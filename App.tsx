@@ -51,7 +51,10 @@ const MINIMAP_NODE_COLORS: Record<string, string> = {
   text: '#94a3b8',
 };
 
+import { useToast } from './components/ui/ToastContext';
+
 const FlowEditor = () => {
+  const { addToast } = useToast();
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
 
@@ -406,22 +409,23 @@ const FlowEditor = () => {
     const text = toFlowMindDSL(nodes, edges);
     try {
       await navigator.clipboard.writeText(text);
-      alert('FlowMind DSL copied to clipboard!');
+      addToast('FlowMind DSL copied to clipboard!', 'success');
     } catch (err) {
       console.error('Failed to copy', err);
+      addToast('Failed to copy DSL', 'error');
     }
-  }, [nodes, edges]);
+  }, [nodes, edges, addToast]);
 
   const handleExportFigma = useCallback(async () => {
     try {
       const svg = toFigmaSVG(nodes, edges);
       await navigator.clipboard.writeText(svg);
-      alert('Diagram copied for Figma! You can now paste (Cmd+V) in Figma.');
+      addToast('Diagram copied for Figma! You can now paste (Cmd+V) in Figma.', 'success');
     } catch (err: any) {
       console.error('Failed to copy Figma SVG:', err);
-      alert(`Figma Export Failed: ${err?.message || err}`);
+      addToast(`Figma Export Failed: ${err?.message || err}`, 'error');
     }
-  }, [nodes, edges]);
+  }, [nodes, edges, addToast]);
 
   const handleRestoreSnapshot = useCallback((snapshot: any) => {
     restoreSnapshot(snapshot, setNodes, setEdges);

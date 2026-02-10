@@ -21,6 +21,7 @@ FlowMind bridges the gap between **Diagram-as-Code** and visual whiteboarding. I
 Most diagramming tools are either "Code Only" (Mermaid/PlantUML) or "Drag & Drop Only" (draw.io). FlowMind is **both**.
 
 - **📝 Mermaid & DSL Native**: Paste your Mermaid code, and it instantly renders as editable nodes.
+- **🎨 Designed for Figma**: Copy your entire flow and paste it into Figma as **fully editable layers**. Text remains text.
 - **✨ Beautiful Defaults**: No more ugly charts. FlowMind uses a premium glassmorphic UI with auto-layout.
 - **⚡️ Rapid Prototyping**: Text-to-Flow capabilities let you scaffold complex systems in seconds.
 - **🧠 AI Copilot**: Stuck? Ask the built-in AI to "Add error handling" or "Explain this flow".
@@ -29,17 +30,24 @@ Most diagramming tools are either "Code Only" (Mermaid/PlantUML) or "Drag & Drop
 
 ## 🔥 Key Features
 
+### 🖌️ Native Figma Export (New!)
+Stop screenshotting your diagrams. FlowMind generates clean, structured SVGs that behave like native Figma layers.
+- **Editable Text**: Labels and sublabels export as `<text>` blocks, not paths. Fix typos in Figma without redrawing.
+- **Vector Fidelity**: Perfect rounded corners, gradients, and stroke precision.
+- **One-Click Copy**: Just hit "Copy for Figma" and paste (Cmd+V).
+
 ### 🛠 Diagram as Code
 First-class support for **Mermaid.js** and our own **FlowMind DSL**.
 - **Import**: Paste `graph TD; A-->B;` and see it come to life.
 - **Export**: Get clean Mermaid, PlantUML, or JSON output for your docs.
 - **Live Sync**: Tweaking the visual graph updates the underlying code structure.
 
-### 🎨 Premium UX
+### 💎 Premium UX & Smart Editor
+- **Intelligent Text Nodes**: Multi-line labels with auto-expanding text areas and Markdown support.
+- **Auto-Sizing**: Nodes automatically grow vertically to fit your content.
+- **Movable Edge Labels**: Drag labels anywhere along the connector wire; they stick like beads on a string.
+- **Toast Notifications**: Non-intrusive, animated feedback for all your actions.
 - **Glassmorphism UI**: Modern, translucent controls that stay out of your way.
-- **Smart Auto-Layout**: One-click cleanup using the Dagre layout engine.
-- **Keyboard Power**: `Cmd+K` Command Bar, Figma-like shortcuts, and multi-select.
-- **Dark Mode Ready**: (Coming soon) Optimized specifically for long coding sessions.
 
 ### 🤖 Intelligent Assistance
 While FlowMind is a solid manual tool, it has an AI engine under the hood when you need speed:

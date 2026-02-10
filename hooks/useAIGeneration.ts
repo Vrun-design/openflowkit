@@ -3,6 +3,8 @@ import { Node, Edge, MarkerType } from 'reactflow';
 import { generateDiagramFromPrompt } from '../services/geminiService';
 import { EDGE_STYLE, EDGE_LABEL_STYLE, EDGE_LABEL_BG_STYLE } from '../constants';
 
+import { useToast } from '../components/ui/ToastContext';
+
 export const useAIGeneration = (
   nodes: Node[],
   edges: Edge[],
@@ -11,6 +13,7 @@ export const useAIGeneration = (
   recordHistory: () => void,
   fitView: (opts?: any) => void
 ) => {
+  const { addToast } = useToast();
   const [isAIOpen, setIsAIOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -18,13 +21,14 @@ export const useAIGeneration = (
     recordHistory();
     setIsGenerating(true);
     try {
-      const simplifiedNodes = nodes.map((n) => ({ 
-        id: n.id, 
-        type: n.type, 
-        label: n.data.label, 
-        description: n.data.subLabel, 
-        x: n.position.x, 
-        y: n.position.y 
+      // ... logic ...
+      const simplifiedNodes = nodes.map((n) => ({
+        id: n.id,
+        type: n.type,
+        label: n.data.label,
+        description: n.data.subLabel,
+        x: n.position.x,
+        y: n.position.y
       }));
 
       const currentGraph = JSON.stringify({
@@ -63,13 +67,14 @@ export const useAIGeneration = (
       setEdges(newEdges);
       setIsAIOpen(false);
       setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
+      addToast('Diagram generated successfully!', 'success');
     } catch (error) {
       console.error('AI Generation failed:', error);
-      alert('Failed to generate diagram. Please check your API key or try again.');
+      addToast('Failed to generate diagram. Please check your API key or try again.', 'error');
     } finally {
       setIsGenerating(false);
     }
-  }, [nodes, edges, recordHistory, setNodes, setEdges, fitView]);
+  }, [nodes, edges, recordHistory, setNodes, setEdges, fitView, addToast]);
 
   return { isAIOpen, setIsAIOpen, isGenerating, handleAIRequest };
 };
