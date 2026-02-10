@@ -12,6 +12,7 @@ import ReactFlow, {
   MiniMap,
   getRectOfNodes,
   SelectionMode,
+  MarkerType,
 } from 'reactflow';
 import dagre from 'dagre';
 import CustomNode from './components/CustomNode';
@@ -19,6 +20,8 @@ import AnnotationNode from './components/AnnotationNode';
 import SectionNode from './components/SectionNode';
 import TextNode from './components/TextNode';
 import { CustomBezierEdge, CustomSmoothStepEdge, CustomStepEdge } from './components/CustomEdge';
+import CustomConnectionLine from './components/CustomConnectionLine';
+import { ConnectMenu } from './components/ConnectMenu';
 import { CommandBar } from './components/CommandBar';
 import { Toolbar } from './components/Toolbar';
 import { NavigationControls } from './components/NavigationControls';
@@ -94,6 +97,9 @@ const FlowEditor = () => {
   const [showMiniMap, setShowMiniMap] = useState(true);
   const [showGrid, setShowGrid] = useState(true);
   const [snapToGrid, setSnapToGrid] = useState(true);
+
+  // Connection Menu State
+  const [connectMenu, setConnectMenu] = useState<{ position: { x: number; y: number }, sourceId: string, sourceHandle: string | null } | null>(null);
 
   // Context Menu State
   const [contextMenu, setContextMenu] = useState<ContextMenuProps & { isOpen: boolean }>({
@@ -304,9 +310,11 @@ const FlowEditor = () => {
     handleClear,
     copySelection, pasteSelection,
     onConnectStart, onConnectEnd,
+    handleAddAndConnect,
   } = useFlowOperations(
     nodes, edges, setNodes, setEdges, recordHistory, setSelectedNodeId, setSelectedEdgeId,
-    screenToFlowPosition
+    screenToFlowPosition,
+    (position, sourceId, sourceHandle) => setConnectMenu({ position, sourceId, sourceHandle })
   );
 
   const selectAll = useCallback(() => {
@@ -516,14 +524,11 @@ const FlowEditor = () => {
         selectionMode={isEffectiveSelectMode ? SelectionMode.Partial : undefined}
         multiSelectionKeyCode="Alt"
         defaultEdgeOptions={{
-          type: 'smoothstep',
-          animated: true,
-          style: EDGE_STYLE,
-          labelStyle: EDGE_LABEL_STYLE,
-          labelBgStyle: EDGE_LABEL_BG_STYLE,
-          labelBgPadding: [8, 4] as [number, number],
-          labelBgBorderRadius: 4,
+          style: { stroke: '#94a3b8', strokeWidth: 2 },
+          animated: false,
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' },
         }}
+        connectionLineComponent={CustomConnectionLine}
         snapToGrid={snapToGrid}
       >
         {showGrid && <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />}
@@ -632,6 +637,18 @@ const FlowEditor = () => {
         onChange={onFileImport}
         className="hidden"
       />
+      {connectMenu && (
+        <ConnectMenu
+          position={connectMenu.position}
+          onClose={() => setConnectMenu(null)}
+          onSelect={(type) => {
+            if (connectMenu) {
+              const flowPos = screenToFlowPosition(connectMenu.position);
+              handleAddAndConnect(type, flowPos, connectMenu.sourceId, connectMenu.sourceHandle);
+            }
+          }}
+        />
+      )}
       {contextMenu.isOpen && (
         <ContextMenu
           {...contextMenu}

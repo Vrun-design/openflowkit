@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { Node, Edge, Connection, addEdge, MarkerType, OnSelectionChangeParams } from 'reactflow';
 import { NodeData } from '../types';
-import { EDGE_STYLE, EDGE_LABEL_STYLE, EDGE_LABEL_BG_STYLE } from '../constants';
+import { EDGE_STYLE, EDGE_LABEL_STYLE, EDGE_LABEL_BG_STYLE, NODE_WIDTH, NODE_HEIGHT } from '../constants';
 
 export const useFlowOperations = (
   nodes: Node[],
@@ -11,10 +11,12 @@ export const useFlowOperations = (
   recordHistory: () => void,
   setSelectedNodeId: (id: string | null) => void,
   setSelectedEdgeId: (id: string | null) => void,
-  screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number }
+  screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number },
+  onShowConnectMenu?: (position: { x: number; y: number }, sourceId: string, sourceHandle: string | null) => void
 ) => {
   const connectingNodeId = useRef<string | null>(null);
   const connectingHandleId = useRef<string | null>(null);
+  const isConnectionValid = useRef<boolean>(false);
   // --- Node Data Updates ---
   const updateNodeData = useCallback((id: string, data: Partial<NodeData>) => {
     setNodes((nds) =>
@@ -80,6 +82,7 @@ export const useFlowOperations = (
 
   // --- Connection ---
   const onConnect = useCallback((params: Connection) => {
+    isConnectionValid.current = true;
     recordHistory();
     setEdges((eds) =>
       addEdge({
@@ -99,52 +102,61 @@ export const useFlowOperations = (
   const onConnectStart = useCallback((_, { nodeId, handleId }: { nodeId: string | null; handleId: string | null }) => {
     connectingNodeId.current = nodeId;
     connectingHandleId.current = handleId;
+    isConnectionValid.current = false;
   }, []);
 
   const onConnectEnd = useCallback(
     (event: any) => {
       if (!connectingNodeId.current) return;
+      if (isConnectionValid.current) return;
 
+      const { clientX, clientY } = event;
+      const position = screenToFlowPosition({
+        x: clientX,
+        y: clientY,
+      });
+
+      // --- PHASE 1: Smarter Drop (Auto-Snap) ---
+      let closestHandle: { nodeId: string, handleId: string, dist: number } | null = null;
+
+      nodes.forEach(node => {
+        const hPoints = [
+          { id: 'top', x: node.position.x + NODE_WIDTH / 2, y: node.position.y },
+          { id: 'bottom', x: node.position.x + NODE_WIDTH / 2, y: node.position.y + NODE_HEIGHT },
+          { id: 'left', x: node.position.x, y: node.position.y + NODE_HEIGHT / 2 },
+          { id: 'right', x: node.position.x + NODE_WIDTH, y: node.position.y + NODE_HEIGHT / 2 },
+        ];
+
+        hPoints.forEach(hp => {
+          const dist = Math.sqrt((hp.x - position.x) ** 2 + (hp.y - position.y) ** 2);
+          if (dist < 40 && (!closestHandle || dist < closestHandle.dist)) {
+            closestHandle = { nodeId: node.id, handleId: hp.id, dist };
+          }
+        });
+      });
+
+      if (closestHandle) {
+        onConnect({
+          source: connectingNodeId.current,
+          sourceHandle: connectingHandleId.current,
+          target: (closestHandle as any).nodeId,
+          targetHandle: (closestHandle as any).handleId,
+        } as Connection);
+        return;
+      }
+
+      // --- PHASE 3: Context Menu ---
       const targetIsPane = event.target.classList.contains('react-flow__pane');
 
-      if (targetIsPane) {
-        // we need to remove the wrapper bounds to get the correct position
-        const { top, left } = event.target.getBoundingClientRect();
-        const position = screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
-        });
-
-        const id = `${Date.now()}`;
-        const newNode: Node = {
-          id,
-          position,
-          data: { label: 'New Node', subLabel: 'Process Step', icon: 'Settings', color: 'slate' },
-          type: 'process',
-        };
-
-        recordHistory();
-        setNodes((nds) => nds.concat(newNode));
-        setEdges((eds) =>
-          eds.concat({
-            id: `e-${connectingNodeId.current}-${id}`,
-            source: connectingNodeId.current!,
-            sourceHandle: connectingHandleId.current,
-            target: id,
-            type: 'smoothstep',
-            markerEnd: { type: MarkerType.ArrowClosed },
-            animated: true,
-            style: EDGE_STYLE,
-            labelStyle: EDGE_LABEL_STYLE,
-            labelBgStyle: EDGE_LABEL_BG_STYLE,
-            labelBgPadding: [8, 4],
-            labelBgBorderRadius: 4,
-          })
+      if (targetIsPane && onShowConnectMenu) {
+        onShowConnectMenu(
+          { x: clientX, y: clientY },
+          connectingNodeId.current,
+          connectingHandleId.current
         );
-        setSelectedNodeId(id);
       }
     },
-    [screenToFlowPosition, recordHistory, setNodes, setEdges, setSelectedNodeId]
+    [nodes, screenToFlowPosition, onConnect, onShowConnectMenu]
   );
 
   // --- Selection ---
@@ -363,6 +375,41 @@ export const useFlowOperations = (
     }
   }, [setNodes, setEdges, recordHistory, setSelectedNodeId]);
 
+  const handleAddAndConnect = useCallback((type: string, position: { x: number; y: number }, sourceId: string, sourceHandle: string | null) => {
+    recordHistory();
+    const id = `${Date.now()}`;
+    const newNode: Node = {
+      id,
+      position,
+      data: {
+        label: type === 'annotation' ? 'Note' : 'New Node',
+        subLabel: type === 'decision' ? 'Branch' : 'Process Step',
+        icon: type === 'decision' ? 'Sparkles' : (type === 'annotation' ? 'StickyNote' : 'Settings'),
+        color: type === 'annotation' ? 'yellow' : (type === 'decision' ? 'amber' : 'slate')
+      },
+      type,
+    };
+
+    setNodes((nds) => nds.concat(newNode));
+    setEdges((eds) =>
+      eds.concat({
+        id: `e-${sourceId}-${id}`,
+        source: sourceId,
+        sourceHandle,
+        target: id,
+        type: 'smoothstep',
+        markerEnd: { type: MarkerType.ArrowClosed },
+        animated: true,
+        style: EDGE_STYLE,
+        labelStyle: EDGE_LABEL_STYLE,
+        labelBgStyle: EDGE_LABEL_BG_STYLE,
+        labelBgPadding: [8, 4],
+        labelBgBorderRadius: 4,
+      })
+    );
+    setSelectedNodeId(id);
+  }, [setNodes, setEdges, recordHistory, setSelectedNodeId]);
+
   return {
     updateNodeData,
     updateNodeType,
@@ -385,5 +432,6 @@ export const useFlowOperations = (
     copySelection,
     pasteSelection,
     handleAddTextNode,
+    handleAddAndConnect,
   };
 };

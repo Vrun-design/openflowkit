@@ -264,7 +264,6 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                             {/* Rich Text Label */}
                             <div className="relative border border-slate-200 rounded-lg bg-slate-50 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all">
                                 <MarkdownToolbar onInsert={labelEditor.insert} simple />
-                                <MarkdownToolbar onInsert={labelEditor.insert} simple />
                                 <textarea
                                     ref={labelInputRef}
                                     value={selectedNode.data.label}
@@ -300,32 +299,37 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Text Style</label>
                                 <div className="grid grid-cols-2 gap-2">
                                     {/* Font Family */}
-                                    <div className="flex bg-slate-100 p-1 rounded-lg">
-                                        {['sans', 'serif', 'mono'].map((font) => (
+                                    <div className="flex bg-slate-100 p-1 rounded-lg overflow-x-auto no-scrollbar">
+                                        {[
+                                            { label: 'Inter', value: 'inter' },
+                                            { label: 'Roboto', value: 'roboto' },
+                                            { label: 'Outfit', value: 'outfit' },
+                                            { label: 'Playfair', value: 'playfair' },
+                                            { label: 'Fira', value: 'fira' },
+                                        ].map((font) => (
                                             <button
-                                                key={font}
-                                                onClick={() => onChangeNode(selectedNode.id, { fontFamily: font })}
-                                                className={`flex-1 py-1 rounded-md text-xs font-medium transition-all capitalize
-                                                    ${(selectedNode.data.fontFamily || 'sans') === font ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}
+                                                key={font.value}
+                                                onClick={() => onChangeNode(selectedNode.id, { fontFamily: font.value })}
+                                                className={`flex-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all uppercase whitespace-nowrap
+                                                    ${(selectedNode.data.fontFamily || 'inter') === font.value ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}
                                                 `}
-                                                title={font}
+                                                title={font.label}
                                             >
-                                                {font === 'sans' ? 'A' : font === 'serif' ? 'T' : 'M'}
+                                                {font.label}
                                             </button>
                                         ))}
                                     </div>
                                     {/* Font Size */}
-                                    <div className="flex bg-slate-100 p-1 rounded-lg">
-                                        {['small', 'medium', 'large', 'xl'].map((size) => (
+                                    <div className="flex bg-slate-100 p-1 rounded-lg overflow-x-auto no-scrollbar">
+                                        {[12, 14, 16, 20, 24, 32, 48, 64].map((size) => (
                                             <button
                                                 key={size}
-                                                onClick={() => onChangeNode(selectedNode.id, { fontSize: size })}
-                                                className={`flex-1 py-1 rounded-md text-xs font-medium transition-all
-                                                    ${(selectedNode.data.fontSize || 'medium') === size ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}
+                                                onClick={() => onChangeNode(selectedNode.id, { fontSize: size.toString() })}
+                                                className={`flex-1 px-2 py-1 rounded-md text-[10px] font-bold transition-all
+                                                    ${(selectedNode.data.fontSize || '16') === size.toString() ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}
                                                 `}
-                                                title={size}
                                             >
-                                                {size === 'small' ? 'S' : size === 'medium' ? 'M' : size === 'large' ? 'L' : 'XL'}
+                                                {size}
                                             </button>
                                         ))}
                                     </div>
@@ -355,42 +359,46 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                             </div>
                         </div>
 
-                        {/* Background Color for Text Node */}
-                        {isText && (
-                            <div className="space-y-3">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                                    <span>Background</span>
-                                    <button
-                                        onClick={() => onChangeNode(selectedNode.id, { backgroundColor: selectedNode.data.backgroundColor ? undefined : '#ffffff' })}
-                                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${selectedNode.data.backgroundColor ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-slate-50 border-slate-200 text-slate-400'}`}
-                                    >
-                                        {selectedNode.data.backgroundColor ? 'On' : 'Off'}
-                                    </button>
-                                </label>
-                                {selectedNode.data.backgroundColor && (
-                                    <div className="flex flex-wrap gap-2">
-                                        {[
-                                            '#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', // Grays
-                                            '#fef2f2', '#fffbeb', '#f0fdf4', '#eff6ff', // Tints
-                                            '#fee2e2', '#fef3c7', '#dcfce7', '#dbeafe', // More tints
-                                        ].map((bg) => (
-                                            <button
-                                                key={bg}
-                                                onClick={() => onChangeNode(selectedNode.id, { backgroundColor: bg })}
-                                                className={`w-6 h-6 rounded-md border shadow-sm transition-transform hover:scale-110 ${selectedNode.data.backgroundColor === bg ? 'ring-2 ring-indigo-500 ring-offset-1 border-indigo-200' : 'border-slate-200'}`}
-                                                style={{ backgroundColor: bg }}
-                                            />
-                                        ))}
+                        {/* Background Color Picker - Always shown for transparency control */}
+                        <div className="space-y-3">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                                <span>Background</span>
+                                <button
+                                    onClick={() => onChangeNode(selectedNode.id, { backgroundColor: selectedNode.data.backgroundColor ? undefined : '#ffffff' })}
+                                    className={`text-[10px] px-2 py-0.5 rounded-full border transition-all ${selectedNode.data.backgroundColor ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-slate-50 border-slate-200 text-slate-400'}`}
+                                >
+                                    {selectedNode.data.backgroundColor ? 'On' : 'Off'}
+                                </button>
+                            </label>
+                            {selectedNode.data.backgroundColor && (
+                                <div className="flex flex-wrap gap-2">
+                                    {[
+                                        '#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', // Grays
+                                        '#fef2f2', '#fffbeb', '#f0fdf4', '#eff6ff', // Tints
+                                        '#fee2e2', '#fef3c7', '#dcfce7', '#dbeafe', // More tints
+                                    ].map((bg) => (
+                                        <button
+                                            key={bg}
+                                            onClick={() => onChangeNode(selectedNode.id, { backgroundColor: bg })}
+                                            className={`
+                                                    w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 shadow-sm
+                                                    ${selectedNode.data.backgroundColor === bg ? 'border-slate-600 scale-110' : 'border-slate-200'}
+                                                `}
+                                            style={{ backgroundColor: bg }}
+                                        />
+                                    ))}
+                                    {/* Custom Color Input Wrapper */}
+                                    <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-slate-200 group">
                                         <input
                                             type="color"
                                             value={selectedNode.data.backgroundColor || '#ffffff'}
                                             onChange={(e) => onChangeNode(selectedNode.id, { backgroundColor: e.target.value })}
-                                            className="w-6 h-6 rounded-md overflow-hidden cursor-pointer border border-slate-200 p-0"
+                                            className="absolute inset-0 w-full h-full cursor-pointer scale-[2] origin-center"
                                         />
                                     </div>
-                                )}
-                            </div>
-                        )}
+                                </div>
+                            )}
+                        </div>
 
                         {/* Icon Picker - Hide for annotation and text */}
                         {!isAnnotation && !isText && (

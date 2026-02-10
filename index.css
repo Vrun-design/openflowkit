@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+.font-inter {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-roboto {
+  font-family: 'Roboto', sans-serif;
+}
+
+.font-playfair {
+  font-family: 'Playfair Display', serif;
+}
+
+.font-fira {
+  font-family: 'Fira Code', monospace;
+}
+
+.font-outfit {
+  font-family: 'Outfit', sans-serif;
+}
+
+
 /* Custom Scrollbar for side panels */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;

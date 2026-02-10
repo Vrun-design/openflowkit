@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { NodeData } from '../types';
 import { ICON_MAP } from './IconMap';
+import { NODE_WIDTH, NODE_HEIGHT } from '../constants';
 
 const getThemeStyles = (color: string = 'slate') => {
   const themes: Record<string, { bg: string, border: string, iconBg: string, iconColor: string, handle: string, ring: string }> = {
@@ -53,6 +54,23 @@ const CustomNode = ({ data, type, selected }: NodeProps<NodeData>) => {
     return foundKey ? ICON_MAP[foundKey] : ICON_MAP.Settings;
   }, [activeIconKey]);
 
+  // Font Styling
+  const fontFamilyMap: Record<string, string> = {
+    inter: 'font-inter',
+    roboto: 'font-roboto',
+    outfit: 'font-outfit',
+    playfair: 'font-playfair',
+    fira: 'font-fira',
+    sans: 'font-sans',
+    serif: 'font-serif',
+    mono: 'font-mono',
+  };
+  const fontFamilyClass = fontFamilyMap[data.fontFamily || 'inter'];
+  const fontSize = data.fontSize || '14';
+  const isNumericSize = !isNaN(Number(fontSize));
+  const fontSizeClass = isNumericSize ? '' : (fontSize === 'small' ? 'text-xs' : fontSize === 'medium' ? 'text-sm' : fontSize === 'large' ? 'text-base' : 'text-lg');
+  const fontSizeStyle = isNumericSize ? { fontSize: `${fontSize}px` } : {};
+
   // Alignment Logic
   const align = data.align || 'left';
   const layoutClass = align === 'left' ? 'flex-row text-left' : 'flex-col text-center';
@@ -80,10 +98,17 @@ const CustomNode = ({ data, type, selected }: NodeProps<NodeData>) => {
           className={`
               relative flex flex-col justify-center shadow-lg border-2 transition-all duration-200 h-full overflow-hidden
               ${borderRadiusClass}
-              ${style.bg} ${style.border}
-              ${selected ? `ring-2 ${style.ring} ring-offset-2 z-10` : 'hover:shadow-xl'}
-            `}
-          style={{ minWidth: 200, width: '100%', height: '100%' }}
+              ${!data.backgroundColor ? style.bg : ''} 
+              ${!data.backgroundColor ? style.border : 'border-slate-300 shadow-sm'}
+              ${selected ? 'ring-2 ring-indigo-500 ring-offset-4' : ''}
+              text-${activeColor}-900
+          `}
+          style={{
+            backgroundColor: data.backgroundColor,
+            minWidth: 200,
+            width: '100%',
+            height: '100%',
+          }}
         >
           {/* 1. Header Section */}
           <div className={`flex ${layoutClass} items-center gap-3 p-4`}>
@@ -98,7 +123,7 @@ const CustomNode = ({ data, type, selected }: NodeProps<NodeData>) => {
 
             <div className={`flex flex-col min-w-0 ${!IconComponent ? 'w-full' : ''}`}>
               {/* Rich Text Label */}
-              <div className="text-sm font-bold text-slate-800 leading-tight block break-words markdown-content [&>p]:m-0">
+              <div className={`font-bold text-slate-800 leading-tight block break-words markdown-content [&>p]:m-0 ${fontFamilyClass} ${fontSizeClass}`} style={fontSizeStyle}>
                 <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{data.label || 'Node'}</ReactMarkdown>
               </div>
 
