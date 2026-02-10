@@ -5,10 +5,12 @@ import remarkGfm from 'remark-gfm';
 import * as AllIcons from 'lucide-react'; // Import all icons
 import { NodeData } from '../types';
 
-// Filter out non-component exports from Lucide (like createLucideIcon)
+// Filter out non-component exports from Lucide
 export const ICON_MAP = Object.entries(AllIcons).reduce((acc, [key, component]) => {
-  if (key !== 'createLucideIcon' && key !== 'default' && typeof component === 'function') {
-    acc[key] = component;
+  // Lucide icons are PascalCase. We filter out createLucideIcon and default.
+  // We also check if the key starts with an uppercase letter to catch components.
+  if (key !== 'createLucideIcon' && key !== 'default' && /^[A-Z]/.test(key)) {
+    acc[key] = component as React.ElementType;
   }
   return acc;
 }, {} as Record<string, React.ElementType>);
@@ -28,14 +30,14 @@ const getThemeStyles = (color: string = 'slate') => {
 };
 
 const getDefaults = (type: string) => {
-    switch(type) {
-        case 'start': return { color: 'emerald', icon: 'Play', shape: 'capsule' };
-        case 'end': return { color: 'red', icon: 'Square', shape: 'capsule' };
-        case 'decision': return { color: 'amber', icon: 'Diamond', shape: 'rounded' };
-        case 'annotation': return { color: 'yellow', icon: 'StickyNote', shape: 'rectangle' };
-        case 'custom': return { color: 'violet', icon: 'Cpu', shape: 'rounded' };
-        default: return { color: 'slate', icon: 'Settings', shape: 'rounded' };
-    }
+  switch (type) {
+    case 'start': return { color: 'emerald', icon: 'Play', shape: 'capsule' };
+    case 'end': return { color: 'red', icon: 'Square', shape: 'capsule' };
+    case 'decision': return { color: 'amber', icon: 'Diamond', shape: 'rounded' };
+    case 'annotation': return { color: 'yellow', icon: 'StickyNote', shape: 'rectangle' };
+    case 'custom': return { color: 'violet', icon: 'Cpu', shape: 'rounded' };
+    default: return { color: 'slate', icon: 'Settings', shape: 'rounded' };
+  }
 }
 
 const CustomNode = ({ data, type, selected }: NodeProps<NodeData>) => {
@@ -44,22 +46,22 @@ const CustomNode = ({ data, type, selected }: NodeProps<NodeData>) => {
   const activeIconKey = data.icon === 'none' ? null : (data.icon || defaults.icon);
   const activeShape = data.shape || defaults.shape || 'rounded';
   const rotation = data.rotation || 0;
-  
+
   const style = getThemeStyles(activeColor);
-  
+
   // Dynamic Icon Retrieval
   const IconComponent = useMemo(() => {
-      if (!activeIconKey) return null;
-      // Handle case-sensitivity fallback (Lucide icons are PascalCase)
-      const exactMatch = ICON_MAP[activeIconKey];
-      if (exactMatch) return exactMatch;
-      
-      // Fallback search
-      const keyLower = activeIconKey.toLowerCase();
-      const foundKey = Object.keys(ICON_MAP).find(k => k.toLowerCase() === keyLower);
-      return foundKey ? ICON_MAP[foundKey] : AllIcons.Settings;
+    if (!activeIconKey) return null;
+    // Handle case-sensitivity fallback (Lucide icons are PascalCase)
+    const exactMatch = ICON_MAP[activeIconKey];
+    if (exactMatch) return exactMatch;
+
+    // Fallback search
+    const keyLower = activeIconKey.toLowerCase();
+    const foundKey = Object.keys(ICON_MAP).find(k => k.toLowerCase() === keyLower);
+    return foundKey ? ICON_MAP[foundKey] : AllIcons.Settings;
   }, [activeIconKey]);
-  
+
   // Alignment Logic
   const align = data.align || 'left';
   const layoutClass = align === 'left' ? 'flex-row text-left' : 'flex-col text-center';
@@ -72,66 +74,66 @@ const CustomNode = ({ data, type, selected }: NodeProps<NodeData>) => {
 
   return (
     <>
-      <NodeResizer 
-        color="#94a3b8" 
-        isVisible={selected} 
-        minWidth={150} 
-        minHeight={80} 
+      <NodeResizer
+        color="#94a3b8"
+        isVisible={selected}
+        minWidth={150}
+        minHeight={80}
         lineStyle={{ borderStyle: 'solid', borderWidth: 1 }}
         handleStyle={{ width: 8, height: 8, borderRadius: 4 }}
       />
-      
+
       {/* Rotation Wrapper */}
       <div style={{ transform: `rotate(${rotation}deg)`, transformOrigin: 'center center', width: '100%', height: '100%' }}>
-          <div
-            className={`
+        <div
+          className={`
               relative flex flex-col shadow-lg border-2 transition-all duration-200 h-full overflow-hidden
               ${borderRadiusClass}
               ${style.bg} ${style.border}
               ${selected ? `ring-2 ${style.ring} ring-offset-2 z-10` : 'hover:shadow-xl'}
             `}
-            style={{ minWidth: 200, width: '100%', height: '100%' }}
-          >
-            {/* 1. Header Section */}
-            <div className={`flex ${layoutClass} ${itemsClass} gap-3 p-4 flex-1`}>
-              {IconComponent && (
-                  <div className={`
+          style={{ minWidth: 200, width: '100%', height: '100%' }}
+        >
+          {/* 1. Header Section */}
+          <div className={`flex ${layoutClass} ${itemsClass} gap-3 p-4 flex-1`}>
+            {IconComponent && (
+              <div className={`
                       shrink-0 w-10 h-10 rounded-lg flex items-center justify-center border border-black/5 shadow-sm
                       ${style.iconBg}
                   `}>
-                      <IconComponent className={`w-5 h-5 ${style.iconColor}`} />
-                  </div>
-              )}
-
-              <div className={`flex flex-col min-w-0 ${!IconComponent ? 'w-full' : ''}`}>
-                {/* Rich Text Label */}
-                <div className="text-sm font-bold text-slate-800 leading-tight block break-words markdown-content [&>p]:m-0">
-                  <ReactMarkdown>{data.label || 'Node'}</ReactMarkdown>
-                </div>
-                
-                {data.subLabel && (
-                  <div className="text-[11px] text-slate-600 mt-2 font-medium leading-normal markdown-content break-words">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {data.subLabel}
-                    </ReactMarkdown>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 2. Body Section: Image */}
-            {data.imageUrl && (
-              <div className="px-4 pb-4">
-                  <div className="relative w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
-                      <img 
-                          src={data.imageUrl} 
-                          alt="Node attachment" 
-                          className="w-full h-auto max-h-[200px] object-cover" 
-                      />
-                  </div>
+                <IconComponent className={`w-5 h-5 ${style.iconColor}`} />
               </div>
             )}
+
+            <div className={`flex flex-col min-w-0 ${!IconComponent ? 'w-full' : ''}`}>
+              {/* Rich Text Label */}
+              <div className="text-sm font-bold text-slate-800 leading-tight block break-words markdown-content [&>p]:m-0">
+                <ReactMarkdown>{data.label || 'Node'}</ReactMarkdown>
+              </div>
+
+              {data.subLabel && (
+                <div className="text-[11px] text-slate-600 mt-2 font-medium leading-normal markdown-content break-words">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {data.subLabel}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* 2. Body Section: Image */}
+          {data.imageUrl && (
+            <div className="px-4 pb-4">
+              <div className="relative w-full rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                <img
+                  src={data.imageUrl}
+                  alt="Node attachment"
+                  className="w-full h-auto max-h-[200px] object-cover"
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* --- Connection Handles --- */}

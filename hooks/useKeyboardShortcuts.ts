@@ -8,6 +8,7 @@ interface ShortcutHandlers {
   undo: () => void;
   redo: () => void;
   duplicateNode: (id: string) => void;
+  selectAll: () => void;
 }
 
 export const useKeyboardShortcuts = ({
@@ -18,15 +19,20 @@ export const useKeyboardShortcuts = ({
   undo,
   redo,
   duplicateNode,
+  selectAll,
 }: ShortcutHandlers) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Delete
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedNodeId && document.activeElement === document.body) {
+        const tag = (document.activeElement as HTMLElement)?.tagName;
+        const isEditable = tag === 'INPUT' || tag === 'TEXTAREA' || (document.activeElement as HTMLElement)?.isContentEditable;
+        if (isEditable) return;
+
+        if (selectedNodeId) {
           deleteNode(selectedNodeId);
         }
-        if (selectedEdgeId && document.activeElement === document.body) {
+        if (selectedEdgeId) {
           deleteEdge(selectedEdgeId);
         }
       }
@@ -50,9 +56,17 @@ export const useKeyboardShortcuts = ({
         e.preventDefault();
         if (selectedNodeId) duplicateNode(selectedNodeId);
       }
+
+      // Select All
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        if (document.activeElement === document.body) {
+          selectAll();
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeId, selectedEdgeId, deleteNode, deleteEdge, undo, redo, duplicateNode]);
+  }, [selectedNodeId, selectedEdgeId, deleteNode, deleteEdge, undo, redo, duplicateNode, selectAll]);
 };
