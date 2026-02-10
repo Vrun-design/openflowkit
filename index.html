@@ -1,195 +1,217 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FlowMind AI - Intelligent Diagramming</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/reactflow/dist/style.min.css"
-      crossorigin="anonymous"
-    />
-    <style>
-      /* Custom Scrollbar for a cleaner look */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-      }
-      .react-flow__attribution {
-        display: none;
-      }
 
-      /* ===== Edge path & label styles (live view) ===== */
-      .react-flow__edge-path {
-        stroke: #94a3b8;
-        stroke-width: 2;
-        opacity: 1 !important;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowMind AI - Intelligent Diagramming</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reactflow/dist/style.min.css" crossorigin="anonymous" />
+  <style>
+    /* Custom Scrollbar for a cleaner look */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
 
-      .react-flow__edge-textbg {
-        fill: #ffffff;
-        fill-opacity: 1;
-        stroke: #cbd5e1;
-        stroke-width: 1;
-        rx: 4;
-        ry: 4;
-      }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
 
-      .react-flow__edge-text {
-        fill: #334155;
-        font-size: 12px;
-        font-weight: 500;
-      }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
 
-      /* ===== Export-specific overrides ===== */
-      /* Hide handles & resize controls */
-      .exporting .react-flow__handle {
-        display: none !important;
-      }
-      .exporting .react-flow__resize-control {
-        display: none !important;
-      }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
 
-      /* Kill dash animations so html-to-image captures solid lines */
-      .exporting .react-flow__edge.animated path {
-        animation: none !important;
-        stroke-dasharray: none !important;
-        stroke-dashoffset: 0 !important;
-      }
-      .exporting .react-flow__edge-path {
-        stroke: #94a3b8 !important;
-        stroke-width: 2 !important;
-        opacity: 1 !important;
-        stroke-dasharray: none !important;
-      }
+    .react-flow__attribution {
+      display: none;
+    }
 
-      /* Force edge label visibility during export */
-      .exporting .react-flow__edge-textbg {
-        fill: #ffffff !important;
-        fill-opacity: 1 !important;
-      }
-      .exporting .react-flow__edge-text {
-        fill: #334155 !important;
-        fill-opacity: 1 !important;
-      }
+    /* ===== Edge path & label styles (live view) ===== */
+    .react-flow__edge-path {
+      stroke: #94a3b8;
+      stroke-width: 2;
+      opacity: 1 !important;
+    }
 
-      /* Ensure markers (arrows) render correctly */
-      .exporting .react-flow__marker {
-        fill: #94a3b8 !important;
-        stroke: #94a3b8 !important;
-      }
+    .react-flow__edge-textbg {
+      fill: #ffffff;
+      fill-opacity: 1;
+      stroke: #cbd5e1;
+      stroke-width: 1;
+      rx: 4;
+      ry: 4;
+    }
 
-      /* Markdown Styles inside Nodes */
-      .markdown-content {
-        font-size: 11px;
-        line-height: 1.5;
-      }
-      .markdown-content ul {
-        list-style-type: disc;
-        padding-left: 1.2em;
-        margin-bottom: 0.4em;
-      }
-      .markdown-content ol {
-        list-style-type: decimal;
-        padding-left: 1.2em;
-        margin-bottom: 0.4em;
-      }
-      .markdown-content li {
-        margin-bottom: 0.1em;
-      }
-      .markdown-content strong {
-        font-weight: 700;
-        color: #0f172a;
-      }
-      .markdown-content em {
-        font-style: italic;
-      }
-      .markdown-content code {
-        background: #f1f5f9;
-        padding: 0.1em 0.3em;
-        border-radius: 0.2em;
-        font-family: monospace;
-        font-size: 0.9em;
-        color: #ef4444;
-        border: 1px solid #e2e8f0;
-      }
-      .markdown-content pre {
-        background: #1e293b;
-        color: #f8fafc;
-        padding: 0.5em;
-        border-radius: 0.3em;
-        overflow-x: auto;
-        margin-bottom: 0.5em;
-        font-family: monospace;
-      }
-      .markdown-content pre code {
-        background: transparent;
-        color: inherit;
-        border: none;
-        padding: 0;
-      }
-      .markdown-content h1 {
-        font-size: 1.4em;
-        font-weight: 700;
-        margin-top: 0.5em;
-        margin-bottom: 0.3em;
-        border-bottom: 1px solid #e2e8f0;
-        padding-bottom: 0.2em;
-      }
-      .markdown-content h2 {
-        font-size: 1.2em;
-        font-weight: 600;
-        margin-top: 0.5em;
-        margin-bottom: 0.3em;
-      }
-      .markdown-content h3 {
-        font-size: 1.1em;
-        font-weight: 600;
-        margin-top: 0.4em;
-        margin-bottom: 0.2em;
-      }
-      .markdown-content p {
-        margin-bottom: 0.5em;
-      }
-      .markdown-content blockquote {
-        border-left: 3px solid #cbd5e1;
-        padding-left: 0.8em;
-        color: #64748b;
-        font-style: italic;
-        margin-bottom: 0.5em;
-      }
-      .markdown-content a {
-        color: #3b82f6;
-        text-decoration: underline;
-      }
-      .markdown-content table {
-        border-collapse: collapse;
-        width: 100%;
-        margin-bottom: 0.5em;
-      }
-      .markdown-content th,
-      .markdown-content td {
-        border: 1px solid #cbd5e1;
-        padding: 0.3em 0.5em;
-      }
-      .markdown-content th {
-        background: #f8fafc;
-        font-weight: 600;
-        text-align: left;
-      }
-    </style>
-    <script type="importmap">
+    .react-flow__edge-text {
+      fill: #334155;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* ===== Export-specific overrides ===== */
+    /* Hide handles & resize controls */
+    .exporting .react-flow__handle {
+      display: none !important;
+    }
+
+    .exporting .react-flow__resize-control {
+      display: none !important;
+    }
+
+    /* Kill dash animations so html-to-image captures solid lines */
+    .exporting .react-flow__edge.animated path {
+      animation: none !important;
+      stroke-dasharray: none !important;
+      stroke-dashoffset: 0 !important;
+    }
+
+    .exporting .react-flow__edge-path {
+      stroke: #94a3b8 !important;
+      stroke-width: 2 !important;
+      opacity: 1 !important;
+      stroke-dasharray: none !important;
+    }
+
+    /* Force edge label visibility during export */
+    .exporting .react-flow__edge-textbg {
+      fill: #ffffff !important;
+      fill-opacity: 1 !important;
+    }
+
+    .exporting .react-flow__edge-text {
+      fill: #334155 !important;
+      fill-opacity: 1 !important;
+    }
+
+    /* Ensure markers (arrows) render correctly */
+    .exporting .react-flow__marker {
+      fill: #94a3b8 !important;
+      stroke: #94a3b8 !important;
+    }
+
+    /* Markdown Styles inside Nodes */
+    .markdown-content {
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .markdown-content ul {
+      list-style-type: disc;
+      padding-left: 1.2em;
+      margin-bottom: 0.4em;
+    }
+
+    .markdown-content ol {
+      list-style-type: decimal;
+      padding-left: 1.2em;
+      margin-bottom: 0.4em;
+    }
+
+    .markdown-content li {
+      margin-bottom: 0.1em;
+    }
+
+    .markdown-content strong {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .markdown-content em {
+      font-style: italic;
+    }
+
+    .markdown-content code {
+      background: #f1f5f9;
+      padding: 0.1em 0.3em;
+      border-radius: 0.2em;
+      font-family: monospace;
+      font-size: 0.9em;
+      color: #ef4444;
+      border: 1px solid #e2e8f0;
+    }
+
+    .markdown-content pre {
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 0.5em;
+      border-radius: 0.3em;
+      overflow-x: auto;
+      margin-bottom: 0.5em;
+      font-family: monospace;
+    }
+
+    .markdown-content pre code {
+      background: transparent;
+      color: inherit;
+      border: none;
+      padding: 0;
+    }
+
+    .markdown-content h1 {
+      font-size: 1.4em;
+      font-weight: 700;
+      margin-top: 0.5em;
+      margin-bottom: 0.3em;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 0.2em;
+    }
+
+    .markdown-content h2 {
+      font-size: 1.2em;
+      font-weight: 600;
+      margin-top: 0.5em;
+      margin-bottom: 0.3em;
+    }
+
+    .markdown-content h3 {
+      font-size: 1.1em;
+      font-weight: 600;
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+
+    .markdown-content p {
+      margin-bottom: 0.5em;
+    }
+
+    .markdown-content blockquote {
+      border-left: 3px solid #cbd5e1;
+      padding-left: 0.8em;
+      color: #64748b;
+      font-style: italic;
+      margin-bottom: 0.5em;
+    }
+
+    .markdown-content a {
+      color: #3b82f6;
+      text-decoration: underline;
+    }
+
+    .markdown-content table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 0.5em;
+    }
+
+    .markdown-content th,
+    .markdown-content td {
+      border: 1px solid #cbd5e1;
+      padding: 0.3em 0.5em;
+    }
+
+    .markdown-content th {
+      background: #f8fafc;
+      font-weight: 600;
+      text-align: left;
+    }
+  </style>
+  <script type="importmap">
       {
         "imports": {
           "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
@@ -205,10 +227,12 @@
         }
       }
     </script>
-    <link rel="stylesheet" href="/index.css" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+  <link rel="stylesheet" href="/index.css" />
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>

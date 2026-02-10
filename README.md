@@ -20,23 +20,43 @@ Whether you're brainstorming system architectures, mapping out user journeys, or
 - **Smart Suggestions**: AI understands your current graph context to making relevant additions.
 
 ### ⚡ Productivity Tools
+- **Command Bar**: A centralized command palette (Cmd+K) to access AI, Templates, Code, and Actions.
 - **Node Templates**: Pre-built patterns for common workflows (Auth, CRUD, Approval Chains).
 - **Multi-Tab Support**: Work on multiple flows simultaneously within a single session.
 - **Auto-Layout**: Instantly organize messy diagrams with Dagre-powered automatic positioning.
-- **Sections & Grouping**: Organize complex flows into logical, visual groups.
+- **Pro Shortcuts**: 
+  - **Multi-Select**: Hold `Cmd` (Mac) or `Ctrl` (Windows) and drag to select multiple items.
+  - **Quick Pan**: Hold `Space` (coming soon) to pan around the canvas.
 
 ### 💾 Data & Persistence
 - **Auto-Save**: Never lose your work. Changes are automatically saved to local storage.
 - **Version Snapshots**: Create named save points (e.g., "v1 - Initial Draft") and restore them anytime.
-- **JSON Import/Export**: robust save/load functionality for sharing or backing up flows.
+- **JSON Import/Export**: Robust save/load functionality for sharing or backing up flows.
 
 ### 🎨 Visual & Export
+- **Glassmorphism UI**: A premium, modern interface with blur effects and refined typography.
 - **Custom Node Types**: Semantic nodes for Start, Process, Decision, End, and Annotations.
 - **Edge Styling**: Semantic edge labels (Yes/No, Success/Error) with automatic styling.
 - **Export Options**: 
   - 📸 **PNG Image**: High-resolution export for presentations.
   - 📝 **MermaidJS**: Copy code for Markdown documentation.
   - 🌿 **PlantUML**: Copy code for technical specifications.
+  - 🔮 **FlowMind DSL**: Native DSL for easy sharing and AI processing.
+
+---
+
+## 🏗️ Architecture
+
+FlowMind AI is built with a modular component architecture:
+
+- **FlowEditor (`App.tsx`)**: The core orchestrator managing React Flow state, history, and global events.
+- **CommandBar**: The central "brain" of the UI, handling user intent (AI, Templates, Navigation) in a unified modal.
+- **TopNav**: Manages global context (Tabs, Export, Settings) with a consistent glassmorphic design.
+- **Toolbar**: Quick-access tools for canvas manipulation (Undo/Redo, Zoom, Layout) with unified tooltips.
+- **Services**:
+  - `visual_generator`: Handles AI prompt processing and graph generation.
+  - `flowmindDSLExporter`: Manages the native Domain Specific Language for flow persistence.
+
 
 ---
 

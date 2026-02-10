@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -11,33 +11,41 @@ import ReactFlow, {
   BackgroundVariant,
   MiniMap,
   getRectOfNodes,
+  SelectionMode,
 } from 'reactflow';
 import dagre from 'dagre';
 import CustomNode from './components/CustomNode';
 import AnnotationNode from './components/AnnotationNode';
 import SectionNode from './components/SectionNode';
-import { AIPanel } from './components/AIPanel';
+import { CommandBar } from './components/CommandBar';
 import { Toolbar } from './components/Toolbar';
+import { NavigationControls } from './components/NavigationControls';
 import { PropertiesPanel } from './components/PropertiesPanel';
-import { FlowTabs } from './components/FlowTabs';
-import { TemplatesPanel } from './components/TemplatesPanel';
+// import { TemplatesPanel } from './components/TemplatesPanel'; // Removed
 import { SnapshotsPanel } from './components/SnapshotsPanel';
+import { ContextMenu, ContextMenuProps } from './components/ContextMenu';
+import { TopNav } from './components/TopNav';
 import { FlowTemplate } from './services/templates';
 import { toMermaid, toPlantUML } from './services/exportService';
-import { LayoutGrid } from 'lucide-react';
+import { toFlowMindDSL } from './services/flowmindDSLExporter';
+
 import { useSnapshots } from './hooks/useSnapshots';
 import { useAutoSave } from './hooks/useAutoSave';
-
-// Hooks
 import { useFlowHistory } from './hooks/useFlowHistory';
 import { useFlowOperations } from './hooks/useFlowOperations';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useAIGeneration } from './hooks/useAIGeneration';
 import { useFlowExport } from './hooks/useFlowExport';
-
-// Constants
 import { INITIAL_NODES, INITIAL_EDGES, NODE_WIDTH, NODE_HEIGHT, EDGE_STYLE, EDGE_LABEL_STYLE, EDGE_LABEL_BG_STYLE } from './constants';
 import { FlowTab } from './types';
+
+const MINIMAP_NODE_COLORS: Record<string, string> = {
+  start: '#10b981',
+  end: '#ef4444',
+  decision: '#f59e0b',
+  annotation: '#facc15',
+  section: '#60a5fa',
+};
 
 const FlowEditor = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
@@ -59,15 +67,95 @@ const FlowEditor = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
-  // Templates
-  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
-
   // Snapshots
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const { snapshots, saveSnapshot, deleteSnapshot, restoreSnapshot } = useSnapshots();
 
+  // Command Bar State
+  const [isCommandBarOpen, setIsCommandBarOpen] = useState(false);
+  const [commandBarView, setCommandBarView] = useState<'root' | 'ai' | 'mermaid' | 'flowmind' | 'templates'>('root');
+
+  const openCommandBar = (view: 'root' | 'ai' | 'mermaid' | 'flowmind' | 'templates' = 'root') => {
+    setCommandBarView(view);
+    setIsCommandBarOpen(true);
+  };
+
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { fitView } = useReactFlow();
+  const { fitView, project } = useReactFlow();
+
+  // View Settings
+  const [showMiniMap, setShowMiniMap] = useState(true);
+  const [showGrid, setShowGrid] = useState(true);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<ContextMenuProps & { isOpen: boolean }>({
+    id: null,
+    type: 'pane',
+    position: { x: 0, y: 0 },
+    onClose: () => { },
+    isOpen: false,
+  });
+
+  const closeContextMenu = useCallback(
+    () => setContextMenu((prev) => ({ ...prev, isOpen: false })),
+    []
+  );
+
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault();
+      setContextMenu({
+        id: node.id,
+        type: 'node',
+        position: { x: event.clientX, y: event.clientY },
+        onClose: closeContextMenu,
+        isOpen: true,
+      });
+    },
+    [closeContextMenu]
+  );
+
+  const onPaneContextMenu = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      setContextMenu({
+        id: null,
+        type: 'pane',
+        position: { x: event.clientX, y: event.clientY },
+        onClose: closeContextMenu,
+        isOpen: true,
+      });
+    },
+    [closeContextMenu]
+  );
+
+  const onEdgeContextMenu = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      event.preventDefault();
+      setContextMenu({
+        id: edge.id,
+        type: 'edge',
+        position: { x: event.clientX, y: event.clientY },
+        onClose: closeContextMenu,
+        isOpen: true,
+      });
+    },
+    [closeContextMenu]
+  );
+
+  const onCloseContextMenu = closeContextMenu;
+
+  const screenToFlowPosition = useCallback((position: { x: number; y: number }) => {
+    if (reactFlowWrapper.current) {
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      return project({
+        x: position.x - bounds.left,
+        y: position.y - bounds.top,
+      });
+    }
+    return position;
+  }, [project]);
 
   // --- Node Types ---
   const nodeTypes = useMemo(() => ({
@@ -190,24 +278,30 @@ const FlowEditor = () => {
 
   // --- Core Operations ---
   const {
-    updateNodeData, updateNodeType, updateEdge,
+    updateNodeData, updateNodeType, updateNodeZIndex, updateEdge,
     deleteNode, deleteEdge, duplicateNode,
     onConnect, onSelectionChange, onNodeDoubleClick,
     onNodeDragStart, onNodeDragStop,
     handleAddNode, handleAddAnnotation, handleAddSection,
     handleClear,
+    copySelection, pasteSelection,
   } = useFlowOperations(
     nodes, edges, setNodes, setEdges, recordHistory, setSelectedNodeId, setSelectedEdgeId
   );
 
+  const selectAll = useCallback(() => {
+    setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+    setEdges((eds) => eds.map((e) => ({ ...e, selected: true })));
+  }, [setNodes, setEdges]);
+
   // --- Keyboard Shortcuts ---
   useKeyboardShortcuts({
     selectedNodeId, selectedEdgeId,
-    deleteNode, deleteEdge, undo, redo, duplicateNode,
+    deleteNode, deleteEdge, undo, redo, duplicateNode, selectAll
   });
 
   // --- AI ---
-  const { isAIOpen, setIsAIOpen, isGenerating, handleAIRequest } = useAIGeneration(
+  const { isGenerating, handleAIRequest } = useAIGeneration(
     nodes, edges, setNodes, setEdges, recordHistory, fitView
   );
 
@@ -217,7 +311,7 @@ const FlowEditor = () => {
   );
 
   // --- Auto Layout (dagre) ---
-  const onLayout = useMemo(() => () => {
+  const onLayout = useCallback(() => {
     recordHistory();
     const dagreGraph = new dagre.graphlib.Graph();
     dagreGraph.setDefaultEdgeLabel(() => ({}));
@@ -266,7 +360,7 @@ const FlowEditor = () => {
 
     setNodes((nds) => [...nds.map((n) => ({ ...n, selected: false })), ...newNodes]);
     setEdges((eds) => [...eds, ...newEdges]);
-    setIsTemplatesOpen(false);
+    // setIsTemplatesOpen(false); // Managed by CommandBar now
     setTimeout(() => fitView({ duration: 800 }), 100);
   }, [nodes, recordHistory, setNodes, setEdges, fitView]);
 
@@ -291,6 +385,16 @@ const FlowEditor = () => {
     }
   }, [nodes, edges]);
 
+  const handleExportFlowMindDSL = useCallback(async () => {
+    const text = toFlowMindDSL(nodes, edges);
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('FlowMind DSL copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy', err);
+    }
+  }, [nodes, edges]);
+
   const handleRestoreSnapshot = useCallback((snapshot: any) => {
     restoreSnapshot(snapshot, setNodes, setEdges);
     recordHistory(); // Record the restoration as a new history step
@@ -301,24 +405,51 @@ const FlowEditor = () => {
   const selectedNode = useMemo(() => nodes.find((n) => n.id === selectedNodeId) || null, [nodes, selectedNodeId]);
   const selectedEdge = useMemo(() => edges.find((e) => e.id === selectedEdgeId) || null, [edges, selectedEdgeId]);
 
+  // Selection Mode
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [isSelectionModifierPressed, setIsSelectionModifierPressed] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Meta' || e.key === 'Control') setIsSelectionModifierPressed(true);
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Meta' || e.key === 'Control') setIsSelectionModifierPressed(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  const isEffectiveSelectMode = isSelectMode || isSelectionModifierPressed;
+
   return (
     <div className="w-full h-screen bg-slate-50 flex flex-col relative" ref={reactFlowWrapper}>
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 px-6 py-4 pointer-events-none flex items-center justify-between">
-        <div className="pointer-events-auto bg-white/80 backdrop-blur rounded-full px-4 py-2 border border-slate-200 shadow-sm flex items-center gap-2">
-          <LayoutGrid className="w-5 h-5 text-indigo-600" />
-          <span className="font-bold text-slate-800 tracking-tight">FlowMind AI</span>
-          <span className="text-xs font-medium px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">Beta</span>
-        </div>
-      </div>
-
-      <FlowTabs
+      <TopNav
+        showMiniMap={showMiniMap}
+        toggleMiniMap={() => setShowMiniMap(!showMiniMap)}
+        showGrid={showGrid}
+        toggleGrid={() => setShowGrid(!showGrid)}
+        snapToGrid={snapToGrid}
+        toggleSnapToGrid={() => setSnapToGrid(!snapToGrid)}
         tabs={tabs}
         activeTabId={activeTabId}
         onSwitchTab={handleSwitchTab}
         onAddTab={handleAddTab}
         onCloseTab={handleCloseTab}
         onRenameTab={handleRenameTab}
+        onExportPNG={handleExport}
+        onExportJSON={handleExportJSON}
+        onExportMermaid={handleExportMermaid}
+        onExportPlantUML={handleExportPlantUML}
+        onExportFlowMindDSL={handleExportFlowMindDSL}
+        onImportJSON={handleImportJSON}
+        onHistory={() => setIsHistoryOpen(true)}
       />
 
       <ReactFlow
@@ -331,10 +462,18 @@ const FlowEditor = () => {
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onNodeDoubleClick={onNodeDoubleClick}
+        onNodeContextMenu={onNodeContextMenu}
+        onPaneContextMenu={onPaneContextMenu}
+        onEdgeContextMenu={onEdgeContextMenu}
+        onPaneClick={onCloseContextMenu}
         nodeTypes={nodeTypes}
         fitView
         className="bg-slate-50 pt-16"
         minZoom={0.1}
+        selectionOnDrag={isEffectiveSelectMode}
+        panOnDrag={!isEffectiveSelectMode}
+        selectionMode={isEffectiveSelectMode ? SelectionMode.Partial : undefined}
+        multiSelectionKeyCode="Alt"
         defaultEdgeOptions={{
           type: 'smoothstep',
           animated: true,
@@ -344,28 +483,21 @@ const FlowEditor = () => {
           labelBgPadding: [8, 4] as [number, number],
           labelBgBorderRadius: 4,
         }}
+        snapToGrid={snapToGrid}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />
-        <Controls className="bg-white border-slate-200 shadow-xl rounded-lg" />
-        <MiniMap
-          nodeColor={(n) => {
-            if (n.type === 'start') return '#10b981';
-            if (n.type === 'end') return '#ef4444';
-            if (n.type === 'decision') return '#f59e0b';
-            if (n.type === 'annotation') return '#facc15';
-            if (n.type === 'section') return '#60a5fa';
-            return '#64748b';
-          }}
-          maskColor="rgba(241, 245, 249, 0.7)"
-          className="border border-slate-200 shadow-lg rounded-lg overflow-hidden"
-        />
+        {showGrid && <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#cbd5e1" />}
+        <NavigationControls />
+        {showMiniMap && (
+          <MiniMap
+            nodeColor={(n) => MINIMAP_NODE_COLORS[n.type ?? ''] ?? '#64748b'}
+            maskColor="rgba(241, 245, 249, 0.7)"
+            className="border border-slate-200 shadow-lg rounded-lg overflow-hidden"
+          />
+        )}
       </ReactFlow>
 
       <Toolbar
-        onAI={() => setIsAIOpen(true)}
-        onExport={handleExport}
-        onExportJSON={handleExportJSON}
-        onImportJSON={handleImportJSON}
+        onCommandBar={() => openCommandBar('root')}
         onClear={handleClear}
         onFitView={() => fitView({ duration: 800 })}
         onAddNode={handleAddNode}
@@ -374,26 +506,45 @@ const FlowEditor = () => {
         onUndo={undo}
         onRedo={redo}
         onLayout={onLayout}
-        onTemplates={() => setIsTemplatesOpen(true)}
-        onHistory={() => setIsHistoryOpen(true)}
-        onExportMermaid={handleExportMermaid}
-        onExportPlantUML={handleExportPlantUML}
+        onTemplates={() => openCommandBar('templates')}
         canUndo={canUndo}
         canRedo={canRedo}
+        isSelectMode={isSelectMode}
+        isCommandBarOpen={isCommandBarOpen}
+        onToggleSelectMode={() => setIsSelectMode(true)}
+        onTogglePanMode={() => setIsSelectMode(false)}
       />
 
-      <AIPanel
-        isOpen={isAIOpen}
-        onClose={() => setIsAIOpen(false)}
-        onGenerate={handleAIRequest}
+      <CommandBar
+        isOpen={isCommandBarOpen}
+        onClose={() => setIsCommandBarOpen(false)}
+        nodes={nodes}
+        edges={edges}
+        onApply={(newNodes, newEdges) => {
+          recordHistory();
+          setNodes(newNodes);
+          setEdges(newEdges);
+          setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
+        }}
+        onAIGenerate={handleAIRequest}
         isGenerating={isGenerating}
+        onUndo={undo}
+        onRedo={redo}
+        onFitView={() => fitView({ duration: 800 })}
+        onLayout={onLayout}
+        onSelectTemplate={handleInsertTemplate}
+        initialView={commandBarView}
+        settings={{
+          showGrid,
+          onToggleGrid: () => setShowGrid(!showGrid),
+          snapToGrid,
+          onToggleSnap: () => setSnapToGrid(!snapToGrid),
+          showMiniMap,
+          onToggleMiniMap: () => setShowMiniMap(!showMiniMap),
+        }}
       />
 
-      <TemplatesPanel
-        isOpen={isTemplatesOpen}
-        onClose={() => setIsTemplatesOpen(false)}
-        onSelectTemplate={handleInsertTemplate}
-      />
+      {/* TemplatesPanel removed - functionality moved to CommandBar */}
 
       <SnapshotsPanel
         isOpen={isHistoryOpen}
@@ -413,6 +564,7 @@ const FlowEditor = () => {
         onDeleteNode={deleteNode}
         onDuplicateNode={duplicateNode}
         onDeleteEdge={deleteEdge}
+        onUpdateZIndex={updateNodeZIndex}
         onClose={() => {
           setSelectedNodeId(null);
           setSelectedEdgeId(null);
@@ -438,6 +590,39 @@ const FlowEditor = () => {
         onChange={onFileImport}
         className="hidden"
       />
+      {contextMenu.isOpen && (
+        <ContextMenu
+          {...contextMenu}
+          onClose={onCloseContextMenu}
+          onCopy={copySelection}
+          onPaste={() => {
+            if (contextMenu.position) {
+              pasteSelection(screenToFlowPosition(contextMenu.position));
+            }
+            onCloseContextMenu();
+          }}
+          onDuplicate={() => {
+            if (contextMenu.id) duplicateNode(contextMenu.id);
+            onCloseContextMenu();
+          }}
+          onDelete={() => {
+            if (contextMenu.id) {
+              if (contextMenu.type === 'edge') deleteEdge(contextMenu.id);
+              else deleteNode(contextMenu.id);
+            }
+            onCloseContextMenu();
+          }}
+          onBringToFront={() => {
+            if (contextMenu.id) updateNodeZIndex(contextMenu.id, 'front');
+            onCloseContextMenu();
+          }}
+          onSendToBack={() => {
+            if (contextMenu.id) updateNodeZIndex(contextMenu.id, 'back');
+            onCloseContextMenu();
+          }}
+          canPaste={true}
+        />
+      )}
     </div>
   );
 };

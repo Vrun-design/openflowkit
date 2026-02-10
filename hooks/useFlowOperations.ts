@@ -24,6 +24,22 @@ export const useFlowOperations = (
     setNodes((nds) => nds.map((node) => node.id === id ? { ...node, type } : node));
   }, [setNodes, recordHistory]);
 
+  const updateNodeZIndex = useCallback((id: string, action: 'front' | 'back') => {
+    recordHistory();
+    setNodes((nds) => {
+      const node = nds.find((n) => n.id === id);
+      if (!node) return nds;
+
+      const zIndices = nds.map((n) => n.zIndex || 0);
+      const maxZ = Math.max(...zIndices, 0);
+      const minZ = Math.min(...zIndices, 0);
+
+      const newZ = action === 'front' ? maxZ + 1 : minZ - 1;
+
+      return nds.map((n) => (n.id === id ? { ...n, zIndex: newZ } : n));
+    });
+  }, [setNodes, recordHistory]);
+
   // --- Edge Updates ---
   const updateEdge = useCallback((id: string, updates: Partial<Edge>) => {
     recordHistory();
@@ -123,6 +139,7 @@ export const useFlowOperations = (
       data: { label: 'New Section', subLabel: '', color: 'blue' },
       type: 'section',
       style: { width: 500, height: 400 },
+      zIndex: -1,
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
@@ -136,6 +153,17 @@ export const useFlowOperations = (
   const onNodeDragStop = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
     if (draggedNode.type === 'section') return;
 
+    // Compute absolute position of the dragged node
+    let absX = draggedNode.position.x;
+    let absY = draggedNode.position.y;
+    if (draggedNode.parentNode) {
+      const currentParent = nodes.find((n) => n.id === draggedNode.parentNode);
+      if (currentParent) {
+        absX += currentParent.position.x;
+        absY += currentParent.position.y;
+      }
+    }
+
     const sectionNodes = nodes.filter((n) => n.type === 'section' && n.id !== draggedNode.id);
     let newParent: Node | null = null;
 
@@ -146,33 +174,35 @@ export const useFlowOperations = (
       const sY = section.position.y;
 
       if (
-        draggedNode.position.x > sX &&
-        draggedNode.position.x < sX + sW &&
-        draggedNode.position.y > sY &&
-        draggedNode.position.y < sY + sH
+        absX > sX &&
+        absX < sX + sW &&
+        absY > sY &&
+        absY < sY + sH
       ) {
         newParent = section;
         break;
       }
     }
 
+    // If the node is already in the correct parent, do nothing
+    if (newParent?.id === draggedNode.parentNode) return;
+
     setNodes((nds) =>
       nds.map((n) => {
         if (n.id !== draggedNode.id) return n;
         if (newParent) {
+          // Reparent: convert absolute → relative to new parent
           return {
             ...n,
             parentNode: newParent.id,
             extent: 'parent' as const,
             position: {
-              x: n.position.x - newParent.position.x,
-              y: n.position.y - newParent.position.y,
+              x: absX - newParent.position.x,
+              y: absY - newParent.position.y,
             },
           };
         } else if (n.parentNode) {
-          const parent = nds.find((p) => p.id === n.parentNode);
-          const absX = parent ? n.position.x + parent.position.x : n.position.x;
-          const absY = parent ? n.position.y + parent.position.y : n.position.y;
+          // Unparent: convert relative → absolute
           const { parentNode, extent, ...rest } = n as any;
           return { ...rest, position: { x: absX, y: absY } };
         }
@@ -190,9 +220,86 @@ export const useFlowOperations = (
     }
   }, [setNodes, setEdges, recordHistory]);
 
+  // --- Clipboard Operations ---
+  const copySelection = useCallback(() => {
+    const selectedNodes = nodes.filter((n) => n.selected);
+    const selectedEdges = edges.filter((e) => e.selected);
+
+    if (selectedNodes.length > 0 || selectedEdges.length > 0) {
+      const clipboardData = {
+        nodes: selectedNodes,
+        edges: selectedEdges,
+      };
+      localStorage.setItem('flowmind-clipboard', JSON.stringify(clipboardData));
+    }
+  }, [nodes, edges]);
+
+  const pasteSelection = useCallback((position?: { x: number; y: number }) => {
+    const clipboardDataStr = localStorage.getItem('flowmind-clipboard');
+    if (!clipboardDataStr) return;
+
+    try {
+      const { nodes: copiedNodes, edges: copiedEdges } = JSON.parse(clipboardDataStr);
+
+      if (!copiedNodes || !Array.isArray(copiedNodes)) return;
+
+      recordHistory();
+
+      // Calculate offset
+      // If position is provided (mouse paste), offset relative to top-left of copied nodes
+      // If not (keyboard paste), offset slightly from original
+      let offsetX = 50;
+      let offsetY = 50;
+
+      if (position && copiedNodes.length > 0) {
+        const minX = Math.min(...copiedNodes.map((n: Node) => n.position.x));
+        const minY = Math.min(...copiedNodes.map((n: Node) => n.position.y));
+        offsetX = position.x - minX;
+        offsetY = position.y - minY;
+      }
+
+      const idMap = new Map<string, string>();
+
+      const newNodes = copiedNodes.map((node: Node) => {
+        const newId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        idMap.set(node.id, newId);
+
+        return {
+          ...node,
+          id: newId,
+          position: {
+            x: position ? node.position.x + offsetX : node.position.x + 50,
+            y: position ? node.position.y + offsetY : node.position.y + 50
+          },
+          selected: true,
+          parentNode: undefined, // Reset parent for now to avoid issues
+          extent: undefined
+        };
+      });
+
+      const newEdges = copiedEdges
+        .filter((edge: Edge) => idMap.has(edge.source) && idMap.has(edge.target))
+        .map((edge: Edge) => ({
+          ...edge,
+          id: `e-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          source: idMap.get(edge.source)!,
+          target: idMap.get(edge.target)!,
+          selected: true
+        }));
+
+      setNodes((nds) => nds.map(n => ({ ...n, selected: false })).concat(newNodes));
+      setEdges((eds) => eds.map(e => ({ ...e, selected: false })).concat(newEdges));
+
+      if (newNodes.length > 0) setSelectedNodeId(newNodes[0].id);
+    } catch (error) {
+      console.error('Failed to paste from clipboard', error);
+    }
+  }, [setNodes, setEdges, recordHistory, setSelectedNodeId]);
+
   return {
     updateNodeData,
     updateNodeType,
+    updateNodeZIndex,
     updateEdge,
     deleteNode,
     deleteEdge,
@@ -206,5 +313,7 @@ export const useFlowOperations = (
     handleAddAnnotation,
     handleAddSection,
     handleClear,
+    copySelection,
+    pasteSelection,
   };
 };
