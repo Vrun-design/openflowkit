@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     Zap, Settings, Layout, Command, Search,
-    Home, Clock, Loader2, Plus, Import, Image, FileCode, FileJson, GitBranch, Book
+    Home, Clock, Loader2, Plus, Import, Image, FileCode, FileJson, GitBranch, Book, ExternalLink
 } from 'lucide-react';
 import { useFlowStore } from '../store';
 import { useSnapshots } from '../hooks/useSnapshots';
@@ -101,10 +101,13 @@ export const HomePage: React.FC<HomePageProps> = ({
 
                     <a
                         href="#/docs"
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 text-[var(--brand-secondary)] hover:bg-slate-50 hover:text-slate-900 font-medium`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 text-[var(--brand-secondary)] hover:bg-slate-50 hover:text-slate-900 font-medium group`}
                     >
                         <Book className="w-4 h-4" />
-                        Documentation
+                        <span className="flex-1">Documentation</span>
+                        <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </a>
                 </div>
 
