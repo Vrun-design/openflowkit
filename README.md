@@ -26,7 +26,7 @@ FlowMind is the ultimate **White-Label Solution** for developers who need a prem
 
 ## 🔥 Key Features
 
-### �️ White-Label Brand Engine
+### ⚪ White-Label Brand Engine
 Make FlowMind your own. Our state-of-the-art theming system allows you to completely re-skin the editor:
 -   **Brand Kits**: create unlimited identity presets (e.g., "Client A", "Dark Mode", "Wireframe").
 -   **Dynamic Typography**: Automatically loads and applies **Google Fonts** to match your website.
