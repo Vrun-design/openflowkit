@@ -26,18 +26,22 @@ FlowMind is the ultimate **White-Label Solution** for developers who need a prem
 
 ## 🔥 Key Features
 
-### �️ White-Label Brand Engine
+### ⚪ White-Label Brand Engine
 Make FlowMind your own. Our state-of-the-art theming system allows you to completely re-skin the editor:
+![Brand Kit](public/readme/brandkit%201.png)
 -   **Brand Kits**: create unlimited identity presets (e.g., "Client A", "Dark Mode", "Wireframe").
 -   **Dynamic Typography**: Automatically loads and applies **Google Fonts** to match your website.
 -   **Smart Coloring**: Provide your brand's Primary Color, and we auto-generate a harmonious palette (Surface, Background, Accents).
 -   **UI Physics**: Toggle **Glassmorphism**, adjust **Corner Radiuses**, and fine-tune border weights.
+![Brand Kit](public/readme/brandkit%202.png)
+
 
 ### 💠 Design Systems & Styling
 Fine-grained control over how your diagrams look.
 - **Component-Level Styling**: Define exact styles for **Nodes** (Shape, Color, Border) and **Edges** (Stroke, Pattern, Routing).
 - **Design System Panel**: Manage your design tokens directly relative to the canvas.
 - **Smart Inheritance**: New nodes automatically inherit the active design system's properties.
+![Canvas Interface](public/readme/canvas%201.png)
 
 ### 🖌️ Native Figma Export
 Stop screenshotting your diagrams. FlowMind generates clean, structured SVGs that behave like native Figma layers.
@@ -53,12 +57,15 @@ First-class support for **Mermaid.js** and our own **FlowMind DSL**.
 ### 💎 Premium UX & Smart Editor
 - **Intelligent Properties Panel**: Context-aware side panel for editing Node/Edge properties with brand-aware controls.
 - **Keyboard Shortcuts**: `Cmd/Ctrl + K` Command Bar for instant access to every action.
+![Command Bar](public/readme/command_bar%201.png)
 - **Home Dashboard**: A beautiful, minimalist dashboard to manage your recent flows and brand settings.
+![Home Dashboard](public/readme/homepage%201.png)
 - **Drag & Drop**: Intuitive drag-and-drop interface for image assets and nodes.
 - **Universal Handles**: Omni-directional connection points that just work.
 
 ### 🔑 Bring Your Own Key (BYOK)
 Use your own **Gemini API Key** to power the AI features.
+![AI Generation](public/readme/AI%201.png)
 -   **Privacy First**: Your key is stored locally in your browser and never sent to our servers.
 -   **Higher Limits**: Use your personal quota for heavy usage.
 -   **Cost Control**: Manage your own billing directly with Google.
@@ -73,6 +80,7 @@ Export your diagrams to the format you need.
 Powered by the **ELK Layout Engine** for professional-grade graph organization.
 - **4 Algorithms**: Layered (standard flow), Tree (org charts), Force (organic networks), and Radial.
 - **Animated Transitions**: Watch your graph smoothly reorganize itself.
+![Playback History](public/readme/playback%201.png)
 
 ---
 
