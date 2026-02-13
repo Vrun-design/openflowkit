@@ -40,6 +40,12 @@ Your job:
    - \`[system]\`
    - \`[note]\`
    - \`[section]\`
+   - \`[browser]\` (for web pages)
+   - \`[mobile]\` (for mobile apps)
+   - \`[button]\` (for UI buttons)
+   - \`[input]\` (for text fields)
+   - \`[icon]\` (Lucide icon name)
+   - \`[image]\` (image placeholder)
 
 3. Connections:
    - Use \`->\` for connections

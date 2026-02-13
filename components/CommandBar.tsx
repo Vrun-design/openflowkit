@@ -23,7 +23,9 @@ import { TemplatesView } from './command-bar/TemplatesView';
 import { SearchView } from './command-bar/SearchView';
 import { LayoutView } from './command-bar/LayoutView';
 import { VisualsView } from './command-bar/VisualsView';
+
 import { DesignSystemView } from './command-bar/DesignSystemView';
+import { WireframesView } from './command-bar/WireframesView';
 
 
 export const CommandBar: React.FC<CommandBarProps> = ({
@@ -129,6 +131,14 @@ export const CommandBar: React.FC<CommandBarProps> = ({
             type: 'navigation',
             view: 'visuals',
             description: 'Edge styles & theme'
+        },
+        {
+            id: 'wireframes',
+            label: 'Wireframe Elements...',
+            icon: <Layout className="w-4 h-4 text-purple-500" />,
+            type: 'navigation',
+            view: 'wireframes',
+            description: 'Browser, Mobile, UI Controls'
         },
         // Hidden Commands (Search only)
         ...(settings ? [
@@ -282,6 +292,12 @@ export const CommandBar: React.FC<CommandBarProps> = ({
                 {view === 'search' && (
                     <SearchView
                         nodes={nodes}
+                        onClose={onClose}
+                        handleBack={handleBack}
+                    />
+                )}
+                {view === 'wireframes' && (
+                    <WireframesView
                         onClose={onClose}
                         handleBack={handleBack}
                     />

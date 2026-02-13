@@ -23,6 +23,11 @@ import TextNode from './TextNode';
 import GroupNode from './GroupNode';
 import SwimlaneNode from './SwimlaneNode';
 import ImageNode from './ImageNode';
+
+import BrowserNode from './custom-nodes/BrowserNode';
+import MobileNode from './custom-nodes/MobileNode';
+import IconNode from './custom-nodes/IconNode';
+import { WireframeButtonNode, WireframeInputNode, WireframeImageNode, WireframeIconNode } from './custom-nodes/WireframeNodes';
 import { CustomBezierEdge, CustomSmoothStepEdge, CustomStepEdge } from './CustomEdge';
 import CustomConnectionLine from './CustomConnectionLine';
 import { ConnectMenu } from './ConnectMenu';
@@ -199,6 +204,14 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         group: GroupNode,
         swimlane: SwimlaneNode,
         image: ImageNode,
+
+        browser: BrowserNode,
+        mobile: MobileNode,
+        wireframe_button: WireframeButtonNode,
+        wireframe_input: WireframeInputNode,
+        wireframe_image: WireframeImageNode,
+        wireframe_icon: WireframeIconNode,
+        icon: IconNode,
     }), []);
 
     const edgeTypes = useMemo(() => ({

@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { Node } from 'reactflow';
 import { NodeData } from '../../types';
-import { Bold, Italic, List, ListOrdered, Code, Quote, Heading1, CheckSquare, Copy, Trash2, Box, AlignLeft, Image as ImageIcon, Type } from 'lucide-react';
+import { Bold, Italic, List, ListOrdered, Code, Quote, Heading1, CheckSquare, Copy, Trash2, Box, AlignLeft, Image as ImageIcon, Type, Layout } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { ShapeSelector } from './ShapeSelector';
 import { ColorPicker } from './ColorPicker';
@@ -81,6 +81,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
     const isAnnotation = selectedNode.type === 'annotation';
     const isText = selectedNode.type === 'text';
     const isImage = selectedNode.type === 'image';
+    const isWireframe = selectedNode.type === 'browser' || selectedNode.type === 'mobile';
 
     const labelInputRef = useRef<HTMLTextAreaElement>(null);
     const descInputRef = useRef<HTMLTextAreaElement>(null);
@@ -92,18 +93,62 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
         <>
             <hr className="border-slate-100" />
 
+            {/* Wireframe Variant Section */}
+            {isWireframe && (
+                <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Layout className="w-3.5 h-3.5" /> Wireframe Variant
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                        {selectedNode.type === 'browser' ? (
+                            <>
+                                {['landing', 'dashboard', 'form', 'modal', 'cookie', 'pricing'].map((variant) => (
+                                    <button
+                                        key={variant}
+                                        onClick={() => onChange(selectedNode.id, { variant })}
+                                        className={`px-2 py-2 rounded text-xs font-medium border transition-all
+                                            ${(selectedNode.data?.variant || 'default') === variant
+                                                ? 'bg-[var(--brand-primary-50)] border-[var(--brand-primary-200)] text-[var(--brand-primary)]'
+                                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                                    >
+                                        {variant.charAt(0).toUpperCase() + variant.slice(1)}
+                                    </button>
+                                ))}
+                            </>
+                        ) : (
+                            <>
+                                {['login', 'social', 'chat', 'product', 'list'].map((variant) => (
+                                    <button
+                                        key={variant}
+                                        onClick={() => onChange(selectedNode.id, { variant })}
+                                        className={`px-2 py-2 rounded text-xs font-medium border transition-all
+                                            ${(selectedNode.data?.variant || 'default') === variant
+                                                ? 'bg-[var(--brand-primary-50)] border-[var(--brand-primary-200)] text-[var(--brand-primary)]'
+                                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                                    >
+                                        {variant.charAt(0).toUpperCase() + variant.slice(1)}
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Appearance Section */}
-            <div className="space-y-3">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Box className="w-3.5 h-3.5" /> Appearance
-                </label>
-                {!isAnnotation && !isText && !isImage && (
-                    <ShapeSelector
-                        selectedShape={selectedNode.data?.shape}
-                        onChange={(shape) => onChange(selectedNode.id, { shape })}
-                    />
-                )}
-            </div>
+            {!isWireframe && (
+                <div className="space-y-3">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Box className="w-3.5 h-3.5" /> Appearance
+                    </label>
+                    {!isAnnotation && !isText && !isImage && (
+                        <ShapeSelector
+                            selectedShape={selectedNode.data?.shape}
+                            onChange={(shape) => onChange(selectedNode.id, { shape })}
+                        />
+                    )}
+                </div>
+            )}
 
             {/* Image Settings Section */}
             {isImage && (
@@ -170,7 +215,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
                 </div>
 
                 {/* Description */}
-                {!isText && !isImage && (
+                {!isText && !isImage && !isWireframe && (
                     <div className="relative border border-slate-200 rounded-[var(--brand-radius)] bg-[var(--brand-background)] overflow-hidden focus-within:ring-2 focus-within:ring-[var(--brand-primary)] focus-within:border-transparent transition-all">
                         <MarkdownToolbar onInsert={descEditor.insert} />
                         <textarea
@@ -228,7 +273,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
                 />
             )}
 
-            {!isAnnotation && !isText && !isImage && (
+            {!isAnnotation && !isText && !isImage && !isWireframe && (
                 <IconPicker
                     selectedIcon={selectedNode.data?.icon}
                     customIconUrl={selectedNode.data?.customIconUrl}

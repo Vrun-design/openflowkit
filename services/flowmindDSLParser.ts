@@ -17,6 +17,12 @@ const NODE_TYPE_MAP: Record<string, string> = {
     system: 'custom',
     note: 'annotation',
     section: 'section',
+    browser: 'browser',
+    mobile: 'mobile',
+    button: 'wireframe_button',
+    input: 'wireframe_input',
+    icon: 'icon',
+    placeholder: 'wireframe_image',
 };
 
 /**

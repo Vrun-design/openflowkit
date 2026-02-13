@@ -149,16 +149,16 @@ export const HomePage: React.FC<HomePageProps> = ({
                                     <p className="text-[var(--brand-secondary)] text-xs">Start from scratch or import an existing diagram.</p>
                                     <div className="mt-6 flex items-center justify-center gap-3">
                                         <button
-                                            onClick={onLaunch}
-                                            className="px-4 py-2 text-xs font-medium text-white bg-[var(--brand-primary)] rounded-[var(--brand-radius)] shadow-sm hover:opacity-90 transition-all"
-                                        >
-                                            Create New
-                                        </button>
-                                        <button
                                             onClick={onImportJSON}
                                             className="px-4 py-2 text-xs font-medium text-[var(--brand-secondary)] bg-[var(--brand-surface)] border border-slate-200 rounded-[var(--brand-radius)] shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-all"
                                         >
                                             Open File
+                                        </button>
+                                        <button
+                                            onClick={onLaunch}
+                                            className="px-4 py-2 text-xs font-medium text-white bg-[var(--brand-primary)] rounded-[var(--brand-radius)] shadow-sm hover:opacity-90 transition-all"
+                                        >
+                                            Create New
                                         </button>
                                     </div>
                                 </div>

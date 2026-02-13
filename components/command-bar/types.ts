@@ -2,7 +2,7 @@ import { Node, Edge } from 'reactflow';
 import { FlowTemplate } from '../../services/templates';
 import { LayoutAlgorithm } from '../../services/elkLayout';
 
-export type CommandView = 'root' | 'ai' | 'mermaid' | 'flowmind' | 'templates' | 'search' | 'layout' | 'visuals' | 'design-system';
+export type CommandView = 'root' | 'ai' | 'mermaid' | 'flowmind' | 'templates' | 'search' | 'layout' | 'visuals' | 'design-system' | 'wireframes';
 
 export interface CommandItem {
     id: string;

@@ -30,6 +30,7 @@ export interface NodeData {
   fontFamily?: string;
   backgroundColor?: string;
   transparency?: number; // 0-1
+  variant?: string; // wireframe preset key (e.g. 'landing', 'modal')
 }
 
 export interface AIRequestParams {
