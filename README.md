@@ -10,7 +10,7 @@ Build beautiful, branded flowcharts with a tool that feels like a billion-dollar
 
 FlowMind is the ultimate **White-Label Solution** for developers who need a premium diagramming tool embedded in their workflow, or just want a better way to diagram code.
 
-![FlowMind Banner](public/Flow_mind_1.png)
+![FlowMind Banner](public/readme/canvas%201.png)
 
 ---
 
