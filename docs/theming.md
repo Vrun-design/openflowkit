@@ -11,9 +11,7 @@ Navigate to **Settings > Brand Kit** to configure:
 *   **Surface**: The color of panels and sidebars.
 *   **Logo**: Upload your own logo to replace the FlowMind icon in the sidebar.
 
-## Dark Mode
 
-FlowMind respects your system preference by default but can be toggled manually in the **General Settings**.
 
 ## Export Settings
 

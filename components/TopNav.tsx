@@ -163,6 +163,11 @@ export const TopNav: React.FC<TopNavProps> = ({
                                 <span className="font-bold text-slate-800 tracking-tight text-lg leading-none">{brandConfig.appName}</span>
                             </div>
                         )}
+
+                        {/* BETA Chip */}
+                        <div className="flex items-center justify-center px-1.5 py-0.5 rounded-full bg-[var(--brand-primary-50)] border border-[var(--brand-primary-200)]">
+                            <span className="text-[10px] font-extrabold text-[var(--brand-primary)] tracking-widest leading-none">BETA</span>
+                        </div>
                     </div>
                 </Tooltip>
             </div>
