@@ -1,5 +1,5 @@
 {
-  "name": "FlowMind AI",
-  "description": "An intelligent, high-fidelity diagramming tool for developers. Create complex flowcharts manually or generate them instantly using Gemini AI. Features export capabilities and a modern, responsive UI.",
+  "name": "OpenFlowKit",
+  "description": "The bridge between Diagram-as-Code and visual whiteboarding. Instantly render Mermaid/DSL into editable UI, export to Figma, and iterate with Flowpilot.",
   "requestFramePermissions": []
 }

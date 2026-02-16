@@ -1,0 +1,27 @@
+{
+    "name": "@openflowkit/core",
+    "version": "0.1.0",
+    "description": "Core logic for OpenFlowKit, including Mermaid parsing and brand services.",
+    "type": "module",
+    "main": "./dist/openflowkit-core.cjs.js",
+    "module": "./dist/openflowkit-core.es.js",
+    "types": "./index.ts",
+    "files": [
+        "dist",
+        "index.ts",
+        "mermaidParser.ts"
+    ],
+    "keywords": [
+        "diagram",
+        "mermaid",
+        "react-flow",
+        "flowchart",
+        "white-label"
+    ],
+    "author": "OpenFlowKit",
+    "license": "MIT",
+    "peerDependencies": {
+        "react": ">=18",
+        "react-dom": ">=18"
+    }
+}
