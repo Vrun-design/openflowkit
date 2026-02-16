@@ -15,7 +15,7 @@ import ErrorBoundary from './ErrorBoundary';
 import { FlowTemplate } from '../services/templates';
 import { toMermaid, toPlantUML } from '../services/exportService';
 import { toFigmaSVG } from '../services/figmaExportService';
-import { toFlowMindDSL } from '../services/flowmindDSLExporter';
+import { toOpenFlowDSL } from '../services/openFlowDSLExporter';
 import { useSnapshots } from '../hooks/useSnapshots';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useFlowHistory } from '../hooks/useFlowHistory';
@@ -223,11 +223,11 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
         }
     }, [nodes, edges]);
 
-    const handleExportFlowMindDSL = useCallback(async () => {
-        const text = toFlowMindDSL(nodes, edges);
+    const handleExportOpenFlowDSL = useCallback(async () => {
+        const text = toOpenFlowDSL(nodes, edges);
         try {
             await navigator.clipboard.writeText(text);
-            addToast('FlowMind DSL copied to clipboard!', 'success');
+            addToast('OpenFlow DSL copied to clipboard!', 'success');
         } catch (err) {
             console.error('Failed to copy', err);
             addToast('Failed to copy DSL', 'error');
@@ -277,7 +277,7 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
                 onExportJSON={handleExportJSON}
                 onExportMermaid={handleExportMermaid}
                 onExportPlantUML={handleExportPlantUML}
-                onExportFlowMindDSL={handleExportFlowMindDSL}
+                onExportOpenFlowDSL={handleExportOpenFlowDSL}
                 onExportFigma={handleExportFigma}
                 onImportJSON={handleImportJSON}
                 onHistory={() => setIsHistoryOpen(true)}

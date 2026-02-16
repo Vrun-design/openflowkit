@@ -1,9 +1,9 @@
 
-FlowMind uses a human-readable JSON structure to represent flows. This allows for programmatic generation and easy diffing in version control.
+OpenFlowKit uses a human-readable JSON structure to represent flows. This allows for programmatic generation and easy diffing in version control.
 
 ## Structure
 
-A FlowMind document consists of two main arrays: `nodes` and `edges`.
+A OpenFlowKit document consists of two main arrays: `nodes` and `edges`.
 
 ```json
 {

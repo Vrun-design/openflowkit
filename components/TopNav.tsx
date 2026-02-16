@@ -28,7 +28,7 @@ interface TopNavProps {
     onExportJSON: () => void;
     onExportMermaid: () => void;
     onExportPlantUML: () => void;
-    onExportFlowMindDSL: () => void;
+    onExportOpenFlowDSL: () => void;
     onExportFigma: () => void;
     onImportJSON: () => void;
     onHistory: () => void;
@@ -53,7 +53,7 @@ export const TopNav: React.FC<TopNavProps> = ({
     onExportJSON,
     onExportMermaid,
     onExportPlantUML,
-    onExportFlowMindDSL,
+    onExportOpenFlowDSL,
     onExportFigma,
     onImportJSON,
     onHistory,
@@ -123,7 +123,7 @@ export const TopNav: React.FC<TopNavProps> = ({
                     )}
                 </div>
 
-                <Tooltip text={brandConfig.appName || "FlowMind AI Canvas"} side="bottom">
+                <Tooltip text={brandConfig.appName || "OpenFlowKit AI Canvas"} side="bottom">
                     <div className="flex items-center gap-3">
                         {/* Logo Icon (Square) */}
                         {(brandConfig.logoStyle === 'icon' || brandConfig.logoStyle === 'both') && (
@@ -163,6 +163,11 @@ export const TopNav: React.FC<TopNavProps> = ({
                                 <span className="font-bold text-slate-800 tracking-tight text-lg leading-none">{brandConfig.appName}</span>
                             </div>
                         )}
+
+                        {/* BETA Chip */}
+                        <div className="flex items-center justify-center px-1.5 py-0.5 rounded-full bg-[var(--brand-primary-50)] border border-[var(--brand-primary-200)]">
+                            <span className="text-[10px] font-extrabold text-[var(--brand-primary)] tracking-widest leading-none">BETA</span>
+                        </div>
                     </div>
                 </Tooltip>
             </div>
@@ -222,7 +227,7 @@ export const TopNav: React.FC<TopNavProps> = ({
                         onExportJSON={onExportJSON}
                         onExportMermaid={onExportMermaid}
                         onExportPlantUML={onExportPlantUML}
-                        onExportFlowMindDSL={onExportFlowMindDSL}
+                        onExportOpenFlowDSL={onExportOpenFlowDSL}
                         onExportFigma={onExportFigma}
                     />
                 </div>

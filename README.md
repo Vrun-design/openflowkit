@@ -1,20 +1,29 @@
-# FlowMind ⚡️
+# OpenFlowKit ⚡️
 
-![FlowMind Banner](https://img.shields.io/badge/FlowMind-Diagram_As_Code-indigo?style=for-the-badge&logo=github)
+![FlowMind Banner](https://img.shields.io/badge/OpenFlowKit-Diagram_As_Code-indigo?style=for-the-badge&logo=github)
 ![React](https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+[![Product Hunt](https://img.shields.io/badge/Product_Hunt-Launch_Soon-orange?style=for-the-badge&logo=product-hunt)](https://www.producthunt.com/posts/openflowkit)
 
 **The Open-Source, White-Label Diagramming Canvas.**  
 Build beautiful, branded flowcharts with a tool that feels like a billion-dollar startup product. **100% Free & Open Source.**
 
-FlowMind is the ultimate **White-Label Solution** for developers who need a premium diagramming tool embedded in their workflow, or just want a better way to diagram code.
+**OpenFlowKit** is the ultimate **White-Label Solution** for developers who need a premium diagramming tool embedded in their workflow, or just want a better way to diagram code.
 
 ![FlowMind Banner](public/readme/canvas%201.png)
 
+## 📋 Table of Contents
+- [Why OpenFlowKit?](#-why-openflowkit)
+- [Key Features](#-key-features)
+- [Architecture](#-architecture--project-structure)
+- [Getting Started](#-getting-started)
+- [Contributing](#-contributing)
+- [License](#-license)
+
 ---
 
-## 🌟 Why FlowMind?
+## 🌟 Why OpenFlowKit?
 
 -   **MIT Licensed**: Completely free to use, modify, and integrate into your own commercial projects.
 -   **True White-Label**: The entire UI dynamically adapts to **YOUR** brand. It's designed to look like *your* product, not ours.
@@ -27,7 +36,7 @@ FlowMind is the ultimate **White-Label Solution** for developers who need a prem
 ## 🔥 Key Features
 
 ### ⚪ White-Label Brand Engine
-Make FlowMind your own. Our state-of-the-art theming system allows you to completely re-skin the editor:
+Make OpenFlowKit your own. Our state-of-the-art theming system allows you to completely re-skin the editor:
 
 ![Brand Kit](public/readme/brandkit%201.png)
 
@@ -139,8 +148,8 @@ FlowMind/
 
 1. **Clone the repo**
    ```bash
-   git clone https://github.com/Vrun-design/FlowMind.git
-   cd FlowMind
+    git clone https://github.com/Vrun-design/OpenFlowKit.git
+    cd OpenFlowKit
    ```
 
 2. **Install dependencies**
@@ -161,7 +170,7 @@ We want FlowMind to be the standard open-source diagramming tool for developers.
 PRs are highly encouraged!
 
 - **Found a bug?** Open an issue.
-- **Want a feature?** Start a discussion.
+- **Want a feature?** Start a discussion or open a PR.
 - **Love the tool?** ⭐ **Star this repo!** It helps us ship faster.
 
 ---

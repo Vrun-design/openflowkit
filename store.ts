@@ -18,7 +18,7 @@ import { assignSmartHandles } from './services/smartEdgeRouting';
 // --- Default Design System ---
 export const DEFAULT_DESIGN_SYSTEM: DesignSystem = {
     id: 'default',
-    name: 'FlowMind Default',
+    name: 'OpenFlowKit Default',
     description: 'The classic FlowMind look and feel.',
     colors: {
         primary: '#6366f1', // Indigo 500
@@ -93,7 +93,7 @@ export interface BrandConfig {
 }
 
 export const DEFAULT_BRAND_CONFIG: BrandConfig = {
-    appName: 'FlowMind',
+    appName: 'OpenFlowKit',
     logoUrl: null,
     faviconUrl: null,
     apiKey: undefined,
@@ -554,7 +554,7 @@ export const useFlowStore = create<FlowState>()(
             setSelectedEdgeId: (id) => set({ selectedEdgeId: id }),
         }),
         {
-            name: 'flowmind-storage', // unique name
+            name: 'openflowkit-storage', // unique name
             partialize: (state) => ({
                 // Only persist these fields
                 tabs: state.tabs,

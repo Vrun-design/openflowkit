@@ -36,7 +36,7 @@ const NODE_TYPE_MAP: Record<string, string> = {
  *   Source Label -> Target Label
  *   Source Label ->|edge label| Target Label
  */
-export const parseFlowMindDSL = (input: string): ParseResult => {
+export const parseOpenFlowDSL = (input: string): ParseResult => {
     const lines = input.split('\n');
     const declaredNodes: Array<{ label: string; type: string }> = [];
     const declaredEdges: Array<{ sourceLabel: string; targetLabel: string; label: string }> = [];

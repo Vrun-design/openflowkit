@@ -3,9 +3,9 @@ import { Node, Edge } from 'reactflow';
 import { Code2, FileCode, AlertCircle, BookOpen, Loader2, Play } from 'lucide-react';
 import { ViewHeader } from './ViewHeader';
 import { toMermaid } from '../../services/exportService';
-import { toFlowMindDSL } from '../../services/flowmindDSLExporter';
+import { toOpenFlowDSL } from '../../services/openFlowDSLExporter';
 import { parseMermaid } from '../../services/mermaidParser';
-import { parseFlowMindDSL } from '../../services/flowmindDSLParser';
+import { parseOpenFlowDSL } from '../../services/openFlowDSLParser';
 import { getElkLayout } from '../../services/elkLayout';
 import { assignSmartHandles } from '../../services/smartEdgeRouting';
 import { Button } from '../ui/Button';
@@ -13,7 +13,12 @@ import { Textarea } from '../ui/Textarea';
 import { useFlowStore } from '../../store';
 
 interface CodeViewProps {
-    mode: 'mermaid' | 'flowmind';
+    mode: 'mermaid' | 'flowmind'; // Keeping mode 'flowmind' for now as internal identifier or renaming? Let's check where mode is used.
+    // If commandBarView state uses 'flowmind', we should probably rename that too, but that iterates globally.
+    // user asked for "default from we had was called FlowMind".
+    // I will keep the internal key 'flowmind' for the mode if it simplifies things, or rename it if I can finding all usages.
+    // The previous step showed `commandBarView` type in FlowEditor.
+    // Let's stick to renaming the UI strings first.
     nodes: Node[];
     edges: Edge[];
     onApply: (nodes: Node[], edges: Edge[]) => void;
@@ -45,7 +50,7 @@ export const CodeView = ({
     };
 
     const handleApply = async () => {
-        const res = mode === 'mermaid' ? parseMermaid(code) : parseFlowMindDSL(code);
+        const res = mode === 'mermaid' ? parseMermaid(code) : parseOpenFlowDSL(code);
         if (res.error) {
             setError(res.error);
             return;

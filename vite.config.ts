@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, '.'),
       }
     },
-    base: mode === 'production' ? '/FlowMind/' : '/',
+    base: './',
     test: {
       globals: true,
       environment: 'jsdom',

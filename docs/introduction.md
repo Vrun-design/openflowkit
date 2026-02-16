@@ -1,6 +1,6 @@
-**FlowMind** is a next-generation diagramming tool that bridges the gap between AI-generated visualization and precise, code-based editing. Designed for developers, architects, and product managers, FlowMind allows you to create complex flowcharts, sequence diagrams, and system architectures using natural language or our specialized DSL.
+**OpenFlowKit** is a next-generation diagramming tool that bridges the gap between AI-generated visualization and precise, code-based editing. Designed for developers, architects, and product managers, OpenFlowKit allows you to create complex flowcharts, sequence diagrams, and system architectures using natural language or our specialized DSL.
 
-## Why FlowMind?
+## Why OpenFlowKit?
 
 Traditional diagramming tools often force a choice between:
 1.  **Drag-and-drop tools**: Easy to start, but hard to maintain and version control.

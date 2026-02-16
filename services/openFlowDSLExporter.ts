@@ -13,7 +13,7 @@ const TYPE_TO_DSL: Record<string, string> = {
 /**
  * Export FlowMind nodes/edges to our custom DSL text format.
  */
-export const toFlowMindDSL = (nodes: Node[], edges: Edge[]): string => {
+export const toOpenFlowDSL = (nodes: Node[], edges: Edge[]): string => {
     const lines: string[] = [];
 
     lines.push('flow: "Untitled Flow"');

@@ -70,7 +70,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunch }) => {
                         <button onClick={onLaunch} className="h-12 px-8 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all shadow-[0_0_30px_rgba(79,70,229,0.3)] hover:shadow-[0_0_50px_rgba(79,70,229,0.5)] flex items-center gap-2">
                             Start Creating <ArrowRight className="w-4 h-4" />
                         </button>
-                        <a href="https://github.com/Vrun-design/FlowMind" target="_blank" rel="noreferrer" className="h-12 px-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium transition-all backdrop-blur-sm flex items-center">
+                        <a href="https://github.com/Vrun-design/OpenFlowKit" target="_blank" rel="noreferrer" className="h-12 px-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium transition-all backdrop-blur-sm flex items-center">
                             Star on GitHub
                         </a>
                     </div>

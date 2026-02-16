@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Node, Edge, useReactFlow } from 'reactflow';
 import { generateDiagramFromChat, ChatMessage } from '../services/geminiService';
-import { parseFlowMindDSL } from '../services/flowmindDSLParser';
+import { parseOpenFlowDSL } from '../services/openFlowDSLParser';
 import { getElkLayout } from '../services/elkLayout';
 import { createDefaultEdge } from '../constants';
 import { useFlowStore } from '../store';
@@ -75,7 +75,7 @@ export const useAIGeneration = (
       // 4. Parse DSL
       // Strip markdown code blocks if present
       const cleanDSL = dslText.replace(/```(yaml|flowmind|)?/g, '').replace(/```/g, '').trim();
-      const parseResult = parseFlowMindDSL(cleanDSL);
+      const parseResult = parseOpenFlowDSL(cleanDSL);
 
       if (parseResult.error) {
         throw new Error(parseResult.error);

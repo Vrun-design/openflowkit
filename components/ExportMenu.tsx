@@ -8,7 +8,7 @@ interface ExportMenuProps {
     onExportJSON: () => void;
     onExportMermaid: () => void;
     onExportPlantUML: () => void;
-    onExportFlowMindDSL: () => void;
+    onExportOpenFlowDSL: () => void;
     onExportFigma: () => void;
 }
 
@@ -17,7 +17,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
     onExportJSON,
     onExportMermaid,
     onExportPlantUML,
-    onExportFlowMindDSL,
+    onExportOpenFlowDSL,
     onExportFigma,
 }) => {
     const { brandConfig } = useFlowStore();
@@ -28,7 +28,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         { key: 'png', label: 'Export PNG', hint: 'Transparent (4K)', Icon: Image },
         { key: 'jpeg', label: 'Export JPG', hint: 'White Background (4K)', Icon: Image },
         { key: 'json', label: 'JSON File', hint: 'Download', Icon: FileJson },
-        { key: 'flowmind', label: `${brandConfig.appName} DSL`, hint: 'Copy to clipboard', Icon: Wand2 },
+        { key: 'openflow', label: `${brandConfig.appName} DSL`, hint: 'Copy to clipboard', Icon: Wand2 },
         { key: 'mermaid', label: 'Mermaid', hint: 'Copy to clipboard', Icon: GitBranch },
         { key: 'plantuml', label: 'PlantUML', hint: 'Copy to clipboard', Icon: FileCode },
         { key: 'figma', label: 'Figma Editable', hint: 'Copy to clipboard', Icon: Figma },
@@ -50,7 +50,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         png: () => onExportPNG('png'),
         jpeg: () => onExportPNG('jpeg'),
         json: onExportJSON,
-        flowmind: onExportFlowMindDSL,
+        openflow: onExportOpenFlowDSL,
         mermaid: onExportMermaid,
         plantuml: onExportPlantUML,
         figma: onExportFigma,

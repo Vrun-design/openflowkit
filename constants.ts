@@ -18,7 +18,7 @@ export const DEFAULT_EDGE_OPTIONS = {
   labelBgBorderRadius: 4,
 };
 
-/** Creates a fully-configured edge with standard FlowMind styling. */
+/** Creates a fully-configured edge with standard OpenFlow styling. */
 export const createDefaultEdge = (
   source: string,
   target: string,
