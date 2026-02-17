@@ -13,6 +13,6 @@ Use this section to tell people about which versions of your project are current
 
 We take security seriously. If you discover a security vulnerability within OpenFlowKit, please do NOT create a public GitHub issue.
 
- Instead, please report it [here]([url](https://docs.google.com/forms/d/e/1FAIpQLSd0hE_WTHEM8frJyZ_WlDQI8jrkGNpFu3RGCiJCmC-xp-Wm6g/viewform)).
+ Instead, please report it [here](https://docs.google.com/forms/d/e/1FAIpQLSd0hE_WTHEM8frJyZ_WlDQI8jrkGNpFu3RGCiJCmC-xp-Wm6g/viewform).
 
 We will create a fix and release a patch as soon as possible.
