@@ -44,6 +44,34 @@ interface FlowCanvasProps {
     isSelectMode: boolean;
 }
 
+const nodeTypes = {
+    start: CustomNode,
+    process: CustomNode,
+    decision: CustomNode,
+    end: CustomNode,
+    custom: CustomNode,
+    annotation: AnnotationNode,
+    section: SectionNode,
+    text: TextNode,
+    group: GroupNode,
+    swimlane: SwimlaneNode,
+    image: ImageNode,
+
+    browser: BrowserNode,
+    mobile: MobileNode,
+    wireframe_button: WireframeButtonNode,
+    wireframe_input: WireframeInputNode,
+    wireframe_image: WireframeImageNode,
+    wireframe_icon: WireframeIconNode,
+    icon: IconNode,
+};
+
+const edgeTypes = {
+    default: CustomBezierEdge,
+    smoothstep: CustomSmoothStepEdge,
+    step: CustomStepEdge,
+};
+
 export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     undo,
     redo,
@@ -181,37 +209,6 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         closeContextMenu();
     }, [closeContextMenu]);
 
-
-
-
-    // --- Memoized Types ---
-    const nodeTypes = useMemo(() => ({
-        start: CustomNode,
-        process: CustomNode,
-        decision: CustomNode,
-        end: CustomNode,
-        custom: CustomNode,
-        annotation: AnnotationNode,
-        section: SectionNode,
-        text: TextNode,
-        group: GroupNode,
-        swimlane: SwimlaneNode,
-        image: ImageNode,
-
-        browser: BrowserNode,
-        mobile: MobileNode,
-        wireframe_button: WireframeButtonNode,
-        wireframe_input: WireframeInputNode,
-        wireframe_image: WireframeImageNode,
-        wireframe_icon: WireframeIconNode,
-        icon: IconNode,
-    }), []);
-
-    const edgeTypes = useMemo(() => ({
-        default: CustomBezierEdge,
-        smoothstep: CustomSmoothStepEdge,
-        step: CustomStepEdge,
-    }), []);
 
     const [isConnecting, setIsConnecting] = useState(false);
 

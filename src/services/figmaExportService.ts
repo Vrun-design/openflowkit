@@ -355,9 +355,12 @@ export const toFigmaSVG = (nodes: Node[], edges: Edge[]): string => {
             }
             case 'capsule': {
                 const rx_cap = Math.min(w, h) / 2;
-                shapePath = `M${x + rx_cap},${y} L${x + w - rx_cap},${y} A${rx_cap},${rx_cap} 0 0,1 ${x + w},${y + h} L${x + rx_cap},${y + h} A${rx_cap},${rx_cap} 0 0,1 ${x},${y} Z`;
-                if (w < h) { // vertical capsule
-                    shapePath = `M${x},${y + rx_cap} L${x},${y + h - rx_cap} A${rx_cap},${rx_cap} 0 0,0 ${x + w},${y + h - rx_cap} L${x + w},${y + rx_cap} A${rx_cap},${rx_cap} 0 0,0 ${x},${y + rx_cap} Z`;
+                if (w >= h) {
+                    // Horizontal capsule
+                    shapePath = `M${x + rx_cap},${y} L${x + w - rx_cap},${y} A${rx_cap},${h / 2} 0 0,1 ${x + w - rx_cap},${y + h} L${x + rx_cap},${y + h} A${rx_cap},${h / 2} 0 0,1 ${x + rx_cap},${y} Z`;
+                } else {
+                    // Vertical capsule
+                    shapePath = `M${x},${y + rx_cap} L${x},${y + h - rx_cap} A${w / 2},${rx_cap} 0 0,0 ${x + w},${y + h - rx_cap} L${x + w},${y + rx_cap} A${w / 2},${rx_cap} 0 0,0 ${x},${y + rx_cap} Z`;
                 }
                 break;
             }
@@ -373,7 +376,7 @@ export const toFigmaSVG = (nodes: Node[], edges: Edge[]): string => {
         out.push(`    <path d="${shapePath}" fill="${theme.bg}" stroke="${theme.border}" stroke-width="2" />`);
         if (shapeExtra) out.push(`    ${shapeExtra}`);
 
-        // Layout: Icon (40×40) on the left, text to the right
+        // Layout: Centered vertical — icon on top, text below (matches canvas CustomNode.tsx)
         const pad = 16;
         let contentX = x;
         let contentW = w;
@@ -385,10 +388,25 @@ export const toFigmaSVG = (nodes: Node[], edges: Edge[]): string => {
         const centerX = contentX + contentW / 2;
         const centerY = cy;
 
+        // Calculate vertical positions for centered stacked layout
+        const iconBoxSize = 40;
+        const labelLineH = 16;
+        const subLabelLineH = 14;
+        const lLines = String(data.label || 'Node').split('\n');
+        const sLines = data.subLabel ? String(data.subLabel).split('\n') : [];
+        const gap = 8; // gap between icon and text, and between label and subLabel
+
+        // Calculate total content height to center everything vertically
+        let totalH = 0;
+        if (activeIcon) totalH += iconBoxSize + gap;
+        totalH += lLines.length * labelLineH;
+        if (data.subLabel) totalH += gap / 2 + sLines.length * subLabelLineH;
+
+        let cursorY = centerY - totalH / 2;
+
         if (activeIcon) {
-            const iconBoxSize = 40;
-            const iconBoxX = centerX - (iconBoxSize + 12 + 60) / 2; // Approximate centering with text
-            const iconBoxY = centerY - 20;
+            const iconBoxX = centerX - iconBoxSize / 2;
+            const iconBoxY = cursorY;
 
             // Icon background box
             out.push(`    <rect x="${iconBoxX}" y="${iconBoxY}" width="${iconBoxSize}" height="${iconBoxSize}" rx="8" fill="${theme.iconBg}" stroke="rgba(0,0,0,0.05)" stroke-width="1" />`);
@@ -401,45 +419,21 @@ export const toFigmaSVG = (nodes: Node[], edges: Edge[]): string => {
                 out.push(`    </g>`);
             }
 
-            // Text next to icon
-            const textX = iconBoxX + iconBoxSize + 12;
-            const lLines = String(data.label || 'Node').split('\n');
-            const sLines = String(data.subLabel || '').split('\n');
+            cursorY += iconBoxSize + gap;
+        }
 
-            if (data.subLabel) {
-                // Label
-                out.push(`    <text x="${textX}" y="${centerY - 8}" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="14" fill="${theme.text}">`);
-                lLines.forEach((l, i) => out.push(`      <tspan x="${textX}" dy="${i === 0 ? 0 : '1.2em'}">${escapeXml(l)}</tspan>`));
-                out.push(`    </text>`);
+        // Label text (centered)
+        out.push(`    <text x="${centerX}" y="${cursorY + labelLineH - 2}" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="14" fill="${theme.text}" text-anchor="middle">`);
+        lLines.forEach((l, i) => out.push(`      <tspan x="${centerX}" dy="${i === 0 ? 0 : '1.2em'}">${escapeXml(l)}</tspan>`));
+        out.push(`    </text>`);
+        cursorY += lLines.length * labelLineH;
 
-                // SubLabel
-                out.push(`    <text x="${textX}" y="${centerY + 8 + (lLines.length - 1) * 14}" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="${theme.subText}">`);
-                sLines.forEach((l, i) => out.push(`      <tspan x="${textX}" dy="${i === 0 ? 0 : '1.2em'}">${escapeXml(l)}</tspan>`));
-                out.push(`    </text>`);
-            } else {
-                out.push(`    <text x="${textX}" y="${centerY + 5}" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="14" fill="${theme.text}">`);
-                lLines.forEach((l, i) => out.push(`      <tspan x="${textX}" dy="${i === 0 ? 0 : '1.2em'}">${escapeXml(l)}</tspan>`));
-                out.push(`    </text>`);
-            }
-
-        } else {
-            // No icon — center text
-            const lLines = String(data.label || 'Node').split('\n');
-            const sLines = String(data.subLabel || '').split('\n');
-
-            if (data.subLabel) {
-                out.push(`    <text x="${centerX}" y="${centerY - 8}" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="14" fill="${theme.text}" text-anchor="middle">`);
-                lLines.forEach((l, i) => out.push(`      <tspan x="${centerX}" dy="${i === 0 ? 0 : '1.2em'}">${escapeXml(l)}</tspan>`));
-                out.push(`    </text>`);
-
-                out.push(`    <text x="${centerX}" y="${centerY + 8 + (lLines.length - 1) * 14}" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="${theme.subText}" text-anchor="middle">`);
-                sLines.forEach((l, i) => out.push(`      <tspan x="${centerX}" dy="${i === 0 ? 0 : '1.2em'}">${escapeXml(l)}</tspan>`));
-                out.push(`    </text>`);
-            } else {
-                out.push(`    <text x="${centerX}" y="${centerY + 5}" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="14" fill="${theme.text}" text-anchor="middle">`);
-                lLines.forEach((l, i) => out.push(`      <tspan x="${centerX}" dy="${i === 0 ? 0 : '1.2em'}">${escapeXml(l)}</tspan>`));
-                out.push(`    </text>`);
-            }
+        // SubLabel text (centered, smaller)
+        if (data.subLabel) {
+            cursorY += gap / 2;
+            out.push(`    <text x="${centerX}" y="${cursorY + subLabelLineH - 2}" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="${theme.subText}" text-anchor="middle">`);
+            sLines.forEach((l, i) => out.push(`      <tspan x="${centerX}" dy="${i === 0 ? 0 : '1.2em'}">${escapeXml(l)}</tspan>`));
+            out.push(`    </text>`);
         }
 
         out.push(`  </g>`);
@@ -455,7 +449,9 @@ export const toFigmaSVG = (nodes: Node[], edges: Edge[]): string => {
         const h = node.height || 30;
         const data = node.data || {};
         const color = data.color || 'slate';
-        const theme = getNodeTheme(color); // Reuse node theme for text color
+        const theme = getNodeTheme(color);
+
+        out.push(`  <g id="text-${node.id}">`);
 
         // Background
         if (data.backgroundColor) {
@@ -479,7 +475,7 @@ export const toFigmaSVG = (nodes: Node[], edges: Edge[]): string => {
         const lines = label.split('\n');
         const lineHeight = fontSize * 1.2;
         const totalTextH = lines.length * lineHeight;
-        const startY = y + (h - totalTextH) / 2 + fontSize - 2; // Vertical center approx
+        const startY = y + (h - totalTextH) / 2 + fontSize - 2;
 
         out.push(`    <text x="${x + w / 2}" y="${startY}" font-family="${fontFamily}" font-size="${fontSize}" font-weight="500" fill="${theme.text}" text-anchor="middle">`);
         lines.forEach((line, i) => {

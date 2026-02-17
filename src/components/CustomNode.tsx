@@ -61,8 +61,8 @@ const CustomNode = ({ data, type, selected }: NodeProps<NodeData>) => {
   const fontSizeClass = isNumericSize ? '' : (fontSize === 'small' ? 'text-xs' : fontSize === 'medium' ? 'text-sm' : fontSize === 'large' ? 'text-base' : 'text-lg');
   const fontSizeStyle = isNumericSize ? { fontSize: fontSize + 'px' } : {};
 
-  // Layout alignment: Always Center as requested
-  const layoutClass = 'flex-col text-center';
+  // Layout alignment: Dynamic
+  const layoutClass = 'flex-col';
   const hasIcon = IconComponent || data.customIconUrl;
 
   // -- Shape Rendering Logic -- //
@@ -194,12 +194,28 @@ const CustomNode = ({ data, type, selected }: NodeProps<NodeData>) => {
           </div>
 
           {/* Text Content */}
-          <div className={`flex flex-col min-w-0 ${!hasIcon ? 'w-full' : ''}`}>
-            <div className={`font-bold text-slate-800 leading-tight block break-words markdown-content [&>p]:m-0 ${fontFamilyClass} ${fontSizeClass}`} style={{ ...fontSizeStyle, fontFamily: 'inherit' }}>
+          <div className={`flex flex-col min-w-0 ${!hasIcon ? 'w-full' : ''} ${fontFamilyClass}`} style={{ textAlign: data.align || 'center', ...fontFamilyStyle }}>
+            <div
+              className={`leading-tight block break-words markdown-content [&>p]:m-0 ${fontSizeClass}`}
+              style={{
+                ...fontSizeStyle,
+                // fontFamily: 'inherit', // Redundant if parent has class
+                fontWeight: data.fontWeight || 'bold',
+                fontStyle: data.fontStyle || 'normal',
+              }}
+            >
               <MemoizedMarkdown content={data.label || 'Node'} />
             </div>
             {data.subLabel && (
-              <div className="text-xs text-slate-600 mt-1 font-medium leading-normal markdown-content break-words">
+              <div
+                className="text-xs text-slate-600 mt-1 leading-normal markdown-content break-words"
+                style={{
+                  fontWeight: 'normal',
+                  fontStyle: 'normal',
+                  textAlign: data.align || 'center',
+                  opacity: 0.85
+                }}
+              >
                 <MemoizedMarkdown content={data.subLabel} />
               </div>
             )}

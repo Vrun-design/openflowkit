@@ -1,6 +1,6 @@
-# FlowMind DSL Syntax Guide
+# FlowMind DSL Syntax Guide (V2)
 
-FlowMind uses a concise, human-readable Domain Specific Language (DSL) to define diagrams textually. This sets it apart from verbose formats like JSON or XML.
+FlowMind uses a concise, human-readable Domain Specific Language (DSL) to define diagrams textually. V2 adds support for explicit IDs, styling attributes, and groups.
 
 ## 1. Document Header
 Every DSL file starts with optional metadata:
@@ -13,13 +13,31 @@ direction: TB
 - `direction`: Layout direction. `TB` (Top-to-Bottom) or `LR` (Left-to-Right).
 
 ## 2. Nodes
-Define nodes using brackets for the type, followed by the label.
+Define nodes using brackets for the type. You can optionally provide an **ID** and **Attributes**.
 
+### Basic Syntax
 ```
 [start] Start Process
 [process] Handle Request
-[decision] Is Valid?
 [end] End Process
+```
+
+### With Explicit IDs
+Useful for clearer connections or when labels are duplicate/long.
+```
+[start] start: Start Process
+[process] proc1: Handle Request
+[end] end: End Process
+
+start -> proc1
+proc1 -> end
+```
+
+### With Attributes
+Customize node appearance using JSON-like syntax `{ key: "value" }`.
+```
+[process] p1: Critical Step { color: "red", icon: "alert-triangle" }
+[system] db: Database { icon: "database" }
 ```
 
 ### Supported Types:
@@ -32,25 +50,54 @@ Define nodes using brackets for the type, followed by the label.
 | `system` | Custom Node | Violet |
 | `note` | Sticky Note | Yellow |
 | `section` | Group Container | Blue |
+| `container`| Generic Group | Gray |
 
 *Note: If a node is used in an edge but not declared, it defaults to a `process` node.*
 
 ## 3. Edges (Connections)
-Connect nodes using arrows. You can use node labels directly.
+Connect nodes using arrows.
 
 ### Basic Connection
 ```
 Start Process -> Handle Request
 ```
 
+### Edge Styles
+Visual sugar for common edge types:
+- `->` : Default solid line
+- `-->` : Curved line
+- `..>` : Dashed line
+- `==>` : Thick/Heavy line
+
+```
+A ..> B  # Dashed connection
+C ==> D  # Thick connection
+```
+
 ### Labeled Connection
-Add text to the connection using pipes `|...|`.
+Add text to the connection using pipes `|...|` or attributes.
 ```
 Is Valid? ->|Yes| Save Data
 Is Valid? ->|No| Return Error
 ```
 
-## 4. Comments
+### Edge Attributes
+```
+A -> B { style: "dashed", label: "Async" }
+```
+
+## 4. Groups
+Group related nodes together using the `group` keyword.
+
+```
+group "Backend Services" {
+    [process] api: API Server
+    [system] db: Database
+    api -> db
+}
+```
+
+## 5. Comments
 Lines starting with `#` are ignored.
 
 ```
@@ -65,18 +112,22 @@ flow: "User Login Flow"
 direction: TB
 
 # Define Nodes
-[start] User Lands on Page
-[process] Enter Credentials
-[decision] Is Valid?
-[system] Auth Service
-[end] Dashboard
-[end] Error Message
+[start] user: User
+[process] login: Login Page { icon: "log-in" }
+
+group "Authentication" {
+    [system] auth: Auth Service
+    [decision] check: Is Valid?
+}
+
+[end] dash: Dashboard
+[end] err: Error
 
 # Define Logic
-User Lands on Page -> Enter Credentials
-Enter Credentials -> Auth Service
-Auth Service -> Is Valid?
+user -> login
+login -> auth
+auth -> check
 
-Is Valid? ->|Yes| Dashboard
-Is Valid? ->|No| Error Message
+check ->|Yes| dash { color: "green" }
+check ->|No| err { color: "red", style: "dashed" } // Dashed error path
 ```

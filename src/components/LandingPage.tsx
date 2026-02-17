@@ -31,9 +31,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunch }) => {
             <main className="relative z-10">
                 <HeroSection onLaunch={onLaunch} />
 
-                <SolutionSection />
-
                 <ProblemSection />
+
+                <SolutionSection />
 
                 {/* DEMO SECTION - Immersive Billboard Aesthetic */}
                 <section className="py-32 md:py-48 relative overflow-hidden bg-white">
@@ -51,7 +51,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunch }) => {
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-primary/5 border border-brand-primary/10 text-brand-primary/60 mb-10 font-mono text-[10px] uppercase tracking-[0.2em] font-bold relative overflow-hidden ring-1 ring-brand-primary/5">
                                 <div className="absolute inset-0 bg-brand-primary/5 animate-pulse"></div>
                                 <RefreshCw className="w-3 h-3 text-brand-blue relative z-10 animate-spin-slow" />
-                                <span className="relative z-10">Signature Sync Engine</span>
+                                <span className="relative z-10">Live Preview</span>
                             </div>
 
                             <h2 className="text-6xl md:text-[100px] font-bold text-brand-dark mb-10 tracking-[-0.05em] leading-[1.1] text-balance">
@@ -60,8 +60,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunch }) => {
                             </h2>
 
                             <p className="text-xl md:text-2xl text-brand-secondary leading-relaxed font-medium max-w-3xl text-balance opacity-80">
-                                The bridge between <span className="text-brand-dark font-bold border-b-2 border-brand-primary/20">napkin-ideas</span> and documented reality. <br className="hidden md:block" />
-                                Hand-drawn precision meet industrial-scale automation.
+                                Sketch your ideas fast. <br className="hidden md:block" />
+                                Export them production-ready.
                             </p>
                         </div>
 
@@ -82,8 +82,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLaunch }) => {
                                         <RefreshCw className="w-5 h-5 text-brand-blue" />
                                     </div>
                                     <div>
-                                        <div className="text-xs font-bold text-brand-dark">Two-way Sync</div>
-                                        <div className="text-[10px] text-brand-secondary">UI ↔ Code Reliability</div>
+                                        <div className="text-xs font-bold text-brand-dark">Live Sync</div>
+                                        <div className="text-[10px] text-brand-secondary">Edit code ↔ See changes instantly</div>
                                     </div>
                                 </div>
                             </div>

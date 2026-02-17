@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { ViewHeader } from './ViewHeader';
 import { ChatMessage } from '../../services/geminiService';
 import { useFlowStore } from '../../store';
+import { trackEvent } from '../../lib/analytics';
 
 interface AIViewProps {
     searchQuery: string;
@@ -42,6 +43,7 @@ export const AIView = ({
         const promptText = text || prompt;
         if ((!promptText.trim() && !selectedImage) || isGenerating) return;
 
+        trackEvent('ai_generate', { has_image: !!selectedImage });
         await onAIGenerate(promptText, selectedImage || undefined);
         setPrompt('');
         setSelectedImage(null);
@@ -193,10 +195,22 @@ export const AIView = ({
                                     <Button
                                         onClick={() => fileInputRef.current?.click()}
                                         variant="ghost"
-                                        className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600"
+                                        className="h-8 px-2 flex items-center gap-2 transition-colors"
+                                        style={{
+                                            color: brandConfig.colors.secondary,
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.color = brandConfig.colors.primary;
+                                            e.currentTarget.style.backgroundColor = `${brandConfig.colors.primary}10`; // 10% opacity
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.color = brandConfig.colors.secondary;
+                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                        }}
                                         title="Attach Image"
                                     >
                                         <ImagePlus className="w-4 h-4" />
+                                        <span className="text-[10px] font-medium">Add Image</span>
                                     </Button>
                                 </div>
                                 <span className="text-[10px] text-slate-400 font-medium">

@@ -13,6 +13,10 @@ import { DocsLayout } from './components/docs/DocsLayout';
 import { DocsPage } from './components/docs/DocsPage';
 
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { initAnalytics } from './lib/analytics';
+
+// Initialize analytics once
+initAnalytics();
 
 function FlowEditorWrapper({ onGoHome }: { onGoHome: () => void }): React.JSX.Element {
   return <FlowEditor onGoHome={onGoHome} />;

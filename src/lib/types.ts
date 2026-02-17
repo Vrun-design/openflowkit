@@ -28,6 +28,8 @@ export interface NodeData {
   height?: number;
   fontSize?: string;
   fontFamily?: string;
+  fontWeight?: string; // 'normal', 'bold', '100'-'900'
+  fontStyle?: string; // 'normal', 'italic'
   backgroundColor?: string;
   transparency?: number; // 0-1
   variant?: string; // wireframe preset key (e.g. 'landing', 'modal')

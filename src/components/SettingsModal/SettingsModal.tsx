@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { X, Palette, Settings, Keyboard, Monitor } from 'lucide-react';
+import { X, Settings, Keyboard } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { BrandSettings } from './BrandSettings';
 import { GeneralSettings } from './GeneralSettings';
 import { ShortcutsSettings } from './ShortcutsSettings';
 import { useFlowStore } from '../../store';
@@ -10,11 +9,11 @@ import { SidebarItem } from '../ui/SidebarItem';
 interface SettingsModalProps {
     isOpen: boolean;
     onClose: () => void;
-    initialTab?: 'brand' | 'general' | 'shortcuts';
+    initialTab?: 'general' | 'shortcuts';
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab = 'brand' }) => {
-    const [activeTab, setActiveTab] = useState<'brand' | 'general' | 'shortcuts'>(initialTab);
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, initialTab = 'general' }) => {
+    const [activeTab, setActiveTab] = useState<'general' | 'shortcuts'>(initialTab);
 
     // Update active tab if initialTab changes when opening
     React.useEffect(() => {
@@ -35,14 +34,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                 {/* Sidebar */}
                 <div className="w-64 bg-slate-50/50 border-r border-slate-200/60 p-4 flex flex-col gap-1">
                     <h2 className="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Settings</h2>
-
-                    <SidebarItem
-                        icon={<Palette className="w-4 h-4" />}
-                        isActive={activeTab === 'brand'}
-                        onClick={() => setActiveTab('brand')}
-                    >
-                        Brand Kit
-                    </SidebarItem>
 
                     <SidebarItem
                         icon={<Settings className="w-4 h-4" />}
@@ -71,7 +62,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
                 <div className="flex-1 flex flex-col min-h-0 bg-white/50">
                     <div className="flex items-center justify-between p-4 border-b border-slate-100">
                         <h2 className="text-lg font-semibold text-slate-800">
-                            {activeTab === 'brand' && 'Brand Customization'}
                             {activeTab === 'general' && 'General Settings'}
                             {activeTab === 'shortcuts' && 'Keyboard Shortcuts'}
                         </h2>
@@ -85,7 +75,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, i
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         <div className="p-6">
-                            {activeTab === 'brand' && <BrandSettings />}
                             {activeTab === 'general' && <GeneralSettings />}
                             {activeTab === 'shortcuts' && <ShortcutsSettings />}
                         </div>

@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { Node, Edge, useReactFlow } from 'reactflow';
 import { generateDiagramFromChat, ChatMessage } from '../services/geminiService';
@@ -11,7 +12,7 @@ import { useToast } from '../components/ui/ToastContext';
 export const useAIGeneration = (
   recordHistory: () => void
 ) => {
-  const { nodes, edges, setNodes, setEdges, brandConfig } = useFlowStore();
+  const { nodes, edges, setNodes, setEdges, brandConfig, globalEdgeOptions } = useFlowStore();
   const { fitView } = useReactFlow();
   const { addToast } = useToast();
   const [isAIOpen, setIsAIOpen] = useState(false);
@@ -30,9 +31,6 @@ export const useAIGeneration = (
       parts: [{ text: prompt }]
     };
 
-    // Note: Image handling for history display is currently simplified.
-    // The actual image data is passed directly to the service layer.
-
     try {
       // 1. Prepare context
       const simplifiedNodes = nodes.map((n) => ({
@@ -50,17 +48,14 @@ export const useAIGeneration = (
       });
 
       const selectedNodes = simplifiedNodes.filter(n => nodes.find(orig => orig.id === n.id)?.selected);
-      const focusedContextJSON = selectedNodes.length > 0 ? JSON.stringify(selectedNodes) : undefined;
+      // const focusedContextJSON = selectedNodes.length > 0 ? JSON.stringify(selectedNodes) : undefined;
 
       // 2. Call AI (now using chat)
       const dslText = await generateDiagramFromChat(chatMessages, prompt, currentGraph, imageBase64, brandConfig.apiKey);
 
       // 3. Update Chat History
-      // Add User Message (with image if present)
       const finalUserMessage = { ...userMessage };
       if (imageBase64) {
-        // We can add a marker that there was an image, or the actual image data
-        // For now let's just append [Image Uploaded] to text or similar
         finalUserMessage.parts[0].text += " [Image Attached]";
       }
 
@@ -71,10 +66,11 @@ export const useAIGeneration = (
 
       setChatMessages(prev => [...prev, finalUserMessage, modelMessage]);
 
-
       // 4. Parse DSL
       // Strip markdown code blocks if present
       const cleanDSL = dslText.replace(/```(yaml|flowmind|)?/g, '').replace(/```/g, '').trim();
+
+      // Use the wrapped V2 parser
       const parseResult = parseOpenFlowDSL(cleanDSL);
 
       if (parseResult.error) {
@@ -82,34 +78,65 @@ export const useAIGeneration = (
       }
 
       // 5. Merge Logic: Preserve IDs for existing labels
-      // ... (Merge logic remains the same)
+      // We expect the AI to try and preserve labels.
+      // V2 parser prefers explicit IDs but handles implicit ones via label mapping.
 
       const idMap = new Map<string, string>();
 
       parseResult.nodes.forEach(newNode => {
+        // Try to match by label to preserve existing node states if possible
         const existingNode = nodes.find(n => n.data.label?.toLowerCase() === newNode.data.label?.toLowerCase());
         if (existingNode) {
           idMap.set(newNode.id, existingNode.id);
         } else {
+          // New node
           idMap.set(newNode.id, newNode.id);
         }
       });
 
+      // Reconstruct nodes with mapped IDs
       const finalNodes = parseResult.nodes.map(n => ({
         ...n,
         id: idMap.get(n.id)!,
         type: n.type || 'process'
       }));
 
-      const finalEdges = parseResult.edges.map(e => ({
-        ...e,
-        source: idMap.get(e.source)!,
-        target: idMap.get(e.target)!,
-        id: `e-${idMap.get(e.source)}-${idMap.get(e.target)}`
-      }));
+      // Reconstruct edges with mapped IDs
+      const finalEdges = parseResult.edges.map(e => {
+        const sourceId = idMap.get(e.source);
+        const targetId = idMap.get(e.target);
+
+        if (!sourceId || !targetId) {
+          console.warn(`Skipping edge with missing node: ${e.source} -> ${e.target}`);
+          return null;
+        }
+
+        // Apply Global Default if parser returns 'default'
+        let edgeType = e.type;
+        if (edgeType === 'default' || !edgeType) {
+          edgeType = globalEdgeOptions.type === 'default' ? undefined : globalEdgeOptions.type;
+        }
+
+        // Preserve specific styles (curved/dashed) if recognized by attributes
+        if (e.data?.styleType === 'curved') edgeType = 'default'; // ReactFlow default is bezier/curved
+
+        return {
+          ...e,
+          source: sourceId,
+          target: targetId,
+          type: edgeType,
+          animated: e.animated || globalEdgeOptions.animated,
+          style: {
+            ...e.style,
+            strokeWidth: globalEdgeOptions.strokeWidth,
+            ...(globalEdgeOptions.color ? { stroke: globalEdgeOptions.color } : {})
+          },
+          id: `e-${sourceId}-${targetId}-${Date.now()}` // Ensure unique edge ID
+        };
+      }).filter(Boolean) as Edge[];
 
 
-      // 6. Apply Auto-Layout (ELK)
+      // 6. Apply Auto-Layout (ELK) - CRITICAL for V2 which returns (0,0)
       const layoutedNodes = await getElkLayout(finalNodes, finalEdges, {
         direction: 'TB',
         algorithm: 'layered',
@@ -118,7 +145,6 @@ export const useAIGeneration = (
 
       setNodes(layoutedNodes);
       setEdges(finalEdges);
-      // setIsAIOpen(false); // Can keep it open for chat now!
 
       // Wait for render then fit view
       setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
@@ -130,7 +156,7 @@ export const useAIGeneration = (
     } finally {
       setIsGenerating(false);
     }
-  }, [nodes, edges, recordHistory, setNodes, setEdges, fitView, addToast, chatMessages]);
+  }, [nodes, edges, recordHistory, setNodes, setEdges, fitView, addToast, chatMessages, brandConfig.apiKey, globalEdgeOptions]);
 
   return { isAIOpen, setIsAIOpen, isGenerating, handleAIRequest, chatMessages, clearChat };
 };

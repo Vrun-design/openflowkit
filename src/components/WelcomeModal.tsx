@@ -88,6 +88,12 @@ export function WelcomeModal(): React.JSX.Element | null {
                     <p className="text-center text-slate-400 text-[10px] mt-6 uppercase tracking-widest font-semibold">
                         Press <kbd className="font-sans px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-500">?</kbd> for shortcuts
                     </p>
+
+                    <p className="text-center text-slate-300 text-[10px] mt-4 max-w-xs mx-auto leading-relaxed opacity-60 hover:opacity-100 transition-opacity">
+                        Your diagrams, API keys, and data stay locally on your device.
+                        <br />
+                        We only count anonymous page visits.
+                    </p>
                 </div>
             </div>
         </div>

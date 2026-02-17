@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { OpenFlowLogo } from './icons/OpenFlowLogo';
 import {
     Settings, Layout, Command, Search,
-    Home, Clock, Loader2, Plus, Import, Image, FileCode, FileJson, GitBranch, Book, ExternalLink
+    Home, Clock, Loader2, Plus, Import, Image, FileCode, FileJson, GitBranch, Book, ExternalLink, Trash2
 } from 'lucide-react';
 import { useFlowStore } from '../store';
 import { useSnapshots } from '../hooks/useSnapshots';
@@ -10,9 +10,11 @@ import { Button } from './ui/Button';
 import { BrandSettings } from './SettingsModal/BrandSettings';
 import { GeneralSettings } from './SettingsModal/GeneralSettings';
 import { ShortcutsSettings } from './SettingsModal/ShortcutsSettings';
+import { PrivacySettings } from './SettingsModal/PrivacySettings';
 import { FlowSnapshot } from '@/lib/types';
 import { SidebarItem } from './ui/SidebarItem';
 import { WelcomeModal } from './WelcomeModal';
+import { trackEvent } from '../lib/analytics';
 
 
 interface HomePageProps {
@@ -33,7 +35,7 @@ export const HomePage: React.FC<HomePageProps> = ({
     const { brandConfig } = useFlowStore();
     const { snapshots, deleteSnapshot } = useSnapshots();
     const [internalActiveTab, setInternalActiveTab] = useState<'home' | 'settings'>('home');
-    const [activeSettingsTab, setActiveSettingsTab] = useState<'brand' | 'general' | 'shortcuts'>('brand');
+    const [activeSettingsTab, setActiveSettingsTab] = useState<'brand' | 'general' | 'shortcuts' | 'privacy'>('brand');
 
     const activeTab = propActiveTab || internalActiveTab;
 
@@ -46,6 +48,7 @@ export const HomePage: React.FC<HomePageProps> = ({
     };
 
     const handleRestore = (snapshot: FlowSnapshot) => {
+        trackEvent('restore_snapshot_flow');
         onRestoreSnapshot(snapshot);
         onLaunch(); // Enter editor
     };
@@ -115,7 +118,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
                 <div className="mt-auto p-4 border-t border-slate-100">
                     <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                        v2.1.0 • {brandConfig.appName}
+                        v1.0 BETA • {brandConfig.appName}
                     </div>
                 </div>
             </aside>
@@ -135,7 +138,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
 
                                 <Button
-                                    onClick={onLaunch}
+                                    onClick={() => { trackEvent('create_new_flow'); onLaunch(); }}
                                     variant="primary"
                                     size="md"
                                     icon={<Plus className="w-4 h-4" />}
@@ -163,14 +166,14 @@ export const HomePage: React.FC<HomePageProps> = ({
                                     <p className="text-[var(--brand-secondary)] text-xs">Start from scratch or import an existing diagram.</p>
                                     <div className="mt-6 flex items-center justify-center gap-3">
                                         <Button
-                                            onClick={onImportJSON}
+                                            onClick={() => { trackEvent('import_json_flow'); onImportJSON(); }}
                                             variant="secondary"
                                             size="sm"
                                         >
                                             Open File
                                         </Button>
                                         <Button
-                                            onClick={onLaunch}
+                                            onClick={() => { trackEvent('create_new_flow'); onLaunch(); }}
                                             variant="primary"
                                             size="sm"
                                         >
@@ -204,7 +207,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                                                     className="absolute top-2 right-2 p-1.5 bg-[var(--brand-surface)] text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 opacity-0 group-hover:opacity-100 transition-all z-20"
                                                     title="Delete"
                                                 >
-                                                    <Command className="w-3 h-3" />
+                                                    <Trash2 className="w-3 h-3" />
                                                 </Button>
                                             </div>
                                             <div className="p-3">
@@ -249,6 +252,12 @@ export const HomePage: React.FC<HomePageProps> = ({
                                 >
                                     Shortcuts
                                 </SidebarItem>
+                                <SidebarItem
+                                    isActive={activeSettingsTab === 'privacy'}
+                                    onClick={() => setActiveSettingsTab('privacy')}
+                                >
+                                    Privacy
+                                </SidebarItem>
                             </div>
 
                             {/* Settings Content */}
@@ -257,6 +266,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                                     {activeSettingsTab === 'brand' && <BrandSettings />}
                                     {activeSettingsTab === 'general' && <GeneralSettings />}
                                     {activeSettingsTab === 'shortcuts' && <ShortcutsSettings />}
+                                    {activeSettingsTab === 'privacy' && <PrivacySettings />}
                                 </div>
                             </div>
                         </div>

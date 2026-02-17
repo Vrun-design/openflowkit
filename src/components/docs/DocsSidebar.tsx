@@ -48,7 +48,7 @@ export const DocsSidebar: React.FC<DocsSidebarProps> = ({ className = '', onClos
                                     to={`/docs/${item.slug}`}
                                     onClick={onClose}
                                 >
-                                    {item.title}
+                                    {item.title.replace(/FlowMind|OpenFlowKit/g, brandConfig.appName)}
                                 </SidebarItem>
                             ))}
                         </div>

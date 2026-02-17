@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Node, Edge } from 'reactflow';
+import { Link } from 'react-router-dom';
 import { Code2, FileCode, AlertCircle, BookOpen, Loader2, Play } from 'lucide-react';
 import { ViewHeader } from './ViewHeader';
 import { toMermaid } from '../../services/exportService';
@@ -13,12 +14,7 @@ import { Textarea } from '../ui/Textarea';
 import { useFlowStore } from '../../store';
 
 interface CodeViewProps {
-    mode: 'mermaid' | 'flowmind'; // Keeping mode 'flowmind' for now as internal identifier or renaming? Let's check where mode is used.
-    // If commandBarView state uses 'flowmind', we should probably rename that too, but that iterates globally.
-    // user asked for "default from we had was called FlowMind".
-    // I will keep the internal key 'flowmind' for the mode if it simplifies things, or rename it if I can finding all usages.
-    // The previous step showed `commandBarView` type in FlowEditor.
-    // Let's stick to renaming the UI strings first.
+    mode: 'mermaid' | 'flowmind';
     nodes: Node[];
     edges: Edge[];
     onApply: (nodes: Node[], edges: Edge[]) => void;
@@ -56,17 +52,23 @@ export const CodeView = ({
             return;
         }
 
-        // For Mermaid: run ELK layout + smart edge routing for proper flow
-        if (mode === 'mermaid' && res.nodes.length > 0) {
+
+        // Apply ELK layout for both Mermaid and FlowMind DSL
+        if (res.nodes.length > 0) {
             setIsApplying(true);
             try {
-                const direction = (res as any).direction || 'TB';
+                // Direction from metadata or default to TB
+                const direction = (res as any).metadata?.direction || (res as any).direction || 'TB';
+
                 const layoutedNodes = await getElkLayout(res.nodes, res.edges, {
                     direction,
                     algorithm: 'layered',
                     spacing: 'normal',
                 });
+
+                // Smart Edge Routing (optional but good)
                 const smartEdges = assignSmartHandles(layoutedNodes, res.edges);
+
                 onApply(layoutedNodes, smartEdges);
             } catch (err) {
                 console.error('Layout failed, applying raw positions:', err);
@@ -131,7 +133,7 @@ export const CodeView = ({
                         <span className="text-xs text-slate-400">⌘+Enter to apply</span>
                         {mode === 'flowmind' && (
                             <a
-                                href="https://varun-shield.notion.site/FlowMind-DSL-Syntax-Guide-303ce7f68c06800f94f4d2cd21082236?source=copy_link"
+                                href="#/docs/openflow-dsl"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1.5 text-xs font-medium text-[var(--brand-primary)] hover:text-[var(--brand-primary-700)] transition-colors"

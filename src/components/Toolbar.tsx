@@ -233,7 +233,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             disabled={!canRedo || !isInteractive}
             variant="ghost"
             size="icon"
-            className="rounded-[var(--brand-radius)] h-9 w-9"
+            className="h-9 w-9"
             icon={<Redo2 className="w-4 h-4" />}
           />
         </Tooltip>

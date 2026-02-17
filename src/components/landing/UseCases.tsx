@@ -46,9 +46,9 @@ export function UseCases(): React.ReactElement {
                                 <Terminal className="w-6 h-6" />
                             </div>
                             <h3 className="text-2xl font-bold text-white mb-2">Engineering</h3>
-                            <p className="text-sm text-cyan-400 font-mono mb-4">THE SOURCE OF TRUTH</p>
+                            <p className="text-sm text-cyan-400 font-mono mb-4">DIAGRAM AS CODE</p>
                             <p className="text-neutral-400 text-sm leading-relaxed mb-8">
-                                Treat diagrams like code. Import the SDK, define your nodes in TypeScript, and commit changes to Git.
+                                Write diagrams in our DSL or Mermaid.js syntax. Paste code, get a fully laid-out diagram. Export as JSON to version control.
                             </p>
 
                             {/* Visual: Mini Code Editor */}
@@ -57,14 +57,12 @@ export function UseCases(): React.ReactElement {
                                     <div className="w-2 h-2 rounded-full bg-red-500/20"></div>
                                     <div className="w-2 h-2 rounded-full bg-yellow-500/20"></div>
                                     <div className="w-2 h-2 rounded-full bg-green-500/20"></div>
-                                    <div className="ml-auto text-xs text-white/20">Architecture.tsx</div>
+                                    <div className="ml-auto text-xs text-white/20">architecture.dsl</div>
                                 </div>
-                                <div><span className="text-purple-400">const</span> <span className="text-yellow-200">System</span> = () ={`>`} (</div>
-                                <div className="pl-4 text-cyan-300">{'<Diagram>'}</div>
-                                <div className="pl-8 text-white/70">{'<Service name="Auth" />'}</div>
-                                <div className="pl-8 text-white/70">{'<DB type="Postgres" />'}</div>
-                                <div className="pl-4 text-cyan-300">{'</Diagram>'}</div>
-                                <div>)</div>
+                                <div><span className="text-cyan-300">Auth Service</span></div>
+                                <div className="pl-4"><span className="text-white/70">-&gt;</span> <span className="text-cyan-300">API Gateway</span></div>
+                                <div className="pl-4"><span className="text-white/70">-&gt;</span> <span className="text-cyan-300">Redis Cache</span></div>
+                                <div className="pl-4"><span className="text-white/70">-&gt;</span> <span className="text-cyan-300">Postgres DB</span></div>
                             </div>
                         </div>
                     </div>
@@ -103,7 +101,7 @@ export function UseCases(): React.ReactElement {
                         </div>
                     </div>
 
-                    {/* Persona 3: Product (Amber/Orange Theme) */}
+                    {/* Persona 3: Export & Share (Amber/Orange Theme) */}
                     <div className="group relative bg-[#0A0A0A] rounded-[2rem] border border-white/5 overflow-hidden flex flex-col hover:border-amber-500/30 transition-all duration-500 hover:shadow-[0_0_50px_-12px_rgba(245,158,11,0.15)]">
                         <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
@@ -111,27 +109,26 @@ export function UseCases(): React.ReactElement {
                             <div className="w-12 h-12 rounded-xl bg-amber-950/30 flex items-center justify-center border border-amber-500/20 text-amber-400 mb-6 group-hover:scale-110 transition-transform">
                                 <Share2 className="w-6 h-6" />
                             </div>
-                            <h3 className="text-2xl font-bold text-white mb-2">Product</h3>
-                            <p className="text-sm text-amber-400 font-mono mb-4">THE BIG PICTURE</p>
+                            <h3 className="text-2xl font-bold text-white mb-2">Export & Share</h3>
+                            <p className="text-sm text-amber-400 font-mono mb-4">PIXEL-PERFECT OUTPUT</p>
                             <p className="text-neutral-400 text-sm leading-relaxed mb-8">
-                                Embed diagrams in Notion or Linear. When engineering updates the code, your documentation updates automatically.
+                                Export diagrams as SVG, PNG, or PDF. Copy to clipboard and paste into Figma with editable layers. Save as JSON to share or version control.
                             </p>
 
-                            {/* Visual: Ticket Sync */}
-                            <div className="h-[140px] bg-[#151515] rounded-xl border border-white/10 p-4 relative overflow-hidden">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-4 h-4 rounded-full border border-amber-500/50 bg-amber-500/10 flex items-center justify-center text-[8px] text-amber-500 font-bold">L</div>
-                                    <span className="text-xs text-white/50 font-mono">LIN-249</span>
-                                </div>
-                                <div className="text-xs text-white font-medium mb-4">Update schema</div>
-
-                                <div className="flex items-center gap-2 p-2 bg-white/5 rounded border border-white/5">
-                                    <div className="w-6 h-6 bg-brand-blue/20 rounded flex items-center justify-center text-brand-blue">
-                                        <GitBranch className="w-3 h-3" />
+                            {/* Visual: Export Formats */}
+                            <div className="h-[140px] bg-[#151515] rounded-xl border border-white/10 p-4 relative overflow-hidden flex flex-col justify-center">
+                                <div className="space-y-2.5">
+                                    <div className="flex items-center gap-3 p-2 bg-white/5 rounded border border-white/5 group-hover:border-amber-500/20 transition-colors">
+                                        <div className="w-6 h-6 bg-amber-500/10 rounded flex items-center justify-center text-[9px] text-amber-400 font-bold">SVG</div>
+                                        <div className="text-[10px] text-white/60 font-mono">Vector • Editable in Figma</div>
                                     </div>
-                                    <div className="flex-1">
-                                        <div className="text-[9px] text-white">diagram.json</div>
-                                        <div className="text-[8px] text-green-400">Synced just now</div>
+                                    <div className="flex items-center gap-3 p-2 bg-white/5 rounded border border-white/5 group-hover:border-amber-500/20 transition-colors">
+                                        <div className="w-6 h-6 bg-amber-500/10 rounded flex items-center justify-center text-[9px] text-amber-400 font-bold">PNG</div>
+                                        <div className="text-[10px] text-white/60 font-mono">Raster • High-res export</div>
+                                    </div>
+                                    <div className="flex items-center gap-3 p-2 bg-white/5 rounded border border-white/5 group-hover:border-amber-500/20 transition-colors">
+                                        <div className="w-6 h-6 bg-amber-500/10 rounded flex items-center justify-center text-[9px] text-amber-400 font-bold">JSON</div>
+                                        <div className="text-[10px] text-white/60 font-mono">Data • Save & restore flows</div>
                                     </div>
                                 </div>
                             </div>

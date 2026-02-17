@@ -30,7 +30,7 @@ export const useAutoSave = (
             try {
                 const data: AutoSaveData = JSON.parse(saved);
                 if (data.tabs && data.activeTabId) {
-                    console.log('Restoring auto-saved state...');
+
 
                     setTabs(data.tabs);
                     setActiveTabId(data.activeTabId);

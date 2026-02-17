@@ -4,18 +4,18 @@ import { FlowNode, FlowEdge, FlowSnapshot } from '@/lib/types';
 const STORAGE_KEY = 'flowmind_snapshots';
 
 export const useSnapshots = () => {
-    const [snapshots, setSnapshots] = useState<FlowSnapshot[]>([]);
-
-    useEffect(() => {
+    const [snapshots, setSnapshots] = useState<FlowSnapshot[]>(() => {
+        if (typeof window === 'undefined') return [];
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             try {
-                setSnapshots(JSON.parse(saved));
+                return JSON.parse(saved);
             } catch (e) {
                 console.error('Failed to parse snapshots', e);
             }
         }
-    }, []);
+        return [];
+    });
 
     const saveSnapshot = useCallback((name: string, nodes: FlowNode[], edges: FlowEdge[]) => {
         const newSnapshot: FlowSnapshot = {

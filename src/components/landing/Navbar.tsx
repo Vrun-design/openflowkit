@@ -29,9 +29,9 @@ export function Navbar({ isScrolled, onLaunch }: NavbarProps): React.ReactElemen
   };
 
   const navLinks = [
-    { name: 'Architecture', href: '#architecture' },
+    { name: 'Features', href: '#architecture' },
     { name: 'Figma', href: '#figma' },
-    { name: 'Workflows', href: '#workflows' },
+    { name: 'Use Cases', href: '#workflows' },
     { name: 'Pricing', href: '#pricing' },
   ];
 

@@ -19,7 +19,7 @@ export function FinalCTASection({ onLaunch }: FinalCTASectionProps): React.React
     }, []);
 
     const handleCopy = () => {
-        navigator.clipboard.writeText('npm install @openflowkit/engine');
+        navigator.clipboard.writeText('gh repo clone Vrun-design/openflowkit');
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
@@ -37,7 +37,7 @@ export function FinalCTASection({ onLaunch }: FinalCTASectionProps): React.React
                     <div className="mb-10 animate-float">
                         <div className="bg-white text-brand-dark px-6 py-2 rounded-full border border-gray-100 shadow-[inset_0px_1px_0px_0px_rgba(255,255,255,1),0px_10px_20px_-5px_rgba(0,0,0,0.05)] flex items-center gap-3">
                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                            <span className="font-mono text-xs tracking-widest uppercase text-brand-secondary">System Online</span>
+                            <span className="font-mono text-xs tracking-widest uppercase text-brand-secondary">Ready to use</span>
                         </div>
                     </div>
 
@@ -80,19 +80,19 @@ export function FinalCTASection({ onLaunch }: FinalCTASectionProps): React.React
                                 <div className="flex items-center gap-3 text-white/90">
                                     <span className="text-green-400">➜</span>
                                     <span className="text-blue-400">~</span>
-                                    <span className="typing-effect">npm install @openflowkit/engine</span>
+                                    <span className="typing-effect">gh repo clone openflowkit</span>
                                 </div>
 
                                 {/* Simulated Output Steps */}
                                 <div className="mt-4 space-y-1 text-xs md:text-sm text-white/50">
                                     <div className={`transition-opacity duration-300 ${terminalStep >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-                                        <span className="text-gray-500">✔</span> Resolving packages...
+                                        <span className="text-gray-500">✔</span> Cloning into 'openflowkit'...
                                     </div>
                                     <div className={`transition-opacity duration-300 ${terminalStep >= 2 ? 'opacity-100' : 'opacity-0'}`}>
-                                        <span className="text-gray-500">✔</span> Fetching dependencies...
+                                        <span className="text-gray-500">✔</span> Remote: Enumerating objects...
                                     </div>
                                     <div className={`transition-opacity duration-300 ${terminalStep >= 3 ? 'opacity-100' : 'opacity-0'} text-green-400`}>
-                                        <span className="text-green-500">✔</span> Done in 0.4s. Happy coding!
+                                        <span className="text-green-500">✔</span> Receiving objects: 100% done.
                                     </div>
                                 </div>
                             </div>

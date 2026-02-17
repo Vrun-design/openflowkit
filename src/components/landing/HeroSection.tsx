@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Copy, GitBranch, Terminal } from 'lucide-react';
+import { Play, Copy, GitBranch, Terminal, Check } from 'lucide-react';
 import { Button } from './Button';
+import { trackEvent } from '../../lib/analytics';
 
 interface HeroSectionProps {
   onLaunch: () => void;
 }
 
-const ROTATING_WORDS = ["thinks", "draws", "builds", "scales"];
+const ROTATING_WORDS = ["thinks", "draws", "builds", "ships"];
 
 import { useFlowStore } from '../../store';
 
@@ -26,6 +27,15 @@ export function HeroSection({ onLaunch }: HeroSectionProps): React.ReactElement 
 
     return () => clearInterval(timer);
   }, []);
+
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    trackEvent('copy_install_command');
+    navigator.clipboard.writeText('gh repo clone Vrun-design/openflowkit');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <section className="relative pt-24 pb-12 md:pt-36 md:pb-24 overflow-hidden select-none bg-brand-canvas">
@@ -69,7 +79,7 @@ export function HeroSection({ onLaunch }: HeroSectionProps): React.ReactElement 
 
         {/* Subhead */}
         <p className="animate-slide-up opacity-0 [animation-delay:200ms] text-lg md:text-xl text-brand-secondary mb-8 md:mb-10 max-w-2xl mx-auto leading-relaxed text-balance font-medium tracking-tight px-4 opacity-80">
-          100% free. Open source. Built for teams who care about craft and detail.
+          100% free, open-source diagram tool for builders. Write code or drag and drop — get beautiful results either way.
         </p>
 
         {/* CTAs - Removed overriding shadow classes */}
@@ -77,7 +87,10 @@ export function HeroSection({ onLaunch }: HeroSectionProps): React.ReactElement 
           <Button
             size="lg"
             className="w-full sm:w-auto h-14 px-10 transition-all active:scale-95 text-[15px]"
-            onClick={() => window.open("https://github.com/Vrun-design/FlowMind", "_blank")}
+            onClick={() => {
+              trackEvent('click_github_fork');
+              window.open("https://github.com/Vrun-design/FlowMind", "_blank");
+            }}
           >
             <GitBranch className="w-4 h-4 mr-2" />
             Fork on GitHub
@@ -93,11 +106,18 @@ export function HeroSection({ onLaunch }: HeroSectionProps): React.ReactElement 
           </Button>
         </div>
         {/* Install Block */}
-        <div className="animate-slide-up opacity-0 [animation-delay:400ms] group cursor-pointer w-full max-w-sm mx-auto">
-          <div className="relative flex items-center justify-between md:justify-center gap-3 px-5 py-3 bg-white/60 backdrop-blur-sm rounded-xl border border-brand-border/60 hover:border-brand-primary/20 transition-all shadow-sm ring-1 ring-transparent hover:ring-brand-primary/10">
-            <span className="font-mono text-xs md:text-sm text-brand-secondary select-all truncate">npm install @openflowkit/engine</span>
+        <div
+          className="animate-slide-up opacity-0 [animation-delay:400ms] group cursor-pointer w-fit max-w-full mx-auto"
+          onClick={handleCopy}
+        >
+          <div className="relative flex items-center justify-between md:justify-center gap-2 px-4 py-3 bg-white/60 backdrop-blur-sm rounded-xl border border-brand-border/60 hover:border-brand-primary/20 transition-all shadow-sm ring-1 ring-transparent hover:ring-brand-primary/10">
+            <span className="font-mono text-xs md:text-sm text-brand-secondary select-all truncate">gh repo clone openflowkit</span>
             <div className="hidden md:block w-px h-4 bg-brand-secondary/20"></div>
-            <Copy className="w-3.5 h-3.5 text-brand-muted hover:text-brand-primary transition-colors shrink-0" />
+            {copied ? (
+              <Check className="w-3.5 h-3.5 text-green-500 shrink-0" />
+            ) : (
+              <Copy className="w-3.5 h-3.5 text-brand-muted hover:text-brand-primary transition-colors shrink-0" />
+            )}
           </div>
           <div className="mt-4 text-[10px] font-mono text-brand-muted uppercase tracking-widest opacity-60 flex items-center justify-center gap-3">
             <span>MIT Licensed</span>

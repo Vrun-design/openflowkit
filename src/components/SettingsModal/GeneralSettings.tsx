@@ -17,20 +17,21 @@ export const GeneralSettings = () => {
                 </div>
 
                 <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-slate-100">
+                    <div className="flex items-center justify-between p-3 bg-slate-50/50 rounded-[calc(var(--brand-radius,24px)*0.5)] border border-slate-100">
                         <span className="font-medium text-slate-700">Show Grid</span>
                         <Switch checked={viewSettings.showGrid} onCheckedChange={toggleGrid} />
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-slate-100">
+                    <div className="flex items-center justify-between p-3 bg-slate-50/50 rounded-[calc(var(--brand-radius,24px)*0.5)] border border-slate-100">
                         <span className="font-medium text-slate-700">Snap to Grid</span>
                         <Switch checked={viewSettings.snapToGrid} onCheckedChange={toggleSnap} />
                     </div>
-                    <div className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-slate-100">
+                    <div className="flex items-center justify-between p-3 bg-slate-50/50 rounded-[calc(var(--brand-radius,24px)*0.5)] border border-slate-100">
                         <span className="font-medium text-slate-700">Mini Map</span>
                         <Switch checked={viewSettings.showMiniMap} onCheckedChange={toggleMiniMap} />
                     </div>
                 </div>
             </div>
+
         </div>
     );
 };

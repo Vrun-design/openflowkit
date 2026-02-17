@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { ViewHeader } from './ViewHeader';
 import { LayoutAlgorithm } from '../../services/elkLayout';
 import { useFlowStore } from '../../store';
+import { trackEvent } from '../../lib/analytics';
 
 interface LayoutViewProps {
     onLayout?: (direction?: 'TB' | 'LR' | 'RL' | 'BT', algorithm?: LayoutAlgorithm, spacing?: 'compact' | 'normal' | 'loose') => void;
@@ -83,6 +84,7 @@ export const LayoutView = ({
     const [spacing, setSpacing] = useState<'compact' | 'normal' | 'loose'>('normal');
 
     const handleApply = () => {
+        trackEvent('apply_layout', { algorithm, direction, spacing });
         onLayout?.(direction, algorithm, spacing);
         onClose();
     };

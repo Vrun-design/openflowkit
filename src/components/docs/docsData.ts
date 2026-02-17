@@ -31,7 +31,7 @@ export const docsNavigation: DocSection[] = [
             { title: 'AI Generation', slug: 'ai-generation' },
             { title: 'Smart Layout', slug: 'smart-layout' },
             { title: 'Playback & History', slug: 'playback-history' },
-            { title: 'OpenFlow DSL', slug: 'openflow-dsl' },
+            { title: 'FlowMind DSL (V2)', slug: 'openflow-dsl' },
         ],
     },
     {

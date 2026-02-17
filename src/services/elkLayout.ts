@@ -99,6 +99,10 @@ function getAlgorithmOptions(algorithm: LayoutAlgorithm, layerSpacing: number) {
  * Perform auto-layout using ELK.
  * Returns a new array of nodes with updated positions.
  */
+/**
+ * Perform auto-layout using ELK.
+ * Supports hierarchical nodes (groups).
+ */
 export async function getElkLayout(
     nodes: Node[],
     edges: Edge[],
@@ -112,53 +116,102 @@ export async function getElkLayout(
     // 1. Calculate Configuration
     const dims = getSpacingDimensions(spacing, isHorizontal);
     const algoOptions = getAlgorithmOptions(algorithm, parseFloat(dims.nodeLayer));
+    const layoutOptions = {
+        'elk.direction': elkDirection,
+        'elk.spacing.nodeNode': dims.nodeNode,
+        'elk.layered.spacing.nodeNodeBetweenLayers': dims.nodeLayer,
+        'elk.spacing.componentComponent': dims.component,
+        'elk.padding': '[top=50,left=50,bottom=50,right=50]',
+        ...algoOptions,
+    };
 
-    // 2. Build Graph
+    // 2. Build Hierarchy
+    const buildElkNode = (node: Node): ElkNode => {
+        const children = nodes.filter(n => n.parentId === node.id);
+
+        // Better estimation for unmeasured nodes (e.g. fresh from AI)
+        let w = (node as any).measured?.width ?? node.width ?? (node.data as any)?.width;
+        let h = (node as any).measured?.height ?? node.height ?? (node.data as any)?.height;
+
+        if (!w || !h) {
+            // Estimate based on label length
+            const label = node.data?.label || '';
+            const estimatedWidth = Math.max(NODE_WIDTH, label.length * 8 + 40); // Base width + char approx
+            const estimatedHeight = Math.max(NODE_HEIGHT, Math.ceil(label.length / 40) * 20 + 60); // Wrap approx
+
+            w = w ?? estimatedWidth;
+            h = h ?? estimatedHeight;
+        }
+
+        return {
+            id: node.id,
+            width: children.length === 0 ? w : undefined, // Let ELK calculate size if group
+            height: children.length === 0 ? h : undefined,
+            children: children.map(buildElkNode),
+            layoutOptions: {
+                'elk.portConstraints': 'FREE',
+                'elk.padding': '[top=40,left=20,bottom=20,right=20]', // Padding for groups
+            },
+        };
+    };
+
+    const topLevelNodes = nodes.filter(n => !n.parentId);
+
     const elkGraph: ElkNode = {
         id: 'root',
-        layoutOptions: {
-            'elk.direction': elkDirection,
-            'elk.spacing.nodeNode': dims.nodeNode,
-            'elk.layered.spacing.nodeNodeBetweenLayers': dims.nodeLayer,
-            'elk.spacing.componentComponent': dims.component,
-            'elk.padding': '[top=50,left=50,bottom=50,right=50]',
-            ...algoOptions,
-        },
-        children: nodes.map((node) => {
-            // Use MEASURED dimensions to prevent overlap
-            const w = (node as any).measured?.width ?? node.width ?? (node.data as any)?.width ?? NODE_WIDTH;
-            const h = (node as any).measured?.height ?? node.height ?? (node.data as any)?.height ?? NODE_HEIGHT;
-            return {
-                id: node.id,
-                width: w,
-                height: h,
-                layoutOptions: { 'elk.portConstraints': 'FREE' },
-            };
-        }),
-        edges: edges
-            .filter((e) => e.source !== e.target) // Skip self-loops
-            .map((edge) => ({
-                id: edge.id,
-                sources: [edge.source],
-                targets: [edge.target],
-            })) as ElkExtendedEdge[],
+        layoutOptions,
+        children: topLevelNodes.map(buildElkNode),
+        edges: edges.map((edge) => ({
+            id: edge.id,
+            sources: [edge.source],
+            targets: [edge.target],
+            // Hierarchy support: edges might cross boundaries
+            // ELK handles this if IDs match
+        })) as ElkExtendedEdge[],
     };
 
     // 3. Execute Layout
-    const layoutResult = await elk.layout(elkGraph);
+    try {
+        const layoutResult = await elk.layout(elkGraph);
 
-    // 4. Map Results
-    const positionMap = new Map<string, { x: number; y: number }>();
-    layoutResult.children?.forEach((elkNode) => {
-        positionMap.set(elkNode.id, {
-            x: elkNode.x ?? 0,
-            y: elkNode.y ?? 0,
+        // 4. Flatten and Map Results
+        const positionMap = new Map<string, { x: number; y: number, width?: number, height?: number }>();
+
+        const traverse = (node: ElkNode) => {
+            if (node.id !== 'root') {
+                positionMap.set(node.id, {
+                    x: node.x ?? 0,
+                    y: node.y ?? 0,
+                    width: node.width,
+                    height: node.height
+                });
+            }
+            node.children?.forEach(traverse);
+        };
+        traverse(layoutResult);
+
+        return nodes.map((node) => {
+            const pos = positionMap.get(node.id);
+            if (!pos) return node;
+
+            // For groups, we might want to update style/dimensions if ELK resized them?
+            // ReactFlow handles group sizing dynamically usually, unless we set explicit style.width/height
+            // But if we want to respect ELK's decision:
+            const style = { ...node.style };
+            if (node.type === 'group' || node.type === 'section' || node.type === 'container') {
+                if (pos.width) style.width = pos.width;
+                if (pos.height) style.height = pos.height;
+            }
+
+            return {
+                ...node,
+                position: { x: pos.x, y: pos.y },
+                style
+            };
         });
-    });
 
-    return nodes.map((node) => {
-        const pos = positionMap.get(node.id);
-        if (!pos) return node;
-        return { ...node, position: { x: pos.x, y: pos.y } };
-    });
+    } catch (err) {
+        console.error('ELK Layout Error:', err);
+        return nodes; // Fallback
+    }
 }

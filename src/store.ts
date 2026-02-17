@@ -65,7 +65,9 @@ interface ViewSettings {
     isShortcutsHelpOpen: boolean;
     defaultIconsEnabled: boolean;
     smartRoutingEnabled: boolean;
+    analyticsEnabled: boolean;
 }
+
 
 export interface BrandConfig {
     appName: string;
@@ -192,6 +194,8 @@ interface FlowState {
     setGlobalEdgeOptions: (options: Partial<GlobalEdgeOptions>) => void;
     setDefaultIconsEnabled: (enabled: boolean) => void;
     setSmartRoutingEnabled: (enabled: boolean) => void;
+    toggleAnalytics: (enabled: boolean) => void;
+
 
     // Brand Actions
     setBrandConfig: (config: Partial<BrandConfig>) => void;
@@ -238,6 +242,7 @@ export const useFlowStore = create<FlowState>()(
                 isShortcutsHelpOpen: false,
                 defaultIconsEnabled: true,
                 smartRoutingEnabled: true,
+                analyticsEnabled: true,
             },
 
             globalEdgeOptions: {
@@ -480,6 +485,11 @@ export const useFlowStore = create<FlowState>()(
                     edges: newEdges
                 };
             }),
+
+            toggleAnalytics: (enabled) => set((state) => ({
+                viewSettings: { ...state.viewSettings, analyticsEnabled: enabled }
+            })),
+
 
             // Brand Actions
             // Brand Actions

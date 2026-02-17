@@ -13,15 +13,15 @@ export function SolutionSection(): React.ReactElement {
                 <div className="max-w-4xl">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-primary/5 border border-brand-primary/10 text-brand-primary/60 mb-8 font-mono text-[10px] uppercase tracking-widest font-bold opacity-0 animate-slide-up [animation-delay:200ms]">
                         <Layers className="w-3 h-3" />
-                        The Architecture
+                        The Features
                     </div>
                     <h2 className="text-5xl md:text-7xl font-bold text-brand-dark tracking-tighter leading-[1.1] mb-8 opacity-0 animate-slide-up [animation-delay:300ms]">
-                        Your components. <br />
-                        <span className="font-serif italic font-normal text-brand-primary">Unbound.</span>
+                        Everything you need. <br />
+                        <span className="font-serif italic font-normal text-brand-primary">Nothing you don't.</span>
                     </h2>
                     <p className="text-xl text-brand-secondary max-w-2xl leading-relaxed font-medium opacity-0 animate-slide-up [animation-delay:400ms] text-balance">
-                        The ultimate <span className="text-brand-dark font-bold">white-label</span> canvas. While other tools render static SVGs, OpenFlowKit renders <span className="text-brand-primary">your React components</span>.
-                        Built on top of <span className="text-brand-dark font-bold">React Flow</span>, it's your design system, given infinite space to breathe.
+                        The ultimate <span className="text-brand-dark font-bold">white-label</span> canvas. Fully customizable nodes, edges, and themes — powered by <span className="text-brand-dark font-bold">React Flow</span>.
+                        It's <span className="text-brand-primary">your brand</span>, given infinite space to breathe.
                     </p>
                 </div>
             </div>
@@ -42,7 +42,7 @@ export function SolutionSection(): React.ReactElement {
                             <h3 className="text-3xl font-bold text-brand-dark mb-4 tracking-tight">Diagram as Code</h3>
                             <p className="text-brand-secondary text-lg leading-relaxed">
                                 First-class support for <span className="font-semibold text-brand-primary">Mermaid.js</span> and our type-safe DSL.
-                                Define infrastructure in code, version control it, and let the engine handle the layout.
+                                Define your architecture in code, export as JSON, and let the engine handle the layout.
                             </p>
                         </div>
 
@@ -87,7 +87,7 @@ export function SolutionSection(): React.ReactElement {
                         <div className="relative z-20 mb-auto">
                             <div className="flex items-center gap-2 mb-3 text-brand-blue font-mono text-[10px] uppercase tracking-widest">
                                 <Sparkles className="w-3 h-3" />
-                                <span>Private Intelligence</span>
+                                <span>AI Assistant</span>
                             </div>
                             <h3 className="text-3xl font-bold text-white mb-2 tracking-tight">Flowpilot AI</h3>
                             <p className="text-white/60 text-base leading-relaxed">

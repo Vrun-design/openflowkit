@@ -24,6 +24,7 @@
     "framer-motion": "^12.34.0",
     "html-to-image": "^1.11.13",
     "lucide-react": "^0.563.0",
+    "posthog-js": "^1.347.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-markdown": "9.0.1",

@@ -72,13 +72,13 @@ export function PricingSection({ onLaunch }: PricingSectionProps): React.ReactEl
                                     <ul className="space-y-5">
                                         {[
                                             'Unlimited diagrams & projects',
-                                            'Local file storage (JSON/YAML)',
-                                            'React Component Injection',
-                                            'ELK Auto-Layout Engine',
-                                            'Export to SVG, PNG, PDF',
+                                            'Save locally, your data stays on your device',
+                                            'White-Label Branding',
+                                            'One-click auto-layout',
+                                            'Export to SVG, PNG, JPG',
                                             'Figma Export',
                                             'Mermaid.js Support',
-                                            'Gemini AI Integration (BYOK)'
+                                            'AI diagram generation (bring your own API key)'
                                         ].map((item, i) => (
                                             <li key={i} className="flex items-center gap-3 group">
                                                 <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center border border-green-100 group-hover:scale-110 transition-transform shadow-sm">
@@ -98,9 +98,9 @@ export function PricingSection({ onLaunch }: PricingSectionProps): React.ReactEl
 
                     {/* Sponsor CTA */}
                     <div className="mt-12 text-center">
-                        <a href="https://github.com/sponsors" className="inline-flex items-center gap-2 text-brand-muted hover:text-brand-primary transition-colors text-sm font-medium">
+                        <a href="https://github.com/Vrun-design/FlowMind" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-brand-muted hover:text-brand-primary transition-colors text-sm font-medium">
                             <Heart className="w-4 h-4 fill-current text-pink-500" />
-                            Support development on GitHub Sponsors
+                            Support development on GitHub
                         </a>
                     </div>
 

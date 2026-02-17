@@ -46,15 +46,24 @@ Your job:
    - Use \`->\` for connections
    - Use \`->|label|\` for decision paths
 
-4. If a node is referenced but not defined, treat it as \`[process]\`.
+4. **Strict Structure**:
+   - Define all **Nodes** first.
+   - Define all **Edges** second.
+   - Do NOT mix them (e.g. \`[start] A -> [end] B\` is INVALID). 
+   - Write \`[start] A\` on one line, \`[end] B\` on another, then \`A -> B\`.
 
 5. Use comments \`#\` only when they add clarity.
 
 6. Do NOT explain the output. Do NOT add prose. Only output DSL.
+
+7. **Node IDs**:
+   - If the label is simple (e.g., "Login"), you can use it as the ID: \`[process] Login\`.
+   - If the label is long, use an ID: \`[process] login_step: User enters credentials\`.
+
 `;
 
 const processImage = (imageBase64?: string) => {
-  const regex = /^data:image\/(\w+);base64,/;
+  const regex = /^data:image\/([^;]+);base64,/;
   const match = imageBase64?.match(regex);
   const mimeType = match ? `image/${match[1]}` : 'image/png';
   const cleanBase64 = imageBase64?.replace(regex, '') || '';

@@ -8,6 +8,7 @@ import { ExportMenu } from './ExportMenu';
 import { Tooltip } from './Tooltip';
 import { useFlowStore } from '../store';
 import { SettingsModal } from './SettingsModal/SettingsModal';
+import { trackEvent } from '../lib/analytics';
 
 interface TopNavProps {
     showMiniMap: boolean;
@@ -66,9 +67,9 @@ export const TopNav: React.FC<TopNavProps> = ({
     const isBeveled = brandConfig.ui.buttonStyle === 'beveled';
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [activeSettingsTab, setActiveSettingsTab] = useState<'brand' | 'general' | 'shortcuts'>('brand');
+    const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'shortcuts'>('general');
 
-    const openSettings = (tab: 'brand' | 'general' | 'shortcuts') => {
+    const openSettings = (tab: 'general' | 'shortcuts') => {
         setActiveSettingsTab(tab);
         setIsSettingsOpen(true);
         setIsMenuOpen(false);
@@ -114,13 +115,7 @@ export const TopNav: React.FC<TopNavProps> = ({
                                     <Settings className="w-4 h-4" />
                                     Canvas Settings
                                 </button>
-                                <button
-                                    onClick={() => openSettings('brand')}
-                                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-slate-600 hover:bg-[var(--brand-primary-50)] hover:text-[var(--brand-primary)] rounded-[var(--radius-sm)] transition-all"
-                                >
-                                    <Palette className="w-4 h-4" />
-                                    Brand Settings
-                                </button>
+
                             </div>
                         </>
                     )}
@@ -229,12 +224,12 @@ export const TopNav: React.FC<TopNavProps> = ({
                     </Tooltip>
 
                     <ExportMenu
-                        onExportPNG={onExportPNG}
-                        onExportJSON={onExportJSON}
-                        onExportMermaid={onExportMermaid}
-                        onExportPlantUML={onExportPlantUML}
-                        onExportOpenFlowDSL={onExportOpenFlowDSL}
-                        onExportFigma={onExportFigma}
+                        onExportPNG={(fmt) => { trackEvent('export_png', { format: fmt }); onExportPNG(fmt); }}
+                        onExportJSON={() => { trackEvent('export_json'); onExportJSON(); }}
+                        onExportMermaid={() => { trackEvent('export_mermaid'); onExportMermaid(); }}
+                        onExportPlantUML={() => { trackEvent('export_plantuml'); onExportPlantUML(); }}
+                        onExportOpenFlowDSL={() => { trackEvent('export_dsl'); onExportOpenFlowDSL(); }}
+                        onExportFigma={() => { trackEvent('export_figma'); onExportFigma(); }}
                     />
                 </div>
 
@@ -244,14 +239,7 @@ export const TopNav: React.FC<TopNavProps> = ({
                     initialTab={activeSettingsTab}
                 />
 
-                {/* Logo after Menu (User Request: "icon on the right side adn then logo") */}
-                {/* NOTE: I am keeping the main logo on the left for now as removing it might break the layout balance. 
-                     The user might mean they want *another* logo here or the main logo moved? 
-                     I will interpret "then logo" as maybe the user wants their logo to be visible here too?
-                     Or maybe they confused left/right? 
-                     I will leave the logo on left for now and just add the menu. 
-                     If they want the logo on the right *instead* of left, I would need to move the left block.
-                 */}
+
             </div>
         </div>
     );
