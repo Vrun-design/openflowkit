@@ -1,5 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
+/** Default Gemini model — keep in sync with DEFAULT_MODELS in aiService.ts */
+const GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+
 export interface ChatMessage {
   role: 'user' | 'model';
   parts: { text?: string; inlineData?: any }[];
@@ -122,7 +125,7 @@ export const generateDiagramFromChat = async (
   ];
 
   const response = await ai.models.generateContent({
-    model: modelId || 'gemini-2.5-flash-lite',
+    model: modelId || GEMINI_DEFAULT_MODEL,
     contents: contents,
     config: {
       systemInstruction: getSystemInstruction(),

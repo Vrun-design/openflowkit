@@ -107,8 +107,8 @@ const PROVIDERS: {
             name: 'NVIDIA',
             icon: '▶',
             color: '#76b900',
-            logoPath: '/logos/Nvidea.svg',
-            hint: 'NIM · DeepSeek-V3.2 · Frontier models',
+            logoPath: '/logos/Nvidia.svg',
+            hint: 'NIM · Kimi-V2.5 · Frontier models',
             keyPlaceholder: 'nvapi-...',
             keyLink: 'https://build.nvidia.com',
             keyLinkLabel: 'Get an NVIDIA API Key',
@@ -189,13 +189,13 @@ const PROVIDER_MODELS: Record<AIProvider, { id: string; label: string; hint: str
     ],
     nvidia: [
         { id: 'meta/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout', hint: 'Efficient · Multi-modal', category: 'Speed' },
-        { id: 'nvidia/nemotron-nano-12b-v2-vl', label: 'Nemotron Nano 12B', hint: 'NVIDIA flagship · Best accuracy', category: 'Flagship', badge: 'Flagship' },
+        { id: 'nvidia/nemotron-nano-12b-v2-vl', label: 'Nemotron Nano 12B', hint: 'Lightweight · Vision-language · Fast', category: 'Speed' },
         { id: 'deepseek/deepseek-v3-2', label: 'DeepSeek-V3.2 (685B)', hint: 'Latest · GPT-5 comparable', category: 'Flagship', badge: 'New' },
         { id: 'qwen/qwq-32b', label: 'QwQ 32B', hint: 'Strong reasoning model', category: 'Reasoning' },
         { id: 'moonshotai/kimi-k2-thinking', label: 'Kimi K2 Thinking', hint: 'Advanced reasoning · Tool use', category: 'Reasoning' },
     ],
     cerebras: [
-        { id: 'gpt-oss-120b', label: 'Llama 3.3 70B', hint: '~800 tok/s · Reliable', category: 'Speed', badge: 'Default' },
+        { id: 'gpt-oss-120b', label: 'GPT-OSS 120B', hint: '120B params · Fast on WSE-3', category: 'Speed', badge: 'Default' },
         { id: 'qwen-3-32b', label: 'Qwen3 32B', hint: '2,403 tok/s · Industry fastest', category: 'Speed', badge: '🚀 Fastest' },
         { id: 'qwen-3-235b-a22b', label: 'Qwen3 235B A22B', hint: 'Flagship · Best quality', category: 'Flagship', badge: 'Flagship' },
         { id: 'zai-glm-4.7', label: 'Zai-GLM 4.7', hint: 'Advanced reasoning · Tool use', category: 'Reasoning' },
@@ -703,6 +703,7 @@ function AIEditor({ config, update }: EditorProps): React.ReactElement {
                                 key={p.id}
                                 onClick={() => selectProvider(p.id)}
                                 title={p.name}
+                                aria-label={`Select ${p.name} as AI provider`}
                                 className={`group relative flex flex-col items-center justify-center shrink-0 w-[72px] h-[72px] rounded-2xl border transition-all duration-200 ${buttonClass}`}
                             >
                                 <div className={`pointer-events-none transition-transform duration-200 ${iconWrapperClass}`}>
@@ -782,7 +783,7 @@ function AIEditor({ config, update }: EditorProps): React.ReactElement {
                                 <a
                                     href={providerMeta.keyLink}
                                     target="_blank"
-                                    rel="noreferrer"
+                                    rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--brand-primary)] hover:underline"
                                 >
                                     Open Console <ExternalLink className="w-3 h-3" />
