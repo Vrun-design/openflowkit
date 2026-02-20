@@ -69,7 +69,7 @@ interface ViewSettings {
 }
 
 
-export type AIProvider = 'gemini' | 'openai' | 'claude' | 'groq' | 'nvidia' | 'cerebras' | 'custom';
+export type AIProvider = 'gemini' | 'openai' | 'claude' | 'groq' | 'nvidia' | 'cerebras' | 'mistral' | 'custom';
 
 export interface BrandConfig {
     appName: string;
@@ -499,7 +499,6 @@ export const useFlowStore = create<FlowState>()(
             })),
 
 
-            // Brand Actions
             // Brand Actions
             setBrandConfig: (config) => set((state) => {
                 const newConfig = { ...state.brandConfig, ...config };

@@ -108,4 +108,12 @@ export const KEYBOARD_SHORTCUTS = [
       { label: 'Nudge Node', keys: ['Arrows'] },
     ]
   },
+  {
+    title: 'Help',
+    items: [
+      { label: 'Keyboard Shortcuts', keys: ['?'] },
+      { label: 'Keyboard Shortcuts', keys: ['Cmd', '/'] },
+      { label: 'Command Bar', keys: ['Cmd', 'K'] },
+    ]
+  },
 ];

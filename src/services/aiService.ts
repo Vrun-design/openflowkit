@@ -1,12 +1,13 @@
 import { getSystemInstruction, ChatMessage, generateDiagramFromChat as generateDiagramFromChatGemini } from './geminiService';
 
-export type AIProvider = 'gemini' | 'openai' | 'claude' | 'groq' | 'nvidia' | 'cerebras' | 'custom';
+export type AIProvider = 'gemini' | 'openai' | 'claude' | 'groq' | 'nvidia' | 'cerebras' | 'mistral' | 'custom';
 
 const PROVIDER_BASE_URLS: Record<string, string> = {
     openai: 'https://api.openai.com/v1',
     groq: 'https://api.groq.com/openai/v1',
     nvidia: 'https://integrate.api.nvidia.com/v1',
     cerebras: 'https://api.cerebras.ai/v1',
+    mistral: 'https://api.mistral.ai/v1',
 };
 
 const DEFAULT_MODELS: Record<string, string> = {
@@ -15,7 +16,8 @@ const DEFAULT_MODELS: Record<string, string> = {
     claude: 'claude-sonnet-4-6',
     groq: 'meta-llama/llama-4-scout-17b-16e-instruct',
     nvidia: 'meta/llama-4-scout-17b-16e-instruct',
-    cerebras: 'llama3.3-70b',
+    cerebras: 'gpt-oss-120b',
+    mistral: 'mistral-medium-latest',
     custom: 'gpt-4o',
 };
 
@@ -27,7 +29,7 @@ function historyToMessages(history: ChatMessage[]): { role: string; content: str
     }));
 }
 
-// --- OpenAI-compatible REST call (used by OpenAI, Groq, NVIDIA, Cerebras, Custom) ---
+// --- OpenAI-compatible REST call (used by OpenAI, Groq, NVIDIA, Cerebras, Mistral, Custom) ---
 async function callOpenAICompatible(
     baseUrl: string,
     apiKey: string,
@@ -123,7 +125,7 @@ export async function generateDiagramFromChat(
         return callClaude(apiKey, modelId || DEFAULT_MODELS.claude, messages);
     }
 
-    // All remaining providers (OpenAI, Groq, NVIDIA, Cerebras, Custom) share the OpenAI wire format
+    // All remaining providers (OpenAI, Groq, NVIDIA, Cerebras, Mistral, Custom) share the OpenAI wire format
     const baseUrl = provider === 'custom'
         ? (customBaseUrl || PROVIDER_BASE_URLS.openai)
         : PROVIDER_BASE_URLS[provider];

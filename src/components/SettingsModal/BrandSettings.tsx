@@ -107,8 +107,8 @@ const PROVIDERS: {
             name: 'NVIDIA',
             icon: '▶',
             color: '#76b900',
-            logoPath: '/logos/Nvidea.svg',
-            hint: 'NIM · DeepSeek-V3.2 · Frontier models',
+            logoPath: '/logos/Nvidia.svg',
+            hint: 'NIM · Kimi-V2.5 · Frontier models',
             keyPlaceholder: 'nvapi-...',
             keyLink: 'https://build.nvidia.com',
             keyLinkLabel: 'Get an NVIDIA API Key',
@@ -128,7 +128,21 @@ const PROVIDERS: {
             keyLinkLabel: 'Get a Cerebras API Key',
             consoleName: 'Cerebras Cloud',
             keySetupNote: 'Free tier available — no credit card needed',
-            defaultModel: 'llama3.3-70b',
+            defaultModel: 'gpt-oss-120b',
+        },
+        {
+            id: 'mistral',
+            name: 'Mistral',
+            icon: '▣',
+            color: '#FF7000',
+            logoPath: '/logos/Mistral.svg',
+            hint: 'Le Chat · Codestral · European AI leader',
+            keyPlaceholder: 'your-mistral-key...',
+            keyLink: 'https://console.mistral.ai/api-keys',
+            keyLinkLabel: 'Get a Mistral API Key',
+            consoleName: 'Mistral Console (La Plateforme)',
+            keySetupNote: 'Free tier with generous limits — no credit card needed',
+            defaultModel: 'mistral-medium-latest',
         },
         {
             id: 'custom',
@@ -171,19 +185,27 @@ const PROVIDER_MODELS: Record<AIProvider, { id: string; label: string; hint: str
         { id: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout', hint: 'Free tier · Very fast', category: 'Speed', badge: 'Free' },
         { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'Llama 4 Maverick', hint: 'More capable · Free tier', category: 'Speed', badge: 'Free' },
         { id: 'qwen/qwen3-32b', label: 'Qwen3 32B', hint: 'Advanced reasoning · Tool use', category: 'Reasoning' },
-        { id: 'deepseek-r1-distill-llama-70b', label: 'DeepSeek R1 (Llama)', hint: 'Chain-of-thought reasoning', category: 'Reasoning', badge: 'Reasoning' },
+        { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile', hint: 'Versatile model', category: 'Performance', badge: 'Performance' },
     ],
     nvidia: [
         { id: 'meta/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout', hint: 'Efficient · Multi-modal', category: 'Speed' },
-        { id: 'nvidia/llama-3.1-nemotron-ultra-253b-v1', label: 'Nemotron Ultra 253B', hint: 'NVIDIA flagship · Best accuracy', category: 'Flagship', badge: 'Flagship' },
+        { id: 'nvidia/nemotron-nano-12b-v2-vl', label: 'Nemotron Nano 12B', hint: 'Lightweight · Vision-language · Fast', category: 'Speed' },
         { id: 'deepseek/deepseek-v3-2', label: 'DeepSeek-V3.2 (685B)', hint: 'Latest · GPT-5 comparable', category: 'Flagship', badge: 'New' },
         { id: 'qwen/qwq-32b', label: 'QwQ 32B', hint: 'Strong reasoning model', category: 'Reasoning' },
+        { id: 'moonshotai/kimi-k2-thinking', label: 'Kimi K2 Thinking', hint: 'Advanced reasoning · Tool use', category: 'Reasoning' },
     ],
     cerebras: [
-        { id: 'meta-llama/llama-4-scout-17b-16e-instruct', label: 'Llama 4 Scout', hint: 'Fast inference on WSE-3', category: 'Speed' },
-        { id: 'llama3.3-70b', label: 'Llama 3.3 70B', hint: '~800 tok/s · Reliable', category: 'Speed', badge: 'Default' },
+        { id: 'gpt-oss-120b', label: 'GPT-OSS 120B', hint: '120B params · Fast on WSE-3', category: 'Speed', badge: 'Default' },
         { id: 'qwen-3-32b', label: 'Qwen3 32B', hint: '2,403 tok/s · Industry fastest', category: 'Speed', badge: '🚀 Fastest' },
         { id: 'qwen-3-235b-a22b', label: 'Qwen3 235B A22B', hint: 'Flagship · Best quality', category: 'Flagship', badge: 'Flagship' },
+        { id: 'zai-glm-4.7', label: 'Zai-GLM 4.7', hint: 'Advanced reasoning · Tool use', category: 'Reasoning' },
+    ],
+    mistral: [
+        { id: 'mistral-small-latest', label: 'Mistral Small', hint: 'Fast · Cost-efficient · 32k context', category: 'Speed', badge: 'Free' },
+        { id: 'mistral-medium-latest', label: 'Mistral Medium', hint: 'Balanced quality-cost · Best default', category: 'Flagship', badge: 'Default' },
+        { id: 'mistral-large-latest', label: 'Mistral Large', hint: 'Most capable · 128k context · Flagship', category: 'Flagship', badge: 'Flagship' },
+        { id: 'codestral-latest', label: 'Codestral', hint: 'Code-optimized · 256k context', category: 'Coding', badge: 'Code' },
+        { id: 'pixtral-large-latest', label: 'Pixtral Large', hint: 'Vision + reasoning · Multimodal', category: 'Multimodal', badge: 'Vision' },
     ],
     custom: [
         { id: 'custom', label: 'Custom Model', hint: 'Enter your model ID below', category: 'Custom' },
@@ -681,6 +703,7 @@ function AIEditor({ config, update }: EditorProps): React.ReactElement {
                                 key={p.id}
                                 onClick={() => selectProvider(p.id)}
                                 title={p.name}
+                                aria-label={`Select ${p.name} as AI provider`}
                                 className={`group relative flex flex-col items-center justify-center shrink-0 w-[72px] h-[72px] rounded-2xl border transition-all duration-200 ${buttonClass}`}
                             >
                                 <div className={`pointer-events-none transition-transform duration-200 ${iconWrapperClass}`}>
@@ -760,7 +783,7 @@ function AIEditor({ config, update }: EditorProps): React.ReactElement {
                                 <a
                                     href={providerMeta.keyLink}
                                     target="_blank"
-                                    rel="noreferrer"
+                                    rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--brand-primary)] hover:underline"
                                 >
                                     Open Console <ExternalLink className="w-3 h-3" />

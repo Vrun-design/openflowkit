@@ -34,7 +34,7 @@ OpenFlowKit is a professional-grade canvas that combines the power of **React Fl
 - **Diagram-as-Code Native**: Full support for **Mermaid.js** and the **OpenFlow DSL V2**.
 - **High-Fidelity UX**: Glassmorphism, smooth animations, and CAD-inspired aesthetics out of the box.
 - **Privacy First**: Local-first architecture. Your data never leaves your device.
-- **BYOK AI**: Bring your own API key for 6 providers — Gemini, OpenAI, Claude, Groq, NVIDIA, Cerebras, or any custom OpenAI-compatible endpoint.
+- **BYOK AI**: Bring your own API key for 7 providers — Gemini, OpenAI, Claude, Groq, NVIDIA, Cerebras, Mistral, or any custom OpenAI-compatible endpoint.
 
 ---
 
@@ -59,6 +59,7 @@ Generate entire diagrams from a text prompt. Bring your own API key — your key
 | **Gemini** | ✅ Yes | `AIzaSy...` | Google AI Studio — no credit card needed |
 | **Groq** | ✅ Yes | `gsk_...` | Blazing fast · Llama 4 |
 | **Cerebras** | ✅ Yes | `csk-...` | 2,400 tok/s on WSE-3 |
+| **Mistral** | ✅ Yes | `azy...` | European AI · Codestral · Le Chat |
 | **NVIDIA NIM** | ✅ Credits | `nvapi-...` | DeepSeek-V3.2, Llama 4 |
 | **OpenAI** | 💳 Paid | `sk-...` | GPT-5 family |
 | **Claude** | 💳 Paid | `sk-ant-...` | Anthropic Sonnet/Opus |
@@ -251,7 +252,7 @@ Privacy-friendly analytics via PostHog.
 ### 4. AI Integration (BYOK)
 The AI layer (`useAIGeneration.ts`) and provider client (`geminiService.ts`) are isolated modules.
 - **BYOK**: Users add their own API key in Settings → Flowpilot. Keys are stored in `localStorage` only.
-- **Multi-Provider**: Gemini, OpenAI, Claude, Groq, NVIDIA, Cerebras, or any OpenAI-compatible custom endpoint.
+- **Multi-Provider**: Gemini, OpenAI, Claude, Groq, NVIDIA, Cerebras, Mistral, or any OpenAI-compatible custom endpoint.
 - **Swap Providers**: Select a new provider in-app — no code changes required.
 
 ![Extensibility](public/readme/6.png)
