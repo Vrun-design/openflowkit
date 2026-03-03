@@ -14,7 +14,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(({
     id,
     ...props
 }, ref) => {
-    const inputId = id || React.useId();
+    const generatedId = React.useId();
+    const inputId = id ?? generatedId;
 
     return (
         <div className="space-y-1.5 h-full flex flex-col">

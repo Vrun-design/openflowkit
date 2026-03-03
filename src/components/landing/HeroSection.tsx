@@ -21,18 +21,19 @@ export function HeroSection({ onLaunch }: HeroSectionProps): React.ReactElement 
     t('landing.hero.builds'),
     t('landing.hero.ships')
   ];
+  const rotatingWordsLength = ROTATING_WORDS.length;
 
   useEffect(() => {
     const timer = setInterval(() => {
       setIsExiting(true);
       setTimeout(() => {
-        setIndex((prev) => (prev + 1) % ROTATING_WORDS.length);
+        setIndex((prev) => (prev + 1) % rotatingWordsLength);
         setIsExiting(false);
       }, 500); // Wait for exit animation
     }, 3000); // Total cycle time
 
     return () => clearInterval(timer);
-  }, []);
+  }, [rotatingWordsLength]);
 
   const [copied, setCopied] = useState(false);
 

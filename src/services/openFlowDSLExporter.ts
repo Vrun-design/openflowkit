@@ -131,7 +131,7 @@ export const toOpenFlowDSL = (nodes: Node[], edges: Edge[]): string => {
             if (!sourceNode || !targetNode) continue;
 
             // We use IDs for connections in V2
-            let arrow = '->';
+            const arrow = '->';
             // Check edge style?
             // if (edge.data?.styleType === 'dashed') arrow = '..>';
             // if (edge.data?.styleType === 'thick') arrow = '==>';

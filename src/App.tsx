@@ -109,7 +109,7 @@ function MobileGate({ children }: { children: React.ReactNode }): React.JSX.Elem
         </h2>
 
         <p className="text-brand-secondary text-base leading-relaxed max-w-sm mb-10">
-          OpenFlowKit's diagram editor needs a desktop or tablet-sized screen for the best experience. Please open this on a larger device.
+          OpenFlowKit diagram editor needs a desktop or tablet-sized screen for the best experience. Please open this on a larger device.
         </p>
 
         <button

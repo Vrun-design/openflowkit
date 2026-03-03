@@ -124,7 +124,7 @@ export const EdgeProperties: React.FC<EdgePropertiesProps> = ({
                             markerStart: isBidirectional ? undefined : { type: MarkerType.ArrowClosed, color: selectedEdge.style?.stroke || '#94a3b8' }
                         });
                     }}
-                    variant={!!selectedEdge.markerStart ? 'primary' : 'secondary'}
+                    variant={selectedEdge.markerStart ? 'primary' : 'secondary'}
                     className="flex-1"
                 >
                     Bidirectional

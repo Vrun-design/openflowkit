@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useFlowStore, BrandKit } from '../../store';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -173,24 +173,22 @@ function BrandEditorView({ kitId, onBack }: BrandEditorViewProps): React.ReactEl
 
     const kit = brandKits.find(k => k.id === kitId);
     const [activeTab, setActiveTab] = useState<EditorTab>('identity');
-    const [name, setName] = useState(kit?.name ?? '');
-
-    // Sync name field when switching kits
-    useEffect(() => {
-        if (kit) setName(kit.name);
-    }, [kit?.id]);
+    const nameInputRef = useRef<HTMLInputElement>(null);
 
     // Activate the kit being edited so live preview reflects changes
     useEffect(() => {
         if (activeBrandKitId !== kitId) setActiveBrandKitId(kitId);
-    }, [kitId]);
+    }, [activeBrandKitId, kitId, setActiveBrandKitId]);
 
     if (!kit) return <div>Kit not found</div>;
 
     const isLive = activeBrandKitId === kitId;
 
     function saveNameIfChanged() {
-        if (name.trim() !== kit!.name) updateBrandKitName(kit!.id, name);
+        const nextName = nameInputRef.current?.value?.trim() ?? '';
+        if (nextName && nextName !== kit.name) {
+            updateBrandKitName(kit.id, nextName);
+        }
     }
 
     const editorMap: Record<EditorTab, React.ReactNode> = {
@@ -209,9 +207,10 @@ function BrandEditorView({ kitId, onBack }: BrandEditorViewProps): React.ReactEl
                 </Button>
                 <div className="flex-1">
                     <input
+                        key={kit.id}
+                        ref={nameInputRef}
                         className="w-full bg-transparent font-semibold text-slate-700 text-sm focus:outline-none focus:bg-white focus:ring-1 focus:ring-[var(--brand-primary)] rounded px-1 -ml-1 transition-all truncate"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        defaultValue={kit.name}
                         onBlur={saveNameIfChanged}
                         onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
                     />

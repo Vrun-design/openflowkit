@@ -1,5 +1,5 @@
-import React, { useCallback, useRef, useState, useMemo } from 'react';
-import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath, getSmoothStepPath, getStraightPath, useReactFlow, useViewport, useEdges } from 'reactflow';
+import React, { useEffect, useRef } from 'react';
+import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath, getSmoothStepPath, useReactFlow, useEdges } from 'reactflow';
 import { EdgeData } from '@/lib/types';
 import { useDesignSystem } from '@/hooks/useDesignSystem';
 
@@ -91,8 +91,8 @@ const CustomEdgeWrapper = ({
     markerStart?: string;
 }) => {
     const { setEdges, screenToFlowPosition } = useReactFlow();
-    const { zoom } = useViewport();
     const pathRef = useRef<SVGPathElement>(null);
+    const labelRef = useRef<HTMLDivElement>(null);
     const designSystem = useDesignSystem();
     const resolvedStyle: React.CSSProperties = {
         stroke: designSystem.colors.edge,
@@ -100,16 +100,28 @@ const CustomEdgeWrapper = ({
         ...style,
     };
 
-    // Calculate position along path for label
-    let posX = labelX;
-    let posY = labelY;
+    useEffect(() => {
+        const labelNode = labelRef.current;
+        if (!labelNode) return;
 
-    if (pathRef.current && typeof data?.labelPosition === 'number') {
-        const len = pathRef.current.getTotalLength();
-        const point = pathRef.current.getPointAtLength(len * data.labelPosition);
-        posX = point.x;
-        posY = point.y;
-    }
+        let x = labelX;
+        let y = labelY;
+
+        if (typeof data?.labelPosition !== 'number') {
+            labelNode.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+            return;
+        }
+        const pathNode = pathRef.current;
+        if (!pathNode) {
+            labelNode.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+            return;
+        }
+        const len = pathNode.getTotalLength();
+        const point = pathNode.getPointAtLength(len * data.labelPosition);
+        x = point.x;
+        y = point.y;
+        labelNode.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+    }, [data?.labelPosition, labelX, labelY, path]);
 
     const onLabelPointerDown = (event: React.PointerEvent) => {
         event.stopPropagation();
@@ -168,9 +180,10 @@ const CustomEdgeWrapper = ({
             {label && (
                 <EdgeLabelRenderer>
                     <div
+                        ref={labelRef}
                         style={{
                             position: 'absolute',
-                            transform: `translate(-50%, -50%) translate(${posX}px,${posY}px)`,
+                            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
                             fontSize: 12,
                             pointerEvents: 'all',
                         }}

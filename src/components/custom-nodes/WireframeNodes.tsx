@@ -86,3 +86,9 @@ export const WireframeIconNode = memo(({ data, selected }: NodeProps<NodeData>) 
         </div>
     );
 });
+
+DefaultHandles.displayName = 'DefaultHandles';
+WireframeButtonNode.displayName = 'WireframeButtonNode';
+WireframeInputNode.displayName = 'WireframeInputNode';
+WireframeImageNode.displayName = 'WireframeImageNode';
+WireframeIconNode.displayName = 'WireframeIconNode';

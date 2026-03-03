@@ -70,7 +70,7 @@ Your job:
 | \`->|label|\` | Labeled arrow | Decision branches — ALWAYS label Yes/No, Pass/Fail etc. |
 | \`==>\` | **Thick** | Primary happy path / critical route |
 | \`-->\` | Curved | Soft / secondary flow |
-| \`..\>\` | Dashed | Optional, error path, alternative, async |
+| \`..>\` | Dashed | Optional, error path, alternative, async |
 
 ---
 
@@ -84,7 +84,7 @@ Syntax: \`[type] id: Label { icon: "IconName", color: "color", subLabel: "option
    [system] api: Payment API { icon: "CreditCard", color: "violet", subLabel: "Stripe v3" }
    \`\`\`
 
-7. **Annotations** — use \`[note]\` to add callouts for constraints, caveats, or SLAs. Connect with a dashed edge \`..\>\`:
+7. **Annotations** — use \`[note]\` to add callouts for constraints, caveats, or SLAs. Connect with a dashed edge \`..>\`:
    \`\`\`
    [note] sla: 99.9% Uptime required { color: "slate" }
    api ..> sla

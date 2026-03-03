@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { Node } from 'reactflow';
 import { NodeData } from '@/lib/types';
 import { Bold, Italic, List, ListOrdered, Code, Quote, Heading1, CheckSquare, Copy, Trash2, Box, AlignLeft, AlignCenter, AlignRight, Image as ImageIcon, Type, Layout, Palette, Star, Image as ImageStart } from 'lucide-react';
@@ -123,25 +123,29 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
     const isWireframeInput = selectedNode.type === 'wireframe_input';
     const isWireframeMisc = isWireframeIcon || isWireframeImage || isWireframeButton || isWireframeInput;
 
-    // State for progressive disclosure (accordion)
-    // Initialize open section based on node type
-    const [activeSection, setActiveSection] = useState<string>('content');
+    function getDefaultSection(): string {
+        if (isWireframeApp) return 'variant';
+        if (isWireframeIcon) return 'icon';
+        if (isText || isAnnotation) return 'content';
+        return 'appearance';
+    }
 
-    // Reset/Set default active section when selected node type changes
-    useEffect(() => {
-        if (isWireframeApp) setActiveSection('variant');
-        else if (isWireframeIcon) setActiveSection('icon');
-        else if (isText) setActiveSection('content'); // Text nodes prioritize content
-        else if (isAnnotation) setActiveSection('content');
-        else setActiveSection('appearance'); // Standard nodes prioritize shape/appearance
-    }, [selectedNode.id, selectedNode.type]); // Re-run when selection changes
+    // Persist accordion state per node to avoid effect-driven synchronous setState.
+    const [activeSectionsByNode, setActiveSectionsByNode] = useState<Record<string, string>>({});
+    const activeSection = activeSectionsByNode[selectedNode.id] ?? getDefaultSection();
 
     const toggleSection = (section: string) => {
+        const currentSection = activeSectionsByNode[selectedNode.id] ?? getDefaultSection();
+        let nextSection = '';
         if (section === 'typography') {
-            setActiveSection(current => current === 'content-typography' ? 'content' : 'content-typography');
+            nextSection = currentSection === 'content-typography' ? 'content' : 'content-typography';
         } else {
-            setActiveSection(current => current === section ? '' : section);
+            nextSection = currentSection === section ? '' : section;
         }
+        setActiveSectionsByNode((prev) => ({
+            ...prev,
+            [selectedNode.id]: nextSection,
+        }));
     };
 
     const labelInputRef = useRef<HTMLTextAreaElement>(null);

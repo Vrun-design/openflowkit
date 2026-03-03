@@ -90,8 +90,6 @@ export function usePlayback() {
 
         if (isPlaying && !isFinished) {
             interval = setInterval(nextStep, playbackSpeed);
-        } else if (isPlaying && isFinished) {
-            setIsPlaying(false);
         }
 
         return () => { if (interval) clearInterval(interval); };

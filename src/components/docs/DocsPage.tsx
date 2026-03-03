@@ -43,8 +43,8 @@ const slugify = (text: string) => {
         .toLowerCase()
         .trim()
         .replace(/\s+/g, '-')        // Replace spaces with -
-        .replace(/[^\w\-]+/g, '')    // Remove all non-word chars
-        .replace(/\-\-+/g, '-')      // Replace multiple - with single -
+        .replace(/[^\w-]+/g, '')     // Remove all non-word chars
+        .replace(/--+/g, '-')        // Replace multiple - with single -
         .replace(/^-+/, '')          // Trim start
         .replace(/-+$/, '');         // Trim end
 };
@@ -157,12 +157,12 @@ export const DocsPage: React.FC = () => {
                     <>
                         <DocsBreadcrumbs />
 
-                        {/* Only show title if the content doesn't start with an H1 */
-                            (!content || !content.trim().startsWith('# ')) && (
-                                <h1 className="text-4xl font-extrabold mb-8 capitalize text-slate-900 tracking-tight leading-tight">
-                                    {slug?.replace(/-/g, ' ')}
-                                </h1>
-                            )}
+                        {/* Only show title if the content does not start with an H1 */}
+                        {(!content || !content.trim().startsWith('# ')) && (
+                            <h1 className="text-4xl font-extrabold mb-8 capitalize text-slate-900 tracking-tight leading-tight">
+                                {slug?.replace(/-/g, ' ')}
+                            </h1>
+                        )}
                     </>
                 )}
 
@@ -178,7 +178,7 @@ export const DocsPage: React.FC = () => {
                         <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
                         <div>
                             <h3 className="font-semibold text-sm">Document Not Found</h3>
-                            <p className="text-sm mt-1">We couldn't find the requested documentation page.</p>
+                            <p className="text-sm mt-1">We could not find the requested documentation page.</p>
                             <Link to="/docs" className="text-sm mt-3 inline-block font-medium underline">Return to Introduction</Link>
                         </div>
                     </div>

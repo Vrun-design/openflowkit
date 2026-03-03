@@ -69,7 +69,7 @@ export function SolutionSection(): React.ReactElement {
                                     <div className="w-2 h-2 rounded-full bg-green-500/80"></div>
                                 </div>
                                 <div className="font-mono text-[10px] space-y-1.5">
-                                    <div className="text-gray-400">// define.ts</div>
+                                    <div className="text-gray-400">{'// define.ts'}</div>
                                     <div><span className="text-purple-400">const</span> <span className="text-blue-300">api</span> = <span className="text-yellow-200">Node</span>();</div>
                                     <div><span className="text-purple-400">const</span> <span className="text-blue-300">db</span> = <span className="text-yellow-200">Node</span>();</div>
                                     <div><span className="text-blue-300">api</span>.<span className="text-green-300">connect</span>(<span className="text-blue-300">db</span>);</div>
@@ -217,7 +217,7 @@ export function SolutionSection(): React.ReactElement {
                                 <div className="w-px h-8 bg-brand-border mx-2"></div>
 
                                 <div className="text-xs font-mono text-brand-secondary bg-white border border-brand-border px-3 py-2 rounded-lg">
-                                    font-family: 'Inter', sans-serif;
+                                    font-family: &apos;Inter&apos;, sans-serif;
                                 </div>
                             </div>
                         </div>
@@ -241,8 +241,8 @@ export function SolutionSection(): React.ReactElement {
 
                         {/* Visual: Language Flags */}
                         <div className="relative z-10 mt-8 flex flex-wrap gap-3">
-                            {['US', 'TR', 'DE', 'FR', 'ES', 'CN', 'JP'].map((country) => (
-                                <div key={country} className="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center shadow-sm overflow-hidden group-hover:-translate-y-1 transition-transform hover:!scale-110 duration-300" style={{ transitionDelay: `${Math.random() * 150}ms` }}>
+                            {['US', 'TR', 'DE', 'FR', 'ES', 'CN', 'JP'].map((country, index) => (
+                                <div key={country} className="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center shadow-sm overflow-hidden group-hover:-translate-y-1 transition-transform hover:!scale-110 duration-300" style={{ transitionDelay: `${index * 25}ms` }}>
                                     <img src={`https://flagcdn.com/w40/${getFlagCode(country)}.png`} alt={`${country} flag`} className="w-full h-full object-cover" />
                                 </div>
                             ))}

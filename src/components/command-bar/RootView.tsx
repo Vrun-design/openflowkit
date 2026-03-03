@@ -165,7 +165,7 @@ export const RootView = ({
                         className="px-4 py-3 text-sm text-slate-500 text-center cursor-pointer hover:bg-slate-50"
                         onClick={() => setView('ai')}
                     >
-                        Press <kbd className="font-sans px-1 py-0.5 bg-slate-100 border border-slate-200 rounded text-xs">Enter</kbd> to ask Flowpilot about "{searchQuery}"
+                        Press <kbd className="font-sans px-1 py-0.5 bg-slate-100 border border-slate-200 rounded text-xs">Enter</kbd> to ask Flowpilot about &quot;{searchQuery}&quot;
                     </div>
                 )}
             </div>

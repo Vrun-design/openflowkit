@@ -55,7 +55,7 @@ export const useAutoSave = (
             // If no save found, mark as loaded so we can start saving new state
             isLoaded.current = true;
         }
-    }, []);
+    }, [setActiveTabId, setEdges, setFuture, setNodes, setPast, setTabs]);
 
     // Auto-save logic
     useEffect(() => {

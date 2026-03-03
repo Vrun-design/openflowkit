@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Layout, Shield } from 'lucide-react';
 import { OpenFlowLogo } from './icons/OpenFlowLogo';
 import { useFlowStore } from '../store';
@@ -8,14 +8,7 @@ export function WelcomeModal(): React.JSX.Element | null {
     const { t } = useTranslation();
     const buttonStyle = useFlowStore(state => state.brandConfig.ui.buttonStyle);
     const isBeveled = buttonStyle === 'beveled';
-    const [isOpen, setIsOpen] = useState(false);
-
-    useEffect(() => {
-        const hasSeenWelcome = localStorage.getItem('hasSeenWelcome_v1');
-        if (!hasSeenWelcome) {
-            setIsOpen(true);
-        }
-    }, []);
+    const [isOpen, setIsOpen] = useState(() => !localStorage.getItem('hasSeenWelcome_v1'));
 
     const handleClose = () => {
         setIsOpen(false);

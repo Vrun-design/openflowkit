@@ -114,7 +114,7 @@ export function CodeDemo(): React.ReactElement {
           <div className="flex-1 p-6 leading-7 text-gray-400 overflow-y-auto custom-scrollbar selection:bg-brand-blue/30 selection:text-white">
              <div className="flex group hover:bg-white/5 transition-colors -mx-6 px-6">
                  <span className="w-8 text-gray-700 select-none text-right mr-4 text-[11px] pt-0.5 font-medium">1</span>
-                 <div><span className="text-[#C678DD]">import</span> <span className="text-[#E5C07B]">{`{ Node, Edge }`}</span> <span className="text-[#C678DD]">from</span> <span className="text-[#98C379]">'@openflowkit/core'</span>;</div>
+                 <div><span className="text-[#C678DD]">import</span> <span className="text-[#E5C07B]">{`{ Node, Edge }`}</span> <span className="text-[#C678DD]">from</span> <span className="text-[#98C379]">&quot;@openflowkit/core&quot;</span>;</div>
              </div>
              <div className="flex group hover:bg-white/5 transition-colors -mx-6 px-6">
                  <span className="w-8 text-gray-700 select-none text-right mr-4 text-[11px] pt-0.5 font-medium">2</span>
@@ -122,7 +122,7 @@ export function CodeDemo(): React.ReactElement {
              </div>
              <div className="flex group hover:bg-white/5 transition-colors -mx-6 px-6">
                  <span className="w-8 text-gray-700 select-none text-right mr-4 text-[11px] pt-0.5 font-medium">3</span>
-                 <div className="italic text-gray-500"><span className="text-[#56B6C2]">/** Defines the Checkout Service */</span></div>
+                 <div className="italic text-gray-500"><span className="text-[#56B6C2]">{'/** Defines the Checkout Service */'}</span></div>
              </div>
              <div className="flex group hover:bg-white/5 transition-colors -mx-6 px-6">
                  <span className="w-8 text-gray-700 select-none text-right mr-4 text-[11px] pt-0.5 font-medium">4</span>
@@ -130,11 +130,11 @@ export function CodeDemo(): React.ReactElement {
              </div>
              <div className="flex bg-[#1E222A] border-l-2 border-brand-blue -mx-6 px-6">
                  <span className="w-8 text-gray-700 select-none text-right mr-4 text-[11px] pt-0.5 font-medium">5</span>
-                 <div className="pl-4">id: <span className="text-[#98C379]">'checkout-service'</span>,</div>
+                 <div className="pl-4">id: <span className="text-[#98C379]">&apos;checkout-service&apos;</span>,</div>
              </div>
              <div className="flex bg-[#1E222A] border-l-2 border-brand-blue -mx-6 px-6">
                  <span className="w-8 text-gray-700 select-none text-right mr-4 text-[11px] pt-0.5 font-medium">6</span>
-                 <div className="pl-4">type: <span className="text-[#98C379]">'service'</span>,</div>
+                 <div className="pl-4">type: <span className="text-[#98C379]">&apos;service&apos;</span>,</div>
              </div>
              <div className="flex bg-[#1E222A] border-l-2 border-brand-blue -mx-6 px-6">
                  <span className="w-8 text-gray-700 select-none text-right mr-4 text-[11px] pt-0.5 font-medium">7</span>
@@ -154,11 +154,11 @@ export function CodeDemo(): React.ReactElement {
              </div>
              <div className="flex group hover:bg-white/5 transition-colors -mx-6 px-6">
                  <span className="w-8 text-gray-700 select-none text-right mr-4 text-[11px] pt-0.5 font-medium">11</span>
-                 <div className="pl-4">target: <span className="text-[#98C379]">'payment-db'</span>,</div>
+                 <div className="pl-4">target: <span className="text-[#98C379]">&apos;payment-db&apos;</span>,</div>
              </div>
              <div className="flex group hover:bg-white/5 transition-colors -mx-6 px-6">
                  <span className="w-8 text-gray-700 select-none text-right mr-4 text-[11px] pt-0.5 font-medium">12</span>
-                 <div className="pl-4">kind: <span className="text-[#98C379]">'TCP/IP'</span></div>
+                 <div className="pl-4">kind: <span className="text-[#98C379]">&apos;TCP/IP&apos;</span></div>
              </div>
              <div className="flex group hover:bg-white/5 transition-colors -mx-6 px-6">
                  <span className="w-8 text-gray-700 select-none text-right mr-4 text-[11px] pt-0.5 font-medium">13</span>

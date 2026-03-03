@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useEffect, useState } from 'react';
+import React, { useCallback, useMemo, useEffect, useRef } from 'react';
 import ReactFlow, {
     useNodesState,
     useEdgesState,
@@ -39,9 +39,7 @@ const StartNode = ({ data }: NodeProps) => {
                 <div className="mb-4">
                     <span className="text-purple-400">const</span> <span className="text-blue-400">flow</span> = <span className="text-yellow-300">new</span> <span className="text-emerald-400">FlowMind</span>();
                 </div>
-                <div className="mb-4 text-slate-500">
-                    // Generating architecture...
-                </div>
+                <div className="mb-4 text-slate-500">{'// Generating architecture...'}</div>
 
                 <div className="space-y-2">
                     <button
@@ -85,7 +83,7 @@ const initialNodes = [
 export const HeroCanvas = () => {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-    const [hasBuilt, setHasBuilt] = useState(false);
+    const hasBuiltRef = useRef(false);
 
     const onConnect = useCallback((params: Connection) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
 
@@ -146,7 +144,8 @@ export const HeroCanvas = () => {
 
     // Auto-build effect
     useEffect(() => {
-        if (hasBuilt) return;
+        if (hasBuiltRef.current) return;
+        hasBuiltRef.current = true;
 
         const timeouts = [
             setTimeout(() => addNode(), 1000),
@@ -154,9 +153,8 @@ export const HeroCanvas = () => {
             setTimeout(() => addNode(), 3000),
         ];
 
-        setHasBuilt(true);
         return () => timeouts.forEach(clearTimeout);
-    }, [addNode, hasBuilt]);
+    }, [addNode]);
 
     return (
         <div className="w-full h-full bg-[#FAFAFA] relative">

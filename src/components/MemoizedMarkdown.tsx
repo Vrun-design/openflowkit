@@ -15,4 +15,6 @@ const MemoizedMarkdown = memo(({ content }: MemoizedMarkdownProps) => {
     );
 });
 
+MemoizedMarkdown.displayName = 'MemoizedMarkdown';
+
 export default MemoizedMarkdown;

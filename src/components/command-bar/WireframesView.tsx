@@ -24,11 +24,11 @@ export const WireframesView: React.FC<WireframesViewProps> = ({ onClose, handleB
     const isBeveled = brandConfig.ui.buttonStyle === 'beveled';
 
     const handleAdd = (type: string) => {
-        const id = `wf-${Date.now()}`;
-        // Random offset to show movement/new placement
+        const nextIndex = nodes.length + 1;
+        const id = `wf-${type}-${nextIndex}`;
         const position = {
-            x: 100 + Math.random() * 50,
-            y: 100 + Math.random() * 50
+            x: 100 + (nextIndex % 6) * 12,
+            y: 100 + (nextIndex % 8) * 10
         };
 
         const label = type === 'browser' ? 'New Window' :
