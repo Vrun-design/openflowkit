@@ -51,7 +51,8 @@
     "distribute": "分布",
     "distributeHorizontally": "水平方向に分布",
     "distributeVertically": "垂直方向に分布",
-    "group": "グループ"
+    "group": "グループ",
+    "upload": "Upload"
   },
   "nav": {
     "home": "ホーム",
@@ -100,7 +101,16 @@
     "mermaid": "Mermaidとしてエクスポート",
     "plantuml": "PlantUMLとしてエクスポート",
     "openflowdsl": "OpenFlow DSLとしてエクスポート",
-    "figma": "Figmaにエクスポート"
+    "figma": "Figmaにエクスポート",
+    "hintTransparent4K": "Transparent (4K)",
+    "hintWhiteBg4K": "White Background (4K)",
+    "jsonLabel": "JSON File",
+    "hintDownload": "Download",
+    "openflowdslLabel": "{{appName}} DSL",
+    "hintClipboard": "Copy to clipboard",
+    "figmaEditable": "Figma Editable",
+    "exportDiagram": "Export Diagram",
+    "exportAs": "Export As"
   },
   "import": {
     "title": "インポート",
@@ -223,7 +233,8 @@
     "provider": "AIプロバイダー",
     "model": "モデル",
     "apiKey": "APIキー",
-    "placeholder": "フローチャートを説明してください..."
+    "placeholder": "フローチャートを説明してください...",
+    "settingsSubtitle": "Configure your preferred AI provider, model, and API key below."
   },
   "playback": {
     "title": "再生",
@@ -328,7 +339,9 @@
     "amazingAestheticsDesc": "完全にカスタマイズ可能なフォント、色、形。",
     "sunsetRed": "サンセットレッド",
     "amberWarning": "アンバー警告",
-    "successGreen": "サクセスグリーン"
+    "successGreen": "サクセスグリーン",
+    "localization": "グローバルデザイン",
+    "localizationDesc": "英語、トルコ語、ドイツ語、フランス語、スペイン語、中国語、日本語など、複数の言語で利用できます。"
   },
   "workflows": {
     "badge": "ワークフロー",
@@ -576,7 +589,14 @@
         "custom": {
           "hint": "互換エンドポイント"
         }
-      }
+      },
+      "customModelHint": "Enter the exact model ID for your endpoint",
+      "howToGetKey": "How to get your API key",
+      "pasteKeyStep": "Paste it in the field above — never shared with us",
+      "customEndpointTitle": "What is a custom endpoint?",
+      "privacyTitle": "Privacy & Encryption",
+      "customEndpointText": "Any <1>OpenAI-compatible</1> API endpoint — local or remote. Great for:",
+      "customEndpointMustSupport": "Must support <1>POST /chat/completions</1> (OpenAI format)"
     },
     "brand": {
       "title": "ブランドキット",
@@ -589,7 +609,23 @@
       "activeKit": "現在のキット",
       "inactive": "非アクティブ",
       "setActive": "アクティブにする",
-      "resetToDefaults": "デフォルトにリセット"
+      "resetToDefaults": "デフォルトにリセット",
+      "tabIdentity": "Identity",
+      "tabColors": "Colors",
+      "tabType": "Type",
+      "tabUI": "UI & Shape",
+      "appName": "App Name",
+      "logo": "Logo",
+      "favicon": "Favicon",
+      "logoStyle": "Logo Style",
+      "fontFamily": "Font Family",
+      "googleFontsHint": "Dynamically loaded from Google Fonts",
+      "cornerRadius": "Corner Radius",
+      "glassmorphism": "Glassmorphism",
+      "beveledButtons": "Beveled Buttons",
+      "beveledButtonsHint": "Add depth and borders to buttons",
+      "showBetaBadge": "Show Beta Badge",
+      "showBetaBadgeHint": "Display the BETA chip next to logo"
     },
     "shortcutsHint": "いつでも ? を押して、これらのショートカットを表示できます。",
     "privacy": {
@@ -708,5 +744,22 @@
   "flowTabs": {
     "closeTab": "タブを閉じる",
     "newFlowTab": "新しいフロータブ"
+  },
+  "nodes": {
+    "note": "Note",
+    "database": "Database",
+    "inputOutput": "Input / Output",
+    "newNode": "New Node",
+    "branch": "Branch",
+    "processStep": "Process Step",
+    "group": "Group",
+    "items": "items",
+    "addCommentsHere": "Add your comments here.",
+    "newSection": "New Section",
+    "text": "Text",
+    "image": "Image"
+  },
+  "actions": {
+    "clearCanvasConfirm": "Are you sure you want to clear the canvas?"
   }
 }

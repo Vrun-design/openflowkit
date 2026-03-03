@@ -51,7 +51,8 @@
     "distribute": "Distribuer",
     "distributeHorizontally": "Distribuer horizontalement",
     "distributeVertically": "Distribuer verticalement",
-    "group": "Groupe"
+    "group": "Groupe",
+    "upload": "Upload"
   },
   "nav": {
     "home": "Accueil",
@@ -100,7 +101,16 @@
     "mermaid": "Exporter en Mermaid",
     "plantuml": "Exporter en PlantUML",
     "openflowdsl": "Exporter en OpenFlow DSL",
-    "figma": "Exporter vers Figma"
+    "figma": "Exporter vers Figma",
+    "hintTransparent4K": "Transparent (4K)",
+    "hintWhiteBg4K": "White Background (4K)",
+    "jsonLabel": "JSON File",
+    "hintDownload": "Download",
+    "openflowdslLabel": "{{appName}} DSL",
+    "hintClipboard": "Copy to clipboard",
+    "figmaEditable": "Figma Editable",
+    "exportDiagram": "Export Diagram",
+    "exportAs": "Export As"
   },
   "import": {
     "title": "Importer",
@@ -223,7 +233,8 @@
     "provider": "Fournisseur IA",
     "model": "Modèle",
     "apiKey": "Clé API",
-    "placeholder": "Décrivez votre diagramme..."
+    "placeholder": "Décrivez votre diagramme...",
+    "settingsSubtitle": "Configure your preferred AI provider, model, and API key below."
   },
   "playback": {
     "title": "Lecture",
@@ -328,7 +339,9 @@
     "amazingAestheticsDesc": "Polices, couleurs et formes entièrement personnalisables.",
     "sunsetRed": "Rouge coucher de soleil",
     "amberWarning": "Avertissement ambre",
-    "successGreen": "Vert succès"
+    "successGreen": "Vert succès",
+    "localization": "Conception globale",
+    "localizationDesc": "Disponible en plusieurs langues, dont l'anglais, le turc, l'allemand, le français, l'espagnol, le chinois et le japonais."
   },
   "workflows": {
     "badge": "Flux de travail",
@@ -576,7 +589,14 @@
         "custom": {
           "hint": "Tout endpoint compatible OpenAI"
         }
-      }
+      },
+      "customModelHint": "Enter the exact model ID for your endpoint",
+      "howToGetKey": "How to get your API key",
+      "pasteKeyStep": "Paste it in the field above — never shared with us",
+      "customEndpointTitle": "What is a custom endpoint?",
+      "privacyTitle": "Privacy & Encryption",
+      "customEndpointText": "Any <1>OpenAI-compatible</1> API endpoint — local or remote. Great for:",
+      "customEndpointMustSupport": "Must support <1>POST /chat/completions</1> (OpenAI format)"
     },
     "brand": {
       "title": "Kits de marque",
@@ -589,7 +609,23 @@
       "activeKit": "Kit actif",
       "inactive": "Inactif",
       "setActive": "Définir comme actif",
-      "resetToDefaults": "Réinitialiser"
+      "resetToDefaults": "Réinitialiser",
+      "tabIdentity": "Identity",
+      "tabColors": "Colors",
+      "tabType": "Type",
+      "tabUI": "UI & Shape",
+      "appName": "App Name",
+      "logo": "Logo",
+      "favicon": "Favicon",
+      "logoStyle": "Logo Style",
+      "fontFamily": "Font Family",
+      "googleFontsHint": "Dynamically loaded from Google Fonts",
+      "cornerRadius": "Corner Radius",
+      "glassmorphism": "Glassmorphism",
+      "beveledButtons": "Beveled Buttons",
+      "beveledButtonsHint": "Add depth and borders to buttons",
+      "showBetaBadge": "Show Beta Badge",
+      "showBetaBadgeHint": "Display the BETA chip next to logo"
     },
     "shortcutsHint": "Vous pouvez aussi appuyer sur ? pour les afficher.",
     "privacy": {
@@ -708,5 +744,22 @@
   "flowTabs": {
     "closeTab": "Fermer l'onglet",
     "newFlowTab": "Nouvel onglet de flux"
+  },
+  "nodes": {
+    "note": "Note",
+    "database": "Database",
+    "inputOutput": "Input / Output",
+    "newNode": "New Node",
+    "branch": "Branch",
+    "processStep": "Process Step",
+    "group": "Group",
+    "items": "items",
+    "addCommentsHere": "Add your comments here.",
+    "newSection": "New Section",
+    "text": "Text",
+    "image": "Image"
+  },
+  "actions": {
+    "clearCanvasConfirm": "Are you sure you want to clear the canvas?"
   }
 }

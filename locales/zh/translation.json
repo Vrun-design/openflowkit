@@ -51,7 +51,8 @@
     "distribute": "分布",
     "distributeHorizontally": "水平分布",
     "distributeVertically": "垂直分布",
-    "group": "分组"
+    "group": "分组",
+    "upload": "Upload"
   },
   "nav": {
     "home": "首页",
@@ -100,7 +101,16 @@
     "mermaid": "导出为 Mermaid",
     "plantuml": "导出为 PlantUML",
     "openflowdsl": "导出为 OpenFlow DSL",
-    "figma": "导出到 Figma"
+    "figma": "导出到 Figma",
+    "hintTransparent4K": "Transparent (4K)",
+    "hintWhiteBg4K": "White Background (4K)",
+    "jsonLabel": "JSON File",
+    "hintDownload": "Download",
+    "openflowdslLabel": "{{appName}} DSL",
+    "hintClipboard": "Copy to clipboard",
+    "figmaEditable": "Figma Editable",
+    "exportDiagram": "Export Diagram",
+    "exportAs": "Export As"
   },
   "import": {
     "title": "导入",
@@ -223,7 +233,8 @@
     "provider": "AI 提供商",
     "model": "模型",
     "apiKey": "API 密钥",
-    "placeholder": "描述你的流程图..."
+    "placeholder": "描述你的流程图...",
+    "settingsSubtitle": "Configure your preferred AI provider, model, and API key below."
   },
   "playback": {
     "title": "回放",
@@ -328,7 +339,9 @@
     "amazingAestheticsDesc": "完全可定制的字体、颜色和形状。",
     "sunsetRed": "日落红",
     "amberWarning": "琥珀警告",
-    "successGreen": "成功绿"
+    "successGreen": "成功绿",
+    "localization": "全球化设计",
+    "localizationDesc": "支持多种语言，包括英语、土耳其语、德语、法语、西班牙语、中文和日语。"
   },
   "workflows": {
     "badge": "工作流",
@@ -576,7 +589,14 @@
         "custom": {
           "hint": "OpenAI 兼容"
         }
-      }
+      },
+      "customModelHint": "Enter the exact model ID for your endpoint",
+      "howToGetKey": "How to get your API key",
+      "pasteKeyStep": "Paste it in the field above — never shared with us",
+      "customEndpointTitle": "What is a custom endpoint?",
+      "privacyTitle": "Privacy & Encryption",
+      "customEndpointText": "Any <1>OpenAI-compatible</1> API endpoint — local or remote. Great for:",
+      "customEndpointMustSupport": "Must support <1>POST /chat/completions</1> (OpenAI format)"
     },
     "brand": {
       "title": "品牌套件",
@@ -589,7 +609,23 @@
       "activeKit": "当前套件",
       "inactive": "未激活",
       "setActive": "设为当前使用",
-      "resetToDefaults": "重置为默认"
+      "resetToDefaults": "重置为默认",
+      "tabIdentity": "Identity",
+      "tabColors": "Colors",
+      "tabType": "Type",
+      "tabUI": "UI & Shape",
+      "appName": "App Name",
+      "logo": "Logo",
+      "favicon": "Favicon",
+      "logoStyle": "Logo Style",
+      "fontFamily": "Font Family",
+      "googleFontsHint": "Dynamically loaded from Google Fonts",
+      "cornerRadius": "Corner Radius",
+      "glassmorphism": "Glassmorphism",
+      "beveledButtons": "Beveled Buttons",
+      "beveledButtonsHint": "Add depth and borders to buttons",
+      "showBetaBadge": "Show Beta Badge",
+      "showBetaBadgeHint": "Display the BETA chip next to logo"
     },
     "shortcutsHint": "你也可以随时按下 ? 键来查看这些快捷键。",
     "privacy": {
@@ -708,5 +744,22 @@
   "flowTabs": {
     "closeTab": "关闭标签页",
     "newFlowTab": "新建流程标签页"
+  },
+  "nodes": {
+    "note": "Note",
+    "database": "Database",
+    "inputOutput": "Input / Output",
+    "newNode": "New Node",
+    "branch": "Branch",
+    "processStep": "Process Step",
+    "group": "Group",
+    "items": "items",
+    "addCommentsHere": "Add your comments here.",
+    "newSection": "New Section",
+    "text": "Text",
+    "image": "Image"
+  },
+  "actions": {
+    "clearCanvasConfirm": "Are you sure you want to clear the canvas?"
   }
 }
