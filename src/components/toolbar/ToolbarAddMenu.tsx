@@ -84,8 +84,17 @@ export function ToolbarAddMenu({
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-white/95 backdrop-blur-md rounded-[var(--radius-lg)] shadow-xl border border-white/20 ring-1 ring-black/5 p-1 flex flex-col gap-0.5 z-50 animate-in slide-in-from-bottom-4 zoom-in-95 duration-200 origin-bottom pointer-events-auto">
                     <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('toolbar.addToCanvas')}</div>
 
-                    <Button onClick={() => { onAddNode(getCenter()); onCloseMenu(); }} variant="ghost" className="w-full justify-start h-9 px-3 text-sm rounded-[var(--radius-sm)] hover:bg-indigo-50 hover:text-[var(--brand-primary)] transition-colors" icon={<Square className="w-4 h-4 mr-2" />}>
-                        <span data-testid="toolbar-add-node">{t('toolbar.node')}</span>
+                    <Button
+                        onClick={() => {
+                            onAddNode(getCenter());
+                            onCloseMenu();
+                        }}
+                        data-testid="toolbar-add-node"
+                        variant="ghost"
+                        className="w-full justify-start h-9 px-3 text-sm rounded-[var(--radius-sm)] hover:bg-indigo-50 hover:text-[var(--brand-primary)] transition-colors"
+                        icon={<Square className="w-4 h-4 mr-2" />}
+                    >
+                        <span>{t('toolbar.node')}</span>
                     </Button>
                     <Button onClick={() => { onAddAnnotation(getCenter()); onCloseMenu(); }} variant="ghost" className="w-full justify-start h-9 px-3 text-sm rounded-[var(--radius-sm)] hover:bg-yellow-50 hover:text-yellow-600 transition-colors" icon={<StickyNote className="w-4 h-4 mr-2" />}>
                         {t('toolbar.stickyNote')}

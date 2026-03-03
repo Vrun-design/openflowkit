@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+import React, { useRef } from 'react';
 import ReactFlow, {
     Background,
     Controls,
@@ -7,8 +7,6 @@ import ReactFlow, {
     SelectionMode,
     MarkerType,
     useReactFlow,
-    Node,
-    Edge,
     ConnectionMode
 } from 'reactflow';
 import { useFlowStore } from '../store';
@@ -16,99 +14,52 @@ import { NodeData } from '../lib/types';
 import { useFlowOperations } from '../hooks/useFlowOperations';
 import { useModifierKeys } from '../hooks/useModifierKeys';
 import { useEdgeInteractions } from '../hooks/useEdgeInteractions';
-import CustomNode from './CustomNode';
-import AnnotationNode from './AnnotationNode';
-import SectionNode from './SectionNode';
-import TextNode from './TextNode';
-import GroupNode from './GroupNode';
-import SwimlaneNode from './SwimlaneNode';
-import ImageNode from './ImageNode';
-
-import BrowserNode from './custom-nodes/BrowserNode';
-import MobileNode from './custom-nodes/MobileNode';
-import IconNode from './custom-nodes/IconNode';
-import { WireframeButtonNode, WireframeInputNode, WireframeImageNode, WireframeIconNode } from './custom-nodes/WireframeNodes';
-import { CustomBezierEdge, CustomSmoothStepEdge, CustomStepEdge } from './CustomEdge';
 import CustomConnectionLine from './CustomConnectionLine';
 import { ConnectMenu } from './ConnectMenu';
-import { ContextMenu, ContextMenuProps } from './ContextMenu';
+import { ContextMenu } from './ContextMenu';
 import { NavigationControls } from './NavigationControls';
-import { MINIMAP_NODE_COLORS, NODE_WIDTH, NODE_HEIGHT } from '../constants';
+import { MINIMAP_NODE_COLORS } from '../constants';
+import { flowCanvasEdgeTypes, flowCanvasNodeTypes, isDuplicateConnection } from './flow-canvas/flowCanvasTypes';
+import { useFlowCanvasMenus } from './flow-canvas/useFlowCanvasMenus';
+import { useFlowCanvasDragDrop } from './flow-canvas/useFlowCanvasDragDrop';
+import { useFlowCanvasConnectionState } from './flow-canvas/useFlowCanvasConnectionState';
+import { useFlowCanvasContextActions } from './flow-canvas/useFlowCanvasContextActions';
 
 interface FlowCanvasProps {
-    undo: () => void;
-    redo: () => void;
-    canUndo: boolean; // For keyboard shortcuts check?
-    canRedo: boolean;
     recordHistory: () => void;
     isSelectMode: boolean;
 }
 
-const nodeTypes = {
-    start: CustomNode,
-    process: CustomNode,
-    decision: CustomNode,
-    end: CustomNode,
-    custom: CustomNode,
-    annotation: AnnotationNode,
-    section: SectionNode,
-    text: TextNode,
-    group: GroupNode,
-    swimlane: SwimlaneNode,
-    image: ImageNode,
-
-    browser: BrowserNode,
-    mobile: MobileNode,
-    wireframe_button: WireframeButtonNode,
-    wireframe_input: WireframeInputNode,
-    wireframe_image: WireframeImageNode,
-    wireframe_icon: WireframeIconNode,
-    icon: IconNode,
-};
-
-const edgeTypes = {
-    default: CustomBezierEdge,
-    smoothstep: CustomSmoothStepEdge,
-    step: CustomStepEdge,
-};
-
 export const FlowCanvas: React.FC<FlowCanvasProps> = ({
-    undo,
-    redo,
     recordHistory,
     isSelectMode
 }) => {
     const {
         nodes, edges,
         onNodesChange, onEdgesChange,
-        selectedNodeId, selectedEdgeId,
         viewSettings: { showGrid, snapToGrid, showMiniMap },
-        setSelectedNodeId // Used by context menu? No, operations handle it
     } = useFlowStore();
 
-    const { fitView } = useReactFlow();
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
-    // --- Connection Menu State ---
-    const [connectMenu, setConnectMenu] = useState<{ position: { x: number; y: number }, sourceId: string, sourceHandle: string | null } | null>(null);
-
-    // --- Context Menu State ---
-    const [contextMenu, setContextMenu] = useState<ContextMenuProps & { isOpen: boolean }>({
-        id: null,
-        type: 'pane',
-        position: { x: 0, y: 0 },
-        onClose: () => { },
-        isOpen: false,
-    });
-
     const { screenToFlowPosition } = useReactFlow();
+    const {
+        connectMenu,
+        setConnectMenu,
+        contextMenu,
+        onNodeContextMenu,
+        onPaneContextMenu,
+        onEdgeContextMenu,
+        onPaneClick,
+        onCloseContextMenu,
+    } = useFlowCanvasMenus();
 
     // --- Operations ---
     const {
         onConnect, onSelectionChange, onNodeDoubleClick,
         onNodeDragStart, onNodeDragStop,
         onConnectStart, onConnectEnd,
-        handleAddAndConnect, handleAddNode,
+        handleAddAndConnect,
         deleteNode, deleteEdge, duplicateNode,
         updateNodeZIndex,
         pasteSelection, copySelection,
@@ -121,106 +72,39 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         (position, sourceId, sourceHandle) => setConnectMenu({ position, sourceId, sourceHandle })
     );
 
-    // --- Drag & Drop ---
-    const onDragOver = useCallback((event: React.DragEvent) => {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'copy';
-    }, []);
-
-    const onDrop = useCallback(
-        (event: React.DragEvent) => {
-            event.preventDefault();
-
-            const file = event.dataTransfer.files?.[0];
-            if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const imageUrl = e.target?.result as string;
-                    if (imageUrl) {
-                        const position = screenToFlowPosition({
-                            x: event.clientX,
-                            y: event.clientY,
-                        });
-                        handleAddImage(imageUrl, position);
-                    }
-                };
-                reader.readAsDataURL(file);
-            }
-        },
-        [screenToFlowPosition, handleAddImage]
-    );
+    const { onDragOver, onDrop } = useFlowCanvasDragDrop({
+        screenToFlowPosition,
+        handleAddImage,
+    });
 
     // --- Keyboard Shortcuts ---
     const { isSelectionModifierPressed } = useModifierKeys();
     useEdgeInteractions();
 
     const isEffectiveSelectMode = isSelectMode || isSelectionModifierPressed;
-
-    // --- Context Menu Handlers ---
-    const closeContextMenu = useCallback(
-        () => setContextMenu((prev) => ({ ...prev, isOpen: false })),
-        []
-    );
-
-    const onNodeContextMenu = useCallback(
-        (event: React.MouseEvent, node: Node) => {
-            event.preventDefault();
-            setContextMenu({
-                id: node.id,
-                type: 'node',
-                position: { x: event.clientX, y: event.clientY },
-                onClose: closeContextMenu,
-                isOpen: true,
-            });
+    const { isConnecting, onConnectStartWrapper, onConnectEndWrapper } = useFlowCanvasConnectionState({
+        onConnectStart: (event, params) => {
+            onConnectStart(event as Parameters<typeof onConnectStart>[0], params as Parameters<typeof onConnectStart>[1]);
         },
-        [closeContextMenu]
-    );
-
-    const onPaneContextMenu = useCallback(
-        (event: React.MouseEvent) => {
-            event.preventDefault();
-            setContextMenu({
-                id: null,
-                type: 'pane',
-                position: { x: event.clientX, y: event.clientY },
-                onClose: closeContextMenu,
-                isOpen: true,
-            });
+        onConnectEnd: (event) => {
+            onConnectEnd(event as Parameters<typeof onConnectEnd>[0]);
         },
-        [closeContextMenu]
-    );
-
-    const onEdgeContextMenu = useCallback(
-        (event: React.MouseEvent, edge: Edge) => {
-            event.preventDefault();
-            setContextMenu({
-                id: edge.id,
-                type: 'edge',
-                position: { x: event.clientX, y: event.clientY },
-                onClose: closeContextMenu,
-                isOpen: true,
-            });
-        },
-        [closeContextMenu]
-    );
-
-    const onCloseContextMenu = closeContextMenu;
-    const onPaneClick = useCallback(() => {
-        closeContextMenu();
-    }, [closeContextMenu]);
-
-
-    const [isConnecting, setIsConnecting] = useState(false);
-
-    const onConnectStartWrapper = useCallback((event: any, params: any) => {
-        setIsConnecting(true);
-        onConnectStart(event, params);
-    }, [onConnectStart]);
-
-    const onConnectEndWrapper = useCallback((event: any) => {
-        setIsConnecting(false);
-        onConnectEnd(event);
-    }, [onConnectEnd]);
+    });
+    const contextActions = useFlowCanvasContextActions({
+        contextMenu,
+        onCloseContextMenu,
+        screenToFlowPosition,
+        copySelection,
+        pasteSelection,
+        duplicateNode,
+        deleteNode,
+        deleteEdge,
+        updateNodeZIndex,
+        handleAlignNodes,
+        handleDistributeNodes,
+        handleGroupNodes,
+        nodes,
+    });
 
     return (
         <div className={`w-full h-full relative ${isConnecting ? 'is-connecting' : ''}`} ref={reactFlowWrapper}>
@@ -245,19 +129,14 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 onConnectEnd={onConnectEndWrapper}
                 onDragOver={onDragOver}
                 onDrop={onDrop}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
+                nodeTypes={flowCanvasNodeTypes}
+                edgeTypes={flowCanvasEdgeTypes}
                 fitView
                 className="bg-[var(--brand-background)]"
                 minZoom={0.1}
                 connectionMode={ConnectionMode.Loose}
                 isValidConnection={(connection) => {
-                    return !edges.some(e =>
-                        e.source === connection.source &&
-                        e.target === connection.target &&
-                        e.sourceHandle === connection.sourceHandle &&
-                        e.targetHandle === connection.targetHandle
-                    );
+                    return !isDuplicateConnection(connection, edges);
                 }}
                 selectionOnDrag={isEffectiveSelectMode}
                 panOnDrag={!isEffectiveSelectMode}
@@ -300,32 +179,15 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                         {...contextMenu}
                         onClose={onCloseContextMenu}
                         onCopy={copySelection}
-                        onPaste={() => {
-                            if (contextMenu.position) {
-                                pasteSelection(screenToFlowPosition(contextMenu.position));
-                            }
-                            onCloseContextMenu();
-                        }}
-                        onDuplicate={() => {
-                            if (contextMenu.id) duplicateNode(contextMenu.id);
-                            onCloseContextMenu();
-                        }}
-                        onDelete={() => {
-                            if (contextMenu.id) {
-                                if (contextMenu.type === 'edge') deleteEdge(contextMenu.id);
-                                else deleteNode(contextMenu.id);
-                            }
-                            onCloseContextMenu();
-                        }}
-                        onSendToBack={() => {
-                            if (contextMenu.id) updateNodeZIndex(contextMenu.id, 'back');
-                            onCloseContextMenu();
-                        }}
+                        onPaste={contextActions.onPaste}
+                        onDuplicate={contextActions.onDuplicate}
+                        onDelete={contextActions.onDelete}
+                        onSendToBack={contextActions.onSendToBack}
                         canPaste={true}
-                        selectedCount={nodes.filter(n => n.selected).length}
-                        onAlignNodes={(dir) => { handleAlignNodes(dir); onCloseContextMenu(); }}
-                        onDistributeNodes={(dir) => { handleDistributeNodes(dir); onCloseContextMenu(); }}
-                        onGroupSelected={() => { handleGroupNodes(); onCloseContextMenu(); }}
+                        selectedCount={contextActions.selectedCount}
+                        onAlignNodes={contextActions.onAlignNodes}
+                        onDistributeNodes={contextActions.onDistributeNodes}
+                        onGroupSelected={contextActions.onGroupSelected}
                     />
                 )
             }

@@ -15,6 +15,59 @@ export default defineConfig(({ mode }) => {
       }
     },
     base: './',
+    build: {
+      chunkSizeWarningLimit: 1600,
+      modulePreload: false,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) {
+              return undefined;
+            }
+
+            if (id.includes('/node_modules/reactflow/')) {
+              return 'vendor-reactflow';
+            }
+
+            if (id.includes('/node_modules/elkjs/')) {
+              return 'vendor-elk';
+            }
+
+            if (id.includes('/node_modules/dagre/')) {
+              return 'vendor-dagre';
+            }
+
+            if (
+              id.includes('/node_modules/react-markdown/') ||
+              id.includes('/node_modules/remark-gfm/') ||
+              id.includes('/node_modules/remark-breaks/') ||
+              id.includes('/node_modules/rehype-raw/') ||
+              id.includes('/node_modules/rehype-slug/') ||
+              id.includes('/node_modules/react-syntax-highlighter/')
+            ) {
+              return 'vendor-markdown';
+            }
+
+            if (id.includes('/node_modules/i18next') || id.includes('/node_modules/react-i18next/')) {
+              return 'vendor-i18n';
+            }
+
+            if (id.includes('/node_modules/lucide-react/')) {
+              return 'vendor-lucide';
+            }
+
+            if (id.includes('/node_modules/framer-motion/')) {
+              return 'vendor-motion';
+            }
+
+            if (id.includes('/node_modules/@google/genai/')) {
+              return 'vendor-ai';
+            }
+            return undefined;
+          },
+        },
+      },
+    },
     test: {
       globals: true,
       environment: 'jsdom',

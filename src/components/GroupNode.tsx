@@ -1,8 +1,7 @@
 import React, { memo, useState, useCallback, useMemo } from 'react';
 import { NodeProps, NodeResizer, Handle, Position, useReactFlow, useNodes } from 'reactflow';
 import { NodeData } from '@/lib/types';
-import { ChevronDown, ChevronRight, FolderOpen, FolderClosed, Layers } from 'lucide-react';
-import { ICON_MAP } from './IconMap';
+import { ChevronDown, ChevronRight, FolderOpen, FolderClosed } from 'lucide-react';
 import { NODE_COLOR_PALETTE } from '../theme';
 
 const GroupNode = ({ id, data, selected }: NodeProps<NodeData>) => {
@@ -32,8 +31,6 @@ const GroupNode = ({ id, data, selected }: NodeProps<NodeData>) => {
             })
         );
     }, [collapsed, id, setNodes]);
-
-    const IconComponent = data.icon && ICON_MAP[data.icon] ? ICON_MAP[data.icon] : Layers;
 
     return (
         <>

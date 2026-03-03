@@ -1,7 +1,8 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps, NodeResizer } from 'reactflow';
 import { NodeData } from '@/lib/types';
-import * as Icons from 'lucide-react';
+import { Image } from 'lucide-react';
+import { NamedIcon } from '../IconMap';
 
 // --- Helper for Handles ---
 const DefaultHandles = () => (
@@ -49,7 +50,7 @@ export const WireframeImageNode = memo(({ data, selected }: NodeProps<NodeData>)
                 style={{ width: '100%', height: '100%', minWidth: 50, minHeight: 50 }}
             >
                 <DefaultHandles />
-                <Icons.Image size={24} />
+                <Image size={24} />
                 {data.label && <span className="absolute bottom-1 text-[10px]">{data.label}</span>}
             </div>
         </>
@@ -60,9 +61,7 @@ export const WireframeImageNode = memo(({ data, selected }: NodeProps<NodeData>)
 // This is different from the specific IconNode which uses the full Lucide library.
 // This is for generic wireframing.
 export const WireframeIconNode = memo(({ data, selected }: NodeProps<NodeData>) => {
-    // The base "Icon" component from lucide-react requires an iconNode array and crashes if rendered directly
     const iconName = data.label === 'Icon' ? 'Box' : (data.icon || data.label);
-    const IconComponent = (Icons as any)[iconName] || Icons.Circle;
 
     const color = data.color || 'slate';
     const colorMap: Record<string, string> = {
@@ -82,7 +81,7 @@ export const WireframeIconNode = memo(({ data, selected }: NodeProps<NodeData>) 
              ${selected ? 'ring-2 ring-indigo-500 ring-offset-1 rounded' : ''}`}
         >
             <DefaultHandles />
-            <IconComponent size={32} />
+            <NamedIcon name={iconName} fallbackName="Circle" size={32} />
         </div>
     );
 });

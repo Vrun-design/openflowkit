@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react';
-import { getRectOfNodes } from 'reactflow';
 import type { TFunction } from 'i18next';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { FlowTemplate } from '@/services/templates';
@@ -8,6 +7,7 @@ import { getElkLayout } from '@/services/elkLayout';
 import { toMermaid, toPlantUML } from '@/services/exportService';
 import { toFigmaSVG } from '@/services/figmaExportService';
 import { toOpenFlowDSL } from '@/services/openFlowDSLExporter';
+import { buildInsertedTemplateData, copyTextToClipboard } from './flow-editor-actions/helpers';
 
 interface UseFlowEditorActionsParams {
     nodes: FlowNode[];
@@ -72,27 +72,7 @@ export function useFlowEditorActions({
 
     const handleInsertTemplate = useCallback((template: FlowTemplate): void => {
         recordHistory();
-        const batchId = crypto.randomUUID();
-        const bounds = getRectOfNodes(nodes);
-        const startX = (bounds.width || 0) + (bounds.x || 0) + 100;
-        const startY = (bounds.y || 0);
-
-        const newNodes = template.nodes.map((node) => ({
-            ...node,
-            id: `${node.id}-${batchId}`,
-            position: { x: node.position.x + startX, y: node.position.y + startY },
-            selected: false,
-        }));
-
-        const idMap = new Map<string, string>();
-        template.nodes.forEach((node, index) => idMap.set(node.id, newNodes[index].id));
-
-        const newEdges = template.edges.map((edge) => ({
-            ...edge,
-            id: `${edge.id}-${batchId}`,
-            source: idMap.get(edge.source)!,
-            target: idMap.get(edge.target)!,
-        }));
+        const { newNodes, newEdges } = buildInsertedTemplateData(template, nodes);
 
         setNodes((existingNodes) => [...existingNodes.map((node) => ({ ...node, selected: false })), ...newNodes]);
         setEdges((existingEdges) => [...existingEdges, ...newEdges]);
@@ -101,38 +81,33 @@ export function useFlowEditorActions({
 
     const handleExportMermaid = useCallback(async (): Promise<void> => {
         const text = toMermaid(nodes, edges);
-        try {
-            await navigator.clipboard.writeText(text);
+        const copied = await copyTextToClipboard(text);
+        if (copied) {
             alert(t('flowEditor.mermaidCopied'));
-        } catch (error) {
-            console.error('Failed to copy', error);
         }
     }, [nodes, edges, t]);
 
     const handleExportPlantUML = useCallback(async (): Promise<void> => {
         const text = toPlantUML(nodes, edges);
-        try {
-            await navigator.clipboard.writeText(text);
+        const copied = await copyTextToClipboard(text);
+        if (copied) {
             alert(t('flowEditor.plantUMLCopied'));
-        } catch (error) {
-            console.error('Failed to copy', error);
         }
     }, [nodes, edges, t]);
 
     const handleExportOpenFlowDSL = useCallback(async (): Promise<void> => {
         const text = toOpenFlowDSL(nodes, edges);
-        try {
-            await navigator.clipboard.writeText(text);
+        const copied = await copyTextToClipboard(text);
+        if (copied) {
             addToast(t('flowEditor.dslCopied'), 'success');
-        } catch (error) {
-            console.error('Failed to copy', error);
+        } else {
             addToast(t('flowEditor.dslCopyFailed'), 'error');
         }
     }, [nodes, edges, addToast, t]);
 
     const handleExportFigma = useCallback(async (): Promise<void> => {
         try {
-            const svg = toFigmaSVG(nodes, edges);
+            const svg = await toFigmaSVG(nodes, edges);
             await navigator.clipboard.writeText(svg);
             addToast(t('flowEditor.figmaCopied'), 'success');
         } catch (error: unknown) {

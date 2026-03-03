@@ -1,13 +1,13 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo } from 'react';
 import { Handle, Position, NodeProps, NodeResizer } from 'reactflow';
 import { NodeData } from '@/lib/types';
 
-import { ICON_MAP } from './IconMap';
+import { NamedIcon } from './IconMap';
 import MemoizedMarkdown from './MemoizedMarkdown';
 import { NODE_COLOR_PALETTE, NODE_EXPORT_COLORS } from '../theme';
 import { useDesignSystem } from '../hooks/useDesignSystem';
 
-function getDefaults(type: string): { color: string; icon: string | null; shape: 'rounded' | 'diamond' | 'rectangle' | 'capsule' | 'hexagon' | 'parallelogram' | 'triangle' | 'cylinder' | 'circle' | 'ellipse' } {
+function getDefaults(type: string): { color: string; icon: string | null; shape: 'rounded' | 'diamond' | 'rectangle' | 'capsule' | 'hexagon' | 'parallelogram' | 'cylinder' | 'circle' | 'ellipse' } {
   switch (type) {
     case 'start': return { color: 'emerald', icon: null, shape: 'rounded' };
     case 'end': return { color: 'red', icon: null, shape: 'rounded' };
@@ -18,7 +18,25 @@ function getDefaults(type: string): { color: string; icon: string | null; shape:
   }
 }
 
-function CustomNode({ data, type, selected }: NodeProps<NodeData>): React.ReactElement {
+function getMinNodeSize(shape: NodeData['shape'] | undefined): { minWidth: number; minHeight: number } {
+  if (shape === 'circle' || shape === 'ellipse') {
+    return { minWidth: 120, minHeight: 120 };
+  }
+  if (shape === 'diamond' || shape === 'hexagon' || shape === 'parallelogram' || shape === 'cylinder') {
+    return { minWidth: 140, minHeight: 90 };
+  }
+  return { minWidth: 120, minHeight: 70 };
+}
+
+function toCssSize(value: number | string | undefined): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  return typeof value === 'number' ? `${value}px` : value;
+}
+
+function CustomNode(props: NodeProps<NodeData>): React.ReactElement {
+  const { data, type, selected } = props;
+  const width = (props as { width?: number }).width;
+  const height = (props as { height?: number }).height;
   const designSystem = useDesignSystem();
 
   const defaults = getDefaults(type || 'process');
@@ -31,15 +49,7 @@ function CustomNode({ data, type, selected }: NodeProps<NodeData>): React.ReactE
   const exportColors = NODE_EXPORT_COLORS[activeColor] || NODE_EXPORT_COLORS.slate;
 
   // Resolve icons
-  const IconComponent = useMemo(() => {
-    if (data.customIconUrl) return null;
-    if (!activeIconKey) return null;
-    const exactMatch = ICON_MAP[activeIconKey];
-    if (exactMatch) return exactMatch;
-    const keyLower = activeIconKey.toLowerCase();
-    const foundKey = Object.keys(ICON_MAP).find(k => k.toLowerCase() === keyLower);
-    return foundKey ? ICON_MAP[foundKey] : ICON_MAP.Settings;
-  }, [activeIconKey, data.customIconUrl]);
+  const iconName = data.customIconUrl || !activeIconKey ? null : activeIconKey;
 
   // Typography
   const fontFamilyMap: Record<string, string> = {
@@ -80,7 +90,7 @@ function CustomNode({ data, type, selected }: NodeProps<NodeData>): React.ReactE
 
   // Layout alignment: Dynamic
   const layoutClass = 'flex-col';
-  const hasIcon = IconComponent || data.customIconUrl;
+  const hasIcon = Boolean(iconName) || Boolean(data.customIconUrl);
 
   // -- Shape Rendering Logic -- //
   function getShapeSVG(): React.ReactElement | null {
@@ -101,8 +111,6 @@ function CustomNode({ data, type, selected }: NodeProps<NodeData>): React.ReactE
         return <polygon points="15,0 85,0 100,50 85,100 15,100 0,50" {...commonProps} />;
       case 'parallelogram':
         return <polygon points="15,0 100,0 85,100 0,100" {...commonProps} />;
-      case 'triangle':
-        return <polygon points="50,0 100,100 0,100" {...commonProps} />;
       case 'cylinder':
         return (
           <>
@@ -120,6 +128,7 @@ function CustomNode({ data, type, selected }: NodeProps<NodeData>): React.ReactE
 
   const isComplexShape = ['diamond', 'hexagon', 'parallelogram', 'cylinder', 'circle', 'ellipse'].includes(activeShape);
   const isCircular = activeShape === 'circle';
+  const { minWidth, minHeight } = getMinNodeSize(activeShape);
 
   // Calculate Border Radius from Design System if shape is 'rounded' (default)
   function getBorderRadius(): string | number {
@@ -132,9 +141,10 @@ function CustomNode({ data, type, selected }: NodeProps<NodeData>): React.ReactE
 
   // Container style
   const containerStyle: React.CSSProperties = {
-    minWidth: isCircular ? 150 : 200,
-    width: '100%',
-    height: '100%',
+    minWidth,
+    minHeight,
+    width: toCssSize(width) ?? '100%',
+    height: toCssSize(height) ?? '100%',
     ...(isCircular ? { aspectRatio: '1/1' } : {}),
     ...fontFamilyStyle,
 
@@ -150,8 +160,8 @@ function CustomNode({ data, type, selected }: NodeProps<NodeData>): React.ReactE
       <NodeResizer
         color="#94a3b8"
         isVisible={selected}
-        minWidth={100}
-        minHeight={50}
+        minWidth={minWidth}
+        minHeight={minHeight}
         lineStyle={{ borderStyle: 'solid', borderWidth: 1 }}
         handleStyle={{ width: 8, height: 8, borderRadius: 4 }}
       />
@@ -196,9 +206,9 @@ function CustomNode({ data, type, selected }: NodeProps<NodeData>): React.ReactE
               </div>
             )}
 
-            {IconComponent && (
+            {iconName && (
               <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border border-black/5 shadow-sm ${style.iconBg}`}>
-                <IconComponent className={`w-4 h-4 ${style.iconColor}`} />
+                <NamedIcon name={iconName} fallbackName="Settings" className={`w-4 h-4 ${style.iconColor}`} />
               </div>
             )}
           </div>

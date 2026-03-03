@@ -1,12 +1,11 @@
 import React, { memo } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { NodeData } from '@/lib/types';
-import { ICON_MAP } from '../IconMap';
 import { HelpCircle } from 'lucide-react';
+import { NamedIcon } from '../IconMap';
 
 const IconNode = ({ data, selected }: NodeProps<NodeData>) => {
-    // Determine the icon component
-    const IconComponent = ICON_MAP[data.label] || HelpCircle;
+    const iconName = data.label || 'HelpCircle';
 
     // Size logic could be enhanced, default to 48 for good visibility
     const size = 48;
@@ -34,7 +33,11 @@ const IconNode = ({ data, selected }: NodeProps<NodeData>) => {
             <Handle type="target" position={Position.Top} className="opacity-0 hover:opacity-100 w-2 h-2 bg-current" />
             <Handle type="target" position={Position.Left} className="opacity-0 hover:opacity-100 w-2 h-2 bg-current" />
 
-            <IconComponent size={size} strokeWidth={1.5} />
+            {iconName ? (
+                <NamedIcon name={iconName} fallbackName="HelpCircle" size={size} strokeWidth={1.5} />
+            ) : (
+                <HelpCircle size={size} strokeWidth={1.5} />
+            )}
 
             <Handle type="source" position={Position.Right} className="opacity-0 hover:opacity-100 w-2 h-2 bg-current" />
             <Handle type="source" position={Position.Bottom} className="opacity-0 hover:opacity-100 w-2 h-2 bg-current" />

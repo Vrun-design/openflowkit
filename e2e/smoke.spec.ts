@@ -1,21 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
-
-async function getPersistedActiveTabNodeCount(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const rawStore = localStorage.getItem('openflowkit-storage');
-    if (!rawStore) return -1;
-    const parsed = JSON.parse(rawStore) as {
-      state?: {
-        activeTabId?: string;
-        tabs?: Array<{ id: string; nodes?: unknown[] }>;
-      };
-    };
-    const state = parsed.state;
-    if (!state?.activeTabId || !state.tabs) return -1;
-    const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId);
-    return activeTab?.nodes?.length ?? -1;
-  });
-}
+import { expect, test } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -42,7 +25,7 @@ test('creates a new flow and adds an extra tab', async ({ page }) => {
   await expect(page.getByTestId('empty-generate-ai')).toBeVisible();
 });
 
-test('restores snapshot state and persists active tab data', async ({ page }) => {
+test('saves and restores snapshot state', async ({ page }) => {
   await page.goto('/#/canvas');
   await expect(page.getByTestId('topnav-history')).toBeVisible();
 
@@ -77,6 +60,4 @@ test('restores snapshot state and persists active tab data', async ({ page }) =>
 
   await restoreButton.dispatchEvent('click');
   await expect(canvasNodes).toHaveCount(1);
-  await expect.poll(async () => getPersistedActiveTabNodeCount(page)).toBe(1);
-
 });

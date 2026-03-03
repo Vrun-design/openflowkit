@@ -1,55 +1,152 @@
-import { useState, useCallback } from 'react';
-import { Node, Edge, useReactFlow } from 'reactflow';
-import { generateDiagramFromChat, ChatMessage } from '../services/aiService';
+import { useCallback, useState } from 'react';
+import type { Edge } from 'reactflow';
+import { useReactFlow } from 'reactflow';
+import type { FlowNode } from '@/lib/types';
+import { createId } from '@/lib/id';
 import { parseOpenFlowDSL } from '@/lib/openFlowDSLParser';
-import { getElkLayout } from '../services/elkLayout';
-import { createDefaultEdge } from '../constants';
-import { useFlowStore } from '../store';
-import { useToast } from '../components/ui/ToastContext';
-import { trackEvent } from '../lib/analytics';
-import { createId } from '../lib/id';
+import { createDefaultEdge } from '@/constants';
+import { getElkLayout } from '@/services/elkLayout';
+import { generateDiagramFromChat, type ChatMessage } from '@/services/aiService';
+import { useFlowStore } from '@/store';
+import { useToast } from '@/components/ui/ToastContext';
+import { trackEvent } from '@/lib/analytics';
 
-export const useAIGeneration = (
-  recordHistory: () => void
-) => {
+interface SimplifiedNode {
+  id: string;
+  type?: string;
+  label?: string;
+  description?: string;
+  x: number;
+  y: number;
+}
+
+interface ParsedFlowResult {
+  nodes: FlowNode[];
+  edges: Edge[];
+}
+
+function buildSimplifiedNodes(nodes: FlowNode[]): SimplifiedNode[] {
+  return nodes.map((node) => ({
+    id: node.id,
+    type: node.type,
+    label: node.data.label,
+    description: node.data.subLabel,
+    x: node.position.x,
+    y: node.position.y,
+  }));
+}
+
+function buildCurrentGraphPayload(nodes: SimplifiedNode[], edges: Edge[]): string {
+  return JSON.stringify({
+    nodes,
+    edges: edges.map((edge) => ({
+      source: edge.source,
+      target: edge.target,
+      label: edge.label,
+    })),
+  });
+}
+
+function parseDslOrThrow(dslText: string): ParsedFlowResult {
+  const cleanDsl = dslText.replace(/```(yaml|flowmind|)?/g, '').replace(/```/g, '').trim();
+  const parseResult = parseOpenFlowDSL(cleanDsl);
+  if (parseResult.error) {
+    throw new Error(parseResult.error);
+  }
+  return {
+    nodes: parseResult.nodes as FlowNode[],
+    edges: parseResult.edges,
+  };
+}
+
+function buildIdMap(parsedNodes: FlowNode[], existingNodes: FlowNode[]): Map<string, string> {
+  const idMap = new Map<string, string>();
+  parsedNodes.forEach((parsedNode) => {
+    const existingNode = existingNodes.find((node) => {
+      return node.data.label?.toLowerCase() === parsedNode.data.label?.toLowerCase();
+    });
+    idMap.set(parsedNode.id, existingNode ? existingNode.id : parsedNode.id);
+  });
+  return idMap;
+}
+
+function toFinalNodes(parsedNodes: FlowNode[], idMap: Map<string, string>): FlowNode[] {
+  return parsedNodes.map((node) => ({
+    ...node,
+    id: idMap.get(node.id) || node.id,
+    type: node.type || 'process',
+  }));
+}
+
+function toFinalEdges(parsedEdges: Edge[], idMap: Map<string, string>, globalEdgeOptions: ReturnType<typeof useFlowStore.getState>['globalEdgeOptions']): Edge[] {
+  return parsedEdges
+    .map((edge) => {
+      const sourceId = idMap.get(edge.source);
+      const targetId = idMap.get(edge.target);
+
+      if (!sourceId || !targetId) {
+        console.warn(`Skipping edge with missing node: ${edge.source} -> ${edge.target}`);
+        return null;
+      }
+
+      const defaultEdge = createDefaultEdge(sourceId, targetId);
+      let edgeType = edge.type;
+      if (edgeType === 'default' || !edgeType) {
+        edgeType = globalEdgeOptions.type === 'default' ? undefined : globalEdgeOptions.type;
+      }
+      if (edge.data?.styleType === 'curved') {
+        edgeType = 'default';
+      }
+
+      return {
+        ...defaultEdge,
+        ...edge,
+        id: createId(`e-${sourceId}-${targetId}`),
+        source: sourceId,
+        target: targetId,
+        type: edgeType,
+        animated: edge.animated || globalEdgeOptions.animated,
+        style: {
+          ...defaultEdge.style,
+          ...edge.style,
+          strokeWidth: globalEdgeOptions.strokeWidth,
+          ...(globalEdgeOptions.color ? { stroke: globalEdgeOptions.color } : {}),
+        },
+      } as Edge;
+    })
+    .filter((edge): edge is Edge => edge !== null);
+}
+
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return 'Unknown error';
+}
+
+export function useAIGeneration(recordHistory: () => void) {
   const { nodes, edges, setNodes, setEdges, aiSettings, globalEdgeOptions } = useFlowStore();
   const { fitView } = useReactFlow();
   const { addToast } = useToast();
-  const [isAIOpen, setIsAIOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
-  const clearChat = useCallback(() => setChatMessages([]), []);
+  const clearChat = useCallback(() => {
+    setChatMessages([]);
+  }, []);
 
   const handleAIRequest = useCallback(async (prompt: string, imageBase64?: string) => {
     recordHistory();
     setIsGenerating(true);
 
-    // Create user message
     const userMessage: ChatMessage = {
       role: 'user',
-      parts: [{ text: prompt }]
+      parts: [{ text: prompt }],
     };
 
     try {
-      // 1. Prepare context
-      const simplifiedNodes = nodes.map((n) => ({
-        id: n.id,
-        type: n.type,
-        label: n.data.label,
-        description: n.data.subLabel,
-        x: n.position.x,
-        y: n.position.y
-      }));
-
-      const currentGraph = JSON.stringify({
-        nodes: simplifiedNodes,
-        edges: edges.map((e) => ({ source: e.source, target: e.target, label: e.label })),
-      });
-
-      const selectedNodes = simplifiedNodes.filter(n => nodes.find(orig => orig.id === n.id)?.selected);
-
-      // 2. Call AI (now using unified service)
+      const simplifiedNodes = buildSimplifiedNodes(nodes);
+      const currentGraph = buildCurrentGraphPayload(simplifiedNodes, edges);
       const dslText = await generateDiagramFromChat(
         chatMessages,
         prompt,
@@ -61,111 +158,60 @@ export const useAIGeneration = (
         aiSettings.customBaseUrl
       );
 
-      // 3. Update Chat History
       if (imageBase64) {
-        userMessage.parts[0].text += " [Image Attached]";
+        userMessage.parts[0].text += ' [Image Attached]';
       }
 
-      const modelMessage: ChatMessage = {
-        role: 'model',
-        parts: [{ text: dslText }]
-      };
+      setChatMessages((previousMessages) => [
+        ...previousMessages,
+        userMessage,
+        { role: 'model', parts: [{ text: dslText }] },
+      ]);
 
-      setChatMessages(prev => [...prev, userMessage, modelMessage]);
+      const parsed = parseDslOrThrow(dslText);
+      const idMap = buildIdMap(parsed.nodes, nodes);
+      const finalNodes = toFinalNodes(parsed.nodes, idMap);
+      const finalEdges = toFinalEdges(parsed.edges, idMap, globalEdgeOptions);
 
-      // 4. Parse DSL
-      // Strip markdown code blocks if present
-      const cleanDSL = dslText.replace(/```(yaml|flowmind|)?/g, '').replace(/```/g, '').trim();
-
-      // Use the wrapped V2 parser
-      const parseResult = parseOpenFlowDSL(cleanDSL);
-
-      if (parseResult.error) {
-        throw new Error(parseResult.error);
-      }
-
-      // 5. Merge Logic: Preserve IDs for existing labels
-      // We expect the AI to try and preserve labels.
-      // V2 parser prefers explicit IDs but handles implicit ones via label mapping.
-
-      const idMap = new Map<string, string>();
-
-      parseResult.nodes.forEach(newNode => {
-        // Try to match by label to preserve existing node states if possible
-        const existingNode = nodes.find(n => n.data.label?.toLowerCase() === newNode.data.label?.toLowerCase());
-        if (existingNode) {
-          idMap.set(newNode.id, existingNode.id);
-        } else {
-          // New node
-          idMap.set(newNode.id, newNode.id);
-        }
-      });
-
-      // Reconstruct nodes with mapped IDs
-      const finalNodes = parseResult.nodes.map(n => ({
-        ...n,
-        id: idMap.get(n.id)!,
-        type: n.type || 'process'
-      }));
-
-      // Reconstruct edges with mapped IDs
-      const finalEdges = parseResult.edges.map(e => {
-        const sourceId = idMap.get(e.source);
-        const targetId = idMap.get(e.target);
-
-        if (!sourceId || !targetId) {
-          console.warn(`Skipping edge with missing node: ${e.source} -> ${e.target}`);
-          return null;
-        }
-
-        // Apply Global Default if parser returns 'default'
-        let edgeType = e.type;
-        if (edgeType === 'default' || !edgeType) {
-          edgeType = globalEdgeOptions.type === 'default' ? undefined : globalEdgeOptions.type;
-        }
-
-        // Preserve specific styles (curved/dashed) if recognized by attributes
-        if (e.data?.styleType === 'curved') edgeType = 'default'; // ReactFlow default is bezier/curved
-
-        return {
-          ...e,
-          source: sourceId,
-          target: targetId,
-          type: edgeType,
-          animated: e.animated || globalEdgeOptions.animated,
-          style: {
-            ...e.style,
-            strokeWidth: globalEdgeOptions.strokeWidth,
-            ...(globalEdgeOptions.color ? { stroke: globalEdgeOptions.color } : {})
-          },
-          id: createId(`e-${sourceId}-${targetId}`)
-        };
-      }).filter(Boolean) as Edge[];
-
-
-      // 6. Apply Auto-Layout (ELK) - CRITICAL for V2 which returns (0,0)
-      // mrtree is ELK's dedicated tree algorithm — cleaner hierarchy than 'layered' for AI-generated flows
       const layoutedNodes = await getElkLayout(finalNodes, finalEdges, {
         direction: 'TB',
         algorithm: 'mrtree',
-        spacing: 'loose'
+        spacing: 'loose',
       });
 
       setNodes(layoutedNodes);
       setEdges(finalEdges);
-
       setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
 
       trackEvent('ai_generate_success', { model: aiSettings.model, provider: aiSettings.provider });
       addToast('Diagram generated successfully!', 'success');
-    } catch (error: any) {
-      trackEvent('ai_generate_error', { error_message: error.message || 'Unknown error', model: aiSettings.model, provider: aiSettings.provider });
+    } catch (error: unknown) {
+      const errorMessage = toErrorMessage(error);
+      trackEvent('ai_generate_error', {
+        error_message: errorMessage,
+        model: aiSettings.model,
+        provider: aiSettings.provider,
+      });
       console.error('AI Generation failed:', error);
-      addToast(`Failed to generate: ${error.message || 'Unknown error'}`, 'error');
+      addToast(`Failed to generate: ${errorMessage}`, 'error');
     } finally {
       setIsGenerating(false);
     }
-  }, [nodes, edges, recordHistory, setNodes, setEdges, fitView, addToast, chatMessages, aiSettings.apiKey, aiSettings.model, aiSettings.provider, aiSettings.customBaseUrl, globalEdgeOptions]);
+  }, [
+    addToast,
+    aiSettings.apiKey,
+    aiSettings.customBaseUrl,
+    aiSettings.model,
+    aiSettings.provider,
+    chatMessages,
+    edges,
+    fitView,
+    globalEdgeOptions,
+    nodes,
+    recordHistory,
+    setEdges,
+    setNodes,
+  ]);
 
-  return { isAIOpen, setIsAIOpen, isGenerating, handleAIRequest, chatMessages, clearChat };
-};
+  return { isGenerating, handleAIRequest, chatMessages, clearChat };
+}

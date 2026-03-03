@@ -1,13 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Undo2, Redo2, MousePointer2, Hand, Wand2, Plus,
-  Square, StickyNote, Group, Type, Layout, Workflow,
-  Trash2, Image as ImageIcon, Palette, Sparkles, X, AppWindow
+  Layout,
+  Sparkles,
+  Trash2,
+  Workflow,
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Tooltip } from './Tooltip';
-import { Node as FlowNode, Edge } from 'reactflow';
+import { ToolbarAddMenu } from './toolbar/ToolbarAddMenu';
+import { ToolbarHistoryControls } from './toolbar/ToolbarHistoryControls';
+import { ToolbarModeControls } from './toolbar/ToolbarModeControls';
 
 interface ToolbarProps {
   onUndo: () => void;
@@ -60,7 +63,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 }) => {
   const { t } = useTranslation();
   const [showAddMenu, setShowAddMenu] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const addMenuRef = useRef<HTMLDivElement>(null);
 
   // Close add menu when clicking outside
@@ -77,59 +79,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   // Interaction guard: If command bar is open, disable all toolbar interactions
   const isInteractive = !isCommandBarOpen;
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageUrl = e.target?.result as string;
-        if (imageUrl) {
-          onAddImage(imageUrl, getCenter());
-          setShowAddMenu(false);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-    event.target.value = '';
-  };
-
   const containerClasses = `flex items-center p-1.5 bg-white/90 backdrop-blur-xl shadow-2xl rounded-[var(--radius-lg)] border border-white/20 ring-1 ring-black/5 transition-all duration-300 ${!isInteractive ? 'opacity-50 pointer-events-none grayscale' : ''}`;
 
   return (
     <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-40 ${containerClasses}`}>
-
-      {/* Hidden File Input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        accept="image/*"
-        onChange={handleImageUpload}
-      />
-
       {/* Group 1: Tools */}
-      <div className="flex bg-slate-100/50 p-1 rounded-[var(--radius-md)] gap-0.5 border border-slate-200/60">
-        <Tooltip text={t('toolbar.selectMode')}>
-          <Button
-            onClick={onToggleSelectMode}
-            disabled={!isInteractive}
-            variant="ghost"
-            size="icon"
-            className={`h-8 w-8 transition-all ${isSelectMode ? 'bg-white shadow text-[var(--brand-primary)]' : 'text-slate-500 hover:text-slate-900'}`}
-            icon={<MousePointer2 className="w-4 h-4" />}
-          />
-        </Tooltip>
-        <Tooltip text={t('toolbar.panMode')}>
-          <Button
-            onClick={onTogglePanMode}
-            disabled={!isInteractive}
-            variant="ghost"
-            size="icon"
-            className={`h-8 w-8 transition-all ${!isSelectMode ? 'bg-white shadow text-[var(--brand-primary)]' : 'text-slate-500 hover:text-slate-900'}`}
-            icon={<Hand className="w-4 h-4" />}
-          />
-        </Tooltip>
-      </div>
+      <ToolbarModeControls
+        isInteractive={isInteractive}
+        isSelectMode={isSelectMode}
+        onToggleSelectMode={onToggleSelectMode}
+        onTogglePanMode={onTogglePanMode}
+      />
 
       <div className="w-px h-6 bg-slate-200/50 mx-2" />
 
@@ -158,44 +118,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           />
         </Tooltip>
 
-        <div className="relative" ref={addMenuRef}>
-          <Tooltip text={t('toolbar.addItem')}>
-            <Button
-              onClick={() => setShowAddMenu(!showAddMenu)}
-              disabled={!isInteractive}
-              variant="primary"
-              size="icon"
-              className={`h-10 w-10 shadow-lg shadow-[var(--brand-primary)]/20 transition-all hover:scale-105 active:scale-95 ${showAddMenu ? 'rotate-45 bg-slate-800 hover:bg-slate-900' : 'bg-[var(--brand-primary)] hover:brightness-110'}`}
-              icon={<Plus className="w-5 h-5 text-white" />}
-            />
-          </Tooltip>
-
-          {showAddMenu && isInteractive && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-white/95 backdrop-blur-md rounded-[var(--radius-lg)] shadow-xl border border-white/20 ring-1 ring-black/5 p-1 flex flex-col gap-0.5 z-50 animate-in slide-in-from-bottom-4 zoom-in-95 duration-200 origin-bottom pointer-events-auto">
-              <div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('toolbar.addToCanvas')}</div>
-
-              <Button onClick={() => { onAddNode(getCenter()); setShowAddMenu(false); }} variant="ghost" className="w-full justify-start h-9 px-3 text-sm rounded-[var(--radius-sm)] hover:bg-indigo-50 hover:text-[var(--brand-primary)] transition-colors" icon={<Square className="w-4 h-4 mr-2" />}>
-                {t('toolbar.node')}
-              </Button>
-              <Button onClick={() => { onAddAnnotation(getCenter()); setShowAddMenu(false); }} variant="ghost" className="w-full justify-start h-9 px-3 text-sm rounded-[var(--radius-sm)] hover:bg-yellow-50 hover:text-yellow-600 transition-colors" icon={<StickyNote className="w-4 h-4 mr-2" />}>
-                {t('toolbar.stickyNote')}
-              </Button>
-              <Button onClick={() => { onAddSection(getCenter()); setShowAddMenu(false); }} variant="ghost" className="w-full justify-start h-9 px-3 text-sm rounded-[var(--radius-sm)] hover:bg-blue-50 hover:text-blue-600 transition-colors" icon={<Group className="w-4 h-4 mr-2" />}>
-                {t('toolbar.section')}
-              </Button>
-              <Button onClick={() => { onAddText(getCenter()); setShowAddMenu(false); }} variant="ghost" className="w-full justify-start h-9 px-3 text-sm rounded-[var(--radius-sm)] hover:bg-slate-100 transition-colors" icon={<Type className="w-4 h-4 mr-2" />}>
-                {t('toolbar.text')}
-              </Button>
-              <div className="h-px bg-slate-100 my-1 mx-2" />
-              <Button onClick={() => { onAddWireframes(); setShowAddMenu(false); }} variant="ghost" className="w-full justify-start h-9 px-3 text-sm rounded-[var(--radius-sm)] hover:bg-[var(--brand-primary-50)] hover:text-[var(--brand-primary)] transition-colors" icon={<AppWindow className="w-4 h-4 mr-2" />}>
-                {t('toolbar.wireframes')}
-              </Button>
-              <div className="h-px bg-slate-100 my-1 mx-2" />
-              <Button onClick={() => fileInputRef.current?.click()} variant="ghost" className="w-full justify-start h-9 px-3 text-sm rounded-[var(--radius-sm)] hover:bg-pink-50 hover:text-pink-600 transition-colors" icon={<ImageIcon className="w-4 h-4 mr-2" />}>
-                {t('toolbar.image')}
-              </Button>
-            </div>
-          )}
+        <div ref={addMenuRef}>
+          <ToolbarAddMenu
+            isInteractive={isInteractive}
+            showAddMenu={showAddMenu}
+            onToggleMenu={() => setShowAddMenu(!showAddMenu)}
+            onCloseMenu={() => setShowAddMenu(false)}
+            onAddNode={onAddNode}
+            onAddAnnotation={onAddAnnotation}
+            onAddSection={onAddSection}
+            onAddText={onAddText}
+            onAddImage={onAddImage}
+            onAddWireframes={onAddWireframes}
+            getCenter={getCenter}
+          />
         </div>
 
         <Tooltip text={t('toolbar.autoLayout')}>
@@ -224,28 +160,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       <div className="w-px h-6 bg-slate-200/50 mx-2" />
 
       {/* Group 3: History */}
-      <div className="flex items-center gap-0.5">
-        <Tooltip text={t('toolbar.undo')}>
-          <Button
-            onClick={onUndo}
-            disabled={!canUndo || !isInteractive}
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            icon={<Undo2 className="w-4 h-4" />}
-          />
-        </Tooltip>
-        <Tooltip text={t('toolbar.redo')}>
-          <Button
-            onClick={onRedo}
-            disabled={!canRedo || !isInteractive}
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            icon={<Redo2 className="w-4 h-4" />}
-          />
-        </Tooltip>
-      </div>
+      <ToolbarHistoryControls
+        isInteractive={isInteractive}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={onUndo}
+        onRedo={onRedo}
+      />
 
     </div>
   );

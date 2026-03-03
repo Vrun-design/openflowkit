@@ -3,22 +3,23 @@ import { Node, useReactFlow } from 'reactflow';
 import { NodeData } from '@/lib/types';
 import { useFlowStore } from '../store';
 import { assignSmartHandles } from '../services/smartEdgeRouting';
-import { NODE_WIDTH, NODE_HEIGHT } from '../constants';
-import { NODE_DEFAULTS } from '../theme';
 import { useTranslation } from 'react-i18next';
 import { trackEvent } from '../lib/analytics';
 import { createId } from '../lib/id';
+import {
+    applySectionParenting,
+    createAnnotationNode,
+    createImageNode,
+    createProcessNode,
+    createSectionNode,
+    createTextNode,
+    getDefaultNodePosition,
+} from './node-operations/utils';
 
 export const useNodeOperations = (recordHistory: () => void) => {
     const { t } = useTranslation();
     const { nodes, setNodes, setEdges, setSelectedNodeId } = useFlowStore();
     const { screenToFlowPosition } = useReactFlow();
-    function getDefaultNodePosition(count: number, baseX: number, baseY: number): { x: number; y: number } {
-        const columns = 4;
-        const column = count % columns;
-        const row = Math.floor(count / columns);
-        return { x: baseX + column * 80, y: baseY + row * 80 };
-    }
 
     // --- Node Data Updates ---
     const updateNodeData = useCallback((id: string, data: Partial<NodeData>) => {
@@ -80,19 +81,11 @@ export const useNodeOperations = (recordHistory: () => void) => {
     const handleAddNode = useCallback((position?: { x: number; y: number }) => {
         recordHistory();
         const id = createId();
-        const defaultStyle = NODE_DEFAULTS['process'];
-        const newNode: Node = {
+        const newNode = createProcessNode(
             id,
-            position: position || getDefaultNodePosition(nodes.length, 100, 100),
-            data: {
-                label: t('nodes.newNode'),
-                subLabel: t('nodes.processStep'),
-                color: defaultStyle?.color || 'slate',
-                shape: defaultStyle?.shape as NodeData['shape'],
-                icon: defaultStyle?.icon && defaultStyle.icon !== 'none' ? defaultStyle.icon : undefined
-            },
-            type: 'process',
-        };
+            position || getDefaultNodePosition(nodes.length, 100, 100),
+            { label: t('nodes.newNode'), subLabel: t('nodes.processStep') }
+        );
         setNodes((nds) => nds.concat(newNode));
         setSelectedNodeId(id);
         trackEvent('add_node', { node_type: 'process' });
@@ -101,12 +94,11 @@ export const useNodeOperations = (recordHistory: () => void) => {
     const handleAddAnnotation = useCallback((position?: { x: number; y: number }) => {
         recordHistory();
         const id = createId();
-        const newNode: Node = {
+        const newNode = createAnnotationNode(
             id,
-            position: position || getDefaultNodePosition(nodes.length, 100, 100),
-            data: { label: t('nodes.note'), subLabel: t('nodes.addCommentsHere'), color: 'yellow' },
-            type: 'annotation',
-        };
+            position || getDefaultNodePosition(nodes.length, 100, 100),
+            { label: t('nodes.note'), subLabel: t('nodes.addCommentsHere') }
+        );
         setNodes((nds) => nds.concat(newNode));
         setSelectedNodeId(id);
         trackEvent('add_node', { node_type: 'annotation' });
@@ -115,14 +107,11 @@ export const useNodeOperations = (recordHistory: () => void) => {
     const handleAddSection = useCallback((position?: { x: number; y: number }) => {
         recordHistory();
         const id = createId('section');
-        const newNode: Node = {
+        const newNode = createSectionNode(
             id,
-            position: position || getDefaultNodePosition(nodes.length, 50, 50),
-            data: { label: t('nodes.newSection'), subLabel: '', color: 'blue' },
-            type: 'section',
-            style: { width: 500, height: 400 },
-            zIndex: -1,
-        };
+            position || getDefaultNodePosition(nodes.length, 50, 50),
+            t('nodes.newSection')
+        );
         setNodes((nds) => nds.concat(newNode));
         setSelectedNodeId(id);
         trackEvent('add_node', { node_type: 'section' });
@@ -131,12 +120,11 @@ export const useNodeOperations = (recordHistory: () => void) => {
     const handleAddTextNode = useCallback((position?: { x: number; y: number }) => {
         recordHistory();
         const id = createId('text');
-        const newNode: Node = {
+        const newNode = createTextNode(
             id,
-            position: position || getDefaultNodePosition(nodes.length, 100, 100),
-            data: { label: t('nodes.text'), subLabel: '', color: 'slate' },
-            type: 'text',
-        };
+            position || getDefaultNodePosition(nodes.length, 100, 100),
+            t('nodes.text')
+        );
         setNodes((nds) => nds.concat(newNode));
         setSelectedNodeId(id);
         trackEvent('add_node', { node_type: 'text' });
@@ -145,13 +133,12 @@ export const useNodeOperations = (recordHistory: () => void) => {
     const handleAddImage = useCallback((imageUrl: string, position?: { x: number; y: number }) => {
         recordHistory();
         const id = createId('image');
-        const newNode: Node = {
+        const newNode = createImageNode(
             id,
-            position: position || getDefaultNodePosition(nodes.length, 100, 100),
-            data: { label: t('nodes.image'), imageUrl, transparency: 1, rotation: 0 },
-            type: 'image',
-            style: { width: 200, height: 200 },
-        };
+            imageUrl,
+            position || getDefaultNodePosition(nodes.length, 100, 100),
+            t('nodes.image')
+        );
         setNodes((nds) => nds.concat(newNode));
         setSelectedNodeId(id);
         trackEvent('add_node', { node_type: 'image' });
@@ -200,62 +187,8 @@ export const useNodeOperations = (recordHistory: () => void) => {
 
     const onNodeDragStop = useCallback((_event: React.MouseEvent, draggedNode: Node) => {
         const { nodes: currentNodes } = useFlowStore.getState();
-
-        if (draggedNode.type === 'section') return;
-
-        // Section/Parenting Logic
-        let absX = draggedNode.position.x;
-        let absY = draggedNode.position.y;
-        if (draggedNode.parentNode) {
-            const currentParent = currentNodes.find((n) => n.id === draggedNode.parentNode);
-            if (currentParent) {
-                absX += currentParent.position.x;
-                absY += currentParent.position.y;
-            }
-        }
-
-        const sectionNodes = currentNodes.filter((n) => n.type === 'section' && n.id !== draggedNode.id);
-        let newParent: Node | null = null;
-
-        for (const section of sectionNodes) {
-            const sW = (section.style?.width as number) || 500;
-            const sH = (section.style?.height as number) || 400;
-            const sX = section.position.x;
-            const sY = section.position.y;
-
-            if (
-                absX > sX &&
-                absX < sX + sW &&
-                absY > sY &&
-                absY < sY + sH
-            ) {
-                newParent = section;
-                break;
-            }
-        }
-
-        if (newParent?.id === draggedNode.parentNode) return;
-
-        const updatedNodes = currentNodes.map((n) => {
-            if (n.id !== draggedNode.id) return n;
-            if (newParent) {
-                return {
-                    ...n,
-                    parentNode: newParent.id,
-                    extent: 'parent' as const,
-                    position: {
-                        x: absX - newParent.position.x,
-                        y: absY - newParent.position.y,
-                    },
-                };
-            } else if (n.parentNode) {
-                // Unparent
-                const { parentNode, extent, ...rest } = n as any;
-                return { ...rest, position: { x: absX, y: absY } };
-            }
-            return { ...n, position: draggedNode.position };
-        });
-
+        const updatedNodes = applySectionParenting(currentNodes, draggedNode);
+        if (updatedNodes === currentNodes) return;
         setNodes(updatedNodes);
 
         // Smart Routing Recalc on Drop

@@ -1,11 +1,11 @@
-import { useRef, useState, useEffect } from 'react';
+import type { ReactElement } from 'react';
 import { Sparkles, Loader2, ImagePlus, X, Send, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
 import { ViewHeader } from './ViewHeader';
-import { ChatMessage } from '../../services/geminiService';
+import type { ChatMessage } from '@/services/aiService';
 import { useFlowStore } from '../../store';
-import { trackEvent } from '../../lib/analytics';
+import { useAIViewState } from './useAIViewState';
 
 interface AIViewProps {
     searchQuery: string;
@@ -17,7 +17,7 @@ interface AIViewProps {
     onClearChat?: () => void;
 }
 
-export const AIView = ({
+export function AIView({
     searchQuery,
     onAIGenerate,
     onClose,
@@ -25,52 +25,27 @@ export const AIView = ({
     isGenerating,
     chatMessages = [],
     onClearChat
-}: AIViewProps) => {
+}: AIViewProps): ReactElement {
     const { t } = useTranslation();
     const { brandConfig } = useFlowStore();
     const isBeveled = brandConfig.ui.buttonStyle === 'beveled';
-    const [prompt, setPrompt] = useState(searchQuery || '');
-    const [selectedImage, setSelectedImage] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const scrollRef = useRef<HTMLDivElement>(null);
-
-    // Auto-scroll to bottom
-    useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [chatMessages]);
-
-    const handleGenerate = async (text?: string) => {
-        const promptText = text || prompt;
-        if ((!promptText.trim() && !selectedImage) || isGenerating) return;
-
-        trackEvent('ai_generate', { has_image: !!selectedImage });
-        await onAIGenerate(promptText, selectedImage || undefined);
-        setPrompt('');
-        setSelectedImage(null);
-        // We close the modal to show results. User can re-open to continue chat.
-        onClose();
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        e.stopPropagation();
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleGenerate();
-        }
-    };
-
-    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setSelectedImage(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
+    const {
+        prompt,
+        setPrompt,
+        selectedImage,
+        setSelectedImage,
+        fileInputRef,
+        scrollRef,
+        handleGenerate,
+        handleKeyDown,
+        handleImageSelect,
+    } = useAIViewState({
+        searchQuery,
+        isGenerating,
+        onAIGenerate,
+        onClose,
+        chatMessageCount: chatMessages.length,
+    });
 
     const EXAMPLES = [
         { label: t('commandBar.ai.examples.userRegistration'), prompt: t('commandBar.ai.examples.userRegistrationPrompt') },
@@ -161,7 +136,10 @@ export const AIView = ({
                                 {EXAMPLES.map((ex, i) => (
                                     <button
                                         key={i}
-                                        onClick={() => { setPrompt(ex.prompt); handleGenerate(ex.prompt); }}
+                                        onClick={() => {
+                                            setPrompt(ex.prompt);
+                                            void handleGenerate(ex.prompt);
+                                        }}
                                         className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95
                                             ${isBeveled
                                                 ? 'bg-white border border-slate-200 text-slate-600 btn-beveled hover:border-[var(--brand-primary-200)] hover:text-[var(--brand-primary)]'
@@ -179,7 +157,7 @@ export const AIView = ({
                         <div className="flex-1 bg-slate-50 border border-slate-200 rounded-[var(--radius-lg)] focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all flex flex-col">
                             <textarea
                                 value={prompt}
-                                onChange={e => setPrompt(e.target.value)}
+                                onChange={(e) => setPrompt(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 placeholder="Describe your flow..."
                                 className="w-full bg-transparent border-none focus:ring-0 outline-none p-3 text-sm resize-none max-h-32 min-h-[44px]"
@@ -222,7 +200,9 @@ export const AIView = ({
                         </div>
 
                         <Button
-                            onClick={() => handleGenerate()}
+                            onClick={() => {
+                                void handleGenerate();
+                            }}
                             disabled={(!prompt.trim() && !selectedImage) || isGenerating}
                             variant="primary"
                             className={`h-11 w-11 p-0 rounded-xl flex-shrink-0 flex items-center justify-center shadow-lg transition-all ${isGenerating ? 'opacity-80' : ''}`}
@@ -234,4 +214,4 @@ export const AIView = ({
             </div>
         </div>
     );
-};
+}

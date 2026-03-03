@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Download, Image, FileJson, GitBranch, FileCode, Wand2, X, Figma } from 'lucide-react';
+import React from 'react';
+import { Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useFlowStore } from '../store';
 import { Tooltip } from './Tooltip';
 import { Button } from './ui/Button';
+import { useExportMenu } from './useExportMenu';
 
 interface ExportMenuProps {
     onExportPNG: (format: 'png' | 'jpeg') => void;
@@ -22,54 +22,21 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
     onExportOpenFlowDSL,
     onExportFigma,
 }) => {
-    const { brandConfig } = useFlowStore();
-    const [isOpen, setIsOpen] = useState(false);
-    const menuRef = useRef<HTMLDivElement>(null);
-
     const { t } = useTranslation();
-
-    const exportOptions = useMemo(() => [
-        { key: 'png', label: t('export.png', 'Export PNG'), hint: t('export.hintTransparent4K', 'Transparent (4K)'), Icon: Image },
-        { key: 'jpeg', label: t('export.jpeg', 'Export JPG'), hint: t('export.hintWhiteBg4K', 'White Background (4K)'), Icon: Image },
-        { key: 'json', label: t('export.jsonLabel', 'JSON File'), hint: t('export.hintDownload', 'Download'), Icon: FileJson },
-        { key: 'openflow', label: t('export.openflowdslLabel', { appName: brandConfig.appName, defaultValue: `${brandConfig.appName} DSL` }), hint: t('export.hintClipboard', 'Copy to clipboard'), Icon: Wand2 },
-        { key: 'mermaid', label: t('export.mermaid', 'Mermaid'), hint: t('export.hintClipboard', 'Copy to clipboard'), Icon: GitBranch },
-        { key: 'plantuml', label: t('export.plantuml', 'PlantUML'), hint: t('export.hintClipboard', 'Copy to clipboard'), Icon: FileCode },
-        { key: 'figma', label: t('export.figmaEditable', 'Figma Editable'), hint: t('export.hintClipboard', 'Copy to clipboard'), Icon: Figma },
-    ], [brandConfig.appName, t]);
-
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        if (isOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
-        }
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isOpen]);
-
-    const handlers: Record<string, () => void> = {
-        png: () => onExportPNG('png'),
-        jpeg: () => onExportPNG('jpeg'),
-        json: onExportJSON,
-        openflow: onExportOpenFlowDSL,
-        mermaid: onExportMermaid,
-        plantuml: onExportPlantUML,
-        figma: onExportFigma,
-    };
-
-    const handleSelect = (key: string) => {
-        handlers[key]();
-        setIsOpen(false);
-    };
+    const { isOpen, menuRef, exportOptions, toggleMenu, handleSelect } = useExportMenu({
+        onExportPNG,
+        onExportJSON,
+        onExportMermaid,
+        onExportPlantUML,
+        onExportOpenFlowDSL,
+        onExportFigma,
+    });
 
     return (
         <div className="relative" ref={menuRef}>
             <Tooltip text={t('export.exportDiagram', 'Export Diagram')} side="bottom">
                 <Button
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={toggleMenu}
                     className="h-9 px-4 text-sm"
                 >
                     <Download className="w-4 h-4 mr-2" />

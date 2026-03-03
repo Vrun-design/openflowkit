@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Ban, Upload } from 'lucide-react';
-import { ICON_MAP } from '../IconMap';
+import { ICON_NAMES, NamedIcon } from '../IconMap';
 
 interface IconPickerProps {
     selectedIcon?: string;
@@ -19,7 +19,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
 
     const filteredIcons = useMemo(() => {
         const term = iconSearch.toLowerCase();
-        const allKeys = Object.keys(ICON_MAP);
+        const allKeys = ICON_NAMES;
 
         // Priority icons for flowcharts
         const priorityIcons = [
@@ -73,7 +73,6 @@ export const IconPicker: React.FC<IconPickerProps> = ({
                 </button>
 
                 {filteredIcons.map((key) => {
-                    const Icon = ICON_MAP[key];
                     return (
                         <button
                             key={key}
@@ -87,7 +86,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
                             `}
                             title={key}
                         >
-                            <Icon className="w-5 h-5" />
+                            <NamedIcon name={key} className="w-5 h-5" />
                         </button>
                     );
                 })}

@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { NodeProps, NodeResizer, Handle, Position } from 'reactflow';
 import { NodeData } from '@/lib/types';
 import { Rows3 } from 'lucide-react';
-import { ICON_MAP } from './IconMap';
+import { NamedIcon } from './IconMap';
 
 const LANE_COLORS = [
     { bg: '#eff6ff', border: '#93c5fd', text: '#1e40af', label: 'Blue' },
@@ -16,7 +16,7 @@ const SwimlaneNode = ({ id, data, selected }: NodeProps<NodeData>) => {
     const colorIndex = parseInt(id.replace(/\D/g, ''), 10) || 0;
     const lane = LANE_COLORS[colorIndex % LANE_COLORS.length];
 
-    const Icon = data.icon && ICON_MAP[data.icon] ? ICON_MAP[data.icon] : Rows3;
+    const iconName = data.icon || 'Rows3';
 
     return (
         <>
@@ -49,7 +49,11 @@ const SwimlaneNode = ({ id, data, selected }: NodeProps<NodeData>) => {
                         pointerEvents: 'auto',
                     }}
                 >
-                    <Icon className="w-4 h-4" style={{ color: lane.text }} />
+                    {iconName ? (
+                        <NamedIcon name={iconName} fallbackName="Rows3" className="w-4 h-4" style={{ color: lane.text }} />
+                    ) : (
+                        <Rows3 className="w-4 h-4" style={{ color: lane.text }} />
+                    )}
                     <span
                         className="font-bold text-sm uppercase tracking-wider"
                         style={{ color: lane.text }}

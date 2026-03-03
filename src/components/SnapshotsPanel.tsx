@@ -50,6 +50,7 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                     <input
                         type="text"
                         value={newSnapshotName}
+                        data-testid="snapshot-name-input"
                         onChange={(e) => setNewSnapshotName(e.target.value)}
                         placeholder={t('snapshotsPanel.versionName')}
                         className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-[var(--radius-md)] text-sm outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
@@ -81,6 +82,7 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
                                         onClick={() => onRestoreSnapshot(snapshot)}
+                                        data-testid={`snapshot-restore-${snapshot.id}`}
                                         title={t('snapshotsPanel.restoreVersion')}
                                         className="p-1.5 text-[var(--brand-primary)] hover:bg-[var(--brand-primary-50)] rounded-[var(--radius-sm)] transition-colors"
                                     >

@@ -24,3 +24,9 @@ jobs:
 
       - name: Run CI quality suite
         run: npm run test:ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E smoke suite
+        run: npm run e2e:ci

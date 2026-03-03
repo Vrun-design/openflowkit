@@ -1,7 +1,7 @@
 {
   "name": "openflowkit",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "homepage": "https://openflowkit.com",
   "engines": {
@@ -10,7 +10,12 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/generate-sitemap.js && tsc -b && vite build",
-    "test:ci": "npm run test -- --run && npm run build",
+    "bundle:check": "node scripts/check-bundle-budget.mjs",
+    "build:ci": "npm run build && npm run bundle:check",
+    "test:ci": "npm run test -- --run && npm run build:ci",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:ci": "playwright test --project=chromium",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "preview": "vite preview",
@@ -48,6 +53,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@playwright/test": "^1.53.2",
     "@tailwindcss/postcss": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

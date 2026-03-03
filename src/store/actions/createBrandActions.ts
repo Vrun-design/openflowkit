@@ -1,4 +1,5 @@
 import type { FlowState, BrandConfig, BrandKit } from '../types';
+import { createId } from '@/lib/id';
 import { DEFAULT_BRAND_KIT } from '../defaults';
 
 type SetFlowState = (partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)) => void;
@@ -22,7 +23,7 @@ export function createBrandActions(set: SetFlowState): Pick<
         }),
 
         addBrandKit: (name: string, base?: BrandConfig) => set((state) => {
-            const newId = `brand-${crypto.randomUUID()}`;
+            const newId = createId('brand');
             const baseConfig = base || state.brandConfig;
             const newKit: BrandKit = {
                 ...baseConfig,

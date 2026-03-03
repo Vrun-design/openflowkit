@@ -1,163 +1,34 @@
-import React, { useMemo, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSlug from 'rehype-slug';
 import rehypeRaw from 'rehype-raw';
-import { MarkdownComponents } from './MarkdownComponents';
-import { useDocsContent } from './useDocsContent';
+import rehypeSlug from 'rehype-slug';
+import remarkGfm from 'remark-gfm';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { DocsBreadcrumbs } from './DocsBreadcrumbs';
-import { DocsFooter } from './DocsFooter';
-import { Loader2, AlertCircle } from 'lucide-react';
-import { useFlowStore } from '../../store';
 import { DocsChatbot } from './DocsChatbot';
-import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
-
-// Helper to inject dynamic content and fix placeholders
-const processContent = (content: string, appName: string) => {
-    return content
-        .replace(/FlowMind/g, appName || 'FlowMind')
-        .replace(/OpenFlowKit/g, appName || 'OpenFlowKit')
-        .replace(/\[PLACEHOLDER: (.*?)\]/g, (_, text) => {
-            return `<div class="p-8 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 text-center my-8 text-slate-400 text-sm flex flex-col items-center gap-2"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span>Image: ${text}</span></div>`;
-        });
-};
-
-
-
-
-
-// Helper to strip emojis for cleaner display
-const stripEmojis = (str: string) => {
-    return str
-        .replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '')
-        .replace(/\p{Emoji}/gu, '') // Add unicode property escape for better coverage
-        .replace(/\s+/g, ' ') // Collapse multiple spaces
-        .trim();
-};
-
-// Helper to slugify text (matches github-slugger behavior roughly)
-const slugify = (text: string) => {
-    return stripEmojis(text) // Strip emojis FIRST to match rehype-slug which ignores them
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, '-')        // Replace spaces with -
-        .replace(/[^\w-]+/g, '')     // Remove all non-word chars
-        .replace(/--+/g, '-')        // Replace multiple - with single -
-        .replace(/^-+/, '')          // Trim start
-        .replace(/-+$/, '');         // Trim end
-};
-
-// Helper to extract Table of Contents
-const extractToc = (content: string) => {
-    const regex = /^(#{2,3})\s+(.*)$/gm;
-    const matches = [];
-    let match;
-    while ((match = regex.exec(content)) !== null) {
-        const originalText = match[2];
-        const cleanText = stripEmojis(originalText);
-
-        matches.push({
-            level: match[1].length,
-            text: cleanText, // Display text without emojis
-            id: slugify(originalText) // ID generation uses original text to match rehype-slug behavior
-        });
-    }
-    return matches;
-};
+import { DocsFooter } from './DocsFooter';
+import { DocsToc } from './DocsToc';
+import { MarkdownComponents } from './MarkdownComponents';
+import { useDocsPageModel } from './useDocsPageModel';
 
 export const DocsPage: React.FC = () => {
-    const { t } = useTranslation();
-    const { slug, lang } = useParams();
-    const { content: rawContent, loading, error } = useDocsContent(slug, lang || 'en');
-    const { brandConfig } = useFlowStore();
-
-    const content = useMemo(() => {
-        if (!rawContent) return null;
-        return processContent(rawContent, brandConfig.appName);
-    }, [rawContent, brandConfig.appName]);
-
-    const toc = useMemo(() => {
-        if (!content) return [];
-        return extractToc(content);
-    }, [content]);
-
-    // SEO: Dynamic Meta Injection
-    const location = useLocation();
-    useEffect(() => {
-        if (!slug) return;
-
-        // Fallback title generation from slug
-        const titleCase = slug
-            .split('-')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-
-        let title = `${titleCase} | OpenFlowKit Docs`;
-        let description = 'Learn how to use OpenFlowKit, the open-source Diagram-as-Code engine.';
-
-        // Try to extract an H1 from the actual markdown for a better title
-        if (content) {
-            const h1Match = content.match(/^#\s+(.*)$/m);
-            if (h1Match && h1Match[1]) {
-                title = `${stripEmojis(h1Match[1])} | OpenFlowKit Docs`;
-            }
-
-            // Try to extract the first paragraph for the description
-            const paragraphs = content.split('\n\n');
-            const firstPara = paragraphs.find(p => p.trim() && !p.startsWith('#') && !p.startsWith('>') && !p.startsWith('!'));
-            if (firstPara) {
-                // Remove markdown links and truncate to ~160 chars
-                description = firstPara.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').substring(0, 160).trim();
-                if (description.length === 160) description += '...';
-            }
-        }
-
-        document.title = title;
-
-        let metaDescription = document.querySelector('meta[name="description"]');
-        if (!metaDescription) {
-            metaDescription = document.createElement('meta');
-            metaDescription.setAttribute('name', 'description');
-            document.head.appendChild(metaDescription);
-        }
-        metaDescription.setAttribute('content', description);
-
-        // Cleanup function to avoid stale meta tags if the component unmounts entirely
-        return () => {
-            document.title = 'OpenFlowKit | Diagram-as-Code Engine';
-            if (metaDescription) metaDescription.setAttribute('content', 'OpenFlowKit is the open-source, white-label Diagram-as-Code engine built for modern workflows.');
-        }
-
-    }, [slug, content, location.pathname]);
-
-    const handleScroll = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
-        e.preventDefault();
-        const element = document.getElementById(id);
-        if (element) {
-            const offset = 80; // Header height + padding
-            const elementPosition = element.getBoundingClientRect().top;
-            const offsetPosition = elementPosition + window.pageYOffset - offset;
-
-            window.scrollTo({
-                top: offsetPosition,
-                behavior: "smooth"
-            });
-
-            // Optional: Update URL hash without jumping
-            window.history.pushState({}, '', `#${id}`);
-        }
-    };
+    const {
+        slug,
+        content,
+        toc,
+        loading,
+        error,
+        isChatPage,
+        handleTocClick,
+    } = useDocsPageModel();
 
     return (
         <div className="animate-in fade-in duration-300 min-h-[60vh] flex gap-12">
-            <div className={`flex-1 min-w-0 ${slug === 'ask-flowpilot' ? 'max-w-5xl mx-auto w-full' : ''}`}>
-                {slug !== 'ask-flowpilot' && (
+            <div className={`flex-1 min-w-0 ${isChatPage ? 'max-w-5xl mx-auto w-full' : ''}`}>
+                {!isChatPage && (
                     <>
                         <DocsBreadcrumbs />
-
-                        {/* Only show title if the content does not start with an H1 */}
                         {(!content || !content.trim().startsWith('# ')) && (
                             <h1 className="text-4xl font-extrabold mb-8 capitalize text-slate-900 tracking-tight leading-tight">
                                 {slug?.replace(/-/g, ' ')}
@@ -184,7 +55,7 @@ export const DocsPage: React.FC = () => {
                     </div>
                 )}
 
-                {!loading && !error && content && slug !== 'ask-flowpilot' && (
+                {!loading && !error && content && !isChatPage && (
                     <div className="mb-16">
                         <ReactMarkdown
                             components={MarkdownComponents}
@@ -196,36 +67,11 @@ export const DocsPage: React.FC = () => {
                     </div>
                 )}
 
-                {!loading && !error && slug === 'ask-flowpilot' && (
-                    <DocsChatbot />
-                )}
-
-                {!loading && !error && slug !== 'ask-flowpilot' && <DocsFooter />}
+                {!loading && !error && isChatPage && <DocsChatbot />}
+                {!loading && !error && !isChatPage && <DocsFooter />}
             </div>
 
-            {slug !== 'ask-flowpilot' && (
-                <div className="hidden xl:block w-64 shrink-0">
-                    <div className="sticky top-6">
-                        <h5 className="text-xs font-semibold text-slate-900 uppercase tracking-widest mb-4">{t('docs.onThisPage')}</h5>
-                        <ul className="space-y-2 text-sm border-l border-slate-100">
-                            {toc.map((item, i) => (
-                                <li key={i}>
-                                    <a
-                                        href={`#${item.id}`}
-                                        onClick={(e) => handleScroll(e, item.id)}
-                                        className={`
-                                            block pl-4 py-1 border-l -ml-px transition-colors cursor-pointer
-                                            ${item.level === 2 ? 'text-slate-600 hover:text-slate-900 hover:border-slate-300' : 'text-slate-400 hover:text-slate-700 pl-8 text-xs'}
-                                        `}
-                                    >
-                                        {item.text}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            )}
+            {!isChatPage && <DocsToc items={toc} onItemClick={handleTocClick} />}
         </div>
     );
 };

@@ -1,8 +1,21 @@
-import ELK, { ElkNode, ElkExtendedEdge } from 'elkjs/lib/elk.bundled.js';
+import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk.bundled.js';
 import { Node, Edge } from 'reactflow';
 import { NODE_WIDTH, NODE_HEIGHT } from '../constants';
 
-const elk = new ELK();
+interface ElkLayoutEngine {
+    layout: (graph: ElkNode) => Promise<ElkNode>;
+}
+
+let elkInstancePromise: Promise<ElkLayoutEngine> | null = null;
+
+async function getElkInstance(): Promise<ElkLayoutEngine> {
+    if (!elkInstancePromise) {
+        elkInstancePromise = import('elkjs/lib/elk.bundled.js').then((module) => {
+            return new module.default() as unknown as ElkLayoutEngine;
+        });
+    }
+    return elkInstancePromise;
+}
 
 export type LayoutAlgorithm = 'layered' | 'force' | 'mrtree' | 'stress' | 'radial';
 export type LayoutDirection = 'DOWN' | 'RIGHT' | 'LEFT' | 'UP';
@@ -172,6 +185,7 @@ export async function getElkLayout(
 
     // 3. Execute Layout
     try {
+        const elk = await getElkInstance();
         const layoutResult = await elk.layout(elkGraph);
 
         // 4. Flatten and Map Results

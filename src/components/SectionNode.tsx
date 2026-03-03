@@ -1,9 +1,8 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo } from 'react';
 import { NodeProps, NodeResizer } from 'reactflow';
 import { NodeData } from '@/lib/types';
-import { ChevronDown, ChevronRight, Group } from 'lucide-react';
-
-import { ICON_MAP } from './IconMap';
+import { Group } from 'lucide-react';
+import { NamedIcon } from './IconMap';
 import { SECTION_COLOR_PALETTE } from '../theme';
 
 
@@ -11,7 +10,7 @@ import { SECTION_COLOR_PALETTE } from '../theme';
 function SectionNode({ data, selected }: NodeProps<NodeData>): React.ReactElement {
   const color = data.color || 'blue';
   const theme = SECTION_COLOR_PALETTE[color] || SECTION_COLOR_PALETTE.blue;
-  const Icon = data.icon && ICON_MAP[data.icon] ? ICON_MAP[data.icon] : Group;
+  const iconName = data.icon || 'Group';
 
   return (
     <>
@@ -40,7 +39,11 @@ function SectionNode({ data, selected }: NodeProps<NodeData>): React.ReactElemen
           className="flex items-center gap-2 px-4 py-3 rounded-t-2xl cursor-grab active:cursor-grabbing"
           style={{ borderBottom: `1px dashed ${theme.border}` }}
         >
-          <Icon className="w-4 h-4" style={{ color: theme.title }} />
+          {iconName ? (
+            <NamedIcon name={iconName} fallbackName="Group" className="w-4 h-4" style={{ color: theme.title }} />
+          ) : (
+            <Group className="w-4 h-4" style={{ color: theme.title }} />
+          )}
           <span
             className="font-bold text-sm tracking-tight"
             style={{ color: theme.title }}

@@ -1,12 +1,10 @@
-import { useCallback } from 'react';
-import { OnSelectionChangeParams } from 'reactflow';
 import { useFlowStore } from '../store';
 import { useNodeOperations } from './useNodeOperations';
 import { useEdgeOperations } from './useEdgeOperations';
 import { useLayoutOperations } from './useLayoutOperations';
 import { useClipboardOperations } from './useClipboardOperations';
 import { useTranslation } from 'react-i18next';
-import { trackEvent } from '../lib/analytics';
+import { useFlowCoreActions } from './flow-operations/useFlowCoreActions';
 
 export const useFlowOperations = (
   recordHistory: () => void,
@@ -20,60 +18,20 @@ export const useFlowOperations = (
   const edgeOps = useEdgeOperations(recordHistory, onShowConnectMenu);
   const layoutOps = useLayoutOperations(recordHistory);
   const clipboardOps = useClipboardOperations(recordHistory);
-
-  // --- Selection ---
-  const onSelectionChange = useCallback(({ nodes: selectedNodes, edges: selectedEdges }: OnSelectionChangeParams) => {
-    setSelectedNodeId(selectedNodes.length > 0 ? selectedNodes[0].id : null);
-    setSelectedEdgeId(selectedNodes.length === 0 && selectedEdges.length > 0 ? selectedEdges[0].id : null);
-  }, [setSelectedNodeId, setSelectedEdgeId]);
-
-  // --- Clear Canvas ---
-  const handleClear = useCallback(() => {
-    if (window.confirm(t('actions.clearCanvasConfirm'))) {
-      recordHistory();
-      setNodes([]);
-      setEdges([]);
-      trackEvent('clear_canvas');
-    }
-  }, [setNodes, setEdges, recordHistory, t]);
+  const coreOps = useFlowCoreActions({
+    setSelectedNodeId,
+    setSelectedEdgeId,
+    setNodes,
+    setEdges,
+    recordHistory,
+    clearCanvasConfirmText: t('actions.clearCanvasConfirm'),
+  });
 
   return {
-    // Node Ops
-    updateNodeData: nodeOps.updateNodeData,
-    updateNodeType: nodeOps.updateNodeType,
-    updateNodeZIndex: nodeOps.updateNodeZIndex,
-    deleteNode: nodeOps.deleteNode,
-    duplicateNode: nodeOps.duplicateNode,
-    handleAddNode: nodeOps.handleAddNode,
-    handleAddAnnotation: nodeOps.handleAddAnnotation,
-    handleAddSection: nodeOps.handleAddSection,
-    handleAddTextNode: nodeOps.handleAddTextNode,
-    handleAddImage: nodeOps.handleAddImage,
-    onNodeDragStart: nodeOps.onNodeDragStart,
-    onNodeDrag: nodeOps.onNodeDrag,
-    onNodeDragStop: nodeOps.onNodeDragStop,
-    onNodeDoubleClick: nodeOps.onNodeDoubleClick,
-
-    // Edge Ops
-    updateEdge: edgeOps.updateEdge,
-    deleteEdge: edgeOps.deleteEdge,
-    onConnect: edgeOps.onConnect,
-    onConnectStart: edgeOps.onConnectStart,
-    onConnectEnd: edgeOps.onConnectEnd,
-    onEdgeUpdate: edgeOps.onEdgeUpdate,
-    handleAddAndConnect: edgeOps.handleAddAndConnect,
-
-    // Layout Ops
-    handleAlignNodes: layoutOps.handleAlignNodes,
-    handleDistributeNodes: layoutOps.handleDistributeNodes,
-    handleGroupNodes: layoutOps.handleGroupNodes,
-
-    // Clipboard Ops
-    copySelection: clipboardOps.copySelection,
-    pasteSelection: clipboardOps.pasteSelection,
-
-    // Local
-    onSelectionChange,
-    handleClear,
+    ...nodeOps,
+    ...edgeOps,
+    ...layoutOps,
+    ...clipboardOps,
+    ...coreOps,
   };
 };

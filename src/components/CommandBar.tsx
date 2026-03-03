@@ -1,20 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import {
-    Sparkles,
-    Layout,
-    Command,
-    Settings,
-    Zap,
-    ArrowRight,
-    Code2,
-    FileCode,
-    Search,
-    Palette,
-    Activity
-} from 'lucide-react';
-
-import { useFlowStore } from '../store';
-import { CommandBarProps, CommandItem, CommandView } from './command-bar/types';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { CommandBarProps, CommandView } from './command-bar/types';
 
 // Import newly refactored views
 import { RootView } from './command-bar/RootView';
@@ -27,10 +12,11 @@ import { VisualsView } from './command-bar/VisualsView';
 
 import { DesignSystemView } from './command-bar/DesignSystemView';
 import { WireframesView } from './command-bar/WireframesView';
+import { useCommandBarCommands } from './command-bar/useCommandBarCommands';
 
+type OpenCommandBarContentProps = Omit<CommandBarProps, 'isOpen'>;
 
-export const CommandBar: React.FC<CommandBarProps> = ({
-    isOpen,
+function OpenCommandBarContent({
     onClose,
     nodes,
     edges,
@@ -39,29 +25,22 @@ export const CommandBar: React.FC<CommandBarProps> = ({
     isGenerating,
     onUndo,
     onRedo,
-    onFitView,
     onLayout,
     onSelectTemplate,
     initialView = 'root',
     settings,
     chatMessages,
     onClearChat
-}) => {
+}: OpenCommandBarContentProps): React.ReactElement {
     const [view, setView] = useState<CommandView>(initialView);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // Reset state on open
     useEffect(() => {
-        if (isOpen) {
-            setView(initialView);
-            setSearchQuery('');
-            setSelectedIndex(-1);
-            setTimeout(() => inputRef.current?.focus(), 50);
-        }
-    }, [isOpen, initialView]);
+        setTimeout(() => inputRef.current?.focus(), 50);
+    }, []);
 
     const handleBack = useCallback(() => {
         if (view === 'root') {
@@ -72,152 +51,11 @@ export const CommandBar: React.FC<CommandBarProps> = ({
         }
     }, [view, onClose]);
 
-    const commands: CommandItem[] = useMemo(() => [
-        {
-            id: 'ai-generate',
-            label: 'Ask Flowpilot to build flow...',
-            icon: <Sparkles className="w-4 h-4 text-[var(--brand-primary)]" />,
-            type: 'navigation',
-            description: 'Generate flow from text',
-            view: 'ai'
-        },
-        {
-            id: 'templates',
-            label: 'Templates',
-            icon: <Layout className="w-4 h-4 text-blue-500" />,
-            type: 'navigation',
-            description: 'Browse pre-built flows',
-            view: 'templates'
-        },
-        {
-            id: 'mermaid',
-            label: 'Paste Mermaid Code',
-            icon: <Code2 className="w-4 h-4 text-pink-500" />,
-            type: 'navigation',
-            view: 'mermaid'
-        },
-        {
-            id: 'flowmind',
-            label: `Paste ${useFlowStore.getState().brandConfig.appName} DSL`,
-            icon: <FileCode className="w-4 h-4 text-emerald-500" />,
-            type: 'navigation',
-            view: 'flowmind'
-        },
-        {
-            id: 'fit-view',
-            label: 'Fit View',
-            icon: <Command className="w-4 h-4 text-slate-500" />,
-            shortcut: '⇧1',
-            type: 'action',
-            action: onFitView
-        },
-        {
-            id: 'search-nodes',
-            label: 'Search Nodes',
-            icon: <Search className="w-4 h-4 text-[var(--brand-primary-400)]" />,
-            shortcut: '⌘F',
-            type: 'navigation',
-            view: 'search'
-        },
-        {
-            id: 'auto-layout',
-            label: 'Layout Studio...',
-            icon: <Zap className="w-4 h-4 text-amber-500" />,
-            type: 'navigation',
-            view: 'layout',
-            description: 'Advanced algorithms & settings'
-        },
-        {
-            id: 'visuals',
-            label: 'Connection Styles...',
-            icon: <Activity className="w-4 h-4 text-pink-500" />,
-            type: 'navigation',
-            view: 'visuals',
-            description: 'Edge styles & theme'
-        },
-        {
-            id: 'wireframes',
-            label: 'Wireframe Elements...',
-            icon: <Layout className="w-4 h-4 text-purple-500" />,
-            type: 'navigation',
-            view: 'wireframes',
-            description: 'Browser, Mobile, UI Controls'
-        },
-        // Hidden Commands (Search only)
-        ...(settings ? [
-            {
-                id: 'toggle-grid',
-                label: 'Show Grid',
-                icon: <Settings className="w-4 h-4 text-slate-500" />,
-                type: 'toggle' as const,
-                value: settings.showGrid,
-                action: settings.onToggleGrid,
-                description: settings.showGrid ? 'On' : 'Off',
-                hidden: true
-            },
-            {
-                id: 'toggle-snap',
-                label: 'Snap to Grid',
-                icon: <Settings className="w-4 h-4 text-slate-500" />,
-                type: 'toggle' as const,
-                value: settings.snapToGrid,
-                action: settings.onToggleSnap,
-                description: settings.snapToGrid ? 'On' : 'Off',
-                hidden: true
-            },
-            {
-                id: 'toggle-minimap',
-                label: 'Show MiniMap',
-                icon: <Settings className="w-4 h-4 text-slate-500" />,
-                type: 'toggle' as const,
-                value: settings.showMiniMap,
-                action: settings.onToggleMiniMap,
-                description: settings.showMiniMap ? 'On' : 'Off',
-                hidden: true
-            }
-        ] : []),
-        {
-            id: 'undo',
-            label: 'Undo',
-            icon: <ArrowRight className="w-4 h-4 rotate-180 text-slate-500" />,
-            shortcut: '⌘Z',
-            type: 'action',
-            action: onUndo,
-            hidden: true
-        },
-        {
-            id: 'redo',
-            label: 'Redo',
-            icon: <ArrowRight className="w-4 h-4 text-slate-500" />,
-            shortcut: '⌘Y',
-            type: 'action',
-            action: onRedo,
-            hidden: true
-        },
-        {
-            id: 'select-all-edges',
-            label: 'Select All Edges',
-            icon: <ArrowRight className="w-4 h-4 text-cyan-500" />,
-            type: 'action',
-            description: 'Highlight all connections',
-            action: () => {
-                const { edges, setEdges } = useFlowStore.getState();
-                setEdges(edges.map(e => ({ ...e, selected: true })));
-            },
-            hidden: true
-        },
-        // Bottom aligned
-        {
-            id: 'design-systems',
-            label: 'Design Systems...',
-            icon: <Palette className="w-4 h-4 text-[var(--brand-primary)]" />,
-            type: 'navigation',
-            view: 'design-system',
-            description: 'Manage themes & styles'
-        },
-    ], [settings, onFitView, onUndo, onRedo]);
-
-    if (!isOpen) return null;
+    const commands = useCommandBarCommands({
+        settings,
+        onUndo,
+        onRedo,
+    });
 
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center pb-24 pointer-events-none">
@@ -330,4 +168,9 @@ export const CommandBar: React.FC<CommandBarProps> = ({
             </div>
         </div>
     );
+}
+
+export const CommandBar: React.FC<CommandBarProps> = ({ isOpen, ...props }) => {
+    if (!isOpen) return null;
+    return <OpenCommandBarContent {...props} />;
 };

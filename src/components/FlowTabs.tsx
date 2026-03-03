@@ -55,6 +55,7 @@ export const FlowTabs: React.FC<FlowTabsProps> = ({
         {tabs.map((tab) => (
           <div
             key={tab.id}
+            data-testid="flow-tab"
             className={`
               group relative flex items-center gap-2 px-3 py-1.5 rounded-[var(--brand-radius)] cursor-pointer select-none transition-all border
               ${activeTabId === tab.id
@@ -99,6 +100,7 @@ export const FlowTabs: React.FC<FlowTabsProps> = ({
 
         <button
           onClick={onAddTab}
+          data-testid="flow-tab-add"
           className={`p-1.5 ml-1 rounded-full text-slate-400 hover:text-[var(--brand-primary)] hover:bg-[var(--brand-primary-50)] transition-colors ${isBeveled ? 'btn-beveled bg-white' : ''}`}
           title={t('flowTabs.newFlowTab')}
         >

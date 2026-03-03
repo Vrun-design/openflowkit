@@ -1,45 +1,6 @@
-import { MarkerType } from 'reactflow';
-import type React from 'react';
 import type { NodeData } from './types';
 
-const EDGE_STYLE: React.CSSProperties = { stroke: '#94a3b8', strokeWidth: 2 };
-const EDGE_LABEL_STYLE: React.CSSProperties = { fill: '#334155', fontWeight: 500, fontSize: 12 };
-const EDGE_LABEL_BG_STYLE: React.CSSProperties = { fill: '#ffffff', stroke: '#cbd5e1', strokeWidth: 1 };
-
-const DEFAULT_EDGE_OPTIONS = {
-    type: 'smoothstep' as const,
-    markerEnd: { type: MarkerType.ArrowClosed },
-    animated: true,
-    style: EDGE_STYLE,
-    labelStyle: EDGE_LABEL_STYLE,
-    labelBgStyle: EDGE_LABEL_BG_STYLE,
-    labelBgPadding: [8, 4] as [number, number],
-    labelBgBorderRadius: 4,
-};
-
-export function createDefaultEdge(source: string, target: string, label?: string, id?: string) {
-    return {
-        id: id || `e-${source}-${target}-${crypto.randomUUID()}`,
-        source,
-        target,
-        label,
-        ...DEFAULT_EDGE_OPTIONS,
-    };
-}
-
-const NODE_TYPE_DEFAULTS: Record<string, string> = {
-    start: 'emerald',
-    end: 'red',
-    decision: 'amber',
-    custom: 'violet',
-    process: 'slate',
-};
-
-export function getDefaultColor(type: string): string {
-    return NODE_TYPE_DEFAULTS[type] || 'slate';
-}
-
-const SHAPE_OPENERS: Array<{ open: string; close: string; type: string; shape: NodeData['shape'] }> = [
+export const SHAPE_OPENERS: Array<{ open: string; close: string; type: string; shape: NodeData['shape'] }> = [
     { open: '([', close: '])', type: 'start', shape: 'capsule' },
     { open: '((', close: '))', type: 'end', shape: 'circle' },
     { open: '{{', close: '}}', type: 'custom', shape: 'hexagon' },
@@ -60,53 +21,65 @@ export const SKIP_PATTERNS = [
 ];
 
 const LINK_STYLE_RE = /^linkStyle\s+([\d,\s]+)\s+(.+)$/i;
-export const CLASS_DEF_RE = /^classDef\s+(\w+)\s+(.+)$/i;
-export const STYLE_RE = /^style\s+(\w+)\s+(.+)$/i;
+const CLASS_DEF_RE = /^classDef\s+(\w+)\s+(.+)$/i;
+const STYLE_RE = /^style\s+(\w+)\s+(.+)$/i;
+
+export { CLASS_DEF_RE, STYLE_RE };
 
 export function parseLinkStyleLine(line: string): { indices: number[]; style: Record<string, string> } | null {
-    const m = line.match(LINK_STYLE_RE);
-    if (!m) return null;
+    const match = line.match(LINK_STYLE_RE);
+    if (!match) return null;
 
-    const indices = m[1].split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
-    const styleParts = m[2].replace(/;$/, '').split(',');
+    const indices = match[1]
+        .split(',')
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => !Number.isNaN(n));
+
+    const styleParts = match[2].replace(/;$/, '').split(',');
     const style: Record<string, string> = {};
+
     for (const part of styleParts) {
-        const [key, val] = part.split(':').map((s) => s.trim());
-        if (key && val) style[key] = val;
+        const [key, value] = part.split(':').map((s) => s.trim());
+        if (key && value) {
+            style[key] = value;
+        }
     }
+
     return { indices, style };
 }
 
 export function normalizeMultilineStrings(input: string): string {
     let result = '';
     let inQuote = false;
+
     for (let i = 0; i < input.length; i++) {
-        const c = input[i];
-        if (c === '"' && input[i - 1] !== '\\') {
+        const char = input[i];
+        if (char === '"' && input[i - 1] !== '\\') {
             inQuote = !inQuote;
         }
 
-        if (inQuote && c === '\n') {
+        if (inQuote && char === '\n') {
             result += '\\n';
-            let j = i + 1;
-            while (j < input.length && (input[j] === ' ' || input[j] === '\t')) {
-                j++;
+            let nextIndex = i + 1;
+            while (nextIndex < input.length && (input[nextIndex] === ' ' || input[nextIndex] === '\t')) {
+                nextIndex++;
             }
-            i = j - 1;
+            i = nextIndex - 1;
         } else {
-            result += c;
+            result += char;
         }
     }
+
     return result;
 }
 
 export function normalizeEdgeLabels(input: string): string {
-    let s = input;
-    s = s.replace(/==(?![>])\s*(.+?)\s*==>/g, ' ==>|$1|');
-    s = s.replace(/--(?![>-])\s*(.+?)\s*-->/g, ' -->|$1|');
-    s = s.replace(/-\.\s*(.+?)\s*\.->/g, ' -.->|$1|');
-    s = s.replace(/--(?![>-])\s*(.+?)\s*---/g, ' ---|$1|');
-    return s;
+    let result = input;
+    result = result.replace(/==(?![>])\s*(.+?)\s*==>/g, ' ==>|$1|');
+    result = result.replace(/--(?![>-])\s*(.+?)\s*-->/g, ' -->|$1|');
+    result = result.replace(/-\.\s*(.+?)\s*\.->/g, ' -.->|$1|');
+    result = result.replace(/--(?![>-])\s*(.+?)\s*---/g, ' ---|$1|');
+    return result;
 }
 
 export interface RawNode {
@@ -130,19 +103,18 @@ function tryParseWithShape(
     input: string,
     shape: { open: string; close: string; type: string; shape: NodeData['shape'] }
 ): RawNode | null {
-    const openIdx = input.indexOf(shape.open);
-    if (openIdx < 1) return null;
+    const openIndex = input.indexOf(shape.open);
+    if (openIndex < 1) return null;
+    if (openIndex > 0 && input[openIndex - 1] === shape.open[0]) return null;
 
-    if (openIdx > 0 && input[openIdx - 1] === shape.open[0]) return null;
-
-    const id = input.substring(0, openIdx).trim();
+    const id = input.substring(0, openIndex).trim();
     if (!/^[a-zA-Z0-9_][\w-]*$/.test(id)) return null;
 
-    const afterOpen = input.substring(openIdx + shape.open.length);
-    const closeIdx = afterOpen.lastIndexOf(shape.close);
-    if (closeIdx < 0) return null;
+    const afterOpen = input.substring(openIndex + shape.open.length);
+    const closeIndex = afterOpen.lastIndexOf(shape.close);
+    if (closeIndex < 0) return null;
 
-    const afterClose = afterOpen.substring(closeIdx + shape.close.length).trim();
+    const afterClose = afterOpen.substring(closeIndex + shape.close.length).trim();
     let classes: string[] = [];
     if (afterClose.startsWith(':::')) {
         classes = afterClose.substring(3).split(/,\s*/);
@@ -150,7 +122,7 @@ function tryParseWithShape(
         return null;
     }
 
-    let label = afterOpen.substring(0, closeIdx).trim();
+    let label = afterOpen.substring(0, closeIndex).trim();
     if ((label.startsWith('"') && label.endsWith('"')) || (label.startsWith("'") && label.endsWith("'"))) {
         label = label.slice(1, -1);
     }
@@ -189,12 +161,12 @@ export const ARROW_PATTERNS = ['===>', '-.->', '--->', '-->', '===', '---', '==>
 
 function findArrowInLine(line: string): { arrow: string; before: string; after: string } | null {
     for (const arrow of ARROW_PATTERNS) {
-        const idx = line.indexOf(arrow);
-        if (idx >= 0) {
+        const index = line.indexOf(arrow);
+        if (index >= 0) {
             return {
                 arrow,
-                before: line.substring(0, idx).trim(),
-                after: line.substring(idx + arrow.length).trim(),
+                before: line.substring(0, index).trim(),
+                after: line.substring(index + arrow.length).trim(),
             };
         }
     }
@@ -237,27 +209,33 @@ export function parseEdgeLine(line: string): Array<{
             remaining = '';
         }
 
-        let s = sourceRaw.trim();
-        let t = targetRaw.trim();
+        let source = sourceRaw.trim();
+        let target = targetRaw.trim();
 
-        if (s.includes(':::')) s = s.split(':::')[0];
-        if (t.includes(':::')) t = t.split(':::')[0];
+        if (source.includes(':::')) source = source.split(':::')[0];
+        if (target.includes(':::')) target = target.split(':::')[0];
 
-        if (s && t) {
-            edges.push({ sourceRaw: s, targetRaw: t, label, arrowType: arrow });
+        if (source && target) {
+            edges.push({ sourceRaw: source, targetRaw: target, label, arrowType: arrow });
         }
+
         lastNodeRaw = targetRaw.trim();
         if (!nextArrowMatch) break;
     }
+
     return edges;
 }
 
 export function parseStyleString(styleStr: string): Record<string, string> {
     const styles: Record<string, string> = {};
     const parts = styleStr.split(',');
+
     for (const part of parts) {
-        const [key, val] = part.split(':').map((s) => s.trim());
-        if (key && val) styles[key] = val.replace(/;$/, '');
+        const [key, value] = part.split(':').map((s) => s.trim());
+        if (key && value) {
+            styles[key] = value.replace(/;$/, '');
+        }
     }
+
     return styles;
 }

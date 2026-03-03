@@ -1,54 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import { Send, Sparkles, Loader2, Bot, User, AlertCircle, Plus } from 'lucide-react';
+import remarkGfm from 'remark-gfm';
+import { AlertCircle, Loader2, Plus, Send, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFlowStore } from '../../store';
 import { OpenFlowLogo } from '../icons/OpenFlowLogo';
-import { chatWithDocs, ChatMessage } from '../../services/aiService';
 import { MarkdownComponents } from './MarkdownComponents';
-
-const markdownFiles = import.meta.glob('/docs/**/*.md', { query: '?raw', import: 'default' });
+import { useDocsChatbotState } from './chatbot/useDocsChatbotState';
 
 export const DocsChatbot: React.FC = () => {
     const { t } = useTranslation();
     const { brandConfig, aiSettings } = useFlowStore();
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [input, setInput] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [docsContext, setDocsContext] = useState('');
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        async function loadDocsContext(): Promise<void> {
-            const entries = await Promise.all(
-                Object.entries(markdownFiles).map(async ([path, loader]) => {
-                    const content = await loader();
-                    const filename = path.split('/').pop()?.replace('.md', '') || '';
-                    return `--- FILE: ${filename} ---\n${content}\n`;
-                })
-            );
-            const merged = entries.join('\n');
-            setDocsContext(merged);
-            if (!merged.trim()) {
-                setError('Documentation context is unavailable. Please refresh or rebuild docs.');
-            }
-        }
-
-        loadDocsContext().catch(() => {
-            setError('Documentation context is unavailable. Please refresh or rebuild docs.');
-        });
-    }, []);
-
-    const renderLogo = (className: string) => {
-        return brandConfig.faviconUrl ? (
-            <img src={brandConfig.faviconUrl} alt={brandConfig.appName} className={`object-contain ${className}`} />
-        ) : (
-            <OpenFlowLogo className={className} />
-        );
-    };
+    const {
+        messages,
+        input,
+        setInput,
+        isLoading,
+        error,
+        messagesEndRef,
+        handleSend,
+        resetChat,
+    } = useDocsChatbotState({ aiSettings });
 
     const suggestedPrompts = [
         {
@@ -68,59 +41,18 @@ export const DocsChatbot: React.FC = () => {
         }
     ];
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const renderLogo = (className: string) => {
+        return brandConfig.faviconUrl ? (
+            <img src={brandConfig.faviconUrl} alt={brandConfig.appName} className={`object-contain ${className}`} />
+        ) : (
+            <OpenFlowLogo className={className} />
+        );
     };
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages, isLoading]);
-
-    const resetChat = () => {
-        setMessages([]);
-        setInput('');
-        setError(null);
-    };
-
-    // Removed auto-greeting so we can show the hero state
-
-    const handleSend = async (overrideMsg?: string) => {
-        const msgToSend = overrideMsg || input.trim();
-        if (!msgToSend || isLoading || !docsContext.trim()) return;
-
-        setInput('');
-        setError(null);
-
-        const newUserMessage: ChatMessage = { role: 'user', parts: [{ text: msgToSend }] };
-        const newHistory = [...messages, newUserMessage];
-        setMessages(newHistory);
-        setIsLoading(true);
-
-        try {
-            const responseText = await chatWithDocs(
-                newHistory.slice(0, -1), // Give history excluding the message we just added
-                msgToSend,
-                docsContext,
-                aiSettings.apiKey,
-                aiSettings.model,
-                aiSettings.provider,
-                aiSettings.customBaseUrl
-            );
-
-            setMessages([...newHistory, { role: 'model', parts: [{ text: responseText }] }]);
-        } catch (err: any) {
-            console.error('Chat error:', err);
-            setError(err.message || "Failed to get a response. Please check your API key settings.");
-            // Remove the user message if it failed, or leave it and let them try again. Let's leave it and show error.
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
+    const handleKeyDown = (event: React.KeyboardEvent): void => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            void handleSend();
         }
     };
 
@@ -128,7 +60,7 @@ export const DocsChatbot: React.FC = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-4xl mx-auto w-full animate-in fade-in zoom-in-95 duration-500">
                 <div className="w-16 h-16 flex items-center justify-center mb-8 transform transition-transform hover:scale-105 duration-300">
-                    {renderLogo("w-full h-full drop-shadow-sm")}
+                    {renderLogo('w-full h-full drop-shadow-sm')}
                 </div>
 
                 <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 mb-4 text-center bg-clip-text">
@@ -142,7 +74,7 @@ export const DocsChatbot: React.FC = () => {
                 <div className="relative flex items-end gap-2 w-full max-w-2xl bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-200/50 p-1.5 focus-within:shadow-[0_8px_30px_rgb(0,0,0,0.08)] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/30 mb-10 transition-all">
                     <textarea
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
+                        onChange={(event) => setInput(event.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder={`${t('chatbot.messagePlaceholder')} ${brandConfig.appName} ${t('chatbot.aiSuffix')}`}
                         className="w-full min-h-[52px] max-h-[200px] border-0 px-4 py-3.5 text-[15px] focus:ring-0 resize-none placeholder:text-slate-400 custom-scrollbar block bg-transparent leading-relaxed"
@@ -150,7 +82,9 @@ export const DocsChatbot: React.FC = () => {
                         autoFocus
                     />
                     <button
-                        onClick={() => handleSend()}
+                        onClick={() => {
+                            void handleSend();
+                        }}
                         disabled={!input.trim() || isLoading}
                         className="shrink-0 w-11 h-11 mb-1 mr-1 bg-slate-900 hover:bg-slate-800 text-white rounded-xl flex items-center justify-center transition-all disabled:opacity-30 disabled:scale-95 shadow-sm"
                         aria-label={t('chatbot.sendMessage')}
@@ -160,10 +94,12 @@ export const DocsChatbot: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full max-w-4xl px-4">
-                    {suggestedPrompts.map((prompt, i) => (
+                    {suggestedPrompts.map((prompt, index) => (
                         <button
-                            key={i}
-                            onClick={() => handleSend(prompt.description)}
+                            key={index}
+                            onClick={() => {
+                                void handleSend(prompt.description);
+                            }}
                             className="flex flex-col text-left p-5 rounded-2xl bg-white shadow-[0_2px_10px_rgb(0,0,0,0.02)] ring-1 ring-slate-100 hover:ring-slate-200 hover:shadow-md transition-all group duration-300 transform hover:-translate-y-1"
                         >
                             <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 mb-3 group-hover:bg-[var(--brand-primary)]/10 group-hover:text-[var(--brand-primary)] transition-colors text-sm font-medium">
@@ -180,11 +116,10 @@ export const DocsChatbot: React.FC = () => {
 
     return (
         <div className="flex flex-col h-[calc(100vh-8rem)] max-h-[900px] max-w-5xl mx-auto w-full bg-white rounded-[2rem] shadow-[0_8px_40px_rgb(0,0,0,0.08)] ring-1 ring-slate-200/50 overflow-hidden animate-in fade-in duration-300">
-            {/* Header */}
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white z-10 shadow-sm">
                 <div className="flex items-center gap-3 bg-white">
                     <div className="w-8 h-8 flex items-center justify-center">
-                        {renderLogo("w-full h-full drop-shadow-sm")}
+                        {renderLogo('w-full h-full drop-shadow-sm')}
                     </div>
                     <div>
                         <h2 className="text-sm font-semibold text-slate-900 tracking-tight">{brandConfig.appName} {t('chatbot.docsTitle')}</h2>
@@ -200,11 +135,10 @@ export const DocsChatbot: React.FC = () => {
                 </button>
             </div>
 
-            {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 custom-scrollbar bg-slate-50/30">
                 <div className="flex gap-4 max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="shrink-0 w-8 h-8 flex items-center justify-center">
-                        {renderLogo("w-full h-full object-contain drop-shadow-sm")}
+                        {renderLogo('w-full h-full object-contain drop-shadow-sm')}
                     </div>
                     <div className="flex flex-col gap-1 items-start min-w-0">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">{brandConfig.appName} {t('chatbot.aiName')}</span>
@@ -214,12 +148,12 @@ export const DocsChatbot: React.FC = () => {
                     </div>
                 </div>
 
-                {messages.map((msg, idx) => {
-                    const isUser = msg.role === 'user';
+                {messages.map((message, index) => {
+                    const isUser = message.role === 'user';
                     return (
-                        <div key={idx} className={`flex gap-4 max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300 ${isUser ? 'ml-auto flex-row-reverse' : ''}`}>
+                        <div key={index} className={`flex gap-4 max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300 ${isUser ? 'ml-auto flex-row-reverse' : ''}`}>
                             <div className={`shrink-0 w-8 h-8 flex items-center justify-center ${isUser ? 'rounded-full bg-slate-200 text-slate-600 p-2 shadow-sm' : ''}`}>
-                                {isUser ? <User className="w-4 h-4" /> : renderLogo("w-full h-full object-contain drop-shadow-sm")}
+                                {isUser ? <User className="w-4 h-4" /> : renderLogo('w-full h-full object-contain drop-shadow-sm')}
                             </div>
                             <div className={`flex flex-col gap-1 min-w-0 ${isUser ? 'items-end' : 'items-start'}`}>
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">
@@ -227,7 +161,7 @@ export const DocsChatbot: React.FC = () => {
                                 </span>
                                 <div className={`px-4 py-3 rounded-2xl text-sm shadow-sm ${isUser ? 'bg-[var(--brand-primary)] text-white rounded-tr-sm' : 'bg-white border border-slate-100 rounded-tl-sm text-slate-700'}`}>
                                     {isUser ? (
-                                        <p className="whitespace-pre-wrap">{msg.parts.map(p => p.text).join('')}</p>
+                                        <p className="whitespace-pre-wrap">{message.parts.map((part) => part.text).join('')}</p>
                                     ) : (
                                         <div className="prose prose-sm prose-slate max-w-none">
                                             <ReactMarkdown
@@ -235,7 +169,7 @@ export const DocsChatbot: React.FC = () => {
                                                 remarkPlugins={[remarkGfm]}
                                                 rehypePlugins={[rehypeRaw]}
                                             >
-                                                {msg.parts.map(p => p.text).join('')}
+                                                {message.parts.map((part) => part.text).join('')}
                                             </ReactMarkdown>
                                         </div>
                                     )}
@@ -248,7 +182,7 @@ export const DocsChatbot: React.FC = () => {
                 {isLoading && (
                     <div className="flex gap-4 max-w-[85%] animate-in fade-in duration-300">
                         <div className="shrink-0 w-8 h-8 flex items-center justify-center">
-                            {renderLogo("w-full h-full object-contain drop-shadow-sm")}
+                            {renderLogo('w-full h-full object-contain drop-shadow-sm')}
                         </div>
                         <div className="flex flex-col gap-1 items-start">
                             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-1">{brandConfig.appName} {t('chatbot.aiName')}</span>
@@ -262,7 +196,6 @@ export const DocsChatbot: React.FC = () => {
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Error Banner */}
             {error && (
                 <div className="mx-6 p-3 bg-red-50 text-red-900 rounded-lg border border-red-200 flex items-start gap-3 mt-2">
                     <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -270,12 +203,11 @@ export const DocsChatbot: React.FC = () => {
                 </div>
             )}
 
-            {/* Input Area */}
             <div className="p-4 md:p-6 bg-white border-t border-slate-100 z-10">
                 <div className="relative flex items-end gap-2 max-w-4xl mx-auto bg-slate-50 ring-1 ring-slate-200/50 rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/40 focus-within:bg-white transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
                     <textarea
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
+                        onChange={(event) => setInput(event.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder={`${t('chatbot.messagePlaceholder')} ${brandConfig.appName} ${t('chatbot.aiSuffix')}`}
                         className="w-full max-h-32 min-h-[44px] bg-transparent border-0 px-4 py-3 text-[15px] focus:ring-0 resize-none custom-scrollbar leading-relaxed"
@@ -284,7 +216,9 @@ export const DocsChatbot: React.FC = () => {
                         autoFocus
                     />
                     <button
-                        onClick={() => handleSend()}
+                        onClick={() => {
+                            void handleSend();
+                        }}
                         disabled={!input.trim() || isLoading}
                         className="shrink-0 w-11 h-11 mb-0.5 mr-0.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl flex items-center justify-center transition-all disabled:opacity-30 disabled:scale-95 shadow-sm"
                         aria-label={t('chatbot.sendMessage')}

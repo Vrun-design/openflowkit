@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Outlet, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { DocsSidebar } from './DocsSidebar';
 import { useBrandTheme } from '../../hooks/useBrandTheme';
 import { Menu, X } from 'lucide-react';
 import { LanguageSelector } from '../LanguageSelector';
+import { useDocsLayoutState } from './useDocsLayoutState';
 
 export const DocsLayout: React.FC = () => {
     useBrandTheme();
@@ -12,22 +13,12 @@ export const DocsLayout: React.FC = () => {
     const location = useLocation();
     const { t, i18n } = useTranslation();
     const { lang } = useParams();
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-    // Redirect to default language and page if at root /docs
-    useEffect(() => {
-        if (location.pathname === '/docs' || location.pathname === '/docs/') {
-            const currentLang = i18n.language === 'en' || i18n.language === 'tr' ? i18n.language : 'en';
-            navigate(`/docs/${currentLang}/ask-flowpilot`, { replace: true });
-        }
-    }, [location.pathname, navigate, i18n.language]);
-
-    // Sync i18n language with URL parameter
-    useEffect(() => {
-        if (lang && lang !== i18n.language) {
-            i18n.changeLanguage(lang);
-        }
-    }, [lang, i18n]);
+    const { mobileMenuOpen, toggleMobileMenu, closeMobileMenu } = useDocsLayoutState({
+        pathname: location.pathname,
+        navigate,
+        i18n,
+        lang,
+    });
 
     return (
         <div className="min-h-screen bg-[var(--brand-background)] text-[var(--brand-text)] flex">
@@ -36,7 +27,7 @@ export const DocsLayout: React.FC = () => {
                 <div className="font-semibold text-slate-900">{t('docs.documentation')}</div>
                 <div className="flex items-center gap-2">
                     <LanguageSelector variant="minimal" />
-                    <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-md">
+                    <button onClick={toggleMobileMenu} className="p-2 text-slate-500 hover:bg-slate-100 rounded-md">
                         {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                     </button>
                 </div>
@@ -45,14 +36,14 @@ export const DocsLayout: React.FC = () => {
             {/* Sidebar with Mobile State */}
             <DocsSidebar
                 className={mobileMenuOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full lg:translate-x-0 lg:shadow-none'}
-                onClose={() => setMobileMenuOpen(false)}
+                onClose={closeMobileMenu}
             />
 
             {/* Overlay */}
             {mobileMenuOpen && (
                 <div
                     className="fixed inset-0 bg-black/20 z-10 lg:hidden backdrop-blur-sm"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                 />
             )}
 

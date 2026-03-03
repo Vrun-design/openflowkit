@@ -1,4 +1,5 @@
 import type { DesignSystem } from '@/lib/types';
+import { createId } from '@/lib/id';
 import type { FlowState } from '../types';
 
 type SetFlowState = (partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)) => void;
@@ -32,7 +33,7 @@ export function createDesignSystemActions(set: SetFlowState): Pick<
                 const original = state.designSystems.find((designSystem) => designSystem.id === id);
                 if (!original) return {};
 
-                const newId = `ds-${crypto.randomUUID()}`;
+                const newId = createId('ds');
                 const newSystem: DesignSystem = {
                     ...original,
                     id: newId,

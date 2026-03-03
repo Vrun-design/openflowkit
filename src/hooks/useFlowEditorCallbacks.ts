@@ -1,0 +1,98 @@
+import { useCallback } from 'react';
+import type { FlowEdge, FlowNode, FlowSnapshot } from '@/lib/types';
+
+interface UseFlowEditorCallbacksParams {
+    addTab: () => string;
+    closeTab: (tabId: string) => void;
+    updateTab: (tabId: string, update: Partial<{ name: string }>) => void;
+    navigate: (path: string) => void;
+    tabsLength: number;
+    cannotCloseLastTabMessage: string;
+    setNodes: (nodes: FlowNode[] | ((nodes: FlowNode[]) => FlowNode[])) => void;
+    setEdges: (edges: FlowEdge[] | ((edges: FlowEdge[]) => FlowEdge[])) => void;
+    restoreSnapshot: (snapshot: FlowSnapshot, setNodes: UseFlowEditorCallbacksParams['setNodes'], setEdges: UseFlowEditorCallbacksParams['setEdges']) => void;
+    recordHistory: () => void;
+    fitView: (options?: { duration?: number; padding?: number }) => void;
+    screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number };
+}
+
+interface UseFlowEditorCallbacksResult {
+    getCenter: () => { x: number; y: number };
+    handleSwitchTab: (tabId: string) => void;
+    handleAddTab: () => void;
+    handleCloseTab: (tabId: string) => void;
+    handleRenameTab: (tabId: string, newName: string) => void;
+    selectAll: () => void;
+    handleRestoreSnapshot: (snapshot: FlowSnapshot) => void;
+    handleCommandBarApply: (newNodes: FlowNode[], newEdges: FlowEdge[]) => void;
+}
+
+export function useFlowEditorCallbacks({
+    addTab,
+    closeTab,
+    updateTab,
+    navigate,
+    tabsLength,
+    cannotCloseLastTabMessage,
+    setNodes,
+    setEdges,
+    restoreSnapshot,
+    recordHistory,
+    fitView,
+    screenToFlowPosition,
+}: UseFlowEditorCallbacksParams): UseFlowEditorCallbacksResult {
+    const getCenter = useCallback(() => {
+        const centerX = window.innerWidth / 2;
+        const centerY = window.innerHeight / 2;
+        return screenToFlowPosition({ x: centerX, y: centerY });
+    }, [screenToFlowPosition]);
+
+    const handleSwitchTab = useCallback((tabId: string) => {
+        navigate(`/flow/${tabId}`);
+    }, [navigate]);
+
+    const handleAddTab = useCallback(() => {
+        const newId = addTab();
+        navigate(`/flow/${newId}`);
+    }, [addTab, navigate]);
+
+    const handleCloseTab = useCallback((tabId: string) => {
+        if (tabsLength === 1) {
+            alert(cannotCloseLastTabMessage);
+            return;
+        }
+        closeTab(tabId);
+    }, [cannotCloseLastTabMessage, closeTab, tabsLength]);
+
+    const handleRenameTab = useCallback((tabId: string, newName: string) => {
+        updateTab(tabId, { name: newName });
+    }, [updateTab]);
+
+    const selectAll = useCallback(() => {
+        setNodes((nodes) => nodes.map((node) => ({ ...node, selected: true })));
+        setEdges((edges) => edges.map((edge) => ({ ...edge, selected: true })));
+    }, [setEdges, setNodes]);
+
+    const handleRestoreSnapshot = useCallback((snapshot: FlowSnapshot) => {
+        restoreSnapshot(snapshot, setNodes, setEdges);
+        recordHistory();
+    }, [recordHistory, restoreSnapshot, setEdges, setNodes]);
+
+    const handleCommandBarApply = useCallback((newNodes: FlowNode[], newEdges: FlowEdge[]) => {
+        recordHistory();
+        setNodes(newNodes);
+        setEdges(newEdges);
+        setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
+    }, [fitView, recordHistory, setEdges, setNodes]);
+
+    return {
+        getCenter,
+        handleSwitchTab,
+        handleAddTab,
+        handleCloseTab,
+        handleRenameTab,
+        selectAll,
+        handleRestoreSnapshot,
+        handleCommandBarApply,
+    };
+}

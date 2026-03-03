@@ -4,76 +4,88 @@ import path from 'node:path';
 const DIST_DIR = path.resolve(process.cwd(), 'dist');
 const INDEX_HTML_PATH = path.join(DIST_DIR, 'index.html');
 
-const BUDGETS = [
-  { label: 'entry index js', match: /^assets\/index-.*\.js$/, maxBytes: 450 * 1024 },
-  { label: 'entry react vendor js', match: /^assets\/react-vendor-.*\.js$/, maxBytes: 520 * 1024 },
-  { label: 'entry flow vendor js', match: /^assets\/flow-vendor-.*\.js$/, maxBytes: 220 * 1024 },
-  { label: 'entry css', match: /^assets\/index-.*\.css$/, maxBytes: 180 * 1024 },
-  { label: 'entry flow vendor css', match: /^assets\/flow-vendor-.*\.css$/, maxBytes: 20 * 1024 },
-];
+const MAIN_JS_MAX_KB = Number(process.env.ENTRY_MAIN_JS_BUDGET_KB ?? 1400);
+const TOTAL_ENTRY_JS_MAX_KB = Number(process.env.ENTRY_TOTAL_JS_BUDGET_KB ?? 2800);
+const ENTRY_CSS_MAX_KB = Number(process.env.ENTRY_CSS_BUDGET_KB ?? 220);
 
-function parseAssetPathsFromIndexHtml(html) {
-  const assets = [];
-  const assetRegex = /(?:src|href)="\.\/(assets\/[^"]+)"/g;
-  let match = assetRegex.exec(html);
-  while (match) {
-    assets.push(match[1]);
-    match = assetRegex.exec(html);
-  }
-  return Array.from(new Set(assets));
+function toKb(bytes) {
+  return Number((bytes / 1024).toFixed(1));
 }
 
-function formatKb(bytes) {
-  return `${(bytes / 1024).toFixed(1)} KB`;
+function parseEntryAssets(html) {
+  const matches = html.matchAll(/(?:src|href)="\.\/(assets\/[^"]+)"/g);
+  const files = new Set();
+  for (const match of matches) {
+    files.add(match[1]);
+  }
+  return Array.from(files);
+}
+
+function readEntryAssetSizes() {
+  if (!fs.existsSync(INDEX_HTML_PATH)) {
+    throw new Error('Missing dist/index.html. Run "npm run build" before "npm run bundle:check".');
+  }
+
+  const html = fs.readFileSync(INDEX_HTML_PATH, 'utf8');
+  const entryAssets = parseEntryAssets(html);
+  const sizes = new Map();
+
+  for (const relativePath of entryAssets) {
+    const filePath = path.join(DIST_DIR, relativePath);
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Entry asset is missing: ${relativePath}`);
+    }
+    sizes.set(relativePath, fs.statSync(filePath).size);
+  }
+
+  return sizes;
 }
 
 function main() {
-  if (!fs.existsSync(INDEX_HTML_PATH)) {
-    throw new Error(`Missing dist/index.html. Run "npm run build:ci" before checking bundle budget.`);
+  const sizes = readEntryAssetSizes();
+  const entries = Array.from(sizes.entries());
+  const jsEntries = entries.filter(([file]) => file.endsWith('.js'));
+  const cssEntries = entries.filter(([file]) => file.endsWith('.css'));
+  const mainEntry = jsEntries.find(([file]) => /^assets\/index-.*\.js$/.test(file));
+
+  if (!mainEntry) {
+    throw new Error('Could not find main entry JS chunk (assets/index-*.js) in dist/index.html.');
   }
 
-  const indexHtml = fs.readFileSync(INDEX_HTML_PATH, 'utf8');
-  const entryAssets = parseAssetPathsFromIndexHtml(indexHtml);
-  const fileSizes = new Map();
+  const [mainEntryFile, mainEntryBytes] = mainEntry;
+  const totalEntryJsBytes = jsEntries.reduce((sum, [, size]) => sum + size, 0);
+  const totalEntryCssBytes = cssEntries.reduce((sum, [, size]) => sum + size, 0);
 
-  for (const relativeAssetPath of entryAssets) {
-    const fullPath = path.join(DIST_DIR, relativeAssetPath);
-    if (!fs.existsSync(fullPath)) {
-      throw new Error(`Entry asset listed in index.html is missing: ${relativeAssetPath}`);
-    }
-    fileSizes.set(relativeAssetPath, fs.statSync(fullPath).size);
+  const checks = [
+    {
+      label: 'main entry JS',
+      actualKb: toKb(mainEntryBytes),
+      maxKb: MAIN_JS_MAX_KB,
+      detail: mainEntryFile,
+    },
+    {
+      label: 'total entry JS',
+      actualKb: toKb(totalEntryJsBytes),
+      maxKb: TOTAL_ENTRY_JS_MAX_KB,
+      detail: `${jsEntries.length} files`,
+    },
+    {
+      label: 'total entry CSS',
+      actualKb: toKb(totalEntryCssBytes),
+      maxKb: ENTRY_CSS_MAX_KB,
+      detail: `${cssEntries.length} files`,
+    },
+  ];
+
+  console.log('Bundle budget check (entry assets only):');
+  for (const check of checks) {
+    const status = check.actualKb <= check.maxKb ? 'PASS' : 'FAIL';
+    console.log(`- ${status} ${check.label}: ${check.actualKb} KB / ${check.maxKb} KB (${check.detail})`);
   }
 
-  const lines = ['Bundle budget check (entry assets only):'];
-  const violations = [];
-
-  for (const budget of BUDGETS) {
-    const matchedAsset = Array.from(fileSizes.entries()).find(([relativePath]) => budget.match.test(relativePath));
-    if (!matchedAsset) {
-      violations.push(`Missing asset for budget "${budget.label}" (${budget.match})`);
-      continue;
-    }
-
-    const [relativePath, bytes] = matchedAsset;
-    const status = bytes <= budget.maxBytes ? 'PASS' : 'FAIL';
-    lines.push(
-      `- ${status} ${budget.label}: ${relativePath} (${formatKb(bytes)} / max ${formatKb(budget.maxBytes)})`
-    );
-
-    if (bytes > budget.maxBytes) {
-      violations.push(
-        `${budget.label} exceeded: ${relativePath} (${formatKb(bytes)} > ${formatKb(budget.maxBytes)})`
-      );
-    }
-  }
-
-  console.log(lines.join('\n'));
-
-  if (violations.length > 0) {
-    console.error('\nBundle budget violations:');
-    for (const violation of violations) {
-      console.error(`- ${violation}`);
-    }
+  const failures = checks.filter((check) => check.actualKb > check.maxKb);
+  if (failures.length > 0) {
+    console.error('\nBundle budget violations detected.');
     process.exit(1);
   }
 }

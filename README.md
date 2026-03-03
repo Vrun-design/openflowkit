@@ -23,6 +23,7 @@ OpenFlowKit is a professional-grade canvas that combines the power of **React Fl
 - [Internationalization](#-internationalization-i18n)
 - [Architecture](#-architecture--project-structure)
 - [Getting Started](#-getting-started)
+- [Testing & Quality](#-testing--quality)
 - [Extensibility & Self-Hosting](#-extensibility--self-hosting)
 - [Contributing](#-contributing)
 - [License](#-license)
@@ -236,8 +237,10 @@ OpenFlowKit/
 │   │   ├── properties/          # Property panels (nodes/edges/canvas)
 │   │   ├── SettingsModal/       # Settings screens + AI provider sections
 │   │   ├── custom-nodes/        # Browser/Mobile/Wireframe/Icon nodes
+│   │   ├── custom-edge/         # Custom edge render helpers
 │   │   ├── command-bar/         # Cmd+K command palette views
 │   │   ├── docs/                # Built-in docs + docs chatbot
+│   │   ├── flow-canvas/         # Canvas orchestration subcomponents
 │   │   ├── home/                # Dashboard/sidebar/settings home views
 │   │   ├── toolbar/             # Toolbar subcomponents
 │   │   ├── top-nav/             # Top nav subcomponents
@@ -251,13 +254,17 @@ OpenFlowKit/
 │   ├── config/
 │   │   └── aiProviders.ts       # AI provider registry + model metadata
 │   ├── hooks/
-│   │   ├── useFlowOperations.ts    # Composed canvas operations
-│   │   ├── useAIGeneration.ts      # Flowpilot AI integration
-│   │   ├── useFlowEditorActions.ts # Layout/export/template actions
+│   │   ├── flow-operations/        # Flow operation modules (layout/selection/canvas ops)
+│   │   ├── flow-editor-actions/    # Editor action modules (export/templates/history)
+│   │   ├── node-operations/        # Node operation modules
+│   │   ├── useFlowOperations.ts    # Composed flow operation hook
+│   │   ├── useFlowEditorActions.ts # Composed editor actions hook
+│   │   ├── useFlowEditorCallbacks.ts # Editor callback wiring
 │   │   ├── useFlowEditorUIState.ts # Editor panel/view state orchestration
-│   │   ├── useFlowHistory.ts       # Undo/Redo
-│   │   ├── useAutoSave.ts          # Active tab synchronization
+│   │   ├── useFlowHistory.ts       # Undo/Redo state + controls
+│   │   ├── useAIGeneration.ts      # Flowpilot AI integration
 │   │   ├── useSnapshots.ts         # Snapshot version history
+│   │   ├── useClipboardOperations.ts # Clipboard copy/cut/paste operations
 │   │   └── useDesignSystem.ts      # Active design-system token access
 │   ├── i18n/
 │   │   ├── config.ts            # react-i18next setup (bundled imports)
@@ -285,6 +292,9 @@ OpenFlowKit/
 │   │   └── types.ts                # Store state types
 │   ├── store.ts                    # Store composition + persist wiring
 │   └── theme.ts                 # Color palettes & design tokens
+├── e2e/
+│   └── smoke.spec.ts              # Playwright smoke tests
+├── playwright.config.ts           # Playwright config (Chromium project + webServer)
 ├── docs/
 │   ├── en/                      # English documentation
 │   └── tr/                      # Turkish documentation
@@ -344,6 +354,38 @@ The AI layer (`useAIGeneration.ts`) and provider clients (`services/aiService.ts
    ```bash
    npm test
    ```
+
+## ✅ Testing & Quality
+
+OpenFlowKit ships with three quality layers:
+
+- **Lint**: static analysis and rules enforcement.
+- **Unit/Integration**: Vitest + Testing Library.
+- **E2E Smoke**: Playwright browser-level coverage for key canvas flows.
+
+### Local commands
+
+```bash
+# Lint
+npm run lint
+
+# Unit + integration tests
+npm test -- --run
+
+# E2E smoke tests (headless)
+npm run e2e
+
+# E2E in headed mode (local debugging)
+npm run e2e:headed
+
+# Full CI-equivalent suite (tests + build + bundle budget)
+npm run test:ci
+```
+
+### CI checks
+
+- `npm run test:ci` for unit/integration/build/bundle budget.
+- `npm run e2e:ci` for Playwright smoke coverage (Chromium).
 
 
 ## 🤝 Contributing

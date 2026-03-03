@@ -1,4 +1,5 @@
 import type { FlowTab } from '@/lib/types';
+import { createId } from '@/lib/id';
 import type { FlowState } from '../types';
 
 type SetFlowState = (partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)) => void;
@@ -39,7 +40,7 @@ export function createTabActions(set: SetFlowState, get: GetFlowState): Pick<
                 tab.id === activeTabId ? { ...tab, nodes: get().nodes, edges: get().edges } : tab
             );
 
-            const newTabId = `tab-${crypto.randomUUID()}`;
+            const newTabId = createId('tab');
             const newTab: FlowTab = {
                 id: newTabId,
                 name: 'New Flow',

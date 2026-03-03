@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import 'reactflow/dist/style.css';
 import { ReactFlowProvider } from 'reactflow';
@@ -8,14 +8,9 @@ import { OpenFlowLogo } from './components/icons/OpenFlowLogo';
 import { useFlowStore } from './store';
 import { useBrandTheme } from './hooks/useBrandTheme';
 
-import { FlowEditor } from './components/FlowEditor';
-import { HomePage } from './components/HomePage';
-import { LandingPage } from './components/LandingPage';
-import { DocsLayout } from './components/docs/DocsLayout';
-import { DocsPage } from './components/docs/DocsPage';
-
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { initAnalytics } from './lib/analytics';
+import { FlowSnapshot } from './lib/types';
 
 // Import i18n configuration
 import './i18n/config';
@@ -23,13 +18,46 @@ import './i18n/config';
 // Initialize analytics once
 initAnalytics();
 
-function FlowEditorWrapper({ onGoHome }: { onGoHome: () => void }): React.JSX.Element {
-  return <FlowEditor onGoHome={onGoHome} />;
+const FlowEditor = lazy(async () => {
+  const module = await import('./components/FlowEditor');
+  return { default: module.FlowEditor };
+});
+
+const HomePage = lazy(async () => {
+  const module = await import('./components/HomePage');
+  return { default: module.HomePage };
+});
+
+const LandingPage = lazy(async () => {
+  const module = await import('./components/LandingPage');
+  return { default: module.LandingPage };
+});
+
+const DocsLayout = lazy(async () => {
+  const module = await import('./components/docs/DocsLayout');
+  return { default: module.DocsLayout };
+});
+
+const DocsPage = lazy(async () => {
+  const module = await import('./components/docs/DocsPage');
+  return { default: module.DocsPage };
+});
+
+function RouteLoadingFallback(): React.JSX.Element {
+  return (
+    <div className="min-h-screen bg-[var(--brand-background)] flex items-center justify-center text-[var(--brand-secondary)]">
+      Loading...
+    </div>
+  );
 }
 
 function LandingPageRoute(): React.JSX.Element {
   const navigate = useNavigate();
-  return <LandingPage onLaunch={() => navigate('/home', { replace: true })} />;
+  return (
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <LandingPage onLaunch={() => navigate('/home', { replace: true })} />
+    </Suspense>
+  );
 }
 
 // Backwards-compatibility redirect: /docs/:slug → /docs/en/:slug
@@ -49,7 +77,11 @@ function FlowCanvasRoute(): React.JSX.Element {
     }
   }, [flowId, setActiveTabId]);
 
-  return <FlowEditor onGoHome={() => navigate('/home')} />;
+  return (
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <FlowEditor onGoHome={() => navigate('/home')} />
+    </Suspense>
+  );
 }
 
 function HomePageRoute(): React.JSX.Element {
@@ -62,7 +94,7 @@ function HomePageRoute(): React.JSX.Element {
     navigate('/canvas');
   };
 
-  const handleRestore = (snapshot: any) => {
+  const handleRestore = (snapshot: FlowSnapshot) => {
     const { setNodes, setEdges } = useFlowStore.getState();
     // Deep copy to prevent state mutation issues if snapshot is just a ref
     const nodesCopy = JSON.parse(JSON.stringify(snapshot.nodes));
@@ -73,18 +105,20 @@ function HomePageRoute(): React.JSX.Element {
   };
 
   return (
-    <HomePage
-      onLaunch={handleLaunch}
-      onImportJSON={() => {
-        navigate('/canvas');
-        setTimeout(() => {
-          document.getElementById('json-import-input')?.click();
-        }, 100);
-      }}
-      onRestoreSnapshot={handleRestore}
-      activeTab={activeTab}
-      onSwitchTab={(tab) => navigate(tab === 'settings' ? '/settings' : '/home')}
-    />
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <HomePage
+        onLaunch={handleLaunch}
+        onImportJSON={() => {
+          navigate('/canvas');
+          setTimeout(() => {
+            document.getElementById('json-import-input')?.click();
+          }, 100);
+        }}
+        onRestoreSnapshot={handleRestore}
+        activeTab={activeTab}
+        onSwitchTab={(tab) => navigate(tab === 'settings' ? '/settings' : '/home')}
+      />
+    </Suspense>
   );
 }
 
@@ -166,10 +200,24 @@ function App(): React.JSX.Element {
           <Route path="/settings" element={<MobileGate><HomePageRoute /></MobileGate>} />
           <Route path="/canvas" element={<MobileGate><FlowCanvasRoute /></MobileGate>} />
           <Route path="/flow/:flowId" element={<MobileGate><FlowCanvasRoute /></MobileGate>} />
-          <Route path="/docs" element={<DocsLayout />}>
+          <Route
+            path="/docs"
+            element={(
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <DocsLayout />
+              </Suspense>
+            )}
+          >
             <Route index element={<Navigate to="en/introduction" replace />} />
             <Route path=":slug" element={<DocsSlugRedirect />} />
-            <Route path=":lang/:slug" element={<DocsPage />} />
+            <Route
+              path=":lang/:slug"
+              element={(
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <DocsPage />
+                </Suspense>
+              )}
+            />
           </Route>
         </Routes>
 
