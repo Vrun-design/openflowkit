@@ -3,6 +3,7 @@ import { Handle, Position } from '@/lib/reactflowCompat';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { getConnectorHandleStyle, getHandlePointerEvents, getV2HandleVisibilityClass } from './handleInteraction';
 import { NodeTransformControls } from './NodeTransformControls';
+import { useActiveNodeSelection } from './useActiveNodeSelection';
 
 type HandleSide = 'top' | 'right' | 'bottom' | 'left';
 
@@ -46,15 +47,16 @@ export function NodeChrome({
   children,
 }: NodeChromeProps): React.ReactElement {
   const visualQualityV2Enabled = ROLLOUT_FLAGS.visualQualityV2;
-  const handlePointerEvents = getHandlePointerEvents(visualQualityV2Enabled, selected);
+  const isActiveSelected = useActiveNodeSelection(selected);
+  const handlePointerEvents = getHandlePointerEvents(visualQualityV2Enabled, isActiveSelected);
   const handleVisibilityClass = visualQualityV2Enabled
-    ? getV2HandleVisibilityClass(selected, handleVisibilityOptions)
-    : selected
+    ? getV2HandleVisibilityClass(isActiveSelected, handleVisibilityOptions)
+    : isActiveSelected
       ? 'opacity-100'
       : 'opacity-0 group-hover:opacity-100 [.is-connecting_&]:opacity-100';
 
   return (
-    <>
+    <div className="group relative h-full w-full">
       <NodeTransformControls
         isVisible={selected}
         minWidth={minWidth}
@@ -71,9 +73,9 @@ export function NodeChrome({
           isConnectableStart
           isConnectableEnd
           className={`${handleClassName} ${handleVisibilityClass}`}
-          style={getConnectorHandleStyle(side, selected, handlePointerEvents, handleStyleExtras?.[side])}
+          style={getConnectorHandleStyle(side, isActiveSelected, handlePointerEvents, handleStyleExtras?.[side])}
         />
       ))}
-    </>
+    </div>
   );
 }

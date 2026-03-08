@@ -61,6 +61,7 @@
     "remark-gfm": "4.0.0",
     "remark-slug": "^7.0.1",
     "tinycolor2": "^1.6.0",
+    "y-indexeddb": "^9.0.12",
     "y-webrtc": "^10.3.0",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.29",

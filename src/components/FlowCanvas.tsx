@@ -1,5 +1,6 @@
 import React, { useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import ReactFlow, {
     Background,
     Controls,
@@ -16,21 +17,25 @@ import CustomConnectionLine from './CustomConnectionLine';
 import { NavigationControls } from './NavigationControls';
 import { FlowCanvasOverlays } from './flow-canvas/FlowCanvasOverlays';
 import { flowCanvasEdgeTypes, flowCanvasNodeTypes } from './flow-canvas/flowCanvasTypes';
-import { useFlowCanvasMenusAndActions } from './flow-canvas/useFlowCanvasMenusAndActions';
+import { useFlowCanvasMenus } from './flow-canvas/useFlowCanvasMenus';
+import { useFlowCanvasContextActions } from './flow-canvas/useFlowCanvasContextActions';
 import { useFlowCanvasDragDrop } from './flow-canvas/useFlowCanvasDragDrop';
 import { useFlowCanvasConnectionState } from './flow-canvas/useFlowCanvasConnectionState';
 import { useFlowCanvasPaste } from './flow-canvas/useFlowCanvasPaste';
 import { useFlowCanvasInteractionLod } from './flow-canvas/useFlowCanvasInteractionLod';
+import { useFlowCanvasZoomLod } from './flow-canvas/useFlowCanvasZoomLod';
 import { useFlowCanvasViewState } from './flow-canvas/useFlowCanvasViewState';
 import { useFlowCanvasReactFlowConfig } from './flow-canvas/useFlowCanvasReactFlowConfig';
 import { useFlowCanvasSelectionTools } from './flow-canvas/useFlowCanvasSelectionTools';
-import {
-    isFarZoomReductionActiveForProfile,
-    isLowDetailModeActiveForProfile,
-} from './flow-canvas/largeGraphSafetyMode';
 import { useToast } from './ui/ToastContext';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
-import { isPaneTarget } from '@/hooks/edgeConnectInteractions';
+import { isCanvasBackgroundTarget } from '@/hooks/edgeConnectInteractions';
+import { setEdgeInteractionLowDetailMode } from './custom-edge/edgeRenderMode';
+import { useCanvasActions, useCanvasState } from '@/store/canvasHooks';
+import { useSelectionActions } from '@/store/selectionHooks';
+import { useTabActions, useActiveTabId } from '@/store/tabHooks';
+import { useViewSettings, useCanvasViewSettings } from '@/store/viewHooks';
+import { useMermaidDiagnosticsActions } from '@/store/selectionHooks';
 
 interface FlowCanvasProps {
     recordHistory: () => void;
@@ -46,20 +51,16 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     const { t } = useTranslation();
     const visualQualityV2Enabled = ROLLOUT_FLAGS.visualQualityV2;
     const canvasInteractionsV1Enabled = ROLLOUT_FLAGS.canvasInteractionsV1;
-    const {
-        nodes, edges,
-        onNodesChange, onEdgesChange,
-        layers,
-        activeTabId,
-        updateTab,
-        setNodes,
-        setEdges,
-        setSelectedNodeId,
-        setSelectedEdgeId,
-        setMermaidDiagnostics,
-        clearMermaidDiagnostics,
-        viewSettings: { showGrid, snapToGrid, largeGraphSafetyMode, largeGraphSafetyProfile, architectureStrictMode },
-    } = useFlowStore();
+    const { nodes, edges } = useCanvasState();
+    const { onNodesChange, onEdgesChange, setNodes, setEdges } = useCanvasActions();
+    const activeTabId = useActiveTabId();
+    const { updateTab } = useTabActions();
+    const { setSelectedNodeId, setSelectedEdgeId } = useSelectionActions();
+    const { setMermaidDiagnostics, clearMermaidDiagnostics } = useMermaidDiagnosticsActions();
+    const { showGrid, snapToGrid, alignmentGuidesEnabled, largeGraphSafetyMode, largeGraphSafetyProfile, architectureStrictMode } = useCanvasViewSettings();
+    const { layers } = useFlowStore(useShallow((state) => ({
+        layers: state.layers,
+    })));
     const { addToast } = useToast();
     const {
         safetyModeActive,
@@ -83,26 +84,6 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         setSelectedNodeId(null);
         setSelectedEdgeId(null);
     }, [setSelectedEdgeId, setSelectedNodeId]);
-
-    // --- Operations ---
-    const {
-        onConnect, onSelectionChange, onNodeDoubleClick,
-        onNodeDragStart, onNodeDragStop,
-        onConnectStart, onConnectEnd,
-        handleAddAndConnect,
-        handleAddNode,
-        updateNodeData,
-        deleteNode, deleteEdge, duplicateNode,
-        updateNodeZIndex,
-        pasteSelection, copySelection,
-        handleAlignNodes, handleDistributeNodes, handleGroupNodes,
-        onReconnect,
-        onNodeDrag,
-        handleAddImage
-    } = useFlowOperations(
-        recordHistory,
-        (position, sourceId, sourceHandle) => setConnectMenu({ position, sourceId, sourceHandle })
-    );
     const {
         connectMenu,
         setConnectMenu,
@@ -112,9 +93,31 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         onEdgeContextMenu,
         onPaneClick,
         onCloseContextMenu,
-        contextActions,
-    } = useFlowCanvasMenusAndActions({
+    } = useFlowCanvasMenus({
         onPaneSelectionClear: clearPaneSelection,
+    });
+
+    // --- Operations ---
+    const {
+        onConnect, onSelectionChange, onNodeDoubleClick,
+        onNodeDragStart, onNodeDragStop,
+        onConnectStart, onConnectEnd,
+        handleAddAndConnect,
+        handleAddNode,
+        deleteNode, deleteEdge, duplicateNode,
+        updateNodeZIndex,
+        pasteSelection, copySelection,
+        handleAlignNodes, handleDistributeNodes, handleGroupNodes,
+        onReconnect,
+        onNodeDrag,
+        handleAddImage
+    } = useFlowOperations(
+        recordHistory,
+        (position, sourceId, sourceHandle, sourceType) => setConnectMenu({ position, sourceId, sourceHandle, sourceType })
+    );
+    const contextActions = useFlowCanvasContextActions({
+        contextMenu,
+        onCloseContextMenu,
         screenToFlowPosition,
         copySelection,
         pasteSelection,
@@ -138,7 +141,11 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     useEdgeInteractions();
 
     const isEffectiveSelectMode = isSelectMode || isSelectionModifierPressed;
-    const lowDetailModeActive = isLowDetailModeActiveForProfile(safetyModeActive, zoom, largeGraphSafetyProfile);
+    const { lowDetailModeActive, farZoomReductionActive } = useFlowCanvasZoomLod({
+        safetyModeActive,
+        zoom,
+        largeGraphSafetyProfile,
+    });
     const {
         interactionLowDetailModeActive,
         startInteractionLowDetail,
@@ -147,7 +154,6 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         safetyModeActive,
         largeGraphSafetyProfile,
     });
-    const farZoomReductionActive = isFarZoomReductionActiveForProfile(safetyModeActive, zoom, largeGraphSafetyProfile);
     const reactFlowConfig = useFlowCanvasReactFlowConfig({
         visualQualityV2Enabled,
         isEffectiveSelectMode,
@@ -174,34 +180,15 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     };
 
     const {
-        selectedVisibleNodes,
-        quickToolbarAnchor,
-        quickToolbarColorValue,
-        singleSelectedNode,
-        quickAddOverlay,
-        isQuickAddHovering,
-        setIsQuickAddHovering,
-        onQuickToolbarDelete,
-        onQuickToolbarDuplicate,
-        onQuickToolbarAddConnected,
-        onQuickToolbarColorChange,
         alignmentGuides,
+        selectionDragPreview,
         handleNodeDragStart,
         handleNodeDrag,
         handleNodeDragStop,
     } = useFlowCanvasSelectionTools({
         layerAdjustedNodes,
-        zoom,
-        viewportX,
-        viewportY,
-        recordHistory,
-        setNodes,
-        setEdges,
-        setSelectedNodeId,
-        duplicateNode,
-        handleAddAndConnect,
-        updateNodeData,
-        alignmentGuidesEnabled: canvasInteractionsV1Enabled,
+        edges: effectiveEdges,
+        alignmentGuidesEnabled,
         toTypedFlowNode: (node) => toTypedFlowNode(node as Parameters<typeof toFlowNode>[0]),
         onNodeDragStart: (event, node) => onNodeDragStart(event as Parameters<typeof onNodeDragStart>[0], node),
         onNodeDrag: (event, node, draggedNodes) => onNodeDrag(event as Parameters<typeof onNodeDrag>[0], node, draggedNodes),
@@ -212,7 +199,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
     const onCanvasDoubleClickCapture = (event: React.MouseEvent<HTMLDivElement>): void => {
         if (!canvasInteractionsV1Enabled) return;
-        if (!isPaneTarget(event.target)) return;
+        if (!isCanvasBackgroundTarget(event.target)) return;
         const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
         handleAddNode(position);
     };
@@ -240,6 +227,13 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         pasteSelection,
         getCanvasCenterFlowPosition,
     });
+
+    React.useEffect(() => {
+        setEdgeInteractionLowDetailMode(interactionLowDetailModeActive);
+        return () => {
+            setEdgeInteractionLowDetailMode(false);
+        };
+    }, [interactionLowDetailModeActive]);
 
     return (
         <div
@@ -282,9 +276,18 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 connectionMode={reactFlowConfig.connectionMode}
                 isValidConnection={reactFlowConfig.isValidConnection}
                 selectionOnDrag={reactFlowConfig.selectionOnDrag}
+                selectionKeyCode={reactFlowConfig.selectionKeyCode}
                 panOnDrag={reactFlowConfig.panOnDrag}
+                panActivationKeyCode={reactFlowConfig.panActivationKeyCode}
                 selectionMode={reactFlowConfig.selectionMode}
                 multiSelectionKeyCode={reactFlowConfig.multiSelectionKeyCode}
+                zoomActivationKeyCode={reactFlowConfig.zoomActivationKeyCode}
+                zoomOnScroll={reactFlowConfig.zoomOnScroll}
+                zoomOnPinch={reactFlowConfig.zoomOnPinch}
+                panOnScroll={reactFlowConfig.panOnScroll}
+                panOnScrollMode={reactFlowConfig.panOnScrollMode}
+                preventScrolling={reactFlowConfig.preventScrolling}
+                zoomOnDoubleClick={reactFlowConfig.zoomOnDoubleClick}
                 defaultEdgeOptions={reactFlowConfig.defaultEdgeOptions}
                 connectionLineComponent={CustomConnectionLine}
                 snapToGrid={snapToGrid}
@@ -300,22 +303,13 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 <NavigationControls />
             </ReactFlow>
             <FlowCanvasOverlays
-                canvasInteractionsEnabled={canvasInteractionsV1Enabled}
+                alignmentGuidesEnabled={alignmentGuidesEnabled}
                 alignmentGuides={alignmentGuides}
+                overlayNodes={layerAdjustedNodes}
+                selectionDragPreview={selectionDragPreview}
                 zoom={zoom}
                 viewportX={viewportX}
                 viewportY={viewportY}
-                quickToolbarAnchor={quickToolbarAnchor}
-                selectedVisibleNodes={selectedVisibleNodes}
-                quickToolbarColorValue={quickToolbarColorValue}
-                onQuickToolbarDelete={onQuickToolbarDelete}
-                onQuickToolbarDuplicate={onQuickToolbarDuplicate}
-                onQuickToolbarAddConnected={onQuickToolbarAddConnected}
-                onQuickToolbarColorChange={onQuickToolbarColorChange}
-                singleSelectedNode={singleSelectedNode}
-                quickAddOverlay={quickAddOverlay}
-                isQuickAddHovering={isQuickAddHovering}
-                setIsQuickAddHovering={setIsQuickAddHovering}
                 connectMenu={connectMenu}
                 setConnectMenu={setConnectMenu}
                 screenToFlowPosition={screenToFlowPosition}

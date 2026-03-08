@@ -1,23 +1,35 @@
 import React from 'react';
-import { Layout, Plus, Trash2 } from 'lucide-react';
+import { Copy, Layout, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
-import type { FlowSnapshot } from '@/lib/types';
+
+export interface HomeFlowCard {
+    id: string;
+    name: string;
+    nodeCount: number;
+    edgeCount: number;
+    updatedAt?: string;
+    isActive?: boolean;
+}
 
 interface HomeDashboardProps {
-    snapshots: FlowSnapshot[];
+    flows: HomeFlowCard[];
     onCreateNew: () => void;
     onImportJSON: () => void;
-    onRestoreSnapshot: (snapshot: FlowSnapshot) => void;
-    onDeleteSnapshot: (id: string) => void;
+    onOpenFlow: (flowId: string) => void;
+    onRenameFlow: (flowId: string) => void;
+    onDuplicateFlow: (flowId: string) => void;
+    onDeleteFlow: (flowId: string) => void;
 }
 
 export function HomeDashboard({
-    snapshots,
+    flows,
     onCreateNew,
     onImportJSON,
-    onRestoreSnapshot,
-    onDeleteSnapshot,
+    onOpenFlow,
+    onRenameFlow,
+    onDuplicateFlow,
+    onDeleteFlow,
 }: HomeDashboardProps): React.ReactElement {
     const { t } = useTranslation();
 
@@ -44,18 +56,20 @@ export function HomeDashboard({
             <section>
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('home.recentFiles', 'Recent Files')}</h2>
-                    {snapshots.length > 0 && (
-                        <span className="text-xs text-slate-400">{snapshots.length} {t('home.files', 'files')}</span>
+                    {flows.length > 0 && (
+                        <span className="text-xs text-slate-400">{flows.length} {t('home.files', 'files')}</span>
                     )}
                 </div>
 
-                {snapshots.length === 0 ? (
-                    <div className="text-center py-20 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
-                        <div className="w-10 h-10 bg-[var(--brand-surface)] rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-100">
+                {flows.length === 0 ? (
+                    <div className="rounded-[24px] border border-dashed border-slate-200 bg-[linear-gradient(180deg,_rgba(255,255,255,0.96),_rgba(248,250,252,0.9))] px-6 py-16 text-center shadow-sm">
+                        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-[var(--brand-surface)] shadow-sm">
                             <Plus className="w-5 h-5 text-slate-400" />
                         </div>
-                        <h3 className="text-slate-900 font-medium text-sm mb-1">{t('home.createFirstFlow', 'Create your first flow')}</h3>
-                        <p className="text-[var(--brand-secondary)] text-xs">{t('home.startFromScratch', 'Start from scratch or import an existing diagram.')}</p>
+                        <h3 className="mb-1 text-sm font-medium text-slate-900">{t('home.createFirstFlow', 'Create your first flow')}</h3>
+                        <p className="mx-auto max-w-md text-xs leading-6 text-[var(--brand-secondary)]">
+                            {t('home.startFromScratch', 'Start from scratch or import an existing diagram.')}
+                        </p>
                         <div className="mt-6 flex items-center justify-center gap-3">
                             <Button
                                 onClick={onImportJSON}
@@ -73,13 +87,27 @@ export function HomeDashboard({
                                 {t('common.createNew', 'Create New')}
                             </Button>
                         </div>
+                        <div className="mx-auto mt-8 grid max-w-2xl grid-cols-1 gap-3 text-left sm:grid-cols-3">
+                            <div className="rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3">
+                                <p className="text-xs font-semibold text-slate-900">Start blank</p>
+                                <p className="mt-1 text-[11px] leading-5 text-slate-500">Open a new workspace and sketch the flow from scratch.</p>
+                            </div>
+                            <div className="rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3">
+                                <p className="text-xs font-semibold text-slate-900">Import existing work</p>
+                                <p className="mt-1 text-[11px] leading-5 text-slate-500">Bring in a saved JSON flow when you want to keep iterating.</p>
+                            </div>
+                            <div className="rounded-2xl border border-slate-200/80 bg-white/70 px-4 py-3">
+                                <p className="text-xs font-semibold text-slate-900">Autosave by default</p>
+                                <p className="mt-1 text-[11px] leading-5 text-slate-500">Everything stays in this browser until you export or share it.</p>
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {snapshots.map((snapshot) => (
+                        {flows.map((flow) => (
                             <div
-                                key={snapshot.id}
-                                onClick={() => onRestoreSnapshot(snapshot)}
+                                key={flow.id}
+                                onClick={() => onOpenFlow(flow.id)}
                                 className="group bg-[var(--brand-surface)] rounded-lg border border-slate-200 overflow-hidden cursor-pointer hover:border-slate-300 hover:shadow-sm transition-all relative"
                             >
                                 <div className="h-40 bg-slate-50 flex items-center justify-center border-b border-slate-100 relative overflow-hidden">
@@ -91,32 +119,74 @@ export function HomeDashboard({
                                     <div className="w-8 h-8 rounded bg-[var(--brand-surface)] shadow-sm border border-slate-100 flex items-center justify-center text-slate-300 group-hover:text-[var(--brand-primary)] group-hover:border-[var(--brand-primary-200)] transition-colors z-10">
                                         <Layout className="w-4 h-4" />
                                     </div>
-
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={(event) => {
-                                            event?.stopPropagation();
-                                            onDeleteSnapshot(snapshot.id);
-                                        }}
-                                        className="absolute top-2 right-2 p-1.5 bg-[var(--brand-surface)] text-slate-400 hover:text-red-600 hover:bg-red-50 border border-slate-200 opacity-0 group-hover:opacity-100 transition-all z-20"
-                                        title="Delete"
-                                    >
-                                        <Trash2 className="w-3 h-3" />
-                                    </Button>
+                                    <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onRenameFlow(flow.id);
+                                            }}
+                                            className="rounded-md border border-slate-200 bg-white p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                                            aria-label={t('common.rename', 'Rename')}
+                                            title={t('common.rename', 'Rename')}
+                                        >
+                                            <Pencil className="h-3 w-3" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onDuplicateFlow(flow.id);
+                                            }}
+                                            className="rounded-md border border-slate-200 bg-white p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"
+                                            aria-label={t('common.duplicate', 'Duplicate')}
+                                            title={t('common.duplicate', 'Duplicate')}
+                                        >
+                                            <Copy className="h-3 w-3" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onDeleteFlow(flow.id);
+                                            }}
+                                            className="rounded-md border border-slate-200 bg-white p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                                            aria-label={t('common.delete', 'Delete')}
+                                            title={t('common.delete', 'Delete')}
+                                        >
+                                            <Trash2 className="h-3 w-3" />
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="p-3">
-                                    <h3 className="font-medium text-slate-900 text-sm truncate mb-1 group-hover:text-[var(--brand-primary)] transition-colors">{snapshot.name}</h3>
+                                    <h3 className="font-medium text-slate-900 text-sm truncate mb-1 group-hover:text-[var(--brand-primary)] transition-colors">
+                                        {flow.name}
+                                    </h3>
                                     <div className="flex items-center justify-between text-[11px] text-[var(--brand-secondary)]">
-                                        <span>{new Date(snapshot.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                                        <span>{snapshot.nodes.length} nodes</span>
+                                        <span>{flow.isActive ? t('home.currentFlow', 'Current flow') : t('home.autosaved', 'Autosaved')}</span>
+                                        <span>{flow.nodeCount} nodes</span>
+                                    </div>
+                                    <div className="mt-1 flex items-center justify-between text-[11px] text-slate-400">
+                                        <span>{flow.edgeCount} edges</span>
+                                        <span>{formatUpdatedAt(flow.updatedAt)}</span>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 )}
+
+                <p className="mt-6 text-xs text-slate-400">
+                    {t('home.localStorageHint', 'Autosaved in this browser on this device. Export JSON or DSL when you want a portable backup or handoff.')}
+                </p>
             </section>
         </div>
     );
+}
+
+function formatUpdatedAt(updatedAt?: string): string {
+    if (!updatedAt) return 'Autosaved';
+    const parsed = Date.parse(updatedAt);
+    if (Number.isNaN(parsed)) return 'Autosaved';
+    return new Date(parsed).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }

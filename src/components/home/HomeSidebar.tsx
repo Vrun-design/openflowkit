@@ -1,5 +1,5 @@
 import React from 'react';
-import { Book, ExternalLink, Home, Settings } from 'lucide-react';
+import { Book, Home, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { OpenFlowLogo } from '../icons/OpenFlowLogo';
 import { LanguageSelector } from '../LanguageSelector';
@@ -72,11 +72,10 @@ export function HomeSidebar({
                 </SidebarItem>
                 <SidebarItem
                     icon={<Book className="w-4 h-4" />}
-                    to="#/docs"
+                    to="/docs"
                     testId="sidebar-docs"
                 >
                     {t('nav.documentation', 'Documentation')}
-                    <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
                 </SidebarItem>
             </div>
 

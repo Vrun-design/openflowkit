@@ -39,8 +39,15 @@ export interface CollaborationPresenceState {
   };
 }
 
+export interface CollaborationParticipantState {
+  clientId: string;
+  name: string;
+  color: string;
+}
+
 export interface CollaborationRoomConfig {
   roomId: string;
   clientId: string;
   signalingServers: string[];
+  password: string;
 }

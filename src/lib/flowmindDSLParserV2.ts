@@ -50,30 +50,115 @@ function parseAttributes(text: string): Record<string, DSLAttributeValue> {
     const attributes: Record<string, DSLAttributeValue> = {};
     if (!text) return attributes;
 
-    // Simple parser for { key: "value", key2: 123 }
-    // Remove wrapping braces
     const content = text.trim();
     if (!content.startsWith('{') || !content.endsWith('}')) return attributes;
 
     const inner = content.slice(1, -1);
-    const pairs = inner.split(',').map(p => p.trim()).filter(Boolean);
+    const pairs: string[] = [];
+    let buffer = '';
+    let quote: '"' | "'" | null = null;
+    let escaping = false;
 
-    pairs.forEach(pair => {
-        const [key, rawValue] = pair.split(':').map(s => s.trim());
+    for (const char of inner) {
+        if (escaping) {
+            buffer += char;
+            escaping = false;
+            continue;
+        }
+
+        if (char === '\\') {
+            buffer += char;
+            escaping = true;
+            continue;
+        }
+
+        if (quote) {
+            buffer += char;
+            if (char === quote) {
+                quote = null;
+            }
+            continue;
+        }
+
+        if (char === '"' || char === "'") {
+            quote = char;
+            buffer += char;
+            continue;
+        }
+
+        if (char === ',') {
+            const pair = buffer.trim();
+            if (pair) pairs.push(pair);
+            buffer = '';
+            continue;
+        }
+
+        buffer += char;
+    }
+
+    const trailingPair = buffer.trim();
+    if (trailingPair) {
+        pairs.push(trailingPair);
+    }
+
+    pairs.forEach((pair) => {
+        let colonIndex = -1;
+        let pairQuote: '"' | "'" | null = null;
+        let pairEscaping = false;
+
+        for (let index = 0; index < pair.length; index += 1) {
+            const char = pair[index];
+
+            if (pairEscaping) {
+                pairEscaping = false;
+                continue;
+            }
+
+            if (char === '\\') {
+                pairEscaping = true;
+                continue;
+            }
+
+            if (pairQuote) {
+                if (char === pairQuote) {
+                    pairQuote = null;
+                }
+                continue;
+            }
+
+            if (char === '"' || char === "'") {
+                pairQuote = char;
+                continue;
+            }
+
+            if (char === ':') {
+                colonIndex = index;
+                break;
+            }
+        }
+
+        if (colonIndex <= 0) return;
+
+        const key = pair.slice(0, colonIndex).trim();
+        const rawValue = pair.slice(colonIndex + 1).trim();
         if (!key || !rawValue) return;
 
         let value: DSLAttributeValue = rawValue;
-        // String
-        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-            value = value.slice(1, -1);
-        }
-        // Number
-        else if (!isNaN(Number(value))) {
+        if (
+            (value.startsWith('"') && value.endsWith('"'))
+            || (value.startsWith("'") && value.endsWith("'"))
+        ) {
+            value = value
+                .slice(1, -1)
+                .replace(/\\(["'])/g, '$1')
+                .replace(/\\\\/g, '\\');
+        } else if (!Number.isNaN(Number(value))) {
             value = Number(value);
+        } else if (value === 'true') {
+            value = true;
+        } else if (value === 'false') {
+            value = false;
         }
-        // Boolean
-        else if (value === 'true') value = true;
-        else if (value === 'false') value = false;
 
         attributes[key] = value;
     });

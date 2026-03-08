@@ -111,7 +111,6 @@ export function ArchitectureEdgeSemanticsSection({
 
   return (
     <div className="space-y-2">
-      <label className="block text-xs font-semibold text-slate-600">Architecture Semantics</label>
       <div className="grid grid-cols-2 gap-2">
         <select
           value={currentDirection}

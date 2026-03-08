@@ -53,7 +53,7 @@ export const applyBrandTheme = (config: BrandConfig) => {
     }
 
     // Update Meta Title
-    document.title = config.appName || 'FlowMind';
+    document.title = config.appName || 'OpenFlowKit';
 };
 
 const loadGoogleFont = (fontFamily: string) => {

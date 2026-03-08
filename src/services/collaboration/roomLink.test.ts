@@ -3,9 +3,10 @@ import { buildCollaborationInviteUrl, resolveCollaborationRoomId } from './roomL
 
 describe('collaboration room link', () => {
   it('uses room from URL when present', () => {
-    const result = resolveCollaborationRoomId('?room=team-demo', 'fallback-tab');
+    const result = resolveCollaborationRoomId('?room=team-demo&secret=shared-secret', 'fallback-tab');
     expect(result).toEqual({
       roomId: 'team-demo',
+      roomSecret: 'shared-secret',
       shouldWriteToUrl: false,
     });
   });
@@ -14,12 +15,13 @@ describe('collaboration room link', () => {
     const result = resolveCollaborationRoomId('', 'fallback-tab');
     expect(result).toEqual({
       roomId: 'fallback-tab',
+      roomSecret: null,
       shouldWriteToUrl: true,
     });
   });
 
-  it('builds invite URL with room param', () => {
-    const inviteUrl = buildCollaborationInviteUrl('https://flowmind.ai/editor?foo=1', 'room-a');
-    expect(inviteUrl).toBe('https://flowmind.ai/editor?foo=1&room=room-a');
+  it('builds invite URL with room and secret params', () => {
+    const inviteUrl = buildCollaborationInviteUrl('https://flowmind.ai/editor?foo=1', 'room-a', 'secret-a');
+    expect(inviteUrl).toBe('https://flowmind.ai/editor?foo=1&room=room-a&secret=secret-a');
   });
 });

@@ -14,15 +14,32 @@ function createNode(id: string, x: number, y: number): FlowNode {
 }
 
 describe('alignmentGuides', () => {
-  it('returns nearest vertical and horizontal guides when within threshold', () => {
+  it('returns nearest center guides when centers are within threshold', () => {
     const dragged = createNode('dragged', 100, 100);
-    const alignedX = createNode('aligned-x', 100, 300);
-    const alignedY = createNode('aligned-y', 400, 100);
+    const alignedX = {
+      ...createNode('aligned-x', 140, 300),
+      width: 100,
+    };
+    const alignedY = {
+      ...createNode('aligned-y', 400, 118),
+      height: 60,
+    };
 
     const guides = computeAlignmentGuides(dragged, [dragged, alignedX, alignedY], 8);
 
     expect(guides.verticalFlowX).toBe(190);
     expect(guides.horizontalFlowY).toBe(148);
+  });
+
+  it('returns side guides when edges are within threshold', () => {
+    const dragged = createNode('dragged', 100, 100);
+    const alignedLeft = createNode('aligned-left', 104, 320);
+    const alignedTop = createNode('aligned-top', 360, 95);
+
+    const guides = computeAlignmentGuides(dragged, [dragged, alignedLeft, alignedTop], 8);
+
+    expect(guides.verticalFlowX).toBe(104);
+    expect(guides.horizontalFlowY).toBe(95);
   });
 
   it('returns null guides when no candidate is near enough', () => {

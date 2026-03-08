@@ -17,7 +17,7 @@ function createNode(id: string, overrides: Partial<FlowNode> = {}): FlowNode {
 }
 
 describe('useFlowCanvasSelectionTools', () => {
-    it('returns quick actions for the selected node and clears guides after drag stop', () => {
+    it('keeps drag guide handling working for the selected node', () => {
         const selectedNode = createNode('node-1', {
             selected: true,
             data: { label: 'node-1', backgroundColor: '#ff6600' },
@@ -31,16 +31,7 @@ describe('useFlowCanvasSelectionTools', () => {
         const hook = renderHook(() =>
             useFlowCanvasSelectionTools({
                 layerAdjustedNodes: [selectedNode],
-                zoom: 1,
-                viewportX: 0,
-                viewportY: 0,
-                recordHistory: vi.fn(),
-                setNodes: vi.fn(),
-                setEdges: vi.fn(),
-                setSelectedNodeId: vi.fn(),
-                duplicateNode: vi.fn(),
-                handleAddAndConnect: vi.fn(),
-                updateNodeData: vi.fn(),
+                edges: [],
                 alignmentGuidesEnabled: true,
                 toTypedFlowNode: (node) => node as FlowNode,
                 onNodeDragStart,
@@ -50,10 +41,6 @@ describe('useFlowCanvasSelectionTools', () => {
                 endInteractionLowDetail,
             })
         );
-
-        expect(hook.result.current.singleSelectedNode?.id).toBe('node-1');
-        expect(hook.result.current.quickToolbarColorValue).toBe('#ff6600');
-        expect(hook.result.current.quickAddOverlay).not.toBeNull();
 
         act(() => {
             hook.result.current.handleNodeDragStart({}, selectedNode);

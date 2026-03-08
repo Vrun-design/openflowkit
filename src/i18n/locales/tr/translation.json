@@ -20,6 +20,8 @@
     "selectAll": "Tümünü Seç",
     "duplicate": "Çoğalt",
     "duplicateDrag": "Çoğalt ve Sürükle",
+    "multiSelect": "Çoklu seçim",
+    "selectionBox": "Seçim kutusu",
     "upload": "Yükle",
     "copy": "Kopyala",
     "paste": "Yapıştır",
@@ -38,6 +40,8 @@
     "success": "Başarılı",
     "settings": "Ayarlar",
     "help": "Yardım",
+    "selectTool": "Seçim Aracı",
+    "handTool": "El Aracı",
     "docs": "Dokümantasyon",
     "getStarted": "Hemen Başla",
     "publicBeta": "v1.0 Public Beta",
@@ -129,7 +133,7 @@
     "newTab": "Yeni Sekme",
     "renameTab": "Sekmeyi Yeniden Adlandır",
     "closeTab": "Sekmeyi Kapat",
-    "addNode": "Düğüm Ekle",
+    "addNode": "Şekil Ekle",
     "deleteNode": "Düğümü Sil",
     "duplicateNode": "Düğümü Çoğalt"
   },
@@ -137,6 +141,7 @@
     "newNode": "Yeni Düğüm",
     "processStep": "İşlem Adımı",
     "note": "Not",
+    "addText": "Metin ekle",
     "addCommentsHere": "Yorumlarınızı buraya ekleyin.",
     "newSection": "Yeni Bölüm",
     "text": "Metin",
@@ -250,7 +255,18 @@
     "description": "Açıklama",
     "color": "Renk",
     "icon": "İkon",
-    "size": "Boyut"
+    "size": "Boyut",
+    "shape": "Şekil",
+    "bulkShape": "Toplu Şekil",
+    "bulkColor": "Toplu Renk",
+    "bulkIcon": "Toplu İkon",
+    "labelTransform": "Etiket Dönüşümü",
+    "prefixOptional": "Önek (isteğe bağlı)",
+    "suffixOptional": "Sonek (isteğe bağlı)",
+    "previewSummary": "Önizleme özeti",
+    "bulkApplySummary": "Seçili {{count}} öğe güncellenecek",
+    "selectFieldToApply": "Uygulamak için en az bir alan seçin.",
+    "applyToSelectedNodes": "Seçili öğelere uygula"
   },
   "ai": {
     "generate": "Yapay Zeka ile Oluştur",
@@ -460,7 +476,7 @@
       },
       "dslSyntax": {
         "title": "DSL Sözdizimi",
-        "description": "FlowMind DSL'den bir örnek göster.",
+        "description": "OpenFlowKit DSL'den bir örnek göster.",
         "icon": "{}"
       }
     }
@@ -919,7 +935,7 @@
     "title": "Klavye Kısayolları",
     "subtitle": "İş akışınıza hızla hakim olun.",
     "closeAriaLabel": "Kısayol modalını kapat",
-    "proTip": "İpucu: Sürüklerken seçim kutusu etkinleştirmek için <key>?</key> tuşunu basılı tutun."
+    "proTip": "İpucu: Seçime eklemek veya seçim kutusu çizmek için <key>Shift</key> tuşunu basılı tutun."
   },
   "toolbar": {
     "selectMode": "Seçim Modu (V)",
@@ -928,7 +944,9 @@
     "templates": "Şablonlar",
     "addItem": "Öğe Ekle",
     "addToCanvas": "Tuvale Ekle",
-    "node": "Düğüm",
+    "shapes": "Şekiller",
+    "assets": "Varlıklar",
+    "node": "Şekil",
     "stickyNote": "Yapışkan Not",
     "section": "Bölüm",
     "text": "Metin",
@@ -953,23 +971,23 @@
       "description": "Tuvaliniz boş. Flowpilot ile bir akış oluşturun, bir şablon kullanın veya sıfırdan başlayın.",
       "generateWithFlowpilot": "Flowpilot ile Oluştur",
       "browseTemplates": "Şablonlara Gözat",
-      "addBlankNode": "Boş Düğüm Ekle"
+      "addBlankNode": "Boş Şekil Ekle"
     }
   },
   "annotationNode": {
     "placeholder": "*Düzenlemek için çift tıklayın*"
   },
   "connectMenu": {
-    "createNewNode": "Yeni Düğüm Oluştur",
-    "process": "İşlem",
-    "processDesc": "Standart eylem",
-    "decision": "Karar",
-    "decisionDesc": "Dallanma mantığı",
+    "createNewNode": "Yeni Şekil Oluştur",
+    "process": "Yuvarlatılmış Şekil",
+    "processDesc": "Genel amaçlı blok",
+    "decision": "Elmas Şekil",
+    "decisionDesc": "Dallanma bloğu",
     "database": "Veritabanı",
-    "databaseDesc": "Veri depolama",
+    "databaseDesc": "Silindir şekli",
     "inputOutput": "Giriş / Çıkış",
-    "inputOutputDesc": "Veri akışı",
-    "note": "Not",
+    "inputOutputDesc": "Paralelkenar şekli",
+    "note": "Yapışkan Not",
     "noteDesc": "Dokümantasyon",
     "releaseToConnect": "Bağlamak için bırak"
   },
@@ -1004,7 +1022,7 @@
   },
   "propertiesPanel": {
     "stickyNote": "Yapışkan Not",
-    "nodeSettings": "Düğüm Ayarları",
+    "nodeSettings": "Şekil Ayarları",
     "connection": "Bağlantı"
   },
   "flowCanvas": {

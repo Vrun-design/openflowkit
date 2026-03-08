@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-
-// Use Vite's glob import to get raw content of all markdown files by language
-const markdownFiles = import.meta.glob('/docs/**/*.md', { query: '?raw', import: 'default' });
+import { docsMarkdownLoaders } from './docsMarkdownLoaders';
 
 export const useDocsContent = (slug: string | undefined, lang: string = 'en') => {
     const [content, setContent] = useState<string | null>(null);
@@ -23,16 +21,16 @@ export const useDocsContent = (slug: string | undefined, lang: string = 'en') =>
                 const path = `/docs/${lang}/${slug}.md`;
                 const fallbackPath = `/docs/en/${slug}.md`;
 
-                let loader = markdownFiles[path];
+                let loader = docsMarkdownLoaders[path];
 
                 // Fallback to English if translation doesn't exist
                 if (!loader && lang !== 'en') {
                     console.log(`Translation not found for ${lang}, falling back to English`);
-                    loader = markdownFiles[fallbackPath];
+                    loader = docsMarkdownLoaders[fallbackPath];
                 }
 
                 if (!loader) {
-                    console.warn(`Doc not found: ${path}. Available:`, Object.keys(markdownFiles));
+                    console.warn(`Doc not found: ${path}. Available:`, Object.keys(docsMarkdownLoaders));
                     throw new Error(`Document not found: ${slug} for language ${lang}`);
                 }
 

@@ -12,6 +12,7 @@ import type { ExportSerializationMode } from '@/services/canonicalSerialization'
 export interface ViewSettings {
     showGrid: boolean;
     snapToGrid: boolean;
+    alignmentGuidesEnabled: boolean;
     isShortcutsHelpOpen: boolean;
     defaultIconsEnabled: boolean;
     smartRoutingEnabled: boolean;
@@ -98,6 +99,12 @@ export interface MermaidDiagnosticsSnapshot {
     updatedAt: number;
 }
 
+export interface PendingNodeLabelEditRequest {
+    nodeId: string;
+    seedText?: string;
+    replaceExisting?: boolean;
+}
+
 export interface FlowState {
     nodes: FlowNode[];
     edges: FlowEdge[];
@@ -115,6 +122,7 @@ export interface FlowState {
     activeLayerId: string;
     selectedNodeId: string | null;
     selectedEdgeId: string | null;
+    pendingNodeLabelEditRequest: PendingNodeLabelEditRequest | null;
     mermaidDiagnostics: MermaidDiagnosticsSnapshot | null;
     onNodesChange: OnNodesChange;
     onEdgesChange: OnEdgesChange;
@@ -125,6 +133,7 @@ export interface FlowState {
     setTabs: (tabs: FlowTab[]) => void;
     addTab: () => string;
     duplicateActiveTab: () => string | null;
+    duplicateTab: (id: string) => string | null;
     closeTab: (id: string) => void;
     updateTab: (id: string, updates: Partial<FlowTab>) => void;
     copySelectedToTab: (targetTabId: string) => number;
@@ -164,6 +173,8 @@ export interface FlowState {
     selectNodesInLayer: (layerId: string) => void;
     setSelectedNodeId: (id: string | null) => void;
     setSelectedEdgeId: (id: string | null) => void;
+    queuePendingNodeLabelEditRequest: (request: PendingNodeLabelEditRequest) => void;
+    clearPendingNodeLabelEditRequest: () => void;
     setMermaidDiagnostics: (snapshot: MermaidDiagnosticsSnapshot | null) => void;
     clearMermaidDiagnostics: () => void;
     recordHistoryV2: () => void;

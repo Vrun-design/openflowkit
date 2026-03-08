@@ -1,10 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import type { CSSProperties } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Position } from '@/lib/reactflowCompat';
 import ImageNode from './ImageNode';
 import GroupNode from './GroupNode';
 import SwimlaneNode from './SwimlaneNode';
+
+let selectedNodeId: string | null = null;
+let currentNodeId: string | null = null;
 
 vi.mock('@/config/rolloutFlags', () => ({
   ROLLOUT_FLAGS: {
@@ -34,6 +37,7 @@ vi.mock('@/lib/reactflowCompat', async (importOriginal) => {
     ),
     NodeResizer: () => null,
     NodeResizeControl: () => null,
+    useNodeId: () => currentNodeId,
     useReactFlow: () => ({
       setNodes: vi.fn(),
     }),
@@ -45,6 +49,18 @@ vi.mock('@/lib/reactflowCompat', async (importOriginal) => {
       Left: 'left',
     },
   };
+});
+
+vi.mock('@/store', () => ({
+  useFlowStore: (selector?: (state: { selectedNodeId: string | null; setNodes: ReturnType<typeof vi.fn> }) => unknown) => {
+    const state = { selectedNodeId, setNodes: vi.fn() };
+    return typeof selector === 'function' ? selector(state) : state;
+  },
+}));
+
+afterEach(() => {
+  selectedNodeId = null;
+  currentNodeId = null;
 });
 
 function assertSelectedConnectableHandles(ids: string[]): void {
@@ -137,6 +153,31 @@ describe('container-like node handle interaction policy', () => {
     );
 
     assertUnselectedDiscoverableHandles(['top-target', 'bottom-source', 'left-target', 'right-source']);
+  });
+
+  it('keeps GroupNode handles visible when the store selection remains active after drag', () => {
+    selectedNodeId = 'group-3';
+    currentNodeId = 'group-3';
+
+    render(
+      <GroupNode
+        id="group-3"
+        type="group"
+        selected={false}
+        dragging={false}
+        zIndex={1}
+        data={{ label: 'Group C' }}
+        isConnectable={true}
+        xPos={0}
+        yPos={0}
+      />
+    );
+
+    for (const handleId of ['top-target', 'bottom-source', 'left-target', 'right-source']) {
+      const handle = screen.getByTestId(`handle-${handleId}`);
+      expect(handle.getAttribute('data-class')).not.toContain('flow-handle-hitarea');
+      expect(handle.getAttribute('data-pointer')).toBe('all');
+    }
   });
 
   it('keeps selected SwimlaneNode handles connectable in visualQualityV2', () => {

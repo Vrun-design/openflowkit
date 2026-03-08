@@ -1,29 +1,10 @@
-import type { FlowEdge, FlowNode, NodeData } from '@/lib/types';
+import type { FlowEdge, FlowNode } from '@/lib/types';
 import { useFlowCanvasAlignmentGuides } from './useFlowCanvasAlignmentGuides';
 import { useFlowCanvasNodeDragHandlers } from './useFlowCanvasNodeDragHandlers';
-import { useFlowCanvasQuickActions } from './useFlowCanvasQuickActions';
-
-type SetFlowNodes = (payload: FlowNode[] | ((nodes: FlowNode[]) => FlowNode[])) => void;
-type SetFlowEdges = (payload: FlowEdge[] | ((edges: FlowEdge[]) => FlowEdge[])) => void;
 
 interface UseFlowCanvasSelectionToolsParams {
     layerAdjustedNodes: FlowNode[];
-    zoom: number;
-    viewportX: number;
-    viewportY: number;
-    recordHistory: () => void;
-    setNodes: SetFlowNodes;
-    setEdges: SetFlowEdges;
-    setSelectedNodeId: (id: string | null) => void;
-    duplicateNode: (nodeId: string) => void;
-    handleAddAndConnect: (
-        type: string,
-        position: { x: number; y: number },
-        sourceId?: string,
-        sourceHandle?: string,
-        shape?: NodeData['shape']
-    ) => void;
-    updateNodeData: (id: string, updates: Partial<NodeData>) => void;
+    edges: FlowEdge[];
     alignmentGuidesEnabled: boolean;
     toTypedFlowNode: (node: unknown) => FlowNode;
     onNodeDragStart: (event: unknown, node: FlowNode) => void;
@@ -35,16 +16,7 @@ interface UseFlowCanvasSelectionToolsParams {
 
 export function useFlowCanvasSelectionTools({
     layerAdjustedNodes,
-    zoom,
-    viewportX,
-    viewportY,
-    recordHistory,
-    setNodes,
-    setEdges,
-    setSelectedNodeId,
-    duplicateNode,
-    handleAddAndConnect,
-    updateNodeData,
+    edges,
     alignmentGuidesEnabled,
     toTypedFlowNode,
     onNodeDragStart,
@@ -53,23 +25,10 @@ export function useFlowCanvasSelectionTools({
     startInteractionLowDetail,
     endInteractionLowDetail,
 }: UseFlowCanvasSelectionToolsParams) {
-    const quickActions = useFlowCanvasQuickActions({
-        layerAdjustedNodes,
-        zoom,
-        viewportX,
-        viewportY,
-        recordHistory,
-        setNodes,
-        setEdges,
-        setSelectedNodeId,
-        duplicateNode,
-        handleAddAndConnect,
-        updateNodeData,
-    });
-
     const alignmentGuides = useFlowCanvasAlignmentGuides({
         enabled: alignmentGuidesEnabled,
         layerAdjustedNodes,
+        edges,
     });
 
     const dragHandlers = useFlowCanvasNodeDragHandlers({
@@ -84,8 +43,8 @@ export function useFlowCanvasSelectionTools({
     });
 
     return {
-        ...quickActions,
         alignmentGuides: alignmentGuides.alignmentGuides,
+        selectionDragPreview: alignmentGuides.selectionDragPreview,
         ...dragHandlers,
     };
 }

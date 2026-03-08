@@ -8,6 +8,7 @@ export interface DiagramNodePropertiesComponentProps {
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   onAddMindmapChild?: (parentId: string) => void;
+  onAddMindmapSibling?: (nodeId: string) => void;
   onAddArchitectureService?: (sourceId: string) => void;
   onCreateArchitectureBoundary?: (sourceId: string) => void;
 }

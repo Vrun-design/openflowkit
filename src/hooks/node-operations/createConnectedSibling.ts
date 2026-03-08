@@ -4,15 +4,21 @@ import type { FlowNode, NodeData } from '@/lib/types';
 import { createDefaultEdge } from '@/constants';
 import { useFlowStore } from '@/store';
 import { assignSmartHandlesWithOptions, getSmartRoutingOptionsFromViewSettings } from '@/services/smartEdgeRouting';
+import { queueNodeLabelEditRequest } from '@/hooks/nodeLabelEditRequest';
+import { getBlankGenericShapeData, isGenericShapeType } from '@/lib/genericShapePolicy';
 
 function createSiblingData(sourceNode: FlowNode): NodeData {
+  const isGenericShape = isGenericShapeType(sourceNode.type);
+  const subLabel = typeof sourceNode.data?.subLabel === 'string' ? sourceNode.data.subLabel : '';
+
+  if (isGenericShape) {
+    return getBlankGenericShapeData(sourceNode);
+  }
+
   return {
+    ...getBlankGenericShapeData(sourceNode),
     label: 'New Node',
-    subLabel: typeof sourceNode.data?.subLabel === 'string' ? sourceNode.data.subLabel : '',
-    color: sourceNode.data?.color as string | undefined,
-    shape: sourceNode.data?.shape as NodeData['shape'],
-    icon: sourceNode.data?.icon as string | undefined,
-    layerId: sourceNode.data?.layerId as string | undefined,
+    subLabel,
   };
 }
 
@@ -59,6 +65,9 @@ export function createConnectedSibling(sourceNodeId: string): string | null {
     );
   });
   state.setSelectedNodeId(siblingId);
+  if (isGenericShapeType(sourceNode.type)) {
+    queueNodeLabelEditRequest(siblingId, { replaceExisting: true });
+  }
 
   return siblingId;
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Copy, MoveRight, PanelsTopLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useFlowStore } from '@/store';
+import { useTabActions, useTabsState } from '@/store/tabHooks';
 import { ViewHeader } from './ViewHeader';
 
 interface PagesViewProps {
@@ -11,14 +11,8 @@ interface PagesViewProps {
 
 export function PagesView({ onClose, handleBack }: PagesViewProps): React.ReactElement {
     const navigate = useNavigate();
-    const {
-        tabs,
-        activeTabId,
-        duplicateActiveTab,
-        copySelectedToTab,
-        moveSelectedToTab,
-        setActiveTabId,
-    } = useFlowStore();
+    const { tabs, activeTabId } = useTabsState();
+    const { duplicateActiveTab, copySelectedToTab, moveSelectedToTab, setActiveTabId } = useTabActions();
 
     function handleDuplicateCurrentPage(): void {
         const newTabId = duplicateActiveTab();

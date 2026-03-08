@@ -30,12 +30,19 @@
     "fitView": "Fit View",
     "nudgeNode": "Nudge Node",
     "groupSelection": "Group Selection",
+    "mindmapAddChild": "Mindmap: Add Child Topic",
+    "mindmapAddSibling": "Mindmap: Add Sibling Topic",
+    "renameSelection": "Rename Selection",
     "keyboardShortcuts": "Keyboard Shortcuts",
     "commandBar": "Command Bar",
+    "multiSelect": "Multi-select",
+    "selectionBox": "Selection Box",
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
     "help": "Help",
+    "selectTool": "Select Tool",
+    "handTool": "Hand Tool",
     "getStarted": "Get Started",
     "bringToFront": "Bring to Front",
     "sendToBack": "Send to Back",
@@ -125,7 +132,7 @@
     "newTab": "New Tab",
     "renameTab": "Rename Tab",
     "closeTab": "Close Tab",
-    "addNode": "Add Node",
+    "addNode": "Add Shape",
     "deleteNode": "Delete Node",
     "duplicateNode": "Duplicate Node"
   },
@@ -133,6 +140,7 @@
     "newNode": "New Node",
     "processStep": "Process Step",
     "note": "Note",
+    "addText": "Add text",
     "addCommentsHere": "Add your comments here.",
     "newSection": "New Section",
     "text": "Text",
@@ -246,7 +254,18 @@
     "description": "Description",
     "color": "Color",
     "icon": "Icon",
-    "size": "Size"
+    "size": "Size",
+    "shape": "Shape",
+    "bulkShape": "Bulk Shape",
+    "bulkColor": "Bulk Color",
+    "bulkIcon": "Bulk Icon",
+    "labelTransform": "Label Transform",
+    "prefixOptional": "Prefix (optional)",
+    "suffixOptional": "Suffix (optional)",
+    "previewSummary": "Preview summary",
+    "bulkApplySummary": "Will update {{count}} selected nodes",
+    "selectFieldToApply": "Select at least one field to apply.",
+    "applyToSelectedNodes": "Apply to selected nodes"
   },
   "ai": {
     "generate": "Generate with AI",
@@ -289,6 +308,8 @@
     "shortcuts": "for shortcuts",
     "privacy": "Your diagrams, API keys, and data stay locally on your device.",
     "analytics": "We only count anonymous page visits.",
+    "analyticsTitle": "Help improve OpenFlowKit",
+    "analyticsDesc": "Share anonymous basic usage data (optional)",
     "features": {
       "beautifulByDefault": "Beautiful by default",
       "automatedLayouts": "Automated layouts and professional themes.",
@@ -333,6 +354,68 @@
     "documentation": "Documentation",
     "github": "GitHub",
     "roadmap": "Roadmap"
+  },
+  "share": {
+    "title": "Share Design",
+    "description": "Invite collaborators to view and edit this flow with you in real-time.",
+    "roomLink": "Collaboration Link",
+    "copyLink": "Copy Link",
+    "copied": "Copied Link!",
+    "permissionsNote": "Anyone with the link can join.",
+    "permissionsNoteSecondary": "Permission controls and durable backend sync are not configured yet.",
+    "close": "Close",
+    "closeDialog": "Close share dialog",
+    "openDialog": "Share dialog",
+    "viewerCount": {
+      "one": "1 viewer in this session.",
+      "many": "{{count}} viewers in this session."
+    },
+    "toast": {
+      "linkCopied": "Collaboration link copied.",
+      "copyFailed": "Unable to copy share link."
+    },
+    "status": {
+      "realtime": "Realtime peer sync",
+      "waiting": "Connecting to realtime sync",
+      "fallback": "Local-only mode",
+      "cache": {
+        "syncing": " local cache syncing",
+        "ready": " local cache ready",
+        "hydrated": " restored from local cache"
+      }
+    },
+    "mode": {
+      "realtime": {
+        "title": "Realtime sync active",
+        "body": "Peers who open this link can see live updates and cursors over the current peer transport."
+      },
+      "waiting": {
+        "title": "Connecting to realtime sync",
+        "body": "This canvas is still trying to establish live peer sync. If it cannot, the session will stay local-only in this browser."
+      },
+      "fallback": {
+        "title": "Local-only collaboration",
+        "body": "Without a backend relay or supported peer transport, this session does not provide durable multi-user live sync outside the current browser runtime."
+      }
+    },
+    "cache": {
+      "syncing": {
+        "title": "Local room cache syncing",
+        "body": "This browser is still restoring any IndexedDB-cached room state before peer sync fully settles."
+      },
+      "hydrated": {
+        "title": "Recovered from local cache",
+        "body": "This room already had locally cached state in this browser, so the canvas could restore before peers reconnected."
+      },
+      "ready": {
+        "title": "Local cache ready",
+        "body": "This browser can keep a local IndexedDB copy of the room for reload and offline recovery in this device."
+      },
+      "unavailable": {
+        "title": "No local room cache",
+        "body": "This collaboration session is not using browser IndexedDB room persistence right now."
+      }
+    }
   },
   "problem": {
     "badge": "The Problem",
@@ -455,7 +538,7 @@
       },
       "dslSyntax": {
         "title": "DSL Syntax",
-        "description": "Show me an example of the FlowMind DSL.",
+        "description": "Show me an example of the OpenFlowKit DSL.",
         "icon": "{}"
       }
     }
@@ -583,6 +666,8 @@
       "showGridDesc": "Display a dot grid on the canvas",
       "snapToGrid": "Snap to Grid",
       "snapToGridDesc": "Snap nodes to the grid when moving",
+      "alignmentGuides": "Alignment Guides",
+      "alignmentGuidesDesc": "Show smart guide lines while dragging nodes",
       "miniMap": "Mini Map",
       "miniMapDesc": "Show mini-map in bottom right",
       "architectureStrictMode": "Architecture Strict Mode",
@@ -923,7 +1008,7 @@
     "title": "Keyboard Shortcuts",
     "subtitle": "Master your workflow with speed.",
     "closeAriaLabel": "Close shortcuts modal",
-    "proTip": "Pro tip: Hold <key>?</key> to enable selection box while dragging."
+    "proTip": "Pro tip: Hold <key>Shift</key> to add to selection or drag a selection box."
   },
   "toolbar": {
     "selectMode": "Select Mode (V)",
@@ -932,7 +1017,9 @@
     "templates": "Templates",
     "addItem": "Add Item",
     "addToCanvas": "Add to Canvas",
-    "node": "Node",
+    "shapes": "Shapes",
+    "assets": "Assets",
+    "node": "Shape",
     "stickyNote": "Sticky Note",
     "section": "Section",
     "text": "Text",
@@ -957,23 +1044,23 @@
       "description": "Your canvas is empty. Get started and create a flow. Saved locally on this device. Save named versions regularly for backup.",
       "generateWithFlowpilot": "Generate with Flowpilot",
       "browseTemplates": "Browse Templates",
-      "addBlankNode": "Add Blank Node"
+      "addBlankNode": "Add Blank Shape"
     }
   },
   "annotationNode": {
     "placeholder": "*Double click to edit note*"
   },
   "connectMenu": {
-    "createNewNode": "Create New Node",
-    "process": "Process",
-    "processDesc": "Standard action",
-    "decision": "Decision",
-    "decisionDesc": "Branching logic",
+    "createNewNode": "Create New Shape",
+    "process": "Rounded Shape",
+    "processDesc": "General-purpose block",
+    "decision": "Diamond Shape",
+    "decisionDesc": "Branching block",
     "database": "Database",
-    "databaseDesc": "Data storage",
+    "databaseDesc": "Cylinder shape",
     "inputOutput": "Input / Output",
-    "inputOutputDesc": "Data flow",
-    "note": "Note",
+    "inputOutputDesc": "Parallelogram shape",
+    "note": "Sticky Note",
     "noteDesc": "Documentation",
     "releaseToConnect": "Release to connect"
   },
@@ -1012,8 +1099,16 @@
   },
   "propertiesPanel": {
     "stickyNote": "Sticky Note",
-    "nodeSettings": "Node Settings",
+    "nodeSettings": "Shape Settings",
     "connection": "Connection"
+  },
+  "connectionPanel": {
+    "architecture": "Architecture",
+    "condition": "Condition",
+    "label": "Label",
+    "style": "Style",
+    "actions": "Actions",
+    "deleteConnection": "Delete Connection"
   },
   "flowCanvas": {
     "strictModePasteBlocked": "Architecture strict mode blocked Mermaid paste. Open Code view, fix diagnostics, then retry."

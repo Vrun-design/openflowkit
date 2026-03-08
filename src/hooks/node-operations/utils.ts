@@ -9,26 +9,67 @@ export function getDefaultNodePosition(count: number, baseX: number, baseY: numb
     return { x: baseX + column * 80, y: baseY + row * 80 };
 }
 
-export function createProcessNode(
+interface CreateGenericShapeNodeOptions {
+    type?: FlowNode['type'];
+    label?: string;
+    subLabel?: string;
+    color?: string;
+    shape?: NodeData['shape'];
+    icon?: string;
+    layerId?: string;
+}
+
+interface CreateMindmapTopicNodeOptions {
+    id: string;
+    position: { x: number; y: number };
+    depth: number;
+    parentId: string;
+    side: 'left' | 'right';
+    branchStyle: 'curved' | 'straight';
+    layerId?: string;
+}
+
+interface CreateArchitectureServiceNodeOptions {
+    id: string;
+    position: { x: number; y: number };
+    sourceNode: FlowNode;
+    layerId: string;
+}
+
+export function createGenericShapeNode(
     id: string,
     position: { x: number; y: number },
-    labels: { label: string; subLabel: string }
+    options: CreateGenericShapeNodeOptions = {}
 ): FlowNode {
-    const defaults = NODE_DEFAULTS.process;
     return {
         id,
         position,
         data: {
-            label: labels.label,
-            subLabel: labels.subLabel,
-            color: defaults?.color || 'slate',
-            shape: defaults?.shape as NodeData['shape'],
-            icon: defaults?.icon && defaults.icon !== 'none' ? defaults.icon : undefined,
+            label: options.label ?? '',
+            subLabel: options.subLabel ?? '',
+            color: options.color,
+            shape: options.shape,
+            icon: options.icon,
+            layerId: options.layerId,
         },
-        type: 'process',
-        width: 200,
-        height: 80,
+        type: options.type ?? 'process',
     };
+}
+
+export function createProcessNode(
+    id: string,
+    position: { x: number; y: number },
+    labels?: { label?: string; subLabel?: string }
+): FlowNode {
+    const defaults = NODE_DEFAULTS.process;
+    return createGenericShapeNode(id, position, {
+        type: 'process',
+        label: labels?.label,
+        subLabel: labels?.subLabel,
+        color: defaults?.color || 'slate',
+        shape: defaults?.shape as NodeData['shape'],
+        icon: defaults?.icon && defaults.icon !== 'none' ? defaults.icon : undefined,
+    });
 }
 
 export function createAnnotationNode(
@@ -87,19 +128,155 @@ export function createImageNode(
     };
 }
 
-function getAbsoluteNodePosition(node: FlowNode, allNodes: FlowNode[]): { x: number; y: number } {
-    const parentId = getNodeParentId(node);
-    if (!parentId) {
-        return { ...node.position };
-    }
-    const parent = allNodes.find((candidate) => candidate.id === parentId);
-    if (!parent) {
-        return { ...node.position };
-    }
+export function createMindmapTopicNode({
+    id,
+    position,
+    depth,
+    parentId,
+    side,
+    branchStyle,
+    layerId,
+}: CreateMindmapTopicNodeOptions): FlowNode {
     return {
-        x: node.position.x + parent.position.x,
-        y: node.position.y + parent.position.y,
+        id,
+        type: 'mindmap',
+        position,
+        data: {
+            label: 'New Topic',
+            color: 'slate',
+            shape: 'rounded',
+            mindmapDepth: depth,
+            mindmapParentId: parentId,
+            mindmapSide: side,
+            mindmapBranchStyle: branchStyle,
+            layerId,
+        },
+        selected: true,
     };
+}
+
+export function createArchitectureServiceNode({
+    id,
+    position,
+    sourceNode,
+    layerId,
+}: CreateArchitectureServiceNodeOptions): FlowNode {
+    return {
+        id,
+        type: 'architecture',
+        position,
+        data: {
+            label: 'New Service',
+            color: 'slate',
+            shape: 'rectangle',
+            icon: 'Server',
+            archProvider: sourceNode.data?.archProvider || 'custom',
+            archResourceType: 'service',
+            archEnvironment: sourceNode.data?.archEnvironment || 'default',
+            archBoundaryId: sourceNode.data?.archBoundaryId,
+            archZone: sourceNode.data?.archZone,
+            archTrustDomain: sourceNode.data?.archTrustDomain,
+            layerId,
+        },
+        selected: true,
+    };
+}
+
+export function getAbsoluteNodePosition(node: FlowNode, allNodes: FlowNode[]): { x: number; y: number } {
+    let absoluteX = node.position.x;
+    let absoluteY = node.position.y;
+    let currentParentId = getNodeParentId(node);
+
+    while (currentParentId) {
+        const parentNode = allNodes.find((candidate) => candidate.id === currentParentId);
+        if (!parentNode) {
+            break;
+        }
+        absoluteX += parentNode.position.x;
+        absoluteY += parentNode.position.y;
+        currentParentId = getNodeParentId(parentNode);
+    }
+
+    return { x: absoluteX, y: absoluteY };
+}
+
+interface ReassignArchitectureNodeBoundaryParams {
+    nodes: FlowNode[];
+    nodeId: string;
+    data: Partial<NodeData>;
+}
+
+export function reassignArchitectureNodeBoundary({
+    nodes,
+    nodeId,
+    data,
+}: ReassignArchitectureNodeBoundaryParams): FlowNode[] {
+    const targetNode = nodes.find((node) => node.id === nodeId);
+    if (!targetNode) {
+        return nodes;
+    }
+
+    const rawBoundaryId = data.archBoundaryId;
+    const hasBoundaryUpdate = typeof rawBoundaryId === 'string';
+    if (targetNode.type !== 'architecture' || !hasBoundaryUpdate) {
+        return nodes.map((node) => (
+            node.id === nodeId
+                ? { ...node, data: { ...node.data, ...data } }
+                : node
+        ));
+    }
+
+    const requestedBoundaryId = rawBoundaryId.trim();
+    const absolutePosition = getAbsoluteNodePosition(targetNode, nodes);
+
+    if (requestedBoundaryId.length === 0) {
+        return nodes.map((node) => {
+            if (node.id !== nodeId) {
+                return node;
+            }
+
+            const nextNode = {
+                ...node,
+                position: absolutePosition,
+                data: {
+                    ...node.data,
+                    ...data,
+                    archBoundaryId: '',
+                },
+            } as FlowNode;
+            return clearNodeParent(nextNode);
+        });
+    }
+
+    const boundaryNode = nodes.find(
+        (node) => node.id === requestedBoundaryId && node.type === 'section'
+    );
+    if (!boundaryNode) {
+        return nodes.map((node) => (
+            node.id === nodeId
+                ? { ...node, data: { ...node.data, ...data } }
+                : node
+        ));
+    }
+
+    return nodes.map((node) => {
+        if (node.id !== nodeId) {
+            return node;
+        }
+
+        return setNodeParent({
+            ...node,
+            position: {
+                x: absolutePosition.x - boundaryNode.position.x,
+                y: absolutePosition.y - boundaryNode.position.y,
+            },
+            data: {
+                ...node.data,
+                ...data,
+                archBoundaryId: boundaryNode.id,
+            },
+        }, boundaryNode.id);
+    });
 }
 
 function findContainingSection(

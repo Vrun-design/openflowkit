@@ -5,6 +5,7 @@ import { useInlineNodeTextEdit } from '@/hooks/useInlineNodeTextEdit';
 import { InlineTextEditSurface } from '@/components/InlineTextEditSurface';
 import { NodeChrome } from '@/components/NodeChrome';
 import { getTransformDiagnosticsAttrs } from '@/components/transformDiagnostics';
+import { resolveNodeVisualStyle } from '@/theme';
 
 function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.ReactElement {
   const labelEdit = useInlineNodeTextEdit(id, 'label', data.label || '');
@@ -12,37 +13,30 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
   const resourceType = data.archResourceType || 'service';
   const environment = data.archEnvironment || 'default';
   const architectureMinHeight = environment ? 96 : 88;
-  const styleByResource: Record<string, { shell: string; providerBadge: string; icon: string }> = {
-    group: {
-      shell: 'border-violet-300 bg-violet-50/60',
-      providerBadge: 'bg-violet-100 text-violet-700 border-violet-200',
-      icon: '◼',
-    },
-    junction: {
-      shell: 'border-amber-300 bg-amber-50/60',
-      providerBadge: 'bg-amber-100 text-amber-700 border-amber-200',
-      icon: '◆',
-    },
-    service: {
-      shell: 'border-slate-200 bg-white',
-      providerBadge: 'bg-slate-100 text-slate-700 border-slate-200',
-      icon: '▣',
-    },
-  };
-  const currentStyle = styleByResource[resourceType] ?? styleByResource.service;
+  const activeColor = data.color || 'white';
+  const activeColorMode = data.colorMode || 'subtle';
+  const visualStyle = resolveNodeVisualStyle(activeColor, activeColorMode, data.customColor);
+  const resourceIcon = {
+    group: '◼',
+    junction: '◆',
+    service: '▣',
+  }[resourceType] ?? '▣';
 
   return (
     <NodeChrome
       selected={Boolean(selected)}
       minWidth={180}
       minHeight={architectureMinHeight}
-      handleClassName="!w-3 !h-3 !bg-slate-400 !border-2 !border-white transition-all duration-150 hover:scale-125"
+      handleClassName="!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125"
     >
       <div
-        className={`group min-w-[180px] rounded-xl border px-3 py-2 shadow-sm ${currentStyle.shell} ${
-          selected ? 'ring-2 ring-indigo-500 ring-offset-2' : ''
-        }`}
-        style={{ minHeight: architectureMinHeight }}
+        className="group min-w-[180px] rounded-xl border px-3 py-2 shadow-sm"
+        style={{
+          minHeight: architectureMinHeight,
+          backgroundColor: visualStyle.bg,
+          borderColor: visualStyle.border,
+          color: visualStyle.text,
+        }}
         {...getTransformDiagnosticsAttrs({
           nodeFamily: 'architecture',
           selected: Boolean(selected),
@@ -51,11 +45,18 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
         })}
       >
         <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide text-slate-500">
-          <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-semibold ${currentStyle.providerBadge}`}>
-            <span>{currentStyle.icon}</span>
+          <span
+            className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-semibold"
+            style={{
+              backgroundColor: visualStyle.iconBg,
+              borderColor: visualStyle.border,
+              color: visualStyle.iconColor,
+            }}
+          >
+            <span>{resourceIcon}</span>
             <span>{provider}</span>
           </span>
-          <span className="font-semibold text-slate-500">{resourceType}</span>
+          <span className="font-semibold" style={{ color: visualStyle.subText }}>{resourceType}</span>
         </div>
         <InlineTextEditSurface
           isEditing={labelEdit.isEditing}
@@ -65,10 +66,16 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
           onDraftChange={labelEdit.setDraft}
           onCommit={labelEdit.commit}
           onKeyDown={labelEdit.handleKeyDown}
-          className="mt-1 text-sm font-semibold text-slate-800 break-words"
+          className="mt-1 text-sm font-semibold break-words"
           isSelected={Boolean(selected)}
         />
-        <div className="mt-1 inline-flex rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+        <div
+          className="mt-1 inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+          style={{
+            backgroundColor: visualStyle.iconBg,
+            color: visualStyle.subText,
+          }}
+        >
           {environment}
         </div>
       </div>

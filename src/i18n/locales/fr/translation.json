@@ -19,6 +19,8 @@
     "selectAll": "Tout sélectionner",
     "duplicate": "Dupliquer",
     "duplicateDrag": "Dupliquer et glisser",
+    "multiSelect": "Sélection multiple",
+    "selectionBox": "Boîte de sélection",
     "copy": "Copier",
     "paste": "Coller",
     "zoomIn": "Zoom avant",
@@ -35,6 +37,8 @@
     "error": "Erreur",
     "success": "Succès",
     "help": "Aide",
+    "selectTool": "Outil de sélection",
+    "handTool": "Outil main",
     "getStarted": "Commencer",
     "bringToFront": "Mettre au premier plan",
     "sendToBack": "Mettre en arrière-plan",
@@ -122,7 +126,7 @@
     "newTab": "Nouvel onglet",
     "renameTab": "Renommer l'onglet",
     "closeTab": "Fermer l'onglet",
-    "addNode": "Ajouter un nœud",
+    "addNode": "Ajouter une forme",
     "deleteNode": "Supprimer le nœud",
     "duplicateNode": "Dupliquer le nœud"
   },
@@ -226,7 +230,18 @@
     "description": "Description",
     "color": "Couleur",
     "icon": "Icône",
-    "size": "Taille"
+    "size": "Taille",
+    "shape": "Forme",
+    "bulkShape": "Forme groupée",
+    "bulkColor": "Couleur groupée",
+    "bulkIcon": "Icône groupée",
+    "labelTransform": "Transformation d'étiquette",
+    "prefixOptional": "Préfixe (optionnel)",
+    "suffixOptional": "Suffixe (optionnel)",
+    "previewSummary": "Aperçu",
+    "bulkApplySummary": "{{count}} éléments sélectionnés seront mis à jour",
+    "selectFieldToApply": "Sélectionnez au moins un champ à appliquer.",
+    "applyToSelectedNodes": "Appliquer aux éléments sélectionnés"
   },
   "ai": {
     "generate": "Générer avec l'IA",
@@ -429,7 +444,7 @@
       },
       "dslSyntax": {
         "title": "Syntaxe DSL",
-        "description": "Montrez un exemple du DSL FlowMind.",
+        "description": "Montrez un exemple du DSL OpenFlowKit.",
         "icon": "{}"
       }
     }
@@ -665,7 +680,7 @@
     "title": "Raccourcis clavier",
     "subtitle": "Maîtrisez votre flux de travail avec rapidité.",
     "closeAriaLabel": "Fermer la fenêtre des raccourcis",
-    "proTip": "Conseil pro: Maintenez <key>?</key> pour activer la boîte de sélection lors du glisser."
+    "proTip": "Conseil pro : maintenez <key>Shift</key> pour ajouter à la sélection ou dessiner une boîte de sélection."
   },
   "toolbar": {
     "selectMode": "Mode sélection (V)",
@@ -674,7 +689,9 @@
     "templates": "Modèles",
     "addItem": "Ajouter un élément",
     "addToCanvas": "Ajouter au canevas",
-    "node": "Nœud",
+    "shapes": "Formes",
+    "assets": "Ressources",
+    "node": "Forme",
     "stickyNote": "Note adhésive",
     "section": "Section",
     "text": "Texte",
@@ -699,23 +716,23 @@
       "description": "Votre canevas est vide. Générez un flux avec Flowpilot ou commencez de zéro.",
       "generateWithFlowpilot": "Générer avec Flowpilot",
       "browseTemplates": "Parcourir les modèles",
-      "addBlankNode": "Ajouter un nœud vide"
+      "addBlankNode": "Ajouter une forme vide"
     }
   },
   "annotationNode": {
     "placeholder": "*Double-cliquez pour modifier la note*"
   },
   "connectMenu": {
-    "createNewNode": "Créer un nouveau nœud",
-    "process": "Processus",
-    "processDesc": "Action standard",
-    "decision": "Décision",
-    "decisionDesc": "Logique de branchement",
+    "createNewNode": "Créer une nouvelle forme",
+    "process": "Forme arrondie",
+    "processDesc": "Bloc polyvalent",
+    "decision": "Forme losange",
+    "decisionDesc": "Bloc de branchement",
     "database": "Base de données",
-    "databaseDesc": "Stockage de données",
+    "databaseDesc": "Forme cylindre",
     "inputOutput": "Entrée / Sortie",
-    "inputOutputDesc": "Flux de données",
-    "note": "Note",
+    "inputOutputDesc": "Forme parallélogramme",
+    "note": "Note adhésive",
     "noteDesc": "Documentation",
     "releaseToConnect": "Relâcher pour connecter"
   },
@@ -750,7 +767,7 @@
   },
   "propertiesPanel": {
     "stickyNote": "Note adhésive",
-    "nodeSettings": "Paramètres du nœud",
+    "nodeSettings": "Paramètres de forme",
     "connection": "Connexion"
   },
   "flowCanvas": {
@@ -767,6 +784,7 @@
     "newNode": "New Node",
     "branch": "Branch",
     "processStep": "Process Step",
+    "addText": "Ajouter du texte",
     "group": "Group",
     "items": "items",
     "addCommentsHere": "Add your comments here.",

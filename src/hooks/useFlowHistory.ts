@@ -1,25 +1,19 @@
 import { useState, useCallback } from 'react';
 import { FlowHistoryState } from '@/lib/types';
-import { useFlowStore } from '../store';
 import { trackEvent } from '../lib/analytics';
+import { useCanvasActions, useCanvasState } from '@/store/canvasHooks';
+import { useHistoryActions } from '@/store/historyHooks';
+import { useTabsState } from '@/store/tabHooks';
+import { useViewSettings } from '@/store/viewHooks';
 
 const MAX_HISTORY = 20;
 
 export const useFlowHistory = () => {
-  const {
-    nodes,
-    edges,
-    tabs,
-    activeTabId,
-    viewSettings,
-    setNodes,
-    setEdges,
-    recordHistoryV2,
-    undoV2,
-    redoV2,
-    canUndoV2,
-    canRedoV2,
-  } = useFlowStore();
+  const { nodes, edges } = useCanvasState();
+  const { tabs, activeTabId } = useTabsState();
+  const viewSettings = useViewSettings();
+  const { setNodes, setEdges } = useCanvasActions();
+  const { recordHistoryV2, undoV2, redoV2, canUndoV2, canRedoV2 } = useHistoryActions();
 
   const [past, setPast] = useState<FlowHistoryState[]>([]);
   const [future, setFuture] = useState<FlowHistoryState[]>([]);

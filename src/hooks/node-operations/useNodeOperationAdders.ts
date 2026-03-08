@@ -2,14 +2,20 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { trackEvent } from '@/lib/analytics';
 import { createId } from '@/lib/id';
-import type { FlowNode } from '@/lib/types';
-import { useFlowStore } from '@/store';
+import type { FlowNode, NodeData } from '@/lib/types';
 import {
-  createAnnotationNode,
-  createImageNode,
-  createProcessNode,
-  createSectionNode,
-  createTextNode,
+  createDomainLibraryNode,
+  type DomainLibraryItem,
+} from '@/services/domainLibrary';
+import { useFlowStore } from '@/store';
+import { queueNodeLabelEditRequest } from '@/hooks/nodeLabelEditRequest';
+import {
+    createAnnotationNode,
+    createGenericShapeNode,
+    createImageNode,
+    createProcessNode,
+    createSectionNode,
+    createTextNode,
   getDefaultNodePosition,
 } from './utils';
 
@@ -28,23 +34,29 @@ export function useNodeOperationAdders({
 }: UseNodeOperationAddersParams) {
   const { t } = useTranslation();
 
-  const handleAddNode = useCallback((position?: { x: number; y: number }) => {
+  const handleAddShape = useCallback((shape: NodeData['shape'], position?: { x: number; y: number }) => {
     recordHistory();
     const id = createId();
     const { activeLayerId } = useFlowStore.getState();
-    const newNode = createProcessNode(
+    const newNode = createGenericShapeNode(
       id,
       position || getDefaultNodePosition(nodesLength, 100, 100),
-      { label: t('nodes.newNode'), subLabel: t('nodes.processStep') }
+      {
+        type: 'process',
+        color: 'white',
+        shape,
+        layerId: activeLayerId,
+      }
     );
-    newNode.data = {
-      ...newNode.data,
-      layerId: activeLayerId,
-    };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
-    trackEvent('add_node', { node_type: 'process' });
-  }, [nodesLength, recordHistory, setNodes, setSelectedNodeId, t]);
+    queueNodeLabelEditRequest(id, { replaceExisting: true });
+    trackEvent('add_node', { node_type: 'process', shape });
+  }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
+
+  const handleAddNode = useCallback((position?: { x: number; y: number }) => {
+    handleAddShape('rounded', position);
+  }, [handleAddShape]);
 
   const handleAddAnnotation = useCallback((position?: { x: number; y: number }) => {
     recordHistory();
@@ -88,6 +100,55 @@ export function useNodeOperationAdders({
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
     trackEvent('add_node', { node_type: 'journey' });
+  }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
+
+  const handleAddMindmapNode = useCallback((position?: { x: number; y: number }) => {
+    recordHistory();
+    const id = createId('mindmap');
+    const { activeLayerId } = useFlowStore.getState();
+    const newNode: FlowNode = {
+      id,
+      type: 'mindmap',
+      position: position || getDefaultNodePosition(nodesLength, 120, 120),
+      data: {
+        label: 'Central Topic',
+        color: 'slate',
+        shape: 'rounded',
+        mindmapDepth: 0,
+        mindmapBranchStyle: 'curved',
+        layerId: activeLayerId,
+      },
+      selected: true,
+    };
+    setNodes((nds) => nds.concat(newNode));
+    setSelectedNodeId(id);
+    queueNodeLabelEditRequest(id, { replaceExisting: true });
+    trackEvent('add_node', { node_type: 'mindmap' });
+  }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
+
+  const handleAddArchitectureNode = useCallback((position?: { x: number; y: number }) => {
+    recordHistory();
+    const id = createId('arch');
+    const { activeLayerId } = useFlowStore.getState();
+    const newNode: FlowNode = {
+      id,
+      type: 'architecture',
+      position: position || getDefaultNodePosition(nodesLength, 120, 120),
+      data: {
+        label: 'New Service',
+        color: 'slate',
+        shape: 'rectangle',
+        icon: 'Server',
+        archProvider: 'custom',
+        archResourceType: 'service',
+        archEnvironment: 'default',
+        layerId: activeLayerId,
+      },
+      selected: true,
+    };
+    setNodes((nds) => nds.concat(newNode));
+    setSelectedNodeId(id);
+    trackEvent('add_node', { node_type: 'architecture' });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
 
   const handleAddSection = useCallback((position?: { x: number; y: number }) => {
@@ -145,12 +206,54 @@ export function useNodeOperationAdders({
     trackEvent('add_node', { node_type: 'image' });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId, t]);
 
+  const handleAddWireframe = useCallback((type: 'browser' | 'mobile', position?: { x: number; y: number }) => {
+    recordHistory();
+    const id = createId(type);
+    const { activeLayerId } = useFlowStore.getState();
+    const label = type === 'browser' ? 'New Window' : 'Mobile App';
+    const newNode: FlowNode = {
+      id,
+      type,
+      position: position || getDefaultNodePosition(nodesLength, 100, 100),
+      data: {
+        label,
+        color: 'slate',
+        variant: 'default',
+        layerId: activeLayerId,
+      },
+      selected: true,
+    };
+    setNodes((nds) => nds.concat(newNode));
+    setSelectedNodeId(id);
+    trackEvent('add_node', { node_type: type });
+  }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
+
+  const handleAddDomainLibraryItem = useCallback((item: DomainLibraryItem, position?: { x: number; y: number }) => {
+    recordHistory();
+    const id = createId('lib');
+    const { activeLayerId } = useFlowStore.getState();
+    const newNode = createDomainLibraryNode(
+      item,
+      id,
+      position || getDefaultNodePosition(nodesLength, 100, 100),
+      activeLayerId
+    );
+    setNodes((nds) => nds.concat(newNode));
+    setSelectedNodeId(id);
+    trackEvent('add_node', { node_type: 'domain_library', category: item.category, item_id: item.id });
+  }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
+
   return {
+    handleAddShape,
     handleAddNode,
     handleAddAnnotation,
     handleAddJourneyNode,
+    handleAddMindmapNode,
+    handleAddArchitectureNode,
     handleAddSection,
     handleAddTextNode,
     handleAddImage,
+    handleAddWireframe,
+    handleAddDomainLibraryItem,
   };
 }

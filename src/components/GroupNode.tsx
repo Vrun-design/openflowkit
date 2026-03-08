@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight, FolderOpen, FolderClosed } from 'lucide-reac
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { getConnectorHandleStyle, getHandlePointerEvents, getV2HandleVisibilityClass } from './handleInteraction';
 import { NodeTransformControls } from './NodeTransformControls';
+import { useActiveNodeSelection } from './useActiveNodeSelection';
 
 const GROUP_HANDLE_CONFIG: Array<{
     id: string;
@@ -24,9 +25,10 @@ function GroupNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
     const { setNodes } = useReactFlow();
     const allNodes = useNodes();
     const visualQualityV2Enabled = ROLLOUT_FLAGS.visualQualityV2;
-    const handlePointerEvents = getHandlePointerEvents(visualQualityV2Enabled, Boolean(selected));
+    const isActiveSelected = useActiveNodeSelection(Boolean(selected));
+    const handlePointerEvents = getHandlePointerEvents(visualQualityV2Enabled, isActiveSelected);
     const handleVisibilityClass = visualQualityV2Enabled
-        ? getV2HandleVisibilityClass(Boolean(selected), { includeConnectingState: false, includeScale: false })
+        ? getV2HandleVisibilityClass(isActiveSelected, { includeConnectingState: false, includeScale: false })
         : 'opacity-0 hover:opacity-100';
 
     // Count children
@@ -60,7 +62,6 @@ function GroupNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
                 className={`
           w-full rounded-2xl border-2 transition-all duration-300 overflow-hidden
           ${collapsed ? 'border-solid' : 'border-dashed'}
-          ${selected && !visualQualityV2Enabled ? 'ring-2 ring-[var(--brand-primary)] ring-offset-2' : ''}
         `}
                 style={{
                     minWidth: 300,
@@ -68,7 +69,6 @@ function GroupNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
                     height: collapsed ? 60 : '100%',
                     backgroundColor: collapsed ? '#f8fafc' : '#f1f5f9',
                     borderColor: '#a5b4fc',
-                    boxShadow: selected && visualQualityV2Enabled ? '0 0 0 2px #6366f1, 0 0 12px rgba(99,102,241,0.2)' : undefined,
                 }}
             >
                 {/* Header */}
@@ -119,8 +119,8 @@ function GroupNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
                     id={handleId}
                     isConnectableStart
                     isConnectableEnd
-                    className={`!w-3 !h-3 !border-2 !border-white !bg-indigo-400 transition-opacity ${handleVisibilityClass}`}
-                    style={getConnectorHandleStyle(side, Boolean(selected), handlePointerEvents)}
+                    className={`!w-3 !h-3 !border-2 !border-white transition-opacity ${handleVisibilityClass}`}
+                    style={getConnectorHandleStyle(side, isActiveSelected, handlePointerEvents)}
                 />
             ))}
         </>

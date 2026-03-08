@@ -7,6 +7,7 @@ import { NamedIcon } from './IconMap';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { getConnectorHandleStyle, getHandlePointerEvents, getV2HandleVisibilityClass } from './handleInteraction';
 import { NodeTransformControls } from './NodeTransformControls';
+import { useActiveNodeSelection } from './useActiveNodeSelection';
 
 const LANE_COLORS = [
     { bg: '#eff6ff', border: '#93c5fd', text: '#1e40af', label: 'Blue' },
@@ -18,9 +19,10 @@ const LANE_COLORS = [
 
 const SwimlaneNode = ({ id, data, selected }: LegacyNodeProps<NodeData>) => {
     const visualQualityV2Enabled = ROLLOUT_FLAGS.visualQualityV2;
-    const handlePointerEvents = getHandlePointerEvents(visualQualityV2Enabled, Boolean(selected));
+    const isActiveSelected = useActiveNodeSelection(Boolean(selected));
+    const handlePointerEvents = getHandlePointerEvents(visualQualityV2Enabled, isActiveSelected);
     const handleVisibilityClass = visualQualityV2Enabled
-        ? getV2HandleVisibilityClass(Boolean(selected), { includeConnectingState: false, includeScale: false })
+        ? getV2HandleVisibilityClass(isActiveSelected, { includeConnectingState: false, includeScale: false })
         : 'opacity-0 hover:opacity-100';
     const colorIndex = parseInt(id.replace(/\D/g, ''), 10) || 0;
     const lane = LANE_COLORS[colorIndex % LANE_COLORS.length];
@@ -37,7 +39,6 @@ const SwimlaneNode = ({ id, data, selected }: LegacyNodeProps<NodeData>) => {
             <div
                 className={`
           w-full h-full rounded-xl border-2 transition-all duration-200 overflow-hidden
-          ${selected ? 'ring-2 ring-offset-2' : ''}
         `}
                 style={{
                     backgroundColor: lane.bg,
@@ -87,10 +88,10 @@ const SwimlaneNode = ({ id, data, selected }: LegacyNodeProps<NodeData>) => {
             </div>
 
             {/* Handles */}
-            <Handle type="source" position={Position.Top} id="top-target" className={`!w-3 !h-3 !border-2 !border-white transition-opacity ${handleVisibilityClass}`} style={getConnectorHandleStyle('top', Boolean(selected), handlePointerEvents, { backgroundColor: lane.border })} />
-            <Handle type="source" position={Position.Bottom} id="bottom-source" className={`!w-3 !h-3 !border-2 !border-white transition-opacity ${handleVisibilityClass}`} style={getConnectorHandleStyle('bottom', Boolean(selected), handlePointerEvents, { backgroundColor: lane.border })} />
-            <Handle type="source" position={Position.Left} id="left-target" className={`!w-3 !h-3 !border-2 !border-white transition-opacity ${handleVisibilityClass}`} style={getConnectorHandleStyle('left', Boolean(selected), handlePointerEvents, { backgroundColor: lane.border })} />
-            <Handle type="source" position={Position.Right} id="right-source" className={`!w-3 !h-3 !border-2 !border-white transition-opacity ${handleVisibilityClass}`} style={getConnectorHandleStyle('right', Boolean(selected), handlePointerEvents, { backgroundColor: lane.border })} />
+            <Handle type="source" position={Position.Top} id="top-target" className={`!w-3 !h-3 !border-2 !border-white transition-opacity ${handleVisibilityClass}`} style={getConnectorHandleStyle('top', isActiveSelected, handlePointerEvents)} />
+            <Handle type="source" position={Position.Bottom} id="bottom-source" className={`!w-3 !h-3 !border-2 !border-white transition-opacity ${handleVisibilityClass}`} style={getConnectorHandleStyle('bottom', isActiveSelected, handlePointerEvents)} />
+            <Handle type="source" position={Position.Left} id="left-target" className={`!w-3 !h-3 !border-2 !border-white transition-opacity ${handleVisibilityClass}`} style={getConnectorHandleStyle('left', isActiveSelected, handlePointerEvents)} />
+            <Handle type="source" position={Position.Right} id="right-source" className={`!w-3 !h-3 !border-2 !border-white transition-opacity ${handleVisibilityClass}`} style={getConnectorHandleStyle('right', isActiveSelected, handlePointerEvents)} />
         </>
     );
 };

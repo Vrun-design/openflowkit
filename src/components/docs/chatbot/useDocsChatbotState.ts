@@ -3,8 +3,7 @@ import type { RefObject } from 'react';
 import { chatWithDocs } from '@/services/aiService';
 import type { ChatMessage } from '@/services/aiService';
 import type { AISettings } from '@/store';
-
-const markdownFiles = import.meta.glob('/docs/**/*.md', { query: '?raw', import: 'default' });
+import { docsMarkdownLoaders } from '../docsMarkdownLoaders';
 
 interface UseDocsChatbotStateParams {
     aiSettings: AISettings;
@@ -35,7 +34,7 @@ export function useDocsChatbotState({ aiSettings }: UseDocsChatbotStateParams): 
     useEffect(() => {
         async function loadDocsContext(): Promise<void> {
             const entries = await Promise.all(
-                Object.entries(markdownFiles).map(async ([path, loader]) => {
+                Object.entries(docsMarkdownLoaders).map(async ([path, loader]) => {
                     const content = await loader();
                     const filename = path.split('/').pop()?.replace('.md', '') || '';
                     return `--- FILE: ${filename} ---\n${content}\n`;

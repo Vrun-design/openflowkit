@@ -109,6 +109,11 @@ A Spotlight-style command palette for power users:
 - **Fuzzy Search**: Find commands, templates, and settings instantly.
 - **Keyboard First**: Full shortcut support (Undo, Redo, Copy, Paste, Delete, Select All, Alt+Drag to duplicate).
 
+### 📚 Docs + In-App Help
+Access comprehensive help without leaving the canvas:
+- **Embedded Docs**: Full documentation rendered natively inside the app (EN/TR).
+- **Docs Chatbot**: Get AI-assisted answers directly from the markdown documentation context.
+
 ### 🎬 Playback & Presentation Mode
 Step through diagram construction like a slideshow:
 - **Build-Order Replay**: Watch nodes and edges appear in the order they were created.
@@ -126,6 +131,11 @@ Hit the ground running with **5 production-ready templates**:
 ### 📸 Snapshots & Version History
 - **Manual Snapshots**: Save and restore named versions of your work.
 - **Local Storage**: Everything stays on your device.
+
+### 👥 Live Collaboration (Experimental)
+Peer-to-peer live collaboration is included but currently in **public beta**.
+- **⚠️ Important Disclaimer**: Real-time sync relies heavily on peer network conditions and transport routing. Without a dedicated backend database, it is **not 100% perfect** and occasionally drops state. It should be treated as a best-effort whiteboard rather than durable multi-user storage.
+- **Tip**: Always save manual snapshots or export your work when collaborating!
 
 ### 🧮 Alignment & Distribution
 - **Align**: Left, center, right, top, middle, bottom.
@@ -232,81 +242,90 @@ Built for performance and extensibility:
 
 ### Project Map
 
-```bash
+```text
 OpenFlowKit/
 ├── src/
+│   ├── app/                     # App routes and history providers
 │   ├── components/
-│   │   ├── properties/          # Property panels (nodes/edges/canvas)
-│   │   ├── SettingsModal/       # Settings screens + AI provider sections
-│   │   ├── custom-nodes/        # Browser/Mobile/Wireframe/Icon nodes
-│   │   ├── custom-edge/         # Custom edge render helpers
 │   │   ├── command-bar/         # Cmd+K command palette views
+│   │   ├── custom-edge/         # Custom edge render helpers
+│   │   ├── custom-nodes/        # Browser/Mobile/Wireframe/Icon nodes
+│   │   ├── diagram-types/       # (Moved out) Core diagram submodules
 │   │   ├── docs/                # Built-in docs + docs chatbot
 │   │   ├── flow-canvas/         # Canvas orchestration subcomponents
-│   │   ├── home/                # Dashboard/sidebar/settings home views
-│   │   ├── toolbar/             # Toolbar subcomponents
-│   │   ├── top-nav/             # Top nav subcomponents
-│   │   ├── landing/             # Landing page sections
-│   │   ├── ui/                  # Branded UI primitives
-│   │   ├── FlowEditor.tsx       # Main diagram orchestrator
+│   │   ├── flow-editor/         # Core editor shells
+│   │   ├── home/                # Dashboard/sidebar/settings views
+│   │   ├── icons/               # Custom SVGs and Lucide wrappers
+│   │   ├── landing/             # External landing page sections
+│   │   ├── properties/          # Property panels (nodes/edges/canvas)
+│   │   ├── SettingsModal/       # Settings screens + AI provider sections
+│   │   ├── studio-code-panel/   # Panel for Diagram-as-code
+│   │   ├── toolbar/             # Toolbar menus and actions
+│   │   ├── top-nav/             # Header navigation
+│   │   ├── ui/                  # Branded UI primitives (buttons, selects)
 │   │   ├── FlowCanvas.tsx       # React Flow canvas wrapper
+│   │   ├── FlowEditor.tsx       # Main diagram orchestrator
 │   │   ├── CommandBar.tsx       # Spotlight-style command palette
 │   │   ├── CustomNode.tsx       # Universal node renderer
 │   │   └── CustomEdge.tsx       # Styled edge renderer
-│   ├── config/
-│   │   └── aiProviders.ts       # AI provider registry + model metadata
+│   ├── config/                  # Provider configs (AI, Analytics)
+│   ├── diagram-types/           # Family plugins (ER, sequence, etc)
+│   ├── docs/                    # Source markdown for doc viewer
 │   ├── hooks/
-│   │   ├── flow-operations/        # Flow operation modules (layout/selection/canvas ops)
-│   │   ├── flow-editor-actions/    # Editor action modules (export/templates/history)
-│   │   ├── node-operations/        # Node operation modules
-│   │   ├── useFlowOperations.ts    # Composed flow operation hook
-│   │   ├── useFlowEditorActions.ts # Composed editor actions hook
-│   │   ├── useFlowEditorCallbacks.ts # Editor callback wiring
-│   │   ├── useFlowEditorUIState.ts # Editor panel/view state orchestration
-│   │   ├── useFlowHistory.ts       # Undo/Redo state + controls
-│   │   ├── useAIGeneration.ts      # Flowpilot AI integration
-│   │   ├── useSnapshots.ts         # Snapshot version history
-│   │   ├── useClipboardOperations.ts # Clipboard copy/cut/paste operations
-│   │   └── useDesignSystem.ts      # Active design-system token access
+│   │   ├── ai-generation/       # AI request handlers
+│   │   ├── edge-operations/     # Edge routing/drawing behaviors
+│   │   ├── flow-editor-actions/ # Actions involving export/menus
+│   │   ├── flow-operations/     # Top-level action orchestrators
+│   │   ├── node-operations/     # Node styling/geometry updates
+│   │   ├── useFlowHistory.ts    # Custom undo/redo engine
+│   │   ├── useSnapshots.ts      # IndexedDB diagram saving
+│   │   └── ...                  # Reusable action hooks
 │   ├── i18n/
-│   │   ├── config.ts            # react-i18next setup (bundled imports)
-│   │   └── locales/
-│   │       ├── en/translation.json  # English (full coverage)
-│   │       ├── tr/translation.json  # Turkish (full coverage)
-│   │       └── ...                  # de/fr/es/zh/ja
+│   │   ├── config.ts            # react-i18next setup
+│   │   └── locales/             # en, tr, es, de, fr json dicts
 │   ├── lib/
-│   │   ├── flowmindDSLParserV2.ts  # OpenFlow DSL V2 parser
-│   │   ├── mermaidParser.ts        # Mermaid.js → nodes/edges
-│   │   ├── observability.ts        # Global error/telemetry hooks
-│   │   ├── analytics.ts            # PostHog integration
-│   │   └── types.ts                # Shared type definitions
+│   │   ├── flowmindDSLParserV2.ts # OpenFlow DSL v2 parser
+│   │   ├── mermaidParser.ts     # Mermaid → ReactFlow converter
+│   │   ├── observability.ts     # Telemetry & error boundary logger
+│   │   ├── brandService.ts      # Theme color generators
+│   │   └── analytics.ts         # PostHog integration
 │   ├── services/
-│   │   ├── aiService.ts            # Multi-provider AI client
-│   │   ├── geminiService.ts        # Gemini-specific implementation
-│   │   ├── elkLayout.ts            # ELK.js auto-layout engine
-│   │   ├── smartEdgeRouting.ts     # Edge path optimization
-│   │   ├── figmaExportService.ts   # Figma-compatible SVG export
-│   │   ├── openFlowDSLExporter.ts  # Nodes/edges → DSL V2
-│   │   └── templates.ts            # Starter templates
-│   ├── store/
-│   │   ├── actions/                # Zustand action slices
-│   │   ├── defaults.ts             # Default state contracts
-│   │   └── types.ts                # Store state types
-│   ├── store.ts                    # Store composition + persist wiring
-│   └── theme.ts                 # Color palettes & design tokens
-├── e2e/
-│   └── smoke.spec.ts              # Playwright smoke tests
-├── playwright.config.ts           # Playwright config (Chromium project + webServer)
-├── docs/
-│   ├── en/                      # English documentation
-│   └── tr/                      # Turkish documentation
-├── public/                      # Static assets & provider logos
-└── index.css                    # Tailwind & custom styling
+│   │   ├── ai/                  # Provider abstractions
+│   │   ├── collaboration/       # Yjs CRDT networking layers
+│   │   ├── elk-layout/          # ELK.js tree algorithms
+│   │   ├── figma/               # Figma SVG builders
+│   │   ├── storage/             # IDB/localStorage wrappers
+│   │   ├── shapeLibrary/        # Domain shapes and validators
+│   │   ├── geminiService.ts     # Vertex/Gemini implementations
+│   │   └── smartEdgeRouting.ts  # Node overlap avoidance logic
+│   ├── store/                   # Zustand Slices
+│   │   ├── actions/             # State mutations
+│   │   ├── defaults.ts          # Store initializers
+│   │   └── types.ts             # App state interfaces
+│   ├── constants.ts             # Hardcoded sizing/configs
+│   ├── index.tsx                # React Mount wrapper
+│   ├── store.ts                 # Root Zustand store container
+│   └── theme.ts                 # Generated CSS tokens
+├── e2e/                         # Playwright integration tests
+├── playwright.config.ts         # Test suite configurations
+├── public/                      # Static assets & localized jsons
+├── index.css                    # Tailwind + overrides
+└── index.html                   # Entrypoint shell
 ```
 
 ---
 
-## 🔌 Extensibility & Self-Hosting
+## � Current Status & Known Limitations
+
+OpenFlowKit is currently **release-credible** and all branch quality gates (`lint`, `vitest`, `e2e:ci`) are green. However, please note the following:
+
+- **Large Bundle Anchors**: Due to deep diagramming requirements, the bundle includes two heavy vendors: `lucide-react` (~885 kB) for the massive icon library, and `elkjs` (~1.46 MB) for industrial-grade auto-layout algorithms.
+- **Collaboration Durability**: Live collaboration is environment-dependent unless a dedicated backend relay/persistence strategy is provided.
+- **Localization Coverage**: Full app and documentation coverage is strongest in **English (EN)** and **Turkish (TR)**. Other languages may be partial in some edge surfaces.
+
+---
+
+## �🔌 Extensibility & Self-Hosting
 
 OpenFlowKit is **local-first** for maximum privacy. It's also architected to be easily extended with a backend.
 
@@ -394,6 +413,7 @@ npm run test:ci
 
 - `npm run test:ci` for unit/integration/build/bundle budget.
 - `npm run e2e:ci` for Playwright smoke coverage (Chromium).
+  - *Note: `e2e:ci` may require environment permissions to bind a local preview server port. If your environment blocks local bind, rerun with the needed permission layer.*
 - `npm run bench:check` for benchmark artifact schema/status validation.
 
 
@@ -413,7 +433,7 @@ We are building the open standard for diagramming. PRs for new Mermaid features,
 
 OpenFlowKit is now global and more powerful! A massive shout-out to our community:
 
-- **[Yunus Emre Alpuş](https://github.com/YunusEmreAlps)** for leading the internationalization (i18n) effort and providing the initial Turkish localization. His contributions paved the way for our expansion into Spanish, German, French, Japanese, and Chinese.
+- **[Yunus Emre Alpu](https://github.com/YunusEmreAlps)** for leading the internationalization (i18n) effort and providing the initial Turkish localization. His contributions paved the way for our expansion into Spanish, German, French, Japanese, and Chinese.
 - **[Naman Dhakad](https://github.com/namandhakad712)** for integrating **Mistral AI** as a Flowpilot provider, expanding our AI ecosystem and improving the developer experience across all providers.
 - **[marsender](https://github.com/marsender)** for reporting key bugs and helping us improve the user experience and stability of the app!
 

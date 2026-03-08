@@ -246,6 +246,46 @@ describe('flow store tab actions', () => {
         expect(state.edges[0].id).toBe('e2');
     });
 
+    it('strips transient canvas fields from persisted autosave tabs', () => {
+        const tab2 = createTab(
+            'tab-2',
+            'Tab 2',
+            [
+                {
+                    ...createNode('n2', 'Recovered Tab 2'),
+                    selected: true,
+                    dragging: true,
+                    measured: { width: 180, height: 96 },
+                    positionAbsolute: { x: 50, y: 60 },
+                } as FlowNode,
+            ],
+            [{ ...createEdge('e2', 'n2', 'n2'), selected: true }]
+        );
+
+        useFlowStore.setState((state) => ({
+            tabs: [state.tabs[0], tab2],
+            activeTabId: 'tab-2',
+            nodes: tab2.nodes,
+            edges: tab2.edges,
+        }));
+
+        const persistedSlice = useFlowStore.persist.getOptions().partialize(useFlowStore.getState()) as {
+            tabs: FlowTab[];
+        };
+        const persistedTab = persistedSlice.tabs.find((tab) => tab.id === 'tab-2');
+        const persistedNode = persistedTab?.nodes[0] as FlowNode & {
+            measured?: unknown;
+            positionAbsolute?: unknown;
+        };
+        const persistedEdge = persistedTab?.edges[0];
+
+        expect(persistedNode.selected).toBeUndefined();
+        expect(persistedNode.dragging).toBeUndefined();
+        expect(persistedNode.measured).toBeUndefined();
+        expect(persistedNode.positionAbsolute).toBeUndefined();
+        expect(persistedEdge?.selected).toBeUndefined();
+    });
+
     it('migrates legacy persisted tabs by adding missing history fields', async () => {
         const migrate = useFlowStore.persist.getOptions().migrate;
         expect(migrate).toBeDefined();

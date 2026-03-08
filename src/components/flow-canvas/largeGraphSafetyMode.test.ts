@@ -9,6 +9,8 @@ import {
   isLowDetailModeActive,
   isLowDetailModeActiveForProfile,
   isLargeGraphSafetyActive,
+  resolveFarZoomReductionStateForProfile,
+  resolveLowDetailModeStateForProfile,
   shouldEnableViewportCulling,
 } from './largeGraphSafetyMode';
 
@@ -70,5 +72,19 @@ describe('largeGraphSafetyMode', () => {
     expect(getInteractionLodCooldownMs('performance')).toBe(240);
     expect(getInteractionLodCooldownMs('balanced')).toBe(180);
     expect(getInteractionLodCooldownMs('quality')).toBe(130);
+  });
+
+  it('uses hysteresis when resolving low-detail zoom state', () => {
+    expect(resolveLowDetailModeStateForProfile(true, 0.5, 'balanced', false)).toBe(true);
+    expect(resolveLowDetailModeStateForProfile(true, 0.53, 'balanced', true)).toBe(true);
+    expect(resolveLowDetailModeStateForProfile(true, 0.56, 'balanced', true)).toBe(false);
+    expect(resolveLowDetailModeStateForProfile(false, 0.3, 'balanced', true)).toBe(false);
+  });
+
+  it('uses hysteresis when resolving far-zoom reduction state', () => {
+    expect(resolveFarZoomReductionStateForProfile(true, 0.4, 'balanced', false)).toBe(true);
+    expect(resolveFarZoomReductionStateForProfile(true, 0.44, 'balanced', true)).toBe(true);
+    expect(resolveFarZoomReductionStateForProfile(true, 0.46, 'balanced', true)).toBe(false);
+    expect(resolveFarZoomReductionStateForProfile(false, 0.2, 'balanced', true)).toBe(false);
   });
 });

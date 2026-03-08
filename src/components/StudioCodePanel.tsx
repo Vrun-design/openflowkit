@@ -1,25 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { AlertCircle, BookOpen, CheckCircle2, Play, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { parseOpenFlowDSL, type ParseDiagnostic } from '@/lib/openFlowDSLParser';
-import { toMermaid } from '@/services/exportService';
-import { toOpenFlowDSL } from '@/services/openFlowDSLExporter';
-import { parseMermaidByType } from '@/services/mermaid/parseMermaidByType';
 import { Button } from './ui/Button';
 import { Textarea } from './ui/Textarea';
 import { useFlowStore } from '@/store';
+import { useBrandConfig } from '@/store/brandHooks';
+import { useMermaidDiagnosticsActions } from '@/store/selectionHooks';
 import { useToast } from './ui/ToastContext';
 import type { FlowEdge, FlowNode } from '@/lib/types';
-import { applyCodeChanges } from './command-bar/applyCodeChanges';
 import type { StudioCodeMode } from '@/hooks/useFlowEditorUIState';
-
-type DraftPreviewState = 'empty' | 'error' | 'ready';
-
-interface DraftPreview {
-    state: DraftPreviewState;
-    label: string;
-    detail: string;
-}
+import { useStudioCodePanelController, type DraftPreviewState } from './studio-code-panel/useStudioCodePanelController';
 
 interface CodeModeOption {
     id: StudioCodeMode;
@@ -54,148 +44,40 @@ export function StudioCodePanel({
     onModeChange,
 }: StudioCodePanelProps): React.ReactElement {
     const { t } = useTranslation();
-    const {
-        brandConfig,
-        activeTabId,
-        updateTab,
-        viewSettings,
-        setMermaidDiagnostics,
-        clearMermaidDiagnostics,
-    } = useFlowStore();
+    const { activeTabId, updateTab, viewSettings } = useFlowStore();
+    const { setMermaidDiagnostics, clearMermaidDiagnostics } = useMermaidDiagnosticsActions();
+    const brandConfig = useBrandConfig();
     const { addToast } = useToast();
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-    const [code, setCode] = useState('');
-    const [error, setError] = useState<string | null>(null);
-    const [diagnostics, setDiagnostics] = useState<ParseDiagnostic[]>([]);
-    const [isApplying, setIsApplying] = useState(false);
-    const [isDirty, setIsDirty] = useState(false);
-    const [lastAppliedCode, setLastAppliedCode] = useState<Record<StudioCodeMode, string>>({
-        flowmind: '',
-        mermaid: '',
-    });
-
-    const generatedFlowMind = useMemo(() => toOpenFlowDSL(nodes, edges), [nodes, edges]);
-    const generatedMermaid = useMemo(() => toMermaid(nodes, edges), [nodes, edges]);
-    const generatedCode = mode === 'flowmind' ? generatedFlowMind : generatedMermaid;
-
-    useEffect(() => {
-        setLastAppliedCode({
-            flowmind: generatedFlowMind,
-            mermaid: generatedMermaid,
-        });
-    }, [generatedFlowMind, generatedMermaid]);
-
-    useEffect(() => {
-        if (!isDirty) {
-            setCode(generatedCode);
-        }
-    }, [generatedCode, isDirty]);
-
-    useEffect(() => {
-        setCode(mode === 'flowmind' ? generatedFlowMind : generatedMermaid);
-        setError(null);
-        setDiagnostics([]);
-        setIsDirty(false);
-    }, [mode, generatedFlowMind, generatedMermaid]);
-
-    const draftPreview = useMemo<DraftPreview>(() => {
-        if (!code.trim()) {
-            return {
-                state: 'empty',
-                label: 'Empty draft',
-                detail: 'Start typing to build a graph-wide code draft.',
-            };
-        }
-
-        if (mode === 'mermaid') {
-            const parsed = parseMermaidByType(code, { architectureStrictMode: viewSettings.architectureStrictMode });
-            if (parsed.error) {
-                return {
-                    state: 'error',
-                    label: 'Needs fixes',
-                    detail: parsed.error,
-                };
-            }
-
-            return {
-                state: 'ready',
-                label: 'Ready to apply',
-                detail: `${parsed.nodes.length} nodes, ${parsed.edges.length} edges`,
-            };
-        }
-
-        const parsed = parseOpenFlowDSL(code);
-        if (parsed.error) {
-            return {
-                state: 'error',
-                label: 'Needs fixes',
-                detail: parsed.error,
-            };
-        }
-
-        return {
-            state: 'ready',
-            label: 'Ready to apply',
-            detail: `${parsed.nodes.length} nodes, ${parsed.edges.length} edges`,
-        };
-    }, [code, mode, viewSettings.architectureStrictMode]);
-
-    const appliedCodeForMode = lastAppliedCode[mode] || generatedCode;
-    const hasDraftChanges = code !== appliedCodeForMode;
     const modeOptions: CodeModeOption[] = [
         { id: 'flowmind', label: `${brandConfig.appName} DSL` },
         { id: 'mermaid', label: 'Mermaid' },
     ];
-
-    const handleApply = useCallback(async () => {
-        const applied = await applyCodeChanges({
-            mode,
-            code,
-            architectureStrictMode: viewSettings.architectureStrictMode,
-            onApply,
-            onClose: () => undefined,
-            activeTabId,
-            updateTab,
-            setMermaidDiagnostics,
-            clearMermaidDiagnostics,
-            addToast,
-            setError,
-            setDiagnostics,
-            setIsApplying,
-            setLiveStatus: () => undefined,
-            isLiveRequestStale: () => false,
-            options: {
-                closeOnSuccess: false,
-                source: 'manual',
-            },
-        });
-
-        if (applied) {
-            setLastAppliedCode((current) => ({
-                ...current,
-                [mode]: code,
-            }));
-            setIsDirty(false);
-        }
-    }, [
-        activeTabId,
-        addToast,
-        clearMermaidDiagnostics,
+    const {
         code,
+        error,
+        diagnostics,
+        isApplying,
+        draftPreview,
+        hasDraftChanges,
+        handleCodeChange,
+        handleApply,
+        handleReset,
+        handleModeSelect,
+    } = useStudioCodePanelController({
+        nodes,
+        edges,
         mode,
         onApply,
-        setMermaidDiagnostics,
+        onModeChange,
+        activeTabId,
         updateTab,
-        viewSettings.architectureStrictMode,
-    ]);
-
-    const handleReset = useCallback(() => {
-        setCode(generatedCode);
-        setError(null);
-        setDiagnostics([]);
-        setIsDirty(false);
-        clearMermaidDiagnostics();
-    }, [clearMermaidDiagnostics, generatedCode]);
+        architectureStrictMode: viewSettings.architectureStrictMode,
+        setMermaidDiagnostics,
+        clearMermaidDiagnostics,
+        addToast,
+        t,
+    });
 
     const handleKeyDown = (event: React.KeyboardEvent) => {
         if (['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
@@ -214,7 +96,7 @@ export function StudioCodePanel({
                         <button
                             key={id}
                             type="button"
-                            onClick={() => onModeChange(id)}
+                            onClick={() => handleModeSelect(id)}
                             className={`relative -mb-px border-b-2 px-0 pb-2 pt-1 text-sm font-semibold transition-colors ${mode === id
                                 ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]'
                                 : 'border-transparent text-slate-500 hover:text-[var(--brand-text)]'
@@ -231,14 +113,7 @@ export function StudioCodePanel({
                     <Textarea
                         ref={textareaRef}
                         value={code}
-                        onChange={(event) => {
-                            setCode(event.target.value);
-                            setIsDirty(true);
-                            if (error) {
-                                setError(null);
-                                setDiagnostics([]);
-                            }
-                        }}
+                        onChange={(event) => handleCodeChange(event.target.value)}
                         onKeyDown={handleKeyDown}
                         className="h-full w-full resize-none !rounded-none !border-0 bg-transparent px-4 py-4 text-sm font-mono leading-relaxed text-[var(--brand-text)] placeholder-[var(--brand-secondary-light)] outline-none shadow-none custom-scrollbar focus-visible:!ring-0"
                         placeholder={mode === 'mermaid'
@@ -301,7 +176,7 @@ export function StudioCodePanel({
                     <div className="flex items-center gap-2">
                         <Button
                             onClick={handleReset}
-                            disabled={!isDirty && !error}
+                            disabled={!hasDraftChanges && !error}
                             variant="ghost"
                             className="h-8 px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900"
                             icon={<RotateCcw className="w-3.5 h-3.5" />}

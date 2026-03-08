@@ -19,6 +19,8 @@
     "selectAll": "すべて選択",
     "duplicate": "複製",
     "duplicateDrag": "複製してドラッグ",
+    "multiSelect": "複数選択",
+    "selectionBox": "選択ボックス",
     "copy": "コピー",
     "paste": "貼り付け",
     "zoomIn": "ズームイン",
@@ -35,6 +37,8 @@
     "error": "エラー",
     "success": "成功",
     "help": "ヘルプ",
+    "selectTool": "選択ツール",
+    "handTool": "手のひらツール",
     "getStarted": "始める",
     "bringToFront": "最前面へ",
     "sendToBack": "最背面へ",
@@ -122,7 +126,7 @@
     "newTab": "新しいタブ",
     "renameTab": "タブの名前を変更",
     "closeTab": "タブを閉じる",
-    "addNode": "ノードを追加",
+    "addNode": "図形を追加",
     "deleteNode": "ノードを削除",
     "duplicateNode": "ノードを複製"
   },
@@ -226,7 +230,18 @@
     "description": "説明",
     "color": "色",
     "icon": "アイコン",
-    "size": "サイズ"
+    "size": "サイズ",
+    "shape": "図形",
+    "bulkShape": "複数図形",
+    "bulkColor": "一括カラー",
+    "bulkIcon": "一括アイコン",
+    "labelTransform": "ラベル変換",
+    "prefixOptional": "接頭辞（任意）",
+    "suffixOptional": "接尾辞（任意）",
+    "previewSummary": "プレビュー",
+    "bulkApplySummary": "選択中の {{count}} 項目を更新します",
+    "selectFieldToApply": "適用する項目を少なくとも 1 つ選択してください。",
+    "applyToSelectedNodes": "選択した項目に適用"
   },
   "ai": {
     "generate": "AIで生成",
@@ -665,7 +680,7 @@
     "title": "キーボードショートカット",
     "subtitle": "スピードでワークフローをマスターしましょう。",
     "closeAriaLabel": "ショートカットモーダルを閉じる",
-    "proTip": "プロのヒント：ドラッグ中に <key>?</key> を押し続けると選択ボックスが有効になります。"
+    "proTip": "ヒント: <key>Shift</key> を押し続けると選択に追加したり、選択ボックスを描けます。"
   },
   "toolbar": {
     "selectMode": "選択モード (V)",
@@ -674,7 +689,9 @@
     "templates": "テンプレート",
     "addItem": "アイテムを追加",
     "addToCanvas": "キャンバスに追加",
-    "node": "ノード",
+    "shapes": "図形",
+    "assets": "アセット",
+    "node": "図形",
     "stickyNote": "付箋",
     "section": "セクション",
     "text": "テキスト",
@@ -699,23 +716,23 @@
       "description": "キャンバスが空です。Flowpilotでフローを生成するか、一から始めてください。",
       "generateWithFlowpilot": "Flowpilotで生成",
       "browseTemplates": "テンプレートを閲覧",
-      "addBlankNode": "空のノードを追加"
+      "addBlankNode": "空の図形を追加"
     }
   },
   "annotationNode": {
     "placeholder": "*ダブルクリックしてメモを編集*"
   },
   "connectMenu": {
-    "createNewNode": "新しいノードを作成",
-    "process": "プロセス",
-    "processDesc": "標準アクション",
-    "decision": "決定",
-    "decisionDesc": "分岐ロジック",
+    "createNewNode": "新しい図形を作成",
+    "process": "角丸図形",
+    "processDesc": "汎用ブロック",
+    "decision": "ひし形",
+    "decisionDesc": "分岐ブロック",
     "database": "データベース",
-    "databaseDesc": "データ保存",
+    "databaseDesc": "円柱図形",
     "inputOutput": "入力 / 出力",
-    "inputOutputDesc": "データフロー",
-    "note": "メモ",
+    "inputOutputDesc": "平行四辺形",
+    "note": "付箋",
     "noteDesc": "ドキュメント",
     "releaseToConnect": "接続するには離す"
   },
@@ -750,7 +767,7 @@
   },
   "propertiesPanel": {
     "stickyNote": "付箋",
-    "nodeSettings": "ノード設定",
+    "nodeSettings": "図形設定",
     "connection": "接続"
   },
   "flowCanvas": {
@@ -767,6 +784,7 @@
     "newNode": "New Node",
     "branch": "Branch",
     "processStep": "Process Step",
+    "addText": "テキストを追加",
     "group": "Group",
     "items": "items",
     "addCommentsHere": "Add your comments here.",

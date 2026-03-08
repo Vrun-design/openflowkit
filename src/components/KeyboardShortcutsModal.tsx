@@ -1,19 +1,44 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { useFlowStore } from '../store';
 import { X, Keyboard, Command, MousePointer2, Pencil } from 'lucide-react';
-import { KEYBOARD_SHORTCUTS } from '../constants';
+import { getKeyboardShortcuts, isMacLikePlatform } from '../constants';
+import { useShortcutHelpActions, useShortcutHelpOpen } from '@/store/viewHooks';
 
 export function KeyboardShortcutsModal(): React.JSX.Element | null {
     const { t } = useTranslation();
-    const { viewSettings, setShortcutsHelpOpen } = useFlowStore();
-    const { isShortcutsHelpOpen } = viewSettings;
+    const isShortcutsHelpOpen = useShortcutHelpOpen();
+    const { setShortcutsHelpOpen } = useShortcutHelpActions();
+    const closeButtonRef = useRef<HTMLButtonElement>(null);
+    const keyboardShortcuts = useMemo(
+        () => getKeyboardShortcuts(typeof navigator !== 'undefined' && isMacLikePlatform(navigator.platform || navigator.userAgent)),
+        []
+    );
+
+    useEffect(() => {
+        if (!isShortcutsHelpOpen) {
+            return undefined;
+        }
+
+        closeButtonRef.current?.focus();
+
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setShortcutsHelpOpen(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleEscape);
+        return () => window.removeEventListener('keydown', handleEscape);
+    }, [isShortcutsHelpOpen, setShortcutsHelpOpen]);
 
     if (!isShortcutsHelpOpen) return null;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="keyboard-shortcuts-title"
                 className="bg-white shadow-2xl max-w-2xl w-full border border-slate-200/60 flex flex-col overflow-hidden animate-in zoom-in duration-200"
                 style={{ borderRadius: 'var(--brand-radius, 20px)' }}
             >
@@ -31,11 +56,12 @@ export function KeyboardShortcutsModal(): React.JSX.Element | null {
                             <Keyboard className="w-5 h-5" />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold leading-none">{t('keyboardShortcutsModal.title')}</h2>
+                            <h2 id="keyboard-shortcuts-title" className="text-lg font-bold leading-none">{t('keyboardShortcutsModal.title')}</h2>
                             <p className="text-xs text-slate-500 mt-1">{t('keyboardShortcutsModal.subtitle')}</p>
                         </div>
                     </div>
                     <button
+                        ref={closeButtonRef}
                         onClick={() => setShortcutsHelpOpen(false)}
                         className="p-2 hover:bg-slate-100 rounded-full transition-all active:scale-90"
                         aria-label={t('keyboardShortcutsModal.closeAriaLabel')}
@@ -46,7 +72,7 @@ export function KeyboardShortcutsModal(): React.JSX.Element | null {
 
                 {/* Content */}
                 <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10 overflow-y-auto max-h-[70vh]">
-                    {KEYBOARD_SHORTCUTS.map((section) => (
+                    {keyboardShortcuts.map((section) => (
                         <ShortcutGroup
                             key={section.title}
                             title={section.title}
@@ -65,7 +91,7 @@ export function KeyboardShortcutsModal(): React.JSX.Element | null {
                         <Trans
                             i18nKey="keyboardShortcutsModal.proTip"
                             components={{
-                                key: <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-bold mx-1">Alt</kbd>
+                                key: <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-bold mx-1">Shift</kbd>
                             }}
                         />
                     </p>

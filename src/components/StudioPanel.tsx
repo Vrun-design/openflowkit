@@ -1,11 +1,19 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Code2, WandSparkles } from 'lucide-react';
-import { StudioCodePanel } from './StudioCodePanel';
-import { StudioAIPanel } from './StudioAIPanel';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { ChatMessage } from '@/services/aiService';
 import type { StudioCodeMode, StudioTab } from '@/hooks/useFlowEditorUIState';
 import { SidebarBody, SidebarHeader, SidebarSegmentedTabs, SidebarShell } from './SidebarShell';
+
+const LazyStudioAIPanel = lazy(async () => {
+    const module = await import('./StudioAIPanel');
+    return { default: module.StudioAIPanel };
+});
+
+const LazyStudioCodePanel = lazy(async () => {
+    const module = await import('./StudioCodePanel');
+    return { default: module.StudioCodePanel };
+});
 
 const STUDIO_TABS = [
     { id: 'ai', label: 'FlowPilot', icon: WandSparkles },
@@ -62,20 +70,24 @@ export function StudioPanel({
 
             <SidebarBody>
                 {activeTab === 'ai' ? (
-                    <StudioAIPanel
-                        onAIGenerate={onAIGenerate}
-                        isGenerating={isGenerating}
-                        chatMessages={chatMessages}
-                        onClearChat={onClearChat}
-                    />
+                    <Suspense fallback={null}>
+                        <LazyStudioAIPanel
+                            onAIGenerate={onAIGenerate}
+                            isGenerating={isGenerating}
+                            chatMessages={chatMessages}
+                            onClearChat={onClearChat}
+                        />
+                    </Suspense>
                 ) : (
-                    <StudioCodePanel
-                        nodes={nodes}
-                        edges={edges}
-                        onApply={onApply}
-                        mode={codeMode}
-                        onModeChange={onCodeModeChange}
-                    />
+                    <Suspense fallback={null}>
+                        <LazyStudioCodePanel
+                            nodes={nodes}
+                            edges={edges}
+                            onApply={onApply}
+                            mode={codeMode}
+                            onModeChange={onCodeModeChange}
+                        />
+                    </Suspense>
                 )}
             </SidebarBody>
         </SidebarShell>

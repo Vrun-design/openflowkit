@@ -8,12 +8,16 @@ type GetFlowState = () => FlowState;
 
 export function createTabActions(set: SetFlowState, get: GetFlowState): Pick<
     FlowState,
-    'setActiveTabId' | 'setTabs' | 'addTab' | 'duplicateActiveTab' | 'closeTab' | 'updateTab' | 'copySelectedToTab' | 'moveSelectedToTab'
+    'setActiveTabId' | 'setTabs' | 'addTab' | 'duplicateActiveTab' | 'duplicateTab' | 'closeTab' | 'updateTab' | 'copySelectedToTab' | 'moveSelectedToTab'
 > {
+    function nowIso(): string {
+        return new Date().toISOString();
+    }
+
     function syncActiveTabContent(tabs: FlowTab[]): FlowTab[] {
         const { activeTabId, nodes, edges } = get();
         return tabs.map((tab) =>
-            tab.id === activeTabId ? { ...tab, nodes, edges } : tab
+            tab.id === activeTabId ? { ...tab, nodes, edges, updatedAt: nowIso() } : tab
         );
     }
 
@@ -34,6 +38,7 @@ export function createTabActions(set: SetFlowState, get: GetFlowState): Pick<
                 style: edge.style ? { ...edge.style } : edge.style,
             })),
             history: { past: [], future: [] },
+            updatedAt: nowIso(),
         };
     }
 
@@ -45,7 +50,7 @@ export function createTabActions(set: SetFlowState, get: GetFlowState): Pick<
 
             const updatedTabs = tabs.map((tab) =>
                 tab.id === currentTabId
-                    ? { ...tab, nodes, edges }
+                    ? { ...tab, nodes, edges, updatedAt: nowIso() }
                     : tab
             );
 
@@ -74,6 +79,7 @@ export function createTabActions(set: SetFlowState, get: GetFlowState): Pick<
                 id: newTabId,
                 name: 'New Flow',
                 diagramType: DEFAULT_DIAGRAM_TYPE,
+                updatedAt: nowIso(),
                 nodes: [],
                 edges: [],
                 history: { past: [], future: [] },
@@ -100,6 +106,30 @@ export function createTabActions(set: SetFlowState, get: GetFlowState): Pick<
                 ...duplicated,
                 id: newTabId,
                 name: `${sourceTab.name} Copy`,
+            };
+
+            set({
+                tabs: [...syncedTabs, newTab],
+                activeTabId: newTabId,
+                nodes: newTab.nodes,
+                edges: newTab.edges,
+            });
+            return newTabId;
+        },
+
+        duplicateTab: (id) => {
+            const { tabs, activeTabId } = get();
+            const syncedTabs = syncActiveTabContent(tabs);
+            const sourceTab = syncedTabs.find((tab) => tab.id === id);
+            if (!sourceTab) return null;
+
+            const newTabId = createId('tab');
+            const duplicated = cloneTabContent(sourceTab);
+            const newTab: FlowTab = {
+                ...duplicated,
+                id: newTabId,
+                name: `${sourceTab.name} Copy`,
+                updatedAt: nowIso(),
             };
 
             set({
@@ -138,7 +168,7 @@ export function createTabActions(set: SetFlowState, get: GetFlowState): Pick<
 
         updateTab: (id, updates) => {
             set((state) => ({
-                tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, ...updates } : tab)),
+                tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, ...updates, updatedAt: nowIso() } : tab)),
             }));
         },
 

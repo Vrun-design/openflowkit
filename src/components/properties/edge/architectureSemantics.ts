@@ -1,5 +1,6 @@
 import { MarkerType } from '@/lib/reactflowCompat';
 import type { Edge, EdgeMarkerType } from '@/lib/reactflowCompat';
+import { handleIdToSide } from '@/lib/nodeHandles';
 
 export type ArchitectureEdgeSide = 'L' | 'R' | 'T' | 'B';
 export type ArchitectureEdgeDirection = '-->' | '<--' | '<-->';
@@ -36,12 +37,11 @@ export function architectureSideToHandleId(side: ArchitectureEdgeSide | undefine
 }
 
 export function handleIdToArchitectureSide(handleId: string | undefined): ArchitectureEdgeSide | undefined {
-  if (!handleId) return undefined;
-  const normalized = handleId.trim().toLowerCase();
-  if (normalized === 'left') return 'L';
-  if (normalized === 'right') return 'R';
-  if (normalized === 'top') return 'T';
-  if (normalized === 'bottom') return 'B';
+  const side = handleIdToSide(handleId);
+  if (side === 'left') return 'L';
+  if (side === 'right') return 'R';
+  if (side === 'top') return 'T';
+  if (side === 'bottom') return 'B';
   return undefined;
 }
 

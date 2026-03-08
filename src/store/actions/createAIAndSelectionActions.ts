@@ -4,7 +4,13 @@ type SetFlowState = (partial: Partial<FlowState> | ((state: FlowState) => Partia
 
 export function createAIAndSelectionActions(set: SetFlowState): Pick<
     FlowState,
-    'setAISettings' | 'setSelectedNodeId' | 'setSelectedEdgeId' | 'setMermaidDiagnostics' | 'clearMermaidDiagnostics'
+    | 'setAISettings'
+    | 'setSelectedNodeId'
+    | 'setSelectedEdgeId'
+    | 'queuePendingNodeLabelEditRequest'
+    | 'clearPendingNodeLabelEditRequest'
+    | 'setMermaidDiagnostics'
+    | 'clearMermaidDiagnostics'
 > {
     return {
         setAISettings: (settings) => set((state) => ({
@@ -13,6 +19,8 @@ export function createAIAndSelectionActions(set: SetFlowState): Pick<
 
         setSelectedNodeId: (id) => set({ selectedNodeId: id }),
         setSelectedEdgeId: (id) => set({ selectedEdgeId: id }),
+        queuePendingNodeLabelEditRequest: (request) => set({ pendingNodeLabelEditRequest: request }),
+        clearPendingNodeLabelEditRequest: () => set({ pendingNodeLabelEditRequest: null }),
         setMermaidDiagnostics: (snapshot) => set({ mermaidDiagnostics: snapshot }),
         clearMermaidDiagnostics: () => set({ mermaidDiagnostics: null }),
     };

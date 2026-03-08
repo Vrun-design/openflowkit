@@ -21,6 +21,10 @@ describe('MINDMAP_PLUGIN', () => {
     expect(result.nodes[0].data.label).toBe('Roadmap');
     expect(result.nodes[0].type).toBe('mindmap');
     expect(result.nodes.some((node) => node.data.label === 'Mermaid')).toBe(true);
+    const productNode = result.nodes.find((node) => node.data.label === 'Product');
+    const canvasNode = result.nodes.find((node) => node.data.label === 'Canvas');
+    expect(productNode?.data.mindmapParentId).toBe(result.nodes[0].id);
+    expect(canvasNode?.data.mindmapParentId).toBe(productNode?.id);
   });
 
   it('balances parent y-position between children', () => {

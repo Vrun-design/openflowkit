@@ -7,21 +7,34 @@ import { assignSmartHandlesWithOptions, getSmartRoutingOptionsFromViewSettings }
 import { useTranslation } from 'react-i18next';
 import { trackEvent } from '../lib/analytics';
 import { createId } from '../lib/id';
-import { createDefaultEdge } from '@/constants';
+import { createDefaultEdge, createMindmapEdge } from '@/constants';
+import { releaseStaleElkRoutesForNodeIds } from '@/lib/releaseStaleElkRoutes';
+import { reconcileMindmapDrop, relayoutMindmapComponent, resolveMindmapBranchStyleForNode, syncMindmapEdges } from '@/lib/mindmapLayout';
 import {
     applySectionParenting,
+    createArchitectureServiceNode,
+    createMindmapTopicNode,
     createSectionNode,
     getDefaultNodePosition,
+    getAbsoluteNodePosition,
+    reassignArchitectureNodeBoundary,
 } from './node-operations/utils';
 import { getDragStopReconcileDelayMs } from './node-operations/dragStopReconcilePolicy';
 import { useNodeOperationAdders } from './node-operations/useNodeOperationAdders';
 import { requestNodeLabelEdit } from './nodeLabelEditRequest';
+import { resolveMindmapChildSide } from '@/lib/connectCreationPolicy';
+import type { MindmapTopicSide } from './mindmapTopicActionRequest';
 
 export const useNodeOperations = (recordHistory: () => void) => {
     const { t } = useTranslation();
     const { nodes, setNodes, setEdges, setSelectedNodeId } = useFlowStore();
     const { screenToFlowPosition } = useReactFlow();
     const dragStopReconcileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const altDragDuplicateRef = useRef<{
+        originalNodeId: string;
+        duplicateNodeId: string;
+        originalPosition: FlowNode['position'];
+    } | null>(null);
 
     useEffect(() => {
         return () => {
@@ -31,100 +44,37 @@ export const useNodeOperations = (recordHistory: () => void) => {
         };
     }, []);
 
-    const getAbsolutePosition = useCallback((node: FlowNode, allNodes: FlowNode[]): { x: number; y: number } => {
-        let absoluteX = node.position.x;
-        let absoluteY = node.position.y;
-        let currentParentId = getNodeParentId(node);
-
-        while (currentParentId) {
-            const parentNode = allNodes.find((candidate) => candidate.id === currentParentId);
-            if (!parentNode) {
-                break;
-            }
-            absoluteX += parentNode.position.x;
-            absoluteY += parentNode.position.y;
-            currentParentId = getNodeParentId(parentNode);
-        }
-
-        return { x: absoluteX, y: absoluteY };
-    }, []);
-
     // --- Node Data Updates ---
     const updateNodeData = useCallback((id: string, data: Partial<NodeData>) => {
-        setNodes((nds) => {
-            const targetNode = nds.find((node) => node.id === id);
-            if (!targetNode) {
-                return nds;
-            }
+        const state = useFlowStore.getState();
+        const existingNode = state.nodes.find((node) => node.id === id);
+        if (!existingNode) {
+            return;
+        }
 
-            const rawBoundaryId = data.archBoundaryId;
-            const hasBoundaryUpdate = typeof rawBoundaryId === 'string';
-            if (targetNode.type !== 'architecture' || !hasBoundaryUpdate) {
-                return nds.map((node) => (
+        if (existingNode.type === 'mindmap' && typeof data.mindmapBranchStyle === 'string') {
+            const nextNodes = relayoutMindmapComponent(
+                state.nodes.map((node) => (
                     node.id === id
                         ? { ...node, data: { ...node.data, ...data } }
                         : node
-                ));
-            }
-
-            const requestedBoundaryId = rawBoundaryId.trim();
-            const absolutePosition = getAbsolutePosition(targetNode, nds);
-
-            if (requestedBoundaryId.length === 0) {
-                return nds.map((node) => {
-                    if (node.id !== id) {
-                        return node;
-                    }
-                    const nextNode = {
-                        ...node,
-                        position: absolutePosition,
-                        data: {
-                            ...node.data,
-                            ...data,
-                            archBoundaryId: '',
-                        },
-                    } as FlowNode;
-                    return clearNodeParent(nextNode);
-                });
-            }
-
-            const boundaryNode = nds.find(
-                (node) => node.id === requestedBoundaryId && node.type === 'section'
+                )),
+                state.edges,
+                id
             );
-            if (!boundaryNode) {
-                return nds.map((node) => (
-                    node.id === id
-                        ? {
-                            ...node,
-                            data: {
-                                ...node.data,
-                                ...data,
-                            },
-                        }
-                        : node
-                ));
-            }
+            setNodes(() => nextNodes);
+            setEdges((existingEdges) => syncMindmapEdges(nextNodes, existingEdges));
+            return;
+        }
 
-            return nds.map((node) => {
-                if (node.id !== id) {
-                    return node;
-                }
-
-                return setNodeParent({
-                    ...node,
-                    position: {
-                        x: absolutePosition.x - boundaryNode.position.x,
-                        y: absolutePosition.y - boundaryNode.position.y,
-                    },
-                    data: {
-                        ...node.data,
-                        ...data,
-                        archBoundaryId: boundaryNode.id,
-                    },
-                }, boundaryNode.id);
+        setNodes((nds) => {
+            return reassignArchitectureNodeBoundary({
+                nodes: nds,
+                nodeId: id,
+                data,
             });
         });
-    }, [getAbsolutePosition, setNodes]);
+    }, [setEdges, setNodes]);
 
     const applyBulkNodeData = useCallback((updates: Partial<NodeData>, labelPrefix = '', labelSuffix = '') => {
         const hasFieldUpdates = Object.keys(updates).length > 0;
@@ -208,12 +158,17 @@ export const useNodeOperations = (recordHistory: () => void) => {
 
     // --- Add Nodes ---
     const {
+        handleAddShape,
         handleAddNode,
         handleAddAnnotation,
         handleAddJourneyNode,
+        handleAddMindmapNode,
+        handleAddArchitectureNode,
         handleAddSection,
         handleAddTextNode,
         handleAddImage,
+        handleAddWireframe,
+        handleAddDomainLibraryItem,
     } = useNodeOperationAdders({
         recordHistory,
         nodesLength: nodes.length,
@@ -221,57 +176,87 @@ export const useNodeOperations = (recordHistory: () => void) => {
         setSelectedNodeId,
     });
 
-    const handleAddMindmapChild = useCallback((parentId: string): boolean => {
+    const insertMindmapTopic = useCallback((
+        sourceNodeId: string,
+        relationship: 'child' | 'sibling',
+        preferredSideOverride: MindmapTopicSide = null
+    ): boolean => {
         const state = useFlowStore.getState();
+        const sourceNode = state.nodes.find((node) => node.id === sourceNodeId);
+        if (!sourceNode || sourceNode.type !== 'mindmap') {
+            return false;
+        }
+
+        const parentId = relationship === 'child' ? sourceNode.id : sourceNode.data?.mindmapParentId;
+        if (!parentId) {
+            return false;
+        }
+
         const parentNode = state.nodes.find((node) => node.id === parentId);
         if (!parentNode || parentNode.type !== 'mindmap') {
             return false;
         }
 
+        const sourceDepth = typeof sourceNode.data?.mindmapDepth === 'number' ? sourceNode.data.mindmapDepth : 0;
         const parentDepth = typeof parentNode.data?.mindmapDepth === 'number' ? parentNode.data.mindmapDepth : 0;
-        const childDepth = parentDepth + 1;
-        const siblingEdges = state.edges.filter((edge) => edge.source === parentId);
         const id = createId('mm');
-        const yOffset = siblingEdges.length === 0 ? 0 : siblingEdges.length * 110;
         const { activeLayerId, viewSettings } = state;
+        const inheritedSide = sourceNode.data?.mindmapSide === 'left' || sourceNode.data?.mindmapSide === 'right'
+            ? sourceNode.data.mindmapSide
+            : parentNode.data?.mindmapSide;
+        const preferredSide = preferredSideOverride ?? resolveMindmapChildSide(parentDepth, inheritedSide, null);
+        const branchStyle = resolveMindmapBranchStyleForNode(parentNode.id, state.nodes);
 
-        const newNode: FlowNode = {
+        const newNode = createMindmapTopicNode({
             id,
-            type: 'mindmap',
             position: {
-                x: parentNode.position.x + 260,
-                y: parentNode.position.y + yOffset,
+                x: sourceNode.position.x + 260,
+                y: sourceNode.position.y,
             },
-            data: {
-                label: t('nodes.newNode'),
-                color: 'slate',
-                shape: 'rectangle',
-                mindmapDepth: childDepth,
-                layerId: activeLayerId,
-            },
-            selected: true,
-        };
+            depth: relationship === 'child' ? sourceDepth + 1 : parentDepth + 1,
+            parentId: parentNode.id,
+            side: preferredSide,
+            branchStyle,
+            layerId: activeLayerId,
+        });
+        const insertedEdge = createMindmapEdge(parentNode, newNode, undefined, undefined, branchStyle);
+        const nextNodes = relayoutMindmapComponent(
+            [
+                ...state.nodes.map((node) => ({ ...node, selected: false })),
+                newNode,
+            ],
+            state.edges.concat(insertedEdge),
+            sourceNode.id
+        );
 
         recordHistory();
-        setNodes((existingNodes) => [
-            ...existingNodes.map((node) => ({ ...node, selected: false })),
-            newNode,
-        ]);
+        setNodes(() => nextNodes);
         setEdges((existingEdges) => {
-            const insertedEdges = existingEdges.concat(createDefaultEdge(parentId, id));
-            if (!viewSettings.smartRoutingEnabled) {
-                return insertedEdges;
-            }
+                const insertedEdges = syncMindmapEdges(nextNodes, existingEdges.concat(insertedEdge));
+                if (!viewSettings.smartRoutingEnabled) {
+                    return insertedEdges;
+                }
             return assignSmartHandlesWithOptions(
-                useFlowStore.getState().nodes.concat(newNode),
+                nextNodes,
                 insertedEdges,
                 getSmartRoutingOptionsFromViewSettings(viewSettings)
             );
         });
         setSelectedNodeId(id);
-        trackEvent('add_node', { node_type: 'mindmap_child' });
+        requestNodeLabelEdit(id, { replaceExisting: true });
+        trackEvent('add_node', {
+            node_type: relationship === 'child' ? 'mindmap_child' : 'mindmap_sibling',
+        });
         return true;
-    }, [recordHistory, setNodes, setEdges, setSelectedNodeId, t]);
+    }, [recordHistory, setEdges, setNodes, setSelectedNodeId]);
+
+    const handleAddMindmapChild = useCallback((parentId: string, preferredSide: MindmapTopicSide = null): boolean => {
+        return insertMindmapTopic(parentId, 'child', preferredSide);
+    }, [insertMindmapTopic]);
+
+    const handleAddMindmapSibling = useCallback((nodeId: string): boolean => {
+        return insertMindmapTopic(nodeId, 'sibling');
+    }, [insertMindmapTopic]);
 
     const handleAddArchitectureService = useCallback((sourceId: string): boolean => {
         const state = useFlowStore.getState();
@@ -287,28 +272,15 @@ export const useNodeOperations = (recordHistory: () => void) => {
         );
         const yOffset = sameBoundaryNodes.length * 90;
 
-        const newNode: FlowNode = {
+        const newNode = createArchitectureServiceNode({
             id,
-            type: 'architecture',
             position: {
                 x: sourceNode.position.x + 260,
                 y: sourceNode.position.y + yOffset,
             },
-            data: {
-                label: 'New Service',
-                color: 'slate',
-                shape: 'rectangle',
-                icon: 'Server',
-                archProvider: sourceNode.data?.archProvider || 'custom',
-                archResourceType: 'service',
-                archEnvironment: sourceNode.data?.archEnvironment || 'default',
-                archBoundaryId: sourceNode.data?.archBoundaryId,
-                archZone: sourceNode.data?.archZone,
-                archTrustDomain: sourceNode.data?.archTrustDomain,
-                layerId: activeLayerId,
-            },
-            selected: true,
-        };
+            sourceNode,
+            layerId: activeLayerId,
+        });
 
         recordHistory();
         setNodes((existingNodes) => [
@@ -337,7 +309,7 @@ export const useNodeOperations = (recordHistory: () => void) => {
         if (!sourceNode || sourceNode.type !== 'architecture') {
             return false;
         }
-        const sourceAbsolutePosition = getAbsolutePosition(sourceNode, state.nodes);
+        const sourceAbsolutePosition = getAbsoluteNodePosition(sourceNode, state.nodes);
 
         const boundaryId = createId('section');
         const { activeLayerId } = state;
@@ -379,7 +351,7 @@ export const useNodeOperations = (recordHistory: () => void) => {
         setSelectedNodeId(sourceId);
         trackEvent('add_node', { node_type: 'architecture_boundary' });
         return true;
-    }, [getAbsolutePosition, recordHistory, setNodes, setSelectedNodeId]);
+    }, [recordHistory, setNodes, setSelectedNodeId]);
 
     // --- Drag Operations ---
     const onNodeDragStart = useCallback((event: React.MouseEvent, node: FlowNode) => {
@@ -391,44 +363,107 @@ export const useNodeOperations = (recordHistory: () => void) => {
             const newNode: FlowNode = {
                 ...node,
                 id: newNodeId,
-                selected: false, // The static clone should not be selected
-                position: { ...node.position }, // Clone executes at START position
-                // We might want to reset zIndex or ensure it's correct?
-                zIndex: (node.zIndex || 0) - 1, // Put clone slightly behind?
+                selected: true,
+                position: { ...node.position },
+                zIndex: (node.zIndex || 0) + 1,
             };
 
-            // Add the CLONE (which stays behind)
-            setNodes((nds) => nds.concat(newNode));
-
-            // The user continues dragging the ORIGINAL 'node'.
+            altDragDuplicateRef.current = {
+                originalNodeId: node.id,
+                duplicateNodeId: newNodeId,
+                originalPosition: { ...node.position },
+            };
+            setNodes((nds) => [
+                ...nds.map((existingNode) => ({
+                    ...existingNode,
+                    selected: existingNode.id === newNodeId ? true : existingNode.id === node.id ? false : existingNode.selected,
+                })),
+                newNode,
+            ]);
+            setSelectedNodeId(newNodeId);
         }
-    }, [recordHistory, setNodes]);
+    }, [recordHistory, setNodes, setSelectedNodeId]);
 
-    const onNodeDrag = useCallback((_event: React.MouseEvent, _node: FlowNode, _draggedNodes: FlowNode[]) => {
+    const onNodeDrag = useCallback((_event: React.MouseEvent, draggedNode: FlowNode, _draggedNodes: FlowNode[]) => {
+        const altDragDuplicate = altDragDuplicateRef.current;
+        if (altDragDuplicate && altDragDuplicate.originalNodeId === draggedNode.id) {
+            setNodes((currentNodes) => currentNodes.map((node) => {
+                if (node.id === altDragDuplicate.originalNodeId) {
+                    return {
+                        ...node,
+                        position: { ...altDragDuplicate.originalPosition },
+                        selected: false,
+                    };
+                }
+
+                if (node.id === altDragDuplicate.duplicateNodeId) {
+                    return {
+                        ...node,
+                        position: { ...draggedNode.position },
+                        selected: true,
+                    };
+                }
+
+                return node;
+            }));
+            setSelectedNodeId(altDragDuplicate.duplicateNodeId);
+        }
+
         // Intentionally no smart-routing work during active drag to protect frame budget.
         // Full reconciliation still runs on drag stop via `onNodeDragStop`.
-    }, []);
+    }, [setNodes, setSelectedNodeId]);
 
     const onNodeDragStop = useCallback((_event: React.MouseEvent, draggedNode: FlowNode) => {
+        const altDragDuplicate = altDragDuplicateRef.current;
+        const effectiveDraggedNode = altDragDuplicate && altDragDuplicate.originalNodeId === draggedNode.id
+            ? useFlowStore.getState().nodes.find((node) => node.id === altDragDuplicate.duplicateNodeId) ?? draggedNode
+            : draggedNode;
+        altDragDuplicateRef.current = null;
+
         const { nodes: currentNodes } = useFlowStore.getState();
-        const parentedNodes = applySectionParenting(currentNodes, draggedNode);
-        if (parentedNodes !== currentNodes) {
+        const parentedNodes = applySectionParenting(currentNodes, effectiveDraggedNode);
+        let reconciledNodes = parentedNodes;
+        let currentEdges = useFlowStore.getState().edges;
+
+        if (effectiveDraggedNode.type === 'mindmap') {
+            const mindmapDropResult = reconcileMindmapDrop(parentedNodes, currentEdges, effectiveDraggedNode.id);
+            if (mindmapDropResult.changed) {
+                reconciledNodes = mindmapDropResult.nodes;
+                currentEdges = mindmapDropResult.edges;
+                setNodes(reconciledNodes);
+                setEdges(currentEdges);
+            } else if (parentedNodes !== currentNodes) {
+                setNodes(parentedNodes);
+            }
+        } else if (parentedNodes !== currentNodes) {
             setNodes(parentedNodes);
         }
 
         const runReconcile = () => {
             const { nodes: latestNodes, edges: latestEdges, setEdges: setLatestEdges, viewSettings } = useFlowStore.getState();
-            if (!viewSettings.smartRoutingEnabled) return;
+            const movedNodeIds = new Set(
+                latestNodes.filter((node) => node.selected).map((node) => node.id)
+            );
+            if (effectiveDraggedNode.id) {
+                movedNodeIds.add(effectiveDraggedNode.id);
+            }
+
+            const releasedEdges = releaseStaleElkRoutesForNodeIds(latestEdges, movedNodeIds);
+            if (!viewSettings.smartRoutingEnabled) {
+                if (releasedEdges !== latestEdges) {
+                    setLatestEdges(releasedEdges);
+                }
+                return;
+            }
             const smartEdges = assignSmartHandlesWithOptions(
                 latestNodes,
-                latestEdges,
+                releasedEdges,
                 getSmartRoutingOptionsFromViewSettings(viewSettings)
             );
             setLatestEdges(smartEdges);
         };
 
-        const { edges } = useFlowStore.getState();
-        const delayMs = getDragStopReconcileDelayMs(parentedNodes.length, edges.length);
+        const delayMs = getDragStopReconcileDelayMs(reconciledNodes.length, currentEdges.length);
         if (delayMs === 0) {
             if (dragStopReconcileTimerRef.current !== null) {
                 clearTimeout(dragStopReconcileTimerRef.current);
@@ -446,7 +481,7 @@ export const useNodeOperations = (recordHistory: () => void) => {
             runReconcile();
         }, delayMs);
 
-    }, [setNodes]);
+    }, [setEdges, setNodes]);
 
     const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: FlowNode) => {
         setSelectedNodeId(node.id);
@@ -461,13 +496,19 @@ export const useNodeOperations = (recordHistory: () => void) => {
         updateNodeZIndex,
         deleteNode,
         duplicateNode,
+        handleAddShape,
         handleAddNode,
         handleAddAnnotation,
         handleAddJourneyNode,
+        handleAddMindmapNode,
+        handleAddArchitectureNode,
         handleAddSection,
         handleAddTextNode,
         handleAddImage,
+        handleAddWireframe,
+        handleAddDomainLibraryItem,
         handleAddMindmapChild,
+        handleAddMindmapSibling,
         handleAddArchitectureService,
         handleCreateArchitectureBoundary,
         onNodeDragStart,

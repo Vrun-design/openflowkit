@@ -4,10 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFlowEditorActions } from './useFlowEditorActions';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import { getOpenFlowDSLExportDiagnostics, toOpenFlowDSL } from '@/services/openFlowDSLExporter';
+import { getElkLayout } from '@/services/elkLayout';
 
 vi.mock('@/services/openFlowDSLExporter', () => ({
     toOpenFlowDSL: vi.fn(() => 'mock-dsl'),
     getOpenFlowDSLExportDiagnostics: vi.fn(() => []),
+}));
+
+vi.mock('@/services/elkLayout', () => ({
+    getElkLayout: vi.fn(async (nodes: FlowNode[], edges: FlowEdge[]) => ({ nodes, edges })),
 }));
 
 vi.mock('@/services/figmaExportService', () => ({
@@ -128,5 +133,49 @@ describe('useFlowEditorActions', () => {
         });
 
         expect(addToast).toHaveBeenCalledWith('1 skipped', 'warning');
+    });
+
+    it('uses mindmap relayout instead of ELK when auto-layouting a mindmap tab', async () => {
+        const setNodes = vi.fn();
+        const setEdges = vi.fn();
+        const fitView = vi.fn();
+
+        const root: FlowNode = {
+            id: 'mind-root',
+            type: 'mindmap',
+            position: { x: 100, y: 100 },
+            data: { label: 'Root', mindmapBranchStyle: 'curved' },
+        };
+        const child: FlowNode = {
+            id: 'mind-child',
+            type: 'mindmap',
+            position: { x: 400, y: 400 },
+            data: { label: 'Child', mindmapParentId: 'mind-root', mindmapSide: 'right', mindmapDepth: 1 },
+        };
+        const edge: FlowEdge = { id: 'edge-1', source: 'mind-root', target: 'mind-child' };
+
+        const { result } = renderHook(() =>
+            useFlowEditorActions({
+                nodes: [root, child],
+                edges: [edge],
+                recordHistory: vi.fn(),
+                setNodes,
+                setEdges,
+                fitView,
+                t: createTranslator((key: string) => key),
+                addToast: vi.fn(),
+                exportSerializationMode: 'deterministic',
+            })
+        );
+
+        await act(async () => {
+            await result.current.onLayout('TB', 'layered', 'normal', 'mindmap');
+        });
+
+        expect(getElkLayout).not.toHaveBeenCalled();
+        expect(setNodes).toHaveBeenCalledTimes(1);
+        expect(setEdges).toHaveBeenCalledTimes(1);
+        const layoutedNodes = setNodes.mock.calls[0][0] as FlowNode[];
+        expect(layoutedNodes.find((node) => node.id === 'mind-child')?.position.x).not.toBe(400);
     });
 });

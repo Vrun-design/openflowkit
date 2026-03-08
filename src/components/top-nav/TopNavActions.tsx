@@ -1,16 +1,28 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Play, Share2 } from 'lucide-react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { ExportMenu } from '@/components/ExportMenu';
 import { Tooltip } from '@/components/Tooltip';
 import { Button } from '@/components/ui/Button';
-import { ShareModal } from '@/components/ShareModal';
+
+const LazyShareModal = lazy(async () => {
+    const module = await import('@/components/ShareModal');
+    return { default: module.ShareModal };
+});
 
 interface CollaborationState {
     roomId: string;
     viewerCount: number;
     status: 'realtime' | 'waiting' | 'fallback';
-    onCopyInvite: () => void;
+    cacheState: 'unavailable' | 'syncing' | 'ready' | 'hydrated';
+    participants: Array<{
+        clientId: string;
+        name: string;
+        color: string;
+        isLocal: boolean;
+    }>;
+    onCopyShareLink: () => void;
 }
 
 interface TopNavActionsProps {
@@ -25,18 +37,44 @@ interface TopNavActionsProps {
     isBeveled: boolean;
 }
 
-function getAvatarInitial(index: number): string {
-    return String.fromCharCode(65 + index);
+function getAvatarInitial(name: string): string {
+    const trimmedName = name.replace(/\(You\)$/u, '').trim();
+    if (!trimmedName) {
+        return '?';
+    }
+
+    const parts = trimmedName.split(/\s+/u).filter(Boolean);
+    if (parts.length === 1) {
+        return parts[0].slice(0, 2).toUpperCase();
+    }
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
 }
 
-function getCollaborationStatusLabel(status: CollaborationState['status']): string {
+function getCollaborationStatusLabel(
+    status: CollaborationState['status'],
+    cacheState: CollaborationState['cacheState'],
+    t: TFunction<'translation', undefined>
+): string {
+    const cacheLabel = (() => {
+        switch (cacheState) {
+            case 'syncing':
+                return t('share.status.cache.syncing', { defaultValue: ' local cache syncing' });
+            case 'ready':
+                return t('share.status.cache.ready', { defaultValue: ' local cache ready' });
+            case 'hydrated':
+                return t('share.status.cache.hydrated', { defaultValue: ' restored from local cache' });
+            default:
+                return '';
+        }
+    })();
+
     switch (status) {
         case 'realtime':
-            return 'Realtime Beta';
+            return `${t('share.status.realtime', { defaultValue: 'Realtime peer sync' })}${cacheLabel}`;
         case 'waiting':
-            return 'Connecting...';
+            return `${t('share.status.waiting', { defaultValue: 'Connecting to realtime sync' })}${cacheLabel}`;
         default:
-            return 'Fallback mode';
+            return `${t('share.status.fallback', { defaultValue: 'Local-only mode' })}${cacheLabel}`;
     }
 }
 
@@ -66,6 +104,7 @@ export function TopNavActions({
     const [isShareModalOpen, setIsShareModalOpen] = React.useState(false);
     const viewerCount = collaboration?.viewerCount ?? 1;
     const visibleViewerCount = Math.min(viewerCount, 4);
+    const visibleParticipants = collaboration?.participants.slice(0, visibleViewerCount) ?? [];
 
     return (
         <div className="flex items-center gap-3 min-w-[240px] justify-end">
@@ -73,16 +112,21 @@ export function TopNavActions({
                 {collaboration && (
                     <div className="flex items-center gap-2 mr-1 border-r border-slate-200/60 pr-3">
                         {/* Status Indicator */}
-                        <Tooltip text={getCollaborationStatusLabel(collaboration.status)} side="bottom">
+                        <Tooltip text={getCollaborationStatusLabel(collaboration.status, collaboration.cacheState, t)} side="bottom">
                             <div className={`w-2 h-2 rounded-full ${getCollaborationStatusDotClass(collaboration.status)}`} />
                         </Tooltip>
 
                         {/* Avatars */}
                         <div className="flex -space-x-2 overflow-hidden px-1">
-                            {Array.from({ length: visibleViewerCount }).map((_, i) => (
-                                <div key={i} className="inline-flex h-8 w-8 rounded-full ring-2 ring-white bg-gradient-to-br from-[var(--brand-primary-400)] to-[var(--brand-primary-600)] flex items-center justify-center text-white text-[11px] font-bold shadow-sm">
-                                    {getAvatarInitial(i)}
-                                </div>
+                            {visibleParticipants.map((participant) => (
+                                <Tooltip key={participant.clientId} text={participant.name} side="bottom">
+                                    <div
+                                        className="inline-flex h-8 w-8 rounded-full ring-2 ring-white flex items-center justify-center text-white text-[10px] font-bold shadow-sm"
+                                        style={{ backgroundColor: participant.color }}
+                                    >
+                                        {getAvatarInitial(participant.name)}
+                                    </div>
+                                </Tooltip>
                             ))}
                             {viewerCount > 4 && (
                                 <div className="inline-flex h-8 w-8 rounded-full ring-2 ring-white bg-slate-100 flex items-center justify-center text-slate-600 text-[10px] font-bold shadow-sm">
@@ -91,7 +135,7 @@ export function TopNavActions({
                             )}
                         </div>
 
-                        <Tooltip text="Share Dialog" side="bottom">
+                        <Tooltip text={t('share.openDialog', 'Share dialog')} side="bottom">
                             <Button
                                 variant="icon"
                                 size="icon"
@@ -128,14 +172,19 @@ export function TopNavActions({
                 />
             </div>
 
-            {collaboration && (
-                <ShareModal
-                    isOpen={isShareModalOpen}
-                    onClose={() => setIsShareModalOpen(false)}
-                    onCopyInvite={collaboration.onCopyInvite}
-                    roomId={collaboration.roomId}
-                />
-            )}
+            {collaboration && isShareModalOpen ? (
+                <Suspense fallback={null}>
+                    <LazyShareModal
+                        isOpen={isShareModalOpen}
+                        onClose={() => setIsShareModalOpen(false)}
+                        onCopyInvite={collaboration.onCopyShareLink}
+                        roomId={collaboration.roomId}
+                        cacheState={collaboration.cacheState}
+                        status={collaboration.status}
+                        viewerCount={viewerCount}
+                    />
+                </Suspense>
+            ) : null}
         </div>
     );
 }

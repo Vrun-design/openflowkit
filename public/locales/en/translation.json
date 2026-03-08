@@ -289,6 +289,8 @@
     "shortcuts": "for shortcuts",
     "privacy": "Your diagrams, API keys, and data stay locally on your device.",
     "analytics": "We only count anonymous page visits.",
+    "analyticsTitle": "Help improve OpenFlowKit",
+    "analyticsDesc": "Share anonymous basic usage data (optional)",
     "features": {
       "beautifulByDefault": "Beautiful by default",
       "automatedLayouts": "Automated layouts and professional themes.",
@@ -455,7 +457,7 @@
       },
       "dslSyntax": {
         "title": "DSL Syntax",
-        "description": "Show me an example of the FlowMind DSL.",
+        "description": "Show me an example of the OpenFlowKit DSL.",
         "icon": "{}"
       }
     }

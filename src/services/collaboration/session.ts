@@ -5,6 +5,7 @@ import type { CollaborationPresenceState, CollaborationRoomConfig } from './type
 
 interface CollaborationSessionParams {
   roomId: string;
+  roomPassword: string;
   clientId: string;
   name: string;
   color: string;
@@ -34,7 +35,7 @@ export function createCollaborationSessionBootstrap(
 ): CollaborationSessionBootstrap {
   return {
     enabled: ROLLOUT_FLAGS.collaborationV1,
-    room: createCollaborationRoomConfig(params.roomId, params.clientId),
+    room: createCollaborationRoomConfig(params.roomId, params.clientId, params.roomPassword),
     localPresence: createLocalPresence(params.clientId, params.name, params.color),
   };
 }
@@ -60,4 +61,13 @@ export function mergePresenceSnapshot(
     byClientId.set(presence.clientId, presence);
   }
   return Array.from(byClientId.values()).sort((a, b) => a.clientId.localeCompare(b.clientId));
+}
+
+export function replacePresenceSnapshot(
+  current: CollaborationPresenceState[],
+  incoming: CollaborationPresenceState[],
+  localPresence?: CollaborationPresenceState | null
+): CollaborationPresenceState[] {
+  const nextPresence = localPresence ? incoming.concat(localPresence) : incoming;
+  return mergePresenceSnapshot([], nextPresence);
 }

@@ -1,14 +1,17 @@
 import { useCallback } from 'react';
 import type { FlowEdge, FlowNode } from '@/lib/types';
-import { useFlowStore } from '../store';
 import { createId } from '../lib/id';
 import { clearNodeParent } from '@/lib/nodeParent';
 import { readLocalStorageString, writeLocalStorageJson } from '@/services/storage/uiLocalStorage';
+import { useCanvasActions, useCanvasState } from '@/store/canvasHooks';
+import { useSelectionActions } from '@/store/selectionHooks';
 
 const CLIPBOARD_STORAGE_KEY = 'flowmind-clipboard';
 
 export const useClipboardOperations = (recordHistory: () => void) => {
-    const { nodes, edges, setNodes, setEdges, setSelectedNodeId } = useFlowStore();
+    const { nodes, edges } = useCanvasState();
+    const { setNodes, setEdges } = useCanvasActions();
+    const { setSelectedNodeId } = useSelectionActions();
 
     const copySelection = useCallback(() => {
         const selectedNodes = nodes.filter((n) => n.selected);

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useFlowStore } from '@/store';
 import type { CommandItem, CommandBarProps } from './types';
+import { AssetsIcon } from '../icons/AssetsIcon';
 
 interface UseCommandBarCommandsParams {
     settings?: CommandBarProps['settings'];
@@ -57,12 +58,12 @@ export function useCommandBarCommands({
                 action: onOpenStudioMermaid,
             },
             {
-                id: 'wireframes',
-                label: 'Add to Canvas',
-                icon: <Compass className="w-4 h-4 text-violet-500" />,
+                id: 'assets',
+                label: 'Assets',
+                icon: <AssetsIcon className="w-4 h-4 text-[var(--brand-primary)]" />,
                 type: 'navigation',
-                view: 'wireframes',
-                description: 'Browser screens, mobile screens, and canvas primitives',
+                view: 'assets',
+                description: 'Wireframes, notes, sections, and media',
             },
             {
                 id: 'search-nodes',

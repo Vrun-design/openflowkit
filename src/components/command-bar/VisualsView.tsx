@@ -2,6 +2,8 @@ import type { ReactElement } from 'react';
 import { Activity, Grid, Network, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFlowStore } from '../../store';
+import { useBrandButtonStyle } from '@/store/brandHooks';
+import { useViewSettings, useVisualSettingsActions } from '@/store/viewHooks';
 import { ViewHeader } from './ViewHeader';
 import type { GlobalEdgeOptions } from '@/lib/types';
 
@@ -21,17 +23,16 @@ interface ExportModeOption {
 
 export function VisualsView({ onBack }: VisualsViewProps): ReactElement {
     const { t } = useTranslation();
+    const globalEdgeOptions = useFlowStore((state) => state.globalEdgeOptions);
+    const viewSettings = useViewSettings();
     const {
-        globalEdgeOptions,
         setGlobalEdgeOptions,
-        viewSettings,
         setViewSettings,
         setDefaultIconsEnabled,
         setSmartRoutingEnabled,
         setLargeGraphSafetyMode,
-        brandConfig
-    } = useFlowStore();
-    const isBeveled = brandConfig.ui.buttonStyle === 'beveled';
+    } = useVisualSettingsActions();
+    const isBeveled = useBrandButtonStyle() === 'beveled';
     const edgeStyleOptions: Array<{
         type: GlobalEdgeOptions['type'];
         label: string;

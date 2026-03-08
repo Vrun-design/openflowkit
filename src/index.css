@@ -289,6 +289,15 @@ body {
   opacity: 0.9;
 }
 
+.flow-lod-low .flow-lod-secondary:not(.flow-lod-preserve) {
+  opacity: 0.38;
+}
+
+.flow-lod-low .flow-edge-label:not(.flow-lod-preserve) {
+  opacity: 0;
+  pointer-events: none !important;
+}
+
 .flow-lod-low .flow-lod-shadow {
   box-shadow: none !important;
   filter: none !important;
@@ -313,6 +322,19 @@ body {
 
 .flow-lod-far .flow-lod-secondary {
   display: none !important;
+}
+
+.flow-lod-far .flow-lod-secondary.flow-lod-preserve,
+.flow-lod-low .flow-edge-label.flow-lod-preserve {
+  display: block !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.flow-lod-far .flow-lod-far-flex-target.flow-lod-preserve {
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .font-inter {
@@ -430,6 +452,20 @@ body {
   font-weight: 500;
 }
 
+.flow-edge-animated-overlay {
+  animation: flow-edge-dash 0.6s linear infinite;
+}
+
+@keyframes flow-edge-dash {
+  from {
+    stroke-dashoffset: 16;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 .flow-edge-waypoint,
 .flow-edge-waypoint * {
   cursor: grab !important;
@@ -461,6 +497,12 @@ body {
 
 /* Kill dash animations so html-to-image captures solid lines */
 .exporting .react-flow__edge.animated path {
+  animation: none !important;
+  stroke-dasharray: none !important;
+  stroke-dashoffset: 0 !important;
+}
+
+.exporting .flow-edge-animated-overlay {
   animation: none !important;
   stroke-dasharray: none !important;
   stroke-dashoffset: 0 !important;

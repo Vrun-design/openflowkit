@@ -39,6 +39,12 @@ const baseProps = {
     onOpenStudioFlowMind: vi.fn(),
     onOpenStudioMermaid: vi.fn(),
     initialView: 'root' as const,
+    onAddAnnotation: vi.fn(),
+    onAddSection: vi.fn(),
+    onAddText: vi.fn(),
+    onAddImage: vi.fn(),
+    onAddBrowserWireframe: vi.fn(),
+    onAddMobileWireframe: vi.fn(),
     showGrid: true,
     onToggleGrid: vi.fn(),
     snapToGrid: false,
@@ -67,6 +73,7 @@ const baseProps = {
     onDeleteEdge: vi.fn(),
     onUpdateZIndex: vi.fn(),
     onAddMindmapChild: vi.fn(),
+    onAddMindmapSibling: vi.fn(),
     onAddArchitectureService: vi.fn(),
     onCreateArchitectureBoundary: vi.fn(),
     onClose: vi.fn(),
@@ -94,7 +101,7 @@ const selectedNode = {
 } as const;
 
 describe('FlowEditorPanels', () => {
-  it('shows the properties panel in canvas mode', () => {
+  it('shows the properties panel in canvas mode', async () => {
     render(
       <FlowEditorPanels
         {...baseProps}
@@ -103,14 +110,14 @@ describe('FlowEditorPanels', () => {
       />
     );
 
-    expect(screen.getByTestId('properties-panel')).not.toBeNull();
+    expect(await screen.findByTestId('properties-panel')).not.toBeNull();
     expect(screen.queryByTestId('studio-panel')).toBeNull();
   });
 
-  it('shows the studio panel in studio mode', () => {
+  it('shows the studio panel in studio mode', async () => {
     render(<FlowEditorPanels {...baseProps} editorMode="studio" />);
 
-    expect(screen.getByTestId('studio-panel')).not.toBeNull();
+    expect(await screen.findByTestId('studio-panel')).not.toBeNull();
     expect(screen.queryByTestId('properties-panel')).toBeNull();
   });
 });

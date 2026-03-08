@@ -19,6 +19,8 @@
     "selectAll": "Alles auswählen",
     "duplicate": "Duplizieren",
     "duplicateDrag": "Duplizieren und ziehen",
+    "multiSelect": "Mehrfachauswahl",
+    "selectionBox": "Auswahlrahmen",
     "copy": "Kopieren",
     "paste": "Einfügen",
     "zoomIn": "Vergrößern",
@@ -35,6 +37,8 @@
     "error": "Fehler",
     "success": "Erfolg",
     "help": "Hilfe",
+    "selectTool": "Auswahlwerkzeug",
+    "handTool": "Handwerkzeug",
     "getStarted": "Loslegen",
     "bringToFront": "In den Vordergrund",
     "sendToBack": "In den Hintergrund",
@@ -122,7 +126,7 @@
     "newTab": "Neuer Tab",
     "renameTab": "Tab umbenennen",
     "closeTab": "Tab schließen",
-    "addNode": "Knoten hinzufügen",
+    "addNode": "Form hinzufügen",
     "deleteNode": "Knoten löschen",
     "duplicateNode": "Knoten duplizieren"
   },
@@ -226,7 +230,18 @@
     "description": "Beschreibung",
     "color": "Farbe",
     "icon": "Symbol",
-    "size": "Größe"
+    "size": "Größe",
+    "shape": "Form",
+    "bulkShape": "Mehrere Formen",
+    "bulkColor": "Mehrere Farben",
+    "bulkIcon": "Mehrere Symbole",
+    "labelTransform": "Text-Transformation",
+    "prefixOptional": "Präfix (optional)",
+    "suffixOptional": "Suffix (optional)",
+    "previewSummary": "Vorschau",
+    "bulkApplySummary": "{{count}} ausgewählte Elemente werden aktualisiert",
+    "selectFieldToApply": "Wählen Sie mindestens ein Feld zum Anwenden aus.",
+    "applyToSelectedNodes": "Auf ausgewählte Elemente anwenden"
   },
   "ai": {
     "generate": "Mit KI generieren",
@@ -429,7 +444,7 @@
       },
       "dslSyntax": {
         "title": "DSL-Syntax",
-        "description": "Zeigen Sie ein Beispiel der FlowMind DSL.",
+        "description": "Zeigen Sie ein Beispiel der OpenFlowKit DSL.",
         "icon": "{}"
       }
     }
@@ -665,7 +680,7 @@
     "title": "Tastaturkürzel",
     "subtitle": "Meistern Sie Ihren Arbeitsablauf mit Geschwindigkeit.",
     "closeAriaLabel": "Kürzel-Modal schließen",
-    "proTip": "Profi-Tipp: Halten Sie <key>?</key> gedrückt, um das Auswahlfeld zu aktivieren."
+    "proTip": "Profi-Tipp: Halten Sie <key>Shift</key> gedrückt, um zur Auswahl hinzuzufügen oder einen Auswahlrahmen zu ziehen."
   },
   "toolbar": {
     "selectMode": "Auswahlmodus (V)",
@@ -674,7 +689,9 @@
     "templates": "Vorlagen",
     "addItem": "Element hinzufügen",
     "addToCanvas": "Zum Canvas hinzufügen",
-    "node": "Knoten",
+    "shapes": "Formen",
+    "assets": "Assets",
+    "node": "Form",
     "stickyNote": "Haftnotiz",
     "section": "Abschnitt",
     "text": "Text",
@@ -699,23 +716,23 @@
       "description": "Ihr Canvas ist leer. Generieren Sie einen Fluss mit Flowpilot oder starten Sie von Grund auf.",
       "generateWithFlowpilot": "Mit Flowpilot generieren",
       "browseTemplates": "Vorlagen durchsuchen",
-      "addBlankNode": "Leeren Knoten hinzufügen"
+      "addBlankNode": "Leere Form hinzufügen"
     }
   },
   "annotationNode": {
     "placeholder": "*Doppelklicken zum Bearbeiten der Notiz*"
   },
   "connectMenu": {
-    "createNewNode": "Neuen Knoten erstellen",
-    "process": "Prozess",
-    "processDesc": "Standardaktion",
-    "decision": "Entscheidung",
-    "decisionDesc": "Verzweigungslogik",
+    "createNewNode": "Neue Form erstellen",
+    "process": "Abgerundete Form",
+    "processDesc": "Allgemeiner Block",
+    "decision": "Diamantform",
+    "decisionDesc": "Verzweigungsblock",
     "database": "Datenbank",
-    "databaseDesc": "Datenspeicherung",
+    "databaseDesc": "Zylinderform",
     "inputOutput": "Eingabe / Ausgabe",
-    "inputOutputDesc": "Datenfluss",
-    "note": "Notiz",
+    "inputOutputDesc": "Parallelogrammform",
+    "note": "Haftnotiz",
     "noteDesc": "Dokumentation",
     "releaseToConnect": "Loslassen zum Verbinden"
   },
@@ -750,7 +767,7 @@
   },
   "propertiesPanel": {
     "stickyNote": "Haftnotiz",
-    "nodeSettings": "Knoteneinstellungen",
+    "nodeSettings": "Formeinstellungen",
     "connection": "Verbindung"
   },
   "flowCanvas": {
@@ -767,6 +784,7 @@
     "newNode": "New Node",
     "branch": "Branch",
     "processStep": "Process Step",
+    "addText": "Text eingeben",
     "group": "Group",
     "items": "items",
     "addCommentsHere": "Add your comments here.",

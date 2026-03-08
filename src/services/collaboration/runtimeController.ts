@@ -1,6 +1,6 @@
 import { createId } from '@/lib/id';
 import { applyCollaborationOperation } from './reducer';
-import { createLocalPresence, mapPresenceFromAwarenessState, mergePresenceSnapshot } from './session';
+import { createLocalPresence, mergePresenceSnapshot, replacePresenceSnapshot } from './session';
 import { rebaseCollaborationOperation, guardCollaborationOperationVersion } from './versioning';
 import type {
   CollaborationDocumentState,
@@ -70,12 +70,8 @@ export function createCollaborationRuntimeController(
     notifyDocumentStateChange();
   }
 
-  function applyIncomingPresence(value: unknown): void {
-    const mappedPresence = mapPresenceFromAwarenessState(value);
-    if (!mappedPresence) {
-      return;
-    }
-    presenceState = mergePresenceSnapshot(presenceState, [mappedPresence]);
+  function applyIncomingPresenceSnapshot(snapshot: CollaborationPresenceState[]): void {
+    presenceState = replacePresenceSnapshot(presenceState, snapshot, localPresence);
     notifyPresenceChange();
   }
 
@@ -102,7 +98,7 @@ export function createCollaborationRuntimeController(
           applyIncomingOperation(event.operation);
           return;
         }
-        applyIncomingPresence(event.presence);
+        applyIncomingPresenceSnapshot(event.presence);
       });
       // Publish initial presence immediately so peers can see viewer/cursor metadata without waiting for pointer movement.
       transport.publishPresence(localPresence);

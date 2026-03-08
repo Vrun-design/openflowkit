@@ -10,12 +10,47 @@ import esTranslation from './locales/es/translation.json';
 import zhTranslation from './locales/zh/translation.json';
 import jaTranslation from './locales/ja/translation.json';
 
+function lookupTranslationValue(source: unknown, key: string): string | undefined {
+  const segments = key.split('.');
+  let current: unknown = source;
+
+  for (const segment of segments) {
+    if (!current || typeof current !== 'object' || !(segment in current)) {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return typeof current === 'string' ? current : undefined;
+}
+
+function formatMissingKeyAsEnglishLabel(key: string): string {
+  const lastSegment = key.split('.').pop() ?? key;
+  const withSpaces = lastSegment
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+
+  if (!withSpaces) {
+    return key;
+  }
+
+  return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
+}
+
+export function getTranslationFallback(key: string): string {
+  return lookupTranslationValue(enTranslation, key) ?? formatMissingKeyAsEnglishLabel(key);
+}
+
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     fallbackLng: 'en',
     debug: false,
+    returnNull: false,
+    returnEmptyString: false,
+    parseMissingKeyHandler: (key) => getTranslationFallback(key),
     interpolation: {
       escapeValue: false,
     },

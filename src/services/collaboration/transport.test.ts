@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import type { CollaborationOperationEnvelope, CollaborationPresenceState } from './types';
 import { createInMemoryCollaborationTransport } from './transport';
 
+function createRoomConfig(roomId: string, clientId: string) {
+  return { roomId, clientId, signalingServers: [], password: 'secret-1' };
+}
+
 function createOperation(clientId: string): CollaborationOperationEnvelope {
   return {
     opId: `op-${clientId}`,
@@ -29,9 +33,10 @@ describe('in-memory collaboration transport', () => {
     const b = createInMemoryCollaborationTransport();
     const listenerA = vi.fn();
     const listenerB = vi.fn();
+    const roomId = 'room-operation-broadcast';
 
-    a.connect({ roomId: 'room-1', clientId: 'client-a', signalingServers: [] }, listenerA);
-    b.connect({ roomId: 'room-1', clientId: 'client-b', signalingServers: [] }, listenerB);
+    a.connect(createRoomConfig(roomId, 'client-a'), listenerA);
+    b.connect(createRoomConfig(roomId, 'client-b'), listenerB);
 
     a.publishOperation(createOperation('client-a'));
 
@@ -40,18 +45,20 @@ describe('in-memory collaboration transport', () => {
     expect(listenerB.mock.calls[0][0].type).toBe('operation');
   });
 
-  it('broadcasts presence events to peers in same room', () => {
+  it('broadcasts presence snapshots to peers in same room', () => {
     const a = createInMemoryCollaborationTransport();
     const b = createInMemoryCollaborationTransport();
     const listenerB = vi.fn();
+    const roomId = 'room-presence-broadcast';
 
-    a.connect({ roomId: 'room-1', clientId: 'client-a', signalingServers: [] }, vi.fn());
-    b.connect({ roomId: 'room-1', clientId: 'client-b', signalingServers: [] }, listenerB);
+    a.connect(createRoomConfig(roomId, 'client-a'), vi.fn());
+    b.connect(createRoomConfig(roomId, 'client-b'), listenerB);
 
     a.publishPresence(createPresence('client-a'));
 
     expect(listenerB).toHaveBeenCalledTimes(1);
-    expect(listenerB.mock.calls[0][0].type).toBe('presence');
+    expect(listenerB.mock.calls[0][0].type).toBe('presence_snapshot');
+    expect(listenerB.mock.calls[0][0].presence).toEqual([createPresence('client-a')]);
   });
 
   it('does not leak events across rooms and removes listeners on disconnect', () => {
@@ -60,10 +67,12 @@ describe('in-memory collaboration transport', () => {
     const c = createInMemoryCollaborationTransport();
     const listenerB = vi.fn();
     const listenerC = vi.fn();
+    const roomId = 'room-isolation-a';
+    const otherRoomId = 'room-isolation-b';
 
-    a.connect({ roomId: 'room-1', clientId: 'client-a', signalingServers: [] }, vi.fn());
-    b.connect({ roomId: 'room-1', clientId: 'client-b', signalingServers: [] }, listenerB);
-    c.connect({ roomId: 'room-2', clientId: 'client-c', signalingServers: [] }, listenerC);
+    a.connect(createRoomConfig(roomId, 'client-a'), vi.fn());
+    b.connect(createRoomConfig(roomId, 'client-b'), listenerB);
+    c.connect(createRoomConfig(otherRoomId, 'client-c'), listenerC);
 
     a.publishOperation(createOperation('client-a'));
     expect(listenerB).toHaveBeenCalledTimes(1);
@@ -72,5 +81,26 @@ describe('in-memory collaboration transport', () => {
     b.disconnect();
     a.publishOperation(createOperation('client-a'));
     expect(listenerB).toHaveBeenCalledTimes(1);
+  });
+
+  it('broadcasts presence removal snapshots when a peer disconnects', () => {
+    const a = createInMemoryCollaborationTransport();
+    const b = createInMemoryCollaborationTransport();
+    const listenerA = vi.fn();
+    const roomId = 'room-presence-removal';
+
+    a.connect(createRoomConfig(roomId, 'client-a'), listenerA);
+    b.connect(createRoomConfig(roomId, 'client-b'), vi.fn());
+    a.publishPresence(createPresence('client-a'));
+    listenerA.mockClear();
+
+    b.publishPresence(createPresence('client-b'));
+    listenerA.mockClear();
+
+    b.disconnect();
+
+    expect(listenerA).toHaveBeenCalledTimes(1);
+    expect(listenerA.mock.calls[0][0].type).toBe('presence_snapshot');
+    expect(listenerA.mock.calls[0][0].presence).toEqual([createPresence('client-a')]);
   });
 });

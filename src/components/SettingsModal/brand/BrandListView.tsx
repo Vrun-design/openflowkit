@@ -1,7 +1,7 @@
 import React from 'react';
 import { Check, Copy, Edit2, LayoutTemplate, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useFlowStore } from '@/store';
+import { useBrandKitActions, useBrandKitCatalog } from '@/store/brandHooks';
 import { Button } from '@/components/ui/Button';
 
 interface BrandListViewProps {
@@ -10,13 +10,8 @@ interface BrandListViewProps {
 
 export function BrandListView({ onSelect }: BrandListViewProps): React.ReactElement {
     const { t } = useTranslation();
-    const {
-        brandKits,
-        activeBrandKitId,
-        setActiveBrandKitId,
-        addBrandKit,
-        deleteBrandKit,
-    } = useFlowStore();
+    const { brandKits, activeBrandKitId } = useBrandKitCatalog();
+    const { setActiveBrandKitId, addBrandKit, deleteBrandKit } = useBrandKitActions();
 
     return (
         <div className="flex flex-col h-full animate-in slide-in-from-right-4 duration-200">

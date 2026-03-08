@@ -8,6 +8,7 @@ export interface LayoutOptions {
     algorithm?: LayoutAlgorithm;
     spacing?: 'compact' | 'normal' | 'loose';
     preset?: 'hierarchical' | 'orthogonal-compact' | 'orthogonal-spacious';
+    diagramType?: string;
 }
 
 export type ResolvedLayoutConfiguration = {

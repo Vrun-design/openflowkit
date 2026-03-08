@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BaseEdge, EdgeLabelRenderer, useReactFlow } from '@/lib/reactflowCompat';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
+import { MarkerType } from '@/lib/reactflowCompat';
 import { useDesignSystem } from '@/hooks/useDesignSystem';
-import type { EdgeData } from '@/lib/types';
+import type { EdgeData, FlowEdge } from '@/lib/types';
 import {
     CLASS_MARKER_ARROW_FILLED,
     CLASS_MARKER_ARROW_OPEN,
@@ -15,18 +16,25 @@ import {
     resolveRelationVisualSpec,
     toMarkerUrl,
 } from './classRelationSemantics';
-import { shouldStartEdgeWaypointEdit } from './edgeWaypointPolicy';
+import { resolveStandardEdgeMarkers } from './standardEdgeMarkers';
 
 interface CustomEdgeWrapperProps {
     id: string;
     path: string;
+    sourceX: number;
+    sourceY: number;
+    targetX: number;
+    targetY: number;
     labelX: number;
     labelY: number;
     markerEnd?: string;
+    markerEndConfig?: FlowEdge['markerEnd'];
     style?: React.CSSProperties;
     data?: EdgeData;
     label?: string | React.ReactNode;
     markerStart?: string;
+    markerStartConfig?: FlowEdge['markerStart'];
+    selected?: boolean;
 }
 
 function toLabelTransform(x: number, y: number): string {
@@ -36,17 +44,25 @@ function toLabelTransform(x: number, y: number): string {
 export function CustomEdgeWrapper({
     id,
     path,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
     labelX,
     labelY,
     markerEnd,
+    markerEndConfig,
     style,
     data,
     label,
     markerStart,
+    markerStartConfig,
+    selected = false,
 }: CustomEdgeWrapperProps): React.ReactElement {
     const { setEdges, screenToFlowPosition } = useReactFlow();
     const pathRef = useRef<SVGPathElement>(null);
     const labelRef = useRef<HTMLDivElement>(null);
+    const [isHovered, setIsHovered] = useState(false);
     const designSystem = useDesignSystem();
     const visualQualityV2Enabled = ROLLOUT_FLAGS.visualQualityV2;
     const relationSemanticsV1Enabled = ROLLOUT_FLAGS.relationSemanticsV1;
@@ -69,12 +85,43 @@ export function CustomEdgeWrapper({
         ...relationStyle,
     };
 
-    const resolvedMarkerStart = relationVisualSpec
+    const relationResolvedMarkerStart = relationVisualSpec
         ? toMarkerUrl(relationVisualSpec.markerStartId)
         : markerStart;
-    const resolvedMarkerEnd = relationVisualSpec
+    const relationResolvedMarkerEnd = relationVisualSpec
         ? toMarkerUrl(relationVisualSpec.markerEndId)
         : markerEnd;
+    const standardMarkers = resolveStandardEdgeMarkers({
+        connectorModelEnabled: !relationVisualSpec,
+        edgeId: id,
+        markerStartUrl: relationResolvedMarkerStart,
+        markerEndUrl: relationResolvedMarkerEnd,
+        markerStartConfig: typeof markerStartConfig === 'object' ? markerStartConfig as {
+            type?: MarkerType | string;
+            color?: string;
+            width?: number;
+            height?: number;
+        } : undefined,
+        markerEndConfig: typeof markerEndConfig === 'object' ? markerEndConfig as {
+            type?: MarkerType | string;
+            color?: string;
+            width?: number;
+            height?: number;
+        } : undefined,
+        stroke: String(resolvedStyle.stroke ?? designSystem.colors.edge),
+    });
+    const resolvedMarkerStart = standardMarkers.markerStartUrl;
+    const resolvedMarkerEnd = standardMarkers.markerEndUrl;
+    const isAnimated = selected || isHovered;
+    const animatedStrokeStyle = useMemo<React.CSSProperties>(() => {
+        return {
+            stroke: resolvedStyle.stroke,
+            strokeWidth: Math.max(Number(resolvedStyle.strokeWidth ?? 2), 2),
+            strokeDasharray: typeof resolvedStyle.strokeDasharray === 'string' && resolvedStyle.strokeDasharray.length > 0
+                ? resolvedStyle.strokeDasharray
+                : '8 8',
+        };
+    }, [resolvedStyle.stroke, resolvedStyle.strokeDasharray, resolvedStyle.strokeWidth]);
 
     useEffect(() => {
         const labelNode = labelRef.current;
@@ -161,42 +208,6 @@ export function CustomEdgeWrapper({
         window.addEventListener('pointerup', onPointerUp);
     };
 
-    const updateWaypoint = (x: number, y: number): void => {
-        updateEdgeData((edgeData) => ({
-            ...edgeData,
-            waypoint: { x, y },
-        }));
-    };
-
-    const onEdgePathPointerDown = (event: React.PointerEvent<SVGPathElement>): void => {
-        if (!shouldStartEdgeWaypointEdit(canvasInteractionsV1Enabled, event)) return;
-        event.stopPropagation();
-        event.preventDefault();
-        const flowPosition = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-        updateWaypoint(flowPosition.x, flowPosition.y);
-    };
-
-    const onWaypointPointerDown = (event: React.PointerEvent<HTMLDivElement>): void => {
-        if (!canvasInteractionsV1Enabled) return;
-        event.stopPropagation();
-        event.preventDefault();
-
-        const onPointerMove = (moveEvent: PointerEvent): void => {
-            moveEvent.preventDefault();
-            const flowPosition = screenToFlowPosition({ x: moveEvent.clientX, y: moveEvent.clientY });
-            updateWaypoint(flowPosition.x, flowPosition.y);
-        };
-
-        const onPointerUp = (upEvent: PointerEvent): void => {
-            upEvent.preventDefault();
-            window.removeEventListener('pointermove', onPointerMove);
-            window.removeEventListener('pointerup', onPointerUp);
-        };
-
-        window.addEventListener('pointermove', onPointerMove);
-        window.addEventListener('pointerup', onPointerUp);
-    };
-
     const hasArchitectureMeta = typeof data?.archProtocol === 'string' && data.archProtocol.length > 0;
     const direction = typeof data?.archDirection === 'string' ? data.archDirection : '-->';
     const directionGlyph = direction === '<--' ? '<-' : direction === '<-->' ? '<->' : '->';
@@ -241,18 +252,48 @@ export function CustomEdgeWrapper({
                     <marker id={ER_MARKER_CROW} markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
                         <path d="M1,1 L10,6 L1,11 M1,6 L10,6" fill="none" stroke="context-stroke" strokeWidth="1.4" />
                     </marker>
+                    {standardMarkers.defs.map((markerDef) => (
+                        <marker
+                            key={markerDef.id}
+                            id={markerDef.id}
+                            markerWidth={markerDef.width}
+                            markerHeight={markerDef.height}
+                            refX={markerDef.side === 'end' ? markerDef.width - 1 : 1}
+                            refY={markerDef.height / 2}
+                            orient={markerDef.side === 'start' ? 'auto-start-reverse' : 'auto'}
+                            markerUnits="userSpaceOnUse"
+                        >
+                            <path
+                                d={`M0,0 L${markerDef.width},${markerDef.height / 2} L0,${markerDef.height} z`}
+                                fill={markerDef.color}
+                            />
+                        </marker>
+                    ))}
                 </defs>
             </svg>
             <BaseEdge path={path} markerEnd={resolvedMarkerEnd} markerStart={resolvedMarkerStart} style={resolvedStyle} />
+            {isAnimated && (
+                <path
+                    d={path}
+                    fill="none"
+                    strokeLinecap="round"
+                    style={animatedStrokeStyle}
+                    className="flow-edge-animated-overlay"
+                    pointerEvents="none"
+                    aria-hidden="true"
+                />
+            )}
             <path
                 d={path}
                 fill="none"
-                stroke="transparent"
+                stroke="rgba(15,23,42,0.001)"
                 strokeWidth={20}
-                onPointerDown={onEdgePathPointerDown}
+                pointerEvents="stroke"
+                onPointerEnter={() => setIsHovered(true)}
+                onPointerLeave={() => setIsHovered(false)}
                 aria-hidden="true"
             >
-                {canvasInteractionsV1Enabled && <title>Alt-click to bend edge</title>}
+                {canvasInteractionsV1Enabled && <title>Select edge</title>}
             </path>
             <path ref={pathRef} d={path} style={{ display: 'none' }} fill="none" stroke="none" aria-hidden="true" />
 
@@ -266,7 +307,9 @@ export function CustomEdgeWrapper({
                             fontSize: 12,
                             pointerEvents: 'all',
                         }}
-                        className="flow-edge-label nodrag nopan"
+                        onPointerEnter={() => setIsHovered(true)}
+                        onPointerLeave={() => setIsHovered(false)}
+                        className={`flow-edge-label nodrag nopan ${selected || isHovered ? 'flow-lod-preserve' : ''}`}
                     >
                         <div
                             onPointerDown={onLabelPointerDown}
@@ -278,25 +321,6 @@ export function CustomEdgeWrapper({
                         >
                             {renderedLabel}
                         </div>
-                    </div>
-                </EdgeLabelRenderer>
-            )}
-            {canvasInteractionsV1Enabled && data?.waypoint && (
-                <EdgeLabelRenderer>
-                    <div
-                        style={{
-                            position: 'absolute',
-                            transform: toLabelTransform(data.waypoint.x, data.waypoint.y),
-                            pointerEvents: 'all',
-                            cursor: 'grab',
-                        }}
-                        className="flow-edge-waypoint nodrag nopan"
-                    >
-                        <div
-                            onPointerDown={onWaypointPointerDown}
-                            className="h-3 w-3 rounded-full border border-slate-600 bg-white shadow cursor-grab active:cursor-grabbing"
-                            title="Drag to bend edge"
-                        />
                     </div>
                 </EdgeLabelRenderer>
             )}

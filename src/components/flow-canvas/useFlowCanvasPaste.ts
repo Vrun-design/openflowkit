@@ -6,7 +6,6 @@ import { createPastedTextNode, isEditablePasteTarget, resolveLayoutDirection } f
 import { detectMermaidDiagramType } from '@/services/mermaid/detectDiagramType';
 import { normalizeParseDiagnostics } from '@/services/mermaid/diagnosticFormatting';
 import { parseMermaidByType } from '@/services/mermaid/parseMermaidByType';
-import { getElkLayout } from '@/services/elkLayout';
 import { assignSmartHandles } from '@/services/smartEdgeRouting';
 
 type SetFlowNodes = (payload: FlowNode[] | ((nodes: FlowNode[]) => FlowNode[])) => void;
@@ -81,13 +80,14 @@ export function useFlowCanvasPaste({
 
                 if (result.nodes.length > 0) {
                     try {
+                        const { getElkLayout } = await import('@/services/elkLayout');
                         const layoutDirection = resolveLayoutDirection(result);
-                        const layoutedNodes = await getElkLayout(result.nodes, result.edges, {
+                        const { nodes: layoutedNodes, edges: layoutedEdges } = await getElkLayout(result.nodes, result.edges, {
                             direction: layoutDirection,
                             algorithm: 'layered',
                             spacing: 'normal',
                         });
-                        const smartEdges = assignSmartHandles(layoutedNodes, result.edges);
+                        const smartEdges = assignSmartHandles(layoutedNodes, layoutedEdges);
                         setNodes(layoutedNodes);
                         setEdges(smartEdges);
                     } catch {

@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
 import { ViewHeader } from './ViewHeader';
 import type { LayoutAlgorithm } from '../../services/elkLayout';
-import { useFlowStore } from '../../store';
 import { trackEvent } from '../../lib/analytics';
+import { useBrandButtonStyle } from '@/store/brandHooks';
 
 interface LayoutViewProps {
     onLayout?: (direction?: 'TB' | 'LR' | 'RL' | 'BT', algorithm?: LayoutAlgorithm, spacing?: 'compact' | 'normal' | 'loose') => void;
@@ -81,7 +81,7 @@ interface AlgorithmCardProps {
 }
 
 function AlgorithmCard({ label, desc, icon, selected, onClick }: AlgorithmCardProps): ReactElement {
-    const isBeveled = useFlowStore(state => state.brandConfig.ui.buttonStyle === 'beveled');
+    const isBeveled = useBrandButtonStyle() === 'beveled';
 
     return (
         <div

@@ -9,13 +9,15 @@ import { getConnectorHandleStyle, getHandlePointerEvents, getV2HandleVisibilityC
 import { InlineTextEditSurface } from '@/components/InlineTextEditSurface';
 import { getTransformDiagnosticsAttrs } from '@/components/transformDiagnostics';
 import { NodeTransformControls } from '@/components/NodeTransformControls';
+import { useActiveNodeSelection } from '@/components/useActiveNodeSelection';
 
 function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.ReactElement {
   const visualQualityV2Enabled = ROLLOUT_FLAGS.visualQualityV2;
-  const handlePointerEvents = getHandlePointerEvents(visualQualityV2Enabled, Boolean(selected));
+  const isActiveSelected = useActiveNodeSelection(Boolean(selected));
+  const handlePointerEvents = getHandlePointerEvents(visualQualityV2Enabled, isActiveSelected);
   const handleVisibilityClass = visualQualityV2Enabled
-    ? getV2HandleVisibilityClass(Boolean(selected))
-    : selected
+    ? getV2HandleVisibilityClass(isActiveSelected)
+    : isActiveSelected
       ? 'opacity-100'
       : 'opacity-0 group-hover:opacity-100 [.is-connecting_&]:opacity-100';
   const attributes = Array.isArray(data.classAttributes) ? data.classAttributes : [];
@@ -85,12 +87,9 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
       />
 
       <div
-        className={`${visualQualityV2Enabled ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg shadow-sm min-w-[220px] ${
-          selected && !visualQualityV2Enabled ? 'ring-2 ring-indigo-500 ring-offset-2' : ''
-        }`}
+        className={`${visualQualityV2Enabled ? 'bg-slate-50' : 'bg-white'} border border-slate-300 rounded-lg shadow-sm min-w-[220px]`}
         style={{
           minHeight: contentMinHeight,
-          boxShadow: selected && visualQualityV2Enabled ? '0 0 0 2px #6366f1, 0 0 12px rgba(99,102,241,0.2)' : undefined,
         }}
         {...getTransformDiagnosticsAttrs({
           nodeFamily: 'class',
@@ -246,8 +245,8 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
         id="top"
         isConnectableStart
         isConnectableEnd
-        className={`!w-3 !h-3 !bg-slate-400 !border-2 !border-white transition-all duration-150 hover:scale-125 ${handleVisibilityClass}`}
-        style={getConnectorHandleStyle('top', Boolean(selected), handlePointerEvents)}
+        className={`!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125 ${handleVisibilityClass}`}
+        style={getConnectorHandleStyle('top', isActiveSelected, handlePointerEvents)}
       />
       <Handle
         type="source"
@@ -255,8 +254,8 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
         id="bottom"
         isConnectableStart
         isConnectableEnd
-        className={`!w-3 !h-3 !bg-slate-400 !border-2 !border-white transition-all duration-150 hover:scale-125 ${handleVisibilityClass}`}
-        style={getConnectorHandleStyle('bottom', Boolean(selected), handlePointerEvents)}
+        className={`!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125 ${handleVisibilityClass}`}
+        style={getConnectorHandleStyle('bottom', isActiveSelected, handlePointerEvents)}
       />
       <Handle
         type="source"
@@ -264,8 +263,8 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
         id="left"
         isConnectableStart
         isConnectableEnd
-        className={`!w-3 !h-3 !bg-slate-400 !border-2 !border-white transition-all duration-150 hover:scale-125 ${handleVisibilityClass}`}
-        style={getConnectorHandleStyle('left', Boolean(selected), handlePointerEvents)}
+        className={`!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125 ${handleVisibilityClass}`}
+        style={getConnectorHandleStyle('left', isActiveSelected, handlePointerEvents)}
       />
       <Handle
         type="source"
@@ -273,8 +272,8 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
         id="right"
         isConnectableStart
         isConnectableEnd
-        className={`!w-3 !h-3 !bg-slate-400 !border-2 !border-white transition-all duration-150 hover:scale-125 ${handleVisibilityClass}`}
-        style={getConnectorHandleStyle('right', Boolean(selected), handlePointerEvents)}
+        className={`!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125 ${handleVisibilityClass}`}
+        style={getConnectorHandleStyle('right', isActiveSelected, handlePointerEvents)}
       />
     </>
   );

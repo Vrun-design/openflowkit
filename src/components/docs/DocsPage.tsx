@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -6,11 +6,15 @@ import rehypeSlug from 'rehype-slug';
 import remarkGfm from 'remark-gfm';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { DocsBreadcrumbs } from './DocsBreadcrumbs';
-import { DocsChatbot } from './DocsChatbot';
 import { DocsFooter } from './DocsFooter';
 import { DocsToc } from './DocsToc';
 import { MarkdownComponents } from './MarkdownComponents';
 import { useDocsPageModel } from './useDocsPageModel';
+
+const LazyDocsChatbot = lazy(async () => {
+    const module = await import('./DocsChatbot');
+    return { default: module.DocsChatbot };
+});
 
 export const DocsPage: React.FC = () => {
     const {
@@ -67,7 +71,18 @@ export const DocsPage: React.FC = () => {
                     </div>
                 )}
 
-                {!loading && !error && isChatPage && <DocsChatbot />}
+                {!loading && !error && isChatPage && (
+                    <Suspense
+                        fallback={(
+                            <div className="flex items-center gap-2 text-slate-400 py-12">
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>Loading AI assistant...</span>
+                            </div>
+                        )}
+                    >
+                        <LazyDocsChatbot />
+                    </Suspense>
+                )}
                 {!loading && !error && !isChatPage && <DocsFooter />}
             </div>
 

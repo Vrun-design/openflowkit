@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '../ui/Input';
 import { ViewHeader } from './ViewHeader';
 import { useFlowStore } from '../../store';
+import { useTabActions, useTabsState } from '@/store/tabHooks';
 import { EMPTY_QUERY, matchesNodeQuery, type QueryState } from './searchQuery';
 import { readLocalStorageJson, writeLocalStorageJson } from '@/services/storage/uiLocalStorage';
 
@@ -40,7 +41,9 @@ export const SearchView = ({
     });
     const [selectedPresetId, setSelectedPresetId] = useState('');
     const { fitView } = useReactFlow();
-    const { tabs, activeTabId, setActiveTabId, setSelectedNodeId, setNodes, setEdges } = useFlowStore();
+    const { tabs, activeTabId } = useTabsState();
+    const { setActiveTabId } = useTabActions();
+    const { setSelectedNodeId, setNodes, setEdges } = useFlowStore();
 
     useEffect(() => {
         writeLocalStorageJson(QUERY_PRESETS_STORAGE_KEY, queryPresets);

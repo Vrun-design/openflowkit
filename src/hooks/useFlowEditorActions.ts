@@ -3,12 +3,18 @@ import type { TFunction } from 'i18next';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { FlowTemplate } from '@/services/templates';
 import type { LayoutAlgorithm } from '@/services/elkLayout';
-import { getElkLayout } from '@/services/elkLayout';
-import { toMermaid, toPlantUML } from '@/services/exportService';
-import { toFigmaSVG } from '@/services/figmaExportService';
-import { getOpenFlowDSLExportDiagnostics, toOpenFlowDSL } from '@/services/openFlowDSLExporter';
 import type { ExportSerializationMode } from '@/services/canonicalSerialization';
-import { buildInsertedTemplateData, copyTextToClipboard } from './flow-editor-actions/helpers';
+import {
+    exportFigmaToClipboard,
+    exportMermaidToClipboard,
+    exportOpenFlowDSLToClipboard,
+    exportPlantUMLToClipboard,
+} from './flow-editor-actions/exportHandlers';
+import {
+    buildTemplateInsertionResult,
+    getAutoLayoutResult,
+    scheduleFitView,
+} from './flow-editor-actions/layoutHandlers';
 
 interface UseFlowEditorActionsParams {
     nodes: FlowNode[];
@@ -27,7 +33,8 @@ interface UseFlowEditorActionsResult {
     onLayout: (
         direction?: 'TB' | 'LR' | 'RL' | 'BT',
         algorithm?: LayoutAlgorithm,
-        spacing?: 'compact' | 'normal' | 'loose'
+        spacing?: 'compact' | 'normal' | 'loose',
+        diagramType?: string
     ) => Promise<void>;
     handleInsertTemplate: (template: FlowTemplate) => void;
     handleExportMermaid: () => Promise<void>;
@@ -52,80 +59,64 @@ export function useFlowEditorActions({
     const onLayout = useCallback(async (
         direction: 'TB' | 'LR' | 'RL' | 'BT' = 'TB',
         algorithm: LayoutAlgorithm = 'layered',
-        spacing: 'compact' | 'normal' | 'loose' = 'normal'
+        spacing: 'compact' | 'normal' | 'loose' = 'normal',
+        diagramType?: string
     ): Promise<void> => {
         if (nodes.length === 0) return;
         setIsLayouting(true);
         recordHistory();
 
         try {
-            const layoutedNodes = await getElkLayout(nodes, edges, {
+            const { nodes: layoutedNodes, edges: layoutedEdges } = await getAutoLayoutResult({
+                nodes,
+                edges,
                 direction,
                 algorithm,
                 spacing,
+                diagramType,
             });
             setNodes(layoutedNodes);
-            setTimeout(() => fitView({ duration: 800 }), 50);
+            setEdges(layoutedEdges);
+            scheduleFitView(fitView, 800, 50);
         } catch (error) {
             console.error('ELK layout failed:', error);
         } finally {
             setIsLayouting(false);
         }
-    }, [nodes, edges, recordHistory, setNodes, fitView]);
+    }, [nodes, edges, recordHistory, setNodes, setEdges, fitView]);
 
     const handleInsertTemplate = useCallback((template: FlowTemplate): void => {
         recordHistory();
-        const { newNodes, newEdges } = buildInsertedTemplateData(template, nodes);
+        const { nextNodes, newEdges } = buildTemplateInsertionResult({
+            template,
+            existingNodes: nodes,
+        });
 
-        setNodes((existingNodes) => [...existingNodes.map((node) => ({ ...node, selected: false })), ...newNodes]);
+        setNodes(nextNodes);
         setEdges((existingEdges) => [...existingEdges, ...newEdges]);
-        setTimeout(() => fitView({ duration: 800 }), 100);
+        scheduleFitView(fitView, 800, 100);
     }, [nodes, recordHistory, setNodes, setEdges, fitView]);
 
     const handleExportMermaid = useCallback(async (): Promise<void> => {
-        const text = toMermaid(nodes, edges);
-        const copied = await copyTextToClipboard(text);
-        if (copied) {
-            alert(t('flowEditor.mermaidCopied'));
-        }
+        await exportMermaidToClipboard({ nodes, edges, t });
     }, [nodes, edges, t]);
 
     const handleExportPlantUML = useCallback(async (): Promise<void> => {
-        const text = toPlantUML(nodes, edges);
-        const copied = await copyTextToClipboard(text);
-        if (copied) {
-            alert(t('flowEditor.plantUMLCopied'));
-        }
+        await exportPlantUMLToClipboard({ nodes, edges, t });
     }, [nodes, edges, t]);
 
     const handleExportOpenFlowDSL = useCallback(async (): Promise<void> => {
-        const exportDiagnostics = getOpenFlowDSLExportDiagnostics(nodes, edges);
-        const text = toOpenFlowDSL(nodes, edges, { mode: exportSerializationMode });
-        const copied = await copyTextToClipboard(text);
-        if (copied) {
-            addToast(t('flowEditor.dslCopied'), 'success');
-            if (exportDiagnostics.length > 0) {
-                const warningMessage = t(
-                    'flowEditor.dslExportSkippedEdges',
-                    { count: exportDiagnostics.length, defaultValue: '{{count}} invalid edge(s) were skipped in DSL export.' }
-                );
-                addToast(warningMessage, 'warning');
-            }
-        } else {
-            addToast(t('flowEditor.dslCopyFailed'), 'error');
-        }
+        await exportOpenFlowDSLToClipboard({
+            nodes,
+            edges,
+            addToast,
+            t,
+            exportSerializationMode,
+        });
     }, [nodes, edges, addToast, t, exportSerializationMode]);
 
     const handleExportFigma = useCallback(async (): Promise<void> => {
-        try {
-            const svg = await toFigmaSVG(nodes, edges);
-            await navigator.clipboard.writeText(svg);
-            addToast(t('flowEditor.figmaCopied'), 'success');
-        } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : String(error);
-            console.error('Failed to copy Figma SVG:', error);
-            addToast(t('flowEditor.figmaExportFailed', { message }), 'error');
-        }
+        await exportFigmaToClipboard({ nodes, edges, addToast, t });
     }, [nodes, edges, addToast, t]);
 
     return {

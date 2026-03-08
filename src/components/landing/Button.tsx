@@ -1,5 +1,5 @@
 import React from 'react';
-import { useFlowStore } from '../../store';
+import { useBrandButtonStyle } from '@/store/brandHooks';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
@@ -18,7 +18,7 @@ export function Button({
   className = '',
   ...props
 }: ButtonProps): React.ReactElement {
-  const buttonStyle = useFlowStore(state => state.brandConfig.ui.buttonStyle);
+  const buttonStyle = useBrandButtonStyle();
 
   const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]";
 

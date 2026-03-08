@@ -3,7 +3,7 @@ import { Play, Copy, GitBranch, Terminal, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 import { trackEvent } from '../../lib/analytics';
-import { useFlowStore } from '../../store';
+import { useBrandConfig } from '@/store/brandHooks';
 
 interface HeroSectionProps {
   onLaunch: () => void;
@@ -11,7 +11,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ onLaunch }: HeroSectionProps): React.ReactElement {
   const { t } = useTranslation();
-  const { brandConfig } = useFlowStore();
+  const brandConfig = useBrandConfig();
   const [index, setIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
 

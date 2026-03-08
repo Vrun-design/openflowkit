@@ -3,7 +3,9 @@ import type { FlowEdge, FlowNode } from '@/lib/types';
 import {
   buildResolvedLayoutConfiguration,
   getDeterministicSeedOptions,
+  normalizeElkEdgeBoundaryFanout,
   normalizeLayoutInputsForDeterminism,
+  resolveLayoutedEdgeHandles,
   resolveLayoutPresetOptions,
 } from './elkLayout';
 
@@ -19,6 +21,10 @@ function createNode(id: string, parentId?: string): FlowNode {
 
 function createEdge(id: string, source: string, target: string): FlowEdge {
   return { id, source, target } as FlowEdge;
+}
+
+function createPositionMap(entries: Array<[string, { x: number; y: number; width?: number; height?: number }]>) {
+  return new Map(entries);
 }
 
 describe('normalizeLayoutInputsForDeterminism', () => {
@@ -150,5 +156,273 @@ describe('buildResolvedLayoutConfiguration', () => {
     expect(Number(compact.dims.nodeNode)).toBeLessThan(Number(spacious.dims.nodeNode));
     expect(Number(compact.dims.nodeLayer)).toBeLessThan(Number(spacious.dims.nodeLayer));
     expect(Number(compact.dims.component)).toBeLessThan(Number(spacious.dims.component));
+    expect(compact.layoutOptions['elk.layered.nodePlacement.favorStraightEdges']).toBe('true');
+    expect(compact.layoutOptions['elk.layered.mergeEdges']).toBe('true');
+    expect(compact.layoutOptions['elk.layered.unnecessaryBendpoints']).toBe('true');
+  });
+});
+
+describe('normalizeElkEdgeBoundaryFanout', () => {
+  it('spreads dense same-side source fan-out along the node boundary', () => {
+    const nodes = [
+      {
+        id: 'source',
+        type: 'process',
+        position: { x: 0, y: 0 },
+        width: 200,
+        height: 120,
+        data: { label: 'Source' },
+      } as FlowNode,
+      {
+        id: 'a',
+        type: 'process',
+        position: { x: 300, y: 0 },
+        width: 120,
+        height: 80,
+        data: { label: 'A' },
+      } as FlowNode,
+      {
+        id: 'b',
+        type: 'process',
+        position: { x: 300, y: 100 },
+        width: 120,
+        height: 80,
+        data: { label: 'B' },
+      } as FlowNode,
+      {
+        id: 'c',
+        type: 'process',
+        position: { x: 300, y: 200 },
+        width: 120,
+        height: 80,
+        data: { label: 'C' },
+      } as FlowNode,
+    ];
+    const edges = [
+      { id: 'e1', source: 'source', target: 'a', sourceHandle: 'right' },
+      { id: 'e2', source: 'source', target: 'b', sourceHandle: 'right' },
+      { id: 'e3', source: 'source', target: 'c', sourceHandle: 'right' },
+    ] as FlowEdge[];
+    const edgePointsMap = new Map<string, { x: number; y: number }[]>([
+      ['e1', [{ x: 200, y: 60 }, { x: 260, y: 60 }]],
+      ['e2', [{ x: 200, y: 60 }, { x: 260, y: 60 }]],
+      ['e3', [{ x: 200, y: 60 }, { x: 260, y: 60 }]],
+    ]);
+    const positionMap = createPositionMap([
+      ['source', { x: 0, y: 0, width: 200, height: 120 }],
+      ['a', { x: 300, y: 0, width: 120, height: 80 }],
+      ['b', { x: 300, y: 100, width: 120, height: 80 }],
+      ['c', { x: 300, y: 200, width: 120, height: 80 }],
+    ]);
+
+    const normalized = normalizeElkEdgeBoundaryFanout(edges, nodes, positionMap, edgePointsMap);
+
+    expect(normalized.get('e1')?.[0].y).toBeLessThan(60);
+    expect(normalized.get('e2')).toBeUndefined();
+    expect(normalized.get('e3')?.[0].y).toBeGreaterThan(60);
+    expect(normalized.get('e1')).toHaveLength(4);
+    expect(normalized.get('e1')?.[1].y).toBe(normalized.get('e1')?.[0].y);
+    expect(normalized.get('e1')?.[2].y).toBe(60);
+    expect(normalized.get('e1')?.[3]).toEqual({ x: 260, y: 60 });
+    expect(normalized.get('e3')?.[1].y).toBe(normalized.get('e3')?.[0].y);
+    expect(normalized.get('e3')?.[2].y).toBe(60);
+    expect(normalized.get('e3')?.[3]).toEqual({ x: 260, y: 60 });
+  });
+
+  it('spreads dense bottom-side source fan-out horizontally', () => {
+    const nodes = [
+      {
+        id: 'source',
+        type: 'process',
+        position: { x: 0, y: 0 },
+        width: 200,
+        height: 120,
+        data: { label: 'Source' },
+      } as FlowNode,
+      {
+        id: 'a',
+        type: 'process',
+        position: { x: -80, y: 240 },
+        width: 120,
+        height: 80,
+        data: { label: 'A' },
+      } as FlowNode,
+      {
+        id: 'b',
+        type: 'process',
+        position: { x: 40, y: 240 },
+        width: 120,
+        height: 80,
+        data: { label: 'B' },
+      } as FlowNode,
+      {
+        id: 'c',
+        type: 'process',
+        position: { x: 160, y: 240 },
+        width: 120,
+        height: 80,
+        data: { label: 'C' },
+      } as FlowNode,
+    ];
+    const edges = [
+      { id: 'e1', source: 'source', target: 'a', sourceHandle: 'bottom' },
+      { id: 'e2', source: 'source', target: 'b', sourceHandle: 'bottom' },
+      { id: 'e3', source: 'source', target: 'c', sourceHandle: 'bottom' },
+    ] as FlowEdge[];
+    const edgePointsMap = new Map<string, { x: number; y: number }[]>([
+      ['e1', [{ x: 100, y: 120 }, { x: 100, y: 180 }]],
+      ['e2', [{ x: 100, y: 120 }, { x: 100, y: 180 }]],
+      ['e3', [{ x: 100, y: 120 }, { x: 100, y: 180 }]],
+    ]);
+    const positionMap = createPositionMap([
+      ['source', { x: 0, y: 0, width: 200, height: 120 }],
+      ['a', { x: -80, y: 240, width: 120, height: 80 }],
+      ['b', { x: 40, y: 240, width: 120, height: 80 }],
+      ['c', { x: 160, y: 240, width: 120, height: 80 }],
+    ]);
+
+    const normalized = normalizeElkEdgeBoundaryFanout(edges, nodes, positionMap, edgePointsMap);
+
+    expect(normalized.get('e1')?.[0].x).toBeLessThan(100);
+    expect(normalized.get('e2')).toBeUndefined();
+    expect(normalized.get('e3')?.[0].x).toBeGreaterThan(100);
+    expect(normalized.get('e1')).toHaveLength(4);
+    expect(normalized.get('e1')?.[1].x).toBe(normalized.get('e1')?.[0].x);
+    expect(normalized.get('e1')?.[2].x).toBe(100);
+    expect(normalized.get('e1')?.[3]).toEqual({ x: 100, y: 180 });
+    expect(normalized.get('e3')?.[1].x).toBe(normalized.get('e3')?.[0].x);
+    expect(normalized.get('e3')?.[2].x).toBe(100);
+    expect(normalized.get('e3')?.[3]).toEqual({ x: 100, y: 180 });
+  });
+
+  it('clamps fan-out spacing to the available node boundary span for dense groups', () => {
+    const nodes = [
+      {
+        id: 'source',
+        type: 'process',
+        position: { x: 0, y: 0 },
+        width: 180,
+        height: 60,
+        data: { label: 'Source' },
+      } as FlowNode,
+      ...Array.from({ length: 5 }, (_, index) => ({
+        id: `target-${index}`,
+        type: 'process',
+        position: { x: 280, y: index * 40 },
+        width: 120,
+        height: 80,
+        data: { label: `Target ${index}` },
+      } as FlowNode)),
+    ];
+    const edges = Array.from({ length: 5 }, (_, index) => ({
+      id: `e${index}`,
+      source: 'source',
+      target: `target-${index}`,
+      sourceHandle: 'right',
+    })) as FlowEdge[];
+    const edgePointsMap = new Map(
+      edges.map((edge) => [edge.id, [{ x: 180, y: 30 }, { x: 240, y: 30 }]])
+    );
+    const positionMapEntries: Array<[string, { x: number; y: number; width?: number; height?: number }]> = [
+      ['source', { x: 0, y: 0, width: 180, height: 60 }],
+      ...Array.from({ length: 5 }, (_, index) => ([
+        `target-${index}`,
+        { x: 280, y: index * 40, width: 120, height: 80 },
+      ] as [string, { x: number; y: number; width?: number; height?: number }])),
+    ];
+    const positionMap = createPositionMap(positionMapEntries);
+
+    const normalized = normalizeElkEdgeBoundaryFanout(edges, nodes, positionMap, edgePointsMap);
+    const top = normalized.get('e0')?.[0];
+    const bottom = normalized.get('e4')?.[0];
+
+    expect(top).toBeDefined();
+    expect(bottom).toBeDefined();
+    expect(top!.y).toBeGreaterThanOrEqual(14);
+    expect(bottom!.y).toBeLessThanOrEqual(46);
+  });
+});
+
+describe('resolveLayoutedEdgeHandles', () => {
+  it('reassigns handles from layouted geometry instead of preserving stale sides', () => {
+    const nodes = [
+      {
+        id: 'source',
+        type: 'process',
+        position: { x: 0, y: 0 },
+        width: 200,
+        height: 120,
+        data: { label: 'Source' },
+      } as FlowNode,
+      {
+        id: 'target',
+        type: 'process',
+        position: { x: 0, y: 260 },
+        width: 120,
+        height: 80,
+        data: { label: 'Target' },
+      } as FlowNode,
+    ];
+    const edges = [
+      {
+        id: 'e1',
+        source: 'source',
+        target: 'target',
+        sourceHandle: 'right',
+        targetHandle: 'left',
+      } as FlowEdge,
+    ];
+
+    const rerouted = resolveLayoutedEdgeHandles(nodes, edges);
+
+    expect(rerouted[0].sourceHandle).toBe('bottom');
+    expect(rerouted[0].targetHandle).toBe('top');
+  });
+
+  it('keeps sibling layouted edges on the same canonical side pair', () => {
+    const nodes = [
+      {
+        id: 'source',
+        type: 'process',
+        position: { x: 0, y: 0 },
+        width: 200,
+        height: 120,
+        data: { label: 'Source' },
+      } as FlowNode,
+      {
+        id: 'a',
+        type: 'process',
+        position: { x: 280, y: 0 },
+        width: 120,
+        height: 80,
+        data: { label: 'A' },
+      } as FlowNode,
+      {
+        id: 'b',
+        type: 'process',
+        position: { x: 280, y: 120 },
+        width: 120,
+        height: 80,
+        data: { label: 'B' },
+      } as FlowNode,
+      {
+        id: 'c',
+        type: 'process',
+        position: { x: 280, y: 240 },
+        width: 120,
+        height: 80,
+        data: { label: 'C' },
+      } as FlowNode,
+    ];
+    const edges = [
+      { id: 'e1', source: 'source', target: 'a' } as FlowEdge,
+      { id: 'e2', source: 'source', target: 'b' } as FlowEdge,
+      { id: 'e3', source: 'source', target: 'c' } as FlowEdge,
+    ];
+
+    const rerouted = resolveLayoutedEdgeHandles(nodes, edges);
+
+    expect(rerouted.every((edge) => edge.sourceHandle === 'right')).toBe(true);
+    expect(rerouted.every((edge) => edge.targetHandle === 'left')).toBe(true);
   });
 });

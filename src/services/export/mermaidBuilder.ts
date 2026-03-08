@@ -6,6 +6,7 @@ import {
   isClassRelationToken,
   isERRelationToken,
 } from '@/lib/relationSemantics';
+import { handleIdToSide as handleIdToFlowSide } from '@/lib/nodeHandles';
 import { sanitizeId, sanitizeLabel } from './formatting';
 
 function normalizeArchitectureDirection(direction: string | undefined): '-->' | '<--' | '<-->' {
@@ -23,12 +24,11 @@ function normalizeArchitectureSide(side: string | undefined): 'L' | 'R' | 'T' | 
 }
 
 function handleIdToSide(handleId: string | null | undefined): 'L' | 'R' | 'T' | 'B' | undefined {
-  if (!handleId) return undefined;
-  const normalized = handleId.toLowerCase();
-  if (normalized === 'left') return 'L';
-  if (normalized === 'right') return 'R';
-  if (normalized === 'top') return 'T';
-  if (normalized === 'bottom') return 'B';
+  const side = handleIdToFlowSide(handleId);
+  if (side === 'left') return 'L';
+  if (side === 'right') return 'R';
+  if (side === 'top') return 'T';
+  if (side === 'bottom') return 'B';
   return undefined;
 }
 

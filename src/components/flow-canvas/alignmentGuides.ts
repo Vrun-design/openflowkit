@@ -1,4 +1,5 @@
 import type { FlowNode } from '@/lib/types';
+import type { MindmapDropPreview } from '@/lib/mindmapLayout';
 
 const DEFAULT_NODE_WIDTH = 180;
 const DEFAULT_NODE_HEIGHT = 96;
@@ -6,6 +7,10 @@ const DEFAULT_NODE_HEIGHT = 96;
 export interface AlignmentGuides {
   verticalFlowX: number | null;
   horizontalFlowY: number | null;
+}
+
+export interface SelectionDragPreview {
+  mindmapDrop: MindmapDropPreview | null;
 }
 
 function resolveNodeSize(node: FlowNode): { width: number; height: number } {
@@ -39,6 +44,16 @@ function getNodeBox(node: FlowNode): {
   };
 }
 
+function getVerticalAnchors(node: FlowNode): number[] {
+  const box = getNodeBox(node);
+  return [box.left, box.centerX, box.right];
+}
+
+function getHorizontalAnchors(node: FlowNode): number[] {
+  const box = getNodeBox(node);
+  return [box.top, box.centerY, box.bottom];
+}
+
 function updateNearestGuide(
   currentGuide: { position: number | null; delta: number },
   candidatePosition: number,
@@ -55,28 +70,32 @@ export function computeAlignmentGuides(
   allNodes: FlowNode[],
   threshold = 8
 ): AlignmentGuides {
-  const draggedBox = getNodeBox(draggedNode);
+  const draggedVerticalAnchors = getVerticalAnchors(draggedNode);
+  const draggedHorizontalAnchors = getHorizontalAnchors(draggedNode);
   let vertical = { position: null as number | null, delta: Number.POSITIVE_INFINITY };
   let horizontal = { position: null as number | null, delta: Number.POSITIVE_INFINITY };
 
   const candidates = allNodes.filter((node) => node.id !== draggedNode.id && !node.hidden);
   candidates.forEach((node) => {
-    const nodeBox = getNodeBox(node);
-    const verticalCandidates = [nodeBox.left, nodeBox.centerX, nodeBox.right];
-    const horizontalCandidates = [nodeBox.top, nodeBox.centerY, nodeBox.bottom];
+    const verticalCandidates = getVerticalAnchors(node);
+    const horizontalCandidates = getHorizontalAnchors(node);
 
-    verticalCandidates.forEach((candidateX) => {
-      const delta = Math.abs(candidateX - draggedBox.centerX);
-      if (delta <= threshold) {
-        vertical = updateNearestGuide(vertical, candidateX, delta);
-      }
+    draggedVerticalAnchors.forEach((draggedAnchor) => {
+      verticalCandidates.forEach((candidateX) => {
+        const delta = Math.abs(candidateX - draggedAnchor);
+        if (delta <= threshold) {
+          vertical = updateNearestGuide(vertical, candidateX, delta);
+        }
+      });
     });
 
-    horizontalCandidates.forEach((candidateY) => {
-      const delta = Math.abs(candidateY - draggedBox.centerY);
-      if (delta <= threshold) {
-        horizontal = updateNearestGuide(horizontal, candidateY, delta);
-      }
+    draggedHorizontalAnchors.forEach((draggedAnchor) => {
+      horizontalCandidates.forEach((candidateY) => {
+        const delta = Math.abs(candidateY - draggedAnchor);
+        if (delta <= threshold) {
+          horizontal = updateNearestGuide(horizontal, candidateY, delta);
+        }
+      });
     });
   });
 

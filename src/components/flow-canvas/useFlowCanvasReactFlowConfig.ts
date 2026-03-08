@@ -3,8 +3,10 @@ import {
     BackgroundVariant,
     ConnectionMode,
     MarkerType,
+    PanOnScrollMode,
     SelectionMode,
     type Connection,
+    type KeyCode,
 } from '@/lib/reactflowCompat';
 import type { FlowEdge } from '@/lib/types';
 import { isDuplicateConnection } from './flowCanvasTypes';
@@ -31,13 +33,22 @@ export interface FlowCanvasReactFlowConfig {
     onlyRenderVisibleElements: boolean;
     connectionMode: ConnectionMode;
     selectionOnDrag: boolean;
-    panOnDrag: boolean;
+    selectionKeyCode: KeyCode | null;
+    panOnDrag: boolean | number[];
+    panActivationKeyCode: KeyCode | null;
+    zoomActivationKeyCode: KeyCode | null;
     selectionMode: SelectionMode | undefined;
     multiSelectionKeyCode: string;
+    zoomOnScroll: boolean;
+    zoomOnPinch: boolean;
+    panOnScroll: boolean;
+    panOnScrollMode: PanOnScrollMode;
+    preventScrolling: boolean;
+    zoomOnDoubleClick: boolean;
     defaultEdgeOptions: {
         style: { stroke: string; strokeWidth: number };
         animated: boolean;
-        markerEnd: { type: MarkerType; color: string };
+        markerEnd: { type: MarkerType; color: string; width?: number; height?: number };
     };
     background: FlowCanvasBackgroundConfig;
     isValidConnection: (connection: Connection) => boolean;
@@ -53,15 +64,26 @@ export function computeFlowCanvasReactFlowConfig({
         onlyRenderVisibleElements: viewportCullingEnabled,
         connectionMode: ConnectionMode.Loose,
         selectionOnDrag: isEffectiveSelectMode,
-        panOnDrag: !isEffectiveSelectMode,
+        selectionKeyCode: 'Shift',
+        panOnDrag: isEffectiveSelectMode ? [1, 2] : [0, 1, 2],
+        panActivationKeyCode: 'Space',
+        zoomActivationKeyCode: ['Meta', 'Control'],
         selectionMode: isEffectiveSelectMode ? SelectionMode.Partial : undefined,
-        multiSelectionKeyCode: 'Alt',
+        multiSelectionKeyCode: 'Shift',
+        zoomOnScroll: false,
+        zoomOnPinch: true,
+        panOnScroll: true,
+        panOnScrollMode: PanOnScrollMode.Free,
+        preventScrolling: true,
+        zoomOnDoubleClick: false,
         defaultEdgeOptions: {
             style: visualQualityV2Enabled ? { stroke: '#64748b', strokeWidth: 1.5 } : { stroke: '#94a3b8', strokeWidth: 2 },
             animated: false,
             markerEnd: {
                 type: MarkerType.ArrowClosed,
                 color: visualQualityV2Enabled ? '#64748b' : '#94a3b8',
+                width: 20,
+                height: 20,
             },
         },
         background: {

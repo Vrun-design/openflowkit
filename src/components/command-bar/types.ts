@@ -1,8 +1,9 @@
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import { FlowTemplate } from '../../services/templates';
 import { LayoutAlgorithm } from '../../services/elkLayout';
+import type { DomainLibraryItem } from '@/services/domainLibrary';
 
-export type CommandView = 'root' | 'templates' | 'search' | 'layout' | 'design-system' | 'wireframes' | 'layers' | 'pages' | 'libraries';
+export type CommandView = 'root' | 'templates' | 'search' | 'layout' | 'design-system' | 'assets' | 'layers' | 'pages';
 
 export interface CommandItem {
     id: string;
@@ -30,6 +31,16 @@ export interface CommandBarProps {
     onOpenStudioFlowMind?: () => void;
     onOpenStudioMermaid?: () => void;
     initialView?: CommandView;
+    onAddAnnotation?: () => void;
+    onAddSection?: () => void;
+    onAddText?: () => void;
+    onAddJourney?: () => void;
+    onAddMindmap?: () => void;
+    onAddArchitecture?: () => void;
+    onAddImage?: (imageUrl: string) => void;
+    onAddBrowserWireframe?: () => void;
+    onAddMobileWireframe?: () => void;
+    onAddDomainLibraryItem?: (item: DomainLibraryItem) => void;
     settings?: {
         showGrid: boolean;
         onToggleGrid: () => void;

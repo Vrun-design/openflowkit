@@ -44,7 +44,9 @@ export interface NodeData {
   secondaryIcon?: string; // Optional secondary icon key
   customIconUrl?: string; // User-uploaded icon (base64 or URL)
   imageUrl?: string; // Base64 or URL
-  color?: string; // Tailwind color class key (e.g., 'blue', 'red')
+  color?: string; // Preset color key (e.g., 'white', 'blue', 'custom')
+  colorMode?: 'subtle' | 'filled';
+  customColor?: string; // Hex color for the "custom" preset
   align?: 'left' | 'center' | 'right';
   shape?: 'rectangle' | 'rounded' | 'capsule' | 'diamond' | 'hexagon' | 'cylinder' | 'ellipse' | 'parallelogram' | 'circle';
   rotation?: number;
@@ -67,6 +69,9 @@ export interface NodeData {
   journeyTask?: string;
   journeyScore?: number;
   mindmapDepth?: number;
+  mindmapParentId?: string;
+  mindmapSide?: 'left' | 'right';
+  mindmapBranchStyle?: 'curved' | 'straight';
   archProvider?: string;
   archResourceType?: string;
   archEnvironment?: string;
@@ -84,6 +89,7 @@ export type FlowNode = LegacyNode<NodeData>;
 
 export interface EdgeData {
   [key: string]: unknown;
+  routingMode?: 'auto' | 'elk' | 'manual';
   condition?: EdgeCondition;
   labelOffsetX?: number;
   labelOffsetY?: number;
@@ -100,10 +106,19 @@ export interface EdgeData {
   classRelationLabel?: string;
   erRelation?: ERRelationToken;
   erRelationLabel?: string;
+  elkPoints?: {
+    x: number;
+    y: number;
+  }[];
+  mindmapBranchKind?: 'root' | 'branch';
   waypoint?: {
     x: number;
     y: number;
   };
+  waypoints?: {
+    x: number;
+    y: number;
+  }[];
 }
 
 export interface GlobalEdgeOptions {
@@ -141,6 +156,7 @@ export interface FlowTab {
   id: string;
   name: string;
   diagramType?: DiagramType;
+  updatedAt?: string;
   nodes: FlowNode[];
   edges: FlowEdge[];
   history: {

@@ -1,8 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import type { CSSProperties } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ClassNode from './ClassNode';
 import EntityNode from './EntityNode';
+
+let selectedNodeId: string | null = null;
+let currentNodeId: string | null = null;
 
 vi.mock('@/config/rolloutFlags', () => ({
   ROLLOUT_FLAGS: {
@@ -32,6 +35,7 @@ vi.mock('@/lib/reactflowCompat', async (importOriginal) => {
     ),
     NodeResizer: () => null,
     NodeResizeControl: () => null,
+    useNodeId: () => currentNodeId,
     Position: {
       Top: 'top',
       Right: 'right',
@@ -39,6 +43,18 @@ vi.mock('@/lib/reactflowCompat', async (importOriginal) => {
       Left: 'left',
     },
   };
+});
+
+vi.mock('@/store', () => ({
+  useFlowStore: (selector?: (state: { selectedNodeId: string | null; setNodes: ReturnType<typeof vi.fn> }) => unknown) => {
+    const state = { selectedNodeId, setNodes: vi.fn() };
+    return typeof selector === 'function' ? selector(state) : state;
+  },
+}));
+
+afterEach(() => {
+  selectedNodeId = null;
+  currentNodeId = null;
 });
 
 function assertSelectedHandlesAreConnectable(): void {
@@ -127,6 +143,31 @@ describe('Class/Entity handle interaction policy', () => {
     );
 
     assertUnselectedHandlesAreDiscoverable();
+  });
+
+  it('keeps EntityNode handles visible when the store selection remains active after drag', () => {
+    selectedNodeId = 'entity-4';
+    currentNodeId = 'entity-4';
+
+    render(
+      <EntityNode
+        id="entity-4"
+        type="er_entity"
+        selected={false}
+        dragging={false}
+        zIndex={1}
+        data={{ label: 'Payment', erFields: [] }}
+        isConnectable={true}
+        xPos={0}
+        yPos={0}
+      />
+    );
+
+    for (const handleId of ['top', 'bottom', 'left', 'right']) {
+      const handle = screen.getByTestId(`handle-${handleId}`);
+      expect(handle.getAttribute('data-class')).not.toContain('flow-handle-hitarea');
+      expect(handle.getAttribute('data-pointer')).toBe('all');
+    }
   });
 
   it('exposes elevated min-height diagnostics for dense ClassNode content', () => {

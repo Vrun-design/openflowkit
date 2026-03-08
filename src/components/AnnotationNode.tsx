@@ -1,12 +1,16 @@
-import React, { memo } from 'react';
+import React, { Suspense, lazy, memo } from 'react';
 import type { LegacyNodeProps } from '@/lib/reactflowCompat';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import type { NodeData } from '@/lib/types';
 import { useTranslation } from 'react-i18next';
 import { useInlineNodeTextEdit } from '@/hooks/useInlineNodeTextEdit';
 import { InlineTextEditSurface } from './InlineTextEditSurface';
 import { NodeChrome } from './NodeChrome';
+import { hasMarkdownSyntax } from './markdownSyntax';
+
+const LazyMarkdownRenderer = lazy(async () => {
+  const module = await import('./MarkdownRenderer');
+  return { default: module.MarkdownRenderer };
+});
 
 function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.ReactElement {
   const { t } = useTranslation();
@@ -15,19 +19,27 @@ function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): Reac
     multiline: true,
     allowTabCreateSibling: false,
   });
+  const subLabelContent = data.subLabel || t('annotationNode.placeholder');
+  const renderedSubLabel = hasMarkdownSyntax(subLabelContent)
+    ? (
+        <Suspense fallback={<span className="whitespace-pre-wrap break-words">{subLabelContent}</span>}>
+          <LazyMarkdownRenderer content={subLabelContent} />
+        </Suspense>
+      )
+    : <span className="whitespace-pre-wrap break-words">{subLabelContent}</span>;
   return (
     <NodeChrome
       selected={Boolean(selected)}
       minWidth={150}
       minHeight={100}
-      handleClassName="!w-3 !h-3 !border-2 !border-white !bg-yellow-500 transition-all duration-150 hover:scale-125"
+      handleClassName="!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125"
       handleVisibilityOptions={{ includeConnectingState: false }}
     >
       <div
         className={`
           relative group flex flex-col h-full shadow-md flow-lod-shadow rounded-br-3xl rounded-tl-sm rounded-tr-sm rounded-bl-sm border border-yellow-300 transition-all duration-200
           bg-yellow-100/90
-          ${selected ? `ring-2 ring-yellow-400 ring-offset-2 z-10` : 'hover:shadow-lg'}
+          ${selected ? 'z-10' : 'hover:shadow-lg'}
         `}
         style={{ minWidth: 200, width: '100%', height: '100%' }}
       >
@@ -49,11 +61,7 @@ function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): Reac
             <InlineTextEditSurface
                 isEditing={subLabelEdit.isEditing}
                 draft={subLabelEdit.draft}
-                displayValue={(
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {data.subLabel || t('annotationNode.placeholder')}
-                    </ReactMarkdown>
-                )}
+                displayValue={renderedSubLabel}
                 onBeginEdit={subLabelEdit.beginEdit}
                 onDraftChange={subLabelEdit.setDraft}
                 onCommit={subLabelEdit.commit}

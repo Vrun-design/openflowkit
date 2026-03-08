@@ -1,5 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type { FlowEdge, FlowNode, FlowSnapshot } from '@/lib/types';
+import { useFlowStore } from '@/store';
+import { composeDiagramForDisplay } from '@/services/composeDiagramForDisplay';
 
 interface UseFlowEditorCallbacksParams {
     addTab: () => string;
@@ -41,6 +43,8 @@ export function useFlowEditorCallbacks({
     fitView,
     screenToFlowPosition,
 }: UseFlowEditorCallbacksParams): UseFlowEditorCallbacksResult {
+    const stabilizationRunIdRef = useRef(0);
+
     const getCenter = useCallback(() => {
         const centerX = window.innerWidth / 2;
         const centerY = window.innerHeight / 2;
@@ -83,6 +87,46 @@ export function useFlowEditorCallbacks({
         setNodes(newNodes);
         setEdges(newEdges);
         setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
+
+        const runId = stabilizationRunIdRef.current + 1;
+        stabilizationRunIdRef.current = runId;
+
+        window.setTimeout(() => {
+            void (async () => {
+                if (stabilizationRunIdRef.current !== runId) {
+                    return;
+                }
+
+                const state = useFlowStore.getState();
+                const measuredNodes = state.nodes;
+                const measuredEdges = state.edges;
+                const hasMeasuredDimensions = measuredNodes.some((node) => {
+                    const measured = (node as FlowNode & {
+                        measured?: { width?: number; height?: number };
+                    }).measured;
+                    return typeof measured?.width === 'number' && typeof measured?.height === 'number';
+                });
+
+                if (!hasMeasuredDimensions) {
+                    return;
+                }
+
+                const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId);
+                const { nodes: stabilizedNodes, edges: stabilizedEdges } = await composeDiagramForDisplay(
+                    measuredNodes,
+                    measuredEdges,
+                    { diagramType: activeTab?.diagramType }
+                );
+
+                if (stabilizationRunIdRef.current !== runId) {
+                    return;
+                }
+
+                setNodes(stabilizedNodes);
+                setEdges(stabilizedEdges);
+                fitView({ duration: 500, padding: 0.2 });
+            })();
+        }, 180);
     }, [fitView, recordHistory, setEdges, setNodes]);
 
     return {

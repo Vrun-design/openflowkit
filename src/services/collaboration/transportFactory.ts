@@ -1,5 +1,5 @@
 import { createInMemoryCollaborationTransport, type CollaborationTransport } from './transport';
-import { createYjsWebRtcCollaborationTransport, isRealtimeCollaborationSupported } from './yjsWebrtcTransport';
+import { createYjsPeerCollaborationTransport, isPeerCollaborationSupported } from './yjsPeerTransport';
 
 export type CollaborationTransportMode = 'in-memory' | 'realtime';
 
@@ -18,8 +18,8 @@ export function createCollaborationTransportFactory(
   mode: CollaborationTransportMode,
   options: CollaborationTransportFactoryOptions = {}
 ): CollaborationTransportFactoryResult {
-  const isRealtimeSupported = options.isRealtimeSupported ?? isRealtimeCollaborationSupported;
-  const createRealtimeTransport = options.createRealtimeTransport ?? createYjsWebRtcCollaborationTransport;
+  const isRealtimeSupported = options.isRealtimeSupported ?? isPeerCollaborationSupported;
+  const createRealtimeTransport = options.createRealtimeTransport ?? createYjsPeerCollaborationTransport;
 
   if (mode === 'in-memory') {
     return {

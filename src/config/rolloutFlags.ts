@@ -3,6 +3,7 @@ export type RolloutFlagKey =
     | 'visualQualityV2'
     | 'mermaidSyncV1'
     | 'familyPluginV1'
+    | 'connectorModelV1'
     | 'relationSemanticsV1'
     | 'stateDiagramV1'
     | 'indexedDbStorageV1'
@@ -10,6 +11,7 @@ export type RolloutFlagKey =
     | 'shapeLibraryV1'
     | 'templateLibraryV1'
     | 'collaborationV1'
+    | 'collaborationIndexedDbV1'
     | 'reactFlowV12Migration'
     | 'architectureParentingV12'
     | 'reactFlowV12Cleanup';
@@ -31,7 +33,7 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     visualQualityV2: {
         key: 'visualQualityV2',
         envVar: 'VITE_VISUAL_QUALITY_V2',
-        defaultEnabled: false,
+        defaultEnabled: true,
         description: 'Phase 0 visual quality rollout',
     },
     mermaidSyncV1: {
@@ -45,6 +47,12 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
         envVar: 'VITE_FAMILY_PLUGIN_V1',
         defaultEnabled: false,
         description: 'Diagram family plugin routing rollout',
+    },
+    connectorModelV1: {
+        key: 'connectorModelV1',
+        envVar: 'VITE_CONNECTOR_MODEL_V1',
+        defaultEnabled: false,
+        description: 'Unified custom renderer coverage for all regular connector styles',
     },
     relationSemanticsV1: {
         key: 'relationSemanticsV1',
@@ -67,7 +75,7 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     canvasInteractionsV1: {
         key: 'canvasInteractionsV1',
         envVar: 'VITE_CANVAS_INTERACTIONS_V1',
-        defaultEnabled: false,
+        defaultEnabled: true,
         description: 'Canvas micro-interactions rollout (double-click create, drag-create/connect)',
     },
     shapeLibraryV1: {
@@ -87,6 +95,12 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
         envVar: 'VITE_COLLABORATION_V1',
         defaultEnabled: true,
         description: 'Real-time collaboration scaffold rollout',
+    },
+    collaborationIndexedDbV1: {
+        key: 'collaborationIndexedDbV1',
+        envVar: 'VITE_COLLABORATION_INDEXEDDB_V1',
+        defaultEnabled: true,
+        description: 'Local IndexedDB persistence for collaboration rooms',
     },
     reactFlowV12Migration: {
         key: 'reactFlowV12Migration',
@@ -129,6 +143,7 @@ export const ROLLOUT_FLAGS: Record<RolloutFlagKey, boolean> = {
     visualQualityV2: isRolloutFlagEnabled('visualQualityV2'),
     mermaidSyncV1: isRolloutFlagEnabled('mermaidSyncV1'),
     familyPluginV1: isRolloutFlagEnabled('familyPluginV1'),
+    connectorModelV1: isRolloutFlagEnabled('connectorModelV1'),
     relationSemanticsV1: isRolloutFlagEnabled('relationSemanticsV1'),
     stateDiagramV1: isRolloutFlagEnabled('stateDiagramV1'),
     indexedDbStorageV1: isRolloutFlagEnabled('indexedDbStorageV1'),
@@ -136,6 +151,7 @@ export const ROLLOUT_FLAGS: Record<RolloutFlagKey, boolean> = {
     shapeLibraryV1: isRolloutFlagEnabled('shapeLibraryV1'),
     templateLibraryV1: isRolloutFlagEnabled('templateLibraryV1'),
     collaborationV1: isRolloutFlagEnabled('collaborationV1'),
+    collaborationIndexedDbV1: isRolloutFlagEnabled('collaborationIndexedDbV1'),
     reactFlowV12Migration: isRolloutFlagEnabled('reactFlowV12Migration'),
     architectureParentingV12: isRolloutFlagEnabled('architectureParentingV12'),
     reactFlowV12Cleanup: isRolloutFlagEnabled('reactFlowV12Cleanup'),

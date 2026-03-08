@@ -1,13 +1,16 @@
-import React, { memo } from 'react';
+import React, { Suspense, lazy, memo } from 'react';
 import { Position } from '@/lib/reactflowCompat';
 import type { LegacyNodeProps } from '@/lib/reactflowCompat';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
 import type { NodeData } from '@/lib/types';
 import { useInlineNodeTextEdit } from '@/hooks/useInlineNodeTextEdit';
 import { InlineTextEditSurface } from './InlineTextEditSurface';
 import { NodeChrome } from './NodeChrome';
+import { hasMarkdownSyntax } from './markdownSyntax';
+
+const LazyMarkdownRenderer = lazy(async () => {
+    const module = await import('./MarkdownRenderer');
+    return { default: module.MarkdownRenderer };
+});
 
 const TEXT_COLORS: Record<string, { text: string, border: string }> = {
     slate: { text: 'text-slate-700', border: 'border-slate-300' },
@@ -89,13 +92,21 @@ function TextNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
         multiline: true,
         allowTabCreateSibling: true,
     });
+    const labelContent = data.label || 'Text';
+    const renderedLabel = hasMarkdownSyntax(labelContent)
+        ? (
+            <Suspense fallback={<span className="whitespace-pre-wrap break-words">{labelContent}</span>}>
+                <LazyMarkdownRenderer content={labelContent} enableBreaks />
+            </Suspense>
+        )
+        : <span className="whitespace-pre-wrap break-words">{labelContent}</span>;
 
     return (
         <NodeChrome
             selected={Boolean(selected)}
             minWidth={50}
             minHeight={30}
-            handleClassName="!w-3 !h-3 !border-2 !border-white !bg-[var(--brand-primary)]"
+            handleClassName="!w-3 !h-3 !border-2 !border-white"
             handleVisibilityOptions={{ includeConnectingState: false }}
             handles={[
                 { id: 'target-top', position: Position.Top, side: 'top' },
@@ -107,7 +118,6 @@ function TextNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
             <div
                 className={`
           w-full h-full box-border flex items-center justify-center p-2 rounded-lg transition-all duration-200 border-2
-          ${selected ? 'ring-2 ring-[var(--brand-primary)] ring-offset-2' : ''}
           ${!data.backgroundColor ? 'hover:bg-slate-100/50 border-transparent' : borderColor}
         `}
                 style={{
@@ -122,11 +132,7 @@ function TextNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
                 <InlineTextEditSurface
                     isEditing={labelEdit.isEditing}
                     draft={labelEdit.draft}
-                    displayValue={(
-                        <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
-                            {data.label || 'Text'}
-                        </ReactMarkdown>
-                    )}
+                    displayValue={renderedLabel}
                     onBeginEdit={labelEdit.beginEdit}
                     onDraftChange={labelEdit.setDraft}
                     onCommit={labelEdit.commit}

@@ -13,11 +13,15 @@ interface ShortcutHandlers {
   duplicateNode: (id: string) => void;
   selectAll: () => void;
   onAddMindmapChildShortcut?: () => void;
+  onAddMindmapSiblingShortcut?: () => void;
   onCommandBar: () => void;
   onSearch: () => void;
   onShortcutsHelp: () => void;
   onSelectMode?: () => void;
   onPanMode?: () => void;
+  onFitView?: () => void;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
 }
 
 export function useKeyboardShortcuts({
@@ -31,11 +35,15 @@ export function useKeyboardShortcuts({
   duplicateNode,
   selectAll,
   onAddMindmapChildShortcut,
+  onAddMindmapSiblingShortcut,
   onCommandBar,
   onSearch,
   onShortcutsHelp,
   onSelectMode,
   onPanMode,
+  onFitView,
+  onZoomIn,
+  onZoomOut,
 }: ShortcutHandlers): void {
   useEffect(() => {
     const isEditableActiveElement = (): boolean => {
@@ -86,6 +94,24 @@ export function useKeyboardShortcuts({
         }
       }
 
+      if (!isCmdOrCtrl && isShift && !isEditable && e.code === 'Digit1') {
+        e.preventDefault();
+        onFitView?.();
+        return;
+      }
+
+      if (isCmdOrCtrl && !isEditable && (key === '=' || key === '+')) {
+        e.preventDefault();
+        onZoomIn?.();
+        return;
+      }
+
+      if (isCmdOrCtrl && !isEditable && key === '-') {
+        e.preventDefault();
+        onZoomOut?.();
+        return;
+      }
+
       // Delete
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (isEditable) return;
@@ -121,12 +147,22 @@ export function useKeyboardShortcuts({
         if (selectedNodeId) duplicateNode(selectedNodeId);
       }
 
-      // Mindmap quick-add child (Shift + Enter)
-      if (isShift && e.key === 'Enter') {
-        if (isEditable) return;
+      // Mindmap quick-add child (Tab)
+      if (!isCmdOrCtrl && !isEditable && e.key === 'Tab') {
         if (selectedNodeId && selectedNodeType === 'mindmap' && onAddMindmapChildShortcut) {
           e.preventDefault();
           onAddMindmapChildShortcut();
+          return;
+        }
+      }
+
+      // Mindmap quick-add sibling (Enter)
+      if (!isCmdOrCtrl && !isShift && e.key === 'Enter') {
+        if (isEditable) return;
+        if (selectedNodeId && selectedNodeType === 'mindmap' && onAddMindmapSiblingShortcut) {
+          e.preventDefault();
+          onAddMindmapSiblingShortcut();
+          return;
         }
       }
 
@@ -168,5 +204,5 @@ export function useKeyboardShortcuts({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedNodeId, selectedEdgeId, selectedNodeType, deleteNode, deleteEdge, undo, redo, duplicateNode, selectAll, onAddMindmapChildShortcut, onCommandBar, onSearch, onShortcutsHelp, onSelectMode, onPanMode]);
+  }, [selectedNodeId, selectedEdgeId, selectedNodeType, deleteNode, deleteEdge, undo, redo, duplicateNode, selectAll, onAddMindmapChildShortcut, onAddMindmapSiblingShortcut, onCommandBar, onSearch, onShortcutsHelp, onSelectMode, onPanMode, onFitView, onZoomIn, onZoomOut]);
 }

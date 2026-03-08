@@ -230,6 +230,7 @@ function parseMindmap(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; er
       color: 'slate',
       shape: node.depth === 0 ? 'rounded' : 'rectangle',
       mindmapDepth: node.depth,
+      mindmapParentId: node.parentIndex === null ? undefined : structuredNodes[node.parentIndex].id,
     },
   }));
 

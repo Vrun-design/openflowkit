@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { useFlowStore } from '../../store';
 import { Palette, Check, Plus, ArrowLeft, MoreHorizontal, Copy, Trash2, Edit2, Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
 import { DesignSystemEditor } from './DesignSystemEditor';
 import { createId } from '@/lib/id';
+import { useBrandButtonStyle } from '@/store/brandHooks';
+import { useDesignSystemActions, useDesignSystemsCatalog } from '@/store/designSystemHooks';
 
 interface DesignSystemViewProps {
     onClose: () => void;
@@ -13,17 +14,10 @@ interface DesignSystemViewProps {
 
 export const DesignSystemView: React.FC<DesignSystemViewProps> = ({ onClose, handleBack }) => {
     const { t } = useTranslation();
-    const {
-        designSystems,
-        activeDesignSystemId,
-        setActiveDesignSystem,
-        addDesignSystem,
-        duplicateDesignSystem,
-        deleteDesignSystem,
-        brandConfig
-    } = useFlowStore();
+    const { designSystems, activeDesignSystemId } = useDesignSystemsCatalog();
+    const { setActiveDesignSystem, addDesignSystem, duplicateDesignSystem, deleteDesignSystem } = useDesignSystemActions();
 
-    const isBeveled = brandConfig.ui.buttonStyle === 'beveled';
+    const isBeveled = useBrandButtonStyle() === 'beveled';
     const [editingSystemId, setEditingSystemId] = useState<string | null>(null);
 
     const activeSystem = designSystems.find(ds => ds.id === activeDesignSystemId);

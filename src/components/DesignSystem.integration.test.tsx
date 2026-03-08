@@ -6,6 +6,31 @@ import type { DesignSystem } from '@/lib/types';
 import { DEFAULT_DESIGN_SYSTEM, useFlowStore } from '@/store';
 import CustomNode from './CustomNode';
 import { CustomSmoothStepEdge } from './CustomEdge';
+import { DEFAULT_EDGE_OPTIONS } from '@/constants';
+
+vi.mock('react-i18next', () => ({
+    useTranslation: () => ({
+        t: (_key: string, fallback?: string) => fallback ?? _key,
+    }),
+}));
+
+vi.mock('./custom-edge/CustomEdgeWrapper', () => ({
+    CustomEdgeWrapper: ({ style }: { style?: CSSProperties }) => {
+        const state = useFlowStore.getState();
+        const resolvedStyle = {
+            stroke: state.designSystems.find((system) => system.id === state.activeDesignSystemId)?.colors.edge ?? DEFAULT_EDGE_OPTIONS.style.stroke,
+            strokeWidth: state.designSystems.find((system) => system.id === state.activeDesignSystemId)?.components.edge.strokeWidth ?? DEFAULT_EDGE_OPTIONS.style.strokeWidth,
+            ...style,
+        };
+
+        return (
+            <div
+                data-testid="custom-edge-base"
+                data-style={JSON.stringify(resolvedStyle)}
+            />
+        );
+    },
+}));
 
 vi.mock('@/lib/reactflowCompat', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@/lib/reactflowCompat')>();
@@ -22,17 +47,11 @@ vi.mock('@/lib/reactflowCompat', async (importOriginal) => {
             Bottom: 'bottom',
             Left: 'left',
         },
-        BaseEdge: ({ style }: { style?: CSSProperties }) => (
-            <div
-                data-testid="custom-edge-base"
-                data-style={JSON.stringify(style ?? {})}
-            />
-        ),
         getBezierPath: () => ['M 0 0 C 0 0 0 0 0 0', 10, 20],
         getSmoothStepPath: () => ['M 0 0 L 10 10', 15, 25],
-        useEdges: () => [],
-        useNodes: () => [],
         useReactFlow: () => ({
+            getEdges: () => [],
+            getNodes: () => [],
             setEdges: vi.fn(),
             screenToFlowPosition: ({ x, y }: { x: number; y: number }) => ({ x, y }),
         }),
@@ -113,7 +132,7 @@ describe('Design System integration', () => {
             />
         );
 
-        const nodeContainer = document.querySelector('.group') as HTMLDivElement | null;
+        const nodeContainer = document.querySelector('[data-transform-diagnostics="1"]') as HTMLDivElement | null;
         expect(nodeContainer).toBeTruthy();
         if (!nodeContainer) {
             throw new Error('Node container not found');
@@ -193,11 +212,35 @@ describe('Design System integration', () => {
             />
         );
 
-        const nodeContainer = document.querySelector('.group') as HTMLDivElement | null;
+        const nodeContainer = document.querySelector('[data-transform-diagnostics="1"]') as HTMLDivElement | null;
         expect(nodeContainer).toBeTruthy();
         if (!nodeContainer) {
             throw new Error('Node container not found');
         }
         expect(nodeContainer.style.minHeight).toBe('128px');
+    });
+
+    it('does not lock generic nodes to measured dimensions when no explicit size was authored', () => {
+        const { container } = render(
+            <CustomNode
+                id="n-auto"
+                type="process"
+                selected={false}
+                dragging={false}
+                zIndex={1}
+                data={{ label: 'Auto grow' }}
+                isConnectable={true}
+                xPos={0}
+                yPos={0}
+                sourcePosition={Position.Right}
+                targetPosition={Position.Left}
+                {...({ width: 220, height: 84 } as Record<string, number>)}
+            />
+        );
+
+        const diagnosticsNode = container.querySelector('[data-transform-diagnostics="1"]') as HTMLElement | null;
+        expect(diagnosticsNode).not.toBeNull();
+        expect(diagnosticsNode?.style.width).toBe('100%');
+        expect(diagnosticsNode?.style.height).toBe('');
     });
 });

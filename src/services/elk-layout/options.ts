@@ -61,31 +61,42 @@ function getAlgorithmOptions(algorithm: LayoutAlgorithm, layerSpacing: number): 
         default:
             options['elk.algorithm'] = `org.eclipse.elk.${algorithm}`;
     }
-
     if (algorithm === 'layered') {
         Object.assign(options, {
             'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
             'elk.layered.crossingMinimization.thoroughness': '30',
             'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+            'elk.layered.nodePlacement.favorStraightEdges': 'true',
+            'elk.layered.mergeEdges': 'true',
+            'elk.layered.unnecessaryBendpoints': 'true',
             'elk.edgeRouting': 'ORTHOGONAL',
+            'elk.portConstraints': 'FIXED_SIDE', // Lock to centers to force centralized trunk grouping
             'elk.layered.spacing.edgeNodeBetweenLayers': '50',
-            'elk.layered.spacing.edgeEdgeBetweenLayers': '40',
+            'elk.layered.spacing.edgeEdgeBetweenLayers': '30', // Increased from 20 for cleaner multi-edge separation
+            'elk.spacing.edgeEdge': '12',                      // Minimum gap between parallel edges
             'elk.separateConnectedComponents': 'true',
             'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+            'elk.layered.compaction.postCompaction.strategy': 'EDGE_LENGTH',
         });
     } else if (algorithm === 'mrtree') {
         Object.assign(options, {
             'elk.separateConnectedComponents': 'true',
+            'elk.portConstraints': 'FIXED_SIDE', // Lock to centers to force centralized trunk grouping
+            'elk.spacing.edgeEdge': '12',
         });
+
     } else if (algorithm === 'force') {
         Object.assign(options, {
             'elk.force.iterations': '500',
             'elk.force.repulsivePower': String(layerSpacing / 20),
+            'elk.portConstraints': 'FREE', // Force layout needs free ports
         });
     } else if (algorithm === 'stress') {
         options['elk.stress.desiredEdgeLength'] = String(layerSpacing);
+        options['elk.portConstraints'] = 'FREE';
     } else if (algorithm === 'radial') {
         options['elk.radial.radius'] = String(layerSpacing);
+        options['elk.portConstraints'] = 'FREE';
     }
 
     return options;

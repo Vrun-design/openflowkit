@@ -50,4 +50,14 @@ describe('handle interaction usage guardrails', () => {
       expect(source, path).not.toContain('pointerEvents: selected && visualQualityV2Enabled');
     }
   });
+
+  it('keeps handle fill color centralized instead of node-specific handle backgrounds', () => {
+    for (const path of HANDLE_POLICY_FILES) {
+      const source = readSource(path);
+      expect(source, path).not.toContain('!bg-');
+      expect(source, path).not.toContain('backgroundColor: lane.border');
+      expect(source, path).not.toContain('backgroundColor: theme.border');
+      expect(source, path).not.toContain('style.handle');
+    }
+  });
 });

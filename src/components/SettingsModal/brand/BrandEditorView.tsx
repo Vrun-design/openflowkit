@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, RotateCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useFlowStore } from '@/store';
+import { useBrandKitActions, useBrandKitById, useBrandKitCatalog } from '@/store/brandHooks';
 import { Button } from '@/components/ui/Button';
 import { getEditorTabs, renderEditorTab, TabButton } from './BrandEditorSections';
 import type { EditorTab } from './types';
@@ -13,18 +13,12 @@ interface BrandEditorViewProps {
 
 export function BrandEditorView({ kitId, onBack }: BrandEditorViewProps): React.ReactElement {
     const { t } = useTranslation();
-    const {
-        brandKits,
-        updateBrandKitName,
-        setBrandConfig,
-        activeBrandKitId,
-        setActiveBrandKitId,
-        resetBrandConfig,
-    } = useFlowStore();
+    const { brandKits, activeBrandKitId } = useBrandKitCatalog();
+    const { updateBrandKitName, setBrandConfig, setActiveBrandKitId, resetBrandConfig } = useBrandKitActions();
 
     const [activeTab, setActiveTab] = useState<EditorTab>('identity');
     const nameInputRef = useRef<HTMLInputElement>(null);
-    const kit = brandKits.find((item) => item.id === kitId);
+    const kit = useBrandKitById(kitId);
 
     useEffect(() => {
         if (activeBrandKitId !== kitId) {

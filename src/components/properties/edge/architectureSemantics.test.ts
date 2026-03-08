@@ -59,6 +59,8 @@ describe('side/handle mapping', () => {
     expect(handleIdToArchitectureSide('RIGHT')).toBe('R');
     expect(handleIdToArchitectureSide('top')).toBe('T');
     expect(handleIdToArchitectureSide('bottom')).toBe('B');
+    expect(handleIdToArchitectureSide('source-right')).toBe('R');
+    expect(handleIdToArchitectureSide('target-left')).toBe('L');
     expect(handleIdToArchitectureSide('random')).toBeUndefined();
   });
 });

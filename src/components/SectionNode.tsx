@@ -22,17 +22,11 @@ function SectionNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
       minHeight={250}
       handleClassName="!w-3 !h-3 !border-2 !border-white transition-opacity"
       handleVisibilityOptions={{ includeConnectingState: false }}
-      handleStyleExtras={{
-        top: { backgroundColor: theme.border },
-        right: { backgroundColor: theme.border },
-        bottom: { backgroundColor: theme.border },
-        left: { backgroundColor: theme.border },
-      }}
     >
       <div
         className={`
           group w-full h-full rounded-2xl border-2 border-dashed transition-all duration-200
-          ${selected ? 'ring-2 ring-offset-2 z-10' : ''}
+          ${selected ? 'z-10' : ''}
         `}
         style={{
           backgroundColor: theme.bg,

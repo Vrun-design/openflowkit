@@ -6,26 +6,44 @@ const PROFILE_THRESHOLDS: Record<ViewSettings['largeGraphSafetyProfile'], {
   lowDetailZoomThreshold: number;
   farZoomReductionThreshold: number;
   interactionCooldownMs: number;
+  lodRecoveryBuffer: number;
 }> = {
   performance: {
     nodeThreshold: 100,
     lowDetailZoomThreshold: 0.6,
     farZoomReductionThreshold: 0.5,
     interactionCooldownMs: 240,
+    lodRecoveryBuffer: 0.06,
   },
   balanced: {
     nodeThreshold: 300,
     lowDetailZoomThreshold: 0.5,
     farZoomReductionThreshold: 0.4,
     interactionCooldownMs: 180,
+    lodRecoveryBuffer: 0.05,
   },
   quality: {
     nodeThreshold: 500,
     lowDetailZoomThreshold: 0.42,
     farZoomReductionThreshold: 0.34,
     interactionCooldownMs: 130,
+    lodRecoveryBuffer: 0.04,
   },
 };
+
+function resolveHysteresisState(
+  safetyActive: boolean,
+  zoom: number,
+  threshold: number,
+  recoveryBuffer: number,
+  previouslyActive: boolean
+): boolean {
+  if (!safetyActive) return false;
+  if (previouslyActive) {
+    return zoom <= threshold + recoveryBuffer;
+  }
+  return zoom <= threshold;
+}
 
 export function isLargeGraphSafetyActive(
   nodeCount: number,
@@ -68,6 +86,22 @@ export function isLowDetailModeActiveForProfile(
   return zoom <= PROFILE_THRESHOLDS[profile].lowDetailZoomThreshold;
 }
 
+export function resolveLowDetailModeStateForProfile(
+  safetyActive: boolean,
+  zoom: number,
+  profile: ViewSettings['largeGraphSafetyProfile'],
+  previouslyActive: boolean
+): boolean {
+  const thresholds = PROFILE_THRESHOLDS[profile];
+  return resolveHysteresisState(
+    safetyActive,
+    zoom,
+    thresholds.lowDetailZoomThreshold,
+    thresholds.lodRecoveryBuffer,
+    previouslyActive
+  );
+}
+
 export function isInteractionLowDetailModeActive(
   safetyActive: boolean,
   isInteracting: boolean
@@ -87,6 +121,22 @@ export function isFarZoomReductionActiveForProfile(
 ): boolean {
   if (!safetyActive) return false;
   return zoom <= PROFILE_THRESHOLDS[profile].farZoomReductionThreshold;
+}
+
+export function resolveFarZoomReductionStateForProfile(
+  safetyActive: boolean,
+  zoom: number,
+  profile: ViewSettings['largeGraphSafetyProfile'],
+  previouslyActive: boolean
+): boolean {
+  const thresholds = PROFILE_THRESHOLDS[profile];
+  return resolveHysteresisState(
+    safetyActive,
+    zoom,
+    thresholds.farZoomReductionThreshold,
+    thresholds.lodRecoveryBuffer,
+    previouslyActive
+  );
 }
 
 export function getInteractionLodCooldownMs(

@@ -195,21 +195,14 @@ function MobileNode({ data, selected }: LegacyNodeProps<NodeData>): React.ReactE
             selected={Boolean(selected)}
             minWidth={300}
             minHeight={600}
-            handleClassName={`${style.handle} !w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125`}
+            handleClassName="!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125"
             handleVisibilityOptions={{ includeConnectingState: false }}
-            handleStyleExtras={{
-                top: { zIndex: 100 },
-                right: { zIndex: 100 },
-                bottom: { zIndex: 100 },
-                left: { zIndex: 100 },
-            }}
         >
             <div
                 className={`
                     relative flex flex-col w-full h-full 
                     bg-white rounded-[2.5rem] shadow-sm border ${style.border}
                     overflow-hidden transition-all duration-200
-                    ${selected ? `ring-2 ${style.ring} ring-offset-4` : ''}
                 `}
                 style={{ minWidth: 300, minHeight: 600 }}
             >

@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import { AlertCircle, Loader2, Plus, Send, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFlowStore } from '../../store';
+import { useBrandConfig } from '@/store/brandHooks';
 import { OpenFlowLogo } from '../icons/OpenFlowLogo';
 import { MarkdownComponents } from './MarkdownComponents';
 import { useDocsChatbotState } from './chatbot/useDocsChatbotState';
 
 export const DocsChatbot: React.FC = () => {
     const { t } = useTranslation();
-    const { brandConfig, aiSettings } = useFlowStore();
+    const brandConfig = useBrandConfig();
+    const aiSettings = useFlowStore((state) => state.aiSettings);
     const {
         messages,
         input,
@@ -22,6 +24,7 @@ export const DocsChatbot: React.FC = () => {
         handleSend,
         resetChat,
     } = useDocsChatbotState({ aiSettings });
+    const composerRef = useRef<HTMLTextAreaElement>(null);
 
     const suggestedPrompts = [
         {
@@ -56,6 +59,10 @@ export const DocsChatbot: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        composerRef.current?.focus();
+    }, [messages.length]);
+
     if (messages.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-4xl mx-auto w-full animate-in fade-in zoom-in-95 duration-500">
@@ -73,13 +80,14 @@ export const DocsChatbot: React.FC = () => {
 
                 <div className="relative flex items-end gap-2 w-full max-w-2xl bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-slate-200/50 p-1.5 focus-within:shadow-[0_8px_30px_rgb(0,0,0,0.08)] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/30 mb-10 transition-all">
                     <textarea
+                        ref={composerRef}
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
                         onKeyDown={handleKeyDown}
+                        aria-label={t('chatbot.messagePlaceholder')}
                         placeholder={`${t('chatbot.messagePlaceholder')} ${brandConfig.appName} ${t('chatbot.aiSuffix')}`}
                         className="w-full min-h-[52px] max-h-[200px] border-0 px-4 py-3.5 text-[15px] focus:ring-0 resize-none placeholder:text-slate-400 custom-scrollbar block bg-transparent leading-relaxed"
                         rows={1}
-                        autoFocus
                     />
                     <button
                         onClick={() => {
@@ -135,7 +143,12 @@ export const DocsChatbot: React.FC = () => {
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 custom-scrollbar bg-slate-50/30">
+            <div
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions text"
+                className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 custom-scrollbar bg-slate-50/30"
+            >
                 <div className="flex gap-4 max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="shrink-0 w-8 h-8 flex items-center justify-center">
                         {renderLogo('w-full h-full object-contain drop-shadow-sm')}
@@ -206,14 +219,15 @@ export const DocsChatbot: React.FC = () => {
             <div className="p-4 md:p-6 bg-white border-t border-slate-100 z-10">
                 <div className="relative flex items-end gap-2 max-w-4xl mx-auto bg-slate-50 ring-1 ring-slate-200/50 rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/40 focus-within:bg-white transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
                     <textarea
+                        ref={composerRef}
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
                         onKeyDown={handleKeyDown}
+                        aria-label={t('chatbot.messagePlaceholder')}
                         placeholder={`${t('chatbot.messagePlaceholder')} ${brandConfig.appName} ${t('chatbot.aiSuffix')}`}
                         className="w-full max-h-32 min-h-[44px] bg-transparent border-0 px-4 py-3 text-[15px] focus:ring-0 resize-none custom-scrollbar leading-relaxed"
                         rows={1}
                         disabled={isLoading}
-                        autoFocus
                     />
                     <button
                         onClick={() => {

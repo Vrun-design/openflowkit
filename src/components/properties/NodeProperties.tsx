@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Node } from '@/lib/reactflowCompat';
 import { NodeData } from '@/lib/types';
 import { Box, Palette, Star, Image as ImageStart } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { ShapeSelector } from './ShapeSelector';
 import { ColorPicker } from './ColorPicker';
 import { IconPicker } from './IconPicker';
@@ -13,6 +14,7 @@ import { NodeContentSection } from './NodeContentSection';
 import { NodeImageSettingsSection } from './NodeImageSettingsSection';
 import { NodeTextStyleSection } from './NodeTextStyleSection';
 import { NodeWireframeVariantSection } from './NodeWireframeVariantSection';
+import { InspectorSectionDivider } from './InspectorPrimitives';
 
 interface NodePropertiesProps {
     selectedNode: Node<NodeData>;
@@ -27,17 +29,19 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
     onDuplicate,
     onDelete
 }) => {
+    const { t } = useTranslation();
     const isAnnotation = selectedNode.type === 'annotation';
     const isText = selectedNode.type === 'text';
     const isImage = selectedNode.type === 'image';
     const isSection = selectedNode.type === 'section';
     const isWireframeApp = selectedNode.type === 'browser' || selectedNode.type === 'mobile';
+    const supportsAdvancedColorTheme = ['process', 'start', 'end', 'decision', 'custom'].includes(selectedNode.type || '');
 
     function getDefaultSection(): string {
         if (isWireframeApp) return 'variant';
         if (isSection) return 'content';
         if (isText || isAnnotation) return 'content';
-        return 'appearance';
+        return 'shape';
     }
 
     // Persist accordion state per node to avoid effect-driven synchronous setState.
@@ -84,7 +88,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
 
     return (
         <>
-            <hr className="border-slate-100 mb-2" />
+            <InspectorSectionDivider />
 
             {/* Wireframe Variant Section */}
             {isWireframeApp && (
@@ -96,13 +100,13 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
                 />
             )}
 
-            {/* Appearance Section */}
+            {/* Shape Section */}
             {!isWireframeApp && !isAnnotation && !isText && !isImage && !isSection && (
                 <CollapsibleSection
-                    title="Appearance"
+                    title={t('properties.shape', 'Shape')}
                     icon={<Box className="w-3.5 h-3.5" />}
-                    isOpen={activeSection === 'appearance'}
-                    onToggle={() => toggleSection('appearance')}
+                    isOpen={activeSection === 'shape'}
+                    onToggle={() => toggleSection('shape')}
                 >
                     <ShapeSelector
                         selectedShape={selectedNode.data?.shape}
@@ -155,21 +159,34 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
 
             {!isImage && !isWireframeApp && (
                 <CollapsibleSection
-                    title="Color Theme"
+                    title={t('properties.color', 'Color')}
                     icon={<Palette className="w-3.5 h-3.5" />}
                     isOpen={activeSection === 'color'}
                     onToggle={() => toggleSection('color')}
                 >
                     <ColorPicker
                         selectedColor={selectedNode.data?.color}
-                        onChange={(color) => onChange(selectedNode.id, { color })}
+                        selectedColorMode={selectedNode.data?.colorMode}
+                        selectedCustomColor={selectedNode.data?.customColor}
+                        onChange={(color) => onChange(selectedNode.id, {
+                            color,
+                            ...(color === 'custom' ? {} : { customColor: undefined }),
+                        })}
+                        onColorModeChange={supportsAdvancedColorTheme
+                            ? (colorMode) => onChange(selectedNode.id, { colorMode })
+                            : undefined}
+                        onCustomColorChange={supportsAdvancedColorTheme
+                            ? (customColor) => onChange(selectedNode.id, { color: 'custom', customColor })
+                            : undefined}
+                        allowModes={supportsAdvancedColorTheme}
+                        allowCustom={supportsAdvancedColorTheme}
                     />
                 </CollapsibleSection>
             )}
 
             {!isAnnotation && !isText && !isImage && !isWireframeApp && (
                 <CollapsibleSection
-                    title="Icon Theme"
+                    title={t('properties.icon', 'Icon')}
                     icon={<Star className="w-3.5 h-3.5" />}
                     isOpen={activeSection === 'icon'}
                     onToggle={() => toggleSection('icon')}

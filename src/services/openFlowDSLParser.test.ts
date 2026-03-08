@@ -92,4 +92,15 @@ describe('openFlowDSLParser', () => {
         expect(result.error).toContain('Unexpected');
         expect(result.diagnostics?.[0].hint).toContain('block delimiters');
     });
+
+    it('preserves quoted attribute values with commas and URLs', () => {
+        const input = `
+            [process] api: API Node { icon: "server, api", note: "https://example.com/api:v1" }
+        `;
+        const result = parseOpenFlowDSL(input);
+
+        expect(result.error).toBeUndefined();
+        expect(result.nodes[0]?.data.icon).toBe('server, api');
+        expect(result.nodes[0]?.data.note).toBe('https://example.com/api:v1');
+    });
 });

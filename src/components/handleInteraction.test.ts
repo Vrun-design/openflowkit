@@ -32,4 +32,10 @@ describe('handle interaction policy', () => {
     expect(selectedRight.left).toBe('100%');
     expect(unselectedRight.left).toBe('100%');
   });
+
+  it('keeps connector anchors above node content and on brand color', () => {
+    const style = getConnectorHandleStyle('left', true, 'all');
+    expect(style.zIndex).toBe(100);
+    expect(style.backgroundColor).toBe('var(--brand-primary)');
+  });
 });

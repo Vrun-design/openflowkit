@@ -1,14 +1,15 @@
 import React from 'react';
 import { Shield, Lock, Database, UserX, MessageSquare, Fingerprint } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useFlowStore } from '../../store';
 import { Switch } from '../ui/Switch';
 import { updateAnalyticsConsent } from '../../lib/analytics';
 import { Button } from '../ui/Button';
+import { useViewSettings, useVisualSettingsActions } from '@/store/viewHooks';
 
 export const PrivacySettings = () => {
     const { t } = useTranslation();
-    const { viewSettings, toggleAnalytics } = useFlowStore();
+    const viewSettings = useViewSettings();
+    const { toggleAnalytics } = useVisualSettingsActions();
 
     const handleAnalyticsToggle = (checked: boolean) => {
         toggleAnalytics(checked);

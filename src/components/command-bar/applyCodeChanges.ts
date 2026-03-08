@@ -10,8 +10,7 @@ import {
   persistLatestImportReport,
   summarizeImportReport,
 } from '@/services/importFidelity';
-import { getElkLayout } from '@/services/elkLayout';
-import { assignSmartHandles } from '@/services/smartEdgeRouting';
+import { composeDiagramForDisplay } from '@/services/composeDiagramForDisplay';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 
 interface ApplyOptions {
@@ -133,18 +132,17 @@ export async function applyCodeChanges({
 
       const direction = ('direction' in res && res.direction) ? res.direction : 'TB';
 
-      const layoutedNodes = await getElkLayout(res.nodes, res.edges, {
+      const { nodes: layoutedNodes, edges: layoutedEdges } = await composeDiagramForDisplay(res.nodes, res.edges, {
         direction,
         algorithm: 'layered',
         spacing: 'normal',
+        diagramType: mode === 'mermaid' && 'diagramType' in res ? res.diagramType : undefined,
       });
       if (isLiveRequestStale(options.liveRequestId, options.source)) {
         return false;
       }
 
-      const smartEdges = assignSmartHandles(layoutedNodes, res.edges);
-
-      onApply(layoutedNodes, smartEdges);
+      onApply(layoutedNodes, layoutedEdges);
       setError(null);
       setDiagnostics([]);
       if (mode === 'mermaid' && 'diagramType' in res && res.diagramType) {
@@ -154,7 +152,7 @@ export async function applyCodeChanges({
         const report = buildImportFidelityReport({
           source: mode === 'mermaid' ? 'mermaid' : 'openflowdsl',
           nodeCount: layoutedNodes.length,
-          edgeCount: smartEdges.length,
+          edgeCount: layoutedEdges.length,
           elapsedMs: Math.round(performance.now() - importStart),
           issues: [],
         });

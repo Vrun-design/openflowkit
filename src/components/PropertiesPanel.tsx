@@ -20,6 +20,7 @@ interface PropertiesPanelProps {
     onDeleteEdge: (id: string) => void;
     onUpdateZIndex: (id: string, action: 'front' | 'back') => void;
     onAddMindmapChild: (parentId: string) => void;
+    onAddMindmapSibling: (nodeId: string) => void;
     onAddArchitectureService: (sourceId: string) => void;
     onCreateArchitectureBoundary: (sourceId: string) => void;
     onClose: () => void;
@@ -36,6 +37,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
     onDuplicateNode,
     onDeleteEdge,
     onAddMindmapChild,
+    onAddMindmapSibling,
     onAddArchitectureService,
     onCreateArchitectureBoundary,
     onClose
@@ -44,45 +46,17 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
 
     if (!selectedNode && !selectedEdge) return null;
 
-    const isAnnotation = selectedNode?.type === 'annotation';
     const isBulkEdit = selectedNodes.length > 1;
-    const getSingleNodeTitle = (): string => {
-        if (!selectedNode) {
-            return t('propertiesPanel.nodeSettings');
-        }
-
-        switch (selectedNode.type) {
-            case 'text':
-                return t('propertiesPanel.textSettings', 'Text Settings');
-            case 'annotation':
-                return t('propertiesPanel.stickyNote');
-            case 'section':
-                return t('propertiesPanel.sectionSettings', 'Section Settings');
-            case 'class':
-                return t('propertiesPanel.classSettings', 'Class Settings');
-            case 'er_entity':
-                return t('propertiesPanel.erEntitySettings', 'ER Entity Settings');
-            case 'mindmap':
-                return t('propertiesPanel.mindmapNodeSettings', 'Mindmap Node Settings');
-            case 'journey':
-                return t('propertiesPanel.journeyNodeSettings', 'Journey Node Settings');
-            case 'architecture':
-                return t('propertiesPanel.architectureNodeSettings', 'Architecture Node Settings');
-            case 'image':
-                return t('propertiesPanel.imageSettings', 'Image Settings');
-            default:
-                return t('propertiesPanel.nodeSettings');
-        }
-    };
+    const panelTitle = isBulkEdit
+        ? `Bulk edit (${selectedNodes.length})`
+        : selectedEdge
+            ? t('propertiesPanel.connection')
+            : t('properties.title');
 
     return (
         <SidebarShell>
             <SidebarHeader
-                title={
-                    isBulkEdit
-                        ? `Bulk edit (${selectedNodes.length})`
-                        : (isAnnotation ? t('propertiesPanel.stickyNote') : selectedNode ? getSingleNodeTitle() : t('propertiesPanel.connection'))
-                }
+                title={panelTitle}
                 onClose={onClose}
             />
 
@@ -101,6 +75,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                         onDuplicate={onDuplicateNode}
                         onDelete={onDeleteNode}
                         onAddMindmapChild={onAddMindmapChild}
+                        onAddMindmapSibling={onAddMindmapSibling}
                         onAddArchitectureService={onAddArchitectureService}
                         onCreateArchitectureBoundary={onCreateArchitectureBoundary}
                     />

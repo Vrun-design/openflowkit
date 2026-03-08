@@ -1,5 +1,6 @@
 import { useState, type ReactElement, type ReactNode } from 'react';
-import { useFlowStore } from '../../store';
+import { useBrandButtonStyle } from '@/store/brandHooks';
+import { useDesignSystemActions, useDesignSystemById } from '@/store/designSystemHooks';
 import { ArrowLeft, Palette, Type, Box, Activity } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { DesignSystem } from '@/lib/types';
@@ -13,8 +14,8 @@ type EditorTab = 'colors' | 'typography' | 'nodes' | 'edges';
 type UpdateDesignSystem = (id: string, updates: Partial<DesignSystem>) => void;
 
 export function DesignSystemEditor({ systemId, onBack }: DesignSystemEditorProps): ReactElement {
-    const { designSystems, updateDesignSystem } = useFlowStore();
-    const system = designSystems.find(ds => ds.id === systemId);
+    const { updateDesignSystem } = useDesignSystemActions();
+    const system = useDesignSystemById(systemId);
 
     // Local state for the specific editor tab
     const [activeTab, setActiveTab] = useState<EditorTab>('colors');
@@ -93,7 +94,7 @@ interface TabButtonProps {
 }
 
 const TabButton = ({ active, onClick, icon, label }: TabButtonProps) => {
-    const isBeveled = useFlowStore(state => state.brandConfig.ui.buttonStyle === 'beveled');
+    const isBeveled = useBrandButtonStyle() === 'beveled';
     return (
         <button
             onClick={onClick}

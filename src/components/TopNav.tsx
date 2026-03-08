@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import type { FlowTab } from '@/lib/types';
 import { FlowTabs } from './FlowTabs';
 import { useFlowStore } from '../store';
-import { SettingsModal } from './SettingsModal/SettingsModal';
 import { trackEvent } from '../lib/analytics';
 import { TopNavMenu } from './top-nav/TopNavMenu';
 import { TopNavBrand } from './top-nav/TopNavBrand';
 import { TopNavActions } from './top-nav/TopNavActions';
 import { useTopNavState } from './top-nav/useTopNavState';
+import { useBrandButtonStyle, useBrandConfig } from '@/store/brandHooks';
+
+const LazySettingsModal = lazy(async () => {
+    const module = await import('./SettingsModal/SettingsModal');
+    return { default: module.SettingsModal };
+});
 
 interface TopNavProps {
     tabs: FlowTab[];
@@ -32,7 +37,14 @@ interface TopNavProps {
         roomId: string;
         viewerCount: number;
         status: 'realtime' | 'waiting' | 'fallback';
-        onCopyInvite: () => void;
+        cacheState: 'unavailable' | 'syncing' | 'ready' | 'hydrated';
+        participants: Array<{
+            clientId: string;
+            name: string;
+            color: string;
+            isLocal: boolean;
+        }>;
+        onCopyShareLink: () => void;
     };
 }
 
@@ -71,8 +83,8 @@ export function TopNav({
     onPlay,
     collaboration,
 }: TopNavProps): React.ReactElement {
-    const { brandConfig } = useFlowStore();
-    const isBeveled = brandConfig.ui.buttonStyle === 'beveled';
+    const brandConfig = useBrandConfig();
+    const isBeveled = useBrandButtonStyle() === 'beveled';
     const handleExportPNG = trackAndRunExport(onExportPNG);
     const handleExportJSON = trackAndRun('export_json', onExportJSON);
     const handleExportMermaid = trackAndRun('export_mermaid', onExportMermaid);
@@ -137,11 +149,15 @@ export function TopNav({
                 isBeveled={isBeveled}
             />
 
-            <SettingsModal
-                isOpen={isSettingsOpen}
-                onClose={closeSettings}
-                initialTab={activeSettingsTab}
-            />
+            {isSettingsOpen ? (
+                <Suspense fallback={null}>
+                    <LazySettingsModal
+                        isOpen={isSettingsOpen}
+                        onClose={closeSettings}
+                        initialTab={activeSettingsTab}
+                    />
+                </Suspense>
+            ) : null}
         </div>
     );
 }

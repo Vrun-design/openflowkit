@@ -1,17 +1,43 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useRef, useCallback } from 'react';
 import { CommandBarProps, CommandView } from './command-bar/types';
 
 import { RootView } from './command-bar/RootView';
-import { TemplatesView } from './command-bar/TemplatesView';
-import { SearchView } from './command-bar/SearchView';
-import { LayoutView } from './command-bar/LayoutView';
-import { LayersView } from './command-bar/LayersView';
-import { PagesView } from './command-bar/PagesView';
-import { LibrariesView } from './command-bar/LibrariesView';
-
-import { DesignSystemView } from './command-bar/DesignSystemView';
-import { WireframesView } from './command-bar/WireframesView';
 import { useCommandBarCommands } from './command-bar/useCommandBarCommands';
+
+const LazyTemplatesView = lazy(async () => {
+    const module = await import('./command-bar/TemplatesView');
+    return { default: module.TemplatesView };
+});
+
+const LazySearchView = lazy(async () => {
+    const module = await import('./command-bar/SearchView');
+    return { default: module.SearchView };
+});
+
+const LazyLayoutView = lazy(async () => {
+    const module = await import('./command-bar/LayoutView');
+    return { default: module.LayoutView };
+});
+
+const LazyLayersView = lazy(async () => {
+    const module = await import('./command-bar/LayersView');
+    return { default: module.LayersView };
+});
+
+const LazyPagesView = lazy(async () => {
+    const module = await import('./command-bar/PagesView');
+    return { default: module.PagesView };
+});
+
+const LazyAssetsView = lazy(async () => {
+    const module = await import('./command-bar/AssetsView');
+    return { default: module.AssetsView };
+});
+
+const LazyDesignSystemView = lazy(async () => {
+    const module = await import('./command-bar/DesignSystemView');
+    return { default: module.DesignSystemView };
+});
 
 type OpenCommandBarContentProps = Omit<CommandBarProps, 'isOpen'>;
 
@@ -26,16 +52,52 @@ function OpenCommandBarContent({
     onOpenStudioFlowMind,
     onOpenStudioMermaid,
     initialView = 'root',
+    onAddAnnotation,
+    onAddSection,
+    onAddText,
+    onAddJourney,
+    onAddMindmap,
+    onAddArchitecture,
+    onAddImage,
+    onAddBrowserWireframe,
+    onAddMobileWireframe,
+    onAddDomainLibraryItem,
     settings,
 }: OpenCommandBarContentProps): React.ReactElement {
     const [view, setView] = useState<CommandView>(initialView);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const inputRef = useRef<HTMLInputElement>(null);
+    const previouslyFocusedElementRef = useRef<HTMLElement | null>(
+        document.activeElement instanceof HTMLElement ? document.activeElement : null
+    );
 
     useEffect(() => {
-        setTimeout(() => inputRef.current?.focus(), 50);
+        const previousElement = previouslyFocusedElementRef.current;
+        inputRef.current?.focus();
+
+        return () => {
+            if (!previousElement) {
+                return;
+            }
+
+            window.setTimeout(() => previousElement.focus(), 0);
+        };
     }, []);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent): void => {
+            if (event.key !== 'Escape') {
+                return;
+            }
+
+            event.preventDefault();
+            onClose();
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
 
     const handleBack = useCallback(() => {
         if (view === 'root') {
@@ -65,6 +127,9 @@ function OpenCommandBarContent({
             />
 
             <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Command bar"
                 className="pointer-events-auto flex h-[500px] w-[640px] flex-col overflow-hidden rounded-[var(--radius-lg)] border border-white/50 bg-white/96 shadow-[0_28px_80px_rgba(15,23,42,0.16)] ring-1 ring-black/5 backdrop-blur-2xl animate-in slide-in-from-bottom-4 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
@@ -81,57 +146,74 @@ function OpenCommandBarContent({
                     />
                 )}
                 {view === 'design-system' && (
-                    <DesignSystemView
-                        onClose={onClose}
-                        handleBack={handleBack}
-                    />
+                    <Suspense fallback={null}>
+                        <LazyDesignSystemView
+                            onClose={onClose}
+                            handleBack={handleBack}
+                        />
+                    </Suspense>
                 )}
                 {view === 'templates' && (
-                    <TemplatesView
-                        onSelectTemplate={onSelectTemplate}
-                        onClose={onClose}
-                        handleBack={handleBack}
-                    />
+                    <Suspense fallback={null}>
+                        <LazyTemplatesView
+                            onSelectTemplate={onSelectTemplate}
+                            onClose={onClose}
+                            handleBack={handleBack}
+                        />
+                    </Suspense>
                 )}
                 {view === 'layout' && (
-                    <LayoutView
-                        onLayout={onLayout}
-                        onClose={onClose}
-                        handleBack={handleBack}
-                    />
+                    <Suspense fallback={null}>
+                        <LazyLayoutView
+                            onLayout={onLayout}
+                            onClose={onClose}
+                            handleBack={handleBack}
+                        />
+                    </Suspense>
                 )}
                 {view === 'search' && (
-                    <SearchView
-                        nodes={nodes}
-                        onClose={onClose}
-                        handleBack={handleBack}
-                    />
+                    <Suspense fallback={null}>
+                        <LazySearchView
+                            nodes={nodes}
+                            onClose={onClose}
+                            handleBack={handleBack}
+                        />
+                    </Suspense>
                 )}
-                {view === 'wireframes' && (
-                    <WireframesView
-                        onClose={onClose}
-                        handleBack={handleBack}
-                    />
+                {view === 'assets' && (
+                    <Suspense fallback={null}>
+                        <LazyAssetsView
+                            onClose={onClose}
+                            handleBack={handleBack}
+                            onAddAnnotation={() => onAddAnnotation?.()}
+                            onAddSection={() => onAddSection?.()}
+                            onAddText={() => onAddText?.()}
+                            onAddJourney={() => onAddJourney?.()}
+                            onAddMindmap={() => onAddMindmap?.()}
+                            onAddArchitecture={() => onAddArchitecture?.()}
+                            onAddImage={(imageUrl) => onAddImage?.(imageUrl)}
+                            onAddBrowserWireframe={() => onAddBrowserWireframe?.()}
+                            onAddMobileWireframe={() => onAddMobileWireframe?.()}
+                            onAddDomainLibraryItem={(item) => onAddDomainLibraryItem?.(item)}
+                        />
+                    </Suspense>
                 )}
                 {view === 'layers' && (
-                    <LayersView
-                        onClose={onClose}
-                        handleBack={handleBack}
-                    />
+                    <Suspense fallback={null}>
+                        <LazyLayersView
+                            onClose={onClose}
+                            handleBack={handleBack}
+                        />
+                    </Suspense>
                 )}
                 {view === 'pages' && (
-                    <PagesView
-                        onClose={onClose}
-                        handleBack={handleBack}
-                    />
+                    <Suspense fallback={null}>
+                        <LazyPagesView
+                            onClose={onClose}
+                            handleBack={handleBack}
+                        />
+                    </Suspense>
                 )}
-                {view === 'libraries' && (
-                    <LibrariesView
-                        onClose={onClose}
-                        handleBack={handleBack}
-                    />
-                )}
-
                 {/* Footer (only show on root?) */}
                 {view === 'root' && (
                     <div className="flex items-center justify-between border-t border-slate-200/60 bg-slate-50/70 px-4 py-2.5 text-[11px] font-medium text-slate-500">

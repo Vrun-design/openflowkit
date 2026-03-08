@@ -49,7 +49,9 @@ export function getConnectorHandleStyle(
 
   return {
     ...baseByPosition[position],
-    pointerEvents,
     ...(extra ?? {}),
+    backgroundColor: 'var(--brand-primary)',
+    zIndex: 100,
+    pointerEvents,
   };
 }

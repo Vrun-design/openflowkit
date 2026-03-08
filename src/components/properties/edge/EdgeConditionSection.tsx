@@ -1,6 +1,5 @@
 import React from 'react';
 import type { Edge } from '@/lib/reactflowCompat';
-import { GitBranch } from 'lucide-react';
 import type { EdgeCondition } from '@/lib/types';
 import { EDGE_CONDITION_LABELS, EDGE_CONDITION_STYLES } from '@/constants';
 
@@ -14,9 +13,6 @@ export function EdgeConditionSection({ selectedEdge, onChange }: EdgeConditionSe
 
     return (
         <div className="space-y-3">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <GitBranch className="w-3.5 h-3.5" /> Condition
-            </label>
             <div className="grid grid-cols-2 gap-2">
                 {(Object.keys(EDGE_CONDITION_STYLES) as EdgeCondition[]).map((condition) => {
                     const style = EDGE_CONDITION_STYLES[condition];

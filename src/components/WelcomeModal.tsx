@@ -1,21 +1,29 @@
 import React, { useState } from 'react';
 import { X, Layout, Shield } from 'lucide-react';
 import { OpenFlowLogo } from './icons/OpenFlowLogo';
-import { useFlowStore } from '../store';
+import { useBrandButtonStyle } from '@/store/brandHooks';
+import { useViewSettings, useVisualSettingsActions } from '@/store/viewHooks';
 import { useTranslation } from 'react-i18next';
-import { readLocalStorageString, writeLocalStorageString } from '@/services/storage/uiLocalStorage';
-
-const WELCOME_SEEN_STORAGE_KEY = 'hasSeenWelcome_v1';
+import { writeLocalStorageString } from '@/services/storage/uiLocalStorage';
+import { shouldShowWelcomeModal, WELCOME_SEEN_STORAGE_KEY } from './home/welcomeModalState';
 
 export function WelcomeModal(): React.JSX.Element | null {
     const { t } = useTranslation();
-    const buttonStyle = useFlowStore(state => state.brandConfig.ui.buttonStyle);
+    const buttonStyle = useBrandButtonStyle();
     const isBeveled = buttonStyle === 'beveled';
-    const [isOpen, setIsOpen] = useState(() => !readLocalStorageString(WELCOME_SEEN_STORAGE_KEY));
+    const [isOpen, setIsOpen] = useState(() => shouldShowWelcomeModal());
+    const { analyticsEnabled } = useViewSettings();
+    const { toggleAnalytics } = useVisualSettingsActions();
+
+    // Track opt-in state locally for instant UI updates, persist on close
+    const [allowAnalytics, setAllowAnalytics] = useState(analyticsEnabled);
 
     const handleClose = () => {
         setIsOpen(false);
         writeLocalStorageString(WELCOME_SEEN_STORAGE_KEY, 'true');
+        // Persist local choice to both the legacy key and the actual app state
+        writeLocalStorageString('openflowkit_analytics_opt_in', allowAnalytics ? 'true' : 'false');
+        toggleAnalytics(allowAnalytics);
     };
 
     if (!isOpen) return null;
@@ -59,7 +67,7 @@ export function WelcomeModal(): React.JSX.Element | null {
                         </p>
                     </div>
 
-                    <div className="space-y-5 mb-10">
+                    <div className="space-y-5 mb-8">
                         <FeatureItem
                             icon={<Layout className="w-5 h-5" />}
                             title={t('welcome.features.beautifulByDefault', 'Beautiful by Default')}
@@ -72,36 +80,18 @@ export function WelcomeModal(): React.JSX.Element | null {
                         />
                     </div>
 
-                    <div className="mt-4 flex flex-col gap-3">
-                        <button
-                            onClick={handleClose}
-                            className={`w-full py-3.5 text-white font-bold transition-all active:scale-[0.98] hover:-translate-y-0.5 ${isBeveled ? 'shadow-[inset_0px_1px_0px_0px_rgba(255,255,255,0.4),inset_0px_-2px_0px_0px_rgba(0,0,0,0.2),0px_10px_15px_-3px_rgba(0,0,0,0.1)] border border-white/20' : 'shadow-lg hover:shadow-xl'}`}
-                            style={{
-                                background: 'var(--brand-primary, #6366f1)',
-                                borderRadius: 'calc(var(--brand-radius, 24px) * 0.6)'
-                            }}
-                        >
-                            {t('common.getStarted', 'Get Started')}
-                        </button>
+                    <AnalyticsToggle
+                        allowAnalytics={allowAnalytics}
+                        onChange={setAllowAnalytics}
+                    />
 
-                        <a
-                            href="/docs/en/quick-start"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[11px] font-semibold text-slate-500 hover:text-[var(--brand-primary)] text-center w-full transition-colors"
-                        >
-                            Read the Quick Start Guide →
-                        </a>
-                    </div>
+                    <WelcomeFooter
+                        isBeveled={isBeveled}
+                        onGetStarted={handleClose}
+                    />
 
                     <p className="text-center text-slate-400 text-[10px] mt-6 uppercase tracking-widest font-semibold">
                         {t('welcome.press', 'Press')} <kbd className="font-sans px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-500">?</kbd> {t('welcome.shortcuts', 'for shortcuts')}
-                    </p>
-
-                    <p className="text-center text-slate-300 text-[10px] mt-4 max-w-xs mx-auto leading-relaxed opacity-60 hover:opacity-100 transition-opacity">
-                        {t('welcome.privacy', 'Your diagrams, API keys, and data stay locally on your device.')}
-                        <br />
-                        {t('welcome.analytics', 'We only count anonymous page visits.')}
                     </p>
                 </div>
             </div>
@@ -109,7 +99,13 @@ export function WelcomeModal(): React.JSX.Element | null {
     );
 }
 
-function FeatureItem({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }): React.JSX.Element {
+interface FeatureItemProps {
+    icon: React.ReactNode;
+    title: string;
+    desc: string;
+}
+
+function FeatureItem({ icon, title, desc }: FeatureItemProps): React.JSX.Element {
     return (
         <div
             className="flex gap-4 items-center p-3 transition-colors group"
@@ -129,6 +125,75 @@ function FeatureItem({ icon, title, desc }: { icon: React.ReactNode, title: stri
                 <h3 className="text-sm font-bold text-slate-900">{title}</h3>
                 <p className="text-xs text-slate-500">{desc}</p>
             </div>
+        </div>
+    );
+}
+
+interface AnalyticsToggleProps {
+    allowAnalytics: boolean;
+    onChange: (val: boolean) => void;
+}
+
+function AnalyticsToggle({ allowAnalytics, onChange }: AnalyticsToggleProps): React.JSX.Element {
+    const { t } = useTranslation();
+    return (
+        <div className={`mb-8 flex items-center gap-3.5 p-3.5 rounded-xl border transition-all duration-300 ${allowAnalytics ? 'bg-[var(--brand-primary-50,#eef2ff)]/50 border-[var(--brand-primary,#6366f1)]/30' : 'bg-slate-50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] border-slate-200'}`}>
+            <div className="flex items-center justify-center shrink-0">
+                <label className="relative flex items-center justify-center cursor-pointer">
+                    <input
+                        id="analytics-opt-in"
+                        type="checkbox"
+                        checked={allowAnalytics}
+                        onChange={(e) => onChange(e.target.checked)}
+                        className="peer sr-only"
+                    />
+                    <div className={`w-[34px] h-5 rounded-full transition-colors duration-300 ${allowAnalytics ? 'bg-[var(--brand-primary,#6366f1)]' : 'bg-slate-300'}`}></div>
+                    <div className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform duration-300 transform shadow-sm ${allowAnalytics ? 'translate-x-[14px]' : 'translate-x-0'}`}></div>
+                </label>
+            </div>
+            <label
+                htmlFor="analytics-opt-in"
+                className="flex-1 select-none cursor-pointer flex flex-col justify-center"
+            >
+                <span className="text-[13px] font-semibold text-slate-900 leading-none mb-1">
+                    {t('welcome.analyticsTitle', 'Help improve OpenFlowKit')}
+                </span>
+                <p className="text-[11px] text-slate-500 leading-tight pr-2">
+                    {t('welcome.analyticsDesc', 'Share anonymous basic usage data (optional)')}
+                </p>
+            </label>
+        </div>
+    );
+}
+
+interface WelcomeFooterProps {
+    isBeveled: boolean;
+    onGetStarted: () => void;
+}
+
+function WelcomeFooter({ isBeveled, onGetStarted }: WelcomeFooterProps): React.JSX.Element {
+    const { t } = useTranslation();
+    return (
+        <div className="mt-4 flex flex-col gap-3">
+            <button
+                onClick={onGetStarted}
+                className={`w-full py-3.5 text-white font-bold transition-all active:scale-[0.98] hover:-translate-y-0.5 ${isBeveled ? 'shadow-[inset_0px_1px_0px_0px_rgba(255,255,255,0.4),inset_0px_-2px_0px_0px_rgba(0,0,0,0.2),0px_10px_15px_-3px_rgba(0,0,0,0.1)] border border-white/20' : 'shadow-lg hover:shadow-xl'}`}
+                style={{
+                    background: 'var(--brand-primary, #6366f1)',
+                    borderRadius: 'calc(var(--brand-radius, 24px) * 0.6)'
+                }}
+            >
+                {t('common.getStarted', 'Get Started')}
+            </button>
+
+            <a
+                href="/docs/en/quick-start"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] font-semibold text-slate-500 hover:text-[var(--brand-primary)] text-center w-full transition-colors"
+            >
+                Read the Quick Start Guide →
+            </a>
         </div>
     );
 }

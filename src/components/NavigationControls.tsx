@@ -2,8 +2,8 @@ import React from 'react';
 import { useReactFlow, useViewport } from '@/lib/reactflowCompat';
 import { Plus, Minus, Maximize, HelpCircle } from 'lucide-react';
 import { Tooltip } from './Tooltip';
-import { useFlowStore } from '../store';
 import { useTranslation } from 'react-i18next';
+import { useShortcutHelpActions } from '@/store/viewHooks';
 
 const controlButtonClassName =
     'p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-[var(--radius-sm)] transition-all active:scale-95';
@@ -12,7 +12,7 @@ export function NavigationControls(): React.ReactElement {
     const { t } = useTranslation();
     const { zoomIn, zoomOut, fitView } = useReactFlow();
     const { zoom } = useViewport();
-    const { setShortcutsHelpOpen } = useFlowStore();
+    const { setShortcutsHelpOpen } = useShortcutHelpActions();
 
     return (
         <div className="absolute bottom-8 left-8 flex flex-col gap-2 z-50">

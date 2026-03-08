@@ -3,6 +3,7 @@ import type { Node } from '@/lib/reactflowCompat';
 import { Image as ImageIcon } from 'lucide-react';
 import type { NodeData } from '@/lib/types';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
+import { PropertySliderRow } from './PropertySliderRow';
 
 interface NodeImageSettingsSectionProps {
     selectedNode: Node<NodeData>;
@@ -24,37 +25,27 @@ export function NodeImageSettingsSection({
             isOpen={isOpen}
             onToggle={onToggle}
         >
-            <div className="space-y-1 mb-3">
-                <div className="flex justify-between text-xs text-slate-500">
-                    <span>Transparency</span>
-                    <span>{Math.round((1 - (selectedNode.data?.transparency ?? 1)) * 100)}%</span>
-                </div>
-                <input
-                    type="range"
-                    min="0.1"
-                    max="1"
-                    step="0.05"
-                    value={selectedNode.data?.transparency ?? 1}
-                    onChange={(e) => onChange(selectedNode.id, { transparency: parseFloat(e.target.value) })}
-                    className="w-full accent-[var(--brand-primary)] h-2 bg-slate-200 rounded-[var(--brand-radius)] appearance-none cursor-pointer"
-                />
-            </div>
+            <PropertySliderRow
+                label="Transparency"
+                valueLabel={`${Math.round((1 - (selectedNode.data?.transparency ?? 1)) * 100)}%`}
+                value={selectedNode.data?.transparency ?? 1}
+                min={0.1}
+                max={1}
+                step={0.05}
+                onChange={(transparency) => onChange(selectedNode.id, { transparency })}
+                containerClassName="mb-3 space-y-1"
+            />
 
-            <div className="space-y-1 mb-2">
-                <div className="flex justify-between text-xs text-slate-500">
-                    <span>Rotation</span>
-                    <span>{selectedNode.data?.rotation ?? 0}°</span>
-                </div>
-                <input
-                    type="range"
-                    min="0"
-                    max="360"
-                    step="15"
-                    value={selectedNode.data?.rotation ?? 0}
-                    onChange={(e) => onChange(selectedNode.id, { rotation: parseInt(e.target.value, 10) })}
-                    className="w-full accent-[var(--brand-primary)] h-2 bg-slate-200 rounded-[var(--brand-radius)] appearance-none cursor-pointer"
-                />
-            </div>
+            <PropertySliderRow
+                label="Rotation"
+                valueLabel={`${selectedNode.data?.rotation ?? 0}°`}
+                value={selectedNode.data?.rotation ?? 0}
+                min={0}
+                max={360}
+                step={15}
+                onChange={(rotation) => onChange(selectedNode.id, { rotation })}
+                containerClassName="mb-2 space-y-1"
+            />
         </CollapsibleSection>
     );
 }

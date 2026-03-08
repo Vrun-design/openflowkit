@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KEYBOARD_SHORTCUTS } from '../../constants';
+import { getKeyboardShortcuts, isMacLikePlatform } from '../../constants';
 
 export const ShortcutsSettings = () => {
     const { t } = useTranslation();
+    const keyboardShortcuts = useMemo(
+        () => getKeyboardShortcuts(typeof navigator !== 'undefined' && isMacLikePlatform(navigator.platform || navigator.userAgent)),
+        []
+    );
     return (
         <div className="space-y-8">
-            {KEYBOARD_SHORTCUTS.map((section) => (
+            {keyboardShortcuts.map((section) => (
                 <div key={section.title} className="space-y-4">
                     <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
                         <h3 className="font-semibold text-slate-800">{t(section.title)}</h3>

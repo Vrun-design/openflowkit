@@ -460,7 +460,7 @@
       },
       "dslSyntax": {
         "title": "DSL Sözdizimi",
-        "description": "FlowMind DSL'den bir örnek göster.",
+        "description": "OpenFlowKit DSL'den bir örnek göster.",
         "icon": "{}"
       }
     }

@@ -27,4 +27,17 @@ describe('collaboration transport factory', () => {
     expect(result.transport).toBe(transport);
     expect(result.fallbackReason).toBeUndefined();
   });
+
+  it('keeps whenReady available on returned transports when provided by the realtime transport', async () => {
+    const transport = {
+      ...createInMemoryCollaborationTransport(),
+      whenReady: () => Promise.resolve(),
+    };
+    const result = createCollaborationTransportFactory('realtime', {
+      isRealtimeSupported: () => true,
+      createRealtimeTransport: () => transport,
+    });
+
+    await expect(result.transport.whenReady?.()).resolves.toBeUndefined();
+  });
 });

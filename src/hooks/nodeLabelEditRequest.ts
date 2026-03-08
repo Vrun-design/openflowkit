@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { useFlowStore } from '@/store';
+import { useNodeLabelEditRequestActions, usePendingNodeLabelEditRequest } from '@/store/selectionHooks';
 
 const NODE_LABEL_EDIT_REQUEST_EVENT = 'flowmind:node-label-edit-request';
 
@@ -25,10 +27,33 @@ export function requestNodeLabelEdit(nodeId: string, options?: RequestNodeLabelE
   );
 }
 
+export function queueNodeLabelEditRequest(nodeId: string, options?: RequestNodeLabelEditOptions): void {
+  useFlowStore.getState().queuePendingNodeLabelEditRequest({
+    nodeId,
+    seedText: options?.seedText,
+    replaceExisting: options?.replaceExisting,
+  });
+}
+
 export function useNodeLabelEditRequest(
   nodeId: string,
   onRequest: (detail?: RequestNodeLabelEditOptions) => void
 ): void {
+  const pendingRequest = usePendingNodeLabelEditRequest();
+  const { clearPendingNodeLabelEditRequest } = useNodeLabelEditRequestActions();
+
+  useEffect(() => {
+    if (pendingRequest?.nodeId !== nodeId) {
+      return;
+    }
+
+    onRequest({
+      seedText: pendingRequest.seedText,
+      replaceExisting: pendingRequest.replaceExisting,
+    });
+    clearPendingNodeLabelEditRequest();
+  }, [clearPendingNodeLabelEditRequest, nodeId, onRequest, pendingRequest]);
+
   useEffect(() => {
     const handleRequest = (event: Event): void => {
       const customEvent = event as CustomEvent<NodeLabelEditRequestDetail>;

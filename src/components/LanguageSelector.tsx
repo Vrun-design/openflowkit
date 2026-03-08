@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Globe, Check, ChevronDown } from 'lucide-react';
-import { useFlowStore } from '../store';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useVisualSettingsActions } from '@/store/viewHooks';
 
 interface Language {
   code: string;
@@ -97,7 +97,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
 }) => {
   const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
-  const { setViewSettings } = useFlowStore();
+  const { setViewSettings } = useVisualSettingsActions();
   const navigate = useNavigate();
   const location = useLocation();
   const { slug } = useParams();

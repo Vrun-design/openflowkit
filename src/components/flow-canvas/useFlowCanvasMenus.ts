@@ -7,6 +7,7 @@ export interface ConnectMenuState {
     position: { x: number; y: number };
     sourceId: string;
     sourceHandle: string | null;
+    sourceType: string | null;
 }
 
 export type ContextMenuState = ContextMenuProps & { isOpen: boolean };

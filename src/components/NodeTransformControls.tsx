@@ -1,6 +1,6 @@
 import React from 'react';
 import { NodeResizer, useNodeId } from '@/lib/reactflowCompat';
-import { useFlowStore } from '@/store';
+import { useSelectedNodeId } from '@/store/selectionHooks';
 
 interface NodeTransformControlsProps {
   isVisible?: boolean;
@@ -16,7 +16,7 @@ export function NodeTransformControls({
   keepAspectRatio = false,
 }: NodeTransformControlsProps): React.ReactElement | null {
   const nodeId = useNodeId();
-  const selectedNodeId = useFlowStore((state) => state.selectedNodeId);
+  const selectedNodeId = useSelectedNodeId();
   const isStoreSelected = Boolean(nodeId) && selectedNodeId === nodeId;
   const shouldShow = Boolean(nodeId) && (isVisible || isStoreSelected);
 

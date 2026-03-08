@@ -14,12 +14,22 @@ describe('computeFlowCanvasReactFlowConfig', () => {
         expect(result.onlyRenderVisibleElements).toBe(true);
         expect(result.connectionMode).toBe(ConnectionMode.Loose);
         expect(result.selectionOnDrag).toBe(true);
-        expect(result.panOnDrag).toBe(false);
+        expect(result.selectionKeyCode).toBe('Shift');
+        expect(result.panOnDrag).toEqual([1, 2]);
+        expect(result.panActivationKeyCode).toBe('Space');
+        expect(result.zoomActivationKeyCode).toEqual(['Meta', 'Control']);
         expect(result.selectionMode).toBe(SelectionMode.Partial);
+        expect(result.multiSelectionKeyCode).toBe('Shift');
+        expect(result.zoomOnScroll).toBe(false);
+        expect(result.zoomOnPinch).toBe(true);
+        expect(result.panOnScroll).toBe(true);
+        expect(result.panOnScrollMode).toBe('free');
+        expect(result.preventScrolling).toBe(true);
+        expect(result.zoomOnDoubleClick).toBe(false);
         expect(result.defaultEdgeOptions).toEqual({
             style: { stroke: '#64748b', strokeWidth: 1.5 },
             animated: false,
-            markerEnd: { type: MarkerType.ArrowClosed, color: '#64748b' },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#64748b', width: 20, height: 20 },
         });
         expect(result.background).toEqual({
             variant: expect.anything(),
@@ -39,12 +49,22 @@ describe('computeFlowCanvasReactFlowConfig', () => {
         expect(result.className).toContain('flow-canvas-pan-mode');
         expect(result.onlyRenderVisibleElements).toBe(false);
         expect(result.selectionOnDrag).toBe(false);
-        expect(result.panOnDrag).toBe(true);
+        expect(result.selectionKeyCode).toBe('Shift');
+        expect(result.panOnDrag).toEqual([0, 1, 2]);
+        expect(result.panActivationKeyCode).toBe('Space');
+        expect(result.zoomActivationKeyCode).toEqual(['Meta', 'Control']);
         expect(result.selectionMode).toBeUndefined();
+        expect(result.multiSelectionKeyCode).toBe('Shift');
+        expect(result.zoomOnScroll).toBe(false);
+        expect(result.zoomOnPinch).toBe(true);
+        expect(result.panOnScroll).toBe(true);
+        expect(result.panOnScrollMode).toBe('free');
+        expect(result.preventScrolling).toBe(true);
+        expect(result.zoomOnDoubleClick).toBe(false);
         expect(result.defaultEdgeOptions).toEqual({
             style: { stroke: '#94a3b8', strokeWidth: 2 },
             animated: false,
-            markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8' },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8', width: 20, height: 20 },
         });
         expect(result.background.gap).toBe(20);
         expect(result.background.size).toBe(1.25);

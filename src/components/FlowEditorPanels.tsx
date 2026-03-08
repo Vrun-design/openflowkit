@@ -1,18 +1,36 @@
-import React from 'react';
-import { CommandBar } from './CommandBar';
+import React, { Suspense, lazy } from 'react';
 import { ErrorBoundary } from './ErrorBoundary';
-import { PropertiesPanel } from './PropertiesPanel';
 import { RightRail } from './RightRail';
-import { SnapshotsPanel } from './SnapshotsPanel';
-import { StudioPanel } from './StudioPanel';
 import type { FlowEdge, FlowNode, FlowSnapshot } from '@/lib/types';
 import type { ChatMessage } from '@/services/aiService';
 import type { CommandBarView, FlowEditorMode, StudioCodeMode, StudioTab } from '@/hooks/useFlowEditorUIState';
 import type { LayoutAlgorithm } from '@/services/elkLayout';
 import type { FlowTemplate } from '@/services/templates';
 import type { EdgeData, NodeData } from '@/lib/types';
+import type { DomainLibraryItem } from '@/services/domainLibrary';
+import type { PropertiesPanel as PropertiesPanelComponent } from './PropertiesPanel';
 
-interface CommandBarPanelProps {
+const LazyCommandBar = lazy(async () => {
+    const module = await import('./CommandBar');
+    return { default: module.CommandBar };
+});
+
+const LazyPropertiesPanel = lazy(async () => {
+    const module = await import('./PropertiesPanel');
+    return { default: module.PropertiesPanel };
+});
+
+const LazySnapshotsPanel = lazy(async () => {
+    const module = await import('./SnapshotsPanel');
+    return { default: module.SnapshotsPanel };
+});
+
+const LazyStudioPanel = lazy(async () => {
+    const module = await import('./StudioPanel');
+    return { default: module.StudioPanel };
+});
+
+export interface CommandBarPanelProps {
     isOpen: boolean;
     onClose: () => void;
     nodes: FlowNode[];
@@ -29,13 +47,23 @@ interface CommandBarPanelProps {
     onOpenStudioFlowMind: () => void;
     onOpenStudioMermaid: () => void;
     initialView: CommandBarView;
+    onAddAnnotation: () => void;
+    onAddSection: () => void;
+    onAddText: () => void;
+    onAddJourney?: () => void;
+    onAddMindmap?: () => void;
+    onAddArchitecture?: () => void;
+    onAddImage: (imageUrl: string) => void;
+    onAddBrowserWireframe: () => void;
+    onAddMobileWireframe: () => void;
+    onAddDomainLibraryItem?: (item: DomainLibraryItem) => void;
     showGrid: boolean;
     onToggleGrid: () => void;
     snapToGrid: boolean;
     onToggleSnap: () => void;
 }
 
-interface SnapshotsPanelProps {
+export interface SnapshotsPanelProps {
     isOpen: boolean;
     onClose: () => void;
     snapshots: FlowSnapshot[];
@@ -46,25 +74,26 @@ interface SnapshotsPanelProps {
     onDeleteSnapshot: (id: string) => void;
 }
 
-interface PropertiesRailProps {
+export interface PropertiesRailProps {
     selectedNode: FlowNode | null;
     selectedNodes: FlowNode[];
     selectedEdge: FlowEdge | null;
     onChangeNode: (id: string, data: Partial<NodeData>) => void;
-    onBulkChangeNodes: React.ComponentProps<typeof PropertiesPanel>['onBulkChangeNodes'];
+    onBulkChangeNodes: React.ComponentProps<typeof PropertiesPanelComponent>['onBulkChangeNodes'];
     onChangeNodeType: (id: string, type: string) => void;
     onChangeEdge: (id: string, data: Partial<EdgeData>) => void;
     onDeleteNode: (id: string) => void;
     onDuplicateNode: (id: string) => void;
     onDeleteEdge: (id: string) => void;
     onUpdateZIndex: (id: string, action: 'front' | 'back') => void;
-    onAddMindmapChild: React.ComponentProps<typeof PropertiesPanel>['onAddMindmapChild'];
-    onAddArchitectureService: React.ComponentProps<typeof PropertiesPanel>['onAddArchitectureService'];
-    onCreateArchitectureBoundary: React.ComponentProps<typeof PropertiesPanel>['onCreateArchitectureBoundary'];
+    onAddMindmapChild: React.ComponentProps<typeof PropertiesPanelComponent>['onAddMindmapChild'];
+    onAddMindmapSibling: React.ComponentProps<typeof PropertiesPanelComponent>['onAddMindmapSibling'];
+    onAddArchitectureService: React.ComponentProps<typeof PropertiesPanelComponent>['onAddArchitectureService'];
+    onCreateArchitectureBoundary: React.ComponentProps<typeof PropertiesPanelComponent>['onCreateArchitectureBoundary'];
     onClose: () => void;
 }
 
-interface StudioRailProps {
+export interface StudioRailProps {
     onClose: () => void;
     onApply: (nodes: FlowNode[], edges: FlowEdge[]) => void;
     onAIGenerate: (prompt: string, imageBase64?: string) => Promise<void>;
@@ -77,7 +106,7 @@ interface StudioRailProps {
     onCodeModeChange: (mode: StudioCodeMode) => void;
 }
 
-interface FlowEditorPanelsProps {
+export interface FlowEditorPanelsProps {
     commandBar: CommandBarPanelProps;
     snapshots: SnapshotsPanelProps;
     properties: PropertiesRailProps;
@@ -97,75 +126,98 @@ export function FlowEditorPanels({
     const showPropertiesRail = editorMode === 'canvas' && Boolean(properties.selectedNode || properties.selectedEdge);
     const showStudioRail = editorMode === 'studio';
     const railContent = showStudioRail ? (
-        <StudioPanel
-            onClose={studio.onClose}
-            nodes={commandBar.nodes}
-            edges={commandBar.edges}
-            onApply={studio.onApply}
-            onAIGenerate={studio.onAIGenerate}
-            isGenerating={studio.isGenerating}
-            chatMessages={studio.chatMessages}
-            onClearChat={studio.onClearChat}
-            activeTab={studio.activeTab}
-            onTabChange={studio.onTabChange}
-            codeMode={studio.codeMode}
-            onCodeModeChange={studio.onCodeModeChange}
-        />
+        <Suspense fallback={null}>
+            <LazyStudioPanel
+                onClose={studio.onClose}
+                nodes={commandBar.nodes}
+                edges={commandBar.edges}
+                onApply={studio.onApply}
+                onAIGenerate={studio.onAIGenerate}
+                isGenerating={studio.isGenerating}
+                chatMessages={studio.chatMessages}
+                onClearChat={studio.onClearChat}
+                activeTab={studio.activeTab}
+                onTabChange={studio.onTabChange}
+                codeMode={studio.codeMode}
+                onCodeModeChange={studio.onCodeModeChange}
+            />
+        </Suspense>
     ) : showPropertiesRail ? (
-        <PropertiesPanel
-            selectedNodes={properties.selectedNodes}
-            selectedNode={properties.selectedNode}
-            selectedEdge={properties.selectedEdge}
-            onChangeNode={properties.onChangeNode}
-            onBulkChangeNodes={properties.onBulkChangeNodes}
-            onChangeNodeType={properties.onChangeNodeType}
-            onChangeEdge={properties.onChangeEdge}
-            onDeleteNode={properties.onDeleteNode}
-            onDuplicateNode={properties.onDuplicateNode}
-            onDeleteEdge={properties.onDeleteEdge}
-            onUpdateZIndex={properties.onUpdateZIndex}
-            onAddMindmapChild={properties.onAddMindmapChild}
-            onAddArchitectureService={properties.onAddArchitectureService}
-            onCreateArchitectureBoundary={properties.onCreateArchitectureBoundary}
-            onClose={properties.onClose}
-        />
+        <Suspense fallback={null}>
+            <LazyPropertiesPanel
+                selectedNodes={properties.selectedNodes}
+                selectedNode={properties.selectedNode}
+                selectedEdge={properties.selectedEdge}
+                onChangeNode={properties.onChangeNode}
+                onBulkChangeNodes={properties.onBulkChangeNodes}
+                onChangeNodeType={properties.onChangeNodeType}
+                onChangeEdge={properties.onChangeEdge}
+                onDeleteNode={properties.onDeleteNode}
+                onDuplicateNode={properties.onDuplicateNode}
+                onDeleteEdge={properties.onDeleteEdge}
+                onUpdateZIndex={properties.onUpdateZIndex}
+                onAddMindmapChild={properties.onAddMindmapChild}
+                onAddMindmapSibling={properties.onAddMindmapSibling}
+                onAddArchitectureService={properties.onAddArchitectureService}
+                onCreateArchitectureBoundary={properties.onCreateArchitectureBoundary}
+                onClose={properties.onClose}
+            />
+        </Suspense>
     ) : null;
 
     return (
         <>
             <ErrorBoundary className="h-auto">
-                <CommandBar
-                    isOpen={commandBar.isOpen}
-                    onClose={commandBar.onClose}
-                    nodes={commandBar.nodes}
-                    edges={commandBar.edges}
-                    onUndo={commandBar.onUndo}
-                    onRedo={commandBar.onRedo}
-                    onLayout={commandBar.onLayout}
-                    onSelectTemplate={commandBar.onSelectTemplate}
-                    onOpenStudioAI={commandBar.onOpenStudioAI}
-                    onOpenStudioFlowMind={commandBar.onOpenStudioFlowMind}
-                    onOpenStudioMermaid={commandBar.onOpenStudioMermaid}
-                    initialView={commandBar.initialView}
-                    settings={{
-                        showGrid: commandBar.showGrid,
-                        onToggleGrid: commandBar.onToggleGrid,
-                        snapToGrid: commandBar.snapToGrid,
-                        onToggleSnap: commandBar.onToggleSnap,
-                    }}
-                />
+                {commandBar.isOpen ? (
+                    <Suspense fallback={null}>
+                        <LazyCommandBar
+                            isOpen={commandBar.isOpen}
+                            onClose={commandBar.onClose}
+                            nodes={commandBar.nodes}
+                            edges={commandBar.edges}
+                            onUndo={commandBar.onUndo}
+                            onRedo={commandBar.onRedo}
+                            onLayout={commandBar.onLayout}
+                            onSelectTemplate={commandBar.onSelectTemplate}
+                            onOpenStudioAI={commandBar.onOpenStudioAI}
+                            onOpenStudioFlowMind={commandBar.onOpenStudioFlowMind}
+                            onOpenStudioMermaid={commandBar.onOpenStudioMermaid}
+                            initialView={commandBar.initialView}
+                            onAddAnnotation={commandBar.onAddAnnotation}
+                            onAddSection={commandBar.onAddSection}
+                            onAddText={commandBar.onAddText}
+                            onAddJourney={commandBar.onAddJourney}
+                            onAddMindmap={commandBar.onAddMindmap}
+                            onAddArchitecture={commandBar.onAddArchitecture}
+                            onAddImage={commandBar.onAddImage}
+                            onAddBrowserWireframe={commandBar.onAddBrowserWireframe}
+                            onAddMobileWireframe={commandBar.onAddMobileWireframe}
+                            onAddDomainLibraryItem={commandBar.onAddDomainLibraryItem}
+                            settings={{
+                                showGrid: commandBar.showGrid,
+                                onToggleGrid: commandBar.onToggleGrid,
+                                snapToGrid: commandBar.snapToGrid,
+                                onToggleSnap: commandBar.onToggleSnap,
+                            }}
+                        />
+                    </Suspense>
+                ) : null}
             </ErrorBoundary>
 
-            <SnapshotsPanel
-                isOpen={isHistoryOpen}
-                onClose={snapshots.onClose}
-                snapshots={snapshots.snapshots}
-                manualSnapshots={snapshots.manualSnapshots}
-                autoSnapshots={snapshots.autoSnapshots}
-                onSaveSnapshot={snapshots.onSaveSnapshot}
-                onRestoreSnapshot={snapshots.onRestoreSnapshot}
-                onDeleteSnapshot={snapshots.onDeleteSnapshot}
-            />
+            {isHistoryOpen ? (
+                <Suspense fallback={null}>
+                    <LazySnapshotsPanel
+                        isOpen={isHistoryOpen}
+                        onClose={snapshots.onClose}
+                        snapshots={snapshots.snapshots}
+                        manualSnapshots={snapshots.manualSnapshots}
+                        autoSnapshots={snapshots.autoSnapshots}
+                        onSaveSnapshot={snapshots.onSaveSnapshot}
+                        onRestoreSnapshot={snapshots.onRestoreSnapshot}
+                        onDeleteSnapshot={snapshots.onDeleteSnapshot}
+                    />
+                </Suspense>
+            ) : null}
 
             <ErrorBoundary className="h-full">
                 {railContent ? <RightRail>{railContent}</RightRail> : null}

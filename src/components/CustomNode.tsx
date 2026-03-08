@@ -5,7 +5,7 @@ import type { NodeData } from '@/lib/types';
 
 import { NamedIcon } from './IconMap';
 import MemoizedMarkdown from './MemoizedMarkdown';
-import { getNodeColorPalette, NODE_EXPORT_COLORS } from '../theme';
+import { resolveNodeVisualStyle } from '../theme';
 import { useDesignSystem } from '../hooks/useDesignSystem';
 import { useInlineNodeTextEdit } from '@/hooks/useInlineNodeTextEdit';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
@@ -13,6 +13,8 @@ import { getTransformDiagnosticsAttrs } from './transformDiagnostics';
 import { InlineTextEditSurface } from './InlineTextEditSurface';
 import { NodeChrome } from './NodeChrome';
 import { NodeTransformControls } from './NodeTransformControls';
+import { useActiveNodeSelection } from './useActiveNodeSelection';
+import { useTranslation } from 'react-i18next';
 
 type NodeShape = NonNullable<NodeData['shape']>;
 
@@ -24,8 +26,8 @@ function getDefaults(type: string): { color: string; icon: string | null; shape:
     case 'end': return { color: 'red', icon: null, shape: 'rounded' };
     case 'decision': return { color: 'amber', icon: null, shape: 'diamond' };
     case 'annotation': return { color: 'yellow', icon: null, shape: 'rounded' };
-    case 'custom': return { color: 'violet', icon: null, shape: 'rounded' };
-    default: return { color: 'slate', icon: null, shape: 'rounded' };
+    case 'custom': return { color: 'white', icon: null, shape: 'rounded' };
+    default: return { color: 'white', icon: null, shape: 'rounded' };
   }
 }
 
@@ -65,21 +67,22 @@ function ShiftKeyResizeWatcher({ onShiftChange }: { onShiftChange: (held: boolea
 
 function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
   const { id, data, type, selected } = props;
-  const width = (props as { width?: number }).width;
-  const height = (props as { height?: number }).height;
+  const explicitNodeStyle = (props as { style?: React.CSSProperties }).style;
+  const explicitWidth = data.width ?? explicitNodeStyle?.width;
+  const explicitHeight = data.height ?? explicitNodeStyle?.height;
+  const measuredHeight = (props as { height?: number }).height;
   const [shiftHeld, setShiftHeld] = useState(false);
   const designSystem = useDesignSystem();
+  const isActiveSelected = useActiveNodeSelection(Boolean(selected));
+  const { t } = useTranslation();
 
   const defaults = getDefaults(type || 'process');
   const activeColor = data.color || defaults.color;
+  const activeColorMode = data.colorMode || 'subtle';
   const activeIconKey = data.icon === 'none' ? null : (data.icon || defaults.icon);
   const activeShape = data.shape || defaults.shape || 'rounded';
   const visualQualityV2Enabled = ROLLOUT_FLAGS.visualQualityV2;
-  const nodeColorPalette = getNodeColorPalette(visualQualityV2Enabled);
-
-  // Theme colors
-  const style = nodeColorPalette[activeColor] || nodeColorPalette.slate;
-  const exportColors = NODE_EXPORT_COLORS[activeColor] || NODE_EXPORT_COLORS.slate;
+  const visualStyle = resolveNodeVisualStyle(activeColor, activeColorMode, data.customColor);
 
   // Resolve icons
   const iconName = data.customIconUrl || !activeIconKey ? null : activeIconKey;
@@ -117,12 +120,13 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
   const fontSizeStyle = isNumericSize ? { fontSize: fontSize + 'px' } : {};
 
   const hasIcon = Boolean(iconName) || Boolean(data.customIconUrl);
+  const hasLabel = Boolean(data.label?.trim());
   const hasSubLabel = Boolean(data.subLabel);
 
   // -- Shape Rendering Logic -- //
   function getShapeSVG(): React.ReactElement | null {
-    const strokeColor = exportColors.border;
-    const fillColor = exportColors.bg;
+    const strokeColor = visualStyle.border;
+    const fillColor = visualStyle.bg;
 
     const commonProps = {
       stroke: strokeColor,
@@ -159,12 +163,21 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
     ? (hasIcon && hasSubLabel ? 128 : hasIcon ? 108 : hasSubLabel ? 96 : 84)
     : minHeight;
   const effectiveMinHeight = Math.max(minHeight, contentMinHeight);
-  const nodeHeightPx = typeof height === 'number' ? height : undefined;
+  const nodeHeightPx = typeof measuredHeight === 'number' ? measuredHeight : undefined;
   const isCompactNode = typeof nodeHeightPx === 'number' && nodeHeightPx < effectiveMinHeight + 8;
   const contentPadding = isCompactNode ? '0.5rem' : designSystem.components.node.padding;
-  const labelEdit = useInlineNodeTextEdit(id, 'label', data.label || '');
+  const labelEdit = useInlineNodeTextEdit(id, 'label', data.label || '', { multiline: true });
   const subLabelEdit = useInlineNodeTextEdit(id, 'subLabel', data.subLabel || '');
-  const connectionHandleClass = '!w-2.5 !h-2.5 !bg-white !border-2 !border-[var(--brand-primary)] transition-all duration-150 hover:scale-110';
+  const connectionHandleClass = '!w-2.5 !h-2.5 !border-2 !border-white transition-all duration-150 hover:scale-110';
+  const emptyLabelPrompt = t('nodes.addText', 'Add text');
+  const showEmptyLabelPrompt = !hasLabel && isActiveSelected;
+  const lodPreserveClass = isActiveSelected ? 'flow-lod-preserve' : '';
+  const labelDisplayValue = hasLabel
+    ? <MemoizedMarkdown content={data.label} />
+    : showEmptyLabelPrompt
+      ? <span className="text-slate-400/80">{emptyLabelPrompt}</span>
+      : null;
+  const labelTitle = hasLabel ? data.label : showEmptyLabelPrompt ? emptyLabelPrompt : undefined;
 
   // Calculate Border Radius from Design System if shape is 'rounded' (default)
   function getBorderRadius(): string | number {
@@ -182,21 +195,18 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
   const containerStyle: React.CSSProperties = {
     minWidth,
     minHeight: effectiveMinHeight,
-    width: toCssSize(width) ?? '100%',
-    height: toCssSize(height) ?? '100%',
+    width: toCssSize(explicitWidth) ?? '100%',
+    height: toCssSize(explicitHeight),
     ...(needsSquareAspect ? { aspectRatio: '1/1' } : {}),
     ...fontFamilyStyle,
 
     // Apply Design System Styles for Box Shadow and Border
-    boxShadow:
-      selected && visualQualityV2Enabled
-        ? '0 0 0 2px #6366f1, 0 0 12px rgba(99,102,241,0.2)'
-        : !isComplexShape
-          ? designSystem.components.node.boxShadow
-          : 'none',
+    boxShadow: !isComplexShape ? designSystem.components.node.boxShadow : 'none',
     borderWidth: !isComplexShape ? designSystem.components.node.borderWidth : 0,
     padding: 0, // Padding handled by inner content wrapper.
     borderRadius: getBorderRadius(),
+    backgroundColor: !isComplexShape ? visualStyle.bg : undefined,
+    borderColor: !isComplexShape ? visualStyle.border : undefined,
   };
 
   return (
@@ -219,13 +229,7 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
       >
         {/* Main Node Container */}
         <div
-        className={`relative group flex flex-col justify-center h-full transition-all duration-200
-          ${!isComplexShape ? style.bg : ''}
-          ${!isComplexShape ? style.border : ''}
-          flow-lod-shadow
-          ${isComplexShape ? 'overflow-hidden' : 'overflow-visible'}
-          ${selected && !visualQualityV2Enabled ? 'ring-2 ring-[var(--brand-primary)] ring-offset-4' : ''}
-        `}
+        className={`relative group flex flex-col justify-center h-full border transition-all duration-200 flow-lod-shadow ${isComplexShape ? 'overflow-hidden' : 'overflow-visible'}`}
         style={containerStyle}
         {...getTransformDiagnosticsAttrs({
           nodeFamily: 'custom',
@@ -261,16 +265,27 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
         >
 
           {/* Icon Area */}
-          <div className={`flex items-center gap-1.5 shrink-0 flow-lod-far-target ${hasIcon ? 'mb-0' : 'mb-2'}`}>
+          <div className={`flex items-center gap-1.5 shrink-0 flow-lod-far-target flow-lod-far-flex-target ${lodPreserveClass} ${hasIcon ? 'mb-0' : 'mb-2'}`}>
             {data.customIconUrl && (
-              <div className={`shrink-0 ${isCompactNode ? 'w-7 h-7' : 'w-8 h-8'} rounded-lg flex items-center justify-center border border-black/5 shadow-sm overflow-hidden flow-lod-shadow ${style.iconBg}`}>
+              <div
+                className={`shrink-0 ${isCompactNode ? 'w-7 h-7' : 'w-8 h-8'} rounded-lg flex items-center justify-center border border-black/5 shadow-sm overflow-hidden flow-lod-shadow`}
+                style={{ backgroundColor: visualStyle.iconBg }}
+              >
                 <img src={data.customIconUrl} alt="icon" className={`${isCompactNode ? 'w-4 h-4' : 'w-5 h-5'} object-contain`} />
               </div>
             )}
 
             {iconName && (
-              <div className={`shrink-0 ${isCompactNode ? 'w-7 h-7' : 'w-8 h-8'} rounded-lg flex items-center justify-center border border-black/5 shadow-sm flow-lod-shadow ${style.iconBg}`}>
-                <NamedIcon name={iconName} fallbackName="Settings" className={`${isCompactNode ? 'w-3.5 h-3.5' : 'w-4 h-4'} ${style.iconColor}`} />
+              <div
+                className={`shrink-0 ${isCompactNode ? 'w-7 h-7' : 'w-8 h-8'} rounded-lg flex items-center justify-center border border-black/5 shadow-sm flow-lod-shadow`}
+                style={{ backgroundColor: visualStyle.iconBg }}
+              >
+                <NamedIcon
+                  name={iconName}
+                  fallbackName="Settings"
+                  className={`${isCompactNode ? 'w-3.5 h-3.5' : 'w-4 h-4'}`}
+                  style={{ color: visualStyle.iconColor }}
+                />
               </div>
             )}
           </div>
@@ -280,7 +295,7 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
             <InlineTextEditSurface
               isEditing={labelEdit.isEditing}
               draft={labelEdit.draft}
-              displayValue={<MemoizedMarkdown content={data.label || 'Node'} />}
+              displayValue={labelDisplayValue}
               onBeginEdit={labelEdit.beginEdit}
               onDraftChange={labelEdit.setDraft}
               onCommit={labelEdit.commit}
@@ -288,20 +303,20 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
               className={`leading-tight block break-words markdown-content [&_p]:m-0 [&_p]:leading-tight ${fontSizeClass}`}
               style={{
                 ...fontSizeStyle,
+                color: visualStyle.text,
                 // fontFamily: 'inherit', // Redundant if parent has class
                 fontWeight: data.fontWeight || (visualQualityV2Enabled ? '600' : 'bold'),
                 fontStyle: data.fontStyle || 'normal',
                 ...(visualQualityV2Enabled
                   ? {
                     lineHeight: 1.2,
-                    maxHeight: isCompactNode ? '2.4em' : '3.6em',
-                    overflow: 'hidden',
                   }
                   : {}),
               }}
-              title={data.label || 'Node'}
+              title={labelTitle}
+              inputMode="multiline"
               inputClassName="text-center"
-              isSelected={Boolean(selected)}
+              isSelected={isActiveSelected}
             />
             {hasSubLabel && (
               <InlineTextEditSurface
@@ -312,8 +327,9 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
                 onDraftChange={subLabelEdit.setDraft}
                 onCommit={subLabelEdit.commit}
                 onKeyDown={subLabelEdit.handleKeyDown}
-                className="text-[10px] text-slate-500 mt-1 leading-snug markdown-content [&_p]:m-0 [&_p]:leading-snug break-words flow-lod-secondary"
+                className={`text-[10px] text-slate-500 mt-1 leading-snug markdown-content [&_p]:m-0 [&_p]:leading-snug break-words flow-lod-secondary ${lodPreserveClass}`}
                 style={{
+                  color: visualStyle.subText,
                   fontWeight: 'normal',
                   fontStyle: 'normal',
                   textAlign: data.align || 'center',
@@ -321,8 +337,6 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
                   ...(visualQualityV2Enabled
                     ? {
                       lineHeight: 1.25,
-                      maxHeight: isCompactNode ? '1.25em' : '2.5em',
-                      overflow: 'hidden',
                     }
                     : {}),
                 }}

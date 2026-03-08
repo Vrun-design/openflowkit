@@ -4,6 +4,7 @@ import {
   createLocalPresence,
   mapPresenceFromAwarenessState,
   mergePresenceSnapshot,
+  replacePresenceSnapshot,
 } from './session';
 
 vi.mock('@/config/rolloutFlags', () => ({
@@ -16,6 +17,7 @@ describe('collaboration session bootstrap', () => {
   it('creates room + local presence bootstrap shell', () => {
     const result = createCollaborationSessionBootstrap({
       roomId: 'room-1',
+      roomPassword: 'secret-1',
       clientId: 'client-1',
       name: 'Varun',
       color: '#6366f1',
@@ -23,6 +25,7 @@ describe('collaboration session bootstrap', () => {
 
     expect(result.enabled).toBe(true);
     expect(result.room.roomId).toBe('room-1');
+    expect(result.room.password).toBe('secret-1');
     expect(result.room.signalingServers).toEqual(['wss://signaling.yjs.dev']);
     expect(result.localPresence).toEqual({
       clientId: 'client-1',
@@ -61,5 +64,16 @@ describe('collaboration session bootstrap', () => {
 
     const merged = mergePresenceSnapshot(current, incoming);
     expect(merged.map((presence) => presence.clientId)).toEqual(['client-a', 'client-b', 'client-c']);
+  });
+
+  it('replaces presence snapshot and preserves explicit local presence only', () => {
+    const current = [
+      createLocalPresence('client-a', 'A', '#222222'),
+      createLocalPresence('client-b', 'B', '#111111'),
+    ];
+    const incoming = [createLocalPresence('client-c', 'C', '#333333')];
+
+    const replaced = replacePresenceSnapshot(current, incoming, current[0]);
+    expect(replaced.map((presence) => presence.clientId)).toEqual(['client-a', 'client-c']);
   });
 });

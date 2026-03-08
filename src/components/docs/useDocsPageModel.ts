@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import type { MouseEvent } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
-import { useFlowStore } from '@/store';
+import { useBrandConfig } from '@/store/brandHooks';
 import { useDocsContent } from './useDocsContent';
 import {
     applyDocsMetaTags,
@@ -24,7 +24,7 @@ interface UseDocsPageModelResult {
 export function useDocsPageModel(): UseDocsPageModelResult {
     const { slug, lang } = useParams();
     const location = useLocation();
-    const { brandConfig } = useFlowStore();
+    const brandConfig = useBrandConfig();
     const { content: rawContent, loading, error } = useDocsContent(slug, lang || 'en');
 
     const content = useMemo(() => {

@@ -5,6 +5,12 @@ export function isPaneTarget(target: EventTarget | null): boolean {
   return target.classList.contains('react-flow__pane') || target.closest('.react-flow__pane') !== null;
 }
 
+export function isCanvasBackgroundTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  if (!isPaneTarget(target)) return false;
+  return target.closest('.react-flow__node, .react-flow__edge') === null;
+}
+
 export function getPointerClientPosition(
   event: unknown
 ): { x: number; y: number } | null {

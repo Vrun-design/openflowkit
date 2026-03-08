@@ -19,6 +19,8 @@
     "selectAll": "全选",
     "duplicate": "复制",
     "duplicateDrag": "复制并拖拽",
+    "multiSelect": "多选",
+    "selectionBox": "选择框",
     "copy": "复制",
     "paste": "粘贴",
     "zoomIn": "放大",
@@ -35,6 +37,8 @@
     "error": "错误",
     "success": "成功",
     "help": "帮助",
+    "selectTool": "选择工具",
+    "handTool": "抓手工具",
     "getStarted": "开始使用",
     "bringToFront": "移至顶层",
     "sendToBack": "移至底层",
@@ -122,7 +126,7 @@
     "newTab": "新建标签页",
     "renameTab": "重命名标签页",
     "closeTab": "关闭标签页",
-    "addNode": "添加节点",
+    "addNode": "添加形状",
     "deleteNode": "删除节点",
     "duplicateNode": "复制节点"
   },
@@ -226,7 +230,18 @@
     "description": "描述",
     "color": "颜色",
     "icon": "图标",
-    "size": "大小"
+    "size": "大小",
+    "shape": "形状",
+    "bulkShape": "批量形状",
+    "bulkColor": "批量颜色",
+    "bulkIcon": "批量图标",
+    "labelTransform": "标签变换",
+    "prefixOptional": "前缀（可选）",
+    "suffixOptional": "后缀（可选）",
+    "previewSummary": "预览摘要",
+    "bulkApplySummary": "将更新已选择的 {{count}} 个项目",
+    "selectFieldToApply": "请至少选择一个要应用的字段。",
+    "applyToSelectedNodes": "应用到所选项目"
   },
   "ai": {
     "generate": "使用 AI 生成",
@@ -665,7 +680,7 @@
     "title": "键盘快捷键",
     "subtitle": "用速度掌控您的工作流程。",
     "closeAriaLabel": "关闭快捷键窗口",
-    "proTip": "专业技巧：拖动时按住 <key>?</key> 以启用选择框。"
+    "proTip": "提示：按住 <key>Shift</key> 可加入选择或拖出选择框。"
   },
   "toolbar": {
     "selectMode": "选择模式 (V)",
@@ -674,7 +689,9 @@
     "templates": "模板",
     "addItem": "添加元素",
     "addToCanvas": "添加到画布",
-    "node": "节点",
+    "shapes": "形状",
+    "assets": "资源",
+    "node": "形状",
     "stickyNote": "便利贴",
     "section": "分区",
     "text": "文本",
@@ -699,23 +716,23 @@
       "description": "您的画布是空的。使用 Flowpilot 生成流程，或从空白开始。",
       "generateWithFlowpilot": "使用 Flowpilot 生成",
       "browseTemplates": "浏览模板",
-      "addBlankNode": "添加空白节点"
+      "addBlankNode": "添加空白形状"
     }
   },
   "annotationNode": {
     "placeholder": "*双击编辑注释*"
   },
   "connectMenu": {
-    "createNewNode": "创建新节点",
-    "process": "流程",
-    "processDesc": "标准操作",
-    "decision": "决策",
-    "decisionDesc": "分支逻辑",
+    "createNewNode": "创建新形状",
+    "process": "圆角形状",
+    "processDesc": "通用块",
+    "decision": "菱形形状",
+    "decisionDesc": "分支块",
     "database": "数据库",
-    "databaseDesc": "数据存储",
+    "databaseDesc": "圆柱形状",
     "inputOutput": "输入 / 输出",
-    "inputOutputDesc": "数据流",
-    "note": "注释",
+    "inputOutputDesc": "平行四边形",
+    "note": "便利贴",
     "noteDesc": "文档说明",
     "releaseToConnect": "松开以连接"
   },
@@ -750,7 +767,7 @@
   },
   "propertiesPanel": {
     "stickyNote": "便利贴",
-    "nodeSettings": "节点设置",
+    "nodeSettings": "形状设置",
     "connection": "连接"
   },
   "flowCanvas": {
@@ -767,6 +784,7 @@
     "newNode": "New Node",
     "branch": "Branch",
     "processStep": "Process Step",
+    "addText": "添加文本",
     "group": "Group",
     "items": "items",
     "addCommentsHere": "Add your comments here.",

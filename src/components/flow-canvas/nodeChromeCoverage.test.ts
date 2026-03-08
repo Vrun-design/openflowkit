@@ -53,4 +53,19 @@ describe('node chrome coverage', () => {
       expect(source, path).not.toContain('type="target"');
     }
   });
+
+  it('keeps selection chrome centralized instead of adding node-local selected rings', () => {
+    const forbiddenPatterns = [
+      /selected\s*\?\s*['"`][^'"`]*ring-/,
+      /selected\s*&&\s*!visualQualityV2Enabled[^\n]*ring-/,
+      /boxShadow:\s*selected\s*&&\s*visualQualityV2Enabled/,
+    ];
+
+    for (const path of NODE_COMPONENT_FILES) {
+      const source = readSource(path);
+      for (const pattern of forbiddenPatterns) {
+        expect(pattern.test(source), `${path} matches ${pattern}`).toBe(false);
+      }
+    }
+  });
 });

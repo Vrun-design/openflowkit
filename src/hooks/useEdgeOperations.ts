@@ -1,19 +1,30 @@
 import { useCallback, useRef } from 'react';
 import { Edge, Connection, addEdge, useReactFlow } from '@/lib/reactflowCompat';
 import { useFlowStore } from '../store';
-import { NodeData } from '@/lib/types';
-import { DEFAULT_EDGE_OPTIONS, NODE_WIDTH, NODE_HEIGHT } from '../constants';
-import { NODE_DEFAULTS } from '../theme';
+import type { FlowEdge, NodeData } from '@/lib/types';
+import { createMindmapEdge, DEFAULT_EDGE_OPTIONS } from '../constants';
 import { useTranslation } from 'react-i18next';
 import { trackEvent } from '../lib/analytics';
-import { createId } from '../lib/id';
 import { assignSmartHandlesWithOptions, getSmartRoutingOptionsFromViewSettings } from '../services/smartEdgeRouting';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { getPointerClientPosition, isPaneTarget, normalizeConnectionFromDragStart } from './edgeConnectInteractions';
+import { normalizeNodeHandleId } from '@/lib/nodeHandles';
+import { buildReconnectedEdge, shouldRespectExplicitReconnectHandles } from '@/lib/reconnectEdge';
+import { queueNodeLabelEditRequest } from './nodeLabelEditRequest';
+import { isMindmapConnectorSource } from '@/lib/connectCreationPolicy';
+import { resolveMindmapBranchStyleForNode, syncMindmapEdges } from '@/lib/mindmapLayout';
+import {
+    buildConnectedEdge,
+    buildConnectedMindmapTopic,
+    buildConnectedNode,
+    getOppositeTargetHandle,
+    isDuplicateConnection,
+    resolveConnectEndAction,
+} from './edge-operations/utils';
 
 export const useEdgeOperations = (
     recordHistory: () => void,
-    onShowConnectMenu?: (position: { x: number; y: number }, sourceId: string, sourceHandle: string | null) => void
+    onShowConnectMenu?: (position: { x: number; y: number }, sourceId: string, sourceHandle: string | null, sourceType: string | null) => void
 ) => {
     const { t } = useTranslation();
     const { nodes, edges, setNodes, setEdges, setSelectedNodeId, setSelectedEdgeId } = useFlowStore();
@@ -33,18 +44,24 @@ export const useEdgeOperations = (
     const onReconnect = useCallback((oldEdge: Edge, newConnection: Connection) => {
         recordHistory();
         setEdges((eds) => {
-            return eds.map((edge) => {
+            const state = useFlowStore.getState();
+            const reconnectedEdge = buildReconnectedEdge(oldEdge as FlowEdge, newConnection, state.nodes);
+            const nextEdges = eds.map((edge) => {
                 if (edge.id === oldEdge.id) {
-                    return {
-                        ...edge,
-                        source: newConnection.source || edge.source,
-                        target: newConnection.target || edge.target,
-                        sourceHandle: newConnection.sourceHandle,
-                        targetHandle: newConnection.targetHandle,
-                    };
+                    return reconnectedEdge;
                 }
                 return edge;
             });
+
+            if (!state.viewSettings.smartRoutingEnabled || shouldRespectExplicitReconnectHandles(newConnection)) {
+                return nextEdges;
+            }
+
+            return assignSmartHandlesWithOptions(
+                state.nodes,
+                nextEdges,
+                getSmartRoutingOptionsFromViewSettings(state.viewSettings)
+            );
         });
     }, [setEdges, recordHistory]);
 
@@ -63,23 +80,40 @@ export const useEdgeOperations = (
             connectingNodeId.current,
             connectingHandleId.current
         );
-        const isDuplicate = edges.some(e =>
-            e.source === normalizedConnection.source &&
-            e.target === normalizedConnection.target &&
-            e.sourceHandle === normalizedConnection.sourceHandle &&
-            e.targetHandle === normalizedConnection.targetHandle
-        );
+        const sourceNode = nodes.find((node) => node.id === normalizedConnection.source);
+        const targetNode = nodes.find((node) => node.id === normalizedConnection.target);
+        const resolvedConnection = {
+            ...normalizedConnection,
+            sourceHandle: normalizeNodeHandleId(sourceNode, normalizedConnection.sourceHandle),
+            targetHandle: normalizeNodeHandleId(targetNode, normalizedConnection.targetHandle),
+        };
+        const isDuplicate = isDuplicateConnection(edges, resolvedConnection);
 
         if (isDuplicate) return;
 
         const { viewSettings } = useFlowStore.getState();
         recordHistory();
         setEdges((eds) => {
+            if (sourceNode?.type === 'mindmap' && targetNode?.type === 'mindmap' && resolvedConnection.source && resolvedConnection.target) {
+                const mindmapEdge = createMindmapEdge(
+                    sourceNode,
+                    targetNode,
+                    undefined,
+                    `e-${resolvedConnection.source}-${resolvedConnection.target}`,
+                    resolveMindmapBranchStyleForNode(sourceNode.id, nodes)
+                );
+                return eds.concat(mindmapEdge);
+            }
             const inserted = addEdge({
-                ...normalizedConnection,
+                ...resolvedConnection,
                 ...DEFAULT_EDGE_OPTIONS,
             }, eds);
-            if (!viewSettings.smartRoutingEnabled) {
+
+            // If the user explicitly dragged both source AND target to specific handles,
+            // respect that intentional choice — don't let Smart Routing override it.
+            // Only auto-assign handles when the user dropped on the node body (not a handle).
+            const bothHandlesExplicit = !!resolvedConnection.sourceHandle && !!resolvedConnection.targetHandle;
+            if (!viewSettings.smartRoutingEnabled || bothHandlesExplicit) {
                 return inserted;
             }
             return assignSmartHandlesWithOptions(
@@ -88,7 +122,7 @@ export const useEdgeOperations = (
                 getSmartRoutingOptionsFromViewSettings(viewSettings)
             );
         });
-    }, [edges, setEdges, recordHistory]);
+    }, [edges, nodes, setEdges, recordHistory]);
 
     const onConnectStart = useCallback((_, { nodeId, handleId }: { nodeId: string | null; handleId: string | null }) => {
         connectingNodeId.current = nodeId;
@@ -98,46 +132,55 @@ export const useEdgeOperations = (
 
     const handleAddAndConnect = useCallback((type: string, position: { x: number; y: number }, sourceId: string, sourceHandle: string | null, shape?: NodeData['shape']) => {
         recordHistory();
-        const id = createId();
-        const defaultStyle = NODE_DEFAULTS[type] || NODE_DEFAULTS['process'];
-        const isJourney = type === 'journey';
-        const newNode = {
-            id,
-            position,
-            data: {
-                label: isJourney
-                    ? 'User Journey'
-                    : type === 'annotation'
-                        ? t('nodes.note')
-                        : (shape === 'cylinder' ? t('nodes.database') : shape === 'parallelogram' ? t('nodes.inputOutput') : t('nodes.newNode')),
-                subLabel: isJourney ? 'User' : (type === 'decision' ? t('nodes.branch') : t('nodes.processStep')),
-                icon: defaultStyle?.icon && defaultStyle.icon !== 'none'
-                    ? defaultStyle.icon
-                    : (type === 'decision' ? 'GitBranch' : (type === 'annotation' ? 'StickyNote' : (shape === 'cylinder' ? 'Database' : 'Settings'))),
-                color: isJourney
-                    ? 'violet'
-                    : defaultStyle?.color || (type === 'annotation' ? 'yellow' : (type === 'decision' ? 'amber' : (shape === 'cylinder' ? 'emerald' : 'slate'))),
-                shape: (shape || defaultStyle?.shape) as NodeData['shape'],
-                ...(isJourney ? {
-                    journeySection: 'General',
-                    journeyTask: 'User Journey',
-                    journeyActor: 'User',
-                    journeyScore: 3,
-                } : {}),
-            },
-            type,
-        };
+        const state = useFlowStore.getState();
+        const sourceNode = state.nodes.find((node) => node.id === sourceId);
+        if (type === 'mindmap' && isMindmapConnectorSource(sourceNode?.type)) {
+            const { insertedEdge, nextNode, nextNodes } = buildConnectedMindmapTopic({
+                nodes: state.nodes,
+                edges: state.edges,
+                sourceNode,
+                sourceHandle,
+                sourceId,
+                position,
+            });
 
-        const { viewSettings } = useFlowStore.getState();
+            setNodes(() => nextNodes);
+            setEdges((existingEdges) => {
+                const insertedEdges = syncMindmapEdges(nextNodes, existingEdges.concat(insertedEdge));
+                if (!state.viewSettings.smartRoutingEnabled) {
+                    return insertedEdges;
+                }
+                return assignSmartHandlesWithOptions(
+                    nextNodes,
+                    insertedEdges,
+                    getSmartRoutingOptionsFromViewSettings(state.viewSettings)
+                );
+            });
+            setSelectedNodeId(nextNode.id);
+            queueNodeLabelEditRequest(nextNode.id, { replaceExisting: true });
+            return;
+        }
+
+        const { newNode, isGenericShape } = buildConnectedNode({
+            type,
+            position,
+            shape,
+            labels: {
+                noteLabel: t('nodes.note'),
+                noteSubLabel: t('nodes.addCommentsHere'),
+            },
+        });
+        const id = newNode.id;
+
+        const { viewSettings } = state;
         setNodes((nds) => nds.concat(newNode));
         setEdges((eds) => {
-            const insertedEdges = eds.concat({
-                id: `e-${sourceId}-${id}`,
-                source: sourceId,
-                sourceHandle,
-                target: id,
-                ...DEFAULT_EDGE_OPTIONS,
-            });
+            const resolvedSourceHandle = normalizeNodeHandleId(sourceNode, sourceHandle) ?? null;
+            const resolvedTargetHandle = !viewSettings.smartRoutingEnabled && resolvedSourceHandle
+                ? getOppositeTargetHandle(newNode, resolvedSourceHandle)
+                : null;
+
+            const insertedEdges = eds.concat(buildConnectedEdge(sourceId, id, resolvedSourceHandle, resolvedTargetHandle));
             if (!viewSettings.smartRoutingEnabled) {
                 return insertedEdges;
             }
@@ -148,7 +191,10 @@ export const useEdgeOperations = (
             );
         });
         setSelectedNodeId(id);
-    }, [setNodes, setEdges, recordHistory, setSelectedNodeId, t]);
+        if (isGenericShape) {
+            queueNodeLabelEditRequest(id, { replaceExisting: true });
+        }
+    }, [recordHistory, setEdges, setNodes, setSelectedNodeId, t]);
 
     const onConnectEnd = useCallback(
         (event: unknown) => {
@@ -158,64 +204,40 @@ export const useEdgeOperations = (
             const clientPosition = getPointerClientPosition(event);
             if (!clientPosition) return;
             const position = screenToFlowPosition(clientPosition);
-
-            // PHASE 1: Auto-Snap
-            let closestHandle: { nodeId: string, handleId: string, dist: number } | null = null;
-
-            // Use current nodes from store to ensure fresh state if needed
-            // but `nodes` from hook dependency should be fine
-            nodes.forEach(node => {
-                const hPoints = [
-                    { id: 'top', x: node.position.x + NODE_WIDTH / 2, y: node.position.y },
-                    { id: 'bottom', x: node.position.x + NODE_WIDTH / 2, y: node.position.y + NODE_HEIGHT },
-                    { id: 'left', x: node.position.x, y: node.position.y + NODE_HEIGHT / 2 },
-                    { id: 'right', x: node.position.x + NODE_WIDTH, y: node.position.y + NODE_HEIGHT / 2 },
-                ];
-
-                hPoints.forEach(hp => {
-                    const dist = Math.sqrt((hp.x - position.x) ** 2 + (hp.y - position.y) ** 2);
-                    if (dist < 50 && (!closestHandle || dist < closestHandle.dist)) {
-                        closestHandle = { nodeId: node.id, handleId: hp.id, dist };
-                    }
-                });
+            const target = (event as { target?: EventTarget | null }).target ?? null;
+            const resolution = resolveConnectEndAction({
+                nodes,
+                edges,
+                sourceId: connectingNodeId.current,
+                sourceHandle: connectingHandleId.current,
+                position,
+                clientPosition,
+                targetIsPane: isPaneTarget(target),
+                canvasInteractionsV1Enabled: ROLLOUT_FLAGS.canvasInteractionsV1,
             });
 
-            if (closestHandle) {
-                const targetHandle = closestHandle;
-                const connection = {
-                    source: connectingNodeId.current,
-                    sourceHandle: connectingHandleId.current,
-                    target: targetHandle.nodeId,
-                    targetHandle: targetHandle.handleId,
-                } as Connection;
-
-                const isDuplicate = edges.some(e =>
-                    e.source === connection.source &&
-                    e.target === connection.target &&
-                    e.sourceHandle === connection.sourceHandle &&
-                    e.targetHandle === connection.targetHandle
-                );
-
-                if (isDuplicate) return;
-
-                onConnect(connection);
+            if (resolution.type === 'connect') {
+                onConnect(resolution.connection);
                 return;
             }
 
-            // PHASE 2: Context Menu
-            const target = (event as { target?: EventTarget | null }).target ?? null;
-            const targetIsPane = isPaneTarget(target);
-
-            if (targetIsPane && ROLLOUT_FLAGS.canvasInteractionsV1) {
-                handleAddAndConnect('process', position, connectingNodeId.current, connectingHandleId.current, 'rounded');
-                return;
-            }
-
-            if (targetIsPane && onShowConnectMenu) {
-                onShowConnectMenu(
-                    { x: clientPosition.x, y: clientPosition.y },
+            if (resolution.type === 'add') {
+                handleAddAndConnect(
+                    resolution.nodeType,
+                    resolution.position,
                     connectingNodeId.current,
-                    connectingHandleId.current
+                    connectingHandleId.current,
+                    resolution.shape
+                );
+                return;
+            }
+
+            if (resolution.type === 'menu' && onShowConnectMenu) {
+                onShowConnectMenu(
+                    resolution.clientPosition,
+                    connectingNodeId.current,
+                    connectingHandleId.current,
+                    resolution.sourceType
                 );
             }
         },

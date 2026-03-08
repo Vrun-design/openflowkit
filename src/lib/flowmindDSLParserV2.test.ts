@@ -62,6 +62,20 @@ describe('FlowMind DSL V2 Parser', () => {
         // Let's check the implementation again.
     });
 
+    it('parses quoted attribute values containing commas, colons, and escapes', () => {
+        const input = `
+            [process] p1: Configured Node { icon: "server, api", note: "http://svc:8080/path", enabled: true, retries: 3, quote: "say \\"hello\\"" }
+        `;
+        const result = parseFlowMindDSL(input);
+
+        const p1 = result.nodes.find((node) => node.id === 'p1');
+        expect(p1?.data.icon).toBe('server, api');
+        expect(p1?.data.note).toBe('http://svc:8080/path');
+        expect(p1?.data.enabled).toBe(true);
+        expect(p1?.data.retries).toBe(3);
+        expect(p1?.data.quote).toBe('say "hello"');
+    });
+
     it('parses groups', () => {
         const input = `
             group "Backend" {

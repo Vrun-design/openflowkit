@@ -1,34 +1,24 @@
 import React, { memo } from 'react';
 import type { LegacyNodeProps } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
-import { getNodeColorPalette } from '../theme';
-import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { NodeChrome } from './NodeChrome';
 
 function ImageNode({ data, selected }: LegacyNodeProps<NodeData>): React.ReactElement {
-    // Default styles
-    const visualQualityV2Enabled = ROLLOUT_FLAGS.visualQualityV2;
-    const nodeColorPalette = getNodeColorPalette(visualQualityV2Enabled);
-    const style = nodeColorPalette.slate;
-
     return (
         <NodeChrome
             selected={Boolean(selected)}
             minWidth={50}
             minHeight={50}
             keepAspectRatio
-            handleClassName={`!w-3 !h-3 !border-2 !border-white ${style.handle} transition-all duration-150 hover:scale-125`}
+            handleClassName="!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125"
         >
             <div
-                className={`relative group flex flex-col justify-center h-full transition-all duration-200
-                    ${selected && !visualQualityV2Enabled ? 'ring-2 ring-[var(--brand-primary)] ring-offset-4' : ''}
-                `}
+                className="relative group flex flex-col justify-center h-full transition-all duration-200"
                 style={{
                     width: '100%',
                     height: '100%',
                     opacity: data.transparency ?? 1,
                     transform: data.rotation ? `rotate(${data.rotation}deg)` : 'none',
-                    boxShadow: selected && visualQualityV2Enabled ? '0 0 0 2px #6366f1, 0 0 12px rgba(99,102,241,0.2)' : undefined,
                 }}
             >
                 {data.imageUrl ? (

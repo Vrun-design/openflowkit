@@ -4,12 +4,20 @@ export const useModifierKeys = () => {
     const [isSelectionModifierPressed, setIsSelectionModifierPressed] = useState(false);
 
     useEffect(() => {
+        function isSelectionModifierKey(key: string): boolean {
+            return key === 'Meta' || key === 'Control' || key === 'Shift';
+        }
+
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Meta' || e.key === 'Control') setIsSelectionModifierPressed(true);
+            if (isSelectionModifierKey(e.key)) {
+                setIsSelectionModifierPressed(true);
+            }
         };
 
         const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.key === 'Meta' || e.key === 'Control') setIsSelectionModifierPressed(false);
+            if (isSelectionModifierKey(e.key)) {
+                setIsSelectionModifierPressed(e.metaKey || e.ctrlKey || e.shiftKey);
+            }
         };
 
         const handleBlur = () => setIsSelectionModifierPressed(false);

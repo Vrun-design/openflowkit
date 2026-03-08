@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Plus, WandSparkles } from 'lucide-react';
+import { Layout, Plus, Sparkles } from 'lucide-react';
 import { Button } from './ui/Button';
 
 interface FlowEditorEmptyStateProps {
@@ -48,7 +48,7 @@ export function FlowEditorEmptyState({
                         size="lg"
                         data-testid="empty-generate-ai"
                         className="w-full shadow-lg"
-                        icon={<WandSparkles className="w-4 h-4" />}
+                        icon={<Sparkles className="w-4 h-4" />}
                     >
                         {generateLabel}
                     </Button>

@@ -28,6 +28,7 @@ describe('collaboration runtime controller', () => {
       transport: transportA,
       session: createCollaborationSessionBootstrap({
         roomId: 'room-1',
+        roomPassword: 'secret-1',
         clientId: 'client-a',
         name: 'A',
         color: '#111111',
@@ -38,6 +39,7 @@ describe('collaboration runtime controller', () => {
       transport: transportB,
       session: createCollaborationSessionBootstrap({
         roomId: 'room-1',
+        roomPassword: 'secret-1',
         clientId: 'client-b',
         name: 'B',
         color: '#222222',
@@ -66,7 +68,9 @@ describe('collaboration runtime controller', () => {
   });
 
   it('applies stale incoming operation via rebase guard path', () => {
-    let onEvent: ((event: { type: 'operation'; fromClientId: string; operation: CollaborationOperationEnvelope } | { type: 'presence'; fromClientId: string; presence: CollaborationPresenceState }) => void) | null = null;
+    let onEvent: ((event:
+      { type: 'operation'; fromClientId: string; operation: CollaborationOperationEnvelope }
+      | { type: 'presence_snapshot'; fromClientId: string; presence: CollaborationPresenceState[] }) => void) | null = null;
     const transport: CollaborationTransport = {
       connect: (_config, listener) => {
         onEvent = listener;
@@ -79,6 +83,7 @@ describe('collaboration runtime controller', () => {
       transport,
       session: createCollaborationSessionBootstrap({
         roomId: 'room-1',
+        roomPassword: 'secret-1',
         clientId: 'client-a',
         name: 'A',
         color: '#111111',
@@ -133,6 +138,7 @@ describe('collaboration runtime controller', () => {
       transport: transportA,
       session: createCollaborationSessionBootstrap({
         roomId: 'room-1',
+        roomPassword: 'secret-1',
         clientId: 'client-a',
         name: 'A',
         color: '#111111',
@@ -143,6 +149,7 @@ describe('collaboration runtime controller', () => {
       transport: transportB,
       session: createCollaborationSessionBootstrap({
         roomId: 'room-1',
+        roomPassword: 'secret-1',
         clientId: 'client-b',
         name: 'B',
         color: '#222222',
@@ -156,5 +163,40 @@ describe('collaboration runtime controller', () => {
 
     const bPresenceClientIds = controllerB.getPresenceState().map((presence) => presence.clientId);
     expect(bPresenceClientIds).toEqual(['client-a', 'client-b']);
+  });
+
+  it('removes disconnected peers from presence state after snapshot replacement', () => {
+    const transportA = createInMemoryCollaborationTransport();
+    const transportB = createInMemoryCollaborationTransport();
+    const controllerA = createCollaborationRuntimeController({
+      transport: transportA,
+      session: createCollaborationSessionBootstrap({
+        roomId: 'room-1',
+        roomPassword: 'secret-1',
+        clientId: 'client-a',
+        name: 'A',
+        color: '#111111',
+      }),
+      initialDocumentState: createInitialState(),
+    });
+    const controllerB = createCollaborationRuntimeController({
+      transport: transportB,
+      session: createCollaborationSessionBootstrap({
+        roomId: 'room-1',
+        roomPassword: 'secret-1',
+        clientId: 'client-b',
+        name: 'B',
+        color: '#222222',
+      }),
+      initialDocumentState: createInitialState(),
+    });
+
+    controllerA.start();
+    controllerB.start();
+    expect(controllerA.getPresenceState().map((presence) => presence.clientId)).toEqual(['client-a', 'client-b']);
+
+    controllerB.stop();
+
+    expect(controllerA.getPresenceState().map((presence) => presence.clientId)).toEqual(['client-a']);
   });
 });

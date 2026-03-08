@@ -13,10 +13,40 @@ export interface ThemeColors {
     shadow: string; // for export
 }
 
+export type NodeColorMode = 'subtle' | 'filled';
+
+export const NODE_COLOR_OPTIONS = ['white', 'slate', 'blue', 'emerald', 'amber', 'red', 'violet', 'pink', 'yellow'] as const;
+
+export const NODE_COLOR_LABELS: Record<(typeof NODE_COLOR_OPTIONS)[number] | 'custom', string> = {
+    white: 'White',
+    slate: 'Slate',
+    blue: 'Blue',
+    emerald: 'Green',
+    amber: 'Orange',
+    red: 'Red',
+    violet: 'Violet',
+    pink: 'Pink',
+    yellow: 'Yellow',
+    custom: 'Custom',
+};
+
 // Maps color names to Tailwind classes (for UI) AND hex values (for export)
 // This serves as the Single Source of Truth for node styling.
 
 export const NODE_COLOR_PALETTE: Record<string, ThemeColors> = {
+    white: {
+        bg: 'bg-white',
+        fill: 'fill-white',
+        border: 'border-slate-300',
+        stroke: 'stroke-slate-300',
+        iconBg: 'bg-slate-50',
+        iconColor: 'text-slate-600',
+        handle: 'bg-slate-400',
+        ring: 'ring-slate-400',
+        text: '#0f172a',
+        subText: '#475569',
+        shadow: 'rgba(15,23,42,0.06)',
+    },
     slate: {
         bg: 'bg-white',
         fill: 'fill-white',
@@ -138,15 +168,96 @@ export const NODE_COLOR_PALETTE: Record<string, ThemeColors> = {
 };
 
 export const NODE_COLOR_PALETTE_V2: Record<string, ThemeColors> = {
-    slate: { ...NODE_COLOR_PALETTE.slate, bg: 'bg-slate-50', fill: 'fill-slate-50' },
-    blue: { ...NODE_COLOR_PALETTE.blue, bg: 'bg-blue-50', fill: 'fill-blue-50' },
-    emerald: { ...NODE_COLOR_PALETTE.emerald, bg: 'bg-emerald-50', fill: 'fill-emerald-50' },
-    red: { ...NODE_COLOR_PALETTE.red, bg: 'bg-red-50', fill: 'fill-red-50' },
-    amber: { ...NODE_COLOR_PALETTE.amber, bg: 'bg-amber-50', fill: 'fill-amber-50' },
-    violet: { ...NODE_COLOR_PALETTE.violet, bg: 'bg-violet-50', fill: 'fill-violet-50' },
-    pink: { ...NODE_COLOR_PALETTE.pink, bg: 'bg-pink-50', fill: 'fill-pink-50' },
-    yellow: { ...NODE_COLOR_PALETTE.yellow },
-    cyan: { ...NODE_COLOR_PALETTE.cyan, bg: 'bg-cyan-50', fill: 'fill-cyan-50' },
+    white: {
+        ...NODE_COLOR_PALETTE.white,
+        bg: 'bg-white',
+        fill: 'fill-white',
+        border: 'border-slate-300',
+        stroke: 'stroke-slate-300',
+        iconBg: 'bg-slate-50',
+        ring: 'ring-slate-400',
+    },
+    slate: {
+        ...NODE_COLOR_PALETTE.slate,
+        bg: 'bg-slate-50',
+        fill: 'fill-slate-50',
+        border: 'border-slate-400',
+        stroke: 'stroke-slate-400',
+        iconBg: 'bg-slate-100',
+        ring: 'ring-slate-500',
+    },
+    blue: {
+        ...NODE_COLOR_PALETTE.blue,
+        bg: 'bg-blue-50',
+        fill: 'fill-blue-50',
+        border: 'border-blue-400',
+        stroke: 'stroke-blue-400',
+        iconBg: 'bg-blue-100',
+        ring: 'ring-blue-500',
+    },
+    emerald: {
+        ...NODE_COLOR_PALETTE.emerald,
+        bg: 'bg-emerald-50',
+        fill: 'fill-emerald-50',
+        border: 'border-emerald-400',
+        stroke: 'stroke-emerald-400',
+        iconBg: 'bg-emerald-100',
+        ring: 'ring-emerald-500',
+    },
+    red: {
+        ...NODE_COLOR_PALETTE.red,
+        bg: 'bg-red-50',
+        fill: 'fill-red-50',
+        border: 'border-red-400',
+        stroke: 'stroke-red-400',
+        iconBg: 'bg-red-100',
+        ring: 'ring-red-500',
+    },
+    amber: {
+        ...NODE_COLOR_PALETTE.amber,
+        bg: 'bg-amber-50',
+        fill: 'fill-amber-50',
+        border: 'border-amber-400',
+        stroke: 'stroke-amber-400',
+        iconBg: 'bg-amber-100',
+        ring: 'ring-amber-500',
+    },
+    violet: {
+        ...NODE_COLOR_PALETTE.violet,
+        bg: 'bg-violet-50',
+        fill: 'fill-violet-50',
+        border: 'border-violet-400',
+        stroke: 'stroke-violet-400',
+        iconBg: 'bg-violet-100',
+        ring: 'ring-violet-500',
+    },
+    pink: {
+        ...NODE_COLOR_PALETTE.pink,
+        bg: 'bg-pink-50',
+        fill: 'fill-pink-50',
+        border: 'border-pink-400',
+        stroke: 'stroke-pink-400',
+        iconBg: 'bg-pink-100',
+        ring: 'ring-pink-500',
+    },
+    yellow: {
+        ...NODE_COLOR_PALETTE.yellow,
+        bg: 'bg-yellow-100',
+        fill: 'fill-yellow-100',
+        border: 'border-yellow-400',
+        stroke: 'stroke-yellow-400',
+        iconBg: 'bg-yellow-200',
+        ring: 'ring-yellow-500',
+    },
+    cyan: {
+        ...NODE_COLOR_PALETTE.cyan,
+        bg: 'bg-cyan-50',
+        fill: 'fill-cyan-50',
+        border: 'border-cyan-400',
+        stroke: 'stroke-cyan-400',
+        iconBg: 'bg-cyan-100',
+        ring: 'ring-cyan-500',
+    },
 };
 
 export function getNodeColorPalette(visualQualityV2Enabled: boolean): Record<string, ThemeColors> {
@@ -168,16 +279,133 @@ interface NodeExportColor {
 // Hex values for Export Service (Figma/SVG)
 // We map the Tailwind classes to hex values for tools that can't use CSS classes
 export const NODE_EXPORT_COLORS: Record<string, NodeExportColor> = {
-    slate: { bg: '#ffffff', border: '#cbd5e1', iconBg: '#f1f5f9', iconColor: '#475569', text: '#1e293b', subText: '#475569' },
-    blue: { bg: '#eff6ff', border: '#93c5fd', iconBg: '#dbeafe', iconColor: '#2563eb', text: '#1e293b', subText: '#475569' },
-    emerald: { bg: '#ecfdf5', border: '#6ee7b7', iconBg: '#d1fae5', iconColor: '#059669', text: '#064e3b', subText: '#065f46' },
-    red: { bg: '#fef2f2', border: '#fca5a5', iconBg: '#fee2e2', iconColor: '#dc2626', text: '#7f1d1d', subText: '#991b1b' },
-    amber: { bg: '#fffbeb', border: '#fcd34d', iconBg: '#fef3c7', iconColor: '#d97706', text: '#78350f', subText: '#92400e' },
-    violet: { bg: '#f5f3ff', border: '#c4b5fd', iconBg: '#ede9fe', iconColor: '#7c3aed', text: '#5b21b6', subText: '#6d28d9' },
-    pink: { bg: '#fdf2f8', border: '#f9a8d4', iconBg: '#fce7f3', iconColor: '#db2777', text: '#831843', subText: '#9d174d' },
-    yellow: { bg: '#fef9c3', border: '#fde047', iconBg: '#fef08a', iconColor: '#a16207', text: '#a16207', subText: '#b45309' },
-    cyan: { bg: '#ecfeff', border: '#67e8f9', iconBg: '#cffafe', iconColor: '#0891b2', text: '#0e7490', subText: '#155e75' },
+    white: { bg: '#ffffff', border: '#cbd5e1', iconBg: '#f8fafc', iconColor: '#475569', text: '#0f172a', subText: '#475569' },
+    slate: { bg: '#f8fafc', border: '#94a3b8', iconBg: '#f1f5f9', iconColor: '#475569', text: '#1e293b', subText: '#475569' },
+    blue: { bg: '#eff6ff', border: '#60a5fa', iconBg: '#dbeafe', iconColor: '#2563eb', text: '#1e293b', subText: '#475569' },
+    emerald: { bg: '#ecfdf5', border: '#34d399', iconBg: '#d1fae5', iconColor: '#059669', text: '#064e3b', subText: '#065f46' },
+    red: { bg: '#fef2f2', border: '#f87171', iconBg: '#fee2e2', iconColor: '#dc2626', text: '#7f1d1d', subText: '#991b1b' },
+    amber: { bg: '#fffbeb', border: '#fbbf24', iconBg: '#fef3c7', iconColor: '#d97706', text: '#78350f', subText: '#92400e' },
+    violet: { bg: '#f5f3ff', border: '#8b5cf6', iconBg: '#ede9fe', iconColor: '#7c3aed', text: '#5b21b6', subText: '#6d28d9' },
+    pink: { bg: '#fdf2f8', border: '#f472b6', iconBg: '#fce7f3', iconColor: '#db2777', text: '#831843', subText: '#9d174d' },
+    yellow: { bg: '#fef9c3', border: '#facc15', iconBg: '#fef08a', iconColor: '#a16207', text: '#a16207', subText: '#b45309' },
+    cyan: { bg: '#ecfeff', border: '#22d3ee', iconBg: '#cffafe', iconColor: '#0891b2', text: '#0e7490', subText: '#155e75' },
 };
+
+function clampChannel(value: number): number {
+    return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function normalizeHex(hex: string): string | null {
+    const normalized = hex.trim().replace('#', '');
+    if (/^[\da-fA-F]{3}$/.test(normalized)) {
+        return `#${normalized.split('').map((char) => char + char).join('')}`.toLowerCase();
+    }
+    if (/^[\da-fA-F]{6}$/.test(normalized)) {
+        return `#${normalized}`.toLowerCase();
+    }
+    return null;
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+    const normalized = normalizeHex(hex);
+    if (!normalized) {
+        return null;
+    }
+    const value = normalized.slice(1);
+    return {
+        r: Number.parseInt(value.slice(0, 2), 16),
+        g: Number.parseInt(value.slice(2, 4), 16),
+        b: Number.parseInt(value.slice(4, 6), 16),
+    };
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+    return `#${[r, g, b]
+        .map((channel) => clampChannel(channel).toString(16).padStart(2, '0'))
+        .join('')}`;
+}
+
+function mixHex(colorA: string, colorB: string, ratio: number): string {
+    const a = hexToRgb(colorA);
+    const b = hexToRgb(colorB);
+    if (!a || !b) {
+        return colorA;
+    }
+    return rgbToHex(
+        a.r * (1 - ratio) + b.r * ratio,
+        a.g * (1 - ratio) + b.g * ratio,
+        a.b * (1 - ratio) + b.b * ratio,
+    );
+}
+
+function getLuminance(hex: string): number {
+    const rgb = hexToRgb(hex);
+    if (!rgb) {
+        return 1;
+    }
+    const channels = [rgb.r, rgb.g, rgb.b].map((channel) => {
+        const value = channel / 255;
+        return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+function getContrastText(hex: string): '#0f172a' | '#ffffff' {
+    return getLuminance(hex) > 0.44 ? '#0f172a' : '#ffffff';
+}
+
+const NODE_FILLED_COLORS: Record<string, NodeExportColor> = {
+    white: { bg: '#ffffff', border: '#94a3b8', iconBg: '#f8fafc', iconColor: '#475569', text: '#0f172a', subText: '#475569' },
+    slate: { bg: '#475569', border: '#334155', iconBg: '#64748b', iconColor: '#ffffff', text: '#ffffff', subText: '#e2e8f0' },
+    blue: { bg: '#2563eb', border: '#1d4ed8', iconBg: '#1d4ed8', iconColor: '#ffffff', text: '#ffffff', subText: '#dbeafe' },
+    emerald: { bg: '#059669', border: '#047857', iconBg: '#047857', iconColor: '#ffffff', text: '#ffffff', subText: '#d1fae5' },
+    amber: { bg: '#f59e0b', border: '#d97706', iconBg: '#d97706', iconColor: '#ffffff', text: '#0f172a', subText: '#451a03' },
+    red: { bg: '#dc2626', border: '#b91c1c', iconBg: '#b91c1c', iconColor: '#ffffff', text: '#ffffff', subText: '#fee2e2' },
+    violet: { bg: '#7c3aed', border: '#6d28d9', iconBg: '#6d28d9', iconColor: '#ffffff', text: '#ffffff', subText: '#ede9fe' },
+    pink: { bg: '#db2777', border: '#be185d', iconBg: '#be185d', iconColor: '#ffffff', text: '#ffffff', subText: '#fce7f3' },
+    yellow: { bg: '#eab308', border: '#ca8a04', iconBg: '#ca8a04', iconColor: '#ffffff', text: '#0f172a', subText: '#4d3800' },
+    cyan: { bg: '#0891b2', border: '#0e7490', iconBg: '#0e7490', iconColor: '#ffffff', text: '#ffffff', subText: '#cffafe' },
+};
+
+export function resolveNodeVisualStyle(
+    colorKey?: string,
+    colorMode: NodeColorMode = 'subtle',
+    customColor?: string
+): NodeExportColor {
+    if (colorKey === 'custom') {
+        const normalized = normalizeHex(customColor || '');
+        if (normalized) {
+            if (colorMode === 'filled') {
+                const textColor = getContrastText(normalized);
+                const subTextColor = textColor === '#ffffff'
+                    ? mixHex('#ffffff', normalized, 0.18)
+                    : mixHex('#0f172a', '#ffffff', 0.18);
+                return {
+                    bg: normalized,
+                    border: mixHex(normalized, '#000000', 0.18),
+                    iconBg: mixHex(normalized, '#000000', 0.14),
+                    iconColor: textColor,
+                    text: textColor,
+                    subText: subTextColor,
+                };
+            }
+            return {
+                bg: mixHex(normalized, '#ffffff', 0.9),
+                border: mixHex(normalized, '#ffffff', 0.2),
+                iconBg: mixHex(normalized, '#ffffff', 0.8),
+                iconColor: normalized,
+                text: '#0f172a',
+                subText: '#475569',
+            };
+        }
+    }
+
+    const resolvedColor = colorKey && NODE_EXPORT_COLORS[colorKey] ? colorKey : 'white';
+    if (colorMode === 'filled') {
+        return NODE_FILLED_COLORS[resolvedColor] || NODE_FILLED_COLORS.white;
+    }
+    return NODE_EXPORT_COLORS[resolvedColor] || NODE_EXPORT_COLORS.white;
+}
 
 export interface SectionColors {
     bg: string;
@@ -251,9 +479,9 @@ export const NODE_DEFAULTS: Record<string, { color: string; icon: string; shape:
     start: { color: 'emerald', icon: 'none', shape: 'capsule' },
     end: { color: 'red', icon: 'none', shape: 'capsule' },
     decision: { color: 'amber', icon: 'none', shape: 'diamond' },
-    custom: { color: 'violet', icon: 'none', shape: 'rounded' },
-    process: { color: 'slate', icon: 'none', shape: 'rounded' },
+    custom: { color: 'white', icon: 'none', shape: 'rounded' },
+    process: { color: 'white', icon: 'none', shape: 'rounded' },
 };
 
 export const getDefaultColor = (type: string): string =>
-    NODE_DEFAULTS[type]?.color || 'slate';
+    NODE_DEFAULTS[type]?.color || 'white';

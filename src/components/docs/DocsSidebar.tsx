@@ -5,7 +5,7 @@ import { docsNavigation } from './docsData';
 import { Book, ArrowLeft } from 'lucide-react';
 import { LanguageSelector } from '../LanguageSelector';
 import { SidebarItem } from '../ui/SidebarItem';
-import { useFlowStore } from '../../store';
+import { useBrandConfig } from '@/store/brandHooks';
 
 interface DocsSidebarProps {
     className?: string;
@@ -14,7 +14,7 @@ interface DocsSidebarProps {
 
 export const DocsSidebar: React.FC<DocsSidebarProps> = ({ className = '', onClose }) => {
     const { t, i18n } = useTranslation();
-    const { brandConfig } = useFlowStore();
+    const brandConfig = useBrandConfig();
     const { lang } = useParams();
     const currentLang = lang || i18n.language || 'en';
 
@@ -24,7 +24,7 @@ export const DocsSidebar: React.FC<DocsSidebarProps> = ({ className = '', onClos
                 <Link
                     to="/home"
                     className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
-                    title={t('docs.returnToCanvas')}
+                    title={t('docs.returnToDashboard', 'Back to dashboard')}
                 >
                     <ArrowLeft className="w-4 h-4" />
                 </Link>

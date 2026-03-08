@@ -7,7 +7,7 @@ export type CommandBarView =
     | 'search'
     | 'layout'
     | 'design-system'
-    | 'wireframes';
+    | 'assets';
 
 export type FlowEditorMode = 'canvas' | 'studio';
 export type StudioTab = 'ai' | 'code';

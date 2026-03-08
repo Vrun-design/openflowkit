@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import { assignSmartHandles, assignSmartHandlesWithOptions } from './smartEdgeRouting';
 
-function createNode(id: string, x: number, y: number): FlowNode {
+function createNode(id: string, x: number, y: number, type = 'process'): FlowNode {
   return {
     id,
-    type: 'process',
+    type,
     position: { x, y },
     data: { label: id },
   } as FlowNode;
@@ -16,7 +16,7 @@ function createEdge(id: string, source: string, target: string): FlowEdge {
 }
 
 describe('assignSmartHandles', () => {
-  it('keeps sibling ordering deterministic for same-direction edges', () => {
+  it('keeps sibling edges on the same geometry-driven sides', () => {
     const nodes = [createNode('a', 0, 0), createNode('b', 300, 0)];
     const edges = [
       createEdge('e1', 'a', 'b'),
@@ -28,13 +28,13 @@ describe('assignSmartHandles', () => {
 
     expect(routed[0].sourceHandle).toBe('right');
     expect(routed[0].targetHandle).toBe('left');
-    expect(routed[1].sourceHandle).toBe('bottom');
-    expect(routed[1].targetHandle).toBe('bottom');
+    expect(routed[1].sourceHandle).toBe('right');
+    expect(routed[1].targetHandle).toBe('left');
     expect(routed[2].sourceHandle).toBe('right');
     expect(routed[2].targetHandle).toBe('left');
   });
 
-  it('keeps bidirectional pairing behavior', () => {
+  it('keeps bidirectional edges geometry-consistent in each direction', () => {
     const nodes = [createNode('a', 0, 0), createNode('b', 0, 300)];
     const edges = [
       createEdge('e-forward', 'a', 'b'),
@@ -47,8 +47,8 @@ describe('assignSmartHandles', () => {
 
     expect(forward?.sourceHandle).toBe('bottom');
     expect(forward?.targetHandle).toBe('top');
-    expect(reverse?.sourceHandle).toBe('right');
-    expect(reverse?.targetHandle).toBe('right');
+    expect(reverse?.sourceHandle).toBe('top');
+    expect(reverse?.targetHandle).toBe('bottom');
   });
 
   it('invalidates cached routing context when node mutation epoch changes', () => {
@@ -77,8 +77,8 @@ describe('assignSmartHandles', () => {
     const routedTwo = assignSmartHandles(nodes, twoEdges);
     expect(routedTwo[0].sourceHandle).toBe('right');
     expect(routedTwo[0].targetHandle).toBe('left');
-    expect(routedTwo[1].sourceHandle).toBe('bottom');
-    expect(routedTwo[1].targetHandle).toBe('bottom');
+    expect(routedTwo[1].sourceHandle).toBe('right');
+    expect(routedTwo[1].targetHandle).toBe('left');
   });
 
   it('preserves edge label placement metadata during reroute updates', () => {
@@ -122,7 +122,7 @@ describe('assignSmartHandles', () => {
     expect(infra[0].targetHandle).toBe('left');
   });
 
-  it('supports sibling edge bundling option', () => {
+  it('keeps bundling option path-only and not side-selective', () => {
     const nodes = [createNode('a', 0, 0), createNode('b', 300, 0)];
     const edges = [createEdge('e1', 'a', 'b'), createEdge('e2', 'a', 'b')];
 
@@ -137,8 +137,8 @@ describe('assignSmartHandles', () => {
 
     expect(spread[0].sourceHandle).toBe('right');
     expect(spread[0].targetHandle).toBe('left');
-    expect(spread[1].sourceHandle).toBe('bottom');
-    expect(spread[1].targetHandle).toBe('bottom');
+    expect(spread[1].sourceHandle).toBe('right');
+    expect(spread[1].targetHandle).toBe('left');
 
     expect(bundled[0].sourceHandle).toBe('right');
     expect(bundled[0].targetHandle).toBe('left');
@@ -163,5 +163,15 @@ describe('assignSmartHandles', () => {
 
     expect(routed[0].sourceHandle).toBe('top');
     expect(routed[0].targetHandle).toBe('bottom');
+  });
+
+  it('maps smart-routed handles to the actual lightweight node handles', () => {
+    const nodes = [createNode('text-a', 0, 0, 'text'), createNode('text-b', 320, 0, 'text')];
+    const edge = createEdge('e-text', 'text-a', 'text-b');
+
+    const routed = assignSmartHandles(nodes, [edge]);
+
+    expect(routed[0].sourceHandle).toBe('source-right');
+    expect(routed[0].targetHandle).toBe('target-left');
   });
 });

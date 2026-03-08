@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { useFlowStore } from '../store';
+import { useBrandConfig } from '@/store/brandHooks';
 import { applyBrandTheme } from '@/lib/brandService';
 
 export const useBrandTheme = () => {
-    const brandConfig = useFlowStore((state) => state.brandConfig);
+    const brandConfig = useBrandConfig();
 
     // Apply brand CSS variables
     useEffect(() => {

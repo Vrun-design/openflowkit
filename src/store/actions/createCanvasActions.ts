@@ -10,29 +10,59 @@ export function createCanvasActions(set: SetFlowState, get: GetFlowState): Pick<
     FlowState,
     'onNodesChange' | 'onEdgesChange' | 'setNodes' | 'setEdges' | 'onConnect'
 > {
+    function syncActiveTabTabs(
+        tabs: FlowState['tabs'],
+        activeTabId: string,
+        nodes: FlowNode[],
+        edges: FlowEdge[]
+    ): FlowState['tabs'] {
+        const updatedAt = new Date().toISOString();
+        return tabs.map((tab) =>
+            tab.id === activeTabId
+                ? { ...tab, nodes, edges, updatedAt }
+                : tab
+        );
+    }
+
     return {
         onNodesChange: (changes) => {
-            set({
-                nodes: applyFlowNodeChanges(changes, get().nodes),
+            set((state) => {
+                const nextNodes = applyFlowNodeChanges(changes, state.nodes);
+                return {
+                    nodes: nextNodes,
+                    tabs: syncActiveTabTabs(state.tabs, state.activeTabId, nextNodes, state.edges),
+                };
             });
         },
 
         onEdgesChange: (changes) => {
-            set({
-                edges: applyFlowEdgeChanges(changes, get().edges),
+            set((state) => {
+                const nextEdges = applyFlowEdgeChanges(changes, state.edges);
+                return {
+                    edges: nextEdges,
+                    tabs: syncActiveTabTabs(state.tabs, state.activeTabId, state.nodes, nextEdges),
+                };
             });
         },
 
         setNodes: (nodesInput: FlowNode[] | ((nodes: FlowNode[]) => FlowNode[])) => {
-            set((state) => ({
-                nodes: typeof nodesInput === 'function' ? nodesInput(state.nodes) : nodesInput,
-            }));
+            set((state) => {
+                const nextNodes = typeof nodesInput === 'function' ? nodesInput(state.nodes) : nodesInput;
+                return {
+                    nodes: nextNodes,
+                    tabs: syncActiveTabTabs(state.tabs, state.activeTabId, nextNodes, state.edges),
+                };
+            });
         },
 
         setEdges: (edgesInput: FlowEdge[] | ((edges: FlowEdge[]) => FlowEdge[])) => {
-            set((state) => ({
-                edges: typeof edgesInput === 'function' ? edgesInput(state.edges) : edgesInput,
-            }));
+            set((state) => {
+                const nextEdges = typeof edgesInput === 'function' ? edgesInput(state.edges) : edgesInput;
+                return {
+                    edges: nextEdges,
+                    tabs: syncActiveTabTabs(state.tabs, state.activeTabId, state.nodes, nextEdges),
+                };
+            });
         },
 
         onConnect: (connection) => {
@@ -47,8 +77,12 @@ export function createCanvasActions(set: SetFlowState, get: GetFlowState): Pick<
                 ...(globalEdgeOptions.color ? { stroke: globalEdgeOptions.color } : {}),
             };
 
-            set({
-                edges: addFlowEdge(newEdge, get().edges),
+            set((state) => {
+                const nextEdges = addFlowEdge(newEdge, state.edges);
+                return {
+                    edges: nextEdges,
+                    tabs: syncActiveTabTabs(state.tabs, state.activeTabId, state.nodes, nextEdges),
+                };
             });
         },
     };

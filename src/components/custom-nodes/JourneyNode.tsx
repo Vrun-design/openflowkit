@@ -92,13 +92,9 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
       selected={Boolean(selected)}
       minWidth={220}
       minHeight={120}
-      handleClassName="!w-3 !h-3 !bg-violet-400 !border-2 !border-white transition-all duration-150 hover:scale-125"
+      handleClassName="!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125"
     >
-      <div
-        className={`group min-w-[220px] max-w-[280px] rounded-xl border border-violet-200 bg-white px-3 py-3 shadow-sm transition-all ${
-          selected ? 'ring-2 ring-violet-500 ring-offset-2' : ''
-        }`}
-      >
+      <div className="group min-w-[220px] max-w-[280px] rounded-xl border border-violet-200 bg-white px-3 py-3 shadow-sm transition-all">
         <div className="mb-2 flex items-center justify-between gap-2">
           <span
             className="rounded-md bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 cursor-text"

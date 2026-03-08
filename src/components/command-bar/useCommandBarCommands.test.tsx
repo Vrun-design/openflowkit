@@ -28,6 +28,7 @@ describe('useCommandBarCommands', () => {
         expect(ids).toContain('studio-ai');
         expect(ids).toContain('studio-flowmind');
         expect(ids).toContain('studio-mermaid');
+        expect(ids).toContain('assets');
 
         result.current.find((command) => command.id === 'studio-ai')?.action?.();
         result.current.find((command) => command.id === 'studio-flowmind')?.action?.();

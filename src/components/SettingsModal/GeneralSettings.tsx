@@ -4,12 +4,13 @@ import { useFlowStore } from '../../store';
 import { Switch } from '../ui/Switch';
 import { Grid, Magnet, Network, Zap } from 'lucide-react';
 import type { GlobalEdgeOptions } from '@/lib/types';
+import { useViewSettings, useVisualSettingsActions } from '@/store/viewHooks';
 
 export const GeneralSettings = () => {
     const { t } = useTranslation();
+    const viewSettings = useViewSettings();
+    const globalEdgeOptions = useFlowStore((state) => state.globalEdgeOptions);
     const {
-        viewSettings,
-        globalEdgeOptions,
         toggleGrid,
         toggleSnap,
         setGlobalEdgeOptions,
@@ -20,7 +21,7 @@ export const GeneralSettings = () => {
         setViewSettings,
         setLargeGraphSafetyMode,
         setLargeGraphSafetyProfile,
-    } = useFlowStore();
+    } = useVisualSettingsActions();
 
     return (
         <div className="space-y-6">
@@ -40,6 +41,13 @@ export const GeneralSettings = () => {
                         description={t('settingsModal.canvas.snapToGridDesc')}
                         checked={viewSettings.snapToGrid}
                         onChange={toggleSnap}
+                    />
+                    <SettingRow
+                        icon={<Grid className="w-4 h-4" />}
+                        label={t('settingsModal.canvas.alignmentGuides', 'Alignment Guides')}
+                        description={t('settingsModal.canvas.alignmentGuidesDesc', 'Show smart guide lines while dragging nodes')}
+                        checked={viewSettings.alignmentGuidesEnabled}
+                        onChange={(checked) => setViewSettings({ alignmentGuidesEnabled: checked })}
                     />
                 </div>
             </div>

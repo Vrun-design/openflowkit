@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Components } from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Info, AlertTriangle, CheckCircle, Lightbulb, Copy } from 'lucide-react';
+
+const LazySyntaxCodeBlock = lazy(async () => {
+    const module = await import('./SyntaxCodeBlock');
+    return { default: module.SyntaxCodeBlock };
+});
 
 // Callout/Alert Component
 const Callout = ({ type, title, children }: { type: 'info' | 'warning' | 'success' | 'tip', title?: string, children: React.ReactNode }) => {
@@ -37,6 +40,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ className, children, ...props }) 
 
     if (match || isMultiLine) {
         const language = match ? match[1] : 'text';
+        const code = String(children).replace(/\n$/, '');
         return (
             <div className="my-8 rounded-xl overflow-hidden border border-slate-200/60 bg-[#1e293b] shadow-md group">
                 <div className="flex items-center justify-between px-4 py-3 bg-[#0f172a]/50 border-b border-white/5">
@@ -56,16 +60,15 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ className, children, ...props }) 
                         <Copy className="w-3.5 h-3.5" />
                     </button>
                 </div>
-                <div className="text-[13px] font-mono leading-relaxed custom-scrollbar">
-                    <SyntaxHighlighter
-                        language={language}
-                        style={vscDarkPlus}
-                        customStyle={{ margin: 0, padding: '1.25rem', background: 'transparent', fontSize: '13px' }}
-                        wrapLongLines={true}
-                    >
-                        {String(children).replace(/\n$/, '')}
-                    </SyntaxHighlighter>
-                </div>
+                <Suspense
+                    fallback={(
+                        <pre className="m-0 overflow-x-auto p-5 text-[13px] leading-relaxed text-slate-100">
+                            <code>{code}</code>
+                        </pre>
+                    )}
+                >
+                    <LazySyntaxCodeBlock language={language} code={code} />
+                </Suspense>
             </div>
         );
     }
