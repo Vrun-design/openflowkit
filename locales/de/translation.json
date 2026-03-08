@@ -429,7 +429,7 @@
       },
       "dslSyntax": {
         "title": "DSL-Syntax",
-        "description": "Zeigen Sie ein Beispiel der FlowMind DSL.",
+        "description": "Zeigen Sie ein Beispiel der OpenFlowKit DSL.",
         "icon": "{}"
       }
     }

@@ -1,0 +1,5 @@
+import{j as e}from"./vendor-motion-DvwQhRCO.js";import{R as i}from"./vendor-lucide-DSGzOVYV.js";const x=i.forwardRef(({className:d="",label:t,error:s,helperText:r,id:l,...o},n)=>{const c=i.useId(),a=l??c;return e.jsxs("div",{className:"space-y-1.5",children:[t&&e.jsx("label",{htmlFor:a,className:"block text-xs font-semibold text-slate-500 uppercase tracking-wider",children:t}),e.jsx("input",{id:a,ref:n,className:`
+                    flex h-9 w-full rounded-[var(--brand-radius)] border bg-white px-3 py-1 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50
+                    ${s?"border-red-300 focus-visible:ring-red-500":"border-slate-300 shadow-sm focus:border-[var(--brand-primary-400)]"}
+                    ${d}
+                `,...o}),s&&e.jsx("p",{className:"text-xs text-red-500",children:s}),r&&!s&&e.jsx("p",{className:"text-xs text-slate-400",children:r})]})});x.displayName="Input";export{x as I};

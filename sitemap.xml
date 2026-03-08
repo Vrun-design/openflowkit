@@ -16,6 +16,41 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://openflowkit.com/docs/en/DIAGRAM_QUALITY_MASTER_PLAN</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://openflowkit.com/docs/en/EXECUTION_GAP_AUDIT_2026-03-05</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://openflowkit.com/docs/en/PAX_CHANGESET_CHECKLIST_2026-03-05</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://openflowkit.com/docs/en/PAX_ROMANA</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://openflowkit.com/docs/en/PAX_ROMANA_TRACKER_2026-03-05</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://openflowkit.com/docs/en/PAX_SNAPSHOT_BASELINE_2026-03-05</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://openflowkit.com/docs/en/SAFE_EXECUTION_PLAN_2026-03-05</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://openflowkit.com/docs/en/ai-generation</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
