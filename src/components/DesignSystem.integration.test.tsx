@@ -138,7 +138,7 @@ describe('Design System integration', () => {
             throw new Error('Node container not found');
         }
         expect(nodeContainer.style.fontFamily).toBe('Inter, sans-serif');
-        expect(nodeContainer.style.borderRadius).toBe('1rem');
+        expect(nodeContainer.style.borderRadius).toBe('8px');
 
         act(() => {
             useFlowStore.getState().setActiveDesignSystem('alt');
