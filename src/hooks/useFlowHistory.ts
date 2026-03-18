@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { trackEvent } from '../lib/analytics';
 import { useHistoryActions } from '@/store/historyHooks';
 import { useTabsState } from '@/store/tabHooks';
 
@@ -17,12 +16,10 @@ export const useFlowHistory = () => {
 
   const undo = useCallback(() => {
     undoV2();
-    trackEvent('undo');
   }, [undoV2]);
 
   const redo = useCallback(() => {
     redoV2();
-    trackEvent('redo');
   }, [redoV2]);
 
   return {

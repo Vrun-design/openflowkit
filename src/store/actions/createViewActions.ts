@@ -17,7 +17,6 @@ export function createViewActions(set: SetFlowState): Pick<
     | 'setSmartRoutingBundlingEnabled'
     | 'setLargeGraphSafetyMode'
     | 'setLargeGraphSafetyProfile'
-    | 'toggleAnalytics'
 > {
     return {
         toggleGrid: () => set((state) => ({
@@ -133,8 +132,5 @@ export function createViewActions(set: SetFlowState): Pick<
             viewSettings: { ...state.viewSettings, largeGraphSafetyProfile: profile },
         })),
 
-        toggleAnalytics: (enabled) => set((state) => ({
-            viewSettings: { ...state.viewSettings, analyticsEnabled: enabled },
-        })),
     };
 }

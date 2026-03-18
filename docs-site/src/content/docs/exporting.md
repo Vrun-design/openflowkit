@@ -3,13 +3,70 @@ draft: false
 title: Exporting
 ---
 
+Export lives in the top-right menu of the editor and covers both downloadable files and clipboard-oriented formats.
 
-FlowMind offers a wide range of export options to help you use your diagrams in presentations, documentation, or other external tools.
+## Downloaded file exports
 
-> [!TIP]
-> All export options are available via the **"Export"** button in the top right corner of the toolbar.
+### PNG
 
-## Image Exports
+Best for:
+
+- docs
+- slides
+- issue trackers
+- transparent-background diagram drops
+
+### JPG
+
+Best for:
+
+- white-background presentations
+- lightweight sharing where transparency is not required
+
+### JSON
+
+This is the most faithful archival format for re-import into OpenFlowKit. Use it for:
+
+- backups
+- migration between browsers or machines
+- preserving playback metadata where present
+- team handoff of editable diagrams
+
+## Clipboard-oriented exports
+
+These exports are generated from the current graph and copied rather than downloaded:
+
+- OpenFlow DSL
+- Mermaid
+- PlantUML
+- Figma-friendly SVG payload
+
+Use these when the next destination is another editor rather than a file browser.
+
+## Animated export
+
+The codebase supports playback export to:
+
+- GIF
+- browser-recorded video
+
+These options appear only when the animated export rollout flag is enabled.
+
+## Fidelity guidance
+
+Choose formats by goal:
+
+- use **JSON** for maximum round-trip fidelity
+- use **OpenFlow DSL** for editor-native textual workflows
+- use **Mermaid** when the target is Markdown or docs tooling
+- use **PlantUML** when the destination stack already expects PlantUML
+- use **PNG/JPG** when the result only needs to be viewed
+
+## Import pairing
+
+If you expect to continue editing later, always export a JSON copy alongside any presentation export.
+
+That one habit prevents most avoidable rework.
 
 Perfect for slides, documents, or sharing on Slack.
 

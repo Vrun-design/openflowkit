@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Input } from '../ui/Input';
 import { ViewHeader } from './ViewHeader';
 import { getFlowTemplates, type FlowTemplate } from '../../services/templates';
-import { trackEvent } from '../../lib/analytics';
 
 interface TemplatesViewProps {
     onSelectTemplate?: (t: FlowTemplate) => void;
@@ -24,7 +23,6 @@ export const TemplatesView = ({
     const categories = useMemo(() => Array.from(new Set(templates.map((template) => template.category))).sort((left, right) => left.localeCompare(right)), [templates]);
 
     const handleSelect = (template: FlowTemplate) => {
-        trackEvent('use_template', { template_id: template.id, template_name: template.name });
         onSelectTemplate?.(template);
         onClose();
     };

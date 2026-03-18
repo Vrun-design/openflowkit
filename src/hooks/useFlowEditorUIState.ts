@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import { trackEvent } from '@/lib/analytics';
-
 export type CommandBarView =
     | 'root'
     | 'templates'
@@ -53,7 +51,6 @@ export function useFlowEditorUIState(): UseFlowEditorUIStateResult {
     }
 
     function openCommandBar(view: CommandBarView = 'root'): void {
-        trackEvent('open_command_bar', { view });
         setCommandBarView(view);
         setIsCommandBarOpen(true);
     }

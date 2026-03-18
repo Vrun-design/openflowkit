@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useReactFlow } from '@/lib/reactflowCompat';
 import type { FlowNode, NodeData } from '@/lib/types';
-import { clearNodeParent, getNodeParentId, setNodeParent } from '@/lib/nodeParent';
+import { setNodeParent } from '@/lib/nodeParent';
 import { useFlowStore } from '../store';
 import { assignSmartHandlesWithOptions, getSmartRoutingOptionsFromViewSettings } from '../services/smartEdgeRouting';
 import { useTranslation } from 'react-i18next';
-import { trackEvent } from '../lib/analytics';
 import { createId } from '../lib/id';
 import { createDefaultEdge, createMindmapEdge } from '@/constants';
 import { releaseStaleElkRoutesForNodeIds } from '@/lib/releaseStaleElkRoutes';
@@ -15,7 +14,6 @@ import {
     createArchitectureServiceNode,
     createMindmapTopicNode,
     createSectionNode,
-    getDefaultNodePosition,
     getAbsoluteNodePosition,
     reassignArchitectureNodeBoundary,
 } from './node-operations/utils';
@@ -26,9 +24,9 @@ import { resolveMindmapChildSide } from '@/lib/connectCreationPolicy';
 import type { MindmapTopicSide } from './mindmapTopicActionRequest';
 
 export const useNodeOperations = (recordHistory: () => void) => {
-    const { t } = useTranslation();
+    useTranslation();
     const { nodes, setNodes, setEdges, setSelectedNodeId } = useFlowStore();
-    const { screenToFlowPosition } = useReactFlow();
+    useReactFlow();
     const dragStopReconcileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const altDragDuplicateRef = useRef<{
         originalNodeId: string;
@@ -130,14 +128,10 @@ export const useNodeOperations = (recordHistory: () => void) => {
 
     // --- Delete ---
     const deleteNode = useCallback((id: string) => {
-        const deletedNode = nodes.find(n => n.id === id);
         recordHistory();
         setNodes((nds) => nds.filter((n) => n.id !== id));
         setSelectedNodeId(null);
-        if (deletedNode) {
-            trackEvent('delete_node', { node_type: deletedNode.type });
-        }
-    }, [nodes, setNodes, recordHistory, setSelectedNodeId]);
+    }, [setNodes, recordHistory, setSelectedNodeId]);
 
     // --- Duplicate ---
     const duplicateNode = useCallback((id: string) => {
@@ -153,7 +147,6 @@ export const useNodeOperations = (recordHistory: () => void) => {
         };
         setNodes((nds) => [...nds.map((n) => ({ ...n, selected: false })), newNode]);
         setSelectedNodeId(newNodeId);
-        trackEvent('duplicate_node', { node_type: nodeToDuplicate.type });
     }, [nodes, recordHistory, setNodes, setSelectedNodeId]);
 
     // --- Add Nodes ---
@@ -244,9 +237,6 @@ export const useNodeOperations = (recordHistory: () => void) => {
         });
         setSelectedNodeId(id);
         requestNodeLabelEdit(id, { replaceExisting: true });
-        trackEvent('add_node', {
-            node_type: relationship === 'child' ? 'mindmap_child' : 'mindmap_sibling',
-        });
         return true;
     }, [recordHistory, setEdges, setNodes, setSelectedNodeId]);
 
@@ -299,7 +289,6 @@ export const useNodeOperations = (recordHistory: () => void) => {
             );
         });
         setSelectedNodeId(id);
-        trackEvent('add_node', { node_type: 'architecture_service' });
         return true;
     }, [recordHistory, setNodes, setEdges, setSelectedNodeId]);
 
@@ -349,7 +338,6 @@ export const useNodeOperations = (recordHistory: () => void) => {
             return nextNodes;
         });
         setSelectedNodeId(sourceId);
-        trackEvent('add_node', { node_type: 'architecture_boundary' });
         return true;
     }, [recordHistory, setNodes, setSelectedNodeId]);
 

@@ -2,13 +2,13 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AISettings } from '../SettingsModal/AISettings';
 import { GeneralSettings } from '../SettingsModal/GeneralSettings';
-import { PrivacySettings } from '../SettingsModal/PrivacySettings';
+
 import { ShortcutsSettings } from '../SettingsModal/ShortcutsSettings';
 import { SidebarItem } from '../ui/SidebarItem';
 
 interface HomeSettingsViewProps {
-    activeSettingsTab: 'general' | 'shortcuts' | 'privacy' | 'ai';
-    onSettingsTabChange: (tab: 'general' | 'shortcuts' | 'privacy' | 'ai') => void;
+    activeSettingsTab: 'general' | 'shortcuts' | 'ai';
+    onSettingsTabChange: (tab: 'general' | 'shortcuts' | 'ai') => void;
 }
 
 export function HomeSettingsView({
@@ -43,12 +43,7 @@ export function HomeSettingsView({
                     >
                         {t('settings.shortcuts', 'Shortcuts')}
                     </SidebarItem>
-                    <SidebarItem
-                        isActive={activeSettingsTab === 'privacy'}
-                        onClick={() => onSettingsTabChange('privacy')}
-                    >
-                        {t('settings.privacy', 'Privacy')}
-                    </SidebarItem>
+
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-8">
@@ -56,7 +51,7 @@ export function HomeSettingsView({
                         {activeSettingsTab === 'general' && <GeneralSettings />}
                         {activeSettingsTab === 'ai' && <AISettings />}
                         {activeSettingsTab === 'shortcuts' && <ShortcutsSettings />}
-                        {activeSettingsTab === 'privacy' && <PrivacySettings />}
+
                     </div>
                 </div>
             </div>

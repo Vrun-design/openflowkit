@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Play, Copy, GitBranch, Terminal, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
-import { trackEvent } from '../../lib/analytics';
-import { APP_NAME } from '@/lib/brand';
 
 interface HeroSectionProps {
   onLaunch: () => void;
@@ -37,7 +35,6 @@ export function HeroSection({ onLaunch }: HeroSectionProps): React.ReactElement 
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    trackEvent('copy_install_command');
     navigator.clipboard.writeText('gh repo clone Vrun-design/openflowkit');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -94,7 +91,6 @@ export function HeroSection({ onLaunch }: HeroSectionProps): React.ReactElement 
             size="lg"
             className="w-full sm:w-auto h-14 px-10 transition-all active:scale-95 text-[15px]"
             onClick={() => {
-              trackEvent('click_github_fork');
               window.open("https://github.com/Vrun-design/FlowMind", "_blank");
             }}
           >

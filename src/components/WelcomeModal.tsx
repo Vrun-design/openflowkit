@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { X, Layout, Shield } from 'lucide-react';
 import { OpenFlowLogo } from './icons/OpenFlowLogo';
 import { IS_BEVELED } from '@/lib/brand';
-import { useViewSettings, useVisualSettingsActions } from '@/store/viewHooks';
 import { useTranslation } from 'react-i18next';
 import { writeLocalStorageString } from '@/services/storage/uiLocalStorage';
 import { shouldShowWelcomeModal, WELCOME_SEEN_STORAGE_KEY } from './home/welcomeModalState';
@@ -11,18 +10,10 @@ export function WelcomeModal(): React.JSX.Element | null {
     const { t } = useTranslation();
     const isBeveled = IS_BEVELED;
     const [isOpen, setIsOpen] = useState(() => shouldShowWelcomeModal());
-    const { analyticsEnabled } = useViewSettings();
-    const { toggleAnalytics } = useVisualSettingsActions();
-
-    // Track opt-in state locally for instant UI updates, persist on close
-    const [allowAnalytics, setAllowAnalytics] = useState(analyticsEnabled);
 
     const handleClose = () => {
         setIsOpen(false);
         writeLocalStorageString(WELCOME_SEEN_STORAGE_KEY, 'true');
-        // Persist local choice to both the legacy key and the actual app state
-        writeLocalStorageString('openflowkit_analytics_opt_in', allowAnalytics ? 'true' : 'false');
-        toggleAnalytics(allowAnalytics);
     };
 
     if (!isOpen) return null;
@@ -79,11 +70,6 @@ export function WelcomeModal(): React.JSX.Element | null {
                         />
                     </div>
 
-                    <AnalyticsToggle
-                        allowAnalytics={allowAnalytics}
-                        onChange={setAllowAnalytics}
-                    />
-
                     <WelcomeFooter
                         isBeveled={isBeveled}
                         onGetStarted={handleClose}
@@ -124,43 +110,6 @@ function FeatureItem({ icon, title, desc }: FeatureItemProps): React.JSX.Element
                 <h3 className="text-sm font-bold text-slate-900">{title}</h3>
                 <p className="text-xs text-slate-500">{desc}</p>
             </div>
-        </div>
-    );
-}
-
-interface AnalyticsToggleProps {
-    allowAnalytics: boolean;
-    onChange: (val: boolean) => void;
-}
-
-function AnalyticsToggle({ allowAnalytics, onChange }: AnalyticsToggleProps): React.JSX.Element {
-    const { t } = useTranslation();
-    return (
-        <div className={`mb-8 flex items-center gap-3.5 p-3.5 rounded-xl border transition-all duration-300 ${allowAnalytics ? 'bg-[var(--brand-primary-50,#eef2ff)]/50 border-[var(--brand-primary,#6366f1)]/30' : 'bg-slate-50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] border-slate-200'}`}>
-            <div className="flex items-center justify-center shrink-0">
-                <label className="relative flex items-center justify-center cursor-pointer">
-                    <input
-                        id="analytics-opt-in"
-                        type="checkbox"
-                        checked={allowAnalytics}
-                        onChange={(e) => onChange(e.target.checked)}
-                        className="peer sr-only"
-                    />
-                    <div className={`w-[34px] h-5 rounded-full transition-colors duration-300 ${allowAnalytics ? 'bg-[var(--brand-primary,#6366f1)]' : 'bg-slate-300'}`}></div>
-                    <div className={`absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform duration-300 transform shadow-sm ${allowAnalytics ? 'translate-x-[14px]' : 'translate-x-0'}`}></div>
-                </label>
-            </div>
-            <label
-                htmlFor="analytics-opt-in"
-                className="flex-1 select-none cursor-pointer flex flex-col justify-center"
-            >
-                <span className="text-[13px] font-semibold text-slate-900 leading-none mb-1">
-                    {t('welcome.analyticsTitle', 'Help improve OpenFlowKit')}
-                </span>
-                <p className="text-[11px] text-slate-500 leading-tight pr-2">
-                    {t('welcome.analyticsDesc', 'Share anonymous basic usage data (optional)')}
-                </p>
-            </label>
         </div>
     );
 }

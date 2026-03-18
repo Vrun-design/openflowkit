@@ -3,13 +3,53 @@ draft: false
 title: Payment Flow Visualization
 ---
 
-# How to Visualize Payment Flows (Stripe, PayPal, etc.)
+Payment systems are one of the best use cases for OpenFlowKit because they mix clear business stages with asynchronous branches, retries, and exception handling.
 
-When building e-commerce or SaaS applications, understanding the exact sequence of a payment flow is critical. A single missed webhook can lead to a dropped order or an angry customer.
+## What a useful payment diagram should include
 
-OpenFlowKit allows you to map out complex asynchronous payment architectures quickly using a variety of [Node Types](/docs/en/node-types).
+Do not stop at the happy path. Most payment diagrams need:
 
-## Why build payment architectures with OpenFlowKit?
+- entry event
+- authorization or charge attempt
+- success and failure branches
+- retry logic
+- manual review path
+- customer notification path
+- final account state
+
+## Suggested node pattern
+
+For a typical subscription or checkout diagram:
+
+- `start` for invoice due or checkout initiated
+- `process` for charge, webhook handling, notifications, and retries
+- `decision` for gateway outcomes
+- `end` for terminal account states
+
+## Example prompt
+
+```text
+Create a payment recovery flow for a SaaS subscription.
+Include invoice due, charge attempt, charge success decision,
+smart retries, request updated card, manual fraud review,
+customer notification, subscription active, and account downgrade.
+```
+
+## Why this works well in OpenFlowKit
+
+- branch labeling is easy on edges
+- auto layout cleans up decision-heavy graphs
+- JSON export gives you a high-fidelity editable backup
+- Mermaid and PlantUML export help when finance or platform teams need docs-friendly formats
+
+## Recommended review pattern
+
+After drafting:
+
+1. label every branch edge
+2. verify timeout and retry behavior explicitly
+3. add notes for webhook or gateway dependencies
+4. save a manual snapshot before larger revisions
 
 - **Shareability**: Everyone from the PM to the backend engineer needs to see the same flow.
 - **Clarity**: Mapping out happy paths, failures, and webhook retries visually is much easier than reading through Stripe API documentation.

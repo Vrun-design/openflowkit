@@ -65,7 +65,6 @@ export const INITIAL_VIEW_SETTINGS: ViewSettings = {
     largeGraphSafetyMode: 'auto',
     largeGraphSafetyProfile: 'balanced',
     exportSerializationMode: 'deterministic',
-    analyticsEnabled: false,
     language: 'en',
 };
 

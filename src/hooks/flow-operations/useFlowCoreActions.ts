@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import type { OnSelectionChangeParams } from '@/lib/reactflowCompat';
-import { trackEvent } from '@/lib/analytics';
 import type { FlowStoreState } from '@/store';
 
 interface UseFlowCoreActionsParams {
@@ -46,7 +45,6 @@ export function useFlowCoreActions({
         recordHistory();
         setNodes(() => []);
         setEdges(() => []);
-        trackEvent('clear_canvas');
     }, [clearCanvasConfirmText, recordHistory, setEdges, setNodes]);
 
     return { onSelectionChange, handleClear };

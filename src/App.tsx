@@ -8,15 +8,12 @@ import { OpenFlowLogo } from './components/icons/OpenFlowLogo';
 
 import { useFlowStore } from './store';
 import { useActiveTabId, useTabActions } from '@/store/tabHooks';
-import { initAnalytics } from './lib/analytics';
 import { FlowSnapshot } from './lib/types';
 import { useShortcutHelpOpen } from '@/store/viewHooks';
 
 // Import i18n configuration
 import './i18n/config';
 
-// Initialize analytics once
-initAnalytics();
 
 const FlowEditor = lazy(async () => {
   const module = await import('./components/FlowEditor');

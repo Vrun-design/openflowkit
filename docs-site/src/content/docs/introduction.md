@@ -3,37 +3,73 @@ draft: false
 title: Introduction
 ---
 
-**OpenFlowKit** is a next-generation diagramming tool that bridges the gap between AI-generated visualization and precise, code-based editing. Designed for developers, architects, and product managers, OpenFlowKit allows you to create complex flowcharts, sequence diagrams, and system architectures using natural language or our specialized DSL.
+OpenFlowKit is a local-first diagram editor for technical flows, architecture maps, mind maps, journey maps, and code-backed diagram workflows.
 
-## Why OpenFlowKit?
+The current product combines four working modes:
 
-Traditional diagramming tools often force a choice between:
-1.  **Drag-and-drop tools**: Easy to start, but hard to maintain and version control.
-2.  **Code-based tools (like Mermaid)**: Great for versioning, but can be tedious to write from scratch.
+- A visual canvas for direct editing
+- A command-driven asset and template browser
+- A studio rail for AI, OpenFlow DSL, and Mermaid editing
+- Export and import paths for sharing diagrams outside the app
 
-FlowMind gives you the best of both worlds. You can start with a text prompt to generate an initial structure, then refine it using our **Hybrid Editor**—manipulating nodes visually on the canvas *or* editing the underlying code directly.
+## What OpenFlowKit is good at
 
-## Key Features
+OpenFlowKit works best when you need a diagram that starts rough and becomes structured over time:
 
-### AI-Powered Generation
-Simply describe your system: *"Create a login flow with OAuth fallback and error handling."* FlowMind's Gemini integration scaffolds the entire diagram effectively instantly.
+- You can begin from a blank canvas, a template, imported JSON, Mermaid text, or an AI prompt.
+- You can keep refining the result visually with node handles, layout tools, properties, and edge controls.
+- You can switch to code when you want a more repeatable or reviewable representation.
 
-### Hybrid Canvas
-Our canvas isn't just a static image. It's a fully interactive graph environment.
-*   **Drag & Drop**: Move nodes, auto-snap alignment.
-*   **Smart Layouts**: One-click re-organization using Elk.js.
-*   **Properties Panel**: Fine-tune specific node styling without touching CSS.
+## Diagram families in the app
 
-### Diagram-as-Code
-Every diagram is backed by a readable, editable JSON structure and compatible with Mermaid.js syntax. This means your documentation can live alongside your code.
+The editor currently has first-class support for these diagram types:
 
-### Premium Aesthetics
-Built with a "Design First" code, FlowMind diagrams are presentation-ready by default. No more ugly, default-grey boxes.
+- `flowchart`
+- `stateDiagram`
+- `classDiagram`
+- `erDiagram`
+- `gitGraph`
+- `mindmap`
+- `journey`
+- `architecture`
 
-## Next Steps
+You will also see reusable node families for general-purpose flows, architecture icon nodes, annotations, sections, images, and wireframe-style surfaces.
 
-Ready to get started?
+## Core product concepts
 
-*   Check out the [Quick Start](/docs/quick-start) guide to build your first flow.
-*   Learn about the [Canvas Basics](/docs/canvas-basics).
-*   Master the [OpenFlow DSL](/docs/openflow-dsl).
+### Local-first by default
+
+Regular editing state is stored in the browser. You do not need an account to create or edit diagrams.
+
+### Bring your own model access
+
+AI generation uses the provider and model you configure in Settings. API keys stay in local browser storage.
+
+### Visual plus code workflow
+
+The Studio panel lets you work in:
+
+- **FlowPilot** for AI-driven edits
+- **OpenFlow DSL** for OpenFlowKit-native code
+- **Mermaid** for Mermaid-compatible text editing
+
+### Export beyond the canvas
+
+You can export or copy diagrams as:
+
+- PNG
+- JPG
+- JSON document
+- OpenFlow DSL
+- Mermaid
+- PlantUML
+- Figma-friendly SVG payload
+
+Animated playback export exists in the codebase, but it is currently gated behind a rollout flag and should be treated as optional rather than universally available.
+
+## What to read next
+
+- Start with [Quick Start](/quick-start/)
+- Learn the editor model in [Canvas Basics](/canvas-basics/)
+- Review data and syntax in [OpenFlow DSL](/openflow-dsl/)
+- See automation workflows in [AI Generation](/ai-generation/)

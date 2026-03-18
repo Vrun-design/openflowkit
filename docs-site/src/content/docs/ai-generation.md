@@ -3,13 +3,101 @@ draft: false
 title: AI Generation
 ---
 
+OpenFlowKit ships with AI-assisted diagram generation through the Studio rail. Internally this flow composes a graph, lays it out, applies it to the current canvas, and keeps the exchange history in the local session.
 
+## Where AI lives in the product
 
-FlowMind leverages Google's **Gemini 2.0 Flash** model to understand natural language and convert it into structural diagrams.
+AI is available in the Studio panel under the **AI** tab and through the **Open FlowPilot** command in the Command Center.
 
-## How it Works
+The current hook path:
 
-1.  **Intent Analysis**: The AI analyzes your prompt to understand the *goal* (e.g., "Login Flow") and the *actors* (User, Server, Database).
+1. captures your prompt and optional image
+2. sends it using your configured provider settings
+3. receives DSL-like graph output
+4. composes nodes and edges
+5. applies layout
+6. replaces the current working graph
+
+## Provider model
+
+The app supports multiple BYOK providers, including:
+
+- Gemini
+- OpenAI
+- Claude
+- Groq
+- NVIDIA
+- Cerebras
+- Mistral
+- OpenRouter
+- Custom OpenAI-compatible endpoint
+
+Default models are defined in the app config, but you can choose from provider-specific lists in Settings.
+
+## Important operational detail
+
+Your API configuration is stored locally in browser state. OpenFlowKit does not require an application account to use the editor.
+
+Some providers are more browser-friendly than others. In the codebase, provider risk is explicitly categorized, so for certain providers a proxy setup may still be the more reliable production choice.
+
+## Prompting patterns that work well
+
+Use prompts that specify:
+
+- the diagram goal
+- actors or systems
+- decision points
+- important branches
+- desired layout direction if it matters
+- the diagram family if it matters
+
+Example:
+
+```text
+Create a left-to-right architecture diagram for a SaaS product with:
+Cloudflare edge, API gateway, auth service, product service, Postgres,
+Redis, background worker, S3-compatible object storage, and observability.
+Show user traffic, internal service calls, and async jobs.
+```
+
+## Iteration workflow
+
+The fastest loop is usually:
+
+1. generate a first draft with AI
+2. clean structure with auto layout
+3. refine labels and edge semantics in Properties
+4. switch to OpenFlow DSL or Mermaid for exact textual edits
+
+## What AI changes and what it does not
+
+AI is good at:
+
+- initial graph creation
+- rough decomposition
+- generating branch logic
+- filling in missing surrounding steps
+
+AI is weaker at:
+
+- strict provider-specific architecture semantics
+- exact naming conventions
+- pixel-level visual composition
+- preserving a very specific existing diagram unless you guide it tightly
+
+## Best practices
+
+- keep prompts concrete
+- ask for one diagram family at a time
+- include failure paths explicitly
+- avoid mixing product requirements and visual polish in the same prompt
+- use a follow-up pass for naming, grouping, and export cleanup
+
+## Related reading
+
+- [Prompting AI Agents](/prompting-agents/)
+- [OpenFlow DSL](/openflow-dsl/)
+- [Mermaid Integration](/mermaid-integration/)
 2.  **Structural Generation**: It constructs a valid FlowMind DSL JSON object representing the nodes and connections.
 3.  **Layout Optimization**: The engine applies smart layout algorithms to ensure the generated graph is readable.
 

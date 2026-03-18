@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, KeyboardEvent, RefObject } from 'react';
-import { trackEvent } from '@/lib/analytics';
 
 interface UseAIViewStateParams {
     searchQuery: string;
@@ -44,7 +43,7 @@ export function useAIViewState({
         const promptText = text || prompt;
         if ((!promptText.trim() && !selectedImage) || isGenerating) return;
 
-        trackEvent('ai_generate', { has_image: Boolean(selectedImage) });
+
         await onAIGenerate(promptText, selectedImage || undefined);
         setPrompt('');
         setSelectedImage(null);

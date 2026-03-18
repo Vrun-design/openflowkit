@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
 import { ViewHeader } from './ViewHeader';
 import type { LayoutAlgorithm } from '../../services/elkLayout';
-import { trackEvent } from '../../lib/analytics';
 import { IS_BEVELED } from '@/lib/brand';
 
 interface LayoutViewProps {
@@ -120,12 +119,6 @@ export function LayoutView({
 
     const handleApply = () => {
         const selectedPreset = LAYOUT_PRESETS.find((item) => item.id === preset) ?? LAYOUT_PRESETS[0];
-        trackEvent('apply_layout', {
-            preset: selectedPreset.id,
-            algorithm: selectedPreset.algorithm,
-            direction: selectedPreset.direction,
-            spacing: selectedPreset.spacing,
-        });
         onLayout?.(selectedPreset.direction, selectedPreset.algorithm, selectedPreset.spacing);
         onClose();
     };

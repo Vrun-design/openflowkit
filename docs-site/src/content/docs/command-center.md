@@ -3,13 +3,71 @@ draft: false
 title: Command Center
 ---
 
-
-The Command Center is the floating toolbar at the bottom of the screen. It's the heart of FlowMind's "keyboard-first" workflow.
+The Command Center is the keyboard-first launcher for the editor. It opens as a floating panel and is the fastest way to move between assets, templates, search, layout, and studio actions.
 
 > [!NOTE]
-> Open the Command Center anytime by pressing `Cmd + K` (Mac) or `Ctrl + K` (Windows).
+> Open it with `Cmd + K` on macOS or `Ctrl + K` on Windows/Linux.
 
-## Features
+## Root commands
+
+The top-level command list currently includes:
+
+- Open FlowPilot
+- Edit Flow DSL
+- Edit Mermaid Code
+- Assets
+- Search Nodes
+- Auto Layout
+- Start from Template
+- Design Systems
+
+Playback Studio also appears when its rollout flag is enabled.
+
+## Views inside the Command Center
+
+### Assets
+
+Use this to insert:
+
+- sticky notes
+- text blocks
+- sections
+- journey nodes
+- mind map nodes
+- architecture nodes
+- uploaded images
+- browser wireframes
+- mobile wireframes
+- provider-backed icons and cloud assets
+
+### Templates
+
+The template browser supports search and category filtering. It is the fastest way to start from a known graph shape.
+
+### Search
+
+Search scans existing nodes on the current canvas so you can find and jump to content in large diagrams.
+
+### Layout
+
+The layout view lets you run auto layout without leaving the keyboard workflow.
+
+### Design Systems
+
+This view is used to manage reusable visual styling choices for the canvas.
+
+## Why use it instead of clicking around
+
+Use the Command Center when:
+
+- you are working on a laptop and want minimal pointer travel
+- the canvas is crowded and the toolbar is slower than search
+- you want to switch directly into AI or code editing
+- you want to insert assets in batches
+
+## Recommended habit
+
+Treat the Command Center as the default launcher, not a secondary shortcut. In daily use it becomes the fastest path to most non-drag operations.
 
 ### 1. Templates
 Don't start from scratch. Access a library of pre-built diagrams:

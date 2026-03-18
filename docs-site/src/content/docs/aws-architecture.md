@@ -3,13 +3,53 @@ draft: false
 title: AWS Architecture Diagram
 ---
 
-# How to Draw AWS Architecture Diagrams with OpenFlowKit
+OpenFlowKit is a strong fit for AWS architecture diagrams because it supports both provider-backed icon insertion and code-first drafting.
 
-Drawing cloud infrastructure can be tedious if you are dragging and dropping shapes manually. OpenFlowKit provides a **Diagram-as-Code** approach to visualizing AWS Architectures, making it perfect for DevOps teams, Solutions Architects, and Cloud Engineers.
+## Best starting points
 
-## Why Use Diagram-as-Code for AWS?
+For AWS diagrams, use one of these:
 
-Instead of spending hours aligning server icons, you can write simple text that OpenFlowKit instantly renders into a beautiful, auto-routed diagram. Because it's code, your architecture diagram can live right next to your Terraform or CloudFormation scripts in Git.
+- an AWS template from the template browser
+- the Assets view with AWS icon catalog
+- AI generation with a provider-specific architecture prompt
+- OpenFlow DSL for a deterministic first pass
+
+## Recommended workflow
+
+1. insert core services first
+2. add boundaries and sections for VPCs, public/private tiers, or trust zones
+3. connect traffic paths
+4. run auto layout
+5. refine protocols and edge labels
+
+## Asset strategy
+
+The assets panel can load provider-backed catalogs and previews. Use icon nodes for branded service identity, then use sections or architecture boundaries to show grouping.
+
+## Example prompt
+
+```text
+Create an AWS architecture diagram for a three-tier web app with:
+Route 53, CloudFront, ALB, ECS services, RDS PostgreSQL,
+ElastiCache Redis, SQS worker queue, S3 assets bucket, and CloudWatch.
+Show public ingress, internal service traffic, and async worker processing.
+```
+
+## When to use OpenFlow DSL instead
+
+Use DSL when:
+
+- you want the graph reviewed in code form
+- you are iterating quickly on service composition
+- you want to pair the diagram with infrastructure change planning
+
+## Export recommendation
+
+For architecture reviews:
+
+- export PNG for slides
+- export JSON for editable backup
+- optionally export Mermaid or PlantUML for docs workflows
 
 - **Version Control**: Track infrastructure changes over time.
 - **Auto-Layout**: No more overlapping lines or misaligned VPCs.

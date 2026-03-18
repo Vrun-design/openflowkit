@@ -3,13 +3,40 @@ draft: false
 title: Mermaid vs OpenFlow
 ---
 
-# Mermaid.js vs OpenFlowKit
+Mermaid and OpenFlow DSL solve adjacent but different problems in OpenFlowKit.
 
-Mermaid.js is an incredible text-based diagramming tool that has become the standard for markdown-based documentation. However, when you need a presentation-ready, highly interactive canvas, raw Mermaid can sometimes feel limiting.
+## Choose Mermaid when
 
-This is why **OpenFlowKit is built on top of Mermaid.js**, giving you the best of both worlds: Diagram-as-code speed with visual-editor polish.
+- the diagram must live in Markdown, docs sites, or README files
+- your team already reviews Mermaid in pull requests
+- external tooling expects Mermaid syntax
 
-## 1. Aesthetics and Branding
+## Choose OpenFlow DSL when
+
+- the diagram is primarily maintained inside OpenFlowKit
+- you want a format closer to the native graph model
+- you want fewer compatibility constraints during editing
+- you want a better target for OpenFlowKit-specific AI and Studio workflows
+
+## Practical difference
+
+Mermaid is a broad ecosystem format.
+
+OpenFlow DSL is an editor-native format.
+
+That usually means:
+
+- Mermaid is better for portability
+- OpenFlow DSL is better for fidelity inside this product
+
+## Recommended team pattern
+
+If you need both:
+
+- treat JSON or OpenFlow DSL as the editing master
+- publish Mermaid as a downstream representation when required
+
+This avoids losing detail every time a diagram moves between ecosystems.
 
 **Mermaid.js:**
 - Renders SVGs based on predefined themes (default, dark, forest, neutral).

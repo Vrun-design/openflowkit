@@ -1,8 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import type { FlowTab } from '@/lib/types';
 import { FlowTabs } from './FlowTabs';
-import { useFlowStore } from '../store';
-import { trackEvent } from '../lib/analytics';
 import { TopNavMenu } from './top-nav/TopNavMenu';
 import { TopNavBrand } from './top-nav/TopNavBrand';
 import { TopNavActions } from './top-nav/TopNavActions';
@@ -49,21 +47,6 @@ interface TopNavProps {
     };
 }
 
-function trackAndRun(eventName: string, action: () => void): () => void {
-    return () => {
-        trackEvent(eventName);
-        action();
-    };
-}
-
-function trackAndRunExport(
-    action: (format?: 'png' | 'jpeg') => void
-): (format?: 'png' | 'jpeg') => void {
-    return (format) => {
-        trackEvent('export_png', { format });
-        action(format);
-    };
-}
 
 export function TopNav({
     tabs,
@@ -86,16 +69,13 @@ export function TopNav({
     collaboration,
 }: TopNavProps): React.ReactElement {
     const isBeveled = IS_BEVELED;
-    const handleExportPNG = trackAndRunExport(onExportPNG);
-    const handleExportAnimated = (format: 'video' | 'gif') => {
-        trackEvent('export_animated', { format });
-        onExportAnimated(format);
-    };
-    const handleExportJSON = trackAndRun('export_json', onExportJSON);
-    const handleExportMermaid = trackAndRun('export_mermaid', onExportMermaid);
-    const handleExportPlantUML = trackAndRun('export_plantuml', onExportPlantUML);
-    const handleExportOpenFlowDSL = trackAndRun('export_dsl', onExportOpenFlowDSL);
-    const handleExportFigma = trackAndRun('export_figma', onExportFigma);
+    const handleExportPNG = onExportPNG;
+    const handleExportAnimated = onExportAnimated;
+    const handleExportJSON = onExportJSON;
+    const handleExportMermaid = onExportMermaid;
+    const handleExportPlantUML = onExportPlantUML;
+    const handleExportOpenFlowDSL = onExportOpenFlowDSL;
+    const handleExportFigma = onExportFigma;
     const {
         isMenuOpen,
         isSettingsOpen,

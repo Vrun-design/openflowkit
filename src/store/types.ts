@@ -22,7 +22,6 @@ export interface ViewSettings {
     largeGraphSafetyMode: 'auto' | 'on' | 'off';
     largeGraphSafetyProfile: 'performance' | 'balanced' | 'quality';
     exportSerializationMode: ExportSerializationMode;
-    analyticsEnabled: boolean;
     language: string;
 }
 
@@ -135,7 +134,6 @@ export interface FlowState {
     setSmartRoutingBundlingEnabled: (enabled: boolean) => void;
     setLargeGraphSafetyMode: (mode: ViewSettings['largeGraphSafetyMode']) => void;
     setLargeGraphSafetyProfile: (profile: ViewSettings['largeGraphSafetyProfile']) => void;
-    toggleAnalytics: (enabled: boolean) => void;
 
     // -------------------------------------------------------------------------
     // SLICE: AI — provider config and generation settings

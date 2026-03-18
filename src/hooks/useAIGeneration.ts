@@ -3,7 +3,6 @@ import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { ChatMessage } from '@/services/aiService';
 import { useFlowStore } from '@/store';
 import { useToast } from '@/components/ui/ToastContext';
-import { trackEvent } from '@/lib/analytics';
 import { toErrorMessage } from './ai-generation/graphComposer';
 import {
   appendChatExchange,
@@ -61,15 +60,9 @@ export function useAIGeneration(
 
       applyComposedGraph(layoutedNodes, layoutedEdges);
 
-      trackEvent('ai_generate_success', { model, provider });
       addToast('Diagram generated successfully!', 'success');
     } catch (error: unknown) {
       const errorMessage = toErrorMessage(error);
-      trackEvent('ai_generate_error', {
-        error_message: errorMessage,
-        model,
-        provider,
-      });
       console.error('AI Generation failed:', error);
       addToast(`Failed to generate: ${errorMessage}`, 'error');
     } finally {

@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { trackEvent } from '@/lib/analytics';
 import { createId } from '@/lib/id';
 import type { FlowNode, NodeData } from '@/lib/types';
 import {
@@ -13,7 +12,6 @@ import {
     createAnnotationNode,
     createGenericShapeNode,
     createImageNode,
-    createProcessNode,
     createSectionNode,
     createTextNode,
   getDefaultNodePosition,
@@ -51,7 +49,6 @@ export function useNodeOperationAdders({
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
     queueNodeLabelEditRequest(id, { replaceExisting: true });
-    trackEvent('add_node', { node_type: 'process', shape });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
 
   const handleAddNode = useCallback((position?: { x: number; y: number }) => {
@@ -73,7 +70,6 @@ export function useNodeOperationAdders({
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
-    trackEvent('add_node', { node_type: 'annotation' });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId, t]);
 
   const handleAddJourneyNode = useCallback((position?: { x: number; y: number }) => {
@@ -99,7 +95,6 @@ export function useNodeOperationAdders({
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
-    trackEvent('add_node', { node_type: 'journey' });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
 
   const handleAddMindmapNode = useCallback((position?: { x: number; y: number }) => {
@@ -123,7 +118,6 @@ export function useNodeOperationAdders({
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
     queueNodeLabelEditRequest(id, { replaceExisting: true });
-    trackEvent('add_node', { node_type: 'mindmap' });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
 
   const handleAddArchitectureNode = useCallback((position?: { x: number; y: number }) => {
@@ -148,7 +142,6 @@ export function useNodeOperationAdders({
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
-    trackEvent('add_node', { node_type: 'architecture' });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
 
   const handleAddSection = useCallback((position?: { x: number; y: number }) => {
@@ -166,7 +159,6 @@ export function useNodeOperationAdders({
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
-    trackEvent('add_node', { node_type: 'section' });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId, t]);
 
   const handleAddTextNode = useCallback((position?: { x: number; y: number }) => {
@@ -184,7 +176,6 @@ export function useNodeOperationAdders({
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
-    trackEvent('add_node', { node_type: 'text' });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId, t]);
 
   const handleAddImage = useCallback((imageUrl: string, position?: { x: number; y: number }) => {
@@ -203,7 +194,6 @@ export function useNodeOperationAdders({
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
-    trackEvent('add_node', { node_type: 'image' });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId, t]);
 
   const handleAddWireframe = useCallback((type: 'browser' | 'mobile', position?: { x: number; y: number }) => {
@@ -225,7 +215,6 @@ export function useNodeOperationAdders({
     };
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
-    trackEvent('add_node', { node_type: type });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
 
   const handleAddDomainLibraryItem = useCallback((item: DomainLibraryItem, position?: { x: number; y: number }) => {
@@ -240,7 +229,6 @@ export function useNodeOperationAdders({
     );
     setNodes((nds) => nds.concat(newNode));
     setSelectedNodeId(id);
-    trackEvent('add_node', { node_type: 'domain_library', category: item.category, item_id: item.id });
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
 
   return {

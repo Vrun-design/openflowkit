@@ -46,7 +46,6 @@ export function useVisualSettingsActions(): Pick<
     | 'setSmartRoutingBundlingEnabled'
     | 'setLargeGraphSafetyMode'
     | 'setLargeGraphSafetyProfile'
-    | 'toggleAnalytics'
 > {
     return useFlowStore(
         useShallow((state) => ({
@@ -60,7 +59,6 @@ export function useVisualSettingsActions(): Pick<
             setSmartRoutingBundlingEnabled: state.setSmartRoutingBundlingEnabled,
             setLargeGraphSafetyMode: state.setLargeGraphSafetyMode,
             setLargeGraphSafetyProfile: state.setLargeGraphSafetyProfile,
-            toggleAnalytics: state.toggleAnalytics,
         }))
     );
 }

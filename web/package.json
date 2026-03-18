@@ -14,7 +14,6 @@
     "@tailwindcss/vite": "^4.2.1",
     "astro": "^5.7.0",
     "lucide-react": "^0.469.0",
-    "posthog-js": "^1.182.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "sharp": "^0.34.1",

@@ -4,7 +4,6 @@ import { useFlowStore } from '../store';
 import type { FlowEdge, NodeData } from '@/lib/types';
 import { createMindmapEdge, DEFAULT_EDGE_OPTIONS } from '../constants';
 import { useTranslation } from 'react-i18next';
-import { trackEvent } from '../lib/analytics';
 import type { DomainLibraryItem } from '@/services/domainLibrary';
 import { createDomainLibraryNode } from '@/services/domainLibrary';
 import { createId } from '@/lib/id';
@@ -41,7 +40,6 @@ export const useEdgeOperations = (
     const updateEdge = useCallback((id: string, updates: Partial<Edge>) => {
         recordHistory();
         setEdges((eds) => eds.map((edge) => edge.id === id ? { ...edge, ...updates } : edge));
-        trackEvent('update_edge');
     }, [setEdges, recordHistory]);
 
     const onReconnect = useCallback((oldEdge: Edge, newConnection: Connection) => {
@@ -72,7 +70,6 @@ export const useEdgeOperations = (
         recordHistory();
         setEdges((eds) => eds.filter((e) => e.id !== id));
         setSelectedEdgeId(null);
-        trackEvent('delete_edge');
     }, [setEdges, recordHistory, setSelectedEdgeId]);
 
     // --- Connections ---

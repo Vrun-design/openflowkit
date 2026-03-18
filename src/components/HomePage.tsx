@@ -2,7 +2,6 @@ import React, { Suspense, lazy, useState } from 'react';
 import { useFlowStore } from '../store';
 import { useTabActions, useTabsState } from '@/store/tabHooks';
 import { FlowSnapshot } from '@/lib/types';
-import { trackEvent } from '../lib/analytics';
 import { HomeDashboard, type HomeFlowCard } from './home/HomeDashboard';
 import { HomeFlowDeleteDialog, HomeFlowRenameDialog } from './home/HomeFlowDialogs';
 import { HomeSettingsView } from './home/HomeSettingsView';
@@ -26,7 +25,7 @@ interface HomePageProps {
 export const HomePage: React.FC<HomePageProps> = ({
     onLaunch,
     onImportJSON,
-    onRestoreSnapshot,
+    onRestoreSnapshot: _onRestoreSnapshot,
     onOpenFlow,
     activeTab: propActiveTab,
     onSwitchTab
@@ -35,7 +34,7 @@ export const HomePage: React.FC<HomePageProps> = ({
     const { updateTab, closeTab, duplicateTab } = useTabActions();
     const { nodes, edges } = useFlowStore();
     const [internalActiveTab, setInternalActiveTab] = useState<'home' | 'settings'>('home');
-    const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'shortcuts' | 'privacy' | 'ai'>('general');
+    const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'shortcuts' | 'ai'>('general');
     const [flowPendingRename, setFlowPendingRename] = useState<HomeFlowCard | null>(null);
     const [flowPendingDelete, setFlowPendingDelete] = useState<HomeFlowCard | null>(null);
     const showWelcomeModal = shouldShowWelcomeModal();
@@ -67,11 +66,6 @@ export const HomePage: React.FC<HomePageProps> = ({
         } else {
             setInternalActiveTab(tab);
         }
-    };
-
-    const handleRestore = (snapshot: FlowSnapshot): void => {
-        trackEvent('restore_snapshot_flow');
-        onRestoreSnapshot(snapshot);
     };
 
     const handleRenameFlow = (flowId: string): void => {
@@ -131,20 +125,16 @@ export const HomePage: React.FC<HomePageProps> = ({
                     <HomeDashboard
                         flows={flows}
                         onCreateNew={() => {
-                            trackEvent('create_new_flow');
                             onLaunch();
                         }}
                         onImportJSON={() => {
-                            trackEvent('import_json_flow');
                             onImportJSON();
                         }}
                         onOpenFlow={(flowId) => {
-                            trackEvent('open_existing_flow', { flow_id: flowId });
                             onOpenFlow(flowId);
                         }}
                         onRenameFlow={handleRenameFlow}
                         onDuplicateFlow={(flowId) => {
-                            trackEvent('duplicate_flow', { flow_id: flowId });
                             const newFlowId = duplicateTab(flowId);
                             if (newFlowId) {
                                 onOpenFlow(newFlowId);

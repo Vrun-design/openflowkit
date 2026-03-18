@@ -3,43 +3,89 @@ draft: false
 title: Quick Start
 ---
 
+This walkthrough is the fastest reliable way to get productive in the current app.
 
+## 1. Open or create a flow
 
-This guide will help you create your first diagram in FlowMind in under 2 minutes.
+From the home screen you can:
 
-## 1. Create a New Flow
+- create a new flow
+- open an existing browser-stored flow
+- duplicate a saved flow
+- import a JSON diagram document
 
-From the Dashboard, click the **"Create New"** button (or press \`Cmd+N\`). You will be taken to a fresh canvas.
+Each flow opens in its own tab inside the editor.
 
-## 2. Using AI Generation
+## 2. Pick a starting point
 
-The fastest way to start is with a prompt.
+You have five realistic entry paths:
 
-1.  Locate the command bar at the bottom of the screen.
-2.  Type a description of your flow.
-    *   *Example:* "Create a user registration flow that includes email verification and database checks."
-3.  Press \`Enter\`.
+### Blank canvas
 
-FlowMind will generate a complete diagram structure for you.
+Use this when you already know the structure and want to sketch directly.
 
-## 3. Editing Nodes
+### Template
 
-Once generated, you can refine the diagram:
+Open the Command Center with `Cmd/Ctrl + K`, then choose **Start from Template**. Templates cover flowcharts, cloud diagrams, mind maps, journeys, and wireframes.
 
-*   **Move**: Click and drag any node to reposition it.
-*   **Edit Text**: Double-click a node to change its label.
-*   **Connect**: Drag from the handles (dots) on a node's edge to connect it to another node.
+### Assets
 
-## 4. Using Smart Layout
+Open **Assets** from the Command Center to add notes, text, sections, wireframes, images, or provider-backed icons.
 
-If your diagram gets messy, click the **"Auto Layout"** button in the top toolbar. FlowMind uses the ELK layout engine to automatically organize your nodes into a clean hierarchy.
+### AI
 
-## 5. Exporting
+Switch the right rail to Studio and open the **AI** tab. Enter a prompt such as:
 
-When you're happy with your flow:
+```text
+Create a SaaS onboarding workflow with signup, email verification,
+workspace setup, billing check, and success/failure branches.
+```
 
-1.  Click the **Export** button in the top right.
-2.  Choose your format (PNG, SVG, or JSON).
-3.  Download your file.
+### Code
 
-[PLACEHOLDER: GIF showing the creation process]
+Open Studio and switch to **OpenFlow DSL** or **Mermaid** if you prefer to start from text.
+
+## 3. Edit on the canvas
+
+Once you have content:
+
+- drag nodes to reposition them
+- click a node or edge to open the Properties panel
+- drag from a handle to create a connection
+- use `Shift + Click` or `Shift + Drag` for multi-select
+- use `Cmd/Ctrl + D` to duplicate
+- use `Delete` or `Backspace` to remove the current selection
+
+## 4. Clean up the structure
+
+For fast organization:
+
+1. Open `Cmd/Ctrl + K`
+2. Choose **Auto Layout**
+3. Pick direction, algorithm, and spacing
+
+The app uses ELK-based layout strategies and passes the active diagram type into layout decisions where relevant.
+
+## 5. Save a recovery point
+
+Open the history panel and create a manual snapshot before major edits. OpenFlowKit also keeps automatic snapshots while you work.
+
+## 6. Export or share
+
+Use the top-right export menu for:
+
+- PNG
+- JPG
+- JSON
+- OpenFlow DSL
+- Mermaid
+- PlantUML
+- Figma payload copy
+
+Use the Share control if you want a lightweight collaboration room link.
+
+## Recommended next steps
+
+- Read [Canvas Basics](/canvas-basics/) for navigation and selection details
+- Read [Properties Panel](/properties-panel/) for editing controls
+- Read [AI Generation](/ai-generation/) if you plan to use FlowPilot or BYOK models

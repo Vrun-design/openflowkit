@@ -1,20 +1,9 @@
 import React from 'react';
 import { Shield, Lock, Database, UserX, MessageSquare, Fingerprint } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Switch } from '../ui/Switch';
-import { updateAnalyticsConsent } from '../../lib/analytics';
-import { Button } from '../ui/Button';
-import { useViewSettings, useVisualSettingsActions } from '@/store/viewHooks';
 
 export const PrivacySettings = () => {
     const { t } = useTranslation();
-    const viewSettings = useViewSettings();
-    const { toggleAnalytics } = useVisualSettingsActions();
-
-    const handleAnalyticsToggle = (checked: boolean) => {
-        toggleAnalytics(checked);
-        updateAnalyticsConsent(checked);
-    };
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -33,30 +22,6 @@ export const PrivacySettings = () => {
                         <Feature icon={<UserX className="w-3.5 h-3.5" />} text={t('settingsModal.privacy.noAccounts')} />
                         <Feature icon={<Database className="w-3.5 h-3.5" />} text={t('settingsModal.privacy.ownData')} />
                         <Feature icon={<Fingerprint className="w-3.5 h-3.5" />} text={t('settingsModal.privacy.anonymous')} />
-                    </div>
-                </div>
-            </div>
-
-            {/* Analytics Control */}
-            <div className="space-y-4">
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-                    <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-                        {t('settingsModal.privacy.telemetry')}
-                    </h3>
-                </div>
-
-                <div className="p-1">
-                    <div className="flex items-start justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                        <div className="flex-1 pr-6">
-                            <h4 className="font-medium text-slate-800 mb-1">{t('settingsModal.privacy.anonymousStats')}</h4>
-                            <p className="text-xs text-slate-500 leading-relaxed mb-3">
-                                {t('settingsModal.privacy.anonymousStatsDesc')}
-                            </p>
-                            <p className="text-xs text-slate-400 italic">
-                                {t('settingsModal.privacy.quote')}
-                            </p>
-                        </div>
-                        <Switch checked={viewSettings.analyticsEnabled} onCheckedChange={handleAnalyticsToggle} />
                     </div>
                 </div>
             </div>

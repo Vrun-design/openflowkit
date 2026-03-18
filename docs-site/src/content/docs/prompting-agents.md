@@ -3,13 +3,66 @@ draft: false
 title: Prompting AI Agents
 ---
 
-# How to Prompt AI Agents (Cursor, Copilot, ChatGPT)
+If you use Cursor, Copilot, ChatGPT, Claude, or any other coding agent to help author diagrams, the prompt quality matters more than the model brand.
 
-OpenFlowKit is built to be AI-native. While it includes **Flowpilot** (our built-in AI assistant), you often want to generate diagrams directly inside your IDE using tools like Cursor, GitHub Copilot, or even regular ChatGPT.
+## What to ask for
 
-To get the best results from any LLM, you need to point them to our syntax rules.
+Ask the agent for one of these outputs explicitly:
 
-## The Magic Keyword: `llms.txt`
+- OpenFlow DSL
+- Mermaid
+- a diagram plan before code
+
+Do not ask for "a diagram" and hope it guesses the right syntax.
+
+## Good prompt structure
+
+Include all of the following:
+
+- diagram purpose
+- intended audience
+- required systems or actors
+- important branches or failure paths
+- preferred direction (`TB` or `LR`)
+- preferred syntax (`OpenFlow DSL` or `Mermaid`)
+
+## Example prompt for OpenFlow DSL
+
+```text
+Generate OpenFlow DSL for OpenFlowKit.
+Make a left-to-right payment recovery workflow.
+Include invoice due, charge attempt, success decision,
+retry sequence, manual review, customer notification,
+and terminal success/failure nodes.
+Use explicit node ids and label every branch edge.
+```
+
+## Example prompt for Mermaid
+
+```text
+Generate Mermaid flowchart code for a SaaS onboarding diagram.
+Use LR layout.
+Include signup, email verification, workspace provisioning,
+billing activation, support fallback, and success.
+Keep labels concise and production-ready.
+```
+
+## What to avoid
+
+Avoid prompts that:
+
+- mix multiple diagram families at once
+- ask for visual styling and architecture semantics in the same sentence
+- omit failure cases
+- omit the target syntax
+
+## Best workflow with agents
+
+1. generate first draft in text
+2. paste into Studio
+3. apply to canvas
+4. fix structure and styling visually
+5. export in the format your team needs
 
 The secret to perfect AI generation is our `llms.txt` file. We host a machine-readable set of rules that teaches any AI exactly how to write OpenFlow DSL V2 code.
 

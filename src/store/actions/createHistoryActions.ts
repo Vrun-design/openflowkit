@@ -1,4 +1,3 @@
-import { trackEvent } from '@/lib/analytics';
 import type { FlowHistoryState } from '@/lib/types';
 import type { FlowState } from '../types';
 
@@ -96,7 +95,7 @@ export function createHistoryActions(set: SetFlowState, get: GetFlowState): Pick
 
                 const tabs = [...state.tabs];
                 tabs[activeTabIndex] = updatedTab;
-                trackEvent('undo');
+
                 return {
                     tabs,
                     nodes: previous.nodes,
@@ -127,7 +126,7 @@ export function createHistoryActions(set: SetFlowState, get: GetFlowState): Pick
 
                 const tabs = [...state.tabs];
                 tabs[activeTabIndex] = updatedTab;
-                trackEvent('redo');
+
                 return {
                     tabs,
                     nodes: next.nodes,

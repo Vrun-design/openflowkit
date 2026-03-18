@@ -15,7 +15,7 @@ export default defineConfig({
         { icon: 'github', label: 'GitHub', href: 'https://github.com/Vrun-design/openflowkit' },
       ],
       editLink: {
-        baseUrl: 'https://github.com/Vrun-design/openflowkit/edit/main/docs/',
+        baseUrl: 'https://github.com/Vrun-design/openflowkit/edit/main/docs-site/src/content/docs/',
       },
       // Root locale keeps English at clean URLs (/introduction not /en/introduction)
       defaultLocale: 'root',
@@ -32,7 +32,7 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Core Features',
+          label: 'Core Workflows',
           items: [
             { label: 'Canvas Basics', slug: 'canvas-basics' },
             { label: 'Node Types', slug: 'node-types' },
@@ -41,7 +41,7 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Advanced Tools',
+          label: 'Studio & Automation',
           items: [
             { label: 'AI Generation', slug: 'ai-generation' },
             { label: 'Smart Layout', slug: 'smart-layout' },
@@ -50,7 +50,7 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Guides & Use Cases',
+          label: 'Guides',
           items: [
             { label: 'Prompting AI Agents', slug: 'prompting-agents' },
             { label: 'Mermaid vs OpenFlow', slug: 'mermaid-vs-openflow' },
@@ -59,13 +59,11 @@ export default defineConfig({
             { label: 'Mermaid Integration', slug: 'mermaid-integration' },
             { label: 'Exporting', slug: 'exporting' },
             { label: 'Keyboard Shortcuts', slug: 'keyboard-shortcuts' },
-            { label: 'Theming', slug: 'theming' },
           ],
         },
         {
-          label: 'Announcements',
+          label: 'Project Notes',
           items: [
-            { label: 'V1 Beta Launch', slug: 'v1-beta-launch' },
             { label: 'Roadmap', slug: 'roadmap' },
           ],
         },

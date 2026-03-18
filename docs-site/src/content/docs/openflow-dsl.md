@@ -3,261 +3,136 @@ draft: false
 title: OpenFlow DSL
 ---
 
-# 🧠 FlowMind DSL Syntax Guide (V2)
+OpenFlow DSL is the native text representation used by OpenFlowKit Studio. It is the best option when you want a code-first representation that stays close to the editor's own graph model.
 
-FlowMind uses a clean, human-readable DSL to define diagrams using text.
-Version 2 introduces:
+## Where it fits
 
-* Explicit node IDs
-* Styling attributes
-* Groups / containers
-* Edge customization
+Use OpenFlow DSL when you want:
 
----
+- a readable editor-native syntax
+- deterministic structural edits before layout
+- a better fit than Mermaid for OpenFlowKit-specific workflows
+- an easier target for AI-generated code than raw JSON
 
-# 1️⃣ Document Header
+The Studio code panel can generate DSL from the current canvas and apply DSL back onto it.
 
-Every DSL file can begin with optional metadata:
+## Basic document structure
+
+Start with a header:
 
 ```yaml
-flow: "My Awesome Workflow"
+flow: "User Signup"
 direction: TB
 ```
 
-### Fields
+Common direction values:
 
-| Field       | Description                                                    |
-| ----------- | -------------------------------------------------------------- |
-| `flow`      | Title of the diagram                                           |
-| `direction` | Layout direction: `TB` (Top to Bottom) or `LR` (Left to Right) |
+- `TB`
+- `LR`
+- `RL`
+- `BT`
 
----
+## Nodes
 
-# 2️⃣ Nodes
+Use explicit node declarations with stable ids.
 
-Nodes define diagram elements.
-
-## Basic Syntax
-
-```
-[start] Start Process
-[process] Handle Request
-[end] End Process
+```text
+node signup [label: "Signup Form"]
+node verify [label: "Verify Email"]
+node success [label: "Workspace Ready", shape: capsule]
 ```
 
----
+Good ids are:
 
-## With Explicit IDs
+- short
+- lowercase
+- semantic
+- stable enough to survive edits
 
-Useful for clarity, especially in large flows.
+## Edges
 
-```
-[start] start: Start Process
-[process] proc1: Handle Request
-[end] end: End Process
+Create edges with arrow syntax:
 
-start -> proc1
-proc1 -> end
-```
-
----
-
-## With Attributes
-
-Attributes use JSON-like syntax:
-
-```
-[process] p1: Critical Step { color: "red", icon: "alert-triangle" }
-[system] db: Database { icon: "database" }
+```text
+signup -> verify
+verify -> success
 ```
 
-### Attribute Examples
+You can add labels and other edge-level metadata:
 
-| Attribute | Purpose               |
-| --------- | --------------------- |
-| `color`   | Override node color   |
-| `icon`    | Add icon              |
-| `style`   | Custom style modifier |
-
----
-
-## Supported Node Types
-
-| DSL Type    | Shape             | Default Color |
-| ----------- | ----------------- | ------------- |
-| `start`     | Capsule           | Emerald       |
-| `end`       | Capsule           | Red           |
-| `process`   | Rounded rectangle | Slate         |
-| `decision`  | Diamond           | Amber         |
-| `system`    | Custom node       | Violet        |
-| `note`      | Sticky note       | Yellow        |
-| `section`   | Group container   | Blue          |
-| `container` | Generic group     | Gray          |
-
-If a node is referenced in a connection but not declared, it defaults to `process`.
-
----
-
-# 3️⃣ Edges (Connections)
-
-Connections define flow between nodes.
-
-## Basic Connection
-
-```
-Start Process -> Handle Request
+```text
+verify -> success [label: "Verified"]
+verify -> retry [label: "Expired"]
 ```
 
----
+## Typical node attributes
 
-## Edge Types
+The visual node model supports a broad set of properties. In practice, the most useful attributes to express in DSL are:
 
-| Symbol | Meaning     |
-| ------ | ----------- |
-| `->`   | Solid line  |
-| `-->`  | Curved line |
-| `..>`  | Dashed line |
-| `==>`  | Thick line  |
+- `label`
+- `subLabel`
+- `shape`
+- `color`
+- `icon`
 
-Example:
+For advanced families, the graph model also carries metadata for mind maps, journey nodes, architecture nodes, class diagrams, and ER diagrams.
 
-```
-A ..> B
-C ==> D
-```
+## Example
 
----
+```text
+flow: "Payment Recovery"
+direction: LR
 
-## Labeled Connections
+node invoice [label: "Invoice Due", color: blue]
+node charge [label: "Attempt Charge", color: emerald]
+node decision [label: "Charge Successful?", shape: diamond, color: amber]
+node retry [label: "Retry Sequence", color: violet]
+node review [label: "Manual Review", color: slate]
+node success [label: "Subscription Active", shape: capsule, color: emerald]
 
-Use pipes:
-
-```
-Is Valid? ->|Yes| Save Data
-Is Valid? ->|No| Return Error
-```
-
----
-
-## Edge Attributes
-
-```
-A -> B { style: "dashed", label: "Async" }
+invoice -> charge
+charge -> decision
+decision -> success [label: "Yes"]
+decision -> retry [label: "Retry"]
+decision -> review [label: "Manual"]
 ```
 
----
+## Editing workflow in Studio
 
-# 4️⃣ Groups
+The Studio code panel does three things:
 
-Use `group` to cluster nodes.
+1. generates current DSL from the canvas
+2. previews whether your draft is valid
+3. applies the parsed graph back to the editor
 
+Use **Reset** if the draft diverges too far from the current canvas.
+
+## When to choose OpenFlow DSL over Mermaid
+
+Prefer OpenFlow DSL when:
+
+- the diagram lives mainly inside OpenFlowKit
+- you want fewer Mermaid translation constraints
+- you want a format tailored to the editor's own graph model
+
+Prefer Mermaid when:
+
+- the diagram must also live in Markdown-heavy environments
+- you already have Mermaid sources
+- external tooling expects Mermaid syntax
+
+## Recommended AI instruction
+
+If you want another agent to write OpenFlow DSL for this app, give it these constraints:
+
+```text
+Generate OpenFlow DSL for OpenFlowKit.
+Use explicit node ids.
+Create a clear flow title and direction.
+Prefer process, decision, start, end, and custom nodes unless a more specific family is required.
+Label all meaningful branch edges.
+Keep names concise and production-friendly.
 ```
-group "Backend Services" {
-    [process] api: API Server
-    [system] db: Database
-    api -> db
-}
-```
-
-Groups help visually separate logical areas.
-
----
-
-# 5️⃣ Comments
-
-Lines starting with `#` are ignored.
-
-```
-# This is a comment
-[start] Begin
-```
-
----
-
-# ✅ Complete Example
-
-```yaml
-flow: "User Login Flow"
-direction: TB
-
-# Define Nodes
-[start] user: User
-[process] login: Login Page { icon: "log-in" }
-
-group "Authentication" {
-    [system] auth: Auth Service
-    [decision] check: Is Valid?
-}
-
-[end] dash: Dashboard
-[end] err: Error
-
-# Define Logic
-user -> login
-login -> auth
-auth -> check
-
-check ->|Yes| dash { color: "green" }
-check ->|No| err { color: "red", style: "dashed" }
-```
-
----
-
-# 🤖 LLM Agent Prompt Template
-
-If someone wants to generate FlowMind DSL using an LLM agent, they can paste the following prompt:
-
----
-
-## Copy-Paste Prompt for LLM
-
-```
-You are an expert FlowMind DSL V2 generator.
-
-Your job is to convert a user's workflow description into valid FlowMind DSL.
-
-You must strictly follow the FlowMind DSL V2 specification defined below.
-
-========================================
-FLOWMIND DSL V2 SPECIFICATION
-========================================
-
-1. DOCUMENT HEADER (Required)
-
-Every output MUST begin with:
-
-flow: "Title Here"
-direction: TB or LR
-
-Rules:
-- Always generate a meaningful title.
-- Default to TB unless user clearly needs horizontal layout.
-
-----------------------------------------
-
-2. NODE DECLARATION RULES
-
-Node syntax:
-
-[type] id: Label { optional_attributes }
-
-Example:
-[process] p1: Handle Request
-[decision] d1: Is Valid? { icon: "help-circle" }
-
-Rules:
-- ALWAYS use explicit IDs.
-- IDs must be short, lowercase, no spaces.
-- IDs must be unique.
-- Use semantic naming (start, login, checkAuth, db, etc).
-- Do NOT reuse labels as IDs.
-- Do NOT skip node declarations.
-
-If a node is referenced in a connection, it MUST be declared first.
-
-----------------------------------------
-
-3. SUPPORTED NODE TYPES
 
 Use ONLY these types:
 
