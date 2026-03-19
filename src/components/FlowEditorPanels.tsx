@@ -100,6 +100,8 @@ export interface StudioRailProps {
     onAIGenerate: (prompt: string, imageBase64?: string) => Promise<void>;
     onCodeAnalysis?: (code: string, language: import('@/hooks/ai-generation/codeToArchitecture').SupportedLanguage) => Promise<void>;
     isGenerating: boolean;
+    selectedNode: FlowNode | null;
+    onViewProperties: () => void;
     chatMessages: ChatMessage[];
     onClearChat: () => void;
     activeTab: StudioTab;
@@ -150,6 +152,8 @@ export function FlowEditorPanels({
                 onAIGenerate={studio.onAIGenerate}
                 onCodeAnalysis={studio.onCodeAnalysis}
                 isGenerating={studio.isGenerating}
+                selectedNode={studio.selectedNode}
+                onViewProperties={studio.onViewProperties}
                 chatMessages={studio.chatMessages}
                 onClearChat={studio.onClearChat}
                 activeTab={studio.activeTab}

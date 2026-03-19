@@ -11,41 +11,10 @@ interface ShouldExitStudioOnSelectionParams extends SelectionSnapshot {
     studioSelectionSnapshot: SelectionSnapshot | null;
 }
 
-function hasSelectionChanged(
-    studioSelectionSnapshot: SelectionSnapshot | null,
-    selectedNodeId: string | null,
-    selectedEdgeId: string | null
-): boolean {
-    if (!studioSelectionSnapshot) {
-        return false;
-    }
-
-    return (
-        studioSelectionSnapshot.selectedNodeId !== selectedNodeId ||
-        studioSelectionSnapshot.selectedEdgeId !== selectedEdgeId
-    );
-}
-
-export function shouldExitStudioOnSelection({
-    editorMode,
-    studioTab,
-    studioSelectionSnapshot,
-    selectedNodeId,
-    selectedEdgeId,
-}: ShouldExitStudioOnSelectionParams): boolean {
-    if (editorMode !== 'studio') {
-        return false;
-    }
-
-    if (studioTab === 'playback') {
-        return false;
-    }
-
-    if (!selectedNodeId && !selectedEdgeId) {
-        return false;
-    }
-
-    return hasSelectionChanged(studioSelectionSnapshot, selectedNodeId, selectedEdgeId);
+// Selecting a node/edge never auto-exits studio — the user stays in Studio
+// and can explicitly click "View Properties" to switch.
+export function shouldExitStudioOnSelection(_params: ShouldExitStudioOnSelectionParams): boolean {
+    return false;
 }
 
 export type { SelectionSnapshot };

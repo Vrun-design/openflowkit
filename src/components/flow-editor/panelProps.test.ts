@@ -88,6 +88,7 @@ describe('buildFlowEditorPanelsProps', () => {
       handleCommandBarApply: vi.fn(),
       handleAIRequest: vi.fn(async () => undefined),
       handleCodeAnalysis: vi.fn(async () => undefined),
+      setCanvasMode: vi.fn(),
       isGenerating: false,
       chatMessages: [],
       clearChat: vi.fn(),

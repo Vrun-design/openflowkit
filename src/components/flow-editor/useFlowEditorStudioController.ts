@@ -102,13 +102,9 @@ export function useFlowEditorStudioController({
         clearSelectionAndSetCanvasMode();
     }, [clearSelectionAndSetCanvasMode]);
 
-    const handleCanvasEntityIntent = useCallback(() => {
-        if (editorMode !== 'studio') {
-            return;
-        }
-
-        setCanvasMode();
-    }, [editorMode, setCanvasMode]);
+    // Clicking a node/edge while in studio keeps the studio open.
+    // The user explicitly switches via "View Properties" in the studio header.
+    const handleCanvasEntityIntent = useCallback(() => undefined, []);
 
     useEffect(() => {
         if (!shouldExitStudioOnSelection({

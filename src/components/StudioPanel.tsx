@@ -1,6 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { Code2, ListVideo, WandSparkles } from 'lucide-react';
-import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
+import { ArrowRight, Code2, WandSparkles } from 'lucide-react';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { ChatMessage } from '@/services/aiService';
 import type { StudioCodeMode, StudioTab } from '@/hooks/useFlowEditorUIState';
@@ -15,10 +14,6 @@ const LazyStudioAIPanel = lazy(async () => {
 const LazyStudioCodePanel = lazy(async () => {
     const module = await import('./StudioCodePanel');
     return { default: module.StudioCodePanel };
-});
-const LazyStudioPlaybackPanel = lazy(async () => {
-    const module = await import('./StudioPlaybackPanel');
-    return { default: module.StudioPlaybackPanel };
 });
 
 interface StudioPanelProps {
@@ -35,6 +30,8 @@ interface StudioPanelProps {
     onTabChange: (tab: StudioTab) => void;
     codeMode: StudioCodeMode;
     onCodeModeChange: (mode: StudioCodeMode) => void;
+    selectedNode: FlowNode | null;
+    onViewProperties: () => void;
     playback: {
         currentStepIndex: number;
         totalSteps: number;
@@ -64,12 +61,13 @@ export function StudioPanel({
     onTabChange,
     codeMode,
     onCodeModeChange,
-    playback,
+    selectedNode,
+    onViewProperties,
+    playback: _playback,
 }: StudioPanelProps): React.ReactElement {
     const studioTabs = [
         { id: 'ai', label: 'FlowPilot', icon: WandSparkles },
         { id: 'code', label: 'Code', icon: Code2 },
-        ...(ROLLOUT_FLAGS.playbackStudioV1 ? [{ id: 'playback', label: 'Playback', icon: ListVideo }] : []),
     ] as const;
 
     return (
@@ -90,6 +88,20 @@ export function StudioPanel({
                     onTabChange={(tab) => onTabChange(tab as StudioTab)}
                 />
             </div>
+
+            {selectedNode && (
+                <button
+                    onClick={onViewProperties}
+                    className="flex w-full items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2 text-left transition-colors hover:bg-[var(--brand-primary-50)]"
+                >
+                    <span className="truncate text-xs font-medium text-slate-600">
+                        {(selectedNode.data as { label?: string }).label?.trim() || 'Selected node'}
+                    </span>
+                    <span className="ml-2 flex shrink-0 items-center gap-1 text-[11px] font-medium text-[var(--brand-primary)]">
+                        Properties <ArrowRight className="h-3 w-3" />
+                    </span>
+                </button>
+            )}
 
             <SidebarBody>
                 {activeTab === 'ai' ? (
@@ -112,25 +124,7 @@ export function StudioPanel({
                             onModeChange={onCodeModeChange}
                         />
                     </Suspense>
-                ) : (
-                    <Suspense fallback={null}>
-                        <LazyStudioPlaybackPanel
-                            nodes={nodes}
-                            edges={edges}
-                            currentStepIndex={playback.currentStepIndex}
-                            totalSteps={playback.totalSteps}
-                            isPlaying={playback.isPlaying}
-                            onStartPlayback={playback.onStartPlayback}
-                            onPlayPause={playback.onPlayPause}
-                            onStop={playback.onStop}
-                            onScrubToStep={playback.onScrubToStep}
-                            onNext={playback.onNext}
-                            onPrev={playback.onPrev}
-                            playbackSpeed={playback.playbackSpeed}
-                            onPlaybackSpeedChange={playback.onPlaybackSpeedChange}
-                        />
-                    </Suspense>
-                )}
+                ) : null}
             </SidebarBody>
         </SidebarShell>
     );

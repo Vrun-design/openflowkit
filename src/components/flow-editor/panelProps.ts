@@ -68,6 +68,7 @@ interface BuildFlowEditorPanelsPropsParams {
     isGenerating: boolean;
     chatMessages: ChatMessage[];
     clearChat: () => void;
+    setCanvasMode: () => void;
     studioTab: StudioTab;
     setStudioTab: (tab: StudioTab) => void;
     studioCodeMode: StudioCodeMode;
@@ -133,6 +134,7 @@ export function buildFlowEditorPanelsProps({
     isGenerating,
     chatMessages,
     clearChat,
+    setCanvasMode,
     studioTab,
     setStudioTab,
     studioCodeMode,
@@ -206,6 +208,8 @@ export function buildFlowEditorPanelsProps({
             isGenerating,
             chatMessages,
             onClearChat: clearChat,
+            selectedNode,
+            onViewProperties: setCanvasMode,
             activeTab: studioTab,
             onTabChange: setStudioTab,
             codeMode: studioCodeMode,

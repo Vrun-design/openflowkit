@@ -77,7 +77,7 @@ describe('useFlowEditorStudioController', () => {
         expect(props.setCanvasMode).toHaveBeenCalled();
     });
 
-    it('returns to canvas mode when selection changes after studio opens', () => {
+    it('stays in studio when selection changes — never auto-exits', () => {
         const initialProps = createBaseProps({
             editorMode: 'canvas',
             selectedNodeId: 'node-1',
@@ -97,6 +97,6 @@ describe('useFlowEditorStudioController', () => {
             selectedNodeId: 'node-2',
         });
 
-        expect(initialProps.setCanvasMode).toHaveBeenCalled();
+        expect(initialProps.setCanvasMode).not.toHaveBeenCalled();
     });
 });

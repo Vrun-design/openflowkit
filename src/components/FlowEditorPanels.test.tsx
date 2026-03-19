@@ -90,6 +90,8 @@ const baseProps = {
     onTabChange: vi.fn(),
     codeMode: 'openflow' as const,
     onCodeModeChange: vi.fn(),
+    selectedNode: null,
+    onViewProperties: vi.fn(),
     playback: {
       currentStepIndex: -1,
       totalSteps: 0,
