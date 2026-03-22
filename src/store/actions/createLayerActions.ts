@@ -8,7 +8,7 @@ function ensureLayerExists(state: FlowState, layerId: string): boolean {
     return state.layers.some((layer) => layer.id === layerId);
 }
 
-export function createLayerActions(set: SetFlowState, get: GetFlowState): Pick<
+export function createLayerActions(set: SetFlowState, _get: GetFlowState): Pick<
     FlowState,
     | 'addLayer'
     | 'renameLayer'

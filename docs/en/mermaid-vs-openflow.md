@@ -39,7 +39,7 @@ This is why **OpenFlowKit is built on top of Mermaid.js**, giving you the best o
 While AI can write Mermaid syntax, iterating on it is difficult.
 
 **OpenFlowKit:**
-- Integrated [Flowpilot AI](/docs/en/ask-flowpilot) directly into the [Command Center](/docs/en/command-center).
+- Integrated [AI Studio](/docs/en/ask-flowpilot) directly into the [Command Center](/docs/en/command-center).
 - You can prompt the AI, generate the canvas, and then manually adjust the final 10% visually instead of trying to perfectly craft a prompt to fix a misaligned node.
 - Supports **BYOK (Bring Your Own Key)** for 7 different AI providers.
 

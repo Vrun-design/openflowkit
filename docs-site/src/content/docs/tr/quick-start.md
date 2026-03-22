@@ -1,43 +1,73 @@
 ---
 draft: false
 title: Quick Start
+description: İlk OpenFlowKit diyagramınızı tuval, şablonlar, yapay zeka, kod veya yapılandırılmış içe aktarma ile oluşturun.
 ---
 
-Bu kılavuz, OpenFlowKit'te 2 dakikadan kısa sürede ilk diyagramınızı oluşturmanıza yardımcı olacaktır.
+Bu sayfa, mevcut üründe hızlıca üretken olmanız için en kısa güvenilir yoldur.
 
-## 1. Yeni Bir Akış Oluşturun
+## 1. Yeni bir belge açın veya oluşturun
 
-Kontrol Panelinden **"Yeni Oluştur"** düğmesine tıklayın (veya \`Cmd+N\` tuşuna basın). Temiz bir tuvale yönlendirileceksiniz.
+Ana ekrandan şunları yapabilirsiniz:
 
-## 2. Yapay Zeka Üretimini Kullanma
+- yeni akış oluşturmak
+- tarayıcıda kayıtlı mevcut bir akışı açmak
+- kayıtlı bir akışı çoğaltmak
+- JSON diyagram belgesi içe aktarmak
 
-Başlamanın en hızlı yolu bir istemle başlamaktır.
+Her belge editör içinde ayrı bir sekmede açılır.
 
-1.  Ekranın alt kısmındaki komut çubuğunu bulun.
-2.  Akışınızın bir açıklamasını yazın.
-    *   *Örnek:* "E-posta doğrulama ve veritabanı kontrolleri içeren bir kullanıcı kayıt akışı oluştur."
-3.  \`Enter\` tuşuna basın.
+## 2. Başlangıç noktanızı seçin
 
-OpenFlowKit sizin için eksiksiz bir diyagram yapısı oluşturacaktır.
+Elinizde hangi bilgi varsa ona uygun giriş yolunu seçin.
 
-## 3. Düğümleri Düzenleme
+### Boş tuval
 
-Oluşturulduktan sonra diyagramı iyileştirebilirsiniz:
+Yapıyı zaten biliyorsanız ve doğrudan çizmek istiyorsanız bunu kullanın.
 
-*   **Taşı**: Herhangi bir düğümü yeniden konumlandırmak için tıklayın ve sürükleyin.
-*   **Metni Düzenle**: Etiketini değiştirmek için bir düğüme çift tıklayın.
-*   **Bağla**: Bir düğümü başka bir düğüme bağlamak için düğüm kenarındaki tutamaclardan (noktalar) sürükleyin.
+### Şablon
 
-## 4. Akıllı Düzen Kullanma
+`Cmd/Ctrl + K` ile Komut Merkezi’ni açın ve **Start from Template** seçin. Şablonlar akış diyagramları, bulut mimarileri, zihin haritaları, journey akışları ve wireframe’leri kapsar.
 
-Diyagramınız karmaşıklaşırsa, üst araç çubuğundaki **"Otomatik Düzen"** düğmesine tıklayın. OpenFlowKit, düğümlerinizi temiz bir hiyerarşi içinde otomatik olarak düzenlemek için ELK düzen motorunu kullanır.
+### Varlıklar
 
-## 5. Dışa Aktarma
+Komut Merkezi içindeki **Assets** görünümünü kullanarak not, metin, bölüm, wireframe, görsel veya sağlayıcı ikonları ekleyin.
 
-Akışınızdan memnun kaldığınızda:
+### Yapay zeka
 
-1.  Sağ üstteki **Dışa Aktar** düğmesine tıklayın.
-2.  Formatınızı seçin (PNG, SVG veya JSON).
-3.  Dosyanızı indirin.
+Sağ panelde Studio’yu açın ve **FlowPilot** sekmesine geçin. Örnek istem:
 
-[YER TUTUCU: Oluşturma sürecini gösteren GIF]
+```text
+Kayıt, e-posta doğrulama, ekip daveti,
+çalışma alanı oluşturma, ödeme kurulumu
+ve ilk başarı adımını içeren bir SaaS onboarding akışı oluştur.
+```
+
+### Kod
+
+Elinizde Mermaid veya OpenFlow DSL varsa Studio içindeki **Code** sekmesinden doğrudan yapıştırıp uygulayın.
+
+### Yapılandırılmış giriş
+
+Elinizde SQL, OpenAPI, Terraform veya Kubernetes girdisi varsa Studio içe aktarma akışlarını kullanın. Bkz. [Import from Structured Data](/tr/import-from-data/) ve [Infrastructure Sync](/tr/infra-sync/).
+
+## 3. Taslağı iyileştirin
+
+İlk taslak tuvale geldikten sonra:
+
+- düğümleri kabaca konumlandırın
+- kesin düzenlemeler için [Properties Panel](/tr/properties-panel/) kullanın
+- yapı doğru ama yerleşim dağınıksa [Smart Layout](/tr/smart-layout/) çalıştırın
+- arama, ek varlık ve iş akışı geçişleri için [Command Center](/tr/command-center/) kullanın
+
+## 4. Kurtarma noktaları oluşturun
+
+Büyük bir yapay zeka yeniden yazımı veya geniş içe aktarma yenilemesinden önce anlık görüntü geçmişinizi kontrol edin. Bkz. [Playback & History](/tr/playback-history/).
+
+## 5. Paylaşın veya dışa aktarın
+
+Diyagramı dokümantasyon, tasarım veya iş birliği akışına taşımaya hazır olduğunuzda dışa aktarma menüsünü kullanın.
+
+- [Choose an Export Format](/tr/choose-export-format/)
+- [Exporting](/tr/exporting/)
+- [Collaboration & Sharing](/tr/collaboration-sharing/)

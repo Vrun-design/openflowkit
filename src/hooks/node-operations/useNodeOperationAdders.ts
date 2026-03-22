@@ -196,6 +196,49 @@ export function useNodeOperationAdders({
     setSelectedNodeId(id);
   }, [nodesLength, recordHistory, setNodes, setSelectedNodeId, t]);
 
+  const handleAddClassNode = useCallback((position?: { x: number; y: number }) => {
+    recordHistory();
+    const id = createId('class');
+    const { activeLayerId } = useFlowStore.getState();
+    const newNode: FlowNode = {
+      id,
+      type: 'class',
+      position: position || getDefaultNodePosition(nodesLength, 120, 120),
+      data: {
+        label: 'ClassName',
+        color: 'white',
+        shape: 'rectangle',
+        classAttributes: ['+ attribute: Type'],
+        classMethods: ['+ method(): void'],
+        layerId: activeLayerId,
+      },
+      selected: true,
+    };
+    setNodes((nds) => nds.concat(newNode));
+    setSelectedNodeId(id);
+  }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
+
+  const handleAddEntityNode = useCallback((position?: { x: number; y: number }) => {
+    recordHistory();
+    const id = createId('er');
+    const { activeLayerId } = useFlowStore.getState();
+    const newNode: FlowNode = {
+      id,
+      type: 'er_entity',
+      position: position || getDefaultNodePosition(nodesLength, 120, 120),
+      data: {
+        label: 'EntityName',
+        color: 'white',
+        shape: 'rectangle',
+        erFields: ['id: INT PK', 'name: VARCHAR'],
+        layerId: activeLayerId,
+      },
+      selected: true,
+    };
+    setNodes((nds) => nds.concat(newNode));
+    setSelectedNodeId(id);
+  }, [nodesLength, recordHistory, setNodes, setSelectedNodeId]);
+
   const handleAddWireframe = useCallback((type: 'browser' | 'mobile', position?: { x: number; y: number }) => {
     recordHistory();
     const id = createId(type);
@@ -238,6 +281,8 @@ export function useNodeOperationAdders({
     handleAddJourneyNode,
     handleAddMindmapNode,
     handleAddArchitectureNode,
+    handleAddClassNode,
+    handleAddEntityNode,
     handleAddSection,
     handleAddTextNode,
     handleAddImage,

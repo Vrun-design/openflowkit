@@ -29,12 +29,14 @@ interface TopNavProps {
     onExportPlantUML: () => void;
     onExportOpenFlowDSL: () => void;
     onExportFigma: () => void;
+    onShare: () => void;
     onImportJSON: () => void;
     onHistory: () => void;
     onGoHome: () => void;
     onPlay: () => void;
     collaboration?: {
         roomId: string;
+        inviteUrl: string;
         viewerCount: number;
         status: 'realtime' | 'waiting' | 'fallback';
         cacheState: 'unavailable' | 'syncing' | 'ready' | 'hydrated';
@@ -64,6 +66,7 @@ export function TopNav({
     onExportPlantUML,
     onExportOpenFlowDSL,
     onExportFigma,
+    onShare,
     onImportJSON,
     onHistory,
     onGoHome,
@@ -71,14 +74,6 @@ export function TopNav({
     collaboration,
 }: TopNavProps): React.ReactElement {
     const isBeveled = IS_BEVELED;
-    const handleExportPNG = onExportPNG;
-    const handleExportSVG = onExportSVG;
-    const handleExportAnimated = onExportAnimated;
-    const handleExportJSON = onExportJSON;
-    const handleExportMermaid = onExportMermaid;
-    const handleExportPlantUML = onExportPlantUML;
-    const handleExportOpenFlowDSL = onExportOpenFlowDSL;
-    const handleExportFigma = onExportFigma;
     const {
         isMenuOpen,
         isSettingsOpen,
@@ -127,14 +122,15 @@ export function TopNav({
 
             <TopNavActions
                 onPlay={onPlay}
-                onExportPNG={handleExportPNG}
-                onExportSVG={handleExportSVG}
-                onExportAnimated={handleExportAnimated}
-                onExportJSON={handleExportJSON}
-                onExportMermaid={handleExportMermaid}
-                onExportPlantUML={handleExportPlantUML}
-                onExportOpenFlowDSL={handleExportOpenFlowDSL}
-                onExportFigma={handleExportFigma}
+                onExportPNG={onExportPNG}
+                onExportSVG={onExportSVG}
+                onExportAnimated={onExportAnimated}
+                onExportJSON={onExportJSON}
+                onExportMermaid={onExportMermaid}
+                onExportPlantUML={onExportPlantUML}
+                onExportOpenFlowDSL={onExportOpenFlowDSL}
+                onExportFigma={onExportFigma}
+                onShare={onShare}
                 collaboration={collaboration}
                 isBeveled={isBeveled}
             />

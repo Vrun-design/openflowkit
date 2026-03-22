@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { TFunction } from 'i18next';
+import { createLogger } from '@/lib/logger';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { FlowTemplate } from '@/services/templates';
 import type { LayoutAlgorithm } from '@/services/elkLayout';
@@ -10,11 +11,15 @@ import {
     exportOpenFlowDSLToClipboard,
     exportPlantUMLToClipboard,
 } from './flow-editor-actions/exportHandlers';
+import { toOpenFlowDSL } from '@/services/openFlowDSLExporter';
+import { encodeDslForViewer } from '@/components/DiagramViewer';
 import {
     buildTemplateInsertionResult,
     getAutoLayoutResult,
     scheduleFitView,
 } from './flow-editor-actions/layoutHandlers';
+
+const logger = createLogger({ scope: 'useFlowEditorActions' });
 
 interface UseFlowEditorActionsParams {
     nodes: FlowNode[];
@@ -41,6 +46,9 @@ interface UseFlowEditorActionsResult {
     handleExportPlantUML: () => Promise<void>;
     handleExportOpenFlowDSL: () => Promise<void>;
     handleExportFigma: () => Promise<void>;
+    handleShare: () => void;
+    shareViewerUrl: string | null;
+    clearShareViewerUrl: () => void;
 }
 
 export function useFlowEditorActions({
@@ -79,7 +87,7 @@ export function useFlowEditorActions({
             setEdges(layoutedEdges);
             scheduleFitView(fitView, 800, 50);
         } catch (error) {
-            console.error('ELK layout failed:', error);
+            logger.error('ELK layout failed.', { error });
         } finally {
             setIsLayouting(false);
         }
@@ -119,6 +127,18 @@ export function useFlowEditorActions({
         await exportFigmaToClipboard({ nodes, edges, addToast, t });
     }, [nodes, edges, addToast, t]);
 
+    const [shareViewerUrl, setShareViewerUrl] = useState<string | null>(null);
+
+    const handleShare = useCallback((): void => {
+        if (nodes.length === 0) return;
+        const dsl = toOpenFlowDSL(nodes, edges, { mode: exportSerializationMode });
+        const encoded = encodeDslForViewer(dsl);
+        const url = `${window.location.origin}/view?flow=${encoded}`;
+        setShareViewerUrl(url);
+    }, [nodes, edges, exportSerializationMode]);
+
+    const clearShareViewerUrl = useCallback((): void => setShareViewerUrl(null), []);
+
     return {
         isLayouting,
         onLayout,
@@ -127,5 +147,8 @@ export function useFlowEditorActions({
         handleExportPlantUML,
         handleExportOpenFlowDSL,
         handleExportFigma,
+        handleShare,
+        shareViewerUrl,
+        clearShareViewerUrl,
     };
 }

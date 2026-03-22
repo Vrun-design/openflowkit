@@ -1,28 +1,24 @@
 ---
 draft: false
 title: Playback & History
+description: Use undo, snapshots, and playback-related state to recover work and review diagram evolution.
 ---
 
 OpenFlowKit has two related but distinct recovery systems:
 
 - regular undo/redo history
-- snapshot-based history and playback state stored on tabs/documents
+- snapshot-based history and playback state stored on tabs or documents
 
 ## Undo and redo
 
-The editor keeps standard editing history for canvas operations. Use:
+Use:
 
 - `Cmd/Ctrl + Z` to undo
 - `Cmd/Ctrl + Shift + Z` to redo
 
-This is your fastest local recovery path during active editing.
+This is the fastest recovery path during active editing.
 
 ## Snapshots
-
-The history panel exposes:
-
-- manual snapshots you name yourself
-- automatic snapshots queued while you work
 
 Use snapshots when you are about to:
 
@@ -31,39 +27,23 @@ Use snapshots when you are about to:
 - do a broad text apply from Studio
 - restructure a large architecture map
 
+Snapshots are the safest checkpoint tool before large AI or import-driven edits. They are also the baseline you use for compare workflows later.
+
 ## Playback model
 
-The data model already supports playback scenes, timeline steps, selected scenes, and default step durations.
+The data model supports playback scenes, steps, and timed sequences. Animated export options appear in the export menu for playback-oriented outputs such as video and GIF.
 
-In practice this means OpenFlowKit is structured for diagram playback authoring, even though some playback-studio surfaces remain behind rollout flags.
+## Practical advice
 
-## Animated export status
+Treat history and snapshots differently:
 
-Animated export code exists for:
+- use undo/redo for quick corrections
+- use snapshots for milestones
 
-- GIF
-- browser-recorded video
+If the next operation could meaningfully rewrite the graph, create a snapshot first.
 
-However, these options are only shown when `animatedExportV1` is enabled. Do not assume every deployment exposes them.
+## Related pages
 
-## Recommended workflow
-
-For stable edits:
-
-1. save a manual snapshot
-2. perform your risky change
-3. compare visually
-4. restore if needed
-
-This is safer than relying only on a long undo chain.
-
-### Version Checkpoints
-Every time you perform a significant action (adding a node, changing a color, auto-layout), a "snapshot" is saved.
-*   **Undo/Redo**: Uses this same system to jump back and forth (`Cmd+Z`).
-
-## Playback Mode
-
-Press the **Play** button in the History panel to watch a "movie" of your diagram being built from start to finish.
-*   **Speed Control**: Adjust playback speed (1x, 2x, 4x).
-*   **Scrubbing**: Drag the slider to specific points in time.
-*   **Restore**: Found an older version you like better? Click "Restore" to revert the canvas to that state perfectly.
+- [Diagram Diff & Compare](/diagram-diff/)
+- [Exporting](/exporting/)
+- [AI Generation](/ai-generation/)

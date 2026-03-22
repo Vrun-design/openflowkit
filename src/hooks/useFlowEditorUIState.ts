@@ -8,7 +8,7 @@ export type CommandBarView =
     | 'assets';
 
 export type FlowEditorMode = 'canvas' | 'studio';
-export type StudioTab = 'ai' | 'code' | 'playback';
+export type StudioTab = 'ai' | 'code' | 'playback' | 'infra' | 'lint';
 export type StudioCodeMode = 'openflow' | 'mermaid';
 
 interface UseFlowEditorUIStateResult {

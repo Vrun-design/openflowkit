@@ -1,4 +1,5 @@
 import type { ParseDiagnostic } from '@/lib/openFlowDSLParser';
+import { createLogger } from '@/lib/logger';
 import { parseOpenFlowDSL } from '@/lib/openFlowDSLParser';
 import type { MermaidDiagnosticsSnapshot } from '@/store/types';
 import { parseMermaidByType } from '@/services/mermaid/parseMermaidByType';
@@ -8,10 +9,12 @@ import {
   mapErrorToIssue,
   mapParserDiagnosticToIssue,
   persistLatestImportReport,
-  summarizeImportReport,
 } from '@/services/importFidelity';
 import { composeDiagramForDisplay } from '@/services/composeDiagramForDisplay';
 import type { FlowEdge, FlowNode } from '@/lib/types';
+import { createImportReportOutcome, notifyOperationOutcome } from '@/services/operationFeedback';
+
+const logger = createLogger({ scope: 'applyCodeChanges' });
 
 interface ApplyOptions {
   closeOnSuccess: boolean;
@@ -90,7 +93,7 @@ export async function applyCodeChanges({
         issues,
       });
       persistLatestImportReport(report);
-      addToast(summarizeImportReport(report), 'error');
+      notifyOperationOutcome(addToast, createImportReportOutcome(report, res.error));
     }
     setError(res.error);
     if ('diagnostics' in res) {
@@ -157,12 +160,12 @@ export async function applyCodeChanges({
           issues: [],
         });
         persistLatestImportReport(report);
-        addToast(summarizeImportReport(report), 'success');
+        notifyOperationOutcome(addToast, createImportReportOutcome(report));
       } else {
         setLiveStatus('synced');
       }
     } catch (err) {
-      console.error('Layout failed, applying raw positions:', err);
+      logger.error('Layout failed; applying raw positions.', { error: err });
       if (isLiveRequestStale(options.liveRequestId, options.source)) {
         return false;
       }
@@ -181,7 +184,7 @@ export async function applyCodeChanges({
           issues: [mapErrorToIssue('Layout fallback applied after import.')],
         });
         persistLatestImportReport(report);
-        addToast(summarizeImportReport(report), 'warning');
+        notifyOperationOutcome(addToast, createImportReportOutcome(report, 'Layout fallback applied after import.'));
       } else {
         setLiveStatus('synced');
       }
@@ -225,7 +228,7 @@ export async function applyCodeChanges({
         issues: [],
       });
       persistLatestImportReport(report);
-      addToast(summarizeImportReport(report), 'success');
+      notifyOperationOutcome(addToast, createImportReportOutcome(report));
     } else {
       setLiveStatus('synced');
     }

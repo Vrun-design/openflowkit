@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import { AlertCircle, BookOpen, CheckCircle2, Play, RotateCcw, Zap } from 'lucide-react';
-import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
 import { Textarea } from './ui/Textarea';
@@ -15,6 +14,13 @@ import { useStudioCodePanelController, type DraftPreviewState } from './studio-c
 interface CodeModeOption {
     id: StudioCodeMode;
     label: string;
+}
+
+function friendlyDslError(raw: string): string {
+    if (/unexpected token/i.test(raw)) return 'Syntax error — check for missing colons or brackets';
+    if (/duplicate|already defined/i.test(raw)) return 'Duplicate node ID — each node must have a unique name';
+    if (/spaces?\b.*id|id.*\bspaces?/i.test(raw) || /node id.*space/i.test(raw)) return 'Node IDs cannot contain spaces — use underscores (e.g. my_node)';
+    return raw;
 }
 
 function getDraftPreviewBadgeClass(state: DraftPreviewState): string {
@@ -92,7 +98,13 @@ export function StudioCodePanel({
 
     return (
         <div className="flex h-full min-h-0 flex-col">
-            <div className="mb-3 border-b border-slate-200/80">
+            <div className="mb-3 border-b border-slate-200/80 pb-3">
+                <div className="mb-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Diagram as code</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                        Edit the full diagram source, validate the draft, then apply the changes back to the canvas.
+                    </p>
+                </div>
                 <div className="flex items-center gap-5">
                     {modeOptions.map(({ id, label }) => (
                         <button
@@ -126,22 +138,36 @@ export function StudioCodePanel({
 
                 {error ? (
                     <div className="mx-3 mt-3 rounded-[calc(var(--brand-radius)-4px)] border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                        <div className="flex items-center gap-2">
-                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                            <span className="font-medium">{error}</span>
-                        </div>
                         {diagnostics.length > 0 ? (
-                            <div className="mt-2 space-y-1">
+                            <div className="space-y-2">
                                 {diagnostics.slice(0, 3).map((diagnostic, index) => (
-                                    <div key={`${diagnostic.message}-${index}`} className="text-[11px] leading-relaxed whitespace-pre-wrap">
-                                        {typeof diagnostic.line === 'number'
-                                            ? t('commandBar.code.linePrefix', { line: diagnostic.line, defaultValue: 'Line {{line}}: ' })
-                                            : ''}
-                                        {diagnostic.message}
+                                    <div key={`${diagnostic.message}-${index}`}>
+                                        <div className="flex items-center gap-2 font-medium">
+                                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                            <span>
+                                                {typeof diagnostic.line === 'number' ? `Line ${diagnostic.line} · ` : ''}
+                                                {diagnostic.message}
+                                            </span>
+                                        </div>
+                                        {diagnostic.snippet && (
+                                            <div className="ml-5.5 mt-1 rounded bg-amber-100/60 px-2 py-1 font-mono text-[11px] text-amber-800">
+                                                {diagnostic.snippet}
+                                            </div>
+                                        )}
+                                        {diagnostic.hint && (
+                                            <div className="ml-5.5 mt-1 text-[11px] text-amber-600">
+                                                {diagnostic.hint}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
-                        ) : null}
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                <span className="font-medium">{friendlyDslError(error)}</span>
+                            </div>
+                        )}
                     </div>
                 ) : null}
 
@@ -152,6 +178,7 @@ export function StudioCodePanel({
                                 {draftPreview.state === 'ready' ? <CheckCircle2 className="h-3 w-3" /> : null}
                                 {draftPreview.label}
                             </span>
+                            <span className="truncate text-slate-500">{draftPreview.state === 'error' ? friendlyDslError(draftPreview.detail) : draftPreview.detail}</span>
                             {hasDraftChanges ? (
                                 <span className="inline-flex items-center gap-1 text-[var(--brand-primary)]">
                                     <span className="h-1.5 w-1.5 rounded-full bg-[var(--brand-primary)]" />
@@ -176,10 +203,10 @@ export function StudioCodePanel({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {ROLLOUT_FLAGS.mermaidSyncV1 && (
+                        {mode === 'mermaid' && (
                             <button
                                 onClick={() => setLiveSync(!liveSync)}
-                                title={liveSync ? 'Live sync on — auto-applies valid changes' : 'Enable live sync'}
+                                title={liveSync ? 'Live preview is on and auto-applies valid Mermaid changes.' : 'Enable live preview for Mermaid changes.'}
                                 className={`flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all ${
                                     liveSync
                                         ? 'border-[var(--brand-primary-200)] bg-[var(--brand-primary-50)] text-[var(--brand-primary)]'
@@ -187,7 +214,7 @@ export function StudioCodePanel({
                                 }`}
                             >
                                 <Zap className="h-3 w-3" />
-                                Live
+                                Live preview
                             </button>
                         )}
                         <Button
@@ -207,7 +234,7 @@ export function StudioCodePanel({
                             isLoading={isApplying}
                             icon={!isApplying && <Play className="w-3.5 h-3.5" />}
                         >
-                            Apply Changes
+                            Apply to canvas
                         </Button>
                     </div>
                 </div>

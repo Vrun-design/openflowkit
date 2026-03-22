@@ -1,36 +1,44 @@
 ---
 draft: false
 title: Exporting
+description: Export diagrams from OpenFlowKit as images, playback media, JSON, code formats, design-tool handoff, or share/embed links.
 ---
 
 Export lives in the top-right menu of the editor and covers both downloadable files and clipboard-oriented formats.
 
+The right export choice depends on whether your next step is editing, publishing, presenting, embedding, or collaboration.
+
 ## Downloaded file exports
 
-### PNG
+### PNG and JPG
 
-Best for:
+Use PNG or JPG for:
 
 - docs
 - slides
-- issue trackers
-- transparent-background diagram drops
+- tickets
+- lightweight visual sharing
 
-### JPG
+PNG is usually the better default when you want cleaner transparency handling. JPG is useful when a simple white-background image is enough.
 
-Best for:
+### SVG
 
-- white-background presentations
-- lightweight sharing where transparency is not required
+Use SVG when you need vector output for docs, websites, or further design-tool handling. SVG is the best choice when the diagram needs to stay crisp across sizes.
 
 ### JSON
 
 This is the most faithful archival format for re-import into OpenFlowKit. Use it for:
 
 - backups
-- migration between browsers or machines
-- preserving playback metadata where present
-- team handoff of editable diagrams
+- browser-to-browser handoff
+- preserving the most editable version of the graph
+- long-term retention of a diagram you may need to revise later
+
+If you are unsure what to save as the master file, choose JSON.
+
+### Playback video and GIF
+
+Use animated exports when the diagram is meant to communicate change over time rather than a single static state. These are useful for demos, changelogs, social posts, and process walkthroughs.
 
 ## Clipboard-oriented exports
 
@@ -39,71 +47,25 @@ These exports are generated from the current graph and copied rather than downlo
 - OpenFlow DSL
 - Mermaid
 - PlantUML
-- Figma-friendly SVG payload
+- Figma editable export
 
-Use these when the next destination is another editor rather than a file browser.
+Use these when the next tool in the workflow expects text or design-tool-compatible handoff rather than an image.
 
-## Animated export
+## Sharing
 
-The codebase supports playback export to:
+The export menu also includes **Share / Embed** for viewer-link and collaboration-oriented workflows. Use this when you want a room link, viewer URL, or embed-style flow instead of a file.
 
-- GIF
-- browser-recorded video
+## Recommended export pattern
 
-These options appear only when the animated export rollout flag is enabled.
+For serious work, a practical pattern is:
 
-## Fidelity guidance
+1. keep JSON as the editable master
+2. export Mermaid or DSL for text workflows
+3. export PNG, JPG, or SVG for presentation
+4. use share/embed when the diagram should remain interactive
 
-Choose formats by goal:
+## Related pages
 
-- use **JSON** for maximum round-trip fidelity
-- use **OpenFlow DSL** for editor-native textual workflows
-- use **Mermaid** when the target is Markdown or docs tooling
-- use **PlantUML** when the destination stack already expects PlantUML
-- use **PNG/JPG** when the result only needs to be viewed
-
-## Import pairing
-
-If you expect to continue editing later, always export a JSON copy alongside any presentation export.
-
-That one habit prevents most avoidable rework.
-
-Perfect for slides, documents, or sharing on Slack.
-
-### PNG (Portable Network Graphics)
-Exports a high-resolution, pixel-based image of your current flow.
-*   **Best for**: Slides, Web, General Sharing.
-*   **Settings**: Includes transparency by default if enabled in settings.
-
-### JPEG (Joint Photographic Experts Group)
-Exports a compressed image file.
-*   **Best for**: Email attachments, situations where file size matters.
-*   **Note**: Does not support transparency (background will be white).
-
-## Data & Code Exports
-
-FlowMind is a "Diagram-as-Code" tool, so we treat your diagram data as a first-class citizen.
-
-### JSON (FlowMind Native)
-Downloads the raw `.json` file containing all node positions, styles, and data.
-*   **Best for**: Backups, Version Control, Sharing editable files with other FlowMind users.
-
-### FlowMind DSL
-Copies the simplified Domain Specific Language (DSL) representation to your clipboard.
-*   **Best for**: Storing diagram logic in your codebase comments or generating similar flows via AI.
-
-### Mermaid.js
-Converts your current diagram into [Mermaid](https://mermaid.js.org/) syntax and copies it to the clipboard.
-*   **Best for**: Embedding diagrams in GitHub `README.md` files, Notion, or Obsidian.
-*   **Supported**: Basic Flowcharts, Sequence Diagrams.
-
-### PlantUML
-Copies the PlantUML representation of your diagram.
-*   **Best for**: Enterprise wikis (Confluence) or legacy documentation systems.
-
-### Figma
-Copies a vector representation compatible with Figma's paste format.
-*   **Best for**: Handing off diagrams to designers for high-fidelity polishing.
-
-> [!WARNING]
-> Figma export is experimental. Complex custom nodes may not transfer 100% perfectly.
+- [Choose an Export Format](/choose-export-format/)
+- [Collaboration & Sharing](/collaboration-sharing/)
+- [Embed Diagrams in GitHub](/github-embed/)

@@ -48,6 +48,17 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
     );
   }, [id, setNodes]);
 
+  const removeClassListItem = React.useCallback((key: 'classAttributes' | 'classMethods', index: number) => {
+    setNodes((nodes) =>
+      nodes.map((node) => {
+        if (node.id !== id) return node;
+        const current = Array.isArray(node.data?.[key]) ? [...(node.data?.[key] as string[])] : [];
+        current.splice(index, 1);
+        return { ...node, data: { ...node.data, [key]: current } };
+      })
+    );
+  }, [id, setNodes]);
+
   const beginAttributeEdit = (index: number, value: string) => {
     setEditingMethodIndex(null);
     setEditingAttributeIndex(index);
@@ -65,6 +76,8 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
     const trimmed = listDraft.trim();
     if (trimmed) {
       updateClassList('classAttributes', editingAttributeIndex, trimmed);
+    } else if (editingAttributeIndex < attributes.length) {
+      removeClassListItem('classAttributes', editingAttributeIndex);
     }
     setEditingAttributeIndex(null);
   };
@@ -74,6 +87,8 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
     const trimmed = listDraft.trim();
     if (trimmed) {
       updateClassList('classMethods', editingMethodIndex, trimmed);
+    } else if (editingMethodIndex < methods.length) {
+      removeClassListItem('classMethods', editingMethodIndex);
     }
     setEditingMethodIndex(null);
   };
@@ -170,16 +185,40 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
           ) : (
             <div className="text-[11px] text-slate-400">No attributes</div>
           )}
-          <button
-            type="button"
-            className="mt-1 text-[11px] text-slate-500 hover:text-slate-700"
-            onClick={(event) => {
-              event.stopPropagation();
-              beginAttributeEdit(attributes.length, '');
-            }}
-          >
-            + Add attribute
-          </button>
+          {editingAttributeIndex === attributes.length && (
+            <input
+              autoFocus
+              value={listDraft}
+              onChange={(event) => setListDraft(event.target.value)}
+              onBlur={commitAttributeEdit}
+              onMouseDown={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setEditingAttributeIndex(null);
+                }
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  commitAttributeEdit();
+                }
+              }}
+              placeholder="+ attribute: Type"
+              className="mt-1 w-full rounded border border-slate-300 bg-white px-1 py-0.5 text-xs font-mono outline-none"
+            />
+          )}
+          {editingAttributeIndex !== attributes.length && (
+            <button
+              type="button"
+              className="mt-1 text-[11px] text-slate-500 hover:text-slate-700"
+              onClick={(event) => {
+                event.stopPropagation();
+                beginAttributeEdit(attributes.length, '');
+              }}
+            >
+              + Add attribute
+            </button>
+          )}
         </div>
 
         <div className="px-3 py-2">
@@ -225,16 +264,40 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
           ) : (
             <div className="text-[11px] text-slate-400">No methods</div>
           )}
-          <button
-            type="button"
-            className="mt-1 text-[11px] text-slate-500 hover:text-slate-700"
-            onClick={(event) => {
-              event.stopPropagation();
-              beginMethodEdit(methods.length, '');
-            }}
-          >
-            + Add method
-          </button>
+          {editingMethodIndex === methods.length && (
+            <input
+              autoFocus
+              value={listDraft}
+              onChange={(event) => setListDraft(event.target.value)}
+              onBlur={commitMethodEdit}
+              onMouseDown={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setEditingMethodIndex(null);
+                }
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  commitMethodEdit();
+                }
+              }}
+              placeholder="+ method(): void"
+              className="mt-1 w-full rounded border border-slate-300 bg-white px-1 py-0.5 text-xs font-mono outline-none"
+            />
+          )}
+          {editingMethodIndex !== methods.length && (
+            <button
+              type="button"
+              className="mt-1 text-[11px] text-slate-500 hover:text-slate-700"
+              onClick={(event) => {
+                event.stopPropagation();
+                beginMethodEdit(methods.length, '');
+              }}
+            >
+              + Add method
+            </button>
+          )}
         </div>
       </div>
 

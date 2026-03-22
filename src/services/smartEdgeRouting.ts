@@ -143,7 +143,7 @@ function resolveAutoHandleSides(
     return { sourceHandleSide: 'left', targetHandleSide: 'right' };
 }
 
-function buildRoutingContext(nodes: FlowNode[], edges: FlowEdge[]): RoutingContext {
+function buildRoutingContext(nodes: FlowNode[], _edges: FlowEdge[]): RoutingContext {
     const nodeMap = new Map<string, FlowNode>();
     for (const node of nodes) {
         nodeMap.set(node.id, node);

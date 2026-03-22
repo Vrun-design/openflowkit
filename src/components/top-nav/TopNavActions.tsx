@@ -13,6 +13,7 @@ const LazyShareModal = lazy(async () => {
 
 interface CollaborationState {
     roomId: string;
+    inviteUrl: string;
     viewerCount: number;
     status: 'realtime' | 'waiting' | 'fallback';
     cacheState: 'unavailable' | 'syncing' | 'ready' | 'hydrated';
@@ -35,6 +36,7 @@ interface TopNavActionsProps {
     onExportPlantUML: () => void;
     onExportOpenFlowDSL: () => void;
     onExportFigma: () => void;
+    onShare: () => void;
     collaboration?: CollaborationState;
     isBeveled: boolean;
 }
@@ -72,9 +74,9 @@ function getCollaborationStatusLabel(
 
     switch (status) {
         case 'realtime':
-            return `${t('share.status.realtime', { defaultValue: 'Realtime peer sync' })}${cacheLabel}`;
+            return `${t('share.status.realtime', { defaultValue: 'Live collaboration ready' })}${cacheLabel}`;
         case 'waiting':
-            return `${t('share.status.waiting', { defaultValue: 'Connecting to realtime sync' })}${cacheLabel}`;
+            return `${t('share.status.waiting', { defaultValue: 'Connecting live collaboration' })}${cacheLabel}`;
         default:
             return `${t('share.status.fallback', { defaultValue: 'Local-only mode' })}${cacheLabel}`;
     }
@@ -101,6 +103,7 @@ export function TopNavActions({
     onExportPlantUML,
     onExportOpenFlowDSL,
     onExportFigma,
+    onShare,
     collaboration,
     isBeveled,
 }: TopNavActionsProps): React.ReactElement {
@@ -139,7 +142,7 @@ export function TopNavActions({
                             )}
                         </div>
 
-                        <Tooltip text={t('share.openDialog', 'Share dialog')} side="bottom">
+                        <Tooltip text={t('share.openDialog', 'Open sharing')} side="bottom">
                             <Button
                                 variant="icon"
                                 size="icon"
@@ -155,7 +158,7 @@ export function TopNavActions({
                     </div>
                 )}
 
-                <Tooltip text={t('nav.playbackMode', 'Playback Mode')} side="bottom">
+                <Tooltip text={t('nav.playbackMode', 'Preview playback')} side="bottom">
                     <Button
                         variant="secondary"
                         onClick={onPlay}
@@ -163,7 +166,7 @@ export function TopNavActions({
                         className="h-9 px-4 text-sm font-medium"
                         icon={<Play className="w-3.5 h-3.5 mr-1" />}
                     >
-                        {t('common.play', 'Play')}
+                        {t('common.play', 'Preview')}
                     </Button>
                 </Tooltip>
 
@@ -176,6 +179,7 @@ export function TopNavActions({
                     onExportPlantUML={onExportPlantUML}
                     onExportOpenFlowDSL={onExportOpenFlowDSL}
                     onExportFigma={onExportFigma}
+                    onShare={onShare}
                 />
             </div>
 
@@ -186,8 +190,10 @@ export function TopNavActions({
                         onClose={() => setIsShareModalOpen(false)}
                         onCopyInvite={collaboration.onCopyShareLink}
                         roomId={collaboration.roomId}
+                        inviteUrl={collaboration.inviteUrl}
                         status={collaboration.status}
                         viewerCount={viewerCount}
+                        participants={collaboration.participants}
                     />
                 </Suspense>
             ) : null}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { docsNavigation } from './docsData';
 import { Book, ArrowLeft } from 'lucide-react';

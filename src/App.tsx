@@ -7,8 +7,7 @@ import { RouteLoadingFallback } from '@/components/app/RouteLoadingFallback';
 import { OpenFlowLogo } from './components/icons/OpenFlowLogo';
 
 import { useFlowStore } from './store';
-import { useActiveTabId, useTabActions } from '@/store/tabHooks';
-import { FlowSnapshot } from './lib/types';
+import { useTabActions } from '@/store/tabHooks';
 import { useShortcutHelpOpen } from '@/store/viewHooks';
 
 // Import i18n configuration
@@ -74,7 +73,6 @@ function FlowCanvasRoute(): React.JSX.Element {
 function HomePageRoute(): React.JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
-  const activeTabId = useActiveTabId();
   const { addTab } = useTabActions();
 
   const activeTab = location.pathname === '/settings' ? 'settings' : 'home';
@@ -82,17 +80,6 @@ function HomePageRoute(): React.JSX.Element {
   const handleLaunch = () => {
     const newTabId = addTab();
     navigate(`/flow/${newTabId}`);
-  };
-
-  const handleRestore = (snapshot: FlowSnapshot) => {
-    const { setNodes, setEdges, updateTab } = useFlowStore.getState();
-    // Deep copy to prevent state mutation issues if snapshot is just a ref
-    const nodesCopy = JSON.parse(JSON.stringify(snapshot.nodes));
-    const edgesCopy = JSON.parse(JSON.stringify(snapshot.edges));
-    setNodes(nodesCopy);
-    setEdges(edgesCopy);
-    updateTab(activeTabId, { name: snapshot.name });
-    navigate(`/flow/${activeTabId}`);
   };
 
   return (
@@ -104,7 +91,6 @@ function HomePageRoute(): React.JSX.Element {
                               state: createFlowEditorImportRouteState(),
                             });
                         }}
-                        onRestoreSnapshot={handleRestore}
                         onOpenFlow={(flowId) => navigate(`/flow/${flowId}`)}
                         activeTab={activeTab}
                         onSwitchTab={(tab) => navigate(tab === 'settings' ? '/settings' : '/home')}

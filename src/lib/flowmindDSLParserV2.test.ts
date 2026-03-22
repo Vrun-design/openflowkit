@@ -1,8 +1,8 @@
 
 import { describe, it, expect } from 'vitest';
-import { parseFlowMindDSL } from './flowmindDSLParserV2';
+import { parseOpenFlowDslV2 } from './openFlowDslParserV2';
 
-describe('FlowMind DSL V2 Parser', () => {
+describe('OpenFlow DSL V2 Parser', () => {
     it('parses basic nodes and edges', () => {
         const input = `
             [start] Start
@@ -11,7 +11,7 @@ describe('FlowMind DSL V2 Parser', () => {
             Start -> Step 1
             Step 1 -> End
         `;
-        const result = parseFlowMindDSL(input);
+        const result = parseOpenFlowDslV2(input);
         expect(result.nodes).toHaveLength(3);
         expect(result.edges).toHaveLength(2);
 
@@ -26,7 +26,7 @@ describe('FlowMind DSL V2 Parser', () => {
             [process] p2: Process Two
             p1 -> p2
         `;
-        const result = parseFlowMindDSL(input);
+        const result = parseOpenFlowDslV2(input);
         expect(result.nodes).toHaveLength(2);
 
         const p1 = result.nodes.find(n => n.id === 'p1');
@@ -43,7 +43,7 @@ describe('FlowMind DSL V2 Parser', () => {
             [process] p1: Configured Node { color: "red", icon: "settings" }
             p1 -> p2 { style: "dashed", label: "async" }
         `;
-        const result = parseFlowMindDSL(input);
+        const result = parseOpenFlowDslV2(input);
 
         const p1 = result.nodes.find(n => n.id === 'p1');
         expect(p1?.data.color).toBe('red');
@@ -66,7 +66,7 @@ describe('FlowMind DSL V2 Parser', () => {
         const input = `
             [process] p1: Configured Node { icon: "server, api", note: "http://svc:8080/path", enabled: true, retries: 3, quote: "say \\"hello\\"" }
         `;
-        const result = parseFlowMindDSL(input);
+        const result = parseOpenFlowDslV2(input);
 
         const p1 = result.nodes.find((node) => node.id === 'p1');
         expect(p1?.data.icon).toBe('server, api');
@@ -84,12 +84,8 @@ describe('FlowMind DSL V2 Parser', () => {
                 api -> db
             }
         `;
-        const result = parseFlowMindDSL(input);
+        const result = parseOpenFlowDslV2(input);
         expect(result.nodes).toHaveLength(3); // api, db, Backend group
-
-        const group = result.nodes.find(n => n.type === 'group' || n.type === 'container'); // I used 'group' in DSLNode type but might need 'container' mapping
-        // implementation: type: 'group' in DSLNode
-        // finalNodes: type: n.type
 
         const api = result.nodes.find(n => n.id === 'api');
         expect(api?.parentId).toBeDefined();

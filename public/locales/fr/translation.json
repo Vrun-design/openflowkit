@@ -440,7 +440,7 @@
   },
   "commandBar": {
     "ai": {
-      "title": "Demander à Flowpilot",
+      "title": "Demander à AI Studio",
       "clearChat": "Effacer l'historique",
       "placeholder": "Décrivez ce que vous voulez créer...",
       "examples": {
@@ -530,7 +530,7 @@
     "shortcuts": "Raccourcis",
     "running": "{appName} en cours",
     "generalSettings": "Paramètres généraux",
-    "flowpilotConfigurations": "Configurations Flowpilot",
+    "flowpilotConfigurations": "Configuration AI Studio",
     "keyboardShortcuts": "Raccourcis clavier",
     "canvas": {
       "title": "Canevas",
@@ -658,7 +658,7 @@
   "toolbar": {
     "selectMode": "Mode sélection (V)",
     "panMode": "Mode déplacement (H)",
-    "flowpilot": "Flowpilot (Cmd+K)",
+    "flowpilot": "Command Center (Cmd+K)",
     "templates": "Modèles",
     "addItem": "Ajouter un élément",
     "addToCanvas": "Ajouter au canevas",
@@ -685,7 +685,7 @@
     "emptyState": {
       "title": "Commencer à construire",
       "description": "Votre canevas est vide. Générez un flux avec Flowpilot ou commencez de zéro.",
-      "generateWithFlowpilot": "Générer avec Flowpilot",
+      "generateWithFlowpilot": "Générer avec AI Studio",
       "browseTemplates": "Parcourir les modèles",
       "addBlankNode": "Ajouter un nœud vide"
     }

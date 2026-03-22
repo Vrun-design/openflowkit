@@ -25,7 +25,13 @@ export const DocsLayout: React.FC = () => {
                 <div className="font-semibold text-slate-900">{t('docs.documentation')}</div>
                 <div className="flex items-center gap-2">
                     <LanguageSelector variant="minimal" />
-                    <button onClick={toggleMobileMenu} className="p-2 text-slate-500 hover:bg-slate-100 rounded-md">
+                    <button
+                        type="button"
+                        onClick={toggleMobileMenu}
+                        className="p-2 text-slate-500 hover:bg-slate-100 rounded-md"
+                        aria-label={mobileMenuOpen ? t('docs.closeNavigation', 'Close documentation navigation') : t('docs.openNavigation', 'Open documentation navigation')}
+                        aria-expanded={mobileMenuOpen}
+                    >
                         {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                     </button>
                 </div>

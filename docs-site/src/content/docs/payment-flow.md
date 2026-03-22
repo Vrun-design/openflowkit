@@ -1,9 +1,12 @@
 ---
 draft: false
 title: Payment Flow Visualization
+description: Model subscription, checkout, retry, and exception-heavy payment systems in OpenFlowKit.
 ---
 
 Payment systems are one of the best use cases for OpenFlowKit because they mix clear business stages with asynchronous branches, retries, and exception handling.
+
+They are also easy to get wrong if the diagram only shows the happy path. OpenFlowKit is a good fit because it lets you start rough, then keep adding operational detail.
 
 ## What a useful payment diagram should include
 
@@ -17,6 +20,13 @@ Do not stop at the happy path. Most payment diagrams need:
 - customer notification path
 - final account state
 
+Depending on the workflow, you may also need:
+
+- fraud or risk review
+- webhook handling
+- customer notifications
+- ledger or billing-state updates
+
 ## Suggested node pattern
 
 For a typical subscription or checkout diagram:
@@ -26,6 +36,15 @@ For a typical subscription or checkout diagram:
 - `decision` for gateway outcomes
 - `end` for terminal account states
 
+## Strong starting options
+
+You can begin from:
+
+- a blank flowchart canvas
+- a payment or SaaS-oriented template
+- an AI prompt in FlowPilot
+- OpenFlow DSL if the flow should be reviewed as text
+
 ## Example prompt
 
 ```text
@@ -34,6 +53,14 @@ Include invoice due, charge attempt, charge success decision,
 smart retries, request updated card, manual fraud review,
 customer notification, subscription active, and account downgrade.
 ```
+
+## Recommended workflow
+
+1. generate or sketch the happy path
+2. add all failure and retry branches
+3. label edges so business outcomes are explicit
+4. use layout to normalize spacing
+5. export a visual format for stakeholders and JSON for editable retention
 
 ## Why this works well in OpenFlowKit
 

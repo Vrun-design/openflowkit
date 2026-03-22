@@ -1,25 +1,43 @@
 ---
 draft: false
 title: Smart Layout
+description: ELK tabanlı düzen ile kaba grafikleri daha okunabilir diyagramlara dönüştürün.
 ---
 
+OpenFlowKit, kaba grafikleri hızlı biçimde daha okunabilir diyagramlara dönüştürmek için ELK tabanlı düzen stratejileri kullanır.
 
-FlowMind, **ELK (Eclipse Layout Kernel)** tarafından desteklenen güçlü bir "Akıllı Düzen" motoru içerir.
+## Otomatik düzen ne zaman kullanılmalı?
 
-## Nasıl Çalışır?
+- şablonun yapısı doğru ama görünümü dağınıksa
+- yapay zeka doğru düğümleri üretip kötü konumlandırdıysa
+- kod veya içe aktarma sonrası normalizasyon gerekiyorsa
+- elle eklenen dallar yüzünden boşluklar bozulduysa
 
-Karmaşık diyagramları elle çizmek sıkıcıdır. Mantığı düşünmek yerine kutucukları HIZALAMAKLA zaman harcarsınız.
-Akıllı Düzen, düğümleri otomatik olarak düzenlemek için kuvvet yönlü bir algoritma çalıştırarak bu sorunu çözer.
+## Nasıl çalıştırılır?
 
-### Kullanım
-1.  Komut Merkezindeki (veya üst araç çubuğundaki) **Düzen** düğmesine tıklayın.
-2.  Motor, her düğüm ve kenar için en uygun konumu hesaplar.
-3.  Diyagram, yeni yapısına akıcı biçimde animasyonla geçer.
+Komut Merkezi’ni açın ve **Auto Layout** seçin. Editör yön, algoritma ve boşluk tercihlerini düzen motoruna geçirir.
 
-### Özellikler
-*   **Hiyerarşik Katmanlama**: Akış şemaları ve organizasyon ağaçları için mükemmeldir.
-*   **Çakışma Algılama**: Düğümlerin asla üst üste gelmemesini sağlar.
-*   **Kenar Yönlendirme**: Daha temiz bir okunabilirlik için çizgi kesişimlerini en aza indirir.
+Yaygın yönler:
 
-> [!TIP]
-> Ham Mermaid metni içe aktardıktan veya yapay zeka ile büyük bir akış oluşturduktan sonra sonucu anında düzenlemek için Akıllı Düzen'i kullanın.
+- `TB`
+- `LR`
+- `RL`
+- `BT`
+
+## Düzenin güçlü olduğu alanlar
+
+- akış şemaları
+- mimari grafikler
+- dallanan durum diyagramları
+- yapay zeka ile üretilmiş ilk taslaklar
+
+Elle kurgulanmış sunum tarzı diyagramlarda ise her zaman sihirli sonuç vermez.
+
+## Pratik strateji
+
+1. önce doğru düğüm ve kenarları kurun
+2. ardından düzeni çalıştırın
+3. gerekirse bölümlerle gruplayın
+4. son görsel ayarları elle yapın
+
+Yerleşimi düzen çalıştırmadan önce elle mükemmelleştirmeye çalışmak çoğu zaman boşa emektir.

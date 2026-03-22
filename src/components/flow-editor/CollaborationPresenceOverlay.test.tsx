@@ -19,8 +19,7 @@ describe('CollaborationPresenceOverlay', () => {
 
     const cursor = screen.getByTestId('remote-cursor-client-a');
     expect(cursor).toBeTruthy();
-    expect(cursor instanceof HTMLElement ? cursor.style.left : '').toBe('320px');
-    expect(cursor instanceof HTMLElement ? cursor.style.top : '').toBe('180px');
+    expect(cursor instanceof HTMLElement ? cursor.style.transform : '').toBe('translate(330px, 190px)');
   });
 
   it('suppresses untouched ghost cursors at 0,0', () => {

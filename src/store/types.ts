@@ -23,6 +23,7 @@ export interface ViewSettings {
     largeGraphSafetyProfile: 'performance' | 'balanced' | 'quality';
     exportSerializationMode: ExportSerializationMode;
     language: string;
+    lintRules: string;
 }
 
 export type AIProvider =

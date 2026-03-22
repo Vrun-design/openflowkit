@@ -1,29 +1,49 @@
 ---
 draft: false
 title: Properties Panel
+description: OpenFlowKit’te düğüm, kenar, toplu düzenleme ve Studio ile ilişkili ayarlar için sağ taraftaki denetçiyi kullanın.
 ---
 
+Properties Panel, bir düğüm veya kenar seçtiğinizde açılan sağ taraf denetçisidir. Kabaca doğru olan yapıyı kesin düzeye taşıyan ana yüzeydir.
 
-Özellikler Paneli, bireysel düğümleri özelleştirmek için kontrol merkezinizdir. Bir düğüm seçtiğinizde ekranın sağ tarafında görünür.
+## Ne zaman kullanılmalı?
 
-## Düğüm Özelleştirme
+Şu durumlarda kullanın:
 
-### Etiket Düzenleme
-Herhangi bir düğümü doğrudan panelden yeniden adlandırabilirsiniz. Etiket, tuval üzerinde gerçek zamanlı olarak güncellenir.
+- yapı doğru ama ayrıntılar yanlışsa
+- etiket, renk, şekil ve tipografi gibi ayarlar kesinleşecekse
+- kenar etiketleri veya rota davranışı ayarlanacaksa
+- aileye özgü alanlar doğrudan tuvalde düzenlemek için uygun değilse
 
-### Görsel Stil
-Diyagramlarınızı özel stillerle öne çıkarın:
-*   **Renkler**: Anlamlı renk paletinden seçim yapın (Tehlike için Kırmızı, Başarı için Yeşil vb.).
-*   **İkonlar**: Anında tanınabilir hale getirmek için herhangi bir düğüme ikon ekleyin. Tam Lucide React ikon kütüphanesini destekliyoruz.
-*   **Çizgi Stili**: `Düz` ve `Kesik` kenarlıklar arasında geçiş yapın (geçici veya gelecekteki durumları temsil etmek için harikadır).
+## Sağ panelin davranışı
 
-### Düzen ve Boyutlandırma
-*   **Genişlik/Yükseklik**: Piksel mükemmeliyetinde hizalama için boyutları manuel olarak ayarlayın.
-*   **Konum**: Tam X/Y koordinatlarını görüntüleyin ve düzenleyin.
+- tek düğüm seçiliyse: düğüm denetçisi
+- birden fazla düğüm seçiliyse: toplu düzenleme
+- tek kenar seçiliyse: kenar denetçisi
+- Studio aktifse: AI, kod, lint veya ilgili Studio görünümü
 
-## Toplu Düzenleme
+## Düğüm düzenleme
 
-> [!TIP]
-> Hepsini aynı anda düzenlemek için birden fazla düğümü seçebilirsiniz (`Shift + Tıklama`)!
+Tipik olarak şunlar bulunur:
 
-Birden fazla düğüm seçildiğinde, Özellikler Paneli değişiklikleri (renk veya ikon gibi) **tüm** seçili düğümlere uygular.
+- içerik
+- şekil
+- renk
+- ikon
+- tipografi
+- görsel ayarları
+- browser/mobile varyant ayarları
+
+## Kenar düzenleme
+
+Kenar seçildiğinde tipik olarak:
+
+- etiket
+- rota
+- görünüm ayarları
+
+alanları düzenlenebilir.
+
+## Toplu düzenleme
+
+Birden fazla düğüm seçildiğinde ortak stil ve paylaşılan alanları tek seferde güncellemek için toplu düzenleme modu açılır.

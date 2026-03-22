@@ -1,3 +1,5 @@
+import { DEFAULT_AI_SETTINGS } from '../defaults';
+import { sanitizeAISettings } from '../aiSettings';
 import type { FlowState } from '../types';
 
 type SetFlowState = (partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)) => void;
@@ -14,7 +16,7 @@ export function createAIAndSelectionActions(set: SetFlowState): Pick<
 > {
     return {
         setAISettings: (settings) => set((state) => ({
-            aiSettings: { ...state.aiSettings, ...settings },
+            aiSettings: sanitizeAISettings({ ...state.aiSettings, ...settings }, DEFAULT_AI_SETTINGS),
         })),
 
         setSelectedNodeId: (id) => set({ selectedNodeId: id }),

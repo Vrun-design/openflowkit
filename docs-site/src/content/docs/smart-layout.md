@@ -1,6 +1,7 @@
 ---
 draft: false
 title: Smart Layout
+description: Use ELK-based layout to turn rough graphs into cleaner, more readable diagrams in OpenFlowKit.
 ---
 
 OpenFlowKit uses ELK-based layout strategies to turn rough graphs into readable diagrams quickly.
@@ -36,7 +37,7 @@ Auto layout is especially effective for:
 - state-like branching diagrams
 - AI-generated drafts
 
-It is less magical for intentionally hand-composed slides or dense annotated canvases where visual storytelling matters more than graph regularity.
+It is less effective for intentionally hand-composed slides or dense annotated canvases where visual storytelling matters more than graph regularity.
 
 ## Practical strategy
 
@@ -56,17 +57,10 @@ OpenFlow DSL and Mermaid edits are especially effective when combined with layou
 - make structural changes in text
 - apply them
 - run auto layout
-- then finish visual polish in Properties
+- finish visual polish in the properties panel
 
-### Usage
-1.  Click the **Layout** button in the Command Center (or top toolbar).
-2.  The engine calculates the optimal position for every node and edge.
-3.  The diagram animates smoothly to its new structure.
+## Related pages
 
-### Features
-*   **Hierarchical Layering**: Perfect for flowcharts and organizational trees.
-*   **Collision Detection**: Ensures nodes never overlap.
-*   **Edge Routing**: Minimizes line crossings for cleaner readability.
-
-> [!TIP]
-> Use Smart Layout after importing a raw Mermaid text or generating a large flow with AI to instantly tidy up the result.
+- [Canvas Basics](/canvas-basics/)
+- [OpenFlow DSL](/openflow-dsl/)
+- [Mermaid Integration](/mermaid-integration/)

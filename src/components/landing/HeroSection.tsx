@@ -87,11 +87,11 @@ export function HeroSection({ onLaunch }: HeroSectionProps): React.ReactElement 
 
         {/* CTAs - Removed overriding shadow classes */}
         <div className="animate-slide-up opacity-0 [animation-delay:300ms] flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto mb-12 px-6">
-          <Button
-            size="lg"
-            className="w-full sm:w-auto h-14 px-10 transition-all active:scale-95 text-[15px]"
-            onClick={() => {
-              window.open("https://github.com/Vrun-design/FlowMind", "_blank");
+            <Button
+              size="lg"
+              className="w-full sm:w-auto h-14 px-10 transition-all active:scale-95 text-[15px]"
+              onClick={() => {
+              window.open("https://github.com/Vrun-design/openflowkit", "_blank");
             }}
           >
             <GitBranch className="w-4 h-4 mr-2" />

@@ -1,6 +1,7 @@
 import type { CollaborationRoomConfig } from './types';
 
-const DEFAULT_SIGNALING_SERVERS = ['wss://signaling.yjs.dev'];
+const SIGNALING_SERVER = import.meta.env.VITE_SIGNALING_SERVER as string | undefined;
+const DEFAULT_SIGNALING_SERVERS = [SIGNALING_SERVER || 'wss://signaling.yjs.dev'];
 
 export function createCollaborationRoomConfig(roomId: string, clientId: string, password: string): CollaborationRoomConfig {
   return {

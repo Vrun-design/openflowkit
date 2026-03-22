@@ -68,6 +68,26 @@ interface YArrayChangeEvent {
   };
 }
 
+function isStatusEvent(value: unknown): value is { connected?: unknown; status?: unknown } {
+  return typeof value === 'object' && value !== null;
+}
+
+function isSyncedEvent(value: unknown): value is { synced?: unknown } {
+  return typeof value === 'object' && value !== null;
+}
+
+function isPeersEvent(value: unknown): value is { webrtcPeers?: unknown[]; bcPeers?: unknown[] } {
+  return typeof value === 'object' && value !== null;
+}
+
+function readAwarenessPresence(value: unknown): CollaborationPresenceState | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+
+  return mapPresenceFromAwarenessState((value as { presence?: unknown }).presence);
+}
+
 function createDefaultProvider(
   roomId: string,
   doc: Y.Doc,
@@ -249,8 +269,10 @@ export function createYjsPeerCollaborationTransport(
         : Promise.resolve();
 
       statusListener = (event) => {
-        const candidate = event as { connected?: unknown; status?: unknown };
-        const connected = candidate.connected === true || candidate.status === 'connected';
+        if (!isStatusEvent(event)) {
+          return;
+        }
+        const connected = event.connected === true || event.status === 'connected';
         setStatusPatch({
           connected,
         });
@@ -262,20 +284,21 @@ export function createYjsPeerCollaborationTransport(
           });
           return;
         }
-        const candidate = event as { synced?: unknown };
-        if (typeof candidate.synced !== 'boolean') {
+        if (!isSyncedEvent(event) || typeof event.synced !== 'boolean') {
           return;
         }
         setStatusPatch({
-          synced: candidate.synced,
+          synced: event.synced,
         });
       };
       peersListener = (event) => {
-        const candidate = event as { webrtcPeers?: unknown[]; bcPeers?: unknown[] };
-        const webrtcPeerCount = Array.isArray(candidate.webrtcPeers) ? candidate.webrtcPeers.length : 0;
-        const broadcastChannelPeerCount = Array.isArray(candidate.bcPeers) ? candidate.bcPeers.length : 0;
+        if (!isPeersEvent(event)) {
+          return;
+        }
+        const webrtcPeerCount = Array.isArray(event.webrtcPeers) ? event.webrtcPeers.length : 0;
+        const broadcastChannelPeerCount = Array.isArray(event.bcPeers) ? event.bcPeers.length : 0;
         const peerCount = webrtcPeerCount + broadcastChannelPeerCount;
-        if (peerCount === 0 && !Array.isArray(candidate.webrtcPeers) && !Array.isArray(candidate.bcPeers)) {
+        if (peerCount === 0 && !Array.isArray(event.webrtcPeers) && !Array.isArray(event.bcPeers)) {
           return;
         }
         setStatusPatch({
@@ -301,11 +324,7 @@ export function createYjsPeerCollaborationTransport(
         }
         const snapshot: CollaborationPresenceState[] = [];
         for (const [peerId, awarenessState] of states.entries()) {
-          if (typeof awarenessState !== 'object' || awarenessState === null) {
-            continue;
-          }
-          const rawPresence = (awarenessState as { presence?: unknown }).presence;
-          const presence = mapPresenceFromAwarenessState(rawPresence);
+          const presence = readAwarenessPresence(awarenessState);
           if (!presence || presence.clientId === config.clientId) {
             continue;
           }
@@ -314,12 +333,7 @@ export function createYjsPeerCollaborationTransport(
         }
         let originClientId = config.clientId;
         for (const peerId of [...event.added, ...event.updated]) {
-          const awarenessState = states.get(peerId);
-          if (typeof awarenessState !== 'object' || awarenessState === null) {
-            continue;
-          }
-          const rawPresence = (awarenessState as { presence?: unknown }).presence;
-          const presence = mapPresenceFromAwarenessState(rawPresence);
+          const presence = readAwarenessPresence(states.get(peerId));
           if (!presence || presence.clientId === config.clientId) {
             continue;
           }

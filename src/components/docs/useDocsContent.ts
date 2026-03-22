@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
+import { createLogger } from '@/lib/logger';
 import { docsMarkdownLoaders } from './docsMarkdownLoaders';
+
+const logger = createLogger({ scope: 'useDocsContent' });
 
 export const useDocsContent = (slug: string | undefined, lang: string = 'en') => {
     const [content, setContent] = useState<string | null>(null);
@@ -25,19 +28,22 @@ export const useDocsContent = (slug: string | undefined, lang: string = 'en') =>
 
                 // Fallback to English if translation doesn't exist
                 if (!loader && lang !== 'en') {
-                    console.log(`Translation not found for ${lang}, falling back to English`);
+                    logger.info('Translation not found; falling back to English.', { lang, path });
                     loader = docsMarkdownLoaders[fallbackPath];
                 }
 
                 if (!loader) {
-                    console.warn(`Doc not found: ${path}. Available:`, Object.keys(docsMarkdownLoaders));
+                    logger.warn('Documentation page not found.', {
+                        path,
+                        availablePaths: Object.keys(docsMarkdownLoaders),
+                    });
                     throw new Error(`Document not found: ${slug} for language ${lang}`);
                 }
 
                 const rawContent = await loader() as string;
                 setContent(rawContent);
             } catch (err) {
-                console.error(err);
+                logger.error('Failed to load documentation content.', { error: err, slug, lang });
                 setError('Failed to load documentation');
                 setContent(null);
             } finally {

@@ -6,7 +6,6 @@ import {
   CLASS_MARKER_DIAMOND_OPEN,
   CLASS_MARKER_TRIANGLE_OPEN,
   ER_MARKER_BAR,
-  ER_MARKER_CIRCLE,
   ER_MARKER_CROW,
   resolveClassRelationVisualSpec,
   resolveRelationVisualSpec,

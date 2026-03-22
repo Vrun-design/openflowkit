@@ -18,6 +18,14 @@ import {
 } from '@xyflow/react';
 import * as ReactFlowCompatRuntime from '@xyflow/react';
 
+interface ReactFlowRuntimeWithBounds {
+  getNodesBounds?: (input: LegacyNode[]) => ReactFlowRect;
+}
+
+function hasGetNodesBounds(runtime: unknown): runtime is Required<Pick<ReactFlowRuntimeWithBounds, 'getNodesBounds'>> {
+  return typeof (runtime as ReactFlowRuntimeWithBounds).getNodesBounds === 'function';
+}
+
 export type LegacyNode<
   TData extends Record<string, unknown> = Record<string, unknown>,
   TType extends string = string
@@ -73,12 +81,8 @@ export function getCompatibleNodesBounds<
   TData extends Record<string, unknown> = Record<string, unknown>,
   TType extends string = string
 >(nodes: LegacyNode<TData, TType>[]): ReactFlowRect {
-  const reactFlowCompat = (ReactFlowCompatRuntime as unknown as {
-    getNodesBounds?: (input: LegacyNode[]) => ReactFlowRect;
-  });
-
-  if (typeof reactFlowCompat.getNodesBounds === 'function') {
-    return reactFlowCompat.getNodesBounds(nodes);
+  if (hasGetNodesBounds(ReactFlowCompatRuntime)) {
+    return ReactFlowCompatRuntime.getNodesBounds(nodes);
   }
 
   return { x: 0, y: 0, width: 0, height: 0 };

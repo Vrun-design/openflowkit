@@ -23,22 +23,27 @@ function createEdge(id: string, source: string, target: string, label?: string):
 }
 
 describe('serializeCanvasContextForAI', () => {
-  it('serializes nodes/edges with deterministic summary fields', () => {
+  it('returns empty string for empty canvas', () => {
+    expect(serializeCanvasContextForAI([], [])).toBe('');
+  });
+
+  it('serializes nodes/edges as OpenFlow DSL with header comment', () => {
     const nodes = [createNode('n1', 'process', 'A'), createNode('n2', 'decision', 'B')];
     const edges = [createEdge('e1', 'n1', 'n2', 'yes')];
 
     const serialized = serializeCanvasContextForAI(nodes, edges);
-    const parsed = JSON.parse(serialized) as {
-      summary: { nodeCount: number; edgeCount: number; nodeTypes: Record<string, number> };
-      nodes: Array<{ id: string; label: string }>;
-      edges: Array<{ source: string; target: string; label?: string }>;
-    };
 
-    expect(parsed.summary.nodeCount).toBe(2);
-    expect(parsed.summary.edgeCount).toBe(1);
-    expect(parsed.summary.nodeTypes.process).toBe(1);
-    expect(parsed.summary.nodeTypes.decision).toBe(1);
-    expect(parsed.nodes[0].id).toBe('n1');
-    expect(parsed.edges[0].label).toBe('yes');
+    expect(serialized).toContain('# Current diagram');
+    expect(serialized).toContain('n1');
+    expect(serialized).toContain('n2');
+    expect(serialized).toContain('A');
+    expect(serialized).toContain('B');
+  });
+
+  it('appends focused node IDs when selectedNodeIds are provided', () => {
+    const nodes = [createNode('n1', 'process', 'A')];
+    const serialized = serializeCanvasContextForAI(nodes, [], ['n1']);
+
+    expect(serialized).toContain('# Focused nodes: [n1]');
   });
 });

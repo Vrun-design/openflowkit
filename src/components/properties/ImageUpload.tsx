@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Image as ImageIcon, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 
 interface ImageUploadProps {
     imageUrl?: string;

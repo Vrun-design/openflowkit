@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import { createLogger } from '@/lib/logger';
 import { getCompatibleNodesBounds, useReactFlow } from '@/lib/reactflowCompat';
 import { toPng, toJpeg, toSvg } from 'html-to-image';
 import { useFlowStore } from '../store';
@@ -16,10 +17,12 @@ import {
   mapErrorToIssue,
   mapWarningToIssue,
   persistLatestImportReport,
-  summarizeImportReport,
 } from '@/services/importFidelity';
-
 import { useToast } from '../components/ui/ToastContext';
+import { resolveFlowExportViewport } from './flowExportViewport';
+import { createImportReportOutcome, notifyOperationOutcome } from '@/services/operationFeedback';
+
+const logger = createLogger({ scope: 'useFlowExport' });
 
 interface AnimatedPlaybackControls {
   jumpToStep: (stepIndex: number) => void;
@@ -113,17 +116,16 @@ export const useFlowExport = (
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
 
   const handleExport = useCallback((format: 'png' | 'jpeg' = 'png') => {
-    if (!reactFlowWrapper.current) return;
+    const { viewport: flowViewport, message } = resolveFlowExportViewport(reactFlowWrapper.current);
+    if (!flowViewport) {
+      addToast(message ?? 'The canvas viewport could not be found.', 'error');
+      return;
+    }
+
     reactFlowWrapper.current.classList.add('exporting');
 
     setTimeout(() => {
       const { options } = createExportOptions(nodes, format);
-      const flowViewport = document.querySelector('.react-flow__viewport') as HTMLElement;
-
-      if (!flowViewport) {
-        reactFlowWrapper.current?.classList.remove('exporting');
-        return;
-      }
 
       const exportPromise = format === 'png' ? toPng(flowViewport, options) : toJpeg(flowViewport, options);
 
@@ -136,7 +138,7 @@ export const useFlowExport = (
           addToast(`Diagram exported as ${format.toUpperCase()}!`, 'success');
         })
         .catch((err) => {
-          console.error('Export failed:', err);
+          logger.error('Export failed.', { error: err, format });
           addToast('Failed to export. Please try again.', 'error');
         })
         .finally(() => {
@@ -146,17 +148,16 @@ export const useFlowExport = (
   }, [nodes, reactFlowWrapper, addToast]);
 
   const handleSvgExport = useCallback(() => {
-    if (!reactFlowWrapper.current) return;
+    const { viewport: flowViewport, message } = resolveFlowExportViewport(reactFlowWrapper.current);
+    if (!flowViewport) {
+      addToast(message ?? 'The canvas viewport could not be found.', 'error');
+      return;
+    }
+
     reactFlowWrapper.current.classList.add('exporting');
 
     setTimeout(() => {
       const { options } = createExportOptions(nodes, 'png');
-      const flowViewport = document.querySelector('.react-flow__viewport') as HTMLElement;
-
-      if (!flowViewport) {
-        reactFlowWrapper.current?.classList.remove('exporting');
-        return;
-      }
 
       toSvg(flowViewport, { ...options, backgroundColor: null })
         .then((dataUrl) => {
@@ -167,7 +168,7 @@ export const useFlowExport = (
           addToast('Diagram exported as SVG!', 'success');
         })
         .catch((err) => {
-          console.error('SVG export failed:', err);
+          logger.error('SVG export failed.', { error: err });
           addToast('Failed to export SVG. Please try again.', 'error');
         })
         .finally(() => {
@@ -177,13 +178,9 @@ export const useFlowExport = (
   }, [nodes, reactFlowWrapper, addToast]);
 
   const handleAnimatedExport = useCallback(async (kind: AnimatedExportKind) => {
-    if (!reactFlowWrapper.current) {
-      return;
-    }
-
-    const flowViewport = document.querySelector('.react-flow__viewport') as HTMLElement | null;
+    const { viewport: flowViewport, message } = resolveFlowExportViewport(reactFlowWrapper.current);
     if (!flowViewport) {
-      addToast('Animated export is unavailable because the canvas viewport could not be found.', 'error');
+      addToast(message ?? 'Animated export is unavailable because the canvas viewport could not be found.', 'error');
       return;
     }
 
@@ -309,7 +306,7 @@ export const useFlowExport = (
       addToast(`Playback ${extension.toUpperCase()} exported.`, 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Animated export failed.';
-      console.error('Animated export failed:', error);
+      logger.error('Animated export failed.', { error, kind });
       addToast(message, 'error');
     } finally {
       animatedPlayback.stopPlayback();
@@ -374,8 +371,7 @@ export const useFlowExport = (
               issues: parsed.warnings.map((warning) => mapWarningToIssue(warning)),
             });
             persistLatestImportReport(report);
-            addToast(summarizeImportReport(report), report.summary.warningCount > 0 ? 'warning' : 'success');
-            addToast('Diagram loaded successfully!', 'success');
+            notifyOperationOutcome(addToast, createImportReportOutcome(report, 'Diagram loaded successfully!'));
             setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Failed to parse JSON file. Please check the format.';
@@ -387,8 +383,7 @@ export const useFlowExport = (
               issues: [mapErrorToIssue(message)],
             });
             persistLatestImportReport(report);
-            addToast(summarizeImportReport(report), 'error');
-            addToast(message, 'error');
+            notifyOperationOutcome(addToast, createImportReportOutcome(report, message));
           }
         })();
       };

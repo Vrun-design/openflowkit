@@ -1,7 +1,9 @@
 export function processContent(content: string, appName: string): string {
+    const resolvedAppName = appName || 'OpenFlowKit';
+
     return content
-        .replace(/FlowMind/g, appName || 'FlowMind')
-        .replace(/OpenFlowKit/g, appName || 'OpenFlowKit')
+        .replace(/FlowMind/g, resolvedAppName)
+        .replace(/OpenFlowKit/g, resolvedAppName)
         .replace(/\[PLACEHOLDER: (.*?)\]/g, (_, text) => {
             return `<div class="p-8 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 text-center my-8 text-slate-400 text-sm flex flex-col items-center gap-2"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg><span>Image: ${text}</span></div>`;
         });

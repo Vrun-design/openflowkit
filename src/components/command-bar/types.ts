@@ -28,7 +28,7 @@ export interface CommandBarProps {
     onLayout?: (direction?: 'TB' | 'LR' | 'RL' | 'BT', algorithm?: LayoutAlgorithm, spacing?: 'compact' | 'normal' | 'loose') => void;
     onSelectTemplate?: (template: FlowTemplate) => void;
     onOpenStudioAI?: () => void;
-    onOpenStudioFlowMind?: () => void;
+    onOpenStudioOpenFlow?: () => void;
     onOpenStudioMermaid?: () => void;
     onOpenStudioPlayback?: () => void;
     initialView?: CommandView;
@@ -38,6 +38,8 @@ export interface CommandBarProps {
     onAddJourney?: () => void;
     onAddMindmap?: () => void;
     onAddArchitecture?: () => void;
+    onAddClassNode?: () => void;
+    onAddEntityNode?: () => void;
     onAddImage?: (imageUrl: string) => void;
     onAddBrowserWireframe?: () => void;
     onAddMobileWireframe?: () => void;

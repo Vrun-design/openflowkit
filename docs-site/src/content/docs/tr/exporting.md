@@ -1,51 +1,59 @@
 ---
 draft: false
 title: Exporting
+description: Diyagramları OpenFlowKit’ten görsel, oynatma medyası, JSON, kod formatları, tasarım aracı aktarımı veya paylaşım/gömme akışları olarak dışa aktarın.
 ---
 
-FlowMind, diyagramlarınızı sunumlarda, belgelerde veya diğer harici araçlarda kullanmanıza yardımcı olmak için geniş bir dışa aktarma seçenekleri yelpazesi sunar.
+Dışa aktarma menüsü editörün sağ üstünde yer alır ve hem indirilen dosyaları hem de panoya kopyalanan formatları kapsar.
 
-> [!TIP]
-> Tüm dışa aktarma seçeneklerine araç çubuğunun sağ üst köşesindeki **"Dışa Aktar"** düğmesinden ulaşabilirsiniz.
+## İndirilen formatlar
 
-## Görsel Dışa Aktarma
+### PNG ve JPG
 
-Slaytlar, belgeler veya Slack'te paylaşmak için idealdir.
+Şunlar için kullanın:
 
-### PNG (Taşınabilir Ağ Grafikleri)
-Mevcut akışınızın yüksek çözünürlüklü, piksel tabanlı bir görselini dışa aktarır.
-*   **En İyi Kullanım**: Slaytlar, Web, Genel Paylaşım.
-*   **Ayarlar**: Ayarlarda etkinleştirilmişse varsayılan olarak şeffaflık içerir.
+- dokümanlar
+- slaytlar
+- ticket sistemleri
+- hızlı görsel paylaşım
 
-### JPEG (Ortak Fotoğrafçılık Uzmanları Grubu)
-Sıkıştırılmış bir görsel dosyası dışa aktarır.
-*   **En İyi Kullanım**: E-posta ekleri, dosya boyutunun önemli olduğu durumlar.
-*   **Not**: Şeffaflığı desteklemez (arka plan beyaz olacaktır).
+PNG genellikle şeffaflık ve netlik açısından daha iyi varsayılandır. JPG ise beyaz arka planlı hafif paylaşım için uygundur.
 
-## Veri ve Kod Dışa Aktarma
+### SVG
 
-FlowMind bir "Kod Olarak Diyagram" aracıdır; bu nedenle diyagram verilerinizi birinci sınıf vatandaş olarak ele alıyoruz.
+Web, dokümantasyon ve ölçeklenebilir tasarım kullanımları için en iyi seçenektir.
 
-### JSON (FlowMind Yerel Formatı)
-Tüm düğüm konumlarını, stillerini ve verilerini içeren ham `.json` dosyasını indirir.
-*   **En İyi Kullanım**: Yedekleme, Sürüm Kontrolü, Diğer FlowMind kullanıcılarıyla düzenlenebilir dosya paylaşımı.
+### JSON
 
-### FlowMind DSL
-Basitleştirilmiş Alan Spesifik Dil (DSL) temsilini panonuza kopyalar.
-*   **En İyi Kullanım**: Diyagram mantığını kod tabanı yorumlarında saklamak veya yapay zeka aracılığıyla benzer akışlar oluşturmak.
+OpenFlowKit’e en yüksek sadakatle geri içe aktarılabilen ana arşiv formatıdır. Şunlar için kullanın:
 
-### Mermaid.js
-Mevcut diyagramınızı [Mermaid](https://mermaid.js.org/) sözdizimine dönüştürür ve panoya kopyalar.
-*   **En İyi Kullanım**: GitHub `README.md` dosyalarına, Notion veya Obsidian'a diyagram gömme.
-*   **Desteklenen**: Temel Akış Şemaları, Sekans Diyagramları.
+- yedekleme
+- düzenlenebilir ana kopya saklama
+- tarayıcılar arası aktarım
+- ileri tarihte tekrar düzenlenecek diyagramlar
 
-### PlantUML
-Diyagramınızın PlantUML temsilini kopyalar.
-*   **En İyi Kullanım**: Kurumsal wikiler (Confluence) veya eski dokümantasyon sistemleri.
+### Oynatma videosu ve GIF
 
-### Figma
-Figma'nın yapıştırma formatıyla uyumlu bir vektör temsilini kopyalar.
-*   **En İyi Kullanım**: Yüksek kaliteli parlatma için diyagramları tasarımcılara teslim etme.
+Değişimin zaman içinde anlatılması gereken akışlar için kullanın.
 
-> [!WARNING]
-> Figma dışa aktarma deneyseldir. Karmaşık özel düğümler %100 mükemmel aktarılmayabilir.
+## Panoya kopyalanan formatlar
+
+- OpenFlow DSL
+- Mermaid
+- PlantUML
+- Figma editable export
+
+Bu formatlar bir sonraki araç metin veya tasarım düzeyinde girdi beklediğinde daha uygundur.
+
+## Paylaşım
+
+Menüdeki **Share / Embed** seçeneği izleyici bağlantısı ve iş birliği odası akışları içindir.
+
+## Önerilen yaklaşım
+
+Çoğu ciddi kullanım için iyi bir desen şudur:
+
+1. JSON’u düzenlenebilir ana kopya olarak saklayın
+2. sunum için görsel format dışa aktarın
+3. metin iş akışı gerekiyorsa Mermaid veya DSL üretin
+4. etkileşim gerekiyorsa paylaşım/gömme akışını kullanın

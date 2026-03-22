@@ -1,6 +1,8 @@
 import React, { memo, useEffect, useState } from 'react';
 import type { LegacyNodeProps } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
+import { useArchitectureLint } from '@/context/ArchitectureLintContext';
+import { useDiagramDiff } from '@/context/DiagramDiffContext';
 
 import { NamedIcon } from './IconMap';
 import MemoizedMarkdown from './MemoizedMarkdown';
@@ -51,18 +53,23 @@ function toCssSize(value: number | string | undefined): string | undefined {
 }
 
 /** Lightweight Shift-key watcher — mounts only while a node is selected. */
-function ShiftKeyResizeWatcher({ onShiftChange }: { onShiftChange: (held: boolean) => void }): null {
+function useShiftHeld(selected: boolean): boolean {
+  const [shiftHeld, setShiftHeld] = useState(false);
+
   useEffect(() => {
-    const down = (e: KeyboardEvent) => { if (e.key === 'Shift') onShiftChange(true); };
-    const up = (e: KeyboardEvent) => { if (e.key === 'Shift') onShiftChange(false); };
+    if (!selected) return;
+
+    const down = (e: KeyboardEvent) => { if (e.key === 'Shift') setShiftHeld(true); };
+    const up = (e: KeyboardEvent) => { if (e.key === 'Shift') setShiftHeld(false); };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     return () => {
       window.removeEventListener('keydown', down);
       window.removeEventListener('keyup', up);
     };
-  }, [onShiftChange]);
-  return null;
+  }, [selected]);
+
+  return selected ? shiftHeld : false;
 }
 
 interface NodeShapeSVGProps {
@@ -100,7 +107,6 @@ function NodeShapeSVG({ shape, fill, stroke, strokeWidth }: NodeShapeSVGProps): 
 
 interface IconAssetNodeBodyProps {
   selected: boolean;
-  setShiftHeld: (held: boolean) => void;
   connectionHandleClass: string;
   explicitWidth: number | string | undefined;
   nodeHeightPx: number | undefined;
@@ -122,7 +128,6 @@ interface IconAssetNodeBodyProps {
 /** Renders the compact icon-first presentation used for architecture asset nodes. */
 function IconAssetNodeBody({
   selected,
-  setShiftHeld,
   connectionHandleClass,
   explicitWidth,
   nodeHeightPx,
@@ -139,7 +144,6 @@ function IconAssetNodeBody({
 
   return (
     <>
-      {selected && <ShiftKeyResizeWatcher onShiftChange={setShiftHeld} />}
       <NodeTransformControls isVisible={selected} minWidth={96} minHeight={96} keepAspectRatio={false} />
       <NodeChrome
         selected={selected}
@@ -198,13 +202,47 @@ function IconAssetNodeBody({
   );
 }
 
+function DiffBadge({ nodeId }: { nodeId: string }): React.ReactElement | null {
+  const { isActive, addedNodeIds, changedNodeIds } = useDiagramDiff();
+  if (!isActive) return null;
+  const isAdded = addedNodeIds.has(nodeId);
+  const isChanged = !isAdded && changedNodeIds.has(nodeId);
+  if (!isAdded && !isChanged) return null;
+  return (
+    <div
+      className="absolute -top-2 -left-2 z-20 h-4 w-4 rounded-full shadow-md pointer-events-none"
+      style={{ backgroundColor: isAdded ? '#22c55e' : '#f59e0b' }}
+      title={isAdded ? 'Added in current version' : 'Changed since snapshot'}
+    />
+  );
+}
+
+function LintViolationBadge({ nodeId }: { nodeId: string }): React.ReactElement | null {
+  const { violations, violatingNodeIds } = useArchitectureLint();
+  if (!violatingNodeIds.has(nodeId)) return null;
+
+  const nodeViolations = violations.filter((v) => v.nodeIds.includes(nodeId));
+  const hasError = nodeViolations.some((v) => v.severity === 'error');
+  const title = nodeViolations.map((v) => v.message).join('\n');
+
+  return (
+    <div
+      className="absolute -top-2 -right-2 z-20 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white shadow-md pointer-events-auto select-none"
+      style={{ backgroundColor: hasError ? '#ef4444' : '#f59e0b' }}
+      title={title}
+    >
+      {nodeViolations.length > 1 ? nodeViolations.length : '!'}
+    </div>
+  );
+}
+
 function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
   const { id, data, type, selected } = props;
   const explicitNodeStyle = (props as { style?: React.CSSProperties }).style;
   const explicitWidth = data.width ?? explicitNodeStyle?.width;
   const explicitHeight = data.height ?? explicitNodeStyle?.height;
   const measuredHeight = (props as { height?: number }).height;
-  const [shiftHeld, setShiftHeld] = useState(false);
+  const shiftHeld = useShiftHeld(Boolean(selected));
   const providerAssetKey = data.archIconPackId && data.archIconShapeId
     ? `${data.archIconPackId}:${data.archIconShapeId}`
     : null;
@@ -323,7 +361,12 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
   // Square-aspect shapes enforce aspect-ratio so the geometry stays correct on resize.
   const needsSquareAspect = activeShape === 'circle' || activeShape === 'ellipse' || activeShape === 'diamond' || activeShape === 'hexagon';
 
+  const selectionRing = isActiveSelected && !isComplexShape
+    ? `, 0 0 0 2px var(--brand-primary, #e95420)`
+    : '';
+
   // Container style
+  const animateIn = data.freshlyAdded === true;
   const containerStyle: React.CSSProperties = {
     minWidth,
     minHeight: effectiveMinHeight,
@@ -333,12 +376,15 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
     ...fontFamilyStyle,
 
     // Apply Design System Styles for Box Shadow and Border
-    boxShadow: !isComplexShape ? designSystem.components.node.boxShadow : 'none',
+    boxShadow: !isComplexShape ? `${designSystem.components.node.boxShadow}${selectionRing}` : 'none',
     borderWidth: !isComplexShape ? designSystem.components.node.borderWidth : 0,
     padding: 0, // Padding handled by inner content wrapper.
     borderRadius: getBorderRadius(),
     backgroundColor: !isComplexShape ? visualStyle.bg : undefined,
     borderColor: !isComplexShape ? visualStyle.border : undefined,
+    ...(animateIn ? {
+      animation: `nodeAnimateIn 180ms ease-out ${data.animateDelay ?? 0}ms both`,
+    } : {}),
   };
 
   if (isIconAssetNode) {
@@ -346,7 +392,6 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
       <>
         <IconAssetNodeBody
           selected={Boolean(selected)}
-          setShiftHeld={setShiftHeld}
           connectionHandleClass={connectionHandleClass}
           explicitWidth={explicitWidth}
           nodeHeightPx={nodeHeightPx}
@@ -363,8 +408,6 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
 
   return (
     <>
-      {/* Shift key state for proportional resize */}
-      {selected && <ShiftKeyResizeWatcher onShiftChange={setShiftHeld} />}
       <NodeTransformControls
         isVisible={Boolean(selected)}
         minWidth={minWidth}
@@ -393,6 +436,9 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
           hasSubLabel,
         })}
       >
+        <DiffBadge nodeId={id} />
+        <LintViolationBadge nodeId={id} />
+
         {/* SVG Background Layer for Complex Shapes */}
         {isComplexShape && (
           <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center">

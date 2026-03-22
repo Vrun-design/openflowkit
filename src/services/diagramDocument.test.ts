@@ -26,7 +26,7 @@ describe('diagramDocument', () => {
   it('creates export document with version metadata', () => {
     const doc = createDiagramDocument([createNode('n1')], [createEdge('e1', 'n1', 'n1')], DEFAULT_DIAGRAM_TYPE, { extendedDocumentModel: false });
     expect(doc.version).toBe(DIAGRAM_DOCUMENT_VERSION);
-    expect(doc.name).toBe('FlowMind Diagram');
+    expect(doc.name).toBe('OpenFlowKit Diagram');
     expect(doc.diagramType).toBe(DEFAULT_DIAGRAM_TYPE);
     expect(typeof doc.createdAt).toBe('string');
   });

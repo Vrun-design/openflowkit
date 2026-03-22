@@ -93,7 +93,7 @@ describe('StudioCodePanel', () => {
     fireEvent.change(textbox, { target: { value: 'broken dsl' } });
 
     expect(screen.getByText('Needs fixes')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Apply Changes' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('button', { name: 'Apply to canvas' }).hasAttribute('disabled')).toBe(true);
   });
 
   it('applies valid changed drafts and marks them applied', async () => {
@@ -102,7 +102,7 @@ describe('StudioCodePanel', () => {
     const textbox = screen.getByRole('textbox');
     fireEvent.change(textbox, { target: { value: 'flow: "Updated"\ndirection: TB' } });
 
-    const applyButton = screen.getByRole('button', { name: 'Apply Changes' });
+    const applyButton = screen.getByRole('button', { name: 'Apply to canvas' });
     expect(applyButton.hasAttribute('disabled')).toBe(false);
 
     fireEvent.click(applyButton);

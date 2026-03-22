@@ -60,6 +60,7 @@ export function HomeFlowRenameDialog({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="home-flow-rename-title"
+                aria-describedby="home-flow-rename-description"
                 className="w-full max-w-md rounded-[var(--radius-xl)] border border-slate-200 bg-white shadow-2xl"
             >
                 <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
@@ -71,7 +72,7 @@ export function HomeFlowRenameDialog({
                             <h2 id="home-flow-rename-title" className="text-base font-semibold text-slate-900">
                                 {t('home.renameFlow.title', 'Rename flow')}
                             </h2>
-                            <p className="text-sm text-slate-500">
+                            <p id="home-flow-rename-description" className="text-sm text-slate-500">
                                 {t('home.renameFlow.description', 'Update the name shown on your dashboard and tabs.')}
                             </p>
                         </div>
@@ -161,6 +162,7 @@ export function HomeFlowDeleteDialog({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="home-flow-delete-title"
+                aria-describedby="home-flow-delete-description"
                 className="w-full max-w-md rounded-[var(--radius-xl)] border border-slate-200 bg-white shadow-2xl"
             >
                 <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
@@ -172,7 +174,7 @@ export function HomeFlowDeleteDialog({
                             <h2 id="home-flow-delete-title" className="text-base font-semibold text-slate-900">
                                 {t('home.deleteFlow.title', 'Delete flow')}
                             </h2>
-                            <p className="text-sm text-slate-500">
+                            <p id="home-flow-delete-description" className="text-sm text-slate-500">
                                 {t('home.deleteFlow.description', 'This removes the local autosaved flow from this device.')}
                             </p>
                         </div>

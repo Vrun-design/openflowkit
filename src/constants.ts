@@ -1,5 +1,5 @@
 import { MarkerType } from '@/lib/reactflowCompat';
-import { type FlowEdge, type FlowNode, NodeType } from '@/lib/types';
+import { type FlowEdge, type FlowNode } from '@/lib/types';
 import { createId } from '@/lib/id';
 
 // --- Edge Styles (inline for reliable SVG rendering) ---

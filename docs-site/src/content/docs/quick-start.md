@@ -1,11 +1,12 @@
 ---
 draft: false
 title: Quick Start
+description: Create your first OpenFlowKit diagram from the canvas, templates, AI, code, or structured imports.
 ---
 
-This walkthrough is the fastest reliable way to get productive in the current app.
+This is the fastest reliable way to get productive in the current app.
 
-## 1. Open or create a flow
+## 1. Open or create a document
 
 From the home screen you can:
 
@@ -14,11 +15,11 @@ From the home screen you can:
 - duplicate a saved flow
 - import a JSON diagram document
 
-Each flow opens in its own tab inside the editor.
+Each document opens in its own editor tab.
 
 ## 2. Pick a starting point
 
-You have five realistic entry paths:
+Pick the path that matches the information you already have.
 
 ### Blank canvas
 
@@ -34,58 +35,38 @@ Open **Assets** from the Command Center to add notes, text, sections, wireframes
 
 ### AI
 
-Switch the right rail to Studio and open the **AI** tab. Enter a prompt such as:
+Switch the right rail to Studio and open the **FlowPilot** tab. Enter a prompt such as:
 
 ```text
 Create a SaaS onboarding workflow with signup, email verification,
-workspace setup, billing check, and success/failure branches.
+team invite, workspace creation, billing setup, and first success milestone.
 ```
 
 ### Code
 
-Open Studio and switch to **OpenFlow DSL** or **Mermaid** if you prefer to start from text.
+If you already have Mermaid or OpenFlow DSL, open Studio and switch to the **Code** tab to paste and apply it.
 
-## 3. Edit on the canvas
+### Structured input
 
-Once you have content:
+If you already have SQL, OpenAPI, Terraform, or Kubernetes text, use the import flows in Studio. See [Import from Structured Data](/import-from-data/) and [Infrastructure Sync](/infra-sync/).
 
-- drag nodes to reposition them
-- click a node or edge to open the Properties panel
-- drag from a handle to create a connection
-- use `Shift + Click` or `Shift + Drag` for multi-select
-- use `Cmd/Ctrl + D` to duplicate
-- use `Delete` or `Backspace` to remove the current selection
+## 3. Refine the draft
 
-## 4. Clean up the structure
+Once something is on the canvas:
 
-For fast organization:
+- move nodes into rough position
+- use the [Properties Panel](/properties-panel/) for exact edits
+- run [Smart Layout](/smart-layout/) when the structure is right but spacing is rough
+- use the [Command Center](/command-center/) to search, switch workflows, or insert more assets
 
-1. Open `Cmd/Ctrl + K`
-2. Choose **Auto Layout**
-3. Pick direction, algorithm, and spacing
+## 4. Save recovery points
 
-The app uses ELK-based layout strategies and passes the active diagram type into layout decisions where relevant.
+Before a major AI rewrite or import refresh, review the snapshot/history tooling so you can recover quickly if the new result is worse. See [Playback & History](/playback-history/).
 
-## 5. Save a recovery point
+## 5. Share or export
 
-Open the history panel and create a manual snapshot before major edits. OpenFlowKit also keeps automatic snapshots while you work.
+Use the export menu when you are ready to move the diagram into docs, design tools, or collaboration workflows.
 
-## 6. Export or share
-
-Use the top-right export menu for:
-
-- PNG
-- JPG
-- JSON
-- OpenFlow DSL
-- Mermaid
-- PlantUML
-- Figma payload copy
-
-Use the Share control if you want a lightweight collaboration room link.
-
-## Recommended next steps
-
-- Read [Canvas Basics](/canvas-basics/) for navigation and selection details
-- Read [Properties Panel](/properties-panel/) for editing controls
-- Read [AI Generation](/ai-generation/) if you plan to use FlowPilot or BYOK models
+- See [Choose an Export Format](/choose-export-format/)
+- See [Exporting](/exporting/)
+- See [Collaboration & Sharing](/collaboration-sharing/)

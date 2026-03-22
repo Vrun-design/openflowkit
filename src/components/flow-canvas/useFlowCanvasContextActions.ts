@@ -33,7 +33,6 @@ export function useFlowCanvasContextActions({
     contextMenu,
     onCloseContextMenu,
     screenToFlowPosition,
-    copySelection,
     pasteSelection,
     duplicateNode,
     deleteNode,

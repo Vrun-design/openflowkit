@@ -1,10 +1,9 @@
-import { useRef, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import {
     ArrowUp, Code2, Database, Server, Cloud, Network,
-    Loader2, Paperclip, Trash2, WandSparkles, X, FileCode, Crosshair, Import,
+    Loader2, Paperclip, Trash2, WandSparkles, X, FileCode, Crosshair, Import, Edit3,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import type { ChatMessage } from '@/services/aiService';
 import { IS_BEVELED } from '@/lib/brand';
 import { useAIViewState } from './command-bar/useAIViewState';
@@ -15,13 +14,20 @@ import {
 } from '@/hooks/ai-generation/codeToArchitecture';
 import { TERRAFORM_FORMAT_LABELS, type TerraformInputFormat } from '@/hooks/ai-generation/terraformToCloud';
 
-interface FlowPilotExample {
+interface AIStudioExample {
     label: string;
     icon: typeof Database;
     prompt: string;
 }
 
-const FLOWPILOT_EXAMPLES: FlowPilotExample[] = [
+const EMPTY_CANVAS_EXAMPLES: AIStudioExample[] = [
+    { label: 'Microservices architecture', icon: Server, prompt: 'Generate a microservices architecture with API gateway, auth service, user service, order service, and a shared PostgreSQL database' },
+    { label: 'AWS 3-tier webapp', icon: Cloud, prompt: 'Generate a 3-tier AWS architecture with CloudFront, ALB, ECS Fargate, RDS PostgreSQL, and ElastiCache Redis' },
+    { label: 'User auth flow', icon: Network, prompt: 'Generate a user authentication flow showing login, registration, password reset, OAuth, and session management' },
+    { label: 'CI/CD pipeline', icon: Database, prompt: 'Generate a CI/CD pipeline with GitHub, build, test, staging deploy, approval gate, and production deploy stages' },
+];
+
+const ITERATION_EXAMPLES: AIStudioExample[] = [
     { label: 'Add Database', icon: Database, prompt: 'Add a PostgreSQL database to the architecture' },
     { label: 'Add Server', icon: Server, prompt: 'Add a backend Node.js server service' },
     { label: 'Add Cloud Infrastructure', icon: Cloud, prompt: 'Deploy the main application to AWS' },
@@ -64,12 +70,30 @@ interface StudioAIPanelProps {
     onSqlAnalysis?: (sql: string) => Promise<void>;
     onTerraformAnalysis?: (input: string, format: TerraformInputFormat) => Promise<void>;
     onOpenApiAnalysis?: (spec: string) => Promise<void>;
+    nodeCount?: number;
     selectedNodeCount?: number;
+    initialPrompt?: string;
+    onInitialPromptConsumed?: () => void;
 }
 
 type AIMode = 'chat' | 'code' | 'import';
 
 const AI_MODES: AIMode[] = ['chat', 'code', 'import'];
+
+const AI_MODE_COPY: Record<AIMode, { label: string; caption: string }> = {
+    chat: {
+        label: 'AI Studio',
+        caption: 'Prompt targeted edits, additions, and refinements.',
+    },
+    code: {
+        label: 'From code',
+        caption: 'Paste source files to generate an architecture draft.',
+    },
+    import: {
+        label: 'Structured import',
+        caption: 'Turn SQL, Terraform, or OpenAPI into a canvas.',
+    },
+};
 
 export function StudioAIPanel({
     onAIGenerate,
@@ -80,7 +104,10 @@ export function StudioAIPanel({
     onSqlAnalysis,
     onTerraformAnalysis,
     onOpenApiAnalysis,
+    nodeCount = 0,
     selectedNodeCount = 0,
+    initialPrompt,
+    onInitialPromptConsumed,
 }: StudioAIPanelProps): ReactElement {
     const { t } = useTranslation();
     const isBeveled = IS_BEVELED;
@@ -88,8 +115,8 @@ export function StudioAIPanel({
     const [aiMode, setAiMode] = useState<AIMode>('chat');
     const [codeInput, setCodeInput] = useState('');
     const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>('typescript');
-    const showCodeTab = ROLLOUT_FLAGS.codeToArchitectureV1 && Boolean(onCodeAnalysis);
-    const showImportTab = ROLLOUT_FLAGS.importAdaptersV1 && (Boolean(onSqlAnalysis) || Boolean(onTerraformAnalysis) || Boolean(onOpenApiAnalysis));
+    const showCodeTab = Boolean(onCodeAnalysis);
+    const showImportTab = Boolean(onSqlAnalysis) || Boolean(onTerraformAnalysis) || Boolean(onOpenApiAnalysis);
     const [importType, setImportType] = useState<ImportType>('sql');
     const [importInput, setImportInput] = useState('');
     const [terraformFormat, setTerraformFormat] = useState<TerraformInputFormat>('terraform');
@@ -111,6 +138,13 @@ export function StudioAIPanel({
         onClose: () => undefined,
         chatMessageCount: chatMessages.length,
     });
+
+    useEffect(() => {
+        if (initialPrompt) {
+            setPrompt(initialPrompt);
+            onInitialPromptConsumed?.();
+        }
+    }, [initialPrompt, onInitialPromptConsumed, setPrompt]);
 
     const hasHistory = chatMessages.length > 0;
 
@@ -145,8 +179,13 @@ export function StudioAIPanel({
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
             {(showCodeTab || showImportTab) && (
-                <div className="flex gap-1 border-b border-slate-100 px-1 pb-0 pt-1 shrink-0">
-                    {AI_MODES.filter((mode) => {
+                <div className="shrink-0 border-b border-slate-100 px-3 pb-3 pt-2">
+                    <div className="mb-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Studio actions</p>
+                        <p className="mt-1 text-xs text-slate-500">{AI_MODE_COPY[aiMode].caption}</p>
+                    </div>
+                    <div className="flex gap-1">
+                        {AI_MODES.filter((mode) => {
                         if (mode === 'code') return showCodeTab;
                         if (mode === 'import') return showImportTab;
                         return true;
@@ -163,17 +202,18 @@ export function StudioAIPanel({
                             {mode === 'chat' && <WandSparkles className="h-3.5 w-3.5" />}
                             {mode === 'code' && <Code2 className="h-3.5 w-3.5" />}
                             {mode === 'import' && <Import className="h-3.5 w-3.5" />}
-                            {mode === 'chat' ? 'FlowPilot' : mode === 'code' ? 'From Code' : 'Import'}
+                            {AI_MODE_COPY[mode].label}
                         </button>
                     ))}
+                    </div>
                 </div>
             )}
 
             {aiMode === 'import' && showImportTab ? (
                 <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-3 custom-scrollbar">
                     <div className="rounded-[var(--radius-md)] border border-slate-200 bg-[var(--brand-primary-50)] p-3">
-                        <p className="text-xs font-medium text-[var(--brand-primary)]">Import from structured data</p>
-                        <p className="mt-0.5 text-[11px] text-slate-500">Paste SQL, Terraform, or OpenAPI specs — FlowPilot will generate a diagram automatically.</p>
+                        <p className="text-xs font-medium text-[var(--brand-primary)]">Import structured data</p>
+                        <p className="mt-0.5 text-[11px] leading-5 text-slate-500">Paste SQL, Terraform, Kubernetes, Docker Compose, or OpenAPI specs to generate an editable draft.</p>
                     </div>
 
                     <div className="flex gap-1.5 flex-wrap">
@@ -220,17 +260,17 @@ export function StudioAIPanel({
                         className={`flex h-9 w-full items-center justify-center gap-2 rounded-[var(--brand-radius)] bg-[var(--brand-primary)] text-sm font-medium text-white transition-all hover:bg-[var(--brand-primary-600)] disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98] ${isBeveled ? 'btn-beveled' : ''}`}
                     >
                         {isGenerating ? (
-                            <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</>
+                            <><Loader2 className="h-4 w-4 animate-spin" /> Generating draft...</>
                         ) : (
-                            <><WandSparkles className="h-4 w-4" /> Generate Diagram</>
+                            <><WandSparkles className="h-4 w-4" /> Generate from import</>
                         )}
                     </button>
                 </div>
             ) : aiMode === 'code' && showCodeTab ? (
                 <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-3 custom-scrollbar">
                     <div className="rounded-[var(--radius-md)] border border-slate-200 bg-[var(--brand-primary-50)] p-3">
-                        <p className="text-xs font-medium text-[var(--brand-primary)]">Paste source code below</p>
-                        <p className="mt-0.5 text-[11px] text-slate-500">FlowPilot will analyze the structure and generate an architecture diagram on your canvas.</p>
+                        <p className="text-xs font-medium text-[var(--brand-primary)]">Generate from source code</p>
+                        <p className="mt-0.5 text-[11px] leading-5 text-slate-500">Paste source files or upload a snippet. AI Studio will analyze the structure and build an architecture draft on the canvas.</p>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -273,9 +313,9 @@ export function StudioAIPanel({
                         className={`flex h-9 w-full items-center justify-center gap-2 rounded-[var(--brand-radius)] bg-[var(--brand-primary)] text-sm font-medium text-white transition-all hover:bg-[var(--brand-primary-600)] disabled:cursor-not-allowed disabled:opacity-40 active:scale-[0.98] ${isBeveled ? 'btn-beveled' : ''}`}
                     >
                         {isGenerating ? (
-                            <><Loader2 className="h-4 w-4 animate-spin" /> Analyzing...</>
+                            <><Loader2 className="h-4 w-4 animate-spin" /> Analyzing code...</>
                         ) : (
-                            <><WandSparkles className="h-4 w-4" /> Generate Architecture</>
+                            <><WandSparkles className="h-4 w-4" /> Generate from code</>
                         )}
                     </button>
                 </div>
@@ -299,12 +339,14 @@ export function StudioAIPanel({
                                 <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-[var(--radius-md)] border border-[var(--brand-primary-100)] bg-[var(--brand-primary-50)] text-[var(--brand-primary)] shadow-sm">
                                     <WandSparkles className="h-6 w-6" />
                                 </div>
-                                <h3 className="text-xl font-semibold tracking-tight text-slate-900">FlowPilot</h3>
+                                <h3 className="text-xl font-semibold tracking-tight text-slate-900">AI Studio</h3>
                                 <p className="mt-2 mb-6 max-w-[280px] text-sm leading-6 text-slate-500">
-                                    Describe the changes you want and FlowPilot will update the graph for you.
+                                    {nodeCount === 0
+                                        ? 'Start with a template or describe your diagram from scratch.'
+                                        : 'Describe the change you want. AI Studio works best for targeted edits, additions, and quick first drafts.'}
                                 </p>
                                 <div className="flex flex-wrap items-center justify-center gap-2.5 max-w-[320px] mx-auto">
-                                    {FLOWPILOT_EXAMPLES.map((skill, index) => {
+                                    {(nodeCount === 0 ? EMPTY_CANVAS_EXAMPLES : ITERATION_EXAMPLES).map((skill, index) => {
                                         const Icon = skill.icon;
                                         return (
                                             <button
@@ -341,14 +383,21 @@ export function StudioAIPanel({
                     </div>
 
                     <div className="border-t border-slate-100 px-1 pt-3">
-                        {selectedNodeCount > 0 && (
+                        {selectedNodeCount > 0 ? (
                             <div className="mb-2 flex items-center gap-1.5 rounded-md bg-[var(--brand-primary-50)] px-2.5 py-1.5">
                                 <Crosshair className="h-3 w-3 shrink-0 text-[var(--brand-primary)]" />
                                 <span className="text-[11px] font-medium text-[var(--brand-primary)]">
-                                    Editing {selectedNodeCount} selected {selectedNodeCount === 1 ? 'node' : 'nodes'}
+                                    Targeting {selectedNodeCount} selected {selectedNodeCount === 1 ? 'node' : 'nodes'}
                                 </span>
                             </div>
-                        )}
+                        ) : nodeCount > 0 ? (
+                            <div className="mb-2 flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                                <Edit3 className="h-3 w-3 shrink-0 text-slate-500" />
+                                <span className="text-[11px] font-medium text-slate-500">
+                                    Editing existing diagram
+                                </span>
+                            </div>
+                        ) : null}
                         {selectedImage && (
                             <div className="group relative mb-3 h-16 w-16 overflow-hidden rounded-[var(--radius-md)] border border-slate-200 bg-slate-100 shadow-sm">
                                 <img src={selectedImage} alt="Upload preview" className="h-full w-full object-cover" />
@@ -366,7 +415,13 @@ export function StudioAIPanel({
                                 value={prompt}
                                 onChange={(event) => setPrompt(event.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder="Describe your edits..."
+                                placeholder={
+                                    selectedNodeCount > 0
+                                        ? `Describe what to change about the ${selectedNodeCount} selected node${selectedNodeCount > 1 ? 's' : ''}...`
+                                        : nodeCount > 0
+                                            ? "Describe a change \u2014 e.g. 'make auth service red' or 'add Redis between API and DB'"
+                                            : 'Describe a diagram to generate from scratch...'
+                                }
                                 className="w-full resize-none rounded-t-[var(--brand-radius)] bg-transparent p-4 text-sm text-[var(--brand-text)] placeholder-[var(--brand-secondary-light)] outline-none custom-scrollbar"
                                 style={{ minHeight: '60px', maxHeight: '160px' }}
                                 rows={2}
@@ -394,7 +449,7 @@ export function StudioAIPanel({
                                         disabled={(!prompt.trim() && !selectedImage) || isGenerating}
                                         className={`flex h-8 w-8 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-600)] disabled:bg-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 flex-shrink-0 ${isBeveled ? 'btn-beveled' : ''}`}
                                     >
-                                        {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+                                        {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : nodeCount > 0 ? <Edit3 className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
                                     </button>
                                 </div>
                             </div>

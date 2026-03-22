@@ -6,9 +6,11 @@ import {
     GitBranch,
     Group,
     Image as ImageIcon,
+    LayoutList,
     Search,
     Smartphone,
     StickyNote,
+    Table2,
     Type,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -43,6 +45,8 @@ interface AssetsViewProps {
     onAddImage: (imageUrl: string) => void;
     onAddBrowserWireframe: () => void;
     onAddMobileWireframe: () => void;
+    onAddClassNode: () => void;
+    onAddEntityNode: () => void;
     onAddDomainLibraryItem: (item: DomainLibraryItem) => void;
 }
 
@@ -101,6 +105,8 @@ export function AssetsView({
     onAddImage,
     onAddBrowserWireframe,
     onAddMobileWireframe,
+    onAddClassNode,
+    onAddEntityNode,
     onAddDomainLibraryItem,
 }: AssetsViewProps): React.ReactElement {
     const { t } = useTranslation();
@@ -222,6 +228,26 @@ export function AssetsView({
             icon: <ImageIcon className="h-5 w-5" />,
             keywords: ['image', 'media', 'upload', 'screenshot'],
             action: requestImageUpload,
+        },
+        {
+            id: 'class',
+            label: 'Class',
+            icon: <LayoutList className="h-5 w-5" />,
+            keywords: ['class', 'uml', 'object', 'oop'],
+            action: () => {
+                onAddClassNode();
+                onClose();
+            },
+        },
+        {
+            id: 'entity',
+            label: 'Entity',
+            icon: <Table2 className="h-5 w-5" />,
+            keywords: ['entity', 'er', 'erd', 'table', 'database', 'schema'],
+            action: () => {
+                onAddEntityNode();
+                onClose();
+            },
         },
         {
             id: 'browser',
@@ -554,7 +580,7 @@ export function AssetsView({
                                     >
                                         <div className="flex h-14 w-14 items-center justify-center rounded-[var(--radius-md)] border border-slate-200 bg-slate-50 text-slate-600 transition-colors group-hover:border-[var(--brand-primary-200)] group-hover:bg-white group-hover:text-[var(--brand-primary)]">
                                             {providerPreviewUrls[item.id] ? (
-                                                <img src={providerPreviewUrls[item.id]} alt="" className="h-10 w-10 object-contain" loading="lazy" />
+                                                <img src={providerPreviewUrls[item.id]} alt={`${item.label} icon`} className="h-10 w-10 object-contain" loading="lazy" />
                                             ) : (
                                                 <NamedIcon
                                                     name={item.icon}

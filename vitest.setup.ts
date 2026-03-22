@@ -39,8 +39,29 @@ class InMemoryStorage implements Storage {
   }
 }
 
-// Only install if the native implementation is missing or broken (no setItem).
-if (typeof globalThis.localStorage?.setItem !== 'function') {
+function hasWorkingStorage(storageName: 'localStorage' | 'sessionStorage'): boolean {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, storageName);
+  if (!descriptor) {
+    return false;
+  }
+
+  if ('value' in descriptor) {
+    return typeof descriptor.value?.setItem === 'function';
+  }
+
+  if (typeof descriptor.get !== 'function') {
+    return false;
+  }
+
+  try {
+    const storage = descriptor.get.call(globalThis) as Storage | undefined;
+    return typeof storage?.setItem === 'function';
+  } catch {
+    return false;
+  }
+}
+
+if (!hasWorkingStorage('localStorage')) {
   Object.defineProperty(globalThis, 'localStorage', {
     value: new InMemoryStorage(),
     writable: true,
@@ -48,7 +69,7 @@ if (typeof globalThis.localStorage?.setItem !== 'function') {
   });
 }
 
-if (typeof globalThis.sessionStorage?.setItem !== 'function') {
+if (!hasWorkingStorage('sessionStorage')) {
   Object.defineProperty(globalThis, 'sessionStorage', {
     value: new InMemoryStorage(),
     writable: true,

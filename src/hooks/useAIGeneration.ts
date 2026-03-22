@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { createLogger } from '@/lib/logger';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { ChatMessage } from '@/services/aiService';
 import { useFlowStore } from '@/store';
@@ -12,6 +13,9 @@ import { buildCodeToArchitecturePrompt, type SupportedLanguage } from './ai-gene
 import { buildSqlToErdPrompt } from './ai-generation/sqlToErd';
 import { buildTerraformToCloudPrompt, type TerraformInputFormat } from './ai-generation/terraformToCloud';
 import { buildOpenApiToSequencePrompt } from './ai-generation/openApiToSequence';
+import { notifyOperationOutcome } from '@/services/operationFeedback';
+
+const logger = createLogger({ scope: 'useAIGeneration' });
 
 export function useAIGeneration(
   recordHistory: () => void,
@@ -60,17 +64,25 @@ export function useAIGeneration(
         globalEdgeOptions,
       });
 
+      const isEditMode = nodes.length > 0;
       setChatMessages((previousMessages) => [
-        ...appendChatExchange(previousMessages, userMessage, dslText),
+        ...appendChatExchange(previousMessages, userMessage, dslText, isEditMode),
       ]);
 
       applyComposedGraph(layoutedNodes, layoutedEdges);
 
-      addToast('Diagram generated successfully!', 'success');
+      notifyOperationOutcome(addToast, {
+        status: 'success',
+        summary: 'Diagram generated successfully!',
+      });
     } catch (error: unknown) {
       const errorMessage = toErrorMessage(error);
-      console.error('AI Generation failed:', error);
-      addToast(`Failed to generate: ${errorMessage}`, 'error');
+      logger.error('AI generation failed.', { error });
+      notifyOperationOutcome(addToast, {
+        status: 'error',
+        summary: 'Failed to generate diagram.',
+        detail: errorMessage,
+      });
     } finally {
       setIsGenerating(false);
     }

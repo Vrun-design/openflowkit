@@ -148,4 +148,39 @@ describe('store persistence helpers', () => {
         expect(migrated.viewSettings.showGrid).toBe(false);
         expect(migrated.viewSettings.snapToGrid).toBe(true);
     });
+
+    it('sanitizes persisted ai settings during migration', () => {
+        const migrated = migratePersistedFlowState({
+            tabs: [
+                {
+                    id: 'tab-a',
+                    name: 'A',
+                    nodes: [createNode('na', 'A')],
+                    edges: [],
+                    history: { past: [], future: [] },
+                },
+            ],
+            activeTabId: 'tab-a',
+            aiSettings: {
+                provider: 'invalid-provider',
+                apiKey: '  secret  ',
+                customHeaders: [
+                    { key: ' Authorization ', value: 'Bearer token', enabled: true },
+                    { key: '', value: 'skip-me' },
+                ],
+            },
+        }) as {
+            aiSettings: {
+                provider: string;
+                apiKey?: string;
+                customHeaders?: Array<{ key: string; value: string; enabled?: boolean }>;
+            };
+        };
+
+        expect(migrated.aiSettings.provider).toBe('gemini');
+        expect(migrated.aiSettings.apiKey).toBe('secret');
+        expect(migrated.aiSettings.customHeaders).toEqual([
+            { key: 'Authorization', value: 'Bearer token', enabled: true },
+        ]);
+    });
 });

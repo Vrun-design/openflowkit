@@ -7,7 +7,6 @@ import {
     SendToBack,
     CopyPlus,
     Replace,
-    X,
     AlignStartVertical,
     AlignCenterVertical,
     AlignEndVertical,
@@ -40,7 +39,6 @@ export interface ContextMenuProps {
 }
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({
-    id,
     type,
     position,
     onClose,

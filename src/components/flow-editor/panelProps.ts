@@ -8,7 +8,7 @@ import type { ChatMessage } from '@/services/aiService';
 import type { SupportedLanguage } from '@/hooks/ai-generation/codeToArchitecture';
 import type { TerraformInputFormat } from '@/hooks/ai-generation/terraformToCloud';
 
-interface BuildFlowEditorPanelsPropsParams {
+export interface CommandBarPanelBuilderParams {
     isCommandBarOpen: boolean;
     closeCommandBar: () => void;
     nodes: FlowNode[];
@@ -31,6 +31,8 @@ interface BuildFlowEditorPanelsPropsParams {
     handleAddJourneyNode: () => void;
     handleAddMindmapNode: () => void;
     handleAddArchitectureNode: () => void;
+    handleAddClassNode: () => void;
+    handleAddEntityNode: () => void;
     handleAddImage: (imageUrl: string) => void;
     handleAddWireframe: (surface: 'browser' | 'mobile') => void;
     handleAddDomainLibraryItem: (item: DomainLibraryItem) => void;
@@ -38,6 +40,9 @@ interface BuildFlowEditorPanelsPropsParams {
     toggleGrid: () => void;
     snapToGrid: boolean;
     toggleSnap: () => void;
+}
+
+export interface SnapshotsPanelBuilderParams {
     isHistoryOpen: boolean;
     closeHistory: () => void;
     snapshots: FlowSnapshot[];
@@ -46,9 +51,14 @@ interface BuildFlowEditorPanelsPropsParams {
     saveSnapshot: (name: string, nodes: FlowNode[], edges: FlowEdge[]) => void;
     handleRestoreSnapshot: (snapshot: FlowSnapshot) => void;
     deleteSnapshot: (id: string) => void;
+    handleCompareSnapshot?: (snapshot: FlowSnapshot) => void;
+    nodes: FlowNode[];
+    edges: FlowEdge[];
+}
+
+export interface PropertiesRailBuilderParams {
     selectedNode: FlowNode | null;
     selectedNodes: FlowNode[];
-    selectedNodeCount: number;
     selectedEdge: FlowEdge | null;
     updateNodeData: (id: string, data: Record<string, unknown>) => void;
     applyBulkNodeData: FlowEditorPanelsProps['properties']['onBulkChangeNodes'];
@@ -63,6 +73,9 @@ interface BuildFlowEditorPanelsPropsParams {
     handleAddArchitectureService: FlowEditorPanelsProps['properties']['onAddArchitectureService'];
     handleCreateArchitectureBoundary: FlowEditorPanelsProps['properties']['onCreateArchitectureBoundary'];
     clearSelection: () => void;
+}
+
+export interface StudioRailBuilderParams {
     closeStudioPanel: () => void;
     handleCommandBarApply: (nodes: FlowNode[], edges: FlowEdge[]) => void;
     handleAIRequest: (prompt: string, imageBase64?: string) => Promise<void>;
@@ -70,19 +83,32 @@ interface BuildFlowEditorPanelsPropsParams {
     handleSqlAnalysis: (sql: string) => Promise<void>;
     handleTerraformAnalysis: (input: string, format: TerraformInputFormat) => Promise<void>;
     handleOpenApiAnalysis: (spec: string) => Promise<void>;
+    handleApplyInfraDsl: (dsl: string) => void;
     isGenerating: boolean;
     chatMessages: ChatMessage[];
     clearChat: () => void;
+    selectedNode: FlowNode | null;
+    selectedNodeCount: number;
     setCanvasMode: () => void;
     studioTab: StudioTab;
     setStudioTab: (tab: StudioTab) => void;
     studioCodeMode: StudioCodeMode;
     setStudioCodeMode: (mode: StudioCodeMode) => void;
     playback: FlowEditorPanelsProps['studio']['playback'];
+    initialPrompt?: string;
+    onInitialPromptConsumed?: () => void;
+}
+
+export interface BuildFlowEditorPanelsPropsParams {
+    commandBar: CommandBarPanelBuilderParams;
+    snapshots: SnapshotsPanelBuilderParams;
+    properties: PropertiesRailBuilderParams;
+    studio: StudioRailBuilderParams;
+    isHistoryOpen: boolean;
     editorMode: FlowEditorMode;
 }
 
-export function buildFlowEditorPanelsProps({
+export function buildCommandBarPanelProps({
     isCommandBarOpen,
     closeCommandBar,
     nodes,
@@ -101,6 +127,8 @@ export function buildFlowEditorPanelsProps({
     handleAddJourneyNode,
     handleAddMindmapNode,
     handleAddArchitectureNode,
+    handleAddClassNode,
+    handleAddEntityNode,
     handleAddImage,
     handleAddWireframe,
     handleAddDomainLibraryItem,
@@ -108,6 +136,41 @@ export function buildFlowEditorPanelsProps({
     toggleGrid,
     snapToGrid,
     toggleSnap,
+}: CommandBarPanelBuilderParams): FlowEditorPanelsProps['commandBar'] {
+    return {
+        isOpen: isCommandBarOpen,
+        onClose: closeCommandBar,
+        nodes,
+        edges,
+        onUndo: undo,
+        onRedo: redo,
+        onLayout,
+        onSelectTemplate: handleInsertTemplate,
+        onOpenStudioAI: openStudioAI,
+        onOpenStudioOpenFlow: () => openStudioCode('openflow'),
+        onOpenStudioMermaid: () => openStudioCode('mermaid'),
+        onOpenStudioPlayback: openStudioPlayback,
+        initialView: commandBarView,
+        onAddAnnotation: handleAddAnnotation,
+        onAddSection: handleAddSection,
+        onAddText: handleAddTextNode,
+        onAddJourney: handleAddJourneyNode,
+        onAddMindmap: handleAddMindmapNode,
+        onAddArchitecture: handleAddArchitectureNode,
+        onAddClassNode: handleAddClassNode,
+        onAddEntityNode: handleAddEntityNode,
+        onAddImage: handleAddImage,
+        onAddBrowserWireframe: () => handleAddWireframe('browser'),
+        onAddMobileWireframe: () => handleAddWireframe('mobile'),
+        onAddDomainLibraryItem: handleAddDomainLibraryItem,
+        showGrid,
+        onToggleGrid: toggleGrid,
+        snapToGrid,
+        onToggleSnap: toggleSnap,
+    };
+}
+
+export function buildSnapshotsPanelProps({
     isHistoryOpen,
     closeHistory,
     snapshots,
@@ -116,9 +179,26 @@ export function buildFlowEditorPanelsProps({
     saveSnapshot,
     handleRestoreSnapshot,
     deleteSnapshot,
+    handleCompareSnapshot,
+    nodes,
+    edges,
+}: SnapshotsPanelBuilderParams): FlowEditorPanelsProps['snapshots'] {
+    return {
+        isOpen: isHistoryOpen,
+        onClose: closeHistory,
+        snapshots,
+        manualSnapshots,
+        autoSnapshots,
+        onSaveSnapshot: (name) => saveSnapshot(name, nodes, edges),
+        onRestoreSnapshot: handleRestoreSnapshot,
+        onDeleteSnapshot: deleteSnapshot,
+        onCompareSnapshot: handleCompareSnapshot,
+    };
+}
+
+export function buildPropertiesRailProps({
     selectedNode,
     selectedNodes,
-    selectedNodeCount,
     selectedEdge,
     updateNodeData,
     applyBulkNodeData,
@@ -133,6 +213,28 @@ export function buildFlowEditorPanelsProps({
     handleAddArchitectureService,
     handleCreateArchitectureBoundary,
     clearSelection,
+}: PropertiesRailBuilderParams): FlowEditorPanelsProps['properties'] {
+    return {
+        selectedNode,
+        selectedNodes,
+        selectedEdge,
+        onChangeNode: updateNodeData,
+        onBulkChangeNodes: applyBulkNodeData,
+        onChangeNodeType: updateNodeType,
+        onChangeEdge: updateEdge,
+        onDeleteNode: deleteNode,
+        onDuplicateNode: duplicateNode,
+        onDeleteEdge: deleteEdge,
+        onUpdateZIndex: updateNodeZIndex,
+        onAddMindmapChild: handleAddMindmapChild,
+        onAddMindmapSibling: handleAddMindmapSibling,
+        onAddArchitectureService: handleAddArchitectureService,
+        onCreateArchitectureBoundary: handleCreateArchitectureBoundary,
+        onClose: clearSelection,
+    };
+}
+
+export function buildStudioRailProps({
     closeStudioPanel,
     handleCommandBarApply,
     handleAIRequest,
@@ -140,95 +242,59 @@ export function buildFlowEditorPanelsProps({
     handleSqlAnalysis,
     handleTerraformAnalysis,
     handleOpenApiAnalysis,
+    handleApplyInfraDsl,
     isGenerating,
     chatMessages,
     clearChat,
+    selectedNode,
+    selectedNodeCount,
     setCanvasMode,
     studioTab,
     setStudioTab,
     studioCodeMode,
     setStudioCodeMode,
     playback,
+    initialPrompt,
+    onInitialPromptConsumed,
+}: StudioRailBuilderParams): FlowEditorPanelsProps['studio'] {
+    return {
+        onClose: closeStudioPanel,
+        onApply: handleCommandBarApply,
+        onAIGenerate: handleAIRequest,
+        onCodeAnalysis: handleCodeAnalysis,
+        onSqlAnalysis: handleSqlAnalysis,
+        onTerraformAnalysis: handleTerraformAnalysis,
+        onOpenApiAnalysis: handleOpenApiAnalysis,
+        onApplyInfraDsl: handleApplyInfraDsl,
+        isGenerating,
+        chatMessages,
+        onClearChat: clearChat,
+        selectedNode,
+        selectedNodeCount,
+        onViewProperties: setCanvasMode,
+        activeTab: studioTab,
+        onTabChange: setStudioTab,
+        codeMode: studioCodeMode,
+        onCodeModeChange: setStudioCodeMode,
+        playback,
+        initialPrompt,
+        onInitialPromptConsumed,
+    };
+}
+
+export function buildFlowEditorPanelsProps({
+    commandBar,
+    snapshots,
+    properties,
+    studio,
+    isHistoryOpen,
     editorMode,
 }: BuildFlowEditorPanelsPropsParams): FlowEditorPanelsProps {
     return {
-        commandBar: {
-            isOpen: isCommandBarOpen,
-            onClose: closeCommandBar,
-            nodes,
-            edges,
-            onUndo: undo,
-            onRedo: redo,
-            onLayout,
-            onSelectTemplate: handleInsertTemplate,
-            onOpenStudioAI: openStudioAI,
-            onOpenStudioFlowMind: () => openStudioCode('openflow'),
-            onOpenStudioMermaid: () => openStudioCode('mermaid'),
-            onOpenStudioPlayback: openStudioPlayback,
-            initialView: commandBarView,
-            onAddAnnotation: handleAddAnnotation,
-            onAddSection: handleAddSection,
-            onAddText: handleAddTextNode,
-            onAddJourney: handleAddJourneyNode,
-            onAddMindmap: handleAddMindmapNode,
-            onAddArchitecture: handleAddArchitectureNode,
-            onAddImage: handleAddImage,
-            onAddBrowserWireframe: () => handleAddWireframe('browser'),
-            onAddMobileWireframe: () => handleAddWireframe('mobile'),
-            onAddDomainLibraryItem: handleAddDomainLibraryItem,
-            showGrid,
-            onToggleGrid: toggleGrid,
-            snapToGrid,
-            onToggleSnap: toggleSnap,
-        },
-        snapshots: {
-            isOpen: isHistoryOpen,
-            onClose: closeHistory,
-            snapshots,
-            manualSnapshots,
-            autoSnapshots,
-            onSaveSnapshot: (name) => saveSnapshot(name, nodes, edges),
-            onRestoreSnapshot: handleRestoreSnapshot,
-            onDeleteSnapshot: deleteSnapshot,
-        },
-        properties: {
-            selectedNode,
-            selectedNodes,
-            selectedEdge,
-            onChangeNode: updateNodeData,
-            onBulkChangeNodes: applyBulkNodeData,
-            onChangeNodeType: updateNodeType,
-            onChangeEdge: updateEdge,
-            onDeleteNode: deleteNode,
-            onDuplicateNode: duplicateNode,
-            onDeleteEdge: deleteEdge,
-            onUpdateZIndex: updateNodeZIndex,
-            onAddMindmapChild: handleAddMindmapChild,
-            onAddMindmapSibling: handleAddMindmapSibling,
-            onAddArchitectureService: handleAddArchitectureService,
-            onCreateArchitectureBoundary: handleCreateArchitectureBoundary,
-            onClose: clearSelection,
-        },
-        studio: {
-            onClose: closeStudioPanel,
-            onApply: handleCommandBarApply,
-            onAIGenerate: handleAIRequest,
-            onCodeAnalysis: handleCodeAnalysis,
-            onSqlAnalysis: handleSqlAnalysis,
-            onTerraformAnalysis: handleTerraformAnalysis,
-            onOpenApiAnalysis: handleOpenApiAnalysis,
-            isGenerating,
-            chatMessages,
-            onClearChat: clearChat,
-            selectedNode,
-            selectedNodeCount,
-            onViewProperties: setCanvasMode,
-            activeTab: studioTab,
-            onTabChange: setStudioTab,
-            codeMode: studioCodeMode,
-            onCodeModeChange: setStudioCodeMode,
-            playback,
-        },
+        commandBar: buildCommandBarPanelProps(commandBar),
+        snapshots: buildSnapshotsPanelProps(snapshots),
+        properties: buildPropertiesRailProps(properties),
+        studio: buildStudioRailProps(studio),
         isHistoryOpen,
         editorMode,
     };

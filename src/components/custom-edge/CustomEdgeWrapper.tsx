@@ -141,7 +141,7 @@ export function CustomEdgeWrapper({
     const resolvedMarkerStart = standardMarkers.markerStartUrl;
     const resolvedMarkerEnd = standardMarkers.markerEndUrl;
     const animatedPresentation = useMemo(() => resolveAnimatedEdgePresentation({
-        animatedExportEnabled: ROLLOUT_FLAGS.animatedExportV1,
+        animatedExportEnabled: true,
         selected,
         hovered: isHovered,
         edgeAnimated,

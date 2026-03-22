@@ -1,30 +1,42 @@
 ---
 draft: false
 title: AWS Architecture Diagram
+description: Use OpenFlowKit for AWS architecture diagrams with templates, icon-backed assets, AI drafting, DSL, and export workflows.
 ---
 
-OpenFlowKit is a strong fit for AWS architecture diagrams because it supports both provider-backed icon insertion and code-first drafting.
+OpenFlowKit is a strong fit for AWS architecture diagrams because it supports provider-backed icon insertion, architecture-oriented layouts, AI-assisted drafting, and code-backed editing in the same workflow.
 
 ## Best starting points
 
-For AWS diagrams, use one of these:
+For AWS diagrams, start from the input that already exists:
 
 - an AWS template from the template browser
 - the Assets view with AWS icon catalog
 - AI generation with a provider-specific architecture prompt
 - OpenFlow DSL for a deterministic first pass
 
+## How to choose the starting point
+
+- Use templates when you want a known structural baseline.
+- Use assets when you know the services already and want manual control.
+- Use AI when you want a fast conceptual draft.
+- Use DSL when the graph should be reviewed as text.
+
 ## Recommended workflow
 
 1. insert core services first
-2. add boundaries and sections for VPCs, public/private tiers, or trust zones
-3. connect traffic paths
-4. run auto layout
-5. refine protocols and edge labels
+2. add boundaries for VPCs, public/private tiers, or trust zones
+3. connect traffic paths and async flows
+4. run [Smart Layout](/smart-layout/)
+5. refine labels, protocols, and visual emphasis
+6. save a snapshot before large revisions
+7. export or share in the format your audience needs
 
 ## Asset strategy
 
-The assets panel can load provider-backed catalogs and previews. Use icon nodes for branded service identity, then use sections or architecture boundaries to show grouping.
+The assets panel can load provider-backed catalogs and previews. Use icon nodes for branded service identity, then use sections or boundaries to show grouping.
+
+This is usually better than drawing every service as a generic box, especially when the audience expects cloud-provider cues at a glance.
 
 ## Example prompt
 
@@ -47,70 +59,12 @@ Use DSL when:
 
 For architecture reviews:
 
-- export PNG for slides
+- export PNG or SVG for slides and docs
 - export JSON for editable backup
-- optionally export Mermaid or PlantUML for docs workflows
+- optionally export Mermaid or PlantUML for repo or docs workflows
 
-- **Version Control**: Track infrastructure changes over time.
-- **Auto-Layout**: No more overlapping lines or misaligned VPCs.
-- **Speed**: Type a few lines, get a complete diagram.
+## Related pages
 
-
-## Example: Basic Web Architecture (Mermaid.js)
-
-OpenFlowKit natively supports Mermaid.js, which is great for standard cloud structures. Here is how you can visualize an AWS VPC with a Load Balancer, EC2 instances, and an RDS database.
-
-```mermaid
-flowchart TD
-    %% Define Styles
-    classDef aws fill:#FF9900,stroke:#fff,stroke-width:2px,color:#fff,rx:8px,ry:8px;
-    classDef vpc fill:#f5f5f5,stroke:#00A4A6,stroke-width:2px,stroke-dasharray: 5 5,rx:12px,ry:12px;
-    
-    Client((User Traffic))
-
-    subgraph AWS_VPC [AWS Cloud VPC]
-        ALB(Application Load Balancer)
-        
-        subgraph Public_Subnet [Public Subnet]
-            EC2_1(Web Server 1)
-            EC2_2(Web Server 2)
-        end
-        
-        subgraph Private_Subnet [Private Subnet]
-            RDS[(Amazon RDS)]
-            ElastiCache[(Redis Cache)]
-        end
-    end
-
-    %% Connections
-    Client -->|HTTPS| ALB
-    ALB -->|Round Robin| EC2_1
-    ALB -->|Round Robin| EC2_2
-    
-    EC2_1 --> RDS
-    EC2_1 --> ElastiCache
-    EC2_2 --> RDS
-    EC2_2 --> ElastiCache
-
-    %% Apply Styles
-    class ALB,EC2_1,EC2_2 aws;
-    class RDS,ElastiCache aws;
-    class AWS_VPC,Public_Subnet,Private_Subnet vpc;
-```
-
-## Creating AWS Diagrams with AI
-
-If you don't know Mermaid syntax, you can use **Flowpilot**, our built-in AI assistant. 
-
-1. Open the [Command Center](/docs/en/command-center).
-2. Type a prompt like:
-> `"Create an AWS architecture diagram showing an API Gateway routing traffic to three AWS Lambda functions, which all connect to a central DynamoDB table."`
-3. Hit enter. Flowpilot will instantly generate the DSL and render the diagram.
-
-## Exporting for internal documentation
-
-Once your AWS Architecture is generated, you can easily export it:
-- **SVG / PNG**: For Confluence, Jira, or Slack.
-- **Figma Editable**: Want your UX team to polish the diagram? Click *Figma Editable* and paste it directly into Figma as native, editable vector layers.
-
-[Try building your first AWS Architecture diagram now!](/#/canvas)
+- [Infrastructure Sync](/infra-sync/)
+- [Templates & Starter Flows](/templates-assets/)
+- [Choose an Export Format](/choose-export-format/)

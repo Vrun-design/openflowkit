@@ -1,16 +1,17 @@
 ---
 draft: false
 title: Command Center
+description: Use the keyboard-first launcher to search, insert assets, start templates, switch into Studio, and run layout or design-system actions.
 ---
 
-The Command Center is the keyboard-first launcher for the editor. It opens as a floating panel and is the fastest way to move between assets, templates, search, layout, and studio actions.
+The Command Center is the keyboard-first launcher for the editor. It opens as a floating panel and is the fastest way to move between assets, templates, search, layout, and Studio actions.
 
 > [!NOTE]
 > Open it with `Cmd + K` on macOS or `Ctrl + K` on Windows/Linux.
 
 ## Root commands
 
-The top-level command list currently includes:
+The top-level command list includes actions such as:
 
 - Open FlowPilot
 - Edit Flow DSL
@@ -21,7 +22,7 @@ The top-level command list currently includes:
 - Start from Template
 - Design Systems
 
-Playback Studio also appears when its rollout flag is enabled.
+Playback-related entries may also appear when the relevant playback surface is active in the current product path.
 
 ## Views inside the Command Center
 
@@ -38,54 +39,23 @@ Use this to insert:
 - uploaded images
 - browser wireframes
 - mobile wireframes
-- provider-backed icons and cloud assets
 
 ### Templates
 
-The template browser supports search and category filtering. It is the fastest way to start from a known graph shape.
+Use templates when you want a proven starting structure instead of a blank canvas.
 
 ### Search
 
-Search scans existing nodes on the current canvas so you can find and jump to content in large diagrams.
-
-### Layout
-
-The layout view lets you run auto layout without leaving the keyboard workflow.
+Use search to jump to named nodes in larger diagrams.
 
 ### Design Systems
 
-This view is used to manage reusable visual styling choices for the canvas.
+Use Design Systems to switch themes, duplicate them, edit them, or import/export theme JSON.
 
-## Why use it instead of clicking around
+## How it fits with the rest of the editor
 
-Use the Command Center when:
+The Command Center is the fastest bridge between the canvas and Studio:
 
-- you are working on a laptop and want minimal pointer travel
-- the canvas is crowded and the toolbar is slower than search
-- you want to switch directly into AI or code editing
-- you want to insert assets in batches
-
-## Recommended habit
-
-Treat the Command Center as the default launcher, not a secondary shortcut. In daily use it becomes the fastest path to most non-drag operations.
-
-### 1. Templates
-Don't start from scratch. Access a library of pre-built diagrams:
-*   AWS Architecture Patterns
-*   User Journey Maps
-*   Database Schemas
-*   Organizational Charts
-
-### 2. Design System / Visuals
-Access a library of assets to enhance your diagram:
-*   **Wireframes**: Drag and drop low-fidelity UI components (Buttons, Inputs, Modals) to build quick mockups.
-*   **Icons**: Search and insert any icon as a standalone node.
-
-### 3. AI Copilot
-The text input in the Command Center is your direct line to our AI engine. Type what you want to build, and hitting `Enter` generates it instantly.
-
-### 4. Layout & Tools
-Quickly access utility functions:
-*   **Auto Layout**: Re-organize the chaos.
-*   **Reset View**: Jump back to center.
-*   **Format Code**: Clean up your DSL.
+- use the canvas for direct manipulation
+- use the inspector for exact edits
+- use the Command Center for navigation, search, layout, templates, assets, and workflow switching

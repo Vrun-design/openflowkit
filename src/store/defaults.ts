@@ -1,5 +1,6 @@
 import type { DesignSystem, GlobalEdgeOptions } from '@/lib/types';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
+import { sanitizeAISettings } from './aiSettings';
 import type { AISettings, Layer, ViewSettings } from './types';
 
 export const DEFAULT_DESIGN_SYSTEM: DesignSystem = {
@@ -35,7 +36,7 @@ export const DEFAULT_DESIGN_SYSTEM: DesignSystem = {
         node: {
             borderRadius: '8px',
             borderWidth: '1px',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.08), 0 4px 8px -2px rgb(0 0 0 / 0.1), 0 0 0 1px rgb(0 0 0 / 0.04)',
             padding: '1rem',
         },
         edge: {
@@ -44,13 +45,16 @@ export const DEFAULT_DESIGN_SYSTEM: DesignSystem = {
     },
 };
 
-export const DEFAULT_AI_SETTINGS: AISettings = {
-    provider: 'gemini',
-    apiKey: undefined,
-    model: undefined,
-    customBaseUrl: undefined,
-    customHeaders: [],
-};
+export const DEFAULT_AI_SETTINGS: AISettings = sanitizeAISettings(
+    { provider: 'gemini' },
+    {
+        provider: 'gemini',
+        apiKey: undefined,
+        model: undefined,
+        customBaseUrl: undefined,
+        customHeaders: [],
+    }
+);
 
 export const INITIAL_VIEW_SETTINGS: ViewSettings = {
     showGrid: true,
@@ -66,6 +70,7 @@ export const INITIAL_VIEW_SETTINGS: ViewSettings = {
     largeGraphSafetyProfile: 'balanced',
     exportSerializationMode: 'deterministic',
     language: 'en',
+    lintRules: '',
 };
 
 export const INITIAL_GLOBAL_EDGE_OPTIONS: GlobalEdgeOptions = {

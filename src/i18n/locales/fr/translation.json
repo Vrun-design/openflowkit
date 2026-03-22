@@ -342,9 +342,9 @@
     "description": "Le canvas white-label ultime.",
     "diagramAsCode": "Diagramme en code",
     "diagramAsCodeDesc": "Support de Mermaid.js et DSL typé.",
-    "flowpilotAI": "Flowpilot IA",
+    "flowpilotAI": "AI Studio",
     "aiAssistant": "Assistant IA",
-    "flowpilotAIDesc": "Discutez avec votre diagramme.",
+    "flowpilotAIDesc": "Travaillez sur votre diagramme avec des modifications IA guidées.",
     "addRedisCache": "Ajouter un cache Redis devant la DB.",
     "localPrivate": "Local & Privé",
     "localPrivateDesc": "Tout reste sur votre machine.",
@@ -400,7 +400,7 @@
     "communityDesc": "Rejoindre les développeurs qui construisent avec OpenFlowKit.",
     "roadmap": "Feuille de route",
     "coreRenderer": "Moteur principal",
-    "flowpilotAI": "Flowpilot IA",
+    "flowpilotAI": "AI Studio",
     "pdfExport": "Export PDF"
   },
   "demo": {
@@ -455,7 +455,7 @@
   },
   "commandBar": {
     "ai": {
-      "title": "Demander à Flowpilot",
+      "title": "Demander à AI Studio",
       "clearChat": "Effacer l'historique",
       "placeholder": "Décrivez ce que vous voulez créer...",
       "examples": {
@@ -551,11 +551,11 @@
   "settingsModal": {
     "title": "Paramètres",
     "general": "Général",
-    "flowpilotAI": "Flowpilot IA",
+    "flowpilotAI": "AI Studio",
     "shortcuts": "Raccourcis",
     "running": "{appName} en cours",
     "generalSettings": "Paramètres généraux",
-    "flowpilotConfigurations": "Configurations Flowpilot",
+    "flowpilotConfigurations": "Configuration AI Studio",
     "keyboardShortcuts": "Raccourcis clavier",
     "canvas": {
       "title": "Canevas",
@@ -685,7 +685,7 @@
   "toolbar": {
     "selectMode": "Mode sélection (V)",
     "panMode": "Mode déplacement (H)",
-    "flowpilot": "Flowpilot (Cmd+K)",
+    "flowpilot": "Command Center (Cmd+K)",
     "templates": "Modèles",
     "addItem": "Ajouter un élément",
     "addToCanvas": "Ajouter au canevas",
@@ -713,8 +713,8 @@
     "applyingLayout": "Application de la mise en page…",
     "emptyState": {
       "title": "Commencer à construire",
-      "description": "Votre canevas est vide. Générez un flux avec Flowpilot ou commencez de zéro.",
-      "generateWithFlowpilot": "Générer avec Flowpilot",
+      "description": "Votre canevas est vide. Générez un flux avec AI Studio ou commencez de zéro.",
+      "generateWithFlowpilot": "Générer avec AI Studio",
       "browseTemplates": "Parcourir les modèles",
       "addBlankNode": "Ajouter une forme vide"
     }

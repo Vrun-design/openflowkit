@@ -327,7 +327,7 @@
     "description": "究極のホワイトラベルキャンバス。",
     "diagramAsCode": "コードとしての図",
     "diagramAsCodeDesc": "Mermaid.jsとDSLをサポート。",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "aiAssistant": "AIアシスタント",
     "flowpilotAIDesc": "図と対話する。",
     "addRedisCache": "DBの前にRedisキャッシュを追加する。",
@@ -385,7 +385,7 @@
     "communityDesc": "OpenFlowKitを活用している開発者に参加しましょう。",
     "roadmap": "ロードマップ",
     "coreRenderer": "コアレンダラー",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "pdfExport": "PDFエクスポート"
   },
   "demo": {
@@ -526,11 +526,11 @@
   "settingsModal": {
     "title": "設定",
     "general": "一般",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "shortcuts": "ショートカット",
     "running": "{appName} 実行中",
     "generalSettings": "一般設定",
-    "flowpilotConfigurations": "Flowpilot設定",
+    "flowpilotConfigurations": "AI Studio設定",
     "keyboardShortcuts": "キーボードショートカット",
     "canvas": {
       "title": "キャンバス",
@@ -658,7 +658,7 @@
   "toolbar": {
     "selectMode": "選択モード (V)",
     "panMode": "パンモード (H)",
-    "flowpilot": "Flowpilot (Cmd+K)",
+    "flowpilot": "Command Center (Cmd+K)",
     "templates": "テンプレート",
     "addItem": "アイテムを追加",
     "addToCanvas": "キャンバスに追加",
@@ -685,7 +685,7 @@
     "emptyState": {
       "title": "構築を開始",
       "description": "キャンバスが空です。Flowpilotでフローを生成するか、一から始めてください。",
-      "generateWithFlowpilot": "Flowpilotで生成",
+      "generateWithFlowpilot": "AI Studioで生成",
       "browseTemplates": "テンプレートを閲覧",
       "addBlankNode": "空のノードを追加"
     }

@@ -3,6 +3,7 @@ import { DEFAULT_DIAGRAM_TYPE } from '@/services/diagramDocument';
 import { clonePlaybackState, sanitizePlaybackState } from '@/services/playback/model';
 import type { FlowTab } from '@/lib/types';
 import { isDiagramType } from '@/lib/types';
+import { sanitizeAISettings } from './aiSettings';
 import {
     DEFAULT_AI_SETTINGS,
     DEFAULT_DESIGN_SYSTEM,
@@ -147,6 +148,10 @@ export function migratePersistedFlowState(persistedState: unknown): unknown {
     const layers = persistedLayers.some((layer) => layer.id === 'default')
         ? persistedLayers
         : [...INITIAL_LAYERS, ...persistedLayers];
+    const persistedAiSettings =
+        state.aiSettings && typeof state.aiSettings === 'object'
+            ? (state.aiSettings as Partial<FlowState['aiSettings']>)
+            : undefined;
 
     return {
         ...state,
@@ -164,6 +169,7 @@ export function migratePersistedFlowState(persistedState: unknown): unknown {
             ...INITIAL_VIEW_SETTINGS,
             ...persistedViewSettings,
         },
+        aiSettings: sanitizeAISettings(persistedAiSettings, DEFAULT_AI_SETTINGS),
     };
 }
 
@@ -175,7 +181,7 @@ export function partializePersistedFlowState(state: FlowState): PersistedFlowSta
         activeDesignSystemId: state.activeDesignSystemId,
         viewSettings: state.viewSettings,
         globalEdgeOptions: state.globalEdgeOptions,
-        aiSettings: state.aiSettings,
+        aiSettings: sanitizeAISettings(state.aiSettings, DEFAULT_AI_SETTINGS),
         layers: state.layers,
         activeLayerId: state.activeLayerId,
     };

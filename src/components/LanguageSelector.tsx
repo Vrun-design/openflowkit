@@ -45,7 +45,6 @@ function LanguageDropdown({
   onClose,
   width = 'w-60', // Widened to accommodate badges
 }: LanguageDropdownProps): React.JSX.Element | null {
-  const { t } = useTranslation();
   if (!isOpen) return null;
 
   const positionClass = placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2';

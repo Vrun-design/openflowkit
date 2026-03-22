@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { ArrowRight, Code2, WandSparkles } from 'lucide-react';
+import { ArrowRight, Code2, Server, Shield, WandSparkles } from 'lucide-react';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { ChatMessage } from '@/services/aiService';
 import type { StudioCodeMode, StudioTab } from '@/hooks/useFlowEditorUIState';
@@ -17,6 +17,16 @@ const LazyStudioCodePanel = lazy(async () => {
     return { default: module.StudioCodePanel };
 });
 
+const LazyInfraSyncPanel = lazy(async () => {
+    const module = await import('./infra-sync/InfraSyncPanel');
+    return { default: module.InfraSyncPanel };
+});
+
+const LazyLintRulesPanel = lazy(async () => {
+    const module = await import('./architecture-lint/LintRulesPanel');
+    return { default: module.LintRulesPanel };
+});
+
 interface StudioPanelProps {
     onClose: () => void;
     nodes: FlowNode[];
@@ -27,6 +37,7 @@ interface StudioPanelProps {
     onSqlAnalysis?: (sql: string) => Promise<void>;
     onTerraformAnalysis?: (input: string, format: TerraformInputFormat) => Promise<void>;
     onOpenApiAnalysis?: (spec: string) => Promise<void>;
+    onApplyInfraDsl?: (dsl: string) => void;
     isGenerating: boolean;
     chatMessages: ChatMessage[];
     onClearChat: () => void;
@@ -50,6 +61,8 @@ interface StudioPanelProps {
         playbackSpeed: number;
         onPlaybackSpeedChange: (durationMs: number) => void;
     };
+    initialPrompt?: string;
+    onInitialPromptConsumed?: () => void;
 }
 
 export function StudioPanel({
@@ -62,6 +75,7 @@ export function StudioPanel({
     onSqlAnalysis,
     onTerraformAnalysis,
     onOpenApiAnalysis,
+    onApplyInfraDsl,
     isGenerating,
     chatMessages,
     onClearChat,
@@ -73,10 +87,16 @@ export function StudioPanel({
     selectedNodeCount,
     onViewProperties,
     playback: _playback,
+    initialPrompt,
+    onInitialPromptConsumed,
 }: StudioPanelProps): React.ReactElement {
+    const showInfraTab = Boolean(onApplyInfraDsl);
+
     const studioTabs = [
-        { id: 'ai', label: 'FlowPilot', icon: WandSparkles },
+        { id: 'ai', label: 'AI Studio', icon: WandSparkles },
         { id: 'code', label: 'Code', icon: Code2 },
+        ...(showInfraTab ? [{ id: 'infra', label: 'Infra', icon: Server }] : []),
+        { id: 'lint', label: 'Lint', icon: Shield },
     ] as const;
 
     return (
@@ -124,7 +144,10 @@ export function StudioPanel({
                             isGenerating={isGenerating}
                             chatMessages={chatMessages}
                             onClearChat={onClearChat}
+                            nodeCount={nodes.length}
                             selectedNodeCount={selectedNodeCount}
+                            initialPrompt={initialPrompt}
+                            onInitialPromptConsumed={onInitialPromptConsumed}
                         />
                     </Suspense>
                 ) : activeTab === 'code' ? (
@@ -136,6 +159,17 @@ export function StudioPanel({
                             mode={codeMode}
                             onModeChange={onCodeModeChange}
                         />
+                    </Suspense>
+                ) : activeTab === 'infra' && showInfraTab && onApplyInfraDsl ? (
+                    <Suspense fallback={null}>
+                        <LazyInfraSyncPanel
+                            onApplyDsl={onApplyInfraDsl}
+                            onTerraformAnalysis={onTerraformAnalysis}
+                        />
+                    </Suspense>
+                ) : activeTab === 'lint' ? (
+                    <Suspense fallback={null}>
+                        <LazyLintRulesPanel />
                     </Suspense>
                 ) : null}
             </SidebarBody>

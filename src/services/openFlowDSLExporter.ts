@@ -66,7 +66,7 @@ const EDGE_ATTRIBUTE_KEYS = [
 ] as const;
 
 /**
- * Export FlowMind nodes/edges to our custom DSL V2 text format.
+ * Export nodes and edges to the OpenFlow DSL V2 text format.
  */
 export interface OpenFlowDSLExportOptions {
     mode?: ExportSerializationMode;

@@ -342,9 +342,9 @@
     "description": "El canvas white-label definitivo.",
     "diagramAsCode": "Diagrama como código",
     "diagramAsCodeDesc": "Soporte de Mermaid.js y DSL tipado.",
-    "flowpilotAI": "Flowpilot IA",
+    "flowpilotAI": "AI Studio",
     "aiAssistant": "Asistente IA",
-    "flowpilotAIDesc": "Chatea con tu diagrama.",
+    "flowpilotAIDesc": "Trabaja en tu diagrama con ediciones guiadas por IA.",
     "addRedisCache": "Agregar caché Redis frente a la BD.",
     "localPrivate": "Local & Privado",
     "localPrivateDesc": "Todo queda en tu máquina.",
@@ -400,7 +400,7 @@
     "communityDesc": "Únete a desarrolladores que construyen con OpenFlowKit.",
     "roadmap": "Hoja de ruta",
     "coreRenderer": "Motor principal",
-    "flowpilotAI": "Flowpilot IA",
+    "flowpilotAI": "AI Studio",
     "pdfExport": "Exportar PDF"
   },
   "demo": {
@@ -455,7 +455,7 @@
   },
   "commandBar": {
     "ai": {
-      "title": "Preguntar a Flowpilot",
+      "title": "Preguntar a AI Studio",
       "clearChat": "Borrar historial",
       "placeholder": "Describe lo que quieres crear...",
       "examples": {
@@ -551,11 +551,11 @@
   "settingsModal": {
     "title": "Configuración",
     "general": "General",
-    "flowpilotAI": "Flowpilot IA",
+    "flowpilotAI": "AI Studio",
     "shortcuts": "Atajos",
     "running": "{appName} en ejecución",
     "generalSettings": "Configuración general",
-    "flowpilotConfigurations": "Configuraciones de Flowpilot",
+    "flowpilotConfigurations": "Configuración de AI Studio",
     "keyboardShortcuts": "Atajos de teclado",
     "canvas": {
       "title": "Lienzo",
@@ -685,7 +685,7 @@
   "toolbar": {
     "selectMode": "Modo selección (V)",
     "panMode": "Modo mover (H)",
-    "flowpilot": "Flowpilot (Cmd+K)",
+    "flowpilot": "Command Center (Cmd+K)",
     "templates": "Plantillas",
     "addItem": "Agregar elemento",
     "addToCanvas": "Agregar al lienzo",
@@ -713,8 +713,8 @@
     "applyingLayout": "Aplicando diseño…",
     "emptyState": {
       "title": "Comenzar a construir",
-      "description": "Su lienzo está vacío. Genere un flujo con Flowpilot o comience desde cero.",
-      "generateWithFlowpilot": "Generar con Flowpilot",
+      "description": "Su lienzo está vacío. Genere un flujo con AI Studio o comience desde cero.",
+      "generateWithFlowpilot": "Generar con AI Studio",
       "browseTemplates": "Explorar plantillas",
       "addBlankNode": "Agregar forma en blanco"
     }

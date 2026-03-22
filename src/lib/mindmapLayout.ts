@@ -106,10 +106,6 @@ function findMindmapRootId(componentIds: Set<string>, edges: FlowEdge[]): string
   return roots[0] ?? null;
 }
 
-function getNodeDepth(node: FlowNode): number {
-  return typeof node.data.mindmapDepth === 'number' ? node.data.mindmapDepth : 0;
-}
-
 function getNodeSide(node: FlowNode): MindmapSide | null {
   return node.data.mindmapSide === 'left' || node.data.mindmapSide === 'right'
     ? node.data.mindmapSide

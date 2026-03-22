@@ -17,7 +17,7 @@ import {
  *   B — toggle bidirectional
  */
 export function useEdgeInteractions() {
-    const { getEdges, setEdges, getNodes } = useReactFlow();
+    const { getEdges, setEdges } = useReactFlow();
 
     const handleKeyDown = useCallback((event: KeyboardEvent) => {
         // Skip if user is typing in an input/textarea

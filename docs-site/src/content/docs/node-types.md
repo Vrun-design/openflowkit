@@ -1,9 +1,10 @@
 ---
 draft: false
 title: Node Types
+description: Understand the core node families available in OpenFlowKit and how they map to different diagram workflows.
 ---
 
-OpenFlowKit supports both generic and family-specific nodes. The actual node model in the app covers flow, architecture, mind map, journey, class, ER, annotation, grouping, and media use cases.
+OpenFlowKit supports both generic and family-specific nodes. The node model in the app covers flow, architecture, mind map, journey, class, ER, annotation, grouping, and media use cases.
 
 ## Core node families
 
@@ -17,131 +18,44 @@ These are the default building blocks for most workflows:
 - `end`
 - `custom`
 
-Typical properties include:
-
-- label and sublabel
-- icon
-- color preset or custom color
-- shape
-- typography
-- dimensions and rotation
+Use them when the diagram is primarily procedural and you do not need a richer family model.
 
 ### Mind map nodes
 
-`mindmap` nodes track extra structure such as:
+Mind map nodes carry extra structure such as:
 
 - depth
 - parent id
 - left/right side
 - branch style
 
-Keyboard helpers:
+They are better than plain flow nodes when hierarchy and branch structure matter more than route semantics.
 
-- `Tab` adds a child
-- `Enter` adds a sibling
+### Architecture and asset-backed nodes
 
-### Journey nodes
+Architecture-oriented diagrams can use provider-backed icon nodes and related visual grouping structures such as sections and boundaries.
 
-`journey` nodes include journey-specific metadata such as:
+These are useful when the diagram should read like a system topology instead of a generic flowchart.
 
-- actor
-- section
-- task
-- score
+### Journey and experience nodes
 
-These are useful for service blueprints and UX journey maps.
+Journey-oriented nodes help when the diagram represents user or process stages instead of system topology. They are a better fit when actor, stage, and score-like information matter.
 
-### Architecture nodes
+### Media and wireframe nodes
 
-`architecture` and icon-backed `custom` nodes are designed for system diagrams. They can carry:
+OpenFlowKit also supports image nodes and browser/mobile wireframe-style nodes for product, UX, and annotated architecture workflows.
 
-- provider metadata
-- resource type
-- environment and trust domain fields
-- provider icon pack references
-- architecture boundary relationships
+## How to choose
 
-### Structural and content nodes
+Choose the node family that matches the semantics of the work, not just the shape you want on the canvas.
 
-These support organization and annotation:
+- Use flow nodes for generic process logic.
+- Use architecture nodes for system and infrastructure modeling.
+- Use mind map nodes for branching ideation.
+- Use journey nodes for experience mapping.
 
-- `annotation`
-- `section`
-- `group`
-- `swimlane`
-- `image`
+## Related pages
 
-Use them to explain or frame diagrams rather than only to model system entities.
-
-## Shapes
-
-The node data model supports these shape variants:
-
-- rectangle
-- rounded
-- capsule
-- diamond
-- hexagon
-- cylinder
-- ellipse
-- parallelogram
-- circle
-
-Not every family exposes every shape in the same way. General flow nodes are the most flexible.
-
-## Wireframe surfaces
-
-The asset browser can create browser and mobile wireframe nodes. These are useful when you need UI flow context inside the same canvas as process logic.
-
-## Provider-backed icon nodes
-
-The assets panel can load icon catalogs for:
-
-- general icons
-- AWS
-- Azure
-- GCP
-- CNCF
-
-These are inserted as icon-presented nodes rather than plain boxes, which makes them better suited for infrastructure maps.
-
-## Which node should you use?
-
-Use this rule of thumb:
-
-- choose **process/start/decision/end** for classic workflows
-- choose **mindmap** for branching idea trees
-- choose **journey** for actor and stage-based experiences
-- choose **architecture** or provider icons for cloud/system diagrams
-- choose **annotation**, **text**, and **section** for explanation and grouping
-
-## Related reading
-
+- [Diagram Families](/diagram-families/)
 - [Properties Panel](/properties-panel/)
-- [AWS Architecture](/aws-architecture/)
-- [Payment Flow](/payment-flow/)
-*   **Best for**: Process steps, services, database tables, or general entities.
-*   **Features**: Resizable, editable label, support for icons.
-
-## 2. Text Node / Annotation
-
-A lightweight, borderless node used for adding comments or labels to the canvas without affecting the flow structure.
-*   **Best for**: Adding sticky notes, section headers, or explanatory text.
-*   **Usage**: Select "Text" from the toolbar or press \`T\`.
-
-## 3. Group Node
-
-Container nodes that visually group other nodes together. Moving a group moves all nodes inside it.
-*   **Best for**: Visualizing sub-systems, VPCs, or logical boundaries.
-*   **Usage**: Select nodes -> Right Click -> "Group Selection".
-
-## 4. Swimlane Node
-
-Vertical or horizontal lanes to organize processes by actor or department.
-*   **Best for**: Cross-functional flowcharts.
-
-## 5. Image Node
-
-Embed arbitrary images directly onto the canvas.
-*   **Best for**: Adding logos, screenshots, or reference diagrams.
-*   **Usage**: Drag and drop an image file directly onto the canvas.
+- [Templates & Starter Flows](/templates-assets/)

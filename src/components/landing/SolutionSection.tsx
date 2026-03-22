@@ -91,7 +91,7 @@ export function SolutionSection(): React.ReactElement {
                         </div>
                     </div>
 
-                    {/* Card 2: Flowpilot AI (Span 5) */}
+                    {/* Card 2: AI Studio (Span 5) */}
                     <div className="md:col-span-5 bg-[#0A0A0A] rounded-[2.5rem] p-8 md:p-12 flex flex-col relative overflow-hidden group border border-white/10 shadow-2xl min-h-[400px]">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#222_0%,transparent_60%)]"></div>
                         <div className="absolute inset-0 noise-overlay opacity-10 mix-blend-overlay"></div>

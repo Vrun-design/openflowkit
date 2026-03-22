@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom';
-import { docsNavigation, DocItem, DocSection } from './docsData';
+import { docsNavigation, DocItem } from './docsData';
 
 export const useDocsNavigation = () => {
     const { slug } = useParams();

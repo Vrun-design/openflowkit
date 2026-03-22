@@ -37,6 +37,7 @@ export interface CollaborationPresenceState {
     x: number;
     y: number;
   };
+  selectedNodeIds?: string[];
 }
 
 export interface CollaborationParticipantState {

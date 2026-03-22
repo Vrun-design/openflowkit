@@ -289,7 +289,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
                                         }}
                                     >
                                         {assetPreviewUrls[item.id] ? (
-                                            <img src={assetPreviewUrls[item.id]} alt="" className="h-10 w-10 object-contain" />
+                                            <img src={assetPreviewUrls[item.id]} alt={`${item.label} icon`} className="h-10 w-10 object-contain" />
                                         ) : (
                                             item.category === 'icons'
                                                 ? <NamedIcon name={item.icon} fallbackName="Box" className="h-5 w-5 text-slate-400" />

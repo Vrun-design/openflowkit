@@ -440,7 +440,7 @@
   },
   "commandBar": {
     "ai": {
-      "title": "Flowpilot fragen",
+      "title": "AI Studio fragen",
       "clearChat": "Chatverlauf löschen",
       "placeholder": "Beschreiben Sie, was Sie erstellen möchten...",
       "examples": {
@@ -530,7 +530,7 @@
     "shortcuts": "Kürzel",
     "running": "{appName} wird ausgeführt",
     "generalSettings": "Allgemeine Einstellungen",
-    "flowpilotConfigurations": "Flowpilot-Konfigurationen",
+    "flowpilotConfigurations": "AI Studio-Konfiguration",
     "keyboardShortcuts": "Tastaturkürzel",
     "canvas": {
       "title": "Canvas",
@@ -658,7 +658,7 @@
   "toolbar": {
     "selectMode": "Auswahlmodus (V)",
     "panMode": "Verschiebemodus (H)",
-    "flowpilot": "Flowpilot (Cmd+K)",
+    "flowpilot": "Command Center (Cmd+K)",
     "templates": "Vorlagen",
     "addItem": "Element hinzufügen",
     "addToCanvas": "Zum Canvas hinzufügen",
@@ -685,7 +685,7 @@
     "emptyState": {
       "title": "Aufbauen beginnen",
       "description": "Ihr Canvas ist leer. Generieren Sie einen Fluss mit Flowpilot oder starten Sie von Grund auf.",
-      "generateWithFlowpilot": "Mit Flowpilot generieren",
+      "generateWithFlowpilot": "Mit AI Studio generieren",
       "browseTemplates": "Vorlagen durchsuchen",
       "addBlankNode": "Leeren Knoten hinzufügen"
     }

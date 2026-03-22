@@ -144,7 +144,7 @@ export const RootView = ({
                         e.stopPropagation();
                     }}
                     aria-label="Search command bar actions"
-                    placeholder="Search actions, FlowPilot, code, or canvas tools..."
+                    placeholder="Search actions, AI Studio, code, or canvas tools..."
                     className="flex-1 bg-transparent border-none outline-none text-slate-700 placeholder:text-slate-400 text-base focus:ring-0"
                     autoFocus
                 />

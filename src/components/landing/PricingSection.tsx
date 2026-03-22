@@ -100,7 +100,7 @@ export function PricingSection({ onLaunch }: PricingSectionProps): React.ReactEl
 
                     {/* Sponsor CTA */}
                     <div className="mt-12 text-center">
-                        <a href="https://github.com/Vrun-design/FlowMind" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-brand-muted hover:text-brand-primary transition-colors text-sm font-medium">
+                        <a href="https://github.com/Vrun-design/openflowkit" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-brand-muted hover:text-brand-primary transition-colors text-sm font-medium">
                             <Heart className="w-4 h-4 fill-current text-pink-500" />
                             {t('pricing.supportDevelopment')}
                         </a>

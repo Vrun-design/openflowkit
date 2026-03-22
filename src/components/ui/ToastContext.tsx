@@ -29,7 +29,7 @@ export const useToast = () => {
 
 // Toast Component
 const ToastItem = ({ toast, onClose }: { toast: Toast; onClose: () => void }) => {
-    const { id, message, type } = toast;
+    const { message, type } = toast;
 
     // Icons & Colors
     const styles = {

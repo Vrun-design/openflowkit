@@ -106,7 +106,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           />
         </Tooltip>
 
-        <Tooltip text={t('toolbar.commandBar', 'Open command bar')}>
+        <Tooltip text={t('toolbar.commandCenter', 'Open Command Center')}>
           <Button
             onClick={onCommandBar}
             disabled={!isInteractive}
@@ -128,7 +128,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           />
         </Tooltip>
 
-        <Tooltip text={t('toolbar.flowpilotAI', 'Open FlowPilot')}>
+        <Tooltip text={t('toolbar.aiStudio', 'Open AI Studio')}>
           <Button
             onClick={onToggleStudio}
             disabled={!isInteractive}

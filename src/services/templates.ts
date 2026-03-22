@@ -1,4 +1,3 @@
-import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { Layout, Cloud, GitBranch, Monitor, Route, ShipWheel } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { FlowEdge, FlowNode } from '@/lib/types';
@@ -57,6 +56,6 @@ function listRegistryTemplates(): FlowTemplate[] {
 
 export const FLOW_TEMPLATES: FlowTemplate[] = listRegistryTemplates();
 
-export function getFlowTemplates(_templateLibraryEnabled: boolean = ROLLOUT_FLAGS.templateLibraryV1): FlowTemplate[] {
+export function getFlowTemplates(): FlowTemplate[] {
   return FLOW_TEMPLATES;
 }

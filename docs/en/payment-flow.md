@@ -48,7 +48,7 @@ sequenceDiagram
 
 ## AI Prompt Example
 
-To generate a similar flow using [Ask Flowpilot](/docs/en/ask-flowpilot):
+To generate a similar flow using [Ask AI Studio](/docs/en/ask-flowpilot):
 
 > `"Generate a flowchart showing a subscription payment flow using Braintree. Include the client requesting a client token, the server generating it, the user submitting a nonce, and the final server-side transaction creation. Show both success and failure branches."`
 

@@ -61,11 +61,23 @@ export function relayoutAllMindmapComponents(nodes: FlowNode[], edges: FlowEdge[
     };
 }
 
+function getLayoutHintsForDiagramType(diagramType: string | undefined): Partial<Pick<AutoLayoutParams, 'algorithm' | 'direction'>> {
+    switch (diagramType) {
+        case 'architecture':
+        case 'infrastructure':
+            return { direction: 'LR' };
+        case 'org-chart':
+            return { algorithm: 'mrtree', direction: 'TB' };
+        default:
+            return {};
+    }
+}
+
 export async function getAutoLayoutResult({
     nodes,
     edges,
-    direction = 'TB',
-    algorithm = 'layered',
+    direction,
+    algorithm,
     spacing = 'normal',
     diagramType,
 }: AutoLayoutParams): Promise<AutoLayoutResult> {
@@ -73,10 +85,11 @@ export async function getAutoLayoutResult({
         return relayoutAllMindmapComponents(nodes, edges);
     }
 
+    const hints = getLayoutHintsForDiagramType(diagramType);
     const { getElkLayout } = await import('@/services/elkLayout');
     return getElkLayout(nodes, edges, {
-        direction,
-        algorithm,
+        direction: direction ?? hints.direction ?? 'TB',
+        algorithm: algorithm ?? hints.algorithm ?? 'layered',
         spacing,
         diagramType,
     });

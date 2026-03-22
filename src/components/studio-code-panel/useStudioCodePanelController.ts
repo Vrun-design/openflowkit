@@ -71,9 +71,9 @@ export function useStudioCodePanelController({
         mermaid: '',
     });
 
-    const generatedFlowMind = useMemo(() => toOpenFlowDSL(nodes, edges), [nodes, edges]);
+    const generatedOpenFlow = useMemo(() => toOpenFlowDSL(nodes, edges), [nodes, edges]);
     const generatedMermaid = useMemo(() => toMermaid(nodes, edges), [nodes, edges]);
-    const generatedCode = mode === 'openflow' ? generatedFlowMind : generatedMermaid;
+    const generatedCode = mode === 'openflow' ? generatedOpenFlow : generatedMermaid;
     const code = draftCodeByMode[mode] ?? generatedCode;
 
     const draftPreview = useMemo<DraftPreview>(() => {

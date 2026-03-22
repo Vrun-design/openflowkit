@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
     Terminal,
     Figma,
-    GitBranch,
     Share2,
     Workflow
 } from 'lucide-react';

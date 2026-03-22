@@ -1,7 +1,6 @@
 import React, { Suspense, lazy, useState } from 'react';
 import { useFlowStore } from '../store';
 import { useTabActions, useTabsState } from '@/store/tabHooks';
-import { FlowSnapshot } from '@/lib/types';
 import { HomeDashboard, type HomeFlowCard } from './home/HomeDashboard';
 import { HomeFlowDeleteDialog, HomeFlowRenameDialog } from './home/HomeFlowDialogs';
 import { HomeSettingsView } from './home/HomeSettingsView';
@@ -16,7 +15,6 @@ const LazyWelcomeModal = lazy(async () => {
 interface HomePageProps {
     onLaunch: () => void;
     onImportJSON: () => void;
-    onRestoreSnapshot: (snapshot: FlowSnapshot) => void;
     onOpenFlow: (flowId: string) => void;
     activeTab?: 'home' | 'settings';
     onSwitchTab?: (tab: 'home' | 'settings') => void;
@@ -25,7 +23,6 @@ interface HomePageProps {
 export const HomePage: React.FC<HomePageProps> = ({
     onLaunch,
     onImportJSON,
-    onRestoreSnapshot: _onRestoreSnapshot,
     onOpenFlow,
     activeTab: propActiveTab,
     onSwitchTab

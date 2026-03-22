@@ -1,4 +1,3 @@
-import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { isCollaborationPresenceState } from './contracts';
 import { createCollaborationRoomConfig } from './roomConfig';
 import type { CollaborationPresenceState, CollaborationRoomConfig } from './types';
@@ -27,6 +26,7 @@ export function createLocalPresence(
     name,
     color,
     cursor: { x: 0, y: 0 },
+    selectedNodeIds: [],
   };
 }
 
@@ -34,7 +34,7 @@ export function createCollaborationSessionBootstrap(
   params: CollaborationSessionParams
 ): CollaborationSessionBootstrap {
   return {
-    enabled: ROLLOUT_FLAGS.collaborationV1,
+    enabled: true,
     room: createCollaborationRoomConfig(params.roomId, params.clientId, params.roomPassword),
     localPresence: createLocalPresence(params.clientId, params.name, params.color),
   };

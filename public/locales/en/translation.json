@@ -355,7 +355,7 @@
     "description": "The ultimate white-label canvas. Fully customizable nodes, edges, and themes — powered by React Flow. It's your brand, given infinite space to breathe.",
     "diagramAsCode": "Diagram as Code",
     "diagramAsCodeDesc": "First-class support for Mermaid.js and our type-safe DSL. Define your architecture in code, export as JSON, and let the engine handle the layout.",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "aiAssistant": "AI Assistant",
     "flowpilotAIDesc": "Chat with your diagram. \"Make the corners rounder\", \"Add a load balancer\".",
     "addRedisCache": "Add a Redis cache in front of the DB.",
@@ -413,7 +413,7 @@
     "communityDesc": "Join developers building on OpenFlowKit.",
     "roadmap": "Roadmap",
     "coreRenderer": "Core Renderer",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "pdfExport": "PDF Export"
   },
   "demo": {
@@ -468,7 +468,7 @@
   },
   "commandBar": {
     "ai": {
-      "title": "Ask Flowpilot",
+      "title": "Ask AI Studio",
       "clearChat": "Clear Chat History",
       "placeholder": "Describe what you want to create...",
       "examples": {
@@ -554,7 +554,7 @@
   "settingsModal": {
     "title": "Settings",
     "general": "General",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "shortcuts": "Shortcuts",
     "running": "Running {appName}",
     "generalSettings": "General Settings",
@@ -909,7 +909,7 @@
   "toolbar": {
     "selectMode": "Select Mode (V)",
     "panMode": "Pan Mode (H)",
-    "flowpilot": "Flowpilot (Cmd+K)",
+    "flowpilot": "Command Center (Cmd+K)",
     "templates": "Templates",
     "addItem": "Add Item",
     "addToCanvas": "Add to Canvas",
@@ -936,7 +936,7 @@
     "emptyState": {
       "title": "Start Building",
       "description": "Your canvas is empty. Generate a flow with Flowpilot, use a template, or start from scratch.",
-      "generateWithFlowpilot": "Generate with Flowpilot",
+      "generateWithFlowpilot": "Generate with AI Studio",
       "browseTemplates": "Browse Templates",
       "addBlankNode": "Add Blank Node"
     }

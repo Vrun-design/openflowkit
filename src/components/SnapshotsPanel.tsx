@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, Clock, Trash2, RotateCcw } from 'lucide-react';
+import { X, Save, Clock, Trash2, RotateCcw, GitCompare } from 'lucide-react';
 import { FlowSnapshot } from '@/lib/types';
 import { useTranslation } from 'react-i18next';
 
@@ -12,12 +12,14 @@ interface SnapshotsPanelProps {
     onSaveSnapshot: (name: string) => void;
     onRestoreSnapshot: (snapshot: FlowSnapshot) => void;
     onDeleteSnapshot: (id: string) => void;
+    onCompareSnapshot?: (snapshot: FlowSnapshot) => void;
 }
 
 interface SnapshotCardListProps {
     snapshots: FlowSnapshot[];
     onRestoreSnapshot: (snapshot: FlowSnapshot) => void;
     onDeleteSnapshot: (id: string) => void;
+    onCompareSnapshot?: (snapshot: FlowSnapshot) => void;
     restoreVersionTitle: string;
     deleteVersionTitle: string;
     nodesLabel: (count: number) => string;
@@ -30,6 +32,7 @@ function SnapshotCardList({
     snapshots,
     onRestoreSnapshot,
     onDeleteSnapshot,
+    onCompareSnapshot,
     restoreVersionTitle,
     deleteVersionTitle,
     nodesLabel,
@@ -47,16 +50,31 @@ function SnapshotCardList({
                             <p className="text-xs text-slate-500">{new Date(snapshot.timestamp).toLocaleString()}</p>
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {onCompareSnapshot && (
+                                <button
+                                    type="button"
+                                    onClick={() => onCompareSnapshot(snapshot)}
+                                    aria-label="Compare snapshot with current diagram"
+                                    title="Compare with current"
+                                    className="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-[var(--brand-primary)] rounded-[var(--radius-sm)] transition-colors"
+                                >
+                                    <GitCompare className="w-3.5 h-3.5" />
+                                </button>
+                            )}
                             <button
+                                type="button"
                                 onClick={() => onRestoreSnapshot(snapshot)}
                                 data-testid={`snapshot-restore-${snapshot.id}`}
+                                aria-label={`${restoreVersionTitle}: ${snapshot.name}`}
                                 title={restoreVersionTitle}
                                 className="p-1.5 text-[var(--brand-primary)] hover:bg-[var(--brand-primary-50)] rounded-[var(--radius-sm)] transition-colors"
                             >
                                 <RotateCcw className="w-3.5 h-3.5" />
                             </button>
                             <button
+                                type="button"
                                 onClick={() => onDeleteSnapshot(snapshot.id)}
+                                aria-label={`${deleteVersionTitle}: ${snapshot.name}`}
                                 title={deleteVersionTitle}
                                 className="p-1.5 text-red-600 hover:bg-red-50 rounded-[var(--radius-sm)] transition-colors"
                             >
@@ -83,6 +101,7 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
     onSaveSnapshot,
     onRestoreSnapshot,
     onDeleteSnapshot,
+    onCompareSnapshot,
 }) => {
     const { t } = useTranslation();
     const [newSnapshotName, setNewSnapshotName] = useState('');
@@ -107,7 +126,7 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                     <Clock className="w-4 h-4 text-[var(--brand-primary)]" />
                     <span>{t('snapshotsPanel.title')}</span>
                 </h3>
-                <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-[var(--radius-sm)] text-slate-400 transition-colors">
+                <button type="button" onClick={onClose} className="p-1 hover:bg-slate-200 rounded-[var(--radius-sm)] text-slate-400 transition-colors" aria-label={t('snapshotsPanel.close', 'Close snapshots panel')}>
                     <X className="w-4 h-4" />
                 </button>
             </div>
@@ -125,8 +144,10 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                         onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                     />
                     <button
+                        type="button"
                         onClick={handleSave}
                         disabled={!newSnapshotName.trim()}
+                        aria-label={t('snapshotsPanel.saveCurrentVersion', 'Save current version')}
                         className="p-2 bg-[var(--brand-primary)] text-white rounded-[var(--radius-md)] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95"
                     >
                         <Save className="w-4 h-4" />
@@ -152,6 +173,7 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                                     snapshots={manualSnapshots}
                                     onRestoreSnapshot={onRestoreSnapshot}
                                     onDeleteSnapshot={onDeleteSnapshot}
+                                    onCompareSnapshot={onCompareSnapshot}
                                     restoreVersionTitle={restoreVersionTitle}
                                     deleteVersionTitle={deleteVersionTitle}
                                     nodesLabel={nodesLabel}
@@ -173,6 +195,7 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                                     snapshots={autoSnapshots}
                                     onRestoreSnapshot={onRestoreSnapshot}
                                     onDeleteSnapshot={onDeleteSnapshot}
+                                    onCompareSnapshot={onCompareSnapshot}
                                     restoreVersionTitle={restoreVersionTitle}
                                     deleteVersionTitle={deleteVersionTitle}
                                     nodesLabel={nodesLabel}

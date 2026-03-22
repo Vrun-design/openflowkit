@@ -174,7 +174,7 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
                                             className="flex aspect-square items-center justify-center rounded-xl border border-slate-200 bg-white p-2 transition-all hover:border-slate-300 hover:bg-slate-50"
                                         >
                                             {previewUrls[item.id] ? (
-                                                <img src={previewUrls[item.id]} alt="" className="h-10 w-10 object-contain" />
+                                                <img src={previewUrls[item.id]} alt={`${item.label} icon`} className="h-10 w-10 object-contain" />
                                             ) : item.category === 'icons' ? (
                                                 <NamedIcon name={item.icon} fallbackName="Box" className="w-5 h-5 text-slate-500" />
                                             ) : (
@@ -258,7 +258,7 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
 
                 <div className="bg-slate-50/80 px-4 py-2 flex items-center justify-between border-t border-slate-100">
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t('connectMenu.releaseToConnect')}</span>
-                    <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-full text-slate-400 transition-colors">
+                    <button type="button" onClick={onClose} className="p-1 hover:bg-slate-200 rounded-full text-slate-400 transition-colors" aria-label={t('connectMenu.close', 'Close connect menu')}>
                         <X className="w-3 h-3" />
                     </button>
                 </div>

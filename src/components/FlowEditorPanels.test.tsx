@@ -36,7 +36,7 @@ const baseProps = {
     onLayout: vi.fn(async () => undefined),
     onSelectTemplate: vi.fn(),
     onOpenStudioAI: vi.fn(),
-    onOpenStudioFlowMind: vi.fn(),
+    onOpenStudioOpenFlow: vi.fn(),
     onOpenStudioMermaid: vi.fn(),
     onOpenStudioPlayback: vi.fn(),
     initialView: 'root' as const,

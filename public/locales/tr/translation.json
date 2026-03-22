@@ -358,7 +358,7 @@
     "description": "Nihai beyaz etiketli tuval. Tamamen özelleştirilebilir düğümler, kenarlar ve temalar — React Flow ile güçlendirilmiş. Bu sizin markanız, nefes almak için sonsuz alan verilmiş.",
     "diagramAsCode": "Kod Olarak Diyagram",
     "diagramAsCodeDesc": "Mermaid.js ve tip güvenli DSL'imiz için birinci sınıf destek. Mimarinizi kodla tanımlayın, JSON olarak dışa aktarın ve motorun düzeni halletmesine izin verin.",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "aiAssistant": "Yapay Zeka Asistanı",
     "flowpilotAIDesc": "Diyagramınızla sohbet edin. \"Köşeleri daha yuvarlak yap\", \"Yük dengeleyici ekle\".",
     "addRedisCache": "Veritabanının önüne Redis önbelleği ekle.",
@@ -416,7 +416,7 @@
     "communityDesc": "OpenFlowKit üzerinde çalışan geliştiricilere katılın.",
     "roadmap": "Yol Haritası",
     "coreRenderer": "Çekirdek Render",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "pdfExport": "PDF Dışa Aktarma"
   },
   "demo": {
@@ -557,11 +557,11 @@
   "settingsModal": {
     "title": "Ayarlar",
     "general": "Genel",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "shortcuts": "Kısayollar",
     "running": "{appName} Çalışıyor",
     "generalSettings": "Genel Ayarlar",
-    "flowpilotConfigurations": "Flowpilot Yapılandırmaları",
+    "flowpilotConfigurations": "AI Studio Yapılandırması",
     "keyboardShortcuts": "Klavye Kısayolları",
     "canvas": {
       "title": "Tuval",
@@ -912,7 +912,7 @@
   "toolbar": {
     "selectMode": "Seçim Modu (V)",
     "panMode": "Kaydırma Modu (H)",
-    "flowpilot": "Flowpilot (Cmd+K)",
+    "flowpilot": "Command Center (Cmd+K)",
     "templates": "Şablonlar",
     "addItem": "Öğe Ekle",
     "addToCanvas": "Tuvale Ekle",

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatMessage } from '@/services/aiService';
 import { composeDiagramForDisplay } from '@/services/composeDiagramForDisplay';
 import { generateDiagramFromChat } from '@/services/aiService';
@@ -9,7 +9,7 @@ import {
 } from './requestLifecycle';
 
 vi.mock('@/services/ai/contextSerializer', () => ({
-  serializeCanvasContextForAI: vi.fn(() => '{"nodes":[],"edges":[]}'),
+  serializeCanvasContextForAI: vi.fn(() => '# Current diagram\nflow: Test\ndirection: TB'),
 }));
 
 vi.mock('@/services/aiService', () => ({
@@ -30,7 +30,13 @@ vi.mock('./graphComposer', () => ({
   toFinalEdges: vi.fn(() => [{ id: 'edge-final', source: 'existing-a', target: 'existing-a' }]),
 }));
 
+const BASE_AI_SETTINGS = { provider: 'gemini' as const, apiKey: 'key', model: 'model' };
+const BASE_EDGE_OPTIONS = { type: 'smoothstep' as const, animated: false, strokeWidth: 2 };
+
 describe('requestLifecycle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it('builds and appends chat messages consistently', () => {
     const userMessage = buildUserChatMessage('Create billing flow', 'base64');
     expect(userMessage).toEqual({
@@ -46,32 +52,58 @@ describe('requestLifecycle', () => {
     ]);
   });
 
-  it('runs the AI generation pipeline and returns composed graph output', async () => {
+  it('runs full layout on an empty canvas (fresh generation)', async () => {
     vi.mocked(generateDiagramFromChat).mockResolvedValueOnce('flow: "A"');
 
     const result = await generateAIFlowResult({
       chatMessages: [],
       prompt: 'Create billing flow',
-      imageBase64: undefined,
-      nodes: [{ id: 'existing-a', type: 'process', position: { x: 0, y: 0 }, data: { label: 'A' } }],
+      nodes: [],
       edges: [],
-      aiSettings: {
-        provider: 'gemini',
-        apiKey: 'key',
-        model: 'model',
-      },
-      globalEdgeOptions: {
-        type: 'smoothstep',
-        animated: false,
-        strokeWidth: 2,
-      },
+      aiSettings: BASE_AI_SETTINGS,
+      globalEdgeOptions: BASE_EDGE_OPTIONS,
     });
 
     expect(generateDiagramFromChat).toHaveBeenCalled();
     expect(composeDiagramForDisplay).toHaveBeenCalled();
     expect(result.userMessage.role).toBe('user');
     expect(result.dslText).toBe('flow: "A"');
+  });
+
+  it('skips layout when all AI nodes are matched (pure edit — positions preserved)', async () => {
+    vi.mocked(generateDiagramFromChat).mockResolvedValueOnce('flow: "A"');
+
+    const result = await generateAIFlowResult({
+      chatMessages: [],
+      prompt: 'Make the Login node blue',
+      nodes: [{ id: 'existing-a', type: 'process', position: { x: 100, y: 200 }, data: { label: 'A' } }],
+      edges: [],
+      aiSettings: BASE_AI_SETTINGS,
+      globalEdgeOptions: BASE_EDGE_OPTIONS,
+    });
+
+    // No new nodes → layout skipped, existing position preserved
+    expect(composeDiagramForDisplay).not.toHaveBeenCalled();
     expect(result.layoutedNodes[0].id).toBe('existing-a');
+    expect(result.layoutedNodes[0].position).toEqual({ x: 100, y: 200 });
     expect(result.layoutedEdges[0].id).toBe('edge-final');
+  });
+
+  it('appends selection suffix to prompt when nodes are selected', async () => {
+    vi.mocked(generateDiagramFromChat).mockResolvedValueOnce('flow: "A"');
+
+    await generateAIFlowResult({
+      chatMessages: [],
+      prompt: 'Make it blue',
+      nodes: [{ id: 'existing-a', type: 'process', position: { x: 0, y: 0 }, data: { label: 'Login' } }],
+      edges: [],
+      selectedNodeIds: ['existing-a'],
+      aiSettings: BASE_AI_SETTINGS,
+      globalEdgeOptions: BASE_EDGE_OPTIONS,
+    });
+
+    const calledPrompt = vi.mocked(generateDiagramFromChat).mock.calls[0][1];
+    expect(calledPrompt).toContain('FOCUSED EDIT');
+    expect(calledPrompt).toContain('Login');
   });
 });

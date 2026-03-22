@@ -1,5 +1,6 @@
 import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk.bundled.js';
 import { NODE_HEIGHT, NODE_WIDTH } from '@/constants';
+import { createLogger } from '@/lib/logger';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import { handleIdToSide } from '@/lib/nodeHandles';
 import { assignSmartHandlesWithOptions } from './smartEdgeRouting';
@@ -11,8 +12,13 @@ interface ElkLayoutEngine {
     layout: (graph: ElkNode) => Promise<ElkNode>;
 }
 
+interface ElkModuleLike {
+    default?: new () => unknown;
+}
+
 let elkInstancePromise: Promise<ElkLayoutEngine> | null = null;
 const ELK_BOUNDARY_FANOUT_MIN_GROUP_SIZE = 2;
+const logger = createLogger({ scope: 'elkLayout' });
 
 /** Reset the cached ELK instance — useful in tests or when the instance may have become stale. */
 export function resetElkInstance(): void {
@@ -49,7 +55,17 @@ function getClampedBoundaryFanoutSpacing(
 async function getElkInstance(): Promise<ElkLayoutEngine> {
     if (!elkInstancePromise) {
         elkInstancePromise = import('elkjs/lib/elk.bundled.js').then((module) => {
-            return new module.default() as unknown as ElkLayoutEngine;
+            const elkModule = module as ElkModuleLike;
+            if (typeof elkModule.default !== 'function') {
+                throw new Error('ELK module did not expose a constructor.');
+            }
+
+            const candidate = new elkModule.default();
+            if (!candidate || typeof (candidate as ElkLayoutEngine).layout !== 'function') {
+                throw new Error('ELK instance does not implement layout().');
+            }
+
+            return candidate as ElkLayoutEngine;
         });
     }
     return elkInstancePromise;
@@ -350,6 +366,27 @@ export function resolveLayoutedEdgeHandles(nodes: FlowNode[], edges: FlowEdge[])
     });
 }
 
+/**
+ * Re-routes all edges using smart handle assignment, clearing any stale ELK waypoints.
+ * Use this after manual node moves to clean up all edges without re-running the full layout.
+ */
+export function rerouteEdges(nodes: FlowNode[], edges: FlowEdge[]): FlowEdge[] {
+    return resolveLayoutedEdgeHandles(nodes, edges).map((edge) => ({
+        ...edge,
+        data: {
+            ...edge.data,
+            routingMode: 'auto' as const,
+            elkPoints: undefined,
+        },
+    }));
+}
+
+function isSparseDiagram(nodeCount: number, edgeCount: number): boolean {
+    if (nodeCount <= 20) return true;
+    const avgDegree = nodeCount > 0 ? (edgeCount * 2) / nodeCount : 0;
+    return avgDegree <= 2.5;
+}
+
 export async function getElkLayout(
     nodes: FlowNode[],
     edges: FlowEdge[],
@@ -418,14 +455,23 @@ export async function getElkLayout(
             };
         });
         const reroutedEdges = resolveLayoutedEdgeHandles(laidOutNodes, sortedEdges);
-        const normalizedElkPointsMap = normalizeElkEdgeBoundaryFanout(
-            reroutedEdges,
-            laidOutNodes,
-            positionMap,
-            edgePointsMap
-        );
+        const sparse = isSparseDiagram(nodes.length, sortedEdges.length);
+
+        const normalizedElkPointsMap = sparse
+            ? new Map<string, { x: number; y: number }[]>()
+            : normalizeElkEdgeBoundaryFanout(reroutedEdges, laidOutNodes, positionMap, edgePointsMap);
 
         const laidOutEdges = reroutedEdges.map((edge) => {
+            if (sparse) {
+                return {
+                    ...edge,
+                    data: {
+                        ...edge.data,
+                        routingMode: edge.data?.routingMode === 'manual' ? ('manual' as const) : ('auto' as const),
+                        elkPoints: undefined,
+                    },
+                };
+            }
             const points = normalizedElkPointsMap.get(edge.id) ?? edgePointsMap.get(edge.id);
             if (points) {
                 return {
@@ -442,7 +488,7 @@ export async function getElkLayout(
 
         return { nodes: laidOutNodes, edges: laidOutEdges };
     } catch (err) {
-        console.error('ELK Layout Error:', err);
+        logger.error('ELK layout error.', { error: err });
         return { nodes, edges };
     }
 }

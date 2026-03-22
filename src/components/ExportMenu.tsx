@@ -19,6 +19,7 @@ interface ExportMenuProps {
     onExportPlantUML: () => void;
     onExportOpenFlowDSL: () => void;
     onExportFigma: () => void;
+    onShare: () => void;
 }
 
 export const ExportMenu: React.FC<ExportMenuProps> = ({
@@ -30,6 +31,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
     onExportPlantUML,
     onExportOpenFlowDSL,
     onExportFigma,
+    onShare,
 }) => {
     const { t } = useTranslation();
     const { isOpen, menuRef, toggleMenu, handleSelect } = useExportMenu({
@@ -41,11 +43,12 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         onExportPlantUML,
         onExportOpenFlowDSL,
         onExportFigma,
+        onShare,
     });
 
     return (
         <div className="relative" ref={menuRef}>
-            <Tooltip text={t('export.exportDiagram', 'Export Diagram')} side="bottom">
+            <Tooltip text={t('export.exportOrShare', 'Export or share this canvas')} side="bottom">
                 <Button
                     onClick={toggleMenu}
                     data-testid="topnav-export"

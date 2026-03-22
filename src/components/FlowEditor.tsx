@@ -1,17 +1,14 @@
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useReactFlow } from '@/lib/reactflowCompat';
 import '@xyflow/react/dist/style.css';
-import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { useFlowStore } from '../store';
 import { FlowCanvas } from './FlowCanvas';
-import { ErrorBoundary } from './ErrorBoundary';
 import { useSnapshots } from '../hooks/useSnapshots';
 import { useFlowHistory } from '../hooks/useFlowHistory';
 import { useFlowOperations } from '../hooks/useFlowOperations';
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useAIGeneration } from '../hooks/useAIGeneration';
 import { useFlowExport } from '../hooks/useFlowExport';
 import { useToast } from './ui/ToastContext';
@@ -19,57 +16,20 @@ import { usePlayback } from '../hooks/usePlayback';
 import { useFlowEditorUIState } from '@/hooks/useFlowEditorUIState';
 import { useFlowEditorActions } from '@/hooks/useFlowEditorActions';
 import { useFlowEditorCallbacks } from '@/hooks/useFlowEditorCallbacks';
-import { buildFlowEditorPanelsProps } from './flow-editor/panelProps';
-import { useFlowEditorShellController } from './flow-editor/useFlowEditorShellController';
-import { useFlowEditorStudioController } from './flow-editor/useFlowEditorStudioController';
+import { FlowEditorChrome } from './flow-editor/FlowEditorChrome';
+import { useCollaborationNodePositions } from './flow-editor/useCollaborationNodePositions';
+import { useFlowEditorController } from './flow-editor/useFlowEditorController';
+import { useFlowEditorInteractionBindings } from './flow-editor/useFlowEditorInteractionBindings';
+import { useInfraDslApply } from './flow-editor/useInfraDslApply';
 import { useFlowEditorCollaboration } from '@/hooks/useFlowEditorCollaboration';
-import { useMindmapTopicActionRequest } from '@/hooks/mindmapTopicActionRequest';
 import { useShortcutHelpActions, useViewSettings } from '@/store/viewHooks';
 import { useSelectionActions, useSelectionState } from '@/store/selectionHooks';
-
-const LazyFlowEditorPanels = lazy(async () => {
-    const module = await import('./FlowEditorPanels');
-    return { default: module.FlowEditorPanels };
-});
-
-const LazyTopNav = lazy(async () => {
-    const module = await import('./TopNav');
-    return { default: module.TopNav };
-});
-
-const LazyToolbar = lazy(async () => {
-    const module = await import('./Toolbar');
-    return { default: module.Toolbar };
-});
-
-const LazyPlaybackControls = lazy(async () => {
-    const module = await import('./PlaybackControls');
-    return { default: module.PlaybackControls };
-});
-
-const LazyFlowEditorLayoutOverlay = lazy(async () => {
-    const module = await import('./FlowEditorLayoutOverlay');
-    return { default: module.FlowEditorLayoutOverlay };
-});
-
-const LazyFlowEditorEmptyState = lazy(async () => {
-    const module = await import('./FlowEditorEmptyState');
-    return { default: module.FlowEditorEmptyState };
-});
-
-const LazyCollaborationPresenceOverlay = lazy(async () => {
-    const module = await import('./flow-editor/CollaborationPresenceOverlay');
-    return { default: module.CollaborationPresenceOverlay };
-});
+import { ArchitectureLintProvider } from '@/context/ArchitectureLintContext';
+import { DiagramDiffProvider } from '@/context/DiagramDiffContext';
+import { ShareEmbedModal } from '@/components/ShareEmbedModal';
 
 interface FlowEditorProps {
     onGoHome: () => void;
-}
-
-function TopNavFallback(): React.ReactElement {
-    return (
-        <div className="absolute top-0 left-0 right-0 z-50 h-16 border-b border-white/20 bg-white/70 shadow-sm backdrop-blur-md" />
-    );
 }
 
 export function FlowEditor({ onGoHome }: FlowEditorProps) {
@@ -77,7 +37,7 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
     const { addToast } = useToast();
     const location = useLocation();
     const navigate = useNavigate();
-    const collaborationV1Enabled = ROLLOUT_FLAGS.collaborationV1;
+    const collaborationEnabled = true;
 
     // --- Global Store ---
     const {
@@ -107,6 +67,7 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
     })));
     const viewSettings = useViewSettings();
     const { setShortcutsHelpOpen } = useShortcutHelpActions();
+    const [diffBaseline, setDiffBaseline] = useState<import('@/lib/types').FlowSnapshot | null>(null);
     const { selectedNodeId, selectedEdgeId } = useSelectionState();
     const { setSelectedNodeId, setSelectedEdgeId } = useSelectionActions();
     const { showGrid, snapToGrid } = viewSettings;
@@ -150,7 +111,7 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
     const {
         updateNodeData, applyBulkNodeData, updateNodeType, updateNodeZIndex, updateEdge,
         deleteNode, deleteEdge, duplicateNode,
-        handleAddNode, handleAddShape, handleAddJourneyNode, handleAddMindmapNode, handleAddArchitectureNode, handleAddAnnotation, handleAddSection, handleAddTextNode, handleAddImage, handleAddWireframe, handleAddDomainLibraryItem, handleAddMindmapChild, handleAddMindmapSibling, handleAddArchitectureService, handleCreateArchitectureBoundary,
+        handleAddNode, handleAddShape, handleAddJourneyNode, handleAddMindmapNode, handleAddArchitectureNode, handleAddClassNode, handleAddEntityNode, handleAddAnnotation, handleAddSection, handleAddTextNode, handleAddImage, handleAddWireframe, handleAddDomainLibraryItem, handleAddMindmapChild, handleAddMindmapSibling, handleAddArchitectureService, handleCreateArchitectureBoundary,
         copySelection, pasteSelection,
     } = useFlowOperations(recordHistory);
 
@@ -183,48 +144,45 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
         screenToFlowPosition,
     });
 
-    useKeyboardShortcuts({
-        selectedNodeId, selectedEdgeId,
-        deleteNode, deleteEdge, undo, redo, duplicateNode, selectAll,
+    useFlowEditorInteractionBindings({
+        selectedNodeId,
+        selectedEdgeId,
         selectedNodeType,
-        onAddMindmapChildShortcut: () => {
-            if (selectedNodeId) {
-                handleAddMindmapChild(selectedNodeId);
-            }
-        },
-        onAddMindmapSiblingShortcut: () => {
-            if (selectedNodeId) {
-                handleAddMindmapSibling(selectedNodeId);
-            }
-        },
-        onCommandBar: () => openCommandBar('root'),
-        onSearch: () => openCommandBar('search'),
-        onShortcutsHelp: () => setShortcutsHelpOpen(true),
-        onSelectMode: enableSelectMode,
-        onPanMode: enablePanMode,
-        onFitView: () => fitView({ duration: 600, padding: 0.2 }),
-        onZoomIn: () => zoomIn({ duration: 300 }),
-        onZoomOut: () => zoomOut({ duration: 300 }),
-        onCopy: copySelection,
-        onPaste: pasteSelection,
-        onClearSelection: () => {
-            setSelectedNodeId(null);
-            setSelectedEdgeId(null);
-            setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
-            setEdges((eds) => eds.map((e) => ({ ...e, selected: false })));
-        },
-        onNudge: (dx, dy) => {
-            setNodes((nds) => nds.map((n) =>
-                n.selected ? { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } } : n
-            ));
-        },
+        deleteNode,
+        deleteEdge,
+        undo,
+        redo,
+        duplicateNode,
+        selectAll,
+        handleAddMindmapChild,
+        handleAddMindmapSibling,
+        openCommandBar,
+        setShortcutsHelpOpen,
+        enableSelectMode,
+        enablePanMode,
+        fitView,
+        zoomIn,
+        zoomOut,
+        copySelection,
+        pasteSelection,
+        setSelectedNodeId,
+        setSelectedEdgeId,
+        setNodes,
+        setEdges,
     });
 
     // --- AI ---
+    const [pendingAIPrompt, setPendingAIPrompt] = useState<string | undefined>();
+    const clearPendingAIPrompt = useCallback(() => setPendingAIPrompt(undefined), []);
     const { isGenerating, handleAIRequest, handleCodeAnalysis, handleSqlAnalysis, handleTerraformAnalysis, handleOpenApiAnalysis, chatMessages, clearChat } = useAIGeneration(
         recordHistory,
         handleCommandBarApply
     );
+
+    const handleApplyInfraDsl = useInfraDslApply({
+        addToast,
+        handleCommandBarApply,
+    });
 
     // --- Playback ---
     const {
@@ -260,7 +218,7 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
         collaborationTopNavState,
         remotePresence,
     } = useFlowEditorCollaboration({
-        collaborationEnabled: collaborationV1Enabled,
+        collaborationEnabled,
         activeTabId,
         nodes,
         edges,
@@ -270,16 +228,10 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
         addToast,
     });
 
-    useMindmapTopicActionRequest(
-        useCallback(({ nodeId, action, side }) => {
-            if (action === 'child') {
-                handleAddMindmapChild(nodeId, side ?? null);
-                return;
-            }
-            if (action === 'sibling') {
-                handleAddMindmapSibling(nodeId);
-            }
-        }, [handleAddMindmapChild, handleAddMindmapSibling])
+    const collaborationNodePositions = useCollaborationNodePositions(
+        collaborationEnabled,
+        nodes,
+        remotePresence.length
     );
 
     const {
@@ -290,6 +242,9 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
         handleExportPlantUML,
         handleExportOpenFlowDSL,
         handleExportFigma,
+        handleShare,
+        shareViewerUrl,
+        clearShareViewerUrl,
     } = useFlowEditorActions({
         nodes,
         edges,
@@ -301,13 +256,7 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
         addToast,
         exportSerializationMode: viewSettings.exportSerializationMode,
     });
-    const {
-        handleLayoutWithContext,
-        selectedNode,
-        selectedNodes,
-        selectedEdge,
-        shouldRenderPanels,
-    } = useFlowEditorShellController({
+    const flowEditorController = useFlowEditorController({
         location,
         navigate,
         fileInputRef,
@@ -323,20 +272,7 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
         editorMode,
         handleExportJSON,
         onLayout,
-    });
-    const {
-        openStudioPanel,
-        openStudioAI,
-        openStudioCode,
-        openStudioPlayback,
-        toggleStudioPanel,
-        closeStudioPanel,
-        handleCanvasEntityIntent,
-    } = useFlowEditorStudioController({
-        editorMode,
         studioTab,
-        selectedNodeId,
-        selectedEdgeId,
         setStudioTab,
         setStudioCodeMode,
         setStudioMode,
@@ -344,49 +280,21 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
         setCanvasMode,
         setSelectedNodeId,
         setSelectedEdgeId,
-    });
-    const clearSelection = useCallback(() => {
-        setSelectedNodeId(null);
-        setSelectedEdgeId(null);
-    }, [setSelectedEdgeId, setSelectedNodeId]);
-    const flowEditorPanelsProps = useMemo(() => buildFlowEditorPanelsProps({
-        isCommandBarOpen,
-        closeCommandBar,
-        nodes,
-        edges,
-        undo,
-        redo,
-        onLayout,
-        handleInsertTemplate,
-        openStudioAI,
-        openStudioCode,
-        openStudioPlayback,
-        commandBarView,
-        handleAddAnnotation,
-        handleAddSection,
-        handleAddTextNode,
-        handleAddJourneyNode,
-        handleAddMindmapNode,
-        handleAddArchitectureNode,
-        handleAddImage,
-        handleAddWireframe,
-        handleAddDomainLibraryItem,
-        showGrid,
-        toggleGrid,
-        snapToGrid,
-        toggleSnap,
-        isHistoryOpen,
         closeHistory,
-        snapshots,
+        commandBarView,
         manualSnapshots,
         autoSnapshots,
         saveSnapshot,
         handleRestoreSnapshot,
         deleteSnapshot,
-        selectedNode,
-        selectedNodes,
-        selectedNodeCount: selectedNodes.length,
-        selectedEdge,
+        setDiffBaseline,
+        undo,
+        redo,
+        handleInsertTemplate,
+        showGrid,
+        toggleGrid,
+        snapToGrid,
+        toggleSnap,
         updateNodeData,
         applyBulkNodeData,
         updateNodeType,
@@ -399,101 +307,17 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
         handleAddMindmapSibling,
         handleAddArchitectureService,
         handleCreateArchitectureBoundary,
-        clearSelection,
-        closeStudioPanel,
         handleCommandBarApply,
         handleAIRequest,
         handleCodeAnalysis,
         handleSqlAnalysis,
         handleTerraformAnalysis,
         handleOpenApiAnalysis,
+        handleApplyInfraDsl,
         isGenerating,
         chatMessages,
         clearChat,
-        setCanvasMode,
-        studioTab,
-        setStudioTab,
         studioCodeMode,
-        setStudioCodeMode,
-        playback: {
-            currentStepIndex,
-            totalSteps,
-            isPlaying,
-            onStartPlayback: startPlayback,
-            onPlayPause: togglePlay,
-            onStop: stopPlayback,
-            onScrubToStep: jumpToStep,
-            onNext: nextStep,
-            onPrev: prevStep,
-            playbackSpeed,
-            onPlaybackSpeedChange: setPlaybackSpeed,
-        },
-        editorMode,
-    }), [
-        isCommandBarOpen,
-        closeCommandBar,
-        nodes,
-        edges,
-        undo,
-        redo,
-        onLayout,
-        handleInsertTemplate,
-        openStudioAI,
-        openStudioCode,
-        openStudioPlayback,
-        commandBarView,
-        handleAddAnnotation,
-        handleAddSection,
-        handleAddTextNode,
-        handleAddJourneyNode,
-        handleAddMindmapNode,
-        handleAddArchitectureNode,
-        handleAddImage,
-        handleAddWireframe,
-        handleAddDomainLibraryItem,
-        showGrid,
-        toggleGrid,
-        snapToGrid,
-        toggleSnap,
-        isHistoryOpen,
-        closeHistory,
-        snapshots,
-        manualSnapshots,
-        autoSnapshots,
-        saveSnapshot,
-        handleRestoreSnapshot,
-        deleteSnapshot,
-        selectedNode,
-        selectedNodes,
-        selectedEdge,
-        updateNodeData,
-        applyBulkNodeData,
-        updateNodeType,
-        updateEdge,
-        deleteNode,
-        duplicateNode,
-        deleteEdge,
-        updateNodeZIndex,
-        handleAddMindmapChild,
-        handleAddMindmapSibling,
-        handleAddArchitectureService,
-        handleCreateArchitectureBoundary,
-        clearSelection,
-        closeStudioPanel,
-        handleCommandBarApply,
-        handleAIRequest,
-        handleCodeAnalysis,
-        handleSqlAnalysis,
-        handleTerraformAnalysis,
-        handleOpenApiAnalysis,
-        isGenerating,
-        chatMessages,
-        clearChat,
-        setCanvasMode,
-        studioTab,
-        setStudioTab,
-        studioCodeMode,
-        setStudioCodeMode,
         currentStepIndex,
         totalSteps,
         isPlaying,
@@ -505,118 +329,74 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
         prevStep,
         playbackSpeed,
         setPlaybackSpeed,
-        editorMode,
-    ]);
+        pendingAIPrompt,
+        clearPendingAIPrompt,
+        handleSwitchTab,
+        handleAddTab,
+        handleCloseTab,
+        handleRenameTab,
+        handleExport,
+        handleSvgExport,
+        handleAnimatedExport,
+        handleExportMermaid,
+        handleExportPlantUML,
+        handleExportOpenFlowDSL,
+        handleExportFigma,
+        handleShare,
+        handleImportJSON,
+        openHistory,
+        onGoHome,
+        collaborationTopNavState,
+        openCommandBar,
+        handleAddShape,
+        canUndo,
+        canRedo,
+        isSelectMode,
+        enableSelectMode,
+        enablePanMode,
+        getCenter,
+        t,
+        handleAddNode,
+        setPendingAIPrompt,
+        handleAddAnnotation,
+        handleAddSection,
+        handleAddTextNode,
+        handleAddJourneyNode,
+        handleAddMindmapNode,
+        handleAddArchitectureNode,
+        handleAddClassNode,
+        handleAddEntityNode,
+        handleAddImage,
+        handleAddWireframe,
+        handleAddDomainLibraryItem,
+    });
 
     return (
+        <DiagramDiffProvider nodes={nodes} edges={edges} baselineSnapshot={diffBaseline} onStopCompare={() => setDiffBaseline(null)}>
+        <ArchitectureLintProvider nodes={nodes} edges={edges} rulesJson={viewSettings.lintRules}>
         <div className="w-full h-screen bg-[var(--brand-background)] flex flex-col relative" ref={reactFlowWrapper}>
-            {/* Header */}
-            <Suspense fallback={<TopNavFallback />}>
-                <LazyTopNav
-                    tabs={tabs}
-                    activeTabId={activeTabId}
-                    onSwitchTab={handleSwitchTab}
-                    onAddTab={handleAddTab}
-                    onCloseTab={handleCloseTab}
-                    onRenameTab={handleRenameTab}
-                    onExportPNG={handleExport}
-                    onExportSVG={handleSvgExport}
-                    onExportAnimated={handleAnimatedExport}
-                    onExportJSON={handleExportJSON}
-                    onExportMermaid={handleExportMermaid}
-                    onExportPlantUML={handleExportPlantUML}
-                    onExportOpenFlowDSL={handleExportOpenFlowDSL}
-                    onExportFigma={handleExportFigma}
-                    onImportJSON={handleImportJSON}
-                    onHistory={openHistory}
-                    onGoHome={onGoHome}
-                    onPlay={startPlayback}
-                    collaboration={collaborationTopNavState}
-                />
-            </Suspense>
-
-            <div className="flex min-h-0 flex-1 min-w-0 pt-16">
-                <div className="relative min-w-0 flex-1">
-                    <ErrorBoundary className="h-full">
-                        <FlowCanvas
-                            recordHistory={recordHistory}
-                            isSelectMode={isSelectMode}
-                            onCanvasEntityIntent={handleCanvasEntityIntent}
-                        />
-                    </ErrorBoundary>
-                </div>
-                {shouldRenderPanels ? (
-                    <Suspense fallback={null}>
-                        <LazyFlowEditorPanels {...flowEditorPanelsProps} />
-                    </Suspense>
-                ) : null}
-            </div>
-            {collaborationV1Enabled ? (
-                <Suspense fallback={null}>
-                    <LazyCollaborationPresenceOverlay remotePresence={remotePresence} />
-                </Suspense>
-            ) : null}
-
-            {/* Layout loading overlay */}
-            {isLayouting ? (
-                <Suspense fallback={null}>
-                    <LazyFlowEditorLayoutOverlay message={t('flowEditor.applyingLayout')} />
-                </Suspense>
-            ) : null}
-
-            {/* Toolbar (Hidden during playback) */}
-            {currentStepIndex === -1 && (
-                <Suspense fallback={null}>
-                    <LazyToolbar
-                        onCommandBar={() => openCommandBar('root')}
-                        onToggleStudio={toggleStudioPanel}
-                        isStudioOpen={editorMode === 'studio'}
-                        onOpenAssets={() => openCommandBar('assets')}
-                        onAddShape={handleAddShape}
-                        onUndo={undo}
-                        onRedo={redo}
-                        onLayout={handleLayoutWithContext}
-                        canUndo={canUndo}
-                        canRedo={canRedo}
+            <FlowEditorChrome
+                tabs={tabs}
+                activeTabId={activeTabId}
+                topNav={flowEditorController.chrome.topNav}
+                canvas={(
+                    <FlowCanvas
+                        recordHistory={recordHistory}
                         isSelectMode={isSelectMode}
-                        onToggleSelectMode={enableSelectMode}
-                        isCommandBarOpen={isCommandBarOpen}
-                        onTogglePanMode={enablePanMode}
-                        getCenter={getCenter}
+                        onCanvasEntityIntent={flowEditorController.handleCanvasEntityIntent}
                     />
-                </Suspense>
-            )}
-
-            {/* Playback Controls Overlay - Force Rebuild */}
-            {currentStepIndex >= 0 && (
-                <Suspense fallback={null}>
-                    <LazyPlaybackControls
-                        isPlaying={isPlaying}
-                        currentStepIndex={currentStepIndex}
-                        totalSteps={totalSteps}
-                        onPlayPause={togglePlay}
-                        onNext={nextStep}
-                        onPrev={prevStep}
-                        onStop={stopPlayback}
-                    />
-                </Suspense>
-            )}
-
-            {/* Empty State */}
-            {nodes.length === 0 ? (
-                <Suspense fallback={null}>
-                    <LazyFlowEditorEmptyState
-                        title={t('flowEditor.emptyState.title')}
-                        description={t('flowEditor.emptyState.description')}
-                        generateLabel={t('flowEditor.emptyState.generateWithFlowpilot')}
-                        templatesLabel={t('flowEditor.emptyState.browseTemplates')}
-                        addNodeLabel={t('flowEditor.emptyState.addBlankNode')}
-                        onGenerate={() => openStudioPanel('ai')}
-                        onTemplates={() => openCommandBar('templates')}
-                        onAddNode={() => handleAddNode()}
-                    />
-                </Suspense>
-            ) : null}
+                )}
+                shouldRenderPanels={flowEditorController.shouldRenderPanels}
+                panels={flowEditorController.panels}
+                collaborationEnabled={collaborationEnabled}
+                remotePresence={remotePresence}
+                collaborationNodePositions={collaborationNodePositions}
+                layoutMessage={t('flowEditor.applyingLayout')}
+                isLayouting={isLayouting}
+                playback={flowEditorController.chrome.playback}
+                toolbar={flowEditorController.chrome.toolbar}
+                emptyState={flowEditorController.chrome.emptyState}
+            />
 
             {/* Hidden file input for JSON import */}
             <input
@@ -627,6 +407,11 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
                 className="hidden"
                 id="json-import-input"
             />
+            {shareViewerUrl && (
+                <ShareEmbedModal viewerUrl={shareViewerUrl} onClose={clearShareViewerUrl} />
+            )}
         </div>
+        </ArchitectureLintProvider>
+        </DiagramDiffProvider>
     );
-};
+}

@@ -1,28 +1,31 @@
 ---
 draft: false
 title: AI Generation
+description: Generate and refine diagrams in Studio with FlowPilot, BYOK providers, code-to-architecture, and structured imports.
 ---
 
-OpenFlowKit ships with AI-assisted diagram generation through the Studio rail. Internally this flow composes a graph, lays it out, applies it to the current canvas, and keeps the exchange history in the local session.
+OpenFlowKit includes AI-assisted diagram generation through the Studio rail. FlowPilot is best used for first drafts, structural revisions, and code-backed architecture exploration.
+
+AI generation is most valuable when you need to go from ambiguity to structure quickly. It is not the only way to create diagrams in OpenFlowKit, and it is usually not the final step. Think of it as a draft accelerator.
 
 ## Where AI lives in the product
 
-AI is available in the Studio panel under the **AI** tab and through the **Open FlowPilot** command in the Command Center. The panel has three tabs:
+AI is available in the Studio panel under **FlowPilot** and through the **Open FlowPilot** command in the Command Center. Common sub-flows include:
 
-| Tab | What it does |
+| Mode | What it does |
 | --- | --- |
 | **FlowPilot** | Chat-based generation and iteration |
-| **From Code** | Paste source code → architecture diagram |
-| **Import** | Paste SQL / Terraform / K8s / OpenAPI → diagram |
+| **From Code** | Paste source code and generate an architecture diagram |
+| **Import** | Paste SQL, Terraform, K8s, or OpenAPI and generate a draft |
 
-The current hook path:
+Typical generation flow:
 
-1. captures your prompt and optional image
-2. sends it using your configured provider settings
-3. receives DSL-like graph output
-4. composes nodes and edges
-5. applies layout
-6. replaces the current working graph
+1. capture your prompt and optional image
+2. send it through the configured provider
+3. receive a structured graph representation
+4. compose nodes and edges
+5. apply layout
+6. replace or update the current graph
 
 ## Provider model
 
@@ -38,104 +41,52 @@ The app supports multiple BYOK providers, including:
 - OpenRouter
 - Custom OpenAI-compatible endpoint
 
-Default models are defined in the app config, but you can choose from provider-specific lists in Settings.
+This matters because you are not locked to one hosted AI vendor or one billing model.
 
-## Important operational detail
+## When AI is the right tool
 
-Your API configuration is stored locally in browser state. OpenFlowKit does not require an application account to use the editor.
+Use AI when:
 
-Some providers are more browser-friendly than others. In the codebase, provider risk is explicitly categorized, so for certain providers a proxy setup may still be the more reliable production choice.
+- you are starting from a plain-language idea
+- you want a fast first-pass architecture or workflow draft
+- you want to revise an existing diagram conceptually rather than move boxes one by one
+- you have source code and want a generated architecture view
 
-## Prompting patterns that work well
+Avoid AI when:
 
-Use prompts that specify:
+- you already have a precise text format such as Mermaid or OpenFlow DSL
+- you need deterministic output from infrastructure files
+- the diagram is small enough that manual editing is faster
 
-- the diagram goal
-- actors or systems
-- decision points
-- important branches
-- desired layout direction if it matters
-- the diagram family if it matters
+In those cases, prefer [OpenFlow DSL](/openflow-dsl/), [Mermaid Integration](/mermaid-integration/), or [Infrastructure Sync](/infra-sync/).
 
-Example:
+## How to get better results
 
-```text
-Create a left-to-right architecture diagram for a SaaS product with:
-Cloudflare edge, API gateway, auth service, product service, Postgres,
-Redis, background worker, S3-compatible object storage, and observability.
-Show user traffic, internal service calls, and async jobs.
-```
+Strong prompts usually include:
 
-## Iteration workflow
+- the intended audience
+- the systems or actors involved
+- important branches or failure paths
+- the preferred diagram direction
+- the level of detail you want
 
-The fastest loop is usually:
+Weak prompts ask for “a diagram” without constraints. Strong prompts explain the system.
 
-1. generate a first draft with AI
-2. clean structure with auto layout
-3. refine labels and edge semantics in Properties
-4. switch to OpenFlow DSL or Mermaid for exact textual edits
+## Recommended workflow
 
-## What AI changes and what it does not
+1. Generate a first draft with FlowPilot.
+2. Inspect the structure on the canvas.
+3. Use the [Properties Panel](/properties-panel/) to normalize labels, color, and routing.
+4. Run [Smart Layout](/smart-layout/) if the structure is right but spacing is poor.
+5. Save a snapshot before another major rewrite.
 
-AI is good at:
+## Practical caution
 
-- initial graph creation
-- rough decomposition
-- generating branch logic
-- filling in missing surrounding steps
+AI output should be treated as a draft, not a certified system model. For documentation, architecture review, or infra communication, you should still check naming, boundaries, and missing branches before exporting or sharing.
 
-AI is weaker at:
+## Related pages
 
-- strict provider-specific architecture semantics
-- exact naming conventions
-- pixel-level visual composition
-- preserving a very specific existing diagram unless you guide it tightly
-
-## Best practices
-
-- keep prompts concrete
-- ask for one diagram family at a time
-- include failure paths explicitly
-- avoid mixing product requirements and visual polish in the same prompt
-- use a follow-up pass for naming, grouping, and export cleanup
-
-## Related reading
-
-- [Import from Structured Data](/import-from-data/) — SQL, Terraform, OpenAPI → diagram
+- [Ask FlowPilot](/ask-flowpilot/)
+- [Studio Overview](/studio-overview/)
+- [Choose an Input Mode](/choose-input-mode/)
 - [Prompting AI Agents](/prompting-agents/)
-- [OpenFlow DSL](/openflow-dsl/)
-- [Mermaid Integration](/mermaid-integration/)
-2.  **Structural Generation**: It constructs a valid FlowMind DSL JSON object representing the nodes and connections.
-3.  **Layout Optimization**: The engine applies smart layout algorithms to ensure the generated graph is readable.
-
-## Best Practices for Prompts
-
-To get the best results, be specific about the **steps** and the **outcome**.
-
-### ❌ Too Vague
-> "Make a system diagram."
-
-### ✅ Good
-> "Create a high-level system architecture for an e-commerce platform. Include a Web App, API Gateway, User Service, Product Service, and a shared PostgreSQL database."
-
-### ✅ Better (Process Flow)
-> "Draw a flowchart for a user password reset process. Start with 'User clicks forgot password', check if email exists. If yes, send distinct token. If no, show error. End with 'User enters new password'."
-
-## Editing AI Results
-
-AI generation is a starting point, not the end. You can always:
-*   Add missing steps manaully.
-*   Renaming nodes for clarity.
-*   Regenerating specific sections (Coming Soon).
-
-## 🔑 Bring Your Own Key (BYOK)
-
-By default, FlowMind uses a shared API key with limited quotas. For heavy usage, privacy, or to use your own billing, you can bring your own **Gemini API Key**.
-
-1.  Go to **Google AI Studio** and [Get an API Key](https://aistudio.google.com/app/apikey).
-2.  In FlowMind, open **Settings** (Gear Icon) or click on any **Brand Kit**.
-3.  Navigate to the **AI** tab.
-4.  Paste your key into the secure input field.
-
-> [!NOTE]
-> Your key is stored locally in your browser's `localStorage` and is never sent to our servers. It is strictly used for client-side API calls to Google.

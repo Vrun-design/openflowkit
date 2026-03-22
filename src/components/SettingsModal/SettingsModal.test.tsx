@@ -28,7 +28,7 @@ describe('SettingsModal', () => {
   it('renders with dialog semantics and initial focus on the close button', () => {
     render(<SettingsModal isOpen onClose={vi.fn()} />);
 
-    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByRole('dialog').getAttribute('aria-describedby')).toBe('settings-modal-description');
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Close settings' }));
   });
 

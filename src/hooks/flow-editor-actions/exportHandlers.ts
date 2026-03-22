@@ -1,10 +1,13 @@
 import type { TFunction } from 'i18next';
+import { createLogger } from '@/lib/logger';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import { toMermaid, toPlantUML } from '@/services/exportService';
 import { toFigmaSVG } from '@/services/figmaExportService';
 import { getOpenFlowDSLExportDiagnostics, toOpenFlowDSL } from '@/services/openFlowDSLExporter';
 import type { ExportSerializationMode } from '@/services/canonicalSerialization';
 import { copyTextToClipboard } from './helpers';
+
+const logger = createLogger({ scope: 'exportHandlers' });
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -97,7 +100,7 @@ export async function exportFigmaToClipboard({
         addToast(t('flowEditor.figmaCopied'), 'success');
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
-        console.error('Failed to copy Figma SVG:', error);
+        logger.error('Failed to copy Figma SVG.', { error });
         addToast(t('flowEditor.figmaExportFailed', { message }), 'error');
     }
 }

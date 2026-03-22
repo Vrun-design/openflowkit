@@ -1,32 +1,11 @@
 import React, { Suspense, lazy } from 'react';
 import { Components } from 'react-markdown';
-import { Info, AlertTriangle, CheckCircle, Lightbulb, Copy } from 'lucide-react';
+import { Copy } from 'lucide-react';
 
 const LazySyntaxCodeBlock = lazy(async () => {
     const module = await import('./SyntaxCodeBlock');
     return { default: module.SyntaxCodeBlock };
 });
-
-// Callout/Alert Component
-const Callout = ({ type, title, children }: { type: 'info' | 'warning' | 'success' | 'tip', title?: string, children: React.ReactNode }) => {
-    const styles = {
-        info: { bg: 'bg-blue-50/50', border: 'border-blue-200/50', text: 'text-blue-900', icon: <Info className="w-5 h-5 text-blue-500" /> },
-        warning: { bg: 'bg-amber-50/50', border: 'border-amber-200/50', text: 'text-amber-900', icon: <AlertTriangle className="w-5 h-5 text-amber-500" /> },
-        success: { bg: 'bg-green-50/50', border: 'border-green-200/50', text: 'text-green-900', icon: <CheckCircle className="w-5 h-5 text-green-500" /> },
-        tip: { bg: 'bg-violet-50/50', border: 'border-violet-200/50', text: 'text-violet-900', icon: <Lightbulb className="w-5 h-5 text-violet-500" /> }
-    };
-    const style = styles[type] || styles.info;
-
-    return (
-        <div className={`my-6 p-4 rounded-xl border flex gap-4 ${style.bg} ${style.border} shadow-sm`}>
-            <div className="shrink-0 mt-0.5">{style.icon}</div>
-            <div className={`space-y-1 ${style.text} flex-1`}>
-                {title && <h4 className="font-semibold text-sm">{title}</h4>}
-                <div className="text-sm leading-relaxed opacity-90">{children}</div>
-            </div>
-        </div>
-    );
-};
 
 // Code Block Component
 interface CodeBlockProps extends React.HTMLAttributes<HTMLElement> {

@@ -30,22 +30,6 @@ function setDualNodeState(version: string): void {
     useFlowStore.getState().setEdges([createEdge(`e-${version}`, 'n1', 'n2')]);
 }
 
-function setLargeGraphState(version: number, nodeCount = 120): void {
-    const nodes: FlowNode[] = Array.from({ length: nodeCount }, (_, index) => ({
-        id: `n${version}-${index}`,
-        type: 'process',
-        position: { x: index * 10, y: version * 5 },
-        data: { label: `Node-${version}-${index}-payload-${'x'.repeat(32)}`, subLabel: '', color: 'blue' },
-    }));
-    const edges: FlowEdge[] = Array.from({ length: Math.max(0, nodeCount - 1) }, (_, index) => ({
-        id: `e${version}-${index}`,
-        source: `n${version}-${index}`,
-        target: `n${version}-${index + 1}`,
-    }));
-    useFlowStore.getState().setNodes(nodes);
-    useFlowStore.getState().setEdges(edges);
-}
-
 function setMemoryHeavyGraphState(version: number, nodeCount = 180, payloadSize = 256): void {
     const payload = 'm'.repeat(payloadSize);
     const nodes: FlowNode[] = Array.from({ length: nodeCount }, (_, index) => ({

@@ -31,7 +31,6 @@ describe('HomePage integration flows', () => {
                     <HomePage
                         onLaunch={vi.fn()}
                         onImportJSON={vi.fn()}
-                        onRestoreSnapshot={vi.fn()}
                         onOpenFlow={vi.fn()}
                         {...props}
                     />
@@ -45,7 +44,7 @@ describe('HomePage integration flows', () => {
 
         fireEvent.click(screen.getByText('Settings'));
         expect(screen.getByRole('heading', { name: 'Settings' })).toBeTruthy();
-        expect(screen.getByText('Flowpilot AI')).toBeTruthy();
+        expect(screen.getByText('AI Studio')).toBeTruthy();
     });
 
     it('opens persisted flows from the dashboard list', async () => {

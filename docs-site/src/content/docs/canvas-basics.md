@@ -1,9 +1,19 @@
 ---
 draft: false
 title: Canvas Basics
+description: Learn how to move, select, edit, and recover work on the OpenFlowKit canvas.
 ---
 
-The canvas is the main editing surface. It is optimized for desktop and large tablet layouts, with selection, panning, layout, and right-rail editing built around a large-screen workflow.
+The canvas is the main editing surface in OpenFlowKit. It is optimized for desktop and larger-tablet workflows, with direct manipulation on the graph and exact edits in the side rails.
+
+## When to use the canvas
+
+Use the canvas when you want to:
+
+- sketch a diagram manually
+- refine something created by AI, imports, or code
+- inspect structure spatially instead of as text
+- move quickly between direct manipulation and inspector-based editing
 
 ## Navigation
 
@@ -39,69 +49,10 @@ Use either of these:
 
 When multiple nodes are selected, the right rail switches to **Bulk edit** mode.
 
-## Moving and editing nodes
+## Direct manipulation vs exact editing
 
-### Reposition
+The canvas is where you move, select, and compose the graph. For exact values and family-specific settings, switch to the [Properties Panel](/properties-panel/). For templates, search, layout, and workflow switching, use the [Command Center](/command-center/).
 
-Drag nodes directly on the canvas.
+## History and recovery
 
-### Rename
-
-- double-click directly on a node for fast label editing
-- or select the node and edit its content from the Properties panel
-- `F2` triggers rename for the current selection
-
-### Duplicate and delete
-
-- `Cmd/Ctrl + D` duplicates the current selection
-- `Option/Alt + Drag` performs duplicate-drag
-- `Delete` or `Backspace` removes the current selection
-
-## Creating connections
-
-Drag from a node handle (the small dot that appears on hover) to another node to create an edge. As you drag toward a target node, a snap ring highlights the destination to confirm the connection will land correctly.
-
-Releasing on empty canvas opens a node-creation menu so you can create and connect a new node in one gesture.
-
-After creating an edge, use the edge inspector to refine:
-
-- label
-- route style
-- color
-- condition semantics
-- appearance and animation flags
-
-Architecture edges expose extra semantics such as protocol, port, and direction.
-
-### Edit an edge label
-
-Double-click any edge label to enter inline edit mode. Press `Enter` or click away to save. Press `Escape` to cancel.
-
-## Working styles
-
-The editor supports two primary interaction modes:
-
-- **Select mode** for object manipulation
-- **Pan mode** for navigation
-
-This matters most on dense diagrams, where accidental node moves become expensive.
-
-## Canvas support tools
-
-### Command Center
-
-Use `Cmd/Ctrl + K` to add assets, browse templates, search nodes, or run layout without leaving the canvas.
-
-### Properties rail
-
-Select a node or edge to open the right-side inspector.
-
-### History and snapshots
-
-Open the snapshots/history panel when you need recovery points or want to revisit a previous graph state.
-
-## Practical advice
-
-- Use sections to create visual boundaries before a diagram gets large
-- Use auto layout early, not only when a canvas is already messy
-- Switch to OpenFlow DSL or Mermaid in Studio when structural edits are faster in text than by drag-and-drop
+Use regular undo/redo for short corrections and snapshots for larger rollback points. See [Playback & History](/playback-history/).

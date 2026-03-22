@@ -1,10 +1,20 @@
 import { getSystemInstruction, ChatMessage, generateDiagramFromChat as generateDiagramFromChatGemini, chatWithDocsGemini } from './geminiService';
 import { DEFAULT_MODELS, PROVIDER_BASE_URLS } from '@/config/aiProviders';
+import { err, ok, unwrapResult, type Result } from '@/lib/result';
 
 export type AIProvider = 'gemini' | 'openai' | 'claude' | 'groq' | 'nvidia' | 'cerebras' | 'mistral' | 'openrouter' | 'custom';
 
+interface AiServiceError {
+    code:
+        | 'missing_api_key'
+        | 'unknown_provider'
+        | 'network_error'
+        | 'bad_response';
+    message: string;
+    status?: number;
+}
+
 function getEnvApiKey(provider: AIProvider): string | undefined {
-    // Vite uses import.meta.env
     switch (provider) {
         case 'gemini': return import.meta.env.VITE_GEMINI_API_KEY;
         case 'openai': return import.meta.env.VITE_OPENAI_API_KEY;
@@ -19,7 +29,6 @@ function getEnvApiKey(provider: AIProvider): string | undefined {
     }
 }
 
-/** Convert FlowMind chat history to OpenAI-compatible message format */
 function historyToMessages(history: ChatMessage[]): { role: string; content: string }[] {
     return history.map(h => ({
         role: h.role === 'model' ? 'assistant' : 'user',
@@ -27,7 +36,67 @@ function historyToMessages(history: ChatMessage[]): { role: string; content: str
     }));
 }
 
-// --- OpenAI-compatible REST call (used by OpenAI, Groq, NVIDIA, Cerebras, Mistral, Custom) ---
+function resolveApiKey(provider: AIProvider, apiKeySetting?: string): string {
+    const apiKey = apiKeySetting || getEnvApiKey(provider);
+    if (!apiKey) {
+        throw new Error('API key is missing. Add it in Settings → AI or in your .env.local file.');
+    }
+    return apiKey;
+}
+
+function resolveModelId(provider: AIProvider, modelIdSetting?: string): string | undefined {
+    return modelIdSetting || (provider === 'custom' ? import.meta.env.VITE_CUSTOM_AI_MODEL : undefined);
+}
+
+function resolveOpenAICompatibleBaseUrl(provider: AIProvider, customBaseUrlSetting?: string): string {
+    if (provider === 'custom') {
+        return customBaseUrlSetting || import.meta.env.VITE_CUSTOM_AI_BASE_URL || PROVIDER_BASE_URLS.openai;
+    }
+
+    const baseUrl = PROVIDER_BASE_URLS[provider as keyof typeof PROVIDER_BASE_URLS];
+    if (!baseUrl) {
+        throw new Error(`Unknown provider: ${provider}`);
+    }
+    return baseUrl;
+}
+
+function toAiServiceError(error: AiServiceError): Error {
+    return new Error(error.message);
+}
+
+function parseOpenAICompatibleContent(data: unknown): Result<string, AiServiceError> {
+    const text = (data as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message?.content;
+    if (typeof text !== 'string' || text.trim().length === 0) {
+        return err({
+            code: 'bad_response',
+            message: 'No content in response from AI provider.',
+        });
+    }
+
+    return ok(text);
+}
+
+function parseClaudeContent(data: unknown): Result<string, AiServiceError> {
+    const text = (data as { content?: Array<{ text?: unknown }> })?.content?.[0]?.text;
+    if (typeof text !== 'string' || text.trim().length === 0) {
+        return err({
+            code: 'bad_response',
+            message: 'No content in Anthropic response.',
+        });
+    }
+
+    return ok(text);
+}
+
+async function parseFailedResponse(response: Response, prefix: string): Promise<AiServiceError> {
+    const errorText = await response.text();
+    return {
+        code: 'network_error',
+        status: response.status,
+        message: `${prefix} (${response.status}): ${errorText}`,
+    };
+}
+
 async function callOpenAICompatible(
     baseUrl: string,
     apiKey: string,
@@ -49,21 +118,18 @@ async function callOpenAICompatible(
     });
 
     if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`API error (${response.status}): ${err}`);
+        throw toAiServiceError(await parseFailedResponse(response, 'API error'));
     }
 
     const data = await response.json();
-    const text = data.choices?.[0]?.message?.content;
-    if (!text) throw new Error('No content in response from AI provider.');
-    return text;
+    return unwrapResult(parseOpenAICompatibleContent(data), toAiServiceError);
 }
 
-// --- Anthropic Claude REST call ---
 async function callClaude(
     apiKey: string,
     model: string,
-    messages: { role: string; content: string }[]
+    messages: { role: string; content: string }[],
+    systemInstruction: string
 ): Promise<string> {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -74,24 +140,20 @@ async function callClaude(
         },
         body: JSON.stringify({
             model,
-            system: getSystemInstruction(),
+            system: systemInstruction,
             messages,
             max_tokens: 4096,
         }),
     });
 
     if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`Anthropic API error (${response.status}): ${err}`);
+        throw toAiServiceError(await parseFailedResponse(response, 'Anthropic API error'));
     }
 
     const data = await response.json();
-    const text = data.content?.[0]?.text;
-    if (!text) throw new Error('No content in Anthropic response.');
-    return text;
+    return unwrapResult(parseClaudeContent(data), toAiServiceError);
 }
 
-// --- Primary exported function ---
 export async function generateDiagramFromChat(
     history: ChatMessage[],
     newMessage: string,
@@ -100,49 +162,44 @@ export async function generateDiagramFromChat(
     apiKeySetting?: string,
     modelIdSetting?: string,
     provider: AIProvider = 'gemini',
-    customBaseUrlSetting?: string
+    customBaseUrlSetting?: string,
+    isEditMode = false
 ): Promise<string> {
-    const apiKey = apiKeySetting || getEnvApiKey(provider);
-    if (!apiKey) {
-        throw new Error("API Key is missing. Please add it in Settings → Flowpilot AI or in your .env.local file.");
-    }
+    const apiKey = resolveApiKey(provider, apiKeySetting);
+    const modelId = resolveModelId(provider, modelIdSetting);
 
-    const modelId = modelIdSetting || (provider === 'custom' ? import.meta.env.VITE_CUSTOM_AI_MODEL : undefined);
+    const userPrompt = isEditMode && currentDSL
+        ? `User Request: ${newMessage}\n\nCURRENT DIAGRAM — output the complete updated OpenFlow DSL:\n${currentDSL}\n\nIMPORTANT: Preserve ALL unchanged node IDs and attributes exactly. Only modify what was requested.`
+        : `User Request: ${newMessage}\n\nGenerate a new OpenFlow DSL diagram.`;
 
-    const userPrompt = `User Request: ${newMessage}${currentDSL ? `\n\nCURRENT CANVAS CONTEXT (JSON):\n${currentDSL}` : ''}\n\nGenerate or update the FlowMind DSL based on this request. If context exists, extend/modify that structure instead of resetting from scratch unless user explicitly asks for replacement.`;
-
-    // Gemini uses its own SDK with different prompt structure — delegate directly
     if (provider === 'gemini') {
-        return generateDiagramFromChatGemini(history, newMessage, currentDSL, imageBase64, apiKey, modelId);
+        return generateDiagramFromChatGemini(history, newMessage, currentDSL, imageBase64, apiKey, modelId, isEditMode);
     }
 
-    // Claude uses Anthropic's message format
+    const systemInstruction = getSystemInstruction(isEditMode ? 'edit' : 'create');
+
     if (provider === 'claude') {
         const messages = [
             ...historyToMessages(history),
             { role: 'user', content: userPrompt },
         ];
-        return callClaude(apiKey, modelId || DEFAULT_MODELS.claude, messages);
+        return callClaude(apiKey, modelId || DEFAULT_MODELS.claude, messages, systemInstruction);
     }
-
-    // All remaining providers (OpenAI, Groq, NVIDIA, Cerebras, Mistral, Custom) share the OpenAI wire format
-    let baseUrl = PROVIDER_BASE_URLS[provider as keyof typeof PROVIDER_BASE_URLS];
-    if (provider === 'custom') {
-        baseUrl = customBaseUrlSetting || import.meta.env.VITE_CUSTOM_AI_BASE_URL || PROVIDER_BASE_URLS.openai;
-    }
-
-    if (!baseUrl) throw new Error(`Unknown provider: ${provider}`);
 
     const messages = [
-        { role: 'system', content: getSystemInstruction() },
+        { role: 'system', content: systemInstruction },
         ...historyToMessages(history),
         { role: 'user', content: userPrompt },
     ];
 
-    return callOpenAICompatible(baseUrl, apiKey, modelId || DEFAULT_MODELS[provider], messages);
+    return callOpenAICompatible(
+        resolveOpenAICompatibleBaseUrl(provider, customBaseUrlSetting),
+        apiKey,
+        modelId || DEFAULT_MODELS[provider],
+        messages
+    );
 }
 
-// --- Chat with Docs Function ---
 export async function chatWithDocs(
     history: ChatMessage[],
     newMessage: string,
@@ -152,12 +209,8 @@ export async function chatWithDocs(
     provider: AIProvider = 'gemini',
     customBaseUrlSetting?: string
 ): Promise<string> {
-    const apiKey = apiKeySetting || getEnvApiKey(provider);
-    if (!apiKey) {
-        throw new Error("API Key is missing. Please add it in Settings → Flowpilot AI or in your .env.local file.");
-    }
-
-    const modelId = modelIdSetting || (provider === 'custom' ? import.meta.env.VITE_CUSTOM_AI_MODEL : undefined);
+    const apiKey = resolveApiKey(provider, apiKeySetting);
+    const modelId = resolveModelId(provider, modelIdSetting);
 
     if (provider === 'gemini') {
         return chatWithDocsGemini(history, newMessage, docsContext, apiKey, modelId);
@@ -180,41 +233,8 @@ ${docsContext}
             ...historyToMessages(history),
             { role: 'user', content: newMessage },
         ];
-
-        // Custom Claude call since it needs docs in system prompt, but we reuse callClaude logic loosely:
-        // Actually, callClaude hardcodes getSystemInstruction(), so let's inline a quick Claude call here for docs.
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-                model: modelId || DEFAULT_MODELS.claude,
-                system: systemInstruction,
-                messages,
-                max_tokens: 4096,
-            }),
-        });
-
-        if (!response.ok) {
-            const err = await response.text();
-            throw new Error(`Anthropic API error (${response.status}): ${err}`);
-        }
-
-        const data = await response.json();
-        const text = data.content?.[0]?.text;
-        if (!text) throw new Error('No content in Anthropic response.');
-        return text;
+        return callClaude(apiKey, modelId || DEFAULT_MODELS.claude, messages, systemInstruction);
     }
-
-    let baseUrl = PROVIDER_BASE_URLS[provider as keyof typeof PROVIDER_BASE_URLS];
-    if (provider === 'custom') {
-        baseUrl = customBaseUrlSetting || import.meta.env.VITE_CUSTOM_AI_BASE_URL || PROVIDER_BASE_URLS.openai;
-    }
-
-    if (!baseUrl) throw new Error(`Unknown provider: ${provider}`);
 
     const messages = [
         { role: 'system', content: systemInstruction },
@@ -222,8 +242,12 @@ ${docsContext}
         { role: 'user', content: newMessage },
     ];
 
-    return callOpenAICompatible(baseUrl, apiKey, modelId || DEFAULT_MODELS[provider], messages);
+    return callOpenAICompatible(
+        resolveOpenAICompatibleBaseUrl(provider, customBaseUrlSetting),
+        apiKey,
+        modelId || DEFAULT_MODELS[provider],
+        messages
+    );
 }
-
-// Re-export for compatibility
 export type { ChatMessage };
+export { parseClaudeContent, parseOpenAICompatibleContent };

@@ -10,6 +10,7 @@ interface UseExportMenuParams {
     onExportPlantUML: () => void;
     onExportOpenFlowDSL: () => void;
     onExportFigma: () => void;
+    onShare: () => void;
 }
 
 interface UseExportMenuResult {
@@ -28,6 +29,7 @@ export function useExportMenu({
     onExportPlantUML,
     onExportOpenFlowDSL,
     onExportFigma,
+    onShare,
 }: UseExportMenuParams): UseExportMenuResult {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -56,6 +58,7 @@ export function useExportMenu({
         mermaid: onExportMermaid,
         plantuml: onExportPlantUML,
         figma: onExportFigma,
+        share: onShare,
     };
 
     function toggleMenu(): void {

@@ -10,7 +10,6 @@ import {
     WandSparkles,
     Workflow,
 } from 'lucide-react';
-import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { useFlowStore } from '@/store';
 import { APP_NAME } from '@/lib/brand';
 import type { CommandItem, CommandBarProps } from './types';
@@ -21,7 +20,7 @@ interface UseCommandBarCommandsParams {
     onUndo?: CommandBarProps['onUndo'];
     onRedo?: CommandBarProps['onRedo'];
     onOpenStudioAI?: CommandBarProps['onOpenStudioAI'];
-    onOpenStudioFlowMind?: CommandBarProps['onOpenStudioFlowMind'];
+    onOpenStudioOpenFlow?: CommandBarProps['onOpenStudioOpenFlow'];
     onOpenStudioMermaid?: CommandBarProps['onOpenStudioMermaid'];
     onOpenStudioPlayback?: CommandBarProps['onOpenStudioPlayback'];
 }
@@ -31,7 +30,7 @@ export function useCommandBarCommands({
     onUndo,
     onRedo,
     onOpenStudioAI,
-    onOpenStudioFlowMind,
+    onOpenStudioOpenFlow,
     onOpenStudioMermaid,
     onOpenStudioPlayback,
 }: UseCommandBarCommandsParams): CommandItem[] {
@@ -39,7 +38,7 @@ export function useCommandBarCommands({
         return [
             {
                 id: 'studio-ai',
-                label: 'Open FlowPilot',
+                label: 'Open AI Studio',
                 icon: <WandSparkles className="w-4 h-4 text-[var(--brand-primary)]" />,
                 type: 'action',
                 description: 'Open AI editing in the right rail',
@@ -51,7 +50,7 @@ export function useCommandBarCommands({
                 icon: <FileCode className="w-4 h-4 text-emerald-500" />,
                 type: 'action',
                 description: `Open ${APP_NAME} DSL in Studio`,
-                action: onOpenStudioFlowMind,
+                action: onOpenStudioOpenFlow,
             },
             {
                 id: 'studio-mermaid',
@@ -61,16 +60,14 @@ export function useCommandBarCommands({
                 description: 'Open Mermaid editing in Studio',
                 action: onOpenStudioMermaid,
             },
-            ...(ROLLOUT_FLAGS.playbackStudioV1
-                ? [{
-                    id: 'studio-playback',
-                    label: 'Open Playback Studio',
-                    icon: <Workflow className="w-4 h-4 text-violet-500" />,
-                    type: 'action' as const,
-                    description: 'Author scenes, timeline order, and playback preview',
-                    action: onOpenStudioPlayback,
-                }]
-                : []),
+            {
+                id: 'studio-playback',
+                label: 'Open Playback Studio',
+                icon: <Workflow className="w-4 h-4 text-violet-500" />,
+                type: 'action' as const,
+                description: 'Author scenes, timeline order, and playback preview',
+                action: onOpenStudioPlayback,
+            },
             {
                 id: 'assets',
                 label: 'Assets',
@@ -167,5 +164,5 @@ export function useCommandBarCommands({
                 description: 'Manage themes & styles',
             },
         ];
-    }, [onOpenStudioAI, onOpenStudioFlowMind, onOpenStudioMermaid, onOpenStudioPlayback, settings, onUndo, onRedo]);
+    }, [onOpenStudioAI, onOpenStudioOpenFlow, onOpenStudioMermaid, onOpenStudioPlayback, settings, onUndo, onRedo]);
 }

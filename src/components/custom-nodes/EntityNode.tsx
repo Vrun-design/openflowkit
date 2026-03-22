@@ -3,6 +3,7 @@ import { Handle, Position } from '@/lib/reactflowCompat';
 import type { LegacyNodeProps } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
 import { useInlineNodeTextEdit } from '@/hooks/useInlineNodeTextEdit';
+import { InlineTextEditSurface } from '@/components/InlineTextEditSurface';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { useFlowStore } from '@/store';
 import { getConnectorHandleStyle, getHandlePointerEvents, getV2HandleVisibilityClass } from '@/components/handleInteraction';
@@ -43,6 +44,17 @@ function EntityNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Re
     );
   }, [id, setNodes]);
 
+  const removeField = React.useCallback((index: number) => {
+    setNodes((nodes) =>
+      nodes.map((node) => {
+        if (node.id !== id) return node;
+        const current = Array.isArray(node.data?.erFields) ? [...node.data.erFields] : [];
+        current.splice(index, 1);
+        return { ...node, data: { ...node.data, erFields: current } };
+      })
+    );
+  }, [id, setNodes]);
+
   const beginFieldEdit = (index: number, value: string) => {
     setEditingFieldIndex(index);
     setFieldDraft(value);
@@ -53,6 +65,8 @@ function EntityNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Re
     const trimmed = fieldDraft.trim();
     if (trimmed) {
       updateField(editingFieldIndex, trimmed);
+    } else if (editingFieldIndex < fields.length) {
+      removeField(editingFieldIndex);
     }
     setEditingFieldIndex(null);
   };
@@ -79,28 +93,17 @@ function EntityNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Re
       >
         <div className="border-b border-slate-300 px-3 py-2 bg-slate-50 rounded-t-lg">
           <div className="text-[11px] font-semibold text-slate-500">Entity</div>
-          <div
+          <InlineTextEditSurface
+            isEditing={labelEdit.isEditing}
+            draft={labelEdit.draft}
+            displayValue={data.label || 'Entity'}
+            onBeginEdit={labelEdit.beginEdit}
+            onDraftChange={labelEdit.setDraft}
+            onCommit={labelEdit.commit}
+            onKeyDown={labelEdit.handleKeyDown}
             className={`${visualQualityV2Enabled ? 'text-[13px]' : 'text-sm'} font-semibold text-slate-800 break-words`}
-            title={data.label || 'Entity'}
-            onClick={(event) => {
-              event.stopPropagation();
-              labelEdit.beginEdit();
-            }}
-          >
-            {labelEdit.isEditing ? (
-              <input
-                autoFocus
-                value={labelEdit.draft}
-                onChange={(event) => labelEdit.setDraft(event.target.value)}
-                onBlur={labelEdit.commit}
-                onKeyDown={labelEdit.handleKeyDown}
-                onMouseDown={(event) => event.stopPropagation()}
-                className="w-full rounded border border-slate-300 bg-white/90 px-1 py-0.5 outline-none"
-              />
-            ) : (
-              data.label || 'Entity'
-            )}
-          </div>
+            isSelected={Boolean(selected)}
+          />
         </div>
 
         <div className="px-3 py-2">
@@ -146,16 +149,40 @@ function EntityNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Re
           ) : (
             <div className="text-[11px] text-slate-400">No fields</div>
           )}
-          <button
-            type="button"
-            className="mt-1 text-[11px] text-slate-500 hover:text-slate-700"
-            onClick={(event) => {
-              event.stopPropagation();
-              beginFieldEdit(fields.length, '');
-            }}
-          >
-            + Add field
-          </button>
+          {editingFieldIndex === fields.length && (
+            <input
+              autoFocus
+              value={fieldDraft}
+              onChange={(event) => setFieldDraft(event.target.value)}
+              onBlur={commitFieldEdit}
+              onMouseDown={(event) => event.stopPropagation()}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setEditingFieldIndex(null);
+                }
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  commitFieldEdit();
+                }
+              }}
+              placeholder="fieldName: TYPE"
+              className="mt-1 w-full rounded border border-slate-300 bg-white px-1 py-0.5 text-xs font-mono outline-none"
+            />
+          )}
+          {editingFieldIndex !== fields.length && (
+            <button
+              type="button"
+              className="mt-1 text-[11px] text-slate-500 hover:text-slate-700"
+              onClick={(event) => {
+                event.stopPropagation();
+                beginFieldEdit(fields.length, '');
+              }}
+            >
+              + Add field
+            </button>
+          )}
         </div>
       </div>
 

@@ -121,7 +121,7 @@ export function createTabActions(set: SetFlowState, get: GetFlowState): Pick<
         },
 
         duplicateTab: (id) => {
-            const { tabs, activeTabId } = get();
+            const { tabs } = get();
             const syncedTabs = syncActiveTabContent(tabs);
             const sourceTab = syncedTabs.find((tab) => tab.id === id);
             if (!sourceTab) return null;

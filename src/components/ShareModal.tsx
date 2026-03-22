@@ -4,13 +4,22 @@ import { Share2, X, Copy, Check, Link2, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
 
+interface ShareModalParticipant {
+    clientId: string;
+    name: string;
+    color: string;
+    isLocal: boolean;
+}
+
 interface ShareModalProps {
     isOpen: boolean;
     onClose: () => void;
     onCopyInvite: () => void;
     roomId: string;
+    inviteUrl: string;
     status: 'realtime' | 'waiting' | 'fallback';
     viewerCount: number;
+    participants?: ShareModalParticipant[];
 }
 
 function getStatusLabel(status: ShareModalProps['status'], t: ReturnType<typeof useTranslation>['t']): string {
@@ -29,8 +38,10 @@ export function ShareModal({
     onClose,
     onCopyInvite,
     roomId,
+    inviteUrl,
     status,
     viewerCount,
+    participants = [],
 }: ShareModalProps): React.JSX.Element | null {
     const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
@@ -58,6 +69,23 @@ export function ShareModal({
 
     if (!isOpen) return null;
 
+    const statusMessage = (() => {
+        switch (status) {
+            case 'realtime':
+                return t('share.statusMessage.realtime', {
+                    defaultValue: 'Anyone with this link can join the live canvas right away.',
+                });
+            case 'waiting':
+                return t('share.statusMessage.waiting', {
+                    defaultValue: 'The link is ready. Live sync is still connecting for this session.',
+                });
+            default:
+                return t('share.statusMessage.fallback', {
+                    defaultValue: 'This browser is in local-only mode right now. You can still copy the room link, but others will not join live until realtime sync is available.',
+                });
+        }
+    })();
+
     function handleCopyLink(): void {
         onCopyInvite();
         setCopied(true);
@@ -70,6 +98,7 @@ export function ShareModal({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="share-modal-title"
+                aria-describedby="share-modal-description"
                 data-testid="share-panel"
                 className="w-full max-w-md overflow-hidden border border-slate-200/70 bg-white shadow-2xl animate-in zoom-in-95 duration-200"
                 style={{ borderRadius: brandRadius }}
@@ -99,10 +128,10 @@ export function ShareModal({
                         </div>
 
                         <h2 id="share-modal-title" className="text-xl font-bold tracking-tight text-slate-900">
-                            {t('share.title', { defaultValue: 'Share design' })}
+                            {t('share.title', { defaultValue: 'Share live canvas' })}
                         </h2>
-                        <p className="mt-2 max-w-[300px] text-sm leading-relaxed text-slate-500">
-                            {t('share.description', { defaultValue: 'Copy a lightweight room link to collaborate on this canvas in real time.' })}
+                        <p id="share-modal-description" className="mt-2 max-w-[300px] text-sm leading-relaxed text-slate-500">
+                            {t('share.description', { defaultValue: 'Invite people with a room link so they can open this canvas and collaborate in the same workspace.' })}
                         </p>
                     </div>
 
@@ -111,8 +140,8 @@ export function ShareModal({
                             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
                                 <Users className="h-3.5 w-3.5" />
                                 {viewerCount === 1
-                                    ? t('share.viewerCount.one', { defaultValue: '1 viewer in this room' })
-                                    : t('share.viewerCount.many', { defaultValue: '{{count}} viewers in this room', count: viewerCount })}
+                                    ? t('share.viewerCount.one', { defaultValue: '1 person here' })
+                                    : t('share.viewerCount.many', { defaultValue: '{{count}} people here', count: viewerCount })}
                             </div>
                             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600">
                                 <Link2 className="h-3.5 w-3.5" />
@@ -120,11 +149,38 @@ export function ShareModal({
                             </div>
                         </div>
 
+                        {participants.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {participants.map((p) => (
+                                    <div
+                                        key={p.clientId}
+                                        className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600"
+                                    >
+                                        <span
+                                            className="h-3 w-3 rounded-full ring-2 ring-white"
+                                            style={{ backgroundColor: p.color }}
+                                        />
+                                        <span>{p.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
                         <div className="rounded-[calc(var(--brand-radius,24px)*0.5)] border border-slate-200 bg-slate-50 px-4 py-3">
                             <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                                {t('share.roomId', { defaultValue: 'Room ID' })}
+                                {t('share.roomId', { defaultValue: 'Room' })}
                             </div>
                             <div className="mt-2 break-all font-mono text-sm text-slate-700">{roomId}</div>
+                        </div>
+
+                        <div className="rounded-[calc(var(--brand-radius,24px)*0.5)] border border-slate-200 bg-white px-4 py-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                {t('share.link', { defaultValue: 'Invite link' })}
+                            </div>
+                            <div className="mt-2 rounded-[calc(var(--brand-radius,24px)*0.35)] border border-slate-200 bg-slate-50 px-3 py-2">
+                                <p className="break-all font-mono text-xs leading-5 text-slate-700">{inviteUrl}</p>
+                            </div>
+                            <p className="mt-2 text-xs leading-5 text-slate-500">{statusMessage}</p>
                         </div>
 
                         <Button
@@ -134,11 +190,12 @@ export function ShareModal({
                             icon={copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
                             style={copied ? {} : { background: primaryColor, borderRadius: `calc(${brandRadius} * 0.6)` }}
                         >
-                            {copied ? t('share.copied', { defaultValue: 'Copied link' }) : t('share.copyLink', { defaultValue: 'Copy Link' })}
+                            {copied ? t('share.copied', { defaultValue: 'Copied invite link' }) : t('share.copyLink', { defaultValue: 'Copy invite link' })}
                         </Button>
 
                         <p className="text-center text-xs text-slate-400">
-                            {t('share.localOnlyNote', { defaultValue: 'All your diagram data stays local in the browser unless you export it.' })}
+                            {t('share.localOnlyNote', { defaultValue: 'Your diagram stays browser-local unless you export it or share a live room.' })} {' '}
+                            {t('share.copyFallback', { defaultValue: 'If clipboard access is blocked, copy the invite link above manually.' })}
                         </p>
                     </div>
                 </div>

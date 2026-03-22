@@ -1,6 +1,7 @@
 ---
 draft: false
 title: Embed Diagrams in GitHub
+description: Create viewer links for OpenFlowKit diagrams and embed them into GitHub-flavored documentation workflows.
 ---
 
 OpenFlowKit diagrams can be embedded in any GitHub README or Markdown file as interactive, read-only views. No server setup or GitHub App required.
@@ -14,6 +15,14 @@ https://openflowkit.dev/#/view?flow=BASE64_ENCODED_DSL
 ```
 
 When someone clicks the link, they see the fully rendered, interactive diagram and can pan, zoom, and click **Open in Editor** to load it into the canvas for editing.
+
+## When this is useful
+
+Use the GitHub embed workflow when:
+
+- your team documents systems in Markdown
+- you want a richer diagram experience than a static PNG
+- you want readers to be able to open the diagram back in the editor
 
 ## Step-by-step
 

@@ -81,7 +81,7 @@ export function AISettings(): React.ReactElement {
             {/* Header Text */}
             <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-base font-semibold text-slate-800">{t('settingsModal.flowpilotConfigurations')}</h3>
+                    <h3 className="text-base font-semibold text-slate-800">{t('settingsModal.flowpilotConfigurations', { defaultValue: 'AI Studio Configuration' })}</h3>
                     <a href="/docs/en/prompting-agents" target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-[var(--brand-primary)] hover:underline flex items-center gap-1">
                         Prompting Guide <ExternalLink className="w-3 h-3" />
                     </a>

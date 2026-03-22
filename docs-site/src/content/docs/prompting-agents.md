@@ -1,6 +1,7 @@
 ---
 draft: false
 title: Prompting AI Agents
+description: Write better prompts for coding assistants and AI systems when you want diagram output for OpenFlowKit.
 ---
 
 If you use Cursor, Copilot, ChatGPT, Claude, or any other coding agent to help author diagrams, the prompt quality matters more than the model brand.

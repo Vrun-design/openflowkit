@@ -116,7 +116,7 @@ export function FinalCTASection({ onLaunch }: FinalCTASectionProps): React.React
                     <div className="mt-12 flex items-center gap-6 text-sm text-brand-secondary">
                         <a href="#/docs" className="hover:text-brand-primary transition-colors">{t('cta.documentation')}</a>
                         <span className="opacity-30">•</span>
-                        <a href="https://github.com/Vrun-design/FlowMind" target="_blank" rel="noreferrer" className="hover:text-brand-primary transition-colors">{t('cta.github')}</a>
+                        <a href="https://github.com/Vrun-design/openflowkit" target="_blank" rel="noreferrer" className="hover:text-brand-primary transition-colors">{t('cta.github')}</a>
                         <span className="opacity-30">•</span>
                         <a href="#/docs/roadmap" className="hover:text-brand-primary transition-colors">{t('cta.roadmap')}</a>
                     </div>

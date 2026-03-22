@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import type { LegacyNodeProps } from '@/lib/reactflowCompat';
 import { useTranslation } from 'react-i18next';
 import { NodeData } from '@/lib/types';
-import { Layout, Cookie, Lock, X, Menu, Search } from 'lucide-react';
+import { Layout, Cookie, Lock } from 'lucide-react';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { NodeChrome } from '@/components/NodeChrome';
 

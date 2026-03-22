@@ -1,5 +1,5 @@
 
-import { parseFlowMindDSL } from './flowmindDSLParserV2';
+import { parseOpenFlowDslV2 } from './openFlowDslParserV2';
 import type { FlowEdge, FlowNode } from './types';
 
 export interface ParseDiagnostic {
@@ -27,7 +27,14 @@ function buildDiagnosticFromError(rawError: string, inputLines: string[]): Parse
     const message = lineMatch[2];
     const snippet = inputLines[line - 1]?.trim();
     let hint: string | undefined;
-    if (message.startsWith('Unexpected')) {
+    const hasSpaceInId = snippet && /^\[?\w+\]?\s+\w+\s+\w/.test(snippet) && !snippet.includes(':');
+    if (hasSpaceInId) {
+        hint = 'Node IDs cannot contain spaces. Use underscores: my_node';
+    } else if (snippet && /->/.test(snippet) && message.startsWith('Unexpected')) {
+        hint = 'Edge syntax: source -> target or source -> target |label|';
+    } else if (message.includes('expected identifier') || message.includes('Expected identifier')) {
+        hint = 'Node format: [type] id: Label';
+    } else if (message.startsWith('Unexpected')) {
         hint = 'Check block delimiters and remove extra closing braces.';
     } else if (message.startsWith('Unrecognized syntax')) {
         hint = 'Use DSL forms like `[type] id: Label`, `A -> B`, or `group "Name" { ... }`.';
@@ -49,7 +56,7 @@ function formatDiagnosticsError(diagnostics: ParseDiagnostic[]): string {
  * Ensures backward compatibility with the existing UI components.
  */
 export const parseOpenFlowDSL = (input: string): ParseResult => {
-    const result = parseFlowMindDSL(input);
+    const result = parseOpenFlowDslV2(input);
     const inputLines = input.split('\n');
     const diagnostics = result.errors.map((error) => buildDiagnosticFromError(error, inputLines));
 

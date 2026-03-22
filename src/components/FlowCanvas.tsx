@@ -1,9 +1,8 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import ReactFlow, {
     Background,
-    Controls,
     useReactFlow,
     useViewport,
     toFlowNode,
@@ -17,8 +16,7 @@ import CustomConnectionLine from './CustomConnectionLine';
 import { NavigationControls } from './NavigationControls';
 import { FlowCanvasOverlays } from './flow-canvas/FlowCanvasOverlays';
 import { flowCanvasEdgeTypes, flowCanvasNodeTypes } from './flow-canvas/flowCanvasTypes';
-import { useFlowCanvasMenus } from './flow-canvas/useFlowCanvasMenus';
-import { useFlowCanvasContextActions } from './flow-canvas/useFlowCanvasContextActions';
+import { useFlowCanvasMenusAndActions } from './flow-canvas/useFlowCanvasMenusAndActions';
 import { useFlowCanvasDragDrop } from './flow-canvas/useFlowCanvasDragDrop';
 import { useFlowCanvasConnectionState } from './flow-canvas/useFlowCanvasConnectionState';
 import { useFlowCanvasPaste } from './flow-canvas/useFlowCanvasPaste';
@@ -27,6 +25,7 @@ import { useFlowCanvasZoomLod } from './flow-canvas/useFlowCanvasZoomLod';
 import { useFlowCanvasViewState } from './flow-canvas/useFlowCanvasViewState';
 import { useFlowCanvasReactFlowConfig } from './flow-canvas/useFlowCanvasReactFlowConfig';
 import { useFlowCanvasSelectionTools } from './flow-canvas/useFlowCanvasSelectionTools';
+import type { ConnectMenuState } from './flow-canvas/useFlowCanvasMenus';
 import { useToast } from './ui/ToastContext';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { isCanvasBackgroundTarget } from '@/hooks/edgeConnectInteractions';
@@ -34,7 +33,7 @@ import { setEdgeInteractionLowDetailMode } from './custom-edge/edgeRenderMode';
 import { useCanvasActions, useCanvasState } from '@/store/canvasHooks';
 import { useSelectionActions } from '@/store/selectionHooks';
 import { useTabActions, useActiveTabId } from '@/store/tabHooks';
-import { useViewSettings, useCanvasViewSettings } from '@/store/viewHooks';
+import { useCanvasViewSettings } from '@/store/viewHooks';
 import { useMermaidDiagnosticsActions } from '@/store/selectionHooks';
 
 interface FlowCanvasProps {
@@ -77,6 +76,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         largeGraphSafetyProfile,
     });
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
+    const connectMenuSetterRef = useRef<((value: ConnectMenuState | null) => void) | null>(null);
 
     const { screenToFlowPosition, fitView } = useReactFlow();
     const { zoom, x: viewportX, y: viewportY } = useViewport();
@@ -84,19 +84,6 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         setSelectedNodeId(null);
         setSelectedEdgeId(null);
     }, [setSelectedEdgeId, setSelectedNodeId]);
-    const {
-        connectMenu,
-        setConnectMenu,
-        contextMenu,
-        onNodeContextMenu,
-        onPaneContextMenu,
-        onEdgeContextMenu,
-        onPaneClick,
-        onCloseContextMenu,
-    } = useFlowCanvasMenus({
-        onPaneSelectionClear: clearPaneSelection,
-    });
-
     // --- Operations ---
     const {
         onConnect, onSelectionChange, onNodeDoubleClick,
@@ -114,11 +101,22 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         handleAddImage
     } = useFlowOperations(
         recordHistory,
-        (position, sourceId, sourceHandle, sourceType) => setConnectMenu({ position, sourceId, sourceHandle, sourceType })
+        (position, sourceId, sourceHandle, sourceType) => {
+            connectMenuSetterRef.current?.({ position, sourceId, sourceHandle, sourceType });
+        }
     );
-    const contextActions = useFlowCanvasContextActions({
+    const {
+        connectMenu,
+        setConnectMenu,
         contextMenu,
+        onNodeContextMenu,
+        onPaneContextMenu,
+        onEdgeContextMenu,
+        onPaneClick,
         onCloseContextMenu,
+        contextActions,
+    } = useFlowCanvasMenusAndActions({
+        onPaneSelectionClear: clearPaneSelection,
         screenToFlowPosition,
         copySelection,
         pasteSelection,
@@ -131,6 +129,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         handleGroupNodes,
         nodes,
     });
+    useEffect(() => {
+        connectMenuSetterRef.current = setConnectMenu;
+    }, [setConnectMenu]);
 
     const { onDragOver, onDrop } = useFlowCanvasDragDrop({
         screenToFlowPosition,
@@ -277,6 +278,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 connectionMode={reactFlowConfig.connectionMode}
                 isValidConnection={reactFlowConfig.isValidConnection}
                 selectionOnDrag={reactFlowConfig.selectionOnDrag}
+                selectNodesOnDrag={reactFlowConfig.selectNodesOnDrag}
                 selectionKeyCode={reactFlowConfig.selectionKeyCode}
                 panOnDrag={reactFlowConfig.panOnDrag}
                 panActivationKeyCode={reactFlowConfig.panActivationKeyCode}

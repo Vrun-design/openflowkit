@@ -84,7 +84,10 @@ export function useFlowEditorCallbacks({
 
     const handleCommandBarApply = useCallback((newNodes: FlowNode[], newEdges: FlowEdge[]) => {
         recordHistory();
-        setNodes(newNodes);
+        setNodes(newNodes.map((node, index) => ({
+            ...node,
+            data: { ...node.data, freshlyAdded: true, animateDelay: Math.min(index * 20, 400) },
+        })));
         setEdges(newEdges);
         setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
 

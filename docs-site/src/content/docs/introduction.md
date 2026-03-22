@@ -1,24 +1,28 @@
 ---
 draft: false
 title: Introduction
+description: OpenFlowKit is a local-first diagramming workspace for technical flows, architecture maps, code-backed diagrams, and AI-assisted editing.
 ---
 
-OpenFlowKit is a local-first diagram editor for technical flows, architecture maps, mind maps, journey maps, and code-backed diagram workflows.
-
-The current product combines four working modes:
-
-- A visual canvas for direct editing
-- A command-driven asset and template browser
-- A studio rail for AI, OpenFlow DSL, and Mermaid editing
-- Export and import paths for sharing diagrams outside the app
+OpenFlowKit is a local-first diagramming workspace for technical teams. It combines a visual canvas, code-friendly representations, deterministic imports, AI-assisted generation, and share/export workflows in one browser-based tool.
 
 ## What OpenFlowKit is good at
 
-OpenFlowKit works best when you need a diagram that starts rough and becomes structured over time:
+OpenFlowKit works best when a diagram needs to evolve instead of staying static:
 
-- You can begin from a blank canvas, a template, imported JSON, Mermaid text, or an AI prompt.
-- You can keep refining the result visually with node handles, layout tools, properties, and edge controls.
-- You can switch to code when you want a more repeatable or reviewable representation.
+- start from a blank canvas, template, AI prompt, code representation, or imported source artifact
+- refine the result visually instead of treating generation as a one-shot output
+- keep a text representation close to the editor model when needed
+- export or share the same diagram across docs, design, and collaboration workflows
+
+## Core product surfaces
+
+The current product centers on four major surfaces:
+
+- A visual canvas for direct editing
+- A command-driven launcher for search, templates, assets, layout, and design systems
+- A Studio rail for AI, code, imports, infrastructure sync, and linting
+- Export, embed, and share flows for moving work outside the editor
 
 ## Diagram families in the app
 
@@ -39,37 +43,18 @@ You will also see reusable node families for general-purpose flows, architecture
 
 ### Local-first by default
 
-Regular editing state is stored in the browser. You do not need an account to create or edit diagrams.
+Diagram state lives in the browser by default. You choose when to export, share, or join collaboration-style room flows.
 
-### Bring your own model access
+### Multiple input modes
 
-AI generation uses the provider and model you configure in Settings. API keys stay in local browser storage.
+OpenFlowKit does not force a single source of truth. You can work visually, with AI, through OpenFlow DSL, through Mermaid, or from structured imports.
 
-### Visual plus code workflow
+### Editable outputs
 
-The Studio panel lets you work in:
+Generated and imported diagrams come back into the same editable canvas model rather than becoming dead screenshots.
 
-- **FlowPilot** for AI-driven edits
-- **OpenFlow DSL** for OpenFlowKit-native code
-- **Mermaid** for Mermaid-compatible text editing
+## Start here
 
-### Export beyond the canvas
-
-You can export or copy diagrams as:
-
-- PNG
-- JPG
-- JSON document
-- OpenFlow DSL
-- Mermaid
-- PlantUML
-- Figma-friendly SVG payload
-
-Animated playback export exists in the codebase, but it is currently gated behind a rollout flag and should be treated as optional rather than universally available.
-
-## What to read next
-
-- Start with [Quick Start](/quick-start/)
-- Learn the editor model in [Canvas Basics](/canvas-basics/)
-- Review data and syntax in [OpenFlow DSL](/openflow-dsl/)
-- See automation workflows in [AI Generation](/ai-generation/)
+- Read [Quick Start](/quick-start/) for the fastest first-run workflow.
+- Read [Studio Overview](/studio-overview/) for the AI, code, import, and lint flows.
+- Read [Choose an Input Mode](/choose-input-mode/) if you are not sure where to start.

@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useReactFlow } from '@/lib/reactflowCompat';
-import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { useFlowStore } from '../store';
 import {
     applyPlaybackStepStyles,
@@ -23,9 +22,7 @@ export function usePlayback() {
 
     const resolveSequence = useCallback(() => {
         const activeTabPlayback = tabs.find((tab) => tab.id === activeTabId)?.playback;
-        return ROLLOUT_FLAGS.animationTimelineV1
-            ? buildPlaybackSequenceFromState(nodes, activeTabPlayback, playbackSpeed)
-            : buildPlaybackSequence(nodes, playbackSpeed);
+        return buildPlaybackSequenceFromState(nodes, activeTabPlayback, playbackSpeed);
     }, [activeTabId, nodes, playbackSpeed, tabs]);
 
     const restoreStyles = useCallback(() => {

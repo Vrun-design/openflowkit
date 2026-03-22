@@ -10,9 +10,9 @@ export type DocItem = {
 
 export const docsNavigation: DocSection[] = [
     {
-        title: 'AI Assistant',
+        title: 'AI Studio',
         items: [
-            { title: 'Ask Flowpilot', slug: 'ask-flowpilot' },
+            { title: 'Ask AI Studio', slug: 'ask-flowpilot' },
         ],
     },
     {
@@ -37,7 +37,7 @@ export const docsNavigation: DocSection[] = [
             { title: 'AI Generation', slug: 'ai-generation' },
             { title: 'Smart Layout', slug: 'smart-layout' },
             { title: 'Playback & History', slug: 'playback-history' },
-            { title: 'FlowMind DSL (V2)', slug: 'openflow-dsl' },
+            { title: 'OpenFlow DSL (V2)', slug: 'openflow-dsl' },
         ],
     },
     {

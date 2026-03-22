@@ -1,12 +1,14 @@
 import { useCallback } from 'react';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import { createId } from '../lib/id';
+import { createLogger } from '@/lib/logger';
 import { clearNodeParent } from '@/lib/nodeParent';
 import { readLocalStorageString, writeLocalStorageJson } from '@/services/storage/uiLocalStorage';
 import { useCanvasActions, useCanvasState } from '@/store/canvasHooks';
 import { useSelectionActions } from '@/store/selectionHooks';
 
 const CLIPBOARD_STORAGE_KEY = 'flowmind-clipboard';
+const logger = createLogger({ scope: 'clipboard' });
 
 export const useClipboardOperations = (recordHistory: () => void) => {
     const { nodes, edges } = useCanvasState();
@@ -80,7 +82,7 @@ export const useClipboardOperations = (recordHistory: () => void) => {
 
             if (newNodes.length > 0) setSelectedNodeId(newNodes[0].id);
         } catch (error) {
-            console.error('Failed to paste from clipboard', error);
+            logger.error('Failed to paste from clipboard.', { error });
         }
     }, [setNodes, setEdges, recordHistory, setSelectedNodeId]);
 

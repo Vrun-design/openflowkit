@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import type { LegacyNodeProps } from '@/lib/reactflowCompat';
 import { useTranslation } from 'react-i18next';
 import { NodeData } from '@/lib/types';
-import { User, Lock, Mail, ChevronLeft, Menu, Bell, Search } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { NodeChrome } from '@/components/NodeChrome';
 import { getNodeColorPalette } from '../../theme';

@@ -1,6 +1,9 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCcw } from 'lucide-react';
 import { withTranslation, WithTranslation } from 'react-i18next';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger({ scope: 'ErrorBoundary' });
 
 interface Props extends WithTranslation {
     children?: ReactNode;
@@ -23,7 +26,7 @@ class ErrorBoundaryComponent extends Component<Props, State> {
     }
 
     public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        console.error('Uncaught error:', error, errorInfo);
+        logger.error('Uncaught error.', { error, componentStack: errorInfo.componentStack });
     }
 
     public render() {

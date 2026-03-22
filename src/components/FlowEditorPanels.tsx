@@ -44,7 +44,7 @@ export interface CommandBarPanelProps {
     ) => Promise<void>;
     onSelectTemplate: (template: FlowTemplate) => void;
     onOpenStudioAI: () => void;
-    onOpenStudioFlowMind: () => void;
+    onOpenStudioOpenFlow: () => void;
     onOpenStudioMermaid: () => void;
     onOpenStudioPlayback: () => void;
     initialView: CommandBarView;
@@ -54,6 +54,8 @@ export interface CommandBarPanelProps {
     onAddJourney?: () => void;
     onAddMindmap?: () => void;
     onAddArchitecture?: () => void;
+    onAddClassNode?: () => void;
+    onAddEntityNode?: () => void;
     onAddImage: (imageUrl: string) => void;
     onAddBrowserWireframe: () => void;
     onAddMobileWireframe: () => void;
@@ -73,6 +75,7 @@ export interface SnapshotsPanelProps {
     onSaveSnapshot: (name: string) => void;
     onRestoreSnapshot: (snapshot: FlowSnapshot) => void;
     onDeleteSnapshot: (id: string) => void;
+    onCompareSnapshot?: (snapshot: FlowSnapshot) => void;
 }
 
 export interface PropertiesRailProps {
@@ -102,6 +105,7 @@ export interface StudioRailProps {
     onSqlAnalysis?: (sql: string) => Promise<void>;
     onTerraformAnalysis?: (input: string, format: import('@/hooks/ai-generation/terraformToCloud').TerraformInputFormat) => Promise<void>;
     onOpenApiAnalysis?: (spec: string) => Promise<void>;
+    onApplyInfraDsl?: (dsl: string) => void;
     isGenerating: boolean;
     selectedNode: FlowNode | null;
     selectedNodeCount: number;
@@ -125,6 +129,8 @@ export interface StudioRailProps {
         playbackSpeed: number;
         onPlaybackSpeedChange: (durationMs: number) => void;
     };
+    initialPrompt?: string;
+    onInitialPromptConsumed?: () => void;
 }
 
 export interface FlowEditorPanelsProps {
@@ -158,6 +164,7 @@ export function FlowEditorPanels({
                 onSqlAnalysis={studio.onSqlAnalysis}
                 onTerraformAnalysis={studio.onTerraformAnalysis}
                 onOpenApiAnalysis={studio.onOpenApiAnalysis}
+                onApplyInfraDsl={studio.onApplyInfraDsl}
                 isGenerating={studio.isGenerating}
                 selectedNode={studio.selectedNode}
                 selectedNodeCount={studio.selectedNodeCount}
@@ -169,6 +176,8 @@ export function FlowEditorPanels({
                 codeMode={studio.codeMode}
                 onCodeModeChange={studio.onCodeModeChange}
                 playback={studio.playback}
+                initialPrompt={studio.initialPrompt}
+                onInitialPromptConsumed={studio.onInitialPromptConsumed}
             />
         </Suspense>
     ) : showPropertiesRail ? (
@@ -209,7 +218,7 @@ export function FlowEditorPanels({
                             onLayout={commandBar.onLayout}
                             onSelectTemplate={commandBar.onSelectTemplate}
                             onOpenStudioAI={commandBar.onOpenStudioAI}
-                            onOpenStudioFlowMind={commandBar.onOpenStudioFlowMind}
+                            onOpenStudioOpenFlow={commandBar.onOpenStudioOpenFlow}
                             onOpenStudioMermaid={commandBar.onOpenStudioMermaid}
                             onOpenStudioPlayback={commandBar.onOpenStudioPlayback}
                             initialView={commandBar.initialView}
@@ -219,6 +228,8 @@ export function FlowEditorPanels({
                             onAddJourney={commandBar.onAddJourney}
                             onAddMindmap={commandBar.onAddMindmap}
                             onAddArchitecture={commandBar.onAddArchitecture}
+                            onAddClassNode={commandBar.onAddClassNode}
+                            onAddEntityNode={commandBar.onAddEntityNode}
                             onAddImage={commandBar.onAddImage}
                             onAddBrowserWireframe={commandBar.onAddBrowserWireframe}
                             onAddMobileWireframe={commandBar.onAddMobileWireframe}
@@ -245,6 +256,7 @@ export function FlowEditorPanels({
                         onSaveSnapshot={snapshots.onSaveSnapshot}
                         onRestoreSnapshot={snapshots.onRestoreSnapshot}
                         onDeleteSnapshot={snapshots.onDeleteSnapshot}
+                        onCompareSnapshot={snapshots.onCompareSnapshot}
                     />
                 </Suspense>
             ) : null}

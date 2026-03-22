@@ -41,6 +41,7 @@ function OpenSettingsModalContent({ onClose, initialTab }: OpenSettingsModalCont
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="settings-modal-title"
+                aria-describedby="settings-modal-description"
                 className="bg-white/95 backdrop-blur-xl w-full max-w-3xl max-h-full md:h-[80vh] rounded-[calc(var(--brand-radius)*1.5)] shadow-2xl border border-white/20 ring-1 ring-black/5 flex flex-col md:flex-row overflow-hidden animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
@@ -78,7 +79,11 @@ function OpenSettingsModalContent({ onClose, initialTab }: OpenSettingsModalCont
                                 shortcuts: t('settingsModal.keyboardShortcuts', 'Keyboard Shortcuts'),
                             }[activeTab]}
                         </h2>
+                        <p id="settings-modal-description" className="sr-only">
+                            {t('settingsModal.description', 'Configure canvas preferences and keyboard shortcuts.')}
+                        </p>
                         <button
+                            type="button"
                             ref={closeButtonRef}
                             onClick={onClose}
                             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
@@ -98,7 +103,12 @@ function OpenSettingsModalContent({ onClose, initialTab }: OpenSettingsModalCont
             </div>
 
             {/* Backdrop click to close */}
-            <div className="absolute inset-0 -z-10" onClick={onClose} />
+            <button
+                type="button"
+                className="absolute inset-0 -z-10"
+                onClick={onClose}
+                aria-label={t('settingsModal.closeDialog', 'Close settings dialog')}
+            />
         </div>
     );
 }

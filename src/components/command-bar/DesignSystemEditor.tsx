@@ -1,9 +1,11 @@
 import { useState, type ReactElement, type ReactNode } from 'react';
 import { IS_BEVELED } from '@/lib/brand';
 import { useDesignSystemActions, useDesignSystemById } from '@/store/designSystemHooks';
-import { ArrowLeft, Palette, Type, Box, Activity } from 'lucide-react';
+import { ArrowLeft, Palette, Type, Box, Activity, Figma } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { DesignSystem } from '@/lib/types';
+import { FigmaImportPanel } from './FigmaImportPanel';
+import type { FigmaImportResult } from '@/services/figmaImport/figmaApiClient';
 
 interface DesignSystemEditorProps {
     systemId: string;
@@ -111,16 +113,50 @@ const TabButton = ({ active, onClick, icon, label }: TabButtonProps) => {
 };
 
 // Sub-Editors (Basic Stub)
-const ColorEditor = ({ system, update }: { system: DesignSystem; update: UpdateDesignSystem }) => (
-    <div className="space-y-4">
-        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Semantic Colors</h3>
-        <div className="grid grid-cols-1 gap-3">
-            <ColorInput label="Primary" value={system.colors.primary} onChange={(v) => update(system.id, { colors: { ...system.colors, primary: v } })} />
-            <ColorInput label="Background" value={system.colors.background} onChange={(v) => update(system.id, { colors: { ...system.colors, background: v } })} />
-            <ColorInput label="Surface" value={system.colors.surface} onChange={(v) => update(system.id, { colors: { ...system.colors, surface: v } })} />
+const ColorEditor = ({ system, update }: { system: DesignSystem; update: UpdateDesignSystem }) => {
+    const [showFigmaPanel, setShowFigmaPanel] = useState(false);
+
+    const handleFigmaImport = (result: FigmaImportResult) => {
+        const firstColor = result.colors[0]?.hex;
+        const secondColor = result.colors[1]?.hex;
+        const thirdColor = result.colors[2]?.hex;
+        const updates: Partial<DesignSystem['colors']> = {};
+        if (firstColor) updates.primary = firstColor;
+        if (secondColor) updates.secondary = secondColor;
+        if (thirdColor) updates.accent = thirdColor;
+
+        const firstFont = result.fonts[0]?.fontFamily;
+        if (firstFont || Object.keys(updates).length > 0) {
+            update(system.id, {
+                ...(Object.keys(updates).length > 0 ? { colors: { ...system.colors, ...updates } } : {}),
+                ...(firstFont ? { typography: { ...system.typography, fontFamily: `${firstFont}, sans-serif` } } : {}),
+            });
+        }
+        setShowFigmaPanel(false);
+    };
+
+    return (
+        <div className="space-y-4">
+            {showFigmaPanel ? (
+                <FigmaImportPanel onImport={handleFigmaImport} onClose={() => setShowFigmaPanel(false)} />
+            ) : (
+                <button
+                    onClick={() => setShowFigmaPanel(true)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-slate-300 text-slate-500 hover:border-[#F24E1E]/50 hover:text-[#F24E1E] hover:bg-[#F24E1E]/5 transition-all text-xs font-medium"
+                >
+                    <Figma className="w-3.5 h-3.5" />
+                    Import from Figma
+                </button>
+            )}
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Semantic Colors</h3>
+            <div className="grid grid-cols-1 gap-3">
+                <ColorInput label="Primary" value={system.colors.primary} onChange={(v) => update(system.id, { colors: { ...system.colors, primary: v } })} />
+                <ColorInput label="Background" value={system.colors.background} onChange={(v) => update(system.id, { colors: { ...system.colors, background: v } })} />
+                <ColorInput label="Surface" value={system.colors.surface} onChange={(v) => update(system.id, { colors: { ...system.colors, surface: v } })} />
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const TypographyEditor = ({ system, update }: { system: DesignSystem; update: UpdateDesignSystem }) => (
     <div className="space-y-4">

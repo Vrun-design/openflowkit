@@ -168,7 +168,7 @@ function parseAttributes(text: string): Record<string, DSLAttributeValue> {
 
 // --- Parser ---
 
-export function parseFlowMindDSL(input: string): DSLResult {
+export function parseOpenFlowDslV2(input: string): DSLResult {
     const dslNodes: DSLNode[] = [];
     const dslEdges: DSLEdge[] = [];
     const metadata: Record<string, string> = { direction: 'TB' };
@@ -410,3 +410,5 @@ export function parseFlowMindDSL(input: string): DSLResult {
         errors
     };
 };
+
+export const parseFlowMindDSL = parseOpenFlowDslV2;

@@ -1,36 +1,49 @@
 ---
 draft: false
 title: Node Types
+description: OpenFlowKit’teki temel düğüm ailelerini ve bunların hangi diyagram iş akışlarına uyduğunu anlayın.
 ---
 
+OpenFlowKit hem genel amaçlı hem de aileye özgü düğümleri destekler. Uygulamadaki düğüm modeli akış, mimari, zihin haritası, journey, sınıf, ER, açıklama, gruplama ve medya senaryolarını kapsar.
 
-FlowMind, farklı diyagram ihtiyaçlarını karşılamak için çeşitli özel düğüm türlerini destekler.
+## Temel düğüm aileleri
 
-## 1. Özel Düğüm (Varsayılan)
+### Flow düğümleri
 
-Diyagramlarınızın temel yapı taşı. Başlık, isteğe bağlı ikon ve zengin bağlantı tutamaçlarını destekler.
-*   **En İyi Kullanım**: Süreç adımları, servisler, veritabanı tabloları veya genel varlıklar.
-*   **Özellikler**: Yeniden boyutlandırılabilir, düzenlenebilir etiket, ikon desteği.
+En sık kullanılan temel yapı taşları:
 
-## 2. Metin Düğümü / Açıklama
+- `start`
+- `process`
+- `decision`
+- `end`
+- `custom`
 
-Akış yapısını etkilemeden tuvale yorum veya etiket eklemek için kullanılan hafif, kenarsız bir düğüm.
-*   **En İyi Kullanım**: Yapışkan notlar, bölüm başlıkları veya açıklayıcı metin ekleme.
-*   **Kullanım**: Araç çubuğundan "Metin" seçin veya \`T\` tuşuna basın.
+### Mind map düğümleri
 
-## 3. Grup Düğümü
+Ek yapısal bilgiler taşırlar:
 
-Diğer düğümleri görsel olarak bir arada tutan kapsayıcı düğümler. Bir grubu taşımak, içindeki tüm düğümleri de taşır.
-*   **En İyi Kullanım**: Alt sistemleri, VPC'leri veya mantıksal sınırları görselleştirme.
-*   **Kullanım**: Düğümleri seçin → Sağ Tıklayın → "Seçimi Grupla".
+- derinlik
+- ebeveyn
+- sol/sağ taraf
+- dal stili
 
-## 4. Yüzme Şeridi Düğümü
+### Architecture ve varlık tabanlı düğümler
 
-Süreçleri aktöre veya departmana göre düzenlemek için dikey veya yatay şeritler.
-*   **En İyi Kullanım**: Çok işlevli akış şemaları.
+Mimari diyagramlar sağlayıcı ikonları, sınırlar ve bölümler ile daha güçlü okunabilirlik kazanır.
 
-## 5. Görsel Düğümü
+### Journey ve deneyim odaklı düğümler
 
-İsteğe bağlı görselleri doğrudan tuvale yerleştirin.
-*   **En İyi Kullanım**: Logo, ekran görüntüsü veya referans diyagramı ekleme.
-*   **Kullanım**: Bir görsel dosyasını doğrudan tuvalin üzerine sürükleyip bırakın.
+Aşama, aktör ve skor gibi bilgilerin önemli olduğu süreçler için daha uygundur.
+
+### Medya ve wireframe düğümleri
+
+OpenFlowKit ayrıca görsel düğümleri ile browser/mobile wireframe yüzeylerini destekler.
+
+## Nasıl seçilmeli?
+
+Sadece şekle göre değil, diyagramın semantiğine göre seçim yapın:
+
+- genel süreçler için flow düğümleri
+- sistem topolojisi için architecture düğümleri
+- dallanan fikir yapıları için mind map düğümleri
+- deneyim haritaları için journey düğümleri

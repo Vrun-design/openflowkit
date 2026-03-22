@@ -1,6 +1,5 @@
 import React from 'react';
 import { CheckCircle2, Eye, Film, ListOrdered, MoveDown, MoveUp, Plus, RefreshCw, Trash2 } from 'lucide-react';
-import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { useTabActions, useTabsState } from '@/store/tabHooks';
 import type { FlowEdge, FlowNode, PlaybackState } from '@/lib/types';
 import { createEmptyPlaybackState } from '@/services/playback/model';
@@ -124,11 +123,6 @@ export function StudioPlaybackPanel({
                         </button>
                     ))}
                 </div>
-                {!ROLLOUT_FLAGS.playbackStudioV1 ? (
-                    <div className="mt-3 rounded-[calc(var(--brand-radius)-4px)] border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                        Playback Studio is behind a rollout flag and should stay disabled by default outside controlled testing.
-                    </div>
-                ) : null}
             </PlaybackPanelSection>
 
             <PlaybackPanelSection

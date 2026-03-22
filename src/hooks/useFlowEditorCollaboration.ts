@@ -5,12 +5,9 @@ import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { ToastType } from '@/components/ui/ToastContext';
 import { useFlowStore } from '@/store';
-import { createCollaborationSessionBootstrap } from '@/services/collaboration/session';
 import { createCollaborationRuntimeController } from '@/services/collaboration/runtimeController';
-import { applyCollaborationDocumentStateToCanvas, createCollaborationDocumentStateFromCanvas } from '@/services/collaboration/storeBridge';
 import { buildCollaborationPresenceViewModel } from '@/services/collaboration/presenceViewModel';
 import type { CollaborationPresenceState } from '@/services/collaboration/types';
-import { createCollaborationTransportFactory } from '@/services/collaboration/transportFactory';
 import type { CollaborationCanvasSnapshot } from '@/services/collaboration/canvasDiff';
 import {
     createCollaborationRuntimeControllerBundle,
@@ -21,19 +18,20 @@ import {
 } from '@/services/collaboration/runtimeHookUtils';
 import {
     buildTopNavParticipants,
-    resolveCollaborationCacheState,
     resolveInitialCollaborationCacheState,
     resolveLocalCollaborationClientId,
     resolveLocalCollaborationIdentity,
     resolveLocalCollaborationRoomSecret,
 } from '@/services/collaboration/hookUtils';
 import { buildCollaborationInviteUrl, COLLAB_ROOM_QUERY_PARAM, COLLAB_SECRET_QUERY_PARAM, resolveCollaborationRoomId } from '@/services/collaboration/roomLink';
+import { notifyOperationOutcome } from '@/services/operationFeedback';
 
 type SetFlowNodes = (payload: FlowNode[] | ((nodes: FlowNode[]) => FlowNode[])) => void;
 type SetFlowEdges = (payload: FlowEdge[] | ((edges: FlowEdge[]) => FlowEdge[])) => void;
 
 export interface FlowEditorCollaborationTopNavState {
     roomId: string;
+    inviteUrl: string;
     viewerCount: number;
     status: 'realtime' | 'waiting' | 'fallback';
     cacheState: 'unavailable' | 'syncing' | 'ready' | 'hydrated';
@@ -87,6 +85,9 @@ export function useFlowEditorCollaboration({
         })
     );
     const collaborationControllerRef = useRef<ReturnType<typeof createCollaborationRuntimeController> | null>(null);
+    const previousPresenceMapRef = useRef<Map<string, string>>(new Map());
+    const hasHydratedPresenceRef = useRef(false);
+    const previousTransportStatusRef = useRef<'realtime' | 'waiting' | 'fallback' | null>(null);
     const previousCollaborationCanvasRef = useRef<CollaborationCanvasSnapshot | null>(null);
     const applyingRemoteCollaborationStateRef = useRef(false);
     const pendingCollaborationSnapshotRef = useRef<CollaborationCanvasSnapshot | null>(null);
@@ -283,17 +284,94 @@ export function useFlowEditorCollaboration({
         });
     }, [collaborationEnabled, editorSurfaceRef]);
 
+    useEffect(() => {
+        if (!collaborationEnabled) {
+            return;
+        }
+        const selectedIds = nodes.filter((n) => n.selected).map((n) => n.id);
+        collaborationControllerRef.current?.updateLocalPresenceSelection(selectedIds);
+    }, [collaborationEnabled, nodes]);
+
+    useEffect(() => {
+        if (!collaborationEnabled) {
+            hasHydratedPresenceRef.current = false;
+            return;
+        }
+        const currentMap = new Map(collaborationPresence.map((p) => [p.clientId, p.name]));
+        const previousMap = previousPresenceMapRef.current;
+
+        if (!hasHydratedPresenceRef.current) {
+            previousPresenceMapRef.current = currentMap;
+            hasHydratedPresenceRef.current = true;
+            return;
+        }
+
+        for (const [clientId, name] of currentMap) {
+            if (!previousMap.has(clientId) && clientId !== localCollaborationClientId) {
+                addToast(`${name} joined`, 'info', 3000);
+            }
+        }
+        for (const [clientId, name] of previousMap) {
+            if (!currentMap.has(clientId) && clientId !== localCollaborationClientId) {
+                addToast(`${name} left`, 'info', 3000);
+            }
+        }
+
+        previousPresenceMapRef.current = currentMap;
+    }, [collaborationEnabled, collaborationPresence, localCollaborationClientId, addToast]);
+
+    useEffect(() => {
+        if (!collaborationEnabled) {
+            previousTransportStatusRef.current = null;
+            return;
+        }
+
+        const previousStatus = previousTransportStatusRef.current;
+        if (previousStatus === null) {
+            previousTransportStatusRef.current = collaborationTransportStatus;
+            return;
+        }
+
+        if (previousStatus !== collaborationTransportStatus) {
+            if (collaborationTransportStatus === 'fallback') {
+                notifyOperationOutcome(addToast, {
+                    status: 'warning',
+                    summary: t('share.toast.fallbackMode', 'Realtime sync is unavailable. Continuing in local-only mode.'),
+                    duration: 4500,
+                });
+            } else if (previousStatus === 'fallback' && collaborationTransportStatus === 'realtime') {
+                notifyOperationOutcome(addToast, {
+                    status: 'success',
+                    summary: t('share.toast.reconnected', 'Realtime collaboration restored.'),
+                    duration: 3000,
+                });
+            }
+
+            previousTransportStatusRef.current = collaborationTransportStatus;
+        }
+    }, [addToast, collaborationEnabled, collaborationTransportStatus, t]);
+
     const handleCopyInvite = useCallback(async (): Promise<void> => {
         if (!collaborationRoomSecret) {
-            addToast(t('share.toast.copyFailed', 'Unable to copy share link.'), 'error');
+            notifyOperationOutcome(addToast, {
+                status: 'error',
+                summary: t('share.toast.copyFailed', 'Unable to copy share link.'),
+            });
             return;
         }
         const inviteUrl = buildCollaborationInviteUrl(window.location.href, collaborationRoomId, collaborationRoomSecret);
         try {
             await navigator.clipboard.writeText(inviteUrl);
-            addToast(t('share.toast.linkCopied', 'Collaboration link copied.'), 'success');
+            notifyOperationOutcome(addToast, {
+                status: 'success',
+                summary: t('share.toast.linkCopied', 'Collaboration link copied.'),
+            });
         } catch {
-            addToast(t('share.toast.copyFailed', 'Unable to copy share link.'), 'error');
+            notifyOperationOutcome(addToast, {
+                status: 'warning',
+                summary: t('share.toast.copyManual', 'Clipboard access is blocked. Copy the link manually from the share dialog.'),
+                duration: 4500,
+            });
         }
     }, [addToast, collaborationRoomId, collaborationRoomSecret, t]);
 
@@ -306,6 +384,7 @@ export function useFlowEditorCollaboration({
             status: collaborationTransportStatus,
             cacheState: collaborationCacheState,
             roomId: collaborationRoomId,
+            inviteUrl: buildCollaborationInviteUrl(window.location.href, collaborationRoomId, collaborationRoomSecret ?? collaborationRoomId),
             viewerCount: presenceViewModel.viewerCount,
             participants: buildTopNavParticipants(collaborationPresence, localCollaborationClientId),
             onCopyShareLink: () => {
@@ -318,6 +397,7 @@ export function useFlowEditorCollaboration({
         collaborationPresence,
         collaborationTransportStatus,
         collaborationRoomId,
+        collaborationRoomSecret,
         handleCopyInvite,
         localCollaborationClientId,
         presenceViewModel.viewerCount,

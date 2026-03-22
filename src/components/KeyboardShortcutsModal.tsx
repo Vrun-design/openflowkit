@@ -39,6 +39,7 @@ export function KeyboardShortcutsModal(): React.JSX.Element | null {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="keyboard-shortcuts-title"
+                aria-describedby="keyboard-shortcuts-description"
                 className="bg-white shadow-2xl max-w-2xl w-full border border-slate-200/60 flex flex-col overflow-hidden animate-in zoom-in duration-200"
                 style={{ borderRadius: 'var(--brand-radius, 20px)' }}
             >
@@ -57,7 +58,7 @@ export function KeyboardShortcutsModal(): React.JSX.Element | null {
                         </div>
                         <div>
                             <h2 id="keyboard-shortcuts-title" className="text-lg font-bold leading-none">{t('keyboardShortcutsModal.title')}</h2>
-                            <p className="text-xs text-slate-500 mt-1">{t('keyboardShortcutsModal.subtitle')}</p>
+                            <p id="keyboard-shortcuts-description" className="text-xs text-slate-500 mt-1">{t('keyboardShortcutsModal.subtitle')}</p>
                         </div>
                     </div>
                     <button

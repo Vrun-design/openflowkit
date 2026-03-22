@@ -62,21 +62,25 @@ function getAlgorithmOptions(algorithm: LayoutAlgorithm, layerSpacing: number): 
             options['elk.algorithm'] = `org.eclipse.elk.${algorithm}`;
     }
     if (algorithm === 'layered') {
+        const edgeNodeSpacing = String(Math.round(layerSpacing * 0.33));
         Object.assign(options, {
             'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-            'elk.layered.crossingMinimization.thoroughness': '30',
+            'elk.layered.crossingMinimization.thoroughness': '64',
             'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
             'elk.layered.nodePlacement.favorStraightEdges': 'true',
             'elk.layered.mergeEdges': 'true',
             'elk.layered.unnecessaryBendpoints': 'true',
             'elk.edgeRouting': 'ORTHOGONAL',
-            'elk.portConstraints': 'FIXED_SIDE', // Lock to centers to force centralized trunk grouping
-            'elk.layered.spacing.edgeNodeBetweenLayers': '50',
-            'elk.layered.spacing.edgeEdgeBetweenLayers': '30', // Increased from 20 for cleaner multi-edge separation
-            'elk.spacing.edgeEdge': '12',                      // Minimum gap between parallel edges
+            'elk.portConstraints': 'FIXED_SIDE',
+            'elk.layered.spacing.edgeNodeBetweenLayers': edgeNodeSpacing,
+            'elk.layered.spacing.edgeEdgeBetweenLayers': '30',
+            'elk.spacing.edgeEdge': '12',
             'elk.separateConnectedComponents': 'true',
             'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
             'elk.layered.compaction.postCompaction.strategy': 'EDGE_LENGTH',
+            'elk.layered.highDegreeNode.treatment': 'true',
+            'elk.layered.highDegreeNode.threshold': '4',
+            'elk.layered.highDegreeNode.treeHeight': '2',
         });
     } else if (algorithm === 'mrtree') {
         Object.assign(options, {

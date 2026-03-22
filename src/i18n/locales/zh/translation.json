@@ -342,9 +342,9 @@
     "description": "终极白标画布。",
     "diagramAsCode": "代码即图表",
     "diagramAsCodeDesc": "支持 Mermaid.js 和 DSL。",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "aiAssistant": "AI 助手",
-    "flowpilotAIDesc": "与你的图表对话。",
+    "flowpilotAIDesc": "通过引导式 AI 编辑来完善你的图表。",
     "addRedisCache": "在数据库前添加一个 Redis 缓存。",
     "localPrivate": "本地且私密",
     "localPrivateDesc": "一切都留在你的机器上。",
@@ -400,7 +400,7 @@
     "communityDesc": "加入构建者行列。",
     "roadmap": "路线图",
     "coreRenderer": "核心渲染器",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "pdfExport": "PDF 导出"
   },
   "demo": {
@@ -455,7 +455,7 @@
   },
   "commandBar": {
     "ai": {
-      "title": "询问 Flowpilot",
+      "title": "询问 AI Studio",
       "clearChat": "清除聊天记录",
       "placeholder": "描述你想创建的内容...",
       "examples": {
@@ -551,11 +551,11 @@
   "settingsModal": {
     "title": "设置",
     "general": "通用",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "shortcuts": "快捷键",
     "running": "正在运行 {appName}",
     "generalSettings": "通用设置",
-    "flowpilotConfigurations": "Flowpilot 配置",
+    "flowpilotConfigurations": "AI Studio 配置",
     "keyboardShortcuts": "键盘快捷键",
     "canvas": {
       "title": "画布",
@@ -685,7 +685,7 @@
   "toolbar": {
     "selectMode": "选择模式 (V)",
     "panMode": "平移模式 (H)",
-    "flowpilot": "Flowpilot (Cmd+K)",
+    "flowpilot": "Command Center (Cmd+K)",
     "templates": "模板",
     "addItem": "添加元素",
     "addToCanvas": "添加到画布",
@@ -713,8 +713,8 @@
     "applyingLayout": "正在应用布局…",
     "emptyState": {
       "title": "开始构建",
-      "description": "您的画布是空的。使用 Flowpilot 生成流程，或从空白开始。",
-      "generateWithFlowpilot": "使用 Flowpilot 生成",
+      "description": "您的画布是空的。使用 AI Studio 生成流程，或从空白开始。",
+      "generateWithFlowpilot": "使用 AI Studio 生成",
       "browseTemplates": "浏览模板",
       "addBlankNode": "添加空白形状"
     }

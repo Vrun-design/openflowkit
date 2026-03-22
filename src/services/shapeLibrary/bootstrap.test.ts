@@ -6,13 +6,8 @@ import {
 } from './bootstrap';
 
 describe('shape library bootstrap', () => {
-    it('returns an empty runtime registry when flag is disabled', () => {
-        const registry = createRuntimeShapePackRegistry(false);
-        expect(registry.listPacks()).toEqual([]);
-    });
-
-    it('returns starter packs when flag is enabled', () => {
-        const registry = createRuntimeShapePackRegistry(true);
+    it('returns starter packs from the runtime registry', () => {
+        const registry = createRuntimeShapePackRegistry();
         const packIds = registry.listPacks().map((pack) => pack.id);
 
         expect(packIds).toEqual(['starter-core-v1']);

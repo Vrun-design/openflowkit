@@ -440,7 +440,7 @@
   },
   "commandBar": {
     "ai": {
-      "title": "Preguntar a Flowpilot",
+      "title": "Preguntar a AI Studio",
       "clearChat": "Borrar historial",
       "placeholder": "Describe lo que quieres crear...",
       "examples": {
@@ -530,7 +530,7 @@
     "shortcuts": "Atajos",
     "running": "{appName} en ejecución",
     "generalSettings": "Configuración general",
-    "flowpilotConfigurations": "Configuraciones de Flowpilot",
+    "flowpilotConfigurations": "Configuración de AI Studio",
     "keyboardShortcuts": "Atajos de teclado",
     "canvas": {
       "title": "Lienzo",
@@ -658,7 +658,7 @@
   "toolbar": {
     "selectMode": "Modo selección (V)",
     "panMode": "Modo mover (H)",
-    "flowpilot": "Flowpilot (Cmd+K)",
+    "flowpilot": "Command Center (Cmd+K)",
     "templates": "Plantillas",
     "addItem": "Agregar elemento",
     "addToCanvas": "Agregar al lienzo",

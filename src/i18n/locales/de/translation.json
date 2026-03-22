@@ -342,9 +342,9 @@
     "description": "Das ultimative White-Label-Canvas.",
     "diagramAsCode": "Diagramm als Code",
     "diagramAsCodeDesc": "Erstklassige Unterstützung für Mermaid.js und DSL.",
-    "flowpilotAI": "Flowpilot KI",
+    "flowpilotAI": "AI Studio",
     "aiAssistant": "KI-Assistent",
-    "flowpilotAIDesc": "Mit Ihrem Diagramm chatten.",
+    "flowpilotAIDesc": "Mit geführten KI-Bearbeitungen an Ihrem Diagramm arbeiten.",
     "addRedisCache": "Redis-Cache vor der DB hinzufügen.",
     "localPrivate": "Lokal & Privat",
     "localPrivateDesc": "Alles bleibt auf Ihrem Rechner.",
@@ -400,7 +400,7 @@
     "communityDesc": "Entwickler treffen, die auf OpenFlowKit aufbauen.",
     "roadmap": "Roadmap",
     "coreRenderer": "Core-Renderer",
-    "flowpilotAI": "Flowpilot KI",
+    "flowpilotAI": "AI Studio",
     "pdfExport": "PDF-Export"
   },
   "demo": {
@@ -455,7 +455,7 @@
   },
   "commandBar": {
     "ai": {
-      "title": "Flowpilot fragen",
+      "title": "AI Studio fragen",
       "clearChat": "Chatverlauf löschen",
       "placeholder": "Beschreiben Sie, was Sie erstellen möchten...",
       "examples": {
@@ -551,11 +551,11 @@
   "settingsModal": {
     "title": "Einstellungen",
     "general": "Allgemein",
-    "flowpilotAI": "Flowpilot KI",
+    "flowpilotAI": "AI Studio",
     "shortcuts": "Kürzel",
     "running": "{appName} wird ausgeführt",
     "generalSettings": "Allgemeine Einstellungen",
-    "flowpilotConfigurations": "Flowpilot-Konfigurationen",
+    "flowpilotConfigurations": "AI Studio-Konfiguration",
     "keyboardShortcuts": "Tastaturkürzel",
     "canvas": {
       "title": "Canvas",
@@ -685,7 +685,7 @@
   "toolbar": {
     "selectMode": "Auswahlmodus (V)",
     "panMode": "Verschiebemodus (H)",
-    "flowpilot": "Flowpilot (Cmd+K)",
+    "flowpilot": "Command Center (Cmd+K)",
     "templates": "Vorlagen",
     "addItem": "Element hinzufügen",
     "addToCanvas": "Zum Canvas hinzufügen",
@@ -713,8 +713,8 @@
     "applyingLayout": "Layout wird angewendet…",
     "emptyState": {
       "title": "Aufbauen beginnen",
-      "description": "Ihr Canvas ist leer. Generieren Sie einen Fluss mit Flowpilot oder starten Sie von Grund auf.",
-      "generateWithFlowpilot": "Mit Flowpilot generieren",
+      "description": "Ihr Canvas ist leer. Generieren Sie einen Fluss mit AI Studio oder starten Sie von Grund auf.",
+      "generateWithFlowpilot": "Mit AI Studio generieren",
       "browseTemplates": "Vorlagen durchsuchen",
       "addBlankNode": "Leere Form hinzufügen"
     }

@@ -32,6 +32,7 @@ describe('collaboration session bootstrap', () => {
       name: 'Varun',
       color: '#6366f1',
       cursor: { x: 0, y: 0 },
+      selectedNodeIds: [],
     });
   });
 

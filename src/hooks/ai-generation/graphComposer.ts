@@ -1,7 +1,10 @@
 import { createDefaultEdge } from '@/constants';
 import { createId } from '@/lib/id';
+import { createLogger } from '@/lib/logger';
 import { parseOpenFlowDSL } from '@/lib/openFlowDSLParser';
 import type { FlowEdge, FlowNode } from '@/lib/types';
+
+const logger = createLogger({ scope: 'graphComposer' });
 
 export interface ParsedFlowResult {
   nodes: FlowNode[];
@@ -22,12 +25,21 @@ export function parseDslOrThrow(dslText: string): ParsedFlowResult {
 
 export function buildIdMap(parsedNodes: FlowNode[], existingNodes: FlowNode[]): Map<string, string> {
   const idMap = new Map<string, string>();
+  const existingById = new Map(existingNodes.map((n) => [n.id, n]));
+
   parsedNodes.forEach((parsedNode) => {
-    const existingNode = existingNodes.find((node) => (
-      node.data.label?.toLowerCase() === parsedNode.data.label?.toLowerCase()
-    ));
-    idMap.set(parsedNode.id, existingNode ? existingNode.id : parsedNode.id);
+    // Prefer exact ID match — the AI preserved the existing node ID
+    if (existingById.has(parsedNode.id)) {
+      idMap.set(parsedNode.id, parsedNode.id);
+      return;
+    }
+    // Fall back to label match for AI responses that generated new IDs
+    const byLabel = existingNodes.find(
+      (n) => n.data.label?.toLowerCase() === parsedNode.data.label?.toLowerCase()
+    );
+    idMap.set(parsedNode.id, byLabel ? byLabel.id : parsedNode.id);
   });
+
   return idMap;
 }
 
@@ -55,7 +67,10 @@ export function toFinalEdges(
       const targetId = idMap.get(edge.target);
 
       if (!sourceId || !targetId) {
-        console.warn(`Skipping edge with missing node: ${edge.source} -> ${edge.target}`);
+        logger.warn('Skipping edge with missing node.', {
+          sourceId: edge.source,
+          targetId: edge.target,
+        });
         return null;
       }
 

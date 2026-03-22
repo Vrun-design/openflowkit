@@ -33,6 +33,7 @@ export interface CollaborationRuntimeController {
   getPresenceState: () => CollaborationPresenceState[];
   submitLocalOperation: (input: LocalCollaborationOperationInput) => CollaborationOperationEnvelope | null;
   updateLocalPresenceCursor: (x: number, y: number) => void;
+  updateLocalPresenceSelection: (selectedNodeIds: string[]) => void;
 }
 
 export function createCollaborationRuntimeController(
@@ -145,6 +146,18 @@ export function createCollaborationRuntimeController(
       localPresence = {
         ...localPresence,
         cursor: { x, y },
+      };
+      presenceState = mergePresenceSnapshot(presenceState, [localPresence]);
+      notifyPresenceChange();
+      transport.publishPresence(localPresence);
+    },
+    updateLocalPresenceSelection: (selectedNodeIds) => {
+      if (!running) {
+        return;
+      }
+      localPresence = {
+        ...localPresence,
+        selectedNodeIds,
       };
       presenceState = mergePresenceSnapshot(presenceState, [localPresence]);
       notifyPresenceChange();

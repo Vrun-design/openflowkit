@@ -14,6 +14,8 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
   const provider = data.archProvider || 'custom';
   const resourceType = data.archResourceType || 'service';
   const environment = data.archEnvironment || 'default';
+  const zone = data.archZone as string | undefined;
+  const trustDomain = data.archTrustDomain as string | undefined;
   const architectureMinHeight = environment ? 96 : 88;
   const activeColor = data.color || 'white';
   const activeColorMode = data.colorMode || 'subtle';
@@ -85,7 +87,7 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
             }}
           >
             {providerPreviewUrl ? (
-              <img src={providerPreviewUrl} alt="" className="h-3.5 w-3.5 object-contain" loading="lazy" />
+              <img src={providerPreviewUrl} alt={`${provider} ${resourceType} icon`} className="h-3.5 w-3.5 object-contain" loading="lazy" />
             ) : (
               <span>{resourceIcon}</span>
             )}
@@ -104,14 +106,38 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
           className="mt-1 text-sm font-semibold break-words"
           isSelected={Boolean(selected)}
         />
-        <div
-          className="mt-1 inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
-          style={{
-            backgroundColor: visualStyle.iconBg,
-            color: visualStyle.subText,
-          }}
-        >
-          {environment}
+        <div className="mt-1 flex flex-wrap items-center gap-1">
+          <span
+            className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+            style={{
+              backgroundColor: visualStyle.iconBg,
+              color: visualStyle.subText,
+            }}
+          >
+            {environment}
+          </span>
+          {zone && (
+            <span
+              className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+              style={{
+                backgroundColor: visualStyle.iconBg,
+                color: visualStyle.subText,
+              }}
+            >
+              {zone}
+            </span>
+          )}
+          {trustDomain && (
+            <span
+              className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+              style={{
+                backgroundColor: visualStyle.iconBg,
+                color: visualStyle.subText,
+              }}
+            >
+              {trustDomain}
+            </span>
+          )}
         </div>
       </div>
     </NodeChrome>

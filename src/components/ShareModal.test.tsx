@@ -1,53 +1,68 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ShareModal } from './ShareModal';
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (_key: string, fallback?: string | { defaultValue?: string; count?: number }) => {
-      if (typeof fallback === 'string') return fallback;
-      if (fallback?.defaultValue) return fallback.defaultValue.replace('{{count}}', String(fallback.count ?? ''));
-      return _key;
-    },
-  }),
-}));
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>();
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, options?: string | { defaultValue?: string }) => {
+        if (typeof options === 'string') {
+          return options;
+        }
+        return options?.defaultValue ?? key;
+      },
+    }),
+  };
+});
 
 describe('ShareModal', () => {
-  it('shows the room id with a simplified privacy note', () => {
+  it('renders the invite URL and fallback guidance for local-only mode', () => {
     render(
       <ShareModal
         isOpen
         onClose={vi.fn()}
         onCopyInvite={vi.fn()}
-        roomId="abc-room"
+        roomId="room-123"
+        inviteUrl="https://example.com/flow?room=room-123"
         status="fallback"
-        viewerCount={1}
+        viewerCount={2}
+        participants={[
+          { clientId: 'local', name: 'You', color: '#000', isLocal: true },
+          { clientId: 'peer', name: 'Peer', color: '#fff', isLocal: false },
+        ]}
       />
     );
 
-    expect(screen.getByText('Share design')).toBeTruthy();
-    expect(screen.getByText('abc-room')).toBeTruthy();
-    expect(screen.getByText('All your diagram data stays local in the browser unless you export it.')).toBeTruthy();
-    expect(screen.getByText('Copy Link')).toBeTruthy();
+    expect(screen.getByTestId('share-panel')).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Share live canvas' }).getAttribute('aria-describedby')).toBe('share-modal-description');
+    expect(screen.getByText('https://example.com/flow?room=room-123')).toBeTruthy();
+    expect(screen.getByText(/local-only mode/i)).toBeTruthy();
+    expect(screen.getByText(/copy the invite link above manually/i)).toBeTruthy();
   });
 
-  it('copies the collaboration link', () => {
+  it('invokes copy and close actions', () => {
+    const onClose = vi.fn();
     const onCopyInvite = vi.fn();
 
     render(
       <ShareModal
         isOpen
-        onClose={vi.fn()}
+        onClose={onClose}
         onCopyInvite={onCopyInvite}
-        roomId="abc-room"
+        roomId="room-123"
+        inviteUrl="https://example.com/flow?room=room-123"
         status="realtime"
-        viewerCount={2}
+        viewerCount={1}
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Copy Link/i }));
+    fireEvent.click(screen.getByRole('button', { name: /copy invite link/i }));
+    fireEvent.click(screen.getByLabelText('Close'));
 
     expect(onCopyInvite).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('Live sync')).toBeTruthy();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

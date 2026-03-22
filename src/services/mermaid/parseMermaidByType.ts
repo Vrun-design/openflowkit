@@ -1,6 +1,5 @@
 import type { DiagramType } from '@/lib/types';
 import { parseMermaid, type ParseResult } from '@/lib/mermaidParser';
-import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { getDiagramPlugin } from '@/diagram-types/core';
 import { registerBuiltInDiagramPlugins } from '@/diagram-types/registerBuiltInPlugins';
 import { detectMermaidDiagramType } from './detectDiagramType';
@@ -84,7 +83,7 @@ export function parseMermaidByType(
     };
   }
 
-  const canUsePluginDispatch = detectedType !== 'stateDiagram' || ROLLOUT_FLAGS.stateDiagramV1;
+  const canUsePluginDispatch = true;
   if (canUsePluginDispatch) {
     const plugin = getDiagramPlugin(detectedType);
     if (plugin) {

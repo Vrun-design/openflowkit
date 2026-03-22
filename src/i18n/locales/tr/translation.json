@@ -374,9 +374,9 @@
     "description": "Nihai beyaz etiketli tuval. Tamamen özelleştirilebilir düğümler, kenarlar ve temalar — React Flow ile güçlendirilmiş. Bu sizin markanız, nefes almak için sonsuz alan verilmiş.",
     "diagramAsCode": "Kod Olarak Diyagram",
     "diagramAsCodeDesc": "Mermaid.js ve tip güvenli DSL'imiz için birinci sınıf destek. Mimarinizi kodla tanımlayın, JSON olarak dışa aktarın ve motorun düzeni halletmesine izin verin.",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "aiAssistant": "Yapay Zeka Asistanı",
-    "flowpilotAIDesc": "Diyagramınızla sohbet edin. \"Köşeleri daha yuvarlak yap\", \"Yük dengeleyici ekle\".",
+    "flowpilotAIDesc": "Yönlendirilmiş AI düzenlemeleriyle diyagramınız üzerinde çalışın. \"Köşeleri daha yuvarlak yap\", \"Yük dengeleyici ekle\".",
     "addRedisCache": "Veritabanının önüne Redis önbelleği ekle.",
     "localPrivate": "Yerel ve Özel",
     "localPrivateDesc": "Verilerinizi istemiyoruz. Her şey makinenizde kalır. Bulut kaydetme yok, izleme yok, sunucularımıza \"senkronizasyon\" yok. Tam özgürlüğe sahipsiniz.",
@@ -432,7 +432,7 @@
     "communityDesc": "OpenFlowKit üzerinde çalışan geliştiricilere katılın.",
     "roadmap": "Yol Haritası",
     "coreRenderer": "Çekirdek Render",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "pdfExport": "PDF Dışa Aktarma"
   },
   "demo": {
@@ -487,7 +487,7 @@
   },
   "commandBar": {
     "ai": {
-      "title": "Flowpilot'a Sor",
+      "title": "AI Studio'ya Sor",
       "clearChat": "Sohbet Geçmişini Temizle",
       "placeholder": "Ne oluşturmak istediğinizi açıklayın...",
       "examples": {
@@ -583,11 +583,11 @@
   "settingsModal": {
     "title": "Ayarlar",
     "general": "Genel",
-    "flowpilotAI": "Flowpilot AI",
+    "flowpilotAI": "AI Studio",
     "shortcuts": "Kısayollar",
     "running": "{appName} Çalışıyor",
     "generalSettings": "Genel Ayarlar",
-    "flowpilotConfigurations": "Flowpilot Yapılandırmaları",
+    "flowpilotConfigurations": "AI Studio Yapılandırması",
     "keyboardShortcuts": "Klavye Kısayolları",
     "canvas": {
       "title": "Tuval",
@@ -940,7 +940,7 @@
   "toolbar": {
     "selectMode": "Seçim Modu (V)",
     "panMode": "Kaydırma Modu (H)",
-    "flowpilot": "Flowpilot (Cmd+K)",
+    "flowpilot": "Command Center (Cmd+K)",
     "templates": "Şablonlar",
     "addItem": "Öğe Ekle",
     "addToCanvas": "Tuvale Ekle",
@@ -968,8 +968,8 @@
     "applyingLayout": "Düzen uygulanıyor…",
     "emptyState": {
       "title": "İnşaya Başlayın",
-      "description": "Tuvaliniz boş. Flowpilot ile bir akış oluşturun, bir şablon kullanın veya sıfırdan başlayın.",
-      "generateWithFlowpilot": "Flowpilot ile Oluştur",
+      "description": "Tuvaliniz boş. AI Studio ile bir akış oluşturun, bir şablon kullanın veya sıfırdan başlayın.",
+      "generateWithFlowpilot": "AI Studio ile Oluştur",
       "browseTemplates": "Şablonlara Gözat",
       "addBlankNode": "Boş Şekil Ekle"
     }

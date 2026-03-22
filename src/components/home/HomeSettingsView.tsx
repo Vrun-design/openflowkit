@@ -35,7 +35,7 @@ export function HomeSettingsView({
                         isActive={activeSettingsTab === 'ai'}
                         onClick={() => onSettingsTabChange('ai')}
                     >
-                        {t('settings.ai', 'Flowpilot AI')}
+                        {t('settings.ai', 'AI Studio')}
                     </SidebarItem>
                     <SidebarItem
                         isActive={activeSettingsTab === 'shortcuts'}

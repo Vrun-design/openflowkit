@@ -1,39 +1,60 @@
 ---
 draft: false
 title: Introduction
+description: OpenFlowKit; teknik akışlar, mimari diyagramlar, kod tabanlı temsil ve yapay zeka destekli düzenleme için local-first bir diyagram çalışma alanıdır.
 ---
 
-**OpenFlowKit**, yapay zeka destekli görselleştirme ile hassas, kod tabanlı düzenleme arasındaki boşluğu dolduran yeni nesil bir diyagram aracıdır. Geliştiriciler, mimarlar ve ürün yöneticileri için tasarlanan OpenFlowKit, doğal dil veya özel DSL'imizi kullanarak karmaşık akış şemaları, sıra diyagramları ve sistem mimarileri oluşturmanıza olanak tanır.
+OpenFlowKit, teknik ekipler için tasarlanmış local-first bir diyagram çalışma alanıdır. Görsel tuvali, kod dostu temsilleri, deterministik içe aktarma yollarını, yapay zeka destekli üretimi ve paylaşım/dışa aktarma akışlarını tek bir tarayıcı tabanlı üründe birleştirir.
 
-## Neden OpenFlowKit?
+## OpenFlowKit nerede güçlüdür?
 
-Geleneksel diyagram araçları genellikle şu seçenekler arasında tercih yapmaya zorlar:
-1.  **Sürükle-bırak araçları**: Başlamak kolay, ancak sürdürmesi ve versiyon kontrolü zor.
-2.  **Kod tabanlı araçlar (Mermaid gibi)**: Versiyon kontrolü için harika, ancak sıfırdan yazmak zahmetli olabilir.
+OpenFlowKit özellikle diyagramın zaman içinde evrilmesi gereken durumlarda güçlüdür:
 
-OpenFlowKit size her iki dünyanın en iyisini sunar. Bir metin istemiyle başlangıç yapısını oluşturabilir, ardından **Hibrit Editörümüzü** kullanarak düzenleyebilirsiniz—düğümleri tuval üzerinde görsel olarak manipüle edebilir *veya* altta yatan kodu doğrudan düzenleyebilirsiniz.
+- boş tuval, şablon, yapay zeka istemi, kod temsili veya mevcut kaynak girdiden başlayabilirsiniz
+- sonucu tek seferlik bir çıktı gibi değil, düzenlenebilir bir çalışma yüzeyi gibi geliştirebilirsiniz
+- gerektiğinde metinsel temsili editör modeline yakın tutabilirsiniz
+- aynı diyagramı dokümantasyon, tasarım ve paylaşım iş akışlarına taşıyabilirsiniz
 
-## Temel Özellikler
+## Ürünün temel yüzeyleri
 
-### Yapay Zeka Destekli Üretim
-Sisteminizi basitçe tanımlayın: *"OAuth yedekli ve hata işlemeli bir giriş akışı oluştur."* OpenFlowKit'in Gemini entegrasyonu tüm diyagramı anında oluşturur.
+Mevcut ürün dört ana yüzey etrafında şekillenir:
 
-### Hibrit Tuval
-Tuvalimiz sadece statik bir görüntü değil. Tamamen etkileşimli bir grafik ortamıdır.
-*   **Sürükle & Bırak**: Düğümleri taşıyın, otomatik hizalama.
-*   **Akıllı Düzenler**: Elk.js kullanarak tek tıkla yeniden düzenleme.
-*   **Özellikler Paneli**: CSS'e dokunmadan belirli düğüm stillerini ince ayarlayın.
+- doğrudan düzenleme için görsel tuval
+- arama, şablon, varlık, düzen ve tasarım sistemleri için komut merkezi
+- yapay zeka, kod, içe aktarma, infra senkronizasyonu ve lint akışları için Studio alanı
+- editör dışına taşımak için dışa aktarma, gömme ve paylaşım akışları
 
-### Kod Olarak Diyagram
-Her diyagram okunabilir, düzenlenebilir bir JSON yapısı ile desteklenir ve Mermaid.js sözdizimi ile uyumludur. Bu, dokümantasyonunuzun kodunuzla birlikte yaşayabileceği anlamına gelir.
+## Uygulamadaki diyagram aileleri
 
-### Premium Estetik
-"Önce Tasarım" yaklaşımıyla oluşturulan OpenFlowKit diyagramları varsayılan olarak sunum için hazırdır. Artık çirkin, varsayılan gri kutular yok.
+Editör şu diyagram türlerini birinci sınıf olarak destekler:
 
-## Sonraki Adımlar
+- `flowchart`
+- `stateDiagram`
+- `classDiagram`
+- `erDiagram`
+- `gitGraph`
+- `mindmap`
+- `journey`
+- `architecture`
 
-Başlamaya hazır mısınız?
+Buna ek olarak genel amaçlı akış düğümleri, mimari ikon düğümleri, açıklamalar, bölümler, görseller ve wireframe yüzeyleri de bulunur.
 
-*   İlk akışınızı oluşturmak için [Hızlı Başlangıç](/docs/tr/quick-start) kılavuzuna göz atın.
-*   [Tuval Temelleri](/docs/tr/canvas-basics) hakkında bilgi edinin.
-*   [OpenFlow DSL](/docs/tr/openflow-dsl)'de ustalaşın.
+## Temel kavramlar
+
+### Varsayılan olarak local-first
+
+Diyagram durumu varsayılan olarak tarayıcıda kalır. Ne zaman dışa aktaracağınızı, paylaşacağınızı veya bir ortak çalışma odasına gireceğinizi siz belirlersiniz.
+
+### Birden fazla giriş modu
+
+OpenFlowKit tek bir kaynak doğruluğu modeline sizi zorlamaz. Görsel düzenleme, yapay zeka, OpenFlow DSL, Mermaid veya yapılandırılmış içe aktarma arasında ihtiyaç bazlı geçiş yapabilirsiniz.
+
+### Düzenlenebilir çıktılar
+
+Üretilen veya içe aktarılan diyagramlar ölü ekran görüntülerine dönüşmez; aynı düzenlenebilir tuval modeline geri gelir.
+
+## Buradan başlayın
+
+- En hızlı ilk kullanım akışı için [Quick Start](/tr/quick-start/) sayfasını okuyun.
+- Yapay zeka, kod ve içe aktarma yüzeyleri için [Studio Overview](/tr/studio-overview/) sayfasını açın.
+- Nereden başlamanız gerektiğinden emin değilseniz [Choose an Input Mode](/tr/choose-input-mode/) sayfasına gidin.

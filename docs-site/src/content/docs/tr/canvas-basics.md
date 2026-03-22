@@ -1,31 +1,54 @@
 ---
 draft: false
 title: Canvas Basics
+description: OpenFlowKit tuvalinde gezinmeyi, seçim yapmayı, düzenlemeyi ve çalışmanızı geri kazanmayı öğrenin.
 ---
 
+Tuval, OpenFlowKit’in ana düzenleme yüzeyidir. Doğrudan graf üzerinde çalışmayı ve kesin düzenlemeleri yan panellerle birleştirir.
 
-FlowMind tuvali sonsuz, etkileşimli bir çalışma alanıdır. Etkin biçimde gezinmek ve kullanmak için aşağıdaki rehberi inceleyin.
+## Tuvali ne zaman kullanmalısınız?
 
-## Gezinti
+Tuvali şu durumlarda kullanın:
 
-*   **Kaydırma**: Belirli fare eylemi (örn. Boşluk Tuşu + Sürükle veya Orta Tıklama + Sürükle) tuval görünümünü taşır.
-*   **Yakınlaştırma**: Fare tekerleğini kullanarak yakınlaştırın ve uzaklaştırın.
-*   **Görünüme Sığdır**: Tüm düğümleri görünüme sığdırmak için \`Shift + 1\` tuşlarına basın.
+- diyagramı manuel olarak çizmek istediğinizde
+- yapay zeka, içe aktarma veya koddan gelen bir sonucu iyileştirmek istediğinizde
+- yapıyı metin yerine mekânsal olarak değerlendirmek istediğinizde
+- doğrudan sürükle-bırak düzenleme yapmak istediğinizde
 
-## Düğüm İşlemleri
+## Gezinme
 
-### Düğüm Seçme
-*   **Tekli Seçim**: Bir düğüme tıklayın.
-*   **Çoklu Seçim**: \`Shift\` tuşunu basılı tutarak birden fazla düğüme tıklayın veya etraflarına bir seçim kutusu çizmek için tıklayıp sürükleyin.
+### Kaydırma ve yakınlaştırma
 
-### Kopyalama
-Bir veya daha fazla düğümü seçin ve kopyalamak için \`Cmd + D\` (Mac) veya \`Ctrl + D\` (Windows) tuşlarına basın.
+- Fare tekerleği ile yakınlaşın veya uzaklaşın
+- `Space + Drag` ile kaydırın
+- `H` el moduna geçer
+- `V` seçim moduna döner
+- `Shift + 1` mevcut grafiği görünüşe sığdırır
+- `Cmd/Ctrl + +/-` yakınlaştırma kontrolü sağlar
 
-### Silme
-Düğümleri seçin ve \`Backspace\` veya \`Delete\` tuşuna basın.
+### Büyük diyagramlarda gezinme
 
-## Mini Harita
+- görünüşe sığdırmayı kullanın
+- Komut Merkezi aramasıyla düğümlere atlayın
+- yapı doğruysa otomatik düzeni kullanın
 
-Sağ alt köşedeki Mini Harita, tüm akışınıza genel bir bakış sunar. Büyük diyagramlarda hızlıca gezinmek için mini haritanın içindeki görünüm kutusunu sürükleyebilirsiniz.
+## Seçim
 
-[YER TUTUCU: Çağrı açıklamalarıyla Tuval Arayüzü görseli]
+### Tekli seçim
+
+Bir düğüme veya kenara tıklayarak inceleyip düzenleyin.
+
+### Çoklu seçim
+
+- `Shift + Click`
+- `Shift + Drag` ile seçim kutusu
+
+Birden fazla düğüm seçildiğinde sağ panel toplu düzenleme moduna geçer.
+
+## Doğrudan düzenleme ve kesin düzenleme
+
+Tuval, grafiği hareket ettirdiğiniz ve yapılandırdığınız yüzeydir. Kesin değerler ve aileye özgü ayarlar için [Properties Panel](/tr/properties-panel/) kullanın. Şablonlar, arama, düzen ve iş akışı geçişleri için [Command Center](/tr/command-center/) daha doğrudur.
+
+## Geçmiş ve kurtarma
+
+Kısa düzeltmeler için undo/redo, büyük geri dönüşler için snapshot kullanın. Bkz. [Playback & History](/tr/playback-history/).
