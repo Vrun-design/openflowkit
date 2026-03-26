@@ -46,7 +46,7 @@ A **browser-based diagramming studio** for engineers and designers — structure
 - 🤖 **AI generation with your own key** — 8 providers (Gemini, OpenAI, Claude, Groq, Ollama + more), keys stay in your browser
 - 📐 **8 structured diagram types** — flowcharts, AWS/Azure/CNCF architecture, class, ER, mind maps, state, wireframes
 - `{}` **Diagram-as-code, bidirectionally** — edit visually or in the OpenFlow DSL, always in sync
-- 📤 **Export everything** — SVG, PNG, Figma, Mermaid, PlantUML, animated GIF/MP4
+- 📤 **Export everything** — SVG, PNG, Figma, Mermaid, PlantUML, animated GIF/MP4, cinematic reveal videos
 - 🔒 **Fully local-first** — no account, no telemetry, offline-capable, MIT licensed
 
 **Built for** engineers, architects, and technical PMs who want a fast, structured diagramming tool that doesn't require a cloud account or a credit card.
@@ -77,12 +77,12 @@ Describe a system in plain English. Flowpilot generates a fully laid-out, editab
 | Provider | Default model |
 |---|---|
 | Google Gemini | `gemini-2.5-flash-lite` |
-| OpenAI | `gpt-4o-mini` |
-| Anthropic Claude | `claude-3-5-sonnet` |
+| OpenAI | `gpt-5-mini` |
+| Anthropic Claude | `claude-sonnet-4-6` |
 | Groq | `llama-4-scout-17b-16e-instruct` |
 | Mistral | `mistral-medium-latest` |
 | NVIDIA | `llama-4-scout-17b-16e-instruct` |
-| Cerebras | `llama-3.3-70b` |
+| Cerebras | `gpt-oss-120b` |
 | OpenRouter | `google/gemini-2.5-flash` |
 | **Custom endpoint** | Any OpenAI-compatible API (Ollama, LM Studio, Together AI…) |
 
@@ -94,6 +94,7 @@ Describe a system in plain English. Flowpilot generates a fully laid-out, editab
 - Stream responses in real time with a cancel button
 - Multi-turn conversation with persistent chat history
 - Diff preview (added / updated / removed node count) before applying — confirm or discard
+- **Inline key setup** — add your API key directly in the AI panel, no Settings detour
 
 ### 📥 AI Import Pipelines
 
@@ -123,15 +124,15 @@ File upload supported with automatic language detection from extension, or paste
 
 ### 📤 Export
 
-**Image:** SVG · PNG (transparent, hi-res) · JPG
+**Image:** SVG · PNG (transparent, hi-res) · JPG · PDF
 
-**Animation / Video:** WebM · MP4 · Animated GIF (via playback timeline)
+**Animation / Video:** Playback WebM/MP4 · Playback GIF · **Cinematic Reveal Video** · **Cinematic Reveal GIF** (nodes fade in wave-by-wave with smooth opacity transitions — white background, ready for social/docs)
 
-**Code / Data:** JSON (native, fully reopenable) · OpenFlow DSL · Mermaid · PlantUML
+**Code / Data:** JSON (native, fully reopenable) · OpenFlow DSL · Mermaid · PlantUML · **README Embed** (copy a Markdown badge snippet)
 
 **Design Handoff:** Figma — paste directly into Figma as editable SVG with text layers
 
-**Sharing:** Read-only viewer link (diagram encoded in URL, zero server required) · Embeddable markdown badge for GitHub READMEs
+**Sharing:** Read-only viewer link (diagram encoded in URL, zero server required)
 
 ### `{}` OpenFlow DSL — Diagram as Code
 
@@ -215,6 +216,10 @@ One-click ELK.js layout with four presets:
 
 Real-time peer-to-peer collaboration via WebRTC + Yjs. Share a room link — participants see live cursors, presence indicators, and synchronized canvas state.
 
+### 🚀 First-Run Experience
+
+New users see a **Welcome overlay** with three paths: start from a template, import a diagram, or jump to a blank canvas. No blank-screen confusion.
+
 ### ⌨️ Canvas & Keyboard
 
 - **Multi-tab workspace** — multiple diagrams open simultaneously
@@ -284,7 +289,7 @@ npm run dev
 
 ### Add an AI provider
 
-Open **Settings → AI** in the app, select a provider, and paste your API key. Keys are stored in your browser via `localStorage` and never leave your device. Session-only mode (no persistence) is also available.
+Open the AI panel — if no key is configured, an inline setup card lets you pick a provider and paste your key without leaving the canvas. Alternatively, go to **Settings → AI** for full configuration. Keys are stored in your browser via `localStorage` and never leave your device. Session-only mode (no persistence) is also available.
 
 ---
 

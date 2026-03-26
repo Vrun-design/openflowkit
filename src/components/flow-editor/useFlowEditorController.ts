@@ -1,4 +1,5 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
+import { shouldOpenFlowEditorTemplates } from '@/app/routeState';
 import type { FlowEdge, FlowNode, FlowSnapshot } from '@/lib/types';
 import type { FlowEditorMode, StudioCodeMode, StudioTab } from '@/hooks/useFlowEditorUIState';
 import type { DomainLibraryItem } from '@/services/domainLibrary';
@@ -296,6 +297,16 @@ export function useFlowEditorController({
         undo: panelParams.commandBar.undo,
         redo: panelParams.commandBar.redo,
     });
+
+    useEffect(() => {
+        if (!shouldOpenFlowEditorTemplates(shell.location.state)) return;
+        chromeParams.openCommandBar('templates');
+        shell.navigate(
+            { pathname: shell.location.pathname, search: shell.location.search, hash: shell.location.hash },
+            { replace: true, state: null }
+        );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return {
         shouldRenderPanels,

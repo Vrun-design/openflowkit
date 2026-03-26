@@ -361,7 +361,7 @@ export const useFlowExport = (
       return;
     }
 
-    const frames = buildRevealFrames(nodes, edges);
+    const frames = buildRevealFrames(nodes, edges, { fade: true });
     if (frames.length === 0) {
       addToast('Could not build reveal sequence.', 'error');
       return;
@@ -373,9 +373,9 @@ export const useFlowExport = (
     reactFlowWrapper.current!.classList.add('exporting');
     addToast(isGif ? 'Preparing reveal GIF…' : 'Preparing reveal video…', 'info');
 
-    // Save original hidden states to restore afterward
-    const originalNodes = nodes.map((n) => ({ id: n.id, hidden: n.hidden }));
-    const originalEdges = edges.map((e) => ({ id: e.id, hidden: e.hidden }));
+    const originalNodeHidden = new Map(nodes.map((n) => [n.id, n.hidden]));
+    const originalNodeStyle = new Map(nodes.map((n) => [n.id, n.style]));
+    const originalEdgeHidden = new Map(edges.map((e) => [e.id, e.hidden]));
 
     try {
       const frameOptions = createExportOptions(nodes, 'png', { maxDimension: 1440, pixelRatio: 1.5 }).options;
@@ -383,43 +383,42 @@ export const useFlowExport = (
 
       for (const frame of frames) {
         setNodes((prev) =>
-          prev.map((n) => ({ ...n, hidden: !frame.visibleNodeIds.has(n.id) }))
+          prev.map((n) => {
+            if (!frame.visibleNodeIds.has(n.id)) return { ...n, hidden: true };
+            const opacity = frame.fadingNodeIds.has(n.id) ? frame.fadeOpacity : 1;
+            return { ...n, hidden: false, style: { ...n.style, opacity, transition: 'none' } };
+          })
         );
         setEdges((prev) =>
           prev.map((e) => ({ ...e, hidden: !frame.visibleEdgeIds.has(e.id) }))
         );
-        await wait(160);
+        await wait(100);
         const dataUrl = await toPng(flowViewport, frameOptions);
         capturedFrames.push({ dataUrl, delayMs: frame.holdMs });
       }
-
-      if (isGif) {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Canvas 2D context unavailable.');
-        const gifFrames = [];
-        for (const f of capturedFrames) {
-          const img = await loadImage(f.dataUrl);
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          gifFrames.push({ imageData: ctx.getImageData(0, 0, canvas.width, canvas.height), delayMs: f.delayMs });
-        }
-        const blob = encodeGif(gifFrames);
-        createDownload(blob, 'openflowkit-reveal.gif');
-        addToast('Reveal GIF exported.', 'success');
-        return;
-      }
-
-      const mimeType = selectSupportedVideoMimeType(window.MediaRecorder);
-      if (!mimeType) throw new Error('This browser does not support video recording.');
 
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas 2D context unavailable.');
+
+      if (isGif) {
+        const gifFrames = [];
+        for (const f of capturedFrames) {
+          const img = await loadImage(f.dataUrl);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          gifFrames.push({ imageData: ctx.getImageData(0, 0, canvas.width, canvas.height), delayMs: f.delayMs });
+        }
+        createDownload(encodeGif(gifFrames), 'openflowkit-reveal.gif');
+        addToast('Reveal GIF exported.', 'success');
+        return;
+      }
+
+      const mimeType = selectSupportedVideoMimeType(window.MediaRecorder);
+      if (!mimeType) throw new Error('This browser does not support video recording.');
 
       const stream = canvas.captureStream(12);
       const recorder = new MediaRecorder(stream, { mimeType });
@@ -435,7 +434,8 @@ export const useFlowExport = (
         const img = await loadImage(f.dataUrl);
         const repeatCount = Math.max(1, Math.round(f.delayMs / frameDurationMs));
         for (let i = 0; i < repeatCount; i++) {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           await wait(frameDurationMs);
         }
@@ -450,19 +450,8 @@ export const useFlowExport = (
       logger.error('Reveal export failed.', { error, kind });
       addToast(msg, 'error');
     } finally {
-      // Restore original node/edge visibility
-      setNodes((prev) =>
-        prev.map((n) => {
-          const orig = originalNodes.find((o) => o.id === n.id);
-          return orig ? { ...n, hidden: orig.hidden } : n;
-        })
-      );
-      setEdges((prev) =>
-        prev.map((e) => {
-          const orig = originalEdges.find((o) => o.id === e.id);
-          return orig ? { ...e, hidden: orig.hidden } : e;
-        })
-      );
+      setNodes((prev) => prev.map((n) => ({ ...n, hidden: originalNodeHidden.get(n.id), style: originalNodeStyle.get(n.id) })));
+      setEdges((prev) => prev.map((e) => ({ ...e, hidden: originalEdgeHidden.get(e.id) })));
       reactFlowWrapper.current?.classList.remove('exporting');
     }
   }, [nodes, edges, reactFlowWrapper, addToast, setNodes, setEdges]);

@@ -66,6 +66,13 @@ export function useExportMenu({
         plantuml: onExportPlantUML,
         figma: onExportFigma,
         share: onShare,
+        readme: () => {
+            const snippet = [
+                '<!-- Diagram built with OpenFlowKit — https://openflowkit.com -->',
+                '[![Diagram](./diagram.png)](https://openflowkit.com)',
+            ].join('\n');
+            void navigator.clipboard.writeText(snippet);
+        },
     };
 
     function toggleMenu(): void {

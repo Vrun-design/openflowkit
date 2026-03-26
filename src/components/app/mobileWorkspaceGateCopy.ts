@@ -1,10 +1,10 @@
 export const MOBILE_WORKSPACE_GATE_COPY = {
-    title: 'Editing works best on larger screens',
+    title: 'Made for big screens',
     description:
-        'The canvas editor is tuned for desktop and large-tablet layouts. On this device, docs and workspace management will work better than the full editing canvas.',
-    recommendedLabel: 'Recommended',
+        'OpenFlowKit\'s canvas needs room to breathe — drag-and-drop, multi-select, and panels shine on a laptop or tablet. We\'d love to have you there!',
+    recommendedLabel: 'Quick tip',
     recommendedBody:
-        'Open the editor on a laptop or larger tablet for canvas controls, panels, and collaboration tools.',
-    openDocs: 'Open Docs Instead',
-    goHome: 'Back to Home',
+        'Open this link on a laptop or desktop and you\'ll land right in the editor with all tools ready.',
+    openDocs: 'Browse the Docs',
+    goHome: 'Go Home',
 } as const;

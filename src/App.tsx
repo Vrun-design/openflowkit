@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ReactFlowProvider } from '@/lib/reactflowCompat';
-import { createFlowEditorImportRouteState } from '@/app/routeState';
+import { createFlowEditorImportRouteState, createFlowEditorTemplatesRouteState } from '@/app/routeState';
 import { DocsSiteRedirect } from '@/components/app/DocsSiteRedirect';
 import { RouteLoadingFallback } from '@/components/app/RouteLoadingFallback';
 import { MobileWorkspaceGate } from '@/components/app/MobileWorkspaceGate';
@@ -66,10 +66,16 @@ function HomePageRoute(): React.JSX.Element {
     navigate(`/flow/${newTabId}`);
   };
 
+  const handleLaunchWithTemplates = () => {
+    const newTabId = addTab();
+    navigate(`/flow/${newTabId}`, { state: createFlowEditorTemplatesRouteState() });
+  };
+
   return (
     <Suspense fallback={<RouteLoadingFallback />}>
                     <HomePage
                         onLaunch={handleLaunch}
+                        onLaunchWithTemplates={handleLaunchWithTemplates}
                         onImportJSON={() => {
                             navigate('/canvas', {
                               state: createFlowEditorImportRouteState(),

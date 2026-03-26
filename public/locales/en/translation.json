@@ -136,7 +136,12 @@
     "hintPlaybackGif": "Short loop for docs/social",
     "hintRevealVideo": "Nodes fade in sequentially (WebM/MP4)",
     "hintRevealGif": "Animated reveal for docs/social",
-    "hintShareViewer": "Invite link for this room"
+    "hintShareViewer": "Invite link for this room",
+    "readmeEmbed": "README Embed",
+    "hintReadmeEmbed": "Copy Markdown snippet",
+    "sectionImage": "Image",
+    "sectionVideo": "Video & Animation",
+    "sectionCode": "Code & Data"
   },
   "import": {
     "title": "Import",

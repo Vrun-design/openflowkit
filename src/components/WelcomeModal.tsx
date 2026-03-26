@@ -1,151 +1,113 @@
 import React, { useState } from 'react';
-import { X, Layout, Shield } from 'lucide-react';
+import { ArrowRight, FileInput, LayoutTemplate, PenSquare } from 'lucide-react';
 import { OpenFlowLogo } from './icons/OpenFlowLogo';
-import { IS_BEVELED } from '@/lib/brand';
-import { useTranslation } from 'react-i18next';
-import { buildDocsSiteUrl } from '@/docs/docsRoutes';
 import { writeLocalStorageString } from '@/services/storage/uiLocalStorage';
 import { shouldShowWelcomeModal, WELCOME_SEEN_STORAGE_KEY } from './home/welcomeModalState';
 
-const WELCOME_MODAL_RADIUS = 'var(--radius-xl)';
-const WELCOME_CARD_RADIUS = 'var(--radius-md)';
-const WELCOME_ICON_RADIUS = 'var(--radius-sm)';
+export interface WelcomeModalProps {
+    onOpenTemplates: () => void;
+    onImport: () => void;
+    onBlankCanvas: () => void;
+}
 
-export function WelcomeModal(): React.JSX.Element | null {
-    const { t } = useTranslation();
-    const isBeveled = IS_BEVELED;
+interface PathOption {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    onClick: () => void;
+    primary?: boolean;
+}
+
+function PathCard({ icon, title, description, onClick, primary }: PathOption): React.JSX.Element {
+    return (
+        <button
+            onClick={onClick}
+            className={`group flex w-full items-center gap-4 rounded-[var(--radius-md)] border p-4 text-left transition-all hover:-translate-y-0.5 active:scale-[0.98] ${
+                primary
+                    ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-50)] hover:bg-[var(--brand-primary)]'
+                    : 'border-slate-200 bg-white hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary-50)]'
+            }`}
+        >
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-sm)] transition-colors ${
+                primary
+                    ? 'bg-[var(--brand-primary)] text-white group-hover:bg-white group-hover:text-[var(--brand-primary)]'
+                    : 'bg-[var(--brand-primary-50)] text-[var(--brand-primary)]'
+            }`}>
+                {icon}
+            </div>
+            <div className="min-w-0 flex-1">
+                <p className={`text-sm font-semibold ${primary ? 'text-[var(--brand-primary)] group-hover:text-white' : 'text-slate-900'}`}>{title}</p>
+                <p className={`text-xs ${primary ? 'text-[var(--brand-primary)]/70 group-hover:text-white/80' : 'text-slate-500'}`}>{description}</p>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 opacity-40 transition-opacity group-hover:opacity-100" />
+        </button>
+    );
+}
+
+export function WelcomeModal({ onOpenTemplates, onImport, onBlankCanvas }: WelcomeModalProps): React.JSX.Element | null {
     const [isOpen, setIsOpen] = useState(() => shouldShowWelcomeModal());
-    const handleClose = () => {
+
+    const dismiss = () => {
         setIsOpen(false);
         writeLocalStorageString(WELCOME_SEEN_STORAGE_KEY, 'true');
     };
 
+    const handle = (action: () => void) => () => { dismiss(); action(); };
+
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/10 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-            <div
-                className="max-w-md w-full overflow-hidden border border-slate-200/50 bg-white shadow-[var(--shadow-overlay)] animate-in zoom-in duration-300"
-                style={{ borderRadius: WELCOME_MODAL_RADIUS }}
-            >
-                <div className="p-8 relative">
-                    <button
-                        onClick={handleClose}
-                        className="absolute top-6 right-6 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
-                        aria-label="Close"
-                    >
-                        <X size={18} />
-                    </button>
+    const paths: PathOption[] = [
+        {
+            icon: <LayoutTemplate className="h-5 w-5" />,
+            title: 'Start from a template',
+            description: 'Pick a starter diagram and customize it',
+            onClick: handle(onOpenTemplates),
+            primary: true,
+        },
+        {
+            icon: <FileInput className="h-5 w-5" />,
+            title: 'Import a diagram',
+            description: 'Open a JSON, Mermaid, or OpenFlow file',
+            onClick: handle(onImport),
+        },
+        {
+            icon: <PenSquare className="h-5 w-5" />,
+            title: 'Blank canvas',
+            description: 'Start with an empty diagram',
+            onClick: handle(onBlankCanvas),
+        },
+    ];
 
-                    <div className="flex flex-col items-center text-center mt-4">
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/10 p-4 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="w-full max-w-sm overflow-hidden rounded-[var(--radius-xl)] border border-slate-200/50 bg-white shadow-[var(--shadow-overlay)] animate-in zoom-in-95 duration-300">
+                <div className="p-8">
+                    <div className="mb-6 flex flex-col items-center text-center">
                         <div
-                            className="w-14 h-14 flex items-center justify-center mb-6 ring-8"
+                            className="mb-4 flex h-12 w-12 items-center justify-center rounded-[var(--radius-md)] ring-8"
                             style={{
                                 background: 'var(--brand-primary-50, #eef2ff)',
                                 color: 'var(--brand-primary, #6366f1)',
-                                borderRadius: WELCOME_CARD_RADIUS,
-                                '--tw-ring-color': 'var(--brand-primary-50, #eef2ff)'
+                                '--tw-ring-color': 'var(--brand-primary-50, #eef2ff)',
                             } as React.CSSProperties}
                         >
-                            <OpenFlowLogo className="w-7 h-7" />
+                            <OpenFlowLogo className="h-6 w-6" />
                         </div>
-
-                        <h2
-                            className="text-2xl font-bold text-slate-900 mb-2 tracking-tight"
-                            style={{ fontFamily: 'var(--brand-font-family, inherit)' }}
-                        >
-                            {t('welcome.title', 'OpenFlowKit')}
-                        </h2>
-                        <p className="text-slate-500 text-sm leading-relaxed mb-8 max-w-[280px]">
-                            {t('welcome.description', 'Design beautiful, structured diagrams with a developer-first canvas.')}
-                        </p>
+                        <h2 className="text-xl font-bold tracking-tight text-slate-900">Welcome to OpenFlowKit</h2>
+                        <p className="mt-1 text-sm text-slate-500">How do you want to get started?</p>
                     </div>
 
-                    <div className="space-y-5 mb-8">
-                        <FeatureItem
-                            icon={<Layout className="w-5 h-5" />}
-                            title={t('welcome.features.beautifulByDefault', 'Beautiful by Default')}
-                            desc={t('welcome.features.automatedLayouts', 'Automated layouts and professional themes.')}
-                        />
-                        <FeatureItem
-                            icon={<Shield className="w-5 h-5" />}
-                            title={t('welcome.features.privateSecure', 'Private & Secure')}
-                            desc={t('welcome.features.localFirst', 'Local-first architecture keeps your data safe.')}
-                        />
+                    <div className="flex flex-col gap-3">
+                        {paths.map((path) => (
+                            <PathCard key={path.title} {...path} />
+                        ))}
                     </div>
 
-                    <WelcomeFooter
-                        isBeveled={isBeveled}
-                        onGetStarted={handleClose}
-                    />
-
-                    <p className="text-center text-slate-400 text-[10px] mt-6 uppercase tracking-widest font-semibold">
-                        {t('welcome.press', 'Press')} <kbd className="font-sans px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-500">?</kbd> {t('welcome.shortcuts', 'for shortcuts')}
+                    <p className="mt-6 text-center text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                        Press <kbd className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-sans text-slate-500">?</kbd> for keyboard shortcuts
                     </p>
                 </div>
             </div>
-        </div>
-    );
-}
-
-interface FeatureItemProps {
-    icon: React.ReactNode;
-    title: string;
-    desc: string;
-}
-
-function FeatureItem({ icon, title, desc }: FeatureItemProps): React.JSX.Element {
-    return (
-        <div
-            className="flex gap-4 items-center p-3 transition-colors group"
-            style={{ borderRadius: WELCOME_CARD_RADIUS }}
-        >
-            <div
-                className="w-10 h-10 flex items-center justify-center shrink-0"
-                style={{
-                    background: 'var(--brand-primary-50, #f8fafc)',
-                    color: 'var(--brand-primary, #6366f1)',
-                    borderRadius: WELCOME_ICON_RADIUS
-                }}
-            >
-                {icon}
-            </div>
-            <div className="text-left">
-                <h3 className="text-sm font-bold text-slate-900">{title}</h3>
-                <p className="text-xs text-slate-500">{desc}</p>
-            </div>
-        </div>
-    );
-}
-
-interface WelcomeFooterProps {
-    isBeveled: boolean;
-    onGetStarted: () => void;
-}
-
-function WelcomeFooter({ isBeveled, onGetStarted }: WelcomeFooterProps): React.JSX.Element {
-    const { t } = useTranslation();
-    return (
-        <div className="mt-4 flex flex-col gap-3">
-            <button
-                onClick={onGetStarted}
-                className={`w-full py-3.5 text-white font-bold transition-all active:scale-[0.98] hover:-translate-y-0.5 ${isBeveled ? 'shadow-[inset_0px_1px_0px_0px_rgba(255,255,255,0.4),inset_0px_-2px_0px_0px_rgba(0,0,0,0.2),0px_10px_15px_-3px_rgba(0,0,0,0.1)] border border-white/20' : 'shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)]'}`}
-                style={{
-                    background: 'var(--brand-primary, #6366f1)',
-                    borderRadius: WELCOME_CARD_RADIUS
-                }}
-            >
-                {t('common.getStarted', 'Get Started')}
-            </button>
-
-            <a
-                href={buildDocsSiteUrl('quick-start')}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] font-semibold text-slate-500 hover:text-[var(--brand-primary)] text-center w-full transition-colors"
-            >
-                Read the Quick Start Guide →
-            </a>
         </div>
     );
 }

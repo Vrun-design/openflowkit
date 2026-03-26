@@ -2,14 +2,16 @@ import { useEffect, useState, type ReactElement } from 'react';
 import {
     ArrowUp, Database, Server, Cloud, Network,
     Loader2, Paperclip, Square, Trash2, WandSparkles, X, Crosshair, Edit3,
-    CheckCircle2, Plus, Minus, RefreshCw,
+    CheckCircle2, Plus, Minus, RefreshCw, ExternalLink, Key,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { FLOWPILOT_NAME } from '@/lib/brand';
+import { FLOWPILOT_NAME, IS_BEVELED } from '@/lib/brand';
 import type { ChatMessage } from '@/services/aiService';
 import type { ImportDiff } from '@/hooks/useAIGeneration';
 import type { AIReadinessState } from '@/hooks/ai-generation/readiness';
-import { IS_BEVELED } from '@/lib/brand';
+import type { AIProvider } from '@/store/types';
+import { PROVIDERS } from '@/config/aiProviders';
+import { useFlowStore } from '@/store';
 import { useAIViewState } from './command-bar/useAIViewState';
 import { SegmentedChoice } from './properties/SegmentedChoice';
 
@@ -104,6 +106,72 @@ function getPromptPlaceholder(
     }
 
     return 'Describe a diagram to generate from scratch...';
+}
+
+const QUICK_PROVIDERS = PROVIDERS.filter((p) => p.id !== 'custom');
+
+function InlineKeySetup(): ReactElement {
+    const { aiSettings, setAISettings } = useFlowStore();
+    const [provider, setProvider] = useState<AIProvider>(aiSettings.provider);
+    const [apiKey, setApiKey] = useState('');
+    const meta = PROVIDERS.find((p) => p.id === provider) ?? PROVIDERS[0];
+
+    const handleSave = () => {
+        const trimmed = apiKey.trim();
+        if (!trimmed) return;
+        setAISettings({ provider, apiKey: trimmed });
+    };
+
+    return (
+        <div className="mx-auto mt-4 w-full max-w-[300px] rounded-[var(--radius-md)] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-2">
+                <Key className="h-4 w-4 text-[var(--brand-primary)]" />
+                <span className="text-sm font-semibold text-slate-800">Add your AI key</span>
+            </div>
+            <div className="mb-3 flex flex-wrap gap-1.5">
+                {QUICK_PROVIDERS.map((p) => (
+                    <button
+                        key={p.id}
+                        onClick={() => setProvider(p.id)}
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                            provider === p.id
+                                ? 'bg-[var(--brand-primary)] text-white'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                    >
+                        {p.name}
+                    </button>
+                ))}
+            </div>
+            <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
+                placeholder={meta.keyPlaceholder}
+                className="mb-2 w-full rounded-[var(--radius-sm)] border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary-100)]"
+            />
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={handleSave}
+                    disabled={!apiKey.trim()}
+                    className="flex-1 rounded-[var(--radius-sm)] bg-[var(--brand-primary)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--brand-primary-600)] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    Save and try
+                </button>
+                {meta.keyLink && (
+                    <a
+                        href={meta.keyLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-[11px] font-medium text-[var(--brand-primary)] hover:underline"
+                    >
+                        Get key <ExternalLink className="h-3 w-3" />
+                    </a>
+                )}
+            </div>
+        </div>
+    );
 }
 
 export function StudioAIPanel({
@@ -228,24 +296,27 @@ export function StudioAIPanel({
                                 ? 'Use AI for first drafts, then refine the result. Be explicit about the systems, actors, and data flow you want.'
                                 : `${FLOWPILOT_NAME} works best for targeted edits, additions, and quick first drafts. It is less reliable for rewriting a whole canvas in one shot.`}
                         </p>
-                        <div className="flex flex-wrap items-center justify-center gap-2.5 max-w-[320px] mx-auto">
-                            {(nodeCount === 0 ? EMPTY_CANVAS_EXAMPLES : ITERATION_EXAMPLES).map((skill, index) => {
-                                const Icon = skill.icon;
-                                return (
-                                    <button
-                                        key={skill.label}
-                                        onClick={() => {
-                                            setPrompt(skill.prompt);
-                                            void submitPrompt(skill.prompt);
-                                        }}
-                                        className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm transition-all hover:border-[var(--brand-primary-200)] hover:text-[var(--brand-primary)] active:scale-95"
-                                    >
-                                        <Icon className={`h-3.5 w-3.5 ${getExampleIconColor(index)}`} />
-                                        {skill.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                        {aiReadiness.canGenerate && (
+                            <div className="flex flex-wrap items-center justify-center gap-2.5 max-w-[320px] mx-auto">
+                                {(nodeCount === 0 ? EMPTY_CANVAS_EXAMPLES : ITERATION_EXAMPLES).map((skill, index) => {
+                                    const Icon = skill.icon;
+                                    return (
+                                        <button
+                                            key={skill.label}
+                                            onClick={() => {
+                                                setPrompt(skill.prompt);
+                                                void submitPrompt(skill.prompt);
+                                            }}
+                                            className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-1.5 text-[13px] font-medium text-slate-700 shadow-sm transition-all hover:border-[var(--brand-primary-200)] hover:text-[var(--brand-primary)] active:scale-95"
+                                        >
+                                            <Icon className={`h-3.5 w-3.5 ${getExampleIconColor(index)}`} />
+                                            {skill.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        {!aiReadiness.canGenerate && <InlineKeySetup />}
                     </div>
                 ) : (
                     <>

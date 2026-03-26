@@ -30,6 +30,7 @@ describe('HomePage integration flows', () => {
                 <MemoryRouter>
                     <HomePage
                         onLaunch={vi.fn()}
+                        onLaunchWithTemplates={vi.fn()}
                         onImportJSON={vi.fn()}
                         onOpenFlow={vi.fn()}
                         {...props}
