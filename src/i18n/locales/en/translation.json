@@ -387,7 +387,7 @@
       "exportFormats": "Export to SVG, PNG, JPG",
       "figmaExport": "Figma Export",
       "mermaidSupport": "Mermaid.js Support",
-      "aiGeneration": "AI diagram generation (bring your own API key)"
+      "aiGeneration": "AI diagram generation (BYOK)"
     },
     "supportDevelopment": "Support development on GitHub"
   },

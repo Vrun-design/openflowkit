@@ -21,7 +21,7 @@ export const PRICING_FEATURES = [
   'Export to SVG, PNG, JPG',
   'Figma Export',
   'Mermaid.js Support',
-  'AI diagram generation (bring your own API key)',
+  'AI diagram generation (BYOK)',
 ] as const;
 
 export const LANDING_CONTRIBUTORS = [

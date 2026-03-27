@@ -10,6 +10,10 @@ import { useViewSettings } from '@/store/viewHooks';
 import { getAnimatedExportFileExtension, selectSupportedVideoMimeType } from '@/services/animatedExport';
 import { buildCinematicBuildPlan, type CinematicExportKind } from '@/services/export/cinematicBuildPlan';
 import { buildCinematicTimeline, getCinematicExportPreset, resolveCinematicRenderState } from '@/services/export/cinematicRenderState';
+import {
+  CINEMATIC_EXPORT_FALLBACK_COLOR,
+  paintCinematicExportBackground,
+} from '@/services/export/cinematicExportTheme';
 import { useToast } from '../components/ui/ToastContext';
 import { resolveFlowExportViewport } from './flowExportViewport';
 import { notifyOperationOutcome } from '@/services/operationFeedback';
@@ -23,7 +27,6 @@ import {
   encodeGifFromFrames,
   encodeVideoFromFrames,
   waitForExportRender,
-  waitForExportSurface,
 } from './flow-export/exportCapture';
 import {
   buildDiagramDocumentJson,
@@ -40,7 +43,6 @@ export const useFlowExport = (
   recordHistory: () => void,
   reactFlowWrapper: React.RefObject<HTMLDivElement>,
   animatedPlayback: AnimatedPlaybackControls,
-  cinematicExportSurfaceRef?: React.RefObject<HTMLDivElement | null>,
 ) => {
   const tabs = useFlowStore((state) => state.tabs);
   const { nodes, edges } = useCanvasState();
@@ -49,7 +51,7 @@ export const useFlowExport = (
   const activeTabId = useActiveTabId();
   const { updateTab } = useTabActions();
   const { fitView } = useReactFlow();
-  const { setRenderState, setSurfaceConfig, resetRenderState } = useCinematicExportActions();
+  const { setRenderState, resetRenderState } = useCinematicExportActions();
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
@@ -216,6 +218,12 @@ export const useFlowExport = (
       return;
     }
 
+    const { viewport: flowViewport, message } = resolveFlowExportViewport(reactFlowWrapper.current);
+    if (!flowViewport) {
+      addToast(message ?? 'The canvas viewport could not be found.', 'error');
+      return;
+    }
+
     if (nodes.length === 0) {
       addToast('Add nodes before exporting a cinematic build animation.', 'error');
       return;
@@ -247,41 +255,27 @@ export const useFlowExport = (
 
       animatedPlayback.stopPlayback();
 
-      setSurfaceConfig({
-        width: frameOptions.width ?? 0,
-        height: frameOptions.height ?? 0,
-      });
-      const exportSurfaceTarget = await waitForExportSurface(cinematicExportSurfaceRef);
-
-      if (!exportSurfaceTarget) {
-        throw new Error('Cinematic export surface is unavailable.');
-      }
+      const captureCinematicFrame = async (): Promise<string> => (
+        toPng(flowViewport, {
+          ...frameOptions,
+          backgroundColor: CINEMATIC_EXPORT_FALLBACK_COLOR,
+          cacheBust: true,
+        })
+      );
 
       for (let timeMs = 0; timeMs < timeline.totalDurationMs; timeMs += frameDurationMs) {
         setRenderState(resolveCinematicRenderState(timeline, edges, timeMs));
         await waitForExportRender(12);
-        const dataUrl = await toPng(exportSurfaceTarget, {
-          backgroundColor: null,
-          width: frameOptions.width,
-          height: frameOptions.height,
-          pixelRatio: frameOptions.pixelRatio,
-          skipFonts: true,
-          cacheBust: true,
+        capturedFrames.push({
+          dataUrl: await captureCinematicFrame(),
+          delayMs: frameDurationMs,
         });
-        capturedFrames.push({ dataUrl, delayMs: frameDurationMs });
       }
 
       setRenderState(resolveCinematicRenderState(timeline, edges, timeline.totalDurationMs));
       await waitForExportRender(12);
       capturedFrames.push({
-        dataUrl: await toPng(exportSurfaceTarget, {
-          backgroundColor: null,
-          width: frameOptions.width,
-          height: frameOptions.height,
-          pixelRatio: frameOptions.pixelRatio,
-          skipFonts: true,
-          cacheBust: true,
-        }),
+        dataUrl: await captureCinematicFrame(),
         delayMs: Math.max(frameDurationMs, timeline.preset.finalHoldMs),
       });
 
@@ -295,6 +289,7 @@ export const useFlowExport = (
           frames: decodedFrames,
           width,
           height,
+          backgroundPainter: paintCinematicExportBackground,
         });
         createDownload(blob, buildExportFileName(exportBaseName ?? 'openflowkit-cinematic-build', 'gif'));
         addToast('Cinematic build GIF exported.', 'success');
@@ -313,6 +308,7 @@ export const useFlowExport = (
         height,
         fps: timeline.preset.fps,
         mimeType,
+        backgroundPainter: paintCinematicExportBackground,
       });
       const extension = getAnimatedExportFileExtension(mimeType);
       createDownload(blob, buildExportFileName(exportBaseName ?? 'openflowkit-cinematic-build', extension));
@@ -325,7 +321,7 @@ export const useFlowExport = (
       resetRenderState();
       reactFlowWrapper.current?.classList.remove('exporting');
     }
-  }, [addToast, animatedPlayback, cinematicExportSurfaceRef, edges, exportBaseName, nodes, reactFlowWrapper, resetRenderState, setRenderState, setSurfaceConfig]);
+  }, [addToast, animatedPlayback, edges, exportBaseName, nodes, reactFlowWrapper, resetRenderState, setRenderState]);
 
   // --- JSON Export ---
   const handleExportJSON = useCallback(() => {

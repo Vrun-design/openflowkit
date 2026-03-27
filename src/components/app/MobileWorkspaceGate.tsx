@@ -18,9 +18,7 @@ export function MobileWorkspaceGate({
         <>
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),_transparent_45%),linear-gradient(180deg,_white,_#f8fafc)] px-6 text-center md:hidden">
                 <div className="w-full max-w-sm rounded-[28px] border border-slate-200/80 bg-white/90 px-6 py-8 shadow-2xl shadow-slate-200/70 backdrop-blur-md">
-                    <div className="mx-auto mb-8 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-primary text-white shadow-xl shadow-brand-primary/20 ring-1 ring-white/20">
-                        <OpenFlowLogo className="h-8 w-8 text-white" />
-                    </div>
+                    <OpenFlowLogo className="mx-auto mb-8 h-14 w-14" />
 
                     <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-brand-primary/5">
                         <Monitor className="h-6 w-6 text-brand-primary" />

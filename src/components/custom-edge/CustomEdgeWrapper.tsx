@@ -425,7 +425,7 @@ export function CustomEdgeWrapper({
                                 onDoubleClick={(e) => { e.stopPropagation(); beginLabelEdit(); }}
                                 className={
                                     visualQualityV2Enabled
-                                        ? `px-2 py-0.5 rounded-full border shadow-sm text-[11px] font-medium select-none flow-lod-secondary flow-lod-shadow transition-all ${cinematicActive ? 'bg-white/96 border-slate-200/90 text-slate-600 shadow-[0_6px_18px_rgba(15,23,42,0.08)]' : 'bg-white/90 border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-slate-700 hover:shadow active:ring-2 active:ring-indigo-400'}`
+                                        ? `whitespace-nowrap px-2 py-0.5 rounded-full border shadow-sm text-[11px] font-medium select-none flow-lod-secondary flow-lod-shadow transition-all ${cinematicActive ? 'bg-white/96 border-slate-200/90 text-slate-600 shadow-[0_6px_18px_rgba(15,23,42,0.08)]' : 'bg-white/90 border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-slate-700 hover:shadow active:ring-2 active:ring-indigo-400'}`
                                         : 'bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm text-[11px] font-medium text-slate-500 hover:ring-2 hover:ring-indigo-500/20 active:ring-indigo-500 select-none flow-lod-secondary flow-lod-shadow'
                                 }
                             >

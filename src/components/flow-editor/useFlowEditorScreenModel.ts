@@ -90,7 +90,7 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
         onFileImport,
     } = useFlowExport(screenState.recordHistory, screenState.reactFlowWrapper, {
         stopPlayback,
-    }, screenState.cinematicExportSurfaceRef);
+    });
 
     const {
         collaborationTopNavState,
@@ -309,7 +309,6 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
         recordHistory: screenState.recordHistory,
         isSelectMode: screenState.isSelectMode,
         reactFlowWrapper: screenState.reactFlowWrapper,
-        cinematicExportSurfaceRef: screenState.cinematicExportSurfaceRef,
         fileInputRef,
         onFileImport,
         shareViewerUrl,

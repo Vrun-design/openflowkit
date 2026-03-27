@@ -104,16 +104,7 @@ export function WelcomeModal({ onOpenTemplates, onPromptWithAI, onImport, onBlan
             <div className="w-full max-w-xl overflow-hidden rounded-[var(--radius-xl)] border border-slate-200/50 bg-white shadow-[var(--shadow-overlay)] animate-in zoom-in-95 duration-300">
                 <div className="p-8">
                     <div className="mb-6 flex flex-col items-center text-center">
-                        <div
-                            className="mb-4 flex h-12 w-12 items-center justify-center rounded-[var(--radius-md)] ring-8"
-                            style={{
-                                background: 'var(--brand-primary-50, #eef2ff)',
-                                color: 'var(--brand-primary, #6366f1)',
-                                '--tw-ring-color': 'var(--brand-primary-50, #eef2ff)',
-                            } as React.CSSProperties}
-                        >
-                            <OpenFlowLogo className="h-6 w-6" />
-                        </div>
+                        <OpenFlowLogo className="mb-4 h-12 w-12" />
                         <h2 className="text-xl font-bold tracking-tight text-slate-900">Welcome to OpenFlowKit</h2>
                         <p className="mt-1 max-w-md text-sm text-slate-500">
                             Pick the fastest way to get to a real developer diagram: template, import, prompt, or blank canvas.

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronRight, Github, Menu, WandSparkles, X } from 'lucide-react';
+import { ChevronRight, Github, Menu, X } from 'lucide-react';
 import { OpenFlowLogo } from '../icons/OpenFlowLogo';
 import { Button } from './Button';
 import { GITHUB_REPO_URL, NAV_LINKS } from './constants';
@@ -77,9 +77,7 @@ export function Navbar({ isScrolled, onLaunch }: NavbarProps): React.ReactElemen
             className="flex items-center gap-2.5 cursor-pointer group select-none min-w-0"
             aria-label="Open OpenFlowKit"
           >
-            <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-primary/20 transition-transform duration-500 group-hover:rotate-12 group-hover:scale-105 ring-1 ring-white/20 shrink-0">
-              <OpenFlowLogo className="w-5 h-5 text-white" />
-            </div>
+            <OpenFlowLogo className="h-8 w-8 shrink-0 transition-transform duration-500 group-hover:rotate-6 group-hover:scale-105" />
             <span className="text-lg font-bold tracking-tight text-brand-primary font-sans group-hover:opacity-80 transition-opacity whitespace-nowrap">
               OpenFlowKit
             </span>
@@ -164,19 +162,17 @@ export function Navbar({ isScrolled, onLaunch }: NavbarProps): React.ReactElemen
           <div className="mt-12 space-y-4">
             <Button
               size="lg"
-              className="w-full justify-between h-14 text-base shadow-none"
+              className="h-14 w-full text-base shadow-none"
               onClick={handleMobileLaunch}
             >
-              <span>Get Started</span>
-              <WandSparkles className="w-4 h-4" />
+              Get Started
             </Button>
             <Button
               size="lg"
               variant="secondary"
-              className="w-full justify-center h-14 text-base bg-gray-50 border-gray-200"
+              className="h-14 w-full text-base"
               onClick={openGithub}
             >
-              <Github className="w-5 h-5 mr-2" />
               View on GitHub
             </Button>
           </div>
