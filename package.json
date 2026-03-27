@@ -27,7 +27,7 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "preview": "vite preview",
-    "test": "NODE_OPTIONS=--localstorage-file=/tmp/openflowkit-vitest-storage.json vitest",
+    "test": "vitest",
     "build:lib": "vite build -c vite.lib.config.ts",
     "build:lib:watch": "vite build -c vite.lib.config.ts --watch",
     "lint": "eslint . --ext ts,tsx --ignore-pattern 'web/**' --ignore-pattern 'docs-site/**' --report-unused-disable-directives --max-warnings 0",
