@@ -80,7 +80,7 @@ export function KeyboardShortcutsModal(): React.JSX.Element | null {
                             icon={getSectionIcon(section.title)}
                         >
                             {section.items.map((item) => (
-                                <ShortcutItem key={item.label} keys={item.keys} label={item.label} />
+                                <ShortcutItem key={item.label} shortcuts={item.shortcuts} label={item.label} />
                             ))}
                         </ShortcutGroup>
                     ))}
@@ -103,10 +103,10 @@ export function KeyboardShortcutsModal(): React.JSX.Element | null {
 }
 
 function getSectionIcon(title: string) {
-    switch (title.toLowerCase()) {
-        case 'essentials': return <Command className="w-4 h-4 text-slate-400" />;
-        case 'manipulation': return <Pencil className="w-4 h-4 text-slate-400" />;
-        case 'navigation': return <MousePointer2 className="w-4 h-4 text-slate-400" />;
+    switch (title) {
+        case 'shortcuts.essentials': return <Command className="w-4 h-4 text-slate-400" />;
+        case 'shortcuts.manipulation': return <Pencil className="w-4 h-4 text-slate-400" />;
+        case 'shortcuts.navigation': return <MousePointer2 className="w-4 h-4 text-slate-400" />;
         default: return <Keyboard className="w-4 h-4 text-slate-400" />;
     }
 }
@@ -135,25 +135,32 @@ function ShortcutGroup({ title, icon, children }: ShortcutGroupProps): React.JSX
 }
 
 interface ShortcutItemProps {
-    keys: string[];
+    shortcuts: string[][];
     label: string;
 }
 
-function ShortcutItem({ keys, label }: ShortcutItemProps): React.JSX.Element {
+function ShortcutItem({ shortcuts, label }: ShortcutItemProps): React.JSX.Element {
     const { t } = useTranslation();
     return (
         <div className="flex items-center justify-between group py-0.5">
             <span className="text-sm font-medium text-slate-600 transition-colors group-hover:text-[var(--brand-primary)]">
                 {t(`${label}`, label)}
             </span>
-            <div className="flex gap-1.5">
-                {keys.map((k, i) => (
-                    <kbd
-                        key={i}
-                        className="px-2 py-1 min-w-[28px] text-center text-[10px] font-bold bg-white border-b-2 border-slate-200 border-x border-t rounded shadow-sm text-slate-500 uppercase transition-colors group-hover:border-[var(--brand-primary-200)]"
-                    >
-                        {k}
-                    </kbd>
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+                {shortcuts.map((shortcut, shortcutIndex) => (
+                    <React.Fragment key={`${label}-${shortcutIndex}`}>
+                        {shortcutIndex > 0 ? <span className="text-[10px] font-semibold uppercase text-slate-300">/</span> : null}
+                        <div className="flex gap-1.5">
+                            {shortcut.map((key, keyIndex) => (
+                                <kbd
+                                    key={`${label}-${shortcutIndex}-${keyIndex}`}
+                                    className="px-2 py-1 min-w-[28px] text-center text-[10px] font-bold bg-white border-b-2 border-slate-200 border-x border-t rounded shadow-sm text-slate-500 uppercase transition-colors group-hover:border-[var(--brand-primary-200)]"
+                                >
+                                    {key}
+                                </kbd>
+                            ))}
+                        </div>
+                    </React.Fragment>
                 ))}
             </div>
         </div>

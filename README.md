@@ -292,6 +292,7 @@ Peer-to-peer collaboration via **WebRTC + Yjs**. Share a room link — participa
 | `Cmd+D` | Duplicate |
 | `Alt+Arrow` | Quick-create connected node |
 | `F2` | Edit label inline |
+| `Escape` | Clear selection |
 | `Cmd+Alt+C` / `Cmd+Alt+V` | Copy / Paste style |
 
 ---

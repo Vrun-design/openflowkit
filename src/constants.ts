@@ -99,7 +99,7 @@ export const EDGE_DASH_PATTERNS: Record<string, { label: string; strokeDasharray
 // --- Keyboard Shortcuts ---
 interface ShortcutDefinition {
   label: string;
-  keys: string[];
+  shortcuts: string[][];
 }
 
 interface ShortcutSection {
@@ -127,53 +127,62 @@ function getShortcutKeyLabels(isMacLike: boolean): KeyboardShortcutKeyLabels {
 
 export function getKeyboardShortcuts(isMacLike: boolean): ShortcutSection[] {
   const keyLabels = getShortcutKeyLabels(isMacLike);
+  const redoShortcuts = isMacLike
+    ? [[keyLabels.primary, 'Shift', 'Z']]
+    : [[keyLabels.primary, 'Shift', 'Z'], [keyLabels.primary, 'Y']];
 
   return [
     {
       title: 'shortcuts.essentials',
       items: [
-        { label: 'common.undo', keys: [keyLabels.primary, 'Z'] },
-        { label: 'common.redo', keys: [keyLabels.primary, 'Shift', 'Z'] },
-        { label: 'common.selectAll', keys: [keyLabels.primary, 'A'] },
-        { label: 'common.delete', keys: [keyLabels.delete] },
+        { label: 'common.undo', shortcuts: [[keyLabels.primary, 'Z']] },
+        { label: 'common.redo', shortcuts: redoShortcuts },
+        { label: 'common.selectAll', shortcuts: [[keyLabels.primary, 'A']] },
+        { label: 'common.delete', shortcuts: [[keyLabels.delete]] },
+        { label: 'common.clearSelection', shortcuts: [['Escape']] },
       ]
     },
     {
       title: 'shortcuts.manipulation',
       items: [
-        { label: 'common.multiSelect', keys: ['Shift', 'Click'] },
-        { label: 'common.selectionBox', keys: ['Shift', 'Drag'] },
-        { label: 'common.duplicate', keys: [keyLabels.primary, 'D'] },
-        { label: 'common.duplicateDrag', keys: [keyLabels.alternate, 'Drag'] },
-        { label: 'common.copy', keys: [keyLabels.primary, 'C'] },
-        { label: 'common.paste', keys: [keyLabels.primary, 'V'] },
-        { label: 'common.groupSelection', keys: [keyLabels.primary, 'G'] },
+        { label: 'common.multiSelect', shortcuts: [['Shift', 'Click']] },
+        { label: 'common.selectionBox', shortcuts: [['Shift', 'Drag']] },
+        { label: 'common.duplicate', shortcuts: [[keyLabels.primary, 'D']] },
+        { label: 'common.duplicateDrag', shortcuts: [[keyLabels.alternate, 'Drag']] },
+        { label: 'common.copy', shortcuts: [[keyLabels.primary, 'C']] },
+        { label: 'common.paste', shortcuts: [[keyLabels.primary, 'V']] },
+        { label: 'common.copyStyle', shortcuts: [[keyLabels.primary, keyLabels.alternate, 'C']] },
+        { label: 'common.pasteStyle', shortcuts: [[keyLabels.primary, keyLabels.alternate, 'V']] },
       ]
     },
     {
       title: 'shortcuts.nodes',
       items: [
-        { label: 'common.mindmapAddChild', keys: ['Tab'] },
-        { label: 'common.mindmapAddSibling', keys: ['Enter'] },
-        { label: 'common.renameSelection', keys: ['F2'] },
+        { label: 'common.mindmapAddChild', shortcuts: [['Tab']] },
+        { label: 'common.mindmapAddSibling', shortcuts: [['Enter']] },
+        { label: 'common.renameSelection', shortcuts: [['F2']] },
+        { label: 'common.quickCreateConnectedNode', shortcuts: [[keyLabels.alternate, 'Arrow']] },
+        { label: 'common.annotationColors', shortcuts: [['1'], ['2'], ['3'], ['4'], ['5'], ['6']] },
       ]
     },
     {
       title: 'shortcuts.navigation',
       items: [
-        { label: 'common.selectTool', keys: ['V'] },
-        { label: 'common.handTool', keys: ['H'] },
-        { label: 'common.panCanvas', keys: ['Space', 'Drag'] },
-        { label: 'common.zoomInOut', keys: [keyLabels.primary, '+/-'] },
-        { label: 'common.fitView', keys: ['Shift', '1'] },
-        { label: 'common.nudgeNode', keys: ['Arrows'] },
+        { label: 'common.selectTool', shortcuts: [['V']] },
+        { label: 'common.handTool', shortcuts: [['H']] },
+        { label: 'common.panCanvas', shortcuts: [['Space', 'Drag']] },
+        { label: 'common.zoomIn', shortcuts: [[keyLabels.primary, '+']] },
+        { label: 'common.zoomOut', shortcuts: [[keyLabels.primary, '-']] },
+        { label: 'common.fitView', shortcuts: [['Shift', '1']] },
+        { label: 'common.nudgeNode', shortcuts: [['Arrow'], ['Shift', 'Arrow']] },
       ]
     },
     {
       title: 'shortcuts.help',
       items: [
-        { label: 'common.keyboardShortcuts', keys: ['?'] },
-        { label: 'common.commandBar', keys: [keyLabels.primary, 'K'] },
+        { label: 'common.keyboardShortcuts', shortcuts: [['?']] },
+        { label: 'common.commandBar', shortcuts: [[keyLabels.primary, 'K']] },
+        { label: 'common.searchNodes', shortcuts: [[keyLabels.primary, 'F']] },
       ]
     },
   ];

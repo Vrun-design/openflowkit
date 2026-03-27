@@ -19,11 +19,18 @@ export const ShortcutsSettings = () => {
                         {section.items.map((item) => (
                             <div key={item.label} className="group flex items-center justify-between rounded-[var(--radius-sm)] p-2 transition-colors hover:bg-slate-50/50">
                                 <span className="text-slate-600 text-sm font-medium">{t(item.label)}</span>
-                                <div className="flex gap-1">
-                                    {item.keys.map((key, i) => (
-                                        <kbd key={i} className="min-w-[24px] rounded-[var(--radius-xs)] border border-slate-200 bg-white px-2 py-1 text-center text-xs font-semibold text-slate-500 shadow-sm">
-                                            {key}
-                                        </kbd>
+                                <div className="flex flex-wrap items-center justify-end gap-1">
+                                    {item.shortcuts.map((shortcut, shortcutIndex) => (
+                                        <React.Fragment key={`${item.label}-${shortcutIndex}`}>
+                                            {shortcutIndex > 0 ? <span className="text-[10px] font-semibold uppercase text-slate-300">/</span> : null}
+                                            <div className="flex gap-1">
+                                                {shortcut.map((key, keyIndex) => (
+                                                    <kbd key={`${item.label}-${shortcutIndex}-${keyIndex}`} className="min-w-[24px] rounded-[var(--radius-xs)] border border-slate-200 bg-white px-2 py-1 text-center text-xs font-semibold text-slate-500 shadow-sm">
+                                                        {key}
+                                                    </kbd>
+                                                ))}
+                                            </div>
+                                        </React.Fragment>
                                     ))}
                                 </div>
                             </div>

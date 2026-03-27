@@ -4,16 +4,17 @@ title: Keyboard Shortcuts
 description: OpenFlowKit’te düzenleme, gezinme ve diyagram üretimi için mevcut klavye kısayolları.
 ---
 
-Bu tablolar uygulamadaki temel kısayol gruplarını özetler.
+Bu tablolar artık uygulamada gösterilen güncel kısayolları özetler.
 
 ## Temel
 
 | Eylem | macOS | Windows/Linux |
 | --- | --- | --- |
 | Undo | `Cmd + Z` | `Ctrl + Z` |
-| Redo | `Cmd + Shift + Z` | `Ctrl + Shift + Z` |
+| Redo | `Cmd + Shift + Z` | `Ctrl + Shift + Z` veya `Ctrl + Y` |
 | Tümünü seç | `Cmd + A` | `Ctrl + A` |
 | Seçimi sil | `Delete` | `Backspace` |
+| Seçimi temizle | `Escape` | `Escape` |
 
 ## Düzenleme
 
@@ -25,7 +26,8 @@ Bu tablolar uygulamadaki temel kısayol gruplarını özetler.
 | Sürükleyerek çoğalt | `Opt + Drag` | `Alt + Drag` |
 | Kopyala | `Cmd + C` | `Ctrl + C` |
 | Yapıştır | `Cmd + V` | `Ctrl + V` |
-| Grupla | `Cmd + G` | `Ctrl + G` |
+| Stili kopyala | `Cmd + Opt + C` | `Ctrl + Alt + C` |
+| Stili yapıştır | `Cmd + Opt + V` | `Ctrl + Alt + V` |
 
 ## Düğüm işlemleri
 
@@ -34,15 +36,32 @@ Bu tablolar uygulamadaki temel kısayol gruplarını özetler.
 | Zihin haritasına çocuk ekle | `Tab` | `Tab` |
 | Zihin haritasına kardeş ekle | `Enter` | `Enter` |
 | Seçimi yeniden adlandır | `F2` | `F2` |
+| Bağlı düğümü hızlı oluştur | `Opt + Arrow` | `Alt + Arrow` |
+| Not renkleri | `1` `2` `3` `4` `5` `6` | `1` `2` `3` `4` `5` `6` |
 
 ## Gezinme
 
 | Eylem | macOS | Windows/Linux |
 | --- | --- | --- |
-| Komut Merkezi | `Cmd + K` | `Ctrl + K` |
+| Seçim aracı | `V` | `V` |
+| El aracı | `H` | `H` |
+| Tuvali kaydır | `Space + Drag` | `Space + Drag` |
+| Yakınlaştır | `Cmd + +` | `Ctrl + +` |
+| Uzaklaştır | `Cmd + -` | `Ctrl + -` |
 | Görünüşe sığdır | `Shift + 1` | `Shift + 1` |
+| Düğümü hafifçe taşı | `Arrow` veya `Shift + Arrow` | `Arrow` veya `Shift + Arrow` |
+
+## Yardım
+
+| Eylem | macOS | Windows/Linux |
+| --- | --- | --- |
+| Klavye kısayolları | `?` | `?` |
+| Komut Merkezi | `Cmd + K` | `Ctrl + K` |
+| Düğümleri ara | `Cmd + F` | `Ctrl + F` |
 
 ## Notlar
 
-- Kısayollar odak durumuna ve aktif moda göre değişebilir.
-- Bazı işlemler için doğrudan kısayol yerine [Command Center](/tr/command-center/) kullanmak daha hızlıdır.
+- Kısayollar odak durumuna, aktif moda ve seçili öğeye göre değişebilir.
+- Zihin haritası kısayolları yalnızca bir zihin haritası düğümü seçiliyken çalışır.
+- Not renkleri kısayolları yalnızca bir annotation düğümü seçiliyken çalışır.
+- Doğrudan kısayolu olmayan işlemler için [Command Center](/tr/command-center/) kullanabilirsiniz.
