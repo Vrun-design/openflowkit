@@ -26,10 +26,9 @@ const EMPTY_CANVAS_EXAMPLES: AIStudioExample[] = [
 ];
 
 const ITERATION_EXAMPLES: AIStudioExample[] = [
-    { label: 'Add Database', icon: Database, prompt: 'Add a PostgreSQL database to the architecture' },
-    { label: 'Add Server', icon: Server, prompt: 'Add a backend Node.js server service' },
-    { label: 'Add Cloud Infrastructure', icon: Cloud, prompt: 'Deploy the main application to AWS' },
-    { label: 'Add Load Balancer', icon: Network, prompt: 'Add a load balancer in front of the application' },
+    { label: 'Database', icon: Database, prompt: 'Add a PostgreSQL database to the architecture' },
+    { label: 'Server', icon: Server, prompt: 'Add a backend Node.js server service' },
+    { label: 'Deploy to AWS', icon: Cloud, prompt: 'Deploy the main application to AWS' },
 ];
 
 const EXAMPLE_ICON_COLORS = [
@@ -178,12 +177,14 @@ export function StudioAIPanel({
     }, [initialPrompt, onInitialPromptConsumed, setPrompt]);
 
     const hasHistory = chatMessages.length > 0;
+    const isCanvasEmpty = nodeCount === 0;
     const effectiveGenerationMode: AIGenerationMode = nodeCount === 0 ? 'create' : generationMode;
-    const examplePrompts = nodeCount === 0 ? EMPTY_CANVAS_EXAMPLES : ITERATION_EXAMPLES;
-    const sendButtonLabel = effectiveGenerationMode === 'edit' && nodeCount > 0
+    const examplePrompts = isCanvasEmpty ? EMPTY_CANVAS_EXAMPLES : ITERATION_EXAMPLES;
+    const isEditMode = effectiveGenerationMode === 'edit' && !isCanvasEmpty;
+    const sendButtonLabel = isEditMode
         ? 'Apply AI edit'
         : 'Generate diagram';
-    const sendButtonIcon = generationMode === 'edit' && nodeCount > 0 ? <Edit3 className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />;
+    const sendButtonIcon = isEditMode ? <Edit3 className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />;
 
     async function submitPrompt(promptText?: string): Promise<void> {
         const resolvedPrompt = promptText ?? prompt;
@@ -204,7 +205,7 @@ export function StudioAIPanel({
         void submitPrompt();
     }
 
-    const isInputEmpty = (!prompt.trim() && !selectedImage);
+    const isInputEmpty = !prompt.trim() && !selectedImage;
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -267,13 +268,13 @@ export function StudioAIPanel({
                         </div>
                         <h3 className="text-xl font-bold tracking-tight text-slate-900">{FLOWPILOT_NAME}</h3>
                         <p className="mt-2.5 mb-8 max-w-[280px] text-[13px] leading-relaxed text-slate-600">
-                            {nodeCount === 0
+                            {isCanvasEmpty
                                 ? `Describe the diagram you want and ${FLOWPILOT_NAME} will draft the first graph for you.`
                                 : `Describe the changes you want and ${FLOWPILOT_NAME} will update the graph for you.`}
                         </p>
 
                         {aiReadiness.canGenerate && (
-                            <div className="flex max-w-[520px] flex-wrap items-center justify-center gap-3">
+                            <div className="flex max-w-[360px] flex-wrap justify-center gap-2">
                                 {examplePrompts.map((skill, index) => {
                                     const Icon = skill.icon;
                                     return (
@@ -283,10 +284,12 @@ export function StudioAIPanel({
                                                 setPrompt(skill.prompt);
                                                 void submitPrompt(skill.prompt);
                                             }}
-                                            className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 text-[13px] font-medium text-slate-700 shadow-sm transition-all duration-200 hover:border-[var(--brand-primary-200)] hover:text-[var(--brand-primary)] hover:shadow-md active:scale-95"
+                                            className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white bg-white px-3 py-2 text-left text-[12px] font-semibold leading-none text-slate-700 shadow-sm shadow-slate-200/70 ring-1 ring-slate-200/70 transition-all duration-200 hover:-translate-y-px hover:border-[var(--brand-primary-100)] hover:text-[var(--brand-primary)] hover:shadow-md active:scale-95"
                                         >
-                                            <Icon className={`h-3.5 w-3.5 ${getExampleIconColor(index)}`} />
-                                            {skill.label}
+                                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-50">
+                                                <Icon className={`h-3.5 w-3.5 ${getExampleIconColor(index)}`} />
+                                            </span>
+                                            <span>{skill.label}</span>
                                         </button>
                                     );
                                 })}

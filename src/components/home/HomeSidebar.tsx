@@ -20,9 +20,7 @@ export function HomeSidebar({
     return (
         <aside className="sticky top-0 z-20 flex w-full flex-col border-b border-slate-200 bg-[var(--brand-surface)] md:fixed md:inset-y-0 md:left-0 md:w-64 md:border-b-0 md:border-r">
             <div className="flex h-14 items-center gap-3 border-b border-slate-100 px-4">
-                <div className="w-8 h-8 flex items-center justify-center bg-[var(--brand-primary)]/10 rounded-lg text-[var(--brand-primary)] overflow-hidden shrink-0">
-                    <OpenFlowLogo className="w-5 h-5" />
-                </div>
+                <OpenFlowLogo className="h-8 w-8 shrink-0" />
 
                 <span className="font-semibold text-base tracking-tight text-slate-900 truncate">{APP_NAME}</span>
 

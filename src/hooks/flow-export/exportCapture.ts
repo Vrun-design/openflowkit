@@ -1,4 +1,3 @@
-import type React from 'react';
 import { getCompatibleNodesBounds } from '@/lib/reactflowCompat';
 import type { FlowNode } from '@/lib/types';
 import { encodeGif } from '@/services/gifEncoder';
@@ -19,6 +18,12 @@ export interface DecodedFrame {
   frame: CapturedFrame;
   image: CanvasImageSource;
 }
+
+export type FrameBackgroundPainter = (
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+) => void;
 
 export interface ExportCaptureOptions {
   width: number;
@@ -67,21 +72,6 @@ export async function waitForExportRender(minDelayMs = 0): Promise<void> {
 
   await waitForAnimationFrame();
   await waitForAnimationFrame();
-}
-
-export async function waitForExportSurface(
-  surfaceRef: React.RefObject<HTMLDivElement | null> | undefined,
-  attempts = 8,
-): Promise<HTMLDivElement | null> {
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    if (surfaceRef?.current) {
-      return surfaceRef.current;
-    }
-
-    await waitForExportRender(8);
-  }
-
-  return surfaceRef?.current ?? null;
 }
 
 export function createDownload(blob: Blob, fileName: string): void {
@@ -192,14 +182,17 @@ function createExportCanvas(width: number, height: number): {
   return { canvas, context };
 }
 
-function renderDecodedFrame(
+export function renderDecodedFrame(
   context: CanvasRenderingContext2D,
   width: number,
   height: number,
   image: CanvasImageSource,
   backgroundColor?: string,
+  backgroundPainter?: FrameBackgroundPainter,
 ): void {
-  if (backgroundColor) {
+  if (backgroundPainter) {
+    backgroundPainter(context, width, height);
+  } else if (backgroundColor) {
     context.fillStyle = backgroundColor;
     context.fillRect(0, 0, width, height);
   } else {
@@ -214,13 +207,14 @@ export async function encodeGifFromFrames(params: {
   width: number;
   height: number;
   backgroundColor?: string;
+  backgroundPainter?: FrameBackgroundPainter;
 }): Promise<Blob> {
-  const { frames, width, height, backgroundColor } = params;
+  const { frames, width, height, backgroundColor, backgroundPainter } = params;
   const { context } = createExportCanvas(width, height);
   const gifFrames = [];
 
   for (const { frame, image } of frames) {
-    renderDecodedFrame(context, width, height, image, backgroundColor);
+    renderDecodedFrame(context, width, height, image, backgroundColor, backgroundPainter);
     gifFrames.push({
       imageData: context.getImageData(0, 0, width, height),
       delayMs: frame.delayMs,
@@ -237,8 +231,9 @@ export async function encodeVideoFromFrames(params: {
   fps: number;
   mimeType: string;
   backgroundColor?: string;
+  backgroundPainter?: FrameBackgroundPainter;
 }): Promise<Blob> {
-  const { frames, width, height, fps, mimeType, backgroundColor } = params;
+  const { frames, width, height, fps, mimeType, backgroundColor, backgroundPainter } = params;
   const { canvas, context } = createExportCanvas(width, height);
   const stream = canvas.captureStream(fps);
   const recorder = new MediaRecorder(stream, { mimeType });
@@ -260,7 +255,7 @@ export async function encodeVideoFromFrames(params: {
   for (const { frame, image } of frames) {
     const repeatCount = Math.max(1, Math.round(frame.delayMs / frameDurationMs));
     for (let repeatIndex = 0; repeatIndex < repeatCount; repeatIndex += 1) {
-      renderDecodedFrame(context, width, height, image, backgroundColor);
+      renderDecodedFrame(context, width, height, image, backgroundColor, backgroundPainter);
       await wait(frameDurationMs);
     }
   }

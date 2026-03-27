@@ -41,7 +41,6 @@ export function useFlowEditorScreenState() {
   const snapshotsState = useSnapshots();
   const uiState = useFlowEditorUIState();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const cinematicExportSurfaceRef = useRef<HTMLDivElement>(null);
   const reactFlowState = useReactFlow();
   const historyState = useFlowHistory();
 
@@ -60,7 +59,6 @@ export function useFlowEditorScreenState() {
     ...snapshotsState,
     ...uiState,
     reactFlowWrapper,
-    cinematicExportSurfaceRef,
     ...reactFlowState,
     ...historyState,
   };

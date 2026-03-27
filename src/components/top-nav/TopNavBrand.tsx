@@ -22,11 +22,11 @@ export function TopNavBrand({ appName, logoUrl, logoStyle, ui }: TopNavBrandProp
     return (
         <div className="flex min-w-0 items-center gap-2">
             {(logoStyle === 'icon' || logoStyle === 'both') && (
-                <div className="w-9 h-9 flex items-center justify-center bg-[var(--brand-primary-50)] rounded-[var(--radius-md)] text-[var(--brand-primary)] overflow-hidden relative shrink-0">
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden shrink-0">
                     {logoUrl ? (
-                        <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                        <img src={logoUrl} alt="Logo" className="h-full w-full object-contain" />
                     ) : (
-                        <OpenFlowLogo className="w-6 h-6" />
+                        <OpenFlowLogo className="h-9 w-9" />
                     )}
                 </div>
             )}
@@ -43,8 +43,8 @@ export function TopNavBrand({ appName, logoUrl, logoStyle, ui }: TopNavBrandProp
                         </div>
                     ) : (
                         <Tooltip text={t('nav.uploadWideLogo', 'Upload a wide logo in Brand Settings to see it here')} side="bottom">
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-[var(--brand-primary-50)] rounded-[var(--radius-md)] border border-[var(--brand-primary-100)] opacity-80 hover:opacity-100 transition-opacity cursor-help">
-                                <OpenFlowLogo className="w-4 h-4" />
+                            <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--brand-primary-100)] px-3 py-1.5 opacity-80 transition-opacity hover:opacity-100 cursor-help">
+                                <OpenFlowLogo className="h-4 w-4" />
                                 <span className="text-xs font-semibold whitespace-nowrap">{t('nav.wideLogo', 'Your Wide Logo')}</span>
                             </div>
                         </Tooltip>
