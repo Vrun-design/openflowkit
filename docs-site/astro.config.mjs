@@ -8,6 +8,7 @@ export default defineConfig({
     starlight({
       title: 'OpenFlowKit Docs',
       description: 'Documentation for OpenFlowKit — the local-first, AI-powered diagramming tool.',
+      favicon: '/favicon.svg',
       logo: {
         src: './src/assets/Logo_openflowkit.svg',
         alt: 'OpenFlowKit',

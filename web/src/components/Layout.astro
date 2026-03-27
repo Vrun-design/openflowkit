@@ -4,11 +4,45 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description: string;
+  canonicalPath?: string;
+  schema?: Record<string, unknown> | Array<Record<string, unknown>>;
 }
 
-const { title, description } = Astro.props;
+const { title, description, canonicalPath = '/', schema } = Astro.props;
 const siteUrl = 'https://openflowkit.com';
+const canonicalUrl = new URL(canonicalPath, siteUrl).toString();
 const ogImage = `${siteUrl}/og-image.png`;
+const baseSchemas = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'OpenFlowKit',
+    description,
+    url: canonicalUrl,
+    applicationCategory: 'DesignApplication',
+    operatingSystem: 'Web',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    license: 'https://opensource.org/licenses/MIT',
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'OpenFlowKit',
+    url: siteUrl,
+    logo: `${siteUrl}/Logo_openflowkit.svg`,
+    sameAs: ['https://github.com/Vrun-design/openflowkit'],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'OpenFlowKit',
+    url: siteUrl,
+    description:
+      'Open-source, local-first AI diagramming for architecture diagrams, flowcharts, system design, and export workflows.',
+  },
+];
+const extraSchemas = schema ? (Array.isArray(schema) ? schema : [schema]) : [];
+const schemas = [...baseSchemas, ...extraSchemas];
 ---
 
 <!doctype html>
@@ -18,11 +52,12 @@ const ogImage = `${siteUrl}/og-image.png`;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={siteUrl} />
+    <link rel="canonical" href={canonicalUrl} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content={siteUrl} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:site_name" content="OpenFlowKit" />
     <meta property="og:image" content={ogImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -30,18 +65,8 @@ const ogImage = `${siteUrl}/og-image.png`;
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
-    <script type="application/ld+json" set:html={JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "OpenFlowKit",
-      "description": description,
-      "url": siteUrl,
-      "applicationCategory": "DesignApplication",
-      "operatingSystem": "Web",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-      "license": "https://opensource.org/licenses/MIT"
-    })} />
-    <link rel="icon" type="image/svg+xml" href="/Logo_openflowkit.svg" />
+    <script type="application/ld+json" set:html={JSON.stringify(schemas)} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />

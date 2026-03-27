@@ -1,11 +1,52 @@
 ---
 import Layout from '../components/Layout.astro';
 import { LandingPage } from '../components/landing/LandingPage';
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'What is OpenFlowKit?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'OpenFlowKit is an open-source, local-first diagramming tool for architecture diagrams, flowcharts, and AI-assisted visual workflows.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Who is OpenFlowKit for?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'OpenFlowKit is for engineers, architects, technical founders, and product teams who need editable diagrams instead of static AI image output.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'Does OpenFlowKit require an account?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'No. You can start diagramming in OpenFlowKit without creating an account.',
+      },
+    },
+    {
+      '@type': 'Question',
+      name: 'How does AI work in OpenFlowKit?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'AI is optional. You add your own API key in settings, then use AI inside the editor to draft, refine, or expand diagrams.',
+      },
+    },
+  ],
+};
 ---
 
 <Layout
-  title="OpenFlowKit — Free, Open-Source AI Diagramming Tool"
-  description="Create beautiful flowcharts, system architecture, and diagrams with AI. Open-source, local-first, no signup — export to Figma, Mermaid, SVG, PNG and more. Free forever."
+  title="OpenFlowKit | Local-First AI Diagramming for Architecture and Flowcharts"
+  description="Open-source, local-first AI diagramming for architecture diagrams, flowcharts, system design, and editable exports. No signup required."
+  canonicalPath="/"
+  schema={faqSchema}
 >
   <LandingPage client:load />
 </Layout>

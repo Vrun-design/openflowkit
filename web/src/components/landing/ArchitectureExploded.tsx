@@ -67,13 +67,13 @@ export function ArchitectureExploded(): React.ReactElement {
 
                         {/* Layer 4 Legend */}
                         <div className="flex items-start gap-4 lg:gap-3 group">
-                            <div className="w-10 h-10 lg:w-8 lg:h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 text-purple-400 group-hover:scale-110 group-hover:bg-purple-500/20 transition-all duration-300 shadow-[0_0_15px_rgba(168,85,247,0)] group-hover:shadow-[0_0_15px_rgba(168,85,247,0.3)]">
-                                <WandSparkles className="w-5 h-5 lg:w-4 lg:h-4" />
+                            <div className="w-8 h-8 lg:w-8 lg:h-8 xl:w-10 xl:h-10 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 text-purple-400 group-hover:scale-110 group-hover:bg-purple-500/20 transition-all duration-300 shadow-[0_0_15px_rgba(168,85,247,0)] group-hover:shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                                <WandSparkles className="w-4 h-4 xl:w-5 xl:h-5" />
                             </div>
                             <div>
-                                <h4 className="text-white text-sm lg:text-xs font-bold mb-1 group-hover:text-purple-400 transition-colors">4. LLM Bridge</h4>
-                                <p className="text-sm lg:text-[10px] text-white/40 leading-relaxed">
-                                    Your private BYOK pipeline parsing natural language into strictly-typed TypeScript commands.
+                                <h4 className="text-white text-xs lg:text-sm xl:text-base font-bold mb-0.5 group-hover:text-purple-400 transition-colors">4. LLM Bridge</h4>
+                                <p className="text-xs text-white/40 leading-snug">
+                                    Private BYOK prompts translated into typed editor commands.
                                 </p>
                             </div>
                         </div>

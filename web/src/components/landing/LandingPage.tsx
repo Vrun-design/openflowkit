@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AnswerEngineSection } from './AnswerEngineSection';
 import { ArchitectureExploded } from './ArchitectureExploded';
 import { APP_URL } from './constants';
 import { FinalCTASection } from './FinalCTASection';
@@ -45,6 +46,7 @@ export function LandingPage(): React.ReactElement {
       </div>
 
       <ArchitectureExploded />
+      <AnswerEngineSection />
       <PricingSection onLaunch={handleLaunch} />
       <Testimonials />
       <FinalCTASection onLaunch={handleLaunch} />

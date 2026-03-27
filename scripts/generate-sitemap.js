@@ -6,12 +6,62 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const OUTPUT_FILE = path.resolve(__dirname, '../public/sitemap.xml');
+const PAGES_DIR = path.resolve(__dirname, '../web/src/pages');
+const SITE_URL = 'https://openflowkit.com';
 
-const ROUTES = [
-  { loc: 'https://openflowkit.com/', changefreq: 'weekly', priority: '1.0' },
-  { loc: 'https://app.openflowkit.com/', changefreq: 'daily', priority: '0.9' },
-  { loc: 'https://docs.openflowkit.com/', changefreq: 'weekly', priority: '0.8' },
-];
+const ROUTE_SUFFIXES = new Set(['.astro', '.md', '.mdx']);
+
+function toRoute(relativePath) {
+  const normalizedPath = relativePath.replace(/\\/g, '/');
+  const withoutExtension = normalizedPath.replace(/\.(astro|md|mdx)$/u, '');
+
+  if (withoutExtension === 'index') {
+    return '/';
+  }
+
+  if (withoutExtension.endsWith('/index')) {
+    return `/${withoutExtension.slice(0, -'/index'.length)}/`;
+  }
+
+  return `/${withoutExtension}/`;
+}
+
+function collectRoutes(directory, relativeDirectory = '') {
+  const entries = fs.readdirSync(directory, { withFileTypes: true });
+
+  return entries.flatMap((entry) => {
+    const entryRelativePath = path.posix.join(relativeDirectory, entry.name);
+    const entryAbsolutePath = path.join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      return collectRoutes(entryAbsolutePath, entryRelativePath);
+    }
+
+    const extension = path.extname(entry.name);
+    const isStaticPage =
+      ROUTE_SUFFIXES.has(extension) &&
+      !entryRelativePath.startsWith('api/') &&
+      !entry.name.startsWith('[');
+
+    if (!isStaticPage) {
+      return [];
+    }
+
+    return [toRoute(entryRelativePath)];
+  });
+}
+
+function buildRoutes() {
+  const discoveredRoutes = collectRoutes(PAGES_DIR);
+
+  return Array.from(new Set(discoveredRoutes))
+    .sort((left, right) => left.localeCompare(right))
+    .map((route) => ({
+      loc: new URL(route, SITE_URL).toString(),
+      changefreq: route === '/' ? 'weekly' : 'monthly',
+      priority: route === '/' ? '1.0' : '0.7',
+    }));
+}
 
 function renderUrl({ loc, changefreq, priority }) {
   return [
@@ -24,10 +74,11 @@ function renderUrl({ loc, changefreq, priority }) {
 }
 
 function generateSitemap() {
+  const routes = buildRoutes();
   const sitemap = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...ROUTES.map(renderUrl),
+    ...routes.map(renderUrl),
     '</urlset>',
     '',
   ].join('\n');

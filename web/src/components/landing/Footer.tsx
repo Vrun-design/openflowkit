@@ -1,6 +1,7 @@
 import React from 'react';
 import { Github } from 'lucide-react';
 import { OpenFlowLogo } from '../icons/OpenFlowLogo';
+import { Button } from './Button';
 import { GITHUB_REPO_URL } from './constants';
 import { useGithubStars } from './useGithubStars';
 
@@ -10,6 +11,10 @@ interface FooterProps {
 
 export function Footer({ onLaunch }: FooterProps): React.ReactElement {
   const stars = useGithubStars();
+
+  function handleOpenGithub(): void {
+    window.open(GITHUB_REPO_URL, '_blank', 'noopener,noreferrer');
+  }
 
   return (
     <footer className="bg-white border-t border-brand-border py-12 select-none">
@@ -23,9 +28,7 @@ export function Footer({ onLaunch }: FooterProps): React.ReactElement {
               className="flex items-center gap-2 cursor-pointer group"
               aria-label="Open OpenFlowKit"
             >
-              <div className="w-6 h-6 bg-brand-primary rounded flex items-center justify-center text-white shadow-sm transition-transform group-hover:rotate-6">
-                <OpenFlowLogo className="w-4 h-4 text-white" />
-              </div>
+              <OpenFlowLogo className="h-6 w-6 transition-transform group-hover:scale-105" />
               <span className="font-bold text-brand-primary text-sm tracking-tight">
                 OpenFlowKit
               </span>
@@ -47,33 +50,35 @@ export function Footer({ onLaunch }: FooterProps): React.ReactElement {
             >
               <img
                 alt="Product Hunt"
-                width="200"
-                height="43"
+                width="224"
+                height="48"
                 src="https://api.producthunt.com/widgets/embed-image/v1/top-post-topic-badge.svg?post_id=1081019&theme=light&period=weekly&topic_id=44&t=1772031326630"
-                className="h-10 w-auto shadow-sm rounded border border-gray-100"
+                className="h-11 w-auto rounded border border-gray-100 shadow-sm"
               />
             </a>
           </div>
 
           {/* GitHub Stars */}
           <div className="flex items-center justify-center md:justify-end md:w-1/3">
-            <a
-              href={GITHUB_REPO_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 px-5 py-2.5 bg-[#24292e] text-white rounded-xl hover:bg-[#2f363d] transition-colors shadow-sm group"
-              aria-label="GitHub"
+            <Button
+              type="button"
+              variant="secondary"
+              size="md"
+              shape="pill"
+              onClick={handleOpenGithub}
+              className="group h-12 gap-3 px-5"
+              aria-label="OpenFlowKit on GitHub"
             >
-              <Github className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-              <div className="flex items-center gap-2 border-l border-white/20 pl-3">
+              <Github className="w-5 h-5 text-brand-primary group-hover:rotate-12 transition-transform" />
+              <div className="flex items-center gap-2 border-l border-brand-border pl-3">
                 <span className="text-sm font-semibold">Star us</span>
                 {stars !== null && (
-                  <span className="text-sm font-mono bg-white/10 px-2 py-0.5 rounded font-bold tracking-tight">
+                  <span className="rounded-full bg-brand-canvas px-2.5 py-0.5 text-sm font-mono font-bold tracking-tight text-brand-secondary ring-1 ring-brand-border/80">
                     {stars.toLocaleString()}
                   </span>
                 )}
               </div>
-            </a>
+            </Button>
           </div>
         </div>
       </div>

@@ -22,7 +22,7 @@ export function PricingSection({ onLaunch }: PricingSectionProps): React.ReactEl
               </span>
             </h2>
             <p className="text-xl text-brand-secondary max-w-xl mx-auto font-medium">
-              OpenFlowKit is 100% open source. There is no &quot;Enterprise Edition&quot; hidden
+              OpenFlowKit is 100% free & open source. There is no &quot;Enterprise Edition&quot; hidden
               behind a sales call.
             </p>
           </div>
