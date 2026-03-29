@@ -16,7 +16,7 @@ async function createNewFlow(page: import('@playwright/test').Page) {
   await page.getByTestId('home-create-new').click();
   await expect(page).toHaveURL(/#\/flow\/[^?]+(?:\?.*)?$/);
   await expect(page.getByTestId('toolbar-add-toggle')).toBeVisible({ timeout: 15000 });
-  await expect(page.getByTestId('flow-tab').first()).toBeVisible();
+  await expect(page.getByTestId('flow-page-tab').first()).toBeVisible();
 }
 
 async function addRectangleNode(page: import('@playwright/test').Page) {
@@ -76,7 +76,7 @@ test('exports the diagram as JSON and download starts', async ({ page }) => {
   await addRectangleNode(page);
 
   await page.getByTestId('topnav-export').click();
-  await page.getByTestId('export-section-code').click();
+  await page.getByRole('tab', { name: 'Code' }).click();
   await expect(page.getByTestId('export-action-json-download')).toBeVisible();
 
   const downloadPromise = page.waitForEvent('download');
@@ -111,11 +111,10 @@ test('exports the diagram as PNG and download starts', async ({ page }) => {
 test('can create a second tab', async ({ page }) => {
   await createNewFlow(page);
 
-  const tabs = page.getByTestId('flow-tab');
+  const tabs = page.getByTestId('flow-page-tab');
   const initialCount = await tabs.count();
 
-  // Use the + button to add a new tab
-  await page.getByTestId('flow-tab-add').click();
+  await page.getByTestId('flow-page-add').click();
   await expect(tabs).toHaveCount(initialCount + 1);
 });
 
@@ -159,10 +158,117 @@ test('deletes a selected node via the properties panel', async ({ page }) => {
 // Share panel opens
 // ---------------------------------------------------------------------------
 
-test('share panel opens when share button is clicked', async ({ page }) => {
+test('main menu exposes version history', async ({ page }) => {
   await createNewFlow(page);
 
-  await page.getByTestId('topnav-share').click();
+  await page.getByTestId('topnav-menu-toggle').click();
+  await expect(page.getByTestId('topnav-history')).toBeVisible();
+});
 
-  await expect(page.getByTestId('share-panel')).toBeVisible();
+// ---------------------------------------------------------------------------
+// Settings modal
+// ---------------------------------------------------------------------------
+
+test('settings view opens from the home sidebar', async ({ page }) => {
+  await page.goto('/#/home');
+  await page.getByTestId('sidebar-settings').click();
+
+  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByText('Canvas').first()).toBeVisible();
+});
+
+test('main menu has theme toggle', async ({ page }) => {
+  await page.goto('/#/home');
+
+  await expect(page.getByTitle(/switch to dark mode|switch to light mode/i)).toBeVisible();
+});
+
+test('switching to dark mode applies data-theme attribute', async ({ page }) => {
+  await page.goto('/#/home');
+  await page.getByTitle(/switch to dark mode/i).click();
+
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+});
+
+// ---------------------------------------------------------------------------
+// Command bar
+// ---------------------------------------------------------------------------
+
+test('command bar opens with Cmd+K', async ({ page }) => {
+  await createNewFlow(page);
+
+  await page.keyboard.press('ControlOrMeta+k');
+  await expect(page.getByPlaceholder(/search/i)).toBeVisible();
+});
+
+test('command bar fuzzy search works', async ({ page }) => {
+  await createNewFlow(page);
+  await page.keyboard.press('ControlOrMeta+k');
+
+  await page.getByPlaceholder(/search/i).fill('arc');
+  await expect(page.getByText(/architecture/i).first()).toBeVisible();
+});
+
+// ---------------------------------------------------------------------------
+// Welcome modal
+// ---------------------------------------------------------------------------
+
+test('welcome modal shows on first visit', async ({ page }) => {
+  await page.addInitScript(() => localStorage.clear());
+  await page.goto('/#/home');
+
+  await expect(page.getByRole('heading', { name: 'OpenFlowKit' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Get Started' })).toBeVisible();
+});
+
+test('welcome modal feature cards are clickable', async ({ page }) => {
+  await page.addInitScript(() => localStorage.clear());
+  await page.goto('/#/home');
+
+  await page.getByText('Create amazing diagrams').click();
+  await expect(page).toHaveURL(/#\/flow\//);
+});
+
+// ---------------------------------------------------------------------------
+// Properties panel empty state
+// ---------------------------------------------------------------------------
+
+test('new flows show the empty canvas actions', async ({ page }) => {
+  await createNewFlow(page);
+
+  await expect(page.getByTestId('empty-generate-ai')).toBeVisible();
+  await expect(page.getByText('Browse Templates')).toBeVisible();
+  await expect(page.getByText('Add Blank Shape')).toBeVisible();
+});
+
+// ---------------------------------------------------------------------------
+// Accessibility
+// ---------------------------------------------------------------------------
+
+test('skip-to-content link is present', async ({ page }) => {
+  await page.goto('/#/home');
+  await page.keyboard.press('Tab');
+
+  const skipLink = page.getByText('Skip to content');
+  await expect(skipLink).toBeVisible();
+});
+
+test('flow tabs have tab role', async ({ page }) => {
+  await createNewFlow(page);
+
+  await expect(page.getByRole('tab').first()).toBeVisible();
+});
+
+// ---------------------------------------------------------------------------
+// Keyboard navigation
+// ---------------------------------------------------------------------------
+
+test('can navigate nodes with keyboard', async ({ page }) => {
+  await createNewFlow(page);
+
+  await page.getByTestId('toolbar-add-toggle').click();
+  await page.getByText('Sticky Note').click();
+
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
 });

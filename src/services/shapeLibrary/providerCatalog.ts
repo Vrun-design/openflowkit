@@ -28,6 +28,7 @@ const KNOWN_PROVIDER_PACK_IDS: Partial<Record<string, string>> = {
     aws: 'aws-official-starter-v1',
     azure: 'azure-official-icons-v20',
     cncf: 'cncf-artwork-icons-v1',
+    developer: 'developer-icons-v1',
 };
 
 function normalizeProviderPathSegment(value: string): string {

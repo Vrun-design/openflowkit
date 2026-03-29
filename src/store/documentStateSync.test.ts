@@ -63,4 +63,21 @@ describe('documentStateSync', () => {
             edges: [],
         })).toBe(documents);
     });
+
+    it('returns the same documents reference when active pages already match editor state', () => {
+        const livePage = createPage({
+            nodes: [{ id: 'node-live' } as never],
+            edges: [{ id: 'edge-live' } as never],
+        });
+        const documents = [createDocument([livePage])];
+
+        expect(syncWorkspaceDocuments({
+            documents,
+            activeDocumentId: 'doc-1',
+            tabs: [livePage],
+            activeTabId: 'page-1',
+            nodes: livePage.nodes,
+            edges: livePage.edges,
+        })).toBe(documents);
+    });
 });

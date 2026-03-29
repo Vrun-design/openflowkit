@@ -22,13 +22,13 @@ export function CustomHeadersEditor({
     const { t } = useTranslation();
 
     return (
-        <div className="space-y-2 rounded-[var(--radius-lg)] border border-slate-200 bg-white p-3">
+        <div className="space-y-2 rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-3">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--brand-secondary)]">
                         {t('settingsModal.ai.customHeadersTitle', { defaultValue: 'Custom Headers' })}
                     </p>
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-[10px] text-[var(--brand-secondary)]">
                         {t('settingsModal.ai.customHeadersSubtitle', { defaultValue: 'Send extra headers for auth proxies like Cloudflare Access.' })}
                     </p>
                 </div>
@@ -36,7 +36,7 @@ export function CustomHeadersEditor({
                     <button
                         type="button"
                         onClick={onAddHeader}
-                        className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-700 hover:bg-slate-200"
+                        className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--brand-background)] px-2 py-1 text-[10px] font-semibold text-[var(--brand-text)] hover:bg-[var(--brand-background)]/80"
                     >
                         <Plus className="w-3.5 h-3.5" />
                         {t('settingsModal.ai.addHeader', { defaultValue: 'Add Header' })}
@@ -51,7 +51,7 @@ export function CustomHeadersEditor({
                 </div>
             </div>
             {customHeaders.length === 0 && (
-                <p className="text-[10px] text-slate-400">
+                <p className="text-[10px] text-[var(--brand-secondary)]">
                     {t('settingsModal.ai.customHeadersEmpty', { defaultValue: 'No custom headers configured.' })}
                 </p>
             )}
@@ -85,7 +85,7 @@ export function CustomHeadersEditor({
                         <button
                             type="button"
                             onClick={() => onRemoveHeader(idx)}
-                            className="text-slate-500 hover:text-red-600"
+                            className="text-[var(--brand-secondary)] hover:text-red-600"
                             aria-label="Remove header"
                         >
                             <Trash2 className="w-4 h-4" />
@@ -93,7 +93,7 @@ export function CustomHeadersEditor({
                     </div>
                 </div>
             ))}
-            <p className="text-[10px] text-slate-500">
+            <p className="text-[10px] text-[var(--brand-secondary)]">
                 {t('settingsModal.ai.customHeadersSecurity', { defaultValue: 'Header values are stored locally in your browser profile.' })}
             </p>
         </div>

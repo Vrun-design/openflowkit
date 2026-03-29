@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
 import type { ClassVisibility } from '@/lib/classMembers';
 import { parseClassMember, stringifyClassMember } from '@/lib/classMembers';
+import { EDITOR_FIELD_COMPACT_CLASS } from '@/components/ui/editorFieldStyles';
 
 interface ClassMemberListEditorProps {
   title: string;
@@ -51,10 +52,10 @@ export function ClassMemberListEditor({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-slate-600">{title}</label>
+        <label className="text-xs font-semibold text-[var(--brand-secondary)]">{title}</label>
         <button
           type="button"
-          className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-slate-200 px-2 py-1 text-[11px] font-medium text-slate-600 hover:border-slate-300 hover:text-slate-800"
+          className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-2 py-1 text-[11px] font-medium text-[var(--brand-secondary)] hover:border-[var(--brand-secondary)] hover:text-[var(--brand-text)]"
           onClick={() => onChange([...items, '+ '])}
         >
           <Plus className="h-3 w-3" />
@@ -62,7 +63,7 @@ export function ClassMemberListEditor({
         </button>
       </div>
 
-      <div className="space-y-2 rounded-[var(--radius-lg)] border border-slate-200 bg-white p-2">
+      <div className="space-y-2 rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-2">
         {items.length > 0 ? items.map((item, index) => {
           const parsed = parseClassMember(item);
           return (
@@ -70,7 +71,7 @@ export function ClassMemberListEditor({
               <select
                 value={parsed.visibility}
                 onChange={(event) => onChange(updateVisibility(items, index, event.target.value as ClassVisibility))}
-                className="rounded-[var(--radius-sm)] border border-slate-200 px-2 py-1.5 text-xs text-slate-700 outline-none focus:border-violet-300 focus:ring-1 focus:ring-violet-200"
+                className={`${EDITOR_FIELD_COMPACT_CLASS} px-2 py-1.5`}
               >
                 <option value="public">Public</option>
                 <option value="private">Private</option>
@@ -80,13 +81,13 @@ export function ClassMemberListEditor({
               <input
                 value={parsed.signature}
                 onChange={(event) => onChange(updateSignature(items, index, event.target.value))}
-                className="rounded-[var(--radius-sm)] border border-slate-200 px-2 py-1.5 text-xs font-mono text-slate-700 outline-none focus:border-violet-300 focus:ring-1 focus:ring-violet-200"
+                className={`${EDITOR_FIELD_COMPACT_CLASS} px-2 py-1.5 font-mono`}
                 placeholder={placeholder}
               />
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  className="rounded-[var(--radius-xs)] border border-slate-200 p-1 text-slate-500 hover:border-slate-300 hover:text-slate-700 disabled:opacity-40"
+                  className="rounded-[var(--radius-xs)] border border-[var(--color-brand-border)] p-1 text-[var(--brand-secondary)] hover:border-[var(--brand-secondary)] hover:text-[var(--brand-text)] disabled:opacity-40"
                   onClick={() => onChange(moveItem(items, index, -1))}
                   disabled={index === 0}
                   aria-label={`Move ${title} item up`}
@@ -95,7 +96,7 @@ export function ClassMemberListEditor({
                 </button>
                 <button
                   type="button"
-                  className="rounded-[var(--radius-xs)] border border-slate-200 p-1 text-slate-500 hover:border-slate-300 hover:text-slate-700 disabled:opacity-40"
+                  className="rounded-[var(--radius-xs)] border border-[var(--color-brand-border)] p-1 text-[var(--brand-secondary)] hover:border-[var(--brand-secondary)] hover:text-[var(--brand-text)] disabled:opacity-40"
                   onClick={() => onChange(moveItem(items, index, 1))}
                   disabled={index === items.length - 1}
                   aria-label={`Move ${title} item down`}
@@ -104,7 +105,7 @@ export function ClassMemberListEditor({
                 </button>
                 <button
                   type="button"
-                  className="rounded-[var(--radius-xs)] border border-slate-200 p-1 text-slate-500 hover:border-rose-300 hover:text-rose-600"
+                  className="rounded-[var(--radius-xs)] border border-[var(--color-brand-border)] p-1 text-[var(--brand-secondary)] hover:border-rose-300 hover:text-rose-600"
                   onClick={() => onChange(removeItem(items, index))}
                   aria-label={`Remove ${title} item`}
                 >
@@ -116,7 +117,7 @@ export function ClassMemberListEditor({
         }) : (
           <button
             type="button"
-            className="w-full rounded-[var(--radius-sm)] border border-dashed border-slate-200 px-3 py-2 text-left text-xs text-slate-400 hover:border-slate-300 hover:text-slate-600"
+            className="w-full rounded-[var(--radius-sm)] border border-dashed border-[var(--color-brand-border)] px-3 py-2 text-left text-xs text-[var(--brand-secondary)] hover:border-[var(--brand-secondary)] hover:text-[var(--brand-text)]"
             onClick={() => onChange(['+ '])}
           >
             {addLabel}

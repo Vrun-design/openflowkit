@@ -1,6 +1,6 @@
 import { getCompatibleNodesBounds } from '@/lib/reactflowCompat';
 import type { FlowNode } from '@/lib/types';
-import { encodeGif } from '@/services/gifEncoder';
+import { encodeGif, startGifStream } from '@/services/gifEncoder';
 
 export type ExportImageFormat = 'png' | 'jpeg';
 
@@ -22,7 +22,7 @@ export interface DecodedFrame {
 export type FrameBackgroundPainter = (
   context: CanvasRenderingContext2D,
   width: number,
-  height: number,
+  height: number
 ) => void;
 
 export interface ExportCaptureOptions {
@@ -41,6 +41,11 @@ export interface ExportCaptureOptions {
     skipFonts: boolean;
     filter: (node: HTMLElement) => boolean;
   };
+}
+
+export interface StreamingGifHandle {
+  addFrame(dataUrl: string, delayMs: number): Promise<void>;
+  finish(): Blob;
 }
 
 const EXPORT_CAPTURE_PADDING = 80;
@@ -108,7 +113,7 @@ function shouldIncludeExportNode(node: HTMLElement): boolean {
 export function createExportOptions(
   nodes: FlowNode[],
   format: ExportImageFormat,
-  config?: ExportCaptureConfig,
+  config?: ExportCaptureConfig
 ): ExportCaptureOptions {
   const bounds = getCompatibleNodesBounds(nodes);
   const rawWidth = (bounds.width || DEFAULT_EXPORT_WIDTH) + EXPORT_CAPTURE_PADDING * 2;
@@ -162,11 +167,18 @@ export async function decodeCapturedFrames(frames: CapturedFrame[]): Promise<Dec
     frames.map(async (frame) => ({
       frame,
       image: await decodeCapturedFrame(frame.dataUrl),
-    })),
+    }))
   );
 }
 
-function createExportCanvas(width: number, height: number): {
+export async function decodeSingleFrame(dataUrl: string): Promise<CanvasImageSource> {
+  return decodeCapturedFrame(dataUrl);
+}
+
+function createExportCanvas(
+  width: number,
+  height: number
+): {
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
 } {
@@ -188,7 +200,7 @@ export function renderDecodedFrame(
   height: number,
   image: CanvasImageSource,
   backgroundColor?: string,
-  backgroundPainter?: FrameBackgroundPainter,
+  backgroundPainter?: FrameBackgroundPainter
 ): void {
   if (backgroundPainter) {
     backgroundPainter(context, width, height);
@@ -262,4 +274,25 @@ export async function encodeVideoFromFrames(params: {
 
   recorder.stop();
   return stopped;
+}
+
+export function createStreamingGifEncoder(
+  width: number,
+  height: number,
+  backgroundPainter?: FrameBackgroundPainter
+): StreamingGifHandle {
+  const { context } = createExportCanvas(width, height);
+  const stream = startGifStream(width, height, true);
+
+  return {
+    async addFrame(dataUrl: string, delayMs: number) {
+      const image = await decodeCapturedFrame(dataUrl);
+      renderDecodedFrame(context, width, height, image, undefined, backgroundPainter);
+      const imageData = context.getImageData(0, 0, width, height);
+      stream.addFrame(imageData, delayMs);
+    },
+    finish() {
+      return stream.finish();
+    },
+  };
 }

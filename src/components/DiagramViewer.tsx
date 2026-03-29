@@ -66,7 +66,7 @@ function ViewerCanvas({
             fitViewOptions={{ padding: size === 'badge' ? 0.08 : size === 'card' ? 0.12 : 0.15 }}
             className="bg-[var(--brand-background,#f8fafc)]"
         >
-            <Background variant={BackgroundVariant.Dots} gap={24} size={size === 'badge' ? 1.3 : 1.9} color="rgba(148,163,184,0.6)" />
+            <Background variant={BackgroundVariant.Dots} gap={24} size={size === 'badge' ? 1.3 : 1.9} color="color-mix(in srgb, var(--brand-secondary), transparent 80%)" />
             {size === 'full' ? <Controls showInteractive={false} /> : null}
         </ReactFlow>
     );
@@ -101,23 +101,23 @@ function DiagramViewerInner(): React.ReactElement {
     }, [parsed]);
 
     return (
-        <div className="flex h-screen w-screen flex-col overflow-hidden bg-slate-50">
+        <div className="flex h-screen w-screen flex-col overflow-hidden bg-[var(--brand-background)]">
             {viewerSize !== 'badge' ? (
-            <div className={`flex shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur ${viewerSize === 'card' ? 'h-9' : 'h-10'}`}>
+            <div className={`flex shrink-0 items-center justify-between border-b border-[var(--color-brand-border)] bg-[var(--brand-surface)]/90 px-4 backdrop-blur ${viewerSize === 'card' ? 'h-9' : 'h-10'}`}>
                 <div className="flex items-center gap-2">
                     <OpenFlowLogo className="h-5 w-5 text-[var(--brand-primary,#e95420)]" />
-                    <span className="text-xs font-semibold text-slate-600">{viewerSize === 'card' ? 'OpenFlowKit Viewer' : 'OpenFlowKit'}</span>
+                    <span className="text-xs font-semibold text-[var(--brand-secondary)]">{viewerSize === 'card' ? 'OpenFlowKit Viewer' : 'OpenFlowKit'}</span>
                 </div>
                 <button
                     onClick={() => navigate('/home')}
-                    className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium text-slate-600 shadow-sm transition-all hover:border-[var(--brand-primary,#e95420)] hover:text-[var(--brand-primary,#e95420)] active:scale-95"
+                    className="flex items-center gap-1.5 rounded-full border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-1 text-[11px] font-medium text-[var(--brand-secondary)] shadow-sm transition-all hover:border-[var(--brand-primary,#e95420)] hover:text-[var(--brand-primary,#e95420)] active:scale-95"
                 >
                     <ExternalLink className="h-3 w-3" />
                     Open in Editor
                 </button>
             </div>
             ) : (
-            <div className="flex h-7 shrink-0 items-center justify-between border-b border-slate-200 bg-white/90 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+            <div className="flex h-7 shrink-0 items-center justify-between border-b border-[var(--color-brand-border)] bg-[var(--brand-surface)]/90 px-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--brand-secondary)]">
                 <span>OpenFlowKit</span>
                 <span>Badge Viewer</span>
             </div>
@@ -126,7 +126,7 @@ function DiagramViewerInner(): React.ReactElement {
             <div className="relative min-h-0 flex-1">
                 {layoutState.status === 'loading' && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                        <Loader2 className="h-6 w-6 animate-spin text-[var(--brand-secondary)]" />
                     </div>
                 )}
                 {layoutState.status === 'error' && (

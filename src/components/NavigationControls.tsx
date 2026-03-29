@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useShortcutHelpActions } from '@/store/viewHooks';
 
 const controlButtonClassName =
-    'flex min-h-10 min-w-10 items-center justify-center rounded-[var(--radius-sm)] p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-95 sm:min-h-9 sm:min-w-9';
+    'flex min-h-10 min-w-10 items-center justify-center rounded-[var(--radius-sm)] p-2 text-[var(--brand-secondary)] transition-all hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)] active:scale-95 sm:min-h-9 sm:min-w-9';
 
 export function NavigationControls(): React.ReactElement {
     const { t } = useTranslation();
@@ -16,7 +16,7 @@ export function NavigationControls(): React.ReactElement {
 
     return (
         <div className="absolute bottom-8 left-4 flex flex-col gap-2 z-50">
-            <div className="flex flex-col p-1 bg-white shadow-[var(--shadow-md)] rounded-[var(--radius-lg)] border border-slate-100 ring-1 ring-slate-900/5">
+            <div className="flex flex-col rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-1 shadow-[var(--shadow-md)] ring-1 ring-black/5">
                 <Tooltip text={t('navigationControls.zoomIn')} side="right">
                     <button
                         onClick={() => zoomIn({ duration: 300 })}
@@ -26,7 +26,7 @@ export function NavigationControls(): React.ReactElement {
                     </button>
                 </Tooltip>
 
-                <div className="text-[10px] font-medium text-slate-400 text-center py-1 select-none tabular-nums">
+                <div className="py-1 text-center text-[10px] font-medium tabular-nums text-[var(--brand-secondary)] select-none">
                     {Math.round(zoom * 100)}%
                 </div>
 
@@ -38,7 +38,7 @@ export function NavigationControls(): React.ReactElement {
                         <Minus className="w-4 h-4" />
                     </button>
                 </Tooltip>
-                <div className="h-px bg-slate-100 mx-2 my-1" />
+                <div className="mx-2 my-1 h-px bg-[var(--color-brand-border)]" />
                 <Tooltip text={t('navigationControls.fitView')} side="right">
                     <button
                         onClick={() => fitView({ duration: 600, padding: 0.2 })}
@@ -47,7 +47,7 @@ export function NavigationControls(): React.ReactElement {
                         <Maximize className="w-4 h-4" />
                     </button>
                 </Tooltip>
-                <div className="h-px bg-slate-100 mx-2 my-1" />
+                <div className="mx-2 my-1 h-px bg-[var(--color-brand-border)]" />
                 <Tooltip text={t('navigationControls.keyboardShortcuts')} side="right">
                     <button
                         onClick={() => setShortcutsHelpOpen(true)}

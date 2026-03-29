@@ -6,6 +6,7 @@ describe('providerCatalog', () => {
         expect(listProviderCatalogProviders()).toContain('aws');
         expect(listProviderCatalogProviders()).toContain('azure');
         expect(listProviderCatalogProviders()).toContain('cncf');
+        expect(listProviderCatalogProviders()).toContain('developer');
     });
 
     it('loads the AWS provider catalog from the local manifest pack', async () => {
@@ -36,5 +37,13 @@ describe('providerCatalog', () => {
         expect(cncfItems.length).toBeGreaterThan(100);
         expect(azureItems[0]?.category).toBe('azure');
         expect(cncfItems[0]?.category).toBe('cncf');
+    });
+
+    it('loads the developer icons catalog from the local svg pack', async () => {
+        const items = await loadProviderCatalog('developer');
+
+        expect(items.length).toBeGreaterThan(300);
+        expect(items[0]?.category).toBe('developer');
+        expect(items.some((item) => item.archIconShapeId === 'languages-javascript')).toBe(true);
     });
 });

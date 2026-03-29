@@ -3,11 +3,12 @@ import { useFlowStore } from '../store';
 import type { FlowStoreState } from '../store';
 import type { MermaidDiagnosticsSnapshot, PendingNodeLabelEditRequest } from './types';
 
-export function useSelectionState(): Pick<FlowStoreState, 'selectedNodeId' | 'selectedEdgeId'> {
+export function useSelectionState(): Pick<FlowStoreState, 'selectedNodeId' | 'selectedEdgeId' | 'hoveredSectionId'> {
     return useFlowStore(
         useShallow((state) => ({
             selectedNodeId: state.selectedNodeId,
             selectedEdgeId: state.selectedEdgeId,
+            hoveredSectionId: state.hoveredSectionId,
         }))
     );
 }
@@ -16,11 +17,12 @@ export function useSelectedNodeId(): string | null {
     return useFlowStore((state) => state.selectedNodeId);
 }
 
-export function useSelectionActions(): Pick<FlowStoreState, 'setSelectedNodeId' | 'setSelectedEdgeId'> {
+export function useSelectionActions(): Pick<FlowStoreState, 'setSelectedNodeId' | 'setSelectedEdgeId' | 'setHoveredSectionId'> {
     return useFlowStore(
         useShallow((state) => ({
             setSelectedNodeId: state.setSelectedNodeId,
             setSelectedEdgeId: state.setSelectedEdgeId,
+            setHoveredSectionId: state.setHoveredSectionId,
         }))
     );
 }

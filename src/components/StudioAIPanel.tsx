@@ -102,7 +102,7 @@ function getPromptPlaceholder(
 
 function getPrimaryComposerClassName(isInputEmpty: boolean, isBeveled: boolean): string {
     if (isInputEmpty) {
-        return 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 shadow-none';
+        return 'cursor-not-allowed border-[var(--color-brand-border)] bg-[var(--brand-background)] text-[var(--brand-secondary)] shadow-none';
     }
 
     return `border-[color-mix(in_srgb,var(--brand-primary),black_18%)] bg-[var(--brand-primary)] text-white shadow-sm hover:-translate-y-px hover:bg-[var(--brand-primary-600)] hover:shadow-md ${isBeveled ? 'btn-beveled' : ''}`;
@@ -110,14 +110,14 @@ function getPrimaryComposerClassName(isInputEmpty: boolean, isBeveled: boolean):
 
 function getGenerationModeButtonClassName(isActive: boolean): string {
     if (isActive) {
-        return 'bg-white text-orange-600 border border-orange-200 shadow-sm';
+        return 'bg-[var(--brand-surface)] text-orange-600 border border-orange-200 shadow-sm';
     }
 
-    return 'text-slate-500 hover:bg-white/50 hover:text-slate-700 border border-transparent';
+    return 'text-[var(--brand-secondary)] hover:bg-[var(--brand-surface)]/50 hover:text-[var(--brand-text)] border border-transparent';
 }
 
 function getInfoIconClassName(isActive: boolean): string {
-    return `h-3.5 w-3.5 focus:outline-none ${isActive ? 'text-orange-400' : 'text-slate-400'}`;
+    return `h-3.5 w-3.5 focus:outline-none ${isActive ? 'text-orange-400' : 'text-[var(--brand-secondary)]'}`;
 }
 
 function getChatBubbleClassName(role: ChatBubbleTone): string {
@@ -125,7 +125,7 @@ function getChatBubbleClassName(role: ChatBubbleTone): string {
         return 'rounded-br-sm bg-[var(--brand-primary)] text-white shadow-sm';
     }
 
-    return 'rounded-bl-sm border border-slate-200/70 bg-white text-[var(--brand-text)] shadow-sm';
+    return 'rounded-bl-sm border border-[var(--color-brand-border)]/70 bg-[var(--brand-surface)] text-[var(--brand-text)] shadow-sm';
 }
 
 export function StudioAIPanel({
@@ -213,7 +213,7 @@ export function StudioAIPanel({
                 <div className="mx-1 mb-2 rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50 p-3">
                     <div className="flex items-center gap-2 mb-2">
                         <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                        <p className="text-xs font-semibold text-slate-700">Import ready — review changes</p>
+                        <p className="text-xs font-semibold text-[var(--brand-text)]">Import ready — review changes</p>
                     </div>
                     <div className="flex items-center gap-3 mb-3 text-[11px]">
                         {pendingDiff.addedCount > 0 && (
@@ -235,7 +235,7 @@ export function StudioAIPanel({
                     <div className="flex gap-2">
                         <button
                             onClick={onDiscardDiff}
-                            className="flex h-7 flex-1 items-center justify-center rounded border border-slate-200 bg-white text-[11px] font-medium text-slate-600 hover:bg-slate-50"
+                            className="flex h-7 flex-1 items-center justify-center rounded border border-[var(--color-brand-border)] bg-[var(--brand-surface)] text-[11px] font-medium text-[var(--brand-secondary)] hover:bg-[var(--brand-background)]"
                         >
                             Discard
                         </button>
@@ -252,7 +252,7 @@ export function StudioAIPanel({
                 <div className="flex items-center justify-end px-1 pb-2">
                     <button
                         onClick={onClearChat}
-                        className="rounded-full p-2 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 active:scale-95"
+                        className="rounded-full p-2 text-[var(--brand-secondary)] transition-colors hover:bg-red-50 hover:text-red-500 active:scale-95"
                         title={t('commandBar.ai.clearChat')}
                     >
                         <Trash2 className="h-4 w-4" />
@@ -266,8 +266,8 @@ export function StudioAIPanel({
                         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 shadow-sm ring-1 ring-orange-100">
                             <WandSparkles className="h-6 w-6" />
                         </div>
-                        <h3 className="text-xl font-bold tracking-tight text-slate-900">{FLOWPILOT_NAME}</h3>
-                        <p className="mt-2.5 mb-8 max-w-[280px] text-[13px] leading-relaxed text-slate-600">
+                        <h3 className="text-xl font-bold tracking-tight text-[var(--brand-text)]">{FLOWPILOT_NAME}</h3>
+                        <p className="mt-2.5 mb-8 max-w-[280px] text-[13px] leading-relaxed text-[var(--brand-secondary)]">
                             {isCanvasEmpty
                                 ? `Describe the diagram you want and ${FLOWPILOT_NAME} will draft the first graph for you.`
                                 : `Describe the changes you want and ${FLOWPILOT_NAME} will update the graph for you.`}
@@ -284,9 +284,9 @@ export function StudioAIPanel({
                                                 setPrompt(skill.prompt);
                                                 void submitPrompt(skill.prompt);
                                             }}
-                                            className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white bg-white px-3 py-2 text-left text-[12px] font-semibold leading-none text-slate-700 shadow-sm shadow-slate-200/70 ring-1 ring-slate-200/70 transition-all duration-200 hover:-translate-y-px hover:border-[var(--brand-primary-100)] hover:text-[var(--brand-primary)] hover:shadow-md active:scale-95"
+                                            className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[var(--brand-surface)] bg-[var(--brand-surface)] px-3 py-2 text-left text-[12px] font-semibold leading-none text-[var(--brand-text)] shadow-sm shadow-[var(--color-brand-border)]/70 ring-1 ring-[var(--color-brand-border)]/70 transition-all duration-200 hover:-translate-y-px hover:border-[var(--brand-primary-100)] hover:text-[var(--brand-primary)] hover:shadow-md active:scale-95"
                                         >
-                                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-50">
+                                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-background)]">
                                                 <Icon className={`h-3.5 w-3.5 ${getExampleIconColor(index)}`} />
                                             </span>
                                             <span>{skill.label}</span>
@@ -299,7 +299,7 @@ export function StudioAIPanel({
                             <div className="mt-8 flex justify-center">
                                 <button
                                     onClick={openAISettings}
-                                    className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95"
+                                    className="flex items-center gap-2 rounded-full border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-4 py-2 text-xs font-semibold text-[var(--brand-secondary)] shadow-sm transition-all hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)] active:scale-95"
                                 >
                                     <Key className="h-3.5 w-3.5" />
                                     Add AI key to start generating
@@ -322,10 +322,10 @@ export function StudioAIPanel({
                         ))}
                         {isGenerating && (
                             <div className="flex justify-start">
-                                <div className="max-w-[88%] rounded-[var(--radius-md)] rounded-bl-sm border border-slate-200/70 bg-white px-3.5 py-2.5 text-sm text-[var(--brand-text)] shadow-sm">
+                                <div className="max-w-[88%] rounded-[var(--radius-md)] rounded-bl-sm border border-[var(--color-brand-border)]/70 bg-[var(--brand-surface)] px-3.5 py-2.5 text-sm text-[var(--brand-text)] shadow-sm">
                                     {streamingText
                                         ? <span className="whitespace-pre-wrap leading-relaxed">{streamingText}</span>
-                                        : <span className="flex items-center gap-1.5 text-slate-400">
+                                        : <span className="flex items-center gap-1.5 text-[var(--brand-secondary)]">
                                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                             {retryCount > 0 ? `Retrying (${retryCount} of 3)…` : 'Generating…'}
                                         </span>
@@ -336,9 +336,9 @@ export function StudioAIPanel({
                     </>
                 )}
             </div>
-            <div className="shrink-0 border-t border-slate-100 px-1 pt-3">
+            <div className="shrink-0 border-t border-[var(--color-brand-border)] px-1 pt-3">
                 {nodeCount > 0 ? (
-                    <div className="mb-3 flex rounded-[var(--radius-md)] border border-slate-200/80 bg-slate-50/80 p-1">
+                    <div className="mb-3 flex rounded-[var(--radius-md)] border border-[var(--color-brand-border)]/80 bg-[var(--brand-background)]/80 p-1">
                         <button
                             onClick={() => setGenerationMode('edit')}
                             className={`flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] py-1.5 text-[13px] font-semibold transition-all ${getGenerationModeButtonClassName(effectiveGenerationMode === 'edit')}`}
@@ -372,7 +372,7 @@ export function StudioAIPanel({
                 ) : null}
 
                 {selectedImage && (
-                    <div className="group relative mb-3 h-16 w-16 overflow-hidden rounded-[var(--radius-md)] border border-slate-200 bg-slate-100 shadow-sm">
+                    <div className="group relative mb-3 h-16 w-16 overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] shadow-sm">
                         <img src={selectedImage} alt="Upload preview" className="h-full w-full object-cover" />
                         <button
                             onClick={() => setSelectedImage(null)}
@@ -383,7 +383,7 @@ export function StudioAIPanel({
                     </div>
                 )}
 
-                <div className="relative flex w-full flex-col rounded-[var(--brand-radius)] border border-slate-200 bg-white shadow-sm transition-all focus-within:border-[var(--brand-primary)] focus-within:ring-[3px] focus-within:ring-[var(--brand-primary-100)]">
+                <div className="relative flex w-full flex-col rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-sm transition-all focus-within:border-[var(--brand-primary)] focus-within:ring-[3px] focus-within:ring-[var(--brand-primary-100)]">
                     <textarea
                         value={prompt}
                         onChange={(event) => {
@@ -394,7 +394,7 @@ export function StudioAIPanel({
                         }}
                         onKeyDown={handleKeyDown}
                         placeholder={getPromptPlaceholder(effectiveGenerationMode, nodeCount, selectedNodeCount)}
-                        className="w-full resize-none rounded-[var(--brand-radius)] bg-transparent px-4 pb-12 pt-4 text-sm text-[var(--brand-text)] placeholder-slate-400 outline-none custom-scrollbar"
+                        className="w-full resize-none rounded-[var(--brand-radius)] bg-transparent px-4 pb-12 pt-4 text-sm text-[var(--brand-text)] placeholder-[var(--brand-secondary)] outline-none custom-scrollbar"
                         style={{ minHeight: '100px', maxHeight: '180px' }}
                         rows={3}
                     />
@@ -408,7 +408,7 @@ export function StudioAIPanel({
                         />
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                            className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-secondary)]"
                             title="Attach Image"
                             type="button"
                         >

@@ -13,11 +13,17 @@ interface DiagramNodePropertiesRouterProps {
   onChange: (id: string, data: Partial<NodeData>) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  onFitSectionToContents?: (id: string) => void;
+  onReleaseFromSection?: (id: string) => void;
+  onBringContentsIntoSection?: (id: string) => void;
   onAddMindmapChild?: (parentId: string) => void;
   onAddMindmapSibling?: (nodeId: string) => void;
   onAddArchitectureService?: (sourceId: string) => void;
   onCreateArchitectureBoundary?: (sourceId: string) => void;
-  onApplyArchitectureTemplate?: (sourceId: string, templateId: import('@/lib/architectureTemplates').ArchitectureTemplateId) => void;
+  onApplyArchitectureTemplate?: (
+    sourceId: string,
+    templateId: import('@/lib/architectureTemplates').ArchitectureTemplateId
+  ) => void;
   onGenerateEntityFields?: (nodeId: string) => Promise<void> | void;
   onSuggestArchitectureNode?: (nodeId: string) => Promise<void> | void;
   onConvertEntitySelectionToClassDiagram?: () => void;
@@ -45,6 +51,9 @@ export function DiagramNodePropertiesRouter({
   onChange,
   onDuplicate,
   onDelete,
+  onFitSectionToContents,
+  onReleaseFromSection,
+  onBringContentsIntoSection,
   onAddMindmapChild,
   onAddMindmapSibling,
   onAddArchitectureService,
@@ -55,11 +64,18 @@ export function DiagramNodePropertiesRouter({
   onConvertEntitySelectionToClassDiagram,
   onOpenMermaidCodeEditor,
 }: DiagramNodePropertiesRouterProps): ReactElement {
-  const { tabs, activeTabId } = useFlowStore();
+  const tabs = useFlowStore((state) => state.tabs);
+  const activeTabId = useFlowStore((state) => state.activeTabId);
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const activeDiagramType = activeTab?.diagramType ?? 'flowchart';
-  const panelDiagramType = resolveNodePropertiesPanelDiagramType(selectedNode.type, activeDiagramType);
-  const registeredComponent = useMemo(() => getDiagramNodeProperties(panelDiagramType), [panelDiagramType]);
+  const panelDiagramType = resolveNodePropertiesPanelDiagramType(
+    selectedNode.type,
+    activeDiagramType
+  );
+  const registeredComponent = useMemo(
+    () => getDiagramNodeProperties(panelDiagramType),
+    [panelDiagramType]
+  );
 
   if (!registeredComponent) {
     return (
@@ -68,6 +84,9 @@ export function DiagramNodePropertiesRouter({
         onChange={onChange}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
+        onFitSectionToContents={onFitSectionToContents}
+        onReleaseFromSection={onReleaseFromSection}
+        onBringContentsIntoSection={onBringContentsIntoSection}
       />
     );
   }

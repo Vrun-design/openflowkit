@@ -38,28 +38,28 @@ export const FLOW_CANVAS_BASE_BEHAVIOR: {
 export const FLOW_CANVAS_STYLE_PRESETS = {
     enhanced: {
         defaultEdgeOptions: {
-            style: { stroke: '#64748b', strokeWidth: 1.5 },
+            style: { stroke: 'var(--brand-secondary)', strokeWidth: 1.5 },
             animated: false,
-            markerEnd: { type: MarkerType.ArrowClosed, color: '#64748b', width: 20, height: 20 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--brand-secondary)', width: 20, height: 20 },
         },
         background: {
             variant: BackgroundVariant.Dots,
             gap: 24,
             size: 1.5,
-            color: 'rgba(148,163,184,0.4)',
+            color: 'color-mix(in srgb, var(--brand-secondary), transparent 68%)',
         },
     },
     standard: {
         defaultEdgeOptions: {
-            style: { stroke: '#94a3b8', strokeWidth: 2 },
+            style: { stroke: 'var(--brand-secondary)', strokeWidth: 2 },
             animated: false,
-            markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8', width: 20, height: 20 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--brand-secondary)', width: 20, height: 20 },
         },
         background: {
             variant: BackgroundVariant.Dots,
             gap: 24,
             size: 1.5,
-            color: 'rgba(148,163,184,0.5)',
+            color: 'color-mix(in srgb, var(--brand-secondary), transparent 64%)',
         },
     },
 } as const;

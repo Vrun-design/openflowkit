@@ -39,7 +39,7 @@ export function IconTileScrollGrid({
   className = '',
 }: IconTileScrollGridProps): React.ReactElement {
   return (
-    <div className={`max-h-40 overflow-y-auto rounded-[var(--brand-radius)] border border-slate-200 bg-[var(--brand-background)] p-2 custom-scrollbar ${className}`.trim()}>
+    <div className={`max-h-40 overflow-y-auto rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-2 custom-scrollbar ${className}`.trim()}>
       <div className="grid grid-cols-6 gap-2">
         {children}
       </div>

@@ -66,7 +66,7 @@ export function EdgeColorSection({
             backgroundColor: '#ffffff',
             accentColor: customStroke,
             preview: (
-              <div className="flex h-6 w-6 items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 text-slate-400">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md border border-dashed border-[var(--color-brand-border)] bg-[var(--brand-background)] text-[var(--brand-secondary-light)]">
                 <PaintBucket className="h-3 w-3" />
               </div>
             ),

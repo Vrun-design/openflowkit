@@ -19,18 +19,18 @@ export function ToolbarModeControls({
     onTogglePanMode,
 }: ToolbarModeControlsProps): React.ReactElement {
     const { t } = useTranslation();
-    const selectIconClass = `w-4 h-4 ${isSelectMode ? 'text-[var(--brand-primary)]' : 'text-slate-500 group-hover:text-slate-900'}`;
-    const panIconClass = `w-4 h-4 ${!isSelectMode ? 'text-[var(--brand-primary)]' : 'text-slate-500 group-hover:text-slate-900'}`;
+    const selectIconClass = `w-4 h-4 ${isSelectMode ? 'text-[var(--brand-primary)]' : 'text-[var(--brand-secondary)] group-hover:text-[var(--brand-text)]'}`;
+    const panIconClass = `w-4 h-4 ${!isSelectMode ? 'text-[var(--brand-primary)]' : 'text-[var(--brand-secondary)] group-hover:text-[var(--brand-text)]'}`;
 
     return (
-        <div className={`flex gap-0.5 border border-slate-200/60 bg-slate-100/50 p-1 ${TOOLBAR_GROUP_RADIUS_CLASS}`}>
+        <div className={`flex gap-0.5 border border-[var(--color-brand-border)]/80 bg-[var(--brand-background)]/72 p-1 ${TOOLBAR_GROUP_RADIUS_CLASS}`}>
             <Tooltip text={t('toolbar.selectMode')}>
                 <Button
                     onClick={onToggleSelectMode}
                     disabled={!isInteractive}
                     variant="ghost"
                     size="icon"
-                    className={`h-8 w-8 transition-all ${TOOLBAR_BUTTON_RADIUS_CLASS} ${isSelectMode ? 'border border-slate-200 bg-white shadow-none' : 'text-slate-500 hover:text-slate-900'}`}
+                    className={`h-8 w-8 transition-all ${TOOLBAR_BUTTON_RADIUS_CLASS} ${isSelectMode ? 'border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-none' : 'text-[var(--brand-secondary)] hover:bg-[var(--brand-surface)]/80 hover:text-[var(--brand-text)]'}`}
                     icon={<MousePointer2 className={selectIconClass} />}
                 />
             </Tooltip>
@@ -40,7 +40,7 @@ export function ToolbarModeControls({
                     disabled={!isInteractive}
                     variant="ghost"
                     size="icon"
-                    className={`h-8 w-8 transition-all ${TOOLBAR_BUTTON_RADIUS_CLASS} ${!isSelectMode ? 'border border-slate-200 bg-white shadow-none' : 'text-slate-500 hover:text-slate-900'}`}
+                    className={`h-8 w-8 transition-all ${TOOLBAR_BUTTON_RADIUS_CLASS} ${!isSelectMode ? 'border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-none' : 'text-[var(--brand-secondary)] hover:bg-[var(--brand-surface)]/80 hover:text-[var(--brand-text)]'}`}
                     icon={<Hand className={panIconClass} />}
                 />
             </Tooltip>

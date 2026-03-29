@@ -27,8 +27,8 @@ export function NodeTextStyleSection({
             isOpen={isOpen}
             onToggle={onToggle}
         >
-            <div className="grid grid-cols-2 gap-2 mb-2">
-                <div className="flex bg-slate-100 p-1 rounded-lg overflow-x-auto no-scrollbar">
+            <div className="mb-2 grid grid-cols-2 gap-2">
+                <div className="flex overflow-x-auto rounded-lg bg-[var(--brand-background)] p-1 no-scrollbar">
                     {FONT_OPTIONS.map((font) => (
                         <button
                             key={font}
@@ -42,7 +42,7 @@ export function NodeTextStyleSection({
                         </button>
                     ))}
                 </div>
-                <div className="flex bg-slate-100 p-1 rounded-lg overflow-x-auto no-scrollbar">
+                <div className="flex overflow-x-auto rounded-lg bg-[var(--brand-background)] p-1 no-scrollbar">
                     {SIZE_OPTIONS.map((size) => (
                         <button
                             key={size}

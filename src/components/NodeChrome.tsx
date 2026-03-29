@@ -1,6 +1,10 @@
 import React from 'react';
 import { Handle, Position } from '@/lib/reactflowCompat';
-import { getConnectorHandleStyle, getHandlePointerEvents, getV2HandleVisibilityClass } from './handleInteraction';
+import {
+  getConnectorHandleStyle,
+  getHandlePointerEvents,
+  getV2HandleVisibilityClass,
+} from './handleInteraction';
 import { useCinematicExportState } from '@/context/CinematicExportContext';
 import { NodeTransformControls } from './NodeTransformControls';
 import { useActiveNodeSelection } from './useActiveNodeSelection';
@@ -20,6 +24,7 @@ type NodeChromeProps = {
   minWidth: number;
   minHeight: number;
   keepAspectRatio?: boolean;
+  showQuickCreateButtons?: boolean;
   handleClassName: string;
   handleVisibilityOptions?: {
     includeConnectingState?: boolean;
@@ -62,7 +67,7 @@ function getCinematicNodePresentation(params: {
   }
 
   const translateY = 8 * (1 - progress);
-  const scale = 0.985 + (0.015 * progress);
+  const scale = 0.985 + 0.015 * progress;
   const glowRadius = 14 + Math.round(progress * 12);
   const bloomRadius = 5 + Math.round(progress * 7);
 
@@ -79,6 +84,7 @@ export function NodeChrome({
   minWidth,
   minHeight,
   keepAspectRatio = false,
+  showQuickCreateButtons = true,
   handleClassName,
   handleVisibilityOptions,
   handleStyleExtras,
@@ -86,17 +92,17 @@ export function NodeChrome({
   children,
 }: NodeChromeProps): React.ReactElement {
   const cinematicExportState = useCinematicExportState();
-  const visualQualityV2Enabled = true;
   const isActiveSelected = useActiveNodeSelection(selected);
-  const handlePointerEvents = getHandlePointerEvents(visualQualityV2Enabled, isActiveSelected);
-  const handleVisibilityClass = visualQualityV2Enabled
-    ? getV2HandleVisibilityClass(isActiveSelected, handleVisibilityOptions)
-    : isActiveSelected
-      ? 'opacity-100'
-      : 'opacity-0 group-hover:opacity-100 [.is-connecting_&]:opacity-100';
+  const handlePointerEvents = getHandlePointerEvents(true, isActiveSelected);
+  const handleVisibilityClass = getV2HandleVisibilityClass(
+    isActiveSelected,
+    handleVisibilityOptions
+  );
 
-  const isCinematicNodeVisible = !nodeId || !cinematicExportState.active || cinematicExportState.visibleNodeIds.has(nodeId);
-  const isActiveCinematicNode = Boolean(nodeId) && cinematicExportState.active && cinematicExportState.activeNodeId === nodeId;
+  const isCinematicNodeVisible =
+    !nodeId || !cinematicExportState.active || cinematicExportState.visibleNodeIds.has(nodeId);
+  const isActiveCinematicNode =
+    Boolean(nodeId) && cinematicExportState.active && cinematicExportState.activeNodeId === nodeId;
   const activeNodeProgress = isActiveCinematicNode ? cinematicExportState.activeNodeProgress : 0;
   const cinematicPresentation = getCinematicNodePresentation({
     active: cinematicExportState.active,
@@ -121,7 +127,9 @@ export function NodeChrome({
         minHeight={minHeight}
         keepAspectRatio={keepAspectRatio}
       />
-      {nodeId ? <NodeQuickCreateButtons nodeId={nodeId} visible={selected} /> : null}
+      {nodeId && showQuickCreateButtons ? (
+        <NodeQuickCreateButtons nodeId={nodeId} visible={selected} />
+      ) : null}
       {children}
       {handles.map(({ id, position, side }) => (
         <Handle
@@ -132,7 +140,12 @@ export function NodeChrome({
           isConnectableStart
           isConnectableEnd
           className={`${handleClassName} ${handleVisibilityClass}`}
-          style={getConnectorHandleStyle(side, isActiveSelected, handlePointerEvents, handleStyleExtras?.[side])}
+          style={getConnectorHandleStyle(
+            side,
+            isActiveSelected,
+            handlePointerEvents,
+            handleStyleExtras?.[side]
+          )}
         />
       ))}
     </div>

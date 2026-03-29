@@ -39,6 +39,10 @@ function createTranslator(fn: (key: string, options?: Record<string, unknown>) =
 describe('useFlowEditorActions', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
+        vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback): number => {
+            callback(0);
+            return 1;
+        });
         Object.assign(navigator, {
             clipboard: {
                 writeText: vi.fn().mockResolvedValue(undefined),

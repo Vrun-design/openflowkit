@@ -26,12 +26,12 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ imageUrl, onChange }) 
             <div className="flex flex-col gap-3">
 
                 {imageUrl ? (
-                    <div className="relative group overflow-hidden rounded-[var(--radius-lg)] border border-slate-200">
+                    <div className="relative group overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-brand-border)]">
                         <img src={imageUrl} className="w-full h-32 object-cover opacity-90" alt="attached" />
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                                 onClick={() => onChange(undefined)}
-                                className="rounded-[var(--radius-sm)] bg-red-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600"
+                                className="rounded-[var(--radius-sm)] border border-red-500/20 bg-red-500/90 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500"
                             >
                                 Remove
                             </button>
@@ -40,7 +40,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ imageUrl, onChange }) 
                 ) : (
                     <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="flex w-full flex-col items-center gap-2 rounded-[var(--radius-lg)] border-2 border-dashed border-slate-300 py-6 text-sm text-slate-500 transition-all hover:border-indigo-400 hover:bg-slate-50 hover:text-indigo-600"
+                        className="flex w-full flex-col items-center gap-2 rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-4 py-6 text-sm text-[var(--brand-secondary)] transition-all hover:border-[var(--brand-primary-300)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-primary)]"
                     >
                         <Upload className="w-5 h-5" />
                         <span>Click to Upload Image</span>

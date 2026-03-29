@@ -43,7 +43,10 @@ export interface CodeToArchitectureOptions {
   language: SupportedLanguage;
 }
 
-export function buildCodeToArchitecturePrompt({ code, language }: CodeToArchitectureOptions): string {
+export function buildCodeToArchitecturePrompt({
+  code,
+  language,
+}: CodeToArchitectureOptions): string {
   return `Analyze this ${LANGUAGE_LABELS[language]} source code and generate a clean architecture diagram.
 
 Identify the main modules, services, classes, functions, and their dependencies. Focus on the high-level structure — not every line of code, only meaningful architectural components and relationships.
@@ -60,4 +63,23 @@ SOURCE CODE (${LANGUAGE_LABELS[language]}):
 \`\`\`${language}
 ${code}
 \`\`\``;
+}
+
+export function buildCodebaseToArchitecturePrompt(codebaseSummary: string): string {
+  return `Analyze this codebase structure and dependency graph, then generate a clean architecture diagram.
+
+The codebase was analyzed statically — file imports and dependencies were parsed automatically. Use this structural data to create a meaningful architecture overview.
+
+Guidelines:
+- Use [section] containers for top-level directories/modules (e.g. "src/api", "src/auth", "src/frontend")
+- Use [system] nodes for key files or modules that serve as services, controllers, models, or utilities
+- Use [browser] or [mobile] nodes for frontend entry points if present
+- Use [process] nodes for key workflows (e.g. authentication flow, data pipeline)
+- Show dependency edges between modules — label them with what the import provides
+- Group related modules that are heavily connected
+- Focus on the highest-level picture — not every file, just the important ones
+- Entry points should be prominent (they're the app's starting points)
+
+CODEBASE ANALYSIS:
+${codebaseSummary}`;
 }

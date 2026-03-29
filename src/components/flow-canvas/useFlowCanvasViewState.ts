@@ -5,6 +5,7 @@ import {
     isLargeGraphSafetyActive,
     shouldEnableViewportCulling,
 } from './largeGraphSafetyMode';
+import { getNodeParentId } from '@/lib/nodeParent';
 
 interface FlowCanvasViewStateParams {
     nodes: FlowNode[];
@@ -52,9 +53,54 @@ function applyLayerStateToNode(node: FlowNode, layerById: Map<string, Layer>): F
     };
 }
 
+function inheritSectionState(node: FlowNode, nodeById: Map<string, FlowNode>): {
+    hidden: boolean;
+    locked: boolean;
+} {
+    let hidden = node.data?.sectionHidden === true;
+    let locked = node.data?.sectionLocked === true;
+    let currentParentId = getNodeParentId(node);
+
+    while (currentParentId) {
+        const parent = nodeById.get(currentParentId);
+        if (!parent) {
+            break;
+        }
+
+        hidden = hidden || parent.data?.sectionHidden === true;
+        locked = locked || parent.data?.sectionLocked === true;
+        currentParentId = getNodeParentId(parent);
+    }
+
+    return { hidden, locked };
+}
+
 function getLayerAdjustedNodes(nodes: FlowNode[], layers: Layer[]): FlowNode[] {
     const layerById = buildLayerLookup(layers);
-    return nodes.map((node) => applyLayerStateToNode(node, layerById));
+    const nodeById = new Map(nodes.map((node) => [node.id, node]));
+
+    return nodes.map((node) => {
+        const layerAdjustedNode = applyLayerStateToNode(node, layerById);
+        const inheritedState = inheritSectionState(node, nodeById);
+        const nextHidden = layerAdjustedNode.hidden || inheritedState.hidden;
+        const nextDraggable = Boolean(layerAdjustedNode.draggable) && !inheritedState.locked;
+
+        if (
+            layerAdjustedNode.hidden === nextHidden
+            && layerAdjustedNode.draggable === nextDraggable
+            && layerAdjustedNode.selectable === !inheritedState.hidden
+        ) {
+            return layerAdjustedNode;
+        }
+
+        return {
+            ...layerAdjustedNode,
+            hidden: nextHidden,
+            selected: nextHidden ? false : layerAdjustedNode.selected,
+            selectable: !inheritedState.hidden,
+            draggable: nextDraggable,
+        };
+    });
 }
 
 function getVisibleEdges(nodes: FlowNode[], edges: FlowEdge[]): FlowEdge[] {

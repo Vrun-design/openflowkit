@@ -67,8 +67,8 @@ export const IconPicker: React.FC<IconPickerProps> = ({
                         className={`
                             h-full w-full p-2 rounded-lg flex items-center justify-center transition-all
                             ${selectedIcon === 'none'
-                                ? 'bg-red-100 text-red-600 ring-1 ring-red-400'
-                                : 'hover:bg-white hover:shadow-sm text-slate-400'
+                                ? 'bg-red-500/10 text-red-400 ring-1 ring-red-500/30'
+                                : 'text-[var(--brand-secondary-light)] hover:bg-[var(--brand-surface)] hover:shadow-sm'
                             }
                         `}
                         aria-label="No Icon"
@@ -99,19 +99,19 @@ export const IconPicker: React.FC<IconPickerProps> = ({
             <div className="flex items-center gap-2">
                 {customIconUrl ? (
                     <div className="flex items-center gap-2 w-full">
-                        <div className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
+                        <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-[var(--color-brand-border)] bg-[var(--brand-surface)]">
                             <img src={customIconUrl} alt="custom" className="w-5 h-5 object-contain" />
                         </div>
-                        <span className="text-xs text-slate-500 flex-1">Custom icon</span>
+                        <span className="flex-1 text-xs text-[var(--brand-secondary)]">Custom icon</span>
                         <button
                             onClick={() => onCustomIconChange(undefined)}
-                            className="text-[10px] px-2 py-0.5 rounded-full bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 transition-colors"
+                            className="rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-[10px] text-red-400 transition-colors hover:bg-red-500/15"
                         >
                             Remove
                         </button>
                     </div>
                 ) : (
-                    <label className="flex items-center gap-2 w-full px-3 py-2 border border-dashed border-slate-300 rounded-[var(--brand-radius)] hover:bg-[var(--brand-background)] hover:border-[var(--brand-primary-400)] transition-all cursor-pointer text-xs text-[var(--brand-secondary)] hover:text-[var(--brand-primary)]">
+                    <label className="flex w-full cursor-pointer items-center gap-2 rounded-[var(--brand-radius)] border border-dashed border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-2 text-xs text-[var(--brand-secondary)] transition-all hover:border-[var(--brand-primary-400)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-primary)]">
                         <Upload className="w-3.5 h-3.5" />
                         <span>Upload custom icon</span>
                         <input

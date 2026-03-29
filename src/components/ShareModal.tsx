@@ -83,7 +83,7 @@ export function ShareModal({
                 aria-labelledby="share-modal-title"
                 aria-describedby="share-modal-description"
                 data-testid="share-panel"
-                className="w-full max-w-md overflow-hidden border border-slate-200/70 bg-white shadow-[var(--shadow-overlay)] animate-in zoom-in-95 duration-200"
+                className="w-full max-w-md overflow-hidden border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-[var(--shadow-overlay)] animate-in zoom-in-95 duration-200"
                 style={{ borderRadius: modalRadius }}
                 onClick={(event) => event.stopPropagation()}
             >
@@ -91,7 +91,7 @@ export function ShareModal({
                     <button
                         ref={closeButtonRef}
                         onClick={onClose}
-                        className="absolute right-5 top-5 rounded-full p-2 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-600 active:scale-95"
+                        className="absolute right-5 top-5 rounded-full p-2 text-[var(--brand-secondary)] transition-all hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)] active:scale-95"
                         aria-label={t('share.close', { defaultValue: SHARE_MODAL_COPY.close })}
                     >
                         <X size={18} />
@@ -110,33 +110,33 @@ export function ShareModal({
                             <Share2 className="h-6 w-6" />
                         </div>
 
-                        <h2 id="share-modal-title" className="text-xl font-bold tracking-tight text-slate-900">
+                        <h2 id="share-modal-title" className="text-xl font-bold tracking-tight text-[var(--brand-text)]">
                             {t('share.title', { defaultValue: SHARE_MODAL_COPY.title })}
                             <span className="ml-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-amber-700">
                                 {t('share.betaBadge', { defaultValue: SHARE_MODAL_COPY.betaBadge })}
                             </span>
                         </h2>
-                        <p id="share-modal-description" className="mt-2 max-w-[300px] text-sm leading-relaxed text-slate-500">
+                        <p id="share-modal-description" className="mt-2 max-w-[300px] text-sm leading-relaxed text-[var(--brand-secondary)]">
                             {t('share.description', { defaultValue: SHARE_MODAL_COPY.description })}
                         </p>
                     </div>
 
                     <div className="space-y-4">
-                        <div className="rounded-[var(--radius-lg)] border border-slate-200 bg-slate-50 px-4 py-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                        <div className="rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-4 py-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-secondary)]">
                                 {t('share.roomId', { defaultValue: SHARE_MODAL_COPY.roomLabel })}
                             </div>
-                            <div className="mt-2 break-all font-mono text-sm text-slate-700">{roomId}</div>
+                            <div className="mt-2 break-all font-mono text-sm text-[var(--brand-text)]">{roomId}</div>
                         </div>
 
-                        <div className="rounded-[var(--radius-lg)] border border-slate-200 bg-white px-4 py-3">
-                            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                        <div className="rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-4 py-3">
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-secondary)]">
                                 {t('share.link', { defaultValue: SHARE_MODAL_COPY.linkLabel })}
                             </div>
-                            <div className="mt-2 rounded-[var(--radius-md)] border border-slate-200 bg-slate-50 px-3 py-2">
-                                <p className="break-all font-mono text-xs leading-5 text-slate-700">{inviteUrl}</p>
+                            <div className="mt-2 rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-3 py-2">
+                                <p className="break-all font-mono text-xs leading-5 text-[var(--brand-text)]">{inviteUrl}</p>
                             </div>
-                            <p className="mt-2 text-xs leading-5 text-slate-500">{statusMessage}</p>
+                            <p className="mt-2 text-xs leading-5 text-[var(--brand-secondary)]">{statusMessage}</p>
                         </div>
 
                         <Button
@@ -151,7 +151,7 @@ export function ShareModal({
                                 : t('share.copyLink', { defaultValue: SHARE_MODAL_COPY.copyLink })}
                         </Button>
 
-                        <p className="text-center text-xs text-slate-400">
+                        <p className="text-center text-xs text-[var(--brand-secondary)]">
                             {t('share.footerNote', { defaultValue: SHARE_MODAL_COPY.footerNote })}
                         </p>
                     </div>

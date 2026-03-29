@@ -62,7 +62,7 @@ export const TemplatesView = ({
                 onClose={onClose}
             />
 
-            <div className="border-b border-slate-200/70 bg-white/90 px-4 py-3 backdrop-blur-sm">
+            <div className="border-b border-[var(--color-brand-border)]/70 bg-[var(--brand-surface)]/90 px-4 py-3 backdrop-blur-sm">
                 <SearchField
                     value={tSearch}
                     onChange={(e) => setTSearch(e.target.value)}
@@ -90,20 +90,20 @@ export const TemplatesView = ({
                                     key={template.id}
                                     type="button"
                                     onClick={() => handleSelect(template)}
-                                    className="group flex aspect-square flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-slate-200 bg-white px-3 py-4 text-center transition-colors hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-primary-50)]"
+                                    className="group flex aspect-square flex-col items-center justify-center gap-3 rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-4 text-center transition-colors hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-primary-50)]"
                                 >
-                                    <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] border border-slate-200 bg-slate-50 text-slate-600 transition-colors group-hover:border-[var(--brand-primary-200)] group-hover:bg-white group-hover:text-[var(--brand-primary)]">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] text-[var(--brand-secondary)] transition-colors group-hover:border-[var(--brand-primary-200)] group-hover:bg-[var(--brand-surface)] group-hover:text-[var(--brand-primary)]">
                                         <Icon className="h-5 w-5" />
                                     </div>
-                                    <div className="text-xs font-semibold text-slate-700 group-hover:text-[var(--brand-primary-900)]">
+                                    <div className="text-xs font-semibold text-[var(--brand-text)] group-hover:text-[var(--brand-primary-900)]">
                                         {template.name}
                                     </div>
                                     {template.useCase ? (
-                                        <div className="line-clamp-2 text-[10px] leading-4 text-slate-500">
+                                        <div className="line-clamp-2 text-[10px] leading-4 text-[var(--brand-secondary)]">
                                             {template.useCase}
                                         </div>
                                     ) : null}
-                                    <div className="text-[10px] font-medium text-slate-400 opacity-60 uppercase tracking-widest">
+                                    <div className="text-[10px] font-medium text-[var(--brand-secondary)] opacity-60 uppercase tracking-widest">
                                         {template.category}
                                     </div>
                                 </button>
@@ -112,7 +112,7 @@ export const TemplatesView = ({
                     </div>
                 ) : null}
                 {filteredTemplates.length === 0 && (
-                    <div className="rounded-[var(--radius-lg)] border border-dashed border-slate-200 bg-white/80 px-4 py-10 text-center text-sm text-slate-400">
+                    <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-brand-border)] bg-[var(--brand-surface)]/80 px-4 py-10 text-center text-sm text-[var(--brand-secondary)]">
                         {t('commandBar.templates.noResults')}
                     </div>
                 )}

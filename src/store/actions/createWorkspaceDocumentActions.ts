@@ -50,6 +50,30 @@ function toFlowTabPages(document: FlowDocument): FlowTab[] {
     }));
 }
 
+function matchesLoadedPages(currentPages: FlowTab[], documentPages: FlowDocument['pages']): boolean {
+    if (currentPages.length !== documentPages.length) {
+        return false;
+    }
+
+    return currentPages.every((page, index) => {
+        const documentPage = documentPages[index];
+        if (!documentPage) {
+            return false;
+        }
+
+        return (
+            page.id === documentPage.id &&
+            page.name === documentPage.name &&
+            page.diagramType === documentPage.diagramType &&
+            page.updatedAt === documentPage.updatedAt &&
+            page.nodes === documentPage.nodes &&
+            page.edges === documentPage.edges &&
+            page.playback === documentPage.playback &&
+            page.history === documentPage.history
+        );
+    });
+}
+
 export function createWorkspaceDocumentActions(set: SetFlowState, get: GetFlowState): Pick<
     FlowState,
     'setDocuments' | 'setActiveDocumentId' | 'createDocument' | 'renameDocument' | 'duplicateDocument' | 'deleteDocumentRecord'
@@ -57,7 +81,7 @@ export function createWorkspaceDocumentActions(set: SetFlowState, get: GetFlowSt
     return {
         setDocuments: (documents) => set({ documents }),
         setActiveDocumentId: (id) => {
-            const { documents } = get();
+            const { documents, activeDocumentId, activeTabId, tabs, nodes, edges } = get();
             const document = documents.find((entry) => entry.id === id);
             if (!document) {
                 return;
@@ -66,6 +90,16 @@ export function createWorkspaceDocumentActions(set: SetFlowState, get: GetFlowSt
             const pages = toFlowTabPages(document);
             const activePage = pages.find((page) => page.id === document.activePageId) ?? pages[0];
             if (!activePage) {
+                return;
+            }
+
+            const activePageAlreadyLoaded =
+                activeDocumentId === document.id &&
+                activeTabId === activePage.id &&
+                matchesLoadedPages(tabs, document.pages) &&
+                nodes === activePage.nodes &&
+                edges === activePage.edges;
+            if (activePageAlreadyLoaded) {
                 return;
             }
 

@@ -64,7 +64,7 @@ export function SwatchPicker({
                             className={`flex ${sizeClass} items-center justify-center rounded-[var(--brand-radius)] border transition-all hover:-translate-y-0.5 ${
                                 selected
                                     ? 'border-[var(--brand-primary)] shadow-sm'
-                                    : 'border-slate-200 hover:border-slate-300'
+                                    : 'border-[var(--color-brand-border)] hover:border-[var(--brand-secondary)]'
                             }`}
                             style={{ backgroundColor: item.backgroundColor }}
                         >
@@ -86,7 +86,7 @@ export function SwatchPicker({
             </div>
 
             {showCaption && caption && (
-                <div className="text-xs font-medium text-slate-500">
+                <div className="text-xs font-medium text-[var(--brand-secondary)]">
                     {caption}
                 </div>
             )}

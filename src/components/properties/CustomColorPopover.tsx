@@ -83,7 +83,7 @@ export function CustomColorPopover({
     return createPortal(
         <div
             ref={popupRef}
-            className="fixed z-[100] overflow-y-auto rounded-[var(--radius-lg)] border border-slate-200 bg-white p-3 shadow-[0_18px_48px_rgba(15,23,42,0.16)]"
+            className="fixed z-[100] overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-3 shadow-[0_18px_48px_rgba(15,23,42,0.16)]"
             style={{
                 top: position.top,
                 left: position.left,
@@ -92,12 +92,12 @@ export function CustomColorPopover({
             }}
         >
             <div className="mb-2 flex items-center justify-between gap-3">
-                <div className="text-xs font-medium text-slate-500">{title}</div>
+                <div className="text-xs font-medium text-[var(--brand-secondary)]">{title}</div>
                 <button
                     type="button"
                     aria-label={closeLabel}
                     onClick={onRequestClose}
-                    className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                    className="rounded-md p-1 text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
                 >
                     <X className="h-4 w-4" />
                 </button>
@@ -121,7 +121,7 @@ export function CustomColorPopover({
                     onChange={(hue) => onChange(hslToHex(hue, customHsl.s, customHsl.l))}
                 />
 
-                <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 text-xs text-slate-500">
+                <div className="grid grid-cols-[1fr_auto_auto] items-center gap-2 text-xs text-[var(--brand-secondary)]">
                     <span>HEX</span>
                     <input
                         value={customHex.slice(1).toUpperCase()}
@@ -239,7 +239,7 @@ function ColorField({ ariaLabel, hue, saturation, lightness, onChange }: ColorFi
             ref={fieldRef}
             aria-label={ariaLabel}
             onPointerDown={handlePointerDown}
-            className="relative h-44 cursor-crosshair overflow-hidden rounded-[var(--brand-radius)] border border-slate-200"
+            className="relative h-44 cursor-crosshair overflow-hidden rounded-[var(--brand-radius)] border border-[var(--color-brand-border)]"
             style={{ backgroundColor: hslToHex(hue, 100, 50) }}
         >
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff,transparent)]" />

@@ -84,4 +84,31 @@ describe('computeFlowCanvasViewState', () => {
         expect(result.safetyModeActive).toBe(true);
         expect(result.effectiveShowGrid).toBe(false);
     });
+
+    it('inherits hidden and locked state from parent sections', () => {
+        const nodes = [
+            createNode('section-1', {
+                type: 'section',
+                data: { label: 'Section', sectionHidden: true, sectionLocked: true },
+            }),
+            createNode('child-1', {
+                parentId: 'section-1',
+                extent: 'parent',
+                data: { label: 'Child' },
+            }),
+        ];
+
+        const result = computeFlowCanvasViewState({
+            nodes,
+            edges: [createEdge('edge-1', 'child-1', 'child-1')],
+            layers: [{ id: 'default', name: 'Default', visible: true, locked: false }],
+            showGrid: true,
+            largeGraphSafetyMode: 'off',
+            largeGraphSafetyProfile: 'balanced',
+        });
+
+        expect(result.layerAdjustedNodes[1]?.hidden).toBe(true);
+        expect(result.layerAdjustedNodes[1]?.draggable).toBe(false);
+        expect(result.effectiveEdges).toHaveLength(0);
+    });
 });

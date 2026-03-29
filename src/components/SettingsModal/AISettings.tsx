@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useFlowStore, AIProvider, AISettingsStorageMode } from '../../store';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
@@ -17,36 +17,23 @@ import { buildDocsSiteUrl } from '@/docs/docsRoutes';
 
 // Helper for logo with fallback
 function ProviderIcon({ p, isSelected }: { p: ProviderMeta; isSelected: boolean }): React.ReactElement {
-    const [imgError, setImgError] = useState(false);
-
-    if (imgError) {
-        return <span className="text-2xl" style={{ color: isSelected ? 'var(--brand-primary)' : undefined }}>{p.icon}</span>;
-    }
-
-    if (isSelected) {
-        return (
-            <div
-                className="w-8 h-8 bg-[var(--brand-primary)]"
-                style={{
-                    maskImage: `url(${p.logoPath})`,
-                    WebkitMaskImage: `url(${p.logoPath})`,
-                    maskSize: 'contain',
-                    WebkitMaskSize: 'contain',
-                    maskRepeat: 'no-repeat',
-                    WebkitMaskRepeat: 'no-repeat',
-                    maskPosition: 'center',
-                    WebkitMaskPosition: 'center',
-                }}
-            />
-        );
-    }
+    const iconColor = isSelected ? 'var(--brand-primary)' : 'var(--brand-secondary)';
 
     return (
-        <img
-            src={p.logoPath}
-            alt={p.name}
-            className="w-8 h-8 object-contain"
-            onError={() => setImgError(true)}
+        <div
+            aria-hidden="true"
+            className="h-8 w-8"
+            style={{
+                backgroundColor: iconColor,
+                maskImage: `url(${p.logoPath})`,
+                WebkitMaskImage: `url(${p.logoPath})`,
+                maskSize: 'contain',
+                WebkitMaskSize: 'contain',
+                maskRepeat: 'no-repeat',
+                WebkitMaskRepeat: 'no-repeat',
+                maskPosition: 'center',
+                WebkitMaskPosition: 'center',
+            }}
         />
     );
 }
@@ -58,7 +45,7 @@ function Step({ n, text }: { n: number; text: string }): React.ReactElement {
             <span className="w-4 h-4 rounded-full bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] text-[9px] font-bold flex items-center justify-center shrink-0 mt-px">
                 {n}
             </span>
-            <span className="text-[11px] text-slate-600 leading-tight">{text}</span>
+            <span className="text-[11px] text-[var(--brand-secondary)] leading-tight">{text}</span>
         </div>
     );
 }
@@ -113,10 +100,10 @@ export function AISettings(): React.ReactElement {
     const providerRisk = getProviderRiskPresentation(currentProvider);
     const providerRiskIcon = providerRisk.tone === 'warning' ? AlertCircle : Info;
     const providerRiskClassName = providerRisk.tone === 'warning'
-        ? 'border-amber-200 bg-amber-50 text-amber-900'
-        : 'border-slate-200 bg-slate-50 text-slate-800';
+        ? 'border-amber-500/25 bg-amber-500/10 text-amber-100'
+        : 'border-[var(--color-brand-border)] bg-[var(--brand-background)] text-[var(--brand-text)]';
     const providerRiskIconClassName = providerRisk.tone === 'warning'
-        ? 'text-amber-500'
+        ? 'text-amber-400'
         : 'text-[var(--brand-primary)]';
     const customBaseUrlError = currentProvider === 'custom' && readiness.blockingIssue?.detail.includes('base URL')
         ? readiness.blockingIssue.detail
@@ -140,12 +127,12 @@ export function AISettings(): React.ReactElement {
             {/* Header Text */}
             <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-base font-semibold text-slate-800">{t('settingsModal.flowpilotConfigurations', { defaultValue: 'Flowpilot Configuration' })}</h3>
+                    <h3 className="text-base font-semibold text-[var(--brand-text)]">{t('settingsModal.flowpilotConfigurations', { defaultValue: 'Flowpilot Configuration' })}</h3>
                     <a href={buildDocsSiteUrl('prompting-agents')} target="_blank" rel="noopener noreferrer" className="text-[10px] font-semibold text-[var(--brand-primary)] hover:underline flex items-center gap-1">
                         Prompting Guide <ExternalLink className="w-3 h-3" />
                     </a>
                 </div>
-                <p className="text-xs text-slate-500">{t('ai.settingsSubtitle')}</p>
+                <p className="text-xs text-[var(--brand-secondary)]">{t('ai.settingsSubtitle')}</p>
             </div>
 
             {/* Provider Section - Logo Dock */}
@@ -158,7 +145,7 @@ export function AISettings(): React.ReactElement {
 
                         const buttonClass = isSelected
                             ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/8 ring-2 ring-[var(--brand-primary)]/40 shadow-md'
-                            : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50';
+                            : 'border-[var(--color-brand-border)] bg-[var(--brand-surface)] hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)]';
 
                         const iconWrapperClass = isSelected
                             ? 'scale-100'
@@ -166,7 +153,7 @@ export function AISettings(): React.ReactElement {
 
                         const nameClass = isSelected
                             ? 'text-[var(--brand-primary)]'
-                            : 'text-slate-400';
+                            : 'text-[var(--brand-secondary)]';
 
                         return (
                             <button
@@ -186,13 +173,15 @@ export function AISettings(): React.ReactElement {
                         );
                     })}
                 </div>
-                <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-slate-200 bg-white px-3 py-2.5">
-                    <img src={providerMeta.logoPath} alt={providerMeta.name} className="w-6 h-6 object-contain shrink-0" />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-slate-800">{providerMeta.name}</p>
-                        <p className="text-[10px] text-slate-400 truncate">{t(`settingsModal.ai.providers.${currentProvider}.hint`)}</p>
+                <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-2.5">
+                    <div className="shrink-0 scale-75 origin-left">
+                        <ProviderIcon p={providerMeta} isSelected={false} />
                     </div>
-                    {providerMeta.id === 'custom' && <span className="rounded-[var(--radius-xs)] border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">BYOK</span>}
+                    <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-[var(--brand-text)]">{providerMeta.name}</p>
+                        <p className="text-[10px] text-[var(--brand-secondary)] truncate">{t(`settingsModal.ai.providers.${currentProvider}.hint`)}</p>
+                    </div>
+                    {providerMeta.id === 'custom' && <span className="rounded-[var(--radius-xs)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-1.5 py-0.5 text-[9px] font-medium text-[var(--brand-secondary)]">BYOK</span>}
                 </div>
                 <div className={`rounded-[var(--radius-lg)] border px-3 py-3 ${providerRiskClassName}`}>
                     <div className="flex items-start gap-2">
@@ -211,7 +200,7 @@ export function AISettings(): React.ReactElement {
                 </div>
             </div>
 
-            <div className="h-px bg-slate-100" />
+            <div className="h-px bg-[var(--brand-background)]" />
 
             {/* Config Section */}
             <div className="space-y-6">
@@ -248,7 +237,7 @@ export function AISettings(): React.ReactElement {
                 <div className="space-y-3">
                     <Label>{providerMeta.name} {t('settingsModal.ai.apiKey')}</Label>
                     <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-[var(--brand-secondary)]">
                             <Lock className="w-4 h-4" />
                         </div>
                         <Input
@@ -268,11 +257,11 @@ export function AISettings(): React.ReactElement {
                                 className={`rounded-[var(--radius-lg)] border px-3 py-3 text-left transition-colors ${
                                     storageMode === 'local'
                                         ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/6'
-                                        : 'border-slate-200 bg-white hover:border-slate-300'
+                                        : 'border-[var(--color-brand-border)] bg-[var(--brand-surface)] hover:border-[var(--brand-secondary)]'
                                 }`}
                             >
-                                <p className="text-xs font-semibold text-slate-800">Persistent</p>
-                                <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                                <p className="text-xs font-semibold text-[var(--brand-text)]">Persistent</p>
+                                <p className="mt-1 text-[11px] leading-5 text-[var(--brand-secondary)]">
                                     Keep this key on this browser until you clear it manually.
                                 </p>
                             </button>
@@ -282,30 +271,30 @@ export function AISettings(): React.ReactElement {
                                 className={`rounded-[var(--radius-lg)] border px-3 py-3 text-left transition-colors ${
                                     storageMode === 'session'
                                         ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/6'
-                                        : 'border-slate-200 bg-white hover:border-slate-300'
+                                        : 'border-[var(--color-brand-border)] bg-[var(--brand-surface)] hover:border-[var(--brand-secondary)]'
                                 }`}
                             >
-                                <p className="text-xs font-semibold text-slate-800">Session only</p>
-                                <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                                <p className="text-xs font-semibold text-[var(--brand-text)]">Session only</p>
+                                <p className="mt-1 text-[11px] leading-5 text-[var(--brand-secondary)]">
                                     Forget this key when the browser session closes. Better for shared or temporary machines.
                                 </p>
                             </button>
                         </div>
-                        <p className="text-[11px] leading-5 text-slate-500">
+                        <p className="text-[11px] leading-5 text-[var(--brand-secondary)]">
                             {storageMode === 'session'
                                 ? 'Session-only mode stores AI settings in session storage and clears them when the browser session ends.'
                                 : 'Persistent mode stores AI settings in local browser storage until you remove them or clear site data.'}
                         </p>
                     </div>
                     {aiSettings.apiKey && (
-                        <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-slate-200 bg-slate-50 px-3 py-2.5">
-                            <p className="text-[11px] leading-5 text-slate-500">
+                        <div className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-3 py-2.5">
+                            <p className="text-[11px] leading-5 text-[var(--brand-secondary)]">
                                 Clear the saved API key from this browser without resetting the selected provider or model.
                             </p>
                             <button
                                 type="button"
                                 onClick={() => setAISettings({ apiKey: undefined })}
-                                className="shrink-0 rounded-[var(--radius-sm)] border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                                className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--brand-text)] transition-colors hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)]"
                             >
                                 Forget key
                             </button>
@@ -314,9 +303,9 @@ export function AISettings(): React.ReactElement {
 
                     {/* Show setup guide only when the key is empty */}
                     {!aiSettings.apiKey && providerMeta.keyLink && (
-                        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-slate-200 bg-slate-50">
-                            <div className="px-3 py-2 border-b border-slate-200 flex items-center justify-between">
-                                <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('settingsModal.ai.howToGetKey')}</span>
+                        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-background)]">
+                            <div className="px-3 py-2 border-b border-[var(--color-brand-border)] flex items-center justify-between">
+                                <span className="text-[10px] font-semibold text-[var(--brand-secondary)] uppercase tracking-wider">{t('settingsModal.ai.howToGetKey')}</span>
                                 <a
                                     href={providerMeta.keyLink}
                                     target="_blank"
@@ -338,21 +327,21 @@ export function AISettings(): React.ReactElement {
                 {/* Custom Base URL */}
                 {currentProvider === 'custom' && (
                     <div className="space-y-3">
-                        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-slate-200 bg-slate-50">
-                            <div className="px-3 py-2 border-b border-slate-200">
-                                <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('settingsModal.ai.customEndpointTitle')}</span>
+                        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-background)]">
+                            <div className="px-3 py-2 border-b border-[var(--color-brand-border)]">
+                                <span className="text-[10px] font-semibold text-[var(--brand-secondary)] uppercase tracking-wider">{t('settingsModal.ai.customEndpointTitle')}</span>
                             </div>
                             <div className="px-3 py-2.5 space-y-1.5">
-                                <p className="text-[11px] text-slate-600 leading-snug">
+                                <p className="text-[11px] text-[var(--brand-secondary)] leading-snug">
                                     <Trans i18nKey="settingsModal.ai.customEndpointText">
-                                        Any <span className="font-semibold text-slate-800">OpenAI-compatible</span> API endpoint — local or remote. Great for:
+                                        Any <span className="font-semibold text-[var(--brand-text)]">OpenAI-compatible</span> API endpoint — local or remote. Great for:
                                     </Trans>
                                 </p>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mt-2">
                                     {['ollama', 'lmStudio', 'together'].map(id => (
-                                        <div key={id} className="flex flex-col items-center rounded-[var(--radius-sm)] border border-slate-200 bg-white px-2 py-1.5 text-center">
-                                            <span className="text-[10px] font-semibold text-slate-700">{t(`settingsModal.ai.customEndpoints.${id}.name`)}</span>
-                                            <span className="text-[9px] text-slate-400">{t(`settingsModal.ai.customEndpoints.${id}.hint`)}</span>
+                                        <div key={id} className="flex flex-col items-center rounded-[var(--radius-sm)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-2 py-1.5 text-center">
+                                            <span className="text-[10px] font-semibold text-[var(--brand-text)]">{t(`settingsModal.ai.customEndpoints.${id}.name`)}</span>
+                                            <span className="text-[9px] text-[var(--brand-secondary)]">{t(`settingsModal.ai.customEndpoints.${id}.hint`)}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -367,9 +356,9 @@ export function AISettings(): React.ReactElement {
                             error={customBaseUrlError}
                             helperText="Use a full http:// or https:// base URL."
                         />
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-[11px] text-[var(--brand-secondary)]">
                             <Trans i18nKey="settingsModal.ai.customEndpointMustSupport">
-                                Must support <code className="rounded-[var(--radius-xs)] bg-slate-100 px-1 text-[10px]">POST /chat/completions</code> (OpenAI format)
+                                Must support <code className="rounded-[var(--radius-xs)] bg-[var(--brand-background)] px-1 text-[10px]">POST /chat/completions</code> (OpenAI format)
                             </Trans>
                         </p>
                     </div>
@@ -378,20 +367,20 @@ export function AISettings(): React.ReactElement {
 
             {/* Privacy Section - Improved Visibility */}
             <div className="pt-2">
-                <div className="rounded-[var(--radius-lg)] border border-slate-200 bg-slate-50 p-4 shadow-sm">
-                    <div className="flex items-center gap-2 mb-3 text-slate-800">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3 text-[var(--brand-text)]">
                         <Shield className="w-4 h-4 text-[var(--brand-primary)]" />
                         <span className="text-xs font-semibold uppercase tracking-wider">{t('settingsModal.ai.privacyTitle')}</span>
                     </div>
                     <ul className="grid grid-cols-1 gap-2">
                         {BYOK_KEYS.map((item, i) => (
-                            <li key={i} className="flex gap-2 text-[11px] text-slate-600 items-start">
+                            <li key={i} className="flex gap-2 text-[11px] text-[var(--brand-secondary)] items-start">
                                 <Check className="w-3.5 h-3.5 text-green-600 shrink-0 mt-0.5" />
                                 <span className="leading-tight">{t(`settingsModal.ai.byok.${item}`)}</span>
                             </li>
                         ))}
                     </ul>
-                    <p className="mt-3 text-[11px] leading-5 text-slate-500">
+                    <p className="mt-3 text-[11px] leading-5 text-[var(--brand-secondary)]">
                         {storageMode === 'session'
                             ? 'AI settings stay only for this browser session. Close the browser to clear them, or clear the key manually if you are handing the machine to someone else.'
                             : 'AI settings stay on this browser and device until you remove them. Treat shared browsers as untrusted and clear or rotate keys when needed.'}

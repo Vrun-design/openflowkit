@@ -12,6 +12,10 @@ vi.mock('./GeneralSettings', () => ({
   GeneralSettings: () => <div>General content</div>,
 }));
 
+vi.mock('./CanvasSettings', () => ({
+  CanvasSettings: () => <div>Canvas settings content</div>,
+}));
+
 vi.mock('./AISettings', () => ({
   AISettings: () => <div>AI settings content</div>,
 }));
@@ -50,5 +54,12 @@ describe('SettingsModal', () => {
 
     expect(screen.getByText('AI settings content')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'AI' })).toBeInTheDocument();
+  });
+
+  it('renders the canvas settings tab when opened with the canvas tab selected', () => {
+    render(<SettingsModal isOpen onClose={vi.fn()} initialTab="canvas" />);
+
+    expect(screen.getByText('Canvas settings content')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Canvas' })).toBeInTheDocument();
   });
 });

@@ -170,7 +170,7 @@ export const SearchView = ({
                 onClose={onClose}
             />
 
-            <div className="px-4 py-2 border-b border-slate-100">
+            <div className="border-b border-[var(--color-brand-border)] px-4 py-2">
                 <SearchField
                     value={query.text}
                     onChange={e => setQuery((current) => ({ ...current, text: e.target.value }))}
@@ -178,14 +178,14 @@ export const SearchView = ({
                     placeholder={t('commandBar.search.placeholder')}
                     autoFocus
                 />
-                <div className="mt-3 rounded-[var(--radius-md)] border border-slate-200 bg-slate-50 p-3">
+                <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)]/70 p-3">
                     <SegmentedTabs
                         items={scopeItems}
                         value={scope}
                         onChange={(value) => setScope(value as 'current' | 'all')}
                         size="sm"
                     />
-                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--brand-secondary)]">
                         <Filter className="h-3.5 w-3.5" />
                         Query Selection
                     </div>
@@ -236,7 +236,7 @@ export const SearchView = ({
                         </button>
                         <button
                             onClick={() => setQuery(EMPTY_QUERY)}
-                            className="h-8 rounded-[var(--brand-radius)] border border-slate-300 bg-white px-3 text-xs"
+                            className="h-8 rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 text-xs text-[var(--brand-text)] hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)]"
                         >
                             Clear Query
                         </button>
@@ -250,13 +250,13 @@ export const SearchView = ({
                         />
                         <button
                             onClick={saveQueryPreset}
-                            className="h-8 rounded-[var(--brand-radius)] border border-slate-300 bg-white px-2 text-xs"
+                            className="h-8 rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-2 text-xs text-[var(--brand-text)] hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)]"
                         >
                             Save Preset
                         </button>
                         <button
                             onClick={deleteSelectedPreset}
-                            className="h-8 rounded-[var(--brand-radius)] border border-slate-300 bg-white px-2 text-xs"
+                            className="h-8 rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-2 text-xs text-[var(--brand-text)] hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)]"
                         >
                             Delete
                         </button>
@@ -269,7 +269,7 @@ export const SearchView = ({
                         className="mt-2"
                     />
                 </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                <div className="mt-2 flex items-center justify-between text-xs text-[var(--brand-secondary)]">
                     <span>
                         {t('commandBar.search.showingCount', { count: filteredNodes.length })}
                     </span>
@@ -284,7 +284,7 @@ export const SearchView = ({
                     <div
                         key={`${tabId}:${node.id}`}
                         onClick={() => handleSelectNode(node, tabId)}
-                        className="group flex items-center gap-3 p-3 rounded-[var(--radius-md)] hover:bg-slate-50 border border-transparent hover:border-slate-200 cursor-pointer transition-all"
+                        className="group flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-transparent p-3 transition-all hover:border-[var(--color-brand-border)] hover:bg-[var(--brand-background)]/70"
                     >
                         <div className={`w-8 h-8 rounded-[var(--radius-sm)] flex items-center justify-center shrink-0 text-white font-bold text-xs
                             ${node.type === 'start' ? 'bg-emerald-500' :
@@ -295,25 +295,25 @@ export const SearchView = ({
                             {getInitials(node.data?.label || node.type || '?')}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-slate-700 group-hover:text-[var(--brand-primary-700)] truncate">
+                            <h4 className="truncate text-sm font-medium text-[var(--brand-text)] group-hover:text-[var(--brand-primary-700)]">
                                 {node.data?.label || t('commandBar.search.untitled')}
                             </h4>
-                            <p className="text-xs text-slate-400 line-clamp-1">
+                            <p className="line-clamp-1 text-xs text-[var(--brand-secondary)]">
                                 {node.data?.subLabel || `${t('commandBar.search.type')}: ${node.type}`}
                             </p>
                         </div>
-                        <div className="text-[10px] text-slate-300 group-hover:text-slate-500 font-mono bg-slate-100 px-1.5 py-0.5 rounded">
+                        <div className="rounded bg-[var(--brand-surface)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--brand-secondary)]">
                             {node.id}
                         </div>
                         {scope === 'all' && (
-                            <div className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                            <div className="rounded bg-[var(--brand-surface)] px-1.5 py-0.5 text-[10px] text-[var(--brand-secondary)]">
                                 {tabName}
                             </div>
                         )}
                     </div>
                 ))}
                 {filteredNodes.length === 0 && (
-                    <div className="text-center py-8 text-slate-400 text-sm">{t('commandBar.search.noResults')}</div>
+                    <div className="py-8 text-center text-sm text-[var(--brand-secondary)]">{t('commandBar.search.noResults')}</div>
                 )}
             </div>
         </div>

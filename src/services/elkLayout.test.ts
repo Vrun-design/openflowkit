@@ -7,6 +7,7 @@ import {
   normalizeLayoutInputsForDeterminism,
   resolveLayoutedEdgeHandles,
   resolveLayoutPresetOptions,
+  shouldUseLightweightLayoutPostProcessing,
 } from './elkLayout';
 
 function createNode(id: string, parentId?: string): FlowNode {
@@ -159,6 +160,28 @@ describe('buildResolvedLayoutConfiguration', () => {
     expect(compact.layoutOptions['elk.layered.nodePlacement.favorStraightEdges']).toBe('true');
     expect(compact.layoutOptions['elk.layered.mergeEdges']).toBe('true');
     expect(compact.layoutOptions['elk.layered.unnecessaryBendpoints']).toBe('true');
+  });
+
+  it('applies more spacious layered heuristics for architecture diagrams', () => {
+    const standard = buildResolvedLayoutConfiguration({
+      algorithm: 'layered',
+      direction: 'LR',
+      spacing: 'normal',
+    });
+    const architecture = buildResolvedLayoutConfiguration({
+      algorithm: 'layered',
+      direction: 'LR',
+      spacing: 'normal',
+      diagramType: 'architecture',
+    });
+
+    expect(Number(architecture.dims.nodeNode)).toBeGreaterThan(Number(standard.dims.nodeNode));
+    expect(Number(architecture.dims.nodeLayer)).toBeGreaterThan(Number(standard.dims.nodeLayer));
+    expect(Number(architecture.dims.component)).toBeGreaterThan(Number(standard.dims.component));
+    expect(architecture.layoutOptions['elk.spacing.edgeNode']).toBe('24');
+    expect(architecture.layoutOptions['elk.spacing.edgeEdge']).toBe('18');
+    expect(architecture.layoutOptions['elk.layered.spacing.edgeEdgeBetweenLayers']).toBe('42');
+    expect(architecture.layoutOptions['elk.layered.nodePlacement.bk.fixedAlignment']).toBe('BALANCED');
   });
 });
 
@@ -424,5 +447,21 @@ describe('resolveLayoutedEdgeHandles', () => {
 
     expect(rerouted.every((edge) => edge.sourceHandle === 'right')).toBe(true);
     expect(rerouted.every((edge) => edge.targetHandle === 'left')).toBe(true);
+  });
+});
+
+describe('shouldUseLightweightLayoutPostProcessing', () => {
+  it('keeps smaller standard diagrams on the full post-processing path', () => {
+    expect(shouldUseLightweightLayoutPostProcessing(20, 24, 'flowchart')).toBe(false);
+  });
+
+  it('switches larger diagrams to the lightweight post-processing path', () => {
+    expect(shouldUseLightweightLayoutPostProcessing(48, 20, 'flowchart')).toBe(true);
+    expect(shouldUseLightweightLayoutPostProcessing(16, 72, 'flowchart')).toBe(true);
+  });
+
+  it('switches architecture diagrams earlier because icon-heavy edge normalization is expensive', () => {
+    expect(shouldUseLightweightLayoutPostProcessing(24, 20, 'architecture')).toBe(true);
+    expect(shouldUseLightweightLayoutPostProcessing(12, 36, 'infrastructure')).toBe(true);
   });
 });

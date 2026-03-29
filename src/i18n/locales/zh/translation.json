@@ -52,6 +52,7 @@
     "bringToFront": "移至顶层",
     "sendToBack": "移至底层",
     "reverseDirection": "反转方向",
+    "editLabel": "编辑标签",
     "deleteConnection": "删除连接",
     "itemsSelected": "已选 {{count}} 项",
     "align": "对齐",
@@ -65,7 +66,7 @@
     "distributeHorizontally": "水平分布",
     "distributeVertically": "垂直分布",
     "group": "分组",
-    "upload": "Upload",
+    "upload": "上传",
     "rename": "重命名"
   },
   "nav": {
@@ -87,7 +88,8 @@
     "versionHistory": "版本历史",
     "loadJSON": "加载 JSON",
     "playbackMode": "回放模式",
-    "privacyMessage": "您的图表只留在您这里，不会发送到我们的服务器。"
+    "privacyMessage": "您的图表只留在您这里，不会发送到我们的服务器。",
+    "templates": "模板"
   },
   "menu": {
     "file": "文件",
@@ -110,6 +112,7 @@
   },
   "export": {
     "title": "导出",
+    "subtitle": "选择一种格式和操作。",
     "png": "导出为 PNG",
     "jpeg": "导出为 JPEG",
     "json": "导出为 JSON",
@@ -122,10 +125,11 @@
     "jsonLabel": "JSON File",
     "hintDownload": "Download",
     "openflowdslLabel": "{{appName}} DSL",
-    "hintClipboard": "Copy to clipboard",
+    "hintClipboard": "复制",
     "figmaEditable": "Figma Editable",
     "exportDiagram": "Export Diagram",
     "exportAs": "Export As",
+    "actionCopy": "复制",
     "exportOrShare": "导出或分享此画布",
     "svg": "导出为 SVG",
     "hintSvgScalable": "可缩放矢量文件",
@@ -255,6 +259,7 @@
   "settings": {
     "title": "设置",
     "general": "通用",
+    "canvas": "画布",
     "shortcuts": "键盘快捷键",
     "theme": "主题",
     "language": "语言",
@@ -264,7 +269,10 @@
     "analytics": "分析",
     "about": "关于",
     "brand": "品牌设置",
-    "privacy": "隐私"
+    "privacy": "隐私",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
   },
   "shortcuts": {
     "title": "键盘快捷键",
@@ -337,7 +345,18 @@
       "automatedLayouts": "自动布局和专业主题。",
       "privateSecure": "私密安全",
       "localFirst": "本地优先架构确保您的数据安全。"
-    }
+    },
+    "feature1Title": "Create amazing diagrams",
+    "feature1Desc": "Design beautiful, enterprise-grade architecture visually.",
+    "feature2Title": "Use AI",
+    "feature2Desc": "Generate complete architectures with a single intelligent prompt.",
+    "feature3Title": "Code to diagram",
+    "feature3Desc": "Instantly construct stunning visual infrastructure from text.",
+    "feature4Title": "Export in many formats",
+    "feature4Desc": "Export into beautiful, fully animated presentation diagrams.",
+    "analyticsTitle": "Anonymous Analytics",
+    "analyticsDesc": "We collect diagnostic data. We never read your diagrams or prompts.",
+    "getStarted": "Get Started"
   },
   "footer": {
     "mitLicensed": "MIT 开源协议"
@@ -630,8 +649,8 @@
       "miniMapDesc": "右下角显示小地图",
       "architectureStrictMode": "架构严格模式",
       "architectureStrictModeDesc": "当架构诊断包含恢复/校验问题时，阻止 Mermaid 导入",
-      "alignmentGuides": "Alignment Guides",
-      "alignmentGuidesDesc": "Show smart guide lines while dragging nodes",
+      "alignmentGuides": "对齐参考线",
+      "alignmentGuidesDesc": "拖动节点时显示智能参考线",
       "routingProfile": "路由配置",
       "routingProfileStandard": "标准",
       "routingProfileInfrastructure": "基础设施",
@@ -688,13 +707,13 @@
           "hint": "OpenAI 兼容"
         }
       },
-      "customModelHint": "Enter the exact model ID for your endpoint",
-      "howToGetKey": "How to get your API key",
-      "pasteKeyStep": "Paste it in the field above — never shared with us",
-      "customEndpointTitle": "What is a custom endpoint?",
+      "customModelHint": "输入此端点对应的准确模型 ID",
+      "howToGetKey": "如何获取 API 密钥",
+      "pasteKeyStep": "将其粘贴到上方字段中，我们绝不会与我们共享",
+      "customEndpointTitle": "什么是自定义端点？",
       "privacyTitle": "Privacy & Encryption",
-      "customEndpointText": "Any <1>OpenAI-compatible</1> API endpoint — local or remote. Great for:",
-      "customEndpointMustSupport": "Must support <1>POST /chat/completions</1> (OpenAI format)",
+      "customEndpointText": "任何 <1>兼容 OpenAI</1> 的 API 端点，本地或远程均可。非常适合：",
+      "customEndpointMustSupport": "必须支持 <1>POST /chat/completions</1>（OpenAI 格式）",
       "advancedEndpointOverride": "高级基础 URL 覆盖",
       "baseUrlHint": "留空以使用提供商默认端点。可用于您自己的代理/worker URL。",
       "resetEndpoint": "重置为默认值",
@@ -722,15 +741,15 @@
       "inactive": "未激活",
       "setActive": "设为当前使用",
       "resetToDefaults": "重置为默认",
-      "tabIdentity": "Identity",
-      "tabColors": "Colors",
+      "tabIdentity": "标识",
+      "tabColors": "颜色",
       "tabType": "Type",
       "tabUI": "UI & Shape",
-      "appName": "App Name",
+      "appName": "应用名称",
       "logo": "Logo",
       "favicon": "Favicon",
-      "logoStyle": "Logo Style",
-      "fontFamily": "Font Family",
+      "logoStyle": "Logo 样式",
+      "fontFamily": "字体系列",
       "googleFontsHint": "Dynamically loaded from Google Fonts",
       "cornerRadius": "Corner Radius",
       "glassmorphism": "Glassmorphism",
@@ -744,7 +763,11 @@
     "canvasSettings": "画布设置",
     "description": "配置画布偏好设置和键盘快捷键。",
     "close": "关闭设置",
-    "closeDialog": "关闭设置对话框"
+    "closeDialog": "关闭设置对话框",
+    "analytics": {
+      "enableTitle": "匿名启动分析",
+      "enableDescription": "共享匿名的基础使用数据（可选）"
+    }
   },
   "customNodes": {
     "browserContent": "浏览器内容",
@@ -764,11 +787,13 @@
     "addItem": "添加元素",
     "addToCanvas": "添加到画布",
     "shapes": "形状",
+    "diagrams": "图表",
     "assets": "资源",
     "node": "形状",
     "stickyNote": "便利贴",
     "section": "分区",
     "text": "文本",
+    "other": "其他",
     "wireframes": "线框图",
     "image": "图片",
     "autoLayout": "自动布局",
@@ -837,20 +862,34 @@
     "nodes": "{{count}} 个节点",
     "edges": "{{count}} 条边",
     "close": "关闭快照面板",
-    "namedVersions": "Named Versions",
-    "noNamedSnapshots": "No named versions yet.",
-    "autosavedVersions": "Autosaved Checkpoints",
-    "noAutoSnapshots": "No autosaved checkpoints yet."
+    "namedVersions": "命名版本",
+    "noNamedSnapshots": "还没有命名版本。",
+    "autosavedVersions": "自动保存检查点",
+    "noAutoSnapshots": "还没有自动保存检查点。"
   },
   "templatesPanel": {
     "title": "流程模板",
     "searchPlaceholder": "搜索模板...",
     "noTemplates": "未找到模板。"
   },
+  "homeTemplates": {
+    "description": "从现成流程开始，并在编辑器中进行自定义。",
+    "openPicker": "打开模板选择器",
+    "featured": "精选模板",
+    "count": "{{count}} 个模板",
+    "nodes": "{{count}} 个节点",
+    "edges": "{{count}} 条连接",
+    "starter": "入门",
+    "starterTemplate": "入门模板",
+    "useTemplate": "使用模板",
+    "closePreview": "关闭模板预览"
+  },
   "propertiesPanel": {
     "stickyNote": "便利贴",
     "nodeSettings": "形状设置",
-    "connection": "连接"
+    "connection": "连接",
+    "noSelection": "未选择任何内容",
+    "selectHint": "点击节点或连线以编辑其属性"
   },
   "flowCanvas": {
     "strictModePasteBlocked": "架构严格模式已阻止 Mermaid 粘贴。请打开代码视图，修复诊断后重试。"
@@ -860,61 +899,64 @@
     "newFlowTab": "新建流程标签页"
   },
   "nodes": {
-    "note": "Note",
-    "database": "Database",
-    "inputOutput": "Input / Output",
-    "newNode": "New Node",
-    "branch": "Branch",
-    "processStep": "Process Step",
+    "note": "便签",
+    "database": "数据库",
+    "inputOutput": "输入 / 输出",
+    "newNode": "新节点",
+    "branch": "分支",
+    "processStep": "流程步骤",
     "addText": "添加文本",
     "group": "Group",
     "items": "items",
-    "addCommentsHere": "Add your comments here.",
-    "newSection": "New Section",
+    "addCommentsHere": "在这里添加你的评论。",
+    "newSection": "新分区",
     "text": "Text",
     "image": "Image",
     "mindmap": "主题"
   },
   "actions": {
-    "clearCanvasConfirm": "Are you sure you want to clear the canvas?"
+    "clearCanvasConfirm": "确定要清空画布吗？"
   },
   "share": {
     "close": "Close",
-    "title": "Share Design",
+    "title": "分享设计",
     "betaBadge": "测试版",
-    "description": "Invite collaborators to view and edit this flow with you in real-time.",
+    "description": "邀请协作者与你一起实时查看和编辑此流程。",
     "roomId": "房间 ID",
     "link": "分享链接",
     "copied": "Copied Link!",
-    "copyLink": "Copy Link",
-    "footerNote": "Your diagram stays local unless you share this room. If copy is blocked, copy the link above manually.",
-    "closeDialog": "Close share dialog",
+    "copyLink": "复制链接",
+    "footerNote": "除非你分享这个房间，否则图表会一直保存在本地。如果复制被阻止，请手动复制上方链接。",
+    "closeDialog": "关闭分享对话框",
     "status": {
       "cache": {
         "syncing": " local cache syncing",
         "ready": " local cache ready",
         "hydrated": " restored from local cache"
       },
-      "realtime": "Realtime peer sync",
-      "waiting": "Connecting to realtime sync",
-      "fallback": "Local-only mode"
+      "realtime": "实时点对点同步",
+      "waiting": "正在连接实时同步",
+      "fallback": "仅本地模式"
     },
     "openDialog": "Share dialog",
     "toast": {
       "fallbackMode": "实时同步不可用。将继续以仅本地模式运行。",
       "reconnected": "实时协作已恢复。",
-      "copyFailed": "Unable to copy share link.",
-      "linkCopied": "Collaboration link copied.",
+      "copyFailed": "无法复制分享链接。",
+      "linkCopied": "协作链接已复制。",
       "copyManual": "剪贴板访问被阻止。请从分享对话框中手动复制链接。"
     }
   },
   "connectionPanel": {
-    "architecture": "Architecture",
+    "architecture": "架构",
     "label": "Label",
     "messagePlaceholder": "消息",
     "route": "路由",
     "appearance": "外观",
-    "condition": "Condition",
-    "deleteConnection": "Delete Connection"
+    "condition": "条件",
+    "deleteConnection": "删除连接"
+  },
+  "sidebar": {
+    "close": "关闭侧边栏"
   }
 }

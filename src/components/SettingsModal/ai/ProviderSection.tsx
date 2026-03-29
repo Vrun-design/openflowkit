@@ -18,7 +18,7 @@ function getRiskStyles(providerRisk: 'browser_friendly' | 'proxy_likely' | 'mixe
     if (providerRisk === 'proxy_likely') {
         return 'bg-amber-50 border-amber-200 text-amber-700';
     }
-    return 'bg-slate-100 border-slate-200 text-slate-600';
+    return 'bg-[var(--brand-background)] border-[var(--color-brand-border)] text-[var(--brand-secondary)]';
 }
 
 function getRiskLabel(t: (key: string, options?: Record<string, unknown>) => string, providerRisk: 'browser_friendly' | 'proxy_likely' | 'mixed'): string {
@@ -47,13 +47,13 @@ export function ProviderSection({
                     const isSelected = currentProvider === provider.id;
                     const buttonClass = isSelected
                         ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/8 ring-2 ring-[var(--brand-primary)]/40 shadow-md'
-                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50';
+                        : 'border-[var(--color-brand-border)] bg-[var(--brand-surface)] hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)]';
                     const iconWrapperClass = isSelected
                         ? 'scale-100'
                         : 'scale-[0.7] opacity-60 group-hover:opacity-90 group-hover:scale-80';
                     const nameClass = isSelected
                         ? 'text-[var(--brand-primary)]'
-                        : 'text-slate-400';
+                        : 'text-[var(--brand-secondary)]';
 
                     return (
                         <button
@@ -73,11 +73,11 @@ export function ProviderSection({
                     );
                 })}
             </div>
-            <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-slate-200 bg-white px-3 py-2.5">
+            <div className="flex items-center gap-2.5 rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-2.5">
                 <img src={providerMeta.logoPath} alt={providerMeta.name} className="w-6 h-6 object-contain shrink-0" />
                 <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-800">{providerMeta.name}</p>
-                    <p className="text-[10px] text-slate-400 truncate">
+                    <p className="text-xs font-semibold text-[var(--brand-text)]">{providerMeta.name}</p>
+                    <p className="text-[10px] text-[var(--brand-secondary)] truncate">
                         {t(`settingsModal.ai.providers.${currentProvider}.hint`, {
                             defaultValue: providerMeta.id === 'custom'
                                 ? 'Any OpenAI-compatible endpoint'
@@ -90,7 +90,7 @@ export function ProviderSection({
                 >
                     {getRiskLabel(t, providerRisk)}
                 </span>
-                {providerMeta.id === 'custom' && <span className="rounded-[var(--radius-xs)] border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">BYOK</span>}
+                {providerMeta.id === 'custom' && <span className="rounded-[var(--radius-xs)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-1.5 py-0.5 text-[9px] font-medium text-[var(--brand-secondary)]">BYOK</span>}
             </div>
         </div>
     );

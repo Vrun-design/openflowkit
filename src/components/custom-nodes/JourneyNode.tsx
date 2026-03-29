@@ -1,90 +1,28 @@
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo } from 'react';
 import type { LegacyNodeProps } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
 import { useFlowStore } from '@/store';
 import { NodeChrome } from '@/components/NodeChrome';
 import { JourneyScoreControl } from '@/components/journey/JourneyScoreControl';
-
-function useInlineJourneyEdit(
-  nodeId: string,
-  initialValue: string,
-  getPatch: (nextValue: string) => Partial<NodeData>
-): {
-  isEditing: boolean;
-  draft: string;
-  beginEdit: () => void;
-  setDraft: (value: string) => void;
-  commit: () => void;
-  cancel: () => void;
-  handleKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
-} {
-  const { setNodes } = useFlowStore();
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState(initialValue ?? '');
-
-  const beginEdit = useCallback(() => {
-    setDraft(initialValue ?? '');
-    setIsEditing(true);
-  }, [initialValue]);
-
-  const commit = useCallback(() => {
-    const nextValue = draft.trim();
-    setNodes((nodes) =>
-      nodes.map((node) =>
-        node.id === nodeId
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                ...getPatch(nextValue),
-              },
-            }
-          : node
-      )
-    );
-    setIsEditing(false);
-  }, [draft, getPatch, nodeId, setNodes]);
-
-  const cancel = useCallback(() => {
-    setDraft(initialValue ?? '');
-    setIsEditing(false);
-  }, [initialValue]);
-
-  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
-    event.stopPropagation();
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      cancel();
-      return;
-    }
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      commit();
-    }
-  }, [cancel, commit]);
-
-  return { isEditing, draft, beginEdit, setDraft, commit, cancel, handleKeyDown };
-}
+import { useInlineNodeTextEdit } from '@/hooks/useInlineNodeTextEdit';
 
 function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.ReactElement {
-  const titleEdit = useInlineJourneyEdit(id, data.label || '', (nextValue) => ({
-    label: nextValue,
-    journeyTask: nextValue,
-  }));
-  const actorEdit = useInlineJourneyEdit(id, data.subLabel || '', (nextValue) => ({
-    subLabel: nextValue,
-    journeyActor: nextValue,
-  }));
-  const sectionEdit = useInlineJourneyEdit(id, data.journeySection || '', (nextValue) => ({
-    journeySection: nextValue || 'General',
-  }));
-  const { setNodes } = useFlowStore();
+  const titleEdit = useInlineNodeTextEdit(id, 'label', data.label || '', {
+    getPatch: (nextValue) => ({ label: nextValue, journeyTask: nextValue }),
+  });
+  const actorEdit = useInlineNodeTextEdit(id, 'subLabel', data.subLabel || '', {
+    getPatch: (nextValue) => ({ subLabel: nextValue, journeyActor: nextValue }),
+  });
+  const sectionEdit = useInlineNodeTextEdit(id, 'label', data.journeySection || '', {
+    getPatch: (nextValue) => ({ journeySection: nextValue || 'General' }),
+  });
+  const setNodes = useFlowStore((state) => state.setNodes);
   const sectionLabel = data.journeySection || 'General';
   const score = data.journeyScore;
 
   function updateScore(nextScore: number): void {
     setNodes((nodes) =>
-      nodes.map((node) => (
+      nodes.map((node) =>
         node.id === id
           ? {
               ...node,
@@ -94,7 +32,7 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
               },
             }
           : node
-      ))
+      )
     );
   }
 
@@ -104,12 +42,12 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
       selected={Boolean(selected)}
       minWidth={220}
       minHeight={120}
-      handleClassName="!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125"
+      handleClassName="!w-3 !h-3 !border-2 !border-[var(--brand-surface)] transition-all duration-150 hover:scale-125"
     >
-      <div className="group min-w-[220px] max-w-[280px] rounded-xl border border-violet-200 bg-white px-3 py-3 shadow-sm transition-all">
+      <div className="group min-w-[220px] max-w-[280px] rounded-xl border border-violet-300/50 bg-[var(--brand-surface)] px-3 py-3 shadow-sm transition-all">
         <div className="mb-2 flex items-center justify-between gap-2">
           <span
-            className="rounded-md bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-700 cursor-text"
+            className="cursor-text rounded-md bg-violet-500/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-300"
             onClick={(event) => {
               event.stopPropagation();
               sectionEdit.beginEdit();
@@ -123,7 +61,7 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
                 onBlur={sectionEdit.commit}
                 onKeyDown={sectionEdit.handleKeyDown}
                 onMouseDown={(event) => event.stopPropagation()}
-                className="w-24 rounded border border-violet-300 bg-white px-1 py-0.5 text-[10px] uppercase tracking-wide outline-none"
+                className="w-24 rounded border border-violet-400/60 bg-[var(--brand-surface)] px-1 py-0.5 text-[10px] uppercase tracking-wide text-[var(--brand-text)] outline-none"
               />
             ) : (
               sectionLabel
@@ -132,13 +70,13 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
           <JourneyScoreControl
             score={score}
             onChange={updateScore}
-            className="rounded-md bg-slate-50 px-2 py-1"
+            className="rounded-md bg-[var(--brand-background)] px-2 py-1"
             starClassName="text-sm leading-none"
           />
         </div>
 
         <div
-          className="text-sm font-semibold leading-snug text-slate-900 break-words"
+          className="break-words text-sm font-semibold leading-snug text-[var(--brand-text)]"
           onClick={(event) => {
             event.stopPropagation();
             titleEdit.beginEdit();
@@ -152,7 +90,7 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
               onBlur={titleEdit.commit}
               onKeyDown={titleEdit.handleKeyDown}
               onMouseDown={(event) => event.stopPropagation()}
-              className="w-full rounded border border-violet-300 bg-white px-1 py-0.5 outline-none"
+              className="w-full rounded border border-violet-400/60 bg-[var(--brand-surface)] px-1 py-0.5 text-[var(--brand-text)] outline-none"
             />
           ) : (
             data.label || 'Journey Step'
@@ -160,7 +98,7 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
         </div>
 
         <div
-          className="mt-1 text-xs text-slate-600 break-words"
+          className="mt-1 break-words text-xs text-[var(--brand-secondary)]"
           onClick={(event) => {
             event.stopPropagation();
             actorEdit.beginEdit();
@@ -174,7 +112,7 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
               onBlur={actorEdit.commit}
               onKeyDown={actorEdit.handleKeyDown}
               onMouseDown={(event) => event.stopPropagation()}
-              className="w-full rounded border border-violet-200 bg-white px-1 py-0.5 outline-none"
+              className="w-full rounded border border-violet-300/50 bg-[var(--brand-surface)] px-1 py-0.5 text-[var(--brand-text)] outline-none"
             />
           ) : (
             data.subLabel || 'Actor'

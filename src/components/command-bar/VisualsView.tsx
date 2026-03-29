@@ -61,7 +61,7 @@ export function VisualsView({ onBack }: VisualsViewProps): ReactElement {
 
                 {/* Edge Style */}
                 <div className="space-y-3">
-                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('commandBar.visuals.edgeStyle')}</label>
+                    <label className="text-xs font-semibold text-[var(--brand-secondary)] uppercase tracking-wider">{t('commandBar.visuals.edgeStyle')}</label>
                     <div className="grid grid-cols-2 gap-3">
                         {edgeStyleOptions.map((style) => (
                             <div
@@ -70,69 +70,69 @@ export function VisualsView({ onBack }: VisualsViewProps): ReactElement {
                                 className={`p-3 rounded-[var(--radius-md)] border cursor-pointer transition-all duration-200 active:scale-[0.98]
                                     ${(globalEdgeOptions.type === style.type || (style.type === 'default' && globalEdgeOptions.type === 'bezier'))
                                         ? `border-[var(--brand-primary)] bg-[var(--brand-primary-50)]/50 ${isBeveled ? 'btn-beveled border-2' : 'border-2 ring-1 ring-[var(--brand-primary)]/10'}`
-                                        : `border-slate-100 bg-white hover:border-[var(--brand-primary-200)] ${isBeveled ? 'btn-beveled hover:bg-slate-50' : 'hover:bg-slate-50 border-2'}`
+                                        : `border-[var(--color-brand-border)] bg-[var(--brand-surface)] hover:border-[var(--brand-primary-200)] ${isBeveled ? 'btn-beveled hover:bg-[var(--brand-background)]' : 'hover:bg-[var(--brand-background)] border-2'}`
                                     }`}
                             >
-                                <div className="font-medium text-sm text-slate-700">{style.label}</div>
-                                <div className="text-[10px] text-slate-400">{style.desc}</div>
+                                <div className="font-medium text-sm text-[var(--brand-text)]">{style.label}</div>
+                                <div className="text-[10px] text-[var(--brand-secondary)]">{style.desc}</div>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Default Icons */}
-                <div className={`flex items-center justify-between p-3 rounded-[var(--radius-md)] border transition-all ${isBeveled ? 'btn-beveled' : 'border-slate-200 bg-white'}`}>
+                <div className={`flex items-center justify-between p-3 rounded-[var(--radius-md)] border transition-all ${isBeveled ? 'btn-beveled' : 'border-[var(--color-brand-border)] bg-[var(--brand-surface)]'}`}>
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-100 rounded-[var(--radius-sm)] shadow-inner"><Grid className="w-4 h-4 text-slate-500" /></div>
+                        <div className="p-2 bg-[var(--brand-background)] rounded-[var(--radius-sm)] shadow-inner"><Grid className="w-4 h-4 text-[var(--brand-secondary)]" /></div>
                         <div>
-                            <div className="font-medium text-sm text-slate-700">{t('commandBar.visuals.defaultIcons')}</div>
-                            <div className="text-[10px] text-slate-400">{t('commandBar.visuals.defaultIconsDesc')}</div>
+                            <div className="font-medium text-sm text-[var(--brand-text)]">{t('commandBar.visuals.defaultIcons')}</div>
+                            <div className="text-[10px] text-[var(--brand-secondary)]">{t('commandBar.visuals.defaultIconsDesc')}</div>
                         </div>
                     </div>
                     <button
                         onClick={() => setDefaultIconsEnabled(!viewSettings.defaultIconsEnabled)}
-                        className={`w-11 h-6 rounded-full transition-all flex items-center px-0.5 active:scale-90 ${viewSettings.defaultIconsEnabled ? 'bg-[var(--brand-primary)] shadow-inner' : 'bg-slate-200 shadow-inner'}`}
+                        className={`w-11 h-6 rounded-full transition-all flex items-center px-0.5 active:scale-90 ${viewSettings.defaultIconsEnabled ? 'bg-[var(--brand-primary)] shadow-inner' : 'bg-[var(--color-brand-border)] shadow-inner'}`}
                     >
-                        <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${isBeveled ? 'border border-black/5 shadow-md' : ''} ${viewSettings.defaultIconsEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                        <div className={`w-5 h-5 rounded-full bg-[var(--brand-surface)] shadow-sm transition-transform ${isBeveled ? 'border border-black/5 shadow-md' : ''} ${viewSettings.defaultIconsEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                 </div>
 
                 {/* Intelligent Routing */}
-                <div className={`flex items-center justify-between p-3 rounded-[var(--radius-md)] border transition-all ${isBeveled ? 'btn-beveled' : 'border-slate-200 bg-white'}`}>
+                <div className={`flex items-center justify-between p-3 rounded-[var(--radius-md)] border transition-all ${isBeveled ? 'btn-beveled' : 'border-[var(--color-brand-border)] bg-[var(--brand-surface)]'}`}>
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-100 rounded-[var(--radius-sm)] shadow-inner"><Network className="w-4 h-4 text-emerald-500" /></div>
+                        <div className="p-2 bg-[var(--brand-background)] rounded-[var(--radius-sm)] shadow-inner"><Network className="w-4 h-4 text-emerald-500" /></div>
                         <div>
-                            <div className="font-medium text-sm text-slate-700">{t('commandBar.visuals.intelligentRouting')}</div>
-                            <div className="text-[10px] text-slate-400">{t('commandBar.visuals.intelligentRoutingDesc')}</div>
+                            <div className="font-medium text-sm text-[var(--brand-text)]">{t('commandBar.visuals.intelligentRouting')}</div>
+                            <div className="text-[10px] text-[var(--brand-secondary)]">{t('commandBar.visuals.intelligentRoutingDesc')}</div>
                         </div>
                     </div>
                     <button
                         onClick={() => setSmartRoutingEnabled(!viewSettings.smartRoutingEnabled)}
-                        className={`w-11 h-6 rounded-full transition-all flex items-center px-0.5 active:scale-90 ${viewSettings.smartRoutingEnabled ? 'bg-[var(--brand-primary)] shadow-inner' : 'bg-slate-200 shadow-inner'}`}
+                        className={`w-11 h-6 rounded-full transition-all flex items-center px-0.5 active:scale-90 ${viewSettings.smartRoutingEnabled ? 'bg-[var(--brand-primary)] shadow-inner' : 'bg-[var(--color-brand-border)] shadow-inner'}`}
                     >
-                        <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${isBeveled ? 'border border-black/5 shadow-md' : ''} ${viewSettings.smartRoutingEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                        <div className={`w-5 h-5 rounded-full bg-[var(--brand-surface)] shadow-sm transition-transform ${isBeveled ? 'border border-black/5 shadow-md' : ''} ${viewSettings.smartRoutingEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                 </div>
 
                 {/* Animation */}
-                <div className={`flex items-center justify-between p-3 rounded-[var(--radius-md)] border transition-all ${isBeveled ? 'btn-beveled' : 'border-slate-200 bg-white'}`}>
+                <div className={`flex items-center justify-between p-3 rounded-[var(--radius-md)] border transition-all ${isBeveled ? 'btn-beveled' : 'border-[var(--color-brand-border)] bg-[var(--brand-surface)]'}`}>
                     <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-100 rounded-[var(--radius-sm)] shadow-inner"><Zap className="w-4 h-4 text-amber-500" /></div>
+                        <div className="p-2 bg-[var(--brand-background)] rounded-[var(--radius-sm)] shadow-inner"><Zap className="w-4 h-4 text-amber-500" /></div>
                         <div>
-                            <div className="font-medium text-sm text-slate-700">{t('commandBar.visuals.animatedEdges')}</div>
-                            <div className="text-[10px] text-slate-400">{t('commandBar.visuals.animatedEdgesDesc')}</div>
+                            <div className="font-medium text-sm text-[var(--brand-text)]">{t('commandBar.visuals.animatedEdges')}</div>
+                            <div className="text-[10px] text-[var(--brand-secondary)]">{t('commandBar.visuals.animatedEdgesDesc')}</div>
                         </div>
                     </div>
                     <button
                         onClick={() => setGlobalEdgeOptions({ animated: !globalEdgeOptions.animated })}
-                        className={`w-11 h-6 rounded-full transition-all flex items-center px-0.5 active:scale-90 ${globalEdgeOptions.animated ? 'bg-[var(--brand-primary)] shadow-inner' : 'bg-slate-200 shadow-inner'}`}
+                        className={`w-11 h-6 rounded-full transition-all flex items-center px-0.5 active:scale-90 ${globalEdgeOptions.animated ? 'bg-[var(--brand-primary)] shadow-inner' : 'bg-[var(--color-brand-border)] shadow-inner'}`}
                     >
-                        <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${isBeveled ? 'border border-black/5 shadow-md' : ''} ${globalEdgeOptions.animated ? 'translate-x-5' : 'translate-x-0'}`} />
+                        <div className={`w-5 h-5 rounded-full bg-[var(--brand-surface)] shadow-sm transition-transform ${isBeveled ? 'border border-black/5 shadow-md' : ''} ${globalEdgeOptions.animated ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                 </div>
 
                 <div className="space-y-3">
-                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    <label className="text-xs font-semibold text-[var(--brand-secondary)] uppercase tracking-wider">
                         {t('commandBar.visuals.largeGraphSafety', 'Large Graph Safety')}
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -143,7 +143,7 @@ export function VisualsView({ onBack }: VisualsViewProps): ReactElement {
                                 className={`h-9 rounded-[var(--radius-sm)] border text-xs font-semibold transition-all active:scale-95
                                     ${viewSettings.largeGraphSafetyMode === option.mode
                                         ? `border-[var(--brand-primary)] bg-[var(--brand-primary-50)] text-[var(--brand-primary-700)] ${isBeveled ? 'btn-beveled' : ''}`
-                                        : `border-slate-200 text-slate-600 hover:border-[var(--brand-primary-200)] ${isBeveled ? 'btn-beveled hover:bg-slate-50' : ''}`
+                                        : `border-[var(--color-brand-border)] text-[var(--brand-secondary)] hover:border-[var(--brand-primary-200)] ${isBeveled ? 'btn-beveled hover:bg-[var(--brand-background)]' : ''}`
                                     }`}
                             >
                                 {option.label}
@@ -153,7 +153,7 @@ export function VisualsView({ onBack }: VisualsViewProps): ReactElement {
                 </div>
 
                 <div className="space-y-3">
-                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    <label className="text-xs font-semibold text-[var(--brand-secondary)] uppercase tracking-wider">
                         {t('commandBar.visuals.exportMode', 'Export Mode')}
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -168,7 +168,7 @@ export function VisualsView({ onBack }: VisualsViewProps): ReactElement {
                                 className={`h-9 rounded-[var(--radius-sm)] border text-xs font-semibold transition-all active:scale-95
                                     ${viewSettings.exportSerializationMode === option.mode
                                         ? `border-[var(--brand-primary)] bg-[var(--brand-primary-50)] text-[var(--brand-primary-700)] ${isBeveled ? 'btn-beveled' : ''}`
-                                        : `border-slate-200 text-slate-600 hover:border-[var(--brand-primary-200)] ${isBeveled ? 'btn-beveled hover:bg-slate-50' : ''}`
+                                        : `border-[var(--color-brand-border)] text-[var(--brand-secondary)] hover:border-[var(--brand-primary-200)] ${isBeveled ? 'btn-beveled hover:bg-[var(--brand-background)]' : ''}`
                                     }`}
                             >
                                 {option.label}
@@ -179,7 +179,7 @@ export function VisualsView({ onBack }: VisualsViewProps): ReactElement {
 
                 {/* Stroke Width */}
                 <div className="space-y-3">
-                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t('commandBar.visuals.strokeWidth')}</label>
+                    <label className="text-xs font-semibold text-[var(--brand-secondary)] uppercase tracking-wider">{t('commandBar.visuals.strokeWidth')}</label>
                     <div className="flex gap-2">
                         {[1, 2, 3, 4, 5].map(w => (
                             <button
@@ -188,7 +188,7 @@ export function VisualsView({ onBack }: VisualsViewProps): ReactElement {
                                 className={`flex-1 h-10 rounded-[var(--radius-sm)] border font-medium text-sm transition-all active:scale-95
                                     ${globalEdgeOptions.strokeWidth === w
                                         ? `border-[var(--brand-primary)] bg-[var(--brand-primary-50)] text-[var(--brand-primary-700)] shadow-inner ${isBeveled ? 'btn-beveled' : ''}`
-                                        : `border-slate-200 text-slate-600 hover:border-[var(--brand-primary-200)] ${isBeveled ? 'btn-beveled hover:bg-slate-50' : ''}`}
+                                        : `border-[var(--color-brand-border)] text-[var(--brand-secondary)] hover:border-[var(--brand-primary-200)] ${isBeveled ? 'btn-beveled hover:bg-[var(--brand-background)]' : ''}`}
                                 `}
                             >
                                 {w}px

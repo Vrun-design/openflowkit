@@ -21,8 +21,8 @@ export function PropertySliderRow({
     max,
     step = 1,
     onChange,
-    labelClassName = 'text-xs text-slate-500',
-    sliderClassName = 'h-2 rounded-[var(--brand-radius)] bg-slate-200 accent-[var(--brand-primary)]',
+    labelClassName = 'text-xs text-[var(--brand-secondary)]',
+    sliderClassName = 'h-2 rounded-[var(--brand-radius)] bg-[var(--color-brand-border)] accent-[var(--brand-primary)]',
     containerClassName = 'space-y-1',
 }: PropertySliderRowProps): React.ReactElement {
     return (

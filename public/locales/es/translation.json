@@ -52,6 +52,7 @@
     "bringToFront": "Traer al frente",
     "sendToBack": "Enviar atrás",
     "reverseDirection": "Invertir dirección",
+    "editLabel": "Editar etiqueta",
     "deleteConnection": "Eliminar conexión",
     "itemsSelected": "{{count}} elementos seleccionados",
     "align": "Alinear",
@@ -65,7 +66,7 @@
     "distributeHorizontally": "Distribuir horizontalmente",
     "distributeVertically": "Distribuir verticalmente",
     "group": "Grupo",
-    "upload": "Upload",
+    "upload": "Subir",
     "rename": "Renombrar"
   },
   "nav": {
@@ -87,7 +88,8 @@
     "versionHistory": "Historial de versiones",
     "loadJSON": "Cargar JSON",
     "playbackMode": "Modo reproducción",
-    "privacyMessage": "Sus diagramas permanecen con usted y no llegan a nuestros servidores."
+    "privacyMessage": "Sus diagramas permanecen con usted y no llegan a nuestros servidores.",
+    "templates": "Plantillas"
   },
   "menu": {
     "file": "Archivo",
@@ -110,6 +112,7 @@
   },
   "export": {
     "title": "Exportar",
+    "subtitle": "Elige un formato y una acción.",
     "png": "Exportar como PNG",
     "jpeg": "Exportar como JPEG",
     "json": "Exportar como JSON",
@@ -122,10 +125,11 @@
     "jsonLabel": "JSON File",
     "hintDownload": "Download",
     "openflowdslLabel": "{{appName}} DSL",
-    "hintClipboard": "Copy to clipboard",
+    "hintClipboard": "Copiar",
     "figmaEditable": "Figma Editable",
     "exportDiagram": "Export Diagram",
     "exportAs": "Export As",
+    "actionCopy": "Copiar",
     "exportOrShare": "Exportar o compartir este lienzo",
     "svg": "Exportar como SVG",
     "hintSvgScalable": "Archivo vectorial escalable",
@@ -255,6 +259,7 @@
   "settings": {
     "title": "Configuración",
     "general": "General",
+    "canvas": "Lienzo",
     "shortcuts": "Atajos de teclado",
     "theme": "Tema",
     "language": "Idioma",
@@ -264,7 +269,10 @@
     "analytics": "Análisis",
     "about": "Acerca de",
     "brand": "Configuración de marca",
-    "privacy": "Privacidad"
+    "privacy": "Privacidad",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
   },
   "shortcuts": {
     "title": "Atajos de teclado",
@@ -331,13 +339,24 @@
     "press": "Presione",
     "shortcuts": "para atajos",
     "privacy": "Sus diagramas, claves API y datos permanecen localmente en su dispositivo.",
-    "analytics": "Solo contamos visitas anónimas.",
+    "analytics": "Hoy no recopilamos analíticas.",
     "features": {
       "beautifulByDefault": "Hermoso por defecto",
       "automatedLayouts": "Diseños automatizados y temas profesionales.",
       "privateSecure": "Privado y seguro",
       "localFirst": "La arquitectura local mantiene sus datos seguros."
-    }
+    },
+    "feature1Title": "Create amazing diagrams",
+    "feature1Desc": "Design beautiful, enterprise-grade architecture visually.",
+    "feature2Title": "Use AI",
+    "feature2Desc": "Generate complete architectures with a single intelligent prompt.",
+    "feature3Title": "Code to diagram",
+    "feature3Desc": "Instantly construct stunning visual infrastructure from text.",
+    "feature4Title": "Export in many formats",
+    "feature4Desc": "Export into beautiful, fully animated presentation diagrams.",
+    "analyticsTitle": "Anonymous Analytics",
+    "analyticsDesc": "We collect diagnostic data. We never read your diagrams or prompts.",
+    "getStarted": "Get Started"
   },
   "footer": {
     "mitLicensed": "Licencia MIT"
@@ -630,8 +649,8 @@
       "miniMapDesc": "Mostrar mini mapa abajo a la derecha",
       "architectureStrictMode": "Modo estricto de arquitectura",
       "architectureStrictModeDesc": "Bloquea la importación Mermaid cuando los diagnósticos de arquitectura incluyen problemas de recuperación/validación",
-      "alignmentGuides": "Alignment Guides",
-      "alignmentGuidesDesc": "Show smart guide lines while dragging nodes",
+      "alignmentGuides": "Guías de alineación",
+      "alignmentGuidesDesc": "Muestra guías inteligentes al arrastrar nodos",
       "routingProfile": "Perfil de enrutamiento",
       "routingProfileStandard": "Estándar",
       "routingProfileInfrastructure": "Infraestructura",
@@ -688,13 +707,13 @@
           "hint": "Cualquier endpoint compatible con OpenAI"
         }
       },
-      "customModelHint": "Enter the exact model ID for your endpoint",
-      "howToGetKey": "How to get your API key",
-      "pasteKeyStep": "Paste it in the field above — never shared with us",
-      "customEndpointTitle": "What is a custom endpoint?",
+      "customModelHint": "Introduce el ID exacto del modelo para tu endpoint",
+      "howToGetKey": "Cómo obtener tu clave API",
+      "pasteKeyStep": "Pégala en el campo de arriba; nunca se comparte con nosotros",
+      "customEndpointTitle": "¿Qué es un endpoint personalizado?",
       "privacyTitle": "Privacy & Encryption",
-      "customEndpointText": "Any <1>OpenAI-compatible</1> API endpoint — local or remote. Great for:",
-      "customEndpointMustSupport": "Must support <1>POST /chat/completions</1> (OpenAI format)",
+      "customEndpointText": "Cualquier endpoint API <1>compatible con OpenAI</1>, local o remoto. Ideal para:",
+      "customEndpointMustSupport": "Debe admitir <1>POST /chat/completions</1> (formato OpenAI)",
       "advancedEndpointOverride": "Anulación avanzada de URL base",
       "baseUrlHint": "Déjalo vacío para usar el endpoint predeterminado del proveedor. Úsalo para la URL de tu propio proxy/worker.",
       "resetEndpoint": "Restablecer al valor predeterminado",
@@ -722,15 +741,15 @@
       "inactive": "Inactivo",
       "setActive": "Establecer como activo",
       "resetToDefaults": "Restablecer",
-      "tabIdentity": "Identity",
-      "tabColors": "Colors",
+      "tabIdentity": "Identidad",
+      "tabColors": "Colores",
       "tabType": "Type",
       "tabUI": "UI & Shape",
-      "appName": "App Name",
+      "appName": "Nombre de la app",
       "logo": "Logo",
       "favicon": "Favicon",
-      "logoStyle": "Logo Style",
-      "fontFamily": "Font Family",
+      "logoStyle": "Estilo del logo",
+      "fontFamily": "Familia tipográfica",
       "googleFontsHint": "Dynamically loaded from Google Fonts",
       "cornerRadius": "Corner Radius",
       "glassmorphism": "Glassmorphism",
@@ -740,26 +759,15 @@
       "showBetaBadgeHint": "Display the BETA chip next to logo"
     },
     "shortcutsHint": "También puedes presionar ? para verlos en cualquier momento.",
-    "privacy": {
-      "manifesto": "Nuestro manifiesto de privacidad",
-      "manifestoText": "Creemos en la privacidad por diseño y la autonomía del usuario.",
-      "localFirst": "Almacenamiento local",
-      "noAccounts": "Sin cuentas de usuario",
-      "ownData": "Tus datos son tuyos",
-      "anonymous": "Solo uso anónimo",
-      "telemetry": "Telemetría & Comentarios",
-      "anonymousStats": "Estadísticas anónimas",
-      "anonymousStatsDesc": "Solo rastreamos visitas y uso anónimo limitado.",
-      "quote": "Confiamos en que nos digas qué funciona.",
-      "helpImprove": "Ayúdanos a mejorar",
-      "shareFeedback": "Compartir comentarios",
-      "shareFeedbackDesc": "Dar comentarios, reportar errores, pedir características"
-    },
     "settings": "Configuración",
     "canvasSettings": "Configuración del lienzo",
     "description": "Configura las preferencias del lienzo y los atajos de teclado.",
     "close": "Cerrar configuración",
-    "closeDialog": "Cerrar diálogo de configuración"
+    "closeDialog": "Cerrar diálogo de configuración",
+    "analytics": {
+      "enableTitle": "Analíticas de inicio anónimas",
+      "enableDescription": "Compartir datos básicos de uso de forma anónima (opcional)"
+    }
   },
   "customNodes": {
     "browserContent": "Contenido del navegador",
@@ -779,11 +787,13 @@
     "addItem": "Agregar elemento",
     "addToCanvas": "Agregar al lienzo",
     "shapes": "Formas",
+    "diagrams": "Diagramas",
     "assets": "Recursos",
     "node": "Forma",
     "stickyNote": "Nota adhesiva",
     "section": "Sección",
     "text": "Texto",
+    "other": "Otros",
     "wireframes": "Wireframes",
     "image": "Imagen",
     "autoLayout": "Diseño automático",
@@ -852,20 +862,34 @@
     "nodes": "{{count}} nodos",
     "edges": "{{count}} conexiones",
     "close": "Cerrar panel de instantáneas",
-    "namedVersions": "Named Versions",
-    "noNamedSnapshots": "No named versions yet.",
-    "autosavedVersions": "Autosaved Checkpoints",
-    "noAutoSnapshots": "No autosaved checkpoints yet."
+    "namedVersions": "Versiones con nombre",
+    "noNamedSnapshots": "Aún no hay versiones con nombre.",
+    "autosavedVersions": "Puntos de control autoguardados",
+    "noAutoSnapshots": "Aún no hay puntos de control autoguardados."
   },
   "templatesPanel": {
     "title": "Plantillas de flujo",
     "searchPlaceholder": "Buscar plantillas...",
     "noTemplates": "No se encontraron plantillas."
   },
+  "homeTemplates": {
+    "description": "Comienza con un flujo listo para usar y personalízalo en el editor.",
+    "openPicker": "Abrir selector de plantillas",
+    "featured": "Plantillas destacadas",
+    "count": "{{count}} plantillas",
+    "nodes": "{{count}} nodos",
+    "edges": "{{count}} conexiones",
+    "starter": "Inicial",
+    "starterTemplate": "Plantilla inicial",
+    "useTemplate": "Usar plantilla",
+    "closePreview": "Cerrar vista previa de plantilla"
+  },
   "propertiesPanel": {
     "stickyNote": "Nota adhesiva",
     "nodeSettings": "Configuración de forma",
-    "connection": "Conexión"
+    "connection": "Conexión",
+    "noSelection": "Nada seleccionado",
+    "selectHint": "Haz clic en un nodo o una arista para editar sus propiedades"
   },
   "flowCanvas": {
     "strictModePasteBlocked": "El modo estricto de arquitectura bloqueó el pegado de Mermaid. Abre la vista de código, corrige los diagnósticos y vuelve a intentarlo."
@@ -875,61 +899,64 @@
     "newFlowTab": "Nueva pestaña de flujo"
   },
   "nodes": {
-    "note": "Note",
-    "database": "Database",
-    "inputOutput": "Input / Output",
-    "newNode": "New Node",
-    "branch": "Branch",
-    "processStep": "Process Step",
+    "note": "Nota",
+    "database": "Base de datos",
+    "inputOutput": "Entrada / Salida",
+    "newNode": "Nuevo nodo",
+    "branch": "Rama",
+    "processStep": "Paso de proceso",
     "addText": "Agregar texto",
     "group": "Group",
     "items": "items",
-    "addCommentsHere": "Add your comments here.",
-    "newSection": "New Section",
+    "addCommentsHere": "Añade aquí tus comentarios.",
+    "newSection": "Nueva sección",
     "text": "Text",
     "image": "Image",
     "mindmap": "Tema"
   },
   "actions": {
-    "clearCanvasConfirm": "Are you sure you want to clear the canvas?"
+    "clearCanvasConfirm": "¿Seguro que quieres limpiar el lienzo?"
   },
   "share": {
     "close": "Close",
-    "title": "Share Design",
+    "title": "Compartir diseño",
     "betaBadge": "Beta",
-    "description": "Invite collaborators to view and edit this flow with you in real-time.",
+    "description": "Invita a colaboradores a ver y editar este flujo contigo en tiempo real.",
     "roomId": "ID de la sala",
     "link": "Enlace para compartir",
     "copied": "Copied Link!",
-    "copyLink": "Copy Link",
-    "footerNote": "Your diagram stays local unless you share this room. If copy is blocked, copy the link above manually.",
-    "closeDialog": "Close share dialog",
+    "copyLink": "Copiar enlace",
+    "footerNote": "Tu diagrama permanece local a menos que compartas esta sala. Si la copia está bloqueada, copia manualmente el enlace de arriba.",
+    "closeDialog": "Cerrar diálogo de compartir",
     "status": {
       "cache": {
         "syncing": " local cache syncing",
         "ready": " local cache ready",
         "hydrated": " restored from local cache"
       },
-      "realtime": "Realtime peer sync",
-      "waiting": "Connecting to realtime sync",
-      "fallback": "Local-only mode"
+      "realtime": "Sincronización entre pares en tiempo real",
+      "waiting": "Conectando a la sincronización en tiempo real",
+      "fallback": "Modo solo local"
     },
     "openDialog": "Share dialog",
     "toast": {
       "fallbackMode": "La sincronización en tiempo real no está disponible. Se continuará en modo solo local.",
       "reconnected": "La colaboración en tiempo real se ha restablecido.",
-      "copyFailed": "Unable to copy share link.",
-      "linkCopied": "Collaboration link copied.",
+      "copyFailed": "No se pudo copiar el enlace para compartir.",
+      "linkCopied": "Se copió el enlace de colaboración.",
       "copyManual": "El acceso al portapapeles está bloqueado. Copia el enlace manualmente desde el diálogo de compartir."
     }
   },
   "connectionPanel": {
-    "architecture": "Architecture",
+    "architecture": "Arquitectura",
     "label": "Label",
     "messagePlaceholder": "Mensaje",
     "route": "Ruta",
     "appearance": "Apariencia",
-    "condition": "Condition",
-    "deleteConnection": "Delete Connection"
+    "condition": "Condición",
+    "deleteConnection": "Eliminar conexión"
+  },
+  "sidebar": {
+    "close": "Cerrar barra lateral"
   }
 }

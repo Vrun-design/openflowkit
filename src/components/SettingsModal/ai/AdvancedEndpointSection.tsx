@@ -27,16 +27,16 @@ export function AdvancedEndpointSection({
     const { t } = useTranslation();
 
     return (
-        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-slate-200">
+        <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-brand-border)]">
             <button
                 type="button"
                 onClick={onToggleAdvancedEndpoint}
-                className="w-full px-3 py-2.5 flex items-center justify-between bg-slate-50 hover:bg-slate-100 transition-colors"
+                className="w-full px-3 py-2.5 flex items-center justify-between bg-[var(--brand-background)] hover:bg-[var(--brand-background)]/80 transition-colors"
             >
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--brand-secondary)]">
                     {t('settingsModal.ai.advancedEndpointOverride', { defaultValue: 'Advanced Base URL Override' })}
                 </span>
-                {showAdvancedEndpoint ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
+                {showAdvancedEndpoint ? <ChevronUp className="w-4 h-4 text-[var(--brand-secondary)]" /> : <ChevronDown className="w-4 h-4 text-[var(--brand-secondary)]" />}
             </button>
             {showAdvancedEndpoint && (
                 <div className="px-3 py-3 space-y-2">
@@ -47,7 +47,7 @@ export function AdvancedEndpointSection({
                         placeholder={defaultBaseUrl || 'https://your-proxy.example.com/v1'}
                     />
                     <div className="flex items-center justify-between gap-3">
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-[11px] text-[var(--brand-secondary)]">
                             {t('settingsModal.ai.baseUrlHint', {
                                 defaultValue: 'Leave empty to use provider default endpoint. Use this for your own proxy/worker URL.',
                             })}
@@ -56,15 +56,15 @@ export function AdvancedEndpointSection({
                             type="button"
                             onClick={onResetCustomBaseUrl}
                             disabled={!customBaseUrl}
-                            className="shrink-0 text-[10px] font-semibold text-slate-600 hover:text-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="shrink-0 text-[10px] font-semibold text-[var(--brand-secondary)] hover:text-[var(--brand-text)] disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             {t('settingsModal.ai.resetEndpoint', { defaultValue: 'Reset to default' })}
                         </button>
                     </div>
                     {(currentProvider === 'custom' || currentProvider === 'openrouter' || !!customBaseUrl) && (
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-[11px] text-[var(--brand-secondary)]">
                             <Trans i18nKey="settingsModal.ai.customEndpointMustSupport">
-                                Must support <code className="rounded-[var(--radius-xs)] bg-slate-100 px-1 text-[10px]">POST /chat/completions</code> (OpenAI format)
+                                Must support <code className="rounded-[var(--radius-xs)] bg-[var(--brand-background)] px-1 text-[10px]">POST /chat/completions</code> (OpenAI format)
                             </Trans>
                         </p>
                     )}

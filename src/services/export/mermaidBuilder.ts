@@ -41,7 +41,10 @@ function toArchitectureMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
     const label = sanitizeLabel(node.data.label);
     const kind = (node.data.archResourceType || 'service').toLowerCase();
     const parent = node.data.archBoundaryId ? sanitizeId(node.data.archBoundaryId) : '';
-    const icon = node.data.archProvider && node.data.archProvider !== 'custom' ? `(${sanitizeLabel(node.data.archProvider)})` : '';
+    const icon =
+      node.data.archProvider && node.data.archProvider !== 'custom'
+        ? `(${sanitizeLabel(node.data.archProvider)})`
+        : '';
     const suffix = parent ? ` in ${parent}` : '';
 
     if (kind === 'group') {
@@ -60,21 +63,25 @@ function toArchitectureMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
   edges.forEach((edge) => {
     const source = sanitizeId(edge.source);
     const target = sanitizeId(edge.target);
-    const edgeData = edge.data as {
-      archProtocol?: string;
-      archPort?: string;
-      archDirection?: '-->' | '<--' | '<-->';
-      archSourceSide?: 'L' | 'R' | 'T' | 'B';
-      archTargetSide?: 'L' | 'R' | 'T' | 'B';
-    } | undefined;
+    const edgeData = edge.data as
+      | {
+          archProtocol?: string;
+          archPort?: string;
+          archDirection?: '-->' | '<--' | '<-->';
+          archSourceSide?: 'L' | 'R' | 'T' | 'B';
+          archTargetSide?: 'L' | 'R' | 'T' | 'B';
+        }
+      | undefined;
     const protocol = edgeData?.archProtocol;
     const port = edgeData?.archPort;
     const label = edge.label ? sanitizeLabel(String(edge.label)) : undefined;
-    const sourceSide = normalizeArchitectureSide(edgeData?.archSourceSide) || handleIdToSide(edge.sourceHandle);
-    const targetSide = normalizeArchitectureSide(edgeData?.archTargetSide) || handleIdToSide(edge.targetHandle);
+    const sourceSide =
+      normalizeArchitectureSide(edgeData?.archSourceSide) || handleIdToSide(edge.sourceHandle);
+    const targetSide =
+      normalizeArchitectureSide(edgeData?.archTargetSide) || handleIdToSide(edge.targetHandle);
     const direction = normalizeArchitectureDirection(
-      edgeData?.archDirection
-      || (edge.markerStart && edge.markerEnd ? '<-->' : edge.markerStart ? '<--' : '-->')
+      edgeData?.archDirection ||
+        (edge.markerStart && edge.markerEnd ? '<-->' : edge.markerStart ? '<--' : '-->')
     );
 
     const resolvedLabel = protocol
@@ -123,8 +130,10 @@ function toMindmapMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
       const leftNode = nodeById.get(left);
       const rightNode = nodeById.get(right);
       if (!leftNode || !rightNode) return left.localeCompare(right);
-      if (leftNode.position.y !== rightNode.position.y) return leftNode.position.y - rightNode.position.y;
-      if (leftNode.position.x !== rightNode.position.x) return leftNode.position.x - rightNode.position.x;
+      if (leftNode.position.y !== rightNode.position.y)
+        return leftNode.position.y - rightNode.position.y;
+      if (leftNode.position.x !== rightNode.position.x)
+        return leftNode.position.x - rightNode.position.x;
       return left.localeCompare(right);
     });
   });
@@ -137,7 +146,10 @@ function toMindmapMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
     if (visited.has(node.id)) return;
     visited.add(node.id);
     const label = String(node.data.label || node.id).trim() || node.id;
-    const explicitDepth = typeof node.data.mindmapDepth === 'number' ? Math.max(0, Math.floor(node.data.mindmapDepth)) : null;
+    const explicitDepth =
+      typeof node.data.mindmapDepth === 'number'
+        ? Math.max(0, Math.floor(node.data.mindmapDepth))
+        : null;
     const effectiveDepth = explicitDepth ?? depth;
     lines.push(`${'  '.repeat(effectiveDepth)}${label}`);
 
@@ -190,7 +202,11 @@ function toJourneyMermaid(nodes: FlowNode[]): string {
       const task = String(node.data.journeyTask || node.data.label || node.id).trim() || node.id;
       const actor = String(node.data.journeyActor || node.data.subLabel || '').trim();
       const scoreValue = node.data.journeyScore;
-      const hasScore = typeof scoreValue === 'number' && Number.isFinite(scoreValue) && scoreValue >= 0 && scoreValue <= 5;
+      const hasScore =
+        typeof scoreValue === 'number' &&
+        Number.isFinite(scoreValue) &&
+        scoreValue >= 0 &&
+        scoreValue <= 5;
       if (hasScore && actor) {
         lines.push(`      ${task}: ${Math.round(scoreValue)}: ${actor}`);
         return;
@@ -209,12 +225,14 @@ function toJourneyMermaid(nodes: FlowNode[]): string {
 function resolveClassRelation(edge: FlowEdge): { relation: string; label?: string } {
   const edgeData = edge.data as { classRelation?: string; classRelationLabel?: string } | undefined;
   const dataRelation = edgeData?.classRelation?.trim();
-  const fallbackRelation = typeof edge.label === 'string' && isClassRelationToken(edge.label.trim())
-    ? edge.label.trim()
-    : undefined;
-  const relation = (dataRelation && isClassRelationToken(dataRelation))
-    ? dataRelation
-    : (fallbackRelation ?? DEFAULT_CLASS_RELATION);
+  const fallbackRelation =
+    typeof edge.label === 'string' && isClassRelationToken(edge.label.trim())
+      ? edge.label.trim()
+      : undefined;
+  const relation =
+    dataRelation && isClassRelationToken(dataRelation)
+      ? dataRelation
+      : (fallbackRelation ?? DEFAULT_CLASS_RELATION);
 
   const dataLabel = edgeData?.classRelationLabel?.trim();
   if (dataLabel) return { relation, label: dataLabel };
@@ -233,9 +251,14 @@ function toClassDiagramMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
   const lines: string[] = ['classDiagram'];
   sortNodesByPosition(nodes).forEach((node) => {
     const id = node.id.trim();
-    const stereotype = typeof node.data.classStereotype === 'string' ? node.data.classStereotype.trim() : '';
-    const attributes = Array.isArray(node.data.classAttributes) ? node.data.classAttributes.map((entry) => String(entry).trim()).filter(Boolean) : [];
-    const methods = Array.isArray(node.data.classMethods) ? node.data.classMethods.map((entry) => String(entry).trim()).filter(Boolean) : [];
+    const stereotype =
+      typeof node.data.classStereotype === 'string' ? node.data.classStereotype.trim() : '';
+    const attributes = Array.isArray(node.data.classAttributes)
+      ? node.data.classAttributes.map((entry) => String(entry).trim()).filter(Boolean)
+      : [];
+    const methods = Array.isArray(node.data.classMethods)
+      ? node.data.classMethods.map((entry) => String(entry).trim()).filter(Boolean)
+      : [];
     if (!stereotype && attributes.length === 0 && methods.length === 0) {
       lines.push(`    class ${id}`);
       return;
@@ -260,12 +283,14 @@ function toClassDiagramMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
 function resolveERRelation(edge: FlowEdge): { relation: string; label?: string } {
   const edgeData = edge.data as { erRelation?: string; erRelationLabel?: string } | undefined;
   const dataRelation = edgeData?.erRelation?.trim();
-  const fallbackRelation = typeof edge.label === 'string' && isERRelationToken(edge.label.trim())
-    ? edge.label.trim()
-    : undefined;
-  const relation = (dataRelation && isERRelationToken(dataRelation))
-    ? dataRelation
-    : (fallbackRelation ?? DEFAULT_ER_RELATION);
+  const fallbackRelation =
+    typeof edge.label === 'string' && isERRelationToken(edge.label.trim())
+      ? edge.label.trim()
+      : undefined;
+  const relation =
+    dataRelation && isERRelationToken(dataRelation)
+      ? dataRelation
+      : (fallbackRelation ?? DEFAULT_ER_RELATION);
 
   const dataLabel = edgeData?.erRelationLabel?.trim();
   if (dataLabel) return { relation, label: dataLabel };
@@ -284,7 +309,9 @@ function toERDiagramMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
   const lines: string[] = ['erDiagram'];
   sortNodesByPosition(nodes).forEach((node) => {
     lines.push(`    ${node.id} {`);
-    const fields = normalizeErFields(node.data.erFields).map((entry) => stringifyErField(entry).trim()).filter(Boolean);
+    const fields = normalizeErFields(node.data.erFields)
+      .map((entry) => stringifyErField(entry).trim())
+      .filter(Boolean);
     fields.forEach((field) => lines.push(`      ${field}`));
     lines.push('    }');
   });
@@ -310,7 +337,9 @@ function looksLikeStateDiagram(nodes: FlowNode[]): boolean {
   if (nodes.length === 0) return false;
   const hasStateStartNode = nodes.some((node) => node.id.startsWith('state_start_'));
   const hasExplicitStateNode = nodes.some((node) => node.type === 'state');
-  const sectionIds = new Set(nodes.filter((node) => node.type === 'section').map((node) => node.id));
+  const sectionIds = new Set(
+    nodes.filter((node) => node.type === 'section').map((node) => node.id)
+  );
   const hasCompositeParenting = nodes.some((node) => {
     const parentId = getNodeParentId(node);
     return parentId.length > 0 && sectionIds.has(parentId);
@@ -330,12 +359,17 @@ function resolveStateConnector(edge: FlowEdge): string {
   const styleDash = edge.style?.strokeDasharray;
 
   const isDashed = Boolean(styleDash);
-  const numericWidth = typeof styleWidth === 'number'
-    ? styleWidth
-    : typeof styleWidth === 'string'
-      ? Number(styleWidth)
-      : undefined;
-  const isThick = !isDashed && typeof numericWidth === 'number' && Number.isFinite(numericWidth) && numericWidth >= 4;
+  const numericWidth =
+    typeof styleWidth === 'number'
+      ? styleWidth
+      : typeof styleWidth === 'string'
+        ? Number(styleWidth)
+        : undefined;
+  const isThick =
+    !isDashed &&
+    typeof numericWidth === 'number' &&
+    Number.isFinite(numericWidth) &&
+    numericWidth >= 4;
 
   let body = '--';
   if (isDashed) body = '-.-';
@@ -404,7 +438,9 @@ function toStateDiagramMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
 
   topLevelNodes.forEach((node) => emitNodeDeclaration(node, 1));
 
-  const startNodeIds = new Set(nodes.filter((node) => node.type === 'start').map((node) => node.id));
+  const startNodeIds = new Set(
+    nodes.filter((node) => node.type === 'start').map((node) => node.id)
+  );
   edges.forEach((edge) => {
     const sourceNode = nodeById.get(edge.source);
     const targetNode = nodeById.get(edge.target);
@@ -427,19 +463,26 @@ function hasMarker(marker: FlowEdge['markerStart'] | FlowEdge['markerEnd']): boo
 
 function resolveFlowchartConnector(edge: FlowEdge): string {
   const dashPattern = edge.data?.dashPattern;
-  const isDashedByData = dashPattern === 'dashed' || dashPattern === 'dotted' || dashPattern === 'dashdot';
+  const isDashedByData =
+    dashPattern === 'dashed' || dashPattern === 'dotted' || dashPattern === 'dashdot';
   const isDashedByStyle = Boolean(edge.style?.strokeDasharray);
   const isDashed = isDashedByData || isDashedByStyle;
 
-  const strokeWidthFromData = typeof edge.data?.strokeWidth === 'number' ? edge.data.strokeWidth : undefined;
+  const strokeWidthFromData =
+    typeof edge.data?.strokeWidth === 'number' ? edge.data.strokeWidth : undefined;
   const styleWidth = edge.style?.strokeWidth;
-  const strokeWidthFromStyle = typeof styleWidth === 'number'
-    ? styleWidth
-    : typeof styleWidth === 'string'
-      ? Number(styleWidth)
-      : undefined;
+  const strokeWidthFromStyle =
+    typeof styleWidth === 'number'
+      ? styleWidth
+      : typeof styleWidth === 'string'
+        ? Number(styleWidth)
+        : undefined;
   const strokeWidth = strokeWidthFromData ?? strokeWidthFromStyle;
-  const isThick = !isDashed && typeof strokeWidth === 'number' && Number.isFinite(strokeWidth) && strokeWidth >= 4;
+  const isThick =
+    !isDashed &&
+    typeof strokeWidth === 'number' &&
+    Number.isFinite(strokeWidth) &&
+    strokeWidth >= 4;
 
   const hasStart = hasMarker(edge.markerStart);
   const hasEnd = hasMarker(edge.markerEnd) || (!hasStart && !edge.markerEnd);
@@ -464,27 +507,73 @@ function resolveSequenceArrow(kind: string | undefined): string {
 function toSequenceMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
   const lines: string[] = ['sequenceDiagram'];
   const participantIdByNodeId = new Map<string, string>();
-  sortNodesByPosition(nodes).forEach((node) => {
-    const kind = node.data.seqParticipantKind || 'participant';
-    const label = String(node.data.label || node.id).trim() || node.id;
-    const explicitAlias = typeof node.data.seqParticipantAlias === 'string' ? node.data.seqParticipantAlias.trim() : '';
-    const participantId = sanitizeId(node.id);
-    participantIdByNodeId.set(node.id, participantId);
 
-    if (explicitAlias) {
-      lines.push(`    ${kind} ${participantId} as ${sanitizeLabel(label)}`);
-      return;
-    }
-
-    if (participantId !== label) {
-      lines.push(`    ${kind} ${participantId} as ${sanitizeLabel(label)}`);
-      return;
-    }
-
-    lines.push(`    ${kind} ${participantId}`);
+  const participants = sortNodesByPosition(nodes.filter((n) => n.type === 'sequence_participant'));
+  const notes = nodes.filter((n) => n.type === 'sequence_note');
+  const sortedEdges = [...edges].sort((a, b) => {
+    const ao = typeof a.data?.seqMessageOrder === 'number' ? a.data.seqMessageOrder : 0;
+    const bo = typeof b.data?.seqMessageOrder === 'number' ? b.data.seqMessageOrder : 0;
+    return ao - bo;
   });
 
-  edges.forEach((edge) => {
+  // Export participants
+  participants.forEach((node) => {
+    const kind = node.data.seqParticipantKind || 'participant';
+    const label = String(node.data.label || node.id).trim() || node.id;
+    const id = sanitizeId(node.id);
+    participantIdByNodeId.set(node.id, id);
+    const explicitAlias =
+      typeof node.data.seqParticipantAlias === 'string' ? node.data.seqParticipantAlias.trim() : '';
+    if (explicitAlias) {
+      lines.push(`    ${kind} ${id} as ${sanitizeLabel(label)}`);
+    } else if (id !== label) {
+      lines.push(`    ${kind} ${id} as ${sanitizeLabel(label)}`);
+    } else {
+      lines.push(`    ${kind} ${id}`);
+    }
+  });
+
+  // Export activations
+  participants.forEach((node) => {
+    const id = participantIdByNodeId.get(node.id) ?? sanitizeId(node.id);
+    const acts = node.data.seqActivations;
+    if (acts && acts.length > 0) {
+      acts.forEach((_, i) => {
+        lines.push(`    ${i % 2 === 0 ? 'activate' : 'deactivate'} ${id}`);
+      });
+    }
+  });
+
+  // Export notes
+  notes.forEach((node) => {
+    const text = String(node.data.label || '');
+    const target = node.data.seqNoteTarget || '';
+    const position = node.data.seqNotePosition || 'over';
+    if (text && target) {
+      lines.push(`    note ${position} ${sanitizeId(target)}: ${sanitizeLabel(text)}`);
+    }
+  });
+
+  // Export edges with fragment wrapping
+  let currentFrag: { type: string; condition: string } | null = null;
+  sortedEdges.forEach((edge) => {
+    const frag = edge.data?.seqFragment;
+
+    // Close previous fragment if different
+    if (
+      currentFrag &&
+      (!frag || frag.type !== currentFrag.type || frag.condition !== currentFrag.condition)
+    ) {
+      lines.push('    end');
+      currentFrag = null;
+    }
+
+    // Open new fragment
+    if (frag && !currentFrag) {
+      lines.push(`    ${frag.type} ${frag.condition}`);
+      currentFrag = { type: frag.type, condition: frag.condition };
+    }
+
     const arrow = resolveSequenceArrow(edge.data?.seqMessageKind);
     const label = typeof edge.label === 'string' ? edge.label.trim() : '';
     const suffix = label ? `: ${label}` : '';
@@ -492,6 +581,11 @@ function toSequenceMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
     const target = participantIdByNodeId.get(edge.target) ?? sanitizeId(edge.target);
     lines.push(`    ${source}${arrow}${target}${suffix}`);
   });
+
+  // Close any remaining fragment
+  if (currentFrag) {
+    lines.push('    end');
+  }
 
   return `${lines.join('\n')}\n`;
 }
@@ -522,7 +616,9 @@ export function toMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
     return toERDiagramMermaid(nodes, edges);
   }
 
-  const seqNodeCount = nodes.filter((node) => node.type === 'sequence_participant').length;
+  const seqNodeCount = nodes.filter(
+    (node) => node.type === 'sequence_participant' || node.type === 'sequence_note'
+  ).length;
   if (nodes.length > 0 && seqNodeCount === nodes.length) {
     return toSequenceMermaid(nodes, edges);
   }
@@ -542,14 +638,31 @@ export function toMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
     const shape = node.data.shape || 'rounded';
     const type = node.type;
 
-    if (shape === 'diamond') { shapeStart = '{'; shapeEnd = '}'; }
-    else if (shape === 'hexagon') { shapeStart = '{{'; shapeEnd = '}}'; }
-    else if (shape === 'cylinder') { shapeStart = '[('; shapeEnd = ')]'; }
-    else if (shape === 'ellipse') { shapeStart = '(['; shapeEnd = '])'; }
-    else if (shape === 'circle') { shapeStart = '(('; shapeEnd = '))'; }
-    else if (shape === 'parallelogram') { shapeStart = '>'; shapeEnd = ']'; }
-    else if (type === 'decision') { shapeStart = '{'; shapeEnd = '}'; }
-    else if (type === 'start' || type === 'end') { shapeStart = '(['; shapeEnd = '])'; }
+    if (shape === 'diamond') {
+      shapeStart = '{';
+      shapeEnd = '}';
+    } else if (shape === 'hexagon') {
+      shapeStart = '{{';
+      shapeEnd = '}}';
+    } else if (shape === 'cylinder') {
+      shapeStart = '[(';
+      shapeEnd = ')]';
+    } else if (shape === 'ellipse') {
+      shapeStart = '([';
+      shapeEnd = '])';
+    } else if (shape === 'circle') {
+      shapeStart = '((';
+      shapeEnd = '))';
+    } else if (shape === 'parallelogram') {
+      shapeStart = '>';
+      shapeEnd = ']';
+    } else if (type === 'decision') {
+      shapeStart = '{';
+      shapeEnd = '}';
+    } else if (type === 'start' || type === 'end') {
+      shapeStart = '([';
+      shapeEnd = '])';
+    }
 
     mermaid += `    ${id}${shapeStart}"${label}"${shapeEnd}\n`;
   });

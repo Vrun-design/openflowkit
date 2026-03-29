@@ -11,7 +11,7 @@ function ImageNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
             minWidth={50}
             minHeight={50}
             keepAspectRatio
-            handleClassName="!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125"
+            handleClassName="!w-3 !h-3 !border-2 !border-[var(--brand-surface)] transition-all duration-150 hover:scale-125"
         >
             <div
                 className="relative group flex flex-col justify-center h-full transition-all duration-200"
@@ -29,7 +29,7 @@ function ImageNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
                         className="w-full h-full object-contain pointer-events-none select-none"
                     />
                 ) : (
-                    <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400 border-2 border-dashed border-slate-300 rounded-lg">
+                    <div className="flex h-full w-full items-center justify-center rounded-lg border-2 border-dashed border-[var(--color-brand-border)] bg-[var(--brand-background)] text-[var(--brand-secondary)]">
                         <span className="text-xs">No Image</span>
                     </div>
                 )}

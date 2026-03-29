@@ -42,28 +42,56 @@ function getSpacingDimensions(spacing: LayoutOptions['spacing'] = 'normal', isHo
     };
 }
 
-function getAlgorithmOptions(algorithm: LayoutAlgorithm, layerSpacing: number): Record<string, string> {
-    const options: Record<string, string> = {};
+function isArchitectureLikeDiagram(diagramType: string | undefined): boolean {
+    return diagramType === 'architecture' || diagramType === 'infrastructure';
+}
+
+function applyDiagramTypeSpacingHeuristics(
+    dims: { nodeNode: string; nodeLayer: string; component: string },
+    options: LayoutOptions
+): { nodeNode: string; nodeLayer: string; component: string } {
+    if (!isArchitectureLikeDiagram(options.diagramType)) {
+        return dims;
+    }
+
+    const nodeNode = Math.round(Number(dims.nodeNode) * 1.35);
+    const nodeLayer = Math.round(Number(dims.nodeLayer) * 1.3);
+    const component = Math.round(Number(dims.component) * 1.25);
+
+    return {
+        nodeNode: String(nodeNode),
+        nodeLayer: String(nodeLayer),
+        component: String(component),
+    };
+}
+
+function getAlgorithmOptions(
+    algorithm: LayoutAlgorithm,
+    layerSpacing: number,
+    options: LayoutOptions
+): Record<string, string> {
+    const algorithmOptions: Record<string, string> = {};
 
     switch (algorithm) {
         case 'mrtree':
-            options['elk.algorithm'] = 'org.eclipse.elk.mrtree';
+            algorithmOptions['elk.algorithm'] = 'org.eclipse.elk.mrtree';
             break;
         case 'force':
-            options['elk.algorithm'] = 'org.eclipse.elk.force';
+            algorithmOptions['elk.algorithm'] = 'org.eclipse.elk.force';
             break;
         case 'stress':
-            options['elk.algorithm'] = 'org.eclipse.elk.stress';
+            algorithmOptions['elk.algorithm'] = 'org.eclipse.elk.stress';
             break;
         case 'radial':
-            options['elk.algorithm'] = 'org.eclipse.elk.radial';
+            algorithmOptions['elk.algorithm'] = 'org.eclipse.elk.radial';
             break;
         default:
-            options['elk.algorithm'] = `org.eclipse.elk.${algorithm}`;
+            algorithmOptions['elk.algorithm'] = `org.eclipse.elk.${algorithm}`;
     }
     if (algorithm === 'layered') {
         const edgeNodeSpacing = String(Math.round(layerSpacing * 0.33));
-        Object.assign(options, {
+        const architectureLike = isArchitectureLikeDiagram(options.diagramType);
+        Object.assign(algorithmOptions, {
             'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
             'elk.layered.crossingMinimization.thoroughness': '64',
             'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
@@ -81,29 +109,38 @@ function getAlgorithmOptions(algorithm: LayoutAlgorithm, layerSpacing: number): 
             'elk.layered.highDegreeNode.treatment': 'true',
             'elk.layered.highDegreeNode.threshold': '4',
             'elk.layered.highDegreeNode.treeHeight': '2',
+            ...(architectureLike
+                ? {
+                    'elk.spacing.edgeNode': '24',
+                    'elk.spacing.edgeEdge': '18',
+                    'elk.layered.spacing.edgeEdgeBetweenLayers': '42',
+                    'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
+                    'elk.layered.priority.direction': '1',
+                }
+                : {}),
         });
     } else if (algorithm === 'mrtree') {
-        Object.assign(options, {
+        Object.assign(algorithmOptions, {
             'elk.separateConnectedComponents': 'true',
             'elk.portConstraints': 'FIXED_SIDE', // Lock to centers to force centralized trunk grouping
             'elk.spacing.edgeEdge': '12',
         });
 
     } else if (algorithm === 'force') {
-        Object.assign(options, {
+        Object.assign(algorithmOptions, {
             'elk.force.iterations': '500',
             'elk.force.repulsivePower': String(layerSpacing / 20),
             'elk.portConstraints': 'FREE', // Force layout needs free ports
         });
     } else if (algorithm === 'stress') {
-        options['elk.stress.desiredEdgeLength'] = String(layerSpacing);
-        options['elk.portConstraints'] = 'FREE';
+        algorithmOptions['elk.stress.desiredEdgeLength'] = String(layerSpacing);
+        algorithmOptions['elk.portConstraints'] = 'FREE';
     } else if (algorithm === 'radial') {
-        options['elk.radial.radius'] = String(layerSpacing);
-        options['elk.portConstraints'] = 'FREE';
+        algorithmOptions['elk.radial.radius'] = String(layerSpacing);
+        algorithmOptions['elk.portConstraints'] = 'FREE';
     }
 
-    return options;
+    return algorithmOptions;
 }
 
 export function getDeterministicSeedOptions(algorithm: LayoutAlgorithm): Record<string, string> {
@@ -142,8 +179,8 @@ export function buildResolvedLayoutConfiguration(options: LayoutOptions): Resolv
     const elkDirection = DIRECTION_MAP[direction] || 'DOWN';
     const isHorizontal = direction === 'LR' || direction === 'RL';
 
-    const dims = getSpacingDimensions(spacing, isHorizontal);
-    const algoOptions = getAlgorithmOptions(algorithm, parseFloat(dims.nodeLayer));
+    const dims = applyDiagramTypeSpacingHeuristics(getSpacingDimensions(spacing, isHorizontal), options);
+    const algoOptions = getAlgorithmOptions(algorithm, parseFloat(dims.nodeLayer), options);
     const deterministicSeedOptions = getDeterministicSeedOptions(algorithm);
     const layoutOptions = {
         'elk.direction': elkDirection,

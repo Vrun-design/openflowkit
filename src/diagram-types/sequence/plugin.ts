@@ -15,6 +15,26 @@ interface ParsedMessage {
   kind: 'sync' | 'async' | 'return' | 'self' | 'create' | 'destroy';
 }
 
+interface ParsedFragment {
+  type: 'alt' | 'loop' | 'opt' | 'par' | 'break' | 'critical';
+  condition: string;
+  startOrder: number;
+  elseOrder?: number;
+}
+
+interface ParsedActivation {
+  participant: string;
+  activate: boolean;
+  order: number;
+}
+
+interface ParsedNote {
+  text: string;
+  target: string;
+  position: 'over' | 'left' | 'right';
+  order: number;
+}
+
 function resolveMessageKind(arrow: string): ParsedMessage['kind'] {
   if (arrow === '-->' || arrow === '-->>' || arrow === '-->>>' || arrow === '--x') return 'return';
   if (arrow === '-)' || arrow === '--)') return 'async';
@@ -22,13 +42,27 @@ function resolveMessageKind(arrow: string): ParsedMessage['kind'] {
   return 'sync';
 }
 
-function parseSequence(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; error?: string; diagnostics?: string[] } {
+function parseSequence(input: string): {
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  error?: string;
+  diagnostics?: string[];
+} {
   const lines = input.replace(/\r\n/g, '\n').split('\n');
   const participants: ParsedParticipant[] = [];
   const messages: ParsedMessage[] = [];
+  const fragments: ParsedFragment[] = [];
+  const activations: ParsedActivation[] = [];
+  const notes: ParsedNote[] = [];
   const knownIds = new Set<string>();
   const diagnostics: string[] = [];
   let hasHeader = false;
+  let messageOrder = 0;
+  const fragmentStack: Array<{
+    type: ParsedFragment['type'];
+    condition: string;
+    startOrder: number;
+  }> = [];
 
   function ensureParticipant(name: string): void {
     if (knownIds.has(name)) return;
@@ -39,11 +73,7 @@ function parseSequence(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; e
   for (const [index, rawLine] of lines.entries()) {
     const lineNumber = index + 1;
     const line = rawLine.trim();
-    if (!line || line.startsWith('%%') || line.startsWith('note ') || line.startsWith('Note ')) continue;
-    if (/^(loop|alt|else|opt|par|critical|break|rect|end)\b/i.test(line)) continue;
-    if (/^(activate|deactivate)\b/i.test(line)) continue;
-    if (/^title\b/i.test(line)) continue;
-    if (/^autonumber\b/i.test(line)) continue;
+    if (!line || line.startsWith('%%')) continue;
 
     if (/^sequenceDiagram\b/i.test(line)) {
       hasHeader = true;
@@ -51,16 +81,75 @@ function parseSequence(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; e
     }
     if (!hasHeader) continue;
 
+    if (/^title\b/i.test(line)) continue;
+    if (/^autonumber\b/i.test(line)) continue;
+
     const participantMatch = line.match(/^(participant|actor)\s+(.+?)(?:\s+as\s+(.+))?$/i);
     if (participantMatch) {
       const kind = participantMatch[1].toLowerCase() as 'participant' | 'actor';
       const rawId = participantMatch[2].trim();
       const alias = participantMatch[3]?.trim();
-      const id = rawId;
-      if (!knownIds.has(id)) {
-        participants.push({ id, label: alias || id, kind, alias });
-        knownIds.add(id);
+      if (!knownIds.has(rawId)) {
+        participants.push({ id: rawId, label: alias || rawId, kind, alias });
+        knownIds.add(rawId);
       }
+      continue;
+    }
+
+    const activateMatch = line.match(/^(activate|deactivate)\s+(\S+)/i);
+    if (activateMatch) {
+      const isActivate = activateMatch[1].toLowerCase() === 'activate';
+      const participant = activateMatch[2];
+      ensureParticipant(participant);
+      activations.push({ participant, activate: isActivate, order: messageOrder });
+      continue;
+    }
+
+    const fragmentMatch = line.match(/^(alt|loop|opt|par|break|critical)\s+(.+)$/i);
+    if (fragmentMatch) {
+      fragmentStack.push({
+        type: fragmentMatch[1].toLowerCase() as ParsedFragment['type'],
+        condition: fragmentMatch[2].trim(),
+        startOrder: messageOrder,
+      });
+      continue;
+    }
+
+    const elseMatch = line.match(/^else\s+(.+)$/i);
+    if (elseMatch && fragmentStack.length > 0) {
+      const top = fragmentStack[fragmentStack.length - 1];
+      if (top.type === 'alt') {
+        fragments.push({
+          type: top.type,
+          condition: top.condition,
+          startOrder: top.startOrder,
+          elseOrder: messageOrder,
+        });
+        top.condition = elseMatch[1].trim();
+        top.startOrder = messageOrder;
+      }
+      continue;
+    }
+
+    if (/^end\b/i.test(line)) {
+      if (fragmentStack.length > 0) {
+        const top = fragmentStack.pop()!;
+        fragments.push({ type: top.type, condition: top.condition, startOrder: top.startOrder });
+      }
+      continue;
+    }
+
+    const noteMatch = line.match(
+      /^note\s+(left of|right of|over)\s+(\S+?)(?:,\s*(\S+))?\s*:\s*(.+)$/i
+    );
+    if (noteMatch) {
+      const position = noteMatch[1].toLowerCase().replace(' ', '_') as 'left' | 'right' | 'over';
+      const target1 = noteMatch[2];
+      const target2 = noteMatch[3];
+      const text = noteMatch[4].trim();
+      ensureParticipant(target1);
+      if (target2) ensureParticipant(target2);
+      notes.push({ text, target: target1, position, order: messageOrder });
       continue;
     }
 
@@ -87,6 +176,7 @@ function parseSequence(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; e
       const isSelf = from === to;
       const kind = isSelf ? 'self' : resolveMessageKind(arrow);
       messages.push({ from, to, label, kind });
+      messageOrder++;
       matched = true;
       break;
     }
@@ -107,6 +197,13 @@ function parseSequence(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; e
   const LANE_WIDTH = 220;
   const participantKindMap = new Map(participants.map((p) => [p.id, p.kind]));
 
+  const activationByParticipant = new Map<string, number[]>();
+  for (const act of activations) {
+    if (!activationByParticipant.has(act.participant))
+      activationByParticipant.set(act.participant, []);
+    activationByParticipant.get(act.participant)!.push(act.order);
+  }
+
   const nodes: FlowNode[] = participants.map((p, i) => ({
     id: p.id,
     type: 'sequence_participant',
@@ -115,26 +212,51 @@ function parseSequence(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; e
       label: p.label,
       seqParticipantKind: p.kind,
       seqParticipantAlias: p.alias,
+      seqActivations: activationByParticipant.get(p.id),
     },
   }));
 
-  const edges: FlowEdge[] = messages.map((msg, i) => ({
-    id: `e-seq-${i + 1}`,
-    source: msg.from,
-    target: msg.to,
-    sourceHandle: 'top',
-    targetHandle: 'top',
-    label: msg.label || undefined,
-    type: 'sequence_message',
+  const edges: FlowEdge[] = messages.map((msg, i) => {
+    const frag = fragments.find((f) => {
+      const end = f.elseOrder !== undefined ? f.elseOrder : f.startOrder;
+      return i >= f.startOrder && i <= end;
+    });
+
+    return {
+      id: `e-seq-${i + 1}`,
+      source: msg.from,
+      target: msg.to,
+      sourceHandle: 'top',
+      targetHandle: 'top',
+      label: msg.label || undefined,
+      type: 'sequence_message',
+      data: {
+        seqMessageKind: msg.kind,
+        seqMessageOrder: i,
+        sourceIsActor: participantKindMap.get(msg.from) === 'actor',
+        targetIsActor: participantKindMap.get(msg.to) === 'actor',
+        seqFragment: frag ? { type: frag.type, condition: frag.condition, edgeIds: [] } : undefined,
+      },
+    };
+  });
+
+  const noteNodes: FlowNode[] = notes.map((note, i) => ({
+    id: `seq-note-${i + 1}`,
+    type: 'sequence_note',
+    position: { x: 0, y: 0 },
     data: {
-      seqMessageKind: msg.kind,
-      seqMessageOrder: i,
-      sourceIsActor: participantKindMap.get(msg.from) === 'actor',
-      targetIsActor: participantKindMap.get(msg.to) === 'actor',
+      label: note.text,
+      seqNoteTarget: note.target,
+      seqNotePosition: note.position,
+      seqMessageOrder: note.order,
     },
   }));
 
-  return diagnostics.length > 0 ? { nodes, edges, diagnostics } : { nodes, edges };
+  return {
+    nodes: [...nodes, ...noteNodes],
+    edges,
+    ...(diagnostics.length > 0 ? { diagnostics } : {}),
+  };
 }
 
 export const SEQUENCE_PLUGIN: DiagramPlugin = {

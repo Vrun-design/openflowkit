@@ -20,7 +20,7 @@ export function ClassNodeSection({ nodeId, data, onChange }: ClassNodeSectionPro
   return (
     <div className="space-y-4">
       <div>
-        <label className="text-xs font-semibold text-slate-600">Stereotype</label>
+        <label className="text-xs font-semibold text-[var(--brand-secondary)]">Stereotype</label>
         <input
           value={data.classStereotype || ''}
           onChange={(event) => onChange(nodeId, { classStereotype: event.target.value })}

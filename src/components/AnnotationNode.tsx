@@ -16,7 +16,7 @@ const LazyMarkdownRenderer = lazy(async () => {
 
 function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.ReactElement {
   const { t } = useTranslation();
-  const { setNodes } = useFlowStore();
+  const setNodes = useFlowStore((state) => state.setNodes);
   const labelEdit = useInlineNodeTextEdit(id, 'label', data.label || '');
   const subLabelEdit = useInlineNodeTextEdit(id, 'subLabel', data.subLabel || '', {
     multiline: true,
@@ -26,13 +26,13 @@ function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): Reac
   const lineCount = (data.subLabel || '').split('\n').length;
   const contentMinHeight = Math.max(100, 84 + lineCount * 18);
   const subLabelContent = data.subLabel || t('annotationNode.placeholder');
-  const renderedSubLabel = hasMarkdownSyntax(subLabelContent)
-    ? (
-        <Suspense fallback={<span className="whitespace-pre-wrap break-words">{subLabelContent}</span>}>
-          <LazyMarkdownRenderer content={subLabelContent} />
-        </Suspense>
-      )
-    : <span className="whitespace-pre-wrap break-words">{subLabelContent}</span>;
+  const renderedSubLabel = hasMarkdownSyntax(subLabelContent) ? (
+    <Suspense fallback={<span className="whitespace-pre-wrap break-words">{subLabelContent}</span>}>
+      <LazyMarkdownRenderer content={subLabelContent} />
+    </Suspense>
+  ) : (
+    <span className="whitespace-pre-wrap break-words">{subLabelContent}</span>
+  );
   return (
     <NodeChrome
       nodeId={id}
@@ -51,55 +51,59 @@ function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): Reac
         style={{ minWidth: 200, width: '100%', minHeight: contentMinHeight }}
       >
         {selected ? (
-          <div className="absolute -top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 shadow-sm">
+          <div className="absolute -top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-2 py-1 shadow-sm">
             {ANNOTATION_COLOR_OPTIONS.map((option) => (
               <button
                 key={option.id}
                 type="button"
                 aria-label={`Set annotation color ${option.label}`}
-                className={`h-3.5 w-3.5 rounded-full border transition-transform hover:scale-110 ${option.dot} ${data.color === option.id ? 'ring-2 ring-slate-400/70' : 'border-white/70'}`}
+                className={`h-3.5 w-3.5 rounded-full border transition-transform hover:scale-110 ${option.dot} ${data.color === option.id ? 'ring-2 ring-[var(--brand-secondary)]/70' : 'border-[var(--brand-surface)]/70'}`}
                 onClick={(event) => {
                   event.stopPropagation();
-                  setNodes((nodes) => nodes.map((node) => (
-                    node.id === id ? { ...node, data: { ...node.data, color: option.id } } : node
-                  )));
+                  setNodes((nodes) =>
+                    nodes.map((node) =>
+                      node.id === id ? { ...node, data: { ...node.data, color: option.id } } : node
+                    )
+                  );
                 }}
               />
             ))}
           </div>
         ) : null}
         <div className="p-4 flex flex-col">
-            {data.label && (
-                <InlineTextEditSurface
-                    isEditing={labelEdit.isEditing}
-                    draft={labelEdit.draft}
-                    displayValue={data.label}
-                    onBeginEdit={labelEdit.beginEdit}
-                    onDraftChange={labelEdit.setDraft}
-                    onCommit={labelEdit.commit}
-                    onKeyDown={labelEdit.handleKeyDown}
-                    className={`mb-2 border-b pb-2 text-sm font-bold ${annotationTheme.title}`}
-                    inputClassName={annotationTheme.title.split(' ')[0]}
-                    isSelected={Boolean(selected)}
-                />
-            )}
+          {data.label && (
             <InlineTextEditSurface
-                isEditing={subLabelEdit.isEditing}
-                draft={subLabelEdit.draft}
-                displayValue={renderedSubLabel}
-                onBeginEdit={subLabelEdit.beginEdit}
-                onDraftChange={subLabelEdit.setDraft}
-                onCommit={subLabelEdit.commit}
-                onKeyDown={subLabelEdit.handleKeyDown}
-                className={`text-xs font-medium leading-relaxed markdown-content flow-lod-secondary ${annotationTheme.body}`}
-                inputClassName={annotationTheme.body}
-                inputMode="multiline"
-                isSelected={Boolean(selected)}
+              isEditing={labelEdit.isEditing}
+              draft={labelEdit.draft}
+              displayValue={data.label}
+              onBeginEdit={labelEdit.beginEdit}
+              onDraftChange={labelEdit.setDraft}
+              onCommit={labelEdit.commit}
+              onKeyDown={labelEdit.handleKeyDown}
+              className={`mb-2 border-b pb-2 text-sm font-bold ${annotationTheme.title}`}
+              inputClassName={annotationTheme.title.split(' ')[0]}
+              isSelected={Boolean(selected)}
             />
+          )}
+          <InlineTextEditSurface
+            isEditing={subLabelEdit.isEditing}
+            draft={subLabelEdit.draft}
+            displayValue={renderedSubLabel}
+            onBeginEdit={subLabelEdit.beginEdit}
+            onDraftChange={subLabelEdit.setDraft}
+            onCommit={subLabelEdit.commit}
+            onKeyDown={subLabelEdit.handleKeyDown}
+            className={`text-xs font-medium leading-relaxed markdown-content flow-lod-secondary ${annotationTheme.body}`}
+            inputClassName={annotationTheme.body}
+            inputMode="multiline"
+            isSelected={Boolean(selected)}
+          />
         </div>
 
         {/* Decorative corner fold */}
-        <div className={`absolute bottom-0 right-0 h-8 w-8 rounded-tl-xl border-l border-t ${annotationTheme.fold}`}></div>
+        <div
+          className={`absolute bottom-0 right-0 h-8 w-8 rounded-tl-xl border-l border-t ${annotationTheme.fold}`}
+        ></div>
       </div>
     </NodeChrome>
   );

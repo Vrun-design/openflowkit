@@ -29,8 +29,8 @@ export function EdgeStyleSection({ selectedEdge, onChange }: EdgeStyleSectionPro
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between rounded-[var(--brand-radius)] border border-slate-200 bg-slate-50 px-3 py-2">
-                <span className="text-sm font-medium text-slate-600">Animated</span>
+            <div className="flex items-center justify-between rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-background)]/70 px-3 py-2">
+                <span className="text-sm font-medium text-[var(--brand-text)]">Animated</span>
                 <Switch
                     checked={selectedEdge.animated || false}
                     onCheckedChange={(checked) => onChange(selectedEdge.id, { animated: checked })}
@@ -47,14 +47,14 @@ export function EdgeStyleSection({ selectedEdge, onChange }: EdgeStyleSectionPro
             <button
                 type="button"
                 onClick={() => setAdvancedOpen((current) => !current)}
-                className="flex w-full items-center justify-between rounded-[var(--brand-radius)] border border-slate-200 bg-white px-3 py-2 text-left text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                className="flex w-full items-center justify-between rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-2 text-left text-sm font-medium text-[var(--brand-text)] transition-colors hover:bg-[var(--brand-background)]"
             >
                 <span>Advanced</span>
-                <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 text-[var(--brand-secondary)] transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {advancedOpen && (
-                <div className="space-y-3 rounded-[var(--brand-radius)] border border-slate-200 bg-slate-50 p-3">
+                <div className="space-y-3 rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-background)]/70 p-3">
                     <PropertySliderRow
                         label="Stroke Width"
                         valueLabel={`${selectedEdge.style?.strokeWidth || 2}px`}
@@ -67,13 +67,13 @@ export function EdgeStyleSection({ selectedEdge, onChange }: EdgeStyleSectionPro
                                 style: { ...selectedEdge.style, strokeWidth },
                             });
                         }}
-                        labelClassName="text-[10px] font-bold uppercase text-slate-400"
-                        sliderClassName="h-1 rounded-lg bg-slate-200 accent-[var(--brand-primary)]"
+                        labelClassName="text-[10px] font-bold uppercase text-[var(--brand-secondary)]"
+                        sliderClassName="h-1 rounded-lg bg-[var(--color-brand-border)] accent-[var(--brand-primary)]"
                         containerClassName="space-y-1"
                     />
 
                     <div className="space-y-1.5">
-                        <span className="text-[10px] uppercase font-bold text-slate-400">Line Pattern</span>
+                        <span className="text-[10px] font-bold uppercase text-[var(--brand-secondary)]">Line Pattern</span>
                         <SegmentedChoice
                             items={(['solid', 'dashed', 'dotted', 'dashdot'] as const).map((pattern) => ({
                                 id: pattern,

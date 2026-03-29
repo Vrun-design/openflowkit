@@ -96,7 +96,10 @@ function buildGraphModel(nodes: FlowNode[], edges: FlowEdge[]): GraphModel {
   };
 }
 
-function buildOrderedNodeIds(nodes: FlowNode[], edges: FlowEdge[]): { orderedNodeIds: string[]; hasTopologyFallback: boolean } {
+function buildOrderedNodeIds(
+  nodes: FlowNode[],
+  edges: FlowEdge[]
+): { orderedNodeIds: string[]; hasTopologyFallback: boolean } {
   const compareNodes = createNodeComparator(nodes);
   const { indegree, outgoingEdgeIdsByNodeId } = buildGraphModel(nodes, edges);
   const edgeById = new Map(edges.map((edge) => [edge.id, edge]));
@@ -139,7 +142,11 @@ function buildOrderedNodeIds(nodes: FlowNode[], edges: FlowEdge[]): { orderedNod
   };
 }
 
-function createComponentOrderMap(orderedNodeIds: string[], edges: FlowEdge[]): Map<string, number> {
+function createComponentOrderMap(
+  orderedNodeIds: string[],
+  edges: FlowEdge[],
+  nodes: FlowNode[]
+): Map<string, number> {
   const visible = new Set<string>();
   const componentIndexByNodeId = new Map<string, number>();
   const edgeByTargetId = new Map<string, FlowEdge[]>();
@@ -150,17 +157,37 @@ function createComponentOrderMap(orderedNodeIds: string[], edges: FlowEdge[]): M
     edgeByTargetId.set(edge.target, current);
   });
 
+  const sectionByNodeId = new Map<string, string>();
+  for (const node of nodes) {
+    if (node.parentId && nodes.some((n) => n.id === node.parentId && n.type === 'section')) {
+      sectionByNodeId.set(node.id, node.parentId);
+    }
+  }
+
   let currentComponentIndex = -1;
+  const sectionIndexMap = new Map<string, number>();
 
   orderedNodeIds.forEach((nodeId) => {
+    const sectionId = sectionByNodeId.get(nodeId);
+    if (sectionId && sectionIndexMap.has(sectionId)) {
+      componentIndexByNodeId.set(nodeId, sectionIndexMap.get(sectionId)!);
+      visible.add(nodeId);
+      return;
+    }
+
     const incomingEdges = edgeByTargetId.get(nodeId) ?? [];
-    const hasVisibleSource = incomingEdges.some((edge) => visible.has(edge.source) && edge.source !== edge.target);
+    const hasVisibleSource = incomingEdges.some(
+      (edge) => visible.has(edge.source) && edge.source !== edge.target
+    );
 
     if (!hasVisibleSource) {
       currentComponentIndex += 1;
     }
 
     componentIndexByNodeId.set(nodeId, currentComponentIndex);
+    if (sectionId) {
+      sectionIndexMap.set(sectionId, currentComponentIndex);
+    }
     visible.add(nodeId);
   });
 
@@ -171,7 +198,7 @@ function resolveLeadEdgeForNode(
   nodeId: string,
   orderedNodeIds: string[],
   edges: FlowEdge[],
-  compareNodes: (leftId: string, rightId: string) => number,
+  compareNodes: (leftId: string, rightId: string) => number
 ): FlowEdge | null {
   const visibleIndexByNodeId = new Map(orderedNodeIds.map((id, index) => [id, index]));
   const candidateEdges = edges.filter((edge) => {
@@ -181,7 +208,11 @@ function resolveLeadEdgeForNode(
 
     const sourceIndex = visibleIndexByNodeId.get(edge.source);
     const targetIndex = visibleIndexByNodeId.get(edge.target);
-    return typeof sourceIndex === 'number' && typeof targetIndex === 'number' && sourceIndex < targetIndex;
+    return (
+      typeof sourceIndex === 'number' &&
+      typeof targetIndex === 'number' &&
+      sourceIndex < targetIndex
+    );
   });
 
   if (candidateEdges.length === 0) {
@@ -212,7 +243,7 @@ export function buildCinematicBuildPlan(nodes: FlowNode[], edges: FlowEdge[]): C
 
   const { orderedNodeIds, hasTopologyFallback } = buildOrderedNodeIds(nodes, edges);
   const compareNodes = createNodeComparator(nodes);
-  const componentIndexByNodeId = createComponentOrderMap(orderedNodeIds, edges);
+  const componentIndexByNodeId = createComponentOrderMap(orderedNodeIds, edges, nodes);
 
   const segments = orderedNodeIds.map<CinematicBuildSegment>((targetNodeId) => {
     const leadEdge = resolveLeadEdgeForNode(targetNodeId, orderedNodeIds, edges, compareNodes);

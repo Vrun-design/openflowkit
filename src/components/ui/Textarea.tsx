@@ -20,7 +20,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(({
     return (
         <div className="space-y-1.5 h-full flex flex-col">
             {label && (
-                <label htmlFor={inputId} className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <label htmlFor={inputId} className="block text-xs font-semibold text-[var(--brand-secondary)] uppercase tracking-wider">
                     {label}
                 </label>
             )}
@@ -28,14 +28,14 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(({
                 id={inputId}
                 ref={ref}
                 className={`
-                    flex min-h-[80px] w-full rounded-[var(--brand-radius)] border bg-white px-3 py-2 text-sm ring-offset-white placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50
-                    ${error ? 'border-red-300 focus-visible:ring-red-500' : 'border-slate-200 focus:border-[var(--brand-primary-400)]'}
+                    flex min-h-[80px] w-full rounded-[var(--brand-radius)] border bg-[var(--brand-surface)] px-3 py-2 text-sm ring-offset-[var(--brand-surface)] placeholder:text-[var(--brand-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50
+                    ${error ? 'border-red-300 focus-visible:ring-red-500' : 'border-[var(--color-brand-border)] focus:border-[var(--brand-primary-400)]'}
                     ${className}
                 `}
                 {...props}
             />
             {error && <p className="text-xs text-red-500">{error}</p>}
-            {helperText && !error && <p className="text-xs text-slate-400">{helperText}</p>}
+            {helperText && !error && <p className="text-xs text-[var(--brand-secondary)]">{helperText}</p>}
         </div>
     );
 });

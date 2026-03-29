@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useFlowStore } from '../store';
 import type { FlowStoreState } from '../store';
@@ -76,9 +76,13 @@ export function useWorkspaceRouteResolver(): {
     resolveTarget: (targetId: string) => { documentId: string; pageId: string } | null;
 } {
     const documents = useFlowStore((state) => state.documents);
+    const resolveTarget = useCallback(
+        (targetId: string) => findDocumentRouteTarget(documents, targetId),
+        [documents],
+    );
 
     return {
         documents,
-        resolveTarget: (targetId: string) => findDocumentRouteTarget(documents, targetId),
+        resolveTarget,
     };
 }

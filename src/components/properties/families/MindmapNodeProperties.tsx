@@ -11,6 +11,7 @@ import {
   InspectorSectionDivider,
 } from '@/components/properties/InspectorPrimitives';
 import { createPropertyInputKeyDownHandler } from '@/components/properties/propertyInputBehavior';
+import { toggleSection } from '@/components/properties/shared';
 import { SegmentedChoice } from '@/components/properties/SegmentedChoice';
 import { Palette, Type, Workflow } from 'lucide-react';
 
@@ -47,10 +48,6 @@ export function MindmapNodeProperties({
   const collapsed = selectedNode.data.mindmapCollapsed === true;
   const handleInputKeyDown = createPropertyInputKeyDownHandler({ blurOnEnter: true });
 
-  function toggleSection(section: string): void {
-    setActiveSection((currentSection) => (currentSection === section ? '' : section));
-  }
-
   return (
     <>
       <InspectorSectionDivider />
@@ -59,7 +56,7 @@ export function MindmapNodeProperties({
         title="Content"
         icon={<Type className="w-3.5 h-3.5" />}
         isOpen={activeSection === 'content'}
-        onToggle={() => toggleSection('content')}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'content'))}
       >
         <InspectorField label="Topic">
           <input
@@ -76,19 +73,25 @@ export function MindmapNodeProperties({
         title="Branch Color"
         icon={<Palette className="w-3.5 h-3.5" />}
         isOpen={activeSection === 'appearance'}
-        onToggle={() => toggleSection('appearance')}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'appearance'))}
       >
-        <p className="mb-3 text-xs text-slate-500">Applies the selected color to this topic and all of its descendants.</p>
+        <p className="mb-3 text-xs text-[var(--brand-secondary)]">
+          Applies the selected color to this topic and all of its descendants.
+        </p>
         <ColorPicker
           selectedColor={selectedNode.data.color}
           selectedColorMode={selectedNode.data.colorMode}
           selectedCustomColor={selectedNode.data.customColor}
-          onChange={(color) => onChange(selectedNode.id, {
-            color,
-            ...(color === 'custom' ? {} : { customColor: undefined }),
-          })}
+          onChange={(color) =>
+            onChange(selectedNode.id, {
+              color,
+              ...(color === 'custom' ? {} : { customColor: undefined }),
+            })
+          }
           onColorModeChange={(colorMode) => onChange(selectedNode.id, { colorMode })}
-          onCustomColorChange={(customColor) => onChange(selectedNode.id, { color: 'custom', customColor })}
+          onCustomColorChange={(customColor) =>
+            onChange(selectedNode.id, { color: 'custom', customColor })
+          }
           allowModes={true}
           allowCustom={true}
         />
@@ -98,11 +101,11 @@ export function MindmapNodeProperties({
         title="Structure"
         icon={<Workflow className="w-3.5 h-3.5" />}
         isOpen={activeSection === 'structure'}
-        onToggle={() => toggleSection('structure')}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'structure'))}
       >
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
+            <span className="rounded-full bg-[var(--brand-background)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--brand-secondary)]">
               {nodeRole}
             </span>
           </div>
@@ -141,9 +144,11 @@ export function MindmapNodeProperties({
                 columns={2}
                 size="sm"
                 selectedId={branchStyle}
-                onSelect={(value) => onChange(selectedNode.id, {
-                  mindmapBranchStyle: value as 'curved' | 'straight',
-                })}
+                onSelect={(value) =>
+                  onChange(selectedNode.id, {
+                    mindmapBranchStyle: value as 'curved' | 'straight',
+                  })
+                }
                 items={[
                   { id: 'curved', label: 'Curved' },
                   { id: 'straight', label: 'Straight' },

@@ -55,24 +55,24 @@ export function HomeFlowRenameDialog({
     }
 
     return createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="home-flow-rename-title"
                 aria-describedby="home-flow-rename-description"
-                className="w-full max-w-md rounded-[var(--radius-lg)] border border-slate-200 bg-white shadow-[var(--shadow-overlay)]"
+                className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-[var(--shadow-overlay)]"
             >
-                <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+                <div className="flex items-start justify-between border-b border-[var(--color-brand-border)] px-6 py-5">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary-50)] text-[var(--brand-primary)]">
                             <Pencil className="h-4 w-4" />
                         </div>
                         <div>
-                            <h2 id="home-flow-rename-title" className="text-base font-semibold text-slate-900">
+                            <h2 id="home-flow-rename-title" className="text-base font-semibold text-[var(--brand-text)]">
                                 {t('home.renameFlow.title', 'Rename flow')}
                             </h2>
-                            <p id="home-flow-rename-description" className="text-sm text-slate-500">
+                            <p id="home-flow-rename-description" className="text-sm text-[var(--brand-secondary)]">
                                 {t('home.renameFlow.description', 'Update the name shown on your dashboard and in the editor.')}
                             </p>
                         </div>
@@ -81,7 +81,7 @@ export function HomeFlowRenameDialog({
                         ref={closeButtonRef}
                         type="button"
                         onClick={onClose}
-                        className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                        className="rounded-full p-2 text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
                         aria-label={t('common.close', 'Close')}
                     >
                         <X className="h-4 w-4" />
@@ -89,18 +89,18 @@ export function HomeFlowRenameDialog({
                 </div>
 
                 <form onSubmit={handleSubmit} className="px-6 py-5">
-                    <label htmlFor="home-flow-rename-input" className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <label htmlFor="home-flow-rename-input" className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--brand-secondary)]">
                         {t('home.renameFlow.label', 'Flow name')}
                     </label>
                     <input
                         id="home-flow-rename-input"
                         value={draftName}
                         onChange={(event) => setDraftName(event.target.value)}
-                        className="w-full rounded-[var(--radius-md)] border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-[var(--brand-primary)]"
+                        className="w-full rounded-[var(--radius-md)] border border-[var(--color-brand-border)] px-3 py-2.5 text-sm text-[var(--brand-text)] outline-none transition-colors placeholder:text-[var(--brand-secondary)] focus:border-[var(--brand-primary)]"
                         placeholder={t('home.renameFlow.placeholder', 'Enter a flow name')}
                         autoFocus
                     />
-                    <p className="mt-2 text-xs text-slate-400">
+                    <p className="mt-2 text-xs text-[var(--brand-secondary)]">
                         {t('home.renameFlow.hint', 'Names are local to this browser profile unless you export or sync them elsewhere.')}
                     </p>
 
@@ -157,24 +157,24 @@ export function HomeFlowDeleteDialog({
     }
 
     return createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="home-flow-delete-title"
                 aria-describedby="home-flow-delete-description"
-                className="w-full max-w-md rounded-[var(--radius-lg)] border border-slate-200 bg-white shadow-[var(--shadow-overlay)]"
+                className="w-full max-w-md rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-[var(--shadow-overlay)]"
             >
-                <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+                <div className="flex items-start justify-between border-b border-[var(--color-brand-border)] px-6 py-5">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-500/10 text-red-400">
                             <AlertTriangle className="h-4 w-4" />
                         </div>
                         <div>
-                            <h2 id="home-flow-delete-title" className="text-base font-semibold text-slate-900">
+                            <h2 id="home-flow-delete-title" className="text-base font-semibold text-[var(--brand-text)]">
                                 {t('home.deleteFlow.title', 'Delete flow')}
                             </h2>
-                            <p id="home-flow-delete-description" className="text-sm text-slate-500">
+                            <p id="home-flow-delete-description" className="text-sm text-[var(--brand-secondary)]">
                                 {t('home.deleteFlow.description', 'This removes the local autosaved flow from this device.')}
                             </p>
                         </div>
@@ -183,7 +183,7 @@ export function HomeFlowDeleteDialog({
                         ref={closeButtonRef}
                         type="button"
                         onClick={onClose}
-                        className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                        className="rounded-full p-2 text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
                         aria-label={t('common.close', 'Close')}
                     >
                         <X className="h-4 w-4" />
@@ -191,10 +191,10 @@ export function HomeFlowDeleteDialog({
                 </div>
 
                 <div className="px-6 py-5">
-                    <p className="text-sm leading-6 text-slate-700">
+                    <p className="text-sm leading-6 text-[var(--brand-text)]">
                         {t('home.deleteFlow.confirmation', 'Delete "{{name}}"?', { name: flowName })}
                     </p>
-                    <p className="mt-2 text-xs text-slate-400">
+                    <p className="mt-2 text-xs text-[var(--brand-secondary)]">
                         {t('home.deleteFlow.hint', 'This cannot be undone unless you have an exported backup or another copy.')}
                     </p>
 

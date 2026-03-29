@@ -18,18 +18,30 @@ vi.mock('../nodeLabelEditRequest', () => ({
 const mockSetNodes = vi.fn();
 const mockSetEdges = vi.fn();
 const mockSetSelectedNodeId = vi.fn();
+const mockSetHoveredSectionId = vi.fn();
 const mockState = {
     nodes: [],
     edges: [],
     viewSettings: { smartRoutingEnabled: false },
     setEdges: mockSetEdges,
+    setHoveredSectionId: mockSetHoveredSectionId,
 };
 
 beforeEach(() => {
-    vi.mocked(useFlowStore).mockReturnValue({ setNodes: mockSetNodes, setEdges: mockSetEdges, setSelectedNodeId: mockSetSelectedNodeId } as never);
+    vi.mocked(useFlowStore).mockReturnValue({
+        setNodes: mockSetNodes,
+        setEdges: mockSetEdges,
+        setSelectedNodeId: mockSetSelectedNodeId,
+        setHoveredSectionId: mockSetHoveredSectionId,
+    } as never);
     vi.mocked(useFlowStore.getState).mockReturnValue(mockState as never);
     vi.clearAllMocks();
-    vi.mocked(useFlowStore).mockReturnValue({ setNodes: mockSetNodes, setEdges: mockSetEdges, setSelectedNodeId: mockSetSelectedNodeId } as never);
+    vi.mocked(useFlowStore).mockReturnValue({
+        setNodes: mockSetNodes,
+        setEdges: mockSetEdges,
+        setSelectedNodeId: mockSetSelectedNodeId,
+        setHoveredSectionId: mockSetHoveredSectionId,
+    } as never);
     vi.mocked(useFlowStore.getState).mockReturnValue(mockState as never);
 });
 

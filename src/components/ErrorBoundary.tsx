@@ -42,22 +42,22 @@ class ErrorBoundaryComponent extends Component<Props, State> {
             }
 
             return (
-                <div className={`flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-4 ${this.props.className || 'min-h-screen'}`}>
-                    <div className="max-w-md w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-8 text-center shadow-[var(--shadow-lg)] dark:border-slate-700 dark:bg-slate-800">
-                        <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+                <div className={`flex items-center justify-center bg-[var(--brand-background)] p-4 ${this.props.className || 'min-h-screen'}`}>
+                    <div className="max-w-md w-full overflow-hidden rounded-xl border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-8 text-center shadow-[var(--shadow-lg)]">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <AlertTriangle className="w-8 h-8 text-red-600" />
                         </div>
 
-                        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+                        <h1 className="text-2xl font-bold text-[var(--brand-text)] mb-2">
                             {t('errorBoundary.title')}
                         </h1>
 
-                        <p className="text-slate-600 dark:text-slate-400 mb-8">
+                        <p className="text-[var(--brand-secondary)] mb-8">
                             {t('errorBoundary.description')}
                         </p>
 
                         {this.state.error && (
-                            <div className="mb-6 p-4 bg-slate-100 dark:bg-slate-900 rounded-lg text-left text-xs font-mono overflow-auto max-h-32 text-slate-600 dark:text-slate-400">
+                            <div className="mb-6 p-4 bg-[var(--brand-background)] rounded-lg text-left text-xs font-mono overflow-auto max-h-32 text-[var(--brand-secondary)]">
                                 {this.state.error.toString()}
                             </div>
                         )}

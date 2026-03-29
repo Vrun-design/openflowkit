@@ -130,19 +130,19 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
                 onClick={handleToggle}
                 aria-expanded={isOpen}
                 aria-haspopup="listbox"
-                className={`${EDITOR_FIELD_DEFAULT_CLASS} flex items-center justify-between px-3 py-2.5 text-left ${isOpen ? 'border-[var(--brand-primary-300)] ring-1 ring-[var(--brand-primary)]/15' : 'hover:border-slate-300'}`.trim()}
+                className={`${EDITOR_FIELD_DEFAULT_CLASS} flex items-center justify-between px-3 py-2.5 text-left ${isOpen ? 'border-[var(--brand-primary-300)] bg-[var(--brand-surface)] ring-1 ring-[var(--brand-primary)]/15' : 'hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)]/55'}`.trim()}
             >
                 <div className="flex flex-col items-start overflow-hidden">
-                    <span className={`block truncate ${selectedOption ? 'text-slate-900 font-medium' : 'text-slate-400'}`}>
+                    <span className={`block truncate ${selectedOption ? 'text-[var(--brand-text)] font-medium' : 'text-[var(--brand-secondary)]'}`}>
                         {selectedOption ? selectedOption.label : placeholder}
                     </span>
                     {selectedOption?.hint && (
-                        <span className="text-[10px] text-slate-500 truncate block max-w-full">
+                        <span className="text-[10px] text-[var(--brand-secondary)] truncate block max-w-full">
                             {selectedOption.hint}
                         </span>
                     )}
                 </div>
-                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-[var(--brand-secondary)] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {shouldRenderMenu
@@ -154,7 +154,7 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
                         transition={{ duration: 0.15, ease: "easeOut" }}
                         role="listbox"
                         data-floating-select-root="true"
-                        className="fixed z-[1000] max-h-64 overflow-y-auto rounded-[var(--radius-lg)] border border-slate-200 bg-white shadow-[var(--shadow-md)] no-scrollbar focus:outline-none"
+                        className="fixed z-[1000] max-h-64 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-[var(--shadow-md)] no-scrollbar focus:outline-none"
                         style={{
                             top: `${menuPosition.top}px`,
                             left: `${menuPosition.left}px`,
@@ -168,7 +168,7 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
                                     if (!groupItems?.length) return null;
                                     return (
                                         <div key={group}>
-                                            <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50/50 sticky top-0 backdrop-blur-sm">
+                                            <div className="px-3 py-1.5 text-[10px] font-semibold text-[var(--brand-secondary)] uppercase tracking-wider bg-[var(--brand-background)]/50 sticky top-0 backdrop-blur-sm">
                                                 {group}
                                             </div>
                                             {groupItems.map(option => (
@@ -194,7 +194,7 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
                             )}
 
                             {options.length === 0 && (
-                                <div className="px-3 py-8 text-center text-sm text-slate-400">
+                                <div className="px-3 py-8 text-center text-sm text-[var(--brand-secondary)]">
                                     No options available
                                 </div>
                             )}
@@ -208,14 +208,14 @@ export function Select({ value, onChange, options, placeholder = 'Select...', cl
 
 function OptionItem({ option, isSelected, onClick }: { option: SelectOption; isSelected: boolean; onClick: () => void }) {
     const itemClass = isSelected
-        ? 'bg-[var(--brand-primary)]/5 text-[var(--brand-primary)]'
-        : 'text-slate-700 hover:bg-slate-50';
+        ? 'bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]'
+        : 'text-[var(--brand-text)] hover:bg-[var(--brand-background)]/75';
 
     const badgeClass = isSelected
         ? 'bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] border-[var(--brand-primary)]/20'
-        : 'bg-slate-100 text-slate-500 border-slate-200';
+        : 'bg-[var(--brand-background)] text-[var(--brand-secondary)] border-[var(--color-brand-border)]';
 
-    const hintClass = isSelected ? 'text-[var(--brand-primary)]/70' : 'text-slate-400';
+    const hintClass = isSelected ? 'text-[var(--brand-primary)]/70' : 'text-[var(--brand-secondary)]';
 
     return (
         <button

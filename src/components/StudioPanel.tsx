@@ -119,7 +119,7 @@ export function StudioPanel({
         <SidebarShell>
             <SidebarHeader title="Studio" onClose={onClose} />
 
-            <div className="border-b border-slate-100 bg-[var(--brand-surface)] px-4 py-2.5">
+            <div className="border-b border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-4 py-2.5">
                 <SidebarSegmentedTabs
                     tabs={STUDIO_TABS.map(({ id, icon: Icon, label }) => ({
                         id,
@@ -134,9 +134,9 @@ export function StudioPanel({
             {selectedNode && (
                 <button
                     onClick={onViewProperties}
-                    className="flex w-full items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-2 text-left transition-colors hover:bg-[var(--brand-primary-50)]"
+                    className="flex w-full items-center justify-between border-b border-[var(--color-brand-border)] bg-[var(--brand-background)] px-4 py-2 text-left transition-colors hover:bg-[var(--brand-primary-50)]"
                 >
-                    <span className="truncate text-xs font-medium text-slate-600">
+                    <span className="truncate text-xs font-medium text-[var(--brand-secondary)]">
                         {(selectedNode.data as { label?: string }).label?.trim() || 'Selected node'}
                     </span>
                     <span className="ml-2 flex shrink-0 items-center gap-1 text-[11px] font-medium text-[var(--brand-primary)]">

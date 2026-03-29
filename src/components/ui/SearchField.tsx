@@ -16,12 +16,14 @@ export const SearchField = React.forwardRef<HTMLInputElement, SearchFieldProps>(
     },
     ref
     ): React.ReactElement {
-    const surfaceClassName = surface === 'subtle' ? 'bg-slate-50/80' : 'bg-white';
+    const surfaceClassName = surface === 'subtle'
+        ? 'bg-[var(--brand-background)]/75 hover:bg-[var(--brand-background)]'
+        : 'bg-[var(--brand-surface)] hover:bg-[var(--brand-surface)]';
     const trailingPaddingClassName = trailingContent ? 'pr-11' : 'pr-3';
 
     return (
         <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--brand-secondary)]" />
             <input
                 ref={ref}
                 type="text"

@@ -54,7 +54,7 @@ export function TopNavBrand({ appName, logoUrl, logoStyle, ui }: TopNavBrandProp
 
             {(logoStyle === 'text' || logoStyle === 'both') && (
                 <div className="min-w-0 flex flex-col">
-                    <span className="truncate text-base font-bold leading-none tracking-tight text-slate-800 sm:text-lg">{appName}</span>
+                    <span className="truncate text-base font-bold leading-none tracking-tight text-[var(--brand-text)] sm:text-lg">{appName}</span>
                 </div>
             )}
 

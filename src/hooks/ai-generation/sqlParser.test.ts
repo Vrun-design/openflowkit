@@ -52,7 +52,11 @@ describe('parseSqlDdl', () => {
     const schema = parseSqlDdl(sql);
     const [items] = schema.tables;
     expect(items.foreignKeys).toHaveLength(2);
-    expect(items.foreignKeys[0]).toEqual({ column: 'order_id', refTable: 'orders', refColumn: 'id' });
+    expect(items.foreignKeys[0]).toEqual({
+      column: 'order_id',
+      refTable: 'orders',
+      refColumn: 'id',
+    });
   });
 
   it('parses FOREIGN KEY ... REFERENCES constraint syntax', () => {
@@ -65,7 +69,11 @@ describe('parseSqlDdl', () => {
     `;
     const schema = parseSqlDdl(sql);
     expect(schema.tables[0].foreignKeys).toHaveLength(1);
-    expect(schema.tables[0].foreignKeys[0]).toEqual({ column: 'order_id', refTable: 'orders', refColumn: 'id' });
+    expect(schema.tables[0].foreignKeys[0]).toEqual({
+      column: 'order_id',
+      refTable: 'orders',
+      refColumn: 'id',
+    });
   });
 
   it('strips SQL comments before parsing', () => {
@@ -107,6 +115,47 @@ describe('parseSqlDdl', () => {
   it('returns empty tables for empty input', () => {
     expect(parseSqlDdl('').tables).toHaveLength(0);
     expect(parseSqlDdl('-- just a comment').tables).toHaveLength(0);
+  });
+
+  it('parses ALTER TABLE ADD FOREIGN KEY', () => {
+    const sql = `
+      CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100));
+      CREATE TABLE posts (id INT PRIMARY KEY, user_id INT, body TEXT);
+      ALTER TABLE posts ADD FOREIGN KEY (user_id) REFERENCES users(id);
+    `;
+    const schema = parseSqlDdl(sql);
+    const posts = schema.tables.find((t) => t.name === 'posts');
+    expect(posts?.foreignKeys).toHaveLength(1);
+    expect(posts?.foreignKeys[0]).toEqual({
+      column: 'user_id',
+      refTable: 'users',
+      refColumn: 'id',
+    });
+  });
+
+  it('parses ALTER TABLE with CONSTRAINT name', () => {
+    const sql = `
+      CREATE TABLE orders (id INT PRIMARY KEY);
+      CREATE TABLE items (id INT PRIMARY KEY, order_id INT);
+      ALTER TABLE items ADD CONSTRAINT fk_items_order FOREIGN KEY (order_id) REFERENCES orders(id);
+    `;
+    const schema = parseSqlDdl(sql);
+    const items = schema.tables.find((t) => t.name === 'items');
+    expect(items?.foreignKeys).toHaveLength(1);
+    expect(items?.foreignKeys[0]).toEqual({
+      column: 'order_id',
+      refTable: 'orders',
+      refColumn: 'id',
+    });
+  });
+
+  it('preserves ENUM type values', () => {
+    const sql = `CREATE TABLE orders (status ENUM('pending', 'shipped', 'delivered'), priority INT);`;
+    const schema = parseSqlDdl(sql);
+    const status = schema.tables[0].columns[0];
+    expect(status.name).toBe('status');
+    expect(status.type).toContain('ENUM');
+    expect(status.type).toContain('PENDING');
   });
 });
 

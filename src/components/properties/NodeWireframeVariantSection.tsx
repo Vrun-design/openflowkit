@@ -36,7 +36,7 @@ export function NodeWireframeVariantSection({
                         className={`px-2 py-2 rounded text-xs font-medium border transition-all
                             ${activeVariant === variant.id
                                 ? 'bg-[var(--brand-primary-50)] border-[var(--brand-primary-200)] text-[var(--brand-primary)]'
-                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                                : 'bg-[var(--brand-surface)] border-[var(--color-brand-border)] text-[var(--brand-secondary)] hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]'}`}
                         title={variant.description}
                     >
                         {variant.label}

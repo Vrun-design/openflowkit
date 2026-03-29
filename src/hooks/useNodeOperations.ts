@@ -6,7 +6,15 @@ import { useTranslation } from 'react-i18next';
 import { createId } from '../lib/id';
 import { relayoutMindmapComponent, syncMindmapEdges } from '@/lib/mindmapLayout';
 import { applyMindmapVisibility, getMindmapChildrenById, getMindmapDescendantIds } from '@/lib/mindmapTree';
-import { reassignArchitectureNodeBoundary } from './node-operations/utils';
+import {
+    autoFitSectionsToChildren,
+    bringContentsIntoSection,
+    duplicateSectionWithChildren,
+    fitSectionToChildren,
+    reassignArchitectureNodeBoundary,
+    releaseNodeFromSection,
+    unparentSectionChildren,
+} from './node-operations/utils';
 import { useNodeOperationAdders } from './node-operations/useNodeOperationAdders';
 import { useMindmapNodeOperations } from './node-operations/useMindmapNodeOperations';
 import { useArchitectureNodeOperations } from './node-operations/useArchitectureNodeOperations';
@@ -141,7 +149,19 @@ export const useNodeOperations = (recordHistory: () => void) => {
     // --- Delete ---
     const deleteNode = useCallback((id: string) => {
         recordHistory();
-        setNodes((nds) => nds.filter((n) => n.id !== id));
+        setNodes((nds) => {
+            const targetNode = nds.find((node) => node.id === id);
+            if (!targetNode) {
+                return nds;
+            }
+
+            if (targetNode.type !== 'section') {
+                return autoFitSectionsToChildren(nds.filter((node) => node.id !== id));
+            }
+
+            const releasedNodes = unparentSectionChildren(id, nds).filter((node) => node.id !== id);
+            return autoFitSectionsToChildren(releasedNodes);
+        });
         setSelectedNodeId(null);
     }, [setNodes, recordHistory, setSelectedNodeId]);
 
@@ -150,6 +170,13 @@ export const useNodeOperations = (recordHistory: () => void) => {
         const nodeToDuplicate = nodes.find((n) => n.id === id);
         if (!nodeToDuplicate) return;
         recordHistory();
+
+        if (nodeToDuplicate.type === 'section') {
+            setNodes((nds) => duplicateSectionWithChildren(nds, id));
+            setSelectedNodeId(null);
+            return;
+        }
+
         const newNodeId = createId();
         const newNode: FlowNode = {
             ...nodeToDuplicate,
@@ -160,6 +187,34 @@ export const useNodeOperations = (recordHistory: () => void) => {
         setNodes((nds) => [...nds.map((n) => ({ ...n, selected: false })), newNode]);
         setSelectedNodeId(newNodeId);
     }, [nodes, recordHistory, setNodes, setSelectedNodeId]);
+
+    const fitSectionToContents = useCallback((id: string) => {
+        recordHistory();
+        setNodes((nds) => {
+            const section = nds.find((node) => node.id === id && node.type === 'section');
+            if (!section) {
+                return nds;
+            }
+
+            return fitSectionToChildren({
+                ...section,
+                data: {
+                    ...section.data,
+                    sectionSizingMode: 'manual',
+                },
+            }, nds);
+        });
+    }, [recordHistory, setNodes]);
+
+    const releaseFromSection = useCallback((id: string) => {
+        recordHistory();
+        setNodes((nds) => releaseNodeFromSection(nds, id));
+    }, [recordHistory, setNodes]);
+
+    const handleBringContentsIntoSection = useCallback((id: string) => {
+        recordHistory();
+        setNodes((nds) => bringContentsIntoSection(nds, id));
+    }, [recordHistory, setNodes]);
 
     // --- Add Nodes ---
     const {
@@ -191,6 +246,9 @@ export const useNodeOperations = (recordHistory: () => void) => {
         updateNodeZIndex,
         deleteNode,
         duplicateNode,
+        fitSectionToContents,
+        releaseFromSection,
+        handleBringContentsIntoSection,
         handleAddShape,
         handleAddNode,
         handleAddAnnotation,

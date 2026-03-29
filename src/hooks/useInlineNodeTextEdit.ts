@@ -13,6 +13,7 @@ type BeginEditOptions = {
 type InlineNodeTextEditOptions = {
   multiline?: boolean;
   allowTabCreateSibling?: boolean;
+  getPatch?: (nextValue: string) => Partial<NodeData>;
 };
 
 export function useInlineNodeTextEdit(
@@ -34,14 +35,18 @@ export function useInlineNodeTextEdit(
   const [draft, setDraftState] = useState(initialValue ?? '');
   const multiline = options.multiline ?? false;
   const allowTabCreateSibling = options.allowTabCreateSibling ?? field === 'label';
+  const getPatch = options.getPatch;
 
-  const beginEdit = useCallback((options?: BeginEditOptions) => {
-    const nextDraft = options?.replaceExisting
-      ? (options.seedText ?? '')
-      : (options?.seedText ?? initialValue ?? '');
-    setDraftState(nextDraft);
-    setIsEditing(true);
-  }, [initialValue]);
+  const beginEdit = useCallback(
+    (options?: BeginEditOptions) => {
+      const nextDraft = options?.replaceExisting
+        ? (options.seedText ?? '')
+        : (options?.seedText ?? initialValue ?? '');
+      setDraftState(nextDraft);
+      setIsEditing(true);
+    },
+    [initialValue]
+  );
 
   useNodeLabelEditRequest(nodeId, beginEdit);
 
@@ -59,14 +64,14 @@ export function useInlineNodeTextEdit(
               ...node,
               data: {
                 ...node.data,
-                [field]: nextValue,
+                ...(getPatch ? getPatch(nextValue) : { [field]: nextValue }),
               } as NodeData,
             }
           : node
       )
     );
     setIsEditing(false);
-  }, [draft, field, nodeId, setNodes, recordHistoryV2]);
+  }, [draft, field, getPatch, nodeId, setNodes, recordHistoryV2]);
 
   const cancel = useCallback(() => {
     setDraftState(initialValue ?? '');

@@ -49,6 +49,32 @@ describe('useKeyboardShortcuts', () => {
     expect(duplicateNode).not.toHaveBeenCalled();
   });
 
+  it('does not hijack select-all while focused in textarea', () => {
+    const selectAll = vi.fn();
+    renderShortcuts({ selectAll });
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    textarea.focus();
+
+    const event = new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true, cancelable: true });
+    window.dispatchEvent(event);
+
+    expect(selectAll).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('does not open command bar while focused in textarea', () => {
+    const onCommandBar = vi.fn();
+    renderShortcuts({ onCommandBar });
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    textarea.focus();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+
+    expect(onCommandBar).not.toHaveBeenCalled();
+  });
+
   it('dispatches node label edit request when F2 is pressed with selected node', () => {
     renderShortcuts();
     const requestListener = vi.fn();

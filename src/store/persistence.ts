@@ -6,6 +6,7 @@ import type { FlowTab } from '@/lib/types';
 import { isDiagramType } from '@/lib/types';
 import { sanitizeAISettings } from './aiSettings';
 import { loadPersistedAISettings, persistAISettings } from './aiSettingsPersistence';
+import { withSectionDefaults } from '@/hooks/node-operations/utils';
 import {
     DEFAULT_DESIGN_SYSTEM,
     INITIAL_GLOBAL_EDGE_OPTIONS,
@@ -50,18 +51,18 @@ function createFallbackDocument(): FlowDocument {
 }
 
 export function sanitizePersistedNode(node: FlowTab['nodes'][number]): FlowTab['nodes'][number] {
-    const {
+  const {
         selected: _selected,
         dragging: _dragging,
         measured: _measured,
-        positionAbsolute: _positionAbsolute,
-        ...persistedNode
-    } = node as FlowTab['nodes'][number] & {
-        measured?: unknown;
-        positionAbsolute?: unknown;
-    };
+    positionAbsolute: _positionAbsolute,
+    ...persistedNode
+  } = node as FlowTab['nodes'][number] & {
+    measured?: unknown;
+    positionAbsolute?: unknown;
+  };
 
-    return persistedNode;
+  return withSectionDefaults(persistedNode);
 }
 
 export function sanitizePersistedEdge(edge: FlowTab['edges'][number]): FlowTab['edges'][number] {
@@ -220,6 +221,7 @@ export function createInitialFlowState(): Pick<
     | 'activeLayerId'
     | 'selectedNodeId'
     | 'selectedEdgeId'
+    | 'hoveredSectionId'
     | 'pendingNodeLabelEditRequest'
     | 'mermaidDiagnostics'
 > {
@@ -239,6 +241,7 @@ export function createInitialFlowState(): Pick<
         activeLayerId: 'default',
         selectedNodeId: null,
         selectedEdgeId: null,
+        hoveredSectionId: null,
         pendingNodeLabelEditRequest: null,
         mermaidDiagnostics: null,
     };

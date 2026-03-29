@@ -16,16 +16,16 @@ function CopyRow({ label, value, icon: Icon }: { label: string; value: string; i
     }, [value]);
 
     return (
-        <div className="rounded-[var(--radius-sm)] border border-slate-200 bg-slate-50 p-3">
+        <div className="rounded-[var(--radius-sm)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3">
             <div className="mb-1.5 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--brand-secondary-light)]">
                     <Icon className="h-3 w-3" />
                     {label}
                 </div>
                 <button
                     type="button"
                     onClick={() => void handleCopy()}
-                    className="flex items-center gap-1 rounded-[var(--radius-xs)] px-2 py-0.5 text-[11px] font-medium text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition-colors"
+                    className="flex items-center gap-1 rounded-[var(--radius-xs)] px-2 py-0.5 text-[11px] font-medium text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-surface)] hover:text-[var(--brand-text)]"
                     aria-label={`Copy ${label.toLowerCase()}`}
                 >
                     {copied ? (
@@ -35,7 +35,7 @@ function CopyRow({ label, value, icon: Icon }: { label: string; value: string; i
                     )}
                 </button>
             </div>
-            <p className="select-all break-all font-mono text-[11px] text-slate-600 leading-relaxed">{value}</p>
+            <p className="select-all break-all font-mono text-[11px] leading-relaxed text-[var(--brand-secondary)]">{value}</p>
         </div>
     );
 }
@@ -63,15 +63,15 @@ export function ShareEmbedModal({ viewerUrl, onClose }: ShareEmbedModalProps): R
                 aria-modal="true"
                 aria-labelledby="share-embed-title"
                 aria-describedby="share-embed-description"
-                className="relative mx-4 w-full max-w-md rounded-[var(--radius-xl)] border border-white/20 bg-white shadow-[var(--shadow-overlay)] ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-150"
+                className="relative mx-4 w-full max-w-md rounded-[var(--radius-xl)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] text-[var(--brand-text)] shadow-[var(--shadow-overlay)] ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-150"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <div className="flex items-center justify-between border-b border-[var(--color-brand-border)] px-5 py-4">
                     <div>
-                        <h2 id="share-embed-title" className="text-sm font-semibold text-slate-800">Share and embed diagram</h2>
-                        <p id="share-embed-description" className="mt-0.5 text-[11px] text-slate-400">Viewer links are read-only and encode the diagram directly in the URL.</p>
+                        <h2 id="share-embed-title" className="text-sm font-semibold text-[var(--brand-text)]">Share and embed diagram</h2>
+                        <p id="share-embed-description" className="mt-0.5 text-[11px] text-[var(--brand-secondary-light)]">Viewer links are read-only and encode the diagram directly in the URL.</p>
                     </div>
-                    <button type="button" onClick={onClose} className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close share dialog">
+                    <button type="button" onClick={onClose} className="rounded-full p-1 text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]" aria-label="Close share dialog">
                         <X className="h-4 w-4" />
                     </button>
                 </div>
@@ -86,15 +86,15 @@ export function ShareEmbedModal({ viewerUrl, onClose }: ShareEmbedModalProps): R
                         href={cardViewerUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-slate-200 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-[var(--brand-primary)] transition-colors"
+                        className="flex items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-brand-border)] py-2 text-xs font-medium text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-primary)]"
                     >
                         <ExternalLink className="h-3.5 w-3.5" />
                         Open card viewer
                     </a>
                 </div>
 
-                <div className="border-t border-slate-100 px-5 py-3">
-                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                <div className="border-t border-[var(--color-brand-border)] px-5 py-3">
+                    <p className="text-[10px] leading-relaxed text-[var(--brand-secondary-light)]">
                         GitHub README usage should prefer the Markdown link. Blog posts and docs can use the iframe snippet with `size=card` or `size=badge`.
                     </p>
                 </div>

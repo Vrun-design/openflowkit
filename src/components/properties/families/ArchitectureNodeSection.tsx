@@ -1,14 +1,18 @@
 import React from 'react';
 import type { NodeData } from '@/lib/types';
 import type { DomainLibraryCategory, DomainLibraryItem } from '@/services/domainLibrary';
-import { loadProviderCatalog, loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalog';
+import { loadProviderCatalog } from '@/services/shapeLibrary/providerCatalog';
+import { useAssetCatalog } from '@/hooks/useAssetCatalog';
 import { InspectorField } from '@/components/properties/InspectorPrimitives';
 import { SegmentedChoice } from '@/components/properties/SegmentedChoice';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Tooltip } from '@/components/Tooltip';
 import { Image as ImageIcon, Upload } from 'lucide-react';
-import { IconSearchField, IconTileScrollGrid } from '@/components/properties/IconTilePickerPrimitives';
+import {
+  IconSearchField,
+  IconTileScrollGrid,
+} from '@/components/properties/IconTilePickerPrimitives';
 
 interface ArchitectureNodeSectionProps {
   nodeId: string;
@@ -41,102 +45,37 @@ export function ArchitectureNodeSection({
 }: ArchitectureNodeSectionProps): React.ReactElement {
   const provider = (data.archProvider || 'custom') as DomainLibraryCategory | 'custom';
   const providerLabel = provider.toUpperCase();
-  const customProviderLabel = typeof data.archProviderLabel === 'string' ? data.archProviderLabel : '';
+  const customProviderLabel =
+    typeof data.archProviderLabel === 'string' ? data.archProviderLabel : '';
   const customIconUrl = typeof data.customIconUrl === 'string' ? data.customIconUrl : undefined;
-  const [query, setQuery] = React.useState('');
-  const [category, setCategory] = React.useState('all');
-  const [results, setResults] = React.useState<DomainLibraryItem[]>([]);
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [previewUrls, setPreviewUrls] = React.useState<Record<string, string>>({});
 
-  React.useEffect(() => {
-    if (provider === 'custom') {
-      setResults([]);
-      setCategory('all');
-      return;
-    }
+  const effectiveProvider = provider === 'custom' ? null : provider;
+  const {
+    items: results,
+    filteredItems: filteredResults,
+    previewUrls,
+    isLoading,
+    query,
+    setQuery,
+    category,
+    setCategory,
+  } = useAssetCatalog({
+    provider: effectiveProvider,
+    loadCatalog: loadProviderCatalog,
+  });
 
-    let cancelled = false;
-    setIsLoading(true);
-    loadProviderCatalog(provider)
-      .then((items) => {
-        if (!cancelled) {
-          setResults(items);
-          setIsLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setResults([]);
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [provider]);
-
-  const providerCategories = React.useMemo(() => Array.from(new Set(
-    results
-      .map((item) => item.providerShapeCategory)
-      .filter((value): value is string => Boolean(value))
-  )).sort((left, right) => left.localeCompare(right)), [results]);
+  const providerCategories = React.useMemo(
+    () =>
+      Array.from(
+        new Set(
+          results
+            .map((item) => item.providerShapeCategory)
+            .filter((value): value is string => Boolean(value))
+        )
+      ).sort((left, right) => left.localeCompare(right)),
+    [results]
+  );
   const hasProviderCategories = providerCategories.length > 1;
-
-  const filteredResults = React.useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return results
-      .filter((item) => {
-        if (category !== 'all' && item.providerShapeCategory !== category) {
-          return false;
-        }
-        if (!normalizedQuery) {
-          return true;
-        }
-        return item.label.toLowerCase().includes(normalizedQuery)
-          || item.description.toLowerCase().includes(normalizedQuery)
-          || (item.providerShapeCategory || '').toLowerCase().includes(normalizedQuery);
-      })
-      .slice(0, 24);
-  }, [category, query, results]);
-
-  React.useEffect(() => {
-    if (filteredResults.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-    Promise.all(filteredResults.map(async (item) => {
-      if (!item.archIconPackId || !item.archIconShapeId || previewUrls[item.id]) {
-        return null;
-      }
-
-      const preview = await loadProviderShapePreview(item.archIconPackId, item.archIconShapeId);
-      return preview ? [item.id, preview.previewUrl] as const : null;
-    })).then((entries) => {
-      if (cancelled) {
-        return;
-      }
-
-      const loadedEntries = entries.filter((entry): entry is readonly [string, string] => entry !== null);
-      if (loadedEntries.length === 0) {
-        return;
-      }
-
-      setPreviewUrls((current) => {
-        const next = { ...current };
-        loadedEntries.forEach(([itemId, previewUrl]) => {
-          next[itemId] = previewUrl;
-        });
-        return next;
-      });
-    }).catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [filteredResults, previewUrls]);
 
   function applySuggestion(item: DomainLibraryItem): void {
     onChange(nodeId, {
@@ -182,7 +121,9 @@ export function ArchitectureNodeSection({
   }
 
   function getItemTooltipText(item: DomainLibraryItem): string {
-    return item.providerShapeCategory ? `${item.label} • ${item.providerShapeCategory}` : item.label;
+    return item.providerShapeCategory
+      ? `${item.label} • ${item.providerShapeCategory}`
+      : item.label;
   }
 
   return (
@@ -198,11 +139,8 @@ export function ArchitectureNodeSection({
       </InspectorField>
 
       {provider === 'custom' ? (
-        <InspectorField
-          label="Custom Provider"
-          helper="Name the provider. Icon is optional."
-        >
-          <div className="space-y-2 rounded-[var(--brand-radius)] border border-slate-200 bg-slate-50/60 p-3">
+        <InspectorField label="Custom Provider" helper="Name the provider. Icon is optional.">
+          <div className="space-y-2 rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3">
             <Input
               value={customProviderLabel}
               onChange={(event) => onChange(nodeId, { archProviderLabel: event.target.value })}
@@ -210,12 +148,18 @@ export function ArchitectureNodeSection({
             />
 
             {customIconUrl ? (
-              <div className="flex items-center gap-3 rounded-[var(--brand-radius)] border border-slate-200 bg-white px-3 py-2">
-                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-slate-200 bg-slate-50">
-                  <img src={customIconUrl} alt="Custom provider icon" className="h-5 w-5 object-contain" />
+              <div className="flex items-center gap-3 rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-2">
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-brand-border)] bg-[var(--brand-background)]">
+                  <img
+                    src={customIconUrl}
+                    alt="Custom provider icon"
+                    className="h-5 w-5 object-contain"
+                  />
                 </div>
-                <span className="flex-1 text-xs font-medium text-slate-500">Custom icon added</span>
-                <label className="cursor-pointer rounded-[var(--radius-sm)] border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:border-slate-300 hover:bg-slate-50">
+                <span className="flex-1 text-xs font-medium text-[var(--brand-secondary)]">
+                  Custom icon added
+                </span>
+                <label className="cursor-pointer rounded-[var(--radius-sm)] border border-[var(--color-brand-border)] px-2.5 py-1 text-xs font-medium text-[var(--brand-secondary)] transition-colors hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]">
                   Replace
                   <input
                     type="file"
@@ -226,14 +170,14 @@ export function ArchitectureNodeSection({
                 </label>
                 <button
                   type="button"
-                  className="rounded-[var(--radius-sm)] border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+                  className="rounded-[var(--radius-sm)] border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/15"
                   onClick={() => onChange(nodeId, { customIconUrl: undefined })}
                 >
                   Remove
                 </button>
               </div>
             ) : (
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-[var(--brand-radius)] border border-dashed border-slate-300 px-3 py-2 text-xs font-medium text-slate-600 transition-all hover:border-[var(--brand-primary-400)] hover:bg-white hover:text-[var(--brand-primary)]">
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-[var(--brand-radius)] border border-dashed border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-2 text-xs font-medium text-[var(--brand-secondary)] transition-all hover:border-[var(--brand-primary-400)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-primary)]">
                 <Upload className="h-3.5 w-3.5" />
                 <span>Add provider icon</span>
                 <input
@@ -273,42 +217,49 @@ export function ArchitectureNodeSection({
             {isLoading ? (
               <div className="grid grid-cols-6 gap-2">
                 {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                  <div key={i} className="aspect-square animate-pulse rounded-[var(--radius-md)] border border-slate-200 bg-slate-50" />
+                  <div
+                    key={i}
+                    className="aspect-square animate-pulse rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)]"
+                  />
                 ))}
               </div>
             ) : null}
 
             {!isLoading && filteredResults.length > 0 ? (
               <IconTileScrollGrid>
-                  {filteredResults.map((item) => {
-                    const isSelected = data.archIconShapeId === item.archIconShapeId;
-                    const previewUrl = previewUrls[item.id];
-                    return (
-                      <Tooltip key={item.id} text={getItemTooltipText(item)} className="block w-full aspect-square">
-                        <button
-                          type="button"
-                          aria-label={item.label}
-                          className={`group flex h-full w-full items-center justify-center rounded-[var(--radius-md)] border p-2 transition-all ${
-                            isSelected
-                              ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-50)]'
-                              : 'border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50'
-                          }`}
-                          onClick={() => applySuggestion(item)}
-                        >
-                          {previewUrl ? (
-                            <img src={previewUrl} alt="" className="h-10 w-10 object-contain" />
-                          ) : (
-                            <ImageIcon className="h-5 w-5 text-slate-400" />
-                          )}
-                        </button>
-                      </Tooltip>
-                    );
-                  })}
+                {filteredResults.map((item) => {
+                  const isSelected = data.archIconShapeId === item.archIconShapeId;
+                  const previewUrl = previewUrls[item.id];
+                  return (
+                    <Tooltip
+                      key={item.id}
+                      text={getItemTooltipText(item)}
+                      className="block w-full aspect-square"
+                    >
+                      <button
+                        type="button"
+                        aria-label={item.label}
+                        className={`group flex h-full w-full items-center justify-center rounded-[var(--radius-md)] border p-2 transition-all ${
+                          isSelected
+                            ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-50)]'
+                            : 'border-transparent bg-transparent hover:border-[var(--color-brand-border)] hover:bg-[var(--brand-surface)]'
+                        }`}
+                        onClick={() => applySuggestion(item)}
+                      >
+                        {previewUrl ? (
+                          <img src={previewUrl} alt="" className="h-10 w-10 object-contain" />
+                        ) : (
+                          <ImageIcon className="h-5 w-5 text-[var(--brand-secondary-light)]" />
+                        )}
+                      </button>
+                    </Tooltip>
+                  );
+                })}
               </IconTileScrollGrid>
             ) : null}
 
             {!isLoading && filteredResults.length === 0 ? (
-              <div className="rounded-[var(--brand-radius)] border border-dashed border-slate-200 px-3 py-4 text-center text-xs text-slate-500">
+              <div className="rounded-[var(--brand-radius)] border border-dashed border-[var(--color-brand-border)] px-3 py-4 text-center text-xs text-[var(--brand-secondary)]">
                 No matching services found.
               </div>
             ) : null}

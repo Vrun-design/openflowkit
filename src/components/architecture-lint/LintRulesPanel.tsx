@@ -111,7 +111,7 @@ function NodeMatcherForm({ label, value, onChange }: NodeMatcherFormProps): Reac
 
     return (
         <div className="space-y-1">
-            <label className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{label}</label>
+            <label className="text-[10px] font-medium uppercase tracking-wide text-[var(--brand-secondary)]">{label}</label>
             <div className="flex gap-1.5">
                 <Select
                     value={field}
@@ -156,7 +156,7 @@ function RuleForm({ initial, onSave, onCancel }: RuleFormProps): React.ReactElem
     const showCount = rule.type === 'node-count';
 
     return (
-        <div className="space-y-3 rounded-[var(--radius-md)] border border-slate-200 bg-slate-50 p-3">
+        <div className="space-y-3 rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3">
             <div className="grid grid-cols-2 gap-2">
                 <Input
                     label="Rule ID"
@@ -166,7 +166,7 @@ function RuleForm({ initial, onSave, onCancel }: RuleFormProps): React.ReactElem
                     className="h-9 text-[11px]"
                 />
                 <div className="space-y-1">
-                    <label className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Type</label>
+                    <label className="text-[10px] font-medium uppercase tracking-wide text-[var(--brand-secondary)]">Type</label>
                     <Select
                         value={rule.type}
                         onChange={(nextValue) => set('type', nextValue as LintRuleType)}
@@ -185,7 +185,7 @@ function RuleForm({ initial, onSave, onCancel }: RuleFormProps): React.ReactElem
             />
 
             <div className="space-y-1">
-                <label className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Severity</label>
+                <label className="text-[10px] font-medium uppercase tracking-wide text-[var(--brand-secondary)]">Severity</label>
                 <Select
                     value={rule.severity}
                     onChange={(nextValue) => set('severity', nextValue as LintSeverity)}
@@ -259,16 +259,16 @@ interface RuleRowProps {
 
 function RuleRow({ rule, onEdit, onDelete }: RuleRowProps): React.ReactElement {
     return (
-        <div className="flex items-center gap-2 rounded border border-slate-100 bg-white px-2.5 py-2">
+        <div className="flex items-center gap-2 rounded border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-2.5 py-2">
             <SeverityIcon severity={rule.severity} />
             <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] font-medium text-slate-700">{rule.description || rule.id}</p>
-                <p className="text-[10px] font-mono text-slate-400">{rule.type}</p>
+                <p className="truncate text-[11px] font-medium text-[var(--brand-text)]">{rule.description || rule.id}</p>
+                <p className="text-[10px] font-mono text-[var(--brand-secondary)]">{rule.type}</p>
             </div>
             <Button type="button" variant="ghost" size="sm" onClick={onEdit} className="h-7 shrink-0 px-2 text-[10px]">
                 Edit
             </Button>
-            <Button type="button" variant="icon" size="icon" onClick={onDelete} className="h-7 w-7 shrink-0 text-slate-300 hover:text-red-400">
+            <Button type="button" variant="icon" size="icon" onClick={onDelete} className="h-7 w-7 shrink-0 text-[var(--brand-secondary)] hover:text-red-400">
                 <Trash2 className="h-3.5 w-3.5" />
             </Button>
         </div>
@@ -293,13 +293,13 @@ function RulesSection({
     onOpenEditor,
 }: RulesSectionProps): React.ReactElement {
     return (
-        <div className="rounded border border-slate-200 bg-white">
-            <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+        <div className="rounded border border-[var(--color-brand-border)] bg-[var(--brand-surface)]">
+            <div className="flex items-center justify-between border-b border-[var(--color-brand-border)] px-3 py-2">
                 <div className="flex items-center gap-1.5">
                     {icon}
-                    <p className="text-[11px] font-medium text-slate-700">{title}</p>
+                    <p className="text-[11px] font-medium text-[var(--brand-text)]">{title}</p>
                     {hasRules ? (
-                        <span className="rounded-full bg-slate-100 px-1.5 py-0 text-[10px] text-slate-500">
+                        <span className="rounded-full bg-[var(--brand-background)] px-1.5 py-0 text-[10px] text-[var(--brand-secondary)]">
                             {rules.length}
                         </span>
                     ) : null}
@@ -316,13 +316,13 @@ function RulesSection({
                 </Button>
             </div>
             {!hasRules ? (
-                <p className="px-3 py-2 text-[11px] text-slate-400">{emptyMessage}</p>
+                <p className="px-3 py-2 text-[11px] text-[var(--brand-secondary)]">{emptyMessage}</p>
             ) : (
-                <div className="divide-y divide-slate-50 px-3">
+                <div className="divide-y divide-[var(--color-brand-border)] px-3">
                     {rules.map((rule) => (
                         <div key={rule.id} className="flex items-center gap-2 py-2">
                             <SeverityIcon severity={rule.severity} />
-                            <p className="min-w-0 flex-1 truncate text-[11px] text-slate-600">{rule.description || rule.id}</p>
+                            <p className="min-w-0 flex-1 truncate text-[11px] text-[var(--brand-secondary)]">{rule.description || rule.id}</p>
                         </div>
                     ))}
                 </div>
@@ -345,25 +345,25 @@ function LibraryPicker({ onApply, existingJson, onClose }: LibraryPickerProps): 
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-slate-700">Rule Templates</p>
+                <p className="text-xs font-medium text-[var(--brand-text)]">Rule Templates</p>
                 <Button type="button" variant="ghost" size="sm" onClick={onClose} className="h-7 px-2 text-[11px]">
                     Back
                 </Button>
             </div>
-            <p className="text-[11px] text-slate-400">Pick a template to add to this diagram&apos;s rules.</p>
+            <p className="text-[11px] text-[var(--brand-secondary)]">Pick a template to add to this diagram&apos;s rules.</p>
             {RULE_LIBRARY.map((tpl) => (
-                <div key={tpl.id} className="rounded border border-slate-200 bg-white">
+                <div key={tpl.id} className="rounded border border-[var(--color-brand-border)] bg-[var(--brand-surface)]">
                     <button
                         onClick={() => setExpanded(expanded === tpl.id ? null : tpl.id)}
                         className="flex w-full items-center gap-2 px-3 py-2 text-left"
                     >
                         {expanded === tpl.id
-                            ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                            : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                            ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--brand-secondary)]" />
+                            : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--brand-secondary)]" />
                         }
                         <div className="min-w-0 flex-1">
-                            <p className="text-[11px] font-medium text-slate-700">{tpl.name}</p>
-                            <p className="text-[10px] text-slate-400">{tpl.description}</p>
+                            <p className="text-[11px] font-medium text-[var(--brand-text)]">{tpl.name}</p>
+                            <p className="text-[10px] text-[var(--brand-secondary)]">{tpl.description}</p>
                         </div>
                         <Button
                             type="button"
@@ -379,11 +379,11 @@ function LibraryPicker({ onApply, existingJson, onClose }: LibraryPickerProps): 
                         </Button>
                     </button>
                     {expanded === tpl.id && (
-                        <div className="border-t border-slate-100 px-3 py-2 space-y-1">
+                        <div className="border-t border-[var(--color-brand-border)] px-3 py-2 space-y-1">
                             {tpl.rules.map((r) => (
                                 <div key={r.id} className="flex items-center gap-1.5">
                                     <SeverityIcon severity={r.severity} />
-                                    <p className="text-[10px] text-slate-600">{r.description}</p>
+                                    <p className="text-[10px] text-[var(--brand-secondary)]">{r.description}</p>
                                 </div>
                             ))}
                         </div>
@@ -448,7 +448,7 @@ function VisualEditor({ rulesJson, onSave, onCancel, showLibrary, onToggleLibrar
     return (
         <div className="flex h-full min-h-0 flex-col gap-3 p-3">
             <div className="flex items-center gap-2">
-                <p className="flex-1 text-xs font-medium text-slate-700">Edit Rules</p>
+                <p className="flex-1 text-xs font-medium text-[var(--brand-text)]">Edit Rules</p>
                 <div className="min-w-[10rem]">
                     <SegmentedChoice
                         items={[...EDITOR_MODE_ITEMS]}
@@ -475,7 +475,7 @@ function VisualEditor({ rulesJson, onSave, onCancel, showLibrary, onToggleLibrar
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
                     spellCheck={false}
-                    className="min-h-[200px] flex-1 resize-none font-mono text-xs text-slate-700 custom-scrollbar"
+                    className="min-h-[200px] flex-1 resize-none font-mono text-xs text-[var(--brand-text)] custom-scrollbar"
                     placeholder={EXAMPLE_LINT_RULES}
                 />
             ) : (
@@ -513,7 +513,7 @@ function VisualEditor({ rulesJson, onSave, onCancel, showLibrary, onToggleLibrar
                             onClick={() => setAddingNew(true)}
                             variant="secondary"
                             size="sm"
-                            className="h-9 w-full border-dashed text-[11px] text-slate-400 hover:text-[var(--brand-primary)]"
+                            className="h-9 w-full border-dashed text-[11px] text-[var(--brand-secondary)] hover:text-[var(--brand-primary)]"
                             icon={<Plus className="h-3.5 w-3.5" />}
                         >
                             Add rule
@@ -615,12 +615,12 @@ export function LintRulesPanel(): React.ReactElement {
 
     return (
         <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-3 custom-scrollbar">
-            <div className="rounded-[var(--radius-md)] border border-slate-200 bg-[var(--brand-primary-50)] p-3">
+            <div className="rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-primary-50)] p-3">
                 <div className="flex items-center gap-2">
                     <Shield className="h-4 w-4 text-[var(--brand-primary)]" />
                     <p className="text-xs font-medium text-[var(--brand-primary)]">Architecture Linting</p>
                 </div>
-                <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                <p className="mt-1 text-[11px] leading-5 text-[var(--brand-secondary)]">
                     Enforce architecture constraints in real time — like ESLint for diagrams.
                 </p>
             </div>
@@ -640,8 +640,8 @@ export function LintRulesPanel(): React.ReactElement {
                         <div className="flex items-center gap-2.5 rounded border border-emerald-200 bg-emerald-50/50 p-3">
                             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
                             <div>
-                                <p className="text-xs font-medium text-slate-700">All rules pass</p>
-                                <p className="text-[11px] text-slate-400">
+                                <p className="text-xs font-medium text-[var(--brand-text)]">All rules pass</p>
+                                <p className="text-[11px] text-[var(--brand-secondary)]">
                                     {nodes.length} node{nodes.length !== 1 ? 's' : ''} checked, no violations found.
                                 </p>
                             </div>
@@ -649,7 +649,7 @@ export function LintRulesPanel(): React.ReactElement {
                     ) : (
                         <div className="rounded border border-red-100 bg-red-50/30">
                             <div className="flex items-center justify-between border-b border-red-100 px-3 py-2">
-                                <span className="text-xs font-medium text-slate-700">
+                                <span className="text-xs font-medium text-[var(--brand-text)]">
                                     {violations.length} violation{violations.length !== 1 ? 's' : ''}
                                 </span>
                                 <div className="flex items-center gap-2 text-[11px]">
@@ -680,8 +680,8 @@ export function LintRulesPanel(): React.ReactElement {
                                     <div key={`${v.ruleId}-${i}`} className="flex items-start gap-2 px-3 py-2.5">
                                         <SeverityIcon severity={v.severity} />
                                         <div className="min-w-0">
-                                            <p className="text-[11px] font-medium text-slate-700 leading-snug">{v.message}</p>
-                                            <p className="text-[10px] text-slate-400 mt-0.5 font-mono">{v.ruleId}</p>
+                                            <p className="text-[11px] font-medium text-[var(--brand-text)] leading-snug">{v.message}</p>
+                                            <p className="text-[10px] text-[var(--brand-secondary)] mt-0.5 font-mono">{v.ruleId}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -693,7 +693,7 @@ export function LintRulesPanel(): React.ReactElement {
 
             <RulesSection
                 title="Diagram rules"
-                icon={<Shield className="h-3.5 w-3.5 text-slate-400" />}
+                icon={<Shield className="h-3.5 w-3.5 text-[var(--brand-secondary)]" />}
                 hasRules={hasRules}
                 rules={diagramRules}
                 emptyMessage="No diagram-level rules yet."
@@ -702,7 +702,7 @@ export function LintRulesPanel(): React.ReactElement {
 
             <RulesSection
                 title="Workspace rules"
-                icon={<Globe className="h-3.5 w-3.5 text-slate-400" />}
+                icon={<Globe className="h-3.5 w-3.5 text-[var(--brand-secondary)]" />}
                 hasRules={hasWorkspaceRules}
                 rules={workspaceRules}
                 emptyMessage="Workspace rules apply to all diagrams. Good for org-wide standards."
@@ -712,10 +712,10 @@ export function LintRulesPanel(): React.ReactElement {
             {/* Empty state */}
             {!hasRules && !hasWorkspaceRules && (
                 <div className="flex flex-col items-center gap-4 py-4 text-center">
-                    <ShieldCheck className="h-10 w-10 text-slate-200" />
+                    <ShieldCheck className="h-10 w-10 text-[var(--color-brand-border)]" />
                     <div>
-                        <p className="text-sm font-medium text-slate-700">No rules defined yet</p>
-                        <p className="mt-1 text-[11px] text-slate-400">
+                        <p className="text-sm font-medium text-[var(--brand-text)]">No rules defined yet</p>
+                        <p className="mt-1 text-[11px] text-[var(--brand-secondary)]">
                             Add rules to automatically detect architecture violations as you draw.
                         </p>
                     </div>

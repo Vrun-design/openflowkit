@@ -33,7 +33,7 @@ export function NodeQuickCreateButtons({
             event.stopPropagation();
             requestNodeQuickCreate(nodeId, direction);
           }}
-          className={`absolute z-20 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-md transition-colors hover:border-sky-300 hover:text-sky-700 ${BUTTON_POSITIONS[direction]}`}
+          className={`absolute z-20 flex h-7 w-7 items-center justify-center rounded-full border border-[var(--color-brand-border)] bg-[var(--brand-surface)] text-[var(--brand-secondary)] shadow-md transition-colors hover:border-sky-300 hover:text-sky-700 ${BUTTON_POSITIONS[direction]}`}
         >
           <Plus className="h-3.5 w-3.5" />
         </button>

@@ -19,8 +19,8 @@ export function RouteLoadingFallback({
     >
       <div className="flex w-full max-w-sm flex-col items-center text-center">
         <Loader2 className="h-6 w-6 animate-spin text-[var(--brand-primary)]" />
-        <h1 className="mt-4 text-lg font-semibold tracking-tight text-slate-900">{title}</h1>
-        <p className="mt-2 text-sm text-slate-500">{description}</p>
+        <h1 className="mt-4 text-lg font-semibold tracking-tight text-[var(--brand-text)]">{title}</h1>
+        <p className="mt-2 text-sm text-[var(--brand-secondary)]">{description}</p>
       </div>
     </div>
   );

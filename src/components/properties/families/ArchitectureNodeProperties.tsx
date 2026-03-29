@@ -11,6 +11,7 @@ import {
   InspectorSectionDivider,
 } from '@/components/properties/InspectorPrimitives';
 import { createPropertyInputKeyDownHandler } from '@/components/properties/propertyInputBehavior';
+import { toggleSection } from '@/components/properties/shared';
 import { Palette, ServerCog, Type } from 'lucide-react';
 import { ArchitectureNodeSection } from './ArchitectureNodeSection';
 
@@ -60,10 +61,6 @@ export function ArchitectureNodeProperties({
   }
   const handleInputKeyDown = createPropertyInputKeyDownHandler({ blurOnEnter: true });
 
-  function toggleSection(section: string): void {
-    setActiveSection((currentSection) => (currentSection === section ? '' : section));
-  }
-
   return (
     <>
       <InspectorSectionDivider />
@@ -72,7 +69,7 @@ export function ArchitectureNodeProperties({
         title="Service"
         icon={<Type className="w-3.5 h-3.5" />}
         isOpen={activeSection === 'architecture'}
-        onToggle={() => toggleSection('architecture')}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'architecture'))}
       >
         <ArchitectureNodeSection
           nodeId={selectedNode.id}
@@ -85,18 +82,22 @@ export function ArchitectureNodeProperties({
         title="Color"
         icon={<Palette className="w-3.5 h-3.5" />}
         isOpen={activeSection === 'appearance'}
-        onToggle={() => toggleSection('appearance')}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'appearance'))}
       >
         <ColorPicker
           selectedColor={selectedNode.data.color}
           selectedColorMode={selectedNode.data.colorMode}
           selectedCustomColor={selectedNode.data.customColor}
-          onChange={(color) => onChange(selectedNode.id, {
-            color,
-            ...(color === 'custom' ? {} : { customColor: undefined }),
-          })}
+          onChange={(color) =>
+            onChange(selectedNode.id, {
+              color,
+              ...(color === 'custom' ? {} : { customColor: undefined }),
+            })
+          }
           onColorModeChange={(colorMode) => onChange(selectedNode.id, { colorMode })}
-          onCustomColorChange={(customColor) => onChange(selectedNode.id, { color: 'custom', customColor })}
+          onCustomColorChange={(customColor) =>
+            onChange(selectedNode.id, { color: 'custom', customColor })
+          }
           allowModes={true}
           allowCustom={true}
         />
@@ -106,7 +107,7 @@ export function ArchitectureNodeProperties({
         title="Deployment"
         icon={<ServerCog className="w-3.5 h-3.5" />}
         isOpen={activeSection === 'structure'}
-        onToggle={() => toggleSection('structure')}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'structure'))}
       >
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
@@ -141,7 +142,9 @@ export function ArchitectureNodeProperties({
             <InspectorField label="Trust Domain">
               <input
                 value={selectedNode.data.archTrustDomain || ''}
-                onChange={(event) => onChange(selectedNode.id, { archTrustDomain: event.target.value })}
+                onChange={(event) =>
+                  onChange(selectedNode.id, { archTrustDomain: event.target.value })
+                }
                 onKeyDown={handleInputKeyDown}
                 className={INSPECTOR_INPUT_COMPACT_CLASSNAME}
                 placeholder="e.g. internal"

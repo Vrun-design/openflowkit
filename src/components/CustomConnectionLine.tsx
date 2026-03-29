@@ -15,7 +15,7 @@ const CustomConnectionLine = ({
 }: ConnectionLineComponentProps) => {
     const nodes = useNodes<FlowNode>();
 
-    let snapTarget: { nX: number; nY: number; w: number; h: number } | null = null;
+    let isNearNode = false;
     for (const node of nodes) {
         const nX = node.position.x;
         const nY = node.position.y;
@@ -26,7 +26,10 @@ const CustomConnectionLine = ({
             toX <= nX + w + SNAP_PADDING &&
             toY >= nY - SNAP_PADDING &&
             toY <= nY + h + SNAP_PADDING;
-        if (inside) { snapTarget = { nX, nY, w, h }; break; }
+        if (inside) {
+            isNearNode = true;
+            break;
+        }
     }
 
     const [edgePath] = getBezierPath({
@@ -48,30 +51,13 @@ const CustomConnectionLine = ({
                 d={edgePath}
             />
 
-            {/* Snap ring — lights up the target node on approach */}
-            {snapTarget && (
-                <rect
-                    x={snapTarget.nX - 3}
-                    y={snapTarget.nY - 3}
-                    width={snapTarget.w + 6}
-                    height={snapTarget.h + 6}
-                    rx={9}
-                    ry={9}
-                    fill="none"
-                    stroke="var(--brand-primary, #6366f1)"
-                    strokeWidth={2.5}
-                    opacity={0.65}
-                    pointerEvents="none"
-                />
-            )}
-
-            {/* Endpoint dot — grows on snap */}
+            {/* Endpoint dot — grows subtly on snap without outlining the whole node */}
             <circle
                 cx={toX}
                 cy={toY}
-                r={snapTarget ? 6 : 4}
+                r={isNearNode ? 6 : 4}
                 fill="var(--brand-primary, #6366f1)"
-                opacity={snapTarget ? 1 : 0.6}
+                opacity={isNearNode ? 1 : 0.6}
             />
         </g>
     );

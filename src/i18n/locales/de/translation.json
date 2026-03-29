@@ -52,6 +52,7 @@
     "bringToFront": "In den Vordergrund",
     "sendToBack": "In den Hintergrund",
     "reverseDirection": "Richtung umkehren",
+    "editLabel": "Beschriftung bearbeiten",
     "deleteConnection": "Verbindung löschen",
     "itemsSelected": "{{count}} Elemente ausgewählt",
     "align": "Ausrichten",
@@ -65,7 +66,7 @@
     "distributeHorizontally": "Horizontal verteilen",
     "distributeVertically": "Vertikal verteilen",
     "group": "Gruppe",
-    "upload": "Upload",
+    "upload": "Hochladen",
     "rename": "Umbenennen"
   },
   "nav": {
@@ -87,7 +88,8 @@
     "versionHistory": "Versionsverlauf",
     "loadJSON": "JSON laden",
     "playbackMode": "Wiedergabemodus",
-    "privacyMessage": "Ihre Diagramme bleiben bei Ihnen und erreichen unsere Server nicht."
+    "privacyMessage": "Ihre Diagramme bleiben bei Ihnen und erreichen unsere Server nicht.",
+    "templates": "Vorlagen"
   },
   "menu": {
     "file": "Datei",
@@ -110,6 +112,7 @@
   },
   "export": {
     "title": "Exportieren",
+    "subtitle": "Format und Aktion auswählen.",
     "png": "Als PNG exportieren",
     "jpeg": "Als JPEG exportieren",
     "json": "Als JSON exportieren",
@@ -122,10 +125,11 @@
     "jsonLabel": "JSON File",
     "hintDownload": "Download",
     "openflowdslLabel": "{{appName}} DSL",
-    "hintClipboard": "Copy to clipboard",
+    "hintClipboard": "Kopieren",
     "figmaEditable": "Figma Editable",
     "exportDiagram": "Export Diagram",
     "exportAs": "Export As",
+    "actionCopy": "Kopieren",
     "exportOrShare": "Dieses Canvas exportieren oder teilen",
     "svg": "Als SVG exportieren",
     "hintSvgScalable": "Skalierbare Vektordatei",
@@ -255,6 +259,7 @@
   "settings": {
     "title": "Einstellungen",
     "general": "Allgemein",
+    "canvas": "Canvas",
     "shortcuts": "Tastaturkürzel",
     "theme": "Design",
     "language": "Sprache",
@@ -264,7 +269,10 @@
     "analytics": "Analysen",
     "about": "Über",
     "brand": "Markeneinstellungen",
-    "privacy": "Datenschutz"
+    "privacy": "Datenschutz",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System"
   },
   "shortcuts": {
     "title": "Tastaturkürzel",
@@ -337,7 +345,18 @@
       "automatedLayouts": "Automatisierte Layouts und professionelle Designs.",
       "privateSecure": "Privat und sicher",
       "localFirst": "Lokale Architektur hält Ihre Daten sicher."
-    }
+    },
+    "feature1Title": "Create amazing diagrams",
+    "feature1Desc": "Design beautiful, enterprise-grade architecture visually.",
+    "feature2Title": "Use AI",
+    "feature2Desc": "Generate complete architectures with a single intelligent prompt.",
+    "feature3Title": "Code to diagram",
+    "feature3Desc": "Instantly construct stunning visual infrastructure from text.",
+    "feature4Title": "Export in many formats",
+    "feature4Desc": "Export into beautiful, fully animated presentation diagrams.",
+    "analyticsTitle": "Anonymous Analytics",
+    "analyticsDesc": "We collect diagnostic data. We never read your diagrams or prompts.",
+    "getStarted": "Get Started"
   },
   "footer": {
     "mitLicensed": "MIT-Lizenz"
@@ -630,8 +649,8 @@
       "miniMapDesc": "Minimap unten rechts",
       "architectureStrictMode": "Architektur-Strict-Mode",
       "architectureStrictModeDesc": "Blockiert den Mermaid-Import, wenn Architekturdiagnosen Wiederherstellungs-/Validierungsprobleme enthalten",
-      "alignmentGuides": "Alignment Guides",
-      "alignmentGuidesDesc": "Show smart guide lines while dragging nodes",
+      "alignmentGuides": "Ausrichtungshilfen",
+      "alignmentGuidesDesc": "Zeigt intelligente Hilfslinien beim Ziehen von Knoten",
       "routingProfile": "Routing-Profil",
       "routingProfileStandard": "Standard",
       "routingProfileInfrastructure": "Infrastruktur",
@@ -688,13 +707,13 @@
           "hint": "Jeder OpenAI-kompatible Endpunkt"
         }
       },
-      "customModelHint": "Enter the exact model ID for your endpoint",
-      "howToGetKey": "How to get your API key",
-      "pasteKeyStep": "Paste it in the field above — never shared with us",
-      "customEndpointTitle": "What is a custom endpoint?",
+      "customModelHint": "Geben Sie die genaue Modell-ID für Ihren Endpunkt ein",
+      "howToGetKey": "So erhalten Sie Ihren API-Schlüssel",
+      "pasteKeyStep": "Fügen Sie ihn oben ein — er wird niemals mit uns geteilt",
+      "customEndpointTitle": "Was ist ein benutzerdefinierter Endpunkt?",
       "privacyTitle": "Privacy & Encryption",
-      "customEndpointText": "Any <1>OpenAI-compatible</1> API endpoint — local or remote. Great for:",
-      "customEndpointMustSupport": "Must support <1>POST /chat/completions</1> (OpenAI format)",
+      "customEndpointText": "Jeder <1>OpenAI-kompatible</1> API-Endpunkt — lokal oder remote. Ideal für:",
+      "customEndpointMustSupport": "Muss <1>POST /chat/completions</1> (OpenAI-Format) unterstützen",
       "advancedEndpointOverride": "Erweiterte Basis-URL-Überschreibung",
       "baseUrlHint": "Leer lassen, um den Standard-Endpunkt des Anbieters zu verwenden. Nutzen Sie dies für Ihre eigene Proxy-/Worker-URL.",
       "resetEndpoint": "Auf Standard zurücksetzen",
@@ -722,15 +741,15 @@
       "inactive": "Inaktiv",
       "setActive": "Aktiv setzen",
       "resetToDefaults": "Auf Standardwerte zurücksetzen",
-      "tabIdentity": "Identity",
-      "tabColors": "Colors",
+      "tabIdentity": "Identität",
+      "tabColors": "Farben",
       "tabType": "Type",
       "tabUI": "UI & Shape",
-      "appName": "App Name",
+      "appName": "App-Name",
       "logo": "Logo",
       "favicon": "Favicon",
-      "logoStyle": "Logo Style",
-      "fontFamily": "Font Family",
+      "logoStyle": "Logostil",
+      "fontFamily": "Schriftfamilie",
       "googleFontsHint": "Dynamically loaded from Google Fonts",
       "cornerRadius": "Corner Radius",
       "glassmorphism": "Glassmorphism",
@@ -744,7 +763,11 @@
     "canvasSettings": "Canvas-Einstellungen",
     "description": "Canvas-Einstellungen und Tastaturkürzel konfigurieren.",
     "close": "Einstellungen schließen",
-    "closeDialog": "Einstellungsdialog schließen"
+    "closeDialog": "Einstellungsdialog schließen",
+    "analytics": {
+      "enableTitle": "Anonyme Start-Analysen",
+      "enableDescription": "Anonyme grundlegende Nutzungsdaten teilen (optional)"
+    }
   },
   "customNodes": {
     "browserContent": "Browser-Inhalt",
@@ -764,11 +787,13 @@
     "addItem": "Element hinzufügen",
     "addToCanvas": "Zum Canvas hinzufügen",
     "shapes": "Formen",
+    "diagrams": "Diagramme",
     "assets": "Assets",
     "node": "Form",
     "stickyNote": "Haftnotiz",
     "section": "Abschnitt",
     "text": "Text",
+    "other": "Andere",
     "wireframes": "Wireframes",
     "image": "Bild",
     "autoLayout": "Auto-Layout",
@@ -837,20 +862,34 @@
     "nodes": "{{count}} Knoten",
     "edges": "{{count}} Kanten",
     "close": "Versionsverlaufsleiste schließen",
-    "namedVersions": "Named Versions",
-    "noNamedSnapshots": "No named versions yet.",
-    "autosavedVersions": "Autosaved Checkpoints",
-    "noAutoSnapshots": "No autosaved checkpoints yet."
+    "namedVersions": "Benannte Versionen",
+    "noNamedSnapshots": "Noch keine benannten Versionen.",
+    "autosavedVersions": "Automatisch gespeicherte Prüfpunkte",
+    "noAutoSnapshots": "Noch keine automatisch gespeicherten Prüfpunkte."
   },
   "templatesPanel": {
     "title": "Flow-Vorlagen",
     "searchPlaceholder": "Vorlagen suchen...",
     "noTemplates": "Keine Vorlagen gefunden."
   },
+  "homeTemplates": {
+    "description": "Beginnen Sie mit einem vorbereiteten Flow und passen Sie ihn im Editor an.",
+    "openPicker": "Vorlagenauswahl öffnen",
+    "featured": "Empfohlene Vorlagen",
+    "count": "{{count}} Vorlagen",
+    "nodes": "{{count}} Knoten",
+    "edges": "{{count}} Verbindungen",
+    "starter": "Starter",
+    "starterTemplate": "Starter-Vorlage",
+    "useTemplate": "Vorlage verwenden",
+    "closePreview": "Vorlagenvorschau schließen"
+  },
   "propertiesPanel": {
     "stickyNote": "Haftnotiz",
     "nodeSettings": "Formeinstellungen",
-    "connection": "Verbindung"
+    "connection": "Verbindung",
+    "noSelection": "Nichts ausgewählt",
+    "selectHint": "Klicken Sie auf einen Knoten oder eine Kante, um deren Eigenschaften zu bearbeiten"
   },
   "flowCanvas": {
     "strictModePasteBlocked": "Der Architektur-Strict-Mode hat das Mermaid-Einfügen blockiert. Öffnen Sie die Code-Ansicht, beheben Sie die Diagnosen und versuchen Sie es erneut."
@@ -860,61 +899,64 @@
     "newFlowTab": "Neuer Flow-Tab"
   },
   "nodes": {
-    "note": "Note",
-    "database": "Database",
-    "inputOutput": "Input / Output",
-    "newNode": "New Node",
-    "branch": "Branch",
-    "processStep": "Process Step",
+    "note": "Notiz",
+    "database": "Datenbank",
+    "inputOutput": "Eingabe / Ausgabe",
+    "newNode": "Neuer Knoten",
+    "branch": "Verzweigung",
+    "processStep": "Prozessschritt",
     "addText": "Text eingeben",
     "group": "Group",
     "items": "items",
-    "addCommentsHere": "Add your comments here.",
-    "newSection": "New Section",
+    "addCommentsHere": "Fügen Sie hier Ihre Kommentare hinzu.",
+    "newSection": "Neuer Abschnitt",
     "text": "Text",
     "image": "Image",
     "mindmap": "Thema"
   },
   "actions": {
-    "clearCanvasConfirm": "Are you sure you want to clear the canvas?"
+    "clearCanvasConfirm": "Möchten Sie die Zeichenfläche wirklich leeren?"
   },
   "share": {
     "close": "Close",
-    "title": "Share Design",
+    "title": "Design teilen",
     "betaBadge": "Beta",
-    "description": "Invite collaborators to view and edit this flow with you in real-time.",
+    "description": "Laden Sie Mitwirkende ein, diesen Flow gemeinsam mit Ihnen in Echtzeit anzusehen und zu bearbeiten.",
     "roomId": "Raum-ID",
     "link": "Freigabelink",
     "copied": "Copied Link!",
-    "copyLink": "Copy Link",
-    "footerNote": "Your diagram stays local unless you share this room. If copy is blocked, copy the link above manually.",
-    "closeDialog": "Close share dialog",
+    "copyLink": "Link kopieren",
+    "footerNote": "Ihr Diagramm bleibt lokal, bis Sie diesen Raum freigeben. Wenn das Kopieren blockiert ist, kopieren Sie den obigen Link manuell.",
+    "closeDialog": "Freigabedialog schließen",
     "status": {
       "cache": {
         "syncing": " local cache syncing",
         "ready": " local cache ready",
         "hydrated": " restored from local cache"
       },
-      "realtime": "Realtime peer sync",
-      "waiting": "Connecting to realtime sync",
-      "fallback": "Local-only mode"
+      "realtime": "Echtzeit-Peer-Synchronisierung",
+      "waiting": "Verbindung zur Echtzeit-Synchronisierung wird hergestellt",
+      "fallback": "Nur-lokal-Modus"
     },
     "openDialog": "Share dialog",
     "toast": {
       "fallbackMode": "Echtzeit-Synchronisierung ist nicht verfügbar. Es wird im Nur-lokal-Modus fortgefahren.",
       "reconnected": "Echtzeit-Zusammenarbeit wiederhergestellt.",
-      "copyFailed": "Unable to copy share link.",
-      "linkCopied": "Collaboration link copied.",
+      "copyFailed": "Freigabelink konnte nicht kopiert werden.",
+      "linkCopied": "Zusammenarbeitslink wurde kopiert.",
       "copyManual": "Der Zugriff auf die Zwischenablage ist blockiert. Kopieren Sie den Link manuell aus dem Freigabedialog."
     }
   },
   "connectionPanel": {
-    "architecture": "Architecture",
+    "architecture": "Architektur",
     "label": "Label",
     "messagePlaceholder": "Nachricht",
     "route": "Route",
     "appearance": "Darstellung",
-    "condition": "Condition",
-    "deleteConnection": "Delete Connection"
+    "condition": "Bedingung",
+    "deleteConnection": "Verbindung löschen"
+  },
+  "sidebar": {
+    "close": "Seitenleiste schließen"
   }
 }

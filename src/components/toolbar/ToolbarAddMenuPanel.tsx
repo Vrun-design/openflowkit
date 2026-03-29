@@ -1,57 +1,62 @@
-import React from 'react';
-import {
-    Circle,
-    Database,
-    Diamond,
-    Hexagon,
-    PanelTop,
-    RectangleHorizontal,
-    Square,
-} from 'lucide-react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
-import type { NodeData } from '@/lib/types';
+import {
+  getAddItemsForScope,
+  getAddItemSections,
+  type AddItemId,
+} from '@/components/add-items/addItemRegistry';
 
 interface ToolbarAddMenuPanelProps {
-    onAddShape: (shape: NodeData['shape']) => void;
+  currentItemId: AddItemId;
+  onSelectItem: (itemId: AddItemId) => void;
 }
 
-const SHAPE_ITEMS: Array<{
-    id: NodeData['shape'];
-    label: string;
-    icon: React.ReactNode;
-    className: string;
-}> = [
-    { id: 'rectangle', label: 'Rectangle', icon: <RectangleHorizontal className="w-4 h-4 mr-2" />, className: 'hover:bg-slate-100' },
-    { id: 'rounded', label: 'Rounded', icon: <Square className="w-4 h-4 mr-2" />, className: 'hover:bg-indigo-50 hover:text-[var(--brand-primary)]' },
-    { id: 'capsule', label: 'Capsule', icon: <PanelTop className="w-4 h-4 mr-2" />, className: 'hover:bg-violet-50 hover:text-violet-600' },
-    { id: 'diamond', label: 'Diamond', icon: <Diamond className="w-4 h-4 mr-2" />, className: 'hover:bg-amber-50 hover:text-amber-600' },
-    { id: 'hexagon', label: 'Hexagon', icon: <Hexagon className="w-4 h-4 mr-2" />, className: 'hover:bg-emerald-50 hover:text-emerald-600' },
-    { id: 'cylinder', label: 'Database', icon: <Database className="w-4 h-4 mr-2" />, className: 'hover:bg-cyan-50 hover:text-cyan-600' },
-    { id: 'parallelogram', label: 'Input / Output', icon: <RectangleHorizontal className="w-4 h-4 mr-2 skew-x-[-12deg]" />, className: 'hover:bg-orange-50 hover:text-orange-600' },
-    { id: 'circle', label: 'Circle', icon: <Circle className="w-4 h-4 mr-2" />, className: 'hover:bg-pink-50 hover:text-pink-600' },
-];
+export function ToolbarAddMenuPanel({
+  currentItemId,
+  onSelectItem,
+}: ToolbarAddMenuPanelProps): React.ReactElement {
+  const { t } = useTranslation();
+  const sections = getAddItemSections(t);
+  const items = getAddItemsForScope('toolbar', t);
 
-export function ToolbarAddMenuPanel({ onAddShape }: ToolbarAddMenuPanelProps): React.ReactElement {
-    const { t } = useTranslation();
+  const itemsBySection = useMemo(() => {
+    return sections.map((section) => ({
+      ...section,
+      items: items.filter((item) => item.section === section.id),
+    }));
+  }, [items, sections]);
 
-    return (
-        <div className="absolute bottom-full left-1/2 mb-3 w-52 -translate-x-1/2 rounded-[var(--radius-lg)] border border-white/20 bg-white/95 p-1 shadow-[var(--shadow-md)] ring-1 ring-black/5 backdrop-blur-md animate-in slide-in-from-bottom-4 zoom-in-95 duration-200 origin-bottom pointer-events-auto">
-            <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                {t('toolbar.shapes', 'Shapes')}
-            </div>
+  return (
+    <div className="absolute bottom-full left-1/2 mb-3 w-64 -translate-x-1/2 rounded-[var(--radius-lg)] border border-[var(--color-brand-border)]/80 bg-[var(--brand-surface)]/95 p-2 shadow-[var(--shadow-md)] ring-1 ring-black/5 backdrop-blur-md animate-in slide-in-from-bottom-4 zoom-in-95 duration-200 origin-bottom pointer-events-auto max-h-[70vh] overflow-y-auto custom-scrollbar">
+      {itemsBySection.map((section) => (
+        <div key={section.id} className="mb-2 last:mb-0">
+          <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-secondary)]">
+            {section.title}
+          </div>
+          <div className="grid grid-cols-2 gap-0.5">
+            {section.items.map((item) => {
+              const isActive = item.id === currentItemId;
 
-            {SHAPE_ITEMS.map((item) => (
+              return (
                 <Button
-                    key={item.id}
-                    onClick={() => onAddShape(item.id)}
-                    variant="ghost"
-                    className={`h-9 w-full justify-start rounded-[var(--radius-sm)] px-3 text-sm transition-colors ${item.className}`}
-                    icon={item.icon}
+                  key={item.id}
+                  onClick={() => onSelectItem(item.id)}
+                  variant="ghost"
+                  className={`h-8 justify-start rounded-[var(--radius-sm)] px-2 text-xs transition-colors ${
+                    isActive
+                      ? 'bg-[var(--brand-primary-50)] text-[var(--brand-primary)]'
+                      : 'hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]'
+                  }`}
+                  icon={item.renderIcon('h-4 w-4')}
                 >
-                    {item.label}
+                  {item.label}
                 </Button>
-            ))}
+              );
+            })}
+          </div>
         </div>
-    );
+      ))}
+    </div>
+  );
 }

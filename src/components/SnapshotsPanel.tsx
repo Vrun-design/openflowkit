@@ -37,8 +37,8 @@ function SnapshotCardList({
     deleteVersionTitle,
     nodesLabel,
     edgesLabel,
-    cardClassName = 'group p-3 rounded-[var(--radius-md)] border border-slate-200 bg-slate-50 hover:bg-white hover:border-[var(--brand-primary-200)] transition-all',
-    titleClassName = 'text-sm font-semibold text-slate-800',
+    cardClassName = 'group rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3 transition-all hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-surface)]',
+    titleClassName = 'text-sm font-semibold text-[var(--brand-text)]',
 }: SnapshotCardListProps): React.ReactElement {
     return (
         <>
@@ -47,7 +47,7 @@ function SnapshotCardList({
                     <div className="flex items-start justify-between mb-2">
                         <div>
                             <h4 className={titleClassName}>{snapshot.name}</h4>
-                            <p className="text-xs text-slate-500">{new Date(snapshot.timestamp).toLocaleString()}</p>
+                            <p className="text-xs text-[var(--brand-secondary)]">{new Date(snapshot.timestamp).toLocaleString()}</p>
                         </div>
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {onCompareSnapshot && (
@@ -56,7 +56,7 @@ function SnapshotCardList({
                                     onClick={() => onCompareSnapshot(snapshot)}
                                     aria-label="Compare snapshot with current diagram"
                                     title="Compare with current"
-                                    className="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-[var(--brand-primary)] rounded-[var(--radius-sm)] transition-colors"
+                                    className="rounded-[var(--radius-sm)] p-1.5 text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-surface)] hover:text-[var(--brand-primary)]"
                                 >
                                     <GitCompare className="w-3.5 h-3.5" />
                                 </button>
@@ -76,15 +76,15 @@ function SnapshotCardList({
                                 onClick={() => onDeleteSnapshot(snapshot.id)}
                                 aria-label={`${deleteVersionTitle}: ${snapshot.name}`}
                                 title={deleteVersionTitle}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-[var(--radius-sm)] transition-colors"
+                                className="rounded-[var(--radius-sm)] p-1.5 text-red-500 transition-colors hover:bg-red-500/10"
                             >
                                 <Trash2 className="w-3.5 h-3.5" />
                             </button>
                         </div>
                     </div>
-                    <div className="flex gap-2 text-xs text-slate-400">
-                        <span className="bg-slate-200 px-1.5 py-0.5 rounded-[var(--radius-sm)] text-slate-600">{nodesLabel(snapshot.nodes.length)}</span>
-                        <span className="bg-slate-200 px-1.5 py-0.5 rounded-[var(--radius-sm)] text-slate-600">{edgesLabel(snapshot.edges.length)}</span>
+                    <div className="flex gap-2 text-xs text-[var(--brand-secondary-light)]">
+                        <span className="rounded-[var(--radius-sm)] bg-[var(--brand-surface)] px-1.5 py-0.5 text-[var(--brand-secondary)]">{nodesLabel(snapshot.nodes.length)}</span>
+                        <span className="rounded-[var(--radius-sm)] bg-[var(--brand-surface)] px-1.5 py-0.5 text-[var(--brand-secondary)]">{edgesLabel(snapshot.edges.length)}</span>
                     </div>
                 </div>
             ))}
@@ -120,19 +120,19 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
     };
 
     return (
-        <div className="absolute top-20 right-6 z-40 flex max-h-[calc(100vh-140px)] w-80 flex-col overflow-hidden rounded-[var(--radius-lg)] border border-white/20 bg-white/95 shadow-[var(--shadow-lg)] ring-1 ring-black/5 backdrop-blur-md animate-in slide-in-from-right-10 duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/80">
-                <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+        <div className="absolute top-20 right-6 z-40 flex max-h-[calc(100vh-140px)] w-80 flex-col overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-[var(--shadow-lg)] ring-1 ring-black/5 backdrop-blur-md animate-in slide-in-from-right-10 duration-200">
+            <div className="flex items-center justify-between border-b border-[var(--color-brand-border)] bg-[var(--brand-background)] p-4">
+                <h3 className="flex items-center gap-2 font-semibold text-[var(--brand-text)]">
                     <Clock className="w-4 h-4 text-[var(--brand-primary)]" />
                     <span>{t('snapshotsPanel.title')}</span>
                 </h3>
-                <button type="button" onClick={onClose} className="p-1 hover:bg-slate-200 rounded-[var(--radius-sm)] text-slate-400 transition-colors" aria-label={t('snapshotsPanel.close', 'Close snapshots panel')}>
+                <button type="button" onClick={onClose} className="rounded-[var(--radius-sm)] p-1 text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-surface)] hover:text-[var(--brand-text)]" aria-label={t('snapshotsPanel.close', 'Close snapshots panel')}>
                     <X className="w-4 h-4" />
                 </button>
             </div>
 
-            <div className="p-4 border-b border-slate-100 bg-white space-y-3">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('snapshotsPanel.saveCurrentVersion')}</label>
+            <div className="space-y-3 border-b border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-4">
+                <label className="text-xs font-bold uppercase tracking-wider text-[var(--brand-secondary-light)]">{t('snapshotsPanel.saveCurrentVersion')}</label>
                 <div className="flex gap-2">
                     <input
                         type="text"
@@ -140,7 +140,7 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                         data-testid="snapshot-name-input"
                         onChange={(e) => setNewSnapshotName(e.target.value)}
                         placeholder={t('snapshotsPanel.versionName')}
-                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-[var(--radius-md)] text-sm outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 focus:border-[var(--brand-primary)]"
+                        className="flex-1 rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-3 py-2 text-sm text-[var(--brand-text)] outline-none placeholder:text-[var(--brand-secondary-light)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
                         onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                     />
                     <button
@@ -155,19 +155,19 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                 </div>
             </div>
 
-            <div className="p-4 overflow-y-auto custom-scrollbar space-y-5 flex-1">
+            <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto bg-[var(--brand-surface)] p-4">
                 {snapshots.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">
+                    <div className="py-8 text-center text-[var(--brand-secondary-light)]">
                         <p className="text-sm">{t('snapshotsPanel.noSnapshots')}</p>
                     </div>
                 ) : (
                     <>
                         <section className="space-y-3">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--brand-secondary-light)]">
                                 {t('snapshotsPanel.namedVersions', 'Named Versions')}
                             </h4>
                             {manualSnapshots.length === 0 ? (
-                                <p className="text-xs text-slate-400">{t('snapshotsPanel.noNamedSnapshots', 'No named versions yet.')}</p>
+                                <p className="text-xs text-[var(--brand-secondary-light)]">{t('snapshotsPanel.noNamedSnapshots', 'No named versions yet.')}</p>
                             ) : (
                                 <SnapshotCardList
                                     snapshots={manualSnapshots}
@@ -178,18 +178,18 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                                     deleteVersionTitle={deleteVersionTitle}
                                     nodesLabel={nodesLabel}
                                     edgesLabel={edgesLabel}
-                                    cardClassName="group p-3 rounded-[var(--radius-md)] border border-slate-200 bg-slate-50 hover:bg-white hover:border-[var(--brand-primary-200)] hover:shadow-md transition-all"
-                                    titleClassName="text-sm font-semibold text-slate-800"
+                                    cardClassName="group rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3 transition-all hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-surface)] hover:shadow-md"
+                                    titleClassName="text-sm font-semibold text-[var(--brand-text)]"
                                 />
                             )}
                         </section>
 
                         <section className="space-y-3">
-                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--brand-secondary-light)]">
                                 {t('snapshotsPanel.autosavedVersions', 'Autosaved Checkpoints')}
                             </h4>
                             {autoSnapshots.length === 0 ? (
-                                <p className="text-xs text-slate-400">{t('snapshotsPanel.noAutoSnapshots', 'No autosaved checkpoints yet.')}</p>
+                                <p className="text-xs text-[var(--brand-secondary-light)]">{t('snapshotsPanel.noAutoSnapshots', 'No autosaved checkpoints yet.')}</p>
                             ) : (
                                 <SnapshotCardList
                                     snapshots={autoSnapshots}
@@ -200,8 +200,8 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                                     deleteVersionTitle={deleteVersionTitle}
                                     nodesLabel={nodesLabel}
                                     edgesLabel={edgesLabel}
-                                    cardClassName="group p-3 rounded-[var(--radius-md)] border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-[var(--brand-primary-200)] transition-all"
-                                    titleClassName="text-sm font-semibold text-slate-700"
+                                    cardClassName="group rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3 transition-all hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-surface)]"
+                                    titleClassName="text-sm font-semibold text-[var(--brand-text)]"
                                 />
                             )}
                         </section>

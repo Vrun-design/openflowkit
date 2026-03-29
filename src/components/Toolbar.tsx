@@ -1,10 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Plus,
-  WandSparkles,
-  Workflow,
-} from 'lucide-react';
+import { Plus, WandSparkles, Workflow } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Tooltip } from './Tooltip';
 import { ToolbarAddMenu } from './toolbar/ToolbarAddMenu';
@@ -12,6 +8,10 @@ import { ToolbarHistoryControls } from './toolbar/ToolbarHistoryControls';
 import { ToolbarModeControls } from './toolbar/ToolbarModeControls';
 import { getToolbarIconButtonClass, TOOLBAR_DIVIDER_CLASS } from './toolbar/toolbarButtonStyles';
 import { AssetsIcon } from './icons/AssetsIcon';
+import {
+  getDefaultToolbarAddItemId,
+  type AddItemId,
+} from '@/components/add-items/addItemRegistry';
 
 interface ToolbarProps {
   onUndo: () => void;
@@ -26,9 +26,22 @@ interface ToolbarProps {
   onToggleStudio: () => void;
   isStudioOpen: boolean;
   onOpenAssets: () => void;
-  onAddShape: (shape: import('@/lib/types').NodeData['shape'], position: { x: number, y: number }) => void;
+  onAddShape: (
+    shape: import('@/lib/types').NodeData['shape'],
+    position: { x: number; y: number }
+  ) => void;
+  onAddAnnotation: (position: { x: number; y: number }) => void;
+  onAddSection: (position: { x: number; y: number }) => void;
+  onAddTextNode: (position: { x: number; y: number }) => void;
+  onAddClassNode: (position: { x: number; y: number }) => void;
+  onAddEntityNode: (position: { x: number; y: number }) => void;
+  onAddMindmapNode: (position: { x: number; y: number }) => void;
+  onAddJourneyNode: (position: { x: number; y: number }) => void;
+  onAddArchitectureNode: (position: { x: number; y: number }) => void;
+  onAddSequenceParticipant: (position: { x: number; y: number }) => void;
+  onAddWireframe: (variant: 'browser' | 'mobile', position: { x: number; y: number }) => void;
   onLayout: () => void;
-  getCenter: () => { x: number, y: number };
+  getCenter: () => { x: number; y: number };
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -45,11 +58,22 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   isStudioOpen,
   onOpenAssets,
   onAddShape,
+  onAddAnnotation,
+  onAddSection,
+  onAddTextNode,
+  onAddClassNode,
+  onAddEntityNode,
+  onAddMindmapNode,
+  onAddJourneyNode,
+  onAddArchitectureNode,
+  onAddSequenceParticipant,
+  onAddWireframe,
   onLayout,
-  getCenter
+  getCenter,
 }) => {
   const { t } = useTranslation();
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [currentAddItemId, setCurrentAddItemId] = useState<AddItemId>(getDefaultToolbarAddItemId);
   const addMenuRef = useRef<HTMLDivElement>(null);
   const flowPilotIconClass = `w-4 h-4 transition-transform ${isStudioOpen ? 'scale-110 text-[var(--brand-primary)]' : 'group-hover:scale-110'}`;
   const shouldShowAddMenu = showAddMenu && !isCommandBarOpen && !isStudioOpen;
@@ -67,8 +91,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   // Interaction guard: If command bar is open, disable all toolbar interactions
   const isInteractive = !isCommandBarOpen;
-
-  const containerClasses = `flex items-center p-1.5 bg-white/90 backdrop-blur-xl shadow-[var(--shadow-md)] rounded-[var(--radius-lg)] border border-white/20 ring-1 ring-black/5 transition-all duration-300 ${!isInteractive ? 'opacity-50 pointer-events-none grayscale' : ''}`;
+  const containerClasses = [
+    'flex items-center p-1.5 bg-[var(--brand-surface)]/90 backdrop-blur-xl shadow-[var(--shadow-md)] rounded-[var(--radius-lg)] border border-[var(--brand-surface)]/20 ring-1 ring-black/5 transition-all duration-300',
+    !isInteractive ? 'pointer-events-none' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 z-40 ${containerClasses}`}>
@@ -86,11 +114,23 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       <div className="flex items-center gap-1">
         <div ref={addMenuRef}>
           <ToolbarAddMenu
+            currentItemId={currentAddItemId}
             isInteractive={isInteractive}
             showAddMenu={shouldShowAddMenu}
             onToggleMenu={() => setShowAddMenu((previouslyShown) => !previouslyShown)}
             onCloseMenu={() => setShowAddMenu(false)}
+            onCurrentItemChange={setCurrentAddItemId}
             onAddShape={onAddShape}
+            onAddAnnotation={onAddAnnotation}
+            onAddSection={onAddSection}
+            onAddTextNode={onAddTextNode}
+            onAddClassNode={onAddClassNode}
+            onAddEntityNode={onAddEntityNode}
+            onAddMindmapNode={onAddMindmapNode}
+            onAddJourneyNode={onAddJourneyNode}
+            onAddArchitectureNode={onAddArchitectureNode}
+            onAddSequenceParticipant={onAddSequenceParticipant}
+            onAddWireframe={onAddWireframe}
             getCenter={getCenter}
           />
         </div>
@@ -112,14 +152,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             disabled={!isInteractive}
             variant="primary"
             size="icon"
-            className={`group rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] transition-all hover:scale-105 active:scale-95 ${isCommandBarOpen ? 'bg-slate-800 hover:bg-slate-900' : 'bg-[var(--brand-primary)] hover:brightness-110'}`}
-            icon={<Plus className={`w-5 h-5 text-white transition-transform duration-200 ${isCommandBarOpen ? 'rotate-45' : 'group-hover:rotate-90'}`} />}
+            className={`group rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] transition-all hover:scale-105 active:scale-95 ${isCommandBarOpen ? 'bg-[var(--brand-text)] hover:bg-[var(--brand-text)]' : 'bg-[var(--brand-primary)] hover:brightness-110'}`}
+            icon={
+              <Plus
+                className={`w-5 h-5 text-white transition-transform duration-200 ${isCommandBarOpen ? 'rotate-45' : 'group-hover:rotate-90'}`}
+              />
+            }
           />
         </Tooltip>
 
         <Tooltip text={t('toolbar.autoLayout')}>
           <Button
-            onClick={() => onLayout()}
+            onClick={onLayout}
             disabled={!isInteractive}
             variant="ghost"
             size="icon"

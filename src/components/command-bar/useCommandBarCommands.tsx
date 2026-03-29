@@ -8,6 +8,7 @@ import {
     Palette,
     Search,
     Settings,
+    SquareStack,
     WandSparkles,
     Workflow,
 } from 'lucide-react';
@@ -74,6 +75,15 @@ export function useCommandBarCommands({
                 description: 'Wireframes, notes, sections, and media',
             },
             {
+                id: 'layers',
+                label: 'Layers & Sections',
+                icon: <SquareStack className="w-4 h-4 text-amber-500" />,
+                tier: 'advanced',
+                type: 'navigation',
+                view: 'layers',
+                description: 'Manage layers, section order, focus, lock, and visibility',
+            },
+            {
                 id: 'search-nodes',
                 label: 'Search Nodes',
                 icon: <Search className="w-4 h-4 text-[var(--brand-primary-400)]" />,
@@ -115,7 +125,7 @@ export function useCommandBarCommands({
                     {
                         id: 'toggle-grid',
                         label: 'Show Grid',
-                        icon: <Settings className="w-4 h-4 text-slate-500" />,
+                        icon: <Settings className="w-4 h-4 text-[var(--brand-secondary)]" />,
                         tier: 'advanced' as const,
                         type: 'toggle' as const,
                         value: settings.showGrid,
@@ -126,7 +136,7 @@ export function useCommandBarCommands({
                     {
                         id: 'toggle-snap',
                         label: 'Snap to Grid',
-                        icon: <Settings className="w-4 h-4 text-slate-500" />,
+                        icon: <Settings className="w-4 h-4 text-[var(--brand-secondary)]" />,
                         tier: 'advanced' as const,
                         type: 'toggle' as const,
                         value: settings.snapToGrid,
@@ -139,7 +149,7 @@ export function useCommandBarCommands({
             {
                 id: 'undo',
                 label: 'Undo',
-                icon: <ArrowRight className="w-4 h-4 rotate-180 text-slate-500" />,
+                icon: <ArrowRight className="w-4 h-4 rotate-180 text-[var(--brand-secondary)]" />,
                 tier: 'advanced',
                 shortcut: '⌘Z',
                 type: 'action',
@@ -149,7 +159,7 @@ export function useCommandBarCommands({
             {
                 id: 'redo',
                 label: 'Redo',
-                icon: <ArrowRight className="w-4 h-4 text-slate-500" />,
+                icon: <ArrowRight className="w-4 h-4 text-[var(--brand-secondary)]" />,
                 tier: 'advanced',
                 shortcut: '⌘Y',
                 type: 'action',

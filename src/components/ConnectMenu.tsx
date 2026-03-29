@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { isMindmapConnectorSource } from '@/lib/connectCreationPolicy';
 import { useFlowStore } from '@/store';
 import type { DomainLibraryCategory, DomainLibraryItem } from '@/services/domainLibrary';
-import { loadProviderCatalogSuggestions, loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalog';
+import { loadDomainAssetSuggestions } from '@/services/assetCatalog';
+import { getAssetCategoryDisplayName } from '@/services/assetPresentation';
+import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalog';
 import { Tooltip } from './Tooltip';
-import { loadIconAssetSuggestions } from '@/services/iconAssetCatalog';
 import { NamedIcon } from './IconMap';
 import type { ConnectedEdgePreset } from '@/hooks/edge-operations/utils';
 
@@ -105,11 +106,6 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
     const assetCategory = typeof sourceNode?.data?.assetCategory === 'string' ? sourceNode.data.assetCategory : undefined;
     const currentShapeId = typeof sourceNode?.data?.archIconShapeId === 'string' ? sourceNode.data.archIconShapeId : undefined;
     const currentIconName = typeof sourceNode?.data?.icon === 'string' ? sourceNode.data.icon : undefined;
-    const iconSuggestions = useMemo(() => loadIconAssetSuggestions({
-        category: assetCategory,
-        excludeIcon: currentIconName,
-        limit: 18,
-    }), [assetCategory, currentIconName]);
     const providerItemsKey = isAssetSource && assetProvider
         ? `${assetProvider}:${assetCategory ?? 'all'}:${currentShapeId ?? currentIconName ?? 'all'}`
         : null;
@@ -122,13 +118,12 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
         }
 
         let cancelled = false;
-        const suggestionPromise = assetProvider === 'icons'
-            ? Promise.resolve(iconSuggestions)
-            : loadProviderCatalogSuggestions(assetProvider, {
-                category: assetCategory,
-                excludeShapeId: currentShapeId,
-                limit: 18,
-            });
+        const suggestionPromise = loadDomainAssetSuggestions(assetProvider, {
+            category: assetCategory,
+            excludeIcon: currentIconName,
+            excludeShapeId: currentShapeId,
+            limit: 18,
+        });
 
         suggestionPromise.then((items) => {
             if (!cancelled) {
@@ -143,7 +138,7 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
         return () => {
             cancelled = true;
         };
-    }, [assetCategory, assetProvider, currentShapeId, iconSuggestions, isAssetSource, providerItemsKey]);
+    }, [assetCategory, assetProvider, currentIconName, currentShapeId, isAssetSource, providerItemsKey]);
 
     const providerItems = useMemo(
         () => (providerItemsState.key === providerItemsKey ? providerItemsState.items : []),
@@ -188,7 +183,7 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
         if (!assetProvider) {
             return '';
         }
-        return assetProvider.toUpperCase();
+        return getAssetCategoryDisplayName(assetProvider);
     }, [assetProvider]);
     const contextualOptions = useMemo(() => getContextualOptions(sourceType), [sourceType]);
     const genericOptions = useMemo<ConnectMenuOption[]>(() => [
@@ -262,31 +257,31 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
                 aria-label="Close connect menu"
             />
             <div
-                className="fixed z-[70] min-w-[180px] overflow-hidden rounded-2xl border border-slate-200/50 bg-white/95 shadow-[var(--shadow-lg)] ring-1 ring-black/5 backdrop-blur-xl animate-in zoom-in-95 fade-in duration-150"
+                className="fixed z-[70] min-w-[180px] overflow-hidden rounded-2xl border border-[var(--color-brand-border)]/80 bg-[var(--brand-surface)]/95 shadow-[var(--shadow-lg)] ring-1 ring-black/5 backdrop-blur-xl animate-in zoom-in-95 fade-in duration-150"
                 style={{ top: position.y, left: position.x }}
             >
                 <div className="p-1.5 space-y-0.5">
                     <div className="px-3 py-2 mb-1">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">{t('connectMenu.createNewNode')}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--brand-secondary)]">{t('connectMenu.createNewNode')}</p>
                     </div>
 
                     {isMindmapSource ? (
                         <button
                             onClick={() => handleSelect('mindmap')}
-                            className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 active:bg-slate-100 rounded-xl transition-all group"
+                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[var(--brand-text)] transition-all hover:bg-[var(--brand-background)] active:bg-[var(--brand-background)]/80"
                         >
                             <div className="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center border border-indigo-100 group-hover:scale-110 transition-transform">
                                 <Settings className="w-4.5 h-4.5" />
                             </div>
                             <div className="flex flex-col items-start translate-y-[1px]">
-                                <span className="font-bold text-slate-700 leading-none mb-1">{t('nodes.mindmap', 'Topic')}</span>
-                                <span className="text-[10px] text-slate-400 font-medium">Create connected topic</span>
+                                <span className="mb-1 font-bold leading-none text-[var(--brand-text)]">{t('nodes.mindmap', 'Topic')}</span>
+                                <span className="text-[10px] font-medium text-[var(--brand-secondary)]">Create connected topic</span>
                             </div>
                         </button>
                     ) : isAssetSource && providerItems.length > 0 ? (
                         <>
                             <div className="px-3 py-2">
-                                <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                                <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--brand-secondary)]">
                                     {providerTitle} suggestions
                                 </div>
                             </div>
@@ -297,14 +292,14 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
                                         <button
                                             aria-label={item.label}
                                             onClick={() => handleSelectAsset(item)}
-                                            className="flex aspect-square items-center justify-center rounded-xl border border-slate-200 bg-white p-2 transition-all hover:border-slate-300 hover:bg-slate-50"
+                                            className="flex aspect-square items-center justify-center rounded-xl border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-2 transition-all hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)]"
                                         >
                                             {previewUrls[item.id] ? (
                                                 <img src={previewUrls[item.id]} alt={`${item.label} icon`} className="h-10 w-10 object-contain" />
                                             ) : item.category === 'icons' ? (
-                                                <NamedIcon name={item.icon} fallbackName="Box" className="w-5 h-5 text-slate-500" />
+                                                <NamedIcon name={item.icon} fallbackName="Box" className="w-5 h-5 text-[var(--brand-secondary)]" />
                                             ) : (
-                                                <Database className="w-4.5 h-4.5 text-slate-400" />
+                                                <Database className="w-4.5 h-4.5 text-[var(--brand-secondary)]" />
                                             )}
                                         </button>
                                     </Tooltip>
@@ -318,14 +313,14 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
                                 <button
                                     key={`${option.type}:${option.shape ?? 'default'}:${option.title}`}
                                     onClick={() => handleSelect(option.type, option.shape, option.edgePreset)}
-                                    className="flex items-center gap-3 w-full px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 active:bg-slate-100 rounded-xl transition-all group"
+                                    className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[var(--brand-text)] transition-all hover:bg-[var(--brand-background)] active:bg-[var(--brand-background)]/80"
                                 >
                                     <div className={`w-9 h-9 rounded-lg flex items-center justify-center border group-hover:scale-110 transition-transform ${option.toneClassName}`}>
                                         {option.icon}
                                     </div>
                                     <div className="flex flex-col items-start translate-y-[1px]">
-                                        <span className="font-bold text-slate-700 leading-none mb-1">{option.title}</span>
-                                        <span className="text-[10px] text-slate-400 font-medium">{option.description}</span>
+                                        <span className="mb-1 font-bold leading-none text-[var(--brand-text)]">{option.title}</span>
+                                        <span className="text-[10px] font-medium text-[var(--brand-secondary)]">{option.description}</span>
                                     </div>
                                 </button>
                             ))}
@@ -333,9 +328,9 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
                     )}
                 </div>
 
-                <div className="bg-slate-50/80 px-4 py-2 flex items-center justify-between border-t border-slate-100">
-                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{t('connectMenu.releaseToConnect')}</span>
-                    <button type="button" onClick={onClose} className="p-1 hover:bg-slate-200 rounded-full text-slate-400 transition-colors" aria-label={t('connectMenu.close', 'Close connect menu')}>
+                <div className="flex items-center justify-between border-t border-[var(--color-brand-border)] bg-[var(--brand-background)]/70 px-4 py-2">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--brand-secondary)]">{t('connectMenu.releaseToConnect')}</span>
+                    <button type="button" onClick={onClose} className="rounded-full p-1 text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]" aria-label={t('connectMenu.close', 'Close connect menu')}>
                         <X className="w-3 h-3" />
                     </button>
                 </div>

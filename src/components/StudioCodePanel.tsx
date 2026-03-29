@@ -31,26 +31,26 @@ function friendlyDslError(raw: string): string {
 
 function getDraftPreviewToneClass(state: DraftPreviewState): string {
     if (state === 'ready') {
-        return 'text-emerald-700';
+        return 'text-emerald-500';
     }
 
     if (state === 'error') {
-        return 'text-amber-700';
+        return 'text-amber-500';
     }
 
-    return 'text-slate-600';
+    return 'text-[var(--brand-secondary)]';
 }
 
 function getDraftPreviewBadgeClass(state: DraftPreviewState): string {
     if (state === 'ready') {
-        return 'bg-emerald-50 text-emerald-700';
+        return 'bg-emerald-500/10 text-emerald-500';
     }
 
     if (state === 'error') {
-        return 'bg-amber-50 text-amber-700';
+        return 'bg-amber-500/10 text-amber-500';
     }
 
-    return 'bg-slate-100 text-slate-600';
+    return 'bg-[var(--brand-background)] text-[var(--brand-secondary)]';
 }
 
 function getModeButtonClassName(isActive: boolean): string {
@@ -58,7 +58,7 @@ function getModeButtonClassName(isActive: boolean): string {
         return 'border-[var(--brand-primary)] text-[var(--brand-primary)]';
     }
 
-    return 'border-transparent text-slate-500 hover:text-[var(--brand-text)]';
+    return 'border-transparent text-[var(--brand-secondary)] hover:text-[var(--brand-text)]';
 }
 
 function getLivePreviewButtonClassName(isActive: boolean): string {
@@ -66,7 +66,7 @@ function getLivePreviewButtonClassName(isActive: boolean): string {
         return 'border-[var(--brand-primary-200)] bg-[var(--brand-primary-50)] text-[var(--brand-primary)]';
     }
 
-    return 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700';
+    return 'border-[var(--color-brand-border)] text-[var(--brand-secondary)] hover:border-[var(--brand-primary-200)] hover:text-[var(--brand-text)]';
 }
 
 interface StudioCodePanelProps {
@@ -137,7 +137,7 @@ export function StudioCodePanel({
 
     return (
         <div className="flex h-full min-h-0 flex-col">
-            <div className="mb-3 border-b border-slate-200/80 pb-0.5">
+            <div className="mb-3 border-b border-[var(--color-brand-border)] pb-0.5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-5">
                         {MODE_OPTIONS.map(({ id, label }) => (
@@ -164,7 +164,7 @@ export function StudioCodePanel({
                         <Tooltip text="Edit the full diagram source, validate the draft, then apply the changes back to the canvas.">
                             <button
                                 type="button"
-                                className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+                                className="flex h-5 w-5 items-center justify-center rounded-full text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
                                 aria-label="Diagram as code help"
                             >
                                 <CircleHelp className="h-3.5 w-3.5" />
@@ -174,8 +174,8 @@ export function StudioCodePanel({
                 </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-md)] border border-slate-200 bg-slate-50/55 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-colors focus-within:border-[var(--brand-primary-300)] focus-within:ring-1 focus-within:ring-[var(--brand-primary-100)]">
-                <div className="min-h-0 flex-1 overflow-hidden bg-white">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition-colors focus-within:border-[var(--brand-primary-300)] focus-within:ring-1 focus-within:ring-[var(--brand-primary-100)]">
+                <div className="min-h-0 flex-1 overflow-hidden bg-[var(--brand-surface)]">
                     <Textarea
                         ref={textareaRef}
                         value={code}
@@ -189,7 +189,7 @@ export function StudioCodePanel({
                 </div>
 
                 {error ? (
-                    <div className="mx-3 mt-3 rounded-[var(--radius-xs)] border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                    <div className="mx-3 mt-3 rounded-[var(--radius-xs)] border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
                         {diagnostics.length > 0 ? (
                             <div className="space-y-2">
                                 {diagnostics.slice(0, 3).map((diagnostic, index) => (
@@ -202,12 +202,12 @@ export function StudioCodePanel({
                                             </span>
                                         </div>
                                         {diagnostic.snippet && (
-                                            <div className="ml-5.5 mt-1 rounded bg-amber-100/60 px-2 py-1 font-mono text-[11px] text-amber-800">
+                                            <div className="ml-5.5 mt-1 rounded bg-amber-500/10 px-2 py-1 font-mono text-[11px] text-amber-400">
                                                 {diagnostic.snippet}
                                             </div>
                                         )}
                                         {diagnostic.hint && (
-                                            <div className="ml-5.5 mt-1 text-[11px] text-amber-600">
+                                            <div className="ml-5.5 mt-1 text-[11px] text-amber-400/90">
                                                 {diagnostic.hint}
                                             </div>
                                         )}
@@ -223,7 +223,7 @@ export function StudioCodePanel({
                     </div>
                 ) : null}
 
-                <div className="border-t border-slate-200/80 bg-slate-50/80 px-4 py-3">
+                <div className="border-t border-[var(--color-brand-border)] bg-[var(--brand-background)] px-4 py-3">
                     <div className="space-y-3">
                         <div className="flex items-center justify-between gap-3 text-[11px]">
                             <div className="flex min-w-0 items-center gap-2">
@@ -264,7 +264,7 @@ export function StudioCodePanel({
                                 onClick={handleReset}
                                 disabled={!hasDraftChanges && !error}
                                 variant="ghost"
-                                className="h-8 px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900"
+                                className="h-8 px-3 py-1.5 text-xs text-[var(--brand-secondary)] hover:text-[var(--brand-text)]"
                                 icon={<RotateCcw className="w-3.5 h-3.5" />}
                             >
                                 Reset

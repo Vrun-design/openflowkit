@@ -61,21 +61,32 @@ export function useKeyboardShortcuts({
   onNudge,
 }: ShortcutHandlers): void {
   useEffect(() => {
-    const isEditableActiveElement = (): boolean => {
-      const activeElement = document.activeElement as HTMLElement | null;
-      if (!activeElement) return false;
-      const tag = activeElement.tagName;
-      return tag === 'INPUT' || tag === 'TEXTAREA' || activeElement.isContentEditable;
-    };
+    function isEditableElement(element: EventTarget | null): boolean {
+      if (!(element instanceof HTMLElement)) {
+        return false;
+      }
 
-    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = element.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || element.isContentEditable;
+    }
+
+    function isEditableEventTarget(event: KeyboardEvent): boolean {
+      if (isEditableElement(event.target)) {
+        return true;
+      }
+
+      return isEditableElement(document.activeElement);
+    }
+
+    function handleKeyDown(e: KeyboardEvent): void {
       const isCmdOrCtrl = e.metaKey || e.ctrlKey;
       const isShift = e.shiftKey;
       const key = e.key.toLowerCase();
-      const isEditable = isEditableActiveElement();
+      const isEditable = isEditableEventTarget(e);
 
       // Command Bar (Cmd+K)
       if (isCmdOrCtrl && key === 'k') {
+        if (isEditable) return;
         e.preventDefault();
         onCommandBar();
         return;
@@ -83,6 +94,7 @@ export function useKeyboardShortcuts({
 
       // Search (Cmd+F)
       if (isCmdOrCtrl && key === 'f') {
+        if (isEditable) return;
         e.preventDefault();
         onSearch();
         return;
@@ -237,11 +249,9 @@ export function useKeyboardShortcuts({
 
       // Select All
       if (isCmdOrCtrl && key === 'a') {
+        if (isEditable) return;
         e.preventDefault();
-        // Only if focus is body or canvas (not inputs)
-        if (!isEditable) {
-          selectAll();
-        }
+        selectAll();
       }
 
       // Copy (Cmd+C)
@@ -278,7 +288,7 @@ export function useKeyboardShortcuts({
         if (e.key === 'ArrowUp')    { e.preventDefault(); onNudge?.(0, -nudgeDist); }
         if (e.key === 'ArrowDown')  { e.preventDefault(); onNudge?.(0, nudgeDist); }
       }
-    };
+    }
 
     window.addEventListener('keydown', handleKeyDown);
 

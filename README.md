@@ -5,6 +5,7 @@
 <h1>OpenFlowKit</h1>
 
 <p><strong>The open-source diagramming studio for developers and builders.</strong><br/>
+Paste a GitHub repo → get an architecture diagram. Import SQL → get an ERD. Import Terraform → get a cloud diagram.<br/>
 Prompt · Import · Edit · Export as animated video · Collaborate — entirely in your browser, no account required.</p>
 
 <p>
@@ -46,10 +47,10 @@ OpenFlowKit is a **local-first, developer-grade diagramming workspace** that liv
 **The core loop is simple:**
 
 ```
-Prompt / Import → Edit visually or in code → Export anywhere
+Paste code / Import infra / Prompt AI → Edit visually or in code → Export anywhere
 ```
 
-Start from a plain-English prompt, a Mermaid file, SQL schema, OpenAPI spec, Terraform config, or one of 20 built-in templates. Refine on a polished canvas. Export to Mermaid, PlantUML, Figma, PNG, PDF, or a cinematic reveal video. Your diagrams stay in your browser by default, and your API keys never leave your device.
+Start from a GitHub repo, SQL schema, Terraform state, Kubernetes YAML, OpenAPI spec, a Mermaid file, or a plain-English prompt. Refine on a polished canvas. Export to Mermaid, PlantUML, Figma, PNG, PDF, or a cinematic reveal video. Your diagrams stay in your browser by default, and your API keys never leave your device.
 
 ---
 
@@ -57,23 +58,81 @@ Start from a plain-English prompt, a Mermaid file, SQL schema, OpenAPI spec, Ter
 
 Every existing tool misses something critical for developers. OpenFlowKit fills those gaps.
 
-| Tool | The gap | How OpenFlowKit fills it |
-|---|---|---|
-| **Excalidraw** | Freeform only, no structured diagram types, no DSL | 8 structured diagram families, bidirectional diagram-as-code, Figma export |
-| **Draw.io / diagrams.net** | Dated UX, no AI, no code representation | Modern React 19 canvas, 9 AI providers, OpenFlow DSL |
-| **Mermaid.js** | Code-only, no visual editor | Full visual editor on top of Mermaid — edit visually or in code, bidirectionally |
-| **tldraw** | Whiteboard-first, no structured diagram types | Cloud architecture (AWS/Azure/CNCF icons), class, ER, state, and more |
-| **Lucidchart / Miro** | Paid, cloud-only, account required | MIT licensed, local-first, and usable without an account |
+| Tool                       | The gap                                            | How OpenFlowKit fills it                                                         |
+| -------------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Excalidraw**             | Freeform only, no structured diagram types, no DSL | 8 structured diagram families, bidirectional diagram-as-code, Figma export       |
+| **Draw.io / diagrams.net** | Dated UX, no AI, no code representation            | Modern React 19 canvas, 9 AI providers, OpenFlow DSL                             |
+| **Mermaid.js**             | Code-only, no visual editor                        | Full visual editor on top of Mermaid — edit visually or in code, bidirectionally |
+| **tldraw**                 | Whiteboard-first, no structured diagram types      | Cloud architecture (AWS/Azure/CNCF icons), class, ER, state, and more            |
+| **Lucidchart / Miro**      | Paid, cloud-only, account required                 | MIT licensed, local-first, and usable without an account                         |
 
 **OpenFlowKit combines** a visual canvas editor, a diagram-as-code environment, an AI-powered generator, a developer import pipeline, and a Figma / docs export workflow in one open-source, local-first app.
 
 ---
 
+## ⭐ Spotlight: Code-to-Diagram Import
+
+<div align="center">
+
+**The fastest path from code to architecture diagram. Zero setup.**
+
+</div>
+
+OpenFlowKit turns your existing code and infrastructure into editable diagrams in seconds — no AI required for most formats.
+
+### How it works
+
+| What you paste                           | What you get                 | How it works                                                                                                         |
+| ---------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **GitHub repo URL**                      | Full architecture diagram    | Fetches repo via GitHub API, parses import statements across 9 languages, builds dependency graph, generates diagram |
+| **`.zip` of your project**               | Full architecture diagram    | Extracts files, analyzes imports and dependencies, maps the structure                                                |
+| **SQL DDL** (`CREATE TABLE` statements)  | Entity-relationship diagram  | Native parser — deterministic, instant, no AI                                                                        |
+| **Terraform state** (`.tfstate` JSON)    | Cloud architecture diagram   | Native parser — extracts resources, edges, provider icons                                                            |
+| **Kubernetes YAML** / **Helm templates** | Cloud architecture diagram   | Native parser — extracts Deployments, Services, Ingress, edges                                                       |
+| **Docker Compose**                       | Service architecture diagram | Native parser — extracts services, ports, networks, dependencies                                                     |
+| **OpenAPI / Swagger spec**               | API sequence diagram         | AI-generated from spec                                                                                               |
+| **Source code** (single file)            | Architecture draft           | AI-generated from code                                                                                               |
+
+### The GitHub import flow
+
+```
+1. Open Import panel → "Repo" tab
+2. Paste "github.com/vercel/next.js" → click Fetch
+3. Watch it analyze: "Fetching file tree... Fetched 80 source files..."
+4. See results: "80 files, TypeScript, 312 dependencies, 3 entry points"
+5. Click "Analyze Project" → AI generates the architecture diagram
+6. Edit, refine, export
+```
+
+Works with any public GitHub repo. Optionally add a personal access token for 5,000 requests/hour (vs 60 without).
+
+### Native parsers — no AI needed
+
+The SQL, Terraform, Kubernetes, and Docker Compose parsers are **fully deterministic** — they parse locally in the browser, require no API key, and produce predictable results:
+
+- **SQL:** Handles `CREATE TABLE`, `ALTER TABLE ADD FOREIGN KEY`, `ENUM` types, quoted identifiers, `IF NOT EXISTS`
+- **Terraform state:** Extracts `aws_`, `azurerm_`, `google_` resources with `vpc_id`, `subnet_id`, `security_groups`, `depends_on` edges
+- **Kubernetes:** Handles multi-document YAML (`---`), Helm templates (`{{ .Values.xxx }}`), extracts Services, Deployments, Ingress, ConfigMaps, Secrets, with port and selector edges
+- **Docker Compose:** Extracts services, `depends_on` edges, `networks`, `ports` mappings (shown in labels)
+
+### Import fidelity report
+
+Every import shows exactly what was detected:
+
+- **Node count** and **edge count**
+- **Summary** (e.g. "5 tables, 3 relationships" or "12 resources, 8 edges, AWS")
+- **DSL preview** — expandable raw DSL output before applying
+- **Apply to Canvas** — single click to add to your diagram
+
+---
+
 ## ✨ Spotlight: Cinematic Export
 
-<p align="center">
-<strong>Turn a finished diagram into a polished animated walkthrough without leaving the editor.</strong>
-</p>
+<div align="center">
+
+**Turn a finished diagram into a polished animated walkthrough without leaving the editor.**
+
+</div>
 
 Most diagramming tools stop at static images. OpenFlowKit can export a **cinematic build video or GIF** so a diagram can be presented as a lightweight animated walkthrough. This is especially useful for:
 
@@ -83,6 +142,7 @@ Most diagramming tools stop at static images. OpenFlowKit can export a **cinemat
 - 🎓 **Engineering onboarding** — show new hires how a system connects, step by step
 
 **How it works:**
+
 1. Build and refine the diagram on the canvas
 2. Open **Export**
 3. Choose a cinematic video or cinematic GIF output
@@ -100,16 +160,16 @@ Describe a system in natural language. Flowpilot generates a fully laid-out, edi
 
 **9 supported AI providers:**
 
-| Provider | Default model |
-|---|---|
-| Google Gemini | `gemini-2.5-flash-lite` |
-| OpenAI | `gpt-5-mini` |
-| Anthropic Claude | `claude-sonnet-4-6` |
-| Groq | `llama-4-scout-17b-16e-instruct` |
-| Mistral | `mistral-medium-latest` |
-| NVIDIA | `llama-4-scout-17b-16e-instruct` |
-| Cerebras | `gpt-oss-120b` |
-| OpenRouter | `google/gemini-2.5-flash` |
+| Provider            | Default model                                               |
+| ------------------- | ----------------------------------------------------------- |
+| Google Gemini       | `gemini-2.5-flash-lite`                                     |
+| OpenAI              | `gpt-5-mini`                                                |
+| Anthropic Claude    | `claude-sonnet-4-6`                                         |
+| Groq                | `llama-4-scout-17b-16e-instruct`                            |
+| Mistral             | `mistral-medium-latest`                                     |
+| NVIDIA              | `llama-4-scout-17b-16e-instruct`                            |
+| Cerebras            | `gpt-oss-120b`                                              |
+| OpenRouter          | `google/gemini-2.5-flash`                                   |
 | **Custom endpoint** | Any OpenAI-compatible API (Ollama, LM Studio, Together AI…) |
 
 **Flowpilot capabilities:**
@@ -129,30 +189,34 @@ Describe a system in natural language. Flowpilot generates a fully laid-out, edi
 
 Feed any structured artifact into OpenFlowKit and get a ready-to-edit diagram:
 
-| Source | Generated diagram |
-|---|---|
-| **SQL DDL** (`CREATE TABLE` statements) | Entity-relationship diagram with typed fields and cardinalities |
-| **Terraform / Kubernetes YAML / Docker Compose** | Cloud architecture diagram with provider icons |
-| **OpenAPI / Swagger spec** | API sequence diagram with operations and responses |
-| **Source code** (TS, JS, Python, Go, Java, Ruby, C#, C++, Rust) | Architecture draft from module structure |
-| **Mermaid** | Native import, fully editable |
+| Source                                     | Generated diagram                                               | Parser type |
+| ------------------------------------------ | --------------------------------------------------------------- | ----------- |
+| **GitHub repo URL**                        | Full architecture from codebase structure                       | Native + AI |
+| **Project `.zip` upload**                  | Full architecture from codebase structure                       | Native + AI |
+| **SQL DDL**                                | Entity-relationship diagram with typed fields and cardinalities | Native      |
+| **Terraform state** (`.tfstate`)           | Cloud architecture diagram with provider icons                  | Native      |
+| **Kubernetes YAML / Helm**                 | Cloud architecture diagram with K8s resources                   | Native      |
+| **Docker Compose**                         | Service architecture with ports and networks                    | Native      |
+| **OpenAPI / Swagger spec**                 | API sequence diagram with operations and responses              | AI          |
+| **Source code** (single file, 9 languages) | Architecture draft from module structure                        | AI          |
+| **Mermaid**                                | Native import, fully editable                                   | Native      |
 
-File upload with automatic language detection, or paste raw text.
+**File upload** with automatic format detection, **drag-and-drop** onto the import panel, and **input size limits** with clear error messages.
 
 ---
 
 ### 📐 8 Structured Diagram Types
 
-| Diagram | What it includes | Mermaid export |
-|---|---|---|
-| **Flowchart** | Start/end, process, decision, annotation, swimlane, section | `flowchart TD` |
-| **Architecture** | AWS, Azure, CNCF icons; zones, trust domains, service boundaries | `architecture-beta` |
-| **Class Diagram** | UML classes, attributes, methods, stereotypes, all relation types | `classDiagram` |
-| **ER Diagram** | Entities with typed fields (PK, FK, NN, UNIQUE), cardinality edges | `erDiagram` |
-| **Mind Map** | Hierarchical topics, curved branches, depth-aware auto-layout | `mindmap` |
-| **User Journey** | Scored tasks, named sections, actor annotations | `journey` |
-| **State Diagram** | States, composite containers, start-node markers | `stateDiagram-v2` |
-| **Wireframe** | Browser shells, mobile frames, UI component blocks | — |
+| Diagram           | What it includes                                                   | Mermaid export      |
+| ----------------- | ------------------------------------------------------------------ | ------------------- |
+| **Flowchart**     | Start/end, process, decision, annotation, swimlane, section        | `flowchart TD`      |
+| **Architecture**  | AWS, Azure, CNCF icons; zones, trust domains, service boundaries   | `architecture-beta` |
+| **Class Diagram** | UML classes, attributes, methods, stereotypes, all relation types  | `classDiagram`      |
+| **ER Diagram**    | Entities with typed fields (PK, FK, NN, UNIQUE), cardinality edges | `erDiagram`         |
+| **Mind Map**      | Hierarchical topics, curved branches, depth-aware auto-layout      | `mindmap`           |
+| **User Journey**  | Scored tasks, named sections, actor annotations                    | `journey`           |
+| **State Diagram** | States, composite containers, start-node markers                   | `stateDiagram-v2`   |
+| **Wireframe**     | Browser shells, mobile frames, UI component blocks                 | —                   |
 
 ---
 
@@ -160,14 +224,14 @@ File upload with automatic language detection, or paste raw text.
 
 **🖼 Images:** SVG · PNG (transparent, hi-res) · JPG · PDF
 
-**🎬 Animation & Video** *(unique to OpenFlowKit)*
+**🎬 Animation & Video** _(unique to OpenFlowKit)_
 
-| Format | Description |
-|---|---|
-| Playback MP4 / WebM | Simple video replay of your diagram |
-| Playback GIF | Looping animation for embedding anywhere |
+| Format                 | Description                                                                      |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| Playback MP4 / WebM    | Simple video replay of your diagram                                              |
+| Playback GIF           | Looping animation for embedding anywhere                                         |
 | **Cinematic Video** ⭐ | Presentation-friendly animated diagram export for talks, demos, and walkthroughs |
-| **Cinematic GIF** ⭐ | Lightweight looping animated export for embeds and social sharing |
+| **Cinematic GIF** ⭐   | Lightweight looping animated export for embeds and social sharing                |
 
 **`{}` Code & Data:** JSON · OpenFlow DSL · Mermaid · PlantUML
 
@@ -215,6 +279,7 @@ One-click starters across 7 categories, fully searchable.
 <summary>View all templates</summary>
 
 **Flowchart**
+
 - Subscription Upgrade Workflow
 - Incident Escalation Runbook
 - CI/CD Release Train
@@ -222,23 +287,27 @@ One-click starters across 7 categories, fully searchable.
 - AI Support Escalation
 
 **AWS**
+
 - AWS Event-Driven API (API Gateway, Lambda, EventBridge, SQS, DynamoDB, Step Functions, SES)
 - AWS Data Lake Analytics (S3, Glue, DataZone, Athena, Redshift)
 - AWS Container Delivery Platform
 - AWS Security Operations Loop
 
 **Azure**
+
 - Azure AI Application Platform
 - Azure Landing Zone Operations
 - Azure Data Estate
 - Azure Identity Access Hub
 
 **CNCF**
+
 - CNCF GitOps Platform
 - CNCF Service Mesh Security
 - CNCF Observability Stack
 
 **Mindmap · Journey · Wireframe**
+
 - Product Discovery Mindmap
 - Engineering Strategy Mindmap
 - Customer Onboarding Journey
@@ -252,16 +321,16 @@ One-click starters across 7 categories, fully searchable.
 
 One-click ELK.js layout with four presets:
 
-| Preset | Algorithm | Best for |
-|---|---|---|
-| Tree | `mrtree`, top-down | Org charts, dependency trees |
-| Hierarchical | `layered`, top-down | Most flows and sequences |
-| Compact | `layered`, left-right, tight | Dense diagrams |
-| Spacious | `layered`, left-right, loose | Presentations and handoffs |
+| Preset       | Algorithm                    | Best for                     |
+| ------------ | ---------------------------- | ---------------------------- |
+| Tree         | `mrtree`, top-down           | Org charts, dependency trees |
+| Hierarchical | `layered`, top-down          | Most flows and sequences     |
+| Compact      | `layered`, left-right, tight | Dense diagrams               |
+| Spacious     | `layered`, left-right, loose | Presentations and handoffs   |
 
 ---
 
-### 👥 Real-Time Collaboration *(beta)*
+### 👥 Real-Time Collaboration _(beta)_
 
 Peer-to-peer collaboration via **WebRTC + Yjs**. Share a room link — participants see live cursors, presence indicators, and a fully synchronized canvas state. No server-side diagram storage, ever.
 
@@ -282,18 +351,18 @@ Peer-to-peer collaboration via **WebRTC + Yjs**. Share a room link — participa
 
 **Essential shortcuts:**
 
-| Shortcut | Action |
-|---|---|
-| `Cmd+K` | Command Bar / Flowpilot |
-| `Cmd+F` | Search nodes |
-| `?` | Keyboard shortcuts help |
-| `Shift+1` | Fit view |
-| `Cmd+Z` / `Cmd+Shift+Z` | Undo / Redo |
-| `Cmd+D` | Duplicate |
-| `Alt+Arrow` | Quick-create connected node |
-| `F2` | Edit label inline |
-| `Escape` | Clear selection |
-| `Cmd+Alt+C` / `Cmd+Alt+V` | Copy / Paste style |
+| Shortcut                  | Action                      |
+| ------------------------- | --------------------------- |
+| `Cmd+K`                   | Command Bar / Flowpilot     |
+| `Cmd+F`                   | Search nodes                |
+| `?`                       | Keyboard shortcuts help     |
+| `Shift+1`                 | Fit view                    |
+| `Cmd+Z` / `Cmd+Shift+Z`   | Undo / Redo                 |
+| `Cmd+D`                   | Duplicate                   |
+| `Alt+Arrow`               | Quick-create connected node |
+| `F2`                      | Edit label inline           |
+| `Escape`                  | Clear selection             |
+| `Cmd+Alt+C` / `Cmd+Alt+V` | Copy / Paste style          |
 
 ---
 
@@ -315,20 +384,20 @@ Available in 7 languages: **English · German · Spanish · French · Japanese �
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| UI framework | React 19 + TypeScript 5 |
-| Canvas engine | React Flow / XYFlow 12 |
-| Graph layout | ELK.js |
-| State management | Zustand 5 |
-| Styling | Tailwind CSS 4 |
-| Animation | Framer Motion |
-| Collaboration | Yjs + y-webrtc + y-indexeddb |
-| Build | Vite 6 |
-| Unit / integration tests | Vitest 4 + Testing Library |
-| E2E tests | Playwright |
-| Docs site | Astro + Starlight |
-| Hosting | Cloudflare Pages |
+| Layer                    | Technology                   |
+| ------------------------ | ---------------------------- |
+| UI framework             | React 19 + TypeScript 5      |
+| Canvas engine            | React Flow / XYFlow 12       |
+| Graph layout             | ELK.js                       |
+| State management         | Zustand 5                    |
+| Styling                  | Tailwind CSS 4               |
+| Animation                | Framer Motion                |
+| Collaboration            | Yjs + y-webrtc + y-indexeddb |
+| Build                    | Vite 6                       |
+| Unit / integration tests | Vitest 4 + Testing Library   |
+| E2E tests                | Playwright                   |
+| Docs site                | Astro + Starlight            |
+| Hosting                  | Cloudflare Pages             |
 
 ---
 
@@ -436,11 +505,11 @@ Domain services own logic. Hooks compose state and side effects. Components rend
 
 ## Deployment
 
-| Surface | URL | Build command | Output dir |
-|---|---|---|---|
-| App | `app.openflowkit.com` | `npm run build` | `dist/` |
-| Docs | `docs.openflowkit.com` | `npm run build --workspace=docs-site` | `docs-site/dist/` |
-| Landing | `openflowkit.com` | `npm run build --workspace=web` | `web/dist/` |
+| Surface | URL                    | Build command                         | Output dir        |
+| ------- | ---------------------- | ------------------------------------- | ----------------- |
+| App     | `app.openflowkit.com`  | `npm run build`                       | `dist/`           |
+| Docs    | `docs.openflowkit.com` | `npm run build --workspace=docs-site` | `docs-site/dist/` |
+| Landing | `openflowkit.com`      | `npm run build --workspace=web`       | `web/dist/`       |
 
 All three surfaces deploy to Cloudflare Pages. See [`docs/cloudflare-pages-setup.md`](docs/cloudflare-pages-setup.md).
 
@@ -452,14 +521,14 @@ Contributions of all kinds are welcome — bug reports, features, docs, translat
 
 **Key constraints to know before contributing:**
 
-| Constraint | Why it matters |
-|---|---|
-| **Do not rename persisted storage keys** without a migration path | Renaming silently erases existing user browser data |
-| **Gate new features** behind a rollout flag in `src/config/rolloutFlags.ts` | Allows safe promotion and easy rollback |
-| **Keep lint, test, and build green** | CI is a strict gate — zero ESLint warnings |
-| **Prefer small, reversible change-sets** | Easier to review, safer to merge |
-| **No new runtime dependencies** without opening an issue first | Keeps the bundle lean and deliberate |
-| **Component size ≤ 250 lines** | Maintains readability and testability |
+| Constraint                                                                  | Why it matters                                      |
+| --------------------------------------------------------------------------- | --------------------------------------------------- |
+| **Do not rename persisted storage keys** without a migration path           | Renaming silently erases existing user browser data |
+| **Gate new features** behind a rollout flag in `src/config/rolloutFlags.ts` | Allows safe promotion and easy rollback             |
+| **Keep lint, test, and build green**                                        | CI is a strict gate — zero ESLint warnings          |
+| **Prefer small, reversible change-sets**                                    | Easier to review, safer to merge                    |
+| **No new runtime dependencies** without opening an issue first              | Keeps the bundle lean and deliberate                |
+| **Component size ≤ 250 lines**                                              | Maintains readability and testability               |
 
 ### Quick contributor setup
 

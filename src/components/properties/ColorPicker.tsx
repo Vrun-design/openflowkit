@@ -78,7 +78,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         <div className="space-y-3">
             {allowModes && onColorModeChange && (
                 <div className="flex items-center justify-between gap-3">
-                    <div className="inline-flex rounded-[var(--brand-radius)] border border-slate-200 bg-slate-50 p-1">
+                    <div className="inline-flex rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-background)]/75 p-1">
                         {(['subtle', 'filled'] as const).map((mode) => {
                             const selected = selectedColorMode === mode;
                             return (
@@ -88,8 +88,8 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                                     onClick={() => onColorModeChange(mode)}
                                     className={`rounded-[var(--radius-xs)] px-2 py-1 text-xs font-medium transition-colors ${
                                         selected
-                                            ? 'bg-white text-slate-900 shadow-sm'
-                                            : 'text-slate-500 hover:text-slate-700'
+                                            ? 'bg-[var(--brand-surface)] text-[var(--brand-text)] shadow-sm'
+                                            : 'text-[var(--brand-secondary)] hover:text-[var(--brand-text)]'
                                     }`}
                                 >
                                     {mode === 'subtle' ? 'Subtle' : 'Filled'}
@@ -98,7 +98,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                         })}
                     </div>
 
-                    <div className="text-right text-xs font-medium text-slate-500">
+                    <div className="text-right text-xs font-medium text-[var(--brand-secondary)]">
                         {activeLabel}
                     </div>
                 </div>
@@ -114,7 +114,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                                 backgroundColor: '#ffffff',
                                 accentColor: selectedCustomColor || '#94a3b8',
                                 preview: (
-                                    <div className="flex h-6 w-6 items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-50 text-slate-400">
+                                    <div className="flex h-6 w-6 items-center justify-center rounded-md border border-dashed border-[var(--color-brand-border)] bg-[var(--brand-background)] text-[var(--brand-secondary)]">
                                         <PaintBucket className="h-3 w-3" />
                                     </div>
                                 ),

@@ -6,7 +6,7 @@ export default defineConfig({
   site: 'https://docs.openflowkit.com',
   integrations: [
     starlight({
-      title: 'OpenFlowKit | Free Local-First AI Diagramming for Builders',
+      title: 'OpenFlowKit Docs',
       description: 'Documentation for OpenFlowKit — the local-first, AI-powered diagramming tool.',
       favicon: '/favicon.svg',
       logo: {

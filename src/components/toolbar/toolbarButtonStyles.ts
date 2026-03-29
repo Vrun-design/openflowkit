@@ -8,7 +8,7 @@ function getToolbarToneClass(tone: ToolbarButtonTone): string {
         case 'brand':
             return 'text-[var(--brand-primary)] hover:bg-[var(--brand-primary-50)] hover:text-[var(--brand-primary)]';
         default:
-            return 'text-slate-500 hover:bg-slate-100 hover:text-slate-900';
+            return 'text-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]';
     }
 }
 
@@ -21,10 +21,10 @@ export function getToolbarIconButtonClass(options?: {
     const sizeClass = size === 'compact' ? 'h-8 w-8' : 'h-9 w-9';
 
     if (active) {
-        return `group ${sizeClass} ${TOOLBAR_BUTTON_RADIUS_CLASS} border border-[var(--brand-primary-200)] bg-[var(--brand-primary-50)] text-[var(--brand-primary)] transition-all`;
+        return `group inline-flex items-center justify-center ${sizeClass} ${TOOLBAR_BUTTON_RADIUS_CLASS} border border-[var(--brand-primary-200)] bg-[var(--brand-primary-50)] text-[var(--brand-primary)] transition-all`;
     }
 
-    return `group ${sizeClass} ${TOOLBAR_BUTTON_RADIUS_CLASS} transition-all ${getToolbarToneClass(tone)}`;
+    return `group inline-flex items-center justify-center ${sizeClass} ${TOOLBAR_BUTTON_RADIUS_CLASS} transition-all ${getToolbarToneClass(tone)}`;
 }
 
-export const TOOLBAR_DIVIDER_CLASS = 'h-6 w-px bg-slate-200/60';
+export const TOOLBAR_DIVIDER_CLASS = 'h-6 w-px bg-[var(--color-brand-border)]/80';

@@ -1,5 +1,10 @@
 import { useCallback, useEffect } from 'react';
-import { shouldOpenFlowEditorAI, shouldOpenFlowEditorTemplates } from '@/app/routeState';
+import {
+    getInitialFlowEditorTemplateId,
+    shouldOpenFlowEditorAI,
+    shouldOpenFlowEditorTemplates,
+} from '@/app/routeState';
+import { getFlowTemplates } from '@/services/templates';
 import type { FlowEdge, FlowNode, FlowSnapshot } from '@/lib/types';
 import type { FlowEditorMode, StudioCodeMode, StudioTab } from '@/hooks/useFlowEditorUIState';
 import type { DomainLibraryItem } from '@/services/domainLibrary';
@@ -321,6 +326,27 @@ export function useFlowEditorController({
     useEffect(() => {
         if (!shouldOpenFlowEditorAI(shell.location.state)) return;
         openStudioAI();
+        shell.navigate(
+            { pathname: shell.location.pathname, search: shell.location.search, hash: shell.location.hash },
+            { replace: true, state: null }
+        );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        const initialTemplateId = getInitialFlowEditorTemplateId(shell.location.state);
+        if (!initialTemplateId) return;
+
+        const template = getFlowTemplates().find((candidate) => candidate.id === initialTemplateId);
+        if (!template) {
+            shell.navigate(
+                { pathname: shell.location.pathname, search: shell.location.search, hash: shell.location.hash },
+                { replace: true, state: null }
+            );
+            return;
+        }
+
+        panelParams.commandBar.handleInsertTemplate(template);
         shell.navigate(
             { pathname: shell.location.pathname, search: shell.location.search, hash: shell.location.hash },
             { replace: true, state: null }

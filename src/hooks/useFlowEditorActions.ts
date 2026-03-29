@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { startTransition, useCallback, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { createLogger } from '@/lib/logger';
 import type { FlowEdge, FlowNode } from '@/lib/types';
@@ -87,6 +87,10 @@ export function useFlowEditorActions({
         recordHistory();
 
         try {
+            await new Promise<void>((resolve) => {
+                window.requestAnimationFrame(() => resolve());
+            });
+
             const { nodes: layoutedNodes, edges: layoutedEdges } = await getAutoLayoutResult({
                 nodes,
                 edges,
@@ -95,8 +99,10 @@ export function useFlowEditorActions({
                 spacing,
                 diagramType,
             });
-            setNodes(layoutedNodes);
-            setEdges(layoutedEdges);
+            startTransition(() => {
+                setNodes(layoutedNodes);
+                setEdges(layoutedEdges);
+            });
             scheduleFitView(fitView, 800, 50);
         } catch (error) {
             logger.error('ELK layout failed.', { error });

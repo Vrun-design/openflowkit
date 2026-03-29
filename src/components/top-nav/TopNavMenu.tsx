@@ -28,6 +28,9 @@ export function TopNavMenu({
     onImportJSON,
 }: TopNavMenuProps): React.ReactElement {
     const menuRef = useRef<HTMLDivElement>(null);
+    const buttonClassName = isOpen
+        ? 'flex min-h-10 items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-sm font-medium transition-all sm:min-h-9 bg-[var(--brand-primary-50)] border-[var(--brand-primary-200)] text-[var(--brand-primary)] shadow-inner'
+        : `flex min-h-10 items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-sm font-medium transition-all sm:min-h-9 bg-[var(--brand-surface)] border-[var(--color-brand-border)] text-[var(--brand-secondary)] hover:border-[var(--brand-secondary)] hover:text-[var(--brand-text)] ${isBeveled ? 'btn-beveled' : 'shadow-sm hover:shadow'}`;
 
     useEffect(() => {
         if (!isOpen) {
@@ -63,11 +66,7 @@ export function TopNavMenu({
                 onClick={onToggle}
                 data-testid="topnav-menu-toggle"
                 aria-label="Open main menu"
-                className={`flex min-h-10 items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-sm font-medium transition-all sm:min-h-9
-                    ${isOpen
-                        ? 'bg-[var(--brand-primary-50)] border-[var(--brand-primary-200)] text-[var(--brand-primary)] shadow-inner'
-                        : `bg-white border-slate-200 text-slate-600 hover:border-slate-300 ${isBeveled ? 'btn-beveled' : 'shadow-sm hover:shadow'}`}
-                `}
+                className={buttonClassName}
             >
                 <AlignJustify className="w-4 h-4" />
             </button>

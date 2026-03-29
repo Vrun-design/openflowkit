@@ -6,12 +6,12 @@ import { assignSmartHandlesWithOptions, getSmartRoutingOptionsFromViewSettings }
 import { releaseStaleElkRoutesForNodeIds } from '@/lib/releaseStaleElkRoutes';
 import { reconcileMindmapDrop } from '@/lib/mindmapLayout';
 import { applyMindmapVisibility } from '@/lib/mindmapTree';
-import { applySectionParenting } from './utils';
+import { applySectionParenting, getContainingSectionId } from './utils';
 import { getDragStopReconcileDelayMs } from './dragStopReconcilePolicy';
 import { requestNodeLabelEdit } from '../nodeLabelEditRequest';
 
 export const useNodeDragOperations = (recordHistory: () => void) => {
-    const { setNodes, setEdges, setSelectedNodeId } = useFlowStore();
+    const { setNodes, setEdges, setSelectedNodeId, setHoveredSectionId } = useFlowStore();
     const dragStopReconcileTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const altDragDuplicateRef = useRef<{
         originalNodeId: string;
@@ -24,11 +24,13 @@ export const useNodeDragOperations = (recordHistory: () => void) => {
             if (dragStopReconcileTimerRef.current !== null) {
                 clearTimeout(dragStopReconcileTimerRef.current);
             }
+            useFlowStore.getState().setHoveredSectionId(null);
         };
     }, []);
 
     const onNodeDragStart = useCallback((event: React.MouseEvent, node: FlowNode) => {
         recordHistory();
+        setHoveredSectionId(node.type === 'section' ? null : getContainingSectionId(useFlowStore.getState().nodes, node));
 
         // Alt + Drag Duplication
         if (event.altKey) {
@@ -55,10 +57,11 @@ export const useNodeDragOperations = (recordHistory: () => void) => {
             ]);
             setSelectedNodeId(newNodeId);
         }
-    }, [recordHistory, setNodes, setSelectedNodeId]);
+    }, [recordHistory, setHoveredSectionId, setNodes, setSelectedNodeId]);
 
     const onNodeDrag = useCallback((_event: React.MouseEvent, draggedNode: FlowNode, _draggedNodes: FlowNode[]) => {
         const altDragDuplicate = altDragDuplicateRef.current;
+        let hoverTargetNode = draggedNode;
         if (altDragDuplicate && altDragDuplicate.originalNodeId === draggedNode.id) {
             setNodes((currentNodes) => currentNodes.map((node) => {
                 if (node.id === altDragDuplicate.originalNodeId) {
@@ -80,11 +83,17 @@ export const useNodeDragOperations = (recordHistory: () => void) => {
                 return node;
             }));
             setSelectedNodeId(altDragDuplicate.duplicateNodeId);
+            hoverTargetNode = {
+                ...draggedNode,
+                id: altDragDuplicate.duplicateNodeId,
+            };
         }
+
+        setHoveredSectionId(getContainingSectionId(useFlowStore.getState().nodes, hoverTargetNode));
 
         // Intentionally no smart-routing work during active drag to protect frame budget.
         // Full reconciliation still runs on drag stop via `onNodeDragStop`.
-    }, [setNodes, setSelectedNodeId]);
+    }, [setHoveredSectionId, setNodes, setSelectedNodeId]);
 
     const onNodeDragStop = useCallback((_event: React.MouseEvent, draggedNode: FlowNode) => {
         const altDragDuplicate = altDragDuplicateRef.current;
@@ -104,6 +113,8 @@ export const useNodeDragOperations = (recordHistory: () => void) => {
             ));
             return;
         }
+
+        setHoveredSectionId(null);
 
         const { nodes: currentNodes } = useFlowStore.getState();
         const parentedNodes = applySectionParenting(currentNodes, effectiveDraggedNode);
@@ -167,7 +178,7 @@ export const useNodeDragOperations = (recordHistory: () => void) => {
             runReconcile();
         }, delayMs);
 
-    }, [setEdges, setNodes]);
+    }, [setEdges, setHoveredSectionId, setNodes]);
 
     const onNodeDoubleClick = useCallback((_event: React.MouseEvent, node: FlowNode) => {
         setSelectedNodeId(node.id);

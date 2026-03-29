@@ -16,11 +16,11 @@ test('creates a new flow and adds an extra tab', async ({ page }) => {
   await expect(page).toHaveURL(/#\/flow\/[^?]+(?:\?.*)?$/);
   await expect(page.getByTestId('toolbar-add-toggle')).toBeVisible({ timeout: 15000 });
 
-  const tabs = page.getByTestId('flow-tab');
+  const tabs = page.getByTestId('flow-page-tab');
   await expect(tabs.first()).toBeVisible();
   const tabCountBefore = await tabs.count();
 
-  await page.getByTestId('flow-tab-add').click();
+  await page.getByTestId('flow-page-add').click();
 
   await expect(tabs).toHaveCount(tabCountBefore + 1);
   await expect(page.getByTestId('empty-generate-ai')).toBeVisible();

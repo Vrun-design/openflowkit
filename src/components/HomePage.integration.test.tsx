@@ -13,6 +13,10 @@ vi.mock('react-i18next', async (importOriginal) => {
         ...actual,
         useTranslation: () => ({
             t: (_key: string, fallback?: string) => fallback ?? _key,
+            i18n: {
+                language: 'en',
+                changeLanguage: vi.fn(),
+            },
         }),
     };
 });
@@ -36,6 +40,7 @@ describe('HomePage integration flows', () => {
                     <HomePage
                         onLaunch={vi.fn()}
                         onLaunchWithTemplates={vi.fn()}
+                        onLaunchWithTemplate={vi.fn()}
                         onLaunchWithAI={vi.fn()}
                         onImportJSON={vi.fn()}
                         onOpenFlow={vi.fn()}
@@ -57,12 +62,29 @@ describe('HomePage integration flows', () => {
         };
     }
 
-    it('switches from home to settings view via sidebar', async () => {
+    it('switches between home, templates, and settings views via sidebar', async () => {
         await renderHomePage();
+
+        fireEvent.click(screen.getByText('Templates'));
+        expect(screen.getByRole('heading', { name: 'Templates' })).toBeTruthy();
+        expect(screen.getByText('Featured Templates')).toBeTruthy();
 
         fireEvent.click(screen.getByText('Settings'));
         expect(screen.getByRole('heading', { name: 'Settings' })).toBeTruthy();
         expect(screen.getByText('Flowpilot')).toBeTruthy();
+    });
+
+    it('opens the selected template flow from the homepage templates tab', async () => {
+        const onLaunchWithTemplate = vi.fn();
+
+        await renderHomePage({ onLaunchWithTemplate });
+
+        fireEvent.click(screen.getByText('Templates'));
+        fireEvent.click(screen.getByRole('button', { name: /AWS Event-Driven API/i }));
+        fireEvent.click(screen.getByRole('button', { name: 'Use Template' }));
+
+        expect(onLaunchWithTemplate).toHaveBeenCalledTimes(1);
+        expect(onLaunchWithTemplate).toHaveBeenCalledWith('aws-event-api');
     });
 
     it('exposes template and flowpilot entry points in the empty dashboard state', async () => {

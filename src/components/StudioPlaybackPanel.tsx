@@ -50,8 +50,8 @@ function PlaybackPanelSection({
     children: React.ReactNode;
 }): React.ReactElement {
     return (
-        <section className="rounded-[var(--brand-radius)] border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-4 py-3">
+        <section className="rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-sm">
+            <div className="border-b border-[var(--color-brand-border)] px-4 py-3">
                 <h4 className="text-sm font-semibold text-[var(--brand-text)]">{title}</h4>
                 {description ? <p className="mt-1 text-xs text-[var(--brand-secondary)]">{description}</p> : null}
             </div>
@@ -116,7 +116,7 @@ export function StudioPlaybackPanel({
                             key={preset}
                             type="button"
                             onClick={() => applyPreset(preset)}
-                            className="rounded-[var(--radius-xs)] border border-slate-200 bg-slate-50 px-3 py-2 text-left transition-colors hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-primary-50)]"
+                            className="rounded-[var(--radius-xs)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-3 py-2 text-left transition-colors hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-primary-50)]"
                         >
                             <div className="text-sm font-semibold text-[var(--brand-text)]">{PRESET_LABELS[preset].label}</div>
                             <div className="mt-1 text-[11px] leading-5 text-[var(--brand-secondary)]">{PRESET_LABELS[preset].description}</div>
@@ -135,13 +135,13 @@ export function StudioPlaybackPanel({
                         return (
                             <div
                                 key={scene.id}
-                                className={`rounded-[var(--radius-xs)] border px-3 py-2 ${isSelected ? 'border-[var(--brand-primary-300)] bg-[var(--brand-primary-50)]' : 'border-slate-200 bg-slate-50'}`}
+                                className={`rounded-[var(--radius-xs)] border px-3 py-2 ${isSelected ? 'border-[var(--brand-primary-300)] bg-[var(--brand-primary-50)]' : 'border-[var(--color-brand-border)] bg-[var(--brand-background)]'}`}
                             >
                                 <div className="flex items-center gap-2">
                                     <button
                                         type="button"
                                         onClick={() => commitPlayback(selectPlaybackScene(playback, scene.id))}
-                                        className="flex h-4 w-4 items-center justify-center rounded-full border border-slate-300 bg-white"
+                                        className="flex h-4 w-4 items-center justify-center rounded-full border border-[var(--color-brand-border)] bg-[var(--brand-surface)]"
                                         aria-label={`Select ${scene.name}`}
                                     >
                                         {isSelected ? <span className="block h-2 w-2 rounded-full bg-[var(--brand-primary)]" /> : null}
@@ -151,14 +151,14 @@ export function StudioPlaybackPanel({
                                         onChange={(event) => commitPlayback(renamePlaybackScene(playback, scene.id, event.target.value))}
                                         className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[var(--brand-text)] outline-none"
                                     />
-                                    <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                                    <span className="rounded-full bg-[var(--brand-surface)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-secondary)]">
                                         {scene.mode ?? 'auto'}
                                     </span>
                                     {scene.id !== 'scene-main' ? (
                                         <button
                                             type="button"
                                             onClick={() => commitPlayback(deletePlaybackScene(playback, scene.id))}
-                                            className="rounded-full p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                                            className="rounded-full p-1 text-[var(--brand-secondary)] transition-colors hover:bg-red-50 hover:text-red-600"
                                             aria-label={`Delete ${scene.name}`}
                                         >
                                             <Trash2 className="h-3.5 w-3.5" />
@@ -172,7 +172,7 @@ export function StudioPlaybackPanel({
                 <button
                     type="button"
                     onClick={() => commitPlayback(addPlaybackScene(playback))}
-                    className="mt-3 inline-flex items-center gap-2 rounded-[var(--radius-xs)] border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:border-[var(--brand-primary-200)] hover:text-[var(--brand-primary)]"
+                    className="mt-3 inline-flex items-center gap-2 rounded-[var(--radius-xs)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-2 text-xs font-semibold text-[var(--brand-text)] transition-colors hover:border-[var(--brand-primary-200)] hover:text-[var(--brand-primary)]"
                 >
                     <Plus className="h-3.5 w-3.5" />
                     Add scene
@@ -185,10 +185,10 @@ export function StudioPlaybackPanel({
             >
                 {hasPlayback ? (
                     <div className="space-y-4">
-                        <div className="rounded-[var(--radius-xs)] border border-slate-200 bg-slate-50 px-3 py-3">
+                        <div className="rounded-[var(--radius-xs)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-3 py-3">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
-                                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Preview</div>
+                                    <div className="text-xs font-semibold uppercase tracking-wide text-[var(--brand-secondary)]">Preview</div>
                                     <div className="mt-1 text-sm font-medium text-[var(--brand-text)]">
                                         {currentStepIndex >= 0 ? `Step ${scrubValue + 1} of ${Math.max(totalSteps, sceneSteps.length)}` : 'Ready to preview'}
                                     </div>
@@ -197,7 +197,7 @@ export function StudioPlaybackPanel({
                                     <button
                                         type="button"
                                         onClick={onPrev}
-                                        className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 hover:text-slate-900"
+                                        className="rounded-full border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-2 text-[var(--brand-secondary)] hover:text-[var(--brand-text)]"
                                         aria-label="Previous step"
                                     >
                                         <MoveUp className="h-3.5 w-3.5 rotate-90" />
@@ -213,7 +213,7 @@ export function StudioPlaybackPanel({
                                     <button
                                         type="button"
                                         onClick={onNext}
-                                        className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 hover:text-slate-900"
+                                        className="rounded-full border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-2 text-[var(--brand-secondary)] hover:text-[var(--brand-text)]"
                                         aria-label="Next step"
                                     >
                                         <MoveDown className="h-3.5 w-3.5 rotate-90" />
@@ -222,7 +222,7 @@ export function StudioPlaybackPanel({
                                         <button
                                             type="button"
                                             onClick={onStop}
-                                            className="rounded-full border border-slate-200 bg-white p-2 text-slate-500 hover:text-red-600"
+                                            className="rounded-full border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-2 text-[var(--brand-secondary)] hover:text-red-600"
                                             aria-label="Stop preview"
                                         >
                                             <Film className="h-3.5 w-3.5" />
@@ -241,10 +241,10 @@ export function StudioPlaybackPanel({
                             />
                         </div>
 
-                        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-xs)] border border-slate-200 bg-slate-50 px-3 py-2">
+                        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-xs)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-3 py-2">
                             <div>
-                                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Default step duration</div>
-                                <div className="mt-1 text-[11px] text-slate-500">Used for new presets and fallback timing</div>
+                                <div className="text-xs font-semibold uppercase tracking-wide text-[var(--brand-secondary)]">Default step duration</div>
+                                <div className="mt-1 text-[11px] text-[var(--brand-secondary)]">Used for new presets and fallback timing</div>
                             </div>
                             <input
                                 type="number"
@@ -256,7 +256,7 @@ export function StudioPlaybackPanel({
                                     onPlaybackSpeedChange(next);
                                     commitPlayback(setPlaybackDefaultDuration(playback, next));
                                 }}
-                                className="w-24 rounded-[var(--radius-xs)] border border-slate-200 bg-white px-2 py-1.5 text-sm"
+                                className="w-24 rounded-[var(--radius-xs)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-2 py-1.5 text-sm"
                             />
                         </div>
 
@@ -267,14 +267,14 @@ export function StudioPlaybackPanel({
                                 return (
                                     <div
                                         key={step.id}
-                                        className={`rounded-[var(--radius-xs)] border px-3 py-2 ${includedInSelectedScene ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50/60 opacity-70'}`}
+                                        className={`rounded-[var(--radius-xs)] border px-3 py-2 ${includedInSelectedScene ? 'border-[var(--color-brand-border)] bg-[var(--brand-surface)]' : 'border-[var(--color-brand-border)] bg-[var(--brand-background)]/60 opacity-70'}`}
                                     >
                                         <div className="flex items-center gap-2">
                                             {selectedScene ? (
                                                 <button
                                                     type="button"
                                                     onClick={() => commitPlayback(togglePlaybackStepInScene(playback, selectedScene.id, step.id))}
-                                                    className={`flex h-5 w-5 items-center justify-center rounded border ${includedInSelectedScene ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white' : 'border-slate-300 bg-white text-transparent'}`}
+                                                    className={`flex h-5 w-5 items-center justify-center rounded border ${includedInSelectedScene ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white' : 'border-[var(--color-brand-border)] bg-[var(--brand-surface)] text-transparent'}`}
                                                     aria-label={`Toggle ${node?.data.label ?? step.nodeId} in scene`}
                                                 >
                                                     <CheckCircle2 className="h-3.5 w-3.5" />
@@ -289,7 +289,7 @@ export function StudioPlaybackPanel({
                                                     type="button"
                                                     onClick={() => commitPlayback(reorderPlaybackTimelineStep(playback, step.id, 'up'))}
                                                     disabled={index === 0}
-                                                    className="rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 disabled:opacity-40"
+                                                    className="rounded-full border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-1.5 text-[var(--brand-secondary)] disabled:opacity-40"
                                                     aria-label={`Move ${step.nodeId} up`}
                                                 >
                                                     <MoveUp className="h-3.5 w-3.5" />
@@ -298,7 +298,7 @@ export function StudioPlaybackPanel({
                                                     type="button"
                                                     onClick={() => commitPlayback(reorderPlaybackTimelineStep(playback, step.id, 'down'))}
                                                     disabled={index === playback.timeline.length - 1}
-                                                    className="rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 disabled:opacity-40"
+                                                    className="rounded-full border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-1.5 text-[var(--brand-secondary)] disabled:opacity-40"
                                                     aria-label={`Move ${step.nodeId} down`}
                                                 >
                                                     <MoveDown className="h-3.5 w-3.5" />
@@ -313,7 +313,7 @@ export function StudioPlaybackPanel({
                                                     const nextDuration = Math.max(200, Number(event.target.value) || playback.defaultStepDurationMs);
                                                     commitPlayback(setPlaybackStepDuration(playback, step.id, nextDuration));
                                                 }}
-                                                className="w-20 rounded-[var(--radius-xs)] border border-slate-200 bg-white px-2 py-1.5 text-sm"
+                                                className="w-20 rounded-[var(--radius-xs)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-2 py-1.5 text-sm"
                                                 aria-label={`Duration for ${step.nodeId}`}
                                             />
                                         </div>
@@ -323,8 +323,8 @@ export function StudioPlaybackPanel({
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-[var(--radius-xs)] border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
-                        <ListOrdered className="mx-auto h-6 w-6 text-slate-400" />
+                    <div className="rounded-[var(--radius-xs)] border border-dashed border-[var(--color-brand-border)] bg-[var(--brand-background)] px-4 py-8 text-center">
+                        <ListOrdered className="mx-auto h-6 w-6 text-[var(--brand-secondary)]" />
                         <div className="mt-3 text-sm font-medium text-[var(--brand-text)]">No playback timeline yet</div>
                         <div className="mt-1 text-xs text-[var(--brand-secondary)]">Generate a preset to create scenes and stable step order from the current graph.</div>
                         <button

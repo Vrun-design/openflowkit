@@ -2,6 +2,7 @@ import React from 'react';
 import type { DiagramNodePropertiesComponentProps } from '@/diagram-types/core';
 import { NodeProperties } from '@/components/properties/NodeProperties';
 import { NodeActionButtons } from '@/components/properties/NodeActionButtons';
+import { toggleSection } from '@/components/properties/shared';
 import { JourneyNodeSection } from './JourneyNodeSection';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { InspectorSectionDivider } from '@/components/properties/InspectorPrimitives';
@@ -26,10 +27,6 @@ export function JourneyNodeProperties({
     );
   }
 
-  function toggleSection(section: string): void {
-    setActiveSection((currentSection) => (currentSection === section ? '' : section));
-  }
-
   return (
     <>
       <InspectorSectionDivider />
@@ -38,7 +35,7 @@ export function JourneyNodeProperties({
         title="Journey Step"
         icon={<Footprints className="w-3.5 h-3.5" />}
         isOpen={activeSection === 'step'}
-        onToggle={() => toggleSection('step')}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'step'))}
       >
         <JourneyNodeSection nodeId={selectedNode.id} data={selectedNode.data} onChange={onChange} />
       </CollapsibleSection>

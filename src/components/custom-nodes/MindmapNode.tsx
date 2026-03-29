@@ -14,10 +14,8 @@ function MindmapNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
   const HANDLE_INSET_PX = 8;
   const SOCKET_DOT_SIZE_PX = 8;
   const labelEdit = useInlineNodeTextEdit(id, 'label', data.label || '', { multiline: true });
-  const depth = typeof (data as NodeData & { mindmapDepth?: number }).mindmapDepth === 'number'
-    ? (data as NodeData & { mindmapDepth?: number }).mindmapDepth!
-    : 0;
-  const side = (data as NodeData & { mindmapSide?: 'left' | 'right' }).mindmapSide;
+  const depth = typeof data.mindmapDepth === 'number' ? data.mindmapDepth : 0;
+  const side = data.mindmapSide;
 
   const isRoot = depth === 0;
   const isLeftBranch = side === 'left';
@@ -28,13 +26,12 @@ function MindmapNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
   const visualStyle = resolveNodeVisualStyle(activeColor, activeColorMode, data.customColor);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
-  const childCount = useFlowStore((state) => {
+  const { childCount, hiddenDescendantCount } = useFlowStore((state) => {
     const childrenById = getMindmapChildrenById(state.nodes, state.edges);
-    return (childrenById.get(id) ?? []).length;
-  });
-  const hiddenDescendantCount = useFlowStore((state) => {
-    const childrenById = getMindmapChildrenById(state.nodes, state.edges);
-    return getMindmapDescendantIds(id, childrenById).size;
+    return {
+      childCount: (childrenById.get(id) ?? []).length,
+      hiddenDescendantCount: getMindmapDescendantIds(id, childrenById).size,
+    };
   });
   const isCollapsed = data.mindmapCollapsed === true;
   const branchHandles = [
@@ -58,11 +55,12 @@ function MindmapNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
     ? 'rounded-2xl border px-5 py-3 shadow-[0_18px_48px_rgba(15,23,42,0.18)]'
     : 'rounded-full border px-4 py-2 shadow-[0_10px_28px_rgba(15,23,42,0.08)]';
   const alignmentClass = isRoot ? 'text-center' : isLeftBranch ? 'text-right' : 'text-left';
-  const requestChildTopic = (side: 'left' | 'right' | null) => (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    requestMindmapTopicAction(id, 'child', side);
-  };
+  const requestChildTopic =
+    (side: 'left' | 'right' | null) => (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      requestMindmapTopicAction(id, 'child', side);
+    };
   const requestSiblingTopic = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
@@ -75,20 +73,24 @@ function MindmapNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
     const { nodes: currentNodes, edges: currentEdges } = useFlowStore.getState();
     const currentChildrenById = getMindmapChildrenById(currentNodes, currentEdges);
     const descendantIds = getMindmapDescendantIds(id, currentChildrenById);
-    setNodes((prev) => prev.map((node) => {
-      if (node.id === id) {
-        return { ...node, data: { ...node.data, mindmapCollapsed: nextCollapsed } };
-      }
-      if (descendantIds.has(node.id)) {
-        return { ...node, hidden: nextCollapsed };
-      }
-      return node;
-    }));
-    setEdges((prev) => prev.map((edge) => (
-      descendantIds.has(edge.source) || descendantIds.has(edge.target)
-        ? { ...edge, hidden: nextCollapsed }
-        : edge
-    )));
+    setNodes((prev) =>
+      prev.map((node) => {
+        if (node.id === id) {
+          return { ...node, data: { ...node.data, mindmapCollapsed: nextCollapsed } };
+        }
+        if (descendantIds.has(node.id)) {
+          return { ...node, hidden: nextCollapsed };
+        }
+        return node;
+      })
+    );
+    setEdges((prev) =>
+      prev.map((edge) =>
+        descendantIds.has(edge.source) || descendantIds.has(edge.target)
+          ? { ...edge, hidden: nextCollapsed }
+          : edge
+      )
+    );
   };
 
   return (
@@ -107,7 +109,7 @@ function MindmapNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
           borderColor: visualStyle.border,
           color: visualStyle.text,
         }}
-        >
+      >
         {childCount > 0 ? (
           <button
             type="button"
@@ -169,7 +171,10 @@ function MindmapNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
             >
               {inwardSide === 'left' ? (
                 <>
-                  <div className="h-0.5 flex-1 rounded-full" style={{ backgroundColor: visualStyle.border }} />
+                  <div
+                    className="h-0.5 flex-1 rounded-full"
+                    style={{ backgroundColor: visualStyle.border }}
+                  />
                   <div
                     className="rounded-full"
                     style={{
@@ -189,7 +194,10 @@ function MindmapNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
                       backgroundColor: visualStyle.border,
                     }}
                   />
-                  <div className="h-0.5 flex-1 rounded-full" style={{ backgroundColor: visualStyle.border }} />
+                  <div
+                    className="h-0.5 flex-1 rounded-full"
+                    style={{ backgroundColor: visualStyle.border }}
+                  />
                 </>
               )}
             </div>

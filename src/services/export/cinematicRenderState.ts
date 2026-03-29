@@ -1,5 +1,9 @@
 import type { FlowEdge } from '@/lib/types';
-import type { CinematicBuildPlan, CinematicBuildSegment, CinematicExportKind } from './cinematicBuildPlan';
+import type {
+  CinematicBuildPlan,
+  CinematicBuildSegment,
+  CinematicExportKind,
+} from './cinematicBuildPlan';
 
 export interface CinematicExportPreset {
   kind: CinematicExportKind;
@@ -13,6 +17,7 @@ export interface CinematicExportPreset {
   settleMs: number;
   finalHoldMs: number;
   maxFrames: number;
+  speedMultiplier: number;
 }
 
 export interface CinematicRenderState {
@@ -77,35 +82,41 @@ function createInactiveSegmentRenderState(): CinematicRenderState {
   };
 }
 
-export function getCinematicExportPreset(kind: CinematicExportKind): CinematicExportPreset {
+export function getCinematicExportPreset(
+  kind: CinematicExportKind,
+  speedMultiplier = 1,
+  maxDimension?: number
+): CinematicExportPreset {
   if (kind === 'cinematic-gif') {
     return {
       kind,
       fps: 8,
-      maxDimension: 960,
+      maxDimension: maxDimension ?? 960,
       pixelRatio: 1,
-      introHoldMs: 180,
-      rootNodeFadeMs: 260,
-      edgeGrowMs: 360,
-      targetNodeFadeMs: 240,
-      settleMs: 120,
-      finalHoldMs: 480,
+      introHoldMs: Math.round(180 / speedMultiplier),
+      rootNodeFadeMs: Math.round(260 / speedMultiplier),
+      edgeGrowMs: Math.round(360 / speedMultiplier),
+      targetNodeFadeMs: Math.round(240 / speedMultiplier),
+      settleMs: Math.round(120 / speedMultiplier),
+      finalHoldMs: Math.round(480 / speedMultiplier),
       maxFrames: 140,
+      speedMultiplier,
     };
   }
 
   return {
     kind,
     fps: 20,
-    maxDimension: 1600,
-    pixelRatio: 1.5,
-    introHoldMs: 200,
-    rootNodeFadeMs: 300,
-    edgeGrowMs: 500,
-    targetNodeFadeMs: 260,
-    settleMs: 150,
-    finalHoldMs: 640,
+    maxDimension: maxDimension ?? 1600,
+    pixelRatio: 1,
+    introHoldMs: Math.round(200 / speedMultiplier),
+    rootNodeFadeMs: Math.round(300 / speedMultiplier),
+    edgeGrowMs: Math.round(500 / speedMultiplier),
+    targetNodeFadeMs: Math.round(260 / speedMultiplier),
+    settleMs: Math.round(150 / speedMultiplier),
+    finalHoldMs: Math.round(640 / speedMultiplier),
     maxFrames: 280,
+    speedMultiplier,
   };
 }
 
@@ -119,7 +130,10 @@ function estimateRawDurationMs(plan: CinematicBuildPlan, preset: CinematicExport
   }, preset.introHoldMs + preset.finalHoldMs);
 }
 
-function scalePresetForFrameBudget(plan: CinematicBuildPlan, preset: CinematicExportPreset): CinematicExportPreset {
+function scalePresetForFrameBudget(
+  plan: CinematicBuildPlan,
+  preset: CinematicExportPreset
+): CinematicExportPreset {
   const rawDurationMs = estimateRawDurationMs(plan, preset);
   const rawFrames = Math.max(1, Math.ceil((rawDurationMs / 1000) * preset.fps));
   if (rawFrames <= preset.maxFrames) {
@@ -139,7 +153,10 @@ function scalePresetForFrameBudget(plan: CinematicBuildPlan, preset: CinematicEx
   };
 }
 
-export function buildCinematicTimeline(plan: CinematicBuildPlan, basePreset: CinematicExportPreset): CinematicTimeline {
+export function buildCinematicTimeline(
+  plan: CinematicBuildPlan,
+  basePreset: CinematicExportPreset
+): CinematicTimeline {
   const preset = scalePresetForFrameBudget(plan, basePreset);
   let currentMs = preset.introHoldMs;
 
@@ -148,7 +165,8 @@ export function buildCinematicTimeline(plan: CinematicBuildPlan, basePreset: Cin
     const edgeGrowStartMs = segment.leadEdgeId ? currentMs : null;
     const edgeGrowEndMs = segment.leadEdgeId ? currentMs + preset.edgeGrowMs : null;
     const nodeFadeStartMs = edgeGrowEndMs ?? currentMs;
-    const nodeFadeEndMs = nodeFadeStartMs + (segment.leadEdgeId ? preset.targetNodeFadeMs : preset.rootNodeFadeMs);
+    const nodeFadeEndMs =
+      nodeFadeStartMs + (segment.leadEdgeId ? preset.targetNodeFadeMs : preset.rootNodeFadeMs);
     const endMs = nodeFadeEndMs + preset.settleMs;
 
     currentMs = endMs;
@@ -176,14 +194,14 @@ function buildVisibleEdgeIds(visibleNodeIds: Set<string>, edges: FlowEdge[]): Se
   return new Set(
     edges
       .filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target))
-      .map((edge) => edge.id),
+      .map((edge) => edge.id)
   );
 }
 
 export function resolveCinematicRenderState(
   timeline: CinematicTimeline,
   edges: FlowEdge[],
-  timeMs: number,
+  timeMs: number
 ): CinematicRenderState {
   if (timeline.plan.segments.length === 0) {
     return createInactiveSegmentRenderState();
@@ -214,10 +232,17 @@ export function resolveCinematicRenderState(
     }
 
     currentSegment = segment;
-    if (segmentEntry.edgeGrowStartMs !== null && segmentEntry.edgeGrowEndMs !== null && clampedTimeMs < segmentEntry.edgeGrowEndMs) {
+    if (
+      segmentEntry.edgeGrowStartMs !== null &&
+      segmentEntry.edgeGrowEndMs !== null &&
+      clampedTimeMs < segmentEntry.edgeGrowEndMs
+    ) {
       visibleNodeIds.add(segment.sourceNodeId ?? segment.targetNodeId);
       activeEdgeId = segment.leadEdgeId;
-      activeEdgeProgress = easeOutQuart((clampedTimeMs - segmentEntry.edgeGrowStartMs) / (segmentEntry.edgeGrowEndMs - segmentEntry.edgeGrowStartMs));
+      activeEdgeProgress = easeOutQuart(
+        (clampedTimeMs - segmentEntry.edgeGrowStartMs) /
+          (segmentEntry.edgeGrowEndMs - segmentEntry.edgeGrowStartMs)
+      );
       break;
     }
 
@@ -226,7 +251,10 @@ export function resolveCinematicRenderState(
     }
 
     activeNodeId = segment.targetNodeId;
-    activeNodeProgress = easeOutCubic((clampedTimeMs - segmentEntry.nodeFadeStartMs) / (segmentEntry.nodeFadeEndMs - segmentEntry.nodeFadeStartMs));
+    activeNodeProgress = easeOutCubic(
+      (clampedTimeMs - segmentEntry.nodeFadeStartMs) /
+        (segmentEntry.nodeFadeEndMs - segmentEntry.nodeFadeStartMs)
+    );
     if (activeNodeProgress > 0) {
       visibleNodeIds.add(segment.targetNodeId);
     }

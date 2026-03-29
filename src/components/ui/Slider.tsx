@@ -14,16 +14,16 @@ export const Slider = React.forwardRef<HTMLInputElement, SliderProps>(({
     return (
         <div className="space-y-2">
             {(label || valueDisplay) && (
-                <div className="flex justify-between items-center bg-slate-50 px-2 py-1 rounded">
-                    {label && <span className="text-xs font-medium text-slate-500">{label}</span>}
-                    {valueDisplay && <span className="text-xs font-mono text-slate-400">{valueDisplay}</span>}
+                <div className="flex items-center justify-between rounded bg-[var(--brand-background)] px-2 py-1">
+                    {label && <span className="text-xs font-medium text-[var(--brand-secondary)]">{label}</span>}
+                    {valueDisplay && <span className="text-xs font-mono text-[var(--brand-secondary)]">{valueDisplay}</span>}
                 </div>
             )}
             <input
                 type="range"
                 ref={ref}
                 className={`
-                    w-full h-1.5 bg-slate-200 rounded-[var(--brand-radius)] appearance-none cursor-pointer accent-[var(--brand-primary)]
+                    h-1.5 w-full cursor-pointer appearance-none rounded-[var(--brand-radius)] bg-[var(--color-brand-border)] accent-[var(--brand-primary)]
                     focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20
                     ${className}
                 `}

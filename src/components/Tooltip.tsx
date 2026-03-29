@@ -1,141 +1,187 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 interface TooltipProps {
-    text: string;
-    children: React.ReactNode;
-    side?: 'top' | 'bottom' | 'left' | 'right';
-    sideOffset?: number;
-    className?: string;
+  text: string;
+  children: React.ReactNode;
+  side?: 'top' | 'bottom' | 'left' | 'right';
+  sideOffset?: number;
+  className?: string;
 }
 
-const ARROW_CLASSES = {
-    top: '-bottom-1 left-1/2 -translate-x-1/2 border-t-slate-900 border-x-transparent border-b-transparent',
-    bottom: '-top-1 left-1/2 -translate-x-1/2 border-b-slate-900 border-x-transparent border-t-transparent',
-    left: '-right-1 top-1/2 -translate-y-1/2 border-l-slate-900 border-y-transparent border-r-transparent',
-    right: '-left-1 top-1/2 -translate-y-1/2 border-r-slate-900 border-y-transparent border-l-transparent',
-} as const;
+type TooltipSide = NonNullable<TooltipProps['side']>;
+
+const VIEWPORT_PADDING = 8;
+const HIDDEN_POSITION = { top: -9999, left: -9999 };
+
+function resolveTooltipSide(
+  side: TooltipSide,
+  triggerRect: DOMRect,
+  tooltipRect: DOMRect,
+  sideOffset: number
+): TooltipSide {
+  if (side === 'top' && triggerRect.top - tooltipRect.height - sideOffset < VIEWPORT_PADDING) return 'bottom';
+  if (side === 'bottom' && triggerRect.bottom + tooltipRect.height + sideOffset > window.innerHeight - VIEWPORT_PADDING) return 'top';
+  if (side === 'left' && triggerRect.left - tooltipRect.width - sideOffset < VIEWPORT_PADDING) return 'right';
+  if (side === 'right' && triggerRect.right + tooltipRect.width + sideOffset > window.innerWidth - VIEWPORT_PADDING) return 'left';
+  return side;
+}
+
+function getArrowStyle(side: TooltipSide): React.CSSProperties {
+  const fill = 'var(--brand-text)';
+  const transparent = 'transparent';
+
+  switch (side) {
+    case 'top':
+      return { bottom: -4, left: '50%', transform: 'translateX(-50%)', borderWidth: '4px 4px 0', borderStyle: 'solid', borderColor: `${fill} ${transparent} ${transparent}` };
+    case 'bottom':
+      return { top: -4, left: '50%', transform: 'translateX(-50%)', borderWidth: '0 4px 4px', borderStyle: 'solid', borderColor: `${transparent} ${transparent} ${fill}` };
+    case 'left':
+      return { right: -4, top: '50%', transform: 'translateY(-50%)', borderWidth: '4px 0 4px 4px', borderStyle: 'solid', borderColor: `${transparent} ${transparent} ${transparent} ${fill}` };
+    case 'right':
+      return { left: -4, top: '50%', transform: 'translateY(-50%)', borderWidth: '4px 4px 4px 0', borderStyle: 'solid', borderColor: `${transparent} ${fill} ${transparent} ${transparent}` };
+  }
+}
 
 export function Tooltip({
-    children,
-    text,
-    side = 'top',
-    sideOffset = 12,
-    className = ''
+  children,
+  text,
+  side = 'top',
+  sideOffset = 8,
+  className = '',
 }: TooltipProps): React.ReactElement {
-    const triggerRef = useRef<HTMLDivElement | null>(null);
-    const tooltipRef = useRef<HTMLDivElement | null>(null);
-    const [isOpen, setIsOpen] = useState(false);
-    const [resolvedSide, setResolvedSide] = useState(side);
-    const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-    const triggerClassName = className.trim();
+  const triggerRef = useRef<HTMLDivElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const tooltipId = useId();
+  const rafRef = useRef<number | null>(null);
 
-    const updatePosition = useCallback((): void => {
-        if (!triggerRef.current || !tooltipRef.current) {
-            return;
-        }
+  const [isOpen, setIsOpen] = useState(false);
+  const [resolvedSide, setResolvedSide] = useState(side);
+  const [position, setPosition] = useState<{ top: number; left: number }>(HIDDEN_POSITION);
+  const [isVisible, setIsVisible] = useState(false);
 
-        const triggerRect = triggerRef.current.getBoundingClientRect();
-        const tooltipRect = tooltipRef.current.getBoundingClientRect();
-        const viewportPadding = 8;
-        const preferredSide = (() => {
-            if (side === 'top' && triggerRect.top - tooltipRect.height - sideOffset < viewportPadding) {
-                return 'bottom';
-            }
-            if (side === 'bottom' && triggerRect.bottom + tooltipRect.height + sideOffset > window.innerHeight - viewportPadding) {
-                return 'top';
-            }
-            if (side === 'left' && triggerRect.left - tooltipRect.width - sideOffset < viewportPadding) {
-                return 'right';
-            }
-            if (side === 'right' && triggerRect.right + tooltipRect.width + sideOffset > window.innerWidth - viewportPadding) {
-                return 'left';
-            }
-            return side;
-        })();
-        setResolvedSide(preferredSide);
+  const triggerClassName = className.trim();
 
-        let top = 0;
-        let left = 0;
+  const updatePosition = useCallback((): void => {
+    const trigger = triggerRef.current;
+    const tooltip = tooltipRef.current;
+    if (!trigger || !tooltip) return;
 
-        switch (preferredSide) {
-            case 'bottom':
-                top = triggerRect.bottom + sideOffset;
-                left = triggerRect.left + (triggerRect.width - tooltipRect.width) / 2;
-                break;
-            case 'left':
-                top = triggerRect.top + (triggerRect.height - tooltipRect.height) / 2;
-                left = triggerRect.left - tooltipRect.width - sideOffset;
-                break;
-            case 'right':
-                top = triggerRect.top + (triggerRect.height - tooltipRect.height) / 2;
-                left = triggerRect.right + sideOffset;
-                break;
-            case 'top':
-            default:
-                top = triggerRect.top - tooltipRect.height - sideOffset;
-                left = triggerRect.left + (triggerRect.width - tooltipRect.width) / 2;
-                break;
-        }
+    const tr = trigger.getBoundingClientRect();
+    const tt = tooltip.getBoundingClientRect();
+    const preferred = resolveTooltipSide(side, tr, tt, sideOffset);
+    setResolvedSide(preferred);
 
-        const maxLeft = window.innerWidth - tooltipRect.width - viewportPadding;
-        const maxTop = window.innerHeight - tooltipRect.height - viewportPadding;
-        setPosition({
-            left: Math.min(Math.max(left, viewportPadding), Math.max(maxLeft, viewportPadding)),
-            top: Math.min(Math.max(top, viewportPadding), Math.max(maxTop, viewportPadding)),
-        });
-    }, [side, sideOffset]);
+    let top = 0, left = 0;
+    switch (preferred) {
+      case 'bottom': top = tr.bottom + sideOffset; left = tr.left + (tr.width  - tt.width)  / 2; break;
+      case 'left':   top = tr.top   + (tr.height - tt.height) / 2; left = tr.left  - tt.width  - sideOffset; break;
+      case 'right':  top = tr.top   + (tr.height - tt.height) / 2; left = tr.right + sideOffset; break;
+      default:       top = tr.top   - tt.height - sideOffset; left = tr.left + (tr.width  - tt.width)  / 2; break;
+    }
 
-    useLayoutEffect(() => {
-        if (!isOpen) {
-            return;
-        }
-        updatePosition();
-    }, [isOpen, text, updatePosition]);
+    const maxL = window.innerWidth  - tt.width  - VIEWPORT_PADDING;
+    const maxT = window.innerHeight - tt.height - VIEWPORT_PADDING;
+    setPosition({
+      left: Math.min(Math.max(left, VIEWPORT_PADDING), Math.max(maxL, VIEWPORT_PADDING)),
+      top:  Math.min(Math.max(top, VIEWPORT_PADDING), Math.max(maxT, VIEWPORT_PADDING)),
+    });
+    setIsVisible(true);
+  }, [side, sideOffset]);
 
-    useEffect(() => {
-        if (!isOpen) {
-            return;
-        }
+  const openTooltip = useCallback((): void => {
+    setIsVisible(false);
+    setIsOpen(true);
+  }, []);
 
-        function handleViewportChange(): void {
-            updatePosition();
-        }
+  const closeTooltip = useCallback((): void => {
+    setIsOpen(false);
+    setIsVisible(false);
+    setPosition(HIDDEN_POSITION);
+  }, []);
 
-        window.addEventListener('scroll', handleViewportChange, true);
-        window.addEventListener('resize', handleViewportChange);
-        return () => {
-            window.removeEventListener('scroll', handleViewportChange, true);
-            window.removeEventListener('resize', handleViewportChange);
-        };
-    }, [isOpen, text, updatePosition]);
+  useEffect(() => {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
 
-    return (
-        <div
-            ref={triggerRef}
-            className={triggerClassName}
-            onMouseEnter={() => setIsOpen(true)}
-            onMouseLeave={() => setIsOpen(false)}
-            onFocus={() => setIsOpen(true)}
-            onBlur={() => setIsOpen(false)}
-        >
-            {children}
-            {isOpen && typeof document !== 'undefined'
-                ? createPortal(
-                    <div
-                        ref={tooltipRef}
-                        className="pointer-events-none fixed z-[120] px-2 py-1 text-xs font-medium text-white bg-slate-900 rounded-lg shadow-sm whitespace-nowrap"
-                        style={{
-                            top: `${position.top}px`,
-                            left: `${position.left}px`,
-                        }}
-                    >
-                        {text}
-                        <span className={`absolute border-4 border-transparent ${ARROW_CLASSES[resolvedSide]}`}></span>
-                    </div>,
-                    document.body
-                )
-                : null}
-        </div>
-    );
+    if (!isOpen) {
+      return;
+    }
+
+    rafRef.current = requestAnimationFrame(() => {
+      updatePosition();
+      rafRef.current = null;
+    });
+
+    return () => {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [isOpen, text, updatePosition]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (): void => updatePosition();
+    window.addEventListener('scroll', handler, true);
+    window.addEventListener('resize', handler);
+    return () => {
+      window.removeEventListener('scroll', handler, true);
+      window.removeEventListener('resize', handler);
+    };
+  }, [isOpen, updatePosition]);
+
+  useEffect(() => () => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  return (
+    <div
+      ref={triggerRef}
+      className={triggerClassName}
+      aria-describedby={isOpen ? tooltipId : undefined}
+      onMouseEnter={openTooltip}
+      onMouseLeave={closeTooltip}
+      onFocus={openTooltip}
+      onBlur={closeTooltip}
+    >
+      {children}
+      {isOpen && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={tooltipRef}
+              id={tooltipId}
+              role="tooltip"
+              className="pointer-events-none fixed z-[9999]"
+              style={{
+                top: `${position.top}px`,
+                left: `${position.left}px`,
+                opacity: isVisible ? 1 : 0,
+                transition: isVisible ? 'opacity 150ms ease' : 'none',
+              }}
+            >
+              <div
+                className="relative whitespace-nowrap rounded-md px-2.5 py-1.5 text-[11px] font-medium leading-none tracking-wide"
+                style={{
+                  background: 'var(--brand-text)',
+                  color: 'var(--brand-surface)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.2), 0 1px 4px rgba(0,0,0,0.12)',
+                }}
+              >
+                {text}
+                <span
+                  aria-hidden="true"
+                  className="absolute h-0 w-0"
+                  style={getArrowStyle(resolvedSide)}
+                />
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+    </div>
+  );
 }

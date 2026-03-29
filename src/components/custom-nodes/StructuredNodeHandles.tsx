@@ -1,6 +1,10 @@
 import React from 'react';
 import { Handle, Position } from '@/lib/reactflowCompat';
-import { getConnectorHandleStyle, getHandlePointerEvents, getV2HandleVisibilityClass } from '@/components/handleInteraction';
+import {
+  getConnectorHandleStyle,
+  getHandlePointerEvents,
+  getV2HandleVisibilityClass,
+} from '@/components/handleInteraction';
 
 interface StructuredNodeHandlesProps {
   isActiveSelected: boolean;
@@ -13,14 +17,11 @@ const HANDLE_POSITIONS = [
   { id: 'right', position: Position.Right },
 ] as const;
 
-export function StructuredNodeHandles({ isActiveSelected }: StructuredNodeHandlesProps): React.ReactElement {
-  const visualQualityV2Enabled = true;
-  const handlePointerEvents = getHandlePointerEvents(visualQualityV2Enabled, isActiveSelected);
-  const handleVisibilityClass = visualQualityV2Enabled
-    ? getV2HandleVisibilityClass(isActiveSelected)
-    : isActiveSelected
-      ? 'opacity-100'
-      : 'opacity-0 group-hover:opacity-100 [.is-connecting_&]:opacity-100';
+export function StructuredNodeHandles({
+  isActiveSelected,
+}: StructuredNodeHandlesProps): React.ReactElement {
+  const handlePointerEvents = getHandlePointerEvents(true, isActiveSelected);
+  const handleVisibilityClass = getV2HandleVisibilityClass(isActiveSelected);
 
   return (
     <>

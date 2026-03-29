@@ -12,7 +12,7 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-      }
+      },
     },
     base: './',
     build: {
@@ -33,22 +33,20 @@ export default defineConfig(() => {
               return 'vendor-elk';
             }
 
-            if (id.includes('/node_modules/dagre/')) {
-              return 'vendor-dagre';
-            }
-
             if (
               id.includes('/node_modules/react-markdown/') ||
               id.includes('/node_modules/remark-gfm/') ||
               id.includes('/node_modules/remark-breaks/') ||
-              id.includes('/node_modules/rehype-raw/') ||
               id.includes('/node_modules/rehype-slug/') ||
               id.includes('/node_modules/react-syntax-highlighter/')
             ) {
               return 'vendor-markdown';
             }
 
-            if (id.includes('/node_modules/i18next') || id.includes('/node_modules/react-i18next/')) {
+            if (
+              id.includes('/node_modules/i18next') ||
+              id.includes('/node_modules/react-i18next/')
+            ) {
               return 'vendor-i18n';
             }
 
@@ -75,6 +73,12 @@ export default defineConfig(() => {
       testTimeout: 10000,
       maxWorkers: 2,
       exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'lcov'],
+        include: ['src/**/*.{ts,tsx}'],
+        exclude: ['src/**/*.test.{ts,tsx}', 'src/**/*.d.ts', 'src/i18n/**'],
+      },
     },
   };
 });

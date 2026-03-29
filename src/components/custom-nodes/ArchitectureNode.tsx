@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useState } from 'react';
+import React, { memo } from 'react';
 import type { LegacyNodeProps } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
 import { useInlineNodeTextEdit } from '@/hooks/useInlineNodeTextEdit';
@@ -6,15 +6,31 @@ import { InlineTextEditSurface } from '@/components/InlineTextEditSurface';
 import { NodeChrome } from '@/components/NodeChrome';
 import { getTransformDiagnosticsAttrs } from '@/components/transformDiagnostics';
 import { resolveNodeVisualStyle } from '@/theme';
-import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalog';
+import { useProviderShapePreview } from '@/hooks/useProviderShapePreview';
 import type { DomainLibraryCategory } from '@/services/domainLibrary';
+import type { LucideIcon } from 'lucide-react';
+import {
+  Box,
+  Database,
+  Diamond,
+  Folder,
+  Globe,
+  Globe2,
+  Network,
+  Package,
+  Puzzle,
+  Router,
+  Scale,
+  Server,
+  Shield,
+  User,
+} from 'lucide-react';
 
 function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.ReactElement {
   const labelEdit = useInlineNodeTextEdit(id, 'label', data.label || '');
   const provider = (data.archProvider || 'custom') as DomainLibraryCategory | 'custom';
-  const providerLabel = provider === 'custom'
-    ? String(data.archProviderLabel || 'Custom')
-    : provider;
+  const providerLabel =
+    provider === 'custom' ? String(data.archProviderLabel || 'Custom') : provider;
   const resourceType = data.archResourceType || 'service';
   const environment = data.archEnvironment || 'default';
   const zone = data.archZone as string | undefined;
@@ -23,53 +39,31 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
   const activeColor = data.color || 'white';
   const activeColorMode = data.colorMode || 'subtle';
   const visualStyle = resolveNodeVisualStyle(activeColor, activeColorMode, data.customColor);
-  const resourceIcon: string = {
-    group: '◼',
-    junction: '◆',
-    service: '▣',
-    person: '👤',
-    system: '⬜',
-    container: '⧉',
-    component: '⧈',
-    database_container: '⛁',
-    router: '⇄',
-    switch: '⬡',
-    firewall: '🛡',
-    load_balancer: '⇶',
-    cdn: '◉',
-    dns: '◎',
-  }[resourceType] ?? '▣';
-  const packId = typeof data.archIconPackId === 'string' ? data.archIconPackId : undefined;
-  const shapeId = typeof data.archIconShapeId === 'string' ? data.archIconShapeId : undefined;
+  const resourceIconMap: Record<string, LucideIcon> = {
+    group: Folder,
+    junction: Diamond,
+    service: Server,
+    person: User,
+    system: Box,
+    container: Package,
+    component: Puzzle,
+    database_container: Database,
+    router: Router,
+    switch: Network,
+    firewall: Shield,
+    load_balancer: Scale,
+    cdn: Globe,
+    dns: Globe2,
+  };
+  const ResourceIcon: LucideIcon = resourceIconMap[resourceType] ?? Server;
   const customIconUrl = typeof data.customIconUrl === 'string' ? data.customIconUrl : undefined;
-  const previewKey = packId && shapeId ? `${packId}:${shapeId}` : null;
-  const [providerPreviewState, setProviderPreviewState] = useState<{ key: string | null; url: string | null }>({ key: null, url: null });
-  const providerPreviewUrl = providerPreviewState.key === previewKey ? providerPreviewState.url : null;
-  const resolvedProviderIconUrl = provider === 'custom' && customIconUrl ? customIconUrl : providerPreviewUrl;
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!packId || !shapeId || !previewKey) {
-      return;
-    }
-
-    loadProviderShapePreview(packId, shapeId)
-      .then((preview) => {
-        if (!cancelled) {
-          setProviderPreviewState({ key: previewKey, url: preview?.previewUrl ?? null });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setProviderPreviewState({ key: previewKey, url: null });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [packId, previewKey, shapeId]);
+  const providerPreviewUrl = useProviderShapePreview(
+    typeof data.archIconPackId === 'string' ? data.archIconPackId : undefined,
+    typeof data.archIconShapeId === 'string' ? data.archIconShapeId : undefined,
+    customIconUrl
+  );
+  const resolvedProviderIconUrl =
+    provider === 'custom' && customIconUrl ? customIconUrl : providerPreviewUrl;
 
   return (
     <NodeChrome
@@ -77,7 +71,7 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
       selected={Boolean(selected)}
       minWidth={180}
       minHeight={architectureMinHeight}
-      handleClassName="!w-3 !h-3 !border-2 !border-white transition-all duration-150 hover:scale-125"
+      handleClassName="!w-3 !h-3 !border-2 !border-[var(--brand-surface)] transition-all duration-150 hover:scale-125"
     >
       <div
         className="group min-w-[180px] rounded-xl border px-3 py-2 shadow-sm"
@@ -94,7 +88,7 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
           hasSubLabel: Boolean(environment),
         })}
       >
-        <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide text-slate-500">
+        <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wide">
           <span
             className="inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 font-semibold"
             style={{
@@ -104,13 +98,20 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
             }}
           >
             {resolvedProviderIconUrl ? (
-              <img src={resolvedProviderIconUrl} alt={`${providerLabel} ${resourceType} icon`} className="h-3.5 w-3.5 object-contain" loading="lazy" />
+              <img
+                src={resolvedProviderIconUrl}
+                alt={`${providerLabel} ${resourceType} icon`}
+                className="h-3.5 w-3.5 object-contain"
+                loading="lazy"
+              />
             ) : (
-              <span>{resourceIcon}</span>
+              <ResourceIcon className="h-3.5 w-3.5" />
             )}
             <span>{providerLabel}</span>
           </span>
-          <span className="font-semibold" style={{ color: visualStyle.subText }}>{resourceType}</span>
+          <span className="font-semibold" style={{ color: visualStyle.subText }}>
+            {resourceType}
+          </span>
         </div>
         <InlineTextEditSurface
           isEditing={labelEdit.isEditing}
@@ -124,37 +125,18 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
           isSelected={Boolean(selected)}
         />
         <div className="mt-1 flex flex-wrap items-center gap-1">
-          <span
-            className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
-            style={{
-              backgroundColor: visualStyle.iconBg,
-              color: visualStyle.subText,
-            }}
-          >
-            {environment}
-          </span>
-          {zone && (
+          {[environment, zone, trustDomain].filter(Boolean).map((label) => (
             <span
+              key={label}
               className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
               style={{
                 backgroundColor: visualStyle.iconBg,
                 color: visualStyle.subText,
               }}
             >
-              {zone}
+              {label}
             </span>
-          )}
-          {trustDomain && (
-            <span
-              className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide"
-              style={{
-                backgroundColor: visualStyle.iconBg,
-                color: visualStyle.subText,
-              }}
-            >
-              {trustDomain}
-            </span>
-          )}
+          ))}
         </div>
       </div>
     </NodeChrome>

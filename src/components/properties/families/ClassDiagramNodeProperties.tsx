@@ -2,6 +2,7 @@ import React from 'react';
 import type { DiagramNodePropertiesComponentProps } from '@/diagram-types/core';
 import { NodeProperties } from '@/components/properties/NodeProperties';
 import { NodeActionButtons } from '@/components/properties/NodeActionButtons';
+import { toggleSection } from '@/components/properties/shared';
 import { ClassNodeSection } from './ClassNodeSection';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import {
@@ -35,10 +36,6 @@ export function ClassDiagramNodeProperties({
 
   const handleInputKeyDown = createPropertyInputKeyDownHandler({ blurOnEnter: true });
 
-  function toggleSection(section: string): void {
-    setActiveSection((currentSection) => (currentSection === section ? '' : section));
-  }
-
   return (
     <>
       <InspectorSectionDivider />
@@ -47,7 +44,7 @@ export function ClassDiagramNodeProperties({
         title="Class Name"
         icon={<Type className="w-3.5 h-3.5" />}
         isOpen={activeSection === 'name'}
-        onToggle={() => toggleSection('name')}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'name'))}
       >
         <InspectorField label="Name">
           <input
@@ -64,7 +61,7 @@ export function ClassDiagramNodeProperties({
         title="Definition"
         icon={<Braces className="w-3.5 h-3.5" />}
         isOpen={activeSection === 'definition'}
-        onToggle={() => toggleSection('definition')}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'definition'))}
       >
         <ClassNodeSection nodeId={selectedNode.id} data={selectedNode.data} onChange={onChange} />
       </CollapsibleSection>
@@ -73,7 +70,7 @@ export function ClassDiagramNodeProperties({
         title="Code"
         icon={<Code className="w-3.5 h-3.5" />}
         isOpen={activeSection === 'code'}
-        onToggle={() => toggleSection('code')}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'code'))}
       >
         <button
           type="button"

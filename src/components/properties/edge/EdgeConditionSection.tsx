@@ -33,7 +33,7 @@ export function EdgeConditionSection({ selectedEdge, onChange }: EdgeConditionSe
                                 px-2 py-1.5 rounded-lg text-xs font-medium border transition-all text-left flex items-center gap-2
                                 ${isSelected
                                     ? 'bg-[var(--brand-primary-50)] border-[var(--brand-primary-200)] text-[var(--brand-primary-700)] ring-1 ring-[var(--brand-primary-200)]'
-                                    : 'bg-[var(--brand-surface)] border-slate-200 text-[var(--brand-secondary)] hover:border-slate-300'
+                                    : 'bg-[var(--brand-surface)] border-[var(--color-brand-border)] text-[var(--brand-secondary)] hover:border-[var(--brand-secondary)]'
                                 }
                             `}
                         >

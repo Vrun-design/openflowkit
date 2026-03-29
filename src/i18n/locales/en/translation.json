@@ -53,6 +53,7 @@
     "bringToFront": "Bring to Front",
     "sendToBack": "Send to Back",
     "reverseDirection": "Reverse Direction",
+    "editLabel": "Edit Label",
     "deleteConnection": "Delete Connection",
     "itemsSelected": "{{count}} items selected",
     "align": "Align",
@@ -90,6 +91,7 @@
     "versionHistory": "Version History",
     "loadJSON": "Load JSON",
     "playbackMode": "Playback Mode",
+    "templates": "Templates",
     "privacyMessage": "Your diagrams stay with you and do not reach our servers."
   },
   "menu": {
@@ -113,6 +115,7 @@
   },
   "export": {
     "title": "Export",
+    "subtitle": "Choose a format and action.",
     "png": "Export as PNG",
     "jpeg": "Export as JPEG",
     "svg": "Export as SVG",
@@ -131,7 +134,7 @@
     "exportDiagram": "Export Diagram",
     "exportAs": "Export As",
     "headingFormat": "Export Format",
-    "actionCopy": "Copy to Clipboard",
+    "actionCopy": "Copy",
     "actionDownload": "Download",
     "exportOrShare": "Export or share this canvas",
     "shareSection": "Share canvas",
@@ -141,7 +144,7 @@
     "hintTransparent4K": "Transparent (4K)",
     "hintWhiteBg4K": "White Background (4K)",
     "hintDownload": "Download",
-    "hintClipboard": "Copy to clipboard",
+    "hintClipboard": "Copy",
     "hintSvgScalable": "Scalable vector file",
     "hintPlaybackWebM": "Playback timeline (WebM/MP4)",
     "hintPlaybackGif": "Short loop for docs/social",
@@ -279,8 +282,12 @@
   "settings": {
     "title": "Settings",
     "general": "General",
+    "canvas": "Canvas",
     "shortcuts": "Keyboard Shortcuts",
     "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
     "language": "Language",
     "selectLanguage": "Select Language",
     "appearance": "Appearance",
@@ -367,7 +374,18 @@
       "automatedLayouts": "Automated layouts and professional themes.",
       "privateSecure": "Private and Secure",
       "localFirst": "Local-first architecture keeps your data safe."
-    }
+    },
+    "feature1Title": "Create amazing diagrams",
+    "feature1Desc": "Design beautiful, enterprise-grade architecture visually.",
+    "feature2Title": "Use AI",
+    "feature2Desc": "Generate complete architectures with a single intelligent prompt.",
+    "feature3Title": "Code to diagram",
+    "feature3Desc": "Instantly construct stunning visual infrastructure from text.",
+    "feature4Title": "Export in many formats",
+    "feature4Desc": "Export into beautiful, fully animated presentation diagrams.",
+    "analyticsTitle": "Anonymous Analytics",
+    "analyticsDesc": "We collect diagnostic data. We never read your diagrams or prompts.",
+    "getStarted": "Get Started"
   },
   "footer": {
     "mitLicensed": "MIT Licensed"
@@ -749,6 +767,10 @@
       "edgeBundling": "Bundle Sibling Edges",
       "edgeBundlingDesc": "Keep parallel connections on shared lanes"
     },
+    "analytics": {
+      "enableTitle": "Anonymous Launch Analytics",
+      "enableDescription": "Share anonymous basic usage data (optional)"
+    },
     "ai": {
       "provider": "Provider",
       "model": "Model",
@@ -1094,11 +1116,13 @@
     "addItem": "Add Item",
     "addToCanvas": "Add to Canvas",
     "shapes": "Shapes",
+    "diagrams": "Diagrams",
     "assets": "Assets",
     "node": "Shape",
     "stickyNote": "Sticky Note",
     "section": "Section",
     "text": "Text",
+    "other": "Other",
     "wireframes": "Wireframes",
     "image": "Image",
     "autoLayout": "Auto Layout",
@@ -1177,10 +1201,24 @@
     "searchPlaceholder": "Search templates...",
     "noTemplates": "No templates found."
   },
+  "homeTemplates": {
+    "description": "Start from a ready-made flow and customize it in the editor.",
+    "openPicker": "Open Template Picker",
+    "featured": "Featured Templates",
+    "count": "{{count}} templates",
+    "nodes": "{{count}} nodes",
+    "edges": "{{count}} edges",
+    "starter": "Starter",
+    "starterTemplate": "Starter template",
+    "useTemplate": "Use Template",
+    "closePreview": "Close template preview"
+  },
   "propertiesPanel": {
     "stickyNote": "Sticky Note",
     "nodeSettings": "Shape Settings",
-    "connection": "Connection"
+    "connection": "Connection",
+    "noSelection": "Nothing selected",
+    "selectHint": "Click a node or edge to edit its properties"
   },
   "connectionPanel": {
     "architecture": "Architecture",
@@ -1199,5 +1237,8 @@
   "flowTabs": {
     "closeTab": "Close Page",
     "newFlowTab": "New Page"
+  },
+  "sidebar": {
+    "close": "Close sidebar"
   }
 }

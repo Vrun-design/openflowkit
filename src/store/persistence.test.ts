@@ -148,6 +148,37 @@ describe('store persistence helpers', () => {
         expect(migrated.viewSettings.snapToGrid).toBe(true);
     });
 
+    it('upgrades legacy section nodes with frame metadata defaults', () => {
+        const migrated = migratePersistedFlowState({
+            tabs: [
+                {
+                    id: 'tab-a',
+                    name: 'A',
+                    nodes: [
+                        {
+                            id: 'section-1',
+                            type: 'section',
+                            position: { x: 20, y: 30 },
+                            data: { label: 'Legacy Section' },
+                            style: { width: 500, height: 400 },
+                        },
+                    ],
+                    edges: [],
+                    history: { past: [], future: [] },
+                },
+            ],
+            activeTabId: 'tab-a',
+        }) as {
+            tabs: FlowTab[];
+        };
+
+        const migratedSection = migrated.tabs[0]?.nodes[0];
+        expect(migratedSection?.data.sectionSizingMode).toBe('manual');
+        expect(migratedSection?.data.sectionLayoutMode).toBe('freeform');
+        expect(migratedSection?.data.sectionLocked).toBe(false);
+        expect(migratedSection?.data.sectionHidden).toBe(false);
+    });
+
     it('sanitizes persisted ai settings during migration', () => {
         const loadPersistedAISettingsSpy = vi.spyOn(aiSettingsPersistence, 'loadPersistedAISettings').mockReturnValue({
             provider: 'gemini',

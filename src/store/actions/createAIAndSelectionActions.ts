@@ -10,6 +10,7 @@ export function createAIAndSelectionActions(set: SetFlowState): Pick<
     | 'setAISettings'
     | 'setSelectedNodeId'
     | 'setSelectedEdgeId'
+    | 'setHoveredSectionId'
     | 'queuePendingNodeLabelEditRequest'
     | 'clearPendingNodeLabelEditRequest'
     | 'setMermaidDiagnostics'
@@ -26,6 +27,7 @@ export function createAIAndSelectionActions(set: SetFlowState): Pick<
 
         setSelectedNodeId: (id) => set({ selectedNodeId: id }),
         setSelectedEdgeId: (id) => set({ selectedEdgeId: id }),
+        setHoveredSectionId: (id) => set({ hoveredSectionId: id }),
         queuePendingNodeLabelEditRequest: (request) => set({ pendingNodeLabelEditRequest: request }),
         clearPendingNodeLabelEditRequest: () => set({ pendingNodeLabelEditRequest: null }),
         setMermaidDiagnostics: (snapshot) => set({ mermaidDiagnostics: snapshot }),

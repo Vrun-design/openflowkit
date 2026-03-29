@@ -97,7 +97,7 @@ function getCollaborationStatusDotClass(status: CollaborationState['status']): s
         case 'waiting':
             return 'bg-amber-400 animate-pulse';
         default:
-            return 'bg-slate-400';
+            return 'bg-[var(--brand-secondary-light)]';
     }
 }
 
@@ -129,17 +129,14 @@ export function TopNavActions({
     const viewerCount = collaboration?.viewerCount ?? 1;
     const visibleViewerCount = Math.min(viewerCount, 4);
     const visibleParticipants = collaboration?.participants.slice(0, visibleViewerCount) ?? [];
-    const shareButtonClassName = `ml-1 h-10 w-10 rounded-[var(--radius-md)] border text-slate-600 transition-all sm:h-9 sm:w-9 ${isBeveled
-        ? 'btn-beveled-secondary'
-        : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm hover:shadow'
-        }`;
+    const shareButtonClassName = `ml-1 h-10 w-10 rounded-[var(--radius-md)] sm:h-9 sm:w-9 ${isBeveled ? 'btn-beveled-secondary' : ''}`;
     const playButtonClassName = 'h-10 px-2.5 font-medium sm:h-9 sm:px-3';
 
     return (
         <div className="flex min-w-0 items-center justify-end gap-2 sm:gap-3">
             <div className="flex items-center gap-1.5 sm:gap-2">
                 {collaboration && (
-                    <div className="mr-1 hidden items-center gap-2 border-r border-slate-200/60 pr-3 md:flex">
+                    <div className="mr-1 hidden items-center gap-2 border-r border-[var(--color-brand-border)]/80 pr-3 md:flex">
                         {/* Status Indicator */}
                         <Tooltip text={getCollaborationStatusLabel(collaboration.status, collaboration.cacheState, t)} side="bottom">
                             <div className={`w-2 h-2 rounded-full ${getCollaborationStatusDotClass(collaboration.status)}`} />
@@ -150,7 +147,7 @@ export function TopNavActions({
                             {visibleParticipants.map((participant) => (
                                 <Tooltip key={participant.clientId} text={participant.name} side="bottom">
                                     <div
-                                        className="inline-flex h-8 w-8 rounded-full ring-2 ring-white flex items-center justify-center text-white text-[10px] font-bold shadow-sm"
+                                        className="inline-flex h-8 w-8 rounded-full ring-2 ring-[var(--brand-surface)] flex items-center justify-center text-white text-[10px] font-bold shadow-sm"
                                         style={{ backgroundColor: participant.color }}
                                     >
                                         {getAvatarInitial(participant.name)}
@@ -158,7 +155,7 @@ export function TopNavActions({
                                 </Tooltip>
                             ))}
                             {viewerCount > 4 && (
-                                <div className="inline-flex h-8 w-8 rounded-full ring-2 ring-white bg-slate-100 flex items-center justify-center text-slate-600 text-[10px] font-bold shadow-sm">
+                                <div className="inline-flex h-8 w-8 rounded-full ring-2 ring-[var(--brand-surface)] bg-[var(--brand-background)] flex items-center justify-center text-[var(--brand-secondary)] text-[10px] font-bold shadow-sm">
                                     +{viewerCount - 4}
                                 </div>
                             )}
@@ -166,7 +163,7 @@ export function TopNavActions({
 
                         <Tooltip text={t('share.openDialog', 'Open sharing')} side="bottom">
                             <Button
-                                variant="icon"
+                                variant="secondary"
                                 size="icon"
                                 onClick={() => setIsShareModalOpen(true)}
                                 data-testid="topnav-share"

@@ -2,6 +2,7 @@ import React from 'react';
 import type { DiagramNodePropertiesComponentProps } from '@/diagram-types/core';
 import { NodeProperties } from '@/components/properties/NodeProperties';
 import { NodeActionButtons } from '@/components/properties/NodeActionButtons';
+import { toggleSection } from '@/components/properties/shared';
 import { SequenceNodeSection } from './SequenceNodeSection';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
 import { InspectorSectionDivider } from '@/components/properties/InspectorPrimitives';
@@ -26,10 +27,6 @@ export function SequenceNodeProperties({
     );
   }
 
-  function toggleSection(section: string): void {
-    setActiveSection((current) => (current === section ? '' : section));
-  }
-
   return (
     <>
       <InspectorSectionDivider />
@@ -38,9 +35,13 @@ export function SequenceNodeProperties({
         title="Participant"
         icon={<Users className="w-3.5 h-3.5" />}
         isOpen={activeSection === 'participant'}
-        onToggle={() => toggleSection('participant')}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'participant'))}
       >
-        <SequenceNodeSection nodeId={selectedNode.id} data={selectedNode.data} onChange={onChange} />
+        <SequenceNodeSection
+          nodeId={selectedNode.id}
+          data={selectedNode.data}
+          onChange={onChange}
+        />
       </CollapsibleSection>
 
       <NodeActionButtons nodeId={selectedNode.id} onDuplicate={onDuplicate} onDelete={onDelete} />

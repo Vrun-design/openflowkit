@@ -29,6 +29,7 @@ describe('useCommandBarCommands', () => {
             'studio-ai',
             'templates',
             'assets',
+            'layers',
             'search-nodes',
             'layout',
             'studio-openflow',

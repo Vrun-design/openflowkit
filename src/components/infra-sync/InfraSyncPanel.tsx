@@ -30,7 +30,7 @@ const FORMAT_HINTS: Record<InfraFormat, string> = {
 function getFormatTabClassName(selected: boolean): string {
     return selected
         ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-sm shadow-[var(--brand-primary-200)]'
-        : 'border-slate-200 bg-white text-slate-500 hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-primary-50)] hover:text-[var(--brand-primary)]';
+        : 'border-[var(--color-brand-border)] bg-[var(--brand-surface)] text-[var(--brand-secondary)] hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-primary-50)] hover:text-[var(--brand-primary)]';
 }
 
 function formatFileSize(bytes: number): string {
@@ -98,14 +98,14 @@ export function InfraSyncPanel({ onApplyDsl, onTerraformAnalysis }: InfraSyncPan
 
     return (
         <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto p-3 custom-scrollbar">
-            <div className="rounded-[var(--radius-md)] border border-slate-200 bg-[var(--brand-primary-50)] p-3">
+            <div className="rounded-[var(--radius-md)] border border-[var(--brand-primary-200)] bg-[var(--brand-primary-50)] p-3">
                 <p className="text-xs font-medium text-[var(--brand-primary)]">Infrastructure Sync</p>
-                <p className="mt-0.5 text-[11px] leading-5 text-slate-500">
+                <p className="mt-0.5 text-[11px] leading-5 text-[var(--brand-secondary)]">
                     Parse infrastructure source into an editable diagram draft, then apply it to the canvas when the result looks right.
                 </p>
             </div>
 
-            <div className="flex flex-wrap gap-1.5 rounded-[var(--radius-md)] border border-slate-200 bg-slate-50 p-1">
+            <div className="flex flex-wrap gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)]/70 p-1">
                 {FORMAT_TABS.map((tab) => (
                     <button
                         key={tab.id}
@@ -119,13 +119,13 @@ export function InfraSyncPanel({ onApplyDsl, onTerraformAnalysis }: InfraSyncPan
                 ))}
             </div>
 
-            <div className="text-[11px] text-slate-400 -mt-1">{FORMAT_HINTS[format]}</div>
+            <div className="-mt-1 text-[11px] text-[var(--brand-secondary)]">{FORMAT_HINTS[format]}</div>
 
             {fileInfo && (
-                <div className="flex items-center gap-2 rounded-[var(--radius-sm)] bg-slate-50 border border-slate-200 px-2.5 py-1.5">
-                    <FileText className="h-3.5 w-3.5 text-slate-400" />
-                    <span className="text-[11px] font-medium text-slate-600 truncate">{fileInfo.name}</span>
-                    <span className="text-[11px] text-slate-400">{formatFileSize(fileInfo.size)}</span>
+                <div className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-2.5 py-1.5">
+                    <FileText className="h-3.5 w-3.5 text-[var(--brand-secondary)]" />
+                    <span className="truncate text-[11px] font-medium text-[var(--brand-text)]">{fileInfo.name}</span>
+                    <span className="text-[11px] text-[var(--brand-secondary)]">{formatFileSize(fileInfo.size)}</span>
                 </div>
             )}
 
@@ -135,7 +135,7 @@ export function InfraSyncPanel({ onApplyDsl, onTerraformAnalysis }: InfraSyncPan
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
                 placeholder={FORMAT_PLACEHOLDERS[format]}
-                className="min-h-[200px] flex-1 resize-none rounded-[var(--radius-md)] border border-slate-200 bg-white px-3 py-3 font-mono text-xs text-slate-700 shadow-sm outline-none transition-all placeholder-slate-300 focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary-100)] custom-scrollbar"
+                className="custom-scrollbar min-h-[200px] flex-1 resize-none rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-3 font-mono text-xs text-[var(--brand-text)] shadow-sm outline-none transition-all placeholder:text-[var(--brand-secondary)] focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary-100)]"
             />
 
             <button
@@ -161,11 +161,11 @@ export function InfraSyncPanel({ onApplyDsl, onTerraformAnalysis }: InfraSyncPan
                 <div className="rounded-[var(--radius-md)] border border-emerald-200 bg-emerald-50/50 p-3 space-y-1.5">
                     <div className="flex items-center gap-2">
                         <Check className="h-4 w-4 shrink-0 text-emerald-500" />
-                        <span className="text-xs font-medium text-slate-700">
+                        <span className="text-xs font-medium text-[var(--brand-text)]">
                             Found {infraSyncResultSummary(result)}
                         </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 pl-6">
+                    <p className="pl-6 text-[11px] text-[var(--brand-secondary)]">
                         Parsed {formatRelativeTime(result.lastParsed)}
                     </p>
                 </div>
@@ -191,7 +191,7 @@ export function InfraSyncPanel({ onApplyDsl, onTerraformAnalysis }: InfraSyncPan
                         onClick={() => void refresh()}
                         disabled={isParsing}
                         title="Refresh"
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--brand-radius)] border border-slate-200 bg-white text-slate-500 shadow-sm transition-all duration-200 hover:-translate-y-px hover:border-slate-300 hover:bg-slate-50 hover:text-slate-700 hover:shadow-md disabled:opacity-40"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] text-[var(--brand-secondary)] shadow-sm transition-all duration-200 hover:-translate-y-px hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)] hover:shadow-md disabled:opacity-40"
                     >
                         <RefreshCw className={`h-4 w-4 ${isParsing ? 'animate-spin' : ''}`} />
                     </button>

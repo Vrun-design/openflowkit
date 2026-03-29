@@ -175,10 +175,12 @@ export interface FlowState {
     // -------------------------------------------------------------------------
     selectedNodeId: string | null;
     selectedEdgeId: string | null;
+    hoveredSectionId: string | null;
     pendingNodeLabelEditRequest: PendingNodeLabelEditRequest | null;
     mermaidDiagnostics: MermaidDiagnosticsSnapshot | null;
     setSelectedNodeId: (id: string | null) => void;
     setSelectedEdgeId: (id: string | null) => void;
+    setHoveredSectionId: (id: string | null) => void;
     queuePendingNodeLabelEditRequest: (request: PendingNodeLabelEditRequest) => void;
     clearPendingNodeLabelEditRequest: () => void;
     setMermaidDiagnostics: (snapshot: MermaidDiagnosticsSnapshot | null) => void;

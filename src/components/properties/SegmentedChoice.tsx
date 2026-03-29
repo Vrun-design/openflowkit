@@ -6,7 +6,7 @@ export interface SegmentedChoiceItem {
 }
 
 interface SegmentedChoiceProps {
-    items: SegmentedChoiceItem[];
+    items: readonly SegmentedChoiceItem[];
     selectedId?: string;
     onSelect: (id: string) => void;
     columns?: number;
@@ -28,8 +28,8 @@ function getItemClassName(selected: boolean, size: SegmentedChoiceProps['size'])
 
     return `flex items-center justify-center rounded-[var(--radius-xs)] font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary-200)] focus-visible:ring-offset-1 ${spacingClass} ${
         selected
-            ? 'bg-white text-[var(--brand-primary)] shadow-sm ring-1 ring-[var(--brand-primary-200)]'
-            : 'text-slate-500 hover:bg-white/85 hover:text-slate-700'
+            ? 'bg-[var(--brand-surface)] text-[var(--brand-primary)] shadow-sm ring-1 ring-[var(--brand-primary-200)]'
+            : 'text-[var(--brand-secondary)] hover:bg-[var(--brand-surface)]/90 hover:text-[var(--brand-text)]'
     }`;
 }
 
@@ -44,7 +44,7 @@ export function SegmentedChoice({
     const paddingClass = getContainerPaddingClass(size);
 
     return (
-        <div className={`grid ${gridClass} gap-1 rounded-[var(--radius-sm)] border border-slate-200/80 bg-slate-100/70 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] ${paddingClass}`}>
+        <div className={`grid ${gridClass} gap-1 rounded-[var(--radius-sm)] border border-[var(--color-brand-border)]/80 bg-[var(--brand-background)]/75 ${paddingClass}`}>
             {items.map((item) => {
                 const selected = item.id === selectedId;
                 return (

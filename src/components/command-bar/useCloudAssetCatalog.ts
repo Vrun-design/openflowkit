@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { DomainLibraryItem } from '@/services/domainLibrary';
+import { loadDomainAssetCatalog } from '@/services/assetCatalog';
 import {
-    loadProviderCatalog,
     loadProviderShapePreview,
 } from '@/services/shapeLibrary/providerCatalog';
 import { CLOUD_TABS, type CloudAssetState, type CloudTabDefinition } from './assetsViewConstants';
@@ -12,15 +12,18 @@ export function useCloudAssetCatalog(onAddDomainLibraryItem: (item: DomainLibrar
     const [providerPreviewUrls, setProviderPreviewUrls] = useState<Record<string, string>>({});
 
     const loadProviderTab = useCallback((tabId: CloudTabDefinition['id']): void => {
-        if (tabId === 'icons') {
-            return;
-        }
         if (providerLoadState[tabId] === 'loading' || providerLoadState[tabId] === 'ready') {
             return;
         }
 
         setProviderLoadState((current) => ({ ...current, [tabId]: 'loading' }));
-        loadProviderCatalog(tabId)
+        const tabDefinition = CLOUD_TABS.find((tab) => tab.id === tabId);
+        if (!tabDefinition) {
+            setProviderLoadState((current) => ({ ...current, [tabId]: 'error' }));
+            return;
+        }
+
+        loadDomainAssetCatalog(tabDefinition.category)
             .then((items) => {
                 setProviderItems((current) => ({ ...current, [tabId]: items }));
                 setProviderLoadState((current) => ({ ...current, [tabId]: 'ready' }));

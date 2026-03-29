@@ -32,7 +32,7 @@ describe('ExportMenuPanel', () => {
 
         expect(screen.getByRole('button', { name: /PNG/i })).toBeTruthy();
 
-        fireEvent.click(screen.getByRole('button', { name: /Code/i }));
+        fireEvent.click(screen.getByRole('tab', { name: /Code/i }));
 
         expect(screen.getByRole('button', { name: /JSON File/i })).toBeTruthy();
 
@@ -49,7 +49,7 @@ describe('ExportMenuPanel', () => {
 
         render(<ExportMenuPanel onSelect={onSelect} />);
 
-        fireEvent.click(screen.getByRole('button', { name: /Code/i }));
+        fireEvent.click(screen.getByRole('tab', { name: /Code/i }));
         fireEvent.click(within(screen.getByTestId('export-format-select')).getByRole('button', { name: /JSON File/i }));
         fireEvent.click(within(screen.getByRole('listbox')).getByRole('button', { name: /Figma Editable/i }));
         fireEvent.click(screen.getByTestId('export-action-figma-copy'));
@@ -60,12 +60,47 @@ describe('ExportMenuPanel', () => {
     it('shows cinematic build options in the video section', () => {
         render(<ExportMenuPanel onSelect={vi.fn()} />);
 
-        fireEvent.click(screen.getByRole('button', { name: /Video/i }));
+        fireEvent.click(screen.getByRole('tab', { name: /Video/i }));
         fireEvent.click(within(screen.getByTestId('export-format-select')).getByRole('button', { name: /Cinematic Build Video/i }));
 
         expect(within(screen.getByTestId('export-format-select')).getByRole('button', { name: /Cinematic Build Video/i })).toBeTruthy();
         expect(within(screen.getByRole('listbox')).getByRole('button', { name: /Cinematic Build Video/i })).toBeTruthy();
         expect(within(screen.getByRole('listbox')).getByRole('button', { name: /Cinematic Build GIF/i })).toBeTruthy();
         expect(within(screen.getByRole('listbox')).queryByRole('button', { name: /Playback Video/i })).toBeNull();
+    });
+
+    it('renders video controls before the download action and uses shared control interactions', () => {
+        const onCinematicSpeedChange = vi.fn();
+        const onCinematicResolutionChange = vi.fn();
+        const onCinematicTransparentChange = vi.fn();
+
+        render(
+            <ExportMenuPanel
+                onSelect={vi.fn()}
+                cinematicSpeed="normal"
+                onCinematicSpeedChange={onCinematicSpeedChange}
+                cinematicResolution="1080p"
+                onCinematicResolutionChange={onCinematicResolutionChange}
+                cinematicTransparent={false}
+                onCinematicTransparentChange={onCinematicTransparentChange}
+            />
+        );
+
+        fireEvent.click(screen.getByRole('tab', { name: /Video/i }));
+
+        const panelText = screen.getByText(/Transparent background/i);
+        const downloadButton = screen.getByTestId('export-action-cinematic-video-download');
+
+        expect(
+            panelText.compareDocumentPosition(downloadButton) & Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
+
+        fireEvent.click(screen.getByRole('button', { name: '2×' }));
+        fireEvent.click(screen.getByRole('button', { name: '4K' }));
+        fireEvent.click(screen.getByRole('switch'));
+
+        expect(onCinematicSpeedChange).toHaveBeenCalledWith('fast');
+        expect(onCinematicResolutionChange).toHaveBeenCalledWith('4k');
+        expect(onCinematicTransparentChange).toHaveBeenCalledWith(true);
     });
 });

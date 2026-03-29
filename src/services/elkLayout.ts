@@ -1,5 +1,6 @@
 import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk.bundled.js';
 import { NODE_HEIGHT, NODE_WIDTH } from '@/constants';
+import { getIconAssetNodeMinSize, resolveNodeSize } from '@/components/nodeHelpers';
 import { createLogger } from '@/lib/logger';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import { handleIdToSide } from '@/lib/nodeHandles';
@@ -18,6 +19,8 @@ interface ElkModuleLike {
 
 let elkInstancePromise: Promise<ElkLayoutEngine> | null = null;
 const ELK_BOUNDARY_FANOUT_MIN_GROUP_SIZE = 2;
+const LARGE_DIAGRAM_NODE_THRESHOLD = 48;
+const LARGE_DIAGRAM_EDGE_THRESHOLD = 72;
 const logger = createLogger({ scope: 'elkLayout' });
 
 /** Reset the cached ELK instance — useful in tests or when the instance may have become stale. */
@@ -78,16 +81,23 @@ function buildElkNode(
     const children = childrenByParent.get(node.id) || [];
 
     const nodeWithMeasuredDimensions = node as FlowNodeWithMeasuredDimensions;
-    let width = nodeWithMeasuredDimensions.measured?.width ?? node.width ?? nodeWithMeasuredDimensions.data?.width;
-    let height = nodeWithMeasuredDimensions.measured?.height ?? node.height ?? nodeWithMeasuredDimensions.data?.height;
+    let width = nodeWithMeasuredDimensions.measured?.width;
+    let height = nodeWithMeasuredDimensions.measured?.height;
 
     if (!width || !height) {
-        const label = node.data?.label || '';
-        const estimatedWidth = Math.max(NODE_WIDTH, label.length * 8 + 40);
-        const estimatedHeight = Math.max(NODE_HEIGHT, Math.ceil(label.length / 40) * 20 + 60);
+        if (node.data?.assetPresentation === 'icon') {
+            const minSize = getIconAssetNodeMinSize(Boolean(node.data?.label?.trim()));
+            width = width ?? minSize.minWidth;
+            height = height ?? minSize.minHeight;
+        } else {
+            const resolvedSize = resolveNodeSize(node);
+            const label = node.data?.label || '';
+            const estimatedWidth = Math.max(resolvedSize.width, NODE_WIDTH, label.length * 8 + 40);
+            const estimatedHeight = Math.max(resolvedSize.height, NODE_HEIGHT, Math.ceil(label.length / 40) * 20 + 60);
 
-        width = width ?? estimatedWidth;
-        height = height ?? estimatedHeight;
+            width = width ?? estimatedWidth;
+            height = height ?? estimatedHeight;
+        }
     }
 
     return {
@@ -136,18 +146,9 @@ function getNodeBounds(
     const layoutPosition = positionMap.get(node.id);
     const x = layoutPosition?.x ?? node.position.x ?? 0;
     const y = layoutPosition?.y ?? node.position.y ?? 0;
-    const width =
-        layoutPosition?.width
-        ?? node.width
-        ?? (node as FlowNodeWithMeasuredDimensions).measured?.width
-        ?? (node as FlowNodeWithMeasuredDimensions).data?.width
-        ?? NODE_WIDTH;
-    const height =
-        layoutPosition?.height
-        ?? node.height
-        ?? (node as FlowNodeWithMeasuredDimensions).measured?.height
-        ?? (node as FlowNodeWithMeasuredDimensions).data?.height
-        ?? NODE_HEIGHT;
+    const fallbackSize = resolveNodeSize(node);
+    const width = layoutPosition?.width ?? (node as FlowNodeWithMeasuredDimensions).measured?.width ?? fallbackSize.width ?? NODE_WIDTH;
+    const height = layoutPosition?.height ?? (node as FlowNodeWithMeasuredDimensions).measured?.height ?? fallbackSize.height ?? NODE_HEIGHT;
 
     return {
         left: x,
@@ -387,6 +388,23 @@ function isSparseDiagram(nodeCount: number, edgeCount: number): boolean {
     return avgDegree <= 2.5;
 }
 
+export function shouldUseLightweightLayoutPostProcessing(
+    nodeCount: number,
+    edgeCount: number,
+    diagramType?: string
+): boolean {
+    if (nodeCount >= LARGE_DIAGRAM_NODE_THRESHOLD || edgeCount >= LARGE_DIAGRAM_EDGE_THRESHOLD) {
+        return true;
+    }
+
+    const isArchitectureDiagram = diagramType === 'architecture' || diagramType === 'infrastructure';
+    if (!isArchitectureDiagram) {
+        return false;
+    }
+
+    return nodeCount >= 24 || edgeCount >= 36;
+}
+
 export async function getElkLayout(
     nodes: FlowNode[],
     edges: FlowEdge[],
@@ -456,13 +474,18 @@ export async function getElkLayout(
         });
         const reroutedEdges = resolveLayoutedEdgeHandles(laidOutNodes, sortedEdges);
         const sparse = isSparseDiagram(nodes.length, sortedEdges.length);
+        const useLightweightPostProcessing = shouldUseLightweightLayoutPostProcessing(
+            nodes.length,
+            sortedEdges.length,
+            options.diagramType
+        );
 
-        const normalizedElkPointsMap = sparse
+        const normalizedElkPointsMap = sparse || useLightweightPostProcessing
             ? new Map<string, { x: number; y: number }[]>()
             : normalizeElkEdgeBoundaryFanout(reroutedEdges, laidOutNodes, positionMap, edgePointsMap);
 
         const laidOutEdges = reroutedEdges.map((edge) => {
-            if (sparse) {
+            if (sparse || useLightweightPostProcessing) {
                 return {
                     ...edge,
                     data: {

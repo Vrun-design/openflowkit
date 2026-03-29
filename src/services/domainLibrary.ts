@@ -1,7 +1,7 @@
 import type { Node } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
 
-export type DomainLibraryCategory = 'aws' | 'azure' | 'gcp' | 'cncf' | 'network' | 'security' | 'c4' | 'icons';
+export type DomainLibraryCategory = 'aws' | 'azure' | 'gcp' | 'cncf' | 'developer' | 'network' | 'security' | 'c4' | 'icons';
 
 export interface DomainLibraryItem {
     id: string;
