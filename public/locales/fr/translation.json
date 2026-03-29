@@ -84,6 +84,9 @@
     "canvasSettings": "Paramètres du canevas",
     "wideLogo": "Votre logo large",
     "uploadWideLogo": "Téléchargez un logo large dans les paramètres de marque",
+    "saveStatus": "État de sauvegarde locale",
+    "autoSaved": "Enregistré localement à {{time}}.",
+    "privacyShort": "Vos diagrammes restent sur cet appareil et n’atteignent pas nos serveurs.",
     "beta": "BÊTA",
     "versionHistory": "Historique des versions",
     "loadJSON": "Charger JSON",
@@ -153,7 +156,13 @@
     "hintCinematicVideo": "Dark launch-style build",
     "cinematicGif": "Cinematic Build GIF",
     "hintCinematicGif": "Dark social-ready loop",
-    "actionDownload": "Download"
+    "actionDownload": "Download",
+    "hintDocument": "Document",
+    "hintEditableSvg": "SVG modifiable",
+    "chooseFormat": "Choisir un format",
+    "speed": "Vitesse",
+    "resolution": "Résolution",
+    "transparentBackground": "Arrière-plan transparent"
   },
   "import": {
     "title": "Importer",
@@ -264,6 +273,7 @@
     "theme": "Thème",
     "language": "Langue",
     "selectLanguage": "Sélectionner la langue",
+    "languageDescription": "Choisissez la langue de l'interface utilisée dans l'application.",
     "appearance": "Apparence",
     "ai": "Paramètres IA",
     "analytics": "Analytique",
@@ -299,10 +309,22 @@
     "labelTransform": "Transformation d'étiquette",
     "prefixOptional": "Préfixe (optionnel)",
     "suffixOptional": "Suffixe (optionnel)",
+    "findReplace": "Rechercher et remplacer",
+    "findLabel": "Rechercher",
+    "findPlaceholder": "Texte à rechercher",
+    "replaceLabel": "Remplacer par",
+    "replacePlaceholder": "Texte de remplacement",
+    "useRegex": "Utiliser une expression régulière",
     "previewSummary": "Aperçu",
     "bulkApplySummary": "{{count}} éléments sélectionnés seront mis à jour",
     "selectFieldToApply": "Sélectionnez au moins un champ à appliquer.",
-    "applyToSelectedNodes": "Appliquer aux éléments sélectionnés"
+    "applyToSelectedNodes": "Appliquer aux éléments sélectionnés",
+    "imageSettings": "Paramètres de l'image",
+    "transparency": "Transparence",
+    "rotation": "Rotation"
+  },
+  "saveStatus": {
+    "saved": "Enregistré"
   },
   "ai": {
     "generate": "Générer avec l'IA",
@@ -636,6 +658,135 @@
       "exportModeDeterministic": "Déterministe",
       "exportModeLegacy": "Hérité",
       "exportMode": "Mode d’export"
+    },
+    "aiStudio": {
+      "placeholders": {
+        "create": "Décrivez le diagramme que vous voulez créer à partir de zéro...",
+        "selectedEdit": "Décrivez ce que vous voulez modifier sur le nœud sélectionné {{count}}...",
+        "edit": "Décrivez une modification, par exemple : 'ajouter Redis entre l'API et la base de données'",
+        "empty": "Décrivez un diagramme à générer à partir de zéro..."
+      },
+      "applyEdit": "Appliquer la modification IA",
+      "generateDiagram": "Générer le diagramme",
+      "importReady": "Import prêt - vérifiez les modifications",
+      "addedCount": "{{count}} ajoutés",
+      "updatedCount": "{{count}} mis à jour",
+      "removedCount": "{{count}} supprimés",
+      "discard": "Ignorer",
+      "applyToCanvas": "Appliquer au canevas",
+      "emptyDescription": "Décrivez le diagramme souhaité et {{appName}} préparera le premier brouillon pour vous.",
+      "editDescription": "Décrivez les changements souhaités et {{appName}} mettra le diagramme à jour pour vous.",
+      "addKeyCta": "Ajoutez une clé IA pour commencer",
+      "retrying": "Nouvelle tentative ({{retryCount}} sur 3)...",
+      "generating": "Génération...",
+      "editCurrent": "Modifier l'actuel",
+      "editCurrentHint": "Modifier votre canevas actuel",
+      "createNew": "Créer un nouveau",
+      "createNewHint": "Repartir de zéro avec un nouveau diagramme",
+      "editingSelectedNodes": "Modification du nœud sélectionné {{count}}",
+      "uploadPreviewAlt": "Aperçu du téléversement",
+      "attachImage": "Joindre une image",
+      "cancelGeneration": "Annuler la génération"
+    },
+    "figmaImport": {
+      "invalidUrl": "URL Figma invalide. Utilisez un lien figma.com/file/... ou figma.com/design/....",
+      "tokenRequired": "Un jeton d'accès personnel est requis.",
+      "unknownError": "Erreur inconnue",
+      "title": "Importer depuis Figma",
+      "fileUrlLabel": "URL du fichier Figma",
+      "fileUrlPlaceholder": "https://www.figma.com/design/...",
+      "tokenLabel": "Jeton d'accès personnel",
+      "tokenHelpLink": "comment en obtenir un",
+      "tokenPlaceholder": "figd_...",
+      "tokenPrivacy": "Le jeton est utilisé uniquement dans votre navigateur et n'est jamais envoyé à nos serveurs.",
+      "foundSummary": "{{colors}} couleurs et {{fonts}} styles de texte trouvés dans \"{{name}}\"",
+      "colors": "Couleurs",
+      "moreCount": "+{{count}} de plus",
+      "fonts": "Polices",
+      "fetchingStyles": "Récupération des styles...",
+      "fetchStyles": "Récupérer les styles",
+      "applyToDesignSystem": "Appliquer au système de design"
+    },
+    "import": {
+      "placeholders": {
+        "sql": "Collez ici les instructions CREATE TABLE...",
+        "infra": "Collez ici l'état Terraform en JSON, du YAML Kubernetes, Docker Compose ou Terraform HCL...",
+        "openapi": "Collez ici votre YAML ou JSON OpenAPI / Swagger...",
+        "code": "Collez ici votre code source..."
+      },
+      "infraFormats": {
+        "terraformState": "Terraform State (.tfstate)",
+        "kubernetes": "Kubernetes YAML",
+        "dockerCompose": "Docker Compose",
+        "terraformHcl": "Terraform HCL (AI)"
+      },
+      "errors": {
+        "inputTooLarge": "L'entrée fait {{size}} - maximum {{max}} pour le collage.",
+        "fileTooLarge": "Le fichier fait {{size}} - maximum {{max}}.",
+        "terraformHclRequiresAi": "Terraform HCL nécessite une analyse IA. Utilisez le bouton IA.",
+        "nativeNotAvailable": "L'analyse native n'est pas disponible pour ce type.",
+        "parsingFailed": "L'analyse a échoué.",
+        "aiUnavailable": "L'analyse IA n'est pas disponible pour ce type.",
+        "aiFailed": "La génération IA a échoué.",
+        "inputExceedsLimit": "L'entrée dépasse la limite de {{max}}. Réduisez le contenu ou utilisez un fichier plus petit."
+      },
+      "categories": {
+        "sql": "SQL",
+        "infra": "Infra",
+        "openapi": "OpenAPI",
+        "code": "Code",
+        "codebase": "Dépôt"
+      },
+      "title": "Importer depuis des données",
+      "description": "Importez du code, de l'infrastructure, du SQL ou des spécifications d'API dans votre diagramme.",
+      "uploadFile": "Téléverser un fichier",
+      "parsing": "Analyse en cours...",
+      "parse": "Analyser",
+      "analyzing": "Analyse en cours...",
+      "aiActions": {
+        "generateErd": "Générer le MCD (IA)",
+        "generateDiagram": "Générer le diagramme (IA)",
+        "generateSequence": "Générer la séquence",
+        "analyzeArchitecture": "Analyser l'architecture",
+        "analyzeProject": "Analyser le projet"
+      },
+      "previewDsl": "Aperçu DSL",
+      "appliedToCanvas": "Appliqué au canevas",
+      "applyToCanvas": "Appliquer au canevas"
+    },
+    "layers": {
+      "title": "Calques",
+      "newLayerName": "Nouveau nom de calque",
+      "add": "Ajouter",
+      "active": "Actif",
+      "visible": "Visible",
+      "hidden": "Masqué",
+      "locked": "Verrouillé",
+      "unlocked": "Déverrouillé",
+      "moveSelectedHere": "Déplacer la sélection ici",
+      "selectLayer": "Sélectionner le calque",
+      "up": "Monter",
+      "down": "Descendre",
+      "sections": "Sections",
+      "previousSection": "Section précédente",
+      "nextSection": "Section suivante",
+      "noSections": "Aucune section pour le moment.",
+      "sectionFallbackName": "Section",
+      "order": "Ordre {{order}}",
+      "focus": "Cibler",
+      "show": "Afficher",
+      "hide": "Masquer",
+      "unlock": "Déverrouiller",
+      "lock": "Verrouiller",
+      "footerHint": "Un calque verrouillé ne peut pas être déplacé. Les calques masqués sont exclus du rendu du canevas."
+    },
+    "root": {
+      "searchAria": "Rechercher des actions dans la barre de commandes",
+      "searchPlaceholder": "Rechercher des actions, {{appName}}, du code ou des outils de canevas...",
+      "resultsAria": "Résultats de recherche de la barre de commandes",
+      "quickActionsAria": "Actions rapides de la barre de commandes",
+      "results": "Résultats",
+      "noMatchingCommands": "Aucune commande correspondante pour \"{{query}}\""
     }
   },
   "settingsModal": {
@@ -889,6 +1040,8 @@
     "edges": "{{count}} connexions",
     "starter": "Départ",
     "starterTemplate": "Modèle de départ",
+    "bestFirstEdits": "Meilleures premières modifications",
+    "perfectFor": "Idéal pour",
     "useTemplate": "Utiliser le modèle",
     "closePreview": "Fermer l’aperçu du modèle"
   },
@@ -898,6 +1051,31 @@
     "connection": "Connexion",
     "noSelection": "Aucune sélection",
     "selectHint": "Cliquez sur un nœud ou une arête pour modifier ses propriétés"
+  },
+  "properties": {
+    "title": "Properties",
+    "shape": "Shape",
+    "color": "Color",
+    "icon": "Icon",
+    "rotation": "Rotation",
+    "transparency": "Transparency",
+    "imageSettings": "Image Settings",
+    "bulkShape": "Bulk Shape",
+    "bulkColor": "Bulk Color",
+    "bulkIcon": "Bulk Icon",
+    "labelTransform": "Label Transform",
+    "findReplace": "Find & Replace",
+    "findLabel": "Find",
+    "findPlaceholder": "Find text",
+    "replaceLabel": "Replace",
+    "replacePlaceholder": "Replace with",
+    "prefixOptional": "Prefix (optional)",
+    "suffixOptional": "Suffix (optional)",
+    "useRegex": "Use Regex",
+    "applyToSelectedNodes": "Apply to selected nodes",
+    "selectFieldToApply": "Select a field to apply",
+    "previewSummary": "Preview summary",
+    "selectionSummary": "Résumé de la sélection"
   },
   "flowCanvas": {
     "strictModePasteBlocked": "Le mode strict d’architecture a bloqué le collage Mermaid. Ouvrez la vue Code, corrigez les diagnostics, puis réessayez."
@@ -918,6 +1096,7 @@
     "items": "items",
     "addCommentsHere": "Ajoutez vos commentaires ici.",
     "newSection": "Nouvelle section",
+    "section": "Section",
     "text": "Text",
     "image": "Image",
     "mindmap": "Sujet"

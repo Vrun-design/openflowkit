@@ -84,6 +84,9 @@
     "canvasSettings": "Configuración del lienzo",
     "wideLogo": "Su logotipo ancho",
     "uploadWideLogo": "Suba un logotipo ancho en Configuración de marca",
+    "saveStatus": "Estado de guardado local",
+    "autoSaved": "Guardado localmente a las {{time}}.",
+    "privacyShort": "Sus diagramas permanecen en este dispositivo y no llegan a nuestros servidores.",
     "beta": "BETA",
     "versionHistory": "Historial de versiones",
     "loadJSON": "Cargar JSON",
@@ -153,7 +156,13 @@
     "hintCinematicVideo": "Dark launch-style build",
     "cinematicGif": "Cinematic Build GIF",
     "hintCinematicGif": "Dark social-ready loop",
-    "actionDownload": "Download"
+    "actionDownload": "Download",
+    "hintDocument": "Documento",
+    "hintEditableSvg": "SVG editable",
+    "chooseFormat": "Elegir formato",
+    "speed": "Velocidad",
+    "resolution": "Resolución",
+    "transparentBackground": "Fondo transparente"
   },
   "import": {
     "title": "Importar",
@@ -264,6 +273,7 @@
     "theme": "Tema",
     "language": "Idioma",
     "selectLanguage": "Seleccionar idioma",
+    "languageDescription": "Elige el idioma de la interfaz en toda la aplicación.",
     "appearance": "Apariencia",
     "ai": "Configuración IA",
     "analytics": "Análisis",
@@ -299,10 +309,22 @@
     "labelTransform": "Transformación de etiqueta",
     "prefixOptional": "Prefijo (opcional)",
     "suffixOptional": "Sufijo (opcional)",
+    "findReplace": "Buscar y reemplazar",
+    "findLabel": "Buscar",
+    "findPlaceholder": "Texto a buscar",
+    "replaceLabel": "Reemplazar por",
+    "replacePlaceholder": "Texto de reemplazo",
+    "useRegex": "Usar expresión regular",
     "previewSummary": "Resumen previo",
     "bulkApplySummary": "Se actualizarán {{count}} elementos seleccionados",
     "selectFieldToApply": "Seleccione al menos un campo para aplicar.",
-    "applyToSelectedNodes": "Aplicar a los elementos seleccionados"
+    "applyToSelectedNodes": "Aplicar a los elementos seleccionados",
+    "imageSettings": "Configuración de imagen",
+    "transparency": "Transparencia",
+    "rotation": "Rotación"
+  },
+  "saveStatus": {
+    "saved": "Guardado"
   },
   "ai": {
     "generate": "Generar con IA",
@@ -636,6 +658,135 @@
       "exportModeDeterministic": "Determinista",
       "exportModeLegacy": "Heredado",
       "exportMode": "Modo de exportación"
+    },
+    "aiStudio": {
+      "placeholders": {
+        "create": "Describe el diagrama que quieres crear desde cero...",
+        "selectedEdit": "Describe qué quieres cambiar en el nodo seleccionado {{count}}...",
+        "edit": "Describe un cambio, por ejemplo: 'añadir Redis entre la API y la BD'",
+        "empty": "Describe un diagrama para generarlo desde cero..."
+      },
+      "applyEdit": "Aplicar edición con IA",
+      "generateDiagram": "Generar diagrama",
+      "importReady": "Importación lista - revisa los cambios",
+      "addedCount": "{{count}} añadidos",
+      "updatedCount": "{{count}} actualizados",
+      "removedCount": "{{count}} eliminados",
+      "discard": "Descartar",
+      "applyToCanvas": "Aplicar al lienzo",
+      "emptyDescription": "Describe el diagrama que quieres y {{appName}} preparará el primer borrador por ti.",
+      "editDescription": "Describe los cambios que quieres y {{appName}} actualizará el diagrama por ti.",
+      "addKeyCta": "Añade una clave de IA para empezar",
+      "retrying": "Reintentando ({{retryCount}} de 3)...",
+      "generating": "Generando...",
+      "editCurrent": "Editar actual",
+      "editCurrentHint": "Modificar tu lienzo actual",
+      "createNew": "Crear nuevo",
+      "createNewHint": "Empezar de cero con un nuevo diagrama",
+      "editingSelectedNodes": "Editando {{count}} nodo seleccionado",
+      "uploadPreviewAlt": "Vista previa de la carga",
+      "attachImage": "Adjuntar imagen",
+      "cancelGeneration": "Cancelar generación"
+    },
+    "figmaImport": {
+      "invalidUrl": "URL de Figma no válida. Usa un enlace figma.com/file/... o figma.com/design/....",
+      "tokenRequired": "Se requiere un token de acceso personal.",
+      "unknownError": "Error desconocido",
+      "title": "Importar desde Figma",
+      "fileUrlLabel": "URL del archivo de Figma",
+      "fileUrlPlaceholder": "https://www.figma.com/design/...",
+      "tokenLabel": "Token de acceso personal",
+      "tokenHelpLink": "cómo obtener uno",
+      "tokenPlaceholder": "figd_...",
+      "tokenPrivacy": "El token solo se usa en tu navegador y nunca se envía a nuestros servidores.",
+      "foundSummary": "Se encontraron {{colors}} colores y {{fonts}} estilos de texto de \"{{name}}\"",
+      "colors": "Colores",
+      "moreCount": "+{{count}} más",
+      "fonts": "Fuentes",
+      "fetchingStyles": "Obteniendo estilos...",
+      "fetchStyles": "Obtener estilos",
+      "applyToDesignSystem": "Aplicar al sistema de diseño"
+    },
+    "import": {
+      "placeholders": {
+        "sql": "Pega aquí las sentencias CREATE TABLE...",
+        "infra": "Pega aquí el JSON del estado de Terraform, YAML de Kubernetes, Docker Compose o Terraform HCL...",
+        "openapi": "Pega aquí tu YAML o JSON de OpenAPI / Swagger...",
+        "code": "Pega aquí tu código fuente..."
+      },
+      "infraFormats": {
+        "terraformState": "Terraform State (.tfstate)",
+        "kubernetes": "Kubernetes YAML",
+        "dockerCompose": "Docker Compose",
+        "terraformHcl": "Terraform HCL (AI)"
+      },
+      "errors": {
+        "inputTooLarge": "La entrada ocupa {{size}} - el máximo para pegar es {{max}}.",
+        "fileTooLarge": "El archivo ocupa {{size}} - el máximo es {{max}}.",
+        "terraformHclRequiresAi": "Terraform HCL requiere análisis con IA. Usa el botón de IA.",
+        "nativeNotAvailable": "El análisis nativo no está disponible para este tipo.",
+        "parsingFailed": "Error al analizar.",
+        "aiUnavailable": "El análisis con IA no está disponible para este tipo.",
+        "aiFailed": "La generación con IA falló.",
+        "inputExceedsLimit": "La entrada supera el límite de {{max}}. Recorta el contenido o usa un archivo más pequeño."
+      },
+      "categories": {
+        "sql": "SQL",
+        "infra": "Infra",
+        "openapi": "OpenAPI",
+        "code": "Code",
+        "codebase": "Repositorio"
+      },
+      "title": "Importar desde datos",
+      "description": "Importa código, infraestructura, SQL o especificaciones de API en tu diagrama.",
+      "uploadFile": "Subir archivo",
+      "parsing": "Analizando...",
+      "parse": "Analizar",
+      "analyzing": "Procesando...",
+      "aiActions": {
+        "generateErd": "Generar DER (IA)",
+        "generateDiagram": "Generar diagrama (IA)",
+        "generateSequence": "Generar secuencia",
+        "analyzeArchitecture": "Analizar arquitectura",
+        "analyzeProject": "Analizar proyecto"
+      },
+      "previewDsl": "Vista previa del DSL",
+      "appliedToCanvas": "Aplicado al lienzo",
+      "applyToCanvas": "Aplicar al lienzo"
+    },
+    "layers": {
+      "title": "Capas",
+      "newLayerName": "Nuevo nombre de capa",
+      "add": "Añadir",
+      "active": "Activa",
+      "visible": "Visible",
+      "hidden": "Oculta",
+      "locked": "Bloqueada",
+      "unlocked": "Desbloqueada",
+      "moveSelectedHere": "Mover selección aquí",
+      "selectLayer": "Seleccionar capa",
+      "up": "Subir",
+      "down": "Bajar",
+      "sections": "Secciones",
+      "previousSection": "Sección anterior",
+      "nextSection": "Sección siguiente",
+      "noSections": "Todavía no hay secciones.",
+      "sectionFallbackName": "Sección",
+      "order": "Orden {{order}}",
+      "focus": "Enfocar",
+      "show": "Mostrar",
+      "hide": "Ocultar",
+      "unlock": "Desbloquear",
+      "lock": "Bloquear",
+      "footerHint": "Bloquear una capa desactiva el arrastre. Las capas ocultas no se renderizan en el lienzo."
+    },
+    "root": {
+      "searchAria": "Buscar acciones de la barra de comandos",
+      "searchPlaceholder": "Buscar acciones, {{appName}}, código o herramientas del lienzo...",
+      "resultsAria": "Resultados de búsqueda de la barra de comandos",
+      "quickActionsAria": "Acciones rápidas de la barra de comandos",
+      "results": "Resultados",
+      "noMatchingCommands": "No hay comandos que coincidan con \"{{query}}\""
     }
   },
   "settingsModal": {
@@ -889,6 +1040,8 @@
     "edges": "{{count}} conexiones",
     "starter": "Inicial",
     "starterTemplate": "Plantilla inicial",
+    "bestFirstEdits": "Primeras ediciones recomendadas",
+    "perfectFor": "Ideal para",
     "useTemplate": "Usar plantilla",
     "closePreview": "Cerrar vista previa de plantilla"
   },
@@ -898,6 +1051,31 @@
     "connection": "Conexión",
     "noSelection": "Nada seleccionado",
     "selectHint": "Haz clic en un nodo o una arista para editar sus propiedades"
+  },
+  "properties": {
+    "title": "Properties",
+    "shape": "Shape",
+    "color": "Color",
+    "icon": "Icon",
+    "rotation": "Rotation",
+    "transparency": "Transparency",
+    "imageSettings": "Image Settings",
+    "bulkShape": "Bulk Shape",
+    "bulkColor": "Bulk Color",
+    "bulkIcon": "Bulk Icon",
+    "labelTransform": "Label Transform",
+    "findReplace": "Find & Replace",
+    "findLabel": "Find",
+    "findPlaceholder": "Find text",
+    "replaceLabel": "Replace",
+    "replacePlaceholder": "Replace with",
+    "prefixOptional": "Prefix (optional)",
+    "suffixOptional": "Suffix (optional)",
+    "useRegex": "Use Regex",
+    "applyToSelectedNodes": "Apply to selected nodes",
+    "selectFieldToApply": "Select a field to apply",
+    "previewSummary": "Preview summary",
+    "selectionSummary": "Resumen de selección"
   },
   "flowCanvas": {
     "strictModePasteBlocked": "El modo estricto de arquitectura bloqueó el pegado de Mermaid. Abre la vista de código, corrige los diagnósticos y vuelve a intentarlo."
@@ -918,6 +1096,7 @@
     "items": "items",
     "addCommentsHere": "Añade aquí tus comentarios.",
     "newSection": "Nueva sección",
+    "section": "Sección",
     "text": "Text",
     "image": "Image",
     "mindmap": "Tema"

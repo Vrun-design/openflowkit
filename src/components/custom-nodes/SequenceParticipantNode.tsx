@@ -6,6 +6,7 @@ import { useInlineNodeTextEdit } from '@/hooks/useInlineNodeTextEdit';
 import { InlineTextEditSurface } from '@/components/InlineTextEditSurface';
 import { NodeChrome } from '@/components/NodeChrome';
 import { getTransformDiagnosticsAttrs } from '@/components/transformDiagnostics';
+import { resolveContainerVisualStyle } from '@/theme';
 
 // These constants are used by SequenceMessageEdge to position arrows correctly.
 export const SEQ_BOX_H = 48;
@@ -27,6 +28,12 @@ function SequenceParticipantNode({
   const labelEdit = useInlineNodeTextEdit(id, 'label', data.label || '');
   const isActor = data.seqParticipantKind === 'actor';
   const totalH = (isActor ? SEQ_ACTOR_EXTRA_H : 0) + SEQ_BOX_H + SEQ_LIFELINE_H;
+  const visualStyle = resolveContainerVisualStyle(
+    data.color,
+    data.colorMode || 'subtle',
+    data.customColor,
+    'slate'
+  );
 
   return (
     <NodeChrome
@@ -49,14 +56,18 @@ function SequenceParticipantNode({
         {/* Actor stick figure */}
         {isActor && (
           <div className="flex flex-col items-center pb-1 pt-1">
-            <User className="h-7 w-7 text-[var(--brand-secondary)]" strokeWidth={1.5} />
+            <User className="h-7 w-7" strokeWidth={1.5} style={{ color: visualStyle.accentText }} />
           </div>
         )}
 
         {/* Participant box */}
         <div
-          className="flex w-full items-center justify-center rounded border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 shadow-sm"
-          style={{ height: SEQ_BOX_H }}
+          className="flex w-full items-center justify-center rounded border px-3 shadow-sm"
+          style={{
+            height: SEQ_BOX_H,
+            borderColor: visualStyle.border,
+            backgroundColor: visualStyle.bg,
+          }}
         >
           <InlineTextEditSurface
             isEditing={labelEdit.isEditing}
@@ -66,7 +77,8 @@ function SequenceParticipantNode({
             onDraftChange={labelEdit.setDraft}
             onCommit={labelEdit.commit}
             onKeyDown={labelEdit.handleKeyDown}
-            className="w-full truncate text-center text-[12px] font-semibold text-[var(--brand-text)]"
+            className="w-full truncate text-center text-[12px] font-semibold"
+            style={{ color: visualStyle.text }}
             inputClassName="text-center text-[12px]"
             isSelected={Boolean(selected)}
           />
@@ -79,7 +91,7 @@ function SequenceParticipantNode({
             width: 1.5,
             height: SEQ_LIFELINE_H,
             background:
-              'repeating-linear-gradient(to bottom, var(--brand-secondary) 0px, var(--brand-secondary) 6px, transparent 6px, transparent 12px)',
+              `repeating-linear-gradient(to bottom, ${visualStyle.border} 0px, ${visualStyle.border} 6px, transparent 6px, transparent 12px)`,
           }}
         />
 
@@ -101,8 +113,15 @@ function SequenceParticipantNode({
               return (
                 <div
                   key={i}
-                  className="absolute rounded-sm bg-[var(--brand-primary)]/10 border border-[var(--brand-primary)]/20"
-                  style={{ width: 12, left: -6, top: y, height: h }}
+                  className="absolute rounded-sm border"
+                  style={{
+                    width: 12,
+                    left: -6,
+                    top: y,
+                    height: h,
+                    backgroundColor: visualStyle.badgeBg,
+                    borderColor: visualStyle.border,
+                  }}
                 />
               );
             })}

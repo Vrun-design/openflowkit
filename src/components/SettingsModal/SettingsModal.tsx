@@ -1,22 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Settings, Keyboard, PenSquare, WandSparkles } from 'lucide-react';
+import { X, Keyboard, PenSquare, WandSparkles } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { AISettings } from './AISettings';
 import { CanvasSettings } from './CanvasSettings';
-import { GeneralSettings } from './GeneralSettings';
 import { ShortcutsSettings } from './ShortcutsSettings';
 import { SidebarItem } from '../ui/SidebarItem';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: 'general' | 'canvas' | 'shortcuts' | 'ai';
+  initialTab?: 'canvas' | 'shortcuts' | 'ai';
 }
 
 interface OpenSettingsModalContentProps {
   onClose: () => void;
-  initialTab: 'general' | 'canvas' | 'shortcuts' | 'ai';
+  initialTab: 'canvas' | 'shortcuts' | 'ai';
 }
 
 function OpenSettingsModalContent({
@@ -24,7 +23,7 @@ function OpenSettingsModalContent({
   initialTab,
 }: OpenSettingsModalContentProps): React.ReactElement {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'general' | 'canvas' | 'shortcuts' | 'ai'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'canvas' | 'shortcuts' | 'ai'>(initialTab);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -55,15 +54,6 @@ function OpenSettingsModalContent({
           <h2 className="hidden md:block px-3 py-2 text-xs font-bold text-[var(--brand-secondary)] uppercase tracking-widest mb-2">
             {t('settingsModal.settings', 'Settings')}
           </h2>
-
-          <SidebarItem
-            icon={<Settings className="w-4 h-4" />}
-            isActive={activeTab === 'general'}
-            onClick={() => setActiveTab('general')}
-            className="whitespace-nowrap w-auto md:w-full px-4 md:px-3 py-2 md:py-2.5 flex-none"
-          >
-            {t('settingsModal.general', 'General')}
-          </SidebarItem>
 
           <SidebarItem
             icon={<PenSquare className="w-4 h-4" />}
@@ -102,8 +92,7 @@ function OpenSettingsModalContent({
             >
               {
                 {
-                  general: t('settingsModal.canvasSettings', 'Canvas Settings'),
-                  canvas: t('settings.canvas', 'Canvas'),
+                  canvas: t('settingsModal.canvasSettings', 'Canvas Settings'),
                   ai: t('settings.ai', 'AI'),
                   shortcuts: t('settingsModal.keyboardShortcuts', 'Keyboard Shortcuts'),
                 }[activeTab]
@@ -128,7 +117,6 @@ function OpenSettingsModalContent({
 
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className="p-6">
-              {activeTab === 'general' && <GeneralSettings />}
               {activeTab === 'canvas' && <CanvasSettings />}
               {activeTab === 'ai' && <AISettings />}
               {activeTab === 'shortcuts' && <ShortcutsSettings />}
@@ -151,7 +139,7 @@ function OpenSettingsModalContent({
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
-  initialTab = 'general',
+  initialTab = 'canvas',
 }) => {
   if (!isOpen) return null;
 

@@ -22,11 +22,11 @@ export function FinalCTASection({ onLaunch }: FinalCTASectionProps): React.React
     return () => window.clearInterval(interval);
   }, []);
 
-  const handleCopy = () => {
+  function handleCopy(): void {
     navigator.clipboard.writeText(CLONE_COMMAND);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2000);
-  };
+  }
 
   return (
     <section className="py-32 bg-white relative overflow-hidden border-t border-brand-border">
@@ -99,17 +99,17 @@ export function FinalCTASection({ onLaunch }: FinalCTASectionProps): React.React
                 {/* Simulated Output Steps */}
                 <div className="mt-4 space-y-1 text-xs md:text-sm text-white/50">
                   <div
-                    className={`transition-opacity duration-300 ${terminalStep >= 1 ? 'opacity-100' : 'opacity-0'}`}
+                    className={getTerminalStepClassName(terminalStep >= 1)}
                   >
                     <span className="text-gray-500">✔</span> Cloning into &apos;openflowkit&apos;...
                   </div>
                   <div
-                    className={`transition-opacity duration-300 ${terminalStep >= 2 ? 'opacity-100' : 'opacity-0'}`}
+                    className={getTerminalStepClassName(terminalStep >= 2)}
                   >
                     <span className="text-gray-500">✔</span> Remote: Enumerating objects...
                   </div>
                   <div
-                    className={`transition-opacity duration-300 ${terminalStep >= 3 ? 'opacity-100' : 'opacity-0'} text-green-400`}
+                    className={`${getTerminalStepClassName(terminalStep >= 3)} text-green-400`}
                   >
                     <span className="text-green-500">✔</span> Receiving objects: 100% done.
                   </div>
@@ -174,4 +174,8 @@ export function FinalCTASection({ onLaunch }: FinalCTASectionProps): React.React
       </div>
     </section>
   );
+}
+
+function getTerminalStepClassName(isVisible: boolean): string {
+  return `transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`;
 }

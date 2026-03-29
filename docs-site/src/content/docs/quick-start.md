@@ -8,15 +8,15 @@ This is the fastest reliable way to get productive if you are building software,
 
 ## 1. Start from the home screen
 
-The first screen is designed to get you to a useful draft in under a couple of minutes. From there you can:
+The first screen is the workspace home, not a forced blank diagram. From there you can:
 
 - create a blank flow
 - open an existing browser-stored flow
 - duplicate a saved flow
 - import a JSON diagram document
-- jump directly into templates or Flowpilot
+- jump directly into templates or AI-assisted generation paths
 
-Each document opens in its own editor tab.
+Each flow opens in the editor only after a real document exists.
 
 ## 2. Pick the strongest input you already have
 
@@ -24,7 +24,7 @@ OpenFlowKit works best when you start from the most truthful source available, t
 
 ### Template-first
 
-Use **Browse Templates** when you need a strong developer-oriented starting structure fast. The starter set includes release flows, incident runbooks, cloud diagrams, sequence flows, C4 context, and network-edge layouts.
+Use **Browse Templates** when you need a strong developer-oriented starting structure fast. The starter set is strongest for release flows, incident runbooks, cloud diagrams, sequence flows, C4 context, and architecture communication.
 
 ### Import or code-first
 
@@ -32,7 +32,7 @@ Use import or the Studio code flows when you already have a technical source art
 
 - Mermaid or OpenFlow DSL for editable diagram-as-code
 - SQL or OpenAPI for structured system drafts
-- Terraform or Kubernetes text for deterministic infra parsing
+- Terraform, source code, or infrastructure text for system and architecture imports
 - JSON/OpenFlow when you are restoring a saved graph exactly
 
 ### Prompt-to-diagram
@@ -50,7 +50,7 @@ If AI is not configured yet, use the **Add key** action to open the shared AI se
 
 ### Blank canvas and assets
 
-Use blank canvas when the structure is already in your head and visual iteration is faster than import. Open **Assets** from the Command Center to add sections, notes, wireframes, provider icons, and reusable building blocks.
+Use blank canvas when the structure is already in your head and visual iteration is faster than import. Open **Assets** from the Command Center to add developer logos, cloud-provider libraries, CNCF shapes, and icon packs into the current flow.
 
 ## 3. Refine the diagram visually
 
@@ -58,6 +58,7 @@ Once something is on the canvas:
 
 - move nodes into rough position
 - use the [Properties Panel](/properties-panel/) for exact edits and architecture metadata
+- use [Layers](/command-center/) and page tabs when the diagram needs more structure
 - run [Smart Layout](/smart-layout/) when the structure is right but spacing is rough
 - use the [Command Center](/command-center/) to search, switch workflows, or insert more assets
 

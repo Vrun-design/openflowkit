@@ -1,7 +1,11 @@
 import { Layout, Cloud, GitBranch, Monitor, Route, ShipWheel } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { FlowEdge, FlowNode } from '@/lib/types';
-import type { TemplateManifest } from './templateLibrary/types';
+import type {
+  TemplateDifficulty,
+  TemplateManifest,
+  TemplatePreviewVariant,
+} from './templateLibrary/types';
 import { createStarterTemplateRegistry } from './templateLibrary/starterTemplates';
 
 export interface FlowTemplate {
@@ -12,9 +16,14 @@ export interface FlowTemplate {
   msg: string;
   category: string;
   tags: string[];
-  audience?: 'developers' | 'builders';
-  useCase?: string;
-  launchPriority?: number;
+  audience: 'developers' | 'builders';
+  useCase: string;
+  launchPriority: number;
+  featured: boolean;
+  difficulty: TemplateDifficulty;
+  outcome: string;
+  replacementHints: string[];
+  previewVariant?: TemplatePreviewVariant;
   nodes: FlowNode[];
   edges: FlowEdge[];
 }
@@ -53,13 +62,22 @@ function mapTemplateManifestToFlowTemplate(template: TemplateManifest): FlowTemp
     audience: template.audience,
     useCase: template.useCase,
     launchPriority: template.launchPriority,
+    featured: template.featured,
+    difficulty: template.difficulty,
+    outcome: template.outcome,
+    replacementHints: [...template.replacementHints],
+    previewVariant: template.previewVariant,
     nodes: template.graph.nodes,
     edges: template.graph.edges,
   };
 }
 
 function compareTemplates(left: FlowTemplate, right: FlowTemplate): number {
-  const priorityDelta = (right.launchPriority ?? 0) - (left.launchPriority ?? 0);
+  if (left.featured !== right.featured) {
+    return left.featured ? -1 : 1;
+  }
+
+  const priorityDelta = right.launchPriority - left.launchPriority;
   if (priorityDelta !== 0) {
     return priorityDelta;
   }

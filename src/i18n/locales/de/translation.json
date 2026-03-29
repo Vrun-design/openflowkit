@@ -84,6 +84,9 @@
     "canvasSettings": "Canvas-Einstellungen",
     "wideLogo": "Ihr breites Logo",
     "uploadWideLogo": "Breites Logo in Markeneinstellungen hochladen",
+    "saveStatus": "Lokaler Speicherstatus",
+    "autoSaved": "Lokal gespeichert um {{time}}.",
+    "privacyShort": "Ihre Diagramme bleiben auf diesem Gerät und erreichen unsere Server nicht.",
     "beta": "BETA",
     "versionHistory": "Versionsverlauf",
     "loadJSON": "JSON laden",
@@ -153,7 +156,13 @@
     "hintCinematicVideo": "Dark launch-style build",
     "cinematicGif": "Cinematic Build GIF",
     "hintCinematicGif": "Dark social-ready loop",
-    "actionDownload": "Download"
+    "actionDownload": "Download",
+    "hintDocument": "Dokument",
+    "hintEditableSvg": "Bearbeitbares SVG",
+    "chooseFormat": "Format wählen",
+    "speed": "Geschwindigkeit",
+    "resolution": "Auflösung",
+    "transparentBackground": "Transparenter Hintergrund"
   },
   "import": {
     "title": "Importieren",
@@ -264,6 +273,7 @@
     "theme": "Design",
     "language": "Sprache",
     "selectLanguage": "Sprache auswählen",
+    "languageDescription": "Wählen Sie die Oberflächensprache der App.",
     "appearance": "Erscheinungsbild",
     "ai": "KI-Einstellungen",
     "analytics": "Analysen",
@@ -299,10 +309,22 @@
     "labelTransform": "Text-Transformation",
     "prefixOptional": "Präfix (optional)",
     "suffixOptional": "Suffix (optional)",
+    "findReplace": "Suchen und Ersetzen",
+    "findLabel": "Suchen",
+    "findPlaceholder": "Zu suchender Text",
+    "replaceLabel": "Ersetzen durch",
+    "replacePlaceholder": "Ersetzungstext",
+    "useRegex": "Regulären Ausdruck verwenden",
     "previewSummary": "Vorschau",
     "bulkApplySummary": "{{count}} ausgewählte Elemente werden aktualisiert",
     "selectFieldToApply": "Wählen Sie mindestens ein Feld zum Anwenden aus.",
-    "applyToSelectedNodes": "Auf ausgewählte Elemente anwenden"
+    "applyToSelectedNodes": "Auf ausgewählte Elemente anwenden",
+    "imageSettings": "Bildeinstellungen",
+    "transparency": "Transparenz",
+    "rotation": "Drehung"
+  },
+  "saveStatus": {
+    "saved": "Gespeichert"
   },
   "ai": {
     "generate": "Mit KI generieren",
@@ -636,6 +658,135 @@
       "exportModeDeterministic": "Deterministisch",
       "exportModeLegacy": "Legacy",
       "exportMode": "Exportmodus"
+    },
+    "aiStudio": {
+      "placeholders": {
+        "create": "Beschreibe das Diagramm, das du von Grund auf erstellen möchtest...",
+        "selectedEdit": "Beschreibe, was an dem ausgewählten Knoten {{count}} geändert werden soll...",
+        "edit": "Beschreibe eine Änderung, zum Beispiel: 'Redis zwischen API und DB hinzufügen'",
+        "empty": "Beschreibe ein Diagramm, das von Grund auf generiert werden soll..."
+      },
+      "applyEdit": "KI-Bearbeitung anwenden",
+      "generateDiagram": "Diagramm generieren",
+      "importReady": "Import bereit - Änderungen prüfen",
+      "addedCount": "{{count}} hinzugefügt",
+      "updatedCount": "{{count}} aktualisiert",
+      "removedCount": "{{count}} entfernt",
+      "discard": "Verwerfen",
+      "applyToCanvas": "Auf Canvas anwenden",
+      "emptyDescription": "Beschreibe das gewünschte Diagramm und {{appName}} erstellt den ersten Entwurf für dich.",
+      "editDescription": "Beschreibe die gewünschten Änderungen und {{appName}} aktualisiert das Diagramm für dich.",
+      "addKeyCta": "KI-Schlüssel hinzufügen, um zu starten",
+      "retrying": "Erneuter Versuch ({{retryCount}} von 3)...",
+      "generating": "Wird generiert...",
+      "editCurrent": "Aktuelles bearbeiten",
+      "editCurrentHint": "Dein bestehendes Canvas ändern",
+      "createNew": "Neu erstellen",
+      "createNewHint": "Mit einem neuen Diagramm neu beginnen",
+      "editingSelectedNodes": "{{count}} ausgewählten Knoten bearbeiten",
+      "uploadPreviewAlt": "Upload-Vorschau",
+      "attachImage": "Bild anhängen",
+      "cancelGeneration": "Generierung abbrechen"
+    },
+    "figmaImport": {
+      "invalidUrl": "Ungültige Figma-URL. Verwende einen Link im Format figma.com/file/... oder figma.com/design/....",
+      "tokenRequired": "Ein persönliches Zugriffstoken ist erforderlich.",
+      "unknownError": "Unbekannter Fehler",
+      "title": "Aus Figma importieren",
+      "fileUrlLabel": "Figma-Datei-URL",
+      "fileUrlPlaceholder": "https://www.figma.com/design/...",
+      "tokenLabel": "Persönliches Zugriffstoken",
+      "tokenHelpLink": "so erhältst du eins",
+      "tokenPlaceholder": "figd_...",
+      "tokenPrivacy": "Das Token wird nur in deinem Browser verwendet und niemals an unsere Server gesendet.",
+      "foundSummary": "{{colors}} Farben und {{fonts}} Textstile aus \"{{name}}\" gefunden",
+      "colors": "Farben",
+      "moreCount": "+{{count}} weitere",
+      "fonts": "Schriftarten",
+      "fetchingStyles": "Stile werden geladen...",
+      "fetchStyles": "Stile laden",
+      "applyToDesignSystem": "Auf Design-System anwenden"
+    },
+    "import": {
+      "placeholders": {
+        "sql": "Füge hier CREATE-TABLE-Anweisungen ein...",
+        "infra": "Füge hier Terraform-State-JSON, Kubernetes-YAML, Docker Compose oder Terraform-HCL ein...",
+        "openapi": "Füge hier dein OpenAPI-/Swagger-YAML oder -JSON ein...",
+        "code": "Füge hier deinen Quellcode ein..."
+      },
+      "infraFormats": {
+        "terraformState": "Terraform-State (.tfstate)",
+        "kubernetes": "Kubernetes YAML",
+        "dockerCompose": "Docker Compose",
+        "terraformHcl": "Terraform HCL (AI)"
+      },
+      "errors": {
+        "inputTooLarge": "Die Eingabe ist {{size}} groß - maximal {{max}} beim Einfügen.",
+        "fileTooLarge": "Die Datei ist {{size}} groß - maximal {{max}}.",
+        "terraformHclRequiresAi": "Terraform HCL erfordert eine KI-Analyse. Verwende die KI-Schaltfläche.",
+        "nativeNotAvailable": "Natives Parsing ist für diesen Typ nicht verfügbar.",
+        "parsingFailed": "Parsing fehlgeschlagen.",
+        "aiUnavailable": "KI-Analyse ist für diesen Typ nicht verfügbar.",
+        "aiFailed": "KI-Generierung fehlgeschlagen.",
+        "inputExceedsLimit": "Die Eingabe überschreitet das Limit von {{max}}. Kürze den Inhalt oder verwende eine kleinere Datei."
+      },
+      "categories": {
+        "sql": "SQL",
+        "infra": "Infra",
+        "openapi": "OpenAPI",
+        "code": "Code",
+        "codebase": "Repository"
+      },
+      "title": "Aus Daten importieren",
+      "description": "Importiere Code, Infrastruktur, SQL oder API-Spezifikationen in dein Diagramm.",
+      "uploadFile": "Datei hochladen",
+      "parsing": "Wird geparst...",
+      "parse": "Parsen",
+      "analyzing": "Wird analysiert...",
+      "aiActions": {
+        "generateErd": "ERD generieren (KI)",
+        "generateDiagram": "Diagramm generieren (KI)",
+        "generateSequence": "Sequenz generieren",
+        "analyzeArchitecture": "Architektur analysieren",
+        "analyzeProject": "Projekt analysieren"
+      },
+      "previewDsl": "DSL-Vorschau",
+      "appliedToCanvas": "Auf Canvas angewendet",
+      "applyToCanvas": "Auf Canvas anwenden"
+    },
+    "layers": {
+      "title": "Ebenen",
+      "newLayerName": "Neuer Ebenenname",
+      "add": "Hinzufügen",
+      "active": "Aktiv",
+      "visible": "Sichtbar",
+      "hidden": "Ausgeblendet",
+      "locked": "Gesperrt",
+      "unlocked": "Entsperrt",
+      "moveSelectedHere": "Auswahl hierher verschieben",
+      "selectLayer": "Ebene auswählen",
+      "up": "Nach oben",
+      "down": "Nach unten",
+      "sections": "Abschnitte",
+      "previousSection": "Vorheriger Abschnitt",
+      "nextSection": "Nächster Abschnitt",
+      "noSections": "Noch keine Abschnitte.",
+      "sectionFallbackName": "Abschnitt",
+      "order": "Reihenfolge {{order}}",
+      "focus": "Fokussieren",
+      "show": "Anzeigen",
+      "hide": "Ausblenden",
+      "unlock": "Entsperren",
+      "lock": "Sperren",
+      "footerHint": "Eine gesperrte Ebene kann nicht gezogen werden. Ausgeblendete Ebenen werden nicht auf dem Canvas gerendert."
+    },
+    "root": {
+      "searchAria": "Befehle in der Befehlsleiste suchen",
+      "searchPlaceholder": "Aktionen, {{appName}}, Code oder Canvas-Werkzeuge suchen...",
+      "resultsAria": "Befehlssuchergebnisse",
+      "quickActionsAria": "Schnellaktionen der Befehlsleiste",
+      "results": "Ergebnisse",
+      "noMatchingCommands": "Keine passenden Befehle für \"{{query}}\""
     }
   },
   "settingsModal": {
@@ -889,6 +1040,8 @@
     "edges": "{{count}} Verbindungen",
     "starter": "Starter",
     "starterTemplate": "Starter-Vorlage",
+    "bestFirstEdits": "Beste erste Anpassungen",
+    "perfectFor": "Ideal für",
     "useTemplate": "Vorlage verwenden",
     "closePreview": "Vorlagenvorschau schließen"
   },
@@ -898,6 +1051,31 @@
     "connection": "Verbindung",
     "noSelection": "Nichts ausgewählt",
     "selectHint": "Klicken Sie auf einen Knoten oder eine Kante, um deren Eigenschaften zu bearbeiten"
+  },
+  "properties": {
+    "title": "Properties",
+    "shape": "Shape",
+    "color": "Color",
+    "icon": "Icon",
+    "rotation": "Rotation",
+    "transparency": "Transparency",
+    "imageSettings": "Image Settings",
+    "bulkShape": "Bulk Shape",
+    "bulkColor": "Bulk Color",
+    "bulkIcon": "Bulk Icon",
+    "labelTransform": "Label Transform",
+    "findReplace": "Find & Replace",
+    "findLabel": "Find",
+    "findPlaceholder": "Find text",
+    "replaceLabel": "Replace",
+    "replacePlaceholder": "Replace with",
+    "prefixOptional": "Prefix (optional)",
+    "suffixOptional": "Suffix (optional)",
+    "useRegex": "Use Regex",
+    "applyToSelectedNodes": "Apply to selected nodes",
+    "selectFieldToApply": "Select a field to apply",
+    "previewSummary": "Preview summary",
+    "selectionSummary": "Auswahlübersicht"
   },
   "flowCanvas": {
     "strictModePasteBlocked": "Der Architektur-Strict-Mode hat das Mermaid-Einfügen blockiert. Öffnen Sie die Code-Ansicht, beheben Sie die Diagnosen und versuchen Sie es erneut."
@@ -918,6 +1096,7 @@
     "items": "items",
     "addCommentsHere": "Fügen Sie hier Ihre Kommentare hinzu.",
     "newSection": "Neuer Abschnitt",
+    "section": "Abschnitt",
     "text": "Text",
     "image": "Image",
     "mindmap": "Thema"

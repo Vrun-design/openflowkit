@@ -5,6 +5,7 @@ import { NodeActionButtons } from '@/components/properties/NodeActionButtons';
 import { toggleSection } from '@/components/properties/shared';
 import { EntityNodeSection } from './EntityNodeSection';
 import { CollapsibleSection } from '@/components/ui/CollapsibleSection';
+import { ColorPicker } from '@/components/properties/ColorPicker';
 import {
   INSPECTOR_BUTTON_CLASSNAME,
   INSPECTOR_INPUT_COMPACT_CLASSNAME,
@@ -12,7 +13,7 @@ import {
   InspectorSectionDivider,
 } from '@/components/properties/InspectorPrimitives';
 import { createPropertyInputKeyDownHandler } from '@/components/properties/propertyInputBehavior';
-import { Code, Table, Type } from 'lucide-react';
+import { Code, Palette, Table, Type } from 'lucide-react';
 
 export function ERDiagramNodeProperties({
   selectedNode,
@@ -70,6 +71,31 @@ export function ERDiagramNodeProperties({
           data={selectedNode.data}
           onChange={onChange}
           onGenerateEntityFields={onGenerateEntityFields}
+        />
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Color"
+        icon={<Palette className="w-3.5 h-3.5" />}
+        isOpen={activeSection === 'color'}
+        onToggle={() => setActiveSection((current) => toggleSection(current, 'color'))}
+      >
+        <ColorPicker
+          selectedColor={selectedNode.data.color}
+          selectedColorMode={selectedNode.data.colorMode}
+          selectedCustomColor={selectedNode.data.customColor}
+          onChange={(color) =>
+            onChange(selectedNode.id, {
+              color,
+              ...(color === 'custom' ? {} : { customColor: undefined }),
+            })
+          }
+          onColorModeChange={(colorMode) => onChange(selectedNode.id, { colorMode })}
+          onCustomColorChange={(customColor) =>
+            onChange(selectedNode.id, { color: 'custom', customColor })
+          }
+          allowModes={true}
+          allowCustom={true}
         />
       </CollapsibleSection>
 

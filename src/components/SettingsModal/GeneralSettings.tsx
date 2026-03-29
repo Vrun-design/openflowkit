@@ -1,9 +1,10 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Switch } from '../ui/Switch';
-import { Moon, Sun, Zap } from 'lucide-react';
+import { Globe, Moon, Sun, Zap } from 'lucide-react';
 import { useAnalyticsPreference } from '@/hooks/useAnalyticsPreference';
 import { useTheme } from '@/context/ThemeContext';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 type ThemeOption = {
   value: 'light' | 'dark' | 'system';
@@ -60,7 +61,7 @@ export function GeneralSettings(): React.ReactElement {
 
       <div>
         <h3 className="text-sm font-semibold text-[var(--brand-text)] mb-3">
-          {t('settings.theme', 'Appearance')}
+          {t('settings.appearance', 'Appearance')}
         </h3>
         <div className="grid grid-cols-3 gap-2">
           {themeOptions.map((option) => (
@@ -78,6 +79,31 @@ export function GeneralSettings(): React.ReactElement {
               {option.label}
             </button>
           ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold text-[var(--brand-text)] mb-3">
+          {t('settings.language', 'Language')}
+        </h3>
+        <div className="rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-4">
+          <div className="mb-4 flex items-start gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] text-[var(--brand-secondary)]">
+              <Globe className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-[var(--brand-text)]">
+                {t('settings.selectLanguage', 'Select Language')}
+              </p>
+              <p className="text-[11px] text-[var(--brand-secondary)]">
+                {t(
+                  'settings.languageDescription',
+                  'Choose the interface language used across the app.'
+                )}
+              </p>
+            </div>
+          </div>
+          <LanguageSelector variant="compact" />
         </div>
       </div>
     </div>

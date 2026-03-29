@@ -48,29 +48,17 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('AssetsView', () => {
-  it('shows general assets by default and switches to cloud tabs', async () => {
+  it('opens on developer assets and switches to cloud tabs', async () => {
     render(
       <AssetsView
         onClose={vi.fn()}
         handleBack={vi.fn()}
-        onAddAnnotation={vi.fn()}
-        onAddSection={vi.fn()}
-        onAddText={vi.fn()}
-        onAddJourney={vi.fn()}
-        onAddMindmap={vi.fn()}
-        onAddArchitecture={vi.fn()}
-        onAddSequence={vi.fn()}
-        onAddClassNode={vi.fn()}
-        onAddEntityNode={vi.fn()}
-        onAddImage={vi.fn()}
-        onAddBrowserWireframe={vi.fn()}
-        onAddMobileWireframe={vi.fn()}
         onAddDomainLibraryItem={vi.fn()}
       />
     );
 
-    expect(screen.getByText('Sticky Note')).toBeTruthy();
-    expect(screen.getByText('Architecture')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /DEVELOPER/i, selected: true })).toBeTruthy();
+    expect(screen.queryByText('Sticky Note')).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: /AWS/i }));
 
@@ -86,33 +74,22 @@ describe('AssetsView', () => {
       <AssetsView
         onClose={vi.fn()}
         handleBack={vi.fn()}
-        onAddAnnotation={vi.fn()}
-        onAddSection={vi.fn()}
-        onAddText={vi.fn()}
-        onAddJourney={vi.fn()}
-        onAddMindmap={vi.fn()}
-        onAddArchitecture={vi.fn()}
-        onAddSequence={vi.fn()}
-        onAddClassNode={vi.fn()}
-        onAddEntityNode={vi.fn()}
-        onAddImage={vi.fn()}
-        onAddBrowserWireframe={vi.fn()}
-        onAddMobileWireframe={vi.fn()}
         onAddDomainLibraryItem={vi.fn()}
       />
     );
 
     await waitFor(() => expect(screen.getByRole('tab', { name: /AWS/i })).toBeTruthy());
 
+    fireEvent.click(screen.getByRole('tab', { name: /AWS/i }));
     fireEvent.change(
-      screen.getByPlaceholderText('Search assets, icons, developer logos, AWS services, Azure diagrams...'),
+      screen.getByPlaceholderText('Search developer logos, AWS services, Azure diagrams, CNCF assets, icons...'),
       {
-        target: { value: 'mobile' },
+        target: { value: 'lambda' },
       }
     );
 
-    expect(screen.getByText('Mobile')).toBeTruthy();
-    expect(screen.queryByText('Sticky Note')).toBeNull();
+    expect(screen.getByRole('button', { name: /Compute Lambda/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Analytics Athena/i })).toBeNull();
   });
 
   it('supports pending multi-select before adding provider icons', async () => {
@@ -123,18 +100,6 @@ describe('AssetsView', () => {
       <AssetsView
         onClose={onClose}
         handleBack={vi.fn()}
-        onAddAnnotation={vi.fn()}
-        onAddSection={vi.fn()}
-        onAddText={vi.fn()}
-        onAddJourney={vi.fn()}
-        onAddMindmap={vi.fn()}
-        onAddArchitecture={vi.fn()}
-        onAddSequence={vi.fn()}
-        onAddClassNode={vi.fn()}
-        onAddEntityNode={vi.fn()}
-        onAddImage={vi.fn()}
-        onAddBrowserWireframe={vi.fn()}
-        onAddMobileWireframe={vi.fn()}
         onAddDomainLibraryItem={onAddDomainLibraryItem}
       />
     );

@@ -53,12 +53,12 @@ describe('section node utilities', () => {
 
     expect(section).toBeTruthy();
     expect(section?.type).toBe('section');
-    expect(section?.position).toEqual({ x: 168, y: 124 });
+    expect(section?.position).toEqual({ x: 168, y: 164 });
     expect(section?.style).toMatchObject({ width: 500, height: 400 });
     expect(childA?.parentId).toBe('section-1');
     expect(childA?.extent).toBe('parent');
-    expect(childA?.position).toEqual({ x: 32, y: 56 });
-    expect(childB?.position).toEqual({ x: 212, y: 136 });
+    expect(childA?.position).toEqual({ x: 32, y: 16 });
+    expect(childB?.position).toEqual({ x: 212, y: 96 });
   });
 
   it('parents a dragged node into the deepest section without auto-fitting manual sections', () => {
@@ -169,7 +169,7 @@ describe('section node utilities', () => {
     const fittedNodes = fitSectionToChildren(section, [section, child]);
     const fittedSection = fittedNodes.find((node) => node.id === 'section-1');
 
-    expect(fittedSection?.position).toEqual({ x: 308, y: 224 });
+    expect(fittedSection?.position).toEqual({ x: 308, y: 264 });
   });
 
   it('releases a child from its parent section while preserving absolute position', () => {

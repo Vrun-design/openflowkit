@@ -20,137 +20,31 @@ import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalo
 import {
     type AssetTab,
     CLOUD_TABS,
-    type GeneralAssetItem,
-    IMAGE_UPLOAD_INPUT_ID,
     MAX_CLOUD_RESULTS,
     TAB_ORDER,
-    getTileClass,
+    getTileInnerClass,
 } from './assetsViewConstants';
 import { useCloudAssetCatalog } from './useCloudAssetCatalog';
-import {
-    executeAddItem,
-    getAddItemsForScope,
-    type AddItemActions,
-} from '@/components/add-items/addItemRegistry';
 
 interface AssetsViewProps {
     onClose: () => void;
     handleBack: () => void;
-    onAddAnnotation: () => void;
-    onAddSection: () => void;
-    onAddText: () => void;
-    onAddJourney: () => void;
-    onAddMindmap: () => void;
-    onAddArchitecture: () => void;
-    onAddSequence: () => void;
-    onAddImage: (imageUrl: string) => void;
-    onAddBrowserWireframe: () => void;
-    onAddMobileWireframe: () => void;
-    onAddClassNode: () => void;
-    onAddEntityNode: () => void;
     onAddDomainLibraryItem: (item: DomainLibraryItem) => void;
 }
 
 export function AssetsView({
     onClose,
     handleBack,
-    onAddAnnotation,
-    onAddSection,
-    onAddText,
-    onAddJourney,
-    onAddMindmap,
-    onAddArchitecture,
-    onAddSequence,
-    onAddImage,
-    onAddBrowserWireframe,
-    onAddMobileWireframe,
-    onAddClassNode,
-    onAddEntityNode,
     onAddDomainLibraryItem,
 }: AssetsViewProps): React.ReactElement {
     const { t } = useTranslation();
     const [query, setQuery] = useState('');
-    const [activeTab, setActiveTab] = useState<AssetTab>('general');
+    const [activeTab, setActiveTab] = useState<AssetTab>('developer');
     const [categoryFilters, setCategoryFilters] = useState<Partial<Record<(typeof CLOUD_TABS)[number]['id'], string>>>({});
     const [pendingSelectionState, setPendingSelectionState] = useState<{ scope: string; ids: string[] }>({ scope: '', ids: [] });
     const { providerItems, providerLoadState, providerPreviewUrls, setProviderPreviewUrls, insertProviderItem } = useCloudAssetCatalog(onAddDomainLibraryItem);
 
-    function requestImageUpload(): void {
-        document.getElementById(IMAGE_UPLOAD_INPUT_ID)?.click();
-    }
-
-    function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>): void {
-        const file = event.target.files?.[0];
-        if (!file) {
-            return;
-        }
-
-        const reader = new FileReader();
-        reader.onload = (loadEvent) => {
-            const imageUrl = loadEvent.target?.result as string | undefined;
-            if (!imageUrl) {
-                return;
-            }
-            onAddImage(imageUrl);
-            onClose();
-        };
-        reader.readAsDataURL(file);
-        event.target.value = '';
-    }
-
-    const addItemActions: AddItemActions = useMemo(() => ({
-        onAddShape: () => undefined,
-        onAddAnnotation,
-        onAddSection,
-        onAddTextNode: onAddText,
-        onAddClassNode,
-        onAddEntityNode,
-        onAddMindmapNode: onAddMindmap,
-        onAddJourneyNode: onAddJourney,
-        onAddArchitectureNode: onAddArchitecture,
-        onAddSequenceParticipant: onAddSequence,
-        onAddWireframe: (variant) => {
-            if (variant === 'browser') {
-                onAddBrowserWireframe();
-                return;
-            }
-            onAddMobileWireframe();
-        },
-        onRequestImageUpload: requestImageUpload,
-    }), [
-        onAddAnnotation,
-        onAddArchitecture,
-        onAddBrowserWireframe,
-        onAddClassNode,
-        onAddEntityNode,
-        onAddJourney,
-        onAddMindmap,
-        onAddMobileWireframe,
-        onAddSection,
-        onAddSequence,
-        onAddText,
-    ]);
-
-    const generalItems: GeneralAssetItem[] = useMemo(() => (
-        getAddItemsForScope('assets', t).map((item) => ({
-            id: item.id,
-            label: item.label,
-            icon: item.renderIcon('h-5 w-5'),
-            keywords: item.keywords,
-            action: () => {
-                executeAddItem(item.id, addItemActions);
-                onClose();
-            },
-        }))
-    ), [addItemActions, onClose, t]);
-
     const normalizedQuery = query.trim().toLowerCase();
-
-    const filteredGeneralItems = generalItems.filter((item) => (
-        normalizedQuery.length === 0
-        || item.label.toLowerCase().includes(normalizedQuery)
-        || item.keywords.some((keyword) => keyword.includes(normalizedQuery))
-    ));
 
     const filteredCloudItems = useMemo(() => {
         return CLOUD_TABS.reduce<Record<(typeof CLOUD_TABS)[number]['id'], DomainLibraryItem[]>>((accumulator, tab) => {
@@ -183,24 +77,22 @@ export function AssetsView({
     const tabCounts = useMemo<Record<AssetTab, number>>(() => (
         hasActiveFilters
             ? {
-                general: filteredGeneralItems.length,
-                icons: filteredCloudItems.icons.length,
                 developer: filteredCloudItems.developer.length,
                 aws: filteredCloudItems.aws.length,
                 azure: filteredCloudItems.azure.length,
                 gcp: filteredCloudItems.gcp.length,
                 cncf: filteredCloudItems.cncf.length,
+                icons: filteredCloudItems.icons.length,
             }
             : {
-                general: generalItems.length,
-                icons: getDomainAssetCatalogCount('icons'),
                 developer: getDomainAssetCatalogCount('developer'),
                 aws: getDomainAssetCatalogCount('aws'),
                 azure: getDomainAssetCatalogCount('azure'),
                 gcp: getDomainAssetCatalogCount('gcp'),
                 cncf: getDomainAssetCatalogCount('cncf'),
+                icons: getDomainAssetCatalogCount('icons'),
             }
-    ), [filteredCloudItems, filteredGeneralItems.length, generalItems.length, hasActiveFilters]);
+    ), [filteredCloudItems, hasActiveFilters]);
     const tabItems = useMemo(() => TAB_ORDER.map((tab) => ({
         id: tab,
         label: tab.toUpperCase(),
@@ -208,11 +100,10 @@ export function AssetsView({
     })), [tabCounts]);
 
     const activeCloudTab = CLOUD_TABS.find((tab) => tab.id === activeTab);
-    const activeTabItems = useMemo(() => (
-        activeCloudTab
-            ? filteredCloudItems[activeCloudTab.id]
-            : []
-    ), [activeCloudTab, filteredCloudItems]);
+    const activeTabItems = useMemo(
+        () => (activeCloudTab ? filteredCloudItems[activeCloudTab.id] : []),
+        [activeCloudTab, filteredCloudItems]
+    );
     const visibleCloudItems = useMemo(
         () => (activeCloudTab ? activeTabItems.slice(0, MAX_CLOUD_RESULTS) : []),
         [activeCloudTab, activeTabItems]
@@ -265,18 +156,10 @@ export function AssetsView({
 
     return (
         <div className="flex h-full flex-col bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.06),_transparent_45%)]">
-            <input
-                id={IMAGE_UPLOAD_INPUT_ID}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageUpload}
-            />
-
             <ViewHeader
                 title={t('toolbar.assets', 'Assets')}
                 icon={<AssetsIcon className="h-4 w-4 text-[var(--brand-primary)]" />}
-                description="Insert supporting building blocks and reusable visual elements."
+                description="Browse reusable developer logos, cloud libraries, and icon packs."
                 onBack={handleBack}
                 onClose={onClose}
             />
@@ -286,7 +169,7 @@ export function AssetsView({
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     onKeyDown={(event) => event.stopPropagation()}
-                    placeholder="Search assets, icons, developer logos, AWS services, Azure diagrams..."
+                    placeholder="Search developer logos, AWS services, Azure diagrams, CNCF assets, icons..."
                 />
 
                 <SegmentedTabs
@@ -299,33 +182,7 @@ export function AssetsView({
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
-                {activeTab === 'general' ? (
-                    filteredGeneralItems.length > 0 ? (
-                        <div className="grid grid-cols-4 gap-3">
-                            {filteredGeneralItems.map((item) => (
-                                <button
-                                    key={item.id}
-                                    onClick={item.action}
-                                    className={getTileClass()}
-                                >
-                                    <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] text-[var(--brand-secondary)] transition-colors group-hover:border-[var(--brand-primary-200)] group-hover:bg-[var(--brand-surface)] group-hover:text-[var(--brand-primary)]">
-                                        {item.icon}
-                                    </div>
-                                    <div className="text-xs font-semibold text-[var(--brand-text)] group-hover:text-[var(--brand-primary-900)]">
-                                        {item.label}
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-brand-border)] bg-[var(--brand-surface)]/80 px-4 py-10 text-center">
-                            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-background)] text-[var(--brand-secondary)]">
-                                <Search className="h-4 w-4" />
-                            </div>
-                            <div className="mt-3 text-sm font-medium text-[var(--brand-text)]">No general assets found</div>
-                        </div>
-                    )
-                ) : activeCloudTab ? (
+                {activeCloudTab ? (
                     providerLoadState[activeCloudTab.id] === 'loading' && tabCounts[activeCloudTab.id] === 0 ? (
                         <div className="rounded-[var(--radius-lg)] border border-dashed border-[var(--color-brand-border)] bg-[var(--brand-surface)]/80 px-4 py-10 text-center">
                             <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-background)] text-[var(--brand-secondary)]">
@@ -376,49 +233,49 @@ export function AssetsView({
                                 </div>
                             ) : null}
                             <div className="grid grid-cols-6 gap-3">
-                            {visibleCloudItems.map((item) => (
-                                <Tooltip key={item.id} text={item.label}>
-                                    <button
-                                        aria-label={item.label}
-                                        onClick={async (event) => {
-                                            if (event.metaKey || event.ctrlKey) {
-                                                setPendingSelectionState((current) => {
-                                                    const currentIds = current.scope === selectionScope ? current.ids : [];
-                                                    return {
-                                                        scope: selectionScope,
-                                                        ids: currentIds.includes(item.id)
-                                                            ? currentIds.filter((value) => value !== item.id)
-                                                            : currentIds.concat(item.id),
-                                                    };
-                                                });
-                                                return;
-                                            }
+                                {visibleCloudItems.map((item) => (
+                                    <Tooltip key={item.id} text={item.label}>
+                                        <button
+                                            aria-label={item.label}
+                                            onClick={async (event) => {
+                                                if (event.metaKey || event.ctrlKey) {
+                                                    setPendingSelectionState((current) => {
+                                                        const currentIds = current.scope === selectionScope ? current.ids : [];
+                                                        return {
+                                                            scope: selectionScope,
+                                                            ids: currentIds.includes(item.id)
+                                                                ? currentIds.filter((value) => value !== item.id)
+                                                                : currentIds.concat(item.id),
+                                                        };
+                                                    });
+                                                    return;
+                                                }
 
-                                            await insertProviderItem(item);
-                                            if (pendingSelectionIds.length === 0) {
-                                                onClose();
-                                            }
-                                        }}
-                                        className={`group flex aspect-square items-center justify-center rounded-[var(--radius-lg)] border bg-[var(--brand-surface)] p-3 transition-colors hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-primary-50)] ${
-                                            pendingSelectionIds.includes(item.id)
-                                                ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-50)]'
-                                                : 'border-[var(--color-brand-border)]'
-                                        }`}
-                                    >
-                                        <div className="flex h-14 w-14 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] text-[var(--brand-secondary)] transition-colors group-hover:border-[var(--brand-primary-200)] group-hover:bg-[var(--brand-surface)] group-hover:text-[var(--brand-primary)]">
-                                            {providerPreviewUrls[item.id] ? (
-                                                <img src={providerPreviewUrls[item.id]} alt={`${item.label} icon`} className="h-10 w-10 object-contain" loading="lazy" />
-                                            ) : (
-                                                <NamedIcon
-                                                    name={item.icon}
-                                                    fallbackName={activeCloudTab.id === 'icons' ? item.icon : 'Box'}
-                                                    className="h-5 w-5"
-                                                />
-                                            )}
-                                        </div>
-                                    </button>
-                                </Tooltip>
-                            ))}
+                                                await insertProviderItem(item);
+                                                if (pendingSelectionIds.length === 0) {
+                                                    onClose();
+                                                }
+                                            }}
+                                            className={`group flex aspect-square items-center justify-center rounded-[var(--radius-lg)] border bg-[var(--brand-surface)] p-3 transition-colors hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-primary-50)] ${
+                                                pendingSelectionIds.includes(item.id)
+                                                    ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-50)]'
+                                                    : 'border-[var(--color-brand-border)]'
+                                            }`}
+                                        >
+                                            <div className={getTileInnerClass()}>
+                                                {providerPreviewUrls[item.id] ? (
+                                                    <img src={providerPreviewUrls[item.id]} alt={`${item.label} icon`} className="h-10 w-10 object-contain" loading="lazy" />
+                                                ) : (
+                                                    <NamedIcon
+                                                        name={item.icon}
+                                                        fallbackName={activeCloudTab.id === 'icons' ? item.icon : 'Box'}
+                                                        className="h-5 w-5"
+                                                    />
+                                                )}
+                                            </div>
+                                        </button>
+                                    </Tooltip>
+                                ))}
                             </div>
                             {cloudItemsHiddenCount > 0 ? (
                                 <div className="text-[11px] text-[var(--brand-secondary)]">

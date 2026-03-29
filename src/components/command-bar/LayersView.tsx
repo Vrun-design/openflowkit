@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Eye, EyeOff, Layers, Lock, LockOpen, MoveVertical, Plus, Trash2, SquareStack, Crosshair, ArrowDown, ArrowUp, SkipBack, SkipForward } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useFlowStore } from '@/store';
 import { ViewHeader } from './ViewHeader';
 import { useReactFlow } from '@/lib/reactflowCompat';
@@ -12,6 +13,7 @@ interface LayersViewProps {
 }
 
 export function LayersView({ onClose, handleBack }: LayersViewProps): React.ReactElement {
+    const { t } = useTranslation();
     const [newLayerName, setNewLayerName] = useState('');
     const [sectionCursorId, setSectionCursorId] = useState<string | null>(null);
     const { fitView } = useReactFlow();
@@ -132,7 +134,7 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
 
     return (
         <div className="flex h-full flex-col">
-            <ViewHeader title="Layers" icon={<Layers className="h-4 w-4 text-[var(--brand-primary)]" />} onBack={handleBack} />
+            <ViewHeader title={t('commandBar.layers.title', 'Layers')} icon={<Layers className="h-4 w-4 text-[var(--brand-primary)]" />} onBack={handleBack} />
 
             <div className="border-b border-[var(--color-brand-border)] px-4 py-2">
                 <div className="flex items-center gap-2">
@@ -145,7 +147,7 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
                                 handleAddLayer();
                             }
                         }}
-                        placeholder="New layer name"
+                        placeholder={t('commandBar.layers.newLayerName', 'New layer name')}
                         className="h-9 w-full rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-3 text-sm"
                     />
                     <button
@@ -153,7 +155,7 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
                         className="inline-flex h-9 items-center gap-1 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-3 text-xs font-medium"
                     >
                         <Plus className="h-3.5 w-3.5" />
-                        Add
+                        {t('commandBar.layers.add', 'Add')}
                     </button>
                 </div>
             </div>
@@ -176,7 +178,7 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
                                 onClick={() => setActiveLayerId(layer.id)}
                                 className="h-8 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] px-2 text-[11px]"
                             >
-                                Active
+                                {t('commandBar.layers.active', 'Active')}
                             </button>
                         </div>
 
@@ -186,39 +188,39 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
                                 className="inline-flex h-7 items-center gap-1 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-2 text-[11px]"
                             >
                                 {layer.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                                {layer.visible ? 'Visible' : 'Hidden'}
+                                {layer.visible ? t('commandBar.layers.visible', 'Visible') : t('commandBar.layers.hidden', 'Hidden')}
                             </button>
                             <button
                                 onClick={() => toggleLayerLock(layer.id)}
                                 className="inline-flex h-7 items-center gap-1 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-2 text-[11px]"
                             >
                                 {layer.locked ? <Lock className="h-3 w-3" /> : <LockOpen className="h-3 w-3" />}
-                                {layer.locked ? 'Locked' : 'Unlocked'}
+                                {layer.locked ? t('commandBar.layers.locked', 'Locked') : t('commandBar.layers.unlocked', 'Unlocked')}
                             </button>
                             <button
                                 onClick={() => moveSelectedNodesToLayer(layer.id)}
                                 className="inline-flex h-7 items-center gap-1 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-2 text-[11px]"
                             >
                                 <MoveVertical className="h-3 w-3" />
-                                Move Selected Here
+                                {t('commandBar.layers.moveSelectedHere', 'Move Selected Here')}
                             </button>
                             <button
                                 onClick={() => selectNodesInLayer(layer.id)}
                                 className="inline-flex h-7 items-center gap-1 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-2 text-[11px]"
                             >
-                                Select Layer
+                                {t('commandBar.layers.selectLayer', 'Select Layer')}
                             </button>
                             <button
                                 onClick={() => moveLayer(layer.id, 'up')}
                                 className="inline-flex h-7 items-center rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-2 text-[11px]"
                             >
-                                Up
+                                {t('commandBar.layers.up', 'Up')}
                             </button>
                             <button
                                 onClick={() => moveLayer(layer.id, 'down')}
                                 className="inline-flex h-7 items-center rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-2 text-[11px]"
                             >
-                                Down
+                                {t('commandBar.layers.down', 'Down')}
                             </button>
                             {layer.id !== 'default' && (
                                 <button
@@ -226,7 +228,7 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
                                     className="inline-flex h-7 items-center gap-1 rounded-[var(--brand-radius)] border border-red-200 bg-red-50 px-2 text-[11px] text-red-600"
                                 >
                                     <Trash2 className="h-3 w-3" />
-                                    Delete
+                                    {t('common.delete', 'Delete')}
                                 </button>
                             )}
                         </div>
@@ -237,20 +239,20 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
                     <div className="mb-3 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-sm font-semibold text-[var(--brand-text)]">
                             <SquareStack className="h-4 w-4 text-[var(--brand-primary)]" />
-                            Sections
+                            {t('commandBar.layers.sections', 'Sections')}
                         </div>
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={() => focusRelativeSection('prev')}
                                 className="inline-flex h-7 w-7 items-center justify-center rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)]"
-                                title="Previous section"
+                                title={t('commandBar.layers.previousSection', 'Previous section')}
                             >
                                 <SkipBack className="h-3.5 w-3.5" />
                             </button>
                             <button
                                 onClick={() => focusRelativeSection('next')}
                                 className="inline-flex h-7 w-7 items-center justify-center rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)]"
-                                title="Next section"
+                                title={t('commandBar.layers.nextSection', 'Next section')}
                             >
                                 <SkipForward className="h-3.5 w-3.5" />
                             </button>
@@ -260,7 +262,7 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
                     <div className="space-y-2">
                         {orderedSections.length === 0 ? (
                             <div className="rounded-[var(--brand-radius)] border border-dashed border-[var(--color-brand-border)] px-3 py-4 text-xs text-[var(--brand-secondary)]">
-                                No sections yet.
+                                {t('commandBar.layers.noSections', 'No sections yet.')}
                             </div>
                         ) : orderedSections.map(({ section, depth }) => (
                             <div
@@ -275,10 +277,13 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
                                 <div className="flex items-center gap-2">
                                     <div className="min-w-0 flex-1">
                                         <div className="truncate text-sm font-medium text-[var(--brand-text)]">
-                                            {section.data?.label || 'Section'}
+                                            {section.data?.label || t('commandBar.layers.sectionFallbackName', 'Section')}
                                         </div>
                                         <div className="text-[11px] text-[var(--brand-secondary)]">
-                                            Order {getSectionOrder(section)}
+                                            {t('commandBar.layers.order', {
+                                                order: getSectionOrder(section),
+                                                defaultValue: 'Order {{order}}',
+                                            })}
                                         </div>
                                     </div>
                                     <button
@@ -286,7 +291,7 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
                                         className="inline-flex h-7 items-center gap-1 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-2 text-[11px]"
                                     >
                                         <Crosshair className="h-3 w-3" />
-                                        Focus
+                                        {t('commandBar.layers.focus', 'Focus')}
                                     </button>
                                 </div>
 
@@ -296,28 +301,28 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
                                         className="inline-flex h-7 items-center gap-1 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-2 text-[11px]"
                                     >
                                         {section.data?.sectionHidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                                        {section.data?.sectionHidden ? 'Show' : 'Hide'}
+                                        {section.data?.sectionHidden ? t('commandBar.layers.show', 'Show') : t('commandBar.layers.hide', 'Hide')}
                                     </button>
                                     <button
                                         onClick={() => toggleSectionFlag(section.id, 'sectionLocked')}
                                         className="inline-flex h-7 items-center gap-1 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-2 text-[11px]"
                                     >
                                         {section.data?.sectionLocked ? <LockOpen className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                                        {section.data?.sectionLocked ? 'Unlock' : 'Lock'}
+                                        {section.data?.sectionLocked ? t('commandBar.layers.unlock', 'Unlock') : t('commandBar.layers.lock', 'Lock')}
                                     </button>
                                     <button
                                         onClick={() => moveSectionOrder(section.id, 'up')}
                                         className="inline-flex h-7 items-center gap-1 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-2 text-[11px]"
                                     >
                                         <ArrowUp className="h-3 w-3" />
-                                        Up
+                                        {t('commandBar.layers.up', 'Up')}
                                     </button>
                                     <button
                                         onClick={() => moveSectionOrder(section.id, 'down')}
                                         className="inline-flex h-7 items-center gap-1 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] bg-[var(--brand-surface)] px-2 text-[11px]"
                                     >
                                         <ArrowDown className="h-3 w-3" />
-                                        Down
+                                        {t('commandBar.layers.down', 'Down')}
                                     </button>
                                 </div>
                             </div>
@@ -327,12 +332,12 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
             </div>
 
             <div className="border-t border-[var(--color-brand-border)] px-4 py-2 text-[11px] text-[var(--brand-secondary)]">
-                Layer lock disables drag. Hidden layers are excluded from canvas render.
+                {t('commandBar.layers.footerHint', 'Layer lock disables drag. Hidden layers are excluded from canvas render.')}
                 <button
                     onClick={onClose}
                     className="ml-2 rounded-[var(--brand-radius)] border border-[var(--brand-secondary)] px-2 py-1 text-[11px]"
                 >
-                    Done
+                    {t('common.done', 'Done')}
                 </button>
             </div>
         </div>

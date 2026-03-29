@@ -84,6 +84,9 @@
     "canvasSettings": "画布设置",
     "wideLogo": "您的宽幅标志",
     "uploadWideLogo": "在品牌设置中上传宽幅标志",
+    "saveStatus": "本地保存状态",
+    "autoSaved": "已于 {{time}} 保存在本地。",
+    "privacyShort": "您的图表保留在此设备上，不会发送到我们的服务器。",
     "beta": "测试版",
     "versionHistory": "版本历史",
     "loadJSON": "加载 JSON",
@@ -153,7 +156,13 @@
     "hintCinematicVideo": "Dark launch-style build",
     "cinematicGif": "Cinematic Build GIF",
     "hintCinematicGif": "Dark social-ready loop",
-    "actionDownload": "Download"
+    "actionDownload": "Download",
+    "hintDocument": "文档",
+    "hintEditableSvg": "可编辑 SVG",
+    "chooseFormat": "选择格式",
+    "speed": "速度",
+    "resolution": "分辨率",
+    "transparentBackground": "透明背景"
   },
   "import": {
     "title": "导入",
@@ -264,6 +273,7 @@
     "theme": "主题",
     "language": "语言",
     "selectLanguage": "选择语言",
+    "languageDescription": "选择整个应用使用的界面语言。",
     "appearance": "外观",
     "ai": "AI 设置",
     "analytics": "分析",
@@ -299,10 +309,22 @@
     "labelTransform": "标签变换",
     "prefixOptional": "前缀（可选）",
     "suffixOptional": "后缀（可选）",
+    "findReplace": "查找和替换",
+    "findLabel": "查找",
+    "findPlaceholder": "要查找的文本",
+    "replaceLabel": "替换为",
+    "replacePlaceholder": "替换文本",
+    "useRegex": "使用正则表达式",
     "previewSummary": "预览摘要",
     "bulkApplySummary": "将更新已选择的 {{count}} 个项目",
     "selectFieldToApply": "请至少选择一个要应用的字段。",
-    "applyToSelectedNodes": "应用到所选项目"
+    "applyToSelectedNodes": "应用到所选项目",
+    "imageSettings": "图像设置",
+    "transparency": "透明度",
+    "rotation": "旋转"
+  },
+  "saveStatus": {
+    "saved": "已保存"
   },
   "ai": {
     "generate": "使用 AI 生成",
@@ -636,6 +658,135 @@
       "exportModeDeterministic": "确定性",
       "exportModeLegacy": "旧版",
       "exportMode": "导出模式"
+    },
+    "aiStudio": {
+      "placeholders": {
+        "create": "请描述你想从零开始创建的图表...",
+        "selectedEdit": "请描述你想对这 {{count}} 个已选节点做哪些修改...",
+        "edit": "请描述一个修改，例如“在 API 和数据库之间添加 Redis”",
+        "empty": "请描述一个要从零生成的图表..."
+      },
+      "applyEdit": "应用 AI 编辑",
+      "generateDiagram": "生成图表",
+      "importReady": "导入已就绪 - 请检查更改",
+      "addedCount": "已添加 {{count}} 项",
+      "updatedCount": "已更新 {{count}} 项",
+      "removedCount": "已删除 {{count}} 项",
+      "discard": "丢弃",
+      "applyToCanvas": "应用到画布",
+      "emptyDescription": "描述你想要的图表，{{appName}} 会先为你起草第一版。",
+      "editDescription": "描述你想要的改动，{{appName}} 会为你更新图表。",
+      "addKeyCta": "添加 AI 密钥以开始生成",
+      "retrying": "正在重试（第 {{retryCount}} / 3 次）...",
+      "generating": "生成中...",
+      "editCurrent": "编辑当前内容",
+      "editCurrentHint": "修改你当前的画布",
+      "createNew": "新建",
+      "createNewHint": "从一个新图表重新开始",
+      "editingSelectedNodes": "正在编辑 {{count}} 个已选节点",
+      "uploadPreviewAlt": "上传预览",
+      "attachImage": "附加图片",
+      "cancelGeneration": "取消生成"
+    },
+    "figmaImport": {
+      "invalidUrl": "无效的 Figma URL。请使用 figma.com/file/... 或 figma.com/design/... 链接。",
+      "tokenRequired": "需要个人访问令牌。",
+      "unknownError": "未知错误",
+      "title": "从 Figma 导入",
+      "fileUrlLabel": "Figma 文件 URL",
+      "fileUrlPlaceholder": "https://www.figma.com/design/...",
+      "tokenLabel": "个人访问令牌",
+      "tokenHelpLink": "如何获取",
+      "tokenPlaceholder": "figd_...",
+      "tokenPrivacy": "该令牌仅在你的浏览器中使用，绝不会发送到我们的服务器。",
+      "foundSummary": "已从“{{name}}”中找到 {{colors}} 种颜色和 {{fonts}} 个文本样式",
+      "colors": "颜色",
+      "moreCount": "另外还有 +{{count}} 项",
+      "fonts": "字体",
+      "fetchingStyles": "正在获取样式...",
+      "fetchStyles": "获取样式",
+      "applyToDesignSystem": "应用到设计系统"
+    },
+    "import": {
+      "placeholders": {
+        "sql": "请在此粘贴 CREATE TABLE 语句...",
+        "infra": "请在此粘贴 Terraform state JSON、Kubernetes YAML、Docker Compose 或 Terraform HCL...",
+        "openapi": "请在此粘贴你的 OpenAPI / Swagger YAML 或 JSON...",
+        "code": "请在此粘贴你的源代码..."
+      },
+      "infraFormats": {
+        "terraformState": "Terraform State (.tfstate)",
+        "kubernetes": "Kubernetes YAML",
+        "dockerCompose": "Docker Compose",
+        "terraformHcl": "Terraform HCL (AI)"
+      },
+      "errors": {
+        "inputTooLarge": "输入大小为 {{size}}，粘贴上限为 {{max}}。",
+        "fileTooLarge": "文件大小为 {{size}}，上限为 {{max}}。",
+        "terraformHclRequiresAi": "Terraform HCL 需要 AI 分析。请使用 AI 按钮。",
+        "nativeNotAvailable": "此类型不支持原生解析。",
+        "parsingFailed": "解析失败。",
+        "aiUnavailable": "此类型不支持 AI 分析。",
+        "aiFailed": "AI 生成失败。",
+        "inputExceedsLimit": "输入超过了 {{max}} 的限制。请精简内容或使用更小的文件。"
+      },
+      "categories": {
+        "sql": "SQL",
+        "infra": "Infra",
+        "openapi": "OpenAPI",
+        "code": "Code",
+        "codebase": "仓库"
+      },
+      "title": "从数据导入",
+      "description": "将代码、基础设施、SQL 或 API 规格导入到你的图表中。",
+      "uploadFile": "上传文件",
+      "parsing": "解析中...",
+      "parse": "解析",
+      "analyzing": "分析中...",
+      "aiActions": {
+        "generateErd": "生成 ERD（AI）",
+        "generateDiagram": "生成图表（AI）",
+        "generateSequence": "生成时序图",
+        "analyzeArchitecture": "分析架构",
+        "analyzeProject": "分析项目"
+      },
+      "previewDsl": "预览 DSL",
+      "appliedToCanvas": "已应用到画布",
+      "applyToCanvas": "应用到画布"
+    },
+    "layers": {
+      "title": "图层",
+      "newLayerName": "新图层名称",
+      "add": "添加",
+      "active": "当前",
+      "visible": "可见",
+      "hidden": "隐藏",
+      "locked": "已锁定",
+      "unlocked": "未锁定",
+      "moveSelectedHere": "将所选内容移到这里",
+      "selectLayer": "选择图层",
+      "up": "上移",
+      "down": "下移",
+      "sections": "分区",
+      "previousSection": "上一个分区",
+      "nextSection": "下一个分区",
+      "noSections": "还没有分区。",
+      "sectionFallbackName": "分区",
+      "order": "顺序 {{order}}",
+      "focus": "聚焦",
+      "show": "显示",
+      "hide": "隐藏",
+      "unlock": "解锁",
+      "lock": "锁定",
+      "footerHint": "锁定图层后将无法拖动。隐藏图层不会参与画布渲染。"
+    },
+    "root": {
+      "searchAria": "搜索命令栏操作",
+      "searchPlaceholder": "搜索操作、{{appName}}、代码或画布工具...",
+      "resultsAria": "命令搜索结果",
+      "quickActionsAria": "命令快捷操作",
+      "results": "结果",
+      "noMatchingCommands": "没有与“{{query}}”匹配的命令"
     }
   },
   "settingsModal": {
@@ -889,6 +1040,8 @@
     "edges": "{{count}} 条连接",
     "starter": "入门",
     "starterTemplate": "入门模板",
+    "bestFirstEdits": "建议优先修改",
+    "perfectFor": "适合用于",
     "useTemplate": "使用模板",
     "closePreview": "关闭模板预览"
   },
@@ -898,6 +1051,31 @@
     "connection": "连接",
     "noSelection": "未选择任何内容",
     "selectHint": "点击节点或连线以编辑其属性"
+  },
+  "properties": {
+    "title": "Properties",
+    "shape": "Shape",
+    "color": "Color",
+    "icon": "Icon",
+    "rotation": "Rotation",
+    "transparency": "Transparency",
+    "imageSettings": "Image Settings",
+    "bulkShape": "Bulk Shape",
+    "bulkColor": "Bulk Color",
+    "bulkIcon": "Bulk Icon",
+    "labelTransform": "Label Transform",
+    "findReplace": "Find & Replace",
+    "findLabel": "Find",
+    "findPlaceholder": "Find text",
+    "replaceLabel": "Replace",
+    "replacePlaceholder": "Replace with",
+    "prefixOptional": "Prefix (optional)",
+    "suffixOptional": "Suffix (optional)",
+    "useRegex": "Use Regex",
+    "applyToSelectedNodes": "Apply to selected nodes",
+    "selectFieldToApply": "Select a field to apply",
+    "previewSummary": "Preview summary",
+    "selectionSummary": "选择摘要"
   },
   "flowCanvas": {
     "strictModePasteBlocked": "架构严格模式已阻止 Mermaid 粘贴。请打开代码视图，修复诊断后重试。"
@@ -918,6 +1096,7 @@
     "items": "items",
     "addCommentsHere": "在这里添加你的评论。",
     "newSection": "新分区",
+    "section": "部分",
     "text": "Text",
     "image": "Image",
     "mindmap": "主题"

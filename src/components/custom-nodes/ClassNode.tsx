@@ -11,6 +11,7 @@ import { getStructuredListNavigationAction } from './structuredListNavigation';
 import { NodeQuickCreateButtons } from '@/components/NodeQuickCreateButtons';
 import { getClassVisibilityTone, parseClassMember } from '@/lib/classMembers';
 import { StructuredNodeHandles } from './StructuredNodeHandles';
+import { resolveContainerVisualStyle } from '@/theme';
 
 function getClassList(data: NodeData, key: 'classAttributes' | 'classMethods'): string[] {
   return Array.isArray(data[key]) ? data[key] : [];
@@ -27,6 +28,12 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
   const [editingMethodIndex, setEditingMethodIndex] = React.useState<number | null>(null);
   const [listDraft, setListDraft] = React.useState('');
   const classBaseMinHeight = 140;
+  const visualStyle = resolveContainerVisualStyle(
+    data.color,
+    data.colorMode || 'subtle',
+    data.customColor,
+    'slate'
+  );
   const estimatedAttributesHeight =
     attributes.length > 0 ? Math.min(attributes.length, 4) * 18 + 16 : 16;
   const estimatedMethodsHeight = methods.length > 0 ? Math.min(methods.length, 4) * 18 + 16 : 16;
@@ -152,7 +159,8 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
             {items.map((item, index) => (
               <li
                 key={`${key}-${index}`}
-                className="break-words font-mono text-xs text-[var(--brand-text)]"
+                className="break-words font-mono text-xs"
+                style={{ color: visualStyle.text }}
               >
                 {editingIndex === index ? (
                   <input
@@ -162,12 +170,14 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
                     onBlur={() => commitBlur(key)}
                     onMouseDown={(event) => event.stopPropagation()}
                     onKeyDown={(event) => handleListKeyDown(event, key, index)}
-                    className="w-full rounded border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-1 py-0.5 text-[var(--brand-text)] outline-none"
+                    className="w-full rounded border bg-[var(--brand-surface)] px-1 py-0.5 text-[var(--brand-text)] outline-none"
+                    style={{ borderColor: visualStyle.border }}
                   />
                 ) : (
                   <button
                     type="button"
-                    className="-mx-1 w-full rounded px-1 text-left hover:bg-[var(--brand-surface)]"
+                    className="-mx-1 w-full rounded px-1 text-left"
+                    style={{ color: visualStyle.text }}
                     onClick={(event) => {
                       event.stopPropagation();
                       beginEdit(key, index, item);
@@ -180,7 +190,7 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
             ))}
           </ul>
         ) : (
-          <div className="text-[11px] text-[var(--brand-secondary-light)]">{emptyLabel}</div>
+          <div className="text-[11px]" style={{ color: visualStyle.subText }}>{emptyLabel}</div>
         )}
         {editingIndex === items.length ? (
           <input
@@ -191,12 +201,14 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
             onMouseDown={(event) => event.stopPropagation()}
             onKeyDown={(event) => handleListKeyDown(event, key, items.length)}
             placeholder={placeholder}
-            className="mt-1 w-full rounded border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-1 py-0.5 text-xs font-mono text-[var(--brand-text)] outline-none"
+            className="mt-1 w-full rounded border bg-[var(--brand-surface)] px-1 py-0.5 text-xs font-mono text-[var(--brand-text)] outline-none"
+            style={{ borderColor: visualStyle.border }}
           />
         ) : (
           <button
             type="button"
-            className="mt-1 text-[11px] text-[var(--brand-secondary)] hover:text-[var(--brand-text)]"
+            className="mt-1 text-[11px]"
+            style={{ color: visualStyle.subText }}
             onClick={(event) => {
               event.stopPropagation();
               beginEdit(key, items.length, '');
@@ -218,8 +230,12 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
       />
 
       <div
-        className="relative bg-[var(--brand-background)] min-w-[220px] rounded-lg border border-[var(--color-brand-border)] shadow-sm"
-        style={{ minHeight: contentMinHeight }}
+        className="relative min-w-[220px] rounded-lg border shadow-sm"
+        style={{
+          minHeight: contentMinHeight,
+          backgroundColor: visualStyle.bg,
+          borderColor: visualStyle.border,
+        }}
         {...getTransformDiagnosticsAttrs({
           nodeFamily: 'class',
           selected: Boolean(selected),
@@ -228,7 +244,13 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
         })}
       >
         <NodeQuickCreateButtons nodeId={id} visible={Boolean(selected)} />
-        <div className="border-b border-[var(--color-brand-border)] px-3 py-2 text-center">
+        <div
+          className="border-b px-3 py-2 text-center"
+          style={{
+            borderColor: visualStyle.border,
+            backgroundColor: visualStyle.accentBg,
+          }}
+        >
           {data.classStereotype && (
             <InlineTextEditSurface
               isEditing={stereotypeEdit.isEditing}
@@ -238,7 +260,8 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
               onDraftChange={stereotypeEdit.setDraft}
               onCommit={stereotypeEdit.commit}
               onKeyDown={stereotypeEdit.handleKeyDown}
-              className="text-[10px] leading-tight text-[var(--brand-secondary)]"
+              className="text-[10px] leading-tight"
+              style={{ color: visualStyle.subText }}
               inputClassName="text-center"
               isSelected={Boolean(selected)}
             />
@@ -251,13 +274,14 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
             onDraftChange={labelEdit.setDraft}
             onCommit={labelEdit.commit}
             onKeyDown={labelEdit.handleKeyDown}
-            className="text-[13px] break-words font-semibold text-[var(--brand-text)]"
+            className="text-[13px] break-words font-semibold"
+            style={{ color: visualStyle.text }}
             inputClassName="text-center"
             isSelected={Boolean(selected)}
           />
         </div>
 
-        <div className="border-b border-[var(--color-brand-border)] px-3 py-2">
+        <div className="border-b px-3 py-2" style={{ borderColor: visualStyle.border }}>
           {renderListSection(
             'classAttributes',
             attributes,
@@ -268,7 +292,7 @@ function ClassNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
           )}
         </div>
 
-        <div className="px-3 py-2">
+        <div className="px-3 py-2" style={{ backgroundColor: visualStyle.hoverBg }}>
           {renderListSection(
             'classMethods',
             methods,

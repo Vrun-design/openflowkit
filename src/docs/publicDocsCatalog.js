@@ -2,8 +2,10 @@ export const PUBLIC_DOC_SECTIONS = [
     {
         title: 'Getting Started',
         items: [
-            { title: 'Introduction', slug: 'introduction' },
             { title: 'Quick Start', slug: 'quick-start' },
+            { title: 'Choose an Input Mode', slug: 'choose-input-mode' },
+            { title: 'Import from Structured Data', slug: 'import-from-data' },
+            { title: 'Introduction', slug: 'introduction' },
             { title: 'Local-First Diagramming', slug: 'local-first-diagramming' },
         ],
     },
@@ -33,11 +35,9 @@ export const PUBLIC_DOC_SECTIONS = [
     {
         title: 'Imports & Code Workflows',
         items: [
-            { title: 'Choose an Input Mode', slug: 'choose-input-mode' },
             { title: 'OpenFlow DSL', slug: 'openflow-dsl' },
             { title: 'Mermaid Integration', slug: 'mermaid-integration' },
             { title: 'Mermaid vs OpenFlow', slug: 'mermaid-vs-openflow' },
-            { title: 'Import from Structured Data', slug: 'import-from-data' },
             { title: 'Infrastructure Sync', slug: 'infra-sync' },
             { title: 'Figma Design Import', slug: 'figma-design-import' },
         ],
@@ -45,7 +45,7 @@ export const PUBLIC_DOC_SECTIONS = [
     {
         title: 'Templates, Assets & Branding',
         items: [
-            { title: 'Templates & Starter Flows', slug: 'templates-assets' },
+            { title: 'Templates & Asset Libraries', slug: 'templates-assets' },
             { title: 'Design Systems & Branding', slug: 'design-systems-branding' },
         ],
     },

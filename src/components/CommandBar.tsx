@@ -57,18 +57,18 @@ function OpenCommandBarContent({
   onOpenStudioOpenFlow,
   onOpenStudioMermaid,
   initialView = 'root',
-  onAddAnnotation,
-  onAddSection,
-  onAddText,
-  onAddJourney,
-  onAddMindmap,
-  onAddArchitecture,
-  onAddSequence,
-  onAddClassNode,
-  onAddEntityNode,
-  onAddImage,
-  onAddBrowserWireframe,
-  onAddMobileWireframe,
+  onAddAnnotation: _onAddAnnotation,
+  onAddSection: _onAddSection,
+  onAddText: _onAddText,
+  onAddJourney: _onAddJourney,
+  onAddMindmap: _onAddMindmap,
+  onAddArchitecture: _onAddArchitecture,
+  onAddSequence: _onAddSequence,
+  onAddClassNode: _onAddClassNode,
+  onAddEntityNode: _onAddEntityNode,
+  onAddImage: _onAddImage,
+  onAddBrowserWireframe: _onAddBrowserWireframe,
+  onAddMobileWireframe: _onAddMobileWireframe,
   onAddDomainLibraryItem,
   onCodeAnalysis,
   onSqlAnalysis,
@@ -197,18 +197,6 @@ function OpenCommandBarContent({
             <LazyAssetsView
               onClose={onClose}
               handleBack={handleBack}
-              onAddAnnotation={() => onAddAnnotation?.()}
-              onAddSection={() => onAddSection?.()}
-              onAddText={() => onAddText?.()}
-              onAddJourney={() => onAddJourney?.()}
-              onAddMindmap={() => onAddMindmap?.()}
-              onAddArchitecture={() => onAddArchitecture?.()}
-              onAddSequence={() => onAddSequence?.()}
-              onAddClassNode={() => onAddClassNode?.()}
-              onAddEntityNode={() => onAddEntityNode?.()}
-              onAddImage={(imageUrl) => onAddImage?.(imageUrl)}
-              onAddBrowserWireframe={() => onAddBrowserWireframe?.()}
-              onAddMobileWireframe={() => onAddMobileWireframe?.()}
               onAddDomainLibraryItem={(item) => onAddDomainLibraryItem?.(item)}
             />
           </Suspense>

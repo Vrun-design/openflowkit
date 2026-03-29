@@ -1,11 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { Node } from '@/lib/reactflowCompat';
 import { NodeData } from '@/lib/types';
-import { Box, Palette, Star, Image as ImageStart, Eye, EyeOff, Lock, LockOpen, Maximize2, FolderInput, ArrowUpRight } from 'lucide-react';
+import { Box, Palette, Star, Image as ImageStart } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ShapeSelector } from './ShapeSelector';
 import { ColorPicker } from './ColorPicker';
-import { IconPicker } from './IconPicker';
+import { IconPicker, type ProviderIconSelection } from './IconPicker';
 import { ImageUpload } from './ImageUpload';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { useMarkdownEditor } from '@/hooks/useMarkdownEditor';
@@ -13,7 +13,6 @@ import { useAssetCatalog } from '@/hooks/useAssetCatalog';
 import { NodeActionButtons } from './NodeActionButtons';
 import { NodeContentSection } from './NodeContentSection';
 import { NodeImageSettingsSection } from './NodeImageSettingsSection';
-import { NodeTextStyleSection } from './NodeTextStyleSection';
 import { NodeWireframeVariantSection } from './NodeWireframeVariantSection';
 import { InspectorSectionDivider } from './InspectorPrimitives';
 import { Tooltip } from '../Tooltip';
@@ -25,6 +24,7 @@ import { NamedIcon } from '../IconMap';
 import { createPropertyInputKeyDownHandler } from './propertyInputBehavior';
 import { IconSearchField, IconTileScrollGrid } from './IconTilePickerPrimitives';
 import { getNodeParentId } from '@/lib/nodeParent';
+import { buildSectionActions } from './sectionActionBuilder';
 
 interface NodePropertiesProps {
   selectedNode: Node<NodeData>;
@@ -50,54 +50,28 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
   const isText = selectedNode.type === 'text';
   const isImage = selectedNode.type === 'image';
   const isSection = selectedNode.type === 'section';
+  const isGroup = selectedNode.type === 'group';
   const isWireframeApp = selectedNode.type === 'browser' || selectedNode.type === 'mobile';
   const isIconAssetNode = selectedNode.data?.assetPresentation === 'icon';
   const assetProvider = (selectedNode.data?.assetProvider || '') as DomainLibraryCategory;
   const supportsAdvancedColorTheme = ['process', 'start', 'end', 'decision', 'custom'].includes(
     selectedNode.type || ''
   );
+  const supportsColorMode =
+    supportsAdvancedColorTheme || isSection || isGroup;
+  const supportsCustomColor = supportsAdvancedColorTheme || isText || isSection || isGroup || isAnnotation;
   const parentSectionId = getNodeParentId(selectedNode);
-  const sectionActions = isSection
-    ? [
-        {
-          id: 'fit-section',
-          label: 'Fit Contents',
-          icon: <Maximize2 className="w-4 h-4" />,
-          onClick: () => onFitSectionToContents?.(selectedNode.id),
-        },
-        {
-          id: 'bring-into-section',
-          label: 'Bring Inside',
-          icon: <FolderInput className="w-4 h-4" />,
-          onClick: () => onBringContentsIntoSection?.(selectedNode.id),
-        },
-        {
-          id: 'toggle-hidden',
-          label: selectedNode.data?.sectionHidden ? 'Show Section' : 'Hide Section',
-          icon: selectedNode.data?.sectionHidden
-            ? <Eye className="w-4 h-4" />
-            : <EyeOff className="w-4 h-4" />,
-          onClick: () =>
-            onChange(selectedNode.id, { sectionHidden: selectedNode.data?.sectionHidden !== true }),
-        },
-        {
-          id: 'toggle-locked',
-          label: selectedNode.data?.sectionLocked ? 'Unlock Section' : 'Lock Section',
-          icon: selectedNode.data?.sectionLocked
-            ? <LockOpen className="w-4 h-4" />
-            : <Lock className="w-4 h-4" />,
-          onClick: () =>
-            onChange(selectedNode.id, { sectionLocked: selectedNode.data?.sectionLocked !== true }),
-        },
-      ]
-    : parentSectionId
-      ? [{
-          id: 'release-from-section',
-          label: 'Release',
-          icon: <ArrowUpRight className="w-4 h-4" />,
-          onClick: () => onReleaseFromSection?.(selectedNode.id),
-        }]
-      : [];
+  const sectionActions = buildSectionActions({
+    isSection,
+    parentSectionId,
+    nodeId: selectedNode.id,
+    sectionHidden: selectedNode.data?.sectionHidden,
+    sectionLocked: selectedNode.data?.sectionLocked,
+    onFitSectionToContents,
+    onBringContentsIntoSection,
+    onReleaseFromSection,
+    onChange,
+  });
 
   const {
     items: assetItems,
@@ -136,19 +110,13 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
   const [activeSectionsByNode, setActiveSectionsByNode] = useState<Record<string, string>>({});
   const activeSection = activeSectionsByNode[selectedNode.id] ?? getDefaultSection();
 
-  const toggleSection = (section: string) => {
+  function toggleSection(section: string): void {
     const currentSection = activeSectionsByNode[selectedNode.id] ?? getDefaultSection();
-    let nextSection = '';
-    if (section === 'typography') {
-      nextSection = currentSection === 'content-typography' ? 'content' : 'content-typography';
-    } else {
-      nextSection = currentSection === section ? '' : section;
-    }
     setActiveSectionsByNode((prev) => ({
       ...prev,
-      [selectedNode.id]: nextSection,
+      [selectedNode.id]: currentSection === section ? '' : section,
     }));
-  };
+  }
 
   const labelInputRef = useRef<HTMLTextAreaElement>(null);
   const descInputRef = useRef<HTMLTextAreaElement>(null);
@@ -165,7 +133,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
     selectedNode.data?.subLabel || ''
   );
 
-  const handleStyleAction = (action: 'bold' | 'italic') => {
+  function handleStyleAction(action: 'bold' | 'italic'): void {
     if (activeField === 'label') {
       if (action === 'bold') labelEditor.insert('**', '**');
       else labelEditor.insert('_', '_');
@@ -184,7 +152,40 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
         });
       }
     }
-  };
+  }
+
+  function handleBuiltInIconChange(icon: string): void {
+    onChange(selectedNode.id, {
+      icon,
+      customIconUrl: undefined,
+      archIconPackId: undefined,
+      archIconShapeId: undefined,
+      assetProvider: undefined,
+      assetCategory: undefined,
+    });
+  }
+
+  function handleProviderIconChange(selection: ProviderIconSelection): void {
+    onChange(selectedNode.id, {
+      icon: undefined,
+      customIconUrl: undefined,
+      archIconPackId: selection.packId,
+      archIconShapeId: selection.shapeId,
+      assetProvider: selection.provider,
+      assetCategory: selection.category,
+    });
+  }
+
+  function handleCustomIconChange(url?: string): void {
+    onChange(selectedNode.id, {
+      icon: undefined,
+      customIconUrl: url,
+      archIconPackId: undefined,
+      archIconShapeId: undefined,
+      assetProvider: undefined,
+      assetCategory: undefined,
+    });
+  }
 
   return (
     <>
@@ -329,17 +330,6 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
         onLabelKeyDown={labelEditor.handleKeyDown}
         onDescKeyDown={descEditor.handleKeyDown}
       />
-
-      {/* Text Styling for Text Node */}
-      {isText && (
-        <NodeTextStyleSection
-          selectedNode={selectedNode}
-          isOpen={activeSection === 'textStyle'}
-          onToggle={() => toggleSection('textStyle')}
-          onChange={onChange}
-        />
-      )}
-
       {!isImage && !isWireframeApp && !isIconAssetNode && (
         <CollapsibleSection
           title={t('properties.color', 'Color')}
@@ -358,17 +348,17 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
               })
             }
             onColorModeChange={
-              supportsAdvancedColorTheme
+              supportsColorMode
                 ? (colorMode) => onChange(selectedNode.id, { colorMode })
                 : undefined
             }
             onCustomColorChange={
-              supportsAdvancedColorTheme
+              supportsCustomColor
                 ? (customColor) => onChange(selectedNode.id, { color: 'custom', customColor })
                 : undefined
             }
-            allowModes={supportsAdvancedColorTheme}
-            allowCustom={supportsAdvancedColorTheme}
+            allowModes={supportsColorMode}
+            allowCustom={supportsCustomColor}
           />
         </CollapsibleSection>
       )}
@@ -383,8 +373,13 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
           <IconPicker
             selectedIcon={selectedNode.data?.icon}
             customIconUrl={selectedNode.data?.customIconUrl}
-            onChange={(icon) => onChange(selectedNode.id, { icon })}
-            onCustomIconChange={(url) => onChange(selectedNode.id, { customIconUrl: url })}
+            selectedProvider={selectedNode.data?.assetProvider as DomainLibraryCategory | undefined}
+            selectedProviderCategory={selectedNode.data?.assetCategory as string | undefined}
+            selectedProviderPackId={selectedNode.data?.archIconPackId as string | undefined}
+            selectedProviderShapeId={selectedNode.data?.archIconShapeId as string | undefined}
+            onSelectBuiltInIcon={handleBuiltInIconChange}
+            onSelectProviderIcon={handleProviderIconChange}
+            onCustomIconChange={handleCustomIconChange}
           />
         </CollapsibleSection>
       )}

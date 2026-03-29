@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Node } from '@/lib/reactflowCompat';
 import { Image as ImageIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { NodeData } from '@/lib/types';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { PropertySliderRow } from './PropertySliderRow';
@@ -18,15 +19,17 @@ export function NodeImageSettingsSection({
     onToggle,
     onChange,
 }: NodeImageSettingsSectionProps): React.ReactElement {
+    const { t } = useTranslation();
+
     return (
         <CollapsibleSection
-            title="Image Settings"
+            title={t('properties.imageSettings', 'Image Settings')}
             icon={<ImageIcon className="w-3.5 h-3.5" />}
             isOpen={isOpen}
             onToggle={onToggle}
         >
             <PropertySliderRow
-                label="Transparency"
+                label={t('properties.transparency', 'Transparency')}
                 valueLabel={`${Math.round((1 - (selectedNode.data?.transparency ?? 1)) * 100)}%`}
                 value={selectedNode.data?.transparency ?? 1}
                 min={0.1}
@@ -37,7 +40,7 @@ export function NodeImageSettingsSection({
             />
 
             <PropertySliderRow
-                label="Rotation"
+                label={t('properties.rotation', 'Rotation')}
                 valueLabel={`${selectedNode.data?.rotation ?? 0}°`}
                 value={selectedNode.data?.rotation ?? 0}
                 min={0}

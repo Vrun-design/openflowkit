@@ -9,52 +9,51 @@ import { createTabActions } from './store/actions/createTabActions';
 import { createWorkspaceDocumentActions } from './store/actions/createWorkspaceDocumentActions';
 import { createViewActions } from './store/actions/createViewActions';
 import { installWorkspaceDocumentSync } from './store/documentStateSync';
-import {
-    DEFAULT_AI_SETTINGS,
-    DEFAULT_DESIGN_SYSTEM,
-} from './store/defaults';
+import { DEFAULT_AI_SETTINGS, DEFAULT_DESIGN_SYSTEM } from './store/defaults';
 import type { FlowState } from './store/types';
 import { createFlowPersistStorage } from '@/services/storage/flowPersistStorage';
 import {
-    createInitialFlowState,
-    migratePersistedFlowState,
-    partializePersistedFlowState,
+  createInitialFlowState,
+  migratePersistedFlowState,
+  partializePersistedFlowState,
 } from './store/persistence';
 
-export {
-    DEFAULT_AI_SETTINGS,
-    DEFAULT_DESIGN_SYSTEM,
-};
+export { DEFAULT_AI_SETTINGS, DEFAULT_DESIGN_SYSTEM };
 export type {
-    AIProvider,
-    AISettings,
-    AISettingsStorageMode,
-    CustomHeaderConfig,
-    FlowState as FlowStoreState,
-    ViewSettings,
+  AIProvider,
+  AISettings,
+  AISettingsStorageMode,
+  CustomHeaderConfig,
+  FlowState as FlowStoreState,
+  ViewSettings,
 } from './store/types';
 
 export const useFlowStore = create<FlowState>()(
-    persist(
-        (set, get) => ({
-            ...createInitialFlowState(),
-            ...createCanvasActions(set, get),
-            ...createHistoryActions(set, get),
-            ...createWorkspaceDocumentActions(set, get),
-            ...createTabActions(set, get),
-            ...createDesignSystemActions(set),
-            ...createViewActions(set),
-            ...createLayerActions(set, get),
-            ...createAIAndSelectionActions(set),
-        }),
-        {
-            name: 'openflowkit-storage',
-            storage: createFlowPersistStorage(),
-            version: 2,
-            migrate: (persistedState) => migratePersistedFlowState(persistedState),
-            partialize: (state) => partializePersistedFlowState(state),
-        }
-    )
+  persist(
+    (set, get) => ({
+      ...createInitialFlowState(),
+      ...createCanvasActions(set, get),
+      ...createHistoryActions(set, get),
+      ...createWorkspaceDocumentActions(set, get),
+      ...createTabActions(set, get),
+      ...createDesignSystemActions(set),
+      ...createViewActions(set),
+      ...createLayerActions(set, get),
+      ...createAIAndSelectionActions(set),
+      updateLastSaveTime: () => set({ lastUpdateTime: Date.now() }),
+    }),
+    createFlowStorePersistOptions()
+  )
 );
 
 installWorkspaceDocumentSync(useFlowStore);
+
+function createFlowStorePersistOptions() {
+  return {
+    name: 'openflowkit-storage',
+    storage: createFlowPersistStorage(),
+    version: 2,
+    migrate: (persistedState: unknown) => migratePersistedFlowState(persistedState),
+    partialize: (state: FlowState) => partializePersistedFlowState(state),
+  };
+}

@@ -341,7 +341,7 @@ describe('flow store tab actions', () => {
             activeTabId: string;
         };
 
-        expect(state.activeTabId).toBe('tab-a');
+        expect(state.activeTabId).toBe('');
     });
 
     it('migrates malformed persisted tabs to a safe fallback tab', async () => {
@@ -359,11 +359,8 @@ describe('flow store tab actions', () => {
             activeTabId: string;
         };
 
-        expect(state.tabs).toHaveLength(1);
-        expect(state.tabs[0].id).toBe('tab-1');
-        expect(state.tabs[0].history.past).toEqual([]);
-        expect(state.tabs[0].history.future).toEqual([]);
-        expect(state.activeTabId).toBe('tab-1');
+        expect(state.tabs).toHaveLength(0);
+        expect(state.activeTabId).toBe('');
     });
 });
 

@@ -114,6 +114,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     handleAlignNodes,
     handleDistributeNodes,
     handleGroupNodes,
+    handleWrapInSection,
     onReconnect,
     onNodeDrag,
     handleAddImage,
@@ -125,6 +126,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     setConnectMenu,
     contextMenu,
     onNodeContextMenu,
+    onSelectionContextMenu,
     onPaneContextMenu,
     onEdgeContextMenu,
     onPaneClick,
@@ -147,6 +149,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     handleAlignNodes,
     handleDistributeNodes,
     handleGroupNodes,
+    handleWrapInSection,
     nodes,
   });
   useEffect(() => {
@@ -284,6 +287,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
         onNodeClick={onCanvasEntityIntent}
         onEdgeClick={onCanvasEntityIntent}
         onNodeContextMenu={onNodeContextMenu}
+        onSelectionContextMenu={onSelectionContextMenu}
         onPaneContextMenu={onPaneContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
         onPaneClick={onPaneClick}

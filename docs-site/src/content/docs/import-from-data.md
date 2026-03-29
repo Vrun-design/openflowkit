@@ -1,10 +1,10 @@
 ---
 draft: false
 title: Import from Structured Data
-description: Turn SQL, OpenAPI, Terraform, and Kubernetes source text into editable diagrams from the Studio import flows.
+description: Turn SQL, OpenAPI, Terraform, code, and other structured source text into editable diagrams from the Studio import flows.
 ---
 
-The structured import flows in Studio convert source text into editable diagrams. This is useful when you already have SQL, OpenAPI, Terraform, or Kubernetes-related content and want a visual model quickly.
+The structured import flows in Studio convert source text into editable diagrams. This is useful when you already have SQL, OpenAPI, Terraform, code, or infrastructure-oriented content and want a visual model quickly.
 
 ## How it works
 
@@ -13,7 +13,7 @@ Paste your source text, choose the matching mode, and generate the diagram. Depe
 One common pipeline is:
 
 ```text
-Your text → specialized prompt → AI model → DSL → ELK layout → canvas
+Your text → specialized import flow → DSL or graph model → layout → canvas
 ```
 
 All your existing AI provider and API key settings apply.
@@ -34,6 +34,17 @@ Flowpilot will:
 ## OpenAPI and service-structure imports
 
 Use OpenAPI import when you want a service or endpoint-level first pass from an existing API spec.
+
+## Code and architecture imports
+
+Use code-oriented import paths when you want a draft that reflects application structure instead of hand-drawing from scratch. This is a good fit for:
+
+- backend service relationships
+- module or package boundaries
+- API-to-database handoffs
+- architecture review prep before cleanup on the canvas
+
+These imports are best treated as editable first drafts, not perfect final diagrams.
 
 ## When to choose this flow
 

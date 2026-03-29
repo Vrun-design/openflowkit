@@ -7,6 +7,7 @@ interface TooltipProps {
   side?: 'top' | 'bottom' | 'left' | 'right';
   sideOffset?: number;
   className?: string;
+  contentClassName?: string;
 }
 
 type TooltipSide = NonNullable<TooltipProps['side']>;
@@ -49,6 +50,7 @@ export function Tooltip({
   side = 'top',
   sideOffset = 8,
   className = '',
+  contentClassName = '',
 }: TooltipProps): React.ReactElement {
   const triggerRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -164,7 +166,7 @@ export function Tooltip({
               }}
             >
               <div
-                className="relative whitespace-nowrap rounded-md px-2.5 py-1.5 text-[11px] font-medium leading-none tracking-wide"
+                className={`relative rounded-md px-2.5 py-1.5 text-[11px] font-medium tracking-wide ${contentClassName}`.trim()}
                 style={{
                   background: 'var(--brand-text)',
                   color: 'var(--brand-surface)',

@@ -11,6 +11,7 @@ import {
 } from './handleInteraction';
 import { NodeTransformControls } from './NodeTransformControls';
 import { useActiveNodeSelection } from './useActiveNodeSelection';
+import { resolveSectionVisualStyle } from '@/theme';
 
 const GROUP_HANDLE_CONFIG: Array<{
   id: string;
@@ -28,6 +29,7 @@ function GroupNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
   const { setNodes } = useReactFlow();
   const allNodes = useNodes();
   const isActiveSelected = useActiveNodeSelection(Boolean(selected));
+  const visualStyle = resolveSectionVisualStyle(data.color, data.colorMode, data.customColor, 'violet');
   const handlePointerEvents = getHandlePointerEvents(true, isActiveSelected);
   const handleVisibilityClass = getV2HandleVisibilityClass(isActiveSelected, {
     includeConnectingState: false,
@@ -70,37 +72,47 @@ function GroupNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
           minWidth: 300,
           minHeight: collapsed ? 60 : 200,
           height: collapsed ? 60 : '100%',
-          backgroundColor: collapsed ? '#f8fafc' : '#f1f5f9',
-          borderColor: '#a5b4fc',
+          backgroundColor: visualStyle.bg,
+          borderColor: visualStyle.border,
         }}
       >
         {/* Header */}
         <div
-          className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none hover:bg-indigo-50/50 transition-colors"
+          className="flex items-center gap-2 px-4 py-3 cursor-pointer select-none transition-colors"
           onClick={toggleCollapse}
-          style={{ borderBottom: collapsed ? 'none' : '2px dashed #a5b4fc', pointerEvents: 'auto' }}
+          style={{
+            borderBottom: collapsed ? 'none' : `2px dashed ${visualStyle.border}`,
+            pointerEvents: 'auto',
+            backgroundColor: collapsed ? 'transparent' : `${visualStyle.badgeBg}55`,
+          }}
         >
-          <button className="p-0.5 rounded hover:bg-indigo-100 transition-colors">
+          <button className="p-0.5 rounded transition-colors" style={{ color: visualStyle.title }}>
             {collapsed ? (
-              <ChevronRight className="w-4 h-4 text-[var(--brand-primary)] flow-lod-far-target" />
+              <ChevronRight className="w-4 h-4 flow-lod-far-target" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-[var(--brand-primary)] flow-lod-far-target" />
+              <ChevronDown className="w-4 h-4 flow-lod-far-target" />
             )}
           </button>
           {collapsed ? (
-            <FolderClosed className="w-4 h-4 text-[var(--brand-primary)] flow-lod-far-target" />
+            <FolderClosed className="w-4 h-4 flow-lod-far-target" style={{ color: visualStyle.title }} />
           ) : (
-            <FolderOpen className="w-4 h-4 text-[var(--brand-primary)] flow-lod-far-target" />
+            <FolderOpen className="w-4 h-4 flow-lod-far-target" style={{ color: visualStyle.title }} />
           )}
-          <span className="font-bold text-sm text-indigo-700 tracking-tight">
+          <span className="font-bold text-sm tracking-tight" style={{ color: visualStyle.title }}>
             {data.label || 'Group'}
           </span>
           {data.subLabel && (
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 flow-lod-secondary">
+            <span
+              className="text-xs font-medium px-2 py-0.5 rounded-full flow-lod-secondary"
+              style={{
+                backgroundColor: visualStyle.badgeBg,
+                color: visualStyle.badgeText,
+              }}
+            >
               {data.subLabel}
             </span>
           )}
-          <span className="ml-auto text-[10px] font-medium text-indigo-400 flow-lod-secondary">
+          <span className="ml-auto text-[10px] font-medium flow-lod-secondary" style={{ color: visualStyle.title }}>
             {childCount} {childCount === 1 ? 'node' : 'nodes'}
           </span>
         </div>

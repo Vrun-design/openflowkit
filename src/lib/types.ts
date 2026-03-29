@@ -82,6 +82,10 @@ export interface NodeData {
   fontFamily?: string;
   fontWeight?: string; // 'normal', 'bold', '100'-'900'
   fontStyle?: string; // 'normal', 'italic'
+  subLabelFontSize?: string;
+  subLabelFontFamily?: string;
+  subLabelFontWeight?: string; // 'normal', 'bold', '100'-'900'
+  subLabelFontStyle?: string; // 'normal', 'italic'
   backgroundColor?: string;
   transparency?: number; // 0-1
   variant?: string; // wireframe preset key (e.g. 'landing', 'modal')

@@ -19,6 +19,7 @@ interface UseFlowCanvasMenusAndActionsParams {
     handleAlignNodes: (direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
     handleDistributeNodes: (direction: 'horizontal' | 'vertical') => void;
     handleGroupNodes: () => void;
+    handleWrapInSection: () => void;
     nodes: Node[];
 }
 
@@ -39,6 +40,7 @@ export function useFlowCanvasMenusAndActions({
     handleAlignNodes,
     handleDistributeNodes,
     handleGroupNodes,
+    handleWrapInSection,
     nodes,
 }: UseFlowCanvasMenusAndActionsParams) {
     const menus = useFlowCanvasMenus({
@@ -62,6 +64,7 @@ export function useFlowCanvasMenusAndActions({
         handleAlignNodes,
         handleDistributeNodes,
         handleGroupNodes,
+        handleWrapInSection,
         nodes,
     });
 

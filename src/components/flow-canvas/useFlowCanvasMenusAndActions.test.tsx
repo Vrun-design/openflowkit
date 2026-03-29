@@ -23,6 +23,7 @@ describe('useFlowCanvasMenusAndActions', () => {
                 handleAlignNodes: vi.fn(),
                 handleDistributeNodes: vi.fn(),
                 handleGroupNodes: vi.fn(),
+                handleWrapInSection: vi.fn(),
                 nodes: [],
             })
         );
@@ -68,6 +69,7 @@ describe('useFlowCanvasMenusAndActions', () => {
                 handleAlignNodes: vi.fn(),
                 handleDistributeNodes: vi.fn(),
                 handleGroupNodes: vi.fn(),
+                handleWrapInSection: vi.fn(),
                 nodes: [
                     {
                         id: 'section-1',

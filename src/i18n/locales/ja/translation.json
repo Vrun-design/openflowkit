@@ -84,6 +84,9 @@
     "canvasSettings": "キャンバス設定",
     "wideLogo": "ワイドロゴ",
     "uploadWideLogo": "ブランド設定でワイドロゴをアップロード",
+    "saveStatus": "ローカル保存ステータス",
+    "autoSaved": "{{time}} にローカル保存済み。",
+    "privacyShort": "図はこの端末に保存され、当社のサーバーには送信されません。",
     "beta": "ベータ",
     "versionHistory": "バージョン履歴",
     "loadJSON": "JSONを読む",
@@ -153,7 +156,13 @@
     "hintCinematicVideo": "Dark launch-style build",
     "cinematicGif": "Cinematic Build GIF",
     "hintCinematicGif": "Dark social-ready loop",
-    "actionDownload": "Download"
+    "actionDownload": "Download",
+    "hintDocument": "ドキュメント",
+    "hintEditableSvg": "編集可能な SVG",
+    "chooseFormat": "形式を選択",
+    "speed": "速度",
+    "resolution": "解像度",
+    "transparentBackground": "透明な背景"
   },
   "import": {
     "title": "インポート",
@@ -264,6 +273,7 @@
     "theme": "テーマ",
     "language": "言語",
     "selectLanguage": "言語を選択",
+    "languageDescription": "アプリ全体で使用する表示言語を選択します。",
     "appearance": "外観",
     "ai": "AI設定",
     "analytics": "分析",
@@ -299,10 +309,22 @@
     "labelTransform": "ラベル変換",
     "prefixOptional": "接頭辞（任意）",
     "suffixOptional": "接尾辞（任意）",
+    "findReplace": "検索と置換",
+    "findLabel": "検索",
+    "findPlaceholder": "検索するテキスト",
+    "replaceLabel": "置換後の文字列",
+    "replacePlaceholder": "置換テキスト",
+    "useRegex": "正規表現を使用",
     "previewSummary": "プレビュー",
     "bulkApplySummary": "選択中の {{count}} 項目を更新します",
     "selectFieldToApply": "適用する項目を少なくとも 1 つ選択してください。",
-    "applyToSelectedNodes": "選択した項目に適用"
+    "applyToSelectedNodes": "選択した項目に適用",
+    "imageSettings": "画像設定",
+    "transparency": "透明度",
+    "rotation": "回転"
+  },
+  "saveStatus": {
+    "saved": "保存済み"
   },
   "ai": {
     "generate": "AIで生成",
@@ -636,6 +658,135 @@
       "exportModeDeterministic": "決定的",
       "exportModeLegacy": "従来方式",
       "exportMode": "エクスポートモード"
+    },
+    "aiStudio": {
+      "placeholders": {
+        "create": "最初から作成したい図を説明してください...",
+        "selectedEdit": "選択中の {{count}} 個のノードをどう変更したいか説明してください...",
+        "edit": "変更内容を説明してください。例:「API と DB の間に Redis を追加」",
+        "empty": "最初から生成したい図を説明してください..."
+      },
+      "applyEdit": "AI 編集を適用",
+      "generateDiagram": "図を生成",
+      "importReady": "インポートの準備ができました - 変更を確認してください",
+      "addedCount": "{{count}} 件追加",
+      "updatedCount": "{{count}} 件更新",
+      "removedCount": "{{count}} 件削除",
+      "discard": "破棄",
+      "applyToCanvas": "キャンバスに適用",
+      "emptyDescription": "必要な図を説明すると、{{appName}} が最初のグラフ案を作成します。",
+      "editDescription": "必要な変更を説明すると、{{appName}} が図を更新します。",
+      "addKeyCta": "開始するには AI キーを追加",
+      "retrying": "再試行中 ({{retryCount}} / 3)...",
+      "generating": "生成中...",
+      "editCurrent": "現在の図を編集",
+      "editCurrentHint": "現在のキャンバスを変更します",
+      "createNew": "新規作成",
+      "createNewHint": "新しい図で最初から始める",
+      "editingSelectedNodes": "選択中の {{count}} 個のノードを編集中",
+      "uploadPreviewAlt": "アップロードプレビュー",
+      "attachImage": "画像を添付",
+      "cancelGeneration": "生成をキャンセル"
+    },
+    "figmaImport": {
+      "invalidUrl": "無効な Figma URL です。figma.com/file/... または figma.com/design/... のリンクを使用してください。",
+      "tokenRequired": "個人アクセストークンが必要です。",
+      "unknownError": "不明なエラー",
+      "title": "Figma からインポート",
+      "fileUrlLabel": "Figma ファイル URL",
+      "fileUrlPlaceholder": "https://www.figma.com/design/...",
+      "tokenLabel": "個人アクセストークン",
+      "tokenHelpLink": "取得方法",
+      "tokenPlaceholder": "figd_...",
+      "tokenPrivacy": "トークンはブラウザー内でのみ使用され、当社サーバーへ送信されることはありません。",
+      "foundSummary": "\"{{name}}\" から {{colors}} 色と {{fonts}} 個のテキストスタイルを検出しました",
+      "colors": "色",
+      "moreCount": "+{{count}} 件",
+      "fonts": "フォント",
+      "fetchingStyles": "スタイルを取得中...",
+      "fetchStyles": "スタイルを取得",
+      "applyToDesignSystem": "デザインシステムに適用"
+    },
+    "import": {
+      "placeholders": {
+        "sql": "ここに CREATE TABLE 文を貼り付けてください...",
+        "infra": "ここに Terraform state JSON、Kubernetes YAML、Docker Compose、または Terraform HCL を貼り付けてください...",
+        "openapi": "ここに OpenAPI / Swagger の YAML または JSON を貼り付けてください...",
+        "code": "ここにソースコードを貼り付けてください..."
+      },
+      "infraFormats": {
+        "terraformState": "Terraform State (.tfstate)",
+        "kubernetes": "Kubernetes YAML",
+        "dockerCompose": "Docker Compose",
+        "terraformHcl": "Terraform HCL (AI)"
+      },
+      "errors": {
+        "inputTooLarge": "入力サイズは {{size}} です。貼り付けの上限は {{max}} です。",
+        "fileTooLarge": "ファイルサイズは {{size}} です。上限は {{max}} です。",
+        "terraformHclRequiresAi": "Terraform HCL には AI 解析が必要です。AI ボタンを使用してください。",
+        "nativeNotAvailable": "この種類ではネイティブ解析を利用できません。",
+        "parsingFailed": "解析に失敗しました。",
+        "aiUnavailable": "この種類では AI 解析を利用できません。",
+        "aiFailed": "AI 生成に失敗しました。",
+        "inputExceedsLimit": "入力が {{max}} の上限を超えています。内容を減らすか、より小さいファイルを使用してください。"
+      },
+      "categories": {
+        "sql": "SQL",
+        "infra": "Infra",
+        "openapi": "OpenAPI",
+        "code": "Code",
+        "codebase": "リポジトリ"
+      },
+      "title": "データからインポート",
+      "description": "コード、インフラ、SQL、または API 仕様を図に取り込みます。",
+      "uploadFile": "ファイルをアップロード",
+      "parsing": "解析中...",
+      "parse": "解析",
+      "analyzing": "分析中...",
+      "aiActions": {
+        "generateErd": "ERD を生成 (AI)",
+        "generateDiagram": "図を生成 (AI)",
+        "generateSequence": "シーケンスを生成",
+        "analyzeArchitecture": "アーキテクチャを分析",
+        "analyzeProject": "プロジェクトを分析"
+      },
+      "previewDsl": "DSL プレビュー",
+      "appliedToCanvas": "キャンバスに適用しました",
+      "applyToCanvas": "キャンバスに適用"
+    },
+    "layers": {
+      "title": "レイヤー",
+      "newLayerName": "新しいレイヤー名",
+      "add": "追加",
+      "active": "アクティブ",
+      "visible": "表示",
+      "hidden": "非表示",
+      "locked": "ロック済み",
+      "unlocked": "ロック解除済み",
+      "moveSelectedHere": "選択項目をここへ移動",
+      "selectLayer": "レイヤーを選択",
+      "up": "上へ",
+      "down": "下へ",
+      "sections": "セクション",
+      "previousSection": "前のセクション",
+      "nextSection": "次のセクション",
+      "noSections": "まだセクションはありません。",
+      "sectionFallbackName": "セクション",
+      "order": "順序 {{order}}",
+      "focus": "フォーカス",
+      "show": "表示",
+      "hide": "非表示",
+      "unlock": "ロック解除",
+      "lock": "ロック",
+      "footerHint": "レイヤーをロックするとドラッグできなくなります。非表示レイヤーはキャンバス描画から除外されます。"
+    },
+    "root": {
+      "searchAria": "コマンドバーのアクションを検索",
+      "searchPlaceholder": "アクション、{{appName}}、コード、またはキャンバスツールを検索...",
+      "resultsAria": "コマンド検索結果",
+      "quickActionsAria": "コマンドのクイックアクション",
+      "results": "結果",
+      "noMatchingCommands": "\"{{query}}\" に一致するコマンドはありません"
     }
   },
   "settingsModal": {
@@ -889,6 +1040,8 @@
     "edges": "{{count}} エッジ",
     "starter": "スターター",
     "starterTemplate": "スターターテンプレート",
+    "bestFirstEdits": "最初に編集するとよい項目",
+    "perfectFor": "こんな用途に最適",
     "useTemplate": "テンプレートを使う",
     "closePreview": "テンプレートプレビューを閉じる"
   },
@@ -898,6 +1051,31 @@
     "connection": "接続",
     "noSelection": "何も選択されていません",
     "selectHint": "ノードまたはエッジをクリックしてプロパティを編集してください"
+  },
+  "properties": {
+    "title": "Properties",
+    "shape": "Shape",
+    "color": "Color",
+    "icon": "Icon",
+    "rotation": "Rotation",
+    "transparency": "Transparency",
+    "imageSettings": "Image Settings",
+    "bulkShape": "Bulk Shape",
+    "bulkColor": "Bulk Color",
+    "bulkIcon": "Bulk Icon",
+    "labelTransform": "Label Transform",
+    "findReplace": "Find & Replace",
+    "findLabel": "Find",
+    "findPlaceholder": "Find text",
+    "replaceLabel": "Replace",
+    "replacePlaceholder": "Replace with",
+    "prefixOptional": "Prefix (optional)",
+    "suffixOptional": "Suffix (optional)",
+    "useRegex": "Use Regex",
+    "applyToSelectedNodes": "Apply to selected nodes",
+    "selectFieldToApply": "Select a field to apply",
+    "previewSummary": "Preview summary",
+    "selectionSummary": "選択の概要"
   },
   "flowCanvas": {
     "strictModePasteBlocked": "アーキテクチャ厳格モードにより Mermaid の貼り付けがブロックされました。コードビューを開き、診断を修正してから再試行してください。"
@@ -918,6 +1096,7 @@
     "items": "項目",
     "addCommentsHere": "ここにコメントを追加します。",
     "newSection": "新しいセクション",
+    "section": "セクション",
     "text": "テキスト",
     "image": "画像",
     "mindmap": "トピック"

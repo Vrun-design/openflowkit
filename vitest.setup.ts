@@ -49,16 +49,10 @@ function hasWorkingStorage(storageName: 'localStorage' | 'sessionStorage'): bool
     return typeof descriptor.value?.setItem === 'function';
   }
 
-  if (typeof descriptor.get !== 'function') {
-    return false;
-  }
-
-  try {
-    const storage = descriptor.get.call(globalThis) as Storage | undefined;
-    return typeof storage?.setItem === 'function';
-  } catch {
-    return false;
-  }
+  // Node 22 exposes stub storage globals behind accessors that emit warnings
+  // when touched without `--localstorage-file`. Replace accessor-backed values
+  // outright instead of probing them.
+  return false;
 }
 
 if (!hasWorkingStorage('localStorage')) {

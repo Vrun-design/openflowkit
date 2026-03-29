@@ -84,6 +84,13 @@ describe('layoutHandlers', () => {
       msg: 'general',
       category: 'flowchart',
       tags: ['test'],
+      audience: 'developers',
+      useCase: 'Test template insertion',
+      launchPriority: 1,
+      featured: false,
+      difficulty: 'starter',
+      outcome: 'Provides a small template fixture for layout tests.',
+      replacementHints: ['Primary label', 'Owner'],
       nodes: [{
         id: 'node-a',
         type: 'process',

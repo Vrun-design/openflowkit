@@ -7,22 +7,12 @@ import { InlineTextEditSurface } from './InlineTextEditSurface';
 import { NodeChrome } from './NodeChrome';
 import { hasMarkdownSyntax } from './markdownSyntax';
 import { FONT_FAMILY_MAP } from './nodeHelpers';
+import { resolveTextVisualStyle } from '@/theme';
 
 const LazyMarkdownRenderer = lazy(async () => {
   const module = await import('./MarkdownRenderer');
   return { default: module.MarkdownRenderer };
 });
-
-const TEXT_COLORS: Record<string, { text: string; border: string }> = {
-  slate: { text: 'text-[var(--brand-text)]', border: 'border-[var(--color-brand-border)]' },
-  blue: { text: 'text-blue-700', border: 'border-blue-300' },
-  emerald: { text: 'text-emerald-700', border: 'border-emerald-300' },
-  amber: { text: 'text-amber-700', border: 'border-amber-300' },
-  violet: { text: 'text-violet-700', border: 'border-violet-300' },
-  red: { text: 'text-red-700', border: 'border-red-300' },
-  pink: { text: 'text-pink-700', border: 'border-pink-300' },
-  yellow: { text: 'text-yellow-800', border: 'border-yellow-400' },
-};
 
 function getSemanticFontSizeClass(fontSize: string): string {
   switch (fontSize) {
@@ -57,10 +47,7 @@ function getBaseFontSizePx(fontSize: string): number {
 
 function TextNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
   const { id, data, selected } = props;
-  const color = data.color || 'slate';
-  const colorSet = TEXT_COLORS[color] || TEXT_COLORS.slate;
-  const textColor = colorSet.text;
-  const borderColor = colorSet.border;
+  const textVisualStyle = resolveTextVisualStyle(data.color, 'subtle', data.customColor, 'slate');
 
   const width = (props as { width?: number }).width;
   const height = (props as { height?: number }).height;
@@ -109,7 +96,7 @@ function TextNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
       <div
         className={`
           w-full h-full box-border flex items-center justify-center p-2 rounded-lg transition-all duration-200 border-2
-          ${!data.backgroundColor ? 'hover:bg-[var(--brand-background)]/60 border-transparent' : borderColor}
+          ${!data.backgroundColor ? 'border-transparent' : ''}
         `}
         style={{
           minWidth: 50,
@@ -117,6 +104,7 @@ function TextNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
           width: '100%',
           height: '100%',
           backgroundColor: data.backgroundColor || 'transparent',
+          borderColor: data.backgroundColor ? textVisualStyle.border : 'transparent',
           ...fontSizeStyle,
         }}
       >
@@ -128,8 +116,11 @@ function TextNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
           onDraftChange={labelEdit.setDraft}
           onCommit={labelEdit.commit}
           onKeyDown={labelEdit.handleKeyDown}
-          className={`prose prose-sm max-w-full w-full text-center leading-snug font-medium break-words ${textColor} ${fontSizeClass} ${fontFamilyClass}`}
-          style={{ fontSize: `${effectiveFontSizePx}px` }}
+          className={`prose prose-sm max-w-full w-full text-center leading-snug font-medium break-words ${fontSizeClass} ${fontFamilyClass}`}
+          style={{
+            fontSize: `${effectiveFontSizePx}px`,
+            color: textVisualStyle.text,
+          }}
           inputClassName="text-center"
           inputStyle={{ fontSize: `${effectiveFontSizePx}px` }}
           inputMode="multiline"

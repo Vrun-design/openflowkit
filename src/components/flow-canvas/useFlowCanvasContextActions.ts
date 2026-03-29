@@ -20,6 +20,7 @@ interface UseFlowCanvasContextActionsParams {
   handleAlignNodes: (direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
   handleDistributeNodes: (direction: 'horizontal' | 'vertical') => void;
   handleGroupNodes: () => void;
+  handleWrapInSection: () => void;
   nodes: Node[];
 }
 
@@ -39,6 +40,7 @@ export interface UseFlowCanvasContextActionsResult {
   onAlignNodes: (direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
   onDistributeNodes: (direction: 'horizontal' | 'vertical') => void;
   onGroupSelected: () => void;
+  onWrapInSection: () => void;
 }
 
 export function useFlowCanvasContextActions({
@@ -58,6 +60,7 @@ export function useFlowCanvasContextActions({
   handleAlignNodes,
   handleDistributeNodes,
   handleGroupNodes,
+  handleWrapInSection,
   nodes,
 }: UseFlowCanvasContextActionsParams): UseFlowCanvasContextActionsResult {
   const selectedCount = useMemo(() => nodes.filter((node) => node.selected).length, [nodes]);
@@ -81,7 +84,10 @@ export function useFlowCanvasContextActions({
   }
 
   function onDelete(): void {
-    if (contextMenu.id) {
+    if (contextMenu.type === 'multi') {
+      const selectedIds = nodes.filter((n) => n.selected).map((n) => n.id);
+      selectedIds.forEach((id) => deleteNode(id));
+    } else if (contextMenu.id) {
       if (contextMenu.type === 'edge') {
         deleteEdge(contextMenu.id);
       } else {
@@ -119,6 +125,11 @@ export function useFlowCanvasContextActions({
 
   function onGroupSelected(): void {
     handleGroupNodes();
+    onCloseContextMenu();
+  }
+
+  function onWrapInSection(): void {
+    handleWrapInSection();
     onCloseContextMenu();
   }
 
@@ -181,5 +192,6 @@ export function useFlowCanvasContextActions({
     onAlignNodes: onAlignNodesAndClose,
     onDistributeNodes: onDistributeNodesAndClose,
     onGroupSelected,
+    onWrapInSection,
   };
 }

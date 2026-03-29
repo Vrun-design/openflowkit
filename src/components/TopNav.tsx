@@ -100,8 +100,8 @@ export function TopNav({
         openSettings,
         closeSettings,
     } = useTopNavState();
-    const openGeneralSettings = useCallback(() => {
-        openSettings('general');
+    const openCanvasSettings = useCallback(() => {
+        openSettings('canvas');
     }, [openSettings]);
     const openAISettings = useCallback(() => {
         openSettings('ai');
@@ -122,7 +122,7 @@ export function TopNav({
                     onToggle={toggleMenu}
                     onClose={closeMenu}
                     onGoHome={onGoHome}
-                    onOpenSettings={openGeneralSettings}
+                    onOpenSettings={openCanvasSettings}
                     onHistory={onHistory}
                     onImportJSON={onImportJSON}
                 />

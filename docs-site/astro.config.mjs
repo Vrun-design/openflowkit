@@ -4,6 +4,9 @@ import { toStarlightSidebar } from '../src/docs/publicDocsCatalog.js';
 
 export default defineConfig({
   site: 'https://docs.openflowkit.com',
+  legacy: {
+    collections: true,
+  },
   integrations: [
     starlight({
       title: 'OpenFlowKit Docs',

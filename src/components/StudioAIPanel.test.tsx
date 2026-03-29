@@ -6,7 +6,17 @@ import { StudioAIPanel } from './StudioAIPanel';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key,
+    t: (
+      key: string,
+      fallbackOrOptions?: string | { defaultValue?: string },
+      maybeOptions?: { defaultValue?: string }
+    ) => {
+      if (typeof fallbackOrOptions === 'string') {
+        return fallbackOrOptions;
+      }
+
+      return fallbackOrOptions?.defaultValue ?? maybeOptions?.defaultValue ?? key;
+    },
   }),
 }));
 

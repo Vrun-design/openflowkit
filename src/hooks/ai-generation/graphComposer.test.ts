@@ -86,6 +86,7 @@ describe('graphComposer', () => {
 
   it('maps unknown errors to a stable message', () => {
     expect(toErrorMessage(new Error('boom'))).toBe('boom');
-    expect(toErrorMessage('bad')).toBe('Unknown error');
+    expect(toErrorMessage('bad')).toBe('bad');
+    expect(toErrorMessage('')).toBe('An unexpected error occurred. Please try again.');
   });
 });

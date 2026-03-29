@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
 import { X, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { FLOWPILOT_NAME } from '@/lib/brand';
 import { Button } from '../ui/Button';
 import { CommandItem, CommandView } from './types';
@@ -125,13 +126,15 @@ export const RootView = ({
   setView,
   inputRef,
 }: RootViewProps) => {
+  const { t } = useTranslation();
   const filteredCommands = useMemo(() => {
     if (!searchQuery) return commands.filter((c) => !c.hidden);
     return commands
       .filter(
         (c) =>
           fuzzyMatch(searchQuery, c.label) ||
-          (c.description ? fuzzyMatch(searchQuery, c.description) : false)
+          (c.description ? fuzzyMatch(searchQuery, c.description) : false) ||
+          (c.shortcut ? fuzzyMatch(searchQuery, c.shortcut) : false)
       )
       .sort((a, b) => fuzzyScore(searchQuery, b.label) - fuzzyScore(searchQuery, a.label));
   }, [commands, searchQuery]);
@@ -175,8 +178,11 @@ export const RootView = ({
             // Prevent global shortcuts interfering with typing
             e.stopPropagation();
           }}
-          aria-label="Search command bar actions"
-          placeholder={`Search actions, ${FLOWPILOT_NAME}, code, or canvas tools...`}
+          aria-label={t('commandBar.root.searchAria', 'Search command bar actions')}
+          placeholder={t('commandBar.root.searchPlaceholder', {
+            appName: FLOWPILOT_NAME,
+            defaultValue: `Search actions, ${FLOWPILOT_NAME}, code, or canvas tools...`,
+          })}
           autoFocus
           trailingContent={
             <Button
@@ -192,13 +198,15 @@ export const RootView = ({
 
       <div
         role="listbox"
-        aria-label={searchQuery ? 'Command search results' : 'Command quick actions'}
+        aria-label={searchQuery
+          ? t('commandBar.root.resultsAria', 'Command search results')
+          : t('commandBar.root.quickActionsAria', 'Command quick actions')}
         className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent py-2"
       >
         {searchQuery ? (
           <>
             <div className="px-4 py-1.5 text-xs font-semibold text-[var(--brand-secondary)] uppercase tracking-wider">
-              Results
+              {t('commandBar.root.results', 'Results')}
             </div>
             {filteredCommands.map((item, idx) => (
               <CommandItemRow
@@ -221,7 +229,10 @@ export const RootView = ({
         )}
         {filteredCommands.length === 0 && searchQuery && (
           <div className="px-4 py-3 text-center text-sm text-[var(--brand-secondary)]">
-            No matching commands for &quot;{searchQuery}&quot;
+            {t('commandBar.root.noMatchingCommands', {
+              query: searchQuery,
+              defaultValue: 'No matching commands for "{{query}}"',
+            })}
           </div>
         )}
       </div>

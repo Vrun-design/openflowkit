@@ -6,6 +6,7 @@ import { ArchitectureNodeProperties } from './ArchitectureNodeProperties';
 vi.mock('@/services/shapeLibrary/providerCatalog', () => ({
   loadProviderCatalog: vi.fn().mockImplementation(() => new Promise(() => {})),
   loadProviderShapePreview: vi.fn().mockResolvedValue(null),
+  listProviderCatalogProviders: vi.fn().mockReturnValue([]),
 }));
 
 const baseHandlers = {

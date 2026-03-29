@@ -4,7 +4,7 @@ title: Studio Overview
 description: Understand the OpenFlowKit Studio rail for AI, code, imports, infrastructure sync, and architecture linting.
 ---
 
-Studio is the right-side workspace for generation, code-backed editing, imports, infrastructure parsing, and rule-driven validation. Use it when the canvas alone is not the best tool for the job.
+Studio is the right-side workspace for generation, code-backed editing, structured imports, infrastructure parsing, and rule-driven validation. Use it when the canvas alone is not the best tool for the job.
 
 Studio matters because OpenFlowKit is not only a drag-and-drop editor. The product is built around moving between visual editing and structured inputs. Studio is where those structured workflows live.
 
@@ -23,7 +23,7 @@ Open Studio when you want to:
 
 - draft a diagram from a prompt
 - paste or edit OpenFlow DSL or Mermaid
-- import SQL, OpenAPI, Terraform, or Kubernetes-oriented inputs
+- import SQL, OpenAPI, Terraform, or code-oriented inputs
 - parse infra files without AI
 - define architecture constraints and review violations
 
@@ -49,6 +49,7 @@ Use it when:
 - you want to review or edit [OpenFlow DSL](/openflow-dsl/)
 - you already have Mermaid and want to apply it to the canvas
 - you want to compare an editor-native representation with a portable one
+- you want diagram-as-code control before running visual cleanup or auto layout
 
 This tab is best when you want repeatability and precision. It is also the right choice when AI is unnecessary and the diagram is easier to reason about as code.
 
@@ -88,9 +89,10 @@ For most serious diagrams, a good sequence is:
 
 1. start with AI, code, template, or import
 2. inspect the result on the canvas
-3. make exact changes in the inspector
-4. save a snapshot before another major Studio operation
-5. export or share once the structure is stable
+3. use auto layout, layers, or pages if the structure is right but the organization is not
+4. make exact changes in the inspector
+5. save a snapshot before another major Studio operation
+6. export or share once the structure is stable
 
 ## Related pages
 

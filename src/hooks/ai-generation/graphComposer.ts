@@ -14,7 +14,10 @@ export interface ParsedFlowResult {
 
 export function parseDslOrThrow(dslText: string): ParsedFlowResult {
   const codeFenceAliasPattern = ['yaml', 'openflow', ...LEGACY_DSL_CODE_FENCE_ALIASES].join('|');
-  const cleanDsl = dslText.replace(new RegExp(`\`\`\`(${codeFenceAliasPattern}|)?`, 'g'), '').replace(/```/g, '').trim();
+  const cleanDsl = dslText
+    .replace(new RegExp(`\`\`\`(${codeFenceAliasPattern}|)?`, 'g'), '')
+    .replace(/```/g, '')
+    .trim();
   const parseResult = parseOpenFlowDSL(cleanDsl);
   if (parseResult.error) {
     throw new Error(parseResult.error);
@@ -25,7 +28,10 @@ export function parseDslOrThrow(dslText: string): ParsedFlowResult {
   };
 }
 
-export function buildIdMap(parsedNodes: FlowNode[], existingNodes: FlowNode[]): Map<string, string> {
+export function buildIdMap(
+  parsedNodes: FlowNode[],
+  existingNodes: FlowNode[]
+): Map<string, string> {
   const idMap = new Map<string, string>();
   const existingById = new Map(existingNodes.map((n) => [n.id, n]));
 
@@ -114,8 +120,48 @@ export function toFinalEdges(
 }
 
 export function toErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) {
-    return error.message;
+  if (error instanceof Error) {
+    const message = error.message;
+
+    if (
+      message.includes('401') ||
+      message.includes('invalid api key') ||
+      message.includes('API key')
+    ) {
+      return 'Invalid or missing API key. Please check your AI settings.';
+    }
+    if (message.includes('403') || message.includes('Forbidden')) {
+      return 'Access forbidden. Please check your API key permissions.';
+    }
+    if (message.includes('429') || message.includes('rate limit') || message.includes('quota')) {
+      return 'Rate limit exceeded. Please wait a moment and try again.';
+    }
+    if (message.includes('500') || message.includes('internal server error')) {
+      return 'AI provider server error. Please try again later.';
+    }
+    if (
+      message.includes('network') ||
+      message.includes('fetch') ||
+      message.includes('Failed to fetch')
+    ) {
+      return 'Network error. Please check your internet connection.';
+    }
+    if (message.includes('timeout') || message.includes('timed out')) {
+      return 'Request timed out. Please try again.';
+    }
+    if (message.includes('cursor') || message.includes('parse')) {
+      return 'Failed to parse AI response. Please try a different prompt.';
+    }
+    if (message.includes('context length') || message.includes('token')) {
+      return 'Prompt too long. Try simplifying your request.';
+    }
+
+    if (message) {
+      return message;
+    }
   }
-  return 'Unknown error';
+  if (typeof error === 'string' && error) {
+    return error;
+  }
+  return 'An unexpected error occurred. Please try again.';
 }

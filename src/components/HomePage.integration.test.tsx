@@ -65,11 +65,11 @@ describe('HomePage integration flows', () => {
     it('switches between home, templates, and settings views via sidebar', async () => {
         await renderHomePage();
 
-        fireEvent.click(screen.getByText('Templates'));
+        fireEvent.click(screen.getByTestId('sidebar-templates'));
         expect(screen.getByRole('heading', { name: 'Templates' })).toBeTruthy();
         expect(screen.getByText('Featured Templates')).toBeTruthy();
 
-        fireEvent.click(screen.getByText('Settings'));
+        fireEvent.click(screen.getByTestId('sidebar-settings'));
         expect(screen.getByRole('heading', { name: 'Settings' })).toBeTruthy();
         expect(screen.getByText('Flowpilot')).toBeTruthy();
     });
@@ -79,12 +79,21 @@ describe('HomePage integration flows', () => {
 
         await renderHomePage({ onLaunchWithTemplate });
 
-        fireEvent.click(screen.getByText('Templates'));
-        fireEvent.click(screen.getByRole('button', { name: /AWS Event-Driven API/i }));
+        fireEvent.click(screen.getByTestId('sidebar-templates'));
+        fireEvent.click(screen.getByRole('button', { name: /AWS Event-Driven SaaS Platform/i }));
         fireEvent.click(screen.getByRole('button', { name: 'Use Template' }));
 
         expect(onLaunchWithTemplate).toHaveBeenCalledTimes(1);
-        expect(onLaunchWithTemplate).toHaveBeenCalledWith('aws-event-api');
+        expect(onLaunchWithTemplate).toHaveBeenCalledWith('aws-event-driven-saas-platform');
+    });
+
+    it('shows only explicitly featured templates on the homepage templates tab', async () => {
+        await renderHomePage();
+
+        fireEvent.click(screen.getByTestId('sidebar-templates'));
+
+        expect(screen.getByRole('button', { name: /AWS Event-Driven SaaS Platform/i })).toBeTruthy();
+        expect(screen.queryByRole('button', { name: /Product Discovery Workshop Map/i })).toBeNull();
     });
 
     it('exposes template and flowpilot entry points in the empty dashboard state', async () => {

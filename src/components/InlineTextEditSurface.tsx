@@ -14,6 +14,9 @@ type InlineTextEditSurfaceProps = {
   inputStyle?: React.CSSProperties;
   inputMode?: 'single-line' | 'multiline';
   isSelected?: boolean;
+  showCharacterCount?: boolean;
+  maxCharacters?: number;
+  spellCheck?: boolean;
 };
 
 const EDIT_GESTURE_DRAG_THRESHOLD_PX = 6;
@@ -36,6 +39,9 @@ export function InlineTextEditSurface({
   inputStyle,
   inputMode = 'single-line',
   isSelected = false,
+  showCharacterCount = false,
+  maxCharacters,
+  spellCheck = false,
 }: InlineTextEditSurfaceProps): React.ReactElement {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -48,9 +54,10 @@ export function InlineTextEditSurface({
     inputClassName
   );
   const isMultiline = inputMode === 'multiline';
-  const affordanceClasses = !isEditing && isSelected
-    ? 'cursor-text decoration-dotted underline-offset-4 transition-decoration-color duration-150 hover:decoration-[var(--brand-primary)] hover:decoration-2'
-    : undefined;
+  const affordanceClasses =
+    !isEditing && isSelected
+      ? 'cursor-text decoration-dotted underline-offset-4 transition-decoration-color duration-150 hover:decoration-[var(--brand-primary)] hover:decoration-2'
+      : undefined;
 
   useEffect(() => {
     return () => {
@@ -81,7 +88,9 @@ export function InlineTextEditSurface({
     activeInput.setSelectionRange(caretPosition, caretPosition);
   }, [isEditing, isMultiline]);
 
-  function stopEditingPointerPropagation(event: React.PointerEvent<HTMLInputElement | HTMLTextAreaElement>): void {
+  function stopEditingPointerPropagation(
+    event: React.PointerEvent<HTMLInputElement | HTMLTextAreaElement>
+  ): void {
     event.stopPropagation();
   }
 
@@ -123,7 +132,11 @@ export function InlineTextEditSurface({
   return (
     <div
       ref={rootRef}
-      className={joinClassNames(className, affordanceClasses, isEditing ? 'nodrag nopan nowheel' : undefined)}
+      className={joinClassNames(
+        className,
+        affordanceClasses,
+        isEditing ? 'nodrag nopan nowheel' : undefined
+      )}
       style={style}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -140,36 +153,55 @@ export function InlineTextEditSurface({
       }}
     >
       {isEditing ? (
-        isMultiline ? (
-          <textarea
-            ref={textareaRef}
-            autoFocus
-            value={draft}
-            rows={1}
-            onChange={(event) => onDraftChange(event.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={onKeyDown}
-            onMouseDown={(event) => event.stopPropagation()}
-            onPointerDown={stopEditingPointerPropagation}
-            onPointerMove={stopEditingPointerPropagation}
-            className={joinClassNames(inputClasses, 'nodrag nopan nowheel resize-none overflow-hidden')}
-            style={inputStyle}
-          />
-        ) : (
-        <input
-          ref={inputRef}
-          autoFocus
-          value={draft}
-          onChange={(event) => onDraftChange(event.target.value)}
-          onBlur={handleBlur}
-          onKeyDown={onKeyDown}
-          onMouseDown={(event) => event.stopPropagation()}
-          onPointerDown={stopEditingPointerPropagation}
-          onPointerMove={stopEditingPointerPropagation}
-          className={joinClassNames(inputClasses, 'nodrag nopan nowheel')}
-          style={inputStyle}
-        />
-        )
+        <div className="relative w-full">
+          {isMultiline ? (
+            <textarea
+              ref={textareaRef}
+              autoFocus
+              value={draft}
+              rows={1}
+              onChange={(event) => onDraftChange(event.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={onKeyDown}
+              onMouseDown={(event) => event.stopPropagation()}
+              onPointerDown={stopEditingPointerPropagation}
+              onPointerMove={stopEditingPointerPropagation}
+              className={joinClassNames(
+                inputClasses,
+                'nodrag nopan nowheel resize-none overflow-hidden w-full'
+              )}
+              style={inputStyle}
+              spellCheck={spellCheck}
+            />
+          ) : (
+            <input
+              ref={inputRef}
+              autoFocus
+              value={draft}
+              onChange={(event) => onDraftChange(event.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={onKeyDown}
+              onMouseDown={(event) => event.stopPropagation()}
+              onPointerDown={stopEditingPointerPropagation}
+              onPointerMove={stopEditingPointerPropagation}
+              className={joinClassNames(inputClasses, 'nodrag nopan nowheel w-full')}
+              style={inputStyle}
+              spellCheck={spellCheck}
+            />
+          )}
+          {showCharacterCount && (
+            <div
+              className={`absolute -bottom-4 right-0 text-[10px] ${
+                maxCharacters && draft.length > maxCharacters
+                  ? 'text-red-500 font-medium'
+                  : 'text-[var(--brand-secondary)]'
+              }`}
+            >
+              {draft.length}
+              {maxCharacters && ` / ${maxCharacters}`}
+            </div>
+          )}
+        </div>
       ) : (
         displayValue
       )}

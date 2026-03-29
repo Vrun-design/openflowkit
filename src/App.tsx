@@ -13,7 +13,7 @@ import {
   createFlowEditorAIRouteState,
   createFlowEditorInitialTemplateRouteState,
   createFlowEditorImportRouteState,
-  createFlowEditorTemplatesRouteState,
+  type FlowEditorRouteState,
 } from '@/app/routeState';
 import { DocsSiteRedirect } from '@/components/app/DocsSiteRedirect';
 import { RouteLoadingFallback } from '@/components/app/RouteLoadingFallback';
@@ -46,24 +46,32 @@ const LazyDiagramViewer = lazy(async () => {
   return { default: module.DiagramViewer };
 });
 
+function navigateHome(navigate: ReturnType<typeof useNavigate>): void {
+  navigate('/home', { replace: true });
+}
+
 function FlowCanvasRoute(): React.JSX.Element {
   const { flowId } = useParams();
   const navigate = useNavigate();
   const { setActiveDocumentId } = useWorkspaceDocumentActions();
   const { setActivePageId } = useEditorPageActions();
-  const { resolveTarget } = useWorkspaceRouteResolver();
+  const { documents, resolveTarget } = useWorkspaceRouteResolver();
 
   useEffect(() => {
-    if (flowId) {
-      const target = resolveTarget(flowId);
-      if (!target) {
-        return;
-      }
-
-      setActiveDocumentId(target.documentId);
-      setActivePageId(target.pageId);
+    if (!flowId) {
+      navigateHome(navigate);
+      return;
     }
-  }, [flowId, resolveTarget, setActiveDocumentId, setActivePageId]);
+
+    const target = resolveTarget(flowId);
+    if (!target) {
+      navigateHome(navigate);
+      return;
+    }
+
+    setActiveDocumentId(target.documentId);
+    setActivePageId(target.pageId);
+  }, [documents, flowId, navigate, resolveTarget, setActiveDocumentId, setActivePageId]);
 
   return (
     <Suspense fallback={<RouteLoadingFallback />}>
@@ -81,35 +89,36 @@ function HomePageRoute(): React.JSX.Element {
   const location = useLocation();
   const { createDocument } = useWorkspaceDocumentActions();
 
-  const activeTab = location.pathname === '/settings'
-    ? 'settings'
-    : location.pathname === '/templates'
-      ? 'templates'
-      : 'home';
+  const activeTab = getHomePageTab(location.pathname);
 
   useEffect(() => {
     void loadFlowEditorModule();
   }, []);
 
-  const handleLaunch = () => {
+  function openNewFlow(routeState?: FlowEditorRouteState): void {
     const newDocumentId = createDocument();
-    navigate(`/flow/${newDocumentId}`);
-  };
+    navigate(`/flow/${newDocumentId}`, routeState ? { state: routeState } : undefined);
+  }
 
-  const handleLaunchWithTemplates = () => {
-    const newDocumentId = createDocument();
-    navigate(`/flow/${newDocumentId}`, { state: createFlowEditorTemplatesRouteState() });
-  };
+  function handleLaunch(): void {
+    openNewFlow();
+  }
 
-  const handleLaunchWithAI = () => {
-    const newDocumentId = createDocument();
-    navigate(`/flow/${newDocumentId}`, { state: createFlowEditorAIRouteState() });
-  };
+  function handleLaunchWithTemplates(): void {
+    navigate('/templates');
+  }
 
-  const handleLaunchWithInitialTemplate = (templateId: string) => {
-    const newDocumentId = createDocument();
-    navigate(`/flow/${newDocumentId}`, { state: createFlowEditorInitialTemplateRouteState(templateId) });
-  };
+  function handleLaunchWithAI(): void {
+    openNewFlow(createFlowEditorAIRouteState());
+  }
+
+  function handleLaunchWithInitialTemplate(templateId: string): void {
+    openNewFlow(createFlowEditorInitialTemplateRouteState(templateId));
+  }
+
+  function handleImportJSON(): void {
+    openNewFlow(createFlowEditorImportRouteState());
+  }
 
   return (
     <HomePage
@@ -117,22 +126,18 @@ function HomePageRoute(): React.JSX.Element {
       onLaunchWithTemplates={handleLaunchWithTemplates}
       onLaunchWithTemplate={handleLaunchWithInitialTemplate}
       onLaunchWithAI={handleLaunchWithAI}
-      onImportJSON={() => {
-        navigate('/canvas', {
-          state: createFlowEditorImportRouteState(),
-        });
-      }}
+      onImportJSON={handleImportJSON}
       onOpenFlow={(flowId) => navigate(`/flow/${flowId}`)}
       activeTab={activeTab}
-      onSwitchTab={(tab) => navigate(
-        tab === 'settings'
-          ? '/settings'
-          : tab === 'templates'
-            ? '/templates'
-            : '/home'
-      )}
+      onSwitchTab={(tab) => navigate(getHomePagePath(tab))}
     />
   );
+}
+
+function FlowCanvasRedirectRoute(): React.JSX.Element {
+  const activeDocumentId = useFlowStore((state) => state.activeDocumentId);
+
+  return <Navigate to={activeDocumentId ? `/flow/${activeDocumentId}` : '/home'} replace />;
 }
 
 function EditorRouteGate({ children }: { children: React.ReactNode }): React.JSX.Element {
@@ -199,7 +204,7 @@ function App(): React.JSX.Element {
             path="/canvas"
             element={
               <EditorRouteGate>
-                <FlowCanvasRoute />
+                <FlowCanvasRedirectRoute />
               </EditorRouteGate>
             }
           />
@@ -224,6 +229,28 @@ function App(): React.JSX.Element {
       </Router>
     </>
   );
+}
+
+function getHomePageTab(pathname: string): 'home' | 'templates' | 'settings' {
+  switch (pathname) {
+    case '/settings':
+      return 'settings';
+    case '/templates':
+      return 'templates';
+    default:
+      return 'home';
+  }
+}
+
+function getHomePagePath(tab: 'home' | 'templates' | 'settings'): string {
+  switch (tab) {
+    case 'settings':
+      return '/settings';
+    case 'templates':
+      return '/templates';
+    default:
+      return '/home';
+  }
 }
 
 export default App;

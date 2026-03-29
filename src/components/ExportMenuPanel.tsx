@@ -149,7 +149,7 @@ export function ExportMenuPanel({
           {
             key: 'pdf',
             label: 'PDF',
-            hint: 'Document',
+            hint: t('export.hintDocument', 'Document'),
             Icon: FileText,
             actions: ['download'],
           },
@@ -157,7 +157,7 @@ export function ExportMenuPanel({
       },
       {
         key: 'video',
-        title: 'Video',
+        title: t('export.sectionVideo', 'Video & Animation'),
         items: [
           {
             key: 'cinematic-video',
@@ -177,7 +177,7 @@ export function ExportMenuPanel({
       },
       {
         key: 'code',
-        title: 'Code',
+        title: t('export.sectionCode', 'Code & Data'),
         items: [
           {
             key: 'json',
@@ -213,7 +213,7 @@ export function ExportMenuPanel({
           {
             key: 'figma',
             label: t('export.figmaEditable', 'Figma Editable'),
-            hint: 'Editable SVG',
+            hint: t('export.hintEditableSvg', 'Editable SVG'),
             Icon: Figma,
             actions: ['download', 'copy'],
           },
@@ -294,14 +294,14 @@ export function ExportMenuPanel({
             value={selectedItem.key}
             onChange={handleOptionChange}
             options={selectOptions}
-            placeholder="Choose format"
+            placeholder={t('export.chooseFormat', 'Choose format')}
           />
         </div>
 
         {activeSectionKey === 'video' && onCinematicSpeedChange && (
           <div className="mt-3">
             <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--brand-secondary)] mb-1.5">
-              Speed
+              {t('export.speed', 'Speed')}
             </p>
             <SegmentedChoice
               selectedId={cinematicSpeed}
@@ -316,7 +316,7 @@ export function ExportMenuPanel({
         {activeSectionKey === 'video' && onCinematicResolutionChange && (
           <div className="mt-3">
             <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--brand-secondary)] mb-1.5">
-              Resolution
+              {t('export.resolution', 'Resolution')}
             </p>
             <SegmentedChoice
               selectedId={cinematicResolution}
@@ -331,7 +331,7 @@ export function ExportMenuPanel({
         {activeSectionKey === 'video' && onCinematicTransparentChange && (
           <div className="mt-3 flex items-center justify-between">
             <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--brand-secondary)]">
-              Transparent background
+              {t('export.transparentBackground', 'Transparent background')}
             </p>
             <Switch
               checked={cinematicTransparent}

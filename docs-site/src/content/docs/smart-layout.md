@@ -19,6 +19,8 @@ Use layout when:
 
 Open the Command Center and choose **Auto Layout**. The editor passes direction, algorithm, and spacing preferences into the layout request.
 
+Current layout control is strongest when the diagram already has the right nodes and edges but needs better flow, spacing, and reading order.
+
 Current directional options are:
 
 - `TB`
@@ -36,6 +38,7 @@ Auto layout is especially effective for:
 - architecture graphs
 - state-like branching diagrams
 - AI-generated drafts
+- imported code and structured data drafts
 
 It is less effective for intentionally hand-composed slides or dense annotated canvases where visual storytelling matters more than graph regularity.
 
@@ -45,7 +48,7 @@ For the best result:
 
 1. get the right nodes and edges first
 2. run layout
-3. group with sections if needed
+3. use layers or sections if the diagram needs hierarchy
 4. make final manual adjustments
 
 Do not spend time hand-aligning a graph before running layout. That work is usually wasted.
@@ -64,3 +67,4 @@ OpenFlow DSL and Mermaid edits are especially effective when combined with layou
 - [Canvas Basics](/canvas-basics/)
 - [OpenFlow DSL](/openflow-dsl/)
 - [Mermaid Integration](/mermaid-integration/)
+- [Import from Structured Data](/import-from-data/)

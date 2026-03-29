@@ -128,6 +128,7 @@ export function FlowCanvasOverlays({
             onAlignNodes={contextActions.onAlignNodes}
             onDistributeNodes={contextActions.onDistributeNodes}
             onGroupSelected={contextActions.onGroupSelected}
+            onWrapInSection={contextActions.onWrapInSection}
           />
         </Suspense>
       ) : null}

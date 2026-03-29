@@ -267,4 +267,39 @@ describe('CustomNode handle interaction policy', () => {
     expect(labelSurface?.style.maxHeight).toBe('');
     expect(labelSurface?.style.overflow).toBe('');
   });
+
+  it('applies independent typography to the description text', () => {
+    currentNodeId = 'n-desc-style';
+
+    const { container } = render(
+      <CustomNode
+        id="n-desc-style"
+        type="process"
+        selected={true}
+        dragging={false}
+        zIndex={1}
+        data={{
+          label: 'Styled node',
+          subLabel: 'Secondary copy',
+          subLabelFontFamily: 'roboto',
+          subLabelFontSize: '16',
+          subLabelFontWeight: 'bold',
+          subLabelFontStyle: 'italic',
+        }}
+        isConnectable={true}
+        xPos={0}
+        yPos={0}
+        sourcePosition={Position.Right}
+        targetPosition={Position.Left}
+      />
+    );
+
+    const markdownSurfaces = container.querySelectorAll('.markdown-content');
+    const subLabelSurface = markdownSurfaces[1] as HTMLElement | undefined;
+    expect(subLabelSurface).toBeTruthy();
+    expect(subLabelSurface?.className).toContain('font-roboto');
+    expect(subLabelSurface?.style.fontSize).toBe('16px');
+    expect(subLabelSurface?.style.fontWeight).toBe('bold');
+    expect(subLabelSurface?.style.fontStyle).toBe('italic');
+  });
 });

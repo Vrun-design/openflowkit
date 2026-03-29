@@ -210,7 +210,7 @@ export function SolutionSection(): React.ReactElement {
                         {/* Polished Visual: Format Dock */}
                         <div className="relative z-10 mt-auto flex items-center p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md self-start group-hover:-translate-y-2 transition-transform duration-500 shadow-2xl shadow-black/50 overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out"></div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap md:flex-nowrap items-center gap-2">
                                 <div className="flex items-center justify-center px-4 py-2 rounded-xl bg-white/10 border border-white/5 gap-2">
                                     <div className="w-2 h-2 rounded-full bg-pink-400"></div><span className="text-xs font-mono font-medium text-white/90">.fig</span>
                                 </div>
@@ -219,6 +219,12 @@ export function SolutionSection(): React.ReactElement {
                                 </div>
                                 <div className="flex items-center justify-center px-4 py-2 rounded-xl bg-white/10 border border-white/5 gap-2">
                                     <div className="w-2 h-2 rounded-full bg-green-400"></div><span className="text-xs font-mono font-medium text-white/90">.png</span>
+                                </div>
+                                <div className="flex items-center justify-center px-4 py-2 rounded-xl bg-white/10 border border-white/5 gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-orange-400"></div><span className="text-xs font-mono font-medium text-white/90">.mp4</span>
+                                </div>
+                                <div className="flex items-center justify-center px-4 py-2 rounded-xl bg-white/10 border border-white/5 gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-purple-400"></div><span className="text-xs font-mono font-medium text-white/90">.gif</span>
                                 </div>
                                 <div className="w-px h-6 bg-white/10 mx-1"></div>
                                 <div className="flex items-center justify-center px-4 py-2 rounded-xl bg-transparent border border-white/5 border-dashed gap-2 text-white/40 group-hover:text-white/70 transition-colors">

@@ -8,6 +8,7 @@ import { NodeChrome } from './NodeChrome';
 import { hasMarkdownSyntax } from './markdownSyntax';
 import { useFlowStore } from '@/store';
 import { ANNOTATION_COLOR_OPTIONS, resolveAnnotationTheme } from './annotationTheme';
+import { resolveSharedColorKey } from '@/theme';
 
 const LazyMarkdownRenderer = lazy(async () => {
   const module = await import('./MarkdownRenderer');
@@ -22,7 +23,8 @@ function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): Reac
     multiline: true,
     allowTabCreateSibling: false,
   });
-  const annotationTheme = resolveAnnotationTheme(data.color);
+  const annotationTheme = resolveAnnotationTheme(data.color, data.customColor);
+  const selectedColorKey = resolveSharedColorKey(data.color, 'yellow');
   const lineCount = (data.subLabel || '').split('\n').length;
   const contentMinHeight = Math.max(100, 84 + lineCount * 18);
   const subLabelContent = data.subLabel || t('annotationNode.placeholder');
@@ -45,19 +47,30 @@ function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): Reac
       <div
         className={`
           relative group flex flex-col shadow-md flow-lod-shadow rounded-br-3xl rounded-tl-sm rounded-tr-sm rounded-bl-sm border transition-all duration-200
-          ${annotationTheme.container}
           ${selected ? 'z-10' : 'hover:shadow-lg'}
         `}
-        style={{ minWidth: 200, width: '100%', minHeight: contentMinHeight }}
+        style={{
+          minWidth: 200,
+          width: '100%',
+          minHeight: contentMinHeight,
+          backgroundColor: annotationTheme.containerBg,
+          borderColor: annotationTheme.containerBorder,
+        }}
       >
         {selected ? (
           <div className="absolute -top-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 rounded-full border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-2 py-1 shadow-sm">
-            {ANNOTATION_COLOR_OPTIONS.map((option) => (
+            {ANNOTATION_COLOR_OPTIONS.map((option) => {
+              const optionTheme = resolveAnnotationTheme(option.id);
+              return (
               <button
                 key={option.id}
                 type="button"
                 aria-label={`Set annotation color ${option.label}`}
-                className={`h-3.5 w-3.5 rounded-full border transition-transform hover:scale-110 ${option.dot} ${data.color === option.id ? 'ring-2 ring-[var(--brand-secondary)]/70' : 'border-[var(--brand-surface)]/70'}`}
+                className={`h-3.5 w-3.5 rounded-full border transition-transform hover:scale-110 ${selectedColorKey === option.id ? 'ring-2 ring-[var(--brand-secondary)]/70' : ''}`}
+                style={{
+                  backgroundColor: optionTheme.dot,
+                  borderColor: selectedColorKey === option.id ? optionTheme.titleBorder : 'var(--brand-surface)',
+                }}
                 onClick={(event) => {
                   event.stopPropagation();
                   setNodes((nodes) =>
@@ -67,7 +80,8 @@ function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): Reac
                   );
                 }}
               />
-            ))}
+              );
+            })}
           </div>
         ) : null}
         <div className="p-4 flex flex-col">
@@ -80,8 +94,11 @@ function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): Reac
               onDraftChange={labelEdit.setDraft}
               onCommit={labelEdit.commit}
               onKeyDown={labelEdit.handleKeyDown}
-              className={`mb-2 border-b pb-2 text-sm font-bold ${annotationTheme.title}`}
-              inputClassName={annotationTheme.title.split(' ')[0]}
+              className="mb-2 border-b pb-2 text-sm font-bold"
+              style={{
+                color: annotationTheme.titleText,
+                borderColor: annotationTheme.titleBorder,
+              }}
               isSelected={Boolean(selected)}
             />
           )}
@@ -93,8 +110,8 @@ function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): Reac
             onDraftChange={subLabelEdit.setDraft}
             onCommit={subLabelEdit.commit}
             onKeyDown={subLabelEdit.handleKeyDown}
-            className={`text-xs font-medium leading-relaxed markdown-content flow-lod-secondary ${annotationTheme.body}`}
-            inputClassName={annotationTheme.body}
+            className="text-xs font-medium leading-relaxed markdown-content flow-lod-secondary"
+            style={{ color: annotationTheme.bodyText }}
             inputMode="multiline"
             isSelected={Boolean(selected)}
           />
@@ -102,7 +119,11 @@ function AnnotationNode({ id, data, selected }: LegacyNodeProps<NodeData>): Reac
 
         {/* Decorative corner fold */}
         <div
-          className={`absolute bottom-0 right-0 h-8 w-8 rounded-tl-xl border-l border-t ${annotationTheme.fold}`}
+          className="absolute bottom-0 right-0 h-8 w-8 rounded-tl-xl border-l border-t"
+          style={{
+            backgroundColor: annotationTheme.foldBg,
+            borderColor: annotationTheme.foldBorder,
+          }}
         ></div>
       </div>
     </NodeChrome>

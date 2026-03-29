@@ -54,14 +54,23 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
   const activeShape = (data.shape || defaults.shape || 'rounded') as NodeShape;
   const visualStyle = resolveNodeVisualStyle(activeColor, activeColorMode, data.customColor);
   const iconName = resolvedAssetIconUrl || !activeIconKey ? null : activeIconKey;
-  const fontFamilyClass = data.fontFamily ? FONT_FAMILY_MAP[data.fontFamily] : '';
-  const fontFamilyStyle = !data.fontFamily
+  const labelFontFamilyClass = data.fontFamily ? FONT_FAMILY_MAP[data.fontFamily] : '';
+  const labelFontFamilyStyle = !data.fontFamily
+    ? { fontFamily: designSystem.typography.fontFamily }
+    : {};
+  const subLabelFontFamily = data.subLabelFontFamily || data.fontFamily;
+  const subLabelFontFamilyClass = subLabelFontFamily ? FONT_FAMILY_MAP[subLabelFontFamily] : '';
+  const subLabelFontFamilyStyle = !subLabelFontFamily
     ? { fontFamily: designSystem.typography.fontFamily }
     : {};
   const fontSize = data.fontSize || '13';
   const isNumericSize = !isNaN(Number(fontSize));
   const fSizeClass = fontSizeClassFor(fontSize);
   const fontSizeStyle = isNumericSize ? { fontSize: fontSize + 'px' } : {};
+  const subLabelFontSize = data.subLabelFontSize || '10';
+  const subLabelIsNumericSize = !isNaN(Number(subLabelFontSize));
+  const subLabelSizeClass = fontSizeClassFor(subLabelFontSize);
+  const subLabelFontSizeStyle = subLabelIsNumericSize ? { fontSize: subLabelFontSize + 'px' } : {};
   const hasIcon = Boolean(iconName) || Boolean(data.customIconUrl);
   const hasLabel = Boolean(data.label?.trim());
   const hasSubLabel = Boolean(data.subLabel);
@@ -107,7 +116,7 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
     width: toCssSize(explicitWidth) ?? '100%',
     height: toCssSize(explicitHeight),
     ...(needsSquareAspect ? { aspectRatio: '1/1' } : {}),
-    ...fontFamilyStyle,
+    ...labelFontFamilyStyle,
     boxShadow: !isComplexShape
       ? `${designSystem.components.node.boxShadow}${selectionRing}`
       : 'none',
@@ -145,22 +154,24 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
 
   const textProps = {
     ...fontSizeStyle,
+    ...labelFontFamilyStyle,
     color: visualStyle.text,
     fontWeight: data.fontWeight || '600',
     fontStyle: data.fontStyle || 'normal',
     lineHeight: 1.2,
   };
   const subTextProps = {
+    ...subLabelFontSizeStyle,
+    ...subLabelFontFamilyStyle,
     color: visualStyle.subText,
-    fontWeight: 'normal' as const,
-    fontStyle: 'normal' as const,
+    fontWeight: data.subLabelFontWeight || 'normal',
+    fontStyle: data.subLabelFontStyle || 'normal',
     textAlign: (data.align || 'center') as React.CSSProperties['textAlign'],
     opacity: 0.85,
     lineHeight: 1.25,
   };
   const textAlignStyle = {
     textAlign: (data.align || 'center') as React.CSSProperties['textAlign'],
-    ...fontFamilyStyle,
   };
   const iconSize = isCompactNode ? 'w-7 h-7' : 'w-8 h-8';
   const iconImgSize = isCompactNode ? 'w-4 h-4' : 'w-5 h-5';
@@ -252,7 +263,7 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
             )}
 
             <div
-              className={`flex flex-col min-w-0 max-w-full w-full overflow-hidden ${fontFamilyClass}`}
+              className={`flex flex-col min-w-0 max-w-full w-full overflow-hidden`}
               style={textAlignStyle}
             >
               <InlineTextEditSurface
@@ -263,7 +274,7 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
                 onDraftChange={labelEdit.setDraft}
                 onCommit={labelEdit.commit}
                 onKeyDown={labelEdit.handleKeyDown}
-                className={`leading-tight block break-words markdown-content [&_p]:m-0 [&_p]:leading-tight ${fSizeClass}`}
+                className={`leading-tight block break-words markdown-content [&_p]:m-0 [&_p]:leading-tight ${fSizeClass} ${labelFontFamilyClass}`}
                 style={textProps}
                 inputMode="multiline"
                 inputClassName="text-center"
@@ -278,7 +289,7 @@ function CustomNode(props: LegacyNodeProps<NodeData>): React.ReactElement {
                   onDraftChange={subLabelEdit.setDraft}
                   onCommit={subLabelEdit.commit}
                   onKeyDown={subLabelEdit.handleKeyDown}
-                  className={`text-[10px] text-slate-500 mt-1 leading-snug markdown-content [&_p]:m-0 [&_p]:leading-snug break-words flow-lod-secondary ${lodPreserveClass}`}
+                  className={`text-slate-500 mt-1 leading-snug markdown-content [&_p]:m-0 [&_p]:leading-snug break-words flow-lod-secondary ${lodPreserveClass} ${subLabelSizeClass} ${subLabelFontFamilyClass}`}
                   style={subTextProps}
                   inputClassName="text-center"
                   isSelected={Boolean(selected)}

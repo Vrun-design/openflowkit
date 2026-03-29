@@ -5,14 +5,6 @@ import { MarkerType } from '@/lib/reactflowCompat';
 import { useDesignSystem } from '@/hooks/useDesignSystem';
 import type { EdgeData, FlowEdge } from '@/lib/types';
 import {
-  CLASS_MARKER_ARROW_FILLED,
-  CLASS_MARKER_ARROW_OPEN,
-  CLASS_MARKER_DIAMOND_FILLED,
-  CLASS_MARKER_DIAMOND_OPEN,
-  CLASS_MARKER_TRIANGLE_OPEN,
-  ER_MARKER_BAR,
-  ER_MARKER_CIRCLE,
-  ER_MARKER_CROW,
   resolveRelationVisualSpec,
   toMarkerUrl,
 } from './classRelationSemantics';
@@ -23,6 +15,8 @@ import {
   getEditableEdgeLabel,
 } from '@/components/properties/edge/edgeLabelModel';
 import type { CinematicRenderState } from '@/services/export/cinematicRenderState';
+import { EdgeMarkerDefs } from './EdgeMarkerDefs';
+import { resolveEdgeVisualStyle } from '@/theme';
 
 interface CustomEdgeWrapperProps {
   id: string;
@@ -136,40 +130,44 @@ export const CustomEdgeWrapper = memo(function CustomEdgeWrapper({
   const relationResolvedMarkerEnd = relationVisualSpec
     ? toMarkerUrl(relationVisualSpec.markerEndId)
     : markerEnd;
-  const standardMarkers = useMemo(() => resolveStandardEdgeMarkers({
-    connectorModelEnabled: !relationVisualSpec,
-    edgeId: id,
-    markerStartUrl: relationResolvedMarkerStart,
-    markerEndUrl: relationResolvedMarkerEnd,
-    markerStartConfig:
-      typeof markerStartConfig === 'object'
-        ? (markerStartConfig as {
-            type?: MarkerType | string;
-            color?: string;
-            width?: number;
-            height?: number;
-          })
-        : undefined,
-    markerEndConfig:
-      typeof markerEndConfig === 'object'
-        ? (markerEndConfig as {
-            type?: MarkerType | string;
-            color?: string;
-            width?: number;
-            height?: number;
-          })
-        : undefined,
-    stroke: String(resolvedStyle.stroke ?? designSystem.colors.edge),
-  }), [
-    relationVisualSpec,
-    id,
-    relationResolvedMarkerStart,
-    relationResolvedMarkerEnd,
-    markerStartConfig,
-    markerEndConfig,
-    resolvedStyle.stroke,
-    designSystem.colors.edge,
-  ]);
+  const standardMarkers = useMemo(
+    () =>
+      resolveStandardEdgeMarkers({
+        connectorModelEnabled: !relationVisualSpec,
+        edgeId: id,
+        markerStartUrl: relationResolvedMarkerStart,
+        markerEndUrl: relationResolvedMarkerEnd,
+        markerStartConfig:
+          typeof markerStartConfig === 'object'
+            ? (markerStartConfig as {
+                type?: MarkerType | string;
+                color?: string;
+                width?: number;
+                height?: number;
+              })
+            : undefined,
+        markerEndConfig:
+          typeof markerEndConfig === 'object'
+            ? (markerEndConfig as {
+                type?: MarkerType | string;
+                color?: string;
+                width?: number;
+                height?: number;
+              })
+            : undefined,
+        stroke: String(resolvedStyle.stroke ?? designSystem.colors.edge),
+      }),
+    [
+      relationVisualSpec,
+      id,
+      relationResolvedMarkerStart,
+      relationResolvedMarkerEnd,
+      markerStartConfig,
+      markerEndConfig,
+      resolvedStyle.stroke,
+      designSystem.colors.edge,
+    ]
+  );
   const resolvedMarkerStart = standardMarkers.markerStartUrl;
   const resolvedMarkerEnd = standardMarkers.markerEndUrl;
   const animatedPresentation = useMemo(
@@ -183,6 +181,10 @@ export const CustomEdgeWrapper = memo(function CustomEdgeWrapper({
         baseStyle: resolvedStyle,
       }),
     [data?.animation, edgeAnimated, isHovered, resolvedStyle, selected]
+  );
+  const edgeVisualStyle = useMemo(
+    () => resolveEdgeVisualStyle(String(resolvedStyle.stroke ?? designSystem.colors.edge)),
+    [designSystem.colors.edge, resolvedStyle.stroke]
   );
 
   useEffect(() => {
@@ -290,10 +292,17 @@ export const CustomEdgeWrapper = memo(function CustomEdgeWrapper({
     label,
   } as FlowEdge);
   const renderedLabel = hasArchitectureMeta ? (
-    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 border border-blue-200">
-      {sideHint && <span className="text-blue-500">{sideHint}</span>}
+    <span
+      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+      style={{
+        backgroundColor: edgeVisualStyle.metaBg,
+        borderColor: edgeVisualStyle.metaBorder,
+        color: edgeVisualStyle.metaText,
+      }}
+    >
+      {sideHint && <span style={{ color: edgeVisualStyle.metaMutedText }}>{sideHint}</span>}
       <span>{data?.archProtocol}</span>
-      {data?.archPort && <span className="text-blue-500">:{data.archPort}</span>}
+      {data?.archPort && <span style={{ color: edgeVisualStyle.metaMutedText }}>:{data.archPort}</span>}
     </span>
   ) : (
     edgeLabel
@@ -318,131 +327,7 @@ export const CustomEdgeWrapper = memo(function CustomEdgeWrapper({
 
   return (
     <>
-      <svg
-        width="0"
-        height="0"
-        style={{ position: 'absolute' }}
-        aria-hidden="true"
-        focusable="false"
-      >
-        <defs>
-          <marker
-            id={CLASS_MARKER_ARROW_FILLED}
-            markerWidth="10"
-            markerHeight="10"
-            refX="9"
-            refY="5"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path d="M0,0 L10,5 L0,10 z" fill="context-stroke" />
-          </marker>
-          <marker
-            id={CLASS_MARKER_ARROW_OPEN}
-            markerWidth="10"
-            markerHeight="10"
-            refX="9"
-            refY="5"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path d="M1,1 L9,5 L1,9" fill="none" stroke="context-stroke" strokeWidth="1.5" />
-          </marker>
-          <marker
-            id={CLASS_MARKER_TRIANGLE_OPEN}
-            markerWidth="12"
-            markerHeight="12"
-            refX="10"
-            refY="6"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path d="M1,1 L10,6 L1,11 z" fill="white" stroke="context-stroke" strokeWidth="1.5" />
-          </marker>
-          <marker
-            id={CLASS_MARKER_DIAMOND_OPEN}
-            markerWidth="12"
-            markerHeight="12"
-            refX="10"
-            refY="6"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path
-              d="M1,6 L5.5,1 L10,6 L5.5,11 z"
-              fill="white"
-              stroke="context-stroke"
-              strokeWidth="1.5"
-            />
-          </marker>
-          <marker
-            id={CLASS_MARKER_DIAMOND_FILLED}
-            markerWidth="12"
-            markerHeight="12"
-            refX="10"
-            refY="6"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path d="M1,6 L5.5,1 L10,6 L5.5,11 z" fill="context-stroke" />
-          </marker>
-          <marker
-            id={ER_MARKER_BAR}
-            markerWidth="8"
-            markerHeight="12"
-            refX="6"
-            refY="6"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path d="M1,1 L1,11" fill="none" stroke="context-stroke" strokeWidth="1.6" />
-          </marker>
-          <marker
-            id={ER_MARKER_CIRCLE}
-            markerWidth="12"
-            markerHeight="12"
-            refX="9"
-            refY="6"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <circle cx="4" cy="6" r="2.7" fill="white" stroke="context-stroke" strokeWidth="1.4" />
-          </marker>
-          <marker
-            id={ER_MARKER_CROW}
-            markerWidth="12"
-            markerHeight="12"
-            refX="10"
-            refY="6"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <path
-              d="M1,1 L10,6 L1,11 M1,6 L10,6"
-              fill="none"
-              stroke="context-stroke"
-              strokeWidth="1.4"
-            />
-          </marker>
-          {standardMarkers.defs.map((markerDef) => (
-            <marker
-              key={markerDef.id}
-              id={markerDef.id}
-              markerWidth={markerDef.width}
-              markerHeight={markerDef.height}
-              refX={markerDef.side === 'end' ? markerDef.width - 1 : 1}
-              refY={markerDef.height / 2}
-              orient={markerDef.side === 'start' ? 'auto-start-reverse' : 'auto'}
-              markerUnits="userSpaceOnUse"
-            >
-              <path
-                d={`M0,0 L${markerDef.width},${markerDef.height / 2} L0,${markerDef.height} z`}
-                fill={markerDef.color}
-              />
-            </marker>
-          ))}
-        </defs>
-      </svg>
+      <EdgeMarkerDefs standardMarkers={standardMarkers} />
       {shouldRenderBaseEdge ? (
         <BaseEdge
           path={displayPath}
@@ -549,6 +434,12 @@ export const CustomEdgeWrapper = memo(function CustomEdgeWrapper({
                   }
                 }}
                 className="min-w-[60px] rounded-full border border-indigo-400 bg-[var(--brand-surface)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--brand-text)] shadow-sm outline-none ring-2 ring-indigo-300/50"
+                style={{
+                  borderColor: edgeVisualStyle.pillHoverBorder,
+                  backgroundColor: 'var(--brand-surface)',
+                  color: 'var(--brand-text)',
+                  boxShadow: `0 0 0 2px ${edgeVisualStyle.focusRing}`,
+                }}
               />
             ) : renderedLabel ? (
               <div
@@ -557,7 +448,23 @@ export const CustomEdgeWrapper = memo(function CustomEdgeWrapper({
                   e.stopPropagation();
                   beginLabelEdit();
                 }}
-                className={`whitespace-nowrap px-2 py-0.5 rounded-full border shadow-sm text-[11px] font-medium select-none flow-lod-secondary flow-lod-shadow transition-all ${cinematicActive ? 'bg-[var(--brand-surface)]/96 border-[var(--color-brand-border)] text-[var(--brand-secondary)] shadow-[0_6px_18px_rgba(15,23,42,0.08)]' : 'bg-[var(--brand-surface)]/90 border-[var(--color-brand-border)] text-[var(--brand-secondary)] hover:border-indigo-300 hover:text-[var(--brand-text)] hover:shadow active:ring-2 active:ring-indigo-400'}`}
+                className={`whitespace-nowrap px-2 py-0.5 rounded-full border shadow-sm text-[11px] font-medium select-none flow-lod-secondary flow-lod-shadow transition-all ${cinematicActive ? 'shadow-[0_6px_18px_rgba(15,23,42,0.08)]' : 'hover:shadow'}`}
+                style={{
+                  backgroundColor: cinematicActive ? 'var(--brand-surface)' : edgeVisualStyle.pillBg,
+                  borderColor: cinematicActive
+                    ? 'var(--color-brand-border)'
+                    : isHovered || selected
+                      ? edgeVisualStyle.pillHoverBorder
+                      : edgeVisualStyle.pillBorder,
+                  color: cinematicActive
+                    ? 'var(--brand-secondary)'
+                    : isHovered || selected
+                      ? edgeVisualStyle.pillHoverText
+                      : edgeVisualStyle.pillText,
+                  boxShadow: !cinematicActive && selected
+                    ? `0 0 0 2px ${edgeVisualStyle.focusRing}`
+                    : undefined,
+                }}
               >
                 {renderedLabel}
               </div>
@@ -568,7 +475,11 @@ export const CustomEdgeWrapper = memo(function CustomEdgeWrapper({
                   event.stopPropagation();
                   beginLabelEdit();
                 }}
-                className="rounded-full border border-dashed border-[var(--color-brand-border)] bg-[var(--brand-surface)]/95 px-2.5 py-0.5 text-[11px] font-medium text-[var(--brand-secondary)] shadow-sm transition-colors hover:border-indigo-300 hover:text-[var(--brand-text)]"
+                className="rounded-full border border-dashed bg-[var(--brand-surface)]/95 px-2.5 py-0.5 text-[11px] font-medium shadow-sm transition-colors"
+                style={{
+                  borderColor: edgeVisualStyle.pillBorder,
+                  color: edgeVisualStyle.pillText,
+                }}
               >
                 Add label
               </button>

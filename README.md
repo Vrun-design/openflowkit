@@ -11,8 +11,7 @@
 
 <h3>The open-source diagramming workspace engineers actually want to use.</h3>
 
-<p>Paste SQL → instant ERD. Paste Terraform state → cloud map. Paste a GitHub repo → architecture diagram (AI). Describe a system in plain English → watch it appear (BYOK).<br/>
-Editable, version-controllable diagrams — entirely in your browser.</p>
+<p>Create flows from templates, code, structured imports, or AI. Refine them visually, keep them local-first, and export without giving up diagram-as-code or developer workflows.</p>
 
 <br/>
 
@@ -42,18 +41,23 @@ Editable, version-controllable diagrams — entirely in your browser.</p>
 
 <br/>
 
-<!-- Add your hero screenshot or GIF below. Recommended: 1400×900px or a focused flow demo -->
+<!-- IMPORTANT: Add a hero GIF before launch. Record a 15–20 second clip showing:
+     1. Paste a GitHub URL → architecture diagram appears
+     2. Edit a node → DSL updates live
+     3. Export as animated MP4
+     Recommended: 1400×900px, hosted in /assets/hero-demo.gif -->
 <!-- ![OpenFlowKit in action](assets/hero-demo.gif) -->
 
 <br/>
 
 <table>
 <tr>
+<td align="center"><b>🏠 Workspace Home</b><br/><sub>Create · open · import<br/>No forced blank file</sub></td>
 <td align="center"><b>🧑‍💻 Code → Diagram</b><br/><sub>GitHub · SQL · Terraform<br/>K8s · Docker Compose</sub></td>
 <td align="center"><b>🤖 AI Generation</b><br/><sub>9 providers · BYOK<br/>Streaming diff preview</sub></td>
 <td align="center"><b>`{}` Diagram as Code</b><br/><sub>Bidirectional live sync<br/>Git-friendly DSL</sub></td>
+<td align="center"><b>🧩 Asset Libraries</b><br/><sub>Developer · AWS · Azure<br/>GCP · CNCF · Icons</sub></td>
 <td align="center"><b>🎬 Cinematic Export</b><br/><sub>Animated video & GIF<br/>No upload required</sub></td>
-<td align="center"><b>👥 P2P Collaboration</b><br/><sub>WebRTC · No server<br/>Live cursors · Yjs</sub></td>
 </tr>
 </table>
 
@@ -77,11 +81,11 @@ Every diagramming tool makes a compromise. OpenFlowKit doesn't.
 | ----------------------- | ----------------------------------------------------------------------------- |
 | **Excalidraw / tldraw** | Freeform whiteboards — no structured diagram types, no DSL, no code imports   |
 | **Mermaid.js**          | Code-only — no visual canvas, no AI, no interactive editor                    |
-| **Draw.io**             | Decade-old UX — no AI integration, no developer import pipelines              |
+| **Draw.io**             | Decade-old UX — Limited AI integration, no developer import pipelines              |
 | **Lucidchart / Miro**   | Cloud lock-in — expensive, account required, your data lives on their servers |
 | **PlantUML**            | Server-dependent rendering — no visual editor, no local-first model           |
 
-OpenFlowKit is the **only MIT-licensed tool** that combines a professional visual canvas, bidirectional diagram-as-code, AI generation from 9 providers, deterministic code imports, real-time P2P collaboration, and cinematic animated export — with zero server-side storage.
+OpenFlowKit is the **only MIT-licensed tool** that combines a real workspace home, a professional visual canvas, bidirectional diagram-as-code, AI generation from 9 providers, deterministic and AI-assisted imports, asset libraries for technical diagrams, and cinematic animated export — with zero server-side storage.
 
 ---
 
@@ -106,7 +110,7 @@ OpenFlowKit is the **only MIT-licensed tool** that combines a professional visua
 
 ## Code → Diagram
 
-Drop in your existing artifacts. Many formats are handled by **deterministic native parsers** that run entirely in your browser — no API call, no roundtrip, instant result. AI-powered imports produce richer diagrams but require an API key.
+Drop in your existing artifacts. Many formats are handled by **deterministic native parsers** that run entirely in your browser. AI-powered imports help when the source needs interpretation or when you want a richer first-pass architecture draft.
 
 **Native parsers (no API key needed):**
 
@@ -139,7 +143,7 @@ services:
 github.com/vercel/next.js  →  architecture diagram
 ```
 
-→ Fetches the repo, analyzes code structure and dependencies, then generates an architecture diagram via AI. Quality depends on the model chosen.
+→ Fetches the repo, analyzes code structure and dependencies, then generates an editable architecture diagram via AI. Quality depends on the model chosen.
 
 | Source                    | Engine                     | API key? |
 | ------------------------- | -------------------------- | :------: |
@@ -152,6 +156,17 @@ github.com/vercel/next.js  →  architecture diagram
 | OpenAPI / Swagger spec    | AI-assisted                |   Yes    |
 | Source code (single file) | AI-assisted · 9 languages  |   Yes    |
 | Mermaid                   | **Native parser**          |  **No**  |
+
+---
+
+## Home first, editor second
+
+OpenFlowKit now treats the product as two clear surfaces:
+
+- **Home** for creating, opening, duplicating, importing, and organizing flows
+- **Editor** for actual canvas work once a real document exists
+
+That means the app does not create a fake default flow just to get you onto the canvas. If you delete everything, your workspace can stay empty until you intentionally create the next flow.
 
 ---
 
@@ -198,7 +213,7 @@ flowchart TB
 
 ---
 
-## 8 structured diagram families
+## Structured diagram families
 
 Not a freeform whiteboard. Structured diagram types with opinionated defaults, correct relationship semantics, and purpose-built node styles.
 
@@ -210,6 +225,19 @@ Not a freeform whiteboard. Structured diagram types with opinionated defaults, c
 - **🧠 Mind maps** — collapsible radial trees with auto-layout
 - **🛤️ User journeys** — steps, phases, and sentiment scoring
 - **⚙️ State machines** — transitions, guards, entry and exit actions
+
+---
+
+## Editor workflow built for technical diagrams
+
+OpenFlowKit works best when you move between the right surfaces instead of forcing everything through one panel:
+
+- **Toolbar add menu** for quick insert actions
+- **Command Center** for templates, import, assets, search, layout, pages, layers, and design systems
+- **Studio** for Flowpilot, Mermaid, OpenFlow DSL, infra parsing, and linting
+- **Properties panel** for exact visual and metadata edits
+
+Large diagrams also get better organization with multi-page documents, layers, sections, and local-first document recovery.
 
 ---
 
@@ -227,9 +255,9 @@ Build your diagram once. Take it anywhere.
 
 ---
 
-## Real-time collaboration — no server
+## Real-time collaboration — local-first by default
 
-P2P collaboration over WebRTC. Share a link, edit together in real time. Presence indicators, cursor sync, live conflict resolution. Nothing routes through a server you don't control.
+Local-first stays the default. Your saved flows live in the browser, your AI keys stay on your device, and export is explicit. When you do want to work together, OpenFlowKit supports P2P collaboration over WebRTC with live presence and shared editing, without making a hosted backend mandatory for solo work.
 
 ---
 
@@ -237,14 +265,26 @@ P2P collaboration over WebRTC. Share a link, edit together in real time. Presenc
 
 | Shortcut         | Action                                               |
 | ---------------- | ---------------------------------------------------- |
-| `⌘ K` / `Ctrl K` | Command bar — search, import, export, run any action |
+| `⌘ K` / `Ctrl K` | Command bar — search, import, layout, assets, and actions |
 | `⌘ \` / `Ctrl \` | Toggle the live code panel                           |
 | `⌘ Z` / `Ctrl Z` | Full undo with complete history                      |
 | `⌘ D` / `Ctrl D` | Duplicate selection                                  |
 | `⌘ G` / `Ctrl G` | Group selected nodes                                 |
 | `⌘ /` / `Ctrl /` | Keyboard shortcuts reference                         |
 
-Plus: smart alignment guides, snap-to-grid, multi-select, layers panel, sections, architecture lint, light/dark/system theme, and full i18n in 7 languages.
+Plus: smart alignment guides, snap-to-grid, multi-select, pages, layers, sections, architecture lint, light/dark/system theme, and full i18n in 7 languages.
+
+---
+
+## What we are improving next
+
+Current roadmap focus:
+
+- better layers and page workflows for larger technical diagrams
+- stronger code and structured-import diagram quality
+- smarter auto-layout defaults with less cleanup after import
+- performance boosts for bigger canvases and heavier sessions
+- continued docs and onboarding cleanup so the product surfaces stay easier to understand
 
 ---
 
@@ -345,6 +385,10 @@ No cloud required. No account required. No lock-in.
 <br/>
 
 [![Star OpenFlowKit on GitHub](https://img.shields.io/github/stars/Vrun-design/openflowkit?style=for-the-badge&logo=github&color=facc15&label=Star%20on%20GitHub)](https://github.com/Vrun-design/openflowkit/stargazers)
+
+<br/>
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Vrun-design/openflowkit&type=Date)](https://star-history.com/#Vrun-design/openflowkit&Date)
 
 <br/>
 

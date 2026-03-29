@@ -5,6 +5,7 @@ import { useFlowStore } from '@/store';
 import { NodeChrome } from '@/components/NodeChrome';
 import { JourneyScoreControl } from '@/components/journey/JourneyScoreControl';
 import { useInlineNodeTextEdit } from '@/hooks/useInlineNodeTextEdit';
+import { resolveContainerVisualStyle } from '@/theme';
 
 function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.ReactElement {
   const titleEdit = useInlineNodeTextEdit(id, 'label', data.label || '', {
@@ -19,6 +20,12 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
   const setNodes = useFlowStore((state) => state.setNodes);
   const sectionLabel = data.journeySection || 'General';
   const score = data.journeyScore;
+  const visualStyle = resolveContainerVisualStyle(
+    data.color,
+    data.colorMode || 'subtle',
+    data.customColor,
+    'violet'
+  );
 
   function updateScore(nextScore: number): void {
     setNodes((nodes) =>
@@ -44,10 +51,21 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
       minHeight={120}
       handleClassName="!w-3 !h-3 !border-2 !border-[var(--brand-surface)] transition-all duration-150 hover:scale-125"
     >
-      <div className="group min-w-[220px] max-w-[280px] rounded-xl border border-violet-300/50 bg-[var(--brand-surface)] px-3 py-3 shadow-sm transition-all">
+      <div
+        className="group min-w-[220px] max-w-[280px] rounded-xl border px-3 py-3 shadow-sm transition-all"
+        style={{
+          backgroundColor: visualStyle.bg,
+          borderColor: visualStyle.border,
+          color: visualStyle.text,
+        }}
+      >
         <div className="mb-2 flex items-center justify-between gap-2">
           <span
-            className="cursor-text rounded-md bg-violet-500/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-300"
+            className="cursor-text rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+            style={{
+              backgroundColor: visualStyle.badgeBg,
+              color: visualStyle.badgeText,
+            }}
             onClick={(event) => {
               event.stopPropagation();
               sectionEdit.beginEdit();
@@ -61,7 +79,8 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
                 onBlur={sectionEdit.commit}
                 onKeyDown={sectionEdit.handleKeyDown}
                 onMouseDown={(event) => event.stopPropagation()}
-                className="w-24 rounded border border-violet-400/60 bg-[var(--brand-surface)] px-1 py-0.5 text-[10px] uppercase tracking-wide text-[var(--brand-text)] outline-none"
+                className="w-24 rounded border bg-[var(--brand-surface)] px-1 py-0.5 text-[10px] uppercase tracking-wide text-[var(--brand-text)] outline-none"
+                style={{ borderColor: visualStyle.border }}
               />
             ) : (
               sectionLabel
@@ -76,7 +95,8 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
         </div>
 
         <div
-          className="break-words text-sm font-semibold leading-snug text-[var(--brand-text)]"
+          className="break-words text-sm font-semibold leading-snug"
+          style={{ color: visualStyle.text }}
           onClick={(event) => {
             event.stopPropagation();
             titleEdit.beginEdit();
@@ -90,7 +110,8 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
               onBlur={titleEdit.commit}
               onKeyDown={titleEdit.handleKeyDown}
               onMouseDown={(event) => event.stopPropagation()}
-              className="w-full rounded border border-violet-400/60 bg-[var(--brand-surface)] px-1 py-0.5 text-[var(--brand-text)] outline-none"
+              className="w-full rounded border bg-[var(--brand-surface)] px-1 py-0.5 text-[var(--brand-text)] outline-none"
+              style={{ borderColor: visualStyle.border }}
             />
           ) : (
             data.label || 'Journey Step'
@@ -98,7 +119,8 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
         </div>
 
         <div
-          className="mt-1 break-words text-xs text-[var(--brand-secondary)]"
+          className="mt-1 break-words text-xs"
+          style={{ color: visualStyle.subText }}
           onClick={(event) => {
             event.stopPropagation();
             actorEdit.beginEdit();
@@ -112,7 +134,8 @@ function JourneyNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
               onBlur={actorEdit.commit}
               onKeyDown={actorEdit.handleKeyDown}
               onMouseDown={(event) => event.stopPropagation()}
-              className="w-full rounded border border-violet-300/50 bg-[var(--brand-surface)] px-1 py-0.5 text-[var(--brand-text)] outline-none"
+              className="w-full rounded border bg-[var(--brand-surface)] px-1 py-0.5 text-[var(--brand-text)] outline-none"
+              style={{ borderColor: visualStyle.border }}
             />
           ) : (
             data.subLabel || 'Actor'

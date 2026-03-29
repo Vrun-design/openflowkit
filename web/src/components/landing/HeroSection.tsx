@@ -4,6 +4,8 @@ import { Button } from './Button';
 import { GITHUB_REPO_URL } from './constants';
 
 const ROTATING_WORDS = ['thinks', 'draws', 'builds', 'ships'] as const;
+const EXIT_DURATION_MS = 500;
+const WORD_ROTATION_INTERVAL_MS = 3000;
 
 interface HeroSectionProps {
   onLaunch: () => void;
@@ -26,8 +28,8 @@ export function HeroSection({ onLaunch }: HeroSectionProps): React.ReactElement 
       exitTimer = window.setTimeout(() => {
         setIndex((previousIndex) => (previousIndex + 1) % ROTATING_WORDS.length);
         setIsExiting(false);
-      }, 500);
-    }, 3000);
+      }, EXIT_DURATION_MS);
+    }, WORD_ROTATION_INTERVAL_MS);
 
     return () => {
       window.clearInterval(interval);
@@ -39,7 +41,7 @@ export function HeroSection({ onLaunch }: HeroSectionProps): React.ReactElement 
   }, []);
 
   function openGithub(): void {
-    window.open(GITHUB_REPO_URL, '_blank');
+    window.open(GITHUB_REPO_URL, '_blank', 'noopener,noreferrer');
   }
 
   return (

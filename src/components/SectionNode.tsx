@@ -4,7 +4,7 @@ import type { NodeData } from '@/lib/types';
 import { getNodeParentId } from '@/lib/nodeParent';
 import { Group, Lock, EyeOff } from 'lucide-react';
 import { NamedIcon } from './IconMap';
-import { SECTION_COLOR_PALETTE } from '../theme';
+import { resolveSectionVisualStyle } from '../theme';
 import { useInlineNodeTextEdit } from '@/hooks/useInlineNodeTextEdit';
 import { InlineTextEditSurface } from './InlineTextEditSurface';
 import { NodeChrome } from './NodeChrome';
@@ -13,8 +13,7 @@ import { useSelectionState } from '@/store/selectionHooks';
 function SectionNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.ReactElement {
   const allNodes = useNodes();
   const { hoveredSectionId } = useSelectionState();
-  const color = data.color || 'blue';
-  const theme = SECTION_COLOR_PALETTE[color] || SECTION_COLOR_PALETTE.blue;
+  const theme = resolveSectionVisualStyle(data.color, data.colorMode, data.customColor, 'blue');
   const iconName = data.icon || 'Group';
   const labelEdit = useInlineNodeTextEdit(id, 'label', data.label || '');
   const subLabelEdit = useInlineNodeTextEdit(id, 'subLabel', data.subLabel || '');
@@ -25,13 +24,11 @@ function SectionNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
   const isDropTarget = hoveredSectionId === id;
   const isLocked = data.sectionLocked === true;
   const isHidden = data.sectionHidden === true;
-  const outlineBorder = isDropTarget ? theme.title : theme.border;
-  const outlineBackground = isDropTarget
-    ? `color-mix(in srgb, ${theme.bg} 78%, white 22%)`
+
+  const borderColor = isDropTarget ? theme.title : theme.border;
+  const bgColor = isDropTarget
+    ? `color-mix(in srgb, ${theme.bg} 85%, white 15%)`
     : theme.bg;
-  const badgeBackground = isDropTarget
-    ? 'color-mix(in srgb, white 32%, transparent)'
-    : 'color-mix(in srgb, white 24%, transparent)';
 
   return (
     <NodeChrome
@@ -43,39 +40,22 @@ function SectionNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
       handleVisibilityOptions={{ includeConnectingState: false }}
     >
       <div
-        className={`
-          group relative w-full h-full rounded-2xl transition-all duration-200 pointer-events-none
-          ${selected ? 'z-10' : ''}
-        `}
-        style={{
-          minWidth: 350,
-          minHeight: 250,
-        }}
+        className={`group relative w-full h-full ${selected ? 'z-10' : ''}`}
+        style={{ minWidth: 350, minHeight: 250 }}
       >
+        {/* Floating title — sits ABOVE the section border, FigJam-style */}
         <div
-          className="absolute inset-0 rounded-2xl border-2 border-dashed"
+          className="pointer-events-auto absolute left-0 flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
           style={{
-            backgroundColor: outlineBackground,
-            borderColor: outlineBorder,
-            boxShadow: isDropTarget ? `0 0 0 1px ${theme.title}` : undefined,
-          }}
-        />
-        <div className="pointer-events-auto absolute inset-x-0 top-0 h-3 rounded-t-2xl" />
-        <div className="pointer-events-auto absolute inset-x-0 bottom-0 h-3 rounded-b-2xl" />
-        <div className="pointer-events-auto absolute inset-y-0 left-0 w-3 rounded-l-2xl" />
-        <div className="pointer-events-auto absolute inset-y-0 right-0 w-3 rounded-r-2xl" />
-        {/* Title Bar */}
-        <div
-          className={`pointer-events-auto relative flex items-center gap-2 rounded-t-2xl px-4 py-3 ${isLocked ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}`}
-          style={{
-            borderBottom: `1px dashed ${outlineBorder}`,
-            backgroundColor: isDropTarget ? 'color-mix(in srgb, white 10%, transparent)' : undefined,
+            top: -36,
+            backgroundColor: `${borderColor}22`,
+            maxWidth: 'calc(100% - 8px)',
           }}
         >
           {iconName ? (
-            <NamedIcon name={iconName} fallbackName="Group" className="w-4 h-4 flow-lod-far-target" style={{ color: theme.title }} />
+            <NamedIcon name={iconName} fallbackName="Group" className="w-3.5 h-3.5 shrink-0 flow-lod-far-target" style={{ color: theme.title }} />
           ) : (
-            <Group className="w-4 h-4 flow-lod-far-target" style={{ color: theme.title }} />
+            <Group className="w-3.5 h-3.5 shrink-0 flow-lod-far-target" style={{ color: theme.title }} />
           )}
           <InlineTextEditSurface
             isEditing={labelEdit.isEditing}
@@ -85,9 +65,9 @@ function SectionNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
             onDraftChange={labelEdit.setDraft}
             onCommit={labelEdit.commit}
             onKeyDown={labelEdit.handleKeyDown}
-            className="font-bold text-sm tracking-tight"
+            className="font-semibold text-[13px] leading-tight tracking-tight whitespace-nowrap"
             style={{ color: theme.title }}
-            inputClassName="font-bold"
+            inputClassName="font-semibold"
             isSelected={Boolean(selected)}
           />
           {data.subLabel && (
@@ -99,34 +79,55 @@ function SectionNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
               onDraftChange={subLabelEdit.setDraft}
               onCommit={subLabelEdit.commit}
               onKeyDown={subLabelEdit.handleKeyDown}
-              className={`text-xs font-medium px-2 py-1 rounded-full flow-lod-secondary ${theme.badge}`}
+              className="text-[11px] font-medium px-1.5 py-0.5 rounded-full flow-lod-secondary"
+              style={{
+                backgroundColor: theme.badgeBg,
+                color: theme.badgeText,
+              }}
               inputClassName="px-0"
               isSelected={Boolean(selected)}
             />
           )}
-          {isLocked ? (
-            <span className="rounded-full px-2 py-1 text-[10px] font-semibold flow-lod-secondary" style={{ color: theme.title, backgroundColor: badgeBackground }}>
-              <Lock className="inline-block h-3 w-3" />
-            </span>
-          ) : null}
-          {isHidden ? (
-            <span className="rounded-full px-2 py-1 text-[10px] font-semibold flow-lod-secondary" style={{ color: theme.title, backgroundColor: badgeBackground }}>
-              <EyeOff className="inline-block h-3 w-3" />
-            </span>
-          ) : null}
+          {(isLocked || isHidden) && (
+            <div className="flex items-center gap-1 ml-0.5">
+              {isLocked && <Lock className="h-3 w-3 flow-lod-secondary shrink-0" style={{ color: theme.title }} />}
+              {isHidden && <EyeOff className="h-3 w-3 flow-lod-secondary shrink-0" style={{ color: theme.title }} />}
+            </div>
+          )}
+        </div>
+
+        {/* Section body — clean border, no internal header bar */}
+        <div
+          className="absolute inset-0 rounded-xl transition-all duration-150"
+          style={{
+            backgroundColor: bgColor,
+            border: `1.5px solid ${borderColor}`,
+            boxShadow: selected
+              ? `0 0 0 2px ${theme.title}33, 0 2px 8px rgba(0,0,0,0.06)`
+              : isDropTarget
+                ? `0 0 0 1px ${theme.title}55, 0 4px 16px rgba(0,0,0,0.10)`
+                : '0 1px 4px rgba(0,0,0,0.04)',
+          }}
+        />
+
+        {/* Edge drag-handle strips for resize */}
+        <div className="pointer-events-auto absolute inset-x-0 top-0 h-3 rounded-t-xl" />
+        <div className="pointer-events-auto absolute inset-x-0 bottom-0 h-3 rounded-b-xl" />
+        <div className="pointer-events-auto absolute inset-y-0 left-0 w-3 rounded-l-xl" />
+        <div className="pointer-events-auto absolute inset-y-0 right-0 w-3 rounded-r-xl" />
+
+        {/* Child count — subtle bottom-right badge */}
+        {childCount > 0 && (
           <span
-            className="ml-auto rounded-full px-2 py-1 text-[10px] font-semibold flow-lod-secondary"
-            style={{
-              color: theme.title,
-              backgroundColor: badgeBackground,
-            }}
+            className="pointer-events-none absolute bottom-2 right-3 text-[10px] font-medium flow-lod-secondary select-none"
+            style={{ color: theme.title, opacity: 0.55 }}
           >
             {childCount} {childCount === 1 ? 'item' : 'items'}
           </span>
-        </div>
+        )}
       </div>
     </NodeChrome>
   );
-};
+}
 
 export default memo(SectionNode);

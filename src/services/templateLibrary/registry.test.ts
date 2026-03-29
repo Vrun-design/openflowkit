@@ -20,6 +20,13 @@ function createTemplate(id: string): TemplateManifest {
         description: 'Template description',
         category: 'flowchart',
         tags: ['starter'],
+        audience: 'developers',
+        useCase: 'Registry fixture template',
+        launchPriority: 1,
+        featured: false,
+        difficulty: 'starter',
+        outcome: 'Supports registry cloning and duplicate-id tests.',
+        replacementHints: ['Primary label', 'Key owner', 'Main branch'],
         graph: {
             nodes: [createNode(`${id}-n1`, 'Node A', 0, 0), createNode(`${id}-n2`, 'Node B', 200, 0)],
             edges: [createDefaultEdge(`${id}-n1`, `${id}-n2`)],

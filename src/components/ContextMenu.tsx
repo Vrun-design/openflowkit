@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   Copy,
   ClipboardPaste,
@@ -27,10 +27,47 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+const VIEWPORT_PADDING = 12;
+const MENU_BUTTON_CLASS_NAME =
+  'flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]';
+const COMPACT_MENU_BUTTON_CLASS_NAME =
+  'flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-1.5 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]';
+const DANGER_MENU_BUTTON_CLASS_NAME =
+  'flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50';
+const GROUP_MENU_BUTTON_CLASS_NAME =
+  'flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-indigo-600 transition-colors hover:bg-indigo-50';
+const DIVIDER_CLASS_NAME = 'h-px bg-[var(--color-brand-border)] my-1';
+const SOFT_DIVIDER_CLASS_NAME = 'h-px bg-[var(--color-brand-border)] my-0.5';
+const SECTION_LABEL_CLASS_NAME =
+  'px-3 py-1 text-[10px] font-semibold text-[var(--brand-secondary)] uppercase';
+const SELECTION_COUNT_CLASS_NAME =
+  'px-3 py-1.5 text-[10px] font-bold text-[var(--brand-secondary)] uppercase tracking-wider';
+const ICON_GRID_BUTTON_CLASS_NAME =
+  'flex items-center justify-center rounded-[var(--radius-xs)] p-1.5 text-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]';
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+export function getContextMenuPosition(input: {
+  position: { x: number; y: number };
+  menuRect: Pick<DOMRect, 'width' | 'height'>;
+  viewport: { width: number; height: number };
+}): { x: number; y: number } {
+  const maxLeft = input.viewport.width - input.menuRect.width - VIEWPORT_PADDING;
+  const maxTop = input.viewport.height - input.menuRect.height - VIEWPORT_PADDING;
+
+  return {
+    x: clamp(input.position.x, VIEWPORT_PADDING, Math.max(VIEWPORT_PADDING, maxLeft)),
+    y: clamp(input.position.y, VIEWPORT_PADDING, Math.max(VIEWPORT_PADDING, maxTop)),
+  };
+}
+
 export interface ContextMenuProps {
   id: string | null;
   type: 'node' | 'pane' | 'edge' | 'multi';
   currentNodeType?: string | null;
+  onChangeNodeType?: (type: string) => void;
   isSectionLocked?: boolean;
   isSectionHidden?: boolean;
   hasParentSection?: boolean;
@@ -42,7 +79,6 @@ export interface ContextMenuProps {
   onDelete?: () => void;
   onBringToFront?: () => void;
   onSendToBack?: () => void;
-  onChangeNodeType?: (type: string) => void;
   onEditLabel?: () => void;
   onFitSectionToContents?: () => void;
   onBringContentsIntoSection?: () => void;
@@ -55,9 +91,10 @@ export interface ContextMenuProps {
   onAlignNodes?: (direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
   onDistributeNodes?: (direction: 'horizontal' | 'vertical') => void;
   onGroupSelected?: () => void;
+  onWrapInSection?: () => void;
 }
 
-export const ContextMenu: React.FC<ContextMenuProps> = ({
+export function ContextMenu({
   type,
   currentNodeType,
   isSectionLocked = false,
@@ -71,7 +108,6 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onDelete,
   onBringToFront,
   onSendToBack,
-  onChangeNodeType,
   onEditLabel,
   onFitSectionToContents,
   onBringContentsIntoSection,
@@ -83,82 +119,74 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onAlignNodes,
   onDistributeNodes,
   onGroupSelected,
-}) => {
+  onWrapInSection,
+}: ContextMenuProps): React.ReactElement {
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
-  const nodeTypeOptions = [
-    { id: 'process', label: 'Process' },
-    { id: 'decision', label: 'Decision' },
-    { id: 'annotation', label: 'Note' },
-    { id: 'journey', label: 'Journey' },
-    { id: 'architecture', label: 'Architecture' },
-    { id: 'class', label: 'Class' },
-    { id: 'er_entity', label: 'Entity' },
-  ];
+  const [menuPosition, setMenuPosition] = useState(position);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    function handleClickOutside(event: MouseEvent): void {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         onClose();
       }
-    };
+    }
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
+  useEffect(() => {
+    setMenuPosition(position);
+  }, [position]);
+
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!menu) {
+      return;
+    }
+
+    const rect = menu.getBoundingClientRect();
+    const nextPosition = getContextMenuPosition({
+      position,
+      menuRect: rect,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+    });
+
+    if (nextPosition.x !== menuPosition.x || nextPosition.y !== menuPosition.y) {
+      setMenuPosition(nextPosition);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menuPosition.x, menuPosition.y, position.x, position.y, type]);
+
   return (
     <div
       ref={menuRef}
-      style={{ top: position.y, left: position.x }}
-      className="absolute z-50 flex min-w-[200px] flex-col gap-0.5 rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-1.5 shadow-[var(--shadow-md)] animate-in fade-in zoom-in-95 duration-100"
+      style={{ top: menuPosition.y, left: menuPosition.x }}
+      className="fixed z-50 flex min-w-[200px] max-w-[min(280px,calc(100vw-24px))] flex-col gap-0.5 rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-1.5 shadow-[var(--shadow-md)] animate-in fade-in zoom-in-95 duration-100"
     >
       {type === 'node' && (
         <>
           <button
             onClick={onCopy}
-            className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+            className={MENU_BUTTON_CLASS_NAME}
           >
             <Copy className="w-4 h-4" /> {t('common.copy')}
           </button>
           <button
             onClick={onDuplicate}
-            className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+            className={MENU_BUTTON_CLASS_NAME}
           >
             <CopyPlus className="w-4 h-4" /> {t('common.duplicate')}
           </button>
 
-          {onChangeNodeType ? (
-            <>
-              <div className="h-px bg-[var(--color-brand-border)] my-1" />
-              <div className="px-3 py-1 text-[10px] font-semibold text-[var(--brand-secondary)] uppercase">
-                Switch type
-              </div>
-              <div className="grid grid-cols-2 gap-1 px-2 pb-1">
-                {nodeTypeOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => onChangeNodeType(option.id)}
-                    className={`rounded-[var(--radius-xs)] px-2 py-1.5 text-xs font-medium transition-colors ${
-                      currentNodeType === option.id
-                        ? 'bg-sky-50 text-sky-700'
-                        : 'bg-[var(--brand-background)] text-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          ) : null}
-
           {currentNodeType === 'section' || hasParentSection ? (
             <>
-              <div className="h-px bg-[var(--color-brand-border)] my-1" />
+              <div className={DIVIDER_CLASS_NAME} />
               {currentNodeType === 'section' && onFitSectionToContents ? (
                 <button
                   onClick={onFitSectionToContents}
-                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                  className={MENU_BUTTON_CLASS_NAME}
                 >
                   <Maximize2 className="w-4 h-4" /> Fit Contents
                 </button>
@@ -166,7 +194,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               {currentNodeType === 'section' && onBringContentsIntoSection ? (
                 <button
                   onClick={onBringContentsIntoSection}
-                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                  className={MENU_BUTTON_CLASS_NAME}
                 >
                   <FolderInput className="w-4 h-4" /> Bring Inside
                 </button>
@@ -174,7 +202,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               {hasParentSection && onReleaseFromSection ? (
                 <button
                   onClick={onReleaseFromSection}
-                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                  className={MENU_BUTTON_CLASS_NAME}
                 >
                   <ArrowUpRight className="w-4 h-4" /> Release From Section
                 </button>
@@ -182,16 +210,20 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
               {currentNodeType === 'section' && onToggleSectionLock ? (
                 <button
                   onClick={onToggleSectionLock}
-                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                  className={MENU_BUTTON_CLASS_NAME}
                 >
-                  {isSectionLocked ? <LockOpen className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                  {isSectionLocked ? (
+                    <LockOpen className="w-4 h-4" />
+                  ) : (
+                    <Lock className="w-4 h-4" />
+                  )}
                   {isSectionLocked ? 'Unlock Section' : 'Lock Section'}
                 </button>
               ) : null}
               {currentNodeType === 'section' && onToggleSectionHidden ? (
                 <button
                   onClick={onToggleSectionHidden}
-                  className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                  className={MENU_BUTTON_CLASS_NAME}
                 >
                   {isSectionHidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                   {isSectionHidden ? 'Show Section' : 'Hide Section'}
@@ -200,26 +232,26 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             </>
           ) : null}
 
-          <div className="h-px bg-[var(--color-brand-border)] my-1" />
+          <div className={DIVIDER_CLASS_NAME} />
 
           <button
             onClick={onBringToFront}
-            className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+            className={MENU_BUTTON_CLASS_NAME}
           >
             <BringToFront className="w-4 h-4" /> {t('common.bringToFront')}
           </button>
           <button
             onClick={onSendToBack}
-            className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+            className={MENU_BUTTON_CLASS_NAME}
           >
             <SendToBack className="w-4 h-4" /> {t('common.sendToBack')}
           </button>
 
-          <div className="h-px bg-[var(--color-brand-border)] my-1" />
+          <div className={DIVIDER_CLASS_NAME} />
 
           <button
             onClick={onDelete}
-            className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
+            className={DANGER_MENU_BUTTON_CLASS_NAME}
           >
             <Trash2 className="w-4 h-4" /> {t('common.delete')}
           </button>
@@ -243,21 +275,21 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           {onEditLabel && (
             <button
               onClick={onEditLabel}
-              className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+              className={MENU_BUTTON_CLASS_NAME}
             >
               <Pencil className="w-4 h-4" /> {t('common.editLabel')}
             </button>
           )}
           <button
             onClick={onDuplicate}
-            className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+            className={MENU_BUTTON_CLASS_NAME}
           >
             <Replace className="w-4 h-4" /> {t('common.reverseDirection')}
           </button>
-          <div className="h-px bg-[var(--color-brand-border)] my-1" />
+          <div className={DIVIDER_CLASS_NAME} />
           <button
             onClick={onDelete}
-            className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
+            className={DANGER_MENU_BUTTON_CLASS_NAME}
           >
             <Trash2 className="w-4 h-4" /> {t('common.deleteConnection')}
           </button>
@@ -266,55 +298,54 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
       {type === 'multi' && (
         <>
-          <div className="px-3 py-1.5 text-[10px] font-bold text-[var(--brand-secondary)] uppercase tracking-wider">
+          <div className={SELECTION_COUNT_CLASS_NAME}>
             {t('common.itemsSelected', { count: selectedCount })}
           </div>
 
-          {/* Align */}
           {onAlignNodes && (
             <>
-              <div className="px-3 py-1 text-[10px] font-semibold text-[var(--brand-secondary)] uppercase">
+              <div className={SECTION_LABEL_CLASS_NAME}>
                 {t('common.align')}
               </div>
               <div className="grid grid-cols-3 gap-0.5 px-2 pb-1">
                 <button
                   onClick={() => onAlignNodes('left')}
-                  className="flex items-center justify-center rounded-[var(--radius-xs)] p-1.5 text-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                  className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignLeft')}
                 >
                   <AlignStartVertical className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => onAlignNodes('center')}
-                  className="flex items-center justify-center rounded-[var(--radius-xs)] p-1.5 text-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                  className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignCenter')}
                 >
                   <AlignCenterVertical className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => onAlignNodes('right')}
-                  className="flex items-center justify-center rounded-[var(--radius-xs)] p-1.5 text-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                  className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignRight')}
                 >
                   <AlignEndVertical className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => onAlignNodes('top')}
-                  className="flex items-center justify-center rounded-[var(--radius-xs)] p-1.5 text-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                  className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignTop')}
                 >
                   <AlignStartHorizontal className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => onAlignNodes('middle')}
-                  className="flex items-center justify-center rounded-[var(--radius-xs)] p-1.5 text-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                  className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignMiddle')}
                 >
                   <AlignCenterHorizontal className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => onAlignNodes('bottom')}
-                  className="flex items-center justify-center rounded-[var(--radius-xs)] p-1.5 text-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                  className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignBottom')}
                 >
                   <AlignEndHorizontal className="w-3.5 h-3.5" />
@@ -323,45 +354,55 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             </>
           )}
 
-          {/* Distribute */}
           {onDistributeNodes && (
             <>
-              <div className="h-px bg-[var(--color-brand-border)] my-0.5" />
-              <div className="px-3 py-1 text-[10px] font-semibold text-[var(--brand-secondary)] uppercase">
+              <div className={SOFT_DIVIDER_CLASS_NAME} />
+              <div className={SECTION_LABEL_CLASS_NAME}>
                 {t('common.distribute')}
               </div>
               <button
                 onClick={() => onDistributeNodes('horizontal')}
-                className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-1.5 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                className={COMPACT_MENU_BUTTON_CLASS_NAME}
               >
                 <ArrowRightFromLine className="w-4 h-4" /> {t('common.distributeHorizontally')}
               </button>
               <button
                 onClick={() => onDistributeNodes('vertical')}
-                className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-1.5 text-left text-sm text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]"
+                className={COMPACT_MENU_BUTTON_CLASS_NAME}
               >
                 <ArrowDownFromLine className="w-4 h-4" /> {t('common.distributeVertically')}
               </button>
             </>
           )}
 
-          {/* Group */}
           {onGroupSelected && (
             <>
-              <div className="h-px bg-[var(--color-brand-border)] my-0.5" />
+              <div className={SOFT_DIVIDER_CLASS_NAME} />
               <button
                 onClick={onGroupSelected}
-                className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-indigo-600 transition-colors hover:bg-indigo-50"
+                className={GROUP_MENU_BUTTON_CLASS_NAME}
               >
                 <Group className="w-4 h-4" /> {t('common.group')}
               </button>
             </>
           )}
 
-          <div className="h-px bg-[var(--color-brand-border)] my-0.5" />
+          {onWrapInSection && (
+            <>
+              <div className={SOFT_DIVIDER_CLASS_NAME} />
+              <button
+                onClick={onWrapInSection}
+                className={GROUP_MENU_BUTTON_CLASS_NAME}
+              >
+                <Maximize2 className="w-4 h-4" /> Wrap in Section
+              </button>
+            </>
+          )}
+
+          <div className={SOFT_DIVIDER_CLASS_NAME} />
           <button
             onClick={onDelete}
-            className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
+            className={DANGER_MENU_BUTTON_CLASS_NAME}
           >
             <Trash2 className="w-4 h-4" /> {t('common.delete')} ({selectedCount})
           </button>
@@ -369,4 +410,4 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       )}
     </div>
   );
-};
+}

@@ -1,211 +1,390 @@
 import React, { useMemo, useState } from 'react';
 import type { Node } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
-import { Box, Palette, Star, Type } from 'lucide-react';
+import {
+  getBulkAffectedNodeCount,
+  getBulkSelectionFamilySummary,
+  getScopedSectionTitle,
+} from '@/lib/nodeBulkEditing';
+import { Box, Palette, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { Button } from '../ui/Button';
+import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { ShapeSelector } from './ShapeSelector';
 import { ColorPicker } from './ColorPicker';
-import { IconPicker } from './IconPicker';
+import { IconPicker, type ProviderIconSelection } from './IconPicker';
 import {
-    INSPECTOR_INPUT_CLASSNAME,
-    InspectorField,
-    InspectorFooter,
-    InspectorIntro,
-    InspectorSectionDivider,
-    InspectorSummaryCard,
+  InspectorFooter,
+  InspectorIntro,
+  InspectorSectionDivider,
+  InspectorSummaryCard,
 } from './InspectorPrimitives';
 import { createPropertyInputKeyDownHandler } from './propertyInputBehavior';
+import { getWireframeVariants } from './wireframeVariants';
+import {
+  ArchitectureBulkSection,
+  ClassBulkSection,
+  FindReplaceBulkSection,
+  JourneyBulkSection,
+  LabelTransformBulkSection,
+  SelectionSummary,
+  SequenceBulkSection,
+  WireframeVariantBulkSection,
+} from './BulkNodePropertiesSections';
+import {
+  buildBulkUpdates,
+  buildChangeSummary,
+  buildLabelOptions,
+  getAvailableBulkSections,
+  getBulkCapabilityCounts,
+  INITIAL_BULK_NODE_PROPERTIES_FORM_STATE,
+  resetBulkLabelTransformFields,
+  type BulkSectionId,
+  type BulkNodePropertiesFormState,
+} from './bulkNodePropertiesModel';
 
 interface BulkNodePropertiesProps {
-    selectedNodes: Node<NodeData>[];
-    onApply: (updates: Partial<NodeData>, labelPrefix?: string, labelSuffix?: string) => number;
+  selectedNodes: Node<NodeData>[];
+  onApply: (
+    updates: Partial<NodeData>,
+    labelPrefix?: string,
+    labelSuffix?: string,
+    labelFindReplace?: { find: string; replace: string; useRegex: boolean }
+  ) => number;
 }
 
-function buildBulkUpdates(
-    shape: NodeData['shape'] | '',
-    color: string,
-    colorMode: NodeData['colorMode'],
-    customColor: string | undefined,
-    icon: string,
-    customIconUrl: string | undefined
-): Partial<NodeData> {
-    const updates: Partial<NodeData> = {};
-    if (shape) updates.shape = shape;
-    if (color) updates.color = color;
-    if (colorMode) updates.colorMode = colorMode;
-    if (customColor && color === 'custom') updates.customColor = customColor;
-    if (icon) updates.icon = icon;
-    if (customIconUrl) updates.customIconUrl = customIconUrl;
-    return updates;
-}
+export function BulkNodeProperties({
+  selectedNodes,
+  onApply,
+}: BulkNodePropertiesProps): React.ReactElement {
+  const { t } = useTranslation();
+  const [form, setForm] = useState(INITIAL_BULK_NODE_PROPERTIES_FORM_STATE);
+  const [activeSection, setActiveSection] = useState<BulkSectionId>('shape');
+  const handleInputKeyDown = createPropertyInputKeyDownHandler({ blurOnEnter: true });
 
-function buildChangeSummary(
-    shape: NodeData['shape'] | '',
-    color: string,
-    colorMode: NodeData['colorMode'],
-    customColor: string | undefined,
-    icon: string,
-    customIconUrl: string | undefined,
-    labelPrefix: string,
-    labelSuffix: string
-): string[] {
-    const updates: string[] = [];
-    if (shape) updates.push(`shape: ${shape}`);
-    if (color) updates.push(`color: ${color === 'custom' && customColor ? `${customColor} (${colorMode || 'subtle'})` : `${color}${colorMode ? ` (${colorMode})` : ''}`}`);
-    if (icon) updates.push(`icon: ${icon}`);
-    if (customIconUrl) updates.push('custom icon: uploaded image');
-    if (labelPrefix) updates.push(`label prefix: "${labelPrefix}"`);
-    if (labelSuffix) updates.push(`label suffix: "${labelSuffix}"`);
-    return updates;
-}
+  const capabilityCounts = useMemo(() => getBulkCapabilityCounts(selectedNodes), [selectedNodes]);
 
-export function BulkNodeProperties({ selectedNodes, onApply }: BulkNodePropertiesProps): React.ReactElement {
-    const { t } = useTranslation();
-    const [shape, setShape] = useState<NodeData['shape'] | ''>('');
-    const [color, setColor] = useState<string>('');
-    const [colorMode, setColorMode] = useState<NodeData['colorMode']>('subtle');
-    const [customColor, setCustomColor] = useState<string | undefined>(undefined);
-    const [icon, setIcon] = useState<string>('');
-    const [customIconUrl, setCustomIconUrl] = useState<string | undefined>(undefined);
-    const [labelPrefix, setLabelPrefix] = useState('');
-    const [labelSuffix, setLabelSuffix] = useState('');
-    const [activeSection, setActiveSection] = useState('shape');
-    const handleInputKeyDown = createPropertyInputKeyDownHandler({ blurOnEnter: true });
+  const familySummary = useMemo(
+    () => getBulkSelectionFamilySummary(selectedNodes),
+    [selectedNodes]
+  );
 
-    const changeSummary = useMemo(
-        () => buildChangeSummary(shape, color, colorMode, customColor, icon, customIconUrl, labelPrefix, labelSuffix),
-        [shape, color, colorMode, customColor, icon, customIconUrl, labelPrefix, labelSuffix]
-    );
+  const allowAdvancedColorControls =
+    capabilityCounts.advancedColor === capabilityCounts.color && capabilityCounts.color > 0;
 
-    const hasChanges = changeSummary.length > 0;
+  const wireframeVariantOptions = useMemo(() => {
+    const optionMap = new Map<string, string>();
 
-    function handleApply(): void {
-        if (!hasChanges) {
-            return;
-        }
+    for (const node of selectedNodes) {
+      if (node.type !== 'browser' && node.type !== 'mobile') {
+        continue;
+      }
 
-        const updates = buildBulkUpdates(shape, color, colorMode, customColor, icon, customIconUrl);
-        onApply(updates, labelPrefix, labelSuffix);
-        setLabelPrefix('');
-        setLabelSuffix('');
+      for (const option of getWireframeVariants(node.type)) {
+        optionMap.set(option.id, option.label);
+      }
     }
 
-    function toggleSection(section: string): void {
-        setActiveSection((currentSection) => currentSection === section ? '' : section);
+    return Array.from(optionMap.entries()).map(([id, label]) => ({ id, label }));
+  }, [selectedNodes]);
+
+  const updates = useMemo(
+    () => buildBulkUpdates(form, allowAdvancedColorControls),
+    [form, allowAdvancedColorControls]
+  );
+
+  const labelOptions = useMemo(() => buildLabelOptions(form), [form]);
+  const changeSummary = useMemo(
+    () => buildChangeSummary(selectedNodes, updates, labelOptions),
+    [selectedNodes, updates, labelOptions]
+  );
+
+  const hasChanges = changeSummary.length > 0;
+  const affectedNodeCount = getBulkAffectedNodeCount(selectedNodes, updates, labelOptions);
+  const availableSections = getAvailableBulkSections({
+    shape: capabilityCounts.shape,
+    color: capabilityCounts.color,
+    icon: capabilityCounts.icon,
+    variant: capabilityCounts.variant,
+    architecture: capabilityCounts.architecture,
+    journey: capabilityCounts.journey,
+    class: capabilityCounts.class,
+    sequence: capabilityCounts.sequence,
+    labels: selectedNodes.length,
+    findReplace: selectedNodes.length,
+  });
+  const resolvedActiveSection = availableSections.includes(activeSection)
+    ? activeSection
+    : availableSections[0] ?? 'labels';
+
+  function updateForm<K extends keyof BulkNodePropertiesFormState>(
+    key: K,
+    value: BulkNodePropertiesFormState[K]
+  ): void {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function toggleSection(section: BulkSectionId): void {
+    setActiveSection((currentSection) => (currentSection === section ? '' : section));
+  }
+
+  function handleApply(): void {
+    if (!hasChanges) {
+      return;
     }
 
-    return (
-        <>
-            <InspectorSectionDivider />
+    onApply(updates, form.labelPrefix, form.labelSuffix, labelOptions.labelFindReplace);
+    setForm((current) => resetBulkLabelTransformFields(current));
+  }
 
-            <InspectorIntro>
-                {selectedNodes.length} nodes selected. Configure shared updates and apply in one history step.
-            </InspectorIntro>
+  function handleBuiltInIconChange(nextIcon: string): void {
+    setForm((current) => ({
+      ...current,
+      iconMode: 'built-in',
+      icon: nextIcon,
+      customIconUrl: undefined,
+      assetProvider: undefined,
+      assetCategory: undefined,
+      archIconPackId: undefined,
+      archIconShapeId: undefined,
+    }));
+  }
 
-            <CollapsibleSection
-                title={t('properties.bulkShape', 'Bulk Shape')}
-                icon={<Box className="w-3.5 h-3.5" />}
-                isOpen={activeSection === 'shape'}
-                onToggle={() => toggleSection('shape')}
-            >
-                <ShapeSelector selectedShape={shape || undefined} onChange={setShape} />
-            </CollapsibleSection>
+  function handleProviderIconChange(selection: ProviderIconSelection): void {
+    setForm((current) => ({
+      ...current,
+      iconMode: 'provider',
+      icon: '',
+      customIconUrl: undefined,
+      assetProvider: selection.provider,
+      assetCategory: selection.category,
+      archIconPackId: selection.packId,
+      archIconShapeId: selection.shapeId,
+    }));
+  }
 
-            <CollapsibleSection
-                title={t('properties.bulkColor', 'Bulk Color')}
-                icon={<Palette className="w-3.5 h-3.5" />}
-                isOpen={activeSection === 'color'}
-                onToggle={() => toggleSection('color')}
-            >
-                <ColorPicker
-                    selectedColor={color || undefined}
-                    selectedColorMode={colorMode}
-                    selectedCustomColor={customColor}
-                    onChange={(nextColor) => {
-                        setColor(nextColor);
-                        if (nextColor !== 'custom') {
-                            setCustomColor(undefined);
-                        }
-                    }}
-                    onColorModeChange={setColorMode}
-                    onCustomColorChange={setCustomColor}
-                    allowModes={true}
-                    allowCustom={true}
-                />
-            </CollapsibleSection>
+  function handleCustomIconChange(url?: string): void {
+    setForm((current) => ({
+      ...current,
+      iconMode: url ? 'upload' : '',
+      icon: '',
+      customIconUrl: url,
+      assetProvider: undefined,
+      assetCategory: undefined,
+      archIconPackId: undefined,
+      archIconShapeId: undefined,
+    }));
+  }
 
-            <CollapsibleSection
-                title={t('properties.bulkIcon', 'Bulk Icon')}
-                icon={<Star className="w-3.5 h-3.5" />}
-                isOpen={activeSection === 'icon'}
-                onToggle={() => toggleSection('icon')}
-            >
-                <IconPicker
-                    selectedIcon={icon || undefined}
-                    onChange={setIcon}
-                    customIconUrl={customIconUrl}
-                    onCustomIconChange={setCustomIconUrl}
-                />
-            </CollapsibleSection>
+  return (
+    <>
+      <InspectorSectionDivider />
 
-            <CollapsibleSection
-                title={t('properties.labelTransform', 'Label Transform')}
-                icon={<Type className="w-3.5 h-3.5" />}
-                isOpen={activeSection === 'labels'}
-                onToggle={() => toggleSection('labels')}
-            >
-                <div className="space-y-2">
-                    <InspectorField label={t('properties.prefixOptional', 'Prefix (optional)')}>
-                        <input
-                            value={labelPrefix}
-                            onChange={(event) => setLabelPrefix(event.target.value)}
-                            onKeyDown={handleInputKeyDown}
-                            placeholder={t('properties.prefixOptional', 'Prefix (optional)')}
-                            className={INSPECTOR_INPUT_CLASSNAME}
-                        />
-                    </InspectorField>
-                    <InspectorField label={t('properties.suffixOptional', 'Suffix (optional)')}>
-                        <input
-                            value={labelSuffix}
-                            onChange={(event) => setLabelSuffix(event.target.value)}
-                            onKeyDown={handleInputKeyDown}
-                            placeholder={t('properties.suffixOptional', 'Suffix (optional)')}
-                            className={INSPECTOR_INPUT_CLASSNAME}
-                        />
-                    </InspectorField>
-                </div>
-            </CollapsibleSection>
+      <InspectorIntro>
+        {selectedNodes.length} nodes selected. Shared controls apply to everything, while scoped
+        controls only touch compatible nodes.
+      </InspectorIntro>
 
-            <InspectorFooter className="space-y-4">
-                <InspectorSummaryCard>
-                    <div className="text-xs font-semibold text-slate-600">
-                        {t('properties.previewSummary', 'Preview summary')}
-                    </div>
-                    {hasChanges ? (
-                        <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-700">
-                            <li>{t('properties.bulkApplySummary', 'Will update {{count}} selected nodes', { count: selectedNodes.length })}</li>
-                            {changeSummary.map((item) => (
-                                <li key={item}>{item}</li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="mt-2 text-xs text-slate-500">
-                            {t('properties.selectFieldToApply', 'Select at least one field to apply.')}
-                        </p>
-                    )}
-                </InspectorSummaryCard>
+      <SelectionSummary familySummary={familySummary} />
 
-                <Button
-                    onClick={handleApply}
-                    disabled={!hasChanges}
-                    variant="primary"
-                    className="w-full"
-                >
-                    {t('properties.applyToSelectedNodes', 'Apply to selected nodes')}
-                </Button>
-            </InspectorFooter>
-        </>
-    );
+      {capabilityCounts.shape > 0 ? (
+        <CollapsibleSection
+          title={getScopedSectionTitle(
+            t('properties.bulkShape', 'Bulk Shape'),
+            capabilityCounts.shape,
+            selectedNodes.length
+          )}
+          icon={<Box className="w-3.5 h-3.5" />}
+          isOpen={resolvedActiveSection === 'shape'}
+          onToggle={() => toggleSection('shape')}
+        >
+          <ShapeSelector
+            selectedShape={form.shape || undefined}
+            onChange={(shape) => updateForm('shape', shape)}
+          />
+        </CollapsibleSection>
+      ) : null}
+
+      {capabilityCounts.color > 0 ? (
+        <CollapsibleSection
+          title={getScopedSectionTitle(
+            t('properties.bulkColor', 'Bulk Color'),
+            capabilityCounts.color,
+            selectedNodes.length
+          )}
+          icon={<Palette className="w-3.5 h-3.5" />}
+          isOpen={resolvedActiveSection === 'color'}
+          onToggle={() => toggleSection('color')}
+        >
+          <ColorPicker
+            selectedColor={form.color || undefined}
+            selectedColorMode={form.colorMode}
+            selectedCustomColor={form.customColor}
+            onChange={(nextColor) => {
+              updateForm('color', nextColor);
+              if (nextColor !== 'custom') {
+                updateForm('customColor', undefined);
+              }
+            }}
+            onColorModeChange={
+              allowAdvancedColorControls ? (colorMode) => updateForm('colorMode', colorMode) : undefined
+            }
+            onCustomColorChange={
+              allowAdvancedColorControls
+                ? (customColor) => updateForm('customColor', customColor)
+                : undefined
+            }
+            allowModes={allowAdvancedColorControls}
+            allowCustom={allowAdvancedColorControls}
+          />
+        </CollapsibleSection>
+      ) : null}
+
+      {capabilityCounts.icon > 0 ? (
+        <CollapsibleSection
+          title={getScopedSectionTitle(
+            t('properties.bulkIcon', 'Bulk Icon'),
+            capabilityCounts.icon,
+            selectedNodes.length
+          )}
+          icon={<Star className="w-3.5 h-3.5" />}
+          isOpen={resolvedActiveSection === 'icon'}
+          onToggle={() => toggleSection('icon')}
+        >
+          <IconPicker
+            selectedIcon={form.icon || undefined}
+            customIconUrl={form.customIconUrl}
+            selectedProvider={form.assetProvider}
+            selectedProviderCategory={form.assetCategory}
+            selectedProviderPackId={form.archIconPackId}
+            selectedProviderShapeId={form.archIconShapeId}
+            onSelectBuiltInIcon={handleBuiltInIconChange}
+            onSelectProviderIcon={handleProviderIconChange}
+            onCustomIconChange={handleCustomIconChange}
+          />
+        </CollapsibleSection>
+      ) : null}
+
+      {capabilityCounts.variant > 0 ? (
+        <WireframeVariantBulkSection
+          title={getScopedSectionTitle(
+            'Wireframe Variant',
+            capabilityCounts.variant,
+            selectedNodes.length
+          )}
+          isOpen={resolvedActiveSection === 'variant'}
+          onToggle={() => toggleSection('variant')}
+          options={wireframeVariantOptions}
+          value={form.variant}
+          onChange={(value) => updateForm('variant', value)}
+        />
+      ) : null}
+
+      {capabilityCounts.architecture > 0 ? (
+        <ArchitectureBulkSection
+          title={getScopedSectionTitle(
+            'Architecture Deployment',
+            capabilityCounts.architecture,
+            selectedNodes.length
+          )}
+          isOpen={resolvedActiveSection === 'architecture'}
+          onToggle={() => toggleSection('architecture')}
+          archEnvironment={form.archEnvironment}
+          archResourceType={form.archResourceType}
+          archZone={form.archZone}
+          archTrustDomain={form.archTrustDomain}
+          onEnvironmentChange={(value) => updateForm('archEnvironment', value)}
+          onResourceTypeChange={(value) => updateForm('archResourceType', value)}
+          onZoneChange={(value) => updateForm('archZone', value)}
+          onTrustDomainChange={(value) => updateForm('archTrustDomain', value)}
+          onInputKeyDown={handleInputKeyDown}
+        />
+      ) : null}
+
+      {capabilityCounts.journey > 0 ? (
+        <JourneyBulkSection
+          title={getScopedSectionTitle('Journey Step', capabilityCounts.journey, selectedNodes.length)}
+          isOpen={resolvedActiveSection === 'journey'}
+          onToggle={() => toggleSection('journey')}
+          journeySection={form.journeySection}
+          journeyScore={form.journeyScore}
+          onJourneySectionChange={(value) => updateForm('journeySection', value)}
+          onJourneyScoreChange={(value) => updateForm('journeyScore', value)}
+          onInputKeyDown={handleInputKeyDown}
+        />
+      ) : null}
+
+      {capabilityCounts.class > 0 ? (
+        <ClassBulkSection
+          title={getScopedSectionTitle('Class Definition', capabilityCounts.class, selectedNodes.length)}
+          isOpen={resolvedActiveSection === 'class'}
+          onToggle={() => toggleSection('class')}
+          classStereotype={form.classStereotype}
+          onChange={(value) => updateForm('classStereotype', value)}
+          onInputKeyDown={handleInputKeyDown}
+        />
+      ) : null}
+
+      {capabilityCounts.sequence > 0 ? (
+        <SequenceBulkSection
+          title={getScopedSectionTitle('Participant', capabilityCounts.sequence, selectedNodes.length)}
+          isOpen={resolvedActiveSection === 'sequence'}
+          onToggle={() => toggleSection('sequence')}
+          sequenceAlias={form.sequenceAlias}
+          onChange={(value) => updateForm('sequenceAlias', value)}
+          onInputKeyDown={handleInputKeyDown}
+        />
+      ) : null}
+
+      <LabelTransformBulkSection
+        title={t('properties.labelTransform', 'Label Transform')}
+        isOpen={resolvedActiveSection === 'labels'}
+        onToggle={() => toggleSection('labels')}
+        labelPrefix={form.labelPrefix}
+        labelSuffix={form.labelSuffix}
+        onLabelPrefixChange={(value) => updateForm('labelPrefix', value)}
+        onLabelSuffixChange={(value) => updateForm('labelSuffix', value)}
+        onInputKeyDown={handleInputKeyDown}
+      />
+
+      <FindReplaceBulkSection
+        title={t('properties.findReplace', 'Find & Replace')}
+        isOpen={resolvedActiveSection === 'findReplace'}
+        onToggle={() => toggleSection('findReplace')}
+        labelFind={form.labelFind}
+        labelReplace={form.labelReplace}
+        useRegex={form.useRegex}
+        onLabelFindChange={(value) => updateForm('labelFind', value)}
+        onLabelReplaceChange={(value) => updateForm('labelReplace', value)}
+        onUseRegexChange={(checked) => updateForm('useRegex', checked)}
+        onInputKeyDown={handleInputKeyDown}
+      />
+
+      <InspectorFooter className="space-y-4">
+        <InspectorSummaryCard>
+          <div className="text-xs font-semibold text-slate-600">
+            {t('properties.previewSummary', 'Preview summary')}
+          </div>
+          {hasChanges ? (
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-slate-700">
+              <li>
+                {affectedNodeCount} of {selectedNodes.length} selected nodes will update
+              </li>
+              {changeSummary.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-xs text-slate-500">
+              {t('properties.selectFieldToApply', 'Select at least one field to apply.')}
+            </p>
+          )}
+        </InspectorSummaryCard>
+
+        <Button onClick={handleApply} disabled={!hasChanges} variant="primary" className="w-full">
+          {t('properties.applyToSelectedNodes', 'Apply to selected nodes')}
+        </Button>
+      </InspectorFooter>
+    </>
+  );
 }

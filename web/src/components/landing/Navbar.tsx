@@ -13,6 +13,10 @@ interface NavbarProps {
 export function Navbar({ isScrolled, onLaunch }: NavbarProps): React.ReactElement {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const stars = useGithubStars();
+  const navContainerClasses = getNavContainerClasses(isMobileMenuOpen, isScrolled);
+  const mobileMenuClasses = isMobileMenuOpen
+    ? 'opacity-100 pointer-events-auto translate-y-0'
+    : 'opacity-0 pointer-events-none -translate-y-4';
 
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : 'unset';
@@ -50,18 +54,8 @@ export function Navbar({ isScrolled, onLaunch }: NavbarProps): React.ReactElemen
   }
 
   function openGithub(): void {
-    window.open(GITHUB_REPO_URL, '_blank');
+    window.open(GITHUB_REPO_URL, '_blank', 'noopener,noreferrer');
   }
-
-  const navContainerClasses = isMobileMenuOpen
-    ? 'bg-white border-transparent shadow-none ring-0'
-    : isScrolled
-      ? 'bg-white/85 backdrop-blur-xl shadow-lg shadow-black/[0.03] border-brand-border/80 ring-1 ring-black/5'
-      : 'bg-white/50 backdrop-blur-md border-brand-border/60 shadow-sm shadow-black/[0.02] ring-1 ring-white/50';
-
-  const mobileMenuClasses = isMobileMenuOpen
-    ? 'opacity-100 pointer-events-auto translate-y-0'
-    : 'opacity-0 pointer-events-none -translate-y-4';
 
   return (
     <>
@@ -195,4 +189,16 @@ export function Navbar({ isScrolled, onLaunch }: NavbarProps): React.ReactElemen
       </div>
     </>
   );
+}
+
+function getNavContainerClasses(isMobileMenuOpen: boolean, isScrolled: boolean): string {
+  if (isMobileMenuOpen) {
+    return 'bg-white border-transparent shadow-none ring-0';
+  }
+
+  if (isScrolled) {
+    return 'bg-white/85 backdrop-blur-xl shadow-lg shadow-black/[0.03] border-brand-border/80 ring-1 ring-black/5';
+  }
+
+  return 'bg-white/50 backdrop-blur-md border-brand-border/60 shadow-sm shadow-black/[0.02] ring-1 ring-white/50';
 }

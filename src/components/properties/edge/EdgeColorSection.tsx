@@ -1,29 +1,26 @@
 import React, { useRef, useState } from 'react';
 import { PaintBucket } from 'lucide-react';
 import type { FlowEdge } from '@/lib/types';
-import { NODE_COLOR_LABELS, NODE_COLOR_OPTIONS, NODE_EXPORT_COLORS } from '@/theme';
+import {
+  NODE_COLOR_LABELS,
+  NODE_COLOR_OPTIONS,
+  resolveEdgeVisualStyle,
+  resolveNodeVisualStyle,
+} from '@/theme';
 import { SwatchPicker } from '../SwatchPicker';
 import { CustomColorPopover } from '../CustomColorPopover';
 import { normalizeHex } from '../colorPickerUtils';
+import { buildEdgeStrokeUpdates } from './edgeColorUtils';
 
-const EDGE_COLORS = NODE_COLOR_OPTIONS.map((color) => ({
-  id: NODE_EXPORT_COLORS[color].border,
-  label: NODE_COLOR_LABELS[color],
-})) as ReadonlyArray<{ id: string; label: string }>;
-
-function recolorMarker(
-  marker: FlowEdge['markerStart'] | FlowEdge['markerEnd'],
-  color: string
-): FlowEdge['markerStart'] | FlowEdge['markerEnd'] {
-  if (!marker || typeof marker === 'string' || !('type' in marker)) {
-    return marker;
-  }
-
+const EDGE_COLORS = NODE_COLOR_OPTIONS.map((color) => {
+  const visualStyle = resolveNodeVisualStyle(color, 'subtle');
   return {
-    ...marker,
-    color,
+    id: visualStyle.border,
+    label: NODE_COLOR_LABELS[color],
+    backgroundColor: visualStyle.bg,
+    accentColor: visualStyle.border,
   };
-}
+});
 
 interface EdgeColorSectionProps {
   selectedEdge: FlowEdge;
@@ -44,11 +41,7 @@ export function EdgeColorSection({
   }
 
   function updateStroke(stroke: string): void {
-    onChange(selectedEdge.id, {
-      style: { ...selectedEdge.style, stroke },
-      markerStart: recolorMarker(selectedEdge.markerStart, stroke),
-      markerEnd: recolorMarker(selectedEdge.markerEnd, stroke),
-    });
+    onChange(selectedEdge.id, buildEdgeStrokeUpdates(selectedEdge, stroke));
   }
 
   return (
@@ -58,7 +51,8 @@ export function EdgeColorSection({
           ...EDGE_COLORS.map((color) => ({
             id: color.id,
             label: color.label,
-            backgroundColor: color.id,
+            backgroundColor: color.backgroundColor,
+            accentColor: color.accentColor,
           })),
           {
             id: 'custom',
@@ -107,5 +101,9 @@ export function EdgeColorSection({
 
 function valueLabelForColor(stroke: string): string {
   const preset = EDGE_COLORS.find((color) => color.id === stroke);
-  return preset?.label || 'Custom';
+  if (preset) {
+    return preset.label;
+  }
+
+  return resolveEdgeVisualStyle(stroke).stroke === stroke ? 'Custom' : 'Default';
 }

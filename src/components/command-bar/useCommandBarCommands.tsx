@@ -5,10 +5,8 @@ import {
     Compass,
     FileCode,
     Import,
-    Palette,
     Search,
     Settings,
-    SquareStack,
     WandSparkles,
     Workflow,
 } from 'lucide-react';
@@ -47,15 +45,6 @@ export function useCommandBarCommands({
                 description: `Open ${FLOWPILOT_NAME} in the right rail`,
                 action: onOpenStudioAI,
             },
-            {
-                id: 'templates',
-                label: 'Start from Template',
-                icon: <Compass className="w-4 h-4 text-blue-500" />,
-                tier: 'core',
-                type: 'navigation',
-                description: 'Browse pre-built flows and starter layouts',
-                view: 'templates',
-            },
             ...(hasImport ? [{
                 id: 'import',
                 label: 'Import from data',
@@ -66,6 +55,15 @@ export function useCommandBarCommands({
                 description: 'SQL -> ERD, Terraform -> Cloud, OpenAPI -> Sequence, Code -> Architecture',
             }] : []),
             {
+                id: 'templates',
+                label: 'Start from Template',
+                icon: <Compass className="w-4 h-4 text-blue-500" />,
+                tier: 'core',
+                type: 'navigation',
+                description: 'Browse pre-built flows and starter layouts',
+                view: 'templates',
+            },
+            {
                 id: 'assets',
                 label: 'Assets',
                 icon: <AssetsIcon className="w-4 h-4 text-[var(--brand-primary)]" />,
@@ -73,15 +71,6 @@ export function useCommandBarCommands({
                 type: 'navigation',
                 view: 'assets',
                 description: 'Wireframes, notes, sections, and media',
-            },
-            {
-                id: 'layers',
-                label: 'Layers & Sections',
-                icon: <SquareStack className="w-4 h-4 text-amber-500" />,
-                tier: 'advanced',
-                type: 'navigation',
-                view: 'layers',
-                description: 'Manage layers, section order, focus, lock, and visibility',
             },
             {
                 id: 'search-nodes',
@@ -178,15 +167,6 @@ export function useCommandBarCommands({
                     setEdges(edges.map((edge) => ({ ...edge, selected: true })));
                 },
                 hidden: true,
-            },
-            {
-                id: 'design-systems',
-                label: 'Design Systems',
-                icon: <Palette className="w-4 h-4 text-[var(--brand-primary)]" />,
-                tier: 'advanced',
-                type: 'navigation',
-                view: 'design-system',
-                description: 'Manage themes & styles',
             },
         ];
     }, [onOpenStudioAI, onOpenStudioOpenFlow, onOpenStudioMermaid, hasImport, settings, onUndo, onRedo]);
