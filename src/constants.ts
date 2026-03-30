@@ -83,9 +83,6 @@ export const EDGE_CONDITION_LABELS = {
 export const NODE_WIDTH = 250;
 export const NODE_HEIGHT = 150;
 
-// --- Initial Data ---
-export const INITIAL_NODES: FlowNode[] = [];
-
 export const INITIAL_EDGES: FlowEdge[] = [];
 
 // Dash pattern definitions for edge styling

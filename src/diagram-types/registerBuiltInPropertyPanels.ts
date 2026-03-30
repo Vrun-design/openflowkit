@@ -1,10 +1,5 @@
 import { registerDiagramNodeProperties } from '@/diagram-types/core';
-import { ClassDiagramNodeProperties } from '@/components/properties/families/ClassDiagramNodeProperties';
-import { ERDiagramNodeProperties } from '@/components/properties/families/ERDiagramNodeProperties';
-import { MindmapNodeProperties } from '@/components/properties/families/MindmapNodeProperties';
-import { JourneyNodeProperties } from '@/components/properties/families/JourneyNodeProperties';
-import { ArchitectureNodeProperties } from '@/components/properties/families/ArchitectureNodeProperties';
-import { SequenceNodeProperties } from '@/components/properties/families/SequenceNodeProperties';
+import { BUILT_IN_DIAGRAM_PROPERTY_PANELS } from './builtInPropertyPanels';
 
 let didRegisterBuiltInPropertyPanels = false;
 
@@ -13,11 +8,13 @@ export function registerBuiltInPropertyPanels(): void {
     return;
   }
 
-  registerDiagramNodeProperties('classDiagram', ClassDiagramNodeProperties);
-  registerDiagramNodeProperties('erDiagram', ERDiagramNodeProperties);
-  registerDiagramNodeProperties('mindmap', MindmapNodeProperties);
-  registerDiagramNodeProperties('journey', JourneyNodeProperties);
-  registerDiagramNodeProperties('architecture', ArchitectureNodeProperties);
-  registerDiagramNodeProperties('sequence', SequenceNodeProperties);
+  for (const panel of BUILT_IN_DIAGRAM_PROPERTY_PANELS) {
+    registerDiagramNodeProperties(panel.diagramType, panel.component);
+  }
+
   didRegisterBuiltInPropertyPanels = true;
+}
+
+export function resetBuiltInPropertyPanelRegistrationForTests(): void {
+  didRegisterBuiltInPropertyPanels = false;
 }

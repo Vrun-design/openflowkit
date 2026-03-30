@@ -48,7 +48,27 @@ describe('collaboration store bridge', () => {
       setEdges
     );
 
-    expect(setNodes).toHaveBeenCalledWith(nodes);
-    expect(setEdges).toHaveBeenCalledWith(edges);
+    expect(setNodes).toHaveBeenCalledWith(expect.any(Function));
+    expect(setEdges).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it('preserves existing references for unchanged remote canvas entities', () => {
+    const sharedNode = createNode('n-1');
+    const sharedEdge = createEdge('e-1', 'n-1', 'n-1');
+    const setNodes = vi.fn();
+    const setEdges = vi.fn();
+
+    applyCollaborationDocumentStateToCanvas(
+      createCollaborationDocumentStateFromCanvas('room-1', 1, [createNode('n-1')], [createEdge('e-1', 'n-1', 'n-1')]),
+      setNodes,
+      setEdges
+    );
+
+    const nextNodes = setNodes.mock.calls[0][0]([sharedNode]);
+    const nextEdges = setEdges.mock.calls[0][0]([sharedEdge]);
+
+    expect(nextNodes).toBeInstanceOf(Array);
+    expect(nextNodes[0]).toBe(sharedNode);
+    expect(nextEdges[0]).toBe(sharedEdge);
   });
 });

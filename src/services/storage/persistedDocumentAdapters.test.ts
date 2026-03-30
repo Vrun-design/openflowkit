@@ -72,6 +72,6 @@ describe('persistedDocumentAdapters', () => {
 
     expect(persisted.pages).toHaveLength(2);
     expect(persisted.activePageId).toBe('page-2');
-    expect(persisted.content?.history).toEqual({ past: [], future: [] });
+    expect(persisted.content?.history).toBeUndefined();
   });
 });

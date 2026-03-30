@@ -34,3 +34,7 @@ export function getDiagramNodeProperties(
 ): DiagramNodePropertiesComponent | undefined {
   return nodePropertiesRegistry.get(diagramType);
 }
+
+export function resetDiagramNodePropertiesRegistryForTests(): void {
+  nodePropertiesRegistry.clear();
+}

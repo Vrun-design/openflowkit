@@ -56,5 +56,8 @@ export function sanitizeAISettings(
     model: isNonEmptyString(input?.model) ? input.model.trim() : undefined,
     customBaseUrl: isNonEmptyString(input?.customBaseUrl) ? input.customBaseUrl.trim() : undefined,
     customHeaders: sanitizeCustomHeaders(input?.customHeaders),
+    temperature: typeof input?.temperature === 'number' && input.temperature >= 0.1 && input.temperature <= 1.0
+      ? Math.round(input.temperature * 10) / 10
+      : undefined,
   };
 }

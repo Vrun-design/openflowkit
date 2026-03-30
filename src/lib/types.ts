@@ -53,14 +53,19 @@ export enum NodeType {
   SEQUENCE_MESSAGE = 'sequence_message',
 }
 
-export interface NodeData {
-  [key: string]: unknown;
+export interface NodeLabelData {
   label: string;
   subLabel?: string; // Supports Markdown
+}
+
+export interface NodeIconData {
   icon?: string; // Key for the icon map
   secondaryIcon?: string; // Optional secondary icon key
   customIconUrl?: string; // User-uploaded icon (base64 or URL)
   imageUrl?: string; // Base64 or URL
+}
+
+export interface NodeVisualStyleData {
   color?: string; // Preset color key (e.g., 'white', 'blue', 'custom')
   colorMode?: 'subtle' | 'filled';
   customColor?: string; // Hex color for the "custom" preset
@@ -89,20 +94,41 @@ export interface NodeData {
   backgroundColor?: string;
   transparency?: number; // 0-1
   variant?: string; // wireframe preset key (e.g. 'landing', 'modal')
+}
+
+export interface NodeCanvasMetadata {
   layerId?: string; // layer identifier for visibility/lock/group operations
+  rotation?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface ClassNodeData {
   classStereotype?: string;
   classAttributes?: string[];
   classMethods?: string[];
+}
+
+export interface EntityNodeData {
   erFields?: Array<string | ErField>;
+}
+
+export interface JourneyNodeData {
   journeySection?: string;
   journeyActor?: string;
   journeyTask?: string;
   journeyScore?: number;
+}
+
+export interface MindmapNodeData {
   mindmapDepth?: number;
   mindmapParentId?: string;
   mindmapSide?: 'left' | 'right';
   mindmapBranchStyle?: 'curved' | 'straight';
   mindmapCollapsed?: boolean;
+}
+
+export interface ArchitectureNodeData {
   archProvider?: string;
   archProviderLabel?: string;
   archResourceType?: string;
@@ -115,6 +141,9 @@ export interface NodeData {
   assetPresentation?: 'icon';
   assetProvider?: string;
   assetCategory?: string;
+}
+
+export interface SequenceNodeData {
   seqParticipantKind?: 'participant' | 'actor';
   seqParticipantAlias?: string;
   seqMessageKind?: 'sync' | 'async' | 'return' | 'self' | 'create' | 'destroy';
@@ -125,6 +154,9 @@ export interface NodeData {
   seqNoteTarget?: string;
   seqNotePosition?: 'over' | 'left' | 'right';
   seqFragmentId?: string;
+}
+
+export interface SectionNodeData {
   sectionSizingMode?: 'manual' | 'fit';
   sectionLayoutMode?: 'freeform';
   sectionOrder?: number;
@@ -132,6 +164,41 @@ export interface NodeData {
   sectionHidden?: boolean;
   sectionCollapsed?: boolean;
 }
+
+export interface NodeData extends
+  NodeLabelData,
+  NodeIconData,
+  NodeVisualStyleData,
+  NodeCanvasMetadata,
+  ClassNodeData,
+  EntityNodeData,
+  JourneyNodeData,
+  MindmapNodeData,
+  ArchitectureNodeData,
+  SequenceNodeData,
+  SectionNodeData {
+  [key: string]: unknown;
+}
+
+export type NodeStyleData = Pick<
+  NodeData,
+  | 'align'
+  | 'backgroundColor'
+  | 'color'
+  | 'colorMode'
+  | 'customColor'
+  | 'customIconUrl'
+  | 'fontFamily'
+  | 'fontSize'
+  | 'fontStyle'
+  | 'fontWeight'
+  | 'icon'
+  | 'rotation'
+  | 'shape'
+  | 'subLabel'
+  | 'transparency'
+  | 'variant'
+>;
 
 export interface AIRequestParams {
   prompt: string;

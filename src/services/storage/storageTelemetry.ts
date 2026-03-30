@@ -3,7 +3,7 @@ import { captureAnalyticsEvent } from '@/services/analytics/analytics';
 export type StorageTelemetrySeverity = 'info' | 'warning' | 'error';
 
 export interface StorageTelemetryEvent {
-  area: 'persist' | 'snapshot' | 'schema' | 'indexeddb-state';
+  area: 'persist' | 'snapshot' | 'schema' | 'indexeddb-state' | 'ai-settings' | 'runtime';
   code: string;
   severity: StorageTelemetrySeverity;
   message: string;

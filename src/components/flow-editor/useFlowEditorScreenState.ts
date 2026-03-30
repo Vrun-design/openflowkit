@@ -26,7 +26,7 @@ export function useFlowEditorScreenState() {
     toggleSnap: state.toggleSnap,
   })));
   const { pages, activePageId } = useEditorPagesState();
-  const { addPage, closePage, updatePage } = useEditorPageActions();
+  const { addPage, closePage, updatePage, reorderPage } = useEditorPageActions();
   const viewSettings = useViewSettings();
   const { setShortcutsHelpOpen } = useShortcutHelpActions();
   const [diffBaseline, setDiffBaseline] = useState<FlowSnapshot | null>(null);
@@ -52,6 +52,7 @@ export function useFlowEditorScreenState() {
     addPage,
     closePage,
     updatePage,
+    reorderPage,
     viewSettings,
     setShortcutsHelpOpen,
     diffBaseline,

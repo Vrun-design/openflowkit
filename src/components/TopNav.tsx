@@ -21,6 +21,7 @@ interface TopNavProps {
     onAddPage: () => void;
     onClosePage: (pageId: string) => void;
     onRenamePage: (pageId: string, newName: string) => void;
+    onReorderPage: (draggedPageId: string, targetPageId: string) => void;
 
     // Actions
     onExportPNG: (format?: 'png' | 'jpeg') => void;
@@ -67,6 +68,7 @@ export function TopNav({
     onAddPage,
     onClosePage,
     onRenamePage,
+    onReorderPage,
     onExportPNG,
     onCopyImage,
     onExportSVG,
@@ -143,6 +145,7 @@ export function TopNav({
                     onAddPage={onAddPage}
                     onClosePage={onClosePage}
                     onRenamePage={onRenamePage}
+                    onReorderPage={onReorderPage}
                 />
             </div>
 

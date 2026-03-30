@@ -131,6 +131,19 @@ describe('resolveCollaborationCacheState', () => {
     });
   });
 
+  it('drops malformed persisted collaboration identities', () => {
+    window.localStorage.setItem('flowmind:collab-identity-v1', JSON.stringify({
+      name: 42,
+      color: null,
+    }));
+
+    const identity = resolveLocalCollaborationIdentity('collab-client-bad');
+
+    expect(identity.name).toBe('Guest');
+    expect(identity.color).toBeTruthy();
+    expect(window.localStorage.getItem('flowmind:collab-identity-v1')).toContain('"Guest"');
+  });
+
   it('resolves room secrets from url, session storage, or room id fallback', () => {
     expect(resolveLocalCollaborationRoomSecret({
       collaborationEnabled: false,

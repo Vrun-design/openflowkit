@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ContextMenu, getContextMenuPosition } from './ContextMenu';
 
@@ -35,5 +35,29 @@ describe('ContextMenu', () => {
         viewport: { width: 320, height: 240 },
       })
     ).toEqual({ x: 88, y: 48 });
+  });
+
+  it('supports keyboard navigation and escape close', () => {
+    const onClose = vi.fn();
+
+    render(
+      <ContextMenu
+        id="node-1"
+        type="node"
+        position={{ x: 310, y: 230 }}
+        onClose={onClose}
+        onCopy={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDelete={vi.fn()}
+        onBringToFront={vi.fn()}
+        onSendToBack={vi.fn()}
+      />
+    );
+
+    const menu = screen.getByRole('menu', { name: 'Canvas context menu' });
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    fireEvent.keyDown(menu, { key: 'Escape' });
+
+    expect(onClose).toHaveBeenCalled();
   });
 });

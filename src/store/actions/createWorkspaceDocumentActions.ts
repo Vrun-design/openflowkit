@@ -1,15 +1,11 @@
 import type { FlowTab } from '@/lib/types';
+import { nowIso } from '@/lib/date';
 import { createId } from '@/lib/id';
 import { DEFAULT_DIAGRAM_TYPE } from '@/services/diagramDocument';
 import type { FlowDocument } from '@/services/storage/flowDocumentModel';
+import type { GetFlowState, SetFlowState } from '../actionFactory';
+import { createEmptyFlowHistory } from '../historyState';
 import type { FlowState } from '../types';
-
-type SetFlowState = (partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)) => void;
-type GetFlowState = () => FlowState;
-
-function nowIso(): string {
-    return new Date().toISOString();
-}
 
 function createEmptyPage(documentId: string, pageName = 'Page 1'): FlowTab {
     return {
@@ -20,7 +16,7 @@ function createEmptyPage(documentId: string, pageName = 'Page 1'): FlowTab {
         nodes: [],
         edges: [],
         playback: undefined,
-        history: { past: [], future: [] },
+        history: createEmptyFlowHistory(),
     };
 }
 
@@ -207,7 +203,7 @@ export function createWorkspaceDocumentActions(set: SetFlowState, get: GetFlowSt
                             data: edge.data ? { ...edge.data } : edge.data,
                             style: edge.style ? { ...edge.style } : edge.style,
                         })),
-                        history: { past: [], future: [] },
+                        history: createEmptyFlowHistory(),
                     };
                 }),
             };

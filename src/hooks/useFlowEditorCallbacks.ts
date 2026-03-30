@@ -6,6 +6,7 @@ import { composeDiagramForDisplay } from '@/services/composeDiagramForDisplay';
 interface UseFlowEditorCallbacksParams {
     addPage: () => string;
     closePage: (pageId: string) => void;
+    reorderPage: (draggedPageId: string, targetPageId: string) => void;
     updatePage: (pageId: string, update: Partial<{ name: string }>) => void;
     navigate: (path: string) => void;
     pagesLength: number;
@@ -24,6 +25,7 @@ interface UseFlowEditorCallbacksResult {
     handleAddPage: () => void;
     handleClosePage: (pageId: string) => void;
     handleRenamePage: (pageId: string, newName: string) => void;
+    handleReorderPage: (draggedPageId: string, targetPageId: string) => void;
     selectAll: () => void;
     handleRestoreSnapshot: (snapshot: FlowSnapshot) => void;
     handleCommandBarApply: (newNodes: FlowNode[], newEdges: FlowEdge[]) => void;
@@ -32,6 +34,7 @@ interface UseFlowEditorCallbacksResult {
 export function useFlowEditorCallbacks({
     addPage,
     closePage,
+    reorderPage,
     updatePage,
     navigate,
     pagesLength,
@@ -71,6 +74,10 @@ export function useFlowEditorCallbacks({
     const handleRenamePage = useCallback((pageId: string, newName: string) => {
         updatePage(pageId, { name: newName });
     }, [updatePage]);
+
+    const handleReorderPage = useCallback((draggedPageId: string, targetPageId: string) => {
+        reorderPage(draggedPageId, targetPageId);
+    }, [reorderPage]);
 
     const selectAll = useCallback(() => {
         setNodes((nodes) => nodes.map((node) => ({ ...node, selected: true })));
@@ -140,6 +147,7 @@ export function useFlowEditorCallbacks({
         handleAddPage,
         handleClosePage,
         handleRenamePage,
+        handleReorderPage,
         selectAll,
         handleRestoreSnapshot,
         handleCommandBarApply,

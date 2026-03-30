@@ -1,22 +1,13 @@
 import { createJSONStorage, type PersistStorage, type StateStorage } from 'zustand/middleware';
 import type { PersistedFlowStateSlice } from '@/store/persistence';
-import { ensureFlowPersistenceSchema } from './indexedDbSchema';
 import { createIndexedDbStateStorage } from './indexedDbStateStorage';
-import { reportStorageTelemetry } from './storageTelemetry';
+import {
+  ensureStorageSchemaReady,
+  getBrowserIndexedDbFactory,
+  getBrowserLocalStorage,
+} from './storageRuntime';
 
 const PERSIST_WRITE_DEBOUNCE_MS = 250;
-
-function getBrowserLocalStorage(): Storage {
-  if (typeof localStorage === 'undefined') {
-    throw new Error('localStorage is not available in this runtime.');
-  }
-  return localStorage;
-}
-
-function getBrowserIndexedDbFactory(): IDBFactory | null {
-  if (typeof indexedDB === 'undefined') return null;
-  return indexedDB;
-}
 
 function createDebouncedStateStorage(storage: StateStorage, debounceMs = PERSIST_WRITE_DEBOUNCE_MS): StateStorage {
   const pendingValues = new Map<string, string>();
@@ -94,12 +85,13 @@ function createDebouncedStateStorage(storage: StateStorage, debounceMs = PERSIST
       const timer = setTimeout(() => {
         pendingTimers.delete(storageKey);
         void flushKey(storageKey).catch((error) => {
-          reportStorageTelemetry({
-            area: 'persist',
-            code: 'DEBOUNCED_WRITE_FAILED',
-            severity: 'warning',
-            message: `Debounced persisted state write failed for "${storageKey}": ${error instanceof Error ? error.message : String(error)}`,
-          });
+          // Storage runtime already reports schema/bootstrap failures.
+          // Keep write failures visible without coupling this module to telemetry details.
+          console.warn(
+            `Debounced persisted state write failed for "${storageKey}": ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
         });
       }, debounceMs);
       pendingTimers.set(storageKey, timer);
@@ -136,17 +128,7 @@ function resolveStateStorage(): StateStorage {
 }
 
 export function initializeIndexedDbSchemaScaffold(): void {
-  const indexedDbFactory = getBrowserIndexedDbFactory();
-  if (!indexedDbFactory) return;
-
-  void ensureFlowPersistenceSchema(indexedDbFactory).catch(() => {
-    reportStorageTelemetry({
-      area: 'schema',
-      code: 'SCHEMA_INIT_FAILED',
-      severity: 'warning',
-      message: 'IndexedDB schema initialization failed; runtime will continue with safe fallback paths.',
-    });
-  });
+  void ensureStorageSchemaReady();
 }
 
 export function createFlowPersistStorage(): PersistStorage<PersistedFlowStateSlice> {

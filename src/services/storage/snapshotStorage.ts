@@ -1,6 +1,7 @@
 import type { FlowSnapshot } from '@/lib/types';
-import { LEGACY_STORAGE_KEYS } from '@/lib/legacyBranding';
+import { APP_STORAGE_KEYS } from '@/lib/legacyBranding';
 import { FLOW_DOCUMENT_STORE_NAME, openFlowPersistenceDatabase } from './indexedDbSchema';
+import { getBrowserIndexedDbFactory } from './storageRuntime';
 import {
   readLocalStorageString,
   removeLocalStorageKey,
@@ -8,7 +9,7 @@ import {
 } from './uiLocalStorage';
 import { reportStorageTelemetry } from './storageTelemetry';
 
-const SNAPSHOT_STORAGE_KEY = LEGACY_STORAGE_KEYS.snapshots;
+const SNAPSHOT_STORAGE_KEY = APP_STORAGE_KEYS.snapshots;
 
 type SnapshotRecord = {
   id: string;
@@ -66,13 +67,8 @@ async function writeSnapshotRecord(indexedDbFactory: IDBFactory, snapshots: Flow
   }
 }
 
-function getIndexedDbFactory(): IDBFactory | null {
-  if (typeof indexedDB === 'undefined') return null;
-  return indexedDB;
-}
-
 export async function loadSnapshots(): Promise<FlowSnapshot[]> {
-  const indexedDbFactory = getIndexedDbFactory();
+  const indexedDbFactory = getBrowserIndexedDbFactory();
   if (!indexedDbFactory) {
     return readSnapshotsFromLocalStorage();
   }
@@ -98,7 +94,7 @@ export async function loadSnapshots(): Promise<FlowSnapshot[]> {
 }
 
 export async function saveSnapshots(snapshots: FlowSnapshot[]): Promise<void> {
-  const indexedDbFactory = getIndexedDbFactory();
+  const indexedDbFactory = getBrowserIndexedDbFactory();
   if (!indexedDbFactory) {
     writeSnapshotsToLocalStorage(snapshots);
     return;

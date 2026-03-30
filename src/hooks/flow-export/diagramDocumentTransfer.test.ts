@@ -51,5 +51,30 @@ describe('diagramDocumentTransfer', () => {
     expect(result.nodes).toHaveLength(1);
     expect(result.edges).toHaveLength(1);
     expect(result.outcome.status).toBe('success');
+    expect(result.report.status).toBe('success');
+  });
+
+  it('returns a structured failure report for invalid diagram json', async () => {
+    const result = await importDiagramDocumentJson({
+      json: JSON.stringify({ version: '1.0', nodes: [] }),
+      importStart: performance.now(),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.outcome.status).toBe('error');
+    expect(result.report.status).toBe('failed');
+    expect(result.report.issues[0]?.message).toContain('missing nodes or edges arrays');
+  });
+
+  it('returns a structured failure report for non-object diagram envelopes', async () => {
+    const result = await importDiagramDocumentJson({
+      json: JSON.stringify(['not-a-document']),
+      importStart: performance.now(),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.outcome.status).toBe('error');
+    expect(result.report.status).toBe('failed');
+    expect(result.report.issues[0]?.message).toContain('missing nodes or edges arrays');
   });
 });

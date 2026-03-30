@@ -1,8 +1,7 @@
 import type { DesignSystem } from '@/lib/types';
 import { createId } from '@/lib/id';
+import type { SetFlowState } from '../actionFactory';
 import type { FlowState } from '../types';
-
-type SetFlowState = (partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)) => void;
 
 export function createDesignSystemActions(set: SetFlowState): Pick<
     FlowState,

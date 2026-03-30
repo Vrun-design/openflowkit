@@ -1,5 +1,6 @@
-import { LEGACY_COLLABORATION_KEYS } from '@/lib/legacyBranding';
+import { APP_COLLABORATION_KEYS } from '@/lib/legacyBranding';
 import { isCollaborationOperationEnvelope } from './contracts';
+import { compactCollaborationOperationLog } from './operationLog';
 import { mapPresenceFromAwarenessState } from './session';
 import type { CollaborationOperationEnvelope, CollaborationPresenceState, CollaborationRoomConfig } from './types';
 import type { CollaborationTransport } from './transport';
@@ -58,6 +59,8 @@ type RealtimePersistenceFactory = (
   doc: Y.Doc
 ) => RealtimePersistenceLike;
 
+const OPERATION_LOG_COMPACTION_THRESHOLD = 120;
+
 interface YArrayDeltaInsert {
   insert?: unknown[];
 }
@@ -113,7 +116,7 @@ export function createYjsPeerCollaborationTransport(
   const createDoc = options.createDoc ?? (() => new Y.Doc());
   const createPersistence = options.createPersistence ?? (
     typeof indexedDB !== 'undefined'
-      ? ((roomId: string, doc: Y.Doc) => new IndexeddbPersistence(`${LEGACY_COLLABORATION_KEYS.indexedDbPrefix}${roomId}`, doc))
+      ? ((roomId: string, doc: Y.Doc) => new IndexeddbPersistence(`${APP_COLLABORATION_KEYS.indexedDbPrefix}${roomId}`, doc))
       : null
   );
 
@@ -131,6 +134,7 @@ export function createYjsPeerCollaborationTransport(
   let seenOperationIds = new Set<string>();
   let lastPresenceSnapshotKey = '[]';
   let awarenessClientIdsByPeerId = new Map<number, string>();
+  let isCompactingOperationLog = false;
   let readyPromise: Promise<void> = Promise.resolve();
   let latestStatus: { connected: boolean; peerCount?: number; synced?: boolean } = { connected: false };
   const statusSubscribers = new Set<(status: { connected: boolean; peerCount?: number; synced?: boolean }) => void>();
@@ -244,6 +248,9 @@ export function createYjsPeerCollaborationTransport(
       });
 
       operationsListener = (event) => {
+        if (isCompactingOperationLog) {
+          return;
+        }
         const deltas = event.changes.delta;
         for (const delta of deltas) {
           if (!Array.isArray(delta.insert)) {
@@ -378,6 +385,22 @@ export function createYjsPeerCollaborationTransport(
         return;
       }
       operationsArray.push([operation]);
+      if (operationsArray.length <= OPERATION_LOG_COMPACTION_THRESHOLD) {
+        return;
+      }
+
+      const retainedOperations = compactCollaborationOperationLog(
+        operationsArray.toArray().filter(isCollaborationOperationEnvelope)
+      );
+      isCompactingOperationLog = true;
+      try {
+        operationsArray.delete(0, operationsArray.length);
+        if (retainedOperations.length > 0) {
+          operationsArray.push(retainedOperations);
+        }
+      } finally {
+        isCompactingOperationLog = false;
+      }
     },
     publishPresence: (presence: CollaborationPresenceState) => {
       if (!provider || !roomConfig) {

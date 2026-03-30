@@ -14,6 +14,7 @@ import type {
   WorkspaceMeta,
 } from './persistenceTypes';
 import {
+  CHAT_MESSAGES_BY_DOCUMENT_ID_INDEX,
   AI_SETTINGS_PERSISTENT_STORE_NAME,
   CHAT_MESSAGES_STORE_NAME,
   CHAT_THREADS_STORE_NAME,
@@ -33,7 +34,9 @@ import {
   getRecord,
   putRecord,
   deleteRecord,
+  deleteRecordsByIndex,
   deleteWhereDocumentId,
+  getAllRecordsByIndex,
 } from './indexedDbHelpers';
 import {
   loadFallbackDocuments,
@@ -322,7 +325,12 @@ export const localFirstRepository: PersistenceRepository = {
         await deleteRecord(database, PERSISTED_DOCUMENTS_STORE_NAME, documentId);
         await deleteRecord(database, DOCUMENT_SESSIONS_STORE_NAME, documentId);
         await deleteRecord(database, CHAT_THREADS_STORE_NAME, documentId);
-        await deleteWhereDocumentId(database, CHAT_MESSAGES_STORE_NAME, documentId);
+        await deleteRecordsByIndex(
+          database,
+          CHAT_MESSAGES_STORE_NAME,
+          CHAT_MESSAGES_BY_DOCUMENT_ID_INDEX,
+          documentId
+        );
       });
     } catch {
       const nextDocuments = loadFallbackDocuments().filter(
@@ -361,12 +369,13 @@ export const localFirstRepository: PersistenceRepository = {
   async loadChatThread(documentId: string): Promise<PersistedChatMessage[]> {
     try {
       const messages = await withDatabase(async (database) => {
-        const allMessages = await getAllRecords<PersistedChatMessage>(
+        const documentMessages = await getAllRecordsByIndex<PersistedChatMessage>(
           database,
-          CHAT_MESSAGES_STORE_NAME
+          CHAT_MESSAGES_STORE_NAME,
+          CHAT_MESSAGES_BY_DOCUMENT_ID_INDEX,
+          documentId
         );
-        return allMessages
-          .filter((message) => message.documentId === documentId)
+        return documentMessages
           .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
       });
 
@@ -404,7 +413,12 @@ export const localFirstRepository: PersistenceRepository = {
   async replaceChatThread(documentId: string, messages: PersistedChatMessage[]): Promise<void> {
     try {
       await withDatabase(async (database) => {
-        await deleteWhereDocumentId(database, CHAT_MESSAGES_STORE_NAME, documentId);
+        await deleteRecordsByIndex(
+          database,
+          CHAT_MESSAGES_STORE_NAME,
+          CHAT_MESSAGES_BY_DOCUMENT_ID_INDEX,
+          documentId
+        );
         await Promise.all(
           messages.map((message) => putRecord(database, CHAT_MESSAGES_STORE_NAME, message))
         );
@@ -433,7 +447,12 @@ export const localFirstRepository: PersistenceRepository = {
     try {
       await withDatabase(async (database) => {
         await deleteRecord(database, CHAT_THREADS_STORE_NAME, documentId);
-        await deleteWhereDocumentId(database, CHAT_MESSAGES_STORE_NAME, documentId);
+        await deleteRecordsByIndex(
+          database,
+          CHAT_MESSAGES_STORE_NAME,
+          CHAT_MESSAGES_BY_DOCUMENT_ID_INDEX,
+          documentId
+        );
       });
       removeLegacyChatHistory(documentId);
     } catch {
@@ -453,8 +472,13 @@ export const localFirstRepository: PersistenceRepository = {
       if (record?.value) {
         return record.value;
       }
-    } catch {
-      // Fall through to compatibility storage.
+    } catch (error) {
+      reportStorageTelemetry({
+        area: 'ai-settings',
+        code: 'PERSISTENT_LOAD_FALLBACK_LOCAL',
+        severity: 'warning',
+        message: `IndexedDB AI settings load failed; falling back to localStorage compatibility storage: ${error instanceof Error ? error.message : String(error)}`,
+      });
     }
 
     return readLocalStorageString(AI_SETTINGS_STORAGE_KEY);
@@ -469,7 +493,13 @@ export const localFirstRepository: PersistenceRepository = {
         } satisfies PersistedAISettingsRecord);
       });
       removeLocalStorageKey(AI_SETTINGS_STORAGE_KEY);
-    } catch {
+    } catch (error) {
+      reportStorageTelemetry({
+        area: 'ai-settings',
+        code: 'PERSISTENT_SAVE_FALLBACK_LOCAL',
+        severity: 'warning',
+        message: `IndexedDB AI settings save failed; writing to localStorage compatibility storage: ${error instanceof Error ? error.message : String(error)}`,
+      });
       writeLocalStorageString(AI_SETTINGS_STORAGE_KEY, serialized);
     }
   },

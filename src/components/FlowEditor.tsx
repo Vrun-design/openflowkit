@@ -7,6 +7,7 @@ import { ArchitectureLintProvider } from '@/context/ArchitectureLintContext';
 import { useCinematicExportState } from '@/context/CinematicExportContext';
 import { DiagramDiffProvider } from '@/context/DiagramDiffContext';
 import { ShareEmbedModal } from '@/components/ShareEmbedModal';
+import { ImportRecoveryDialog } from '@/components/ImportRecoveryDialog';
 
 const CINEMATIC_EXPORT_BACKGROUND =
   'radial-gradient(circle at top, rgba(59,130,246,0.14), transparent 42%), linear-gradient(180deg, #f8fbff 0%, #eef5ff 52%, #f8fafc 100%)';
@@ -29,7 +30,10 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
     isSelectMode,
     reactFlowWrapper,
     fileInputRef,
+    handleImportJSON,
     onFileImport,
+    importRecoveryState,
+    dismissImportRecovery,
     shareViewerUrl,
     clearShareViewerUrl,
     collaborationEnabled,
@@ -92,6 +96,14 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
           {shareViewerUrl && (
             <ShareEmbedModal viewerUrl={shareViewerUrl} onClose={clearShareViewerUrl} />
           )}
+          {importRecoveryState ? (
+            <ImportRecoveryDialog
+              fileName={importRecoveryState.fileName}
+              report={importRecoveryState.report}
+              onRetry={handleImportJSON}
+              onClose={dismissImportRecovery}
+            />
+          ) : null}
         </div>
       </ArchitectureLintProvider>
     </DiagramDiffProvider>

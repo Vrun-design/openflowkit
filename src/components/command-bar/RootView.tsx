@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useId } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { FLOWPILOT_NAME } from '@/lib/brand';
@@ -42,12 +42,15 @@ const CommandItemRow = ({
   item,
   isSelected,
   onClick,
+  optionId,
 }: {
   item: CommandItem;
   isSelected: boolean;
   onClick: () => void;
+  optionId: string;
 }) => (
   <div
+    id={optionId}
     role="option"
     aria-selected={isSelected}
     onClick={onClick}
@@ -127,6 +130,7 @@ export const RootView = ({
   inputRef,
 }: RootViewProps) => {
   const { t } = useTranslation();
+  const listboxId = useId();
   const filteredCommands = useMemo(() => {
     if (!searchQuery) return commands.filter((c) => !c.hidden);
     return commands
@@ -167,6 +171,11 @@ export const RootView = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [filteredCommands, selectedIndex, onClose, setView, searchQuery, setSelectedIndex]);
 
+  const activeDescendantId =
+    selectedIndex >= 0 && selectedIndex < filteredCommands.length
+      ? `${listboxId}-option-${selectedIndex}`
+      : undefined;
+
   return (
     <>
       <div className="border-b border-[var(--color-brand-border)]/50 px-4 py-3">
@@ -178,6 +187,11 @@ export const RootView = ({
             // Prevent global shortcuts interfering with typing
             e.stopPropagation();
           }}
+          role="combobox"
+          aria-controls={listboxId}
+          aria-expanded={true}
+          aria-activedescendant={activeDescendantId}
+          aria-autocomplete="list"
           aria-label={t('commandBar.root.searchAria', 'Search command bar actions')}
           placeholder={t('commandBar.root.searchPlaceholder', {
             appName: FLOWPILOT_NAME,
@@ -197,6 +211,7 @@ export const RootView = ({
       </div>
 
       <div
+        id={listboxId}
         role="listbox"
         aria-label={searchQuery
           ? t('commandBar.root.resultsAria', 'Command search results')
@@ -214,6 +229,7 @@ export const RootView = ({
                 item={item}
                 isSelected={selectedIndex === idx}
                 onClick={() => runCommandItem(item, setView, onClose)}
+                optionId={`${listboxId}-option-${idx}`}
               />
             ))}
           </>
@@ -224,6 +240,7 @@ export const RootView = ({
               item={item}
               isSelected={selectedIndex === idx}
               onClick={() => runCommandItem(item, setView, onClose)}
+              optionId={`${listboxId}-option-${idx}`}
             />
           ))
         )}

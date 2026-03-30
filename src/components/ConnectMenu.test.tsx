@@ -93,7 +93,7 @@ describe('ConnectMenu', () => {
       />
     );
 
-    expect(await screen.findByRole('button', { name: /Analytics Glue/i })).toBeTruthy();
+    expect(await screen.findByRole('menuitem', { name: /Analytics Glue/i })).toBeTruthy();
     expect(screen.queryByText('connectMenu.process')).toBeNull();
   });
 
@@ -134,5 +134,26 @@ describe('ConnectMenu', () => {
       label: 'Yes',
       data: { condition: 'yes' },
     });
+  });
+
+  it('exposes a keyboard-navigable menu and closes on escape', () => {
+    const onClose = vi.fn();
+
+    render(
+      <ConnectMenu
+        position={{ x: 100, y: 100 }}
+        sourceId="decision-1"
+        sourceType="decision"
+        onSelect={vi.fn()}
+        onSelectAsset={vi.fn()}
+        onClose={onClose}
+      />
+    );
+
+    const menu = screen.getByRole('menu', { name: 'Connect node menu' });
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    fireEvent.keyDown(menu, { key: 'Escape' });
+
+    expect(onClose).toHaveBeenCalled();
   });
 });

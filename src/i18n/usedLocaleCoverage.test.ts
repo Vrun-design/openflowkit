@@ -13,6 +13,10 @@ const PUBLIC_LOCALES_DIR = path.join(ROOT_DIR, 'public', 'locales');
 const SOURCE_DIR = path.join(ROOT_DIR, 'src');
 
 const LOCALES = ['en', 'de', 'es', 'fr', 'ja', 'tr', 'zh'] as const;
+const FLOWPILOT_LOCALIZED_KEY_PATHS = [
+  'home.homeFlowpilotAI',
+  'home.suggestionAI',
+] as const;
 
 function readJson(filePath: string): JsonMap {
   return JSON.parse(fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '')) as JsonMap;
@@ -102,6 +106,24 @@ describe('used locale coverage', () => {
       const publicPath = path.join(PUBLIC_LOCALES_DIR, locale, 'translation.json');
 
       expect(readJson(publicPath), `${locale} public locale should match src locale`).toEqual(readJson(srcPath));
+    }
+  });
+
+  it('keeps Flowpilot AI labels localized outside English', () => {
+    const enDict = readJson(path.join(SRC_LOCALES_DIR, 'en', 'translation.json'));
+
+    for (const locale of LOCALES) {
+      if (locale === 'en') continue;
+
+      const dict = readJson(path.join(SRC_LOCALES_DIR, locale, 'translation.json'));
+
+      for (const keyPath of FLOWPILOT_LOCALIZED_KEY_PATHS) {
+        const enValue = getByPath(enDict, keyPath);
+        const localeValue = getByPath(dict, keyPath);
+
+        expect(typeof localeValue, `${locale}.${keyPath} should be a string`).toBe('string');
+        expect(localeValue, `${locale}.${keyPath} should differ from English`).not.toBe(enValue);
+      }
     }
   });
 });

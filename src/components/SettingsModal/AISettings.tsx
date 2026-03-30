@@ -233,6 +233,28 @@ export function AISettings(): React.ReactElement {
                     )}
                 </div>
 
+                {/* Temperature */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Generation temperature</Label>
+                    <span className="text-xs font-mono text-[var(--brand-secondary)]">
+                      {(aiSettings.temperature ?? 0.2).toFixed(1)}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1.0"
+                    step="0.1"
+                    value={aiSettings.temperature ?? 0.2}
+                    onChange={e => setAISettings({ temperature: parseFloat(e.target.value) })}
+                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-[var(--brand-background)] accent-[var(--brand-primary)]"
+                  />
+                  <p className="text-[11px] leading-5 text-[var(--brand-secondary)]">
+                    Lower = more precise and consistent. Higher = more creative and varied. Default: 0.2
+                  </p>
+                </div>
+
                 {/* API Key */}
                 <div className="space-y-3">
                     <Label>{providerMeta.name} {t('settingsModal.ai.apiKey')}</Label>

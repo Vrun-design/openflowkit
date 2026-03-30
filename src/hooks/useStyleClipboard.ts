@@ -1,38 +1,10 @@
 import { useCallback } from 'react';
-import { LEGACY_STORAGE_KEYS } from '@/lib/legacyBranding';
-import type { NodeData } from '@/lib/types';
+import { APP_STORAGE_KEYS } from '@/lib/legacyBranding';
+import { parseNodeStyleData, pickNodeStyleData } from '@/lib/nodeStyleData';
 import { readLocalStorageString, writeLocalStorageJson } from '@/services/storage/uiLocalStorage';
 import { useCanvasActions, useCanvasState } from '@/store/canvasHooks';
 
-const STYLE_CLIPBOARD_STORAGE_KEY = LEGACY_STORAGE_KEYS.styleClipboard;
-
-const STYLE_FIELDS: Array<keyof NodeData> = [
-  'align',
-  'backgroundColor',
-  'color',
-  'colorMode',
-  'customColor',
-  'customIconUrl',
-  'fontFamily',
-  'fontSize',
-  'fontStyle',
-  'fontWeight',
-  'icon',
-  'rotation',
-  'shape',
-  'subLabel',
-  'transparency',
-  'variant',
-];
-
-function pickStyleData(data: NodeData): Partial<NodeData> {
-  return STYLE_FIELDS.reduce<Partial<NodeData>>((styleData, key) => {
-    if (typeof data[key] !== 'undefined') {
-      styleData[key] = data[key];
-    }
-    return styleData;
-  }, {});
-}
+const STYLE_CLIPBOARD_STORAGE_KEY = APP_STORAGE_KEYS.styleClipboard;
 
 export function useStyleClipboard(recordHistory: () => void) {
   const { nodes } = useCanvasState();
@@ -44,7 +16,10 @@ export function useStyleClipboard(recordHistory: () => void) {
       return;
     }
 
-    writeLocalStorageJson(STYLE_CLIPBOARD_STORAGE_KEY, pickStyleData(sourceNode.data));
+    writeLocalStorageJson(
+      STYLE_CLIPBOARD_STORAGE_KEY,
+      pickNodeStyleData(sourceNode.data)
+    );
   }, [nodes]);
 
   const pasteStyleSelection = useCallback(() => {
@@ -58,7 +33,11 @@ export function useStyleClipboard(recordHistory: () => void) {
       return;
     }
 
-    const styleData = JSON.parse(styleDataRaw) as Partial<NodeData>;
+    const styleData = parseNodeStyleData(JSON.parse(styleDataRaw));
+    if (!styleData) {
+      return;
+    }
+
     recordHistory();
     setNodes((currentNodes) => currentNodes.map((node) => (
       selectedIds.has(node.id)

@@ -105,7 +105,7 @@ describe('useFlowEditorActions', () => {
         expect(addToast).toHaveBeenCalledWith('flowEditor.figmaExportFailed:copy failed', 'error');
     });
 
-    it('shows warning toast when export skips dangling edges', async () => {
+  it('shows warning toast when export skips dangling edges', async () => {
         const addToast = vi.fn();
         vi.mocked(getOpenFlowDSLExportDiagnostics).mockReturnValueOnce([
             {
@@ -137,6 +137,31 @@ describe('useFlowEditorActions', () => {
         });
 
         expect(addToast).toHaveBeenCalledWith('1 skipped', 'warning');
+    });
+
+    it('shows an error toast when share is requested on an empty canvas', () => {
+        const addToast = vi.fn();
+
+        const { result } = renderHook(() =>
+            useFlowEditorActions({
+                nodes: [],
+                edges: [],
+                recordHistory: vi.fn(),
+                setNodes: vi.fn(),
+                setEdges: vi.fn(),
+                fitView: vi.fn(),
+                t: createTranslator((key: string) => key),
+                addToast,
+                exportSerializationMode: 'deterministic',
+            })
+        );
+
+        act(() => {
+            result.current.handleShare();
+        });
+
+        expect(addToast).toHaveBeenCalledWith('Add nodes before creating a share link.', 'error');
+        expect(result.current.shareViewerUrl).toBeNull();
     });
 
     it('uses mindmap relayout instead of ELK when auto-layouting a mindmap tab', async () => {

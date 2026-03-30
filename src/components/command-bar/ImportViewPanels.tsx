@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Bot, ChevronRight, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Select, type SelectOption } from '@/components/ui/Select';
@@ -136,12 +136,32 @@ export function ImportTextAreaPanel({
   onInputChange,
   onDrop,
 }: ImportTextAreaPanelProps): React.ReactElement {
+  const [isDragging, setIsDragging] = useState(false);
+
+  function handleDragEnter(event: React.DragEvent): void {
+    event.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(event: React.DragEvent): void {
+    if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  }
+
+  function handleDrop(event: React.DragEvent): void {
+    setIsDragging(false);
+    onDrop(event);
+  }
+
   return (
     <>
       <div
         className="relative flex-1 min-h-[140px]"
-        onDrop={onDrop}
+        onDrop={handleDrop}
         onDragOver={(event) => event.preventDefault()}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
       >
         <textarea
           value={input}
@@ -153,6 +173,12 @@ export function ImportTextAreaPanel({
               : 'border-[var(--color-brand-border)] focus:border-[var(--brand-primary)] focus:ring-1 focus:ring-[var(--brand-primary-100)]'
           }`}
         />
+        {isDragging ? (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--brand-primary)] bg-[var(--brand-primary-100)]/20">
+            <Upload className="h-6 w-6 text-[var(--brand-primary)]" />
+            <span className="text-xs font-medium text-[var(--brand-primary)]">Drop your file here</span>
+          </div>
+        ) : null}
       </div>
 
       {inputTooLarge ? <p className="text-[11px] text-red-500">{limitError}</p> : null}

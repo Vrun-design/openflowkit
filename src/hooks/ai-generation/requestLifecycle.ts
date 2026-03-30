@@ -122,25 +122,40 @@ export async function generateAIFlowResult({
 
   const isEditMode = nodes.length > 0 || Boolean(seedDsl);
 
-  const dslText = await withRetry(
-    () => generateDiagramFromChat(
-      chatMessages,
-      fullPrompt,
-      currentGraph,
-      imageBase64,
-      aiSettings.apiKey,
-      aiSettings.model,
-      aiSettings.provider || 'gemini',
-      aiSettings.customBaseUrl,
-      isEditMode,
-      onChunk,
-      signal,
-    ),
-    signal,
-    onRetry,
-  );
+  let activePrompt = fullPrompt;
+  let dslText = '';
+  let parsed: ReturnType<typeof parseDslOrThrow>;
 
-  const parsed = parseDslOrThrow(dslText);
+  for (let attempt = 0; attempt <= 1; attempt++) {
+    dslText = await withRetry(
+      () => generateDiagramFromChat(
+        chatMessages,
+        activePrompt,
+        currentGraph,
+        imageBase64,
+        aiSettings.apiKey,
+        aiSettings.model,
+        aiSettings.provider || 'gemini',
+        aiSettings.customBaseUrl,
+        isEditMode,
+        onChunk,
+        signal,
+        aiSettings.temperature,
+      ),
+      signal,
+      onRetry,
+    );
+    try {
+      parsed = parseDslOrThrow(dslText);
+      break;
+    } catch (parseErr) {
+      if (attempt === 1) throw parseErr;
+      const msg = parseErr instanceof Error ? parseErr.message : 'DSL syntax error';
+      activePrompt = `${fullPrompt}\n\nFIX REQUIRED: Previous output had a DSL error: "${msg}". Output ONLY valid OpenFlow DSL — no prose, no markdown fences.`;
+      onRetry?.(3);
+    }
+  }
+  parsed = parsed!;
   const idMap = buildIdMap(parsed.nodes, nodes);
   const finalNodes = toFinalNodes(parsed.nodes, idMap);
   const finalEdges = toFinalEdges(parsed.edges, idMap, globalEdgeOptions);

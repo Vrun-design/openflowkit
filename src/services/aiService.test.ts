@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseClaudeContent, parseOpenAICompatibleContent } from './aiService';
+import { parseClaudeStreamDelta, parseOpenAIStreamDelta } from './aiServiceSchemas';
 
 describe('aiService response parsing', () => {
   describe('parseOpenAICompatibleContent', () => {
@@ -109,6 +110,37 @@ describe('aiService response parsing', () => {
         content: [{ text: 'first' }, { text: 'second' }],
       });
       expect(result).toEqual({ ok: true, value: 'first' });
+    });
+  });
+
+  describe('stream delta parsing', () => {
+    it('extracts OpenAI-compatible text deltas safely', () => {
+      expect(
+        parseOpenAIStreamDelta(
+          JSON.stringify({
+            choices: [{ delta: { content: 'partial' } }],
+          })
+        )
+      ).toBe('partial');
+    });
+
+    it('returns undefined for malformed OpenAI-compatible SSE lines', () => {
+      expect(parseOpenAIStreamDelta('{bad-json')).toBeUndefined();
+    });
+
+    it('extracts Claude text deltas safely', () => {
+      expect(
+        parseClaudeStreamDelta(
+          JSON.stringify({
+            type: 'content_block_delta',
+            delta: { type: 'text_delta', text: 'partial' },
+          })
+        )
+      ).toBe('partial');
+    });
+
+    it('returns undefined for malformed Claude SSE lines', () => {
+      expect(parseClaudeStreamDelta('{bad-json')).toBeUndefined();
     });
   });
 });

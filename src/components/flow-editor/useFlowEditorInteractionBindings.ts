@@ -12,6 +12,10 @@ interface UseFlowEditorInteractionBindingsParams {
     deleteEdge: (id: string) => void;
     undo: () => void;
     redo: () => void;
+    canUndo: boolean;
+    canRedo: boolean;
+    onUndoUnavailable: () => void;
+    onRedoUnavailable: () => void;
     duplicateNode: (id: string) => void;
     selectAll: () => void;
     handleAddMindmapChild: (nodeId: string, side?: 'left' | 'right' | null) => void;
@@ -43,6 +47,10 @@ export function useFlowEditorInteractionBindings({
     deleteEdge,
     undo,
     redo,
+    canUndo,
+    canRedo,
+    onUndoUnavailable,
+    onRedoUnavailable,
     duplicateNode,
     selectAll,
     handleAddMindmapChild,
@@ -72,6 +80,10 @@ export function useFlowEditorInteractionBindings({
         deleteEdge,
         undo,
         redo,
+        canUndo,
+        canRedo,
+        onUndoUnavailable,
+        onRedoUnavailable,
         duplicateNode,
         selectAll,
         selectedNodeType,

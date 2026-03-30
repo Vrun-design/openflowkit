@@ -152,6 +152,28 @@ describe('CustomNode handle interaction policy', () => {
     expect(screen.queryByText('Node')).toBeNull();
   });
 
+  it('exposes an accessible canvas node label', () => {
+    render(
+      <CustomNode
+        id="n-aria"
+        type="process"
+        selected={true}
+        dragging={false}
+        zIndex={1}
+        data={{ label: 'Accessible node', subLabel: 'Important detail' }}
+        isConnectable={true}
+        xPos={0}
+        yPos={0}
+        sourcePosition={Position.Right}
+        targetPosition={Position.Left}
+      />
+    );
+
+    expect(
+      screen.getByLabelText('process node, Accessible node, Important detail, selected')
+    ).toBeTruthy();
+  });
+
   it('applies richer V2 fills for preset colors', () => {
     currentNodeId = 'n-fill';
     const { container } = render(

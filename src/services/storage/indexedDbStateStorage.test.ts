@@ -4,6 +4,7 @@ import { openFlowPersistenceDatabase } from './indexedDbSchema';
 
 vi.mock('./indexedDbSchema', () => ({
   FLOW_METADATA_STORE_NAME: 'flowMetadata',
+  SCHEMA_META_STORE_NAME: 'schemaMeta',
   openFlowPersistenceDatabase: vi.fn(),
 }));
 
@@ -34,24 +35,37 @@ function createRequest<T>(result: T, error: Error | null = null): IDBRequest<T> 
 }
 
 function createMockDatabase(initialRecords: Record<string, string> = {}): IDBDatabase {
-  const records = new Map<string, string>(Object.entries(initialRecords));
-  const objectStore = {
-    get: vi.fn((id: string) => {
-      const value = records.get(id);
-      return createRequest(value ? { id, value } : undefined);
-    }),
-    put: vi.fn((record: { id: string; value: string }) => {
-      records.set(record.id, record.value);
-      return createRequest(record.id);
-    }),
-    delete: vi.fn((id: string) => {
-      records.delete(id);
-      return createRequest(undefined);
-    }),
-  } as unknown as IDBObjectStore;
+  const stateRecords = new Map<string, string>(Object.entries(initialRecords));
+  const schemaRecords = new Map<string, string>();
+
+  function createObjectStore(records: Map<string, string>): IDBObjectStore {
+    return {
+      get: vi.fn((id: string) => {
+        const value = records.get(id);
+        return createRequest(value ? { id, value } : undefined);
+      }),
+      put: vi.fn((record: { id: string; value: string }) => {
+        records.set(record.id, record.value);
+        return createRequest(record.id);
+      }),
+      delete: vi.fn((id: string) => {
+        records.delete(id);
+        return createRequest(undefined);
+      }),
+    } as unknown as IDBObjectStore;
+  }
+
+  const stateObjectStore = createObjectStore(stateRecords);
+  const schemaObjectStore = createObjectStore(schemaRecords);
 
   const transaction = {
-    objectStore: vi.fn(() => objectStore),
+    objectStore: vi.fn((storeName: string) => {
+      if (storeName === 'schemaMeta') {
+        return schemaObjectStore;
+      }
+
+      return stateObjectStore;
+    }),
   } as unknown as IDBTransaction;
 
   return {

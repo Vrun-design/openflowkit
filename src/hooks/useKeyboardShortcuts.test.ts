@@ -127,6 +127,28 @@ describe('useKeyboardShortcuts', () => {
     expect(onZoomOut).toHaveBeenCalledTimes(1);
   });
 
+  it('shows undo unavailable feedback instead of calling undo at the history boundary', () => {
+    const undo = vi.fn();
+    const onUndoUnavailable = vi.fn();
+    renderShortcuts({ undo, canUndo: false, onUndoUnavailable });
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true }));
+
+    expect(undo).not.toHaveBeenCalled();
+    expect(onUndoUnavailable).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows redo unavailable feedback instead of calling redo at the history boundary', () => {
+    const redo = vi.fn();
+    const onRedoUnavailable = vi.fn();
+    renderShortcuts({ redo, canRedo: false, onRedoUnavailable });
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'y', ctrlKey: true }));
+
+    expect(redo).not.toHaveBeenCalled();
+    expect(onRedoUnavailable).toHaveBeenCalledTimes(1);
+  });
+
   it('adds a mindmap child on Tab when a mindmap topic is selected', () => {
     const onAddMindmapChildShortcut = vi.fn();
     renderShortcuts({

@@ -1,6 +1,6 @@
 import { createDefaultEdge } from '@/constants';
 import { createId } from '@/lib/id';
-import { LEGACY_DSL_CODE_FENCE_ALIASES } from '@/lib/legacyBranding';
+import { APP_DSL_CODE_FENCE_ALIASES } from '@/lib/legacyBranding';
 import { createLogger } from '@/lib/logger';
 import { parseOpenFlowDSL } from '@/lib/openFlowDSLParser';
 import type { FlowEdge, FlowNode } from '@/lib/types';
@@ -13,7 +13,7 @@ export interface ParsedFlowResult {
 }
 
 export function parseDslOrThrow(dslText: string): ParsedFlowResult {
-  const codeFenceAliasPattern = ['yaml', 'openflow', ...LEGACY_DSL_CODE_FENCE_ALIASES].join('|');
+  const codeFenceAliasPattern = ['yaml', 'openflow', ...APP_DSL_CODE_FENCE_ALIASES].join('|');
   const cleanDsl = dslText
     .replace(new RegExp(`\`\`\`(${codeFenceAliasPattern}|)?`, 'g'), '')
     .replace(/```/g, '')

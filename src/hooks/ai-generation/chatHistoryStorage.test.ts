@@ -52,6 +52,18 @@ describe('chatHistoryStorage', () => {
     ]);
   });
 
+  it('drops malformed legacy localStorage chat payloads', async () => {
+    loadChatThread.mockRejectedValue(new Error('offline'));
+    localStorage.setItem(
+      'ofk_chat_history_doc-bad',
+      JSON.stringify([{ role: 'system', parts: ['bad-shape'] }])
+    );
+
+    const { loadChatHistory } = await import('./chatHistoryStorage');
+
+    await expect(loadChatHistory('doc-bad')).resolves.toEqual([]);
+  });
+
   it('writes the full chat thread to the repository', async () => {
     const messages: ChatMessage[] = [
       { role: 'user', parts: [{ text: 'a' }] },

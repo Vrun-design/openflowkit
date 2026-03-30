@@ -1,5 +1,7 @@
 import React from 'react';
+import { Keyboard } from 'lucide-react';
 import { Button } from './ui/Button';
+import { useShortcutHelpActions } from '@/store/viewHooks';
 
 interface FlowEditorEmptyStateProps {
     title: string;
@@ -23,6 +25,8 @@ export function FlowEditorEmptyState({
     onTemplates,
     onAddNode,
 }: FlowEditorEmptyStateProps): React.ReactElement {
+    const { setShortcutsHelpOpen } = useShortcutHelpActions();
+
     return (
         <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none animate-[fadeIn_200ms_ease-out]">
             <div className="pointer-events-auto w-full max-w-[400px] px-6">
@@ -74,9 +78,18 @@ export function FlowEditorEmptyState({
                         </Button>
                     </div>
 
-                    <div className="mt-8 flex items-center justify-center text-xs text-[var(--brand-secondary)] opacity-80">
-                        Press <kbd className="mx-1.5 rounded border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-1.5 py-0.5 font-sans font-medium text-[var(--brand-secondary)]">&#8984;K</kbd> for command center
-                    </div>
+                    <button
+                        onClick={() => setShortcutsHelpOpen(true)}
+                        className="group mt-8 flex w-full items-center justify-center gap-2 transition-opacity duration-150 hover:opacity-100 opacity-60 focus-visible:outline-none"
+                        data-testid="empty-state-shortcuts"
+                        type="button"
+                    >
+                        <Keyboard className="h-[13px] w-[13px] text-[var(--brand-secondary)]" strokeWidth={2} />
+                        <span className="text-[12px] text-[var(--brand-secondary)]">View keyboard shortcuts</span>
+                        <kbd className="inline-flex h-[18px] items-center justify-center rounded-[4px] border border-[var(--color-brand-border)] bg-[var(--brand-background)] px-[5px] font-mono text-[10px] font-bold text-[var(--brand-secondary)]">
+                            ?
+                        </kbd>
+                    </button>
                 </div>
             </div>
         </div>

@@ -1,38 +1,26 @@
 import { useShallow } from 'zustand/react/shallow';
 import { useFlowStore } from '../store';
 import type { DesignSystem } from '@/lib/types';
-import type { FlowStoreState } from '../store';
+import {
+    createDesignSystemByIdSelector,
+    selectActiveDesignSystem,
+    selectDesignSystemActions,
+    selectDesignSystemsCatalog,
+} from './selectors';
+import type { DesignSystemActionsSlice, DesignSystemCatalogSlice } from './types';
 
-export function useDesignSystemsCatalog(): Pick<FlowStoreState, 'designSystems' | 'activeDesignSystemId'> {
-    return useFlowStore(
-        useShallow((state) => ({
-            designSystems: state.designSystems,
-            activeDesignSystemId: state.activeDesignSystemId,
-        }))
-    );
+export function useDesignSystemsCatalog(): DesignSystemCatalogSlice {
+    return useFlowStore(useShallow(selectDesignSystemsCatalog));
 }
 
 export function useActiveDesignSystem(): DesignSystem {
-    return useFlowStore((state) => {
-        return state.designSystems.find((designSystem) => designSystem.id === state.activeDesignSystemId) ?? state.designSystems[0];
-    });
+    return useFlowStore(selectActiveDesignSystem);
 }
 
 export function useDesignSystemById(systemId: string): DesignSystem | undefined {
-    return useFlowStore((state) => state.designSystems.find((designSystem) => designSystem.id === systemId));
+    return useFlowStore(createDesignSystemByIdSelector(systemId));
 }
 
-export function useDesignSystemActions(): Pick<
-    FlowStoreState,
-    'setActiveDesignSystem' | 'addDesignSystem' | 'updateDesignSystem' | 'deleteDesignSystem' | 'duplicateDesignSystem'
-> {
-    return useFlowStore(
-        useShallow((state) => ({
-            setActiveDesignSystem: state.setActiveDesignSystem,
-            addDesignSystem: state.addDesignSystem,
-            updateDesignSystem: state.updateDesignSystem,
-            deleteDesignSystem: state.deleteDesignSystem,
-            duplicateDesignSystem: state.duplicateDesignSystem,
-        }))
-    );
+export function useDesignSystemActions(): DesignSystemActionsSlice {
+    return useFlowStore(useShallow(selectDesignSystemActions));
 }

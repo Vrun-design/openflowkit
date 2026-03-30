@@ -12,6 +12,7 @@ import {
 } from './services/analytics/analytics';
 import { ensureLocalFirstPersistenceReady } from './services/storage/localFirstRuntime';
 import { installStorageTelemetrySink } from './services/storage/storageTelemetrySink';
+import { reportStorageTelemetry } from './services/storage/storageTelemetry';
 import { registerAppShellServiceWorker } from './services/offline/registerAppShellServiceWorker';
 import './index.css';
 
@@ -35,7 +36,17 @@ function BootstrapApp(): React.ReactElement {
     let isDisposed = false;
 
     void ensureLocalFirstPersistenceReady()
-      .catch(() => undefined)
+      .catch((error) => {
+        reportStorageTelemetry({
+          area: 'runtime',
+          code: 'BOOTSTRAP_PERSISTENCE_READY_FAILED',
+          severity: 'error',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Local-first persistence bootstrap failed.',
+        });
+      })
       .finally(() => {
         if (!isDisposed) {
           setIsReady(true);

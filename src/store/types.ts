@@ -60,6 +60,7 @@ export interface AISettings {
   model?: string;
   customBaseUrl?: string;
   customHeaders?: CustomHeaderConfig[];
+  temperature?: number;
 }
 
 export interface Layer {
@@ -113,6 +114,7 @@ export interface FlowState {
   addTab: () => string;
   duplicateActiveTab: () => string | null;
   duplicateTab: (id: string) => string | null;
+  reorderTab: (draggedTabId: string, targetTabId: string) => void;
   deleteTab: (id: string) => void;
   closeTab: (id: string) => void;
   updateTab: (id: string, updates: Partial<FlowTab>) => void;
@@ -199,5 +201,100 @@ export interface FlowState {
   lastUpdateTime: number;
   updateLastSaveTime: () => void;
 }
+
+export type CanvasStateSlice = Pick<FlowState, 'nodes' | 'edges'>;
+export type CanvasActionsSlice = Pick<
+  FlowState,
+  'onNodesChange' | 'onEdgesChange' | 'setNodes' | 'setEdges' | 'onConnect'
+>;
+
+export type WorkspaceDocumentsStateSlice = Pick<
+  FlowState,
+  'documents' | 'activeDocumentId' | 'tabs' | 'activeTabId' | 'nodes' | 'edges'
+>;
+export type WorkspaceDocumentActionsSlice = Pick<
+  FlowState,
+  | 'setActiveDocumentId'
+  | 'setDocuments'
+  | 'createDocument'
+  | 'renameDocument'
+  | 'duplicateDocument'
+  | 'deleteDocumentRecord'
+>;
+
+export type TabStateSlice = Pick<FlowState, 'tabs' | 'activeTabId'>;
+export type TabActionsSlice = Pick<
+  FlowState,
+  | 'setActiveTabId'
+  | 'setTabs'
+  | 'addTab'
+  | 'duplicateActiveTab'
+  | 'duplicateTab'
+  | 'reorderTab'
+  | 'deleteTab'
+  | 'closeTab'
+  | 'updateTab'
+  | 'copySelectedToTab'
+  | 'moveSelectedToTab'
+>;
+
+export type HistoryActionsSlice = Pick<
+  FlowState,
+  'recordHistoryV2' | 'undoV2' | 'redoV2' | 'canUndoV2' | 'canRedoV2'
+>;
+
+export type DesignSystemCatalogSlice = Pick<
+  FlowState,
+  'designSystems' | 'activeDesignSystemId'
+>;
+export type DesignSystemActionsSlice = Pick<
+  FlowState,
+  | 'setActiveDesignSystem'
+  | 'addDesignSystem'
+  | 'updateDesignSystem'
+  | 'deleteDesignSystem'
+  | 'duplicateDesignSystem'
+>;
+
+export type CanvasViewSettingsSlice = Pick<
+  ViewSettings,
+  | 'showGrid'
+  | 'snapToGrid'
+  | 'alignmentGuidesEnabled'
+  | 'largeGraphSafetyMode'
+  | 'largeGraphSafetyProfile'
+  | 'architectureStrictMode'
+>;
+export type ShortcutHelpActionsSlice = Pick<FlowState, 'setShortcutsHelpOpen'>;
+export type VisualSettingsActionsSlice = Pick<
+  FlowState,
+  | 'toggleGrid'
+  | 'toggleSnap'
+  | 'setViewSettings'
+  | 'setGlobalEdgeOptions'
+  | 'setDefaultIconsEnabled'
+  | 'setSmartRoutingEnabled'
+  | 'setSmartRoutingProfile'
+  | 'setSmartRoutingBundlingEnabled'
+  | 'setLargeGraphSafetyMode'
+  | 'setLargeGraphSafetyProfile'
+>;
+
+export type SelectionStateSlice = Pick<
+  FlowState,
+  'selectedNodeId' | 'selectedEdgeId' | 'hoveredSectionId'
+>;
+export type SelectionActionsSlice = Pick<
+  FlowState,
+  'setSelectedNodeId' | 'setSelectedEdgeId' | 'setHoveredSectionId'
+>;
+export type NodeLabelEditActionsSlice = Pick<
+  FlowState,
+  'queuePendingNodeLabelEditRequest' | 'clearPendingNodeLabelEditRequest'
+>;
+export type MermaidDiagnosticsActionsSlice = Pick<
+  FlowState,
+  'setMermaidDiagnostics' | 'clearMermaidDiagnostics'
+>;
 
 export type { EdgeChange, NodeChange };

@@ -1,5 +1,6 @@
 import type { ChatMessage } from '@/services/aiService';
 import { localFirstRepository, type PersistedChatMessage } from '@/services/storage/localFirstRepository';
+import { parseLegacyChatMessagesJson } from '@/services/storage/storageSchemas';
 
 const STORAGE_KEY_PREFIX = 'ofk_chat_history_';
 
@@ -29,8 +30,7 @@ function toPersistedChatMessages(diagramId: string, messages: ChatMessage[]): Pe
 function loadLegacyChatHistory(diagramId: string): ChatMessage[] {
   try {
     const raw = localStorage.getItem(storageKey(diagramId));
-    if (!raw) return [];
-    return JSON.parse(raw) as ChatMessage[];
+    return parseLegacyChatMessagesJson(raw);
   } catch {
     return [];
   }

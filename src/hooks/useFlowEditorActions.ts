@@ -178,14 +178,17 @@ export function useFlowEditorActions({
     const [shareViewerUrl, setShareViewerUrl] = useState<string | null>(null);
 
     const handleShare = useCallback((): void => {
-        if (nodes.length === 0) return;
+        if (nodes.length === 0) {
+            addToast('Add nodes before creating a share link.', 'error');
+            return;
+        }
         const dsl = toOpenFlowDSL(nodes, edges, { mode: exportSerializationMode });
         const encoded = encodeDslForViewer(dsl);
         const url = `${window.location.origin}/#/view?flow=${encoded}`;
         setShareViewerUrl(url);
         recordOnboardingEvent('first_share_opened', { surface: 'editor' });
         captureAnalyticsEvent('share_opened', { surface: 'editor' });
-    }, [nodes, edges, exportSerializationMode]);
+    }, [nodes, edges, exportSerializationMode, addToast]);
 
     const clearShareViewerUrl = useCallback((): void => setShareViewerUrl(null), []);
 

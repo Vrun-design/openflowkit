@@ -1,4 +1,5 @@
 import type { DiagramType, FlowTab, PlaybackState } from '@/lib/types';
+import { createEmptyFlowHistory } from '@/store/historyState';
 import type {
   LoadedDocument,
   PersistedDocument,
@@ -48,7 +49,7 @@ function createFlowPageFromPersistedContent(
     nodes: content.nodes,
     edges: content.edges,
     playback: content.playback,
-    history: content.history,
+    history: content.history ?? createEmptyFlowHistory(),
   };
 }
 
@@ -61,7 +62,7 @@ function createFlowPageFromPersistedPage(page: PersistedDocumentPage): FlowPage 
     nodes: page.content.nodes,
     edges: page.content.edges,
     playback: page.content.playback,
-    history: page.content.history,
+    history: page.content.history ?? createEmptyFlowHistory(),
   };
 }
 

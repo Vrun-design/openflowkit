@@ -27,9 +27,22 @@ const LARGE_DIAGRAM_EDGE_THRESHOLD = 72;
 const logger = createLogger({ scope: 'elkLayout' });
 const SEMANTIC_LAYER_ORDER = ['edge', 'frontend', 'api', 'services', 'data', 'external'] as const;
 
+const layoutCache = new Map<string, { nodes: FlowNode[]; edges: FlowEdge[] }>();
+const LAYOUT_CACHE_MAX = 20;
+
+function getLayoutCacheKey(nodes: FlowNode[], edges: FlowEdge[], options: LayoutOptions): string {
+  const nodeStr = nodes.map((n) => n.id).sort().join(',');
+  const edgeStr = edges.map((e) => `${e.source}>${e.target}`).sort().join(',');
+  return `${nodeStr}|${edgeStr}|${options.direction ?? 'TB'}:${options.algorithm ?? 'layered'}:${options.spacing ?? 'normal'}:${options.diagramType ?? ''}`;
+}
+
 /** Reset the cached ELK instance — useful in tests or when the instance may have become stale. */
 export function resetElkInstance(): void {
   elkInstancePromise = null;
+}
+
+export function clearLayoutCache(): void {
+  layoutCache.clear();
 }
 
 async function getElkInstance(): Promise<ElkLayoutEngine> {
@@ -250,6 +263,10 @@ export async function getElkLayout(
   edges: FlowEdge[],
   options: LayoutOptions = {}
 ): Promise<{ nodes: FlowNode[]; edges: FlowEdge[] }> {
+  const cacheKey = getLayoutCacheKey(nodes, edges, options);
+  const cached = layoutCache.get(cacheKey);
+  if (cached) return cached;
+
   function collectEdgePoints(
     elkNode: ElkNode | (ElkNode & { edges?: ElkExtendedEdge[]; children?: ElkNode[] }),
     edgePointsMap: Map<string, { x: number; y: number }[]>
@@ -362,6 +379,12 @@ export async function getElkLayout(
       }
       return edge;
     });
+
+    if (layoutCache.size >= LAYOUT_CACHE_MAX) {
+      const firstKey = layoutCache.keys().next().value;
+      if (firstKey !== undefined) layoutCache.delete(firstKey);
+    }
+    layoutCache.set(cacheKey, { nodes: laidOutNodes, edges: laidOutEdges });
 
     return { nodes: laidOutNodes, edges: laidOutEdges };
   } catch (err) {

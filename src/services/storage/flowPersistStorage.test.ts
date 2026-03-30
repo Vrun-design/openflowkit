@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFlowPersistStorage } from './flowPersistStorage';
 import { ensureFlowPersistenceSchema } from './indexedDbSchema';
+import { resetStorageRuntimeForTests } from './storageRuntime';
 
 vi.mock('./indexedDbSchema', () => ({
   ensureFlowPersistenceSchema: vi.fn(() => Promise.resolve()),
@@ -16,6 +17,7 @@ describe('flowPersistStorage', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    resetStorageRuntimeForTests();
     vi.mocked(ensureFlowPersistenceSchema).mockClear();
     if (typeof originalIndexedDb === 'undefined') {
       // `delete` is required to restore the undefined global.

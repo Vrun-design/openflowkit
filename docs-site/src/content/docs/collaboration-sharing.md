@@ -29,6 +29,31 @@ This is important because local-first tools should fail gracefully. If realtime 
 - use room links when you want collaborators in the same canvas context
 - export JSON when you need a durable editable backup outside the current browser state
 
+## Share Modal Features
+
+The Share Modal provides:
+
+- **Room ID**: A unique identifier for the current diagram session
+- **Invite URL**: A link others can open to join the room
+- **Viewer Count**: Number of people currently in the room
+- **Participant Badges**: Visual indicators showing who's in the room (with name and color)
+- **Connection Status**: Shows whether you're in realtime sync, connecting, or local-only fallback
+
+## Connection States
+
+- **Realtime**: Connected and syncing with other participants in real-time
+- **Connecting**: Attempting to establish a realtime connection
+- **Fallback**: Working locally; realtime connection not available
+
+In fallback mode, you can still edit and export your diagram, but changes won't sync with others until reconnected.
+
+## Best Practices
+
+1. **Check status before presenting**: Confirm you're in realtime mode when presenting to others
+2. **Export before handoff**: Always export JSON when handing off to someone who won't use the room
+3. **Use room links for reviews**: Great for live architecture reviews or brainstorming sessions
+4. **Local-first by default**: Even without collaboration, your work is always saved locally
+
 ## When to use sharing vs exporting
 
 Use collaboration sharing when:

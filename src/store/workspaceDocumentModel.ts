@@ -16,6 +16,7 @@ export interface WorkspaceDocumentPreview {
 }
 
 const PREVIEW_MAX_NODES = 18;
+// Guard preview rendering work for dense diagrams while keeping dashboard cards readable.
 const PREVIEW_MAX_RENDER_AREA = 2_400_000;
 const PREVIEW_MIN_NODE_WIDTH = 48;
 const PREVIEW_MIN_NODE_HEIGHT = 24;

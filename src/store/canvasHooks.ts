@@ -1,27 +1,12 @@
 import { useShallow } from 'zustand/react/shallow';
 import { useFlowStore } from '../store';
-import type { FlowStoreState } from '../store';
+import type { CanvasActionsSlice, CanvasStateSlice } from './types';
+import { selectCanvasActions, selectCanvasState } from './selectors';
 
-export function useCanvasState(): Pick<FlowStoreState, 'nodes' | 'edges'> {
-    return useFlowStore(
-        useShallow((state) => ({
-            nodes: state.nodes,
-            edges: state.edges,
-        }))
-    );
+export function useCanvasState(): CanvasStateSlice {
+    return useFlowStore(useShallow(selectCanvasState));
 }
 
-export function useCanvasActions(): Pick<
-    FlowStoreState,
-    'onNodesChange' | 'onEdgesChange' | 'setNodes' | 'setEdges' | 'onConnect'
-> {
-    return useFlowStore(
-        useShallow((state) => ({
-            onNodesChange: state.onNodesChange,
-            onEdgesChange: state.onEdgesChange,
-            setNodes: state.setNodes,
-            setEdges: state.setEdges,
-            onConnect: state.onConnect,
-        }))
-    );
+export function useCanvasActions(): CanvasActionsSlice {
+    return useFlowStore(useShallow(selectCanvasActions));
 }

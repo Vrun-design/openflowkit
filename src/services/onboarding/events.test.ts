@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { clearOnboardingEvents, getOnboardingEvents, recordOnboardingEvent } from './events';
+import {
+  clearOnboardingEvents,
+  getOnboardingEvents,
+  getRecentOnboardingActionSuggestions,
+  recordOnboardingEvent,
+} from './events';
 
 describe('onboarding events', () => {
   beforeEach(() => {
@@ -24,5 +29,34 @@ describe('onboarding events', () => {
       first: true,
       detail: { format: 'cinematic-video' },
     });
+  });
+
+  it('returns recent action suggestions without duplicating the same action', () => {
+    recordOnboardingEvent('welcome_prompt_selected', { source: 'welcome-modal' });
+    recordOnboardingEvent('welcome_import_selected', { source: 'home-dashboard' });
+    recordOnboardingEvent('welcome_prompt_selected', { source: 'home-dashboard' });
+    recordOnboardingEvent('welcome_template_selected', { source: 'welcome-modal' });
+
+    expect(getRecentOnboardingActionSuggestions()).toEqual([
+      expect.objectContaining({ action: 'templates', eventName: 'welcome_template_selected' }),
+      expect.objectContaining({ action: 'ai', eventName: 'welcome_prompt_selected' }),
+      expect.objectContaining({ action: 'import', eventName: 'welcome_import_selected' }),
+    ]);
+  });
+
+  it('ignores malformed persisted onboarding payloads', () => {
+    localStorage.setItem(
+      'openflowkit_onboarding_events',
+      JSON.stringify([{ name: 'not-real', at: 123, first: 'yes' }])
+    );
+    localStorage.setItem(
+      'openflowkit_onboarding_event_firsts',
+      JSON.stringify({ welcome_prompt_selected: 'yes' })
+    );
+
+    expect(getOnboardingEvents()).toEqual([]);
+
+    const event = recordOnboardingEvent('welcome_prompt_selected');
+    expect(event.first).toBe(true);
   });
 });

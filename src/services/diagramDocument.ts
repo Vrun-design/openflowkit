@@ -1,10 +1,10 @@
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { isDiagramType, type DiagramType, type FlowEdge, type FlowNode, type PlaybackState } from '@/lib/types';
+import { diagramDocumentEnvelopeSchema } from './diagramDocumentSchemas';
 import { sanitizePlaybackState } from './playback/model';
 
-export const LEGACY_DIAGRAM_DOCUMENT_VERSION = '1.0';
+export const DIAGRAM_DOCUMENT_VERSION = '1.0';
 export const EXTENDED_DIAGRAM_DOCUMENT_VERSION = '1.1';
-export const DIAGRAM_DOCUMENT_VERSION = LEGACY_DIAGRAM_DOCUMENT_VERSION;
 const DIAGRAM_DOCUMENT_NAME = 'OpenFlowKit Diagram';
 export const DEFAULT_DIAGRAM_TYPE: DiagramType = 'flowchart';
 
@@ -91,12 +91,6 @@ export interface ParseDiagramDocumentOptions {
   extendedDocumentModel?: boolean;
 }
 
-function isArrayPairDocument(value: unknown): value is { nodes: unknown; edges: unknown } {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Record<string, unknown>;
-  return Array.isArray(candidate.nodes) && Array.isArray(candidate.edges);
-}
-
 function getVersionParts(version: string): { major: number | null; minor: number | null } {
   const [majorRaw, minorRaw] = version.split('.', 2);
   const major = Number(majorRaw);
@@ -143,11 +137,12 @@ export function parseDiagramDocumentImport(
   raw: unknown,
   options: ParseDiagramDocumentOptions = {}
 ): ImportCompatibilityResult {
-  if (!isArrayPairDocument(raw)) {
+  const parsedEnvelope = diagramDocumentEnvelopeSchema.safeParse(raw);
+  if (!parsedEnvelope.success) {
     throw new Error('Invalid flow file: missing nodes or edges arrays.');
   }
 
-  const candidate = raw as Record<string, unknown>;
+  const candidate = parsedEnvelope.data as Record<string, unknown>;
   const warnings: string[] = [];
   const versionRaw = typeof candidate.version === 'string' ? candidate.version : null;
   const diagramType = isDiagramType(candidate.diagramType) ? candidate.diagramType : DEFAULT_DIAGRAM_TYPE;

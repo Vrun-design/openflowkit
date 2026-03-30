@@ -1,11 +1,12 @@
 import { createId } from '@/lib/id';
-import { LEGACY_COLLABORATION_KEYS } from '@/lib/legacyBranding';
+import { APP_COLLABORATION_KEYS } from '@/lib/legacyBranding';
 import type { CollaborationPresenceState } from './types';
+import { parseLocalCollaborationIdentityJson } from './schemas';
 
 const COLLABORATION_CURSOR_PUBLISH_DISTANCE = 6;
-const LOCAL_COLLABORATION_IDENTITY_STORAGE_KEY = LEGACY_COLLABORATION_KEYS.identity;
+const LOCAL_COLLABORATION_IDENTITY_STORAGE_KEY = APP_COLLABORATION_KEYS.identity;
 const LOCAL_COLLABORATION_COLORS = ['#2563eb', '#db2777', '#059669', '#7c3aed', '#ea580c', '#0f766e'];
-const LOCAL_COLLABORATION_ROOM_SECRET_STORAGE_PREFIX = LEGACY_COLLABORATION_KEYS.roomSecretPrefix;
+const LOCAL_COLLABORATION_ROOM_SECRET_STORAGE_PREFIX = APP_COLLABORATION_KEYS.roomSecretPrefix;
 
 interface LocalCollaborationIdentity {
     name: string;
@@ -106,7 +107,7 @@ export function resolveLocalCollaborationClientId(collaborationEnabled: boolean,
         return null;
     }
 
-    const storageKey = `${LEGACY_COLLABORATION_KEYS.clientIdPrefix}${roomId}`;
+    const storageKey = `${APP_COLLABORATION_KEYS.clientIdPrefix}${roomId}`;
     const existingClientId = window.sessionStorage.getItem(storageKey);
     if (existingClientId) {
         return existingClientId;
@@ -135,17 +136,12 @@ export function resolveLocalCollaborationIdentity(clientId: string | null): Loca
 
     const storedValue = window.localStorage.getItem(LOCAL_COLLABORATION_IDENTITY_STORAGE_KEY);
     if (storedValue) {
-        try {
-            const parsed = JSON.parse(storedValue) as Partial<LocalCollaborationIdentity>;
-            if (typeof parsed.name === 'string' && typeof parsed.color === 'string') {
-                return {
-                    name: parsed.name,
-                    color: parsed.color,
-                };
-            }
-        } catch {
-            window.localStorage.removeItem(LOCAL_COLLABORATION_IDENTITY_STORAGE_KEY);
+        const parsed = parseLocalCollaborationIdentityJson(storedValue);
+        if (parsed) {
+            return parsed;
         }
+
+        window.localStorage.removeItem(LOCAL_COLLABORATION_IDENTITY_STORAGE_KEY);
     }
 
     const nextIdentity = {

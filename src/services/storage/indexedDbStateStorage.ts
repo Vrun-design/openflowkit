@@ -1,5 +1,5 @@
 import type { StateStorage } from 'zustand/middleware';
-import { FLOW_METADATA_STORE_NAME, openFlowPersistenceDatabase } from './indexedDbSchema';
+import { FLOW_METADATA_STORE_NAME, SCHEMA_META_STORE_NAME, openFlowPersistenceDatabase } from './indexedDbSchema';
 import { reportStorageTelemetry } from './storageTelemetry';
 
 const MIGRATION_MARKER_PREFIX = '__migration__:localStorage:v1:';
@@ -22,6 +22,21 @@ function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
 }
 
 async function readRecord(database: IDBDatabase, recordId: string): Promise<PersistRecord | null> {
+  const transaction = database.transaction(SCHEMA_META_STORE_NAME, 'readonly');
+  const store = transaction.objectStore(SCHEMA_META_STORE_NAME);
+  const request = store.get(recordId) as IDBRequest<PersistRecord | undefined>;
+  const result = await requestToPromise(request);
+  return result ?? null;
+}
+
+async function writeRecord(database: IDBDatabase, recordId: string, value: string): Promise<void> {
+  const transaction = database.transaction(SCHEMA_META_STORE_NAME, 'readwrite');
+  const store = transaction.objectStore(SCHEMA_META_STORE_NAME);
+  const request = store.put({ id: recordId, value } satisfies PersistRecord);
+  await requestToPromise(request);
+}
+
+async function readStateRecord(database: IDBDatabase, recordId: string): Promise<PersistRecord | null> {
   const transaction = database.transaction(FLOW_METADATA_STORE_NAME, 'readonly');
   const store = transaction.objectStore(FLOW_METADATA_STORE_NAME);
   const request = store.get(recordId) as IDBRequest<PersistRecord | undefined>;
@@ -29,18 +44,16 @@ async function readRecord(database: IDBDatabase, recordId: string): Promise<Pers
   return result ?? null;
 }
 
-async function writeRecord(database: IDBDatabase, recordId: string, value: string): Promise<void> {
+async function writeStateRecord(database: IDBDatabase, recordId: string, value: string): Promise<void> {
   const transaction = database.transaction(FLOW_METADATA_STORE_NAME, 'readwrite');
   const store = transaction.objectStore(FLOW_METADATA_STORE_NAME);
-  const request = store.put({ id: recordId, value } satisfies PersistRecord);
-  await requestToPromise(request);
+  await requestToPromise(store.put({ id: recordId, value } satisfies PersistRecord));
 }
 
-async function deleteRecord(database: IDBDatabase, recordId: string): Promise<void> {
+async function deleteStateRecord(database: IDBDatabase, recordId: string): Promise<void> {
   const transaction = database.transaction(FLOW_METADATA_STORE_NAME, 'readwrite');
   const store = transaction.objectStore(FLOW_METADATA_STORE_NAME);
-  const request = store.delete(recordId);
-  await requestToPromise(request);
+  await requestToPromise(store.delete(recordId));
 }
 
 function migrationMarkerKey(storageKey: string): string {
@@ -70,11 +83,16 @@ export function createIndexedDbStateStorage(options: IndexedDbStateStorageOption
         return;
       }
 
-      const indexedRecord = await readRecord(database, storageKey);
-      if (!indexedRecord && options.localStorageRef) {
+      const persistedStateRecord = await readStateRecord(database, storageKey);
+      if (persistedStateRecord) {
+        await writeRecord(database, markerId, 'done');
+        migratedKeys.add(storageKey);
+        return;
+      }
+      if (options.localStorageRef) {
         const localValue = options.localStorageRef.getItem(storageKey);
         if (typeof localValue === 'string') {
-          await writeRecord(database, storageKey, localValue);
+          await writeStateRecord(database, storageKey, localValue);
           reportStorageTelemetry({
             area: 'indexeddb-state',
             code: 'STATE_MIGRATED_FROM_LOCAL',
@@ -93,19 +111,19 @@ export function createIndexedDbStateStorage(options: IndexedDbStateStorageOption
     getItem: async (storageKey) => {
       await migrateFromLocalStorageIfNeeded(storageKey);
       return withDatabase(async (database) => {
-        const record = await readRecord(database, storageKey);
+        const record = await readStateRecord(database, storageKey);
         return record ? record.value : null;
       });
     },
     setItem: async (storageKey, value) => {
       await migrateFromLocalStorageIfNeeded(storageKey);
       await withDatabase(async (database) => {
-        await writeRecord(database, storageKey, value);
+        await writeStateRecord(database, storageKey, value);
       });
     },
     removeItem: async (storageKey) => {
       await withDatabase(async (database) => {
-        await deleteRecord(database, storageKey);
+        await deleteStateRecord(database, storageKey);
       });
     },
   };

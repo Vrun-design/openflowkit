@@ -7,6 +7,7 @@ export interface BuildTopNavParams {
   handleAddPage: () => void;
   handleClosePage: (pageId: string) => void;
   handleRenamePage: (pageId: string, newName: string) => void;
+  handleReorderPage: (draggedPageId: string, targetPageId: string) => void;
   handleExport: (format?: 'png' | 'jpeg') => void;
   handleCopyImage: (format?: 'png' | 'jpeg') => void;
   handleSvgExport: () => void;

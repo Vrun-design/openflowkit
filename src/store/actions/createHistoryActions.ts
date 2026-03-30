@@ -1,11 +1,14 @@
 import type { FlowHistoryState } from '@/lib/types';
+import type { GetFlowState, SetFlowState } from '../actionFactory';
 import type { FlowState } from '../types';
 
 const MAX_HISTORY = 20;
 const MAX_HISTORY_ESTIMATED_BYTES = 220_000;
+const FALLBACK_SNAPSHOT_ESTIMATED_BYTES = 50_000;
 
-type SetFlowState = (partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)) => void;
-type GetFlowState = () => FlowState;
+type SnapshotDirection = 'past' | 'future';
+
+const snapshotSizeCache = new WeakMap<FlowHistoryState, number>();
 
 function buildSnapshot(state: FlowState): FlowHistoryState {
     return {
@@ -19,32 +22,47 @@ function findActiveTabIndex(state: FlowState): number {
 }
 
 function estimateSnapshotBytes(snapshot: FlowHistoryState): number {
+    const cached = snapshotSizeCache.get(snapshot);
+    if (typeof cached === 'number') {
+        return cached;
+    }
+
     try {
-        return JSON.stringify(snapshot).length * 2;
+        const estimatedBytes = JSON.stringify(snapshot).length * 2;
+        snapshotSizeCache.set(snapshot, estimatedBytes);
+        return estimatedBytes;
     } catch {
         // Fallback bias toward conservative trimming when serialization fails.
-        return 50_000;
+        snapshotSizeCache.set(snapshot, FALLBACK_SNAPSHOT_ESTIMATED_BYTES);
+        return FALLBACK_SNAPSHOT_ESTIMATED_BYTES;
     }
 }
 
-function estimateSnapshotsBytes(snapshots: FlowHistoryState[]): number {
-    return snapshots.reduce((sum, snapshot) => sum + estimateSnapshotBytes(snapshot), 0);
+function trimSnapshots(
+    snapshots: FlowHistoryState[],
+    direction: SnapshotDirection
+): FlowHistoryState[] {
+    const trimmed = direction === 'past'
+        ? snapshots.slice(-MAX_HISTORY)
+        : snapshots.slice(0, MAX_HISTORY);
+    let estimatedBytes = trimmed.reduce((sum, snapshot) => sum + estimateSnapshotBytes(snapshot), 0);
+
+    while (trimmed.length > 1 && estimatedBytes > MAX_HISTORY_ESTIMATED_BYTES) {
+        const removed = direction === 'past' ? trimmed.shift() : trimmed.pop();
+        if (removed) {
+            estimatedBytes -= estimateSnapshotBytes(removed);
+        }
+    }
+
+    return trimmed;
 }
 
 function trimPastSnapshots(snapshots: FlowHistoryState[]): FlowHistoryState[] {
-    const trimmed = snapshots.slice(-MAX_HISTORY);
-    while (trimmed.length > 1 && estimateSnapshotsBytes(trimmed) > MAX_HISTORY_ESTIMATED_BYTES) {
-        trimmed.shift();
-    }
-    return trimmed;
+    return trimSnapshots(snapshots, 'past');
 }
 
 function trimFutureSnapshots(snapshots: FlowHistoryState[]): FlowHistoryState[] {
-    const trimmed = snapshots.slice(0, MAX_HISTORY);
-    while (trimmed.length > 1 && estimateSnapshotsBytes(trimmed) > MAX_HISTORY_ESTIMATED_BYTES) {
-        trimmed.pop();
-    }
-    return trimmed;
+    return trimSnapshots(snapshots, 'future');
 }
 
 export function createHistoryActions(set: SetFlowState, get: GetFlowState): Pick<

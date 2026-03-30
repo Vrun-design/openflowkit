@@ -1,7 +1,15 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useExportMenu } from './useExportMenu';
+
+const addToast = vi.fn();
+
+vi.mock('./ui/ToastContext', () => ({
+  useToast: () => ({
+    addToast,
+  }),
+}));
 
 const baseProps = {
   onExportPNG: vi.fn(),
@@ -24,13 +32,16 @@ const baseProps = {
 };
 
 function Harness(): React.ReactElement {
-  const { isOpen, menuRef, toggleMenu } = useExportMenu(baseProps);
+  const { isOpen, menuRef, toggleMenu, handleSelect } = useExportMenu(baseProps);
 
   return (
     <div>
       <div ref={menuRef}>
         <button type="button" onClick={toggleMenu}>
           Toggle export
+        </button>
+        <button type="button" onClick={() => void handleSelect('figma', 'copy')}>
+          Run export
         </button>
         {isOpen ? <div data-testid="export-menu-open">Export menu</div> : null}
       </div>
@@ -40,6 +51,15 @@ function Harness(): React.ReactElement {
 }
 
 describe('useExportMenu', () => {
+  beforeEach(() => {
+    addToast.mockReset();
+    Object.values(baseProps).forEach((handler) => {
+      if (typeof handler === 'function' && 'mockReset' in handler) {
+        handler.mockReset();
+      }
+    });
+  });
+
   it('closes when clicking outside the menu', () => {
     render(<Harness />);
 
@@ -60,5 +80,20 @@ describe('useExportMenu', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
 
     expect(screen.queryByTestId('export-menu-open')).toBeNull();
+  });
+
+  it('shows toast feedback when an export action rejects', async () => {
+    baseProps.onExportFigma.mockRejectedValueOnce(new Error('copy failed'));
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run export' }));
+
+    await waitFor(() => {
+      expect(addToast).toHaveBeenCalledWith(
+        'Failed to complete figma copy: copy failed',
+        'error',
+        5000
+      );
+    });
   });
 });

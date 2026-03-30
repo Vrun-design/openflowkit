@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   createFlowEditorAIRouteState,
   createFlowEditorImportRouteState,
-  createFlowEditorTemplatesRouteState,
   shouldOpenFlowEditorAI,
   shouldOpenFlowEditorImportDialog,
   shouldOpenFlowEditorTemplates,
@@ -14,8 +13,8 @@ describe('routeState', () => {
   });
 
   it('creates route state that requests templates and studio ai entry points', () => {
-    expect(createFlowEditorTemplatesRouteState()).toEqual({ openTemplates: true });
     expect(createFlowEditorAIRouteState()).toEqual({ openStudioAI: true });
+    expect(shouldOpenFlowEditorTemplates({ openTemplates: true })).toBe(true);
   });
 
   it('detects only valid import-dialog route state payloads', () => {

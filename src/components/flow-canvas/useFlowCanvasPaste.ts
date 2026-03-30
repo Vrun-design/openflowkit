@@ -26,6 +26,7 @@ interface UseFlowCanvasPasteParams {
     addToast: AddToast;
     strictModePasteBlockedMessage: string;
     pasteSelection: (center?: { x: number; y: number }) => void;
+    getLastInteractionFlowPosition: () => { x: number; y: number } | null;
     getCanvasCenterFlowPosition: () => { x: number; y: number };
 }
 
@@ -43,6 +44,7 @@ export function useFlowCanvasPaste({
     addToast,
     strictModePasteBlockedMessage,
     pasteSelection,
+    getLastInteractionFlowPosition,
     getCanvasCenterFlowPosition,
 }: UseFlowCanvasPasteParams) {
     const handleCanvasPaste = useCallback(async (event: React.ClipboardEvent<HTMLDivElement>): Promise<void> => {
@@ -52,7 +54,7 @@ export function useFlowCanvasPaste({
         const pastedText = rawText.trim();
 
         if (!pastedText) {
-            pasteSelection(getCanvasCenterFlowPosition());
+            pasteSelection(getLastInteractionFlowPosition() ?? getCanvasCenterFlowPosition());
             return;
         }
 
@@ -124,7 +126,8 @@ export function useFlowCanvasPaste({
             return;
         }
 
-        const pasteFlowPosition = getCanvasCenterFlowPosition();
+        const pasteFlowPosition =
+            getLastInteractionFlowPosition() ?? getCanvasCenterFlowPosition();
 
         recordHistory();
         const { activeLayerId } = useFlowStore.getState();
@@ -143,6 +146,7 @@ export function useFlowCanvasPaste({
         fitView,
         getCanvasCenterFlowPosition,
         pasteSelection,
+        getLastInteractionFlowPosition,
         recordHistory,
         setEdges,
         setMermaidDiagnostics,

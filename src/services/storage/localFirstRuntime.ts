@@ -13,6 +13,10 @@ import {
   localFirstRepository,
   type PersistedChatMessage,
 } from './localFirstRepository';
+import {
+  parseLegacyChatMessagesJson,
+  parsePersistentAISettingsJson,
+} from './storageSchemas';
 
 const STORE_SUBSCRIPTION_DEBOUNCE_MS = 250;
 
@@ -50,23 +54,19 @@ function buildChatMessageId(documentId: string, index: number): string {
 }
 
 function toPersistedChatMessages(documentId: string, serialized: string | null): PersistedChatMessage[] {
-  if (!serialized) {
+  const parsed = parseLegacyChatMessagesJson(serialized);
+  if (parsed.length === 0) {
     return [];
   }
 
-  try {
-    const parsed = JSON.parse(serialized) as Array<{ role: PersistedChatMessage['role']; parts: PersistedChatMessage['parts'] }>;
-    const startedAt = Date.now();
-    return parsed.map((message, index) => ({
-      id: buildChatMessageId(documentId, index),
-      documentId,
-      role: message.role,
-      parts: message.parts,
-      createdAt: new Date(startedAt + index).toISOString(),
-    }));
-  } catch {
-    return [];
-  }
+  const startedAt = Date.now();
+  return parsed.map((message, index) => ({
+    id: buildChatMessageId(documentId, index),
+    documentId,
+    role: message.role,
+    parts: message.parts,
+    createdAt: new Date(startedAt + index).toISOString(),
+  }));
 }
 
 async function migrateLegacyStoreIntoRepositoryIfNeeded(): Promise<void> {
@@ -116,8 +116,11 @@ async function hydrateStoreFromRepository(): Promise<void> {
   }
 
   const persistentAiSettings = await localFirstRepository.loadPersistentAISettings();
-  const aiSettings = persistentAiSettings
-    ? sanitizeAISettings(JSON.parse(persistentAiSettings) as Partial<FlowStoreState['aiSettings']>, DEFAULT_AI_SETTINGS)
+  const parsedPersistentAiSettings = parsePersistentAISettingsJson(
+    persistentAiSettings
+  ) as Partial<FlowStoreState['aiSettings']> | undefined;
+  const aiSettings = parsedPersistentAiSettings
+    ? sanitizeAISettings(parsedPersistentAiSettings, DEFAULT_AI_SETTINGS)
     : loadPersistedAISettings();
 
   useFlowStore.setState((currentState) => ({

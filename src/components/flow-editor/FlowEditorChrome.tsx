@@ -62,6 +62,7 @@ export interface FlowEditorChromeProps {
     onAddPage: () => void;
     onClosePage: (pageId: string) => void;
     onRenamePage: (pageId: string, newName: string) => void;
+    onReorderPage: (draggedPageId: string, targetPageId: string) => void;
     onExportPNG: (format?: 'png' | 'jpeg') => void;
     onCopyImage: (format?: 'png' | 'jpeg') => void;
     onExportSVG: () => void;
@@ -167,6 +168,7 @@ export function FlowEditorChrome({
     onAddPage: topNav.onAddPage,
     onClosePage: topNav.onClosePage,
     onRenamePage: topNav.onRenamePage,
+    onReorderPage: topNav.onReorderPage,
     onExportPNG: topNav.onExportPNG,
     onCopyImage: topNav.onCopyImage,
     onExportSVG: topNav.onExportSVG,

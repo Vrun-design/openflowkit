@@ -1,3 +1,5 @@
+const DARK_TEXT_LUMINANCE_THRESHOLD = 0.44;
+
 export function clampChannel(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
 }
@@ -55,5 +57,5 @@ export function getLuminance(hex: string): number {
 }
 
 export function getContrastText(hex: string): '#0f172a' | '#ffffff' {
-  return getLuminance(hex) > 0.44 ? '#0f172a' : '#ffffff';
+  return getLuminance(hex) > DARK_TEXT_LUMINANCE_THRESHOLD ? '#0f172a' : '#ffffff';
 }

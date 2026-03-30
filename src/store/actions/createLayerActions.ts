@@ -1,8 +1,6 @@
 import { createId } from '@/lib/id';
+import type { GetFlowState, SetFlowState } from '../actionFactory';
 import type { FlowState } from '../types';
-
-type SetFlowState = (partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)) => void;
-type GetFlowState = () => FlowState;
 
 function ensureLayerExists(state: FlowState, layerId: string): boolean {
     return state.layers.some((layer) => layer.id === layerId);

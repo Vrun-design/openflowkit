@@ -5,6 +5,10 @@ export interface ApplyCollaborationOperationResult {
   applied: boolean;
 }
 
+function areEqualByJson(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 export function applyCollaborationOperation(
   state: CollaborationDocumentState,
   operation: CollaborationOperationEnvelope
@@ -20,6 +24,9 @@ export function applyCollaborationOperation(
       }
       const node = operation.payload.node;
       const existingIndex = state.nodes.findIndex((candidate) => candidate.id === node.id);
+      if (existingIndex >= 0 && areEqualByJson(state.nodes[existingIndex], node)) {
+        return { nextState: state, applied: false };
+      }
       const nextNodes = [...state.nodes];
       if (existingIndex >= 0) {
         nextNodes[existingIndex] = node;
@@ -40,6 +47,11 @@ export function applyCollaborationOperation(
         return { nextState: state, applied: false };
       }
       const nodeId = operation.payload.nodeId;
+      const nodeExists = state.nodes.some((node) => node.id === nodeId);
+      const hasConnectedEdges = state.edges.some((edge) => edge.source === nodeId || edge.target === nodeId);
+      if (!nodeExists && !hasConnectedEdges) {
+        return { nextState: state, applied: false };
+      }
       const nextNodes = state.nodes.filter((node) => node.id !== nodeId);
       const nextEdges = state.edges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId);
       return {
@@ -58,6 +70,9 @@ export function applyCollaborationOperation(
       }
       const edge = operation.payload.edge;
       const existingIndex = state.edges.findIndex((candidate) => candidate.id === edge.id);
+      if (existingIndex >= 0 && areEqualByJson(state.edges[existingIndex], edge)) {
+        return { nextState: state, applied: false };
+      }
       const nextEdges = [...state.edges];
       if (existingIndex >= 0) {
         nextEdges[existingIndex] = edge;
@@ -78,6 +93,9 @@ export function applyCollaborationOperation(
         return { nextState: state, applied: false };
       }
       const edgeId = operation.payload.edgeId;
+      if (!state.edges.some((edge) => edge.id === edgeId)) {
+        return { nextState: state, applied: false };
+      }
       return {
         applied: true,
         nextState: {

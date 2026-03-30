@@ -32,6 +32,8 @@ export const useToast = () => {
 const ToastItem = ({ toast, onClose }: { toast: Toast; onClose: () => void }) => {
   const { message, type } = toast;
   const { t } = useTranslation();
+  const liveRole = type === 'error' ? 'alert' : 'status';
+  const livePoliteness = type === 'error' ? 'assertive' : 'polite';
 
   // Icons & Colors
   const styles = {
@@ -65,6 +67,9 @@ const ToastItem = ({ toast, onClose }: { toast: Toast; onClose: () => void }) =>
 
   return (
     <div
+      role={liveRole}
+      aria-live={livePoliteness}
+      aria-atomic="true"
       className={`pointer-events-auto relative flex w-full max-w-sm overflow-hidden rounded-lg border ${styles.borderColor} bg-[var(--brand-surface)] text-[var(--brand-text)] shadow-lg ring-1 ring-black/5 transition-all duration-300 ease-out animate-in slide-in-from-top-2 fade-in`}
     >
       {/* Color Strip */}
@@ -120,7 +125,6 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
 
       {/* Toast Container */}
       <div
-        aria-live="assertive"
         className="pointer-events-none fixed inset-0 flex flex-col items-center px-4 py-6 sm:items-end sm:p-6 z-[9999] gap-2 top-0 left-0 right-0 sm:items-center"
       >
         {toasts.map((toast) => (

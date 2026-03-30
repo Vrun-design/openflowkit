@@ -1,9 +1,8 @@
 import { DEFAULT_AI_SETTINGS } from '../defaults';
 import { sanitizeAISettings } from '../aiSettings';
 import { persistAISettings } from '../aiSettingsPersistence';
+import type { SetFlowState } from '../actionFactory';
 import type { FlowState } from '../types';
-
-type SetFlowState = (partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)) => void;
 
 export function createAIAndSelectionActions(set: SetFlowState): Pick<
     FlowState,

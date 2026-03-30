@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { LEGACY_EVENT_NAMES } from '@/lib/legacyBranding';
+import { APP_EVENT_NAMES } from '@/lib/legacyBranding';
 
-const NODE_QUICK_CREATE_REQUEST_EVENT = LEGACY_EVENT_NAMES.nodeQuickCreateRequest;
+const NODE_QUICK_CREATE_REQUEST_EVENT = APP_EVENT_NAMES.nodeQuickCreateRequest;
 
 export type QuickCreateDirection = 'up' | 'right' | 'down' | 'left';
 

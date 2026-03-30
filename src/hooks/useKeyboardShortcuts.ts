@@ -9,6 +9,10 @@ interface ShortcutHandlers {
   deleteEdge: (id: string) => void;
   undo: () => void;
   redo: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndoUnavailable?: () => void;
+  onRedoUnavailable?: () => void;
   duplicateNode: (id: string) => void;
   selectAll: () => void;
   onAddMindmapChildShortcut?: () => void;
@@ -39,6 +43,10 @@ export function useKeyboardShortcuts({
   deleteEdge,
   undo,
   redo,
+  canUndo,
+  canRedo,
+  onUndoUnavailable,
+  onRedoUnavailable,
   duplicateNode,
   selectAll,
   onAddMindmapChildShortcut,
@@ -156,15 +164,27 @@ export function useKeyboardShortcuts({
         if (isEditable) return;
         e.preventDefault();
         if (isShift) {
-          redo();
+          if (canRedo === false) {
+            onRedoUnavailable?.();
+          } else {
+            redo();
+          }
         } else {
-          undo();
+          if (canUndo === false) {
+            onUndoUnavailable?.();
+          } else {
+            undo();
+          }
         }
       }
       if (isCmdOrCtrl && key === 'y') {
         if (isEditable) return;
         e.preventDefault();
-        redo();
+        if (canRedo === false) {
+          onRedoUnavailable?.();
+        } else {
+          redo();
+        }
       }
 
       // Duplicate
@@ -295,5 +315,5 @@ export function useKeyboardShortcuts({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedNodeId, selectedEdgeId, selectedNodeType, deleteNode, deleteEdge, undo, redo, duplicateNode, selectAll, onAddMindmapChildShortcut, onAddMindmapSiblingShortcut, onCommandBar, onSearch, onShortcutsHelp, onSelectMode, onPanMode, onFitView, onZoomIn, onZoomOut, onCopy, onPaste, onCopyStyle, onPasteStyle, onQuickCreateShortcut, onAnnotationColorShortcut, onClearSelection, onNudge]);
+  }, [selectedNodeId, selectedEdgeId, selectedNodeType, deleteNode, deleteEdge, undo, redo, canUndo, canRedo, onUndoUnavailable, onRedoUnavailable, duplicateNode, selectAll, onAddMindmapChildShortcut, onAddMindmapSiblingShortcut, onCommandBar, onSearch, onShortcutsHelp, onSelectMode, onPanMode, onFitView, onZoomIn, onZoomOut, onCopy, onPaste, onCopyStyle, onPasteStyle, onQuickCreateShortcut, onAnnotationColorShortcut, onClearSelection, onNudge]);
 }

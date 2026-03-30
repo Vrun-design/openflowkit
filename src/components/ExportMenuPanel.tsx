@@ -10,6 +10,7 @@ import {
   Film,
   GitBranch,
   Image,
+  Share2,
   Wand2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -157,7 +158,7 @@ export function ExportMenuPanel({
       },
       {
         key: 'video',
-        title: t('export.sectionVideo', 'Video & Animation'),
+        title: t('export.sectionVideo', 'Video'),
         items: [
           {
             key: 'cinematic-video',
@@ -177,7 +178,7 @@ export function ExportMenuPanel({
       },
       {
         key: 'code',
-        title: t('export.sectionCode', 'Code & Data'),
+        title: t('export.sectionCode', 'Code'),
         items: [
           {
             key: 'json',
@@ -216,6 +217,13 @@ export function ExportMenuPanel({
             hint: t('export.hintEditableSvg', 'Editable SVG'),
             Icon: Figma,
             actions: ['download', 'copy'],
+          },
+          {
+            key: 'share',
+            label: t('export.shareEmbed', 'Share & Embed'),
+            hint: t('export.hintShareEmbed', 'Read-only viewer link'),
+            Icon: Share2,
+            actions: ['download'],
           },
         ],
       },

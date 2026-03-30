@@ -1,7 +1,7 @@
 import type { DiagramType } from '@/lib/types';
 import { parseMermaid, type ParseResult } from '@/lib/mermaidParser';
 import { getDiagramPlugin } from '@/diagram-types/core';
-import { registerBuiltInDiagramPlugins } from '@/diagram-types/registerBuiltInPlugins';
+import { initializeDiagramTypeRuntime } from '@/diagram-types/bootstrap';
 import { detectMermaidDiagramType } from './detectDiagramType';
 
 export interface MermaidDispatchParseResult extends ParseResult {
@@ -62,7 +62,7 @@ export function parseMermaidByType(
   input: string,
   options: ParseMermaidByTypeOptions = {}
 ): MermaidDispatchParseResult {
-  registerBuiltInDiagramPlugins();
+  initializeDiagramTypeRuntime();
 
   const detectedType = detectMermaidDiagramType(input);
 

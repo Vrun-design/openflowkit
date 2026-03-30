@@ -9,10 +9,6 @@ export function createFlowEditorImportRouteState(): FlowEditorRouteState {
   return { openImportDialog: true };
 }
 
-export function createFlowEditorTemplatesRouteState(): FlowEditorRouteState {
-  return { openTemplates: true };
-}
-
 export function createFlowEditorInitialTemplateRouteState(templateId: string): FlowEditorRouteState {
   return { initialTemplateId: templateId };
 }

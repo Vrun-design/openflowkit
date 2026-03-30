@@ -4,6 +4,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { StudioAIPanel } from './StudioAIPanel';
 
+const handleGenerateMock = vi.fn();
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (
@@ -28,7 +30,7 @@ vi.mock('./command-bar/useAIViewState', () => ({
     setSelectedImage: vi.fn(),
     fileInputRef: createRef<HTMLInputElement>(),
     scrollRef: createRef<HTMLDivElement>(),
-    handleGenerate: vi.fn(),
+    handleGenerate: handleGenerateMock,
     handleKeyDown: vi.fn(),
     handleImageSelect: vi.fn(),
   }),
@@ -36,6 +38,7 @@ vi.mock('./command-bar/useAIViewState', () => ({
 
 describe('StudioAIPanel', () => {
   it('shows the settings CTA when ai is unavailable', () => {
+    handleGenerateMock.mockReset();
     render(
       <StudioAIPanel
         onAIGenerate={vi.fn().mockResolvedValue(false)}
@@ -136,6 +139,84 @@ describe('StudioAIPanel', () => {
     expect(screen.queryByText(/Describe one concrete change at a time/i)).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Update auth service' } });
     expect(onClearError).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows AI recovery actions for request failures', () => {
+    handleGenerateMock.mockReset();
+    const onClearError = vi.fn();
+
+    render(
+      <StudioAIPanel
+        onAIGenerate={vi.fn().mockResolvedValue(false)}
+        isGenerating={false}
+        streamingText={null}
+        retryCount={0}
+        onCancelGeneration={vi.fn()}
+        pendingDiff={null}
+        onConfirmDiff={vi.fn()}
+        onDiscardDiff={vi.fn()}
+        aiReadiness={{
+          canGenerate: true,
+          blockingIssue: null,
+          advisory: null,
+        }}
+        lastError="The provider rejected this request."
+        onClearError={onClearError}
+        chatMessages={[]}
+        onClearChat={vi.fn()}
+        nodeCount={1}
+        selectedNodeCount={0}
+      />
+    );
+
+    expect(screen.getByText('Last request failed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry request' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry request' }));
+    expect(handleGenerateMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss AI error' }));
+    expect(onClearError).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers AI settings recovery for setup-style failures', () => {
+    const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent');
+
+    render(
+      <StudioAIPanel
+        onAIGenerate={vi.fn().mockResolvedValue(false)}
+        isGenerating={false}
+        streamingText={null}
+        retryCount={0}
+        onCancelGeneration={vi.fn()}
+        pendingDiff={null}
+        onConfirmDiff={vi.fn()}
+        onDiscardDiff={vi.fn()}
+        aiReadiness={{
+          canGenerate: false,
+          blockingIssue: {
+            tone: 'error',
+            title: 'OpenAI is not ready yet',
+            detail: 'Add your OpenAI API key in Settings before generating.',
+          },
+          advisory: null,
+        }}
+        lastError="Failed to fetch"
+        onClearError={vi.fn()}
+        chatMessages={[]}
+        onClearChat={vi.fn()}
+        nodeCount={1}
+        selectedNodeCount={0}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Review AI settings' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review AI settings' }));
+
+    expect(dispatchEventSpy).toHaveBeenCalledTimes(1);
+    expect((dispatchEventSpy.mock.calls[0]?.[0] as CustomEvent).type).toBe('open-ai-settings');
+
+    dispatchEventSpy.mockRestore();
   });
 
   it('opens settings from the empty-state CTA', () => {

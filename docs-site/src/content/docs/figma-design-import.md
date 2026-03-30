@@ -9,9 +9,16 @@ OpenFlowKit includes a Figma import flow for design-system work. Instead of recr
 ## What you need
 
 - a Figma file URL
-- a personal access token
+- a Figma personal access token
 
 The token is used in your browser to fetch styles. This is a token-based import flow, not a permanent synced integration.
+
+### Getting a Figma Token
+
+1. Go to Figma Settings > Account
+2. Scroll to "Personal access tokens"
+3. Create a new token with a descriptive name
+4. Copy the token (it won't be shown again)
 
 ## What the import previews
 

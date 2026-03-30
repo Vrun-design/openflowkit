@@ -62,4 +62,15 @@ describe('useStyleClipboard', () => {
     expect(recordHistory).toHaveBeenCalledTimes(1);
     expect(setNodes).toHaveBeenCalledTimes(1);
   });
+
+  it('ignores clipboard payloads without style fields', () => {
+    const recordHistory = vi.fn();
+    storage.set('flowmind-style-clipboard', JSON.stringify({ label: 'ignore me' }));
+    const { result } = renderHook(() => useStyleClipboard(recordHistory));
+
+    result.current.pasteStyleSelection();
+
+    expect(recordHistory).not.toHaveBeenCalled();
+    expect(setNodes).not.toHaveBeenCalled();
+  });
 });

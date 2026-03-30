@@ -290,6 +290,47 @@ describe('yjs peer collaboration transport', () => {
     transportB.disconnect();
   });
 
+  it('compacts an oversized operation log to the latest canvas state', () => {
+    let connectedDoc: Y.Doc | null = null;
+    const transport = createYjsPeerCollaborationTransport({
+      createProvider: (_roomId, doc) => {
+        connectedDoc = doc;
+        return {
+          awareness: new FakeAwareness(),
+          destroy: vi.fn(),
+        };
+      },
+    });
+
+    transport.connect({ roomId: 'room-1', clientId: 'client-a', signalingServers: [], password: 'secret-1' }, vi.fn());
+
+    for (let index = 0; index < 130; index += 1) {
+      const nodeId = `n-${index % 4}`;
+      transport.publishOperation({
+        opId: `op-${index}`,
+        roomId: 'room-1',
+        clientId: 'client-a',
+        baseVersion: index,
+        timestamp: index,
+        type: 'node.upsert',
+        payload: {
+          node: {
+            id: nodeId,
+            type: 'process',
+            position: { x: index, y: index },
+            data: { label: `Node ${nodeId} v${index}` },
+          },
+        },
+      });
+    }
+
+    const operations = connectedDoc?.getArray('operations').toArray() ?? [];
+    expect(operations.length).toBeLessThan(20);
+    expect((operations[0] as CollaborationOperationEnvelope).clientId).toBe('system:compaction');
+
+    transport.disconnect();
+  });
+
   it('waits for IndexedDB persistence sync before reporting ready and destroys persistence on disconnect', async () => {
     const awareness = new FakeAwareness();
     let resolvePersistence: (() => void) | null = null;

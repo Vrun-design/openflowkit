@@ -1,20 +1,13 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import ReactFlow, {
-  Background,
-  useReactFlow,
-  toFlowNode,
-} from '@/lib/reactflowCompat';
+import { useReactFlow, toFlowNode } from '@/lib/reactflowCompat';
 import { useFlowStore } from '../store';
 import type { FlowNode, NodeData } from '../lib/types';
 import { useFlowOperations } from '../hooks/useFlowOperations';
 import { useModifierKeys } from '../hooks/useModifierKeys';
 import { useEdgeInteractions } from '../hooks/useEdgeInteractions';
-import CustomConnectionLine from './CustomConnectionLine';
-import { NavigationControls } from './NavigationControls';
-import { FlowCanvasOverlays } from './flow-canvas/FlowCanvasOverlays';
-import { flowCanvasEdgeTypes, flowCanvasNodeTypes } from './flow-canvas/flowCanvasTypes';
+import { FlowCanvasSurface } from './flow-canvas/FlowCanvasSurface';
 import { useFlowCanvasMenusAndActions } from './flow-canvas/useFlowCanvasMenusAndActions';
 import { useFlowCanvasDragDrop } from './flow-canvas/useFlowCanvasDragDrop';
 import { useFlowCanvasConnectionState } from './flow-canvas/useFlowCanvasConnectionState';
@@ -81,6 +74,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     largeGraphSafetyProfile,
   });
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const lastInteractionScreenPositionRef = useRef<{ x: number; y: number } | null>(null);
   const connectMenuSetterRef = useRef<((value: ConnectMenuState | null) => void) | null>(null);
 
   const { screenToFlowPosition, fitView } = useReactFlow();
@@ -204,6 +198,14 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       y: rect.top + rect.height / 2,
     });
   };
+  const getLastInteractionFlowPosition = (): { x: number; y: number } | null => {
+    const position = lastInteractionScreenPositionRef.current;
+    if (!position) {
+      return null;
+    }
+
+    return screenToFlowPosition(position);
+  };
 
   const {
     alignmentGuides,
@@ -253,6 +255,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       'Architecture strict mode blocked Mermaid paste. Open Code view, fix diagnostics, then retry.'
     ),
     pasteSelection,
+    getLastInteractionFlowPosition,
     getCanvasCenterFlowPosition,
   });
 
@@ -263,89 +266,66 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     };
   }, [interactionLowDetailModeActive]);
 
+  const selectedNodeCount = nodes.filter((node) => node.selected).length;
+  const selectedEdgeCount = edges.filter((edge) => edge.selected).length;
+  const selectionAnnouncement =
+    selectedNodeCount === 0 && selectedEdgeCount === 0
+      ? 'Canvas selection cleared.'
+      : `${selectedNodeCount} node${selectedNodeCount === 1 ? '' : 's'} and ${selectedEdgeCount} edge${selectedEdgeCount === 1 ? '' : 's'} selected.`;
+
   return (
-    <div
-      className={`w-full h-full relative ${isConnecting ? 'is-connecting' : ''} ${lowDetailModeActive ? 'flow-lod-low' : ''} ${interactionLowDetailModeActive ? 'flow-lod-interaction' : ''} ${farZoomReductionActive ? 'flow-lod-far' : ''}`}
-      ref={reactFlowWrapper}
+    <FlowCanvasSurface
+      containerClassName={`w-full h-full relative ${isConnecting ? 'is-connecting' : ''} ${lowDetailModeActive ? 'flow-lod-low' : ''} ${interactionLowDetailModeActive ? 'flow-lod-interaction' : ''} ${farZoomReductionActive ? 'flow-lod-far' : ''}`}
+      wrapperRef={reactFlowWrapper}
+      onPointerDownCapture={(event) => {
+        lastInteractionScreenPositionRef.current = {
+          x: event.clientX,
+          y: event.clientY,
+        };
+      }}
       onPasteCapture={handleCanvasPaste}
       onDoubleClickCapture={onCanvasDoubleClickCapture}
-    >
-      <ReactFlow
-        nodes={layerAdjustedNodes}
-        edges={effectiveEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onReconnect={onReconnect}
-        onSelectionChange={onSelectionChange}
-        onNodeDragStart={handleNodeDragStart}
-        onNodeDrag={handleNodeDrag}
-        onNodeDragStop={handleNodeDragStop}
-        onMoveStart={startInteractionLowDetail}
-        onMoveEnd={endInteractionLowDetail}
-        onNodeDoubleClick={onNodeDoubleClick}
-        onNodeClick={onCanvasEntityIntent}
-        onEdgeClick={onCanvasEntityIntent}
-        onNodeContextMenu={onNodeContextMenu}
-        onSelectionContextMenu={onSelectionContextMenu}
-        onPaneContextMenu={onPaneContextMenu}
-        onEdgeContextMenu={onEdgeContextMenu}
-        onPaneClick={onPaneClick}
-        onConnectStart={onConnectStartWrapper}
-        onConnectEnd={onConnectEndWrapper}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
-        nodeTypes={flowCanvasNodeTypes}
-        edgeTypes={flowCanvasEdgeTypes}
-        fitView
-        className={reactFlowConfig.className}
-        minZoom={0.1}
-        onlyRenderVisibleElements={reactFlowConfig.onlyRenderVisibleElements}
-        connectionMode={reactFlowConfig.connectionMode}
-        isValidConnection={reactFlowConfig.isValidConnection}
-        selectionOnDrag={reactFlowConfig.selectionOnDrag}
-        selectNodesOnDrag={reactFlowConfig.selectNodesOnDrag}
-        selectionKeyCode={reactFlowConfig.selectionKeyCode}
-        panOnDrag={reactFlowConfig.panOnDrag}
-        panActivationKeyCode={reactFlowConfig.panActivationKeyCode}
-        selectionMode={reactFlowConfig.selectionMode}
-        multiSelectionKeyCode={reactFlowConfig.multiSelectionKeyCode}
-        zoomActivationKeyCode={reactFlowConfig.zoomActivationKeyCode}
-        zoomOnScroll={reactFlowConfig.zoomOnScroll}
-        zoomOnPinch={reactFlowConfig.zoomOnPinch}
-        panOnScroll={reactFlowConfig.panOnScroll}
-        panOnScrollMode={reactFlowConfig.panOnScrollMode}
-        preventScrolling={reactFlowConfig.preventScrolling}
-        zoomOnDoubleClick={reactFlowConfig.zoomOnDoubleClick}
-        defaultEdgeOptions={reactFlowConfig.defaultEdgeOptions}
-        connectionLineComponent={CustomConnectionLine}
-        snapToGrid={snapToGrid}
-      >
-        {effectiveShowGrid && (
-          <Background
-            variant={reactFlowConfig.background.variant}
-            gap={reactFlowConfig.background.gap}
-            size={reactFlowConfig.background.size}
-            color={reactFlowConfig.background.color}
-          />
-        )}
-        <NavigationControls />
-      </ReactFlow>
-      <FlowCanvasOverlays
-        alignmentGuidesEnabled={alignmentGuidesEnabled}
-        alignmentGuides={alignmentGuides}
-        overlayNodes={layerAdjustedNodes}
-        selectionDragPreview={selectionDragPreview}
-        connectMenu={connectMenu}
-        setConnectMenu={setConnectMenu}
-        screenToFlowPosition={screenToFlowPosition}
-        handleAddAndConnect={handleAddAndConnect}
-        handleAddDomainLibraryItemAndConnect={handleAddDomainLibraryItemAndConnect}
-        contextMenu={contextMenu}
-        onCloseContextMenu={onCloseContextMenu}
-        copySelection={copySelection}
-        contextActions={contextActions}
-      />
-    </div>
+      selectionAnnouncement={selectionAnnouncement}
+      nodes={layerAdjustedNodes}
+      edges={effectiveEdges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      onReconnect={onReconnect}
+      onSelectionChange={onSelectionChange}
+      onNodeDragStart={handleNodeDragStart}
+      onNodeDrag={handleNodeDrag}
+      onNodeDragStop={handleNodeDragStop}
+      onMoveStart={startInteractionLowDetail}
+      onMoveEnd={endInteractionLowDetail}
+      onNodeDoubleClick={onNodeDoubleClick}
+      onNodeClick={onCanvasEntityIntent}
+      onEdgeClick={onCanvasEntityIntent}
+      onNodeContextMenu={onNodeContextMenu}
+      onSelectionContextMenu={onSelectionContextMenu}
+      onPaneContextMenu={onPaneContextMenu}
+      onEdgeContextMenu={onEdgeContextMenu}
+      onPaneClick={onPaneClick}
+      onConnectStart={onConnectStartWrapper}
+      onConnectEnd={onConnectEndWrapper}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      fitView={true}
+      reactFlowConfig={reactFlowConfig}
+      snapToGrid={snapToGrid}
+      effectiveShowGrid={effectiveShowGrid}
+      alignmentGuidesEnabled={alignmentGuidesEnabled}
+      alignmentGuides={alignmentGuides}
+      selectionDragPreview={selectionDragPreview}
+      connectMenu={connectMenu}
+      setConnectMenu={setConnectMenu}
+      screenToFlowPosition={screenToFlowPosition}
+      handleAddAndConnect={handleAddAndConnect}
+      handleAddDomainLibraryItemAndConnect={handleAddDomainLibraryItemAndConnect}
+      contextMenu={contextMenu}
+      onCloseContextMenu={onCloseContextMenu}
+      copySelection={copySelection}
+      contextActions={contextActions}
+    />
   );
 };

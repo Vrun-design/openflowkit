@@ -2,11 +2,11 @@ import { createElement, useMemo, type ReactElement } from 'react';
 import { useFlowStore } from '@/store';
 import type { Node } from '@/lib/reactflowCompat';
 import { NodeType, type DiagramType, type NodeData } from '@/lib/types';
+import { initializeDiagramTypeRuntime } from '@/diagram-types/bootstrap';
 import { getDiagramNodeProperties } from '@/diagram-types/core';
-import { registerBuiltInPropertyPanels } from '@/diagram-types/registerBuiltInPropertyPanels';
 import { NodeProperties } from './NodeProperties';
 
-registerBuiltInPropertyPanels();
+initializeDiagramTypeRuntime();
 
 interface DiagramNodePropertiesRouterProps {
   selectedNode: Node<NodeData>;

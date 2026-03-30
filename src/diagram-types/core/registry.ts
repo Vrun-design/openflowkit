@@ -15,3 +15,6 @@ export function listDiagramPlugins(): DiagramPlugin[] {
   return Array.from(pluginRegistry.values());
 }
 
+export function resetDiagramPluginRegistryForTests(): void {
+  pluginRegistry.clear();
+}

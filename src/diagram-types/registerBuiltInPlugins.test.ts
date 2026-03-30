@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { getDiagramPlugin, listDiagramPlugins } from '@/diagram-types/core';
-import { registerBuiltInDiagramPlugins } from './registerBuiltInPlugins';
+import {
+  getDiagramPlugin,
+  listDiagramPlugins,
+  resetDiagramPluginRegistryForTests,
+} from '@/diagram-types/core';
+import {
+  registerBuiltInDiagramPlugins,
+  resetBuiltInDiagramPluginRegistrationForTests,
+} from './registerBuiltInPlugins';
 
 describe('registerBuiltInDiagramPlugins', () => {
   it('registers flowchart plugin', () => {
+    resetBuiltInDiagramPluginRegistrationForTests();
+    resetDiagramPluginRegistryForTests();
     registerBuiltInDiagramPlugins();
 
     const flowchart = getDiagramPlugin('flowchart');
@@ -37,6 +46,8 @@ describe('registerBuiltInDiagramPlugins', () => {
   });
 
   it('is idempotent', () => {
+    resetBuiltInDiagramPluginRegistrationForTests();
+    resetDiagramPluginRegistryForTests();
     registerBuiltInDiagramPlugins();
     registerBuiltInDiagramPlugins();
 

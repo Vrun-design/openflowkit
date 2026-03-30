@@ -66,6 +66,9 @@ export interface SnapshotsPanelBuilderParams {
   handleRestoreSnapshot: (snapshot: FlowSnapshot) => void;
   deleteSnapshot: (id: string) => void;
   handleCompareSnapshot?: (snapshot: FlowSnapshot) => void;
+  historyPastCount: number;
+  historyFutureCount: number;
+  scrubHistoryToIndex: (index: number) => void;
   nodes: FlowNode[];
   edges: FlowEdge[];
 }
@@ -232,6 +235,9 @@ export function buildSnapshotsPanelProps({
   handleRestoreSnapshot,
   deleteSnapshot,
   handleCompareSnapshot,
+  historyPastCount,
+  historyFutureCount,
+  scrubHistoryToIndex,
   nodes,
   edges,
 }: SnapshotsPanelBuilderParams): FlowEditorPanelsProps['snapshots'] {
@@ -245,6 +251,9 @@ export function buildSnapshotsPanelProps({
     onRestoreSnapshot: handleRestoreSnapshot,
     onDeleteSnapshot: deleteSnapshot,
     onCompareSnapshot: handleCompareSnapshot,
+    historyPastCount,
+    historyFutureCount,
+    onScrubHistoryTo: scrubHistoryToIndex,
   };
 }
 

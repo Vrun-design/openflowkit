@@ -53,7 +53,7 @@
 <table>
 <tr>
 <td align="center"><b>🏠 Workspace Home</b><br/><sub>Create · open · import<br/>No forced blank file</sub></td>
-<td align="center"><b>🧑‍💻 Code → Diagram</b><br/><sub>GitHub · SQL · Terraform<br/>K8s · Docker Compose</sub></td>
+<td align="center"><b>🧑‍💻 Code → Diagram</b><br/><sub>GitHub · SQL · Terraform<br/>K8s · OpenAPI</sub></td>
 <td align="center"><b>🤖 AI Generation</b><br/><sub>9 providers · BYOK<br/>Streaming diff preview</sub></td>
 <td align="center"><b>`{}` Diagram as Code</b><br/><sub>Bidirectional live sync<br/>Git-friendly DSL</sub></td>
 <td align="center"><b>🧩 Asset Libraries</b><br/><sub>Developer · AWS · Azure<br/>GCP · CNCF · Icons</sub></td>
@@ -81,7 +81,7 @@ Every diagramming tool makes a compromise. OpenFlowKit doesn't.
 | ----------------------- | ----------------------------------------------------------------------------- |
 | **Excalidraw / tldraw** | Freeform whiteboards — no structured diagram types, no DSL, no code imports   |
 | **Mermaid.js**          | Code-only — no visual canvas, no AI, no interactive editor                    |
-| **Draw.io**             | Decade-old UX — Limited AI integration, no developer import pipelines              |
+| **Draw.io**             | Decade-old UX — Limited AI integration, no developer import pipelines         |
 | **Lucidchart / Miro**   | Cloud lock-in — expensive, account required, your data lives on their servers |
 | **PlantUML**            | Server-dependent rendering — no visual editor, no local-first model           |
 
@@ -91,20 +91,20 @@ OpenFlowKit is the **only MIT-licensed tool** that combines a real workspace hom
 
 ## Feature highlights
 
-|                                 | OpenFlowKit | Excalidraw | Draw.io | Mermaid | Lucidchart |
-| ------------------------------- | :---------: | :--------: | :-----: | :-----: | :--------: |
-| Visual canvas editor            |     ✅      |     ✅     |   ✅    |   ❌    |     ✅     |
-| Bidirectional diagram-as-code   |     ✅      |     ❌     |   ❌    |   ✅    |     ❌     |
-| AI generation (9 providers)     |     ✅      |     ❌     |   ❌    |   ❌    |  Limited   |
-| GitHub repo → diagram           |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
-| SQL → ERD (native parser)       |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
-| Terraform / K8s / Docker import |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
-| AWS / Azure / GCP / CNCF icons  |     ✅      |     ❌     |   ✅    | Partial |     ✅     |
-| Real-time collaboration (P2P)   |     ✅      |     ✅     |   ❌    |   ❌    | ✅ (cloud) |
-| Cinematic animated export       |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
-| Figma export (editable SVG)     |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
-| No account required             |     ✅      |     ✅     |   ✅    |   ✅    |     ❌     |
-| Open source (MIT)               |     ✅      |     ✅     |   ✅    |   ✅    |     ❌     |
+|                                | OpenFlowKit | Excalidraw | Draw.io | Mermaid | Lucidchart |
+| ------------------------------ | :---------: | :--------: | :-----: | :-----: | :--------: |
+| Visual canvas editor           |     ✅      |     ✅     |   ✅    |   ❌    |     ✅     |
+| Bidirectional diagram-as-code  |     ✅      |     ❌     |   ❌    |   ✅    |     ❌     |
+| AI generation (9 providers)    |     ✅      |     ❌     |   ❌    |   ❌    |  Limited   |
+| GitHub repo → diagram          |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
+| SQL → ERD (native parser)      |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
+| Terraform / K8s import         |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
+| AWS / Azure / GCP / CNCF icons |     ✅      |     ❌     |   ✅    | Partial |     ✅     |
+| Real-time collaboration (P2P)  |     ✅      |     ✅     |   ❌    |   ❌    | ✅ (cloud) |
+| Cinematic animated export      |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
+| Figma export (editable SVG)    |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
+| No account required            |     ✅      |     ✅     |   ✅    |   ✅    |     ❌     |
+| Open source (MIT)              |     ✅      |     ✅     |   ✅    |   ✅    |     ❌     |
 
 ---
 
@@ -125,17 +125,25 @@ CREATE TABLE orders (
 → Typed ERD with inferred foreign-key edges and cardinalities. Rendered in milliseconds, no server involved.
 
 ```yaml
-# docker-compose.yml
-services:
-  api:
-    depends_on: [postgres, redis]
-  postgres:
-    image: postgres:16
-  redis:
-    image: redis:alpine
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  replicas: 3
+---
+apiVersion: v1
+kind: Service
+selector:
+  app: api
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+spec:
+  rules:
+    - host: api.example.com
 ```
 
-→ Service architecture with `depends_on` edges and port labels.
+→ Kubernetes architecture with Deployment → Service → Ingress connections.
 
 **AI-powered imports (API key required):**
 
@@ -143,17 +151,17 @@ services:
 github.com/vercel/next.js  →  architecture diagram
 ```
 
-→ Fetches the repo, analyzes code structure and dependencies, then generates an editable architecture diagram via AI. Quality depends on the model chosen.
+→ Fetches a prioritized slice of the GitHub repository in-browser, analyzes the codebase with AI, then generates an editable architecture diagram. Quality depends on repository size, file coverage, and model choice.
 
 | Source                    | Engine                     | API key? |
 | ------------------------- | -------------------------- | :------: |
-| GitHub repo URL           | AI · 9 languages supported |   Yes    |
+| GitHub repo URL           | AI-assisted import         |   Yes    |
 | SQL DDL                   | **Native parser**          |  **No**  |
 | Terraform `.tfstate`      | **Native parser**          |  **No**  |
 | Terraform HCL             | AI-assisted                |   Yes    |
 | Kubernetes YAML / Helm    | **Native parser**          |  **No**  |
-| Docker Compose            | **Native parser**          |  **No**  |
-| OpenAPI / Swagger spec    | AI-assisted                |   Yes    |
+| OpenAPI / Swagger YAML/JSON | **Native parser**        |  **No**  |
+| OpenAPI source text → richer flow | AI-assisted         |   Yes    |
 | Source code (single file) | AI-assisted · 9 languages  |   Yes    |
 | Mermaid                   | **Native parser**          |  **No**  |
 
@@ -263,14 +271,14 @@ Local-first stays the default. Your saved flows live in the browser, your AI key
 
 ## Canvas built for keyboard-first developers
 
-| Shortcut         | Action                                               |
-| ---------------- | ---------------------------------------------------- |
+| Shortcut         | Action                                                    |
+| ---------------- | --------------------------------------------------------- |
 | `⌘ K` / `Ctrl K` | Command bar — search, import, layout, assets, and actions |
-| `⌘ \` / `Ctrl \` | Toggle the live code panel                           |
-| `⌘ Z` / `Ctrl Z` | Full undo with complete history                      |
-| `⌘ D` / `Ctrl D` | Duplicate selection                                  |
-| `⌘ G` / `Ctrl G` | Group selected nodes                                 |
-| `⌘ /` / `Ctrl /` | Keyboard shortcuts reference                         |
+| `⌘ \` / `Ctrl \` | Toggle the live code panel                                |
+| `⌘ Z` / `Ctrl Z` | Full undo with complete history                           |
+| `⌘ D` / `Ctrl D` | Duplicate selection                                       |
+| `⌘ G` / `Ctrl G` | Group selected nodes                                      |
+| `⌘ /` / `Ctrl /` | Keyboard shortcuts reference                              |
 
 Plus: smart alignment guides, snap-to-grid, multi-select, pages, layers, sections, architecture lint, light/dark/system theme, and full i18n in 7 languages.
 
@@ -312,13 +320,6 @@ OpenFlowKit is a pure static SPA. There is no backend. Deploy the `dist/` folder
 ```bash
 npm run build
 # upload dist/ to your provider
-```
-
-**Docker:**
-
-```bash
-docker build -t openflowkit .
-docker run -p 8080:80 openflowkit
 ```
 
 No database. No secrets. No infrastructure. One folder.

@@ -19,7 +19,6 @@ import { DocsSiteRedirect } from '@/components/app/DocsSiteRedirect';
 import { RouteLoadingFallback } from '@/components/app/RouteLoadingFallback';
 import { MobileWorkspaceGate } from '@/components/app/MobileWorkspaceGate';
 import { CinematicExportProvider } from '@/context/CinematicExportContext';
-import { HomePage } from '@/components/HomePage';
 
 import { useFlowStore } from './store';
 import { useEditorPageActions } from '@/store/editorPageHooks';
@@ -35,6 +34,11 @@ async function loadFlowEditorModule() {
 }
 
 const FlowEditor = lazy(loadFlowEditorModule);
+
+const LazyHomePage = lazy(async () => {
+  const module = await import('./components/HomePage');
+  return { default: module.HomePage };
+});
 
 const LazyKeyboardShortcutsModal = lazy(async () => {
   const module = await import('./components/KeyboardShortcutsModal');
@@ -121,16 +125,18 @@ function HomePageRoute(): React.JSX.Element {
   }
 
   return (
-    <HomePage
-      onLaunch={handleLaunch}
-      onLaunchWithTemplates={handleLaunchWithTemplates}
-      onLaunchWithTemplate={handleLaunchWithInitialTemplate}
-      onLaunchWithAI={handleLaunchWithAI}
-      onImportJSON={handleImportJSON}
-      onOpenFlow={(flowId) => navigate(`/flow/${flowId}`)}
-      activeTab={activeTab}
-      onSwitchTab={(tab) => navigate(getHomePagePath(tab))}
-    />
+    <Suspense fallback={<RouteLoadingFallback />}>
+      <LazyHomePage
+        onLaunch={handleLaunch}
+        onLaunchWithTemplates={handleLaunchWithTemplates}
+        onLaunchWithTemplate={handleLaunchWithInitialTemplate}
+        onLaunchWithAI={handleLaunchWithAI}
+        onImportJSON={handleImportJSON}
+        onOpenFlow={(flowId) => navigate(`/flow/${flowId}`)}
+        activeTab={activeTab}
+        onSwitchTab={(tab) => navigate(getHomePagePath(tab))}
+      />
+    </Suspense>
   );
 }
 

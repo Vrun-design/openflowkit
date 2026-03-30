@@ -1,41 +1,38 @@
 import type { FlowTab } from '@/lib/types';
+import { nowIso } from '@/lib/date';
+import { createEmptyFlowHistory } from '@/store/historyState';
 import type { FlowDocument, FlowPage } from './flowDocumentModel';
 import type { PersistedDocument, PersistedDocumentPage } from './persistenceTypes';
 
-function getNowIso(): string {
-  return new Date().toISOString();
+function createPersistedDocumentContent(tab: Pick<FlowTab, 'nodes' | 'edges' | 'playback'>) {
+  return {
+    nodes: tab.nodes,
+    edges: tab.edges,
+    playback: tab.playback,
+  };
 }
 
 export function createPersistedDocumentFromTab(tab: FlowTab): PersistedDocument {
-  const nowIso = getNowIso();
+  const createdAt = nowIso();
   const primaryPageId = `${tab.id}:page:primary`;
+  const content = createPersistedDocumentContent(tab);
   return {
     id: tab.id,
     name: tab.name,
     diagramType: tab.diagramType,
-    content: {
-      nodes: tab.nodes,
-      edges: tab.edges,
-      playback: tab.playback,
-      history: tab.history,
-    },
+    content,
     pages: [
       {
         id: primaryPageId,
         name: tab.name,
         diagramType: tab.diagramType,
-        updatedAt: tab.updatedAt ?? nowIso,
-        content: {
-          nodes: tab.nodes,
-          edges: tab.edges,
-          playback: tab.playback,
-          history: tab.history,
-        },
+        updatedAt: tab.updatedAt ?? createdAt,
+        content,
       },
     ],
     activePageId: primaryPageId,
-    createdAt: tab.updatedAt ?? nowIso,
-    updatedAt: tab.updatedAt ?? nowIso,
+    createdAt: tab.updatedAt ?? createdAt,
+    updatedAt: tab.updatedAt ?? createdAt,
     deletedAt: null,
   };
 }
@@ -62,7 +59,7 @@ export function createFlowTabFromPersistedDocument(document: PersistedDocument):
     nodes: content.nodes,
     edges: content.edges,
     playback: content.playback,
-    history: content.history,
+    history: content.history ?? createEmptyFlowHistory(),
   };
 }
 
@@ -76,12 +73,7 @@ function createPersistedPageFromFlowPage(page: FlowPage): PersistedDocumentPage 
     name: page.name,
     diagramType: page.diagramType,
     updatedAt: page.updatedAt,
-    content: {
-      nodes: page.nodes,
-      edges: page.edges,
-      playback: page.playback,
-      history: page.history,
-    },
+    content: createPersistedDocumentContent(page),
   };
 }
 

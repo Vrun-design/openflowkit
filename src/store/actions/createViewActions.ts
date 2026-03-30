@@ -1,8 +1,7 @@
 import { NODE_DEFAULTS } from '@/theme';
 import { assignSmartHandlesWithOptions, getSmartRoutingOptionsFromViewSettings } from '@/services/smartEdgeRouting';
+import type { SetFlowState } from '../actionFactory';
 import type { FlowState } from '../types';
-
-type SetFlowState = (partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)) => void;
 
 export function createViewActions(set: SetFlowState): Pick<
     FlowState,

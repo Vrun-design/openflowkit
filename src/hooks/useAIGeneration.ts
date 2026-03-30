@@ -11,6 +11,8 @@ import {
   generateAIFlowResult,
   type GenerateAIFlowResult,
 } from './ai-generation/requestLifecycle';
+import { parseStreamingDsl } from './ai-generation/streamingParser';
+import { setStreamingGraph, setStreamingActive } from './ai-generation/streamingStore';
 import {
   buildCodeToArchitecturePrompt,
   buildCodebaseToArchitecturePrompt,
@@ -237,6 +239,8 @@ export function useAIGeneration(
 
       setLastError(null);
       setStreamingText('');
+      setStreamingGraph(null);
+      setStreamingActive(true);
       setRetryCount(0);
       if (!showPreview) recordHistory();
       setIsGenerating(true);
@@ -262,7 +266,16 @@ export function useAIGeneration(
           selectedNodeIds: focusedNodeIds ?? selectedNodeIds,
           aiSettings,
           globalEdgeOptions,
-          onChunk: (delta) => setStreamingText((prev) => (prev ?? '') + delta),
+          onChunk: (delta) => {
+            setStreamingText((prev) => {
+              const next = (prev ?? '') + delta;
+              const parsed = parseStreamingDsl(next);
+              if (parsed.nodeCount > 0) {
+                setStreamingGraph(parsed);
+              }
+              return next;
+            });
+          },
           onRetry: (attempt) => {
             setRetryCount(attempt);
             setStreamingText('');
@@ -333,6 +346,8 @@ export function useAIGeneration(
         abortControllerRef.current = null;
         setIsGenerating(false);
         setStreamingText(null);
+        setStreamingGraph(null);
+        setStreamingActive(false);
         setRetryCount(0);
       }
     },

@@ -12,6 +12,7 @@ interface FlowTabsProps {
   onAddPage: () => void;
   onClosePage: (pageId: string) => void;
   onRenamePage: (pageId: string, newName: string) => void;
+  onReorderPage: (draggedPageId: string, targetPageId: string) => void;
 }
 
 export const FlowTabs: React.FC<FlowTabsProps> = ({
@@ -21,11 +22,14 @@ export const FlowTabs: React.FC<FlowTabsProps> = ({
   onAddPage,
   onClosePage,
   onRenamePage,
+  onReorderPage,
 }) => {
   const { t } = useTranslation();
   const isBeveled = IS_BEVELED;
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [draggedPageId, setDraggedPageId] = useState<string | null>(null);
+  const [dropTargetPageId, setDropTargetPageId] = useState<string | null>(null);
   const activeTabClassName = `${getSegmentedTabButtonClass(true, 'sm')} h-10 sm:h-9 border-[var(--brand-primary-200)] bg-[var(--brand-primary-50)] text-[var(--brand-primary-700)]`;
   const inactiveTabClassName = `${getSegmentedTabButtonClass(false, 'sm')} h-10 sm:h-9 border-[var(--color-brand-border)] bg-[var(--brand-surface)] text-[var(--brand-secondary)] hover:border-[var(--color-brand-border)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]`;
 
@@ -51,6 +55,18 @@ export const FlowTabs: React.FC<FlowTabsProps> = ({
     }
   };
 
+  const handleDrop = (targetPageId: string): void => {
+    if (!draggedPageId || draggedPageId === targetPageId) {
+      setDraggedPageId(null);
+      setDropTargetPageId(null);
+      return;
+    }
+
+    onReorderPage(draggedPageId, targetPageId);
+    setDraggedPageId(null);
+    setDropTargetPageId(null);
+  };
+
   return (
     <div className="pointer-events-auto flex min-w-0 items-center justify-center px-2 sm:px-4">
       <div
@@ -66,8 +82,31 @@ export const FlowTabs: React.FC<FlowTabsProps> = ({
             aria-selected={activePageId === page.id}
             className={`
               group relative flex items-center gap-2 cursor-pointer select-none transition-all
+              ${dropTargetPageId === page.id && draggedPageId !== page.id ? 'ring-2 ring-[var(--brand-primary-300)] ring-offset-1 ring-offset-transparent' : ''}
               ${activePageId === page.id ? activeTabClassName : inactiveTabClassName}
             `}
+            draggable={editingTabId !== page.id}
+            onDragStart={() => setDraggedPageId(page.id)}
+            onDragOver={(event) => {
+              if (!draggedPageId || draggedPageId === page.id) {
+                return;
+              }
+              event.preventDefault();
+              setDropTargetPageId(page.id);
+            }}
+            onDragLeave={() => {
+              if (dropTargetPageId === page.id) {
+                setDropTargetPageId(null);
+              }
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              handleDrop(page.id);
+            }}
+            onDragEnd={() => {
+              setDraggedPageId(null);
+              setDropTargetPageId(null);
+            }}
             onClick={() => onSwitchPage(page.id)}
             onDoubleClick={() => handleStartEdit(page)}
             onKeyDown={(e) => {

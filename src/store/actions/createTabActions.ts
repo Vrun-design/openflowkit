@@ -1,14 +1,12 @@
 import type { FlowTab } from '@/lib/types';
+import { nowIso } from '@/lib/date';
 import { createId } from '@/lib/id';
 import { DEFAULT_DIAGRAM_TYPE } from '@/services/diagramDocument';
 import { clonePlaybackState } from '@/services/playback/model';
+import type { GetFlowState, SetFlowState } from '../actionFactory';
+import { createEmptyFlowHistory } from '../historyState';
 import type { FlowState } from '../types';
 import { syncTabNodesEdges } from './syncTabNodesEdges';
-
-type SetFlowState = (
-  partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)
-) => void;
-type GetFlowState = () => FlowState;
 
 export function createTabActions(
   set: SetFlowState,
@@ -20,16 +18,13 @@ export function createTabActions(
   | 'addTab'
   | 'duplicateActiveTab'
   | 'duplicateTab'
+  | 'reorderTab'
   | 'deleteTab'
   | 'closeTab'
   | 'updateTab'
   | 'copySelectedToTab'
   | 'moveSelectedToTab'
 > {
-  function nowIso(): string {
-    return new Date().toISOString();
-  }
-
   function syncActiveTabContent(tabs: FlowTab[]): FlowTab[] {
     const { activeTabId, nodes, edges } = get();
     return syncTabNodesEdges(tabs, activeTabId, nodes, edges);
@@ -52,7 +47,7 @@ export function createTabActions(
         style: edge.style ? { ...edge.style } : edge.style,
       })),
       playback: clonePlaybackState(tab.playback),
-      history: { past: [], future: [] },
+      history: createEmptyFlowHistory(),
       updatedAt: nowIso(),
     };
   }
@@ -66,7 +61,7 @@ export function createTabActions(
       nodes: [],
       edges: [],
       playback: undefined,
-      history: { past: [], future: [] },
+      history: createEmptyFlowHistory(),
     };
   }
 
@@ -157,6 +152,30 @@ export function createTabActions(
         edges: newTab.edges,
       });
       return newTabId;
+    },
+
+    reorderTab: (draggedTabId, targetTabId) => {
+      if (draggedTabId === targetTabId) {
+        return;
+      }
+
+      const { tabs } = get();
+      const syncedTabs = syncActiveTabContent(tabs);
+      const draggedIndex = syncedTabs.findIndex((tab) => tab.id === draggedTabId);
+      const targetIndex = syncedTabs.findIndex((tab) => tab.id === targetTabId);
+
+      if (draggedIndex === -1 || targetIndex === -1) {
+        return;
+      }
+
+      const nextTabs = [...syncedTabs];
+      const [draggedTab] = nextTabs.splice(draggedIndex, 1);
+      if (!draggedTab) {
+        return;
+      }
+
+      nextTabs.splice(targetIndex, 0, draggedTab);
+      set({ tabs: nextTabs });
     },
 
     deleteTab: (id) => {

@@ -4,12 +4,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { ToastType } from '@/components/ui/ToastContext';
 import { useFlowStore } from '@/store';
+import { createCollaborationRuntimeBundle } from '@/services/collaboration/bootstrap';
 import { createCollaborationRuntimeController } from '@/services/collaboration/runtimeController';
 import { buildCollaborationPresenceViewModel } from '@/services/collaboration/presenceViewModel';
 import type { CollaborationPresenceState } from '@/services/collaboration/types';
 import type { CollaborationCanvasSnapshot } from '@/services/collaboration/canvasDiff';
 import {
-    createCollaborationRuntimeControllerBundle,
     registerCollaborationPointerTracking,
     resetCollaborationRuntimeState,
     seedCollaborationDocumentIfEmpty,
@@ -164,14 +164,13 @@ export function useFlowEditorCollaboration({
         }
 
         const { nodes: currentNodes, edges: currentEdges } = useFlowStore.getState();
-        const { runtimeController, transportFactory } = createCollaborationRuntimeControllerBundle({
+        const { runtimeController, transportFactory } = createCollaborationRuntimeBundle({
             collaborationRoomId,
             collaborationRoomSecret,
             clientId,
             localIdentity: localCollaborationIdentity,
             currentNodes,
             currentEdges,
-            indexedDbAvailable,
             setNodes: (payload) => {
                 if (typeof payload === 'function') {
                     setNodes(payload);

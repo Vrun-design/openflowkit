@@ -4,7 +4,22 @@ import { describe, expect, it, vi } from 'vitest';
 import { CommandBar } from './CommandBar';
 
 vi.mock('./command-bar/useCommandBarCommands', () => ({
-  useCommandBarCommands: () => [],
+  useCommandBarCommands: () => [
+    {
+      id: 'command-1',
+      label: 'Open AI',
+      description: 'Open AI tools',
+      type: 'action',
+      action: vi.fn(),
+    },
+    {
+      id: 'command-2',
+      label: 'Open Search',
+      description: 'Open search tools',
+      type: 'navigation',
+      view: 'search',
+    },
+  ],
 }));
 
 describe('CommandBar', () => {
@@ -19,7 +34,7 @@ describe('CommandBar', () => {
     render(<CommandBar {...baseProps} />);
 
     expect(screen.getByRole('dialog', { name: 'Command bar' })).toBeTruthy();
-    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Search command bar actions' }));
+    expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'Search command bar actions' }));
   });
 
   it('closes on Escape and restores focus to the previous control', async () => {
@@ -47,5 +62,16 @@ describe('CommandBar', () => {
     await vi.waitFor(() => {
       expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Open command bar' }));
     });
+  });
+
+  it('wires the search input to the active command option for assistive tech', () => {
+    render(<CommandBar {...baseProps} />);
+
+    const input = screen.getByRole('combobox', { name: 'Search command bar actions' });
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+
+    expect(input.getAttribute('aria-controls')).toBeTruthy();
+    expect(input.getAttribute('aria-activedescendant')).toContain('-option-0');
+    expect(screen.getByRole('listbox')).toBeTruthy();
   });
 });

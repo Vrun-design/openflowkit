@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import {
+  downloadMermaidToFile,
   exportFigmaToClipboard,
   exportMermaidToClipboard,
   exportOpenFlowDSLToClipboard,
@@ -111,5 +112,21 @@ describe('exportHandlers', () => {
     });
 
     expect(addToast).toHaveBeenCalledWith('flowEditor.figmaExportFailed:copy failed', 'error');
+  });
+
+  it('shows an error toast when a text download fails', () => {
+    const addToast = vi.fn();
+    vi.spyOn(URL, 'createObjectURL').mockImplementation(() => {
+      throw new Error('blob failed');
+    });
+
+    downloadMermaidToFile({
+      nodes: [createNode('n1')],
+      edges: [createEdge('e1', 'n1', 'n1')],
+      addToast,
+      baseFileName: 'demo-flow',
+    });
+
+    expect(addToast).toHaveBeenCalledWith('Failed to download Mermaid.', 'error');
   });
 });

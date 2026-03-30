@@ -2,6 +2,11 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { FlowEditorPanels } from './FlowEditorPanels';
 
+const commandBarShouldThrow = false;
+let snapshotsShouldThrow = false;
+let propertiesShouldThrow = false;
+const studioShouldThrow = false;
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: string) => fallback ?? key,
@@ -10,19 +15,43 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('./CommandBar', () => ({
-  CommandBar: () => <div data-testid="command-bar" />,
+  CommandBar: () => {
+    if (commandBarShouldThrow) {
+      throw new Error('command-bar exploded');
+    }
+
+    return <div data-testid="command-bar" />;
+  },
 }));
 
 vi.mock('./SnapshotsPanel', () => ({
-  SnapshotsPanel: () => <div data-testid="snapshots-panel" />,
+  SnapshotsPanel: () => {
+    if (snapshotsShouldThrow) {
+      throw new Error('snapshots exploded');
+    }
+
+    return <div data-testid="snapshots-panel" />;
+  },
 }));
 
 vi.mock('./PropertiesPanel', () => ({
-  PropertiesPanel: () => <div data-testid="properties-panel" />,
+  PropertiesPanel: () => {
+    if (propertiesShouldThrow) {
+      throw new Error('properties exploded');
+    }
+
+    return <div data-testid="properties-panel" />;
+  },
 }));
 
 vi.mock('./StudioPanel', () => ({
-  StudioPanel: () => <div data-testid="studio-panel" />,
+  StudioPanel: () => {
+    if (studioShouldThrow) {
+      throw new Error('studio exploded');
+    }
+
+    return <div data-testid="studio-panel" />;
+  },
 }));
 
 const baseProps = {
@@ -60,6 +89,9 @@ const baseProps = {
     onSaveSnapshot: vi.fn(),
     onRestoreSnapshot: vi.fn(),
     onDeleteSnapshot: vi.fn(),
+    historyPastCount: 0,
+    historyFutureCount: 0,
+    onScrubHistoryTo: vi.fn(),
   },
   properties: {
     selectedNode: null,
@@ -139,6 +171,41 @@ const selectedNode = {
 } as const;
 
 describe('FlowEditorPanels', () => {
+  it('keeps the snapshots panel isolated when the properties rail crashes', async () => {
+    propertiesShouldThrow = true;
+
+    render(
+      <FlowEditorPanels
+        {...baseProps}
+        editorMode="canvas"
+        isHistoryOpen={true}
+        properties={{ ...baseProps.properties, selectedNode }}
+      />
+    );
+
+    expect(await screen.findByText('Properties unavailable')).not.toBeNull();
+    expect(await screen.findByTestId('snapshots-panel')).not.toBeNull();
+
+    propertiesShouldThrow = false;
+  });
+
+  it('shows a recoverable fallback when snapshots rendering fails', async () => {
+    snapshotsShouldThrow = true;
+
+    render(
+      <FlowEditorPanels
+        {...baseProps}
+        editorMode="canvas"
+        isHistoryOpen={true}
+      />
+    );
+
+    expect(await screen.findByText('Snapshots unavailable')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Close panel' })).not.toBeNull();
+
+    snapshotsShouldThrow = false;
+  });
+
   it('shows the properties panel in canvas mode', async () => {
     render(
       <FlowEditorPanels
@@ -169,5 +236,17 @@ describe('FlowEditorPanels', () => {
     );
 
     expect(await screen.findByTestId('properties-panel')).not.toBeNull();
+  });
+
+  it('shows the snapshots panel when history is open', async () => {
+    render(
+      <FlowEditorPanels
+        {...baseProps}
+        editorMode="canvas"
+        isHistoryOpen={true}
+      />
+    );
+
+    expect(await screen.findByTestId('snapshots-panel')).not.toBeNull();
   });
 });

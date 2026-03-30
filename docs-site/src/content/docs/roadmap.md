@@ -16,6 +16,25 @@ The current product direction is built around a few clear pillars that already s
 - asset libraries for developer, cloud, and icon-heavy diagrams
 - design systems, pages, layers, and structured canvas controls
 
+## Recently shipped
+
+These capabilities have been released and are documented in the docs:
+
+- **Workspace Home**: Create, open, import, and organize multiple flows
+- **Local-First Storage**: All diagrams saved in browser, survives refresh
+- **Flowpilot AI**: Generate diagrams from prompts
+- **Mermaid Import**: Import and edit Mermaid diagrams
+- **OpenFlow DSL**: Text-based diagram definition language
+- **Infrastructure Sync**: Import Terraform, Kubernetes, Docker Compose
+- **Smart Layout**: Automatic arrangement of nodes
+- **Playback History**: Step through diagram changes
+- **Snapshots**: Save and restore named versions
+- **Diagram Diff**: Compare current state against snapshots
+- **Architecture Linting**: Check diagrams for architectural rules
+- **Context Menu**: Right-click actions for nodes, edges, selections
+- **Settings Modal**: Configure AI, canvas, and keyboard shortcuts
+- **Multiple Diagram Families**: Flowchart, State, Class, ER, GitGraph, Mindmap, Journey, Architecture
+
 ## Near-term roadmap
 
 These are the highest-signal improvements currently worth planning around:

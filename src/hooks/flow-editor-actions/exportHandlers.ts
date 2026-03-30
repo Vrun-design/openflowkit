@@ -70,17 +70,24 @@ function downloadTextFile({
     mimeType = 'text/plain;charset=utf-8',
     processingMessage,
     successMessage,
+    errorMessage,
     addToast,
 }: DownloadTextFileParams): void {
     addToast(processingMessage, 'info');
-    const blob = new Blob([text], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.download = fileName;
-    link.href = url;
-    link.click();
-    URL.revokeObjectURL(url);
-    addToast(successMessage, 'success');
+
+    try {
+        const blob = new Blob([text], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+        addToast(successMessage, 'success');
+    } catch (error) {
+        logger.error('Text file download failed.', { error, fileName });
+        addToast(errorMessage, 'error');
+    }
 }
 
 export async function exportMermaidToClipboard({

@@ -38,6 +38,19 @@ export async function getAllRecords<T extends StoredRecord>(
   return requestToPromise(request);
 }
 
+export async function getAllRecordsByIndex<T>(
+  database: IDBDatabase,
+  storeName: string,
+  indexName: string,
+  query: IDBValidKey | IDBKeyRange
+): Promise<T[]> {
+  const transaction = database.transaction(storeName, 'readonly');
+  const store = transaction.objectStore(storeName);
+  const index = store.index(indexName);
+  const request = index.getAll(query) as IDBRequest<T[]>;
+  return requestToPromise(request);
+}
+
 export async function getRecord<T>(
   database: IDBDatabase,
   storeName: string,
@@ -83,5 +96,23 @@ export async function deleteWhereDocumentId(
     existing
       .filter((record) => record.documentId === documentId)
       .map((record) => requestToPromise(store.delete(record.id)))
+  );
+}
+
+export async function deleteRecordsByIndex(
+  database: IDBDatabase,
+  storeName: string,
+  indexName: string,
+  query: IDBValidKey | IDBKeyRange
+): Promise<void> {
+  const transaction = database.transaction(storeName, 'readwrite');
+  const store = transaction.objectStore(storeName);
+  const index = store.index(indexName);
+  const existing = await requestToPromise(
+    index.getAll(query) as IDBRequest<Array<{ id: string }>>
+  );
+
+  await Promise.all(
+    existing.map((record) => requestToPromise(store.delete(record.id)))
   );
 }

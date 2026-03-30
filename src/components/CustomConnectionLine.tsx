@@ -40,25 +40,61 @@ const CustomConnectionLine = ({
         targetY: toY,
         targetPosition: toPosition,
     });
+    const connectionStroke = 'var(--brand-primary, #6366f1)';
 
     return (
         <g>
             <path
                 fill="none"
-                stroke="var(--brand-primary, #6366f1)"
-                strokeWidth={2}
-                style={{ filter: 'drop-shadow(0 1px 3px rgba(99,102,241,0.25))' }}
+                stroke={connectionStroke}
+                strokeWidth={2.5}
+                strokeDasharray={isNearNode ? '8 6' : '6 8'}
+                strokeLinecap="round"
+                style={{
+                    filter: 'drop-shadow(0 1px 3px rgba(99,102,241,0.25))',
+                    animation: 'flow-connection-dash 0.8s linear infinite',
+                }}
                 d={edgePath}
             />
 
-            {/* Endpoint dot — grows subtly on snap without outlining the whole node */}
+            {isNearNode ? (
+                <circle
+                    cx={toX}
+                    cy={toY}
+                    r={9}
+                    fill={connectionStroke}
+                    opacity={0.18}
+                    className="animate-ping"
+                />
+            ) : null}
             <circle
                 cx={toX}
                 cy={toY}
                 r={isNearNode ? 6 : 4}
-                fill="var(--brand-primary, #6366f1)"
+                fill={connectionStroke}
                 opacity={isNearNode ? 1 : 0.6}
             />
+            {isNearNode ? (
+                <circle
+                    cx={toX}
+                    cy={toY}
+                    r={3}
+                    fill="white"
+                    opacity={0.95}
+                />
+            ) : null}
+            <style>
+                {`
+                    @keyframes flow-connection-dash {
+                        from {
+                            stroke-dashoffset: 20;
+                        }
+                        to {
+                            stroke-dashoffset: 0;
+                        }
+                    }
+                `}
+            </style>
         </g>
     );
 };

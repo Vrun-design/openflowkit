@@ -23,6 +23,7 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
   const { operations, callbacks } = useFlowEditorScreenBehavior({
     screenState,
     t,
+    addToast,
   });
 
   const [pendingAIPrompt, setPendingAIPrompt] = useState<string | undefined>();
@@ -101,6 +102,8 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
     handleCopyJSON,
     handleImportJSON,
     onFileImport,
+    importRecoveryState,
+    dismissImportRecovery,
   } = useFlowExport(screenState.recordHistory, screenState.reactFlowWrapper, {
     stopPlayback,
   });
@@ -196,6 +199,9 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
         handleRestoreSnapshot: callbacks.handleRestoreSnapshot,
         deleteSnapshot: screenState.deleteSnapshot,
         setDiffBaseline: screenState.setDiffBaseline,
+        historyPastCount: screenState.past.length,
+        historyFutureCount: screenState.future.length,
+        scrubHistoryToIndex: screenState.scrubToHistoryIndex,
       },
       properties: {
         updateNodeData: operations.updateNodeData,
@@ -260,6 +266,7 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
       handleAddPage: callbacks.handleAddPage,
       handleClosePage: callbacks.handleClosePage,
       handleRenamePage: callbacks.handleRenamePage,
+      handleReorderPage: callbacks.handleReorderPage,
       handleExport,
       handleCopyImage,
       handleSvgExport,
@@ -329,7 +336,10 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
     isSelectMode: screenState.isSelectMode,
     reactFlowWrapper: screenState.reactFlowWrapper,
     fileInputRef,
+    handleImportJSON,
     onFileImport,
+    importRecoveryState,
+    dismissImportRecovery,
     shareViewerUrl,
     clearShareViewerUrl,
     collaborationEnabled: screenState.collaborationEnabled,

@@ -1,27 +1,21 @@
 import { useCallback, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useFlowStore } from '../store';
-import type { FlowStoreState } from '../store';
 import type { FlowDocument } from '@/services/storage/flowDocumentModel';
 import {
     createWorkspaceDocumentsFromTabs,
     findDocumentRouteTarget,
     type WorkspaceDocumentSummary,
 } from './workspaceDocumentModel';
+import { selectWorkspaceDocumentActions, selectWorkspaceDocumentsState } from './selectors';
+import type { WorkspaceDocumentActionsSlice } from './types';
 
 export function useWorkspaceDocumentsState(): {
     documents: WorkspaceDocumentSummary[];
     activeDocumentId: string;
 } {
     const { documents, activeDocumentId, tabs, activeTabId, nodes, edges } = useFlowStore(
-        useShallow((state) => ({
-            documents: state.documents,
-            activeDocumentId: state.activeDocumentId,
-            tabs: state.tabs,
-            activeTabId: state.activeTabId,
-            nodes: state.nodes,
-            edges: state.edges,
-        })),
+        useShallow(selectWorkspaceDocumentsState),
     );
 
     const summaries = useMemo(
@@ -43,23 +37,14 @@ export function useWorkspaceDocumentsState(): {
 }
 
 export function useWorkspaceDocumentActions(): {
-    setActiveDocumentId: FlowStoreState['setActiveDocumentId'];
-    setDocuments: FlowStoreState['setDocuments'];
-    createDocument: FlowStoreState['createDocument'];
-    renameDocument: FlowStoreState['renameDocument'];
-    duplicateDocument: FlowStoreState['duplicateDocument'];
-    deleteDocument: FlowStoreState['deleteDocumentRecord'];
+    setActiveDocumentId: WorkspaceDocumentActionsSlice['setActiveDocumentId'];
+    setDocuments: WorkspaceDocumentActionsSlice['setDocuments'];
+    createDocument: WorkspaceDocumentActionsSlice['createDocument'];
+    renameDocument: WorkspaceDocumentActionsSlice['renameDocument'];
+    duplicateDocument: WorkspaceDocumentActionsSlice['duplicateDocument'];
+    deleteDocument: WorkspaceDocumentActionsSlice['deleteDocumentRecord'];
 } {
-    const actions = useFlowStore(
-        useShallow((state) => ({
-            setActiveDocumentId: state.setActiveDocumentId,
-            setDocuments: state.setDocuments,
-            createDocument: state.createDocument,
-            renameDocument: state.renameDocument,
-            duplicateDocument: state.duplicateDocument,
-            deleteDocument: state.deleteDocumentRecord,
-        })),
-    );
+    const actions = useFlowStore(useShallow(selectWorkspaceDocumentActions));
 
     return {
         setActiveDocumentId: actions.setActiveDocumentId,
@@ -67,7 +52,7 @@ export function useWorkspaceDocumentActions(): {
         createDocument: actions.createDocument,
         renameDocument: actions.renameDocument,
         duplicateDocument: actions.duplicateDocument,
-        deleteDocument: actions.deleteDocument,
+        deleteDocument: actions.deleteDocumentRecord,
     };
 }
 

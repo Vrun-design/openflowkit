@@ -74,9 +74,17 @@ Key area:
 
 ## State Management
 
-The app uses a single Zustand store assembled in `src/store.ts`.
+The app uses a single public Zustand store exported from `src/store.ts`.
 
-The store is composed from action factories and supported by selective hook files in `src/store/`.
+The runtime store is now bootstrapped through:
+
+- `src/store/createFlowStore.ts`
+- `src/store/createFlowStoreState.ts`
+- `src/store/createFlowStorePersistOptions.ts`
+
+This keeps the public entry stable while moving composition, persistence, and hydration concerns behind explicit seams.
+
+The store is still monolithic at runtime, but it is now partitioned more clearly through slice-typed hooks, selectors, and internal slice factories in `src/store/`.
 
 Current store-facing hook files include:
 
@@ -91,6 +99,10 @@ Supporting files:
 
 - `defaults.ts`
 - `types.ts`
+- `selectors.ts`
+- `slices/createCanvasEditorSlice.ts`
+- `slices/createExperienceSlice.ts`
+- `slices/createWorkspaceSlice.ts`
 - `persistence.ts`
 - `aiSettings.ts`
 
@@ -104,6 +116,7 @@ Persistence is coordinated through:
 
 - `src/store/persistence.ts`
 - `src/services/storage/flowPersistStorage.ts`
+- `src/services/storage/storageRuntime.ts`
 - `src/services/storage/indexedDbStateStorage.ts`
 
 Current behavior at a high level:
@@ -113,6 +126,10 @@ Current behavior at a high level:
 - localStorage remains part of the compatibility and fallback story
 - persisted nodes/edges are sanitized before storage
 - ephemeral UI fields are excluded from persisted state
+- browser storage detection and IndexedDB schema readiness are now funneled through a shared storage runtime helper instead of each storage surface bootstrapping itself independently
+- IndexedDB store and index definitions are now declared in one schema manifest in `src/services/storage/indexedDbSchema.ts`
+- schema migration markers now live in a dedicated IndexedDB schema metadata store instead of sharing the persisted Zustand state store
+- local-first chat persistence now uses document-scoped IndexedDB indexes instead of full chat-message store scans
 
 Important constraint:
 
@@ -219,6 +236,12 @@ Examples include:
 
 These plugins and registrations allow the app to support multiple structured diagram behaviors without collapsing all logic into the base canvas layer.
 
+Built-in diagram capabilities are now bootstrapped through a shared runtime initialization path instead of scattered one-off registration calls:
+
+- `src/diagram-types/bootstrap.ts`
+- `src/diagram-types/builtInPlugins.ts`
+- `src/diagram-types/builtInPropertyPanels.ts`
+
 ---
 
 ## Docs Surfaces
@@ -244,6 +267,7 @@ Collaboration currently lives under:
 
 Current implementation notes:
 
+- collaboration runtime construction now flows through `src/services/collaboration/bootstrap.ts`
 - realtime transport is built around peer-oriented collaboration
 - the current stack includes WebRTC-style transport concerns and signaling configuration
 - fallback behavior exists for unsupported environments

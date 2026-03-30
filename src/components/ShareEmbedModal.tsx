@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Check, Code2, Copy, ExternalLink, FileCode2, Link, X } from 'lucide-react';
+import { MODAL_PANEL_CLASS, SECTION_CARD_CLASS } from '@/lib/designTokens';
 
 interface ShareEmbedModalProps {
     viewerUrl: string;
@@ -16,7 +17,7 @@ function CopyRow({ label, value, icon: Icon }: { label: string; value: string; i
     }, [value]);
 
     return (
-        <div className="rounded-[var(--radius-sm)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3">
+        <div className={`${SECTION_CARD_CLASS} p-3`}>
             <div className="mb-1.5 flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--brand-secondary-light)]">
                     <Icon className="h-3 w-3" />
@@ -63,7 +64,7 @@ export function ShareEmbedModal({ viewerUrl, onClose }: ShareEmbedModalProps): R
                 aria-modal="true"
                 aria-labelledby="share-embed-title"
                 aria-describedby="share-embed-description"
-                className="relative mx-4 w-full max-w-md rounded-[var(--radius-xl)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] text-[var(--brand-text)] shadow-[var(--shadow-overlay)] ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-150"
+                className={`relative mx-4 w-full max-w-md text-[var(--brand-text)] animate-in fade-in zoom-in-95 duration-150 ${MODAL_PANEL_CLASS}`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between border-b border-[var(--color-brand-border)] px-5 py-4">

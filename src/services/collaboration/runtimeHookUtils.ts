@@ -1,9 +1,6 @@
 import type { FlowEdge, FlowNode } from '@/lib/types';
-import { createCollaborationSessionBootstrap } from './session';
-import { createCollaborationRuntimeController, type CollaborationRuntimeController } from './runtimeController';
+import type { CollaborationRuntimeController } from './runtimeController';
 import { computeCollaborationOperationsFromCanvasChange, type CollaborationCanvasSnapshot } from './canvasDiff';
-import { applyCollaborationDocumentStateToCanvas, createCollaborationDocumentStateFromCanvas } from './storeBridge';
-import { createCollaborationTransportFactory } from './transportFactory';
 import {
     resolveCollaborationCacheState,
     resolveCollaborationCursorPosition,
@@ -11,66 +8,6 @@ import {
     shouldPublishCollaborationCursor,
 } from './hookUtils';
 import type { CollaborationPresenceState } from './types';
-
-type SetFlowNodes = (payload: FlowNode[] | ((nodes: FlowNode[]) => FlowNode[])) => void;
-type SetFlowEdges = (payload: FlowEdge[] | ((edges: FlowEdge[]) => FlowEdge[])) => void;
-
-interface CreateCollaborationRuntimeControllerBundleParams {
-    collaborationRoomId: string;
-    collaborationRoomSecret: string;
-    clientId: string;
-    localIdentity: {
-        name: string;
-        color: string;
-    };
-    currentNodes: FlowNode[];
-    currentEdges: FlowEdge[];
-    indexedDbAvailable: boolean;
-    setNodes: SetFlowNodes;
-    setEdges: SetFlowEdges;
-    setCollaborationPresence: (presence: CollaborationPresenceState[]) => void;
-}
-
-interface CreateCollaborationRuntimeControllerBundleResult {
-    runtimeController: CollaborationRuntimeController;
-    transportFactory: ReturnType<typeof createCollaborationTransportFactory>;
-}
-
-export function createCollaborationRuntimeControllerBundle({
-    collaborationRoomId,
-    collaborationRoomSecret,
-    clientId,
-    localIdentity,
-    currentNodes,
-    currentEdges,
-    setNodes,
-    setEdges,
-    setCollaborationPresence,
-}: CreateCollaborationRuntimeControllerBundleParams): CreateCollaborationRuntimeControllerBundleResult {
-    const transportFactory = createCollaborationTransportFactory('realtime');
-    const runtimeController = createCollaborationRuntimeController({
-        transport: transportFactory.transport,
-        session: createCollaborationSessionBootstrap({
-            roomId: collaborationRoomId,
-            roomPassword: collaborationRoomSecret,
-            clientId,
-            name: localIdentity.name,
-            color: localIdentity.color,
-        }),
-        initialDocumentState: createCollaborationDocumentStateFromCanvas(collaborationRoomId, 0, currentNodes, currentEdges),
-        onDocumentStateChange: (state) => {
-            applyCollaborationDocumentStateToCanvas(state, setNodes, setEdges);
-        },
-        onPresenceChange: (presence) => {
-            setCollaborationPresence(presence);
-        },
-    });
-
-    return {
-        runtimeController,
-        transportFactory,
-    };
-}
 
 interface SeedCollaborationDocumentIfEmptyParams {
     runtimeController: CollaborationRuntimeController;

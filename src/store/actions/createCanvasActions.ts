@@ -1,13 +1,9 @@
 import { addFlowEdge, applyFlowEdgeChanges, applyFlowNodeChanges } from '@/lib/reactflowCompat';
 import { createDefaultEdge } from '@/constants';
 import type { FlowEdge, FlowNode } from '@/lib/types';
+import type { GetFlowState, SetFlowState } from '../actionFactory';
 import type { FlowState } from '../types';
 import { syncTabNodesEdges } from './syncTabNodesEdges';
-
-type SetFlowState = (
-  partial: Partial<FlowState> | ((state: FlowState) => Partial<FlowState>)
-) => void;
-type GetFlowState = () => FlowState;
 
 export function createCanvasActions(
   set: SetFlowState,

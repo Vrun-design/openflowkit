@@ -4,7 +4,7 @@ export interface PersistedDocumentContent {
   nodes: FlowTab['nodes'];
   edges: FlowTab['edges'];
   playback?: FlowTab['playback'];
-  history: FlowTab['history'];
+  history?: FlowTab['history'];
 }
 
 export interface PersistedDocumentPage {

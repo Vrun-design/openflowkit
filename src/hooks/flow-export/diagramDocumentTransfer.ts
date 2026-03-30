@@ -4,6 +4,7 @@ import { createDiagramDocument, parseDiagramDocumentImport } from '@/services/di
 import { composeDiagramForDisplay } from '@/services/composeDiagramForDisplay';
 import {
   buildImportFidelityReport,
+  type ImportFidelityReport,
   mapErrorToIssue,
   mapWarningToIssue,
   persistLatestImportReport,
@@ -47,10 +48,12 @@ export async function importDiagramDocumentJson(params: {
       diagramType: DiagramType | undefined;
       playback: PlaybackState | undefined;
       warnings: string[];
+      report: ImportFidelityReport;
       outcome: OperationOutcome;
     }
   | {
       ok: false;
+      report: ImportFidelityReport;
       outcome: OperationOutcome;
     }
 > {
@@ -80,6 +83,7 @@ export async function importDiagramDocumentJson(params: {
       diagramType: parsed.diagramType,
       playback: parsed.playback,
       warnings: parsed.warnings,
+      report,
       outcome,
     };
   } catch (error) {
@@ -99,6 +103,7 @@ export async function importDiagramDocumentJson(params: {
 
     return {
       ok: false,
+      report,
       outcome,
     };
   }

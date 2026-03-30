@@ -216,7 +216,9 @@ describe('flow store tab actions', () => {
             edges: tab2.edges,
         }));
 
-        const persistedSlice = useFlowStore.persist.getOptions().partialize(useFlowStore.getState()) as Record<string, unknown>;
+        const persistedSlice = useFlowStore.persist.getOptions().partialize(
+            useFlowStore.getState()
+        ) as unknown as Record<string, unknown>;
         expect('tabs' in persistedSlice).toBe(false);
         expect('activeTabId' in persistedSlice).toBe(false);
     });

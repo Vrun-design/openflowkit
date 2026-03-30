@@ -1,6 +1,12 @@
 import { getSystemInstruction, ChatMessage, generateDiagramFromChat as generateDiagramFromChatGemini, chatWithDocsGemini } from './geminiService';
 import { DEFAULT_MODELS, PROVIDER_BASE_URLS } from '@/config/aiProviders';
 import { err, ok, type Result } from '@/lib/result';
+import {
+    getClaudeContent,
+    getOpenAICompatibleContent,
+    parseClaudeStreamDelta,
+    parseOpenAIStreamDelta,
+} from './aiServiceSchemas';
 
 export type AIProvider = 'gemini' | 'openai' | 'claude' | 'groq' | 'nvidia' | 'cerebras' | 'mistral' | 'openrouter' | 'custom';
 
@@ -67,7 +73,7 @@ function toAiServiceError(error: AiServiceError): Error {
 }
 
 function parseOpenAICompatibleContent(data: unknown): Result<string, AiServiceError> {
-    const text = (data as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message?.content;
+    const text = getOpenAICompatibleContent(data);
     if (typeof text !== 'string' || text.trim().length === 0) {
         return err({
             code: 'bad_response',
@@ -79,7 +85,7 @@ function parseOpenAICompatibleContent(data: unknown): Result<string, AiServiceEr
 }
 
 function parseClaudeContent(data: unknown): Result<string, AiServiceError> {
-    const text = (data as { content?: Array<{ text?: unknown }> })?.content?.[0]?.text;
+    const text = getClaudeContent(data);
     if (typeof text !== 'string' || text.trim().length === 0) {
         return err({
             code: 'bad_response',
@@ -133,16 +139,11 @@ async function readSSEStream(
 }
 
 function extractOpenAIDelta(data: string): string | undefined {
-    return (JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> })
-        ?.choices?.[0]?.delta?.content || undefined;
+    return parseOpenAIStreamDelta(data);
 }
 
 function extractClaudeDelta(data: string): string | undefined {
-    const parsed = JSON.parse(data) as { type?: string; delta?: { type?: string; text?: string } };
-    if (parsed.type === 'content_block_delta' && parsed.delta?.type === 'text_delta') {
-        return parsed.delta.text || undefined;
-    }
-    return undefined;
+    return parseClaudeStreamDelta(data);
 }
 
 function extractImageParts(imageBase64: string): { mimeType: string; cleanBase64: string } {
@@ -189,6 +190,7 @@ async function callOpenAICompatible(
     onChunk?: (delta: string) => void,
     signal?: AbortSignal,
     imageBase64?: string,
+    temperature?: number,
 ): Promise<string> {
     const body = imageBase64 ? withOpenAIImage(messages, imageBase64) : messages;
     const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -200,7 +202,7 @@ async function callOpenAICompatible(
         body: JSON.stringify({
             model,
             messages: body,
-            temperature: 0.2,
+            temperature: temperature ?? 0.2,
             max_tokens: 4096,
             stream: true,
         }),
@@ -222,6 +224,7 @@ async function callClaude(
     onChunk?: (delta: string) => void,
     signal?: AbortSignal,
     imageBase64?: string,
+    temperature?: number,
 ): Promise<string> {
     const body = imageBase64 ? withClaudeImage(messages, imageBase64) : messages;
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -236,6 +239,7 @@ async function callClaude(
             system: systemInstruction,
             messages: body,
             max_tokens: 4096,
+            temperature: temperature ?? 0.2,
             stream: true,
         }),
         signal,
@@ -260,6 +264,7 @@ export async function generateDiagramFromChat(
     isEditMode = false,
     onChunk?: (delta: string) => void,
     signal?: AbortSignal,
+    temperature?: number,
 ): Promise<string> {
     const apiKey = resolveApiKey(provider, apiKeySetting);
     const modelId = resolveModelId(provider, modelIdSetting);
@@ -269,7 +274,7 @@ export async function generateDiagramFromChat(
         : `User Request: ${newMessage}\n\nGenerate a new OpenFlow DSL diagram.`;
 
     if (provider === 'gemini') {
-        return generateDiagramFromChatGemini(history, newMessage, currentDSL, imageBase64, apiKey, modelId, isEditMode, onChunk, signal);
+        return generateDiagramFromChatGemini(history, newMessage, currentDSL, imageBase64, apiKey, modelId, isEditMode, onChunk, signal, temperature);
     }
 
     const systemInstruction = getSystemInstruction(isEditMode ? 'edit' : 'create');
@@ -279,7 +284,7 @@ export async function generateDiagramFromChat(
             ...historyToMessages(history),
             { role: 'user', content: userPrompt },
         ];
-        return callClaude(apiKey, modelId || DEFAULT_MODELS.claude, messages, systemInstruction, onChunk, signal, imageBase64);
+        return callClaude(apiKey, modelId || DEFAULT_MODELS.claude, messages, systemInstruction, onChunk, signal, imageBase64, temperature);
     }
 
     const messages: TextMessage[] = [
@@ -296,6 +301,7 @@ export async function generateDiagramFromChat(
         onChunk,
         signal,
         imageBase64,
+        temperature,
     );
 }
 

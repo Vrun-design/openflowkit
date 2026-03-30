@@ -13,6 +13,9 @@ interface SnapshotsPanelProps {
     onRestoreSnapshot: (snapshot: FlowSnapshot) => void;
     onDeleteSnapshot: (id: string) => void;
     onCompareSnapshot?: (snapshot: FlowSnapshot) => void;
+    historyPastCount: number;
+    historyFutureCount: number;
+    onScrubHistoryTo: (index: number) => void;
 }
 
 interface SnapshotCardListProps {
@@ -102,6 +105,9 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
     onRestoreSnapshot,
     onDeleteSnapshot,
     onCompareSnapshot,
+    historyPastCount,
+    historyFutureCount,
+    onScrubHistoryTo,
 }) => {
     const { t } = useTranslation();
     const [newSnapshotName, setNewSnapshotName] = useState('');
@@ -109,6 +115,8 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
     const deleteVersionTitle = t('snapshotsPanel.deleteVersion');
     const nodesLabel = (count: number): string => t('snapshotsPanel.nodes', { count });
     const edgesLabel = (count: number): string => t('snapshotsPanel.edges', { count });
+    const historyTotalSteps = historyPastCount + historyFutureCount + 1;
+    const historyCurrentIndex = historyPastCount;
 
     if (!isOpen) return null;
 
@@ -156,6 +164,36 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
             </div>
 
             <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto bg-[var(--brand-surface)] p-4">
+                <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3">
+                    <div className="space-y-1">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--brand-secondary-light)]">
+                            {t('snapshotsPanel.undoTimeline', 'Undo Timeline')}
+                        </h4>
+                        <p className="text-xs text-[var(--brand-secondary)]">
+                            {historyCurrentIndex === 0
+                                ? t('snapshotsPanel.undoTimelineAtEarliest', 'You are at the earliest captured state.')
+                                : historyCurrentIndex === historyTotalSteps - 1
+                                  ? t('snapshotsPanel.undoTimelineAtLatest', 'You are at the latest state.')
+                                  : t('snapshotsPanel.undoTimelinePosition', 'Step {{current}} of {{total}} in the current history stack.', {
+                                      current: historyCurrentIndex + 1,
+                                      total: historyTotalSteps,
+                                    })}
+                        </p>
+                    </div>
+                    <input
+                        type="range"
+                        min={0}
+                        max={Math.max(historyTotalSteps - 1, 0)}
+                        value={historyCurrentIndex}
+                        onChange={(event) => onScrubHistoryTo(Number(event.currentTarget.value))}
+                        aria-label={t('snapshotsPanel.undoTimelineScrubber', 'Scrub through recent undo history')}
+                        className="w-full accent-[var(--brand-primary)]"
+                    />
+                    <div className="flex items-center justify-between text-[11px] text-[var(--brand-secondary)]">
+                        <span>{historyPastCount} undo step{historyPastCount === 1 ? '' : 's'}</span>
+                        <span>{historyFutureCount} redo step{historyFutureCount === 1 ? '' : 's'}</span>
+                    </div>
+                </section>
                 {snapshots.length === 0 ? (
                     <div className="py-8 text-center text-[var(--brand-secondary-light)]">
                         <p className="text-sm">{t('snapshotsPanel.noSnapshots')}</p>

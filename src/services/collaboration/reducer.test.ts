@@ -96,4 +96,27 @@ describe('collaboration reducer', () => {
     expect(result.applied).toBe(false);
     expect(result.nextState).toEqual(initialState);
   });
+
+  it('treats identical upserts and missing deletes as no-ops', () => {
+    const initialState: CollaborationDocumentState = {
+      roomId: 'room-1',
+      version: 2,
+      nodes: [createNode('n-1', 'Node 1')],
+      edges: [createEdge('e-1', 'n-1', 'n-1')],
+    };
+
+    const identicalNodeUpsert = applyCollaborationOperation(
+      initialState,
+      createOperation('node.upsert', { node: createNode('n-1', 'Node 1') })
+    );
+    const missingEdgeDelete = applyCollaborationOperation(
+      initialState,
+      createOperation('edge.delete', { edgeId: 'missing-edge' })
+    );
+
+    expect(identicalNodeUpsert.applied).toBe(false);
+    expect(identicalNodeUpsert.nextState).toEqual(initialState);
+    expect(missingEdgeDelete.applied).toBe(false);
+    expect(missingEdgeDelete.nextState).toEqual(initialState);
+  });
 });

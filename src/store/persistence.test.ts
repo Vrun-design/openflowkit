@@ -151,6 +151,47 @@ describe('store persistence helpers', () => {
         expect(migrated.viewSettings.snapToGrid).toBe(true);
     });
 
+    it('drops invalid layer and view settings shapes through schema validation', () => {
+        const migrated = migratePersistedFlowState({
+            tabs: [],
+            layers: [
+                { id: 'infra', name: 'Infra', visible: true, locked: false },
+                { id: '', name: 'Broken', visible: 'yes', locked: false },
+            ],
+            viewSettings: {
+                showGrid: 'true',
+                snapToGrid: false,
+                largeGraphSafetyMode: 'balanced',
+            },
+        }) as {
+            layers: Array<{ id: string }>;
+            activeLayerId: string;
+            viewSettings: { showGrid: boolean; snapToGrid: boolean; largeGraphSafetyMode: string };
+        };
+
+        expect(migrated.layers.map((layer) => layer.id)).toEqual(['default', 'infra']);
+        expect(migrated.viewSettings.showGrid).toBe(true);
+        expect(migrated.viewSettings.snapToGrid).toBe(false);
+        expect(migrated.viewSettings.largeGraphSafetyMode).toBe('auto');
+    });
+
+    it('rejects invalid tab envelopes through schema validation', () => {
+        const migrated = migratePersistedFlowState({
+            tabs: [
+                { id: '', name: 'Broken' },
+                { id: 'tab-a', name: 'Valid', nodes: [], edges: [] },
+            ],
+            activeTabId: 'tab-a',
+        }) as {
+            tabs: FlowTab[];
+            activeTabId: string;
+        };
+
+        expect(migrated.tabs).toHaveLength(1);
+        expect(migrated.tabs[0]?.id).toBe('tab-a');
+        expect(migrated.activeTabId).toBe('tab-a');
+    });
+
     it('upgrades legacy section nodes with frame metadata defaults', () => {
         const migrated = migratePersistedFlowState({
             tabs: [

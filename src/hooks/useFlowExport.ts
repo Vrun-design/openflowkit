@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { createLogger } from '@/lib/logger';
 import { useReactFlow } from '@/lib/reactflowCompat';
 import { toJpeg } from 'html-to-image';
@@ -18,6 +18,12 @@ import {
 } from './flow-export/diagramDocumentTransfer';
 import { useStaticExport } from './useStaticExport';
 import { useCinematicExport } from './useCinematicExport';
+import type { ImportFidelityReport } from '@/services/importFidelity';
+
+interface ImportRecoveryState {
+  fileName: string;
+  report: ImportFidelityReport;
+}
 
 const logger = createLogger({ scope: 'useFlowExport' });
 
@@ -39,6 +45,7 @@ export const useFlowExport = (
   const { fitView } = useReactFlow();
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importRecoveryState, setImportRecoveryState] = useState<ImportRecoveryState | null>(null);
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const exportBaseName = activeTab?.name;
 
@@ -133,10 +140,15 @@ export const useFlowExport = (
     fileInputRef.current?.click();
   }, []);
 
+  const dismissImportRecovery = useCallback(() => {
+    setImportRecoveryState(null);
+  }, []);
+
   const onFileImport = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
+      setImportRecoveryState(null);
       const reader = new FileReader();
       reader.onload = (ev) => {
         const importStart = performance.now();
@@ -147,6 +159,7 @@ export const useFlowExport = (
           });
 
           if (result.ok) {
+            setImportRecoveryState(null);
             recordHistory();
             setNodes(result.nodes);
             setEdges(result.edges);
@@ -157,6 +170,10 @@ export const useFlowExport = (
             return;
           }
 
+          setImportRecoveryState({
+            fileName: file.name,
+            report: result.report,
+          });
           notifyOperationOutcome(addToast, result.outcome);
         })();
       };
@@ -178,5 +195,7 @@ export const useFlowExport = (
     handleCopyJSON,
     handleImportJSON,
     onFileImport,
+    importRecoveryState,
+    dismissImportRecovery,
   };
 };

@@ -347,6 +347,21 @@ html {
   --shadow-md: 0 10px 24px rgba(15, 23, 42, 0.07), 0 3px 8px rgba(15, 23, 42, 0.04);
   --shadow-lg: 0 16px 36px rgba(15, 23, 42, 0.09), 0 6px 16px rgba(15, 23, 42, 0.05);
   --shadow-overlay: 0 22px 48px rgba(15, 23, 42, 0.11), 0 8px 20px rgba(15, 23, 42, 0.05);
+  --shadow-floating: 0 14px 32px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.06);
+
+  /* Semantic surfaces */
+  --color-surface-success-bg: #edfdf4;
+  --color-surface-success-border: #bbf7d0;
+  --color-surface-success-text: #166534;
+  --color-surface-warning-bg: #fff7ed;
+  --color-surface-warning-border: #fed7aa;
+  --color-surface-warning-text: #9a3412;
+  --color-surface-danger-bg: #fef2f2;
+  --color-surface-danger-border: #fecaca;
+  --color-surface-danger-text: #b91c1c;
+  --color-surface-info-bg: #eff6ff;
+  --color-surface-info-border: #bfdbfe;
+  --color-surface-info-text: #1d4ed8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -362,7 +377,20 @@ html {
     --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.7);
     --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.75);
     --shadow-overlay: 0 24px 56px rgba(0, 0, 0, 0.85);
+    --shadow-floating: 0 18px 38px rgba(0, 0, 0, 0.78), 0 6px 18px rgba(0, 0, 0, 0.48);
     --brand-glass-bg: rgba(23, 23, 23, 0.8);
+    --color-surface-success-bg: rgba(20, 83, 45, 0.28);
+    --color-surface-success-border: rgba(74, 222, 128, 0.32);
+    --color-surface-success-text: #86efac;
+    --color-surface-warning-bg: rgba(124, 45, 18, 0.3);
+    --color-surface-warning-border: rgba(251, 191, 36, 0.3);
+    --color-surface-warning-text: #fdba74;
+    --color-surface-danger-bg: rgba(127, 29, 29, 0.32);
+    --color-surface-danger-border: rgba(248, 113, 113, 0.28);
+    --color-surface-danger-text: #fca5a5;
+    --color-surface-info-bg: rgba(30, 58, 138, 0.3);
+    --color-surface-info-border: rgba(96, 165, 250, 0.28);
+    --color-surface-info-text: #93c5fd;
     color-scheme: dark;
   }
 }
@@ -379,7 +407,20 @@ html {
   --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.7);
   --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.75);
   --shadow-overlay: 0 24px 56px rgba(0, 0, 0, 0.85);
+  --shadow-floating: 0 18px 38px rgba(0, 0, 0, 0.78), 0 6px 18px rgba(0, 0, 0, 0.48);
   --brand-glass-bg: rgba(23, 23, 23, 0.8);
+  --color-surface-success-bg: rgba(20, 83, 45, 0.28);
+  --color-surface-success-border: rgba(74, 222, 128, 0.32);
+  --color-surface-success-text: #86efac;
+  --color-surface-warning-bg: rgba(124, 45, 18, 0.3);
+  --color-surface-warning-border: rgba(251, 191, 36, 0.3);
+  --color-surface-warning-text: #fdba74;
+  --color-surface-danger-bg: rgba(127, 29, 29, 0.32);
+  --color-surface-danger-border: rgba(248, 113, 113, 0.28);
+  --color-surface-danger-text: #fca5a5;
+  --color-surface-info-bg: rgba(30, 58, 138, 0.3);
+  --color-surface-info-border: rgba(96, 165, 250, 0.28);
+  --color-surface-info-text: #93c5fd;
   color-scheme: dark;
 }
 

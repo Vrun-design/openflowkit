@@ -1,5 +1,5 @@
 const GITHUB_API = 'https://api.github.com';
-const MAX_FILES_TO_FETCH = 80;
+const MAX_FILES_TO_FETCH = 200;
 const TOKEN_STORAGE_KEY = 'flowmind_github_token';
 const SOURCE_EXTENSIONS = new Set([
   'ts',

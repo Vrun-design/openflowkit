@@ -31,11 +31,17 @@ That distinction matters for trust. If the goal is to stay close to the underlyi
 
 1. Open Studio.
 2. Switch to the **Infra** tab.
-3. Select the matching format.
-4. Paste or drop the file contents.
-5. Generate the diagram.
-6. Review the summary.
-7. Apply it to the canvas.
+3. Select the matching format (Terraform State, Kubernetes YAML, or Docker Compose).
+4. Paste or drop the file contents into the text area.
+5. Click "Generate" to create the diagram.
+6. Review the summary showing nodes and connections found.
+7. Click "Apply" to add the diagram to the canvas.
+
+### Supported File Types
+
+- **Terraform State** (`.tfstate`): Parses resources and their relationships from Terraform state output
+- **Kubernetes YAML**: Parses deployments, services, pods, and their connections
+- **Docker Compose YAML**: Parses services, networks, and volumes
 
 ## After import
 

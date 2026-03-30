@@ -1,64 +1,35 @@
 import { useShallow } from 'zustand/react/shallow';
 import { useFlowStore } from '../store';
-import type { FlowStoreState, ViewSettings } from '../store';
+import type { ViewSettings } from '../store';
+import {
+    selectCanvasViewSettings,
+    selectShortcutHelpActions,
+    selectShortcutHelpOpen,
+    selectViewSettings,
+    selectVisualSettingsActions,
+} from './selectors';
+import type {
+    CanvasViewSettingsSlice,
+    ShortcutHelpActionsSlice,
+    VisualSettingsActionsSlice,
+} from './types';
 
 export function useViewSettings(): ViewSettings {
-    return useFlowStore((state) => state.viewSettings);
+    return useFlowStore(selectViewSettings);
 }
 
 export function useShortcutHelpOpen(): boolean {
-    return useFlowStore((state) => state.viewSettings.isShortcutsHelpOpen);
+    return useFlowStore(selectShortcutHelpOpen);
 }
 
-export function useShortcutHelpActions(): Pick<FlowStoreState, 'setShortcutsHelpOpen'> {
-    return useFlowStore(
-        useShallow((state) => ({
-            setShortcutsHelpOpen: state.setShortcutsHelpOpen,
-        }))
-    );
+export function useShortcutHelpActions(): ShortcutHelpActionsSlice {
+    return useFlowStore(useShallow(selectShortcutHelpActions));
 }
 
-export function useCanvasViewSettings(): Pick<
-    ViewSettings,
-    'showGrid' | 'snapToGrid' | 'alignmentGuidesEnabled' | 'largeGraphSafetyMode' | 'largeGraphSafetyProfile' | 'architectureStrictMode'
-> {
-    return useFlowStore(
-        useShallow((state) => ({
-            showGrid: state.viewSettings.showGrid,
-            snapToGrid: state.viewSettings.snapToGrid,
-            alignmentGuidesEnabled: state.viewSettings.alignmentGuidesEnabled,
-            largeGraphSafetyMode: state.viewSettings.largeGraphSafetyMode,
-            largeGraphSafetyProfile: state.viewSettings.largeGraphSafetyProfile,
-            architectureStrictMode: state.viewSettings.architectureStrictMode,
-        }))
-    );
+export function useCanvasViewSettings(): CanvasViewSettingsSlice {
+    return useFlowStore(useShallow(selectCanvasViewSettings));
 }
 
-export function useVisualSettingsActions(): Pick<
-    FlowStoreState,
-    | 'toggleGrid'
-    | 'toggleSnap'
-    | 'setViewSettings'
-    | 'setGlobalEdgeOptions'
-    | 'setDefaultIconsEnabled'
-    | 'setSmartRoutingEnabled'
-    | 'setSmartRoutingProfile'
-    | 'setSmartRoutingBundlingEnabled'
-    | 'setLargeGraphSafetyMode'
-    | 'setLargeGraphSafetyProfile'
-> {
-    return useFlowStore(
-        useShallow((state) => ({
-            toggleGrid: state.toggleGrid,
-            toggleSnap: state.toggleSnap,
-            setViewSettings: state.setViewSettings,
-            setGlobalEdgeOptions: state.setGlobalEdgeOptions,
-            setDefaultIconsEnabled: state.setDefaultIconsEnabled,
-            setSmartRoutingEnabled: state.setSmartRoutingEnabled,
-            setSmartRoutingProfile: state.setSmartRoutingProfile,
-            setSmartRoutingBundlingEnabled: state.setSmartRoutingBundlingEnabled,
-            setLargeGraphSafetyMode: state.setLargeGraphSafetyMode,
-            setLargeGraphSafetyProfile: state.setLargeGraphSafetyProfile,
-        }))
-    );
+export function useVisualSettingsActions(): VisualSettingsActionsSlice {
+    return useFlowStore(useShallow(selectVisualSettingsActions));
 }

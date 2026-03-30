@@ -1,3 +1,5 @@
+import { getContrastText, mixHex, normalizeHex } from './lib/colorUtils';
+
 export interface ThemeColors {
   bg: string;
   fill: string; // for SVG
@@ -414,8 +416,6 @@ export const NODE_EXPORT_COLORS: Record<string, NodeExportColor> = {
     subText: '#155e75',
   },
 };
-
-import { normalizeHex, mixHex, getContrastText } from './lib/colorUtils';
 
 const NODE_FILLED_COLORS: Record<string, NodeExportColor> = {
   white: {

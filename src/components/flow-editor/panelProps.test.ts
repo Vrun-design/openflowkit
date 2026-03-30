@@ -75,6 +75,9 @@ describe('buildFlowEditorPanelsProps', () => {
       saveSnapshot,
       handleRestoreSnapshot: vi.fn(),
       deleteSnapshot: vi.fn(),
+      historyPastCount: 2,
+      historyFutureCount: 1,
+      scrubHistoryToIndex: vi.fn(),
       nodes,
       edges,
     };

@@ -26,6 +26,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useMenuKeyboardNavigation } from '@/hooks/useMenuKeyboardNavigation';
 
 const VIEWPORT_PADDING = 12;
 const MENU_BUTTON_CLASS_NAME =
@@ -124,6 +125,7 @@ export function ContextMenu({
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuPosition, setMenuPosition] = useState(position);
+  const { onKeyDown } = useMenuKeyboardNavigation({ menuRef, onClose });
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent): void {
@@ -163,17 +165,22 @@ export function ContextMenu({
     <div
       ref={menuRef}
       style={{ top: menuPosition.y, left: menuPosition.x }}
+      role="menu"
+      aria-label={t('contextMenu.label', 'Canvas context menu')}
+      onKeyDown={onKeyDown}
       className="fixed z-50 flex min-w-[200px] max-w-[min(280px,calc(100vw-24px))] flex-col gap-0.5 rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-1.5 shadow-[var(--shadow-md)] animate-in fade-in zoom-in-95 duration-100"
     >
       {type === 'node' && (
         <>
           <button
+            role="menuitem"
             onClick={onCopy}
             className={MENU_BUTTON_CLASS_NAME}
           >
             <Copy className="w-4 h-4" /> {t('common.copy')}
           </button>
           <button
+            role="menuitem"
             onClick={onDuplicate}
             className={MENU_BUTTON_CLASS_NAME}
           >
@@ -185,6 +192,7 @@ export function ContextMenu({
               <div className={DIVIDER_CLASS_NAME} />
               {currentNodeType === 'section' && onFitSectionToContents ? (
                 <button
+                  role="menuitem"
                   onClick={onFitSectionToContents}
                   className={MENU_BUTTON_CLASS_NAME}
                 >
@@ -193,6 +201,7 @@ export function ContextMenu({
               ) : null}
               {currentNodeType === 'section' && onBringContentsIntoSection ? (
                 <button
+                  role="menuitem"
                   onClick={onBringContentsIntoSection}
                   className={MENU_BUTTON_CLASS_NAME}
                 >
@@ -201,6 +210,7 @@ export function ContextMenu({
               ) : null}
               {hasParentSection && onReleaseFromSection ? (
                 <button
+                  role="menuitem"
                   onClick={onReleaseFromSection}
                   className={MENU_BUTTON_CLASS_NAME}
                 >
@@ -209,6 +219,7 @@ export function ContextMenu({
               ) : null}
               {currentNodeType === 'section' && onToggleSectionLock ? (
                 <button
+                  role="menuitem"
                   onClick={onToggleSectionLock}
                   className={MENU_BUTTON_CLASS_NAME}
                 >
@@ -222,6 +233,7 @@ export function ContextMenu({
               ) : null}
               {currentNodeType === 'section' && onToggleSectionHidden ? (
                 <button
+                  role="menuitem"
                   onClick={onToggleSectionHidden}
                   className={MENU_BUTTON_CLASS_NAME}
                 >
@@ -235,12 +247,14 @@ export function ContextMenu({
           <div className={DIVIDER_CLASS_NAME} />
 
           <button
+            role="menuitem"
             onClick={onBringToFront}
             className={MENU_BUTTON_CLASS_NAME}
           >
             <BringToFront className="w-4 h-4" /> {t('common.bringToFront')}
           </button>
           <button
+            role="menuitem"
             onClick={onSendToBack}
             className={MENU_BUTTON_CLASS_NAME}
           >
@@ -250,6 +264,7 @@ export function ContextMenu({
           <div className={DIVIDER_CLASS_NAME} />
 
           <button
+            role="menuitem"
             onClick={onDelete}
             className={DANGER_MENU_BUTTON_CLASS_NAME}
           >
@@ -261,6 +276,7 @@ export function ContextMenu({
       {type === 'pane' && (
         <>
           <button
+            role="menuitem"
             onClick={onPaste}
             disabled={!canPaste}
             className={`flex w-full items-center gap-2 rounded-[var(--radius-sm)] px-3 py-2 text-left text-sm transition-colors ${!canPaste ? 'cursor-not-allowed text-[var(--brand-secondary)]' : 'text-[var(--brand-secondary)] hover:bg-[var(--brand-background)] hover:text-[var(--brand-text)]'}`}
@@ -274,6 +290,7 @@ export function ContextMenu({
         <>
           {onEditLabel && (
             <button
+              role="menuitem"
               onClick={onEditLabel}
               className={MENU_BUTTON_CLASS_NAME}
             >
@@ -281,6 +298,7 @@ export function ContextMenu({
             </button>
           )}
           <button
+            role="menuitem"
             onClick={onDuplicate}
             className={MENU_BUTTON_CLASS_NAME}
           >
@@ -288,6 +306,7 @@ export function ContextMenu({
           </button>
           <div className={DIVIDER_CLASS_NAME} />
           <button
+            role="menuitem"
             onClick={onDelete}
             className={DANGER_MENU_BUTTON_CLASS_NAME}
           >
@@ -309,6 +328,7 @@ export function ContextMenu({
               </div>
               <div className="grid grid-cols-3 gap-0.5 px-2 pb-1">
                 <button
+                  role="menuitem"
                   onClick={() => onAlignNodes('left')}
                   className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignLeft')}
@@ -316,6 +336,7 @@ export function ContextMenu({
                   <AlignStartVertical className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  role="menuitem"
                   onClick={() => onAlignNodes('center')}
                   className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignCenter')}
@@ -323,6 +344,7 @@ export function ContextMenu({
                   <AlignCenterVertical className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  role="menuitem"
                   onClick={() => onAlignNodes('right')}
                   className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignRight')}
@@ -330,6 +352,7 @@ export function ContextMenu({
                   <AlignEndVertical className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  role="menuitem"
                   onClick={() => onAlignNodes('top')}
                   className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignTop')}
@@ -337,6 +360,7 @@ export function ContextMenu({
                   <AlignStartHorizontal className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  role="menuitem"
                   onClick={() => onAlignNodes('middle')}
                   className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignMiddle')}
@@ -344,6 +368,7 @@ export function ContextMenu({
                   <AlignCenterHorizontal className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  role="menuitem"
                   onClick={() => onAlignNodes('bottom')}
                   className={ICON_GRID_BUTTON_CLASS_NAME}
                   title={t('common.alignBottom')}
@@ -361,12 +386,14 @@ export function ContextMenu({
                 {t('common.distribute')}
               </div>
               <button
+                role="menuitem"
                 onClick={() => onDistributeNodes('horizontal')}
                 className={COMPACT_MENU_BUTTON_CLASS_NAME}
               >
                 <ArrowRightFromLine className="w-4 h-4" /> {t('common.distributeHorizontally')}
               </button>
               <button
+                role="menuitem"
                 onClick={() => onDistributeNodes('vertical')}
                 className={COMPACT_MENU_BUTTON_CLASS_NAME}
               >
@@ -379,6 +406,7 @@ export function ContextMenu({
             <>
               <div className={SOFT_DIVIDER_CLASS_NAME} />
               <button
+                role="menuitem"
                 onClick={onGroupSelected}
                 className={GROUP_MENU_BUTTON_CLASS_NAME}
               >
@@ -391,6 +419,7 @@ export function ContextMenu({
             <>
               <div className={SOFT_DIVIDER_CLASS_NAME} />
               <button
+                role="menuitem"
                 onClick={onWrapInSection}
                 className={GROUP_MENU_BUTTON_CLASS_NAME}
               >
@@ -401,6 +430,7 @@ export function ContextMenu({
 
           <div className={SOFT_DIVIDER_CLASS_NAME} />
           <button
+            role="menuitem"
             onClick={onDelete}
             className={DANGER_MENU_BUTTON_CLASS_NAME}
           >

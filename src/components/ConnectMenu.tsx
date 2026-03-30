@@ -7,9 +7,14 @@ import type { DomainLibraryCategory, DomainLibraryItem } from '@/services/domain
 import { loadDomainAssetSuggestions } from '@/services/assetCatalog';
 import { getAssetCategoryDisplayName } from '@/services/assetPresentation';
 import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalog';
-import { Tooltip } from './Tooltip';
-import { NamedIcon } from './IconMap';
 import type { ConnectedEdgePreset } from '@/hooks/edge-operations/utils';
+import { useMenuKeyboardNavigation } from '@/hooks/useMenuKeyboardNavigation';
+import {
+    type ConnectMenuOption,
+    GenericConnectOptionsSection,
+    MindmapConnectSection,
+    ProviderSuggestionsSection,
+} from './ConnectMenuSections';
 
 interface ConnectMenuProps {
     position: { x: number; y: number };
@@ -18,16 +23,6 @@ interface ConnectMenuProps {
     onSelect: (type: string, shape?: string, edgePreset?: ConnectedEdgePreset) => void;
     onSelectAsset: (item: DomainLibraryItem) => void;
     onClose: () => void;
-}
-
-interface ConnectMenuOption {
-    type: string;
-    shape?: string;
-    edgePreset?: ConnectedEdgePreset;
-    title: string;
-    description: string;
-    toneClassName: string;
-    icon: React.ReactNode;
 }
 
 function getContextualOptions(sourceType?: string | null): ConnectMenuOption[] {
@@ -98,6 +93,8 @@ function getContextualOptions(sourceType?: string | null): ConnectMenuOption[] {
 
 export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelectAsset, onClose }: ConnectMenuProps): React.ReactElement => {
     const { t } = useTranslation();
+    const menuRef = React.useRef<HTMLDivElement>(null);
+    const { onKeyDown } = useMenuKeyboardNavigation({ menuRef, onClose });
     const sourceNode = useFlowStore((state) => state.nodes.find((node) => node.id === sourceId));
     const isMindmapSource = isMindmapConnectorSource(sourceType);
     const isAssetSource = sourceNode?.data?.assetPresentation === 'icon'
@@ -255,8 +252,13 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
                 className="fixed inset-0 z-[60]"
                 onClick={onClose}
                 aria-label="Close connect menu"
+                tabIndex={-1}
             />
             <div
+                ref={menuRef}
+                role="menu"
+                aria-label={t('connectMenu.label', 'Connect node menu')}
+                onKeyDown={onKeyDown}
                 className="fixed z-[70] min-w-[180px] overflow-hidden rounded-2xl border border-[var(--color-brand-border)]/80 bg-[var(--brand-surface)]/95 shadow-[var(--shadow-lg)] ring-1 ring-black/5 backdrop-blur-xl animate-in zoom-in-95 fade-in duration-150"
                 style={{ top: position.y, left: position.x }}
             >
@@ -266,65 +268,23 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
                     </div>
 
                     {isMindmapSource ? (
-                        <button
-                            onClick={() => handleSelect('mindmap')}
-                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[var(--brand-text)] transition-all hover:bg-[var(--brand-background)] active:bg-[var(--brand-background)]/80"
-                        >
-                            <div className="w-9 h-9 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center border border-indigo-100 group-hover:scale-110 transition-transform">
-                                <Settings className="w-4.5 h-4.5" />
-                            </div>
-                            <div className="flex flex-col items-start translate-y-[1px]">
-                                <span className="mb-1 font-bold leading-none text-[var(--brand-text)]">{t('nodes.mindmap', 'Topic')}</span>
-                                <span className="text-[10px] font-medium text-[var(--brand-secondary)]">Create connected topic</span>
-                            </div>
-                        </button>
+                        <MindmapConnectSection
+                            title={t('nodes.mindmap', 'Topic')}
+                            description="Create connected topic"
+                            onSelect={() => handleSelect('mindmap')}
+                        />
                     ) : isAssetSource && providerItems.length > 0 ? (
-                        <>
-                            <div className="px-3 py-2">
-                                <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--brand-secondary)]">
-                                    {providerTitle} suggestions
-                                </div>
-                            </div>
-                            <div className="max-h-[16rem] overflow-y-auto px-3 pb-3 custom-scrollbar">
-                            <div className="grid grid-cols-6 gap-2">
-                                {providerItems.map((item) => (
-                                    <Tooltip key={item.id} text={item.label}>
-                                        <button
-                                            aria-label={item.label}
-                                            onClick={() => handleSelectAsset(item)}
-                                            className="flex aspect-square items-center justify-center rounded-xl border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-2 transition-all hover:border-[var(--brand-secondary)] hover:bg-[var(--brand-background)]"
-                                        >
-                                            {previewUrls[item.id] ? (
-                                                <img src={previewUrls[item.id]} alt={`${item.label} icon`} className="h-10 w-10 object-contain" />
-                                            ) : item.category === 'icons' ? (
-                                                <NamedIcon name={item.icon} fallbackName="Box" className="w-5 h-5 text-[var(--brand-secondary)]" />
-                                            ) : (
-                                                <Database className="w-4.5 h-4.5 text-[var(--brand-secondary)]" />
-                                            )}
-                                        </button>
-                                    </Tooltip>
-                                ))}
-                            </div>
-                            </div>
-                        </>
+                        <ProviderSuggestionsSection
+                            title={`${providerTitle} suggestions`}
+                            items={providerItems}
+                            previewUrls={previewUrls}
+                            onSelectAsset={handleSelectAsset}
+                        />
                     ) : (
-                        <>
-                            {menuOptions.map((option) => (
-                                <button
-                                    key={`${option.type}:${option.shape ?? 'default'}:${option.title}`}
-                                    onClick={() => handleSelect(option.type, option.shape, option.edgePreset)}
-                                    className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-[var(--brand-text)] transition-all hover:bg-[var(--brand-background)] active:bg-[var(--brand-background)]/80"
-                                >
-                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center border group-hover:scale-110 transition-transform ${option.toneClassName}`}>
-                                        {option.icon}
-                                    </div>
-                                    <div className="flex flex-col items-start translate-y-[1px]">
-                                        <span className="mb-1 font-bold leading-none text-[var(--brand-text)]">{option.title}</span>
-                                        <span className="text-[10px] font-medium text-[var(--brand-secondary)]">{option.description}</span>
-                                    </div>
-                                </button>
-                            ))}
-                        </>
+                        <GenericConnectOptionsSection
+                            options={menuOptions}
+                            onSelect={handleSelect}
+                        />
                     )}
                 </div>
 

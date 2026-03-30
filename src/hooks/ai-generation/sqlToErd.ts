@@ -1,4 +1,23 @@
-import { formatSchemaForPrompt, parseSqlDdl, type ParsedSchema } from './sqlParser';
+import {
+  formatSchemaForPrompt,
+  parseSqlDdl,
+  type ParsedSchema,
+  type ParsedTable,
+} from './sqlParser';
+
+type Cardinality = '1:1' | '1:N' | 'N:M';
+
+function isJunctionTable(table: ParsedTable): boolean {
+  const fkColumns = new Set(table.foreignKeys.map((fk) => fk.column));
+  const nonKeyColumns = table.columns.filter((c) => !c.primaryKey && !fkColumns.has(c.name));
+  return table.foreignKeys.length >= 2 && nonKeyColumns.length === 0;
+}
+
+function getCardinality(table: ParsedTable, fkColumn: string): Cardinality {
+  if (isJunctionTable(table)) return 'N:M';
+  const col = table.columns.find((c) => c.name === fkColumn);
+  return col?.unique || col?.primaryKey ? '1:1' : '1:N';
+}
 
 export function sqlSchemaToDsl(schema: ParsedSchema, title = 'ERD'): string {
   if (schema.tables.length === 0) return '';
@@ -10,14 +29,26 @@ export function sqlSchemaToDsl(schema: ParsedSchema, title = 'ERD'): string {
 
   for (const table of schema.tables) {
     const id = table.name.replace(/[^a-zA-Z0-9_]/g, '_');
-    const keyCols = table.columns
-      .filter((c) => c.primaryKey || table.foreignKeys.some((fk) => fk.column === c.name))
-      .slice(0, 5);
-    const label =
-      keyCols.length > 0
-        ? `${table.name}: ${keyCols.map((c) => (c.primaryKey ? `*${c.name}` : c.name)).join(', ')}`
-        : table.name;
-    lines.push(`[entity] ${id}: ${label}`);
+    const pkCols = table.columns.filter((c) => c.primaryKey);
+    const fkCols = table.columns.filter(
+      (c) => !c.primaryKey && table.foreignKeys.some((fk) => fk.column === c.name)
+    );
+    const regularCols = table.columns.filter(
+      (c) => !c.primaryKey && !table.foreignKeys.some((fk) => fk.column === c.name)
+    );
+    const displayCols = [...pkCols, ...fkCols, ...regularCols].slice(0, 8);
+    const colLines = displayCols.map((c) => {
+      const tags: string[] = [];
+      if (c.primaryKey) tags.push('PK');
+      if (!c.nullable && !c.primaryKey) tags.push('NOT NULL');
+      if (c.unique) tags.push('UNIQUE');
+      const tagStr = tags.length > 0 ? ` [${tags.join(', ')}]` : '';
+      return `${c.name} ${c.type}${tagStr}`;
+    });
+    const remaining = table.columns.length - displayCols.length;
+    if (remaining > 0) colLines.push(`... +${remaining} more`);
+    const label = `${table.name}: ${colLines.join('\\n')}`;
+    lines.push(`[entity] ${id}: "${label}"`);
   }
 
   lines.push('');
@@ -26,7 +57,8 @@ export function sqlSchemaToDsl(schema: ParsedSchema, title = 'ERD'): string {
     for (const fk of table.foreignKeys) {
       const fromId = table.name.replace(/[^a-zA-Z0-9_]/g, '_');
       const toId = fk.refTable.replace(/[^a-zA-Z0-9_]/g, '_');
-      lines.push(`${fromId} -> ${toId} |${fk.column}|`);
+      const cardinality = getCardinality(table, fk.column);
+      lines.push(`${fromId} -> ${toId} |${fk.column} ${cardinality}|`);
     }
   }
 

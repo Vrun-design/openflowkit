@@ -20,6 +20,12 @@ import type { AIReadinessState } from '@/hooks/ai-generation/readiness';
 
 import type { PropertiesPanel as PropertiesPanelComponent } from './PropertiesPanel';
 
+interface PanelErrorFallbackProps {
+  title: string;
+  description: string;
+  onClose?: () => void;
+}
+
 function CommandBarSkeleton(): React.ReactElement {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 animate-pulse">
@@ -30,6 +36,60 @@ function CommandBarSkeleton(): React.ReactElement {
         <div className="h-10 rounded-lg bg-[var(--brand-surface)]" />
         <div className="h-10 rounded-lg bg-[var(--brand-surface)]" />
       </div>
+    </div>
+  );
+}
+
+function RailPanelSkeleton(props: {
+  title: string;
+  lines?: number;
+}): React.ReactElement {
+  const { title, lines = 5 } = props;
+
+  return (
+    <div className="flex h-full w-full flex-col gap-4 p-4 animate-pulse">
+      <div className="space-y-2">
+        <div className="h-4 w-24 rounded bg-[var(--brand-background)]" />
+        <div className="h-3 w-40 rounded bg-[var(--brand-background)]" />
+      </div>
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-4">
+        <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--brand-secondary)]">
+          {title}
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: lines }, (_, index) => (
+            <div key={`${title}-${index}`} className="h-10 rounded-md bg-[var(--brand-background)]" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PanelErrorFallback({
+  title,
+  description,
+  onClose,
+}: PanelErrorFallbackProps): React.ReactElement {
+  return (
+    <div className="flex h-full w-full flex-col items-start justify-center gap-4 rounded-[var(--radius-xl)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] p-5 shadow-[var(--shadow-sm)]">
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-[var(--brand-text)]">
+          {title}
+        </p>
+        <p className="text-sm text-[var(--brand-secondary)]">
+          {description}
+        </p>
+      </div>
+      {onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md border border-[var(--color-brand-border)] px-3 py-2 text-sm font-medium text-[var(--brand-text)] transition-colors hover:bg-[var(--brand-background)]"
+        >
+          Close panel
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -107,6 +167,9 @@ export interface SnapshotsPanelProps {
   onRestoreSnapshot: (snapshot: FlowSnapshot) => void;
   onDeleteSnapshot: (id: string) => void;
   onCompareSnapshot?: (snapshot: FlowSnapshot) => void;
+  historyPastCount: number;
+  historyFutureCount: number;
+  onScrubHistoryTo: (index: number) => void;
 }
 
 export interface PropertiesRailProps {
@@ -212,73 +275,19 @@ export function FlowEditorPanels({
     Boolean(
       properties.selectedNode || properties.selectedEdge || properties.selectedNodes.length > 1
     );
-  const showStudioRail = editorMode === 'studio';
-  const railContent = showStudioRail ? (
-    <Suspense fallback={null}>
-      <LazyStudioPanel
-        onClose={studio.onClose}
-        nodes={commandBar.nodes}
-        edges={commandBar.edges}
-        onApply={studio.onApply}
-        onAIGenerate={studio.onAIGenerate}
-        isGenerating={studio.isGenerating}
-        streamingText={studio.streamingText}
-        retryCount={studio.retryCount}
-        cancelGeneration={studio.cancelGeneration}
-        pendingDiff={studio.pendingDiff}
-        onConfirmDiff={studio.onConfirmDiff}
-        onDiscardDiff={studio.onDiscardDiff}
-        aiReadiness={studio.aiReadiness}
-        lastAIError={studio.lastAIError}
-        onClearAIError={studio.onClearAIError}
-        selectedNode={studio.selectedNode}
-        selectedNodeCount={studio.selectedNodeCount}
-        onViewProperties={studio.onViewProperties}
-        chatMessages={studio.chatMessages}
-        onClearChat={studio.onClearChat}
-        activeTab={studio.activeTab}
-        onTabChange={studio.onTabChange}
-        codeMode={studio.codeMode}
-        onCodeModeChange={studio.onCodeModeChange}
-        playback={studio.playback}
-        initialPrompt={studio.initialPrompt}
-        onInitialPromptConsumed={studio.onInitialPromptConsumed}
-      />
-    </Suspense>
-  ) : showPropertiesRail ? (
-    <Suspense fallback={null}>
-      <LazyPropertiesPanel
-        selectedNodes={properties.selectedNodes}
-        selectedNode={properties.selectedNode}
-        selectedEdge={properties.selectedEdge}
-        onChangeNode={properties.onChangeNode}
-        onBulkChangeNodes={properties.onBulkChangeNodes}
-        onChangeNodeType={properties.onChangeNodeType}
-        onChangeEdge={properties.onChangeEdge}
-        onDeleteNode={properties.onDeleteNode}
-        onDuplicateNode={properties.onDuplicateNode}
-        onDeleteEdge={properties.onDeleteEdge}
-        onUpdateZIndex={properties.onUpdateZIndex}
-        onFitSectionToContents={properties.onFitSectionToContents}
-        onReleaseFromSection={properties.onReleaseFromSection}
-        onBringContentsIntoSection={properties.onBringContentsIntoSection}
-        onAddMindmapChild={properties.onAddMindmapChild}
-        onAddMindmapSibling={properties.onAddMindmapSibling}
-        onAddArchitectureService={properties.onAddArchitectureService}
-        onCreateArchitectureBoundary={properties.onCreateArchitectureBoundary}
-        onApplyArchitectureTemplate={properties.onApplyArchitectureTemplate}
-        onGenerateEntityFields={properties.onGenerateEntityFields}
-        onSuggestArchitectureNode={properties.onSuggestArchitectureNode}
-        onConvertEntitySelectionToClassDiagram={properties.onConvertEntitySelectionToClassDiagram}
-        onOpenMermaidCodeEditor={properties.onOpenMermaidCodeEditor}
-        onClose={properties.onClose}
-      />
-    </Suspense>
-  ) : null;
 
   return (
     <>
-      <ErrorBoundary className="h-auto">
+      <ErrorBoundary
+        className="h-auto"
+        fallback={
+          <PanelErrorFallback
+            title="Command panel unavailable"
+            description="The command panel hit an unexpected error. Close it and reopen when you are ready."
+            onClose={commandBar.onClose}
+          />
+        }
+      >
         {commandBar.isOpen ? (
           <Suspense fallback={<CommandBarSkeleton />}>
             <LazyCommandBar
@@ -326,24 +335,129 @@ export function FlowEditorPanels({
       </ErrorBoundary>
 
       {isHistoryOpen ? (
-        <Suspense fallback={null}>
-          <LazySnapshotsPanel
-            isOpen={isHistoryOpen}
-            onClose={snapshots.onClose}
-            snapshots={snapshots.snapshots}
-            manualSnapshots={snapshots.manualSnapshots}
-            autoSnapshots={snapshots.autoSnapshots}
-            onSaveSnapshot={snapshots.onSaveSnapshot}
-            onRestoreSnapshot={snapshots.onRestoreSnapshot}
-            onDeleteSnapshot={snapshots.onDeleteSnapshot}
-            onCompareSnapshot={snapshots.onCompareSnapshot}
-          />
-        </Suspense>
+        <ErrorBoundary
+          className="h-full"
+          fallback={
+            <PanelErrorFallback
+              title="Snapshots unavailable"
+              description="History is still intact, but the snapshots panel failed to render. Close it and reopen after the current task."
+              onClose={snapshots.onClose}
+            />
+          }
+        >
+          <Suspense fallback={<RailPanelSkeleton title="Snapshots" lines={4} />}>
+            <LazySnapshotsPanel
+              isOpen={isHistoryOpen}
+              onClose={snapshots.onClose}
+              snapshots={snapshots.snapshots}
+              manualSnapshots={snapshots.manualSnapshots}
+              autoSnapshots={snapshots.autoSnapshots}
+              onSaveSnapshot={snapshots.onSaveSnapshot}
+              onRestoreSnapshot={snapshots.onRestoreSnapshot}
+              onDeleteSnapshot={snapshots.onDeleteSnapshot}
+              onCompareSnapshot={snapshots.onCompareSnapshot}
+              historyPastCount={snapshots.historyPastCount}
+              historyFutureCount={snapshots.historyFutureCount}
+              onScrubHistoryTo={snapshots.onScrubHistoryTo}
+            />
+          </Suspense>
+        </ErrorBoundary>
       ) : null}
 
-      <ErrorBoundary className="h-full">
-        {railContent ? <RightRail>{railContent}</RightRail> : null}
-      </ErrorBoundary>
+      {editorMode === 'studio' ? (
+        <ErrorBoundary
+          className="h-full"
+          fallback={
+            <RightRail>
+              <PanelErrorFallback
+                title="Studio unavailable"
+                description="The studio panel hit an unexpected error. Close it and reopen when you need it again."
+                onClose={studio.onClose}
+              />
+            </RightRail>
+          }
+        >
+          <RightRail>
+            <Suspense fallback={<RailPanelSkeleton title="Studio" lines={6} />}>
+              <LazyStudioPanel
+                onClose={studio.onClose}
+                nodes={commandBar.nodes}
+                edges={commandBar.edges}
+                onApply={studio.onApply}
+                onAIGenerate={studio.onAIGenerate}
+                isGenerating={studio.isGenerating}
+                streamingText={studio.streamingText}
+                retryCount={studio.retryCount}
+                cancelGeneration={studio.cancelGeneration}
+                pendingDiff={studio.pendingDiff}
+                onConfirmDiff={studio.onConfirmDiff}
+                onDiscardDiff={studio.onDiscardDiff}
+                aiReadiness={studio.aiReadiness}
+                lastAIError={studio.lastAIError}
+                onClearAIError={studio.onClearAIError}
+                selectedNode={studio.selectedNode}
+                selectedNodeCount={studio.selectedNodeCount}
+                onViewProperties={studio.onViewProperties}
+                chatMessages={studio.chatMessages}
+                onClearChat={studio.onClearChat}
+                activeTab={studio.activeTab}
+                onTabChange={studio.onTabChange}
+                codeMode={studio.codeMode}
+                onCodeModeChange={studio.onCodeModeChange}
+                playback={studio.playback}
+                initialPrompt={studio.initialPrompt}
+                onInitialPromptConsumed={studio.onInitialPromptConsumed}
+              />
+            </Suspense>
+          </RightRail>
+        </ErrorBoundary>
+      ) : null}
+
+      {showPropertiesRail ? (
+        <ErrorBoundary
+          className="h-full"
+          fallback={
+            <RightRail>
+              <PanelErrorFallback
+                title="Properties unavailable"
+                description="The properties rail failed to render. Close it and reopen after the current edit."
+                onClose={properties.onClose}
+              />
+            </RightRail>
+          }
+        >
+          <RightRail>
+            <Suspense fallback={<RailPanelSkeleton title="Properties" lines={5} />}>
+              <LazyPropertiesPanel
+                selectedNodes={properties.selectedNodes}
+                selectedNode={properties.selectedNode}
+                selectedEdge={properties.selectedEdge}
+                onChangeNode={properties.onChangeNode}
+                onBulkChangeNodes={properties.onBulkChangeNodes}
+                onChangeNodeType={properties.onChangeNodeType}
+                onChangeEdge={properties.onChangeEdge}
+                onDeleteNode={properties.onDeleteNode}
+                onDuplicateNode={properties.onDuplicateNode}
+                onDeleteEdge={properties.onDeleteEdge}
+                onUpdateZIndex={properties.onUpdateZIndex}
+                onFitSectionToContents={properties.onFitSectionToContents}
+                onReleaseFromSection={properties.onReleaseFromSection}
+                onBringContentsIntoSection={properties.onBringContentsIntoSection}
+                onAddMindmapChild={properties.onAddMindmapChild}
+                onAddMindmapSibling={properties.onAddMindmapSibling}
+                onAddArchitectureService={properties.onAddArchitectureService}
+                onCreateArchitectureBoundary={properties.onCreateArchitectureBoundary}
+                onApplyArchitectureTemplate={properties.onApplyArchitectureTemplate}
+                onGenerateEntityFields={properties.onGenerateEntityFields}
+                onSuggestArchitectureNode={properties.onSuggestArchitectureNode}
+                onConvertEntitySelectionToClassDiagram={properties.onConvertEntitySelectionToClassDiagram}
+                onOpenMermaidCodeEditor={properties.onOpenMermaidCodeEditor}
+                onClose={properties.onClose}
+              />
+            </Suspense>
+          </RightRail>
+        </ErrorBoundary>
+      ) : null}
     </>
   );
 }
