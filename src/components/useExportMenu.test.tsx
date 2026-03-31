@@ -1,9 +1,16 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CinematicExportRequest } from '@/services/export/cinematicExport';
 import { useExportMenu } from './useExportMenu';
 
 const addToast = vi.fn();
+const cinematicRequest: CinematicExportRequest = {
+  format: 'cinematic-video',
+  speed: 'normal',
+  resolution: '1080p',
+  themeMode: 'light',
+};
 
 vi.mock('./ui/ToastContext', () => ({
   useToast: () => ({
@@ -18,6 +25,7 @@ const baseProps = {
   onCopySVG: vi.fn(),
   onExportPDF: vi.fn(),
   onExportCinematic: vi.fn(),
+  getCinematicExportRequest: vi.fn(() => cinematicRequest),
   onExportJSON: vi.fn(),
   onCopyJSON: vi.fn(),
   onExportMermaid: vi.fn(),

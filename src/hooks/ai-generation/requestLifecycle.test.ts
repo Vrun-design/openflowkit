@@ -78,7 +78,7 @@ describe('requestLifecycle', () => {
     await generateAIFlowResult({
       chatMessages: [],
       prompt: 'Enhance this repository diagram',
-      seedDsl: 'flow: "Repository Module Structure"\ndirection: TB\n[section] api: API { color: "violet" }',
+      seedDsl: 'flow: "Repository Module Structure"\ndirection: TB\n[system] api: API { color: "violet", subLabel: "API layer" }',
       nodes: [],
       edges: [],
       aiSettings: BASE_AI_SETTINGS,

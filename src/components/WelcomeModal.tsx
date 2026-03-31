@@ -7,7 +7,7 @@ import { Button } from './ui/Button';
 import { writeLocalStorageString } from '@/services/storage/uiLocalStorage';
 import { shouldShowWelcomeModal, WELCOME_SEEN_STORAGE_KEY } from './home/welcomeModalState';
 import { recordOnboardingEvent } from '@/services/onboarding/events';
-import { WandSparkles, FileCode2, MonitorPlay, Paintbrush, Command, Keyboard, MousePointerClick } from 'lucide-react';
+import { WandSparkles, FileCode2, MonitorPlay, Paintbrush } from 'lucide-react';
 
 export interface WelcomeModalProps {
   onOpenTemplates: () => void;
@@ -101,24 +101,6 @@ export function WelcomeModal({
     },
   ];
 
-  const shortcutTips = [
-    {
-      icon: <Command className="h-3.5 w-3.5 text-[var(--brand-primary)]" />,
-      label: t('welcome.shortcutCommandBar', 'Open command center'),
-      combo: 'Cmd/Ctrl + K',
-    },
-    {
-      icon: <Keyboard className="h-3.5 w-3.5 text-[var(--brand-primary)]" />,
-      label: t('welcome.shortcutHelp', 'View keyboard shortcuts'),
-      combo: '?',
-    },
-    {
-      icon: <MousePointerClick className="h-3.5 w-3.5 text-[var(--brand-primary)]" />,
-      label: t('welcome.shortcutCanvas', 'Add a node on canvas'),
-      combo: 'Double-click',
-    },
-  ];
-
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm animate-in fade-in duration-300">
       <div className="w-full max-w-[440px] overflow-hidden rounded-[24px] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-2xl animate-in zoom-in-95 duration-300">
@@ -162,36 +144,6 @@ export function WelcomeModal({
         </div>
 
         <div className="mt-6 border-t border-[var(--color-brand-border)] bg-[var(--brand-background)]/40 px-8 py-6">
-          <div className="mb-5 rounded-xl border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-4 py-3 shadow-sm">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-[12px] font-semibold text-[var(--brand-text)]">
-                {t('welcome.shortcutsTitle', 'Start fast with shortcuts')}
-              </span>
-              <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--brand-secondary)]">
-                {t('welcome.shortcutsBadge', 'Keyboard-first')}
-              </span>
-            </div>
-            <div className="grid gap-2">
-              {shortcutTips.map((tip) => (
-                <div
-                  key={tip.combo}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-[var(--color-brand-border)]/70 bg-[var(--brand-background)]/60 px-3 py-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--brand-surface)] shadow-sm">
-                      {tip.icon}
-                    </div>
-                    <span className="text-[12px] font-medium text-[var(--brand-text)]">
-                      {tip.label}
-                    </span>
-                  </div>
-                  <span className="rounded-md border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-2 py-1 text-[11px] font-semibold text-[var(--brand-secondary)]">
-                    {tip.combo}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
           <div className="mb-5 flex items-center justify-between rounded-xl border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-4 py-3 shadow-sm">
             <div className="flex flex-col text-left mr-4">
               <span className="text-[12px] font-semibold text-[var(--brand-text)]">

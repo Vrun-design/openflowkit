@@ -38,7 +38,8 @@ const NODE_TYPE_MAP: Record<string, string> = {
     end: 'end',
     system: 'custom',
     note: 'annotation',
-    section: 'section',
+    section: 'process',
+    group: 'process',
     browser: 'browser',
     mobile: 'mobile',
     container: 'container', // New generic container
@@ -202,18 +203,7 @@ export function parseOpenFlowDslV2(input: string): DSLResult {
         // 2. Groups Start: group "Label" {
         const groupStartMatch = line.match(/^group\s+"?([^"{]+)"?\s*\{$/);
         if (groupStartMatch) {
-            const label = groupStartMatch[1];
-            const id = `group-${dslNodes.length}`;
-
-            dslNodes.push({
-                id,
-                type: 'group', // Generic group type, mapped to valid ReactFlow type later
-                label,
-                attributes: {},
-                parentId: currentGroupStack.length > 0 ? currentGroupStack[currentGroupStack.length - 1] : undefined
-            });
-
-            currentGroupStack.push(id);
+            currentGroupStack.push(groupStartMatch[1]);
             return;
         }
 
@@ -288,7 +278,7 @@ export function parseOpenFlowDslV2(input: string): DSLResult {
                 type,
                 label,
                 attributes,
-                parentId: currentGroupStack.length > 0 ? currentGroupStack[currentGroupStack.length - 1] : undefined
+                parentId: undefined
             };
 
             dslNodes.push(node);

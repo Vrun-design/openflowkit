@@ -48,6 +48,11 @@ export interface StreamingGifHandle {
   finish(): Blob;
 }
 
+interface VideoEncodeProgress {
+  completedFrames: number;
+  totalFrames: number;
+}
+
 const EXPORT_CAPTURE_PADDING = 80;
 const DEFAULT_EXPORT_WIDTH = 800;
 const DEFAULT_EXPORT_HEIGHT = 600;
@@ -58,25 +63,67 @@ const EXPORT_FILTERED_CLASS_NAMES = [
   'react-flow__background',
 ] as const;
 
-export function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
+export function createAbortError(): DOMException {
+  return new DOMException('The export was cancelled.', 'AbortError');
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw createAbortError();
+  }
+}
+
+export function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    throwIfAborted(signal);
+    const timeoutId = window.setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+
+    function handleAbort(): void {
+      cleanup();
+      reject(createAbortError());
+    }
+
+    function cleanup(): void {
+      window.clearTimeout(timeoutId);
+      signal?.removeEventListener('abort', handleAbort);
+    }
+
+    signal?.addEventListener('abort', handleAbort, { once: true });
   });
 }
 
-export function waitForAnimationFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    window.requestAnimationFrame(() => resolve());
+export function waitForAnimationFrame(signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    throwIfAborted(signal);
+    const frameId = window.requestAnimationFrame(() => {
+      cleanup();
+      resolve();
+    });
+
+    function handleAbort(): void {
+      cleanup();
+      reject(createAbortError());
+    }
+
+    function cleanup(): void {
+      window.cancelAnimationFrame(frameId);
+      signal?.removeEventListener('abort', handleAbort);
+    }
+
+    signal?.addEventListener('abort', handleAbort, { once: true });
   });
 }
 
-export async function waitForExportRender(minDelayMs = 0): Promise<void> {
+export async function waitForExportRender(minDelayMs = 0, signal?: AbortSignal): Promise<void> {
   if (minDelayMs > 0) {
-    await wait(minDelayMs);
+    await wait(minDelayMs, signal);
   }
 
-  await waitForAnimationFrame();
-  await waitForAnimationFrame();
+  await waitForAnimationFrame(signal);
+  await waitForAnimationFrame(signal);
 }
 
 export function createDownload(blob: Blob, fileName: string): void {
@@ -152,10 +199,15 @@ function loadImage(dataUrl: string): Promise<HTMLImageElement> {
   });
 }
 
-async function decodeCapturedFrame(dataUrl: string): Promise<CanvasImageSource> {
+async function decodeCapturedFrame(
+  dataUrl: string,
+  signal?: AbortSignal
+): Promise<CanvasImageSource> {
+  throwIfAborted(signal);
   if (typeof window.createImageBitmap === 'function') {
     const response = await fetch(dataUrl);
     const blob = await response.blob();
+    throwIfAborted(signal);
     return window.createImageBitmap(blob);
   }
 
@@ -173,6 +225,13 @@ export async function decodeCapturedFrames(frames: CapturedFrame[]): Promise<Dec
 
 export async function decodeSingleFrame(dataUrl: string): Promise<CanvasImageSource> {
   return decodeCapturedFrame(dataUrl);
+}
+
+export async function decodeSingleFrameWithSignal(
+  dataUrl: string,
+  signal?: AbortSignal
+): Promise<CanvasImageSource> {
+  return decodeCapturedFrame(dataUrl, signal);
 }
 
 function createExportCanvas(
@@ -244,8 +303,20 @@ export async function encodeVideoFromFrames(params: {
   mimeType: string;
   backgroundColor?: string;
   backgroundPainter?: FrameBackgroundPainter;
+  signal?: AbortSignal;
+  onProgress?: (progress: VideoEncodeProgress) => void;
 }): Promise<Blob> {
-  const { frames, width, height, fps, mimeType, backgroundColor, backgroundPainter } = params;
+  const {
+    frames,
+    width,
+    height,
+    fps,
+    mimeType,
+    backgroundColor,
+    backgroundPainter,
+    signal,
+    onProgress,
+  } = params;
   const { canvas, context } = createExportCanvas(width, height);
   const stream = canvas.captureStream(fps);
   const recorder = new MediaRecorder(stream, { mimeType });
@@ -263,17 +334,35 @@ export async function encodeVideoFromFrames(params: {
 
   recorder.start();
   const frameDurationMs = Math.max(1, Math.round(1000 / fps));
+  const totalFrames = frames.reduce(
+    (sum, frameEntry) => sum + Math.max(1, Math.round(frameEntry.frame.delayMs / frameDurationMs)),
+    0
+  );
+  let completedFrames = 0;
 
-  for (const { frame, image } of frames) {
-    const repeatCount = Math.max(1, Math.round(frame.delayMs / frameDurationMs));
-    for (let repeatIndex = 0; repeatIndex < repeatCount; repeatIndex += 1) {
-      renderDecodedFrame(context, width, height, image, backgroundColor, backgroundPainter);
-      await wait(frameDurationMs);
+  try {
+    for (const { frame, image } of frames) {
+      const repeatCount = Math.max(1, Math.round(frame.delayMs / frameDurationMs));
+      for (let repeatIndex = 0; repeatIndex < repeatCount; repeatIndex += 1) {
+        throwIfAborted(signal);
+        renderDecodedFrame(context, width, height, image, backgroundColor, backgroundPainter);
+        completedFrames += 1;
+        onProgress?.({ completedFrames, totalFrames });
+        await wait(frameDurationMs, signal);
+      }
     }
+  } catch (error) {
+    if (recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+    stream.getTracks().forEach((track) => track.stop());
+    throw error;
   }
 
   recorder.stop();
-  return stopped;
+  const blob = await stopped;
+  stream.getTracks().forEach((track) => track.stop());
+  return blob;
 }
 
 export function createStreamingGifEncoder(

@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import type { FlowNode } from '@/lib/types';
+import type { CinematicExportRequest } from '@/services/export/cinematicExport';
 import type { FlowEditorChromeProps } from './FlowEditorChrome';
 
 export interface BuildTopNavParams {
@@ -13,7 +14,7 @@ export interface BuildTopNavParams {
   handleSvgExport: () => void;
   handleCopySvg: () => void;
   handlePdfExport: () => void;
-  handleCinematicExport: (format: 'cinematic-video' | 'cinematic-gif') => void;
+  handleCinematicExport: (request: CinematicExportRequest) => void;
   handleExportJSON: () => void;
   handleCopyJSON: () => void;
   handleExportMermaid: () => void;

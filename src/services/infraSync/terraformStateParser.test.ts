@@ -48,9 +48,9 @@ describe('parseTerraformState', () => {
     expect(result.nodes[0].label).toContain('app');
   });
 
-  it('parses aws_vpc into a [section] node', () => {
+  it('parses aws_vpc into an architecture node', () => {
     const result = parseTerraformState(makeTfState([makeResource('aws_vpc', 'main')]));
-    expect(result.nodes[0].nodeType).toBe('section');
+    expect(result.nodes[0].nodeType).toBe('architecture');
   });
 
   it('creates edge from vpc to instance via vpc_id attribute', () => {

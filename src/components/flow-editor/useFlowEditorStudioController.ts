@@ -10,6 +10,7 @@ interface UseFlowEditorStudioControllerParams {
     setStudioTab: (tab: StudioTab) => void;
     setStudioCodeMode: (mode: StudioCodeMode) => void;
     setStudioMode: () => void;
+    openArchitectureRulesPanel: () => void;
     closeCommandBar: () => void;
     setCanvasMode: () => void;
     setSelectedNodeId: (id: string | null) => void;
@@ -26,6 +27,7 @@ interface UseFlowEditorStudioControllerResult {
     openStudioAI: () => void;
     openStudioCode: (codeMode: StudioCodeMode) => void;
     openStudioPlayback: () => void;
+    openArchitectureRulesPanel: () => void;
     toggleStudioPanel: () => void;
     closeStudioPanel: () => void;
     handleCanvasEntityIntent: () => void;
@@ -39,6 +41,7 @@ export function useFlowEditorStudioController({
     setStudioTab,
     setStudioCodeMode,
     setStudioMode,
+    openArchitectureRulesPanel: handleOpenArchitectureRulesPanel,
     closeCommandBar,
     setCanvasMode,
     setSelectedNodeId,
@@ -89,6 +92,12 @@ export function useFlowEditorStudioController({
         openStudioPanel('playback', { closeLauncher: true });
     }, [openStudioPanel]);
 
+    const openArchitectureRulesPanel = useCallback(() => {
+        captureStudioSelectionSnapshot();
+        handleOpenArchitectureRulesPanel();
+        closeCommandBar();
+    }, [captureStudioSelectionSnapshot, closeCommandBar, handleOpenArchitectureRulesPanel]);
+
     const toggleStudioPanel = useCallback(() => {
         if (editorMode === 'studio') {
             clearSelectionAndSetCanvasMode();
@@ -125,6 +134,7 @@ export function useFlowEditorStudioController({
         openStudioAI,
         openStudioCode,
         openStudioPlayback,
+        openArchitectureRulesPanel,
         toggleStudioPanel,
         closeStudioPanel,
         handleCanvasEntityIntent,

@@ -27,6 +27,17 @@ vi.mock('./LanguageSelector', () => ({
 }));
 
 describe('HomePage integration flows', () => {
+    function setEmptyHomeState(): void {
+        useFlowStore.setState({
+            documents: [],
+            activeDocumentId: '',
+            tabs: [],
+            activeTabId: null,
+            nodes: [],
+            edges: [],
+        });
+    }
+
     beforeEach(() => {
         localStorage.clear();
         localStorage.setItem(WELCOME_MODAL_ENABLED_STORAGE_KEY, 'false');
@@ -97,17 +108,10 @@ describe('HomePage integration flows', () => {
         expect(screen.queryByRole('button', { name: /Product Discovery Workshop Map/i })).toBeNull();
     });
 
-  it('exposes template and flowpilot entry points in the empty dashboard state', async () => {
+    it('exposes template and flowpilot entry points in the empty dashboard state', async () => {
         const onLaunchWithTemplates = vi.fn();
         const onLaunchWithAI = vi.fn();
-        useFlowStore.setState({
-            documents: [],
-            activeDocumentId: '',
-            tabs: [],
-            activeTabId: null,
-            nodes: [],
-            edges: [],
-        });
+        setEmptyHomeState();
 
         await renderHomePage({ onLaunchWithTemplates, onLaunchWithAI });
 
@@ -118,25 +122,16 @@ describe('HomePage integration flows', () => {
         expect(onLaunchWithAI).toHaveBeenCalledTimes(1);
     });
 
-    it('shows recent onboarding action suggestions in the empty dashboard', async () => {
-        useFlowStore.setState({
-            documents: [],
-            activeDocumentId: '',
-            tabs: [],
-            activeTabId: null,
-            nodes: [],
-            edges: [],
-        });
+    it('keeps the empty dashboard focused on the primary actions', async () => {
+        setEmptyHomeState();
         recordOnboardingEvent('welcome_prompt_selected', { source: 'welcome-modal' });
         recordOnboardingEvent('welcome_template_selected', { source: 'welcome-modal' });
 
         await renderHomePage();
 
-        expect(screen.getByText('Continue with a recent action')).toBeTruthy();
-        const suggestionPanel = screen.getByTestId('home-recent-actions');
-
-        expect(within(suggestionPanel).getByRole('button', { name: /Flowpilot AI/i })).toBeTruthy();
-        expect(within(suggestionPanel).getByRole('button', { name: /Templates/i })).toBeTruthy();
+        expect(screen.queryByText('Continue with a recent action')).toBeNull();
+        expect(screen.getByTestId('home-generate-with-ai')).toBeTruthy();
+        expect(screen.getByTestId('home-open-templates')).toBeTruthy();
     });
 
     it('opens persisted flows from the dashboard list', async () => {
@@ -333,6 +328,6 @@ describe('HomePage integration flows', () => {
         expect(nodes).toHaveLength(0);
         expect(edges).toHaveLength(0);
         expect(screen.queryByText('Solo Flow')).toBeNull();
-        expect(screen.getByTestId('home-create-new')).toBeTruthy();
+        expect(screen.getByTestId('home-create-new-main')).toBeTruthy();
     });
 });

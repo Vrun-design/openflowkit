@@ -70,7 +70,7 @@ function registerSectionNode(
     state: ReturnType<typeof createMermaidParseState>,
     line: string
 ): boolean {
-    const subgraphMatch = line.match(/^subgraph\s+([[]\w\s"'-]+)/i);
+    const subgraphMatch = line.match(/^subgraph\s+(.+)$/i);
     const stateGroupMatch =
       line.match(/^state\s+"([^"]+)"\s+as\s+(\w+)\s+\{/i) ||
       line.match(/^state\s+(\w+)\s+\{/i);
@@ -78,27 +78,7 @@ function registerSectionNode(
     if (!subgraphMatch && !stateGroupMatch) {
         return false;
     }
-
-    let id: string;
-    let label: string;
-
-    if (subgraphMatch) {
-        const col = subgraphMatch[1].trim();
-        const titleMatch = col.match(/^(\w+)\s*\[(.+)\]$/);
-        id = titleMatch ? titleMatch[1] : col.replace(/\s+/g, '_');
-        label = titleMatch ? titleMatch[2] : col;
-    } else {
-        id = stateGroupMatch![2] || stateGroupMatch![1];
-        label = stateGroupMatch![1];
-    }
-
-    state.nodesMap.set(id, {
-        id,
-        label,
-        type: 'section',
-        parentId: state.parentStack[state.parentStack.length - 1],
-    });
-    state.parentStack.push(id);
+    void state;
     return true;
 }
 
@@ -200,7 +180,9 @@ function buildMermaidParseModel(lines: string[]): MermaidParseModel {
         }
 
         if (line.match(/^end\s*$/i) || line === '}') {
-            state.parentStack.pop();
+            if (state.parentStack.length > 0) {
+                state.parentStack.pop();
+            }
             continue;
         }
 
@@ -257,11 +239,6 @@ function createFlowNodes(model: MermaidParseModel): FlowNode[] {
 
         if (node.parentId) {
             flowNode = setNodeParent(flowNode, node.parentId);
-        }
-
-        if (node.type === 'section') {
-            flowNode.className = 'bg-slate-50/50 border-2 border-dashed border-slate-300 rounded-lg';
-            flowNode.style = { width: 600, height: 400 };
         }
 
         if (node.classes) {

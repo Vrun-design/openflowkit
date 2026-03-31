@@ -1,12 +1,17 @@
 import type { FlowEdge } from '@/lib/types';
+import {
+  getCinematicResolutionPreset,
+  getCinematicSpeedMultiplier,
+  type CinematicExportRequest,
+  type CinematicThemeMode,
+} from './cinematicExport';
 import type {
   CinematicBuildPlan,
   CinematicBuildSegment,
-  CinematicExportKind,
 } from './cinematicBuildPlan';
 
 export interface CinematicExportPreset {
-  kind: CinematicExportKind;
+  kind: CinematicExportRequest['format'];
   fps: number;
   maxDimension: number;
   pixelRatio: number;
@@ -22,7 +27,7 @@ export interface CinematicExportPreset {
 
 export interface CinematicRenderState {
   active: boolean;
-  backgroundMode: 'light';
+  backgroundMode: CinematicThemeMode;
   visibleNodeIds: ReadonlySet<string>;
   builtEdgeIds: ReadonlySet<string>;
   visibleEdgeIds: ReadonlySet<string>;
@@ -51,7 +56,6 @@ export interface CinematicTimeline {
 }
 
 const EMPTY_SET = new Set<string>();
-const LIGHT_BACKGROUND_MODE = 'light' as const;
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -70,7 +74,7 @@ function easeOutQuart(value: number): number {
 function createInactiveSegmentRenderState(): CinematicRenderState {
   return {
     active: true,
-    backgroundMode: LIGHT_BACKGROUND_MODE,
+    backgroundMode: 'light',
     visibleNodeIds: EMPTY_SET,
     builtEdgeIds: EMPTY_SET,
     visibleEdgeIds: EMPTY_SET,
@@ -83,39 +87,25 @@ function createInactiveSegmentRenderState(): CinematicRenderState {
 }
 
 export function getCinematicExportPreset(
-  kind: CinematicExportKind,
-  speedMultiplier = 1,
-  maxDimension?: number
+  request: Pick<CinematicExportRequest, 'format' | 'speed' | 'resolution'>
 ): CinematicExportPreset {
-  if (kind === 'cinematic-gif') {
-    return {
-      kind,
-      fps: 8,
-      maxDimension: maxDimension ?? 960,
-      pixelRatio: 1,
-      introHoldMs: Math.round(180 / speedMultiplier),
-      rootNodeFadeMs: Math.round(260 / speedMultiplier),
-      edgeGrowMs: Math.round(360 / speedMultiplier),
-      targetNodeFadeMs: Math.round(240 / speedMultiplier),
-      settleMs: Math.round(120 / speedMultiplier),
-      finalHoldMs: Math.round(480 / speedMultiplier),
-      maxFrames: 140,
-      speedMultiplier,
-    };
-  }
+  const speedMultiplier = getCinematicSpeedMultiplier(request.speed);
+  const resolutionPreset = getCinematicResolutionPreset(request.resolution);
+  const isHighResolution = request.resolution === '4k';
+  const isLowResolution = request.resolution === '720p';
 
   return {
-    kind,
-    fps: 20,
-    maxDimension: maxDimension ?? 1600,
-    pixelRatio: 1,
+    kind: request.format,
+    fps: isHighResolution ? 24 : isLowResolution ? 18 : 20,
+    maxDimension: resolutionPreset.maxDimension,
+    pixelRatio: resolutionPreset.pixelRatio,
     introHoldMs: Math.round(200 / speedMultiplier),
     rootNodeFadeMs: Math.round(300 / speedMultiplier),
     edgeGrowMs: Math.round(500 / speedMultiplier),
     targetNodeFadeMs: Math.round(260 / speedMultiplier),
     settleMs: Math.round(150 / speedMultiplier),
     finalHoldMs: Math.round(640 / speedMultiplier),
-    maxFrames: 280,
+    maxFrames: isHighResolution ? 320 : isLowResolution ? 220 : 280,
     speedMultiplier,
   };
 }
@@ -201,7 +191,8 @@ function buildVisibleEdgeIds(visibleNodeIds: Set<string>, edges: FlowEdge[]): Se
 export function resolveCinematicRenderState(
   timeline: CinematicTimeline,
   edges: FlowEdge[],
-  timeMs: number
+  timeMs: number,
+  backgroundMode: CinematicThemeMode = 'light'
 ): CinematicRenderState {
   if (timeline.plan.segments.length === 0) {
     return createInactiveSegmentRenderState();
@@ -219,6 +210,7 @@ export function resolveCinematicRenderState(
   if (clampedTimeMs < timeline.preset.introHoldMs) {
     return {
       ...createInactiveSegmentRenderState(),
+      backgroundMode,
       visibleNodeIds,
     };
   }
@@ -272,7 +264,7 @@ export function resolveCinematicRenderState(
 
   return {
     active: true,
-    backgroundMode: LIGHT_BACKGROUND_MODE,
+    backgroundMode,
     visibleNodeIds,
     builtEdgeIds: new Set(visibleEdgeIds),
     visibleEdgeIds: activeEdgeId ? new Set([...visibleEdgeIds, activeEdgeId]) : visibleEdgeIds,

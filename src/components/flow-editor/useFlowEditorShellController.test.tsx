@@ -48,6 +48,7 @@ describe('useFlowEditorShellController', () => {
             isCommandBarOpen: false,
             isHistoryOpen: false,
             editorMode: 'canvas',
+            isArchitectureRulesOpen: false,
             handleExportJSON: vi.fn(),
             onLayout: vi.fn(async () => undefined),
         }));
@@ -80,6 +81,7 @@ describe('useFlowEditorShellController', () => {
             isCommandBarOpen: false,
             isHistoryOpen: false,
             editorMode: 'canvas',
+            isArchitectureRulesOpen: false,
             handleExportJSON: vi.fn(),
             onLayout,
         }));

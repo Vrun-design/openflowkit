@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { Position } from '@/lib/reactflowCompat';
+import { useShallow } from 'zustand/react/shallow';
 import type { LegacyNodeProps } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
 import { useInlineNodeTextEdit } from '@/hooks/useInlineNodeTextEdit';
@@ -26,13 +27,15 @@ function MindmapNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
   const visualStyle = resolveNodeVisualStyle(activeColor, activeColorMode, data.customColor);
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
-  const { childCount, hiddenDescendantCount } = useFlowStore((state) => {
-    const childrenById = getMindmapChildrenById(state.nodes, state.edges);
-    return {
-      childCount: (childrenById.get(id) ?? []).length,
-      hiddenDescendantCount: getMindmapDescendantIds(id, childrenById).size,
-    };
-  });
+  const { childCount, hiddenDescendantCount } = useFlowStore(
+    useShallow((state) => {
+      const childrenById = getMindmapChildrenById(state.nodes, state.edges);
+      return {
+        childCount: (childrenById.get(id) ?? []).length,
+        hiddenDescendantCount: getMindmapDescendantIds(id, childrenById).size,
+      };
+    })
+  );
   const isCollapsed = data.mindmapCollapsed === true;
   const branchHandles = [
     { id: 'left', position: Position.Left, side: 'left' as const },

@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 import type { FlowEdge, FlowNode, FlowSnapshot } from '@/lib/types';
 import type { FlowEditorMode, StudioCodeMode, StudioTab } from '@/hooks/useFlowEditorUIState';
 import type { DomainLibraryItem } from '@/services/domainLibrary';
+import type { CinematicExportRequest } from '@/services/export/cinematicExport';
 import type {
     UseFlowEditorChromeParams,
     UseFlowEditorPanelsParams,
@@ -25,6 +26,7 @@ interface BuildFlowEditorControllerShellParams {
     isCommandBarOpen: boolean;
     isHistoryOpen: boolean;
     editorMode: FlowEditorMode;
+    isArchitectureRulesOpen: boolean;
     handleExportJSON: () => void;
     onLayout: (
         direction?: 'TB' | 'LR' | 'RL' | 'BT',
@@ -41,6 +43,7 @@ interface BuildFlowEditorControllerStudioParams {
     setStudioTab: (tab: StudioTab) => void;
     setStudioCodeMode: (mode: StudioCodeMode) => void;
     setStudioMode: () => void;
+    openArchitectureRulesPanel: () => void;
     closeCommandBar: () => void;
     setCanvasMode: () => void;
     setSelectedNodeId: (id: string | null) => void;
@@ -60,7 +63,7 @@ interface BuildFlowEditorControllerChromeParams {
     handleSvgExport: () => void;
     handleCopySvg: () => void;
     handlePdfExport: () => void;
-    handleCinematicExport: (format: 'cinematic-video' | 'cinematic-gif') => void;
+    handleCinematicExport: (request: CinematicExportRequest) => void;
     handleExportJSON: () => void;
     handleCopyJSON: () => void;
     handleExportMermaid: () => void;

@@ -1,6 +1,10 @@
 import { useCallback } from 'react';
 import { toPng } from 'html-to-image';
-import { useCinematicExportActions } from '@/context/CinematicExportContext';
+import {
+  useCinematicExportActions,
+  useCinematicExportJobState,
+} from '@/context/CinematicExportContext';
+import { useTheme } from '@/context/ThemeContext';
 import { buildExportFileName } from '@/lib/exportFileName';
 import { createLogger } from '@/lib/logger';
 import type { FlowEdge, FlowNode } from '@/lib/types';
@@ -9,30 +13,35 @@ import {
   selectSupportedVideoMimeType,
 } from '@/services/animatedExport';
 import {
-  buildCinematicBuildPlan,
-  type CinematicExportKind,
-} from '@/services/export/cinematicBuildPlan';
+  type CinematicExportRequest,
+} from '@/services/export/cinematicExport';
+import { buildCinematicBuildPlan } from '@/services/export/cinematicBuildPlan';
 import {
   buildCinematicTimeline,
   getCinematicExportPreset,
   resolveCinematicRenderState,
 } from '@/services/export/cinematicRenderState';
 import {
-  CINEMATIC_EXPORT_FALLBACK_COLOR,
   paintCinematicExportBackground,
+  resolveCinematicExportTheme,
 } from '@/services/export/cinematicExportTheme';
 import {
   createDownload,
   createExportOptions,
-  createStreamingGifEncoder,
-  decodeSingleFrame,
+  decodeSingleFrameWithSignal,
   encodeVideoFromFrames,
   waitForExportRender,
-  type CapturedFrame,
 } from './flow-export/exportCapture';
 import { resolveFlowExportViewport } from './flowExportViewport';
 
 const logger = createLogger({ scope: 'useCinematicExport' });
+const PREPARING_PROGRESS = 4;
+const CAPTURING_PROGRESS_START = 8;
+const CAPTURING_PROGRESS_END = 72;
+const ENCODING_PROGRESS_START = 76;
+const ENCODING_PROGRESS_END = 96;
+const FINALIZING_PROGRESS = 98;
+const RESET_DELAY_MS = 250;
 
 interface AnimatedPlaybackControls {
   stopPlayback: () => void;
@@ -47,6 +56,42 @@ interface UseCinematicExportParams {
   exportBaseName: string | undefined;
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
+function buildFrameTimes(totalDurationMs: number, frameDurationMs: number): number[] {
+  const frameTimes: number[] = [];
+  for (let timeMs = 0; timeMs < totalDurationMs; timeMs += frameDurationMs) {
+    frameTimes.push(timeMs);
+  }
+  return frameTimes;
+}
+
+function buildExportRequest(
+  request: CinematicExportRequest,
+  resolvedTheme: ReturnType<typeof useTheme>['resolvedTheme']
+): CinematicExportRequest {
+  return {
+    ...request,
+    themeMode: request.themeMode ?? resolvedTheme,
+  };
+}
+
+function getProgressPercent(
+  completedFrames: number,
+  totalFrames: number,
+  start: number,
+  end: number
+): number {
+  if (totalFrames <= 0) {
+    return end;
+  }
+
+  const progress = completedFrames / totalFrames;
+  return Math.round(start + (end - start) * progress);
+}
+
 export function useCinematicExport({
   nodes,
   edges,
@@ -55,16 +100,31 @@ export function useCinematicExport({
   addToast,
   exportBaseName,
 }: UseCinematicExportParams): {
-  handleCinematicExport: (kind: CinematicExportKind) => Promise<void>;
+  handleCinematicExport: (request: CinematicExportRequest) => Promise<void>;
 } {
-  const { setRenderState, resetRenderState } = useCinematicExportActions();
+  const { resolvedTheme } = useTheme();
+  const jobState = useCinematicExportJobState();
+  const {
+    setRenderState,
+    resetRenderState,
+    setJobState,
+    resetJobState,
+    registerCancelHandler,
+  } = useCinematicExportActions();
 
   const handleCinematicExport = useCallback(
-    async (kind: CinematicExportKind): Promise<void> => {
+    async (incomingRequest: CinematicExportRequest): Promise<void> => {
+      if (jobState.status !== 'idle') {
+        addToast('A cinematic export is already running.', 'info');
+        return;
+      }
+
       if (!reactFlowWrapper.current) {
         addToast('Canvas viewport not found.', 'error');
         return;
       }
+
+      const request = buildExportRequest(incomingRequest, resolvedTheme);
 
       const { viewport: flowViewport, message } = resolveFlowExportViewport(
         reactFlowWrapper.current
@@ -85,87 +145,95 @@ export function useCinematicExport({
         return;
       }
 
-      const preset = getCinematicExportPreset(kind);
+      const preset = getCinematicExportPreset(request);
       const timeline = buildCinematicTimeline(plan, preset);
+      const abortController = new AbortController();
+      const exportTheme = resolveCinematicExportTheme(request.themeMode);
+
+      if (request.resolution === '4k' && plan.segments.length > 80) {
+        addToast(
+          '4K cinematic export may take longer on larger diagrams. You can switch to 1080p for faster output.',
+          'warning'
+        );
+      }
 
       reactFlowWrapper.current.classList.add('exporting');
-      addToast(
-        kind === 'cinematic-gif' ? 'Rendering cinematic GIF…' : 'Rendering cinematic video…',
-        'info'
-      );
+      registerCancelHandler(() => abortController.abort());
+      setJobState({
+        status: 'preparing',
+        progressPercent: PREPARING_PROGRESS,
+        completedFrames: 0,
+        totalFrames: 0,
+        stageLabel: 'Preparing cinematic export…',
+        canCancel: true,
+        request,
+      });
 
       try {
-        const frameOptions = createExportOptions(nodes, 'png', {
-          maxDimension: timeline.preset.maxDimension,
-          pixelRatio: timeline.preset.pixelRatio,
-        }).options;
-        const { width, height } = createExportOptions(nodes, 'png', {
+        const exportCapture = createExportOptions(nodes, 'png', {
           maxDimension: timeline.preset.maxDimension,
           pixelRatio: timeline.preset.pixelRatio,
         });
         const frameDurationMs = Math.max(1, Math.round(1000 / timeline.preset.fps));
+        const frameTimes = buildFrameTimes(timeline.totalDurationMs, frameDurationMs);
+        const totalCaptureFrames = frameTimes.length + 1;
 
         animatedPlayback.stopPlayback();
 
         const captureFrame = async (): Promise<string> =>
           toPng(flowViewport, {
-            ...frameOptions,
-            backgroundColor: CINEMATIC_EXPORT_FALLBACK_COLOR,
+            ...exportCapture.options,
+            backgroundColor: exportTheme.fallbackColor,
             cacheBust: true,
           });
 
-        if (kind === 'cinematic-gif') {
-          const gifEncoder = createStreamingGifEncoder(
-            width,
-            height,
-            paintCinematicExportBackground
-          );
+        const decodedFrames: Array<{
+          frame: { dataUrl: string; delayMs: number };
+          image: CanvasImageSource;
+        }> = [];
 
-          for (let timeMs = 0; timeMs < timeline.totalDurationMs; timeMs += frameDurationMs) {
-            setRenderState(resolveCinematicRenderState(timeline, edges, timeMs));
-            await waitForExportRender(8);
-            const dataUrl = await captureFrame();
-            await gifEncoder.addFrame(dataUrl, frameDurationMs);
-          }
+        setJobState((current) => ({
+          ...current,
+          status: 'capturing',
+          progressPercent: CAPTURING_PROGRESS_START,
+          totalFrames: totalCaptureFrames,
+          stageLabel: 'Capturing frames…',
+        }));
 
-          setRenderState(resolveCinematicRenderState(timeline, edges, timeline.totalDurationMs));
-          await waitForExportRender(8);
-          const finalDataUrl = await captureFrame();
-          await gifEncoder.addFrame(
-            finalDataUrl,
-            Math.max(frameDurationMs, timeline.preset.finalHoldMs)
-          );
-
-          const blob = gifEncoder.finish();
-          createDownload(
-            blob,
-            buildExportFileName(exportBaseName ?? 'openflowkit-cinematic-build', 'gif')
-          );
-          addToast('Cinematic build GIF exported.', 'success');
-          return;
-        }
-
-        const mimeType = selectSupportedVideoMimeType(window.MediaRecorder);
-        if (!mimeType) {
-          throw new Error(
-            'This browser does not support local video recording for cinematic export.'
-          );
-        }
-
-        const decodedFrames: Array<{ frame: CapturedFrame; image: CanvasImageSource }> = [];
-
-        for (let timeMs = 0; timeMs < timeline.totalDurationMs; timeMs += frameDurationMs) {
-          setRenderState(resolveCinematicRenderState(timeline, edges, timeMs));
-          await waitForExportRender(8);
+        for (const [frameIndex, timeMs] of frameTimes.entries()) {
+          setRenderState(resolveCinematicRenderState(timeline, edges, timeMs, request.themeMode));
+          await waitForExportRender(8, abortController.signal);
           const dataUrl = await captureFrame();
-          const image = await decodeSingleFrame(dataUrl);
+          const image = await decodeSingleFrameWithSignal(dataUrl, abortController.signal);
           decodedFrames.push({ frame: { dataUrl, delayMs: frameDurationMs }, image });
+
+          const completedFrames = frameIndex + 1;
+          setJobState((current) => ({
+            ...current,
+            status: 'capturing',
+            completedFrames,
+            totalFrames: totalCaptureFrames,
+            stageLabel: 'Capturing frames…',
+            progressPercent: getProgressPercent(
+              completedFrames,
+              totalCaptureFrames,
+              CAPTURING_PROGRESS_START,
+              CAPTURING_PROGRESS_END
+            ),
+          }));
         }
 
-        setRenderState(resolveCinematicRenderState(timeline, edges, timeline.totalDurationMs));
-        await waitForExportRender(8);
+        setRenderState(
+          resolveCinematicRenderState(
+            timeline,
+            edges,
+            timeline.totalDurationMs,
+            request.themeMode
+          )
+        );
+        await waitForExportRender(8, abortController.signal);
         const finalUrl = await captureFrame();
-        const finalImage = await decodeSingleFrame(finalUrl);
+        const finalImage = await decodeSingleFrameWithSignal(finalUrl, abortController.signal);
         decodedFrames.push({
           frame: {
             dataUrl: finalUrl,
@@ -174,27 +242,96 @@ export function useCinematicExport({
           image: finalImage,
         });
 
+        setJobState((current) => ({
+          ...current,
+          status: 'encoding',
+          completedFrames: 0,
+          totalFrames: Math.max(1, decodedFrames.length),
+          stageLabel: 'Encoding video…',
+          progressPercent: ENCODING_PROGRESS_START,
+        }));
+
+        const mimeType = selectSupportedVideoMimeType(window.MediaRecorder);
+        if (!mimeType) {
+          throw new Error(
+            'This browser does not support local video recording for cinematic export.'
+          );
+        }
+
         const blob = await encodeVideoFromFrames({
           frames: decodedFrames,
-          width,
-          height,
+          width: exportCapture.width,
+          height: exportCapture.height,
           fps: timeline.preset.fps,
           mimeType,
-          backgroundPainter: paintCinematicExportBackground,
+          signal: abortController.signal,
+          backgroundPainter: (context, width, height) =>
+            paintCinematicExportBackground(context, width, height, request.themeMode),
+          onProgress: ({ completedFrames, totalFrames }) => {
+            setJobState((current) => ({
+              ...current,
+              status: 'encoding',
+              completedFrames,
+              totalFrames,
+              stageLabel: 'Encoding video…',
+              progressPercent: getProgressPercent(
+                completedFrames,
+                totalFrames,
+                ENCODING_PROGRESS_START,
+                ENCODING_PROGRESS_END
+              ),
+            }));
+          },
         });
+
+        setJobState((current) => ({
+          ...current,
+          status: 'finalizing',
+          progressPercent: FINALIZING_PROGRESS,
+          stageLabel: 'Finalizing export…',
+        }));
+
         const extension = getAnimatedExportFileExtension(mimeType);
         createDownload(
           blob,
           buildExportFileName(exportBaseName ?? 'openflowkit-cinematic-build', extension)
         );
+        setJobState((current) => ({
+          ...current,
+          status: 'done',
+          progressPercent: 100,
+          canCancel: false,
+          stageLabel: 'Export complete',
+        }));
         addToast(`Cinematic build ${extension.toUpperCase()} exported.`, 'success');
       } catch (error) {
+        if (isAbortError(error)) {
+          setJobState((current) => ({
+            ...current,
+            status: 'cancelled',
+            canCancel: false,
+            stageLabel: 'Export cancelled',
+          }));
+          addToast('Cinematic export cancelled.', 'info');
+          return;
+        }
+
         const exportMessage = error instanceof Error ? error.message : 'Cinematic export failed.';
-        logger.error('Cinematic export failed.', { error, kind });
+        logger.error('Cinematic export failed.', { error, request });
+        setJobState((current) => ({
+          ...current,
+          status: 'error',
+          canCancel: false,
+          stageLabel: exportMessage,
+        }));
         addToast(exportMessage, 'error');
       } finally {
         resetRenderState();
+        registerCancelHandler(null);
         reactFlowWrapper.current?.classList.remove('exporting');
+        window.setTimeout(() => {
+          resetJobState();
+        }, RESET_DELAY_MS);
       }
     },
     [
@@ -202,9 +339,14 @@ export function useCinematicExport({
       animatedPlayback,
       edges,
       exportBaseName,
+      jobState.status,
       nodes,
       reactFlowWrapper,
+      registerCancelHandler,
+      resetJobState,
       resetRenderState,
+      resolvedTheme,
+      setJobState,
       setRenderState,
     ]
   );

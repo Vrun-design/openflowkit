@@ -174,13 +174,13 @@ export function parseDockerCompose(input: string): InfraSyncResult {
   if (isRecord(networkSection)) {
     for (const netName of Object.keys(networkSection)) {
       const nodeId = sanitizeId(`net_${netName}`);
-      nodes.push({
-        id: nodeId,
-        label: netName,
-        nodeType: 'section',
-        provider: 'docker-compose',
-        resourceType: 'network',
-        resourceName: netName,
+        nodes.push({
+          id: nodeId,
+          label: netName,
+          nodeType: 'architecture',
+          provider: 'docker-compose',
+          resourceType: 'network',
+          resourceName: netName,
       });
     }
   }
@@ -202,7 +202,7 @@ export function parseDockerCompose(input: string): InfraSyncResult {
         nodes.push({
           id: nodeId,
           label: net,
-          nodeType: 'section',
+          nodeType: 'architecture',
           provider: 'docker-compose',
           resourceType: 'network',
           resourceName: net,

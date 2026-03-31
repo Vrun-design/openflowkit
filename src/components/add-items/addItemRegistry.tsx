@@ -1,11 +1,9 @@
 import React from 'react';
 import {
   AppWindow,
-  ArrowRightLeft,
   Boxes,
   Component,
   GitBranch,
-  Group,
   Image as ImageIcon,
   LayoutList,
   Smartphone,
@@ -26,11 +24,9 @@ export type AddItemId =
   | 'circle'
   | 'sticky-note'
   | 'text'
-  | 'section'
   | 'journey'
   | 'mindmap'
   | 'architecture'
-  | 'sequence'
   | 'image'
   | 'class'
   | 'entity'
@@ -232,14 +228,6 @@ export function getAddItemDefinitions(t: TFunction): AddItemDefinition[] {
       renderIcon: makeLucideIcon(Boxes),
     },
     {
-      id: 'sequence',
-      label: 'Sequence',
-      section: 'diagrams',
-      keywords: ['sequence', 'diagram', 'participant', 'message', 'uml', 'flow'],
-      scope: ['toolbar', 'assets'],
-      renderIcon: makeLucideIcon(ArrowRightLeft),
-    },
-    {
       id: 'browser',
       label: 'Browser',
       section: 'wireframes',
@@ -257,19 +245,11 @@ export function getAddItemDefinitions(t: TFunction): AddItemDefinition[] {
     },
     {
       id: 'sticky-note',
-      label: t('toolbar.stickyNote', 'Sticky Note'),
+      label: t('toolbar.stickyNote', 'Note'),
       section: 'other',
       keywords: ['sticky note', 'note', 'comment', 'annotation'],
       scope: ['toolbar', 'assets'],
       renderIcon: makeLucideIcon(StickyNote),
-    },
-    {
-      id: 'section',
-      label: t('toolbar.section', 'Section'),
-      section: 'other',
-      keywords: ['section', 'group', 'container'],
-      scope: ['toolbar', 'assets'],
-      renderIcon: makeLucideIcon(Group),
     },
     {
       id: 'text',
@@ -340,9 +320,6 @@ export function executeAddItem(
     case 'text':
       actions.onAddTextNode(position);
       return;
-    case 'section':
-      actions.onAddSection(position);
-      return;
     case 'journey':
       actions.onAddJourneyNode(position);
       return;
@@ -351,9 +328,6 @@ export function executeAddItem(
       return;
     case 'architecture':
       actions.onAddArchitectureNode(position);
-      return;
-    case 'sequence':
-      actions.onAddSequenceParticipant(position);
       return;
     case 'image':
       actions.onRequestImageUpload?.();

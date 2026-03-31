@@ -201,7 +201,7 @@ function createTemplatePreview(template: FlowTemplate): {
 }
 
 function isPreviewContainerNode(node: FlowNode): boolean {
-  return node.type === 'group' || node.type === 'section' || node.type === 'swimlane';
+  return node.type === 'swimlane';
 }
 
 function clamp(value: number, min: number, max: number): number {

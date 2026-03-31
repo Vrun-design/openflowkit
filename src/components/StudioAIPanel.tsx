@@ -6,6 +6,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { IS_BEVELED } from '@/lib/brand';
 import type { ChatMessage } from '@/services/aiService';
+import type { AssistantThreadItem } from '@/services/flowpilot/types';
 import type { ImportDiff } from '@/hooks/useAIGeneration';
 import type { AIReadinessState } from '@/hooks/ai-generation/readiness';
 import { useAIViewState } from './command-bar/useAIViewState';
@@ -38,6 +39,7 @@ interface StudioAIPanelProps {
   lastError: string | null;
   onClearError: () => void;
   chatMessages: ChatMessage[];
+  assistantThread: AssistantThreadItem[];
   onClearChat: () => void;
   nodeCount?: number;
   selectedNodeCount?: number;
@@ -124,6 +126,7 @@ export function StudioAIPanel({
   lastError,
   onClearError,
   chatMessages,
+  assistantThread,
   onClearChat,
   nodeCount = 0,
   selectedNodeCount = 0,
@@ -151,7 +154,7 @@ export function StudioAIPanel({
     isGenerating,
     onAIGenerate,
     onClose: () => undefined,
-    chatMessageCount: chatMessages.length,
+    chatMessageCount: assistantThread.length,
   });
 
   useEffect(() => {
@@ -161,7 +164,7 @@ export function StudioAIPanel({
     }
   }, [initialPrompt, onInitialPromptConsumed, setPrompt]);
 
-  const hasHistory = chatMessages.length > 0;
+  const hasHistory = assistantThread.length > 0;
   const isCanvasEmpty = nodeCount === 0;
   const effectiveGenerationMode: AIGenerationMode = nodeCount === 0 ? 'create' : generationMode;
   const examplePrompts = isCanvasEmpty ? EMPTY_CANVAS_EXAMPLES : ITERATION_EXAMPLES;
@@ -206,9 +209,10 @@ export function StudioAIPanel({
           t={t}
         />
       ) : null}
-      <ChatHistoryView
+        <ChatHistoryView
         hasHistory={hasHistory}
         chatMessages={chatMessages}
+        assistantThread={assistantThread}
         isGenerating={isGenerating}
         streamingText={streamingText}
         retryCount={retryCount}

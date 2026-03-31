@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useCallback, useEffect } from 'react';
 import type { EditorPage } from '@/store/editorPageHooks';
+import type { CinematicExportRequest } from '@/services/export/cinematicExport';
 import { FlowTabs } from './FlowTabs';
 import { TopNavMenu } from './top-nav/TopNavMenu';
 import { TopNavBrand } from './top-nav/TopNavBrand';
@@ -29,7 +30,7 @@ interface TopNavProps {
     onExportSVG: () => void;
     onCopySVG: () => void;
     onExportPDF: () => void;
-    onExportCinematic: (format: 'cinematic-video' | 'cinematic-gif') => void;
+    onExportCinematic: (request: CinematicExportRequest) => void;
     onExportJSON: () => void;
     onCopyJSON: () => void;
     onExportMermaid: () => void;

@@ -46,6 +46,7 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
     handleOpenApiAnalysis,
     handleCodebaseAnalysis,
     chatMessages,
+    assistantThread,
     clearChat,
     clearLastError,
   } = useAIGeneration(screenState.recordHistory, callbacks.handleCommandBarApply);
@@ -157,6 +158,7 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
       isCommandBarOpen: screenState.isCommandBarOpen,
       isHistoryOpen: screenState.isHistoryOpen,
       editorMode: screenState.editorMode,
+      isArchitectureRulesOpen: screenState.isArchitectureRulesOpen,
       handleExportJSON,
       onLayout,
       fileInputRef,
@@ -169,6 +171,7 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
       setStudioTab: screenState.setStudioTab,
       setStudioCodeMode: screenState.setStudioCodeMode,
       setStudioMode: screenState.setStudioMode,
+      openArchitectureRulesPanel: screenState.openArchitectureRulesPanel,
       closeCommandBar: screenState.closeCommandBar,
       setCanvasMode: screenState.setCanvasMode,
       setSelectedNodeId: screenState.setSelectedNodeId,
@@ -240,6 +243,7 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
         lastAIError: lastError,
         onClearAIError: clearLastError,
         chatMessages,
+        assistantThread,
         clearChat,
         studioCodeMode: screenState.studioCodeMode,
         playback: {
@@ -257,6 +261,10 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
         },
         pendingAIPrompt,
         clearPendingAIPrompt,
+      },
+      architectureRules: {
+        isOpen: screenState.isArchitectureRulesOpen,
+        closeArchitectureRulesPanel: screenState.closeArchitectureRulesPanel,
       },
       isHistoryOpen: screenState.isHistoryOpen,
       editorMode: screenState.editorMode,

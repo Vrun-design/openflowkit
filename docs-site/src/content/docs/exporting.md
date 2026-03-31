@@ -36,9 +36,9 @@ This is the most faithful archival format for re-import into OpenFlowKit. Use it
 
 If you are unsure what to save as the master file, choose JSON.
 
-### Cinematic video and GIF
+### Cinematic video
 
-Use cinematic exports when the diagram is meant to communicate change over time rather than a single static state. These are useful for demos, changelogs, social posts, and process walkthroughs.
+Use cinematic video export when the diagram is meant to communicate change over time rather than a single static state. This is useful for demos, changelogs, social posts, and process walkthroughs.
 
 These exports are presentation-oriented. Keep JSON as the editable master if you may need to revise the underlying diagram later.
 

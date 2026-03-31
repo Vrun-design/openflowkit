@@ -1,6 +1,7 @@
 import React from 'react';
 import '@xyflow/react/dist/style.css';
 import { FlowCanvas } from './FlowCanvas';
+import { CinematicExportOverlay } from './CinematicExportOverlay';
 import { FlowEditorChrome } from './flow-editor/FlowEditorChrome';
 import { useFlowEditorScreenModel } from './flow-editor/useFlowEditorScreenModel';
 import { ArchitectureLintProvider } from '@/context/ArchitectureLintContext';
@@ -8,9 +9,7 @@ import { useCinematicExportState } from '@/context/CinematicExportContext';
 import { DiagramDiffProvider } from '@/context/DiagramDiffContext';
 import { ShareEmbedModal } from '@/components/ShareEmbedModal';
 import { ImportRecoveryDialog } from '@/components/ImportRecoveryDialog';
-
-const CINEMATIC_EXPORT_BACKGROUND =
-  'radial-gradient(circle at top, rgba(59,130,246,0.14), transparent 42%), linear-gradient(180deg, #f8fbff 0%, #eef5ff 52%, #f8fafc 100%)';
+import { resolveCinematicExportTheme } from '@/services/export/cinematicExportTheme';
 
 interface FlowEditorProps {
   onGoHome: () => void;
@@ -43,6 +42,7 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
     flowEditorController,
     t,
   } = useFlowEditorScreenModel({ onGoHome });
+  const cinematicExportTheme = resolveCinematicExportTheme(cinematicExportState.backgroundMode);
 
   return (
     <DiagramDiffProvider
@@ -58,10 +58,11 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
           ref={reactFlowWrapper}
           style={{
             background: cinematicExportState.active
-              ? CINEMATIC_EXPORT_BACKGROUND
+              ? cinematicExportTheme.surfaceBackground
               : 'var(--brand-background)',
           }}
         >
+          <CinematicExportOverlay />
           <FlowEditorChrome
             pages={pages}
             activePageId={activePageId}

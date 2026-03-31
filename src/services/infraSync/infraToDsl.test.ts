@@ -28,20 +28,18 @@ describe('infraSyncResultToDsl', () => {
         expect(dsl).toContain('lb_main -> ec2_web');
     });
 
-    it('renders section nodes with indented children', () => {
+    it('renders infrastructure nodes as flat DSL nodes', () => {
         const result = makeResult({
             nodes: [
-                { id: 'vpc_main', label: 'Production VPC', nodeType: 'section', provider: 'aws', resourceType: 'aws_vpc', resourceName: 'main' },
+                { id: 'vpc_main', label: 'Production VPC', nodeType: 'architecture', provider: 'aws', resourceType: 'aws_vpc', resourceName: 'main' },
                 { id: 'ec2_web', label: 'Web Server', nodeType: 'system', provider: 'aws', resourceType: 'aws_instance', resourceName: 'web' },
             ],
             edges: [{ from: 'vpc_main', to: 'ec2_web' }],
         });
         const dsl = infraSyncResultToDsl(result);
-        expect(dsl).toContain('[section] vpc_main: Production VPC');
-        // child should be indented
-        expect(dsl).toMatch(/\s+\[system\] ec2_web:/);
-        // section->child edge should NOT be rendered as an explicit edge line
-        expect(dsl).not.toContain('vpc_main -> ec2_web');
+        expect(dsl).toContain('[architecture] vpc_main: Production VPC');
+        expect(dsl).toContain('[system] ec2_web: Web Server');
+        expect(dsl).toContain('vpc_main -> ec2_web');
     });
 
     it('renders edge labels with |label| syntax', () => {

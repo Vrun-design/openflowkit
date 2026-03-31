@@ -1,12 +1,16 @@
 import React, { Suspense, lazy, useState } from 'react';
 import { Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import {
+  createDefaultCinematicExportRequest,
+  type CinematicExportRequest,
+  type CinematicExportResolution,
+  type CinematicExportSpeed,
+  type CinematicThemeMode,
+} from '@/services/export/cinematicExport';
 import { Tooltip } from './Tooltip';
 import { Button } from './ui/Button';
 import { useExportMenu } from './useExportMenu';
-
-type CinematicSpeed = 'slow' | 'normal' | 'fast';
-type CinematicResolution = '720p' | '1080p' | '4k';
 
 const LazyExportMenuPanel = lazy(async () => {
   const module = await import('./ExportMenuPanel');
@@ -19,7 +23,7 @@ interface ExportMenuProps {
   onExportSVG: () => void;
   onCopySVG: () => void;
   onExportPDF: () => void;
-  onExportCinematic: (format: 'cinematic-video' | 'cinematic-gif') => void;
+  onExportCinematic: (request: CinematicExportRequest) => void;
   onExportJSON: () => void;
   onCopyJSON: () => void;
   onExportMermaid: () => void;
@@ -31,12 +35,11 @@ interface ExportMenuProps {
   onExportFigma: () => void;
   onDownloadFigma: () => void;
   onShare: () => void;
-  cinematicSpeed?: CinematicSpeed;
-  onCinematicSpeedChange?: (speed: CinematicSpeed) => void;
-  cinematicResolution?: CinematicResolution;
-  onCinematicResolutionChange?: (res: CinematicResolution) => void;
-  cinematicTransparent?: boolean;
-  onCinematicTransparentChange?: (transparent: boolean) => void;
+  cinematicSpeed?: CinematicExportSpeed;
+  onCinematicSpeedChange?: (speed: CinematicExportSpeed) => void;
+  cinematicResolution?: CinematicExportResolution;
+  onCinematicResolutionChange?: (res: CinematicExportResolution) => void;
+  cinematicThemeMode: CinematicThemeMode;
 }
 
 export const ExportMenu: React.FC<ExportMenuProps> = ({
@@ -61,21 +64,26 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
   onCinematicSpeedChange,
   cinematicResolution,
   onCinematicResolutionChange,
-  cinematicTransparent,
-  onCinematicTransparentChange,
+  cinematicThemeMode,
 }) => {
   const { t } = useTranslation();
   const exportLabel = t('export.title', 'Export');
-  const [cinematicSpeedState, setCinematicSpeedState] = useState<CinematicSpeed>('normal');
+  const defaultRequest = createDefaultCinematicExportRequest(cinematicThemeMode);
+  const [cinematicSpeedState, setCinematicSpeedState] = useState<CinematicExportSpeed>(
+    defaultRequest.speed
+  );
   const [cinematicResolutionState, setCinematicResolutionState] =
-    useState<CinematicResolution>('1080p');
-  const [cinematicTransparentState, setCinematicTransparentState] = useState(false);
+    useState<CinematicExportResolution>(defaultRequest.resolution);
   const effectiveSpeed = cinematicSpeed ?? cinematicSpeedState;
   const effectiveSpeedChange = onCinematicSpeedChange ?? setCinematicSpeedState;
   const effectiveResolution = cinematicResolution ?? cinematicResolutionState;
   const effectiveResolutionChange = onCinematicResolutionChange ?? setCinematicResolutionState;
-  const effectiveTransparent = cinematicTransparent ?? cinematicTransparentState;
-  const effectiveTransparentChange = onCinematicTransparentChange ?? setCinematicTransparentState;
+  const cinematicExportRequest: CinematicExportRequest = {
+    format: 'cinematic-video',
+    speed: effectiveSpeed,
+    resolution: effectiveResolution,
+    themeMode: cinematicThemeMode,
+  };
   const {
     isOpen,
     menuRef,
@@ -88,6 +96,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
     onCopySVG,
     onExportPDF,
     onExportCinematic,
+    getCinematicExportRequest: () => cinematicExportRequest,
     onExportJSON,
     onCopyJSON,
     onExportMermaid,
@@ -124,8 +133,6 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             onCinematicSpeedChange={effectiveSpeedChange}
             cinematicResolution={effectiveResolution}
             onCinematicResolutionChange={effectiveResolutionChange}
-            cinematicTransparent={effectiveTransparent}
-            onCinematicTransparentChange={effectiveTransparentChange}
           />
         </Suspense>
       )}

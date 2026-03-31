@@ -192,7 +192,7 @@ describe('store persistence helpers', () => {
         expect(migrated.activeTabId).toBe('tab-a');
     });
 
-    it('upgrades legacy section nodes with frame metadata defaults', () => {
+    it('removes legacy section container nodes during migration', () => {
         const migrated = migratePersistedFlowState({
             tabs: [
                 {
@@ -216,11 +216,7 @@ describe('store persistence helpers', () => {
             tabs: FlowTab[];
         };
 
-        const migratedSection = migrated.tabs[0]?.nodes[0];
-        expect(migratedSection?.data.sectionSizingMode).toBe('manual');
-        expect(migratedSection?.data.sectionLayoutMode).toBe('freeform');
-        expect(migratedSection?.data.sectionLocked).toBe(false);
-        expect(migratedSection?.data.sectionHidden).toBe(false);
+        expect(migrated.tabs[0]?.nodes).toEqual([]);
     });
 
     it('sanitizes persisted ai settings during migration', () => {

@@ -45,7 +45,7 @@ export function parseStreamingDsl(text: string): StreamingParseResult {
 
       nodes.push({
         id,
-        type: nodeMatch[1] === 'section' ? 'section' : 'process',
+        type: nodeMatch[1] === 'section' ? 'group' : 'process',
         position: { x: col * (NODE_W + GAP_X), y: row * (NODE_H + GAP_Y) },
         data: { label },
         width: NODE_W,

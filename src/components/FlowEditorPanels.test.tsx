@@ -54,6 +54,10 @@ vi.mock('./StudioPanel', () => ({
   },
 }));
 
+vi.mock('./ArchitectureRulesPanel', () => ({
+  ArchitectureRulesPanel: () => <div data-testid="architecture-rules-panel" />,
+}));
+
 const baseProps = {
   commandBar: {
     isOpen: false,
@@ -68,6 +72,7 @@ const baseProps = {
     onOpenStudioOpenFlow: vi.fn(),
     onOpenStudioMermaid: vi.fn(),
     onOpenStudioPlayback: vi.fn(),
+    onOpenArchitectureRules: vi.fn(),
     initialView: 'root' as const,
     onAddAnnotation: vi.fn(),
     onAddSection: vi.fn(),
@@ -138,6 +143,7 @@ const baseProps = {
     lastAIError: null,
     onClearAIError: vi.fn(),
     chatMessages: [],
+    assistantThread: [],
     onClearChat: vi.fn(),
     activeTab: 'ai' as const,
     onTabChange: vi.fn(),
@@ -159,6 +165,10 @@ const baseProps = {
       playbackSpeed: 2000,
       onPlaybackSpeedChange: vi.fn(),
     },
+  },
+  architectureRules: {
+    isOpen: false,
+    onClose: vi.fn(),
   },
   isHistoryOpen: false,
 };
@@ -224,6 +234,19 @@ describe('FlowEditorPanels', () => {
 
     expect(await screen.findByTestId('studio-panel')).not.toBeNull();
     expect(screen.queryByTestId('properties-panel')).toBeNull();
+  });
+
+  it('shows the architecture rules panel in architecture rules mode', async () => {
+    render(
+      <FlowEditorPanels
+        {...baseProps}
+        editorMode="canvas"
+        architectureRules={{ ...baseProps.architectureRules, isOpen: true }}
+      />
+    );
+
+    expect(await screen.findByTestId('architecture-rules-panel')).not.toBeNull();
+    expect(screen.queryByTestId('studio-panel')).toBeNull();
   });
 
   it('shows the properties panel for bulk selection even without a focused primary node', async () => {

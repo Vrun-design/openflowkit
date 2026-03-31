@@ -56,6 +56,7 @@ function OpenCommandBarContent({
   onOpenStudioAI,
   onOpenStudioOpenFlow,
   onOpenStudioMermaid,
+  onOpenArchitectureRules,
   initialView = 'root',
   onAddAnnotation: _onAddAnnotation,
   onAddSection: _onAddSection,
@@ -133,6 +134,7 @@ function OpenCommandBarContent({
     onOpenStudioAI,
     onOpenStudioOpenFlow,
     onOpenStudioMermaid,
+    onOpenArchitectureRules,
     hasImport,
   });
 

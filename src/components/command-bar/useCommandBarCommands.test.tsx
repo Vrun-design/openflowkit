@@ -7,6 +7,7 @@ describe('useCommandBarCommands', () => {
         const onOpenStudioAI = vi.fn();
         const onOpenStudioOpenFlow = vi.fn();
         const onOpenStudioMermaid = vi.fn();
+        const onOpenArchitectureRules = vi.fn();
 
         const { result } = renderHook(() =>
             useCommandBarCommands({
@@ -21,6 +22,7 @@ describe('useCommandBarCommands', () => {
                 onOpenStudioAI,
                 onOpenStudioOpenFlow,
                 onOpenStudioMermaid,
+                onOpenArchitectureRules,
                 hasImport: true,
             })
         );
@@ -33,6 +35,7 @@ describe('useCommandBarCommands', () => {
             'assets',
             'search-nodes',
             'layout',
+            'architecture-rules',
             'studio-openflow',
             'studio-mermaid',
             'toggle-grid',
@@ -50,10 +53,12 @@ describe('useCommandBarCommands', () => {
         expect(result.current.find((command) => command.id === 'studio-openflow')?.tier).toBe('advanced');
 
         result.current.find((command) => command.id === 'studio-ai')?.action?.();
+        result.current.find((command) => command.id === 'architecture-rules')?.action?.();
         result.current.find((command) => command.id === 'studio-openflow')?.action?.();
         result.current.find((command) => command.id === 'studio-mermaid')?.action?.();
 
         expect(onOpenStudioAI).toHaveBeenCalledTimes(1);
+        expect(onOpenArchitectureRules).toHaveBeenCalledTimes(1);
         expect(onOpenStudioOpenFlow).toHaveBeenCalledTimes(1);
         expect(onOpenStudioMermaid).toHaveBeenCalledTimes(1);
     });

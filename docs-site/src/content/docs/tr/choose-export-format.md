@@ -15,7 +15,7 @@ OpenFlowKit hem görsel hem de düzenlenebilir teslim formatlarını destekler. 
 | Markdown veya repo dostu metin | Mermaid |
 | dokümanlar ve sunumlar | PNG, JPG veya SVG |
 | tasarım aracı aktarımı | Figma |
-| kısa oynatma çıktısı | GIF veya video |
+| kısa oynatma çıktısı | sinematik video |
 | canlı izleyici veya oda erişimi | Share / Embed |
 
 ## Varsayılan öneri

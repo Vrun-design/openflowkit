@@ -137,3 +137,47 @@ ${docsContext}
 
   return response.text;
 }
+
+export async function chatWithSystemInstructionGemini(
+  history: ChatMessage[],
+  newMessage: string,
+  systemInstruction: string,
+  userApiKey: string,
+  modelId?: string,
+  onChunk?: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<string> {
+  const ai = new GoogleGenAI({ apiKey: userApiKey });
+  const newMessageContent = {
+    role: 'user' as const,
+    parts: [{ text: newMessage }],
+  };
+  const contents = [...history, newMessageContent];
+
+  const stream = await ai.models.generateContentStream({
+    model: modelId || GEMINI_DEFAULT_MODEL,
+    contents,
+    config: {
+      systemInstruction,
+      responseMimeType: 'text/plain',
+    },
+  });
+
+  let fullText = '';
+  for await (const chunk of stream) {
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+    const delta = chunk.text ?? '';
+    if (delta) {
+      fullText += delta;
+      onChunk?.(delta);
+    }
+  }
+
+  if (!fullText) {
+    throw new Error('No response from AI');
+  }
+
+  return fullText;
+}

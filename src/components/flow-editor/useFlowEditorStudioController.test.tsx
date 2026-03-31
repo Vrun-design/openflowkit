@@ -11,6 +11,7 @@ function createBaseProps(overrides: Partial<Parameters<typeof useFlowEditorStudi
         setStudioTab: vi.fn(),
         setStudioCodeMode: vi.fn(),
         setStudioMode: vi.fn(),
+        openArchitectureRulesPanel: vi.fn(),
         closeCommandBar: vi.fn(),
         setCanvasMode: vi.fn(),
         setSelectedNodeId: vi.fn(),

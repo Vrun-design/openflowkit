@@ -268,7 +268,7 @@ test('can navigate nodes with keyboard', async ({ page }) => {
   await createNewFlow(page);
 
   await page.getByTestId('toolbar-add-toggle').click();
-  await page.getByText('Sticky Note').click();
+  await page.getByRole('button', { name: /^(Note|Sticky Note)$/ }).click();
 
   await page.keyboard.press('Tab');
   await page.keyboard.press('Tab');

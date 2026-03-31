@@ -8,7 +8,7 @@ export type CommandBarView =
     | 'assets';
 
 export type FlowEditorMode = 'canvas' | 'studio';
-export type StudioTab = 'ai' | 'code' | 'playback' | 'infra' | 'lint';
+export type StudioTab = 'ai' | 'code' | 'playback' | 'infra';
 export type StudioCodeMode = 'openflow' | 'mermaid';
 
 interface UseFlowEditorUIStateResult {
@@ -20,11 +20,14 @@ interface UseFlowEditorUIStateResult {
     studioCodeMode: StudioCodeMode;
     isSelectMode: boolean;
     isDesignSystemPanelOpen: boolean;
+    isArchitectureRulesOpen: boolean;
     openHistory: () => void;
     closeHistory: () => void;
     openCommandBar: (view?: CommandBarView) => void;
     closeCommandBar: () => void;
     openDesignSystemPanel: () => void;
+    openArchitectureRulesPanel: () => void;
+    closeArchitectureRulesPanel: () => void;
     setCanvasMode: () => void;
     setStudioMode: () => void;
     setStudioTab: (tab: StudioTab) => void;
@@ -41,6 +44,7 @@ export function useFlowEditorUIState(): UseFlowEditorUIStateResult {
     const [studioTab, setStudioTab] = useState<StudioTab>('ai');
     const [studioCodeMode, setStudioCodeMode] = useState<StudioCodeMode>('openflow');
     const [isSelectMode, setIsSelectMode] = useState(true);
+    const [isArchitectureRulesOpen, setIsArchitectureRulesOpen] = useState(false);
 
     function openHistory(): void {
         setIsHistoryOpen(true);
@@ -64,12 +68,22 @@ export function useFlowEditorUIState(): UseFlowEditorUIStateResult {
         setIsCommandBarOpen(true);
     }
 
+    function openArchitectureRulesPanel(): void {
+        setIsArchitectureRulesOpen(true);
+    }
+
+    function closeArchitectureRulesPanel(): void {
+        setIsArchitectureRulesOpen(false);
+    }
+
     function setCanvasMode(): void {
         setEditorMode('canvas');
+        setIsArchitectureRulesOpen(false);
     }
 
     function setStudioMode(): void {
         setEditorMode('studio');
+        setIsArchitectureRulesOpen(false);
     }
 
     function enableSelectMode(): void {
@@ -89,11 +103,14 @@ export function useFlowEditorUIState(): UseFlowEditorUIStateResult {
         studioCodeMode,
         isSelectMode,
         isDesignSystemPanelOpen: isCommandBarOpen && commandBarView === 'design-system',
+        isArchitectureRulesOpen,
         openHistory,
         closeHistory,
         openCommandBar,
         closeCommandBar,
         openDesignSystemPanel,
+        openArchitectureRulesPanel,
+        closeArchitectureRulesPanel,
         setCanvasMode,
         setStudioMode,
         setStudioTab,

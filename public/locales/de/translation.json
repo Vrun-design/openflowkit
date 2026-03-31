@@ -67,7 +67,10 @@
     "distributeVertically": "Vertikal verteilen",
     "group": "Gruppe",
     "upload": "Hochladen",
-    "rename": "Umbenennen"
+    "rename": "Umbenennen",
+    "export": "Exportieren",
+    "exportDiagram": "Diagramm exportieren",
+    "exportAs": "Exportieren als"
   },
   "nav": {
     "home": "Startseite",
@@ -124,12 +127,12 @@
     "openflowdsl": "Als OpenFlow DSL exportieren",
     "figma": "Nach Figma exportieren",
     "hintTransparent4K": "Transparent (4K)",
-    "hintWhiteBg4K": "White Background (4K)",
+    "hintWhiteBg4K": "Weißer Hintergrund (4K)",
     "jsonLabel": "JSON File",
-    "hintDownload": "Download",
+    "hintDownload": "Herunterladen",
     "openflowdslLabel": "{{appName}} DSL",
     "hintClipboard": "Kopieren",
-    "figmaEditable": "Figma Editable",
+    "figmaEditable": "Figma-bearbeitbar",
     "exportDiagram": "Export Diagram",
     "exportAs": "Export As",
     "actionCopy": "Kopieren",
@@ -144,27 +147,28 @@
     "shareEmbed": "Teilen & Einbetten",
     "hintShareViewer": "Einladungslink für diesen Raum",
     "hintShareEmbed": "Nur-Lese-Link für Viewer",
-    "readmeEmbed": "README Embed",
-    "hintReadmeEmbed": "Copy Markdown snippet",
-    "sectionImage": "Image",
+    "readmeEmbed": "README-Einbettung",
+    "hintReadmeEmbed": "Markdown-Snippet kopieren",
+    "sectionImage": "Bild",
     "sectionVideo": "Video",
     "sectionCode": "Code",
     "shareSection": "Canvas teilen",
-    "revealVideo": "Reveal Video",
-    "hintRevealVideo": "Nodes fade in sequentially (WebM/MP4)",
-    "revealGif": "Reveal GIF",
-    "hintRevealGif": "Animated reveal for docs/social",
-    "cinematicVideo": "Cinematic Build Video",
+    "revealVideo": "Video anzeigen",
+    "hintRevealVideo": "Knoten werden nacheinander eingeblendet (WebM/MP4)",
+    "revealGif": "GIF anzeigen",
+    "hintRevealGif": "Animierte Aufdeckung für Doku/Social",
+    "cinematicVideo": "Cinematic-Build-Video",
     "hintCinematicVideo": "Dark launch-style build",
-    "cinematicGif": "Cinematic Build GIF",
-    "hintCinematicGif": "Dark social-ready loop",
-    "actionDownload": "Download",
+    "cinematicGif": "Cinematic-Build-GIF",
+    "hintCinematicGif": "Dunkle Social-Schleife",
+    "actionDownload": "Herunterladen",
     "hintDocument": "Dokument",
     "hintEditableSvg": "Bearbeitbares SVG",
     "chooseFormat": "Format wählen",
     "speed": "Geschwindigkeit",
     "resolution": "Auflösung",
-    "transparentBackground": "Transparenter Hintergrund"
+    "transparentBackground": "Transparenter Hintergrund",
+    "headingFormat": "Exportformat"
   },
   "import": {
     "title": "Importieren",
@@ -267,26 +271,26 @@
       "hint": "Dies kann nicht rückgängig gemacht werden, es sei denn, Sie haben ein exportiertes Backup oder eine weitere Kopie.",
       "closeDialog": "Dialog zum Löschen des Flows schließen"
     },
-    "suggestionBlank": "Leere Leinwand",
-    "suggestionBlankDesc": "Direkt in den Editor einsteigen",
-    "suggestionAI": "Flowpilot KI",
-    "suggestionAIDesc": "Mit einer Eingabe beginnen",
-    "suggestionImport": "Importieren",
-    "suggestionImportDesc": "Bestehende Arbeit einbringen",
-    "suggestionTemplates": "Vorlagen",
-    "suggestionTemplatesDesc": "Mit einem bewährten Muster beginnen",
-    "continueTitle": "Mit einer kürzlichen Aktion fortfahren",
     "homeEmptyTitle": "Erstellen Sie Ihren ersten Flow",
     "homeEmptySubtitle": "Entwerfen Sie sofort Enterprise-Architekturen. Beginnen Sie mit einer leeren Leinwand, beschreiben Sie Ihre Infrastruktur mit unserem KI-Builder oder verwenden Sie eine maßgeschneiderte Vorlage.",
     "homeBlankCanvas": "Leere Leinwand",
     "homeFlowpilotAI": "Flowpilot KI",
     "homeTemplates": "Vorlagen",
-    "homeImportFile": "Oder eine bestehende Datei importieren"
+    "homeImportFile": "Oder eine bestehende Datei importieren",
+    "suggestionAI": "Flowpilot KI",
+    "suggestionBlank": "Leere Leinwand",
+    "suggestionBlankDesc": "Direkt in den Editor einsteigen",
+    "suggestionAIDesc": "Mit einer Eingabe beginnen",
+    "suggestionImport": "Importieren",
+    "suggestionImportDesc": "Bestehende Arbeit einbringen",
+    "suggestionTemplates": "Vorlagen",
+    "suggestionTemplatesDesc": "Mit einem bewährten Muster beginnen",
+    "continueTitle": "Mit einer kürzlichen Aktion fortfahren"
   },
   "settings": {
     "title": "Einstellungen",
     "general": "Allgemein",
-    "canvas": "Canvas",
+    "canvas": "Leinwand",
     "shortcuts": "Tastaturkürzel",
     "theme": "Design",
     "language": "Sprache",
@@ -298,14 +302,14 @@
     "about": "Über",
     "brand": "Markeneinstellungen",
     "privacy": "Datenschutz",
-    "themeLight": "Light",
-    "themeDark": "Dark",
+    "themeLight": "Hell",
+    "themeDark": "Dunkel",
     "themeSystem": "System"
   },
   "shortcuts": {
     "title": "Tastaturkürzel",
     "general": "Allgemein",
-    "canvas": "Canvas",
+    "canvas": "Leinwand",
     "nodes": "Knoten",
     "essentials": "Grundlagen",
     "manipulation": "Bearbeitung",
@@ -313,28 +317,28 @@
     "help": "Hilfe"
   },
   "properties": {
-    "title": "Properties",
-    "shape": "Shape",
-    "color": "Color",
-    "icon": "Icon",
-    "rotation": "Rotation",
-    "transparency": "Transparency",
-    "imageSettings": "Image Settings",
-    "bulkShape": "Bulk Shape",
-    "bulkColor": "Bulk Color",
-    "bulkIcon": "Bulk Icon",
-    "labelTransform": "Label Transform",
-    "findReplace": "Find & Replace",
-    "findLabel": "Find",
-    "findPlaceholder": "Find text",
-    "replaceLabel": "Replace",
-    "replacePlaceholder": "Replace with",
-    "prefixOptional": "Prefix (optional)",
+    "title": "Eigenschaften",
+    "shape": "Form",
+    "color": "Farbe",
+    "icon": "Symbol",
+    "rotation": "Drehung",
+    "transparency": "Transparenz",
+    "imageSettings": "Bildeinstellungen",
+    "bulkShape": "Form (Mehrfachauswahl)",
+    "bulkColor": "Farbe (Mehrfachauswahl)",
+    "bulkIcon": "Symbol (Mehrfachauswahl)",
+    "labelTransform": "Beschriftungstransformation",
+    "findReplace": "Suchen & Ersetzen",
+    "findLabel": "Suchen",
+    "findPlaceholder": "Text suchen",
+    "replaceLabel": "Ersetzen",
+    "replacePlaceholder": "Ersetzen durch",
+    "prefixOptional": "Präfix (optional)",
     "suffixOptional": "Suffix (optional)",
-    "useRegex": "Use Regex",
-    "applyToSelectedNodes": "Apply to selected nodes",
-    "selectFieldToApply": "Select a field to apply",
-    "previewSummary": "Preview summary",
+    "useRegex": "Regex verwenden",
+    "applyToSelectedNodes": "Auf ausgewählte Knoten anwenden",
+    "selectFieldToApply": "Feld zum Anwenden auswählen",
+    "previewSummary": "Vorschau-Zusammenfassung",
     "selectionSummary": "Auswahlübersicht"
   },
   "saveStatus": {
@@ -346,8 +350,14 @@
     "model": "Modell",
     "apiKey": "API-Schlüssel",
     "placeholder": "Flussdiagramm beschreiben...",
-    "settingsSubtitle": "Configure your preferred AI provider, model, and API key below.",
-    "generateWithFlowpilot": "Mit Flowpilot generieren"
+    "settingsSubtitle": "Konfigurieren Sie unten Ihren bevorzugten KI-Anbieter, das Modell und den API-Schlüssel.",
+    "generateWithFlowpilot": "Mit Flowpilot generieren",
+    "howToGetKey": "So erhalten Sie Ihren API-Schlüssel",
+    "openConsole": "Konsole öffnen",
+    "pasteKeyStep": "Fügen Sie ihn oben ein — er wird niemals mit uns geteilt",
+    "customEndpointTitle": "Was ist ein benutzerdefinierter Endpunkt?",
+    "customModelHint": "Geben Sie die genaue Modell-ID für Ihren Endpunkt ein",
+    "privacyTitle": "Datenschutz & Verschlüsselung"
   },
   "playback": {
     "title": "Wiedergabe",
@@ -615,6 +625,13 @@
         "edgeSyntax": "Verwenden Sie Architektur-Kantenpfeile `-->`, `<--` oder `<-->` sowie Seitenqualifikatoren wie `api:R --> L:db`.",
         "nodeSyntax": "Verwenden Sie gültige Knotendeklarationen: `service id(icon)[Label]`, `group id[Label]`, `junction id[Label]`.",
         "fallback": "Deaktivieren Sie den Architektur-Strict-Mode, um automatische Wiederherstellung zuzulassen, oder beheben Sie die Diagnosen und versuchen Sie es erneut."
+      },
+      "jumpToLine": "Springe zu Zeile {{line}}",
+      "diagnosticsGroup": {
+        "syntax": "Syntax-Probleme",
+        "identity": "Bezeichner-Probleme",
+        "recovery": "Wiederherstellungswarnungen",
+        "general": "Diagnosen"
       }
     },
     "layout": {
@@ -757,9 +774,7 @@
         "infra": "Infra",
         "openapi": "OpenAPI",
         "code": "Code",
-        "codebase": "Repository",
-        "mindmap": "Mindmap",
-        "markdown": "Markdown"
+        "codebase": "Repository"
       },
       "title": "Aus Daten importieren",
       "description": "Importiere Code, Infrastruktur, SQL oder API-Spezifikationen in dein Diagramm.",
@@ -838,7 +853,9 @@
       "edgeBundling": "Geschwisterkanten bündeln",
       "edgeBundlingDesc": "Parallele Verbindungen auf gemeinsamen Spuren halten",
       "architectureStrictMode": "Architektur-Strict-Modus",
-      "architectureStrictModeDesc": "Mermaid-Import blockieren, wenn Architekturdiagnosen Wiederherstellungs-/Validierungsprobleme enthalten"
+      "architectureStrictModeDesc": "Mermaid-Import blockieren, wenn Architekturdiagnosen Wiederherstellungs-/Validierungsprobleme enthalten",
+      "miniMap": "Minimap",
+      "miniMapDesc": "Minimap unten rechts anzeigen"
     },
     "ai": {
       "provider": "Anbieter",
@@ -912,132 +929,227 @@
       },
       "models": {
         "gemini": {
-          "gemini-2": {
-            "5-flash-lite": {
-              "label": "Gemini 2.5 Flash Lite"
-            },
-            "5-flash": {
-              "label": "Gemini 2.5 Flash"
-            },
-            "5-pro": {
-              "label": "Gemini 2.5 Pro"
-            }
-          },
           "gemini-3-flash": {
-            "label": "Gemini 3 Flash"
+            "label": "Gemini 3 Flash",
+            "hint": "Frontier speed + intelligence",
+            "category": "Legacy",
+            "badge": "New"
           },
           "gemini-3-pro": {
-            "label": "Gemini 3 Pro"
+            "label": "Gemini 3 Pro",
+            "hint": "Most powerful · Multimodal",
+            "category": "Legacy",
+            "badge": "New"
+          },
+          "gemini-2.5-flash-lite": {
+            "label": "2.5 Flash Lite",
+            "hint": "Fastest · Free tier default",
+            "category": "Speed",
+            "badge": "Default"
+          },
+          "gemini-2.5-flash": {
+            "label": "2.5 Flash",
+            "hint": "Best price/performance balance",
+            "category": "Speed"
+          },
+          "gemini-2.5-pro": {
+            "label": "2.5 Pro",
+            "hint": "Best reasoning · Complex diagrams",
+            "category": "Reasoning"
           }
         },
         "openai": {
           "gpt-5-mini": {
-            "label": "GPT-5 Mini"
-          },
-          "gpt-5": {
-            "2": {
-              "label": "GPT-5.2"
-            },
-            "label": "GPT-5"
+            "label": "GPT-5 Mini",
+            "hint": "Fast · Cost-efficient",
+            "category": "Speed",
+            "badge": "Default"
           },
           "o4-mini": {
-            "label": "O4-Mini"
+            "label": "O4-Mini",
+            "hint": "Advanced reasoning · Fast",
+            "category": "Reasoning",
+            "badge": "Reasoning"
           },
           "o3": {
-            "label": "O3"
+            "label": "O3",
+            "hint": "Deep reasoning · Complex tasks",
+            "category": "Reasoning",
+            "badge": "Reasoning"
+          },
+          "gpt-5": {
+            "label": "GPT-5",
+            "hint": "Flagship model · Most capable",
+            "category": "Flagship"
+          },
+          "gpt-5.2": {
+            "label": "GPT-5.2",
+            "hint": "Latest update · Improved reasoning",
+            "category": "Reasoning",
+            "badge": "New"
           }
         },
         "claude": {
           "claude-haiku-4-5": {
-            "label": "Claude Haiku 4.5"
+            "label": "Claude Haiku 4.5",
+            "hint": "Fastest · Most affordable",
+            "category": "Speed"
           },
           "claude-sonnet-4-5": {
-            "label": "Claude Sonnet 4.5"
+            "label": "Claude Sonnet 4.5",
+            "hint": "Balanced intelligence & speed",
+            "category": "Flagship"
           },
           "claude-sonnet-4-6": {
-            "label": "Claude Sonnet 4.6"
+            "label": "Claude Sonnet 4.6",
+            "hint": "Latest Sonnet · Best coding",
+            "category": "Flagship",
+            "badge": "Default"
           },
           "claude-opus-4-6": {
-            "label": "Claude Opus 4.6"
+            "label": "Claude Opus 4.6",
+            "hint": "Most intelligent · 1M token context",
+            "category": "Reasoning",
+            "badge": "Flagship"
           }
         },
         "groq": {
           "meta-llama/llama-4-scout-17b-16e-instruct": {
-            "label": "Llama 4 Scout"
+            "label": "Llama 4 Scout",
+            "hint": "Free tier · Very fast",
+            "category": "Speed",
+            "badge": "Free"
           },
           "meta-llama/llama-4-maverick-17b-128e-instruct": {
-            "label": "Llama 4 Maverick"
+            "label": "Llama 4 Maverick",
+            "hint": "More capable · Free tier",
+            "category": "Speed",
+            "badge": "Free"
           },
           "qwen/qwen3-32b": {
-            "label": "Qwen 3 32B"
+            "label": "Qwen 3 32B",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           },
-          "llama-3": {
-            "3-70b-versatile": {
-              "label": "Llama 3.3 70B"
-            }
+          "llama-3.3-70b-versatile": {
+            "label": "Llama 3.3 70B Versatile",
+            "hint": "Versatile model",
+            "category": "Performance",
+            "badge": "Performance"
           }
         },
         "nvidia": {
           "meta/llama-4-scout-17b-16e-instruct": {
-            "label": "Llama 4 Scout"
+            "label": "Llama 4 Scout",
+            "hint": "Efficient · Multi-modal",
+            "category": "Speed"
           },
           "nvidia/nemotron-nano-12b-v2-vl": {
-            "label": "Nemotron Nano 12B"
+            "label": "Nemotron Nano 12B",
+            "hint": "Lightweight · Vision-language · Fast",
+            "category": "Speed"
           },
           "deepseek/deepseek-v3-2": {
-            "label": "DeepSeek V3-2"
+            "label": "DeepSeek V3-2",
+            "hint": "Latest · GPT-5 comparable",
+            "category": "Flagship",
+            "badge": "New"
           },
           "qwen/qwq-32b": {
-            "label": "QwQ 32B"
+            "label": "QwQ 32B",
+            "hint": "Strong reasoning model",
+            "category": "Reasoning"
           },
           "moonshotai/kimi-k2-thinking": {
-            "label": "Kimi K2 Thinking"
+            "label": "Kimi K2 Thinking",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           }
         },
         "cerebras": {
           "gpt-oss-120b": {
-            "label": "GPT OSS 120B"
+            "label": "GPT OSS 120B",
+            "hint": "120B params · Fast on WSE-3",
+            "category": "Speed",
+            "badge": "Default"
           },
           "qwen-3-32b": {
-            "label": "Qwen 3 32B"
+            "label": "Qwen 3 32B",
+            "hint": "2,403 tok/s · Industry fastest",
+            "category": "Speed",
+            "badge": "🚀 Fastest"
           },
           "qwen-3-235b-a22b": {
-            "label": "Qwen 3 235B"
+            "label": "Qwen 3 235B",
+            "hint": "Flagship · Best quality",
+            "category": "Flagship",
+            "badge": "Flagship"
           },
-          "zai-glm-4": {
-            "7": {
-              "label": "Zai GLM 4.7"
-            }
+          "zai-glm-4.7": {
+            "label": "Zai-GLM 4.7",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           }
         },
         "mistral": {
           "mistral-small-latest": {
-            "label": "Mistral Small"
+            "label": "Mistral Small",
+            "hint": "Fast · Cost-efficient · 32k context",
+            "category": "Speed",
+            "badge": "Free"
           },
           "mistral-medium-latest": {
-            "label": "Mistral Medium"
+            "label": "Mistral Medium",
+            "hint": "Balanced quality-cost · Best default",
+            "category": "Flagship",
+            "badge": "Default"
           },
           "mistral-large-latest": {
-            "label": "Mistral Large"
+            "label": "Mistral Large",
+            "hint": "Most capable · 128k context · Flagship",
+            "category": "Flagship",
+            "badge": "Flagship"
           },
           "codestral-latest": {
-            "label": "Codestral"
+            "label": "Codestral",
+            "hint": "Code-optimized · 256k context",
+            "category": "Coding",
+            "badge": "Code"
           },
           "pixtral-large-latest": {
-            "label": "Pixtral Large"
+            "label": "Pixtral Large",
+            "hint": "Vision + reasoning · Multimodal",
+            "category": "Multimodal",
+            "badge": "Vision"
+          }
+        },
+        "custom": {
+          "custom": {
+            "label": "Custom Model",
+            "hint": "Enter your model ID below",
+            "category": "Custom"
           }
         }
       },
       "customEndpoints": {
         "ollama": {
-          "name": "Ollama"
+          "name": "Ollama",
+          "hint": "Local · Free"
         },
         "lmStudio": {
-          "name": "LM Studio"
+          "name": "LM Studio",
+          "hint": "Local · Free"
         },
         "together": {
-          "name": "Together AI"
+          "name": "Together AI",
+          "hint": "Cloud · Fast"
         }
+      },
+      "byok": {
+        "dataPrivacy": "Your data never passes through our servers",
+        "control": "Full control over cost and rate limits",
+        "flexibility": "Switch providers anytime without re-linking",
+        "cuttingEdge": "Access cutting-edge models as soon as they launch"
       }
     },
     "brand": {
@@ -1078,19 +1190,7 @@
     "analytics": {
       "enableTitle": "Anonyme Start-Analysen",
       "enableDescription": "Anonyme grundlegende Nutzungsdaten teilen (optional)"
-    },
-    "search": "Suchen...",
-    "appearance": "Erscheinungsbild",
-    "account": "Konto",
-    "about": "Über",
-    "language": "Sprache",
-    "theme": "Design",
-    "fontSize": "Schriftgröße",
-    "fontFamily": "Schriftart",
-    "save": "Speichern",
-    "cancel": "Abbrechen",
-    "reset": "Zurücksetzen",
-    "confirm": "Bestätigen"
+    }
   },
   "customNodes": {
     "browserContent": "Browser-Inhalt",
@@ -1278,19 +1378,45 @@
       "linkCopied": "Zusammenarbeitslink wurde kopiert.",
       "copyManual": "Der Zugriff auf die Zwischenablage ist blockiert. Kopieren Sie den Link manuell aus dem Freigabedialog."
     },
-    "embed": "Einbetten",
-    "embedCode": "Einbettungscode",
-    "export": "Exportieren",
-    "settings": "Freigabeeinstellungen",
-    "anyoneWithLink": "Jeder mit Link",
-    "viewOnly": "Nur ansehen",
-    "canEdit": "Kann bearbeiten",
-    "disable": "Freigabe deaktivieren",
-    "enable": "Freigabe aktivieren",
-    "invite": "Einladen",
-    "pending": "Ausstehend",
-    "revoke": "Widerrufen",
-    "expired": "Abgelaufen"
+    "roomLink": "Zusammenarbeitslink",
+    "permissionsNote": "Jeder mit dem Link kann beitreten.",
+    "permissionsNoteSecondary": "Berechtigungskontrollen und dauerhafte Backend-Synchronisierung sind noch nicht konfiguriert.",
+    "viewerCount": {
+      "one": "1 Betrachter in dieser Sitzung.",
+      "many": "{{count}} Betrachter in dieser Sitzung."
+    },
+    "mode": {
+      "realtime": {
+        "title": "Echtzeit-Synchronisierung aktiv",
+        "body": "Peers, die diesen Link öffnen, können Live-Updates und Cursor über den aktuellen Peer-Transport sehen."
+      },
+      "waiting": {
+        "title": "Verbindung zur Echtzeit-Synchronisierung",
+        "body": "Diese Leinwand versucht noch, eine Live-Peer-Synchronisierung herzustellen. Falls dies nicht gelingt, bleibt die Sitzung lokal in diesem Browser."
+      },
+      "fallback": {
+        "title": "Nur-lokale Zusammenarbeit",
+        "body": "Ohne ein Backend-Relay oder unterstützten Peer-Transport bietet diese Sitzung keine dauerhafte Multi-User-Live-Synchronisierung außerhalb der aktuellen Browser-Laufzeit."
+      }
+    },
+    "cache": {
+      "syncing": {
+        "title": "Lokaler Raumcache wird synchronisiert",
+        "body": "Dieser Browser stellt noch den in IndexedDB zwischengespeicherten Raumzustand wieder her, bevor die Peer-Synchronisierung vollständig abgeschlossen ist."
+      },
+      "hydrated": {
+        "title": "Aus lokalem Cache wiederhergestellt",
+        "body": "Dieser Raum hatte bereits lokal zwischengespeicherten Zustand in diesem Browser, sodass die Leinwand wiederhergestellt werden konnte, bevor Peers sich wieder verbunden haben."
+      },
+      "ready": {
+        "title": "Lokaler Cache bereit",
+        "body": "Dieser Browser kann eine lokale IndexedDB-Kopie des Raums für Neuladen und Offline-Wiederherstellung auf diesem Gerät speichern."
+      },
+      "unavailable": {
+        "title": "Kein lokaler Raumcache",
+        "body": "Diese Zusammenarbeitssitzung verwendet derzeit keine browserseitige IndexedDB-Raumpersistenz."
+      }
+    }
   },
   "connectionPanel": {
     "architecture": "Architektur",
@@ -1299,68 +1425,19 @@
     "route": "Route",
     "appearance": "Darstellung",
     "condition": "Bedingung",
-    "deleteConnection": "Verbindung löschen"
+    "deleteConnection": "Verbindung löschen",
+    "style": "Stil",
+    "actions": "Aktionen"
   },
   "sidebar": {
-    "close": "Seitenleiste schließen",
-    "searchPlaceholder": "Suchen...",
-    "noResults": "Keine Ergebnisse",
-    "nodes": "Knoten",
-    "components": "Komponenten",
-    "snippets": "Snippets",
-    "addons": "Add-ons"
+    "close": "Seitenleiste schließen"
   },
   "contextMenu": {
     "label": "Canvas-Kontextmenü"
   },
-  "canvas": {
-    "addNodeShortcut": "Knoten hinzufügen",
-    "aiChatPlaceholder": "Etwas erstellen...",
-    "nodes": "Knoten",
-    "connections": "Verbindungen",
-    "elements": "Elemente",
-    "selection": "Auswahl",
-    "noSelection": "Keine Auswahl",
-    "alignNodes": "Knoten ausrichten",
-    "distributeNodes": "Knoten verteilen",
-    "alignLeft": "Links ausrichten",
-    "alignCenter": "Zentriert ausrichten",
-    "alignRight": "Rechts ausrichten",
-    "alignTop": "Oben ausrichten",
-    "alignMiddle": "Mitte ausrichten",
-    "alignBottom": "Unten ausrichten",
-    "distributeHorizontally": "Horizontal verteilen",
-    "distributeVertically": "Vertikal verteilen",
-    "zoomToFit": "Einpassen zoom",
-    "zoomToSelection": "Auf Auswahl zoomen",
-    "locked": "Gesperrt",
-    "unlock": "Entsperren",
-    "lock": "Sperren",
-    "bringToFront": "Nach vorne bringen",
-    "sendToBack": "Nach hinten senden",
-    "group": "Gruppieren",
-    "ungroup": "Gruppierung aufheben"
-  },
-  "mindmap": {
-    "addChild": "Unterthema hinzufügen",
-    "addSibling": "Geschwisterthema hinzufügen",
-    "addParent": "Übergeordnetes Thema hinzufügen",
-    "delete": "Löschen",
-    "insertAfter": "Danach einfügen",
-    "insertBefore": "Davor einfügen"
-  },
+  "canvas": {},
+  "mindmap": {},
   "aiModel": {
-    "title": "KI-Modell",
-    "provider": "Anbieter",
-    "model": "Modell",
-    "temperature": "Temperatur",
-    "maxTokens": "Maximale Token",
-    "buttons": {
-      "retry": "Erneut versuchen",
-      "stop": "Stopp",
-      "clear": "Löschen"
-    },
-    "thinking": "Denkt nach...",
-    "error": "KI-Fehler"
+    "buttons": {}
   }
 }

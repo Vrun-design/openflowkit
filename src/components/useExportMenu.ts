@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
+import type { CinematicExportRequest } from '@/services/export/cinematicExport';
 import { captureAnalyticsEvent } from '@/services/analytics/analytics';
 import { recordOnboardingEvent } from '@/services/onboarding/events';
 import { useToast } from './ui/ToastContext';
@@ -10,7 +11,8 @@ interface UseExportMenuParams {
   onExportSVG: () => void;
   onCopySVG: () => void;
   onExportPDF: () => void;
-  onExportCinematic: (format: 'cinematic-video' | 'cinematic-gif') => void;
+  onExportCinematic: (request: CinematicExportRequest) => void;
+  getCinematicExportRequest: () => CinematicExportRequest;
   onExportJSON: () => void;
   onCopyJSON: () => void;
   onExportMermaid: () => void;
@@ -51,6 +53,7 @@ export function useExportMenu({
   onCopySVG,
   onExportPDF,
   onExportCinematic,
+  getCinematicExportRequest,
   onExportJSON,
   onCopyJSON,
   onExportMermaid,
@@ -117,12 +120,8 @@ export function useExportMenu({
     svg: { download: onExportSVG, copy: onCopySVG },
     pdf: { download: onExportPDF, copy: onExportPDF },
     'cinematic-video': {
-      download: () => onExportCinematic('cinematic-video'),
-      copy: () => onExportCinematic('cinematic-video'),
-    },
-    'cinematic-gif': {
-      download: () => onExportCinematic('cinematic-gif'),
-      copy: () => onExportCinematic('cinematic-gif'),
+      download: () => onExportCinematic(getCinematicExportRequest()),
+      copy: () => onExportCinematic(getCinematicExportRequest()),
     },
     json: { download: onExportJSON, copy: onCopyJSON },
     openflow: { download: onDownloadOpenFlowDSL, copy: onExportOpenFlowDSL },
@@ -150,10 +149,11 @@ export function useExportMenu({
       return;
     }
 
+    closeMenu();
+
     try {
       await Promise.resolve(actionHandler());
       recordSelection(key, action);
-      closeMenu();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Please try again.';
       addToast(`Failed to complete ${key} ${action}: ${message}`, 'error', 5000);

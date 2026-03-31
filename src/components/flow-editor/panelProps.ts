@@ -10,6 +10,7 @@ import type { LayoutAlgorithm } from '@/services/elkLayout';
 import type { FlowTemplate } from '@/services/templates';
 import type { DomainLibraryItem } from '@/services/domainLibrary';
 import type { ChatMessage } from '@/services/aiService';
+import type { AssistantThreadItem } from '@/services/flowpilot/types';
 import type { CodebaseAnalysis } from '@/hooks/ai-generation/codebaseAnalyzer';
 import type { SupportedLanguage } from '@/hooks/ai-generation/codeToArchitecture';
 import type { TerraformInputFormat } from '@/hooks/ai-generation/terraformToCloud';
@@ -31,6 +32,7 @@ export interface CommandBarPanelBuilderParams {
   openStudioAI: () => void;
   openStudioCode: (codeMode: StudioCodeMode) => void;
   openStudioPlayback: () => void;
+  openArchitectureRulesPanel: () => void;
   commandBarView: CommandBarView;
   handleAddAnnotation: () => void;
   handleAddSection: () => void;
@@ -115,6 +117,7 @@ export interface StudioRailBuilderParams {
   lastAIError: string | null;
   onClearAIError: () => void;
   chatMessages: ChatMessage[];
+  assistantThread: AssistantThreadItem[];
   clearChat: () => void;
   selectedNode: FlowNode | null;
   selectedNodeCount: number;
@@ -133,6 +136,10 @@ export interface BuildFlowEditorPanelsPropsParams {
   snapshots: SnapshotsPanelBuilderParams;
   properties: PropertiesRailBuilderParams;
   studio: StudioRailBuilderParams;
+  architectureRules: {
+    isOpen: boolean;
+    closeArchitectureRulesPanel: () => void;
+  };
   isHistoryOpen: boolean;
   editorMode: FlowEditorMode;
 }
@@ -161,6 +168,7 @@ export function buildCommandBarPanelProps({
   openStudioAI,
   openStudioCode,
   openStudioPlayback,
+  openArchitectureRulesPanel,
   commandBarView,
   handleAddAnnotation,
   handleAddSection,
@@ -198,6 +206,7 @@ export function buildCommandBarPanelProps({
     onOpenStudioOpenFlow: () => openStudioCode('openflow'),
     onOpenStudioMermaid: () => openStudioCode('mermaid'),
     onOpenStudioPlayback: openStudioPlayback,
+    onOpenArchitectureRules: openArchitectureRulesPanel,
     initialView: commandBarView,
     onAddAnnotation: handleAddAnnotation,
     onAddSection: handleAddSection,
@@ -326,6 +335,7 @@ export function buildStudioRailProps({
   lastAIError,
   onClearAIError,
   chatMessages,
+  assistantThread,
   clearChat,
   selectedNode,
   selectedNodeCount,
@@ -353,6 +363,7 @@ export function buildStudioRailProps({
     lastAIError,
     onClearAIError,
     chatMessages,
+    assistantThread,
     onClearChat: clearChat,
     selectedNode,
     selectedNodeCount,
@@ -372,6 +383,7 @@ export function buildFlowEditorPanelsProps({
   snapshots,
   properties,
   studio,
+  architectureRules,
   isHistoryOpen,
   editorMode,
 }: BuildFlowEditorPanelsPropsParams): FlowEditorPanelsProps {
@@ -380,6 +392,10 @@ export function buildFlowEditorPanelsProps({
     snapshots: buildSnapshotsPanelProps(snapshots),
     properties: buildPropertiesRailProps(properties),
     studio: buildStudioRailProps(studio),
+    architectureRules: {
+      isOpen: architectureRules.isOpen,
+      onClose: architectureRules.closeArchitectureRulesPanel,
+    },
     isHistoryOpen,
     editorMode,
   };

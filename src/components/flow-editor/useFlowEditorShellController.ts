@@ -42,6 +42,7 @@ interface UseFlowEditorShellControllerParams {
   isCommandBarOpen: boolean;
   isHistoryOpen: boolean;
   editorMode: FlowEditorMode;
+  isArchitectureRulesOpen: boolean;
   handleExportJSON: () => void;
   onLayout: (
     direction?: 'TB' | 'LR' | 'RL' | 'BT',
@@ -74,6 +75,7 @@ export function useFlowEditorShellController({
   isCommandBarOpen,
   isHistoryOpen,
   editorMode,
+  isArchitectureRulesOpen,
   handleExportJSON,
   onLayout,
 }: UseFlowEditorShellControllerParams): UseFlowEditorShellControllerResult {
@@ -128,6 +130,7 @@ export function useFlowEditorShellController({
     isCommandBarOpen ||
     isHistoryOpen ||
     editorMode === 'studio' ||
+    isArchitectureRulesOpen ||
     Boolean(selectedNode || selectedEdge || selectedNodes.length > 1);
 
   return {

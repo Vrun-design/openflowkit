@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import type { NodeData } from '@/lib/types';
 import type { FlowEditorPanelsProps } from '@/components/FlowEditorPanels';
+import type { CinematicExportRequest } from '@/services/export/cinematicExport';
 import type {
   CollaborationRemotePresence,
   FlowEditorCollaborationTopNavState,
@@ -68,7 +69,7 @@ export interface FlowEditorChromeProps {
     onExportSVG: () => void;
     onCopySVG: () => void;
     onExportPDF: () => void;
-    onExportCinematic: (format: 'cinematic-video' | 'cinematic-gif') => void;
+    onExportCinematic: (request: CinematicExportRequest) => void;
     onExportJSON: () => void;
     onCopyJSON: () => void;
     onExportMermaid: () => void;

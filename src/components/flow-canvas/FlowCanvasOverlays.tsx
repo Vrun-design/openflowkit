@@ -118,17 +118,10 @@ export function FlowCanvasOverlays({
             onSendToBack={contextActions.onSendToBack}
             onChangeNodeType={contextActions.onChangeNodeType}
             onEditLabel={contextActions.onEditLabel}
-            onFitSectionToContents={contextActions.onFitSectionToContents}
-            onBringContentsIntoSection={contextActions.onBringContentsIntoSection}
-            onReleaseFromSection={contextActions.onReleaseFromSection}
-            onToggleSectionLock={contextActions.onToggleSectionLock}
-            onToggleSectionHidden={contextActions.onToggleSectionHidden}
             canPaste={true}
             selectedCount={contextActions.selectedCount}
             onAlignNodes={contextActions.onAlignNodes}
             onDistributeNodes={contextActions.onDistributeNodes}
-            onGroupSelected={contextActions.onGroupSelected}
-            onWrapInSection={contextActions.onWrapInSection}
           />
         </Suspense>
       ) : null}

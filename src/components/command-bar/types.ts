@@ -30,6 +30,7 @@ export interface CommandItem {
   value?: boolean;
   view?: CommandView;
   hidden?: boolean;
+  badge?: string;
 }
 
 export interface CommandBarProps {
@@ -49,6 +50,7 @@ export interface CommandBarProps {
   onOpenStudioOpenFlow?: () => void;
   onOpenStudioMermaid?: () => void;
   onOpenStudioPlayback?: () => void;
+  onOpenArchitectureRules?: () => void;
   initialView?: CommandView;
   onAddAnnotation?: () => void;
   onAddSection?: () => void;

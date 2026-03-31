@@ -2,6 +2,8 @@ import React, { lazy, Suspense } from 'react';
 import { Play, Share2 } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '@/context/ThemeContext';
+import type { CinematicExportRequest } from '@/services/export/cinematicExport';
 import { ExportMenu } from '@/components/ExportMenu';
 import { Tooltip } from '@/components/Tooltip';
 import { Button } from '@/components/ui/Button';
@@ -33,7 +35,7 @@ interface TopNavActionsProps {
     onExportSVG: () => void;
     onCopySVG: () => void;
     onExportPDF: () => void;
-    onExportCinematic: (format: 'cinematic-video' | 'cinematic-gif') => void;
+    onExportCinematic: (request: CinematicExportRequest) => void;
     onExportJSON: () => void;
     onCopyJSON: () => void;
     onExportMermaid: () => void;
@@ -124,6 +126,7 @@ export function TopNavActions({
     isBeveled,
 }: TopNavActionsProps): React.ReactElement {
     const { t } = useTranslation();
+    const { resolvedTheme } = useTheme();
     const playLabel = t('common.play', 'Preview');
     const [isShareModalOpen, setIsShareModalOpen] = React.useState(false);
     const viewerCount = collaboration?.viewerCount ?? 1;
@@ -206,6 +209,7 @@ export function TopNavActions({
                     onExportFigma={onExportFigma}
                     onDownloadFigma={onDownloadFigma}
                     onShare={onShare}
+                    cinematicThemeMode={resolvedTheme}
                 />
             </div>
 

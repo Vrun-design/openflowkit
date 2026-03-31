@@ -101,6 +101,42 @@ function formatInfraFileLines(infraFiles: string[]): string {
   return infraFiles.length > 0 ? infraFiles.map((file) => `- ${file}`).join('\n') : '- none detected';
 }
 
+const ICON_HINTS = `AVAILABLE ICON PACKS (use these exact values when the service matches):
+AWS (archProvider: "aws", archIconPackId: "aws-official-starter-v1"):
+  Lambda         -> archIconShapeId: "compute-lambda", color: "violet"
+  EC2            -> archIconShapeId: "compute-ec2", color: "violet"
+  ECS/Fargate    -> archIconShapeId: "containers-elastic-container-service", color: "violet"
+  API Gateway    -> archIconShapeId: "app-integration-api-gateway", color: "violet"
+  S3             -> archIconShapeId: "storage-simple-storage-service", color: "emerald"
+  RDS/Postgres   -> archIconShapeId: "database-rds", color: "emerald"
+  DynamoDB       -> archIconShapeId: "database-dynamodb", color: "emerald"
+  ElastiCache    -> archIconShapeId: "database-elasticache", color: "yellow"
+  SQS            -> archIconShapeId: "app-integration-simple-queue-service", color: "amber"
+  SNS            -> archIconShapeId: "app-integration-simple-notification-service", color: "amber"
+  CloudFront     -> archIconShapeId: "networking-cloudfront", color: "pink"
+  Route 53       -> archIconShapeId: "networking-route-53", color: "pink"
+  Cognito        -> archIconShapeId: "security-cognito", color: "slate"
+  CloudWatch     -> archIconShapeId: "management-governance-cloudwatch", color: "slate"
+  EKS            -> archIconShapeId: "containers-elastic-kubernetes-service", color: "violet"
+
+Azure (archProvider: "azure", archIconPackId: "azure-official-icons-v20"):
+  Azure Functions -> archIconShapeId: "compute-function-apps", color: "violet"
+  AKS             -> archIconShapeId: "compute-kubernetes-services", color: "violet"
+  Azure SQL       -> archIconShapeId: "databases-azure-sql", color: "emerald"
+  Blob Storage    -> archIconShapeId: "storage-storage-accounts", color: "emerald"
+  Service Bus     -> archIconShapeId: "integration-service-bus", color: "amber"
+  API Management  -> archIconShapeId: "integration-api-management-services", color: "violet"
+
+GCP (archProvider: "gcp", archIconPackId: "gcp-official-icons-v1"):
+  Cloud Run       -> archIconShapeId: "compute-cloud-run", color: "violet"
+  GKE             -> archIconShapeId: "compute-kubernetes-engine", color: "violet"
+  Cloud SQL       -> archIconShapeId: "databases-cloud-sql", color: "emerald"
+  Pub/Sub         -> archIconShapeId: "data-analytics-pub-sub", color: "amber"
+  Cloud Storage   -> archIconShapeId: "storage-cloud-storage", color: "emerald"
+
+CNCF (archProvider: "cncf", archIconPackId: "cncf-artwork-icons-v1"):
+  Kubernetes      -> archIconShapeId: "projects-clusternet", color: "violet"`;
+
 export function buildCodeToArchitecturePrompt({
   code,
   language,
@@ -114,7 +150,7 @@ Guidelines:
 - Use [architecture] nodes for databases, caches, queues, external APIs, cloud services, and infrastructure
 - Use [system] nodes for application services, classes, modules, controllers, and business logic
 - Use [browser] or [mobile] nodes for frontend surfaces if present
-- Use [section] to group related components (e.g. "Frontend", "Backend", "Database Layer")
+- Do not use section or group containers; keep related components adjacent and use labels or subtitles to imply layers such as Frontend, Backend, or Database Layer
 - Use [process] nodes for key operations or workflows
 - Color by layer:
   - blue for frontend and user-facing surfaces
@@ -125,6 +161,9 @@ Guidelines:
   - pink for external or third-party services
 - Show data flow and dependencies as edges with clear labels like "HTTP/REST", "SQL", "events", or "cache"
 - Prefer [architecture] when the code clearly references cloud services or runtime infrastructure
+- When code references a cloud service, use [architecture] with the correct archProvider, archIconPackId, and archIconShapeId from the icon hints below
+
+${ICON_HINTS}
 
 SOURCE CODE (${LANGUAGE_LABELS[language]}):
 \`\`\`${language}
@@ -148,7 +187,7 @@ The codebase was analyzed statically — file imports and dependencies were pars
 
 Guidelines:
 - Detect the tech stack and platform from imports, dependencies, and infra files
-- Use [section] containers for top-level layers or modules such as Frontend, API, Services, Data, Platform, or External Services
+- Do not use section or group containers for top-level layers or modules such as Frontend, API, Services, Data, Platform, or External Services
 - Use [architecture] nodes for databases, caches, queues, external APIs, cloud services, infrastructure, and platform resources
 - Use [system] nodes for key files or modules that serve as services, controllers, models, utilities, or internal APIs
 - Use [browser] or [mobile] nodes for frontend entry points if present
@@ -158,7 +197,7 @@ Guidelines:
   - azure -> archProvider: "azure"
   - gcp -> archProvider: "gcp"
   - cncf -> archProvider: "cncf"
-  - docker -> use [section] or [architecture] service nodes for containers and runtimes
+  - docker -> use [architecture] service nodes for containers and runtimes
 - Color by layer:
   - blue -> frontend / user-facing
   - violet -> backend services / APIs

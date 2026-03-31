@@ -6,6 +6,7 @@ interface SidebarTabItem {
   id: string;
   label: string;
   icon?: React.ReactNode;
+  badge?: string;
 }
 
 interface SidebarShellProps {
@@ -107,7 +108,7 @@ export function SidebarSegmentedTabs({
 }: SidebarSegmentedTabsProps): React.ReactElement {
   return (
     <div className="flex rounded-[var(--brand-radius)] border border-[var(--color-brand-border)]/60 bg-[var(--brand-background)]/70 p-1">
-      {tabs.map(({ id, label, icon }) => (
+      {tabs.map(({ id, label, icon, badge }) => (
         <button
           type="button"
           key={id}
@@ -117,6 +118,11 @@ export function SidebarSegmentedTabs({
         >
           {icon}
           {label}
+          {badge && (
+            <span className="rounded px-1 py-0.5 text-[8px] font-bold uppercase tracking-wider bg-[var(--brand-primary-100)] text-[var(--brand-primary)]">
+              {badge}
+            </span>
+          )}
         </button>
       ))}
     </div>

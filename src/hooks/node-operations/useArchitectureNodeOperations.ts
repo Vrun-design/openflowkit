@@ -1,13 +1,12 @@
 import { useCallback } from 'react';
 import type { FlowNode } from '@/lib/types';
-import { setNodeParent } from '@/lib/nodeParent';
 import { useFlowStore } from '../../store';
 import { createId } from '../../lib/id';
 import { createDefaultEdge } from '@/constants';
 import { assignSmartHandlesWithOptions, getSmartRoutingOptionsFromViewSettings } from '../../services/smartEdgeRouting';
 import { buildArchitectureTemplate, type ArchitectureTemplateId } from '@/lib/architectureTemplates';
 import { convertSelectedErNodesToClassDiagram } from '@/lib/erToClassConversion';
-import { createArchitectureServiceNode, createSectionNode, getAbsoluteNodePosition } from './utils';
+import { createArchitectureServiceNode } from './utils';
 
 export const useArchitectureNodeOperations = (recordHistory: () => void) => {
     const { setNodes, setEdges, setSelectedNodeId } = useFlowStore();
@@ -57,53 +56,9 @@ export const useArchitectureNodeOperations = (recordHistory: () => void) => {
     }, [recordHistory, setNodes, setEdges, setSelectedNodeId]);
 
     const handleCreateArchitectureBoundary = useCallback((sourceId: string): boolean => {
-        const state = useFlowStore.getState();
-        const sourceNode = state.nodes.find((node) => node.id === sourceId);
-        if (!sourceNode || sourceNode.type !== 'architecture') {
-            return false;
-        }
-        const sourceAbsolutePosition = getAbsoluteNodePosition(sourceNode, state.nodes);
-
-        const boundaryId = createId('section');
-        const { activeLayerId } = state;
-        const boundaryLabel = `${sourceNode.data?.label || 'System'} Boundary`;
-        const boundaryNode = createSectionNode(
-            boundaryId,
-            { x: sourceAbsolutePosition.x - 80, y: sourceAbsolutePosition.y - 70 },
-            boundaryLabel
-        );
-        boundaryNode.style = { width: 360, height: 260 };
-        boundaryNode.data = {
-            ...boundaryNode.data,
-            layerId: activeLayerId,
-            archBoundaryId: boundaryId,
-        };
-
-        recordHistory();
-        setNodes((existingNodes) => {
-            const nextNodes: FlowNode[] = existingNodes.map((node) => {
-                if (node.id === sourceId) {
-                    return setNodeParent({
-                        ...node,
-                        position: {
-                            x: sourceAbsolutePosition.x - boundaryNode.position.x,
-                            y: sourceAbsolutePosition.y - boundaryNode.position.y,
-                        },
-                        data: {
-                            ...node.data,
-                            archBoundaryId: boundaryId,
-                        },
-                        selected: true,
-                    }, boundaryId);
-                }
-                return { ...node, selected: false };
-            });
-            nextNodes.push({ ...boundaryNode, selected: false });
-            return nextNodes;
-        });
-        setSelectedNodeId(sourceId);
-        return true;
-    }, [recordHistory, setNodes, setSelectedNodeId]);
+        void sourceId;
+        return false;
+    }, []);
 
     const handleApplyArchitectureTemplate = useCallback((sourceId: string, templateId: ArchitectureTemplateId): boolean => {
         const state = useFlowStore.getState();

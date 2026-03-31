@@ -41,21 +41,17 @@ function createAnalysis(): CodebaseAnalysis {
 }
 
 describe('buildCodebaseNativeDiagram', () => {
-  it('builds a native repo structure diagram with grouped sections and cloud services', () => {
+  it('builds a flat native repo structure diagram with cloud services', () => {
     const result = buildCodebaseNativeDiagram(createAnalysis());
 
     expect(result.dsl).toContain('flow: "Repository Module Structure"');
-    expect(result.dsl).toContain('group "src/api" {');
     expect(result.dsl).toContain('[system] file_src_api_routes_ts: routes');
-    expect(result.dsl).toContain('group "Platform Services" {');
+    expect(result.dsl).toContain('subLabel: "src/api');
     expect(result.dsl).toContain(
       '[architecture] svc_s3: S3 { archProvider: "aws", archResourceType: "service", color: "emerald", archIconPackId: "aws-official-starter-v1", archIconShapeId: "storage-simple-storage-service" }'
     );
-    expect(result.dsl).toContain(
-      'section_src_api ->|request handling (1 import)| section_src_services'
-    );
     expect(result.nodeCount).toBeGreaterThan(0);
-    expect(result.edgeCount).toBeGreaterThan(0);
+    expect(result.edgeCount).toBe(0);
     expect(result.sectionCount).toBe(4);
     expect(result.platformServiceCount).toBe(1);
   });
@@ -76,10 +72,8 @@ describe('buildCodebaseNativeDiagram', () => {
       detectedServices: [],
     });
 
-    expect(result.dsl).toContain('group "apps/web" {');
-    expect(result.dsl).toContain('group "apps/api" {');
-    expect(result.dsl).toContain('group "packages/ui" {');
-    expect(result.dsl).toContain('section_apps_web ->|HTTP/UI flow (1 import)| section_apps_api');
-    expect(result.dsl).toContain('section_apps_web ->|shared code (1 import)| section_packages_ui');
+    expect(result.dsl).toContain('subLabel: "apps/web');
+    expect(result.dsl).toContain('subLabel: "apps/api');
+    expect(result.dsl).toContain('subLabel: "packages/ui');
   });
 });

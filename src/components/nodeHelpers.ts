@@ -47,10 +47,19 @@ export function getMinNodeSize(shape: NodeData['shape'] | undefined): {
   minWidth: number;
   minHeight: number;
 } {
-  if (shape === 'circle' || shape === 'ellipse') return { minWidth: 120, minHeight: 120 };
-  if (shape === 'diamond' || shape === 'hexagon') return { minWidth: 140, minHeight: 140 };
-  if (shape === 'parallelogram' || shape === 'cylinder') return { minWidth: 140, minHeight: 80 };
-  return { minWidth: 120, minHeight: 60 };
+  switch (shape) {
+    case 'circle':
+    case 'ellipse':
+      return { minWidth: 120, minHeight: 120 };
+    case 'diamond':
+    case 'hexagon':
+      return { minWidth: 140, minHeight: 140 };
+    case 'parallelogram':
+    case 'cylinder':
+      return { minWidth: 140, minHeight: 80 };
+    default:
+      return { minWidth: 120, minHeight: 60 };
+  }
 }
 
 export function getIconAssetNodeMinSize(hasLabel: boolean): {

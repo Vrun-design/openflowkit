@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FlowEdge } from '@/lib/types';
+import type { CinematicExportRequest } from './cinematicExport';
 import { buildCinematicBuildPlan } from './cinematicBuildPlan';
 import { buildCinematicTimeline, getCinematicExportPreset, resolveCinematicRenderState } from './cinematicRenderState';
 
@@ -14,10 +15,17 @@ const edges = [
   { id: 'bc', source: 'b', target: 'c' },
 ] as FlowEdge[];
 
+const videoRequest: CinematicExportRequest = {
+  format: 'cinematic-video',
+  speed: 'normal',
+  resolution: '1080p',
+  themeMode: 'light',
+};
+
 describe('cinematic render state', () => {
   it('keeps the screen empty during the intro hold', () => {
     const plan = buildCinematicBuildPlan([...nodes], edges);
-    const timeline = buildCinematicTimeline(plan, getCinematicExportPreset('cinematic-video'));
+    const timeline = buildCinematicTimeline(plan, getCinematicExportPreset(videoRequest));
 
     const state = resolveCinematicRenderState(timeline, edges, 0);
 
@@ -28,7 +36,7 @@ describe('cinematic render state', () => {
 
   it('activates the lead edge before the target node fade', () => {
     const plan = buildCinematicBuildPlan([...nodes], edges);
-    const timeline = buildCinematicTimeline(plan, getCinematicExportPreset('cinematic-video'));
+    const timeline = buildCinematicTimeline(plan, getCinematicExportPreset(videoRequest));
     const secondSegment = timeline.segments[1];
     const midpoint = Math.round(((secondSegment.edgeGrowStartMs ?? 0) + (secondSegment.edgeGrowEndMs ?? 0)) / 2);
 
@@ -39,5 +47,22 @@ describe('cinematic render state', () => {
     expect(state.activeNodeId).toBeNull();
     expect(state.visibleNodeIds.has('a')).toBe(true);
     expect(state.visibleNodeIds.has('b')).toBe(false);
+  });
+
+  it('uses different timeline presets for speed and resolution choices', () => {
+    const slow4kPreset = getCinematicExportPreset({
+      ...videoRequest,
+      speed: 'slow',
+      resolution: '4k',
+    });
+    const fast720Preset = getCinematicExportPreset({
+      ...videoRequest,
+      speed: 'fast',
+      resolution: '720p',
+    });
+
+    expect(slow4kPreset.maxDimension).toBeGreaterThan(fast720Preset.maxDimension);
+    expect(slow4kPreset.pixelRatio).toBeGreaterThanOrEqual(fast720Preset.pixelRatio);
+    expect(slow4kPreset.edgeGrowMs).toBeGreaterThan(fast720Preset.edgeGrowMs);
   });
 });

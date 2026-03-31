@@ -16,7 +16,7 @@ const FEATURE_CARDS = [
     },
     {
         title: 'Pristine 60fps Native Exports',
-        sub: 'Render natively to MP4 or high-quality GIFs without leaving the browser environment.',
+        sub: 'Render natively to MP4 without leaving the browser environment.',
         icon: Film,
     },
 ] as const;
@@ -60,7 +60,7 @@ export function AnimationExportSection(): React.ReactElement {
                     
                     <div className="absolute top-32 -right-6 lg:-right-16 z-20 flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl animate-[float_6s_ease-in-out_infinite_reverse]">
                         <Film className="w-4 h-4 text-brand-primary" />
-                        <span className="text-xs font-bold text-white tracking-wider">MP4 & GIF</span>
+                        <span className="text-xs font-bold text-white tracking-wider">MP4 EXPORT</span>
                     </div>
 
                     {/* The Main UI Container */}

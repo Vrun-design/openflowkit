@@ -7,6 +7,7 @@ import {
     Import,
     Search,
     Settings,
+    Shield,
     WandSparkles,
     Workflow,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ interface UseCommandBarCommandsParams {
     onOpenStudioAI?: CommandBarProps['onOpenStudioAI'];
     onOpenStudioOpenFlow?: CommandBarProps['onOpenStudioOpenFlow'];
     onOpenStudioMermaid?: CommandBarProps['onOpenStudioMermaid'];
+    onOpenArchitectureRules?: CommandBarProps['onOpenArchitectureRules'];
     hasImport?: boolean;
 }
 
@@ -32,9 +34,50 @@ export function useCommandBarCommands({
     onOpenStudioAI,
     onOpenStudioOpenFlow,
     onOpenStudioMermaid,
+    onOpenArchitectureRules,
     hasImport = false,
 }: UseCommandBarCommandsParams): CommandItem[] {
     return useMemo(() => {
+        const importCommands: CommandItem[] = hasImport
+            ? [{
+                id: 'import',
+                label: 'Import from data',
+                icon: <Import className="w-4 h-4 text-violet-500" />,
+                tier: 'core',
+                type: 'navigation',
+                view: 'import',
+                description: 'SQL -> ERD, Terraform -> Cloud, OpenAPI -> Sequence, Code -> Architecture',
+                badge: 'Beta',
+            }]
+            : [];
+
+        const settingsCommands: CommandItem[] = settings
+            ? [
+                {
+                    id: 'toggle-grid',
+                    label: 'Show Grid',
+                    icon: <Settings className="w-4 h-4 text-[var(--brand-secondary)]" />,
+                    tier: 'advanced',
+                    type: 'toggle',
+                    value: settings.showGrid,
+                    action: settings.onToggleGrid,
+                    description: settings.showGrid ? 'On' : 'Off',
+                    hidden: true,
+                },
+                {
+                    id: 'toggle-snap',
+                    label: 'Snap to Grid',
+                    icon: <Settings className="w-4 h-4 text-[var(--brand-secondary)]" />,
+                    tier: 'advanced',
+                    type: 'toggle',
+                    value: settings.snapToGrid,
+                    action: settings.onToggleSnap,
+                    description: settings.snapToGrid ? 'On' : 'Off',
+                    hidden: true,
+                },
+            ]
+            : [];
+
         return [
             {
                 id: 'studio-ai',
@@ -44,16 +87,9 @@ export function useCommandBarCommands({
                 type: 'action',
                 description: `Open ${FLOWPILOT_NAME} in the right rail`,
                 action: onOpenStudioAI,
+                badge: 'Beta',
             },
-            ...(hasImport ? [{
-                id: 'import',
-                label: 'Import from data',
-                icon: <Import className="w-4 h-4 text-violet-500" />,
-                tier: 'core' as const,
-                type: 'navigation' as const,
-                view: 'import' as const,
-                description: 'SQL -> ERD, Terraform -> Cloud, OpenAPI -> Sequence, Code -> Architecture',
-            }] : []),
+            ...importCommands,
             {
                 id: 'templates',
                 label: 'Start from Template',
@@ -92,6 +128,15 @@ export function useCommandBarCommands({
                 description: 'Arrange the current flow automatically',
             },
             {
+                id: 'architecture-rules',
+                label: 'Architecture Rules',
+                icon: <Shield className="w-4 h-4 text-amber-500" />,
+                tier: 'advanced',
+                type: 'action',
+                description: 'Open architecture guardrails and rule templates',
+                action: onOpenArchitectureRules,
+            },
+            {
                 id: 'studio-openflow',
                 label: 'Edit Flow DSL',
                 icon: <FileCode className="w-4 h-4 text-emerald-500" />,
@@ -109,32 +154,7 @@ export function useCommandBarCommands({
                 description: 'Open Mermaid editing in Studio',
                 action: onOpenStudioMermaid,
             },
-            ...(settings
-                ? [
-                    {
-                        id: 'toggle-grid',
-                        label: 'Show Grid',
-                        icon: <Settings className="w-4 h-4 text-[var(--brand-secondary)]" />,
-                        tier: 'advanced' as const,
-                        type: 'toggle' as const,
-                        value: settings.showGrid,
-                        action: settings.onToggleGrid,
-                        description: settings.showGrid ? 'On' : 'Off',
-                        hidden: true,
-                    },
-                    {
-                        id: 'toggle-snap',
-                        label: 'Snap to Grid',
-                        icon: <Settings className="w-4 h-4 text-[var(--brand-secondary)]" />,
-                        tier: 'advanced' as const,
-                        type: 'toggle' as const,
-                        value: settings.snapToGrid,
-                        action: settings.onToggleSnap,
-                        description: settings.snapToGrid ? 'On' : 'Off',
-                        hidden: true,
-                    },
-                ]
-                : []),
+            ...settingsCommands,
             {
                 id: 'undo',
                 label: 'Undo',
@@ -169,5 +189,14 @@ export function useCommandBarCommands({
                 hidden: true,
             },
         ];
-    }, [onOpenStudioAI, onOpenStudioOpenFlow, onOpenStudioMermaid, hasImport, settings, onUndo, onRedo]);
+    }, [
+        hasImport,
+        onOpenArchitectureRules,
+        onOpenStudioAI,
+        onOpenStudioMermaid,
+        onOpenStudioOpenFlow,
+        onRedo,
+        onUndo,
+        settings,
+    ]);
 }

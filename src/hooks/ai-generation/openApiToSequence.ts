@@ -20,7 +20,7 @@ Rules:
 - Create one [system] node per resource group listed above
 - Show 1–2 representative flows per resource group as directed edges (e.g. "GET /users", "POST /orders")
 - Do NOT map every endpoint — show only the flows that best explain each group's purpose${authRule}
-- Group related resource nodes into [section] containers by domain
+- Do not use section or group containers; keep related resource nodes adjacent by domain
 - Skip: deeply nested paths, query parameter variations, error response details, webhook callbacks
 
 Goal: a useful architecture overview a developer can understand in 30 seconds.`;

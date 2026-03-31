@@ -48,6 +48,7 @@ describe('buildFlowEditorPanelsProps', () => {
       openStudioAI: vi.fn(),
       openStudioCode,
       openStudioPlayback: vi.fn(),
+      openArchitectureRulesPanel: vi.fn(),
       commandBarView: 'assets' as const,
       handleAddAnnotation: vi.fn(),
       handleAddSection: vi.fn(),
@@ -131,6 +132,7 @@ describe('buildFlowEditorPanelsProps', () => {
       lastAIError: null,
       onClearAIError: vi.fn(),
       chatMessages: [],
+      assistantThread: [],
       clearChat: vi.fn(),
       selectedNode: nodes[0],
       selectedNodeCount: nodes.length,
@@ -158,6 +160,10 @@ describe('buildFlowEditorPanelsProps', () => {
       snapshots: snapshotsPanel,
       properties,
       studio,
+      architectureRules: {
+        isOpen: false,
+        closeArchitectureRulesPanel: vi.fn(),
+      },
       isHistoryOpen: true,
       editorMode: 'studio',
     });

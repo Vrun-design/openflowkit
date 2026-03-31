@@ -3,6 +3,7 @@ import { NodeChrome } from './NodeChrome';
 import { InlineTextEditSurface } from './InlineTextEditSurface';
 import MemoizedMarkdown from './MemoizedMarkdown';
 import { NamedIcon } from './IconMap';
+import { getIconAssetNodeMinSize } from './nodeHelpers';
 import { getTransformDiagnosticsAttrs } from './transformDiagnostics';
 
 interface InlineEditLike {
@@ -33,6 +34,9 @@ function toCssSize(value: number | string | undefined): string | undefined {
   return typeof value === 'number' ? `${value}px` : value;
 }
 
+const ICON_FRAME_SIZE = 72;
+const ICON_HANDLE_STYLE_EXTRAS = { left: { top: 42 }, right: { top: 42 } };
+
 /** Renders the compact icon-first presentation used for architecture asset nodes. */
 export function IconAssetNodeBody({
   nodeId,
@@ -47,70 +51,65 @@ export function IconAssetNodeBody({
   isActiveSelected,
   labelEdit,
 }: IconAssetNodeBodyProps): React.ReactElement {
-  const iconFrameSize = 72;
-  const iconHandleStyleExtras = { left: { top: 42 }, right: { top: 42 } };
-  const minWidth = hasLabel ? 116 : 96;
-  const minHeight = hasLabel ? 118 : 88;
+  const { minWidth, minHeight } = getIconAssetNodeMinSize(hasLabel);
 
   return (
-    <>
-      <NodeChrome
-        nodeId={nodeId}
-        selected={selected}
-        minWidth={minWidth}
-        minHeight={minHeight}
-        keepAspectRatio={false}
-        showQuickCreateButtons={false}
-        handleClassName={connectionHandleClass}
-        handleStyleExtras={iconHandleStyleExtras}
+    <NodeChrome
+      nodeId={nodeId}
+      selected={selected}
+      minWidth={minWidth}
+      minHeight={minHeight}
+      keepAspectRatio={false}
+      showQuickCreateButtons={false}
+      handleClassName={connectionHandleClass}
+      handleStyleExtras={ICON_HANDLE_STYLE_EXTRAS}
+    >
+      <div
+        className="inline-flex min-w-[96px] max-w-[128px] flex-col items-center justify-start gap-2.5 bg-transparent px-2 py-1"
+        style={{ width: toCssSize(explicitWidth) ?? `${Math.max(minWidth, 116)}px` }}
+        {...getTransformDiagnosticsAttrs({
+          nodeFamily: 'custom',
+          selected,
+          compact: false,
+          minHeight,
+          actualHeight: nodeHeightPx,
+          hasIcon: true,
+          hasSubLabel: false,
+        })}
       >
         <div
-          className="inline-flex min-w-[96px] max-w-[128px] flex-col items-center justify-start gap-2.5 bg-transparent px-2 py-1"
-          style={{ width: toCssSize(explicitWidth) ?? `${Math.max(minWidth, 116)}px` }}
-          {...getTransformDiagnosticsAttrs({
-            nodeFamily: 'custom',
-            selected,
-            compact: false,
-            minHeight,
-            actualHeight: nodeHeightPx,
-            hasIcon: true,
-            hasSubLabel: false,
-          })}
+          className="flex items-center justify-center overflow-visible"
+          style={{ width: ICON_FRAME_SIZE, height: ICON_FRAME_SIZE }}
         >
-          <div
-            className="flex items-center justify-center overflow-visible"
-            style={{ width: iconFrameSize, height: iconFrameSize }}
-          >
-            {resolvedAssetIconUrl ? (
-              <img
-                src={resolvedAssetIconUrl}
-                alt={typeof label === 'string' ? label : 'icon'}
-                className="h-full w-full object-contain"
-              />
-            ) : activeIconKey ? (
-              <div className="flex h-full w-full items-center justify-center rounded-2xl bg-[var(--brand-background)] text-[var(--brand-text)]">
-                <NamedIcon name={activeIconKey} fallbackName="Box" className="h-10 w-10" />
-              </div>
-            ) : null}
-          </div>
-          {hasLabel ? (
-            <InlineTextEditSurface
-              isEditing={labelEdit.isEditing}
-              draft={labelEdit.draft}
-              displayValue={<MemoizedMarkdown content={label} />}
-              onBeginEdit={labelEdit.beginEdit}
-              onDraftChange={labelEdit.setDraft}
-              onCommit={labelEdit.commit}
-              onKeyDown={labelEdit.handleKeyDown}
-              className="block max-w-full break-words px-1 text-center text-sm font-semibold leading-tight markdown-content [&_p]:m-0"
-              style={{ color: 'var(--brand-text)' }}
-              inputMode="multiline"
-              inputClassName="text-center"
-              isSelected={isActiveSelected}
+          {resolvedAssetIconUrl ? (
+            <img
+              src={resolvedAssetIconUrl}
+              alt={typeof label === 'string' ? label : 'icon'}
+              className="h-full w-full object-contain"
             />
+          ) : activeIconKey ? (
+            <div className="flex h-full w-full items-center justify-center rounded-2xl bg-[var(--brand-background)] text-[var(--brand-text)]">
+              <NamedIcon name={activeIconKey} fallbackName="Box" className="h-10 w-10" />
+            </div>
           ) : null}
         </div>
-      </NodeChrome>
-    </>
+        {hasLabel ? (
+          <InlineTextEditSurface
+            isEditing={labelEdit.isEditing}
+            draft={labelEdit.draft}
+            displayValue={<MemoizedMarkdown content={label} />}
+            onBeginEdit={labelEdit.beginEdit}
+            onDraftChange={labelEdit.setDraft}
+            onCommit={labelEdit.commit}
+            onKeyDown={labelEdit.handleKeyDown}
+            className="block max-w-full break-words px-1 text-center text-sm font-semibold leading-tight markdown-content [&_p]:m-0"
+            style={{ color: 'var(--brand-text)' }}
+            inputMode="multiline"
+            inputClassName="text-center"
+            isSelected={isActiveSelected}
+          />
+        ) : null}
+      </div>
+    </NodeChrome>
   );
 }

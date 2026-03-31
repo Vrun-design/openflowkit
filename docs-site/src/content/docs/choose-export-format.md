@@ -15,7 +15,7 @@ OpenFlowKit supports both visual exports and editable handoff formats. The right
 | Markdown or repo-friendly text | Mermaid |
 | docs, slides, or tickets | PNG, JPG, or SVG |
 | design-tool handoff | Figma |
-| short playback artifact | GIF or video |
+| short playback artifact | cinematic video |
 | live viewer or room access | Share / Embed |
 
 ## Rules of thumb

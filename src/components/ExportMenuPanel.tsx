@@ -15,26 +15,25 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { APP_NAME } from '@/lib/brand';
+import {
+  type CinematicExportResolution,
+  type CinematicExportSpeed,
+} from '@/services/export/cinematicExport';
 import { SegmentedChoice } from './properties/SegmentedChoice';
 import { Button } from './ui/Button';
 import { Select, type SelectOption } from './ui/Select';
 import { SegmentedTabs } from './ui/SegmentedTabs';
-import { Switch } from './ui/Switch';
 
 interface ExportMenuPanelProps {
   onSelect: (key: string, action: ExportActionKey) => void;
-  cinematicSpeed?: CinematicSpeed;
-  onCinematicSpeedChange?: (speed: CinematicSpeed) => void;
-  cinematicResolution?: CinematicResolution;
-  onCinematicResolutionChange?: (res: CinematicResolution) => void;
-  cinematicTransparent?: boolean;
-  onCinematicTransparentChange?: (transparent: boolean) => void;
+  cinematicSpeed?: CinematicExportSpeed;
+  onCinematicSpeedChange?: (speed: CinematicExportSpeed) => void;
+  cinematicResolution?: CinematicExportResolution;
+  onCinematicResolutionChange?: (res: CinematicExportResolution) => void;
 }
 
 type ExportCategoryKey = 'image' | 'video' | 'code';
 type ExportActionKey = 'download' | 'copy';
-type CinematicSpeed = 'slow' | 'normal' | 'fast';
-type CinematicResolution = '720p' | '1080p' | '4k';
 
 interface ExportOption {
   key: string;
@@ -115,8 +114,6 @@ export function ExportMenuPanel({
   onCinematicSpeedChange,
   cinematicResolution = '1080p',
   onCinematicResolutionChange,
-  cinematicTransparent = false,
-  onCinematicTransparentChange,
 }: ExportMenuPanelProps): React.ReactElement {
   const { t } = useTranslation();
 
@@ -163,14 +160,7 @@ export function ExportMenuPanel({
           {
             key: 'cinematic-video',
             label: t('export.cinematicVideo', 'Cinematic Build Video'),
-            hint: t('export.hintCinematicVideo', 'Polished animated build'),
-            Icon: Film,
-            actions: ['download'],
-          },
-          {
-            key: 'cinematic-gif',
-            label: t('export.cinematicGif', 'Cinematic Build GIF'),
-            hint: t('export.hintCinematicGif', 'Animated loop for sharing'),
+            hint: t('export.hintCinematicVideo', 'Presentation-ready animated export'),
             Icon: Film,
             actions: ['download'],
           },
@@ -250,6 +240,7 @@ export function ExportMenuPanel({
   const selectedItem =
     activeSection.items.find((item) => item.key === selectedKeys[activeSectionKey]) ??
     activeSection.items[0];
+  const shouldShowFormatSelect = activeSection.items.length > 1;
   const selectOptions: SelectOption[] = activeSection.items.map((item) => ({
     value: item.key,
     label: item.label,
@@ -297,14 +288,24 @@ export function ExportMenuPanel({
           </p>
         </div>
 
-        <div data-testid="export-format-select">
-          <Select
-            value={selectedItem.key}
-            onChange={handleOptionChange}
-            options={selectOptions}
-            placeholder={t('export.chooseFormat', 'Choose format')}
-          />
-        </div>
+        {shouldShowFormatSelect ? (
+          <div data-testid="export-format-select">
+            <Select
+              value={selectedItem.key}
+              onChange={handleOptionChange}
+              options={selectOptions}
+              placeholder={t('export.chooseFormat', 'Choose format')}
+            />
+          </div>
+        ) : (
+          <div
+            data-testid="export-format-summary"
+            className="rounded-[var(--radius-md)] border border-[var(--color-brand-border)]/70 bg-[var(--brand-surface)]/80 px-3 py-2.5"
+          >
+            <p className="text-sm font-medium text-[var(--brand-text)]">{selectedItem.label}</p>
+            <p className="mt-1 text-xs text-[var(--brand-secondary)]">{selectedItem.hint}</p>
+          </div>
+        )}
 
         {activeSectionKey === 'video' && onCinematicSpeedChange && (
           <div className="mt-3">
@@ -313,7 +314,7 @@ export function ExportMenuPanel({
             </p>
             <SegmentedChoice
               selectedId={cinematicSpeed}
-              onSelect={(speed) => onCinematicSpeedChange(speed as CinematicSpeed)}
+              onSelect={(speed) => onCinematicSpeedChange(speed as CinematicExportSpeed)}
               items={CINEMATIC_SPEED_ITEMS}
               columns={3}
               size="sm"
@@ -328,23 +329,10 @@ export function ExportMenuPanel({
             </p>
             <SegmentedChoice
               selectedId={cinematicResolution}
-              onSelect={(res) => onCinematicResolutionChange(res as CinematicResolution)}
+              onSelect={(res) => onCinematicResolutionChange(res as CinematicExportResolution)}
               items={CINEMATIC_RESOLUTION_ITEMS}
               columns={3}
               size="sm"
-            />
-          </div>
-        )}
-
-        {activeSectionKey === 'video' && onCinematicTransparentChange && (
-          <div className="mt-3 flex items-center justify-between">
-            <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--brand-secondary)]">
-              {t('export.transparentBackground', 'Transparent background')}
-            </p>
-            <Switch
-              checked={cinematicTransparent}
-              onCheckedChange={onCinematicTransparentChange}
-              className="gap-0"
             />
           </div>
         )}
