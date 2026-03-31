@@ -274,6 +274,7 @@
     "homeEmptyTitle": "Crea tu primer flujo",
     "homeEmptySubtitle": "Diseña arquitecturas de nivel empresarial al instante. Comienza con un lienzo en blanco, describe tu infraestructura con nuestro constructor de IA, o usa una plantilla adaptada.",
     "homeBlankCanvas": "Lienzo en blanco",
+    "createNew": "Crear nuevo",
     "homeFlowpilotAI": "Flowpilot IA",
     "homeTemplates": "Plantillas",
     "homeImportFile": "O importar un archivo existente",

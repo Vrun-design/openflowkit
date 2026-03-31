@@ -87,6 +87,15 @@ export function HomeDashboard({
             {t('home.description', 'Manage your flows and diagrams.')}
           </p>
         </div>
+        <Button
+          onClick={handleCreateNew}
+          data-testid="home-create-new-header"
+          variant="primary"
+          size="sm"
+        >
+          <Plus className="w-3.5 h-3.5" strokeWidth={2.5} />
+          {t('home.createNew', 'Create new')}
+        </Button>
       </div>
 
       <section>

@@ -274,6 +274,7 @@
     "homeEmptyTitle": "创建您的第一个流程",
     "homeEmptySubtitle": "即时设计企业级架构。从空白画布开始，用我们的AI构建器描述您的基础设施，或使用定制模板。",
     "homeBlankCanvas": "空白画布",
+    "createNew": "新建",
     "homeFlowpilotAI": "流程领航人工智能",
     "homeTemplates": "模板",
     "homeImportFile": "或导入现有文件",

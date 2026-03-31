@@ -274,6 +274,7 @@
     "homeEmptyTitle": "Erstellen Sie Ihren ersten Flow",
     "homeEmptySubtitle": "Entwerfen Sie sofort Enterprise-Architekturen. Beginnen Sie mit einer leeren Leinwand, beschreiben Sie Ihre Infrastruktur mit unserem KI-Builder oder verwenden Sie eine maßgeschneiderte Vorlage.",
     "homeBlankCanvas": "Leere Leinwand",
+    "createNew": "Neu erstellen",
     "homeFlowpilotAI": "Flowpilot KI",
     "homeTemplates": "Vorlagen",
     "homeImportFile": "Oder eine bestehende Datei importieren",

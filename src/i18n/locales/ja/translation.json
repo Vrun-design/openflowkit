@@ -274,6 +274,7 @@
     "homeEmptyTitle": "最初のフローを作成",
     "homeEmptySubtitle": "エンタープライズグレードのアーキテクチャを即座に設計。空白のキャンバスから始めるか、AIビルダーでインフラを描述するか、カスタマイズテンプレートを使用してください。",
     "homeBlankCanvas": "空白のキャンバス",
+    "createNew": "新規作成",
     "homeFlowpilotAI": "フローパイロット人工知能",
     "homeTemplates": "テンプレート",
     "homeImportFile": "または既存のファイルをインポート",
