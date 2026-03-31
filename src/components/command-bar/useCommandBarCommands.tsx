@@ -47,6 +47,7 @@ export function useCommandBarCommands({
                 type: 'navigation',
                 view: 'import',
                 description: 'SQL -> ERD, Terraform -> Cloud, OpenAPI -> Sequence, Code -> Architecture',
+                badge: 'Beta',
             }]
             : [];
 
@@ -86,6 +87,7 @@ export function useCommandBarCommands({
                 type: 'action',
                 description: `Open ${FLOWPILOT_NAME} in the right rail`,
                 action: onOpenStudioAI,
+                badge: 'Beta',
             },
             ...importCommands,
             {

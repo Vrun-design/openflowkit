@@ -3,6 +3,7 @@ import { ArrowRight, Code2, WandSparkles } from 'lucide-react';
 import { FLOWPILOT_NAME } from '@/lib/brand';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { ChatMessage } from '@/services/aiService';
+import type { AssistantThreadItem } from '@/services/flowpilot/types';
 import type { StudioCodeMode, StudioTab } from '@/hooks/useFlowEditorUIState';
 import type { AIReadinessState } from '@/hooks/ai-generation/readiness';
 import type { ImportDiff } from '@/hooks/useAIGeneration';
@@ -22,8 +23,9 @@ const STUDIO_TABS: Array<{
     id: StudioTab;
     icon: typeof WandSparkles;
     label: string;
+    badge?: string;
 }> = [
-    { id: 'ai', icon: WandSparkles, label: FLOWPILOT_NAME },
+    { id: 'ai', icon: WandSparkles, label: FLOWPILOT_NAME, badge: 'Beta' },
     { id: 'code', icon: Code2, label: 'Code' },
 ];
 
@@ -52,6 +54,7 @@ interface StudioPanelProps {
     lastAIError: string | null;
     onClearAIError: () => void;
     chatMessages: ChatMessage[];
+    assistantThread: AssistantThreadItem[];
     onClearChat: () => void;
     activeTab: StudioTab;
     onTabChange: (tab: StudioTab) => void;
@@ -95,6 +98,7 @@ export function StudioPanel({
     lastAIError,
     onClearAIError,
     chatMessages,
+    assistantThread,
     onClearChat,
     activeTab,
     onTabChange,
@@ -115,10 +119,11 @@ export function StudioPanel({
 
             <div className="border-b border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-4 py-2.5">
                 <SidebarSegmentedTabs
-                    tabs={STUDIO_TABS.map(({ id, icon: Icon, label }) => ({
+                    tabs={STUDIO_TABS.map(({ id, icon: Icon, label, badge }) => ({
                         id,
                         label,
                         icon: <Icon className="h-3.5 w-3.5" />,
+                        badge,
                     }))}
                     activeTab={effectiveTab}
                     onTabChange={(tab) => onTabChange(tab as StudioTab)}
@@ -155,6 +160,7 @@ export function StudioPanel({
                             lastError={lastAIError}
                             onClearError={onClearAIError}
                             chatMessages={chatMessages}
+                            assistantThread={assistantThread}
                             onClearChat={onClearChat}
                             nodeCount={nodes.length}
                             selectedNodeCount={selectedNodeCount}

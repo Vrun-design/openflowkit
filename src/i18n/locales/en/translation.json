@@ -296,7 +296,16 @@
       "confirmation": "Delete \"{{name}}\"?",
       "hint": "This cannot be undone unless you have an exported backup or another copy.",
       "closeDialog": "Close delete flow dialog"
-    }
+    },
+    "suggestionAI": "Flowpilot AI",
+    "suggestionBlank": "Blank canvas",
+    "suggestionBlankDesc": "Jump straight into the editor",
+    "suggestionAIDesc": "Start from a prompt",
+    "suggestionImport": "Import",
+    "suggestionImportDesc": "Bring in existing work",
+    "suggestionTemplates": "Templates",
+    "suggestionTemplatesDesc": "Start from a proven pattern",
+    "continueTitle": "Continue with a recent action"
   },
   "settings": {
     "title": "Settings",

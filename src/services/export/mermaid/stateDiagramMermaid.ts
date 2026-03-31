@@ -98,24 +98,57 @@ export function toStateDiagramMermaid(nodes: FlowNode[], edges: FlowEdge[]): str
 
   function emitNodeDeclaration(node: FlowNode, depth: number): void {
     const indent = '  '.repeat(depth);
+    const children = sortNodesByPosition(childrenByParentId.get(node.id) ?? []);
 
     if (node.type === 'start') {
       return;
     }
 
     const label = String(node.data.label || node.id).trim() || node.id;
-    lines.push(`${indent}state "${escapeStateLabel(label)}" as ${node.id}`);
-  }
+    if (children.length === 0) {
+      lines.push(`${indent}state "${escapeStateLabel(label)}" as ${node.id}`);
+      return;
+    }
 
-  topLevelNodes.forEach((node) => emitNodeDeclaration(node, 1));
+    lines.push(`${indent}state ${node.id} {`);
+    children.forEach((childNode) => emitNodeDeclaration(childNode, depth + 1));
+    edges.forEach((edge) => {
+      const sourceNode = nodeById.get(edge.source);
+      const targetNode = nodeById.get(edge.target);
+      if (!sourceNode && !targetNode) return;
+
+      const sourceParentId = sourceNode ? getNodeParentId(sourceNode) : '';
+      const targetParentId = targetNode ? getNodeParentId(targetNode) : '';
+      const shouldEmitInsideParent =
+        (sourceParentId === node.id && (targetParentId === node.id || edge.target.startsWith('state_start_'))) ||
+        (targetParentId === node.id && edge.source.startsWith('state_start_'));
+
+      if (!shouldEmitInsideParent) {
+        return;
+      }
+
+      const sourceToken = toStateNodeToken(edge.source, startNodeIds);
+      const targetToken = toStateNodeToken(edge.target, startNodeIds);
+      const connector = resolveStateConnector(edge);
+      const edgeLabel = typeof edge.label === 'string' ? edge.label.trim() : '';
+      const suffix = edgeLabel ? ` : ${edgeLabel}` : '';
+      lines.push(`${'  '.repeat(depth + 1)}${sourceToken} ${connector} ${targetToken}${suffix}`);
+    });
+    lines.push(`${indent}}`);
+  }
 
   const startNodeIds = new Set(
     nodes.filter((node) => node.type === 'start').map((node) => node.id)
   );
+  topLevelNodes.forEach((node) => emitNodeDeclaration(node, 1));
   edges.forEach((edge) => {
     const sourceNode = nodeById.get(edge.source);
     const targetNode = nodeById.get(edge.target);
     if (!sourceNode || !targetNode) return;
+
+    if (getNodeParentId(sourceNode) && getNodeParentId(sourceNode) === getNodeParentId(targetNode)) {
+      return;
+    }
 
     const sourceToken = toStateNodeToken(edge.source, startNodeIds);
     const targetToken = toStateNodeToken(edge.target, startNodeIds);

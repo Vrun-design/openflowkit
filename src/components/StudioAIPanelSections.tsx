@@ -19,6 +19,7 @@ import {
 import { Tooltip } from './Tooltip';
 import { FLOWPILOT_NAME } from '@/lib/brand';
 import type { ChatMessage } from '@/services/aiService';
+import type { AssistantThreadItem } from '@/services/flowpilot/types';
 import type { ImportDiff } from '@/hooks/useAIGeneration';
 import type { AIReadinessState } from '@/hooks/ai-generation/readiness';
 import { SECTION_CARD_CLASS, SECTION_SURFACE_CLASS, STATUS_SURFACE_CLASS } from '@/lib/designTokens';
@@ -115,6 +116,7 @@ export function PendingDiffBanner({
 interface ChatHistoryViewProps {
   hasHistory: boolean;
   chatMessages: ChatMessage[];
+  assistantThread: AssistantThreadItem[];
   isGenerating: boolean;
   streamingText: string | null;
   retryCount: number;
@@ -129,9 +131,139 @@ interface ChatHistoryViewProps {
   t: TranslateFn;
 }
 
+function getThreadBubbleClassName(isUser: boolean): string {
+  if (isUser) {
+    return 'rounded-br-sm bg-[var(--brand-primary)] text-white shadow-sm';
+  }
+
+  return 'rounded-bl-sm border border-[var(--color-brand-border)]/70 bg-[var(--brand-surface)] text-[var(--brand-text)] shadow-sm';
+}
+
+function renderThreadAssetMatches(item: AssistantThreadItem): ReactElement | null {
+  if (!item.assetMatches || item.assetMatches.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {item.assetMatches.slice(0, 4).map((match) => (
+        <span
+          key={match.id}
+          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${SECTION_SURFACE_CLASS}`}
+        >
+          {match.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function renderThreadPreview(item: AssistantThreadItem): ReactElement | null {
+  if (!item.previewTitle) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 rounded-[var(--radius-sm)] border border-[var(--color-brand-border)]/70 bg-[var(--brand-background)] px-2.5 py-2">
+      <div className="text-[11px] font-semibold text-[var(--brand-text)]">{item.previewTitle}</div>
+      {item.previewDetail ? (
+        <div className="mt-1 text-[11px] leading-4 text-[var(--brand-secondary)]">
+          {item.previewDetail}
+        </div>
+      ) : null}
+      {item.previewStats && item.previewStats.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {item.previewStats.map((stat) => (
+            <span
+              key={`${item.id}-${stat}`}
+              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${SECTION_SURFACE_CLASS}`}
+            >
+              {stat}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function renderPlanContent(item: AssistantThreadItem): ReactElement {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-secondary)]">
+        <WandSparkles className="h-3.5 w-3.5" />
+        Plan
+      </div>
+      <div className="leading-relaxed">{item.plan?.reasoningSummary}</div>
+      <div className="flex flex-wrap gap-1.5">
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${SECTION_SURFACE_CLASS}`}>
+          Mode: {item.plan?.mode.replaceAll('_', ' ')}
+        </span>
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${SECTION_SURFACE_CLASS}`}>
+          Confidence: {Math.round((item.plan?.confidence ?? 0) * 100)}%
+        </span>
+      </div>
+      <div className="space-y-1 text-[12px] leading-relaxed text-[var(--brand-secondary)]">
+        {item.plan?.steps.map((step, index) => (
+          <div key={`${item.id}-step-${index}`}>{index + 1}. {step}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function renderThreadContent(item: AssistantThreadItem): ReactElement {
+  if (item.role !== 'user' && item.type === 'assistant_plan' && item.plan) {
+    return renderPlanContent(item);
+  }
+
+  return <div className="leading-relaxed">{item.content}</div>;
+}
+
+function getStreamingStatusCopy(
+  streamingText: string | null,
+  retryCount: number,
+  chatMessageCount: number,
+  t: TranslateFn
+): string {
+  if (retryCount > 0) {
+    return t('commandBar.aiStudio.retrying', {
+      retryCount,
+      defaultValue: 'Retrying ({{retryCount}} of 3)...',
+    });
+  }
+
+  if (chatMessageCount > 0) {
+    return 'Inspecting the canvas, grounding assets, and preparing the next step.';
+  }
+
+  if (streamingText) {
+    return 'Understanding the request and drafting the response.';
+  }
+
+  return 'Understanding the request and deciding whether to answer in chat or prepare a canvas preview.';
+}
+
+function renderThreadItem(item: AssistantThreadItem): ReactElement {
+  const isUser = item.role === 'user';
+
+  return (
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`} key={item.id}>
+      <div
+        className={`max-w-[88%] rounded-[var(--radius-md)] px-3.5 py-2.5 text-sm whitespace-pre-wrap ${getThreadBubbleClassName(isUser)}`}
+      >
+        {renderThreadContent(item)}
+        {isUser ? null : renderThreadAssetMatches(item)}
+        {isUser ? null : renderThreadPreview(item)}
+      </div>
+    </div>
+  );
+}
+
 export function ChatHistoryView({
   hasHistory,
   chatMessages,
+  assistantThread,
   isGenerating,
   streamingText,
   retryCount,
@@ -161,40 +293,20 @@ export function ChatHistoryView({
           ref={scrollRef}
           className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4 custom-scrollbar"
         >
-          {chatMessages.map((msg, idx) => (
-            <div
-              key={idx}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[88%] rounded-[var(--radius-md)] px-3.5 py-2.5 text-sm whitespace-pre-wrap ${msg.role === 'user'
-                  ? 'rounded-br-sm bg-[var(--brand-primary)] text-white shadow-sm'
-                  : 'rounded-bl-sm border border-[var(--color-brand-border)]/70 bg-[var(--brand-surface)] text-[var(--brand-text)] shadow-sm'}`}
-              >
-                {msg.parts.map((part, index) => (
-                  <div key={index} className="leading-relaxed">
-                    {part.text}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+          {assistantThread.map((item) => renderThreadItem(item))}
           {isGenerating ? (
             <div className="flex justify-start">
               <div className="max-w-[88%] rounded-[var(--radius-md)] rounded-bl-sm border border-[var(--color-brand-border)]/70 bg-[var(--brand-surface)] px-3.5 py-2.5 text-sm text-[var(--brand-text)] shadow-sm">
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-secondary)]">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {streamingText ? 'Drafting response' : 'Thinking'}
+                </div>
+                <div className="mt-2 text-[12px] leading-relaxed text-[var(--brand-secondary)]">
+                  {getStreamingStatusCopy(streamingText, retryCount, chatMessages.length, t)}
+                </div>
                 {streamingText ? (
-                  <span className="whitespace-pre-wrap leading-relaxed">{streamingText}</span>
-                ) : (
-                  <span className="flex items-center gap-1.5 text-[var(--brand-secondary)]">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    {retryCount > 0
-                      ? t('commandBar.aiStudio.retrying', {
-                          retryCount,
-                          defaultValue: 'Retrying ({{retryCount}} of 3)...',
-                        })
-                      : t('commandBar.aiStudio.generating', 'Generating...')}
-                  </span>
-                )}
+                  <div className="mt-3 whitespace-pre-wrap leading-relaxed">{streamingText}</div>
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -473,7 +585,7 @@ export function ComposerSection({
         </div>
       ) : null}
 
-      <div className="relative flex w-full flex-col rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-sm transition-all focus-within:border-[var(--brand-primary)] focus-within:ring-[3px] focus-within:ring-[var(--brand-primary-100)]">
+      <div className="relative flex w-full flex-col rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] shadow-sm transition-[border-color,box-shadow] focus-within:border-[var(--brand-primary)] focus-within:shadow-[0_0_0_1px_var(--brand-primary),0_0_0_4px_color-mix(in_srgb,var(--brand-primary)_16%,transparent)]">
         <textarea
           value={prompt}
           onChange={(event) => {

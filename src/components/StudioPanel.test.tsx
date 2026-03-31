@@ -33,6 +33,7 @@ function createProps(): React.ComponentProps<typeof StudioPanel> {
     lastAIError: null,
     onClearAIError: vi.fn(),
     chatMessages: [],
+    assistantThread: [],
     onClearChat: vi.fn(),
     activeTab: 'ai',
     onTabChange: vi.fn(),

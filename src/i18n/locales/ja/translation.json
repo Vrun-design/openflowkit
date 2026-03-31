@@ -67,7 +67,10 @@
     "distributeVertically": "垂直方向に分布",
     "group": "グループ",
     "upload": "アップロード",
-    "rename": "名前を変更"
+    "rename": "名前を変更",
+    "export": "エクスポート",
+    "exportDiagram": "図をエクスポート",
+    "exportAs": "名前を付けてエクスポート"
   },
   "nav": {
     "home": "ホーム",
@@ -123,13 +126,13 @@
     "plantuml": "PlantUMLとしてエクスポート",
     "openflowdsl": "OpenFlow DSLとしてエクスポート",
     "figma": "Figmaにエクスポート",
-    "hintTransparent4K": "Transparent (4K)",
-    "hintWhiteBg4K": "White Background (4K)",
+    "hintTransparent4K": "透明 (4K)",
+    "hintWhiteBg4K": "白背景 (4K)",
     "jsonLabel": "JSON File",
-    "hintDownload": "Download",
+    "hintDownload": "ダウンロード",
     "openflowdslLabel": "{{appName}} DSL",
     "hintClipboard": "コピー",
-    "figmaEditable": "Figma Editable",
+    "figmaEditable": "Figma 編集可能",
     "exportDiagram": "Export Diagram",
     "exportAs": "Export As",
     "actionCopy": "コピー",
@@ -144,27 +147,28 @@
     "shareEmbed": "共有と埋め込み",
     "hintShareViewer": "このルームへの招待リンク",
     "hintShareEmbed": "読み取り専用ビューアーリンク",
-    "readmeEmbed": "README Embed",
-    "hintReadmeEmbed": "Copy Markdown snippet",
-    "sectionImage": "Image",
-    "sectionVideo": "Video",
-    "sectionCode": "Code",
+    "readmeEmbed": "README 埋め込み",
+    "hintReadmeEmbed": "Markdown スニペットをコピー",
+    "sectionImage": "画像",
+    "sectionVideo": "動画",
+    "sectionCode": "コード",
     "shareSection": "キャンバスを共有",
-    "revealVideo": "Reveal Video",
-    "hintRevealVideo": "Nodes fade in sequentially (WebM/MP4)",
-    "revealGif": "Reveal GIF",
-    "hintRevealGif": "Animated reveal for docs/social",
-    "cinematicVideo": "Cinematic Build Video",
+    "revealVideo": "リビール動画",
+    "hintRevealVideo": "ノードが順番にフェードイン (WebM/MP4)",
+    "revealGif": "リビール GIF",
+    "hintRevealGif": "ドキュメント/SNS向けアニメーション表示",
+    "cinematicVideo": "シネマティブuild動画",
     "hintCinematicVideo": "Dark launch-style build",
-    "cinematicGif": "Cinematic Build GIF",
-    "hintCinematicGif": "Dark social-ready loop",
-    "actionDownload": "Download",
+    "cinematicGif": "シネマティブuild GIF",
+    "hintCinematicGif": "ダークソーシャルループ",
+    "actionDownload": "ダウンロード",
     "hintDocument": "ドキュメント",
     "hintEditableSvg": "編集可能な SVG",
     "chooseFormat": "形式を選択",
     "speed": "速度",
     "resolution": "解像度",
-    "transparentBackground": "透明な背景"
+    "transparentBackground": "透明な背景",
+    "headingFormat": "エクスポート形式"
   },
   "import": {
     "title": "インポート",
@@ -267,21 +271,21 @@
       "hint": "エクスポートしたバックアップまたは別のコピーがない限り、この操作は元に戻せません。",
       "closeDialog": "フロー削除ダイアログを閉じる"
     },
-    "suggestionBlank": "空白のキャンバス",
-    "suggestionBlankDesc": "エディタに直接ジャンプ",
-    "suggestionAI": "フローパイロット人工知能",
-    "suggestionAIDesc": "プロンプトから始める",
-    "suggestionImport": "インポート",
-    "suggestionImportDesc": "既存の作品を持ち込む",
-    "suggestionTemplates": "テンプレート",
-    "suggestionTemplatesDesc": "実証済みのパターンから始める",
-    "continueTitle": "最近の操作を続ける",
     "homeEmptyTitle": "最初のフローを作成",
     "homeEmptySubtitle": "エンタープライズグレードのアーキテクチャを即座に設計。空白のキャンバスから始めるか、AIビルダーでインフラを描述するか、カスタマイズテンプレートを使用してください。",
     "homeBlankCanvas": "空白のキャンバス",
     "homeFlowpilotAI": "フローパイロット人工知能",
     "homeTemplates": "テンプレート",
-    "homeImportFile": "または既存のファイルをインポート"
+    "homeImportFile": "または既存のファイルをインポート",
+    "suggestionAI": "フローパイロット人工知能",
+    "suggestionBlank": "空白のキャンバス",
+    "suggestionBlankDesc": "エディタに直接ジャンプ",
+    "suggestionAIDesc": "プロンプトから始める",
+    "suggestionImport": "インポート",
+    "suggestionImportDesc": "既存の作品を持ち込む",
+    "suggestionTemplates": "テンプレート",
+    "suggestionTemplatesDesc": "実証済みのパターンから始める",
+    "continueTitle": "最近の操作を続ける"
   },
   "settings": {
     "title": "設定",
@@ -313,28 +317,28 @@
     "help": "ヘルプ"
   },
   "properties": {
-    "title": "Properties",
-    "shape": "Shape",
-    "color": "Color",
-    "icon": "Icon",
-    "rotation": "Rotation",
-    "transparency": "Transparency",
-    "imageSettings": "Image Settings",
-    "bulkShape": "Bulk Shape",
-    "bulkColor": "Bulk Color",
-    "bulkIcon": "Bulk Icon",
-    "labelTransform": "Label Transform",
-    "findReplace": "Find & Replace",
-    "findLabel": "Find",
-    "findPlaceholder": "Find text",
-    "replaceLabel": "Replace",
-    "replacePlaceholder": "Replace with",
-    "prefixOptional": "Prefix (optional)",
-    "suffixOptional": "Suffix (optional)",
-    "useRegex": "Use Regex",
-    "applyToSelectedNodes": "Apply to selected nodes",
-    "selectFieldToApply": "Select a field to apply",
-    "previewSummary": "Preview summary",
+    "title": "プロパティ",
+    "shape": "形状",
+    "color": "色",
+    "icon": "アイコン",
+    "rotation": "回転",
+    "transparency": "透明度",
+    "imageSettings": "画像設定",
+    "bulkShape": "一括形状",
+    "bulkColor": "一括色",
+    "bulkIcon": "一括アイコン",
+    "labelTransform": "ラベル変換",
+    "findReplace": "検索と置換",
+    "findLabel": "検索",
+    "findPlaceholder": "テキストを検索",
+    "replaceLabel": "置換",
+    "replacePlaceholder": "置換内容",
+    "prefixOptional": "プレフィックス（任意）",
+    "suffixOptional": "サフィックス（任意）",
+    "useRegex": "正規表現を使用",
+    "applyToSelectedNodes": "選択したノードに適用",
+    "selectFieldToApply": "適用するフィールドを選択",
+    "previewSummary": "プレビュー概要",
     "selectionSummary": "選択の概要"
   },
   "saveStatus": {
@@ -346,8 +350,14 @@
     "model": "モデル",
     "apiKey": "APIキー",
     "placeholder": "フローチャートを説明してください...",
-    "settingsSubtitle": "Configure your preferred AI provider, model, and API key below.",
-    "generateWithFlowpilot": "Flowpilotで生成"
+    "settingsSubtitle": "以下で希望の AI プロバイダー、モデル、API キーを設定してください。",
+    "generateWithFlowpilot": "Flowpilotで生成",
+    "howToGetKey": "APIキーの取得方法",
+    "openConsole": "コンソールを開く",
+    "pasteKeyStep": "上の入力欄に貼り付けてください。こちらには共有されません",
+    "customEndpointTitle": "カスタムエンドポイントとは？",
+    "customModelHint": "このエンドポイントで使う正確なモデル ID を入力してください",
+    "privacyTitle": "プライバシーと暗号化"
   },
   "playback": {
     "title": "再生",
@@ -615,6 +625,13 @@
         "edgeSyntax": "アーキテクチャのエッジ矢印 `-->`、`<--`、`<-->` と、`api:R --> L:db` のような側面修飾子を使用してください。",
         "nodeSyntax": "有効なノード宣言を使用してください: `service id(icon)[Label]`、`group id[Label]`、`junction id[Label]`。",
         "fallback": "自動回復を許可するにはアーキテクチャ厳格モードをオフにするか、診断を修正して再試行してください。"
+      },
+      "jumpToLine": "{{line}}行目に移動",
+      "diagnosticsGroup": {
+        "syntax": "構文の問題",
+        "identity": "識別子の問題",
+        "recovery": "リカバリー警告",
+        "general": "診断"
       }
     },
     "layout": {
@@ -757,9 +774,7 @@
         "infra": "Infra",
         "openapi": "OpenAPI",
         "code": "Code",
-        "codebase": "リポジトリ",
-        "mindmap": "マインドマップ",
-        "markdown": "Markdown"
+        "codebase": "リポジトリ"
       },
       "title": "データからインポート",
       "description": "コード、インフラ、SQL、または API 仕様を図に取り込みます。",
@@ -838,7 +853,9 @@
       "edgeBundling": "兄弟エッジをバンドル",
       "edgeBundlingDesc": "並行接続を共有レーンに保つ",
       "architectureStrictMode": "アーキテクチャStrictモード",
-      "architectureStrictModeDesc": "アーキテクチャ診断が回復/検証の問題を含む場合、Mermaidインポートをブロック"
+      "architectureStrictModeDesc": "アーキテクチャ診断が回復/検証の問題を含む場合、Mermaidインポートをブロック",
+      "miniMap": "ミニマップ",
+      "miniMapDesc": "右下にミニマップを表示"
     },
     "ai": {
       "provider": "プロバイダー",
@@ -912,132 +929,227 @@
       },
       "models": {
         "gemini": {
-          "gemini-2": {
-            "5-flash-lite": {
-              "label": "Gemini 2.5 Flash Lite"
-            },
-            "5-flash": {
-              "label": "Gemini 2.5 Flash"
-            },
-            "5-pro": {
-              "label": "Gemini 2.5 Pro"
-            }
-          },
           "gemini-3-flash": {
-            "label": "Gemini 3 Flash"
+            "label": "Gemini 3 Flash",
+            "hint": "Frontier speed + intelligence",
+            "category": "Legacy",
+            "badge": "New"
           },
           "gemini-3-pro": {
-            "label": "Gemini 3 Pro"
+            "label": "Gemini 3 Pro",
+            "hint": "Most powerful · Multimodal",
+            "category": "Legacy",
+            "badge": "New"
+          },
+          "gemini-2.5-flash-lite": {
+            "label": "2.5 Flash Lite",
+            "hint": "Fastest · Free tier default",
+            "category": "Speed",
+            "badge": "Default"
+          },
+          "gemini-2.5-flash": {
+            "label": "2.5 Flash",
+            "hint": "Best price/performance balance",
+            "category": "Speed"
+          },
+          "gemini-2.5-pro": {
+            "label": "2.5 Pro",
+            "hint": "Best reasoning · Complex diagrams",
+            "category": "Reasoning"
           }
         },
         "openai": {
           "gpt-5-mini": {
-            "label": "GPT-5 Mini"
-          },
-          "gpt-5": {
-            "2": {
-              "label": "GPT-5.2"
-            },
-            "label": "GPT-5"
+            "label": "GPT-5 Mini",
+            "hint": "Fast · Cost-efficient",
+            "category": "Speed",
+            "badge": "Default"
           },
           "o4-mini": {
-            "label": "O4-Mini"
+            "label": "O4-Mini",
+            "hint": "Advanced reasoning · Fast",
+            "category": "Reasoning",
+            "badge": "Reasoning"
           },
           "o3": {
-            "label": "O3"
+            "label": "O3",
+            "hint": "Deep reasoning · Complex tasks",
+            "category": "Reasoning",
+            "badge": "Reasoning"
+          },
+          "gpt-5": {
+            "label": "GPT-5",
+            "hint": "Flagship model · Most capable",
+            "category": "Flagship"
+          },
+          "gpt-5.2": {
+            "label": "GPT-5.2",
+            "hint": "Latest update · Improved reasoning",
+            "category": "Reasoning",
+            "badge": "New"
           }
         },
         "claude": {
           "claude-haiku-4-5": {
-            "label": "Claude Haiku 4.5"
+            "label": "Claude Haiku 4.5",
+            "hint": "Fastest · Most affordable",
+            "category": "Speed"
           },
           "claude-sonnet-4-5": {
-            "label": "Claude Sonnet 4.5"
+            "label": "Claude Sonnet 4.5",
+            "hint": "Balanced intelligence & speed",
+            "category": "Flagship"
           },
           "claude-sonnet-4-6": {
-            "label": "Claude Sonnet 4.6"
+            "label": "Claude Sonnet 4.6",
+            "hint": "Latest Sonnet · Best coding",
+            "category": "Flagship",
+            "badge": "Default"
           },
           "claude-opus-4-6": {
-            "label": "Claude Opus 4.6"
+            "label": "Claude Opus 4.6",
+            "hint": "Most intelligent · 1M token context",
+            "category": "Reasoning",
+            "badge": "Flagship"
           }
         },
         "groq": {
           "meta-llama/llama-4-scout-17b-16e-instruct": {
-            "label": "Llama 4 Scout"
+            "label": "Llama 4 Scout",
+            "hint": "Free tier · Very fast",
+            "category": "Speed",
+            "badge": "Free"
           },
           "meta-llama/llama-4-maverick-17b-128e-instruct": {
-            "label": "Llama 4 Maverick"
+            "label": "Llama 4 Maverick",
+            "hint": "More capable · Free tier",
+            "category": "Speed",
+            "badge": "Free"
           },
           "qwen/qwen3-32b": {
-            "label": "Qwen 3 32B"
+            "label": "Qwen 3 32B",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           },
-          "llama-3": {
-            "3-70b-versatile": {
-              "label": "Llama 3.3 70B"
-            }
+          "llama-3.3-70b-versatile": {
+            "label": "Llama 3.3 70B Versatile",
+            "hint": "Versatile model",
+            "category": "Performance",
+            "badge": "Performance"
           }
         },
         "nvidia": {
           "meta/llama-4-scout-17b-16e-instruct": {
-            "label": "Llama 4 Scout"
+            "label": "Llama 4 Scout",
+            "hint": "Efficient · Multi-modal",
+            "category": "Speed"
           },
           "nvidia/nemotron-nano-12b-v2-vl": {
-            "label": "Nemotron Nano 12B"
+            "label": "Nemotron Nano 12B",
+            "hint": "Lightweight · Vision-language · Fast",
+            "category": "Speed"
           },
           "deepseek/deepseek-v3-2": {
-            "label": "DeepSeek V3-2"
+            "label": "DeepSeek V3-2",
+            "hint": "Latest · GPT-5 comparable",
+            "category": "Flagship",
+            "badge": "New"
           },
           "qwen/qwq-32b": {
-            "label": "QwQ 32B"
+            "label": "QwQ 32B",
+            "hint": "Strong reasoning model",
+            "category": "Reasoning"
           },
           "moonshotai/kimi-k2-thinking": {
-            "label": "Kimi K2 Thinking"
+            "label": "Kimi K2 Thinking",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           }
         },
         "cerebras": {
           "gpt-oss-120b": {
-            "label": "GPT OSS 120B"
+            "label": "GPT OSS 120B",
+            "hint": "120B params · Fast on WSE-3",
+            "category": "Speed",
+            "badge": "Default"
           },
           "qwen-3-32b": {
-            "label": "Qwen 3 32B"
+            "label": "Qwen 3 32B",
+            "hint": "2,403 tok/s · Industry fastest",
+            "category": "Speed",
+            "badge": "🚀 Fastest"
           },
           "qwen-3-235b-a22b": {
-            "label": "Qwen 3 235B"
+            "label": "Qwen 3 235B",
+            "hint": "Flagship · Best quality",
+            "category": "Flagship",
+            "badge": "Flagship"
           },
-          "zai-glm-4": {
-            "7": {
-              "label": "Zai GLM 4.7"
-            }
+          "zai-glm-4.7": {
+            "label": "Zai-GLM 4.7",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           }
         },
         "mistral": {
           "mistral-small-latest": {
-            "label": "Mistral Small"
+            "label": "Mistral Small",
+            "hint": "Fast · Cost-efficient · 32k context",
+            "category": "Speed",
+            "badge": "Free"
           },
           "mistral-medium-latest": {
-            "label": "Mistral Medium"
+            "label": "Mistral Medium",
+            "hint": "Balanced quality-cost · Best default",
+            "category": "Flagship",
+            "badge": "Default"
           },
           "mistral-large-latest": {
-            "label": "Mistral Large"
+            "label": "Mistral Large",
+            "hint": "Most capable · 128k context · Flagship",
+            "category": "Flagship",
+            "badge": "Flagship"
           },
           "codestral-latest": {
-            "label": "Codestral"
+            "label": "Codestral",
+            "hint": "Code-optimized · 256k context",
+            "category": "Coding",
+            "badge": "Code"
           },
           "pixtral-large-latest": {
-            "label": "Pixtral Large"
+            "label": "Pixtral Large",
+            "hint": "Vision + reasoning · Multimodal",
+            "category": "Multimodal",
+            "badge": "Vision"
+          }
+        },
+        "custom": {
+          "custom": {
+            "label": "Custom Model",
+            "hint": "Enter your model ID below",
+            "category": "Custom"
           }
         }
       },
       "customEndpoints": {
         "ollama": {
-          "name": "Ollama"
+          "name": "Ollama",
+          "hint": "Local · Free"
         },
         "lmStudio": {
-          "name": "LM Studio"
+          "name": "LM Studio",
+          "hint": "Local · Free"
         },
         "together": {
-          "name": "Together AI"
+          "name": "Together AI",
+          "hint": "Cloud · Fast"
         }
+      },
+      "byok": {
+        "dataPrivacy": "Your data never passes through our servers",
+        "control": "Full control over cost and rate limits",
+        "flexibility": "Switch providers anytime without re-linking",
+        "cuttingEdge": "Access cutting-edge models as soon as they launch"
       }
     },
     "brand": {
@@ -1078,19 +1190,7 @@
     "analytics": {
       "enableTitle": "匿名の起動分析",
       "enableDescription": "匿名の基本的な利用データを共有します（任意）"
-    },
-    "search": "検索...",
-    "appearance": "外観",
-    "account": "アカウント",
-    "about": "概要",
-    "language": "言語",
-    "theme": "テーマ",
-    "fontSize": "フォントサイズ",
-    "fontFamily": "フォント",
-    "save": "保存",
-    "cancel": "キャンセル",
-    "reset": "リセット",
-    "confirm": "確認"
+    }
   },
   "customNodes": {
     "browserContent": "ブラウザコンテンツ",
@@ -1278,19 +1378,45 @@
       "linkCopied": "共同編集リンクをコピーしました。",
       "copyManual": "クリップボードへのアクセスがブロックされています。共有ダイアログからリンクを手動でコピーしてください。"
     },
-    "embed": "埋め込み",
-    "embedCode": "埋め込みコード",
-    "export": "エクスポート",
-    "settings": "共有設定",
-    "anyoneWithLink": "リンクを持つ任何人",
-    "viewOnly": "表示のみ",
-    "canEdit": "編集可能",
-    "disable": "共有を無効化",
-    "enable": "共有を有効化",
-    "invite": "招待",
-    "pending": "保留中",
-    "revoke": "取り消し",
-    "expired": "期限切れ"
+    "roomLink": "コラボレーションリンク",
+    "permissionsNote": "リンクを知っている人は誰でも参加できます。",
+    "permissionsNoteSecondary": "権限管理と永続的なバックエンド同期はまだ設定されていません。",
+    "viewerCount": {
+      "one": "このセッションに 1 人の閲覧者。",
+      "many": "このセッションに {{count}} 人の閲覧者。"
+    },
+    "mode": {
+      "realtime": {
+        "title": "リアルタイム同期が有効",
+        "body": "このリンクを開いたピアは、現在のピアトランスポートを通じてライブアップデートとカーソルを確認できます。"
+      },
+      "waiting": {
+        "title": "リアルタイム同期に接続中",
+        "body": "このキャンバスはライブピア同期の確立を試みています。失敗した場合、セッションはこのブラウザでローカルのみのままになります。"
+      },
+      "fallback": {
+        "title": "ローカルのみのコラボレーション",
+        "body": "バックエンドリレーまたはサポートされるピアトランスポートがない場合、このセッションは現在のブラウザランタイム外で永続的なマルチユーザーライブ同期を提供しません。"
+      }
+    },
+    "cache": {
+      "syncing": {
+        "title": "ルームのローカルキャッシュを同期中",
+        "body": "このブラウザは、ピア同期が完全に確立する前にIndexedDBにキャッシュされたルーム状態をまだ復元しています。"
+      },
+      "hydrated": {
+        "title": "ローカルキャッシュから復元しました",
+        "body": "このルームにはこのブラウザにローカルにキャッシュされた状態があったため、ピアが再接続する前にキャンバスを復元できました。"
+      },
+      "ready": {
+        "title": "ローカルキャッシュ準備完了",
+        "body": "このブラウザは、このデバイスでのリロードとオフライン回復のためにルームのローカルIndexedDBコピーを保持できます。"
+      },
+      "unavailable": {
+        "title": "ローカルルームキャッシュなし",
+        "body": "このコラボレーションセッションは現在、ブラウザIndexedDBルーム永続化を使用していません。"
+      }
+    }
   },
   "connectionPanel": {
     "architecture": "アーキテクチャ",
@@ -1299,68 +1425,19 @@
     "route": "ルート",
     "appearance": "外観",
     "condition": "条件",
-    "deleteConnection": "接続を削除"
+    "deleteConnection": "接続を削除",
+    "style": "スタイル",
+    "actions": "アクション"
   },
   "sidebar": {
-    "close": "サイドバーを閉じる",
-    "searchPlaceholder": "検索...",
-    "noResults": "結果なし",
-    "nodes": "ノード",
-    "components": "コンポーネント",
-    "snippets": "スニペット",
-    "addons": "アドオン"
+    "close": "サイドバーを閉じる"
   },
   "contextMenu": {
     "label": "キャンバスコンテキストメニュー"
   },
-  "canvas": {
-    "addNodeShortcut": "ノードを追加",
-    "aiChatPlaceholder": "何かを作成...",
-    "nodes": "ノード",
-    "connections": "接続",
-    "elements": "要素",
-    "selection": "選択",
-    "noSelection": "選択なし",
-    "alignNodes": "ノードを整列",
-    "distributeNodes": "ノードを分布",
-    "alignLeft": "左揃え",
-    "alignCenter": "中央揃え",
-    "alignRight": "右揃え",
-    "alignTop": "上揃え",
-    "alignMiddle": "中間揃え",
-    "alignBottom": "下揃え",
-    "distributeHorizontally": "水平に分布",
-    "distributeVertically": "垂直に分布",
-    "zoomToFit": "フィットにズーム",
-    "zoomToSelection": "選択にズーム",
-    "locked": "ロック済み",
-    "unlock": "ロック解除",
-    "lock": "ロック",
-    "bringToFront": "最前面へ",
-    "sendToBack": "最背面へ",
-    "group": "グループ化",
-    "ungroup": "グループ解除"
-  },
-  "mindmap": {
-    "addChild": "サブトピックを追加",
-    "addSibling": "兄弟トピックを追加",
-    "addParent": "親トピックを追加",
-    "delete": "削除",
-    "insertAfter": "後に挿入",
-    "insertBefore": "前に挿入"
-  },
+  "canvas": {},
+  "mindmap": {},
   "aiModel": {
-    "title": "AIモデル",
-    "provider": "プロバイダー",
-    "model": "モデル",
-    "temperature": "温度",
-    "maxTokens": "最大トークン数",
-    "buttons": {
-      "retry": "再試行",
-      "stop": "停止",
-      "clear": "クリア"
-    },
-    "thinking": "思考中...",
-    "error": "AIエラー"
+    "buttons": {}
   }
 }

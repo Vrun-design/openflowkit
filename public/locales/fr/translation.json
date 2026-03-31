@@ -67,7 +67,10 @@
     "distributeVertically": "Distribuer verticalement",
     "group": "Groupe",
     "upload": "Téléverser",
-    "rename": "Renommer"
+    "rename": "Renommer",
+    "export": "Exporter",
+    "exportDiagram": "Exporter le diagramme",
+    "exportAs": "Exporter en tant que"
   },
   "nav": {
     "home": "Accueil",
@@ -124,12 +127,12 @@
     "openflowdsl": "Exporter en OpenFlow DSL",
     "figma": "Exporter vers Figma",
     "hintTransparent4K": "Transparent (4K)",
-    "hintWhiteBg4K": "White Background (4K)",
+    "hintWhiteBg4K": "Fond blanc (4K)",
     "jsonLabel": "JSON File",
-    "hintDownload": "Download",
+    "hintDownload": "Télécharger",
     "openflowdslLabel": "{{appName}} DSL",
     "hintClipboard": "Copier",
-    "figmaEditable": "Figma Editable",
+    "figmaEditable": "Figma éditable",
     "exportDiagram": "Export Diagram",
     "exportAs": "Export As",
     "actionCopy": "Copier",
@@ -144,27 +147,28 @@
     "shareEmbed": "Partager et intégrer",
     "hintShareViewer": "Lien d’invitation pour cette salle",
     "hintShareEmbed": "Lien de visualisation en lecture seule",
-    "readmeEmbed": "README Embed",
-    "hintReadmeEmbed": "Copy Markdown snippet",
+    "readmeEmbed": "Intégration README",
+    "hintReadmeEmbed": "Copier un extrait Markdown",
     "sectionImage": "Image",
-    "sectionVideo": "Video",
+    "sectionVideo": "Vidéo",
     "sectionCode": "Code",
     "shareSection": "Partager le canevas",
-    "revealVideo": "Reveal Video",
-    "hintRevealVideo": "Nodes fade in sequentially (WebM/MP4)",
-    "revealGif": "Reveal GIF",
-    "hintRevealGif": "Animated reveal for docs/social",
-    "cinematicVideo": "Cinematic Build Video",
+    "revealVideo": "Vidéo de révélation",
+    "hintRevealVideo": "Les nœuds apparaissent séquentiellement (WebM/MP4)",
+    "revealGif": "GIF de révélation",
+    "hintRevealGif": "Révélation animée pour docs/réseaux",
+    "cinematicVideo": "Vidéo cinématique",
     "hintCinematicVideo": "Dark launch-style build",
-    "cinematicGif": "Cinematic Build GIF",
-    "hintCinematicGif": "Dark social-ready loop",
-    "actionDownload": "Download",
+    "cinematicGif": "GIF cinématique",
+    "hintCinematicGif": "Boucle sombre pour réseaux",
+    "actionDownload": "Télécharger",
     "hintDocument": "Document",
     "hintEditableSvg": "SVG modifiable",
     "chooseFormat": "Choisir un format",
     "speed": "Vitesse",
     "resolution": "Résolution",
-    "transparentBackground": "Arrière-plan transparent"
+    "transparentBackground": "Arrière-plan transparent",
+    "headingFormat": "Format d'exportation"
   },
   "import": {
     "title": "Importer",
@@ -267,21 +271,21 @@
       "hint": "Cette action est irréversible sauf si vous avez un export de sauvegarde ou une autre copie.",
       "closeDialog": "Fermer la boîte de dialogue de suppression du flux"
     },
-    "suggestionBlank": "Canevas vierge",
-    "suggestionBlankDesc": "aller directement dans l'éditeur",
-    "suggestionAI": "Flowpilot IA",
-    "suggestionAIDesc": "Commencer à partir d'une invite",
-    "suggestionImport": "Importer",
-    "suggestionImportDesc": "Importer un travail existant",
-    "suggestionTemplates": "Modèles",
-    "suggestionTemplatesDesc": "Commencer à partir d'un modèle éprouvé",
-    "continueTitle": "Continuer avec une action récente",
     "homeEmptyTitle": "Créez votre premier flux",
     "homeEmptySubtitle": "Concevez des architectures de qualité entreprise instantanément. Commencez avec un canevas vierge, décrivez votre infrastructure avec notre constructeur IA, ou utilisez un modèle adapté.",
     "homeBlankCanvas": "Canevas vierge",
     "homeFlowpilotAI": "Flowpilot IA",
     "homeTemplates": "Modèles",
-    "homeImportFile": "Ou importer un fichier existant"
+    "homeImportFile": "Ou importer un fichier existant",
+    "suggestionAI": "Flowpilot IA",
+    "suggestionBlank": "Canevas vierge",
+    "suggestionBlankDesc": "Accéder directement à l'éditeur",
+    "suggestionAIDesc": "Commencer avec une invite",
+    "suggestionImport": "Importer",
+    "suggestionImportDesc": "Importer un travail existant",
+    "suggestionTemplates": "Modèles",
+    "suggestionTemplatesDesc": "Commencer avec un modèle éprouvé",
+    "continueTitle": "Continuer avec une action récente"
   },
   "settings": {
     "title": "Paramètres",
@@ -298,9 +302,9 @@
     "about": "À propos",
     "brand": "Paramètres de marque",
     "privacy": "Confidentialité",
-    "themeLight": "Light",
-    "themeDark": "Dark",
-    "themeSystem": "System"
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "themeSystem": "Système"
   },
   "shortcuts": {
     "title": "Raccourcis clavier",
@@ -313,28 +317,28 @@
     "help": "Aide"
   },
   "properties": {
-    "title": "Properties",
-    "shape": "Shape",
-    "color": "Color",
-    "icon": "Icon",
+    "title": "Propriétés",
+    "shape": "Forme",
+    "color": "Couleur",
+    "icon": "Icône",
     "rotation": "Rotation",
-    "transparency": "Transparency",
-    "imageSettings": "Image Settings",
-    "bulkShape": "Bulk Shape",
-    "bulkColor": "Bulk Color",
-    "bulkIcon": "Bulk Icon",
-    "labelTransform": "Label Transform",
-    "findReplace": "Find & Replace",
-    "findLabel": "Find",
-    "findPlaceholder": "Find text",
-    "replaceLabel": "Replace",
-    "replacePlaceholder": "Replace with",
-    "prefixOptional": "Prefix (optional)",
-    "suffixOptional": "Suffix (optional)",
-    "useRegex": "Use Regex",
-    "applyToSelectedNodes": "Apply to selected nodes",
-    "selectFieldToApply": "Select a field to apply",
-    "previewSummary": "Preview summary",
+    "transparency": "Transparence",
+    "imageSettings": "Paramètres d'image",
+    "bulkShape": "Forme (groupée)",
+    "bulkColor": "Couleur (groupée)",
+    "bulkIcon": "Icône (groupée)",
+    "labelTransform": "Transformation de l'étiquette",
+    "findReplace": "Rechercher & Remplacer",
+    "findLabel": "Rechercher",
+    "findPlaceholder": "Rechercher du texte",
+    "replaceLabel": "Remplacer",
+    "replacePlaceholder": "Remplacer par",
+    "prefixOptional": "Préfixe (optionnel)",
+    "suffixOptional": "Suffixe (optionnel)",
+    "useRegex": "Utiliser une expression régulière",
+    "applyToSelectedNodes": "Appliquer aux nœuds sélectionnés",
+    "selectFieldToApply": "Sélectionner un champ à appliquer",
+    "previewSummary": "Résumé de l'aperçu",
     "selectionSummary": "Résumé de la sélection"
   },
   "saveStatus": {
@@ -346,8 +350,14 @@
     "model": "Modèle",
     "apiKey": "Clé API",
     "placeholder": "Décrivez votre diagramme...",
-    "settingsSubtitle": "Configure your preferred AI provider, model, and API key below.",
-    "generateWithFlowpilot": "Générer avec Flowpilot"
+    "settingsSubtitle": "Configurez votre fournisseur IA, modèle et clé API préférés ci-dessous.",
+    "generateWithFlowpilot": "Générer avec Flowpilot",
+    "howToGetKey": "Comment obtenir votre clé API",
+    "openConsole": "Ouvrir la console",
+    "pasteKeyStep": "Collez-la dans le champ ci-dessus — elle n'est jamais partagée avec nous",
+    "customEndpointTitle": "Qu'est-ce qu'un point de terminaison personnalisé ?",
+    "customModelHint": "Entrez l'ID exact du modèle pour votre point de terminaison",
+    "privacyTitle": "Confidentialité et chiffrement"
   },
   "playback": {
     "title": "Lecture",
@@ -615,6 +625,13 @@
         "edgeSyntax": "Utilisez les flèches d’arête d’architecture `-->`, `<--` ou `<-->` et des qualificateurs de côté comme `api:R --> L:db`.",
         "nodeSyntax": "Utilisez des déclarations de nœud valides : `service id(icon)[Label]`, `group id[Label]`, `junction id[Label]`.",
         "fallback": "Désactivez le mode strict d’architecture pour autoriser la récupération automatique, ou corrigez les diagnostics puis réessayez."
+      },
+      "jumpToLine": "Aller à la ligne {{line}}",
+      "diagnosticsGroup": {
+        "syntax": "Problèmes de syntaxe",
+        "identity": "Problèmes d'identifiant",
+        "recovery": "Avertissements de récupération",
+        "general": "Diagnostics"
       }
     },
     "layout": {
@@ -757,9 +774,7 @@
         "infra": "Infra",
         "openapi": "OpenAPI",
         "code": "Code",
-        "codebase": "Dépôt",
-        "mindmap": "Carte mentale",
-        "markdown": "Markdown"
+        "codebase": "Dépôt"
       },
       "title": "Importer depuis des données",
       "description": "Importez du code, de l'infrastructure, du SQL ou des spécifications d'API dans votre diagramme.",
@@ -838,7 +853,9 @@
       "edgeBundling": "Regrouper les bords siblings",
       "edgeBundlingDesc": "Garder les connexions parallèles sur des voies partagées",
       "architectureStrictMode": "Mode Strict Architecture",
-      "architectureStrictModeDesc": "Bloquer l'import Mermaid lorsque les diagnostics d'architecture incluent des problèmes de récupération/validation"
+      "architectureStrictModeDesc": "Bloquer l'import Mermaid lorsque les diagnostics d'architecture incluent des problèmes de récupération/validation",
+      "miniMap": "Mini carte",
+      "miniMapDesc": "Afficher la mini carte en bas à droite"
     },
     "ai": {
       "provider": "Fournisseur",
@@ -912,132 +929,227 @@
       },
       "models": {
         "gemini": {
-          "gemini-2": {
-            "5-flash-lite": {
-              "label": "Gemini 2.5 Flash Lite"
-            },
-            "5-flash": {
-              "label": "Gemini 2.5 Flash"
-            },
-            "5-pro": {
-              "label": "Gemini 2.5 Pro"
-            }
-          },
           "gemini-3-flash": {
-            "label": "Gemini 3 Flash"
+            "label": "Gemini 3 Flash",
+            "hint": "Frontier speed + intelligence",
+            "category": "Legacy",
+            "badge": "New"
           },
           "gemini-3-pro": {
-            "label": "Gemini 3 Pro"
+            "label": "Gemini 3 Pro",
+            "hint": "Most powerful · Multimodal",
+            "category": "Legacy",
+            "badge": "New"
+          },
+          "gemini-2.5-flash-lite": {
+            "label": "2.5 Flash Lite",
+            "hint": "Fastest · Free tier default",
+            "category": "Speed",
+            "badge": "Default"
+          },
+          "gemini-2.5-flash": {
+            "label": "2.5 Flash",
+            "hint": "Best price/performance balance",
+            "category": "Speed"
+          },
+          "gemini-2.5-pro": {
+            "label": "2.5 Pro",
+            "hint": "Best reasoning · Complex diagrams",
+            "category": "Reasoning"
           }
         },
         "openai": {
           "gpt-5-mini": {
-            "label": "GPT-5 Mini"
-          },
-          "gpt-5": {
-            "2": {
-              "label": "GPT-5.2"
-            },
-            "label": "GPT-5"
+            "label": "GPT-5 Mini",
+            "hint": "Fast · Cost-efficient",
+            "category": "Speed",
+            "badge": "Default"
           },
           "o4-mini": {
-            "label": "O4-Mini"
+            "label": "O4-Mini",
+            "hint": "Advanced reasoning · Fast",
+            "category": "Reasoning",
+            "badge": "Reasoning"
           },
           "o3": {
-            "label": "O3"
+            "label": "O3",
+            "hint": "Deep reasoning · Complex tasks",
+            "category": "Reasoning",
+            "badge": "Reasoning"
+          },
+          "gpt-5": {
+            "label": "GPT-5",
+            "hint": "Flagship model · Most capable",
+            "category": "Flagship"
+          },
+          "gpt-5.2": {
+            "label": "GPT-5.2",
+            "hint": "Latest update · Improved reasoning",
+            "category": "Reasoning",
+            "badge": "New"
           }
         },
         "claude": {
           "claude-haiku-4-5": {
-            "label": "Claude Haiku 4.5"
+            "label": "Claude Haiku 4.5",
+            "hint": "Fastest · Most affordable",
+            "category": "Speed"
           },
           "claude-sonnet-4-5": {
-            "label": "Claude Sonnet 4.5"
+            "label": "Claude Sonnet 4.5",
+            "hint": "Balanced intelligence & speed",
+            "category": "Flagship"
           },
           "claude-sonnet-4-6": {
-            "label": "Claude Sonnet 4.6"
+            "label": "Claude Sonnet 4.6",
+            "hint": "Latest Sonnet · Best coding",
+            "category": "Flagship",
+            "badge": "Default"
           },
           "claude-opus-4-6": {
-            "label": "Claude Opus 4.6"
+            "label": "Claude Opus 4.6",
+            "hint": "Most intelligent · 1M token context",
+            "category": "Reasoning",
+            "badge": "Flagship"
           }
         },
         "groq": {
           "meta-llama/llama-4-scout-17b-16e-instruct": {
-            "label": "Llama 4 Scout"
+            "label": "Llama 4 Scout",
+            "hint": "Free tier · Very fast",
+            "category": "Speed",
+            "badge": "Free"
           },
           "meta-llama/llama-4-maverick-17b-128e-instruct": {
-            "label": "Llama 4 Maverick"
+            "label": "Llama 4 Maverick",
+            "hint": "More capable · Free tier",
+            "category": "Speed",
+            "badge": "Free"
           },
           "qwen/qwen3-32b": {
-            "label": "Qwen 3 32B"
+            "label": "Qwen 3 32B",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           },
-          "llama-3": {
-            "3-70b-versatile": {
-              "label": "Llama 3.3 70B"
-            }
+          "llama-3.3-70b-versatile": {
+            "label": "Llama 3.3 70B Versatile",
+            "hint": "Versatile model",
+            "category": "Performance",
+            "badge": "Performance"
           }
         },
         "nvidia": {
           "meta/llama-4-scout-17b-16e-instruct": {
-            "label": "Llama 4 Scout"
+            "label": "Llama 4 Scout",
+            "hint": "Efficient · Multi-modal",
+            "category": "Speed"
           },
           "nvidia/nemotron-nano-12b-v2-vl": {
-            "label": "Nemotron Nano 12B"
+            "label": "Nemotron Nano 12B",
+            "hint": "Lightweight · Vision-language · Fast",
+            "category": "Speed"
           },
           "deepseek/deepseek-v3-2": {
-            "label": "DeepSeek V3-2"
+            "label": "DeepSeek V3-2",
+            "hint": "Latest · GPT-5 comparable",
+            "category": "Flagship",
+            "badge": "New"
           },
           "qwen/qwq-32b": {
-            "label": "QwQ 32B"
+            "label": "QwQ 32B",
+            "hint": "Strong reasoning model",
+            "category": "Reasoning"
           },
           "moonshotai/kimi-k2-thinking": {
-            "label": "Kimi K2 Thinking"
+            "label": "Kimi K2 Thinking",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           }
         },
         "cerebras": {
           "gpt-oss-120b": {
-            "label": "GPT OSS 120B"
+            "label": "GPT OSS 120B",
+            "hint": "120B params · Fast on WSE-3",
+            "category": "Speed",
+            "badge": "Default"
           },
           "qwen-3-32b": {
-            "label": "Qwen 3 32B"
+            "label": "Qwen 3 32B",
+            "hint": "2,403 tok/s · Industry fastest",
+            "category": "Speed",
+            "badge": "🚀 Fastest"
           },
           "qwen-3-235b-a22b": {
-            "label": "Qwen 3 235B"
+            "label": "Qwen 3 235B",
+            "hint": "Flagship · Best quality",
+            "category": "Flagship",
+            "badge": "Flagship"
           },
-          "zai-glm-4": {
-            "7": {
-              "label": "Zai GLM 4.7"
-            }
+          "zai-glm-4.7": {
+            "label": "Zai-GLM 4.7",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           }
         },
         "mistral": {
           "mistral-small-latest": {
-            "label": "Mistral Small"
+            "label": "Mistral Small",
+            "hint": "Fast · Cost-efficient · 32k context",
+            "category": "Speed",
+            "badge": "Free"
           },
           "mistral-medium-latest": {
-            "label": "Mistral Medium"
+            "label": "Mistral Medium",
+            "hint": "Balanced quality-cost · Best default",
+            "category": "Flagship",
+            "badge": "Default"
           },
           "mistral-large-latest": {
-            "label": "Mistral Large"
+            "label": "Mistral Large",
+            "hint": "Most capable · 128k context · Flagship",
+            "category": "Flagship",
+            "badge": "Flagship"
           },
           "codestral-latest": {
-            "label": "Codestral"
+            "label": "Codestral",
+            "hint": "Code-optimized · 256k context",
+            "category": "Coding",
+            "badge": "Code"
           },
           "pixtral-large-latest": {
-            "label": "Pixtral Large"
+            "label": "Pixtral Large",
+            "hint": "Vision + reasoning · Multimodal",
+            "category": "Multimodal",
+            "badge": "Vision"
+          }
+        },
+        "custom": {
+          "custom": {
+            "label": "Custom Model",
+            "hint": "Enter your model ID below",
+            "category": "Custom"
           }
         }
       },
       "customEndpoints": {
         "ollama": {
-          "name": "Ollama"
+          "name": "Ollama",
+          "hint": "Local · Free"
         },
         "lmStudio": {
-          "name": "LM Studio"
+          "name": "LM Studio",
+          "hint": "Local · Free"
         },
         "together": {
-          "name": "Together AI"
+          "name": "Together AI",
+          "hint": "Cloud · Fast"
         }
+      },
+      "byok": {
+        "dataPrivacy": "Your data never passes through our servers",
+        "control": "Full control over cost and rate limits",
+        "flexibility": "Switch providers anytime without re-linking",
+        "cuttingEdge": "Access cutting-edge models as soon as they launch"
       }
     },
     "brand": {
@@ -1078,19 +1190,7 @@
     "analytics": {
       "enableTitle": "Analyses de lancement anonymes",
       "enableDescription": "Partager des données d’usage de base de manière anonyme (optionnel)"
-    },
-    "search": "Rechercher...",
-    "appearance": "Apparence",
-    "account": "Compte",
-    "about": "À propos",
-    "language": "Langue",
-    "theme": "Thème",
-    "fontSize": "Taille de police",
-    "fontFamily": "Police",
-    "save": "Enregistrer",
-    "cancel": "Annuler",
-    "reset": "Réinitialiser",
-    "confirm": "Confirmer"
+    }
   },
   "customNodes": {
     "browserContent": "Contenu du navigateur",
@@ -1278,19 +1378,45 @@
       "linkCopied": "Le lien de collaboration a été copié.",
       "copyManual": "L’accès au presse-papiers est bloqué. Copiez le lien manuellement depuis la boîte de dialogue de partage."
     },
-    "embed": "Intégrer",
-    "embedCode": "Code d'intégration",
-    "export": "Exporter",
-    "settings": "Paramètres de partage",
-    "anyoneWithLink": "Toute personne avec le lien",
-    "viewOnly": "Lecture seule",
-    "canEdit": "Peut modifier",
-    "disable": "Désactiver le partage",
-    "enable": "Activer le partage",
-    "invite": "Inviter",
-    "pending": "En attente",
-    "revoke": "Révoquer",
-    "expired": "Expiré"
+    "roomLink": "Lien de collaboration",
+    "permissionsNote": "Toute personne disposant du lien peut rejoindre.",
+    "permissionsNoteSecondary": "Les contrôles d'autorisation et la synchronisation backend durable ne sont pas encore configurés.",
+    "viewerCount": {
+      "one": "1 spectateur dans cette session.",
+      "many": "{{count}} spectateurs dans cette session."
+    },
+    "mode": {
+      "realtime": {
+        "title": "Synchronisation en temps réel active",
+        "body": "Les pairs qui ouvrent ce lien peuvent voir les mises à jour en direct et les curseurs via le transport pair actuel."
+      },
+      "waiting": {
+        "title": "Connexion à la synchronisation en temps réel",
+        "body": "Ce caneaux essaie toujours d'établir une synchronisation pair-à-pair en direct. En cas d'échec, la session restera locale dans ce navigateur."
+      },
+      "fallback": {
+        "title": "Collaboration locale uniquement",
+        "body": "Sans relais backend ni transport pair supporté, cette session ne fournit pas de synchronisation en direct multi-utilisateurs durable en dehors de l'exécution du navigateur actuel."
+      }
+    },
+    "cache": {
+      "syncing": {
+        "title": "Synchronisation du cache local de la salle",
+        "body": "Ce navigateur restaure encore l'état de la salle mis en cache dans IndexedDB avant que la synchronisation pair ne soit pleinement établie."
+      },
+      "hydrated": {
+        "title": "Récupéré depuis le cache local",
+        "body": "Cette salle avait déjà un état mis en cache localement dans ce navigateur, donc le canevas a pu être restauré avant que les pairs ne se reconnectent."
+      },
+      "ready": {
+        "title": "Cache local prêt",
+        "body": "Ce navigateur peut conserver une copie locale IndexedDB de la salle pour le rechargement et la récupération hors ligne sur cet appareil."
+      },
+      "unavailable": {
+        "title": "Pas de cache local de salle",
+        "body": "Cette session de collaboration n'utilise pas la persistance IndexedDB de la salle dans le navigateur actuellement."
+      }
+    }
   },
   "connectionPanel": {
     "architecture": "Architecture",
@@ -1299,68 +1425,19 @@
     "route": "Trajet",
     "appearance": "Apparence",
     "condition": "Condition",
-    "deleteConnection": "Supprimer la connexion"
+    "deleteConnection": "Supprimer la connexion",
+    "style": "Style",
+    "actions": "Actions"
   },
   "sidebar": {
-    "close": "Fermer la barre latérale",
-    "searchPlaceholder": "Rechercher...",
-    "noResults": "Aucun résultat",
-    "nodes": "Nœuds",
-    "components": "Composants",
-    "snippets": "Extraits",
-    "addons": "Add-ons"
+    "close": "Fermer la barre latérale"
   },
   "contextMenu": {
     "label": "Menu contextuel du canevas"
   },
-  "canvas": {
-    "addNodeShortcut": "Ajouter un nœud",
-    "aiChatPlaceholder": "Créer quelque chose...",
-    "nodes": "Nœuds",
-    "connections": "Connexions",
-    "elements": "Éléments",
-    "selection": "Sélection",
-    "noSelection": "Aucune sélection",
-    "alignNodes": "Aligner les nœuds",
-    "distributeNodes": "Distribuer les nœuds",
-    "alignLeft": "Aligner à gauche",
-    "alignCenter": "Aligner au centre",
-    "alignRight": "Aligner à droite",
-    "alignTop": "Aligner en haut",
-    "alignMiddle": "Aligner au milieu",
-    "alignBottom": "Aligner en bas",
-    "distributeHorizontally": "Distribuer horizontalement",
-    "distributeVertically": "Distribuer verticalement",
-    "zoomToFit": "Zoom pour ajuster",
-    "zoomToSelection": "Zoom sur la sélection",
-    "locked": "Verrouillé",
-    "unlock": "Déverrouiller",
-    "lock": "Verrouiller",
-    "bringToFront": "Mettre au premier plan",
-    "sendToBack": "Envoyer à l'arrière",
-    "group": "Grouper",
-    "ungroup": "Dissocier"
-  },
-  "mindmap": {
-    "addChild": "Ajouter un sous-sujet",
-    "addSibling": "Ajouter un sujet frère",
-    "addParent": "Ajouter un sujet parent",
-    "delete": "Supprimer",
-    "insertAfter": "Insérer après",
-    "insertBefore": "Insérer avant"
-  },
+  "canvas": {},
+  "mindmap": {},
   "aiModel": {
-    "title": "Modèle IA",
-    "provider": "Fournisseur",
-    "model": "Modèle",
-    "temperature": "Température",
-    "maxTokens": "Jetons max",
-    "buttons": {
-      "retry": "Réessayer",
-      "stop": "Arrêter",
-      "clear": "Effacer"
-    },
-    "thinking": "Réflexion...",
-    "error": "Erreur IA"
+    "buttons": {}
   }
 }

@@ -57,6 +57,7 @@ describe('StudioAIPanel', () => {
         lastError={null}
         onClearError={vi.fn()}
         chatMessages={[]}
+        assistantThread={[]}
         onClearChat={vi.fn()}
         nodeCount={0}
         selectedNodeCount={0}
@@ -91,6 +92,7 @@ describe('StudioAIPanel', () => {
         lastError={null}
         onClearError={vi.fn()}
         chatMessages={[]}
+        assistantThread={[]}
         onClearChat={vi.fn()}
         nodeCount={3}
         selectedNodeCount={0}
@@ -129,6 +131,7 @@ describe('StudioAIPanel', () => {
         lastError="The provider rejected this request."
         onClearError={onClearError}
         chatMessages={[]}
+        assistantThread={[]}
         onClearChat={vi.fn()}
         nodeCount={1}
         selectedNodeCount={0}
@@ -163,6 +166,7 @@ describe('StudioAIPanel', () => {
         lastError="The provider rejected this request."
         onClearError={onClearError}
         chatMessages={[]}
+        assistantThread={[]}
         onClearChat={vi.fn()}
         nodeCount={1}
         selectedNodeCount={0}
@@ -204,6 +208,7 @@ describe('StudioAIPanel', () => {
         lastError="Failed to fetch"
         onClearError={vi.fn()}
         chatMessages={[]}
+        assistantThread={[]}
         onClearChat={vi.fn()}
         nodeCount={1}
         selectedNodeCount={0}
@@ -240,6 +245,7 @@ describe('StudioAIPanel', () => {
         lastError={null}
         onClearError={vi.fn()}
         chatMessages={[]}
+        assistantThread={[]}
         onClearChat={vi.fn()}
         nodeCount={0}
         selectedNodeCount={0}
@@ -274,6 +280,7 @@ describe('StudioAIPanel', () => {
         lastError={null}
         onClearError={vi.fn()}
         chatMessages={[]}
+        assistantThread={[]}
         onClearChat={vi.fn()}
         nodeCount={3}
         selectedNodeCount={0}
@@ -317,6 +324,7 @@ describe('StudioAIPanel', () => {
         lastError={null}
         onClearError={vi.fn()}
         chatMessages={[]}
+        assistantThread={[]}
         onClearChat={vi.fn()}
         nodeCount={0}
         selectedNodeCount={0}
@@ -333,5 +341,56 @@ describe('StudioAIPanel', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Platform: aws')).toBeInTheDocument();
     expect(screen.getByText('4 native sections')).toBeInTheDocument();
+  });
+
+  it('renders assistant plan cards from the richer thread model', () => {
+    render(
+      <StudioAIPanel
+        onAIGenerate={vi.fn().mockResolvedValue(false)}
+        isGenerating={false}
+        streamingText={null}
+        retryCount={0}
+        onCancelGeneration={vi.fn()}
+        pendingDiff={null}
+        onConfirmDiff={vi.fn()}
+        onDiscardDiff={vi.fn()}
+        aiReadiness={{
+          canGenerate: true,
+          blockingIssue: null,
+          advisory: null,
+        }}
+        lastError={null}
+        onClearError={vi.fn()}
+        chatMessages={[]}
+        assistantThread={[
+          {
+            id: 'plan-1',
+            role: 'model',
+            type: 'assistant_plan',
+            content: 'The request needs a plan before changing the canvas.',
+            createdAt: '2026-03-31T00:00:00.000Z',
+            responseMode: 'plan',
+            thinkingState: 'planning',
+            plan: {
+              goal: 'Plan the architecture',
+              mode: 'plan',
+              steps: ['Inspect the current diagram', 'Outline the recommended structure'],
+              requiresApproval: false,
+              intendedOutput: 'Structured plan and next-step options',
+              confidence: 0.88,
+              reasoningSummary: 'The request needs a plan before changing the canvas.',
+              skillId: 'plan_diagram',
+            },
+          },
+        ]}
+        onClearChat={vi.fn()}
+        nodeCount={4}
+        selectedNodeCount={0}
+      />
+    );
+
+    expect(screen.getByText('Plan')).toBeInTheDocument();
+    expect(screen.getByText('Mode: plan')).toBeInTheDocument();
+    expect(screen.getByText('1. Inspect the current diagram')).toBeInTheDocument();
   });
 });

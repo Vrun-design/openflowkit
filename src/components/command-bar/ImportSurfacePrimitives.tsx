@@ -1,9 +1,8 @@
 import React from 'react';
-import { Check, FileText, XCircle, Eye } from 'lucide-react';
+import { Check, FileText, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { formatBytes } from './importDetection';
 import type { NativeParseResult } from './importNativeParsers';
-import { DiagramMiniPreview } from './DiagramMiniPreview';
 
 interface ImportFileBadgeProps {
   fileInfo: { name: string; size: number };
@@ -64,8 +63,6 @@ export function NativeParseResultCard({
   appliedFeedback,
   onApply,
 }: NativeParseResultCardProps): React.ReactElement {
-  const [showPreview, setShowPreview] = React.useState(true);
-
   return (
     <div className="rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3">
       <div className="flex items-center gap-2">
@@ -79,21 +76,7 @@ export function NativeParseResultCard({
       <div className="mt-1.5 flex items-center gap-3 pl-7 text-[11px] text-[var(--brand-secondary)]">
         <span>{nativeResult.nodeCount} nodes</span>
         <span>{nativeResult.edgeCount} edges</span>
-        <button
-          type="button"
-          onClick={() => setShowPreview((v) => !v)}
-          className="ml-auto flex items-center gap-1 text-[var(--brand-secondary)] hover:text-[var(--brand-text)] transition-colors"
-        >
-          <Eye className="h-3 w-3" />
-          {showPreview ? 'Hide preview' : 'Preview'}
-        </button>
       </div>
-
-      {showPreview && (
-        <div className="mt-2 pl-7">
-          <DiagramMiniPreview dsl={nativeResult.dsl} height={180} />
-        </div>
-      )}
 
       <details className="mt-2 pl-7">
         <summary className="cursor-pointer text-[11px] font-medium text-[var(--brand-secondary)] hover:text-[var(--brand-text)] transition-colors">

@@ -132,6 +132,7 @@ describe('buildFlowEditorPanelsProps', () => {
       lastAIError: null,
       onClearAIError: vi.fn(),
       chatMessages: [],
+      assistantThread: [],
       clearChat: vi.fn(),
       selectedNode: nodes[0],
       selectedNodeCount: nodes.length,

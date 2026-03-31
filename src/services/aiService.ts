@@ -1,4 +1,10 @@
-import { getSystemInstruction, ChatMessage, generateDiagramFromChat as generateDiagramFromChatGemini, chatWithDocsGemini } from './geminiService';
+import {
+    getSystemInstruction,
+    ChatMessage,
+    generateDiagramFromChat as generateDiagramFromChatGemini,
+    chatWithDocsGemini,
+    chatWithSystemInstructionGemini,
+} from './geminiService';
 import { DEFAULT_MODELS, PROVIDER_BASE_URLS } from '@/config/aiProviders';
 import { err, ok, type Result } from '@/lib/result';
 import {
@@ -352,6 +358,63 @@ ${docsContext}
         apiKey,
         modelId || DEFAULT_MODELS[provider],
         messages
+    );
+}
+
+export async function chatWithFlowpilot(
+    history: ChatMessage[],
+    newMessage: string,
+    systemInstruction: string,
+    apiKeySetting?: string,
+    modelIdSetting?: string,
+    provider: AIProvider = 'gemini',
+    customBaseUrlSetting?: string,
+    onChunk?: (delta: string) => void,
+    signal?: AbortSignal,
+): Promise<string> {
+    const apiKey = resolveApiKey(provider, apiKeySetting);
+    const modelId = resolveModelId(provider, modelIdSetting);
+
+    if (provider === 'gemini') {
+        return chatWithSystemInstructionGemini(
+            history,
+            newMessage,
+            systemInstruction,
+            apiKey,
+            modelId,
+            onChunk,
+            signal,
+        );
+    }
+
+    if (provider === 'claude') {
+        const messages: TextMessage[] = [
+            ...historyToMessages(history),
+            { role: 'user', content: newMessage },
+        ];
+        return callClaude(
+            apiKey,
+            modelId || DEFAULT_MODELS.claude,
+            messages,
+            systemInstruction,
+            onChunk,
+            signal,
+        );
+    }
+
+    const messages: TextMessage[] = [
+        { role: 'system', content: systemInstruction },
+        ...historyToMessages(history),
+        { role: 'user', content: newMessage },
+    ];
+
+    return callOpenAICompatible(
+        resolveOpenAICompatibleBaseUrl(provider, customBaseUrlSetting),
+        apiKey,
+        modelId || DEFAULT_MODELS[provider],
+        messages,
+        onChunk,
+        signal,
     );
 }
 export type { ChatMessage };

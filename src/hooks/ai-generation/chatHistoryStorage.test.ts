@@ -83,6 +83,28 @@ describe('chatHistoryStorage', () => {
     );
   });
 
+  it('loads assistant thread items with metadata from the repository', async () => {
+    loadChatThread.mockResolvedValue([
+      {
+        id: 'doc-1:1:assistant_plan',
+        documentId: 'doc-1',
+        role: 'model',
+        parts: [{ text: 'Plan first' }],
+        createdAt: '2026-01-01T00:00:01.000Z',
+        threadType: 'assistant_plan',
+        responseMode: 'plan',
+        thinkingState: 'planning',
+      },
+    ]);
+
+    const { loadAssistantThreadHistory } = await import('./chatHistoryStorage');
+    const [item] = await loadAssistantThreadHistory('doc-1');
+
+    expect(item?.type).toBe('assistant_plan');
+    expect(item?.responseMode).toBe('plan');
+    expect(item?.thinkingState).toBe('planning');
+  });
+
   it('clears the repository thread and falls back to localStorage cleanup on failure', async () => {
     clearChatThread.mockRejectedValueOnce(new Error('boom'));
     localStorage.setItem('ofk_chat_history_doc-4', JSON.stringify([

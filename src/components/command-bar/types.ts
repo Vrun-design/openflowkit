@@ -30,6 +30,7 @@ export interface CommandItem {
   value?: boolean;
   view?: CommandView;
   hidden?: boolean;
+  badge?: string;
 }
 
 export interface CommandBarProps {

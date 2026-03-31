@@ -9,9 +9,9 @@
 
 <h1>OpenFlowKit</h1>
 
-<h3>The open-source diagramming workspace engineers actually want to use.</h3>
+<h3>The open-source diagramming studio builders actually want to use.</h3>
 
-<p>Create flows from templates, code, structured imports, or AI. Refine them visually, keep them local-first, and export without giving up diagram-as-code or developer workflows.</p>
+<p>Create flows from templates, code, structured imports, or AI. Refine them visually, keep them local-first, and export — including as a <b>cinematic animated video</b> that no other open-source tool offers.</p>
 
 <br/>
 
@@ -41,33 +41,49 @@
 
 <br/>
 
-<!-- IMPORTANT: Add a hero GIF before launch. Record a 15–20 second clip showing:
-     1. Paste a GitHub URL → architecture diagram appears
-     2. Edit a node → DSL updates live
-     3. Export as animated MP4
-     Recommended: 1400×900px, hosted in /assets/hero-demo.gif -->
-<!-- ![OpenFlowKit in action](assets/hero-demo.gif) -->
+<a href="https://www.producthunt.com/products/openflowkit" target="_blank">
+  <img src="https://api.producthunt.com/widgets/embed-image/v1/top-post-topic-badge.svg?post_id=1081019&theme=light&period=weekly&topic_id=44" alt="OpenFlowKit on Product Hunt" width="200" height="43" />
+</a>
 
+<br/>
+<br/>
+
+<img src="readme-media/GIF-OFK-F.gif" alt="OpenFlowKit in action" width="100%" />
+
+<br/>
 <br/>
 
 <table>
 <tr>
-<td align="center"><b>🏠 Workspace Home</b><br/><sub>Create · open · import<br/>No forced blank file</sub></td>
-<td align="center"><b>🧑‍💻 Code → Diagram</b><br/><sub>GitHub · SQL · Terraform<br/>K8s · OpenAPI</sub></td>
-<td align="center"><b>🤖 AI Generation</b><br/><sub>9 providers · BYOK<br/>Streaming diff preview</sub></td>
+<td align="center"><b>🧑‍💻 Code → Diagram</b><br/><sub>SQL · Terraform · K8s<br/>OpenAPI · Source code</sub></td>
+<td align="center"><b>🤖 AI Generation</b><br/><sub>9 providers · BYOK<br/>Direct-to-canvas output</sub></td>
 <td align="center"><b>`{}` Diagram as Code</b><br/><sub>Bidirectional live sync<br/>Git-friendly DSL</sub></td>
 <td align="center"><b>🧩 Asset Libraries</b><br/><sub>Developer · AWS · Azure<br/>GCP · CNCF · Icons</sub></td>
 <td align="center"><b>🎬 Cinematic Export</b><br/><sub>Animated video & GIF<br/>No upload required</sub></td>
 </tr>
 </table>
 
+</div>
+
 <br/>
 
-<a href="https://www.producthunt.com/products/openflowkit" target="_blank">
-  <img src="https://api.producthunt.com/widgets/embed-image/v1/top-post-topic-badge.svg?post_id=1081019&theme=light&period=weekly&topic_id=44" alt="OpenFlowKit on Product Hunt" width="200" height="43" />
-</a>
+---
 
-</div>
+## See it in action
+
+<table>
+<tr>
+<td width="33%">
+  <img src="readme-media/Sample -GIF-1.gif" alt="OpenFlowKit demo 1" width="100%" />
+</td>
+<td width="33%">
+  <img src="readme-media/Sample -GIF-2.gif" alt="OpenFlowKit demo 2" width="100%" />
+</td>
+<td width="33%">
+  <img src="readme-media/Sample -GIF-3.gif" alt="OpenFlowKit demo 3" width="100%" />
+</td>
+</tr>
+</table>
 
 <br/>
 
@@ -95,12 +111,11 @@ OpenFlowKit is the **only MIT-licensed tool** that combines a real workspace hom
 | ------------------------------ | :---------: | :--------: | :-----: | :-----: | :--------: |
 | Visual canvas editor           |     ✅      |     ✅     |   ✅    |   ❌    |     ✅     |
 | Bidirectional diagram-as-code  |     ✅      |     ❌     |   ❌    |   ✅    |     ❌     |
-| AI generation (9 providers)    |     ✅      |     ❌     |   ❌    |   ❌    |  Limited   |
-| GitHub repo → diagram          |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
-| SQL → ERD (native parser)      |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
-| Terraform / K8s import         |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
+| AI generation (9 providers) `Beta`  |     ✅      |     ❌     |   ❌    |   ❌    |  Limited   |
+| SQL → ERD (native parser)           |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
+| Terraform / K8s import `Beta`       |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
 | AWS / Azure / GCP / CNCF icons |     ✅      |     ❌     |   ✅    | Partial |     ✅     |
-| Real-time collaboration (P2P)  |     ✅      |     ✅     |   ❌    |   ❌    | ✅ (cloud) |
+| Real-time collaboration (P2P) `Beta` |     ✅      |     ✅     |   ❌    |   ❌    | ✅ (cloud) |
 | Cinematic animated export      |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
 | Figma export (editable SVG)    |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
 | No account required            |     ✅      |     ✅     |   ✅    |   ✅    |     ❌     |
@@ -147,23 +162,18 @@ spec:
 
 **AI-powered imports (API key required):**
 
-```
-github.com/vercel/next.js  →  architecture diagram
-```
+Paste source code, infrastructure, or API specs and hit generate — the diagram lands directly on your canvas. AWS, Azure, GCP, and CNCF icons are automatically applied when the AI detects cloud services in your input.
 
-→ Fetches a prioritized slice of the GitHub repository in-browser, analyzes the codebase with AI, then generates an editable architecture diagram. Quality depends on repository size, file coverage, and model choice.
-
-| Source                    | Engine                     | API key? |
-| ------------------------- | -------------------------- | :------: |
-| GitHub repo URL           | AI-assisted import         |   Yes    |
-| SQL DDL                   | **Native parser**          |  **No**  |
-| Terraform `.tfstate`      | **Native parser**          |  **No**  |
-| Terraform HCL             | AI-assisted                |   Yes    |
-| Kubernetes YAML / Helm    | **Native parser**          |  **No**  |
-| OpenAPI / Swagger YAML/JSON | **Native parser**        |  **No**  |
-| OpenAPI source text → richer flow | AI-assisted         |   Yes    |
-| Source code (single file) | AI-assisted · 9 languages  |   Yes    |
-| Mermaid                   | **Native parser**          |  **No**  |
+| Source                              | Engine                    | API key? |
+| ----------------------------------- | ------------------------- | :------: |
+| SQL DDL                             | **Native parser**         |  **No**  |
+| Terraform `.tfstate`                | **Native parser**         |  **No**  |
+| Terraform HCL                       | AI-assisted               |   Yes    |
+| Kubernetes YAML / Helm              | **Native parser**         |  **No**  |
+| OpenAPI / Swagger YAML/JSON         | **Native parser**         |  **No**  |
+| OpenAPI source text → richer flow   | AI-assisted               |   Yes    |
+| Source code (single file)           | AI-assisted · 9 languages |   Yes    |
+| Mermaid                             | **Native parser**         |  **No**  |
 
 ---
 
@@ -249,17 +259,29 @@ Large diagrams also get better organization with multi-page documents, layers, s
 
 ---
 
+## 🎬 Cinematic Export — a USP no other open-source tool has
+
+Turn any diagram into an animated video walkthrough — node by node, edge by edge — entirely in your browser. No upload, no server, no third-party tool.
+
+Designed for architecture reviews, onboarding docs, and demos where a static image doesn't cut it.
+
+> **No other open-source diagramming tool does this.**
+
+Export as **WebM**, control animation speed, and share a link or embed it anywhere.
+
+---
+
 ## Export everywhere
 
 Build your diagram once. Take it anywhere.
 
+- **🎬 Cinematic MP4 / GIF** — animated walkthrough, browser-only, no upload required
 - **PNG / SVG** — transparent background, pixel-perfect at any resolution
 - **PDF** — print-ready, vector-crisp
 - **Mermaid** — paste directly into GitHub READMEs, Notion, Confluence, Linear
 - **PlantUML** — for enterprise toolchains and legacy integrations
 - **Figma** — full editable SVG import with preserved layers
 - **JSON** — complete round-trip import/export, no data loss
-- **🎬 Cinematic MP4** — an animated walkthrough of your diagram, node by node, edge by edge. Designed for demos, presentations, and architecture reviews. No other open-source diagramming tool does this.
 
 ---
 
@@ -288,6 +310,8 @@ Plus: smart alignment guides, snap-to-grid, multi-select, pages, layers, section
 
 Current roadmap focus:
 
+- **GIF export for cinematic animations** — WebM is shipping now; GIF export coming next so diagrams can be embedded anywhere without conversion
+- **GitHub repo → diagram** — currently in beta internally; will ship when output quality is consistent across real-world codebases
 - better layers and page workflows for larger technical diagrams
 - stronger code and structured-import diagram quality
 - smarter auto-layout defaults with less cleanup after import

@@ -167,7 +167,8 @@
     "chooseFormat": "Biçim seç",
     "speed": "Hız",
     "resolution": "Çözünürlük",
-    "transparentBackground": "Şeffaf arka plan"
+    "transparentBackground": "Şeffaf arka plan",
+    "headingFormat": "Dışa Aktarma Biçimi"
   },
   "import": {
     "title": "İçe Aktar",
@@ -290,21 +291,21 @@
       "hint": "Dışa aktarılmış bir yedeklemeniz veya başka bir kopyanız yoksa bu işlem geri alınamaz.",
       "closeDialog": "Akış silme iletişim kutusunu kapat"
     },
-    "suggestionBlank": "Boş tuval",
-    "suggestionBlankDesc": "Doğrudan editöre geç",
-    "suggestionAI": "Flowpilot Yapay Zeka",
-    "suggestionAIDesc": "Bir prompt ile başla",
-    "suggestionImport": "İçe Aktar",
-    "suggestionImportDesc": "Mevcut çalışmanı getir",
-    "suggestionTemplates": "Şablonlar",
-    "suggestionTemplatesDesc": "Kanıtlanmış bir kalıptan başla",
-    "continueTitle": "Son eylemle devam et",
     "homeEmptyTitle": "İlk akışınızı oluşturun",
     "homeEmptySubtitle": "Kurumsal düzey mimariileri anında tasarlayın. Boş bir tuvalden başlayın, altyapınızı AI builderımızla tanımlayın veya hazır bir şablon kullanın.",
     "homeBlankCanvas": "Boş Tuval",
     "homeFlowpilotAI": "Flowpilot Yapay Zeka",
     "homeTemplates": "Şablonlar",
-    "homeImportFile": "Veya mevcut bir dosyayı içe aktarın"
+    "homeImportFile": "Veya mevcut bir dosyayı içe aktarın",
+    "suggestionAI": "Flowpilot Yapay Zeka",
+    "suggestionBlank": "Boş tuval",
+    "suggestionBlankDesc": "Doğrudan editöre geç",
+    "suggestionAIDesc": "Bir prompt ile başla",
+    "suggestionImport": "İçe Aktar",
+    "suggestionImportDesc": "Mevcut çalışmanı getir",
+    "suggestionTemplates": "Şablonlar",
+    "suggestionTemplatesDesc": "Kanıtlanmış bir kalıptan başla",
+    "continueTitle": "Son eylemle devam et"
   },
   "settings": {
     "title": "Ayarlar",
@@ -644,6 +645,13 @@
         "edgeSyntax": "`-->`, `<--` veya `<-->` mimari kenar oklarını ve `api:R --> L:db` gibi yan niteleyicileri kullanın.",
         "nodeSyntax": "Geçerli düğüm tanımlarını kullanın: `service id(icon)[Label]`, `group id[Label]`, `junction id[Label]`.",
         "fallback": "Otomatik toparlamaya izin vermek için Mimari Katı Modu kapatın veya tanıları düzeltip yeniden deneyin."
+      },
+      "jumpToLine": "{{line}} satırına git",
+      "diagnosticsGroup": {
+        "syntax": "Sözdizimi sorunları",
+        "identity": "Tanımlayıcı sorunları",
+        "recovery": "Kurtarma uyarıları",
+        "general": "Tanılama"
       }
     },
     "layout": {
@@ -786,9 +794,7 @@
         "infra": "Altyapı",
         "openapi": "OpenAPI",
         "code": "Kod",
-        "codebase": "Depo",
-        "mindmap": "Zihin Haritası",
-        "markdown": "Markdown"
+        "codebase": "Depo"
       },
       "title": "Veriden içe aktar",
       "description": "Kod, altyapı, SQL veya API özelliklerini diyagramınıza içe aktarın.",
@@ -867,7 +873,9 @@
       "edgeBundling": "Kardeş Kenarları Grupla",
       "edgeBundlingDesc": "Paralel bağlantıları paylaşılan şeritlerde tut",
       "architectureStrictMode": "Mimari Katı Modu",
-      "architectureStrictModeDesc": "Mimari tanılamalar kurtarma/doğrulama sorunları içerdiğinde Mermaid içe aktarmayı engelle"
+      "architectureStrictModeDesc": "Mimari tanılamalar kurtarma/doğrulama sorunları içerdiğinde Mermaid içe aktarmayı engelle",
+      "miniMap": "Mini Harita",
+      "miniMapDesc": "Sağ altta mini haritayı göster"
     },
     "ai": {
       "provider": "Sağlayıcı",
@@ -947,17 +955,6 @@
             "hint": "En güçlü · Çok modlu",
             "category": "Eski",
             "badge": "Yeni"
-          },
-          "gemini-2": {
-            "5-flash-lite": {
-              "label": "Gemini 2.5 Flash Lite"
-            },
-            "5-flash": {
-              "label": "Gemini 2.5 Flash"
-            },
-            "5-pro": {
-              "label": "Gemini 2.5 Pro"
-            }
           }
         },
         "openai": {
@@ -966,14 +963,6 @@
             "hint": "Hızlı · Maliyet verimli",
             "category": "Hız",
             "badge": "Varsayılan"
-          },
-          "gpt-5": {
-            "2": {
-              "label": "GPT-5.2"
-            },
-            "label": "GPT-5",
-            "hint": "Amiral gemisi · En yetenekli",
-            "category": "Amiral Gemisi"
           },
           "gpt-5.2": {
             "label": "GPT-5.2",
@@ -992,6 +981,11 @@
             "hint": "Derin akıl yürütme · Karmaşık görevler",
             "category": "Akıl Yürütme",
             "badge": "Akıl Yürütme"
+          },
+          "gpt-5": {
+            "label": "GPT-5",
+            "hint": "Flagship model · Most capable",
+            "category": "Flagship"
           }
         },
         "claude": {
@@ -1041,11 +1035,6 @@
             "hint": "Çok yönlü model",
             "category": "Performans",
             "badge": "Performans"
-          },
-          "llama-3": {
-            "3-70b-versatile": {
-              "label": "Llama 3.3 70B"
-            }
           }
         },
         "nvidia": {
@@ -1099,11 +1088,6 @@
             "label": "Zai-GLM 4.7",
             "hint": "Gelişmiş akıl yürütme · Araç kullanımı",
             "category": "Akıl Yürütme"
-          },
-          "zai-glm-4": {
-            "7": {
-              "label": "Zai GLM 4.7"
-            }
           }
         },
         "mistral": {
@@ -1226,19 +1210,7 @@
     "analytics": {
       "enableTitle": "Anonim başlatma analitiği",
       "enableDescription": "Anonim temel kullanım verilerini paylaş (isteğe bağlı)"
-    },
-    "search": "Ara...",
-    "appearance": "Görünüm",
-    "account": "Hesap",
-    "about": "Hakkında",
-    "language": "Dil",
-    "theme": "Tema",
-    "fontSize": "Yazı boyutu",
-    "fontFamily": "Yazı tipi",
-    "save": "Kaydet",
-    "cancel": "İptal",
-    "reset": "Sıfırla",
-    "confirm": "Onayla"
+    }
   },
   "customNodes": {
     "browserContent": "Tarayıcı İçeriği",
@@ -1406,19 +1378,45 @@
       "linkCopied": "İş birliği bağlantısı kopyalandı.",
       "copyManual": "Pano erişimi engellendi. Bağlantıyı paylaşım diyaloğundan manuel olarak kopyalayın."
     },
-    "embed": "Göm",
-    "embedCode": "Gömme kodu",
-    "export": "Dışa aktar",
-    "settings": "Paylaşım ayarları",
-    "anyoneWithLink": "Bağlantısı olan herkes",
-    "viewOnly": "Yalnızca görüntüleme",
-    "canEdit": "Düzenleyebilir",
-    "disable": "Paylaşımı kapat",
-    "enable": "Paylaşımı aç",
-    "invite": "Davet et",
-    "pending": "Beklemede",
-    "revoke": "İptal et",
-    "expired": "Süresi doldu"
+    "roomLink": "İşbirliği Bağlantısı",
+    "permissionsNote": "Bağlantıya sahip herkes katılabilir.",
+    "permissionsNoteSecondary": "İzin kontrolleri ve kalıcı backend senkronizasyonu henüz yapılandırılmadı.",
+    "viewerCount": {
+      "one": "Bu oturumda 1 izleyici.",
+      "many": "Bu oturumda {{count}} izleyici."
+    },
+    "mode": {
+      "realtime": {
+        "title": "Eşzamanlı senkronizasyon etkin",
+        "body": "Bu bağlantıyı açan akranlar, mevcut aktarım üzerinden canlı güncellemeleri ve imleçleri görebilir."
+      },
+      "waiting": {
+        "title": "Eşzamanlı senkronizasyona bağlanılıyor",
+        "body": "Bu tuval hâlâ canlı eş akran senkronizasyonu kurmaya çalışıyor. Başarısız olursa oturum bu tarayıcıda yerel olarak kalır."
+      },
+      "fallback": {
+        "title": "Yalnızca yerel işbirliği",
+        "body": "Bir arka uç aktarıcı veya desteklenen eş aktarımı olmadan bu oturum, mevcut tarayıcı çalışma zamanı dışında kalıcı çoklu kullanıcı canlı senkronizasyonu sağlamaz."
+      }
+    },
+    "cache": {
+      "syncing": {
+        "title": "Yerel oda önbelleği senkronize ediliyor",
+        "body": "Bu tarayıcı, eş senkronizasyon tamamen yerleşmeden önce IndexedDB önb belleğe alınmış oda durumunu geri yüklemeye devam ediyor."
+      },
+      "hydrated": {
+        "title": "Yerel önbellekten kurtarıldı",
+        "body": "Bu odada bu tarayıcıda zaten yerel olarak önbelleğe alınmış bir durum vardı, bu nedenle eşler yeniden bağlanmadan önce tuval geri yüklenebildi."
+      },
+      "ready": {
+        "title": "Yerel önbellek hazır",
+        "body": "Bu tarayıcı, yeniden yükleme ve çevrimdışı kurtarma için odanın yerel bir IndexedDB kopyasını tutabilir."
+      },
+      "unavailable": {
+        "title": "Yerel oda önbelleği yok",
+        "body": "Bu işbirliği oturumu şu anda tarayıcı IndexedDB oda kalıcılığını kullanmıyor."
+      }
+    }
   },
   "connectionPanel": {
     "architecture": "Mimari",
@@ -1427,68 +1425,19 @@
     "route": "Yol",
     "appearance": "Görünüm",
     "condition": "Koşul",
-    "deleteConnection": "Bağlantıyı sil"
+    "deleteConnection": "Bağlantıyı sil",
+    "style": "Stil",
+    "actions": "İşlemler"
   },
   "sidebar": {
-    "close": "Kenar çubuğunu kapat",
-    "searchPlaceholder": "Ara...",
-    "noResults": "Sonuç yok",
-    "nodes": "Düğümler",
-    "components": "Bileşenler",
-    "snippets": "Parçacıklar",
-    "addons": "Eklentiler"
+    "close": "Kenar çubuğunu kapat"
   },
   "contextMenu": {
     "label": "Tuval Bağlam Menüsü"
   },
-  "canvas": {
-    "addNodeShortcut": "Düğüm ekle",
-    "aiChatPlaceholder": "Bir şeyler oluştur...",
-    "nodes": "Düğümler",
-    "connections": "Bağlantılar",
-    "elements": "Öğeler",
-    "selection": "Seçim",
-    "noSelection": "Seçim yok",
-    "alignNodes": "Düğümleri hizala",
-    "distributeNodes": "Düğümleri dağıt",
-    "alignLeft": "Sola hizala",
-    "alignCenter": "Merkeze hizala",
-    "alignRight": "Sağa hizala",
-    "alignTop": "Üste hizala",
-    "alignMiddle": "Ortaya hizala",
-    "alignBottom": "Alta hizala",
-    "distributeHorizontally": "Yatay dağıt",
-    "distributeVertically": "Dikey dağıt",
-    "zoomToFit": "Sığdırmak için yakınlaştır",
-    "zoomToSelection": "Seçime yakınlaştır",
-    "locked": "Kilitli",
-    "unlock": "Kilidi aç",
-    "lock": "Kilitle",
-    "bringToFront": "Öne getir",
-    "sendToBack": "Arkaya gönder",
-    "group": "Grupla",
-    "ungroup": "Grubu kaldır"
-  },
-  "mindmap": {
-    "addChild": "Alt konu ekle",
-    "addSibling": "Kardeş konu ekle",
-    "addParent": "Üst konu ekle",
-    "delete": "Sil",
-    "insertAfter": "Sonra ekle",
-    "insertBefore": "Önce ekle"
-  },
+  "canvas": {},
+  "mindmap": {},
   "aiModel": {
-    "title": "AI Modeli",
-    "provider": "Sağlayıcı",
-    "model": "Model",
-    "temperature": "Sıcaklık",
-    "maxTokens": "Maksimum belirteç",
-    "buttons": {
-      "retry": "Tekrar dene",
-      "stop": "Durdur",
-      "clear": "Temizle"
-    },
-    "thinking": "Düşünüyor...",
-    "error": "AI hatası"
+    "buttons": {}
   }
 }

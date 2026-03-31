@@ -69,7 +69,14 @@ const CommandItemRow = ({
     </div>
 
     <div className="flex-1 flex flex-col justify-center">
-      <span className="mb-1 text-sm font-semibold leading-none">{item.label}</span>
+      <div className="mb-1 flex items-center gap-1.5">
+        <span className="text-sm font-semibold leading-none">{item.label}</span>
+        {item.badge && (
+          <span className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-[var(--brand-primary-100)] text-[var(--brand-primary)]">
+            {item.badge}
+          </span>
+        )}
+      </div>
       {item.description && (
         <span
           className={`text-[11px] ${isSelected ? 'text-[var(--brand-primary-500)]' : 'text-[var(--brand-secondary)]'}`}

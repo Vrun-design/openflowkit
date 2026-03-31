@@ -143,6 +143,7 @@ const baseProps = {
     lastAIError: null,
     onClearAIError: vi.fn(),
     chatMessages: [],
+    assistantThread: [],
     onClearChat: vi.fn(),
     activeTab: 'ai' as const,
     onTabChange: vi.fn(),

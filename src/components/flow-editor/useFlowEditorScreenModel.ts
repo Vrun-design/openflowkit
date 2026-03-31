@@ -46,6 +46,7 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
     handleOpenApiAnalysis,
     handleCodebaseAnalysis,
     chatMessages,
+    assistantThread,
     clearChat,
     clearLastError,
   } = useAIGeneration(screenState.recordHistory, callbacks.handleCommandBarApply);
@@ -242,6 +243,7 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
         lastAIError: lastError,
         onClearAIError: clearLastError,
         chatMessages,
+        assistantThread,
         clearChat,
         studioCodeMode: screenState.studioCodeMode,
         playback: {

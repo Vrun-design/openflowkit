@@ -3,6 +3,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { RightRail } from './RightRail';
 import type { FlowEdge, FlowNode, FlowSnapshot } from '@/lib/types';
 import type { ChatMessage } from '@/services/aiService';
+import type { AssistantThreadItem } from '@/services/flowpilot/types';
 import type {
   CommandBarView,
   FlowEditorMode,
@@ -237,6 +238,7 @@ export interface StudioRailProps {
   selectedNodeCount: number;
   onViewProperties: () => void;
   chatMessages: ChatMessage[];
+  assistantThread: AssistantThreadItem[];
   onClearChat: () => void;
   activeTab: StudioTab;
   onTabChange: (tab: StudioTab) => void;
@@ -411,6 +413,7 @@ export function FlowEditorPanels({
                 selectedNodeCount={studio.selectedNodeCount}
                 onViewProperties={studio.onViewProperties}
                 chatMessages={studio.chatMessages}
+                assistantThread={studio.assistantThread}
                 onClearChat={studio.onClearChat}
                 activeTab={studio.activeTab}
                 onTabChange={studio.onTabChange}

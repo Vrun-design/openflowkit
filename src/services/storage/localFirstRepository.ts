@@ -1,5 +1,11 @@
 import type { FlowTab } from '@/lib/types';
 import type { ChatMessage } from '@/services/aiService';
+import type {
+  AgentPlan,
+  AgentResponseMode,
+  AgentThinkingState,
+  AssetGroundingMatch,
+} from '@/services/flowpilot/types';
 import {
   createFlowTabsFromPersistedDocuments,
   createPersistedDocumentFromFlowDocument,
@@ -64,6 +70,16 @@ export interface PersistedChatMessage {
   role: ChatMessage['role'];
   parts: ChatMessage['parts'];
   createdAt: string;
+  threadType?: string;
+  responseMode?: AgentResponseMode;
+  thinkingState?: AgentThinkingState;
+  summary?: string;
+  previewTitle?: string;
+  previewDetail?: string;
+  previewStats?: string[];
+  applied?: boolean;
+  plan?: AgentPlan;
+  assetMatches?: AssetGroundingMatch[];
 }
 
 export interface PersistedAISettingsRecord {

@@ -67,7 +67,10 @@
     "distributeVertically": "Distribuir verticalmente",
     "group": "Grupo",
     "upload": "Subir",
-    "rename": "Renombrar"
+    "rename": "Renombrar",
+    "export": "Exportar",
+    "exportDiagram": "Exportar diagrama",
+    "exportAs": "Exportar como"
   },
   "nav": {
     "home": "Inicio",
@@ -123,13 +126,13 @@
     "plantuml": "Exportar como PlantUML",
     "openflowdsl": "Exportar como OpenFlow DSL",
     "figma": "Exportar a Figma",
-    "hintTransparent4K": "Transparent (4K)",
-    "hintWhiteBg4K": "White Background (4K)",
+    "hintTransparent4K": "Transparente (4K)",
+    "hintWhiteBg4K": "Fondo blanco (4K)",
     "jsonLabel": "JSON File",
-    "hintDownload": "Download",
+    "hintDownload": "Descargar",
     "openflowdslLabel": "{{appName}} DSL",
     "hintClipboard": "Copiar",
-    "figmaEditable": "Figma Editable",
+    "figmaEditable": "Figma editable",
     "exportDiagram": "Export Diagram",
     "exportAs": "Export As",
     "actionCopy": "Copiar",
@@ -144,27 +147,28 @@
     "shareEmbed": "Compartir e incrustar",
     "hintShareViewer": "Enlace de invitación para esta sala",
     "hintShareEmbed": "Enlace de visor de solo lectura",
-    "readmeEmbed": "README Embed",
-    "hintReadmeEmbed": "Copy Markdown snippet",
-    "sectionImage": "Image",
+    "readmeEmbed": "Incrustar README",
+    "hintReadmeEmbed": "Copiar fragmento Markdown",
+    "sectionImage": "Imagen",
     "sectionVideo": "Video",
-    "sectionCode": "Code",
+    "sectionCode": "Código",
     "shareSection": "Compartir lienzo",
-    "revealVideo": "Reveal Video",
-    "hintRevealVideo": "Nodes fade in sequentially (WebM/MP4)",
-    "revealGif": "Reveal GIF",
-    "hintRevealGif": "Animated reveal for docs/social",
-    "cinematicVideo": "Cinematic Build Video",
+    "revealVideo": "Video de revelación",
+    "hintRevealVideo": "Los nodos aparecen secuencialmente (WebM/MP4)",
+    "revealGif": "GIF de revelación",
+    "hintRevealGif": "Revelación animada para docs/redes",
+    "cinematicVideo": "Video cinematográfico",
     "hintCinematicVideo": "Dark launch-style build",
-    "cinematicGif": "Cinematic Build GIF",
-    "hintCinematicGif": "Dark social-ready loop",
-    "actionDownload": "Download",
+    "cinematicGif": "GIF cinematográfico",
+    "hintCinematicGif": "Bucle oscuro para redes",
+    "actionDownload": "Descargar",
     "hintDocument": "Documento",
     "hintEditableSvg": "SVG editable",
     "chooseFormat": "Elegir formato",
     "speed": "Velocidad",
     "resolution": "Resolución",
-    "transparentBackground": "Fondo transparente"
+    "transparentBackground": "Fondo transparente",
+    "headingFormat": "Formato de exportación"
   },
   "import": {
     "title": "Importar",
@@ -267,21 +271,21 @@
       "hint": "Esto no se puede deshacer a menos que tengas una copia exportada u otra copia.",
       "closeDialog": "Cerrar el diálogo de eliminar flujo"
     },
-    "suggestionBlank": "Lienzo en blanco",
-    "suggestionBlankDesc": "Saltar directamente al editor",
-    "suggestionAI": "Flowpilot IA",
-    "suggestionAIDesc": "Empezar desde un mensaje",
-    "suggestionImport": "Importar",
-    "suggestionImportDesc": "Traer trabajo existente",
-    "suggestionTemplates": "Plantillas",
-    "suggestionTemplatesDesc": "Empezar desde un patrón probado",
-    "continueTitle": "Continuar con una acción reciente",
     "homeEmptyTitle": "Crea tu primer flujo",
     "homeEmptySubtitle": "Diseña arquitecturas de nivel empresarial al instante. Comienza con un lienzo en blanco, describe tu infraestructura con nuestro constructor de IA, o usa una plantilla adaptada.",
     "homeBlankCanvas": "Lienzo en blanco",
     "homeFlowpilotAI": "Flowpilot IA",
     "homeTemplates": "Plantillas",
-    "homeImportFile": "O importar un archivo existente"
+    "homeImportFile": "O importar un archivo existente",
+    "suggestionAI": "Flowpilot IA",
+    "suggestionBlank": "Lienzo en blanco",
+    "suggestionBlankDesc": "Saltar directamente al editor",
+    "suggestionAIDesc": "Empezar desde un mensaje",
+    "suggestionImport": "Importar",
+    "suggestionImportDesc": "Traer trabajo existente",
+    "suggestionTemplates": "Plantillas",
+    "suggestionTemplatesDesc": "Empezar desde un patrón probado",
+    "continueTitle": "Continuar con una acción reciente"
   },
   "settings": {
     "title": "Configuración",
@@ -298,9 +302,9 @@
     "about": "Acerca de",
     "brand": "Configuración de marca",
     "privacy": "Privacidad",
-    "themeLight": "Light",
-    "themeDark": "Dark",
-    "themeSystem": "System"
+    "themeLight": "Claro",
+    "themeDark": "Oscuro",
+    "themeSystem": "Sistema"
   },
   "shortcuts": {
     "title": "Atajos de teclado",
@@ -313,28 +317,28 @@
     "help": "Ayuda"
   },
   "properties": {
-    "title": "Properties",
-    "shape": "Shape",
+    "title": "Propiedades",
+    "shape": "Forma",
     "color": "Color",
-    "icon": "Icon",
-    "rotation": "Rotation",
-    "transparency": "Transparency",
-    "imageSettings": "Image Settings",
-    "bulkShape": "Bulk Shape",
-    "bulkColor": "Bulk Color",
-    "bulkIcon": "Bulk Icon",
-    "labelTransform": "Label Transform",
-    "findReplace": "Find & Replace",
-    "findLabel": "Find",
-    "findPlaceholder": "Find text",
-    "replaceLabel": "Replace",
-    "replacePlaceholder": "Replace with",
-    "prefixOptional": "Prefix (optional)",
-    "suffixOptional": "Suffix (optional)",
-    "useRegex": "Use Regex",
-    "applyToSelectedNodes": "Apply to selected nodes",
-    "selectFieldToApply": "Select a field to apply",
-    "previewSummary": "Preview summary",
+    "icon": "Ícono",
+    "rotation": "Rotación",
+    "transparency": "Transparencia",
+    "imageSettings": "Configuración de imagen",
+    "bulkShape": "Forma (masiva)",
+    "bulkColor": "Color (masivo)",
+    "bulkIcon": "Ícono (masivo)",
+    "labelTransform": "Transformación de etiqueta",
+    "findReplace": "Buscar y reemplazar",
+    "findLabel": "Buscar",
+    "findPlaceholder": "Buscar texto",
+    "replaceLabel": "Reemplazar",
+    "replacePlaceholder": "Reemplazar con",
+    "prefixOptional": "Prefijo (opcional)",
+    "suffixOptional": "Sufijo (opcional)",
+    "useRegex": "Usar expresión regular",
+    "applyToSelectedNodes": "Aplicar a nodos seleccionados",
+    "selectFieldToApply": "Seleccionar campo para aplicar",
+    "previewSummary": "Resumen de vista previa",
     "selectionSummary": "Resumen de selección"
   },
   "saveStatus": {
@@ -346,8 +350,14 @@
     "model": "Modelo",
     "apiKey": "Clave API",
     "placeholder": "Describe tu diagrama...",
-    "settingsSubtitle": "Configure your preferred AI provider, model, and API key below.",
-    "generateWithFlowpilot": "Generar con Flowpilot"
+    "settingsSubtitle": "Configura tu proveedor de IA, modelo y clave API preferidos a continuación.",
+    "generateWithFlowpilot": "Generar con Flowpilot",
+    "howToGetKey": "Cómo obtener tu clave API",
+    "openConsole": "Abrir consola",
+    "pasteKeyStep": "Pégala en el campo de arriba; nunca se comparte con nosotros",
+    "customEndpointTitle": "¿Qué es un endpoint personalizado?",
+    "customModelHint": "Introduce el ID exacto del modelo para tu endpoint",
+    "privacyTitle": "Privacidad y cifrado"
   },
   "playback": {
     "title": "Reproducción",
@@ -615,6 +625,13 @@
         "edgeSyntax": "Usa flechas de arista de arquitectura `-->`, `<--` o `<-->` y calificadores de lado como `api:R --> L:db`.",
         "nodeSyntax": "Usa declaraciones de nodo válidas: `service id(icon)[Label]`, `group id[Label]`, `junction id[Label]`.",
         "fallback": "Desactiva el modo estricto de arquitectura para permitir la recuperación automática, o corrige los diagnósticos y vuelve a intentarlo."
+      },
+      "jumpToLine": "Ir a la línea {{line}}",
+      "diagnosticsGroup": {
+        "syntax": "Problemas de sintaxis",
+        "identity": "Problemas de identificador",
+        "recovery": "Advertencias de recuperación",
+        "general": "Diagnósticos"
       }
     },
     "layout": {
@@ -757,9 +774,7 @@
         "infra": "Infra",
         "openapi": "OpenAPI",
         "code": "Code",
-        "codebase": "Repositorio",
-        "mindmap": "Mapa mental",
-        "markdown": "Markdown"
+        "codebase": "Repositorio"
       },
       "title": "Importar desde datos",
       "description": "Importa código, infraestructura, SQL o especificaciones de API en tu diagrama.",
@@ -838,7 +853,9 @@
       "edgeBundling": "Agrupar bordes hermanos",
       "edgeBundlingDesc": "Mantener conexiones paralelas en carriles compartidos",
       "architectureStrictMode": "Modo Estricto de Arquitectura",
-      "architectureStrictModeDesc": "Bloquear importación de Mermaid cuando los diagnósticos de arquitectura incluyan problemas de recuperación/validación"
+      "architectureStrictModeDesc": "Bloquear importación de Mermaid cuando los diagnósticos de arquitectura incluyan problemas de recuperación/validación",
+      "miniMap": "Minimapa",
+      "miniMapDesc": "Mostrar minimapa en la esquina inferior derecha"
     },
     "ai": {
       "provider": "Proveedor",
@@ -912,132 +929,227 @@
       },
       "models": {
         "gemini": {
-          "gemini-2": {
-            "5-flash-lite": {
-              "label": "Gemini 2.5 Flash Lite"
-            },
-            "5-flash": {
-              "label": "Gemini 2.5 Flash"
-            },
-            "5-pro": {
-              "label": "Gemini 2.5 Pro"
-            }
-          },
           "gemini-3-flash": {
-            "label": "Gemini 3 Flash"
+            "label": "Gemini 3 Flash",
+            "hint": "Frontier speed + intelligence",
+            "category": "Legacy",
+            "badge": "New"
           },
           "gemini-3-pro": {
-            "label": "Gemini 3 Pro"
+            "label": "Gemini 3 Pro",
+            "hint": "Most powerful · Multimodal",
+            "category": "Legacy",
+            "badge": "New"
+          },
+          "gemini-2.5-flash-lite": {
+            "label": "2.5 Flash Lite",
+            "hint": "Fastest · Free tier default",
+            "category": "Speed",
+            "badge": "Default"
+          },
+          "gemini-2.5-flash": {
+            "label": "2.5 Flash",
+            "hint": "Best price/performance balance",
+            "category": "Speed"
+          },
+          "gemini-2.5-pro": {
+            "label": "2.5 Pro",
+            "hint": "Best reasoning · Complex diagrams",
+            "category": "Reasoning"
           }
         },
         "openai": {
           "gpt-5-mini": {
-            "label": "GPT-5 Mini"
-          },
-          "gpt-5": {
-            "2": {
-              "label": "GPT-5.2"
-            },
-            "label": "GPT-5"
+            "label": "GPT-5 Mini",
+            "hint": "Fast · Cost-efficient",
+            "category": "Speed",
+            "badge": "Default"
           },
           "o4-mini": {
-            "label": "O4-Mini"
+            "label": "O4-Mini",
+            "hint": "Advanced reasoning · Fast",
+            "category": "Reasoning",
+            "badge": "Reasoning"
           },
           "o3": {
-            "label": "O3"
+            "label": "O3",
+            "hint": "Deep reasoning · Complex tasks",
+            "category": "Reasoning",
+            "badge": "Reasoning"
+          },
+          "gpt-5": {
+            "label": "GPT-5",
+            "hint": "Flagship model · Most capable",
+            "category": "Flagship"
+          },
+          "gpt-5.2": {
+            "label": "GPT-5.2",
+            "hint": "Latest update · Improved reasoning",
+            "category": "Reasoning",
+            "badge": "New"
           }
         },
         "claude": {
           "claude-haiku-4-5": {
-            "label": "Claude Haiku 4.5"
+            "label": "Claude Haiku 4.5",
+            "hint": "Fastest · Most affordable",
+            "category": "Speed"
           },
           "claude-sonnet-4-5": {
-            "label": "Claude Sonnet 4.5"
+            "label": "Claude Sonnet 4.5",
+            "hint": "Balanced intelligence & speed",
+            "category": "Flagship"
           },
           "claude-sonnet-4-6": {
-            "label": "Claude Sonnet 4.6"
+            "label": "Claude Sonnet 4.6",
+            "hint": "Latest Sonnet · Best coding",
+            "category": "Flagship",
+            "badge": "Default"
           },
           "claude-opus-4-6": {
-            "label": "Claude Opus 4.6"
+            "label": "Claude Opus 4.6",
+            "hint": "Most intelligent · 1M token context",
+            "category": "Reasoning",
+            "badge": "Flagship"
           }
         },
         "groq": {
           "meta-llama/llama-4-scout-17b-16e-instruct": {
-            "label": "Llama 4 Scout"
+            "label": "Llama 4 Scout",
+            "hint": "Free tier · Very fast",
+            "category": "Speed",
+            "badge": "Free"
           },
           "meta-llama/llama-4-maverick-17b-128e-instruct": {
-            "label": "Llama 4 Maverick"
+            "label": "Llama 4 Maverick",
+            "hint": "More capable · Free tier",
+            "category": "Speed",
+            "badge": "Free"
           },
           "qwen/qwen3-32b": {
-            "label": "Qwen 3 32B"
+            "label": "Qwen 3 32B",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           },
-          "llama-3": {
-            "3-70b-versatile": {
-              "label": "Llama 3.3 70B"
-            }
+          "llama-3.3-70b-versatile": {
+            "label": "Llama 3.3 70B Versatile",
+            "hint": "Versatile model",
+            "category": "Performance",
+            "badge": "Performance"
           }
         },
         "nvidia": {
           "meta/llama-4-scout-17b-16e-instruct": {
-            "label": "Llama 4 Scout"
+            "label": "Llama 4 Scout",
+            "hint": "Efficient · Multi-modal",
+            "category": "Speed"
           },
           "nvidia/nemotron-nano-12b-v2-vl": {
-            "label": "Nemotron Nano 12B"
+            "label": "Nemotron Nano 12B",
+            "hint": "Lightweight · Vision-language · Fast",
+            "category": "Speed"
           },
           "deepseek/deepseek-v3-2": {
-            "label": "DeepSeek V3-2"
+            "label": "DeepSeek V3-2",
+            "hint": "Latest · GPT-5 comparable",
+            "category": "Flagship",
+            "badge": "New"
           },
           "qwen/qwq-32b": {
-            "label": "QwQ 32B"
+            "label": "QwQ 32B",
+            "hint": "Strong reasoning model",
+            "category": "Reasoning"
           },
           "moonshotai/kimi-k2-thinking": {
-            "label": "Kimi K2 Thinking"
+            "label": "Kimi K2 Thinking",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           }
         },
         "cerebras": {
           "gpt-oss-120b": {
-            "label": "GPT OSS 120B"
+            "label": "GPT OSS 120B",
+            "hint": "120B params · Fast on WSE-3",
+            "category": "Speed",
+            "badge": "Default"
           },
           "qwen-3-32b": {
-            "label": "Qwen 3 32B"
+            "label": "Qwen 3 32B",
+            "hint": "2,403 tok/s · Industry fastest",
+            "category": "Speed",
+            "badge": "🚀 Fastest"
           },
           "qwen-3-235b-a22b": {
-            "label": "Qwen 3 235B"
+            "label": "Qwen 3 235B",
+            "hint": "Flagship · Best quality",
+            "category": "Flagship",
+            "badge": "Flagship"
           },
-          "zai-glm-4": {
-            "7": {
-              "label": "Zai GLM 4.7"
-            }
+          "zai-glm-4.7": {
+            "label": "Zai-GLM 4.7",
+            "hint": "Advanced reasoning · Tool use",
+            "category": "Reasoning"
           }
         },
         "mistral": {
           "mistral-small-latest": {
-            "label": "Mistral Small"
+            "label": "Mistral Small",
+            "hint": "Fast · Cost-efficient · 32k context",
+            "category": "Speed",
+            "badge": "Free"
           },
           "mistral-medium-latest": {
-            "label": "Mistral Medium"
+            "label": "Mistral Medium",
+            "hint": "Balanced quality-cost · Best default",
+            "category": "Flagship",
+            "badge": "Default"
           },
           "mistral-large-latest": {
-            "label": "Mistral Large"
+            "label": "Mistral Large",
+            "hint": "Most capable · 128k context · Flagship",
+            "category": "Flagship",
+            "badge": "Flagship"
           },
           "codestral-latest": {
-            "label": "Codestral"
+            "label": "Codestral",
+            "hint": "Code-optimized · 256k context",
+            "category": "Coding",
+            "badge": "Code"
           },
           "pixtral-large-latest": {
-            "label": "Pixtral Large"
+            "label": "Pixtral Large",
+            "hint": "Vision + reasoning · Multimodal",
+            "category": "Multimodal",
+            "badge": "Vision"
+          }
+        },
+        "custom": {
+          "custom": {
+            "label": "Custom Model",
+            "hint": "Enter your model ID below",
+            "category": "Custom"
           }
         }
       },
       "customEndpoints": {
         "ollama": {
-          "name": "Ollama"
+          "name": "Ollama",
+          "hint": "Local · Free"
         },
         "lmStudio": {
-          "name": "LM Studio"
+          "name": "LM Studio",
+          "hint": "Local · Free"
         },
         "together": {
-          "name": "Together AI"
+          "name": "Together AI",
+          "hint": "Cloud · Fast"
         }
+      },
+      "byok": {
+        "dataPrivacy": "Your data never passes through our servers",
+        "control": "Full control over cost and rate limits",
+        "flexibility": "Switch providers anytime without re-linking",
+        "cuttingEdge": "Access cutting-edge models as soon as they launch"
       }
     },
     "brand": {
@@ -1078,19 +1190,7 @@
     "analytics": {
       "enableTitle": "Analíticas de inicio anónimas",
       "enableDescription": "Compartir datos básicos de uso de forma anónima (opcional)"
-    },
-    "search": "Buscar...",
-    "appearance": "Apariencia",
-    "account": "Cuenta",
-    "about": "Acerca de",
-    "language": "Idioma",
-    "theme": "Tema",
-    "fontSize": "Tamaño de fuente",
-    "fontFamily": "Familia de fuente",
-    "save": "Guardar",
-    "cancel": "Cancelar",
-    "reset": "Restablecer",
-    "confirm": "Confirmar"
+    }
   },
   "customNodes": {
     "browserContent": "Contenido del navegador",
@@ -1278,19 +1378,45 @@
       "linkCopied": "Se copió el enlace de colaboración.",
       "copyManual": "El acceso al portapapeles está bloqueado. Copia el enlace manualmente desde el diálogo de compartir."
     },
-    "embed": "Insertar",
-    "embedCode": "Código de inserción",
-    "export": "Exportar",
-    "settings": "Configuración de compartir",
-    "anyoneWithLink": "Cualquiera con el enlace",
-    "viewOnly": "Solo lectura",
-    "canEdit": "Puede editar",
-    "disable": "Desactivar compartir",
-    "enable": "Activar compartir",
-    "invite": "Invitar",
-    "pending": "Pendiente",
-    "revoke": "Revocar",
-    "expired": "Expirado"
+    "roomLink": "Enlace de colaboración",
+    "permissionsNote": "Cualquiera con el enlace puede unirse.",
+    "permissionsNoteSecondary": "Los controles de permisos y la sincronización backend duradera aún no están configurados.",
+    "viewerCount": {
+      "one": "1 espectador en esta sesión.",
+      "many": "{{count}} espectadores en esta sesión."
+    },
+    "mode": {
+      "realtime": {
+        "title": "Sincronización en tiempo real activa",
+        "body": "Los pares que abran este enlace pueden ver actualizaciones en vivo y cursores a través del transporte par actual."
+      },
+      "waiting": {
+        "title": "Conectando a la sincronización en tiempo real",
+        "body": "Este lienzo aún está intentando establecer la sincronización par en vivo. Si no puede, la sesión se mantendrá solo local en este navegador."
+      },
+      "fallback": {
+        "title": "Colaboración solo local",
+        "body": "Sin un relay backend o transporte par compatible, esta sesión no proporciona sincronización en vivo multiusuario duradera fuera del runtime del navegador actual."
+      }
+    },
+    "cache": {
+      "syncing": {
+        "title": "Sincronizando caché local de la sala",
+        "body": "Este navegador aún está restaurando el estado de la sala cacheado en IndexedDB antes de que la sincronización par se establezca completamente."
+      },
+      "hydrated": {
+        "title": "Recuperado del caché local",
+        "body": "Esta sala ya tenía estado cacheado localmente en este navegador, por lo que el lienzo pudo restaurarse antes de que los pares se reconectaran."
+      },
+      "ready": {
+        "title": "Caché local listo",
+        "body": "Este navegador puede mantener una copia local IndexedDB de la sala para recarga y recuperación sin conexión en este dispositivo."
+      },
+      "unavailable": {
+        "title": "Sin caché local de sala",
+        "body": "Esta sesión de colaboración no está usando la persistencia IndexedDB de sala del navegador actualmente."
+      }
+    }
   },
   "connectionPanel": {
     "architecture": "Arquitectura",
@@ -1299,68 +1425,19 @@
     "route": "Ruta",
     "appearance": "Apariencia",
     "condition": "Condición",
-    "deleteConnection": "Eliminar conexión"
+    "deleteConnection": "Eliminar conexión",
+    "style": "Estilo",
+    "actions": "Acciones"
   },
   "sidebar": {
-    "close": "Cerrar barra lateral",
-    "searchPlaceholder": "Buscar...",
-    "noResults": "Sin resultados",
-    "nodes": "Nodos",
-    "components": "Componentes",
-    "snippets": "Fragmentos",
-    "addons": "Complementos"
+    "close": "Cerrar barra lateral"
   },
   "contextMenu": {
     "label": "Menú contextual del lienzo"
   },
-  "canvas": {
-    "addNodeShortcut": "Agregar nodo",
-    "aiChatPlaceholder": "Crear algo...",
-    "nodes": "Nodos",
-    "connections": "Conexiones",
-    "elements": "Elementos",
-    "selection": "Selección",
-    "noSelection": "Sin selección",
-    "alignNodes": "Alinear nodos",
-    "distributeNodes": "Distribuir nodos",
-    "alignLeft": "Alinear a la izquierda",
-    "alignCenter": "Alinear al centro",
-    "alignRight": "Alinear a la derecha",
-    "alignTop": "Alinear arriba",
-    "alignMiddle": "Alinear al medio",
-    "alignBottom": "Alinear abajo",
-    "distributeHorizontally": "Distribuir horizontalmente",
-    "distributeVertically": "Distribuir verticalmente",
-    "zoomToFit": "Ajustar zoom",
-    "zoomToSelection": "Zoom a selección",
-    "locked": "Bloqueado",
-    "unlock": "Desbloquear",
-    "lock": "Bloquear",
-    "bringToFront": "Traer al frente",
-    "sendToBack": "Enviar atrás",
-    "group": "Agrupar",
-    "ungroup": "Desagrupar"
-  },
-  "mindmap": {
-    "addChild": "Agregar subtema",
-    "addSibling": "Agregar tema hermano",
-    "addParent": "Agregar tema padre",
-    "delete": "Eliminar",
-    "insertAfter": "Insertar después",
-    "insertBefore": "Insertar antes"
-  },
+  "canvas": {},
+  "mindmap": {},
   "aiModel": {
-    "title": "Modelo de IA",
-    "provider": "Proveedor",
-    "model": "Modelo",
-    "temperature": "Temperatura",
-    "maxTokens": "Máximo de tokens",
-    "buttons": {
-      "retry": "Reintentar",
-      "stop": "Detener",
-      "clear": "Limpiar"
-    },
-    "thinking": "Pensando...",
-    "error": "Error de IA"
+    "buttons": {}
   }
 }

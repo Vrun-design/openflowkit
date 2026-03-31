@@ -1,4 +1,4 @@
-# FlowMind DSL Syntax Guide (V2)
+# OpenFlowKit DSL Syntax Guide (V2)
 
 FlowMind uses a concise, human-readable Domain Specific Language (DSL) to define diagrams textually. V2 adds support for explicit IDs, styling attributes, and groups.
 
