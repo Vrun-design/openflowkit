@@ -294,6 +294,7 @@
     "homeEmptyTitle": "İlk akışınızı oluşturun",
     "homeEmptySubtitle": "Kurumsal düzey mimariileri anında tasarlayın. Boş bir tuvalden başlayın, altyapınızı AI builderımızla tanımlayın veya hazır bir şablon kullanın.",
     "homeBlankCanvas": "Boş Tuval",
+    "createNew": "Yeni oluştur",
     "homeFlowpilotAI": "Flowpilot Yapay Zeka",
     "homeTemplates": "Şablonlar",
     "homeImportFile": "Veya mevcut bir dosyayı içe aktarın",

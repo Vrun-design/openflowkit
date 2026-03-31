@@ -274,6 +274,7 @@
     "homeEmptyTitle": "Créez votre premier flux",
     "homeEmptySubtitle": "Concevez des architectures de qualité entreprise instantanément. Commencez avec un canevas vierge, décrivez votre infrastructure avec notre constructeur IA, ou utilisez un modèle adapté.",
     "homeBlankCanvas": "Canevas vierge",
+    "createNew": "Créer nouveau",
     "homeFlowpilotAI": "Flowpilot IA",
     "homeTemplates": "Modèles",
     "homeImportFile": "Ou importer un fichier existant",

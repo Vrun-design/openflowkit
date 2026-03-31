@@ -287,6 +287,7 @@
     "homeEmptyTitle": "Create your first flow",
     "homeEmptySubtitle": "Design enterprise-grade architectures instantly. Start from a blank canvas, describe your infrastructure with our AI builder, or use a tailored template.",
     "homeBlankCanvas": "Blank Canvas",
+    "createNew": "Create new",
     "homeFlowpilotAI": "Flowpilot AI",
     "homeTemplates": "Templates",
     "homeImportFile": "Or import an existing file",
