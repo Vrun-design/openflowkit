@@ -14,19 +14,16 @@ function escapeStateLabel(label: string): string {
 }
 
 function isStateDiagramNodeType(type: string | undefined): boolean {
-  return type === 'state' || type === 'start' || type === 'section' || type === 'process';
+  return type === 'state' || type === 'start' || type === 'process';
 }
 
 export function looksLikeStateDiagram(nodes: FlowNode[]): boolean {
   if (nodes.length === 0) return false;
   const hasStateStartNode = nodes.some((node) => node.id.startsWith('state_start_'));
   const hasExplicitStateNode = nodes.some((node) => node.type === 'state');
-  const sectionIds = new Set(
-    nodes.filter((node) => node.type === 'section').map((node) => node.id)
-  );
   const hasCompositeParenting = nodes.some((node) => {
     const parentId = getNodeParentId(node);
-    return parentId.length > 0 && sectionIds.has(parentId);
+    return parentId.length > 0;
   });
 
   if (!hasStateStartNode && !hasExplicitStateNode && !hasCompositeParenting) {
@@ -103,20 +100,6 @@ export function toStateDiagramMermaid(nodes: FlowNode[], edges: FlowEdge[]): str
     const indent = '  '.repeat(depth);
 
     if (node.type === 'start') {
-      return;
-    }
-
-    if (node.type === 'section') {
-      const label = String(node.data.label || node.id).trim() || node.id;
-      if (label === node.id) {
-        lines.push(`${indent}state ${node.id} {`);
-      } else {
-        lines.push(`${indent}state "${escapeStateLabel(label)}" as ${node.id} {`);
-      }
-
-      const children = sortNodesByPosition(childrenByParentId.get(node.id) ?? []);
-      children.forEach((child) => emitNodeDeclaration(child, depth + 1));
-      lines.push(`${indent}}`);
       return;
     }
 

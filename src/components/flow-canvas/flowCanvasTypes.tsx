@@ -8,9 +8,7 @@ import {
   CustomStraightEdge,
 } from '@/components/CustomEdge';
 import SequenceMessageEdge from '@/components/custom-edge/SequenceMessageEdge';
-import GroupNode from '@/components/GroupNode';
 import ImageNode from '@/components/ImageNode';
-import SectionNode from '@/components/SectionNode';
 import SwimlaneNode from '@/components/SwimlaneNode';
 import TextNode from '@/components/TextNode';
 import BrowserNode from '@/components/custom-nodes/BrowserNode';
@@ -35,9 +33,7 @@ export const flowCanvasNodeTypes: NodeTypes = {
   journey: JourneyNode,
   architecture: ArchitectureNode,
   annotation: AnnotationNode,
-  section: SectionNode,
   text: TextNode,
-  group: GroupNode,
   swimlane: SwimlaneNode,
   image: ImageNode,
   browser: BrowserNode,

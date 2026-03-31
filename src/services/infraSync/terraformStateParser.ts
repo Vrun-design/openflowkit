@@ -97,7 +97,7 @@ function getNodeType(resourceType: string): string {
     case 'aws_vpc':
     case 'google_compute_network':
     case 'azurerm_virtual_network':
-      return 'section';
+      return 'architecture';
     case 'aws_lb':
     case 'aws_alb':
     case 'aws_elb':
@@ -108,7 +108,7 @@ function getNodeType(resourceType: string): string {
     case 'aws_eks_cluster':
     case 'google_container_cluster':
     case 'azurerm_kubernetes_cluster':
-      return 'section';
+      return 'architecture';
     case 'aws_ecs_service':
     case 'aws_eks_node_group':
       return 'system';
@@ -145,7 +145,7 @@ function getNodeType(resourceType: string): string {
     case 'aws_elasticsearch_domain':
       return 'system';
     case 'google_compute_instance_group':
-      return 'section';
+      return 'architecture';
     case 'azurerm_app_service':
     case 'azurerm_app_service_plan':
       return 'system';

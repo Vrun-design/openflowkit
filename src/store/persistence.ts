@@ -108,15 +108,37 @@ export function sanitizePersistedNode(node: FlowTab['nodes'][number]): FlowTab['
   return withSectionDefaults(persistedNode);
 }
 
+function flattenLegacyContainerNodes(nodes: FlowTab['nodes']): FlowTab['nodes'] {
+  const removedContainerIds = new Set(
+    nodes
+      .filter((node) => node.type === 'section' || node.type === 'group')
+      .map((node) => node.id)
+  );
+
+  return nodes
+    .filter((node) => !removedContainerIds.has(node.id))
+    .map((node) => {
+      if (!node.parentId || !removedContainerIds.has(node.parentId)) {
+        return node;
+      }
+
+      const { parentId: _parentId, extent: _extent, ...flattenedNode } = node;
+      return flattenedNode;
+    });
+}
+
 export function sanitizePersistedEdge(edge: FlowTab['edges'][number]): FlowTab['edges'][number] {
   const { selected: _selected, ...persistedEdge } = edge;
   return persistedEdge;
 }
 
 export function sanitizePersistedTab(tab: FlowTab): FlowTab {
+  const sanitizedNodes = tab.nodes.map(sanitizePersistedNode);
+  const flattenedNodes = flattenLegacyContainerNodes(sanitizedNodes);
+
   return {
     ...tab,
-    nodes: ensureParentsBeforeChildren(tab.nodes.map(sanitizePersistedNode)),
+    nodes: ensureParentsBeforeChildren(flattenedNodes),
     edges: tab.edges.map(sanitizePersistedEdge),
     playback: clonePlaybackState(tab.playback),
     history: sanitizePersistedHistory(tab.history),

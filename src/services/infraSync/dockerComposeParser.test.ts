@@ -44,9 +44,9 @@ describe('parseDockerCompose', () => {
     expect(edge!.label).toBe('depends_on');
   });
 
-  it('parses services with networks and links them to network section nodes', () => {
+  it('parses services with networks and links them to network architecture nodes', () => {
     const result = parseDockerCompose(COMPOSE_WITH_NETWORKS);
-    const netNodes = result.nodes.filter((n) => n.nodeType === 'section');
+    const netNodes = result.nodes.filter((n) => n.nodeType === 'architecture');
     expect(netNodes.length).toBeGreaterThanOrEqual(1);
 
     const frontendNode = result.nodes.find((n) => n.resourceName === 'frontend');

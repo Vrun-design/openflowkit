@@ -14,11 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '../ui/Button';
 import { Tooltip } from '../Tooltip';
 import type { WorkspaceDocumentPreview } from '@/store/workspaceDocumentModel';
-import {
-  getRecentOnboardingActionSuggestions,
-  recordOnboardingEvent,
-  type OnboardingActionSuggestion,
-} from '@/services/onboarding/events';
+import { recordOnboardingEvent } from '@/services/onboarding/events';
 
 const AUTOSAVED_LABEL = 'Autosaved';
 
@@ -56,9 +52,9 @@ export function HomeDashboard({
   onDeleteFlow,
 }: HomeDashboardProps): React.ReactElement {
   const { t } = useTranslation();
+  const hasFlows = flows.length > 0;
   const secondaryActionIconClass =
     'h-4 w-4 text-[var(--brand-secondary)] transition-transform duration-300 group-hover:scale-110';
-  const recentActionSuggestions = getRecentOnboardingActionSuggestions();
 
   function handleCreateNew(): void {
     recordOnboardingEvent('welcome_blank_selected', { source: 'home-dashboard' });
@@ -78,23 +74,6 @@ export function HomeDashboard({
   function handleOpenTemplates(): void {
     recordOnboardingEvent('welcome_template_selected', { source: 'home-dashboard' });
     onOpenTemplates();
-  }
-
-  function handleRecentActionSelection(action: OnboardingActionSuggestion['action']): void {
-    switch (action) {
-      case 'blank':
-        handleCreateNew();
-        return;
-      case 'ai':
-        handlePromptWithAI();
-        return;
-      case 'import':
-        handleImportJSON();
-        return;
-      case 'templates':
-        handleOpenTemplates();
-        return;
-    }
   }
 
   return (
@@ -133,14 +112,14 @@ export function HomeDashboard({
               </div>
             </Tooltip>
           </div>
-          {flows.length > 0 && (
+          {hasFlows && (
             <span className="text-xs text-[var(--brand-secondary)]">
               {flows.length} {t('home.files', 'files')}
             </span>
           )}
         </div>
 
-        {flows.length === 0 ? (
+        {!hasFlows ? (
           <div
             className="flex w-full flex-col py-2 sm:py-6 animate-in fade-in zoom-in-[0.99] duration-700"
             data-testid="home-empty-state"
@@ -205,38 +184,6 @@ export function HomeDashboard({
                     {t('home.homeTemplates', 'Templates')}
                   </Button>
                 </div>
-
-                {recentActionSuggestions.length > 0 ? (
-                  <div
-                    className="mt-8 w-full max-w-[640px] rounded-[18px] border border-[var(--color-brand-border)]/60 bg-[var(--brand-background)]/70 p-4 text-left"
-                    data-testid="home-recent-actions"
-                  >
-                    <h3 className="text-sm font-semibold text-[var(--brand-text)]">
-                      {t('home.continueTitle', 'Continue with a recent action')}
-                    </h3>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      {recentActionSuggestions.map((suggestion) => {
-                        const suggestionCopy = getSuggestionCopy(t, suggestion.action);
-
-                        return (
-                          <button
-                            key={suggestion.action}
-                            type="button"
-                            onClick={() => handleRecentActionSelection(suggestion.action)}
-                            className="rounded-[14px] border border-[var(--color-brand-border)]/60 bg-[var(--brand-surface)] px-4 py-3 text-left transition-colors hover:border-[var(--brand-primary)]/40 hover:bg-[var(--brand-primary)]/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40"
-                          >
-                            <div className="text-sm font-medium text-[var(--brand-text)]">
-                              {suggestionCopy.label}
-                            </div>
-                            <div className="mt-1 text-xs text-[var(--brand-secondary)]">
-                              {suggestionCopy.description}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
 
                 <div className="mt-8 flex items-center justify-center pt-6 border-t border-[var(--color-brand-border)]/60 w-full max-w-[640px]">
                   <ImportExistingFileButton
@@ -312,39 +259,6 @@ export function HomeDashboard({
       </section>
     </div>
   );
-}
-
-interface SuggestionCopy {
-  description: string;
-  label: string;
-}
-
-function getSuggestionCopy(
-  t: ReturnType<typeof useTranslation>['t'],
-  action: OnboardingActionSuggestion['action']
-): SuggestionCopy {
-  switch (action) {
-    case 'blank':
-      return {
-        label: t('home.suggestionBlank', 'Blank canvas'),
-        description: t('home.suggestionBlankDesc', 'Jump straight into the editor'),
-      };
-    case 'ai':
-      return {
-        label: t('home.suggestionAI', 'Flowpilot AI'),
-        description: t('home.suggestionAIDesc', 'Start from a prompt'),
-      };
-    case 'import':
-      return {
-        label: t('home.suggestionImport', 'Import'),
-        description: t('home.suggestionImportDesc', 'Bring in existing work'),
-      };
-    case 'templates':
-      return {
-        label: t('home.suggestionTemplates', 'Templates'),
-        description: t('home.suggestionTemplatesDesc', 'Start from a proven pattern'),
-      };
-  }
 }
 
 function formatUpdatedAt(updatedAt?: string): string {

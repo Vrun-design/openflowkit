@@ -114,7 +114,7 @@ Guidelines:
 - Use [architecture] nodes for databases, caches, queues, external APIs, cloud services, and infrastructure
 - Use [system] nodes for application services, classes, modules, controllers, and business logic
 - Use [browser] or [mobile] nodes for frontend surfaces if present
-- Use [section] to group related components (e.g. "Frontend", "Backend", "Database Layer")
+- Do not use section or group containers; keep related components adjacent and use labels or subtitles to imply layers such as Frontend, Backend, or Database Layer
 - Use [process] nodes for key operations or workflows
 - Color by layer:
   - blue for frontend and user-facing surfaces
@@ -148,7 +148,7 @@ The codebase was analyzed statically — file imports and dependencies were pars
 
 Guidelines:
 - Detect the tech stack and platform from imports, dependencies, and infra files
-- Use [section] containers for top-level layers or modules such as Frontend, API, Services, Data, Platform, or External Services
+- Do not use section or group containers for top-level layers or modules such as Frontend, API, Services, Data, Platform, or External Services
 - Use [architecture] nodes for databases, caches, queues, external APIs, cloud services, infrastructure, and platform resources
 - Use [system] nodes for key files or modules that serve as services, controllers, models, utilities, or internal APIs
 - Use [browser] or [mobile] nodes for frontend entry points if present
@@ -158,7 +158,7 @@ Guidelines:
   - azure -> archProvider: "azure"
   - gcp -> archProvider: "gcp"
   - cncf -> archProvider: "cncf"
-  - docker -> use [section] or [architecture] service nodes for containers and runtimes
+  - docker -> use [architecture] service nodes for containers and runtimes
 - Color by layer:
   - blue -> frontend / user-facing
   - violet -> backend services / APIs

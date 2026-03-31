@@ -12,28 +12,7 @@ export function createCanvasActions(
   return {
     onNodesChange: (changes) => {
       set((state) => {
-        const resizedSectionIds = new Set(
-          changes
-            .filter(
-              (change) =>
-                change.type === 'dimensions' ||
-                change.type === 'replace'
-            )
-            .map((change) => change.id)
-        );
-        const nextNodes = applyFlowNodeChanges(changes, state.nodes).map((node) => {
-          if (node.type !== 'section' || !resizedSectionIds.has(node.id)) {
-            return node;
-          }
-
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              sectionSizingMode: 'manual' as const,
-            },
-          };
-        }) as FlowNode[];
+        const nextNodes = applyFlowNodeChanges(changes, state.nodes) as FlowNode[];
         return {
           nodes: nextNodes,
           tabs: syncTabNodesEdges(state.tabs, state.activeTabId, nextNodes, state.edges),

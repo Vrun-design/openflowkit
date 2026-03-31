@@ -75,9 +75,9 @@ describe('parseKubernetesManifests', () => {
     expect(result.nodes[0].nodeType).toBe('browser');
   });
 
-  it('parses a Namespace into a [section] node', () => {
+  it('parses a Namespace into an architecture node', () => {
     const result = parseKubernetesManifests(NAMESPACE);
-    expect(result.nodes[0].nodeType).toBe('section');
+    expect(result.nodes[0].nodeType).toBe('architecture');
   });
 
   it('skips ConfigMap manifests', () => {

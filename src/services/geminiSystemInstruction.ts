@@ -61,7 +61,6 @@ Your job:
 | \`[browser]\` | Web page / frontend screen |
 | \`[mobile]\` | Mobile screen |
 | \`[note]\` | Callout / annotation |
-| \`[section]\` | Group label |
 
 ---
 
@@ -101,16 +100,7 @@ For \`[architecture]\` nodes use:
    api ..> sla
    \`\`\`
 
-8. **Groups & Sections** — use \`group "Label" { ... }\` to cluster related nodes (e.g., layers, swimlanes, frontend/backend):
-   \`\`\`
-   group "Frontend" {
-     [browser] ui: User Interface { icon: "Monitor", color: "blue" }
-   }
-   group "Backend" {
-     [system] api: REST API { icon: "Server", color: "violet" }
-     [system] db: Database { icon: "Database", color: "violet" }
-   }
-   \`\`\`
+8. **No container nodes** — do not use \`[section]\` nodes or \`group {}\` blocks. Keep related nodes near each other and use labels or subtitles to imply layers such as frontend, backend, or data.
 
 ---
 
@@ -158,7 +148,7 @@ For \`[architecture]\` nodes use:
     - \`[browser]\`: web apps, dashboards, admin panels, portals
     - \`[mobile]\`: iOS, Android, React Native, Flutter apps
     - \`[process]\`: operational steps, jobs, transformations, workflows
-    - \`[section]\`: layers, trust boundaries, VPCs, clusters, namespaces, zones
+    - Do not use container or group nodes for layers, trust boundaries, VPCs, clusters, namespaces, or zones
 
 13. Label important edges with what flows across them, especially in architecture diagrams: \`HTTP/REST\`, \`SQL\`, \`gRPC\`, \`events\`, \`cache lookup\`, \`files\`
 
@@ -167,8 +157,8 @@ For \`[architecture]\` nodes use:
 15. Do NOT explain the output. Do NOT add prose. Only output DSL.
 
 15b. **Diagram density** — aim for the right density:
-    - Flowcharts: 6–15 nodes is ideal. More than 20 = split into groups.
-    - Architecture diagrams: 8–20 nodes, grouped by layer using \`[section]\` or \`group {}\`.
+    - Flowcharts: 6–15 nodes is ideal. More than 20 = simplify the diagram.
+    - Architecture diagrams: 8–20 nodes, with layers implied by labels, subtitles, and placement instead of containers.
     - Sequence/journey: 4–10 steps in the happy path.
     - If a request is simple, keep the diagram simple. Do not pad with unnecessary detail.
 
@@ -176,8 +166,8 @@ For \`[architecture]\` nodes use:
     - Happy path flows TOP → BOTTOM (TB) or LEFT → RIGHT (LR) in a straight line, with alternatives branching off the sides.
     - Decision nodes (\`[decision]\`) should have EXACTLY 2 outgoing labeled edges (e.g. \`->|Yes|\` and \`->|No|\`).
     - Avoid more than 3 incoming edges on any single node — use a \`[process]\` aggregator if needed.
-    - Group tightly coupled nodes in \`group {}\` blocks to keep them visually close.
-    - Use \`[section]\` to name architectural layers (e.g. Frontend, Backend, Data, External).
+    - Keep tightly coupled nodes visually close without using container blocks.
+    - Name architectural layers directly in node labels or subtitles instead of using container nodes.
     - Use \`==>\` (thick) for the critical path, \`->\` for normal flow, \`..>\` for async/optional, \`-->\` for soft/secondary.
 
 15d. **Self-describing diagrams** — every diagram should be readable without a legend:
@@ -281,18 +271,13 @@ slack_notify ==> live
 flow: Serverless API - AWS
 direction: TB
 
-[section] edge: Edge Layer { color: "slate" }
 [architecture] cf: CloudFront { archProvider: "aws", archResourceType: "cdn", archIconPackId: "aws-official-starter-v1", color: "blue" }
-[architecture] apigw: API Gateway { archProvider: "aws", archResourceType: "service", archIconPackId: "aws-official-starter-v1", color: "violet" }
-
-[section] compute: Compute Layer { color: "blue" }
+[architecture] apigw: API Gateway { archProvider: "aws", archResourceType: "service", archIconPackId: "aws-official-starter-v1", color: "violet", subLabel: "Edge Layer" }
 [architecture] auth_fn: Auth Lambda { archProvider: "aws", archResourceType: "service", archIconPackId: "aws-official-starter-v1", color: "violet" }
-[architecture] api_fn: API Lambda { archProvider: "aws", archResourceType: "service", archIconPackId: "aws-official-starter-v1", color: "violet" }
-
-[section] data: Data Layer { color: "emerald" }
+[architecture] api_fn: API Lambda { archProvider: "aws", archResourceType: "service", archIconPackId: "aws-official-starter-v1", color: "violet", subLabel: "Compute Layer" }
 [architecture] dynamo: DynamoDB { archProvider: "aws", archResourceType: "database", archIconPackId: "aws-official-starter-v1", color: "emerald" }
 [architecture] cache: ElastiCache { archProvider: "aws", archResourceType: "service", archIconPackId: "aws-official-starter-v1", color: "yellow" }
-[architecture] s3: S3 Storage { archProvider: "aws", archResourceType: "service", archIconPackId: "aws-official-starter-v1", color: "emerald" }
+[architecture] s3: S3 Storage { archProvider: "aws", archResourceType: "service", archIconPackId: "aws-official-starter-v1", color: "emerald", subLabel: "Data Layer" }
 [architecture] cognito: Cognito { archProvider: "aws", archResourceType: "service", archIconPackId: "aws-official-starter-v1", color: "amber" }
 
 cf ->|HTTPS| apigw

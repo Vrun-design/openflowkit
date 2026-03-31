@@ -122,6 +122,19 @@ describe('mermaidParser', () => {
         expect(result.edges[1].label).toBe('1.5a');
     });
 
+    it('ignores subgraph wrappers instead of creating container nodes', () => {
+        const input = `
+            flowchart TD
+            subgraph Services
+              API[API]
+            end
+        `;
+        const result = parseMermaid(input);
+        const apiNode = result.nodes.find((node) => node.id === 'API');
+        expect(result.nodes).toHaveLength(1);
+        expect(apiNode?.parentId).toBeUndefined();
+    });
+
     it('should handle duplicate edges between same pair', () => {
         const input = `
             flowchart TD

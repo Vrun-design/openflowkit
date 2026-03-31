@@ -76,7 +76,7 @@ describe('OpenFlow DSL V2 Parser', () => {
         expect(p1?.data.quote).toBe('say "hello"');
     });
 
-    it('parses groups', () => {
+    it('ignores group wrappers and keeps inner nodes flat', () => {
         const input = `
             group "Backend" {
                 [process] api: API
@@ -85,9 +85,9 @@ describe('OpenFlow DSL V2 Parser', () => {
             }
         `;
         const result = parseOpenFlowDslV2(input);
-        expect(result.nodes).toHaveLength(3); // api, db, Backend group
+        expect(result.nodes).toHaveLength(2);
 
         const api = result.nodes.find(n => n.id === 'api');
-        expect(api?.parentId).toBeDefined();
+        expect(api?.parentId).toBeUndefined();
     });
 });

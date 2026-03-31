@@ -24,7 +24,7 @@ function getNodeType(kind: string): string {
     case 'IngressClass':
       return 'browser';
     case 'Namespace':
-      return 'section';
+      return 'architecture';
     case 'CronJob':
     case 'Job':
       return 'process';

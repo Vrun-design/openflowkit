@@ -58,13 +58,6 @@ interface SectionModel {
   importantFiles: string[];
 }
 
-interface SectionEdge {
-  from: string;
-  to: string;
-  count: number;
-  label: string;
-}
-
 function slugify(value: string): string {
   return value
     .trim()
@@ -201,96 +194,6 @@ function buildSections(analysis: CodebaseAnalysis): SectionModel[] {
     .sort((left, right) => left.label.localeCompare(right.label));
 }
 
-function buildFileToSectionMap(sections: SectionModel[]): Map<string, string> {
-  const fileToSection = new Map<string, string>();
-  for (const section of sections) {
-    for (const file of section.files) {
-      fileToSection.set(file, section.id);
-    }
-  }
-  return fileToSection;
-}
-
-function buildSectionEdges(
-  analysis: CodebaseAnalysis,
-  fileToSection: Map<string, string>,
-  sections: SectionModel[]
-): SectionEdge[] {
-  const sectionsById = new Map(sections.map((section) => [section.id, section]));
-  const counts = new Map<string, number>();
-
-  for (const edge of analysis.edges) {
-    const from = fileToSection.get(edge.from);
-    const to = fileToSection.get(edge.to);
-    if (!from || !to || from === to) continue;
-    const key = `${from}->${to}`;
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-
-  return [...counts.entries()]
-    .map(([key, count]) => {
-      const [from, to] = key.split('->');
-      const fromSection = sectionsById.get(from);
-      const toSection = sectionsById.get(to);
-      return {
-        from,
-        to,
-        count,
-        label: getSectionEdgeLabel(fromSection, toSection, count),
-      };
-    })
-    .sort((left, right) => right.count - left.count);
-}
-
-function getSectionEdgeLabel(
-  fromSection: SectionModel | undefined,
-  toSection: SectionModel | undefined,
-  count: number
-): string {
-  if (!fromSection || !toSection) {
-    return formatImportLabel(count);
-  }
-
-  if (toSection.role === 'config') {
-    return formatSemanticLabel('config usage', count);
-  }
-  if (toSection.role === 'auth') {
-    return formatSemanticLabel('auth flow', count);
-  }
-  if (toSection.role === 'models') {
-    return formatSemanticLabel('data access', count);
-  }
-  if (toSection.role === 'utils') {
-    return formatSemanticLabel('shared code', count);
-  }
-  if (isSharedWorkspaceSection(toSection.label)) {
-    return formatSemanticLabel('shared code', count);
-  }
-  if (fromSection.role === 'frontend' && (toSection.role === 'routes' || toSection.role === 'services')) {
-    return formatSemanticLabel('HTTP/UI flow', count);
-  }
-  if (fromSection.role === 'routes' && toSection.role === 'services') {
-    return formatSemanticLabel('request handling', count);
-  }
-  if (fromSection.role === 'services' && toSection.role === 'services') {
-    return formatSemanticLabel('service call', count);
-  }
-
-  return formatImportLabel(count);
-}
-
-function formatSemanticLabel(label: string, count: number): string {
-  return `${label} (${count} import${count === 1 ? '' : 's'})`;
-}
-
-function formatImportLabel(count: number): string {
-  return `${count} import${count === 1 ? '' : 's'}`;
-}
-
-function isSharedWorkspaceSection(label: string): boolean {
-  return /^(packages|libs)\//.test(label);
-}
-
 function buildCloudServiceSection(services: DetectedService[]): string[] {
   if (services.length === 0) {
     return [];
@@ -301,26 +204,22 @@ function buildCloudServiceSection(services: DetectedService[]): string[] {
     return [];
   }
 
-  const lines = ['group "Platform Services" {'];
-  lines.push('  [section] platform_services: Platform Services { color: "pink" }');
+  const lines: string[] = [];
 
   for (const service of supportedServices.slice(0, 6)) {
     const nodeId = `svc_${slugify(service.name)}`;
     const iconPackId = service.iconPackId ? `, archIconPackId: "${service.iconPackId}"` : '';
     const iconShapeId = service.iconShapeId ? `, archIconShapeId: "${service.iconShapeId}"` : '';
     lines.push(
-      `  [architecture] ${nodeId}: ${service.name} { archProvider: "${service.provider}", archResourceType: "${service.resourceType}", color: "${service.suggestedColor}"${iconPackId}${iconShapeId} }`
+      `[architecture] ${nodeId}: ${service.name} { archProvider: "${service.provider}", archResourceType: "${service.resourceType}", color: "${service.suggestedColor}"${iconPackId}${iconShapeId} }`
     );
   }
 
-  lines.push('}');
   return lines;
 }
 
 function buildNativeDiagramDsl(analysis: CodebaseAnalysis): string {
   const sections = buildSections(analysis);
-  const fileToSection = buildFileToSectionMap(sections);
-  const sectionEdges = buildSectionEdges(analysis, fileToSection, sections);
   const lines = [
     `flow: ${quoteLabel('Repository Module Structure')}`,
     'direction: TB',
@@ -328,31 +227,23 @@ function buildNativeDiagramDsl(analysis: CodebaseAnalysis): string {
   ];
 
   for (const section of sections) {
-    lines.push(`group ${quoteLabel(section.label)} {`);
-    lines.push(`  [section] ${section.id}: ${section.label} { color: "${section.color}" }`);
-
     for (const path of section.importantFiles) {
       const fileRole = detectFileRole(path);
       const nodeId = `file_${slugify(path)}`;
       const label = formatFileLabel(path);
       const visual = ROLE_VISUAL[section.role];
-      const subLabel = path.replace(/"/g, '\\"');
+      const subLabel = `${section.label} · ${path}`.replace(/"/g, '\\"');
       lines.push(
-        `  [${visual.nodeType}] ${nodeId}: ${label} { icon: "${FILE_ROLE_ICON[fileRole]}", color: "${section.color}", subLabel: "${subLabel}" }`
+        `[${visual.nodeType}] ${nodeId}: ${label} { icon: "${FILE_ROLE_ICON[fileRole]}", color: "${section.color}", subLabel: "${subLabel}" }`
       );
     }
 
-    lines.push('}');
     lines.push('');
   }
 
   const cloudLines = buildCloudServiceSection(analysis.detectedServices);
   if (cloudLines.length > 0) {
     lines.push(...cloudLines, '');
-  }
-
-  for (const edge of sectionEdges.slice(0, 18)) {
-    lines.push(`${edge.from} ->|${edge.label}| ${edge.to}`);
   }
 
   return lines.join('\n').trim();
@@ -365,7 +256,7 @@ function countDiagramElements(dsl: string): { nodeCount: number; edgeCount: numb
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (/^\[(entity|process|system|section|start|end|decision|browser|mobile|note|annotation|container|architecture)\]/.test(trimmed)) {
+    if (/^\[(entity|process|system|start|end|decision|browser|mobile|note|annotation|container|architecture)\]/.test(trimmed)) {
       nodeCount += 1;
       continue;
     }
