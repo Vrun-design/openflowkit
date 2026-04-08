@@ -9,6 +9,7 @@ import { getAssetCategoryDisplayName } from '@/services/assetPresentation';
 import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalog';
 import type { ConnectedEdgePreset } from '@/hooks/edge-operations/utils';
 import { useMenuKeyboardNavigation } from '@/hooks/useMenuKeyboardNavigation';
+import { normalizeNodeIconData } from '@/lib/nodeIconState';
 import {
     type ConnectMenuOption,
     GenericConnectOptionsSection,
@@ -96,13 +97,14 @@ export const ConnectMenu = ({ position, sourceId, sourceType, onSelect, onSelect
     const menuRef = React.useRef<HTMLDivElement>(null);
     const { onKeyDown } = useMenuKeyboardNavigation({ menuRef, onClose });
     const sourceNode = useFlowStore((state) => state.nodes.find((node) => node.id === sourceId));
+    const normalizedIconData = normalizeNodeIconData(sourceNode?.data);
     const isMindmapSource = isMindmapConnectorSource(sourceType);
-    const isAssetSource = sourceNode?.data?.assetPresentation === 'icon'
-        && typeof sourceNode.data?.assetProvider === 'string';
-    const assetProvider = (sourceNode?.data?.assetProvider || null) as DomainLibraryCategory | null;
-    const assetCategory = typeof sourceNode?.data?.assetCategory === 'string' ? sourceNode.data.assetCategory : undefined;
-    const currentShapeId = typeof sourceNode?.data?.archIconShapeId === 'string' ? sourceNode.data.archIconShapeId : undefined;
-    const currentIconName = typeof sourceNode?.data?.icon === 'string' ? sourceNode.data.icon : undefined;
+    const isAssetSource = normalizedIconData?.assetPresentation === 'icon'
+        && typeof normalizedIconData.assetProvider === 'string';
+    const assetProvider = (normalizedIconData?.assetProvider || null) as DomainLibraryCategory | null;
+    const assetCategory = typeof normalizedIconData?.assetCategory === 'string' ? normalizedIconData.assetCategory : undefined;
+    const currentShapeId = typeof normalizedIconData?.archIconShapeId === 'string' ? normalizedIconData.archIconShapeId : undefined;
+    const currentIconName = typeof normalizedIconData?.icon === 'string' ? normalizedIconData.icon : undefined;
     const providerItemsKey = isAssetSource && assetProvider
         ? `${assetProvider}:${assetCategory ?? 'all'}:${currentShapeId ?? currentIconName ?? 'all'}`
         : null;

@@ -42,16 +42,48 @@ export function buildEdgePath(
     return measureDevPerformance('buildEdgePath', () => {
         const interactionLowDetailModeActive = isEdgeInteractionLowDetailModeActive();
         const graphRoutingFastPathActive = interactionLowDetailModeActive || allEdges.length >= EDGE_ROUTING_FAST_PATH_THRESHOLD;
+        const pairOffset = graphRoutingFastPathActive
+            ? 0
+            : getParallelEdgeOffset(params.id, params.source, params.target, allEdges);
+        const sourceSiblingCount = graphRoutingFastPathActive
+            ? 0
+            : getEndpointSiblingCount(allEdges, allNodes, {
+                nodeId: params.source,
+                handleId: params.sourceHandleId,
+                direction: 'source',
+            });
+        const sourceFanoutOffset = graphRoutingFastPathActive
+            ? 0
+            : getEndpointFanoutOffset(params.id, allEdges, allNodes, {
+                nodeId: params.source,
+                handleId: params.sourceHandleId,
+                direction: 'source',
+            });
+        const targetFanoutOffset = graphRoutingFastPathActive
+            ? 0
+            : getEndpointFanoutOffset(params.id, allEdges, allNodes, {
+                nodeId: params.target,
+                handleId: params.targetHandleId,
+                direction: 'target',
+            });
+        const labelBundleOffset = pairOffset + (sourceFanoutOffset + targetFanoutOffset) / 2;
 
         if (params.source === params.target) {
+            const sourceNode = getNodeById(allNodes, params.source);
             const loop = getSelfLoopPath(
                 params.sourceX,
                 params.sourceY,
-                180,
-                60,
+                sourceNode?.width ?? 180,
+                sourceNode?.height ?? 60,
                 getLoopDirection(params.sourcePosition)
             );
-            return { edgePath: loop.path, labelX: loop.labelX, labelY: loop.labelY };
+            return withBundledLabelOffset(
+                loop.path,
+                loop.labelX,
+                loop.labelY,
+                params,
+                labelBundleOffset
+            );
         }
 
         const shouldUseElkRoute =
@@ -81,39 +113,11 @@ export function buildEdgePath(
             const pathStr = buildRoundedPolylinePath(allPoints, 20);
             const { x: labelX, y: labelY } = getElkLabelPosition(adjustedSource.x, adjustedSource.y, points);
 
-            return {
-                edgePath: pathStr,
-                labelX,
-                labelY,
-            };
+            return withBundledLabelOffset(pathStr, labelX, labelY, params, labelBundleOffset);
         }
 
-        const pairOffset = graphRoutingFastPathActive
-            ? 0
-            : getParallelEdgeOffset(params.id, params.source, params.target, allEdges);
         const isMindmapBranch = Boolean(options.mindmapBranchKind) && variant === 'bezier' && !options.forceOrthogonal;
         const isMindmapRootBranch = options.mindmapBranchKind === 'root' && isMindmapBranch;
-        const sourceSiblingCount = graphRoutingFastPathActive
-            ? 0
-            : getEndpointSiblingCount(allEdges, allNodes, {
-                nodeId: params.source,
-                handleId: params.sourceHandleId,
-                direction: 'source',
-            });
-        const sourceFanoutOffset = graphRoutingFastPathActive
-            ? 0
-            : getEndpointFanoutOffset(params.id, allEdges, allNodes, {
-                nodeId: params.source,
-                handleId: params.sourceHandleId,
-                direction: 'source',
-            });
-        const targetFanoutOffset = graphRoutingFastPathActive
-            ? 0
-            : getEndpointFanoutOffset(params.id, allEdges, allNodes, {
-                nodeId: params.target,
-                handleId: params.targetHandleId,
-                direction: 'target',
-            });
         const shouldUseSharedSourceTrunk =
             !isMindmapBranch
             && (variant === 'smoothstep' || variant === 'step' || options.forceOrthogonal)
@@ -135,7 +139,6 @@ export function buildEdgePath(
             pairOffset + ((isMindmapBranch || shouldUseSharedSourceTrunk) ? 0 : sourceFanoutOffset)
         );
         const targetOffset = getOffsetVector(params.targetPosition, pairOffset + targetFanoutOffset);
-        const labelBundleOffset = pairOffset + (sourceFanoutOffset + targetFanoutOffset) / 2;
         const sourceX = params.sourceX + sourceOffset.x;
         const sourceY = params.sourceY + sourceOffset.y;
         const targetX = params.targetX + targetOffset.x;

@@ -31,7 +31,7 @@ const FUZZ_CASES: FuzzCase[] = [
     `,
     expectDiagnosticsIncludes: [
       'Invalid journey section syntax at line',
-      'Invalid journey step syntax at line',
+      'Invalid journey score at line',
     ],
   },
   {

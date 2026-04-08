@@ -3,6 +3,7 @@ import type { NodeData } from '@/lib/types';
 import type { DomainLibraryCategory, DomainLibraryItem } from '@/services/domainLibrary';
 import { loadProviderCatalog } from '@/services/shapeLibrary/providerCatalog';
 import { useAssetCatalog } from '@/hooks/useAssetCatalog';
+import { createProviderIconData, createUploadedIconData } from '@/lib/nodeIconState';
 import { InspectorField } from '@/components/properties/InspectorPrimitives';
 import { SegmentedChoice } from '@/components/properties/SegmentedChoice';
 import { Input } from '@/components/ui/Input';
@@ -81,13 +82,19 @@ export function ArchitectureNodeSection({
     onChange(nodeId, {
       label: item.label,
       subLabel: item.providerShapeCategory || item.description,
-      icon: item.icon,
       archProvider: item.category,
       archProviderLabel: undefined,
       archResourceType: 'service',
-      customIconUrl: undefined,
-      archIconPackId: item.archIconPackId,
-      archIconShapeId: item.archIconShapeId,
+      ...(
+        item.archIconPackId && item.archIconShapeId
+          ? createProviderIconData({
+              packId: item.archIconPackId,
+              shapeId: item.archIconShapeId,
+              provider: item.category,
+              category: item.providerShapeCategory,
+            })
+          : createUploadedIconData(undefined)
+      ),
     });
   }
 
@@ -98,7 +105,7 @@ export function ArchitectureNodeSection({
     }
 
     readFileAsDataUrl(file, (result) => {
-      onChange(nodeId, { customIconUrl: result });
+      onChange(nodeId, createUploadedIconData(result));
     });
   }
 

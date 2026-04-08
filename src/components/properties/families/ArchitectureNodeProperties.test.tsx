@@ -3,11 +3,16 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { useFlowStore } from '@/store';
 import { ArchitectureNodeProperties } from './ArchitectureNodeProperties';
 
-vi.mock('@/services/shapeLibrary/providerCatalog', () => ({
-  loadProviderCatalog: vi.fn().mockImplementation(() => new Promise(() => {})),
-  loadProviderShapePreview: vi.fn().mockResolvedValue(null),
-  listProviderCatalogProviders: vi.fn().mockReturnValue([]),
-}));
+vi.mock('@/services/shapeLibrary/providerCatalog', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/shapeLibrary/providerCatalog')>();
+
+  return {
+    ...actual,
+    loadProviderCatalog: vi.fn().mockImplementation(() => new Promise(() => {})),
+    loadProviderShapePreview: vi.fn().mockResolvedValue(null),
+    listProviderCatalogProviders: vi.fn().mockReturnValue([]),
+  };
+});
 
 const baseHandlers = {
   onChange: vi.fn(),

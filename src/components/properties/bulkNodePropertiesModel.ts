@@ -2,6 +2,11 @@ import type { Node } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
 import type { DomainLibraryCategory } from '@/services/domainLibrary';
 import { getCapabilityTargetNodeIds, type BulkLabelTransformOptions } from '@/lib/nodeBulkEditing';
+import {
+  createBuiltInIconData,
+  createProviderIconData,
+  createUploadedIconData,
+} from '@/lib/nodeIconState';
 
 export type BulkIconMode = '' | 'built-in' | 'provider' | 'upload';
 export type BulkSectionId =
@@ -155,30 +160,25 @@ export function buildBulkUpdates(
   }
 
   if (form.iconMode === 'built-in') {
-    updates.icon = form.icon;
-    updates.customIconUrl = undefined;
-    updates.assetProvider = undefined;
-    updates.assetCategory = undefined;
-    updates.archIconPackId = undefined;
-    updates.archIconShapeId = undefined;
+    Object.assign(updates, createBuiltInIconData(form.icon));
   }
 
   if (form.iconMode === 'upload') {
-    updates.icon = undefined;
-    updates.customIconUrl = form.customIconUrl;
-    updates.assetProvider = undefined;
-    updates.assetCategory = undefined;
-    updates.archIconPackId = undefined;
-    updates.archIconShapeId = undefined;
+    Object.assign(updates, createUploadedIconData(form.customIconUrl));
   }
 
   if (form.iconMode === 'provider') {
-    updates.icon = undefined;
-    updates.customIconUrl = undefined;
-    updates.assetProvider = form.assetProvider;
-    updates.assetCategory = form.assetCategory;
-    updates.archIconPackId = form.archIconPackId;
-    updates.archIconShapeId = form.archIconShapeId;
+    if (form.archIconPackId && form.archIconShapeId) {
+      Object.assign(
+        updates,
+        createProviderIconData({
+          packId: form.archIconPackId,
+          shapeId: form.archIconShapeId,
+          provider: form.assetProvider,
+          category: form.assetCategory,
+        })
+      );
+    }
   }
 
   if (form.archEnvironment) {

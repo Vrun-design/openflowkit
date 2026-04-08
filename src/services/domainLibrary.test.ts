@@ -68,6 +68,8 @@ describe('domainLibrary', () => {
 
         expect(node.type).toBe('custom');
         expect(node.data.assetPresentation).toBe('icon');
-        expect(node.data.customIconUrl).toBe('/mock/athena.svg');
+        expect(node.data.assetProvider).toBe('aws');
+        expect(node.data.assetCategory).toBe('Analytics');
+        expect(node.data.customIconUrl).toBeUndefined();
     });
 });

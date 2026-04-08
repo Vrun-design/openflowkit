@@ -58,4 +58,26 @@ describe('NodeProperties', () => {
     expect(screen.getByText('Secondary Style')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Text Style' })).toBeNull();
   });
+
+  it('uses the shared icon picker for icon-backed asset nodes', () => {
+    render(
+      <NodeProperties
+        selectedNode={createNode({
+          type: 'custom',
+          data: {
+            label: 'Lambda',
+            assetPresentation: 'icon',
+            archIconPackId: 'aws-official-starter-v1',
+            archIconShapeId: 'compute-lambda',
+          },
+        })}
+        onChange={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Icon' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('icon-picker')).toBeTruthy();
+  });
 });

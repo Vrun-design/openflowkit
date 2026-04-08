@@ -114,7 +114,8 @@ function emitSectionBlock(
   indent: string
 ): string {
   const label = sanitizeLabel(section.data.label);
-  let out = `${indent}subgraph ${label}\n`;
+  const quotedLabel = /[\s()[\]{}]/.test(label) ? `"${label}"` : label;
+  let out = `${indent}subgraph ${quotedLabel}\n`;
 
   for (const child of children) {
     if (child.type === 'section' || child.type === 'group') {

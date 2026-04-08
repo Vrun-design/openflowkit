@@ -334,7 +334,9 @@ export function parseOpenFlowDslV2(input: string): DSLResult {
       },
     };
     if (n.parentId) {
-      node = setNodeParent(node, n.parentId);
+      node = setNodeParent(node, n.parentId, {
+        constrainToParent: false,
+      });
     }
     finalNodes.push(node);
     createdNodeIds.add(n.id);

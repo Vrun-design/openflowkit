@@ -56,7 +56,7 @@ describe('section node utilities', () => {
     expect(section?.position).toEqual({ x: 168, y: 164 });
     expect(section?.style).toMatchObject({ width: 500, height: 400 });
     expect(childA?.parentId).toBe('section-1');
-    expect(childA?.extent).toBe('parent');
+    expect(childA?.extent).toBeUndefined();
     expect(childA?.position).toEqual({ x: 32, y: 16 });
     expect(childB?.position).toEqual({ x: 212, y: 96 });
   });
@@ -112,7 +112,9 @@ describe('section node utilities', () => {
     const innerSection = makeSectionNode('section-inner', 180, 180, 500, 400);
     const draggedNode = makeProcessNode('node-a', 240, 260);
 
-    expect(getContainingSectionId([outerSection, innerSection, draggedNode], draggedNode)).toBe('section-inner');
+    expect(getContainingSectionId([outerSection, innerSection, draggedNode], draggedNode)).toBe(
+      'section-inner'
+    );
   });
 
   it('duplicates a section with its descendants and preserves hierarchy', () => {
@@ -131,8 +133,12 @@ describe('section node utilities', () => {
     const duplicatedNodes = duplicateSectionWithChildren([section, child, grandChild], 'section-1');
     const duplicatedSections = duplicatedNodes.filter((node) => node.type === 'section');
     const clonedSection = duplicatedSections.find((node) => node.id !== 'section-1');
-    const clonedChild = duplicatedNodes.find((node) => node.id !== 'child-1' && node.parentId === clonedSection?.id);
-    const clonedGrandChild = duplicatedNodes.find((node) => node.id !== 'grandchild-1' && node.parentId === clonedChild?.id);
+    const clonedChild = duplicatedNodes.find(
+      (node) => node.id !== 'child-1' && node.parentId === clonedSection?.id
+    );
+    const clonedGrandChild = duplicatedNodes.find(
+      (node) => node.id !== 'grandchild-1' && node.parentId === clonedChild?.id
+    );
 
     expect(duplicatedSections).toHaveLength(2);
     expect(clonedSection?.position).toEqual({ x: 180, y: 200 });

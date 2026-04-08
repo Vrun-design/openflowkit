@@ -42,6 +42,11 @@ import {
   type BulkSectionId,
   type BulkNodePropertiesFormState,
 } from './bulkNodePropertiesModel';
+import {
+  createBuiltInIconData,
+  createProviderIconData,
+  createUploadedIconData,
+} from '@/lib/nodeIconState';
 
 interface BulkNodePropertiesProps {
   selectedNodes: Node<NodeData>[];
@@ -138,41 +143,49 @@ export function BulkNodeProperties({
   }
 
   function handleBuiltInIconChange(nextIcon: string): void {
+    const updates = createBuiltInIconData(nextIcon);
     setForm((current) => ({
       ...current,
       iconMode: 'built-in',
-      icon: nextIcon,
-      customIconUrl: undefined,
-      assetProvider: undefined,
-      assetCategory: undefined,
-      archIconPackId: undefined,
-      archIconShapeId: undefined,
+      icon: updates.icon ?? '',
+      customIconUrl: updates.customIconUrl,
+      assetProvider: updates.assetProvider as BulkNodePropertiesFormState['assetProvider'],
+      assetCategory: updates.assetCategory,
+      archIconPackId: updates.archIconPackId,
+      archIconShapeId: updates.archIconShapeId,
     }));
   }
 
   function handleProviderIconChange(selection: ProviderIconSelection): void {
+    const updates = createProviderIconData({
+      packId: selection.packId,
+      shapeId: selection.shapeId,
+      provider: selection.provider,
+      category: selection.category,
+    });
     setForm((current) => ({
       ...current,
       iconMode: 'provider',
-      icon: '',
-      customIconUrl: undefined,
-      assetProvider: selection.provider,
-      assetCategory: selection.category,
-      archIconPackId: selection.packId,
-      archIconShapeId: selection.shapeId,
+      icon: updates.icon ?? '',
+      customIconUrl: updates.customIconUrl,
+      assetProvider: updates.assetProvider as BulkNodePropertiesFormState['assetProvider'],
+      assetCategory: updates.assetCategory,
+      archIconPackId: updates.archIconPackId,
+      archIconShapeId: updates.archIconShapeId,
     }));
   }
 
   function handleCustomIconChange(url?: string): void {
+    const updates = createUploadedIconData(url);
     setForm((current) => ({
       ...current,
       iconMode: url ? 'upload' : '',
-      icon: '',
-      customIconUrl: url,
-      assetProvider: undefined,
-      assetCategory: undefined,
-      archIconPackId: undefined,
-      archIconShapeId: undefined,
+      icon: updates.icon ?? '',
+      customIconUrl: updates.customIconUrl,
+      assetProvider: updates.assetProvider as BulkNodePropertiesFormState['assetProvider'],
+      assetCategory: updates.assetCategory,
+      archIconPackId: updates.archIconPackId,
+      archIconShapeId: updates.archIconShapeId,
     }));
   }
 

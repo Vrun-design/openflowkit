@@ -2,44 +2,49 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AssetsView } from './AssetsView';
 
-vi.mock('@/services/shapeLibrary/providerCatalog', () => ({
-  getProviderCatalogCount: vi.fn((provider: string) => (provider === 'aws' ? 2 : 0)),
-  loadProviderCatalog: vi.fn(async () => [
-    {
-      id: 'aws-official-starter-v1:analytics-athena',
-      category: 'aws',
+vi.mock('@/services/shapeLibrary/providerCatalog', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/shapeLibrary/providerCatalog')>();
+
+  return {
+    ...actual,
+    getProviderCatalogCount: vi.fn((provider: string) => (provider === 'aws' ? 2 : 0)),
+    loadProviderCatalog: vi.fn(async () => [
+      {
+        id: 'aws-official-starter-v1:analytics-athena',
+        category: 'aws',
+        label: 'Analytics Athena',
+        description: 'AWS Analytics',
+        icon: 'Box',
+        color: 'amber',
+        nodeType: 'custom',
+        assetPresentation: 'icon',
+        providerShapeCategory: 'Analytics',
+        archIconPackId: 'aws-official-starter-v1',
+        archIconShapeId: 'analytics-athena',
+      },
+      {
+        id: 'aws-official-starter-v1:compute-lambda',
+        category: 'aws',
+        label: 'Compute Lambda',
+        description: 'AWS Compute',
+        icon: 'Box',
+        color: 'amber',
+        nodeType: 'custom',
+        assetPresentation: 'icon',
+        providerShapeCategory: 'Compute',
+        archIconPackId: 'aws-official-starter-v1',
+        archIconShapeId: 'compute-lambda',
+      },
+    ]),
+    loadProviderShapePreview: vi.fn(async () => ({
+      packId: 'aws-official-starter-v1',
+      shapeId: 'analytics-athena',
       label: 'Analytics Athena',
-      description: 'AWS Analytics',
-      icon: 'Box',
-      color: 'amber',
-      nodeType: 'custom',
-      assetPresentation: 'icon',
-      providerShapeCategory: 'Analytics',
-      archIconPackId: 'aws-official-starter-v1',
-      archIconShapeId: 'analytics-athena',
-    },
-    {
-      id: 'aws-official-starter-v1:compute-lambda',
-      category: 'aws',
-      label: 'Compute Lambda',
-      description: 'AWS Compute',
-      icon: 'Box',
-      color: 'amber',
-      nodeType: 'custom',
-      assetPresentation: 'icon',
-      providerShapeCategory: 'Compute',
-      archIconPackId: 'aws-official-starter-v1',
-      archIconShapeId: 'compute-lambda',
-    },
-  ]),
-  loadProviderShapePreview: vi.fn(async () => ({
-    packId: 'aws-official-starter-v1',
-    shapeId: 'analytics-athena',
-    label: 'Analytics Athena',
-    category: 'Analytics',
-    previewUrl: '/mock/athena.svg',
-  })),
-}));
+      category: 'Analytics',
+      previewUrl: '/mock/athena.svg',
+    })),
+  };
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

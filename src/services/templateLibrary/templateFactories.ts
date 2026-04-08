@@ -1,4 +1,5 @@
 import { createDefaultEdge } from '@/constants';
+import { createProviderIconData } from '@/lib/nodeIconState';
 import { NodeType, type FlowNode, type NodeData } from '@/lib/types';
 import type { TemplateManifest } from './types';
 
@@ -51,10 +52,12 @@ export function createAssetNode(
       color: 'custom',
       customColor: '#ffffff',
       assetPresentation: 'icon',
-      assetProvider: provider,
-      assetCategory: category,
-      archIconPackId: PROVIDER_PACK_IDS[provider],
-      archIconShapeId: shapeId,
+      ...createProviderIconData({
+        packId: PROVIDER_PACK_IDS[provider],
+        shapeId,
+        provider,
+        category,
+      }),
     },
   };
 }

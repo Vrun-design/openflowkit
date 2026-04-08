@@ -8,6 +8,7 @@ import {
     loadProviderShapePreview,
 } from '@/services/shapeLibrary/providerCatalog';
 import { useAssetCatalog } from '@/hooks/useAssetCatalog';
+import { inferAssetProviderFromPackId } from '@/lib/nodeIconState';
 import { ICON_NAMES, ICON_PICKER_PRIORITY_NAMES, NamedIcon } from '../IconMap';
 import { Tooltip } from '../Tooltip';
 import { Select } from '../ui/Select';
@@ -72,16 +73,6 @@ function getInitialSource(
     return 'built-in';
 }
 
-function inferProviderFromPackId(packId: string | undefined): DomainLibraryCategory | undefined {
-    if (!packId) {
-        return undefined;
-    }
-
-    const normalizedPackId = packId.toLowerCase();
-    const match = PROVIDER_OPTIONS.find((option) => normalizedPackId.includes(option.value));
-    return match?.value as DomainLibraryCategory | undefined;
-}
-
 function getProviderLabel(provider: DomainLibraryCategory): string {
     return getAssetCategoryDisplayName(provider);
 }
@@ -103,7 +94,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
     );
     const [provider, setProvider] = useState<DomainLibraryCategory>(
         selectedProvider
-        ?? inferProviderFromPackId(selectedProviderPackId)
+        ?? inferAssetProviderFromPackId(selectedProviderPackId)
         ?? (PROVIDER_OPTIONS[0]?.value as DomainLibraryCategory)
         ?? 'aws'
     );
@@ -117,7 +108,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
             setProvider(selectedProvider);
             return;
         }
-        const inferredProvider = inferProviderFromPackId(selectedProviderPackId);
+        const inferredProvider = inferAssetProviderFromPackId(selectedProviderPackId);
         if (inferredProvider) {
             setProvider(inferredProvider);
         }

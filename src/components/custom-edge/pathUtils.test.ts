@@ -181,6 +181,83 @@ describe('buildEdgePath', () => {
     expect(Number.isFinite(result.labelY)).toBe(true);
   });
 
+  it('uses node dimensions when building self-loop paths', () => {
+    const result = buildEdgePath(
+      {
+        id: 'edge-self',
+        source: 'a',
+        target: 'a',
+        sourceX: 100,
+        sourceY: 100,
+        targetX: 100,
+        targetY: 100,
+        sourcePosition: Position.Right,
+        targetPosition: Position.Right,
+      },
+      [],
+      [{ ...NODE_A, width: 320, height: 120 }],
+      'smoothstep'
+    );
+
+    expect(result.edgePath).toContain('C');
+    expect(result.labelX).toBeGreaterThan(100 + 100);
+  });
+
+  it('nudges ELK label positions for dense sibling bundles', () => {
+    const allEdges = [
+      { id: 'edge-1', source: 'a', target: 'b', sourceHandle: 'right', targetHandle: 'left' },
+      { id: 'edge-2', source: 'a', target: 'c', sourceHandle: 'right', targetHandle: 'left' },
+      { id: 'edge-3', source: 'a', target: 'd', sourceHandle: 'right', targetHandle: 'left' },
+    ];
+
+    const first = buildEdgePath(
+      {
+        id: 'edge-1',
+        source: 'a',
+        target: 'b',
+        sourceX: 100,
+        sourceY: 100,
+        targetX: 260,
+        targetY: 40,
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        sourceHandleId: 'right',
+        targetHandleId: 'left',
+      },
+      allEdges,
+      THREE_TARGET_NODES,
+      'smoothstep',
+      {
+        routingMode: 'elk',
+        elkPoints: [{ x: 180, y: 100 }, { x: 220, y: 40 }],
+      }
+    );
+    const middle = buildEdgePath(
+      {
+        id: 'edge-2',
+        source: 'a',
+        target: 'c',
+        sourceX: 100,
+        sourceY: 100,
+        targetX: 260,
+        targetY: 100,
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        sourceHandleId: 'right',
+        targetHandleId: 'left',
+      },
+      allEdges,
+      THREE_TARGET_NODES,
+      'smoothstep',
+      {
+        routingMode: 'elk',
+        elkPoints: [{ x: 180, y: 100 }, { x: 220, y: 100 }],
+      }
+    );
+
+    expect(first.labelY).not.toBe(middle.labelY);
+  });
+
   it('builds straight auto-routed paths when the straight renderer is used', () => {
     const result = buildEdgePath(
       {
@@ -746,6 +823,7 @@ describe('buildEdgePath', () => {
 
     expect(getMovePoint(first.edgePath)).toBe('100,100');
     expect(first.labelX).toBe(160);
-    expect(first.labelY).toBe(70);
+    expect(first.labelY).toBeLessThan(70);
+    expect(first.labelY).toBeGreaterThan(60);
   });
 });

@@ -5,6 +5,10 @@ type NodeWithParent = Node & {
   extent?: Node['extent'];
 };
 
+interface SetNodeParentOptions {
+  constrainToParent?: boolean;
+}
+
 export function getNodeParentId(node: NodeWithParent): string {
   if (typeof node.parentId === 'string' && node.parentId.length > 0) {
     return node.parentId;
@@ -12,12 +16,23 @@ export function getNodeParentId(node: NodeWithParent): string {
   return '';
 }
 
-export function setNodeParent<T extends Node>(node: T, parentId: string): T {
-  return {
+export function setNodeParent<T extends Node>(
+  node: T,
+  parentId: string,
+  options: SetNodeParentOptions = {}
+): T {
+  const nextNode = {
     ...node,
     parentId,
-    extent: 'parent' as const,
-  } as T;
+  } as NodeWithParent;
+
+  if (options.constrainToParent) {
+    nextNode.extent = 'parent';
+  } else {
+    delete nextNode.extent;
+  }
+
+  return nextNode as T;
 }
 
 export function clearNodeParent<T extends Node>(node: T): T {

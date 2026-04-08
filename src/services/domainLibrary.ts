@@ -1,5 +1,6 @@
 import type { Node } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
+import { createProviderIconData, normalizeNodeIconData } from '@/lib/nodeIconState';
 
 export type DomainLibraryCategory = 'aws' | 'azure' | 'gcp' | 'cncf' | 'developer' | 'network' | 'security' | 'c4' | 'icons';
 
@@ -71,24 +72,25 @@ export function createDomainLibraryNode(
     layerId: string
 ): Node<NodeData> {
     if (item.assetPresentation === 'icon' && (item.previewUrl || item.icon)) {
+        const data = normalizeNodeIconData({
+            label: item.label,
+            subLabel: '',
+            color: 'custom',
+            customColor: '#ffffff',
+            ...(item.previewUrl ? { customIconUrl: item.previewUrl } : {}),
+            ...(item.icon ? { icon: item.icon } : {}),
+            assetPresentation: 'icon',
+            assetProvider: item.category,
+            assetCategory: item.providerShapeCategory,
+            archIconPackId: item.archIconPackId,
+            archIconShapeId: item.archIconShapeId,
+            layerId,
+        });
         return {
             id,
             type: 'custom',
             position,
-            data: {
-                label: item.label,
-                subLabel: '',
-                color: 'custom',
-                customColor: '#ffffff',
-                ...(item.previewUrl ? { customIconUrl: item.previewUrl } : {}),
-                ...(item.icon ? { icon: item.icon } : {}),
-                assetPresentation: 'icon',
-                assetProvider: item.category,
-                assetCategory: item.providerShapeCategory,
-                archIconPackId: item.archIconPackId,
-                archIconShapeId: item.archIconShapeId,
-                layerId,
-            },
+            data,
             style: { width: 96 },
         };
     }
@@ -107,8 +109,14 @@ export function createDomainLibraryNode(
                 archProvider: item.category,
                 archResourceType: item.archResourceType || 'service',
                 archEnvironment: 'default',
-                ...(item.archIconPackId ? { archIconPackId: item.archIconPackId } : {}),
-                ...(item.archIconShapeId ? { archIconShapeId: item.archIconShapeId } : {}),
+                ...(item.archIconPackId && item.archIconShapeId
+                    ? createProviderIconData({
+                        packId: item.archIconPackId,
+                        shapeId: item.archIconShapeId,
+                        provider: item.category,
+                        category: item.providerShapeCategory,
+                    })
+                    : {}),
                 layerId,
             },
         };

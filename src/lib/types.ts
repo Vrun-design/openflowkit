@@ -133,6 +133,8 @@ export interface ArchitectureNodeData {
   archResourceType?: string;
   archEnvironment?: string;
   archBoundaryId?: string;
+  archLayerRank?: number;
+  archLayerLabel?: string;
   archZone?: string;
   archTrustDomain?: string;
   archIconPackId?: string;

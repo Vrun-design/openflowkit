@@ -9,20 +9,19 @@ import { IconPicker, type ProviderIconSelection } from './IconPicker';
 import { ImageUpload } from './ImageUpload';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { useMarkdownEditor } from '@/hooks/useMarkdownEditor';
-import { useAssetCatalog } from '@/hooks/useAssetCatalog';
 import { NodeActionButtons } from './NodeActionButtons';
 import { NodeContentSection } from './NodeContentSection';
 import { NodeImageSettingsSection } from './NodeImageSettingsSection';
 import { NodeWireframeVariantSection } from './NodeWireframeVariantSection';
 import { InspectorSectionDivider } from './InspectorPrimitives';
-import { Tooltip } from '../Tooltip';
-import { Select } from '../ui/Select';
 import type { DomainLibraryCategory } from '@/services/domainLibrary';
-import { getAssetCategoryDisplayName, getAssetCategoryNoun } from '@/services/assetPresentation';
-import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalog';
-import { NamedIcon } from '../IconMap';
-import { createPropertyInputKeyDownHandler } from './propertyInputBehavior';
-import { IconSearchField, IconTileScrollGrid } from './IconTilePickerPrimitives';
+import { getAssetCategoryDisplayName } from '@/services/assetPresentation';
+import {
+  createBuiltInIconData,
+  createProviderIconData,
+  createUploadedIconData,
+  normalizeNodeIconData,
+} from '@/lib/nodeIconState';
 import { getNodeParentId } from '@/lib/nodeParent';
 import { buildSectionActions } from './sectionActionBuilder';
 
@@ -52,8 +51,13 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
   const isSection = selectedNode.type === 'section';
   const isGroup = selectedNode.type === 'group';
   const isWireframeApp = selectedNode.type === 'browser' || selectedNode.type === 'mobile';
-  const isIconAssetNode = selectedNode.data?.assetPresentation === 'icon';
-  const assetProvider = (selectedNode.data?.assetProvider || '') as DomainLibraryCategory;
+  const normalizedIconData = normalizeNodeIconData(selectedNode.data);
+  const isIconAssetNode = normalizedIconData?.assetPresentation === 'icon';
+  const assetProvider = normalizedIconData?.assetProvider as DomainLibraryCategory | undefined;
+  const assetCategory =
+    typeof normalizedIconData?.assetCategory === 'string'
+      ? normalizedIconData.assetCategory
+      : undefined;
   const supportsAdvancedColorTheme = ['process', 'start', 'end', 'decision', 'custom'].includes(
     selectedNode.type || ''
   );
@@ -73,34 +77,10 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
     onChange,
   });
 
-  const {
-    items: assetItems,
-    filteredItems: filteredAssetItems,
-    previewUrls: assetPreviewUrls,
-    query: assetQuery,
-    setQuery: setAssetQuery,
-    category: assetFilterCategory,
-    setCategory: setAssetFilterCategory,
-  } = useAssetCatalog({
-    provider: assetProvider,
-  });
-  const assetCategories = React.useMemo(
-    () =>
-      Array.from(
-        new Set(
-          assetItems
-            .map((item) => item.providerShapeCategory)
-            .filter((value): value is string => Boolean(value))
-        )
-      ).sort((left, right) => left.localeCompare(right)),
-    [assetItems]
-  );
-  const handlePropertyInputKeyDown = createPropertyInputKeyDownHandler({ blurOnEnter: true });
-
   function getDefaultSection(): string {
     if (isImage) return 'image';
     if (isWireframeApp) return 'variant';
-    if (isIconAssetNode) return 'asset';
+    if (isIconAssetNode) return 'icon';
     if (isSection) return 'content';
     if (isText || isAnnotation) return 'content';
     return 'content';
@@ -155,36 +135,23 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
   }
 
   function handleBuiltInIconChange(icon: string): void {
-    onChange(selectedNode.id, {
-      icon,
-      customIconUrl: undefined,
-      archIconPackId: undefined,
-      archIconShapeId: undefined,
-      assetProvider: undefined,
-      assetCategory: undefined,
-    });
+    onChange(selectedNode.id, createBuiltInIconData(icon));
   }
 
   function handleProviderIconChange(selection: ProviderIconSelection): void {
-    onChange(selectedNode.id, {
-      icon: undefined,
-      customIconUrl: undefined,
-      archIconPackId: selection.packId,
-      archIconShapeId: selection.shapeId,
-      assetProvider: selection.provider,
-      assetCategory: selection.category,
-    });
+    onChange(
+      selectedNode.id,
+      createProviderIconData({
+        packId: selection.packId,
+        shapeId: selection.shapeId,
+        provider: selection.provider,
+        category: selection.category,
+      })
+    );
   }
 
   function handleCustomIconChange(url?: string): void {
-    onChange(selectedNode.id, {
-      icon: undefined,
-      customIconUrl: url,
-      archIconPackId: undefined,
-      archIconShapeId: undefined,
-      assetProvider: undefined,
-      assetCategory: undefined,
-    });
+    onChange(selectedNode.id, createUploadedIconData(url));
   }
 
   return (
@@ -229,84 +196,6 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
           onToggle={() => toggleSection('image')}
           onChange={onChange}
         />
-      )}
-
-      {isIconAssetNode && (
-        <CollapsibleSection
-          title="Asset"
-          icon={<ImageStart className="w-3.5 h-3.5" />}
-          isOpen={activeSection === 'asset' || activeSection === 'shape'}
-          onToggle={() => toggleSection('asset')}
-        >
-          <div className="mt-4 space-y-3">
-            <IconSearchField
-              value={assetQuery}
-              onChange={(event) => setAssetQuery(event.target.value)}
-              onKeyDown={handlePropertyInputKeyDown}
-              placeholder={`Search ${getAssetCategoryDisplayName(assetProvider || 'icons').toLowerCase()} ${getAssetCategoryNoun(assetProvider || 'icons')}`}
-            />
-            {assetCategories.length > 1 ? (
-              <Select
-                value={assetFilterCategory}
-                onChange={(value) => setAssetFilterCategory(value)}
-                options={[
-                  { value: 'all', label: 'All categories' },
-                  ...assetCategories.map((category) => ({ value: category, label: category })),
-                ]}
-                placeholder="All categories"
-              />
-            ) : null}
-            <IconTileScrollGrid>
-              {filteredAssetItems.map((item) => (
-                <Tooltip key={item.id} text={item.label} className="block w-full aspect-square">
-                  <button
-                    type="button"
-                    aria-label={item.label}
-                    className={`flex h-full w-full items-center justify-center rounded-[var(--radius-md)] border p-2 transition-all ${
-                      selectedNode.data?.archIconShapeId === item.archIconShapeId
-                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-50)]'
-                        : 'border-transparent bg-transparent hover:border-slate-200 hover:bg-slate-50'
-                    }`}
-                    onClick={async () => {
-                      const preview =
-                        item.archIconPackId && item.archIconShapeId
-                          ? await loadProviderShapePreview(
-                              item.archIconPackId,
-                              item.archIconShapeId
-                            )
-                          : null;
-                      onChange(selectedNode.id, {
-                        label: item.label,
-                        icon: item.icon,
-                        customIconUrl: preview?.previewUrl,
-                        archIconPackId: item.archIconPackId,
-                        archIconShapeId: item.archIconShapeId,
-                        assetProvider: item.category,
-                        assetCategory: item.providerShapeCategory,
-                      });
-                    }}
-                  >
-                    {assetPreviewUrls[item.id] ? (
-                      <img
-                        src={assetPreviewUrls[item.id]}
-                        alt={`${item.label} icon`}
-                        className="h-10 w-10 object-contain"
-                      />
-                    ) : item.category === 'icons' ? (
-                      <NamedIcon
-                        name={item.icon}
-                        fallbackName="Box"
-                        className="h-5 w-5 text-slate-400"
-                      />
-                    ) : (
-                      <ImageStart className="h-5 w-5 text-slate-400" />
-                    )}
-                  </button>
-                </Tooltip>
-              ))}
-            </IconTileScrollGrid>
-          </div>
-        </CollapsibleSection>
       )}
 
       {/* Content Section: Refined Design */}
@@ -363,24 +252,34 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
         </CollapsibleSection>
       )}
 
-      {!isAnnotation && !isText && !isImage && !isWireframeApp && !isIconAssetNode && (
+      {!isAnnotation && !isText && !isImage && !isWireframeApp && (
         <CollapsibleSection
           title={t('properties.icon', 'Icon')}
           icon={<Star className="w-3.5 h-3.5" />}
           isOpen={activeSection === 'icon'}
           onToggle={() => toggleSection('icon')}
         >
-          <IconPicker
-            selectedIcon={selectedNode.data?.icon}
-            customIconUrl={selectedNode.data?.customIconUrl}
-            selectedProvider={selectedNode.data?.assetProvider as DomainLibraryCategory | undefined}
-            selectedProviderCategory={selectedNode.data?.assetCategory as string | undefined}
-            selectedProviderPackId={selectedNode.data?.archIconPackId as string | undefined}
-            selectedProviderShapeId={selectedNode.data?.archIconShapeId as string | undefined}
-            onSelectBuiltInIcon={handleBuiltInIconChange}
-            onSelectProviderIcon={handleProviderIconChange}
-            onCustomIconChange={handleCustomIconChange}
-          />
+          <div className="space-y-3">
+            <IconPicker
+              selectedIcon={normalizedIconData?.icon}
+              customIconUrl={normalizedIconData?.customIconUrl}
+              selectedProvider={assetProvider}
+              selectedProviderCategory={assetCategory}
+              selectedProviderPackId={normalizedIconData?.archIconPackId as string | undefined}
+              selectedProviderShapeId={normalizedIconData?.archIconShapeId as string | undefined}
+              onSelectBuiltInIcon={handleBuiltInIconChange}
+              onSelectProviderIcon={handleProviderIconChange}
+              onCustomIconChange={handleCustomIconChange}
+            />
+            {isIconAssetNode && (assetProvider || assetCategory) ? (
+              <div className="rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-2">
+                <div className="text-[11px] font-medium text-[var(--brand-secondary)]">
+                  {assetProvider ? getAssetCategoryDisplayName(assetProvider) : 'Icons'}
+                  {assetCategory ? ` • ${assetCategory}` : ''}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </CollapsibleSection>
       )}
 

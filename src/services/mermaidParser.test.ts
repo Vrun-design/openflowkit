@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { SECTION_MIN_HEIGHT, SECTION_MIN_WIDTH } from '@/hooks/node-operations/sectionBounds';
 import { parseMermaid } from '@/lib/mermaidParser';
 
 describe('mermaidParser', () => {
@@ -161,10 +162,16 @@ describe('mermaidParser', () => {
     const sectionNode = result.nodes.find((node) => node.type === 'section');
     expect(sectionNode).toBeDefined();
     expect(sectionNode?.data.label).toBe('Services');
+    expect(sectionNode?.style).toMatchObject({
+      width: SECTION_MIN_WIDTH,
+      height: SECTION_MIN_HEIGHT,
+    });
     const apiNode = result.nodes.find((node) => node.id === 'API');
     expect(apiNode?.parentId).toBe(sectionNode?.id);
+    expect(apiNode?.extent).toBeUndefined();
     const dbNode = result.nodes.find((node) => node.id === 'DB');
     expect(dbNode?.parentId).toBe(sectionNode?.id);
+    expect(dbNode?.extent).toBeUndefined();
   });
 
   it('should handle duplicate edges between same pair', () => {
