@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useFlowStore } from '@/store';
+import type { ParseDiagnostic } from '@/lib/openFlowDSLParser';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { MermaidDiagnosticsSnapshot } from '@/store/types';
 import {
@@ -8,13 +9,32 @@ import {
   resolveLayoutDirection,
 } from './pasteHelpers';
 import { detectMermaidDiagramType } from '@/services/mermaid/detectDiagramType';
+import { extractMermaidDiagramHeader } from '@/services/mermaid/detectDiagramType';
 import { normalizeParseDiagnostics } from '@/services/mermaid/diagnosticFormatting';
+import { buildMermaidDiagnosticsSnapshot } from '@/services/mermaid/diagnosticsSnapshot';
+import {
+  appendMermaidImportGuidance,
+  getMermaidImportToastMessage,
+} from '@/services/mermaid/importStatePresentation';
+import {
+  getOfficialMermaidDiagnostics,
+  getOfficialMermaidErrorMessage,
+  isOfficialMermaidValidationBlocking,
+  validateMermaidWithOfficialParser,
+} from '@/services/mermaid/officialMermaidValidation';
 import { parseMermaidByType } from '@/services/mermaid/parseMermaidByType';
 import { composeDiagramForDisplay } from '@/services/composeDiagramForDisplay';
 import { enrichNodesWithIcons } from '@/lib/nodeEnricher';
 import { normalizeNodeIconData } from '@/lib/nodeIconState';
 import { assignSmartHandles } from '@/services/smartEdgeRouting';
 import type { LayoutOptions } from '@/services/elk-layout/types';
+
+function combineMermaidDiagnostics(
+  officialDiagnostics: ParseDiagnostic[],
+  parserDiagnostics: ParseDiagnostic[]
+): ParseDiagnostic[] {
+  return [...officialDiagnostics, ...parserDiagnostics];
+}
 
 type SetFlowNodes = (payload: FlowNode[] | ((nodes: FlowNode[]) => FlowNode[])) => void;
 type SetFlowEdges = (payload: FlowEdge[] | ((edges: FlowEdge[]) => FlowEdge[])) => void;
@@ -100,20 +120,61 @@ export function useFlowCanvasPaste({
 
       event.preventDefault();
 
-      const maybeMermaidType = detectMermaidDiagramType(pastedText);
-      if (maybeMermaidType) {
+      const mermaidHeader = extractMermaidDiagramHeader(pastedText);
+      const maybeMermaidType = mermaidHeader.diagramType ?? detectMermaidDiagramType(pastedText);
+      if (mermaidHeader.rawType) {
+        const officialMermaidValidation = await validateMermaidWithOfficialParser(pastedText);
+        const officialDiagnostics = getOfficialMermaidDiagnostics(officialMermaidValidation);
+
+        if (isOfficialMermaidValidationBlocking(officialMermaidValidation)) {
+          const rawErrorMessage =
+            getOfficialMermaidErrorMessage(officialMermaidValidation)
+            ?? 'Official Mermaid validation failed.';
+          const errorMessage = appendMermaidImportGuidance({
+            message: rawErrorMessage,
+            importState: officialMermaidValidation.detectedType ? 'unsupported_construct' : 'invalid_source',
+            diagramType: officialMermaidValidation.detectedType ?? maybeMermaidType ?? undefined,
+          });
+
+          setMermaidDiagnostics(
+            buildMermaidDiagnosticsSnapshot({
+              source: 'paste',
+              diagramType: officialMermaidValidation.detectedType ?? maybeMermaidType,
+              importState: officialMermaidValidation.detectedType ? 'unsupported_construct' : 'invalid_source',
+              originalSource: pastedText,
+              diagnostics: officialDiagnostics,
+              error: errorMessage,
+            })
+          );
+
+          addToast(errorMessage, 'error');
+          return;
+        }
+
         const result = parseMermaidByType(pastedText, { architectureStrictMode });
-        const diagnostics = normalizeParseDiagnostics(result.diagnostics);
+        const parserDiagnostics = normalizeParseDiagnostics(result.diagnostics);
+        const diagnostics = combineMermaidDiagnostics(officialDiagnostics, parserDiagnostics);
 
         if (!result.error) {
           if (diagnostics.length > 0) {
-            setMermaidDiagnostics({
-              source: 'paste',
-              diagramType: result.diagramType,
-              diagnostics,
-              updatedAt: Date.now(),
+            setMermaidDiagnostics(
+              buildMermaidDiagnosticsSnapshot({
+                source: 'paste',
+                diagramType: result.diagramType,
+                importState: result.importState,
+                originalSource: result.originalSource,
+                diagnostics,
+                nodeCount: result.nodes.length,
+                edgeCount: result.edges.length,
+              })
+            );
+            const toastMessage = getMermaidImportToastMessage({
+              importState: result.importState,
+              warningCount: diagnostics.length,
             });
-            addToast(`Imported with ${diagnostics.length} diagnostic warning(s).`, 'warning');
+            if (toastMessage) {
+              addToast(toastMessage, 'warning');
+            }
           } else {
             clearMermaidDiagnostics();
           }
@@ -155,13 +216,21 @@ export function useFlowCanvasPaste({
           return;
         }
 
-        setMermaidDiagnostics({
-          source: 'paste',
-          diagramType: result.diagramType ?? maybeMermaidType,
-          diagnostics,
-          error: result.error,
-          updatedAt: Date.now(),
+        const errorMessage = appendMermaidImportGuidance({
+          message: result.error,
+          importState: result.importState,
+          diagramType: result.diagramType ?? maybeMermaidType ?? undefined,
         });
+        setMermaidDiagnostics(
+          buildMermaidDiagnosticsSnapshot({
+            source: 'paste',
+            diagramType: result.diagramType ?? maybeMermaidType,
+            importState: result.importState,
+            originalSource: result.originalSource,
+            diagnostics,
+            error: errorMessage,
+          })
+        );
 
         if (
           maybeMermaidType === 'architecture' &&
@@ -172,7 +241,7 @@ export function useFlowCanvasPaste({
           return;
         }
 
-        addToast(result.error, 'error');
+        addToast(errorMessage, 'error');
         return;
       }
 

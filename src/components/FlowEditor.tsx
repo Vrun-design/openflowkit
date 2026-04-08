@@ -9,7 +9,9 @@ import { useCinematicExportState } from '@/context/CinematicExportContext';
 import { DiagramDiffProvider } from '@/context/DiagramDiffContext';
 import { ShareEmbedModal } from '@/components/ShareEmbedModal';
 import { ImportRecoveryDialog } from '@/components/ImportRecoveryDialog';
+import { MermaidDiagnosticsBanner } from '@/components/MermaidDiagnosticsBanner';
 import { resolveCinematicExportTheme } from '@/services/export/cinematicExportTheme';
+import { useMermaidDiagnostics } from '@/store/selectionHooks';
 
 interface FlowEditorProps {
   onGoHome: () => void;
@@ -17,6 +19,7 @@ interface FlowEditorProps {
 
 export function FlowEditor({ onGoHome }: FlowEditorProps) {
   const cinematicExportState = useCinematicExportState();
+  const mermaidDiagnostics = useMermaidDiagnostics();
   const {
     nodes,
     edges,
@@ -43,6 +46,17 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
     t,
   } = useFlowEditorScreenModel({ onGoHome });
   const cinematicExportTheme = resolveCinematicExportTheme(cinematicExportState.backgroundMode);
+  const mermaidRecoverySource = importRecoveryState?.report.source === 'mermaid'
+    ? (importRecoveryState.report.originalSource ?? mermaidDiagnostics?.originalSource)
+    : mermaidDiagnostics?.originalSource;
+  const canRecoverMermaidSource = Boolean(
+    mermaidRecoverySource
+    && (
+      importRecoveryState?.report.source === 'mermaid'
+        ? importRecoveryState.report.importState !== 'editable_full'
+        : mermaidDiagnostics?.importState !== 'editable_full'
+    )
+  );
 
   return (
     <DiagramDiffProvider
@@ -63,6 +77,17 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
           }}
         >
           <CinematicExportOverlay />
+          {mermaidDiagnostics ? (
+            <div className="pointer-events-none absolute left-4 right-4 top-16 z-40 flex justify-center">
+              <div className="pointer-events-auto w-full max-w-2xl">
+                <MermaidDiagnosticsBanner
+                  snapshot={mermaidDiagnostics}
+                  actionLabel={canRecoverMermaidSource ? 'Open Mermaid code' : undefined}
+                  onAction={canRecoverMermaidSource ? () => flowEditorController.openStudioCode('mermaid') : undefined}
+                />
+              </div>
+            </div>
+          ) : null}
           <FlowEditorChrome
             pages={pages}
             activePageId={activePageId}
@@ -103,6 +128,16 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
               report={importRecoveryState.report}
               onRetry={handleImportJSON}
               onClose={dismissImportRecovery}
+              actionLabel={
+                importRecoveryState.report.source === 'mermaid' && canRecoverMermaidSource
+                  ? 'Open Mermaid code'
+                  : undefined
+              }
+              onAction={
+                importRecoveryState.report.source === 'mermaid' && canRecoverMermaidSource
+                  ? () => flowEditorController.openStudioCode('mermaid')
+                  : undefined
+              }
             />
           ) : null}
         </div>

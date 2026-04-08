@@ -373,6 +373,10 @@ describe('flow store Mermaid diagnostics contract', () => {
         useFlowStore.getState().setMermaidDiagnostics({
             source: 'paste',
             diagramType: 'flowchart',
+            importState: 'editable_partial',
+            statusLabel: 'Ready with warnings',
+            statusDetail: '1 nodes, 0 edges, partial editability',
+            originalSource: 'flowchart TD\nA-->B',
             diagnostics: [
                 {
                     message: 'Sample diagnostic',
@@ -386,6 +390,9 @@ describe('flow store Mermaid diagnostics contract', () => {
         let state = useFlowStore.getState();
         expect(state.mermaidDiagnostics).toBeTruthy();
         expect(state.mermaidDiagnostics?.source).toBe('paste');
+        expect(state.mermaidDiagnostics?.importState).toBe('editable_partial');
+        expect(state.mermaidDiagnostics?.statusLabel).toBe('Ready with warnings');
+        expect(state.mermaidDiagnostics?.originalSource).toContain('flowchart TD');
         expect(state.mermaidDiagnostics?.diagnostics).toHaveLength(1);
         expect(state.mermaidDiagnostics?.error).toBe('Sample error');
 

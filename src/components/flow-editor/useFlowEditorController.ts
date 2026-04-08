@@ -372,6 +372,7 @@ export function useFlowEditorController({
     return {
         shouldRenderPanels,
         handleCanvasEntityIntent,
+        openStudioCode,
         panels,
         chrome,
     };

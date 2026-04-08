@@ -98,6 +98,23 @@ export function stringifyErField(field: ErField): string {
   return segments.join(' ').trim();
 }
 
+export function stringifyMermaidErField(field: ErField): string {
+  const segments: string[] = [];
+  const normalizedName = field.name.trim() || 'field';
+  const normalizedType = field.dataType.trim() || 'string';
+
+  segments.push(normalizedType, normalizedName);
+  if (field.isPrimaryKey) segments.push('PK');
+  if (field.isForeignKey) segments.push('FK');
+  if (field.isUnique) segments.push('UK');
+  if (field.isNotNull) segments.push('NN');
+  if (field.referencesTable?.trim()) {
+    segments.push('REFERENCES', field.referencesTable.trim());
+  }
+
+  return segments.join(' ').trim();
+}
+
 export function formatErFieldLabel(field: ErField): string {
   const parts = [field.name.trim() || 'field'];
   if (field.dataType.trim()) {

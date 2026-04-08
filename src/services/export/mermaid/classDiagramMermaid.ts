@@ -9,8 +9,24 @@ function sortNodesByPosition(nodes: FlowNode[]): FlowNode[] {
   });
 }
 
-function resolveClassRelation(edge: FlowEdge): { relation: string; label?: string } {
-  const edgeData = edge.data as { classRelation?: string; classRelationLabel?: string } | undefined;
+interface ClassRelationEdgeData {
+  classRelation?: string;
+  classRelationLabel?: string;
+  classRelationSourceCardinality?: string;
+  classRelationTargetCardinality?: string;
+}
+
+function toMermaidClassIdentifier(value: string): string {
+  return value.trim().replace(/<([^<>]+)>/g, '~$1~');
+}
+
+function resolveClassRelation(edge: FlowEdge): {
+  relation: string;
+  label?: string;
+  sourceCardinality?: string;
+  targetCardinality?: string;
+} {
+  const edgeData = edge.data as ClassRelationEdgeData | undefined;
   const dataRelation = edgeData?.classRelation?.trim();
   const fallbackRelation =
     typeof edge.label === 'string' && isClassRelationToken(edge.label.trim())
@@ -22,22 +38,26 @@ function resolveClassRelation(edge: FlowEdge): { relation: string; label?: strin
       : (fallbackRelation ?? DEFAULT_CLASS_RELATION);
 
   const dataLabel = edgeData?.classRelationLabel?.trim();
-  if (dataLabel) return { relation, label: dataLabel };
+  const sourceCardinality = edgeData?.classRelationSourceCardinality?.trim();
+  const targetCardinality = edgeData?.classRelationTargetCardinality?.trim();
+  if (dataLabel) {
+    return { relation, label: dataLabel, sourceCardinality, targetCardinality };
+  }
 
   if (typeof edge.label === 'string') {
     const candidate = edge.label.trim();
     if (candidate && candidate !== relation && !isClassRelationToken(candidate)) {
-      return { relation, label: candidate };
+      return { relation, label: candidate, sourceCardinality, targetCardinality };
     }
   }
 
-  return { relation };
+  return { relation, sourceCardinality, targetCardinality };
 }
 
 export function toClassDiagramMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
   const lines: string[] = ['classDiagram'];
   sortNodesByPosition(nodes).forEach((node) => {
-    const id = node.id.trim();
+    const id = toMermaidClassIdentifier(node.id);
     const stereotype =
       typeof node.data.classStereotype === 'string' ? node.data.classStereotype.trim() : '';
     const attributes = Array.isArray(node.data.classAttributes)
@@ -59,9 +79,13 @@ export function toClassDiagramMermaid(nodes: FlowNode[], edges: FlowEdge[]): str
   });
 
   edges.forEach((edge) => {
-    const { relation, label } = resolveClassRelation(edge);
+    const { relation, label, sourceCardinality, targetCardinality } = resolveClassRelation(edge);
+    const sourceCardinalitySegment = sourceCardinality ? ` "${sourceCardinality}"` : '';
+    const targetCardinalitySegment = targetCardinality ? ` "${targetCardinality}"` : '';
     const suffix = label ? ` : ${label}` : '';
-    lines.push(`    ${edge.source} ${relation} ${edge.target}${suffix}`);
+    lines.push(
+      `    ${toMermaidClassIdentifier(edge.source)}${sourceCardinalitySegment} ${relation}${targetCardinalitySegment} ${toMermaidClassIdentifier(edge.target)}${suffix}`
+    );
   });
 
   return `${lines.join('\n')}\n`;

@@ -78,6 +78,7 @@ function parseJourney(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; er
 
   let hasHeader = false;
   let currentSection = 'General';
+  let journeyTitle = 'Journey';
 
   for (const [index, rawLine] of lines.entries()) {
     const lineNumber = index + 1;
@@ -90,7 +91,13 @@ function parseJourney(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; er
     }
     if (!hasHeader) continue;
 
-    if (/^title\s+/i.test(line)) {
+    if (/^title\b/i.test(line)) {
+      const titleMatch = line.match(/^title\s+(.+)$/i);
+      if (titleMatch?.[1]?.trim()) {
+        journeyTitle = titleMatch[1].trim();
+      } else {
+        diagnostics.push(`Invalid journey title syntax at line ${lineNumber}: "${line}"`);
+      }
       continue;
     }
 
@@ -170,6 +177,7 @@ function parseJourney(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; er
         subLabel: step.actor,
         color: getJourneyScoreColor(step.score),
         shape: 'rounded',
+        journeyTitle,
         journeySection: step.section,
         journeyTask: step.task,
         journeyActor: step.actor,

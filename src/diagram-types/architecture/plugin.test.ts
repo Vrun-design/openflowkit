@@ -39,6 +39,7 @@ describe('ARCHITECTURE_PLUGIN', () => {
 
     const result = ARCHITECTURE_PLUGIN.parseMermaid(input);
     expect(result.error).toBeUndefined();
+    expect(result.nodes.some((node) => node.data.archTitle === 'Platform')).toBe(true);
     expect(result.nodes.some((node) => node.id === 'api.gateway')).toBe(true);
     expect(result.nodes.some((node) => node.data.label === 'API Gateway')).toBe(true);
     expect(result.edges).toHaveLength(1);
@@ -66,6 +67,25 @@ describe('ARCHITECTURE_PLUGIN', () => {
     expect(result.edges[0].label).toBe('HTTPS:443');
     expect(result.edges[0].data?.archProtocol).toBe('HTTPS');
     expect(result.edges[0].data?.archPort).toBe('443');
+  });
+
+  it('parses official Mermaid architecture edge syntax without labels', () => {
+    const input = `
+      architecture-beta
+      service api(server)[API]
+      service db(database)[Database]
+      api:R --> L:db
+    `;
+
+    const result = ARCHITECTURE_PLUGIN.parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    expect(result.edges).toHaveLength(1);
+    expect(result.edges[0].source).toBe('api');
+    expect(result.edges[0].target).toBe('db');
+    expect(result.edges[0].label).toBeUndefined();
+    expect(result.edges[0].data?.archDirection).toBe('-->');
+    expect(result.edges[0].data?.archSourceSide).toBe('R');
+    expect(result.edges[0].data?.archTargetSide).toBe('L');
   });
 
   it('parses reverse and bidirectional direction tokens', () => {

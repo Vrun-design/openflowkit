@@ -13,6 +13,7 @@ import {
   ARROW_PATTERNS,
   CLASS_DEF_RE,
   parseEdgeLine,
+  parseClassAssignmentLine,
   parseLinkStyleLine,
   parseNodeDeclaration,
   parseStyleString,
@@ -40,6 +41,7 @@ export interface ParseResult {
   edges: FlowEdge[];
   error?: string;
   direction?: MermaidDirection;
+  diagnostics?: string[];
 }
 
 function preprocessMermaidInput(input: string): string[] {
@@ -67,24 +69,61 @@ function parseStateDiagramDirection(nextLine: string | undefined): MermaidDirect
   return (dirMatch?.[1].toUpperCase() ?? 'TB') as MermaidDirection;
 }
 
+function createSectionIdFromLabel(label: string): string {
+  return `subgraph_${label.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+}
+
+function parseSubgraphDeclaration(
+  line: string
+): { sectionId: string; sectionLabel: string } | null {
+  const subgraphMatch = line.match(/^subgraph\s+(.+)$/i);
+  if (!subgraphMatch) {
+    return null;
+  }
+
+  const remainder = subgraphMatch[1].trim();
+  if (!remainder) {
+    return null;
+  }
+
+  const parsedNodeDeclaration = parseNodeDeclaration(remainder);
+  if (parsedNodeDeclaration) {
+    return {
+      sectionId: parsedNodeDeclaration.id,
+      sectionLabel: parsedNodeDeclaration.label,
+    };
+  }
+
+  const quotedLabelMatch = remainder.match(/^"([^"]+)"$/) || remainder.match(/^'([^']+)'$/);
+  const sectionLabel = quotedLabelMatch?.[1]?.trim() ?? remainder;
+  if (!sectionLabel) {
+    return null;
+  }
+
+  return {
+    sectionId: createSectionIdFromLabel(sectionLabel),
+    sectionLabel,
+  };
+}
+
 function registerSectionNode(
   state: ReturnType<typeof createMermaidParseState>,
   line: string
 ): boolean {
-  const subgraphMatch = line.match(/^subgraph\s+(.+)$/i);
+  const subgraphDeclaration = parseSubgraphDeclaration(line);
   const stateGroupMatch =
     line.match(/^state\s+"([^"]+)"\s+as\s+(\w+)\s+\{/i) || line.match(/^state\s+(\w+)\s+\{/i);
 
-  if (!subgraphMatch && !stateGroupMatch) {
+  if (!subgraphDeclaration && !stateGroupMatch) {
     return false;
   }
 
   let sectionId: string;
   let sectionLabel: string;
 
-  if (subgraphMatch) {
-    sectionLabel = subgraphMatch[1].trim();
-    sectionId = `subgraph_${sectionLabel.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+  if (subgraphDeclaration) {
+    sectionLabel = subgraphDeclaration.sectionLabel;
+    sectionId = subgraphDeclaration.sectionId;
   } else if (stateGroupMatch) {
     sectionId = stateGroupMatch[2] ?? stateGroupMatch[1];
     sectionLabel = stateGroupMatch[1] ?? stateGroupMatch[2];
@@ -135,15 +174,45 @@ function applyNodeStyleDirective(
   return true;
 }
 
-function parseEdgeDeclaration(
+function applyClassAssignmentDirective(
   state: ReturnType<typeof createMermaidParseState>,
   line: string
+): boolean {
+  const assignment = parseClassAssignmentLine(line);
+  if (!assignment) {
+    return false;
+  }
+
+  assignment.nodeIds.forEach((nodeId) => {
+    registerMermaidNode(state, nodeId);
+    const node = state.nodesMap.get(nodeId);
+    if (!node) {
+      return;
+    }
+
+    const existingClasses = new Set(node.classes ?? []);
+    assignment.classNames.forEach((className) => existingClasses.add(className));
+    node.classes = [...existingClasses];
+  });
+
+  return true;
+}
+
+function parseEdgeDeclaration(
+  state: ReturnType<typeof createMermaidParseState>,
+  line: string,
+  lineNumber: number
 ): boolean {
   if (!ARROW_PATTERNS.some((arrow) => line.includes(arrow))) {
     return false;
   }
 
   const edgesFound = parseEdgeLine(line);
+  if (edgesFound.length === 0) {
+    state.diagnostics.push(`Invalid Mermaid edge syntax at line ${lineNumber}: "${line}"`);
+    return true;
+  }
+
   edgesFound.forEach((edge) => {
     const type = state.diagramType === 'stateDiagram' ? 'state' : 'process';
     const sourceId = registerMermaidNode(state, edge.sourceRaw, type);
@@ -170,7 +239,7 @@ function parseStateDiagramNodeDeclaration(
     return false;
   }
 
-  const stateDefMatch = line.match(/^state\s+"([^"]+)"\s+as\s+(\w+)/i);
+  const stateDefMatch = line.match(/^state\s+"([^"]+)"\s+as\s+([A-Za-z_][\w.-]*)/i);
   if (stateDefMatch) {
     registerMermaidNode(state, stateDefMatch[2], 'state', stateDefMatch[1]);
     return true;
@@ -190,6 +259,7 @@ function buildMermaidParseModel(lines: string[]): MermaidParseModel {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
+    const lineNumber = i + 1;
     if (isSkippableLine(line)) {
       continue;
     }
@@ -210,7 +280,14 @@ function buildMermaidParseModel(lines: string[]): MermaidParseModel {
     if (line.match(/^end\s*$/i) || line === '}') {
       if (state.parentStack.length > 0) {
         state.parentStack.pop();
+      } else if (state.diagramType === 'flowchart') {
+        state.diagnostics.push(`Unexpected flowchart block closer at line ${lineNumber}: "${line}"`);
       }
+      continue;
+    }
+
+    if (state.diagramType === 'flowchart' && /^subgraph\b/i.test(line) && !parseSubgraphDeclaration(line)) {
+      state.diagnostics.push(`Invalid flowchart subgraph declaration at line ${lineNumber}: "${line}"`);
       continue;
     }
 
@@ -228,13 +305,17 @@ function buildMermaidParseModel(lines: string[]): MermaidParseModel {
       continue;
     }
 
+    if (applyClassAssignmentDirective(state, line)) {
+      continue;
+    }
+
     const linkStyleMatch = parseLinkStyleLine(line);
     if (linkStyleMatch) {
       linkStyleMatch.indices.forEach((index) => state.linkStyles.set(index, linkStyleMatch.style));
       continue;
     }
 
-    if (parseEdgeDeclaration(state, line)) {
+    if (parseEdgeDeclaration(state, line, lineNumber)) {
       continue;
     }
 
@@ -245,7 +326,18 @@ function buildMermaidParseModel(lines: string[]): MermaidParseModel {
     const standalone = parseNodeDeclaration(line);
     if (standalone) {
       registerMermaidNode(state, line);
+      continue;
     }
+
+    if (state.diagramType === 'flowchart') {
+      state.diagnostics.push(`Unrecognized flowchart line at line ${lineNumber}: "${line}"`);
+    }
+  }
+
+  if (state.diagramType === 'flowchart' && state.parentStack.length > 0) {
+    state.diagnostics.push(
+      `Unclosed flowchart block detected (${state.parentStack.length} block(s) not closed).`
+    );
   }
 
   return toMermaidParseModel(state);
@@ -384,5 +476,6 @@ export function parseMermaid(input: string): ParseResult {
     nodes: createFlowNodes(model),
     edges: createFlowEdges(model),
     direction: model.direction,
+    diagnostics: model.diagnostics.length > 0 ? model.diagnostics : undefined,
   };
 }

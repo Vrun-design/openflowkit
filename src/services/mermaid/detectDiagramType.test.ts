@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectMermaidDiagramType } from './detectDiagramType';
+import { detectMermaidDiagramType, extractMermaidDiagramHeader } from './detectDiagramType';
 
 describe('detectMermaidDiagramType', () => {
   it('detects flowchart and graph headers', () => {
@@ -33,5 +33,12 @@ A --> B
   it('returns null for unknown or missing headers', () => {
     expect(detectMermaidDiagramType('A --> B')).toBeNull();
     expect(detectMermaidDiagramType('')).toBeNull();
+  });
+
+  it('preserves unsupported Mermaid headers for higher-level routing', () => {
+    expect(extractMermaidDiagramHeader('gitGraph\ncommit id: "A"')).toEqual({
+      rawType: 'gitGraph',
+    });
+    expect(detectMermaidDiagramType('gitGraph\ncommit id: "A"')).toBeNull();
   });
 });

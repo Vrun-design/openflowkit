@@ -14,6 +14,7 @@ import type {
   FlowTab,
   GlobalEdgeOptions,
 } from '@/lib/types';
+import type { MermaidImportStatus } from '@/services/mermaid/importContracts';
 import type { ExportSerializationMode } from '@/services/canonicalSerialization';
 import type { FlowDocument } from '@/services/storage/flowDocumentModel';
 
@@ -73,6 +74,10 @@ export interface Layer {
 export interface MermaidDiagnosticsSnapshot {
   source: 'paste' | 'import' | 'code';
   diagramType?: DiagramType;
+  importState?: MermaidImportStatus;
+  statusLabel?: string;
+  statusDetail?: string;
+  originalSource?: string;
   diagnostics: ParseDiagnostic[];
   error?: string;
   updatedAt: number;

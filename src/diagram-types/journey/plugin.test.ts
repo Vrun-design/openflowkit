@@ -18,9 +18,25 @@ describe('JOURNEY_PLUGIN', () => {
     expect(result.nodes).toHaveLength(3);
     expect(result.edges).toHaveLength(1);
     expect(result.nodes[0].type).toBe('journey');
+    expect(result.nodes[0].data.journeyTitle).toBe('Checkout Journey');
     expect(result.nodes[0].data.journeySection).toBe('Happy Path');
     expect(result.nodes[0].data.journeyScore).toBe(5);
     expect(result.nodes[0].data.journeyActor).toBe('Buyer');
+  });
+
+  it('emits diagnostics for malformed title syntax while preserving valid steps', () => {
+    const input = `
+      journey
+      title
+      section Support
+        Open ticket: 3: User
+    `;
+
+    const result = JOURNEY_PLUGIN.parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    expect(result.nodes).toHaveLength(1);
+    expect(result.nodes[0].data.journeyTitle).toBe('Journey');
+    expect(result.diagnostics?.some((message) => message.includes('Invalid journey title syntax at line'))).toBe(true);
   });
 
   it('returns diagnostics for malformed score and skips invalid steps', () => {

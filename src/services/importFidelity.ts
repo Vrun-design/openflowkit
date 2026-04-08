@@ -1,4 +1,13 @@
 import type { ParseDiagnostic } from '@/lib/openFlowDSLParser';
+import type {
+    MermaidImportDiagnostic,
+    MermaidImportStatus,
+} from '@/services/mermaid/importContracts';
+import {
+    getMermaidImportStateDetail,
+    getMermaidImportStateGuidance,
+    getMermaidImportStateLabel,
+} from '@/services/mermaid/importStatePresentation';
 import { writeLocalStorageJson } from '@/services/storage/uiLocalStorage';
 
 export type ImportSource = 'json' | 'mermaid' | 'openflowdsl' | 'drawio' | 'visio';
@@ -16,6 +25,8 @@ export interface ImportIssue {
 export interface ImportFidelityReport {
     id: string;
     source: ImportSource;
+    importState?: MermaidImportStatus;
+    originalSource?: string;
     timestamp: string;
     status: 'success' | 'success_with_warnings' | 'failed';
     nodeCount: number;
@@ -72,8 +83,21 @@ export function mapParserDiagnosticToIssue(diagnostic: ParseDiagnostic): ImportI
     };
 }
 
+export function mapMermaidDiagnosticToIssue(diagnostic: MermaidImportDiagnostic): ImportIssue {
+    return {
+        code: diagnostic.code,
+        severity: diagnostic.severity,
+        message: diagnostic.message,
+        line: diagnostic.line,
+        snippet: diagnostic.snippet,
+        hint: diagnostic.hint,
+    };
+}
+
 export function buildImportFidelityReport(params: {
     source: ImportSource;
+    importState?: MermaidImportStatus;
+    originalSource?: string;
     nodeCount: number;
     edgeCount: number;
     elapsedMs: number;
@@ -86,6 +110,8 @@ export function buildImportFidelityReport(params: {
     return {
         id: createReportId(),
         source: params.source,
+        importState: params.importState,
+        originalSource: params.originalSource,
         timestamp: new Date().toISOString(),
         status,
         nodeCount: params.nodeCount,
@@ -105,5 +131,26 @@ export function persistLatestImportReport(report: ImportFidelityReport): void {
 
 export function summarizeImportReport(report: ImportFidelityReport): string {
     const { warningCount, errorCount } = report.summary;
+    if (report.source === 'mermaid') {
+        const label = getMermaidImportStateLabel(report.importState);
+        const detail = getMermaidImportStateDetail({
+            importState: report.importState,
+            nodeCount: report.nodeCount,
+            edgeCount: report.edgeCount,
+        });
+        return `MERMAID import: ${label} (${detail}, ${warningCount} warnings, ${errorCount} errors)`;
+    }
+
     return `${report.source.toUpperCase()} import: ${report.status} (${report.nodeCount} nodes, ${report.edgeCount} edges, ${warningCount} warnings, ${errorCount} errors)`;
+}
+
+export function getImportRecoveryGuidance(report: ImportFidelityReport): string {
+    if (report.source === 'mermaid') {
+        return (
+            getMermaidImportStateGuidance(report.importState)
+            ?? 'Review the Mermaid diagnostics, then retry with simplified or corrected Mermaid code.'
+        );
+    }
+
+    return 'If this file came from another tool, try exporting a plain JSON/OpenFlowKit file again or remove unsupported metadata before retrying.';
 }

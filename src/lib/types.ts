@@ -113,6 +113,7 @@ export interface EntityNodeData {
 }
 
 export interface JourneyNodeData {
+  journeyTitle?: string;
   journeySection?: string;
   journeyActor?: string;
   journeyTask?: string;
@@ -122,12 +123,22 @@ export interface JourneyNodeData {
 export interface MindmapNodeData {
   mindmapDepth?: number;
   mindmapParentId?: string;
+  mindmapAlias?: string;
+  mindmapWrapper?:
+    | 'double-circle'
+    | 'double-square'
+    | 'stadium'
+    | 'subroutine'
+    | 'square'
+    | 'rounded'
+    | 'hexagon';
   mindmapSide?: 'left' | 'right';
   mindmapBranchStyle?: 'curved' | 'straight';
   mindmapCollapsed?: boolean;
 }
 
 export interface ArchitectureNodeData {
+  archTitle?: string;
   archProvider?: string;
   archProviderLabel?: string;
   archResourceType?: string;
@@ -151,9 +162,18 @@ export interface SequenceNodeData {
   seqMessageFrom?: string;
   seqMessageTo?: string;
   seqMessageOrder?: number;
-  seqActivations?: number[];
+  seqActivations?: Array<{
+    order: number;
+    activate: boolean;
+  }>;
   seqNoteTarget?: string;
   seqNotePosition?: 'over' | 'left' | 'right';
+  seqFragment?: {
+    type: 'alt' | 'loop' | 'opt' | 'par' | 'break' | 'critical';
+    condition: string;
+    branchKind?: 'start' | 'else' | 'and';
+    edgeIds: string[];
+  } | null;
   seqFragmentId?: string;
 }
 
@@ -238,6 +258,7 @@ export interface EdgeData {
   seqFragment?: {
     type: 'alt' | 'loop' | 'opt' | 'par' | 'break' | 'critical';
     condition: string;
+    branchKind?: 'start' | 'else' | 'and';
     edgeIds: string[];
   } | null;
   waypoint?: {

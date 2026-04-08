@@ -9,7 +9,14 @@ function sortNodesByPosition(nodes: FlowNode[]): FlowNode[] {
 }
 
 export function toJourneyMermaid(nodes: FlowNode[]): string {
-  const lines: string[] = ['journey', '    title Journey'];
+  const titleNode = sortNodesByPosition(nodes).find((node) => {
+    return typeof node.data.journeyTitle === 'string' && node.data.journeyTitle.trim().length > 0;
+  });
+  const journeyTitle =
+    typeof titleNode?.data.journeyTitle === 'string' && titleNode.data.journeyTitle.trim()
+      ? titleNode.data.journeyTitle.trim()
+      : 'Journey';
+  const lines: string[] = ['journey', `    title ${journeyTitle}`];
   const sectionMap = new Map<string, FlowNode[]>();
 
   sortNodesByPosition(nodes).forEach((node) => {

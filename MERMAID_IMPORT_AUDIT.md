@@ -969,3 +969,241 @@ That is the strongest path to being reliable, credible, and genuinely better for
 - [nodeEnricher.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/nodeEnricher.ts)
 - [iconMatcher.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/iconMatcher.ts)
 - [builtInPlugins.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/builtInPlugins.ts)
+
+---
+
+## Implementation Log
+
+### Completed in this pass
+
+- Added explicit Mermaid import contract types in [importContracts.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/importContracts.ts):
+  - `MermaidImportStatus`
+  - `MermaidImportDiagnostic`
+  - normalization and classification helpers
+- Upgraded [parseMermaidByType.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/parseMermaidByType.ts) to:
+  - preserve `originalSource`
+  - emit `structuredDiagnostics`
+  - classify imports as `editable_full`, `editable_partial`, `invalid_source`, `unsupported_family`, or `unsupported_construct`
+- Tightened [detectDiagramType.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/detectDiagramType.ts) so unsupported-family detection only triggers on real header-shaped lines, which avoids false positives like treating `A --> B` as family `"A"`.
+- Added [officialMermaidValidation.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/officialMermaidValidation.ts) as the seam for the official Mermaid validator so Phase 1 can land without reworking the dispatcher again.
+- Installed the official `mermaid` package and upgraded [officialMermaidValidation.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/officialMermaidValidation.ts) into a real Phase 1 service with:
+  - synchronous official type detection for the app’s current import path
+  - asynchronous official parse validation for correctness work and harnessing
+- Added [scripts/mermaid-compat-report.mjs](/Users/varun/Desktop/Dev_projects/flowmind-ai/scripts/mermaid-compat-report.mjs) as the first compatibility scorecard scaffold.
+- Verified a real upstream integration constraint in the current Node harness:
+  - Mermaid 11 official parsing surfaces `DOMPurify` environment failures for several valid families in this environment
+  - genuine syntax failures still produce real official parse errors
+  - this confirms we need browser-aware async preflight validation rather than pretending the current synchronous import path can fully delegate to Mermaid today
+- Added async official-Mermaid preflight to the command-bar apply path in [applyCodeChanges.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/command-bar/applyCodeChanges.ts), so upstream parse failures can now block apply before editable conversion in the UI path that already supports async work.
+- Strengthened flowchart fidelity in:
+  - [mermaidParser.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/mermaidParser.ts)
+  - [mermaidParserHelpers.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/mermaidParserHelpers.ts)
+  - [mermaidBuilder.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaidBuilder.ts)
+  with:
+  - explicit subgraph id + label parsing, e.g. `subgraph api[API Layer]`
+  - round-trip preservation of explicit subgraph ids during export
+  - retention of inline `:::class` metadata on edge-declared nodes so `classDef` styling applies correctly
+- Expanded the compatibility harness from a stub into a corpus-driven scorecard with:
+  - fixture data in [mermaid-compat-fixtures.json](/Users/varun/Desktop/Dev_projects/flowmind-ai/scripts/mermaid-compat-fixtures.json)
+  - family-level summaries
+  - expected-outcome matching
+  - explicit `environment_limited` classification for upstream DOMPurify/runtime constraints
+- Tightened architecture compatibility expectations:
+  - added an official-subset architecture edge fixture with no label
+  - reclassified labeled architecture edges as an OpenFlowKit extension outside the current official Mermaid subset
+- Made [officialMermaidValidation.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/officialMermaidValidation.ts) browser-aware for full validation so non-browser runtimes degrade intentionally to type detection instead of surfacing misleading DOM runtime failures as diagram syntax failures.
+- Extended [importFidelity.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/importFidelity.ts) and [applyCodeChanges.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/command-bar/applyCodeChanges.ts) so Mermaid warnings now flow into import reports instead of being silently treated as clean successes.
+- Tightened class diagram export fidelity in [classDiagramMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/classDiagramMermaid.ts) so relationship cardinalities already captured by the parser, such as `User "1" o-- "*" Account`, now round-trip instead of being silently dropped on export.
+- Tightened ER diagram export fidelity by separating editor-facing field formatting from Mermaid-facing field formatting:
+  - [entityFields.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/entityFields.ts) now includes a Mermaid-specific serializer that emits valid `type name` ER field syntax and preserves `REFERENCES` metadata.
+  - [erDiagramMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/erDiagramMermaid.ts) now uses that serializer so exported ER diagrams no longer degrade field order or silently drop foreign-key references.
+- Tightened journey export fidelity so imported titles now round-trip instead of being overwritten by a hardcoded fallback:
+  - [journey/plugin.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/journey/plugin.ts) now preserves the Mermaid `title` value on journey nodes.
+  - [journeyMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/journeyMermaid.ts) now exports the preserved title instead of always writing `title Journey`.
+- Tightened mindmap wrapper fidelity so supported Mermaid wrapper syntax now round-trips instead of being flattened into plain labels:
+  - [mindmap/plugin.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/mindmap/plugin.ts) now preserves wrapper metadata such as `((...))`, `[[...]]`, and `{{...}}` on parsed nodes.
+  - [mindmapMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/mindmapMermaid.ts) now re-emits those wrappers during export.
+- Tightened studio Mermaid preview UX in [useStudioCodePanelController.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/studio-code-panel/useStudioCodePanelController.ts) so partially editable Mermaid drafts no longer present the same preview copy as clean imports. The preview now explicitly says `Ready with warnings` and calls out partial editability before apply.
+- Centralized Mermaid import-state presentation in [importStatePresentation.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/importStatePresentation.ts) and reused it across:
+  - studio preview copy
+  - command-bar Mermaid import summaries
+  - paste-path warning toasts
+  This removes state-specific wording drift between entrypoints.
+- Extended Mermaid diagnostics snapshots in [types.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/store/types.ts) so `importState` now travels with the diagnostic payload. That gives downstream UX a stable way to distinguish `editable_partial`, `unsupported_construct`, and `invalid_source` instead of inferring from generic warnings/errors.
+- Tightened blocked-state guidance so unsupported Mermaid families and constructs now surface actionable fallback messaging instead of only raw parser errors:
+  - [importStatePresentation.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/importStatePresentation.ts) now exposes shared guidance text per import state.
+  - [applyCodeChanges.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/command-bar/applyCodeChanges.ts), [useFlowCanvasPaste.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/flow-canvas/useFlowCanvasPaste.ts), and [useStudioCodePanelController.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/studio-code-panel/useStudioCodePanelController.ts) now reuse that guidance so unsupported Mermaid reads like an intentional fallback path.
+- Centralized Mermaid diagnostics snapshot creation in [diagnosticsSnapshot.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/diagnosticsSnapshot.ts) and enriched the snapshot contract with:
+  - `statusLabel`
+  - `statusDetail`
+  This makes the stored diagnostics payload immediately usable by future UI surfaces instead of forcing each surface to recompute Mermaid state meaning from raw errors and warnings.
+- Added Mermaid source preservation to the diagnostics snapshot contract:
+  - [diagnosticsSnapshot.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/diagnosticsSnapshot.ts) now carries `originalSource`
+  - [MermaidDiagnosticsBanner.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/MermaidDiagnosticsBanner.tsx) now tells the user that the original Mermaid source is preserved and points them back to Mermaid code for safe recovery
+  This is the first concrete step toward a true source-preserving fallback mode instead of warning-only UX.
+- Tightened the recovery/reporting layer for Mermaid:
+  - [importFidelity.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/importFidelity.ts) now summarizes Mermaid imports with human-readable state labels instead of raw enum codes.
+  - [ImportRecoveryDialog.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/ImportRecoveryDialog.tsx) now shows Mermaid-specific status and recovery guidance when the failed import came from Mermaid.
+- Added a real shell-level Mermaid recovery action instead of banner-only messaging:
+  - [MermaidDiagnosticsBanner.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/MermaidDiagnosticsBanner.tsx) now supports an optional action button.
+  - [useFlowEditorController.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/flow-editor/useFlowEditorController.ts) now exposes the existing `openStudioCode` controller action to shell consumers.
+  - [FlowEditor.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/FlowEditor.tsx) now wires preserved-source Mermaid diagnostics to an `Open Mermaid code` action that takes the user straight into Mermaid code mode for recovery.
+- Extended the same recovery path into failed Mermaid import flows:
+  - [ImportRecoveryDialog.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/ImportRecoveryDialog.tsx) now supports an optional recovery action alongside retry/dismiss.
+  - [FlowEditor.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/FlowEditor.tsx) now passes `Open Mermaid code` into the import recovery dialog when the failed import is Mermaid and preserved Mermaid source is available in diagnostics.
+- Moved preserved Mermaid source into the import report contract itself:
+  - [importFidelity.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/importFidelity.ts) now carries `originalSource` on Mermaid reports.
+  - [applyCodeChanges.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/command-bar/applyCodeChanges.ts) now persists the original Mermaid source into manual Mermaid import reports across blocking, failure, warning, and success-with-fallback paths.
+  - [ImportRecoveryDialog.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/ImportRecoveryDialog.tsx) now renders the preserved-source recovery note from the report itself.
+  - [FlowEditor.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/FlowEditor.tsx) now prefers report-owned Mermaid source for recovery actions instead of relying only on ambient global diagnostics.
+- Expanded the compatibility corpus materially:
+  - [mermaid-compat-fixtures.json](/Users/varun/Desktop/Dev_projects/flowmind-ai/scripts/mermaid-compat-fixtures.json) now covers 19 fixtures across flowchart, stateDiagram, sequence, classDiagram, erDiagram, mindmap, journey, architecture, and unsupported gitGraph.
+  - [compatReportHarness.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/compatReportHarness.test.ts) now asserts broader family coverage instead of only a minimal smoke baseline.
+  - The expanded corpus surfaced one real upstream compatibility nuance: `REFERENCES CUSTOMER.id` in Mermaid ER fields is currently rejected by official Mermaid in this harness, so that fixture is now classified as officially invalid instead of silently assuming official compatibility.
+- Expanded the compatibility corpus again to cover more invalid and partial-shape cases:
+  - [mermaid-compat-fixtures.json](/Users/varun/Desktop/Dev_projects/flowmind-ai/scripts/mermaid-compat-fixtures.json) now covers 24 fixtures, adding invalid flowchart, sequence, stateDiagram, classDiagram, and journey cases.
+  - The harness now distinguishes between true official-invalid cases and `environment_limited` cases where the current Node runtime cannot honestly validate an officially invalid expectation because Mermaid falls over on DOMPurify first.
+- Fixed a real sequence activation fidelity bug across parser, renderer, and exporter:
+  - [types.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/types.ts) now models `seqActivations` as explicit `{ order, activate }` events instead of a lossy number list.
+  - [sequence/plugin.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/sequence/plugin.ts) now preserves explicit activation/deactivation events on participant nodes.
+  - [sequenceMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/sequenceMermaid.ts) now emits activation commands in the correct timeline position instead of front-loading them before all messages.
+  - [SequenceParticipantNode.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/custom-nodes/SequenceParticipantNode.tsx) now renders activation bars from explicit activation ranges instead of assuming simple alternating start/end pairs.
+- Fixed a real stateDiagram composite-label fidelity bug across parser and exporter:
+  - [stateDiagramMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/stateDiagramMermaid.ts) now preserves composite state labels by emitting `state "Label" as Alias {` when a composite state's display label differs from its node id.
+  - [stateDiagram/plugin.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/stateDiagram/plugin.ts) now recognizes quoted composite aliases during parent reconstruction and supports quoted note targets in state note parsing.
+  - [mermaidParser.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/mermaidParser.ts) now accepts broader state alias identifiers like `Working.Set` or `WorkingSet`.
+- Tightened the generic flowchart parser so malformed-but-recoverable structure is no longer silently treated as a clean import:
+  - [mermaidParserModel.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/mermaidParserModel.ts) now carries parser diagnostics alongside nodes and edges.
+  - [mermaidParser.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/mermaidParser.ts) now emits diagnostics for invalid edge syntax, malformed subgraph declarations, unexpected block closers, unrecognized flowchart lines, and unclosed flowchart blocks.
+  - [parseMermaidByType.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/parseMermaidByType.test.ts) now asserts that these malformed flowchart cases downgrade to `editable_partial` instead of pretending the parse was fully clean.
+- Tightened ER export compatibility against official Mermaid:
+  - [entityFields.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/entityFields.ts) now emits Mermaid-compatible ER field references as `REFERENCES TABLE` and uses `UK` instead of `UNIQUE` for uniqueness markers in Mermaid export.
+  - [erDiagram/plugin.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/erDiagram/plugin.test.ts) now covers the official-compatible table-only `REFERENCES` form.
+  - [mermaid-compat-fixtures.json](/Users/varun/Desktop/Dev_projects/flowmind-ai/scripts/mermaid-compat-fixtures.json) now includes an officially valid ER field fixture using `FK REFERENCES CUSTOMER` plus `UK`, and the compatibility report shows that as a genuine official-valid case.
+- Fixed a real sequence fragment fidelity gap across parser and exporter:
+  - [sequence/plugin.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/sequence/plugin.ts) now preserves per-branch fragment metadata for `alt/else` and `par/and` instead of flattening every branch back to a generic fragment start.
+  - [sequenceMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/sequenceMermaid.ts) now emits `else ...` and `and ...` branch markers in the correct timeline position instead of incorrectly reopening a second `alt` or `par` block.
+  - [mermaidBuilder.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaidBuilder.ts) now recognizes fragment annotation nodes as part of sequence exports so mixed participant/note/fragment sequence canvases are exported through the sequence serializer instead of falling through to another family.
+- Added a dedicated editable-partial regression corpus for malformed-but-recoverable Mermaid imports:
+  - [editablePartialCorpus.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/editablePartialCorpus.test.ts) now verifies malformed-but-editable cases across flowchart, stateDiagram, classDiagram, erDiagram, mindmap, and journey.
+  - The corpus asserts that these cases stay importable, downgrade to `editable_partial`, and produce structured syntax diagnostics instead of silently looking like clean imports.
+- Fixed a real stateDiagram export fidelity gap around explicit direction:
+  - [stateDiagramMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/stateDiagramMermaid.ts) now preserves an explicitly provided `direction LR/TB` during export instead of always re-inferring direction from node layout.
+  - [mermaidBuilder.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaidBuilder.ts) now passes the caller-provided direction through to the stateDiagram exporter just like the flowchart exporter already did.
+- Tightened sequence fragment fidelity again by covering parallel branches as first-class Mermaid branches:
+  - [remainingFamiliesRoundTrip.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/remainingFamiliesRoundTrip.test.ts) now verifies that `par ... and ... end` round-trips as `par/and` instead of degrading to repeated `par` openings.
+  - [mermaid-compat-fixtures.json](/Users/varun/Desktop/Dev_projects/flowmind-ai/scripts/mermaid-compat-fixtures.json) now includes `state-direction-lr` and `sequence-par-and`, pushing the compatibility corpus to 29 fixtures.
+- Fixed a real classDiagram export fidelity gap for generic identifiers:
+  - [classDiagramMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/classDiagramMermaid.ts) now converts internal generic identifiers like `Repository<T>` back to Mermaid syntax like `Repository~T~` during export instead of leaking the normalized internal form.
+  - [remainingFamiliesRoundTrip.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/remainingFamiliesRoundTrip.test.ts) now verifies generic class identifiers and generic relation endpoints round-trip honestly through parse/export/parse.
+- Expanded malformed-but-recoverable coverage for sequence imports:
+  - [editablePartialCorpus.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/editablePartialCorpus.test.ts) now includes a sequence case with one valid message followed by a malformed message, verifying that sequence imports can stay editable as `editable_partial` with syntax diagnostics.
+  - [mermaid-compat-fixtures.json](/Users/varun/Desktop/Dev_projects/flowmind-ai/scripts/mermaid-compat-fixtures.json) now includes `sequence-partial-after-valid-message`, pushing the compatibility corpus to 30 fixtures.
+- Fixed a real architecture round-trip fidelity gap around titles:
+  - [architecture/plugin.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/architecture/plugin.ts) now preserves `title ...` metadata on imported architecture nodes instead of discarding it during parse.
+  - [architectureMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/architectureMermaid.ts) now emits the preserved architecture title back into Mermaid export.
+  - [architectureRoundTrip.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/architectureRoundTrip.test.ts) now verifies title preservation through parse/export/parse.
+- Expanded editable-partial coverage to architecture recovery cases and tightened the corpus contract:
+  - [editablePartialCorpus.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/editablePartialCorpus.test.ts) now includes an architecture implicit-node recovery case and asserts expected structured diagnostic codes per corpus case instead of incorrectly assuming every partial import is `MERMAID_SYNTAX`.
+  - That keeps recovery-driven partial imports like architecture implicit-node creation measured honestly as `MERMAID_RECOVERY` instead of weakening the corpus with a false generic assertion.
+- Expanded the compatibility harness to cover architecture titles explicitly:
+  - [mermaid-compat-fixtures.json](/Users/varun/Desktop/Dev_projects/flowmind-ai/scripts/mermaid-compat-fixtures.json) now includes `architecture-title-basic`, pushing the compatibility corpus to 31 fixtures.
+  - [compatReportHarness.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/compatReportHarness.test.ts) was raised accordingly so title preservation is tracked in the corpus, not just unit tests.
+  - The harness also surfaced another real upstream constraint: official Mermaid still reports the architecture-title fixture as `environment_limited` in this Node runtime because the same DOMPurify/browser assumption affects that path too.
+- Fixed a real mindmap round-trip fidelity gap around Mermaid alias prefixes:
+  - [mindmap/plugin.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/mindmap/plugin.ts) now preserves alias prefixes for wrapped Mermaid mindmap nodes like `root((Root))` and `feature[[Topic]]` instead of dropping them when the structured node tree is built.
+  - [mindmapMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/mindmapMermaid.ts) now emits preserved aliases back into Mermaid export for wrapped mindmap nodes.
+  - [mindmap/plugin.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/mindmap/plugin.test.ts) and [remainingFamiliesRoundTrip.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/remainingFamiliesRoundTrip.test.ts) now verify alias preservation through parse/export/parse.
+- Updated tests in:
+  - [parseMermaidByType.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/parseMermaidByType.test.ts)
+  - [importFidelity.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/importFidelity.test.ts)
+  - [remainingFamiliesRoundTrip.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/remainingFamiliesRoundTrip.test.ts)
+- Expanded flowchart parser fidelity for modern architecture-style Mermaid syntax:
+  - [mermaidParserHelpers.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/mermaidParserHelpers.ts) now preserves annotation-only `@{ ... }` label and shape metadata without requiring legacy bracket syntax.
+  - [mermaidParserHelpers.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/mermaidParserHelpers.ts) now accepts dotted Mermaid ids like `api.gateway`, `db.primary`, and `cluster.api` across standalone nodes, inline edge endpoints, modern annotations, and subgraph ids.
+  - [flowchartRoundTrip.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/flowchartRoundTrip.test.ts) now verifies dotted-id and modern-annotation flowcharts survive parse/export/parse without losing labels or endpoints.
+- Expanded flowchart class styling fidelity:
+  - [mermaidParserHelpers.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/mermaidParserHelpers.ts) now parses Mermaid `class A,B hot` assignment lines instead of silently skipping them.
+  - [mermaidParser.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/mermaidParser.ts) now applies those class assignments to registered nodes, including dotted ids, so later `classDef` styling actually reaches the imported canvas nodes.
+  - [mermaidParser.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaidParser.test.ts) and [parseMermaidByType.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/parseMermaidByType.test.ts) now cover class-assignment directives, dotted ids, and modern annotation-only nodes through both the raw parser and the higher-level Mermaid dispatcher.
+- Expanded the compatibility corpus again:
+  - [mermaid-compat-fixtures.json](/Users/varun/Desktop/Dev_projects/flowmind-ai/scripts/mermaid-compat-fixtures.json) now includes flowchart fixtures for `class` assignment lines and modern annotation+dotted-id combinations, pushing the tracked corpus to 33 fixtures.
+  - [compatReportHarness.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/compatReportHarness.test.ts) was raised accordingly so these flowchart constructs are now part of the ongoing compatibility scorecard, not one-off unit tests.
+- Tightened flowchart export fidelity so imported styling semantics now survive round-trip instead of being flattened away:
+  - [mermaidBuilder.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaidBuilder.ts) now emits Mermaid `style ...` directives for node background/border/text colors and `linkStyle ...` directives for edge stroke color/width when those styles exist on the editable graph.
+  - [exportService.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/exportService.test.ts), [flowchartRoundTrip.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/flowchartRoundTrip.test.ts), and [mermaidExportQuality.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaidExportQuality.test.ts) now verify that Mermaid-imported `classDef`/`class` and `linkStyle` semantics survive parse/export/parse as concrete Mermaid directives.
+- Tightened sequence fragment fidelity so notes inside control blocks no longer fall out of their Mermaid fragment context on export:
+  - [sequence/plugin.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/sequence/plugin.ts) now preserves fragment metadata on note nodes created inside `alt`, `par`, and similar control blocks.
+  - [sequenceMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/sequenceMermaid.ts) now drives fragment open/close transitions for note timeline entries as well as message edges, so note export stays inside the correct Mermaid block.
+  - [sequence/plugin.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/sequence/plugin.test.ts) and [remainingFamiliesRoundTrip.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/remainingFamiliesRoundTrip.test.ts) now verify note-in-fragment preservation through parse/export/parse.
+- Tightened architecture round-trip fidelity for richer node kinds:
+  - [architectureMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/architectureMermaid.ts) now exports preserved architecture kinds like `person`, `container`, and `database_container` instead of collapsing everything non-group/non-junction back to `service`.
+  - [architectureRoundTrip.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/architectureRoundTrip.test.ts) and [exportService.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/exportService.test.ts) now verify that richer architecture node kinds survive import/export/import honestly.
+- Expanded the compatibility corpus again for these two families:
+  - [mermaid-compat-fixtures.json](/Users/varun/Desktop/Dev_projects/flowmind-ai/scripts/mermaid-compat-fixtures.json) now includes `sequence-note-inside-alt` and `architecture-rich-node-kinds`, pushing the tracked corpus to 35 fixtures.
+  - [compatReportHarness.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/compatReportHarness.test.ts) was raised accordingly so these architecture/sequence cases stay part of the ongoing compatibility scorecard.
+  - [entityFields.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/entityFields.test.ts)
+  - [journey/plugin.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/journey/plugin.test.ts)
+  - [mindmap/plugin.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/diagram-types/mindmap/plugin.test.ts)
+  - [useStudioCodePanelController.test.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/studio-code-panel/useStudioCodePanelController.test.tsx)
+  - [StudioCodePanel.test.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/StudioCodePanel.test.tsx)
+  - [importStatePresentation.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/importStatePresentation.test.ts)
+  - [applyCodeChanges.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/command-bar/applyCodeChanges.test.ts)
+  - [diagnosticsSnapshot.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/diagnosticsSnapshot.test.ts)
+  - [MermaidDiagnosticsBanner.test.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/MermaidDiagnosticsBanner.test.tsx)
+  - [ImportRecoveryDialog.test.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/ImportRecoveryDialog.test.tsx)
+  - [FlowEditor.test.tsx](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/components/FlowEditor.test.tsx)
+  - [editablePartialCorpus.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/editablePartialCorpus.test.ts)
+  - [stateDiagramRoundTrip.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/stateDiagramRoundTrip.test.ts)
+  - [compatReportHarness.test.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/compatReportHarness.test.ts)
+
+### Plan changes made during implementation
+
+- Refined Phase 0 to include a hard distinction between `invalid_source` and `unsupported_family`.
+  Why this improved reliability:
+  The previous behavior told users that unsupported Mermaid families were "missing chart type declarations," which was false and damaged trust.
+- Pulled the structured diagnostics work ahead of the official-parser integration.
+  Why this improved reliability:
+  The validator layer needs a stable result contract first; otherwise Phase 1 would add more branching without a clear outcome model.
+- Added the validator seam before adding the dependency.
+  Why this improved quality:
+  It decouples contract work from package integration and keeps the parser entrypoint stable when the official Mermaid package is wired in.
+- Split official Mermaid integration into a synchronous detection layer and an asynchronous full-validation layer.
+  Why this improved reliability:
+  Mermaid’s official parser is async, while the current editable import path is synchronous and widely used. Forcing a fake sync wrapper here would have been brittle and high-risk.
+
+### Simplification / refactor pass
+
+- Removed dead fallback control flow from [parseMermaidByType.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/mermaid/parseMermaidByType.ts) after the new finalize path made it redundant.
+- Centralized Mermaid import-state classification so plugins do not need to duplicate contract logic.
+- Simplified class relation export by giving [classDiagramMermaid.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/services/export/mermaid/classDiagramMermaid.ts) a single typed resolver for relation token, label, and cardinality metadata instead of reconstructing those pieces in multiple places.
+- Avoided an ER editor regression by keeping the existing editor serializer in [entityFields.ts](/Users/varun/Desktop/Dev_projects/flowmind-ai/src/lib/entityFields.ts) unchanged and adding a dedicated Mermaid serializer for export only.
+- Avoided a broader document-model refactor for journey metadata by preserving the Mermaid title locally on journey nodes first, which improves round-trip fidelity now without adding a risky cross-format metadata layer in the same change-set.
+- Avoided conflating Mermaid wrapper syntax with general node shape styling by preserving the original wrapper token separately in mindmap node data and using it only for Mermaid export.
+- Avoided a larger studio preview state-model refactor by reusing the existing `ready` state and making the preview copy truthful for `editable_partial` drafts first.
+- Avoided duplicating fallback copy yet again by introducing a shared import-state presenter instead of hardcoding separate strings in studio, import, and paste flows.
+- Avoided inventing a new fallback mode in the same pass; instead, made the current blocked states self-explanatory first so the later render-only fallback can sit on a clearer product contract.
+- Removed duplicated ad hoc Mermaid snapshot assembly from apply and paste flows so future diagnostics UI changes only need one contract update.
+- Preserved original Mermaid source on blocked and partial paths so future fallback actions can operate on the exact user input instead of reconstructing it from diagnostics.
+- Removed Mermaid-specific recovery wording drift between import reports and the recovery dialog by reusing the same import-state presenter there too.
+- Reused the existing studio-opening controller action instead of adding a second Mermaid-recovery-specific navigation path in the view layer.
+- Reused the same Mermaid recovery action contract in both the shell banner and the import recovery dialog so fallback behavior stays consistent across blocked Mermaid entrypoints.
+- Removed the import recovery dialog's hidden dependency on global Mermaid diagnostics by storing preserved Mermaid source on the report itself, which makes failed Mermaid recovery more self-contained and reliable.
+- Removed a hidden sequence export assumption that activation commands always alternate cleanly and can be reconstructed purely from count/order parity. That assumption was false and caused incorrect Mermaid round-trips.
+- Removed a hidden stateDiagram export assumption that composite state ids and human-readable labels are interchangeable. That assumption was false and caused composite state labels to be dropped on round-trip.
+- Removed a hidden flowchart import assumption that malformed structure without a hard parse failure should be treated as a clean editable import. That assumption was false and masked partial reliability problems.
+- Removed a hidden ER export assumption that richer editor semantics like `UNIQUE` and `REFERENCES TABLE.field` automatically map to Mermaid’s officially accepted ER subset. That assumption was false; the exporter now uses the official-compatible token forms where available.
+- Removed a hidden sequence export assumption that every fragment branch can be reconstructed as a fresh fragment start. That assumption was false and caused `else` and `and` branches to round-trip as the wrong Mermaid control syntax.
+- Added a focused editable-partial corpus instead of burying malformed-but-recoverable cases inside unrelated happy-path tests, which keeps reliability regressions easier to diagnose family by family.
+- Removed a hidden stateDiagram export assumption that layout shape is a safe substitute for an explicit Mermaid `direction` declaration. That assumption was false and caused honest `direction LR` inputs to drift on export.
+- Removed a hidden sequence export assumption that only `alt/else` needed branch-kind preservation. Parallel `par/and` branches have the same fidelity requirement and are now covered the same way.
+- Removed a hidden classDiagram export assumption that internal normalized generic identifiers are safe to emit directly as Mermaid source. That assumption was false and caused generic classes to export in a non-Mermaid form.
+- Removed a hidden architecture import/export assumption that `title` is non-essential metadata. That assumption was false and caused architecture diagrams to lose document-level meaning on round-trip.
+- Expanded the compatibility harness with title-bearing architecture input so document-level metadata fidelity is measured alongside graph-shape fidelity instead of remaining an untracked round-trip behavior.
+- Removed a hidden mindmap parser assumption that alias-like wrapper prefixes were presentation-only. That assumption was false and caused valid Mermaid identifiers like `root((Root))` to disappear on export even though the node itself survived.
+
+### Next recommended implementation steps
+
+- Expand the fixture corpus behind [scripts/mermaid-compat-report.mjs](/Users/varun/Desktop/Dev_projects/flowmind-ai/scripts/mermaid-compat-report.mjs) into a real per-family compatibility harness.
+- Introduce an async import preflight path in the command bar so official parse validation can run before editable conversion without forcing the entire canvas paste/import pipeline to become synchronous-in-name-only.
+- Start parser-depth work with flowchart and architecture, using the new import-state and structured-diagnostics contract as the baseline.

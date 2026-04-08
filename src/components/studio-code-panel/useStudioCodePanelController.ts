@@ -8,6 +8,12 @@ import type { FlowEdge, FlowNode } from '@/lib/types';
 import { applyCodeChanges } from '@/components/command-bar/applyCodeChanges';
 import type { StudioCodeMode } from '@/hooks/useFlowEditorUIState';
 import type { MermaidDiagnosticsSnapshot } from '@/store/types';
+import type { MermaidDispatchParseResult } from '@/services/mermaid/parseMermaidByType';
+import {
+  appendMermaidImportGuidance,
+  getMermaidImportStateDetail,
+  getMermaidImportStateLabel,
+} from '@/services/mermaid/importStatePresentation';
 
 export type DraftPreviewState = 'empty' | 'error' | 'ready';
 
@@ -15,6 +21,19 @@ export interface DraftPreview {
   state: DraftPreviewState;
   label: string;
   detail: string;
+}
+
+function buildMermaidDraftPreviewDetail(parsed: MermaidDispatchParseResult): DraftPreview {
+  return {
+    state: 'ready',
+    label: getMermaidImportStateLabel(parsed.importState),
+    detail: getMermaidImportStateDetail({
+      importState: parsed.importState,
+      diagramType: parsed.diagramType,
+      nodeCount: parsed.nodes.length,
+      edgeCount: parsed.edges.length,
+    }),
+  };
 }
 
 interface UseStudioCodePanelControllerParams {
@@ -96,16 +115,16 @@ export function useStudioCodePanelController({
       if (parsed.error) {
         return {
           state: 'error',
-          label: 'Needs fixes',
-          detail: parsed.error,
+          label: getMermaidImportStateLabel(parsed.importState),
+          detail: appendMermaidImportGuidance({
+            message: parsed.error,
+            importState: parsed.importState,
+            diagramType: parsed.diagramType,
+          }),
         };
       }
 
-      return {
-        state: 'ready',
-        label: 'Ready to apply',
-        detail: `${parsed.nodes.length} nodes, ${parsed.edges.length} edges`,
-      };
+      return buildMermaidDraftPreviewDetail(parsed);
     }
 
     const parsed = parseOpenFlowDSL(code);

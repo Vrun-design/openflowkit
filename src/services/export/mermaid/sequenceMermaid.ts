@@ -16,6 +16,57 @@ function resolveSequenceArrow(kind: string | undefined): string {
   return '->>';
 }
 
+function sortSequenceActivations(
+  activations: Array<{ order: number; activate: boolean }> | undefined
+): Array<{ order: number; activate: boolean }> {
+  return [...(activations ?? [])].sort((left, right) => left.order - right.order);
+}
+
+type SequenceFragmentState = {
+  type: string;
+  condition: string;
+  branchKind?: 'start' | 'else' | 'and';
+};
+
+function syncFragmentState(
+  lines: string[],
+  currentFrag: SequenceFragmentState | null,
+  nextFrag: SequenceFragmentState | null
+): SequenceFragmentState | null {
+  if (
+    currentFrag &&
+    nextFrag &&
+    currentFrag.type === nextFrag.type &&
+    currentFrag.condition !== nextFrag.condition
+  ) {
+    if (nextFrag.type === 'alt' && nextFrag.branchKind === 'else') {
+      lines.push(`    else ${nextFrag.condition}`);
+      return nextFrag;
+    }
+    if (nextFrag.type === 'par' && nextFrag.branchKind === 'and') {
+      lines.push(`    and ${nextFrag.condition}`);
+      return nextFrag;
+    }
+    lines.push('    end');
+    currentFrag = null;
+  }
+
+  if (
+    currentFrag &&
+    (!nextFrag || nextFrag.type !== currentFrag.type || nextFrag.condition !== currentFrag.condition)
+  ) {
+    lines.push('    end');
+    currentFrag = null;
+  }
+
+  if (nextFrag && !currentFrag) {
+    lines.push(`    ${nextFrag.type} ${nextFrag.condition}`);
+    return nextFrag;
+  }
+
+  return currentFrag;
+}
+
 export function toSequenceMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
   const lines: string[] = ['sequenceDiagram'];
   const participantIdByNodeId = new Map<string, string>();
@@ -44,41 +95,82 @@ export function toSequenceMermaid(nodes: FlowNode[], edges: FlowEdge[]): string 
     }
   });
 
-  participants.forEach((node) => {
+  const activations = participants.flatMap((node) => {
     const id = participantIdByNodeId.get(node.id) ?? sanitizeId(node.id);
-    const acts = node.data.seqActivations;
-    if (acts && acts.length > 0) {
-      acts.forEach((_, i) => {
-        lines.push(`    ${i % 2 === 0 ? 'activate' : 'deactivate'} ${id}`);
-      });
-    }
+    return sortSequenceActivations(node.data.seqActivations).map((activation) => ({
+      kind: 'activation' as const,
+      order: activation.order,
+      participantId: id,
+      activation,
+    }));
   });
 
-  notes.forEach((node) => {
-    const text = String(node.data.label || '');
-    const target = node.data.seqNoteTarget || '';
-    const position = node.data.seqNotePosition || 'over';
-    if (text && target) {
-      lines.push(`    note ${position} ${sanitizeId(target)}: ${sanitizeLabel(text)}`);
-    }
+  const timelineEntries = [
+    ...notes.map((node) => ({
+      kind: 'note' as const,
+      order: typeof node.data.seqMessageOrder === 'number' ? node.data.seqMessageOrder : 0,
+      node,
+    })),
+    ...activations,
+    ...sortedEdges.map((edge) => ({
+      kind: 'edge' as const,
+      order: typeof edge.data?.seqMessageOrder === 'number' ? edge.data.seqMessageOrder : 0,
+      edge,
+    })),
+  ].sort((left, right) => {
+    if (left.order !== right.order) return left.order - right.order;
+    const timelinePriority = { note: 0, activation: 1, edge: 2 };
+    return timelinePriority[left.kind] - timelinePriority[right.kind];
   });
 
-  let currentFrag: { type: string; condition: string } | null = null;
-  sortedEdges.forEach((edge) => {
-    const frag = edge.data?.seqFragment;
+  let currentFrag: SequenceFragmentState | null = null;
+  timelineEntries.forEach((entry) => {
+    if (entry.kind === 'note') {
+      const node = entry.node;
+      const noteFrag = node.data.seqFragment
+        ? {
+            type: node.data.seqFragment.type,
+            condition: node.data.seqFragment.condition,
+            branchKind: node.data.seqFragment.branchKind,
+          }
+        : null;
+      currentFrag = syncFragmentState(lines, currentFrag, noteFrag);
+      const text = String(node.data.label || '');
+      const position = node.data.seqNotePosition || 'over';
+      const rawTargets = Array.isArray(node.data.seqNoteTargets)
+        ? node.data.seqNoteTargets
+        : typeof node.data.seqNoteTarget === 'string'
+          ? [node.data.seqNoteTarget]
+          : [];
+      const targets = rawTargets
+        .map((target) => (typeof target === 'string' ? target.trim() : ''))
+        .filter(Boolean)
+        .map((target) => sanitizeId(target));
 
-    if (
-      currentFrag &&
-      (!frag || frag.type !== currentFrag.type || frag.condition !== currentFrag.condition)
-    ) {
-      lines.push('    end');
-      currentFrag = null;
+      if (text && targets.length > 0) {
+        const targetExpr = position === 'over' && targets.length > 1
+          ? `${targets[0]}, ${targets[1]}`
+          : targets[0];
+        lines.push(`    note ${position} ${targetExpr}: ${sanitizeLabel(text)}`);
+      }
+      return;
     }
 
-    if (frag && !currentFrag) {
-      lines.push(`    ${frag.type} ${frag.condition}`);
-      currentFrag = { type: frag.type, condition: frag.condition };
+    if (entry.kind === 'activation') {
+      lines.push(`    ${entry.activation.activate ? 'activate' : 'deactivate'} ${entry.participantId}`);
+      return;
     }
+
+    const edge = entry.edge;
+    const frag = edge.data?.seqFragment
+      ? {
+          type: edge.data.seqFragment.type,
+          condition: edge.data.seqFragment.condition,
+          branchKind: edge.data.seqFragment.branchKind,
+        }
+      : null;
+
+    currentFrag = syncFragmentState(lines, currentFrag, frag);
 
     const arrow = resolveSequenceArrow(edge.data?.seqMessageKind);
     const label = typeof edge.label === 'string' ? edge.label.trim() : '';

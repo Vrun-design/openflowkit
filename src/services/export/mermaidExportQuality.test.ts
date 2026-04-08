@@ -175,4 +175,19 @@ describe('Mermaid Export Quality', () => {
     const exported = toMermaid([], []);
     expect(exported).toContain('flowchart');
   });
+
+  it('exports imported flowchart styling semantics as style and linkStyle directives', async () => {
+    const input = `flowchart TD
+    A["API"] --> B[("DB")]
+    classDef hot fill:#dff,stroke:#08c,color:#024
+    class A hot
+    linkStyle 0 stroke:#f66,stroke-width:3px`;
+
+    const parsed = parseMermaidByType(input);
+    const enriched = await enrichNodesWithIcons(parsed.nodes);
+    const exported = toMermaid(enriched, parsed.edges);
+
+    expect(exported).toContain('style A fill:#dff,stroke:#08c,color:#024');
+    expect(exported).toContain('linkStyle 0 stroke:#f66,stroke-width:3px');
+  });
 });

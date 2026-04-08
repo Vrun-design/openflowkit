@@ -142,6 +142,25 @@ function applyCompositeStateParenting(nodes: FlowNode[], input: string): FlowNod
       continue;
     }
 
+    const compositeAliasMatch = line.match(
+      /^state\s+"([^"]+)"\s+as\s+([A-Za-z_][\w.-]*)\s*\{$/i
+    );
+    if (compositeAliasMatch) {
+      const parentId = compositeAliasMatch[2].trim();
+      compositeStack.push(parentId);
+
+      if (!nodeIndexById.has(parentId)) {
+        nodeIndexById.set(parentId, nextNodes.length);
+        nextNodes.push({
+          id: parentId,
+          type: 'state',
+          position: { x: 0, y: 0 },
+          data: { label: compositeAliasMatch[1].trim() || parentId },
+        } as FlowNode);
+      }
+      continue;
+    }
+
     const compositeMatch = line.match(/^state\s+("?)([^"{]+)\1\s*\{$/i);
     if (compositeMatch) {
       const parentId = compositeMatch[2].trim();
@@ -199,15 +218,15 @@ function parseStateDiagramNotes(input: string, nodes: FlowNode[]): StateNoteReco
     .split('\n')
     .forEach((rawLine, index) => {
       const line = rawLine.trim();
-      const match = line.match(/^note\s+(left of|right of|over)\s+(\S+)\s*:\s*(.+)$/i);
-      if (!match || !knownNodeIds.has(match[2])) {
+      const match = line.match(/^note\s+(left of|right of|over)\s+("?)([^":]+)\2\s*:\s*(.+)$/i);
+      if (!match || !knownNodeIds.has(match[3])) {
         return;
       }
 
       notes.push({
         id: `state-note-${index + 1}`,
-        target: match[2],
-        text: match[3].trim(),
+        target: match[3],
+        text: match[4].trim(),
         position: match[1].toLowerCase().replace(' of', '') as StateNoteRecord['position'],
       });
     });

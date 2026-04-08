@@ -15,6 +15,7 @@ export interface MermaidParseModel {
   rawEdges: MermaidRawEdge[];
   linkStyles: Map<number, Record<string, string>>;
   classDefs: Map<string, Record<string, string>>;
+  diagnostics: string[];
   direction: MermaidDirection;
   diagramType: MermaidDiagramType;
 }
@@ -24,6 +25,7 @@ export interface MermaidParseState {
   rawEdges: MermaidRawEdge[];
   linkStyles: Map<number, Record<string, string>>;
   classDefs: Map<string, Record<string, string>>;
+  diagnostics: string[];
   direction: MermaidDirection;
   diagramType: MermaidDiagramType;
   parentStack: string[];
@@ -36,6 +38,7 @@ export function createMermaidParseState(): MermaidParseState {
     rawEdges: [],
     linkStyles: new Map<number, Record<string, string>>(),
     classDefs: new Map<string, Record<string, string>>(),
+    diagnostics: [],
     direction: 'TB',
     diagramType: 'unknown',
     parentStack: [],
@@ -115,6 +118,7 @@ export function toMermaidParseModel(state: MermaidParseState): MermaidParseModel
     rawEdges: state.rawEdges,
     linkStyles: state.linkStyles,
     classDefs: state.classDefs,
+    diagnostics: state.diagnostics,
     direction: state.direction,
     diagramType: state.diagramType,
   };

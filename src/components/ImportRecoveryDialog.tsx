@@ -1,7 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, FileWarning, RefreshCcw, X } from 'lucide-react';
-import type { ImportFidelityReport } from '@/services/importFidelity';
+import {
+  getImportRecoveryGuidance,
+  type ImportFidelityReport,
+} from '@/services/importFidelity';
+import { getMermaidImportStateLabel } from '@/services/mermaid/importStatePresentation';
 import { MODAL_PANEL_CLASS, SECTION_CARD_CLASS, SECTION_SURFACE_CLASS, STATUS_SURFACE_CLASS } from '@/lib/designTokens';
 import { Button } from './ui/Button';
 
@@ -10,6 +14,8 @@ interface ImportRecoveryDialogProps {
   report: ImportFidelityReport;
   onRetry: () => void;
   onClose: () => void;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 function formatSourceLabel(source: ImportFidelityReport['source']): string {
@@ -25,10 +31,15 @@ export function ImportRecoveryDialog({
   report,
   onRetry,
   onClose,
+  actionLabel,
+  onAction,
 }: ImportRecoveryDialogProps): React.ReactElement | null {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const visibleIssues = report.issues.slice(0, 3);
   const remainingIssueCount = Math.max(0, report.issues.length - visibleIssues.length);
+  const mermaidStateLabel =
+    report.source === 'mermaid' ? getMermaidImportStateLabel(report.importState) : null;
+  const recoveryGuidance = getImportRecoveryGuidance(report);
 
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -78,11 +89,17 @@ export function ImportRecoveryDialog({
         </div>
 
         <div className="space-y-4 px-6 py-5">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className={`grid gap-3 ${report.source === 'mermaid' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
             <div className={`${SECTION_CARD_CLASS} px-3 py-3`}>
               <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-secondary)]">Source</div>
               <div className="mt-1 text-sm font-medium text-[var(--brand-text)]">{formatSourceLabel(report.source)}</div>
             </div>
+            {mermaidStateLabel ? (
+              <div className={`${SECTION_CARD_CLASS} px-3 py-3`}>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-secondary)]">Status</div>
+                <div className="mt-1 text-sm font-medium text-[var(--brand-text)]">{mermaidStateLabel}</div>
+              </div>
+            ) : null}
             <div className={`${SECTION_CARD_CLASS} px-3 py-3`}>
               <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-secondary)]">Errors</div>
               <div className="mt-1 text-sm font-medium text-[var(--brand-text)]">{report.summary.errorCount}</div>
@@ -124,10 +141,20 @@ export function ImportRecoveryDialog({
           </div>
 
           <div className={`${SECTION_CARD_CLASS} px-4 py-3 text-xs text-[var(--brand-secondary)]`}>
-            If this file came from another tool, try exporting a plain JSON/OpenFlowKit file again or remove unsupported metadata before retrying.
+            {recoveryGuidance}
           </div>
+          {report.source === 'mermaid' && report.originalSource ? (
+            <div className={`${SECTION_CARD_CLASS} px-4 py-3 text-xs text-[var(--brand-secondary)]`}>
+              Original Mermaid source is preserved for recovery. Open Mermaid code to continue editing safely.
+            </div>
+          ) : null}
 
           <div className="flex items-center justify-end gap-3">
+            {actionLabel && onAction ? (
+              <Button type="button" variant="secondary" onClick={onAction}>
+                {actionLabel}
+              </Button>
+            ) : null}
             <Button type="button" variant="secondary" onClick={onClose}>
               Dismiss
             </Button>

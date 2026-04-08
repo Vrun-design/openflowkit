@@ -5,6 +5,8 @@ interface ParsedMindmapNode {
   depth: number;
   label: string;
   lineNumber: number;
+  alias?: string;
+  wrapper?: NonNullable<FlowNode['data']['mindmapWrapper']>;
 }
 
 interface StructuredNode extends ParsedMindmapNode {
@@ -32,7 +34,13 @@ function getIndentDepth(rawLine: string): number {
   return Math.floor(indentUnits / 2);
 }
 
-function extractMindmapLabel(rawContent: string): string | null {
+function extractMindmapLabel(
+  rawContent: string
+): {
+  label: string;
+  alias?: string;
+  wrapper?: NonNullable<FlowNode['data']['mindmapWrapper']>;
+} | null {
   const trimmed = rawContent.trim();
   if (!trimmed) return null;
   if (trimmed.startsWith('%%')) return null;
@@ -41,15 +49,29 @@ function extractMindmapLabel(rawContent: string): string | null {
   const withoutDirective = trimmed.replace(/\s*::.+$/, '').trim();
   if (!withoutDirective) return null;
 
-  const wrappedMatch = withoutDirective.match(
-    /^(?:[A-Za-z_][\w-]*\s*)?(?:\(\((.+)\)\)|\[\[(.+)\]\]|\(\[(.+)\]\)|\[\((.+)\)\]|\[(.+)\]|\((.+)\)|\{\{(.+)\}\))$/
-  );
-  if (wrappedMatch) {
-    const value = wrappedMatch.slice(1).find((candidate) => typeof candidate === 'string' && candidate.trim().length > 0);
-    if (value) return value.trim();
+  const wrapperDefinitions: Array<{
+    wrapper: NonNullable<FlowNode['data']['mindmapWrapper']>;
+    pattern: RegExp;
+  }> = [
+    { wrapper: 'double-circle', pattern: /^([A-Za-z_][\w-]*)?\s*\(\((.+)\)\)$/ },
+    { wrapper: 'double-square', pattern: /^([A-Za-z_][\w-]*)?\s*\[\[(.+)\]\]$/ },
+    { wrapper: 'stadium', pattern: /^([A-Za-z_][\w-]*)?\s*\(\[(.+)\]\)$/ },
+    { wrapper: 'subroutine', pattern: /^([A-Za-z_][\w-]*)?\s*\[\((.+)\)\]$/ },
+    { wrapper: 'square', pattern: /^([A-Za-z_][\w-]*)?\s*\[(.+)\]$/ },
+    { wrapper: 'rounded', pattern: /^([A-Za-z_][\w-]*)?\s*\((.+)\)$/ },
+    { wrapper: 'hexagon', pattern: /^([A-Za-z_][\w-]*)?\s*\{\{(.+)\}\}$/ },
+  ];
+
+  for (const definition of wrapperDefinitions) {
+    const wrappedMatch = withoutDirective.match(definition.pattern);
+    const alias = wrappedMatch?.[1]?.trim();
+    const value = wrappedMatch?.[2]?.trim();
+    if (value) {
+      return { label: value, alias, wrapper: definition.wrapper };
+    }
   }
 
-  return withoutDirective;
+  return { label: withoutDirective };
 }
 
 function hasMalformedWrappedLabel(rawContent: string): boolean {
@@ -93,8 +115,8 @@ function parseMindmap(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; er
       continue;
     }
 
-    const label = extractMindmapLabel(rawLine);
-    if (!label) continue;
+    const parsedLabel = extractMindmapLabel(rawLine);
+    if (!parsedLabel) continue;
 
     const indentUnits = rawLine
       .split('')
@@ -118,8 +140,10 @@ function parseMindmap(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; er
 
     parsedNodes.push({
       depth,
-      label,
+      label: parsedLabel.label,
+      alias: parsedLabel.alias,
       lineNumber,
+      wrapper: parsedLabel.wrapper,
     });
   }
 
@@ -158,7 +182,9 @@ function parseMindmap(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; er
       id: `mm-${index + 1}`,
       depth: parsedNode.depth,
       label: parsedNode.label,
+      alias: parsedNode.alias,
       lineNumber: parsedNode.lineNumber,
+      wrapper: parsedNode.wrapper,
       parentIndex,
     });
     stack.push({ depth: parsedNode.depth, index });
@@ -231,6 +257,8 @@ function parseMindmap(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; er
       shape: node.depth === 0 ? 'rounded' : 'rectangle',
       mindmapDepth: node.depth,
       mindmapParentId: node.parentIndex === null ? undefined : structuredNodes[node.parentIndex].id,
+      mindmapAlias: node.alias,
+      mindmapWrapper: node.wrapper,
     },
   }));
 

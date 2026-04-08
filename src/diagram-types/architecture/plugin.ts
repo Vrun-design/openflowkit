@@ -222,18 +222,27 @@ function parseArchitecture(input: string): { nodes: FlowNode[]; edges: FlowEdge[
   const nodeFirstDefinedAt = new Map<string, number>();
   const diagnostics: string[] = [];
   let hasHeader = false;
+  let title: string | undefined;
 
   for (const [index, rawLine] of lines.entries()) {
     const lineNumber = index + 1;
     const line = rawLine.trim();
     if (!line || line.startsWith('%%')) continue;
-    if (/^title\b/i.test(line)) continue;
 
     if (/^architecture(?:-beta)?\b/i.test(line)) {
       hasHeader = true;
       continue;
     }
     if (!hasHeader) continue;
+
+    const titleMatch = line.match(/^title\s+(.+)$/i);
+    if (titleMatch) {
+      const nextTitle = stripQuotes(titleMatch[1]);
+      if (nextTitle) {
+        title = nextTitle;
+      }
+      continue;
+    }
 
     const node = parseNodeLine(line);
     if (node) {
@@ -304,6 +313,7 @@ function parseArchitecture(input: string): { nodes: FlowNode[]; edges: FlowEdge[
         color: resolveArchKindColor(node.kind),
         shape: node.kind === 'group' ? 'rounded' : 'rectangle',
         icon: resolveArchKindIcon(node.kind),
+        archTitle: index === 0 ? title : undefined,
         archProvider: node.icon || (node.kind === 'group' ? 'group' : 'custom'),
         archResourceType: node.kind,
         archBoundaryId: node.parentId,

@@ -96,6 +96,29 @@ describe('toMermaid', () => {
     expect(output).toContain('api:L --> R:db : HTTPS:443');
   });
 
+  it('exports richer architecture node kinds without collapsing them to service', () => {
+    const nodes: FlowNode[] = [
+      { id: 'user', type: 'architecture', position: { x: 0, y: 0 }, data: { label: 'User', archResourceType: 'person' } },
+      {
+        id: 'app',
+        type: 'architecture',
+        position: { x: 200, y: 0 },
+        data: { label: 'App', archResourceType: 'container', archProvider: 'server' },
+      },
+      {
+        id: 'data',
+        type: 'architecture',
+        position: { x: 400, y: 0 },
+        data: { label: 'Data Store', archResourceType: 'database_container', archProvider: 'database' },
+      },
+    ];
+
+    const output = toMermaid(nodes, []);
+    expect(output).toContain('person user[User]');
+    expect(output).toContain('container app(server)[App]');
+    expect(output).toContain('database_container data(database)[Data Store]');
+  });
+
   it('exports dashed flowchart edges with dotted mermaid connector', () => {
     const nodes: FlowNode[] = [
       { id: 'a', type: 'process', position: { x: 0, y: 0 }, data: { label: 'A' } },
@@ -148,6 +171,46 @@ describe('toMermaid', () => {
 
     const output = toMermaid(nodes, edges);
     expect(output).toContain('a <-- b');
+  });
+
+  it('exports flowchart node styles as Mermaid style directives', () => {
+    const nodes: FlowNode[] = [
+      {
+        id: 'a',
+        type: 'process',
+        position: { x: 0, y: 0 },
+        data: { label: 'API' },
+        style: { backgroundColor: '#dff', borderColor: '#08c', color: '#024' },
+      },
+      {
+        id: 'b',
+        type: 'process',
+        position: { x: 200, y: 0 },
+        data: { label: 'DB' },
+      },
+    ];
+    const edges: FlowEdge[] = [{ id: 'e1', source: 'a', target: 'b' }];
+
+    const output = toMermaid(nodes, edges);
+    expect(output).toContain('style a fill:#dff,stroke:#08c,color:#024');
+  });
+
+  it('exports flowchart edge styles as Mermaid linkStyle directives', () => {
+    const nodes: FlowNode[] = [
+      { id: 'a', type: 'process', position: { x: 0, y: 0 }, data: { label: 'A' } },
+      { id: 'b', type: 'process', position: { x: 200, y: 0 }, data: { label: 'B' } },
+    ];
+    const edges: FlowEdge[] = [
+      {
+        id: 'e1',
+        source: 'a',
+        target: 'b',
+        style: { stroke: '#f66', strokeWidth: 3 },
+      },
+    ];
+
+    const output = toMermaid(nodes, edges);
+    expect(output).toContain('linkStyle 0 stroke:#f66,stroke-width:3px');
   });
 
   it('exports stateDiagram-only graphs through stateDiagram-v2 path', () => {

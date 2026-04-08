@@ -9,9 +9,10 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Button } from './ui/Button';
 import { Textarea } from './ui/Textarea';
+import { MermaidDiagnosticsBanner } from './MermaidDiagnosticsBanner';
 import { useFlowStore } from '@/store';
 import { IS_BEVELED } from '@/lib/brand';
-import { useMermaidDiagnosticsActions } from '@/store/selectionHooks';
+import { useMermaidDiagnostics, useMermaidDiagnosticsActions } from '@/store/selectionHooks';
 import { useToast } from './ui/ToastContext';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { StudioCodeMode } from '@/hooks/useFlowEditorUIState';
@@ -95,6 +96,7 @@ export function StudioCodePanel({
 }: StudioCodePanelProps): React.ReactElement {
   const { t } = useTranslation();
   const { activeTabId, updateTab, viewSettings } = useFlowStore();
+  const mermaidDiagnostics = useMermaidDiagnostics();
   const { setMermaidDiagnostics, clearMermaidDiagnostics } = useMermaidDiagnosticsActions();
   const { addToast } = useToast();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -147,7 +149,13 @@ export function StudioCodePanel({
     : 'Enable live preview for Mermaid changes.';
   const draftPreviewDetail =
     draftPreview.state === 'error' ? friendlyDslError(draftPreview.detail) : draftPreview.detail;
-
+  const showMermaidDiagnosticsBanner =
+    mode === 'mermaid' &&
+    mermaidDiagnostics &&
+    (Boolean(mermaidDiagnostics.statusLabel)
+      || Boolean(mermaidDiagnostics.statusDetail)
+      || Boolean(mermaidDiagnostics.error)
+      || mermaidDiagnostics.diagnostics.length > 0);
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="mb-3 border-b border-[var(--color-brand-border)] pb-0.5">
@@ -226,6 +234,10 @@ export function StudioCodePanel({
               </div>
             )}
           </div>
+        ) : null}
+
+        {showMermaidDiagnosticsBanner ? (
+          <MermaidDiagnosticsBanner snapshot={mermaidDiagnostics} className="mx-3 mt-3" />
         ) : null}
 
         <div className="border-t border-[var(--color-brand-border)] bg-[var(--brand-background)] px-4 py-3">

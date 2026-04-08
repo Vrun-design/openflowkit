@@ -18,7 +18,6 @@ export const SHAPE_OPENERS: Array<{
 
 export const SKIP_PATTERNS = [
   /^%%/,
-  /^class\s/i,
   /^click\s/i,
   /^direction\s/i,
   /^accTitle\s/i,
@@ -28,8 +27,32 @@ export const SKIP_PATTERNS = [
 const LINK_STYLE_RE = /^linkStyle\s+([\d,\s]+)\s+(.+)$/i;
 const CLASS_DEF_RE = /^classDef\s+(\w+)\s+(.+)$/i;
 const STYLE_RE = /^style\s+(\w+)\s+(.+)$/i;
+const MERMAID_NODE_ID_RE = /^[a-zA-Z0-9_][\w.-]*$/;
 
 export { CLASS_DEF_RE, STYLE_RE };
+
+export function parseClassAssignmentLine(
+  line: string
+): { nodeIds: string[]; classNames: string[] } | null {
+  const trimmed = line.trim().replace(/;$/, '');
+  const match = trimmed.match(/^class\s+(.+?)\s+([A-Za-z0-9_-]+(?:\s*,\s*[A-Za-z0-9_-]+)*)$/i);
+  if (!match) return null;
+
+  const nodeIds = match[1]
+    .split(/\s*,\s*/)
+    .map((value) => value.trim())
+    .filter((value) => MERMAID_NODE_ID_RE.test(value));
+  const classNames = match[2]
+    .split(/\s*,\s*/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (nodeIds.length === 0 || classNames.length === 0) {
+    return null;
+  }
+
+  return { nodeIds, classNames };
+}
 
 export function parseLinkStyleLine(
   line: string
@@ -132,7 +155,7 @@ interface ModernShapeAnnotation {
 }
 
 function extractModernAnnotation(input: string): ModernShapeAnnotation {
-  const match = input.match(/^(\w+)@\{([^}]+)\}/);
+  const match = input.match(/^([a-zA-Z0-9_][\w.-]*)@\{([^}]+)\}/);
   if (!match) return { cleanInput: input };
 
   const id = match[1];
@@ -175,7 +198,7 @@ function tryParseWithShape(
   if (openIndex > 0 && input[openIndex - 1] === shape.open[0]) return null;
 
   const id = input.substring(0, openIndex).trim();
-  if (!/^[a-zA-Z0-9_][\w-]*$/.test(id)) return null;
+  if (!MERMAID_NODE_ID_RE.test(id)) return null;
 
   const afterOpen = input.substring(openIndex + shape.open.length);
   const closeIndex = afterOpen.lastIndexOf(shape.close);
@@ -241,8 +264,16 @@ export function parseNodeDeclaration(raw: string): RawNode | null {
     classes = parts[1].split(/,\s*/);
   }
 
-  if (/^[a-zA-Z0-9_][\w-]*$/.test(id)) {
-    return { id, label: id, type: 'process', classes: classes.length ? classes : undefined };
+  if (MERMAID_NODE_ID_RE.test(id)) {
+    const override = annotation.shapeKey ? MODERN_SHAPE_MAP[annotation.shapeKey] : undefined;
+
+    return {
+      id,
+      label: stripMarkdown(annotation.labelOverride ?? id),
+      type: override?.type ?? 'process',
+      shape: override?.shape,
+      classes: classes.length ? classes : undefined,
+    };
   }
 
   return null;
@@ -267,7 +298,7 @@ export const ARROW_PATTERNS = [
 ];
 
 function sanitizeEdgeEndpoint(raw: string): string {
-  return raw.trim().replace(/;$/, '').replace(/:::.*$/, '').trim();
+  return raw.trim().replace(/;$/, '').trim();
 }
 
 function findArrowInLine(

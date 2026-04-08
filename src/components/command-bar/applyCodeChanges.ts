@@ -4,9 +4,18 @@ import { parseOpenFlowDSL } from '@/lib/openFlowDSLParser';
 import type { MermaidDiagnosticsSnapshot } from '@/store/types';
 import { parseMermaidByType } from '@/services/mermaid/parseMermaidByType';
 import { normalizeParseDiagnostics } from '@/services/mermaid/diagnosticFormatting';
+import { buildMermaidDiagnosticsSnapshot } from '@/services/mermaid/diagnosticsSnapshot';
+import { appendMermaidImportGuidance } from '@/services/mermaid/importStatePresentation';
+import {
+  getOfficialMermaidDiagnostics,
+  getOfficialMermaidErrorMessage,
+  isOfficialMermaidValidationBlocking,
+  validateMermaidWithOfficialParser,
+} from '@/services/mermaid/officialMermaidValidation';
 import {
   buildImportFidelityReport,
   mapErrorToIssue,
+  mapMermaidDiagnosticToIssue,
   mapParserDiagnosticToIssue,
   persistLatestImportReport,
 } from '@/services/importFidelity';
@@ -60,6 +69,63 @@ export async function applyCodeChanges({
   options,
 }: ApplyCodeChangesParams): Promise<boolean> {
   const importStart = performance.now();
+  const officialMermaidValidation = mode === 'mermaid'
+    ? await validateMermaidWithOfficialParser(code)
+    : null;
+  const officialDiagnostics = officialMermaidValidation
+    ? getOfficialMermaidDiagnostics(officialMermaidValidation)
+    : [];
+
+  if (officialMermaidValidation && isOfficialMermaidValidationBlocking(officialMermaidValidation)) {
+    const rawErrorMessage =
+      getOfficialMermaidErrorMessage(officialMermaidValidation)
+      ?? 'Official Mermaid validation failed.';
+    const errorMessage = appendMermaidImportGuidance({
+      message: rawErrorMessage,
+      importState: officialMermaidValidation.detectedType ? 'unsupported_construct' : 'invalid_source',
+      diagramType: officialMermaidValidation.detectedType,
+    });
+
+    if (isLiveRequestStale(options.liveRequestId, options.source)) {
+      return false;
+    }
+
+    setMermaidDiagnostics(
+      buildMermaidDiagnosticsSnapshot({
+        source: 'code',
+        diagramType: officialMermaidValidation.detectedType,
+        importState: officialMermaidValidation.detectedType ? 'unsupported_construct' : 'invalid_source',
+        originalSource: code,
+        diagnostics: officialDiagnostics,
+        error: errorMessage,
+      })
+    );
+
+    if (options.source === 'manual') {
+      const issues = officialMermaidValidation.diagnostics.map((diagnostic) =>
+        mapMermaidDiagnosticToIssue(diagnostic)
+      );
+      const report = buildImportFidelityReport({
+        source: 'mermaid',
+        importState: officialMermaidValidation.detectedType ? 'unsupported_construct' : 'invalid_source',
+        originalSource: code,
+        nodeCount: 0,
+        edgeCount: 0,
+        elapsedMs: Math.round(performance.now() - importStart),
+        issues: issues.length > 0 ? issues : [mapErrorToIssue(errorMessage)],
+      });
+      persistLatestImportReport(report);
+      notifyOperationOutcome(addToast, createImportReportOutcome(report, errorMessage));
+    }
+
+    setError(errorMessage);
+    setDiagnostics(officialDiagnostics);
+    if (options.source === 'live') {
+      setLiveStatus('error');
+    }
+    return false;
+  }
+
   const res = mode === 'mermaid'
     ? parseMermaidByType(code, { architectureStrictMode })
     : parseOpenFlowDSL(code);
@@ -71,35 +137,63 @@ export async function applyCodeChanges({
     const parserDiagnostics = 'diagnostics' in res
       ? normalizeParseDiagnostics(res.diagnostics)
       : [];
+    const combinedDiagnostics = [...officialDiagnostics, ...parserDiagnostics];
     if (mode === 'mermaid') {
-      setMermaidDiagnostics({
-        source: 'code',
+      const userFacingError = appendMermaidImportGuidance({
+        message: res.error,
+        importState: 'importState' in res ? res.importState : undefined,
         diagramType: 'diagramType' in res ? res.diagramType : undefined,
-        diagnostics: parserDiagnostics,
-        error: res.error,
-        updatedAt: Date.now(),
       });
+      setMermaidDiagnostics(
+        buildMermaidDiagnosticsSnapshot({
+          source: 'code',
+          diagramType: 'diagramType' in res ? res.diagramType : undefined,
+          importState: 'importState' in res ? res.importState : undefined,
+          originalSource: mode === 'mermaid' && 'originalSource' in res ? res.originalSource : code,
+          diagnostics: combinedDiagnostics,
+          error: userFacingError,
+        })
+      );
+      setError(userFacingError);
+    } else {
+      setError(res.error);
     }
     if (options.source === 'manual') {
-      const issues = parserDiagnostics.map((diagnostic) => mapParserDiagnosticToIssue(diagnostic));
+      const issues = [
+        ...officialDiagnostics.map((diagnostic) => mapParserDiagnosticToIssue(diagnostic)),
+        ...parserDiagnostics.map((diagnostic) => mapParserDiagnosticToIssue(diagnostic)),
+      ];
       if (issues.length === 0) {
         issues.push(mapErrorToIssue(res.error));
       }
       const report = buildImportFidelityReport({
         source: mode === 'mermaid' ? 'mermaid' : 'openflowdsl',
+        importState: mode === 'mermaid' && 'importState' in res ? res.importState : undefined,
+        originalSource: mode === 'mermaid' ? ('originalSource' in res ? res.originalSource : code) : undefined,
         nodeCount: 0,
         edgeCount: 0,
         elapsedMs: Math.round(performance.now() - importStart),
         issues,
       });
       persistLatestImportReport(report);
-      notifyOperationOutcome(addToast, createImportReportOutcome(report, res.error));
+      notifyOperationOutcome(
+        addToast,
+        createImportReportOutcome(
+          report,
+          mode === 'mermaid'
+            ? appendMermaidImportGuidance({
+                message: res.error,
+                importState: 'importState' in res ? res.importState : undefined,
+                diagramType: 'diagramType' in res ? res.diagramType : undefined,
+              })
+            : res.error
+        )
+      );
     }
-    setError(res.error);
     if ('diagnostics' in res) {
-      setDiagnostics(normalizeParseDiagnostics(res.diagnostics));
+      setDiagnostics(combinedDiagnostics);
     } else {
-      setDiagnostics([]);
+      setDiagnostics(officialDiagnostics);
     }
     if (options.source === 'live') {
       setLiveStatus('error');
@@ -121,13 +215,19 @@ export async function applyCodeChanges({
         const parserDiagnostics = 'diagnostics' in res
           ? normalizeParseDiagnostics(res.diagnostics)
           : [];
-        if (parserDiagnostics.length > 0) {
-          setMermaidDiagnostics({
-            source: 'code',
-            diagramType: 'diagramType' in res ? res.diagramType : undefined,
-            diagnostics: parserDiagnostics,
-            updatedAt: Date.now(),
-          });
+        const combinedDiagnostics = [...officialDiagnostics, ...parserDiagnostics];
+        if (combinedDiagnostics.length > 0) {
+          setMermaidDiagnostics(
+            buildMermaidDiagnosticsSnapshot({
+              source: 'code',
+              diagramType: 'diagramType' in res ? res.diagramType : undefined,
+              importState: 'importState' in res ? res.importState : undefined,
+              originalSource: mode === 'mermaid' && 'originalSource' in res ? res.originalSource : code,
+              diagnostics: combinedDiagnostics,
+              nodeCount: res.nodes.length,
+              edgeCount: res.edges.length,
+            })
+          );
         } else {
           clearMermaidDiagnostics();
         }
@@ -152,12 +252,20 @@ export async function applyCodeChanges({
         updateTab(activeTabId, { diagramType: res.diagramType });
       }
       if (options.source === 'manual') {
+        const issues = mode === 'mermaid' && 'structuredDiagnostics' in res
+          ? [
+              ...officialDiagnostics.map((diagnostic) => mapParserDiagnosticToIssue(diagnostic)),
+              ...(res.structuredDiagnostics ?? []).map((diagnostic) => mapMermaidDiagnosticToIssue(diagnostic)),
+            ]
+          : [];
         const report = buildImportFidelityReport({
           source: mode === 'mermaid' ? 'mermaid' : 'openflowdsl',
+          importState: mode === 'mermaid' && 'importState' in res ? res.importState : undefined,
+          originalSource: mode === 'mermaid' ? ('originalSource' in res ? res.originalSource : code) : undefined,
           nodeCount: layoutedNodes.length,
           edgeCount: layoutedEdges.length,
           elapsedMs: Math.round(performance.now() - importStart),
-          issues: [],
+          issues,
         });
         persistLatestImportReport(report);
         notifyOperationOutcome(addToast, createImportReportOutcome(report));
@@ -178,6 +286,8 @@ export async function applyCodeChanges({
       if (options.source === 'manual') {
         const report = buildImportFidelityReport({
           source: mode === 'mermaid' ? 'mermaid' : 'openflowdsl',
+          importState: mode === 'mermaid' && 'importState' in res ? res.importState : undefined,
+          originalSource: mode === 'mermaid' ? ('originalSource' in res ? res.originalSource : code) : undefined,
           nodeCount: res.nodes.length,
           edgeCount: res.edges.length,
           elapsedMs: Math.round(performance.now() - importStart),
@@ -201,11 +311,12 @@ export async function applyCodeChanges({
       const parserDiagnostics = 'diagnostics' in res
         ? normalizeParseDiagnostics(res.diagnostics)
         : [];
-      if (parserDiagnostics.length > 0) {
+      const combinedDiagnostics = [...officialDiagnostics, ...parserDiagnostics];
+      if (combinedDiagnostics.length > 0) {
         setMermaidDiagnostics({
           source: 'code',
           diagramType: 'diagramType' in res ? res.diagramType : undefined,
-          diagnostics: parserDiagnostics,
+          diagnostics: combinedDiagnostics,
           updatedAt: Date.now(),
         });
       } else {
@@ -222,10 +333,18 @@ export async function applyCodeChanges({
     if (options.source === 'manual') {
       const report = buildImportFidelityReport({
         source: mode === 'mermaid' ? 'mermaid' : 'openflowdsl',
+        importState: mode === 'mermaid' && 'importState' in res ? res.importState : undefined,
+        originalSource: mode === 'mermaid' ? ('originalSource' in res ? res.originalSource : code) : undefined,
         nodeCount: res.nodes.length,
         edgeCount: res.edges.length,
         elapsedMs: Math.round(performance.now() - importStart),
-        issues: [],
+        issues:
+          mode === 'mermaid' && 'structuredDiagnostics' in res
+            ? [
+                ...officialDiagnostics.map((diagnostic) => mapParserDiagnosticToIssue(diagnostic)),
+                ...(res.structuredDiagnostics ?? []).map((diagnostic) => mapMermaidDiagnosticToIssue(diagnostic)),
+              ]
+            : [],
       });
       persistLatestImportReport(report);
       notifyOperationOutcome(addToast, createImportReportOutcome(report));

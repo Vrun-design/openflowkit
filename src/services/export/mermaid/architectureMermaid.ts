@@ -27,6 +27,14 @@ function handleIdToSide(handleId: string | null | undefined): 'L' | 'R' | 'T' | 
 
 export function toArchitectureMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
   const lines: string[] = ['architecture-beta'];
+  const titleNode = nodes.find(
+    (node) => typeof node.data.archTitle === 'string' && node.data.archTitle.trim().length > 0
+  );
+  const title = typeof titleNode?.data.archTitle === 'string' ? sanitizeLabel(titleNode.data.archTitle) : '';
+
+  if (title) {
+    lines.push(`    title "${title}"`);
+  }
 
   nodes.forEach((node) => {
     const id = sanitizeId(node.id);
@@ -48,8 +56,23 @@ export function toArchitectureMermaid(nodes: FlowNode[], edges: FlowEdge[]): str
       lines.push(`    junction ${id}${icon}[${label}]${suffix}`);
       return;
     }
+    const architectureKinds = new Set([
+      'service',
+      'person',
+      'system',
+      'container',
+      'component',
+      'database_container',
+      'router',
+      'switch',
+      'firewall',
+      'load_balancer',
+      'cdn',
+      'dns',
+    ]);
+    const statementKind = architectureKinds.has(kind) ? kind : 'service';
 
-    lines.push(`    service ${id}${icon}[${label}]${suffix}`);
+    lines.push(`    ${statementKind} ${id}${icon}[${label}]${suffix}`);
   });
 
   edges.forEach((edge) => {

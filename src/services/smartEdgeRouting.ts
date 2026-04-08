@@ -108,8 +108,9 @@ function resolveAutoHandleSides(
     dy: number,
     profile: SmartRoutingOptions['profile']
 ): { sourceHandleSide: HandleSide; targetHandleSide: HandleSide } {
-    // Infrastructure uses a 1.25x bias toward horizontal routing.
-    const effectiveDy = profile === 'infrastructure' ? dy * 1.25 : dy;
+    // Infrastructure uses a 1.25x bias toward horizontal routing by
+    // reducing the vertical component before side selection.
+    const effectiveDy = profile === 'infrastructure' ? dy / 1.25 : dy;
     const sourceSide = handleSideFromVector(dx, effectiveDy);
     const targetSide = handleSideFromVector(-dx, -effectiveDy);
     return { sourceHandleSide: sourceSide, targetHandleSide: targetSide };

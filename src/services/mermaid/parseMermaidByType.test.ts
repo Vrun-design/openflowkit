@@ -10,6 +10,7 @@ describe('parseMermaidByType', () => {
 
     expect(result.error).toBeUndefined();
     expect(result.diagramType).toBe('flowchart');
+    expect(result.importState).toBe('editable_full');
     expect(result.nodes).toHaveLength(2);
     expect(result.edges).toHaveLength(1);
   });
@@ -23,6 +24,52 @@ describe('parseMermaidByType', () => {
     expect(result.error).toBeUndefined();
     expect(result.diagramType).toBe('flowchart');
     expect(result.direction).toBe('LR');
+  });
+
+  it('returns flowchart diagnostics for malformed structure without failing parse', () => {
+    const result = parseMermaidByType(`
+      flowchart TD
+      subgraph
+        A --> B
+      stray words
+      end
+      end
+    `);
+
+    expect(result.diagramType).toBe('flowchart');
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.length).toBeGreaterThan(0);
+    expect(result.importState).toBe('editable_partial');
+    expect(result.diagnostics?.some((message) =>
+      message.includes('Invalid flowchart subgraph declaration at line')
+    )).toBe(true);
+    expect(result.diagnostics?.some((message) =>
+      message.includes('Unexpected flowchart block closer at line')
+    )).toBe(true);
+    expect(result.structuredDiagnostics?.some((diagnostic) => diagnostic.code === 'MERMAID_SYNTAX')).toBe(true);
+  });
+
+  it('parses modern flowchart ids and class assignment directives through the dispatcher', () => {
+    const result = parseMermaidByType(`
+      flowchart TD
+      api.gateway@{ shape: rect, label: "API Gateway" } --> db.primary[(Primary DB)]
+      classDef selected fill:#dff,stroke:#08c,color:#024
+      class api.gateway,db.primary selected
+    `);
+
+    expect(result.error).toBeUndefined();
+    expect(result.diagramType).toBe('flowchart');
+    expect(result.importState).toBe('editable_full');
+    expect(result.nodes.find((node) => node.id === 'api.gateway')?.data.label).toBe('API Gateway');
+    expect(result.nodes.find((node) => node.id === 'api.gateway')?.style).toMatchObject({
+      backgroundColor: '#dff',
+      borderColor: '#08c',
+      color: '#024',
+    });
+    expect(result.edges[0]).toMatchObject({
+      source: 'api.gateway',
+      target: 'db.primary',
+    });
   });
 
   it('parses supported state diagram families', () => {
@@ -70,6 +117,8 @@ describe('parseMermaidByType', () => {
     expect(
       result.diagnostics?.some((message) => message.includes('Invalid class declaration at line'))
     ).toBe(true);
+    expect(result.importState).toBe('editable_partial');
+    expect(result.structuredDiagnostics?.some((diagnostic) => diagnostic.code === 'MERMAID_SYNTAX')).toBe(true);
     expect(
       result.diagnostics?.some((message) =>
         message.includes('Invalid class relation syntax at line')
@@ -251,9 +300,17 @@ describe('parseMermaidByType', () => {
       commit id: "B"
     `);
 
-    expect(result.error).toContain('Missing chart type declaration');
+    expect(result.error).toContain('gitGraph');
+    expect(result.importState).toBe('unsupported_family');
     expect(result.nodes).toHaveLength(0);
     expect(result.edges).toHaveLength(0);
+  });
+
+  it('classifies missing chart headers as invalid source', () => {
+    const result = parseMermaidByType('A --> B');
+
+    expect(result.error).toContain('Missing chart type declaration');
+    expect(result.importState).toBe('invalid_source');
   });
 
   it('parses semicolon-terminated node declarations correctly', () => {

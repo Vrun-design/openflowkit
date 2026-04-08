@@ -110,6 +110,78 @@ describe('mermaidParser', () => {
     expect(result.nodes.find((n) => n.id === 'C')?.type).toBe('start');
   });
 
+  it('should preserve modern annotation-only labels and shapes without legacy brackets', () => {
+    const input = `
+            flowchart TD
+            API@{ shape: rect, label: "API Gateway" }
+            DB@{ shape: cyl, label: "Primary DB" }
+            API --> DB
+        `;
+    const result = parseMermaid(input);
+
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.find((n) => n.id === 'API')?.data.label).toBe('API Gateway');
+    expect(result.nodes.find((n) => n.id === 'API')?.data.shape).toBe('rounded');
+    expect(result.nodes.find((n) => n.id === 'DB')?.data.label).toBe('Primary DB');
+    expect(result.nodes.find((n) => n.id === 'DB')?.data.shape).toBe('cylinder');
+    expect(result.edges).toHaveLength(1);
+  });
+
+  it('should preserve modern annotation-only endpoints when used inline in edges', () => {
+    const input = `
+            flowchart TD
+            Start@{ shape: stadium, label: "Start Here" } --> End@{ shape: circle, label: "Finish" }
+        `;
+    const result = parseMermaid(input);
+
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.find((n) => n.id === 'Start')?.data.label).toBe('Start Here');
+    expect(result.nodes.find((n) => n.id === 'Start')?.type).toBe('start');
+    expect(result.nodes.find((n) => n.id === 'End')?.data.label).toBe('Finish');
+    expect(result.nodes.find((n) => n.id === 'End')?.type).toBe('end');
+    expect(result.edges).toHaveLength(1);
+  });
+
+  it('should parse dotted flowchart ids in standalone node declarations', () => {
+    const input = `
+            flowchart TD
+            api.gateway[API Gateway]
+            db.primary[(Primary DB)]
+            api.gateway --> db.primary
+        `;
+    const result = parseMermaid(input);
+
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.find((n) => n.id === 'api.gateway')?.data.label).toBe('API Gateway');
+    expect(result.nodes.find((n) => n.id === 'db.primary')?.data.label).toBe('Primary DB');
+    expect(result.nodes.find((n) => n.id === 'db.primary')?.data.shape).toBe('cylinder');
+    expect(result.edges[0]).toMatchObject({
+      source: 'api.gateway',
+      target: 'db.primary',
+    });
+  });
+
+  it('should parse dotted flowchart ids in inline edge endpoints and subgraphs', () => {
+    const input = `
+            flowchart TD
+            subgraph cluster.api[API Cluster]
+              api.gateway[Gateway] --> service.core[Core Service]
+            end
+        `;
+    const result = parseMermaid(input);
+    const sectionNode = result.nodes.find((node) => node.type === 'section');
+
+    expect(result.error).toBeUndefined();
+    expect(sectionNode?.id).toBe('cluster.api');
+    expect(sectionNode?.data.label).toBe('API Cluster');
+    expect(result.nodes.find((n) => n.id === 'api.gateway')?.parentId).toBe('cluster.api');
+    expect(result.nodes.find((n) => n.id === 'service.core')?.parentId).toBe('cluster.api');
+    expect(result.edges[0]).toMatchObject({
+      source: 'api.gateway',
+      target: 'service.core',
+    });
+  });
+
   it('should strip markdown from labels', () => {
     const input = `
             flowchart TD
@@ -172,6 +244,84 @@ describe('mermaidParser', () => {
     const dbNode = result.nodes.find((node) => node.id === 'DB');
     expect(dbNode?.parentId).toBe(sectionNode?.id);
     expect(dbNode?.extent).toBeUndefined();
+  });
+
+  it('parses subgraph declarations with explicit ids and human labels', () => {
+    const input = `
+            flowchart TD
+            subgraph api[API Layer]
+              A[Gateway] --> B[Service]
+            end
+        `;
+    const result = parseMermaid(input);
+    const sectionNode = result.nodes.find((node) => node.type === 'section');
+
+    expect(sectionNode?.id).toBe('api');
+    expect(sectionNode?.data.label).toBe('API Layer');
+    expect(result.nodes.find((node) => node.id === 'A')?.parentId).toBe('api');
+    expect(result.nodes.find((node) => node.id === 'B')?.parentId).toBe('api');
+  });
+
+  it('applies classDef styles to inline node declarations used inside edges', () => {
+    const input = `
+            flowchart TD
+            A[One]:::hot --> B[Two]
+            classDef hot fill:#f66,color:#fff,stroke:#900
+        `;
+    const result = parseMermaid(input);
+    const nodeA = result.nodes.find((node) => node.id === 'A');
+
+    expect(nodeA?.style).toMatchObject({
+      backgroundColor: '#f66',
+      color: '#fff',
+      borderColor: '#900',
+    });
+  });
+
+  it('applies classDef styles referenced by Mermaid class assignment lines', () => {
+    const input = `
+            flowchart TD
+            A[Gateway]
+            B[(Primary DB)]
+            classDef hot fill:#f66,color:#fff,stroke:#900
+            class A,B hot
+        `;
+    const result = parseMermaid(input);
+    const nodeA = result.nodes.find((node) => node.id === 'A');
+    const nodeB = result.nodes.find((node) => node.id === 'B');
+
+    expect(nodeA?.style).toMatchObject({
+      backgroundColor: '#f66',
+      color: '#fff',
+      borderColor: '#900',
+    });
+    expect(nodeB?.style).toMatchObject({
+      backgroundColor: '#f66',
+      color: '#fff',
+      borderColor: '#900',
+    });
+  });
+
+  it('applies class assignment lines to dotted node ids', () => {
+    const input = `
+            flowchart TD
+            api.gateway[Gateway]
+            service.core[Core Service]
+            classDef selected fill:#dff,stroke:#08c,color:#024
+            class api.gateway,service.core selected;
+        `;
+    const result = parseMermaid(input);
+
+    expect(result.nodes.find((node) => node.id === 'api.gateway')?.style).toMatchObject({
+      backgroundColor: '#dff',
+      borderColor: '#08c',
+      color: '#024',
+    });
+    expect(result.nodes.find((node) => node.id === 'service.core')?.style).toMatchObject({
+      backgroundColor: '#dff',
+      borderColor: '#08c',
+      color: '#024',
+    });
   });
 
   it('should handle duplicate edges between same pair', () => {
@@ -423,5 +573,36 @@ E--No-->C`;
     const startNo = result.edges.find((e) => e.source === 'A' && e.target === 'C');
     expect(startNo).toBeDefined();
     expect(startNo?.label).toBe('No');
+  });
+
+  it('emits diagnostics for malformed flowchart blocks and unrecognized lines', () => {
+    const input = `
+      flowchart TD
+      subgraph
+        A --> B
+      orphan text
+      end
+      end
+    `;
+
+    const result = parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.length).toBeGreaterThan(0);
+    expect(result.diagnostics?.some((message) => message.includes('Invalid flowchart subgraph declaration at line'))).toBe(true);
+    expect(result.diagnostics?.some((message) => message.includes('Unrecognized flowchart line at line'))).toBe(true);
+    expect(result.diagnostics?.some((message) => message.includes('Unexpected flowchart block closer at line'))).toBe(true);
+  });
+
+  it('emits diagnostics when flowchart subgraph blocks are left unclosed', () => {
+    const input = `
+      flowchart TD
+      subgraph api[API]
+        A --> B
+    `;
+
+    const result = parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.length).toBeGreaterThan(0);
+    expect(result.diagnostics?.some((message) => message.includes('Unclosed flowchart block detected'))).toBe(true);
   });
 });

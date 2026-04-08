@@ -19,6 +19,7 @@ describe('MINDMAP_PLUGIN', () => {
     expect(result.nodes).toHaveLength(6);
     expect(result.edges).toHaveLength(5);
     expect(result.nodes[0].data.label).toBe('Roadmap');
+    expect(result.nodes[0].data.mindmapWrapper).toBe('double-circle');
     expect(result.nodes[0].type).toBe('mindmap');
     expect(result.nodes.some((node) => node.data.label === 'Mermaid')).toBe(true);
     const productNode = result.nodes.find((node) => node.data.label === 'Product');
@@ -104,5 +105,43 @@ describe('MINDMAP_PLUGIN', () => {
     const result = MINDMAP_PLUGIN.parseMermaid(input);
     expect(result.error).toBeUndefined();
     expect(result.diagnostics?.some((message) => message.includes('Malformed mindmap wrapper syntax at line'))).toBe(true);
+  });
+
+  it('preserves wrapper metadata for supported mindmap shapes', () => {
+    const input = `
+      mindmap
+        ((Root))
+          [[Topic]]
+          ([Action])
+          [(Service)]
+          [Plain]
+          (Rounded)
+          {{Decision}}
+    `;
+
+    const result = MINDMAP_PLUGIN.parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.find((node) => node.data.label === 'Root')?.data.mindmapWrapper).toBe('double-circle');
+    expect(result.nodes.find((node) => node.data.label === 'Topic')?.data.mindmapWrapper).toBe('double-square');
+    expect(result.nodes.find((node) => node.data.label === 'Action')?.data.mindmapWrapper).toBe('stadium');
+    expect(result.nodes.find((node) => node.data.label === 'Service')?.data.mindmapWrapper).toBe('subroutine');
+    expect(result.nodes.find((node) => node.data.label === 'Plain')?.data.mindmapWrapper).toBe('square');
+    expect(result.nodes.find((node) => node.data.label === 'Rounded')?.data.mindmapWrapper).toBe('rounded');
+    expect(result.nodes.find((node) => node.data.label === 'Decision')?.data.mindmapWrapper).toBe('hexagon');
+  });
+
+  it('preserves Mermaid alias prefixes for wrapped nodes', () => {
+    const input = `
+      mindmap
+        root((Root))
+          feature[[Topic]]
+          branch(Child)
+    `;
+
+    const result = MINDMAP_PLUGIN.parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.find((node) => node.data.label === 'Root')?.data.mindmapAlias).toBe('root');
+    expect(result.nodes.find((node) => node.data.label === 'Topic')?.data.mindmapAlias).toBe('feature');
+    expect(result.nodes.find((node) => node.data.label === 'Child')?.data.mindmapAlias).toBe('branch');
   });
 });

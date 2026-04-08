@@ -12,11 +12,16 @@ async function openHomeDashboard(page: import('@playwright/test').Page) {
   await expect(page.getByTestId('home-create-new-main')).toBeVisible({ timeout: 15000 });
 }
 
-test('creates a new flow and adds an extra tab', async ({ page }) => {
+async function createNewFlow(page: import('@playwright/test').Page) {
   await openHomeDashboard(page);
   await page.getByTestId('home-create-new-main').click();
-
   await expect(page).toHaveURL(/#\/flow\/[^?]+(?:\?.*)?$/);
+  await expect(page.getByTestId('flow-page-tab').first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('topnav-menu-toggle')).toBeVisible({ timeout: 15000 });
+}
+
+test('creates a new flow and adds an extra tab', async ({ page }) => {
+  await createNewFlow(page);
   await expect(page.getByTestId('toolbar-add-toggle')).toBeVisible({ timeout: 15000 });
 
   const tabs = page.getByTestId('flow-page-tab');
@@ -30,10 +35,8 @@ test('creates a new flow and adds an extra tab', async ({ page }) => {
 });
 
 test('saves and restores snapshot state', async ({ page }) => {
-  await openHomeDashboard(page);
-  await page.getByTestId('home-create-new-main').click();
+  await createNewFlow(page);
   await expect(page.getByTestId('toolbar-add-toggle')).toBeVisible({ timeout: 15000 });
-  await expect(page.getByTestId('topnav-menu-toggle')).toBeVisible({ timeout: 15000 });
 
   const canvasNodes = page.locator('.react-flow__node');
 

@@ -107,6 +107,59 @@ function emitFlowchartNode(node: FlowNode, indent: string): string {
   return `${indent}${id}${start}"${label}"${end}\n`;
 }
 
+function emitFlowchartNodeStyle(node: FlowNode, indent: string): string | null {
+  if (node.type === 'section' || node.type === 'group') {
+    return null;
+  }
+
+  const styleParts: string[] = [];
+  const backgroundColor =
+    typeof node.style?.backgroundColor === 'string' ? node.style.backgroundColor : undefined;
+  const borderColor = typeof node.style?.borderColor === 'string' ? node.style.borderColor : undefined;
+  const textColor = typeof node.style?.color === 'string' ? node.style.color : undefined;
+
+  if (backgroundColor) {
+    styleParts.push(`fill:${backgroundColor}`);
+  }
+  if (borderColor) {
+    styleParts.push(`stroke:${borderColor}`);
+  }
+  if (textColor) {
+    styleParts.push(`color:${textColor}`);
+  }
+
+  if (styleParts.length === 0) {
+    return null;
+  }
+
+  return `${indent}style ${sanitizeId(node.id)} ${styleParts.join(',')}\n`;
+}
+
+function emitFlowchartLinkStyle(edge: FlowEdge, index: number, indent: string): string | null {
+  const styleParts: string[] = [];
+  const stroke = typeof edge.style?.stroke === 'string' ? edge.style.stroke : undefined;
+  const strokeWidth = edge.style?.strokeWidth;
+  const normalizedStrokeWidth =
+    typeof strokeWidth === 'number'
+      ? strokeWidth
+      : typeof strokeWidth === 'string'
+        ? Number(strokeWidth)
+        : undefined;
+
+  if (stroke) {
+    styleParts.push(`stroke:${stroke}`);
+  }
+  if (typeof normalizedStrokeWidth === 'number' && Number.isFinite(normalizedStrokeWidth)) {
+    styleParts.push(`stroke-width:${normalizedStrokeWidth}px`);
+  }
+
+  if (styleParts.length === 0) {
+    return null;
+  }
+
+  return `${indent}linkStyle ${index} ${styleParts.join(',')}\n`;
+}
+
 function emitSectionBlock(
   section: FlowNode,
   children: FlowNode[],
@@ -114,8 +167,14 @@ function emitSectionBlock(
   indent: string
 ): string {
   const label = sanitizeLabel(section.data.label);
-  const quotedLabel = /[\s()[\]{}]/.test(label) ? `"${label}"` : label;
-  let out = `${indent}subgraph ${quotedLabel}\n`;
+  const id = sanitizeId(section.id);
+  const shouldEmitExplicitId = label !== id && !id.startsWith('subgraph_');
+  const subgraphHeader = shouldEmitExplicitId
+    ? `${id}[${JSON.stringify(label)}]`
+    : /[\s()[\]{}]/.test(label)
+      ? `"${label}"`
+      : label;
+  let out = `${indent}subgraph ${subgraphHeader}\n`;
 
   for (const child of children) {
     if (child.type === 'section' || child.type === 'group') {
@@ -168,6 +227,20 @@ function toFlowchartMermaid(nodes: FlowNode[], edges: FlowEdge[], direction?: st
     }
   });
 
+  nodes.forEach((node) => {
+    const styleDirective = emitFlowchartNodeStyle(node, '    ');
+    if (styleDirective) {
+      mermaid += styleDirective;
+    }
+  });
+
+  edges.forEach((edge, index) => {
+    const linkStyleDirective = emitFlowchartLinkStyle(edge, index, '    ');
+    if (linkStyleDirective) {
+      mermaid += linkStyleDirective;
+    }
+  });
+
   return mermaid;
 }
 
@@ -198,14 +271,17 @@ export function toMermaid(nodes: FlowNode[], edges: FlowEdge[], direction?: stri
   }
 
   const seqNodeCount = nodes.filter(
-    (node) => node.type === 'sequence_participant' || node.type === 'sequence_note'
+    (node) =>
+      node.type === 'sequence_participant'
+      || node.type === 'sequence_note'
+      || Boolean(node.data.seqFragmentId)
   ).length;
   if (nodes.length > 0 && seqNodeCount === nodes.length) {
     return toSequenceMermaid(nodes, edges);
   }
 
   if (looksLikeStateDiagram(nodes)) {
-    return toStateDiagramMermaid(nodes, edges);
+    return toStateDiagramMermaid(nodes, edges, direction);
   }
 
   return toFlowchartMermaid(nodes, edges, direction);

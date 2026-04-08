@@ -115,4 +115,37 @@ describe('useStudioCodePanelController', () => {
     expect(result.current.hasDraftChanges).toBe(false);
     expect(result.current.draftPreview.state).toBe('ready');
   });
+
+  it('surfaces partially editable Mermaid drafts as ready with warnings', () => {
+    const props = createBaseProps({ mode: 'mermaid' });
+    parseMermaidByTypeMock.mockReturnValue({
+      nodes: [{ id: 'a' }],
+      edges: [{ id: 'e' }],
+      diagramType: 'flowchart',
+      importState: 'editable_partial',
+    });
+
+    const { result } = renderHook(() => useStudioCodePanelController(props));
+
+    expect(result.current.draftPreview.state).toBe('ready');
+    expect(result.current.draftPreview.label).toBe('Ready with warnings');
+    expect(result.current.draftPreview.detail).toContain('partial editability');
+  });
+
+  it('surfaces unsupported Mermaid families with fallback guidance', () => {
+    const props = createBaseProps({ mode: 'mermaid' });
+    parseMermaidByTypeMock.mockReturnValue({
+      nodes: [],
+      edges: [],
+      diagramType: undefined,
+      importState: 'unsupported_family',
+      error: 'Mermaid "gitGraph" is not supported yet in editable mode.',
+    });
+
+    const { result } = renderHook(() => useStudioCodePanelController(props));
+
+    expect(result.current.draftPreview.state).toBe('error');
+    expect(result.current.draftPreview.label).toBe('Unsupported Mermaid family');
+    expect(result.current.draftPreview.detail).toContain('not editable yet');
+  });
 });

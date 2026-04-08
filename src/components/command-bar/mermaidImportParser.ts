@@ -1,5 +1,6 @@
 import type { NativeParseResult } from './importNativeParsers';
 import { parseMermaidByType } from '@/services/mermaid/parseMermaidByType';
+import { summarizeMermaidImport } from '@/services/mermaid/importStatePresentation';
 import { toOpenFlowDSL } from '@/services/openFlowDSLExporter';
 
 export function parseMermaidToNative(input: string): NativeParseResult {
@@ -18,6 +19,11 @@ export function parseMermaidToNative(input: string): NativeParseResult {
     dsl,
     nodeCount: result.nodes.length,
     edgeCount: result.edges.length,
-    summary: `Mermaid ${typeLabel}: ${result.nodes.length} node${result.nodes.length === 1 ? '' : 's'}, ${result.edges.length} edge${result.edges.length === 1 ? '' : 's'}`,
+    summary: summarizeMermaidImport({
+      diagramType: typeLabel,
+      importState: result.importState,
+      nodeCount: result.nodes.length,
+      edgeCount: result.edges.length,
+    }),
   };
 }

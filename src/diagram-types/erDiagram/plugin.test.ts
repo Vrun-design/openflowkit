@@ -117,4 +117,27 @@ describe('ER_DIAGRAM_PLUGIN', () => {
       ])
     );
   });
+
+  it('parses table-only REFERENCES syntax used by Mermaid-compatible export', () => {
+    const input = `
+      erDiagram
+      ORDER {
+        uuid customer_id FK REFERENCES CUSTOMER
+      }
+    `;
+
+    const result = ER_DIAGRAM_PLUGIN.parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    const fields = result.nodes[0].data.erFields ?? [];
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'customer_id',
+          isForeignKey: true,
+          referencesTable: 'CUSTOMER',
+          referencesField: undefined,
+        }),
+      ])
+    );
+  });
 });

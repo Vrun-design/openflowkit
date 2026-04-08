@@ -1,5 +1,5 @@
 import type { FlowEdge, FlowNode } from '@/lib/types';
-import { normalizeErFields, stringifyErField } from '@/lib/entityFields';
+import { normalizeErFields, stringifyMermaidErField } from '@/lib/entityFields';
 import { DEFAULT_ER_RELATION, isERRelationToken } from '@/lib/relationSemantics';
 
 function sortNodesByPosition(nodes: FlowNode[]): FlowNode[] {
@@ -40,7 +40,7 @@ export function toERDiagramMermaid(nodes: FlowNode[], edges: FlowEdge[]): string
   sortNodesByPosition(nodes).forEach((node) => {
     lines.push(`    ${node.id} {`);
     const fields = normalizeErFields(node.data.erFields)
-      .map((entry) => stringifyErField(entry).trim())
+      .map((entry) => stringifyMermaidErField(entry).trim())
       .filter(Boolean);
     fields.forEach((field) => lines.push(`      ${field}`));
     lines.push('    }');

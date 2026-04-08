@@ -65,6 +65,7 @@ describe('StudioCodePanel', () => {
         ...useFlowStore.getState().viewSettings,
         architectureStrictMode: false,
       },
+      mermaidDiagnostics: null,
       setMermaidDiagnostics: vi.fn(),
       clearMermaidDiagnostics: vi.fn(),
     });
@@ -114,5 +115,38 @@ describe('StudioCodePanel', () => {
     await waitFor(() => {
       expect(screen.queryByText('Unsaved')).toBeNull();
     });
+  });
+
+  it('shows partially editable Mermaid drafts as ready with warnings', () => {
+    parseMermaidByTypeMock.mockReturnValue({
+      nodes: [{ id: 'a' }],
+      edges: [{ id: 'e' }],
+      diagramType: 'flowchart',
+      importState: 'editable_partial',
+    });
+
+    render(<StudioCodePanel nodes={[]} edges={[]} onApply={vi.fn()} mode="mermaid" onModeChange={vi.fn()} />);
+
+    expect(screen.getByText('Ready with warnings')).not.toBeNull();
+    expect(screen.getByText(/partial editability/)).not.toBeNull();
+  });
+
+  it('renders stored Mermaid diagnostics status as a visible banner', () => {
+    useFlowStore.setState({
+      mermaidDiagnostics: {
+        source: 'code',
+        diagramType: 'flowchart',
+        importState: 'editable_partial',
+        statusLabel: 'Ready with warnings',
+        statusDetail: '2 nodes, 1 edges, partial editability',
+        diagnostics: [{ message: 'Diagnostic warning' }],
+        updatedAt: 1,
+      },
+    });
+
+    render(<StudioCodePanel nodes={[]} edges={[]} onApply={vi.fn()} mode="mermaid" onModeChange={vi.fn()} />);
+
+    expect(screen.getAllByText('Ready with warnings').length).toBeGreaterThan(0);
+    expect(screen.getByText('2 nodes, 1 edges, partial editability')).toBeTruthy();
   });
 });

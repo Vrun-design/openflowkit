@@ -35,6 +35,31 @@ function createReport(): ImportFidelityReport {
   };
 }
 
+function createMermaidReport(): ImportFidelityReport {
+  return {
+    id: 'import-2',
+    source: 'mermaid',
+    importState: 'unsupported_family',
+    originalSource: 'gitGraph\ncommit id: "a1"',
+    timestamp: '2026-03-30T00:00:00.000Z',
+    status: 'failed',
+    nodeCount: 0,
+    edgeCount: 0,
+    elapsedMs: 11,
+    issues: [
+      {
+        code: 'UNSUP-001',
+        severity: 'error',
+        message: 'Mermaid "gitGraph" is not supported yet in editable mode.',
+      },
+    ],
+    summary: {
+      warningCount: 0,
+      errorCount: 1,
+    },
+  };
+}
+
 describe('ImportRecoveryDialog', () => {
   it('renders import issues and invokes retry/close actions', () => {
     const onRetry = vi.fn();
@@ -59,5 +84,38 @@ describe('ImportRecoveryDialog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Dismiss/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders Mermaid-specific recovery status and guidance', () => {
+    render(
+      <ImportRecoveryDialog
+        fileName="unsupported.mmd"
+        report={createMermaidReport()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Unsupported Mermaid family')).toBeTruthy();
+    expect(screen.getByText(/not editable yet/i)).toBeTruthy();
+    expect(screen.getByText(/Original Mermaid source is preserved/i)).toBeTruthy();
+  });
+
+  it('renders and triggers an optional recovery action', () => {
+    const onAction = vi.fn();
+
+    render(
+      <ImportRecoveryDialog
+        fileName="unsupported.mmd"
+        report={createMermaidReport()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        actionLabel="Open Mermaid code"
+        onAction={onAction}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Mermaid code' }));
+    expect(onAction).toHaveBeenCalledTimes(1);
   });
 });

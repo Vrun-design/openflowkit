@@ -19,6 +19,7 @@ interface ParsedFragment {
   id: string;
   type: 'alt' | 'loop' | 'opt' | 'par' | 'break' | 'critical';
   condition: string;
+  branchKind: 'start' | 'else' | 'and';
   startOrder: number;
   endOrder: number;
 }
@@ -32,8 +33,14 @@ interface ParsedActivation {
 interface ParsedNote {
   text: string;
   target: string;
+  targetIds: string[];
   position: 'over' | 'left' | 'right';
   order: number;
+  fragment?: {
+    type: ParsedFragment['type'];
+    condition: string;
+    branchKind: ParsedFragment['branchKind'];
+  };
 }
 
 function getSequenceFragmentColor(fragmentType: ParsedFragment['type']): string {
@@ -81,6 +88,7 @@ function parseSequence(input: string): {
     id: string;
     type: ParsedFragment['type'];
     condition: string;
+    branchKind: ParsedFragment['branchKind'];
     startOrder: number;
   }> = [];
 
@@ -131,6 +139,7 @@ function parseSequence(input: string): {
         id: `seq-fragment-${fragmentStack.length + fragments.length + 1}`,
         type: fragmentMatch[1].toLowerCase() as ParsedFragment['type'],
         condition: fragmentMatch[2].trim(),
+        branchKind: 'start',
         startOrder: messageOrder,
       });
       continue;
@@ -144,10 +153,12 @@ function parseSequence(input: string): {
           id: `${top.id}-branch-${fragments.length + 1}`,
           type: top.type,
           condition: top.condition,
+          branchKind: top.branchKind,
           startOrder: top.startOrder,
           endOrder: messageOrder,
         });
         top.condition = elseMatch[1].trim();
+        top.branchKind = 'else';
         top.startOrder = messageOrder;
       }
       continue;
@@ -161,10 +172,12 @@ function parseSequence(input: string): {
           id: `${top.id}-branch-${fragments.length + 1}`,
           type: top.type,
           condition: top.condition,
+          branchKind: top.branchKind,
           startOrder: top.startOrder,
           endOrder: messageOrder,
         });
         top.condition = andMatch[1].trim();
+        top.branchKind = 'and';
         top.startOrder = messageOrder;
       }
       continue;
@@ -177,6 +190,7 @@ function parseSequence(input: string): {
           id: `${top.id}-branch-${fragments.length + 1}`,
           type: top.type,
           condition: top.condition,
+          branchKind: top.branchKind,
           startOrder: top.startOrder,
           endOrder: messageOrder,
         });
@@ -194,7 +208,20 @@ function parseSequence(input: string): {
       const text = noteMatch[4].trim();
       ensureParticipant(target1);
       if (target2) ensureParticipant(target2);
-      notes.push({ text, target: target1, position, order: messageOrder });
+      notes.push({
+        text,
+        target: target1,
+        targetIds: target2 ? [target1, target2] : [target1],
+        position,
+        order: messageOrder,
+        fragment: fragmentStack.length > 0
+          ? {
+              type: fragmentStack[fragmentStack.length - 1].type,
+              condition: fragmentStack[fragmentStack.length - 1].condition,
+              branchKind: fragmentStack[fragmentStack.length - 1].branchKind,
+            }
+          : undefined,
+      });
       continue;
     }
 
@@ -242,11 +269,14 @@ function parseSequence(input: string): {
   const LANE_WIDTH = 220;
   const participantKindMap = new Map(participants.map((p) => [p.id, p.kind]));
 
-  const activationByParticipant = new Map<string, number[]>();
+  const activationByParticipant = new Map<string, Array<{ order: number; activate: boolean }>>();
   for (const act of activations) {
     if (!activationByParticipant.has(act.participant))
       activationByParticipant.set(act.participant, []);
-    activationByParticipant.get(act.participant)!.push(act.order);
+    activationByParticipant.get(act.participant)!.push({
+      order: act.order,
+      activate: act.activate,
+    });
   }
 
   const nodes: FlowNode[] = participants.map((p, i) => ({
@@ -262,7 +292,7 @@ function parseSequence(input: string): {
   }));
 
   const edges: FlowEdge[] = messages.map((msg, i) => {
-    const frag = fragments.find((f) => i >= f.startOrder && i <= f.endOrder);
+    const frag = [...fragments].reverse().find((f) => i >= f.startOrder && i <= f.endOrder);
 
     return {
       id: `e-seq-${i + 1}`,
@@ -277,7 +307,14 @@ function parseSequence(input: string): {
         seqMessageOrder: i,
         sourceIsActor: participantKindMap.get(msg.from) === 'actor',
         targetIsActor: participantKindMap.get(msg.to) === 'actor',
-        seqFragment: frag ? { type: frag.type, condition: frag.condition, edgeIds: [] } : undefined,
+        seqFragment: frag
+          ? {
+              type: frag.type,
+              condition: frag.condition,
+              branchKind: frag.branchKind,
+              edgeIds: [],
+            }
+          : undefined,
       },
     };
   });
@@ -293,8 +330,17 @@ function parseSequence(input: string): {
     data: {
       label: note.text,
       seqNoteTarget: note.target,
+      seqNoteTargets: note.targetIds,
       seqNotePosition: note.position,
       seqMessageOrder: note.order,
+      seqFragment: note.fragment
+        ? {
+            type: note.fragment.type,
+            condition: note.fragment.condition,
+            branchKind: note.fragment.branchKind,
+            edgeIds: [],
+          }
+        : undefined,
     },
   }));
 

@@ -1,0 +1,247 @@
+[
+  {
+    "name": "flowchart-basic",
+    "family": "flowchart",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "flowchart TD\nA[Start] --> B[End]"
+  },
+  {
+    "name": "flowchart-subgraph-explicit-id",
+    "family": "flowchart",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "flowchart TD\nsubgraph api[API Layer]\n  A[Gateway] --> B[Service]\nend"
+  },
+  {
+    "name": "flowchart-invalid-edge",
+    "family": "flowchart",
+    "expectedOfficial": "invalid",
+    "expectedEditableGate": "supported_family",
+    "source": "flowchart TD\nA -->"
+  },
+  {
+    "name": "flowchart-invalid-subgraph-close",
+    "family": "flowchart",
+    "expectedOfficial": "invalid",
+    "expectedEditableGate": "supported_family",
+    "source": "flowchart TD\nsubgraph api[API]\n  A --> B"
+  },
+  {
+    "name": "state-basic",
+    "family": "stateDiagram",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "stateDiagram-v2\n[*] --> Idle\nIdle --> [*]"
+  },
+  {
+    "name": "state-invalid-direction",
+    "family": "stateDiagram",
+    "expectedOfficial": "environment_limited",
+    "expectedEditableGate": "supported_family",
+    "source": "stateDiagram-v2\ndirection RLX\n[*] --> Idle"
+  },
+  {
+    "name": "sequence-basic",
+    "family": "sequence",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "sequenceDiagram\nparticipant Alice\nparticipant Bob\nAlice->>Bob: Hello"
+  },
+  {
+    "name": "sequence-activation-and-alt",
+    "family": "sequence",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "sequenceDiagram\nparticipant A\nparticipant B\nA->>B: Request\nactivate B\nalt success\n  B-->>A: Response\nelse failure\n  B-->>A: Error\nend\ndeactivate B"
+  },
+  {
+    "name": "sequence-invalid-message",
+    "family": "sequence",
+    "expectedOfficial": "invalid",
+    "expectedEditableGate": "supported_family",
+    "source": "sequenceDiagram\nparticipant A\nA->>"
+  },
+  {
+    "name": "sequence-partial-after-valid-message",
+    "family": "sequence",
+    "expectedOfficial": "invalid",
+    "expectedEditableGate": "supported_family",
+    "source": "sequenceDiagram\nparticipant A\nparticipant B\nA->>B: Hello\nA->>"
+  },
+  {
+    "name": "class-basic",
+    "family": "classDiagram",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "classDiagram\nclass Animal\nclass Duck\nAnimal <|-- Duck"
+  },
+  {
+    "name": "class-cardinality-generic",
+    "family": "classDiagram",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "classDiagram\nclass Repository~T~\nclass User\nRepository~T~ \"1\" --> \"*\" User : stores"
+  },
+  {
+    "name": "class-invalid-relation",
+    "family": "classDiagram",
+    "expectedOfficial": "environment_limited",
+    "expectedEditableGate": "supported_family",
+    "source": "classDiagram\nclass User\nUser -> Account"
+  },
+  {
+    "name": "er-basic",
+    "family": "erDiagram",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "erDiagram\nCUSTOMER ||--o{ ORDER : places"
+  },
+  {
+    "name": "er-field-metadata",
+    "family": "erDiagram",
+    "expectedOfficial": "invalid",
+    "expectedEditableGate": "supported_family",
+    "source": "erDiagram\nORDER {\n  uuid id PK\n  uuid customer_id FK REFERENCES CUSTOMER.id\n  string external_id UNIQUE\n}"
+  },
+  {
+    "name": "er-field-references-table-only",
+    "family": "erDiagram",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "erDiagram\nORDER {\n  uuid customer_id FK REFERENCES CUSTOMER\n  string external_id UK\n}"
+  },
+  {
+    "name": "mindmap-basic",
+    "family": "mindmap",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "mindmap\n  Root\n    Branch A\n    Branch B"
+  },
+  {
+    "name": "mindmap-wrapped-nodes",
+    "family": "mindmap",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "mindmap\n  root((Root))\n    feature[[Child A]]\n    decision{{Child B}}"
+  },
+  {
+    "name": "journey-basic",
+    "family": "journey",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "journey\ntitle Checkout\nsection Happy\n  Search: 5: User\n  Buy: 3: User"
+  },
+  {
+    "name": "journey-multiple-sections",
+    "family": "journey",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "journey\ntitle Incident Response\nsection Detect\n  Alert fires: 5: SRE\nsection Resolve\n  Mitigate: 3: SRE, Platform"
+  },
+  {
+    "name": "journey-invalid-score",
+    "family": "journey",
+    "expectedOfficial": "environment_limited",
+    "expectedEditableGate": "supported_family",
+    "source": "journey\ntitle Checkout\nsection Happy\n  Search: User"
+  },
+  {
+    "name": "state-notes-and-control",
+    "family": "stateDiagram",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "stateDiagram-v2\nstate FanOut <<fork>>\nstate FanIn <<join>>\n[*] --> FanOut\nFanOut --> Idle\nIdle --> FanIn\nnote right of Idle: Waiting\nFanIn --> [*]"
+  },
+  {
+    "name": "architecture-official-basic",
+    "family": "architecture",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "architecture-beta\nservice api(server)[API]\nservice db(database)[Database]\napi:R --> L:db"
+  },
+  {
+    "name": "architecture-title-basic",
+    "family": "architecture",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "architecture-beta\ntitle \"Platform\"\nservice api(server)[API]\nservice db(database)[Database]\napi:R --> L:db"
+  },
+  {
+    "name": "architecture-extension-labeled-edge",
+    "family": "architecture",
+    "expectedOfficial": "invalid",
+    "expectedEditableGate": "supported_family",
+    "source": "architecture-beta\nservice api(server)[API]\nservice db(database)[Database]\napi:R --> L:db : SQL"
+  },
+  {
+    "name": "flowchart-inline-class",
+    "family": "flowchart",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "flowchart TD\nA[API]:::hot --> B[(DB)]\nclassDef hot fill:#f66,stroke:#333"
+  },
+  {
+    "name": "flowchart-class-assignment-line",
+    "family": "flowchart",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "flowchart TD\nA[API]\nB[(DB)]\nclassDef hot fill:#f66,stroke:#333\nclass A,B hot"
+  },
+  {
+    "name": "flowchart-modern-annotation-dotted-ids",
+    "family": "flowchart",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "flowchart TD\napi.gateway@{ shape: rect, label: \"API Gateway\" } --> db.primary@{ shape: cyl, label: \"Primary DB\" }"
+  },
+  {
+    "name": "flowchart-unexpected-end",
+    "family": "flowchart",
+    "expectedOfficial": "invalid",
+    "expectedEditableGate": "supported_family",
+    "source": "flowchart TD\nA --> B\nend"
+  },
+  {
+    "name": "state-composite-alias",
+    "family": "stateDiagram",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "stateDiagram-v2\nstate \"Working Set\" as WorkingSet {\n  [*] --> Busy\n  Busy --> Idle\n}\nnote left of WorkingSet: Parent note\nIdle --> [*]"
+  },
+  {
+    "name": "state-direction-lr",
+    "family": "stateDiagram",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "stateDiagram-v2\ndirection LR\n[*] --> Idle\nIdle --> Running\nRunning --> [*]"
+  },
+  {
+    "name": "sequence-par-and",
+    "family": "sequence",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "sequenceDiagram\nparticipant A\nparticipant B\nparticipant C\npar fast lane\n  A->>B: Request\nand slow lane\n  A->>C: Request\nend"
+  },
+  {
+    "name": "sequence-note-inside-alt",
+    "family": "sequence",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "sequenceDiagram\nparticipant A\nparticipant B\nalt success\n  note over A, B: Shared context\n  A->>B: Request\nelse failure\n  B-->>A: Error\nend"
+  },
+  {
+    "name": "architecture-rich-node-kinds",
+    "family": "architecture",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "supported_family",
+    "source": "architecture-beta\nperson user[User]\ncontainer app(server)[App]\ndatabase_container data(database)[Data Store]\nuser:R --> L:app : HTTPS\napp:R --> L:data : TCP:5432"
+  },
+  {
+    "name": "unsupported-gitgraph",
+    "family": "gitGraph",
+    "expectedOfficial": "valid",
+    "expectedEditableGate": "unsupported_family",
+    "source": "gitGraph\ncommit id: \"A\""
+  }
+]

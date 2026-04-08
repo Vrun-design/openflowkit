@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
     buildImportFidelityReport,
+    getImportRecoveryGuidance,
     mapErrorToIssue,
+    mapMermaidDiagnosticToIssue,
     mapParserDiagnosticToIssue,
     mapWarningToIssue,
     summarizeImportReport,
@@ -26,6 +28,20 @@ describe('importFidelity', () => {
         expect(issue.line).toBe(4);
     });
 
+    it('maps Mermaid structured diagnostics to fidelity issues', () => {
+        const issue = mapMermaidDiagnosticToIssue({
+            code: 'MERMAID_SYNTAX',
+            severity: 'warning',
+            message: 'Invalid class declaration',
+            line: 6,
+            editableImpact: 'partial',
+        });
+
+        expect(issue.code).toBe('MERMAID_SYNTAX');
+        expect(issue.severity).toBe('warning');
+        expect(issue.line).toBe(6);
+    });
+
     it('builds and summarizes import report', () => {
         const report = buildImportFidelityReport({
             source: 'json',
@@ -40,5 +56,21 @@ describe('importFidelity', () => {
         expect(report.summary.warningCount).toBe(1);
         expect(report.summary.errorCount).toBe(0);
         expect(summarizeImportReport(report)).toContain('JSON import');
+    });
+
+    it('includes Mermaid import state in summaries', () => {
+        const report = buildImportFidelityReport({
+            source: 'mermaid',
+            importState: 'editable_partial',
+            originalSource: 'flowchart TD\nA-->B',
+            nodeCount: 2,
+            edgeCount: 1,
+            elapsedMs: 9,
+            issues: [{ code: 'MERMAID_SYNTAX', severity: 'warning', message: 'diag' }],
+        });
+
+        expect(report.originalSource).toContain('flowchart TD');
+        expect(summarizeImportReport(report)).toContain('Ready with warnings');
+        expect(getImportRecoveryGuidance(report)).toContain('fully editable');
     });
 });

@@ -14,6 +14,34 @@ function getIncomingTargets(edges: FlowEdge[]): Set<string> {
   return incoming;
 }
 
+function wrapMindmapLabel(node: FlowNode, label: string): string {
+  const alias =
+    typeof node.data.mindmapAlias === 'string' && node.data.mindmapAlias.trim().length > 0
+      ? `${node.data.mindmapAlias.trim()}`
+      : '';
+
+  const withAlias = (content: string): string => (alias ? `${alias}${content}` : content);
+
+  switch (node.data.mindmapWrapper) {
+    case 'double-circle':
+      return withAlias(`((${label}))`);
+    case 'double-square':
+      return withAlias(`[[${label}]]`);
+    case 'stadium':
+      return withAlias(`([${label}])`);
+    case 'subroutine':
+      return withAlias(`[(${label})]`);
+    case 'square':
+      return withAlias(`[${label}]`);
+    case 'rounded':
+      return withAlias(`(${label})`);
+    case 'hexagon':
+      return withAlias(`{{${label}}}`);
+    default:
+      return alias ? `${alias} ${label}` : label;
+  }
+}
+
 export function toMindmapMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
   const lines: string[] = ['mindmap'];
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
@@ -51,7 +79,7 @@ export function toMindmapMermaid(nodes: FlowNode[], edges: FlowEdge[]): string {
         ? Math.max(0, Math.floor(node.data.mindmapDepth))
         : null;
     const effectiveDepth = explicitDepth ?? depth;
-    lines.push(`${'  '.repeat(effectiveDepth)}${label}`);
+    lines.push(`${'  '.repeat(effectiveDepth)}${wrapMindmapLabel(node, label)}`);
 
     const children = childrenById.get(node.id) ?? [];
     children.forEach((childId) => {
