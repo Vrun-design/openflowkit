@@ -10,8 +10,11 @@ import {
 import { detectMermaidDiagramType } from '@/services/mermaid/detectDiagramType';
 import { normalizeParseDiagnostics } from '@/services/mermaid/diagnosticFormatting';
 import { parseMermaidByType } from '@/services/mermaid/parseMermaidByType';
+import { composeDiagramForDisplay } from '@/services/composeDiagramForDisplay';
 import { enrichNodesWithIcons } from '@/lib/nodeEnricher';
+import { normalizeNodeIconData } from '@/lib/nodeIconState';
 import { assignSmartHandles } from '@/services/smartEdgeRouting';
+import type { LayoutOptions } from '@/services/elk-layout/types';
 
 type SetFlowNodes = (payload: FlowNode[] | ((nodes: FlowNode[]) => FlowNode[])) => void;
 type SetFlowEdges = (payload: FlowEdge[] | ((edges: FlowEdge[]) => FlowEdge[])) => void;
@@ -56,6 +59,33 @@ export function useFlowCanvasPaste({
   getLastInteractionFlowPosition,
   getCanvasCenterFlowPosition,
 }: UseFlowCanvasPasteParams) {
+  const getImportSpacing = (nodeCount: number): LayoutOptions['spacing'] => {
+    if (nodeCount <= 10) return 'loose';
+    if (nodeCount <= 25) return 'normal';
+    return 'compact';
+  };
+
+  const safelyEnrichImportedNodes = useCallback(
+    (nodes: FlowNode[], diagramType: MermaidDiagnosticsSnapshot['diagramType']): FlowNode[] => {
+      try {
+        return enrichNodesWithIcons(nodes, {
+          diagramType,
+          mode: 'mermaid-import',
+        }).map((node) => ({
+          ...node,
+          data: normalizeNodeIconData(node.data),
+        }));
+      } catch {
+        addToast(
+          'Imported diagram rendered without icon enrichment due to an enrichment error.',
+          'warning'
+        );
+        return nodes;
+      }
+    },
+    [addToast]
+  );
+
   const handleCanvasPaste = useCallback(
     async (event: React.ClipboardEvent<HTMLDivElement>): Promise<void> => {
       if (isEditablePasteTarget(event.target)) return;
@@ -91,18 +121,18 @@ export function useFlowCanvasPaste({
           recordHistory();
 
           if (result.nodes.length > 0) {
-            const enrichedNodes = await enrichNodesWithIcons(result.nodes);
+            const enrichedNodes = safelyEnrichImportedNodes(result.nodes, result.diagramType);
             try {
-              const { getElkLayout, clearLayoutCache } = await import('@/services/elkLayout');
+              const { clearLayoutCache } = await import('@/services/elkLayout');
               clearLayoutCache();
               const layoutDirection = resolveLayoutDirection(result);
-              const { nodes: layoutedNodes, edges: layoutedEdges } = await getElkLayout(
+              const { nodes: layoutedNodes, edges: layoutedEdges } = await composeDiagramForDisplay(
                 enrichedNodes,
                 result.edges,
                 {
                   direction: layoutDirection,
-                  algorithm: 'layered',
-                  spacing: 'normal',
+                  spacing: getImportSpacing(enrichedNodes.length),
+                  diagramType: result.diagramType,
                 }
               );
               const smartEdges = assignSmartHandles(layoutedNodes, layoutedEdges);
@@ -172,6 +202,7 @@ export function useFlowCanvasPaste({
       setMermaidDiagnostics,
       setNodes,
       setSelectedNodeId,
+      safelyEnrichImportedNodes,
       strictModePasteBlockedMessage,
       updateTab,
     ]

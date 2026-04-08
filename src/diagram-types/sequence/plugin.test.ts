@@ -98,7 +98,8 @@ describe('SEQUENCE_PLUGIN', () => {
     end`;
 
     const result = SEQUENCE_PLUGIN.parseMermaid(input);
-    expect(result.nodes).toHaveLength(2);
+    expect(result.nodes).toHaveLength(3);
+    expect(result.nodes.some((node) => node.type === 'annotation')).toBe(true);
     expect(result.edges).toHaveLength(1);
   });
 
@@ -108,5 +109,23 @@ describe('SEQUENCE_PLUGIN', () => {
 
     const result = SEQUENCE_PLUGIN.parseMermaid(input);
     expect(result.edges[0].data?.seqMessageKind).toBe('async');
+  });
+
+  it('creates visible note and fragment nodes for sequence annotations', () => {
+    const input = `sequenceDiagram
+    participant A
+    participant B
+    note right of A: warm cache
+    alt success
+      A->>B: Request
+    else failure
+      B-->>A: Error
+    end`;
+
+    const result = SEQUENCE_PLUGIN.parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.some((node) => node.type === 'sequence_note')).toBe(true);
+    expect(result.nodes.some((node) => node.type === 'annotation')).toBe(true);
+    expect(result.edges[0].data?.seqFragment?.type).toBe('alt');
   });
 });

@@ -41,6 +41,27 @@ describe('iconMatcher', () => {
     expect(results[0].shapeId).toContain('redis');
   });
 
+  it('surfaces richer ranking metadata for trusted matches', () => {
+    const results = matchIcon('react');
+    expect(results[0]?.confidence).toBeTruthy();
+    expect(typeof results[0]?.reason).toBe('string');
+    expect(typeof results[0]?.runnerUpDelta).toBe('number');
+    expect(typeof results[0]?.wholeTokenMatch).toBe('boolean');
+  });
+
+  it('prefers canonical icons over wordmark or light-dark variants', () => {
+    const results = matchIcon('nextjs');
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0]?.isVariant).toBe(false);
+  });
+
+  it('marks generic matches as generic', () => {
+    const results = matchIcon('service');
+    if (results.length > 0) {
+      expect(results[0]?.isGeneric).toBe(true);
+    }
+  });
+
   it('provider filter: "lambda" with provider "aws" finds AWS Lambda', () => {
     const results = matchIcon('lambda', 'aws');
     expect(results.length).toBeGreaterThan(0);

@@ -1,5 +1,6 @@
 import { MarkerType } from '@/lib/reactflowCompat';
 import { createDefaultEdge } from '@/constants';
+import { SECTION_MIN_HEIGHT, SECTION_MIN_WIDTH } from '@/hooks/node-operations/sectionBounds';
 import { setNodeParent } from './nodeParent';
 import {
   createMermaidParseState,
@@ -264,13 +265,15 @@ function createFlowNodes(model: MermaidParseModel): FlowNode[] {
       },
       ...(node.type === 'section'
         ? {
-            style: { width: 400, height: 300 },
+            style: { width: SECTION_MIN_WIDTH, height: SECTION_MIN_HEIGHT },
           }
         : {}),
     };
 
     if (node.parentId) {
-      flowNode = setNodeParent(flowNode, node.parentId);
+      flowNode = setNodeParent(flowNode, node.parentId, {
+        constrainToParent: false,
+      });
     }
 
     if (node.classes) {

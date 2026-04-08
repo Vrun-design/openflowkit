@@ -19,9 +19,15 @@ interface RelationRecord {
   target: string;
   relation: ClassRelationToken;
   label?: string;
+  sourceCardinality?: string;
+  targetCardinality?: string;
 }
 
-const CLASS_ID_PATTERN = '[A-Za-z_][\\w.]*';
+const CLASS_ID_PATTERN = '[A-Za-z_][\\w.<>~,]*';
+
+function normalizeClassIdentifier(value: string): string {
+  return value.trim().replace(/~([^~]+)~/g, '<$1>');
+}
 
 function createEmptyClass(id: string): ClassRecord {
   return {
@@ -52,16 +58,31 @@ function parseClassBodyLine(line: string, record: ClassRecord): void {
 function parseRelation(line: string): RelationRecord | null {
   const relationTokenPattern = buildClassRelationTokenRegexPattern();
   const relationMatch = line.match(
-    new RegExp(`^(${CLASS_ID_PATTERN})\\s+(${relationTokenPattern})\\s+(${CLASS_ID_PATTERN})(?:\\s*:\\s*(.+))?$`)
+    new RegExp(
+      `^(${CLASS_ID_PATTERN})(?:\\s+"([^"]+)")?\\s+(${relationTokenPattern})\\s+(?:"([^"]+)"\\s+)?(${CLASS_ID_PATTERN})(?:\\s*:\\s*(.+))?$`
+    )
   );
   if (!relationMatch) return null;
 
   return {
-    source: relationMatch[1],
-    relation: relationMatch[2] as ClassRelationToken,
-    target: relationMatch[3],
-    label: relationMatch[4]?.trim(),
+    source: normalizeClassIdentifier(relationMatch[1]),
+    sourceCardinality: relationMatch[2]?.trim(),
+    relation: relationMatch[3] as ClassRelationToken,
+    targetCardinality: relationMatch[4]?.trim(),
+    target: normalizeClassIdentifier(relationMatch[5]),
+    label: relationMatch[6]?.trim(),
   };
+}
+
+function ensureClassRecord(classes: Map<string, ClassRecord>, id: string): ClassRecord {
+  const existing = classes.get(id);
+  if (existing) {
+    return existing;
+  }
+
+  const created = createEmptyClass(id);
+  classes.set(id, created);
+  return created;
 }
 
 function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; error?: string; diagnostics?: string[] } {
@@ -98,9 +119,8 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
 
     const inlineBlock = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})\\s*\\{\\s*(.*?)\\s*\\}$`));
     if (inlineBlock) {
-      const id = inlineBlock[1];
-      const existing = classes.get(id) || createEmptyClass(id);
-      classes.set(id, existing);
+      const id = normalizeClassIdentifier(inlineBlock[1]);
+      const existing = ensureClassRecord(classes, id);
       const members = inlineBlock[2]
         .split(';')
         .map((member) => member.trim())
@@ -111,9 +131,8 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
 
     const blockStart = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})\\s*\\{\\s*$`));
     if (blockStart) {
-      const id = blockStart[1];
-      const existing = classes.get(id) || createEmptyClass(id);
-      classes.set(id, existing);
+      const id = normalizeClassIdentifier(blockStart[1]);
+      const existing = ensureClassRecord(classes, id);
       activeClass = existing;
       activeClassLine = lineNumber;
       continue;
@@ -121,45 +140,37 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
 
     const classWithStereotype = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})\\s*<<\\s*(.+?)\\s*>>\\s*$`));
     if (classWithStereotype) {
-      const id = classWithStereotype[1];
-      const existing = classes.get(id) || createEmptyClass(id);
+      const id = normalizeClassIdentifier(classWithStereotype[1]);
+      const existing = ensureClassRecord(classes, id);
       existing.stereotype = classWithStereotype[2];
-      classes.set(id, existing);
       continue;
     }
 
     const standaloneClass = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})\\s*$`));
     if (standaloneClass) {
-      const id = standaloneClass[1];
-      if (!classes.has(id)) {
-        classes.set(id, createEmptyClass(id));
-      }
+      const id = normalizeClassIdentifier(standaloneClass[1]);
+      ensureClassRecord(classes, id);
       continue;
     }
 
     const classMemberInline = line.match(new RegExp(`^(${CLASS_ID_PATTERN})\\s*:\\s*(.+)$`));
     if (classMemberInline) {
-      const id = classMemberInline[1];
+      const id = normalizeClassIdentifier(classMemberInline[1]);
       const member = classMemberInline[2].trim();
-      const existing = classes.get(id) || createEmptyClass(id);
+      const existing = ensureClassRecord(classes, id);
       if (/\(.*\)/.test(member)) {
         existing.methods.push(member);
       } else {
         existing.attributes.push(member);
       }
-      classes.set(id, existing);
       continue;
     }
 
     const relation = parseRelation(line);
     if (relation) {
       relations.push(relation);
-      if (!classes.has(relation.source)) {
-        classes.set(relation.source, createEmptyClass(relation.source));
-      }
-      if (!classes.has(relation.target)) {
-        classes.set(relation.target, createEmptyClass(relation.target));
-      }
+      ensureClassRecord(classes, relation.source);
+      ensureClassRecord(classes, relation.target);
       continue;
     }
 
@@ -212,15 +223,20 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
   }));
 
   const edges: FlowEdge[] = relations.map((relation, index) => ({
-    id: createId(`e-class-${index}`),
-    source: relation.source,
-    target: relation.target,
-    label: relation.label || relation.relation,
-    type: 'smoothstep',
-    data: {
-      classRelation: relation.relation,
-      classRelationLabel: relation.label,
-    },
+      id: createId(`e-class-${index}`),
+      source: relation.source,
+      target: relation.target,
+      label:
+        relation.label
+        || [relation.sourceCardinality, relation.targetCardinality].filter(Boolean).join(' ')
+        || relation.relation,
+      type: 'smoothstep',
+      data: {
+        classRelation: relation.relation,
+        classRelationLabel: relation.label,
+        classRelationSourceCardinality: relation.sourceCardinality,
+        classRelationTargetCardinality: relation.targetCardinality,
+      },
   }));
 
   return diagnostics.length > 0 ? { nodes, edges, diagnostics } : { nodes, edges };

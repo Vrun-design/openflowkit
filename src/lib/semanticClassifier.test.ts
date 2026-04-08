@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { classifyNode } from './semanticClassifier';
+import {
+  classifyNode,
+  isCommonEnglishIconTerm,
+  isSpecificTechnologyIconQuery,
+} from './semanticClassifier';
 
 describe('classifyNode', () => {
   it('classifies start nodes', () => {
@@ -59,9 +63,11 @@ describe('classifyNode', () => {
   it('classifies gateway nodes', () => {
     const hint = classifyNode({ id: 'gw', label: 'API Gateway' });
     expect(hint.category).toBe('gateway');
+    expect(hint.iconQuery).toBe('');
 
     const nginx = classifyNode({ id: 'proxy', label: 'Nginx' });
     expect(nginx.category).toBe('gateway');
+    expect(nginx.iconQuery).toMatch(/nginx/i);
   });
 
   it('classifies frontend nodes', () => {
@@ -82,11 +88,40 @@ describe('classifyNode', () => {
   it('classifies auth nodes', () => {
     const hint = classifyNode({ id: 'auth', label: 'OAuth Login' });
     expect(hint.category).toBe('auth');
+    expect(hint.iconQuery).toBe('');
+  });
+
+  it('keeps generic categories color-aware but icon-query sparse', () => {
+    expect(classifyNode({ id: 'db', label: 'Database' }).iconQuery).toBe('');
+    expect(classifyNode({ id: 'queue', label: 'Queue' }).iconQuery).toBe('');
+    expect(classifyNode({ id: 'storage', label: 'Storage' }).iconQuery).toBe('');
+    expect(classifyNode({ id: 'frontend', label: 'Frontend' }).iconQuery).toBe('');
+    expect(classifyNode({ id: 'service', label: 'Service' }).iconQuery).toBe('');
+    expect(classifyNode({ id: 'llm', label: 'LLM Router' }).iconQuery).toBe('');
   });
 
   it('returns process as default', () => {
     const hint = classifyNode({ id: 'x', label: 'Something Random' });
     expect(hint.category).toBe('process');
     expect(hint.color).toBe('slate');
+  });
+
+  it('detects generic icon terms conservatively', () => {
+    expect(isCommonEnglishIconTerm('service')).toBe(true);
+    expect(isCommonEnglishIconTerm('payment')).toBe(true);
+    expect(isCommonEnglishIconTerm('PostgreSQL')).toBe(false);
+  });
+
+  it('recognizes specific technology queries for import icon enrichment', () => {
+    expect(isSpecificTechnologyIconQuery('postgres')).toBe(true);
+    expect(isSpecificTechnologyIconQuery('nginx')).toBe(true);
+    expect(isSpecificTechnologyIconQuery('amazon s3')).toBe(true);
+    expect(isSpecificTechnologyIconQuery('aws lambda')).toBe(true);
+    expect(isSpecificTechnologyIconQuery('service')).toBe(false);
+    expect(isSpecificTechnologyIconQuery('check')).toBe(false);
+    expect(isSpecificTechnologyIconQuery('oauth')).toBe(false);
+    expect(isSpecificTechnologyIconQuery('jwt')).toBe(false);
+    expect(isSpecificTechnologyIconQuery('sso')).toBe(false);
+    expect(isSpecificTechnologyIconQuery('llm')).toBe(false);
   });
 });

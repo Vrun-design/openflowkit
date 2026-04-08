@@ -21,6 +21,14 @@ function normalizeScore(input: string): number | null {
   return rounded;
 }
 
+function getJourneyScoreColor(score: number | undefined): string {
+  if (typeof score !== 'number') return 'slate';
+  if (score >= 4) return 'emerald';
+  if (score === 3) return 'amber';
+  if (score === 2) return 'orange';
+  return 'red';
+}
+
 interface ParsedJourneyStep {
   task: string;
   actor?: string;
@@ -42,7 +50,7 @@ function parseJourneyStep(line: string): ParsedJourneyStep | null {
   if (parts.length === 2) {
     const score = normalizeScore(parts[1]);
     if (score === null) {
-      return null;
+      return { task, scoreMalformed: true };
     }
     return { task, score, scoreMalformed: false };
   }
@@ -109,6 +117,7 @@ function parseJourney(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; er
     }
     if (parsedStep.scoreMalformed) {
       diagnostics.push(`Invalid journey score at line ${lineNumber}: "${line}" (expected 0-5)`);
+      continue;
     }
 
     steps.push({
@@ -159,7 +168,7 @@ function parseJourney(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; er
       data: {
         label: step.task,
         subLabel: step.actor,
-        color: 'violet',
+        color: getJourneyScoreColor(step.score),
         shape: 'rounded',
         journeySection: step.section,
         journeyTask: step.task,

@@ -20,7 +20,15 @@ describe('ER_DIAGRAM_PLUGIN', () => {
     expect(result.error).toBeUndefined();
     expect(result.nodes).toHaveLength(2);
     expect(result.edges).toHaveLength(1);
-    expect(result.nodes.find((node) => node.id === 'CUSTOMER')?.data.erFields).toContain('string id PK');
+    expect(result.nodes.find((node) => node.id === 'CUSTOMER')?.data.erFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'id',
+          dataType: 'string',
+          isPrimaryKey: true,
+        }),
+      ])
+    );
   });
 
   it('returns error when header is missing', () => {
@@ -77,5 +85,36 @@ describe('ER_DIAGRAM_PLUGIN', () => {
     const result = ER_DIAGRAM_PLUGIN.parseMermaid(input);
     expect(result.error).toBeUndefined();
     expect(result.diagnostics?.some((message) => message.includes('Unclosed entity block started at line'))).toBe(true);
+  });
+
+  it('parses ER field uniqueness and references metadata', () => {
+    const input = `
+      erDiagram
+      ORDER {
+        uuid id PK
+        uuid customer_id FK REFERENCES CUSTOMER.id
+        string external_id UK
+      }
+    `;
+
+    const result = ER_DIAGRAM_PLUGIN.parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    expect(result.nodes).toHaveLength(1);
+
+    const fields = result.nodes[0].data.erFields ?? [];
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'customer_id',
+          isForeignKey: true,
+          referencesTable: 'CUSTOMER',
+          referencesField: 'id',
+        }),
+        expect.objectContaining({
+          name: 'external_id',
+          isUnique: true,
+        }),
+      ])
+    );
   });
 });

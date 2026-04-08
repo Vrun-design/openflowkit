@@ -3,13 +3,15 @@ import {
   buildERRelationTokenRegexPattern,
   type ERRelationToken,
 } from '@/lib/relationSemantics';
+import { createDefaultErField } from '@/lib/entityFields';
+import type { ErField } from '@/lib/types';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { DiagramPlugin } from '@/diagram-types/core';
 
 interface EntityRecord {
   id: string;
   label: string;
-  fields: string[];
+  fields: ErField[];
 }
 
 interface RelationRecord {
@@ -27,6 +29,57 @@ function createEmptyEntity(id: string): EntityRecord {
     label: id,
     fields: [],
   };
+}
+
+function parseMermaidErField(line: string): ErField {
+  const trimmed = line.trim();
+  if (!trimmed) {
+    return createDefaultErField();
+  }
+
+  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) {
+    return {
+      ...createDefaultErField(),
+      name: trimmed,
+    };
+  }
+
+  const [dataType, name, ...rawConstraints] = tokens;
+  const field: ErField = {
+    ...createDefaultErField(),
+    name,
+    dataType,
+  };
+
+  for (let index = 0; index < rawConstraints.length; index += 1) {
+    const token = rawConstraints[index].toUpperCase();
+    if (token === 'PK' || token === 'PRIMARY') {
+      field.isPrimaryKey = true;
+      continue;
+    }
+    if (token === 'FK' || token === 'FOREIGN') {
+      field.isForeignKey = true;
+      continue;
+    }
+    if (token === 'UK' || token === 'UNIQUE' || token === 'UQ') {
+      field.isUnique = true;
+      continue;
+    }
+    if (token === 'NN' || token === 'NOTNULL' || token === 'NOT') {
+      field.isNotNull = true;
+      continue;
+    }
+    if (token === 'REFERENCES' && rawConstraints[index + 1]) {
+      const reference = rawConstraints[index + 1];
+      const [referencesTable, referencesField] = reference.split('.');
+      field.referencesTable = referencesTable;
+      field.referencesField = referencesField;
+      index += 1;
+    }
+  }
+
+  return field;
 }
 
 function parseRelation(line: string): RelationRecord | null {
@@ -77,7 +130,7 @@ function parseERDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; 
         activeEntityLine = -1;
         continue;
       }
-      activeEntity.fields.push(line);
+      activeEntity.fields.push(parseMermaidErField(line));
       continue;
     }
 

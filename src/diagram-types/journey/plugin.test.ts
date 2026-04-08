@@ -23,7 +23,7 @@ describe('JOURNEY_PLUGIN', () => {
     expect(result.nodes[0].data.journeyActor).toBe('Buyer');
   });
 
-  it('returns diagnostics for malformed score while keeping valid parse', () => {
+  it('returns diagnostics for malformed score and skips invalid steps', () => {
     const input = `
       journey
       section Support
@@ -33,11 +33,25 @@ describe('JOURNEY_PLUGIN', () => {
 
     const result = JOURNEY_PLUGIN.parseMermaid(input);
     expect(result.error).toBeUndefined();
-    expect(result.nodes).toHaveLength(2);
+    expect(result.nodes).toHaveLength(1);
     expect(result.diagnostics?.some((message) => message.includes('Invalid journey score at line'))).toBe(true);
   });
 
-  it('returns diagnostics for malformed section and invalid step syntax while preserving valid steps', () => {
+  it('color-codes steps by score for quick satisfaction scanning', () => {
+    const input = `
+      journey
+      section Checkout
+        Browse: 5: Buyer
+        Retry payment: 1: Buyer
+    `;
+
+    const result = JOURNEY_PLUGIN.parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    expect(result.nodes[0].data.color).toBe('emerald');
+    expect(result.nodes[1].data.color).toBe('red');
+  });
+
+  it('returns diagnostics for malformed section and malformed score-like steps while preserving valid steps', () => {
     const input = `
       journey
       section
@@ -49,7 +63,7 @@ describe('JOURNEY_PLUGIN', () => {
     expect(result.error).toBeUndefined();
     expect(result.nodes).toHaveLength(1);
     expect(result.diagnostics?.some((message) => message.includes('Invalid journey section syntax at line'))).toBe(true);
-    expect(result.diagnostics?.some((message) => message.includes('Invalid journey step syntax at line'))).toBe(true);
+    expect(result.diagnostics?.some((message) => message.includes('Invalid journey score at line'))).toBe(true);
   });
 
   it('returns error when header is missing', () => {

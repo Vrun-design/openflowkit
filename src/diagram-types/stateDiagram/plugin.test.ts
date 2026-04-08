@@ -51,19 +51,51 @@ describe('STATE_DIAGRAM_PLUGIN', () => {
     expect(busyNode?.parentId).toBe('Working');
   });
 
-  it('returns deterministic diagnostics for unsupported note, invalid direction, and malformed transition arrows', () => {
+  it('renders state notes as annotation nodes instead of rejecting them', () => {
+    const input = `
+      stateDiagram-v2
+      [*] --> Idle
+      note right of Idle: Waiting for input
+      Idle --> Running
+    `;
+
+    const result = STATE_DIAGRAM_PLUGIN.parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.some((node) => node.type === 'annotation')).toBe(true);
+    expect(result.edges.some((edge) => edge.source.startsWith('state-note-') && edge.target === 'Idle')).toBe(true);
+    expect(result.diagnostics?.some((message) => message.includes('note syntax'))).not.toBe(true);
+  });
+
+  it('parses explicit fork and join control states', () => {
+    const input = `
+      stateDiagram-v2
+      state FanOut <<fork>>
+      state FanIn <<join>>
+      [*] --> FanOut
+      FanOut --> BranchA
+      FanOut --> BranchB
+      BranchA --> FanIn
+      BranchB --> FanIn
+      FanIn --> [*]
+    `;
+
+    const result = STATE_DIAGRAM_PLUGIN.parseMermaid(input);
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.find((node) => node.id === 'FanOut')?.data.stateControlKind).toBe('fork');
+    expect(result.nodes.find((node) => node.id === 'FanIn')?.data.stateControlKind).toBe('join');
+  });
+
+  it('returns deterministic diagnostics for invalid direction and malformed transition arrows', () => {
     const input = `
       stateDiagram-v2
       [*] --> Idle
       direction RL
-      note right of Idle: unsupported
       Idle -> Running
     `;
 
     const result = STATE_DIAGRAM_PLUGIN.parseMermaid(input);
     expect(result.error).toBeUndefined();
     expect(result.diagnostics?.some((message) => message.includes('Invalid stateDiagram direction syntax at line'))).toBe(true);
-    expect(result.diagnostics?.some((message) => message.includes('Unsupported stateDiagram note syntax at line'))).toBe(true);
     expect(result.diagnostics?.some((message) => message.includes('Invalid stateDiagram transition syntax at line'))).toBe(true);
   });
 });

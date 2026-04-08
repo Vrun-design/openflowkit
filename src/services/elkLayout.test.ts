@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import {
+  applyElkLayoutToNodes,
   buildResolvedLayoutConfiguration,
   getDeterministicSeedOptions,
   normalizeElkEdgeBoundaryFanout,
   normalizeLayoutInputsForDeterminism,
+  normalizeParentedElkPositions,
+  resolveAutomaticLayoutAlgorithm,
   resolveLayoutedEdgeHandles,
   resolveLayoutPresetOptions,
   shouldUseLightweightLayoutPostProcessing,
@@ -24,7 +27,9 @@ function createEdge(id: string, source: string, target: string): FlowEdge {
   return { id, source, target } as FlowEdge;
 }
 
-function createPositionMap(entries: Array<[string, { x: number; y: number; width?: number; height?: number }]>) {
+function createPositionMap(
+  entries: Array<[string, { x: number; y: number; width?: number; height?: number }]>
+) {
   return new Map(entries);
 }
 
@@ -59,16 +64,8 @@ describe('normalizeLayoutInputsForDeterminism', () => {
   });
 
   it('uses deterministic component tie-break ordering for top-level nodes and edges', () => {
-    const nodes = [
-      createNode('z1'),
-      createNode('b1'),
-      createNode('a1'),
-      createNode('c1'),
-    ];
-    const edges = [
-      createEdge('edge-bc', 'b1', 'c1'),
-      createEdge('edge-za', 'z1', 'a1'),
-    ];
+    const nodes = [createNode('z1'), createNode('b1'), createNode('a1'), createNode('c1')];
+    const edges = [createEdge('edge-bc', 'b1', 'c1'), createEdge('edge-za', 'z1', 'a1')];
 
     const normalized = normalizeLayoutInputsForDeterminism(nodes, edges);
 
@@ -93,8 +90,14 @@ describe('normalizeLayoutInputsForDeterminism', () => {
     const normalized = normalizeLayoutInputsForDeterminism(nodes, edges);
 
     expect(normalized.topLevelNodes.map((node) => node.id)).toEqual(['group-a', 'group-b']);
-    expect((normalized.childrenByParent.get('group-a') || []).map((node) => node.id)).toEqual(['a-child-1', 'a-child-2']);
-    expect((normalized.childrenByParent.get('group-b') || []).map((node) => node.id)).toEqual(['b-child-1', 'b-child-2']);
+    expect((normalized.childrenByParent.get('group-a') || []).map((node) => node.id)).toEqual([
+      'a-child-1',
+      'a-child-2',
+    ]);
+    expect((normalized.childrenByParent.get('group-b') || []).map((node) => node.id)).toEqual([
+      'b-child-1',
+      'b-child-2',
+    ]);
   });
 });
 
@@ -160,6 +163,7 @@ describe('buildResolvedLayoutConfiguration', () => {
     expect(compact.layoutOptions['elk.layered.nodePlacement.favorStraightEdges']).toBe('true');
     expect(compact.layoutOptions['elk.layered.mergeEdges']).toBe('true');
     expect(compact.layoutOptions['elk.layered.unnecessaryBendpoints']).toBe('true');
+    expect(Number(compact.dims.nodeNode)).toBe(60);
   });
 
   it('applies more spacious layered heuristics for architecture diagrams', () => {
@@ -182,7 +186,83 @@ describe('buildResolvedLayoutConfiguration', () => {
     expect(architecture.layoutOptions['elk.spacing.edgeNode']).toBe('24');
     expect(architecture.layoutOptions['elk.spacing.edgeEdge']).toBe('18');
     expect(architecture.layoutOptions['elk.layered.spacing.edgeEdgeBetweenLayers']).toBe('42');
-    expect(architecture.layoutOptions['elk.layered.nodePlacement.bk.fixedAlignment']).toBe('BALANCED');
+    expect(architecture.layoutOptions['elk.layered.nodePlacement.bk.fixedAlignment']).toBe(
+      'BALANCED'
+    );
+  });
+
+  it('enables compound hierarchy handling and shared root padding', () => {
+    const config = buildResolvedLayoutConfiguration({
+      algorithm: 'layered',
+      direction: 'TB',
+      spacing: 'normal',
+    });
+
+    expect(config.layoutOptions['elk.hierarchyHandling']).toBe('INCLUDE_CHILDREN');
+    expect(config.layoutOptions['elk.padding']).toBe('[top=16,left=32,bottom=32,right=32]');
+  });
+});
+
+describe('normalizeParentedElkPositions', () => {
+  it('converts child positions from absolute ELK coordinates to parent-relative flow coordinates', () => {
+    const nodes = [
+      {
+        id: 'section-1',
+        type: 'section',
+        position: { x: 0, y: 0 },
+        data: { label: 'Section' },
+        style: { width: 500, height: 400 },
+      } as FlowNode,
+      createNode('child-1', 'section-1'),
+      createNode('child-2'),
+    ];
+
+    const absolutePositionMap = createPositionMap([
+      ['section-1', { x: 120, y: 80, width: 560, height: 420 }],
+      ['child-1', { x: 200, y: 150, width: 120, height: 60 }],
+      ['child-2', { x: 700, y: 500, width: 120, height: 60 }],
+    ]);
+
+    const normalized = normalizeParentedElkPositions(nodes, absolutePositionMap);
+
+    expect(normalized.get('section-1')).toEqual({ x: 120, y: 80, width: 560, height: 420 });
+    expect(normalized.get('child-1')).toEqual({ x: 80, y: 70, width: 120, height: 60 });
+    expect(normalized.get('child-2')).toEqual({ x: 700, y: 500, width: 120, height: 60 });
+  });
+});
+
+describe('applyElkLayoutToNodes', () => {
+  it('updates section size while preserving parent-relative child coordinates', () => {
+    const section = {
+      id: 'section-1',
+      type: 'section',
+      position: { x: 0, y: 0 },
+      data: { label: 'Section' },
+      style: { width: 500, height: 400 },
+    } as FlowNode;
+    const child = {
+      ...createNode('child-1', 'section-1'),
+      position: { x: 0, y: 0 },
+      style: { width: 120, height: 60 },
+    } as FlowNode;
+
+    const laidOutNodes = applyElkLayoutToNodes(
+      [section, child],
+      createPositionMap([
+        ['section-1', { x: 120, y: 80, width: 560, height: 420 }],
+        ['child-1', { x: 200, y: 150, width: 120, height: 60 }],
+      ])
+    );
+
+    expect(laidOutNodes.find((node) => node.id === 'section-1')?.position).toEqual({
+      x: 120,
+      y: 80,
+    });
+    expect(laidOutNodes.find((node) => node.id === 'section-1')?.style).toMatchObject({
+      width: 560,
+      height: 420,
+    });
+    expect(laidOutNodes.find((node) => node.id === 'child-1')?.position).toEqual({ x: 80, y: 70 });
   });
 });
 
@@ -228,9 +308,27 @@ describe('normalizeElkEdgeBoundaryFanout', () => {
       { id: 'e3', source: 'source', target: 'c', sourceHandle: 'right' },
     ] as FlowEdge[];
     const edgePointsMap = new Map<string, { x: number; y: number }[]>([
-      ['e1', [{ x: 200, y: 60 }, { x: 260, y: 60 }]],
-      ['e2', [{ x: 200, y: 60 }, { x: 260, y: 60 }]],
-      ['e3', [{ x: 200, y: 60 }, { x: 260, y: 60 }]],
+      [
+        'e1',
+        [
+          { x: 200, y: 60 },
+          { x: 260, y: 60 },
+        ],
+      ],
+      [
+        'e2',
+        [
+          { x: 200, y: 60 },
+          { x: 260, y: 60 },
+        ],
+      ],
+      [
+        'e3',
+        [
+          { x: 200, y: 60 },
+          { x: 260, y: 60 },
+        ],
+      ],
     ]);
     const positionMap = createPositionMap([
       ['source', { x: 0, y: 0, width: 200, height: 120 }],
@@ -294,9 +392,27 @@ describe('normalizeElkEdgeBoundaryFanout', () => {
       { id: 'e3', source: 'source', target: 'c', sourceHandle: 'bottom' },
     ] as FlowEdge[];
     const edgePointsMap = new Map<string, { x: number; y: number }[]>([
-      ['e1', [{ x: 100, y: 120 }, { x: 100, y: 180 }]],
-      ['e2', [{ x: 100, y: 120 }, { x: 100, y: 180 }]],
-      ['e3', [{ x: 100, y: 120 }, { x: 100, y: 180 }]],
+      [
+        'e1',
+        [
+          { x: 100, y: 120 },
+          { x: 100, y: 180 },
+        ],
+      ],
+      [
+        'e2',
+        [
+          { x: 100, y: 120 },
+          { x: 100, y: 180 },
+        ],
+      ],
+      [
+        'e3',
+        [
+          { x: 100, y: 120 },
+          { x: 100, y: 180 },
+        ],
+      ],
     ]);
     const positionMap = createPositionMap([
       ['source', { x: 0, y: 0, width: 200, height: 120 }],
@@ -329,14 +445,18 @@ describe('normalizeElkEdgeBoundaryFanout', () => {
         height: 60,
         data: { label: 'Source' },
       } as FlowNode,
-      ...Array.from({ length: 5 }, (_, index) => ({
-        id: `target-${index}`,
-        type: 'process',
-        position: { x: 280, y: index * 40 },
-        width: 120,
-        height: 80,
-        data: { label: `Target ${index}` },
-      } as FlowNode)),
+      ...Array.from(
+        { length: 5 },
+        (_, index) =>
+          ({
+            id: `target-${index}`,
+            type: 'process',
+            position: { x: 280, y: index * 40 },
+            width: 120,
+            height: 80,
+            data: { label: `Target ${index}` },
+          }) as FlowNode
+      ),
     ];
     const edges = Array.from({ length: 5 }, (_, index) => ({
       id: `e${index}`,
@@ -345,14 +465,26 @@ describe('normalizeElkEdgeBoundaryFanout', () => {
       sourceHandle: 'right',
     })) as FlowEdge[];
     const edgePointsMap = new Map(
-      edges.map((edge) => [edge.id, [{ x: 180, y: 30 }, { x: 240, y: 30 }]])
+      edges.map((edge) => [
+        edge.id,
+        [
+          { x: 180, y: 30 },
+          { x: 240, y: 30 },
+        ],
+      ])
     );
-    const positionMapEntries: Array<[string, { x: number; y: number; width?: number; height?: number }]> = [
+    const positionMapEntries: Array<
+      [string, { x: number; y: number; width?: number; height?: number }]
+    > = [
       ['source', { x: 0, y: 0, width: 180, height: 60 }],
-      ...Array.from({ length: 5 }, (_, index) => ([
-        `target-${index}`,
-        { x: 280, y: index * 40, width: 120, height: 80 },
-      ] as [string, { x: number; y: number; width?: number; height?: number }])),
+      ...Array.from(
+        { length: 5 },
+        (_, index) =>
+          [`target-${index}`, { x: 280, y: index * 40, width: 120, height: 80 }] as [
+            string,
+            { x: number; y: number; width?: number; height?: number },
+          ]
+      ),
     ];
     const positionMap = createPositionMap(positionMapEntries);
 
@@ -448,6 +580,39 @@ describe('resolveLayoutedEdgeHandles', () => {
 
     expect(rerouted.every((edge) => edge.sourceHandle === 'right')).toBe(true);
     expect(rerouted.every((edge) => edge.targetHandle === 'left')).toBe(true);
+  });
+});
+
+describe('resolveAutomaticLayoutAlgorithm', () => {
+  it('prefers tree layout for high-branching acyclic graphs', () => {
+    const nodes = ['root', 'a', 'b', 'c', 'd', 'e'].map((id) => createNode(id));
+    const edges = ['a', 'b', 'c', 'd', 'e'].map((id, index) => createEdge(`e${index}`, 'root', id));
+
+    expect(resolveAutomaticLayoutAlgorithm(nodes, edges, { diagramType: 'flowchart' })).toBe(
+      'mrtree'
+    );
+  });
+
+  it('switches cyclic graphs away from layered layout automatically', () => {
+    const nodes = ['a', 'b', 'c'].map((id) => createNode(id));
+    const edges = [
+      createEdge('e1', 'a', 'b'),
+      createEdge('e2', 'b', 'c'),
+      createEdge('e3', 'c', 'a'),
+    ];
+
+    expect(resolveAutomaticLayoutAlgorithm(nodes, edges, { diagramType: 'flowchart' })).toBe(
+      'force'
+    );
+  });
+
+  it('keeps architecture imports on layered layout', () => {
+    const nodes = [createNode('edge'), createNode('api')];
+    const edges = [createEdge('e1', 'edge', 'api')];
+
+    expect(resolveAutomaticLayoutAlgorithm(nodes, edges, { diagramType: 'architecture' })).toBe(
+      'layered'
+    );
   });
 });
 

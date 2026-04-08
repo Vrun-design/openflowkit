@@ -34,11 +34,13 @@ describe('Mermaid → Enrichment Pipeline (E2E)', () => {
 
     const dbNode = enriched.find((n) => n.id === 'db');
     expect(dbNode?.data.color).toBe('violet');
-    expect(dbNode?.data.icon).toBe('database');
+    expect(dbNode?.data.archIconPackId).toBeTruthy();
+    expect(dbNode?.data.assetProvider).toBeTruthy();
 
     const redisNode = enriched.find((n) => n.id === 'redis');
     expect(redisNode?.data.color).toBe('red');
-    expect(redisNode?.data.icon).toBe('hard-drive');
+    expect(redisNode?.data.archIconPackId).toBeTruthy();
+    expect(redisNode?.data.assetProvider).toBeTruthy();
   });
 
   it('flowchart with subgraphs: creates section nodes with proper hierarchy', async () => {
@@ -155,6 +157,7 @@ describe('Mermaid → Enrichment Pipeline (E2E)', () => {
     // Enricher should preserve existing archIconPackId
     expect(enriched[0].data.archIconPackId).toBe('aws-official-starter-v1');
     expect(enriched[0].data.archIconShapeId).toBe('api-gateway');
+    expect(enriched[0].data.assetProvider).toBe('aws');
     expect(enriched[0].data.color).toBe('violet');
   });
 

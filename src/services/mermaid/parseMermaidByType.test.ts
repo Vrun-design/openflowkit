@@ -149,7 +149,7 @@ describe('parseMermaidByType', () => {
     expect(result.nodes.every((node) => node.type === 'journey')).toBe(true);
   });
 
-  it('returns journey diagnostics for malformed section and invalid step syntax', () => {
+  it('returns journey diagnostics for malformed section and malformed score-like steps', () => {
     const result = parseMermaidByType(`
       journey
       section
@@ -166,7 +166,7 @@ describe('parseMermaidByType', () => {
       )
     ).toBe(true);
     expect(
-      result.diagnostics?.some((message) => message.includes('Invalid journey step syntax at line'))
+      result.diagnostics?.some((message) => message.includes('Invalid journey score at line'))
     ).toBe(true);
   });
 
@@ -254,6 +254,75 @@ describe('parseMermaidByType', () => {
     expect(result.error).toContain('Missing chart type declaration');
     expect(result.nodes).toHaveLength(0);
     expect(result.edges).toHaveLength(0);
+  });
+
+  it('parses semicolon-terminated node declarations correctly', () => {
+    const result = parseMermaidByType(`
+      graph TB
+      A[Start] ==> B{Is it?};
+      B -->|Yes| C[OK];
+      C --> D[Rethink];
+      D -.-> B;
+      B ---->|No| E[End];
+    `);
+
+    expect(result.error).toBeUndefined();
+    expect(result.nodes).toHaveLength(5);
+    expect(result.edges).toHaveLength(5);
+
+    const b = result.nodes.find((n) => n.id === 'B');
+    expect(b?.data.label).toBe('Is it?');
+    expect(b?.data.shape).toBe('diamond');
+
+    const c = result.nodes.find((n) => n.id === 'C');
+    expect(c?.data.label).toBe('OK');
+
+    expect(result.edges.some((e) => e.source === 'B' && e.target === 'E')).toBe(true);
+    expect(result.edges.some((e) => e.source === 'D' && e.target === 'B')).toBe(true);
+  });
+
+  it('normalizes extended arrows (----> and ====>) to standard forms', () => {
+    const result = parseMermaidByType(`
+      flowchart TD
+      A ---->|No| B
+      C ====> D
+    `);
+
+    expect(result.error).toBeUndefined();
+    expect(result.edges).toHaveLength(2);
+    expect(result.edges[0].source).toBe('A');
+    expect(result.edges[0].target).toBe('B');
+    expect(result.edges[1].source).toBe('C');
+    expect(result.edges[1].target).toBe('D');
+  });
+
+  it('parses chained edges on a single line', () => {
+    const result = parseMermaidByType(`
+      flowchart LR
+      A[Client] --> B[API] --> C[(DB)]
+    `);
+
+    expect(result.error).toBeUndefined();
+    expect(result.nodes).toHaveLength(3);
+    expect(result.edges).toHaveLength(2);
+    expect(result.edges.map((edge) => `${edge.source}->${edge.target}`)).toEqual([
+      'A->B',
+      'B->C',
+    ]);
+  });
+
+  it('keeps arrow-like text inside labels from corrupting edge parsing', () => {
+    const result = parseMermaidByType(`
+      flowchart TD
+      A["A --> B?"] -->|"status --> ok"| B["Done"]
+    `);
+
+    expect(result.error).toBeUndefined();
+    expect(result.nodes.find((node) => node.id === 'A')?.data.label).toBe('A --> B?');
+    expect(result.edges).toHaveLength(1);
+    expect(result.edges[0].label).toBe('status --> ok');
+    expect(result.edges[0].source).toBe('A');
+    expect(result.edges[0].target).toBe('B');
   });
 
   it('returns missing-header error when no family header exists', () => {

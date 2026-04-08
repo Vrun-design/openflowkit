@@ -82,6 +82,15 @@ export function normalizeMultilineStrings(input: string): string {
 
 export function normalizeEdgeLabels(input: string): string {
   let result = input;
+  // Collapse extended arrows: ---> → -->, ====> → ==>, -..-> → -.->
+  // Mermaid spec allows any number of repeated chars in the arrow body.
+  result = result.replace(/={3,}>/g, '==>');
+  result = result.replace(/-{3,}>/g, '-->');
+  result = result.replace(/-\.{2,}->/g, '-.->');
+  result = result.replace(/<-{3,}>/g, '<-->');
+  result = result.replace(/<={3,}>/g, '<==>');
+  result = result.replace(/<-\.{2,}->/g, '<-.->');
+  // Inline-label arrow forms: == text ==> and -- text -->
   result = result.replace(/==(?![>])\s*(.+?)\s*==>/g, ' ==>|$1|');
   result = result.replace(/--(?![>-])\s*(.+?)\s*-->/g, ' -->|$1|');
   result = result.replace(/-\.\s*(.+?)\s*\.->/g, ' -.->|$1|');
@@ -202,7 +211,7 @@ function tryParseWithShape(
 }
 
 export function parseNodeDeclaration(raw: string): RawNode | null {
-  const trimmed = raw.trim();
+  const trimmed = raw.trim().replace(/;$/, '');
   if (!trimmed) return null;
 
   const annotation = extractModernAnnotation(trimmed);
@@ -257,18 +266,161 @@ export const ARROW_PATTERNS = [
   '--',
 ];
 
-function findArrowInLine(line: string): { arrow: string; before: string; after: string } | null {
-  for (const arrow of ARROW_PATTERNS) {
-    const index = line.indexOf(arrow);
-    if (index >= 0) {
-      return {
-        arrow,
-        before: line.substring(0, index).trim(),
-        after: line.substring(index + arrow.length).trim(),
-      };
+function sanitizeEdgeEndpoint(raw: string): string {
+  return raw.trim().replace(/;$/, '').replace(/:::.*$/, '').trim();
+}
+
+function findArrowInLine(
+  line: string
+): { arrow: string; index: number; before: string; after: string } | null {
+  let quoteChar: '"' | "'" | null = null;
+  let pipeOpen = false;
+  let squareDepth = 0;
+  let roundDepth = 0;
+  let curlyDepth = 0;
+
+  for (let index = 0; index < line.length; index++) {
+    const char = line[index];
+    const previousChar = line[index - 1];
+
+    if (quoteChar) {
+      if (char === quoteChar && previousChar !== '\\') {
+        quoteChar = null;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quoteChar = char;
+      continue;
+    }
+
+    if (char === '|') {
+      pipeOpen = !pipeOpen;
+      continue;
+    }
+    if (pipeOpen) {
+      continue;
+    }
+
+    if (char === '[') {
+      squareDepth += 1;
+      continue;
+    }
+    if (char === ']') {
+      squareDepth = Math.max(0, squareDepth - 1);
+      continue;
+    }
+    if (char === '(') {
+      roundDepth += 1;
+      continue;
+    }
+    if (char === ')') {
+      roundDepth = Math.max(0, roundDepth - 1);
+      continue;
+    }
+    if (char === '{') {
+      curlyDepth += 1;
+      continue;
+    }
+    if (char === '}') {
+      curlyDepth = Math.max(0, curlyDepth - 1);
+      continue;
+    }
+
+    if (squareDepth > 0 || roundDepth > 0 || curlyDepth > 0) {
+      continue;
+    }
+
+    for (const arrow of ARROW_PATTERNS) {
+      if (line.startsWith(arrow, index)) {
+        return {
+          arrow,
+          index,
+          before: line.substring(0, index).trim(),
+          after: line.substring(index + arrow.length).trim(),
+        };
+      }
     }
   }
+
   return null;
+}
+
+function parseEdgeLabelSegment(
+  line: string,
+  startIndex: number
+): { label: string; nextIndex: number } {
+  let index = startIndex;
+  while (index < line.length && /\s/.test(line[index])) {
+    index += 1;
+  }
+
+  if (line[index] !== '|') {
+    return { label: '', nextIndex: index };
+  }
+
+  let label = '';
+  let quoteChar: '"' | "'" | null = null;
+  index += 1;
+
+  while (index < line.length) {
+    const char = line[index];
+    const previousChar = line[index - 1];
+
+    if (quoteChar) {
+      if (char === quoteChar && previousChar !== '\\') {
+        quoteChar = null;
+      } else {
+        label += char;
+      }
+      index += 1;
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quoteChar = char;
+      index += 1;
+      continue;
+    }
+
+    if (char === '|') {
+      return { label: label.trim(), nextIndex: index + 1 };
+    }
+
+    label += char;
+    index += 1;
+  }
+
+  return { label: label.trim(), nextIndex: index };
+}
+
+function expandAmpersandEdges(line: string): string[] {
+  if (!line.includes('&')) return [line];
+  const arrowMatch = findArrowInLine(line);
+  if (!arrowMatch) return [line];
+
+  const { arrow, index } = arrowMatch;
+  const sourcePart = line.substring(0, index).trim();
+  const afterArrow = line.substring(index + arrow.length).trim();
+
+  // Parse optional pipe label after arrow
+  const labelMatch = afterArrow.match(/^\|([^|]*)\|(.*)/);
+  const label = labelMatch ? `|${labelMatch[1]}|` : '';
+  const targetPart = labelMatch ? labelMatch[2].trim() : afterArrow;
+
+  const sources = sourcePart.split('&').map((s) => s.trim()).filter(Boolean);
+  const targets = targetPart.split('&').map((s) => s.trim()).filter(Boolean);
+
+  if (sources.length <= 1 && targets.length <= 1) return [line];
+
+  const lines: string[] = [];
+  for (const src of sources) {
+    for (const tgt of targets) {
+      lines.push(`${src} ${arrow}${label} ${tgt}`);
+    }
+  }
+  return lines;
 }
 
 export function parseEdgeLine(line: string): Array<{
@@ -277,48 +429,36 @@ export function parseEdgeLine(line: string): Array<{
   label: string;
   arrowType: string;
 }> {
+  const expanded = expandAmpersandEdges(line);
+  if (expanded.length > 1) {
+    return expanded.flatMap(parseEdgeLine);
+  }
+
   const edges: Array<{ sourceRaw: string; targetRaw: string; label: string; arrowType: string }> =
     [];
-  let remaining = line;
+  let remaining = line.trim();
   let lastNodeRaw: string | null = null;
 
   while (remaining.trim()) {
     const arrowMatch = findArrowInLine(remaining);
     if (!arrowMatch) break;
 
-    const { arrow, before, after } = arrowMatch;
-    const sourceRaw = lastNodeRaw || before;
-    let label = '';
-    let targetAndRest = after;
+    const { arrow } = arrowMatch;
+    const sourceRaw = sanitizeEdgeEndpoint(lastNodeRaw || arrowMatch.before);
+    const sourceOffset = arrowMatch.index + arrow.length;
+    const { label, nextIndex } = parseEdgeLabelSegment(remaining, sourceOffset);
+    const targetSegment = remaining.slice(nextIndex).trim();
+    const nextArrowMatch = findArrowInLine(targetSegment);
+    const targetRaw = sanitizeEdgeEndpoint(
+      nextArrowMatch ? targetSegment.slice(0, nextArrowMatch.index) : targetSegment
+    );
 
-    const labelMatch = targetAndRest.match(/^\|"?([^"|]*)"?\|\s*/);
-    if (labelMatch) {
-      label = labelMatch[1].trim();
-      targetAndRest = targetAndRest.substring(labelMatch[0].length);
+    if (sourceRaw && targetRaw) {
+      edges.push({ sourceRaw, targetRaw, label, arrowType: arrow });
     }
 
-    const nextArrowMatch = findArrowInLine(targetAndRest);
-    let targetRaw: string;
-
-    if (nextArrowMatch) {
-      targetRaw = nextArrowMatch.before;
-      remaining = targetAndRest;
-    } else {
-      targetRaw = targetAndRest;
-      remaining = '';
-    }
-
-    let source = sourceRaw.trim();
-    let target = targetRaw.trim();
-
-    if (source.includes(':::')) source = source.split(':::')[0];
-    if (target.includes(':::')) target = target.split(':::')[0];
-
-    if (source && target) {
-      edges.push({ sourceRaw: source, targetRaw: target, label, arrowType: arrow });
-    }
-
-    lastNodeRaw = targetRaw.trim();
+    lastNodeRaw = targetRaw;
+    remaining = nextArrowMatch ? targetSegment.slice(nextArrowMatch.index) : '';
     if (!nextArrowMatch) break;
   }
 
