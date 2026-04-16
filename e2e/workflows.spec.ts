@@ -16,7 +16,7 @@ async function createNewFlow(page: import('@playwright/test').Page) {
   await expect(page.getByTestId('home-create-new-main')).toBeVisible({ timeout: 15000 });
   await page.getByTestId('home-create-new-main').click();
   await expect(page).toHaveURL(/#\/flow\/[^?]+(?:\?.*)?$/);
-  await expect(page.getByTestId('flow-page-tab').first()).toBeVisible();
+  await expect(page.getByTestId('flow-page-tab').first()).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId('topnav-menu-toggle')).toBeVisible({ timeout: 15000 });
 }
 

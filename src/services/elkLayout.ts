@@ -56,8 +56,15 @@ const ELK_COMPOUND_LAYOUT_OPTIONS = {
   'elk.algorithm': 'layered',
 } as const;
 
-const layoutCache = new Map<string, { nodes: FlowNode[]; edges: FlowEdge[] }>();
+interface CacheEntry {
+  nodes: FlowNode[];
+  edges: FlowEdge[];
+  timestamp: number;
+}
+
+const layoutCache = new Map<string, CacheEntry>();
 const LAYOUT_CACHE_MAX = 20;
+const LAYOUT_CACHE_TTL_MS = 60_000;
 
 function getLayoutCacheKey(nodes: FlowNode[], edges: FlowEdge[], options: LayoutOptions): string {
   const nodeStr = nodes
@@ -78,6 +85,24 @@ export function resetElkInstance(): void {
 
 export function clearLayoutCache(): void {
   layoutCache.clear();
+}
+
+function getCachedLayout(cacheKey: string): { nodes: FlowNode[]; edges: FlowEdge[] } | null {
+  const entry = layoutCache.get(cacheKey);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > LAYOUT_CACHE_TTL_MS) {
+    layoutCache.delete(cacheKey);
+    return null;
+  }
+  return { nodes: entry.nodes, edges: entry.edges };
+}
+
+function setCachedLayout(cacheKey: string, nodes: FlowNode[], edges: FlowEdge[]): void {
+  if (layoutCache.size >= LAYOUT_CACHE_MAX) {
+    const firstKey = layoutCache.keys().next().value;
+    if (firstKey !== undefined) layoutCache.delete(firstKey);
+  }
+  layoutCache.set(cacheKey, { nodes, edges, timestamp: Date.now() });
 }
 
 async function getElkInstance(): Promise<ElkLayoutEngine> {
@@ -129,10 +154,7 @@ function estimateNodeSize(
   };
 }
 
-function hasInternalEdges(
-  childIds: Set<string>,
-  edges: FlowEdge[]
-): boolean {
+function hasInternalEdges(childIds: Set<string>, edges: FlowEdge[]): boolean {
   return edges.some((e) => childIds.has(e.source) && childIds.has(e.target));
 }
 
@@ -495,7 +517,7 @@ function staggerParallelEdgeLabels(edges: FlowEdge[]): FlowEdge[] {
 
     // Spread labels across 0.3–0.7 range to avoid pile-up at the midpoint.
     const spread = 0.4;
-    const labelPosition = 0.5 + spread * ((idx / (count - 1)) - 0.5);
+    const labelPosition = 0.5 + spread * (idx / (count - 1) - 0.5);
 
     return {
       ...edge,
@@ -710,7 +732,7 @@ export async function getElkLayout(
     algorithm,
     diagramType: effectiveDiagramType,
   });
-  const cached = layoutCache.get(cacheKey);
+  const cached = getCachedLayout(cacheKey);
   if (cached) return cached;
   const { layoutOptions } = buildResolvedLayoutConfiguration({
     ...options,
@@ -734,7 +756,14 @@ export async function getElkLayout(
     id: 'root',
     layoutOptions,
     children: orderedTopLevelNodes.map((node) =>
-      buildElkNode(node, childrenByParent, sortedEdges, nodeMinWidth, nodeMinHeight, layoutOptions['elk.direction'] ?? 'DOWN')
+      buildElkNode(
+        node,
+        childrenByParent,
+        sortedEdges,
+        nodeMinWidth,
+        nodeMinHeight,
+        layoutOptions['elk.direction'] ?? 'DOWN'
+      )
     ),
     edges: sortedEdges.map((edge) => ({
       id: edge.id,
@@ -804,11 +833,7 @@ export async function getElkLayout(
       return edge;
     });
 
-    if (layoutCache.size >= LAYOUT_CACHE_MAX) {
-      const firstKey = layoutCache.keys().next().value;
-      if (firstKey !== undefined) layoutCache.delete(firstKey);
-    }
-    layoutCache.set(cacheKey, { nodes: laidOutNodes, edges: laidOutEdges });
+    setCachedLayout(cacheKey, laidOutNodes, laidOutEdges);
 
     return { nodes: laidOutNodes, edges: laidOutEdges };
   } catch (err) {

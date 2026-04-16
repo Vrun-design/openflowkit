@@ -7,6 +7,9 @@ import {
   isSpecificTechnologyIconQuery,
 } from '@/lib/semanticClassifier';
 import { matchIcon, type IconMatch } from '@/lib/iconMatcher';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger({ scope: 'nodeEnricher' });
 
 export interface EnrichNodesWithIconsOptions {
   diagramType?: DiagramType;
@@ -23,10 +26,7 @@ const DIAGRAM_TYPES_WITHOUT_IMPORT_ICON_ENRICHMENT = new Set<DiagramType>([
   'journey',
 ]);
 
-function withNormalizedNodeData(
-  node: FlowNode,
-  dataOverrides?: Record<string, unknown>
-): FlowNode {
+function withNormalizedNodeData(node: FlowNode, dataOverrides?: Record<string, unknown>): FlowNode {
   return {
     ...node,
     data: normalizeNodeIconData({
@@ -63,11 +63,11 @@ function isTrustedImportMatch(match: IconMatch, query: string): boolean {
   }
 
   return (
-    match.confidence === 'high'
-    && match.wholeTokenMatch
-    && !match.isGeneric
-    && !isCommonEnglishIconTerm(query)
-    && match.runnerUpDelta >= 0.08
+    match.confidence === 'high' &&
+    match.wholeTokenMatch &&
+    !match.isGeneric &&
+    !isCommonEnglishIconTerm(query) &&
+    match.runnerUpDelta >= 0.08
   );
 }
 
@@ -78,7 +78,8 @@ export function enrichNodesWithIcons(
   return nodes.map((node) => {
     try {
       return enrichSingleNode(node, options);
-    } catch {
+    } catch (err) {
+      logger.debug('Node enrichment failed, using original', { nodeId: node.id, error: err });
       return node;
     }
   });
@@ -194,9 +195,9 @@ function getIconEnrichmentPolicy(options: EnrichNodesWithIconsOptions): {
     ? IMPORT_ICON_MATCH_THRESHOLD
     : DEFAULT_ICON_MATCH_THRESHOLD;
   const iconEnrichmentAllowed =
-    !strictImportMode
-    || !options.diagramType
-    || !DIAGRAM_TYPES_WITHOUT_IMPORT_ICON_ENRICHMENT.has(options.diagramType);
+    !strictImportMode ||
+    !options.diagramType ||
+    !DIAGRAM_TYPES_WITHOUT_IMPORT_ICON_ENRICHMENT.has(options.diagramType);
 
   return {
     iconMatchThreshold,
@@ -235,10 +236,7 @@ function shouldUseClassifierIconQuery(
   return !isCommonEnglishIconTerm(iconQuery);
 }
 
-function shouldUseLabelFallback(
-  label: string,
-  options: EnrichNodesWithIconsOptions
-): boolean {
+function shouldUseLabelFallback(label: string, options: EnrichNodesWithIconsOptions): boolean {
   if (options.mode === 'mermaid-import') {
     return false;
   }

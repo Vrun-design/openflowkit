@@ -18,8 +18,8 @@ const LazyExportMenuPanel = lazy(async () => {
 });
 
 interface ExportMenuProps {
-  onExportPNG: (format: 'png' | 'jpeg') => void;
-  onCopyImage: (format: 'png' | 'jpeg') => void;
+  onExportPNG: (format: 'png' | 'jpeg', options?: { transparentBackground?: boolean }) => void;
+  onCopyImage: (format: 'png' | 'jpeg', options?: { transparentBackground?: boolean }) => void;
   onExportSVG: () => void;
   onCopySVG: () => void;
   onExportPDF: () => void;
@@ -28,13 +28,11 @@ interface ExportMenuProps {
   onCopyJSON: () => void;
   onExportMermaid: () => void;
   onDownloadMermaid: () => void;
-  onExportPlantUML: () => void;
   onDownloadPlantUML: () => void;
   onExportOpenFlowDSL: () => void;
   onDownloadOpenFlowDSL: () => void;
   onExportFigma: () => void;
   onDownloadFigma: () => void;
-  onShare: () => void;
   cinematicSpeed?: CinematicExportSpeed;
   onCinematicSpeedChange?: (speed: CinematicExportSpeed) => void;
   cinematicResolution?: CinematicExportResolution;
@@ -53,13 +51,11 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
   onCopyJSON,
   onExportMermaid,
   onDownloadMermaid,
-  onExportPlantUML,
   onDownloadPlantUML,
   onExportOpenFlowDSL,
   onDownloadOpenFlowDSL,
   onExportFigma,
   onDownloadFigma,
-  onShare,
   cinematicSpeed,
   onCinematicSpeedChange,
   cinematicResolution,
@@ -101,18 +97,16 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
     onCopyJSON,
     onExportMermaid,
     onDownloadMermaid,
-    onExportPlantUML,
     onDownloadPlantUML,
     onExportOpenFlowDSL,
     onDownloadOpenFlowDSL,
     onExportFigma,
     onDownloadFigma,
-    onShare,
   });
 
   return (
     <div className="relative" ref={menuRef}>
-      <Tooltip text={t('export.exportOrShare', 'Export or share this canvas')} side="bottom">
+      <Tooltip text={t('export.exportDiagram', 'Export Diagram')} side="bottom">
         <Button
           onClick={toggleMenu}
           data-testid="topnav-export"

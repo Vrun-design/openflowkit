@@ -30,13 +30,11 @@ const baseProps = {
   onCopyJSON: vi.fn(),
   onExportMermaid: vi.fn(),
   onDownloadMermaid: vi.fn(),
-  onExportPlantUML: vi.fn(),
   onDownloadPlantUML: vi.fn(),
   onExportOpenFlowDSL: vi.fn(),
   onDownloadOpenFlowDSL: vi.fn(),
   onExportFigma: vi.fn(),
   onDownloadFigma: vi.fn(),
-  onShare: vi.fn(),
 };
 
 function Harness(): React.ReactElement {

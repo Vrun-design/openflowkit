@@ -65,6 +65,28 @@ export function createTabActions(
     };
   }
 
+  function duplicateTabById(tabs: FlowTab[], sourceId: string): string | null {
+    const syncedTabs = syncActiveTabContent(tabs);
+    const sourceTab = syncedTabs.find((tab) => tab.id === sourceId);
+    if (!sourceTab) return null;
+
+    const newTabId = createId('tab');
+    const newTab: FlowTab = {
+      ...cloneTabContent(sourceTab),
+      id: newTabId,
+      name: `${sourceTab.name} Copy`,
+      updatedAt: nowIso(),
+    };
+
+    set({
+      tabs: [...syncedTabs, newTab],
+      activeTabId: newTabId,
+      nodes: newTab.nodes,
+      edges: newTab.edges,
+    });
+    return newTabId;
+  }
+
   return {
     setActiveTabId: (id) => {
       const { tabs, nodes, edges } = get();
@@ -109,50 +131,12 @@ export function createTabActions(
 
     duplicateActiveTab: () => {
       const { tabs, activeTabId } = get();
-      const syncedTabs = syncActiveTabContent(tabs);
-      const sourceTab = syncedTabs.find((tab) => tab.id === activeTabId);
-      if (!sourceTab) return null;
-
-      const newTabId = createId('tab');
-      const duplicated = cloneTabContent(sourceTab);
-      const newTab: FlowTab = {
-        ...duplicated,
-        id: newTabId,
-        name: `${sourceTab.name} Copy`,
-      };
-
-      set({
-        tabs: [...syncedTabs, newTab],
-        activeTabId: newTabId,
-        nodes: newTab.nodes,
-        edges: newTab.edges,
-      });
+      const newTabId = duplicateTabById(tabs, activeTabId);
+      if (!newTabId) return null;
       return newTabId;
     },
 
-    duplicateTab: (id) => {
-      const { tabs } = get();
-      const syncedTabs = syncActiveTabContent(tabs);
-      const sourceTab = syncedTabs.find((tab) => tab.id === id);
-      if (!sourceTab) return null;
-
-      const newTabId = createId('tab');
-      const duplicated = cloneTabContent(sourceTab);
-      const newTab: FlowTab = {
-        ...duplicated,
-        id: newTabId,
-        name: `${sourceTab.name} Copy`,
-        updatedAt: nowIso(),
-      };
-
-      set({
-        tabs: [...syncedTabs, newTab],
-        activeTabId: newTabId,
-        nodes: newTab.nodes,
-        edges: newTab.edges,
-      });
-      return newTabId;
-    },
+    duplicateTab: (id) => duplicateTabById(get().tabs, id),
 
     reorderTab: (draggedTabId, targetTabId) => {
       if (draggedTabId === targetTabId) {

@@ -7,6 +7,7 @@ export type ExportImageFormat = 'png' | 'jpeg';
 export interface ExportCaptureConfig {
   maxDimension?: number;
   pixelRatio?: number;
+  transparentBackground?: boolean;
 }
 
 export interface CapturedFrame {
@@ -143,10 +144,37 @@ async function copyBlobToClipboard(blob: Blob): Promise<void> {
   await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
 }
 
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, body] = dataUrl.split(',', 2);
+  if (!header || body === undefined) {
+    throw new Error('Invalid exported image data.');
+  }
+
+  const mimeMatch = header.match(/^data:(.*?)(;base64)?$/);
+  const mimeType = mimeMatch?.[1] ?? 'application/octet-stream';
+  const byteString = header.includes(';base64') ? atob(body) : decodeURIComponent(body);
+  const bytes = new Uint8Array(byteString.length);
+
+  for (let index = 0; index < byteString.length; index += 1) {
+    bytes[index] = byteString.charCodeAt(index);
+  }
+
+  return new Blob([bytes], { type: mimeType });
+}
+
 export async function copyDataUrlToClipboard(dataUrl: string): Promise<void> {
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
-  await copyBlobToClipboard(blob);
+  const blob = dataUrlToBlob(dataUrl);
+
+  try {
+    await copyBlobToClipboard(blob);
+  } catch (error) {
+    if (blob.type === 'image/png') {
+      throw error;
+    }
+
+    const pngBlob = await convertBlobToPng(blob);
+    await copyBlobToClipboard(pngBlob);
+  }
 }
 
 function shouldIncludeExportNode(node: HTMLElement): boolean {
@@ -175,7 +203,7 @@ export function createExportOptions(
     width,
     height,
     options: {
-      backgroundColor: format === 'png' ? null : '#ffffff',
+      backgroundColor: format === 'png' && config?.transparentBackground ? null : '#ffffff',
       width,
       height,
       style: {
@@ -197,6 +225,28 @@ function loadImage(dataUrl: string): Promise<HTMLImageElement> {
     image.onerror = () => reject(new Error('Failed to decode exported frame.'));
     image.src = dataUrl;
   });
+}
+
+async function convertBlobToPng(blob: Blob): Promise<Blob> {
+  const imageUrl = URL.createObjectURL(blob);
+
+  try {
+    const image = await loadImage(imageUrl);
+    const { canvas, context } = createExportCanvas(image.width, image.height);
+    context.drawImage(image, 0, 0);
+
+    const pngBlob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((nextBlob) => resolve(nextBlob), 'image/png');
+    });
+
+    if (!pngBlob) {
+      throw new Error('Failed to convert the copied image to PNG.');
+    }
+
+    return pngBlob;
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
 }
 
 async function decodeCapturedFrame(

@@ -25,8 +25,8 @@ interface TopNavProps {
     onReorderPage: (draggedPageId: string, targetPageId: string) => void;
 
     // Actions
-    onExportPNG: (format?: 'png' | 'jpeg') => void;
-    onCopyImage: (format?: 'png' | 'jpeg') => void;
+    onExportPNG: (format?: 'png' | 'jpeg', options?: { transparentBackground?: boolean }) => void;
+    onCopyImage: (format?: 'png' | 'jpeg', options?: { transparentBackground?: boolean }) => void;
     onExportSVG: () => void;
     onCopySVG: () => void;
     onExportPDF: () => void;
@@ -35,13 +35,11 @@ interface TopNavProps {
     onCopyJSON: () => void;
     onExportMermaid: () => void;
     onDownloadMermaid: () => void;
-    onExportPlantUML: () => void;
     onDownloadPlantUML: () => void;
     onExportOpenFlowDSL: () => void;
     onDownloadOpenFlowDSL: () => void;
     onExportFigma: () => void;
     onDownloadFigma: () => void;
-    onShare: () => void;
     onImportJSON: () => void;
     onHistory: () => void;
     onGoHome: () => void;
@@ -80,13 +78,11 @@ export function TopNav({
     onCopyJSON,
     onExportMermaid,
     onDownloadMermaid,
-    onExportPlantUML,
     onDownloadPlantUML,
     onExportOpenFlowDSL,
     onDownloadOpenFlowDSL,
     onExportFigma,
     onDownloadFigma,
-    onShare,
     onImportJSON,
     onHistory,
     onGoHome,
@@ -163,13 +159,11 @@ export function TopNav({
                     onCopyJSON={onCopyJSON}
                     onExportMermaid={onExportMermaid}
                     onDownloadMermaid={onDownloadMermaid}
-                    onExportPlantUML={onExportPlantUML}
                     onDownloadPlantUML={onDownloadPlantUML}
                     onExportOpenFlowDSL={onExportOpenFlowDSL}
                     onDownloadOpenFlowDSL={onDownloadOpenFlowDSL}
                     onExportFigma={onExportFigma}
                     onDownloadFigma={onDownloadFigma}
-                    onShare={onShare}
                     collaboration={collaboration}
                     isBeveled={isBeveled}
                 />
