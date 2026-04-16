@@ -47,6 +47,36 @@ interface ExportFigmaParams extends ExportFlowDiagramParams {
     baseFileName?: string;
 }
 
+async function copySvgToClipboard(svg: string): Promise<boolean> {
+    const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
+    let clipboardError: unknown;
+
+    if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+        try {
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    'image/svg+xml': svgBlob,
+                    'text/plain': new Blob([svg], { type: 'text/plain' }),
+                }),
+            ]);
+            return true;
+        } catch (error) {
+            clipboardError = error;
+        }
+    }
+
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(svg);
+        return true;
+    }
+
+    if (clipboardError) {
+        throw clipboardError;
+    }
+
+    return copyTextToClipboard(svg);
+}
+
 async function exportFlowTextToClipboard({
     text,
     successMessage,
@@ -204,7 +234,11 @@ export async function exportFigmaToClipboard({
     try {
         addToast('Copying Figma SVG…', 'info');
         const svg = await toFigmaSVG(nodes, edges);
-        await navigator.clipboard.writeText(svg);
+        const copied = await copySvgToClipboard(svg);
+        if (!copied) {
+            throw new Error('Clipboard access was unavailable.');
+        }
+
         addToast(t('flowEditor.figmaCopied'), 'success');
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);

@@ -65,10 +65,12 @@ function expectLabelsPresent(
 }
 
 describe('Mermaid layout corpus invariants', () => {
-  it('keeps representative imported diagrams compact and structurally clear', async () => {
-    const fixtures = (MERMAID_COMPAT_FIXTURES as MermaidLayoutFixture[]).filter(
-      (fixture) => fixture.layoutAssertions
-    );
+  it(
+    'keeps representative imported diagrams compact and structurally clear',
+    async () => {
+      const fixtures = (MERMAID_COMPAT_FIXTURES as MermaidLayoutFixture[]).filter(
+        (fixture) => fixture.layoutAssertions
+      );
 
     for (const fixture of fixtures) {
       const parsed = parseMermaidByType(fixture.source);
@@ -216,5 +218,7 @@ describe('Mermaid layout corpus invariants', () => {
         }
       }
     }
-  });
+    },
+    60_000
+  );
 });

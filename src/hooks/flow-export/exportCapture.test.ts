@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { renderDecodedFrame } from './exportCapture';
+import { createExportOptions, renderDecodedFrame } from './exportCapture';
 
 function createMockContext() {
   return {
@@ -43,5 +43,21 @@ describe('renderDecodedFrame', () => {
     expect(context.fillRect).not.toHaveBeenCalled();
     expect(context.clearRect).not.toHaveBeenCalled();
     expect(context.drawImage).toHaveBeenCalledWith(image, 0, 0, 960, 540);
+  });
+
+  it('uses a solid background for PNG exports unless transparency is explicitly requested', () => {
+    const nodes = [
+      {
+        id: 'node-1',
+        position: { x: 0, y: 0 },
+        data: { label: 'Node 1' },
+      },
+    ] as never[];
+
+    expect(createExportOptions(nodes, 'png').options.backgroundColor).toBe('#ffffff');
+    expect(
+      createExportOptions(nodes, 'png', { transparentBackground: true }).options.backgroundColor
+    ).toBeNull();
+    expect(createExportOptions(nodes, 'jpeg').options.backgroundColor).toBe('#ffffff');
   });
 });

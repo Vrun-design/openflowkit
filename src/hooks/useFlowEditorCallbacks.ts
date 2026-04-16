@@ -135,7 +135,13 @@ export function useFlowEditorCallbacks({
         || newEdges.some((edge) => edge.data?.routingMode === 'import-fixed');
       const sanitizedNodes = newNodes.map(stripMermaidImportApplyFlag);
 
-      const enrichedNodes = (await enrichNodesWithIcons(sanitizedNodes)).map((node) => ({
+      // Use the strict mermaid-import mode (0.92 threshold, no label-based guessing) for
+      // Mermaid imports to prevent false-positive icons on generic labels like "Service" or
+      // "API". General mode (0.8 threshold) is appropriate for AI-generated nodes which use
+      // explicit archProvider / archResourceType hints.
+      const enrichedNodes = (await enrichNodesWithIcons(sanitizedNodes, {
+        mode: incomingMermaidImport ? 'mermaid-import' : 'general',
+      })).map((node) => ({
         ...node,
         data: normalizeNodeIconData(node.data),
       }));

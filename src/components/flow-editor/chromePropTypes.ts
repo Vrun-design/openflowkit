@@ -9,8 +9,8 @@ export interface BuildTopNavParams {
   handleClosePage: (pageId: string) => void;
   handleRenamePage: (pageId: string, newName: string) => void;
   handleReorderPage: (draggedPageId: string, targetPageId: string) => void;
-  handleExport: (format?: 'png' | 'jpeg') => void;
-  handleCopyImage: (format?: 'png' | 'jpeg') => void;
+  handleExport: (format?: 'png' | 'jpeg', options?: { transparentBackground?: boolean }) => void;
+  handleCopyImage: (format?: 'png' | 'jpeg', options?: { transparentBackground?: boolean }) => void;
   handleSvgExport: () => void;
   handleCopySvg: () => void;
   handlePdfExport: () => void;
@@ -19,13 +19,11 @@ export interface BuildTopNavParams {
   handleCopyJSON: () => void;
   handleExportMermaid: () => void;
   handleDownloadMermaid: () => void;
-  handleExportPlantUML: () => void;
   handleDownloadPlantUML: () => void;
   handleExportOpenFlowDSL: () => void;
   handleDownloadOpenFlowDSL: () => void;
   handleExportFigma: () => void;
   handleDownloadFigma: () => void;
-  handleShare: () => void;
   handleImportJSON: () => void;
   openHistory: () => void;
   onGoHome: () => void;

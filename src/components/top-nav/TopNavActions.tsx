@@ -30,8 +30,8 @@ interface CollaborationState {
 
 interface TopNavActionsProps {
     onPlay: () => void;
-    onExportPNG: (format?: 'png' | 'jpeg') => void;
-    onCopyImage: (format?: 'png' | 'jpeg') => void;
+    onExportPNG: (format?: 'png' | 'jpeg', options?: { transparentBackground?: boolean }) => void;
+    onCopyImage: (format?: 'png' | 'jpeg', options?: { transparentBackground?: boolean }) => void;
     onExportSVG: () => void;
     onCopySVG: () => void;
     onExportPDF: () => void;
@@ -40,13 +40,11 @@ interface TopNavActionsProps {
     onCopyJSON: () => void;
     onExportMermaid: () => void;
     onDownloadMermaid: () => void;
-    onExportPlantUML: () => void;
     onDownloadPlantUML: () => void;
     onExportOpenFlowDSL: () => void;
     onDownloadOpenFlowDSL: () => void;
     onExportFigma: () => void;
     onDownloadFigma: () => void;
-    onShare: () => void;
     collaboration?: CollaborationState;
     isBeveled: boolean;
 }
@@ -115,13 +113,11 @@ export function TopNavActions({
     onCopyJSON,
     onExportMermaid,
     onDownloadMermaid,
-    onExportPlantUML,
     onDownloadPlantUML,
     onExportOpenFlowDSL,
     onDownloadOpenFlowDSL,
     onExportFigma,
     onDownloadFigma,
-    onShare,
     collaboration,
     isBeveled,
 }: TopNavActionsProps): React.ReactElement {
@@ -202,13 +198,11 @@ export function TopNavActions({
                     onCopyJSON={onCopyJSON}
                     onExportMermaid={onExportMermaid}
                     onDownloadMermaid={onDownloadMermaid}
-                    onExportPlantUML={onExportPlantUML}
                     onDownloadPlantUML={onDownloadPlantUML}
                     onExportOpenFlowDSL={onExportOpenFlowDSL}
                     onDownloadOpenFlowDSL={onDownloadOpenFlowDSL}
                     onExportFigma={onExportFigma}
                     onDownloadFigma={onDownloadFigma}
-                    onShare={onShare}
                     cinematicThemeMode={resolvedTheme}
                 />
             </div>

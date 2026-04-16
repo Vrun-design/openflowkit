@@ -8,6 +8,10 @@ import type { FlowNode } from '@/lib/types';
 
 const logger = createLogger({ scope: 'useStaticExport' });
 
+export interface StaticImageExportOptions {
+  transparentBackground?: boolean;
+}
+
 export const useStaticExport = (
   nodes: FlowNode[],
   reactFlowWrapper: React.RefObject<HTMLDivElement>,
@@ -15,7 +19,7 @@ export const useStaticExport = (
   exportBaseName: string | undefined
 ) => {
   const handleExport = useCallback(
-    (format: 'png' | 'jpeg' = 'png') => {
+    (format: 'png' | 'jpeg' = 'png', exportOptions?: StaticImageExportOptions) => {
       const { viewport: flowViewport, message } = resolveFlowExportViewport(
         reactFlowWrapper.current
       );
@@ -28,7 +32,9 @@ export const useStaticExport = (
       addToast(`Preparing ${format.toUpperCase()} download…`, 'info');
 
       setTimeout(() => {
-        const { options } = createExportOptions(nodes, format);
+        const { options } = createExportOptions(nodes, format, {
+          transparentBackground: exportOptions?.transparentBackground,
+        });
 
         const exportPromise =
           format === 'png' ? toPng(flowViewport, options) : toJpeg(flowViewport, options);
@@ -54,7 +60,7 @@ export const useStaticExport = (
   );
 
   const handleCopyImage = useCallback(
-    (format: 'png' | 'jpeg' = 'png') => {
+    (format: 'png' | 'jpeg' = 'png', exportOptions?: StaticImageExportOptions) => {
       const { viewport: flowViewport, message } = resolveFlowExportViewport(
         reactFlowWrapper.current
       );
@@ -67,7 +73,9 @@ export const useStaticExport = (
       addToast(`Preparing ${format.toUpperCase()} copy…`, 'info');
 
       setTimeout(() => {
-        const { options } = createExportOptions(nodes, format);
+        const { options } = createExportOptions(nodes, format, {
+          transparentBackground: exportOptions?.transparentBackground,
+        });
         const exportPromise =
           format === 'png' ? toPng(flowViewport, options) : toJpeg(flowViewport, options);
 

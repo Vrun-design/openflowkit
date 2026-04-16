@@ -581,9 +581,8 @@ export function resolveContainerVisualStyle(
     };
   }
 
-  const strongText = getContrastText(resolved.bg) === '#ffffff'
-    ? '#ffffff'
-    : mixHex(resolved.text, '#0f172a', 0.3);
+  const strongText =
+    getContrastText(resolved.bg) === '#ffffff' ? '#ffffff' : mixHex(resolved.text, '#0f172a', 0.3);
   const subtleText = mixHex(resolved.subText, '#ffffff', 0.16);
 
   return {
@@ -605,13 +604,18 @@ export function resolveTextVisualStyle(
   customColor?: string,
   fallback: NodeColorKey = 'slate'
 ): Pick<ContainerVisualStyle, 'border' | 'text' | 'hoverBg'> {
-  const resolved = resolveNodeVisualStyle(resolveSharedColorKey(colorKey, fallback), colorMode, customColor);
+  const resolved = resolveNodeVisualStyle(
+    resolveSharedColorKey(colorKey, fallback),
+    colorMode,
+    customColor
+  );
   return {
     border: mixHex(resolved.border, '#ffffff', 0.18),
     text: mixHex(resolved.text, '#0f172a', 0.22),
-    hoverBg: colorMode === 'filled'
-      ? mixHex(resolved.bg, '#000000', 0.06)
-      : mixHex(resolved.bg, '#ffffff', 0.28),
+    hoverBg:
+      colorMode === 'filled'
+        ? mixHex(resolved.bg, '#000000', 0.06)
+        : mixHex(resolved.bg, '#ffffff', 0.28),
   };
 }
 
@@ -629,7 +633,11 @@ export function resolveAnnotationVisualStyle(
   foldBorder: string;
   dot: string;
 } {
-  const resolved = resolveNodeVisualStyle(resolveSharedColorKey(colorKey, 'yellow'), colorMode, customColor);
+  const resolved = resolveNodeVisualStyle(
+    resolveSharedColorKey(colorKey, 'yellow'),
+    colorMode,
+    customColor
+  );
   return {
     containerBg: resolved.bg,
     containerBorder: mixHex(resolved.border, '#ffffff', 0.12),
@@ -664,7 +672,9 @@ export function resolveEdgeVisualStyle(stroke?: string): EdgeVisualStyle {
   };
 }
 
-export function resolveEdgeConditionStroke(condition: keyof typeof EDGE_CONDITION_COLOR_KEYS): string {
+export function resolveEdgeConditionStroke(
+  condition: keyof typeof EDGE_CONDITION_COLOR_KEYS
+): string {
   const colorKey = EDGE_CONDITION_COLOR_KEYS[condition] || EDGE_CONDITION_COLOR_KEYS.default;
   return resolveNodeVisualStyle(colorKey, 'subtle').border;
 }

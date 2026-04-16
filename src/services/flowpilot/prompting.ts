@@ -56,7 +56,7 @@ export function buildFlowpilotDiagramPrompt(
   }
 
   const assetHints = assetMatches
-    .slice(0, 6)
+    .slice(0, 12)
     .map((match) => {
       const packHint = match.archIconPackId ? `, archIconPackId: "${match.archIconPackId}"` : '';
       const shapeHint = match.archIconShapeId ? `, archIconShapeId: "${match.archIconShapeId}"` : '';

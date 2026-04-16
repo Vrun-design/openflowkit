@@ -44,8 +44,14 @@ function createTranslator(fn: (key: string, options?: Record<string, unknown>) =
 describe('exportHandlers', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    Object.assign(globalThis, {
+      ClipboardItem: class ClipboardItem {
+        constructor(public readonly items: Record<string, Blob>) {}
+      },
+    });
     Object.assign(navigator, {
       clipboard: {
+        write: vi.fn().mockResolvedValue(undefined),
         writeText: vi.fn().mockResolvedValue(undefined),
       },
     });
@@ -102,6 +108,7 @@ describe('exportHandlers', () => {
   it('shows an error toast when Figma export copy fails', async () => {
     const addToast = vi.fn();
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.spyOn(navigator.clipboard, 'write').mockRejectedValueOnce(new Error('copy failed'));
     vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValueOnce(new Error('copy failed'));
 
     await exportFigmaToClipboard({
@@ -112,6 +119,21 @@ describe('exportHandlers', () => {
     });
 
     expect(addToast).toHaveBeenCalledWith('flowEditor.figmaExportFailed:copy failed', 'error');
+  });
+
+  it('uses structured clipboard data for Figma export when supported', async () => {
+    const addToast = vi.fn();
+
+    await exportFigmaToClipboard({
+      nodes: [createNode('n1')],
+      edges: [createEdge('e1', 'n1', 'n1')],
+      addToast,
+      t: createTranslator((key: string) => key),
+    });
+
+    expect(navigator.clipboard.write).toHaveBeenCalledTimes(1);
+    expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
+    expect(addToast).toHaveBeenCalledWith('flowEditor.figmaCopied', 'success');
   });
 
   it('shows an error toast when a text download fails', () => {

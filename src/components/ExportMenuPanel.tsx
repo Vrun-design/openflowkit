@@ -1,17 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { ComponentType } from 'react';
-import {
-  Copy,
-  Download,
-  Figma,
-  FileCode,
-  FileJson,
-  FileText,
-  Film,
-  GitBranch,
-  Image,
-  Share2,
-} from 'lucide-react';
+import { Copy, Download, Figma, FileCode, FileJson, FileText, Film, GitBranch, Image } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   type CinematicExportResolution,
@@ -23,7 +12,7 @@ import { Select, type SelectOption } from './ui/Select';
 import { SegmentedTabs } from './ui/SegmentedTabs';
 
 interface ExportMenuPanelProps {
-  onSelect: (key: string, action: ExportActionKey) => void;
+  onSelect: (key: string, action: ExportActionKey, options?: ExportSelectionOptions) => void;
   cinematicSpeed?: CinematicExportSpeed;
   onCinematicSpeedChange?: (speed: CinematicExportSpeed) => void;
   cinematicResolution?: CinematicExportResolution;
@@ -32,6 +21,10 @@ interface ExportMenuPanelProps {
 
 type ExportCategoryKey = 'image' | 'video' | 'code';
 type ExportActionKey = 'download' | 'copy';
+
+interface ExportSelectionOptions {
+  transparentBackground?: boolean;
+}
 
 interface ExportOption {
   key: string;
@@ -124,7 +117,7 @@ export function ExportMenuPanel({
           {
             key: 'png',
             label: 'PNG',
-            hint: t('export.hintTransparent4K', 'Transparent (4K)'),
+            hint: t('export.hintWhiteBg4K', 'White Background (4K)'),
             Icon: Image,
             actions: ['download', 'copy'],
           },
@@ -185,9 +178,9 @@ export function ExportMenuPanel({
           {
             key: 'plantuml',
             label: t('export.plantuml', 'PlantUML'),
-            hint: t('export.actionCopy', 'Copy'),
+            hint: t('export.hintDownload', 'Download'),
             Icon: FileCode,
-            actions: ['download', 'copy'],
+            actions: ['download'],
           },
           {
             key: 'figma',
@@ -195,13 +188,6 @@ export function ExportMenuPanel({
             hint: t('export.hintEditableSvg', 'Editable SVG'),
             Icon: Figma,
             actions: ['download', 'copy'],
-          },
-          {
-            key: 'share',
-            label: t('export.shareEmbed', 'Share & Embed'),
-            hint: t('export.hintShareEmbed', 'Read-only viewer link'),
-            Icon: Share2,
-            actions: ['download'],
           },
         ],
       },
@@ -223,12 +209,15 @@ export function ExportMenuPanel({
   const [selectedKeys, setSelectedKeys] = useState<Record<ExportCategoryKey, string>>(() =>
     getInitialSelectedKeys(sections)
   );
+  const [transparentBackground, setTransparentBackground] = useState(false);
 
   const activeSection = sections.find((section) => section.key === activeSectionKey) ?? sections[0];
   const selectedItem =
     activeSection.items.find((item) => item.key === selectedKeys[activeSectionKey]) ??
     activeSection.items[0];
   const shouldShowFormatSelect = activeSection.items.length > 1;
+  const shouldShowTransparentBackgroundToggle =
+    activeSectionKey === 'image' && selectedItem.key === 'png';
   const selectOptions: SelectOption[] = activeSection.items.map((item) => ({
     value: item.key,
     label: item.label,
@@ -295,6 +284,19 @@ export function ExportMenuPanel({
           </div>
         )}
 
+        {shouldShowTransparentBackgroundToggle ? (
+          <label className="mt-3 flex cursor-pointer items-center gap-3 text-sm font-medium text-[var(--brand-text)]">
+            <input
+              type="checkbox"
+              checked={transparentBackground}
+              onChange={(event) => setTransparentBackground(event.target.checked)}
+              className="h-4 w-4 rounded border border-[var(--color-brand-border)] text-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20"
+              aria-label={t('export.transparentBackground', 'Transparent background')}
+            />
+            <span>{t('export.transparentBackground', 'Transparent background')}</span>
+          </label>
+        ) : null}
+
         {activeSectionKey === 'video' && onCinematicSpeedChange && (
           <div className="mt-3">
             <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-[var(--brand-secondary)] mb-1.5">
@@ -333,7 +335,12 @@ export function ExportMenuPanel({
               key={`${selectedItem.key}-${action}`}
               type="button"
               variant={action === 'download' ? 'primary' : 'secondary'}
-              onClick={() => onSelect(selectedItem.key, action)}
+              onClick={() =>
+                onSelect(selectedItem.key, action, {
+                  transparentBackground:
+                    selectedItem.key === 'png' ? transparentBackground : undefined,
+                })
+              }
               data-testid={`export-action-${selectedItem.key}-${action}`}
               className="h-11 w-full"
             >

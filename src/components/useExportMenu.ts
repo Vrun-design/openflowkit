@@ -6,8 +6,8 @@ import { recordOnboardingEvent } from '@/services/onboarding/events';
 import { useToast } from './ui/ToastContext';
 
 interface UseExportMenuParams {
-  onExportPNG: (format: 'png' | 'jpeg') => void;
-  onCopyImage: (format: 'png' | 'jpeg') => void;
+  onExportPNG: (format: 'png' | 'jpeg', options?: ExportImageActionOptions) => void;
+  onCopyImage: (format: 'png' | 'jpeg', options?: ExportImageActionOptions) => void;
   onExportSVG: () => void;
   onCopySVG: () => void;
   onExportPDF: () => void;
@@ -17,25 +17,32 @@ interface UseExportMenuParams {
   onCopyJSON: () => void;
   onExportMermaid: () => void;
   onDownloadMermaid: () => void;
-  onExportPlantUML: () => void;
   onDownloadPlantUML: () => void;
   onExportOpenFlowDSL: () => void;
   onDownloadOpenFlowDSL: () => void;
   onExportFigma: () => void;
   onDownloadFigma: () => void;
-  onShare?: () => void;
 }
 
 type ExportActionKey = 'download' | 'copy';
 type ExportActionHandler = () => void | Promise<void>;
 type ExportActionHandlers = Record<ExportActionKey, ExportActionHandler>;
 
+interface ExportImageActionOptions {
+  transparentBackground?: boolean;
+}
+type ExportSelectionOptions = ExportImageActionOptions;
+
 interface UseExportMenuResult {
   isOpen: boolean;
   menuRef: RefObject<HTMLDivElement>;
   toggleMenu: () => void;
   closeMenu: () => void;
-  handleSelect: (key: string, action: ExportActionKey) => Promise<void>;
+  handleSelect: (
+    key: string,
+    action: ExportActionKey,
+    options?: ExportSelectionOptions
+  ) => Promise<void>;
 }
 
 function isSelectPortalTarget(target: EventTarget | null): boolean {
@@ -58,13 +65,11 @@ export function useExportMenu({
   onCopyJSON,
   onExportMermaid,
   onDownloadMermaid,
-  onExportPlantUML,
   onDownloadPlantUML,
   onExportOpenFlowDSL,
   onDownloadOpenFlowDSL,
   onExportFigma,
   onDownloadFigma,
-  onShare: onShareAction,
 }: UseExportMenuParams): UseExportMenuResult {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -114,22 +119,29 @@ export function useExportMenu({
     };
   }, [isOpen]);
 
-  const handlers: Record<string, ExportActionHandlers> = {
-    png: { download: () => onExportPNG('png'), copy: () => onCopyImage('png') },
-    jpeg: { download: () => onExportPNG('jpeg'), copy: () => onCopyImage('jpeg') },
-    svg: { download: onExportSVG, copy: onCopySVG },
-    pdf: { download: onExportPDF, copy: onExportPDF },
-    'cinematic-video': {
-      download: () => onExportCinematic(getCinematicExportRequest()),
-      copy: () => onExportCinematic(getCinematicExportRequest()),
-    },
-    json: { download: onExportJSON, copy: onCopyJSON },
-    openflow: { download: onDownloadOpenFlowDSL, copy: onExportOpenFlowDSL },
-    mermaid: { download: onDownloadMermaid, copy: onExportMermaid },
-    plantuml: { download: onDownloadPlantUML, copy: onExportPlantUML },
-    figma: { download: onDownloadFigma, copy: onExportFigma },
-    share: { download: () => onShareAction?.(), copy: () => onShareAction?.() },
-  };
+  function getHandlers(options?: ExportSelectionOptions): Record<string, ExportActionHandlers> {
+    return {
+      png: {
+        download: () => onExportPNG('png', options),
+        copy: () => onCopyImage('png', options),
+      },
+      jpeg: {
+        download: () => onExportPNG('jpeg', options),
+        copy: () => onCopyImage('jpeg', options),
+      },
+      svg: { download: onExportSVG, copy: onCopySVG },
+      pdf: { download: onExportPDF, copy: onExportPDF },
+      'cinematic-video': {
+        download: () => onExportCinematic(getCinematicExportRequest()),
+        copy: () => onExportCinematic(getCinematicExportRequest()),
+      },
+      json: { download: onExportJSON, copy: onCopyJSON },
+      openflow: { download: onDownloadOpenFlowDSL, copy: onExportOpenFlowDSL },
+      mermaid: { download: onDownloadMermaid, copy: onExportMermaid },
+      plantuml: { download: onDownloadPlantUML, copy: onDownloadPlantUML },
+      figma: { download: onDownloadFigma, copy: onExportFigma },
+    };
+  }
 
   function toggleMenu(): void {
     setIsOpen((value) => !value);
@@ -143,8 +155,12 @@ export function useExportMenu({
     });
   }
 
-  async function handleSelect(key: string, action: ExportActionKey): Promise<void> {
-    const actionHandler = handlers[key]?.[action];
+  async function handleSelect(
+    key: string,
+    action: ExportActionKey,
+    options?: ExportSelectionOptions
+  ): Promise<void> {
+    const actionHandler = getHandlers(options)[key]?.[action];
     if (!actionHandler) {
       return;
     }

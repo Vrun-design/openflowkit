@@ -64,6 +64,9 @@ export async function generateDiagramFromChat(
       systemInstruction: getGeminiSystemInstruction(isEditMode ? 'edit' : 'create'),
       responseMimeType: "text/plain",
       temperature: temperature ?? 0.2,
+      // Ensure large diagrams (40+ nodes with attributes) are never truncated.
+      // DSL for a 40-node diagram with attributes ≈ 2 500 tokens — 8 192 is generous headroom.
+      maxOutputTokens: 8192,
     },
   });
 

@@ -64,8 +64,8 @@ export interface FlowEditorChromeProps {
     onClosePage: (pageId: string) => void;
     onRenamePage: (pageId: string, newName: string) => void;
     onReorderPage: (draggedPageId: string, targetPageId: string) => void;
-    onExportPNG: (format?: 'png' | 'jpeg') => void;
-    onCopyImage: (format?: 'png' | 'jpeg') => void;
+    onExportPNG: (format?: 'png' | 'jpeg', options?: { transparentBackground?: boolean }) => void;
+    onCopyImage: (format?: 'png' | 'jpeg', options?: { transparentBackground?: boolean }) => void;
     onExportSVG: () => void;
     onCopySVG: () => void;
     onExportPDF: () => void;
@@ -74,13 +74,11 @@ export interface FlowEditorChromeProps {
     onCopyJSON: () => void;
     onExportMermaid: () => void;
     onDownloadMermaid: () => void;
-    onExportPlantUML: () => void;
     onDownloadPlantUML: () => void;
     onExportOpenFlowDSL: () => void;
     onDownloadOpenFlowDSL: () => void;
     onExportFigma: () => void;
     onDownloadFigma: () => void;
-    onShare: () => void;
     onImportJSON: () => void;
     onHistory: () => void;
     onGoHome: () => void;
@@ -180,13 +178,11 @@ export function FlowEditorChrome({
     onCopyJSON: topNav.onCopyJSON,
     onExportMermaid: topNav.onExportMermaid,
     onDownloadMermaid: topNav.onDownloadMermaid,
-    onExportPlantUML: topNav.onExportPlantUML,
     onDownloadPlantUML: topNav.onDownloadPlantUML,
     onExportOpenFlowDSL: topNav.onExportOpenFlowDSL,
     onDownloadOpenFlowDSL: topNav.onDownloadOpenFlowDSL,
     onExportFigma: topNav.onExportFigma,
     onDownloadFigma: topNav.onDownloadFigma,
-    onShare: topNav.onShare,
     onImportJSON: topNav.onImportJSON,
     onHistory: topNav.onHistory,
     onGoHome: topNav.onGoHome,

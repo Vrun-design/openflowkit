@@ -44,6 +44,26 @@ describe('ExportMenuPanel', () => {
         expect(screen.getByTestId('export-action-mermaid-copy')).toBeTruthy();
     });
 
+    it('keeps PNG background solid by default and passes transparency when enabled', () => {
+        const onSelect = vi.fn();
+
+        render(<ExportMenuPanel onSelect={onSelect} />);
+
+        expect(screen.getByLabelText(/Transparent background/i)).not.toBeChecked();
+
+        fireEvent.click(screen.getByTestId('export-action-png-download'));
+        expect(onSelect).toHaveBeenCalledWith('png', 'download', {
+            transparentBackground: false,
+        });
+
+        fireEvent.click(screen.getByLabelText(/Transparent background/i));
+        fireEvent.click(screen.getByTestId('export-action-png-copy'));
+
+        expect(onSelect).toHaveBeenLastCalledWith('png', 'copy', {
+            transparentBackground: true,
+        });
+    });
+
     it('fires the selected export key from the primary action button', () => {
         const onSelect = vi.fn();
 
@@ -54,7 +74,21 @@ describe('ExportMenuPanel', () => {
         fireEvent.click(within(screen.getByRole('listbox')).getByRole('button', { name: /Figma Editable/i }));
         fireEvent.click(screen.getByTestId('export-action-figma-copy'));
 
-        expect(onSelect).toHaveBeenCalledWith('figma', 'copy');
+        expect(onSelect).toHaveBeenCalledWith('figma', 'copy', {
+            transparentBackground: undefined,
+        });
+    });
+
+    it('removes share and PlantUML copy actions from the export panel', () => {
+        render(<ExportMenuPanel onSelect={vi.fn()} />);
+
+        fireEvent.click(screen.getByRole('tab', { name: /Code/i }));
+        fireEvent.click(within(screen.getByTestId('export-format-select')).getByRole('button', { name: /JSON File/i }));
+        fireEvent.click(within(screen.getByRole('listbox')).getByRole('button', { name: /PlantUML/i }));
+
+        expect(screen.getByTestId('export-action-plantuml-download')).toBeTruthy();
+        expect(screen.queryByTestId('export-action-plantuml-copy')).toBeNull();
+        expect(screen.queryByText(/Share & Embed/i)).toBeNull();
     });
 
     it('shows cinematic build options in the video section', () => {
