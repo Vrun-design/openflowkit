@@ -1,0 +1,43 @@
+.git
+.github
+.husky
+.vscode
+.idea
+
+# Build + deps
+node_modules
+**/node_modules
+dist
+dist-ssr
+dist-lib
+src/lib/dist
+src/lib/*.tgz
+docs-site/dist
+web/dist
+tsconfig.tsbuildinfo
+
+# Tests / reports
+playwright-report
+test-results
+coverage
+benchmarks/results
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS / misc
+.DS_Store
+*.suo
+*.sw?
+Dockerfile
+.dockerignore
+diff.patch
