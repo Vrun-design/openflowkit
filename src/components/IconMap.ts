@@ -146,6 +146,8 @@ const ICON_COMPONENTS = {
     Zap,
 } satisfies Record<string, React.ElementType>;
 
+type IconName = keyof typeof ICON_COMPONENTS;
+
 const ICON_ALIASES: Record<string, string> = {
     image: 'ImageIcon',
     imageicon: 'ImageIcon',
@@ -214,27 +216,31 @@ function normalizeIconLookupKey(iconName: string): string {
     return iconName.replace(/[\s_-]/g, '').toLowerCase();
 }
 
-export function resolveIconName(iconName?: string, fallback: string = FALLBACK_ICON_NAME): string {
+function isIconName(iconName: string): iconName is IconName {
+    return iconName in ICON_MAP;
+}
+
+export function resolveIconName(iconName?: string, fallback: string = FALLBACK_ICON_NAME): IconName {
     if (!iconName || iconName === 'none') {
-        return ICON_MAP[fallback] ? fallback : FALLBACK_ICON_NAME;
+        return isIconName(fallback) ? fallback : FALLBACK_ICON_NAME;
     }
 
-    if (ICON_MAP[iconName]) {
+    if (isIconName(iconName)) {
         return iconName;
     }
 
     const normalizedKey = normalizeIconLookupKey(iconName);
     const aliasedName = ICON_ALIASES[normalizedKey];
-    if (aliasedName && ICON_MAP[aliasedName]) {
+    if (aliasedName && isIconName(aliasedName)) {
         return aliasedName;
     }
 
     const matchedKey = ICON_NAMES.find((key) => normalizeIconLookupKey(key) === normalizedKey);
-    if (matchedKey) {
+    if (matchedKey && isIconName(matchedKey)) {
         return matchedKey;
     }
 
-    return ICON_MAP[fallback] ? fallback : FALLBACK_ICON_NAME;
+    return isIconName(fallback) ? fallback : FALLBACK_ICON_NAME;
 }
 
 type NamedIconProps = LucideProps & {

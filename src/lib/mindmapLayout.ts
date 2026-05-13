@@ -14,7 +14,7 @@ const REPARENT_IMPROVEMENT_THRESHOLD = 56;
 const ROOT_REBRANCH_THRESHOLD = 140;
 
 function isMindmapNode(node: FlowNode | undefined): node is FlowNode {
-  return Boolean(node) && node.type === 'mindmap';
+  return node !== undefined && node.type === 'mindmap';
 }
 
 function getConnectedMindmapComponent(

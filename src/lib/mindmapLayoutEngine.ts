@@ -70,7 +70,8 @@ export function assignRootChildSides(
   });
 
   sortedChildIds.forEach((childId) => {
-    const preferredSide = getNodeSide(nodesById.get(childId));
+    const childNode = nodesById.get(childId);
+    const preferredSide = childNode ? getNodeSide(childNode) : null;
     const childSpan = getNodeSpan(childId, childrenById);
     const assignedSide = preferredSide ?? (leftSpan <= rightSpan ? 'left' : 'right');
     assignments.set(childId, assignedSide);

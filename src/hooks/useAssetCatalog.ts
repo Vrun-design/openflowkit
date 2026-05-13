@@ -24,6 +24,7 @@ export function useAssetCatalog({
     }
 
     let cancelled = false;
+    // Loading starts in response to provider changes; delaying this update would leave stale catalog state visible.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     loadCatalog(provider as DomainLibraryCategory)

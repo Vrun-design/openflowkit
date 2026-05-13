@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noEmit": true
+  },
+  "include": [
+    "src/lib/**/*.ts",
+    "src/lib/**/*.tsx",
+    "src/services/mermaid/**/*.ts",
+    "src/services/storage/**/*.ts",
+    "src/services/collaboration/**/*.ts",
+    "src/store/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx"
+  ]
+}

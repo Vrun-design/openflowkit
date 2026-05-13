@@ -17,8 +17,8 @@ interface NodeContentSectionProps {
     isWireframeMisc: boolean;
     onBold: () => void;
     onItalic: () => void;
-    labelInputRef: React.RefObject<HTMLTextAreaElement>;
-    descInputRef: React.RefObject<HTMLTextAreaElement>;
+    labelInputRef: React.RefObject<HTMLTextAreaElement | null>;
+    descInputRef: React.RefObject<HTMLTextAreaElement | null>;
     onLabelFocus: () => void;
     onLabelBlur: () => void;
     onDescFocus: () => void;

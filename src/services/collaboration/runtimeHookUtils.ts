@@ -102,6 +102,7 @@ export function syncCollaborationCanvasSnapshot({
         previousCollaborationCanvasRef.current = currentSnapshot;
         return;
     }
+    const activeController = controller;
 
     if (applyingRemoteCollaborationStateRef.current) {
         applyingRemoteCollaborationStateRef.current = false;
@@ -124,7 +125,7 @@ export function syncCollaborationCanvasSnapshot({
 
         const operations = computeCollaborationOperationsFromCanvasChange(beforeSnapshot, nextSnapshot);
         for (const operation of operations) {
-            controller.submitLocalOperation(operation);
+            activeController.submitLocalOperation(operation);
         }
         previousCollaborationCanvasRef.current = nextSnapshot;
     }

@@ -77,6 +77,16 @@ function getProviderLabel(provider: DomainLibraryCategory): string {
     return getAssetCategoryDisplayName(provider);
 }
 
+function getProviderFromSelection(
+    selectedProvider: DomainLibraryCategory | undefined,
+    selectedProviderPackId: string | undefined,
+    fallbackProvider: DomainLibraryCategory
+): DomainLibraryCategory {
+    return selectedProvider
+        ?? inferAssetProviderFromPackId(selectedProviderPackId)
+        ?? fallbackProvider;
+}
+
 export const IconPicker: React.FC<IconPickerProps> = ({
     selectedIcon,
     customIconUrl,
@@ -89,30 +99,19 @@ export const IconPicker: React.FC<IconPickerProps> = ({
     onCustomIconChange,
 }) => {
     const [iconSearch, setIconSearch] = useState('');
-    const [iconSource, setIconSource] = useState<IconSource>(
-        getInitialSource(selectedProviderPackId, selectedProviderShapeId, customIconUrl)
-    );
-    const [provider, setProvider] = useState<DomainLibraryCategory>(
-        selectedProvider
-        ?? inferAssetProviderFromPackId(selectedProviderPackId)
-        ?? (PROVIDER_OPTIONS[0]?.value as DomainLibraryCategory)
-        ?? 'aws'
-    );
+    const initialIconSource = getInitialSource(selectedProviderPackId, selectedProviderShapeId, customIconUrl);
+    const iconSourceSignature = `${selectedProviderPackId ?? ''}:${selectedProviderShapeId ?? ''}:${customIconUrl ?? ''}`;
+    const [iconSourceChoice, setIconSourceChoice] = useState<{ signature: string; value: IconSource }>({
+        signature: iconSourceSignature,
+        value: initialIconSource,
+    });
+    const iconSource = iconSourceChoice.signature === iconSourceSignature
+        ? iconSourceChoice.value
+        : initialIconSource;
 
-    useEffect(() => {
-        setIconSource(getInitialSource(selectedProviderPackId, selectedProviderShapeId, customIconUrl));
-    }, [selectedProviderPackId, selectedProviderShapeId, customIconUrl]);
-
-    useEffect(() => {
-        if (selectedProvider) {
-            setProvider(selectedProvider);
-            return;
-        }
-        const inferredProvider = inferAssetProviderFromPackId(selectedProviderPackId);
-        if (inferredProvider) {
-            setProvider(inferredProvider);
-        }
-    }, [selectedProvider, selectedProviderPackId]);
+    const fallbackProvider = (PROVIDER_OPTIONS[0]?.value as DomainLibraryCategory | undefined) ?? 'aws';
+    const [manualProvider, setManualProvider] = useState<DomainLibraryCategory>(fallbackProvider);
+    const provider = getProviderFromSelection(selectedProvider, selectedProviderPackId, manualProvider);
 
     const filteredIcons = useMemo(() => {
         const term = iconSearch.toLowerCase();
@@ -197,7 +196,12 @@ export const IconPicker: React.FC<IconPickerProps> = ({
                 columns={3}
                 size="sm"
                 selectedId={iconSource}
-                onSelect={(value) => setIconSource(value as IconSource)}
+                onSelect={(value) => {
+                    setIconSourceChoice({
+                        signature: iconSourceSignature,
+                        value: value as IconSource,
+                    });
+                }}
                 items={ICON_SOURCE_OPTIONS.map((option) => ({ id: option.id, label: option.label }))}
             />
 
@@ -255,7 +259,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
                 <div className="space-y-3">
                     <Select
                         value={provider}
-                        onChange={(value) => setProvider(value as DomainLibraryCategory)}
+                        onChange={(value) => setManualProvider(value as DomainLibraryCategory)}
                         options={PROVIDER_OPTIONS}
                         placeholder="Choose provider"
                     />

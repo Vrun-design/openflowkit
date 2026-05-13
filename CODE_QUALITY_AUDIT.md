@@ -1,395 +1,391 @@
-# Code Quality & Maintainability Audit
+# OpenFlowKit Code Quality Audit
 
-**Date:** April 12, 2026  
-**Project:** OpenFlowKit  
-**Tech Stack:** React 19, TypeScript 5, Zustand 5, React Flow 12, Mermaid 11, Tailwind CSS 4, Vite 6
-
----
+**Date:** April 23, 2026
+**Scope:** Main React/Vite app, Astro marketing/docs workspaces, signaling server, scripts, tests, and repo hygiene.
+**Reviewer stance:** Senior/100x-dev maintainability review: architecture, code health, quality gates, operational risk, and a practical remediation plan.
 
 ## Executive Summary
 
-| Category       | Status                                 |
-| -------------- | -------------------------------------- |
-| Linting        | ✅ Passing (0 errors, 0 warnings)      |
-| TypeScript     | ✅ Passing (0 errors)                  |
-| Tests          | ✅ 1383 tests passing across 284 files |
-| Code Structure | ⚠️ Partial improvement                 |
-| Error Handling | ✅ Improved (debug logging added)      |
-| Tech Debt      | ✅ Reduced                             |
+The codebase is in **generally good and actively maintained shape**. It has meaningful architectural boundaries, a broad test suite, passing lint/type checks, and clear domain separation around the editor, store, diagram plugins, storage, collaboration, Mermaid import/export, and rendering services.
 
----
+The biggest risks are not "bad code" problems. They are **scale-management problems**:
 
-## Completed Fixes (April 13, 2026)
+- Several integration modules are large enough to slow future changes.
+- TypeScript is not running in strict mode, so some classes of bugs can still hide.
+- The repo is now aligned on pnpm workspace metadata and a generated `pnpm-lock.yaml`; the legacy npm lockfile has been removed from the working tree.
+- Build artifacts are ignored, and `tsconfig.tsbuildinfo` has been removed from version control in the current cleanup.
+- Workspace quality gates now exist for the app, marketing site, and docs site; GitHub Actions should run the full `quality` gate.
+- Local-first storage, AI provider calls, collaboration, and import fidelity are sophisticated but need stronger boundary docs and regression gates as the system grows.
 
-### ✅ 1. Duplicate Tab Logic Extracted
+Current verdict: **healthy foundation, medium maintainability risk if growth continues without guardrails.**
 
-- **File:** `src/store/actions/createTabActions.ts`
-- **Change:** Extracted shared `duplicateTabById` helper function
-- **Result:** Reduced duplication from ~45 lines to ~18 lines, improved maintainability
+## Verified Health Checks
 
-### ✅ 2. Layout Cache TTL Added
+| Check | Result |
+| --- | --- |
+| `pnpm run lint` | Passed |
+| `pnpm exec tsc -b --pretty false` | Passed |
+| `pnpm run quality:app` | Passed: 284 test files / 1388 tests |
+| `pnpm run quality:web` | Passed |
+| `pnpm run quality:docs` | Passed, including Pagefind search index generation |
+| `pnpm run test:ci` | Passed |
+| Main source files | ~900 TypeScript/TSX files under `src/` |
+| Test files | 284 test files under `src/` |
+| Production LOC under `src/` | ~86k lines excluding test files |
+| Tracked generated files found | Legacy `package-lock.json` removed; `tsconfig.tsbuildinfo` removed from tracking |
+| Ignored build/dependency dirs present locally | `node_modules/`, `dist/`, `web/dist/`, `docs-site/dist/`, workspace `node_modules/` |
 
-- **File:** `src/services/elkLayout.ts`
-- **Change:** Added `CacheEntry` interface with timestamp, `LAYOUT_CACHE_TTL_MS` (60s), `getCachedLayout()` and `setCachedLayout()` helpers
-- **Result:** Cache now expires after 60 seconds, preventing stale layout data
+## What Is Working Well
 
-### ✅ 3. Error Logging Improved
+### 1. Architecture Has Real Boundaries
 
-- **File:** `src/lib/nodeEnricher.ts`
-- **Change:** Added debug-level logging to previously silent catch block
-- **Result:** Enrichment failures now logged for debugging without noisy console output
+The repo already has a useful shape:
 
----
+- `src/store/` contains Zustand state, actions, selectors, persistence, and document sync.
+- `src/services/` carries heavy domain logic outside React components.
+- `src/diagram-types/` isolates diagram-family plugins and registration.
+- `src/components/flow-editor/` separates editor shell, screen model, controller params, and UI-facing controllers.
+- `src/services/storage/` has a dedicated local-first persistence layer with IndexedDB/localStorage fallback behavior.
+- `src/services/collaboration/` is split into contracts, reducer, runtime controller, transport, session, presence, and tests.
 
-## Remaining Issues
+This is a strong base. The codebase is already past the "single app file and vibes" phase.
 
----
+### 2. Test Coverage Is Broad in the Risky Areas
 
-## 1. Code Structure Issues
+There are tests around:
 
-### 1.1 Large Monolithic Files (HIGH PRIORITY)
+- store behavior and persistence
+- diagram-family plugins
+- Mermaid import/export and compatibility
+- storage runtime and IndexedDB fallback paths
+- collaboration reducer/transport/session behavior
+- canvas interaction helpers
+- export services
+- route state and i18n coverage
 
-These files are too large and should be decomposed:
+That is exactly where regressions would be expensive.
 
-| File                                       | Lines | Issue                                             |
-| ------------------------------------------ | ----- | ------------------------------------------------- |
-| `src/services/elkLayout.ts`                | 837   | Single massive file handling ELK layout algorithm |
-| `src/theme.ts`                             | 795   | All theme colors and styles in one file           |
-| `src/components/ContextMenu.tsx`           | 443   | Large component with complex conditional logic    |
-| `src/services/composeDiagramForDisplay.ts` | 506   | Multiple diagram import scenarios in one file     |
+### 3. Lint and TypeScript Gates Are Currently Green
 
-#### Recommended Decomposition
+Both checked gates pass. This matters because the codebase is large enough that unbounded drift would become expensive quickly.
 
-**`src/theme.ts` (795 lines)** → Split into:
+### 4. Plugin-Oriented Diagram Architecture Is a Good Direction
 
-```
-src/theme/
-  index.ts          # Re-exports
-  colors.ts          # NODE_COLOR_PALETTE, color constants
-  typography.ts      # Font styles, text sizing
-  componentStyles.ts # Edge styles, container styles
-  spacing.ts         # Spacing constants
-  shadows.ts         # Shadow definitions
-```
+`src/diagram-types/core/registry.ts` is intentionally small and clear. Built-in diagram behavior lives in plugin files instead of being hardwired into the canvas everywhere. This is one of the best architectural choices in the repo.
 
-**`src/services/elkLayout.ts` (837 lines)** → Already has subdirectory:
+## Main Issues
 
-```
-src/services/elk-layout/
-  options.ts         ✅ (already exists)
-  boundaryFanout.ts ✅ (already exists)
-  determinism.ts    ✅ (already exists)
-  textSizing.ts     ✅ (already exists)
-  types.ts          ✅ (already exists)
-  algorithms.ts     # NEW: Core layout algorithms (extract from elkLayout.ts)
-  cache.ts          # NEW: Layout cache management
-  fallback.ts       # NEW: Fallback layout logic
-```
+## 1. TypeScript Is Too Permissive for This Codebase Size
 
-**`src/services/composeDiagramForDisplay.ts` (506 lines)** → Split into:
+**Severity:** High
+**Area:** `tsconfig.json`, lint policy
 
-```
-src/services/compose/
-  index.ts
-  diagramForDisplay.ts      # Main orchestration
-  mindmapCompose.ts         # Mindmap-specific logic
-  sequenceCompose.ts        # Sequence diagram logic
-  elkCompose.ts             # ELK layout integration
-```
+`tsconfig.json` does not enable `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, or similar hardening options. For a large local-first editor with persistence, import/export, AI providers, collaboration, and generated diagram data, this leaves avoidable runtime risk.
 
-### 1.2 Code Duplication (MEDIUM PRIORITY)
+Current `no-explicit-any` is only a warning. Today, explicit `any` is not showing up in production code from a targeted scan, which is good. The bigger risk is implicit optional/null/index access behavior.
 
-**`src/store/actions/createTabActions.ts`**
+Recommended direction:
 
-`duplicateActiveTab` (lines 110-131) and `duplicateTab` (lines 133-155) share ~70% similar logic:
+- Add `tsconfig.strict.json` first, without blocking regular development.
+- Run strict checks on high-value folders first: `src/lib`, `src/services/storage`, `src/services/collaboration`, `src/services/mermaid`, `src/store`.
+- Gradually make strictness the default after each folder is clean.
 
-- Both call `syncActiveTabContent(tabs)`
-- Both call `cloneTabContent(sourceTab)`
-- Both create new tab with `name: ${sourceTab.name} Copy`
-- Both call `set()` with same pattern
+Status update, April 23, 2026:
 
-**Recommended Fix:** Extract shared logic into a helper:
+- `tsconfig.strict.json` now enforces strict TypeScript for `src/services/storage`.
+- `tsconfig.strict.json` now also covers `src/services/collaboration`.
+- `tsconfig.strict.json` now also covers `src/store`.
+- `tsconfig.strict.json` now covers all Phase 1 target folders: `src/lib`, `src/services/mermaid`, `src/services/storage`, `src/services/collaboration`, and `src/store`.
+- `pnpm run typecheck:strict` is wired into `quality:app`.
+- Broader `noUncheckedIndexedAccess` migration is intentionally deferred because the first probe exposed many real cross-module unchecked-index issues that should be fixed in focused follow-up changes.
 
-```typescript
-function duplicateTabById(tabs: FlowTab[], sourceId: string, newId: string): FlowTab | null {
-  const syncedTabs = syncActiveTabContent(tabs);
-  const sourceTab = syncedTabs.find((tab) => tab.id === sourceId);
-  if (!sourceTab) return null;
+## 2. Large Integration Files Are Becoming Change Bottlenecks
 
-  const duplicated = cloneTabContent(sourceTab);
-  return {
-    ...duplicated,
-    id: newId,
-    name: `${sourceTab.name} Copy`,
-    updatedAt: nowIso(),
-  };
-}
-```
+**Severity:** High
+**Area:** services, hooks, components, theme
 
----
+Largest production files currently include:
 
-## 2. Error Handling Issues
+| File | Lines | Risk |
+| --- | ---: | --- |
+| `src/services/elkLayout.ts` | 862 | layout orchestration, caching, fallback, routing, and transformation concerns are too concentrated |
+| `src/services/mermaid/extractLayoutFromSvg.ts` | 841 | SVG extraction is complex and difficult to safely alter |
+| `src/hooks/ai-generation/codebaseAnalyzer.ts` | 839 | analyzer logic likely mixes traversal, summarization, scoring, and formatting |
+| `src/theme.ts` | 805 | theme tokens and component styling are hard to navigate as one file |
+| `src/services/mermaid/officialFlowchartImport.ts` | 753 | import logic is high-risk and should stay heavily tested |
+| `src/services/templateLibrary/starterTemplates.ts` | 703 | large static catalog increases review noise and conflict risk |
+| `src/hooks/useAIGeneration.ts` | 663 | AI orchestration is large for one hook |
+| `src/components/StudioAIPanelSections.tsx` | 648 | UI sections and behavior are likely coupled |
 
-### 2.1 Silent Catch Blocks (MEDIUM PRIORITY)
+This is not an emergency, but it is the most important maintainability pressure. These files should be decomposed around stable responsibilities, not split mechanically by line count.
 
-Found **68 instances** of empty catch blocks (`catch {}`) across the codebase. Many silently swallow errors without logging.
+Status update, April 23, 2026:
 
-**Critical Examples:**
+- `src/theme.ts` has been converted into the directory-backed public module `src/theme/index.ts`.
+- Node defaults and section palette data now live in focused theme submodules.
+- `src/services/elkLayout.ts` now delegates cache management, automatic algorithm selection, and recursive fallback layout to focused `src/services/elk-layout/*` modules.
+- `src/hooks/useAIGeneration.ts` now delegates preview diff/copy construction to `src/hooks/ai-generation/previewDiff.ts`.
+- `src/services/mermaid/extractLayoutFromSvg.ts` now delegates SVG path parsing and raw geometry normalization to `src/services/mermaid/svgPathGeometry.ts`.
+- Existing public imports remain stable across the Phase 2 splits.
 
-| File                                           | Line         | Issue                                     |
-| ---------------------------------------------- | ------------ | ----------------------------------------- |
-| `src/store/aiSettingsPersistence.ts`           | 63           | Returns `null` silently on unmask failure |
-| `src/store/aiSettingsPersistence.ts`           | 76-83        | Reports telemetry but still catches       |
-| `src/lib/nodeEnricher.ts`                      | 81           | Silent failure with no telemetry          |
-| `src/services/storage/localFirstRepository.ts` | 11 instances | Silent failures                           |
+## 3. Root Workspace and Package Manager Signals Conflict
 
-**Recommended Fix:** Add telemetry or logging to ALL catch blocks:
+**Severity:** Medium
+**Area:** dependency management
 
-```typescript
-// Bad
-} catch {
-  return null;
-}
+The repo has `pnpm-workspace.yaml`, workspace packages, and pnpm-style commands for web/docs builds, but `package-lock.json` is tracked. That implies npm and pnpm have both been used.
 
-// Good
-} catch (error) {
-  logger.warn('Failed to unmask secret', { error });
-  return null;
-}
-```
+Risk:
 
-### 2.2 Untyped Error Variables (LOW PRIORITY)
+- dependency resolution differs between developers/CI
+- lockfile reviews become noisy or misleading
+- workspace installs may not be reproducible
 
-Many catch blocks use `error` or `err` without proper typing. Should use `unknown` and narrow:
+Status update, April 26, 2026:
 
-```typescript
-// Current
-} catch (error) {
+- `pnpm-lock.yaml` has been generated with pnpm 10.14.0.
+- `package-lock.json` has been removed from the working tree.
+- CI has been updated to install with `pnpm install --frozen-lockfile`.
 
-// Recommended
-} catch (error: unknown) {
-  if (error instanceof Error) {
-    // handle
-  }
-}
-```
+Recommended direction:
 
----
+- Commit `pnpm-lock.yaml` with the package metadata and CI update.
+- Keep npm lockfiles out of future commits.
+- Keep CI and local quality commands using the same package manager.
 
-## 3. Type Safety
+## 4. Generated TypeScript Build Metadata Is Tracked
 
-### 3.1 ESLint Configuration (LOW PRIORITY)
+**Severity:** Medium
+**Area:** repo hygiene
 
-**File:** `.eslintrc.json` line 28
+`tsconfig.tsbuildinfo` is tracked. This file is machine-generated and should not be committed.
 
-```json
-"@typescript-eslint/no-explicit-any": "warn"
-```
+Recommended direction:
 
-`any` is currently allowed with just a warning. Consider changing to `"error"` to enforce stricter type safety.
+- Add `*.tsbuildinfo` to `.gitignore`.
+- Remove `tsconfig.tsbuildinfo` from version control.
 
-### 3.2 Store Types (ACCEPTABLE)
+## 5. Workspace Quality Gates Are Uneven
 
-**File:** `src/store/types.ts` (312 lines)
+**Severity:** Medium
+**Area:** `web/`, `docs-site/`, root scripts
 
-The FlowState interface is large but well-structured using `Pick<>` for slice types. This is acceptable Zustand pattern.
+Root lint explicitly ignores `web/**` and `docs-site/**`. Those workspaces have build scripts, but no lint/typecheck scripts in their own `package.json` files.
 
----
+Risk:
 
-## 4. Performance Concerns
+- marketing/docs app drift can bypass normal quality checks
+- React 18 in `web/` and React 19 in root may hide integration differences
+- Astro upgrades or TypeScript errors can be caught late
 
-### 4.1 Layout Cache Without TTL (MEDIUM PRIORITY)
+Recommended direction:
 
-**File:** `src/services/elkLayout.ts` lines 59-72
+- Add workspace-level `typecheck` scripts.
+- Add workspace-level lint scripts or a shared eslint flat config.
+- Add a root `quality` script that runs root lint, root typecheck, web build/typecheck, docs build/typecheck, and targeted tests.
 
-```typescript
-const layoutCache = new Map<string, { nodes: FlowNode[]; edges: FlowEdge[] }>();
-const LAYOUT_CACHE_MAX = 20;
-```
+## 6. Editor Orchestration Is Better, But Still a Hotspot
 
-Issues:
+**Severity:** Medium
+**Area:** `src/components/flow-editor/*`, `src/components/FlowEditorPanels.tsx`, `src/components/FlowCanvas.tsx`
 
-- Cache has max size but no TTL (time-to-live)
-- No invalidation when node data changes
-- Cache key based on node/edge IDs and options
+The architecture guide correctly identifies the editor composition path:
 
-**Recommended Fix:** Add cache invalidation or TTL:
+1. `FlowEditor.tsx`
+2. `useFlowEditorScreenModel.ts`
+3. `buildFlowEditorScreenControllerParams.ts`
+4. `useFlowEditorController.ts`
 
-```typescript
-interface CacheEntry {
-  data: { nodes: FlowNode[]; edges: FlowEdge[] };
-  timestamp: number;
-}
-const LAYOUT_CACHE_TTL_MS = 60_000; // 1 minute
-```
+This is a good boundary. The risk is that future work bypasses it and reintroduces cross-wired state, callbacks, and UI behavior.
 
-### 4.2 No Virtualization (MEDIUM PRIORITY)
+Recommended direction:
 
-The following lists are not virtualized and may cause performance issues with large datasets:
+- Add an explicit "editor boundary rules" section to `ARCHITECTURE.md`.
+- Add lightweight tests around controller param mapping.
+- Keep `FlowEditor.tsx` render-only.
+- Move any new editor side effects into hooks/services, not panels.
 
-- Tab lists (`src/components/` - likely in TabBar)
-- Layer lists (`src/store/slices/createCanvasEditorSlice.ts`)
-- Node selection lists
+## 7. Storage and Browser APIs Are Spread Across Multiple Layers
 
-### 4.3 Mermaid Render Singleton (LOW PRIORITY)
+**Severity:** Medium
+**Area:** storage, onboarding, analytics, GitHub token, theme, i18n, collaboration
 
-**File:** `src/services/mermaid/rendererFirstImport.ts` lines 67-80
+The core storage layer is thoughtfully designed, but browser storage access also appears in theme, onboarding, analytics, recent imports, GitHub token storage, i18n, and collaboration helpers.
 
-If render fails, the promise may be rejected and not retried without resetting the singleton.
+This is normal in a browser app, but at this size the project should define which data belongs in:
 
----
+- IndexedDB local-first repository
+- localStorage compatibility backup
+- localStorage user preference
+- sessionStorage transient secret/session state
+- in-memory runtime state
 
-## 5. Dependency Issues
+Recommended direction:
 
-### 5.1 Potentially Outdated Dependencies (LOW PRIORITY)
+- Add a short storage ownership document.
+- Prefer small wrappers for new browser storage usage.
+- Keep secrets and API keys out of general persisted app state.
 
-| Package                  | Current | Latest | Note                                |
-| ------------------------ | ------- | ------ | ----------------------------------- |
-| `@mermaid-js/layout-elk` | ^0.2.1  | 0.3.x  | May have compatibility improvements |
-| `elkjs`                  | ^0.11.0 | 0.11.x | Already on latest minor             |
-| `rehype-slug`            | ^6.0.0  | 6.x    | Using latest major                  |
+## 8. Hook Dependency Exceptions Should Be Reviewed
 
-### 5.2 Zod Override (LOW PRIORITY)
+**Severity:** Low/Medium
+**Area:** React hooks
 
-**File:** `package.json` line 119
+There are a few `eslint-disable-next-line react-hooks/exhaustive-deps` comments in production code:
 
-```json
-"overrides": {
-  "zod": "3"
-}
-```
+- `src/components/flow-editor/useFlowEditorController.ts`
+- `src/components/ContextMenu.tsx`
+- `src/hooks/useAssetCatalog.ts`
 
-Forces zod to v3, indicating a version conflict. Investigate which package requires zod v3 and if it's still necessary.
+These may be legitimate, but each one should carry a short reason or be converted to stable callbacks/refs.
 
----
+Recommended direction:
 
-## 6. Testing Coverage
+- Add a convention: every hook dependency disable needs a comment explaining the invariant.
+- Remove disables where stable refs or `useCallback` can express the intent.
 
-### 6.1 Coverage Summary
+Status update, April 26, 2026:
 
-- **Test Files:** 284 out of 616 source files (~46% file coverage)
-- **Tests:** 1383 tests, all passing
+- Existing production hook lint disables now carry short invariant comments.
 
-### 6.2 Missing Tests (LOW PRIORITY)
+## 9. AI Provider Client Is Functional but Too Centralized
 
-Services without tests found:
+**Severity:** Medium
+**Area:** `src/services/aiService.ts`, `src/services/geminiService.ts`
 
-- `src/services/domainLibrary.ts`
-- `src/services/githubFetcher.ts`
-- `src/services/gifEncoder.ts`
+`aiService.ts` handles provider selection, API key resolution, OpenAI-compatible requests, Anthropic requests, SSE parsing, image handling, and error conversion. It is currently manageable, but provider-specific behavior will keep growing.
 
-Hooks without tests found:
+Recommended direction:
 
-- `src/hooks/useFlowEditorCallbacks.ts` (7256 bytes)
+- Extract provider adapters: `openAiCompatibleClient`, `anthropicClient`, `geminiClient`.
+- Keep a small facade that selects the adapter.
+- Add contract tests for streaming, bad response, cancellation, and missing API key behavior.
 
----
+## Implementation Plan
 
-## 7. Architecture Observations
+### Phase 0: Repo Hygiene Baseline
 
-### 7.1 Good Patterns
+Goal: remove ambiguity and make future work safer.
 
-✅ **Slice Pattern:** Zustand store well-organized with factory functions  
-✅ **Selector Pattern:** `src/store/selectors.ts` provides typed slice access  
-✅ **Service Layer:** Domain logic properly separated in `src/services/`  
-✅ **Error Boundaries:** `src/components/ErrorBoundary.tsx` exists  
-✅ **Zod Schemas:** Runtime validation with `src/store/persistenceSchemas.ts`  
-✅ **TypeScript Discriminated Unions:** `src/lib/types.ts` uses well
+Tasks:
 
-### 7.2 Editor Composition (WATCH AREA)
+- Add `*.tsbuildinfo` to `.gitignore`.
+- Remove `tsconfig.tsbuildinfo` from git.
+- Standardize package management on pnpm.
+- Add `"packageManager": "pnpm@<approved-version>"`.
+- Remove `package-lock.json` once `pnpm-lock.yaml` is confirmed and committed.
+- Add a root `quality` script that runs lint, typecheck, and a representative test/build gate.
 
-The architecture doc (`ARCHITECTURE.md`) defines clear boundaries:
+Acceptance checks:
 
-1. `FlowEditor.tsx` - render shell only
-2. `useFlowEditorScreenModel.ts` - state gathering
-3. `buildFlowEditorScreenControllerParams.ts` - pure assembly
-4. `useFlowEditorController.ts` - adaptation
+- Fresh install works with pnpm.
+- `pnpm quality` passes locally and in CI.
+- No generated metadata files appear in `git status` after typecheck/build.
 
-**Risk:** This is the main integration hotspot. If future work bypasses these boundaries, maintainability will regress quickly.
+### Phase 1: TypeScript Hardening Without Blocking Velocity
 
----
+Goal: improve safety incrementally.
 
-## 8. Tech Debt Summary
+Tasks:
 
-| Priority   | Item                                                | Effort | Impact             | Status                            |
-| ---------- | --------------------------------------------------- | ------ | ------------------ | --------------------------------- |
-| ~~HIGH~~   | ~~Decompose `src/theme.ts`~~                        | Medium | Maintainability    | ⚠️ Skipped (circular import risk) |
-| ~~HIGH~~   | ~~Decompose `src/services/elkLayout.ts`~~           | Medium | Maintainability    | ✅ Cache TTL added                |
-| ~~MEDIUM~~ | ~~Add error logging to silent catch blocks~~        | Low    | Debugging          | ✅ Debug logging added            |
-| ~~MEDIUM~~ | ~~Fix duplicateActiveTab/duplicateTab duplication~~ | Low    | DRY                | ✅ Extracted helper               |
-| ~~MEDIUM~~ | ~~Add layout cache TTL~~                            | Low    | Performance        | ✅ 60s TTL added                  |
-| MEDIUM     | Add virtualization for long lists                   | High   | Performance        | ⏳ Pending                        |
-| LOW        | Change `no-explicit-any` to error                   | Low    | Type safety        | ⏳ Pending                        |
-| LOW        | Add tests for untested services                     | Medium | Coverage           | ⏳ Pending                        |
-| LOW        | Investigate zod override                            | Low    | Dependency clarity | ⏳ Pending                        |
+- Add `tsconfig.strict.json`.
+- Start with strict checks for `src/lib`, `src/services/storage`, `src/services/collaboration`, `src/store`.
+- Turn `@typescript-eslint/no-explicit-any` from warning to error once strict folders are clean.
+- Add `noUncheckedIndexedAccess` after the first strict folder migration.
 
----
+Acceptance checks:
 
-## 9. Recommended Fixing Plan
+- Strict check script passes for migrated folders.
+- No behavior changes.
+- Each folder migration lands with targeted tests.
 
-### ✅ Phase 1: Completed (April 13, 2026)
+### Phase 2: Split the Highest-Risk Large Files
 
-1. ✅ **Add logging to silent catch blocks**
-   - Added debug-level logger to `nodeEnricher.ts`
+Goal: reduce change cost in complex modules.
 
-2. ✅ **Extract duplicate tab logic**
-   - Extracted `duplicateTabById` helper in `createTabActions.ts`
+Recommended order:
 
-3. ✅ **Add cache TTL to elkLayout**
-   - Added `CacheEntry` interface with timestamp
-   - Added `LAYOUT_CACHE_TTL_MS = 60000`
-   - Cache now expires after 60 seconds
+1. `src/theme.ts`
+   - Split into `src/theme/colors.ts`, `src/theme/typography.ts`, `src/theme/componentStyles.ts`, `src/theme/index.ts`.
+   - Lowest behavioral risk, high navigation benefit.
 
-### Phase 2: Medium Refactors (Future)
+2. `src/services/elkLayout.ts`
+   - Extract cache management, graph normalization, fallback layout, and edge rerouting.
+   - Keep public exports stable.
 
-4. **Decompose `src/theme.ts`** - Deferred due to circular import risk
-   - Would require updating 100+ import references
-   - Consider a gradual migration path
+3. `src/hooks/useAIGeneration.ts`
+   - Extract provider orchestration, prompt assembly, streaming state, and UI callbacks.
 
-5. **Decompose `src/services/elkLayout.ts`**
-   - Already has good subdirectory structure (`elk-layout/`)
-   - Main file still large but functions are tightly coupled
+4. `src/services/mermaid/extractLayoutFromSvg.ts`
+   - Extract geometry helpers, cluster extraction, node matching, and edge extraction.
+   - Preserve golden/corpus tests before changing internals.
 
-6. **Add virtualized lists**
-   - Add `react-virtual` or similar for TabBar
-   - Add for LayerPanel if large
+Acceptance checks:
 
-### Phase 3: Long-term
+- Existing tests pass after each extraction.
+- Public imports remain stable or are migrated in one scoped change.
+- No large behavior refactor is mixed into mechanical extraction.
 
-7. **Add missing tests**
-   - `domainLibrary.ts`, `githubFetcher.ts`, `gifEncoder.ts`
-   - `useFlowEditorCallbacks.ts`
+Status update, April 23, 2026:
 
-8. **Investigate zod override**
-   - Find root cause of version conflict
-   - Remove override if possible
+- Phase 2 decomposition is complete for the first-pass hotspots: theme data, ELK cache/algorithm/fallback layout, AI preview diffing, and Mermaid SVG geometry.
+- `pnpm run quality:app` passed after the full Phase 2 pass: lint, default typecheck, strict typecheck, and 284 test files / 1388 tests.
+- Remaining large files are better treated as Phase 4+ behavior-boundary work because deeper splits require more domain-specific regression design.
 
-9. **ESLint strictness**
-   - Change `no-explicit-any` to `"error"` after fixing any existing issues
+### Phase 3: Workspace Quality Gates
 
----
+Goal: make all runtime surfaces first-class.
 
-## 10. Files Requiring Immediate Attention
+Tasks:
 
-| File                             | Lines | Primary Issue                      | Status     |
-| -------------------------------- | ----- | ---------------------------------- | ---------- |
-| `src/services/elkLayout.ts`      | 866\* | Size, cache without TTL            | ✅ Fixed   |
-| `src/theme.ts`                   | 795   | Size, should be modular            | ⚠️ Skipped |
-| `src/components/ContextMenu.tsx` | 443   | Size, could benefit from splitting | ⏳ Pending |
+- Add `typecheck` to `web/package.json` and `docs-site/package.json`.
+- Add lint coverage for Astro/TS/TSX files in both workspaces.
+- Add root scripts:
+  - `quality:app`
+  - `quality:web`
+  - `quality:docs`
+  - `quality`
+- Consider CI matrix jobs for app, web, docs, and e2e.
 
-\*Line count increased due to cache TTL additions
-| `src/services/composeDiagramForDisplay.ts` | 506 | Size, multiple responsibilities |
-| `src/store/aiSettingsPersistence.ts` | 230 | Silent catch blocks |
-| `src/store/actions/createTabActions.ts` | 364 | Duplicate logic |
-| `src/services/storage/localFirstRepository.ts` | ~500 | 11 silent catch blocks |
+Acceptance checks:
 
----
+- Root quality command covers all workspaces.
+- Web/docs failures cannot silently bypass CI.
 
-## Appendix: Test Results
+### Phase 4: Boundary Docs and Regression Tests
 
-```
-Test Files  284 passed (284)
-Tests       1383 passed (1383)
-Duration    137.83s
-```
+Goal: protect architectural gains.
 
-All tests passing. No regressions detected.
+Tasks:
+
+- Update `ARCHITECTURE.md` with explicit rules for:
+  - editor controller boundaries
+  - storage ownership
+  - diagram plugin extension pattern
+  - service-vs-hook-vs-component responsibilities
+- Add small tests for editor controller param mapping and AI provider facade behavior.
+- Add a storage ownership table documenting every persisted key family.
+
+Acceptance checks:
+
+- New contributors can find where to add editor, storage, AI, and diagram behavior.
+- New storage keys have an owner, lifetime, and migration policy.
+
+## Priority Backlog
+
+| Priority | Work | Why |
+| --- | --- | --- |
+| P0 | Remove tracked generated files and package-manager ambiguity | Prevents install/build drift |
+| P1 | Add strict TypeScript sidecar config | Finds hidden correctness issues without freezing development |
+| P1 | Split `src/theme.ts` | Low-risk maintainability win |
+| P1 | Add workspace quality scripts | Makes web/docs quality visible |
+| P2 | Decompose `elkLayout.ts` | Reduces risk in core layout behavior |
+| P2 | Decompose `useAIGeneration.ts` and `aiService.ts` | AI provider growth will otherwise get harder |
+| P2 | Document storage ownership | Prevents persistence/security regressions |
+| P3 | Review hook dependency disables | Small but useful correctness cleanup |
+
+## Final Assessment
+
+OpenFlowKit is not a messy codebase. It is a serious product codebase that has reached the stage where **architecture needs active gardening**. The next quality jump should focus on stricter typing, cleaner workspace gates, package-manager discipline, and carefully extracting large integration modules.
+
+Best next move: start with Phase 0 and Phase 1. They are small, high-leverage, and will make every later refactor safer.

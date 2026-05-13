@@ -26,8 +26,8 @@ type AwarenessChangeListener = (event: AwarenessChangeEvent) => void;
 interface RealtimeProviderLike {
   awareness: AwarenessLike;
   destroy: () => void;
-  on?: (event: string, listener: (event: unknown) => void) => void;
-  off?: (event: string, listener: (event: unknown) => void) => void;
+  on?: (event: 'status' | 'synced' | 'peers', listener: (event: unknown) => void) => void;
+  off?: (event: 'status' | 'synced' | 'peers', listener: (event: unknown) => void) => void;
   connected?: boolean;
   synced?: boolean;
 }
@@ -202,7 +202,6 @@ export function createYjsPeerCollaborationTransport(
     }
     if (provider && syncedListener) {
       provider.off?.('synced', syncedListener);
-      provider.off?.('sync', syncedListener);
     }
     if (provider && peersListener) {
       provider.off?.('peers', peersListener);
@@ -318,7 +317,6 @@ export function createYjsPeerCollaborationTransport(
       };
       provider.on?.('status', statusListener);
       provider.on?.('synced', syncedListener);
-      provider.on?.('sync', syncedListener);
       provider.on?.('peers', peersListener);
       // Seed status from provider state in case events fired before listeners were attached.
       if (typeof provider.connected === 'boolean') {

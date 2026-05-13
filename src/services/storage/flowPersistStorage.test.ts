@@ -54,6 +54,18 @@ describe('flowPersistStorage', () => {
     expect(ensureFlowPersistenceSchema).not.toHaveBeenCalled();
   });
 
+  it('falls back to in-memory storage when browser storage is unavailable', async () => {
+    delete (globalThis as { indexedDB?: IDBFactory }).indexedDB;
+    delete (globalThis as { localStorage?: Storage }).localStorage;
+
+    const storage = createFlowPersistStorage();
+    const value = { state: { activeTabId: 'tab-memory' } as never, version: 1 };
+
+    await storage.setItem('openflowkit-storage', value);
+
+    expect(await storage.getItem('openflowkit-storage')).toEqual(value);
+  });
+
   it('debounces rapid writes before hitting the underlying storage', async () => {
     delete (globalThis as { indexedDB?: IDBFactory }).indexedDB;
     const setItem = vi.fn();

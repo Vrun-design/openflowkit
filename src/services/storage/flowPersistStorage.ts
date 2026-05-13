@@ -9,6 +9,20 @@ import {
 
 const PERSIST_WRITE_DEBOUNCE_MS = 250;
 
+function createMemoryStateStorage(): StateStorage {
+  const values = new Map<string, string>();
+
+  return {
+    getItem: (storageKey) => values.get(storageKey) ?? null,
+    setItem: (storageKey, value) => {
+      values.set(storageKey, value);
+    },
+    removeItem: (storageKey) => {
+      values.delete(storageKey);
+    },
+  };
+}
+
 function createDebouncedStateStorage(storage: StateStorage, debounceMs = PERSIST_WRITE_DEBOUNCE_MS): StateStorage {
   const pendingValues = new Map<string, string>();
   const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -127,11 +141,24 @@ function resolveStateStorage(): StateStorage {
   });
 }
 
+function createRequiredJsonStorage(
+  getStorage: () => StateStorage
+): PersistStorage<PersistedFlowStateSlice> {
+  const storage = createJSONStorage<PersistedFlowStateSlice>(getStorage);
+  if (!storage) {
+    throw new Error('Unable to create OpenFlowKit persistence storage.');
+  }
+  return storage;
+}
+
 export function initializeIndexedDbSchemaScaffold(): void {
   void ensureStorageSchemaReady();
 }
 
 export function createFlowPersistStorage(): PersistStorage<PersistedFlowStateSlice> {
   initializeIndexedDbSchemaScaffold();
-  return createJSONStorage<PersistedFlowStateSlice>(() => createDebouncedStateStorage(resolveStateStorage()));
+  return (
+    createJSONStorage<PersistedFlowStateSlice>(() => createDebouncedStateStorage(resolveStateStorage())) ??
+    createRequiredJsonStorage(() => createMemoryStateStorage())
+  );
 }

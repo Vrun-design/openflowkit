@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev --port 4320",
+    "typecheck": "astro sync && tsc --noEmit --project tsconfig.json",
     "build": "astro build",
     "preview": "astro preview"
   },

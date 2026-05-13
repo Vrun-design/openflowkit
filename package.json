@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.1",
   "type": "module",
+  "packageManager": "pnpm@10.14.0",
   "workspaces": [
     "web",
     "docs-site"
@@ -14,21 +15,27 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/generate-sitemap.js && tsc -b && vite build",
-    "build:analyze": "npm run build && node scripts/analyze-bundle.mjs",
+    "build:analyze": "pnpm run build && node scripts/analyze-bundle.mjs",
     "bundle:check": "node scripts/check-bundle-budget.mjs",
-    "build:ci": "npm run build && npm run bundle:check",
-    "test:ci": "npm run test -- --run && npm run build:ci",
-    "test:s0": "npx tsc -b --pretty false && npm run test -- --run src/store.test.ts src/hooks/useFlowHistory.test.ts src/components/flow-canvas/flowCanvasTypes.test.ts src/services/mermaid/parseMermaidByType.test.ts src/services/exportService.test.ts src/components/flow-canvas/largeGraphSafetyMode.test.ts",
-    "test:mermaid:gold": "npm run test:mermaid && npm run test:mermaid:layout",
-    "test:mermaid": "npx tsc -b --pretty false && npm run test -- --run src/services/mermaid/*.test.ts src/diagram-types/*/*.test.ts src/services/*RoundTrip.test.ts",
-    "test:mermaid:layout": "npx tsc -b --pretty false && npm run test -- --run src/services/mermaid/mermaidLayoutCorpus.test.ts src/services/mermaid/compatFixtureCorpus.test.ts src/services/mermaid/editablePartialCorpus.test.ts",
-    "test:s10-state": "npx tsc -b --pretty false && npm run test -- --run src/diagram-types/stateDiagram/plugin.test.ts src/services/stateDiagramRoundTrip.test.ts src/services/exportService.test.ts src/services/mermaid/parseMermaidByType.test.ts src/services/mermaid/detectDiagramType.test.ts",
-    "test:s10-canvas": "npx tsc -b --pretty false && npm run test -- --run src/components/flow-canvas/pasteHelpers.test.ts src/components/flow-canvas/flowCanvasTypes.test.ts src/components/flow-canvas/largeGraphSafetyMode.test.ts src/hooks/edgeConnectInteractions.test.ts src/components/DesignSystem.integration.test.tsx src/components/HomePage.integration.test.tsx src/store.test.ts",
-    "test:s4-handle-safety": "npx tsc -b --pretty false && npm run test -- --run src/components/handleInteraction.test.ts src/components/handleInteractionUsage.test.ts src/components/CustomNode.handleInteraction.test.tsx src/components/custom-nodes/ArchitectureNode.handleInteraction.test.tsx src/components/custom-nodes/ClassEntityNode.handleInteraction.test.tsx src/components/lightweight-nodes.handleInteraction.test.tsx src/components/custom-nodes/VisualNodes.handleInteraction.test.tsx src/components/container-nodes.handleInteraction.test.tsx src/components/flow-canvas/flowCanvasTypes.test.ts src/components/DesignSystem.integration.test.tsx src/components/HomePage.integration.test.tsx",
+    "build:ci": "pnpm run build && pnpm run bundle:check",
+    "typecheck": "tsc -b --pretty false",
+    "typecheck:strict": "tsc --project tsconfig.strict.json --pretty false",
+    "quality:app": "pnpm run lint && pnpm run typecheck && pnpm run typecheck:strict && pnpm run test -- --run",
+    "quality:web": "pnpm --filter openflowkit-web typecheck && pnpm --filter openflowkit-web build",
+    "quality:docs": "pnpm --filter openflowkit-docs typecheck && pnpm --filter openflowkit-docs build",
+    "quality": "pnpm run quality:app && pnpm run quality:web && pnpm run quality:docs",
+    "test:ci": "pnpm run test -- --run && pnpm run build:ci",
+    "test:s0": "pnpm exec tsc -b --pretty false && pnpm run test -- --run src/store.test.ts src/hooks/useFlowHistory.test.ts src/components/flow-canvas/flowCanvasTypes.test.ts src/services/mermaid/parseMermaidByType.test.ts src/services/exportService.test.ts src/components/flow-canvas/largeGraphSafetyMode.test.ts",
+    "test:mermaid:gold": "pnpm run test:mermaid && pnpm run test:mermaid:layout",
+    "test:mermaid": "pnpm exec tsc -b --pretty false && pnpm run test -- --run src/services/mermaid/*.test.ts src/diagram-types/*/*.test.ts src/services/*RoundTrip.test.ts",
+    "test:mermaid:layout": "pnpm exec tsc -b --pretty false && pnpm run test -- --run src/services/mermaid/mermaidLayoutCorpus.test.ts src/services/mermaid/compatFixtureCorpus.test.ts src/services/mermaid/editablePartialCorpus.test.ts",
+    "test:s10-state": "pnpm exec tsc -b --pretty false && pnpm run test -- --run src/diagram-types/stateDiagram/plugin.test.ts src/services/stateDiagramRoundTrip.test.ts src/services/exportService.test.ts src/services/mermaid/parseMermaidByType.test.ts src/services/mermaid/detectDiagramType.test.ts",
+    "test:s10-canvas": "pnpm exec tsc -b --pretty false && pnpm run test -- --run src/components/flow-canvas/pasteHelpers.test.ts src/components/flow-canvas/flowCanvasTypes.test.ts src/components/flow-canvas/largeGraphSafetyMode.test.ts src/hooks/edgeConnectInteractions.test.ts src/components/DesignSystem.integration.test.tsx src/components/HomePage.integration.test.tsx src/store.test.ts",
+    "test:s4-handle-safety": "pnpm exec tsc -b --pretty false && pnpm run test -- --run src/components/handleInteraction.test.ts src/components/handleInteractionUsage.test.ts src/components/CustomNode.handleInteraction.test.tsx src/components/custom-nodes/ArchitectureNode.handleInteraction.test.tsx src/components/custom-nodes/ClassEntityNode.handleInteraction.test.tsx src/components/lightweight-nodes.handleInteraction.test.tsx src/components/custom-nodes/VisualNodes.handleInteraction.test.tsx src/components/container-nodes.handleInteraction.test.tsx src/components/flow-canvas/flowCanvasTypes.test.ts src/components/DesignSystem.integration.test.tsx src/components/HomePage.integration.test.tsx",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
     "e2e:ci": "CI=1 playwright test --project=chromium",
-    "predeploy": "npm run build",
+    "predeploy": "pnpm run build",
     "deploy": "gh-pages -d dist",
     "preview": "vite preview",
     "test": "vitest",
@@ -117,5 +124,13 @@
   },
   "overrides": {
     "zod": "3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "core-js",
+      "esbuild",
+      "protobufjs",
+      "sharp"
+    ]
   }
 }

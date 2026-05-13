@@ -23,7 +23,7 @@ import type { AssistantThreadItem, AssetGroundingMatch } from '@/services/flowpi
 import { useFlowStore } from '@/store';
 import { useToast } from '@/components/ui/ToastContext';
 import { toErrorMessage } from './ai-generation/graphComposer';
-import { generateAIFlowResult, type GenerateAIFlowResult } from './ai-generation/requestLifecycle';
+import { generateAIFlowResult } from './ai-generation/requestLifecycle';
 import { parseStreamingDsl } from './ai-generation/streamingParser';
 import { setStreamingGraph, setStreamingActive } from './ai-generation/streamingStore';
 import {
@@ -33,6 +33,13 @@ import {
 } from './ai-generation/codeToArchitecture';
 import type { CodebaseAnalysis } from './ai-generation/codebaseAnalyzer';
 import { buildCodebaseNativeDiagram } from './ai-generation/codebaseToNativeDiagram';
+import {
+  buildCodebasePreviewDescriptor,
+  computeImportDiff,
+  type ImportDiff,
+  type PreviewDescriptor,
+  type PreviewRequestKind,
+} from './ai-generation/previewDiff';
 import { buildSqlToErdPrompt } from './ai-generation/sqlToErd';
 import {
   buildTerraformToCloudPrompt,
@@ -50,110 +57,7 @@ import { notifyOperationOutcome } from '@/services/operationFeedback';
 
 const logger = createLogger({ scope: 'useAIGeneration' });
 
-export interface ImportDiff {
-  addedCount: number;
-  removedCount: number;
-  updatedCount: number;
-  previewTitle: string;
-  previewDetail?: string;
-  previewStats?: string[];
-  assetMatches?: AssetGroundingMatch[];
-  result: GenerateAIFlowResult;
-}
-
-type PreviewRequestKind =
-  | 'prompt'
-  | 'focused-edit'
-  | 'code-import'
-  | 'sql-import'
-  | 'terraform-import'
-  | 'openapi-import';
-
-interface PreviewDescriptor {
-  title: string;
-  detail?: string;
-  stats?: string[];
-}
-
-function buildPreviewCopy(
-  requestKind: PreviewRequestKind,
-  addedCount: number,
-  updatedCount: number,
-  previewDescriptor?: PreviewDescriptor
-): Pick<ImportDiff, 'previewTitle' | 'previewDetail' | 'previewStats'> {
-  if (previewDescriptor) {
-    return {
-      previewTitle: previewDescriptor.title,
-      previewDetail: previewDescriptor.detail,
-      previewStats: previewDescriptor.stats,
-    };
-  }
-
-  if (requestKind === 'code-import') {
-    return {
-      previewTitle: 'Codebase enhancement ready — review the upgraded diagram.',
-      previewDetail:
-        addedCount > 0 || updatedCount > 0
-          ? 'Started from the native repository map and layered in AI architecture improvements.'
-          : 'The native repository map is ready and no additional AI upgrades were needed.',
-      previewStats: undefined,
-    };
-  }
-
-  return {
-    previewTitle: 'Import ready — review changes before applying.',
-    previewStats: undefined,
-  };
-}
-
-function computeImportDiff(
-  currentNodes: FlowNode[],
-  result: GenerateAIFlowResult,
-  requestKind: PreviewRequestKind,
-  previewDescriptor?: PreviewDescriptor,
-  assetMatches?: AssetGroundingMatch[]
-): ImportDiff {
-  const currentIds = new Set(currentNodes.map((n) => n.id));
-  const newIds = new Set(result.layoutedNodes.map((n) => n.id));
-  const addedCount = result.layoutedNodes.filter((n) => !currentIds.has(n.id)).length;
-  const removedCount = currentNodes.filter((n) => !newIds.has(n.id)).length;
-  const updatedCount = result.layoutedNodes.filter((n) => currentIds.has(n.id)).length;
-
-  return {
-    addedCount,
-    removedCount,
-    updatedCount,
-    assetMatches,
-    ...buildPreviewCopy(requestKind, addedCount, updatedCount, previewDescriptor),
-    result,
-  };
-}
-
-function buildCodebasePreviewDescriptor(
-  analysis: CodebaseAnalysis,
-  nativeDiagram: ReturnType<typeof buildCodebaseNativeDiagram>
-): PreviewDescriptor {
-  const platformLabel =
-    analysis.cloudPlatform === 'unknown'
-      ? 'Platform: app-only'
-      : `Platform: ${analysis.cloudPlatform}`;
-  const serviceLabel =
-    nativeDiagram.platformServiceCount > 0
-      ? `${nativeDiagram.platformServiceCount} platform service${nativeDiagram.platformServiceCount === 1 ? '' : 's'}`
-      : `${analysis.detectedServices.length} detected service${analysis.detectedServices.length === 1 ? '' : 's'}`;
-
-  return {
-    title: 'Codebase enhancement ready — review the upgraded diagram.',
-    detail:
-      'Started from the native repository map, then layered in AI architecture upgrades for services, sections, and labeled flows.',
-    stats: [
-      platformLabel,
-      `${nativeDiagram.sectionCount} native section${nativeDiagram.sectionCount === 1 ? '' : 's'}`,
-      serviceLabel,
-      `${nativeDiagram.edgeCount} preview edge${nativeDiagram.edgeCount === 1 ? '' : 's'}`,
-    ],
-  };
-}
+export type { ImportDiff } from './ai-generation/previewDiff';
 
 function getSuccessSummary(existingNodeCount: number, focusedNodeIds?: string[]): string {
   if ((focusedNodeIds?.length ?? 0) > 0) {

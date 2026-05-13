@@ -138,10 +138,6 @@ export function ContextMenu({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
-  useEffect(() => {
-    setMenuPosition(position);
-  }, [position]);
-
   useLayoutEffect(() => {
     const menu = menuRef.current;
     if (!menu) {
@@ -158,6 +154,7 @@ export function ContextMenu({
     if (nextPosition.x !== menuPosition.x || nextPosition.y !== menuPosition.y) {
       setMenuPosition(nextPosition);
     }
+  // Position is recalculated from the rendered menu size; including menuPosition would create a self-triggering adjustment loop.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [menuPosition.x, menuPosition.y, position.x, position.y, type]);
 

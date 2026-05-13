@@ -3,8 +3,6 @@ import { NODE_HEIGHT, NODE_WIDTH } from '@/constants';
 import { getIconAssetNodeMinSize, resolveNodeSize } from '@/components/nodeHelpers';
 import {
   SECTION_CONTENT_PADDING_TOP,
-  SECTION_MIN_HEIGHT,
-  SECTION_MIN_WIDTH,
   SECTION_PADDING_BOTTOM,
   SECTION_PADDING_X,
 } from '@/hooks/node-operations/sectionBounds';
@@ -16,6 +14,16 @@ import { assignSmartHandlesWithOptions, handleSideFromVector } from './smartEdge
 import { normalizeLayoutInputsForDeterminism } from './elk-layout/determinism';
 import { normalizeElkEdgeBoundaryFanout, type NodeBounds } from './elk-layout/boundaryFanout';
 import {
+  resolveAutomaticLayoutAlgorithm,
+  shouldUseLightweightLayoutPostProcessing,
+} from './elk-layout/algorithm';
+import {
+  clearLayoutCache,
+  getCachedLayout,
+  getLayoutCacheKey,
+  setCachedLayout,
+} from './elk-layout/cache';
+import {
   buildResolvedLayoutConfiguration,
   getDeterministicSeedOptions,
   resolveLayoutPresetOptions,
@@ -23,6 +31,7 @@ import {
 import type { FlowNodeWithMeasuredDimensions, LayoutOptions } from './elk-layout/types';
 import { estimateWrappedTextBox, DEFAULT_MAX_WIDTH } from './elk-layout/textSizing';
 import { getNodeHandleIdForSide } from '@/lib/nodeHandles';
+import { applyRecursiveFallbackLayout } from './elk-layout/fallback';
 
 interface ElkLayoutEngine {
   layout: (graph: ElkNode) => Promise<ElkNode>;
@@ -33,8 +42,6 @@ interface ElkModuleLike {
 }
 
 let elkInstancePromise: Promise<ElkLayoutEngine> | null = null;
-const LARGE_DIAGRAM_NODE_THRESHOLD = 48;
-const LARGE_DIAGRAM_EDGE_THRESHOLD = 72;
 const logger = createLogger({ scope: 'elkLayout' });
 const FALLBACK_LAYER_ORDER = ['edge', 'frontend', 'api', 'services', 'data', 'external'] as const;
 
@@ -56,53 +63,9 @@ const ELK_COMPOUND_LAYOUT_OPTIONS = {
   'elk.algorithm': 'layered',
 } as const;
 
-interface CacheEntry {
-  nodes: FlowNode[];
-  edges: FlowEdge[];
-  timestamp: number;
-}
-
-const layoutCache = new Map<string, CacheEntry>();
-const LAYOUT_CACHE_MAX = 20;
-const LAYOUT_CACHE_TTL_MS = 60_000;
-
-function getLayoutCacheKey(nodes: FlowNode[], edges: FlowEdge[], options: LayoutOptions): string {
-  const nodeStr = nodes
-    .map((n) => n.id)
-    .sort()
-    .join(',');
-  const edgeStr = edges
-    .map((e) => `${e.source}>${e.target}`)
-    .sort()
-    .join(',');
-  return `${nodeStr}|${edgeStr}|${options.direction ?? 'TB'}:${options.algorithm ?? 'layered'}:${options.spacing ?? 'normal'}:${options.diagramType ?? ''}`;
-}
-
 /** Reset the cached ELK instance — useful in tests or when the instance may have become stale. */
 export function resetElkInstance(): void {
   elkInstancePromise = null;
-}
-
-export function clearLayoutCache(): void {
-  layoutCache.clear();
-}
-
-function getCachedLayout(cacheKey: string): { nodes: FlowNode[]; edges: FlowEdge[] } | null {
-  const entry = layoutCache.get(cacheKey);
-  if (!entry) return null;
-  if (Date.now() - entry.timestamp > LAYOUT_CACHE_TTL_MS) {
-    layoutCache.delete(cacheKey);
-    return null;
-  }
-  return { nodes: entry.nodes, edges: entry.edges };
-}
-
-function setCachedLayout(cacheKey: string, nodes: FlowNode[], edges: FlowEdge[]): void {
-  if (layoutCache.size >= LAYOUT_CACHE_MAX) {
-    const firstKey = layoutCache.keys().next().value;
-    if (firstKey !== undefined) layoutCache.delete(firstKey);
-  }
-  layoutCache.set(cacheKey, { nodes, edges, timestamp: Date.now() });
 }
 
 async function getElkInstance(): Promise<ElkLayoutEngine> {
@@ -374,118 +337,6 @@ function getNodeBoundsFromPositionMap(
   };
 }
 
-function getFallbackNodeSize(
-  node: FlowNode,
-  nodeMinWidth: number,
-  nodeMinHeight: number
-): { width: number; height: number } {
-  const measured = node as FlowNodeWithMeasuredDimensions;
-  if (measured.measured?.width && measured.measured?.height) {
-    return {
-      width: measured.measured.width,
-      height: measured.measured.height,
-    };
-  }
-
-  if (node.data?.assetPresentation === 'icon') {
-    const minSize = getIconAssetNodeMinSize(Boolean(node.data?.label?.trim()));
-    return { width: minSize.minWidth, height: minSize.minHeight };
-  }
-
-  return estimateNodeSize(node, nodeMinWidth, nodeMinHeight);
-}
-
-function getFallbackSpacing(options: LayoutOptions): { primary: number; secondary: number } {
-  const isImport = options.source === 'import';
-  const primaryBase = isImport ? 36 : 56;
-  const secondaryBase = isImport ? 52 : 84;
-
-  switch (options.contentDensity) {
-    case 'compact':
-      return { primary: primaryBase - 8, secondary: secondaryBase - 10 };
-    case 'verbose':
-      return { primary: primaryBase + 10, secondary: secondaryBase + 14 };
-    default:
-      return { primary: primaryBase, secondary: secondaryBase };
-  }
-}
-
-function applyRecursiveFallbackLayout(
-  nodes: FlowNode[],
-  options: LayoutOptions,
-  nodeMinWidth: number,
-  nodeMinHeight: number
-): FlowNode[] {
-  const { topLevelNodes, childrenByParent } = normalizeLayoutInputsForDeterminism(nodes, []);
-  const positionedNodes = new Map<string, FlowNode>();
-  const isHorizontal = options.direction === 'LR' || options.direction === 'RL';
-  const spacing = getFallbackSpacing(options);
-
-  function layoutNode(
-    node: FlowNode,
-    origin: { x: number; y: number }
-  ): { width: number; height: number } {
-    const directChildren = childrenByParent.get(node.id) ?? [];
-    const hasChildren = directChildren.length > 0;
-    const nextNode: FlowNode = {
-      ...node,
-      position: origin,
-    };
-
-    if (!hasChildren) {
-      positionedNodes.set(node.id, nextNode);
-      return getFallbackNodeSize(node, nodeMinWidth, nodeMinHeight);
-    }
-
-    let cursorX = SECTION_PADDING_X;
-    let cursorY = SECTION_CONTENT_PADDING_TOP;
-    let maxChildRight = cursorX;
-    let maxChildBottom = cursorY;
-
-    for (const child of directChildren) {
-      const childBounds = layoutNode(child, { x: cursorX, y: cursorY });
-      maxChildRight = Math.max(maxChildRight, cursorX + childBounds.width);
-      maxChildBottom = Math.max(maxChildBottom, cursorY + childBounds.height);
-
-      if (isHorizontal) {
-        cursorX += childBounds.width + spacing.primary;
-      } else {
-        cursorY += childBounds.height + spacing.primary;
-      }
-    }
-
-    const width = Math.max(maxChildRight + SECTION_PADDING_X, SECTION_MIN_WIDTH);
-    const height = Math.max(maxChildBottom + SECTION_PADDING_BOTTOM, SECTION_MIN_HEIGHT);
-
-    positionedNodes.set(node.id, {
-      ...nextNode,
-      style:
-        node.type === 'group' || node.type === 'section' || node.type === 'container'
-          ? {
-              ...node.style,
-              width,
-              height,
-            }
-          : node.style,
-    });
-
-    return { width, height };
-  }
-
-  let cursorX = 0;
-  let cursorY = 0;
-  for (const node of topLevelNodes) {
-    const laidOutSize = layoutNode(node, { x: cursorX, y: cursorY });
-    if (isHorizontal) {
-      cursorX += laidOutSize.width + spacing.secondary;
-    } else {
-      cursorY += laidOutSize.height + spacing.secondary;
-    }
-  }
-
-  return nodes.map((node) => positionedNodes.get(node.id) ?? node);
-}
-
 function inferHandleSideFromPoint(
   bounds: NodeBounds,
   point: { x: number; y: number },
@@ -562,10 +413,13 @@ function applyElkHandles(
 export type { LayoutAlgorithm, LayoutDirection, LayoutOptions } from './elk-layout/types';
 export {
   buildResolvedLayoutConfiguration,
+  clearLayoutCache,
   getDeterministicSeedOptions,
   normalizeLayoutInputsForDeterminism,
   normalizeElkEdgeBoundaryFanout,
+  resolveAutomaticLayoutAlgorithm,
   resolveLayoutPresetOptions,
+  shouldUseLightweightLayoutPostProcessing,
 };
 
 export function resolveLayoutedEdgeHandles(nodes: FlowNode[], edges: FlowEdge[]): FlowEdge[] {
@@ -590,109 +444,6 @@ function isSparseDiagram(nodeCount: number, edgeCount: number): boolean {
   if (nodeCount <= 20) return true;
   const avgDegree = nodeCount > 0 ? (edgeCount * 2) / nodeCount : 0;
   return avgDegree <= 2.5;
-}
-
-function detectCycles(nodes: FlowNode[], edges: FlowEdge[]): boolean {
-  const adjacency = new Map<string, string[]>();
-  const visiting = new Set<string>();
-  const visited = new Set<string>();
-
-  nodes.forEach((node) => adjacency.set(node.id, []));
-  edges.forEach((edge) => {
-    if (!adjacency.has(edge.source)) {
-      adjacency.set(edge.source, []);
-    }
-    adjacency.get(edge.source)?.push(edge.target);
-  });
-
-  function visit(nodeId: string): boolean {
-    if (visiting.has(nodeId)) {
-      return true;
-    }
-    if (visited.has(nodeId)) {
-      return false;
-    }
-
-    visiting.add(nodeId);
-    for (const nextId of adjacency.get(nodeId) ?? []) {
-      if (visit(nextId)) {
-        return true;
-      }
-    }
-    visiting.delete(nodeId);
-    visited.add(nodeId);
-    return false;
-  }
-
-  for (const nodeId of adjacency.keys()) {
-    if (visit(nodeId)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function getMaxBranchingFactor(edges: FlowEdge[]): number {
-  const counts = new Map<string, number>();
-  let max = 0;
-  for (const edge of edges) {
-    const count = (counts.get(edge.source) ?? 0) + 1;
-    counts.set(edge.source, count);
-    if (count > max) max = count;
-  }
-  return max;
-}
-
-export function resolveAutomaticLayoutAlgorithm(
-  nodes: FlowNode[],
-  edges: FlowEdge[],
-  options: LayoutOptions = {}
-): LayoutOptions['algorithm'] {
-  if (options.algorithm) {
-    return options.algorithm;
-  }
-
-  if (options.diagramType === 'architecture' || options.diagramType === 'infrastructure') {
-    return 'layered';
-  }
-
-  const nodeCount = nodes.length;
-  const edgeCount = edges.length;
-  if (nodeCount <= 1 || edgeCount === 0) {
-    return 'layered';
-  }
-
-  const density = edgeCount / Math.max(nodeCount * (nodeCount - 1), 1);
-  const hasCycles = detectCycles(nodes, edges);
-  const maxBranchingFactor = getMaxBranchingFactor(edges);
-
-  if (!hasCycles && maxBranchingFactor > 4 && edgeCount >= nodeCount - 1) {
-    return 'mrtree';
-  }
-
-  if (density > 0.15 || hasCycles) {
-    return nodeCount >= 24 ? 'stress' : 'force';
-  }
-
-  return 'layered';
-}
-
-export function shouldUseLightweightLayoutPostProcessing(
-  nodeCount: number,
-  edgeCount: number,
-  diagramType?: string
-): boolean {
-  if (nodeCount >= LARGE_DIAGRAM_NODE_THRESHOLD || edgeCount >= LARGE_DIAGRAM_EDGE_THRESHOLD) {
-    return true;
-  }
-
-  const isArchitectureDiagram = diagramType === 'architecture' || diagramType === 'infrastructure';
-  if (!isArchitectureDiagram) {
-    return false;
-  }
-
-  return nodeCount >= 40 || edgeCount >= 60;
 }
 
 export async function getElkLayout(
@@ -838,7 +589,13 @@ export async function getElkLayout(
     return { nodes: laidOutNodes, edges: laidOutEdges };
   } catch (err) {
     logger.error('ELK layout error.', { error: err });
-    const fallbackNodes = applyRecursiveFallbackLayout(nodes, options, nodeMinWidth, nodeMinHeight);
+    const fallbackNodes = applyRecursiveFallbackLayout(
+      nodes,
+      options,
+      nodeMinWidth,
+      nodeMinHeight,
+      estimateNodeSize
+    );
     return {
       nodes: fallbackNodes,
       edges: resolveLayoutedEdgeHandles(fallbackNodes, edges),

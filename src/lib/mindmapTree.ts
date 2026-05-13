@@ -1,7 +1,7 @@
 import type { FlowEdge, FlowNode } from '@/lib/types';
 
 function isMindmapNode(node: FlowNode | undefined): node is FlowNode {
-  return Boolean(node) && node.type === 'mindmap';
+  return node !== undefined && node.type === 'mindmap';
 }
 
 export function getMindmapChildrenById(nodes: FlowNode[], edges: FlowEdge[]): Map<string, string[]> {

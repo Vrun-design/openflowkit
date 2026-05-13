@@ -69,20 +69,20 @@ const BULK_CAPABILITY_RULES: CapabilityRule[] = [
     keys: ['shape'],
     supports: (node) =>
       !isIconAssetNode(node) &&
-      GENERIC_SHAPE_NODE_TYPES.has(node.type),
+      GENERIC_SHAPE_NODE_TYPES.has(getNodeType(node)),
   },
   {
     capability: 'color',
     keys: ['color'],
     supports: (node) =>
-      GENERIC_COLOR_NODE_TYPES.has(node.type) ||
+      GENERIC_COLOR_NODE_TYPES.has(getNodeType(node)) ||
       node.type === NodeType.ARCHITECTURE ||
       node.type === NodeType.MINDMAP,
   },
   {
     capability: 'advancedColor',
     keys: ['colorMode', 'customColor'],
-    supports: (node) => ADVANCED_COLOR_NODE_TYPES.has(node.type),
+    supports: (node) => ADVANCED_COLOR_NODE_TYPES.has(getNodeType(node)),
   },
   {
     capability: 'icon',
@@ -96,7 +96,7 @@ const BULK_CAPABILITY_RULES: CapabilityRule[] = [
     ],
     supports: (node) =>
       !isIconAssetNode(node) &&
-      GENERIC_ICON_NODE_TYPES.has(node.type),
+      GENERIC_ICON_NODE_TYPES.has(getNodeType(node)),
   },
   {
     capability: 'variant',
@@ -170,6 +170,10 @@ const ADVANCED_COLOR_NODE_TYPES = new Set<string>([
 
 function isIconAssetNode(node: Node<NodeData>): boolean {
   return node.data?.assetPresentation === 'icon';
+}
+
+function getNodeType(node: Node<NodeData>): string {
+  return node.type ?? '';
 }
 
 function getNodeFamilyId(node: Node<NodeData>): NodeFamilyId {

@@ -333,6 +333,7 @@ export function useFlowEditorController({
             { pathname: shell.location.pathname, search: shell.location.search, hash: shell.location.hash },
             { replace: true, state: null }
         );
+    // Initial route state is consumed once on mount, then cleared to avoid reopening the command bar on later state churn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -343,6 +344,7 @@ export function useFlowEditorController({
             { pathname: shell.location.pathname, search: shell.location.search, hash: shell.location.hash },
             { replace: true, state: null }
         );
+    // Initial route state is consumed once on mount, then cleared to avoid reopening Studio AI on later state churn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -364,6 +366,7 @@ export function useFlowEditorController({
             { pathname: shell.location.pathname, search: shell.location.search, hash: shell.location.hash },
             { replace: true, state: null }
         );
+    // Initial template route state is consumed once on mount, then cleared to avoid reinserting templates after navigation updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

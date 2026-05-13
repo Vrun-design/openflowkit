@@ -322,16 +322,16 @@ function createSceneEdge(
     edge.data = {
       ...edge.data,
       routingMode: 'import-fixed',
-      importRoutePath: sceneEdge.routePath,
-      importRoutePoints: sceneEdge.routePoints,
+      importRoutePath: sceneEdge.routePath ?? undefined,
+      importRoutePoints: sceneEdge.routePoints ?? undefined,
     };
   }
   return attachMermaidImportedEdgeMetadata(edge, {
     source: 'official-flowchart',
     fidelity: 'renderer-backed',
     hasFixedRoute: Boolean(sceneEdge.routePath || sceneEdge.routePoints),
-    preferredSourceHandle: edge.sourceHandle,
-    preferredTargetHandle: edge.targetHandle,
+    preferredSourceHandle: edge.sourceHandle ?? undefined,
+    preferredTargetHandle: edge.targetHandle ?? undefined,
   });
 }
 

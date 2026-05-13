@@ -6,7 +6,7 @@ interface MarkdownEditor {
 }
 
 export function useMarkdownEditor(
-    ref: React.RefObject<HTMLTextAreaElement | HTMLInputElement>,
+    ref: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>,
     onChange: (val: string) => void,
     value: string
 ): MarkdownEditor {
