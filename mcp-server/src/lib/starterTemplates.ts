@@ -73,10 +73,10 @@ direction: LR
 
 [browser] web: Web App { color: "blue" }
 [architecture] cdn: CloudFront { archProvider: "aws", archResourceType: "networking-content-delivery-cloudfront", color: "blue" }
-[architecture] api: API Gateway { archProvider: "aws", archResourceType: "app-integration-api-gateway", color: "violet" }
+[architecture] api: API Gateway { archProvider: "aws", archResourceType: "networking-content-delivery-api-gateway", color: "violet" }
 [architecture] svc: ECS Service { archProvider: "aws", archResourceType: "containers-elastic-container-service", color: "violet" }
-[architecture] cache: ElastiCache { archProvider: "aws", archResourceType: "database-elasticache", color: "yellow" }
-[architecture] db: RDS Postgres { archProvider: "aws", archResourceType: "database-rds", color: "emerald" }
+[architecture] cache: ElastiCache { archProvider: "aws", archResourceType: "databases-elasticache", color: "yellow" }
+[architecture] db: RDS Postgres { archProvider: "aws", archResourceType: "databases-rds", color: "emerald" }
 
 web --> cdn
 cdn --> api
@@ -115,8 +115,8 @@ gateway ..|JSON| client
 direction: LR
 
 [architecture] producer: Web Producer { color: "blue" }
-[architecture] queue: SQS { archProvider: "aws", archResourceType: "app-integration-simple-queue-service", color: "amber" }
-[architecture] dlq: DLQ { archProvider: "aws", archResourceType: "app-integration-simple-queue-service", color: "red" }
+[architecture] queue: SQS { archProvider: "aws", archResourceType: "application-integration-simple-queue-service", color: "amber" }
+[architecture] dlq: DLQ { archProvider: "aws", archResourceType: "application-integration-simple-queue-service", color: "red" }
 [architecture] worker1: Worker 1 { archProvider: "aws", archResourceType: "compute-lambda", color: "violet" }
 [architecture] worker2: Worker 2 { archProvider: "aws", archResourceType: "compute-lambda", color: "violet" }
 [architecture] store: S3 { archProvider: "aws", archResourceType: "storage-simple-storage-service", color: "emerald" }

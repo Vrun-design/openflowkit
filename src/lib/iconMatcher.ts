@@ -47,8 +47,8 @@ const ALIASES: Record<string, string> = {
   aks: 'azure-kubernetes-service',
   eks: 'amazon-elastic-kubernetes-service',
   rds: 'amazon-rds',
-  sqs: 'app-integration-simple-queue-service',
-  sns: 'app-integration-simple-notification-service',
+  sqs: 'application-integration-simple-queue-service',
+  sns: 'application-integration-simple-notification-service',
   s3: 'storage-simple-storage-service',
   'amazon-s3': 'storage-simple-storage-service',
   lambda: 'compute-lambda',
@@ -188,8 +188,15 @@ function getRunnerUpDelta(matches: IconMatch[], index: number): number {
   return Math.max(0, matches[index].score - nextScore);
 }
 
+// AWS ships decorative "Category" emblems and "Architecture Group" frames that
+// are not service node icons. Keep them in the shape library (loadProviderCatalog)
+// but exclude them from label→icon auto-matching so they don't outrank real services.
+const MATCHER_EXCLUDED_AWS_CATEGORIES = new Set(['Category', 'Architecture Group']);
+
 function entries(): IconEntry[] {
-  return SVG_SOURCES.map((s) => {
+  return SVG_SOURCES.filter(
+    (s) => !(s.provider === 'aws' && MATCHER_EXCLUDED_AWS_CATEGORIES.has(s.category))
+  ).map((s) => {
     const parts = s.shapeId.split('/');
     const lastPathPart = parts[parts.length - 1];
     const lastHyphenPart = lastPathPart.split('-').pop() ?? lastPathPart;

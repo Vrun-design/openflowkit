@@ -122,10 +122,10 @@ flow: Serverless API
 direction: TB
 
 [architecture] cf: CloudFront { archProvider: "aws", archResourceType: "networking-cloudfront", color: "blue" }
-[architecture] apigw: API Gateway { archProvider: "aws", archResourceType: "app-integration-api-gateway", color: "violet" }
+[architecture] apigw: API Gateway { archProvider: "aws", archResourceType: "networking-content-delivery-api-gateway", color: "violet" }
 [architecture] lambda: API Lambda { archProvider: "aws", archResourceType: "compute-lambda", color: "violet" }
-[architecture] dynamo: DynamoDB { archProvider: "aws", archResourceType: "database-dynamodb", color: "emerald" }
-[architecture] cache: ElastiCache { archProvider: "aws", archResourceType: "database-elasticache", color: "yellow" }
+[architecture] dynamo: DynamoDB { archProvider: "aws", archResourceType: "databases-dynamodb", color: "emerald" }
+[architecture] cache: ElastiCache { archProvider: "aws", archResourceType: "databases-elasticache", color: "yellow" }
 
 cf ->|HTTPS| apigw
 apigw ->|HTTP/REST| lambda

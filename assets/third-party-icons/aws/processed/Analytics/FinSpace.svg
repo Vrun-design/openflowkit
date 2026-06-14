@@ -1,18 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="80px" height="80px" viewBox="0 0 80 80" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <title>Icon-Architecture/64/Arch_CN-Habañero_64</title>
-    <defs>
-        <linearGradient x1="0%" y1="100%" x2="100%" y2="0%" id="linearGradient-1">
-            <stop stop-color="#4D27A8" offset="0%"></stop>
-            <stop stop-color="#A166FF" offset="100%"></stop>
-        </linearGradient>
-    </defs>
-    <g id="Icon-Architecture/64/Arch_CN-Habañero_64" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <g id="Rectangle" fill="url(#linearGradient-1)">
-            <rect x="0" y="0" width="80" height="80"></rect>
+    <title>Icon-Architecture/64/Arch_Amazon-FinSpace_64</title>
+    <g id="Icon-Architecture/64/Arch_Amazon-FinSpace_64" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Icon-Architecture-BG/64/Analytics" fill="#8C4FFF">
+            <rect id="Rectangle" x="0" y="0" width="80" height="80"></rect>
         </g>
-        <g id="Icon-Service/64/CN-Habañero_64" transform="translate(8.000000, 8.000000)" fill="#FFFFFF">
-            <path d="M16,48 L20,48 L20,22.392 L16,25.12 L16,48 Z M27,17.62 L22,21.028 L22,48 L27,48 L27,17.62 Z M29,16.256 L29,48 L35,48 L35,16.256 L32,14.21 L29,16.256 Z M42,21.028 L37,17.62 L37,48 L42,48 L42,21.028 Z M48,25.12 L44,22.392 L44,48 L48,48 L48,25.12 Z M55,50 L9,50 L9,48 L14,48 L14,26.483 L10.563,28.826 L9.437,27.174 L31.437,12.174 C31.776,11.942 32.224,11.942 32.563,12.174 L54.563,27.174 L53.437,28.826 L50,26.483 L50,48 L55,48 L55,50 Z M7,55 L17,55 L17,53 L7,53 L7,55 Z M21,55 L43,55 L43,53 L21,53 L21,55 Z M47,55 L57,55 L57,53 L47,53 L47,55 Z M4,60 L29,60 L29,58 L4,58 L4,60 Z M35,60 L60,60 L60,58 L35,58 L35,60 Z M5.555,24.832 L4.445,23.168 L31.445,5.168 C31.781,4.944 32.219,4.944 32.555,5.168 L59.555,23.168 L58.445,24.832 L32,7.202 L5.555,24.832 Z" id="Fill-5"></path>
+        <g id="Icon-Service/64/Amazon-FinSpace_64" transform="translate(12.000000, 13.000000)" fill="#FFFFFF">
+            <path d="M12,43 L16,43 L16,17.392 L12,20.12 L12,43 Z M23,12.62 L18,16.028 L18,43 L23,43 L23,12.62 Z M25,11.256 L25,43 L31,43 L31,11.256 L28,9.21 L25,11.256 Z M38,16.028 L33,12.62 L33,43 L38,43 L38,16.028 Z M44,20.12 L40,17.392 L40,43 L44,43 L44,20.12 Z M51,45 L5,45 L5,43 L10,43 L10,21.483 L6.563,23.826 L5.437,22.174 L27.437,7.174 C27.776,6.942 28.224,6.942 28.563,7.174 L50.563,22.174 L49.437,23.826 L46,21.483 L46,43 L51,43 L51,45 Z M3,50 L13,50 L13,48 L3,48 L3,50 Z M17,50 L39,50 L39,48 L17,48 L17,50 Z M43,50 L53,50 L53,48 L43,48 L43,50 Z M0,55 L25,55 L25,53 L0,53 L0,55 Z M31,55 L56,55 L56,53 L31,53 L31,55 Z M1.555,19.832 L0.445,18.168 L27.445,0.168 C27.781,-0.056 28.219,-0.056 28.555,0.168 L55.555,18.168 L54.445,19.832 L28,2.202 L1.555,19.832 Z" id="Fill-5"></path>
         </g>
     </g>
 </svg>

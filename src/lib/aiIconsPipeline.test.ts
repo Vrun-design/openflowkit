@@ -43,8 +43,8 @@ describe('AI + Icons Pipeline (E2E)', () => {
       direction: TB
 
       [architecture] lambda: Lambda { archProvider: "aws", archResourceType: "compute-lambda", color: "violet" }
-      [architecture] sqs: SQS Queue { archProvider: "aws", archResourceType: "app-integration-sqs", color: "amber" }
-      [architecture] dynamo: DynamoDB { archProvider: "aws", archResourceType: "database-dynamodb", color: "emerald" }
+      [architecture] sqs: SQS Queue { archProvider: "aws", archResourceType: "application-integration-simple-queue-service", color: "amber" }
+      [architecture] dynamo: DynamoDB { archProvider: "aws", archResourceType: "databases-dynamodb", color: "emerald" }
 
       lambda ->|publish| sqs
       sqs ->|write| dynamo

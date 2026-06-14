@@ -122,8 +122,8 @@ export const OPENFLOW_ROUND_TRIP_GOLDEN_FIXTURES: OpenFlowRoundTripGoldenFixture
     name: 'arch-icons',
     nodes: [
       createArchNode('lambda', 'Lambda', 'aws-official-starter-v1', 'compute-lambda', 'violet'),
-      createArchNode('sqs', 'SQS Queue', 'aws-official-starter-v1', 'app-integration-sqs', 'amber'),
-      createArchNode('dynamo', 'DynamoDB', 'aws-official-starter-v1', 'database-dynamodb', 'emerald'),
+      createArchNode('sqs', 'SQS Queue', 'aws-official-starter-v1', 'application-integration-simple-queue-service', 'amber'),
+      createArchNode('dynamo', 'DynamoDB', 'aws-official-starter-v1', 'databases-dynamodb', 'emerald'),
     ],
     edges: [
       createEdge('e1', 'lambda', 'sqs', 'publish'),

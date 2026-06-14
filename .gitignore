@@ -28,6 +28,7 @@ test-results
 *.njsproj
 *.sln
 *.sw?
+CLAUDE.md
 PRODUCT_HUNT_LAUNCH.md
 code_fixer.md
 ANNOUNCEMENT_2026-03-02.md

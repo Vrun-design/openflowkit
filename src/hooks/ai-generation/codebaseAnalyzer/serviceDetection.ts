@@ -284,17 +284,20 @@ const SERVICE_ICON_HINTS: Partial<
   >
 > = {
   aws: {
-    'API Gateway': { packId: 'aws-official-starter-v1', shapeId: 'app-integration-api-gateway' },
+    'API Gateway': {
+      packId: 'aws-official-starter-v1',
+      shapeId: 'networking-content-delivery-api-gateway',
+    },
     CloudFront: {
       packId: 'aws-official-starter-v1',
       shapeId: 'networking-content-delivery-cloudfront',
     },
     Cognito: {
       packId: 'aws-official-starter-v1',
-      shapeId: 'security-identity-compliance-cognito',
+      shapeId: 'security-identity-cognito',
     },
-    DynamoDB: { packId: 'aws-official-starter-v1', shapeId: 'database-dynamodb' },
-    ElastiCache: { packId: 'aws-official-starter-v1', shapeId: 'database-elasticache' },
+    DynamoDB: { packId: 'aws-official-starter-v1', shapeId: 'databases-dynamodb' },
+    ElastiCache: { packId: 'aws-official-starter-v1', shapeId: 'databases-elasticache' },
     ECS: {
       packId: 'aws-official-starter-v1',
       shapeId: 'containers-elastic-container-service',
@@ -305,18 +308,18 @@ const SERVICE_ICON_HINTS: Partial<
     },
     EventBridge: {
       packId: 'aws-official-starter-v1',
-      shapeId: 'app-integration-eventbridge',
+      shapeId: 'application-integration-eventbridge',
     },
     Lambda: { packId: 'aws-official-starter-v1', shapeId: 'compute-lambda' },
-    RDS: { packId: 'aws-official-starter-v1', shapeId: 'database-rds' },
+    RDS: { packId: 'aws-official-starter-v1', shapeId: 'databases-rds' },
     S3: { packId: 'aws-official-starter-v1', shapeId: 'storage-simple-storage-service' },
     SNS: {
       packId: 'aws-official-starter-v1',
-      shapeId: 'app-integration-simple-notification-service',
+      shapeId: 'application-integration-simple-notification-service',
     },
     SQS: {
       packId: 'aws-official-starter-v1',
-      shapeId: 'app-integration-simple-queue-service',
+      shapeId: 'application-integration-simple-queue-service',
     },
   },
   azure: {

@@ -97,7 +97,7 @@ describe('analyzeCodebase', () => {
         }),
         expect.objectContaining({
           name: 'ElastiCache',
-          iconShapeId: 'database-elasticache',
+          iconShapeId: 'databases-elasticache',
         }),
         expect.objectContaining({
           name: 'EKS',
