@@ -38,4 +38,10 @@ docs/en/codebase-audit-*.md
 docs/en/fix-log.md
 docs/en/next-level-roadmap-*.md
 docs/internal
-.claude/scheduled_tasks.lockdocs-site/.astro/
+.claude/scheduled_tasks.lock
+docs-site/.astro/
+
+# Local AI tooling (skills, agents, scratch edits) — not product code
+.agents/
+.claude/skills/
+.codex-skill-edits/
