@@ -14,7 +14,7 @@ direction: TB | LR       # default TB
 [process]      step1: Friendly Label { color: "blue" }
 [decision]     branch: Approved?     { color: "amber" }
 [system]       api:    Internal API
-[architecture] db:     Postgres     { archProvider: "aws", archResourceType: "database-rds" }
+[architecture] db:     Postgres     { archProvider: "aws", archResourceType: "databases-rds" }
 [browser]      web:    Dashboard
 [mobile]       app:    Mobile App
 [note]         n:      Latency 200ms
