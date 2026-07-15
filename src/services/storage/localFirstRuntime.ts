@@ -17,6 +17,8 @@ import {
   parseLegacyChatMessagesJson,
   parsePersistentAISettingsJson,
 } from './storageSchemas';
+import { isAssetStoreAvailable } from './assetStore';
+import { migrateNodesMedia } from './assetMigration';
 
 const STORE_SUBSCRIPTION_DEBOUNCE_MS = 250;
 
@@ -142,23 +144,68 @@ async function hydrateStoreFromRepository(): Promise<void> {
 
 function persistStoreSnapshot(): void {
   const nextState = useFlowStore.getState();
-  const documents = syncWorkspaceDocuments({
-    documents: nextState.documents,
-    activeDocumentId: nextState.activeDocumentId,
-    tabs: nextState.tabs.map(sanitizePersistedTab),
-    activeTabId: nextState.activeTabId,
-    nodes: nextState.nodes,
-    edges: nextState.edges,
-  });
 
-  void localFirstRepository.saveFlowDocuments(
-    documents,
-    nextState.activeDocumentId,
-  );
+  void (async () => {
+    // Lazy-migrate legacy inline data: URLs into the assets store before saving.
+    // Only rewrites the live store when migration actually changes nodes.
+    let nodesForSave = nextState.nodes;
+    let tabsForSave = nextState.tabs;
 
-  if (nextState.aiSettings.storageMode === 'local') {
-    void localFirstRepository.savePersistentAISettings(JSON.stringify(nextState.aiSettings));
-  }
+    if (isAssetStoreAvailable()) {
+      try {
+        const activeMigrated = await migrateNodesMedia(nextState.nodes);
+        if (activeMigrated.changed) {
+          nodesForSave = activeMigrated.nodes;
+          const activeTabId = nextState.activeTabId;
+          tabsForSave = nextState.tabs.map((tab) =>
+            tab.id === activeTabId ? { ...tab, nodes: activeMigrated.nodes } : tab
+          );
+          useFlowStore.setState({
+            nodes: activeMigrated.nodes,
+            tabs: tabsForSave,
+          });
+        }
+
+        // Also migrate inactive tab pages so reloads don't re-expand data URLs.
+        const migratedTabs = await Promise.all(
+          tabsForSave.map(async (tab) => {
+            if (tab.id === nextState.activeTabId && activeMigrated.changed) {
+              return { ...tab, nodes: activeMigrated.nodes };
+            }
+            const migrated = await migrateNodesMedia(tab.nodes);
+            if (!migrated.changed) {
+              return tab;
+            }
+            return { ...tab, nodes: migrated.nodes };
+          })
+        );
+        if (migratedTabs.some((tab, index) => tab !== tabsForSave[index])) {
+          tabsForSave = migratedTabs;
+          useFlowStore.setState({ tabs: tabsForSave });
+        }
+      } catch {
+        // Migration is best-effort; always fall through to save.
+      }
+    }
+
+    const documents = syncWorkspaceDocuments({
+      documents: nextState.documents,
+      activeDocumentId: nextState.activeDocumentId,
+      tabs: tabsForSave.map(sanitizePersistedTab),
+      activeTabId: nextState.activeTabId,
+      nodes: nodesForSave,
+      edges: nextState.edges,
+    });
+
+    await localFirstRepository.saveFlowDocuments(
+      documents,
+      nextState.activeDocumentId,
+    );
+
+    if (nextState.aiSettings.storageMode === 'local') {
+      await localFirstRepository.savePersistentAISettings(JSON.stringify(nextState.aiSettings));
+    }
+  })();
 }
 
 let syncStopper: (() => void) | null = null;

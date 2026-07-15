@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { NodeData } from '@/lib/types';
 import { Lock } from 'lucide-react';
 import { NodeChrome } from '@/components/NodeChrome';
+import { useResolvedMediaUrl } from '@/hooks/useResolvedMediaUrl';
 import { renderBrowserVariantContent } from './browserVariantRenderer';
 
 import { getNodeColorPalette } from '../../theme';
@@ -12,6 +13,7 @@ const BrowserNode = ({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
   const { t } = useTranslation();
   const nodeColorPalette = getNodeColorPalette(true);
   const style = nodeColorPalette[data.color || 'slate'] || nodeColorPalette.slate;
+  const imageUrl = useResolvedMediaUrl(data, 'image');
 
   return (
     <NodeChrome
@@ -50,7 +52,7 @@ const BrowserNode = ({ id, data, selected }: LegacyNodeProps<NodeData>): React.R
 
         {/* Content Area */}
         {renderBrowserVariantContent({
-          imageUrl: data.imageUrl,
+          imageUrl,
           variant: data.variant,
           label: data.label,
           style,

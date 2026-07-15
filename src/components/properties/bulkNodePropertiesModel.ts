@@ -43,6 +43,7 @@ export interface BulkNodePropertiesFormState {
   customColor: string | undefined;
   icon: string;
   customIconUrl: string | undefined;
+  iconAssetId: string | undefined;
   iconMode: BulkIconMode;
   assetProvider: DomainLibraryCategory | undefined;
   assetCategory: string | undefined;
@@ -71,6 +72,7 @@ export const INITIAL_BULK_NODE_PROPERTIES_FORM_STATE: BulkNodePropertiesFormStat
   customColor: undefined,
   icon: '',
   customIconUrl: undefined,
+  iconAssetId: undefined,
   iconMode: '',
   assetProvider: undefined,
   assetCategory: undefined,
@@ -164,7 +166,7 @@ export function buildBulkUpdates(
   }
 
   if (form.iconMode === 'upload') {
-    Object.assign(updates, createUploadedIconData(form.customIconUrl));
+    Object.assign(updates, createUploadedIconData(form.customIconUrl, form.iconAssetId));
   }
 
   if (form.iconMode === 'provider') {

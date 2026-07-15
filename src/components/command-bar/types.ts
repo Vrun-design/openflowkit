@@ -61,7 +61,7 @@ export interface CommandBarProps {
   onAddSequence?: () => void;
   onAddClassNode?: () => void;
   onAddEntityNode?: () => void;
-  onAddImage?: (imageUrl: string) => void;
+  onAddImage?: (imageUrl: string, position?: { x: number; y: number }, imageAssetId?: string) => void;
   onAddBrowserWireframe?: () => void;
   onAddMobileWireframe?: () => void;
   onAddDomainLibraryItem?: (item: DomainLibraryItem) => void;

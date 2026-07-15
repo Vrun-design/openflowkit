@@ -120,12 +120,19 @@ export function createImageNode(
   id: string,
   imageUrl: string,
   position: { x: number; y: number },
-  label: string
+  label: string,
+  imageAssetId?: string
 ): FlowNode {
   return {
     id,
     position,
-    data: { label, imageUrl, transparency: 1, rotation: 0 },
+    data: {
+      label,
+      imageUrl: imageAssetId ? undefined : imageUrl,
+      imageAssetId,
+      transparency: 1,
+      rotation: 0,
+    },
     type: 'image',
     style: { width: 200, height: 200 },
   };

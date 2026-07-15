@@ -175,13 +175,14 @@ export function BulkNodeProperties({
     }));
   }
 
-  function handleCustomIconChange(url?: string): void {
-    const updates = createUploadedIconData(url);
+  function handleCustomIconChange(url?: string, iconAssetId?: string): void {
+    const updates = createUploadedIconData(url, iconAssetId);
     setForm((current) => ({
       ...current,
-      iconMode: url ? 'upload' : '',
+      iconMode: url || iconAssetId ? 'upload' : '',
       icon: updates.icon ?? '',
       customIconUrl: updates.customIconUrl,
+      iconAssetId: updates.iconAssetId,
       assetProvider: updates.assetProvider as BulkNodePropertiesFormState['assetProvider'],
       assetCategory: updates.assetCategory,
       archIconPackId: updates.archIconPackId,
@@ -267,6 +268,7 @@ export function BulkNodeProperties({
           <IconPicker
             selectedIcon={form.icon || undefined}
             customIconUrl={form.customIconUrl}
+            iconAssetId={form.iconAssetId}
             selectedProvider={form.assetProvider}
             selectedProviderCategory={form.assetCategory}
             selectedProviderPackId={form.archIconPackId}

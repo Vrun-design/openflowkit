@@ -6,7 +6,8 @@ export type RolloutFlagKey =
   | 'importSql'
   | 'importOpenApi'
   | 'importInfraTerraformHcl'
-  | 'importCodebase';
+  | 'importCodebase'
+  | 'assetStoreV1';
 
 interface RolloutFlagDefinition {
   key: RolloutFlagKey;
@@ -66,6 +67,15 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     defaultEnabled: false,
     description: 'Repo/codebase analyzer importer (hidden — niche, heavy)',
   },
+  assetStoreV1: {
+    key: 'assetStoreV1',
+    envVar: 'VITE_ASSET_STORE_V1',
+    // Enabled by default: user media is stored by reference in IndexedDB instead of
+    // embedding multi-MB data URLs into every document/history/snapshot copy.
+    // Set VITE_ASSET_STORE_V1=0 to force legacy inline data-URL behavior.
+    defaultEnabled: true,
+    description: 'Store user images/icons in IndexedDB assets store by content hash',
+  },
 };
 
 function readBooleanEnvFlag(envValue: string | undefined, defaultEnabled: boolean): boolean {
@@ -96,4 +106,5 @@ export const ROLLOUT_FLAGS: Record<RolloutFlagKey, boolean> = {
   importOpenApi: isRolloutFlagEnabled('importOpenApi'),
   importInfraTerraformHcl: isRolloutFlagEnabled('importInfraTerraformHcl'),
   importCodebase: isRolloutFlagEnabled('importCodebase'),
+  assetStoreV1: isRolloutFlagEnabled('assetStoreV1'),
 };

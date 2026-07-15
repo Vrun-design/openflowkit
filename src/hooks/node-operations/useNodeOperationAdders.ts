@@ -255,7 +255,7 @@ export function useNodeOperationAdders({
   );
 
   const handleAddImage = useCallback(
-    (imageUrl: string, position?: { x: number; y: number }) => {
+    (imageUrl: string, position?: { x: number; y: number }, imageAssetId?: string) => {
       recordHistory();
       const id = createId('image');
       commitAddedNode(
@@ -264,7 +264,8 @@ export function useNodeOperationAdders({
           id,
           imageUrl,
           resolvedPosition || getDefaultNodePosition(nodesLength, 100, 100),
-          t('nodes.image')
+          t('nodes.image'),
+          imageAssetId
         ),
         position
       );

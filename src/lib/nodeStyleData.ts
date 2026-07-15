@@ -7,6 +7,7 @@ export const NODE_STYLE_FIELDS: Array<keyof NodeStyleData> = [
   'colorMode',
   'customColor',
   'customIconUrl',
+  'iconAssetId',
   'fontFamily',
   'fontSize',
   'fontStyle',

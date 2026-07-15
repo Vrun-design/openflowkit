@@ -7,6 +7,7 @@ import { NodeChrome } from '@/components/NodeChrome';
 import { getTransformDiagnosticsAttrs } from '@/components/transformDiagnostics';
 import { resolveNodeVisualStyle } from '@/theme';
 import { useProviderShapePreview } from '@/hooks/useProviderShapePreview';
+import { useResolvedMediaUrl } from '@/hooks/useResolvedMediaUrl';
 import type { DomainLibraryCategory } from '@/services/domainLibrary';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -57,13 +58,16 @@ function ArchitectureNode({ id, data, selected }: LegacyNodeProps<NodeData>): Re
   };
   const ResourceIcon: LucideIcon = resourceIconMap[resourceType] ?? Server;
   const customIconUrl = typeof data.customIconUrl === 'string' ? data.customIconUrl : undefined;
+  const resolvedCustomIconUrl = useResolvedMediaUrl(data, 'icon');
   const providerPreviewUrl = useProviderShapePreview(
     typeof data.archIconPackId === 'string' ? data.archIconPackId : undefined,
     typeof data.archIconShapeId === 'string' ? data.archIconShapeId : undefined,
-    customIconUrl
+    resolvedCustomIconUrl ?? customIconUrl
   );
   const resolvedProviderIconUrl =
-    provider === 'custom' && customIconUrl ? customIconUrl : providerPreviewUrl;
+    provider === 'custom' && (resolvedCustomIconUrl || customIconUrl)
+      ? (resolvedCustomIconUrl ?? customIconUrl)
+      : providerPreviewUrl;
 
   return (
     <NodeChrome

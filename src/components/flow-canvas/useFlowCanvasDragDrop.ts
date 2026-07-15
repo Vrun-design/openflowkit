@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
+import { ingestUserMediaFile } from '@/services/storage/assetStore';
 
 interface UseFlowCanvasDragDropParams {
   screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number };
-  handleAddImage: (imageUrl: string, position: { x: number; y: number }) => void;
+  handleAddImage: (imageUrl: string, position: { x: number; y: number }, imageAssetId?: string) => void;
   onFileDrop?: (file: File, content: string) => void;
 }
 
@@ -52,17 +53,21 @@ export function useFlowCanvasDragDrop({
       if (!file) return;
 
       if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (loadEvent) => {
-          const imageUrl = loadEvent.target?.result as string;
-          if (!imageUrl) return;
-          const position = screenToFlowPosition({
-            x: event.clientX,
-            y: event.clientY,
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        void ingestUserMediaFile(file, 'image', { fileName: file.name })
+          .then((result) => {
+            handleAddImage(
+              result.assetId ? '' : result.displayUrl,
+              position,
+              result.assetId
+            );
+          })
+          .catch(() => {
+            // Ignore failed drops; user can retry via the add-image control.
           });
-          handleAddImage(imageUrl, position);
-        };
-        reader.readAsDataURL(file);
         return;
       }
 

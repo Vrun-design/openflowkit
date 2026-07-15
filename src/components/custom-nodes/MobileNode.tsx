@@ -3,6 +3,7 @@ import type { LegacyNodeProps } from '@/lib/reactflowCompat';
 import { useTranslation } from 'react-i18next';
 import { NodeData } from '@/lib/types';
 import { NodeChrome } from '@/components/NodeChrome';
+import { useResolvedMediaUrl } from '@/hooks/useResolvedMediaUrl';
 import { renderMobileVariantContent } from './mobileVariantRenderer';
 import { getNodeColorPalette } from '../../theme';
 
@@ -10,6 +11,7 @@ function MobileNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Re
   const { t } = useTranslation();
   const nodeColorPalette = getNodeColorPalette(true);
   const style = nodeColorPalette[data.color || 'slate'] || nodeColorPalette.slate;
+  const imageUrl = useResolvedMediaUrl(data, 'image');
 
   return (
     <NodeChrome
@@ -46,7 +48,7 @@ function MobileNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Re
         {/* Screen Content */}
         <div className="flex-1 bg-[var(--brand-surface)] relative overflow-hidden flex flex-col">
           {renderMobileVariantContent({
-            imageUrl: data.imageUrl,
+            imageUrl,
             variant: data.variant,
             style,
             imageAlt: t('customNodes.mobileContent'),
