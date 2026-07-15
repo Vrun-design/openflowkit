@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { ingestUserMediaFile } from '@/services/storage/assetStore';
+import { reportStorageTelemetry } from '@/services/storage/storageTelemetry';
 
 interface UseFlowCanvasDragDropParams {
   screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number };
@@ -65,8 +66,16 @@ export function useFlowCanvasDragDrop({
               result.assetId
             );
           })
-          .catch(() => {
-            // Ignore failed drops; user can retry via the add-image control.
+          .catch((error) => {
+            // Best-effort: leave canvas unchanged so the user can retry.
+            reportStorageTelemetry({
+              area: 'persist',
+              code: 'ASSET_DROP_INGEST_FAILED',
+              severity: 'warning',
+              message: `Image drop ingest failed: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            });
           });
         return;
       }

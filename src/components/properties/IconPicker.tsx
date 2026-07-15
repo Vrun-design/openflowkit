@@ -10,7 +10,7 @@ import {
 import { useAssetCatalog } from '@/hooks/useAssetCatalog';
 import { useResolvedMediaUrl } from '@/hooks/useResolvedMediaUrl';
 import { inferAssetProviderFromPackId } from '@/lib/nodeIconState';
-import { ingestUserMediaFile } from '@/services/storage/assetStore';
+import { AssetEncodeError, ingestUserMediaFile } from '@/services/storage/assetStore';
 import { ICON_NAMES, ICON_PICKER_PRIORITY_NAMES, NamedIcon } from '../IconMap';
 import { Tooltip } from '../Tooltip';
 import { Select } from '../ui/Select';
@@ -86,6 +86,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
     const [iconSearch, setIconSearch] = useState('');
     const [userIconSource, setUserIconSource] = useState<IconSource | null>(null);
     const [userProvider, setUserProvider] = useState<DomainLibraryCategory | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
     const inferredProvider = inferAssetProviderFromPackId(selectedProviderPackId);
     const resolvedCustomIconUrl = useResolvedMediaUrl(
         { customIconUrl, iconAssetId },
@@ -162,14 +163,22 @@ export const IconPicker: React.FC<IconPickerProps> = ({
             return;
         }
 
+        setUploadError(null);
         try {
             const result = await ingestUserMediaFile(file, 'icon', { fileName: file.name });
             onCustomIconChange(
                 result.assetId ? undefined : result.displayUrl,
                 result.assetId
             );
-        } catch {
-            // Keep picker usable if encode/store fails; user can retry.
+        } catch (error) {
+            // Keep picker usable; surface a short message so the failure is not silent.
+            const message =
+                error instanceof AssetEncodeError
+                    ? error.message
+                    : error instanceof Error
+                      ? error.message
+                      : 'Failed to process the selected icon.';
+            setUploadError(message);
         }
     }
 
@@ -381,6 +390,11 @@ export const IconPicker: React.FC<IconPickerProps> = ({
                             }}
                         />
                     </label>
+                    {uploadError ? (
+                        <p className="text-xs text-red-500" role="alert">
+                            {uploadError}
+                        </p>
+                    ) : null}
                 </div>
             ) : null}
         </div>

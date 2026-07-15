@@ -19,6 +19,7 @@ import {
 } from './storageSchemas';
 import { isAssetStoreAvailable } from './assetStore';
 import { migrateNodesMedia } from './assetMigration';
+import { reportStorageTelemetry } from './storageTelemetry';
 
 const STORE_SUBSCRIPTION_DEBOUNCE_MS = 250;
 
@@ -183,8 +184,16 @@ function persistStoreSnapshot(): void {
           tabsForSave = migratedTabs;
           useFlowStore.setState({ tabs: tabsForSave });
         }
-      } catch {
+      } catch (error) {
         // Migration is best-effort; always fall through to save.
+        reportStorageTelemetry({
+          area: 'persist',
+          code: 'ASSET_MIGRATE_ON_SAVE_FAILED',
+          severity: 'warning',
+          message: `Asset media migration failed during save; continuing with unmigrated media. ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        });
       }
     }
 

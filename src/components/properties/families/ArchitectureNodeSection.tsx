@@ -5,7 +5,7 @@ import { loadProviderCatalog } from '@/services/shapeLibrary/providerCatalog';
 import { useAssetCatalog } from '@/hooks/useAssetCatalog';
 import { useResolvedMediaUrl } from '@/hooks/useResolvedMediaUrl';
 import { createProviderIconData, createUploadedIconData } from '@/lib/nodeIconState';
-import { ingestUserMediaFile } from '@/services/storage/assetStore';
+import { AssetEncodeError, ingestUserMediaFile } from '@/services/storage/assetStore';
 import { InspectorField } from '@/components/properties/InspectorPrimitives';
 import { SegmentedChoice } from '@/components/properties/SegmentedChoice';
 import { Input } from '@/components/ui/Input';
@@ -46,6 +46,7 @@ export function ArchitectureNodeSection({
     { customIconUrl, iconAssetId },
     'icon'
   );
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
 
   const effectiveProvider = provider === 'custom' ? null : provider;
   const {
@@ -104,6 +105,7 @@ export function ArchitectureNodeSection({
       return;
     }
 
+    setUploadError(null);
     try {
       const result = await ingestUserMediaFile(file, 'icon', { fileName: file.name });
       onChange(
@@ -113,8 +115,15 @@ export function ArchitectureNodeSection({
           result.assetId
         )
       );
-    } catch {
-      // Keep inspector usable if encode/store fails.
+    } catch (error) {
+      // Keep inspector usable; surface a short message so the failure is not silent.
+      const message =
+        error instanceof AssetEncodeError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : 'Failed to process the selected icon.';
+      setUploadError(message);
     }
   }
 
@@ -218,6 +227,11 @@ export function ArchitectureNodeSection({
                 />
               </label>
             )}
+            {uploadError ? (
+              <p className="text-xs text-red-500" role="alert">
+                {uploadError}
+              </p>
+            ) : null}
           </div>
         </InspectorField>
       ) : (
