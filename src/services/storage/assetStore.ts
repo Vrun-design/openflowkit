@@ -249,6 +249,13 @@ export async function ingestDataUrlAsAsset(
 /**
  * Delete assets that are not referenced by any of the provided ids.
  * Returns the number of deleted assets.
+ *
+ * ponytail: deliberately not called on save. Assets are referenced from more places
+ * than the live canvas — every document page, each page's undo/redo history, and
+ * saved snapshots — so a caller that enumerates fewer than all of them permanently
+ * deletes user images. Until a single collector covers all four, unreferenced bytes
+ * are left on disk: bounded by what the user uploaded, deduped by content hash, and
+ * still far smaller than the inline data URLs this replaced.
  */
 export async function garbageCollectUnreferencedAssets(
   referencedAssetIds: Iterable<string>

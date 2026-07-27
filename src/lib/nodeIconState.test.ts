@@ -70,10 +70,10 @@ describe('nodeIconState', () => {
   });
 
   it('createUploadedIconData accepts iconAssetId without inline url', () => {
-    expect(createUploadedIconData(undefined, 'sha256:abc')).toEqual({
+    expect(createUploadedIconData(undefined, 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toEqual({
       icon: undefined,
       customIconUrl: undefined,
-      iconAssetId: 'sha256:abc',
+      iconAssetId: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       assetProvider: undefined,
       assetCategory: undefined,
       archIconPackId: undefined,

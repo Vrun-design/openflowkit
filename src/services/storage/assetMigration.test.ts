@@ -6,7 +6,7 @@ vi.mock('./assetStore', () => ({
   isAssetStoreAvailable: vi.fn(() => true),
   isDataUrl: (value: unknown) => typeof value === 'string' && value.startsWith('data:'),
   ingestDataUrlAsAsset: vi.fn(async (dataUrl: string, kind: 'image' | 'icon') => ({
-    assetId: kind === 'image' ? 'sha256:image1' : 'sha256:icon1',
+    assetId: kind === 'image' ? 'sha256:1111111111111111111111111111111111111111111111111111111111111111' : 'sha256:2222222222222222222222222222222222222222222222222222222222222222',
     displayUrl: dataUrl,
     mimeType: 'image/png',
     byteLength: 12,
@@ -35,9 +35,9 @@ describe('assetMigration', () => {
       imageUrl: 'data:image/png;base64,aaa',
     });
     expect(result.changed).toBe(true);
-    expect(result.data.imageAssetId).toBe('sha256:image1');
+    expect(result.data.imageAssetId).toBe('sha256:1111111111111111111111111111111111111111111111111111111111111111');
     expect(result.data.imageUrl).toBeUndefined();
-    expect(result.assetIds).toContain('sha256:image1');
+    expect(result.assetIds).toContain('sha256:1111111111111111111111111111111111111111111111111111111111111111');
   });
 
   it('migrates custom icon data URLs into iconAssetId', async () => {
@@ -46,7 +46,7 @@ describe('assetMigration', () => {
       customIconUrl: 'data:image/svg+xml;base64,bbb',
     });
     expect(result.changed).toBe(true);
-    expect(result.data.iconAssetId).toBe('sha256:icon1');
+    expect(result.data.iconAssetId).toBe('sha256:2222222222222222222222222222222222222222222222222222222222222222');
     expect(result.data.customIconUrl).toBeUndefined();
   });
 

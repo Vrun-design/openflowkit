@@ -143,78 +143,93 @@ async function hydrateStoreFromRepository(): Promise<void> {
   });
 }
 
-function persistStoreSnapshot(): void {
-  const nextState = useFlowStore.getState();
+/**
+ * Migrate legacy inline data: URLs into the assets store, writing results back to
+ * the store. Skips the write-back when the user edited during the await so a save
+ * never resurrects stale nodes over newer edits.
+ */
+async function migrateStoreMediaBeforeSave(): Promise<void> {
+  if (!isAssetStoreAvailable()) {
+    return;
+  }
 
-  void (async () => {
-    // Lazy-migrate legacy inline data: URLs into the assets store before saving.
-    // Only rewrites the live store when migration actually changes nodes.
-    let nodesForSave = nextState.nodes;
-    let tabsForSave = nextState.tabs;
-
-    if (isAssetStoreAvailable()) {
-      try {
-        const activeMigrated = await migrateNodesMedia(nextState.nodes);
-        if (activeMigrated.changed) {
-          nodesForSave = activeMigrated.nodes;
-          const activeTabId = nextState.activeTabId;
-          tabsForSave = nextState.tabs.map((tab) =>
-            tab.id === activeTabId ? { ...tab, nodes: activeMigrated.nodes } : tab
-          );
-          useFlowStore.setState({
-            nodes: activeMigrated.nodes,
-            tabs: tabsForSave,
-          });
-        }
-
-        // Also migrate inactive tab pages so reloads don't re-expand data URLs.
-        const migratedTabs = await Promise.all(
-          tabsForSave.map(async (tab) => {
-            if (tab.id === nextState.activeTabId && activeMigrated.changed) {
-              return { ...tab, nodes: activeMigrated.nodes };
-            }
-            const migrated = await migrateNodesMedia(tab.nodes);
-            if (!migrated.changed) {
-              return tab;
-            }
-            return { ...tab, nodes: migrated.nodes };
-          })
-        );
-        if (migratedTabs.some((tab, index) => tab !== tabsForSave[index])) {
-          tabsForSave = migratedTabs;
-          useFlowStore.setState({ tabs: tabsForSave });
-        }
-      } catch (error) {
-        // Migration is best-effort; always fall through to save.
-        reportStorageTelemetry({
-          area: 'persist',
-          code: 'ASSET_MIGRATE_ON_SAVE_FAILED',
-          severity: 'warning',
-          message: `Asset media migration failed during save; continuing with unmigrated media. ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        });
-      }
+  try {
+    const before = useFlowStore.getState();
+    const activeMigrated = await migrateNodesMedia(before.nodes);
+    if (activeMigrated.changed && useFlowStore.getState().nodes === before.nodes) {
+      useFlowStore.setState({
+        nodes: activeMigrated.nodes,
+        tabs: before.tabs.map((tab) =>
+          tab.id === before.activeTabId ? { ...tab, nodes: activeMigrated.nodes } : tab
+        ),
+      });
     }
 
+    // Also migrate inactive tab pages so reloads don't re-expand data URLs.
+    const beforeTabs = useFlowStore.getState().tabs;
+    const activeTabId = useFlowStore.getState().activeTabId;
+    const migratedTabs = await Promise.all(
+      beforeTabs.map(async (tab) => {
+        if (tab.id === activeTabId) {
+          return tab;
+        }
+        const migrated = await migrateNodesMedia(tab.nodes);
+        return migrated.changed ? { ...tab, nodes: migrated.nodes } : tab;
+      })
+    );
+    if (
+      migratedTabs.some((tab, index) => tab !== beforeTabs[index])
+      && useFlowStore.getState().tabs === beforeTabs
+    ) {
+      useFlowStore.setState({ tabs: migratedTabs });
+    }
+  } catch (error) {
+    // Migration is best-effort; always fall through to save.
+    reportStorageTelemetry({
+      area: 'persist',
+      code: 'ASSET_MIGRATE_ON_SAVE_FAILED',
+      severity: 'warning',
+      message: `Asset media migration failed during save; continuing with unmigrated media. ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    });
+  }
+}
+
+// Saves are chained so two overlapping snapshots can't land out of order.
+let pendingPersist: Promise<void> = Promise.resolve();
+
+function persistStoreSnapshot(): void {
+  pendingPersist = pendingPersist.then(async () => {
+    await migrateStoreMediaBeforeSave();
+
+    // Re-read after the awaits above: migration writes back to the store, and the
+    // user may have edited meanwhile. Saving the pre-await snapshot would drop both.
+    const state = useFlowStore.getState();
     const documents = syncWorkspaceDocuments({
-      documents: nextState.documents,
-      activeDocumentId: nextState.activeDocumentId,
-      tabs: tabsForSave.map(sanitizePersistedTab),
-      activeTabId: nextState.activeTabId,
-      nodes: nodesForSave,
-      edges: nextState.edges,
+      documents: state.documents,
+      activeDocumentId: state.activeDocumentId,
+      tabs: state.tabs.map(sanitizePersistedTab),
+      activeTabId: state.activeTabId,
+      nodes: state.nodes,
+      edges: state.edges,
     });
 
-    await localFirstRepository.saveFlowDocuments(
-      documents,
-      nextState.activeDocumentId,
-    );
+    await localFirstRepository.saveFlowDocuments(documents, state.activeDocumentId);
 
-    if (nextState.aiSettings.storageMode === 'local') {
-      await localFirstRepository.savePersistentAISettings(JSON.stringify(nextState.aiSettings));
+    if (state.aiSettings.storageMode === 'local') {
+      await localFirstRepository.savePersistentAISettings(JSON.stringify(state.aiSettings));
     }
-  })();
+  }).catch((error) => {
+    reportStorageTelemetry({
+      area: 'persist',
+      code: 'PERSIST_SNAPSHOT_FAILED',
+      severity: 'error',
+      message: `Failed to persist workspace snapshot. ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    });
+  });
 }
 
 let syncStopper: (() => void) | null = null;

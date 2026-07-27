@@ -161,6 +161,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   const { onDragOver, onDrop } = useFlowCanvasDragDrop({
     screenToFlowPosition,
     handleAddImage,
+    onImageDropError: (message) => addToast(message, 'error'),
   });
 
   // --- Keyboard Shortcuts ---

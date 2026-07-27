@@ -72,6 +72,8 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     envVar: 'VITE_ASSET_STORE_V1',
     // Enabled by default: user media is stored by reference in IndexedDB instead of
     // embedding multi-MB data URLs into every document/history/snapshot copy.
+    // Asset ids are browser-local, so buildDiagramDocumentJson inlines them back to
+    // data URLs on export — keep that in step if another cross-machine path is added.
     // Set VITE_ASSET_STORE_V1=0 to force legacy inline data-URL behavior.
     defaultEnabled: true,
     description: 'Store user images/icons in IndexedDB assets store by content hash',

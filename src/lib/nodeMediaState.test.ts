@@ -13,10 +13,10 @@ describe('nodeMediaState', () => {
   it('prefers imageAssetId over imageUrl', () => {
     expect(
       getNodeImageRef({
-        imageAssetId: 'sha256:abc',
+        imageAssetId: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
         imageUrl: 'data:image/png;base64,xx',
       })
-    ).toEqual({ assetId: 'sha256:abc' });
+    ).toEqual({ assetId: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' });
   });
 
   it('falls back to imageUrl when no asset id', () => {
@@ -28,20 +28,20 @@ describe('nodeMediaState', () => {
   it('prefers iconAssetId over customIconUrl', () => {
     expect(
       getNodeIconRef({
-        iconAssetId: 'sha256:abcdef0123456789',
+        iconAssetId: 'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
         customIconUrl: 'data:image/svg+xml;base64,abc',
       })
-    ).toEqual({ assetId: 'sha256:abcdef0123456789' });
+    ).toEqual({ assetId: 'sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' });
   });
 
   it('creates image and icon media payloads', () => {
-    expect(createImageMediaData({ imageAssetId: 'sha256:1' })).toEqual({
+    expect(createImageMediaData({ imageAssetId: 'sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc' })).toEqual({
       imageUrl: undefined,
-      imageAssetId: 'sha256:1',
+      imageAssetId: 'sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
     });
-    expect(createIconMediaData({ iconAssetId: 'sha256:2' })).toMatchObject({
+    expect(createIconMediaData({ iconAssetId: 'sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd' })).toMatchObject({
       icon: undefined,
-      iconAssetId: 'sha256:2',
+      iconAssetId: 'sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
       archIconPackId: undefined,
     });
   });
@@ -53,15 +53,15 @@ describe('nodeMediaState', () => {
 
   it('collects referenced asset ids from nodes', () => {
     const ids = collectReferencedAssetIds([
-      { data: { imageAssetId: 'sha256:a' } },
-      { data: { iconAssetId: 'sha256:b', imageUrl: 'https://x' } },
+      { data: { imageAssetId: 'sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' } },
+      { data: { iconAssetId: 'sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff', imageUrl: 'https://x' } },
       { data: { imageUrl: 'data:image/png;base64,z' } },
     ]);
-    expect(ids.sort()).toEqual(['sha256:a', 'sha256:b']);
+    expect(ids.sort()).toEqual(['sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', 'sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff']);
   });
 
   it('returns immediate urls only for non-asset refs', () => {
     expect(getImmediateMediaUrl({ imageUrl: 'https://x' }, 'image')).toBe('https://x');
-    expect(getImmediateMediaUrl({ imageAssetId: 'sha256:a' }, 'image')).toBeUndefined();
+    expect(getImmediateMediaUrl({ imageAssetId: 'sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' }, 'image')).toBeUndefined();
   });
 });

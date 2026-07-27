@@ -6,6 +6,7 @@ interface UseFlowCanvasDragDropParams {
   screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number };
   handleAddImage: (imageUrl: string, position: { x: number; y: number }, imageAssetId?: string) => void;
   onFileDrop?: (file: File, content: string) => void;
+  onImageDropError?: (message: string) => void;
 }
 
 interface UseFlowCanvasDragDropResult {
@@ -41,6 +42,7 @@ export function useFlowCanvasDragDrop({
   screenToFlowPosition,
   handleAddImage,
   onFileDrop,
+  onImageDropError,
 }: UseFlowCanvasDragDropParams): UseFlowCanvasDragDropResult {
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -67,15 +69,16 @@ export function useFlowCanvasDragDrop({
             );
           })
           .catch((error) => {
-            // Best-effort: leave canvas unchanged so the user can retry.
+            // Leave the canvas unchanged so the user can retry, but say so —
+            // a drop that silently does nothing reads as a broken app.
+            const message = error instanceof Error ? error.message : String(error);
             reportStorageTelemetry({
               area: 'persist',
               code: 'ASSET_DROP_INGEST_FAILED',
               severity: 'warning',
-              message: `Image drop ingest failed: ${
-                error instanceof Error ? error.message : String(error)
-              }`,
+              message: `Image drop ingest failed: ${message}`,
             });
+            onImageDropError?.(message || 'Could not add that image.');
           });
         return;
       }
@@ -92,7 +95,7 @@ export function useFlowCanvasDragDrop({
         reader.readAsText(file);
       }
     },
-    [handleAddImage, screenToFlowPosition, onFileDrop]
+    [handleAddImage, screenToFlowPosition, onFileDrop, onImageDropError]
   );
 
   return { onDragOver, onDrop };

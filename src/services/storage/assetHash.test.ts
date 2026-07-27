@@ -16,9 +16,11 @@ describe('assetHash', () => {
     expect(left).not.toBe(right);
   });
 
-  it('accepts sha256 and fnv1a id formats', () => {
-    expect(isAssetId('sha256:abcdef0123456789')).toBe(true);
-    expect(isAssetId('fnv1a:deadbeef:12')).toBe(true);
+  it('accepts only full-length sha256 ids', async () => {
+    const real = await hashBytesToAssetId(new TextEncoder().encode('x'));
+    expect(isAssetId(real)).toBe(true);
+    expect(isAssetId('sha256:abcdef0123456789')).toBe(false);
+    expect(isAssetId('fnv1a:deadbeef:12')).toBe(false);
     expect(isAssetId('data:image/png;base64,abc')).toBe(false);
     expect(isAssetId('https://example.com/x.png')).toBe(false);
     expect(isAssetId('')).toBe(false);

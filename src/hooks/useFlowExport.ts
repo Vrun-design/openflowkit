@@ -99,14 +99,21 @@ export const useFlowExport = (
   }, [nodes, reactFlowWrapper, addToast, exportBaseName]);
 
   // --- JSON Export ---
-  const handleExportJSON = useCallback(() => {
+  const handleExportJSON = useCallback(async () => {
     addToast('Preparing JSON download…', 'info');
-    const documentJson = buildDiagramDocumentJson({
-      nodes,
-      edges,
-      exportSerializationMode: viewSettings.exportSerializationMode,
-      activeTab,
-    });
+    let documentJson: string;
+    try {
+      documentJson = await buildDiagramDocumentJson({
+        nodes,
+        edges,
+        exportSerializationMode: viewSettings.exportSerializationMode,
+        activeTab,
+      });
+    } catch (error) {
+      logger.error('JSON export failed.', { error });
+      addToast('Failed to export JSON. Please try again.', 'error');
+      return;
+    }
     const blob = new Blob([documentJson], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -119,7 +126,7 @@ export const useFlowExport = (
 
   const handleCopyJSON = useCallback(async () => {
     addToast('Preparing JSON copy…', 'info');
-    const documentJson = buildDiagramDocumentJson({
+    const documentJson = await buildDiagramDocumentJson({
       nodes,
       edges,
       exportSerializationMode: viewSettings.exportSerializationMode,

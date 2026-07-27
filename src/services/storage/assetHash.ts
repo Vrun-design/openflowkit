@@ -9,7 +9,9 @@ function toHex(buffer: ArrayBuffer): string {
 
 /**
  * Content-addressed asset id: `sha256:<hex>`.
- * Falls back to a length+prefix hash when SubtleCrypto is unavailable (rare).
+ * Throws when SubtleCrypto is unavailable (insecure origin) rather than falling
+ * back to a 32-bit hash — ids are used for dedupe, so a collision would serve the
+ * wrong image. Callers treat the throw as "asset store unusable" and keep data URLs.
  */
 export async function hashBytesToAssetId(bytes: ArrayBuffer | Uint8Array): Promise<string> {
   const view =
@@ -22,21 +24,14 @@ export async function hashBytesToAssetId(bytes: ArrayBuffer | Uint8Array): Promi
   const copy = new Uint8Array(view.byteLength);
   copy.set(view);
 
-  if (typeof crypto !== 'undefined' && crypto.subtle?.digest) {
-    const digest = await crypto.subtle.digest('SHA-256', copy.buffer);
-    return `sha256:${toHex(digest)}`;
+  if (!(typeof crypto !== 'undefined' && crypto.subtle?.digest)) {
+    throw new Error('SubtleCrypto is unavailable; cannot content-address assets.');
   }
 
-  // Deterministic fallback for non-secure contexts / test environments without subtle.
-  let hash = 2166136261;
-  for (let index = 0; index < copy.length; index += 1) {
-    hash ^= copy[index];
-    hash = Math.imul(hash, 16777619);
-  }
-  const unsigned = hash >>> 0;
-  return `fnv1a:${unsigned.toString(16).padStart(8, '0')}:${copy.byteLength}`;
+  const digest = await crypto.subtle.digest('SHA-256', copy.buffer);
+  return `sha256:${toHex(digest)}`;
 }
 
 export function isAssetId(value: unknown): value is string {
-  return typeof value === 'string' && /^(sha256|fnv1a):[a-f0-9:]+$/i.test(value.trim());
+  return typeof value === 'string' && /^sha256:[a-f0-9]{64}$/i.test(value.trim());
 }
