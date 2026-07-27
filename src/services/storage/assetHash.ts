@@ -19,8 +19,7 @@ export async function hashBytesToAssetId(bytes: ArrayBuffer | Uint8Array): Promi
       ? bytes
       : new Uint8Array(bytes);
 
-  // Copy into a fresh ArrayBuffer so SubtleCrypto always receives a plain ArrayBuffer
-  // (avoids SharedArrayBuffer / ArrayBufferLike typing issues).
+  // Copy so a SharedArrayBuffer-backed view can't reach digest().
   const copy = new Uint8Array(view.byteLength);
   copy.set(view);
 
@@ -28,7 +27,10 @@ export async function hashBytesToAssetId(bytes: ArrayBuffer | Uint8Array): Promi
     throw new Error('SubtleCrypto is unavailable; cannot content-address assets.');
   }
 
-  const digest = await crypto.subtle.digest('SHA-256', copy.buffer);
+  // Pass the typed array, not `copy.buffer`: the ArrayBuffer identity check is
+  // realm-sensitive, so a buffer minted under jsdom fails Node 20's webcrypto
+  // validation. A view passes on every runtime.
+  const digest = await crypto.subtle.digest('SHA-256', copy);
   return `sha256:${toHex(digest)}`;
 }
 
