@@ -89,6 +89,7 @@ const BULK_CAPABILITY_RULES: CapabilityRule[] = [
     keys: [
       'icon',
       'customIconUrl',
+      'iconAssetId',
       'assetProvider',
       'assetCategory',
       'archIconPackId',

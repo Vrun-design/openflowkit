@@ -1,9 +1,12 @@
 import React, { memo } from 'react';
 import type { LegacyNodeProps } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
+import { useResolvedMediaUrl } from '@/hooks/useResolvedMediaUrl';
 import { NodeChrome } from './NodeChrome';
 
 function ImageNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.ReactElement {
+    const imageSrc = useResolvedMediaUrl(data, 'image');
+
     return (
         <NodeChrome
             nodeId={id}
@@ -22,9 +25,9 @@ function ImageNode({ id, data, selected }: LegacyNodeProps<NodeData>): React.Rea
                     transform: data.rotation ? `rotate(${data.rotation}deg)` : 'none',
                 }}
             >
-                {data.imageUrl ? (
+                {imageSrc ? (
                     <img
-                        src={data.imageUrl}
+                        src={imageSrc}
                         alt={data.label || 'Image Node'}
                         className="w-full h-full object-contain pointer-events-none select-none"
                     />

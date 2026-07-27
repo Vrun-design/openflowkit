@@ -10,6 +10,7 @@ import {
   persistLatestImportReport,
 } from '@/services/importFidelity';
 import { createImportReportOutcome, type OperationOutcome } from '@/services/operationFeedback';
+import { inlineNodeAssetsForTransfer } from '@/services/storage/assetInlining';
 import type { FlowEdge, FlowNode, PlaybackState, DiagramType } from '@/lib/types';
 
 interface ActiveTabDocumentState {
@@ -17,15 +18,17 @@ interface ActiveTabDocumentState {
   playback?: PlaybackState;
 }
 
-export function buildDiagramDocumentJson(params: {
+export async function buildDiagramDocumentJson(params: {
   nodes: FlowNode[];
   edges: FlowEdge[];
   exportSerializationMode: ExportSerializationMode;
   activeTab?: ActiveTabDocumentState;
-}): string {
+}): Promise<string> {
   const { nodes, edges, exportSerializationMode, activeTab } = params;
+  // Exported documents leave this browser, so stored assets have to travel as bytes.
+  const portableNodes = await inlineNodeAssetsForTransfer(nodes);
   const { nodes: orderedNodes, edges: orderedEdges } = orderGraphForSerialization(
-    nodes,
+    portableNodes,
     edges,
     exportSerializationMode,
   );

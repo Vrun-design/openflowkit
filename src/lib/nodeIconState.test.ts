@@ -30,6 +30,7 @@ describe('nodeIconState', () => {
     expect(createBuiltInIconData('Database')).toEqual({
       icon: 'Database',
       customIconUrl: undefined,
+      iconAssetId: undefined,
       assetProvider: undefined,
       assetCategory: undefined,
       archIconPackId: undefined,
@@ -48,6 +49,7 @@ describe('nodeIconState', () => {
     ).toEqual({
       icon: undefined,
       customIconUrl: undefined,
+      iconAssetId: undefined,
       archIconPackId: 'aws-official-starter-v1',
       archIconShapeId: 'compute-lambda',
       assetProvider: 'aws',
@@ -59,6 +61,19 @@ describe('nodeIconState', () => {
     expect(createUploadedIconData('data:image/svg+xml;base64,abc')).toEqual({
       icon: undefined,
       customIconUrl: 'data:image/svg+xml;base64,abc',
+      iconAssetId: undefined,
+      assetProvider: undefined,
+      assetCategory: undefined,
+      archIconPackId: undefined,
+      archIconShapeId: undefined,
+    });
+  });
+
+  it('createUploadedIconData accepts iconAssetId without inline url', () => {
+    expect(createUploadedIconData(undefined, 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')).toEqual({
+      icon: undefined,
+      customIconUrl: undefined,
+      iconAssetId: 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       assetProvider: undefined,
       assetCategory: undefined,
       archIconPackId: undefined,

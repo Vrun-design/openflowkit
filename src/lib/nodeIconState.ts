@@ -66,6 +66,7 @@ export function createBuiltInIconData(icon: string): Partial<NodeData> {
   return {
     icon,
     customIconUrl: undefined,
+    iconAssetId: undefined,
     assetProvider: undefined,
     assetCategory: undefined,
     archIconPackId: undefined,
@@ -73,10 +74,11 @@ export function createBuiltInIconData(icon: string): Partial<NodeData> {
   };
 }
 
-export function createUploadedIconData(url?: string): Partial<NodeData> {
+export function createUploadedIconData(url?: string, iconAssetId?: string): Partial<NodeData> {
   return {
     icon: undefined,
     customIconUrl: url,
+    iconAssetId,
     assetProvider: undefined,
     assetCategory: undefined,
     archIconPackId: undefined,
@@ -95,6 +97,7 @@ export function createProviderIconData(input: {
   return {
     icon: undefined,
     customIconUrl: undefined,
+    iconAssetId: undefined,
     archIconPackId: input.packId,
     archIconShapeId: input.shapeId,
     assetProvider: input.provider ?? resolved.provider,
@@ -110,7 +113,8 @@ export function normalizeNodeIconData<T extends Partial<NodeData> | undefined>(d
   const next: Partial<NodeData> = { ...data };
   const hasProviderIcon =
     isNonEmptyString(next.archIconPackId) && isNonEmptyString(next.archIconShapeId);
-  const hasUploadIcon = isNonEmptyString(next.customIconUrl);
+  const hasUploadIcon =
+    isNonEmptyString(next.customIconUrl) || isNonEmptyString(next.iconAssetId);
   const hasBuiltInIcon = isNonEmptyString(next.icon);
 
   if (hasProviderIcon) {
@@ -127,7 +131,13 @@ export function normalizeNodeIconData<T extends Partial<NodeData> | undefined>(d
   }
 
   if (hasUploadIcon) {
-    Object.assign(next, createUploadedIconData(next.customIconUrl as string));
+    Object.assign(
+      next,
+      createUploadedIconData(
+        next.customIconUrl as string | undefined,
+        next.iconAssetId as string | undefined
+      )
+    );
     return next as T;
   }
 
@@ -138,6 +148,7 @@ export function normalizeNodeIconData<T extends Partial<NodeData> | undefined>(d
 
   next.icon = undefined;
   next.customIconUrl = undefined;
+  next.iconAssetId = undefined;
   next.assetProvider = undefined;
   next.assetCategory = undefined;
   next.archIconPackId = undefined;

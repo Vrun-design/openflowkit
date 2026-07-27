@@ -16,8 +16,8 @@ function createEdge(id: string, source: string, target: string): FlowEdge {
 }
 
 describe('diagramDocumentTransfer', () => {
-  it('builds diagram document json from the current graph', () => {
-    const json = buildDiagramDocumentJson({
+  it('builds diagram document json from the current graph', async () => {
+    const json = await buildDiagramDocumentJson({
       nodes: [createNode('n1')],
       edges: [createEdge('e1', 'n1', 'n1')],
       exportSerializationMode: 'deterministic',
@@ -31,7 +31,7 @@ describe('diagramDocumentTransfer', () => {
   });
 
   it('imports diagram document json into composed nodes and edges', async () => {
-    const json = buildDiagramDocumentJson({
+    const json = await buildDiagramDocumentJson({
       nodes: [createNode('n1')],
       edges: [createEdge('e1', 'n1', 'n1')],
       exportSerializationMode: 'deterministic',

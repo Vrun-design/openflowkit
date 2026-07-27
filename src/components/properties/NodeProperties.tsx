@@ -9,6 +9,7 @@ import { IconPicker, type ProviderIconSelection } from './IconPicker';
 import { ImageUpload } from './ImageUpload';
 import { CollapsibleSection } from '../ui/CollapsibleSection';
 import { useMarkdownEditor } from '@/hooks/useMarkdownEditor';
+import { useResolvedMediaUrl } from '@/hooks/useResolvedMediaUrl';
 import { NodeActionButtons } from './NodeActionButtons';
 import { NodeContentSection } from './NodeContentSection';
 import { NodeImageSettingsSection } from './NodeImageSettingsSection';
@@ -52,6 +53,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
   const isGroup = selectedNode.type === 'group';
   const isWireframeApp = selectedNode.type === 'browser' || selectedNode.type === 'mobile';
   const normalizedIconData = normalizeNodeIconData(selectedNode.data);
+  const resolvedImageUrl = useResolvedMediaUrl(selectedNode.data, 'image');
   const isIconAssetNode = normalizedIconData?.assetPresentation === 'icon';
   const assetProvider = normalizedIconData?.assetProvider as DomainLibraryCategory | undefined;
   const assetCategory =
@@ -150,8 +152,8 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
     );
   }
 
-  function handleCustomIconChange(url?: string): void {
-    onChange(selectedNode.id, createUploadedIconData(url));
+  function handleCustomIconChange(url?: string, iconAssetId?: string): void {
+    onChange(selectedNode.id, createUploadedIconData(url, iconAssetId));
   }
 
   return (
@@ -263,6 +265,7 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
             <IconPicker
               selectedIcon={normalizedIconData?.icon}
               customIconUrl={normalizedIconData?.customIconUrl}
+              iconAssetId={normalizedIconData?.iconAssetId}
               selectedProvider={assetProvider}
               selectedProviderCategory={assetCategory}
               selectedProviderPackId={normalizedIconData?.archIconPackId as string | undefined}
@@ -291,8 +294,13 @@ export const NodeProperties: React.FC<NodePropertiesProps> = ({
           onToggle={() => toggleSection('upload')}
         >
           <ImageUpload
-            imageUrl={selectedNode.data?.imageUrl}
-            onChange={(url) => onChange(selectedNode.id, { imageUrl: url })}
+            imageUrl={resolvedImageUrl}
+            onChange={(url, meta) =>
+              onChange(selectedNode.id, {
+                imageUrl: meta?.assetId ? undefined : url,
+                imageAssetId: meta?.assetId,
+              })
+            }
           />
         </CollapsibleSection>
       )}

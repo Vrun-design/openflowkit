@@ -130,6 +130,7 @@ Current behavior at a high level:
 - IndexedDB store and index definitions are now declared in one schema manifest in `src/services/storage/indexedDbSchema.ts`
 - schema migration markers now live in a dedicated IndexedDB schema metadata store instead of sharing the persisted Zustand state store
 - local-first chat persistence now uses document-scoped IndexedDB indexes instead of full chat-message store scans
+- user images/icons can be stored by content-hash ref in the IndexedDB `assets` store (`assetStoreV1` rollout flag) instead of embedding multi-MB data URLs into every document/history/snapshot copy; nodes hold `imageAssetId` / `iconAssetId` and resolve display URLs at render time
 
 Important constraint:
 

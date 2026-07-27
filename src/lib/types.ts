@@ -68,8 +68,12 @@ export interface NodeLabelData {
 export interface NodeIconData {
   icon?: string; // Key for the icon map
   secondaryIcon?: string; // Optional secondary icon key
-  customIconUrl?: string; // User-uploaded icon (base64 or URL)
-  imageUrl?: string; // Base64 or URL
+  customIconUrl?: string; // User-uploaded icon (base64, URL, or legacy inline)
+  /** Content-addressed ref into the IndexedDB assets store (preferred over customIconUrl). */
+  iconAssetId?: string;
+  imageUrl?: string; // Base64, URL, or legacy inline
+  /** Content-addressed ref into the IndexedDB assets store (preferred over imageUrl). */
+  imageAssetId?: string;
   mermaidSvg?: string; // Rendered Mermaid SVG markup
 }
 
@@ -233,6 +237,7 @@ export type NodeStyleData = Pick<
   | 'colorMode'
   | 'customColor'
   | 'customIconUrl'
+  | 'iconAssetId'
   | 'fontFamily'
   | 'fontSize'
   | 'fontStyle'

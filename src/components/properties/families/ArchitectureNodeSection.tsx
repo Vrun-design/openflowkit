@@ -3,7 +3,9 @@ import type { NodeData } from '@/lib/types';
 import type { DomainLibraryCategory, DomainLibraryItem } from '@/services/domainLibrary';
 import { loadProviderCatalog } from '@/services/shapeLibrary/providerCatalog';
 import { useAssetCatalog } from '@/hooks/useAssetCatalog';
+import { useResolvedMediaUrl } from '@/hooks/useResolvedMediaUrl';
 import { createProviderIconData, createUploadedIconData } from '@/lib/nodeIconState';
+import { AssetEncodeError, ingestUserMediaFile } from '@/services/storage/assetStore';
 import { InspectorField } from '@/components/properties/InspectorPrimitives';
 import { SegmentedChoice } from '@/components/properties/SegmentedChoice';
 import { Input } from '@/components/ui/Input';
@@ -29,16 +31,6 @@ const PROVIDER_OPTIONS: Array<{ id: DomainLibraryCategory | 'custom'; label: str
   { id: 'custom', label: 'Custom' },
 ];
 
-function readFileAsDataUrl(file: File, onLoad: (result: string) => void): void {
-  const reader = new FileReader();
-  reader.onloadend = () => {
-    if (typeof reader.result === 'string') {
-      onLoad(reader.result);
-    }
-  };
-  reader.readAsDataURL(file);
-}
-
 export function ArchitectureNodeSection({
   nodeId,
   data,
@@ -49,6 +41,12 @@ export function ArchitectureNodeSection({
   const customProviderLabel =
     typeof data.archProviderLabel === 'string' ? data.archProviderLabel : '';
   const customIconUrl = typeof data.customIconUrl === 'string' ? data.customIconUrl : undefined;
+  const iconAssetId = typeof data.iconAssetId === 'string' ? data.iconAssetId : undefined;
+  const resolvedCustomIconUrl = useResolvedMediaUrl(
+    { customIconUrl, iconAssetId },
+    'icon'
+  );
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
 
   const effectiveProvider = provider === 'custom' ? null : provider;
   const {
@@ -98,15 +96,35 @@ export function ArchitectureNodeSection({
     });
   }
 
-  function handleCustomIconChange(event: React.ChangeEvent<HTMLInputElement>): void {
+  async function handleCustomIconChange(
+    event: React.ChangeEvent<HTMLInputElement>
+  ): Promise<void> {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) {
       return;
     }
 
-    readFileAsDataUrl(file, (result) => {
-      onChange(nodeId, createUploadedIconData(result));
-    });
+    setUploadError(null);
+    try {
+      const result = await ingestUserMediaFile(file, 'icon', { fileName: file.name });
+      onChange(
+        nodeId,
+        createUploadedIconData(
+          result.assetId ? undefined : result.displayUrl,
+          result.assetId
+        )
+      );
+    } catch (error) {
+      // Keep inspector usable; surface a short message so the failure is not silent.
+      const message =
+        error instanceof AssetEncodeError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : 'Failed to process the selected icon.';
+      setUploadError(message);
+    }
   }
 
   function handleProviderSelect(value: string): void {
@@ -124,6 +142,7 @@ export function ArchitectureNodeSection({
       archProvider: value as DomainLibraryCategory,
       archProviderLabel: undefined,
       customIconUrl: undefined,
+      iconAssetId: undefined,
     });
   }
 
@@ -154,14 +173,18 @@ export function ArchitectureNodeSection({
               placeholder="Provider name, e.g. Hetzner"
             />
 
-            {customIconUrl ? (
+            {resolvedCustomIconUrl || iconAssetId ? (
               <div className="flex items-center gap-3 rounded-[var(--brand-radius)] border border-[var(--color-brand-border)] bg-[var(--brand-surface)] px-3 py-2">
                 <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-brand-border)] bg-[var(--brand-background)]">
-                  <img
-                    src={customIconUrl}
-                    alt="Custom provider icon"
-                    className="h-5 w-5 object-contain"
-                  />
+                  {resolvedCustomIconUrl ? (
+                    <img
+                      src={resolvedCustomIconUrl}
+                      alt="Custom provider icon"
+                      className="h-5 w-5 object-contain"
+                    />
+                  ) : (
+                    <ImageIcon className="h-4 w-4 text-[var(--brand-secondary)]" />
+                  )}
                 </div>
                 <span className="flex-1 text-xs font-medium text-[var(--brand-secondary)]">
                   Custom icon added
@@ -172,13 +195,20 @@ export function ArchitectureNodeSection({
                     type="file"
                     accept="image/svg+xml,image/png,image/jpeg,image/webp"
                     className="hidden"
-                    onChange={handleCustomIconChange}
+                    onChange={(event) => {
+                      void handleCustomIconChange(event);
+                    }}
                   />
                 </label>
                 <button
                   type="button"
                   className="rounded-[var(--radius-sm)] border border-red-500/20 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/15"
-                  onClick={() => onChange(nodeId, { customIconUrl: undefined })}
+                  onClick={() =>
+                    onChange(nodeId, {
+                      customIconUrl: undefined,
+                      iconAssetId: undefined,
+                    })
+                  }
                 >
                   Remove
                 </button>
@@ -191,10 +221,17 @@ export function ArchitectureNodeSection({
                   type="file"
                   accept="image/svg+xml,image/png,image/jpeg,image/webp"
                   className="hidden"
-                  onChange={handleCustomIconChange}
+                  onChange={(event) => {
+                    void handleCustomIconChange(event);
+                  }}
                 />
               </label>
             )}
+            {uploadError ? (
+              <p className="text-xs text-red-500" role="alert">
+                {uploadError}
+              </p>
+            ) : null}
           </div>
         </InspectorField>
       ) : (
