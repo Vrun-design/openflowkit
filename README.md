@@ -461,7 +461,7 @@ No cloud required. No account required. No lock-in.
 
 <br/>
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Vrun-design/openflowkit&type=Date)](https://star-history.com/#Vrun-design/openflowkit&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=Vrun-design/openflowkit&type=Date)](https://star-history.dera.page/#Vrun-design/openflowkit&Date)
 
 <br/>
 
