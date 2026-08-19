@@ -38,6 +38,7 @@ export const persistedTabBaseSchema = z.object({
   edges: z.array(z.unknown()).optional(),
   playback: z.unknown().optional(),
   history: z.unknown().optional(),
+  canvasExtensions: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const persistedFlowHydrationSchema = z.object({

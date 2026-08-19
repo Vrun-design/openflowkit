@@ -10,6 +10,7 @@ import type {
   DesignSystem,
   DiagramType,
   FlowEdge,
+  FlowLayer,
   FlowNode,
   FlowTab,
   GlobalEdgeOptions,
@@ -68,12 +69,7 @@ export interface AISettings {
   temperature?: number;
 }
 
-export interface Layer {
-  id: string;
-  name: string;
-  visible: boolean;
-  locked: boolean;
-}
+export type Layer = FlowLayer;
 
 export interface MermaidDiagnosticsSnapshot {
   source: 'paste' | 'import' | 'code';
@@ -106,6 +102,8 @@ export interface FlowState {
   onEdgesChange: OnEdgesChange;
   setNodes: (nodes: FlowNode[] | ((nodes: FlowNode[]) => FlowNode[])) => void;
   setEdges: (edges: FlowEdge[] | ((edges: FlowEdge[]) => FlowEdge[])) => void;
+  setGraph: (nodes: FlowNode[], edges: FlowEdge[]) => void;
+  setGraphAndLayers: (nodes: FlowNode[], edges: FlowEdge[], layers: Layer[]) => void;
   onConnect: (connection: Connection) => void;
 
   // -------------------------------------------------------------------------
@@ -130,6 +128,7 @@ export interface FlowState {
   deleteTab: (id: string) => void;
   closeTab: (id: string) => void;
   updateTab: (id: string, updates: Partial<FlowTab>) => void;
+  replacePageWorkspace: (tabs: FlowTab[], activeTabId: string) => void;
   copySelectedToTab: (targetTabId: string) => number;
   moveSelectedToTab: (targetTabId: string) => number;
 
@@ -217,7 +216,7 @@ export interface FlowState {
 export type CanvasStateSlice = Pick<FlowState, 'nodes' | 'edges'>;
 export type CanvasActionsSlice = Pick<
   FlowState,
-  'onNodesChange' | 'onEdgesChange' | 'setNodes' | 'setEdges' | 'onConnect'
+  'onNodesChange' | 'onEdgesChange' | 'setNodes' | 'setEdges' | 'setGraph' | 'setGraphAndLayers' | 'onConnect'
 >;
 
 export type WorkspaceDocumentsStateSlice = Pick<
@@ -246,6 +245,7 @@ export type TabActionsSlice = Pick<
   | 'deleteTab'
   | 'closeTab'
   | 'updateTab'
+  | 'replacePageWorkspace'
   | 'copySelectedToTab'
   | 'moveSelectedToTab'
 >;

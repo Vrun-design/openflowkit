@@ -5,6 +5,7 @@ import { DEFAULT_DIAGRAM_TYPE } from '@/services/diagramDocument';
 import { clonePlaybackState } from '@/services/playback/model';
 import type { GetFlowState, SetFlowState } from '../actionFactory';
 import { createEmptyFlowHistory } from '../historyState';
+import { INITIAL_LAYERS } from '../defaults';
 import type { FlowState } from '../types';
 import { syncTabNodesEdges } from './syncTabNodesEdges';
 
@@ -22,12 +23,15 @@ export function createTabActions(
   | 'deleteTab'
   | 'closeTab'
   | 'updateTab'
+  | 'replacePageWorkspace'
   | 'copySelectedToTab'
   | 'moveSelectedToTab'
 > {
   function syncActiveTabContent(tabs: FlowTab[]): FlowTab[] {
-    const { activeTabId, nodes, edges } = get();
-    return syncTabNodesEdges(tabs, activeTabId, nodes, edges);
+    const { activeTabId, nodes, edges, layers } = get();
+    return syncTabNodesEdges(tabs, activeTabId, nodes, edges).map((tab) => (
+      tab.id === activeTabId ? { ...tab, layers: layers.map((layer) => ({ ...layer })) } : tab
+    ));
   }
 
   function cloneTabContent(tab: FlowTab): FlowTab {
@@ -46,6 +50,7 @@ export function createTabActions(
         data: edge.data ? { ...edge.data } : edge.data,
         style: edge.style ? { ...edge.style } : edge.style,
       })),
+      layers: (tab.layers ?? INITIAL_LAYERS).map((layer) => ({ ...layer })),
       playback: clonePlaybackState(tab.playback),
       history: createEmptyFlowHistory(),
       updatedAt: nowIso(),
@@ -60,6 +65,7 @@ export function createTabActions(
       updatedAt: nowIso(),
       nodes: [],
       edges: [],
+      layers: INITIAL_LAYERS.map((layer) => ({ ...layer })),
       playback: undefined,
       history: createEmptyFlowHistory(),
     };
@@ -83,18 +89,22 @@ export function createTabActions(
       activeTabId: newTabId,
       nodes: newTab.nodes,
       edges: newTab.edges,
+      layers: newTab.layers,
+      activeLayerId: newTab.layers?.[0]?.id ?? 'default',
     });
     return newTabId;
   }
 
   return {
     setActiveTabId: (id) => {
-      const { tabs, nodes, edges } = get();
+      const { tabs, nodes, edges, layers } = get();
       const currentTabId = get().activeTabId;
       if (id === currentTabId) return;
 
       const updatedTabs = tabs.map((tab) =>
-        tab.id === currentTabId ? { ...tab, nodes, edges, updatedAt: nowIso() } : tab
+        tab.id === currentTabId
+          ? { ...tab, nodes, edges, layers: layers.map((layer) => ({ ...layer })), updatedAt: nowIso() }
+          : tab
       );
 
       const newTab = updatedTabs.find((tab) => tab.id === id);
@@ -105,6 +115,8 @@ export function createTabActions(
         activeTabId: id,
         nodes: newTab.nodes,
         edges: newTab.edges,
+        layers: (newTab.layers ?? INITIAL_LAYERS).map((layer) => ({ ...layer })),
+        activeLayerId: newTab.layers?.[0]?.id ?? 'default',
       });
     },
 
@@ -114,7 +126,10 @@ export function createTabActions(
       const { tabs, activeTabId } = get();
 
       const updatedTabs = tabs.map((tab) =>
-        tab.id === activeTabId ? { ...tab, nodes: get().nodes, edges: get().edges } : tab
+        tab.id === activeTabId ? {
+          ...tab, nodes: get().nodes, edges: get().edges,
+          layers: get().layers.map((layer) => ({ ...layer })),
+        } : tab
       );
 
       const newTab = createEmptyTab();
@@ -125,6 +140,8 @@ export function createTabActions(
         activeTabId: newTabId,
         nodes: newTab.nodes,
         edges: newTab.edges,
+        layers: newTab.layers,
+        activeLayerId: newTab.layers?.[0]?.id ?? 'default',
       });
       return newTabId;
     },
@@ -177,6 +194,8 @@ export function createTabActions(
           activeTabId: fallbackTab.id,
           nodes: fallbackTab.nodes,
           edges: fallbackTab.edges,
+          layers: fallbackTab.layers,
+          activeLayerId: fallbackTab.layers?.[0]?.id ?? 'default',
         });
         return;
       }
@@ -197,6 +216,8 @@ export function createTabActions(
         activeTabId: nextActiveTab.id,
         nodes: nextActiveTab.nodes,
         edges: nextActiveTab.edges,
+        layers: (nextActiveTab.layers ?? INITIAL_LAYERS).map((layer) => ({ ...layer })),
+        activeLayerId: nextActiveTab.layers?.[0]?.id ?? 'default',
       });
     },
 
@@ -209,6 +230,8 @@ export function createTabActions(
           activeTabId: fallbackTab.id,
           nodes: fallbackTab.nodes,
           edges: fallbackTab.edges,
+          layers: fallbackTab.layers,
+          activeLayerId: fallbackTab.layers?.[0]?.id ?? 'default',
         });
         return;
       }
@@ -223,6 +246,8 @@ export function createTabActions(
           set({
             nodes: nextTab.nodes,
             edges: nextTab.edges,
+            layers: (nextTab.layers ?? INITIAL_LAYERS).map((layer) => ({ ...layer })),
+            activeLayerId: nextTab.layers?.[0]?.id ?? 'default',
             activeTabId: newActiveTabId,
           });
         }
@@ -239,6 +264,31 @@ export function createTabActions(
         tabs: state.tabs.map((tab) =>
           tab.id === id ? { ...tab, ...updates, updatedAt: nowIso() } : tab
         ),
+      }));
+    },
+
+    replacePageWorkspace: (tabs, activeTabId) => {
+      const active = tabs.find((tab) => tab.id === activeTabId);
+      if (!active || tabs.length === 0) return;
+      const layers = (active.layers ?? INITIAL_LAYERS).map((layer) => ({ ...layer }));
+      set((state) => ({
+        tabs,
+        activeTabId,
+        nodes: active.nodes,
+        edges: active.edges,
+        layers,
+        activeLayerId: layers[0]?.id ?? 'default',
+        documents: state.documents.map((document) => document.id === state.activeDocumentId ? {
+          ...document,
+          activePageId: activeTabId,
+          updatedAt: nowIso(),
+          pages: tabs.map((tab) => ({
+            id: tab.id, name: tab.name, diagramType: tab.diagramType,
+            updatedAt: tab.updatedAt, nodes: tab.nodes, edges: tab.edges,
+            playback: tab.playback, history: tab.history, layers: tab.layers,
+            canvasExtensions: tab.canvasExtensions,
+          })),
+        } : document),
       }));
     },
 

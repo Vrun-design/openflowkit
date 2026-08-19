@@ -2,6 +2,8 @@ import React from 'react';
 import MemoizedMarkdown from './MemoizedMarkdown';
 import { InlineTextEditSurface } from './InlineTextEditSurface';
 import { NamedIcon } from './IconMap';
+import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
+import { projectNodeContentLayoutToReactFlow } from '@/opencanvas/infrastructure/reactflow/nodeContentLayout';
 
 interface InlineEditState {
   isEditing: boolean;
@@ -17,6 +19,7 @@ interface CustomNodeContentProps {
     label?: string;
     subLabel?: string;
     imageUrl?: string;
+    contentLayout?: import('@/opencanvas/domain/node-layout/types').NodeContentLayoutV1;
   };
   hasIcon: boolean;
   hasSubLabel: boolean;
@@ -71,14 +74,26 @@ export function CustomNodeContent({
   complexShapePaddingClassName,
   contentPadding,
 }: CustomNodeContentProps): React.ReactElement {
+  const nodeLayoutEnabled = ROLLOUT_FLAGS.openCanvasNodeLayoutV1;
+  const projectedLayout = projectNodeContentLayoutToReactFlow(
+    data,
+    nodeLayoutEnabled
+  );
   return (
     <div
       className={`relative z-10 h-full w-full min-h-0 p-4 flex flex-col items-center justify-center ${isCompactNode ? 'gap-1.5' : 'gap-2'} ${isComplexShape ? complexShapePaddingClassName : ''}`}
-      style={!isComplexShape ? { padding: contentPadding } : undefined}
+      style={
+        nodeLayoutEnabled
+          ? projectedLayout.containerStyle
+          : !isComplexShape
+            ? { padding: contentPadding }
+            : undefined
+      }
     >
       {hasIcon ? (
         <div
           className={`flex items-center gap-1.5 shrink-0 flow-lod-far-target flow-lod-far-flex-target ${lodPreserveClassName}`}
+          style={nodeLayoutEnabled ? projectedLayout.iconStyle : undefined}
         >
           {resolvedAssetIconUrl ? (
             <div
@@ -110,7 +125,11 @@ export function CustomNodeContent({
 
       <div
         className="flex flex-col min-w-0 max-w-full w-full overflow-hidden"
-        style={textAlignStyle}
+        style={
+          nodeLayoutEnabled
+            ? { ...textAlignStyle, ...projectedLayout.textStyle }
+            : textAlignStyle
+        }
       >
         <InlineTextEditSurface
           isEditing={labelEdit.isEditing}

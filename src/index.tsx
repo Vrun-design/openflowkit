@@ -10,7 +10,8 @@ import {
   captureSessionStarted,
   initializeAnalytics,
 } from './services/analytics/analytics';
-import { ensureLocalFirstPersistenceReady } from './services/storage/localFirstRuntime';
+import { discardPendingCrashRecovery, ensureLocalFirstPersistenceReady,
+  getPendingCrashRecovery, restorePendingCrashRecovery } from './services/storage/localFirstRuntime';
 import { installStorageTelemetrySink } from './services/storage/storageTelemetrySink';
 import { reportStorageTelemetry } from './services/storage/storageTelemetry';
 import { registerAppShellServiceWorker } from './services/offline/registerAppShellServiceWorker';
@@ -31,6 +32,7 @@ const root = ReactDOM.createRoot(rootElement);
 
 function BootstrapApp(): React.ReactElement {
   const [isReady, setIsReady] = React.useState(false);
+  const [recoveryAvailable, setRecoveryAvailable] = React.useState(false);
 
   React.useEffect(() => {
     let isDisposed = false;
@@ -49,6 +51,7 @@ function BootstrapApp(): React.ReactElement {
       })
       .finally(() => {
         if (!isDisposed) {
+          setRecoveryAvailable(Boolean(getPendingCrashRecovery()));
           setIsReady(true);
         }
       });
@@ -67,7 +70,19 @@ function BootstrapApp(): React.ReactElement {
     );
   }
 
-  return <App />;
+  return <>
+    {recoveryAvailable ? <section role="alertdialog" aria-label="Recover unsaved work">
+      <h1>Recover unsaved work?</h1>
+      <p>A newer local edit journal was found after the previous session ended.</p>
+      <button type="button" onClick={() => { restorePendingCrashRecovery(); setRecoveryAvailable(false); }}>
+        Recover work
+      </button>
+      <button type="button" onClick={() => { discardPendingCrashRecovery(); setRecoveryAvailable(false); }}>
+        Discard recovery
+      </button>
+    </section> : null}
+    <App />
+  </>;
 }
 
 root.render(

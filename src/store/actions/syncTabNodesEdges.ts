@@ -6,8 +6,11 @@ export function syncTabNodesEdges(
   tabs: FlowTab[],
   activeTabId: string,
   nodes: FlowTab['nodes'],
-  edges: FlowTab['edges']
+  edges: FlowTab['edges'],
+  layers?: FlowTab['layers']
 ): FlowTab[] {
   const updatedAt = nowIso();
-  return tabs.map((tab) => (tab.id === activeTabId ? { ...tab, nodes, edges, updatedAt } : tab));
+  return tabs.map((tab) => (tab.id === activeTabId
+    ? { ...tab, nodes, edges, ...(layers ? { layers } : {}), updatedAt }
+    : tab));
 }

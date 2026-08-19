@@ -32,6 +32,8 @@ export function selectCanvasActions(state: FlowState): CanvasActionsSlice {
     onEdgesChange: state.onEdgesChange,
     setNodes: state.setNodes,
     setEdges: state.setEdges,
+    setGraph: state.setGraph,
+    setGraphAndLayers: state.setGraphAndLayers,
     onConnect: state.onConnect,
   };
 }
@@ -80,6 +82,7 @@ export function selectTabActions(state: FlowState): TabActionsSlice {
     deleteTab: state.deleteTab,
     closeTab: state.closeTab,
     updateTab: state.updateTab,
+    replacePageWorkspace: state.replacePageWorkspace,
     copySelectedToTab: state.copySelectedToTab,
     moveSelectedToTab: state.moveSelectedToTab,
   };

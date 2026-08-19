@@ -1,6 +1,23 @@
 export type RolloutFlagKey =
   | 'relationSemanticsV1'
   | 'documentModelV2'
+  | 'openCanvasDocumentV1'
+  | 'openCanvasRendererV1'
+  | 'openCanvasConnectorsV1'
+  | 'openCanvasNodeLayoutV1'
+  | 'openCanvasOrganizationV1'
+  | 'openCanvasBasicNodesV1'
+  | 'openCanvasFreeformNodesV1'
+  | 'openCanvasArchitectureNodesV1'
+  | 'openCanvasContainerNodesV1'
+  | 'openCanvasClassEntityNodesV1'
+  | 'openCanvasMindmapJourneyNodesV1'
+  | 'openCanvasSequenceNodesV1'
+  | 'openCanvasWireframeNodesV1'
+  | 'openCanvasA11yV1'
+  | 'openCanvasCanonicalCollaboration'
+  | 'openCanvasAiPreviewV1'
+  | 'openCanvasCrashRecoveryV1'
   | 'collaborationEnabled'
   | 'architectureLintEnabled'
   | 'importSql'
@@ -28,6 +45,108 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     envVar: 'VITE_DOCUMENT_MODEL_V2',
     defaultEnabled: false,
     description: 'Extended document metadata for scenes, exports, and bindings',
+  },
+  openCanvasDocumentV1: {
+    key: 'openCanvasDocumentV1',
+    envVar: 'VITE_OPEN_CANVAS_DOCUMENT_V1',
+    defaultEnabled: false,
+    description: 'Canonical renderer-independent OpenCanvas document projection',
+  },
+  openCanvasRendererV1: {
+    key: 'openCanvasRendererV1',
+    envVar: 'VITE_OPEN_CANVAS_RENDERER_V1',
+    defaultEnabled: false,
+    description: 'Isolated PixiJS WebGL renderer evaluation route',
+  },
+  openCanvasConnectorsV1: {
+    key: 'openCanvasConnectorsV1',
+    envVar: 'VITE_OPEN_CANVAS_CONNECTORS_V1',
+    defaultEnabled: false,
+    description: 'Canonical connector projection and Pixi read-rendering evaluation',
+  },
+  openCanvasNodeLayoutV1: {
+    key: 'openCanvasNodeLayoutV1',
+    envVar: 'VITE_OPEN_CANVAS_NODE_LAYOUT_V1',
+    defaultEnabled: false,
+    description: 'Portable OpenCanvas node content layout model',
+  },
+  openCanvasOrganizationV1: {
+    key: 'openCanvasOrganizationV1',
+    envVar: 'VITE_OPEN_CANVAS_ORGANIZATION_V1',
+    defaultEnabled: false,
+    description: 'Canonical hierarchy and z-order controls in OpenCanvas',
+  },
+  openCanvasBasicNodesV1: {
+    key: 'openCanvasBasicNodesV1',
+    envVar: 'VITE_OPEN_CANVAS_BASIC_NODES_V1',
+    defaultEnabled: false,
+    description: 'Basic process, start, decision, end, and custom node parity in OpenCanvas',
+  },
+  openCanvasFreeformNodesV1: {
+    key: 'openCanvasFreeformNodesV1',
+    envVar: 'VITE_OPEN_CANVAS_FREEFORM_NODES_V1',
+    defaultEnabled: false,
+    description: 'Text, image, and annotation node parity in OpenCanvas',
+  },
+  openCanvasArchitectureNodesV1: {
+    key: 'openCanvasArchitectureNodesV1',
+    envVar: 'VITE_OPEN_CANVAS_ARCHITECTURE_NODES_V1',
+    defaultEnabled: false,
+    description: 'Architecture cards and provider icon node parity in OpenCanvas',
+  },
+  openCanvasContainerNodesV1: {
+    key: 'openCanvasContainerNodesV1',
+    envVar: 'VITE_OPEN_CANVAS_CONTAINER_NODES_V1',
+    defaultEnabled: false,
+    description: 'Group, section, and swimlane node parity in OpenCanvas',
+  },
+  openCanvasClassEntityNodesV1: {
+    key: 'openCanvasClassEntityNodesV1',
+    envVar: 'VITE_OPEN_CANVAS_CLASS_ENTITY_NODES_V1',
+    defaultEnabled: false,
+    description: 'UML class and ER entity node parity in OpenCanvas',
+  },
+  openCanvasMindmapJourneyNodesV1: {
+    key: 'openCanvasMindmapJourneyNodesV1',
+    envVar: 'VITE_OPEN_CANVAS_MINDMAP_JOURNEY_NODES_V1',
+    defaultEnabled: false,
+    description: 'Mindmap topic and journey step node parity in OpenCanvas',
+  },
+  openCanvasSequenceNodesV1: {
+    key: 'openCanvasSequenceNodesV1',
+    envVar: 'VITE_OPEN_CANVAS_SEQUENCE_NODES_V1',
+    defaultEnabled: false,
+    description: 'Sequence participant, note, fragment, and message parity in OpenCanvas',
+  },
+  openCanvasWireframeNodesV1: {
+    key: 'openCanvasWireframeNodesV1',
+    envVar: 'VITE_OPEN_CANVAS_WIREFRAME_NODES_V1',
+    defaultEnabled: false,
+    description: 'Browser, mobile, and wireframe node parity in OpenCanvas',
+  },
+  openCanvasA11yV1: {
+    key: 'openCanvasA11yV1',
+    envVar: 'VITE_OPEN_CANVAS_A11Y_V1',
+    defaultEnabled: false,
+    description: 'OpenCanvas semantic scene tree and spatial keyboard navigation',
+  },
+  openCanvasCanonicalCollaboration: {
+    key: 'openCanvasCanonicalCollaboration',
+    envVar: 'VITE_OPEN_CANVAS_CANONICAL_COLLABORATION',
+    defaultEnabled: false,
+    description: 'Canonical command collaboration in the OpenCanvas production canary',
+  },
+  openCanvasAiPreviewV1: {
+    key: 'openCanvasAiPreviewV1',
+    envVar: 'VITE_OPEN_CANVAS_AI_PREVIEW_V1',
+    defaultEnabled: false,
+    description: 'Validated canonical AI proposal previews and per-change decisions',
+  },
+  openCanvasCrashRecoveryV1: {
+    key: 'openCanvasCrashRecoveryV1',
+    envVar: 'VITE_OPEN_CANVAS_CRASH_RECOVERY_V1',
+    defaultEnabled: false,
+    description: 'Append-before-autosave crash journal and explicit workspace recovery',
   },
   collaborationEnabled: {
     key: 'collaborationEnabled',
@@ -102,6 +221,23 @@ export function isRolloutFlagEnabled(key: RolloutFlagKey): boolean {
 export const ROLLOUT_FLAGS: Record<RolloutFlagKey, boolean> = {
   relationSemanticsV1: isRolloutFlagEnabled('relationSemanticsV1'),
   documentModelV2: isRolloutFlagEnabled('documentModelV2'),
+  openCanvasDocumentV1: isRolloutFlagEnabled('openCanvasDocumentV1'),
+  openCanvasRendererV1: isRolloutFlagEnabled('openCanvasRendererV1'),
+  openCanvasConnectorsV1: isRolloutFlagEnabled('openCanvasConnectorsV1'),
+  openCanvasNodeLayoutV1: isRolloutFlagEnabled('openCanvasNodeLayoutV1'),
+  openCanvasOrganizationV1: isRolloutFlagEnabled('openCanvasOrganizationV1'),
+  openCanvasBasicNodesV1: isRolloutFlagEnabled('openCanvasBasicNodesV1'),
+  openCanvasFreeformNodesV1: isRolloutFlagEnabled('openCanvasFreeformNodesV1'),
+  openCanvasArchitectureNodesV1: isRolloutFlagEnabled('openCanvasArchitectureNodesV1'),
+  openCanvasContainerNodesV1: isRolloutFlagEnabled('openCanvasContainerNodesV1'),
+  openCanvasClassEntityNodesV1: isRolloutFlagEnabled('openCanvasClassEntityNodesV1'),
+  openCanvasMindmapJourneyNodesV1: isRolloutFlagEnabled('openCanvasMindmapJourneyNodesV1'),
+  openCanvasSequenceNodesV1: isRolloutFlagEnabled('openCanvasSequenceNodesV1'),
+  openCanvasWireframeNodesV1: isRolloutFlagEnabled('openCanvasWireframeNodesV1'),
+  openCanvasA11yV1: isRolloutFlagEnabled('openCanvasA11yV1'),
+  openCanvasCanonicalCollaboration: isRolloutFlagEnabled('openCanvasCanonicalCollaboration'),
+  openCanvasAiPreviewV1: isRolloutFlagEnabled('openCanvasAiPreviewV1'),
+  openCanvasCrashRecoveryV1: isRolloutFlagEnabled('openCanvasCrashRecoveryV1'),
   collaborationEnabled: isRolloutFlagEnabled('collaborationEnabled'),
   architectureLintEnabled: isRolloutFlagEnabled('architectureLintEnabled'),
   importSql: isRolloutFlagEnabled('importSql'),

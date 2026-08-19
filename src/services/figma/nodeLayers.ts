@@ -3,8 +3,30 @@ import type { FlowNode, NodeData } from '@/lib/types';
 import { NODE_DEFAULTS } from '@/theme';
 import { getIconSVGContent } from './iconHelpers';
 import { escapeXml, getNodeTheme, getSectionTheme } from './themeHelpers';
+import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
+import {
+    layoutNodeContent,
+    resolveNodeContentLayout,
+} from '@/opencanvas/domain/node-layout/model';
+import type { LabelAlignment } from '@/opencanvas/domain/node-layout/types';
 
 type IconMap = Record<string, ElementType>;
+
+function svgTextAnchor(alignment: LabelAlignment): 'start' | 'middle' | 'end' {
+    if (alignment === 'start') return 'start';
+    if (alignment === 'end') return 'end';
+    return 'middle';
+}
+
+function alignedTextX(x: number, width: number, alignment: LabelAlignment): number {
+    if (alignment === 'start') return x;
+    if (alignment === 'end') return x + width;
+    return x + width / 2;
+}
+
+function estimatedTextWidth(lines: readonly string[], pixelsPerCharacter: number): number {
+    return Math.max(...lines.map((line) => line.length), 1) * pixelsPerCharacter;
+}
 
 export function renderSectionsLayer(out: string[], nodes: FlowNode[], iconMap: IconMap): void {
     out.push('<g id="sections">');
@@ -180,48 +202,67 @@ export function renderStandardNodesLayer(out: string[], nodes: FlowNode[], iconM
                 contentWidth = width - 40;
             }
 
-            const contentCenterX = contentX + contentWidth / 2;
             const iconSize = 40;
             const labelLineHeight = 16;
             const subLabelLineHeight = 14;
             const labelLines = String(data.label || 'Node').split('\n');
             const subLabelLines = data.subLabel ? String(data.subLabel).split('\n') : [];
-            const gap = 8;
+            const contentGeometry = layoutNodeContent(
+                resolveNodeContentLayout(data, ROLLOUT_FLAGS.openCanvasNodeLayoutV1),
+                {
+                    nodeSize: { width: contentWidth, height },
+                    iconSize: activeIcon ? { width: iconSize, height: iconSize } : null,
+                    labelSize: {
+                        width: estimatedTextWidth(labelLines, 7.5),
+                        height: labelLines.length * labelLineHeight,
+                    },
+                    subLabelSize: data.subLabel
+                        ? {
+                            width: estimatedTextWidth(subLabelLines, 6.5),
+                            height: subLabelLines.length * subLabelLineHeight,
+                        }
+                        : null,
+                }
+            );
+            const textAnchor = svgTextAnchor(contentGeometry.labelAlignment);
 
-            let totalHeight = 0;
-            if (activeIcon) totalHeight += iconSize + gap;
-            totalHeight += labelLines.length * labelLineHeight;
-            if (data.subLabel) totalHeight += gap / 2 + subLabelLines.length * subLabelLineHeight;
-
-            let cursorY = centerY - totalHeight / 2;
-
-            if (activeIcon) {
-                const iconBoxX = contentCenterX - iconSize / 2;
-                const iconBoxY = cursorY;
-                out.push(`    <rect x="${iconBoxX}" y="${iconBoxY}" width="${iconSize}" height="${iconSize}" rx="8" fill="${theme.iconBg}" stroke="rgba(0,0,0,0.05)" stroke-width="1" />`);
+            if (activeIcon && contentGeometry.iconBounds) {
+                const iconBoxX = contentX + contentGeometry.iconBounds.x;
+                const iconBoxY = y + contentGeometry.iconBounds.y;
+                const renderedIconSize = Math.min(contentGeometry.iconBounds.width, contentGeometry.iconBounds.height);
+                out.push(`    <rect x="${iconBoxX}" y="${iconBoxY}" width="${contentGeometry.iconBounds.width}" height="${contentGeometry.iconBounds.height}" rx="8" fill="${theme.iconBg}" stroke="rgba(0,0,0,0.05)" stroke-width="1" />`);
 
                 const iconContent = getIconSVGContent(activeIcon, theme.iconColor, iconMap);
                 if (iconContent) {
-                    out.push(`    <g transform="translate(${iconBoxX + 10}, ${iconBoxY + 10})">`);
-                    out.push(`      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${theme.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconContent}</svg>`);
+                    const glyphSize = renderedIconSize / 2;
+                    out.push(`    <g transform="translate(${iconBoxX + (contentGeometry.iconBounds.width - glyphSize) / 2}, ${iconBoxY + (contentGeometry.iconBounds.height - glyphSize) / 2})">`);
+                    out.push(`      <svg width="${glyphSize}" height="${glyphSize}" viewBox="0 0 24 24" fill="none" stroke="${theme.iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${iconContent}</svg>`);
                     out.push('    </g>');
                 }
-
-                cursorY += iconSize + gap;
             }
 
-            out.push(`    <text x="${contentCenterX}" y="${cursorY + labelLineHeight - 2}" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="14" fill="${theme.text}" text-anchor="middle">`);
+            const labelX = contentX + alignedTextX(
+                contentGeometry.labelBounds.x,
+                contentGeometry.labelBounds.width,
+                contentGeometry.labelAlignment
+            );
+            const labelY = y + contentGeometry.labelBounds.y;
+            out.push(`    <text x="${labelX}" y="${labelY + labelLineHeight - 2}" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="14" fill="${theme.text}" text-anchor="${textAnchor}">`);
             labelLines.forEach((line, index) => {
-                out.push(`      <tspan x="${contentCenterX}" dy="${index === 0 ? 0 : '1.2em'}">${escapeXml(line)}</tspan>`);
+                out.push(`      <tspan x="${labelX}" dy="${index === 0 ? 0 : '1.2em'}">${escapeXml(line)}</tspan>`);
             });
             out.push('    </text>');
-            cursorY += labelLines.length * labelLineHeight;
 
-            if (data.subLabel) {
-                cursorY += gap / 2;
-                out.push(`    <text x="${contentCenterX}" y="${cursorY + subLabelLineHeight - 2}" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="${theme.subText}" text-anchor="middle">`);
+            if (data.subLabel && contentGeometry.subLabelBounds) {
+                const subLabelX = contentX + alignedTextX(
+                    contentGeometry.subLabelBounds.x,
+                    contentGeometry.subLabelBounds.width,
+                    contentGeometry.labelAlignment
+                );
+                const subLabelY = y + contentGeometry.subLabelBounds.y;
+                out.push(`    <text x="${subLabelX}" y="${subLabelY + subLabelLineHeight - 2}" font-family="Inter, system-ui, sans-serif" font-size="12" font-weight="500" fill="${theme.subText}" text-anchor="${textAnchor}">`);
                 subLabelLines.forEach((line, index) => {
-                    out.push(`      <tspan x="${contentCenterX}" dy="${index === 0 ? 0 : '1.2em'}">${escapeXml(line)}</tspan>`);
+                    out.push(`      <tspan x="${subLabelX}" dy="${index === 0 ? 0 : '1.2em'}">${escapeXml(line)}</tspan>`);
                 });
                 out.push('    </text>');
             }

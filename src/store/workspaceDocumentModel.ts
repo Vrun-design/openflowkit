@@ -158,6 +158,7 @@ export function mergeActivePagesIntoDocuments(params: {
                 edges: page.edges,
                 playback: page.playback,
                 history: page.history,
+                layers: page.layers,
             })),
         };
     });
@@ -355,6 +356,7 @@ export function getEditorPagesForDocument(documents: FlowDocument[], documentId:
             edges: page.edges,
             playback: page.playback,
             history: page.history,
+            layers: page.layers,
         })),
     };
 }

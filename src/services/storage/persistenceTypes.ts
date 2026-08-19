@@ -5,6 +5,8 @@ export interface PersistedDocumentContent {
   edges: FlowTab['edges'];
   playback?: FlowTab['playback'];
   history?: FlowTab['history'];
+  layers?: FlowTab['layers'];
+  canvasExtensions?: FlowTab['canvasExtensions'];
 }
 
 export interface PersistedDocumentPage {

@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  Link,
   useNavigate,
   useLocation,
   useParams,
@@ -24,6 +25,10 @@ import { useFlowStore } from './store';
 import { useEditorPageActions } from '@/store/editorPageHooks';
 import { useWorkspaceDocumentActions, useWorkspaceRouteResolver } from '@/store/documentHooks';
 import { useShortcutHelpOpen } from '@/store/viewHooks';
+import {
+  canvasRendererLocation,
+  requestedCanvasRenderer,
+} from '@/opencanvas/application/renderer/rendererSelection';
 
 // Import i18n configuration
 import './i18n/config';
@@ -50,6 +55,36 @@ const LazyDiagramViewer = lazy(async () => {
   return { default: module.DiagramViewer };
 });
 
+// Keep the evaluation renderer out of default production bundles entirely.
+// The centralized rollout definition documents the flag; this compile-time gate
+// lets Vite remove the lazy import unless the lab build explicitly opts in.
+const LazyPixiSpikePage =
+  import.meta.env.VITE_OPEN_CANVAS_RENDERER_V1 === '1'
+    ? lazy(async () => {
+        const module = await import('./opencanvas/presentation/PixiSpikePage');
+        return { default: module.PixiSpikePage };
+      })
+    : null;
+
+const LazyOpenCanvasShadowProjection =
+  import.meta.env.VITE_OPEN_CANVAS_DOCUMENT_V1 === '1'
+    ? lazy(async () => {
+        const module = await import(
+          './opencanvas/presentation/OpenCanvasShadowProjection'
+        );
+        return { default: module.OpenCanvasShadowProjection };
+      })
+    : null;
+
+const LazyOpenCanvasDocumentPage =
+  import.meta.env.VITE_OPEN_CANVAS_DOCUMENT_V1 === '1' &&
+  import.meta.env.VITE_OPEN_CANVAS_RENDERER_V1 === '1'
+    ? lazy(async () => {
+        const module = await import('./opencanvas/presentation/OpenCanvasDocumentPage');
+        return { default: module.OpenCanvasDocumentPage };
+      })
+    : null;
+
 function navigateHome(navigate: ReturnType<typeof useNavigate>): void {
   navigate('/home', { replace: true });
 }
@@ -72,6 +107,7 @@ function normalizeLegacyViewerUrl(): void {
 function FlowCanvasRoute(): React.JSX.Element {
   const { flowId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { setActiveDocumentId } = useWorkspaceDocumentActions();
   const { setActivePageId } = useEditorPageActions();
   const { documents, resolveTarget } = useWorkspaceRouteResolver();
@@ -92,12 +128,35 @@ function FlowCanvasRoute(): React.JSX.Element {
     setActivePageId(target.pageId);
   }, [documents, flowId, navigate, resolveTarget, setActiveDocumentId, setActivePageId]);
 
+  const openCanvasRequested = requestedCanvasRenderer(location.search) === 'opencanvas';
+
+  if (openCanvasRequested && LazyOpenCanvasDocumentPage) {
+    return (
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <LazyOpenCanvasDocumentPage />
+      </Suspense>
+    );
+  }
+
   return (
     <Suspense fallback={<RouteLoadingFallback />}>
       <ReactFlowProvider>
+        {LazyOpenCanvasShadowProjection ? (
+          <Suspense fallback={null}>
+            <LazyOpenCanvasShadowProjection />
+          </Suspense>
+        ) : null}
         <CinematicExportProvider>
           <FlowEditor onGoHome={() => navigate('/home')} />
         </CinematicExportProvider>
+        {LazyOpenCanvasDocumentPage ? (
+          <Link
+            to={canvasRendererLocation(location.pathname, location.search, 'opencanvas')}
+            className="fixed bottom-4 right-4 z-[100] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 shadow-lg hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+          >
+            Try OpenCanvas
+          </Link>
+        ) : null}
       </ReactFlowProvider>
     </Suspense>
   );
@@ -225,6 +284,16 @@ function App(): React.JSX.Element {
           <Route path="/templates" element={<HomePageRoute />} />
           <Route path="/mcp" element={<HomePageRoute />} />
           <Route path="/settings" element={<HomePageRoute />} />
+          {LazyPixiSpikePage ? (
+            <Route
+              path="/_labs/opencanvas-pixi"
+              element={
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <LazyPixiSpikePage />
+                </Suspense>
+              }
+            />
+          ) : null}
           <Route
             path="/canvas"
             element={

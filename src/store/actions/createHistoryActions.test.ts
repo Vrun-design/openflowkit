@@ -58,12 +58,15 @@ function createState(snapshotCount = 0): FlowState {
     deleteTab: () => undefined,
     closeTab: () => undefined,
     updateTab: () => undefined,
+    replacePageWorkspace: () => undefined,
     copySelectedToTab: () => 0,
     moveSelectedToTab: () => 0,
     onNodesChange: () => undefined,
     onEdgesChange: () => undefined,
     setNodes: () => undefined,
     setEdges: () => undefined,
+    setGraph: () => undefined,
+    setGraphAndLayers: () => undefined,
     onConnect: () => undefined,
     recordHistoryV2: () => undefined,
     undoV2: () => undefined,
@@ -159,5 +162,49 @@ describe('createHistoryActions', () => {
     actions.recordHistoryV2();
 
     expect(nextState.tabs?.[0]?.history.past.length).toBeLessThanOrEqual(20);
+  });
+
+  it('restores canonical layer state with graph undo', () => {
+    let nextState: Partial<FlowState> = {};
+    const state = createState();
+    state.layers = [{ id: 'locked', name: 'Locked', visible: true, locked: true }];
+    state.tabs[0].history.past = [{
+      nodes: state.nodes,
+      edges: state.edges,
+      layers: [{ id: 'default', name: 'Default', visible: true, locked: false }],
+    }];
+    const actions = createHistoryActions((updater) => {
+      nextState = typeof updater === 'function' ? updater(state) : updater;
+    }, () => state);
+
+    actions.undoV2();
+
+    expect(nextState.layers).toEqual([
+      { id: 'default', name: 'Default', visible: true, locked: false },
+    ]);
+  });
+
+  it('records and restores canvas extensions with graph history', () => {
+    let nextState: Partial<FlowState> = {};
+    const state = createState();
+    state.tabs[0].canvasExtensions = { openCanvasPrecision: { gridSize: 25 } };
+    const actions = createHistoryActions((updater) => {
+      nextState = typeof updater === 'function' ? updater(state) : updater;
+    }, () => state);
+
+    actions.recordHistoryV2();
+    expect(nextState.tabs?.[0]?.history.past[0]?.canvasExtensions).toEqual(
+      state.tabs[0].canvasExtensions
+    );
+
+    state.tabs[0].history.past = [{
+      nodes: state.nodes,
+      edges: state.edges,
+      canvasExtensions: { openCanvasPrecision: { gridSize: 10 } },
+    }];
+    actions.undoV2();
+    expect(nextState.tabs?.[0]?.canvasExtensions).toEqual({
+      openCanvasPrecision: { gridSize: 10 },
+    });
   });
 });

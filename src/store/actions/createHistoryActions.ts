@@ -11,9 +11,12 @@ type SnapshotDirection = 'past' | 'future';
 const snapshotSizeCache = new WeakMap<FlowHistoryState, number>();
 
 function buildSnapshot(state: FlowState): FlowHistoryState {
+    const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId);
     return {
         nodes: state.nodes,
         edges: state.edges,
+        layers: state.layers,
+        canvasExtensions: activeTab?.canvasExtensions,
     };
 }
 
@@ -109,6 +112,8 @@ export function createHistoryActions(set: SetFlowState, get: GetFlowState): Pick
                     },
                     nodes: previous.nodes,
                     edges: previous.edges,
+                    layers: previous.layers ?? state.layers,
+                    canvasExtensions: previous.canvasExtensions,
                 };
 
                 const tabs = [...state.tabs];
@@ -118,6 +123,7 @@ export function createHistoryActions(set: SetFlowState, get: GetFlowState): Pick
                     tabs,
                     nodes: previous.nodes,
                     edges: previous.edges,
+                    layers: previous.layers ?? state.layers,
                 };
             });
         },
@@ -140,6 +146,8 @@ export function createHistoryActions(set: SetFlowState, get: GetFlowState): Pick
                     },
                     nodes: next.nodes,
                     edges: next.edges,
+                    layers: next.layers ?? state.layers,
+                    canvasExtensions: next.canvasExtensions,
                 };
 
                 const tabs = [...state.tabs];
@@ -149,6 +157,7 @@ export function createHistoryActions(set: SetFlowState, get: GetFlowState): Pick
                     tabs,
                     nodes: next.nodes,
                     edges: next.edges,
+                    layers: next.layers ?? state.layers,
                 };
             });
         },

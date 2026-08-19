@@ -99,7 +99,9 @@ export function createCollaborationRuntimeController(
           applyIncomingOperation(event.operation);
           return;
         }
-        applyIncomingPresenceSnapshot(event.presence);
+        if (event.type === 'presence_snapshot') {
+          applyIncomingPresenceSnapshot(event.presence);
+        }
       });
       // Publish initial presence immediately so peers can see viewer/cursor metadata without waiting for pointer movement.
       transport.publishPresence(localPresence);

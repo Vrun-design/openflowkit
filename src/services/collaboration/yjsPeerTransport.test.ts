@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 import type { CollaborationOperationEnvelope, CollaborationPresenceState } from './types';
+import type { CanonicalCollaborationOperation } from '@/opencanvas/application/collaboration/canonicalOperationLog';
 import { createYjsPeerCollaborationTransport, isPeerCollaborationSupported } from './yjsPeerTransport';
 
 interface AwarenessChangeEvent {
@@ -130,6 +131,24 @@ function createPresence(clientId: string): CollaborationPresenceState {
     name: clientId,
     color: '#10b981',
     cursor: { x: 10, y: 20 },
+  };
+}
+
+function createCanonicalOperation(clientId: string): CanonicalCollaborationOperation {
+  return {
+    opId: `canonical-${clientId}`,
+    documentId: 'document-1',
+    clientId,
+    lamport: 1,
+    command: {
+      kind: 'remove-node', id: `remove-${clientId}`, label: 'Remove node', pageId: 'page-1',
+      index: 0,
+      node: {
+        id: 'node-1', kind: 'process', parentId: null, layerId: 'default', zIndex: 0,
+        transform: { translation: { x: 0, y: 0 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+        size: { width: 100, height: 50 }, content: {}, appearance: {}, ports: [], metadata: {}, extensions: {},
+      },
+    },
   };
 }
 
@@ -286,6 +305,37 @@ describe('yjs peer collaboration transport', () => {
     expect(listenerB.mock.calls[0][0].type).toBe('operation');
     expect(listenerB.mock.calls[0][0].fromClientId).toBe('client-a');
 
+    transportA.disconnect();
+    transportB.disconnect();
+  });
+
+  it('syncs and replays canonical operations through an independent Yjs array', () => {
+    const hub = new FakeYjsRoomHub();
+    const makeTransport = () => createYjsPeerCollaborationTransport({
+      createProvider: (roomId, doc) => {
+        const disconnect = hub.connect(roomId, doc);
+        return { awareness: new FakeAwareness(), destroy: disconnect };
+      },
+    });
+    const transportA = makeTransport();
+    const listenerA = vi.fn();
+    transportA.connect(
+      { roomId: 'room-1', clientId: 'client-a', signalingServers: [], password: 'secret-1' },
+      listenerA
+    );
+    transportA.publishCanonicalOperation?.(createCanonicalOperation('client-a'));
+    expect(listenerA).not.toHaveBeenCalled();
+
+    const transportB = makeTransport();
+    const listenerB = vi.fn();
+    transportB.connect(
+      { roomId: 'room-1', clientId: 'client-b', signalingServers: [], password: 'secret-1' },
+      listenerB
+    );
+    expect(listenerB).toHaveBeenCalledTimes(1);
+    expect(listenerB.mock.calls[0][0]).toMatchObject({
+      type: 'canonical_operation', fromClientId: 'client-a',
+    });
     transportA.disconnect();
     transportB.disconnect();
   });

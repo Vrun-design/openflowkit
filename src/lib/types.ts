@@ -1,5 +1,6 @@
 import { type LegacyEdge, type LegacyNode } from '@/lib/reactflowCompat';
 import type { ClassRelationToken, ERRelationToken } from '@/lib/relationSemantics';
+import type { NodeContentLayoutV1 } from '@/opencanvas/domain/node-layout/types';
 
 export interface ErField {
   name: string;
@@ -106,6 +107,7 @@ export interface NodeVisualStyleData {
   backgroundColor?: string;
   transparency?: number; // 0-1
   variant?: string; // wireframe preset key (e.g. 'landing', 'modal')
+  contentLayout?: NodeContentLayoutV1;
 }
 
 export interface NodeCanvasMetadata {
@@ -372,6 +374,15 @@ export interface GeneratedFlowData {
 export interface FlowHistoryState {
   nodes: FlowNode[];
   edges: FlowEdge[];
+  layers?: FlowLayer[];
+  canvasExtensions?: Record<string, unknown>;
+}
+
+export interface FlowLayer {
+  id: string;
+  name: string;
+  visible: boolean;
+  locked: boolean;
 }
 
 export interface FlowTab {
@@ -381,6 +392,8 @@ export interface FlowTab {
   updatedAt?: string;
   nodes: FlowNode[];
   edges: FlowEdge[];
+  layers?: FlowLayer[];
+  canvasExtensions?: Record<string, unknown>;
   playback?: PlaybackState;
   history: {
     past: FlowHistoryState[];

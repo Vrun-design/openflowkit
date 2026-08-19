@@ -1,7 +1,9 @@
 import type { CollaborationOperationEnvelope, CollaborationPresenceState, CollaborationRoomConfig } from './types';
+import type { CanonicalCollaborationOperation } from '@/opencanvas/application/collaboration/canonicalOperationLog';
 
-type CollaborationEvent =
+export type CollaborationEvent =
   | { type: 'operation'; fromClientId: string; operation: CollaborationOperationEnvelope }
+  | { type: 'canonical_operation'; fromClientId: string; operation: CanonicalCollaborationOperation }
   | { type: 'presence_snapshot'; fromClientId: string; presence: CollaborationPresenceState[] };
 
 type CollaborationEventListener = (event: CollaborationEvent) => void;
@@ -9,6 +11,7 @@ type CollaborationEventListener = (event: CollaborationEvent) => void;
 interface CollaborationRoomHub {
   listeners: Map<string, CollaborationEventListener>;
   presenceByClientId: Map<string, CollaborationPresenceState>;
+  canonicalOperations: CanonicalCollaborationOperation[];
 }
 
 const ROOM_HUBS = new Map<string, CollaborationRoomHub>();
@@ -16,7 +19,11 @@ const ROOM_HUBS = new Map<string, CollaborationRoomHub>();
 function getRoomHub(roomId: string): CollaborationRoomHub {
   const existing = ROOM_HUBS.get(roomId);
   if (existing) return existing;
-  const created: CollaborationRoomHub = { listeners: new Map(), presenceByClientId: new Map() };
+  const created: CollaborationRoomHub = {
+    listeners: new Map(),
+    presenceByClientId: new Map(),
+    canonicalOperations: [],
+  };
   ROOM_HUBS.set(roomId, created);
   return created;
 }
@@ -25,6 +32,7 @@ export interface CollaborationTransport {
   connect: (config: CollaborationRoomConfig, onEvent: CollaborationEventListener) => void;
   disconnect: () => void;
   publishOperation: (operation: CollaborationOperationEnvelope) => void;
+  publishCanonicalOperation?: (operation: CanonicalCollaborationOperation) => void;
   publishPresence: (presence: CollaborationPresenceState) => void;
   whenReady?: () => Promise<void>;
   subscribeStatus?: (listener: (status: { connected: boolean; peerCount?: number; synced?: boolean }) => void) => () => void;
@@ -49,6 +57,11 @@ export function createInMemoryCollaborationTransport(): CollaborationTransport {
       clientId = config.clientId;
       const hub = getRoomHub(config.roomId);
       hub.listeners.set(config.clientId, onEvent);
+      for (const operation of hub.canonicalOperations) {
+        if (operation.clientId !== config.clientId) {
+          onEvent({ type: 'canonical_operation', fromClientId: operation.clientId, operation });
+        }
+      }
       const snapshot = Array.from(hub.presenceByClientId.values());
       if (snapshot.length > 0) {
         onEvent({
@@ -80,6 +93,14 @@ export function createInMemoryCollaborationTransport(): CollaborationTransport {
     publishOperation: (operation) => {
       if (!clientId) return;
       publish({ type: 'operation', fromClientId: clientId, operation });
+    },
+    publishCanonicalOperation: (operation) => {
+      if (!clientId || !roomId || operation.clientId !== clientId) return;
+      const hub = getRoomHub(roomId);
+      if (!hub.canonicalOperations.some((candidate) => candidate.opId === operation.opId)) {
+        hub.canonicalOperations.push(operation);
+      }
+      publish({ type: 'canonical_operation', fromClientId: clientId, operation });
     },
     publishPresence: (presence) => {
       if (!clientId || !roomId) return;

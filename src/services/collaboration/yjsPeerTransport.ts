@@ -4,6 +4,10 @@ import { compactCollaborationOperationLog } from './operationLog';
 import { mapPresenceFromAwarenessState } from './session';
 import type { CollaborationOperationEnvelope, CollaborationPresenceState, CollaborationRoomConfig } from './types';
 import type { CollaborationTransport } from './transport';
+import {
+  isCanonicalCollaborationOperation,
+  type CanonicalCollaborationOperation,
+} from '@/opencanvas/application/collaboration/canonicalOperationLog';
 import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebrtcProvider } from 'y-webrtc';
@@ -125,13 +129,16 @@ export function createYjsPeerCollaborationTransport(
   let persistence: RealtimePersistenceLike | null = null;
   let doc: Y.Doc | null = null;
   let operationsArray: Y.Array<unknown> | null = null;
+  let canonicalOperationsArray: Y.Array<unknown> | null = null;
   let operationsListener: ((event: YArrayChangeEvent) => void) | null = null;
+  let canonicalOperationsListener: ((event: YArrayChangeEvent) => void) | null = null;
   let awarenessListener: AwarenessChangeListener | null = null;
   let docUpdateListener: (() => void) | null = null;
   let statusListener: ((event: unknown) => void) | null = null;
   let syncedListener: ((event: unknown) => void) | null = null;
   let peersListener: ((event: unknown) => void) | null = null;
   let seenOperationIds = new Set<string>();
+  let seenCanonicalOperationIds = new Set<string>();
   let lastPresenceSnapshotKey = '[]';
   let awarenessClientIdsByPeerId = new Map<number, string>();
   let isCompactingOperationLog = false;
@@ -187,9 +194,33 @@ export function createYjsPeerCollaborationTransport(
     }
   }
 
+  function emitCanonicalOperationCandidate(
+    candidate: unknown,
+    config: CollaborationRoomConfig,
+    onEvent: Parameters<CollaborationTransport['connect']>[1]
+  ): void {
+    if (!isCanonicalCollaborationOperation(candidate)) return;
+    if (candidate.clientId === config.clientId || seenCanonicalOperationIds.has(candidate.opId)) return;
+    seenCanonicalOperationIds.add(candidate.opId);
+    onEvent({ type: 'canonical_operation', fromClientId: candidate.clientId, operation: candidate });
+  }
+
+  function emitCanonicalOperationArraySnapshot(
+    config: CollaborationRoomConfig,
+    onEvent: Parameters<CollaborationTransport['connect']>[1]
+  ): void {
+    if (!canonicalOperationsArray) return;
+    for (const candidate of canonicalOperationsArray.toArray()) {
+      emitCanonicalOperationCandidate(candidate, config, onEvent);
+    }
+  }
+
   function disconnect(): void {
     if (operationsArray && operationsListener) {
       operationsArray.unobserve(operationsListener as (event: unknown) => void);
+    }
+    if (canonicalOperationsArray && canonicalOperationsListener) {
+      canonicalOperationsArray.unobserve(canonicalOperationsListener as (event: unknown) => void);
     }
     if (doc && docUpdateListener) {
       doc.off('update', docUpdateListener);
@@ -221,13 +252,16 @@ export function createYjsPeerCollaborationTransport(
     persistence = null;
     doc = null;
     operationsArray = null;
+    canonicalOperationsArray = null;
     operationsListener = null;
+    canonicalOperationsListener = null;
     awarenessListener = null;
     docUpdateListener = null;
     statusListener = null;
     syncedListener = null;
     peersListener = null;
     seenOperationIds = new Set<string>();
+    seenCanonicalOperationIds = new Set<string>();
     lastPresenceSnapshotKey = '[]';
     awarenessClientIdsByPeerId = new Map<number, string>();
     readyPromise = Promise.resolve();
@@ -241,6 +275,7 @@ export function createYjsPeerCollaborationTransport(
       roomConfig = config;
       doc = createDoc();
       operationsArray = doc.getArray('operations');
+      canonicalOperationsArray = doc.getArray('canonical-operations');
       persistence = createPersistence ? createPersistence(config.roomId, doc) : null;
       provider = createProvider(config.roomId, doc, {
         signaling: config.signalingServers,
@@ -262,15 +297,27 @@ export function createYjsPeerCollaborationTransport(
         }
       };
       operationsArray.observe(operationsListener as (event: unknown) => void);
+      canonicalOperationsListener = (event) => {
+        for (const delta of event.changes.delta) {
+          if (!Array.isArray(delta.insert)) continue;
+          for (const candidate of delta.insert) {
+            emitCanonicalOperationCandidate(candidate, config, onEvent);
+          }
+        }
+      };
+      canonicalOperationsArray.observe(canonicalOperationsListener as (event: unknown) => void);
       docUpdateListener = () => {
         emitOperationArraySnapshot(config, onEvent);
+        emitCanonicalOperationArraySnapshot(config, onEvent);
       };
       doc.on('update', docUpdateListener);
       emitOperationArraySnapshot(config, onEvent);
+      emitCanonicalOperationArraySnapshot(config, onEvent);
       readyPromise = persistence
         ? persistence.whenSynced
           .then(() => {
             emitOperationArraySnapshot(config, onEvent);
+            emitCanonicalOperationArraySnapshot(config, onEvent);
           })
           .catch((err: unknown) => {
             if (import.meta.env.DEV) {
@@ -401,6 +448,11 @@ export function createYjsPeerCollaborationTransport(
       } finally {
         isCompactingOperationLog = false;
       }
+    },
+    publishCanonicalOperation: (operation: CanonicalCollaborationOperation) => {
+      if (!canonicalOperationsArray || !roomConfig) return;
+      if (operation.clientId !== roomConfig.clientId) return;
+      canonicalOperationsArray.push([operation]);
     },
     publishPresence: (presence: CollaborationPresenceState) => {
       if (!provider || !roomConfig) {

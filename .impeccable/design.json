@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-07T11:05:48Z",
+  "title": "Design System: OpenFlowKit",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Builder Orange",
+        "canonical": "#e95420",
+        "tonalRamp": [
+          "#6e290d",
+          "#8f3411",
+          "#b03f16",
+          "#d14a1b",
+          "#e95420",
+          "#f07043",
+          "#fbc9b1",
+          "#fef4f0"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Tool Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0f172a",
+          "#334155",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#e2e8f0",
+          "#f8fafc",
+          "#ffffff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Rare product-level moments and empty states."
+      },
+      "body": {
+        "displayName": "Interface",
+        "purpose": "Editor controls, properties, and instructional text."
+      },
+      "label": { "displayName": "Control Label", "purpose": "Compact actions and metadata." },
+      "mono": {
+        "displayName": "Technical Mono",
+        "purpose": "Code, identifiers, coordinates, and diagnostics."
+      }
+    },
+    "shadows": [
+      {
+        "name": "hairline-lift",
+        "value": "0 1px 2px rgba(15, 23, 42, 0.03), 0 1px 1px rgba(15, 23, 42, 0.02)",
+        "purpose": "Stable bordered cards and editor sections."
+      },
+      {
+        "name": "menu-lift",
+        "value": "0 10px 24px rgba(15, 23, 42, 0.07), 0 3px 8px rgba(15, 23, 42, 0.04)",
+        "purpose": "Context menus and popovers."
+      },
+      {
+        "name": "dialog-lift",
+        "value": "0 22px 48px rgba(15, 23, 42, 0.11), 0 8px 20px rgba(15, 23, 42, 0.05)",
+        "purpose": "Modal panels over blocked content."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-feedback",
+        "value": "150ms ease",
+        "purpose": "Compact hover, focus, and selection feedback."
+      },
+      {
+        "name": "pressed",
+        "value": "scale(0.98)",
+        "purpose": "Tactile button activation without layout movement."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms",
+        "purpose": "Global animation and transition override when reduced motion is requested."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action in a focused workflow.",
+      "html": "<button class=\"ds-btn-primary\">Create diagram</button>",
+      "css": ".ds-btn-primary { height: 40px; padding: 0 16px; border: 0; border-radius: var(--radius-md); background: var(--brand-primary); color: #fff; font: 500 14px Inter, sans-serif; transition: filter 150ms ease, transform 150ms ease, box-shadow 150ms ease; } .ds-btn-primary:hover { filter: brightness(1.1); box-shadow: var(--shadow-sm); } .ds-btn-primary:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.98); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A supporting action with visible structure.",
+      "html": "<button class=\"ds-btn-secondary\">Auto-layout</button>",
+      "css": ".ds-btn-secondary { height: 40px; padding: 0 16px; border: 1px solid var(--brand-border); border-radius: var(--radius-md); background: var(--brand-surface); color: var(--brand-text); font: 500 14px Inter, sans-serif; transition: background 150ms ease, color 150ms ease, border-color 150ms ease; } .ds-btn-secondary:hover { background: var(--brand-primary-50); color: var(--brand-primary); border-color: var(--brand-primary-200); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; } .ds-btn-secondary:active { transform: scale(0.98); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "A low-emphasis action within dense editor chrome.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost { height: 40px; padding: 0 16px; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--brand-secondary); font: 500 14px Inter, sans-serif; transition: background 150ms ease, color 150ms ease; } .ds-btn-ghost:hover { background: var(--brand-primary-50); color: var(--brand-primary); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--brand-primary); outline-offset: 2px; } .ds-btn-ghost:active { transform: scale(0.98); }"
+    },
+    {
+      "name": "Editor Field",
+      "kind": "input",
+      "refersTo": "field-default",
+      "description": "A compact text field for labels and properties.",
+      "html": "<input class=\"ds-editor-field\" value=\"API Gateway\" aria-label=\"Node label\" />",
+      "css": ".ds-editor-field { height: 40px; width: 240px; padding: 0 12px; border: 1px solid var(--brand-border); border-radius: var(--brand-radius); background: var(--brand-surface); color: var(--brand-text); font: 400 14px Inter, sans-serif; outline: none; transition: border-color 150ms ease, box-shadow 150ms ease; } .ds-editor-field:hover { border-color: var(--brand-primary-200); } .ds-editor-field:focus-visible { border-color: var(--brand-primary-300); box-shadow: 0 0 0 3px rgba(233, 84, 32, 0.15); }"
+    },
+    {
+      "name": "Section Card",
+      "kind": "card",
+      "refersTo": "surface-card",
+      "description": "A stable grouping surface for editor settings.",
+      "html": "<section class=\"ds-section-card\"><strong>Connector routing</strong><span>Orthogonal · Rounded</span></section>",
+      "css": ".ds-section-card { display: grid; gap: 6px; min-width: 240px; padding: 16px; border: 1px solid var(--brand-border); border-radius: var(--radius-lg); background: var(--brand-background); color: var(--brand-text); box-shadow: var(--shadow-xs); font: 400 14px Inter, sans-serif; transition: border-color 150ms ease, box-shadow 150ms ease; } .ds-section-card strong { font-weight: 600; } .ds-section-card span { color: var(--brand-secondary); font-size: 12px; } .ds-section-card:hover { border-color: var(--brand-primary-200); box-shadow: var(--shadow-sm); } .ds-section-card:focus-within { outline: 2px solid var(--brand-primary); outline-offset: 2px; }"
+    },
+    {
+      "name": "Canvas Context Menu",
+      "kind": "custom",
+      "description": "A compact, keyboard-navigable canvas action surface.",
+      "html": "<div class=\"ds-context-menu\" role=\"menu\"><button role=\"menuitem\">Duplicate</button><button role=\"menuitem\">Bring to front</button><hr /><button class=\"ds-danger\" role=\"menuitem\">Delete</button></div>",
+      "css": ".ds-context-menu { display: grid; gap: 2px; width: 220px; padding: 6px; border: 1px solid var(--brand-border); border-radius: var(--radius-lg); background: var(--brand-surface); box-shadow: var(--shadow-md); font: 400 14px Inter, sans-serif; } .ds-context-menu button { padding: 8px 12px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--brand-secondary); text-align: left; } .ds-context-menu button:hover, .ds-context-menu button:focus-visible { background: var(--brand-background); color: var(--brand-text); outline: none; } .ds-context-menu hr { width: 100%; margin: 4px 0; border: 0; border-top: 1px solid var(--brand-border); } .ds-context-menu .ds-danger { color: #b91c1c; } .ds-context-menu .ds-danger:hover, .ds-context-menu .ds-danger:focus-visible { background: #fef2f2; color: #b91c1c; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Builder's Instrument",
+    "overview": "OpenFlowKit is a precise workspace, not a decorative canvas. Quiet neutral surfaces establish orientation, a single warm orange marks consequential action, and compact controls stay close to the object being edited. The interface is calm at rest and immediate in motion.",
+    "keyCharacteristics": [
+      "Local-first and trustworthy.",
+      "Technical, legible, and compact without becoming cramped.",
+      "Restrained at rest; tactile during direct manipulation.",
+      "Consistent across React, DOM overlays, Canvas, WebGL, and exported output.",
+      "Responsive to system theme and reduced-motion preferences."
+    ],
+    "rules": [
+      {
+        "name": "The One Signal Rule",
+        "body": "Builder Orange is the only product accent. Do not add a second ornamental accent to make a screen feel more exciting.",
+        "section": "colors"
+      },
+      {
+        "name": "The Meaning Survives Color Rule",
+        "body": "Selection, error, warning, and connection states always retain a shape, label, icon, or stroke treatment when color is unavailable.",
+        "section": "colors"
+      },
+      {
+        "name": "The Canvas Owns the Hierarchy Rule",
+        "body": "Editor chrome must not visually outrank the user's diagram through oversized type or heavy display treatment.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Until Needed Rule",
+        "body": "Stable workspace surfaces remain nearly flat. Shadows become stronger only when z-order or interaction state must be understood.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep the diagram visually dominant and editor chrome compact.",
+      "Do use Builder Orange only for primary action, focus, selection, or active connection meaning.",
+      "Do use 4px, 6px, 8px, 12px, and 16px radii according to component depth.",
+      "Do preserve visible focus, reduced-motion behavior, keyboard operation, and non-color state cues.",
+      "Do make renderer changes visually consistent across DOM overlays, WebGL content, fallback rendering, and exports.",
+      "Do make errors recoverable and state whether the user's work remains safe."
+    ],
+    "donts": [
+      "Don't build generic AI SaaS dashboards that make the assistant more prominent than the work.",
+      "Don't imitate playful sketch-only whiteboards that trade precision and semantics for novelty.",
+      "Don't recreate dense legacy enterprise diagram tools with modal-heavy, form-first workflows.",
+      "Don't add decorative futuristic GPU demos whose effects reduce legibility or predictability.",
+      "Don't introduce purple gradients, neon glow, glass-heavy surfaces, or competing accent colors as generic \"innovation\" styling.",
+      "Don't hide essential canvas actions behind pointer-only gestures or color-only feedback."
+    ]
+  }
+}

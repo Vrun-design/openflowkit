@@ -17,6 +17,8 @@ export interface FlowPage {
   edges: FlowTab['edges'];
   playback?: PlaybackState;
   history: FlowTab['history'];
+  layers?: FlowTab['layers'];
+  canvasExtensions?: FlowTab['canvasExtensions'];
 }
 
 export interface FlowDocument {
@@ -50,6 +52,8 @@ function createFlowPageFromPersistedContent(
     edges: content.edges,
     playback: content.playback,
     history: content.history ?? createEmptyFlowHistory(),
+    layers: content.layers,
+    canvasExtensions: content.canvasExtensions,
   };
 }
 
@@ -63,6 +67,8 @@ function createFlowPageFromPersistedPage(page: PersistedDocumentPage): FlowPage 
     edges: page.content.edges,
     playback: page.content.playback,
     history: page.content.history ?? createEmptyFlowHistory(),
+    layers: page.content.layers,
+    canvasExtensions: page.content.canvasExtensions,
   };
 }
 
@@ -129,6 +135,8 @@ export function convertFlowDocumentsToTabs(documents: FlowDocument[]): FlowTab[]
       edges: page.edges,
       playback: page.playback,
       history: page.history,
+      layers: page.layers,
+      canvasExtensions: page.canvasExtensions,
     }))
   );
 }

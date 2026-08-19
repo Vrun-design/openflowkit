@@ -8,7 +8,7 @@ import { syncTabNodesEdges } from './syncTabNodesEdges';
 export function createCanvasActions(
   set: SetFlowState,
   get: GetFlowState
-): Pick<FlowState, 'onNodesChange' | 'onEdgesChange' | 'setNodes' | 'setEdges' | 'onConnect'> {
+): Pick<FlowState, 'onNodesChange' | 'onEdgesChange' | 'setNodes' | 'setEdges' | 'setGraph' | 'setGraphAndLayers' | 'onConnect'> {
   return {
     onNodesChange: (changes) => {
       set((state) => {
@@ -48,6 +48,25 @@ export function createCanvasActions(
           tabs: syncTabNodesEdges(state.tabs, state.activeTabId, state.nodes, nextEdges),
         };
       });
+    },
+
+    setGraph: (nodes, edges) => {
+      set((state) => ({
+        nodes,
+        edges,
+        tabs: syncTabNodesEdges(state.tabs, state.activeTabId, nodes, edges),
+      }));
+    },
+
+    setGraphAndLayers: (nodes, edges, layers) => {
+      set((state) => ({
+        nodes,
+        edges,
+        layers,
+        activeLayerId: layers.some((layer) => layer.id === state.activeLayerId)
+          ? state.activeLayerId : layers[0]?.id ?? 'default',
+        tabs: syncTabNodesEdges(state.tabs, state.activeTabId, nodes, edges, layers),
+      }));
     },
 
     onConnect: (connection) => {

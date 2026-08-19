@@ -20,8 +20,13 @@ import {
 import { isAssetStoreAvailable } from './assetStore';
 import { migrateNodesMedia } from './assetMigration';
 import { reportStorageTelemetry } from './storageTelemetry';
+import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
+import { acknowledgeCrashJournal, appendCrashJournal, clearCrashJournal, readCrashJournal,
+  resolveRecoverableJournal,
+  toLoadedDocument, type CrashJournalEntry } from './crashRecoveryJournal';
 
 const STORE_SUBSCRIPTION_DEBOUNCE_MS = 250;
+let pendingCrashRecovery: CrashJournalEntry | null = null;
 
 type StoreWithPersist = typeof useFlowStore & {
   persist?: {
@@ -137,6 +142,12 @@ async function hydrateStoreFromRepository(): Promise<void> {
     aiSettings,
   }));
 
+  if (ROLLOUT_FLAGS.openCanvasCrashRecoveryV1) {
+    const newestPersistedAt = loaded.documents.reduce<string | null>((latest, document) =>
+      !latest || document.updatedAt > latest ? document.updatedAt : latest, null);
+    pendingCrashRecovery = resolveRecoverableJournal(localStorage, newestPersistedAt);
+  }
+
   captureAnalyticsEvent('workspace_restored', {
     document_count: workspace.documents.length,
     has_active_document: Boolean(activeDocument.activeDocumentId),
@@ -214,8 +225,13 @@ function persistStoreSnapshot(): void {
       nodes: state.nodes,
       edges: state.edges,
     });
+    const crashJournalCheckpoint = ROLLOUT_FLAGS.openCanvasCrashRecoveryV1
+      ? readCrashJournal(localStorage).at(-1)?.id ?? null : null;
 
     await localFirstRepository.saveFlowDocuments(documents, state.activeDocumentId);
+    if (ROLLOUT_FLAGS.openCanvasCrashRecoveryV1) {
+      acknowledgeCrashJournal(localStorage, crashJournalCheckpoint);
+    }
 
     if (state.aiSettings.storageMode === 'local') {
       await localFirstRepository.savePersistentAISettings(JSON.stringify(state.aiSettings));
@@ -256,6 +272,14 @@ export async function initializeLocalFirstPersistence(): Promise<void> {
       return;
     }
 
+    if (ROLLOUT_FLAGS.openCanvasCrashRecoveryV1
+      && (documentsChanged || tabsChanged || activeDocumentChanged || activePageChanged)) {
+      try { appendCrashJournal(state, localStorage); } catch (error) {
+        reportStorageTelemetry({ area: 'persist', code: 'CRASH_JOURNAL_WRITE_FAILED',
+          severity: 'warning', message: error instanceof Error ? error.message : String(error) });
+      }
+    }
+
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }
@@ -264,6 +288,26 @@ export async function initializeLocalFirstPersistence(): Promise<void> {
       persistStoreSnapshot();
     }, STORE_SUBSCRIPTION_DEBOUNCE_MS);
   });
+}
+
+export function getPendingCrashRecovery(): CrashJournalEntry | null {
+  return pendingCrashRecovery;
+}
+
+export function discardPendingCrashRecovery(): void {
+  clearCrashJournal(localStorage); pendingCrashRecovery = null;
+}
+
+export function restorePendingCrashRecovery(): boolean {
+  if (!pendingCrashRecovery) return false;
+  const workspace = createLoadedFlowWorkspace(toLoadedDocument(pendingCrashRecovery));
+  const active = getEditorPagesForDocument(workspace.documents, workspace.activeDocumentId);
+  if (!active) return false;
+  useFlowStore.setState({ documents: workspace.documents, activeDocumentId: active.activeDocumentId,
+    tabs: active.pages, activeTabId: active.activePageId,
+    nodes: active.pages.find(({ id }) => id === active.activePageId)?.nodes ?? [],
+    edges: active.pages.find(({ id }) => id === active.activePageId)?.edges ?? [] });
+  pendingCrashRecovery = null; persistStoreSnapshot(); return true;
 }
 
 export function ensureLocalFirstPersistenceReady(): Promise<void> {

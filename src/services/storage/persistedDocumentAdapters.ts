@@ -4,11 +4,15 @@ import { createEmptyFlowHistory } from '@/store/historyState';
 import type { FlowDocument, FlowPage } from './flowDocumentModel';
 import type { PersistedDocument, PersistedDocumentPage } from './persistenceTypes';
 
-function createPersistedDocumentContent(tab: Pick<FlowTab, 'nodes' | 'edges' | 'playback'>) {
+function createPersistedDocumentContent(
+  tab: Pick<FlowTab, 'nodes' | 'edges' | 'playback' | 'layers' | 'canvasExtensions'>
+) {
   return {
     nodes: tab.nodes,
     edges: tab.edges,
     playback: tab.playback,
+    layers: tab.layers,
+    canvasExtensions: tab.canvasExtensions,
   };
 }
 
@@ -60,6 +64,8 @@ export function createFlowTabFromPersistedDocument(document: PersistedDocument):
     edges: content.edges,
     playback: content.playback,
     history: content.history ?? createEmptyFlowHistory(),
+    layers: content.layers,
+    canvasExtensions: content.canvasExtensions,
   };
 }
 

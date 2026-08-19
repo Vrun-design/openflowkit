@@ -1,9 +1,17 @@
 import { createId } from '@/lib/id';
 import type { GetFlowState, SetFlowState } from '../actionFactory';
 import type { FlowState } from '../types';
+import { syncTabNodesEdges } from './syncTabNodesEdges';
 
 function ensureLayerExists(state: FlowState, layerId: string): boolean {
     return state.layers.some((layer) => layer.id === layerId);
+}
+
+function syncLayers(state: FlowState, layers: FlowState['layers']) {
+    return {
+        layers,
+        tabs: syncTabNodesEdges(state.tabs, state.activeTabId, state.nodes, state.edges, layers),
+    };
 }
 
 export function createLayerActions(set: SetFlowState, _get: GetFlowState): Pick<
@@ -22,7 +30,7 @@ export function createLayerActions(set: SetFlowState, _get: GetFlowState): Pick<
         addLayer: (name = 'New Layer') => {
             const id = createId('layer');
             set((state) => ({
-                layers: [...state.layers, { id, name, visible: true, locked: false }],
+                ...syncLayers(state, [...state.layers, { id, name, visible: true, locked: false }]),
                 activeLayerId: id,
             }));
             return id;
@@ -30,11 +38,9 @@ export function createLayerActions(set: SetFlowState, _get: GetFlowState): Pick<
         renameLayer: (id, name) => {
             const nextName = name.trim();
             if (!nextName) return;
-            set((state) => ({
-                layers: state.layers.map((layer) => (
+            set((state) => syncLayers(state, state.layers.map((layer) => (
                     layer.id === id ? { ...layer, name: nextName } : layer
-                )),
-            }));
+                ))));
         },
         deleteLayer: (id) => {
             if (id === 'default') return;
@@ -43,14 +49,18 @@ export function createLayerActions(set: SetFlowState, _get: GetFlowState): Pick<
                 if (!exists) return {};
 
                 const layers = state.layers.filter((layer) => layer.id !== id);
+                const nodes = state.nodes.map((node) => (
+                    node.data?.layerId === id
+                        ? { ...node, data: { ...node.data, layerId: 'default' } }
+                        : node
+                ));
                 return {
                     layers,
+                    tabs: syncTabNodesEdges(
+                        state.tabs, state.activeTabId, nodes, state.edges, layers
+                    ),
                     activeLayerId: state.activeLayerId === id ? 'default' : state.activeLayerId,
-                    nodes: state.nodes.map((node) => (
-                        node.data?.layerId === id
-                            ? { ...node, data: { ...node.data, layerId: 'default' } }
-                            : node
-                    )),
+                    nodes,
                 };
             });
         },
@@ -59,18 +69,14 @@ export function createLayerActions(set: SetFlowState, _get: GetFlowState): Pick<
         },
         toggleLayerVisibility: (id) => {
             if (id === 'default') return;
-            set((state) => ({
-                layers: state.layers.map((layer) => (
+            set((state) => syncLayers(state, state.layers.map((layer) => (
                     layer.id === id ? { ...layer, visible: !layer.visible } : layer
-                )),
-            }));
+                ))));
         },
         toggleLayerLock: (id) => {
-            set((state) => ({
-                layers: state.layers.map((layer) => (
+            set((state) => syncLayers(state, state.layers.map((layer) => (
                     layer.id === id ? { ...layer, locked: !layer.locked } : layer
-                )),
-            }));
+                ))));
         },
         moveLayer: (id, direction) => {
             if (id === 'default') return;
@@ -83,7 +89,7 @@ export function createLayerActions(set: SetFlowState, _get: GetFlowState): Pick<
                 const layers = [...state.layers];
                 const [moved] = layers.splice(index, 1);
                 layers.splice(targetIndex, 0, moved);
-                return { layers };
+                return syncLayers(state, layers);
             });
         },
         moveSelectedNodesToLayer: (layerId) => {
