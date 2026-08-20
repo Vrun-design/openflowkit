@@ -1013,6 +1013,10 @@
           "hint": "Le Chat · Codestral · European AI leader",
           "keySetupNote": "Free tier with generous limits — no credit card needed"
         },
+        "ollama": {
+          "hint": "Local · Free",
+          "keySetupNote": "No API key required — runs locally"
+        },
         "custom": {
           "hint": "Any OpenAI-compatible endpoint"
         }
@@ -1179,6 +1183,38 @@
             "label": "Zai-GLM 4.7",
             "hint": "Advanced reasoning · Tool use",
             "category": "Reasoning"
+          }
+        },
+        "ollama": {
+          "llama3.2": {
+            "label": "Llama 3.2",
+            "hint": "General-purpose local model",
+            "category": "General",
+            "badge": "New"
+          },
+          "llama3.1": {
+            "label": "Llama 3.1",
+            "hint": "General-purpose local model",
+            "category": "General",
+            "badge": "Default"
+          },
+          "qwen2.5-coder": {
+            "label": "Qwen 2.5 Coder",
+            "hint": "Coding-focused local model",
+            "category": "Coding",
+            "badge": "Default"
+          },
+          "mistral": {
+            "label": "Mistral",
+            "hint": "General-purpose local model",
+            "category": "General",
+            "badge": "Default"
+          },
+          "gemma3": {
+            "label": "Gemma 3",
+            "hint": "Lightweight local model",
+            "category": "Speed",
+            "badge": "Default"
           }
         },
         "mistral": {
