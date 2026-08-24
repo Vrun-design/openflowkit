@@ -939,11 +939,26 @@
       },
       "models": {
         "gemini": {
-          "gemini-2.5-flash-lite": {
-            "label": "2.5 Flash Lite",
+          "gemini-3.5-flash-lite": {
+            "label": "3.5 Flash Lite",
             "hint": "En hızlı · Ücretsiz katman varsayılanı",
             "category": "Hız",
             "badge": "Varsayılan"
+          },
+          "gemini-3.5-flash": {
+            "label": "3.5 Flash",
+            "hint": "En iyi fiyat/performans dengesi",
+            "category": "Hız"
+          },
+          "gemini-3.5-pro": {
+            "label": "3.5 Pro",
+            "hint": "En güçlü · Çok modlu",
+            "category": "Akıl Yürütme"
+          },
+          "gemini-2.5-flash-lite": {
+            "label": "2.5 Flash Lite",
+            "hint": "Eski · yeni API anahtarlarında kullanılamaz",
+            "category": "Eski"
           },
           "gemini-2.5-flash": {
             "label": "2.5 Flash",

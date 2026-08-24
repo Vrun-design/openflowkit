@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { getGeminiSystemInstruction } from './geminiSystemInstruction';
 
 /** Default Gemini model — keep in sync with DEFAULT_MODELS in aiService.ts */
-const GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+const GEMINI_DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 
 export interface ChatMessage {
   role: 'user' | 'model';

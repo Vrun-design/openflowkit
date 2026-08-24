@@ -193,7 +193,7 @@ Flowpilot sits directly in the editor. Describe a system, paste source code, upl
 | Provider            | Default model                              | Why use it                                      |
 | ------------------- | ------------------------------------------ | ----------------------------------------------- |
 | 🦙 **Ollama (local)** | `llama3.2`                               | **Fully offline.** No key, no network, no cost. |
-| Google Gemini       | `gemini-2.5-flash-lite`                    | Free tier available, fast, browser-safe         |
+| Google Gemini       | `gemini-3.5-flash-lite`                    | Free tier available, fast, browser-safe         |
 | OpenAI              | `gpt-5-mini`                               | Best reasoning for complex architectures        |
 | Anthropic Claude    | `claude-sonnet-4-6`                        | Excellent code and system understanding         |
 | Groq                | `meta-llama/llama-4-scout-17b-16e-instruct`| Fastest open-source inference available         |
