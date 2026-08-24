@@ -44,7 +44,9 @@ const CustomConnectionLine = ({
     const connectionStroke = 'var(--brand-primary, #6366f1)';
     const dashArray = isNearNode ? '8 6' : '6 8';
     // Travel exactly one dash period per cycle, or the pattern snaps back on every loop.
-    const dashPeriod = getDashPatternPeriod(dashArray) ?? 0;
+    // Left unset if it cannot be derived, so the keyframes' own fallback applies — a 0
+    // here would satisfy `var()` and freeze the animation instead.
+    const dashPeriod = getDashPatternPeriod(dashArray);
 
     return (
         <g>
@@ -57,7 +59,7 @@ const CustomConnectionLine = ({
                 style={{
                     filter: 'drop-shadow(0 1px 3px rgba(99,102,241,0.25))',
                     animation: 'flow-connection-dash 0.8s linear infinite',
-                    '--flow-connection-dash-period': dashPeriod,
+                    ...(dashPeriod === null ? {} : { '--flow-connection-dash-period': dashPeriod }),
                 } as React.CSSProperties}
                 d={edgePath}
             />

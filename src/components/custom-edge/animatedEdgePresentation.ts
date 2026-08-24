@@ -9,6 +9,17 @@ import { getDashPatternPeriod } from './dashPattern';
  */
 export const DASH_PERIOD_CSS_VAR = '--flow-edge-dash-period';
 
+/**
+ * Publish the dash period of `style`'s own pattern so the loop travels exactly that far
+ * per cycle. Left unset when the pattern has no resolvable period, so the CSS default
+ * for the element applies — never set to 0, which would satisfy `var()`'s fallback and
+ * freeze the animation.
+ */
+export function withDashPeriodVar(style: CSSProperties): CSSProperties {
+  const period = getDashPatternPeriod(style.strokeDasharray);
+  return period === null ? style : ({ ...style, [DASH_PERIOD_CSS_VAR]: period } as CSSProperties);
+}
+
 interface ResolveAnimatedEdgePresentationParams {
   animatedExportEnabled: boolean;
   selected: boolean;
@@ -35,15 +46,11 @@ export function resolveAnimatedEdgePresentation({
     ?? (typeof baseStyle.strokeDasharray === 'string' && baseStyle.strokeDasharray.length > 0
       ? baseStyle.strokeDasharray
       : '8 8');
-  const dashPeriod = getDashPatternPeriod(strokeDasharray);
-
-  const overlayStyle: CSSProperties = {
+  const overlayStyle: CSSProperties = withDashPeriodVar({
     stroke: baseStyle.stroke,
     strokeWidth: Math.max(Number(baseStyle.strokeWidth ?? 2), 2),
     strokeDasharray,
-    // Unresolvable patterns leave the var unset so the keyframes fall back.
-    ...(dashPeriod === null ? {} : { [DASH_PERIOD_CSS_VAR]: dashPeriod }),
-  } as CSSProperties;
+  });
 
   if (!animatedExportEnabled) {
     return {

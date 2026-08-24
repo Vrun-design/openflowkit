@@ -9,8 +9,7 @@ import {
   toMarkerUrl,
 } from './classRelationSemantics';
 import { resolveStandardEdgeMarkers } from './standardEdgeMarkers';
-import { DASH_PERIOD_CSS_VAR, resolveAnimatedEdgePresentation } from './animatedEdgePresentation';
-import { getDashPatternPeriod } from './dashPattern';
+import { resolveAnimatedEdgePresentation, withDashPeriodVar } from './animatedEdgePresentation';
 import {
   buildEdgeLabelUpdates,
   getEditableEdgeLabel,
@@ -116,22 +115,15 @@ export const CustomEdgeWrapper = memo(function CustomEdgeWrapper({
   );
 
   const resolvedStyle = useMemo<React.CSSProperties>(
-    () => {
-      const merged: React.CSSProperties = {
-        stroke: designSystem.colors.edge,
-        strokeWidth: designSystem.components.edge.strokeWidth,
-        ...style,
-        ...relationStyle,
-      };
-
-      // Animated edges loop `stroke-dashoffset`, which only joins up seamlessly when it
-      // travels one dash period per cycle. Publish the period of whatever pattern this
-      // edge ended up with; the CSS default covers edges that set none.
-      const dashPeriod = getDashPatternPeriod(merged.strokeDasharray);
-      return dashPeriod === null
-        ? merged
-        : ({ ...merged, [DASH_PERIOD_CSS_VAR]: dashPeriod } as React.CSSProperties);
-    },
+    // Animated edges loop `stroke-dashoffset`, which only joins up seamlessly when it
+    // travels one dash period per cycle, so publish the period of whatever pattern this
+    // edge ended up with. The CSS default covers edges that set none.
+    () => withDashPeriodVar({
+      stroke: designSystem.colors.edge,
+      strokeWidth: designSystem.components.edge.strokeWidth,
+      ...style,
+      ...relationStyle,
+    }),
     [designSystem.colors.edge, designSystem.components.edge.strokeWidth, style, relationStyle]
   );
 
@@ -387,9 +379,10 @@ export const CustomEdgeWrapper = memo(function CustomEdgeWrapper({
           fill="none"
           stroke="rgba(15,23,42,0.001)"
           strokeWidth={20}
-          // React Flow dashes every path in an `.animated` edge; a dashed hit target
-          // would only respond to hover on the dashes.
-          strokeDasharray="none"
+          // React Flow dashes and animates every path in an `.animated` edge, which
+          // would leave this hit target responding only on the moving dashes. A
+          // presentation attribute loses to its class rule, so override inline.
+          style={{ strokeDasharray: 'none', animation: 'none' }}
           pointerEvents="stroke"
           onPointerEnter={() => setIsHovered(true)}
           onPointerLeave={() => setIsHovered(false)}

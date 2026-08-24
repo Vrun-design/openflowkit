@@ -5,7 +5,10 @@
  * pattern such as dash-dot, where the eye tracks individual dots.
  */
 
-const NUMBER_WITH_OPTIONAL_PX = /^(-?(?:\d+\.?\d*|\.\d+))(?:px)?$/;
+// CSS requires a digit after the decimal point, so `8.` is an invalid declaration the
+// browser drops. Accepting it here would publish a period for a pattern that never
+// paints — the exact silent mismatch this module exists to prevent.
+const NUMBER_WITH_OPTIONAL_PX = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(?:px)?$/;
 
 /**
  * Distance a `stroke-dashoffset` animation must travel for one seamless loop of

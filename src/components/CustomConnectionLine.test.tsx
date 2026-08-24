@@ -82,5 +82,11 @@ describe('CustomConnectionLine', () => {
     const far = renderAt({ x: 900, y: 900 });
     expect(far.getAttribute('stroke-dasharray')).toBe('6 8');
     expect(far.style.getPropertyValue('--flow-connection-dash-period')).toBe('14');
+
+    // Publishing the period is useless unless the keyframes read it, so pin that too.
+    const keyframes = far.closest('g')?.querySelector('style')?.textContent ?? '';
+    expect(keyframes).toContain('var(--flow-connection-dash-period');
+    // The travelled distance is the `from` value; a hard-coded one is the bug.
+    expect(keyframes).not.toMatch(/from\s*\{\s*stroke-dashoffset:\s*\d/);
   });
 });

@@ -48,4 +48,11 @@ describe('getDashPatternPeriod', () => {
         expect(getDashPatternPeriod('8 abc')).toBeNull();
         expect(getDashPatternPeriod('NaN')).toBeNull();
     });
+
+    it('rejects numbers CSS itself rejects, so a dropped declaration cannot get a period', () => {
+        // `8.` is not a valid CSS number, so the browser drops the whole declaration and
+        // paints something else. Publishing a period for it would reintroduce the snap.
+        expect(getDashPatternPeriod('8.')).toBeNull();
+        expect(getDashPatternPeriod('8. 4')).toBeNull();
+    });
 });

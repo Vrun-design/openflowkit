@@ -693,6 +693,15 @@ body {
 }
 
 /*
+ * The overlay only ever renders inside an `.animated` edge, where React Flow's
+ * `.react-flow__edge.animated path` (0,2,1) would otherwise outrank the rule above and
+ * hijack it back to `dashdraw`'s fixed travel of 10. Three classes wins.
+ */
+.react-flow__edge.animated .flow-edge-animated-overlay {
+  animation: flow-edge-dash 0.6s linear infinite;
+}
+
+/*
  * React Flow animates every path in an `.animated` edge with its own `dashdraw`, which
  * travels a fixed 10 — right for its own `stroke-dasharray: 5`, wrong for any pattern
  * the app sets inline (the dash-dot preset has period 18, so each cycle snapped back
