@@ -12,7 +12,7 @@ export const PROVIDER_BASE_URLS: Record<Exclude<AIProvider, 'gemini' | 'claude' 
 };
 
 export const DEFAULT_MODELS: Record<AIProvider, string> = {
-    gemini: 'gemini-2.5-flash-lite',
+    gemini: 'gemini-3.5-flash-lite',
     openai: 'gpt-5-mini',
     claude: 'claude-sonnet-4-6',
     groq: 'meta-llama/llama-4-scout-17b-16e-instruct',
@@ -159,6 +159,9 @@ export const PROVIDERS: ProviderMeta[] = [
 
 export const PROVIDER_MODELS: Record<AIProvider, { id: string; translateKey: string }[]> = {
     gemini: [
+        { id: 'gemini-3.5-flash-lite', translateKey: 'gemini-3.5-flash-lite' },
+        { id: 'gemini-3.5-flash', translateKey: 'gemini-3.5-flash' },
+        { id: 'gemini-3.5-pro', translateKey: 'gemini-3.5-pro' },
         { id: 'gemini-2.5-flash-lite', translateKey: 'gemini-2.5-flash-lite' },
         { id: 'gemini-2.5-flash', translateKey: 'gemini-2.5-flash' },
         { id: 'gemini-2.5-pro', translateKey: 'gemini-2.5-pro' },
