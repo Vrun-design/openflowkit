@@ -6,6 +6,7 @@ import {
     isOrthogonalStepCurve,
     isSmoothCurve,
 } from './edgeCurve';
+import { readPathEndTangent, readPathStartTangent } from './curvePathMarkerTangents';
 
 describe('edgeCurve', () => {
     it('classifies smooth and orthogonal curves correctly', () => {
@@ -51,6 +52,46 @@ describe('edgeCurve', () => {
         expect(curveFromLegacyVariant('smoothstep')).toBe('smoothstep');
         expect(curveFromLegacyVariant('step')).toBe('step');
         expect(curveFromLegacyVariant('straight')).toBe('linear');
+    });
+
+    it('leaves every curve with a readable tangent for orient="auto" markers', () => {
+        const points = [
+            { x: 0, y: 0 },
+            { x: 40, y: 60 },
+            { x: 120, y: 200 },
+            { x: 200, y: 220 },
+        ];
+        const curves = [
+            'basis', 'linear', 'step', 'stepBefore', 'stepAfter',
+            'monotoneX', 'monotoneY', 'natural', 'cardinal', 'catmullRom',
+            'bumpX', 'bumpY',
+        ] as const;
+
+        for (const curve of curves) {
+            const path = buildCurvedPath(points, curve);
+            expect(path, curve).not.toBeNull();
+
+            const end = readPathEndTangent(path!);
+            expect(end, curve).not.toBeNull();
+            expect(Math.hypot(end!.x, end!.y), `${curve} end tangent`).toBeGreaterThan(0);
+
+            const start = readPathStartTangent(path!);
+            expect(start, curve).not.toBeNull();
+            expect(Math.hypot(start!.x, start!.y), `${curve} start tangent`).toBeGreaterThan(0);
+        }
+    });
+
+    it('keeps the exact source and target endpoints for smooth curves', () => {
+        const path = buildCurvedPath(
+            [
+                { x: 12, y: 34 },
+                { x: 90, y: 10 },
+                { x: 178, y: 96 },
+            ],
+            'basis'
+        );
+        expect(path!.startsWith('M12,34')).toBe(true);
+        expect(path!.endsWith('178,96')).toBe(true);
     });
 
     it('produces a linear path that traces every waypoint exactly', () => {

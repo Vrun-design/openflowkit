@@ -38,8 +38,68 @@ import {
 
 const EDGE_ROUTING_FAST_PATH_THRESHOLD = 600;
 
+/**
+ * Length of straight path reserved at each endpoint, in flow units. Matches the
+ * standard arrow marker length so the arrowhead sits on a segment whose direction
+ * equals the stroke's — see `withEndpointArrowLead`.
+ */
+const ARROW_LEAD_PX = 12;
+/** Below this endpoint distance the lead would dominate the edge, so it is skipped. */
+const MIN_LENGTH_FOR_ARROW_LEAD = ARROW_LEAD_PX * 4;
+
 function isDecisionLikeShape(shape: string | undefined): boolean {
     return shape === 'diamond';
+}
+
+/**
+ * Cubic bezier with a straight lead reserved at both endpoints.
+ *
+ * `getBezierPath` alone whips into the handle normal over the last few pixels, so an
+ * `orient="auto"` arrow marker — which reads the exact tangent at the endpoint — ends up
+ * pointing somewhere the visible stroke is not, and the stroke pokes out of the
+ * arrowhead's side. Reserving a straight run as long as the arrowhead means the stroke
+ * stops where the arrowhead begins and both share one direction.
+ *
+ * The leads are tangent-continuous with the curve because `getBezierPath` already
+ * leaves and enters along the same handle normals, so no kink is introduced.
+ */
+function buildBezierPathWithArrowLeads(
+    sourceX: number,
+    sourceY: number,
+    targetX: number,
+    targetY: number,
+    sourcePosition: Position,
+    targetPosition: Position,
+    curvature: number
+): { path: string; labelX: number; labelY: number } {
+    const lead = Math.hypot(targetX - sourceX, targetY - sourceY) >= MIN_LENGTH_FOR_ARROW_LEAD
+        ? ARROW_LEAD_PX
+        : 0;
+    const curveSource = applyAnchorClearance({ x: sourceX, y: sourceY }, sourcePosition, lead);
+    const curveTarget = applyAnchorClearance({ x: targetX, y: targetY }, targetPosition, lead);
+
+    const [bezierPath, labelX, labelY] = getBezierPath({
+        sourceX: curveSource.x,
+        sourceY: curveSource.y,
+        sourcePosition,
+        targetX: curveTarget.x,
+        targetY: curveTarget.y,
+        targetPosition,
+        curvature,
+    });
+
+    const curveStart = lead > 0 ? bezierPath.indexOf('C') : -1;
+    if (curveStart < 0) {
+        return { path: bezierPath, labelX, labelY };
+    }
+
+    // Keep React Flow's own path style: comma between coordinates, space between commands.
+    return {
+        path: `M${sourceX},${sourceY} L${curveSource.x},${curveSource.y} `
+            + `${bezierPath.slice(curveStart)} L${targetX},${targetY}`,
+        labelX,
+        labelY,
+    };
 }
 
 function shouldKeepMermaidBranchSpread(
@@ -304,16 +364,16 @@ export function buildEdgePath(
             }
             // For Mermaid-parity we use a slightly looser cubic bezier than the
             // React Flow default; mirrors Mermaid's `curveBasis` softness.
-            const [edgePath, labelX, labelY] = getBezierPath({
+            const { path, labelX, labelY } = buildBezierPathWithArrowLeads(
                 sourceX,
                 sourceY,
-                sourcePosition: params.sourcePosition,
                 targetX,
                 targetY,
-                targetPosition: params.targetPosition,
-                curvature: 0.35,
-            });
-            return withBundledLabelOffset(edgePath, labelX, labelY, params, labelBundleOffset);
+                params.sourcePosition,
+                params.targetPosition,
+                0.35
+            );
+            return withBundledLabelOffset(path, labelX, labelY, params, labelBundleOffset);
         }
 
         if (resolvedCurve === 'linear') {
