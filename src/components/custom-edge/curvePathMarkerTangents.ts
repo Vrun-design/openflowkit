@@ -9,14 +9,14 @@
  * well-defined tangent at both ends.
  */
 
-interface Point {
+export interface Point {
     x: number;
     y: number;
 }
 
 type CommandType = 'M' | 'L' | 'C';
 
-interface Command {
+export interface Command {
     type: CommandType;
     /** `C`: [control1, control2, end]. `M` / `L`: [end]. */
     points: Point[];
@@ -32,7 +32,7 @@ function samePoint(a: Point, b: Point): boolean {
     return Math.abs(a.x - b.x) < EPSILON && Math.abs(a.y - b.y) < EPSILON;
 }
 
-function parsePath(path: string): Command[] | null {
+export function parsePath(path: string): Command[] | null {
     const trimmed = path.trim();
     if (!trimmed.startsWith('M')) return null;
 
@@ -67,7 +67,7 @@ function parsePath(path: string): Command[] | null {
     return commands;
 }
 
-function endOf(command: Command): Point {
+export function endOf(command: Command): Point {
     return command.points[command.points.length - 1];
 }
 
@@ -164,30 +164,4 @@ export function normalizeMarkerTangents(path: string): string {
     kept[last] = repairTail(kept[last], startPoints[last]);
 
     return serialize(kept);
-}
-
-function tangentAt(command: Command, start: Point, at: 'start' | 'end'): Point | null {
-    if (command.type === 'M') return null;
-    if (command.type === 'L') {
-        const end = endOf(command);
-        return { x: end.x - start.x, y: end.y - start.y };
-    }
-    const [c1, c2, end] = command.points;
-    if (at === 'start') return { x: c1.x - start.x, y: c1.y - start.y };
-    return { x: end.x - c2.x, y: end.y - c2.y };
-}
-
-/** Tangent a browser reads for `marker-end` — zero means the arrowhead angle collapses. */
-export function readPathEndTangent(path: string): Point | null {
-    const commands = parsePath(path);
-    if (!commands || commands.length < 2) return null;
-    const last = commands.length - 1;
-    return tangentAt(commands[last], endOf(commands[last - 1]), 'end');
-}
-
-/** Tangent a browser reads for `marker-start`. */
-export function readPathStartTangent(path: string): Point | null {
-    const commands = parsePath(path);
-    if (!commands || commands.length < 2) return null;
-    return tangentAt(commands[1], endOf(commands[0]), 'start');
 }

@@ -6,7 +6,7 @@ import {
     isOrthogonalStepCurve,
     isSmoothCurve,
 } from './edgeCurve';
-import { readPathEndTangent, readPathStartTangent } from './curvePathMarkerTangents';
+import { readPathEndTangent, readPathStartTangent } from './curvePathMarkerTangents.testHelpers';
 
 describe('edgeCurve', () => {
     it('classifies smooth and orthogonal curves correctly', () => {

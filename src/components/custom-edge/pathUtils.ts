@@ -39,9 +39,9 @@ import {
 const EDGE_ROUTING_FAST_PATH_THRESHOLD = 600;
 
 /**
- * Length of straight path reserved at each endpoint, in flow units. Matches the
- * standard arrow marker length so the arrowhead sits on a segment whose direction
- * equals the stroke's — see `withEndpointArrowLead`.
+ * Length of straight path reserved at each endpoint, in flow units. Approximates the
+ * rendered arrow marker length (marker defs vary: 8–12 units, some scaled by stroke
+ * width) so the arrowhead sits on a segment whose direction equals the stroke's.
  */
 const ARROW_LEAD_PX = 12;
 /** Below this endpoint distance the lead would dominate the edge, so it is skipped. */
@@ -88,9 +88,24 @@ function buildBezierPathWithArrowLeads(
         curvature,
     });
 
-    const curveStart = lead > 0 ? bezierPath.indexOf('C') : -1;
-    if (curveStart < 0) {
+    if (lead === 0) {
         return { path: bezierPath, labelX, labelY };
+    }
+
+    const curveStart = bezierPath.indexOf('C');
+    if (curveStart < 0) {
+        // Without a recognizable cubic the lead splice below would leave a path that
+        // starts and ends off the real handles, so rebuild without leads instead.
+        const [plainPath, plainLabelX, plainLabelY] = getBezierPath({
+            sourceX,
+            sourceY,
+            sourcePosition,
+            targetX,
+            targetY,
+            targetPosition,
+            curvature,
+        });
+        return { path: plainPath, labelX: plainLabelX, labelY: plainLabelY };
     }
 
     // Keep React Flow's own path style: comma between coordinates, space between commands.

@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-    normalizeMarkerTangents,
-    readPathEndTangent,
-    readPathStartTangent,
-} from './curvePathMarkerTangents';
+import { normalizeMarkerTangents } from './curvePathMarkerTangents';
+import { readPathEndTangent, readPathStartTangent } from './curvePathMarkerTangents.testHelpers';
 
 describe('curvePathMarkerTangents', () => {
     // Real d3 `curveBasis` output for the repo's duplicated-endpoint anchoring.
