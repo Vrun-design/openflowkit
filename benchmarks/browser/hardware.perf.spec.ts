@@ -150,9 +150,13 @@ test('captures paired React Flow and OpenCanvas evidence on production GPU hardw
   const reactFlow: HardwareRendererCapture = { ...shared, renderer: 'reactflow', runs: reactFlowRuns };
   const openCanvas: HardwareRendererCapture = { ...shared, renderer: 'opencanvas-pixi', runs: openCanvasRuns };
   const gate = evaluateHardwareGate(reactFlow, openCanvas);
-  expect(gate.errors, gate.errors.join('\n')).toEqual([]);
 
+  // Evidence is written before the gate assertion: a failing capture is the
+  // run whose numbers are most worth keeping, and a run this expensive should
+  // never have to be repeated just to find out by how much it missed.
   const payload = { capturedAt: new Date().toISOString(), gate, reactFlow, openCanvas };
   fs.mkdirSync(path.dirname(RESULT_PATH), { recursive: true });
   fs.writeFileSync(RESULT_PATH, `${JSON.stringify(payload, null, 2)}\n`);
+
+  expect(gate.errors, gate.errors.join('\n')).toEqual([]);
 });
