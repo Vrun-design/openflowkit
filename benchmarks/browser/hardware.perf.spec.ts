@@ -134,8 +134,12 @@ test('captures paired React Flow and OpenCanvas evidence on production GPU hardw
     const separator = url.hash.includes('?') ? '&' : '?';
     await page.goto(`${url.origin}${url.pathname}${url.hash}${separator}renderer=opencanvas`);
     const openCanvasViewport = page.getByTestId('opencanvas-document-viewport');
-    await expect(openCanvasViewport.locator('canvas')).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText(/· ready · write canary/)).toBeVisible({ timeout: 30_000 });
+    // The canary reports ready before it attaches its canvas, and a large
+    // workspace is still rehydrating at that point. Waiting on the status
+    // first keeps the capture from racing an unmounted renderer.
+    await expect(page.getByText(/· ready · write canary/)).toBeVisible({ timeout: 60_000 });
+    await expect(openCanvasViewport.locator('canvas')).toBeVisible({ timeout: 60_000 });
+    await page.waitForTimeout(2_000);
     await installBrowserMetrics(page);
     for (let run = 0; run < MIN_HARDWARE_RUNS; run += 1) {
       openCanvasRuns.push({
