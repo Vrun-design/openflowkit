@@ -11,7 +11,13 @@ import path from 'node:path';
 import { test, expect } from '@playwright/test';
 import { BROWSER_BENCHMARK_FIXTURES } from './contracts';
 import { loadBenchmarkFixture } from './fixture';
-import { installBrowserMetrics, measureImportRun, openEmptyFlow } from './pageHarness';
+import {
+  installBrowserMetrics,
+  measureImportRun,
+  openEmptyFlow,
+  readBrowserMetrics,
+  resetBrowserMetrics,
+} from './pageHarness';
 import { summarizeSamples } from './statistics';
 import {
   OPEN_CANVAS_CAMERA_PHASE_MEASURES,
@@ -22,6 +28,29 @@ const RESULT_PATH = path.resolve(
   process.cwd(),
   'benchmarks/browser/results/camera-phases.latest.json'
 );
+
+async function panAndMeasure(
+  page: import('@playwright/test').Page,
+  box: { x: number; y: number; width: number; height: number }
+): Promise<{ frameP95Ms: number | null; framesOver50Ms: number }> {
+  await resetBrowserMetrics(page);
+  const startX = box.x + box.width * 0.72;
+  const startY = box.y + box.height * 0.65;
+  await page.mouse.move(startX, startY);
+  await page.keyboard.down('Space');
+  await page.mouse.down();
+  await page.mouse.move(startX + 160, startY + 80, { steps: 30 });
+  await page.mouse.up();
+  await page.keyboard.up('Space');
+  await page.mouse.wheel(0, -320);
+  await page.mouse.wheel(0, 320);
+  await page.waitForTimeout(300);
+  const metrics = await readBrowserMetrics(page);
+  return {
+    frameP95Ms: summarizeSamples(metrics.frameTimesMs).p95 ?? null,
+    framesOver50Ms: metrics.frameTimesMs.filter((sample) => sample > 50).length,
+  };
+}
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -63,23 +92,16 @@ test('attributes OpenCanvas camera frame cost to a phase', async ({ page }) => {
       for (const name of names) performance.clearMeasures(name);
     }, measureNames);
 
+    // Cold: measure immediately after the reload, exactly as the hardware
+    // capture does. Warm: measure again once hydration has settled.
+    const cold = await panAndMeasure(page, box);
+    await page.waitForTimeout(6_000);
+
     const session = await page.context().newCDPSession(page);
     await session.send('Profiler.enable');
     await session.send('Profiler.setSamplingInterval', { interval: 100 });
     await session.send('Profiler.start');
-
-    const startX = box.x + box.width * 0.72;
-    const startY = box.y + box.height * 0.65;
-    await page.mouse.move(startX, startY);
-    await page.keyboard.down('Space');
-    await page.mouse.down();
-    await page.mouse.move(startX + 160, startY + 80, { steps: 30 });
-    await page.mouse.up();
-    await page.keyboard.up('Space');
-    await page.mouse.wheel(0, -320);
-    await page.mouse.wheel(0, 320);
-    await page.waitForTimeout(300);
-
+    const warm = await panAndMeasure(page, box);
     const { profile } = (await session.send('Profiler.stop')) as {
       profile: {
         nodes: {
@@ -92,7 +114,7 @@ test('attributes OpenCanvas camera frame cost to a phase', async ({ page }) => {
     hotFunctions[fixtureName] = [...profile.nodes]
       .filter((node) => (node.hitCount ?? 0) > 0)
       .sort((a, b) => (b.hitCount ?? 0) - (a.hitCount ?? 0))
-      .slice(0, 20)
+      .slice(0, 25)
       .map((node) => ({
         fn: node.callFrame.functionName || '(anonymous)',
         url: node.callFrame.url.replace(/^https?:\/\/[^/]+/, ''),
@@ -115,6 +137,10 @@ test('attributes OpenCanvas camera frame cost to a phase', async ({ page }) => {
       fixtureReport[`${name}::count`] = samples.length;
       fixtureReport[`${name}::total`] = samples.reduce((sum, value) => sum + value, 0);
     }
+    fixtureReport['cold::frameP95'] = cold.frameP95Ms;
+    fixtureReport['cold::framesOver50'] = cold.framesOver50Ms;
+    fixtureReport['warm::frameP95'] = warm.frameP95Ms;
+    fixtureReport['warm::framesOver50'] = warm.framesOver50Ms;
     report[fixtureName] = fixtureReport;
   }
 

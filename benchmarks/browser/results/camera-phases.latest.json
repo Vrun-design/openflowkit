@@ -1,432 +1,534 @@
 {
-  "capturedAt": "2026-08-25T14:54:21.176Z",
+  "capturedAt": "2026-08-25T15:08:29.808Z",
   "report": {
     "small-100": {
       "openflowkit:opencanvas-camera-total::p95": 0.1,
-      "openflowkit:opencanvas-camera-total::count": 2,
-      "openflowkit:opencanvas-camera-total::total": 0.20000000298023224,
+      "openflowkit:opencanvas-camera-total::count": 35,
+      "openflowkit:opencanvas-camera-total::total": 1.699999988079071,
       "openflowkit:opencanvas-camera-projection::p95": 0,
-      "openflowkit:opencanvas-camera-projection::count": 2,
-      "openflowkit:opencanvas-camera-projection::total": 0,
+      "openflowkit:opencanvas-camera-projection::count": 35,
+      "openflowkit:opencanvas-camera-projection::total": 0.10000000149011612,
       "openflowkit:opencanvas-camera-rebuild::p95": null,
       "openflowkit:opencanvas-camera-rebuild::count": 0,
       "openflowkit:opencanvas-camera-rebuild::total": 0,
       "openflowkit:opencanvas-camera-labels::p95": 0,
-      "openflowkit:opencanvas-camera-labels::count": 2,
+      "openflowkit:opencanvas-camera-labels::count": 35,
       "openflowkit:opencanvas-camera-labels::total": 0,
-      "openflowkit:opencanvas-camera-connector-overlay::p95": 0,
-      "openflowkit:opencanvas-camera-connector-overlay::count": 2,
-      "openflowkit:opencanvas-camera-connector-overlay::total": 0,
-      "openflowkit:opencanvas-render-work::p95": 0.4,
-      "openflowkit:opencanvas-render-work::count": 33,
-      "openflowkit:opencanvas-render-work::total": 6.700000010430813
+      "openflowkit:opencanvas-camera-connector-overlay::p95": 0.1,
+      "openflowkit:opencanvas-camera-connector-overlay::count": 35,
+      "openflowkit:opencanvas-camera-connector-overlay::total": 0.5999999940395355,
+      "openflowkit:opencanvas-render-work::p95": 0.3,
+      "openflowkit:opencanvas-render-work::count": 65,
+      "openflowkit:opencanvas-render-work::total": 10.200000010430813,
+      "cold::frameP95": 17.7,
+      "cold::framesOver50": 2,
+      "warm::frameP95": 17.7,
+      "warm::framesOver50": 0
     },
     "medium-300": {
-      "openflowkit:opencanvas-camera-total::p95": 2.3,
-      "openflowkit:opencanvas-camera-total::count": 2,
-      "openflowkit:opencanvas-camera-total::total": 3.2000000029802322,
-      "openflowkit:opencanvas-camera-projection::p95": 0.8,
-      "openflowkit:opencanvas-camera-projection::count": 2,
-      "openflowkit:opencanvas-camera-projection::total": 1,
-      "openflowkit:opencanvas-camera-rebuild::p95": 1.4,
-      "openflowkit:opencanvas-camera-rebuild::count": 2,
-      "openflowkit:opencanvas-camera-rebuild::total": 2.100000001490116,
-      "openflowkit:opencanvas-camera-labels::p95": null,
-      "openflowkit:opencanvas-camera-labels::count": 0,
+      "openflowkit:opencanvas-camera-total::p95": 2.1,
+      "openflowkit:opencanvas-camera-total::count": 35,
+      "openflowkit:opencanvas-camera-total::total": 53.099999979138374,
+      "openflowkit:opencanvas-camera-projection::p95": 1,
+      "openflowkit:opencanvas-camera-projection::count": 35,
+      "openflowkit:opencanvas-camera-projection::total": 40.29999998211861,
+      "openflowkit:opencanvas-camera-rebuild::p95": 1.1,
+      "openflowkit:opencanvas-camera-rebuild::count": 12,
+      "openflowkit:opencanvas-camera-rebuild::total": 10.5,
+      "openflowkit:opencanvas-camera-labels::p95": 0,
+      "openflowkit:opencanvas-camera-labels::count": 23,
       "openflowkit:opencanvas-camera-labels::total": 0,
-      "openflowkit:opencanvas-camera-connector-overlay::p95": 0,
-      "openflowkit:opencanvas-camera-connector-overlay::count": 2,
-      "openflowkit:opencanvas-camera-connector-overlay::total": 0,
+      "openflowkit:opencanvas-camera-connector-overlay::p95": 0.1,
+      "openflowkit:opencanvas-camera-connector-overlay::count": 35,
+      "openflowkit:opencanvas-camera-connector-overlay::total": 0.6000000014901161,
       "openflowkit:opencanvas-render-work::p95": 0.8,
-      "openflowkit:opencanvas-render-work::count": 33,
-      "openflowkit:opencanvas-render-work::total": 6.800000011920929
+      "openflowkit:opencanvas-render-work::count": 65,
+      "openflowkit:opencanvas-render-work::total": 15.399999968707561,
+      "cold::frameP95": 17.7,
+      "cold::framesOver50": 2,
+      "warm::frameP95": 18.5,
+      "warm::framesOver50": 0
     },
     "large-1000": {
-      "openflowkit:opencanvas-camera-total::p95": 2.6,
-      "openflowkit:opencanvas-camera-total::count": 2,
-      "openflowkit:opencanvas-camera-total::total": 5.000000007450581,
-      "openflowkit:opencanvas-camera-projection::p95": 1.1,
-      "openflowkit:opencanvas-camera-projection::count": 2,
-      "openflowkit:opencanvas-camera-projection::total": 1.8000000044703484,
-      "openflowkit:opencanvas-camera-rebuild::p95": 1.5,
-      "openflowkit:opencanvas-camera-rebuild::count": 2,
-      "openflowkit:opencanvas-camera-rebuild::total": 2.899999998509884,
-      "openflowkit:opencanvas-camera-labels::p95": null,
-      "openflowkit:opencanvas-camera-labels::count": 0,
+      "openflowkit:opencanvas-camera-total::p95": 4.1,
+      "openflowkit:opencanvas-camera-total::count": 35,
+      "openflowkit:opencanvas-camera-total::total": 51.60000001639128,
+      "openflowkit:opencanvas-camera-projection::p95": 1.8,
+      "openflowkit:opencanvas-camera-projection::count": 35,
+      "openflowkit:opencanvas-camera-projection::total": 31.900000005960464,
+      "openflowkit:opencanvas-camera-rebuild::p95": 2.4,
+      "openflowkit:opencanvas-camera-rebuild::count": 11,
+      "openflowkit:opencanvas-camera-rebuild::total": 16.400000005960464,
+      "openflowkit:opencanvas-camera-labels::p95": 0,
+      "openflowkit:opencanvas-camera-labels::count": 24,
       "openflowkit:opencanvas-camera-labels::total": 0,
-      "openflowkit:opencanvas-camera-connector-overlay::p95": 0,
-      "openflowkit:opencanvas-camera-connector-overlay::count": 2,
-      "openflowkit:opencanvas-camera-connector-overlay::total": 0,
-      "openflowkit:opencanvas-render-work::p95": 0.5,
-      "openflowkit:opencanvas-render-work::count": 33,
-      "openflowkit:opencanvas-render-work::total": 7.299999989569187
+      "openflowkit:opencanvas-camera-connector-overlay::p95": 0.2,
+      "openflowkit:opencanvas-camera-connector-overlay::count": 35,
+      "openflowkit:opencanvas-camera-connector-overlay::total": 2.1000000089406967,
+      "openflowkit:opencanvas-render-work::p95": 0.8,
+      "openflowkit:opencanvas-render-work::count": 65,
+      "openflowkit:opencanvas-render-work::total": 19.19999998807907,
+      "cold::frameP95": 299.9,
+      "cold::framesOver50": 2,
+      "warm::frameP95": 18.6,
+      "warm::framesOver50": 0
     }
   },
   "hotFunctions": {
     "small-100": [
       {
-        "fn": "(idle)",
+        "fn": "open",
         "url": "",
         "line": -1,
-        "selfPercent": 35.28
+        "selfPercent": 40.77
       },
       {
         "fn": "(program)",
         "url": "",
         "line": -1,
-        "selfPercent": 19.66
+        "selfPercent": 38.98
       },
       {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 5.72
-      },
-      {
-        "fn": "open",
+        "fn": "(idle)",
         "url": "",
         "line": -1,
-        "selfPercent": 5.14
-      },
-      {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 4.57
-      },
-      {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 4.34
+        "selfPercent": 8.27
       },
       {
         "fn": "transaction",
         "url": "",
         "line": -1,
-        "selfPercent": 3.27
-      },
-      {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 3.13
-      },
-      {
-        "fn": "visitChild",
-        "url": "",
-        "line": 318,
-        "selfPercent": 1.66
-      },
-      {
-        "fn": "visitChild",
-        "url": "",
-        "line": 318,
-        "selfPercent": 1.1
-      },
-      {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 0.8
-      },
-      {
-        "fn": "visitChild",
-        "url": "",
-        "line": 318,
-        "selfPercent": 0.8
-      },
-      {
-        "fn": "getAll",
-        "url": "",
-        "line": -1,
-        "selfPercent": 0.79
-      },
-      {
-        "fn": "Nr",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 32,
-        "selfPercent": 0.76
-      },
-      {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 0.64
-      },
-      {
-        "fn": "setAttribute",
-        "url": "",
-        "line": -1,
-        "selfPercent": 0.61
-      },
-      {
-        "fn": "visitChild",
-        "url": "",
-        "line": 318,
-        "selfPercent": 0.61
-      },
-      {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 0.57
+        "selfPercent": 3.22
       },
       {
         "fn": "(garbage collector)",
         "url": "",
         "line": -1,
-        "selfPercent": 0.56
+        "selfPercent": 2.13
       },
       {
-        "fn": "i.onsuccess",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 58,
+        "fn": "getAll",
+        "url": "",
+        "line": -1,
+        "selfPercent": 1.19
+      },
+      {
+        "fn": "(anonymous)",
+        "url": "/src/services/storage/indexedDbSchema.ts",
+        "line": 60,
+        "selfPercent": 0.72
+      },
+      {
+        "fn": "migrateLegacyChatHistory",
+        "url": "/src/services/storage/localFirstRepository.ts",
+        "line": 63,
         "selfPercent": 0.45
+      },
+      {
+        "fn": "request.onsuccess",
+        "url": "/src/services/storage/indexedDbSchema.ts",
+        "line": 75,
+        "selfPercent": 0.37
+      },
+      {
+        "fn": "loadChatThread",
+        "url": "/src/services/storage/localFirstRepository.ts",
+        "line": 265,
+        "selfPercent": 0.23
+      },
+      {
+        "fn": "(anonymous)",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 2,
+        "selfPercent": 0.2
+      },
+      {
+        "fn": "request.onsuccess",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 3,
+        "selfPercent": 0.2
+      },
+      {
+        "fn": "(anonymous)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.17
+      },
+      {
+        "fn": "getIndexedDbFactory",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 7,
+        "selfPercent": 0.15
+      },
+      {
+        "fn": "getItem",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.13
+      },
+      {
+        "fn": "loadChatThread",
+        "url": "/src/services/storage/localFirstRepository.ts",
+        "line": 265,
+        "selfPercent": 0.12
+      },
+      {
+        "fn": "setAttribute",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.12
+      },
+      {
+        "fn": "withDatabase",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 11,
+        "selfPercent": 0.1
+      },
+      {
+        "fn": "index",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.1
+      },
+      {
+        "fn": "setupDragListeners",
+        "url": "",
+        "line": 0,
+        "selfPercent": 0.1
+      },
+      {
+        "fn": "withDatabase",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 11,
+        "selfPercent": 0.08
+      },
+      {
+        "fn": "getAllRecordsByIndex",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 29,
+        "selfPercent": 0.08
+      },
+      {
+        "fn": "batchedUpdates$1",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=834a0cf8",
+        "line": 2621,
+        "selfPercent": 0.08
+      },
+      {
+        "fn": "requestToPromise",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 1,
+        "selfPercent": 0.07
+      },
+      {
+        "fn": "createPointerEvent",
+        "url": "/node_modules/.vite/deps/chunk-PUIEPWBN.js?v=834a0cf8",
+        "line": 2067,
+        "selfPercent": 0.07
       }
     ],
     "medium-300": [
       {
-        "fn": "captureSnapshot",
+        "fn": "open",
         "url": "",
-        "line": 256,
-        "selfPercent": 45.78
+        "line": -1,
+        "selfPercent": 42.7
       },
       {
         "fn": "(program)",
         "url": "",
         "line": -1,
-        "selfPercent": 14.17
+        "selfPercent": 39.89
       },
       {
         "fn": "(idle)",
         "url": "",
         "line": -1,
-        "selfPercent": 13.8
-      },
-      {
-        "fn": "Nr",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 32,
-        "selfPercent": 8.13
-      },
-      {
-        "fn": "open",
-        "url": "",
-        "line": -1,
-        "selfPercent": 4.71
+        "selfPercent": 3.33
       },
       {
         "fn": "transaction",
         "url": "",
         "line": -1,
-        "selfPercent": 1.88
+        "selfPercent": 2.05
       },
       {
-        "fn": "Nr",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 32,
-        "selfPercent": 1.45
+        "fn": "querySceneBounds",
+        "url": "/src/opencanvas/domain/scene/queries.ts",
+        "line": 13,
+        "selfPercent": 1.82
       },
       {
-        "fn": "setAttribute",
+        "fn": "(garbage collector)",
         "url": "",
         "line": -1,
-        "selfPercent": 1.02
+        "selfPercent": 1.4
+      },
+      {
+        "fn": "projectSceneViewport",
+        "url": "/src/opencanvas/infrastructure/pixi/viewportProjection.ts",
+        "line": 18,
+        "selfPercent": 0.91
       },
       {
         "fn": "getAll",
         "url": "",
         "line": -1,
-        "selfPercent": 0.84
+        "selfPercent": 0.76
       },
       {
-        "fn": "Nr",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 32,
-        "selfPercent": 0.75
+        "fn": "migrateLegacyChatHistory",
+        "url": "/src/services/storage/localFirstRepository.ts",
+        "line": 63,
+        "selfPercent": 0.52
       },
       {
-        "fn": "(garbage collector)",
-        "url": "",
-        "line": -1,
-        "selfPercent": 0.7
+        "fn": "request.onsuccess",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 3,
+        "selfPercent": 0.48
       },
       {
-        "fn": "get value",
-        "url": "",
-        "line": -1,
-        "selfPercent": 0.57
+        "fn": "request.onsuccess",
+        "url": "/src/services/storage/indexedDbSchema.ts",
+        "line": 75,
+        "selfPercent": 0.35
       },
       {
-        "fn": "removeAttribute",
-        "url": "",
-        "line": -1,
-        "selfPercent": 0.5
+        "fn": "(anonymous)",
+        "url": "/src/services/storage/indexedDbSchema.ts",
+        "line": 60,
+        "selfPercent": 0.33
       },
       {
-        "fn": "removeAttribute",
-        "url": "",
-        "line": -1,
-        "selfPercent": 0.39
-      },
-      {
-        "fn": "yn",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 78,
-        "selfPercent": 0.36
-      },
-      {
-        "fn": "i.onsuccess",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 58,
+        "fn": "loadChatThread",
+        "url": "/src/services/storage/localFirstRepository.ts",
+        "line": 265,
         "selfPercent": 0.3
       },
       {
-        "fn": "E1",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 78,
-        "selfPercent": 0.29
-      },
-      {
-        "fn": "e.onsuccess",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 78,
+        "fn": "(anonymous)",
+        "url": "",
+        "line": -1,
         "selfPercent": 0.22
       },
       {
-        "fn": "Nr",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 32,
-        "selfPercent": 0.21
+        "fn": "(anonymous)",
+        "url": "/node_modules/.vite/deps/chunk-IB2P224E.js?v=834a0cf8",
+        "line": 1275,
+        "selfPercent": 0.19
       },
       {
-        "fn": "Vo",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 32,
-        "selfPercent": 0.18
-      }
-    ],
-    "large-1000": [
-      {
-        "fn": "Nr",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 32,
-        "selfPercent": 33.3
+        "fn": "(anonymous)",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 2,
+        "selfPercent": 0.17
       },
       {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 9.01
-      },
-      {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 6.32
-      },
-      {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 6.21
-      },
-      {
-        "fn": "Nr",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 32,
-        "selfPercent": 6.16
-      },
-      {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 4.71
-      },
-      {
-        "fn": "(program)",
-        "url": "",
-        "line": -1,
-        "selfPercent": 4.28
-      },
-      {
-        "fn": "Nr",
-        "url": "/assets/index-Ch3Bj8SE.js",
-        "line": 32,
-        "selfPercent": 3.14
-      },
-      {
-        "fn": "visitChild",
-        "url": "",
-        "line": 318,
-        "selfPercent": 2.62
-      },
-      {
-        "fn": "(idle)",
-        "url": "",
-        "line": -1,
-        "selfPercent": 2.61
-      },
-      {
-        "fn": "removeAttribute",
-        "url": "",
-        "line": -1,
-        "selfPercent": 2.41
-      },
-      {
-        "fn": "removeAttribute",
-        "url": "",
-        "line": -1,
-        "selfPercent": 1.88
-      },
-      {
-        "fn": "visitChild",
-        "url": "",
-        "line": 318,
-        "selfPercent": 1.55
-      },
-      {
-        "fn": "open",
-        "url": "",
-        "line": -1,
-        "selfPercent": 1.35
-      },
-      {
-        "fn": "visitChild",
-        "url": "",
-        "line": 318,
-        "selfPercent": 1.32
+        "fn": "bezierPath",
+        "url": "/src/opencanvas/domain/connectors/routeProjection.ts",
+        "line": 93,
+        "selfPercent": 0.15
       },
       {
         "fn": "setAttribute",
         "url": "",
         "line": -1,
-        "selfPercent": 1.21
+        "selfPercent": 0.15
       },
       {
-        "fn": "visitNode",
-        "url": "",
-        "line": 266,
-        "selfPercent": 1.1
+        "fn": "getIndexedDbFactory",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 7,
+        "selfPercent": 0.11
       },
       {
-        "fn": "visitNode",
+        "fn": "measure",
         "url": "",
-        "line": 266,
-        "selfPercent": 0.94
+        "line": -1,
+        "selfPercent": 0.11
       },
       {
-        "fn": "visitChild",
+        "fn": "withDatabase",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 11,
+        "selfPercent": 0.09
+      },
+      {
+        "fn": "getItem",
         "url": "",
-        "line": 318,
-        "selfPercent": 0.94
+        "line": -1,
+        "selfPercent": 0.09
+      },
+      {
+        "fn": "objectStore",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.09
+      },
+      {
+        "fn": "SyntheticBaseEvent",
+        "url": "/node_modules/.vite/deps/react-dom_client.js?v=834a0cf8",
+        "line": 2686,
+        "selfPercent": 0.09
+      },
+      {
+        "fn": "buildLine",
+        "url": "/node_modules/.vite/deps/chunk-IB2P224E.js?v=834a0cf8",
+        "line": 167,
+        "selfPercent": 0.09
+      }
+    ],
+    "large-1000": [
+      {
+        "fn": "(program)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 67.97
+      },
+      {
+        "fn": "open",
+        "url": "",
+        "line": -1,
+        "selfPercent": 18.28
+      },
+      {
+        "fn": "querySceneBounds",
+        "url": "/src/opencanvas/domain/scene/queries.ts",
+        "line": 13,
+        "selfPercent": 2.1
+      },
+      {
+        "fn": "transaction",
+        "url": "",
+        "line": -1,
+        "selfPercent": 1.87
+      },
+      {
+        "fn": "(idle)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 1.31
+      },
+      {
+        "fn": "getAll",
+        "url": "",
+        "line": -1,
+        "selfPercent": 1.08
       },
       {
         "fn": "(garbage collector)",
         "url": "",
         "line": -1,
-        "selfPercent": 0.76
+        "selfPercent": 0.68
+      },
+      {
+        "fn": "projectSceneViewport",
+        "url": "/src/opencanvas/infrastructure/pixi/viewportProjection.ts",
+        "line": 18,
+        "selfPercent": 0.49
+      },
+      {
+        "fn": "request.onsuccess",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 3,
+        "selfPercent": 0.4
+      },
+      {
+        "fn": "migrateLegacyChatHistory",
+        "url": "/src/services/storage/localFirstRepository.ts",
+        "line": 63,
+        "selfPercent": 0.36
+      },
+      {
+        "fn": "(anonymous)",
+        "url": "/src/services/storage/indexedDbSchema.ts",
+        "line": 60,
+        "selfPercent": 0.24
+      },
+      {
+        "fn": "loadChatThread",
+        "url": "/src/services/storage/localFirstRepository.ts",
+        "line": 265,
+        "selfPercent": 0.22
+      },
+      {
+        "fn": "request.onsuccess",
+        "url": "/src/services/storage/indexedDbSchema.ts",
+        "line": 75,
+        "selfPercent": 0.21
+      },
+      {
+        "fn": "setAttribute",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.19
+      },
+      {
+        "fn": "getIndexedDbFactory",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 7,
+        "selfPercent": 0.16
+      },
+      {
+        "fn": "getItem",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.16
+      },
+      {
+        "fn": "(anonymous)",
+        "url": "/node_modules/.vite/deps/chunk-IB2P224E.js?v=834a0cf8",
+        "line": 1275,
+        "selfPercent": 0.14
+      },
+      {
+        "fn": "index",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.11
+      },
+      {
+        "fn": "bezierPath",
+        "url": "/src/opencanvas/domain/connectors/routeProjection.ts",
+        "line": 93,
+        "selfPercent": 0.11
+      },
+      {
+        "fn": "(anonymous)",
+        "url": "/src/services/storage/indexedDbHelpers.ts",
+        "line": 2,
+        "selfPercent": 0.09
+      },
+      {
+        "fn": "getSelectedConnector",
+        "url": "/src/opencanvas/infrastructure/pixi/PixiRendererHost.ts",
+        "line": 467,
+        "selfPercent": 0.09
+      },
+      {
+        "fn": "draw",
+        "url": "/src/opencanvas/infrastructure/pixi/PixiConnectorRenderer.ts",
+        "line": 113,
+        "selfPercent": 0.09
+      },
+      {
+        "fn": "querySceneBounds",
+        "url": "/src/opencanvas/domain/scene/queries.ts",
+        "line": 13,
+        "selfPercent": 0.09
+      },
+      {
+        "fn": "createConnectorProjectionContext",
+        "url": "/src/opencanvas/domain/connectors/routeProjection.ts",
+        "line": 10,
+        "selfPercent": 0.08
+      },
+      {
+        "fn": "buildNodeWorldMatrices",
+        "url": "/src/opencanvas/domain/scene/worldGeometry.ts",
+        "line": 8,
+        "selfPercent": 0.08
       }
     ]
   }
