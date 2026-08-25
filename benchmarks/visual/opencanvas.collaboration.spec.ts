@@ -34,6 +34,7 @@ test('commits a production node command through canonical collaboration', async 
   await expect(page).toHaveURL(/renderer=opencanvas/);
   await expect(page.getByText(/canonical collaboration/)).toBeVisible({ timeout: 30_000 });
 
+  await page.getByRole('button', { name: 'Inspector', exact: true }).click();
   const label = page.getByRole('textbox', { name: 'Label for Alpha' });
   await label.fill('Collaborative Alpha');
   await label.press('Enter');

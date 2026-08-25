@@ -133,6 +133,8 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
     onFileImport,
     importRecoveryState,
     dismissImportRecovery,
+    repairCanonicalImport,
+    downloadCanonicalRepairSource,
   } = useFlowExport(screenState.recordHistory, screenState.reactFlowWrapper, {
     stopPlayback,
   });
@@ -372,6 +374,8 @@ export function useFlowEditorScreenModel({ onGoHome }: UseFlowEditorScreenModelP
     onFileImport,
     importRecoveryState,
     dismissImportRecovery,
+    repairCanonicalImport,
+    downloadCanonicalRepairSource,
     shareViewerUrl,
     clearShareViewerUrl,
     collaborationEnabled: screenState.collaborationEnabled,

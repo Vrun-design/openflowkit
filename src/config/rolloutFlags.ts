@@ -18,6 +18,9 @@ export type RolloutFlagKey =
   | 'openCanvasCanonicalCollaboration'
   | 'openCanvasAiPreviewV1'
   | 'openCanvasCrashRecoveryV1'
+  | 'openCanvasPersistedWorkspaceRepairV1'
+  | 'openCanvasContextualCommandsV1'
+  | 'openCanvasCustomShortcutsV1'
   | 'collaborationEnabled'
   | 'architectureLintEnabled'
   | 'importSql'
@@ -148,6 +151,24 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     defaultEnabled: false,
     description: 'Append-before-autosave crash journal and explicit workspace recovery',
   },
+  openCanvasPersistedWorkspaceRepairV1: {
+    key: 'openCanvasPersistedWorkspaceRepairV1',
+    envVar: 'VITE_OPEN_CANVAS_PERSISTED_WORKSPACE_REPAIR_V1',
+    defaultEnabled: false,
+    description: 'Backup-first persisted workspace integrity inspection and explicit repair',
+  },
+  openCanvasContextualCommandsV1: {
+    key: 'openCanvasContextualCommandsV1',
+    envVar: 'VITE_OPEN_CANVAS_CONTEXTUAL_COMMANDS_V1',
+    defaultEnabled: false,
+    description: 'Selection-bound atomic commands in Command Center',
+  },
+  openCanvasCustomShortcutsV1: {
+    key: 'openCanvasCustomShortcutsV1',
+    envVar: 'VITE_OPEN_CANVAS_CUSTOM_SHORTCUTS_V1',
+    defaultEnabled: false,
+    description: 'User-remappable keyboard bindings and printable reference sheet',
+  },
   collaborationEnabled: {
     key: 'collaborationEnabled',
     envVar: 'VITE_COLLABORATION_ENABLED',
@@ -238,6 +259,11 @@ export const ROLLOUT_FLAGS: Record<RolloutFlagKey, boolean> = {
   openCanvasCanonicalCollaboration: isRolloutFlagEnabled('openCanvasCanonicalCollaboration'),
   openCanvasAiPreviewV1: isRolloutFlagEnabled('openCanvasAiPreviewV1'),
   openCanvasCrashRecoveryV1: isRolloutFlagEnabled('openCanvasCrashRecoveryV1'),
+  openCanvasPersistedWorkspaceRepairV1: isRolloutFlagEnabled(
+    'openCanvasPersistedWorkspaceRepairV1'
+  ),
+  openCanvasContextualCommandsV1: isRolloutFlagEnabled('openCanvasContextualCommandsV1'),
+  openCanvasCustomShortcutsV1: isRolloutFlagEnabled('openCanvasCustomShortcutsV1'),
   collaborationEnabled: isRolloutFlagEnabled('collaborationEnabled'),
   architectureLintEnabled: isRolloutFlagEnabled('architectureLintEnabled'),
   importSql: isRolloutFlagEnabled('importSql'),

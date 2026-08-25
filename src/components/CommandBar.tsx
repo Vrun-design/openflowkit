@@ -3,6 +3,7 @@ import { CommandBarProps, CommandView } from './command-bar/types';
 
 import { RootView } from './command-bar/RootView';
 import { useCommandBarCommands } from './command-bar/useCommandBarCommands';
+import { useContextualCommandItems } from './command-bar/useContextualCommandItems';
 
 const LazyImportView = lazy(async () => {
   const module = await import('./command-bar/ImportView');
@@ -56,20 +57,21 @@ function OpenCommandBarContent({
   onOpenStudioAI,
   onOpenStudioOpenFlow,
   onOpenStudioMermaid,
+  onOpenStudioPlayback,
   onOpenArchitectureRules,
   initialView = 'root',
-  onAddAnnotation: _onAddAnnotation,
-  onAddSection: _onAddSection,
-  onAddText: _onAddText,
-  onAddJourney: _onAddJourney,
-  onAddMindmap: _onAddMindmap,
-  onAddArchitecture: _onAddArchitecture,
-  onAddSequence: _onAddSequence,
-  onAddClassNode: _onAddClassNode,
-  onAddEntityNode: _onAddEntityNode,
+  onAddAnnotation,
+  onAddSection,
+  onAddText,
+  onAddJourney,
+  onAddMindmap,
+  onAddArchitecture,
+  onAddSequence,
+  onAddClassNode,
+  onAddEntityNode,
   onAddImage: _onAddImage,
-  onAddBrowserWireframe: _onAddBrowserWireframe,
-  onAddMobileWireframe: _onAddMobileWireframe,
+  onAddBrowserWireframe,
+  onAddMobileWireframe,
   onAddDomainLibraryItem,
   onCodeAnalysis,
   onSqlAnalysis,
@@ -127,16 +129,30 @@ function OpenCommandBarContent({
     onCodeAnalysis ?? onSqlAnalysis ?? onTerraformAnalysis ?? onOpenApiAnalysis
   );
 
-  const commands = useCommandBarCommands({
+  const baseCommands = useCommandBarCommands({
     settings,
     onUndo,
     onRedo,
     onOpenStudioAI,
     onOpenStudioOpenFlow,
     onOpenStudioMermaid,
+    onOpenStudioPlayback,
     onOpenArchitectureRules,
+    onAddAnnotation,
+    onAddSection,
+    onAddText,
+    onAddJourney,
+    onAddMindmap,
+    onAddArchitecture,
+    onAddSequence,
+    onAddClassNode,
+    onAddEntityNode,
+    onAddBrowserWireframe,
+    onAddMobileWireframe,
     hasImport,
   });
+  const contextualCommands = useContextualCommandItems();
+  const commands = [...baseCommands, ...contextualCommands];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center pb-24 pointer-events-none">
@@ -168,6 +184,8 @@ function OpenCommandBarContent({
             onClose={onClose}
             setView={setView}
             inputRef={inputRef}
+            onAddDomainLibraryItem={onAddDomainLibraryItem}
+            onSelectTemplate={onSelectTemplate}
           />
         )}
         {view === 'design-system' && (

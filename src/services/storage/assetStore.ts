@@ -12,7 +12,7 @@ import {
   withDatabase,
 } from './indexedDbHelpers';
 import { ensureStorageSchemaReady, getBrowserIndexedDbFactory } from './storageRuntime';
-import { reportStorageTelemetry } from './storageTelemetry';
+import { classifyStorageWriteFailure, reportStorageTelemetry } from './storageTelemetry';
 import { hashBytesToAssetId, isAssetId } from './assetHash';
 import {
   AssetEncodeError,
@@ -200,11 +200,19 @@ export async function ingestUserMediaFile(
       height: encoded.height,
     };
   } catch (error) {
+    const failure = classifyStorageWriteFailure(error, {
+      quotaExceeded: 'ASSET_QUOTA_FALLBACK_DATA_URL',
+      fallback: 'ASSET_WRITE_FAILED',
+    });
     reportStorageTelemetry({
       area: 'persist',
-      code: 'ASSET_WRITE_FAILED',
+      code: failure.code,
       severity: 'warning',
-      message: `Asset store write failed; falling back to data URL. ${error instanceof Error ? error.message : String(error)}`,
+      message: `${failure.quotaExceeded
+        ? 'Asset-store quota exhausted'
+        : 'Asset store write failed'}; falling back to data URL. ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     });
     return {
       displayUrl: await blobToDataUrl(encoded.blob),

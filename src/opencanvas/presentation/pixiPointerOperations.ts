@@ -20,6 +20,8 @@ import type {
 } from '../domain/transforms/types';
 import type { CanvasMode } from './PixiSpikeControls';
 import type { ConnectorPointerOperation } from './pixiConnectorOperations';
+import type { CanvasCamera } from '../domain/camera/types';
+import { worldToScreen } from '../domain/camera/camera';
 
 export type PixiPointerOperation =
   | { kind: 'pan'; pointerId: number; last: Point2d }
@@ -38,6 +40,15 @@ export interface TransformPointerOperation {
   readonly result: TransformResult | null;
 }
 
+export interface AnchoredMarqueePointerOperation {
+  readonly kind: 'marquee';
+  readonly pointerId: number;
+  readonly startScreen: Point2d;
+  readonly startWorld: Point2d;
+  readonly currentScreen: Point2d;
+  readonly additive: boolean;
+}
+
 export function boundsBetween(start: Point2d, end: Point2d): Bounds2d {
   return createBounds2d(
     Math.min(start.x, end.x),
@@ -45,6 +56,13 @@ export function boundsBetween(start: Point2d, end: Point2d): Bounds2d {
     Math.abs(end.x - start.x),
     Math.abs(end.y - start.y)
   );
+}
+
+export function anchoredMarqueeBounds(
+  operation: AnchoredMarqueePointerOperation,
+  camera: CanvasCamera
+): Bounds2d {
+  return boundsBetween(worldToScreen(camera, operation.startWorld), operation.currentScreen);
 }
 
 export function isEditableTarget(target: EventTarget | null): boolean {

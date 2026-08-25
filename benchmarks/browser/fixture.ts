@@ -1,7 +1,11 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { BenchmarkFixture, BrowserBenchmarkFixtureName } from './contracts';
+import {
+  BROWSER_BENCHMARK_FIXTURE_SIZES,
+  type BenchmarkFixture,
+  type BrowserBenchmarkFixtureName,
+} from './contracts';
 
 export interface LoadedBenchmarkFixture {
   name: BrowserBenchmarkFixtureName;
@@ -30,6 +34,12 @@ function assertFixtureShape(
   }
   if (fixture.metadata.edgeCount !== fixture.edges.length) {
     throw new Error(`${name}: metadata edge count does not match fixture edges`);
+  }
+  const expected = BROWSER_BENCHMARK_FIXTURE_SIZES[name];
+  if (fixture.nodes.length !== expected.nodes || fixture.edges.length !== expected.edges) {
+    throw new Error(
+      `${name}: expected ${expected.nodes} nodes/${expected.edges} edges; received ${fixture.nodes.length}/${fixture.edges.length}`
+    );
   }
 }
 

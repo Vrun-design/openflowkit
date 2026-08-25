@@ -16,6 +16,7 @@ import {
   buildDiagramDocumentJson,
   importDiagramDocumentJson,
 } from './flow-export/diagramDocumentTransfer';
+import { downloadCanonicalRepairBackup } from './flow-export/canonicalRepairBackup';
 import { useStaticExport } from './useStaticExport';
 import { useCinematicExport } from './useCinematicExport';
 import type { ImportFidelityReport } from '@/services/importFidelity';
@@ -23,7 +24,12 @@ import type { ImportFidelityReport } from '@/services/importFidelity';
 interface ImportRecoveryState {
   fileName: string;
   report: ImportFidelityReport;
+  canonicalRepairAvailable: boolean;
+  sourceJson?: string;
 }
+
+type DiagramDocumentImportResult = Awaited<ReturnType<typeof importDiagramDocumentJson>>;
+type SuccessfulDiagramDocumentImport = Extract<DiagramDocumentImportResult, { ok: true }>;
 
 const logger = createLogger({ scope: 'useFlowExport' });
 
@@ -151,6 +157,55 @@ export const useFlowExport = (
     setImportRecoveryState(null);
   }, []);
 
+  const applySuccessfulJsonImport = useCallback((result: SuccessfulDiagramDocumentImport) => {
+    setImportRecoveryState(null);
+    recordHistory();
+    setNodes(result.nodes);
+    setEdges(result.edges);
+    updateTab(activeTabId, { diagramType: result.diagramType, playback: result.playback });
+    result.warnings.forEach((message) => addToast(message, 'warning'));
+    notifyOperationOutcome(addToast, result.outcome);
+    setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
+  }, [activeTabId, addToast, fitView, recordHistory, setEdges, setNodes, updateTab]);
+
+  const runJsonImport = useCallback(async (
+    json: string,
+    fileName: string,
+    repairCanonicalReferences = false
+  ) => {
+    const result = await importDiagramDocumentJson({
+      json,
+      importStart: performance.now(),
+      repairCanonicalReferences,
+    });
+
+    if (result.ok === true) {
+      applySuccessfulJsonImport(result);
+      return;
+    }
+
+    setImportRecoveryState({
+      fileName,
+      report: result.report,
+      canonicalRepairAvailable: result.canonicalRepairAvailable,
+      sourceJson: result.canonicalRepairAvailable ? json : undefined,
+    });
+    notifyOperationOutcome(addToast, result.outcome);
+  }, [addToast, applySuccessfulJsonImport]);
+
+  const repairCanonicalImport = useCallback(() => {
+    if (!importRecoveryState?.canonicalRepairAvailable || !importRecoveryState.sourceJson) return;
+    const { fileName, sourceJson } = importRecoveryState;
+    setImportRecoveryState(null);
+    void runJsonImport(sourceJson, fileName, true);
+  }, [importRecoveryState, runJsonImport]);
+
+  const downloadCanonicalRepairSource = useCallback(() => {
+    if (!importRecoveryState?.canonicalRepairAvailable || !importRecoveryState.sourceJson) return;
+    downloadCanonicalRepairBackup(importRecoveryState.sourceJson, importRecoveryState.fileName);
+    addToast('Original canonical file downloaded.', 'success');
+  }, [addToast, importRecoveryState]);
+
   const onFileImport = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -158,36 +213,12 @@ export const useFlowExport = (
       setImportRecoveryState(null);
       const reader = new FileReader();
       reader.onload = (ev) => {
-        const importStart = performance.now();
-        void (async () => {
-          const result = await importDiagramDocumentJson({
-            json: ev.target?.result as string,
-            importStart,
-          });
-
-          if (result.ok) {
-            setImportRecoveryState(null);
-            recordHistory();
-            setNodes(result.nodes);
-            setEdges(result.edges);
-            updateTab(activeTabId, { diagramType: result.diagramType, playback: result.playback });
-            result.warnings.forEach((message) => addToast(message, 'warning'));
-            notifyOperationOutcome(addToast, result.outcome);
-            setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
-            return;
-          }
-
-          setImportRecoveryState({
-            fileName: file.name,
-            report: result.report,
-          });
-          notifyOperationOutcome(addToast, result.outcome);
-        })();
+        void runJsonImport(ev.target?.result as string, file.name);
       };
       reader.readAsText(file);
       e.target.value = '';
     },
-    [recordHistory, setNodes, setEdges, fitView, addToast, activeTabId, updateTab]
+    [runJsonImport]
   );
 
   return {
@@ -204,5 +235,7 @@ export const useFlowExport = (
     onFileImport,
     importRecoveryState,
     dismissImportRecovery,
+    repairCanonicalImport,
+    downloadCanonicalRepairSource,
   };
 };

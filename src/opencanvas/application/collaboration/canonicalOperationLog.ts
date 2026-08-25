@@ -12,7 +12,7 @@ export interface CanonicalCollaborationOperation {
 
 export interface RejectedCanonicalOperation {
   readonly operation: CanonicalCollaborationOperation;
-  readonly reason: 'duplicate' | 'wrong-document' | 'precondition-failed';
+  readonly reason: 'before-checkpoint' | 'duplicate' | 'wrong-document' | 'precondition-failed';
   readonly message: string;
 }
 
@@ -41,7 +41,7 @@ export function isCanonicalCollaborationOperation(
     && typeof value.command.label === 'string';
 }
 
-function compareOperations(
+export function compareCanonicalCollaborationOperations(
   left: CanonicalCollaborationOperation,
   right: CanonicalCollaborationOperation
 ): number {
@@ -60,7 +60,7 @@ export function replayCanonicalOperationLog(
   const rejected: RejectedCanonicalOperation[] = [];
   const seenOperationIds = new Set<string>();
 
-  for (const operation of [...operations].sort(compareOperations)) {
+  for (const operation of [...operations].sort(compareCanonicalCollaborationOperations)) {
     if (seenOperationIds.has(operation.opId)) {
       rejected.push({ operation, reason: 'duplicate', message: `Duplicate operation "${operation.opId}".` });
       continue;

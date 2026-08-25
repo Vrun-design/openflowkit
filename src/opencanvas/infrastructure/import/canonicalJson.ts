@@ -1,4 +1,8 @@
 import { createDefaultSceneLayer, createDefaultRouteIntent } from '../../domain/document/defaults';
+import {
+  inspectDocumentIntegrity,
+  type IntegrityRepairAction,
+} from '../../domain/document/integrityRepair';
 import type { JsonObject } from '../../domain/document/json';
 import { SCENE_DOCUMENT_FORMAT, SCENE_DOCUMENT_VERSION, type SceneDocumentV1 } from '../../domain/document/types';
 import { validateSceneDocumentV1 } from '../../domain/document/validation';
@@ -9,6 +13,21 @@ export interface CanonicalImportResult {
   readonly document: SceneDocumentV1;
   readonly sourceVersion: number;
   readonly migrations: readonly string[];
+  readonly repairs: readonly IntegrityRepairAction[];
+}
+
+export interface CanonicalImportOptions {
+  readonly repairInvalidReferences?: boolean;
+}
+
+export class CanonicalDocumentRepairAvailableError extends TypeError {
+  readonly actions: readonly IntegrityRepairAction[];
+
+  constructor(message: string, actions: readonly IntegrityRepairAction[]) {
+    super(message);
+    this.name = 'CanonicalDocumentRepairAvailableError';
+    this.actions = actions;
+  }
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -55,7 +74,10 @@ function migrateV0(source: Record<string, unknown>): Record<string, unknown> {
     metadata: jsonObject(source.metadata), extensions: jsonObject(source.extensions), pages };
 }
 
-export function importCanonicalJson(source: string | unknown): CanonicalImportResult {
+export function importCanonicalJson(
+  source: string | unknown,
+  options: CanonicalImportOptions = {}
+): CanonicalImportResult {
   if (typeof source === 'string' && new TextEncoder().encode(source).byteLength > MAX_CANONICAL_JSON_BYTES) {
     throw new TypeError('Canonical JSON exceeds the 10 MB safety limit.');
   }
@@ -74,13 +96,25 @@ export function importCanonicalJson(source: string | unknown): CanonicalImportRe
   const validation = validateSceneDocumentV1(candidate);
   if (validation.success === false) {
     const first = validation.issues[0];
-    throw new TypeError(`Canonical document is invalid at ${first.path}: ${first.message}`);
+    const message = `Canonical document is invalid at ${first.path}: ${first.message}`;
+    const integrity = inspectDocumentIntegrity(candidate);
+    if (integrity.status === 'repairable') {
+      if (options.repairInvalidReferences) {
+        return {
+          document: structuredClone(integrity.document),
+          sourceVersion: version as number,
+          migrations,
+          repairs: integrity.actions,
+        };
+      }
+      throw new CanonicalDocumentRepairAvailableError(message, integrity.actions);
+    }
+    throw new TypeError(message);
   }
-  return { document: structuredClone(validation.document), sourceVersion: version as number, migrations };
-}
-
-export function serializeCanonicalJson(document: SceneDocumentV1): string {
-  const validation = validateSceneDocumentV1(document);
-  if (validation.success === false) throw new TypeError('Cannot serialize an invalid canonical document.');
-  return JSON.stringify(document, null, 2) + '\n';
+  return {
+    document: structuredClone(validation.document),
+    sourceVersion: version as number,
+    migrations,
+    repairs: [],
+  };
 }

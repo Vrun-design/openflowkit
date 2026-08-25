@@ -61,6 +61,18 @@ describe('freeform node presentation', () => {
     expect(resolveFreeformNodePresentation(node('pen', {
       points: [{ x: 0, y: 1 }, { x: 20, y: 30 }], strokeWidth: 200,
     }))).toMatchObject({ kind: 'pen', width: 64, points: [{ x: 0, y: 1 }, { x: 20, y: 30 }] });
+    expect(resolveFreeformNodePresentation(node('pen', {
+      points: [{ x: 0, y: 1 }, { x: 20, y: 30 }],
+      inputSamples: [
+        { pressure: 0.2, tiltX: 10, tiltY: 20, twist: 30 },
+        { pressure: 0.8, tiltX: 40, tiltY: 50, twist: 60 },
+      ],
+    }))).toMatchObject({
+      inputSamples: [
+        { pressure: 0.2, tiltX: 10, tiltY: 20, twist: 30 },
+        { pressure: 0.8, tiltX: 40, tiltY: 50, twist: 60 },
+      ],
+    });
     expect(resolveFreeformNodePresentation(node('arrow', { points: [{ x: 0, y: 0 }] }))).toBeNull();
     expect(resolveFreeformNodePresentation(node('sticky', { subLabel: 'Remember' })))
       .toMatchObject({ kind: 'sticky', body: 'Remember' });

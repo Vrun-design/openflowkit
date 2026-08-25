@@ -12,6 +12,11 @@ import {
 import { createImportReportOutcome, type OperationOutcome } from '@/services/operationFeedback';
 import { inlineNodeAssetsForTransfer } from '@/services/storage/assetInlining';
 import type { FlowEdge, FlowNode, PlaybackState, DiagramType } from '@/lib/types';
+import {
+  importCanonicalJsonToReactFlow,
+  isCanonicalJsonDocument,
+} from '@/opencanvas/infrastructure/import/canonicalReactFlowImport';
+import { CanonicalDocumentRepairAvailableError } from '@/opencanvas/infrastructure/import/canonicalJson';
 
 interface ActiveTabDocumentState {
   diagramType?: DiagramType;
@@ -43,6 +48,7 @@ export async function buildDiagramDocumentJson(params: {
 export async function importDiagramDocumentJson(params: {
   json: string;
   importStart: number;
+  repairCanonicalReferences?: boolean;
 }): Promise<
   | {
       ok: true;
@@ -56,14 +62,41 @@ export async function importDiagramDocumentJson(params: {
     }
   | {
       ok: false;
+      canonicalRepairAvailable: boolean;
       report: ImportFidelityReport;
       outcome: OperationOutcome;
     }
 > {
-  const { json, importStart } = params;
+  const { json, importStart, repairCanonicalReferences = false } = params;
 
   try {
-    const raw = JSON.parse(json);
+    const raw: unknown = JSON.parse(json);
+    const canonical = isCanonicalJsonDocument(raw)
+      ? importCanonicalJsonToReactFlow(json, {
+          repairInvalidReferences: repairCanonicalReferences,
+        })
+      : null;
+    if (canonical) {
+      const report = buildImportFidelityReport({
+        source: 'json',
+        nodeCount: canonical.nodes.length,
+        edgeCount: canonical.edges.length,
+        elapsedMs: Math.round(performance.now() - importStart),
+        issues: canonical.warnings.map((warning) => mapWarningToIssue(warning)),
+      });
+      persistLatestImportReport(report);
+      const outcome = createImportReportOutcome(report, 'Canonical diagram loaded successfully!');
+      return {
+        ok: true,
+        nodes: canonical.nodes,
+        edges: canonical.edges,
+        diagramType: canonical.diagramType,
+        playback: undefined,
+        warnings: [...canonical.warnings],
+        report,
+        outcome,
+      };
+    }
     const parsed = parseDiagramDocumentImport(raw);
     const { nodes, edges } = await composeDiagramForDisplay(parsed.nodes, parsed.edges, {
       diagramType: parsed.diagramType,
@@ -106,6 +139,7 @@ export async function importDiagramDocumentJson(params: {
 
     return {
       ok: false,
+      canonicalRepairAvailable: error instanceof CanonicalDocumentRepairAvailableError,
       report,
       outcome,
     };

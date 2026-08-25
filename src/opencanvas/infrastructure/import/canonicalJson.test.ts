@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
-import { importCanonicalJson, serializeCanonicalJson } from './canonicalJson';
+import {
+  CanonicalDocumentRepairAvailableError,
+  importCanonicalJson,
+} from './canonicalJson';
 
 describe('canonical JSON import and migration', () => {
-  it('round-trips current documents deterministically', () => {
+  it('imports current documents without migration', () => {
     const document = createTestDocument({ nodes: [createTestNode('a')] });
-    const serialized = serializeCanonicalJson(document);
-    expect(importCanonicalJson(serialized)).toEqual({ document, sourceVersion: 1, migrations: [] });
-    expect(serializeCanonicalJson(importCanonicalJson(serialized).document)).toBe(serialized);
+    expect(importCanonicalJson(document)).toEqual({
+      document,
+      sourceVersion: 1,
+      migrations: [],
+      repairs: [],
+    });
   });
 
   it('migrates v0 missing portable fields and rejects future or invalid documents', () => {
@@ -24,5 +30,22 @@ describe('canonical JSON import and migration', () => {
     expect(result.document.pages[0].nodes[0]).toMatchObject({ layerId: 'default', zIndex: 0 });
     expect(() => importCanonicalJson({ ...current, schemaVersion: 99 })).toThrow(/newer/);
     expect(() => importCanonicalJson({ ...current, pages: [] })).toThrow(/invalid/);
+  });
+
+  it('requires explicit consent before repairing invalid references', () => {
+    const document = createTestDocument({ nodes: [createTestNode('a')] });
+    const page = document.pages[0];
+    const invalid = {
+      ...document,
+      pages: [{
+        ...page,
+        nodes: [{ ...page.nodes[0], layerId: 'missing-layer' }],
+      }],
+    };
+
+    expect(() => importCanonicalJson(invalid)).toThrow(CanonicalDocumentRepairAvailableError);
+    const repaired = importCanonicalJson(invalid, { repairInvalidReferences: true });
+    expect(repaired.document.pages[0].nodes[0].layerId).toBe('default');
+    expect(repaired.repairs.map(({ kind }) => kind)).toEqual(['reset-layer']);
   });
 });

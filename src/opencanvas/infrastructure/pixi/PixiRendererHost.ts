@@ -1,5 +1,6 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import { screenToWorld, visibleWorldBounds, worldToScreen } from '../../domain/camera/camera';
+import { recordOpenCanvasRenderWork } from '../../application/renderer/renderWorkMeasurement';
 import type { CanvasCamera } from '../../domain/camera/types';
 import { createBounds2d, unionBounds } from '../../domain/geometry/bounds';
 import type { Bounds2d, Point2d, Size2d } from '../../domain/geometry/types';
@@ -16,6 +17,7 @@ import { nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import type { TransformHandle, TransformResult } from '../../domain/transforms/types';
 import { pickTransformHandle as pickHandle, PixiTransformOverlay } from './PixiTransformOverlay';
 import { PixiConnectorRenderer } from './PixiConnectorRenderer';
+import { PixiFreeformPreview, type FreeformPreviewFrame } from './PixiFreeformPreview';
 import { PixiContainerRenderer } from './PixiContainerRenderer';
 import { PixiConnectorEditOverlay } from './PixiConnectorEditOverlay';
 import {
@@ -28,6 +30,12 @@ import {
 import { PixiNodeRenderer } from './PixiNodeRenderer';
 import { PixiSelectionOverlay, selectionWorldBounds } from './PixiSelectionOverlay';
 import { shouldRedrawNodes } from './sceneInvalidation';
+import {
+  projectSceneViewport,
+  viewportProjectionEquals,
+  type SemanticDetailLevel,
+  type ViewportSceneProjection,
+} from './viewportProjection';
 
 export type PixiRendererStatus =
   | 'unavailable'
@@ -43,6 +51,9 @@ export interface PixiRenderDiagnostics {
   readonly lastRenderDurationMs: number;
   readonly nodeCount: number;
   readonly connectorCount: number;
+  readonly renderedNodeCount: number;
+  readonly renderedConnectorCount: number;
+  readonly detailLevel: SemanticDetailLevel;
   readonly pendingFrame: boolean;
   readonly continuousTickerRunning: boolean;
 }
@@ -87,6 +98,7 @@ export class PixiRendererHost {
   private readonly nodeRenderer = new PixiNodeRenderer(() => this.requestRender());
   private readonly selectionOverlay = new PixiSelectionOverlay();
   private readonly transformOverlay = new PixiTransformOverlay();
+  private readonly freeformPreview = new PixiFreeformPreview();
   private readonly marquee = new Graphics();
   private readonly onStatusChange?: PixiRendererHostOptions['onStatusChange'];
   private readonly connectorModelEnabled: boolean;
@@ -112,6 +124,7 @@ export class PixiRendererHost {
   private renderRequests = 0;
   private coalescedRequests = 0;
   private lastRenderDurationMs = 0;
+  private viewportProjection: ViewportSceneProjection | null = null;
 
   constructor(options: PixiRendererHostOptions = {}) {
     this.onStatusChange = options.onStatusChange;
@@ -158,6 +171,7 @@ export class PixiRendererHost {
       this.containerRenderer.labels,
       this.selectionOverlay.graphics,
       this.transformOverlay.graphics,
+      this.freeformPreview.graphics,
       this.connectorEditOverlay.graphics
     );
     this.app.stage.addChild(this.world, this.marquee);
@@ -168,6 +182,7 @@ export class PixiRendererHost {
     canvas.addEventListener('webglcontextrestored', this.handleContextRestored);
     container.appendChild(canvas);
     this.applyCamera();
+    if (this.page && this.refreshViewportProjection()) this.rebuildScene();
     this.emitStatus('ready');
     return canvas;
   }
@@ -180,6 +195,7 @@ export class PixiRendererHost {
     this.primaryNodeId = null;
     this.selectedConnectorId = null;
     this.activeConnectorHandle = null;
+    this.viewportProjection = this.createViewportProjection();
     this.rebuildScene(redrawNodes);
   }
 
@@ -188,7 +204,8 @@ export class PixiRendererHost {
     this.applyCamera();
     this.connectorRenderer.setZoom(camera.zoom);
     this.drawConnectorEditOverlay();
-    this.updateLabelVisibility();
+    if (this.refreshViewportProjection()) this.rebuildScene();
+    else this.updateLabelVisibility();
     this.requestRender();
   }
 
@@ -299,6 +316,7 @@ export class PixiRendererHost {
   setSelection(nodeIds: readonly string[], primaryNodeId: string | null): void {
     this.selectedNodeIds = nodeIds;
     this.primaryNodeId = primaryNodeId;
+    if (this.refreshViewportProjection()) this.rebuildScene();
     this.drawSelection();
     this.drawConnectorEditOverlay();
     this.requestRender();
@@ -326,6 +344,12 @@ export class PixiRendererHost {
         result.snappedY
       );
     this.selectionOverlay.graphics.visible = result === null;
+    this.requestRender();
+  }
+
+  setFreeformPreview(frame: FreeformPreviewFrame | null): void {
+    if (frame) this.freeformPreview.draw(frame);
+    else this.freeformPreview.clear();
     this.requestRender();
   }
 
@@ -392,7 +416,8 @@ export class PixiRendererHost {
   resize(): void {
     if (this.destroyed || !this.app.renderer) return;
     this.app.resize();
-    this.updateLabelVisibility();
+    if (this.refreshViewportProjection()) this.rebuildScene();
+    else this.updateLabelVisibility();
     this.requestRender();
   }
 
@@ -400,14 +425,21 @@ export class PixiRendererHost {
     if (this.destroyed || !this.app.renderer) return;
     const startedAt = performance.now();
     this.app.render();
-    this.lastRenderDurationMs = performance.now() - startedAt;
+    const endedAt = performance.now();
+    this.lastRenderDurationMs = endedAt - startedAt;
+    recordOpenCanvasRenderWork(performance, startedAt, endedAt);
     this.renderCount += 1;
   }
 
   getRenderDiagnostics(): PixiRenderDiagnostics {
+    const renderedNodeCount = this.viewportProjection?.nodeIds?.size ?? this.page?.nodes.length ?? 0;
+    const renderedConnectorCount = this.viewportProjection?.connectorIds?.size
+      ?? this.page?.connectors.length ?? 0;
     return { renderCount: this.renderCount, renderRequests: this.renderRequests,
       coalescedRequests: this.coalescedRequests, lastRenderDurationMs: this.lastRenderDurationMs,
       nodeCount: this.page?.nodes.length ?? 0, connectorCount: this.page?.connectors.length ?? 0,
+      renderedNodeCount, renderedConnectorCount,
+      detailLevel: this.viewportProjection?.detailLevel ?? 'full',
       pendingFrame: this.renderFrame !== null, continuousTickerRunning: this.app.ticker.started };
   }
 
@@ -427,9 +459,17 @@ export class PixiRendererHost {
   private rebuildScene(redrawNodes = true): void {
     if (!this.page || !this.index) return;
     this.drawPrecisionGrid();
-    this.connectorRenderer.draw(this.page, this.connectorModelEnabled);
+    const renderedNodeIds = this.viewportProjection?.nodeIds ?? null;
+    const renderedConnectorIds = this.viewportProjection?.connectorIds ?? null;
+    const detailLevel = this.viewportProjection?.detailLevel ?? 'full';
+    this.connectorRenderer.draw(this.page, this.connectorModelEnabled, renderedConnectorIds);
     if (redrawNodes) {
-      this.containerRenderer.draw(this.page, this.index, this.containerNodesEnabled);
+      this.containerRenderer.draw(
+        this.page,
+        this.index,
+        this.containerNodesEnabled,
+        renderedNodeIds
+      );
       this.nodeRenderer.draw(
         this.page,
         this.index,
@@ -441,7 +481,9 @@ export class PixiRendererHost {
         this.classEntityNodesEnabled,
         this.mindmapJourneyNodesEnabled,
         this.sequenceNodesEnabled,
-        this.wireframeNodesEnabled
+        this.wireframeNodesEnabled,
+        renderedNodeIds,
+        detailLevel
       );
     }
     this.updateLabelVisibility();
@@ -516,8 +558,9 @@ export class PixiRendererHost {
 
   private updateLabelVisibility(): void {
     if (!this.index || !this.app.renderer) return;
-    if (this.camera.zoom < LABEL_DETAIL_ZOOM) {
+    if (this.camera.zoom < LABEL_DETAIL_ZOOM || this.viewportProjection?.detailLevel !== 'full') {
       this.nodeRenderer.setLabelVisibility(null);
+      this.containerRenderer.setLabelVisibility(null);
       return;
     }
     const visibleIds = new Set(
@@ -527,6 +570,20 @@ export class PixiRendererHost {
     );
     this.nodeRenderer.setLabelVisibility(visibleIds);
     this.containerRenderer.setLabelVisibility(visibleIds);
+  }
+
+  private createViewportProjection(): ViewportSceneProjection | null {
+    if (!this.index) return null;
+    return projectSceneViewport(this.index, this.camera, this.getViewportSize(), {
+      retainedNodeIds: this.selectedNodeIds,
+    });
+  }
+
+  private refreshViewportProjection(): boolean {
+    const next = this.createViewportProjection();
+    if (!next || viewportProjectionEquals(this.viewportProjection, next)) return false;
+    this.viewportProjection = next;
+    return true;
   }
 
   private requestRender(): void {

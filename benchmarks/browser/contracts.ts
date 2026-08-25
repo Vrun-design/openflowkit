@@ -4,6 +4,15 @@ export const BROWSER_BENCHMARK_FIXTURES = ['small-100', 'medium-300', 'large-100
 
 export type BrowserBenchmarkFixtureName = (typeof BROWSER_BENCHMARK_FIXTURES)[number];
 
+export const BROWSER_BENCHMARK_FIXTURE_SIZES: Record<
+  BrowserBenchmarkFixtureName,
+  { readonly nodes: number; readonly edges: number }
+> = {
+  'small-100': { nodes: 100, edges: 150 },
+  'medium-300': { nodes: 300, edges: 450 },
+  'large-1000': { nodes: 1_000, edges: 1_500 },
+};
+
 export const PERFORMANCE_BUDGETS = {
   rendererWorkP95TargetMs: 12,
   framePacingP95TargetMs: 20,

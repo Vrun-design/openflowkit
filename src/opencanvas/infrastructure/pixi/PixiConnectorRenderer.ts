@@ -173,7 +173,11 @@ export class PixiConnectorRenderer {
     this.container.addChild(this.paths, this.labelPlates, this.labels);
   }
 
-  draw(page: ScenePage, advanced: boolean): void {
+  draw(
+    page: ScenePage,
+    advanced: boolean,
+    renderedConnectorIds: ReadonlySet<string> | null = null
+  ): void {
     this.paths.clear();
     this.labelPlates.clear();
     this.labels.removeChildren().forEach((child) => child.destroy());
@@ -182,6 +186,7 @@ export class PixiConnectorRenderer {
     const visiblePage = {
       ...page,
       connectors: page.connectors.filter((connector) => {
+        if (renderedConnectorIds && !renderedConnectorIds.has(connector.id)) return false;
         const source = nodesById.get(connector.source.nodeId);
         const target = nodesById.get(connector.target.nodeId);
         return Boolean(source && target && visibleLayerIds.has(source.layerId) && visibleLayerIds.has(target.layerId));

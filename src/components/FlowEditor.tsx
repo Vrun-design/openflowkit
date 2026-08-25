@@ -9,6 +9,7 @@ import { useCinematicExportState } from '@/context/CinematicExportContext';
 import { DiagramDiffProvider } from '@/context/DiagramDiffContext';
 import { ShareEmbedModal } from '@/components/ShareEmbedModal';
 import { ImportRecoveryDialog } from '@/components/ImportRecoveryDialog';
+import { StoragePressureBanner } from '@/components/StoragePressureBanner';
 import { MermaidDiagnosticsBanner } from '@/components/MermaidDiagnosticsBanner';
 import { canRecoverMermaidSource as canRecoverMermaidSourceFromState } from '@/services/mermaid/recoveryPresentation';
 import { resolveCinematicExportTheme } from '@/services/export/cinematicExportTheme';
@@ -50,6 +51,8 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
     onFileImport,
     importRecoveryState,
     dismissImportRecovery,
+    repairCanonicalImport,
+    downloadCanonicalRepairSource,
     shareViewerUrl,
     clearShareViewerUrl,
     collaborationEnabled,
@@ -74,6 +77,7 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
         importState: mermaidDiagnostics?.importState,
         layoutMode: mermaidDiagnostics?.layoutMode,
       });
+  const canRepairCanonicalImport = Boolean(importRecoveryState?.canonicalRepairAvailable);
 
   const handleConvertMermaidToEditable = React.useCallback(async () => {
     if (!mermaidRecoverySource) {
@@ -173,6 +177,11 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
           }}
         >
           <CinematicExportOverlay />
+          {flowEditorController.storagePressure ? (
+            <div className="pointer-events-none absolute right-4 top-16 z-50">
+              <StoragePressureBanner state={flowEditorController.storagePressure} />
+            </div>
+          ) : null}
           {mermaidDiagnostics ? (
             <div className="pointer-events-none absolute left-4 right-4 top-16 z-40 flex justify-center">
               <div className="pointer-events-auto w-full max-w-2xl">
@@ -237,18 +246,28 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
               onRetry={handleImportJSON}
               onClose={dismissImportRecovery}
               actionLabel={
-                importRecoveryState.report.source === 'mermaid' && canRecoverMermaidSource
+                canRepairCanonicalImport
+                  ? 'Repair canonical document'
+                  : importRecoveryState.report.source === 'mermaid' && canRecoverMermaidSource
                   ? mermaidDiagnostics?.visualMode === 'renderer_exact'
                     ? 'Convert to editable diagram'
                     : 'Open Mermaid code'
                   : undefined
               }
               onAction={
-                importRecoveryState.report.source === 'mermaid' && canRecoverMermaidSource
+                canRepairCanonicalImport
+                  ? repairCanonicalImport
+                  : importRecoveryState.report.source === 'mermaid' && canRecoverMermaidSource
                   ? mermaidDiagnostics?.visualMode === 'renderer_exact'
                     ? handleConvertMermaidToEditable
                     : () => flowEditorController.openStudioCode('mermaid')
                   : undefined
+              }
+              supportingActionLabel={
+                canRepairCanonicalImport ? 'Download original' : undefined
+              }
+              onSupportingAction={
+                canRepairCanonicalImport ? downloadCanonicalRepairSource : undefined
               }
             />
           ) : null}

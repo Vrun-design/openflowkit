@@ -934,3 +934,45 @@ body {
     transform: none;
   }
 }
+/* Keep assistive text available to screen readers without affecting layout. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/*
+ * Printable keyboard reference sheet (CS-099).
+ * ponytail: visibility toggling prints the panel in place — no second render
+ * tree, no PDF dependency. The modal's own scroll container is unclamped so
+ * the whole list paginates instead of clipping to the viewport.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  #shortcut-reference-sheet,
+  #shortcut-reference-sheet * {
+    visibility: visible;
+  }
+
+  #shortcut-reference-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+  }
+
+  #shortcut-reference-sheet .group:hover {
+    background: none;
+  }
+}

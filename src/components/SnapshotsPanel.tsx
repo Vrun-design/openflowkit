@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { X, Save, Clock, Trash2, RotateCcw, GitCompare } from 'lucide-react';
+import { X, Save, Clock, Trash2, RotateCcw, GitCompare, Download } from 'lucide-react';
 import { FlowSnapshot } from '@/lib/types';
 import { useTranslation } from 'react-i18next';
+import {
+    buildPreDeleteSnapshotBackup,
+    downloadDestructiveActionBackup,
+    type DestructiveActionBackup,
+} from '@/services/storage/destructiveActionBackup';
 
 interface SnapshotsPanelProps {
     isOpen: boolean;
@@ -25,6 +30,11 @@ interface SnapshotCardListProps {
     onCompareSnapshot?: (snapshot: FlowSnapshot) => void;
     restoreVersionTitle: string;
     deleteVersionTitle: string;
+    compareVersionTitle: string;
+    preparingBackupTitle: string;
+    downloadBackupAndDeleteTitle: string;
+    retryBackupTitle: string;
+    backupFailedMessage: string;
     nodesLabel: (count: number) => string;
     edgesLabel: (count: number) => string;
     cardClassName?: string;
@@ -38,11 +48,48 @@ function SnapshotCardList({
     onCompareSnapshot,
     restoreVersionTitle,
     deleteVersionTitle,
+    compareVersionTitle,
+    preparingBackupTitle,
+    downloadBackupAndDeleteTitle,
+    retryBackupTitle,
+    backupFailedMessage,
     nodesLabel,
     edgesLabel,
     cardClassName = 'group rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3 transition-all hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-surface)]',
     titleClassName = 'text-sm font-semibold text-[var(--brand-text)]',
 }: SnapshotCardListProps): React.ReactElement {
+    const [deletion, setDeletion] = useState<
+        | { status: 'idle' }
+        | { status: 'preparing'; snapshotId: string }
+        | { status: 'ready'; snapshotId: string; backup: DestructiveActionBackup }
+        | { status: 'failed'; snapshotId: string }
+    >({ status: 'idle' });
+
+    function handleDelete(snapshot: FlowSnapshot): void {
+        if (deletion.status === 'ready' && deletion.snapshotId === snapshot.id) {
+            try {
+                downloadDestructiveActionBackup(deletion.backup);
+                onDeleteSnapshot(snapshot.id);
+                setDeletion({ status: 'idle' });
+            } catch {
+                setDeletion({ status: 'failed', snapshotId: snapshot.id });
+            }
+            return;
+        }
+
+        setDeletion({ status: 'preparing', snapshotId: snapshot.id });
+        void buildPreDeleteSnapshotBackup(snapshot).then(
+            (backup) => setDeletion((current) =>
+                current.status !== 'idle' && current.snapshotId === snapshot.id
+                    ? { status: 'ready', snapshotId: snapshot.id, backup }
+                    : current),
+            () => setDeletion((current) =>
+                current.status !== 'idle' && current.snapshotId === snapshot.id
+                    ? { status: 'failed', snapshotId: snapshot.id }
+                    : current)
+        );
+    }
+
     return (
         <>
             {snapshots.map((snapshot) => (
@@ -52,13 +99,13 @@ function SnapshotCardList({
                             <h4 className={titleClassName}>{snapshot.name}</h4>
                             <p className="text-xs text-[var(--brand-secondary)]">{new Date(snapshot.timestamp).toLocaleString()}</p>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                             {onCompareSnapshot && (
                                 <button
                                     type="button"
                                     onClick={() => onCompareSnapshot(snapshot)}
-                                    aria-label="Compare snapshot with current diagram"
-                                    title="Compare with current"
+                                    aria-label={`${compareVersionTitle}: ${snapshot.name}`}
+                                    title={compareVersionTitle}
                                     className="rounded-[var(--radius-sm)] p-1.5 text-[var(--brand-secondary)] transition-colors hover:bg-[var(--brand-surface)] hover:text-[var(--brand-primary)]"
                                 >
                                     <GitCompare className="w-3.5 h-3.5" />
@@ -76,12 +123,31 @@ function SnapshotCardList({
                             </button>
                             <button
                                 type="button"
-                                onClick={() => onDeleteSnapshot(snapshot.id)}
-                                aria-label={`${deleteVersionTitle}: ${snapshot.name}`}
-                                title={deleteVersionTitle}
+                                onClick={() => handleDelete(snapshot)}
+                                disabled={deletion.status === 'preparing'
+                                    && deletion.snapshotId === snapshot.id}
+                                data-testid={`snapshot-delete-${snapshot.id}`}
+                                data-backup-status={deletion.status !== 'idle'
+                                    && deletion.snapshotId === snapshot.id
+                                    ? deletion.status
+                                    : 'idle'}
+                                aria-label={`${deletion.status === 'ready'
+                                    && deletion.snapshotId === snapshot.id
+                                    ? downloadBackupAndDeleteTitle
+                                    : deletion.status === 'failed'
+                                      && deletion.snapshotId === snapshot.id
+                                      ? retryBackupTitle
+                                      : deleteVersionTitle}: ${snapshot.name}`}
+                                title={deletion.status === 'ready'
+                                    && deletion.snapshotId === snapshot.id
+                                    ? downloadBackupAndDeleteTitle
+                                    : deleteVersionTitle}
                                 className="rounded-[var(--radius-sm)] p-1.5 text-red-500 transition-colors hover:bg-red-500/10"
                             >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                {deletion.status === 'ready'
+                                    && deletion.snapshotId === snapshot.id
+                                    ? <Download className="w-3.5 h-3.5" />
+                                    : <Trash2 className="w-3.5 h-3.5" />}
                             </button>
                         </div>
                     </div>
@@ -89,6 +155,16 @@ function SnapshotCardList({
                         <span className="rounded-[var(--radius-sm)] bg-[var(--brand-surface)] px-1.5 py-0.5 text-[var(--brand-secondary)]">{nodesLabel(snapshot.nodes.length)}</span>
                         <span className="rounded-[var(--radius-sm)] bg-[var(--brand-surface)] px-1.5 py-0.5 text-[var(--brand-secondary)]">{edgesLabel(snapshot.edges.length)}</span>
                     </div>
+                    {deletion.status === 'preparing' && deletion.snapshotId === snapshot.id ? (
+                        <p role="status" className="mt-2 text-xs text-[var(--brand-secondary)]">
+                            {preparingBackupTitle}
+                        </p>
+                    ) : null}
+                    {deletion.status === 'failed' && deletion.snapshotId === snapshot.id ? (
+                        <p role="alert" className="mt-2 text-xs text-red-500">
+                            {backupFailedMessage}
+                        </p>
+                    ) : null}
                 </div>
             ))}
         </>
@@ -113,6 +189,11 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
     const [newSnapshotName, setNewSnapshotName] = useState('');
     const restoreVersionTitle = t('snapshotsPanel.restoreVersion');
     const deleteVersionTitle = t('snapshotsPanel.deleteVersion');
+    const compareVersionTitle = t('snapshotsPanel.compareVersion');
+    const preparingBackupTitle = t('snapshotsPanel.preparingDeleteBackup');
+    const downloadBackupAndDeleteTitle = t('snapshotsPanel.downloadBackupAndDelete');
+    const retryBackupTitle = t('snapshotsPanel.retryDeleteBackup');
+    const backupFailedMessage = t('snapshotsPanel.deleteBackupFailed');
     const nodesLabel = (count: number): string => t('snapshotsPanel.nodes', { count });
     const edgesLabel = (count: number): string => t('snapshotsPanel.edges', { count });
     const historyTotalSteps = historyPastCount + historyFutureCount + 1;
@@ -169,7 +250,11 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                         <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--brand-secondary-light)]">
                             {t('snapshotsPanel.undoTimeline', 'Undo Timeline')}
                         </h4>
-                        <p className="text-xs text-[var(--brand-secondary)]">
+                        <p
+                            id="snapshot-history-position"
+                            aria-live="polite"
+                            className="text-xs text-[var(--brand-secondary)]"
+                        >
                             {historyCurrentIndex === 0
                                 ? t('snapshotsPanel.undoTimelineAtEarliest', 'You are at the earliest captured state.')
                                 : historyCurrentIndex === historyTotalSteps - 1
@@ -187,11 +272,20 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                         value={historyCurrentIndex}
                         onChange={(event) => onScrubHistoryTo(Number(event.currentTarget.value))}
                         aria-label={t('snapshotsPanel.undoTimelineScrubber', 'Scrub through recent undo history')}
+                        aria-describedby="snapshot-history-position"
+                        aria-valuetext={t('snapshotsPanel.undoTimelineValue', 'Step {{current}} of {{total}}', {
+                            current: historyCurrentIndex + 1,
+                            total: historyTotalSteps,
+                        })}
                         className="w-full accent-[var(--brand-primary)]"
                     />
                     <div className="flex items-center justify-between text-[11px] text-[var(--brand-secondary)]">
-                        <span>{historyPastCount} undo step{historyPastCount === 1 ? '' : 's'}</span>
-                        <span>{historyFutureCount} redo step{historyFutureCount === 1 ? '' : 's'}</span>
+                        <span>{t(historyPastCount === 1
+                            ? 'snapshotsPanel.undoStep'
+                            : 'snapshotsPanel.undoSteps', { count: historyPastCount })}</span>
+                        <span>{t(historyFutureCount === 1
+                            ? 'snapshotsPanel.redoStep'
+                            : 'snapshotsPanel.redoSteps', { count: historyFutureCount })}</span>
                     </div>
                 </section>
                 {snapshots.length === 0 ? (
@@ -214,6 +308,11 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                                     onCompareSnapshot={onCompareSnapshot}
                                     restoreVersionTitle={restoreVersionTitle}
                                     deleteVersionTitle={deleteVersionTitle}
+                                    compareVersionTitle={compareVersionTitle}
+                                    preparingBackupTitle={preparingBackupTitle}
+                                    downloadBackupAndDeleteTitle={downloadBackupAndDeleteTitle}
+                                    retryBackupTitle={retryBackupTitle}
+                                    backupFailedMessage={backupFailedMessage}
                                     nodesLabel={nodesLabel}
                                     edgesLabel={edgesLabel}
                                     cardClassName="group rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3 transition-all hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-surface)] hover:shadow-md"
@@ -236,6 +335,11 @@ export const SnapshotsPanel: React.FC<SnapshotsPanelProps> = ({
                                     onCompareSnapshot={onCompareSnapshot}
                                     restoreVersionTitle={restoreVersionTitle}
                                     deleteVersionTitle={deleteVersionTitle}
+                                    compareVersionTitle={compareVersionTitle}
+                                    preparingBackupTitle={preparingBackupTitle}
+                                    downloadBackupAndDeleteTitle={downloadBackupAndDeleteTitle}
+                                    retryBackupTitle={retryBackupTitle}
+                                    backupFailedMessage={backupFailedMessage}
                                     nodesLabel={nodesLabel}
                                     edgesLabel={edgesLabel}
                                     cardClassName="group rounded-[var(--radius-md)] border border-[var(--color-brand-border)] bg-[var(--brand-background)] p-3 transition-all hover:border-[var(--brand-primary-200)] hover:bg-[var(--brand-surface)]"

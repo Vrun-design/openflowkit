@@ -18,6 +18,7 @@ import type { PixiNodeDebugRecord } from './pixiNodeDebug';
 import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
 import { measurePortableText } from '../../domain/text/measurement';
+import type { SemanticDetailLevel } from './viewportProjection';
 
 const NODE_FILL = 0xffffff;
 const NODE_STROKE = 0xcbd5e1;
@@ -92,7 +93,9 @@ export class PixiNodeRenderer {
     classEntityNodesEnabled: boolean,
     mindmapJourneyNodesEnabled: boolean,
     sequenceNodesEnabled: boolean,
-    wireframeNodesEnabled: boolean
+    wireframeNodesEnabled: boolean,
+    renderedNodeIds: ReadonlySet<string> | null = null,
+    detailLevel: SemanticDetailLevel = 'full'
   ): void {
     this.graphics.clear();
     this.labels.removeChildren().forEach((child) => child.destroy({ children: true }));
@@ -105,10 +108,12 @@ export class PixiNodeRenderer {
     const visibleLayerIds = new Set(page.layers.filter((layer) => layer.visible).map((layer) => layer.id));
     for (const node of page.nodes) {
       if (!visibleLayerIds.has(node.layerId)) continue;
+      if (renderedNodeIds && !renderedNodeIds.has(node.id)) continue;
       if (containerNodesEnabled && isContainerNodeKind(node.kind)) continue;
       const matrix = index.worldMatricesByNodeId.get(node.id);
       if (!matrix) continue;
-      const architecture = architectureNodesEnabled
+      const showFamilyDetail = detailLevel !== 'overview';
+      const architecture = showFamilyDetail && architectureNodesEnabled
         ? this.architectureRenderer.drawNode(
             node,
             matrix,
@@ -117,23 +122,23 @@ export class PixiNodeRenderer {
           )
         : null;
       const classEntity =
-        !architecture && classEntityNodesEnabled
+        !architecture && showFamilyDetail && classEntityNodesEnabled
           ? this.classEntityRenderer.drawNode(node, matrix, this.graphics)
           : null;
       const mindmap =
-        !architecture && !classEntity && mindmapJourneyNodesEnabled
+        !architecture && !classEntity && showFamilyDetail && mindmapJourneyNodesEnabled
           ? this.mindmapRenderer.drawNode(node, matrix, this.graphics)
           : null;
       const journey =
-        !architecture && !classEntity && !mindmap && mindmapJourneyNodesEnabled
+        !architecture && !classEntity && !mindmap && showFamilyDetail && mindmapJourneyNodesEnabled
           ? this.journeyRenderer.drawNode(node, matrix, this.graphics)
           : null;
       const sequence =
-        !architecture && !classEntity && !mindmap && !journey && sequenceNodesEnabled
+        !architecture && !classEntity && !mindmap && !journey && showFamilyDetail && sequenceNodesEnabled
           ? this.sequenceRenderer.drawNode(node, matrix, this.graphics)
           : null;
       const wireframe =
-        !architecture && !classEntity && !mindmap && !journey && !sequence && wireframeNodesEnabled
+        !architecture && !classEntity && !mindmap && !journey && !sequence && showFamilyDetail && wireframeNodesEnabled
           ? this.wireframeRenderer.drawNode(node, matrix, this.graphics, wireframeMediaGeneration)
           : null;
       const freeform =
@@ -143,7 +148,7 @@ export class PixiNodeRenderer {
         !journey &&
         !sequence &&
         !wireframe &&
-        freeformNodesEnabled
+        showFamilyDetail && freeformNodesEnabled
           ? this.freeformRenderer.drawNode(node, matrix, this.graphics, freeformMediaGeneration)
           : null;
       const visual =
@@ -217,6 +222,7 @@ export class PixiNodeRenderer {
         stroke,
         mediaState: 'none',
       });
+      if (detailLevel === 'overview') continue;
       const labelText = typeof node.content.label === 'string' ? node.content.label : node.id;
       const sizing = resolveNodeSizingPolicy(node);
       const layout = resolveNodeContentLayout(node.content, nodeLayoutEnabled);

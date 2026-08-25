@@ -16,6 +16,8 @@ interface ImportRecoveryDialogProps {
   onClose: () => void;
   actionLabel?: string;
   onAction?: () => void;
+  supportingActionLabel?: string;
+  onSupportingAction?: () => void;
 }
 
 function formatSourceLabel(source: ImportFidelityReport['source']): string {
@@ -54,6 +56,8 @@ export function ImportRecoveryDialog({
   onClose,
   actionLabel,
   onAction,
+  supportingActionLabel,
+  onSupportingAction,
 }: ImportRecoveryDialogProps): React.ReactElement | null {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const visibleIssues = report.issues.slice(0, 3);
@@ -183,6 +187,11 @@ export function ImportRecoveryDialog({
           ) : null}
 
           <div className="flex items-center justify-end gap-3">
+            {supportingActionLabel && onSupportingAction ? (
+              <Button type="button" variant="secondary" onClick={onSupportingAction}>
+                {supportingActionLabel}
+              </Button>
+            ) : null}
             {actionLabel && onAction ? (
               <Button type="button" variant="secondary" onClick={onAction}>
                 {actionLabel}

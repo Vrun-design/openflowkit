@@ -1,4 +1,10 @@
-export const HARDWARE_GATE_SCHEMA_VERSION = 1;
+import {
+  BROWSER_BENCHMARK_FIXTURES,
+  BROWSER_BENCHMARK_FIXTURE_SIZES,
+  PERFORMANCE_BUDGETS,
+} from './contracts';
+
+export const HARDWARE_GATE_SCHEMA_VERSION = 2;
 export const MIN_HARDWARE_RUNS = 5;
 
 export interface HardwareRunnerIdentity {
@@ -18,6 +24,7 @@ export interface HardwareFixtureRun {
     frameP95Ms: number;
     inputNextFrameP95Ms: number;
     framesOver50Ms: number;
+    rendererWorkP95Ms: number | null;
   };
 }
 
@@ -67,15 +74,69 @@ function validateCapture(capture: HardwareRendererCapture, errors: string[]): vo
   } else if (SOFTWARE_RENDERER_PATTERN.test(capture.runner.webGl.renderer)) {
     errors.push(`${capture.renderer}: software WebGL is not hardware evidence`);
   }
-  if (capture.runs.length < MIN_HARDWARE_RUNS) {
-    errors.push(`${capture.renderer}: at least ${MIN_HARDWARE_RUNS} runs are required`);
-  }
+  const runsByFixture = new Map<string, HardwareFixtureRun[]>();
   for (const [index, run] of capture.runs.entries()) {
     const prefix = `${capture.renderer}.runs[${index}]`;
     if (!/^[a-f0-9]{64}$/.test(run.fixture.sha256)) errors.push(`${prefix}: invalid fixture hash`);
     if (run.fixture.nodes <= 0 || run.fixture.edges < 0) errors.push(`${prefix}: invalid fixture size`);
+    const expectedSize = BROWSER_BENCHMARK_FIXTURE_SIZES[
+      run.fixture.name as keyof typeof BROWSER_BENCHMARK_FIXTURE_SIZES
+    ];
+    if (expectedSize
+      && (run.fixture.nodes !== expectedSize.nodes || run.fixture.edges !== expectedSize.edges)) {
+      errors.push(
+        `${prefix}: expected ${expectedSize.nodes} nodes/${expectedSize.edges} edges`
+      );
+    }
     for (const [name, value] of Object.entries(run.interaction)) {
-      if (!Number.isFinite(value) || value < 0) errors.push(`${prefix}.${name}: invalid metric`);
+      if (name === 'rendererWorkP95Ms' && value === null && capture.renderer === 'reactflow') continue;
+      if (!Number.isFinite(value) || (value as number) < 0) {
+        errors.push(`${prefix}.${name}: invalid metric`);
+      }
+    }
+    const fixtureRuns = runsByFixture.get(run.fixture.name) ?? [];
+    fixtureRuns.push(run);
+    runsByFixture.set(run.fixture.name, fixtureRuns);
+  }
+  for (const fixtureName of BROWSER_BENCHMARK_FIXTURES) {
+    const count = runsByFixture.get(fixtureName)?.length ?? 0;
+    if (count < MIN_HARDWARE_RUNS) {
+      errors.push(
+        `${capture.renderer}: fixture ${fixtureName} requires at least ${MIN_HARDWARE_RUNS} runs; received ${count}`
+      );
+    }
+  }
+  for (const fixtureName of runsByFixture.keys()) {
+    if (!(BROWSER_BENCHMARK_FIXTURES as readonly string[]).includes(fixtureName)) {
+      errors.push(`${capture.renderer}: unexpected fixture ${fixtureName}`);
+    }
+  }
+}
+
+function validateOpenCanvasBudgets(
+  capture: HardwareRendererCapture,
+  errors: string[]
+): void {
+  for (const [index, run] of capture.runs.entries()) {
+    const prefix = `${capture.renderer}.runs[${index}]`;
+    if (run.interaction.frameP95Ms > PERFORMANCE_BUDGETS.framePacingP95TargetMs) {
+      errors.push(
+        `${prefix}.frameP95Ms exceeds ${PERFORMANCE_BUDGETS.framePacingP95TargetMs} ms target`
+      );
+    }
+    if (run.interaction.inputNextFrameP95Ms > PERFORMANCE_BUDGETS.inputNextFrameP95Ms) {
+      errors.push(
+        `${prefix}.inputNextFrameP95Ms exceeds ${PERFORMANCE_BUDGETS.inputNextFrameP95Ms} ms target`
+      );
+    }
+    if (run.interaction.framesOver50Ms > 0) {
+      errors.push(`${prefix}.framesOver50Ms must be zero`);
+    }
+    if (run.interaction.rendererWorkP95Ms === null
+      || run.interaction.rendererWorkP95Ms > PERFORMANCE_BUDGETS.rendererWorkP95TargetMs) {
+      errors.push(
+        `${prefix}.rendererWorkP95Ms must be at most ${PERFORMANCE_BUDGETS.rendererWorkP95TargetMs} ms`
+      );
     }
   }
 }
@@ -87,6 +148,7 @@ export function evaluateHardwareGate(
   const errors: string[] = [];
   validateCapture(reactFlow, errors);
   validateCapture(openCanvas, errors);
+  validateOpenCanvasBudgets(openCanvas, errors);
   if (reactFlow.renderer !== 'reactflow') errors.push('first capture must be React Flow');
   if (openCanvas.renderer !== 'opencanvas-pixi') errors.push('second capture must be OpenCanvas');
   if (reactFlow.git.commit !== openCanvas.git.commit) errors.push('captures use different commits');

@@ -5,9 +5,15 @@ import {
   MIN_HARDWARE_RUNS,
   type HardwareRendererCapture,
 } from './hardwareGate';
+import { BROWSER_BENCHMARK_FIXTURE_SIZES } from './contracts';
 
 const SHA = 'a'.repeat(64);
 const COMMIT = 'b'.repeat(40);
+const FIXTURES = [
+  { name: 'small-100', ...BROWSER_BENCHMARK_FIXTURE_SIZES['small-100'] },
+  { name: 'medium-300', ...BROWSER_BENCHMARK_FIXTURE_SIZES['medium-300'] },
+  { name: 'large-1000', ...BROWSER_BENCHMARK_FIXTURE_SIZES['large-1000'] },
+] as const;
 
 function capture(renderer: HardwareRendererCapture['renderer']): HardwareRendererCapture {
   return {
@@ -24,10 +30,15 @@ function capture(renderer: HardwareRendererCapture['renderer']): HardwareRendere
       hardwareConcurrency: 8,
       webGl: { vendor: 'Apple', renderer: 'ANGLE Metal Renderer: Apple M4' },
     },
-    runs: Array.from({ length: MIN_HARDWARE_RUNS }, () => ({
-      fixture: { name: 'large-1000', sha256: SHA, nodes: 1_000, edges: 1_500 },
-      interaction: { frameP95Ms: 16.7, inputNextFrameP95Ms: 22, framesOver50Ms: 0 },
-    })),
+    runs: FIXTURES.flatMap((fixture) => Array.from({ length: MIN_HARDWARE_RUNS }, () => ({
+      fixture: { ...fixture, sha256: SHA },
+      interaction: {
+        frameP95Ms: 16.7,
+        inputNextFrameP95Ms: 22,
+        framesOver50Ms: 0,
+        rendererWorkP95Ms: renderer === 'opencanvas-pixi' ? 8 : null,
+      },
+    }))),
   };
 }
 
@@ -47,7 +58,37 @@ describe('hardware benchmark gate', () => {
     const result = evaluateHardwareGate(reactFlow, openCanvas);
     expect(result.ok).toBe(false);
     expect(result.errors).toContain('opencanvas-pixi: software WebGL is not hardware evidence');
-    expect(result.errors).toContain(`opencanvas-pixi: at least ${MIN_HARDWARE_RUNS} runs are required`);
+    expect(result.errors).toContain(
+      `opencanvas-pixi: fixture small-100 requires at least ${MIN_HARDWARE_RUNS} runs; received 1`
+    );
+    expect(result.errors).toContain(
+      `opencanvas-pixi: fixture medium-300 requires at least ${MIN_HARDWARE_RUNS} runs; received 0`
+    );
+  });
+
+  it('rejects missing corpus fixtures and OpenCanvas latency budget failures', () => {
+    const reactFlow = capture('reactflow');
+    const openCanvas = capture('opencanvas-pixi');
+    openCanvas.runs = openCanvas.runs.filter((run) => run.fixture.name !== 'medium-300');
+    openCanvas.runs[0].interaction.frameP95Ms = 21;
+    openCanvas.runs[1].interaction.inputNextFrameP95Ms = 51;
+    openCanvas.runs[2].interaction.framesOver50Ms = 1;
+    openCanvas.runs[3].fixture.nodes = 99;
+    openCanvas.runs[4].interaction.rendererWorkP95Ms = 13;
+
+    const result = evaluateHardwareGate(reactFlow, openCanvas);
+    expect(result.errors).toContain(
+      `opencanvas-pixi: fixture medium-300 requires at least ${MIN_HARDWARE_RUNS} runs; received 0`
+    );
+    expect(result.errors).toContain('opencanvas-pixi.runs[0].frameP95Ms exceeds 20 ms target');
+    expect(result.errors).toContain(
+      'opencanvas-pixi.runs[1].inputNextFrameP95Ms exceeds 50 ms target'
+    );
+    expect(result.errors).toContain('opencanvas-pixi.runs[2].framesOver50Ms must be zero');
+    expect(result.errors).toContain('opencanvas-pixi.runs[3]: expected 100 nodes/150 edges');
+    expect(result.errors).toContain(
+      'opencanvas-pixi.runs[4].rendererWorkP95Ms must be at most 12 ms'
+    );
   });
 
   it('rejects mismatched commits, runners, and fixture hashes', () => {

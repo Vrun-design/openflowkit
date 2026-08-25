@@ -1,9 +1,18 @@
+import { resolveAnnotationVisualStyle, resolveTextVisualStyle } from '@/theme';
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import { boundsFromPoints } from '../../domain/geometry/bounds';
 import { boundsCorners } from '../../domain/geometry/bounds';
 import type { Matrix2d, Point2d } from '../../domain/geometry/types';
 import { resolveBasicNodePresentation } from '../../domain/nodes/basicNodePresentation';
 import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
+import {
+  resolveFreeformNodePresentation,
+  type AnnotationNodePresentation,
+  type ImageNodePresentation,
+  type StrokeNodePresentation,
+  type TextNodePresentation,
+} from '../../domain/nodes/freeformNodePresentation';
+import { pressureTiltSegmentWidth } from '../../domain/nodes/strokeInput';
 import { projectPageConnectors } from '../../domain/connectors/routeProjection';
 import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
@@ -39,6 +48,166 @@ function pathData(points: readonly Point2d[]): string {
   return points.map((point, index) => `${index ? 'L' : 'M'}${number(point.x)} ${number(point.y)}`).join(' ') + ' Z';
 }
 
+function openPathData(points: readonly Point2d[]): string {
+  return points
+    .map((point, index) => `${index ? 'L' : 'M'}${number(point.x)} ${number(point.y)}`)
+    .join(' ');
+}
+
+function strokePath(
+  data: string,
+  color: string,
+  width: number,
+  opacity: number
+): string {
+  return `<path d="${data}" fill="none" stroke="${color}" stroke-width="${number(width)}" opacity="${number(opacity)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+
+function arrowHeadPath(presentation: StrokeNodePresentation): string {
+  if (presentation.kind !== 'arrow') return '';
+  const end = presentation.points.at(-1);
+  const previous = presentation.points.at(-2);
+  if (!end || !previous) return '';
+  const angle = Math.atan2(end.y - previous.y, end.x - previous.x);
+  const length = Math.max(8, presentation.width * 3);
+  const left = {
+    x: end.x - Math.cos(angle - Math.PI / 6) * length,
+    y: end.y - Math.sin(angle - Math.PI / 6) * length,
+  };
+  const right = {
+    x: end.x - Math.cos(angle + Math.PI / 6) * length,
+    y: end.y - Math.sin(angle + Math.PI / 6) * length,
+  };
+  return `M${number(left.x)} ${number(left.y)} L${number(end.x)} ${number(end.y)} L${number(right.x)} ${number(right.y)}`;
+}
+
+function exportStrokeNode(
+  node: SceneNode,
+  matrix: Matrix2d,
+  presentation: StrokeNodePresentation
+): string {
+  const color = safeColor(presentation.color, '#334155');
+  const inputSamples = presentation.inputSamples;
+  const paths = inputSamples
+    ? presentation.points.slice(1).map((point, index) => strokePath(
+        openPathData([presentation.points[index], point]),
+        color,
+        pressureTiltSegmentWidth(
+          presentation.width,
+          inputSamples[index],
+          inputSamples[index + 1]
+        ),
+        presentation.opacity
+      )).join('')
+    : strokePath(
+        openPathData(presentation.points),
+        color,
+        presentation.width,
+        presentation.opacity
+      );
+  const arrowHead = arrowHeadPath(presentation);
+  return `<g data-node-id="${xml(node.id)}" data-node-kind="${presentation.kind}" transform="${matrixAttribute(matrix)}">${paths}${
+    arrowHead ? strokePath(arrowHead, color, presentation.width, presentation.opacity) : ''
+  }</g>`;
+}
+
+function textElement(
+  value: string,
+  x: number,
+  y: number,
+  attributes: string,
+  lineHeight: number
+): string {
+  const lines = value.split(/\r?\n/).slice(0, 32);
+  const spans = lines.map((line, index) => (
+    `<tspan x="${number(x)}" dy="${index === 0 ? 0 : number(lineHeight)}">${xml(line)}</tspan>`
+  )).join('');
+  return `<text x="${number(x)}" y="${number(y)}" ${attributes}>${spans}</text>`;
+}
+
+function exportTextNode(
+  node: SceneNode,
+  matrix: Matrix2d,
+  presentation: TextNodePresentation,
+  theme: 'light' | 'dark' | 'print'
+): string {
+  const colors = resolveTextVisualStyle(
+    presentation.colorKey,
+    'subtle',
+    presentation.customColor,
+    'slate'
+  );
+  const background = presentation.backgroundColor
+    ? `<rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="8" fill="${safeColor(presentation.backgroundColor, '#ffffff')}" stroke="${safeColor(colors.border, '#94a3b8')}"/>`
+    : '';
+  const color = safeColor(
+    node.content.textColor,
+    theme === 'dark' && !presentation.backgroundColor ? '#f8fafc' : colors.text
+  );
+  const text = textElement(
+    presentation.label,
+    node.size.width / 2,
+    node.size.height / 2,
+    `text-anchor="middle" dominant-baseline="middle" fill="${color}" font-family="${xml(presentation.fontFamily)}" font-size="${number(presentation.fontSizePx)}" font-weight="${xml(presentation.fontWeight)}" font-style="${xml(presentation.fontStyle)}"`,
+    presentation.fontSizePx * 1.25
+  );
+  return `<g data-node-id="${xml(node.id)}" data-node-kind="text" transform="${matrixAttribute(matrix)}">${background}${text}</g>`;
+}
+
+function exportImageNode(
+  node: SceneNode,
+  matrix: Matrix2d,
+  presentation: ImageNodePresentation,
+  theme: 'light' | 'dark' | 'print'
+): string {
+  const background = theme === 'dark' ? '#1e293b' : '#fff7ed';
+  const media = presentation.sourceUrl
+    ? `<image href="${xml(presentation.sourceUrl)}" width="${number(node.size.width)}" height="${number(node.size.height)}" opacity="${number(presentation.opacity)}" preserveAspectRatio="xMidYMid meet"/>`
+    : textElement(
+        presentation.label || 'No Image',
+        node.size.width / 2,
+        node.size.height / 2,
+        `text-anchor="middle" dominant-baseline="middle" fill="${theme === 'dark' ? '#f8fafc' : '#9a3412'}" font-family="system-ui,sans-serif" font-size="12" font-weight="600"`,
+        15
+      );
+  return `<g data-node-id="${xml(node.id)}" data-node-kind="image" transform="${matrixAttribute(matrix)}"><rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="8" fill="${background}" stroke="#e95420"/>${media}</g>`;
+}
+
+function exportAnnotationNode(
+  node: SceneNode,
+  matrix: Matrix2d,
+  presentation: AnnotationNodePresentation
+): string {
+  const colors = resolveAnnotationVisualStyle(
+    presentation.colorKey,
+    'subtle',
+    presentation.customColor
+  );
+  const foldSize = Math.min(28, node.size.width / 4, node.size.height / 3);
+  const fold = pathData([
+    { x: node.size.width - foldSize, y: node.size.height },
+    { x: node.size.width, y: node.size.height - foldSize },
+    { x: node.size.width, y: node.size.height },
+  ]);
+  const title = presentation.title
+    ? textElement(
+        presentation.title,
+        12,
+        22,
+        `fill="${safeColor(colors.titleText, '#713f12')}" font-family="system-ui,sans-serif" font-size="14" font-weight="700"`,
+        17
+      )
+    : '';
+  const body = textElement(
+    presentation.body,
+    12,
+    presentation.title ? 46 : 24,
+    `fill="${safeColor(colors.bodyText, '#854d0e')}" font-family="system-ui,sans-serif" font-size="12" font-weight="500"`,
+    15
+  );
+  return `<g data-node-id="${xml(node.id)}" data-node-kind="${presentation.kind}" transform="${matrixAttribute(matrix)}"><rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="8" fill="${safeColor(colors.containerBg, '#fef9c3')}" stroke="${safeColor(colors.containerBorder, '#eab308')}" stroke-width="1.5"/><path d="${fold}" fill="${safeColor(colors.foldBg, '#fef08a')}" stroke="${safeColor(colors.foldBorder, '#ca8a04')}"/>${title}${body}</g>`;
+}
+
 function connectorPathData(commands: ReturnType<typeof projectPageConnectors>[number]['commands']): string {
   return commands.map((command) => command.kind === 'cubic'
     ? `C${number(command.control1.x)} ${number(command.control1.y)} ${number(command.control2.x)} ${number(command.control2.y)} ${number(command.point.x)} ${number(command.point.y)}`
@@ -47,6 +216,15 @@ function connectorPathData(commands: ReturnType<typeof projectPageConnectors>[nu
 }
 
 function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' | 'print'): string {
+  const freeform = resolveFreeformNodePresentation(node);
+  if (freeform && (freeform.kind === 'pen' || freeform.kind === 'highlighter'
+    || freeform.kind === 'line' || freeform.kind === 'arrow')) {
+    return exportStrokeNode(node, matrix, freeform);
+  }
+  if (freeform?.kind === 'text') return exportTextNode(node, matrix, freeform, theme);
+  if (freeform?.kind === 'image') return exportImageNode(node, matrix, freeform, theme);
+  if (freeform && (freeform.kind === 'annotation' || freeform.kind === 'sticky'
+    || freeform.kind === 'callout')) return exportAnnotationNode(node, matrix, freeform);
   const basic = resolveBasicNodePresentation(node);
   const fillFallback = theme === 'dark' ? '#1e293b' : '#ffffff';
   const strokeFallback = theme === 'dark' ? '#94a3b8' : '#64748b';

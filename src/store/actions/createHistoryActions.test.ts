@@ -35,6 +35,7 @@ function createState(snapshotCount = 0): FlowState {
     renameDocument: () => undefined,
     duplicateDocument: () => null,
     deleteDocumentRecord: () => undefined,
+    deleteDocumentRecords: () => undefined,
     tabs: [
       {
         id: 'tab-1',
@@ -71,8 +72,10 @@ function createState(snapshotCount = 0): FlowState {
     recordHistoryV2: () => undefined,
     undoV2: () => undefined,
     redoV2: () => undefined,
+    scrubHistoryV2: () => undefined,
     canUndoV2: () => false,
     canRedoV2: () => false,
+    runContextualEditorCommand: () => false,
     designSystems: [],
     activeDesignSystemId: '',
     globalEdgeOptions: { type: 'smoothstep', animated: false, strokeWidth: 2 },
@@ -143,9 +146,12 @@ describe('createHistoryActions', () => {
   it('records history for the active tab', () => {
     let nextState: Partial<FlowState> = {};
     const state = createState();
-    const actions = createHistoryActions((updater) => {
-      nextState = typeof updater === 'function' ? updater(state) : updater;
-    }, () => state);
+    const actions = createHistoryActions(
+      (updater) => {
+        nextState = typeof updater === 'function' ? updater(state) : updater;
+      },
+      () => state
+    );
 
     actions.recordHistoryV2();
 
@@ -155,9 +161,12 @@ describe('createHistoryActions', () => {
   it('keeps history bounded when many snapshots accumulate', () => {
     let nextState: Partial<FlowState> = {};
     const state = createState(25);
-    const actions = createHistoryActions((updater) => {
-      nextState = typeof updater === 'function' ? updater(state) : updater;
-    }, () => state);
+    const actions = createHistoryActions(
+      (updater) => {
+        nextState = typeof updater === 'function' ? updater(state) : updater;
+      },
+      () => state
+    );
 
     actions.recordHistoryV2();
 
@@ -168,14 +177,19 @@ describe('createHistoryActions', () => {
     let nextState: Partial<FlowState> = {};
     const state = createState();
     state.layers = [{ id: 'locked', name: 'Locked', visible: true, locked: true }];
-    state.tabs[0].history.past = [{
-      nodes: state.nodes,
-      edges: state.edges,
-      layers: [{ id: 'default', name: 'Default', visible: true, locked: false }],
-    }];
-    const actions = createHistoryActions((updater) => {
-      nextState = typeof updater === 'function' ? updater(state) : updater;
-    }, () => state);
+    state.tabs[0].history.past = [
+      {
+        nodes: state.nodes,
+        edges: state.edges,
+        layers: [{ id: 'default', name: 'Default', visible: true, locked: false }],
+      },
+    ];
+    const actions = createHistoryActions(
+      (updater) => {
+        nextState = typeof updater === 'function' ? updater(state) : updater;
+      },
+      () => state
+    );
 
     actions.undoV2();
 
@@ -188,23 +202,64 @@ describe('createHistoryActions', () => {
     let nextState: Partial<FlowState> = {};
     const state = createState();
     state.tabs[0].canvasExtensions = { openCanvasPrecision: { gridSize: 25 } };
-    const actions = createHistoryActions((updater) => {
-      nextState = typeof updater === 'function' ? updater(state) : updater;
-    }, () => state);
+    const actions = createHistoryActions(
+      (updater) => {
+        nextState = typeof updater === 'function' ? updater(state) : updater;
+      },
+      () => state
+    );
 
     actions.recordHistoryV2();
     expect(nextState.tabs?.[0]?.history.past[0]?.canvasExtensions).toEqual(
       state.tabs[0].canvasExtensions
     );
 
-    state.tabs[0].history.past = [{
-      nodes: state.nodes,
-      edges: state.edges,
-      canvasExtensions: { openCanvasPrecision: { gridSize: 10 } },
-    }];
+    state.tabs[0].history.past = [
+      {
+        nodes: state.nodes,
+        edges: state.edges,
+        canvasExtensions: { openCanvasPrecision: { gridSize: 10 } },
+      },
+    ];
     actions.undoV2();
     expect(nextState.tabs?.[0]?.canvasExtensions).toEqual({
       openCanvasPrecision: { gridSize: 10 },
     });
+  });
+
+  it('scrubs atomically across the complete history timeline', () => {
+    let state = createState();
+    const earliest = {
+      nodes: [createNode('earliest')],
+      edges: [createEdge('earliest-edge', 'earliest', 'earliest')],
+      layers: [{ id: 'early', name: 'Early', visible: true, locked: false }],
+      canvasExtensions: { openCanvasPrecision: { gridSize: 8 } },
+    };
+    const latest = {
+      nodes: [createNode('latest')],
+      edges: [createEdge('latest-edge', 'latest', 'latest')],
+      layers: [{ id: 'late', name: 'Late', visible: true, locked: false }],
+      canvasExtensions: { openCanvasPrecision: { gridSize: 32 } },
+    };
+    state.tabs[0].history = { past: [earliest], future: [latest] };
+    const actions = createHistoryActions(
+      (updater) => {
+        const partial = typeof updater === 'function' ? updater(state) : updater;
+        state = { ...state, ...partial };
+      },
+      () => state
+    );
+
+    actions.scrubHistoryV2(0);
+    expect(state.nodes[0].id).toBe('earliest');
+    expect(state.layers[0].id).toBe('early');
+    expect(state.tabs[0].canvasExtensions).toEqual(earliest.canvasExtensions);
+    expect(state.tabs[0].history).toMatchObject({ past: [], future: expect.any(Array) });
+
+    actions.scrubHistoryV2(2);
+    expect(state.nodes[0].id).toBe('latest');
+    expect(state.layers[0].id).toBe('late');
+    expect(state.tabs[0].history.future).toEqual([]);
+    expect(state.tabs[0].history.past).toHaveLength(2);
   });
 });

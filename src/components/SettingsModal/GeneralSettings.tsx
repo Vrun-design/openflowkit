@@ -5,6 +5,7 @@ import { Globe, Moon, Sun, Zap } from 'lucide-react';
 import { useAnalyticsPreference } from '@/hooks/useAnalyticsPreference';
 import { useTheme } from '@/context/ThemeContext';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { StorageAccountingPanel } from '@/components/settings/StorageAccountingPanel';
 
 type ThemeOption = {
   value: 'light' | 'dark' | 'system';
@@ -106,6 +107,8 @@ export function GeneralSettings(): React.ReactElement {
           <LanguageSelector variant="compact" />
         </div>
       </div>
+
+      <StorageAccountingPanel />
     </div>
   );
 }

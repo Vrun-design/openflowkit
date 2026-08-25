@@ -38,6 +38,11 @@ interface HomeDashboardProps {
   onRenameFlow: (flowId: string) => void;
   onDuplicateFlow: (flowId: string) => void;
   onDeleteFlow: (flowId: string) => void;
+  selectedFlowIds: ReadonlySet<string>;
+  onToggleFlowSelection: (flowId: string) => void;
+  onSelectAllFlows: () => void;
+  onClearFlowSelection: () => void;
+  onDeleteSelectedFlows: () => void;
 }
 
 export function HomeDashboard({
@@ -50,6 +55,11 @@ export function HomeDashboard({
   onRenameFlow,
   onDuplicateFlow,
   onDeleteFlow,
+  selectedFlowIds,
+  onToggleFlowSelection,
+  onSelectAllFlows,
+  onClearFlowSelection,
+  onDeleteSelectedFlows,
 }: HomeDashboardProps): React.ReactElement {
   const { t } = useTranslation();
   const hasFlows = flows.length > 0;
@@ -121,11 +131,30 @@ export function HomeDashboard({
               </div>
             </Tooltip>
           </div>
-          {hasFlows && (
-            <span className="text-xs text-[var(--brand-secondary)]">
-              {flows.length} {t('home.files', 'files')}
-            </span>
-          )}
+          {hasFlows ? (
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <span className="mr-1 text-xs text-[var(--brand-secondary)]">
+                {flows.length} {t('home.files', 'files')}
+              </span>
+              {selectedFlowIds.size > 0 ? (
+                <>
+                  <Button type="button" variant="ghost" size="sm" onClick={onClearFlowSelection}>
+                    {t('home.bulkDelete.clearSelection', 'Clear selection')}
+                  </Button>
+                  <Button type="button" variant="danger" size="sm" onClick={onDeleteSelectedFlows}>
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t('home.bulkDelete.deleteSelected', 'Delete selected ({{count}})', {
+                      count: selectedFlowIds.size,
+                    })}
+                  </Button>
+                </>
+              ) : (
+                <Button type="button" variant="secondary" size="sm" onClick={onSelectAllFlows}>
+                  {t('home.bulkDelete.selectAll', 'Select all')}
+                </Button>
+              )}
+            </div>
+          ) : null}
         </div>
 
         {!hasFlows ? (
@@ -209,10 +238,26 @@ export function HomeDashboard({
               <div
                 key={flow.id}
                 onClick={() => onOpenFlow(flow.id)}
-                className="group relative cursor-pointer flex flex-col overflow-hidden rounded-[16px] border border-[color-mix(in_srgb,var(--color-brand-border),transparent_50%)] bg-[var(--brand-surface)] transition-all duration-300 hover:border-[var(--brand-primary-400)]/40 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:-translate-y-0.5"
+                data-selected={selectedFlowIds.has(flow.id) ? 'true' : 'false'}
+                className={`group relative cursor-pointer flex flex-col overflow-hidden rounded-[16px] border bg-[var(--brand-surface)] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 ${
+                  selectedFlowIds.has(flow.id)
+                    ? 'border-[var(--brand-primary)] ring-2 ring-[var(--brand-primary)]/20'
+                    : 'border-[color-mix(in_srgb,var(--color-brand-border),transparent_50%)] hover:border-[var(--brand-primary-400)]/40'
+                }`}
               >
                 <div className="relative flex h-[160px] w-full items-center justify-center overflow-hidden border-b border-[color-mix(in_srgb,var(--color-brand-border),transparent_50%)] bg-[var(--brand-background)]">
                   <FlowPreview preview={flow.preview} />
+
+                  <input
+                    type="checkbox"
+                    checked={selectedFlowIds.has(flow.id)}
+                    onClick={(event) => event.stopPropagation()}
+                    onChange={() => onToggleFlowSelection(flow.id)}
+                    aria-label={t('home.bulkDelete.selectFlow', 'Select {{name}}', {
+                      name: flow.name,
+                    })}
+                    className="absolute left-3 top-3 z-20 h-5 w-5 cursor-pointer accent-[var(--brand-primary)]"
+                  />
 
                   {/* Sleek Floating Actions Pill */}
                   <div className="absolute right-3 top-3 z-20 flex items-center gap-0.5 rounded-full border border-[color-mix(in_srgb,var(--color-brand-border),white_10%)] bg-[var(--brand-surface)]/80 backdrop-blur-md p-1 opacity-0 transform translate-y-[-4px] transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0 shadow-lg">

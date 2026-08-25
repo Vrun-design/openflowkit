@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { RouteLoadingFallback } from './components/app/RouteLoadingFallback';
+import { PersistedWorkspaceRepairDialog } from './components/PersistedWorkspaceRepairDialog';
 import { ToastProvider } from './components/ui/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
 import {
@@ -10,8 +11,17 @@ import {
   captureSessionStarted,
   initializeAnalytics,
 } from './services/analytics/analytics';
-import { discardPendingCrashRecovery, ensureLocalFirstPersistenceReady,
-  getPendingCrashRecovery, restorePendingCrashRecovery } from './services/storage/localFirstRuntime';
+import {
+  continueWithoutPendingWorkspaceRepair,
+  discardPendingCrashRecovery,
+  downloadPendingWorkspaceBackup,
+  ensureLocalFirstPersistenceReady,
+  getPendingCrashRecovery,
+  getPendingWorkspaceIntegrity,
+  repairPendingWorkspace,
+  restorePendingCrashRecovery,
+} from './services/storage/localFirstRuntime';
+import type { PersistedWorkspaceIntegrityReport } from './services/storage/persistedWorkspaceRepair';
 import { installStorageTelemetrySink } from './services/storage/storageTelemetrySink';
 import { reportStorageTelemetry } from './services/storage/storageTelemetry';
 import { registerAppShellServiceWorker } from './services/offline/registerAppShellServiceWorker';
@@ -33,6 +43,10 @@ const root = ReactDOM.createRoot(rootElement);
 function BootstrapApp(): React.ReactElement {
   const [isReady, setIsReady] = React.useState(false);
   const [recoveryAvailable, setRecoveryAvailable] = React.useState(false);
+  const [workspaceIntegrity, setWorkspaceIntegrity] = React.useState<Exclude<
+    PersistedWorkspaceIntegrityReport,
+    { status: 'healthy' }
+  > | null>(null);
 
   React.useEffect(() => {
     let isDisposed = false;
@@ -44,14 +58,14 @@ function BootstrapApp(): React.ReactElement {
           code: 'BOOTSTRAP_PERSISTENCE_READY_FAILED',
           severity: 'error',
           message:
-            error instanceof Error
-              ? error.message
-              : 'Local-first persistence bootstrap failed.',
+            error instanceof Error ? error.message : 'Local-first persistence bootstrap failed.',
         });
       })
       .finally(() => {
         if (!isDisposed) {
-          setRecoveryAvailable(Boolean(getPendingCrashRecovery()));
+          const integrity = getPendingWorkspaceIntegrity();
+          setWorkspaceIntegrity(integrity?.status === 'healthy' ? null : integrity);
+          setRecoveryAvailable(!integrity && Boolean(getPendingCrashRecovery()));
           setIsReady(true);
         }
       });
@@ -70,19 +84,47 @@ function BootstrapApp(): React.ReactElement {
     );
   }
 
-  return <>
-    {recoveryAvailable ? <section role="alertdialog" aria-label="Recover unsaved work">
-      <h1>Recover unsaved work?</h1>
-      <p>A newer local edit journal was found after the previous session ended.</p>
-      <button type="button" onClick={() => { restorePendingCrashRecovery(); setRecoveryAvailable(false); }}>
-        Recover work
-      </button>
-      <button type="button" onClick={() => { discardPendingCrashRecovery(); setRecoveryAvailable(false); }}>
-        Discard recovery
-      </button>
-    </section> : null}
-    <App />
-  </>;
+  return (
+    <>
+      {workspaceIntegrity ? (
+        <PersistedWorkspaceRepairDialog
+          report={workspaceIntegrity}
+          onRepair={repairPendingWorkspace}
+          onContinueWithoutRepair={continueWithoutPendingWorkspaceRepair}
+          onDownloadBackup={downloadPendingWorkspaceBackup}
+          onResolved={() => {
+            setWorkspaceIntegrity(null);
+            setRecoveryAvailable(Boolean(getPendingCrashRecovery()));
+          }}
+        />
+      ) : null}
+      {recoveryAvailable ? (
+        <section role="alertdialog" aria-label="Recover unsaved work">
+          <h1>Recover unsaved work?</h1>
+          <p>A newer local edit journal was found after the previous session ended.</p>
+          <button
+            type="button"
+            onClick={() => {
+              restorePendingCrashRecovery();
+              setRecoveryAvailable(false);
+            }}
+          >
+            Recover work
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              discardPendingCrashRecovery();
+              setRecoveryAvailable(false);
+            }}
+          >
+            Discard recovery
+          </button>
+        </section>
+      ) : null}
+      <App />
+    </>
+  );
 }
 
 root.render(

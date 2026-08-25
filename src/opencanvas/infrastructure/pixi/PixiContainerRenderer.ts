@@ -53,7 +53,12 @@ export class PixiContainerRenderer {
   private readonly labelByNodeId = new Map<string, Container>();
   private debugRecords: readonly PixiNodeDebugRecord[] = [];
 
-  draw(page: ScenePage, index: SceneIndex, enabled: boolean): void {
+  draw(
+    page: ScenePage,
+    index: SceneIndex,
+    enabled: boolean,
+    renderedNodeIds: ReadonlySet<string> | null = null
+  ): void {
     this.graphics.clear();
     this.labels.removeChildren().forEach((child) => child.destroy({ children: true }));
     this.labelByNodeId.clear();
@@ -65,6 +70,7 @@ export class PixiContainerRenderer {
     const visibleLayerIds = new Set(page.layers.filter((layer) => layer.visible).map((layer) => layer.id));
     for (const node of page.nodes) {
       if (!visibleLayerIds.has(node.layerId)) continue;
+      if (renderedNodeIds && !renderedNodeIds.has(node.id)) continue;
       const visual = projectContainerNodeVisual(node);
       const matrix = index.worldMatricesByNodeId.get(node.id);
       if (!visual || !matrix) continue;

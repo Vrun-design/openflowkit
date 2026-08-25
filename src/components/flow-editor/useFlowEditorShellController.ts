@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, type RefObject } from 'react';
 import { shouldOpenFlowEditorImportDialog } from '@/app/routeState';
 import { useStoragePressureGuard } from '@/hooks/useStoragePressureGuard';
+import type { StoragePressureGuardState } from '@/hooks/useStoragePressureGuard';
 import { useAnimatedEdgePerformanceWarning } from '@/hooks/useAnimatedEdgePerformanceWarning';
 import type { FlowEdge, FlowNode, FlowSnapshot } from '@/lib/types';
 import type { DiagramType } from '@/lib/types';
@@ -59,6 +60,7 @@ interface UseFlowEditorShellControllerResult {
   selectedNodes: FlowNode[];
   selectedEdge: FlowEdge | null;
   shouldRenderPanels: boolean;
+  storagePressure: StoragePressureGuardState | null;
 }
 
 export function useFlowEditorShellController({
@@ -83,7 +85,7 @@ export function useFlowEditorShellController({
     () => `${pages.length}:${snapshots.length}:${nodes.length}:${edges.length}`,
     [pages.length, snapshots.length, nodes.length, edges.length]
   );
-  useStoragePressureGuard({
+  const storagePressure = useStoragePressureGuard({
     trigger: storageGuardTrigger,
     onExportJSON: handleExportJSON,
   });
@@ -140,5 +142,6 @@ export function useFlowEditorShellController({
     selectedNodes,
     selectedEdge,
     shouldRenderPanels,
+    storagePressure,
   };
 }

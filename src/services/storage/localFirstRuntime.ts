@@ -8,25 +8,34 @@ import { getEditorPagesForDocument } from '@/store/workspaceDocumentModel';
 import type { FlowStoreState } from '@/store';
 import { useFlowStore } from '@/store';
 import { createPersistedDocumentsFromTabs } from './persistedDocumentAdapters';
+import { downloadDestructiveActionBackup } from './destructiveActionBackup';
+import {
+  inspectPersistedWorkspace,
+  type PersistedWorkspaceIntegrityReport,
+} from './persistedWorkspaceRepair';
 import {
   createLoadedFlowWorkspace,
   localFirstRepository,
   type PersistedChatMessage,
 } from './localFirstRepository';
-import {
-  parseLegacyChatMessagesJson,
-  parsePersistentAISettingsJson,
-} from './storageSchemas';
+import { parseLegacyChatMessagesJson, parsePersistentAISettingsJson } from './storageSchemas';
 import { isAssetStoreAvailable } from './assetStore';
 import { migrateNodesMedia } from './assetMigration';
-import { reportStorageTelemetry } from './storageTelemetry';
+import { classifyStorageWriteFailure, reportStorageTelemetry } from './storageTelemetry';
 import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
-import { acknowledgeCrashJournal, appendCrashJournal, clearCrashJournal, readCrashJournal,
+import {
+  acknowledgeCrashJournal,
+  appendCrashJournal,
+  clearCrashJournal,
+  readCrashJournal,
   resolveRecoverableJournal,
-  toLoadedDocument, type CrashJournalEntry } from './crashRecoveryJournal';
+  toLoadedDocument,
+  type CrashJournalEntry,
+} from './crashRecoveryJournal';
 
 const STORE_SUBSCRIPTION_DEBOUNCE_MS = 250;
 let pendingCrashRecovery: CrashJournalEntry | null = null;
+let pendingWorkspaceIntegrity: PersistedWorkspaceIntegrityReport | null = null;
 
 type StoreWithPersist = typeof useFlowStore & {
   persist?: {
@@ -61,7 +70,10 @@ function buildChatMessageId(documentId: string, index: number): string {
   return `${documentId}:${index}`;
 }
 
-function toPersistedChatMessages(documentId: string, serialized: string | null): PersistedChatMessage[] {
+function toPersistedChatMessages(
+  documentId: string,
+  serialized: string | null
+): PersistedChatMessage[] {
   const parsed = parseLegacyChatMessagesJson(serialized);
   if (parsed.length === 0) {
     return [];
@@ -91,7 +103,7 @@ async function migrateLegacyStoreIntoRepositoryIfNeeded(): Promise<void> {
 
   await localFirstRepository.saveDocuments(
     createPersistedDocumentsFromTabs(tabs),
-    currentState.activeTabId,
+    currentState.activeTabId
   );
 
   await Promise.all(
@@ -113,6 +125,19 @@ async function migrateLegacyStoreIntoRepositoryIfNeeded(): Promise<void> {
 
 async function hydrateStoreFromRepository(): Promise<void> {
   const loaded = await localFirstRepository.loadWorkspaceSnapshot();
+  if (ROLLOUT_FLAGS.openCanvasPersistedWorkspaceRepairV1) {
+    const integrity = inspectPersistedWorkspace(loaded);
+    pendingWorkspaceIntegrity = integrity.status === 'healthy' ? null : integrity;
+    if (integrity.status === 'unrepairable') {
+      reportStorageTelemetry({
+        area: 'schema',
+        code: 'PERSISTED_WORKSPACE_UNREPAIRABLE',
+        severity: 'error',
+        message: `Persisted workspace failed structural validation: ${integrity.issues.join(' ')}`,
+      });
+      return;
+    }
+  }
   const workspace = createLoadedFlowWorkspace(loaded);
   const activeDocument = getEditorPagesForDocument(workspace.documents, workspace.activeDocumentId);
   if (!activeDocument) {
@@ -124,9 +149,9 @@ async function hydrateStoreFromRepository(): Promise<void> {
   }
 
   const persistentAiSettings = await localFirstRepository.loadPersistentAISettings();
-  const parsedPersistentAiSettings = parsePersistentAISettingsJson(
-    persistentAiSettings
-  ) as Partial<FlowStoreState['aiSettings']> | undefined;
+  const parsedPersistentAiSettings = parsePersistentAISettingsJson(persistentAiSettings) as
+    | Partial<FlowStoreState['aiSettings']>
+    | undefined;
   const aiSettings = parsedPersistentAiSettings
     ? sanitizeAISettings(parsedPersistentAiSettings, DEFAULT_AI_SETTINGS)
     : loadPersistedAISettings();
@@ -137,14 +162,18 @@ async function hydrateStoreFromRepository(): Promise<void> {
     activeDocumentId: activeDocument.activeDocumentId,
     tabs: activeDocument.pages,
     activeTabId: activeDocument.activePageId,
-    nodes: activeDocument.pages.find((page) => page.id === activeDocument.activePageId)?.nodes ?? [],
-    edges: activeDocument.pages.find((page) => page.id === activeDocument.activePageId)?.edges ?? [],
+    nodes:
+      activeDocument.pages.find((page) => page.id === activeDocument.activePageId)?.nodes ?? [],
+    edges:
+      activeDocument.pages.find((page) => page.id === activeDocument.activePageId)?.edges ?? [],
     aiSettings,
   }));
 
   if (ROLLOUT_FLAGS.openCanvasCrashRecoveryV1) {
-    const newestPersistedAt = loaded.documents.reduce<string | null>((latest, document) =>
-      !latest || document.updatedAt > latest ? document.updatedAt : latest, null);
+    const newestPersistedAt = loaded.documents.reduce<string | null>(
+      (latest, document) => (!latest || document.updatedAt > latest ? document.updatedAt : latest),
+      null
+    );
     pendingCrashRecovery = resolveRecoverableJournal(localStorage, newestPersistedAt);
   }
 
@@ -189,8 +218,8 @@ async function migrateStoreMediaBeforeSave(): Promise<void> {
       })
     );
     if (
-      migratedTabs.some((tab, index) => tab !== beforeTabs[index])
-      && useFlowStore.getState().tabs === beforeTabs
+      migratedTabs.some((tab, index) => tab !== beforeTabs[index]) &&
+      useFlowStore.getState().tabs === beforeTabs
     ) {
       useFlowStore.setState({ tabs: migratedTabs });
     }
@@ -211,51 +240,56 @@ async function migrateStoreMediaBeforeSave(): Promise<void> {
 let pendingPersist: Promise<void> = Promise.resolve();
 
 function persistStoreSnapshot(): void {
-  pendingPersist = pendingPersist.then(async () => {
-    await migrateStoreMediaBeforeSave();
+  pendingPersist = pendingPersist
+    .then(async () => {
+      await migrateStoreMediaBeforeSave();
 
-    // Re-read after the awaits above: migration writes back to the store, and the
-    // user may have edited meanwhile. Saving the pre-await snapshot would drop both.
-    const state = useFlowStore.getState();
-    const documents = syncWorkspaceDocuments({
-      documents: state.documents,
-      activeDocumentId: state.activeDocumentId,
-      tabs: state.tabs.map(sanitizePersistedTab),
-      activeTabId: state.activeTabId,
-      nodes: state.nodes,
-      edges: state.edges,
+      // Re-read after the awaits above: migration writes back to the store, and the
+      // user may have edited meanwhile. Saving the pre-await snapshot would drop both.
+      const state = useFlowStore.getState();
+      const documents = syncWorkspaceDocuments({
+        documents: state.documents,
+        activeDocumentId: state.activeDocumentId,
+        tabs: state.tabs.map(sanitizePersistedTab),
+        activeTabId: state.activeTabId,
+        nodes: state.nodes,
+        edges: state.edges,
+      });
+      const crashJournalCheckpoint = ROLLOUT_FLAGS.openCanvasCrashRecoveryV1
+        ? (readCrashJournal(localStorage).at(-1)?.id ?? null)
+        : null;
+
+      await localFirstRepository.saveFlowDocuments(documents, state.activeDocumentId);
+      if (ROLLOUT_FLAGS.openCanvasCrashRecoveryV1) {
+        acknowledgeCrashJournal(localStorage, crashJournalCheckpoint);
+      }
+
+      if (state.aiSettings.storageMode === 'local') {
+        await localFirstRepository.savePersistentAISettings(JSON.stringify(state.aiSettings));
+      }
+    })
+    .catch((error) => {
+      const failure = classifyStorageWriteFailure(error, {
+        quotaExceeded: 'PERSIST_QUOTA_EXHAUSTED',
+        fallback: 'PERSIST_SNAPSHOT_FAILED',
+      });
+      reportStorageTelemetry({
+        area: 'persist',
+        code: failure.code,
+        severity: 'error',
+        message: `${
+          failure.quotaExceeded
+            ? 'Browser quota exhausted while persisting workspace snapshot.'
+            : 'Failed to persist workspace snapshot.'
+        } ${error instanceof Error ? error.message : String(error)}`,
+      });
     });
-    const crashJournalCheckpoint = ROLLOUT_FLAGS.openCanvasCrashRecoveryV1
-      ? readCrashJournal(localStorage).at(-1)?.id ?? null : null;
-
-    await localFirstRepository.saveFlowDocuments(documents, state.activeDocumentId);
-    if (ROLLOUT_FLAGS.openCanvasCrashRecoveryV1) {
-      acknowledgeCrashJournal(localStorage, crashJournalCheckpoint);
-    }
-
-    if (state.aiSettings.storageMode === 'local') {
-      await localFirstRepository.savePersistentAISettings(JSON.stringify(state.aiSettings));
-    }
-  }).catch((error) => {
-    reportStorageTelemetry({
-      area: 'persist',
-      code: 'PERSIST_SNAPSHOT_FAILED',
-      severity: 'error',
-      message: `Failed to persist workspace snapshot. ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    });
-  });
 }
 
 let syncStopper: (() => void) | null = null;
 let initializationPromise: Promise<void> | null = null;
 
-export async function initializeLocalFirstPersistence(): Promise<void> {
-  await waitForStoreHydration();
-  await migrateLegacyStoreIntoRepositoryIfNeeded();
-  await hydrateStoreFromRepository();
-
+function startWorkspacePersistenceSync(): void {
   if (syncStopper) {
     return;
   }
@@ -268,15 +302,29 @@ export async function initializeLocalFirstPersistence(): Promise<void> {
     const activePageChanged = state.activeTabId !== previousState.activeTabId;
     const aiSettingsChanged = state.aiSettings !== previousState.aiSettings;
 
-    if (!documentsChanged && !tabsChanged && !activeDocumentChanged && !activePageChanged && !aiSettingsChanged) {
+    if (
+      !documentsChanged &&
+      !tabsChanged &&
+      !activeDocumentChanged &&
+      !activePageChanged &&
+      !aiSettingsChanged
+    ) {
       return;
     }
 
-    if (ROLLOUT_FLAGS.openCanvasCrashRecoveryV1
-      && (documentsChanged || tabsChanged || activeDocumentChanged || activePageChanged)) {
-      try { appendCrashJournal(state, localStorage); } catch (error) {
-        reportStorageTelemetry({ area: 'persist', code: 'CRASH_JOURNAL_WRITE_FAILED',
-          severity: 'warning', message: error instanceof Error ? error.message : String(error) });
+    if (
+      ROLLOUT_FLAGS.openCanvasCrashRecoveryV1 &&
+      (documentsChanged || tabsChanged || activeDocumentChanged || activePageChanged)
+    ) {
+      try {
+        appendCrashJournal(state, localStorage);
+      } catch (error) {
+        reportStorageTelemetry({
+          area: 'persist',
+          code: 'CRASH_JOURNAL_WRITE_FAILED',
+          severity: 'warning',
+          message: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
@@ -290,12 +338,65 @@ export async function initializeLocalFirstPersistence(): Promise<void> {
   });
 }
 
+export async function initializeLocalFirstPersistence(): Promise<void> {
+  await waitForStoreHydration();
+  await migrateLegacyStoreIntoRepositoryIfNeeded();
+  await hydrateStoreFromRepository();
+
+  if (!pendingWorkspaceIntegrity) {
+    startWorkspacePersistenceSync();
+  }
+}
+
+export function getPendingWorkspaceIntegrity(): PersistedWorkspaceIntegrityReport | null {
+  return pendingWorkspaceIntegrity;
+}
+
+export function downloadPendingWorkspaceBackup(): boolean {
+  if (!pendingWorkspaceIntegrity || pendingWorkspaceIntegrity.status === 'healthy') return false;
+  const backup =
+    pendingWorkspaceIntegrity.status === 'repairable'
+      ? pendingWorkspaceIntegrity.plan.backup
+      : pendingWorkspaceIntegrity.backup;
+  downloadDestructiveActionBackup(backup);
+  return true;
+}
+
+export async function repairPendingWorkspace(): Promise<boolean> {
+  if (!pendingWorkspaceIntegrity || pendingWorkspaceIntegrity.status !== 'repairable') {
+    return false;
+  }
+  const plan = pendingWorkspaceIntegrity.plan;
+  downloadDestructiveActionBackup(plan.backup);
+  await localFirstRepository.saveDocuments(
+    [...plan.repairedDocuments],
+    plan.original.workspaceMeta.activeDocumentId
+  );
+  pendingWorkspaceIntegrity = null;
+  await hydrateStoreFromRepository();
+  if (pendingWorkspaceIntegrity) {
+    throw new Error('Persisted workspace remained invalid after repair.');
+  }
+  startWorkspacePersistenceSync();
+  return true;
+}
+
+export function continueWithoutPendingWorkspaceRepair(): boolean {
+  if (!pendingWorkspaceIntegrity || pendingWorkspaceIntegrity.status !== 'repairable') {
+    return false;
+  }
+  pendingWorkspaceIntegrity = null;
+  startWorkspacePersistenceSync();
+  return true;
+}
+
 export function getPendingCrashRecovery(): CrashJournalEntry | null {
   return pendingCrashRecovery;
 }
 
 export function discardPendingCrashRecovery(): void {
-  clearCrashJournal(localStorage); pendingCrashRecovery = null;
+  clearCrashJournal(localStorage);
+  pendingCrashRecovery = null;
 }
 
 export function restorePendingCrashRecovery(): boolean {
@@ -303,11 +404,17 @@ export function restorePendingCrashRecovery(): boolean {
   const workspace = createLoadedFlowWorkspace(toLoadedDocument(pendingCrashRecovery));
   const active = getEditorPagesForDocument(workspace.documents, workspace.activeDocumentId);
   if (!active) return false;
-  useFlowStore.setState({ documents: workspace.documents, activeDocumentId: active.activeDocumentId,
-    tabs: active.pages, activeTabId: active.activePageId,
+  useFlowStore.setState({
+    documents: workspace.documents,
+    activeDocumentId: active.activeDocumentId,
+    tabs: active.pages,
+    activeTabId: active.activePageId,
     nodes: active.pages.find(({ id }) => id === active.activePageId)?.nodes ?? [],
-    edges: active.pages.find(({ id }) => id === active.activePageId)?.edges ?? [] });
-  pendingCrashRecovery = null; persistStoreSnapshot(); return true;
+    edges: active.pages.find(({ id }) => id === active.activePageId)?.edges ?? [],
+  });
+  pendingCrashRecovery = null;
+  persistStoreSnapshot();
+  return true;
 }
 
 export function ensureLocalFirstPersistenceReady(): Promise<void> {

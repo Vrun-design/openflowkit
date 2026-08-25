@@ -1,53 +1,97 @@
-import { useEffect, useRef } from 'react';
-import { estimateTrackedLocalStorageUsageRatio } from '@/lib/storagePressure';
-import { useToast } from '@/components/ui/ToastContext';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  inspectBrowserStoragePressure,
+  requestBrowserPersistentStorage,
+  type PersistentStorageRequestResult,
+  type StoragePressureSnapshot,
+} from '@/lib/storagePressure';
+import {
+  getStoragePressureLevelForTelemetry,
+  subscribeStorageTelemetry,
+} from '@/services/storage/storageTelemetry';
 
-const WARN_RATIO = 0.7;
-const RESET_RATIO = 0.6;
+export interface StoragePressureGuardState {
+  readonly snapshot: StoragePressureSnapshot;
+  readonly dismiss: () => void;
+  readonly downloadBackup: () => void;
+  readonly persistenceRequestStatus: 'idle' | 'requesting' | PersistentStorageRequestResult;
+  readonly requestPersistence: () => void;
+}
 
 interface UseStoragePressureGuardOptions {
   trigger: unknown;
   onExportJSON: () => void;
 }
 
-export function useStoragePressureGuard({ trigger, onExportJSON }: UseStoragePressureGuardOptions): void {
-  const { addToast } = useToast();
-  const warnedRef = useRef(false);
-  const confirmingRef = useRef(false);
+function pressureIdentity(snapshot: StoragePressureSnapshot): string {
+  const ratioBucket = snapshot.ratio === null ? 'unknown' : Math.floor(snapshot.ratio * 20);
+  return `${snapshot.level}:${ratioBucket}`;
+}
+
+export function useStoragePressureGuard({
+  trigger,
+  onExportJSON,
+}: UseStoragePressureGuardOptions): StoragePressureGuardState | null {
+  const [snapshot, setSnapshot] = useState<StoragePressureSnapshot | null>(null);
+  const [persistenceRequestStatus, setPersistenceRequestStatus] = useState<
+    StoragePressureGuardState['persistenceRequestStatus']
+  >('idle');
+  const dismissedIdentityRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (typeof localStorage === 'undefined') return;
-    const indexedDbBackedPersistenceActive = typeof indexedDB !== 'undefined';
-    if (indexedDbBackedPersistenceActive) return;
+    let cancelled = false;
+    void inspectBrowserStoragePressure().then((next) => {
+      if (cancelled) return;
+      if (next.level === 'healthy' || next.level === 'unavailable') {
+        dismissedIdentityRef.current = null;
+        setSnapshot(null);
+        return;
+      }
+      setPersistenceRequestStatus('idle');
+      if (dismissedIdentityRef.current !== pressureIdentity(next)) setSnapshot(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [trigger]);
 
-    const ratio = estimateTrackedLocalStorageUsageRatio(localStorage);
+  useEffect(() => subscribeStorageTelemetry((event) => {
+    const level = getStoragePressureLevelForTelemetry(event);
+    if (!level) return;
+    setSnapshot({
+      level,
+      usageBytes: null,
+      quotaBytes: null,
+      ratio: null,
+      persisted: null,
+      source: 'write-failure',
+    });
+  }), []);
 
-    if (ratio < RESET_RATIO) {
-      warnedRef.current = false;
-    }
+  const dismiss = useCallback(() => {
+    if (snapshot) dismissedIdentityRef.current = pressureIdentity(snapshot);
+    setSnapshot(null);
+  }, [snapshot]);
 
-    if (ratio < WARN_RATIO || warnedRef.current || confirmingRef.current) {
-      return;
-    }
+  const downloadBackup = useCallback(() => {
+    onExportJSON();
+  }, [onExportJSON]);
 
-    warnedRef.current = true;
-    const usagePercent = Math.round(ratio * 100);
-    addToast(
-      `Storage warning: local save usage is ~${usagePercent}%. Export a backup now to avoid data-loss risk.`,
-      'warning',
-      7000
-    );
+  const requestPersistence = useCallback(() => {
+    setPersistenceRequestStatus('requesting');
+    void requestBrowserPersistentStorage().then((result) => {
+      setPersistenceRequestStatus(result);
+      if (result === 'granted') {
+        setSnapshot((current) => current ? { ...current, persisted: true } : current);
+      }
+    });
+  }, []);
 
-    confirmingRef.current = true;
-    const shouldExport = window.confirm(
-      `Local storage usage is about ${usagePercent}%. Download a JSON backup now?`
-    );
-    confirmingRef.current = false;
-
-    if (shouldExport) {
-      onExportJSON();
-      addToast('Backup JSON downloaded.', 'success');
-    }
-  }, [trigger, addToast, onExportJSON]);
+  return snapshot ? {
+    snapshot,
+    dismiss,
+    downloadBackup,
+    persistenceRequestStatus,
+    requestPersistence,
+  } : null;
 }

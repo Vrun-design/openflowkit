@@ -221,6 +221,7 @@ export function useFlowEditorController({
         selectedNodes,
         selectedEdge,
         shouldRenderPanels,
+        storagePressure,
     } = useFlowEditorShellController(shell);
 
     const {
@@ -369,6 +370,7 @@ export function useFlowEditorController({
 
     return {
         shouldRenderPanels,
+        storagePressure,
         handleCanvasEntityIntent,
         openStudioCode,
         panels,

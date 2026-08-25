@@ -20,6 +20,7 @@ import type {
 import type { MermaidImportStatus } from '@/services/mermaid/importContracts';
 import type { ExportSerializationMode } from '@/services/canonicalSerialization';
 import type { FlowDocument } from '@/services/storage/flowDocumentModel';
+import type { ContextualEditorCommand } from '@/services/contextualEditorCommands';
 
 export interface ViewSettings {
   showGrid: boolean;
@@ -117,6 +118,7 @@ export interface FlowState {
   renameDocument: (id: string, nextName: string) => void;
   duplicateDocument: (id: string) => string | null;
   deleteDocumentRecord: (id: string) => void;
+  deleteDocumentRecords: (ids: readonly string[]) => void;
   tabs: FlowTab[];
   activeTabId: string;
   setActiveTabId: (id: string) => void;
@@ -138,8 +140,10 @@ export interface FlowState {
   recordHistoryV2: () => void;
   undoV2: () => void;
   redoV2: () => void;
+  scrubHistoryV2: (targetIndex: number) => void;
   canUndoV2: () => boolean;
   canRedoV2: () => boolean;
+  runContextualEditorCommand: (command: ContextualEditorCommand) => boolean;
 
   // -------------------------------------------------------------------------
   // SLICE: Design — design systems and global edge appearance
@@ -216,7 +220,13 @@ export interface FlowState {
 export type CanvasStateSlice = Pick<FlowState, 'nodes' | 'edges'>;
 export type CanvasActionsSlice = Pick<
   FlowState,
-  'onNodesChange' | 'onEdgesChange' | 'setNodes' | 'setEdges' | 'setGraph' | 'setGraphAndLayers' | 'onConnect'
+  | 'onNodesChange'
+  | 'onEdgesChange'
+  | 'setNodes'
+  | 'setEdges'
+  | 'setGraph'
+  | 'setGraphAndLayers'
+  | 'onConnect'
 >;
 
 export type WorkspaceDocumentsStateSlice = Pick<
@@ -231,6 +241,7 @@ export type WorkspaceDocumentActionsSlice = Pick<
   | 'renameDocument'
   | 'duplicateDocument'
   | 'deleteDocumentRecord'
+  | 'deleteDocumentRecords'
 >;
 
 export type TabStateSlice = Pick<FlowState, 'tabs' | 'activeTabId'>;
@@ -252,13 +263,12 @@ export type TabActionsSlice = Pick<
 
 export type HistoryActionsSlice = Pick<
   FlowState,
-  'recordHistoryV2' | 'undoV2' | 'redoV2' | 'canUndoV2' | 'canRedoV2'
+  'recordHistoryV2' | 'undoV2' | 'redoV2' | 'scrubHistoryV2' | 'canUndoV2' | 'canRedoV2'
 >;
 
-export type DesignSystemCatalogSlice = Pick<
-  FlowState,
-  'designSystems' | 'activeDesignSystemId'
->;
+export type ContextualCommandActionsSlice = Pick<FlowState, 'runContextualEditorCommand'>;
+
+export type DesignSystemCatalogSlice = Pick<FlowState, 'designSystems' | 'activeDesignSystemId'>;
 export type DesignSystemActionsSlice = Pick<
   FlowState,
   | 'setActiveDesignSystem'

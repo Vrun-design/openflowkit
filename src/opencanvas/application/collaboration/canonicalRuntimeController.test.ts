@@ -104,4 +104,33 @@ describe('canonical collaboration runtime controller', () => {
     expect(b.getDocument()).toEqual(a.getDocument());
     a.stop(); b.stop();
   });
+
+  it('converges a four-peer edit burst and replays it to an offline peer', () => {
+    const initial = createTestDocument({
+      nodes: ['a', 'b', 'c', 'd'].map((id) => createTestNode(id)),
+    });
+    const peers = ['burst-a', 'burst-b', 'burst-c', 'burst-d'].map((clientId) => (
+      createCanonicalRuntimeController({
+        transport: createInMemoryCollaborationTransport(),
+        session: session(clientId),
+        initialDocument: initial,
+      })
+    ));
+    peers.forEach((peer) => peer.start());
+    peers.forEach((peer, index) => {
+      expect(peer.submit(rename(initial.pages[0].nodes[index], `Peer ${index}`))).not.toBeNull();
+    });
+    for (const peer of peers.slice(1)) expect(peer.getDocument()).toEqual(peers[0].getDocument());
+    peers.slice(1).forEach((peer) => peer.stop());
+
+    const offline = createCanonicalRuntimeController({
+      transport: createInMemoryCollaborationTransport(),
+      session: session('burst-offline'),
+      initialDocument: initial,
+    });
+    offline.start();
+    expect(offline.getDocument()).toEqual(peers[0].getDocument());
+    offline.stop();
+    peers[0].stop();
+  });
 });

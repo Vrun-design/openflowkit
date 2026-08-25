@@ -1,11 +1,14 @@
-import React, { useMemo, useEffect, useId } from 'react';
+import React, { useCallback, useMemo, useEffect, useId, useState } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { FLOWPILOT_NAME } from '@/lib/brand';
 import { Button } from '../ui/Button';
 import { CommandItem, CommandView } from './types';
 import { SearchField } from '../ui/SearchField';
-import { fuzzyMatch, fuzzyScore } from '@/lib/fuzzyMatch';
+import type { DomainLibraryItem } from '@/services/domainLibrary';
+import type { FlowTemplate } from '@/services/templates';
+import { useFederatedCommandSearch } from './useFederatedCommandSearch';
+import { scoreSemanticMatch, tokenizeSearchQuery } from '@/services/search/semanticSearch';
 
 interface RootViewProps {
   commands: CommandItem[];
@@ -16,13 +19,15 @@ interface RootViewProps {
   onClose: () => void;
   setView: (v: CommandView) => void;
   inputRef: React.RefObject<HTMLInputElement>;
+  onAddDomainLibraryItem?: (item: DomainLibraryItem) => void;
+  onSelectTemplate?: (template: FlowTemplate) => void;
 }
 
-function runCommandItem(
+async function runCommandItem(
   item: CommandItem,
   setView: (view: CommandView) => void,
   onClose: () => void
-): void {
+): Promise<void> {
   if (item.view) {
     setView(item.view);
     return;
@@ -32,10 +37,27 @@ function runCommandItem(
     return;
   }
 
-  item.action();
+  const actionResult = item.action();
+  if (actionResult instanceof Promise) {
+    await actionResult;
+  }
   if (item.type === 'action') {
     onClose();
   }
+}
+
+function searchableValues(item: CommandItem): string[] {
+  return [item.label, item.description, item.shortcut, ...(item.keywords ?? [])].filter(
+    (value): value is string => Boolean(value)
+  );
+}
+
+function matchesCommand(item: CommandItem, queryTerms: string[]): boolean {
+  return scoreSemanticMatch(searchableValues(item), queryTerms) !== null;
+}
+
+function commandScore(item: CommandItem, queryTerms: string[]): number {
+  return scoreSemanticMatch(searchableValues(item), queryTerms) ?? Number.NEGATIVE_INFINITY;
 }
 
 const CommandItemRow = ({
@@ -135,20 +157,62 @@ export const RootView = ({
   onClose,
   setView,
   inputRef,
+  onAddDomainLibraryItem,
+  onSelectTemplate,
 }: RootViewProps) => {
   const { t } = useTranslation();
   const listboxId = useId();
+  const [executionError, setExecutionError] = useState<string | null>(null);
+  const catalogSearch = useFederatedCommandSearch({
+    query: searchQuery,
+    onAddDomainLibraryItem,
+    onSelectTemplate,
+  });
   const filteredCommands = useMemo(() => {
     if (!searchQuery) return commands.filter((c) => !c.hidden);
-    return commands
-      .filter(
-        (c) =>
-          fuzzyMatch(searchQuery, c.label) ||
-          (c.description ? fuzzyMatch(searchQuery, c.description) : false) ||
-          (c.shortcut ? fuzzyMatch(searchQuery, c.shortcut) : false)
-      )
-      .sort((a, b) => fuzzyScore(searchQuery, b.label) - fuzzyScore(searchQuery, a.label));
-  }, [commands, searchQuery]);
+    const queryTerms = tokenizeSearchQuery(searchQuery);
+    return [...commands, ...catalogSearch.items]
+      .filter((command) => matchesCommand(command, queryTerms))
+      .sort((a, b) => commandScore(b, queryTerms) - commandScore(a, queryTerms));
+  }, [catalogSearch.items, commands, searchQuery]);
+
+  const executeItem = useCallback(
+    (item: CommandItem): void => {
+      setExecutionError(null);
+      void runCommandItem(item, setView, onClose).catch(() => {
+        setExecutionError(
+          t('commandBar.root.executionError', 'This result could not be added. Nothing changed.')
+        );
+      });
+    },
+    [onClose, setView, t]
+  );
+
+  const handleNavigationKey = useCallback(
+    (event: Pick<KeyboardEvent, 'key' | 'preventDefault'>): void => {
+      const commandCount = filteredCommands.length;
+      if (commandCount === 0) return;
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setSelectedIndex((previous) => (previous === -1 ? 0 : (previous + 1) % commandCount));
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setSelectedIndex((previous) =>
+          previous === -1 ? commandCount - 1 : (previous - 1 + commandCount) % commandCount
+        );
+        return;
+      }
+      if (event.key === 'Enter' && selectedIndex >= 0 && selectedIndex < commandCount) {
+        event.preventDefault();
+        const item = filteredCommands[selectedIndex];
+        if (item) executeItem(item);
+      }
+    },
+    [executeItem, filteredCommands, selectedIndex, setSelectedIndex]
+  );
 
   // Keyboard Nav for Root
   useEffect(() => {
@@ -156,27 +220,10 @@ export const RootView = ({
       return;
     }
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const len = filteredCommands.length;
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev === -1 ? 0 : (prev + 1) % len));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev === -1 ? len - 1 : (prev - 1 + len) % len));
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < len) {
-          const item = filteredCommands[selectedIndex];
-          if (item) {
-            runCommandItem(item, setView, onClose);
-          }
-        }
-      }
-    };
+    const handleKeyDown = (event: KeyboardEvent): void => handleNavigationKey(event);
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [filteredCommands, selectedIndex, onClose, setView, searchQuery, setSelectedIndex]);
+  }, [filteredCommands.length, handleNavigationKey]);
 
   const activeDescendantId =
     selectedIndex >= 0 && selectedIndex < filteredCommands.length
@@ -189,10 +236,19 @@ export const RootView = ({
         <SearchField
           ref={inputRef}
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setSelectedIndex(0);
+          }}
           onKeyDown={(e) => {
             // Prevent global shortcuts interfering with typing
             e.stopPropagation();
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              onClose();
+              return;
+            }
+            handleNavigationKey(e);
           }}
           role="combobox"
           aria-controls={listboxId}
@@ -220,9 +276,11 @@ export const RootView = ({
       <div
         id={listboxId}
         role="listbox"
-        aria-label={searchQuery
-          ? t('commandBar.root.resultsAria', 'Command search results')
-          : t('commandBar.root.quickActionsAria', 'Command quick actions')}
+        aria-label={
+          searchQuery
+            ? t('commandBar.root.resultsAria', 'Command search results')
+            : t('commandBar.root.quickActionsAria', 'Command quick actions')
+        }
         className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent py-2"
       >
         {searchQuery ? (
@@ -235,7 +293,7 @@ export const RootView = ({
                 key={item.id}
                 item={item}
                 isSelected={selectedIndex === idx}
-                onClick={() => runCommandItem(item, setView, onClose)}
+                onClick={() => executeItem(item)}
                 optionId={`${listboxId}-option-${idx}`}
               />
             ))}
@@ -246,12 +304,12 @@ export const RootView = ({
               key={item.id}
               item={item}
               isSelected={selectedIndex === idx}
-              onClick={() => runCommandItem(item, setView, onClose)}
+              onClick={() => executeItem(item)}
               optionId={`${listboxId}-option-${idx}`}
             />
           ))
         )}
-        {filteredCommands.length === 0 && searchQuery && (
+        {filteredCommands.length === 0 && searchQuery && catalogSearch.status !== 'loading' && (
           <div className="px-4 py-3 text-center text-sm text-[var(--brand-secondary)]">
             {t('commandBar.root.noMatchingCommands', {
               query: searchQuery,
@@ -259,6 +317,24 @@ export const RootView = ({
             })}
           </div>
         )}
+        {catalogSearch.status === 'loading' && searchQuery ? (
+          <div role="status" className="px-4 py-2 text-xs text-[var(--brand-secondary)]">
+            {t('commandBar.root.loadingCatalogs', 'Searching shapes, icons, and templates…')}
+          </div>
+        ) : null}
+        {catalogSearch.status === 'error' ? (
+          <div role="status" className="px-4 py-2 text-xs text-[var(--brand-secondary)]">
+            {t(
+              'commandBar.root.catalogError',
+              'Catalog results are unavailable. Command search still works.'
+            )}
+          </div>
+        ) : null}
+        {executionError ? (
+          <div role="alert" className="px-4 py-2 text-xs text-red-500">
+            {executionError}
+          </div>
+        ) : null}
       </div>
     </>
   );

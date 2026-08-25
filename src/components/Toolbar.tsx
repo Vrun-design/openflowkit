@@ -8,10 +8,7 @@ import { ToolbarHistoryControls } from './toolbar/ToolbarHistoryControls';
 import { ToolbarModeControls } from './toolbar/ToolbarModeControls';
 import { getToolbarIconButtonClass, TOOLBAR_DIVIDER_CLASS } from './toolbar/toolbarButtonStyles';
 import { AssetsIcon } from './icons/AssetsIcon';
-import {
-  getDefaultToolbarAddItemId,
-  type AddItemId,
-} from '@/components/add-items/addItemRegistry';
+import { getDefaultToolbarAddItemId, type AddItemId } from '@/components/add-items/addItemRegistry';
 
 interface ToolbarProps {
   onUndo: () => void;
@@ -150,6 +147,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <Button
             onClick={onCommandBar}
             disabled={!isInteractive}
+            aria-label={t('toolbar.commandCenter', 'Open Command Center')}
             variant="primary"
             size="icon"
             className={`group rounded-[var(--radius-md)] shadow-[var(--shadow-sm)] transition-all hover:scale-105 active:scale-95 ${isCommandBarOpen ? 'bg-[var(--brand-text)] hover:bg-[var(--brand-text)]' : 'bg-[var(--brand-primary)] hover:brightness-110'}`}

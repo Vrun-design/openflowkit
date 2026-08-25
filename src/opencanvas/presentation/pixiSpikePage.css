@@ -1,5 +1,6 @@
 .pixi-spike {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   width: 100vw;
   height: 100vh;
@@ -15,7 +16,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  min-width: 0;
+  height: 64px;
   min-height: 64px;
+  max-height: 64px;
+  overflow-x: auto;
   padding: 10px 16px;
   border-bottom: 1px solid #e2e8f0;
   background: rgb(255 255 255 / 96%);
@@ -162,6 +167,24 @@
   height: 100%;
 }
 
+.pixi-spike__text-editor {
+  position: absolute;
+  z-index: 5;
+  box-sizing: border-box;
+  min-width: 48px;
+  min-height: 32px;
+  padding: 8px 12px;
+  resize: none;
+  overflow: hidden;
+  border: 2px solid #e95420;
+  border-radius: 8px;
+  outline: none;
+  color: #1e293b;
+  background: rgb(255 255 255 / 98%);
+  box-shadow: 0 4px 16px rgb(15 23 42 / 14%);
+  font: 600 14px/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
 .pixi-spike__hint {
   position: absolute;
   right: 12px;
@@ -248,6 +271,8 @@
   right: 12px;
   bottom: 12px;
   z-index: 3;
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
   padding: 7px 9px;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
@@ -501,5 +526,17 @@
   .pixi-spike *::after {
     scroll-behavior: auto !important;
     transition: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .pixi-spike__viewport {
+    border: 1px solid CanvasText;
+  }
+
+  .pixi-spike button:focus-visible,
+  .pixi-spike__editor:focus-visible,
+  .pixi-spike__viewport:focus-visible {
+    outline-color: Highlight;
   }
 }

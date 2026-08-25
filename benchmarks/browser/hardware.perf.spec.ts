@@ -21,6 +21,7 @@ import {
   resetBrowserMetrics,
 } from './pageHarness';
 import { summarizeSamples } from './statistics';
+import { OPEN_CANVAS_RENDER_WORK_MEASURE } from '../../src/opencanvas/application/renderer/renderWorkMeasurement';
 
 const RESULT_PATH = path.resolve(
   process.cwd(),
@@ -43,24 +44,39 @@ async function readWebGlIdentity(page: Page): Promise<HardwareRunnerIdentity['we
   });
 }
 
-async function measureCameraInteraction(page: Page, viewport: Locator): Promise<HardwareFixtureRun['interaction']> {
+async function measureCameraInteraction(
+  page: Page,
+  viewport: Locator,
+  captureRendererWork: boolean
+): Promise<HardwareFixtureRun['interaction']> {
   const bounds = await viewport.boundingBox();
   if (!bounds) throw new Error('Benchmark viewport has no browser bounds.');
   await resetBrowserMetrics(page);
+  await page.evaluate((measureName) => performance.clearMeasures(measureName),
+    OPEN_CANVAS_RENDER_WORK_MEASURE);
   const startX = bounds.x + bounds.width * 0.72;
   const startY = bounds.y + bounds.height * 0.65;
   await page.mouse.move(startX, startY);
+  await page.keyboard.down('Space');
   await page.mouse.down();
   await page.mouse.move(startX + 160, startY + 80, { steps: 30 });
   await page.mouse.up();
+  await page.keyboard.up('Space');
   await page.mouse.wheel(0, -320);
   await page.mouse.wheel(0, 320);
   await page.waitForTimeout(300);
   const metrics = await readBrowserMetrics(page);
+  const rendererWorkSamples = captureRendererWork
+    ? await page.evaluate((measureName) => performance.getEntriesByName(measureName)
+        .map((entry) => entry.duration), OPEN_CANVAS_RENDER_WORK_MEASURE)
+    : [];
   return {
     frameP95Ms: summarizeSamples(metrics.frameTimesMs).p95 ?? Number.NaN,
     inputNextFrameP95Ms: summarizeSamples(metrics.inputNextFrameLatenciesMs).p95 ?? Number.NaN,
     framesOver50Ms: metrics.frameTimesMs.filter((sample) => sample > 50).length,
+    rendererWorkP95Ms: captureRendererWork
+      ? summarizeSamples(rendererWorkSamples).p95 ?? Number.NaN
+      : null,
   };
 }
 
@@ -108,7 +124,10 @@ test('captures paired React Flow and OpenCanvas evidence on production GPU hardw
     };
     const reactFlowViewport = page.locator('.react-flow');
     for (let run = 0; run < MIN_HARDWARE_RUNS; run += 1) {
-      reactFlowRuns.push({ fixture: fixtureIdentity, interaction: await measureCameraInteraction(page, reactFlowViewport) });
+      reactFlowRuns.push({
+        fixture: fixtureIdentity,
+        interaction: await measureCameraInteraction(page, reactFlowViewport, false),
+      });
     }
 
     const url = new URL(page.url());
@@ -119,7 +138,10 @@ test('captures paired React Flow and OpenCanvas evidence on production GPU hardw
     await expect(page.getByText(/· ready · write canary/)).toBeVisible({ timeout: 30_000 });
     await installBrowserMetrics(page);
     for (let run = 0; run < MIN_HARDWARE_RUNS; run += 1) {
-      openCanvasRuns.push({ fixture: fixtureIdentity, interaction: await measureCameraInteraction(page, openCanvasViewport) });
+      openCanvasRuns.push({
+        fixture: fixtureIdentity,
+        interaction: await measureCameraInteraction(page, openCanvasViewport, true),
+      });
     }
   }
 

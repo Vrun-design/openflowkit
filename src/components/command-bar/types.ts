@@ -24,13 +24,14 @@ export interface CommandItem {
   icon: React.ReactNode;
   tier: EditorSurfaceTier;
   shortcut?: string;
-  action?: () => void;
+  action?: () => void | Promise<void>;
   type: 'action' | 'navigation' | 'ai' | 'toggle';
   description?: string;
   value?: boolean;
   view?: CommandView;
   hidden?: boolean;
   badge?: string;
+  keywords?: readonly string[];
 }
 
 export interface CommandBarProps {
@@ -61,7 +62,11 @@ export interface CommandBarProps {
   onAddSequence?: () => void;
   onAddClassNode?: () => void;
   onAddEntityNode?: () => void;
-  onAddImage?: (imageUrl: string, position?: { x: number; y: number }, imageAssetId?: string) => void;
+  onAddImage?: (
+    imageUrl: string,
+    position?: { x: number; y: number },
+    imageAssetId?: string
+  ) => void;
   onAddBrowserWireframe?: () => void;
   onAddMobileWireframe?: () => void;
   onAddDomainLibraryItem?: (item: DomainLibraryItem) => void;

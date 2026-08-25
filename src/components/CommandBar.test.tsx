@@ -3,8 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { CommandBar } from './CommandBar';
 
-vi.mock('./command-bar/useCommandBarCommands', () => ({
-  useCommandBarCommands: () => [
+const useCommandBarCommandsMock = vi.hoisted(() =>
+  vi.fn(() => [
     {
       id: 'command-1',
       label: 'Open AI',
@@ -19,7 +19,11 @@ vi.mock('./command-bar/useCommandBarCommands', () => ({
       type: 'navigation',
       view: 'search',
     },
-  ],
+  ])
+);
+
+vi.mock('./command-bar/useCommandBarCommands', () => ({
+  useCommandBarCommands: useCommandBarCommandsMock,
 }));
 
 describe('CommandBar', () => {
@@ -34,7 +38,9 @@ describe('CommandBar', () => {
     render(<CommandBar {...baseProps} />);
 
     expect(screen.getByRole('dialog', { name: 'Command bar' })).toBeTruthy();
-    expect(document.activeElement).toBe(screen.getByRole('combobox', { name: 'Search command bar actions' }));
+    expect(document.activeElement).toBe(
+      screen.getByRole('combobox', { name: 'Search command bar actions' })
+    );
   });
 
   it('closes on Escape and restores focus to the previous control', async () => {
@@ -73,5 +79,27 @@ describe('CommandBar', () => {
     expect(input.getAttribute('aria-controls')).toBeTruthy();
     expect(input.getAttribute('aria-activedescendant')).toContain('-option-0');
     expect(screen.getByRole('listbox')).toBeTruthy();
+  });
+
+  it('forwards every editor action to the searchable command registry', () => {
+    const actions = {
+      onOpenStudioOpenFlow: vi.fn(),
+      onOpenStudioPlayback: vi.fn(),
+      onAddAnnotation: vi.fn(),
+      onAddSection: vi.fn(),
+      onAddText: vi.fn(),
+      onAddJourney: vi.fn(),
+      onAddMindmap: vi.fn(),
+      onAddArchitecture: vi.fn(),
+      onAddSequence: vi.fn(),
+      onAddClassNode: vi.fn(),
+      onAddEntityNode: vi.fn(),
+      onAddBrowserWireframe: vi.fn(),
+      onAddMobileWireframe: vi.fn(),
+    };
+
+    render(<CommandBar {...baseProps} {...actions} />);
+
+    expect(useCommandBarCommandsMock).toHaveBeenLastCalledWith(expect.objectContaining(actions));
   });
 });

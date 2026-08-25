@@ -31,5 +31,8 @@ describe('OpenCanvas rollout flags', () => {
     expect(ROLLOUT_FLAGS.openCanvasA11yV1).toBe(false);
     expect(ROLLOUT_FLAGS.openCanvasCanonicalCollaboration).toBe(false);
     expect(ROLLOUT_FLAGS.openCanvasAiPreviewV1).toBe(false);
+    expect(ROLLOUT_FLAGS.openCanvasPersistedWorkspaceRepairV1).toBe(false);
+    expect(ROLLOUT_FLAGS.openCanvasContextualCommandsV1).toBe(false);
+    expect(ROLLOUT_FLAGS.openCanvasCustomShortcutsV1).toBe(false);
   });
 });

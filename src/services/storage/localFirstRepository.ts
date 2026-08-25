@@ -33,7 +33,7 @@ import {
   removeLocalStorageKey,
   writeLocalStorageString,
 } from './uiLocalStorage';
-import { reportStorageTelemetry } from './storageTelemetry';
+import { classifyStorageWriteFailure, reportStorageTelemetry } from './storageTelemetry';
 import {
   withDatabase,
   getAllRecords,
@@ -302,12 +302,18 @@ export const localFirstRepository: PersistenceRepository = {
 
         await putRecord(database, WORKSPACE_META_STORE_NAME, workspaceMeta);
       });
-    } catch {
+    } catch (error) {
+      const failure = classifyStorageWriteFailure(error, {
+        quotaExceeded: 'LOCAL_FIRST_QUOTA_FALLBACK_LOCAL',
+        fallback: 'LOCAL_FIRST_SAVE_FALLBACK_LOCAL',
+      });
       reportStorageTelemetry({
         area: 'persist',
-        code: 'LOCAL_FIRST_SAVE_FALLBACK_LOCAL',
+        code: failure.code,
         severity: 'warning',
-        message: 'IndexedDB workspace save failed; writing localStorage compatibility backup.',
+        message: `${failure.quotaExceeded
+          ? 'IndexedDB quota exhausted'
+          : 'IndexedDB workspace save failed'}; writing localStorage compatibility backup.`,
       });
       saveFallbackDocuments(
         documents.map((document) => ({

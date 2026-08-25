@@ -38,9 +38,7 @@ export function selectCanvasActions(state: FlowState): CanvasActionsSlice {
   };
 }
 
-export function selectWorkspaceDocumentsState(
-  state: FlowState
-): WorkspaceDocumentsStateSlice {
+export function selectWorkspaceDocumentsState(state: FlowState): WorkspaceDocumentsStateSlice {
   return {
     documents: state.documents,
     activeDocumentId: state.activeDocumentId,
@@ -51,9 +49,7 @@ export function selectWorkspaceDocumentsState(
   };
 }
 
-export function selectWorkspaceDocumentActions(
-  state: FlowState
-): WorkspaceDocumentActionsSlice {
+export function selectWorkspaceDocumentActions(state: FlowState): WorkspaceDocumentActionsSlice {
   return {
     setActiveDocumentId: state.setActiveDocumentId,
     setDocuments: state.setDocuments,
@@ -61,6 +57,7 @@ export function selectWorkspaceDocumentActions(
     renameDocument: state.renameDocument,
     duplicateDocument: state.duplicateDocument,
     deleteDocumentRecord: state.deleteDocumentRecord,
+    deleteDocumentRecords: state.deleteDocumentRecords,
   };
 }
 
@@ -88,9 +85,7 @@ export function selectTabActions(state: FlowState): TabActionsSlice {
   };
 }
 
-export function createTabByIdSelector(
-  tabId: string
-): (state: FlowState) => FlowTab | undefined {
+export function createTabByIdSelector(tabId: string): (state: FlowState) => FlowTab | undefined {
   return (state) => state.tabs.find((tab) => tab.id === tabId);
 }
 
@@ -99,14 +94,13 @@ export function selectHistoryActions(state: FlowState): HistoryActionsSlice {
     recordHistoryV2: state.recordHistoryV2,
     undoV2: state.undoV2,
     redoV2: state.redoV2,
+    scrubHistoryV2: state.scrubHistoryV2,
     canUndoV2: state.canUndoV2,
     canRedoV2: state.canRedoV2,
   };
 }
 
-export function selectDesignSystemsCatalog(
-  state: FlowState
-): DesignSystemCatalogSlice {
+export function selectDesignSystemsCatalog(state: FlowState): DesignSystemCatalogSlice {
   return {
     designSystems: state.designSystems,
     activeDesignSystemId: state.activeDesignSystemId,
@@ -115,22 +109,18 @@ export function selectDesignSystemsCatalog(
 
 export function selectActiveDesignSystem(state: FlowState): DesignSystem {
   return (
-    state.designSystems.find(
-      (designSystem) => designSystem.id === state.activeDesignSystemId
-    ) ?? state.designSystems[0]
+    state.designSystems.find((designSystem) => designSystem.id === state.activeDesignSystemId) ??
+    state.designSystems[0]
   );
 }
 
 export function createDesignSystemByIdSelector(
   systemId: string
 ): (state: FlowState) => DesignSystem | undefined {
-  return (state) =>
-    state.designSystems.find((designSystem) => designSystem.id === systemId);
+  return (state) => state.designSystems.find((designSystem) => designSystem.id === systemId);
 }
 
-export function selectDesignSystemActions(
-  state: FlowState
-): DesignSystemActionsSlice {
+export function selectDesignSystemActions(state: FlowState): DesignSystemActionsSlice {
   return {
     setActiveDesignSystem: state.setActiveDesignSystem,
     addDesignSystem: state.addDesignSystem,
@@ -148,17 +138,13 @@ export function selectShortcutHelpOpen(state: FlowState): boolean {
   return state.viewSettings.isShortcutsHelpOpen;
 }
 
-export function selectShortcutHelpActions(
-  state: FlowState
-): ShortcutHelpActionsSlice {
+export function selectShortcutHelpActions(state: FlowState): ShortcutHelpActionsSlice {
   return {
     setShortcutsHelpOpen: state.setShortcutsHelpOpen,
   };
 }
 
-export function selectCanvasViewSettings(
-  state: FlowState
-): CanvasViewSettingsSlice {
+export function selectCanvasViewSettings(state: FlowState): CanvasViewSettingsSlice {
   return {
     showGrid: state.viewSettings.showGrid,
     snapToGrid: state.viewSettings.snapToGrid,
@@ -170,9 +156,7 @@ export function selectCanvasViewSettings(
   };
 }
 
-export function selectVisualSettingsActions(
-  state: FlowState
-): VisualSettingsActionsSlice {
+export function selectVisualSettingsActions(state: FlowState): VisualSettingsActionsSlice {
   return {
     toggleGrid: state.toggleGrid,
     toggleSnap: state.toggleSnap,
@@ -195,9 +179,7 @@ export function selectSelectionState(state: FlowState): SelectionStateSlice {
   };
 }
 
-export function selectSelectionActions(
-  state: FlowState
-): SelectionActionsSlice {
+export function selectSelectionActions(state: FlowState): SelectionActionsSlice {
   return {
     setSelectedNodeId: state.setSelectedNodeId,
     setSelectedEdgeId: state.setSelectedEdgeId,
@@ -205,18 +187,14 @@ export function selectSelectionActions(
   };
 }
 
-export function selectNodeLabelEditActions(
-  state: FlowState
-): NodeLabelEditActionsSlice {
+export function selectNodeLabelEditActions(state: FlowState): NodeLabelEditActionsSlice {
   return {
     queuePendingNodeLabelEditRequest: state.queuePendingNodeLabelEditRequest,
     clearPendingNodeLabelEditRequest: state.clearPendingNodeLabelEditRequest,
   };
 }
 
-export function selectMermaidDiagnosticsActions(
-  state: FlowState
-): MermaidDiagnosticsActionsSlice {
+export function selectMermaidDiagnosticsActions(state: FlowState): MermaidDiagnosticsActionsSlice {
   return {
     setMermaidDiagnostics: state.setMermaidDiagnostics,
     clearMermaidDiagnostics: state.clearMermaidDiagnostics,

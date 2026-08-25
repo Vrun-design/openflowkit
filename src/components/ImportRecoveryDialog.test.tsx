@@ -149,6 +149,26 @@ describe('ImportRecoveryDialog', () => {
     expect(onAction).toHaveBeenCalledTimes(1);
   });
 
+  it('renders a supporting source-backup action independently', () => {
+    const onSupportingAction = vi.fn();
+
+    render(
+      <ImportRecoveryDialog
+        fileName="repairable.json"
+        report={createReport()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        actionLabel="Repair canonical document"
+        onAction={vi.fn()}
+        supportingActionLabel="Download original"
+        onSupportingAction={onSupportingAction}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Download original' }));
+    expect(onSupportingAction).toHaveBeenCalledTimes(1);
+  });
+
   it('shows warning-grade Mermaid status when layout degraded despite editable_full parsing', () => {
     render(
       <ImportRecoveryDialog

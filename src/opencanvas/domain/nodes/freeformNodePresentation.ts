@@ -4,6 +4,7 @@ import {
   presentationString,
   safeImageUrl,
 } from './nodePresentationValues';
+import { normalizeStrokeInput, type StrokeInput } from './strokeInput';
 
 export type FreeformNodeKind = 'text' | 'image' | 'annotation' | 'sticky' | 'callout'
   | 'pen' | 'highlighter' | 'line' | 'arrow';
@@ -42,6 +43,7 @@ export interface StrokeNodePresentation {
   readonly color: string;
   readonly width: number;
   readonly opacity: number;
+  readonly inputSamples: readonly StrokeInput[] | null;
 }
 
 export type FreeformNodePresentation =
@@ -65,6 +67,22 @@ function fontSizePx(value: unknown): number {
 
 function opacity(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1;
+}
+
+function strokeInputSamples(value: unknown, pointCount: number): readonly StrokeInput[] | null {
+  if (!Array.isArray(value) || value.length !== pointCount) return null;
+  const samples: StrokeInput[] = [];
+  for (const sample of value) {
+    if (!sample || typeof sample !== 'object' || Array.isArray(sample)) return null;
+    if (typeof sample.pressure !== 'number' || !Number.isFinite(sample.pressure)) return null;
+    samples.push(normalizeStrokeInput({
+      pressure: sample.pressure,
+      tiltX: typeof sample.tiltX === 'number' ? sample.tiltX : 0,
+      tiltY: typeof sample.tiltY === 'number' ? sample.tiltY : 0,
+      twist: typeof sample.twist === 'number' ? sample.twist : 0,
+    }));
+  }
+  return samples;
 }
 
 export function resolveFreeformNodePresentation(node: SceneNode): FreeformNodePresentation | null {
@@ -118,6 +136,7 @@ export function resolveFreeformNodePresentation(node: SceneNode): FreeformNodePr
         ? Math.min(64, Math.max(0.5, authoredWidth)) : node.kind === 'highlighter' ? 16 : 3,
       opacity: node.kind === 'highlighter' ? Math.min(0.5, opacity(node.content.transparency))
         : opacity(node.content.transparency),
+      inputSamples: strokeInputSamples(node.content.inputSamples, points.length),
     };
   }
   return null;

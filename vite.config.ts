@@ -85,7 +85,17 @@ export default defineConfig(() => {
       setupFiles: './vitest.setup.ts',
       testTimeout: 10000,
       maxWorkers: 2,
-      exclude: ['e2e/**', 'benchmarks/browser/**', 'node_modules/**', 'dist/**', 'mcp-server/**'],
+      // benchmarks/** is Playwright and its own vitest project, never this run.
+      // scripts/** uses node:test, benchmarks/** is Playwright and its own
+      // vitest project. Neither belongs to this run.
+      exclude: [
+        'e2e/**',
+        'benchmarks/**',
+        'scripts/**',
+        'node_modules/**',
+        'dist/**',
+        'mcp-server/**',
+      ],
       coverage: {
         provider: 'v8',
         reporter: ['text', 'lcov'],

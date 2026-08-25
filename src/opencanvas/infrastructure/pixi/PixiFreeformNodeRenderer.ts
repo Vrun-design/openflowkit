@@ -3,6 +3,7 @@ import { createBounds2d } from '../../domain/geometry/bounds';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import type { SceneNode } from '../../domain/document/types';
 import type { Matrix2d, Size2d } from '../../domain/geometry/types';
+import { pressureTiltSegmentWidth } from '../../domain/nodes/strokeInput';
 import { projectFreeformNodeVisual, type PixiFreeformNodeVisual } from './freeformNodeVisual';
 import { drawPixiNodeOutline } from './pixiNodeOutline';
 import type { PixiNodeDebugRecord } from './pixiNodeDebug';
@@ -74,10 +75,28 @@ export class PixiFreeformNodeRenderer {
     if (visual.kind === 'pen' || visual.kind === 'highlighter'
       || visual.kind === 'line' || visual.kind === 'arrow') {
       const points = visual.presentation.points.map((point) => applyMatrixToPoint(matrix, point));
-      graphics.moveTo(points[0].x, points[0].y);
-      for (const point of points.slice(1)) graphics.lineTo(point.x, point.y);
-      graphics.stroke({ color: visual.stroke, width: visual.presentation.width,
-        alpha: visual.presentation.opacity, cap: 'round', join: 'round' });
+      const inputSamples = visual.presentation.inputSamples;
+      if (inputSamples) {
+        for (let index = 1; index < points.length; index += 1) {
+          const previous = points[index - 1];
+          const point = points[index];
+          graphics.moveTo(previous.x, previous.y).lineTo(point.x, point.y).stroke({
+            color: visual.stroke,
+            width: pressureTiltSegmentWidth(
+              visual.presentation.width,
+              inputSamples[index - 1],
+              inputSamples[index]
+            ),
+            alpha: visual.presentation.opacity,
+            cap: 'round',
+          });
+        }
+      } else {
+        graphics.moveTo(points[0].x, points[0].y);
+        for (const point of points.slice(1)) graphics.lineTo(point.x, point.y);
+        graphics.stroke({ color: visual.stroke, width: visual.presentation.width,
+          alpha: visual.presentation.opacity, cap: 'round', join: 'round' });
+      }
       if (visual.kind === 'arrow') {
         const end = points.at(-1)!; const previous = points.at(-2)!;
         const angle = Math.atan2(end.y - previous.y, end.x - previous.x);

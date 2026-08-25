@@ -22,7 +22,9 @@ import {
   projectProductionTransform,
 } from '../application/active-document/productionTransformBridge';
 import {
+  addToSelection,
   clearSelection,
+  replaceSelection,
   selectionAnnouncement,
   type CanvasSelection,
 } from '../application/selection/selection';
@@ -31,11 +33,23 @@ import { canvasRendererLocation } from '../application/renderer/rendererSelectio
 import {
   beginCameraPan,
   moveCameraPan,
+  releaseCameraPanVelocity,
   zoomReadOnlyCamera,
-  type CameraPanGesture,
 } from '../application/renderer/readOnlyCameraInteraction';
-import { DEFAULT_CANVAS_CAMERA, fitCameraToBounds } from '../domain/camera/camera';
+import {
+  resolveWheelGesture,
+  type WheelGestureState,
+} from '../application/renderer/wheelGesture';
+import {
+  beginTouchCameraGesture,
+  endTouchCameraGesture,
+  moveTouchCameraGesture,
+  type TouchCameraGesture,
+} from '../application/renderer/touchCameraGesture';
+import { DEFAULT_CANVAS_CAMERA, fitCameraToBounds, panCamera, zoomCameraAt } from '../domain/camera/camera';
 import type { CanvasCamera } from '../domain/camera/types';
+import { cameraEquals } from '../domain/camera/transition';
+import type { Bounds2d } from '../domain/geometry/types';
 import {
   resetConnectorRoute,
   setPrimaryConnectorLabel,
@@ -55,17 +69,16 @@ import {
 } from '../domain/transforms/arrangement';
 import type { TransformResult } from '../domain/transforms/types';
 import {
+  anchoredMarqueeBounds,
   arrowNudgeDelta,
   beginTransformOperation,
   isEditableTarget,
   selectionAfterClick,
   updateTransformOperation,
-  type TransformPointerOperation,
 } from './pixiPointerOperations';
 import {
   beginConnectorOperation,
   updateConnectorOperation,
-  type ConnectorPointerOperation,
 } from './pixiConnectorOperations';
 import { detectWebGlCapability } from '../infrastructure/pixi/capabilities';
 import { PixiRendererHost, type PixiRendererStatus } from '../infrastructure/pixi/PixiRendererHost';
@@ -74,10 +87,17 @@ import { useOpenCanvasCanonicalCollaboration } from './useOpenCanvasCanonicalCol
 import { OpenCanvasNodePropertyForm } from './OpenCanvasNodePropertyForm';
 import { OpenCanvasNodeSizingForm } from './OpenCanvasNodeSizingForm';
 import { OpenCanvasPageThumbnail } from './OpenCanvasPageThumbnail';
+import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
+import { OpenCanvasCameraControls } from './OpenCanvasCameraControls';
+import { OpenCanvasSemanticSceneTree } from './OpenCanvasSemanticSceneTree';
+import { CameraMotionController } from './CameraMotionController';
+import { CameraInertiaController } from './CameraInertiaController';
+import { EdgeScrollController } from './EdgeScrollController';
 import { PixiNodeLayoutBar } from './PixiNodeLayoutBar';
 import { resolveNodeContentLayout } from '../domain/node-layout/model';
 import { buildProductionNodeLayoutCommand } from '../application/active-document/productionNodeLayout';
 import { exportCanonicalSvg } from '../infrastructure/export/canonicalSvg';
+import { serializeCanonicalJson } from '../infrastructure/export/canonicalJson';
 import { lintStructuredPage } from '../domain/structured/diagramValidation';
 import { buildProductionScopedLayoutCommand } from '../application/active-document/productionScopedLayout';
 import { buildSetCanvasPrecisionCommand, resolveCanvasPrecisionSettings } from '../application/active-document/productionPrecision';
@@ -118,16 +138,47 @@ import {
   symbolBinding,
 } from '../application/active-document/productionSymbols';
 import './pixiSpikePage.css';
-import { beginFreeformOperation, finishFreeformOperation, updateFreeformOperation,
-  type DrawingTool, type FreeformPointerOperation } from './pixiFreeformOperations';
+import { beginFreeformOperation, finishFreeformOperation, freeformPreviewPoints,
+  freeformPreviewStyle, updateFreeformEdgeScrollOperation, updateFreeformOperation,
+  type DrawingTool } from './pixiFreeformOperations';
+import {
+  cancelProductionCanvasGesture,
+  type ProductionCanvasPointerOperation,
+} from './pixiGestureCancellation';
+import { projectPointerSamples } from './pointerSampleProjection';
 
 export const OPEN_CANVAS_CANARY_FALLBACK_EVENT = 'openflowkit:opencanvas-canary-fallback';
 
-type CanaryPointerOperation =
-  | { readonly kind: 'camera'; readonly gesture: CameraPanGesture }
-  | TransformPointerOperation
-  | ConnectorPointerOperation
-  | FreeformPointerOperation;
+function userPrefersReducedMotion(): boolean {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+}
+
+function downloadCanonicalArtifact(
+  name: string,
+  extension: 'json' | 'svg',
+  mimeType: string,
+  content: string
+): void {
+  const url = URL.createObjectURL(new Blob([content], { type: mimeType }));
+  const anchor = document.createElement('a');
+  const baseName = name.replace(/[^a-z0-9_-]+/gi, '-').toLowerCase() || 'diagram';
+  anchor.href = url;
+  anchor.download = `${baseName}.${extension}`;
+  anchor.click();
+  queueMicrotask(() => URL.revokeObjectURL(url));
+}
+
+interface ActiveTextEditor {
+  readonly nodeId: string;
+  readonly value: string;
+  readonly bounds: Bounds2d;
+}
+
+function touchPointerIds(gesture: TouchCameraGesture): readonly number[] {
+  return gesture.kind === 'single'
+    ? [gesture.pointer.id]
+    : gesture.pointers.map((pointer) => pointer.id);
+}
 
 export function OpenCanvasDocumentPage(): React.JSX.Element {
   const location = useLocation();
@@ -135,15 +186,26 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
   const viewportRef = useRef<HTMLElement>(null);
   const hostRef = useRef<PixiRendererHost | null>(null);
   const cameraRef = useRef<CanvasCamera>(DEFAULT_CANVAS_CAMERA);
-  const pointerOperationRef = useRef<CanaryPointerOperation | null>(null);
+  const previousCameraRef = useRef<CanvasCamera | null>(null);
+  const cameraMotionRef = useRef<CameraMotionController | null>(null);
+  const cameraInertiaRef = useRef<CameraInertiaController | null>(null);
+  const edgeScrollRef = useRef<EdgeScrollController | null>(null);
+  const wheelGestureRef = useRef<WheelGestureState | null>(null);
+  const touchCameraGestureRef = useRef<TouchCameraGesture | null>(null);
+  const spacePanRef = useRef(false);
+  const pointerOperationRef = useRef<ProductionCanvasPointerOperation | null>(null);
   const fittedDocumentRef = useRef<string | null>(null);
   const additiveSelectionRef = useRef(false);
   const pendingSelectionToggleRef = useRef<string | null>(null);
   const selectionRef = useRef<CanvasSelection>(clearSelection());
   const selectedConnectorIdRef = useRef<string | null>(null);
   const activeConnectorHandleRef = useRef<ConnectorEditHandle | null>(null);
-  const semanticNodeRefs = useRef(new Map<string, HTMLButtonElement>());
+  const gestureSelectionSnapshotRef = useRef<{
+    readonly selection: CanvasSelection;
+    readonly connectorId: string | null;
+  } | null>(null);
   const clipboardRef = useRef<ProductionClipboardSnapshot | null>(null);
+  const editingNodeIdRef = useRef<string | null>(null);
   const [clipboard, setClipboard] = useState<ProductionClipboardSnapshot | null>(null);
   const [styleClipboard, setStyleClipboard] = useState<ProductionStyleSnapshot | null>(null);
   const [status, setStatus] = useState<PixiRendererStatus>('initializing');
@@ -152,6 +214,8 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
   const [selectedConnectorId, setSelectedConnectorId] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [drawingTool, setDrawingTool] = useState<DrawingTool | null>(null);
+  const [textEditor, setTextEditor] = useState<ActiveTextEditor | null>(null);
+  const [canRecallPreviousCamera, setCanRecallPreviousCamera] = useState(false);
   const [renderDiagnostics, setRenderDiagnostics] = useState<ReturnType<
     PixiRendererHost['getRenderDiagnostics']
   > | null>(null);
@@ -235,7 +299,117 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
   const applyCamera = useCallback((camera: CanvasCamera) => {
     cameraRef.current = camera;
     hostRef.current?.setCamera(camera);
+    viewportRef.current?.setAttribute('data-camera-zoom', camera.zoom.toFixed(4));
+    viewportRef.current?.setAttribute('data-camera-x', camera.x.toFixed(2));
+    viewportRef.current?.setAttribute('data-camera-y', camera.y.toFixed(2));
+    setTextEditor((current) => {
+      if (!current) return null;
+      const bounds = hostRef.current?.getNodeScreenBounds(current.nodeId);
+      return bounds ? { ...current, bounds } : null;
+    });
   }, []);
+
+  const animateCamera = useCallback((from: CanvasCamera, to: CanvasCamera) => {
+    cameraInertiaRef.current?.cancel();
+    cameraMotionRef.current ??= new CameraMotionController();
+    cameraMotionRef.current.start(from, to, applyCamera, {
+      reducedMotion: userPrefersReducedMotion(),
+    });
+  }, [applyCamera]);
+
+  const startCameraInertia = useCallback((velocity: { x: number; y: number }) => {
+    cameraInertiaRef.current ??= new CameraInertiaController();
+    cameraInertiaRef.current.start(velocity, (delta) => {
+      applyCamera(panCamera(cameraRef.current, delta));
+    }, { reducedMotion: userPrefersReducedMotion() });
+  }, [applyCamera]);
+
+  const updateDragEdgeScroll = useCallback((point: { x: number; y: number }, snap: boolean) => {
+    const host = hostRef.current;
+    const operation = pointerOperationRef.current;
+    if (!host || (operation?.kind !== 'transform' && operation?.kind !== 'connector-edit'
+      && operation?.kind !== 'freeform' && operation?.kind !== 'marquee')) {
+      edgeScrollRef.current?.cancel();
+      return;
+    }
+    edgeScrollRef.current ??= new EdgeScrollController();
+    edgeScrollRef.current.update(point, host.getViewportSize(), (delta) => {
+      const currentHost = hostRef.current;
+      const currentOperation = pointerOperationRef.current;
+      if (!currentHost || (currentOperation?.kind !== 'transform'
+        && currentOperation?.kind !== 'connector-edit' && currentOperation?.kind !== 'freeform'
+        && currentOperation?.kind !== 'marquee')) {
+        edgeScrollRef.current?.cancel();
+        return;
+      }
+      applyCamera(panCamera(cameraRef.current, delta));
+      const worldPoint = currentHost.screenToWorld(point);
+      if (currentOperation.kind === 'transform') {
+        const next = updateTransformOperation(currentOperation, worldPoint, snap);
+        pointerOperationRef.current = next;
+        currentHost.setTransformPreview(next.result);
+        return;
+      }
+      if (currentOperation.kind === 'freeform') {
+        const next = updateFreeformEdgeScrollOperation(currentOperation, worldPoint);
+        pointerOperationRef.current = next;
+        currentHost.setFreeformPreview({
+          ...freeformPreviewPoints(next, []),
+          ...freeformPreviewStyle(next.tool),
+        });
+        return;
+      }
+      if (currentOperation.kind === 'marquee') {
+        currentHost.setMarquee(anchoredMarqueeBounds(currentOperation, cameraRef.current));
+        return;
+      }
+      const next = updateConnectorOperation(
+        currentOperation,
+        worldPoint,
+        currentOperation.handle.kind === 'endpoint' ? currentHost.pickNode(point) : null
+      );
+      pointerOperationRef.current = next;
+      currentHost.setConnectorPreview(next.preview);
+    });
+  }, [applyCamera]);
+
+  const transitionToCamera = useCallback((target: CanvasCamera) => {
+    const current = cameraRef.current;
+    if (cameraEquals(current, target)) return;
+    previousCameraRef.current = current;
+    setCanRecallPreviousCamera(true);
+    animateCamera(current, target);
+  }, [animateCamera]);
+
+  const fitPageCamera = useCallback(() => {
+    const host = hostRef.current;
+    const bounds = host?.getContentBounds();
+    if (host && bounds) transitionToCamera(fitCameraToBounds(bounds, host.getViewportSize()));
+  }, [transitionToCamera]);
+
+  const fitSelectionCamera = useCallback(() => {
+    const host = hostRef.current;
+    const bounds = host?.getSelectionWorldBounds();
+    if (host && bounds) transitionToCamera(fitCameraToBounds(bounds, host.getViewportSize()));
+  }, [transitionToCamera]);
+
+  const resetCameraZoom = useCallback(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const viewport = host.getViewportSize();
+    transitionToCamera(zoomCameraAt(cameraRef.current, {
+      x: viewport.width / 2,
+      y: viewport.height / 2,
+    }, 1));
+  }, [transitionToCamera]);
+
+  const recallPreviousCamera = useCallback(() => {
+    const previous = previousCameraRef.current;
+    if (!previous) return;
+    const current = cameraRef.current;
+    previousCameraRef.current = current;
+    animateCamera(current, previous);
+  }, [animateCamera]);
 
   const applySelection = useCallback((selection: CanvasSelection) => {
     selectionRef.current = selection;
@@ -376,11 +550,88 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
     fallback, projection, state,
   ]);
 
+  const startTextEditing = useCallback((nodeId: string) => {
+    const node = activeScenePage?.nodes.find((candidate) => candidate.id === nodeId);
+    const bounds = hostRef.current?.getNodeScreenBounds(nodeId);
+    if (!node || !bounds || !isNodeEditableOnLayer(activeScenePage!, nodeId)) return;
+    editingNodeIdRef.current = nodeId;
+    setTextEditor({
+      nodeId,
+      value: typeof node.content.label === 'string' ? node.content.label : node.id,
+      bounds,
+    });
+  }, [activeScenePage]);
+
+  const closeTextEditor = useCallback(() => {
+    editingNodeIdRef.current = null;
+    setTextEditor(null);
+    viewportRef.current?.focus();
+  }, []);
+
+  const cancelPointerOperation = useCallback((capture: HTMLElement | null = viewportRef.current) => {
+    edgeScrollRef.current?.cancel();
+    const touchGesture = touchCameraGestureRef.current;
+    if (touchGesture && capture) {
+      for (const pointerId of touchPointerIds(touchGesture)) {
+        if (capture.hasPointerCapture(pointerId)) capture.releasePointerCapture(pointerId);
+      }
+    }
+    touchCameraGestureRef.current = null;
+    const operation = pointerOperationRef.current;
+    const operationCanceled = cancelProductionCanvasGesture(operation, hostRef.current, capture);
+    if (!operationCanceled && !touchGesture) return false;
+    pointerOperationRef.current = null;
+    pendingSelectionToggleRef.current = null;
+    activeConnectorHandleRef.current = null;
+    const snapshot = gestureSelectionSnapshotRef.current;
+    gestureSelectionSnapshotRef.current = null;
+    if (snapshot) {
+      applySelection(snapshot.selection);
+      applyConnectorSelection(snapshot.connectorId);
+    } else {
+      hostRef.current?.setConnectorSelection(selectedConnectorIdRef.current, null);
+    }
+    setSelectionMessage('Gesture canceled. Document unchanged.');
+    return true;
+  }, [applyConnectorSelection, applySelection]);
+
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
     if (isEditableTarget(event.target)) return;
+    if (event.code === 'Space' && event.target === viewportRef.current) {
+      spacePanRef.current = true;
+      event.preventDefault();
+      return;
+    }
+    if (event.shiftKey && (event.code === 'Digit1' || event.key === '1')) {
+      fitPageCamera();
+      event.preventDefault();
+      return;
+    }
+    if (event.shiftKey && (event.code === 'Digit2' || event.key === '2')) {
+      fitSelectionCamera();
+      event.preventDefault();
+      return;
+    }
+    if (event.shiftKey && (event.code === 'Digit0' || event.key === '0')) {
+      recallPreviousCamera();
+      event.preventDefault();
+      return;
+    }
+    if ((event.code === 'Digit0' || event.key === '0')
+      && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey) {
+      resetCameraZoom();
+      event.preventDefault();
+      return;
+    }
     if (event.key === 'Escape') {
-      applySelection(clearSelection());
-      applyConnectorSelection(null);
+      const cameraWasMoving = cameraMotionRef.current?.running === true
+        || cameraInertiaRef.current?.running === true;
+      cameraMotionRef.current?.cancel();
+      cameraInertiaRef.current?.cancel();
+      if (!cancelPointerOperation() && !cameraWasMoving) {
+        applySelection(clearSelection());
+        applyConnectorSelection(null);
+      }
       event.preventDefault();
       return;
     }
@@ -397,13 +648,13 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
       return;
     }
     const selected = selectionRef.current.nodeIds;
-    const isSemanticNode = event.target instanceof HTMLElement
-      && event.target.dataset.canvasSemanticNode === 'true';
-    const spatialDirection = event.altKey || (
-      isSemanticNode && !event.shiftKey && !event.metaKey && !event.ctrlKey
-    )
-      ? arrowSpatialDirection(event.key)
-      : null;
+    const enterOnCanvas = event.key === 'Enter' && event.target === viewportRef.current;
+    if ((event.key === 'F2' || enterOnCanvas) && selected.length === 1) {
+      startTextEditing(selected[0]);
+      event.preventDefault();
+      return;
+    }
+    const spatialDirection = event.altKey ? arrowSpatialDirection(event.key) : null;
     if (spatialDirection && projection.status === 'ready') {
       const nextId = spatialNeighborId(
         activeScenePage!,
@@ -413,7 +664,6 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
       if (nextId) {
         applyConnectorSelection(null);
         applySelection({ nodeIds: [nextId], primaryNodeId: nextId });
-        semanticNodeRefs.current.get(nextId)?.focus();
       }
       event.preventDefault();
       return;
@@ -455,9 +705,29 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
     commitTransform(moveTransform(snapshot, delta, { snap: false }));
     event.preventDefault();
   }, [
-    activeScenePage, applyConnectorSelection, applySelection, canonicalCollaboration,
-    commitDocumentCommand, commitNodeMutation, commitTransform, projection, state,
+    activeScenePage, applyConnectorSelection, applySelection, cancelPointerOperation,
+    canonicalCollaboration,
+    commitDocumentCommand, commitNodeMutation, commitTransform, fitPageCamera, fitSelectionCamera,
+    projection, recallPreviousCamera, resetCameraZoom, startTextEditing, state,
   ]);
+
+  const handleKeyUp = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.code !== 'Space') return;
+    spacePanRef.current = false;
+    if (event.target === viewportRef.current) event.preventDefault();
+  }, []);
+
+  useEffect(() => () => {
+    cameraMotionRef.current?.cancel();
+    cameraInertiaRef.current?.cancel();
+    edgeScrollRef.current?.cancel();
+  }, []);
+
+  useEffect(() => {
+    const resetSpacePan = (): void => { spacePanRef.current = false; };
+    window.addEventListener('blur', resetSpacePan);
+    return () => window.removeEventListener('blur', resetSpacePan);
+  }, []);
 
   useEffect(() => {
     if (!capability.supported) fallback('WEBGL_UNAVAILABLE');
@@ -482,7 +752,10 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
       onStatusChange: (nextStatus) => {
         if (disposed) return;
         setStatus(nextStatus);
-        if (nextStatus === 'context-lost') fallback('WEBGL_CONTEXT_LOST');
+        if (nextStatus === 'context-lost') {
+          cancelPointerOperation();
+          fallback('WEBGL_CONTEXT_LOST');
+        }
       },
     });
     hostRef.current = host;
@@ -497,7 +770,7 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
       host.destroy();
       hostRef.current = null;
     };
-  }, [capability.supported, fallback]);
+  }, [cancelPointerOperation, capability.supported, fallback]);
 
   useEffect(() => {
     if (projection.status === 'ready' && status === 'ready') {
@@ -517,7 +790,8 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
   }, [activeScenePage, applyCamera, projection, status]);
 
   return (
-    <main id="main-content" className="pixi-spike" onKeyDown={handleKeyDown}>
+    <main id="main-content" className="pixi-spike"
+      onKeyDown={handleKeyDown} onKeyUp={handleKeyUp}>
       <header className="pixi-spike__toolbar">
         <div>
           <strong>OpenCanvas canary</strong>
@@ -579,16 +853,28 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
         <button type="button" disabled={projection.status !== 'ready'} onClick={() => {
           if (projection.status !== 'ready') return;
           const svg = exportCanonicalSvg(projection.document, { pageId: activeScenePage!.id });
-          const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-          const anchor = document.createElement('a');
-          anchor.href = url;
-          anchor.download = `${projection.document.name.replace(/[^a-z0-9_-]+/gi, '-').toLowerCase() || 'diagram'}.svg`;
-          anchor.click();
-          queueMicrotask(() => URL.revokeObjectURL(url));
+          downloadCanonicalArtifact(projection.document.name, 'svg', 'image/svg+xml', svg);
         }}>Export SVG</button>
+        <button type="button" disabled={projection.status !== 'ready'} onClick={() => {
+          if (projection.status !== 'ready') return;
+          downloadCanonicalArtifact(
+            projection.document.name,
+            'json',
+            'application/json',
+            serializeCanonicalJson(projection.document)
+          );
+        }}>Export canonical JSON</button>
         <button type="button" disabled={status !== 'ready'} onClick={() =>
           setRenderDiagnostics(hostRef.current?.getRenderDiagnostics() ?? null)
         }>Render diagnostics</button>
+        <OpenCanvasCameraControls
+          canFitSelection={semanticSelection.nodeIds.length > 0}
+          canRecallPrevious={canRecallPreviousCamera}
+          onFitPage={fitPageCamera}
+          onFitSelection={fitSelectionCamera}
+          onResetZoom={resetCameraZoom}
+          onRecallPrevious={recallPreviousCamera}
+        />
         <button
           type="button"
           disabled={semanticSelection.nodeIds.length !== 2 || projection.status !== 'ready'}
@@ -667,16 +953,62 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
         style={{ touchAction: 'none' }}
         onPointerDown={(event) => {
           if ((event.button !== 0 && event.button !== 1) || !hostRef.current) return;
+          cameraMotionRef.current?.cancel();
+          cameraInertiaRef.current?.cancel();
+          edgeScrollRef.current?.cancel();
           const bounds = event.currentTarget.getBoundingClientRect();
           const point = {
             x: event.clientX - bounds.left,
             y: event.clientY - bounds.top,
           };
+          if (event.pointerType === 'pen' && touchCameraGestureRef.current) {
+            for (const pointerId of touchPointerIds(touchCameraGestureRef.current)) {
+              if (event.currentTarget.hasPointerCapture(pointerId)) {
+                event.currentTarget.releasePointerCapture(pointerId);
+              }
+            }
+            touchCameraGestureRef.current = null;
+          }
+          if (event.pointerType === 'touch') {
+            if (pointerOperationRef.current) return;
+            touchCameraGestureRef.current = beginTouchCameraGesture(
+              touchCameraGestureRef.current,
+              event.pointerId,
+              point,
+              event.timeStamp
+            );
+            event.currentTarget.focus();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            return;
+          }
+          gestureSelectionSnapshotRef.current = {
+            selection: {
+              nodeIds: [...selectionRef.current.nodeIds],
+              primaryNodeId: selectionRef.current.primaryNodeId,
+            },
+            connectorId: selectedConnectorIdRef.current,
+          };
           additiveSelectionRef.current = event.shiftKey || event.metaKey || event.ctrlKey;
           const host = hostRef.current;
+          const forceCameraPan = event.button === 1 || spacePanRef.current;
+          if (forceCameraPan) {
+            pointerOperationRef.current = {
+              kind: 'camera',
+              gesture: beginCameraPan(event.pointerId, point, event.timeStamp),
+              selectOnClick: false,
+            };
+            event.currentTarget.focus();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            return;
+          }
           if (drawingTool && event.button === 0) {
+            const initialSample = projectPointerSamples(
+              event.nativeEvent,
+              { x: bounds.left, y: bounds.top },
+              (screenPoint) => host.screenToWorld(screenPoint)
+            ).confirmed.at(-1) ?? host.screenToWorld(point);
             pointerOperationRef.current = beginFreeformOperation(
-              event.pointerId, drawingTool, host.screenToWorld(point)
+              event.pointerId, drawingTool, initialSample
             );
             event.currentTarget.focus();
             event.currentTarget.setPointerCapture(event.pointerId);
@@ -721,14 +1053,32 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
             }
           } else {
             pointerOperationRef.current = {
-              kind: 'camera',
-              gesture: beginCameraPan(event.pointerId, point),
+              kind: 'marquee',
+              pointerId: event.pointerId,
+              startScreen: point,
+              startWorld: host.screenToWorld(point),
+              currentScreen: point,
+              additive: additiveSelectionRef.current,
             };
           }
           event.currentTarget.focus();
           event.currentTarget.setPointerCapture(event.pointerId);
         }}
         onPointerMove={(event) => {
+          const touchGesture = touchCameraGestureRef.current;
+          if (event.pointerType === 'touch' && touchGesture) {
+            const bounds = event.currentTarget.getBoundingClientRect();
+            const moved = moveTouchCameraGesture(
+              cameraRef.current,
+              touchGesture,
+              event.pointerId,
+              { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
+              event.timeStamp
+            );
+            touchCameraGestureRef.current = moved.gesture;
+            applyCamera(moved.camera);
+            return;
+          }
           const operation = pointerOperationRef.current;
           if (!operation || (operation.kind === 'camera'
             ? operation.gesture.pointerId
@@ -739,17 +1089,32 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
             y: event.clientY - bounds.top,
           };
           if (operation.kind === 'camera') {
-            const next = moveCameraPan(cameraRef.current, operation.gesture, point);
-            pointerOperationRef.current = { kind: 'camera', gesture: next.gesture };
+            edgeScrollRef.current?.cancel();
+            const next = moveCameraPan(
+              cameraRef.current, operation.gesture, point, event.shiftKey, event.timeStamp
+            );
+            pointerOperationRef.current = { ...operation, gesture: next.gesture };
             applyCamera(next.camera);
           } else if (operation.kind === 'freeform') {
             const host = hostRef.current;
             if (!host) return;
-            const samples = event.nativeEvent.getCoalescedEvents?.() ?? [event.nativeEvent];
-            const worldPoints = samples.map((sample) => host.screenToWorld({
-              x: sample.clientX - bounds.left, y: sample.clientY - bounds.top,
-            }));
-            pointerOperationRef.current = updateFreeformOperation(operation, worldPoints);
+            const samples = projectPointerSamples(
+              event.nativeEvent,
+              { x: bounds.left, y: bounds.top },
+              (screenPoint) => host.screenToWorld(screenPoint)
+            );
+            const next = updateFreeformOperation(operation, samples.confirmed);
+            pointerOperationRef.current = next;
+            host.setFreeformPreview({
+              ...freeformPreviewPoints(next, samples.predicted),
+              ...freeformPreviewStyle(next.tool),
+            });
+            updateDragEdgeScroll(point, true);
+          } else if (operation.kind === 'marquee') {
+            const next = { ...operation, currentScreen: point };
+            pointerOperationRef.current = next;
+            hostRef.current?.setMarquee(anchoredMarqueeBounds(next, cameraRef.current));
+            updateDragEdgeScroll(point, true);
           } else if (operation.kind === 'transform') {
             const next = updateTransformOperation(
               operation,
@@ -758,6 +1123,7 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
             );
             pointerOperationRef.current = next;
             hostRef.current?.setTransformPreview(next.result);
+            updateDragEdgeScroll(point, !event.altKey);
           } else {
             const host = hostRef.current;
             if (!host) return;
@@ -768,15 +1134,27 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
             );
             pointerOperationRef.current = next;
             host.setConnectorPreview(next.preview);
+            updateDragEdgeScroll(point, true);
           }
         }}
         onPointerUp={(event) => {
+          edgeScrollRef.current?.cancel();
+          const touchGesture = touchCameraGestureRef.current;
+          if (event.pointerType === 'touch' && touchGesture) {
+            const ended = endTouchCameraGesture(touchGesture, event.pointerId, event.timeStamp);
+            touchCameraGestureRef.current = ended.gesture;
+            if (!ended.gesture) startCameraInertia(ended.releaseVelocity);
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.releasePointerCapture(event.pointerId);
+            }
+            return;
+          }
           const operation = pointerOperationRef.current;
           if (!operation || (operation.kind === 'camera'
             ? operation.gesture.pointerId
             : operation.pointerId) !== event.pointerId) return;
           if (operation.kind === 'camera') {
-            if (!operation.gesture.moved && event.button === 0) {
+            if (operation.selectOnClick && !operation.gesture.moved && event.button === 0) {
               const pickedNode = hostRef.current?.pickNode(operation.gesture.last) ?? null;
               applySelection(selectionAfterClick(
                 selectionRef.current,
@@ -787,7 +1165,32 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
                 pickedNode ? null : hostRef.current?.pickConnector(operation.gesture.last) ?? null
               );
             }
+            if (operation.gesture.moved) {
+              startCameraInertia(releaseCameraPanVelocity(operation.gesture, event.timeStamp));
+            }
+          } else if (operation.kind === 'marquee') {
+            const host = hostRef.current;
+            host?.setMarquee(null);
+            const moved = Math.hypot(
+              operation.currentScreen.x - operation.startScreen.x,
+              operation.currentScreen.y - operation.startScreen.y
+            );
+            if (host && moved >= 4) {
+              const ids = host.pickNodesInScreenBounds(
+                anchoredMarqueeBounds(operation, cameraRef.current)
+              );
+              applyConnectorSelection(null);
+              applySelection(operation.additive
+                ? addToSelection(selectionRef.current, ids)
+                : replaceSelection(ids));
+            } else {
+              if (!operation.additive) applyConnectorSelection(null);
+              applySelection(selectionAfterClick(
+                selectionRef.current, null, operation.additive
+              ));
+            }
           } else if (operation.kind === 'freeform') {
+            hostRef.current?.setFreeformPreview(null);
             const node = finishFreeformOperation(operation,
               `opencanvas-${operation.tool}-${crypto.randomUUID()}`,
               activeScenePage!.layers[0]?.id ?? 'default');
@@ -808,28 +1211,62 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
           }
           pendingSelectionToggleRef.current = null;
           pointerOperationRef.current = null;
+          gestureSelectionSnapshotRef.current = null;
           if (event.currentTarget.hasPointerCapture(event.pointerId)) {
             event.currentTarget.releasePointerCapture(event.pointerId);
           }
         }}
-        onPointerCancel={() => {
-          hostRef.current?.setTransformPreview(null);
-          hostRef.current?.setConnectorPreview(null);
-          pendingSelectionToggleRef.current = null;
-          pointerOperationRef.current = null;
-        }}
+        onPointerCancel={(event) => cancelPointerOperation(event.currentTarget)}
         onWheel={(event) => {
+          edgeScrollRef.current?.cancel();
+          cameraMotionRef.current?.cancel();
+          cameraInertiaRef.current?.cancel();
           const bounds = event.currentTarget.getBoundingClientRect();
           event.preventDefault();
-          applyCamera(zoomReadOnlyCamera(cameraRef.current, {
+          const host = hostRef.current;
+          const viewport = host?.getViewportSize() ?? {
+            width: bounds.width,
+            height: bounds.height,
+          };
+          const decision = resolveWheelGesture(event, wheelGestureRef.current, viewport);
+          wheelGestureRef.current = decision.state;
+          if (decision.mode === 'pan') {
+            applyCamera(panCamera(cameraRef.current, decision.panDelta));
+          } else {
+            applyCamera(zoomReadOnlyCamera(cameraRef.current, {
+              x: event.clientX - bounds.left,
+              y: event.clientY - bounds.top,
+            }, decision.zoomDeltaY));
+          }
+        }}
+        onDoubleClick={(event) => {
+          const bounds = event.currentTarget.getBoundingClientRect();
+          const nodeId = hostRef.current?.pickNode({
             x: event.clientX - bounds.left,
             y: event.clientY - bounds.top,
-          }, event.deltaY));
+          });
+          if (nodeId) startTextEditing(nodeId);
         }}
-      />
+      >
+        {textEditor ? (
+          <OpenCanvasTextEditorOverlay
+            key={textEditor.nodeId}
+            bounds={textEditor.bounds}
+            value={textEditor.value}
+            onCancel={closeTextEditor}
+            onCommit={(label) => {
+              const nodeId = editingNodeIdRef.current;
+              closeTextEditor();
+              if (nodeId && label.trim()) commitNodeMutation({ kind: 'rename', nodeId, label });
+            }}
+          />
+        ) : null}
+      </section>
       {renderDiagnostics ? (
         <output className="pixi-spike__diagnostics" aria-label="OpenCanvas render diagnostics">
-          {renderDiagnostics.nodeCount} nodes · {renderDiagnostics.connectorCount} connectors ·{' '}
+          {renderDiagnostics.renderedNodeCount}/{renderDiagnostics.nodeCount}n ·{' '}
+          {renderDiagnostics.renderedConnectorCount}/{renderDiagnostics.connectorCount}e ·{' '}
+          {renderDiagnostics.detailLevel} detail ·{' '}
           {renderDiagnostics.renderCount} renders · {renderDiagnostics.coalescedRequests} coalesced ·{' '}
           {renderDiagnostics.lastRenderDurationMs.toFixed(2)} ms ·{' '}
           {renderDiagnostics.continuousTickerRunning ? 'continuous' : 'idle-on-demand'}
@@ -837,9 +1274,19 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
       ) : null}
       <p className="sr-only" aria-live="polite">{selectionMessage}</p>
       {projection.status === 'ready' && ROLLOUT_FLAGS.openCanvasA11yV1 && (
-        <aside id="opencanvas-inspector"
-          className={inspectorOpen ? 'pixi-spike__inspector' : 'sr-only'}
-          aria-label="OpenCanvas inspector">
+        <>
+        <OpenCanvasSemanticSceneTree
+          page={activeScenePage!}
+          selection={semanticSelection}
+          selectedConnectorId={selectedConnectorId}
+          onSelectNode={(nodeId, additive) => {
+            applyConnectorSelection(null);
+            applySelection(selectionAfterClick(selectionRef.current, nodeId, additive));
+          }}
+          onSelectConnector={(connectorId) => applyConnectorSelection(connectorId)}
+        />
+        <aside id="opencanvas-inspector" hidden={!inspectorOpen}
+          className="pixi-spike__inspector" aria-label="OpenCanvas inspector">
         <button type="button" onClick={() => setInspectorOpen(false)}>Close inspector</button>
         <section aria-label="Diagram lint">
           <h2>Diagram lint</h2>
@@ -1032,22 +1479,7 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
             const editable = isNodeEditableOnLayer(activeScenePage!, node.id);
             return (
               <li key={node.id}>
-                <button
-                  data-canvas-semantic-node="true"
-                  ref={(element) => {
-                    if (element) semanticNodeRefs.current.set(node.id, element);
-                    else semanticNodeRefs.current.delete(node.id);
-                  }}
-                  type="button"
-                  aria-pressed={semanticSelection.nodeIds.includes(node.id)}
-                  onClick={(event) => applySelection(selectionAfterClick(
-                    selectionRef.current,
-                    node.id,
-                    event.shiftKey || event.metaKey || event.ctrlKey
-                  ))}
-                >
-                  Select {label}
-                </button>
+                <h3>{label}</h3>
                 <fieldset disabled={!editable}>
                   <legend>Editing for {label}</legend>
                 <form
@@ -1239,13 +1671,7 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
               && isNodeEditableOnLayer(page, target.id));
             return (
               <li key={connector.id}>
-                <button
-                  type="button"
-                  aria-pressed={selectedConnectorId === connector.id}
-                  onClick={() => applyConnectorSelection(connector.id)}
-                >
-                  Select connector {label}
-                </button>
+                <h3>Connector {label}</h3>
                 <fieldset disabled={!editable}>
                   <legend>Editing for connector {label}</legend>
                 <form
@@ -1288,6 +1714,7 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
           })}
         </ol>
         </aside>
+        </>
       )}
     </main>
   );

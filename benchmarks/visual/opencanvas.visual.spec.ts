@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { OPEN_CANVAS_RENDER_WORK_MEASURE } from '../../src/opencanvas/application/renderer/renderWorkMeasurement';
 
 interface VisualFixtureGraph {
   nodes: unknown[];
@@ -117,6 +118,48 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test('imports canonical scene JSON through the production file boundary', async ({ page }) => {
+  await page.goto('/#/home');
+  const headerCreate = page.getByTestId('home-create-new-header');
+  const createButton = await headerCreate.isVisible()
+    ? headerCreate
+    : page.getByTestId('home-create-new-main');
+  await createButton.click();
+  await expect(page).toHaveURL(/#\/flow\/[^?]+/);
+  await page.locator('#json-import-input').setInputFiles({
+    name: 'canonical-scene.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({
+      format: 'openflowkit.scene',
+      schemaVersion: 1,
+      id: 'canonical-browser-document',
+      name: 'Canonical browser import',
+      createdAt: '2026-08-25T00:00:00.000Z',
+      updatedAt: '2026-08-25T00:00:00.000Z',
+      pages: [{
+        id: 'page-1', name: 'Page 1', diagramKind: 'flowchart',
+        layers: [{ id: 'default', name: 'Default', visible: true, locked: false }],
+        nodes: [{
+          id: 'canonical-import-node', kind: 'process', parentId: null,
+          layerId: 'default', zIndex: 0,
+          transform: {
+            translation: { x: 120, y: 80 }, rotationRadians: 0, scale: { x: 1, y: 1 },
+          },
+          size: { width: 180, height: 80 },
+          content: { label: 'Canonical import proof' }, appearance: {}, ports: [],
+          metadata: {}, extensions: {},
+        }],
+        connectors: [], metadata: {}, extensions: {},
+      }],
+      metadata: {}, extensions: {},
+    })),
+  });
+
+  const imported = page.locator('.react-flow__node[data-id="canonical-import-node"]');
+  await expect(imported).toContainText('Canonical import proof', { timeout: 30_000 });
+  await expect(page.getByText('Canonical diagram loaded successfully!')).toBeVisible();
+});
+
 test('keeps mixed-family React Flow and OpenCanvas visual goldens', async ({ page }) => {
   const graph = await createMixedFamilyFixture(page);
 
@@ -164,6 +207,148 @@ test('persists an accessible canonical keyboard transform back to React Flow', a
   await expect.poll(() => reactFlowNode.getAttribute('style')).not.toBe(beforeStyle);
 });
 
+test('commits inline DOM text editing through canonical history and fallback', async ({ page }) => {
+  const graph = await createMixedFamilyFixture(page);
+  await importIntoProductionEditor(page, selectFamily(graph, FAMILY_CORPUS[0]));
+  const currentUrl = new URL(page.url());
+  const separator = currentUrl.hash.includes('?') ? '&' : '?';
+  await page.goto(
+    `${currentUrl.origin}${currentUrl.pathname}${currentUrl.hash}${separator}renderer=opencanvas`
+  );
+  const semanticNode = page.getByRole('button', { name: 'Select Service 1' });
+  await semanticNode.focus();
+  await page.keyboard.press('Enter');
+  await semanticNode.press('F2');
+  const editor = page.getByRole('textbox', { name: 'Edit node label' });
+  await expect(editor).toBeFocused();
+  await editor.fill('Inline renamed service');
+  await editor.press('Enter');
+  await expect(editor).toBeHidden();
+  await page.getByRole('link', { name: 'Use React Flow' }).click();
+  await expect(page.locator('.react-flow__node[data-id="node-0"]'))
+    .toContainText('Inline renamed service');
+});
+
+test('cancels a captured drawing gesture without document mutation', async ({ page }) => {
+  const graph = await createMixedFamilyFixture(page);
+  const fixture = selectFamily(graph, FAMILY_CORPUS[0]);
+  await importIntoProductionEditor(page, fixture);
+  const currentUrl = new URL(page.url());
+  const separator = currentUrl.hash.includes('?') ? '&' : '?';
+  await page.goto(
+    `${currentUrl.origin}${currentUrl.pathname}${currentUrl.hash}${separator}renderer=opencanvas`
+  );
+  await page.getByRole('button', { name: 'Draw pen', exact: true }).click();
+  const viewport = page.getByTestId('opencanvas-document-viewport');
+  const bounds = await viewport.boundingBox();
+  if (!bounds) throw new Error('OpenCanvas viewport bounds unavailable.');
+  await page.mouse.move(bounds.x + 320, bounds.y + 240);
+  await page.mouse.wheel(0, -320);
+  await expect.poll(async () => Number(
+    await viewport.getAttribute('data-camera-zoom')
+  )).toBeGreaterThan(1.2);
+  const zoomedView = await viewport.getAttribute('data-camera-zoom');
+  expect(zoomedView).not.toBe('1.0000');
+  await page.getByRole('button', { name: '100%' }).click();
+  await expect(viewport).toHaveAttribute('data-camera-zoom', '1.0000');
+  await page.getByRole('button', { name: 'Previous view' }).click();
+  await expect(viewport).toHaveAttribute('data-camera-zoom', zoomedView!);
+  const beforeTrackpadX = await viewport.getAttribute('data-camera-x');
+  await viewport.dispatchEvent('wheel', {
+    deltaX: 8, deltaY: 12, deltaMode: 0, ctrlKey: false, shiftKey: false,
+    clientX: 320, clientY: 240,
+  });
+  await expect.poll(() => viewport.getAttribute('data-camera-x')).not.toBe(beforeTrackpadX);
+  await expect(viewport).toHaveAttribute('data-camera-zoom', zoomedView!);
+  await viewport.dispatchEvent('wheel', {
+    deltaX: 0, deltaY: -12, deltaMode: 0, ctrlKey: true, shiftKey: false,
+    clientX: 320, clientY: 240,
+  });
+  await expect.poll(() => viewport.getAttribute('data-camera-zoom')).not.toBe(zoomedView);
+  const beforeSpacePanX = await viewport.getAttribute('data-camera-x');
+  await viewport.focus();
+  await page.keyboard.down('Space');
+  await page.mouse.move(bounds.x + 220, bounds.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + 300, bounds.y + 205, { steps: 2 });
+  await page.mouse.up();
+  await page.keyboard.up('Space');
+  await expect.poll(() => viewport.getAttribute('data-camera-x')).not.toBe(beforeSpacePanX);
+  const releasedPanX = await viewport.getAttribute('data-camera-x');
+  await expect.poll(() => viewport.getAttribute('data-camera-x')).not.toBe(releasedPanX);
+  await page.keyboard.press('Escape');
+  const beforeTouchZoom = await viewport.getAttribute('data-camera-zoom');
+  await viewport.dispatchEvent('pointerdown', {
+    pointerId: 81, pointerType: 'touch', button: 0,
+    clientX: bounds.x + 180, clientY: bounds.y + 180,
+  });
+  await viewport.dispatchEvent('pointerdown', {
+    pointerId: 82, pointerType: 'touch', button: 0,
+    clientX: bounds.x + 280, clientY: bounds.y + 180,
+  });
+  await viewport.dispatchEvent('pointermove', {
+    pointerId: 82, pointerType: 'touch', button: 0,
+    clientX: bounds.x + 360, clientY: bounds.y + 180,
+  });
+  await expect.poll(() => viewport.getAttribute('data-camera-zoom')).not.toBe(beforeTouchZoom);
+  await viewport.dispatchEvent('pointerup', {
+    pointerId: 82, pointerType: 'touch', button: 0,
+    clientX: bounds.x + 360, clientY: bounds.y + 180,
+  });
+  const beforeTouchHandoffX = await viewport.getAttribute('data-camera-x');
+  await viewport.dispatchEvent('pointermove', {
+    pointerId: 81, pointerType: 'touch', button: 0,
+    clientX: bounds.x + 210, clientY: bounds.y + 180,
+  });
+  await expect.poll(() => viewport.getAttribute('data-camera-x')).not.toBe(beforeTouchHandoffX);
+  await viewport.dispatchEvent('pointerup', {
+    pointerId: 81, pointerType: 'touch', button: 0,
+    clientX: bounds.x + 210, clientY: bounds.y + 180,
+  });
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Draw pen', exact: true }).click();
+  await page.getByRole('button', { name: 'Select Service 1' })
+    .evaluate((button: HTMLButtonElement) => button.click());
+  await page.getByRole('button', { name: 'Fit selection' }).click();
+  await page.waitForTimeout(250);
+  const beforeEdgeScrollX = await viewport.getAttribute('data-camera-x');
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + bounds.width - 4, bounds.y + bounds.height / 2);
+  await expect.poll(() => viewport.getAttribute('data-camera-x')).not.toBe(beforeEdgeScrollX);
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await page.getByRole('button', { name: 'Draw pen', exact: true }).click();
+  await page.mouse.move(bounds.x + 180, bounds.y + 180);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + 260, bounds.y + 230, { steps: 4 });
+  const beforeFreeformEdgeScrollX = await viewport.getAttribute('data-camera-x');
+  await page.mouse.move(bounds.x + bounds.width - 4, bounds.y + bounds.height / 2);
+  await expect.poll(() => viewport.getAttribute('data-camera-x'))
+    .not.toBe(beforeFreeformEdgeScrollX);
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(page.getByText('Gesture canceled. Document unchanged.')).toBeAttached();
+  await page.getByRole('button', { name: 'Draw pen', exact: true }).click();
+  const beforeMarqueeEdgeScrollX = await viewport.getAttribute('data-camera-x');
+  await page.mouse.move(bounds.x + 8, bounds.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + bounds.width - 4, bounds.y + bounds.height - 4);
+  await expect.poll(() => viewport.getAttribute('data-camera-x'))
+    .not.toBe(beforeMarqueeEdgeScrollX);
+  await page.mouse.up();
+  await expect(page.getByText(/\d+ nodes? selected\./)).toBeAttached();
+  const rendererWorkSamples = await page.evaluate(
+    (measureName) => performance.getEntriesByName(measureName).map((entry) => entry.duration),
+    OPEN_CANVAS_RENDER_WORK_MEASURE
+  );
+  expect(rendererWorkSamples.length).toBeGreaterThan(0);
+  expect(rendererWorkSamples.every((duration) => Number.isFinite(duration) && duration >= 0))
+    .toBe(true);
+  await page.getByRole('link', { name: 'Use React Flow' }).click();
+  await expect(page.locator('.react-flow__node')).toHaveCount(fixture.nodes.length);
+});
+
 test('persists an accessible canonical connector edit back to React Flow', async ({ page }) => {
   const graph = await createMixedFamilyFixture(page);
   await importIntoProductionEditor(page, selectFamily(graph, FAMILY_CORPUS[0]));
@@ -176,6 +361,7 @@ test('persists an accessible canonical connector edit back to React Flow', async
     `${currentUrl.origin}${currentUrl.pathname}${currentUrl.hash}${separator}renderer=opencanvas`
   );
   await expect(page.getByText(/· ready · write canary/)).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Inspector', exact: true }).click();
   const resetRoute = page.getByRole('button', { name: 'Reset route for connector Failure' });
   await resetRoute.focus();
   await page.keyboard.press('Enter');
@@ -202,8 +388,20 @@ test('persists canonical node rename, duplicate, create, and delete operations',
   await page.getByRole('button', { name: 'Inspector', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'OpenCanvas inspector' })).toBeVisible();
   await expect(page.getByRole('img', { name: /thumbnail with \d+ objects/ }).first()).toBeVisible();
-  await page.getByRole('button', { name: 'Close inspector' })
-    .evaluate((button: HTMLButtonElement) => button.click());
+  const canonicalDownloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export canonical JSON' }).click();
+  const canonicalDownload = await canonicalDownloadPromise;
+  expect(canonicalDownload.suggestedFilename()).toMatch(/\.json$/);
+  const canonicalStream = await canonicalDownload.createReadStream();
+  let canonicalJson = '';
+  for await (const chunk of canonicalStream) canonicalJson += chunk.toString();
+  const canonicalDocument = JSON.parse(canonicalJson) as {
+    format: string; schemaVersion: number; pages: unknown[];
+  };
+  expect(canonicalDocument).toMatchObject({
+    format: 'openflowkit.scene', schemaVersion: 1,
+  });
+  expect(canonicalDocument.pages).toHaveLength(1);
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export SVG' })
     .evaluate((button: HTMLButtonElement) => button.click());
@@ -254,6 +452,8 @@ test('persists canonical node rename, duplicate, create, and delete operations',
   await definitionProperties.locator('input[name="subLabel"]').fill('Linked symbol subtitle');
   await definitionProperties.getByRole('button', { name: 'Update properties for Renamed in OpenCanvas' })
     .evaluate((button: HTMLButtonElement) => button.click());
+  await page.getByRole('button', { name: 'Close inspector' })
+    .evaluate((button: HTMLButtonElement) => button.click());
   for (const primitive of ['pen', 'highlighter', 'line', 'arrow', 'sticky', 'callout']) {
     await page.getByRole('button', { name: `Add ${primitive}`, exact: true })
       .evaluate((button: HTMLButtonElement) => button.click());
@@ -263,11 +463,37 @@ test('persists canonical node rename, duplicate, create, and delete operations',
   const viewport = page.getByTestId('opencanvas-document-viewport');
   const viewportBox = await viewport.boundingBox();
   if (!viewportBox) throw new Error('OpenCanvas viewport bounds are unavailable.');
-  await page.mouse.move(viewportBox.x + 220, viewportBox.y + 220);
-  await page.mouse.down();
-  await page.mouse.move(viewportBox.x + 260, viewportBox.y + 245, { steps: 4 });
-  await page.mouse.move(viewportBox.x + 300, viewportBox.y + 210, { steps: 4 });
-  await page.mouse.up();
+  await viewport.dispatchEvent('pointerdown', {
+    pointerId: 91, pointerType: 'pen', button: 0, pressure: 0.2,
+    tiltX: 10, tiltY: -20, twist: 30,
+    clientX: viewportBox.x + 220, clientY: viewportBox.y + 220,
+  });
+  await viewport.dispatchEvent('pointermove', {
+    pointerId: 91, pointerType: 'pen', button: 0, pressure: 0.55,
+    tiltX: 25, tiltY: -35, twist: 45,
+    clientX: viewportBox.x + 260, clientY: viewportBox.y + 245,
+  });
+  await viewport.dispatchEvent('pointermove', {
+    pointerId: 91, pointerType: 'pen', button: 0, pressure: 0.9,
+    tiltX: 45, tiltY: -55, twist: 60,
+    clientX: viewportBox.x + 300, clientY: viewportBox.y + 210,
+  });
+  await viewport.dispatchEvent('pointerup', {
+    pointerId: 91, pointerType: 'pen', button: 0,
+    clientX: viewportBox.x + 300, clientY: viewportBox.y + 210,
+  });
+  const pressureExportPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export SVG' })
+    .evaluate((button: HTMLButtonElement) => button.click());
+  const pressureExport = await pressureExportPromise;
+  const pressureExportStream = await pressureExport.createReadStream();
+  let pressureSvg = '';
+  for await (const chunk of pressureExportStream) pressureSvg += chunk.toString();
+  const pressureGroups = pressureSvg.split('data-node-kind="pen"').slice(1)
+    .map((group) => group.split('</g>')[0]);
+  expect(pressureGroups.some((group) => group.match(/<path /g)?.length === 2)).toBe(true);
+  expect(pressureSvg).toContain('data-node-kind="sticky"');
+  expect(pressureSvg).toContain('data-node-kind="callout"');
 
   await page.getByRole('button', { name: 'Inspector', exact: true }).click();
   const precisionSection = page.getByRole('region', { name: 'Canvas precision' });
@@ -307,6 +533,7 @@ test('undoes, redoes, and reloads an OpenCanvas production write', async ({ page
   );
   await expect(page.getByText(/· ready · write canary/)).toBeVisible({ timeout: 30_000 });
 
+  await page.getByRole('button', { name: 'Inspector', exact: true }).click();
   const label = page.getByRole('textbox', { name: 'Label for Service 1' });
   await label.fill('Persisted OpenCanvas node');
   await label.press('Enter');
@@ -335,6 +562,17 @@ test('navigates the semantic scene spatially without losing keyboard focus', asy
     `${currentUrl.origin}${currentUrl.pathname}${currentUrl.hash}${separator}renderer=opencanvas`
   );
   await expect(page.getByText(/· ready · write canary/)).toBeVisible({ timeout: 30_000 });
+
+  await expect(page.getByRole('navigation', { name: 'Canvas semantic scene' })).toBeAttached();
+  await expect(page.getByRole('complementary', { name: 'OpenCanvas inspector' })).toHaveCount(0);
+  const accessibility = await page.context().newCDPSession(page);
+  const accessibilityTree = await accessibility.send('Accessibility.getFullAXTree');
+  const interactiveRoles = new Set(['button', 'checkbox', 'combobox', 'link', 'textbox']);
+  const unnamedInteractiveNodes = accessibilityTree.nodes.filter((node) => (
+    interactiveRoles.has(String(node.role?.value ?? '').toLowerCase())
+    && String(node.name?.value ?? '').trim().length === 0
+  ));
+  expect(unnamedInteractiveNodes).toEqual([]);
 
   const first = page.getByRole('button', { name: 'Select Service 1' });
   await first.focus();
@@ -366,6 +604,7 @@ test('creates and deletes a connector through canonical production commands', as
   const second = page.getByRole('button', { name: 'Select Service 2' });
   await second.focus();
   await second.press('Shift+Enter');
+  await page.getByRole('button', { name: 'Inspector', exact: true }).click();
   const alignTop = page.getByRole('button', { name: 'Align top', exact: true });
   await alignTop.focus();
   await alignTop.press('Enter');
@@ -397,6 +636,7 @@ test('round-trips typed production properties across every node family group', a
     `${currentUrl.origin}${currentUrl.pathname}${currentUrl.hash}${separator}renderer=opencanvas`
   );
   await expect(page.getByText(/· ready · write canary/)).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Inspector', exact: true }).click();
 
   async function fillAndSubmit(label: string, value: string): Promise<void> {
     const input = page.getByLabel(label, { exact: true });
@@ -458,6 +698,7 @@ test('round-trips typed production properties across every node family group', a
   await expect(page.locator('.react-flow__node')).toHaveCount(30, { timeout: 30_000 });
   await page.getByRole('link', { name: 'Try OpenCanvas' }).click();
   await expect(page.getByText(/· ready · write canary/)).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Inspector', exact: true }).click();
   await expect(page.getByLabel('Subtitle for Service 1', { exact: true })).toHaveValue('Edited runtime');
   const reopenedServiceProperties = page.locator('form[aria-label="Properties for Service 1"]');
   await expect(reopenedServiceProperties.locator('select[name="shape"]')).toHaveValue('custom-path');
