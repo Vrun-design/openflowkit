@@ -1,6 +1,9 @@
 import { Application, Container, Graphics } from 'pixi.js';
 import { screenToWorld, visibleWorldBounds, worldToScreen } from '../../domain/camera/camera';
-import { recordOpenCanvasRenderWork } from '../../application/renderer/renderWorkMeasurement';
+import {
+  recordOpenCanvasCameraPhase,
+  recordOpenCanvasRenderWork,
+} from '../../application/renderer/renderWorkMeasurement';
 import type { CanvasCamera } from '../../domain/camera/types';
 import { createBounds2d, unionBounds } from '../../domain/geometry/bounds';
 import type { Bounds2d, Point2d, Size2d } from '../../domain/geometry/types';
@@ -200,13 +203,43 @@ export class PixiRendererHost {
   }
 
   setCamera(camera: CanvasCamera): void {
+    const cameraStartedAt = performance.now();
     this.camera = camera;
     this.applyCamera();
     this.connectorRenderer.setZoom(camera.zoom);
+
+    const overlayStartedAt = performance.now();
     this.drawConnectorEditOverlay();
-    if (this.refreshViewportProjection()) this.rebuildScene();
-    else this.updateLabelVisibility();
+    const overlayEndedAt = performance.now();
+    recordOpenCanvasCameraPhase(
+      performance,
+      'connectorOverlay',
+      overlayStartedAt,
+      overlayEndedAt
+    );
+
+    const projectionStartedAt = performance.now();
+    const projectionChanged = this.refreshViewportProjection();
+    const projectionEndedAt = performance.now();
+    recordOpenCanvasCameraPhase(
+      performance,
+      'projection',
+      projectionStartedAt,
+      projectionEndedAt
+    );
+
+    if (projectionChanged) {
+      const rebuildStartedAt = performance.now();
+      this.rebuildScene();
+      recordOpenCanvasCameraPhase(performance, 'rebuild', rebuildStartedAt, performance.now());
+    } else {
+      const labelsStartedAt = performance.now();
+      this.updateLabelVisibility();
+      recordOpenCanvasCameraPhase(performance, 'labels', labelsStartedAt, performance.now());
+    }
+
     this.requestRender();
+    recordOpenCanvasCameraPhase(performance, 'total', cameraStartedAt, performance.now());
   }
 
   getConnectorDebugSnapshot(): ReturnType<PixiConnectorRenderer['getDebugSnapshot']> {

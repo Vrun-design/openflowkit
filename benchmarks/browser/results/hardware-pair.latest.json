@@ -1,0 +1,511 @@
+{
+  "capturedAt": "2026-08-25T14:17:48.209Z",
+  "gate": {
+    "ok": false,
+    "errors": [
+      "opencanvas-pixi.runs[1].framesOver50Ms must be zero",
+      "opencanvas-pixi.runs[5].frameP95Ms exceeds 20 ms target",
+      "opencanvas-pixi.runs[5].inputNextFrameP95Ms exceeds 50 ms target",
+      "opencanvas-pixi.runs[5].framesOver50Ms must be zero",
+      "opencanvas-pixi.runs[6].frameP95Ms exceeds 20 ms target",
+      "opencanvas-pixi.runs[6].inputNextFrameP95Ms exceeds 50 ms target",
+      "opencanvas-pixi.runs[6].framesOver50Ms must be zero",
+      "opencanvas-pixi.runs[7].frameP95Ms exceeds 20 ms target",
+      "opencanvas-pixi.runs[7].inputNextFrameP95Ms exceeds 50 ms target",
+      "opencanvas-pixi.runs[7].framesOver50Ms must be zero",
+      "opencanvas-pixi.runs[8].frameP95Ms exceeds 20 ms target",
+      "opencanvas-pixi.runs[8].inputNextFrameP95Ms exceeds 50 ms target",
+      "opencanvas-pixi.runs[8].framesOver50Ms must be zero",
+      "opencanvas-pixi.runs[9].frameP95Ms exceeds 20 ms target",
+      "opencanvas-pixi.runs[9].inputNextFrameP95Ms exceeds 50 ms target",
+      "opencanvas-pixi.runs[9].framesOver50Ms must be zero",
+      "opencanvas-pixi.runs[10].frameP95Ms exceeds 20 ms target",
+      "opencanvas-pixi.runs[10].inputNextFrameP95Ms exceeds 50 ms target",
+      "opencanvas-pixi.runs[10].framesOver50Ms must be zero",
+      "opencanvas-pixi.runs[11].frameP95Ms exceeds 20 ms target",
+      "opencanvas-pixi.runs[11].inputNextFrameP95Ms exceeds 50 ms target",
+      "opencanvas-pixi.runs[11].framesOver50Ms must be zero",
+      "opencanvas-pixi.runs[12].frameP95Ms exceeds 20 ms target",
+      "opencanvas-pixi.runs[12].inputNextFrameP95Ms exceeds 50 ms target",
+      "opencanvas-pixi.runs[12].framesOver50Ms must be zero",
+      "opencanvas-pixi.runs[13].frameP95Ms exceeds 20 ms target",
+      "opencanvas-pixi.runs[13].inputNextFrameP95Ms exceeds 50 ms target",
+      "opencanvas-pixi.runs[13].framesOver50Ms must be zero",
+      "opencanvas-pixi.runs[14].frameP95Ms exceeds 20 ms target",
+      "opencanvas-pixi.runs[14].inputNextFrameP95Ms exceeds 50 ms target",
+      "opencanvas-pixi.runs[14].framesOver50Ms must be zero"
+    ]
+  },
+  "reactFlow": {
+    "schemaVersion": 2,
+    "git": {
+      "commit": "5b4a6e34cbfcf6ec8f02aa93dc3af4d2eb160b14",
+      "dirty": false
+    },
+    "runner": {
+      "browserName": "chromium",
+      "browserVersion": "151.0.7922.174",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "devicePixelRatio": 1,
+      "hardwareConcurrency": 8,
+      "webGl": {
+        "vendor": "Google Inc. (Apple)",
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)"
+      }
+    },
+    "renderer": "reactflow",
+    "runs": [
+      {
+        "fixture": {
+          "name": "small-100",
+          "sha256": "d077a1dcbc9e379f5b2fceec66c59664db193d4beda8f5601979d1811ac9307d",
+          "nodes": 100,
+          "edges": 150
+        },
+        "interaction": {
+          "frameP95Ms": 18.5,
+          "inputNextFrameP95Ms": 25.5,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "small-100",
+          "sha256": "d077a1dcbc9e379f5b2fceec66c59664db193d4beda8f5601979d1811ac9307d",
+          "nodes": 100,
+          "edges": 150
+        },
+        "interaction": {
+          "frameP95Ms": 18.6,
+          "inputNextFrameP95Ms": 35.8,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "small-100",
+          "sha256": "d077a1dcbc9e379f5b2fceec66c59664db193d4beda8f5601979d1811ac9307d",
+          "nodes": 100,
+          "edges": 150
+        },
+        "interaction": {
+          "frameP95Ms": 18.6,
+          "inputNextFrameP95Ms": 30.3,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "small-100",
+          "sha256": "d077a1dcbc9e379f5b2fceec66c59664db193d4beda8f5601979d1811ac9307d",
+          "nodes": 100,
+          "edges": 150
+        },
+        "interaction": {
+          "frameP95Ms": 18.7,
+          "inputNextFrameP95Ms": 39.1,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "small-100",
+          "sha256": "d077a1dcbc9e379f5b2fceec66c59664db193d4beda8f5601979d1811ac9307d",
+          "nodes": 100,
+          "edges": 150
+        },
+        "interaction": {
+          "frameP95Ms": 18.5,
+          "inputNextFrameP95Ms": 23.6,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "medium-300",
+          "sha256": "9645fb435f4360be25ba9b69c72b29ee6d8a13ecdeff1a0cf496155ed633faec",
+          "nodes": 300,
+          "edges": 450
+        },
+        "interaction": {
+          "frameP95Ms": 18.6,
+          "inputNextFrameP95Ms": 36.9,
+          "framesOver50Ms": 1,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "medium-300",
+          "sha256": "9645fb435f4360be25ba9b69c72b29ee6d8a13ecdeff1a0cf496155ed633faec",
+          "nodes": 300,
+          "edges": 450
+        },
+        "interaction": {
+          "frameP95Ms": 18.5,
+          "inputNextFrameP95Ms": 21.4,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "medium-300",
+          "sha256": "9645fb435f4360be25ba9b69c72b29ee6d8a13ecdeff1a0cf496155ed633faec",
+          "nodes": 300,
+          "edges": 450
+        },
+        "interaction": {
+          "frameP95Ms": 18.6,
+          "inputNextFrameP95Ms": 25.6,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "medium-300",
+          "sha256": "9645fb435f4360be25ba9b69c72b29ee6d8a13ecdeff1a0cf496155ed633faec",
+          "nodes": 300,
+          "edges": 450
+        },
+        "interaction": {
+          "frameP95Ms": 18.4,
+          "inputNextFrameP95Ms": 24,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "medium-300",
+          "sha256": "9645fb435f4360be25ba9b69c72b29ee6d8a13ecdeff1a0cf496155ed633faec",
+          "nodes": 300,
+          "edges": 450
+        },
+        "interaction": {
+          "frameP95Ms": 18.7,
+          "inputNextFrameP95Ms": 25.6,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "large-1000",
+          "sha256": "84a4fb9dadc9474a61610aa82db79ca0c6ccd55ac9d5062db3397e3d4afb5d87",
+          "nodes": 1000,
+          "edges": 1500
+        },
+        "interaction": {
+          "frameP95Ms": 18.7,
+          "inputNextFrameP95Ms": 31.5,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "large-1000",
+          "sha256": "84a4fb9dadc9474a61610aa82db79ca0c6ccd55ac9d5062db3397e3d4afb5d87",
+          "nodes": 1000,
+          "edges": 1500
+        },
+        "interaction": {
+          "frameP95Ms": 18.6,
+          "inputNextFrameP95Ms": 33.9,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "large-1000",
+          "sha256": "84a4fb9dadc9474a61610aa82db79ca0c6ccd55ac9d5062db3397e3d4afb5d87",
+          "nodes": 1000,
+          "edges": 1500
+        },
+        "interaction": {
+          "frameP95Ms": 18.6,
+          "inputNextFrameP95Ms": 46.6,
+          "framesOver50Ms": 1,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "large-1000",
+          "sha256": "84a4fb9dadc9474a61610aa82db79ca0c6ccd55ac9d5062db3397e3d4afb5d87",
+          "nodes": 1000,
+          "edges": 1500
+        },
+        "interaction": {
+          "frameP95Ms": 18.6,
+          "inputNextFrameP95Ms": 36.9,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      },
+      {
+        "fixture": {
+          "name": "large-1000",
+          "sha256": "84a4fb9dadc9474a61610aa82db79ca0c6ccd55ac9d5062db3397e3d4afb5d87",
+          "nodes": 1000,
+          "edges": 1500
+        },
+        "interaction": {
+          "frameP95Ms": 18.6,
+          "inputNextFrameP95Ms": 32.7,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": null
+        }
+      }
+    ]
+  },
+  "openCanvas": {
+    "schemaVersion": 2,
+    "git": {
+      "commit": "5b4a6e34cbfcf6ec8f02aa93dc3af4d2eb160b14",
+      "dirty": false
+    },
+    "runner": {
+      "browserName": "chromium",
+      "browserVersion": "151.0.7922.174",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "devicePixelRatio": 1,
+      "hardwareConcurrency": 8,
+      "webGl": {
+        "vendor": "Google Inc. (Apple)",
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)"
+      }
+    },
+    "renderer": "opencanvas-pixi",
+    "runs": [
+      {
+        "fixture": {
+          "name": "small-100",
+          "sha256": "d077a1dcbc9e379f5b2fceec66c59664db193d4beda8f5601979d1811ac9307d",
+          "nodes": 100,
+          "edges": 150
+        },
+        "interaction": {
+          "frameP95Ms": 18.6,
+          "inputNextFrameP95Ms": 22.6,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": 0.4
+        }
+      },
+      {
+        "fixture": {
+          "name": "small-100",
+          "sha256": "d077a1dcbc9e379f5b2fceec66c59664db193d4beda8f5601979d1811ac9307d",
+          "nodes": 100,
+          "edges": 150
+        },
+        "interaction": {
+          "frameP95Ms": 18.7,
+          "inputNextFrameP95Ms": 42,
+          "framesOver50Ms": 1,
+          "rendererWorkP95Ms": 0.2
+        }
+      },
+      {
+        "fixture": {
+          "name": "small-100",
+          "sha256": "d077a1dcbc9e379f5b2fceec66c59664db193d4beda8f5601979d1811ac9307d",
+          "nodes": 100,
+          "edges": 150
+        },
+        "interaction": {
+          "frameP95Ms": 18.7,
+          "inputNextFrameP95Ms": 27.5,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": 0.2
+        }
+      },
+      {
+        "fixture": {
+          "name": "small-100",
+          "sha256": "d077a1dcbc9e379f5b2fceec66c59664db193d4beda8f5601979d1811ac9307d",
+          "nodes": 100,
+          "edges": 150
+        },
+        "interaction": {
+          "frameP95Ms": 18.7,
+          "inputNextFrameP95Ms": 31.4,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": 0.2
+        }
+      },
+      {
+        "fixture": {
+          "name": "small-100",
+          "sha256": "d077a1dcbc9e379f5b2fceec66c59664db193d4beda8f5601979d1811ac9307d",
+          "nodes": 100,
+          "edges": 150
+        },
+        "interaction": {
+          "frameP95Ms": 18.7,
+          "inputNextFrameP95Ms": 20.5,
+          "framesOver50Ms": 0,
+          "rendererWorkP95Ms": 0.2
+        }
+      },
+      {
+        "fixture": {
+          "name": "medium-300",
+          "sha256": "9645fb435f4360be25ba9b69c72b29ee6d8a13ecdeff1a0cf496155ed633faec",
+          "nodes": 300,
+          "edges": 450
+        },
+        "interaction": {
+          "frameP95Ms": 34.1,
+          "inputNextFrameP95Ms": 60.6,
+          "framesOver50Ms": 2,
+          "rendererWorkP95Ms": 0.8
+        }
+      },
+      {
+        "fixture": {
+          "name": "medium-300",
+          "sha256": "9645fb435f4360be25ba9b69c72b29ee6d8a13ecdeff1a0cf496155ed633faec",
+          "nodes": 300,
+          "edges": 450
+        },
+        "interaction": {
+          "frameP95Ms": 33.4,
+          "inputNextFrameP95Ms": 58.2,
+          "framesOver50Ms": 1,
+          "rendererWorkP95Ms": 0.6
+        }
+      },
+      {
+        "fixture": {
+          "name": "medium-300",
+          "sha256": "9645fb435f4360be25ba9b69c72b29ee6d8a13ecdeff1a0cf496155ed633faec",
+          "nodes": 300,
+          "edges": 450
+        },
+        "interaction": {
+          "frameP95Ms": 50.1,
+          "inputNextFrameP95Ms": 53.6,
+          "framesOver50Ms": 5,
+          "rendererWorkP95Ms": 0.6
+        }
+      },
+      {
+        "fixture": {
+          "name": "medium-300",
+          "sha256": "9645fb435f4360be25ba9b69c72b29ee6d8a13ecdeff1a0cf496155ed633faec",
+          "nodes": 300,
+          "edges": 450
+        },
+        "interaction": {
+          "frameP95Ms": 35.4,
+          "inputNextFrameP95Ms": 64,
+          "framesOver50Ms": 2,
+          "rendererWorkP95Ms": 0.6
+        }
+      },
+      {
+        "fixture": {
+          "name": "medium-300",
+          "sha256": "9645fb435f4360be25ba9b69c72b29ee6d8a13ecdeff1a0cf496155ed633faec",
+          "nodes": 300,
+          "edges": 450
+        },
+        "interaction": {
+          "frameP95Ms": 50,
+          "inputNextFrameP95Ms": 55.9,
+          "framesOver50Ms": 2,
+          "rendererWorkP95Ms": 0.6
+        }
+      },
+      {
+        "fixture": {
+          "name": "large-1000",
+          "sha256": "84a4fb9dadc9474a61610aa82db79ca0c6ccd55ac9d5062db3397e3d4afb5d87",
+          "nodes": 1000,
+          "edges": 1500
+        },
+        "interaction": {
+          "frameP95Ms": 183.3,
+          "inputNextFrameP95Ms": 182.3,
+          "framesOver50Ms": 23,
+          "rendererWorkP95Ms": 0.7
+        }
+      },
+      {
+        "fixture": {
+          "name": "large-1000",
+          "sha256": "84a4fb9dadc9474a61610aa82db79ca0c6ccd55ac9d5062db3397e3d4afb5d87",
+          "nodes": 1000,
+          "edges": 1500
+        },
+        "interaction": {
+          "frameP95Ms": 151,
+          "inputNextFrameP95Ms": 182.9,
+          "framesOver50Ms": 22,
+          "rendererWorkP95Ms": 0.8
+        }
+      },
+      {
+        "fixture": {
+          "name": "large-1000",
+          "sha256": "84a4fb9dadc9474a61610aa82db79ca0c6ccd55ac9d5062db3397e3d4afb5d87",
+          "nodes": 1000,
+          "edges": 1500
+        },
+        "interaction": {
+          "frameP95Ms": 216.7,
+          "inputNextFrameP95Ms": 184.4,
+          "framesOver50Ms": 22,
+          "rendererWorkP95Ms": 1.6
+        }
+      },
+      {
+        "fixture": {
+          "name": "large-1000",
+          "sha256": "84a4fb9dadc9474a61610aa82db79ca0c6ccd55ac9d5062db3397e3d4afb5d87",
+          "nodes": 1000,
+          "edges": 1500
+        },
+        "interaction": {
+          "frameP95Ms": 150.1,
+          "inputNextFrameP95Ms": 168.4,
+          "framesOver50Ms": 22,
+          "rendererWorkP95Ms": 0.5
+        }
+      },
+      {
+        "fixture": {
+          "name": "large-1000",
+          "sha256": "84a4fb9dadc9474a61610aa82db79ca0c6ccd55ac9d5062db3397e3d4afb5d87",
+          "nodes": 1000,
+          "edges": 1500
+        },
+        "interaction": {
+          "frameP95Ms": 166.7,
+          "inputNextFrameP95Ms": 175.1,
+          "framesOver50Ms": 22,
+          "rendererWorkP95Ms": 0.6
+        }
+      }
+    ]
+  }
+}

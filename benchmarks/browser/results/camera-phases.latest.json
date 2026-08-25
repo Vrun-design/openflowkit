@@ -1,0 +1,433 @@
+{
+  "capturedAt": "2026-08-25T14:54:21.176Z",
+  "report": {
+    "small-100": {
+      "openflowkit:opencanvas-camera-total::p95": 0.1,
+      "openflowkit:opencanvas-camera-total::count": 2,
+      "openflowkit:opencanvas-camera-total::total": 0.20000000298023224,
+      "openflowkit:opencanvas-camera-projection::p95": 0,
+      "openflowkit:opencanvas-camera-projection::count": 2,
+      "openflowkit:opencanvas-camera-projection::total": 0,
+      "openflowkit:opencanvas-camera-rebuild::p95": null,
+      "openflowkit:opencanvas-camera-rebuild::count": 0,
+      "openflowkit:opencanvas-camera-rebuild::total": 0,
+      "openflowkit:opencanvas-camera-labels::p95": 0,
+      "openflowkit:opencanvas-camera-labels::count": 2,
+      "openflowkit:opencanvas-camera-labels::total": 0,
+      "openflowkit:opencanvas-camera-connector-overlay::p95": 0,
+      "openflowkit:opencanvas-camera-connector-overlay::count": 2,
+      "openflowkit:opencanvas-camera-connector-overlay::total": 0,
+      "openflowkit:opencanvas-render-work::p95": 0.4,
+      "openflowkit:opencanvas-render-work::count": 33,
+      "openflowkit:opencanvas-render-work::total": 6.700000010430813
+    },
+    "medium-300": {
+      "openflowkit:opencanvas-camera-total::p95": 2.3,
+      "openflowkit:opencanvas-camera-total::count": 2,
+      "openflowkit:opencanvas-camera-total::total": 3.2000000029802322,
+      "openflowkit:opencanvas-camera-projection::p95": 0.8,
+      "openflowkit:opencanvas-camera-projection::count": 2,
+      "openflowkit:opencanvas-camera-projection::total": 1,
+      "openflowkit:opencanvas-camera-rebuild::p95": 1.4,
+      "openflowkit:opencanvas-camera-rebuild::count": 2,
+      "openflowkit:opencanvas-camera-rebuild::total": 2.100000001490116,
+      "openflowkit:opencanvas-camera-labels::p95": null,
+      "openflowkit:opencanvas-camera-labels::count": 0,
+      "openflowkit:opencanvas-camera-labels::total": 0,
+      "openflowkit:opencanvas-camera-connector-overlay::p95": 0,
+      "openflowkit:opencanvas-camera-connector-overlay::count": 2,
+      "openflowkit:opencanvas-camera-connector-overlay::total": 0,
+      "openflowkit:opencanvas-render-work::p95": 0.8,
+      "openflowkit:opencanvas-render-work::count": 33,
+      "openflowkit:opencanvas-render-work::total": 6.800000011920929
+    },
+    "large-1000": {
+      "openflowkit:opencanvas-camera-total::p95": 2.6,
+      "openflowkit:opencanvas-camera-total::count": 2,
+      "openflowkit:opencanvas-camera-total::total": 5.000000007450581,
+      "openflowkit:opencanvas-camera-projection::p95": 1.1,
+      "openflowkit:opencanvas-camera-projection::count": 2,
+      "openflowkit:opencanvas-camera-projection::total": 1.8000000044703484,
+      "openflowkit:opencanvas-camera-rebuild::p95": 1.5,
+      "openflowkit:opencanvas-camera-rebuild::count": 2,
+      "openflowkit:opencanvas-camera-rebuild::total": 2.899999998509884,
+      "openflowkit:opencanvas-camera-labels::p95": null,
+      "openflowkit:opencanvas-camera-labels::count": 0,
+      "openflowkit:opencanvas-camera-labels::total": 0,
+      "openflowkit:opencanvas-camera-connector-overlay::p95": 0,
+      "openflowkit:opencanvas-camera-connector-overlay::count": 2,
+      "openflowkit:opencanvas-camera-connector-overlay::total": 0,
+      "openflowkit:opencanvas-render-work::p95": 0.5,
+      "openflowkit:opencanvas-render-work::count": 33,
+      "openflowkit:opencanvas-render-work::total": 7.299999989569187
+    }
+  },
+  "hotFunctions": {
+    "small-100": [
+      {
+        "fn": "(idle)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 35.28
+      },
+      {
+        "fn": "(program)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 19.66
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 5.72
+      },
+      {
+        "fn": "open",
+        "url": "",
+        "line": -1,
+        "selfPercent": 5.14
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 4.57
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 4.34
+      },
+      {
+        "fn": "transaction",
+        "url": "",
+        "line": -1,
+        "selfPercent": 3.27
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 3.13
+      },
+      {
+        "fn": "visitChild",
+        "url": "",
+        "line": 318,
+        "selfPercent": 1.66
+      },
+      {
+        "fn": "visitChild",
+        "url": "",
+        "line": 318,
+        "selfPercent": 1.1
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 0.8
+      },
+      {
+        "fn": "visitChild",
+        "url": "",
+        "line": 318,
+        "selfPercent": 0.8
+      },
+      {
+        "fn": "getAll",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.79
+      },
+      {
+        "fn": "Nr",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 32,
+        "selfPercent": 0.76
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 0.64
+      },
+      {
+        "fn": "setAttribute",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.61
+      },
+      {
+        "fn": "visitChild",
+        "url": "",
+        "line": 318,
+        "selfPercent": 0.61
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 0.57
+      },
+      {
+        "fn": "(garbage collector)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.56
+      },
+      {
+        "fn": "i.onsuccess",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 58,
+        "selfPercent": 0.45
+      }
+    ],
+    "medium-300": [
+      {
+        "fn": "captureSnapshot",
+        "url": "",
+        "line": 256,
+        "selfPercent": 45.78
+      },
+      {
+        "fn": "(program)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 14.17
+      },
+      {
+        "fn": "(idle)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 13.8
+      },
+      {
+        "fn": "Nr",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 32,
+        "selfPercent": 8.13
+      },
+      {
+        "fn": "open",
+        "url": "",
+        "line": -1,
+        "selfPercent": 4.71
+      },
+      {
+        "fn": "transaction",
+        "url": "",
+        "line": -1,
+        "selfPercent": 1.88
+      },
+      {
+        "fn": "Nr",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 32,
+        "selfPercent": 1.45
+      },
+      {
+        "fn": "setAttribute",
+        "url": "",
+        "line": -1,
+        "selfPercent": 1.02
+      },
+      {
+        "fn": "getAll",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.84
+      },
+      {
+        "fn": "Nr",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 32,
+        "selfPercent": 0.75
+      },
+      {
+        "fn": "(garbage collector)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.7
+      },
+      {
+        "fn": "get value",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.57
+      },
+      {
+        "fn": "removeAttribute",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.5
+      },
+      {
+        "fn": "removeAttribute",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.39
+      },
+      {
+        "fn": "yn",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 78,
+        "selfPercent": 0.36
+      },
+      {
+        "fn": "i.onsuccess",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 58,
+        "selfPercent": 0.3
+      },
+      {
+        "fn": "E1",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 78,
+        "selfPercent": 0.29
+      },
+      {
+        "fn": "e.onsuccess",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 78,
+        "selfPercent": 0.22
+      },
+      {
+        "fn": "Nr",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 32,
+        "selfPercent": 0.21
+      },
+      {
+        "fn": "Vo",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 32,
+        "selfPercent": 0.18
+      }
+    ],
+    "large-1000": [
+      {
+        "fn": "Nr",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 32,
+        "selfPercent": 33.3
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 9.01
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 6.32
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 6.21
+      },
+      {
+        "fn": "Nr",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 32,
+        "selfPercent": 6.16
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 4.71
+      },
+      {
+        "fn": "(program)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 4.28
+      },
+      {
+        "fn": "Nr",
+        "url": "/assets/index-Ch3Bj8SE.js",
+        "line": 32,
+        "selfPercent": 3.14
+      },
+      {
+        "fn": "visitChild",
+        "url": "",
+        "line": 318,
+        "selfPercent": 2.62
+      },
+      {
+        "fn": "(idle)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 2.61
+      },
+      {
+        "fn": "removeAttribute",
+        "url": "",
+        "line": -1,
+        "selfPercent": 2.41
+      },
+      {
+        "fn": "removeAttribute",
+        "url": "",
+        "line": -1,
+        "selfPercent": 1.88
+      },
+      {
+        "fn": "visitChild",
+        "url": "",
+        "line": 318,
+        "selfPercent": 1.55
+      },
+      {
+        "fn": "open",
+        "url": "",
+        "line": -1,
+        "selfPercent": 1.35
+      },
+      {
+        "fn": "visitChild",
+        "url": "",
+        "line": 318,
+        "selfPercent": 1.32
+      },
+      {
+        "fn": "setAttribute",
+        "url": "",
+        "line": -1,
+        "selfPercent": 1.21
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 1.1
+      },
+      {
+        "fn": "visitNode",
+        "url": "",
+        "line": 266,
+        "selfPercent": 0.94
+      },
+      {
+        "fn": "visitChild",
+        "url": "",
+        "line": 318,
+        "selfPercent": 0.94
+      },
+      {
+        "fn": "(garbage collector)",
+        "url": "",
+        "line": -1,
+        "selfPercent": 0.76
+      }
+    ]
+  }
+}
