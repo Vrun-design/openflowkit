@@ -17,6 +17,8 @@ const pickConnector = vi.fn((): string | null => null);
 const pickConnectorHandle = vi.fn((): unknown => null);
 const setConnectorSelection = vi.fn();
 const setConnectorPreview = vi.fn();
+const getNodeScreenBounds = vi.fn((): unknown => ({ x: 10, y: 20, width: 160, height: 60 }));
+const setGraph = vi.fn();
 const setEdges = vi.fn();
 const setSelectedEdgeId = vi.fn();
 const setNodes = vi.fn();
@@ -42,6 +44,17 @@ const { projectProductionTransform } = vi.hoisted(() => ({
 }));
 vi.mock('../application/active-document/productionTransformBridge', () => ({
   projectProductionTransform,
+}));
+
+const { applyProductionNodeMutation } = vi.hoisted(() => ({
+  applyProductionNodeMutation: vi.fn((..._args: unknown[]) => ({
+    changed: true, selectedNodeId: 'node-1',
+    projection: { nodes: [{ id: 'renamed' }], edges: [] },
+  })),
+}));
+vi.mock('../application/active-document/productionNodeBridge', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  applyProductionNodeMutation,
 }));
 
 const { projectProductionConnectorEdit } = vi.hoisted(() => ({
@@ -92,7 +105,7 @@ vi.mock('@/store', () => ({
     nodes: storeNodes,
     edges: [], documents: [{ id: 'doc' }], activeDocumentId: 'doc',
     tabs: [{ id: 'page-1' }], activeTabId: 'page-1', layers: [],
-    setNodes, setSelectedNodeId, recordHistoryV2, setEdges, setSelectedEdgeId,
+    setNodes, setSelectedNodeId, recordHistoryV2, setEdges, setSelectedEdgeId, setGraph,
   }),
 }));
 
@@ -118,6 +131,7 @@ vi.mock('../infrastructure/pixi/PixiRendererHost', () => ({
     pickConnectorHandle = pickConnectorHandle;
     setConnectorSelection = setConnectorSelection;
     setConnectorPreview = setConnectorPreview;
+    getNodeScreenBounds = getNodeScreenBounds;
     getContentBounds = getContentBounds;
     getViewportSize() { return { width: 800, height: 600 }; }
   },
@@ -139,8 +153,15 @@ describe('OpenCanvas editor surface', () => {
     constructed.length = 0;
     [setCamera, setPage, resize, destroy, mount, setSelection, setMarquee,
       setNodes, setSelectedNodeId, setTransformPreview, recordHistoryV2,
-      setConnectorSelection, setConnectorPreview, setEdges, setSelectedEdgeId,
+      setConnectorSelection, setConnectorPreview, setEdges, setSelectedEdgeId, setGraph,
     ].forEach((spy) => spy.mockClear());
+    getNodeScreenBounds.mockReset();
+    getNodeScreenBounds.mockReturnValue({ x: 10, y: 20, width: 160, height: 60 });
+    applyProductionNodeMutation.mockClear();
+    applyProductionNodeMutation.mockReturnValue({
+      changed: true, selectedNodeId: 'node-1',
+      projection: { nodes: [{ id: 'renamed' }], edges: [] },
+    });
     pickConnector.mockReset();
     pickConnector.mockReturnValue(null);
     pickConnectorHandle.mockReset();
@@ -501,5 +522,77 @@ describe('OpenCanvas editor surface', () => {
     fireEvent.pointerUp(surface, { pointerId: 2, clientX: 120, clientY: 90 });
     expect(projectProductionConnectorEdit).not.toHaveBeenCalled();
     expect(recordHistoryV2).not.toHaveBeenCalled();
+  });
+
+  it('opens the text editor over a double-clicked node with its current label', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.doubleClick(surface, { clientX: 10, clientY: 10 });
+
+    const editor = screen.getByRole('textbox', { name: 'Edit node label' }) as HTMLTextAreaElement;
+    expect(editor.value).toBe('Process');
+    expect(editor.style.left).toBe('10px');
+    expect(editor.style.width).toBe('160px');
+  });
+
+  it('commits a rename on Enter with one history entry', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.doubleClick(surface, { clientX: 10, clientY: 10 });
+
+    const editor = screen.getByRole('textbox', { name: 'Edit node label' });
+    fireEvent.change(editor, { target: { value: 'Renamed' } });
+    fireEvent.keyDown(editor, { key: 'Enter' });
+
+    expect(applyProductionNodeMutation.mock.calls.at(-1)?.[2]).toEqual({
+      kind: 'rename', nodeId: 'node-1', label: 'Renamed',
+    });
+    expect(recordHistoryV2).toHaveBeenCalledTimes(1);
+    expect(setGraph).toHaveBeenLastCalledWith([{ id: 'renamed' }], []);
+    expect(screen.queryByRole('textbox', { name: 'Edit node label' })).toBeNull();
+  });
+
+  it('commits nothing on Escape or on a blank value', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+
+    fireEvent.doubleClick(surface, { clientX: 10, clientY: 10 });
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Edit node label' }), { key: 'Escape' });
+    expect(applyProductionNodeMutation).not.toHaveBeenCalled();
+
+    fireEvent.doubleClick(surface, { clientX: 10, clientY: 10 });
+    const editor = screen.getByRole('textbox', { name: 'Edit node label' });
+    fireEvent.change(editor, { target: { value: '   ' } });
+    fireEvent.keyDown(editor, { key: 'Enter' });
+    expect(applyProductionNodeMutation).not.toHaveBeenCalled();
+  });
+
+  it('opens nothing on empty space or for a node on a locked layer', async () => {
+    const surface = await mounted();
+    pickNode.mockReturnValue(null);
+    fireEvent.doubleClick(surface, { clientX: 10, clientY: 10 });
+    expect(screen.queryByRole('textbox', { name: 'Edit node label' })).toBeNull();
+
+    scenePage.layers[0].locked = true;
+    try {
+      pickNode.mockReturnValue('node-1');
+      fireEvent.doubleClick(surface, { clientX: 10, clientY: 10 });
+      expect(screen.queryByRole('textbox', { name: 'Edit node label' })).toBeNull();
+    } finally {
+      scenePage.layers[0].locked = false;
+    }
+  });
+
+  it('keeps the open editor pinned to the node while panning', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.doubleClick(surface, { clientX: 10, clientY: 10 });
+
+    getNodeScreenBounds.mockReturnValue({ x: 70, y: 60, width: 160, height: 60 });
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 1, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 60, clientY: 40 });
+
+    expect((screen.getByRole('textbox', { name: 'Edit node label' }) as HTMLTextAreaElement)
+      .style.left).toBe('70px');
   });
 });

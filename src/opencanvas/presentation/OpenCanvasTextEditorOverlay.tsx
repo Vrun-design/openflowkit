@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Bounds2d } from '../domain/geometry/types';
+import './openCanvasTextEditorOverlay.css';
 
 interface OpenCanvasTextEditorOverlayProps {
   readonly bounds: Bounds2d;

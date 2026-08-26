@@ -7,6 +7,10 @@ import {
   projectSelectionToNodes,
 } from '../application/active-document/productionSelectionBridge';
 import { projectProductionConnectorEdit } from '../application/active-document/productionConnectorBridge';
+import { applyProductionNodeMutation } from '../application/active-document/productionNodeBridge';
+import { isNodeEditableOnLayer } from '../application/active-document/productionLayers';
+import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
+import type { Bounds2d } from '../domain/geometry/types';
 import {
   beginConnectorOperation,
   updateConnectorOperation,
@@ -41,7 +45,9 @@ import type { CanvasCamera } from '../domain/camera/types';
 import { detectWebGlCapability } from '../infrastructure/pixi/capabilities';
 import { PixiRendererHost } from '../infrastructure/pixi/PixiRendererHost';
 
-function surfacePoint(event: React.PointerEvent<HTMLDivElement>): { x: number; y: number } {
+function surfacePoint(
+  event: React.MouseEvent<HTMLDivElement>
+): { x: number; y: number } {
   const bounds = event.currentTarget.getBoundingClientRect();
   return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
 }
@@ -69,6 +75,9 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
   const selectedConnectorIdRef = useRef<string | null>(null);
   const fittedRef = useRef<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'ready' | 'failed'>('idle');
+  const [textEditor, setTextEditor] = useState<
+    { readonly nodeId: string; readonly value: string; readonly bounds: Bounds2d } | null
+  >(null);
   const capability = useMemo(() => detectWebGlCapability(), []);
 
   const state = useFlowStore(
@@ -84,6 +93,7 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
       setSelectedNodeId: current.setSelectedNodeId,
       setSelectedEdgeId: current.setSelectedEdgeId,
       setEdges: current.setEdges,
+      setGraph: current.setGraph,
       recordHistoryV2: current.recordHistoryV2,
     }))
   );
@@ -95,6 +105,11 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
   const applyCamera = useCallback((camera: CanvasCamera) => {
     cameraRef.current = camera;
     hostRef.current?.setCamera(camera);
+    setTextEditor((current) => {
+      if (!current) return null;
+      const bounds = hostRef.current?.getNodeScreenBounds(current.nodeId);
+      return bounds ? { ...current, bounds } : null;
+    });
   }, []);
 
   const applySelection = useCallback((selection: CanvasSelection) => {
@@ -147,6 +162,21 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
       if (!result.changed) return;
       state.recordHistoryV2();
       state.setEdges(result.projection.edges);
+    } catch {
+      setStatus('failed');
+    }
+  }, [activePage, projection, state]);
+
+  const commitRename = useCallback((nodeId: string, label: string) => {
+    if (projection.status !== 'ready' || !activePage) return;
+    try {
+      const result = applyProductionNodeMutation(
+        projection.document, activePage.id, { kind: 'rename', nodeId, label },
+        new Date().toISOString()
+      );
+      if (!result.changed) return;
+      state.recordHistoryV2();
+      state.setGraph(result.projection.nodes, result.projection.edges);
     } catch {
       setStatus('failed');
     }
@@ -372,6 +402,20 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
         hostRef.current?.setMarquee(null);
         cancelTransform();
       }}
+      onDoubleClick={(event) => {
+        const host = hostRef.current;
+        if (!host || !activePage) return;
+        const nodeId = host.pickNode(surfacePoint(event));
+        if (!nodeId || !isNodeEditableOnLayer(activePage, nodeId)) return;
+        const node = activePage.nodes.find(({ id }) => id === nodeId);
+        const bounds = host.getNodeScreenBounds(nodeId);
+        if (!node || !bounds) return;
+        setTextEditor({
+          nodeId,
+          value: typeof node.content.label === 'string' ? node.content.label : node.id,
+          bounds,
+        });
+      }}
       onWheel={(event) => {
         const host = hostRef.current;
         if (!host) return;
@@ -382,6 +426,20 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
           event.deltaY
         ));
       }}
-    />
+    >
+      {textEditor ? (
+        <OpenCanvasTextEditorOverlay
+          key={textEditor.nodeId}
+          bounds={textEditor.bounds}
+          value={textEditor.value}
+          onCancel={() => setTextEditor(null)}
+          onCommit={(label) => {
+            const { nodeId } = textEditor;
+            setTextEditor(null);
+            if (label.trim()) commitRename(nodeId, label);
+          }}
+        />
+      ) : null}
+    </div>
   );
 }

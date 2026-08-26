@@ -1,0 +1,19 @@
+/* Owned by OpenCanvasTextEditorOverlay so it renders correctly wherever it is
+   mounted, not only inside the canary page that used to define this rule. */
+.pixi-spike__text-editor {
+  position: absolute;
+  z-index: 5;
+  box-sizing: border-box;
+  min-width: 48px;
+  min-height: 32px;
+  padding: 8px 12px;
+  resize: none;
+  overflow: hidden;
+  border: 2px solid #e95420;
+  border-radius: 8px;
+  outline: none;
+  color: #1e293b;
+  background: rgb(255 255 255 / 98%);
+  box-shadow: 0 4px 16px rgb(15 23 42 / 14%);
+  font: 600 14px/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+}
