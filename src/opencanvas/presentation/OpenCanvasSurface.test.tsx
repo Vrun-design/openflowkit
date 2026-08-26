@@ -5,6 +5,13 @@ const setCamera = vi.fn();
 const setPage = vi.fn();
 const resize = vi.fn();
 const destroy = vi.fn();
+const setSelection = vi.fn();
+const setMarquee = vi.fn();
+const pickNode = vi.fn((): string | null => null);
+const pickNodesInScreenBounds = vi.fn((): readonly string[] => []);
+const screenToWorld = vi.fn((point: { x: number; y: number }) => point);
+const setNodes = vi.fn();
+const setSelectedNodeId = vi.fn();
 const getContentBounds = vi.fn(() => null as null | {
   x: number; y: number; width: number; height: number;
 });
@@ -39,10 +46,17 @@ vi.mock('../application/active-document/activeDocumentProjection', () => ({
   projectActiveDocument,
 }));
 
+const storeNodes = [
+  { id: 'node-1', type: 'process', position: { x: 0, y: 0 }, data: { label: 'One' } },
+  { id: 'node-2', type: 'process', position: { x: 0, y: 0 }, data: { label: 'Two' } },
+];
+
 vi.mock('@/store', () => ({
   useFlowStore: (selector: (state: unknown) => unknown) => selector({
-    nodes: [], edges: [], documents: [{ id: 'doc' }], activeDocumentId: 'doc',
+    nodes: storeNodes,
+    edges: [], documents: [{ id: 'doc' }], activeDocumentId: 'doc',
     tabs: [{ id: 'page-1' }], activeTabId: 'page-1', layers: [],
+    setNodes, setSelectedNodeId,
   }),
 }));
 
@@ -57,6 +71,11 @@ vi.mock('../infrastructure/pixi/PixiRendererHost', () => ({
     resize = resize;
     setPage = setPage;
     setCamera = setCamera;
+    setSelection = setSelection;
+    setMarquee = setMarquee;
+    pickNode = pickNode;
+    pickNodesInScreenBounds = pickNodesInScreenBounds;
+    screenToWorld = screenToWorld;
     getContentBounds = getContentBounds;
     getViewportSize() { return { width: 800, height: 600 }; }
   },
@@ -74,7 +93,19 @@ describe('OpenCanvas editor surface', () => {
       disconnect() {}
     });
     constructed.length = 0;
-    [setCamera, setPage, resize, destroy, mount].forEach((spy) => spy.mockClear());
+    [setCamera, setPage, resize, destroy, mount, setSelection, setMarquee,
+      setNodes, setSelectedNodeId].forEach((spy) => spy.mockClear());
+    pickNode.mockReset();
+    pickNode.mockReturnValue(null);
+    pickNodesInScreenBounds.mockReset();
+    pickNodesInScreenBounds.mockReturnValue([]);
+    screenToWorld.mockReset();
+    // A true inverse of the fitted camera, so marquee bounds anchored in world
+    // space come back as the screen rectangle the pointer actually swept.
+    screenToWorld.mockImplementation((point) => ({
+      x: (point.x - DEFAULT_CANVAS_CAMERA.x) / DEFAULT_CANVAS_CAMERA.zoom,
+      y: (point.y - DEFAULT_CANVAS_CAMERA.y) / DEFAULT_CANVAS_CAMERA.zoom,
+    }));
     mount.mockImplementation(async () => document.createElement('canvas'));
     detectWebGlCapability.mockReturnValue({ supported: true });
     getContentBounds.mockReturnValue(null);
@@ -128,14 +159,14 @@ describe('OpenCanvas editor surface', () => {
     expect(destroy).toHaveBeenCalled();
   });
 
-  it('pans on drag and zooms on wheel through the host camera', async () => {
+  it('pans on middle-drag and zooms on wheel through the host camera', async () => {
     render(<OpenCanvasSurface fallback={FALLBACK} />);
     const surface = screen.getByTestId('opencanvas-surface');
     surface.setPointerCapture = vi.fn();
     await waitFor(() => expect(setPage).toHaveBeenCalled());
 
     const before = setCamera.mock.calls.at(-1)?.[0] ?? DEFAULT_CANVAS_CAMERA;
-    fireEvent.pointerDown(surface, { pointerId: 1, clientX: 100, clientY: 100 });
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 1, clientX: 100, clientY: 100 });
     fireEvent.pointerMove(surface, { pointerId: 1, clientX: 160, clientY: 140 });
     expect(setCamera.mock.calls.at(-1)?.[0]).toMatchObject({
       x: before.x + 60, y: before.y + 40,
@@ -145,5 +176,91 @@ describe('OpenCanvas editor surface', () => {
     setCamera.mockClear();
     fireEvent.wheel(surface, { clientX: 0, clientY: 0, deltaY: -120 });
     expect(setCamera.mock.calls.at(-1)?.[0].zoom).toBeGreaterThan(1);
+  });
+
+  async function mounted() {
+    render(<OpenCanvasSurface fallback={FALLBACK} />);
+    const surface = screen.getByTestId('opencanvas-surface');
+    surface.setPointerCapture = vi.fn();
+    await waitFor(() => expect(setPage).toHaveBeenCalled());
+    setSelection.mockClear();
+    setNodes.mockClear();
+    setSelectedNodeId.mockClear();
+    return surface;
+  }
+
+  it('selects a clicked node in the renderer and in the store', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    expect(setSelection).toHaveBeenLastCalledWith(['node-1'], 'node-1');
+    expect(setNodes.mock.calls.at(-1)?.[0].map((node: { selected?: boolean }) =>
+      Boolean(node.selected))).toEqual([true, false]);
+    expect(setSelectedNodeId).toHaveBeenLastCalledWith('node-1');
+  });
+
+  it('adds to the selection on shift-click and toggles the same node back out', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    pickNode.mockReturnValue('node-2');
+    fireEvent.pointerDown(surface, { pointerId: 2, button: 0, clientX: 20, clientY: 20, shiftKey: true });
+    expect(setSelection).toHaveBeenLastCalledWith(['node-1', 'node-2'], 'node-2');
+
+    fireEvent.pointerDown(surface, { pointerId: 3, button: 0, clientX: 20, clientY: 20, metaKey: true });
+    expect(setSelection).toHaveBeenLastCalledWith(['node-1'], 'node-1');
+  });
+
+  it('marquee-selects swept nodes and clears the overlay on release', async () => {
+    pickNodesInScreenBounds.mockReturnValue(['node-1', 'node-2']);
+    const surface = await mounted();
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 120, clientY: 90 });
+    expect(setMarquee.mock.calls.at(-1)?.[0]).toMatchObject({ width: 120, height: 90 });
+
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 120, clientY: 90 });
+    expect(setMarquee).toHaveBeenLastCalledWith(null);
+    expect(setSelection).toHaveBeenLastCalledWith(['node-1', 'node-2'], 'node-2');
+  });
+
+  it('clears the selection on an empty click and on Escape', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+
+    pickNode.mockReturnValue(null);
+    fireEvent.pointerDown(surface, { pointerId: 2, button: 0, clientX: 40, clientY: 40 });
+    fireEvent.pointerUp(surface, { pointerId: 2, clientX: 40, clientY: 40 });
+    expect(setSelection).toHaveBeenLastCalledWith([], null);
+    expect(setSelectedNodeId).toHaveBeenLastCalledWith(null);
+
+    pickNode.mockReturnValue('node-2');
+    fireEvent.pointerDown(surface, { pointerId: 3, button: 0, clientX: 10, clientY: 10 });
+    expect(setSelection).toHaveBeenLastCalledWith(['node-2'], 'node-2');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(setSelection).toHaveBeenLastCalledWith([], null);
+  });
+
+  it('pans instead of selecting while Space is held', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.keyDown(window, { code: 'Space' });
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 70, clientY: 50 });
+    expect(setSelection).not.toHaveBeenCalled();
+    expect(setCamera).toHaveBeenCalled();
+    fireEvent.keyUp(window, { code: 'Space' });
+  });
+
+  it('restates the selection after the page is rebuilt', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    setSelection.mockClear();
+    fireEvent.wheel(surface, { clientX: 0, clientY: 0, deltaY: -120 });
+    await waitFor(() => expect(setPage).toHaveBeenCalled());
+    expect(setSelection.mock.calls.every(([ids]) => ids.length === 1)).toBe(true);
   });
 });
