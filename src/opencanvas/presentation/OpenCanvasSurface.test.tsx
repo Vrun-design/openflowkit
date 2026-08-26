@@ -13,6 +13,12 @@ const screenToWorld = vi.fn((point: { x: number; y: number }) => point);
 const pickTransformHandle = vi.fn((): string | null => null);
 const setTransformPreview = vi.fn();
 const recordHistoryV2 = vi.fn();
+const pickConnector = vi.fn((): string | null => null);
+const pickConnectorHandle = vi.fn((): unknown => null);
+const setConnectorSelection = vi.fn();
+const setConnectorPreview = vi.fn();
+const setEdges = vi.fn();
+const setSelectedEdgeId = vi.fn();
 const setNodes = vi.fn();
 const setSelectedNodeId = vi.fn();
 const getContentBounds = vi.fn(() => null as null | {
@@ -36,6 +42,16 @@ const { projectProductionTransform } = vi.hoisted(() => ({
 }));
 vi.mock('../application/active-document/productionTransformBridge', () => ({
   projectProductionTransform,
+}));
+
+const { projectProductionConnectorEdit } = vi.hoisted(() => ({
+  projectProductionConnectorEdit: vi.fn(() => ({
+    changed: true, projection: { edges: [{ id: 'rerouted' }] },
+  })),
+}));
+vi.mock('../application/active-document/productionConnectorBridge', async (original) => ({
+  ...(await original<Record<string, unknown>>()),
+  projectProductionConnectorEdit,
 }));
 
 const { detectWebGlCapability } = vi.hoisted(() => ({
@@ -62,7 +78,7 @@ const scenePage = {
     createProductionSceneNode('process', 'node-1', { x: 0, y: 0 }, 'default'),
     createProductionSceneNode('process', 'node-2', { x: 400, y: 0 }, 'default'),
   ],
-  connectors: [],
+  connectors: [createProductionConnector('edge-1', 'node-1', 'node-2')],
   extensions: {},
 };
 
@@ -76,7 +92,7 @@ vi.mock('@/store', () => ({
     nodes: storeNodes,
     edges: [], documents: [{ id: 'doc' }], activeDocumentId: 'doc',
     tabs: [{ id: 'page-1' }], activeTabId: 'page-1', layers: [],
-    setNodes, setSelectedNodeId, recordHistoryV2,
+    setNodes, setSelectedNodeId, recordHistoryV2, setEdges, setSelectedEdgeId,
   }),
 }));
 
@@ -98,6 +114,10 @@ vi.mock('../infrastructure/pixi/PixiRendererHost', () => ({
     screenToWorld = screenToWorld;
     pickTransformHandle = pickTransformHandle;
     setTransformPreview = setTransformPreview;
+    pickConnector = pickConnector;
+    pickConnectorHandle = pickConnectorHandle;
+    setConnectorSelection = setConnectorSelection;
+    setConnectorPreview = setConnectorPreview;
     getContentBounds = getContentBounds;
     getViewportSize() { return { width: 800, height: 600 }; }
   },
@@ -105,6 +125,7 @@ vi.mock('../infrastructure/pixi/PixiRendererHost', () => ({
 
 import { DEFAULT_CANVAS_CAMERA } from '../domain/camera/camera';
 import { createProductionSceneNode } from '../application/active-document/productionNodeCatalog';
+import { createProductionConnector } from '../application/active-document/productionConnectorBridge';
 import { OpenCanvasSurface } from './OpenCanvasSurface';
 
 const FALLBACK = <div data-testid="react-flow-fallback" />;
@@ -118,11 +139,20 @@ describe('OpenCanvas editor surface', () => {
     constructed.length = 0;
     [setCamera, setPage, resize, destroy, mount, setSelection, setMarquee,
       setNodes, setSelectedNodeId, setTransformPreview, recordHistoryV2,
+      setConnectorSelection, setConnectorPreview, setEdges, setSelectedEdgeId,
     ].forEach((spy) => spy.mockClear());
+    pickConnector.mockReset();
+    pickConnector.mockReturnValue(null);
+    pickConnectorHandle.mockReset();
+    pickConnectorHandle.mockReturnValue(null);
     pickTransformHandle.mockReset();
     pickTransformHandle.mockReturnValue(null);
     projectProductionTransform.mockClear();
     projectProductionTransform.mockReturnValue({ nodes: [{ id: 'moved' }] });
+    projectProductionConnectorEdit.mockClear();
+    projectProductionConnectorEdit.mockReturnValue({
+      changed: true, projection: { edges: [{ id: 'rerouted' }] },
+    });
     pickNode.mockReset();
     pickNode.mockReturnValue(null);
     pickNodesInScreenBounds.mockReset();
@@ -375,6 +405,101 @@ describe('OpenCanvas editor surface', () => {
     fireEvent.pointerUp(surface, { pointerId: 1, clientX: 90, clientY: 70 });
 
     await waitFor(() => expect(screen.getByTestId('react-flow-fallback')).toBeTruthy());
+    expect(recordHistoryV2).not.toHaveBeenCalled();
+  });
+
+  async function withSelectedConnector(surface: HTMLElement) {
+    pickConnector.mockReturnValue('edge-1');
+    fireEvent.pointerDown(surface, { pointerId: 9, button: 0, clientX: 50, clientY: 50 });
+    fireEvent.pointerUp(surface, { pointerId: 9, clientX: 50, clientY: 50 });
+    pickConnector.mockReturnValue(null);
+  }
+
+  it('selects a clicked connector and clears the node selection', async () => {
+    const surface = await mounted();
+    await withSelectedConnector(surface);
+
+    expect(setConnectorSelection).toHaveBeenLastCalledWith('edge-1', null);
+    expect(setSelectedEdgeId).toHaveBeenLastCalledWith('edge-1');
+    expect(setSelection).toHaveBeenLastCalledWith([], null);
+  });
+
+  it('clears the connector selection when a node is clicked', async () => {
+    const surface = await mounted();
+    await withSelectedConnector(surface);
+    setSelectedEdgeId.mockClear();
+
+    pickNode.mockReturnValue('node-1');
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    expect(setSelectedEdgeId).toHaveBeenLastCalledWith(null);
+  });
+
+  it('does not pick a handle while no connector is selected', async () => {
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    expect(pickConnectorHandle).not.toHaveBeenCalled();
+  });
+
+  it('reroutes a waypoint handle and commits once with one history entry', async () => {
+    const surface = await mounted();
+    await withSelectedConnector(surface);
+    pickConnectorHandle.mockReturnValue({ kind: 'waypoint', index: 0, point: { x: 0, y: 0 } });
+    recordHistoryV2.mockClear();
+
+    fireEvent.pointerDown(surface, { pointerId: 2, button: 0, clientX: 50, clientY: 50 });
+    fireEvent.pointerMove(surface, { pointerId: 2, clientX: 120, clientY: 90 });
+    expect(setConnectorPreview.mock.calls.at(-1)?.[0]).toBeTruthy();
+
+    fireEvent.pointerUp(surface, { pointerId: 2, clientX: 120, clientY: 90 });
+    expect(projectProductionConnectorEdit).toHaveBeenCalledTimes(1);
+    expect(recordHistoryV2).toHaveBeenCalledTimes(1);
+    expect(setEdges).toHaveBeenLastCalledWith([{ id: 'rerouted' }]);
+    expect(setConnectorPreview).toHaveBeenLastCalledWith(null);
+  });
+
+  it('reconnects an endpoint to the node under the pointer and leaves it alone over empty space', async () => {
+    const surface = await mounted();
+    await withSelectedConnector(surface);
+    pickConnectorHandle.mockReturnValue({ kind: 'endpoint', role: 'target' });
+
+    fireEvent.pointerDown(surface, { pointerId: 2, button: 0, clientX: 50, clientY: 50 });
+    pickNode.mockReturnValue('node-1');
+    fireEvent.pointerMove(surface, { pointerId: 2, clientX: 60, clientY: 60 });
+    expect(setConnectorPreview.mock.calls.at(-1)?.[0].target.nodeId).toBe('node-1');
+
+    pickNode.mockReturnValue(null);
+    fireEvent.pointerMove(surface, { pointerId: 2, clientX: 900, clientY: 900 });
+    expect(setConnectorPreview.mock.calls.at(-1)?.[0].target.nodeId).toBe('node-2');
+  });
+
+  it('writes nothing when the connector commit reports no change', async () => {
+    projectProductionConnectorEdit.mockReturnValue({ changed: false, projection: { edges: [] } });
+    const surface = await mounted();
+    await withSelectedConnector(surface);
+    pickConnectorHandle.mockReturnValue({ kind: 'waypoint', index: 0, point: { x: 0, y: 0 } });
+    recordHistoryV2.mockClear();
+    setEdges.mockClear();
+
+    fireEvent.pointerDown(surface, { pointerId: 2, button: 0, clientX: 50, clientY: 50 });
+    fireEvent.pointerMove(surface, { pointerId: 2, clientX: 120, clientY: 90 });
+    fireEvent.pointerUp(surface, { pointerId: 2, clientX: 120, clientY: 90 });
+    expect(recordHistoryV2).not.toHaveBeenCalled();
+    expect(setEdges).not.toHaveBeenCalled();
+  });
+
+  it('cancels a connector drag exactly on Escape', async () => {
+    const surface = await mounted();
+    await withSelectedConnector(surface);
+    pickConnectorHandle.mockReturnValue({ kind: 'waypoint', index: 0, point: { x: 0, y: 0 } });
+    recordHistoryV2.mockClear();
+
+    fireEvent.pointerDown(surface, { pointerId: 2, button: 0, clientX: 50, clientY: 50 });
+    fireEvent.pointerMove(surface, { pointerId: 2, clientX: 120, clientY: 90 });
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(setConnectorPreview).toHaveBeenLastCalledWith(null);
+
+    fireEvent.pointerUp(surface, { pointerId: 2, clientX: 120, clientY: 90 });
+    expect(projectProductionConnectorEdit).not.toHaveBeenCalled();
     expect(recordHistoryV2).not.toHaveBeenCalled();
   });
 });

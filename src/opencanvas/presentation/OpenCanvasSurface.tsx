@@ -2,7 +2,17 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow';
 import { useFlowStore } from '@/store';
 import { projectActiveDocument } from '../application/active-document/activeDocumentProjection';
-import { projectSelectionToNodes } from '../application/active-document/productionSelectionBridge';
+import {
+  projectConnectorSelectionToEdges,
+  projectSelectionToNodes,
+} from '../application/active-document/productionSelectionBridge';
+import { projectProductionConnectorEdit } from '../application/active-document/productionConnectorBridge';
+import {
+  beginConnectorOperation,
+  updateConnectorOperation,
+  type ConnectorPointerOperation,
+} from './pixiConnectorOperations';
+import type { ConnectorEditHandle } from '../domain/connectors/editing';
 import {
   addToSelection,
   clearSelection,
@@ -55,6 +65,8 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
   const spacePanRef = useRef(false);
   const transformRef = useRef<TransformPointerOperation | null>(null);
   const pendingToggleRef = useRef<string | null>(null);
+  const connectorRef = useRef<ConnectorPointerOperation | null>(null);
+  const selectedConnectorIdRef = useRef<string | null>(null);
   const fittedRef = useRef<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'ready' | 'failed'>('idle');
   const capability = useMemo(() => detectWebGlCapability(), []);
@@ -70,6 +82,8 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
       layers: current.layers,
       setNodes: current.setNodes,
       setSelectedNodeId: current.setSelectedNodeId,
+      setSelectedEdgeId: current.setSelectedEdgeId,
+      setEdges: current.setEdges,
       recordHistoryV2: current.recordHistoryV2,
     }))
   );
@@ -92,6 +106,17 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
   }, [state]);
 
 
+  const applyConnectorSelection = useCallback((
+    connectorId: string | null,
+    handle: ConnectorEditHandle | null = null
+  ) => {
+    selectedConnectorIdRef.current = connectorId;
+    hostRef.current?.setConnectorSelection(connectorId, handle);
+    const projected = projectConnectorSelectionToEdges(state.edges, connectorId);
+    if (projected.edges) state.setEdges(projected.edges);
+    state.setSelectedEdgeId(projected.selectedEdgeId);
+  }, [state]);
+
   const activePage = projection.status === 'ready'
     ? projection.document.pages.find(({ id }) => id === state.activePageId)
       ?? projection.document.pages[0] ?? null
@@ -111,17 +136,35 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
     }
   }, [activePage, projection, state]);
 
+  const commitConnector = useCallback((operation: ConnectorPointerOperation) => {
+    hostRef.current?.setConnectorPreview(null);
+    if (projection.status !== 'ready' || !activePage) return;
+    try {
+      const result = projectProductionConnectorEdit(
+        projection.document, activePage.id, operation.before, operation.preview,
+        new Date().toISOString()
+      );
+      if (!result.changed) return;
+      state.recordHistoryV2();
+      state.setEdges(result.projection.edges);
+    } catch {
+      setStatus('failed');
+    }
+  }, [activePage, projection, state]);
+
   const cancelTransform = useCallback(() => {
     transformRef.current = null;
     pendingToggleRef.current = null;
+    connectorRef.current = null;
     hostRef.current?.setTransformPreview(null);
+    hostRef.current?.setConnectorPreview(null);
   }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.code === 'Space') spacePanRef.current = true;
       else if (event.key === 'Escape') {
-        if (transformRef.current) cancelTransform();
+        if (transformRef.current || connectorRef.current) cancelTransform();
         else applySelection(clearSelection());
       }
     };
@@ -203,9 +246,23 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
           return;
         }
         const additive = event.shiftKey || event.metaKey || event.ctrlKey;
+        // Handles are only drawn for the selected connector, so picking one
+        // that is not drawn would start a drag on an invisible target.
+        const selectedConnector = selectedConnectorIdRef.current && activePage
+          ? activePage.connectors.find(({ id }) => id === selectedConnectorIdRef.current) ?? null
+          : null;
+        const connectorHandle = selectedConnector ? host.pickConnectorHandle(screen) : null;
+        if (selectedConnector && connectorHandle && activePage) {
+          host.setConnectorSelection(selectedConnector.id, connectorHandle);
+          connectorRef.current = beginConnectorOperation(
+            event.pointerId, activePage, selectedConnector, connectorHandle
+          );
+          return;
+        }
         const handle = host.pickTransformHandle(screen);
         const nodeId = handle ? null : host.pickNode(screen);
         if (handle || nodeId) {
+          if (nodeId) applyConnectorSelection(null);
           const wasSelected = nodeId ? selectionRef.current.nodeIds.includes(nodeId) : false;
           // Deselecting on press would move the wrong set on the drag that follows.
           pendingToggleRef.current = nodeId && wasSelected && additive ? nodeId : null;
@@ -218,6 +275,12 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
               event.pointerId, activePage, next.nodeIds, handle, host.screenToWorld(screen)
             );
           }
+          return;
+        }
+        const connectorId = host.pickConnector(screen);
+        if (connectorId) {
+          applySelection(clearSelection());
+          applyConnectorSelection(connectorId);
           return;
         }
         marqueeRef.current = {
@@ -240,6 +303,18 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
           return;
         }
         if (!host) return;
+        const connector = connectorRef.current;
+        if (connector && connector.pointerId === event.pointerId) {
+          const world = host.screenToWorld(screen);
+          const next = updateConnectorOperation(
+            connector,
+            world,
+            connector.handle.kind === 'endpoint' ? host.pickNode(screen) : null
+          );
+          connectorRef.current = next;
+          host.setConnectorPreview(next.preview);
+          return;
+        }
         const transform = transformRef.current;
         if (transform && transform.pointerId === event.pointerId) {
           const next = updateTransformOperation(
@@ -257,6 +332,12 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
       onPointerUp={(event) => {
         if (panRef.current?.pointerId === event.pointerId) {
           panRef.current = null;
+          return;
+        }
+        const connector = connectorRef.current;
+        if (connector && connector.pointerId === event.pointerId) {
+          connectorRef.current = null;
+          commitConnector(connector);
           return;
         }
         const transform = transformRef.current;

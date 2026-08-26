@@ -1,4 +1,4 @@
-import type { FlowNode } from '@/lib/types';
+import type { FlowEdge, FlowNode } from '@/lib/types';
 import type { CanvasSelection } from '../selection/selection';
 
 export interface ProjectedSelection {
@@ -26,4 +26,25 @@ export function projectSelectionToNodes(
     return { ...node, selected };
   });
   return { nodes: changed ? next : null, selectedNodeId: selection.primaryNodeId };
+}
+
+export interface ProjectedConnectorSelection {
+  /** Null when every edge's `selected` flag already matches, so no write is needed. */
+  readonly edges: FlowEdge[] | null;
+  readonly selectedEdgeId: string | null;
+}
+
+/** The edge counterpart of `projectSelectionToNodes`. */
+export function projectConnectorSelectionToEdges(
+  edges: readonly FlowEdge[],
+  connectorId: string | null
+): ProjectedConnectorSelection {
+  let changed = false;
+  const next = edges.map((edge) => {
+    const selected = edge.id === connectorId;
+    if (Boolean(edge.selected) === selected) return edge;
+    changed = true;
+    return { ...edge, selected };
+  });
+  return { edges: changed ? next : null, selectedEdgeId: connectorId };
 }
