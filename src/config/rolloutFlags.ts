@@ -16,13 +16,11 @@ export type RolloutFlagKey =
   | 'openCanvasWireframeNodesV1'
   | 'openCanvasA11yV1'
   | 'openCanvasCanonicalCollaboration'
-  | 'openCanvasAiPreviewV1'
   | 'openCanvasCrashRecoveryV1'
   | 'openCanvasPersistedWorkspaceRepairV1'
   | 'openCanvasContextualCommandsV1'
   | 'openCanvasCustomShortcutsV1'
   | 'collaborationEnabled'
-  | 'architectureLintEnabled'
   | 'importSql'
   | 'importOpenApi'
   | 'importInfraTerraformHcl'
@@ -139,12 +137,6 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     defaultEnabled: false,
     description: 'Canonical command collaboration in the OpenCanvas production canary',
   },
-  openCanvasAiPreviewV1: {
-    key: 'openCanvasAiPreviewV1',
-    envVar: 'VITE_OPEN_CANVAS_AI_PREVIEW_V1',
-    defaultEnabled: false,
-    description: 'Validated canonical AI proposal previews and per-change decisions',
-  },
   openCanvasCrashRecoveryV1: {
     key: 'openCanvasCrashRecoveryV1',
     envVar: 'VITE_OPEN_CANVAS_CRASH_RECOVERY_V1',
@@ -176,12 +168,6 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     // Set VITE_COLLABORATION_ENABLED=true to re-enable for local testing.
     defaultEnabled: false,
     description: 'WebRTC peer collaboration (beta, disabled)',
-  },
-  architectureLintEnabled: {
-    key: 'architectureLintEnabled',
-    envVar: 'VITE_ARCHITECTURE_LINT_ENABLED',
-    defaultEnabled: true,
-    description: 'Architecture diagram lint rules panel',
   },
   importSql: {
     key: 'importSql',
@@ -230,6 +216,14 @@ function readBooleanEnvFlag(envValue: string | undefined, defaultEnabled: boolea
   return defaultEnabled;
 }
 
+export const ROLLOUT_FLAG_KEYS = Object.keys(
+  ROLLOUT_FLAG_DEFINITIONS
+) as readonly RolloutFlagKey[];
+
+export function getRolloutFlagDefinition(key: RolloutFlagKey): RolloutFlagDefinition {
+  return ROLLOUT_FLAG_DEFINITIONS[key];
+}
+
 export function isRolloutFlagEnabled(key: RolloutFlagKey): boolean {
   const definition = ROLLOUT_FLAG_DEFINITIONS[key];
   if (!definition.envVar) {
@@ -257,7 +251,6 @@ export const ROLLOUT_FLAGS: Record<RolloutFlagKey, boolean> = {
   openCanvasWireframeNodesV1: isRolloutFlagEnabled('openCanvasWireframeNodesV1'),
   openCanvasA11yV1: isRolloutFlagEnabled('openCanvasA11yV1'),
   openCanvasCanonicalCollaboration: isRolloutFlagEnabled('openCanvasCanonicalCollaboration'),
-  openCanvasAiPreviewV1: isRolloutFlagEnabled('openCanvasAiPreviewV1'),
   openCanvasCrashRecoveryV1: isRolloutFlagEnabled('openCanvasCrashRecoveryV1'),
   openCanvasPersistedWorkspaceRepairV1: isRolloutFlagEnabled(
     'openCanvasPersistedWorkspaceRepairV1'
@@ -265,7 +258,6 @@ export const ROLLOUT_FLAGS: Record<RolloutFlagKey, boolean> = {
   openCanvasContextualCommandsV1: isRolloutFlagEnabled('openCanvasContextualCommandsV1'),
   openCanvasCustomShortcutsV1: isRolloutFlagEnabled('openCanvasCustomShortcutsV1'),
   collaborationEnabled: isRolloutFlagEnabled('collaborationEnabled'),
-  architectureLintEnabled: isRolloutFlagEnabled('architectureLintEnabled'),
   importSql: isRolloutFlagEnabled('importSql'),
   importOpenApi: isRolloutFlagEnabled('importOpenApi'),
   importInfraTerraformHcl: isRolloutFlagEnabled('importInfraTerraformHcl'),
