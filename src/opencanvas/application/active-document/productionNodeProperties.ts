@@ -105,6 +105,10 @@ const FAMILY_FIELDS: Readonly<Record<string, readonly NodePropertyField[]>> = {
   mobile: [{ key: 'variant', label: 'Variant', type: 'text' }],
 };
 
+/** Every kind the inspector can describe. The insertion catalog must cover all
+ *  of them, so the inspector cannot describe a kind the canvas cannot create. */
+export const NODE_PROPERTY_FAMILY_KINDS: readonly string[] = Object.keys(FAMILY_FIELDS);
+
 export function nodePropertyFields(node: SceneNode): readonly NodePropertyField[] {
   const specific = FAMILY_FIELDS[node.kind] ?? [];
   const specificKeys = new Set(specific.map(({ key }) => key));

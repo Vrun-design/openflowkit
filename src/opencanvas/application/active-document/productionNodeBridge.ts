@@ -4,6 +4,7 @@ import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/documen
 import type { Point2d } from '../../domain/geometry/types';
 import type { ReactFlowProjection } from '../../infrastructure/reactflow/contracts';
 import { projectSceneDocumentToReactFlow } from '../../infrastructure/reactflow/toReactFlow';
+import { createProductionSceneNode } from './productionNodeCatalog';
 
 export type ProductionNodeMutation =
   | { readonly kind: 'rename'; readonly nodeId: string; readonly label: string }
@@ -121,41 +122,21 @@ export function buildProductionNodeMutationCommand(page: ScenePage, mutation: Pr
   }
 }
 
+export type ProductionFreeformKind = 'pen' | 'highlighter' | 'line' | 'arrow' | 'sticky' | 'callout';
+
 export function createProductionProcessNode(
   id: string,
   point: Point2d,
   layerId: string,
   label = 'Process'
 ): SceneNode {
-  if (!id) throw new TypeError('Node id must not be empty.');
-  return {
-    id, kind: 'process', parentId: null, layerId, zIndex: 0,
-    transform: { translation: point, rotationRadians: 0, scale: { x: 1, y: 1 } },
-    size: { width: 168, height: 72 }, content: { label }, appearance: {}, ports: [],
-    metadata: {}, extensions: {},
-  };
+  return createProductionSceneNode('process', id, point, layerId, { label });
 }
-
-export type ProductionFreeformKind = 'pen' | 'highlighter' | 'line' | 'arrow' | 'sticky' | 'callout';
 
 export function createProductionFreeformNode(
   id: string, kind: ProductionFreeformKind, point: Point2d, layerId: string
 ): SceneNode {
-  const stroke = kind === 'pen' || kind === 'highlighter' || kind === 'line' || kind === 'arrow';
-  return {
-    id, kind, parentId: null, layerId, zIndex: 0,
-    transform: { translation: point, rotationRadians: 0, scale: { x: 1, y: 1 } },
-    size: stroke ? { width: 180, height: 80 } : { width: 180, height: 120 },
-    content: stroke ? {
-      points: kind === 'pen' || kind === 'highlighter'
-        ? [{ x: 0, y: 50 }, { x: 35, y: 20 }, { x: 70, y: 60 }, { x: 110, y: 25 }, { x: 180, y: 45 }]
-        : [{ x: 0, y: 40 }, { x: 180, y: 40 }],
-      strokeColor: kind === 'highlighter' ? '#fde047' : '#334155',
-      strokeWidth: kind === 'highlighter' ? 16 : 3,
-      transparency: kind === 'highlighter' ? 0.45 : 1,
-    } : { label: kind === 'sticky' ? 'Sticky note' : 'Callout', subLabel: 'Add a note…' },
-    appearance: {}, ports: [], metadata: {}, extensions: {},
-  };
+  return createProductionSceneNode(kind, id, point, layerId);
 }
 
 export function applyProductionNodeMutation(

@@ -37,7 +37,7 @@ vi.mock('@/config/rolloutFlags', () => ({
     openCanvasArchitectureNodesV1: true, openCanvasContainerNodesV1: true,
     openCanvasClassEntityNodesV1: true, openCanvasMindmapJourneyNodesV1: true,
     openCanvasSequenceNodesV1: true, openCanvasWireframeNodesV1: true,
-    openCanvasA11yV1: true,
+    openCanvasA11yV1: true, openCanvasNodeInsertionV1: true,
   },
 }));
 const { projectProductionTransform } = vi.hoisted(() => ({
@@ -143,6 +143,7 @@ vi.mock('../infrastructure/pixi/PixiRendererHost', () => ({
   },
 }));
 
+import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { OpenCanvasDocumentPage } from './OpenCanvasDocumentPage';
 
 describe('OpenCanvas production canary interaction', () => {
@@ -694,6 +695,43 @@ describe('OpenCanvas production canary interaction', () => {
     });
     expect(recordHistoryV2).toHaveBeenCalledTimes(2);
     expect(setGraph).toHaveBeenCalledTimes(2);
+  });
+
+  it('inserts any catalog family through the same node mutation bridge', async () => {
+    render(
+      <MemoryRouter initialEntries={['/flow/document-1?renderer=opencanvas']}>
+        <Routes><Route path="/flow/:flowId" element={<OpenCanvasDocumentPage />} /></Routes>
+      </MemoryRouter>
+    );
+    applyProductionNodeMutation.mockClear();
+
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Node to insert' }), {
+      target: { value: 'swimlane' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Insert node' }));
+
+    const mutation = applyProductionNodeMutation.mock.calls[0][2] as {
+      kind: string; node: { kind: string; size: { width: number } };
+    };
+    expect(mutation.kind).toBe('insert');
+    expect(mutation.node.kind).toBe('swimlane');
+    expect(mutation.node.size.width).toBe(640);
+  });
+
+  it('hides the insertion catalog when its flag is off', async () => {
+    ROLLOUT_FLAGS.openCanvasNodeInsertionV1 = false;
+    try {
+      render(
+        <MemoryRouter initialEntries={['/flow/document-1?renderer=opencanvas']}>
+          <Routes><Route path="/flow/:flowId" element={<OpenCanvasDocumentPage />} /></Routes>
+        </MemoryRouter>
+      );
+      expect(await screen.findByRole('button', { name: 'Add process node' })).toBeTruthy();
+      expect(screen.queryByRole('combobox', { name: 'Node to insert' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Insert node' })).toBeNull();
+    } finally {
+      ROLLOUT_FLAGS.openCanvasNodeInsertionV1 = true;
+    }
   });
 
   it('exposes production undo and redo through buttons and keyboard shortcuts', async () => {

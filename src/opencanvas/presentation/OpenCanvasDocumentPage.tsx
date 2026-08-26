@@ -11,6 +11,10 @@ import {
   projectProductionConnectorEdit,
 } from '../application/active-document/productionConnectorBridge';
 import {
+  PRODUCTION_NODE_CATALOG,
+  createProductionSceneNode,
+} from '../application/active-document/productionNodeCatalog';
+import {
   applyProductionNodeMutation,
   buildProductionNodeMutationCommand,
   createProductionProcessNode,
@@ -180,6 +184,13 @@ function touchPointerIds(gesture: TouchCameraGesture): readonly number[] {
     : gesture.pointers.map((pointer) => pointer.id);
 }
 
+const INSERT_CATALOG_GROUPS = [
+  ...PRODUCTION_NODE_CATALOG.reduce((groups, entry) => {
+    groups.set(entry.group, [...(groups.get(entry.group) ?? []), entry]);
+    return groups;
+  }, new Map<string, (typeof PRODUCTION_NODE_CATALOG)[number][]>()),
+];
+
 export function OpenCanvasDocumentPage(): React.JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
@@ -214,6 +225,9 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
   const [selectedConnectorId, setSelectedConnectorId] = useState<string | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [drawingTool, setDrawingTool] = useState<DrawingTool | null>(null);
+  const [insertCatalogId, setInsertCatalogId] = useState<string>(
+    PRODUCTION_NODE_CATALOG[0]!.id
+  );
   const [textEditor, setTextEditor] = useState<ActiveTextEditor | null>(null);
   const [canRecallPreviousCamera, setCanRecallPreviousCamera] = useState(false);
   const [renderDiagnostics, setRenderDiagnostics] = useState<ReturnType<
@@ -834,6 +848,47 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
             ) });
           }}>Add {kind}</button>
         ))}
+        {ROLLOUT_FLAGS.openCanvasNodeInsertionV1 ? (
+          <>
+            <select
+              aria-label="Node to insert"
+              value={insertCatalogId}
+              onChange={(event) => setInsertCatalogId(event.target.value)}
+            >
+              {INSERT_CATALOG_GROUPS.map(([group, entries]) => (
+                <optgroup key={group} label={group}>
+                  {entries.map((entry) => (
+                    <option key={entry.id} value={entry.id}>{entry.label}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={projection.status !== 'ready'}
+              onClick={() => {
+                if (projection.status !== 'ready') return;
+                const page = activeScenePage!;
+                const viewport = hostRef.current?.getViewportSize() ?? { width: 800, height: 600 };
+                const point = hostRef.current?.screenToWorld({
+                  x: viewport.width / 2,
+                  y: viewport.height / 2,
+                }) ?? { x: 0, y: 0 };
+                commitNodeMutation({
+                  kind: 'insert',
+                  node: createProductionSceneNode(
+                    insertCatalogId,
+                    `opencanvas-${insertCatalogId}-${crypto.randomUUID()}`,
+                    point,
+                    page.layers[0]?.id ?? 'default'
+                  ),
+                });
+              }}
+            >
+              Insert node
+            </button>
+          </>
+        ) : null}
         {(['pen', 'highlighter', 'line', 'arrow'] as const).map((tool) => (
           <button key={`draw-${tool}`} type="button" aria-pressed={drawingTool === tool}
             onClick={() => setDrawingTool((current) => current === tool ? null : tool)}>Draw {tool}</button>

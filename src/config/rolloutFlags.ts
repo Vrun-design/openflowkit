@@ -20,6 +20,7 @@ export type RolloutFlagKey =
   | 'openCanvasPersistedWorkspaceRepairV1'
   | 'openCanvasContextualCommandsV1'
   | 'openCanvasCustomShortcutsV1'
+  | 'openCanvasNodeInsertionV1'
   | 'collaborationEnabled'
   | 'importSql'
   | 'importOpenApi'
@@ -161,6 +162,12 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     defaultEnabled: false,
     description: 'User-remappable keyboard bindings and printable reference sheet',
   },
+  openCanvasNodeInsertionV1: {
+    key: 'openCanvasNodeInsertionV1',
+    envVar: 'VITE_OPEN_CANVAS_NODE_INSERTION_V1',
+    defaultEnabled: false,
+    description: 'Full node-family insertion catalog in the OpenCanvas canary',
+  },
   collaborationEnabled: {
     key: 'collaborationEnabled',
     envVar: 'VITE_COLLABORATION_ENABLED',
@@ -257,6 +264,7 @@ export const ROLLOUT_FLAGS: Record<RolloutFlagKey, boolean> = {
   ),
   openCanvasContextualCommandsV1: isRolloutFlagEnabled('openCanvasContextualCommandsV1'),
   openCanvasCustomShortcutsV1: isRolloutFlagEnabled('openCanvasCustomShortcutsV1'),
+  openCanvasNodeInsertionV1: isRolloutFlagEnabled('openCanvasNodeInsertionV1'),
   collaborationEnabled: isRolloutFlagEnabled('collaborationEnabled'),
   importSql: isRolloutFlagEnabled('importSql'),
   importOpenApi: isRolloutFlagEnabled('importOpenApi'),
