@@ -12,9 +12,13 @@ import {
 } from '../application/selection/selection';
 import {
   anchoredMarqueeBounds,
+  beginTransformOperation,
   selectionAfterClick,
+  updateTransformOperation,
   type AnchoredMarqueePointerOperation,
+  type TransformPointerOperation,
 } from './pixiPointerOperations';
+import { projectProductionTransform } from '../application/active-document/productionTransformBridge';
 import { openCanvasRendererFamilyFlags } from '../application/renderer/rendererFamilyFlags';
 import {
   beginCameraPan,
@@ -39,7 +43,7 @@ interface OpenCanvasSurfaceProps {
 
 /**
  * Draws the active page with the OpenCanvas renderer inside the production
- * editor chrome. Read-only: camera navigation only, no editing yet.
+ * editor chrome, with camera navigation, selection, and transforms.
  */
 export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.JSX.Element {
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -49,6 +53,8 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
   const marqueeRef = useRef<AnchoredMarqueePointerOperation | null>(null);
   const selectionRef = useRef<CanvasSelection>(EMPTY_CANVAS_SELECTION);
   const spacePanRef = useRef(false);
+  const transformRef = useRef<TransformPointerOperation | null>(null);
+  const pendingToggleRef = useRef<string | null>(null);
   const fittedRef = useRef<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'ready' | 'failed'>('idle');
   const capability = useMemo(() => detectWebGlCapability(), []);
@@ -64,6 +70,7 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
       layers: current.layers,
       setNodes: current.setNodes,
       setSelectedNodeId: current.setSelectedNodeId,
+      recordHistoryV2: current.recordHistoryV2,
     }))
   );
   const projection = useMemo(
@@ -84,10 +91,39 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
     state.setSelectedNodeId(projected.selectedNodeId);
   }, [state]);
 
+
+  const activePage = projection.status === 'ready'
+    ? projection.document.pages.find(({ id }) => id === state.activePageId)
+      ?? projection.document.pages[0] ?? null
+    : null;
+
+  const commitTransform = useCallback((operation: TransformPointerOperation) => {
+    hostRef.current?.setTransformPreview(null);
+    if (!operation.result || projection.status !== 'ready' || !activePage) return;
+    try {
+      const next = projectProductionTransform(
+        projection.document, activePage.id, operation.result, new Date().toISOString()
+      );
+      state.recordHistoryV2();
+      state.setNodes(next.nodes);
+    } catch {
+      setStatus('failed');
+    }
+  }, [activePage, projection, state]);
+
+  const cancelTransform = useCallback(() => {
+    transformRef.current = null;
+    pendingToggleRef.current = null;
+    hostRef.current?.setTransformPreview(null);
+  }, []);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.code === 'Space') spacePanRef.current = true;
-      else if (event.key === 'Escape') applySelection(clearSelection());
+      else if (event.key === 'Escape') {
+        if (transformRef.current) cancelTransform();
+        else applySelection(clearSelection());
+      }
     };
     const onKeyUp = (event: KeyboardEvent): void => {
       if (event.code === 'Space') spacePanRef.current = false;
@@ -101,7 +137,7 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
     };
-  }, [applySelection]);
+  }, [applySelection, cancelTransform]);
 
   const usable = capability.supported && projection.status !== 'invalid' && status !== 'failed';
 
@@ -167,9 +203,21 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
           return;
         }
         const additive = event.shiftKey || event.metaKey || event.ctrlKey;
-        const nodeId = host.pickNode(screen);
-        if (nodeId) {
-          applySelection(selectionAfterClick(selectionRef.current, nodeId, additive));
+        const handle = host.pickTransformHandle(screen);
+        const nodeId = handle ? null : host.pickNode(screen);
+        if (handle || nodeId) {
+          const wasSelected = nodeId ? selectionRef.current.nodeIds.includes(nodeId) : false;
+          // Deselecting on press would move the wrong set on the drag that follows.
+          pendingToggleRef.current = nodeId && wasSelected && additive ? nodeId : null;
+          const next = nodeId && !wasSelected
+            ? selectionAfterClick(selectionRef.current, nodeId, additive)
+            : selectionRef.current;
+          if (next !== selectionRef.current) applySelection(next);
+          if (next.nodeIds.length > 0 && activePage) {
+            transformRef.current = beginTransformOperation(
+              event.pointerId, activePage, next.nodeIds, handle, host.screenToWorld(screen)
+            );
+          }
           return;
         }
         marqueeRef.current = {
@@ -191,14 +239,35 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
           applyCamera(next.camera);
           return;
         }
+        if (!host) return;
+        const transform = transformRef.current;
+        if (transform && transform.pointerId === event.pointerId) {
+          const next = updateTransformOperation(
+            transform, host.screenToWorld(screen), !event.altKey
+          );
+          transformRef.current = next;
+          host.setTransformPreview(next.result);
+          return;
+        }
         const marquee = marqueeRef.current;
-        if (!host || !marquee || marquee.pointerId !== event.pointerId) return;
+        if (!marquee || marquee.pointerId !== event.pointerId) return;
         marqueeRef.current = { ...marquee, currentScreen: screen };
         host.setMarquee(anchoredMarqueeBounds(marqueeRef.current, cameraRef.current));
       }}
       onPointerUp={(event) => {
         if (panRef.current?.pointerId === event.pointerId) {
           panRef.current = null;
+          return;
+        }
+        const transform = transformRef.current;
+        if (transform && transform.pointerId === event.pointerId) {
+          transformRef.current = null;
+          const toggle = pendingToggleRef.current;
+          pendingToggleRef.current = null;
+          commitTransform(transform);
+          if (!transform.result && toggle) {
+            applySelection(selectionAfterClick(selectionRef.current, toggle, true));
+          }
           return;
         }
         const host = hostRef.current;
@@ -220,6 +289,7 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
         panRef.current = null;
         marqueeRef.current = null;
         hostRef.current?.setMarquee(null);
+        cancelTransform();
       }}
       onWheel={(event) => {
         const host = hostRef.current;

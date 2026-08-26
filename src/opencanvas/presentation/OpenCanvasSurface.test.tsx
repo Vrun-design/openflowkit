@@ -10,6 +10,9 @@ const setMarquee = vi.fn();
 const pickNode = vi.fn((): string | null => null);
 const pickNodesInScreenBounds = vi.fn((): readonly string[] => []);
 const screenToWorld = vi.fn((point: { x: number; y: number }) => point);
+const pickTransformHandle = vi.fn((): string | null => null);
+const setTransformPreview = vi.fn();
+const recordHistoryV2 = vi.fn();
 const setNodes = vi.fn();
 const setSelectedNodeId = vi.fn();
 const getContentBounds = vi.fn(() => null as null | {
@@ -28,6 +31,13 @@ vi.mock('@/config/rolloutFlags', () => ({
   },
 }));
 
+const { projectProductionTransform } = vi.hoisted(() => ({
+  projectProductionTransform: vi.fn(() => ({ nodes: [{ id: 'moved' }] })),
+}));
+vi.mock('../application/active-document/productionTransformBridge', () => ({
+  projectProductionTransform,
+}));
+
 const { detectWebGlCapability } = vi.hoisted(() => ({
   detectWebGlCapability: vi.fn(() => ({ supported: true })),
 }));
@@ -36,15 +46,25 @@ vi.mock('../infrastructure/pixi/capabilities', () => ({ detectWebGlCapability })
 const { projectActiveDocument } = vi.hoisted(() => ({
   projectActiveDocument: vi.fn((): unknown => ({
     status: 'ready',
-    document: {
-      id: 'doc',
-      pages: [{ id: 'page-1', nodes: [], connectors: [], layers: [] }],
-    },
+    document: { id: 'doc', pages: [scenePage] },
   })),
 }));
 vi.mock('../application/active-document/activeDocumentProjection', () => ({
   projectActiveDocument,
 }));
+
+const scenePage = {
+  id: 'page-1',
+  name: 'Page',
+  diagramKind: 'flowchart',
+  layers: [{ id: 'default', name: 'Default', visible: true, locked: false }],
+  nodes: [
+    createProductionSceneNode('process', 'node-1', { x: 0, y: 0 }, 'default'),
+    createProductionSceneNode('process', 'node-2', { x: 400, y: 0 }, 'default'),
+  ],
+  connectors: [],
+  extensions: {},
+};
 
 const storeNodes = [
   { id: 'node-1', type: 'process', position: { x: 0, y: 0 }, data: { label: 'One' } },
@@ -56,7 +76,7 @@ vi.mock('@/store', () => ({
     nodes: storeNodes,
     edges: [], documents: [{ id: 'doc' }], activeDocumentId: 'doc',
     tabs: [{ id: 'page-1' }], activeTabId: 'page-1', layers: [],
-    setNodes, setSelectedNodeId,
+    setNodes, setSelectedNodeId, recordHistoryV2,
   }),
 }));
 
@@ -76,12 +96,15 @@ vi.mock('../infrastructure/pixi/PixiRendererHost', () => ({
     pickNode = pickNode;
     pickNodesInScreenBounds = pickNodesInScreenBounds;
     screenToWorld = screenToWorld;
+    pickTransformHandle = pickTransformHandle;
+    setTransformPreview = setTransformPreview;
     getContentBounds = getContentBounds;
     getViewportSize() { return { width: 800, height: 600 }; }
   },
 }));
 
 import { DEFAULT_CANVAS_CAMERA } from '../domain/camera/camera';
+import { createProductionSceneNode } from '../application/active-document/productionNodeCatalog';
 import { OpenCanvasSurface } from './OpenCanvasSurface';
 
 const FALLBACK = <div data-testid="react-flow-fallback" />;
@@ -94,7 +117,12 @@ describe('OpenCanvas editor surface', () => {
     });
     constructed.length = 0;
     [setCamera, setPage, resize, destroy, mount, setSelection, setMarquee,
-      setNodes, setSelectedNodeId].forEach((spy) => spy.mockClear());
+      setNodes, setSelectedNodeId, setTransformPreview, recordHistoryV2,
+    ].forEach((spy) => spy.mockClear());
+    pickTransformHandle.mockReset();
+    pickTransformHandle.mockReturnValue(null);
+    projectProductionTransform.mockClear();
+    projectProductionTransform.mockReturnValue({ nodes: [{ id: 'moved' }] });
     pickNode.mockReset();
     pickNode.mockReturnValue(null);
     pickNodesInScreenBounds.mockReset();
@@ -111,7 +139,7 @@ describe('OpenCanvas editor surface', () => {
     getContentBounds.mockReturnValue(null);
     projectActiveDocument.mockReturnValue({
       status: 'ready',
-      document: { id: 'doc', pages: [{ id: 'page-1', nodes: [], connectors: [], layers: [] }] },
+      document: { id: 'doc', pages: [scenePage] },
     });
   });
 
@@ -209,6 +237,8 @@ describe('OpenCanvas editor surface', () => {
     expect(setSelection).toHaveBeenLastCalledWith(['node-1', 'node-2'], 'node-2');
 
     fireEvent.pointerDown(surface, { pointerId: 3, button: 0, clientX: 20, clientY: 20, metaKey: true });
+    expect(setSelection).toHaveBeenLastCalledWith(['node-1', 'node-2'], 'node-2');
+    fireEvent.pointerUp(surface, { pointerId: 3, clientX: 20, clientY: 20 });
     expect(setSelection).toHaveBeenLastCalledWith(['node-1'], 'node-1');
   });
 
@@ -239,6 +269,7 @@ describe('OpenCanvas editor surface', () => {
     pickNode.mockReturnValue('node-2');
     fireEvent.pointerDown(surface, { pointerId: 3, button: 0, clientX: 10, clientY: 10 });
     expect(setSelection).toHaveBeenLastCalledWith(['node-2'], 'node-2');
+    fireEvent.pointerUp(surface, { pointerId: 3, clientX: 10, clientY: 10 });
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(setSelection).toHaveBeenLastCalledWith([], null);
   });
@@ -262,5 +293,88 @@ describe('OpenCanvas editor surface', () => {
     fireEvent.wheel(surface, { clientX: 0, clientY: 0, deltaY: -120 });
     await waitFor(() => expect(setPage).toHaveBeenCalled());
     expect(setSelection.mock.calls.every(([ids]) => ids.length === 1)).toBe(true);
+  });
+
+  it('commits a drag as one move transform with a single history entry', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 90, clientY: 70 });
+    expect(setTransformPreview.mock.calls.at(-1)?.[0]).not.toBeNull();
+
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 90, clientY: 70 });
+    expect(projectProductionTransform).toHaveBeenCalledTimes(1);
+    expect(recordHistoryV2).toHaveBeenCalledTimes(1);
+    expect(setNodes).toHaveBeenLastCalledWith([{ id: 'moved' }]);
+    expect(setTransformPreview).toHaveBeenLastCalledWith(null);
+  });
+
+  it('resizes from a transform handle and rotates from the rotate handle', async () => {
+    pickTransformHandle.mockReturnValue('bottom-right');
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    // No node was picked, so the handle drag acts on the existing selection only.
+    expect(pickNode).not.toHaveBeenCalled();
+
+    pickNode.mockReturnValue('node-1');
+    pickTransformHandle.mockReturnValue(null);
+    fireEvent.pointerDown(surface, { pointerId: 2, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(surface, { pointerId: 2, clientX: 10, clientY: 10 });
+
+    pickTransformHandle.mockReturnValue('rotate');
+    fireEvent.pointerDown(surface, { pointerId: 3, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(surface, { pointerId: 3, clientX: 200, clientY: 200 });
+    const preview = setTransformPreview.mock.calls.at(-1)?.[0];
+    expect(preview?.nodes?.[0]?.transform?.rotationRadians).not.toBe(0);
+  });
+
+  it('suppresses snapping while Alt is held', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 7, clientY: 0, altKey: true });
+    const unsnapped = setTransformPreview.mock.calls.at(-1)?.[0];
+    expect(unsnapped?.nodes[0].transform.translation.x).toBe(7);
+
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 7, clientY: 0 });
+    const snapped = setTransformPreview.mock.calls.at(-1)?.[0];
+    expect(snapped?.nodes[0].transform.translation.x).not.toBe(7);
+  });
+
+  it('cancels a drag exactly on Escape without committing or recording history', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 90, clientY: 70 });
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(setTransformPreview).toHaveBeenLastCalledWith(null);
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 90, clientY: 70 });
+    expect(projectProductionTransform).not.toHaveBeenCalled();
+    expect(recordHistoryV2).not.toHaveBeenCalled();
+    // The selection write on press is expected; the transform write is not.
+    expect(setNodes).not.toHaveBeenCalledWith([{ id: 'moved' }]);
+  });
+
+  it('writes nothing when a press produces no movement', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 10, clientY: 10 });
+    expect(projectProductionTransform).not.toHaveBeenCalled();
+    expect(recordHistoryV2).not.toHaveBeenCalled();
+  });
+
+  it('falls back to React Flow when a transform commit throws', async () => {
+    pickNode.mockReturnValue('node-1');
+    projectProductionTransform.mockImplementation(() => { throw new Error('rejected'); });
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 90, clientY: 70 });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 90, clientY: 70 });
+
+    await waitFor(() => expect(screen.getByTestId('react-flow-fallback')).toBeTruthy());
+    expect(recordHistoryV2).not.toHaveBeenCalled();
   });
 });
