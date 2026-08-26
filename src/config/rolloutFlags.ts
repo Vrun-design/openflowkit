@@ -21,6 +21,7 @@ export type RolloutFlagKey =
   | 'openCanvasContextualCommandsV1'
   | 'openCanvasCustomShortcutsV1'
   | 'openCanvasNodeInsertionV1'
+  | 'openCanvasEditorSurfaceV1'
   | 'collaborationEnabled'
   | 'importSql'
   | 'importOpenApi'
@@ -168,6 +169,12 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     defaultEnabled: false,
     description: 'Full node-family insertion catalog in the OpenCanvas canary',
   },
+  openCanvasEditorSurfaceV1: {
+    key: 'openCanvasEditorSurfaceV1',
+    envVar: 'VITE_OPEN_CANVAS_EDITOR_SURFACE_V1',
+    defaultEnabled: false,
+    description: 'OpenCanvas renderer as the production editor canvas surface',
+  },
   collaborationEnabled: {
     key: 'collaborationEnabled',
     envVar: 'VITE_COLLABORATION_ENABLED',
@@ -265,6 +272,7 @@ export const ROLLOUT_FLAGS: Record<RolloutFlagKey, boolean> = {
   openCanvasContextualCommandsV1: isRolloutFlagEnabled('openCanvasContextualCommandsV1'),
   openCanvasCustomShortcutsV1: isRolloutFlagEnabled('openCanvasCustomShortcutsV1'),
   openCanvasNodeInsertionV1: isRolloutFlagEnabled('openCanvasNodeInsertionV1'),
+  openCanvasEditorSurfaceV1: isRolloutFlagEnabled('openCanvasEditorSurfaceV1'),
   collaborationEnabled: isRolloutFlagEnabled('collaborationEnabled'),
   importSql: isRolloutFlagEnabled('importSql'),
   importOpenApi: isRolloutFlagEnabled('importOpenApi'),

@@ -34,6 +34,7 @@ import {
 } from '../application/selection/selection';
 import { arrowSpatialDirection, spatialNeighborId } from '../application/selection/spatialNavigation';
 import { canvasRendererLocation } from '../application/renderer/rendererSelection';
+import { openCanvasRendererFamilyFlags } from '../application/renderer/rendererFamilyFlags';
 import {
   beginCameraPan,
   moveCameraPan,
@@ -753,16 +754,7 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
     if (!viewport || !capability.supported) return;
     let disposed = false;
     const host = new PixiRendererHost({
-      connectorModelEnabled: ROLLOUT_FLAGS.openCanvasConnectorsV1,
-      nodeLayoutModelEnabled: ROLLOUT_FLAGS.openCanvasNodeLayoutV1,
-      basicNodesEnabled: ROLLOUT_FLAGS.openCanvasBasicNodesV1,
-      freeformNodesEnabled: ROLLOUT_FLAGS.openCanvasFreeformNodesV1,
-      architectureNodesEnabled: ROLLOUT_FLAGS.openCanvasArchitectureNodesV1,
-      containerNodesEnabled: ROLLOUT_FLAGS.openCanvasContainerNodesV1,
-      classEntityNodesEnabled: ROLLOUT_FLAGS.openCanvasClassEntityNodesV1,
-      mindmapJourneyNodesEnabled: ROLLOUT_FLAGS.openCanvasMindmapJourneyNodesV1,
-      sequenceNodesEnabled: ROLLOUT_FLAGS.openCanvasSequenceNodesV1,
-      wireframeNodesEnabled: ROLLOUT_FLAGS.openCanvasWireframeNodesV1,
+      ...openCanvasRendererFamilyFlags(),
       onStatusChange: (nextStatus) => {
         if (disposed) return;
         setStatus(nextStatus);

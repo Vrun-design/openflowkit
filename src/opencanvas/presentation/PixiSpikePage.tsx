@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { ROLLOUT_FLAGS } from '../../config/rolloutFlags';
+import { openCanvasRendererFamilyFlags } from '../application/renderer/rendererFamilyFlags';
 import {
   clearSelection,
   replaceSelection,
@@ -134,16 +135,7 @@ export function PixiSpikePage(): React.JSX.Element {
 
   usePixiRendererMount({
     supported: capability.supported,
-    connectorModelEnabled: ROLLOUT_FLAGS.openCanvasConnectorsV1,
-    nodeLayoutModelEnabled: ROLLOUT_FLAGS.openCanvasNodeLayoutV1,
-    basicNodesEnabled: ROLLOUT_FLAGS.openCanvasBasicNodesV1,
-    freeformNodesEnabled: ROLLOUT_FLAGS.openCanvasFreeformNodesV1,
-    architectureNodesEnabled: ROLLOUT_FLAGS.openCanvasArchitectureNodesV1,
-    containerNodesEnabled: ROLLOUT_FLAGS.openCanvasContainerNodesV1,
-    classEntityNodesEnabled: ROLLOUT_FLAGS.openCanvasClassEntityNodesV1,
-    mindmapJourneyNodesEnabled: ROLLOUT_FLAGS.openCanvasMindmapJourneyNodesV1,
-    sequenceNodesEnabled: ROLLOUT_FLAGS.openCanvasSequenceNodesV1,
-    wireframeNodesEnabled: ROLLOUT_FLAGS.openCanvasWireframeNodesV1,
+    ...openCanvasRendererFamilyFlags(),
     viewportRef,
     hostRef,
     cameraRef,
@@ -162,16 +154,7 @@ export function PixiSpikePage(): React.JSX.Element {
     historyRef,
     cameraRef,
     selectionRef,
-    connectorModelEnabled: ROLLOUT_FLAGS.openCanvasConnectorsV1,
-    nodeLayoutModelEnabled: ROLLOUT_FLAGS.openCanvasNodeLayoutV1,
-    basicNodesEnabled: ROLLOUT_FLAGS.openCanvasBasicNodesV1,
-    freeformNodesEnabled: ROLLOUT_FLAGS.openCanvasFreeformNodesV1,
-    architectureNodesEnabled: ROLLOUT_FLAGS.openCanvasArchitectureNodesV1,
-    containerNodesEnabled: ROLLOUT_FLAGS.openCanvasContainerNodesV1,
-    classEntityNodesEnabled: ROLLOUT_FLAGS.openCanvasClassEntityNodesV1,
-    mindmapJourneyNodesEnabled: ROLLOUT_FLAGS.openCanvasMindmapJourneyNodesV1,
-    sequenceNodesEnabled: ROLLOUT_FLAGS.openCanvasSequenceNodesV1,
-    wireframeNodesEnabled: ROLLOUT_FLAGS.openCanvasWireframeNodesV1,
+    ...openCanvasRendererFamilyFlags(),
   });
 
   function openEditor(nodeId: string): void {

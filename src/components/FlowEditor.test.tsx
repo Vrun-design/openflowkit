@@ -14,6 +14,12 @@ const updateTabMock = vi.fn();
 const setMermaidDiagnosticsMock = vi.fn();
 const clearMermaidDiagnosticsMock = vi.fn();
 
+const openCanvasSurface = vi.fn((_props: { fallback: ReactNode }) => (
+  <div>OpenCanvasSurface</div>
+));
+vi.mock('@/opencanvas/presentation/OpenCanvasSurface', () => ({
+  OpenCanvasSurface: (props: { fallback: ReactNode }) => openCanvasSurface(props),
+}));
 vi.mock('./FlowCanvas', () => ({
   FlowCanvas: () => <div>FlowCanvas</div>,
 }));
@@ -23,7 +29,9 @@ vi.mock('./CinematicExportOverlay', () => ({
 }));
 
 vi.mock('./flow-editor/FlowEditorChrome', () => ({
-  FlowEditorChrome: () => <div>FlowEditorChrome</div>,
+  FlowEditorChrome: ({ canvas }: { canvas: ReactNode }) => (
+    <div>FlowEditorChrome{canvas}</div>
+  ),
 }));
 
 vi.mock('@/context/CinematicExportContext', () => ({
@@ -157,6 +165,12 @@ describe('FlowEditor', () => {
     clearMermaidDiagnosticsMock.mockReset();
     useMermaidDiagnosticsMock.mockReturnValue(createMermaidDiagnostics());
     useFlowEditorScreenModelMock.mockReturnValue(createFlowEditorScreenModel());
+  });
+
+  it('keeps the React Flow canvas and builds no OpenCanvas surface while its flag is off', () => {
+    render(<FlowEditor onGoHome={vi.fn()} />);
+    expect(screen.getByText('FlowCanvas')).toBeTruthy();
+    expect(openCanvasSurface).not.toHaveBeenCalled();
   });
 
   it('opens Mermaid code recovery from the shell diagnostics banner', () => {

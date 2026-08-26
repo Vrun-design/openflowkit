@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import '@xyflow/react/dist/style.css';
 import { FlowCanvas } from './FlowCanvas';
+
 import { CinematicExportOverlay } from './CinematicExportOverlay';
 import { FlowEditorChrome } from './flow-editor/FlowEditorChrome';
 import { useFlowEditorScreenModel } from './flow-editor/useFlowEditorScreenModel';
@@ -24,6 +25,17 @@ import { resolveLayoutDirection } from '@/components/flow-canvas/pasteHelpers';
 import { buildMermaidDiagnosticsSnapshot } from '@/services/mermaid/diagnosticsSnapshot';
 import { normalizeParseDiagnostics } from '@/services/mermaid/diagnosticFormatting';
 import { useMermaidDiagnosticsActions } from '@/store/selectionHooks';
+
+// Keep PixiJS out of the default editor bundle. The centralized rollout
+// definition documents the flag; this compile-time gate lets Vite drop the
+// lazy import entirely unless a build explicitly opts in.
+const LazyOpenCanvasSurface =
+  import.meta.env.VITE_OPEN_CANVAS_EDITOR_SURFACE_V1 === '1'
+    ? lazy(async () => {
+        const module = await import('@/opencanvas/presentation/OpenCanvasSurface');
+        return { default: module.OpenCanvasSurface };
+      })
+    : null;
 
 interface FlowEditorProps {
   onGoHome: () => void;
@@ -62,6 +74,13 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
     flowEditorController,
     t,
   } = useFlowEditorScreenModel({ onGoHome });
+  const canvas = (
+    <FlowCanvas
+      recordHistory={recordHistory}
+      isSelectMode={isSelectMode}
+      onCanvasEntityIntent={flowEditorController.handleCanvasEntityIntent}
+    />
+  );
   const cinematicExportTheme = resolveCinematicExportTheme(cinematicExportState.backgroundMode);
   const mermaidRecoverySource = importRecoveryState?.report.source === 'mermaid'
     ? (importRecoveryState.report.originalSource ?? mermaidDiagnostics?.originalSource)
@@ -210,11 +229,11 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
             activePageId={activePageId}
             topNav={flowEditorController.chrome.topNav}
             canvas={
-              <FlowCanvas
-                recordHistory={recordHistory}
-                isSelectMode={isSelectMode}
-                onCanvasEntityIntent={flowEditorController.handleCanvasEntityIntent}
-              />
+              LazyOpenCanvasSurface ? (
+                <Suspense fallback={canvas}>
+                  <LazyOpenCanvasSurface fallback={canvas} />
+                </Suspense>
+              ) : canvas
             }
             shouldRenderPanels={flowEditorController.shouldRenderPanels}
             panels={flowEditorController.panels}
