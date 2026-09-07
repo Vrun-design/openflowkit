@@ -159,9 +159,15 @@ export const PROVIDERS: ProviderMeta[] = [
 
 export const PROVIDER_MODELS: Record<AIProvider, { id: string; translateKey: string }[]> = {
     gemini: [
-        { id: 'gemini-2.5-flash-lite', translateKey: 'gemini-2.5-flash-lite' },
         { id: 'gemini-2.5-flash', translateKey: 'gemini-2.5-flash' },
         { id: 'gemini-2.5-pro', translateKey: 'gemini-2.5-pro' },
+        { id: 'gemini-2.5-flash-lite', translateKey: 'gemini-2.5-flash-lite' },
+        { id: 'gemini-2.0-flash', translateKey: 'gemini-2.0-flash' },
+        { id: 'gemini-2.0-flash-lite', translateKey: 'gemini-2.0-flash-lite' },
+        { id: 'gemini-2.0-flash-thinking-exp-01-21', translateKey: 'gemini-2.0-flash-thinking-exp-01-21' },
+        { id: 'gemini-2.0-pro-exp-02-05', translateKey: 'gemini-2.0-pro-exp-02-05' },
+        { id: 'gemini-1.5-pro', translateKey: 'gemini-1.5-pro' },
+        { id: 'gemini-1.5-flash', translateKey: 'gemini-1.5-flash' },
         { id: 'gemini-3-flash', translateKey: 'gemini-3-flash' },
         { id: 'gemini-3-pro', translateKey: 'gemini-3-pro' },
     ],

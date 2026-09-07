@@ -3,7 +3,7 @@ import { useFlowStore, AIProvider, AISettingsStorageMode } from '../../store';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { Select } from '../ui/Select';
-import { ExternalLink, Check, Shield, Lock, AlertCircle, Info } from 'lucide-react';
+import { ExternalLink, Check, Shield, Lock, AlertCircle, Info, Pencil, List } from 'lucide-react';
 import { useTranslation, Trans } from 'react-i18next';
 import {
     BYOK_KEYS,
@@ -96,6 +96,10 @@ export function AISettings(): React.ReactElement {
     const providerMeta = PROVIDERS.find(p => p.id === currentProvider) ?? PROVIDERS[0];
     const models = PROVIDER_MODELS[currentProvider] ?? [];
     const currentModel = aiSettings.model ?? providerMeta.defaultModel;
+    const isPresetModel = models.some(m => m.id === currentModel);
+    const [isCustomModelMode, setIsCustomModelMode] = React.useState<boolean>(
+        currentProvider === 'custom' || (!isPresetModel && Boolean(aiSettings.model))
+    );
     const readiness = getAIReadinessState(aiSettings);
     const providerRisk = getProviderRiskPresentation(currentProvider);
     const providerRiskIcon = providerRisk.tone === 'warning' ? AlertCircle : Info;
@@ -108,8 +112,8 @@ export function AISettings(): React.ReactElement {
     const customBaseUrlError = currentProvider === 'custom' && readiness.blockingIssue?.detail.includes('base URL')
         ? readiness.blockingIssue.detail
         : undefined;
-    const customModelError = currentProvider === 'custom' && readiness.blockingIssue?.detail.includes('model ID')
-        ? readiness.blockingIssue.detail
+    const customModelError = (currentProvider === 'custom' || isCustomModelMode) && (!aiSettings.model || aiSettings.model.trim().length === 0)
+        ? t('settingsModal.ai.customModelRequired')
         : undefined;
     const storageMode = aiSettings.storageMode ?? 'local';
 
@@ -120,6 +124,18 @@ export function AISettings(): React.ReactElement {
     function selectProvider(id: AIProvider): void {
         const meta = PROVIDERS.find(p => p.id === id)!;
         setAISettings({ provider: id, model: meta.defaultModel });
+        setIsCustomModelMode(id === 'custom');
+    }
+
+    function toggleCustomModelMode(): void {
+        if (isCustomModelMode) {
+            setIsCustomModelMode(false);
+            if (!isPresetModel) {
+                setAISettings({ model: providerMeta.defaultModel });
+            }
+        } else {
+            setIsCustomModelMode(true);
+        }
     }
 
     return (
@@ -206,28 +222,99 @@ export function AISettings(): React.ReactElement {
             <div className="space-y-6">
                 {/* Model Selector */}
                 <div className="space-y-3">
-                    <Label>{t('settingsModal.ai.model')}</Label>
-                    {currentProvider === 'custom' ? (
+                    <div className="flex items-center justify-between">
+                        <Label>{t('settingsModal.ai.model')}</Label>
+                        {currentProvider !== 'custom' && (
+                            <button
+                                type="button"
+                                onClick={toggleCustomModelMode}
+                                className="text-xs font-medium text-[var(--brand-primary)] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
+                            >
+                                {isCustomModelMode ? (
+                                    <>
+                                        <List className="w-3.5 h-3.5" />
+                                        <span>{t('settingsModal.ai.chooseFromList', { defaultValue: 'Select from presets' })}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Pencil className="w-3.5 h-3.5" />
+                                        <span>{t('settingsModal.ai.enterModelCode', { defaultValue: 'Enter model code' })}</span>
+                                    </>
+                                )}
+                            </button>
+                        )}
+                    </div>
+
+                    {currentProvider === 'custom' || isCustomModelMode ? (
                         <div className="space-y-2">
                             <Input
                                 value={currentModel === 'custom' ? '' : currentModel}
                                 onChange={e => setAISettings({ model: e.target.value })}
-                                placeholder="e.g. llama3-70b-8192 or gpt-4o"
+                                placeholder={
+                                    currentProvider === 'custom'
+                                        ? 'e.g. llama3-70b-8192 or gpt-4o'
+                                        : t('settingsModal.ai.customModelPlaceholder', {
+                                            defaultValue: `e.g. ${providerMeta.defaultModel} or custom model code`,
+                                            defaultModel: providerMeta.defaultModel,
+                                        })
+                                }
                                 error={customModelError}
-                                helperText={t('settingsModal.ai.customModelHint')}
+                                helperText={
+                                    currentProvider === 'custom'
+                                        ? t('settingsModal.ai.customModelHint')
+                                        : t('settingsModal.ai.providerModelHint', {
+                                            defaultValue: `Enter any model code supported by ${providerMeta.name} (e.g. fine-tuned or newly released models).`,
+                                            provider: providerMeta.name,
+                                        })
+                                }
                             />
+                            {currentProvider !== 'custom' && models.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                    <span className="text-[11px] text-[var(--brand-secondary)]">
+                                        {t('settingsModal.ai.presetsLabel', { defaultValue: 'Presets:' })}
+                                    </span>
+                                    {models.slice(0, 5).map(m => (
+                                        <button
+                                            key={m.id}
+                                            type="button"
+                                            onClick={() => setAISettings({ model: m.id })}
+                                            className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                                                currentModel === m.id
+                                                    ? 'bg-[var(--brand-primary)]/10 border-[var(--brand-primary)] text-[var(--brand-primary)] font-medium'
+                                                    : 'border-[var(--color-brand-border)] text-[var(--brand-secondary)] hover:bg-[var(--brand-surface)]'
+                                            }`}
+                                        >
+                                            {m.id}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <Select
                             value={currentModel}
-                            onChange={(val) => setAISettings({ model: val })}
-                            options={models.map(m => ({
-                                value: m.id,
-                                label: t(`settingsModal.ai.models.${currentProvider}.${m.translateKey}.label`),
-                                hint: t(`settingsModal.ai.models.${currentProvider}.${m.translateKey}.hint`),
-                                badge: t(`settingsModal.ai.models.${currentProvider}.${m.translateKey}.badge`, { defaultValue: '' }) || undefined,
-                                group: t(`settingsModal.ai.models.${currentProvider}.${m.translateKey}.category`)
-                            }))}
+                            onChange={(val) => {
+                                if (val === '__custom_model_entry__') {
+                                    setIsCustomModelMode(true);
+                                } else {
+                                    setAISettings({ model: val });
+                                }
+                            }}
+                            options={[
+                                ...models.map(m => ({
+                                    value: m.id,
+                                    label: t(`settingsModal.ai.models.${currentProvider}.${m.translateKey}.label`, { defaultValue: m.id }),
+                                    hint: t(`settingsModal.ai.models.${currentProvider}.${m.translateKey}.hint`, { defaultValue: '' }),
+                                    badge: t(`settingsModal.ai.models.${currentProvider}.${m.translateKey}.badge`, { defaultValue: '' }) || undefined,
+                                    group: t(`settingsModal.ai.models.${currentProvider}.${m.translateKey}.category`, { defaultValue: 'Presets' })
+                                })),
+                                {
+                                    value: '__custom_model_entry__',
+                                    label: t('settingsModal.ai.enterCustomModelOption', { defaultValue: '✏️ Enter custom model code...' }),
+                                    hint: t('settingsModal.ai.enterCustomModelOptionHint', { defaultValue: 'Type any model ID or fine-tuned model' }),
+                                    group: t('settingsModal.ai.customGroup', { defaultValue: 'Custom' })
+                                }
+                            ]}
                             placeholder={t('settingsModal.ai.selectModel')}
                         />
                     )}
