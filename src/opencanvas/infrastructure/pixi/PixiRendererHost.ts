@@ -106,6 +106,7 @@ export class PixiRendererHost {
   private readonly freeformPreview = new PixiFreeformPreview();
   private readonly marquee = new Graphics();
   private readonly connectionPreview = new Graphics();
+  private readonly alignmentGuides = new Graphics();
   private readonly onStatusChange?: PixiRendererHostOptions['onStatusChange'];
   private readonly connectorModelEnabled: boolean;
   private readonly nodeLayoutModelEnabled: boolean;
@@ -179,7 +180,8 @@ export class PixiRendererHost {
       this.transformOverlay.graphics,
       this.freeformPreview.graphics,
       this.connectorEditOverlay.graphics,
-      this.connectionPreview
+      this.connectionPreview,
+      this.alignmentGuides
     );
     this.app.stage.addChild(this.world, this.marquee);
     const canvas = this.app.canvas as HTMLCanvasElement;
@@ -374,6 +376,23 @@ export class PixiRendererHost {
     if (this.selectedNodeIds.length !== 1) return null;
     const bounds = this.getSelectionWorldBounds();
     return bounds ? pickConnectHandle(bounds, screenPoint, this.camera) : null;
+  }
+
+  /** Alignment guide lines (world coordinates) shown while a selection moves. */
+  setAlignmentGuides(guides: { readonly x: number | null; readonly y: number | null } | null): void {
+    this.alignmentGuides.clear();
+    if (guides && (guides.x !== null || guides.y !== null)) {
+      const view = visibleWorldBounds(this.camera, this.getViewportSize());
+      const width = 1 / this.camera.zoom;
+      if (guides.x !== null) {
+        this.alignmentGuides.moveTo(guides.x, view.y).lineTo(guides.x, view.y + view.height);
+      }
+      if (guides.y !== null) {
+        this.alignmentGuides.moveTo(view.x, guides.y).lineTo(view.x + view.width, guides.y);
+      }
+      this.alignmentGuides.stroke({ color: 0x2563eb, width, alpha: 0.9 });
+    }
+    this.requestRender();
   }
 
   /** Rubber-band line (world coordinates) while a new connector is dragged. */

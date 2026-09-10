@@ -14,6 +14,7 @@ const pickTransformHandle = vi.fn((): string | null => null);
 const pickConnectHandle = vi.fn((): string | null => null);
 const setConnectionPreview = vi.fn();
 const setFreeformPreview = vi.fn();
+const setAlignmentGuides = vi.fn();
 const getNodesWorldBounds = vi.fn((ids: readonly string[]) =>
   ids.length ? { x: 0, y: 0, width: 100, height: 50 } : null);
 const setTransformPreview = vi.fn();
@@ -111,7 +112,7 @@ const storeState = {
   pendingNodeLabelEditRequest: null as null | { nodeId: string; seedText?: string; replaceExisting?: boolean },
   selectedNodeId: null as string | null,
   selectedEdgeId: null as string | null,
-  viewSettings: { drawingTool: null as string | null },
+  viewSettings: { drawingTool: null as string | null, alignmentGuidesEnabled: true },
   activeLayerId: 'default',
   setViewSettings: vi.fn(),
   edges: [] as Array<{ id: string; source: string; target: string; selected?: boolean }>,
@@ -172,6 +173,7 @@ vi.mock('../infrastructure/pixi/PixiRendererHost', () => ({
     pickConnectHandle = pickConnectHandle;
     setConnectionPreview = setConnectionPreview;
     setFreeformPreview = setFreeformPreview;
+    setAlignmentGuides = setAlignmentGuides;
     getNodesWorldBounds = getNodesWorldBounds;
     setTransformPreview = setTransformPreview;
     pickConnector = pickConnector;
@@ -198,7 +200,7 @@ describe('OpenCanvas editor surface', () => {
     storeState.nodes = storeNodes;
     storeState.edges = [];
     storeState.selectedNodeId = null;
-    storeState.viewSettings = { drawingTool: null };
+    storeState.viewSettings = { drawingTool: null, alignmentGuidesEnabled: true };
     pickConnector.mockReturnValue(null);
     pickConnectHandle.mockReturnValue(null);
     vi.stubGlobal('ResizeObserver', class {
@@ -815,7 +817,7 @@ describe('OpenCanvas editor surface', () => {
   });
 
   it('draws a pen stroke with the armed tool and inserts it as one history entry', async () => {
-    storeState.viewSettings = { drawingTool: 'pen' };
+    storeState.viewSettings = { drawingTool: 'pen', alignmentGuidesEnabled: true };
     pickNode.mockReturnValue('node-1');
     const surface = await mounted();
 
@@ -838,7 +840,7 @@ describe('OpenCanvas editor surface', () => {
   });
 
   it('discards a stroke that never moved', async () => {
-    storeState.viewSettings = { drawingTool: 'line' };
+    storeState.viewSettings = { drawingTool: 'line', alignmentGuidesEnabled: true };
     const surface = await mounted();
     fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
     fireEvent.pointerUp(surface, { pointerId: 1, clientX: 10, clientY: 10 });
@@ -846,7 +848,7 @@ describe('OpenCanvas editor surface', () => {
   });
 
   it('Escape disarms the drawing tool when nothing is in progress', async () => {
-    storeState.viewSettings = { drawingTool: 'pen' };
+    storeState.viewSettings = { drawingTool: 'pen', alignmentGuidesEnabled: true };
     await mounted();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(storeState.setViewSettings).toHaveBeenCalledWith({ drawingTool: null });
@@ -895,5 +897,22 @@ describe('OpenCanvas editor surface', () => {
     const item = screen.getAllByRole('button', { name: /Select/ })[0];
     fireEvent.click(item);
     expect(setSelection).toHaveBeenCalled();
+  });
+
+  it('snaps a move to another node\'s edge and shows the guide', async () => {
+    pickNode.mockReturnValue('node-1');
+    // node-2 sits at x=400 in the scene page; node-1 is 168 wide at x=0.
+    getNodesWorldBounds.mockImplementation((ids: readonly string[]) =>
+      ids[0] === 'node-2' ? { x: 400, y: 0, width: 168, height: 72 }
+        : ids.length ? { x: 0, y: 0, width: 168, height: 72 } : null);
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    // Dragging node-1 right by 396 puts its left edge 4px from node-2's left edge.
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 406, clientY: 10 });
+    expect(setAlignmentGuides).toHaveBeenLastCalledWith(expect.objectContaining({ x: 400 }));
+    const preview = setTransformPreview.mock.calls.at(-1)?.[0];
+    expect(preview.bounds.x).toBe(400);
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 406, clientY: 10 });
+    expect(setAlignmentGuides).toHaveBeenLastCalledWith(null);
   });
 });

@@ -10,7 +10,8 @@ Milestone **M1 — One complete production editor**. Done: M1.1 canvas API,
 M1.2 menus/label editing, M1.3 drag-to-connect, M1.4 external input, M1.5
 freeform drawing, M1.6 group/lock/hide, M1.7 export + multi-page proof,
 M1.8 paste-in-place/style paste, M1.9 touch + screen-reader access on the
-surface, M1.10 rollout decision, M1.11 mermaid_svg on Pixi. Next: M1.12.
+surface, M1.10 rollout decision, M1.11 mermaid_svg on Pixi, M1.12 alignment
+guides. Next: canonical store ownership plan (see "Next steps").
 
 Production entry: `src/components/FlowEditor.tsx` mounts
 `OpenCanvasSurface` at the canvas seam only when the build sets
@@ -243,7 +244,7 @@ Parity checklist for the production surface against the React Flow path.
 | Camera: zoom/fit/wheel/middle-drag/Space-pan/touch pinch | ✅ (touch: unit only) |
 | Select: click/shift-click/marquee/select-all/Escape/inspector sync | ✅ |
 | Move/resize/rotate with snap (Alt disables) | ✅ move; resize/rotate unit-tested only |
-| Alignment guides while dragging | ⚠️ React Flow only |
+| Alignment guides while dragging | ✅ (`domain/transforms/alignmentGuides.ts`; edges/centres, 8px screen threshold, Alt disables, honours the alignment-guides setting) |
 | Connect: drag handles, connect menu, reconnect, reroute, reverse, delete | ✅ |
 | Rename: double-click, F2, typing, post-insert, Edit label | ✅ basic/text/sticky labels; ⚠️ class/ER/sequence/mindmap family fields edit only via inspector |
 | Insert from toolbar at camera centre; dblclick empty adds node | ✅ |

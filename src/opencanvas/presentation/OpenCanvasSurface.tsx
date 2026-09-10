@@ -44,6 +44,7 @@ import {
   type FreeformPointerOperation,
 } from './pixiFreeformOperations';
 import { projectPointerSamples } from './pointerSampleProjection';
+import { computeAlignmentSnap, type AlignmentSnap } from '../domain/transforms/alignmentGuides';
 import {
   addToSelection,
   clearSelection,
@@ -77,6 +78,9 @@ import { DEFAULT_CANVAS_CAMERA, fitCameraToBounds } from '../domain/camera/camer
 import type { CanvasCamera } from '../domain/camera/types';
 import { detectWebGlCapability } from '../infrastructure/pixi/capabilities';
 import { PixiRendererHost } from '../infrastructure/pixi/PixiRendererHost';
+
+/** Screen distance within which a moving selection snaps to another node's edge or centre. */
+const GUIDE_THRESHOLD_PIXELS = 8;
 
 /** Chrome drawn over the canvas (zoom controls, menus) keeps its own pointer events. */
 function isCanvasTarget(event: React.SyntheticEvent<HTMLDivElement>): boolean {
@@ -135,6 +139,7 @@ export function OpenCanvasSurface({
   const connectorRef = useRef<ConnectorPointerOperation | null>(null);
   const connectRef = useRef<ConnectPointerOperation | null>(null);
   const freeformRef = useRef<FreeformPointerOperation | null>(null);
+  const guideCandidatesRef = useRef<readonly Bounds2d[]>([]);
   const selectedConnectorIdRef = useRef<string | null>(null);
   const fittedRef = useRef<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'ready' | 'failed'>('idle');
@@ -170,6 +175,9 @@ export function OpenCanvasSurface({
   );
   // Kept out of `state` so arming a tool never re-projects the document.
   const drawingTool = useFlowStore((current) => current.viewSettings.drawingTool);
+  const alignmentGuidesEnabled = useFlowStore(
+    (current) => current.viewSettings.alignmentGuidesEnabled
+  );
 
   // The same operations and menu state the React Flow canvas composes, so
   // every menu item here is the exact behaviour users get on fallback.
@@ -270,6 +278,7 @@ export function OpenCanvasSurface({
 
   const commitTransform = useCallback((operation: TransformPointerOperation) => {
     hostRef.current?.setTransformPreview(null);
+    hostRef.current?.setAlignmentGuides(null);
     if (!operation.result || projection.status !== 'ready' || !activePage) return;
     try {
       const next = projectProductionTransform(
@@ -336,6 +345,7 @@ export function OpenCanvasSurface({
     connectRef.current = null;
     freeformRef.current = null;
     hostRef.current?.setTransformPreview(null);
+    hostRef.current?.setAlignmentGuides(null);
     hostRef.current?.setConnectorPreview(null);
     hostRef.current?.setConnectionPreview(null);
     hostRef.current?.setFreeformPreview(null);
@@ -653,6 +663,11 @@ export function OpenCanvasSurface({
             transformRef.current = beginTransformOperation(
               event.pointerId, activePage, movable, handle, host.screenToWorld(screen)
             );
+            const moving = new Set(movable);
+            guideCandidatesRef.current = activePage.nodes
+              .filter((node) => !moving.has(node.id))
+              .map((node) => host.getNodesWorldBounds([node.id]))
+              .filter((bounds): bounds is Bounds2d => bounds !== null);
           }
           return;
         }
@@ -727,11 +742,30 @@ export function OpenCanvasSurface({
         }
         const transform = transformRef.current;
         if (transform && transform.pointerId === event.pointerId) {
-          const next = updateTransformOperation(
-            transform, host.screenToWorld(screen), !event.altKey
-          );
+          const world = host.screenToWorld(screen);
+          let next = updateTransformOperation(transform, world, !event.altKey);
+          // Moves snap to the edges/centres of other nodes; Alt disables all
+          // snapping. Guides win over the grid, as on the React Flow canvas,
+          // so the candidate is measured on the raw (un-gridded) move.
+          let guides: AlignmentSnap | null = null;
+          if (!transform.handle && !event.altKey && alignmentGuidesEnabled) {
+            const raw = updateTransformOperation(transform, world, false).result;
+            const snap = raw
+              ? computeAlignmentSnap(
+                  raw.bounds, guideCandidatesRef.current,
+                  GUIDE_THRESHOLD_PIXELS / cameraRef.current.zoom
+                )
+              : null;
+            if (snap && (snap.x !== null || snap.y !== null)) {
+              next = updateTransformOperation(
+                transform, { x: world.x + snap.dx, y: world.y + snap.dy }, false
+              );
+              guides = snap;
+            }
+          }
           transformRef.current = next;
           host.setTransformPreview(next.result);
+          host.setAlignmentGuides(guides);
           return;
         }
         const marquee = marqueeRef.current;
