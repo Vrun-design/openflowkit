@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Node } from '@/lib/reactflowCompat';
 import type { ContextMenuProps } from '@/components/ContextMenu';
+import { useFlowStore } from '@/store';
 
 interface UseFlowCanvasContextActionsParams {
   contextMenu: ContextMenuProps & { isOpen: boolean };
@@ -30,6 +31,7 @@ export interface UseFlowCanvasContextActionsResult {
   onDuplicate: () => void;
   onDelete: () => void;
   onSendToBack: () => void;
+  onReverseEdge: () => void;
   onChangeNodeType: (type: string) => void;
   onEditLabel: () => void;
   onFitSectionToContents: () => void;
@@ -103,6 +105,19 @@ export function useFlowCanvasContextActions({
   function onSendToBack(): void {
     if (contextMenu.id) {
       updateNodeZIndex(contextMenu.id, 'back');
+    }
+    onCloseContextMenu();
+  }
+
+  function onReverseEdge(): void {
+    if (contextMenu.id) {
+      // The store command reverses the selected edges atomically with history,
+      // so select the menu's edge first.
+      const { setSelectedEdgeId, setEdges, runContextualEditorCommand } = useFlowStore.getState();
+      const id = contextMenu.id;
+      setEdges((edges) => edges.map((edge) => ({ ...edge, selected: edge.id === id })));
+      setSelectedEdgeId(id);
+      runContextualEditorCommand({ kind: 'reverse-connectors' });
     }
     onCloseContextMenu();
   }
@@ -200,6 +215,7 @@ export function useFlowCanvasContextActions({
     onDuplicate,
     onDelete,
     onSendToBack,
+    onReverseEdge,
     onChangeNodeType,
     onEditLabel,
     onFitSectionToContents,

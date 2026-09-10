@@ -11,10 +11,17 @@ import { applyProductionNodeMutation } from '../application/active-document/prod
 import { isNodeEditableOnLayer } from '../application/active-document/productionLayers';
 import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
 import { createOpenCanvasSurfaceApi } from './openCanvasSurfaceApi';
-import { publishActiveCanvasViewport, registerActiveCanvas } from '@/canvas/activeCanvas';
+import {
+  publishActiveCanvasViewport,
+  registerActiveCanvas,
+  useActiveCanvas,
+} from '@/canvas/activeCanvas';
 import { ContextMenu } from '@/components/ContextMenu';
 import { NavigationControls } from '@/components/NavigationControls';
-import { useFlowCanvasMenus } from '@/components/flow-canvas/useFlowCanvasMenus';
+import { useFlowCanvasMenusAndActions } from '@/components/flow-canvas/useFlowCanvasMenusAndActions';
+import { useFlowOperations } from '@/hooks/useFlowOperations';
+import { APP_EVENT_NAMES } from '@/lib/legacyBranding';
+import { useNodeLabelEditRequestActions, usePendingNodeLabelEditRequest } from '@/store/selectionHooks';
 import type { Bounds2d } from '../domain/geometry/types';
 import {
   beginConnectorOperation,
@@ -62,17 +69,17 @@ function surfacePoint(
   return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
 }
 
-export interface OpenCanvasSurfaceActions {
-  readonly deleteNode: (id: string) => void;
-  readonly duplicateNode: (id: string) => void;
-  readonly updateNodeZIndex: (id: string, action: 'front' | 'back') => void;
-}
-
 interface OpenCanvasSurfaceProps {
   /** React Flow canvas rendered instead whenever OpenCanvas cannot draw. */
   readonly fallback: React.ReactNode;
-  /** Editor operations FlowEditor already assembles, reused for the menu. */
-  readonly actions: OpenCanvasSurfaceActions;
+  /** Same history hook the React Flow canvas gets, so both share undo. */
+  readonly recordHistory: () => void;
+}
+
+interface LabelEditRequest {
+  readonly nodeId: string;
+  readonly seedText?: string;
+  readonly replaceExisting?: boolean;
 }
 
 /**
@@ -81,7 +88,7 @@ interface OpenCanvasSurfaceProps {
  */
 export function OpenCanvasSurface({
   fallback,
-  actions,
+  recordHistory,
 }: OpenCanvasSurfaceProps): React.JSX.Element {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const hostRef = useRef<PixiRendererHost | null>(null);
@@ -100,7 +107,6 @@ export function OpenCanvasSurface({
     { readonly nodeId: string; readonly value: string; readonly bounds: Bounds2d } | null
   >(null);
   const capability = useMemo(() => detectWebGlCapability(), []);
-  const { contextMenu, onNodeContextMenu, onCloseContextMenu } = useFlowCanvasMenus();
 
   const state = useFlowStore(
     useShallow((current) => ({
@@ -125,6 +131,39 @@ export function OpenCanvasSurface({
     () => projectActiveDocument(state, new Date().toISOString()),
     [state]
   );
+
+  // The same operations and menu state the React Flow canvas composes, so
+  // every menu item here is the exact behaviour users get on fallback.
+  const operations = useFlowOperations(recordHistory);
+  const { screenToFlowPosition } = useActiveCanvas();
+  const {
+    contextMenu,
+    onNodeContextMenu,
+    onPaneContextMenu,
+    onEdgeContextMenu,
+    onCloseContextMenu,
+    contextActions,
+  } = useFlowCanvasMenusAndActions({
+    screenToFlowPosition,
+    copySelection: operations.copySelection,
+    pasteSelection: operations.pasteSelection,
+    duplicateNode: operations.duplicateNode,
+    deleteNode: operations.deleteNode,
+    deleteEdge: operations.deleteEdge,
+    updateNodeZIndex: operations.updateNodeZIndex,
+    updateNodeType: operations.updateNodeType,
+    updateNodeData: operations.updateNodeData,
+    fitSectionToContents: operations.fitSectionToContents,
+    releaseFromSection: operations.releaseFromSection,
+    bringContentsIntoSection: operations.handleBringContentsIntoSection,
+    handleAlignNodes: operations.handleAlignNodes,
+    handleDistributeNodes: operations.handleDistributeNodes,
+    handleGroupNodes: operations.handleGroupNodes,
+    handleWrapInSection: operations.handleWrapInSection,
+    nodes: state.nodes,
+  });
+  const pendingLabelEdit = usePendingNodeLabelEditRequest();
+  const { clearPendingNodeLabelEditRequest } = useNodeLabelEditRequestActions();
 
   const applyCamera = useCallback((camera: CanvasCamera) => {
     cameraRef.current = camera;
@@ -207,17 +246,20 @@ export function OpenCanvasSurface({
     }
   }, [activePage, projection, state]);
 
-  const startTextEditing = useCallback((nodeId: string) => {
+  const startTextEditing = useCallback((request: LabelEditRequest): boolean => {
     const host = hostRef.current;
-    if (!host || !activePage || !isNodeEditableOnLayer(activePage, nodeId)) return;
+    const { nodeId } = request;
+    if (!host || !activePage || !isNodeEditableOnLayer(activePage, nodeId)) return false;
     const node = activePage.nodes.find(({ id }) => id === nodeId);
     const bounds = host.getNodeScreenBounds(nodeId);
-    if (!node || !bounds) return;
+    if (!node || !bounds) return false;
+    const label = typeof node.content.label === 'string' ? node.content.label : '';
     setTextEditor({
       nodeId,
-      value: typeof node.content.label === 'string' ? node.content.label : node.id,
+      value: request.replaceExisting ? request.seedText ?? '' : label + (request.seedText ?? ''),
       bounds,
     });
+    return true;
   }, [activePage]);
 
   const cancelTransform = useCallback(() => {
@@ -342,6 +384,23 @@ export function OpenCanvasSurface({
     applyCamera(bounds ? fitCameraToBounds(bounds, host.getViewportSize()) : DEFAULT_CANVAS_CAMERA);
   }, [applyCamera, projection, state.activePageId, status]);
 
+  // F2, typing on a selected node, "Edit label", and fresh insertions all ask
+  // for a label editor through the store or a window event; answer them here
+  // since no React Flow node is mounted to do it.
+  useEffect(() => {
+    if (!pendingLabelEdit || status !== 'ready') return;
+    if (startTextEditing(pendingLabelEdit)) clearPendingNodeLabelEditRequest();
+  }, [clearPendingNodeLabelEditRequest, pendingLabelEdit, startTextEditing, status]);
+
+  useEffect(() => {
+    const onRequest = (event: Event): void => {
+      const detail = (event as CustomEvent<LabelEditRequest>).detail;
+      if (detail?.nodeId) startTextEditing(detail);
+    };
+    window.addEventListener(APP_EVENT_NAMES.nodeLabelEditRequest, onRequest);
+    return () => window.removeEventListener(APP_EVENT_NAMES.nodeLabelEditRequest, onRequest);
+  }, [startTextEditing]);
+
   if (!usable) return <>{fallback}</>;
 
   return (
@@ -379,9 +438,13 @@ export function OpenCanvasSurface({
           const wasSelected = nodeId ? selectionRef.current.nodeIds.includes(nodeId) : false;
           // Deselecting on press would move the wrong set on the drag that follows.
           pendingToggleRef.current = nodeId && wasSelected && additive ? nodeId : null;
+          // A plain click on an already selected node makes it the primary
+          // one, so the inspector follows the click even after undo/reload.
           const next = nodeId && !wasSelected
             ? selectionAfterClick(selectionRef.current, nodeId, additive)
-            : selectionRef.current;
+            : nodeId && !additive && state.selectedNodeId !== nodeId
+              ? { nodeIds: selectionRef.current.nodeIds, primaryNodeId: nodeId }
+              : selectionRef.current;
           if (next !== selectionRef.current) applySelection(next);
           if (next.nodeIds.length > 0 && activePage) {
             transformRef.current = beginTransformOperation(
@@ -489,21 +552,30 @@ export function OpenCanvasSurface({
         const host = hostRef.current;
         if (!host || !isCanvasTarget(event)) return;
         event.preventDefault();
-        const nodeId = host.pickNode(surfacePoint(event));
-        if (!nodeId) {
-          onCloseContextMenu();
+        const screen = surfacePoint(event);
+        const nodeId = host.pickNode(screen);
+        if (nodeId) {
+          if (!selectionRef.current.nodeIds.includes(nodeId)) {
+            applySelection(selectionAfterClick(selectionRef.current, nodeId, false));
+          }
+          const node = state.nodes.find(({ id }) => id === nodeId);
+          if (node) onNodeContextMenu(event, node);
           return;
         }
-        if (!selectionRef.current.nodeIds.includes(nodeId)) {
-          applySelection(selectionAfterClick(selectionRef.current, nodeId, false));
+        const connectorId = host.pickConnector(screen);
+        if (connectorId) {
+          applySelection(clearSelection());
+          applyConnectorSelection(connectorId);
+          const edge = state.edges.find(({ id }) => id === connectorId);
+          if (edge) onEdgeContextMenu(event, edge);
+          return;
         }
-        const node = state.nodes.find(({ id }) => id === nodeId);
-        if (node) onNodeContextMenu(event, node);
+        onPaneContextMenu(event);
       }}
       onDoubleClick={(event) => {
         if (!isCanvasTarget(event)) return;
         const nodeId = hostRef.current?.pickNode(surfacePoint(event));
-        if (nodeId) startTextEditing(nodeId);
+        if (nodeId) startTextEditing({ nodeId });
       }}
       onWheel={(event) => {
         const host = hostRef.current;
@@ -517,26 +589,30 @@ export function OpenCanvasSurface({
       }}
     >
       <NavigationControls />
-      {contextMenu.isOpen && contextMenu.id ? (
+      {contextMenu.isOpen ? (
         <ContextMenu
           {...contextMenu}
           onClose={onCloseContextMenu}
-          onDuplicate={() => {
-            onCloseContextMenu();
-            actions.duplicateNode(contextMenu.id!);
+          onCopy={operations.copySelection}
+          onPaste={contextActions.onPaste}
+          onDuplicate={contextActions.onDuplicate}
+          onDelete={contextActions.onDelete}
+          onSendToBack={contextActions.onSendToBack}
+          onReverseEdge={contextActions.onReverseEdge}
+          onChangeNodeType={contextActions.onChangeNodeType}
+          onEditLabel={() => {
+            contextActions.onEditLabel();
+            if (contextMenu.id && contextMenu.type === 'node') {
+              startTextEditing({ nodeId: contextMenu.id });
+            }
           }}
-          onDelete={() => {
-            onCloseContextMenu();
-            actions.deleteNode(contextMenu.id!);
-          }}
-          onBringToFront={() => {
-            onCloseContextMenu();
-            actions.updateNodeZIndex(contextMenu.id!, 'front');
-          }}
-          onSendToBack={() => {
-            onCloseContextMenu();
-            actions.updateNodeZIndex(contextMenu.id!, 'back');
-          }}
+          canPaste={true}
+          selectedCount={contextActions.selectedCount}
+          onAlignNodes={contextActions.onAlignNodes}
+          onDistributeNodes={contextActions.onDistributeNodes}
+          onTogglePinPosition={contextActions.onTogglePinPosition}
+          isPinPositionToggleApplicable={contextActions.isPinPositionToggleApplicable}
+          isCurrentNodePinned={contextActions.isCurrentNodePinned}
         />
       ) : null}
       {textEditor ? (

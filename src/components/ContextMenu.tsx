@@ -79,6 +79,7 @@ export interface ContextMenuProps {
   onCopy?: () => void;
   onPaste?: () => void;
   onDuplicate?: () => void;
+  onReverseEdge?: () => void;
   onDelete?: () => void;
   onBringToFront?: () => void;
   onSendToBack?: () => void;
@@ -111,6 +112,7 @@ export function ContextMenu({
   onCopy,
   onPaste,
   onDuplicate,
+  onReverseEdge,
   onDelete,
   onBringToFront,
   onSendToBack,
@@ -142,8 +144,16 @@ export function ContextMenu({
       }
     }
 
+    function handleEscape(event: KeyboardEvent): void {
+      if (event.key === 'Escape') onClose();
+    }
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [onClose]);
 
   useLayoutEffect(() => {
@@ -316,13 +326,15 @@ export function ContextMenu({
               <Pencil className="w-4 h-4" /> {t('common.editLabel')}
             </button>
           )}
-          <button
-            role="menuitem"
-            onClick={onDuplicate}
-            className={MENU_BUTTON_CLASS_NAME}
-          >
-            <Replace className="w-4 h-4" /> {t('common.reverseDirection')}
-          </button>
+          {onReverseEdge && (
+            <button
+              role="menuitem"
+              onClick={onReverseEdge}
+              className={MENU_BUTTON_CLASS_NAME}
+            >
+              <Replace className="w-4 h-4" /> {t('common.reverseDirection')}
+            </button>
+          )}
           <div className={DIVIDER_CLASS_NAME} />
           <button
             role="menuitem"

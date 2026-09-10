@@ -231,14 +231,7 @@ export function FlowEditor({ onGoHome }: FlowEditorProps) {
             canvas={
               LazyOpenCanvasSurface ? (
                 <Suspense fallback={canvas}>
-                  <LazyOpenCanvasSurface
-                    fallback={canvas}
-                    actions={{
-                      deleteNode: flowEditorController.panels.properties.onDeleteNode,
-                      duplicateNode: flowEditorController.panels.properties.onDuplicateNode,
-                      updateNodeZIndex: flowEditorController.panels.properties.onUpdateZIndex,
-                    }}
-                  />
+                  <LazyOpenCanvasSurface fallback={canvas} recordHistory={recordHistory} />
                 </Suspense>
               ) : canvas
             }

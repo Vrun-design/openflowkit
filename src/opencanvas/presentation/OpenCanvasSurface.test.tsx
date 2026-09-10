@@ -100,11 +100,14 @@ const storeNodes = [
   { id: 'node-2', type: 'process', position: { x: 0, y: 0 }, data: { label: 'Two' } },
 ];
 
+const clearPendingNodeLabelEditRequest = vi.fn();
 const storeState = {
   nodes: storeNodes,
+  pendingNodeLabelEditRequest: null as null | { nodeId: string; seedText?: string; replaceExisting?: boolean },
   selectedNodeId: null as string | null,
   selectedEdgeId: null as string | null,
-  edges: [], documents: [{ id: 'doc' }], activeDocumentId: 'doc',
+  edges: [] as Array<{ id: string; source: string; target: string; selected?: boolean }>,
+  documents: [{ id: 'doc' }], activeDocumentId: 'doc',
   tabs: [{ id: 'page-1' }], activeTabId: 'page-1', layers: [],
   setNodes, setSelectedNodeId, recordHistoryV2, setEdges, setSelectedEdgeId, setGraph,
 };
@@ -114,6 +117,19 @@ vi.mock('@/store', () => ({
     (selector: (state: unknown) => unknown) => selector(storeState),
     { getState: () => storeState }
   ),
+}));
+
+const operations = {
+  copySelection: vi.fn(), pasteSelection: vi.fn(), duplicateNode: vi.fn(), deleteNode: vi.fn(),
+  deleteEdge: vi.fn(), updateNodeZIndex: vi.fn(), updateNodeType: vi.fn(), updateNodeData: vi.fn(),
+  fitSectionToContents: vi.fn(), releaseFromSection: vi.fn(), handleBringContentsIntoSection: vi.fn(),
+  handleAlignNodes: vi.fn(), handleDistributeNodes: vi.fn(), handleGroupNodes: vi.fn(),
+  handleWrapInSection: vi.fn(),
+};
+vi.mock('@/hooks/useFlowOperations', () => ({ useFlowOperations: () => operations }));
+vi.mock('@/store/selectionHooks', () => ({
+  usePendingNodeLabelEditRequest: () => storeState.pendingNodeLabelEditRequest,
+  useNodeLabelEditRequestActions: () => ({ clearPendingNodeLabelEditRequest }),
 }));
 
 vi.mock('@/lib/reactflowCompat', async (importOriginal) => ({
@@ -157,16 +173,14 @@ import { OpenCanvasSurface } from './OpenCanvasSurface';
 import { getActiveCanvasApi } from '@/canvas/activeCanvas';
 
 const FALLBACK = <div data-testid="react-flow-fallback" />;
-const surfaceActions = {
-  deleteNode: vi.fn(),
-  duplicateNode: vi.fn(),
-  updateNodeZIndex: vi.fn(),
-};
+const recordHistory = vi.fn();
 
 describe('OpenCanvas editor surface', () => {
   beforeEach(() => {
     storeState.nodes = storeNodes;
+    storeState.edges = [];
     storeState.selectedNodeId = null;
+    pickConnector.mockReturnValue(null);
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
       disconnect() {}
@@ -176,7 +190,8 @@ describe('OpenCanvas editor surface', () => {
       setNodes, setSelectedNodeId, setTransformPreview, recordHistoryV2,
       setConnectorSelection, setConnectorPreview, setEdges, setSelectedEdgeId, setGraph,
     ].forEach((spy) => spy.mockClear());
-    Object.values(surfaceActions).forEach((spy) => spy.mockClear());
+    Object.values(operations).forEach((spy) => spy.mockClear());
+    storeState.pendingNodeLabelEditRequest = null;
     getNodeScreenBounds.mockReset();
     getNodeScreenBounds.mockReturnValue({ x: 10, y: 20, width: 160, height: 60 });
     applyProductionNodeMutation.mockClear();
@@ -218,7 +233,7 @@ describe('OpenCanvas editor surface', () => {
 
   it('draws the projected active page and fits the camera once', async () => {
     getContentBounds.mockReturnValue({ x: 0, y: 0, width: 400, height: 300 });
-    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
 
     expect(screen.getByTestId('opencanvas-surface')).toBeTruthy();
     expect(screen.queryByTestId('react-flow-fallback')).toBeNull();
@@ -230,7 +245,7 @@ describe('OpenCanvas editor surface', () => {
 
   it('renders the React Flow fallback when WebGL is unavailable', () => {
     detectWebGlCapability.mockReturnValue({ supported: false });
-    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
     expect(screen.getByTestId('react-flow-fallback')).toBeTruthy();
     expect(screen.queryByTestId('opencanvas-surface')).toBeNull();
     expect(constructed).toHaveLength(0);
@@ -240,20 +255,20 @@ describe('OpenCanvas editor surface', () => {
     projectActiveDocument.mockReturnValue({
       status: 'invalid', code: 'CANONICAL_PROJECTION_FAILED',
     });
-    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
     expect(screen.getByTestId('react-flow-fallback')).toBeTruthy();
     expect(constructed).toHaveLength(0);
   });
 
   it('falls back and destroys the host when the renderer fails to mount', async () => {
     mount.mockImplementation(async () => { throw new Error('no context'); });
-    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
     await waitFor(() => expect(screen.getByTestId('react-flow-fallback')).toBeTruthy());
     expect(destroy).toHaveBeenCalled();
   });
 
   it('falls back and destroys the host when the WebGL context is lost', async () => {
-    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
     await waitFor(() => expect(constructed).toHaveLength(1));
     constructed[0].onStatusChange?.('context-lost');
     await waitFor(() => expect(screen.getByTestId('react-flow-fallback')).toBeTruthy());
@@ -261,7 +276,7 @@ describe('OpenCanvas editor surface', () => {
   });
 
   it('pans on middle-drag and zooms on wheel through the host camera', async () => {
-    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
     const surface = screen.getByTestId('opencanvas-surface');
     surface.setPointerCapture = vi.fn();
     await waitFor(() => expect(setPage).toHaveBeenCalled());
@@ -280,7 +295,7 @@ describe('OpenCanvas editor surface', () => {
   });
 
   async function mounted() {
-    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
     const surface = screen.getByTestId('opencanvas-surface');
     surface.setPointerCapture = vi.fn();
     await waitFor(() => expect(setPage).toHaveBeenCalled());
@@ -628,15 +643,30 @@ describe('OpenCanvas editor surface', () => {
     expect(screen.getByRole('menuitem', { name: 'common.delete' })).toBeTruthy();
   });
 
-  it('opens nothing on empty space and closes an open menu', async () => {
-    pickNode.mockReturnValue('node-1');
+  it('opens the canvas menu on empty space and pastes at the pointer in world space', async () => {
+    pickNode.mockReturnValue(null);
+    const surface = await mounted();
+    fireEvent.contextMenu(surface, { clientX: 300, clientY: 400 });
+    const menu = screen.getByRole('menu', { name: 'Canvas context menu' });
+    expect(menu).toBeTruthy();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'common.paste' }));
+    expect(operations.pasteSelection).toHaveBeenCalledWith(expect.objectContaining({
+      x: expect.any(Number), y: expect.any(Number),
+    }));
+    expect(screen.queryByRole('menu', { name: 'Canvas context menu' })).toBeNull();
+  });
+
+  it('opens the edge menu on a connector and deletes that edge', async () => {
+    pickNode.mockReturnValue(null);
+    pickConnector.mockReturnValue('edge-1');
+    storeState.edges = [{ id: 'edge-1', source: 'node-1', target: 'node-2' }];
     const surface = await mounted();
     fireEvent.contextMenu(surface, { clientX: 30, clientY: 40 });
-    expect(screen.getByRole('menu', { name: 'Canvas context menu' })).toBeTruthy();
-
-    pickNode.mockReturnValue(null);
-    fireEvent.contextMenu(surface, { clientX: 300, clientY: 400 });
-    expect(screen.queryByRole('menu', { name: 'Canvas context menu' })).toBeNull();
+    expect(setConnectorSelection).toHaveBeenLastCalledWith('edge-1', null);
+    expect(screen.getByRole('menuitem', { name: 'common.reverseDirection' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'common.deleteConnection' }));
+    expect(operations.deleteEdge).toHaveBeenCalledWith('edge-1');
+    expect(operations.deleteNode).not.toHaveBeenCalled();
   });
 
   it('runs delete, duplicate, and z-order actions on the right node and closes', async () => {
@@ -644,10 +674,9 @@ describe('OpenCanvas editor surface', () => {
     const surface = await mounted();
 
     for (const [name, spy, args] of [
-      ['common.delete', surfaceActions.deleteNode, ['node-1']],
-      ['common.duplicate', surfaceActions.duplicateNode, ['node-1']],
-      ['common.bringToFront', surfaceActions.updateNodeZIndex, ['node-1', 'front']],
-      ['common.sendToBack', surfaceActions.updateNodeZIndex, ['node-1', 'back']],
+      ['common.delete', operations.deleteNode, ['node-1']],
+      ['common.duplicate', operations.duplicateNode, ['node-1']],
+      ['common.sendToBack', operations.updateNodeZIndex, ['node-1', 'back']],
     ] as const) {
       fireEvent.contextMenu(surface, { clientX: 30, clientY: 40 });
       fireEvent.click(screen.getByRole('menuitem', { name }));
@@ -656,15 +685,25 @@ describe('OpenCanvas editor surface', () => {
     }
   });
 
-  it('shows no Copy item, since the surface cannot supply one', async () => {
+  it('shows the multi-selection menu when several nodes are selected', async () => {
     pickNode.mockReturnValue('node-1');
+    storeState.nodes = storeNodes.map((node) => ({ ...node, selected: true }));
     const surface = await mounted();
     fireEvent.contextMenu(surface, { clientX: 30, clientY: 40 });
-    expect(screen.queryByRole('menuitem', { name: 'common.copy' })).toBeNull();
+    fireEvent.click(screen.getByRole('menuitem', { name: /common.delete/ }));
+    expect(operations.deleteNode).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens the label editor for a pending store request and clears it', async () => {
+    storeState.pendingNodeLabelEditRequest = { nodeId: 'node-1', seedText: 'Q', replaceExisting: true };
+    await mounted();
+    await waitFor(() => expect(clearPendingNodeLabelEditRequest).toHaveBeenCalled());
+    expect((screen.getByRole('textbox', { name: 'Edit node label' }) as HTMLTextAreaElement)
+      .defaultValue).toBe('Q');
   });
 
   it('registers itself as the active canvas and unregisters on unmount', async () => {
-    const view = render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    const view = render(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
     await waitFor(() => expect(getActiveCanvasApi()).not.toBeNull());
     setCamera.mockClear();
     getActiveCanvasApi()!.zoomIn();
@@ -678,17 +717,17 @@ describe('OpenCanvas editor surface', () => {
 
   it('does not register when it falls back to React Flow', () => {
     detectWebGlCapability.mockReturnValue({ supported: false });
-    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
     expect(getActiveCanvasApi()).toBeNull();
   });
 
   it('mirrors selection made elsewhere in the editor onto the surface', async () => {
-    const view = render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    const view = render(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
     await waitFor(() => expect(setPage).toHaveBeenCalled());
     setSelection.mockClear();
     storeState.nodes = storeNodes.map((node) => ({ ...node, selected: true }));
     storeState.selectedNodeId = 'node-2';
-    view.rerender(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    view.rerender(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
     expect(setSelection).toHaveBeenLastCalledWith(['node-1', 'node-2'], 'node-2');
   });
 });

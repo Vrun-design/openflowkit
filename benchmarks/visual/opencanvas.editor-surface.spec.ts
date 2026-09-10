@@ -57,10 +57,54 @@ test('inserts at the visible camera and survives reload through fallback', async
   await expect(page.getByRole('heading', { name: /Properties/i }).first()).toBeVisible({ timeout: 10_000 });
 
   const viewport = page.viewportSize()!;
-  // Escape clears the selection; the node's top-left sits at the window
-  // centre, so a click just inside it must select it again on this canvas.
+  // First Escape closes the label editor insertion opened, the second clears
+  // the selection; the node's top-left sits at the window centre, so a click
+  // just inside it must select it again on this canvas.
+  await page.getByRole('textbox', { name: 'Edit node label' }).press('Escape');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('heading', { name: /Properties/i })).toHaveCount(0);
   await page.mouse.click(viewport.width / 2 + 24, viewport.height / 2 + 24);
   await expect(page.getByRole('heading', { name: /Properties/i }).first()).toBeVisible();
+});
+
+test('label editing and context menus work on the OpenCanvas surface', async ({ page }) => {
+  await createNewFlow(page);
+  await page.getByTestId('toolbar-add-toggle').click();
+  await page.getByRole('button', { name: 'Rectangle' }).click();
+
+  // Insertion queues a label edit; the surface answers it with its own editor.
+  const editor = page.getByRole('textbox', { name: 'Edit node label' });
+  await expect(editor).toBeVisible({ timeout: 10_000 });
+  await editor.fill('Hello canvas');
+  await editor.press('Enter');
+  await expect(editor).toHaveCount(0);
+  await expect(page.getByPlaceholder('Enter primary text...')).toHaveValue('Hello canvas');
+
+  const viewport = page.viewportSize()!;
+  const inNode = { x: viewport.width / 2 + 24, y: viewport.height / 2 + 24 };
+
+  // Empty-space menu offers paste; Escape closes it.
+  await page.mouse.click(40, 120, { button: 'right' });
+  const menu = page.getByRole('menu', { name: 'Canvas context menu' });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Paste' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+
+  // F2 reopens the editor for the selected node.
+  await page.mouse.click(inNode.x, inNode.y);
+  await page.keyboard.press('F2');
+  await expect(editor).toBeVisible();
+  await editor.press('Escape');
+
+  // Node menu deletes the node; the inspector goes away with it.
+  await page.mouse.click(inNode.x, inNode.y, { button: 'right' });
+  await expect(menu).toBeVisible();
+  await menu.getByRole('menuitem', { name: 'Delete' }).click();
+  await expect(page.getByRole('heading', { name: /Properties/i })).toHaveCount(0);
+
+  // Undo brings it back.
+  await page.keyboard.press('Meta+z');
+  await page.mouse.click(inNode.x, inNode.y);
+  await expect(page.getByPlaceholder('Enter primary text...')).toHaveValue('Hello canvas');
 });

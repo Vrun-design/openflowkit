@@ -116,6 +116,7 @@ export function FlowCanvasOverlays({
             onDuplicate={contextActions.onDuplicate}
             onDelete={contextActions.onDelete}
             onSendToBack={contextActions.onSendToBack}
+            onReverseEdge={contextActions.onReverseEdge}
             onChangeNodeType={contextActions.onChangeNodeType}
             onEditLabel={contextActions.onEditLabel}
             canPaste={true}

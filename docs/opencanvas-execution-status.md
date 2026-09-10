@@ -6,8 +6,8 @@ and next. Updated: 2026-09-10.
 
 ## Current position
 
-Milestone **M1 — One complete production editor**. Slice in progress: M1.1
-renderer-neutral canvas API (done); next M1.2 (see "Next steps").
+Milestone **M1 — One complete production editor**. Done: M1.1 canvas API,
+M1.2 menus/label editing on the surface. Next: M1.3 (see "Next steps").
 
 Production entry: `src/components/FlowEditor.tsx` mounts
 `OpenCanvasSurface` at the canvas seam only when the build sets
@@ -33,8 +33,8 @@ React Flow. Pixi is not default; parity is incomplete (below).
 | Shared interaction controllers | partial | Surface reuses `pixiPointerOperations`, `pixiConnectorOperations`, selection model; `OpenCanvasDocumentPage` still has its own handler hooks (`usePixi*`). Freeform draw not on surface. |
 | Renderer-neutral canvas API | **done (camera/coords/fit)**; clipboard/export/insertion go through store + `screenToFlowPosition` | `src/canvas/activeCanvas.ts`, `src/opencanvas/presentation/openCanvasSurfaceApi.ts`. Consumers: NavigationControls, FlowCanvas, LayersView, SearchView, usePlayback, useFlowExport, useEdgeOperations, useFlowEditorScreenState. |
 | Canonical store ownership | missing | Store still legacy; adapter direction only. |
-| Complete node/edge/canvas/multi menus | partial | Node menu on Pixi (WIP from baseline): delete/duplicate/z-order. Edge, canvas, multi-select menus: React Flow only. |
-| Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename, insert via toolbar (verified). Missing on Pixi: draw new connector from a node, freeform draw, group/ungroup UI, lock/hide UI, drag-drop files/images. |
+| Complete node/edge/canvas/multi menus | **done on both canvases** (same `useFlowCanvasMenusAndActions` + `ContextMenu`) | `OpenCanvasSurface.tsx` right-click → node/multi/edge/pane menus; paste-here uses active-canvas `screenToFlowPosition`. Group/section items depend on M1 group UI. |
+| Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename (double-click, F2, typing, Edit label, post-insert), insert via toolbar, delete/duplicate/z-order/reverse via menus (browser-verified). Missing on Pixi: draw new connector from a node, freeform draw, group/ungroup UI, lock/hide UI, drag-drop files/images. |
 | Paste-in-place / style paste / external paste / file drop | partial | Keyboard copy/paste is store-based and works on either canvas. File/image drop handlers live in `FlowCanvas` only. |
 | Undo/redo + save/reopen | partial | Every Pixi commit records `recordHistoryV2`; persistence is the legacy store path. |
 | Pixi default + fallback | not started | Flag default off. |
@@ -76,6 +76,27 @@ Not applicable / not verified: theme + RTL for nav controls unchanged from
 React Flow path; reduced motion honoured via `prefers-reduced-motion` in the
 API but not browser-verified; touch not exercised.
 
+### M1.2 — Menus and label editing on the surface (2026-09-10)
+
+Behavior: right-click on the Pixi surface opens the same node / multi-select /
+edge / canvas menus as React Flow, driven by the same `useFlowOperations` +
+`useFlowCanvasMenusAndActions` composition (no second implementation). Paste
+from the canvas menu lands at the pointer in world space at any zoom. Label
+edit requests (F2, typing on a selected node, "Edit label", and the request
+queued by every insertion) open the surface's text editor. Escape dismisses
+any context menu on either canvas. Clicking an already-selected node makes it
+primary so the inspector follows clicks after undo.
+
+Fixed on the way (both canvases): edge menu "Reverse direction" called
+`duplicateNode(edgeId)` (inert); now runs the store's atomic
+`reverse-connectors` command with history.
+
+Validation (working tree on 5eba94d):
+- `npx tsc -b` — exit 0; `eslint` on touched files — exit 0.
+- `npx vitest --run src/opencanvas src/components src/hooks src/store` — 260 files, 1235 tests passed.
+- `npm run test:opencanvas:editor-surface` — 3/3 passed (zoom/fit; insert at
+  zoom + reselect; label edit → canvas menu → F2 → node menu delete → undo).
+
 ## Unverified / external gates
 
 - Real-GPU hardware performance capture (needs headed run on reference hardware).
@@ -94,14 +115,11 @@ API but not browser-verified; touch not exercised.
 
 ## Next steps
 
-1. **M1.2 keyboard/menus parity on Pixi**: canvas (empty-space) context menu
-   with paste-here at the pointer, edge context menu, multi-selection menu;
-   reuse `useFlowCanvasMenus`/`useFlowCanvasContextActions` with
-   `useActiveCanvas().screenToFlowPosition`.
-2. **M1.3 drag-to-connect from a node** on the Pixi surface (reuse
-   `pixiConnectorOperations` create path from `OpenCanvasDocumentPage`).
-3. **M1.4 file/image drop + external paste** on the surface (move
+1. **M1.3 drag-to-connect from a node** on the Pixi surface (reuse
+   `pixiConnectorOperations` create path from `OpenCanvasDocumentPage`);
+   include the "connect menu" (drop on empty space → add-and-connect).
+2. **M1.4 file/image drop + external paste** on the surface (move
    `useFlowCanvasDragDrop` to the seam so both canvases share it).
-4. **M1.5 freeform draw tools** on the surface (reuse `pixiFreeformOperations`).
-5. Then canonical store ownership (M1 architecture item), group/lock/hide UI
+3. **M1.5 freeform draw tools** on the surface (reuse `pixiFreeformOperations`).
+4. Then canonical store ownership (M1 architecture item), group/lock/hide UI
    on Pixi, save/reopen/export browser proof, and the flag-default decision.
