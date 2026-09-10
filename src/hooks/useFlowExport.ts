@@ -1,17 +1,16 @@
 import { useCallback, useRef, useState } from 'react';
 import { createLogger } from '@/lib/logger';
 import { useActiveCanvas } from '@/canvas/activeCanvas';
-import { toJpeg } from 'html-to-image';
+import { CanvasCaptureError, captureActiveCanvas } from './flow-export/activeCanvasCapture';
 import { useFlowStore } from '../store';
 import { useCanvasActions, useCanvasState } from '@/store/canvasHooks';
 import { useActiveTabId, useTabActions } from '@/store/tabHooks';
 import { useViewSettings } from '@/store/viewHooks';
 import { useToast } from '../components/ui/ToastContext';
-import { resolveFlowExportViewport } from './flowExportViewport';
 import { notifyOperationOutcome } from '@/services/operationFeedback';
 import { createPdfFromJpeg } from '@/services/export/pdfDocument';
 import { buildExportFileName } from '@/lib/exportFileName';
-import { createDownload, createExportOptions } from './flow-export/exportCapture';
+import { createDownload } from './flow-export/exportCapture';
 import {
   buildDiagramDocumentJson,
   importDiagramDocumentJson,
@@ -35,6 +34,15 @@ const logger = createLogger({ scope: 'useFlowExport' });
 
 interface AnimatedPlaybackControls {
   stopPlayback: () => void;
+}
+
+function imageSize(dataUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = () => reject(new Error('Could not read the exported image.'));
+    image.src = dataUrl;
+  });
 }
 
 export const useFlowExport = (
@@ -70,38 +78,26 @@ export const useFlowExport = (
     exportBaseName,
   });
 
-  const handlePdfExport = useCallback(() => {
-    const { viewport: flowViewport, message } = resolveFlowExportViewport(reactFlowWrapper.current);
-    if (!flowViewport) {
-      addToast(message ?? 'The canvas viewport could not be found.', 'error');
-      return;
-    }
-
-    reactFlowWrapper.current.classList.add('exporting');
+  const handlePdfExport = useCallback(async () => {
     addToast('Preparing PDF download…', 'info');
-
-    setTimeout(() => {
-      const { width, height, options } = createExportOptions(nodes, 'jpeg');
-
-      toJpeg(flowViewport, options)
-        .then((jpegDataUrl) => {
-          const pdfBlob = createPdfFromJpeg({
-            jpegDataUrl,
-            width,
-            height,
-            title: 'OpenFlowKit Diagram',
-          });
-          createDownload(pdfBlob, buildExportFileName(exportBaseName, 'pdf'));
-          addToast('Diagram exported as PDF!', 'success');
-        })
-        .catch((err) => {
-          logger.error('PDF export failed.', { error: err });
-          addToast('Failed to export PDF. Please try again.', 'error');
-        })
-        .finally(() => {
-          reactFlowWrapper.current?.classList.remove('exporting');
-        });
-    }, 300);
+    try {
+      const jpegDataUrl = await captureActiveCanvas(nodes, reactFlowWrapper.current, 'jpeg');
+      const { width, height } = await imageSize(jpegDataUrl);
+      const pdfBlob = createPdfFromJpeg({
+        jpegDataUrl,
+        width,
+        height,
+        title: 'OpenFlowKit Diagram',
+      });
+      createDownload(pdfBlob, buildExportFileName(exportBaseName, 'pdf'));
+      addToast('Diagram exported as PDF!', 'success');
+    } catch (err) {
+      logger.error('PDF export failed.', { error: err });
+      addToast(
+        err instanceof CanvasCaptureError ? err.message : 'Failed to export PDF. Please try again.',
+        'error'
+      );
+    }
   }, [nodes, reactFlowWrapper, addToast, exportBaseName]);
 
   // --- JSON Export ---

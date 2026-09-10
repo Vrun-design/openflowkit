@@ -23,6 +23,8 @@ export interface CanonicalSvgExportOptions {
   readonly theme?: 'light' | 'dark' | 'print';
   readonly padding?: number;
   readonly pixelRatio?: number;
+  /** Omit the background rectangle (transparent PNG / SVG). */
+  readonly transparent?: boolean;
 }
 
 function number(value: number): string {
@@ -290,5 +292,5 @@ export function exportCanonicalSvg(
   }).join('');
   const nodeMarkup = [...page.nodes].sort((a, b) => a.zIndex - b.zIndex || a.id.localeCompare(b.id))
     .map((node) => exportNode(node, matrices.get(node.id)!, theme)).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${number(x)} ${number(y)} ${number(width)} ${number(height)}" width="${number(width * pixelRatio)}" height="${number(height * pixelRatio)}" data-openflowkit-document="${xml(document.id)}" data-page="${xml(page.id)}" data-theme="${theme}" data-pixel-ratio="${number(pixelRatio)}"><rect x="${number(x)}" y="${number(y)}" width="${number(width)}" height="${number(height)}" fill="${background}"/>${connectorMarkup}${nodeMarkup}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${number(x)} ${number(y)} ${number(width)} ${number(height)}" width="${number(width * pixelRatio)}" height="${number(height * pixelRatio)}" data-openflowkit-document="${xml(document.id)}" data-page="${xml(page.id)}" data-theme="${theme}" data-pixel-ratio="${number(pixelRatio)}">${options.transparent ? '' : `<rect x="${number(x)}" y="${number(y)}" width="${number(width)}" height="${number(height)}" fill="${background}"/>`}${connectorMarkup}${nodeMarkup}</svg>`;
 }

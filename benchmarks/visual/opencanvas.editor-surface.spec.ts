@@ -267,3 +267,42 @@ test('groups, locks, and ungroups nodes through the surface menus', async ({ pag
   await page.mouse.click(center.x + 30, center.y + 30);
   await expect(page.getByPlaceholder('Enter primary text...')).toHaveValue('B');
 });
+
+test('copies across pages, reloads, and exports SVG from the OpenCanvas surface', async ({ page }) => {
+  await createNewFlow(page);
+  await addRectangle(page);
+  const editor = page.getByRole('textbox', { name: 'Edit node label' });
+  await editor.fill('Copied');
+  await editor.press('Enter');
+  await page.keyboard.press('Meta+c');
+
+  // Second page: paste, then the same node reads back in the inspector.
+  await page.getByTestId('flow-page-add').click();
+  await expect(page.getByTestId('flow-page-tab')).toHaveCount(2);
+  await expect(page.getByTestId('opencanvas-surface')).toBeVisible();
+  await page.mouse.click(400, 300);
+  await page.keyboard.press('Meta+v');
+  await expect(page.getByPlaceholder('Enter primary text...')).toHaveValue('Copied', { timeout: 10_000 });
+
+  await page.waitForTimeout(1500);
+  await page.reload();
+  await expect(page.getByTestId('flow-page-tab')).toHaveCount(2, { timeout: 30_000 });
+  await expect(page.getByTestId('opencanvas-surface').locator('canvas')).toBeVisible({ timeout: 30_000 });
+  await page.getByRole('button', { name: 'Fit View' }).click();
+
+  // SVG export comes from the canonical document, not React Flow's DOM.
+  await page.getByTestId('topnav-export').click();
+  const svgAction = page.getByTestId('export-action-svg-download');
+  if (!(await svgAction.isVisible())) {
+    await page.getByTestId('export-format-select').getByRole('button').first().click();
+    await page.getByRole('listbox').getByRole('button', { name: /^SVG/ }).click();
+  }
+  const downloadPromise = page.waitForEvent('download');
+  await svgAction.click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.svg$/);
+  const path = await download.path();
+  const svg = (await import('node:fs')).readFileSync(path!, 'utf8');
+  expect(svg).toContain('data-openflowkit-document');
+  expect(svg).toContain('Copied');
+});

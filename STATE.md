@@ -12,8 +12,8 @@ on the Pixi surface (StrokeNode fallback on React Flow). Browser spec: `npm run 
 Full record: docs/opencanvas-execution-status.md (read it first).
 
 ## Next actions
-1. M1.7 — multi-page copy/paste + save/reopen/export browser proof.
-2. M1.8 — paste-in-place / style paste commands.
+1. M1.8 — paste-in-place / style paste commands.
+2. M1.9 — consolidate evaluation page onto the surface's interaction flow.
 3. Canonical store ownership; Pixi-default decision.
 4. Group/lock/hide UI on Pixi; save/reopen/export browser proof.
 
@@ -31,3 +31,4 @@ Full record: docs/opencanvas-execution-status.md (read it first).
 - 2026-09-10 — M1.4 shared external input hook; surface focusable; dblclick adds node.
 - 2026-09-10 — M1.5 drawing tools in toolbar (Pixi only) + StrokeNode fallback.
 - 2026-09-10 — M1.6 group/ungroup + section lock/hide wired on both canvases; nodeState helper.
+- 2026-09-10 — M1.7 export parity (canonical capture on Pixi) + multi-page/reload/export browser proof.
