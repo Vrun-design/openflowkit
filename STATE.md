@@ -12,11 +12,12 @@ on the Pixi surface (StrokeNode fallback on React Flow). Browser spec: `npm run 
 Full record: docs/opencanvas-execution-status.md (read it first).
 
 ## Next actions
-1. M1.9 — consolidate evaluation page onto the surface's interaction flow.
+1. M1.10 — Pixi-default parity checklist + flag decision (fallback stays).
 3. Canonical store ownership; Pixi-default decision.
 4. Group/lock/hide UI on Pixi; save/reopen/export browser proof.
 
 ## Decisions
+- 2026-09-10 — Production surface is the one production gesture implementation; `/pixi-spike` and the document page stay as evidence harnesses, no new gesture work there.
 - 2026-09-10 — `useActiveCanvas()` wraps `useReactFlow()`; registered Pixi API overrides it. One seam, no consumer rewrite.
 - 2026-09-10 — Unsized legacy nodes: deterministic estimate in projection, never persisted back.
 
@@ -32,3 +33,4 @@ Full record: docs/opencanvas-execution-status.md (read it first).
 - 2026-09-10 — M1.6 group/ungroup + section lock/hide wired on both canvases; nodeState helper.
 - 2026-09-10 — M1.7 export parity (canonical capture on Pixi) + multi-page/reload/export browser proof.
 - 2026-09-10 — M1.8 paste in place + style copy/paste in menus, mod+shift+v.
+- 2026-09-10 — M1.9 touch pan/pinch + semantic tree on the surface; eval routes keep own glue (decision).

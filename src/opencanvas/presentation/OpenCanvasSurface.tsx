@@ -11,6 +11,7 @@ import { projectProductionConnectorEdit } from '../application/active-document/p
 import { applyProductionNodeMutation } from '../application/active-document/productionNodeBridge';
 import { isNodeEditableOnLayer } from '../application/active-document/productionLayers';
 import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
+import { OpenCanvasSemanticSceneTree } from './OpenCanvasSemanticSceneTree';
 import { createOpenCanvasSurfaceApi } from './openCanvasSurfaceApi';
 import {
   publishActiveCanvasViewport,
@@ -66,6 +67,12 @@ import {
   zoomReadOnlyCamera,
   type CameraPanGesture,
 } from '../application/renderer/readOnlyCameraInteraction';
+import {
+  beginTouchCameraGesture,
+  endTouchCameraGesture,
+  moveTouchCameraGesture,
+  type TouchCameraGesture,
+} from '../application/renderer/touchCameraGesture';
 import { DEFAULT_CANVAS_CAMERA, fitCameraToBounds } from '../domain/camera/camera';
 import type { CanvasCamera } from '../domain/camera/types';
 import { detectWebGlCapability } from '../infrastructure/pixi/capabilities';
@@ -118,6 +125,7 @@ export function OpenCanvasSurface({
   const hostRef = useRef<PixiRendererHost | null>(null);
   const cameraRef = useRef<CanvasCamera>(DEFAULT_CANVAS_CAMERA);
   const panRef = useRef<CameraPanGesture | null>(null);
+  const touchRef = useRef<TouchCameraGesture | null>(null);
   const marqueeRef = useRef<AnchoredMarqueePointerOperation | null>(null);
   const selectionRef = useRef<CanvasSelection>(EMPTY_CANVAS_SELECTION);
   const spacePanRef = useRef(false);
@@ -442,6 +450,15 @@ export function OpenCanvasSurface({
     }
   }, [state.nodes, state.edges, state.selectedNodeId]);
 
+  const semanticSelection = useMemo<CanvasSelection>(() => {
+    const nodeIds = state.nodes.filter((node) => node.selected).map(({ id }) => id);
+    const primary = state.selectedNodeId ?? nodeIds[0] ?? null;
+    return {
+      nodeIds: primary && !nodeIds.includes(primary) ? [...nodeIds, primary] : nodeIds,
+      primaryNodeId: primary,
+    };
+  }, [state.nodes, state.selectedNodeId]);
+
   const usable = capability.supported && projection.status !== 'invalid' && status !== 'failed';
 
   useEffect(() => {
@@ -553,6 +570,23 @@ export function OpenCanvasSurface({
         }
         event.currentTarget.setPointerCapture(event.pointerId);
         const screen = surfacePoint(event);
+        if (event.pointerType === 'touch') {
+          // A finger on a node edits like a mouse would; on empty space it
+          // pans, and a second finger turns anything in progress into a pinch.
+          const editing = transformRef.current || connectorRef.current
+            || connectRef.current || freeformRef.current || marqueeRef.current;
+          if (touchRef.current || editing || !host.pickNode(screen)) {
+            if (editing) {
+              cancelTransform();
+              marqueeRef.current = null;
+              host.setMarquee(null);
+            }
+            touchRef.current = beginTouchCameraGesture(
+              touchRef.current, event.pointerId, screen, event.timeStamp
+            );
+            return;
+          }
+        }
         if (event.button === 1 || spacePanRef.current) {
           panRef.current = beginCameraPan(event.pointerId, screen);
           return;
@@ -640,6 +674,15 @@ export function OpenCanvasSurface({
       onPointerMove={(event) => {
         const host = hostRef.current;
         const screen = surfacePoint(event);
+        const touch = touchRef.current;
+        if (touch && event.pointerType === 'touch') {
+          const moved = moveTouchCameraGesture(
+            cameraRef.current, touch, event.pointerId, screen, event.timeStamp
+          );
+          touchRef.current = moved.gesture;
+          if (moved.camera !== cameraRef.current) applyCamera(moved.camera);
+          return;
+        }
         const pan = panRef.current;
         if (pan && pan.pointerId === event.pointerId) {
           const next = moveCameraPan(cameraRef.current, pan, screen);
@@ -697,6 +740,11 @@ export function OpenCanvasSurface({
         host.setMarquee(anchoredMarqueeBounds(marqueeRef.current, cameraRef.current));
       }}
       onPointerUp={(event) => {
+        const touch = touchRef.current;
+        if (touch && event.pointerType === 'touch') {
+          touchRef.current = endTouchCameraGesture(touch, event.pointerId, event.timeStamp).gesture;
+          return;
+        }
         if (panRef.current?.pointerId === event.pointerId) {
           panRef.current = null;
           return;
@@ -749,6 +797,7 @@ export function OpenCanvasSurface({
       }}
       onPointerCancel={() => {
         panRef.current = null;
+        touchRef.current = null;
         marqueeRef.current = null;
         hostRef.current?.setMarquee(null);
         cancelTransform();
@@ -795,6 +844,23 @@ export function OpenCanvasSurface({
         ));
       }}
     >
+      {activePage ? (
+        // Screen readers and keyboard users reach every object through this
+        // sr-only tree; it mirrors the store's selection.
+        <OpenCanvasSemanticSceneTree
+          page={activePage}
+          selection={semanticSelection}
+          selectedConnectorId={state.edges.find((edge) => edge.selected)?.id ?? null}
+          onSelectNode={(nodeId, additive) => {
+            applyConnectorSelection(null);
+            applySelection(selectionAfterClick(selectionRef.current, nodeId, additive));
+          }}
+          onSelectConnector={(connectorId) => {
+            applySelection(clearSelection());
+            applyConnectorSelection(connectorId);
+          }}
+        />
+      ) : null}
       <NavigationControls />
       {connectMenu ? (
         <ConnectMenu

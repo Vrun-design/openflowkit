@@ -9,7 +9,8 @@ and next. Updated: 2026-09-10.
 Milestone **M1 — One complete production editor**. Done: M1.1 canvas API,
 M1.2 menus/label editing, M1.3 drag-to-connect, M1.4 external input, M1.5
 freeform drawing, M1.6 group/lock/hide, M1.7 export + multi-page proof,
-M1.8 paste-in-place/style paste. Next: M1.9 (see "Next steps").
+M1.8 paste-in-place/style paste, M1.9 touch + screen-reader access on the
+surface. Next: M1.10 (see "Next steps").
 
 Production entry: `src/components/FlowEditor.tsx` mounts
 `OpenCanvasSurface` at the canvas seam only when the build sets
@@ -32,7 +33,7 @@ React Flow. Pixi is not default; parity is incomplete (below).
 
 | Requirement | Status | Paths |
 | --- | --- | --- |
-| Shared interaction controllers | partial | Surface reuses `pixiPointerOperations`, `pixiConnectorOperations`, selection model; `OpenCanvasDocumentPage` still has its own handler hooks (`usePixi*`). Freeform draw not on surface. |
+| Shared interaction controllers | partial — decision recorded | All gesture *logic* is shared (`pixiPointerOperations`, `pixiConnectorOperations`, `pixiFreeformOperations`, `touchCameraGesture`, selection, camera). The production surface, `OpenCanvasDocumentPage`, and `PixiSpikePage` each keep their own handler glue. Decision: the production surface is the single production implementation; the two evaluation routes remain evidence harnesses (visual/recovery/hardware specs depend on them) and are candidates for retirement, not for new gesture work. |
 | Renderer-neutral canvas API | **done (camera/coords/fit)**; clipboard/export/insertion go through store + `screenToFlowPosition` | `src/canvas/activeCanvas.ts`, `src/opencanvas/presentation/openCanvasSurfaceApi.ts`. Consumers: NavigationControls, FlowCanvas, LayersView, SearchView, usePlayback, useFlowExport, useEdgeOperations, useFlowEditorScreenState. |
 | Canonical store ownership | missing | Store still legacy; adapter direction only. |
 | Complete node/edge/canvas/multi menus | **done on both canvases** (same `useFlowCanvasMenusAndActions` + `ContextMenu`) | `OpenCanvasSurface.tsx` right-click → node/multi/edge/pane menus; paste-here uses active-canvas `screenToFlowPosition`. Group/section items depend on M1 group UI. |
@@ -214,7 +215,29 @@ files / 2133; `npm run test:opencanvas:editor-surface` 9/9 (adds: copy
 style → paste in place → drag copy aside → original still underneath →
 paste style via menu).
 
+### M1.9 — Touch and screen-reader access on the surface (2026-09-10)
+
+Behavior: on touch, a finger on a node selects/drags it exactly like a
+mouse; a finger on empty space pans; a second finger pinches (cancelling
+any drag in progress). No hover- or modifier-only action is required for
+the covered operations (connect handles and menus are tap targets). The
+existing sr-only `OpenCanvasSemanticSceneTree` (nodes/connectors as labelled
+buttons, live region) is mounted on the surface unconditionally and drives
+the same selection bridge, so assistive tech can enumerate and select
+objects. Reduced motion is honoured by the camera API.
+
+Decision: evaluation routes keep their own handler glue (see table).
+
+Validation (working tree on 6a1e8a4): `tsc -b` 0; eslint 0; vitest
+opencanvas+components 213 files / 945; editor-surface browser spec 8/8
+(unchanged — touch is unit-tested with synthetic pointer events, not on a
+device; recorded as unverified on hardware).
+
 ## Unverified / external gates
+
+- Touch/pen on physical devices; the surface's touch flow is only covered by
+  synthetic pointer events.
+- Manual screen-reader pass over the surface's semantic tree.
 
 - Real-GPU hardware performance capture (needs headed run on reference hardware).
 - Manual assistive-technology audit.

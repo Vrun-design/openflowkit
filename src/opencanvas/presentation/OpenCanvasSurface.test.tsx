@@ -861,4 +861,39 @@ describe('OpenCanvas editor surface', () => {
     fireEvent.pointerUp(surface, { pointerId: 1, clientX: 10, clientY: 10 });
     expect(setSelection).toHaveBeenLastCalledWith(['node-2'], 'node-2');
   });
+
+  it('pans with one finger on empty space and pinches with two', async () => {
+    pickNode.mockReturnValue(null);
+    const surface = await mounted();
+    setCamera.mockClear();
+    fireEvent.pointerDown(surface, { pointerId: 7, pointerType: 'touch', button: 0, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(surface, { pointerId: 7, pointerType: 'touch', clientX: 140, clientY: 130 });
+    const panned = setCamera.mock.calls.at(-1)?.[0];
+    expect(panned).toMatchObject({ x: DEFAULT_CANVAS_CAMERA.x + 40, y: DEFAULT_CANVAS_CAMERA.y + 30 });
+    expect(setMarquee).not.toHaveBeenCalledWith(expect.objectContaining({ width: expect.any(Number) }));
+
+    fireEvent.pointerDown(surface, { pointerId: 8, pointerType: 'touch', button: 0, clientX: 340, clientY: 130 });
+    fireEvent.pointerMove(surface, { pointerId: 8, pointerType: 'touch', clientX: 440, clientY: 130 });
+    expect(setCamera.mock.calls.at(-1)?.[0].zoom).toBeGreaterThan(1);
+    fireEvent.pointerUp(surface, { pointerId: 8, pointerType: 'touch' });
+    fireEvent.pointerUp(surface, { pointerId: 7, pointerType: 'touch' });
+  });
+
+  it('lets a finger on a node select and drag it', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 7, pointerType: 'touch', button: 0, clientX: 10, clientY: 10 });
+    expect(setSelection).toHaveBeenLastCalledWith(['node-1'], 'node-1');
+    fireEvent.pointerMove(surface, { pointerId: 7, pointerType: 'touch', clientX: 60, clientY: 40 });
+    expect(setTransformPreview).toHaveBeenCalled();
+  });
+
+  it('exposes objects to assistive tech and selects from the semantic tree', async () => {
+    await mounted();
+    const nav = screen.getByRole('navigation', { name: 'Canvas semantic scene' });
+    expect(nav).toBeTruthy();
+    const item = screen.getAllByRole('button', { name: /Select/ })[0];
+    fireEvent.click(item);
+    expect(setSelection).toHaveBeenCalled();
+  });
 });
