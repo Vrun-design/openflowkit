@@ -1,7 +1,7 @@
 import type { DocumentCommand } from '@/opencanvas/domain/commands/types';
 import type { SceneDocumentV1 } from '@/opencanvas/domain/document/types';
 import { applyDocumentCommand } from '@/opencanvas/domain/commands/execute';
-import { projectActiveDocument } from '@/opencanvas/application/active-document/activeDocumentProjection';
+import { projectActiveDocumentMemoized } from '@/opencanvas/application/active-document/activeDocumentProjection';
 import { projectSceneDocumentToReactFlow } from '@/opencanvas/infrastructure/reactflow/toReactFlow';
 import type { SetFlowState } from '../actionFactory';
 import type { FlowState } from '../types';
@@ -32,10 +32,11 @@ export function createCanonicalCommandActions(
       set((state) => {
         const activeTabIndex = findActiveTabIndex(state);
         if (activeTabIndex < 0) return {};
-        const projection = projectActiveDocument(
-          { ...state, pages: state.tabs, activePageId: state.activeTabId },
-          new Date().toISOString()
-        );
+        const projection = projectActiveDocumentMemoized({
+          nodes: state.nodes, edges: state.edges, documents: state.documents,
+          activeDocumentId: state.activeDocumentId, pages: state.tabs,
+          activePageId: state.activeTabId, layers: state.layers,
+        });
         if (projection.status !== 'ready') return {};
         const command = build(projection.document, state.activeTabId);
         if (!command) return {};

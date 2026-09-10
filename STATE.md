@@ -12,7 +12,7 @@ on the Pixi surface (StrokeNode fallback on React Flow). Browser spec: `npm run 
 Full record: docs/opencanvas-execution-status.md (read it first).
 
 ## Next actions
-1. Canonical store ownership — steps (a)/(b)/(d) per docs/opencanvas-execution-status.md "Next steps".
+1. Canonical store ownership — steps (b)/(d) per docs/opencanvas-execution-status.md "Next steps".
 3. Canonical store ownership; Pixi-default decision.
 4. Group/lock/hide UI on Pixi; save/reopen/export browser proof.
 
@@ -37,4 +37,5 @@ Full record: docs/opencanvas-execution-status.md (read it first).
 - 2026-09-10 — M1.11 mermaid_svg nodes render on Pixi as SVG images.
 - 2026-09-10 — M1.12 alignment guides + snap while moving on the surface.
 - 2026-09-10 — M1.13 store.applyCanonicalCommand — one canonical write path with history.
+- 2026-09-10 — M1.14 per-page memoised projection shared by surface/store/export.
 - 2026-09-10 — M1.9 touch pan/pinch + semantic tree on the surface; eval routes keep own glue (decision).

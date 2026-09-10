@@ -58,6 +58,7 @@ const { projectActiveDocument } = vi.hoisted(() => ({
 }));
 vi.mock('../application/active-document/activeDocumentProjection', () => ({
   projectActiveDocument,
+  projectActiveDocumentMemoized: projectActiveDocument,
 }));
 
 const scenePage = {

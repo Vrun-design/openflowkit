@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { FlowNode, FlowTab } from '@/lib/types';
 import type { FlowDocument } from '@/services/storage/flowDocumentModel';
-import { projectActiveDocument } from './activeDocumentProjection';
+import { createActiveDocumentProjector, projectActiveDocument } from './activeDocumentProjection';
+import { projectSceneDocumentToReactFlow } from '../../infrastructure/reactflow/toReactFlow';
 
 const page: FlowTab = {
   id: 'page-1',
@@ -100,5 +101,39 @@ describe('active OpenCanvas document projection', () => {
 
     expect(result).toEqual({ status: 'invalid', code: 'CANONICAL_PROJECTION_FAILED' });
     expect(JSON.stringify(result)).not.toContain('secret');
+  });
+
+  it('memoises per page and keeps the legacy snapshot baseline', () => {
+    const project = createActiveDocumentProjector();
+    const second: FlowTab = {
+      ...page, id: 'page-2', name: 'Second',
+      nodes: [{ id: 'node-2', type: 'process', position: { x: 1, y: 2 }, data: { label: 'Second' } } as FlowNode],
+    };
+    const node = {
+      id: 'node-1', type: 'process', position: { x: 20, y: 30 },
+      data: { label: 'API', color: 'blue' }, style: { width: 200, height: 80 },
+    } as FlowNode;
+    const base = {
+      nodes: [node], edges: [], documents: [document], activeDocumentId: document.id,
+      pages: [page, second], activePageId: page.id,
+    };
+    const first = project(base);
+    expect(project(base)).toBe(first);
+    expect(first.status).toBe('ready');
+    if (first.status !== 'ready') return;
+
+    // Only the active page changes: page-2's projection is reused by identity.
+    const moved = { ...node, position: { x: 99, y: 30 } };
+    const next = project({ ...base, nodes: [moved] });
+    expect(next.status).toBe('ready');
+    if (next.status !== 'ready') return;
+    expect(next).not.toBe(first);
+    expect(next.document.pages[1]).toBe(first.document.pages[1]);
+    expect(next.document.pages[0].nodes[0].transform.translation.x).toBe(99);
+
+    // The reverse projection still finds the original record as its baseline,
+    // so an unchanged node comes back byte-identical.
+    const back = projectSceneDocumentToReactFlow(next.document, page.id);
+    expect(back.nodes[0]).toEqual(moved);
   });
 });

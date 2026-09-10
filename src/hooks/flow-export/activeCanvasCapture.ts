@@ -2,7 +2,7 @@ import { toJpeg, toPng, toSvg } from 'html-to-image';
 import { getActiveCanvasApi } from '@/canvas/activeCanvas';
 import type { FlowNode } from '@/lib/types';
 import { useFlowStore } from '@/store';
-import { projectActiveDocument } from '@/opencanvas/application/active-document/activeDocumentProjection';
+import { projectActiveDocumentMemoized } from '@/opencanvas/application/active-document/activeDocumentProjection';
 import { exportCanonicalSvg } from '@/opencanvas/infrastructure/export/canonicalSvg';
 import { resolveFlowExportViewport } from '../flowExportViewport';
 import { createExportOptions } from './exportCapture';
@@ -46,10 +46,11 @@ function rasterize(svg: string, format: 'png' | 'jpeg', transparent: boolean): P
 /** Renderer-independent capture of the active page from the canonical document. */
 function captureOpenCanvas(format: CaptureFormat, options: CaptureOptions): Promise<string> {
   const state = useFlowStore.getState();
-  const projection = projectActiveDocument(
-    { ...state, pages: state.tabs, activePageId: state.activeTabId },
-    new Date().toISOString()
-  );
+  const projection = projectActiveDocumentMemoized({
+    nodes: state.nodes, edges: state.edges, documents: state.documents,
+    activeDocumentId: state.activeDocumentId, pages: state.tabs,
+    activePageId: state.activeTabId, layers: state.layers,
+  });
   if (projection.status !== 'ready') {
     return Promise.reject(new CanvasCaptureError('There is nothing on this page to export yet.'));
   }

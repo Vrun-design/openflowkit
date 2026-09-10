@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow';
 import { useTranslation } from 'react-i18next';
 import { useFlowStore } from '@/store';
-import { projectActiveDocument } from '../application/active-document/activeDocumentProjection';
+import { projectActiveDocumentMemoized } from '../application/active-document/activeDocumentProjection';
 import {
   projectConnectorSelectionToEdges,
   projectSelectionToNodes,
@@ -174,10 +174,9 @@ export function OpenCanvasSurface({
       applyCanonicalCommand: current.applyCanonicalCommand,
     }))
   );
-  const projection = useMemo(
-    () => projectActiveDocument(state, new Date().toISOString()),
-    [state]
-  );
+  // Shared, per-page memoised projection: the store's command path reads the
+  // same instance, so both see one canonical document per state.
+  const projection = useMemo(() => projectActiveDocumentMemoized(state), [state]);
   // Kept out of `state` so arming a tool never re-projects the document.
   const drawingTool = useFlowStore((current) => current.viewSettings.drawingTool);
   const alignmentGuidesEnabled = useFlowStore(
