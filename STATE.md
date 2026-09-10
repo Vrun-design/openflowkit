@@ -12,11 +12,13 @@ on the Pixi surface (StrokeNode fallback on React Flow). Browser spec: `npm run 
 Full record: docs/opencanvas-execution-status.md (read it first).
 
 ## Next actions
-1. M1.10 — Pixi-default parity checklist + flag decision (fallback stays).
+1. M1.11 — mermaid_svg rendering + LOD/safety settings on the surface.
+2. M1.12 — alignment guides while dragging on the surface.
 3. Canonical store ownership; Pixi-default decision.
 4. Group/lock/hide UI on Pixi; save/reopen/export browser proof.
 
 ## Decisions
+- 2026-09-10 — Pixi surface flag stays default-off until text auto-size (M3) and mermaid_svg render; fallback retained.
 - 2026-09-10 — Production surface is the one production gesture implementation; `/pixi-spike` and the document page stay as evidence harnesses, no new gesture work there.
 - 2026-09-10 — `useActiveCanvas()` wraps `useReactFlow()`; registered Pixi API overrides it. One seam, no consumer rewrite.
 - 2026-09-10 — Unsized legacy nodes: deterministic estimate in projection, never persisted back.

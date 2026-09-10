@@ -10,7 +10,7 @@ Milestone **M1 — One complete production editor**. Done: M1.1 canvas API,
 M1.2 menus/label editing, M1.3 drag-to-connect, M1.4 external input, M1.5
 freeform drawing, M1.6 group/lock/hide, M1.7 export + multi-page proof,
 M1.8 paste-in-place/style paste, M1.9 touch + screen-reader access on the
-surface. Next: M1.10 (see "Next steps").
+surface, M1.10 rollout decision. Next: M1.11 (see "Next steps").
 
 Production entry: `src/components/FlowEditor.tsx` mounts
 `OpenCanvasSurface` at the canvas seam only when the build sets
@@ -40,7 +40,7 @@ React Flow. Pixi is not default; parity is incomplete (below).
 | Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename (double-click, F2, typing, Edit label, post-insert), insert via toolbar, delete/duplicate/z-order/reverse via menus (browser-verified). Drag-to-connect from side handles (drop on node → edge; drop on empty → connect menu) verified. Double-click on empty space adds a node. Pen/highlighter/line/arrow drawing from the toolbar (Pixi only; React Flow renders strokes read-only via `StrokeNode`). Group (= wrap in section) / Ungroup, section Lock/Unlock, Hide/Show, Fit contents, Bring inside, Release from section all reachable from the menus on both canvases; hidden sections do not draw or hit-test on Pixi, locked ones select but never move. Reorder: z-order items in the node menu. |
 | Paste-in-place / style paste / external paste / file drop | mostly done | Internal copy/paste + style paste are store-based (either canvas). External paste (text/Mermaid/JSON) and image/file drop go through `useCanvasExternalInput`, shared by both canvases (browser-verified on Pixi). Paste in place (`mod+shift+v`, canvas menu) keeps the copied coordinates and internal edges; Copy/Paste style in the node menu on both canvases. |
 | Undo/redo + save/reopen | verified for the covered operations | Every Pixi commit records history; persistence is the legacy store path; browser: reload after cross-page paste and after drawing keeps content. Export: PNG/JPEG/SVG/PDF and copy-image go through `hooks/flow-export/activeCanvasCapture.ts` — canonical SVG (rasterised for bitmaps) on Pixi, DOM capture on React Flow; JSON export was already document-based. |
-| Pixi default + fallback | not started | Flag default off. |
+| Pixi default + fallback | decided: **stay off** (see M1.10) | `openCanvasEditorSurfaceV1` compile-time, default off; React Flow fallback in place on WebGL loss/mount failure/invalid projection (browser-verified). |
 
 ## Completed slices
 
@@ -232,6 +232,38 @@ Validation (working tree on 6a1e8a4): `tsc -b` 0; eslint 0; vitest
 opencanvas+components 213 files / 945; editor-surface browser spec 8/8
 (unchanged — touch is unit-tested with synthetic pointer events, not on a
 device; recorded as unverified on hardware).
+
+### M1.10 — Pixi default rollout decision (2026-09-10)
+
+Parity checklist for the production surface against the React Flow path.
+✅ = verified in the editor-surface browser spec or unit tests; ⚠️ = gap.
+
+| Capability | Status |
+| --- | --- |
+| Camera: zoom/fit/wheel/middle-drag/Space-pan/touch pinch | ✅ (touch: unit only) |
+| Select: click/shift-click/marquee/select-all/Escape/inspector sync | ✅ |
+| Move/resize/rotate with snap (Alt disables) | ✅ move; resize/rotate unit-tested only |
+| Alignment guides while dragging | ⚠️ React Flow only |
+| Connect: drag handles, connect menu, reconnect, reroute, reverse, delete | ✅ |
+| Rename: double-click, F2, typing, post-insert, Edit label | ✅ basic/text/sticky labels; ⚠️ class/ER/sequence/mindmap family fields edit only via inspector |
+| Insert from toolbar at camera centre; dblclick empty adds node | ✅ |
+| Group/ungroup, section lock/hide/fit/bring/release | ✅ |
+| Copy/paste (incl. cross-page), paste in place, style paste, duplicate | ✅ |
+| External paste (text/Mermaid/JSON), image drop | ✅ |
+| Freeform pen/highlighter/line/arrow | ✅ Pixi; React Flow renders strokes read-only |
+| Undo/redo, reload, export SVG/PNG/PDF/JSON | ✅ SVG/JSON browser-verified; PNG/PDF unit path only |
+| Text: auto-size to content, rich text | ⚠️ Pixi uses per-shape minimum; long labels clip (M3) |
+| Large-graph safety mode / LOD toggles from settings | ⚠️ not wired to the surface (host has culling/LOD) |
+| Mermaid `renderer_exact` (`mermaid_svg`) nodes | ⚠️ not drawn by Pixi |
+| Playback / cinematic export | ⚠️ React Flow DOM |
+| Screen reader: semantic tree; keyboard: all shortcuts | ✅ tree mounted; ⚠️ no manual AT pass |
+
+Decision: `openCanvasEditorSurfaceV1` **stays default-off**. Blocking gaps
+before a default flip: text auto-size (M3 rich text measurement) and
+`mermaid_svg` rendering, because both lose visible content silently for
+existing documents; alignment guides and family editors are usability gaps,
+not data-loss risks. Rollout stays behind the compile-time flag with the
+in-place React Flow fallback. Revisit after M3 text.
 
 ## Unverified / external gates
 
