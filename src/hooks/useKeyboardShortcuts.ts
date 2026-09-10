@@ -37,6 +37,7 @@ interface ShortcutHandlers {
   onZoomOut?: () => void;
   onCopy?: () => void;
   onPaste?: () => void;
+  onPasteInPlace?: () => void;
   onCopyStyle?: () => void;
   onPasteStyle?: () => void;
   onQuickCreateShortcut?: (direction: 'up' | 'right' | 'down' | 'left') => void;
@@ -102,6 +103,7 @@ export function useKeyboardShortcuts({
   onZoomOut,
   onCopy,
   onPaste,
+  onPasteInPlace,
   onCopyStyle,
   onPasteStyle,
   onQuickCreateShortcut,
@@ -178,6 +180,10 @@ export function useKeyboardShortcuts({
           return true;
         case 'paste':
           onPaste?.();
+          return true;
+        case 'pasteInPlace':
+          e.preventDefault();
+          onPasteInPlace?.();
           return true;
         case 'copyStyle':
           e.preventDefault();
@@ -336,5 +342,5 @@ export function useKeyboardShortcuts({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [bindingsRef, selectedNodeId, selectedEdgeId, selectedNodeType, deleteNode, deleteEdge, undo, redo, canUndo, canRedo, onUndoUnavailable, onRedoUnavailable, duplicateNode, selectAll, onAddMindmapChildShortcut, onAddMindmapSiblingShortcut, onCommandBar, onSearch, onShortcutsHelp, onSelectMode, onPanMode, onFitView, onZoomIn, onZoomOut, onCopy, onPaste, onCopyStyle, onPasteStyle, onQuickCreateShortcut, onAnnotationColorShortcut, onClearSelection, onNudge, onTogglePinPositionShortcut]);
+  }, [bindingsRef, selectedNodeId, selectedEdgeId, selectedNodeType, deleteNode, deleteEdge, undo, redo, canUndo, canRedo, onUndoUnavailable, onRedoUnavailable, duplicateNode, selectAll, onAddMindmapChildShortcut, onAddMindmapSiblingShortcut, onCommandBar, onSearch, onShortcutsHelp, onSelectMode, onPanMode, onFitView, onZoomIn, onZoomOut, onCopy, onPaste, onPasteInPlace, onCopyStyle, onPasteStyle, onQuickCreateShortcut, onAnnotationColorShortcut, onClearSelection, onNudge, onTogglePinPositionShortcut]);
 }

@@ -7,6 +7,9 @@ interface UseFlowCanvasMenusAndActionsParams {
     screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number };
     copySelection: () => void;
     pasteSelection: (position: { x: number; y: number }) => void;
+    pasteSelectionInPlace: () => void;
+    copyStyleSelection: () => void;
+    pasteStyleSelection: () => void;
     duplicateNode: (id: string) => void;
     deleteNode: (id: string) => void;
     deleteEdge: (id: string) => void;
@@ -29,6 +32,9 @@ export function useFlowCanvasMenusAndActions({
     screenToFlowPosition,
     copySelection,
     pasteSelection,
+    pasteSelectionInPlace,
+    copyStyleSelection,
+    pasteStyleSelection,
     duplicateNode,
     deleteNode,
     deleteEdge,
@@ -54,6 +60,9 @@ export function useFlowCanvasMenusAndActions({
         screenToFlowPosition,
         copySelection,
         pasteSelection,
+        pasteSelectionInPlace,
+        copyStyleSelection,
+        pasteStyleSelection,
         duplicateNode,
         deleteNode,
         deleteEdge,

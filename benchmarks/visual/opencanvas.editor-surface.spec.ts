@@ -306,3 +306,39 @@ test('copies across pages, reloads, and exports SVG from the OpenCanvas surface'
   expect(svg).toContain('data-openflowkit-document');
   expect(svg).toContain('Copied');
 });
+
+test('paste in place and style paste work from the surface menus', async ({ page }) => {
+  await createNewFlow(page);
+  const viewport = page.viewportSize()!;
+  const center = { x: viewport.width / 2, y: viewport.height / 2 };
+  await addRectangle(page);
+  const editor = page.getByRole('textbox', { name: 'Edit node label' });
+  await editor.fill('Source');
+  await editor.press('Enter');
+
+  // Style: pick a colour in the inspector, copy the style from the node menu.
+  await page.getByRole('button', { name: /^Color$/i }).click();
+  const swatch = page.getByRole('button', { name: /green/i }).first();
+  if (await swatch.isVisible()) await swatch.click();
+  await page.mouse.click(center.x + 30, center.y + 30, { button: 'right' });
+  const menu = page.getByRole('menu', { name: 'Canvas context menu' });
+  await menu.getByRole('menuitem', { name: 'Copy Style' }).click();
+
+  // Paste in place from the canvas menu: the copy lands exactly on top.
+  await page.keyboard.press('Meta+c');
+  await page.mouse.click(60, 120, { button: 'right' });
+  await menu.getByRole('menuitem', { name: 'Paste in place' }).click();
+  await expect(page.getByPlaceholder('Enter primary text...')).toHaveValue('Source');
+  // Drag the pasted copy aside: the original is still underneath.
+  await page.mouse.move(center.x + 30, center.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(center.x + 230, center.y + 230, { steps: 6 });
+  await page.mouse.up();
+  await page.mouse.click(center.x + 30, center.y + 30);
+  await expect(page.getByPlaceholder('Enter primary text...')).toHaveValue('Source');
+
+  // Paste style onto the moved copy via its menu.
+  await page.mouse.click(center.x + 230, center.y + 230, { button: 'right' });
+  await menu.getByRole('menuitem', { name: 'Paste Style' }).click();
+  await expect(menu).toHaveCount(0);
+});

@@ -113,6 +113,9 @@ export function FlowCanvasOverlays({
             onClose={onCloseContextMenu}
             onCopy={copySelection}
             onPaste={contextActions.onPaste}
+            onPasteInPlace={contextActions.onPasteInPlace}
+            onCopyStyle={contextActions.onCopyStyle}
+            onPasteStyle={contextActions.onPasteStyle}
             onDuplicate={contextActions.onDuplicate}
             onDelete={contextActions.onDelete}
             onSendToBack={contextActions.onSendToBack}

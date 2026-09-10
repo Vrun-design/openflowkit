@@ -72,7 +72,8 @@
     "export": "Exporter",
     "exportDiagram": "Exporter le diagramme",
     "exportAs": "Exporter en tant que",
-    "ungroup": "Dissocier"
+    "ungroup": "Dissocier",
+    "pasteInPlace": "Coller sur place"
   },
   "nav": {
     "home": "Accueil",

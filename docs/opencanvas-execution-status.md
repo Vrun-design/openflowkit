@@ -8,8 +8,8 @@ and next. Updated: 2026-09-10.
 
 Milestone **M1 — One complete production editor**. Done: M1.1 canvas API,
 M1.2 menus/label editing, M1.3 drag-to-connect, M1.4 external input, M1.5
-freeform drawing, M1.6 group/lock/hide, M1.7 export + multi-page proof.
-Next: M1.8 (see "Next steps").
+freeform drawing, M1.6 group/lock/hide, M1.7 export + multi-page proof,
+M1.8 paste-in-place/style paste. Next: M1.9 (see "Next steps").
 
 Production entry: `src/components/FlowEditor.tsx` mounts
 `OpenCanvasSurface` at the canvas seam only when the build sets
@@ -37,7 +37,7 @@ React Flow. Pixi is not default; parity is incomplete (below).
 | Canonical store ownership | missing | Store still legacy; adapter direction only. |
 | Complete node/edge/canvas/multi menus | **done on both canvases** (same `useFlowCanvasMenusAndActions` + `ContextMenu`) | `OpenCanvasSurface.tsx` right-click → node/multi/edge/pane menus; paste-here uses active-canvas `screenToFlowPosition`. Group/section items depend on M1 group UI. |
 | Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename (double-click, F2, typing, Edit label, post-insert), insert via toolbar, delete/duplicate/z-order/reverse via menus (browser-verified). Drag-to-connect from side handles (drop on node → edge; drop on empty → connect menu) verified. Double-click on empty space adds a node. Pen/highlighter/line/arrow drawing from the toolbar (Pixi only; React Flow renders strokes read-only via `StrokeNode`). Group (= wrap in section) / Ungroup, section Lock/Unlock, Hide/Show, Fit contents, Bring inside, Release from section all reachable from the menus on both canvases; hidden sections do not draw or hit-test on Pixi, locked ones select but never move. Reorder: z-order items in the node menu. |
-| Paste-in-place / style paste / external paste / file drop | mostly done | Internal copy/paste + style paste are store-based (either canvas). External paste (text/Mermaid/JSON) and image/file drop go through `useCanvasExternalInput`, shared by both canvases (browser-verified on Pixi). Paste-in-place (same coordinates) not yet a distinct command. |
+| Paste-in-place / style paste / external paste / file drop | mostly done | Internal copy/paste + style paste are store-based (either canvas). External paste (text/Mermaid/JSON) and image/file drop go through `useCanvasExternalInput`, shared by both canvases (browser-verified on Pixi). Paste in place (`mod+shift+v`, canvas menu) keeps the copied coordinates and internal edges; Copy/Paste style in the node menu on both canvases. |
 | Undo/redo + save/reopen | verified for the covered operations | Every Pixi commit records history; persistence is the legacy store path; browser: reload after cross-page paste and after drawing keeps content. Export: PNG/JPEG/SVG/PDF and copy-image go through `hooks/flow-export/activeCanvasCapture.ts` — canonical SVG (rasterised for bitmaps) on Pixi, DOM capture on React Flow; JSON export was already document-based. |
 | Pixi default + fallback | not started | Flag default off. |
 
@@ -201,6 +201,19 @@ Not applicable / unverified: cinematic video export still captures React
 Flow DOM (video is a separate backlog item); clipboard copy of images is not
 browser-verified (Playwright clipboard permissions).
 
+### M1.8 — Paste in place and style paste (2026-09-10)
+
+Behavior: `pasteSelectionInPlace` (remappable `pasteInPlace`, default
+`mod+shift+v`) pastes at the copied coordinates with new IDs and only the
+edges internal to the copied set; "Paste in place" appears in the canvas
+menu, "Copy Style"/"Paste Style" in the node menu — same actions on both
+canvases. Localized in 7 locales.
+
+Validation (working tree on 8cb5cc6): `tsc -b` 0; eslint 0; vitest 436
+files / 2133; `npm run test:opencanvas:editor-surface` 9/9 (adds: copy
+style → paste in place → drag copy aside → original still underneath →
+paste style via menu).
+
 ## Unverified / external gates
 
 - Real-GPU hardware performance capture (needs headed run on reference hardware).
@@ -221,9 +234,7 @@ browser-verified (Playwright clipboard permissions).
 
 ## Next steps
 
-1. **M1.8 paste-in-place / style paste** as explicit commands on both canvases
-   (style paste exists via shortcuts; add paste-in-place and menu entries).
-2. **M1.9 evaluation-surface consolidation**: make `OpenCanvasDocumentPage`
+1. **M1.9 evaluation-surface consolidation**: make `OpenCanvasDocumentPage`
    reuse the surface's pointer flow (or retire the duplicated handlers) so
    there is one implementation of each gesture.
 3. Then canonical store ownership (M1 architecture item), group/lock/hide UI

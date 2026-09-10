@@ -195,6 +195,9 @@ export function OpenCanvasSurface({
     screenToFlowPosition,
     copySelection: operations.copySelection,
     pasteSelection: operations.pasteSelection,
+    pasteSelectionInPlace: operations.pasteSelectionInPlace,
+    copyStyleSelection: operations.copyStyleSelection,
+    pasteStyleSelection: operations.pasteStyleSelection,
     duplicateNode: operations.duplicateNode,
     deleteNode: operations.deleteNode,
     deleteEdge: operations.deleteEdge,
@@ -827,6 +830,9 @@ export function OpenCanvasSurface({
           onClose={onCloseContextMenu}
           onCopy={operations.copySelection}
           onPaste={contextActions.onPaste}
+          onPasteInPlace={contextActions.onPasteInPlace}
+          onCopyStyle={contextActions.onCopyStyle}
+          onPasteStyle={contextActions.onPasteStyle}
           onDuplicate={contextActions.onDuplicate}
           onDelete={contextActions.onDelete}
           onSendToBack={contextActions.onSendToBack}

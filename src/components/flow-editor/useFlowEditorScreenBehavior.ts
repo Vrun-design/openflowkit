@@ -64,6 +64,7 @@ export function useFlowEditorScreenBehavior(params: {
     zoomOut: screenState.zoomOut,
     copySelection: operations.copySelection,
     pasteSelection: operations.pasteSelection,
+    pasteSelectionInPlace: operations.pasteSelectionInPlace,
     copyStyleSelection: operations.copyStyleSelection,
     pasteStyleSelection: operations.pasteStyleSelection,
     createConnectedNodeInDirection: operations.createConnectedNodeInDirection,

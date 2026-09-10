@@ -9,6 +9,9 @@ interface UseFlowCanvasContextActionsParams {
   screenToFlowPosition: (position: { x: number; y: number }) => { x: number; y: number };
   copySelection: () => void;
   pasteSelection: (position: { x: number; y: number }) => void;
+  pasteSelectionInPlace: () => void;
+  copyStyleSelection: () => void;
+  pasteStyleSelection: () => void;
   duplicateNode: (id: string) => void;
   deleteNode: (id: string) => void;
   deleteEdge: (id: string) => void;
@@ -29,6 +32,9 @@ interface UseFlowCanvasContextActionsParams {
 export interface UseFlowCanvasContextActionsResult {
   selectedCount: number;
   onPaste: () => void;
+  onPasteInPlace: () => void;
+  onCopyStyle: () => void;
+  onPasteStyle: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   onSendToBack: () => void;
@@ -55,6 +61,9 @@ export function useFlowCanvasContextActions({
   onCloseContextMenu,
   screenToFlowPosition,
   pasteSelection,
+  pasteSelectionInPlace,
+  copyStyleSelection,
+  pasteStyleSelection,
   duplicateNode,
   deleteNode,
   deleteEdge,
@@ -81,6 +90,21 @@ export function useFlowCanvasContextActions({
     if (contextMenu.position) {
       pasteSelection(screenToFlowPosition(contextMenu.position));
     }
+    onCloseContextMenu();
+  }
+
+  function onPasteInPlace(): void {
+    pasteSelectionInPlace();
+    onCloseContextMenu();
+  }
+
+  function onCopyStyle(): void {
+    copyStyleSelection();
+    onCloseContextMenu();
+  }
+
+  function onPasteStyle(): void {
+    pasteStyleSelection();
     onCloseContextMenu();
   }
 
@@ -220,6 +244,9 @@ export function useFlowCanvasContextActions({
   return {
     selectedCount,
     onPaste,
+    onPasteInPlace,
+    onCopyStyle,
+    onPasteStyle,
     onDuplicate,
     onDelete,
     onSendToBack,

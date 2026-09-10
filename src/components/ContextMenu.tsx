@@ -79,6 +79,9 @@ export interface ContextMenuProps {
   onClose: () => void;
   onCopy?: () => void;
   onPaste?: () => void;
+  onPasteInPlace?: () => void;
+  onCopyStyle?: () => void;
+  onPasteStyle?: () => void;
   onDuplicate?: () => void;
   onReverseEdge?: () => void;
   onDelete?: () => void;
@@ -113,6 +116,9 @@ export function ContextMenu({
   onClose,
   onCopy,
   onPaste,
+  onPasteInPlace,
+  onCopyStyle,
+  onPasteStyle,
   onDuplicate,
   onReverseEdge,
   onDelete,
@@ -195,6 +201,24 @@ export function ContextMenu({
               className={MENU_BUTTON_CLASS_NAME}
             >
               <Copy className="w-4 h-4" /> {t('common.copy')}
+            </button>
+          )}
+          {onCopyStyle && (
+            <button
+              role="menuitem"
+              onClick={onCopyStyle}
+              className={MENU_BUTTON_CLASS_NAME}
+            >
+              <Copy className="w-4 h-4" /> {t('common.copyStyle')}
+            </button>
+          )}
+          {onPasteStyle && (
+            <button
+              role="menuitem"
+              onClick={onPasteStyle}
+              className={MENU_BUTTON_CLASS_NAME}
+            >
+              <ClipboardPaste className="w-4 h-4" /> {t('common.pasteStyle')}
             </button>
           )}
           <button
@@ -324,6 +348,16 @@ export function ContextMenu({
           >
             <ClipboardPaste className="w-4 h-4" /> {t('common.paste')}
           </button>
+          {onPasteInPlace && (
+            <button
+              role="menuitem"
+              onClick={onPasteInPlace}
+              disabled={!canPaste}
+              className={MENU_BUTTON_CLASS_NAME}
+            >
+              <ClipboardPaste className="w-4 h-4" /> {t('common.pasteInPlace', 'Paste in place')}
+            </button>
+          )}
         </>
       )}
 

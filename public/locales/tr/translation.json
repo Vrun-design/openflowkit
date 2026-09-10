@@ -72,7 +72,8 @@
     "exportDiagram": "Diyagramı Dışa Aktar",
     "exportAs": "Farklı Dışa Aktar",
     "rename": "Yeniden Adlandır",
-    "ungroup": "Grubu çöz"
+    "ungroup": "Grubu çöz",
+    "pasteInPlace": "Yerinde yapıştır"
   },
   "nav": {
     "home": "Ana Sayfa",

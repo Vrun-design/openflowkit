@@ -23,6 +23,7 @@ export type KeyboardActionId =
   | 'duplicate'
   | 'copy'
   | 'paste'
+  | 'pasteInPlace'
   | 'copyStyle'
   | 'pasteStyle'
   | 'selectMode'
@@ -50,6 +51,7 @@ export const DEFAULT_KEYBOARD_BINDINGS: KeyboardBindings = {
   duplicate: ['mod+d'],
   copy: ['mod+c'],
   paste: ['mod+v'],
+  pasteInPlace: ['mod+shift+v'],
   copyStyle: ['mod+alt+c'],
   pasteStyle: ['mod+alt+v'],
   selectMode: ['v'],
@@ -75,6 +77,7 @@ export const KEYBOARD_ACTION_LABEL_KEYS: Record<KeyboardActionId, string> = {
   duplicate: 'common.duplicate',
   copy: 'common.copy',
   paste: 'common.paste',
+  pasteInPlace: 'common.pasteInPlace',
   copyStyle: 'common.copyStyle',
   pasteStyle: 'common.pasteStyle',
   selectMode: 'common.selectTool',

@@ -72,7 +72,8 @@
     "exportDiagram": "Export Diagram",
     "exportAs": "Export As",
     "rename": "Rename",
-    "ungroup": "Ungroup"
+    "ungroup": "Ungroup",
+    "pasteInPlace": "Paste in place"
   },
   "nav": {
     "home": "Home",

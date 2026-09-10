@@ -29,7 +29,10 @@ export const useClipboardOperations = (recordHistory: () => void) => {
         }
     }, [nodes, edges]);
 
-    const pasteSelection = useCallback((position?: { x: number; y: number }) => {
+    const pasteSelection = useCallback((
+        position?: { x: number; y: number },
+        options: { inPlace?: boolean } = {}
+    ) => {
         const clipboardDataStr = readLocalStorageString(CLIPBOARD_STORAGE_KEY);
         if (!clipboardDataStr) return;
 
@@ -40,8 +43,9 @@ export const useClipboardOperations = (recordHistory: () => void) => {
 
             recordHistory();
 
-            let offsetX = 50;
-            let offsetY = 50;
+            // In-place paste keeps the copied coordinates exactly.
+            let offsetX = options.inPlace ? 0 : 50;
+            let offsetY = options.inPlace ? 0 : 50;
 
             if (position && copiedNodes.length > 0) {
                 const minX = Math.min(...copiedNodes.map((n: FlowNode) => n.position.x));
@@ -61,8 +65,8 @@ export const useClipboardOperations = (recordHistory: () => void) => {
                     ...clearNodeParent(node),
                     id: newId,
                     position: {
-                        x: position ? node.position.x + offsetX : node.position.x + 50,
-                        y: position ? node.position.y + offsetY : node.position.y + 50
+                        x: node.position.x + offsetX,
+                        y: node.position.y + offsetY
                     },
                     selected: true
                 };
@@ -87,8 +91,14 @@ export const useClipboardOperations = (recordHistory: () => void) => {
         }
     }, [setNodes, setEdges, recordHistory, setSelectedNodeId]);
 
+    const pasteSelectionInPlace = useCallback(
+        () => pasteSelection(undefined, { inPlace: true }),
+        [pasteSelection]
+    );
+
     return {
         copySelection,
-        pasteSelection
+        pasteSelection,
+        pasteSelectionInPlace
     };
 };

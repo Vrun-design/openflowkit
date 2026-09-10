@@ -29,6 +29,7 @@ interface UseFlowEditorInteractionBindingsParams {
     zoomOut: (options?: { duration?: number }) => void;
     copySelection: () => void;
     pasteSelection: () => void;
+    pasteSelectionInPlace: () => void;
     copyStyleSelection: () => void;
     pasteStyleSelection: () => void;
     createConnectedNodeInDirection: (nodeId: string, direction: 'up' | 'right' | 'down' | 'left') => void;
@@ -64,6 +65,7 @@ export function useFlowEditorInteractionBindings({
     zoomOut,
     copySelection,
     pasteSelection,
+    pasteSelectionInPlace,
     copyStyleSelection,
     pasteStyleSelection,
     createConnectedNodeInDirection,
@@ -107,6 +109,7 @@ export function useFlowEditorInteractionBindings({
         onZoomOut: () => zoomOut({ duration: 300 }),
         onCopy: copySelection,
         onPaste: pasteSelection,
+        onPasteInPlace: pasteSelectionInPlace,
         onCopyStyle: copyStyleSelection,
         onPasteStyle: pasteStyleSelection,
         onQuickCreateShortcut: (direction) => {

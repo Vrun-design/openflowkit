@@ -72,7 +72,8 @@
     "export": "エクスポート",
     "exportDiagram": "図をエクスポート",
     "exportAs": "名前を付けてエクスポート",
-    "ungroup": "グループ解除"
+    "ungroup": "グループ解除",
+    "pasteInPlace": "同じ位置に貼り付け"
   },
   "nav": {
     "home": "ホーム",
