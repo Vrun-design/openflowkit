@@ -1,6 +1,7 @@
 import type { GetFlowState, SetFlowState } from '../actionFactory';
 import { createHistoryActions } from '../actions/createHistoryActions';
 import { createContextualCommandActions } from '../actions/createContextualCommandActions';
+import { createCanonicalCommandActions } from '../actions/createCanonicalCommandActions';
 import { createTabActions } from '../actions/createTabActions';
 import { createWorkspaceDocumentActions } from '../actions/createWorkspaceDocumentActions';
 import type {
@@ -36,5 +37,6 @@ export function createWorkspaceSlice(
     ...createTabActions(set, get),
     ...createHistoryActions(set, get),
     ...createContextualCommandActions(set),
+    ...createCanonicalCommandActions(set),
   };
 }

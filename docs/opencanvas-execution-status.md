@@ -11,7 +11,7 @@ M1.2 menus/label editing, M1.3 drag-to-connect, M1.4 external input, M1.5
 freeform drawing, M1.6 group/lock/hide, M1.7 export + multi-page proof,
 M1.8 paste-in-place/style paste, M1.9 touch + screen-reader access on the
 surface, M1.10 rollout decision, M1.11 mermaid_svg on Pixi, M1.12 alignment
-guides. Next: canonical store ownership plan (see "Next steps").
+guides, M1.13 canonical command dispatch in the store. Next: see "Next steps".
 
 Production entry: `src/components/FlowEditor.tsx` mounts
 `OpenCanvasSurface` at the canvas seam only when the build sets
@@ -36,7 +36,7 @@ React Flow. Pixi is not default; parity is incomplete (below).
 | --- | --- | --- |
 | Shared interaction controllers | partial — decision recorded | All gesture *logic* is shared (`pixiPointerOperations`, `pixiConnectorOperations`, `pixiFreeformOperations`, `touchCameraGesture`, selection, camera). The production surface, `OpenCanvasDocumentPage`, and `PixiSpikePage` each keep their own handler glue. Decision: the production surface is the single production implementation; the two evaluation routes remain evidence harnesses (visual/recovery/hardware specs depend on them) and are candidates for retirement, not for new gesture work. |
 | Renderer-neutral canvas API | **done (camera/coords/fit)**; clipboard/export/insertion go through store + `screenToFlowPosition` | `src/canvas/activeCanvas.ts`, `src/opencanvas/presentation/openCanvasSurfaceApi.ts`. Consumers: NavigationControls, FlowCanvas, LayersView, SearchView, usePlayback, useFlowExport, useEdgeOperations, useFlowEditorScreenState. |
-| Canonical store ownership | missing | Store still legacy; adapter direction only. |
+| Canonical store ownership | step (c) done | `store.applyCanonicalCommand(build)` is the single write path for canonical edits (project → build → apply → project back → history → set, in one update); the surface's move/resize/rotate, connector edits, rename, and freeform inserts use it. Legacy `nodes`/`edges` remain the stored shape (steps a/b/d open). |
 | Complete node/edge/canvas/multi menus | **done on both canvases** (same `useFlowCanvasMenusAndActions` + `ContextMenu`) | `OpenCanvasSurface.tsx` right-click → node/multi/edge/pane menus; paste-here uses active-canvas `screenToFlowPosition`. Group/section items depend on M1 group UI. |
 | Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename (double-click, F2, typing, Edit label, post-insert), insert via toolbar, delete/duplicate/z-order/reverse via menus (browser-verified). Drag-to-connect from side handles (drop on node → edge; drop on empty → connect menu) verified. Double-click on empty space adds a node. Pen/highlighter/line/arrow drawing from the toolbar (Pixi only; React Flow renders strokes read-only via `StrokeNode`). Group (= wrap in section) / Ungroup, section Lock/Unlock, Hide/Show, Fit contents, Bring inside, Release from section all reachable from the menus on both canvases; hidden sections do not draw or hit-test on Pixi, locked ones select but never move. Reorder: z-order items in the node menu. |
 | Paste-in-place / style paste / external paste / file drop | mostly done | Internal copy/paste + style paste are store-based (either canvas). External paste (text/Mermaid/JSON) and image/file drop go through `useCanvasExternalInput`, shared by both canvases (browser-verified on Pixi). Paste in place (`mod+shift+v`, canvas menu) keeps the copied coordinates and internal edges; Copy/Paste style in the node menu on both canvases. |
@@ -264,6 +264,19 @@ before a default flip: text auto-size (M3 rich text measurement), because
 long labels clip silently for existing documents; alignment guides and family editors are usability gaps,
 not data-loss risks. Rollout stays behind the compile-time flag with the
 in-place React Flow fallback. Revisit after M3 text.
+
+### M1.13 — Canonical command dispatch (2026-09-10)
+
+`createCanonicalCommandActions.applyCanonicalCommand` gives the store one
+canonical write path; a builder that returns null or throws leaves the
+store untouched, selection flags survive the projection round trip, and
+undoV2 restores the previous graph. The surface no longer restates
+selection or calls `recordHistoryV2`/`setGraph` itself. Cost: the main
+entry grows ~11 KB (1135/1400 KB) because the store now imports the
+canonical projection and command executor.
+
+Validation (working tree on a9f2fa3): `tsc -b` 0; eslint 0; vitest 438
+files / 2143; build:ci pass; editor-surface browser spec 8/8.
 
 ## Unverified / external gates
 

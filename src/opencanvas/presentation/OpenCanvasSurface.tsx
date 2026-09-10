@@ -7,8 +7,12 @@ import {
   projectConnectorSelectionToEdges,
   projectSelectionToNodes,
 } from '../application/active-document/productionSelectionBridge';
-import { projectProductionConnectorEdit } from '../application/active-document/productionConnectorBridge';
-import { applyProductionNodeMutation } from '../application/active-document/productionNodeBridge';
+import { buildProductionConnectorCommand } from '../application/active-document/productionConnectorBridge';
+import {
+  buildProductionNodeMutationCommand,
+  type ProductionNodeMutation,
+} from '../application/active-document/productionNodeBridge';
+import type { CanonicalCommandBuilder } from '@/store/actions/createCanonicalCommandActions';
 import { isNodeEditableOnLayer } from '../application/active-document/productionLayers';
 import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
 import { OpenCanvasSemanticSceneTree } from './OpenCanvasSemanticSceneTree';
@@ -20,7 +24,7 @@ import {
 } from '@/canvas/activeCanvas';
 import { ContextMenu } from '@/components/ContextMenu';
 import { ConnectMenu } from '@/components/ConnectMenu';
-import type { FlowNode, NodeData } from '@/lib/types';
+import type { NodeData } from '@/lib/types';
 import { NavigationControls } from '@/components/NavigationControls';
 import { useFlowCanvasMenusAndActions } from '@/components/flow-canvas/useFlowCanvasMenusAndActions';
 import { useCanvasExternalInput } from '@/components/flow-canvas/useCanvasExternalInput';
@@ -60,7 +64,7 @@ import {
   type AnchoredMarqueePointerOperation,
   type TransformPointerOperation,
 } from './pixiPointerOperations';
-import { projectProductionTransform } from '../application/active-document/productionTransformBridge';
+import { buildProductionTransformCommand } from '../application/active-document/productionTransformBridge';
 import { openCanvasRendererFamilyFlags } from '../application/renderer/rendererFamilyFlags';
 import {
   beginCameraPan,
@@ -167,6 +171,7 @@ export function OpenCanvasSurface({
       setEdges: current.setEdges,
       setGraph: current.setGraph,
       recordHistoryV2: current.recordHistoryV2,
+      applyCanonicalCommand: current.applyCanonicalCommand,
     }))
   );
   const projection = useMemo(
@@ -269,58 +274,41 @@ export function OpenCanvasSurface({
       ?? projection.document.pages[0] ?? null
     : null;
 
-  // Projected legacy records carry no transient flags, so every write from
-  // the canonical document restates the surface's selection.
-  const withSelection = useCallback(
-    (nodes: FlowNode[]) => projectSelectionToNodes(nodes, selectionRef.current).nodes ?? nodes,
-    []
-  );
+  // Every canonical edit goes through one store action that applies the
+  // command, records history, and writes the projection atomically.
+  const dispatch = useCallback((build: CanonicalCommandBuilder): boolean => {
+    try {
+      return state.applyCanonicalCommand(build);
+    } catch {
+      setStatus('failed');
+      return false;
+    }
+  }, [state]);
 
   const commitTransform = useCallback((operation: TransformPointerOperation) => {
     hostRef.current?.setTransformPreview(null);
     hostRef.current?.setAlignmentGuides(null);
-    if (!operation.result || projection.status !== 'ready' || !activePage) return;
-    try {
-      const next = projectProductionTransform(
-        projection.document, activePage.id, operation.result, new Date().toISOString()
-      );
-      state.recordHistoryV2();
-      state.setNodes(withSelection(next.nodes));
-    } catch {
-      setStatus('failed');
-    }
-  }, [activePage, projection, state, withSelection]);
+    const { result } = operation;
+    if (!result) return;
+    dispatch((document, pageId) => buildProductionTransformCommand(document, pageId, result));
+  }, [dispatch]);
 
   const commitConnector = useCallback((operation: ConnectorPointerOperation) => {
     hostRef.current?.setConnectorPreview(null);
-    if (projection.status !== 'ready' || !activePage) return;
-    try {
-      const result = projectProductionConnectorEdit(
-        projection.document, activePage.id, operation.before, operation.preview,
-        new Date().toISOString()
-      );
-      if (!result.changed) return;
-      state.recordHistoryV2();
-      state.setEdges(result.projection.edges);
-    } catch {
-      setStatus('failed');
-    }
-  }, [activePage, projection, state]);
+    dispatch((document, pageId) =>
+      buildProductionConnectorCommand(document, pageId, operation.before, operation.preview));
+  }, [dispatch]);
+
+  const commitNodeMutation = useCallback((mutation: ProductionNodeMutation) => {
+    dispatch((document, pageId) => {
+      const page = document.pages.find(({ id }) => id === pageId);
+      return page ? buildProductionNodeMutationCommand(page, mutation).command : null;
+    });
+  }, [dispatch]);
 
   const commitRename = useCallback((nodeId: string, label: string) => {
-    if (projection.status !== 'ready' || !activePage) return;
-    try {
-      const result = applyProductionNodeMutation(
-        projection.document, activePage.id, { kind: 'rename', nodeId, label },
-        new Date().toISOString()
-      );
-      if (!result.changed) return;
-      state.recordHistoryV2();
-      state.setGraph(withSelection(result.projection.nodes), result.projection.edges);
-    } catch {
-      setStatus('failed');
-    }
-  }, [activePage, projection, state, withSelection]);
+    commitNodeMutation({ kind: 'rename', nodeId, label });
+  }, [commitNodeMutation]);
 
   const startTextEditing = useCallback((request: LabelEditRequest): boolean => {
     const host = hostRef.current;
@@ -353,25 +341,15 @@ export function OpenCanvasSurface({
 
   const commitFreeform = useCallback((operation: FreeformPointerOperation) => {
     hostRef.current?.setFreeformPreview(null);
-    if (projection.status !== 'ready' || !activePage) return;
+    if (!activePage) return;
     const layerId = activePage.layers.some(({ id }) => id === state.activeLayerId)
       ? state.activeLayerId
       : activePage.layers[0]?.id ?? 'default';
     const node = finishFreeformOperation(
       operation, `opencanvas-${operation.tool}-${crypto.randomUUID()}`, layerId
     );
-    if (!node) return;
-    try {
-      const result = applyProductionNodeMutation(
-        projection.document, activePage.id, { kind: 'insert', node }, new Date().toISOString()
-      );
-      if (!result.changed) return;
-      state.recordHistoryV2();
-      state.setGraph(withSelection(result.projection.nodes), result.projection.edges);
-    } catch {
-      setStatus('failed');
-    }
-  }, [activePage, projection, state, withSelection]);
+    if (node) commitNodeMutation({ kind: 'insert', node });
+  }, [activePage, commitNodeMutation, state.activeLayerId]);
 
   const finishConnect = useCallback((
     operation: ConnectPointerOperation,

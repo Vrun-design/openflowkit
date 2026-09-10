@@ -76,6 +76,7 @@ function createState(snapshotCount = 0): FlowState {
     canUndoV2: () => false,
     canRedoV2: () => false,
     runContextualEditorCommand: () => false,
+    applyCanonicalCommand: () => false,
     designSystems: [],
     activeDesignSystemId: '',
     globalEdgeOptions: { type: 'smoothstep', animated: false, strokeWidth: 2 },

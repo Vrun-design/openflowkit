@@ -21,6 +21,7 @@ import type { MermaidImportStatus } from '@/services/mermaid/importContracts';
 import type { ExportSerializationMode } from '@/services/canonicalSerialization';
 import type { FlowDocument } from '@/services/storage/flowDocumentModel';
 import type { ContextualEditorCommand } from '@/services/contextualEditorCommands';
+import type { CanonicalCommandBuilder } from './actions/createCanonicalCommandActions';
 
 export type CanvasDrawingTool = 'pen' | 'highlighter' | 'line' | 'arrow';
 
@@ -148,6 +149,8 @@ export interface FlowState {
   canUndoV2: () => boolean;
   canRedoV2: () => boolean;
   runContextualEditorCommand: (command: ContextualEditorCommand) => boolean;
+  /** Applies one canonical document command with history; see createCanonicalCommandActions. */
+  applyCanonicalCommand: (build: CanonicalCommandBuilder) => boolean;
 
   // -------------------------------------------------------------------------
   // SLICE: Design — design systems and global edge appearance
@@ -270,7 +273,7 @@ export type HistoryActionsSlice = Pick<
   'recordHistoryV2' | 'undoV2' | 'redoV2' | 'scrubHistoryV2' | 'canUndoV2' | 'canRedoV2'
 >;
 
-export type ContextualCommandActionsSlice = Pick<FlowState, 'runContextualEditorCommand'>;
+export type ContextualCommandActionsSlice = Pick<FlowState, 'runContextualEditorCommand' | 'applyCanonicalCommand'>;
 
 export type DesignSystemCatalogSlice = Pick<FlowState, 'designSystems' | 'activeDesignSystemId'>;
 export type DesignSystemActionsSlice = Pick<

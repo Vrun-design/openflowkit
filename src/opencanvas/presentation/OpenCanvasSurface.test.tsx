@@ -45,34 +45,6 @@ vi.mock('@/config/rolloutFlags', () => ({
   },
 }));
 
-const { projectProductionTransform } = vi.hoisted(() => ({
-  projectProductionTransform: vi.fn(() => ({ nodes: [{ id: 'moved' }] })),
-}));
-vi.mock('../application/active-document/productionTransformBridge', () => ({
-  projectProductionTransform,
-}));
-
-const { applyProductionNodeMutation } = vi.hoisted(() => ({
-  applyProductionNodeMutation: vi.fn((..._args: unknown[]) => ({
-    changed: true, selectedNodeId: 'node-1',
-    projection: { nodes: [{ id: 'renamed' }], edges: [] },
-  })),
-}));
-vi.mock('../application/active-document/productionNodeBridge', async (original) => ({
-  ...(await original<Record<string, unknown>>()),
-  applyProductionNodeMutation,
-}));
-
-const { projectProductionConnectorEdit } = vi.hoisted(() => ({
-  projectProductionConnectorEdit: vi.fn(() => ({
-    changed: true, projection: { edges: [{ id: 'rerouted' }] },
-  })),
-}));
-vi.mock('../application/active-document/productionConnectorBridge', async (original) => ({
-  ...(await original<Record<string, unknown>>()),
-  projectProductionConnectorEdit,
-}));
-
 const { detectWebGlCapability } = vi.hoisted(() => ({
   detectWebGlCapability: vi.fn(() => ({ supported: true })),
 }));
@@ -107,6 +79,13 @@ const storeNodes = [
 ];
 
 const clearPendingNodeLabelEditRequest = vi.fn();
+/** Commands the surface dispatched, built against the scene page fixture. */
+const dispatched: unknown[] = [];
+const applyCanonicalCommand = vi.fn((build: (document: unknown, pageId: string) => unknown) => {
+  const command = build({ id: 'doc', pages: [scenePage] }, 'page-1');
+  if (command) dispatched.push(command);
+  return Boolean(command);
+});
 const storeState = {
   nodes: storeNodes,
   pendingNodeLabelEditRequest: null as null | { nodeId: string; seedText?: string; replaceExisting?: boolean },
@@ -119,6 +98,7 @@ const storeState = {
   documents: [{ id: 'doc' }], activeDocumentId: 'doc',
   tabs: [{ id: 'page-1' }], activeTabId: 'page-1', layers: [],
   setNodes, setSelectedNodeId, recordHistoryV2, setEdges, setSelectedEdgeId, setGraph,
+  applyCanonicalCommand,
 };
 
 vi.mock('@/store', () => ({
@@ -213,14 +193,11 @@ describe('OpenCanvas editor surface', () => {
       setConnectorSelection, setConnectorPreview, setEdges, setSelectedEdgeId, setGraph,
     ].forEach((spy) => spy.mockClear());
     Object.values(operations).forEach((spy) => spy.mockClear());
+    applyCanonicalCommand.mockClear();
+    dispatched.length = 0;
     storeState.pendingNodeLabelEditRequest = null;
     getNodeScreenBounds.mockReset();
     getNodeScreenBounds.mockReturnValue({ x: 10, y: 20, width: 160, height: 60 });
-    applyProductionNodeMutation.mockClear();
-    applyProductionNodeMutation.mockReturnValue({
-      changed: true, selectedNodeId: 'node-1',
-      projection: { nodes: [{ id: 'renamed' }], edges: [] },
-    });
     pickConnector.mockReset();
     pickConnector.mockReturnValue(null);
     pickConnectHandle.mockReturnValue(null);
@@ -228,12 +205,6 @@ describe('OpenCanvas editor surface', () => {
     pickConnectorHandle.mockReturnValue(null);
     pickTransformHandle.mockReset();
     pickTransformHandle.mockReturnValue(null);
-    projectProductionTransform.mockClear();
-    projectProductionTransform.mockReturnValue({ nodes: [{ id: 'moved' }] });
-    projectProductionConnectorEdit.mockClear();
-    projectProductionConnectorEdit.mockReturnValue({
-      changed: true, projection: { edges: [{ id: 'rerouted' }] },
-    });
     pickNode.mockReset();
     pickNode.mockReturnValue(null);
     pickNodesInScreenBounds.mockReset();
@@ -415,9 +386,8 @@ describe('OpenCanvas editor surface', () => {
     expect(setTransformPreview.mock.calls.at(-1)?.[0]).not.toBeNull();
 
     fireEvent.pointerUp(surface, { pointerId: 1, clientX: 90, clientY: 70 });
-    expect(projectProductionTransform).toHaveBeenCalledTimes(1);
-    expect(recordHistoryV2).toHaveBeenCalledTimes(1);
-    expect(setNodes).toHaveBeenLastCalledWith([{ id: 'moved' }]);
+    expect(applyCanonicalCommand).toHaveBeenCalledTimes(1);
+    expect(dispatched[0]).toMatchObject({ kind: 'set-node', label: 'Transform node' });
     expect(setTransformPreview).toHaveBeenLastCalledWith(null);
   });
 
@@ -462,10 +432,7 @@ describe('OpenCanvas editor surface', () => {
 
     expect(setTransformPreview).toHaveBeenLastCalledWith(null);
     fireEvent.pointerUp(surface, { pointerId: 1, clientX: 90, clientY: 70 });
-    expect(projectProductionTransform).not.toHaveBeenCalled();
-    expect(recordHistoryV2).not.toHaveBeenCalled();
-    // The selection write on press is expected; the transform write is not.
-    expect(setNodes).not.toHaveBeenCalledWith([{ id: 'moved' }]);
+    expect(applyCanonicalCommand).not.toHaveBeenCalled();
   });
 
   it('writes nothing when a press produces no movement', async () => {
@@ -473,13 +440,12 @@ describe('OpenCanvas editor surface', () => {
     const surface = await mounted();
     fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
     fireEvent.pointerUp(surface, { pointerId: 1, clientX: 10, clientY: 10 });
-    expect(projectProductionTransform).not.toHaveBeenCalled();
-    expect(recordHistoryV2).not.toHaveBeenCalled();
+    expect(applyCanonicalCommand).not.toHaveBeenCalled();
   });
 
   it('falls back to React Flow when a transform commit throws', async () => {
     pickNode.mockReturnValue('node-1');
-    projectProductionTransform.mockImplementation(() => { throw new Error('rejected'); });
+    applyCanonicalCommand.mockImplementationOnce(() => { throw new Error('rejected'); });
     const surface = await mounted();
     fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
     fireEvent.pointerMove(surface, { pointerId: 1, clientX: 90, clientY: 70 });
@@ -522,20 +488,19 @@ describe('OpenCanvas editor surface', () => {
     expect(pickConnectorHandle).not.toHaveBeenCalled();
   });
 
-  it('reroutes a waypoint handle and commits once with one history entry', async () => {
+  it('reroutes a segment handle and commits once with one history entry', async () => {
     const surface = await mounted();
     await withSelectedConnector(surface);
-    pickConnectorHandle.mockReturnValue({ kind: 'waypoint', index: 0, point: { x: 0, y: 0 } });
-    recordHistoryV2.mockClear();
+    // The fixture connector has no waypoints yet; dragging a segment creates them.
+    pickConnectorHandle.mockReturnValue({ kind: 'segment', index: 0, point: { x: 0, y: 0 } });
 
     fireEvent.pointerDown(surface, { pointerId: 2, button: 0, clientX: 50, clientY: 50 });
     fireEvent.pointerMove(surface, { pointerId: 2, clientX: 120, clientY: 90 });
     expect(setConnectorPreview.mock.calls.at(-1)?.[0]).toBeTruthy();
 
     fireEvent.pointerUp(surface, { pointerId: 2, clientX: 120, clientY: 90 });
-    expect(projectProductionConnectorEdit).toHaveBeenCalledTimes(1);
-    expect(recordHistoryV2).toHaveBeenCalledTimes(1);
-    expect(setEdges).toHaveBeenLastCalledWith([{ id: 'rerouted' }]);
+    expect(applyCanonicalCommand).toHaveBeenCalledTimes(1);
+    expect(dispatched[0]).toMatchObject({ kind: 'set-connector' });
     expect(setConnectorPreview).toHaveBeenLastCalledWith(null);
   });
 
@@ -555,7 +520,6 @@ describe('OpenCanvas editor surface', () => {
   });
 
   it('writes nothing when the connector commit reports no change', async () => {
-    projectProductionConnectorEdit.mockReturnValue({ changed: false, projection: { edges: [] } });
     const surface = await mounted();
     await withSelectedConnector(surface);
     pickConnectorHandle.mockReturnValue({ kind: 'waypoint', index: 0, point: { x: 0, y: 0 } });
@@ -581,8 +545,7 @@ describe('OpenCanvas editor surface', () => {
     expect(setConnectorPreview).toHaveBeenLastCalledWith(null);
 
     fireEvent.pointerUp(surface, { pointerId: 2, clientX: 120, clientY: 90 });
-    expect(projectProductionConnectorEdit).not.toHaveBeenCalled();
-    expect(recordHistoryV2).not.toHaveBeenCalled();
+    expect(applyCanonicalCommand).not.toHaveBeenCalled();
   });
 
   it('opens the text editor over a double-clicked node with its current label', async () => {
@@ -605,12 +568,11 @@ describe('OpenCanvas editor surface', () => {
     fireEvent.change(editor, { target: { value: 'Renamed' } });
     fireEvent.keyDown(editor, { key: 'Enter' });
 
-    expect(applyProductionNodeMutation.mock.calls.at(-1)?.[2]).toEqual({
-      kind: 'rename', nodeId: 'node-1', label: 'Renamed',
+    expect(applyCanonicalCommand).toHaveBeenCalledTimes(1);
+    expect(dispatched[0]).toMatchObject({
+      kind: 'set-node',
+      after: expect.objectContaining({ id: 'node-1', content: expect.objectContaining({ label: 'Renamed' }) }),
     });
-    expect(recordHistoryV2).toHaveBeenCalledTimes(1);
-    // The projected record has no `selected`; the surface restates it.
-    expect(setGraph).toHaveBeenLastCalledWith([{ id: 'renamed' }], []);
     expect(screen.queryByRole('textbox', { name: 'Edit node label' })).toBeNull();
   });
 
@@ -620,13 +582,13 @@ describe('OpenCanvas editor surface', () => {
 
     fireEvent.doubleClick(surface, { clientX: 10, clientY: 10 });
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'Edit node label' }), { key: 'Escape' });
-    expect(applyProductionNodeMutation).not.toHaveBeenCalled();
+    expect(applyCanonicalCommand).not.toHaveBeenCalled();
 
     fireEvent.doubleClick(surface, { clientX: 10, clientY: 10 });
     const editor = screen.getByRole('textbox', { name: 'Edit node label' });
     fireEvent.change(editor, { target: { value: '   ' } });
     fireEvent.keyDown(editor, { key: 'Enter' });
-    expect(applyProductionNodeMutation).not.toHaveBeenCalled();
+    expect(applyCanonicalCommand).not.toHaveBeenCalled();
   });
 
   it('opens nothing on empty space or for a node on a locked layer', async () => {
@@ -830,13 +792,10 @@ describe('OpenCanvas editor surface', () => {
     }));
     fireEvent.pointerUp(surface, { pointerId: 1, clientX: 60, clientY: 40 });
     expect(setFreeformPreview).toHaveBeenLastCalledWith(null);
-    expect(applyProductionNodeMutation).toHaveBeenCalledWith(
-      expect.anything(), 'page-1',
-      expect.objectContaining({ kind: 'insert', node: expect.objectContaining({ kind: 'pen' }) }),
-      expect.any(String)
-    );
-    expect(recordHistoryV2).toHaveBeenCalledTimes(1);
-    expect(setGraph).toHaveBeenCalled();
+    expect(applyCanonicalCommand).toHaveBeenCalledTimes(1);
+    expect(dispatched[0]).toMatchObject({
+      kind: 'insert-node', node: expect.objectContaining({ kind: 'pen' }),
+    });
   });
 
   it('discards a stroke that never moved', async () => {
@@ -844,7 +803,7 @@ describe('OpenCanvas editor surface', () => {
     const surface = await mounted();
     fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
     fireEvent.pointerUp(surface, { pointerId: 1, clientX: 10, clientY: 10 });
-    expect(applyProductionNodeMutation).not.toHaveBeenCalled();
+    expect(applyCanonicalCommand).not.toHaveBeenCalled();
   });
 
   it('Escape disarms the drawing tool when nothing is in progress', async () => {
