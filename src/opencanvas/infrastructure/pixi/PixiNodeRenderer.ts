@@ -1,3 +1,4 @@
+import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { Container, Graphics, Text } from 'pixi.js';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import type { ScenePage } from '../../domain/document/types';
@@ -105,9 +106,9 @@ export class PixiNodeRenderer {
     this.mindmapRenderer.beginDraw(page.nodes);
     this.labelByNodeId.clear();
     const debugRecords: PixiNodeDebugRecord[] = [];
-    const visibleLayerIds = new Set(page.layers.filter((layer) => layer.visible).map((layer) => layer.id));
+    const nodeStates = buildNodeStateMap(page);
     for (const node of page.nodes) {
-      if (!visibleLayerIds.has(node.layerId)) continue;
+      if (!nodeStates.get(node.id)?.visible) continue;
       if (renderedNodeIds && !renderedNodeIds.has(node.id)) continue;
       if (containerNodesEnabled && isContainerNodeKind(node.kind)) continue;
       const matrix = index.worldMatricesByNodeId.get(node.id);

@@ -34,7 +34,7 @@ describe('useFlowCanvasContextActions', () => {
       deleteEdge: vi.fn(), updateNodeZIndex: vi.fn(), updateNodeType: vi.fn(), updateNodeData: vi.fn(),
       fitSectionToContents: vi.fn(), releaseFromSection: vi.fn(), bringContentsIntoSection: vi.fn(),
       handleAlignNodes: vi.fn(), handleDistributeNodes: vi.fn(), handleGroupNodes: vi.fn(),
-      handleWrapInSection: vi.fn(), nodes,
+      handleWrapInSection: vi.fn(), handleUngroupSection: vi.fn(), nodes,
     }));
 
     result.current.onReverseEdge();

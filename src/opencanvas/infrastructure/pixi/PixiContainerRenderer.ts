@@ -1,3 +1,4 @@
+import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { Container, Graphics } from 'pixi.js';
 import { createBounds2d } from '../../domain/geometry/bounds';
 import type { SceneNode, ScenePage } from '../../domain/document/types';
@@ -67,9 +68,9 @@ export class PixiContainerRenderer {
       return;
     }
     const records: PixiNodeDebugRecord[] = [];
-    const visibleLayerIds = new Set(page.layers.filter((layer) => layer.visible).map((layer) => layer.id));
+    const nodeStates = buildNodeStateMap(page);
     for (const node of page.nodes) {
-      if (!visibleLayerIds.has(node.layerId)) continue;
+      if (!nodeStates.get(node.id)?.visible) continue;
       if (renderedNodeIds && !renderedNodeIds.has(node.id)) continue;
       const visual = projectContainerNodeVisual(node);
       const matrix = index.worldMatricesByNodeId.get(node.id);

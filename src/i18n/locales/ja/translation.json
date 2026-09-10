@@ -71,7 +71,8 @@
     "rename": "名前を変更",
     "export": "エクスポート",
     "exportDiagram": "図をエクスポート",
-    "exportAs": "名前を付けてエクスポート"
+    "exportAs": "名前を付けてエクスポート",
+    "ungroup": "グループ解除"
   },
   "nav": {
     "home": "ホーム",

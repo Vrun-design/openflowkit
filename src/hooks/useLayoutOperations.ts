@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 import { useFlowStore } from '../store';
 import { alignNodes, distributeNodes } from '../services/AlignDistribute';
+import { createId } from '../lib/id';
+import { ungroupSection, wrapNodesInSection } from './node-operations/groupOperations';
 
 export const useLayoutOperations = (recordHistory: () => void) => {
     const { setNodes } = useFlowStore();
@@ -31,14 +33,35 @@ export const useLayoutOperations = (recordHistory: () => void) => {
         }));
     }, [recordHistory, setNodes]);
 
-    const handleGroupNodes = useCallback(() => {}, []);
+    // Grouping is wrapping in a section: one container primitive, not two.
+    const handleWrapInSection = useCallback(() => {
+        const { nodes, setSelectedNodeId } = useFlowStore.getState();
+        const selectedIds = nodes.filter((n) => n.selected).map((n) => n.id);
+        if (selectedIds.length === 0) return;
+        const sectionId = createId();
+        const next = wrapNodesInSection(nodes, selectedIds, sectionId, 'Group');
+        if (next === nodes) return;
+        recordHistory();
+        setNodes(() => next);
+        setSelectedNodeId(sectionId);
+    }, [recordHistory, setNodes]);
 
-    const handleWrapInSection = useCallback(() => {}, []);
+    const handleGroupNodes = handleWrapInSection;
+
+    const handleUngroupSection = useCallback((sectionId: string) => {
+        const { nodes, setSelectedNodeId } = useFlowStore.getState();
+        const next = ungroupSection(nodes, sectionId);
+        if (next === nodes) return;
+        recordHistory();
+        setNodes(() => next);
+        setSelectedNodeId(next.find((n) => n.selected)?.id ?? null);
+    }, [recordHistory, setNodes]);
 
     return {
         handleAlignNodes,
         handleDistributeNodes,
         handleGroupNodes,
         handleWrapInSection,
+        handleUngroupSection,
     };
 };

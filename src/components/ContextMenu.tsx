@@ -16,6 +16,7 @@ import {
   ArrowRightFromLine,
   ArrowDownFromLine,
   Group,
+  Ungroup,
   Pencil,
   Lock,
   LockOpen,
@@ -87,6 +88,7 @@ export interface ContextMenuProps {
   onFitSectionToContents?: () => void;
   onBringContentsIntoSection?: () => void;
   onReleaseFromSection?: () => void;
+  onUngroupSection?: () => void;
   onToggleSectionLock?: () => void;
   onToggleSectionHidden?: () => void;
   onTogglePinPosition?: () => void;
@@ -120,6 +122,7 @@ export function ContextMenu({
   onFitSectionToContents,
   onBringContentsIntoSection,
   onReleaseFromSection,
+  onUngroupSection,
   onToggleSectionLock,
   onToggleSectionHidden,
   onTogglePinPosition,
@@ -221,6 +224,15 @@ export function ContextMenu({
                   className={MENU_BUTTON_CLASS_NAME}
                 >
                   <FolderInput className="w-4 h-4" /> Bring Inside
+                </button>
+              ) : null}
+              {currentNodeType === 'section' && onUngroupSection ? (
+                <button
+                  role="menuitem"
+                  onClick={onUngroupSection}
+                  className={MENU_BUTTON_CLASS_NAME}
+                >
+                  <Ungroup className="w-4 h-4" /> {t('common.ungroup', 'Ungroup')}
                 </button>
               ) : null}
               {hasParentSection && onReleaseFromSection ? (

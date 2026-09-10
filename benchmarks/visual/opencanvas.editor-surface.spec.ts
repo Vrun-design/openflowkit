@@ -131,18 +131,18 @@ test('drags a connector between two nodes on the OpenCanvas surface', async ({ p
   await page.getByRole('textbox', { name: 'Edit node label' }).fill('B');
   await page.getByRole('textbox', { name: 'Edit node label' }).press('Enter');
 
-  // B (selected) sits at the centre; A is 300px above. Drag from B's top
-  // connect handle (22px above its top edge) up into A.
-  const handle = { x: center.x + 125, y: center.y - 22 };
+  // B (selected, 120x60) sits at the centre; A is 300px above. Drag from B's
+  // top connect handle (22px above its top edge) up into A.
+  const handle = { x: center.x + 60, y: center.y - 22 };
   await page.mouse.move(handle.x, handle.y);
   await page.mouse.down();
-  await page.mouse.move(center.x + 125, center.y - 150, { steps: 8 });
-  await page.mouse.move(center.x + 125, center.y - 250, { steps: 8 });
+  await page.mouse.move(center.x + 60, center.y - 150, { steps: 8 });
+  await page.mouse.move(center.x + 60, center.y - 270, { steps: 8 });
   await page.mouse.up();
 
   // Right-click the new connector's midpoint: the edge menu proves it exists.
-  // A spans centre-300..centre-150, B starts at the centre: the gap is 150px.
-  await page.mouse.click(center.x + 125, center.y - 75, { button: 'right' });
+  // A spans centre-300..centre-240, B starts at the centre: the gap is 240px.
+  await page.mouse.click(center.x + 60, center.y - 120, { button: 'right' });
   const menu = page.getByRole('menu', { name: 'Canvas context menu' });
   await expect(menu.getByRole('menuitem', { name: 'Delete Connection' })).toBeVisible();
   await page.keyboard.press('Escape');
@@ -218,4 +218,52 @@ test('draws a pen stroke that survives reload and the React Flow fallback', asyn
   await expect(page.locator('.react-flow')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('.react-flow__node')).toHaveCount(2, { timeout: 30_000 });
   await expect(page.locator('.react-flow__node svg[aria-label="pen"] path')).toHaveCount(1);
+});
+
+test('groups, locks, and ungroups nodes through the surface menus', async ({ page }) => {
+  await createNewFlow(page);
+  const viewport = page.viewportSize()!;
+  const center = { x: viewport.width / 2, y: viewport.height / 2 };
+  await addRectangle(page);
+  await page.getByRole('textbox', { name: 'Edit node label' }).fill('A');
+  await page.getByRole('textbox', { name: 'Edit node label' }).press('Enter');
+  const surface = page.getByTestId('opencanvas-surface');
+  const box = (await surface.boundingBox())!;
+  await page.mouse.move(box.x + 100, box.y + 400);
+  await page.mouse.down({ button: 'middle' });
+  await page.mouse.move(box.x + 100, box.y + 100, { steps: 5 });
+  await page.mouse.up({ button: 'middle' });
+  await addRectangle(page);
+  await page.getByRole('textbox', { name: 'Edit node label' }).fill('B');
+  await page.getByRole('textbox', { name: 'Edit node label' }).press('Enter');
+
+  // Shift-click A adds it to the selection (B is selected after insertion).
+  await page.keyboard.down('Shift');
+  await page.mouse.click(center.x + 30, center.y - 270);
+  await page.keyboard.up('Shift');
+  await page.mouse.click(center.x + 30, center.y + 30, { button: 'right' });
+  const menu = page.getByRole('menu', { name: 'Canvas context menu' });
+  await menu.getByRole('menuitem', { name: 'Group' }).click();
+  // The new section is selected; its inspector shows the section label.
+  await expect(page.getByPlaceholder('Enter primary text...')).toHaveValue('Group', { timeout: 10_000 });
+
+  // Lock the section: a drag on a child leaves it where it was.
+  await page.mouse.click(center.x + 30, center.y - 100, { button: 'right' });
+  await menu.getByRole('menuitem', { name: /Lock/ }).click();
+  await page.mouse.move(center.x + 30, center.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(center.x + 230, center.y + 230, { steps: 6 });
+  await page.mouse.up();
+  await page.mouse.click(center.x + 30, center.y + 30);
+  await expect(page.getByPlaceholder('Enter primary text...')).toHaveValue('B');
+
+  // Unlock through the section menu, then ungroup: the section is gone and
+  // the children remain, selected.
+  await page.mouse.click(center.x + 30, center.y - 100, { button: 'right' });
+  await menu.getByRole('menuitem', { name: /Unlock/ }).click();
+  await page.mouse.click(center.x + 30, center.y - 100, { button: 'right' });
+  await menu.getByRole('menuitem', { name: 'Ungroup' }).click();
+  await expect(page.getByRole('heading', { name: /Bulk edit/i })).toBeVisible();
+  await page.mouse.click(center.x + 30, center.y + 30);
+  await expect(page.getByPlaceholder('Enter primary text...')).toHaveValue('B');
 });

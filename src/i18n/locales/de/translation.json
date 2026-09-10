@@ -71,7 +71,8 @@
     "rename": "Umbenennen",
     "export": "Exportieren",
     "exportDiagram": "Diagramm exportieren",
-    "exportAs": "Exportieren als"
+    "exportAs": "Exportieren als",
+    "ungroup": "Gruppierung aufheben"
   },
   "nav": {
     "home": "Startseite",

@@ -22,6 +22,7 @@ interface UseFlowCanvasContextActionsParams {
   handleDistributeNodes: (direction: 'horizontal' | 'vertical') => void;
   handleGroupNodes: () => void;
   handleWrapInSection: () => void;
+  handleUngroupSection: (id: string) => void;
   nodes: Node[];
 }
 
@@ -46,6 +47,7 @@ export interface UseFlowCanvasContextActionsResult {
   onDistributeNodes: (direction: 'horizontal' | 'vertical') => void;
   onGroupSelected: () => void;
   onWrapInSection: () => void;
+  onUngroupSection: () => void;
 }
 
 export function useFlowCanvasContextActions({
@@ -66,6 +68,7 @@ export function useFlowCanvasContextActions({
   handleDistributeNodes,
   handleGroupNodes,
   handleWrapInSection,
+  handleUngroupSection,
   nodes,
 }: UseFlowCanvasContextActionsParams): UseFlowCanvasContextActionsResult {
   const selectedCount = useMemo(() => nodes.filter((node) => node.selected).length, [nodes]);
@@ -151,6 +154,11 @@ export function useFlowCanvasContextActions({
     onCloseContextMenu();
   }
 
+  function onUngroupSection(): void {
+    if (contextMenu.id) handleUngroupSection(contextMenu.id);
+    onCloseContextMenu();
+  }
+
   function onEditLabel(): void {
     onCloseContextMenu();
   }
@@ -230,5 +238,6 @@ export function useFlowCanvasContextActions({
     onDistributeNodes: onDistributeNodesAndClose,
     onGroupSelected,
     onWrapInSection,
+    onUngroupSection,
   };
 }

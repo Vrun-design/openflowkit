@@ -71,7 +71,8 @@
     "export": "Export",
     "exportDiagram": "Export Diagram",
     "exportAs": "Export As",
-    "rename": "Rename"
+    "rename": "Rename",
+    "ungroup": "Ungroup"
   },
   "nav": {
     "home": "Home",

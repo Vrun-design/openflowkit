@@ -8,7 +8,7 @@ and next. Updated: 2026-09-10.
 
 Milestone **M1 — One complete production editor**. Done: M1.1 canvas API,
 M1.2 menus/label editing, M1.3 drag-to-connect, M1.4 external input, M1.5
-freeform drawing. Next: M1.6 (see "Next steps").
+freeform drawing, M1.6 group/lock/hide. Next: M1.7 (see "Next steps").
 
 Production entry: `src/components/FlowEditor.tsx` mounts
 `OpenCanvasSurface` at the canvas seam only when the build sets
@@ -35,7 +35,7 @@ React Flow. Pixi is not default; parity is incomplete (below).
 | Renderer-neutral canvas API | **done (camera/coords/fit)**; clipboard/export/insertion go through store + `screenToFlowPosition` | `src/canvas/activeCanvas.ts`, `src/opencanvas/presentation/openCanvasSurfaceApi.ts`. Consumers: NavigationControls, FlowCanvas, LayersView, SearchView, usePlayback, useFlowExport, useEdgeOperations, useFlowEditorScreenState. |
 | Canonical store ownership | missing | Store still legacy; adapter direction only. |
 | Complete node/edge/canvas/multi menus | **done on both canvases** (same `useFlowCanvasMenusAndActions` + `ContextMenu`) | `OpenCanvasSurface.tsx` right-click → node/multi/edge/pane menus; paste-here uses active-canvas `screenToFlowPosition`. Group/section items depend on M1 group UI. |
-| Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename (double-click, F2, typing, Edit label, post-insert), insert via toolbar, delete/duplicate/z-order/reverse via menus (browser-verified). Drag-to-connect from side handles (drop on node → edge; drop on empty → connect menu) verified. Double-click on empty space adds a node. Pen/highlighter/line/arrow drawing from the toolbar (Pixi only; React Flow renders strokes read-only via `StrokeNode`). Missing on Pixi: group/ungroup UI, lock/hide UI. |
+| Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename (double-click, F2, typing, Edit label, post-insert), insert via toolbar, delete/duplicate/z-order/reverse via menus (browser-verified). Drag-to-connect from side handles (drop on node → edge; drop on empty → connect menu) verified. Double-click on empty space adds a node. Pen/highlighter/line/arrow drawing from the toolbar (Pixi only; React Flow renders strokes read-only via `StrokeNode`). Group (= wrap in section) / Ungroup, section Lock/Unlock, Hide/Show, Fit contents, Bring inside, Release from section all reachable from the menus on both canvases; hidden sections do not draw or hit-test on Pixi, locked ones select but never move. Reorder: z-order items in the node menu. |
 | Paste-in-place / style paste / external paste / file drop | mostly done | Internal copy/paste + style paste are store-based (either canvas). External paste (text/Mermaid/JSON) and image/file drop go through `useCanvasExternalInput`, shared by both canvases (browser-verified on Pixi). Paste-in-place (same coordinates) not yet a distinct command. |
 | Undo/redo + save/reopen | partial | Every Pixi commit records `recordHistoryV2`; persistence is the legacy store path. |
 | Pixi default + fallback | not started | Flag default off. |
@@ -156,6 +156,30 @@ Validation (working tree on c018958): `tsc -b` 0; eslint 0; full
 disarms, undo/redo, reload with WebGL disabled shows the stroke as a React
 Flow node).
 
+### M1.6 — Group, lock, hide, reorder on the surface (2026-09-10)
+
+Behavior: multi-selection menu "Group" wraps the selection in a section
+sized around it (`hooks/node-operations/groupOperations.ts`; grouping and
+"wrap in section" are one operation); section menu "Ungroup" releases the
+children and removes the section. Section Lock/Hide/Fit/Bring-inside and
+node "Release from section" items — which existed in `ContextMenu` but were
+never passed by either canvas — are now wired on both. One domain helper
+(`domain/scene/nodeState.ts`) resolves effective visible/locked from layer
+plus section ancestry; the scene index, all three Pixi renderers, the host
+picks, and `isNodeEditableOnLayer` use it, so hidden sections vanish and
+locked ones cannot be moved on Pixi. Containers are now clickable on Pixi.
+Plain click on a node inside a multi-selection collapses to that node
+(React Flow behaviour). Drop-to-connect ports face the source anchor.
+
+Also: canonical fallback size for unsized legacy nodes changed to
+`resolveNodeSize` (120×60 for a plain rectangle) so Pixi geometry matches
+React Flow and the legacy grouping/alignment helpers.
+
+Validation (working tree on 3bb79c2): `tsc -b` 0; eslint 0; full
+`npx vitest --run src` 434 files / 2129 passed; `npm run build:ci` pass;
+`npm run test:opencanvas:editor-surface` 7/7 (adds: shift-click multi-select
+→ Group → Lock blocks drag → Unlock → Ungroup → children selected).
+
 ## Unverified / external gates
 
 - Real-GPU hardware performance capture (needs headed run on reference hardware).
@@ -168,17 +192,16 @@ Flow node).
   rather than replacing it everywhere; cost: React Flow provider stays mounted
   around the editor; benefit: one-line consumer change, both canvases share
   one contract.
-- 2026-09-10 — Unsized legacy nodes get a deterministic estimate, never DOM
-  `measured`, so the reverse projection cannot write sizes into legacy data.
-  Cost: Pixi may draw a slightly different size than React Flow measured.
+- 2026-09-10 — Unsized legacy nodes get `resolveNodeSize` (the per-shape
+  minimum React Flow renders at, and what legacy geometry helpers assume),
+  never DOM `measured`, so the reverse projection cannot write sizes into
+  legacy data. Cost: labels longer than the minimum are clipped on Pixi until
+  M3 text measurement.
 
 ## Next steps
 
-1. **M1.6 group/ungroup, lock/hide, reorder on the surface**: the node/multi
-   menus already expose group/wrap/section items via shared actions — verify
-   they act correctly on Pixi (containers, `parentId`), add lock/hide handling
-   (`isNodeEditableOnLayer` + section lock) to the pointer flow, browser-prove.
-2. **M1.7 multi-page copy/paste + save/reopen/export proof** in the browser
+1. **M1.7 multi-page copy/paste + save/reopen/export proof** in the browser
    (pages tab, paste on page 2, reload, canonical JSON + SVG export).
+2. **M1.8 paste-in-place / style paste** as explicit commands on both canvases.
 3. Then canonical store ownership (M1 architecture item), group/lock/hide UI
    on Pixi, save/reopen/export browser proof, and the flag-default decision.

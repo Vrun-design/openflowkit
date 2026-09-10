@@ -5,6 +5,7 @@ import { DEFAULT_SCENE_LAYER_ID } from '../document/defaults';
 import type { SceneConnector, SceneNode, ScenePage } from '../document/types';
 import { validateSceneDocumentV1 } from '../document/validation';
 import type { IndexedSceneObject, SceneIndex, SceneObjectKind } from './types';
+import { buildNodeStateMap } from './nodeState';
 import { buildNodeWorldMatrices, nodeWorldBounds, nodeWorldCenter } from './worldGeometry';
 
 const DEFAULT_CELL_SIZE = 256;
@@ -99,7 +100,7 @@ export function createSceneIndex(page: ScenePage, cellSize = DEFAULT_CELL_SIZE):
   const nodesById = new Map(page.nodes.map((node) => [node.id, node]));
   const connectorsById = new Map(page.connectors.map((connector) => [connector.id, connector]));
   const worldMatricesByNodeId = buildNodeWorldMatrices(page);
-  const layerById = new Map(page.layers.map((layer) => [layer.id, layer]));
+  const nodeStates = buildNodeStateMap(page);
   const objectsByKey = new Map<string, IndexedSceneObject>();
   const childIdsByParentId = new Map<string, string[]>();
   const mutableCells = new Map<string, string[]>();
@@ -107,14 +108,13 @@ export function createSceneIndex(page: ScenePage, cellSize = DEFAULT_CELL_SIZE):
 
   page.nodes.forEach((node, documentOrder) => {
     const kind = nodeKind(node);
-    const layer = layerById.get(node.layerId);
     const object: IndexedSceneObject = {
       id: node.id,
       kind,
       layerId: node.layerId,
       zIndex: node.zIndex,
       documentOrder,
-      visible: layer?.visible ?? false,
+      visible: nodeStates.get(node.id)?.visible ?? false,
       bounds: nodeWorldBounds(node, worldMatricesByNodeId.get(node.id)!),
     };
     objectsByKey.set(objectKey(kind, node.id), object);
@@ -137,8 +137,8 @@ export function createSceneIndex(page: ScenePage, cellSize = DEFAULT_CELL_SIZE):
       zIndex: 0,
       documentOrder,
       visible:
-        (source ? layerById.get(source.layerId)?.visible === true : false) &&
-        (target ? layerById.get(target.layerId)?.visible === true : false),
+        (source ? nodeStates.get(source.id)?.visible === true : false) &&
+        (target ? nodeStates.get(target.id)?.visible === true : false),
       bounds: connectorBounds(connector, nodesById, worldMatricesByNodeId),
     };
     objectsByKey.set(objectKey('connector', connector.id), object);

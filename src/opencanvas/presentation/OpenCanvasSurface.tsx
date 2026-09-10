@@ -123,6 +123,7 @@ export function OpenCanvasSurface({
   const spacePanRef = useRef(false);
   const transformRef = useRef<TransformPointerOperation | null>(null);
   const pendingToggleRef = useRef<string | null>(null);
+  const pendingToggleAdditiveRef = useRef(false);
   const connectorRef = useRef<ConnectorPointerOperation | null>(null);
   const connectRef = useRef<ConnectPointerOperation | null>(null);
   const freeformRef = useRef<FreeformPointerOperation | null>(null);
@@ -207,6 +208,7 @@ export function OpenCanvasSurface({
     handleDistributeNodes: operations.handleDistributeNodes,
     handleGroupNodes: operations.handleGroupNodes,
     handleWrapInSection: operations.handleWrapInSection,
+    handleUngroupSection: operations.handleUngroupSection,
     nodes: state.nodes,
   });
   const pendingLabelEdit = usePendingNodeLabelEditRequest();
@@ -368,7 +370,9 @@ export function OpenCanvasSurface({
         source: operation.sourceNodeId,
         target: targetId,
         sourceHandle: operation.side,
-        targetHandle: targetBounds ? nearestSide(targetBounds, host.screenToWorld(screen)) : null,
+        // The target port faces where the connector comes from, not the
+        // exact drop pixel, so dropping on the node's middle still looks right.
+        targetHandle: targetBounds ? nearestSide(targetBounds, operation.from) : null,
       });
       return;
     }
@@ -591,8 +595,11 @@ export function OpenCanvasSurface({
         if (handle || nodeId) {
           if (nodeId) applyConnectorSelection(null);
           const wasSelected = nodeId ? selectionRef.current.nodeIds.includes(nodeId) : false;
-          // Deselecting on press would move the wrong set on the drag that follows.
-          pendingToggleRef.current = nodeId && wasSelected && additive ? nodeId : null;
+          // Deselecting on press would move the wrong set on the drag that
+          // follows: additive clicks toggle and plain clicks collapse a
+          // multi-selection only once the pointer lifts without dragging.
+          pendingToggleRef.current = nodeId && wasSelected ? nodeId : null;
+          pendingToggleAdditiveRef.current = additive;
           // A plain click on an already selected node makes it the primary
           // one, so the inspector follows the click even after undo/reload.
           const next = nodeId && !wasSelected
@@ -601,9 +608,13 @@ export function OpenCanvasSurface({
               ? { nodeIds: selectionRef.current.nodeIds, primaryNodeId: nodeId }
               : selectionRef.current;
           if (next !== selectionRef.current) applySelection(next);
-          if (next.nodeIds.length > 0 && activePage) {
+          // Locked (section or layer) nodes stay selectable but never move.
+          const movable = activePage
+            ? next.nodeIds.filter((id) => isNodeEditableOnLayer(activePage, id))
+            : [];
+          if (movable.length > 0 && activePage) {
             transformRef.current = beginTransformOperation(
-              event.pointerId, activePage, next.nodeIds, handle, host.screenToWorld(screen)
+              event.pointerId, activePage, movable, handle, host.screenToWorld(screen)
             );
           }
           return;
@@ -712,7 +723,9 @@ export function OpenCanvasSurface({
           pendingToggleRef.current = null;
           commitTransform(transform);
           if (!transform.result && toggle) {
-            applySelection(selectionAfterClick(selectionRef.current, toggle, true));
+            applySelection(pendingToggleAdditiveRef.current
+              ? selectionAfterClick(selectionRef.current, toggle, true)
+              : replaceSelection([toggle]));
           }
           return;
         }
@@ -825,6 +838,13 @@ export function OpenCanvasSurface({
               startTextEditing({ nodeId: contextMenu.id });
             }
           }}
+          onFitSectionToContents={contextActions.onFitSectionToContents}
+          onBringContentsIntoSection={contextActions.onBringContentsIntoSection}
+          onReleaseFromSection={contextActions.onReleaseFromSection}
+          onUngroupSection={contextActions.onUngroupSection}
+          onToggleSectionLock={contextActions.onToggleSectionLock}
+          onToggleSectionHidden={contextActions.onToggleSectionHidden}
+          onGroupSelected={contextActions.onGroupSelected}
           canPaste={true}
           selectedCount={contextActions.selectedCount}
           onAlignNodes={contextActions.onAlignNodes}

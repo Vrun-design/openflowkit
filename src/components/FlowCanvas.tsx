@@ -106,6 +106,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     handleDistributeNodes,
     handleGroupNodes,
     handleWrapInSection,
+    handleUngroupSection,
     onReconnect,
     onNodeDrag,
     handleAddImage,
@@ -141,6 +142,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     handleDistributeNodes,
     handleGroupNodes,
     handleWrapInSection,
+    handleUngroupSection,
     nodes,
   });
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { Container, Graphics, Text } from 'pixi.js';
 import type { ScenePage } from '../../domain/document/types';
 import { distanceBetweenPoints } from '../../domain/geometry/point';
@@ -181,15 +182,13 @@ export class PixiConnectorRenderer {
     this.paths.clear();
     this.labelPlates.clear();
     this.labels.removeChildren().forEach((child) => child.destroy());
-    const visibleLayerIds = new Set(page.layers.filter((layer) => layer.visible).map((layer) => layer.id));
-    const nodesById = new Map(page.nodes.map((node) => [node.id, node]));
+    const nodeStates = buildNodeStateMap(page);
     const visiblePage = {
       ...page,
       connectors: page.connectors.filter((connector) => {
         if (renderedConnectorIds && !renderedConnectorIds.has(connector.id)) return false;
-        const source = nodesById.get(connector.source.nodeId);
-        const target = nodesById.get(connector.target.nodeId);
-        return Boolean(source && target && visibleLayerIds.has(source.layerId) && visibleLayerIds.has(target.layerId));
+        return nodeStates.get(connector.source.nodeId)?.visible === true
+          && nodeStates.get(connector.target.nodeId)?.visible === true;
       }),
     };
     if (!advanced) {

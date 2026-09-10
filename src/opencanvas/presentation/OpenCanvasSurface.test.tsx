@@ -132,7 +132,7 @@ const operations = {
   deleteEdge: vi.fn(), updateNodeZIndex: vi.fn(), updateNodeType: vi.fn(), updateNodeData: vi.fn(),
   fitSectionToContents: vi.fn(), releaseFromSection: vi.fn(), handleBringContentsIntoSection: vi.fn(),
   handleAlignNodes: vi.fn(), handleDistributeNodes: vi.fn(), handleGroupNodes: vi.fn(),
-  handleWrapInSection: vi.fn(), onConnect: vi.fn(), handleAddAndConnect: vi.fn(),
+  handleWrapInSection: vi.fn(), handleUngroupSection: vi.fn(), onConnect: vi.fn(), handleAddAndConnect: vi.fn(),
   handleAddDomainLibraryItemAndConnect: vi.fn(), handleAddImage: vi.fn(), handleAddNode: vi.fn(),
 };
 vi.mock('@/hooks/useFlowOperations', () => ({ useFlowOperations: () => operations }));
@@ -849,5 +849,15 @@ describe('OpenCanvas editor surface', () => {
     await mounted();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(storeState.setViewSettings).toHaveBeenCalledWith({ drawingTool: null });
+  });
+
+  it('collapses a multi-selection to the clicked node on a plain click without drag', async () => {
+    storeState.nodes = storeNodes.map((node) => ({ ...node, selected: true }));
+    storeState.selectedNodeId = 'node-1';
+    pickNode.mockReturnValue('node-2');
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 10, clientY: 10 });
+    expect(setSelection).toHaveBeenLastCalledWith(['node-2'], 'node-2');
   });
 });

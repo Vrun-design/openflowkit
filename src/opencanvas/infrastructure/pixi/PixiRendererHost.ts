@@ -33,6 +33,7 @@ import {
 import { PixiNodeRenderer } from './PixiNodeRenderer';
 import { PixiSelectionOverlay, selectionWorldBounds } from './PixiSelectionOverlay';
 import { shouldRedrawNodes } from './sceneInvalidation';
+import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { pickConnectHandle, type ConnectSide } from '../../domain/connectors/connectHandles';
 import {
   projectSceneViewport,
@@ -282,28 +283,29 @@ export class PixiRendererHost {
   pickNode(screenPoint: Point2d): string | null {
     if (!this.index) return null;
     const point = this.screenToWorld(screenPoint);
+    // Containers are pickable too, but ordering puts them under their
+    // children so a click inside a section still finds the child first.
     const hits = querySceneBounds(this.index, createBounds2d(point.x, point.y, 0, 0), {
-      kinds: new Set(['node']),
+      kinds: new Set(['node', 'container']),
     });
-    return [...hits].reverse().find((hit) => {
-      const layer = this.page?.layers.find((candidate) => candidate.id === hit.layerId);
-      return layer?.locked === false;
-    })?.id ?? null;
+    // Locked nodes stay selectable (their menu is how they get unlocked);
+    // the pointer flow refuses to move them.
+    const states = this.page ? buildNodeStateMap(this.page) : null;
+    return [...hits].reverse().find((hit) => states?.get(hit.id)?.visible === true)?.id ?? null;
   }
 
   pickConnector(screenPoint: Point2d): string | null {
     if (!this.page || !this.connectorModelEnabled) return null;
-    const unlockedLayerIds = new Set(
-      this.page.layers.filter((layer) => layer.visible && !layer.locked).map((layer) => layer.id)
-    );
-    const nodesById = new Map(this.page.nodes.map((node) => [node.id, node]));
+    const states = buildNodeStateMap(this.page);
+    const editable = (nodeId: string): boolean => {
+      const state = states.get(nodeId);
+      return state?.visible === true && state.locked === false;
+    };
     const editablePage = {
       ...this.page,
-      connectors: this.page.connectors.filter((connector) => {
-        const source = nodesById.get(connector.source.nodeId);
-        const target = nodesById.get(connector.target.nodeId);
-        return Boolean(source && target && unlockedLayerIds.has(source.layerId) && unlockedLayerIds.has(target.layerId));
-      }),
+      connectors: this.page.connectors.filter(
+        (connector) => editable(connector.source.nodeId) && editable(connector.target.nodeId)
+      ),
     };
     return pickConnectorAtPoint(editablePage, this.screenToWorld(screenPoint), 10 / this.camera.zoom);
   }

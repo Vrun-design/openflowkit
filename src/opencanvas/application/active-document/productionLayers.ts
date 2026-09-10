@@ -1,5 +1,6 @@
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneLayer, ScenePage } from '../../domain/document/types';
+import { nodeEffectiveState } from '../../domain/scene/nodeState';
 
 export interface ProductionLayerUpdates {
   readonly name?: string;
@@ -125,9 +126,8 @@ export function buildProductionNodeLayerCommand(
   return { kind: 'batch', id: `move-node-layer:${nodeId}`, label: 'Move node to layer', commands };
 }
 
+/** Visible and unlocked, counting hidden/locked sections above the node. */
 export function isNodeEditableOnLayer(page: ScenePage, nodeId: string): boolean {
-  const node = page.nodes.find((candidate) => candidate.id === nodeId);
-  if (!node) return false;
-  const layer = page.layers.find((candidate) => candidate.id === node.layerId);
-  return layer?.visible === true && layer.locked === false;
+  const state = nodeEffectiveState(page, nodeId);
+  return state.visible && !state.locked;
 }

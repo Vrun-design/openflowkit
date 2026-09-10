@@ -24,6 +24,7 @@ describe('useFlowCanvasMenusAndActions', () => {
                 handleDistributeNodes: vi.fn(),
                 handleGroupNodes: vi.fn(),
                 handleWrapInSection: vi.fn(),
+                handleUngroupSection: vi.fn(),
                 nodes: [],
             })
         );
@@ -70,6 +71,7 @@ describe('useFlowCanvasMenusAndActions', () => {
                 handleDistributeNodes: vi.fn(),
                 handleGroupNodes: vi.fn(),
                 handleWrapInSection: vi.fn(),
+                handleUngroupSection: vi.fn(),
                 nodes: [
                     {
                         id: 'section-1',
