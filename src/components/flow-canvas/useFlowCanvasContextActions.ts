@@ -15,6 +15,7 @@ interface UseFlowCanvasContextActionsParams {
   duplicateNode: (id: string) => void;
   deleteNode: (id: string) => void;
   deleteEdge: (id: string) => void;
+  insertNodeOnEdge: (id: string) => void;
   updateNodeZIndex: (id: string, action: 'front' | 'back') => void;
   updateNodeType: (id: string, type: string) => void;
   updateNodeData: (id: string, updates: Record<string, unknown>) => void;
@@ -39,6 +40,7 @@ export interface UseFlowCanvasContextActionsResult {
   onDelete: () => void;
   onSendToBack: () => void;
   onReverseEdge: () => void;
+  onInsertNodeOnEdge: () => void;
   onChangeNodeType: (type: string) => void;
   onEditLabel: () => void;
   onFitSectionToContents: () => void;
@@ -67,6 +69,7 @@ export function useFlowCanvasContextActions({
   duplicateNode,
   deleteNode,
   deleteEdge,
+  insertNodeOnEdge,
   updateNodeZIndex,
   updateNodeType,
   updateNodeData,
@@ -146,6 +149,11 @@ export function useFlowCanvasContextActions({
       setSelectedEdgeId(id);
       runContextualEditorCommand({ kind: 'reverse-connectors' });
     }
+    onCloseContextMenu();
+  }
+
+  function onInsertNodeOnEdge(): void {
+    if (contextMenu.id) insertNodeOnEdge(contextMenu.id);
     onCloseContextMenu();
   }
 
@@ -251,6 +259,7 @@ export function useFlowCanvasContextActions({
     onDelete,
     onSendToBack,
     onReverseEdge,
+    onInsertNodeOnEdge,
     onChangeNodeType,
     onEditLabel,
     onFitSectionToContents,

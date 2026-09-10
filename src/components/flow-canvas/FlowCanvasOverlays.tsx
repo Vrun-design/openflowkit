@@ -120,6 +120,7 @@ export function FlowCanvasOverlays({
             onDelete={contextActions.onDelete}
             onSendToBack={contextActions.onSendToBack}
             onReverseEdge={contextActions.onReverseEdge}
+            onInsertNodeOnEdge={contextActions.onInsertNodeOnEdge}
             onChangeNodeType={contextActions.onChangeNodeType}
             onEditLabel={contextActions.onEditLabel}
             onFitSectionToContents={contextActions.onFitSectionToContents}

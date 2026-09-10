@@ -73,7 +73,8 @@
     "exportDiagram": "导出图表",
     "exportAs": "导出为",
     "ungroup": "取消编组",
-    "pasteInPlace": "原位粘贴"
+    "pasteInPlace": "原位粘贴",
+    "insertNodeOnEdge": "在此插入节点"
   },
   "nav": {
     "home": "首页",

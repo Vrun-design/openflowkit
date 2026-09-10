@@ -13,6 +13,7 @@ import { getPointerClientPosition, isPaneTarget, normalizeConnectionFromDragStar
 import { normalizeNodeHandleId } from '@/lib/nodeHandles';
 import { buildReconnectedEdge, shouldRespectExplicitReconnectHandles } from '@/lib/reconnectEdge';
 import { queueNodeLabelEditRequest } from './nodeLabelEditRequest';
+import { insertNodeIntoEdge } from './node-operations/edgeInsertion';
 import { isMindmapConnectorSource } from '@/lib/connectCreationPolicy';
 import { resolveMindmapBranchStyleForNode, syncMindmapEdges } from '@/lib/mindmapLayout';
 import {
@@ -223,6 +224,20 @@ export const useEdgeOperations = (
         queueNodeLabelEditRequest(id, { replaceExisting: true });
     }, [recordHistory, setEdges, setNodes, setSelectedNodeId, t]);
 
+    const insertNodeOnEdge = useCallback((edgeId: string) => {
+        const state = useFlowStore.getState();
+        const result = insertNodeIntoEdge(state.nodes, state.edges, edgeId, {
+            nodeId: createId(), edgeId: createId('e'),
+        });
+        if (!result) return;
+        recordHistory();
+        setNodes(() => result.nodes);
+        setEdges(() => result.edges);
+        setSelectedNodeId(result.nodeId);
+        setSelectedEdgeId(null);
+        queueNodeLabelEditRequest(result.nodeId, { replaceExisting: true });
+    }, [recordHistory, setEdges, setNodes, setSelectedEdgeId, setSelectedNodeId]);
+
     const createConnectedNodeInDirection = useCallback((sourceId: string, direction: QuickCreateDirection) => {
         const state = useFlowStore.getState();
         const sourceNode = state.nodes.find((node) => node.id === sourceId);
@@ -336,5 +351,6 @@ export const useEdgeOperations = (
         handleAddAndConnect,
         createConnectedNodeInDirection,
         handleAddDomainLibraryItemAndConnect,
+        insertNodeOnEdge,
     };
 };

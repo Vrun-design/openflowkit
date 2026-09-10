@@ -13,6 +13,7 @@ interface UseFlowCanvasMenusAndActionsParams {
     duplicateNode: (id: string) => void;
     deleteNode: (id: string) => void;
     deleteEdge: (id: string) => void;
+    insertNodeOnEdge: (id: string) => void;
     updateNodeZIndex: (id: string, action: 'front' | 'back') => void;
     updateNodeType: (id: string, type: string) => void;
     updateNodeData: (id: string, updates: Record<string, unknown>) => void;
@@ -38,6 +39,7 @@ export function useFlowCanvasMenusAndActions({
     duplicateNode,
     deleteNode,
     deleteEdge,
+    insertNodeOnEdge,
     updateNodeZIndex,
     updateNodeType,
     updateNodeData,
@@ -66,6 +68,7 @@ export function useFlowCanvasMenusAndActions({
         duplicateNode,
         deleteNode,
         deleteEdge,
+        insertNodeOnEdge,
         updateNodeZIndex,
         updateNodeType,
         updateNodeData,

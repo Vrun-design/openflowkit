@@ -145,6 +145,20 @@ test('drags a connector between two nodes on the OpenCanvas surface', async ({ p
   await page.mouse.click(center.x + 60, center.y - 120, { button: 'right' });
   const menu = page.getByRole('menu', { name: 'Canvas context menu' });
   await expect(menu.getByRole('menuitem', { name: 'Delete Connection' })).toBeVisible();
+
+  // Insert a node into the connector: it lands between A and B, selected,
+  // with its label editor open; both halves stay connected.
+  await menu.getByRole('menuitem', { name: 'Insert node here' }).click();
+  const editor = page.getByRole('textbox', { name: 'Edit node label' });
+  await expect(editor).toBeVisible({ timeout: 10_000 });
+  await editor.fill('Mid');
+  await editor.press('Enter');
+  await expect(page.getByPlaceholder('Enter primary text...')).toHaveValue('Mid');
+  // Two entries: the rename and the insertion.
+  await page.keyboard.press('Meta+z');
+  await page.keyboard.press('Meta+z');
+  await page.mouse.click(center.x + 60, center.y - 120, { button: 'right' });
+  await expect(menu.getByRole('menuitem', { name: 'Delete Connection' })).toBeVisible();
   await page.keyboard.press('Escape');
 });
 

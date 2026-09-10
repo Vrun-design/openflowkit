@@ -84,6 +84,7 @@ export interface ContextMenuProps {
   onPasteStyle?: () => void;
   onDuplicate?: () => void;
   onReverseEdge?: () => void;
+  onInsertNodeOnEdge?: () => void;
   onDelete?: () => void;
   onBringToFront?: () => void;
   onSendToBack?: () => void;
@@ -121,6 +122,7 @@ export function ContextMenu({
   onPasteStyle,
   onDuplicate,
   onReverseEdge,
+  onInsertNodeOnEdge,
   onDelete,
   onBringToFront,
   onSendToBack,
@@ -370,6 +372,15 @@ export function ContextMenu({
               className={MENU_BUTTON_CLASS_NAME}
             >
               <Pencil className="w-4 h-4" /> {t('common.editLabel')}
+            </button>
+          )}
+          {onInsertNodeOnEdge && (
+            <button
+              role="menuitem"
+              onClick={onInsertNodeOnEdge}
+              className={MENU_BUTTON_CLASS_NAME}
+            >
+              <CopyPlus className="w-4 h-4" /> {t('common.insertNodeOnEdge', 'Insert node here')}
             </button>
           )}
           {onReverseEdge && (

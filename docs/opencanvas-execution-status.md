@@ -6,7 +6,11 @@ and next. Updated: 2026-09-10.
 
 ## Current position
 
-Milestone **M1 — One complete production editor**. Done: M1.1 canvas API,
+Milestone **M2 — Excellent everyday diagramming** (M1 workflows complete;
+M1 architecture step (d) canonical ownership flip remains open, tracked in
+"Next steps"). M2.1 insert-node-into-edge done.
+
+M1 summary: Done: M1.1 canvas API,
 M1.2 menus/label editing, M1.3 drag-to-connect, M1.4 external input, M1.5
 freeform drawing, M1.6 group/lock/hide, M1.7 export + multi-page proof,
 M1.8 paste-in-place/style paste, M1.9 touch + screen-reader access on the
@@ -292,6 +296,25 @@ page on each selection change.
 
 Validation (working tree on beeebfd): vitest 438 files / 2144; eslint 0;
 editor-surface browser spec 8/8.
+
+## M2 requirement status
+
+| Requirement | Status | Paths |
+| --- | --- | --- |
+| Quick-connect drag-to-create, keyboard sibling/child, repeated insertion, next-node suggestions | partial | Drag-to-create via connect handles + connect menu (M1.3); Alt+Arrow quick create (`createConnectedNodeInDirection`) and mindmap Tab/Enter exist (store-based, both canvases). Repeated insertion / suggestions: missing. |
+| Insert node into edge; replace node kind preserving bindings | partial | **Insert node here** in the edge menu (`hooks/node-operations/edgeInsertion.ts`): splits the edge at its midpoint, keeps the original edge id/appearance on the first half, opens the label editor, one history entry; both canvases. Replace kind: `updateNodeType` via node menu exists (no compatibility report yet). |
+| Connect anywhere / ports / self-loops / parallel edges | kernel + partial | Canonical port authoring exists (`domain/connectors/portAuthoring`); surface uses side handles; self-loop only in evaluation page. |
+| Routes / handles / waypoints / labels / markers | partial | Reroute handles on surface (M1); multiple labels, crossing bridges: missing. |
+| Auto routing with obstacle avoidance | kernel | CS-037 kernel; not surfaced as a production option. |
+| Scoped/anchored layout | kernel | `productionScopedLayout.ts`; not wired to a production action. |
+| Align/distribute/tidy, numeric geometry, rulers, guides, grid | partial | Align/distribute in multi menu; alignment guides (M1.12); grid/snap via precision settings; rulers/draggable guides: missing. |
+| Family editors | missing on Pixi | Inspector-based only. |
+
+### M2.1 — Insert a node into an edge (2026-09-10)
+
+Validation (working tree on e19b80e): `tsc -b` 0; eslint 0; vitest 439
+files / 2146; editor-surface browser spec 8/8 (extends the connect test:
+edge menu → Insert node here → label editor → undo ×2 restores the edge).
 
 ## Unverified / external gates
 

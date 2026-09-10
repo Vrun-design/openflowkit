@@ -6,13 +6,15 @@ production editor runs on one canonical document with the OpenCanvas (Pixi)
 renderer, React Flow kept as fallback. Roadmap: docs/opencanvas-product-roadmap.md.
 
 ## Now
-M1 in progress. Done: M1.1 canvas API (`src/canvas/activeCanvas.ts`), M1.2
+M1 workflows complete (browser-proven, `npm run test:opencanvas:editor-surface`
+8/8); M2 started: M2.1 insert-node-into-edge done. Done: M1.1 canvas API (`src/canvas/activeCanvas.ts`), M1.2
 context menus + label editing, M1.3 drag-to-connect handles, M1.4 shared external paste/drop, M1.5 pen/highlighter/line/arrow drawing
 on the Pixi surface (StrokeNode fallback on React Flow). Browser spec: `npm run test:opencanvas:editor-surface`.
 Full record: docs/opencanvas-execution-status.md (read it first).
 
 ## Next actions
-1. Canonical store ownership — steps (b)/(d) per docs/opencanvas-execution-status.md "Next steps".
+1. M2.2 repeated quick-create + suggestions; M2.3 replace-kind compatibility report.
+2. M1 (d) canonical ownership flip (large; own change set).
 3. Canonical store ownership; Pixi-default decision.
 4. Group/lock/hide UI on Pixi; save/reopen/export browser proof.
 
@@ -38,4 +40,5 @@ Full record: docs/opencanvas-execution-status.md (read it first).
 - 2026-09-10 — M1.12 alignment guides + snap while moving on the surface.
 - 2026-09-10 — M1.13 store.applyCanonicalCommand — one canonical write path with history.
 - 2026-09-10 — M1.14 per-page memoised projection shared by surface/store/export.
+- 2026-09-10 — M2.1 insert node into edge (edge menu, both canvases).
 - 2026-09-10 — M1.9 touch pan/pinch + semantic tree on the surface; eval routes keep own glue (decision).

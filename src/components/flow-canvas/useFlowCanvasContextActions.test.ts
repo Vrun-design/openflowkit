@@ -32,7 +32,7 @@ describe('useFlowCanvasContextActions', () => {
       screenToFlowPosition: (p) => p,
       copySelection: vi.fn(), pasteSelection: vi.fn(), pasteSelectionInPlace: vi.fn(),
       copyStyleSelection: vi.fn(), pasteStyleSelection: vi.fn(), duplicateNode: vi.fn(), deleteNode: vi.fn(),
-      deleteEdge: vi.fn(), updateNodeZIndex: vi.fn(), updateNodeType: vi.fn(), updateNodeData: vi.fn(),
+      deleteEdge: vi.fn(), insertNodeOnEdge: vi.fn(), updateNodeZIndex: vi.fn(), updateNodeType: vi.fn(), updateNodeData: vi.fn(),
       fitSectionToContents: vi.fn(), releaseFromSection: vi.fn(), bringContentsIntoSection: vi.fn(),
       handleAlignNodes: vi.fn(), handleDistributeNodes: vi.fn(), handleGroupNodes: vi.fn(),
       handleWrapInSection: vi.fn(), handleUngroupSection: vi.fn(), nodes,

@@ -73,7 +73,8 @@
     "exportDiagram": "Exportar diagrama",
     "exportAs": "Exportar como",
     "ungroup": "Desagrupar",
-    "pasteInPlace": "Pegar en el mismo lugar"
+    "pasteInPlace": "Pegar en el mismo lugar",
+    "insertNodeOnEdge": "Insertar nodo aquí"
   },
   "nav": {
     "home": "Inicio",

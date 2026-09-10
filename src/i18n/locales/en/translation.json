@@ -73,7 +73,8 @@
     "exportAs": "Export As",
     "rename": "Rename",
     "ungroup": "Ungroup",
-    "pasteInPlace": "Paste in place"
+    "pasteInPlace": "Paste in place",
+    "insertNodeOnEdge": "Insert node here"
   },
   "nav": {
     "home": "Home",

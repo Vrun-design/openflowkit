@@ -73,7 +73,8 @@
     "exportAs": "Farklı Dışa Aktar",
     "rename": "Yeniden Adlandır",
     "ungroup": "Grubu çöz",
-    "pasteInPlace": "Yerinde yapıştır"
+    "pasteInPlace": "Yerinde yapıştır",
+    "insertNodeOnEdge": "Buraya düğüm ekle"
   },
   "nav": {
     "home": "Ana Sayfa",

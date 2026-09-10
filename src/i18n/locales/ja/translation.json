@@ -73,7 +73,8 @@
     "exportDiagram": "図をエクスポート",
     "exportAs": "名前を付けてエクスポート",
     "ungroup": "グループ解除",
-    "pasteInPlace": "同じ位置に貼り付け"
+    "pasteInPlace": "同じ位置に貼り付け",
+    "insertNodeOnEdge": "ここにノードを挿入"
   },
   "nav": {
     "home": "ホーム",

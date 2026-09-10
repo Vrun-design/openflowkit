@@ -73,7 +73,8 @@
     "exportDiagram": "Diagramm exportieren",
     "exportAs": "Exportieren als",
     "ungroup": "Gruppierung aufheben",
-    "pasteInPlace": "An Ort und Stelle einfügen"
+    "pasteInPlace": "An Ort und Stelle einfügen",
+    "insertNodeOnEdge": "Knoten hier einfügen"
   },
   "nav": {
     "home": "Startseite",

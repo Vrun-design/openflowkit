@@ -221,6 +221,7 @@ export function OpenCanvasSurface({
     duplicateNode: operations.duplicateNode,
     deleteNode: operations.deleteNode,
     deleteEdge: operations.deleteEdge,
+    insertNodeOnEdge: operations.insertNodeOnEdge,
     updateNodeZIndex: operations.updateNodeZIndex,
     updateNodeType: operations.updateNodeType,
     updateNodeData: operations.updateNodeData,
@@ -914,6 +915,7 @@ export function OpenCanvasSurface({
           onDelete={contextActions.onDelete}
           onSendToBack={contextActions.onSendToBack}
           onReverseEdge={contextActions.onReverseEdge}
+          onInsertNodeOnEdge={contextActions.onInsertNodeOnEdge}
           onChangeNodeType={contextActions.onChangeNodeType}
           onEditLabel={() => {
             contextActions.onEditLabel();
