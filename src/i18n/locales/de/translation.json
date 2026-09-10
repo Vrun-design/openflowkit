@@ -867,7 +867,11 @@
       "loadingCatalogs": "Formen, Symbole und Vorlagen werden durchsucht…",
       "catalogError": "Katalogergebnisse sind nicht verfügbar. Die Befehlssuche funktioniert weiterhin.",
       "executionError": "Dieses Ergebnis konnte nicht hinzugefügt werden. Es wurde nichts geändert.",
-      "sources": { "shape": "Form", "icon": "Symbol", "template": "Vorlage" }
+      "sources": {
+        "shape": "Form",
+        "icon": "Symbol",
+        "template": "Vorlage"
+      }
     },
     "contextual": {
       "badge": "Auswahl",
@@ -1286,7 +1290,11 @@
     "clearCanvas": "Canvas löschen",
     "undo": "Rückgängig (Ctrl+Z)",
     "redo": "Wiederholen (Ctrl+Y)",
-    "commandCenter": "Command Center öffnen"
+    "commandCenter": "Command Center öffnen",
+    "drawPen": "Mit Stift zeichnen (P)",
+    "drawHighlighter": "Textmarker",
+    "drawLine": "Linie zeichnen",
+    "drawArrow": "Pfeil zeichnen"
   },
   "flowEditor": {
     "cannotCloseLastTab": "Der letzte Tab kann nicht geschlossen werden.",
@@ -1396,7 +1404,8 @@
     "selectHint": "Klicken Sie auf einen Knoten oder eine Kante, um deren Eigenschaften zu bearbeiten"
   },
   "flowCanvas": {
-    "strictModePasteBlocked": "Der Architektur-Strict-Mode hat das Mermaid-Einfügen blockiert. Öffnen Sie die Code-Ansicht, beheben Sie die Diagnosen und versuchen Sie es erneut."
+    "strictModePasteBlocked": "Der Architektur-Strict-Mode hat das Mermaid-Einfügen blockiert. Öffnen Sie die Code-Ansicht, beheben Sie die Diagnosen und versuchen Sie es erneut.",
+    "canvasLabel": "Diagramm-Zeichenfläche"
   },
   "flowTabs": {
     "closeTab": "Tab schließen",

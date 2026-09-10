@@ -867,7 +867,11 @@
       "loadingCatalogs": "正在搜索形状、图标和模板…",
       "catalogError": "目录结果不可用。命令搜索仍可正常使用。",
       "executionError": "无法添加此结果。未进行任何更改。",
-      "sources": { "shape": "形状", "icon": "图标", "template": "模板" }
+      "sources": {
+        "shape": "形状",
+        "icon": "图标",
+        "template": "模板"
+      }
     },
     "contextual": {
       "badge": "所选项",
@@ -1286,7 +1290,11 @@
     "clearCanvas": "清除画布",
     "undo": "撤销 (Ctrl+Z)",
     "redo": "重做 (Ctrl+Y)",
-    "commandCenter": "打开命令中心"
+    "commandCenter": "打开命令中心",
+    "drawPen": "用钢笔绘制 (P)",
+    "drawHighlighter": "荧光笔",
+    "drawLine": "绘制直线",
+    "drawArrow": "绘制箭头"
   },
   "flowEditor": {
     "cannotCloseLastTab": "无法关闭最后一个标签页。",
@@ -1396,7 +1404,8 @@
     "selectHint": "点击节点或连线以编辑其属性"
   },
   "flowCanvas": {
-    "strictModePasteBlocked": "架构严格模式已阻止 Mermaid 粘贴。请打开代码视图，修复诊断后重试。"
+    "strictModePasteBlocked": "架构严格模式已阻止 Mermaid 粘贴。请打开代码视图，修复诊断后重试。",
+    "canvasLabel": "图表画布"
   },
   "flowTabs": {
     "closeTab": "关闭标签页",

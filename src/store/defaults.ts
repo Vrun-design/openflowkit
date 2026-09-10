@@ -61,6 +61,7 @@ export const INITIAL_VIEW_SETTINGS: ViewSettings = {
     snapToGrid: true,
     alignmentGuidesEnabled: true,
     isShortcutsHelpOpen: false,
+    drawingTool: null,
     defaultIconsEnabled: true,
     smartRoutingEnabled: true,
     smartRoutingProfile: 'standard',

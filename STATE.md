@@ -7,13 +7,14 @@ renderer, React Flow kept as fallback. Roadmap: docs/opencanvas-product-roadmap.
 
 ## Now
 M1 in progress. Done: M1.1 canvas API (`src/canvas/activeCanvas.ts`), M1.2
-context menus + label editing, M1.3 drag-to-connect handles, M1.4 shared external paste/drop on the Pixi
-surface. Browser spec: `npm run test:opencanvas:editor-surface`.
+context menus + label editing, M1.3 drag-to-connect handles, M1.4 shared external paste/drop, M1.5 pen/highlighter/line/arrow drawing
+on the Pixi surface (StrokeNode fallback on React Flow). Browser spec: `npm run test:opencanvas:editor-surface`.
 Full record: docs/opencanvas-execution-status.md (read it first).
 
 ## Next actions
-1. M1.5 — freeform draw tools on the surface (`pixiFreeformOperations`).
-2. Group/lock/hide UI on Pixi; save/reopen/export browser proof.
+1. M1.6 — group/lock/hide/reorder parity on the Pixi surface.
+2. M1.7 — multi-page copy/paste + save/reopen/export browser proof.
+3. Group/lock/hide UI on Pixi; save/reopen/export browser proof.
 
 ## Decisions
 - 2026-09-10 — `useActiveCanvas()` wraps `useReactFlow()`; registered Pixi API overrides it. One seam, no consumer rewrite.
@@ -27,3 +28,4 @@ Full record: docs/opencanvas-execution-status.md (read it first).
 - 2026-09-10 — M1.2 menus + label editing on Pixi; reverse-edge menu fix.
 - 2026-09-10 — M1.3 drag-to-connect handles; insertion selects only the new node.
 - 2026-09-10 — M1.4 shared external input hook; surface focusable; dblclick adds node.
+- 2026-09-10 — M1.5 drawing tools in toolbar (Pixi only) + StrokeNode fallback.

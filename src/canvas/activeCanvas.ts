@@ -89,6 +89,11 @@ export function useActiveCanvas(): ActiveCanvasApi {
   return registered ?? reactFlow;
 }
 
+/** True while a non-React-Flow canvas (OpenCanvas) is the visible one. */
+export function useIsOpenCanvasActive(): boolean {
+  return useSyncExternalStore(subscribe, () => state.api !== null);
+}
+
 /** Live viewport of the visible canvas. */
 export function useActiveCanvasViewport(): CanvasViewport {
   const registered = useSyncExternalStore(subscribe, () => state.viewport);

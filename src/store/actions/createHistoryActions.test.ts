@@ -90,6 +90,7 @@ function createState(snapshotCount = 0): FlowState {
       snapToGrid: false,
       alignmentGuidesEnabled: true,
       isShortcutsHelpOpen: false,
+    drawingTool: null,
       defaultIconsEnabled: true,
       smartRoutingEnabled: true,
       smartRoutingProfile: 'standard',

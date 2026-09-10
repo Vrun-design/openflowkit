@@ -887,7 +887,11 @@
       "loadingCatalogs": "Şekiller, simgeler ve şablonlar aranıyor…",
       "catalogError": "Katalog sonuçları kullanılamıyor. Komut araması çalışmaya devam ediyor.",
       "executionError": "Bu sonuç eklenemedi. Hiçbir şey değişmedi.",
-      "sources": { "shape": "Şekil", "icon": "Simge", "template": "Şablon" }
+      "sources": {
+        "shape": "Şekil",
+        "icon": "Simge",
+        "template": "Şablon"
+      }
     },
     "contextual": {
       "badge": "Seçim",
@@ -1306,7 +1310,11 @@
     "clearCanvas": "Tuvali Temizle",
     "undo": "Geri Al (Ctrl+Z)",
     "redo": "Yinele (Ctrl+Y)",
-    "commandCenter": "Komut Merkezini Aç"
+    "commandCenter": "Komut Merkezini Aç",
+    "drawPen": "Kalemle çiz (P)",
+    "drawHighlighter": "Fosforlu kalem",
+    "drawLine": "Çizgi çiz",
+    "drawArrow": "Ok çiz"
   },
   "flowEditor": {
     "cannotCloseLastTab": "Son sekmeyi kapatamazsınız.",
@@ -1416,7 +1424,8 @@
     "selectHint": "Özelliklerini düzenlemek için bir düğüme veya kenara tıklayın"
   },
   "flowCanvas": {
-    "strictModePasteBlocked": "Mimari Katı Mod, Mermaid yapıştırmayı engelledi. Kod görünümünü açın, tanıları düzeltin ve tekrar deneyin."
+    "strictModePasteBlocked": "Mimari Katı Mod, Mermaid yapıştırmayı engelledi. Kod görünümünü açın, tanıları düzeltin ve tekrar deneyin.",
+    "canvasLabel": "Diyagram tuvali"
   },
   "flowTabs": {
     "closeTab": "Sayfayi Kapat",

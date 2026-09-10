@@ -867,7 +867,11 @@
       "loadingCatalogs": "Recherche de formes, d’icônes et de modèles…",
       "catalogError": "Les résultats du catalogue sont indisponibles. La recherche de commandes fonctionne toujours.",
       "executionError": "Ce résultat n’a pas pu être ajouté. Aucun changement n’a été effectué.",
-      "sources": { "shape": "Forme", "icon": "Icône", "template": "Modèle" }
+      "sources": {
+        "shape": "Forme",
+        "icon": "Icône",
+        "template": "Modèle"
+      }
     },
     "contextual": {
       "badge": "Sélection",
@@ -1286,7 +1290,11 @@
     "clearCanvas": "Effacer le canevas",
     "undo": "Annuler (Ctrl+Z)",
     "redo": "Rétablir (Ctrl+Y)",
-    "commandCenter": "Ouvrir le centre de commandes"
+    "commandCenter": "Ouvrir le centre de commandes",
+    "drawPen": "Dessiner au stylo (P)",
+    "drawHighlighter": "Surligneur",
+    "drawLine": "Tracer une ligne",
+    "drawArrow": "Tracer une flèche"
   },
   "flowEditor": {
     "cannotCloseLastTab": "Impossible de fermer le dernier onglet.",
@@ -1396,7 +1404,8 @@
     "selectHint": "Cliquez sur un nœud ou une arête pour modifier ses propriétés"
   },
   "flowCanvas": {
-    "strictModePasteBlocked": "Le mode strict d’architecture a bloqué le collage Mermaid. Ouvrez la vue Code, corrigez les diagnostics, puis réessayez."
+    "strictModePasteBlocked": "Le mode strict d’architecture a bloqué le collage Mermaid. Ouvrez la vue Code, corrigez les diagnostics, puis réessayez.",
+    "canvasLabel": "Zone de diagramme"
   },
   "flowTabs": {
     "closeTab": "Fermer l'onglet",

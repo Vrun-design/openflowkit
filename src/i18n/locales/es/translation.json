@@ -867,7 +867,11 @@
       "loadingCatalogs": "Buscando formas, iconos y plantillas…",
       "catalogError": "Los resultados del catálogo no están disponibles. La búsqueda de comandos sigue funcionando.",
       "executionError": "No se pudo añadir este resultado. No se cambió nada.",
-      "sources": { "shape": "Forma", "icon": "Icono", "template": "Plantilla" }
+      "sources": {
+        "shape": "Forma",
+        "icon": "Icono",
+        "template": "Plantilla"
+      }
     },
     "contextual": {
       "badge": "Selección",
@@ -1286,7 +1290,11 @@
     "clearCanvas": "Limpiar lienzo",
     "undo": "Deshacer (Ctrl+Z)",
     "redo": "Rehacer (Ctrl+Y)",
-    "commandCenter": "Abrir centro de comandos"
+    "commandCenter": "Abrir centro de comandos",
+    "drawPen": "Dibujar con lápiz (P)",
+    "drawHighlighter": "Resaltador",
+    "drawLine": "Dibujar línea",
+    "drawArrow": "Dibujar flecha"
   },
   "flowEditor": {
     "cannotCloseLastTab": "No se puede cerrar la última pestaña.",
@@ -1396,7 +1404,8 @@
     "selectHint": "Haz clic en un nodo o una arista para editar sus propiedades"
   },
   "flowCanvas": {
-    "strictModePasteBlocked": "El modo estricto de arquitectura bloqueó el pegado de Mermaid. Abre la vista de código, corrige los diagnósticos y vuelve a intentarlo."
+    "strictModePasteBlocked": "El modo estricto de arquitectura bloqueó el pegado de Mermaid. Abre la vista de código, corrige los diagnósticos y vuelve a intentarlo.",
+    "canvasLabel": "Lienzo del diagrama"
   },
   "flowTabs": {
     "closeTab": "Cerrar pestaña",

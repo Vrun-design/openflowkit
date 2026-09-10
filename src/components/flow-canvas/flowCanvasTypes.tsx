@@ -22,6 +22,7 @@ import ArchitectureNode from '@/components/custom-nodes/ArchitectureNode';
 import SequenceParticipantNode from '@/components/custom-nodes/SequenceParticipantNode';
 import SequenceNoteNode from '@/components/custom-nodes/SequenceNoteNode';
 import SectionNode from '@/components/SectionNode';
+import StrokeNode from '@/components/StrokeNode';
 
 export const flowCanvasNodeTypes: NodeTypes = {
   start: CustomNode,
@@ -44,6 +45,10 @@ export const flowCanvasNodeTypes: NodeTypes = {
   mobile: MobileNode,
   sequence_participant: SequenceParticipantNode,
   sequence_note: SequenceNoteNode,
+  pen: StrokeNode,
+  highlighter: StrokeNode,
+  line: StrokeNode,
+  arrow: StrokeNode,
 };
 
 export const flowCanvasEdgeTypes: EdgeTypes = {

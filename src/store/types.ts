@@ -22,8 +22,12 @@ import type { ExportSerializationMode } from '@/services/canonicalSerialization'
 import type { FlowDocument } from '@/services/storage/flowDocumentModel';
 import type { ContextualEditorCommand } from '@/services/contextualEditorCommands';
 
+export type CanvasDrawingTool = 'pen' | 'highlighter' | 'line' | 'arrow';
+
 export interface ViewSettings {
   showGrid: boolean;
+  /** Freeform tool armed on the canvas; null means select/pan. Not persisted. */
+  drawingTool: CanvasDrawingTool | null;
   snapToGrid: boolean;
   alignmentGuidesEnabled: boolean;
   isShortcutsHelpOpen: boolean;

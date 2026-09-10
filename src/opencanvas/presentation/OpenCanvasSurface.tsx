@@ -35,6 +35,15 @@ import {
 import type { ConnectorEditHandle } from '../domain/connectors/editing';
 import { nearestSide, sideAnchor, type ConnectSide } from '../domain/connectors/connectHandles';
 import {
+  beginFreeformOperation,
+  finishFreeformOperation,
+  freeformPreviewPoints,
+  freeformPreviewStyle,
+  updateFreeformOperation,
+  type FreeformPointerOperation,
+} from './pixiFreeformOperations';
+import { projectPointerSamples } from './pointerSampleProjection';
+import {
   addToSelection,
   clearSelection,
   replaceSelection,
@@ -116,6 +125,7 @@ export function OpenCanvasSurface({
   const pendingToggleRef = useRef<string | null>(null);
   const connectorRef = useRef<ConnectorPointerOperation | null>(null);
   const connectRef = useRef<ConnectPointerOperation | null>(null);
+  const freeformRef = useRef<FreeformPointerOperation | null>(null);
   const selectedConnectorIdRef = useRef<string | null>(null);
   const fittedRef = useRef<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'ready' | 'failed'>('idle');
@@ -136,6 +146,7 @@ export function OpenCanvasSurface({
       layers: current.layers,
       selectedNodeId: current.selectedNodeId,
       selectedEdgeId: current.selectedEdgeId,
+      activeLayerId: current.activeLayerId,
       setNodes: current.setNodes,
       setSelectedNodeId: current.setSelectedNodeId,
       setSelectedEdgeId: current.setSelectedEdgeId,
@@ -148,6 +159,8 @@ export function OpenCanvasSurface({
     () => projectActiveDocument(state, new Date().toISOString()),
     [state]
   );
+  // Kept out of `state` so arming a tool never re-projects the document.
+  const drawingTool = useFlowStore((current) => current.viewSettings.drawingTool);
 
   // The same operations and menu state the React Flow canvas composes, so
   // every menu item here is the exact behaviour users get on fallback.
@@ -308,10 +321,34 @@ export function OpenCanvasSurface({
     pendingToggleRef.current = null;
     connectorRef.current = null;
     connectRef.current = null;
+    freeformRef.current = null;
     hostRef.current?.setTransformPreview(null);
     hostRef.current?.setConnectorPreview(null);
     hostRef.current?.setConnectionPreview(null);
+    hostRef.current?.setFreeformPreview(null);
   }, []);
+
+  const commitFreeform = useCallback((operation: FreeformPointerOperation) => {
+    hostRef.current?.setFreeformPreview(null);
+    if (projection.status !== 'ready' || !activePage) return;
+    const layerId = activePage.layers.some(({ id }) => id === state.activeLayerId)
+      ? state.activeLayerId
+      : activePage.layers[0]?.id ?? 'default';
+    const node = finishFreeformOperation(
+      operation, `opencanvas-${operation.tool}-${crypto.randomUUID()}`, layerId
+    );
+    if (!node) return;
+    try {
+      const result = applyProductionNodeMutation(
+        projection.document, activePage.id, { kind: 'insert', node }, new Date().toISOString()
+      );
+      if (!result.changed) return;
+      state.recordHistoryV2();
+      state.setGraph(withSelection(result.projection.nodes), result.projection.edges);
+    } catch {
+      setStatus('failed');
+    }
+  }, [activePage, projection, state, withSelection]);
 
   const finishConnect = useCallback((
     operation: ConnectPointerOperation,
@@ -348,8 +385,14 @@ export function OpenCanvasSurface({
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.code === 'Space') spacePanRef.current = true;
       else if (event.key === 'Escape') {
-        if (transformRef.current || connectorRef.current) cancelTransform();
-        else applySelection(clearSelection());
+        if (
+          transformRef.current || connectorRef.current
+          || connectRef.current || freeformRef.current
+        ) {
+          cancelTransform();
+        } else if (useFlowStore.getState().viewSettings.drawingTool) {
+          useFlowStore.getState().setViewSettings({ drawingTool: null });
+        } else applySelection(clearSelection());
       }
     };
     const onKeyUp = (event: KeyboardEvent): void => {
@@ -484,7 +527,8 @@ export function OpenCanvasSurface({
     <div
       ref={viewportRef}
       data-testid="opencanvas-surface"
-      className="relative h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+      className={`relative h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] ${drawingTool ? 'cursor-crosshair' : ''}`}
+      style={{ touchAction: 'none' }}
       tabIndex={0}
       role="application"
       aria-label={t('flowCanvas.canvasLabel', 'Diagram canvas')}
@@ -504,6 +548,14 @@ export function OpenCanvasSurface({
         const screen = surfacePoint(event);
         if (event.button === 1 || spacePanRef.current) {
           panRef.current = beginCameraPan(event.pointerId, screen);
+          return;
+        }
+        if (drawingTool) {
+          const rect = event.currentTarget.getBoundingClientRect();
+          const start = projectPointerSamples(
+            event.nativeEvent, { x: rect.left, y: rect.top }, (point) => host.screenToWorld(point)
+          ).confirmed.at(-1) ?? host.screenToWorld(screen);
+          freeformRef.current = beginFreeformOperation(event.pointerId, drawingTool, start);
           return;
         }
         const additive = event.shiftKey || event.metaKey || event.ctrlKey;
@@ -582,6 +634,20 @@ export function OpenCanvasSurface({
           return;
         }
         if (!host) return;
+        const freeform = freeformRef.current;
+        if (freeform && freeform.pointerId === event.pointerId) {
+          const rect = event.currentTarget.getBoundingClientRect();
+          const samples = projectPointerSamples(
+            event.nativeEvent, { x: rect.left, y: rect.top }, (point) => host.screenToWorld(point)
+          );
+          const next = updateFreeformOperation(freeform, samples.confirmed);
+          freeformRef.current = next;
+          host.setFreeformPreview({
+            ...freeformPreviewPoints(next, samples.predicted),
+            ...freeformPreviewStyle(next.tool),
+          });
+          return;
+        }
         const connect = connectRef.current;
         if (connect && connect.pointerId === event.pointerId) {
           const moved = connect.moved
@@ -619,6 +685,12 @@ export function OpenCanvasSurface({
       onPointerUp={(event) => {
         if (panRef.current?.pointerId === event.pointerId) {
           panRef.current = null;
+          return;
+        }
+        const freeform = freeformRef.current;
+        if (freeform && freeform.pointerId === event.pointerId) {
+          freeformRef.current = null;
+          commitFreeform(freeform);
           return;
         }
         const connect = connectRef.current;

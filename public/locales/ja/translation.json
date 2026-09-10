@@ -867,7 +867,11 @@
       "loadingCatalogs": "図形、アイコン、テンプレートを検索中…",
       "catalogError": "カタログ結果を利用できません。コマンド検索は引き続き使用できます。",
       "executionError": "この結果を追加できませんでした。変更はありません。",
-      "sources": { "shape": "図形", "icon": "アイコン", "template": "テンプレート" }
+      "sources": {
+        "shape": "図形",
+        "icon": "アイコン",
+        "template": "テンプレート"
+      }
     },
     "contextual": {
       "badge": "選択項目",
@@ -1286,7 +1290,11 @@
     "clearCanvas": "キャンバスをクリア",
     "undo": "元に戻す (Ctrl+Z)",
     "redo": "やり直す (Ctrl+Y)",
-    "commandCenter": "コマンドセンターを開く"
+    "commandCenter": "コマンドセンターを開く",
+    "drawPen": "ペンで描く (P)",
+    "drawHighlighter": "蛍光ペン",
+    "drawLine": "線を描く",
+    "drawArrow": "矢印を描く"
   },
   "flowEditor": {
     "cannotCloseLastTab": "最後のタブは閉じられません。",
@@ -1396,7 +1404,8 @@
     "selectHint": "ノードまたはエッジをクリックしてプロパティを編集してください"
   },
   "flowCanvas": {
-    "strictModePasteBlocked": "アーキテクチャ厳格モードにより Mermaid の貼り付けがブロックされました。コードビューを開き、診断を修正してから再試行してください。"
+    "strictModePasteBlocked": "アーキテクチャ厳格モードにより Mermaid の貼り付けがブロックされました。コードビューを開き、診断を修正してから再試行してください。",
+    "canvasLabel": "ダイアグラムキャンバス"
   },
   "flowTabs": {
     "closeTab": "タブを閉じる",

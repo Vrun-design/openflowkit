@@ -739,7 +739,11 @@
       "loadingCatalogs": "Searching shapes, icons, and templates…",
       "catalogError": "Catalog results are unavailable. Command search still works.",
       "executionError": "This result could not be added. Nothing changed.",
-      "sources": { "shape": "Shape", "icon": "Icon", "template": "Template" }
+      "sources": {
+        "shape": "Shape",
+        "icon": "Icon",
+        "template": "Template"
+      }
     },
     "contextual": {
       "badge": "Selection",
@@ -1375,7 +1379,11 @@
     "clearCanvas": "Clear Canvas",
     "undo": "Undo (Ctrl+Z)",
     "redo": "Redo (Ctrl+Y)",
-    "commandCenter": "Open Command Center"
+    "commandCenter": "Open Command Center",
+    "drawPen": "Draw with pen (P)",
+    "drawHighlighter": "Highlighter",
+    "drawLine": "Draw line",
+    "drawArrow": "Draw arrow"
   },
   "flowEditor": {
     "cannotCloseLastTab": "Cannot close the last tab.",
@@ -1499,7 +1507,8 @@
     "deleteConnection": "Delete Connection"
   },
   "flowCanvas": {
-    "strictModePasteBlocked": "Architecture strict mode blocked Mermaid paste. Open Code view, fix diagnostics, then retry."
+    "strictModePasteBlocked": "Architecture strict mode blocked Mermaid paste. Open Code view, fix diagnostics, then retry.",
+    "canvasLabel": "Diagram canvas"
   },
   "flowTabs": {
     "closeTab": "Close Page",

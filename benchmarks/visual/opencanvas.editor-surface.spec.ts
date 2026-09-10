@@ -181,3 +181,41 @@ test('accepts pasted Mermaid and a dropped image on the OpenCanvas surface', asy
   // The dropped image becomes a selected node; the inspector opens for it.
   await expect(page.getByRole('heading', { name: /Properties/i }).first()).toBeVisible({ timeout: 10_000 });
 });
+
+test('draws a pen stroke that survives reload and the React Flow fallback', async ({ page }) => {
+  await createNewFlow(page);
+  await addRectangle(page);
+  await page.getByRole('textbox', { name: 'Edit node label' }).press('Escape');
+
+  await page.getByRole('button', { name: 'Draw with pen (P)' }).click();
+  await expect(page.getByRole('button', { name: 'Draw with pen (P)' })).toHaveAttribute('aria-pressed', 'true');
+  const surface = page.getByTestId('opencanvas-surface');
+  const box = (await surface.boundingBox())!;
+  await page.mouse.move(box.x + 100, box.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 200, box.y + 160, { steps: 10 });
+  await page.mouse.move(box.x + 300, box.y + 120, { steps: 10 });
+  await page.mouse.up();
+  // Escape disarms the tool; a second Escape clears the selection.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Draw with pen (P)' })).toHaveAttribute('aria-pressed', 'false');
+
+  // Undo removes the stroke, redo restores it (rectangle + stroke = 2 nodes).
+  await page.keyboard.press('Meta+z');
+  await page.keyboard.press('Meta+Shift+z');
+  // Autosave is debounced; give it a moment before the reload below.
+  await page.waitForTimeout(1500);
+
+  // Same document without WebGL: React Flow draws the stroke as an SVG node.
+  await page.addInitScript(() => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, type: string, ...rest: unknown[]) {
+      if (typeof type === 'string' && type.includes('webgl')) return null;
+      return (original as (...args: unknown[]) => unknown).call(this, type, ...rest) as never;
+    } as typeof HTMLCanvasElement.prototype.getContext;
+  });
+  await page.reload();
+  await expect(page.locator('.react-flow')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.react-flow__node')).toHaveCount(2, { timeout: 30_000 });
+  await expect(page.locator('.react-flow__node svg[aria-label="pen"] path')).toHaveCount(1);
+});

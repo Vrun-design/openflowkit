@@ -13,6 +13,7 @@ const screenToWorld = vi.fn((point: { x: number; y: number }) => point);
 const pickTransformHandle = vi.fn((): string | null => null);
 const pickConnectHandle = vi.fn((): string | null => null);
 const setConnectionPreview = vi.fn();
+const setFreeformPreview = vi.fn();
 const getNodesWorldBounds = vi.fn((ids: readonly string[]) =>
   ids.length ? { x: 0, y: 0, width: 100, height: 50 } : null);
 const setTransformPreview = vi.fn();
@@ -110,6 +111,9 @@ const storeState = {
   pendingNodeLabelEditRequest: null as null | { nodeId: string; seedText?: string; replaceExisting?: boolean },
   selectedNodeId: null as string | null,
   selectedEdgeId: null as string | null,
+  viewSettings: { drawingTool: null as string | null },
+  activeLayerId: 'default',
+  setViewSettings: vi.fn(),
   edges: [] as Array<{ id: string; source: string; target: string; selected?: boolean }>,
   documents: [{ id: 'doc' }], activeDocumentId: 'doc',
   tabs: [{ id: 'page-1' }], activeTabId: 'page-1', layers: [],
@@ -166,6 +170,7 @@ vi.mock('../infrastructure/pixi/PixiRendererHost', () => ({
     pickTransformHandle = pickTransformHandle;
     pickConnectHandle = pickConnectHandle;
     setConnectionPreview = setConnectionPreview;
+    setFreeformPreview = setFreeformPreview;
     getNodesWorldBounds = getNodesWorldBounds;
     setTransformPreview = setTransformPreview;
     pickConnector = pickConnector;
@@ -192,6 +197,7 @@ describe('OpenCanvas editor surface', () => {
     storeState.nodes = storeNodes;
     storeState.edges = [];
     storeState.selectedNodeId = null;
+    storeState.viewSettings = { drawingTool: null };
     pickConnector.mockReturnValue(null);
     pickConnectHandle.mockReturnValue(null);
     vi.stubGlobal('ResizeObserver', class {
@@ -805,5 +811,43 @@ describe('OpenCanvas editor surface', () => {
     expect(operations.handleAddNode).toHaveBeenCalledWith(expect.objectContaining({
       x: expect.any(Number), y: expect.any(Number),
     }));
+  });
+
+  it('draws a pen stroke with the armed tool and inserts it as one history entry', async () => {
+    storeState.viewSettings = { drawingTool: 'pen' };
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    // The armed tool wins over node hit-testing.
+    expect(setSelection).not.toHaveBeenCalledWith(['node-1'], 'node-1');
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 60, clientY: 40 });
+    expect(setFreeformPreview).toHaveBeenLastCalledWith(expect.objectContaining({
+      confirmed: expect.any(Array), width: 3,
+    }));
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 60, clientY: 40 });
+    expect(setFreeformPreview).toHaveBeenLastCalledWith(null);
+    expect(applyProductionNodeMutation).toHaveBeenCalledWith(
+      expect.anything(), 'page-1',
+      expect.objectContaining({ kind: 'insert', node: expect.objectContaining({ kind: 'pen' }) }),
+      expect.any(String)
+    );
+    expect(recordHistoryV2).toHaveBeenCalledTimes(1);
+    expect(setGraph).toHaveBeenCalled();
+  });
+
+  it('discards a stroke that never moved', async () => {
+    storeState.viewSettings = { drawingTool: 'line' };
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 10, clientY: 10 });
+    expect(applyProductionNodeMutation).not.toHaveBeenCalled();
+  });
+
+  it('Escape disarms the drawing tool when nothing is in progress', async () => {
+    storeState.viewSettings = { drawingTool: 'pen' };
+    await mounted();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(storeState.setViewSettings).toHaveBeenCalledWith({ drawingTool: null });
   });
 });
