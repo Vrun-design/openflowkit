@@ -147,3 +147,37 @@ test('drags a connector between two nodes on the OpenCanvas surface', async ({ p
   await expect(menu.getByRole('menuitem', { name: 'Delete Connection' })).toBeVisible();
   await page.keyboard.press('Escape');
 });
+
+test('accepts pasted Mermaid and a dropped image on the OpenCanvas surface', async ({ page }) => {
+  await createNewFlow(page);
+  const surface = page.getByTestId('opencanvas-surface');
+  const box = (await surface.boundingBox())!;
+  await page.mouse.click(box.x + 200, box.y + 200);
+
+  await page.evaluate(() => {
+    const target = document.querySelector('[data-testid="opencanvas-surface"]')!;
+    const data = new DataTransfer();
+    data.setData('text/plain', 'graph TD\n  A[Start] --> B[Work]\n  B --> C[Done]');
+    target.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true }));
+  });
+  // Three imported nodes: the fit control now finds content to fit.
+  await page.getByRole('button', { name: 'Fit View' }).click();
+  await expect.poll(() => zoomPercent(page)).not.toBe(100);
+  await page.mouse.click(box.x + 40, box.y + 40, { button: 'right' });
+  await expect(page.getByRole('menu', { name: 'Canvas context menu' })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64'
+  );
+  await page.evaluate(async ({ bytes }) => {
+    const target = document.querySelector('[data-testid="opencanvas-surface"]')!;
+    const file = new File([new Uint8Array(bytes)], 'dot.png', { type: 'image/png' });
+    const data = new DataTransfer();
+    data.items.add(file);
+    target.dispatchEvent(new DragEvent('drop', { dataTransfer: data, bubbles: true, clientX: 300, clientY: 300 }));
+  }, { bytes: Array.from(png) });
+  // The dropped image becomes a selected node; the inspector opens for it.
+  await expect(page.getByRole('heading', { name: /Properties/i }).first()).toBeVisible({ timeout: 10_000 });
+});

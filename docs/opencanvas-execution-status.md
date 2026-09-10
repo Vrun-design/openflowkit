@@ -7,7 +7,8 @@ and next. Updated: 2026-09-10.
 ## Current position
 
 Milestone **M1 — One complete production editor**. Done: M1.1 canvas API,
-M1.2 menus/label editing, M1.3 drag-to-connect. Next: M1.4 (see "Next steps").
+M1.2 menus/label editing, M1.3 drag-to-connect, M1.4 external input. Next:
+M1.5 (see "Next steps").
 
 Production entry: `src/components/FlowEditor.tsx` mounts
 `OpenCanvasSurface` at the canvas seam only when the build sets
@@ -34,8 +35,8 @@ React Flow. Pixi is not default; parity is incomplete (below).
 | Renderer-neutral canvas API | **done (camera/coords/fit)**; clipboard/export/insertion go through store + `screenToFlowPosition` | `src/canvas/activeCanvas.ts`, `src/opencanvas/presentation/openCanvasSurfaceApi.ts`. Consumers: NavigationControls, FlowCanvas, LayersView, SearchView, usePlayback, useFlowExport, useEdgeOperations, useFlowEditorScreenState. |
 | Canonical store ownership | missing | Store still legacy; adapter direction only. |
 | Complete node/edge/canvas/multi menus | **done on both canvases** (same `useFlowCanvasMenusAndActions` + `ContextMenu`) | `OpenCanvasSurface.tsx` right-click → node/multi/edge/pane menus; paste-here uses active-canvas `screenToFlowPosition`. Group/section items depend on M1 group UI. |
-| Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename (double-click, F2, typing, Edit label, post-insert), insert via toolbar, delete/duplicate/z-order/reverse via menus (browser-verified). Drag-to-connect from side handles (drop on node → edge; drop on empty → connect menu) verified. Missing on Pixi: freeform draw, group/ungroup UI, lock/hide UI, drag-drop files/images. |
-| Paste-in-place / style paste / external paste / file drop | partial | Keyboard copy/paste is store-based and works on either canvas. File/image drop handlers live in `FlowCanvas` only. |
+| Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename (double-click, F2, typing, Edit label, post-insert), insert via toolbar, delete/duplicate/z-order/reverse via menus (browser-verified). Drag-to-connect from side handles (drop on node → edge; drop on empty → connect menu) verified. Double-click on empty space adds a node. Missing on Pixi: freeform draw, group/ungroup UI, lock/hide UI. |
+| Paste-in-place / style paste / external paste / file drop | mostly done | Internal copy/paste + style paste are store-based (either canvas). External paste (text/Mermaid/JSON) and image/file drop go through `useCanvasExternalInput`, shared by both canvases (browser-verified on Pixi). Paste-in-place (same coordinates) not yet a distinct command. |
 | Undo/redo + save/reopen | partial | Every Pixi commit records `recordHistoryV2`; persistence is the legacy store path. |
 | Pixi default + fallback | not started | Flag default off. |
 
@@ -121,6 +122,20 @@ Validation (working tree on 7247592): `tsc -b` 0; eslint 0; vitest
 `npm run test:opencanvas:editor-surface` 4/4 (adds: two nodes, pan, drag
 connect handle onto the other node, edge menu on the new connector).
 
+### M1.4 — External input on the surface (2026-09-10)
+
+Behavior: pasting text/Mermaid/JSON and dropping image files onto the Pixi
+surface behaves exactly as on React Flow — one composition hook
+(`components/flow-canvas/useCanvasExternalInput.ts`) now feeds both
+canvases; `FlowCanvas` was refactored onto it. The surface is focusable
+(`role=application`, visible focus ring) so clipboard events reach it; an
+open label editor keeps focus while panning. Double-click on empty space
+adds a node at the pointer through the active canvas.
+
+Validation (working tree on f78dcca): `tsc -b` 0; eslint 0; vitest 261
+files / 1243 passed; `npm run test:opencanvas:editor-surface` 5/5 (adds:
+Mermaid paste imports 3 nodes, PNG drop creates a selected image node).
+
 ## Unverified / external gates
 
 - Real-GPU hardware performance capture (needs headed run on reference hardware).
@@ -139,8 +154,6 @@ connect handle onto the other node, edge menu on the new connector).
 
 ## Next steps
 
-1. **M1.4 file/image drop + external paste** on the surface (move
-   `useFlowCanvasDragDrop` to the seam so both canvases share it).
-2. **M1.5 freeform draw tools** on the surface (reuse `pixiFreeformOperations`).
-3. Then canonical store ownership (M1 architecture item), group/lock/hide UI
+1. **M1.5 freeform draw tools** on the surface (reuse `pixiFreeformOperations`).
+2. Then canonical store ownership (M1 architecture item), group/lock/hide UI
    on Pixi, save/reopen/export browser proof, and the flag-default decision.

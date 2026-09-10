@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { useTranslation } from 'react-i18next';
 import { useFlowStore } from '@/store';
 import { projectActiveDocument } from '../application/active-document/activeDocumentProjection';
 import {
@@ -21,6 +22,7 @@ import { ConnectMenu } from '@/components/ConnectMenu';
 import type { FlowNode, NodeData } from '@/lib/types';
 import { NavigationControls } from '@/components/NavigationControls';
 import { useFlowCanvasMenusAndActions } from '@/components/flow-canvas/useFlowCanvasMenusAndActions';
+import { useCanvasExternalInput } from '@/components/flow-canvas/useCanvasExternalInput';
 import { useFlowOperations } from '@/hooks/useFlowOperations';
 import { APP_EVENT_NAMES } from '@/lib/legacyBranding';
 import { useNodeLabelEditRequestActions, usePendingNodeLabelEditRequest } from '@/store/selectionHooks';
@@ -121,6 +123,7 @@ export function OpenCanvasSurface({
     { readonly nodeId: string; readonly value: string; readonly bounds: Bounds2d } | null
   >(null);
   const capability = useMemo(() => detectWebGlCapability(), []);
+  const { t } = useTranslation();
 
   const state = useFlowStore(
     useShallow((current) => ({
@@ -149,7 +152,22 @@ export function OpenCanvasSurface({
   // The same operations and menu state the React Flow canvas composes, so
   // every menu item here is the exact behaviour users get on fallback.
   const operations = useFlowOperations(recordHistory);
-  const { screenToFlowPosition } = useActiveCanvas();
+  const { screenToFlowPosition, fitView } = useActiveCanvas();
+  const lastPointerRef = useRef<Point2d | null>(null);
+  const externalInput = useCanvasExternalInput({
+    recordHistory,
+    screenToFlowPosition,
+    fitView,
+    handleAddImage: operations.handleAddImage,
+    pasteSelection: operations.pasteSelection,
+    getCanvasCenterScreen: () => {
+      const rect = viewportRef.current?.getBoundingClientRect();
+      return rect
+        ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+        : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    },
+    getLastInteractionScreen: () => lastPointerRef.current,
+  });
   const {
     connectMenu,
     setConnectMenu,
@@ -466,10 +484,22 @@ export function OpenCanvasSurface({
     <div
       ref={viewportRef}
       data-testid="opencanvas-surface"
-      className="relative h-full w-full"
+      className="relative h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+      tabIndex={0}
+      role="application"
+      aria-label={t('flowCanvas.canvasLabel', 'Diagram canvas')}
+      onDragOver={externalInput.onDragOver}
+      onDrop={externalInput.onDrop}
+      onPasteCapture={externalInput.onPasteCapture}
       onPointerDown={(event) => {
         const host = hostRef.current;
         if (!host || !isCanvasTarget(event) || (event.button !== 0 && event.button !== 1)) return;
+        lastPointerRef.current = { x: event.clientX, y: event.clientY };
+        // Focus keeps clipboard paste events arriving at this canvas; an open
+        // label editor inside it already has focus and keeps it.
+        if (!event.currentTarget.contains(document.activeElement)) {
+          event.currentTarget.focus({ preventScroll: true });
+        }
         event.currentTarget.setPointerCapture(event.pointerId);
         const screen = surfacePoint(event);
         if (event.button === 1 || spacePanRef.current) {
@@ -663,6 +693,8 @@ export function OpenCanvasSurface({
         if (!isCanvasTarget(event)) return;
         const nodeId = hostRef.current?.pickNode(surfacePoint(event));
         if (nodeId) startTextEditing({ nodeId });
+        // Empty space: add a node there, as the React Flow canvas does.
+        else operations.handleAddNode(screenToFlowPosition({ x: event.clientX, y: event.clientY }));
       }}
       onWheel={(event) => {
         const host = hostRef.current;

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { toFlowNode } from '@/lib/reactflowCompat';
 import { useActiveCanvas } from '@/canvas/activeCanvas';
@@ -10,23 +9,19 @@ import { useModifierKeys } from '../hooks/useModifierKeys';
 import { useEdgeInteractions } from '../hooks/useEdgeInteractions';
 import { FlowCanvasSurface } from './flow-canvas/FlowCanvasSurface';
 import { useFlowCanvasMenusAndActions } from './flow-canvas/useFlowCanvasMenusAndActions';
-import { useFlowCanvasDragDrop } from './flow-canvas/useFlowCanvasDragDrop';
+import { useCanvasExternalInput } from './flow-canvas/useCanvasExternalInput';
 import { useFlowCanvasConnectionState } from './flow-canvas/useFlowCanvasConnectionState';
-import { useFlowCanvasPaste } from './flow-canvas/useFlowCanvasPaste';
 import { useFlowCanvasInteractionLod } from './flow-canvas/useFlowCanvasInteractionLod';
 import { useFlowCanvasZoomLod } from './flow-canvas/useFlowCanvasZoomLod';
 import { useFlowCanvasViewState } from './flow-canvas/useFlowCanvasViewState';
 import { useFlowCanvasReactFlowConfig } from './flow-canvas/useFlowCanvasReactFlowConfig';
 import { useFlowCanvasSelectionTools } from './flow-canvas/useFlowCanvasSelectionTools';
 import type { ConnectMenuState } from './flow-canvas/useFlowCanvasMenus';
-import { useToast } from './ui/ToastContext';
 import { isCanvasBackgroundTarget } from '@/hooks/edgeConnectInteractions';
 import { setEdgeInteractionLowDetailMode } from './custom-edge/edgeRenderMode';
 import { useCanvasActions, useCanvasState } from '@/store/canvasHooks';
 import { useSelectionActions } from '@/store/selectionHooks';
-import { useTabActions, useActiveTabId } from '@/store/tabHooks';
 import { useCanvasViewSettings } from '@/store/viewHooks';
-import { useMermaidDiagnosticsActions } from '@/store/selectionHooks';
 import {
   clearImportLayoutMetadata,
   isImportPendingLayoutNode,
@@ -45,28 +40,21 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   isSelectMode,
   onCanvasEntityIntent,
 }) => {
-  const { t } = useTranslation();
   const { nodes, edges } = useCanvasState();
   const { onNodesChange, onEdgesChange, setNodes, setEdges } = useCanvasActions();
-  const activeTabId = useActiveTabId();
-  const { updateTab } = useTabActions();
   const { setSelectedNodeId, setSelectedEdgeId } = useSelectionActions();
-  const { setMermaidDiagnostics, clearMermaidDiagnostics } = useMermaidDiagnosticsActions();
   const {
     showGrid,
     snapToGrid,
     alignmentGuidesEnabled,
     largeGraphSafetyMode,
     largeGraphSafetyProfile,
-    architectureStrictMode,
-    mermaidImportMode,
   } = useCanvasViewSettings();
   const { layers } = useFlowStore(
     useShallow((state) => ({
       layers: state.layers,
     }))
   );
-  const { addToast } = useToast();
   const {
     safetyModeActive,
     viewportCullingEnabled,
@@ -159,11 +147,6 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     connectMenuSetterRef.current = setConnectMenu;
   }, [setConnectMenu]);
 
-  const { onDragOver, onDrop } = useFlowCanvasDragDrop({
-    screenToFlowPosition,
-    handleAddImage,
-    onImageDropError: (message) => addToast(message, 'error'),
-  });
 
   // --- Keyboard Shortcuts ---
   const { isSelectionModifierPressed } = useModifierKeys();
@@ -198,24 +181,16 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
       },
     }
   );
-  const getCanvasCenterFlowPosition = (): { x: number; y: number } => {
-    if (!reactFlowWrapper.current) {
-      return screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-    }
-    const rect = reactFlowWrapper.current.getBoundingClientRect();
-    return screenToFlowPosition({
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
-    });
-  };
-  const getLastInteractionFlowPosition = (): { x: number; y: number } | null => {
-    const position = lastInteractionScreenPositionRef.current;
-    if (!position) {
-      return null;
-    }
-
-    return screenToFlowPosition(position);
-  };
+  const getCanvasCenterScreen = useCallback((): { x: number; y: number } => {
+    const rect = reactFlowWrapper.current?.getBoundingClientRect();
+    return rect
+      ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+      : { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  }, []);
+  const getLastInteractionScreen = useCallback(
+    () => lastInteractionScreenPositionRef.current,
+    []
+  );
 
   const {
     alignmentGuides,
@@ -248,26 +223,14 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
     return toFlowNode<NodeData>(node);
   }
 
-  const { handleCanvasPaste } = useFlowCanvasPaste({
-    architectureStrictMode,
-    mermaidImportMode,
-    activeTabId,
-    fitView,
-    updateTab,
+  const { onDragOver, onDrop, onPasteCapture: handleCanvasPaste } = useCanvasExternalInput({
     recordHistory,
-    setNodes,
-    setEdges,
-    setSelectedNodeId,
-    setMermaidDiagnostics,
-    clearMermaidDiagnostics,
-    addToast,
-    strictModePasteBlockedMessage: t(
-      'flowCanvas.strictModePasteBlocked',
-      'Architecture strict mode blocked Mermaid paste. Open Code view, fix diagnostics, then retry.'
-    ),
+    screenToFlowPosition,
+    fitView,
+    handleAddImage,
     pasteSelection,
-    getLastInteractionFlowPosition,
-    getCanvasCenterFlowPosition,
+    getCanvasCenterScreen,
+    getLastInteractionScreen,
   });
 
   React.useEffect(() => {

@@ -129,9 +129,13 @@ const operations = {
   fitSectionToContents: vi.fn(), releaseFromSection: vi.fn(), handleBringContentsIntoSection: vi.fn(),
   handleAlignNodes: vi.fn(), handleDistributeNodes: vi.fn(), handleGroupNodes: vi.fn(),
   handleWrapInSection: vi.fn(), onConnect: vi.fn(), handleAddAndConnect: vi.fn(),
-  handleAddDomainLibraryItemAndConnect: vi.fn(),
+  handleAddDomainLibraryItemAndConnect: vi.fn(), handleAddImage: vi.fn(), handleAddNode: vi.fn(),
 };
 vi.mock('@/hooks/useFlowOperations', () => ({ useFlowOperations: () => operations }));
+const externalInput = { onDragOver: vi.fn(), onDrop: vi.fn(), onPasteCapture: vi.fn() };
+vi.mock('@/components/flow-canvas/useCanvasExternalInput', () => ({
+  useCanvasExternalInput: () => externalInput,
+}));
 vi.mock('@/store/selectionHooks', () => ({
   usePendingNodeLabelEditRequest: () => storeState.pendingNodeLabelEditRequest,
   useNodeLabelEditRequestActions: () => ({ clearPendingNodeLabelEditRequest }),
@@ -784,5 +788,22 @@ describe('OpenCanvas editor surface', () => {
     fireEvent.pointerUp(surface, { pointerId: 1, clientX: 6, clientY: 25 });
     expect(operations.onConnect).not.toHaveBeenCalled();
     expect(screen.queryByRole('menu', { name: 'Connect node menu' })).toBeNull();
+  });
+
+  it('routes drops and pastes through the shared external-input hook', async () => {
+    const surface = await mounted();
+    fireEvent.drop(surface);
+    expect(externalInput.onDrop).toHaveBeenCalled();
+    fireEvent.paste(surface);
+    expect(externalInput.onPasteCapture).toHaveBeenCalled();
+  });
+
+  it('adds a node on double-click over empty space at the pointer', async () => {
+    pickNode.mockReturnValue(null);
+    const surface = await mounted();
+    fireEvent.doubleClick(surface, { clientX: 300, clientY: 200 });
+    expect(operations.handleAddNode).toHaveBeenCalledWith(expect.objectContaining({
+      x: expect.any(Number), y: expect.any(Number),
+    }));
   });
 });
