@@ -6,7 +6,7 @@ import {
 } from './nodePresentationValues';
 import { normalizeStrokeInput, type StrokeInput } from './strokeInput';
 
-export type FreeformNodeKind = 'text' | 'image' | 'annotation' | 'sticky' | 'callout'
+export type FreeformNodeKind = 'text' | 'image' | 'mermaid_svg' | 'annotation' | 'sticky' | 'callout'
   | 'pen' | 'highlighter' | 'line' | 'arrow';
 
 export interface TextNodePresentation {
@@ -107,6 +107,21 @@ export function resolveFreeformNodePresentation(node: SceneNode): FreeformNodePr
       label: presentationString(node.content.label, 'Image'),
       sourceUrl: safeImageUrl(node.content.imageUrl),
       assetId: optionalPresentationString(node.content.imageAssetId) ?? null,
+      opacity: opacity(node.content.transparency),
+    };
+  }
+  // Renderer-exact Mermaid output is inline SVG markup; on a canvas that
+  // cannot mount it, it is an image whose source is that markup.
+  if (node.kind === 'mermaid_svg') {
+    const markup = optionalPresentationString(node.content.mermaidSvg);
+    const sanitized = markup?.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '').trim();
+    return {
+      kind: 'image',
+      label: presentationString(node.content.label, 'Mermaid diagram'),
+      sourceUrl: sanitized
+        ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(sanitized)}`
+        : null,
+      assetId: null,
       opacity: opacity(node.content.transparency),
     };
   }

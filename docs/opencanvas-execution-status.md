@@ -10,7 +10,7 @@ Milestone **M1 — One complete production editor**. Done: M1.1 canvas API,
 M1.2 menus/label editing, M1.3 drag-to-connect, M1.4 external input, M1.5
 freeform drawing, M1.6 group/lock/hide, M1.7 export + multi-page proof,
 M1.8 paste-in-place/style paste, M1.9 touch + screen-reader access on the
-surface, M1.10 rollout decision. Next: M1.11 (see "Next steps").
+surface, M1.10 rollout decision, M1.11 mermaid_svg on Pixi. Next: M1.12.
 
 Production entry: `src/components/FlowEditor.tsx` mounts
 `OpenCanvasSurface` at the canvas seam only when the build sets
@@ -253,15 +253,14 @@ Parity checklist for the production surface against the React Flow path.
 | Freeform pen/highlighter/line/arrow | ✅ Pixi; React Flow renders strokes read-only |
 | Undo/redo, reload, export SVG/PNG/PDF/JSON | ✅ SVG/JSON browser-verified; PNG/PDF unit path only |
 | Text: auto-size to content, rich text | ⚠️ Pixi uses per-shape minimum; long labels clip (M3) |
-| Large-graph safety mode / LOD toggles from settings | ⚠️ not wired to the surface (host has culling/LOD) |
-| Mermaid `renderer_exact` (`mermaid_svg`) nodes | ⚠️ not drawn by Pixi |
+| Large-graph safety mode / LOD toggles from settings | n/a — the Pixi host always culls to the viewport and tiers detail by zoom (CS-060); the React Flow setting exists to shed DOM cost the surface does not have |
+| Mermaid `renderer_exact` (`mermaid_svg`) nodes | ✅ drawn as an image of the sanitized SVG (browser-checked once via JSON import; `mediaState: loaded`) |
 | Playback / cinematic export | ⚠️ React Flow DOM |
 | Screen reader: semantic tree; keyboard: all shortcuts | ✅ tree mounted; ⚠️ no manual AT pass |
 
-Decision: `openCanvasEditorSurfaceV1` **stays default-off**. Blocking gaps
-before a default flip: text auto-size (M3 rich text measurement) and
-`mermaid_svg` rendering, because both lose visible content silently for
-existing documents; alignment guides and family editors are usability gaps,
+Decision: `openCanvasEditorSurfaceV1` **stays default-off**. Blocking gap
+before a default flip: text auto-size (M3 rich text measurement), because
+long labels clip silently for existing documents; alignment guides and family editors are usability gaps,
 not data-loss risks. Rollout stays behind the compile-time flag with the
 in-place React Flow fallback. Revisit after M3 text.
 
