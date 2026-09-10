@@ -11,6 +11,10 @@ const pickNode = vi.fn((): string | null => null);
 const pickNodesInScreenBounds = vi.fn((): readonly string[] => []);
 const screenToWorld = vi.fn((point: { x: number; y: number }) => point);
 const pickTransformHandle = vi.fn((): string | null => null);
+const pickConnectHandle = vi.fn((): string | null => null);
+const setConnectionPreview = vi.fn();
+const getNodesWorldBounds = vi.fn((ids: readonly string[]) =>
+  ids.length ? { x: 0, y: 0, width: 100, height: 50 } : null);
 const setTransformPreview = vi.fn();
 const recordHistoryV2 = vi.fn();
 const pickConnector = vi.fn((): string | null => null);
@@ -124,7 +128,8 @@ const operations = {
   deleteEdge: vi.fn(), updateNodeZIndex: vi.fn(), updateNodeType: vi.fn(), updateNodeData: vi.fn(),
   fitSectionToContents: vi.fn(), releaseFromSection: vi.fn(), handleBringContentsIntoSection: vi.fn(),
   handleAlignNodes: vi.fn(), handleDistributeNodes: vi.fn(), handleGroupNodes: vi.fn(),
-  handleWrapInSection: vi.fn(),
+  handleWrapInSection: vi.fn(), onConnect: vi.fn(), handleAddAndConnect: vi.fn(),
+  handleAddDomainLibraryItemAndConnect: vi.fn(),
 };
 vi.mock('@/hooks/useFlowOperations', () => ({ useFlowOperations: () => operations }));
 vi.mock('@/store/selectionHooks', () => ({
@@ -155,6 +160,9 @@ vi.mock('../infrastructure/pixi/PixiRendererHost', () => ({
     pickNodesInScreenBounds = pickNodesInScreenBounds;
     screenToWorld = screenToWorld;
     pickTransformHandle = pickTransformHandle;
+    pickConnectHandle = pickConnectHandle;
+    setConnectionPreview = setConnectionPreview;
+    getNodesWorldBounds = getNodesWorldBounds;
     setTransformPreview = setTransformPreview;
     pickConnector = pickConnector;
     pickConnectorHandle = pickConnectorHandle;
@@ -181,6 +189,7 @@ describe('OpenCanvas editor surface', () => {
     storeState.edges = [];
     storeState.selectedNodeId = null;
     pickConnector.mockReturnValue(null);
+    pickConnectHandle.mockReturnValue(null);
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
       disconnect() {}
@@ -201,6 +210,7 @@ describe('OpenCanvas editor surface', () => {
     });
     pickConnector.mockReset();
     pickConnector.mockReturnValue(null);
+    pickConnectHandle.mockReturnValue(null);
     pickConnectorHandle.mockReset();
     pickConnectorHandle.mockReturnValue(null);
     pickTransformHandle.mockReset();
@@ -471,6 +481,7 @@ describe('OpenCanvas editor surface', () => {
     fireEvent.pointerDown(surface, { pointerId: 9, button: 0, clientX: 50, clientY: 50 });
     fireEvent.pointerUp(surface, { pointerId: 9, clientX: 50, clientY: 50 });
     pickConnector.mockReturnValue(null);
+    pickConnectHandle.mockReturnValue(null);
   }
 
   it('selects a clicked connector and clears the node selection', async () => {
@@ -585,6 +596,7 @@ describe('OpenCanvas editor surface', () => {
       kind: 'rename', nodeId: 'node-1', label: 'Renamed',
     });
     expect(recordHistoryV2).toHaveBeenCalledTimes(1);
+    // The projected record has no `selected`; the surface restates it.
     expect(setGraph).toHaveBeenLastCalledWith([{ id: 'renamed' }], []);
     expect(screen.queryByRole('textbox', { name: 'Edit node label' })).toBeNull();
   });
@@ -729,5 +741,48 @@ describe('OpenCanvas editor surface', () => {
     storeState.selectedNodeId = 'node-2';
     view.rerender(<OpenCanvasSurface fallback={FALLBACK} recordHistory={recordHistory} />);
     expect(setSelection).toHaveBeenLastCalledWith(['node-1', 'node-2'], 'node-2');
+  });
+
+  it('drags from a connect handle onto another node and connects them', async () => {
+    storeState.nodes = storeNodes.map((node) => ({ ...node, selected: node.id === 'node-1' }));
+    storeState.selectedNodeId = 'node-1';
+    pickConnectHandle.mockReturnValue('right');
+    const surface = await mounted();
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 122, clientY: 25 });
+    expect(pickNode).not.toHaveBeenCalled();
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 200, clientY: 60 });
+    expect(setConnectionPreview).toHaveBeenLastCalledWith({
+      from: { x: 100, y: 25 }, to: expect.any(Object),
+    });
+    pickNode.mockReturnValue('node-2');
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 200, clientY: 60 });
+    expect(setConnectionPreview).toHaveBeenLastCalledWith(null);
+    expect(operations.onConnect).toHaveBeenCalledWith({
+      source: 'node-1', target: 'node-2', sourceHandle: 'right', targetHandle: expect.any(String),
+    });
+  });
+
+  it('drops a new connector on empty space and offers the connect menu', async () => {
+    storeState.nodes = storeNodes.map((node) => ({ ...node, selected: node.id === 'node-1' }));
+    storeState.selectedNodeId = 'node-1';
+    pickConnectHandle.mockReturnValue('bottom');
+    const surface = await mounted();
+
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 50, clientY: 72 });
+    fireEvent.pointerMove(surface, { pointerId: 1, clientX: 60, clientY: 200 });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 60, clientY: 200 });
+    expect(operations.onConnect).not.toHaveBeenCalled();
+    expect(screen.getByRole('menu', { name: 'Connect node menu' })).toBeTruthy();
+  });
+
+  it('treats a click on a connect handle without movement as nothing', async () => {
+    storeState.nodes = storeNodes.map((node) => ({ ...node, selected: node.id === 'node-1' }));
+    pickConnectHandle.mockReturnValue('left');
+    const surface = await mounted();
+    fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 5, clientY: 25 });
+    fireEvent.pointerUp(surface, { pointerId: 1, clientX: 6, clientY: 25 });
+    expect(operations.onConnect).not.toHaveBeenCalled();
+    expect(screen.queryByRole('menu', { name: 'Connect node menu' })).toBeNull();
   });
 });

@@ -4,8 +4,10 @@ import type { Bounds2d } from '../../domain/geometry/types';
 import type { SceneIndex } from '../../domain/scene/types';
 import { nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import { drawTransformFrame } from './PixiTransformOverlay';
+import { connectHandlePoints } from '../../domain/connectors/connectHandles';
 
 const SELECTION_STROKE = 0xe95420;
+const CONNECT_HANDLE_PIXELS = 12;
 
 export function selectionWorldBounds(
   index: SceneIndex,
@@ -47,5 +49,20 @@ export class PixiSelectionOverlay {
     }
     const bounds = selectionWorldBounds(index, selectedNodeIds);
     if (bounds) drawTransformFrame(this.graphics, bounds, zoom);
+    // Connect handles: one node selected, drag a side dot to draw a connector.
+    if (bounds && selectedNodeIds.length === 1) {
+      const radius = CONNECT_HANDLE_PIXELS / 2 / zoom;
+      const stroke = 1.5 / zoom;
+      for (const { point } of connectHandlePoints(bounds, zoom)) {
+        this.graphics
+          .circle(point.x, point.y, radius)
+          .fill({ color: 0xffffff })
+          .stroke({ color: SELECTION_STROKE, width: stroke });
+        this.graphics
+          .moveTo(point.x - radius / 2, point.y).lineTo(point.x + radius / 2, point.y)
+          .moveTo(point.x, point.y - radius / 2).lineTo(point.x, point.y + radius / 2)
+          .stroke({ color: SELECTION_STROKE, width: stroke });
+      }
+    }
   }
 }

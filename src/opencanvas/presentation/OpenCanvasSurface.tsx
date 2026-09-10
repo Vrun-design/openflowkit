@@ -17,18 +17,21 @@ import {
   useActiveCanvas,
 } from '@/canvas/activeCanvas';
 import { ContextMenu } from '@/components/ContextMenu';
+import { ConnectMenu } from '@/components/ConnectMenu';
+import type { FlowNode, NodeData } from '@/lib/types';
 import { NavigationControls } from '@/components/NavigationControls';
 import { useFlowCanvasMenusAndActions } from '@/components/flow-canvas/useFlowCanvasMenusAndActions';
 import { useFlowOperations } from '@/hooks/useFlowOperations';
 import { APP_EVENT_NAMES } from '@/lib/legacyBranding';
 import { useNodeLabelEditRequestActions, usePendingNodeLabelEditRequest } from '@/store/selectionHooks';
-import type { Bounds2d } from '../domain/geometry/types';
+import type { Bounds2d, Point2d } from '../domain/geometry/types';
 import {
   beginConnectorOperation,
   updateConnectorOperation,
   type ConnectorPointerOperation,
 } from './pixiConnectorOperations';
 import type { ConnectorEditHandle } from '../domain/connectors/editing';
+import { nearestSide, sideAnchor, type ConnectSide } from '../domain/connectors/connectHandles';
 import {
   addToSelection,
   clearSelection,
@@ -76,6 +79,16 @@ interface OpenCanvasSurfaceProps {
   readonly recordHistory: () => void;
 }
 
+/** Rubber-band drag from a connect handle to create a new connector. */
+interface ConnectPointerOperation {
+  readonly pointerId: number;
+  readonly sourceNodeId: string;
+  readonly side: ConnectSide;
+  readonly from: Point2d;
+  readonly startScreen: Point2d;
+  readonly moved: boolean;
+}
+
 interface LabelEditRequest {
   readonly nodeId: string;
   readonly seedText?: string;
@@ -100,6 +113,7 @@ export function OpenCanvasSurface({
   const transformRef = useRef<TransformPointerOperation | null>(null);
   const pendingToggleRef = useRef<string | null>(null);
   const connectorRef = useRef<ConnectorPointerOperation | null>(null);
+  const connectRef = useRef<ConnectPointerOperation | null>(null);
   const selectedConnectorIdRef = useRef<string | null>(null);
   const fittedRef = useRef<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'ready' | 'failed'>('idle');
@@ -137,6 +151,8 @@ export function OpenCanvasSurface({
   const operations = useFlowOperations(recordHistory);
   const { screenToFlowPosition } = useActiveCanvas();
   const {
+    connectMenu,
+    setConnectMenu,
     contextMenu,
     onNodeContextMenu,
     onPaneContextMenu,
@@ -201,6 +217,13 @@ export function OpenCanvasSurface({
       ?? projection.document.pages[0] ?? null
     : null;
 
+  // Projected legacy records carry no transient flags, so every write from
+  // the canonical document restates the surface's selection.
+  const withSelection = useCallback(
+    (nodes: FlowNode[]) => projectSelectionToNodes(nodes, selectionRef.current).nodes ?? nodes,
+    []
+  );
+
   const commitTransform = useCallback((operation: TransformPointerOperation) => {
     hostRef.current?.setTransformPreview(null);
     if (!operation.result || projection.status !== 'ready' || !activePage) return;
@@ -209,11 +232,11 @@ export function OpenCanvasSurface({
         projection.document, activePage.id, operation.result, new Date().toISOString()
       );
       state.recordHistoryV2();
-      state.setNodes(next.nodes);
+      state.setNodes(withSelection(next.nodes));
     } catch {
       setStatus('failed');
     }
-  }, [activePage, projection, state]);
+  }, [activePage, projection, state, withSelection]);
 
   const commitConnector = useCallback((operation: ConnectorPointerOperation) => {
     hostRef.current?.setConnectorPreview(null);
@@ -240,11 +263,11 @@ export function OpenCanvasSurface({
       );
       if (!result.changed) return;
       state.recordHistoryV2();
-      state.setGraph(result.projection.nodes, result.projection.edges);
+      state.setGraph(withSelection(result.projection.nodes), result.projection.edges);
     } catch {
       setStatus('failed');
     }
-  }, [activePage, projection, state]);
+  }, [activePage, projection, state, withSelection]);
 
   const startTextEditing = useCallback((request: LabelEditRequest): boolean => {
     const host = hostRef.current;
@@ -266,9 +289,42 @@ export function OpenCanvasSurface({
     transformRef.current = null;
     pendingToggleRef.current = null;
     connectorRef.current = null;
+    connectRef.current = null;
     hostRef.current?.setTransformPreview(null);
     hostRef.current?.setConnectorPreview(null);
+    hostRef.current?.setConnectionPreview(null);
   }, []);
+
+  const finishConnect = useCallback((
+    operation: ConnectPointerOperation,
+    screen: Point2d,
+    client: Point2d
+  ) => {
+    const host = hostRef.current;
+    host?.setConnectionPreview(null);
+    if (!host || !operation.moved) return;
+    const targetId = host.pickNode(screen);
+    if (targetId) {
+      const targetBounds = host.getNodesWorldBounds([targetId]);
+      // ponytail: the legacy edge factory keeps fallback edges byte-identical
+      // to React Flow's; move to the canonical insert-connector command with
+      // store ownership (M1 architecture item).
+      operations.onConnect({
+        source: operation.sourceNodeId,
+        target: targetId,
+        sourceHandle: operation.side,
+        targetHandle: targetBounds ? nearestSide(targetBounds, host.screenToWorld(screen)) : null,
+      });
+      return;
+    }
+    const sourceType = state.nodes.find(({ id }) => id === operation.sourceNodeId)?.type ?? null;
+    setConnectMenu({
+      position: client,
+      sourceId: operation.sourceNodeId,
+      sourceHandle: operation.side,
+      sourceType,
+    });
+  }, [operations, setConnectMenu, state.nodes]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
@@ -295,10 +351,13 @@ export function OpenCanvasSurface({
   // Keyboard, inspector, and paste change selection in the store; mirror it
   // here so the overlay never disagrees with the rest of the editor.
   useEffect(() => {
-    const nodeIds = state.nodes.filter((node) => node.selected).map(({ id }) => id);
-    const primary = state.selectedNodeId && nodeIds.includes(state.selectedNodeId)
+    // Insertion and the inspector set `selectedNodeId` without flagging the
+    // node, so the primary counts as selected either way.
+    const flagged = state.nodes.filter((node) => node.selected).map(({ id }) => id);
+    const primary = state.selectedNodeId && state.nodes.some(({ id }) => id === state.selectedNodeId)
       ? state.selectedNodeId
-      : nodeIds[0] ?? null;
+      : flagged[0] ?? null;
+    const nodeIds = primary && !flagged.includes(primary) ? [...flagged, primary] : flagged;
     const current = selectionRef.current;
     if (
       current.primaryNodeId !== primary ||
@@ -431,6 +490,20 @@ export function OpenCanvasSurface({
           );
           return;
         }
+        const connectSide = host.pickConnectHandle(screen);
+        const sourceNodeId = selectionRef.current.nodeIds[0];
+        const sourceBounds = connectSide ? host.getNodesWorldBounds([sourceNodeId]) : null;
+        if (connectSide && sourceBounds) {
+          connectRef.current = {
+            pointerId: event.pointerId,
+            sourceNodeId,
+            side: connectSide,
+            from: sideAnchor(sourceBounds, connectSide),
+            startScreen: screen,
+            moved: false,
+          };
+          return;
+        }
         const handle = host.pickTransformHandle(screen);
         const nodeId = handle ? null : host.pickNode(screen);
         if (handle || nodeId) {
@@ -479,6 +552,14 @@ export function OpenCanvasSurface({
           return;
         }
         if (!host) return;
+        const connect = connectRef.current;
+        if (connect && connect.pointerId === event.pointerId) {
+          const moved = connect.moved
+            || Math.hypot(screen.x - connect.startScreen.x, screen.y - connect.startScreen.y) > 4;
+          connectRef.current = { ...connect, moved };
+          if (moved) host.setConnectionPreview({ from: connect.from, to: host.screenToWorld(screen) });
+          return;
+        }
         const connector = connectorRef.current;
         if (connector && connector.pointerId === event.pointerId) {
           const world = host.screenToWorld(screen);
@@ -508,6 +589,12 @@ export function OpenCanvasSurface({
       onPointerUp={(event) => {
         if (panRef.current?.pointerId === event.pointerId) {
           panRef.current = null;
+          return;
+        }
+        const connect = connectRef.current;
+        if (connect && connect.pointerId === event.pointerId) {
+          connectRef.current = null;
+          finishConnect(connect, surfacePoint(event), { x: event.clientX, y: event.clientY });
           return;
         }
         const connector = connectorRef.current;
@@ -589,6 +676,34 @@ export function OpenCanvasSurface({
       }}
     >
       <NavigationControls />
+      {connectMenu ? (
+        <ConnectMenu
+          position={connectMenu.position}
+          sourceId={connectMenu.sourceId}
+          sourceType={connectMenu.sourceType}
+          onClose={() => setConnectMenu(null)}
+          onSelect={(type, shape, edgePreset) => {
+            operations.handleAddAndConnect(
+              type,
+              screenToFlowPosition(connectMenu.position),
+              connectMenu.sourceId,
+              connectMenu.sourceHandle,
+              shape as NodeData['shape'],
+              edgePreset
+            );
+            setConnectMenu(null);
+          }}
+          onSelectAsset={(item) => {
+            operations.handleAddDomainLibraryItemAndConnect(
+              item,
+              screenToFlowPosition(connectMenu.position),
+              connectMenu.sourceId,
+              connectMenu.sourceHandle
+            );
+            setConnectMenu(null);
+          }}
+        />
+      ) : null}
       {contextMenu.isOpen ? (
         <ContextMenu
           {...contextMenu}

@@ -21,6 +21,12 @@ async function createNewFlow(page: Page): Promise<void> {
   await expect(page.locator('.react-flow')).toHaveCount(0);
 }
 
+async function addRectangle(page: Page): Promise<void> {
+  await page.getByTestId('toolbar-add-toggle').click();
+  await page.getByRole('button', { name: 'Rectangle', exact: true })
+    .filter({ hasNot: page.locator('[title]') }).last().click();
+}
+
 async function zoomPercent(page: Page): Promise<number> {
   const text = await page.getByTestId('canvas-zoom-readout').innerText();
   return Number(text.replace('%', ''));
@@ -28,8 +34,7 @@ async function zoomPercent(page: Page): Promise<number> {
 
 test('zoom and fit controls drive the OpenCanvas camera', async ({ page }) => {
   await createNewFlow(page);
-  await page.getByTestId('toolbar-add-toggle').click();
-  await page.getByRole('button', { name: 'Rectangle' }).click();
+  await addRectangle(page);
 
   const before = await zoomPercent(page);
   await page.getByRole('button', { name: 'Zoom In' }).click();
@@ -51,8 +56,7 @@ test('inserts at the visible camera and survives reload through fallback', async
   await page.getByRole('button', { name: 'Zoom In' }).click();
   await expect.poll(() => zoomPercent(page)).toBeGreaterThan(100);
 
-  await page.getByTestId('toolbar-add-toggle').click();
-  await page.getByRole('button', { name: 'Rectangle' }).click();
+  await addRectangle(page);
   // Insertion selects the node; the inspector reports it.
   await expect(page.getByRole('heading', { name: /Properties/i }).first()).toBeVisible({ timeout: 10_000 });
 
@@ -69,8 +73,7 @@ test('inserts at the visible camera and survives reload through fallback', async
 
 test('label editing and context menus work on the OpenCanvas surface', async ({ page }) => {
   await createNewFlow(page);
-  await page.getByTestId('toolbar-add-toggle').click();
-  await page.getByRole('button', { name: 'Rectangle' }).click();
+  await addRectangle(page);
 
   // Insertion queues a label edit; the surface answers it with its own editor.
   const editor = page.getByRole('textbox', { name: 'Edit node label' });
@@ -107,4 +110,40 @@ test('label editing and context menus work on the OpenCanvas surface', async ({ 
   await page.keyboard.press('Meta+z');
   await page.mouse.click(inNode.x, inNode.y);
   await expect(page.getByPlaceholder('Enter primary text...')).toHaveValue('Hello canvas');
+});
+
+test('drags a connector between two nodes on the OpenCanvas surface', async ({ page }) => {
+  await createNewFlow(page);
+  const viewport = page.viewportSize()!;
+  const center = { x: viewport.width / 2, y: viewport.height / 2 };
+
+  // First node at the camera centre, then pan the camera so the second lands elsewhere.
+  await addRectangle(page);
+  await page.getByRole('textbox', { name: 'Edit node label' }).fill('A');
+  await page.getByRole('textbox', { name: 'Edit node label' }).press('Enter');
+  const surface = page.getByTestId('opencanvas-surface');
+  const box = (await surface.boundingBox())!;
+  await page.mouse.move(box.x + 100, box.y + 400);
+  await page.mouse.down({ button: 'middle' });
+  await page.mouse.move(box.x + 100, box.y + 100, { steps: 5 });
+  await page.mouse.up({ button: 'middle' });
+  await addRectangle(page);
+  await page.getByRole('textbox', { name: 'Edit node label' }).fill('B');
+  await page.getByRole('textbox', { name: 'Edit node label' }).press('Enter');
+
+  // B (selected) sits at the centre; A is 300px above. Drag from B's top
+  // connect handle (22px above its top edge) up into A.
+  const handle = { x: center.x + 125, y: center.y - 22 };
+  await page.mouse.move(handle.x, handle.y);
+  await page.mouse.down();
+  await page.mouse.move(center.x + 125, center.y - 150, { steps: 8 });
+  await page.mouse.move(center.x + 125, center.y - 250, { steps: 8 });
+  await page.mouse.up();
+
+  // Right-click the new connector's midpoint: the edge menu proves it exists.
+  // A spans centre-300..centre-150, B starts at the centre: the gap is 150px.
+  await page.mouse.click(center.x + 125, center.y - 75, { button: 'right' });
+  const menu = page.getByRole('menu', { name: 'Canvas context menu' });
+  await expect(menu.getByRole('menuitem', { name: 'Delete Connection' })).toBeVisible();
+  await page.keyboard.press('Escape');
 });

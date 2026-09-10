@@ -7,7 +7,7 @@ and next. Updated: 2026-09-10.
 ## Current position
 
 Milestone **M1 — One complete production editor**. Done: M1.1 canvas API,
-M1.2 menus/label editing on the surface. Next: M1.3 (see "Next steps").
+M1.2 menus/label editing, M1.3 drag-to-connect. Next: M1.4 (see "Next steps").
 
 Production entry: `src/components/FlowEditor.tsx` mounts
 `OpenCanvasSurface` at the canvas seam only when the build sets
@@ -34,7 +34,7 @@ React Flow. Pixi is not default; parity is incomplete (below).
 | Renderer-neutral canvas API | **done (camera/coords/fit)**; clipboard/export/insertion go through store + `screenToFlowPosition` | `src/canvas/activeCanvas.ts`, `src/opencanvas/presentation/openCanvasSurfaceApi.ts`. Consumers: NavigationControls, FlowCanvas, LayersView, SearchView, usePlayback, useFlowExport, useEdgeOperations, useFlowEditorScreenState. |
 | Canonical store ownership | missing | Store still legacy; adapter direction only. |
 | Complete node/edge/canvas/multi menus | **done on both canvases** (same `useFlowCanvasMenusAndActions` + `ContextMenu`) | `OpenCanvasSurface.tsx` right-click → node/multi/edge/pane menus; paste-here uses active-canvas `screenToFlowPosition`. Group/section items depend on M1 group UI. |
-| Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename (double-click, F2, typing, Edit label, post-insert), insert via toolbar, delete/duplicate/z-order/reverse via menus (browser-verified). Missing on Pixi: draw new connector from a node, freeform draw, group/ungroup UI, lock/hide UI, drag-drop files/images. |
+| Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename (double-click, F2, typing, Edit label, post-insert), insert via toolbar, delete/duplicate/z-order/reverse via menus (browser-verified). Drag-to-connect from side handles (drop on node → edge; drop on empty → connect menu) verified. Missing on Pixi: freeform draw, group/ungroup UI, lock/hide UI, drag-drop files/images. |
 | Paste-in-place / style paste / external paste / file drop | partial | Keyboard copy/paste is store-based and works on either canvas. File/image drop handlers live in `FlowCanvas` only. |
 | Undo/redo + save/reopen | partial | Every Pixi commit records `recordHistoryV2`; persistence is the legacy store path. |
 | Pixi default + fallback | not started | Flag default off. |
@@ -97,6 +97,30 @@ Validation (working tree on 5eba94d):
 - `npm run test:opencanvas:editor-surface` — 3/3 passed (zoom/fit; insert at
   zoom + reselect; label edit → canvas menu → F2 → node menu delete → undo).
 
+### M1.3 — Drag-to-connect on the surface (2026-09-10)
+
+Behavior: a single selected node shows four side connect handles (touch-
+sized, no hover needed). Dragging one draws a rubber-band; dropping on a node
+creates the edge through the same `onConnect` the React Flow canvas uses
+(handle ids normalised per node type); dropping on empty space opens the
+shared `ConnectMenu` (add-and-connect at the drop point via the active
+canvas). Escape cancels. A click without movement does nothing.
+
+Paths: `domain/connectors/connectHandles.ts` (geometry), `PixiSelectionOverlay`
+(drawing), `PixiRendererHost.pickConnectHandle/setConnectionPreview`,
+`OpenCanvasSurface.tsx` (pointer flow + menu).
+
+Fixed on the way (both canvases): inserting a node set `selectedNodeId` but
+left previous nodes flagged `selected`, so a new node joined the old
+selection; insertion now selects only the new node. The surface also restates
+selection flags on projected writes (rename/transform) and treats
+`selectedNodeId` as selected even without the flag.
+
+Validation (working tree on 7247592): `tsc -b` 0; eslint 0; vitest
+`src/opencanvas src/components src/hooks src/store` 261 files / 1241 passed;
+`npm run test:opencanvas:editor-surface` 4/4 (adds: two nodes, pan, drag
+connect handle onto the other node, edge menu on the new connector).
+
 ## Unverified / external gates
 
 - Real-GPU hardware performance capture (needs headed run on reference hardware).
@@ -115,11 +139,8 @@ Validation (working tree on 5eba94d):
 
 ## Next steps
 
-1. **M1.3 drag-to-connect from a node** on the Pixi surface (reuse
-   `pixiConnectorOperations` create path from `OpenCanvasDocumentPage`);
-   include the "connect menu" (drop on empty space → add-and-connect).
-2. **M1.4 file/image drop + external paste** on the surface (move
+1. **M1.4 file/image drop + external paste** on the surface (move
    `useFlowCanvasDragDrop` to the seam so both canvases share it).
-3. **M1.5 freeform draw tools** on the surface (reuse `pixiFreeformOperations`).
-4. Then canonical store ownership (M1 architecture item), group/lock/hide UI
+2. **M1.5 freeform draw tools** on the surface (reuse `pixiFreeformOperations`).
+3. Then canonical store ownership (M1 architecture item), group/lock/hide UI
    on Pixi, save/reopen/export browser proof, and the flag-default decision.

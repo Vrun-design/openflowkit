@@ -67,7 +67,10 @@ export function useNodeOperationAdders({
           selectedSection?.id ?? null
         );
 
-        return nds.concat(parentedNode);
+        // The new node becomes the only selection, matching `selectedNodeId`.
+        return nds
+          .map((node) => (node.selected ? { ...node, selected: false } : node))
+          .concat({ ...parentedNode, selected: true });
       });
       setSelectedNodeId(id);
     },

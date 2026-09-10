@@ -33,6 +33,7 @@ import {
 import { PixiNodeRenderer } from './PixiNodeRenderer';
 import { PixiSelectionOverlay, selectionWorldBounds } from './PixiSelectionOverlay';
 import { shouldRedrawNodes } from './sceneInvalidation';
+import { pickConnectHandle, type ConnectSide } from '../../domain/connectors/connectHandles';
 import {
   projectSceneViewport,
   viewportProjectionEquals,
@@ -103,6 +104,7 @@ export class PixiRendererHost {
   private readonly transformOverlay = new PixiTransformOverlay();
   private readonly freeformPreview = new PixiFreeformPreview();
   private readonly marquee = new Graphics();
+  private readonly connectionPreview = new Graphics();
   private readonly onStatusChange?: PixiRendererHostOptions['onStatusChange'];
   private readonly connectorModelEnabled: boolean;
   private readonly nodeLayoutModelEnabled: boolean;
@@ -175,7 +177,8 @@ export class PixiRendererHost {
       this.selectionOverlay.graphics,
       this.transformOverlay.graphics,
       this.freeformPreview.graphics,
-      this.connectorEditOverlay.graphics
+      this.connectorEditOverlay.graphics,
+      this.connectionPreview
     );
     this.app.stage.addChild(this.world, this.marquee);
     const canvas = this.app.canvas as HTMLCanvasElement;
@@ -362,6 +365,28 @@ export class PixiRendererHost {
   getNodesWorldBounds(nodeIds: readonly string[]): Bounds2d | null {
     if (!this.index) return null;
     return selectionWorldBounds(this.index, nodeIds);
+  }
+
+  /** Side connect handle under the pointer; only drawn for a single selected node. */
+  pickConnectHandle(screenPoint: Point2d): ConnectSide | null {
+    if (this.selectedNodeIds.length !== 1) return null;
+    const bounds = this.getSelectionWorldBounds();
+    return bounds ? pickConnectHandle(bounds, screenPoint, this.camera) : null;
+  }
+
+  /** Rubber-band line (world coordinates) while a new connector is dragged. */
+  setConnectionPreview(line: { readonly from: Point2d; readonly to: Point2d } | null): void {
+    this.connectionPreview.clear();
+    if (line) {
+      this.connectionPreview
+        .moveTo(line.from.x, line.from.y)
+        .lineTo(line.to.x, line.to.y)
+        .stroke({ color: SELECTION_STROKE, width: 2 / this.camera.zoom, alpha: 0.9 });
+      this.connectionPreview
+        .circle(line.to.x, line.to.y, 4 / this.camera.zoom)
+        .fill({ color: SELECTION_STROKE });
+    }
+    this.requestRender();
   }
 
   pickTransformHandle(screenPoint: Point2d): TransformHandle | null {
