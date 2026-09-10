@@ -175,13 +175,15 @@ export function ContextMenu({
     >
       {type === 'node' && (
         <>
-          <button
-            role="menuitem"
-            onClick={onCopy}
-            className={MENU_BUTTON_CLASS_NAME}
-          >
-            <Copy className="w-4 h-4" /> {t('common.copy')}
-          </button>
+          {onCopy && (
+            <button
+              role="menuitem"
+              onClick={onCopy}
+              className={MENU_BUTTON_CLASS_NAME}
+            >
+              <Copy className="w-4 h-4" /> {t('common.copy')}
+            </button>
+          )}
           <button
             role="menuitem"
             onClick={onDuplicate}

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useReactFlow } from '@/lib/reactflowCompat';
+import { useActiveCanvas } from '@/canvas/activeCanvas';
 import { useFlowStore } from '../store';
 import { useEditorPagesState } from '@/store/editorPageHooks';
 import {
@@ -13,7 +13,7 @@ import {
 export function usePlayback() {
     const { nodes, setNodes } = useFlowStore();
     const { pages, activePageId } = useEditorPagesState();
-    const { fitView } = useReactFlow();
+    const { fitView } = useActiveCanvas();
 
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentStepIndex, setCurrentStepIndex] = useState(-1);

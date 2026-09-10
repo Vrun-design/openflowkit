@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useReactFlow } from '@/lib/reactflowCompat';
+import { useActiveCanvas } from '@/canvas/activeCanvas';
 import type { FlowNode } from '@/lib/types';
 import { Search, Filter } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -43,7 +43,7 @@ export const SearchView = ({
         return Array.isArray(parsed) ? parsed : [];
     });
     const [selectedPresetId, setSelectedPresetId] = useState('');
-    const { fitView } = useReactFlow();
+    const { fitView } = useActiveCanvas();
     const { tabs, activeTabId } = useTabsState();
     const { setActiveTabId } = useTabActions();
     const { setSelectedNodeId, setNodes, setEdges } = useFlowStore();

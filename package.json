@@ -49,6 +49,7 @@
     "test:opencanvas:visual": "playwright test --config benchmarks/visual/playwright.config.ts",
     "test:opencanvas:collaboration": "playwright test --config benchmarks/visual/collaboration.playwright.config.ts",
     "test:opencanvas:recovery": "playwright test --config benchmarks/visual/recovery.playwright.config.ts",
+    "test:opencanvas:editor-surface": "playwright test --config benchmarks/visual/editor-surface.playwright.config.ts",
     "opencanvas:release-report": "node scripts/opencanvas-release-report.mjs --write",
     "mermaid:compat-report": "node scripts/mermaid-compat-report.mjs",
     "audit:reactflow-v12": "node scripts/audit-reactflow-v12.mjs",

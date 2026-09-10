@@ -5,6 +5,7 @@ import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { ReactFlowGraph, ReactFlowProjectionContext } from './contracts';
 import { normalizeJsonObject } from './jsonNormalization';
 import { requireValidSceneDocument } from './validationBoundary';
+import { resolveLegacyNodeSize } from './legacyNodeSize';
 
 const TRANSIENT_NODE_FIELDS = ['selected', 'dragging', 'measured', 'positionAbsolute'] as const;
 const TRANSIENT_EDGE_FIELDS = ['selected'] as const;
@@ -44,6 +45,7 @@ export function projectReactFlowToSceneDocument(
       now: context.now,
       layers: context.layers,
       pageExtensions: context.pageExtensions,
+      resolveNodeSize: resolveLegacyNodeSize,
     })
   );
 }

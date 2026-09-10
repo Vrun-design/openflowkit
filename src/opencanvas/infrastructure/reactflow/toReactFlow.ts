@@ -19,6 +19,7 @@ import type {
 } from '../../domain/document/types';
 import type { ReactFlowProjection } from './contracts';
 import { requireValidSceneDocument } from './validationBoundary';
+import { resolveLegacyNodeSize } from './legacyNodeSize';
 
 function jsonEquals(left: unknown, right: unknown): boolean {
   if (left === right) return true;
@@ -252,6 +253,7 @@ export function projectSceneDocumentToReactFlow(
         pageId: page.id,
         now: validDocument.updatedAt,
         layers: page.layers,
+        resolveNodeSize: resolveLegacyNodeSize,
       })
     : null;
   const baselinePage = baselineDocument?.pages[0];

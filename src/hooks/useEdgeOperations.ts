@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
-import { Edge, Connection, addEdge, useReactFlow } from '@/lib/reactflowCompat';
+import { Edge, Connection, addEdge } from '@/lib/reactflowCompat';
+import { useActiveCanvas } from '@/canvas/activeCanvas';
 import { useFlowStore } from '../store';
 import type { FlowEdge, NodeData } from '@/lib/types';
 import { createMindmapEdge, DEFAULT_EDGE_OPTIONS } from '../constants';
@@ -36,7 +37,7 @@ export const useEdgeOperations = (
 ) => {
     const { t } = useTranslation();
     const { nodes, edges, setNodes, setEdges, setSelectedNodeId, setSelectedEdgeId } = useFlowStore();
-    const { screenToFlowPosition } = useReactFlow();
+    const { screenToFlowPosition } = useActiveCanvas();
 
     const connectingNodeId = useRef<string | null>(null);
     const connectingHandleId = useRef<string | null>(null);

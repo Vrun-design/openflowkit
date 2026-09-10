@@ -3,7 +3,7 @@ import { Eye, EyeOff, Layers, Lock, LockOpen, MoveVertical, Plus, Trash2, Square
 import { useTranslation } from 'react-i18next';
 import { useFlowStore } from '@/store';
 import { ViewHeader } from './ViewHeader';
-import { useReactFlow } from '@/lib/reactflowCompat';
+import { useActiveCanvas } from '@/canvas/activeCanvas';
 import { getNodeParentId } from '@/lib/nodeParent';
 import { getSectionOrder } from '@/hooks/node-operations/utils';
 
@@ -16,7 +16,7 @@ export function LayersView({ onClose, handleBack }: LayersViewProps): React.Reac
     const { t } = useTranslation();
     const [newLayerName, setNewLayerName] = useState('');
     const [sectionCursorId, setSectionCursorId] = useState<string | null>(null);
-    const { fitView } = useReactFlow();
+    const { fitView } = useActiveCanvas();
     const {
         layers,
         activeLayerId,

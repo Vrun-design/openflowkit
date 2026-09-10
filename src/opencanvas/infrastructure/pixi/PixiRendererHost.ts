@@ -356,8 +356,12 @@ export class PixiRendererHost {
   }
 
   getSelectionWorldBounds(): Bounds2d | null {
+    return this.getNodesWorldBounds(this.selectedNodeIds);
+  }
+
+  getNodesWorldBounds(nodeIds: readonly string[]): Bounds2d | null {
     if (!this.index) return null;
-    return selectionWorldBounds(this.index, this.selectedNodeIds);
+    return selectionWorldBounds(this.index, nodeIds);
   }
 
   pickTransformHandle(screenPoint: Point2d): TransformHandle | null {

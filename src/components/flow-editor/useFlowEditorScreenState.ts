@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useReactFlow } from '@/lib/reactflowCompat';
+import { useActiveCanvas } from '@/canvas/activeCanvas';
 import { useFlowStore } from '@/store';
 import { useEditorPageActions, useEditorPagesState } from '@/store/editorPageHooks';
 import { useSnapshots } from '@/hooks/useSnapshots';
@@ -39,7 +40,7 @@ export function useFlowEditorScreenState() {
   const snapshotsState = useSnapshots();
   const uiState = useFlowEditorUIState();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const reactFlowState = useReactFlow();
+  const reactFlowState = { ...useReactFlow(), ...useActiveCanvas() };
   const historyState = useFlowHistory();
 
   return {

@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import { useReactFlow, toFlowNode } from '@/lib/reactflowCompat';
+import { toFlowNode } from '@/lib/reactflowCompat';
+import { useActiveCanvas } from '@/canvas/activeCanvas';
 import { useFlowStore } from '../store';
 import type { FlowNode, NodeData } from '../lib/types';
 import { useFlowOperations } from '../hooks/useFlowOperations';
@@ -85,7 +86,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = ({
   const connectMenuSetterRef = useRef<((value: ConnectMenuState | null) => void) | null>(null);
   const importStabilizationSignatureRef = useRef<string | null>(null);
 
-  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useActiveCanvas();
   const clearPaneSelection = useCallback((): void => {
     setSelectedNodeId(null);
     setSelectedEdgeId(null);

@@ -10,6 +10,11 @@ import { projectProductionConnectorEdit } from '../application/active-document/p
 import { applyProductionNodeMutation } from '../application/active-document/productionNodeBridge';
 import { isNodeEditableOnLayer } from '../application/active-document/productionLayers';
 import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
+import { createOpenCanvasSurfaceApi } from './openCanvasSurfaceApi';
+import { publishActiveCanvasViewport, registerActiveCanvas } from '@/canvas/activeCanvas';
+import { ContextMenu } from '@/components/ContextMenu';
+import { NavigationControls } from '@/components/NavigationControls';
+import { useFlowCanvasMenus } from '@/components/flow-canvas/useFlowCanvasMenus';
 import type { Bounds2d } from '../domain/geometry/types';
 import {
   beginConnectorOperation,
@@ -45,6 +50,11 @@ import type { CanvasCamera } from '../domain/camera/types';
 import { detectWebGlCapability } from '../infrastructure/pixi/capabilities';
 import { PixiRendererHost } from '../infrastructure/pixi/PixiRendererHost';
 
+/** Chrome drawn over the canvas (zoom controls, menus) keeps its own pointer events. */
+function isCanvasTarget(event: React.SyntheticEvent<HTMLDivElement>): boolean {
+  return event.target === event.currentTarget || event.target instanceof HTMLCanvasElement;
+}
+
 function surfacePoint(
   event: React.MouseEvent<HTMLDivElement>
 ): { x: number; y: number } {
@@ -52,16 +62,27 @@ function surfacePoint(
   return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
 }
 
+export interface OpenCanvasSurfaceActions {
+  readonly deleteNode: (id: string) => void;
+  readonly duplicateNode: (id: string) => void;
+  readonly updateNodeZIndex: (id: string, action: 'front' | 'back') => void;
+}
+
 interface OpenCanvasSurfaceProps {
   /** React Flow canvas rendered instead whenever OpenCanvas cannot draw. */
   readonly fallback: React.ReactNode;
+  /** Editor operations FlowEditor already assembles, reused for the menu. */
+  readonly actions: OpenCanvasSurfaceActions;
 }
 
 /**
  * Draws the active page with the OpenCanvas renderer inside the production
  * editor chrome, with camera navigation, selection, and transforms.
  */
-export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.JSX.Element {
+export function OpenCanvasSurface({
+  fallback,
+  actions,
+}: OpenCanvasSurfaceProps): React.JSX.Element {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const hostRef = useRef<PixiRendererHost | null>(null);
   const cameraRef = useRef<CanvasCamera>(DEFAULT_CANVAS_CAMERA);
@@ -79,6 +100,7 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
     { readonly nodeId: string; readonly value: string; readonly bounds: Bounds2d } | null
   >(null);
   const capability = useMemo(() => detectWebGlCapability(), []);
+  const { contextMenu, onNodeContextMenu, onCloseContextMenu } = useFlowCanvasMenus();
 
   const state = useFlowStore(
     useShallow((current) => ({
@@ -89,6 +111,8 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
       pages: current.tabs,
       activePageId: current.activeTabId,
       layers: current.layers,
+      selectedNodeId: current.selectedNodeId,
+      selectedEdgeId: current.selectedEdgeId,
       setNodes: current.setNodes,
       setSelectedNodeId: current.setSelectedNodeId,
       setSelectedEdgeId: current.setSelectedEdgeId,
@@ -105,6 +129,7 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
   const applyCamera = useCallback((camera: CanvasCamera) => {
     cameraRef.current = camera;
     hostRef.current?.setCamera(camera);
+    publishActiveCanvasViewport(camera);
     setTextEditor((current) => {
       if (!current) return null;
       const bounds = hostRef.current?.getNodeScreenBounds(current.nodeId);
@@ -182,6 +207,19 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
     }
   }, [activePage, projection, state]);
 
+  const startTextEditing = useCallback((nodeId: string) => {
+    const host = hostRef.current;
+    if (!host || !activePage || !isNodeEditableOnLayer(activePage, nodeId)) return;
+    const node = activePage.nodes.find(({ id }) => id === nodeId);
+    const bounds = host.getNodeScreenBounds(nodeId);
+    if (!node || !bounds) return;
+    setTextEditor({
+      nodeId,
+      value: typeof node.content.label === 'string' ? node.content.label : node.id,
+      bounds,
+    });
+  }, [activePage]);
+
   const cancelTransform = useCallback(() => {
     transformRef.current = null;
     pendingToggleRef.current = null;
@@ -212,6 +250,29 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
     };
   }, [applySelection, cancelTransform]);
 
+  // Keyboard, inspector, and paste change selection in the store; mirror it
+  // here so the overlay never disagrees with the rest of the editor.
+  useEffect(() => {
+    const nodeIds = state.nodes.filter((node) => node.selected).map(({ id }) => id);
+    const primary = state.selectedNodeId && nodeIds.includes(state.selectedNodeId)
+      ? state.selectedNodeId
+      : nodeIds[0] ?? null;
+    const current = selectionRef.current;
+    if (
+      current.primaryNodeId !== primary ||
+      current.nodeIds.length !== nodeIds.length ||
+      current.nodeIds.some((id, index) => id !== nodeIds[index])
+    ) {
+      selectionRef.current = { nodeIds, primaryNodeId: primary };
+      hostRef.current?.setSelection(nodeIds, primary);
+    }
+    const connectorId = state.edges.find((edge) => edge.selected)?.id ?? null;
+    if (selectedConnectorIdRef.current !== connectorId) {
+      selectedConnectorIdRef.current = connectorId;
+      hostRef.current?.setConnectorSelection(connectorId, null);
+    }
+  }, [state.nodes, state.edges, state.selectedNodeId]);
+
   const usable = capability.supported && projection.status !== 'invalid' && status !== 'failed';
 
   useEffect(() => {
@@ -240,6 +301,28 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
     };
   }, [usable]);
 
+  // Toolbar, shortcuts, menus, and insertion read the camera through this
+  // registration, so they act on the visible canvas instead of React Flow.
+  useEffect(() => {
+    if (status !== 'ready') return;
+    const api = createOpenCanvasSurfaceApi({
+      getCamera: () => cameraRef.current,
+      applyCamera,
+      getViewportSize: () => hostRef.current?.getViewportSize() ?? { width: 1, height: 1 },
+      getViewportOrigin: () => {
+        const rect = viewportRef.current?.getBoundingClientRect();
+        return rect ? { x: rect.left, y: rect.top } : { x: 0, y: 0 };
+      },
+      getContentBounds: () => hostRef.current?.getContentBounds() ?? null,
+      getNodesWorldBounds: (ids) => hostRef.current?.getNodesWorldBounds(ids) ?? null,
+    });
+    const unregister = registerActiveCanvas(api);
+    return () => {
+      unregister();
+      api.dispose();
+    };
+  }, [applyCamera, status]);
+
   useEffect(() => {
     const host = hostRef.current;
     if (!host || status !== 'ready' || projection.status !== 'ready') return;
@@ -265,10 +348,10 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
     <div
       ref={viewportRef}
       data-testid="opencanvas-surface"
-      className="h-full w-full"
+      className="relative h-full w-full"
       onPointerDown={(event) => {
         const host = hostRef.current;
-        if (!host || (event.button !== 0 && event.button !== 1)) return;
+        if (!host || !isCanvasTarget(event) || (event.button !== 0 && event.button !== 1)) return;
         event.currentTarget.setPointerCapture(event.pointerId);
         const screen = surfacePoint(event);
         if (event.button === 1 || spacePanRef.current) {
@@ -402,23 +485,29 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
         hostRef.current?.setMarquee(null);
         cancelTransform();
       }}
-      onDoubleClick={(event) => {
+      onContextMenu={(event) => {
         const host = hostRef.current;
-        if (!host || !activePage) return;
+        if (!host || !isCanvasTarget(event)) return;
+        event.preventDefault();
         const nodeId = host.pickNode(surfacePoint(event));
-        if (!nodeId || !isNodeEditableOnLayer(activePage, nodeId)) return;
-        const node = activePage.nodes.find(({ id }) => id === nodeId);
-        const bounds = host.getNodeScreenBounds(nodeId);
-        if (!node || !bounds) return;
-        setTextEditor({
-          nodeId,
-          value: typeof node.content.label === 'string' ? node.content.label : node.id,
-          bounds,
-        });
+        if (!nodeId) {
+          onCloseContextMenu();
+          return;
+        }
+        if (!selectionRef.current.nodeIds.includes(nodeId)) {
+          applySelection(selectionAfterClick(selectionRef.current, nodeId, false));
+        }
+        const node = state.nodes.find(({ id }) => id === nodeId);
+        if (node) onNodeContextMenu(event, node);
+      }}
+      onDoubleClick={(event) => {
+        if (!isCanvasTarget(event)) return;
+        const nodeId = hostRef.current?.pickNode(surfacePoint(event));
+        if (nodeId) startTextEditing(nodeId);
       }}
       onWheel={(event) => {
         const host = hostRef.current;
-        if (!host) return;
+        if (!host || !isCanvasTarget(event)) return;
         const rect = event.currentTarget.getBoundingClientRect();
         applyCamera(zoomReadOnlyCamera(
           cameraRef.current,
@@ -427,6 +516,29 @@ export function OpenCanvasSurface({ fallback }: OpenCanvasSurfaceProps): React.J
         ));
       }}
     >
+      <NavigationControls />
+      {contextMenu.isOpen && contextMenu.id ? (
+        <ContextMenu
+          {...contextMenu}
+          onClose={onCloseContextMenu}
+          onDuplicate={() => {
+            onCloseContextMenu();
+            actions.duplicateNode(contextMenu.id!);
+          }}
+          onDelete={() => {
+            onCloseContextMenu();
+            actions.deleteNode(contextMenu.id!);
+          }}
+          onBringToFront={() => {
+            onCloseContextMenu();
+            actions.updateNodeZIndex(contextMenu.id!, 'front');
+          }}
+          onSendToBack={() => {
+            onCloseContextMenu();
+            actions.updateNodeZIndex(contextMenu.id!, 'back');
+          }}
+        />
+      ) : null}
       {textEditor ? (
         <OpenCanvasTextEditorOverlay
           key={textEditor.nodeId}

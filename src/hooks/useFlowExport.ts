@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { createLogger } from '@/lib/logger';
-import { useReactFlow } from '@/lib/reactflowCompat';
+import { useActiveCanvas } from '@/canvas/activeCanvas';
 import { toJpeg } from 'html-to-image';
 import { useFlowStore } from '../store';
 import { useCanvasActions, useCanvasState } from '@/store/canvasHooks';
@@ -48,7 +48,7 @@ export const useFlowExport = (
   const viewSettings = useViewSettings();
   const activeTabId = useActiveTabId();
   const { updateTab } = useTabActions();
-  const { fitView } = useReactFlow();
+  const { fitView } = useActiveCanvas();
   const { addToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importRecoveryState, setImportRecoveryState] = useState<ImportRecoveryState | null>(null);

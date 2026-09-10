@@ -1,6 +1,7 @@
 import { createPoint2d } from '../geometry/point';
 import { createSize2d } from '../geometry/size';
 import { createTransform2d } from '../geometry/transform';
+import type { Size2d } from '../geometry/types';
 import { createDefaultSceneLayer, DEFAULT_SCENE_LAYER_ID } from './defaults';
 import { cloneJsonValue, isJsonObject, type JsonObject, type JsonValue } from './json';
 import {
@@ -23,6 +24,12 @@ export interface LegacyProjectionOptions {
   readonly now: string;
   readonly layers?: readonly SceneLayer[];
   readonly pageExtensions?: JsonObject;
+  /**
+   * Size for a legacy node that states none (React Flow would measure it in
+   * the DOM). Must be deterministic: the reverse projection relies on the same
+   * answer to tell an unchanged node from a resized one.
+   */
+  readonly resolveNodeSize?: (node: JsonObject) => Size2d | null;
 }
 
 function requireRecord(value: JsonValue, path: string): JsonObject {
@@ -49,18 +56,32 @@ function nonNegativeNumber(value: JsonValue | undefined, fallback: number): numb
   return number >= 0 ? number : fallback;
 }
 
-function nodeSize(node: JsonObject, data: JsonObject): { width: number; height: number } {
+function nodeSize(
+  node: JsonObject,
+  data: JsonObject,
+  resolve: LegacyProjectionOptions['resolveNodeSize']
+): Size2d {
   const style = isJsonObject(node.style) ? node.style : {};
-  return createSize2d(
+  const stated = createSize2d(
     nonNegativeNumber(node.width, nonNegativeNumber(style.width, nonNegativeNumber(data.width, 0))),
     nonNegativeNumber(
       node.height,
       nonNegativeNumber(style.height, nonNegativeNumber(data.height, 0))
     )
   );
+  if ((stated.width > 0 && stated.height > 0) || !resolve) return stated;
+  const fallback = resolve(node);
+  if (!fallback) return stated;
+  return createSize2d(
+    stated.width > 0 ? stated.width : fallback.width,
+    stated.height > 0 ? stated.height : fallback.height
+  );
 }
 
-function projectNode(value: JsonValue): SceneNode {
+function projectNode(
+  value: JsonValue,
+  resolveNodeSize: LegacyProjectionOptions['resolveNodeSize']
+): SceneNode {
   const node = requireRecord(value, 'Legacy node');
   const data = isJsonObject(node.data) ? cloneJsonValue(node.data) : {};
   const position = requireRecord(node.position ?? {}, `Legacy node ${String(node.id)} position`);
@@ -75,7 +96,7 @@ function projectNode(value: JsonValue): SceneNode {
       translation: createPoint2d(finiteNumber(position.x, 0), finiteNumber(position.y, 0)),
       rotationRadians: (rotationDegrees * Math.PI) / 180,
     }),
-    size: nodeSize(node, data),
+    size: nodeSize(node, data, resolveNodeSize),
     content: data,
     appearance: {},
     ports: [],
@@ -246,7 +267,10 @@ export function projectLegacyDocument(
     typeof value.name === 'string' && value.name.length > 0 ? value.name : 'OpenFlowKit Diagram';
   const createdAt = typeof value.createdAt === 'string' ? value.createdAt : options.now;
   const connectors = value.edges.map(projectConnector);
-  const nodes = addReferencedPorts(value.nodes.map(projectNode), connectors);
+  const nodes = addReferencedPorts(
+    value.nodes.map((node) => projectNode(node, options.resolveNodeSize)),
+    connectors
+  );
   return {
     format: SCENE_DOCUMENT_FORMAT,
     schemaVersion: SCENE_DOCUMENT_VERSION,

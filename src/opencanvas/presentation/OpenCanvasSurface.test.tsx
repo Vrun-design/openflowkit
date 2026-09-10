@@ -100,13 +100,26 @@ const storeNodes = [
   { id: 'node-2', type: 'process', position: { x: 0, y: 0 }, data: { label: 'Two' } },
 ];
 
+const storeState = {
+  nodes: storeNodes,
+  selectedNodeId: null as string | null,
+  selectedEdgeId: null as string | null,
+  edges: [], documents: [{ id: 'doc' }], activeDocumentId: 'doc',
+  tabs: [{ id: 'page-1' }], activeTabId: 'page-1', layers: [],
+  setNodes, setSelectedNodeId, recordHistoryV2, setEdges, setSelectedEdgeId, setGraph,
+};
+
 vi.mock('@/store', () => ({
-  useFlowStore: (selector: (state: unknown) => unknown) => selector({
-    nodes: storeNodes,
-    edges: [], documents: [{ id: 'doc' }], activeDocumentId: 'doc',
-    tabs: [{ id: 'page-1' }], activeTabId: 'page-1', layers: [],
-    setNodes, setSelectedNodeId, recordHistoryV2, setEdges, setSelectedEdgeId, setGraph,
-  }),
+  useFlowStore: Object.assign(
+    (selector: (state: unknown) => unknown) => selector(storeState),
+    { getState: () => storeState }
+  ),
+}));
+
+vi.mock('@/lib/reactflowCompat', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/reactflowCompat')>()),
+  useReactFlow: () => ({}),
+  useViewport: () => ({ x: 0, y: 0, zoom: 1 }),
 }));
 
 vi.mock('../infrastructure/pixi/PixiRendererHost', () => ({
@@ -141,11 +154,19 @@ import { DEFAULT_CANVAS_CAMERA } from '../domain/camera/camera';
 import { createProductionSceneNode } from '../application/active-document/productionNodeCatalog';
 import { createProductionConnector } from '../application/active-document/productionConnectorBridge';
 import { OpenCanvasSurface } from './OpenCanvasSurface';
+import { getActiveCanvasApi } from '@/canvas/activeCanvas';
 
 const FALLBACK = <div data-testid="react-flow-fallback" />;
+const surfaceActions = {
+  deleteNode: vi.fn(),
+  duplicateNode: vi.fn(),
+  updateNodeZIndex: vi.fn(),
+};
 
 describe('OpenCanvas editor surface', () => {
   beforeEach(() => {
+    storeState.nodes = storeNodes;
+    storeState.selectedNodeId = null;
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
       disconnect() {}
@@ -155,6 +176,7 @@ describe('OpenCanvas editor surface', () => {
       setNodes, setSelectedNodeId, setTransformPreview, recordHistoryV2,
       setConnectorSelection, setConnectorPreview, setEdges, setSelectedEdgeId, setGraph,
     ].forEach((spy) => spy.mockClear());
+    Object.values(surfaceActions).forEach((spy) => spy.mockClear());
     getNodeScreenBounds.mockReset();
     getNodeScreenBounds.mockReturnValue({ x: 10, y: 20, width: 160, height: 60 });
     applyProductionNodeMutation.mockClear();
@@ -196,7 +218,7 @@ describe('OpenCanvas editor surface', () => {
 
   it('draws the projected active page and fits the camera once', async () => {
     getContentBounds.mockReturnValue({ x: 0, y: 0, width: 400, height: 300 });
-    render(<OpenCanvasSurface fallback={FALLBACK} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
 
     expect(screen.getByTestId('opencanvas-surface')).toBeTruthy();
     expect(screen.queryByTestId('react-flow-fallback')).toBeNull();
@@ -208,7 +230,7 @@ describe('OpenCanvas editor surface', () => {
 
   it('renders the React Flow fallback when WebGL is unavailable', () => {
     detectWebGlCapability.mockReturnValue({ supported: false });
-    render(<OpenCanvasSurface fallback={FALLBACK} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
     expect(screen.getByTestId('react-flow-fallback')).toBeTruthy();
     expect(screen.queryByTestId('opencanvas-surface')).toBeNull();
     expect(constructed).toHaveLength(0);
@@ -218,20 +240,20 @@ describe('OpenCanvas editor surface', () => {
     projectActiveDocument.mockReturnValue({
       status: 'invalid', code: 'CANONICAL_PROJECTION_FAILED',
     });
-    render(<OpenCanvasSurface fallback={FALLBACK} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
     expect(screen.getByTestId('react-flow-fallback')).toBeTruthy();
     expect(constructed).toHaveLength(0);
   });
 
   it('falls back and destroys the host when the renderer fails to mount', async () => {
     mount.mockImplementation(async () => { throw new Error('no context'); });
-    render(<OpenCanvasSurface fallback={FALLBACK} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
     await waitFor(() => expect(screen.getByTestId('react-flow-fallback')).toBeTruthy());
     expect(destroy).toHaveBeenCalled();
   });
 
   it('falls back and destroys the host when the WebGL context is lost', async () => {
-    render(<OpenCanvasSurface fallback={FALLBACK} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
     await waitFor(() => expect(constructed).toHaveLength(1));
     constructed[0].onStatusChange?.('context-lost');
     await waitFor(() => expect(screen.getByTestId('react-flow-fallback')).toBeTruthy());
@@ -239,7 +261,7 @@ describe('OpenCanvas editor surface', () => {
   });
 
   it('pans on middle-drag and zooms on wheel through the host camera', async () => {
-    render(<OpenCanvasSurface fallback={FALLBACK} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
     const surface = screen.getByTestId('opencanvas-surface');
     surface.setPointerCapture = vi.fn();
     await waitFor(() => expect(setPage).toHaveBeenCalled());
@@ -258,7 +280,7 @@ describe('OpenCanvas editor surface', () => {
   });
 
   async function mounted() {
-    render(<OpenCanvasSurface fallback={FALLBACK} />);
+    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
     const surface = screen.getByTestId('opencanvas-surface');
     surface.setPointerCapture = vi.fn();
     await waitFor(() => expect(setPage).toHaveBeenCalled());
@@ -594,5 +616,79 @@ describe('OpenCanvas editor surface', () => {
 
     expect((screen.getByRole('textbox', { name: 'Edit node label' }) as HTMLTextAreaElement)
       .style.left).toBe('70px');
+  });
+
+  it('opens the node context menu on right-click and selects an unselected node', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.contextMenu(surface, { clientX: 30, clientY: 40 });
+
+    expect(setSelection).toHaveBeenLastCalledWith(['node-1'], 'node-1');
+    expect(screen.getByRole('menu', { name: 'Canvas context menu' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'common.delete' })).toBeTruthy();
+  });
+
+  it('opens nothing on empty space and closes an open menu', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.contextMenu(surface, { clientX: 30, clientY: 40 });
+    expect(screen.getByRole('menu', { name: 'Canvas context menu' })).toBeTruthy();
+
+    pickNode.mockReturnValue(null);
+    fireEvent.contextMenu(surface, { clientX: 300, clientY: 400 });
+    expect(screen.queryByRole('menu', { name: 'Canvas context menu' })).toBeNull();
+  });
+
+  it('runs delete, duplicate, and z-order actions on the right node and closes', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+
+    for (const [name, spy, args] of [
+      ['common.delete', surfaceActions.deleteNode, ['node-1']],
+      ['common.duplicate', surfaceActions.duplicateNode, ['node-1']],
+      ['common.bringToFront', surfaceActions.updateNodeZIndex, ['node-1', 'front']],
+      ['common.sendToBack', surfaceActions.updateNodeZIndex, ['node-1', 'back']],
+    ] as const) {
+      fireEvent.contextMenu(surface, { clientX: 30, clientY: 40 });
+      fireEvent.click(screen.getByRole('menuitem', { name }));
+      expect(spy).toHaveBeenLastCalledWith(...args);
+      expect(screen.queryByRole('menu', { name: 'Canvas context menu' })).toBeNull();
+    }
+  });
+
+  it('shows no Copy item, since the surface cannot supply one', async () => {
+    pickNode.mockReturnValue('node-1');
+    const surface = await mounted();
+    fireEvent.contextMenu(surface, { clientX: 30, clientY: 40 });
+    expect(screen.queryByRole('menuitem', { name: 'common.copy' })).toBeNull();
+  });
+
+  it('registers itself as the active canvas and unregisters on unmount', async () => {
+    const view = render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    await waitFor(() => expect(getActiveCanvasApi()).not.toBeNull());
+    setCamera.mockClear();
+    getActiveCanvasApi()!.zoomIn();
+    expect(setCamera.mock.calls.at(-1)?.[0].zoom).toBeCloseTo(1.2);
+    getContentBounds.mockReturnValue({ x: 0, y: 0, width: 400, height: 300 });
+    getActiveCanvasApi()!.fitView({ padding: 0 });
+    expect(setCamera.mock.calls.at(-1)?.[0].zoom).toBeCloseTo(2);
+    view.unmount();
+    expect(getActiveCanvasApi()).toBeNull();
+  });
+
+  it('does not register when it falls back to React Flow', () => {
+    detectWebGlCapability.mockReturnValue({ supported: false });
+    render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    expect(getActiveCanvasApi()).toBeNull();
+  });
+
+  it('mirrors selection made elsewhere in the editor onto the surface', async () => {
+    const view = render(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    await waitFor(() => expect(setPage).toHaveBeenCalled());
+    setSelection.mockClear();
+    storeState.nodes = storeNodes.map((node) => ({ ...node, selected: true }));
+    storeState.selectedNodeId = 'node-2';
+    view.rerender(<OpenCanvasSurface fallback={FALLBACK} actions={surfaceActions} />);
+    expect(setSelection).toHaveBeenLastCalledWith(['node-1', 'node-2'], 'node-2');
   });
 });

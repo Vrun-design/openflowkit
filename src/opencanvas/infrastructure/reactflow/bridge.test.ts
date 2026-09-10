@@ -40,6 +40,17 @@ describe('OpenCanvas React Flow bridge', () => {
     expect(result.document?.format).toBe('openflowkit.scene');
   });
 
+  it('gives an unsized legacy node a drawable size without writing it back', () => {
+    const result = projectReactFlowGraphThroughOpenCanvas({ nodes, edges }, context, {
+      enabled: true,
+    });
+    const projected = result.document!.pages[0].nodes[0];
+    expect(projected.size.width).toBeGreaterThan(0);
+    expect(projected.size.height).toBeGreaterThan(0);
+    expect(result.nodes[0]).not.toHaveProperty('width');
+    expect(result.nodes[0].style).toBeUndefined();
+  });
+
   it('uses the default-off rollout flag when no override is supplied', () => {
     const result = projectReactFlowGraphThroughOpenCanvas({ nodes, edges }, context);
     expect(result.usedCanonicalDocument).toBe(false);
