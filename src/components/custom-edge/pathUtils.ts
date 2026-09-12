@@ -247,14 +247,13 @@ export function buildEdgePath(
             params.sourcePosition,
             pairOffset + ((isMindmapBranch || shouldUseSharedSourceTrunk) ? 0 : sourceFanoutOffset)
         );
-        const targetOffset = getOffsetVector(params.targetPosition, pairOffset + targetFanoutOffset);
         const sourcePoint = applyAnchorClearance(
             { x: params.sourceX + sourceOffset.x, y: params.sourceY + sourceOffset.y },
             params.sourcePosition,
             sourceMermaidAnchorClearance
         );
         const targetPoint = applyAnchorClearance(
-            { x: params.targetX + targetOffset.x, y: params.targetY + targetOffset.y },
+            { x: params.targetX, y: params.targetY },
             params.targetPosition,
             targetMermaidAnchorClearance
         );
