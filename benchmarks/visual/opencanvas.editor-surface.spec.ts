@@ -90,7 +90,7 @@ test('label editing and context menus work on the OpenCanvas surface', async ({ 
   await page.mouse.click(40, 120, { button: 'right' });
   const menu = page.getByRole('menu', { name: 'Canvas context menu' });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole('menuitem', { name: 'Paste' })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Paste', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(menu).toHaveCount(0);
 

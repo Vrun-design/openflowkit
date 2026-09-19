@@ -6,6 +6,8 @@ production editor runs on one canonical document with the OpenCanvas (Pixi)
 renderer, React Flow kept as fallback. Roadmap: docs/opencanvas-product-roadmap.md.
 
 ## Now
+2026-09-19: plan approved — docs/agent-native-plan.md (Track A Pixi parity→default, Track B agent-native).
+A1 done (unsized legacy nodes grow to label on Pixi). Next: B1 action registry spec.
 M1 workflows complete (browser-proven, `npm run test:opencanvas:editor-surface`
 8/8); M2 started: M2.1 insert-node-into-edge done. Done: M1.1 canvas API (`src/canvas/activeCanvas.ts`), M1.2
 context menus + label editing, M1.3 drag-to-connect handles, M1.4 shared external paste/drop, M1.5 pen/highlighter/line/arrow drawing
@@ -13,21 +15,27 @@ on the Pixi surface (StrokeNode fallback on React Flow). Browser spec: `npm run 
 Full record: docs/opencanvas-execution-status.md (read it first).
 
 ## Next actions
-1. M2.2 repeated quick-create + suggestions; M2.3 replace-kind compatibility report.
+1. Track A/B per docs/agent-native-plan.md: A1 → B1 → A2 → …
+2. Merge branch to main (flag off) once A1 lands.
+3. M2.2 repeated quick-create + suggestions; M2.3 replace-kind compatibility report.
 2. M1 (d) canonical ownership flip (large; own change set).
 3. Canonical store ownership; Pixi-default decision.
 4. Group/lock/hide UI on Pixi; save/reopen/export browser proof.
 
 ## Decisions
+- 2026-09-19 — Do not adopt BuilderIO/agent-native framework; borrow the one-action-many-surfaces pattern over canonical commands.
+- 2026-09-19 — Ship Pixi default before store ownership flip; flip is invisible to users.
 - 2026-09-10 — Pixi surface flag stays default-off until text auto-size (M3) and mermaid_svg render; fallback retained.
 - 2026-09-10 — Production surface is the one production gesture implementation; `/pixi-spike` and the document page stay as evidence harnesses, no new gesture work there.
 - 2026-09-10 — `useActiveCanvas()` wraps `useReactFlow()`; registered Pixi API overrides it. One seam, no consumer rewrite.
 - 2026-09-10 — Unsized legacy nodes: deterministic estimate in projection, never persisted back.
 
 ## Open questions
+- What is MUSE (for the MUSE connector, B5)? Undefined in repo.
 - None blocking. Pixi-default rollout needs release evidence (external gate).
 
 ## Done
+- 2026-09-19 — A1 legacy unsized nodes grow to label on Pixi; editor-surface spec 9/9.
 - 2026-09-10 — M1.1 canvas API + nav controls on Pixi + unsized-node fix.
 - 2026-09-10 — M1.2 menus + label editing on Pixi; reverse-edge menu fix.
 - 2026-09-10 — M1.3 drag-to-connect handles; insertion selects only the new node.

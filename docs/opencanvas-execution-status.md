@@ -2,7 +2,7 @@
 
 Implementation record for [the product roadmap](opencanvas-product-roadmap.md).
 Planning scope lives there; this file records what is actually wired, verified,
-and next. Updated: 2026-09-10.
+and next. Updated: 2026-09-19.
 
 ## Current position
 
@@ -258,7 +258,7 @@ Parity checklist for the production surface against the React Flow path.
 | External paste (text/Mermaid/JSON), image drop | ✅ |
 | Freeform pen/highlighter/line/arrow | ✅ Pixi; React Flow renders strokes read-only |
 | Undo/redo, reload, export SVG/PNG/PDF/JSON | ✅ SVG/JSON browser-verified; PNG/PDF unit path only |
-| Text: auto-size to content, rich text | ⚠️ Pixi uses per-shape minimum; long labels clip (M3) |
+| Text: auto-size to content, rich text | ✅ unsized legacy nodes grow to their label/subLabel (`legacyNodeSize.ts`, 2026-09-19); rich text/markdown measurement still M3 |
 | Large-graph safety mode / LOD toggles from settings | n/a — the Pixi host always culls to the viewport and tiers detail by zoom (CS-060); the React Flow setting exists to shed DOM cost the surface does not have |
 | Mermaid `renderer_exact` (`mermaid_svg`) nodes | ✅ drawn as an image of the sanitized SVG (browser-checked once via JSON import; `mediaState: loaded`) |
 | Playback / cinematic export | ⚠️ React Flow DOM |
