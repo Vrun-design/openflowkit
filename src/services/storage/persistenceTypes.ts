@@ -1,3 +1,4 @@
+import type { SceneDocumentV1 } from '@/opencanvas/domain/document/types';
 import type { FlowTab } from '@/lib/types';
 
 export interface PersistedDocumentContent {
@@ -27,6 +28,8 @@ export interface PersistedDocument {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  /** Canonical projection of `pages`, written on every save (A6 d1). */
+  canonical?: SceneDocumentV1;
 }
 
 export interface PersistedDocumentSession {

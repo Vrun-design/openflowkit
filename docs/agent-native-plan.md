@@ -33,3 +33,30 @@ browser, MCP server out of the browser, tests. We own the write path already
 ## Not doing
 - Adopting `@agent-native/core`: brings Postgres/auth/chat UI; we are local-first. Pattern only.
 - Any M2–M7 roadmap item not listed above.
+
+## A6 — Canonical store ownership: spec (2026-09-19)
+
+Goal: the canonical `SceneDocumentV1` is the durable truth; the legacy React
+Flow shape becomes an adapter. Measured blast radius of an in-memory flip:
+121 legacy write sites in 37 files, 297 read sites in 96 files, plus an
+IndexedDB migration. Options:
+
+| Option | Cost | Value |
+| --- | --- | --- |
+| A. In-memory flip (`state.document` truth, `nodes/edges` derived) | weeks; every legacy writer re-projects; high regression risk; invisible to users | removes the legacy→canonical→legacy round trip for Pixi edits |
+| B. Storage flip only (persist canonical; legacy pages become the import adapter) | days; additive first, then switch load; reversible until legacy pages are dropped | one durable format shared by app, MCP `diagram_open`, exports; round-trip fidelity proven on save |
+| C. Nothing; rely on round-trip corpus tests | 0 | status quo |
+
+Decision: **B**, in slices. A stays deferred until a user-visible cost of the
+in-memory round trip is measured (none so far; the one real bug — dropped
+scale — was fixed at the commit boundary).
+
+- **d1 (done 2026-09-19)** — every save writes `PersistedDocument.canonical`
+  (validated; omitted, never blocking, if projection fails). Load stays on
+  legacy pages. Test: tabs loaded from `canonical` equal tabs loaded from
+  legacy pages for the round-trip corpus. Cost: ~2× document bytes in IndexedDB.
+- **d2** — load prefers `canonical` when present and valid; legacy pages are
+  the fallback and the import path for old data. Crash-recovery journal and
+  destructive-action backups carry canonical.
+- **d3** — stop writing legacy `pages`; export/import legacy JSON through the
+  adapter only. Only after one release on d2 with no repair events.

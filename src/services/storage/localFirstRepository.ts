@@ -12,6 +12,7 @@ import {
   createPersistedDocumentsFromTabs,
 } from './persistedDocumentAdapters';
 import type { FlowDocument } from './flowDocumentModel';
+import { withCanonical } from './canonicalPersistence';
 import type {
   LoadedDocument,
   PersistedDocument,
@@ -258,9 +259,10 @@ export const localFirstRepository: PersistenceRepository = {
   },
 
   async saveDocuments(
-    documents: PersistedDocument[],
+    persisted: PersistedDocument[],
     activeDocumentId: string | null
   ): Promise<void> {
+    const documents = persisted.map(withCanonical);
     const nowIso = getNowIso();
     const workspaceMeta = createDefaultWorkspaceMeta(
       documents.map((document) => document.id),

@@ -287,7 +287,13 @@ export function projectLegacyDocument(
         nodes,
         connectors,
         metadata: {},
-        extensions: options.pageExtensions ? cloneJsonValue(options.pageExtensions) : {},
+        // Each page carries its own legacy snapshot so the reverse projection
+        // has a baseline for every page of a multi-page document, not only
+        // the one that owns the document-level copy.
+        extensions: {
+          ...withoutLegacySnapshot(options.pageExtensions),
+          [LEGACY_SNAPSHOT_KEY]: cloneJsonValue(value),
+        },
       },
     ],
     metadata: {},
@@ -295,7 +301,18 @@ export function projectLegacyDocument(
   };
 }
 
-export function restoreLegacyDocumentSnapshot(document: SceneDocumentV1): JsonObject | null {
-  const snapshot = document.extensions[LEGACY_SNAPSHOT_KEY];
+/** Page extensions as the legacy `canvasExtensions` should see them. */
+export function withoutLegacySnapshot(extensions: JsonObject | undefined): JsonObject {
+  if (!extensions) return {};
+  const { [LEGACY_SNAPSHOT_KEY]: _snapshot, ...rest } = extensions;
+  return cloneJsonValue(rest) as JsonObject;
+}
+
+export function restoreLegacyDocumentSnapshot(
+  document: SceneDocumentV1,
+  pageId?: string
+): JsonObject | null {
+  const page = pageId ? document.pages.find(({ id }) => id === pageId) : undefined;
+  const snapshot = page?.extensions[LEGACY_SNAPSHOT_KEY] ?? document.extensions[LEGACY_SNAPSHOT_KEY];
   return isJsonObject(snapshot) ? cloneJsonValue(snapshot) : null;
 }

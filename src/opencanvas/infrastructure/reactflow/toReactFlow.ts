@@ -3,6 +3,7 @@ import { DEFAULT_SCENE_LAYER_ID } from '../../domain/document/defaults';
 import {
   projectLegacyDocument,
   restoreLegacyDocumentSnapshot,
+  withoutLegacySnapshot,
 } from '../../domain/document/legacyProjection';
 import {
   cloneJsonValue,
@@ -246,7 +247,7 @@ export function projectSceneDocumentToReactFlow(
 ): ReactFlowProjection {
   const validDocument = requireValidSceneDocument(document);
   const page = selectPage(validDocument, pageId);
-  const snapshot = restoreLegacyDocumentSnapshot(validDocument);
+  const snapshot = restoreLegacyDocumentSnapshot(validDocument, page.id);
   const baselineDocument = snapshot
     ? projectLegacyDocument(snapshot, {
         documentId: validDocument.id,
@@ -293,6 +294,6 @@ export function projectSceneDocumentToReactFlow(
     envelope,
     diagramType: page.diagramKind,
     layers: page.layers,
-    pageExtensions: page.extensions,
+    pageExtensions: withoutLegacySnapshot(page.extensions),
   };
 }

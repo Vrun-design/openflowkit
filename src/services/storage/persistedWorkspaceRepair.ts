@@ -1,12 +1,10 @@
 import type { FlowEdge, FlowNode } from '@/lib/types';
-import { projectLegacyDocument } from '@/opencanvas/domain/document/legacyProjection';
 import {
   inspectDocumentIntegrity,
   type IntegrityRepairAction,
 } from '@/opencanvas/domain/document/integrityRepair';
 import type { SceneDocumentV1 } from '@/opencanvas/domain/document/types';
-import { normalizeJsonObject } from '@/opencanvas/infrastructure/reactflow/jsonNormalization';
-import { createFlowDocumentFromPersistedDocument } from './flowDocumentModel';
+import { projectPersistedDocument } from './canonicalPersistence';
 import type {
   LoadedDocument,
   PersistedDocument,
@@ -34,49 +32,6 @@ export type PersistedWorkspaceIntegrityReport =
       readonly backup: PersistedWorkspaceRepairBackup;
     };
 
-function projectPersistedDocument(document: PersistedDocument): SceneDocumentV1 {
-  const flowDocument = createFlowDocumentFromPersistedDocument(document);
-  const projectedPages = flowDocument.pages.map((page) => {
-    const envelope = normalizeJsonObject({
-      version: '1.1',
-      name: flowDocument.name,
-      diagramType: page.diagramType ?? 'flowchart',
-      nodes: page.nodes,
-      edges: page.edges,
-      createdAt: flowDocument.createdAt,
-    });
-    return projectLegacyDocument(envelope, {
-      documentId: flowDocument.id,
-      pageId: page.id,
-      pageName: page.name,
-      now: flowDocument.updatedAt,
-      layers: page.layers,
-      pageExtensions: normalizeJsonObject(page.canvasExtensions ?? {}),
-    }).pages[0];
-  });
-  const firstPage = projectedPages[0];
-  if (!firstPage) {
-    throw new TypeError(`Persisted document "${document.id}" has no projectable page.`);
-  }
-
-  const base = projectLegacyDocument(
-    normalizeJsonObject({
-      version: '1.1',
-      name: flowDocument.name,
-      diagramType: firstPage.diagramKind,
-      nodes: [],
-      edges: [],
-      createdAt: flowDocument.createdAt,
-    }),
-    {
-      documentId: flowDocument.id,
-      pageId: firstPage.id,
-      pageName: firstPage.name,
-      now: flowDocument.updatedAt,
-    }
-  );
-  return { ...base, pages: projectedPages };
-}
 
 function repairNode(
   node: FlowNode,
