@@ -47,7 +47,8 @@
     "build:agent": "npm --prefix .. run build:agent",
     "pretest": "npm run build:agent",
     "pretest:run": "npm run build:agent",
-    "prelint": "npm run build:agent"
+    "prelint": "npm run build:agent",
+    "eval:agent": "npm run build:agent && vitest --config vitest.config.ts --run evals"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
