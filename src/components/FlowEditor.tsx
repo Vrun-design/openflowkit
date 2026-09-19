@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import '@xyflow/react/dist/style.css';
 import { FlowCanvas } from './FlowCanvas';
 
@@ -21,6 +21,7 @@ import { parseMermaidByType } from '@/services/mermaid/parseMermaidByType';
 import { importMermaidToCanvas } from '@/services/mermaid/rendererFirstImport';
 import { parseMermaidDirectives } from '@/services/mermaid/parseMermaidDirectives';
 import { useFlowStore } from '@/store';
+import { registerAgentActionsWithBrowser } from '@/agent/webmcp';
 import { resolveLayoutDirection } from '@/components/flow-canvas/pasteHelpers';
 import { buildMermaidDiagnosticsSnapshot } from '@/services/mermaid/diagnosticsSnapshot';
 import { normalizeParseDiagnostics } from '@/services/mermaid/diagnosticFormatting';
@@ -42,6 +43,7 @@ interface FlowEditorProps {
 }
 
 export function FlowEditor({ onGoHome }: FlowEditorProps) {
+  useEffect(registerAgentActionsWithBrowser, []);
   const cinematicExportState = useCinematicExportState();
   const mermaidDiagnostics = useMermaidDiagnostics();
   const { setNodes, setEdges } = useCanvasActions();
