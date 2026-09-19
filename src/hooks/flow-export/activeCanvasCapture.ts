@@ -19,7 +19,7 @@ function svgDataUrl(svg: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-function rasterize(svg: string, format: 'png' | 'jpeg', transparent: boolean): Promise<string> {
+export function rasterize(svg: string, format: 'png' | 'jpeg', transparent: boolean): Promise<string> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => {

@@ -1,7 +1,7 @@
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { Container, Graphics, Text } from 'pixi.js';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
-import type { ScenePage } from '../../domain/document/types';
+import type { SceneNode, ScenePage } from '../../domain/document/types';
 import type { SceneIndex } from '../../domain/scene/types';
 import { layoutNodeContent, resolveNodeContentLayout } from '../../domain/node-layout/model';
 import type { Bounds2d } from '../../domain/geometry/types';
@@ -39,6 +39,11 @@ function textAnchor(alignment: 'start' | 'center' | 'end'): number {
   if (alignment === 'start') return 0;
   if (alignment === 'end') return 1;
   return 0.5;
+}
+
+function nodeOpacity(node: SceneNode): number {
+  const value = node.appearance.opacity;
+  return typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1;
 }
 
 export class PixiNodeRenderer {
@@ -212,9 +217,12 @@ export class PixiNodeRenderer {
           : shape;
       const fill = visual?.fill ?? NODE_FILL;
       const stroke = visual?.stroke ?? NODE_STROKE;
+      // ponytail: opacity honoured for basic shapes only; family renderers
+      // draw into the shared graphics and would each need an alpha argument.
+      const alpha = nodeOpacity(node);
       drawPixiNodeOutline(this.graphics, renderedShape, node.size, matrix,
         typeof node.content.customSvgPath === 'string' ? node.content.customSvgPath : undefined);
-      this.graphics.fill({ color: fill }).stroke({ color: stroke, width: 1.5 });
+      this.graphics.fill({ color: fill, alpha }).stroke({ color: stroke, width: 1.5, alpha });
       debugRecords.push({
         id: node.id,
         kind: visual?.kind ?? node.kind,
@@ -248,6 +256,7 @@ export class PixiNodeRenderer {
         const bounds = nodeWorldBounds(node, matrix);
         label.position.set(bounds.x + 16, bounds.y + 25);
         const content = new Container();
+        content.alpha = alpha;
         content.addChild(label);
         this.labels.addChild(content);
         this.labelByNodeId.set(node.id, content);
@@ -307,6 +316,7 @@ export class PixiNodeRenderer {
       label.anchor.set(textAnchor(geometry.labelAlignment), 0);
       label.position.set(labelPoint.x, labelPoint.y);
       const content = new Container();
+      content.alpha = alpha;
       content.addChild(label);
       if (subLabel && geometry.subLabelBounds) {
         const subLabelPoint = applyMatrixToPoint(matrix, {

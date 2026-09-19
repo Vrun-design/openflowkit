@@ -20,6 +20,7 @@ import {
   buildCinematicTimeline,
   getCinematicExportPreset,
   resolveCinematicRenderState,
+  type CinematicRenderState,
 } from '@/services/export/cinematicRenderState';
 import {
   paintCinematicExportBackground,
@@ -33,6 +34,12 @@ import {
   waitForExportRender,
 } from './flow-export/exportCapture';
 import { resolveFlowExportViewport } from './flowExportViewport';
+import { getActiveCanvasApi } from '@/canvas/activeCanvas';
+import { projectActiveDocumentMemoized } from '@/opencanvas/application/active-document/activeDocumentProjection';
+import { exportCanonicalSvg } from '@/opencanvas/infrastructure/export/canonicalSvg';
+import { useFlowStore } from '@/store';
+import { applyCinematicRenderState } from '@/services/export/cinematicCanonicalFrame';
+import { rasterize } from './flow-export/activeCanvasCapture';
 
 const logger = createLogger({ scope: 'useCinematicExport' });
 const PREPARING_PROGRESS = 4;
@@ -119,17 +126,20 @@ export function useCinematicExport({
         return;
       }
 
-      if (!reactFlowWrapper.current) {
+      // On the OpenCanvas surface frames come from the canonical document;
+      // React Flow frames are captured from its DOM viewport.
+      const canonical = Boolean(getActiveCanvasApi());
+      if (!canonical && !reactFlowWrapper.current) {
         addToast('Canvas viewport not found.', 'error');
         return;
       }
 
       const request = buildExportRequest(incomingRequest, resolvedTheme);
 
-      const { viewport: flowViewport, message } = resolveFlowExportViewport(
-        reactFlowWrapper.current
-      );
-      if (!flowViewport) {
+      const { viewport: flowViewport, message } = canonical
+        ? { viewport: null, message: null }
+        : resolveFlowExportViewport(reactFlowWrapper.current!);
+      if (!canonical && !flowViewport) {
         addToast(message ?? 'The canvas viewport could not be found.', 'error');
         return;
       }
@@ -157,7 +167,7 @@ export function useCinematicExport({
         );
       }
 
-      reactFlowWrapper.current.classList.add('exporting');
+      reactFlowWrapper.current?.classList.add('exporting');
       registerCancelHandler(() => abortController.abort());
       setJobState({
         status: 'preparing',
@@ -180,12 +190,35 @@ export function useCinematicExport({
 
         animatedPlayback.stopPlayback();
 
-        const captureFrame = async (): Promise<string> =>
-          toPng(flowViewport, {
-            ...exportCapture.options,
-            backgroundColor: exportTheme.fallbackColor,
-            cacheBust: true,
+        let currentRenderState: CinematicRenderState | null = null;
+        const showRenderState = (state: CinematicRenderState) => {
+          currentRenderState = state;
+          setRenderState(state);
+        };
+        const captureCanonicalFrame = (): Promise<string> => {
+          if (!currentRenderState) throw new Error('No cinematic frame to capture.');
+          const state = useFlowStore.getState();
+          const projection = projectActiveDocumentMemoized({
+            nodes: state.nodes, edges: state.edges, documents: state.documents,
+            activeDocumentId: state.activeDocumentId, pages: state.tabs,
+            activePageId: state.activeTabId, layers: state.layers,
           });
+          if (projection.status !== 'ready') throw new Error('The document could not be projected for export.');
+          const frame = applyCinematicRenderState(projection.document, state.activeTabId, currentRenderState);
+          return rasterize(exportCanonicalSvg(frame, {
+            pageId: state.activeTabId,
+            pixelRatio: timeline.preset.pixelRatio,
+            theme: request.themeMode,
+          }), 'png', false);
+        };
+        const captureFrame = (): Promise<string> =>
+          canonical
+            ? captureCanonicalFrame()
+            : toPng(flowViewport!, {
+              ...exportCapture.options,
+              backgroundColor: exportTheme.fallbackColor,
+              cacheBust: true,
+            });
 
         const decodedFrames: Array<{
           frame: { dataUrl: string; delayMs: number };
@@ -201,7 +234,7 @@ export function useCinematicExport({
         }));
 
         for (const [frameIndex, timeMs] of frameTimes.entries()) {
-          setRenderState(resolveCinematicRenderState(timeline, edges, timeMs, request.themeMode));
+          showRenderState(resolveCinematicRenderState(timeline, edges, timeMs, request.themeMode));
           await waitForExportRender(8, abortController.signal);
           const dataUrl = await captureFrame();
           const image = await decodeSingleFrameWithSignal(dataUrl, abortController.signal);
@@ -223,7 +256,7 @@ export function useCinematicExport({
           }));
         }
 
-        setRenderState(
+        showRenderState(
           resolveCinematicRenderState(
             timeline,
             edges,

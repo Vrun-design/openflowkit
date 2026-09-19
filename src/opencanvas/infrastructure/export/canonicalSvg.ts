@@ -243,7 +243,9 @@ function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' |
   const subLabel = typeof node.content.subLabel === 'string' ? node.content.subLabel : '';
   const sizing = resolveNodeSizingPolicy(node);
   const clipId = `clip-${node.id.replace(/[^A-Za-z0-9_-]/g, '-')}`;
-  return `<g data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}">`
+  const opacity = typeof node.appearance.opacity === 'number' && Number.isFinite(node.appearance.opacity)
+    ? Math.min(1, Math.max(0, node.appearance.opacity)) : 1;
+  return `<g data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}"${opacity < 1 ? ` opacity="${number(opacity)}"` : ''}>`
     + (sizing.clipContent ? `<defs><clipPath id="${clipId}"><path d="${pathData(outline)}"/></clipPath></defs>` : '')
     + `<path d="${pathData(outline)}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`
     + `<g${sizing.clipContent ? ` clip-path="url(#${clipId})"` : ''}>`
