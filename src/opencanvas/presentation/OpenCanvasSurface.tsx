@@ -32,6 +32,8 @@ import { useFlowOperations } from '@/hooks/useFlowOperations';
 import { APP_EVENT_NAMES } from '@/lib/legacyBranding';
 import { useNodeLabelEditRequestActions, usePendingNodeLabelEditRequest } from '@/store/selectionHooks';
 import type { Bounds2d, Point2d } from '../domain/geometry/types';
+import { classEntityRowAt, type ClassEntityRow } from '../domain/nodes/classEntityRows';
+import { normalizeErField, parseErField, stringifyErField } from '@/lib/entityFields';
 import {
   beginConnectorOperation,
   updateConnectorOperation,
@@ -148,7 +150,11 @@ export function OpenCanvasSurface({
   const fittedRef = useRef<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'ready' | 'failed'>('idle');
   const [textEditor, setTextEditor] = useState<
-    { readonly nodeId: string; readonly value: string; readonly bounds: Bounds2d } | null
+    {
+      readonly nodeId: string; readonly value: string; readonly bounds: Bounds2d;
+      /** Set when editing one member row of a class/entity node instead of its label. */
+      readonly row?: ClassEntityRow;
+    } | null
   >(null);
   const capability = useMemo(() => detectWebGlCapability(), []);
   const { t } = useTranslation();
@@ -325,6 +331,46 @@ export function OpenCanvasSurface({
     });
     return true;
   }, [activePage]);
+
+  const startRowEditing = useCallback((nodeId: string, row: ClassEntityRow): boolean => {
+    const host = hostRef.current;
+    if (!host || !activePage || !isNodeEditableOnLayer(activePage, nodeId)) return false;
+    const node = activePage.nodes.find(({ id }) => id === nodeId);
+    const nodeBounds = host.getNodeScreenBounds(nodeId);
+    if (!node || !nodeBounds) return false;
+    const zoom = cameraRef.current.zoom;
+    const list = node.content[row.list];
+    const item = Array.isArray(list) ? list[row.index] : undefined;
+    const value = item === undefined ? ''
+      : row.list === 'erFields' ? stringifyErField(normalizeErField(item as never)) : String(item);
+    setTextEditor({
+      nodeId, value, row,
+      bounds: {
+        x: nodeBounds.x + row.bounds.x * zoom, y: nodeBounds.y + row.bounds.y * zoom,
+        width: row.bounds.width * zoom, height: row.bounds.height * zoom,
+      },
+    });
+    return true;
+  }, [activePage]);
+
+  // Empty text removes the row; text past the end appends one (as on React Flow).
+  const commitRowEdit = useCallback((nodeId: string, row: ClassEntityRow, text: string) => {
+    dispatch((document, pageId) => {
+      const page = document.pages.find(({ id }) => id === pageId);
+      const node = page?.nodes.find(({ id }) => id === nodeId);
+      if (!page || !node) return null;
+      const current = Array.isArray(node.content[row.list]) ? [...(node.content[row.list] as unknown[])] : [];
+      const trimmed = text.trim();
+      const next = row.list === 'erFields' && trimmed ? parseErField(trimmed) : trimmed;
+      if (!trimmed) current.splice(row.index, 1);
+      else if (row.index >= current.length) current.push(next);
+      else current[row.index] = next;
+      return {
+        kind: 'set-node', id: `edit-row:${nodeId}:${row.list}:${row.index}`, label: 'Edit member', pageId,
+        before: node, after: { ...node, content: { ...node.content, [row.list]: current as never } },
+      };
+    });
+  }, [dispatch]);
 
   const cancelTransform = useCallback(() => {
     transformRef.current = null;
@@ -840,7 +886,17 @@ export function OpenCanvasSurface({
       }}
       onDoubleClick={(event) => {
         if (!isCanvasTarget(event)) return;
-        const nodeId = hostRef.current?.pickNode(surfacePoint(event));
+        const host = hostRef.current;
+        const screen = surfacePoint(event);
+        const nodeId = host?.pickNode(screen);
+        const node = nodeId ? activePage?.nodes.find(({ id }) => id === nodeId) : undefined;
+        if (node && host) {
+          const world = host.screenToWorld(screen);
+          const row = classEntityRowAt(node, {
+            x: world.x - node.transform.translation.x, y: world.y - node.transform.translation.y,
+          });
+          if (row && startRowEditing(node.id, row)) return;
+        }
         if (nodeId) startTextEditing({ nodeId });
         // Empty space: add a node there, as the React Flow canvas does.
         else operations.handleAddNode(screenToFlowPosition({ x: event.clientX, y: event.clientY }));
@@ -941,14 +997,15 @@ export function OpenCanvasSurface({
       ) : null}
       {textEditor ? (
         <OpenCanvasTextEditorOverlay
-          key={textEditor.nodeId}
+          key={textEditor.row ? `${textEditor.nodeId}:${textEditor.row.list}:${textEditor.row.index}` : textEditor.nodeId}
           bounds={textEditor.bounds}
           value={textEditor.value}
           onCancel={() => setTextEditor(null)}
-          onCommit={(label) => {
-            const { nodeId } = textEditor;
+          onCommit={(text) => {
+            const { nodeId, row } = textEditor;
             setTextEditor(null);
-            if (label.trim()) commitRename(nodeId, label);
+            if (row) commitRowEdit(nodeId, row, text);
+            else if (text.trim()) commitRename(nodeId, text);
           }}
         />
       ) : null}

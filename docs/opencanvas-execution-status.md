@@ -254,7 +254,7 @@ Parity checklist for the production surface against the React Flow path.
 | Move/resize/rotate with snap (Alt disables) | ✅ browser-proven via SVG export (2026-09-19); fixed: resize scale was dropped by the legacy round trip, rotate handle overlapped the connect handle |
 | Alignment guides while dragging | ✅ (`domain/transforms/alignmentGuides.ts`; edges/centres, 8px screen threshold, Alt disables, honours the alignment-guides setting) |
 | Connect: drag handles, connect menu, reconnect, reroute, reverse, delete | ✅ |
-| Rename: double-click, F2, typing, post-insert, Edit label | ✅ basic/text/sticky labels; ⚠️ class/ER/sequence/mindmap family fields edit only via inspector |
+| Rename: double-click, F2, typing, post-insert, Edit label | ✅ basic/text/sticky labels; ✅ class attributes/methods and ER fields edit per row on double-click (2026-09-19, unit-tested; empty removes, past-end appends); sequence/mindmap fields via inspector |
 | Insert from toolbar at camera centre; dblclick empty adds node | ✅ |
 | Group/ungroup, section lock/hide/fit/bring/release | ✅ |
 | Copy/paste (incl. cross-page), paste in place, style paste, duplicate | ✅ |

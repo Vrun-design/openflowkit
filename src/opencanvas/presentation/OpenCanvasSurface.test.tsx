@@ -69,6 +69,9 @@ const scenePage = {
   nodes: [
     createProductionSceneNode('process', 'node-1', { x: 0, y: 0 }, 'default'),
     createProductionSceneNode('process', 'node-2', { x: 400, y: 0 }, 'default'),
+    createProductionSceneNode('class', 'class-1', { x: 0, y: 300 }, 'default', {
+      label: 'Order', classAttributes: ['+id: string'], classMethods: [],
+    }),
   ],
   connectors: [createProductionConnector('edge-1', 'node-1', 'node-2')],
   extensions: {},
@@ -558,6 +561,42 @@ describe('OpenCanvas editor surface', () => {
     expect(editor.value).toBe('Process');
     expect(editor.style.left).toBe('10px');
     expect(editor.style.width).toBe('160px');
+  });
+
+  it('edits, appends, and removes class member rows from a double-click', async () => {
+    pickNode.mockReturnValue('class-1');
+    getNodeScreenBounds.mockReturnValue({ x: 0, y: 300, width: 240, height: 180 });
+    screenToWorld.mockImplementation((point) => point);
+    const surface = await mounted();
+    // Screen == world here; the first attribute row starts 54px below the node top.
+    fireEvent.doubleClick(surface, { clientX: 20, clientY: 300 + 54 + 4 });
+    const editor = screen.getByRole('textbox', { name: 'Edit node label' }) as HTMLTextAreaElement;
+    expect(editor.value).toBe('+id: string');
+    expect(editor.style.top).toBe('354px');
+    fireEvent.change(editor, { target: { value: '-id: uuid' } });
+    fireEvent.keyDown(editor, { key: 'Enter' });
+    expect(dispatched[0]).toMatchObject({
+      kind: 'set-node', after: expect.objectContaining({ content: expect.objectContaining({ classAttributes: ['-id: uuid'] }) }),
+    });
+
+    // The empty row after the last attribute appends.
+    fireEvent.doubleClick(surface, { clientX: 20, clientY: 300 + 54 + 18 + 4 });
+    const append = screen.getByRole('textbox', { name: 'Edit node label' });
+    expect((append as HTMLTextAreaElement).value).toBe('');
+    fireEvent.change(append, { target: { value: '+name: string' } });
+    fireEvent.keyDown(append, { key: 'Enter' });
+    expect(dispatched[1]).toMatchObject({
+      after: expect.objectContaining({ content: expect.objectContaining({ classAttributes: ['+id: string', '+name: string'] }) }),
+    });
+
+    // Blank text removes the row.
+    fireEvent.doubleClick(surface, { clientX: 20, clientY: 300 + 54 + 4 });
+    const remove = screen.getByRole('textbox', { name: 'Edit node label' });
+    fireEvent.change(remove, { target: { value: '  ' } });
+    fireEvent.keyDown(remove, { key: 'Enter' });
+    expect(dispatched[2]).toMatchObject({
+      after: expect.objectContaining({ content: expect.objectContaining({ classAttributes: [] }) }),
+    });
   });
 
   it('commits a rename on Enter with one history entry', async () => {

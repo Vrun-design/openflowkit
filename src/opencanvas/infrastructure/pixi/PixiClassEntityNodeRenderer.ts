@@ -15,9 +15,11 @@ import { drawPixiLocalRect, drawPixiNodeOutline } from './pixiNodeOutline';
 import { applyPixiNodeMatrix } from './pixiNodeTransform';
 import { createPixiText, truncateTextToWidth } from './pixiText';
 
-const HEADER_HEIGHT = 44;
-const ROW_HEIGHT = 18;
-const CONTENT_PADDING = 10;
+import {
+  CLASS_ENTITY_CONTENT_PADDING as CONTENT_PADDING,
+  CLASS_ENTITY_HEADER_HEIGHT as HEADER_HEIGHT,
+  CLASS_ENTITY_ROW_HEIGHT as ROW_HEIGHT,
+} from '../../domain/nodes/classEntityRows';
 const ENTITY_KEY_COLUMN_WIDTH = 54;
 const MONO_FONT = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
 
