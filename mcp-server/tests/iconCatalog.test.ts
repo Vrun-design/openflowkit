@@ -29,9 +29,9 @@ describe('iconCatalog', () => {
   });
 
   it('ranks exact slug matches above substring matches', async () => {
-    const results = await findIcons('database-rds', { provider: 'aws', limit: 5 });
+    const results = await findIcons('databases-rds', { provider: 'aws', limit: 5 });
     expect(results.length).toBeGreaterThan(0);
-    expect(results[0].slug).toBe('database-rds');
+    expect(results[0].slug).toBe('databases-rds');
   });
 
   it('finds icons by human term', async () => {
