@@ -22,16 +22,16 @@ import { importMermaidToCanvas } from '@/services/mermaid/rendererFirstImport';
 import { parseMermaidDirectives } from '@/services/mermaid/parseMermaidDirectives';
 import { useFlowStore } from '@/store';
 import { registerAgentActionsWithBrowser } from '@/agent/webmcp';
+import { ROLLOUT_FLAGS } from '@/config/rolloutFlags';
 import { resolveLayoutDirection } from '@/components/flow-canvas/pasteHelpers';
 import { buildMermaidDiagnosticsSnapshot } from '@/services/mermaid/diagnosticsSnapshot';
 import { normalizeParseDiagnostics } from '@/services/mermaid/diagnosticFormatting';
 import { useMermaidDiagnosticsActions } from '@/store/selectionHooks';
 
-// Keep PixiJS out of the default editor bundle. The centralized rollout
-// definition documents the flag; this compile-time gate lets Vite drop the
-// lazy import entirely unless a build explicitly opts in.
+// PixiJS stays a lazy chunk, fetched only when the surface mounts. The flag
+// is on by default; VITE_OPEN_CANVAS_EDITOR_SURFACE_V1=0 builds React Flow only.
 const LazyOpenCanvasSurface =
-  import.meta.env.VITE_OPEN_CANVAS_EDITOR_SURFACE_V1 === '1'
+  ROLLOUT_FLAGS.openCanvasEditorSurfaceV1
     ? lazy(async () => {
         const module = await import('@/opencanvas/presentation/OpenCanvasSurface');
         return { default: module.OpenCanvasSurface };

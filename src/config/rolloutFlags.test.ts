@@ -36,7 +36,7 @@ describe('OpenCanvas rollout flags', () => {
     expect(ROLLOUT_FLAGS.openCanvasContextualCommandsV1).toBe(false);
     expect(ROLLOUT_FLAGS.openCanvasCustomShortcutsV1).toBe(false);
     expect(ROLLOUT_FLAGS.openCanvasNodeInsertionV1).toBe(false);
-    expect(ROLLOUT_FLAGS.openCanvasEditorSurfaceV1).toBe(false);
+    expect(ROLLOUT_FLAGS.openCanvasEditorSurfaceV1).toBe(true);
   });
 });
 

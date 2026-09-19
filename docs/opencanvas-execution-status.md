@@ -19,10 +19,13 @@ guides, M1.13 canonical command dispatch, M1.14 memoised shared projection.
 Next: see "Next steps".
 
 Production entry: `src/components/FlowEditor.tsx` mounts
-`OpenCanvasSurface` at the canvas seam only when the build sets
-`VITE_OPEN_CANVAS_EDITOR_SURFACE_V1=1` (`rolloutFlags.openCanvasEditorSurfaceV1`),
-with the React Flow `FlowCanvas` as in-place fallback. Default builds ship
-React Flow. Pixi is not default; parity is incomplete (below).
+`OpenCanvasSurface` at the canvas seam. **Since 2026-09-19 the surface is the
+default** (`rolloutFlags.openCanvasEditorSurfaceV1` defaults on; set
+`VITE_OPEN_CANVAS_EDITOR_SURFACE_V1=0` for a React Flow-only build). React Flow
+`FlowCanvas` stays the in-place fallback on WebGL loss/mount failure. The
+production surface enables every node family (`PRODUCTION_RENDERER_FAMILY_FLAGS`);
+the per-family flags only stage the evaluation routes. The editor-surface
+browser spec runs the default build with no flag overrides (11/11).
 
 ## Baseline (start of program, revision ddc5a63 + uncommitted WIP)
 
@@ -46,7 +49,7 @@ React Flow. Pixi is not default; parity is incomplete (below).
 | Insert/connect/…/delete | partial | Pixi: select, marquee, move/resize/rotate, connector reroute/reconnect, rename (double-click, F2, typing, Edit label, post-insert), insert via toolbar, delete/duplicate/z-order/reverse via menus (browser-verified). Drag-to-connect from side handles (drop on node → edge; drop on empty → connect menu) verified. Double-click on empty space adds a node. Pen/highlighter/line/arrow drawing from the toolbar (Pixi only; React Flow renders strokes read-only via `StrokeNode`). Group (= wrap in section) / Ungroup, section Lock/Unlock, Hide/Show, Fit contents, Bring inside, Release from section all reachable from the menus on both canvases; hidden sections do not draw or hit-test on Pixi, locked ones select but never move. Reorder: z-order items in the node menu. |
 | Paste-in-place / style paste / external paste / file drop | mostly done | Internal copy/paste + style paste are store-based (either canvas). External paste (text/Mermaid/JSON) and image/file drop go through `useCanvasExternalInput`, shared by both canvases (browser-verified on Pixi). Paste in place (`mod+shift+v`, canvas menu) keeps the copied coordinates and internal edges; Copy/Paste style in the node menu on both canvases. |
 | Undo/redo + save/reopen | verified for the covered operations | Every Pixi commit records history; persistence is the legacy store path; browser: reload after cross-page paste and after drawing keeps content. Export: PNG/JPEG/SVG/PDF and copy-image go through `hooks/flow-export/activeCanvasCapture.ts` — canonical SVG (rasterised for bitmaps) on Pixi, DOM capture on React Flow; JSON export was already document-based. |
-| Pixi default + fallback | decided: **stay off** (see M1.10) | `openCanvasEditorSurfaceV1` compile-time, default off; React Flow fallback in place on WebGL loss/mount failure/invalid projection (browser-verified). |
+| Pixi default + fallback | **on by default since 2026-09-19** (A5) | `openCanvasEditorSurfaceV1` compile-time, default off; React Flow fallback in place on WebGL loss/mount failure/invalid projection (browser-verified). |
 
 ## Completed slices
 
@@ -248,7 +251,7 @@ Parity checklist for the production surface against the React Flow path.
 | --- | --- |
 | Camera: zoom/fit/wheel/middle-drag/Space-pan/touch pinch | ✅ (touch: unit only) |
 | Select: click/shift-click/marquee/select-all/Escape/inspector sync | ✅ |
-| Move/resize/rotate with snap (Alt disables) | ✅ move; resize/rotate unit-tested only |
+| Move/resize/rotate with snap (Alt disables) | ✅ browser-proven via SVG export (2026-09-19); fixed: resize scale was dropped by the legacy round trip, rotate handle overlapped the connect handle |
 | Alignment guides while dragging | ✅ (`domain/transforms/alignmentGuides.ts`; edges/centres, 8px screen threshold, Alt disables, honours the alignment-guides setting) |
 | Connect: drag handles, connect menu, reconnect, reroute, reverse, delete | ✅ |
 | Rename: double-click, F2, typing, post-insert, Edit label | ✅ basic/text/sticky labels; ⚠️ class/ER/sequence/mindmap family fields edit only via inspector |
@@ -257,11 +260,11 @@ Parity checklist for the production surface against the React Flow path.
 | Copy/paste (incl. cross-page), paste in place, style paste, duplicate | ✅ |
 | External paste (text/Mermaid/JSON), image drop | ✅ |
 | Freeform pen/highlighter/line/arrow | ✅ Pixi; React Flow renders strokes read-only |
-| Undo/redo, reload, export SVG/PNG/PDF/JSON | ✅ SVG/JSON browser-verified; PNG/PDF unit path only |
+| Undo/redo, reload, export SVG/PNG/PDF/JSON | ✅ SVG/PNG/PDF/JSON browser-verified |
 | Text: auto-size to content, rich text | ✅ unsized legacy nodes grow to their label/subLabel (`legacyNodeSize.ts`, 2026-09-19); rich text/markdown measurement still M3 |
 | Large-graph safety mode / LOD toggles from settings | n/a — the Pixi host always culls to the viewport and tiers detail by zoom (CS-060); the React Flow setting exists to shed DOM cost the surface does not have |
 | Mermaid `renderer_exact` (`mermaid_svg`) nodes | ✅ drawn as an image of the sanitized SVG (browser-checked once via JSON import; `mediaState: loaded`) |
-| Playback / cinematic export | ⚠️ React Flow DOM |
+| Playback / cinematic export | ✅ playback dims via appearance.opacity (basic nodes); cinematic frames from the canonical SVG (unit-tested; not browser-verified) |
 | Screen reader: semantic tree; keyboard: all shortcuts | ✅ tree mounted; ⚠️ no manual AT pass |
 
 Decision: `openCanvasEditorSurfaceV1` **stays default-off**. Blocking gap

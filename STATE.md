@@ -7,7 +7,7 @@ renderer, React Flow kept as fallback. Roadmap: docs/opencanvas-product-roadmap.
 
 ## Now
 2026-09-19: plan approved — docs/agent-native-plan.md (Track A Pixi parity→default, Track B agent-native).
-A1 done (unsized legacy nodes grow to label on Pixi). Next: B1 action registry spec.
+Done today: A1 text auto-size, A3 playback+cinematic on Pixi, A4 browser proofs (found+fixed resize-drop and rotate-handle bugs), A5 Pixi default ON; B1 action registry, B2 WebMCP, B3 MCP diagram_* tools. Deferred: A2 per-row family editors (inspector path works). Next: user tests Pixi on this branch; then merge; B4 agent eval; A6 store flip.
 M1 workflows complete (browser-proven, `npm run test:opencanvas:editor-surface`
 8/8); M2 started: M2.1 insert-node-into-edge done. Done: M1.1 canvas API (`src/canvas/activeCanvas.ts`), M1.2
 context menus + label editing, M1.3 drag-to-connect handles, M1.4 shared external paste/drop, M1.5 pen/highlighter/line/arrow drawing
@@ -23,6 +23,9 @@ Full record: docs/opencanvas-execution-status.md (read it first).
 4. Group/lock/hide UI on Pixi; save/reopen/export browser proof.
 
 ## Decisions
+- 2026-09-19 — Pixi surface default ON (A5); React Flow fallback kept; lazy bundle budget raised 8500→9500 KB for the Pixi chunk until fallback removal.
+- 2026-09-19 — Transform commits bake transform.scale into size/points (legacy has no scale).
+- 2026-09-19 — A2 per-row family editors deferred: inspector already edits family fields on Pixi.
 - 2026-09-19 — Do not adopt BuilderIO/agent-native framework; borrow the one-action-many-surfaces pattern over canonical commands.
 - 2026-09-19 — Ship Pixi default before store ownership flip; flip is invisible to users.
 - 2026-09-10 — Pixi surface flag stays default-off until text auto-size (M3) and mermaid_svg render; fallback retained.

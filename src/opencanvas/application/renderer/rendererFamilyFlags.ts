@@ -31,3 +31,20 @@ export function openCanvasRendererFamilyFlags(): OpenCanvasRendererFamilyFlags {
     wireframeNodesEnabled: ROLLOUT_FLAGS.openCanvasWireframeNodesV1,
   };
 }
+
+/**
+ * The production editor surface renders every family; the per-family flags
+ * above only stage new families on the evaluation routes.
+ */
+export const PRODUCTION_RENDERER_FAMILY_FLAGS: OpenCanvasRendererFamilyFlags = {
+  connectorModelEnabled: true,
+  nodeLayoutModelEnabled: true,
+  basicNodesEnabled: true,
+  freeformNodesEnabled: true,
+  architectureNodesEnabled: true,
+  containerNodesEnabled: true,
+  classEntityNodesEnabled: true,
+  mindmapJourneyNodesEnabled: true,
+  sequenceNodesEnabled: true,
+  wireframeNodesEnabled: true,
+};

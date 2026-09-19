@@ -172,8 +172,8 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
   openCanvasEditorSurfaceV1: {
     key: 'openCanvasEditorSurfaceV1',
     envVar: 'VITE_OPEN_CANVAS_EDITOR_SURFACE_V1',
-    defaultEnabled: false,
-    description: 'OpenCanvas renderer as the production editor canvas surface',
+    defaultEnabled: true,
+    description: 'OpenCanvas renderer as the production editor canvas surface (React Flow is the in-place fallback)',
   },
   collaborationEnabled: {
     key: 'collaborationEnabled',

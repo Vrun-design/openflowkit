@@ -9,7 +9,9 @@ const TOTAL_ENTRY_JS_MAX_KB = Number(process.env.ENTRY_TOTAL_JS_BUDGET_KB ?? 280
 const ENTRY_CSS_MAX_KB = Number(process.env.ENTRY_CSS_BUDGET_KB ?? 230);
 const LAZY_CHUNK_MAX_KB = Number(process.env.LAZY_CHUNK_MAX_KB ?? 1500);
 const LAZY_WORKER_CHUNK_MAX_KB = Number(process.env.LAZY_WORKER_CHUNK_MAX_KB ?? 2000);
-const LAZY_TOTAL_MAX_KB = Number(process.env.LAZY_TOTAL_MAX_KB ?? 8500);
+// 2026-09-19: +~700 KB for the OpenCanvas (Pixi) surface, now in every build
+// alongside the React Flow fallback; drop back once the fallback is removed.
+const LAZY_TOTAL_MAX_KB = Number(process.env.LAZY_TOTAL_MAX_KB ?? 9500);
 
 function toKb(bytes) {
   return Number((bytes / 1024).toFixed(1));

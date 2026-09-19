@@ -65,7 +65,7 @@ import {
   type TransformPointerOperation,
 } from './pixiPointerOperations';
 import { buildProductionTransformCommand } from '../application/active-document/productionTransformBridge';
-import { openCanvasRendererFamilyFlags } from '../application/renderer/rendererFamilyFlags';
+import { PRODUCTION_RENDERER_FAMILY_FLAGS } from '../application/renderer/rendererFamilyFlags';
 import {
   beginCameraPan,
   moveCameraPan,
@@ -454,7 +454,7 @@ export function OpenCanvasSurface({
     if (!viewport || !usable) return;
     let disposed = false;
     const host = new PixiRendererHost({
-      ...openCanvasRendererFamilyFlags(),
+      ...PRODUCTION_RENDERER_FAMILY_FLAGS,
       onStatusChange: (next) => {
         if (disposed) return;
         if (next === 'context-lost') setStatus('failed');
