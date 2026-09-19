@@ -2,7 +2,7 @@
   "name": "@vrun-design/openflowkit-mcp",
   "version": "0.1.2",
   "mcpName": "io.github.Vrun-design/openflowkit-mcp",
-  "description": "Local-first Model Context Protocol server for OpenFlowKit — deterministic diagramming tools (validate DSL, templates, icons, viewer links) for Claude Desktop, Cursor, Windsurf, and other MCP clients. No API key, no cloud round-trip.",
+  "description": "Local-first Model Context Protocol server for OpenFlowKit \u2014 deterministic diagramming tools (validate DSL, templates, icons, viewer links) for Claude Desktop, Cursor, Windsurf, and other MCP clients. No API key, no cloud round-trip.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -37,13 +37,17 @@
   },
   "scripts": {
     "build:icons": "node scripts/build-icon-manifest.mjs",
-    "prebuild": "npm run build:icons",
+    "prebuild": "npm run build:icons && npm run build:agent",
     "build": "tsc -p tsconfig.json",
     "dev": "tsx src/index.ts",
     "test": "vitest --config vitest.config.ts",
     "test:run": "vitest --config vitest.config.ts --run",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "build:agent": "npm --prefix .. run build:agent",
+    "pretest": "npm run build:agent",
+    "pretest:run": "npm run build:agent",
+    "prelint": "npm run build:agent"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

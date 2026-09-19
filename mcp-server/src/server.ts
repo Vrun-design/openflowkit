@@ -7,6 +7,7 @@ import { registerGetTemplate } from './tools/getTemplate.js';
 import { registerDiscoveryTools } from './tools/discovery.js';
 import { registerFindIcon } from './tools/findIcon.js';
 import { registerCreateViewerUrl } from './tools/createViewerUrl.js';
+import { registerDiagramTools } from './tools/diagram.js';
 import { registerResources } from './resources/index.js';
 import { registerPrompts } from './prompts/index.js';
 
@@ -23,6 +24,7 @@ export function createServer(): McpServer {
   registerDiscoveryTools(server);
   registerFindIcon(server);
   registerCreateViewerUrl(server);
+  registerDiagramTools(server);
   registerResources(server);
   registerPrompts(server);
 

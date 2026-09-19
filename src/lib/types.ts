@@ -1,4 +1,4 @@
-import { type LegacyEdge, type LegacyNode } from '@/lib/reactflowCompat';
+import type { LegacyEdge, LegacyNode } from '@/lib/reactflowCompat';
 import type { ClassRelationToken, ERRelationToken } from '@/lib/relationSemantics';
 import type { NodeContentLayoutV1 } from '@/opencanvas/domain/node-layout/types';
 

@@ -56,7 +56,8 @@
     "shape-pack:manifest": "node scripts/shape-pack/generate-shape-pack-manifest.mjs",
     "shape-pack:validate": "node scripts/shape-pack/validate-shape-pack-manifests.mjs",
     "shape-pack:intake-check": "node scripts/shape-pack/check-provider-intake.mjs",
-    "prepare": "node -e \"if (process.env.CI) process.exit(0)\" && husky || true"
+    "prepare": "node -e \"if (process.env.CI) process.exit(0)\" && husky || true",
+    "build:agent": "vite build -c vite.agent.config.ts"
   },
   "dependencies": {
     "@google/genai": "^1.40.0",
