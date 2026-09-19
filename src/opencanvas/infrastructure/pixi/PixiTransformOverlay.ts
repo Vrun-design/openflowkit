@@ -9,7 +9,9 @@ import type { TransformHandle } from '../../domain/transforms/types';
 const ORANGE = 0xe95420;
 const WHITE = 0xffffff;
 const HANDLE_PIXELS = 8;
-const ROTATE_OFFSET_PIXELS = 28;
+// Beyond the north connect handle (22px, 9px pick radius) so the two never
+// overlap: connect handles are picked first, which made rotation unreachable.
+const ROTATE_OFFSET_PIXELS = 48;
 
 interface HandlePoint {
   readonly handle: TransformHandle;

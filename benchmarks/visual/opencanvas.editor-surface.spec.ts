@@ -356,3 +356,90 @@ test('paste in place and style paste work from the surface menus', async ({ page
   await menu.getByRole('menuitem', { name: 'Paste Style' }).click();
   await expect(menu).toHaveCount(0);
 });
+
+async function exportDownload(page: Page, format: 'png' | 'svg' | 'pdf') {
+  // Toasts from an earlier export sit over the top-right Export button.
+  const toastClose = page.locator('[role="status"], [role="alert"]').getByRole('button', { name: 'Close', exact: true });
+  while (await toastClose.count()) await toastClose.first().click();
+  await page.getByTestId('topnav-export').click();
+  const action = page.getByTestId(`export-action-${format}-download`);
+  if (!(await action.isVisible())) {
+    await page.getByTestId('export-format-select').getByRole('button').first().click();
+    await page.getByRole('listbox').getByRole('button', { name: new RegExp(`^${format}`, 'i') }).click();
+  }
+  const downloadPromise = page.waitForEvent('download');
+  await action.click();
+  const download = await downloadPromise;
+  const path = (await download.path())!;
+  await page.keyboard.press('Escape');
+  return { name: download.suggestedFilename(), bytes: (await import('node:fs')).readFileSync(path) };
+}
+
+/** Size and transform of the only node, read from the canonical SVG export. */
+async function exportedNodeGeometry(page: Page) {
+  const svg = (await exportDownload(page, 'svg')).bytes.toString('utf8');
+  const node = svg.match(/<g data-node-id="[^"]+" transform="matrix\(([^)]+)\)"[^>]*><path d="([^"]+)"/)!;
+  const [a, b] = node[1].split(' ').map(Number);
+  const xs = [...node[2].matchAll(/([-\d.]+) ([-\d.]+)/g)].map((m) => Number(m[1]));
+  const ys = [...node[2].matchAll(/([-\d.]+) ([-\d.]+)/g)].map((m) => Number(m[2]));
+  return {
+    width: Math.max(...xs) - Math.min(...xs),
+    height: Math.max(...ys) - Math.min(...ys),
+    rotationDegrees: Math.round((Math.atan2(b, a) * 180) / Math.PI),
+  };
+}
+
+test('resizes and rotates with the transform handles, proven through export', async ({ page }) => {
+  await createNewFlow(page);
+  await addRectangle(page);
+  await page.getByRole('textbox', { name: 'Edit node label' }).press('Escape');
+  const before = await exportedNodeGeometry(page);
+  expect(before.rotationDegrees).toBe(0);
+
+  // The inserted node's top-left sits at the window centre; closing the export
+  // menu cleared the selection, so click inside the node to show its handles.
+  const viewport = page.viewportSize()!;
+  const zoom = (await zoomPercent(page)) / 100;
+  const topLeft = { x: viewport.width / 2, y: viewport.height / 2 };
+  await page.mouse.click(topLeft.x + 24, topLeft.y + 24);
+  await expect(page.getByRole('heading', { name: /Properties/i }).first()).toBeVisible();
+  const southEast = { x: topLeft.x + before.width * zoom, y: topLeft.y + before.height * zoom };
+  await page.mouse.move(southEast.x, southEast.y);
+  await page.mouse.down();
+  await page.mouse.move(southEast.x + 40, southEast.y + 20, { steps: 8 });
+  await page.mouse.move(southEast.x + 80, southEast.y + 40, { steps: 8 });
+  await page.mouse.up();
+  const resized = await exportedNodeGeometry(page);
+  expect(resized.width).toBeGreaterThan(before.width + 40 / zoom);
+  expect(resized.height).toBeGreaterThan(before.height + 20 / zoom);
+
+  await page.mouse.click(topLeft.x + 24, topLeft.y + 24);
+  await expect(page.getByRole('heading', { name: /Properties/i }).first()).toBeVisible();
+  const centreX = topLeft.x + (resized.width * zoom) / 2;
+  const rotateHandle = { x: centreX, y: topLeft.y - 48 };
+  await page.mouse.move(rotateHandle.x, rotateHandle.y);
+  await page.mouse.down();
+  await page.mouse.move(rotateHandle.x + 60, rotateHandle.y + 60, { steps: 8 });
+  await page.mouse.move(rotateHandle.x + 120, rotateHandle.y + 160, { steps: 8 });
+  await page.mouse.up();
+  const rotated = await exportedNodeGeometry(page);
+  expect(Math.abs(rotated.rotationDegrees)).toBeGreaterThan(15);
+  expect(Math.round(rotated.width)).toBe(Math.round(resized.width));
+
+  await page.keyboard.press('Meta+z');
+  expect((await exportedNodeGeometry(page)).rotationDegrees).toBe(0);
+});
+
+test('exports PNG and PDF from the OpenCanvas surface', async ({ page }) => {
+  await createNewFlow(page);
+  await addRectangle(page);
+  await page.getByRole('textbox', { name: 'Edit node label' }).press('Escape');
+
+  const png = await exportDownload(page, 'png');
+  expect(png.name).toMatch(/\.png$/);
+  expect(png.bytes.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+
+  const pdf = await exportDownload(page, 'pdf');
+  expect(pdf.name).toMatch(/\.pdf$/);
+  expect(pdf.bytes.subarray(0, 5).toString()).toBe('%PDF-');
+});

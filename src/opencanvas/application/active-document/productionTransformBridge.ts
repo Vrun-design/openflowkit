@@ -4,6 +4,7 @@ import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { TransformResult } from '../../domain/transforms/types';
 import { applyDocumentCommand } from '../../domain/commands/execute';
 import type { DocumentCommand } from '../../domain/commands/types';
+import { bakeTransformScale } from '../../domain/transforms/bakeScale';
 
 export function buildProductionTransformCommand(
   document: SceneDocumentV1,
@@ -16,12 +17,12 @@ export function buildProductionTransformCommand(
   if (replacements.size !== result.nodes.length) {
     throw new TypeError('Transform result contains duplicate node ids.');
   }
-  const commands: DocumentCommand[] = result.nodes.map((after) => {
-    const before = page.nodes.find((node) => node.id === after.id);
-    if (!before) throw new RangeError(`Transform result contains unknown node "${after.id}".`);
+  const commands: DocumentCommand[] = result.nodes.map((scaled) => {
+    const before = page.nodes.find((node) => node.id === scaled.id);
+    if (!before) throw new RangeError(`Transform result contains unknown node "${scaled.id}".`);
     return {
-      kind: 'set-node', id: `transform-node:${after.id}`, label: 'Transform node',
-      pageId, before, after,
+      kind: 'set-node', id: `transform-node:${scaled.id}`, label: 'Transform node',
+      pageId, before, after: bakeTransformScale(scaled),
     };
   });
   if (commands.length === 1) return commands[0];
