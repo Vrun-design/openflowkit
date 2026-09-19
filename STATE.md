@@ -1,6 +1,9 @@
 # STATE — OpenFlowKit / OpenCanvas
 
 ## Goal
+**Direction change 2026-09-19:** build OpenCanvas v2 — Excalidraw/tldraw feel, FigJam connectors, our icons + AI/agent + great Mermaid import — on the existing kernel (domain/commands/agent/storage/Pixi). v1 frozen (bug fixes only). Read docs/opencanvas-v2-roadmap.md first; it supersedes the M1–M7 roadmap for user-facing work. ER/class/sequence dropped.
+
+Previous goal:
 For diagram authors, a free local-first diagramming + whiteboarding tool whose
 production editor runs on one canonical document with the OpenCanvas (Pixi)
 renderer, React Flow kept as fallback. Roadmap: docs/opencanvas-product-roadmap.md.
@@ -15,6 +18,7 @@ on the Pixi surface (StrokeNode fallback on React Flow). Browser spec: `npm run 
 Full record: docs/opencanvas-execution-status.md (read it first).
 
 ## Next actions
+0. Varun evaluates docs/opencanvas-v2-roadmap.md (with a second model) → decides §7 → phase 0 interaction spec.
 1. Track A/B per docs/agent-native-plan.md: A1 → B1 → A2 → …
 2. Merge branch to main (flag off) once A1 lands.
 3. M2.2 repeated quick-create + suggestions; M2.3 replace-kind compatibility report.
@@ -23,6 +27,7 @@ Full record: docs/opencanvas-execution-status.md (read it first).
 4. Group/lock/hide UI on Pixi; save/reopen/export browser proof.
 
 ## Decisions
+- 2026-09-19 — v2 rebuild of model + interaction layer (option B in roadmap §2); kernel kept; nothing ported without a spec line.
 - 2026-09-19 — Pixi surface default ON (A5); React Flow fallback kept; lazy bundle budget raised 8500→9500 KB for the Pixi chunk until fallback removal.
 - 2026-09-19 — Transform commits bake transform.scale into size/points (legacy has no scale).
 - 2026-09-19 — A6: storage flip (option B) over in-memory flip (option A, 121 writers/37 files, weeks, invisible). Slices d1→d3 in docs/agent-native-plan.md.
