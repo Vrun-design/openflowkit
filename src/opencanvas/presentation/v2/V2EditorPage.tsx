@@ -72,10 +72,11 @@ export function V2EditorPage(): React.JSX.Element {
   const {
     selection, selectionRef, selectedConnectorId, applySelection, applyConnectorSelection,
   } = selectionApi;
+  const page = session.document ? firstV2Page(session.document) : null;
   const pageRef = useRef<ScenePage | null>(null);
   const labelEditing = useV2LabelEditing({
     hostRef,
-    pageRef,
+    page,
     camera: camera.camera,
     commit: session.commit,
     announce: setAnnouncement,
@@ -84,7 +85,7 @@ export function V2EditorPage(): React.JSX.Element {
   const { editing, editingRef } = labelEditing;
 
   useEffect(() => {
-    pageRef.current = session.document ? firstV2Page(session.document) : null;
+    pageRef.current = page;
   });
 
   const load = useV2DocumentLoad({
@@ -119,10 +120,11 @@ export function V2EditorPage(): React.JSX.Element {
 
   const { openEditor: openLabelEditor } = labelEditing;
   const openEditor = useCallback(
-    (nodeId: string) => openLabelEditor(nodeId, (single) => {
+    (nodeId: string) => {
       applyConnectorSelection(null);
-      applySelection(replaceSelection([single]));
-    }),
+      applySelection(replaceSelection([nodeId]));
+      openLabelEditor(nodeId);
+    },
     [openLabelEditor, applyConnectorSelection, applySelection]
   );
 
@@ -158,8 +160,6 @@ export function V2EditorPage(): React.JSX.Element {
     onSpacePan: setSpacePan,
   });
 
-  const page = session.document ? firstV2Page(session.document) : null;
-
   return (
     <SystemRoot appearance={appearance}>
       <div className="ofk-v2" data-testid="v2-editor" data-tool={tool}>
@@ -189,7 +189,7 @@ export function V2EditorPage(): React.JSX.Element {
               onToolChange={setTool}
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
-              onResetZoom={camera.resetZoom}
+              onZoomTo={camera.zoomTo}
               onFitView={camera.fitView}
               onToggleTree={() => setTreeOpen((open) => !open)}
             />
@@ -201,7 +201,7 @@ export function V2EditorPage(): React.JSX.Element {
               editing={editing}
               commit={session.commit}
               applySelection={applySelection} applyConnectorSelection={applyConnectorSelection}
-              updateCamera={camera.updateCamera} openEditor={openEditor} mintId={mintV2Id}
+              updateCamera={camera.updateCamera} openEditor={openEditor} onToolChange={setTool} mintId={mintV2Id}
               onCommitLabel={labelEditing.commitLabel} onCancelEdit={labelEditing.cancelEdit}
               onStatusChange={setRendererStatus}
               onKeyDown={handleKeyDown}

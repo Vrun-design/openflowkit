@@ -75,7 +75,7 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
     <>
       <FloatingRegion slot="top-start">
         <Toolbar label="Document">
-          <span className="ofk-v2-wordmark" aria-hidden="true" />
+          <img className="ofk-v2-logo" src="/Logo_openflowkit.svg" alt="" width={20} height={20} />
           <Button variant="quiet" title={props.document.name}>
             {props.document.name}
           </Button>

@@ -208,8 +208,12 @@ async function runJourney(browser, docId) {
     await page.mouse.move(480, 500);
     await page.mouse.down();
     await page.mouse.up();
+    // Text create opens the editor at once; the tool reverts to select.
+    await page.getByLabel('Edit node label').waitFor();
+    await page.keyboard.press('Escape');
     current = await state(page);
     assert.equal(current.nodes.length, 3, 'three shapes created');
+    assert.equal(current.tool, 'select', 'tool reverts to select after a create');
     const [firstId, secondId] = current.nodes;
     // Marquee-select the first two.
     await page.keyboard.press('v');
@@ -312,6 +316,21 @@ async function runJourney(browser, docId) {
     const edge = journey.pages[0].connectors[0];
     assert.equal(edge.source.nodeId, sourceId, 'connector source is bound');
     assert.equal(edge.target.nodeId, targetId, 'connector target is bound');
+    assert.equal(edge.appearance.markerEnd, 'arrow', 'connector has an arrowhead');
+    assert.equal((await state(page)).tool, 'select', 'tool reverts after connect');
+    // Free arrow: drag on empty canvas, then delete it.
+    await page.keyboard.press('a');
+    await page.mouse.move(300, 700);
+    await page.mouse.down();
+    await page.mouse.move(420, 760, { steps: 5 });
+    await page.mouse.up();
+    current = await state(page);
+    assert.equal(current.connectors.length, 2, 'drag on empty canvas creates a free arrow');
+    const free = (await documentJson(page)).pages[0].connectors[1];
+    assert.equal(free.source.nodeId, null, 'free arrow source is unbound');
+    assert.ok(free.target.point, 'free arrow target keeps a page point');
+    await page.keyboard.press('Delete');
+    assert.equal((await state(page)).connectors.length, 1, 'delete removes the selected arrow');
     // Moving a bound shape keeps the binding.
     await page.keyboard.press('v');
     await page.mouse.move(sourceRect.x + sourceRect.width / 2, sourceRect.y + sourceRect.height / 2);
@@ -348,7 +367,15 @@ async function runJourney(browser, docId) {
     assert.equal((await state(page)).tool, 'rectangle', 'tool key R');
     await page.keyboard.press('t');
     assert.equal((await state(page)).tool, 'text', 'tool key T');
-    await page.keyboard.press('v');
+    await page.keyboard.press('Escape');
+    assert.equal((await state(page)).tool, 'select', 'Escape disarms the tool');
+    // Wheel pans; ⌘/Ctrl+wheel zooms.
+    const zoomBefore = await page.getByRole('button', { name: /^Zoom \d+%$/ }).textContent();
+    await page.mouse.move(720, 450);
+    await page.mouse.wheel(0, 120);
+    assert.equal(await page.getByRole('button', { name: /^Zoom \d+%$/ }).textContent(), zoomBefore, 'plain wheel pans, not zooms');
+    await page.getByTestId('v2-canvas').dispatchEvent('wheel', { deltaY: -120, clientX: 720, clientY: 450, ctrlKey: true, bubbles: true });
+    assert.notEqual(await page.getByRole('button', { name: /^Zoom \d+%$/ }).textContent(), zoomBefore, 'ctrl+wheel zooms');
     await page.keyboard.press('ControlOrMeta+a');
     current = await state(page);
     assert.ok(current.selectedNodes.length >= 3, 'select all via keyboard');

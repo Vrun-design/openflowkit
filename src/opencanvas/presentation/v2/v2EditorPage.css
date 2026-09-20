@@ -57,10 +57,8 @@
   padding: 24px;
 }
 
-.ofk-v2-wordmark {
+.ofk-v2-logo {
   inline-size: 20px;
   block-size: 20px;
-  border-radius: 6px;
-  background: var(--ofk-primary);
   flex: none;
 }

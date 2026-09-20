@@ -5,7 +5,7 @@ import { migrateSceneDocument } from '../../domain/document/migration';
 import type { ScenePage } from '../../domain/document/types';
 import { createEmptyV2Document } from './v2Document';
 import {
-  buildInsertBoundConnectorCommand,
+  buildInsertConnectorCommand,
   buildInsertShapeCommand,
   buildSetNodeLabelCommand,
 } from './v2EditCommands';
@@ -17,10 +17,10 @@ function labeledConnectedDocument() {
     (page) => buildInsertShapeCommand(page, { kind: 'ellipse', id: 'node-b', at: { x: 300, y: 20 } }),
     (page) => buildSetNodeLabelCommand(page, 'node-a', 'Checkout flow'),
     (page) =>
-      buildInsertBoundConnectorCommand(page, {
+      buildInsertConnectorCommand(page, {
         id: 'edge-1',
-        sourceNodeId: 'node-a',
-        targetNodeId: 'node-b',
+        source: { nodeId: 'node-a' },
+        target: { nodeId: 'node-b' },
       }),
   ];
   return steps.reduce(

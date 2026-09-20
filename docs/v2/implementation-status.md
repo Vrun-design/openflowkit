@@ -303,5 +303,12 @@ connector interaction and renderer adapters for free points.
 - Limitations: one page, one layer; connector is bound-bound direct only;
   no agent proposal surface yet (V2-10). Camera state re-renders the page per
   pan frame — fine at current tree size, revisit if the tree panel grows.
+- Interaction pass (same day): tools revert to Select after one create or
+  connect and Escape disarms them; arrow tool drags from anywhere with ends
+  bound where they land or free (ADR-001) and a target arrowhead; wheel pans,
+  ⌘/Ctrl+wheel (pinch) zooms; text tool and double-click on empty canvas open
+  the editor immediately (deferred until the node renders). Bottom-left now
+  matches the lab: layers toggle + zoom menu, layers panel on the left, real
+  logo. Gate extended for each behavior.
 - Next: V2-04e UI polish against the lab shell; then V2-05 (moves
   `pixiPointerOperations`) and V2-10a agent proposals.

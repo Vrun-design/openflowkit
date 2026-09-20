@@ -8,6 +8,7 @@ import type {
   SetNodeCommand,
 } from '../../domain/commands/types';
 import type {
+  ConnectorEndpoint,
   SceneConnector,
   SceneNode,
   ScenePage,
@@ -260,39 +261,43 @@ export function buildDuplicateSelectionCommand(
   return { kind: 'batch', id: 'duplicate-selection', label: 'Duplicate selection', commands };
 }
 
-export interface V2BoundConnectorOptions {
+/** A connector end: bound to a shape, or a free page-space point (ADR-001). */
+export type V2ConnectorEnd = { readonly nodeId: string } | { readonly point: Point2d };
+
+export interface V2ConnectorOptions {
   readonly id: string;
-  readonly sourceNodeId: string;
-  readonly targetNodeId: string;
+  readonly source: V2ConnectorEnd;
+  readonly target: V2ConnectorEnd;
 }
 
-// I-13 basic: bound-bound connector with an automatic route. Free endpoints,
-// ports, markers and labels arrive in V2-06.
-export function buildInsertBoundConnectorCommand(
+function connectorEndpoint(page: ScenePage, end: V2ConnectorEnd): ConnectorEndpoint {
+  if ('point' in end) return { nodeId: null, portId: null, anchor: null, point: { ...end.point } };
+  if (!page.nodes.some((node) => node.id === end.nodeId)) {
+    throw new RangeError(`Connector end "${end.nodeId}" was not found.`);
+  }
+  return { nodeId: end.nodeId, portId: null, anchor: null, point: null };
+}
+
+// I-13 basic: arrow with an automatic direct route and a target arrowhead.
+// Ports, markers UI and labels arrive in V2-06.
+export function buildInsertConnectorCommand(
   page: ScenePage,
-  options: V2BoundConnectorOptions
+  options: V2ConnectorOptions
 ): InsertConnectorCommand {
-  const known = new Set(page.nodes.map((node) => node.id));
-  if (!known.has(options.sourceNodeId)) {
-    throw new RangeError(`Connector source "${options.sourceNodeId}" was not found.`);
-  }
-  if (!known.has(options.targetNodeId)) {
-    throw new RangeError(`Connector target "${options.targetNodeId}" was not found.`);
-  }
   return {
     kind: 'insert-connector',
     id: `create-connector:${options.id}`,
-    label: 'Connect shapes',
+    label: 'Connect',
     pageId: page.id,
     index: page.connectors.length,
     connector: {
       id: options.id,
-      source: { nodeId: options.sourceNodeId, portId: null, anchor: null, point: null },
-      target: { nodeId: options.targetNodeId, portId: null, anchor: null, point: null },
+      source: connectorEndpoint(page, options.source),
+      target: connectorEndpoint(page, options.target),
       route: { kind: 'direct', ownership: 'automatic' },
       waypoints: [],
       labels: [],
-      appearance: {},
+      appearance: { markerEnd: 'arrow' },
       semantics: {},
       metadata: {},
       extensions: {},

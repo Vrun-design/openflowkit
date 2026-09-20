@@ -16,7 +16,7 @@ import {
   type CanvasSelection,
 } from '../../application/selection/selection';
 import { PRODUCTION_RENDERER_FAMILY_FLAGS } from '../../application/renderer/rendererFamilyFlags';
-import { zoomCameraAt } from '../../domain/camera/camera';
+import { panCamera, zoomCameraAt } from '../../domain/camera/camera';
 import { detectWebGlCapability } from '../../infrastructure/pixi/capabilities';
 import {
   PixiRendererHost,
@@ -54,6 +54,7 @@ interface V2CanvasHostProps {
   readonly applyConnectorSelection: (connectorId: string | null) => void;
   readonly updateCamera: (camera: CanvasCamera) => void;
   readonly openEditor: (nodeId: string) => void;
+  readonly onToolChange: (tool: V2Tool) => void;
   readonly mintId: (prefix: string) => string;
   readonly onCommitLabel: (value: string) => void;
   readonly onCancelEdit: () => void;
@@ -90,6 +91,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     applyConnectorSelection: props.applyConnectorSelection,
     updateCamera: props.updateCamera,
     openEditor: props.openEditor,
+    onToolChange: props.onToolChange,
     mintId: props.mintId,
   });
 
@@ -176,13 +178,19 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
 
   const unavailableReason = mountError ?? capability.reason ?? null;
 
-  // I-12: wheel/trackpad zoom anchors at the pointer.
+  // I-12: wheel/trackpad pans; ⌘/Ctrl+wheel (and pinch, which browsers
+  // report as ctrlKey) zooms at the pointer — the Figma/tldraw convention.
   function handleWheel(event: ReactWheelEvent<HTMLElement>): void {
+    const camera = props.cameraRef.current;
+    if (!event.ctrlKey && !event.metaKey) {
+      props.updateCamera(panCamera(camera, { x: -event.deltaX, y: -event.deltaY }));
+      return;
+    }
     const bounds = event.currentTarget.getBoundingClientRect();
     props.updateCamera(zoomCameraAt(
-      props.cameraRef.current,
+      camera,
       { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
-      props.cameraRef.current.zoom * Math.exp(-event.deltaY * 0.001)
+      camera.zoom * Math.exp(-event.deltaY * 0.01)
     ));
   }
 

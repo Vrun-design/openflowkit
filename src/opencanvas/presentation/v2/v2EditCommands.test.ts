@@ -5,7 +5,7 @@ import { createEmptyV2Document, createEmptyV2Page, firstV2Page } from './v2Docum
 import {
   buildDeleteSelectionCommand,
   buildDuplicateSelectionCommand,
-  buildInsertBoundConnectorCommand,
+  buildInsertConnectorCommand,
   buildInsertShapeCommand,
   buildMoveNodesCommand,
   buildSetNodeLabelCommand,
@@ -110,10 +110,10 @@ describe('v2 delete command', () => {
     const nodes = pageWithTwoNodes();
     const connected = applyDocumentCommand(
       { ...createEmptyV2Document('doc-1'), pages: [nodes] },
-      buildInsertBoundConnectorCommand(nodes, {
+      buildInsertConnectorCommand(nodes, {
         id: 'edge-1',
-        sourceNodeId: 'node-a',
-        targetNodeId: 'node-b',
+        source: { nodeId: 'node-a' },
+        target: { nodeId: 'node-b' },
       })
     ).document.pages[0];
     const command = buildDeleteSelectionCommand(connected, ['node-a'], []);
@@ -135,10 +135,10 @@ describe('v2 duplicate command', () => {
     const nodes = pageWithTwoNodes();
     const connected = applyDocumentCommand(
       { ...createEmptyV2Document('doc-1'), pages: [nodes] },
-      buildInsertBoundConnectorCommand(nodes, {
+      buildInsertConnectorCommand(nodes, {
         id: 'edge-1',
-        sourceNodeId: 'node-a',
-        targetNodeId: 'node-b',
+        source: { nodeId: 'node-a' },
+        target: { nodeId: 'node-b' },
       })
     ).document.pages[0];
     let counter = 0;
@@ -169,10 +169,10 @@ describe('v2 duplicate command', () => {
     const page = pageWithTwoNodes();
     const connected = applyDocumentCommand(
       { ...createEmptyV2Document('doc-1'), pages: [page] },
-      buildInsertBoundConnectorCommand(page, {
+      buildInsertConnectorCommand(page, {
         id: 'edge-1',
-        sourceNodeId: 'node-a',
-        targetNodeId: 'node-b',
+        source: { nodeId: 'node-a' },
+        target: { nodeId: 'node-b' },
       })
     ).document.pages[0];
     const command = buildDuplicateSelectionCommand(
@@ -193,10 +193,10 @@ describe('v2 duplicate command', () => {
 describe('v2 bound connector command', () => {
   it('creates an automatic bound-bound connector', () => {
     const page = pageWithTwoNodes();
-    const command = buildInsertBoundConnectorCommand(page, {
+    const command = buildInsertConnectorCommand(page, {
       id: 'edge-1',
-      sourceNodeId: 'node-a',
-      targetNodeId: 'node-b',
+      source: { nodeId: 'node-a' },
+      target: { nodeId: 'node-b' },
     });
     expect(command.connector.source.nodeId).toBe('node-a');
     expect(command.connector.target.nodeId).toBe('node-b');
@@ -210,10 +210,10 @@ describe('v2 bound connector command', () => {
 
   it('rejects unknown endpoints', () => {
     expect(() =>
-      buildInsertBoundConnectorCommand(emptyPage(), {
+      buildInsertConnectorCommand(emptyPage(), {
         id: 'edge-x',
-        sourceNodeId: 'missing',
-        targetNodeId: 'missing',
+        source: { nodeId: 'missing' },
+        target: { nodeId: 'missing' },
       })
     ).toThrow(RangeError);
   });

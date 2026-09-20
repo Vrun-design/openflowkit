@@ -9,7 +9,7 @@ import type { V2EditingState } from './V2CanvasHost';
 
 interface V2LabelEditingOptions {
   readonly hostRef: RefObject<PixiRendererHost | null>;
-  readonly pageRef: RefObject<ScenePage | null>;
+  readonly page: ScenePage | null;
   readonly camera: CanvasCamera;
   readonly commit: (command: DocumentCommand) => void;
   readonly announce: (message: string) => void;
@@ -20,11 +20,14 @@ interface V2LabelEditingOptions {
 // Escape restores, commit is a single set-node, and focus returns to the
 // canvas so F2 and arrows keep working afterwards.
 export function useV2LabelEditing(options: V2LabelEditingOptions) {
-  const { hostRef, pageRef, camera } = options;
+  const { hostRef, page, camera } = options;
   const [editing, setEditing] = useState<V2EditingState | null>(null);
   const editingRef = useRef(false);
   const editingStateRef = useRef<V2EditingState | null>(null);
   const optionsRef = useRef(options);
+  // A node created and edited in one gesture is not on the renderer yet;
+  // hold the request until the page that contains it has been drawn.
+  const pendingRef = useRef<string | null>(null);
   useEffect(() => {
     optionsRef.current = options;
   }, [options]);
@@ -44,41 +47,46 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
   }, [camera, hostRef]);
 
   const openEditor = useCallback(
-    (nodeId: string, selectNode: (nodeId: string) => void) => {
-      const node = pageRef.current?.nodes.find((candidate) => candidate.id === nodeId);
+    (nodeId: string) => {
+      const node = optionsRef.current.page?.nodes.find((candidate) => candidate.id === nodeId);
       const bounds = node && hostRef.current?.getNodeScreenBounds(nodeId);
-      if (!node || !bounds) return;
-      selectNode(nodeId);
+      if (!node || !bounds) {
+        pendingRef.current = nodeId;
+        return;
+      }
+      pendingRef.current = null;
       setEditing({
         nodeId,
         bounds,
         value: typeof node.content.label === 'string' ? node.content.label : '',
       });
     },
-    [hostRef, pageRef]
+    [hostRef]
   );
+
+  useEffect(() => {
+    if (pendingRef.current && page?.nodes.some((node) => node.id === pendingRef.current)) {
+      openEditor(pendingRef.current);
+    }
+  }, [page, openEditor]);
 
   const cancelEdit = useCallback(() => {
     setEditing(null);
     optionsRef.current.focusCanvas();
   }, []);
 
-  const commitLabel = useCallback(
-    (value: string) => {
-      const { commit, announce, focusCanvas } = optionsRef.current;
-      const page = pageRef.current;
-      const current = editingStateRef.current;
-      const node = current && page?.nodes.find((candidate) => candidate.id === current.nodeId);
-      const previous = typeof node?.content.label === 'string' ? node.content.label : '';
-      if (node && page && value !== previous) {
-        commit(buildSetNodeLabelCommand(page, node.id, value));
-        announce('Label updated.');
-      }
-      setEditing(null);
-      focusCanvas();
-    },
-    [pageRef]
-  );
+  const commitLabel = useCallback((value: string) => {
+    const { commit, announce, focusCanvas, page: currentPage } = optionsRef.current;
+    const current = editingStateRef.current;
+    const node = current && currentPage?.nodes.find((candidate) => candidate.id === current.nodeId);
+    const previous = typeof node?.content.label === 'string' ? node.content.label : '';
+    if (node && currentPage && value !== previous) {
+      commit(buildSetNodeLabelCommand(currentPage, node.id, value));
+      announce('Label updated.');
+    }
+    setEditing(null);
+    focusCanvas();
+  }, []);
 
   return { editing, editingRef, openEditor, cancelEdit, commitLabel };
 }

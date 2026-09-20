@@ -30,7 +30,9 @@ import {
   type PixiPointerOperation,
 } from '../pixiPointerOperations';
 import {
-  buildInsertBoundConnectorCommand,
+  V2_DEFAULT_SHAPE_SIZE,
+  V2_DEFAULT_TEXT_SIZE,
+  buildInsertConnectorCommand,
   buildInsertShapeCommand,
   type V2ShapeKind,
 } from './v2EditCommands';
@@ -53,8 +55,9 @@ interface V2ConnectOperation {
   readonly kind: 'connect';
   readonly pointerId: number;
   readonly page: ScenePage;
-  readonly sourceNodeId: string;
+  readonly sourceNodeId: string | null;
   readonly fromWorld: Point2d;
+  readonly startScreen: Point2d;
   readonly toWorld: Point2d;
 }
 
@@ -78,12 +81,17 @@ interface V2PointerOptions {
   readonly applyConnectorSelection: (connectorId: string | null) => void;
   readonly updateCamera: (camera: CanvasCamera) => void;
   readonly openEditor: (nodeId: string) => void;
+  readonly onToolChange: (tool: V2Tool) => void;
   readonly mintId: (prefix: string) => string;
 }
 
 function localPoint(event: ReactPointerEvent<HTMLElement>): Point2d {
   const bounds = event.currentTarget.getBoundingClientRect();
   return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+}
+
+function textOrigin(center: Point2d): Point2d {
+  return { x: center.x - V2_DEFAULT_TEXT_SIZE.width / 2, y: center.y - V2_DEFAULT_TEXT_SIZE.height / 2 };
 }
 
 function nodeCenterWorld(page: ScenePage, nodeId: string): Point2d | null {
@@ -164,16 +172,18 @@ export function useV2Pointer(options: V2PointerOptions) {
         return;
       }
       if (tool === 'connector') {
+        // Starts anywhere: over a shape binds that end, empty canvas leaves
+        // it free (ADR-001), like Excalidraw and tldraw arrows.
         const nodeId = host.pickNode(point);
-        if (!nodeId) return;
-        const from = nodeCenterWorld(page, nodeId) ?? host.screenToWorld(point);
+        const world = host.screenToWorld(point);
         operationRef.current = {
           kind: 'connect',
           pointerId: event.pointerId,
           page,
           sourceNodeId: nodeId,
-          fromWorld: from,
-          toWorld: host.screenToWorld(point),
+          fromWorld: (nodeId && nodeCenterWorld(page, nodeId)) || world,
+          startScreen: point,
+          toWorld: world,
         };
         return;
       }
@@ -309,10 +319,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         );
         const id = opts.mintId('node');
         if (moved < CLICK_THRESHOLD_PX) {
-          const size =
-            operation.shape === 'text'
-              ? { width: 160, height: 48 }
-              : { width: 160, height: 72 };
+          const size = operation.shape === 'text' ? V2_DEFAULT_TEXT_SIZE : V2_DEFAULT_SHAPE_SIZE;
           opts.commit(
             buildInsertShapeCommand(operation.page, {
               kind: operation.shape,
@@ -338,20 +345,30 @@ export function useV2Pointer(options: V2PointerOptions) {
         }
         opts.applyConnectorSelection(null);
         opts.applySelection(replaceSelection([id]));
+        opts.onToolChange('select');
+        if (operation.shape === 'text') opts.openEditor(id);
       } else if (operation.kind === 'connect') {
         host.setConnectionPreview(null);
+        const moved = Math.hypot(
+          point.x - operation.startScreen.x,
+          point.y - operation.startScreen.y
+        );
         const targetId = host.pickNode(point);
-        if (targetId && targetId !== operation.sourceNodeId) {
+        const selfLoop = targetId !== null && targetId === operation.sourceNodeId;
+        if (moved >= CLICK_THRESHOLD_PX && !selfLoop) {
           const id = opts.mintId('connector');
           opts.commit(
-            buildInsertBoundConnectorCommand(operation.page, {
+            buildInsertConnectorCommand(operation.page, {
               id,
-              sourceNodeId: operation.sourceNodeId,
-              targetNodeId: targetId,
+              source: operation.sourceNodeId
+                ? { nodeId: operation.sourceNodeId }
+                : { point: operation.fromWorld },
+              target: targetId ? { nodeId: targetId } : { point: host.screenToWorld(point) },
             })
           );
           opts.applySelection(clearSelection());
           opts.applyConnectorSelection(id);
+          opts.onToolChange('select');
         }
       }
       try {
@@ -376,7 +393,17 @@ export function useV2Pointer(options: V2PointerOptions) {
       const bounds = event.currentTarget.getBoundingClientRect();
       const point = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
       const nodeId = host.pickNode(point);
-      if (nodeId) opts.openEditor(nodeId);
+      if (nodeId) {
+        opts.openEditor(nodeId);
+        return;
+      }
+      const page = opts.pageRef.current;
+      if (!page || host.pickConnector(point)) return;
+      const id = opts.mintId('node');
+      opts.commit(buildInsertShapeCommand(page, { kind: 'text', id, at: textOrigin(host.screenToWorld(point)) }));
+      opts.applyConnectorSelection(null);
+      opts.applySelection(replaceSelection([id]));
+      opts.openEditor(id);
     },
     []
   );

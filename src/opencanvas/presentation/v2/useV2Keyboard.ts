@@ -23,7 +23,7 @@ interface V2KeyboardOptions {
 }
 
 // I-02: V/H/R/O/A/T switch tools; typing in a label or input never does.
-// Escape exits the active gesture before it clears selection.
+// Escape exits the active gesture, then an armed tool, then the selection.
 export function useV2Keyboard(options: V2KeyboardOptions) {
   const optionsRef = useRef(options);
   useEffect(() => {
@@ -107,7 +107,13 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onEditPrimary();
       event.preventDefault();
     } else if (event.key === 'Escape') {
-      if (!opts.onCancelGesture()) opts.onClearSelection();
+      if (opts.onCancelGesture()) {
+        /* gesture dropped */
+      } else if (opts.toolRef.current !== 'select') {
+        opts.onToolChange('select');
+      } else {
+        opts.onClearSelection();
+      }
       event.preventDefault();
     }
   }, []);

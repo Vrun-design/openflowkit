@@ -48,7 +48,7 @@ export function V2TreePanel(props: V2TreePanelProps): React.JSX.Element {
   }
 
   return (
-    <Panel title="Layers" side="end" onClose={props.onClose}>
+    <Panel title="Layers" side="start" onClose={props.onClose} style={{ bottom: 88 }}>
       <Tree
         label="Layers"
         nodes={nodes}

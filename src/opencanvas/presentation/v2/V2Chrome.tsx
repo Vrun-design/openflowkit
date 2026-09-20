@@ -22,7 +22,7 @@ interface V2ChromeProps {
   readonly onToolChange: (tool: V2Tool) => void;
   readonly onZoomIn: () => void;
   readonly onZoomOut: () => void;
-  readonly onResetZoom: () => void;
+  readonly onZoomTo: (percent: number) => void;
   readonly onFitView: () => void;
   readonly onToggleTree: () => void;
 }
@@ -50,7 +50,7 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         treeOpen={props.treeOpen}
         onZoomIn={props.onZoomIn}
         onZoomOut={props.onZoomOut}
-        onResetZoom={props.onResetZoom}
+        onZoomTo={props.onZoomTo}
         onFitView={props.onFitView}
         onToggleTree={props.onToggleTree}
       />

@@ -47,9 +47,13 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     [updateCamera, viewportCenter]
   );
 
-  const resetZoom = useCallback(() => {
-    updateCamera(zoomCameraAt(cameraRef.current, viewportCenter(), 1));
-  }, [updateCamera, viewportCenter]);
+  const zoomTo = useCallback(
+    (percent: number) => {
+      updateCamera(zoomCameraAt(cameraRef.current, viewportCenter(), percent / 100));
+    },
+    [updateCamera, viewportCenter]
+  );
+  const resetZoom = useCallback(() => zoomTo(100), [zoomTo]);
 
   // First open of a non-empty doc fits with padding (I-32), including after
   // a reload. Empty docs keep the default camera; later edits never hijack
@@ -87,6 +91,7 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     updateCamera,
     fitView,
     zoomStep,
+    zoomTo,
     resetZoom,
     fitOnOpen,
     resetFit,
