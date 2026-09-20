@@ -687,12 +687,43 @@ body {
 }
 
 .flow-edge-animated-overlay {
+  /* Period of this overlay's own default `8 8` pattern; overridden inline per edge. */
+  --flow-edge-dash-period: 16;
   animation: flow-edge-dash 0.6s linear infinite;
 }
 
+/*
+ * The overlay only ever renders inside an `.animated` edge, where React Flow's
+ * `.react-flow__edge.animated path` (0,2,1) would otherwise outrank the rule above and
+ * hijack it back to `dashdraw`'s fixed travel of 10. Three classes wins.
+ */
+.react-flow__edge.animated .flow-edge-animated-overlay {
+  animation: flow-edge-dash 0.6s linear infinite;
+}
+
+/*
+ * React Flow animates every path in an `.animated` edge with its own `dashdraw`, which
+ * travels a fixed 10 — right for its own `stroke-dasharray: 5`, wrong for any pattern
+ * the app sets inline (the dash-dot preset has period 18, so each cycle snapped back
+ * by 8). Replace it with the period-aware animation. Three classes outweighs React
+ * Flow's `.react-flow__edge.animated path`, so this wins without `!important`.
+ */
+.react-flow__edge.animated .react-flow__edge-path {
+  /* Period of React Flow's `stroke-dasharray: 5`, used when the edge sets no pattern. */
+  --flow-edge-dash-period: 10;
+  animation: flow-edge-dash 0.5s linear infinite;
+}
+
+/*
+ * The travelled distance must equal the dash pattern's period, otherwise every cycle
+ * boundary snaps the pattern back by the remainder — very visible on an irregular
+ * pattern such as dash-dot, where the eye tracks individual dots.
+ * `--flow-edge-dash-period` is published per element; each consumer above declares the
+ * default for its own pattern.
+ */
 @keyframes flow-edge-dash {
   from {
-    stroke-dashoffset: 16;
+    stroke-dashoffset: var(--flow-edge-dash-period, 10);
   }
 
   to {

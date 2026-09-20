@@ -9,7 +9,7 @@ import {
   toMarkerUrl,
 } from './classRelationSemantics';
 import { resolveStandardEdgeMarkers } from './standardEdgeMarkers';
-import { resolveAnimatedEdgePresentation } from './animatedEdgePresentation';
+import { resolveAnimatedEdgePresentation, withDashPeriodVar } from './animatedEdgePresentation';
 import {
   buildEdgeLabelUpdates,
   getEditableEdgeLabel,
@@ -115,7 +115,10 @@ export const CustomEdgeWrapper = memo(function CustomEdgeWrapper({
   );
 
   const resolvedStyle = useMemo<React.CSSProperties>(
-    () => ({
+    // Animated edges loop `stroke-dashoffset`, which only joins up seamlessly when it
+    // travels one dash period per cycle, so publish the period of whatever pattern this
+    // edge ended up with. The CSS default covers edges that set none.
+    () => withDashPeriodVar({
       stroke: designSystem.colors.edge,
       strokeWidth: designSystem.components.edge.strokeWidth,
       ...style,
@@ -376,6 +379,10 @@ export const CustomEdgeWrapper = memo(function CustomEdgeWrapper({
           fill="none"
           stroke="rgba(15,23,42,0.001)"
           strokeWidth={20}
+          // React Flow dashes and animates every path in an `.animated` edge, which
+          // would leave this hit target responding only on the moving dashes. A
+          // presentation attribute loses to its class rule, so override inline.
+          style={{ strokeDasharray: 'none', animation: 'none' }}
           pointerEvents="stroke"
           onPointerEnter={() => setIsHovered(true)}
           onPointerLeave={() => setIsHovered(false)}

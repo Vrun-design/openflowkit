@@ -2,6 +2,7 @@ import React from 'react';
 import { ConnectionLineComponentProps, getBezierPath, useNodes } from '@/lib/reactflowCompat';
 import { NODE_WIDTH, NODE_HEIGHT } from '../constants';
 import type { FlowNode } from '@/lib/types';
+import { getDashPatternPeriod } from './custom-edge/dashPattern';
 
 const SNAP_PADDING = 56;
 
@@ -41,6 +42,11 @@ const CustomConnectionLine = ({
         targetPosition: toPosition,
     });
     const connectionStroke = 'var(--brand-primary, #6366f1)';
+    const dashArray = isNearNode ? '8 6' : '6 8';
+    // Travel exactly one dash period per cycle, or the pattern snaps back on every loop.
+    // Left unset if it cannot be derived, so the keyframes' own fallback applies — a 0
+    // here would satisfy `var()` and freeze the animation instead.
+    const dashPeriod = getDashPatternPeriod(dashArray);
 
     return (
         <g>
@@ -48,12 +54,13 @@ const CustomConnectionLine = ({
                 fill="none"
                 stroke={connectionStroke}
                 strokeWidth={2.5}
-                strokeDasharray={isNearNode ? '8 6' : '6 8'}
+                strokeDasharray={dashArray}
                 strokeLinecap="round"
                 style={{
                     filter: 'drop-shadow(0 1px 3px rgba(99,102,241,0.25))',
                     animation: 'flow-connection-dash 0.8s linear infinite',
-                }}
+                    ...(dashPeriod === null ? {} : { '--flow-connection-dash-period': dashPeriod }),
+                } as React.CSSProperties}
                 d={edgePath}
             />
 
@@ -87,7 +94,7 @@ const CustomConnectionLine = ({
                 {`
                     @keyframes flow-connection-dash {
                         from {
-                            stroke-dashoffset: 20;
+                            stroke-dashoffset: var(--flow-connection-dash-period, 14);
                         }
                         to {
                             stroke-dashoffset: 0;
