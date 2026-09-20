@@ -11,6 +11,8 @@ const srcDir = path.resolve(ocDir, '..');
 // V2_ROOTS + SHARED_KERNEL and removes everything else under src/opencanvas.
 const V2_ROOTS = [
   path.join(ocDir, 'application', 'session'),
+  // Store-free proposal engine and local agent (V2-10a); v2 owns it.
+  path.join(ocDir, 'application', 'ai'),
   path.join(ocDir, 'presentation', 'design-system'),
   path.join(ocDir, 'presentation', 'v2'),
   path.join(srcDir, 'services', 'storage', 'v2'),
@@ -27,6 +29,10 @@ const SHARED_KERNEL = [
   path.join(srcDir, 'config', 'rolloutFlags'),
   path.join(srcDir, 'services', 'storage', 'indexedDbHelpers'),
   path.join(srcDir, 'services', 'storage', 'indexedDbSchema'),
+  // Pure agent actions shared with the MCP server (V2-10a). runInStore.ts and
+  // webmcp.ts touch the legacy store and stay out.
+  path.join(srcDir, 'agent', 'actions'),
+  path.join(srcDir, 'agent', 'runAction'),
 ];
 
 // Store-free legacy presentation files reused without moving yet. Each entry
