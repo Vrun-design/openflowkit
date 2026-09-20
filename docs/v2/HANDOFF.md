@@ -12,7 +12,7 @@ Modes: caveman (terse prose) + ponytail (minimal code). Honest scoring — prais
 
 ## State
 
-Branch `v2`, HEAD `1f8f025`. All green: `tsc`, `eslint --max-warnings=0`, 2276 vitest, both Playwright gates (`scripts/check-v2-04.mjs`, `scripts/check-v2-polish.mjs`) against `VITE_V2_EDITOR=1 npm run build` + `npx vite preview --host 127.0.0.1 --port 4191` with `V2_BASE_URL=http://127.0.0.1:4191`.
+Branch `v2`, HEAD `ddc444b` (V2-04f: gestures survive Chrome capture loss; label Text pooling; per-frame camera settle). All green: `tsc`, `eslint --max-warnings=0`, 2276 vitest, both Playwright gates (`scripts/check-v2-04.mjs`, `scripts/check-v2-polish.mjs`) against `VITE_V2_EDITOR=1 npm run build` + `npx vite preview --host 127.0.0.1 --port 4191` with `V2_BASE_URL=http://127.0.0.1:4191`.
 
 Delivered: V2-00 docs, V2-01 schema/geometry/migration, DS-01/02 design system + lab, V2-02 revisioned session, V2-03 isolated IndexedDB repo, V2-04 editor route (`/v2/:id` behind `VITE_V2_EDITOR`), V2-04e polish (live transform preview, resize/rotate, fill/stroke/dash/opacity, free arrows, dot grid, settings, rename, canvas color).
 
@@ -22,6 +22,8 @@ Dev: `VITE_V2_EDITOR=1 VITE_V2_LAB=1 npx vite --host 127.0.0.1 --port 5173` → 
 
 ## Lessons (apply to every prompt)
 
+0. **Input-feel reports need real input.** Headless Playwright showed zero failures while the owner hit capture drops 6×/10 s. Open a headed Chromium (`chromium.launch({headless:false})`), instrument pointer/capture/frame events to a log, let the owner drive, read the log. Capture script pattern is in V2-04f notes.
+
 1. **Slices ≤ 45 min, one outcome, one gate command.** The 4-part V2-04 prompt took 3h and drifted. 04e as "one big pass" pulled in V2-05 scope and stalled mid-move.
 2. **Test-first for logic.** Opus writes the `*.test.ts` (public API + expected results), agent makes it green. Removes interpretation. Pixels get one screenshot + user's eyes, not Playwright bisection.
 3. **Prompt must say:** run `npx tsc --noEmit && npx eslint src --max-warnings=0 && npx vitest run` and paste output verbatim; no new check scripts; two-strike rule — same fix fails twice → stop, write findings, hand back; no `console.*` in source; no touching files outside the named list.
@@ -30,7 +32,7 @@ Dev: `VITE_V2_EDITOR=1 VITE_V2_LAB=1 npx vite --host 127.0.0.1 --port 5173` → 
 
 ## Next
 
-1. User click-through of `1f8f025`; collect raw issue list → triage: interaction bug (Opus fixes now) / visual polish (Codex) / feature (roadmap slice).
+1. Owner confirmed `ddc444b` drag/marquee feel ("works perfectly"). Open from the click-through: connector body drag (inserts waypoint today; owner wanted select/move/delete — unclear which failed) → fold into V2-05.
 2. **V2-10a agent proposals** — reorder ahead of V2-05/06/07. This is the AI-native payoff; everything so far is the substrate (revision, stale rejection, inverses, single commit path). Wire one real agent action via `ProposalBar` (design-system already has `ProposalBar`, `ProposalReview`, `AgentPanel`, `AgentPresence`) through `resolveAgentActionCommand` → `session.commit` with review/accept/reject and undo. Opus writes the test file first.
 3. V2-05: move `pixiPointerOperations.ts` into v2 (allowlist → zero), ports, connector styles, groups.
 4. Remaining spine: V2-08 pages, V2-11/12 import/collab, V2-13 migration, V2-14 cutover, V2-15 legacy delete.
