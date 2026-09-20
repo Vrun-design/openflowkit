@@ -5,35 +5,36 @@ import {
   createTestConnector,
   createTestDocument,
   createTestNode,
-} from '../testing/builders/documentBuilder';
+} from '../../testing/builders/documentBuilder';
 import { OpenCanvasSemanticSceneTree } from './OpenCanvasSemanticSceneTree';
 
 function renderTree(
   nodeCount: number,
   connectorCount = 0
 ): { onSelectNode: ReturnType<typeof vi.fn>; onSelectConnector: ReturnType<typeof vi.fn> } {
-  const nodes = Array.from({ length: nodeCount }, (_, index) => createTestNode(`node-${index}`, {
-    content: { label: `Node ${index}` },
-    transform: {
-      translation: { x: index * 120, y: 0 },
-      rotationRadians: 0,
-      scale: { x: 1, y: 1 },
-    },
-  }));
-  const connectors = Array.from({ length: connectorCount }, (_, index) => createTestConnector(
-    `connector-${index}`,
-    `node-${index}`,
-    `node-${index + 1}`,
-    {
-      labels: [{
-        id: `label-${index}`,
-        text: `Path ${index}`,
-        pathRatio: 0.5,
-        offset: { x: 0, y: 0 },
-        metadata: {},
-      }],
-    }
-  ));
+  const nodes = Array.from({ length: nodeCount }, (_, index) =>
+    createTestNode(`node-${index}`, {
+      content: { label: `Node ${index}` },
+      transform: {
+        translation: { x: index * 120, y: 0 },
+        rotationRadians: 0,
+        scale: { x: 1, y: 1 },
+      },
+    })
+  );
+  const connectors = Array.from({ length: connectorCount }, (_, index) =>
+    createTestConnector(`connector-${index}`, `node-${index}`, `node-${index + 1}`, {
+      labels: [
+        {
+          id: `label-${index}`,
+          text: `Path ${index}`,
+          pathRatio: 0.5,
+          offset: { x: 0, y: 0 },
+          metadata: {},
+        },
+      ],
+    })
+  );
   const onSelectNode = vi.fn();
   const onSelectConnector = vi.fn();
   render(

@@ -277,3 +277,31 @@ connector interaction and renderer adapters for free points.
   clean. Two V2-01 leftovers fixed here: connector endpoint expectation and the
   canonical JSON golden hash both needed the additive `point: null` field.
 - Next: V2-03 isolated durable v2 repository, ordered autosave, recovery, export.
+
+## V2-04 — first v2 editor route (2026-09-20, delivered)
+
+- Code: `/v2/:id` behind `v2Editor`, lazy chunk. `oc/presentation/v2/` composes
+  the store-free Pixi stack: `V2EditorPage` + `V2Chrome` (doc bar, creation
+  toolbar, camera controls) + `V2CanvasHost` (pointer, context bar, text
+  overlay) + `V2TreePanel`; hooks `useDocumentSession`, `useV2Autosave`,
+  `useV2DocumentLoad`, `useV2Camera`, `useV2Selection`, `useV2LabelEditing`,
+  `useV2EditActions`, `useV2Keyboard`, `useV2Pointer`. Commands live in
+  `v2EditCommands.ts`. `OpenCanvasSemanticSceneTree` and
+  `OpenCanvasTextEditorOverlay` moved into `v2/` (legacy imports them from there).
+- Boundary: `oc/v2Graph.test.ts` replaces the two earlier boundary tests: v2
+  roots import only V2_ROOTS + SHARED_KERNEL + adoption allowlist
+  (`pixiPointerOperations.ts`, moves in V2-05); legacy direct-writer ratchet kept.
+- Validation: full suite 2263 passed (459 files); `tsc`, `eslint --max-warnings=0`
+  clean. Browser gate `scripts/check-v2-04.mjs` against a flag-on production
+  build: 04a–d + keyboard journeys pass; idle canvas area 96.4% (1440×900),
+  95.5% (1280×800). Evidence in `docs/evidence/v2-04/` (ignored).
+- Review fixes: camera is React state so text overlay and context bar track
+  pan/zoom (the agent's "Escape leaves overlay mounted" hunt was an effect
+  re-running every render plus a stale dev server reloading under Playwright);
+  `useDocumentSession` single `advance` path; export round-trip test now
+  deep-equals; dead helpers and trace logging removed.
+- Limitations: one page, one layer; connector is bound-bound direct only;
+  no agent proposal surface yet (V2-10). Camera state re-renders the page per
+  pan frame — fine at current tree size, revisit if the tree panel grows.
+- Next: V2-04e UI polish against the lab shell; then V2-05 (moves
+  `pixiPointerOperations`) and V2-10a agent proposals.

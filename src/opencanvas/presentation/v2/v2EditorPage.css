@@ -1,0 +1,66 @@
+.ofk-v2 {
+  position: relative;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ofk-canvas);
+  color: var(--ofk-text);
+}
+
+.ofk-v2-canvas {
+  position: absolute;
+  inset: 0;
+  outline: none;
+}
+
+.ofk-v2-canvas:focus-visible {
+  outline: 2px solid var(--ofk-focus);
+  outline-offset: -2px;
+}
+
+.ofk-v2[data-tool='hand'] .ofk-v2-canvas {
+  cursor: grab;
+}
+
+.ofk-v2[data-tool='rectangle'] .ofk-v2-canvas,
+.ofk-v2[data-tool='ellipse'] .ofk-v2-canvas,
+.ofk-v2[data-tool='text'] .ofk-v2-canvas,
+.ofk-v2[data-tool='connector'] .ofk-v2-canvas {
+  cursor: crosshair;
+}
+
+.ofk-v2-viewport {
+  position: absolute;
+  inset: 0;
+}
+
+.ofk-v2-viewport canvas {
+  display: block;
+}
+
+.ofk-v2-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.ofk-v2-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  text-align: center;
+  background: var(--ofk-canvas);
+  padding: 24px;
+}
+
+.ofk-v2-wordmark {
+  inline-size: 20px;
+  block-size: 20px;
+  border-radius: 6px;
+  background: var(--ofk-primary);
+  flex: none;
+}

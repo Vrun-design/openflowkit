@@ -92,9 +92,9 @@ import { useOpenCanvasCanonicalCollaboration } from './useOpenCanvasCanonicalCol
 import { OpenCanvasNodePropertyForm } from './OpenCanvasNodePropertyForm';
 import { OpenCanvasNodeSizingForm } from './OpenCanvasNodeSizingForm';
 import { OpenCanvasPageThumbnail } from './OpenCanvasPageThumbnail';
-import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
+import { OpenCanvasTextEditorOverlay } from './v2/OpenCanvasTextEditorOverlay';
 import { OpenCanvasCameraControls } from './OpenCanvasCameraControls';
-import { OpenCanvasSemanticSceneTree } from './OpenCanvasSemanticSceneTree';
+import { OpenCanvasSemanticSceneTree } from './v2/OpenCanvasSemanticSceneTree';
 import { CameraMotionController } from './CameraMotionController';
 import { CameraInertiaController } from './CameraInertiaController';
 import { EdgeScrollController } from './EdgeScrollController';

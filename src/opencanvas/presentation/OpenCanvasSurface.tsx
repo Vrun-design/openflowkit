@@ -14,8 +14,8 @@ import {
 } from '../application/active-document/productionNodeBridge';
 import type { CanonicalCommandBuilder } from '@/store/actions/createCanonicalCommandActions';
 import { isNodeEditableOnLayer } from '../application/active-document/productionLayers';
-import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
-import { OpenCanvasSemanticSceneTree } from './OpenCanvasSemanticSceneTree';
+import { OpenCanvasTextEditorOverlay } from './v2/OpenCanvasTextEditorOverlay';
+import { OpenCanvasSemanticSceneTree } from './v2/OpenCanvasSemanticSceneTree';
 import { createOpenCanvasSurfaceApi } from './openCanvasSurfaceApi';
 import {
   publishActiveCanvasViewport,

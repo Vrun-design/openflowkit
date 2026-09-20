@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import type { CanvasSelection } from '../application/selection/selection';
+import type { CanvasSelection } from '../../application/selection/selection';
 import {
   buildSemanticSceneItems,
   semanticScenePageForItem,
   SEMANTIC_SCENE_PAGE_SIZE,
   type SemanticSceneItem,
-} from '../application/selection/semanticScene';
-import { arrowSpatialDirection, spatialNeighborId } from '../application/selection/spatialNavigation';
-import type { ScenePage } from '../domain/document/types';
+} from '../../application/selection/semanticScene';
+import { arrowSpatialDirection, spatialNeighborId } from '../../application/selection/spatialNavigation';
+import type { ScenePage } from '../../domain/document/types';
 
 interface OpenCanvasSemanticSceneTreeProps {
   readonly page: ScenePage;

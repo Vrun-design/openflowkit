@@ -22,6 +22,7 @@ import { MobileWorkspaceGate } from '@/components/app/MobileWorkspaceGate';
 import { CinematicExportProvider } from '@/context/CinematicExportContext';
 
 import { useFlowStore } from './store';
+import { isRolloutFlagEnabled } from './config/rolloutFlags';
 import { useEditorPageActions } from '@/store/editorPageHooks';
 import { useWorkspaceDocumentActions, useWorkspaceRouteResolver } from '@/store/documentHooks';
 import { useShortcutHelpOpen } from '@/store/viewHooks';
@@ -65,6 +66,13 @@ const LazyPixiSpikePage =
         return { default: module.PixiSpikePage };
       })
     : null;
+
+// First production v2 route (V2-04). Lazy chunk, mounted only when the
+// v2Editor flag is on; flag off leaves the default build unchanged.
+const LazyV2EditorPage = lazy(async () => {
+  const module = await import('./opencanvas/presentation/v2/V2EditorPage');
+  return { default: module.V2EditorPage };
+});
 
 // Dev-only V2 design lab (mock shell + primitive gallery). Not a rollout flag:
 // `VITE_V2_LAB=1 npm run dev`, then open /_labs/v2. Tree-shaken from default builds.
@@ -310,6 +318,16 @@ function App(): React.JSX.Element {
               element={
                 <Suspense fallback={<RouteLoadingFallback />}>
                   <LazyV2LabPage />
+                </Suspense>
+              }
+            />
+          ) : null}
+          {isRolloutFlagEnabled('v2Editor') ? (
+            <Route
+              path="/v2/:id"
+              element={
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <LazyV2EditorPage />
                 </Suspense>
               }
             />

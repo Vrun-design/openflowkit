@@ -126,6 +126,7 @@ export class PixiRendererHost {
   private selectedConnectorId: string | null = null;
   private activeConnectorHandle: ConnectorEditHandle | null = null;
   private destroyed = false;
+  private backgroundColor = 0xf8fafc;
   private renderFrame: number | null = null;
   private renderCount = 0;
   private renderRequests = 0;
@@ -157,7 +158,7 @@ export class PixiRendererHost {
       autoDensity: true,
       resolution: Math.min(window.devicePixelRatio || 1, 2),
       powerPreference: 'high-performance',
-      backgroundColor: 0xf8fafc,
+      backgroundColor: this.backgroundColor,
       resizeTo: container,
     });
     if (this.destroyed) {
@@ -194,6 +195,15 @@ export class PixiRendererHost {
     if (this.page && this.refreshViewportProjection()) this.rebuildScene();
     this.emitStatus('ready');
     return canvas;
+  }
+
+  /** Canvas ground color; applied at mount and live afterwards. */
+  setBackground(background: number): void {
+    this.backgroundColor = background;
+    if (this.app.renderer) {
+      this.app.renderer.background.color.setValue(background);
+      this.requestRender();
+    }
   }
 
   setPage(page: ScenePage): void {

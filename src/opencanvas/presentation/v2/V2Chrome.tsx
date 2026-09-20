@@ -1,0 +1,59 @@
+import type { SceneDocumentV1 } from '../../domain/document/types';
+import type { ToastItem } from '../design-system';
+import { V2CameraControls } from './V2CameraControls';
+import { V2CreationToolbar, type V2Tool } from './V2CreationToolbar';
+import { V2DocumentBar } from './V2DocumentBar';
+import type { V2SaveStatus } from './useV2Autosave';
+
+interface V2ChromeProps {
+  readonly document: SceneDocumentV1;
+  readonly saveStatus: V2SaveStatus;
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
+  readonly readOnly: boolean;
+  readonly tool: V2Tool;
+  readonly zoomPercent: number;
+  readonly treeOpen: boolean;
+  readonly onUndo: () => void;
+  readonly onRedo: () => void;
+  readonly onRetrySave: () => void;
+  readonly onReload: () => void;
+  readonly onToast: (toast: ToastItem) => void;
+  readonly onToolChange: (tool: V2Tool) => void;
+  readonly onZoomIn: () => void;
+  readonly onZoomOut: () => void;
+  readonly onResetZoom: () => void;
+  readonly onFitView: () => void;
+  readonly onToggleTree: () => void;
+}
+
+// Persistent chrome (I-31): document bar, creation toolbar, camera controls.
+// Floating overlays only — the canvas keeps ≥85% of the viewport at 1440×900.
+export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
+  return (
+    <>
+      <V2DocumentBar
+        document={props.document}
+        saveStatus={props.saveStatus}
+        canUndo={props.canUndo}
+        canRedo={props.canRedo}
+        readOnly={props.readOnly}
+        onUndo={props.onUndo}
+        onRedo={props.onRedo}
+        onRetrySave={props.onRetrySave}
+        onReload={props.onReload}
+        onToast={props.onToast}
+      />
+      {props.readOnly ? null : <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange} />}
+      <V2CameraControls
+        zoomPercent={props.zoomPercent}
+        treeOpen={props.treeOpen}
+        onZoomIn={props.onZoomIn}
+        onZoomOut={props.onZoomOut}
+        onResetZoom={props.onResetZoom}
+        onFitView={props.onFitView}
+        onToggleTree={props.onToggleTree}
+      />
+    </>
+  );
+}

@@ -1,0 +1,301 @@
+import type {
+  BatchDocumentCommand,
+  DocumentCommand,
+  InsertConnectorCommand,
+  InsertNodeCommand,
+  RemoveConnectorCommand,
+  RemoveNodeCommand,
+  SetNodeCommand,
+} from '../../domain/commands/types';
+import type {
+  SceneConnector,
+  SceneNode,
+  ScenePage,
+} from '../../domain/document/types';
+import type { Point2d, Size2d } from '../../domain/geometry/types';
+import {
+  createTransformCommand,
+  createTransformSnapshot,
+  moveTransform,
+} from '../../domain/transforms/transformSelection';
+
+export const V2_DEFAULT_SHAPE_SIZE: Size2d = { width: 160, height: 72 };
+export const V2_DEFAULT_TEXT_SIZE: Size2d = { width: 160, height: 48 };
+
+export type V2ShapeKind = 'rectangle' | 'ellipse' | 'text';
+
+export interface V2CreateShapeOptions {
+  readonly kind: V2ShapeKind;
+  readonly id: string;
+  readonly at: Point2d;
+  readonly size?: Size2d;
+}
+
+function defaultSize(kind: V2ShapeKind): Size2d {
+  return kind === 'text' ? V2_DEFAULT_TEXT_SIZE : V2_DEFAULT_SHAPE_SIZE;
+}
+
+function nextZIndex(page: ScenePage): number {
+  return page.nodes.reduce((max, node) => Math.max(max, node.zIndex), -1) + 1;
+}
+
+function shapeNodeKind(kind: V2ShapeKind): { nodeKind: string; content: Record<string, string> } {
+  switch (kind) {
+    case 'ellipse':
+      return { nodeKind: 'custom', content: { shape: 'ellipse', label: '' } };
+    case 'text':
+      // An empty label renders nothing on the canvas; start with a visible
+      // placeholder the author replaces with F2. Explicit '' stays allowed.
+      return { nodeKind: 'text', content: { label: 'Text' } };
+    case 'rectangle':
+      return { nodeKind: 'process', content: { label: '' } };
+  }
+}
+
+// I-03: click or drag creates at the theme default size; one history entry on
+// pointer-up; Escape mid-drag commits nothing (the caller drops the command).
+export function buildInsertShapeCommand(
+  page: ScenePage,
+  options: V2CreateShapeOptions
+): InsertNodeCommand {
+  const size = options.size ?? defaultSize(options.kind);
+  const { nodeKind, content } = shapeNodeKind(options.kind);
+  const node: SceneNode = {
+    id: options.id,
+    kind: nodeKind,
+    parentId: null,
+    layerId: page.layers[0]?.id ?? 'default',
+    zIndex: nextZIndex(page),
+    transform: { translation: { ...options.at }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+    size: { ...size },
+    content: { ...content },
+    appearance: {},
+    ports: [],
+    metadata: {},
+    extensions: {},
+  };
+  return {
+    kind: 'insert-node',
+    id: `create-node:${node.id}`,
+    label: `Create ${options.kind}`,
+    pageId: page.id,
+    index: page.nodes.length,
+    node,
+  };
+}
+
+// I-06: completion commits exactly one set-node; empty string is a valid label.
+export function buildSetNodeLabelCommand(
+  page: ScenePage,
+  nodeId: string,
+  label: string
+): SetNodeCommand {
+  const node = page.nodes.find((candidate) => candidate.id === nodeId);
+  if (!node) throw new RangeError(`Node "${nodeId}" was not found.`);
+  return {
+    kind: 'set-node',
+    id: `edit-label:${nodeId}`,
+    label: 'Edit label',
+    pageId: page.id,
+    before: node,
+    after: { ...node, content: { ...node.content, label } },
+  };
+}
+
+// Keyboard nudge and drag-move share one commit shape: snapshot, move, command.
+export function buildMoveNodesCommand(
+  page: ScenePage,
+  nodeIds: readonly string[],
+  delta: Point2d
+): DocumentCommand {
+  const snapshot = createTransformSnapshot(page, nodeIds);
+  const result = moveTransform(snapshot, delta, { snap: false });
+  return createTransformCommand(page.id, snapshot.nodes, result.nodes, 'Move selection');
+}
+
+function removeNodeCommands(
+  page: ScenePage,
+  nodeIds: ReadonlySet<string>
+): RemoveNodeCommand[] {
+  return page.nodes
+    .map((node, index) => ({ node, index }))
+    .filter(({ node }) => nodeIds.has(node.id))
+    .sort((left, right) => right.index - left.index)
+    .map(({ node, index }) => ({
+      kind: 'remove-node' as const,
+      id: `delete-node:${node.id}`,
+      label: 'Delete node',
+      pageId: page.id,
+      index,
+      node,
+    }));
+}
+
+function attachedConnectorIds(page: ScenePage, nodeIds: ReadonlySet<string>): Set<string> {
+  const attached = new Set<string>();
+  for (const connector of page.connectors) {
+    if (
+      (connector.source.nodeId && nodeIds.has(connector.source.nodeId)) ||
+      (connector.target.nodeId && nodeIds.has(connector.target.nodeId))
+    ) {
+      attached.add(connector.id);
+    }
+  }
+  return attached;
+}
+
+function removeConnectorCommands(
+  page: ScenePage,
+  connectorIds: ReadonlySet<string>
+): RemoveConnectorCommand[] {
+  return page.connectors
+    .map((connector, index) => ({ connector, index }))
+    .filter(({ connector }) => connectorIds.has(connector.id))
+    .sort((left, right) => right.index - left.index)
+    .map(({ connector, index }) => ({
+      kind: 'remove-connector' as const,
+      id: `delete-connector:${connector.id}`,
+      label: 'Delete connector',
+      pageId: page.id,
+      index,
+      connector,
+    }));
+}
+
+// Delete removes nodes plus connectors attached only to deleted nodes (I-09
+// basic); surviving connectors keep their other endpoint. Undo restores all.
+export function buildDeleteSelectionCommand(
+  page: ScenePage,
+  nodeIds: readonly string[],
+  connectorIds: readonly string[]
+): BatchDocumentCommand {
+  const nodes = new Set(nodeIds);
+  const connectors = new Set(connectorIds);
+  for (const attached of attachedConnectorIds(page, nodes)) connectors.add(attached);
+  const commands: DocumentCommand[] = [
+    ...removeConnectorCommands(page, connectors),
+    ...removeNodeCommands(page, nodes),
+  ];
+  if (commands.length === 0) throw new RangeError('Delete selection is empty.');
+  return { kind: 'batch', id: 'delete-selection', label: 'Delete selection', commands };
+}
+
+// Duplicate remaps IDs and internal bindings atomically (I-08 basic); edges to
+// omitted nodes are excluded. Offset keeps the copy visible next to the source.
+export function buildDuplicateSelectionCommand(
+  page: ScenePage,
+  nodeIds: readonly string[],
+  connectorIds: readonly string[],
+  mintId: (prefix: string) => string,
+  offset: Point2d = { x: 24, y: 24 }
+): BatchDocumentCommand {
+  const selectedNodes = new Set(nodeIds);
+  const selectedConnectors = new Set(connectorIds);
+  const idMap = new Map<string, string>();
+  for (const id of selectedNodes) idMap.set(id, mintId('node'));
+  const commands: DocumentCommand[] = [];
+  let nodeIndex = page.nodes.length;
+  let zIndex = nextZIndex(page);
+  for (const node of page.nodes) {
+    const copyId = idMap.get(node.id);
+    if (!copyId) continue;
+    const copy: SceneNode = {
+      ...node,
+      id: copyId,
+      parentId: (node.parentId && idMap.get(node.parentId)) || null,
+      zIndex: zIndex++,
+      transform: {
+        ...node.transform,
+        translation: {
+          x: node.transform.translation.x + offset.x,
+          y: node.transform.translation.y + offset.y,
+        },
+      },
+      content: { ...node.content },
+      appearance: { ...node.appearance },
+      ports: node.ports.map((port) => ({ ...port })),
+      metadata: { ...node.metadata },
+      extensions: { ...node.extensions },
+    };
+    commands.push({
+      kind: 'insert-node',
+      id: `duplicate-node:${copyId}`,
+      label: 'Duplicate node',
+      pageId: page.id,
+      index: nodeIndex,
+      node: copy,
+    });
+    nodeIndex += 1;
+  }
+  let connectorIndex = page.connectors.length;
+  for (const connector of page.connectors) {
+    if (!selectedConnectors.has(connector.id)) continue;
+    const sourceId = connector.source.nodeId;
+    const targetId = connector.target.nodeId;
+    if (!sourceId || !targetId || !idMap.has(sourceId) || !idMap.has(targetId)) continue;
+    const copyId = mintId('connector');
+    const copy: SceneConnector = {
+      ...connector,
+      id: copyId,
+      source: { ...connector.source, nodeId: idMap.get(sourceId)! },
+      target: { ...connector.target, nodeId: idMap.get(targetId)! },
+      waypoints: connector.waypoints.map((point) => ({ ...point })),
+      labels: connector.labels.map((label) => ({ ...label })),
+      appearance: { ...connector.appearance },
+      semantics: { ...connector.semantics },
+      metadata: { ...connector.metadata },
+      extensions: { ...connector.extensions },
+    };
+    commands.push({
+      kind: 'insert-connector',
+      id: `duplicate-connector:${copyId}`,
+      label: 'Duplicate connector',
+      pageId: page.id,
+      index: connectorIndex,
+      connector: copy,
+    });
+    connectorIndex += 1;
+  }
+  if (commands.length === 0) throw new RangeError('Duplicate selection is empty.');
+  return { kind: 'batch', id: 'duplicate-selection', label: 'Duplicate selection', commands };
+}
+
+export interface V2BoundConnectorOptions {
+  readonly id: string;
+  readonly sourceNodeId: string;
+  readonly targetNodeId: string;
+}
+
+// I-13 basic: bound-bound connector with an automatic route. Free endpoints,
+// ports, markers and labels arrive in V2-06.
+export function buildInsertBoundConnectorCommand(
+  page: ScenePage,
+  options: V2BoundConnectorOptions
+): InsertConnectorCommand {
+  const known = new Set(page.nodes.map((node) => node.id));
+  if (!known.has(options.sourceNodeId)) {
+    throw new RangeError(`Connector source "${options.sourceNodeId}" was not found.`);
+  }
+  if (!known.has(options.targetNodeId)) {
+    throw new RangeError(`Connector target "${options.targetNodeId}" was not found.`);
+  }
+  return {
+    kind: 'insert-connector',
+    id: `create-connector:${options.id}`,
+    label: 'Connect shapes',
+    pageId: page.id,
+    index: page.connectors.length,
+    connector: {
+      id: options.id,
+      source: { nodeId: options.sourceNodeId, portId: null, anchor: null, point: null },
+      target: { nodeId: options.targetNodeId, portId: null, anchor: null, point: null },
+      route: { kind: 'direct', ownership: 'automatic' },
+      waypoints: [],
+      labels: [],
+      appearance: {},
+      semantics: {},
+      metadata: {},
+      extensions: {},
+    },
+  };
+}
