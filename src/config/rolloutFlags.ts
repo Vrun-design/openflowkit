@@ -1,6 +1,7 @@
 export type RolloutFlagKey =
   | 'relationSemanticsV1'
   | 'documentModelV2'
+  | 'v2Editor'
   | 'openCanvasDocumentV1'
   | 'openCanvasRendererV1'
   | 'openCanvasConnectorsV1'
@@ -48,6 +49,12 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     envVar: 'VITE_DOCUMENT_MODEL_V2',
     defaultEnabled: false,
     description: 'Extended document metadata for scenes, exports, and bindings',
+  },
+  v2Editor: {
+    key: 'v2Editor',
+    envVar: 'VITE_V2_EDITOR',
+    defaultEnabled: false,
+    description: 'Revisioned v2 editing session as the single commit path (no legacy write-back)',
   },
   openCanvasDocumentV1: {
     key: 'openCanvasDocumentV1',
@@ -250,6 +257,7 @@ export function isRolloutFlagEnabled(key: RolloutFlagKey): boolean {
 export const ROLLOUT_FLAGS: Record<RolloutFlagKey, boolean> = {
   relationSemanticsV1: isRolloutFlagEnabled('relationSemanticsV1'),
   documentModelV2: isRolloutFlagEnabled('documentModelV2'),
+  v2Editor: isRolloutFlagEnabled('v2Editor'),
   openCanvasDocumentV1: isRolloutFlagEnabled('openCanvasDocumentV1'),
   openCanvasRendererV1: isRolloutFlagEnabled('openCanvasRendererV1'),
   openCanvasConnectorsV1: isRolloutFlagEnabled('openCanvasConnectorsV1'),
