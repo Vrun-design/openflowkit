@@ -20,10 +20,14 @@ import {
   moveTransform,
 } from '../../domain/transforms/transformSelection';
 
-export const V2_DEFAULT_SHAPE_SIZE: Size2d = { width: 160, height: 72 };
-export const V2_DEFAULT_TEXT_SIZE: Size2d = { width: 160, height: 48 };
+import {
+  createShapeNode, nextNodeZIndex, DEFAULT_SHAPE_SIZE, DEFAULT_TEXT_SIZE, type ShapeKind,
+} from '../../domain/nodes/shapeNode';
 
-export type V2ShapeKind = 'rectangle' | 'ellipse' | 'text';
+export const V2_DEFAULT_SHAPE_SIZE = DEFAULT_SHAPE_SIZE;
+export const V2_DEFAULT_TEXT_SIZE = DEFAULT_TEXT_SIZE;
+
+export type V2ShapeKind = ShapeKind;
 
 export interface V2CreateShapeOptions {
   readonly kind: V2ShapeKind;
@@ -32,49 +36,13 @@ export interface V2CreateShapeOptions {
   readonly size?: Size2d;
 }
 
-function defaultSize(kind: V2ShapeKind): Size2d {
-  return kind === 'text' ? V2_DEFAULT_TEXT_SIZE : V2_DEFAULT_SHAPE_SIZE;
-}
-
-function nextZIndex(page: ScenePage): number {
-  return page.nodes.reduce((max, node) => Math.max(max, node.zIndex), -1) + 1;
-}
-
-function shapeNodeKind(kind: V2ShapeKind): { nodeKind: string; content: Record<string, string> } {
-  switch (kind) {
-    case 'ellipse':
-      return { nodeKind: 'custom', content: { shape: 'ellipse', label: '' } };
-    case 'text':
-      // An empty label renders nothing on the canvas; start with a visible
-      // placeholder the author replaces with F2. Explicit '' stays allowed.
-      return { nodeKind: 'text', content: { label: 'Text' } };
-    case 'rectangle':
-      return { nodeKind: 'process', content: { shape: 'rectangle', label: '' } };
-  }
-}
-
 // I-03: click or drag creates at the theme default size; one history entry on
 // pointer-up; Escape mid-drag commits nothing (the caller drops the command).
 export function buildInsertShapeCommand(
   page: ScenePage,
   options: V2CreateShapeOptions
 ): InsertNodeCommand {
-  const size = options.size ?? defaultSize(options.kind);
-  const { nodeKind, content } = shapeNodeKind(options.kind);
-  const node: SceneNode = {
-    id: options.id,
-    kind: nodeKind,
-    parentId: null,
-    layerId: page.layers[0]?.id ?? 'default',
-    zIndex: nextZIndex(page),
-    transform: { translation: { ...options.at }, rotationRadians: 0, scale: { x: 1, y: 1 } },
-    size: { ...size },
-    content: { ...content },
-    appearance: options.kind === 'text' ? {} : { fill: '#fdfdfb', stroke: '#555952', strokeWidth: 1.5 },
-    ports: [],
-    metadata: {},
-    extensions: {},
-  };
+  const node = createShapeNode(page, options);
   return {
     kind: 'insert-node',
     id: `create-node:${node.id}`,
@@ -196,7 +164,7 @@ export function buildDuplicateSelectionCommand(
   for (const id of selectedNodes) idMap.set(id, mintId('node'));
   const commands: DocumentCommand[] = [];
   let nodeIndex = page.nodes.length;
-  let zIndex = nextZIndex(page);
+  let zIndex = nextNodeZIndex(page);
   for (const node of page.nodes) {
     const copyId = idMap.get(node.id);
     if (!copyId) continue;

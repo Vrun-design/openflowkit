@@ -55,7 +55,7 @@ export function proposeFromIntent(
       const id = context.mintId('node');
       const label = `Step ${current.nodes.length + 1}`;
       const add = action('add_node', {
-        kind: 'process', id, label,
+        kind: 'rectangle', id, label,
         x: primary.transform.translation.x + primary.size.width + GAP,
         y: primary.transform.translation.y,
       }, document, pageId);

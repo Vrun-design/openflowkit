@@ -467,9 +467,22 @@ rollback procedure and verified result: unset VITE_V2_AI (verified: gate flag-of
   block). Full revert: git revert the six commits; no storage migration.
   Physical revert not performed.
 remaining limitations / next slice: local agent only (V2-11 providers); one
-  exchange in the panel, no thread; agent-added nodes are catalog 'process'
-  nodes (rounded) not the v2 toolbar rectangle — align when add_node grows a
-  shape input; ghost draws basic/freeform families only; read-only docs reach
-  the panel via ⌘J (creation toolbar is hidden read-only). Next: V2-10b
-  capability manifest / operation parity, V2-05 connectors.
+  exchange in the panel, no thread; ghost draws basic/freeform families only;
+  read-only docs reach the panel via ⌘J (creation toolbar is hidden read-only).
+  Next: V2-10b capability manifest / operation parity, V2-05 connectors.
 ```
+
+## V2-10b-1 — shape parity for add_node (2026-09-20)
+
+- `domain/nodes/shapeNode.ts` is the one factory for the toolbar's rectangle,
+  ellipse and text nodes; `v2EditCommands.buildInsertShapeCommand` and the
+  `add_node` action both call it. `add_node` accepts `kind: rectangle|ellipse|text`
+  (blank label allowed; catalog kinds still require one) and emits the identical
+  `create-node:<id>` insert command. Test: `src/agent/actions/addNode.test.ts`
+  asserts `toEqual` against the toolbar command for all three kinds.
+- Local agent `add-step-after-selection` now proposes a rectangle, so the ghost
+  and the applied node match manual creation (review.png).
+- Not touched: `mcp-server/src/generated/*` (regenerates from `src/agent` at its
+  own release; new kinds reach MCP clients then).
+- Validation: vitest (agent, v2, ai, graph), tsc, eslint, `check-v2-10a.mjs`,
+  `check-v2-polish.mjs` against a fresh flag-on build.

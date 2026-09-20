@@ -36,6 +36,8 @@ describe('local agent', () => {
     const added = page.nodes[3];
     expect(added.transform.translation).toEqual({ x: 100 + 48, y: 0 });
     expect(added.content.label).toBe('Step 4');
+    expect(added.content.shape).toBe('rectangle');
+    expect(added.appearance).toEqual({ fill: '#fdfdfb', stroke: '#555952', strokeWidth: 1.5 });
     expect(page.connectors.at(-1)).toMatchObject({ source: { nodeId: 'a' }, target: { nodeId: added.id } });
     expect(session.revision).toBe(1);
     expect(session.history.past).toHaveLength(1);
