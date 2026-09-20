@@ -52,7 +52,7 @@ describe('agent actions', () => {
 
   it('rejects invalid input and unknown references without touching the document', () => {
     expect(() => run('add_node', { label: '' })).toThrow();
-    expect(() => run('connect', { source: 'a', target: 'nope' })).toThrow(/unknown node/);
+    expect(() => run('connect', { source: 'a', target: 'nope' })).toThrow(/not found/);
     expect(() => run('move_node', { id: 'nope', x: 0, y: 0 })).toThrow(/not found/);
     expect(run('set_label', { id: 'a', label: 'A' }).changed).toBe(false);
   });

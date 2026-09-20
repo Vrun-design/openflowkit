@@ -30,16 +30,16 @@ const gap = (operation: string, surface: CapabilityRow['surface'], closes: strin
 export const CAPABILITY_MANIFEST: readonly CapabilityRow[] = [
   shipped('Read document and page', 'canvas', 'get_document', 'src/opencanvas/application/session/commit-path.test.ts'),
   shipped('Create rectangle / ellipse / text', 'toolbar', 'add_node', 'src/agent/actions/addNode.test.ts'),
-  shipped('Connect two nodes', 'toolbar', 'connect', 'src/agent/runAction.test.ts'),
+  shipped('Connect two nodes / free arrow', 'toolbar', 'connect', 'src/agent/actions/parity.test.ts'),
   shipped('Rename node', 'keyboard', 'set_label', 'src/opencanvas/application/session/commit-path.test.ts'),
   shipped('Fill / stroke / width / dash / opacity', 'context-bar', 'set_style', 'src/agent/actions/setStyle.test.ts'),
-  shipped('Move node', 'canvas', 'move_node', 'src/agent/runAction.test.ts'),
-  shipped('Delete node', 'keyboard', 'delete_node', 'src/agent/runAction.test.ts'),
-  gap('Duplicate selection', 'context-bar', 'V2-10b-3'),
-  gap('Resize / rotate', 'canvas', 'V2-10b-3'),
-  gap('Free arrow (unbound endpoints)', 'toolbar', 'V2-05'),
-  gap('Delete connector', 'context-bar', 'V2-10b-3'),
-  gap('Rename document', 'document-bar', 'V2-10b-3'),
+  shipped('Move / nudge node', 'canvas', 'move_node', 'src/agent/actions/parity.test.ts'),
+  shipped('Delete node', 'keyboard', 'delete_node', 'src/agent/actions/parity.test.ts'),
+  shipped('Duplicate selection', 'context-bar', 'duplicate_nodes', 'src/agent/actions/parity.test.ts'),
+  shipped('Delete connector', 'context-bar', 'delete_connector', 'src/agent/actions/parity.test.ts'),
+  shipped('Rename document', 'document-bar', 'rename_document', 'src/agent/actions/parity.test.ts'),
+  gap('Resize / rotate', 'canvas', 'V2-10b-5'),
+  gap('Connector endpoint re-bind / waypoints', 'canvas', 'V2-05'),
 ];
 
 export function manifestCoverage(): { readonly shipped: number; readonly total: number } {

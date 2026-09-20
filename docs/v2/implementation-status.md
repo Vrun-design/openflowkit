@@ -507,3 +507,20 @@ remaining limitations / next slice: local agent only (V2-11 providers); one
   the action. 7 shipped / 12 rows.
 - Not yet exposed over MCP (V2-10c pairs the live bridge; `mcp-server/` is
   untouched).
+
+## V2-10b-4 — record parity for every v2 operation (2026-09-20)
+
+- `presentation/v2/v2EditCommands.ts` moved to `domain/commands/sceneEdits.ts`
+  so agent actions and the editor share one builder per operation.
+- Actions now emit the editor's own records: `connect` without sides is the
+  toolbar arrow (`create-connector:<id>`, auto-anchored, free `{x,y}` end
+  allowed; sides keep the legacy port path), `move_node` is a nudge
+  (`buildMoveNodesCommand`), `delete_node` is Backspace (`delete-selection`,
+  descendants included). New: `delete_connector`, `duplicate_nodes` (⌘D, returns
+  minted ids), `rename_document`. `src/agent/actions/parity.test.ts` asserts
+  `toEqual` against the manual builders for all six; manifest 10 shipped / 12
+  (gaps: resize/rotate → V2-10b-5, connector re-bind/waypoints → V2-05).
+- Behaviour change for legacy MCP callers: `connect` without sides no longer
+  adds side ports (it draws the same arrow a person draws); `delete_node` and
+  `move_node` records change id/label only. `mcp-server/` untouched.
+- Validation: vitest (agent 20, opencanvas 696), tsc, eslint.

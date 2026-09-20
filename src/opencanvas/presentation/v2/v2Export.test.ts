@@ -8,7 +8,7 @@ import {
   buildInsertConnectorCommand,
   buildInsertShapeCommand,
   buildSetNodeLabelCommand,
-} from './v2EditCommands';
+} from '../../domain/commands/sceneEdits';
 import { buildV2JsonExport, buildV2SvgExport } from './v2Export';
 
 function labeledConnectedDocument() {

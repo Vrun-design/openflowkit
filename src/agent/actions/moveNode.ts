@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { buildMoveNodesCommand } from '@/opencanvas/domain/commands/sceneEdits';
 import { defineAction, requireNode } from './defineAction';
 
 export const moveNode = defineAction({
@@ -6,14 +7,11 @@ export const moveNode = defineAction({
   description: 'Move a node to an absolute position on the page.',
   schema: z.object({ id: z.string().min(1), x: z.number().finite(), y: z.number().finite() }),
   run: (input, { page }) => {
-    const node = requireNode(page, input.id);
-    const translation = { x: input.x, y: input.y };
+    const { translation } = requireNode(page, input.id).transform;
+    const delta = { x: input.x - translation.x, y: input.y - translation.y };
     return {
-      command: {
-        kind: 'set-node', id: `move-node:${node.id}`, label: 'Move node', pageId: page.id,
-        before: node, after: { ...node, transform: { ...node.transform, translation } },
-      },
-      output: { id: node.id },
+      command: delta.x === 0 && delta.y === 0 ? null : buildMoveNodesCommand(page, [input.id], delta),
+      output: { id: input.id },
     };
   },
 });

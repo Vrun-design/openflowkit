@@ -1,7 +1,7 @@
-import { applyDocumentCommand } from '../../domain/commands/execute';
-import type { ScenePage } from '../../domain/document/types';
+import { applyDocumentCommand } from './execute';
+import type { ScenePage } from '../document/types';
 import { describe, expect, it } from 'vitest';
-import { createEmptyV2Document, createEmptyV2Page, firstV2Page } from './v2Document';
+import { createEmptyV2Document, createEmptyV2Page, firstV2Page } from '../../presentation/v2/v2Document';
 import {
   buildDeleteSelectionCommand,
   buildDuplicateSelectionCommand,
@@ -9,7 +9,7 @@ import {
   buildInsertShapeCommand,
   buildMoveNodesCommand,
   buildSetNodeLabelCommand,
-} from './v2EditCommands';
+} from './sceneEdits';
 
 function emptyPage(): ScenePage {
   return createEmptyV2Page();

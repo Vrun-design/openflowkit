@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildInsertShapeCommand } from '@/opencanvas/presentation/v2/v2EditCommands';
+import { buildInsertShapeCommand } from '@/opencanvas/domain/commands/sceneEdits';
 import { createTestDocument, createTestNode } from '@/opencanvas/testing/builders/documentBuilder';
 import { resolveAgentActionCommand } from '../runAction';
 import { addNode } from './addNode';

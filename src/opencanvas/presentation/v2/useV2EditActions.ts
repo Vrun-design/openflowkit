@@ -10,7 +10,7 @@ import {
   buildDeleteSelectionCommand,
   buildDuplicateSelectionCommand,
   buildMoveNodesCommand,
-} from './v2EditCommands';
+} from '../../domain/commands/sceneEdits';
 
 interface V2EditActionsOptions {
   readonly commit: (command: DocumentCommand) => void;

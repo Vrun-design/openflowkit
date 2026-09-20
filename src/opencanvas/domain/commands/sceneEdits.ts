@@ -1,3 +1,6 @@
+// Command builders for every v2 editor operation. The toolbar, keyboard and
+// agent actions all build records here so their history entries match.
+// Pure: no session, no store, no React.
 import type {
   BatchDocumentCommand,
   DocumentCommand,
@@ -6,23 +9,23 @@ import type {
   RemoveConnectorCommand,
   RemoveNodeCommand,
   SetNodeCommand,
-} from '../../domain/commands/types';
+} from './types';
 import type {
   ConnectorEndpoint,
   SceneConnector,
   SceneNode,
   ScenePage,
-} from '../../domain/document/types';
-import type { Point2d, Size2d } from '../../domain/geometry/types';
+} from '../document/types';
+import type { Point2d, Size2d } from '../geometry/types';
 import {
   createTransformCommand,
   createTransformSnapshot,
   moveTransform,
-} from '../../domain/transforms/transformSelection';
+} from '../transforms/transformSelection';
 
 import {
   createShapeNode, nextNodeZIndex, DEFAULT_SHAPE_SIZE, DEFAULT_TEXT_SIZE, type ShapeKind,
-} from '../../domain/nodes/shapeNode';
+} from '../nodes/shapeNode';
 
 export const V2_DEFAULT_SHAPE_SIZE = DEFAULT_SHAPE_SIZE;
 export const V2_DEFAULT_TEXT_SIZE = DEFAULT_TEXT_SIZE;

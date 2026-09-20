@@ -4,7 +4,7 @@ import type { DocumentCommand } from '../../domain/commands/types';
 import type { ScenePage } from '../../domain/document/types';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import { sameRect } from './V2ContextBar';
-import { buildSetNodeLabelCommand } from './v2EditCommands';
+import { buildSetNodeLabelCommand } from '../../domain/commands/sceneEdits';
 import type { V2EditingState } from './V2CanvasHost';
 
 interface V2LabelEditingOptions {

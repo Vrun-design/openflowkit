@@ -44,7 +44,7 @@ import {
   buildInsertConnectorCommand,
   buildInsertShapeCommand,
   type V2ShapeKind,
-} from './v2EditCommands';
+} from '../../domain/commands/sceneEdits';
 import type { V2Tool } from './V2CreationToolbar';
 
 const CLICK_THRESHOLD_PX = 4;
