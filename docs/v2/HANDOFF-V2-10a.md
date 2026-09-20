@@ -30,6 +30,15 @@ the first real end-to-end proof of that inside `/v2/:id`. It is deliberately
 provider-free: the proposal source is a deterministic local "agent" so the whole
 loop is testable offline. BYOK/provider selection is V2-11, not this slice.
 
+Destination (design for it now, build only 10a): external clients — Claude
+Code, Codex, OpenCode — pair with the live canvas over MCP (V2-10c/d) and drive
+every shipped authoring operation, canvas settings included, with the same
+records a human edit produces (`agent-native-spec.md` gates 1–2). So the
+proposal session you build here must be the object an external
+"propose-for-review" request creates later: a plain data structure fed by
+commands, no UI-only path, no React in `application/ai`. The panel is just the
+first client.
+
 Done = a user in `/v2/:id` can open the agent panel, request a proposal, see the
 pending changes as a live ghost preview on the canvas and as a review list,
 accept/reject per change, apply the accepted set as ONE undoable history entry
