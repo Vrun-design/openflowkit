@@ -409,3 +409,67 @@ sometimes needs two tries, browser page zooms on aggressive pinch, overall jerk.
   `check-v2-04.mjs` and `check-v2-polish.mjs` against the flag-on build.
 - Open: connector body drag inserts a waypoint (no whole-arrow move) — owner
   report unclear; V2-05 connector work. Firefox/WebKit not installed locally.
+
+## V2-10a — agent proposals in the v2 editor (2026-09-20)
+
+```text
+change_id: V2-10a (commits 7d4f5d9, e7f2d58, 4861779, f347cc6, bf01abe, bf01abe+docs)
+problem and user-visible result: an agent proposes edits inside /v2/:id; the
+  user sees them as a ghost on the canvas and a per-change review list,
+  accepts/rejects, applies the accepted set as ONE undoable history entry
+  attributed to the agent, undoes it with ⌘Z, and is refused with a visible
+  stale state if the document moved on. Provider-free: a deterministic local
+  agent supplies three intents so the loop is testable offline.
+requirement IDs / dependencies: agent-native-spec "Transactions and authorized
+  autonomy" (expected revision, request id idempotency, typed stale conflict,
+  attribution without provider keys); release gate 2 in miniature (agent and
+  manual commits produce equivalent records). Depends on V2-02 session, V2-04.
+existing implementation reused: application/ai/sceneProposal.ts,
+  src/agent/actions + runAction.ts, design-system AgentPanel/ProposalReview/
+  ProposalBar/ProvenanceBadge, PixiNodeRenderer/PixiConnectorRenderer,
+  useV2Preferences, sr-only live region, useV2TestApi.
+exact files touched: src/config/rolloutFlags.ts; src/opencanvas/v2Graph.test.ts;
+  domain/commands/{types,execute}.ts (attribution); application/ai/
+  {sceneProposal,proposalSession,localAgent}.ts + tests; application/session/
+  useDocumentSession.ts (commit expectedRevision); infrastructure/pixi/
+  {PixiProposalPreview.ts,+test,PixiRendererHost.ts}; presentation/v2/
+  {useV2Proposal.ts,+test,V2AgentPanel.tsx,V2EditorPage.tsx,V2Chrome.tsx,
+  V2CreationToolbar.tsx,useV2Keyboard.ts,useV2Preferences.ts,useV2TestApi.ts,
+  v2EditorPage.css}; scripts/check-v2-10a.mjs; docs (this, ADR-004, HANDOFF).
+feature flag and off-state behavior: v2Ai (VITE_V2_AI, default off). Off: no
+  Agent button in the creation toolbar, ⌘J inert, getProposal() idle; nothing
+  else changes (verified by the gate's flag-off block on port 4192).
+schema/data impact: BatchDocumentCommand gains optional attribution; documents
+  unchanged. Preference agentOpen added to localStorage prefs.
+acceptance cases and observed results: unit — proposalSession (9: empty/dup
+  rejected, preview = sequential apply, reject drops from preview and batch,
+  null when nothing accepted, StaleProposalError at revision+1, attribution on
+  batch and inverse, batches flattened, labels for all six action kinds incl.
+  unicode); localAgent (4: add-step geometry+connector, precondition errors,
+  label-unlabeled equals manual renames through the session, tidy-row);
+  useV2Proposal (7: idle→ready, failed, decide+apply once+double-apply refused,
+  stale on external commit, session stale rethrow, read-only never commits,
+  discard); PixiProposalPreview (1). Browser gate check-v2-10a.mjs: ⌘J opens,
+  request→ready, ghost visible via diagnostics, reject one → Apply (1), one
+  revision, rejected connector absent, announcement text, ⌘Z restores prior
+  document deepEqual, redo restores, mouse move → stale (Apply disabled, ghost
+  cleared, stale copy visible), re-request ok, Escape chain
+  (selection→panel), flag-off block, zero page errors.
+commands run / revision / environment / evidence paths: npx tsc --noEmit;
+  npx eslint src --max-warnings=0; npx vitest run; VITE_V2_EDITOR=1 VITE_V2_AI=1
+  npm run build + vite preview :4191; VITE_V2_EDITOR=1 vite build (AI off) +
+  preview :4192; V2_BASE_URL=http://127.0.0.1:4191
+  V2_OFF_BASE_URL=http://127.0.0.1:4192 node scripts/check-v2-10a.mjs; plus
+  check-v2-04.mjs and check-v2-polish.mjs. Node v25.8.1, macOS arm64, Chromium
+  SwiftShader. Evidence: docs/evidence/v2-10a/{review,stale}.png, result.json
+  (ignored).
+rollback procedure and verified result: unset VITE_V2_AI (verified: gate flag-off
+  block). Full revert: git revert the six commits; no storage migration.
+  Physical revert not performed.
+remaining limitations / next slice: local agent only (V2-11 providers); one
+  exchange in the panel, no thread; agent-added nodes are catalog 'process'
+  nodes (rounded) not the v2 toolbar rectangle — align when add_node grows a
+  shape input; ghost draws basic/freeform families only; read-only docs reach
+  the panel via ⌘J (creation toolbar is hidden read-only). Next: V2-10b
+  capability manifest / operation parity, V2-05 connectors.
+```

@@ -153,3 +153,4 @@
 .ofk-v2 .ofk-agent-panel .ofk-review { width: 100%; }
 .ofk-v2 .ofk-agent-panel .ofk-review-header { flex-wrap: wrap; }
 .ofk-v2 .ofk-agent-panel .ofk-review-bulk .ofk-button { white-space: nowrap; }
+.ofk-v2 .ofk-review-footer, .ofk-v2 .ofk-review-bulk, .ofk-v2 .ofk-review-actions { user-select: none; }

@@ -12,13 +12,31 @@ Modes: caveman (terse prose) + ponytail (minimal code). Honest scoring — prais
 
 ## State
 
-Branch `v2`, HEAD `ddc444b` (V2-04f: gestures survive Chrome capture loss; label Text pooling; per-frame camera settle). All green: `tsc`, `eslint --max-warnings=0`, 2276 vitest, both Playwright gates (`scripts/check-v2-04.mjs`, `scripts/check-v2-polish.mjs`) against `VITE_V2_EDITOR=1 npm run build` + `npx vite preview --host 127.0.0.1 --port 4191` with `V2_BASE_URL=http://127.0.0.1:4191`.
+Branch `v2`, HEAD = V2-10a docs commit (after `bf01abe`). All green: `tsc`,
+`eslint --max-warnings=0`, vitest, three Playwright gates
+(`scripts/check-v2-04.mjs`, `scripts/check-v2-polish.mjs`,
+`scripts/check-v2-10a.mjs`) against `VITE_V2_EDITOR=1 VITE_V2_AI=1 npm run build`
++ `npx vite preview --host 127.0.0.1 --port 4191` (`V2_BASE_URL=http://127.0.0.1:4191`);
+the 10a gate's flag-off block needs a second `VITE_V2_EDITOR=1 vite build --outDir <tmp>`
+served on 4192 (`V2_OFF_BASE_URL`).
 
-Delivered: V2-00 docs, V2-01 schema/geometry/migration, DS-01/02 design system + lab, V2-02 revisioned session, V2-03 isolated IndexedDB repo, V2-04 editor route (`/v2/:id` behind `VITE_V2_EDITOR`), V2-04e polish (live transform preview, resize/rotate, fill/stroke/dash/opacity, free arrows, dot grid, settings, rename, canvas color).
+Delivered: V2-00 docs, V2-01 schema/geometry/migration, DS-01/02 design system + lab,
+V2-02 revisioned session, V2-03 isolated IndexedDB repo, V2-04 editor route
+(`/v2/:id` behind `VITE_V2_EDITOR`), V2-04e/f polish + input reliability,
+**V2-10a agent proposals** (`VITE_V2_AI`): `application/ai/{proposalSession,localAgent}`,
+`useV2Proposal`, `V2AgentPanel`, `PixiProposalPreview`, sparkle button in the creation
+toolbar + ⌘J, one attributed batch per proposal, revision-based stale refusal
+(ADR-004).
 
-Isolation: `src/opencanvas/v2Graph.test.ts` — v2 roots import only V2_ROOTS + SHARED_KERNEL + adoption allowlist (`pixiPointerOperations.ts`, moves in V2-05). Legacy direct-writer ratchet (4 files). Legacy deletion at V2-15 = delete everything outside those.
+Isolation: `src/opencanvas/v2Graph.test.ts` — v2 roots (now incl. `application/ai`)
+import only V2_ROOTS + SHARED_KERNEL (now incl. `src/agent/{actions,runAction}`) +
+adoption allowlist (`pixiPointerOperations.ts`, moves in V2-05). Legacy direct-writer
+ratchet (4 files). Legacy deletion at V2-15 = delete everything outside those.
 
-Dev: `VITE_V2_EDITOR=1 VITE_V2_LAB=1 npx vite --host 127.0.0.1 --port 5173` → `/#/v2/<id>` and `/#/_labs/v2`. Kill stale dev servers before Playwright — a stale HMR server on the gate's port cost the cheap model an hour of phantom "spurious navigation" debugging.
+Dev: `VITE_V2_EDITOR=1 VITE_V2_AI=1 VITE_V2_LAB=1 npx vite --host 127.0.0.1 --port 5173`
+→ `/#/v2/<id>` and `/#/_labs/v2`. Kill stale servers first
+(`lsof -i :5173 -i :4191 -i :4192 -t | xargs kill -9`) — a stale HMR server on the
+gate's port cost an hour of phantom bugs, twice now.
 
 ## Lessons (apply to every prompt)
 
@@ -32,11 +50,22 @@ Dev: `VITE_V2_EDITOR=1 VITE_V2_LAB=1 npx vite --host 127.0.0.1 --port 5173` → 
 
 ## Next
 
-1. Owner confirmed `ddc444b` drag/marquee feel ("works perfectly"). Open from the click-through: connector body drag (inserts waypoint today; owner wanted select/move/delete — unclear which failed) → fold into V2-05.
-2. **V2-10a agent proposals** — reorder ahead of V2-05/06/07. This is the AI-native payoff; everything so far is the substrate (revision, stale rejection, inverses, single commit path). Wire one real agent action via `ProposalBar` (design-system already has `ProposalBar`, `ProposalReview`, `AgentPanel`, `AgentPresence`) through `resolveAgentActionCommand` → `session.commit` with review/accept/reject and undo. Opus writes the test file first.
-3. V2-05: move `pixiPointerOperations.ts` into v2 (allowlist → zero), ports, connector styles, groups.
-4. Remaining spine: V2-08 pages, V2-11/12 import/collab, V2-13 migration, V2-14 cutover, V2-15 legacy delete.
+1. Owner click-through of V2-10a (2 min): ⌘J → select a shape → "Add a step after the
+   selection" → hover rows → reject one → Apply → ⌘Z. Then move a shape while a
+   proposal is open and confirm the stale copy. Known: agent-added node is the rounded
+   catalog `process`, not the toolbar rectangle.
+2. V2-10b: capability manifest + operation parity (`agent-native-spec.md`
+   "Capability manifest"): every v2 toolbar/context-bar operation gets an action,
+   a manifest row and an equivalence test; `add_node` grows `shape`/paint so agent
+   rectangles match manual ones. Local agent intents can then cover styling.
+3. V2-05: move `pixiPointerOperations.ts` into v2 (allowlist → zero), ports, connector
+   styles, groups; open item — connector body drag inserts a waypoint (owner wanted
+   select/move/delete).
+4. V2-11 BYOK provider behind `useV2Proposal.request` (same async shape); thread
+   history in the panel (`Composer` is already provider-shaped).
+5. Remaining spine: V2-08 pages, V2-12 import/collab, V2-13 migration, V2-14 cutover,
+   V2-15 legacy delete.
 
 ## Roadmap estimate
 
-~45% by weight after 04e. Substrate + editor shell done; agent surface, multi-page, migration, and cutover remain. Parallel lanes are now possible (each lane = its own test file + worktree).
+~50% by weight after 10a. Substrate + editor shell done; agent surface, multi-page, migration, and cutover remain. Parallel lanes are now possible (each lane = its own test file + worktree).
