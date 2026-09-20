@@ -424,7 +424,7 @@ Start here:
 ```bash
 npm run dev        # development server at localhost:5173
 npm run test       # unit tests via Vitest
-npm run test:e2e   # end-to-end tests via Playwright
+npm run e2e        # end-to-end tests via Playwright
 npm run lint       # ESLint + TypeScript type-check
 ```
 
