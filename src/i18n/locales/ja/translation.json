@@ -1025,28 +1025,27 @@
           }
         },
         "groq": {
-          "meta-llama/llama-4-scout-17b-16e-instruct": {
-            "label": "Llama 4 Scout",
-            "hint": "Free tier · Very fast",
-            "category": "Speed",
-            "badge": "Free"
+          "openai/gpt-oss-120b": {
+            "label": "GPT-OSS 120B",
+            "hint": "最高性能 · 無料枠",
+            "category": "推論",
+            "badge": "無料"
           },
-          "meta-llama/llama-4-maverick-17b-128e-instruct": {
-            "label": "Llama 4 Maverick",
-            "hint": "More capable · Free tier",
-            "category": "Speed",
-            "badge": "Free"
+          "openai/gpt-oss-20b": {
+            "label": "GPT-OSS 20B",
+            "hint": "より高速 · 無料枠",
+            "category": "速度",
+            "badge": "無料"
           },
-          "qwen/qwen3-32b": {
-            "label": "Qwen 3 32B",
-            "hint": "Advanced reasoning · Tool use",
-            "category": "Reasoning"
+          "qwen/qwen3.8-27b": {
+            "label": "Qwen3.8 27B",
+            "hint": "高度な推論 · ツール利用",
+            "category": "推論"
           },
-          "llama-3.3-70b-versatile": {
-            "label": "Llama 3.3 70B Versatile",
-            "hint": "Versatile model",
-            "category": "Performance",
-            "badge": "Performance"
+          "groq/compound": {
+            "label": "Compound",
+            "hint": "Groq エージェントシステム · ツール内蔵",
+            "category": "パフォーマンス"
           }
         },
         "nvidia": {

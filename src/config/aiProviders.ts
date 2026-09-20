@@ -15,7 +15,7 @@ export const DEFAULT_MODELS: Record<AIProvider, string> = {
     gemini: 'gemini-2.5-flash-lite',
     openai: 'gpt-5-mini',
     claude: 'claude-sonnet-4-6',
-    groq: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    groq: 'openai/gpt-oss-120b',
     nvidia: 'meta/llama-4-maverick-17b-128e-instruct',
     cerebras: 'gpt-oss-120b',
     mistral: 'mistral-large-latest',
@@ -179,10 +179,10 @@ export const PROVIDER_MODELS: Record<AIProvider, { id: string; translateKey: str
         { id: 'claude-opus-4-6', translateKey: 'claude-opus-4-6' },
     ],
     groq: [
-        { id: 'meta-llama/llama-4-scout-17b-16e-instruct', translateKey: 'meta-llama/llama-4-scout-17b-16e-instruct' },
-        { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', translateKey: 'meta-llama/llama-4-maverick-17b-128e-instruct' },
-        { id: 'qwen/qwen3-32b', translateKey: 'qwen/qwen3-32b' },
-        { id: 'llama-3.3-70b-versatile', translateKey: 'llama-3.3-70b-versatile' },
+        { id: 'openai/gpt-oss-120b', translateKey: 'openai/gpt-oss-120b' },
+        { id: 'openai/gpt-oss-20b', translateKey: 'openai/gpt-oss-20b' },
+        { id: 'qwen/qwen3.8-27b', translateKey: 'qwen/qwen3.8-27b' },
+        { id: 'groq/compound', translateKey: 'groq/compound' },
     ],
     nvidia: [
         { id: 'meta/llama-4-scout-17b-16e-instruct', translateKey: 'meta/llama-4-scout-17b-16e-instruct' },

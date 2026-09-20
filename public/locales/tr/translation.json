@@ -1024,28 +1024,27 @@
           }
         },
         "groq": {
-          "meta-llama/llama-4-scout-17b-16e-instruct": {
-            "label": "Llama 4 Scout",
-            "hint": "Ücretsiz katman · Çok hızlı",
+          "openai/gpt-oss-120b": {
+            "label": "GPT-OSS 120B",
+            "hint": "En yetenekli · Ücretsiz katman",
+            "category": "Akıl yürütme",
+            "badge": "Ücretsiz"
+          },
+          "openai/gpt-oss-20b": {
+            "label": "GPT-OSS 20B",
+            "hint": "Daha hızlı · Ücretsiz katman",
             "category": "Hız",
             "badge": "Ücretsiz"
           },
-          "meta-llama/llama-4-maverick-17b-128e-instruct": {
-            "label": "Llama 4 Maverick",
-            "hint": "Daha yetenekli · Ücretsiz katman",
-            "category": "Hız",
-            "badge": "Ücretsiz"
-          },
-          "qwen/qwen3-32b": {
-            "label": "Qwen 3 32B",
+          "qwen/qwen3.8-27b": {
+            "label": "Qwen3.8 27B",
             "hint": "Gelişmiş akıl yürütme · Araç kullanımı",
-            "category": "Akıl Yürütme"
+            "category": "Akıl yürütme"
           },
-          "llama-3.3-70b-versatile": {
-            "label": "Llama 3.3 70B Versatile",
-            "hint": "Çok yönlü model",
-            "category": "Performans",
-            "badge": "Performans"
+          "groq/compound": {
+            "label": "Compound",
+            "hint": "Groq ajan sistemi · Yerleşik araçlar",
+            "category": "Performans"
           }
         },
         "nvidia": {
