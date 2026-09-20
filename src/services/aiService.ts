@@ -13,8 +13,9 @@ import {
     parseClaudeStreamDelta,
     parseOpenAIStreamDelta,
 } from './aiServiceSchemas';
+import type { AIProvider } from '@/store/types';
 
-export type AIProvider = 'gemini' | 'openai' | 'claude' | 'groq' | 'nvidia' | 'cerebras' | 'mistral' | 'openrouter' | 'ollama' | 'custom';
+export type { AIProvider };
 
 interface AiServiceError {
     code:
