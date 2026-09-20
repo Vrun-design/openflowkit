@@ -16,7 +16,7 @@ import { detectWebGlCapability } from '../infrastructure/pixi/capabilities';
 import { PixiRendererHost, type PixiRendererStatus } from '../infrastructure/pixi/PixiRendererHost';
 import { PixiSpikeToolbar, type CanvasMode } from './PixiSpikeControls';
 import { PixiSpikeViewport } from './PixiSpikeViewport';
-import { selectionStatus, type PixiPointerOperation } from './pixiPointerOperations';
+import { selectionStatus, type PixiPointerOperation } from './v2/pointerOperations';
 import { usePixiDocumentHistory } from './usePixiDocumentHistory';
 import { usePixiConnectorActions } from './usePixiConnectorActions';
 import { usePixiConnectorSelection } from './usePixiConnectorSelection';

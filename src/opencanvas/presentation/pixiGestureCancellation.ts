@@ -4,7 +4,7 @@ import type { FreeformPointerOperation } from './pixiFreeformOperations';
 import type {
   AnchoredMarqueePointerOperation,
   TransformPointerOperation,
-} from './pixiPointerOperations';
+} from './v2/pointerOperations';
 
 export type ProductionCanvasPointerOperation =
   | {

@@ -1,32 +1,33 @@
+// Pointer-operation helpers shared by the v2 editor and (until V2-15) legacy surfaces.
+// Pure: selection math, marquee bounds, transform begin/update. Legacy may import; v2 never imports legacy.
 import {
   clearSelection,
   replaceSelection,
   toggleSelection,
   type CanvasSelection,
-} from '../application/selection/selection';
-import type { ScenePage } from '../domain/document/types';
-import { createBounds2d } from '../domain/geometry/bounds';
-import type { Bounds2d, Point2d } from '../domain/geometry/types';
+} from '../../application/selection/selection';
+import type { ScenePage } from '../../domain/document/types';
+import { createBounds2d } from '../../domain/geometry/bounds';
+import type { Bounds2d, Point2d } from '../../domain/geometry/types';
 import {
   createTransformSnapshot,
   moveTransform,
   resizeTransform,
   rotateTransform,
-} from '../domain/transforms/transformSelection';
+} from '../../domain/transforms/transformSelection';
 import type {
   TransformHandle,
   TransformResult,
   TransformSnapshot,
-} from '../domain/transforms/types';
-import type { CanvasMode } from './PixiSpikeControls';
-import type { ConnectorPointerOperation } from './pixiConnectorOperations';
-import type { CanvasCamera } from '../domain/camera/types';
-import { worldToScreen } from '../domain/camera/camera';
+} from '../../domain/transforms/types';
+import type { V2ConnectorOperation } from './v2ConnectorOperations';
+import type { CanvasCamera } from '../../domain/camera/types';
+import { worldToScreen } from '../../domain/camera/camera';
 
 export type PixiPointerOperation =
   | { kind: 'pan'; pointerId: number; last: Point2d }
   | { kind: 'marquee'; pointerId: number; start: Point2d; current: Point2d; additive: boolean }
-  | ConnectorPointerOperation
+  | V2ConnectorOperation
   | TransformPointerOperation;
 
 export interface TransformPointerOperation {
@@ -82,7 +83,7 @@ export function selectionAfterClick(
   return additive ? toggleSelection(current, nodeId) : replaceSelection([nodeId]);
 }
 
-export function selectionStatus(selection: CanvasSelection, mode: CanvasMode): string {
+export function selectionStatus(selection: CanvasSelection, mode: 'select' | 'pan'): string {
   if (selection.nodeIds.length > 0) return `${selection.nodeIds.length} selected`;
   return mode === 'select' ? 'Drag empty space to select' : 'Drag to pan';
 }

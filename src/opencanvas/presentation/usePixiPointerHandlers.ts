@@ -29,7 +29,7 @@ import {
   transformLabel,
   updateTransformOperation,
   type PixiPointerOperation,
-} from './pixiPointerOperations';
+} from './v2/pointerOperations';
 import type { CanvasMode } from './PixiSpikeControls';
 
 interface PointerHandlerOptions {

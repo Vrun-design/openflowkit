@@ -65,7 +65,7 @@ import {
   updateTransformOperation,
   type AnchoredMarqueePointerOperation,
   type TransformPointerOperation,
-} from './pixiPointerOperations';
+} from './v2/pointerOperations';
 import { buildProductionTransformCommand } from '../application/active-document/productionTransformBridge';
 import { PRODUCTION_RENDERER_FAMILY_FLAGS } from '../application/renderer/rendererFamilyFlags';
 import {

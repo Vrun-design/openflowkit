@@ -12,7 +12,7 @@ import type { SceneConnector, ScenePage } from '../domain/document/types';
 import { pointAtPolylineRatio } from '../domain/geometry/polyline';
 import type { Point2d } from '../domain/geometry/types';
 import type { PixiRendererHost } from '../infrastructure/pixi/PixiRendererHost';
-import { arrowNudgeDelta } from './pixiPointerOperations';
+import { arrowNudgeDelta } from './v2/pointerOperations';
 
 type CommitConnector = (
   page: ScenePage,

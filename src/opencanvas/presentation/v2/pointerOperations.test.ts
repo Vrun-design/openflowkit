@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchoredMarqueeBounds, type AnchoredMarqueePointerOperation } from './pixiPointerOperations';
+import { anchoredMarqueeBounds, type AnchoredMarqueePointerOperation } from './pointerOperations';
 
 describe('production pointer operations', () => {
   it('keeps the marquee world origin anchored while the camera scrolls', () => {

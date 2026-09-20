@@ -31,7 +31,7 @@ import {
   transformLabel,
   updateTransformOperation,
   type PixiPointerOperation,
-} from '../pixiPointerOperations';
+} from './pointerOperations';
 import {
   beginConnectorOperation,
   connectorEditLabel,

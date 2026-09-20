@@ -9,7 +9,7 @@ import type { ConnectorEditHandle } from '../domain/connectors/editing';
 import { createTransformSnapshot, moveTransform } from '../domain/transforms/transformSelection';
 import type { TransformResult, TransformSnapshot } from '../domain/transforms/types';
 import { cycleConnectorId } from './pixiConnectorOperations';
-import { arrowNudgeDelta, isEditableTarget } from './pixiPointerOperations';
+import { arrowNudgeDelta, isEditableTarget } from './v2/pointerOperations';
 import type { CanvasMode } from './PixiSpikeControls';
 
 interface KeyboardShortcutOptions {

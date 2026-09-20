@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, type KeyboardEvent, type RefObject } from 'react';
-import { isEditableTarget } from '../pixiPointerOperations';
+import { isEditableTarget } from './pointerOperations';
 import type { V2Tool } from './V2CreationToolbar';
 
 interface V2KeyboardOptions {

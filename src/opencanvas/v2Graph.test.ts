@@ -36,10 +36,8 @@ const SHARED_KERNEL = [
 ];
 
 // Store-free legacy presentation files reused without moving yet. Each entry
-// names the sub-slice that moves it; the list must shrink to zero by V2-05.
-const ADOPTION_ALLOWLIST: readonly { path: string; moveTarget: string }[] = [
-  { path: 'presentation/pixiPointerOperations.ts', moveTarget: 'V2-05' },
-];
+// names the sub-slice that moves it. Empty since V2-05a; stays empty.
+const ADOPTION_ALLOWLIST: readonly { path: string; moveTarget: string }[] = [];
 
 // Pre-session v1 writers that stamp updatedAt and project to the legacy
 // ReactFlow store. They stay until their surfaces migrate to the session;

@@ -80,7 +80,7 @@ import {
   isEditableTarget,
   selectionAfterClick,
   updateTransformOperation,
-} from './pixiPointerOperations';
+} from './v2/pointerOperations';
 import {
   beginConnectorOperation,
   updateConnectorOperation,
