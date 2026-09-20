@@ -48,6 +48,8 @@ import {
 import type { V2Tool } from './V2CreationToolbar';
 
 const CLICK_THRESHOLD_PX = 4;
+// Object-snap reach in screen pixels; divided by zoom before it meets world units.
+const OBJECT_SNAP_PX = 6;
 const MIN_CREATE_SIZE = 8;
 const HANDLE_CURSORS: Record<TransformHandle, string> = {
   north: 'ns-resize', south: 'ns-resize', east: 'ew-resize', west: 'ew-resize',
@@ -146,6 +148,7 @@ export function useV2Pointer(options: V2PointerOptions) {
     const host = optionsRef.current.hostRef.current;
     host?.setMarquee(null);
     host?.setTransformPreview(null);
+    host?.setAlignmentGuides(null);
     host?.setConnectionPreview(null);
     optionsRef.current.onTransformPreview?.(null);
   }, []);
@@ -204,9 +207,15 @@ export function useV2Pointer(options: V2PointerOptions) {
         const distance = Math.hypot(worldPoint.x - operation.start.x, worldPoint.y - operation.start.y)
           * opts.cameraRef.current.zoom;
         if (!operation.result && distance < CLICK_THRESHOLD_PX) return;
-        const next = updateTransformOperation(operation, worldPoint, Boolean(opts.snapToGrid) && !event.altKey);
+        const next = updateTransformOperation(operation, worldPoint, Boolean(opts.snapToGrid) && !event.altKey,
+          event.altKey ? undefined : OBJECT_SNAP_PX / opts.cameraRef.current.zoom);
         operationRef.current = next;
         host.setTransformPreview(next.result);
+        host.setAlignmentGuides(
+          next.result?.guideX != null || next.result?.guideY != null
+            ? { x: next.result.guideX ?? null, y: next.result.guideY ?? null }
+            : null
+        );
         opts.onTransformPreview?.(next.result);
       } else if (operation.kind === 'create') {
         operationRef.current = { ...operation, currentScreen: point };
@@ -267,9 +276,11 @@ export function useV2Pointer(options: V2PointerOptions) {
         }
       } else if (operation.kind === 'transform') {
         const final = operation.result
-          ? updateTransformOperation(operation, host.screenToWorld(point), Boolean(opts.snapToGrid) && !event.altKey)
+          ? updateTransformOperation(operation, host.screenToWorld(point), Boolean(opts.snapToGrid) && !event.altKey,
+              event.altKey ? undefined : OBJECT_SNAP_PX / opts.cameraRef.current.zoom)
           : operation;
         host.setTransformPreview(null);
+        host.setAlignmentGuides(null);
         opts.onTransformPreview?.(null);
         if (final.result) {
           const changed = final.result.nodes.some(

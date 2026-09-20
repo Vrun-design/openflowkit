@@ -12,12 +12,13 @@ export interface AlignmentSnap {
 
 const NO_SNAP: AlignmentSnap = { x: null, y: null, dx: 0, dy: 0 };
 
+// Centre first: `nearest` keeps the first of equal distances, so ties prefer centre.
 function xAnchors(bounds: Bounds2d): readonly number[] {
-  return [bounds.x, bounds.x + bounds.width / 2, bounds.x + bounds.width];
+  return [bounds.x + bounds.width / 2, bounds.x, bounds.x + bounds.width];
 }
 
 function yAnchors(bounds: Bounds2d): readonly number[] {
-  return [bounds.y, bounds.y + bounds.height / 2, bounds.y + bounds.height];
+  return [bounds.y + bounds.height / 2, bounds.y, bounds.y + bounds.height];
 }
 
 function nearest(

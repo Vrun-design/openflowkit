@@ -4,7 +4,9 @@ import { createBounds2d, unionBounds } from '../geometry/bounds';
 import { buildNodeWorldMatrices, nodeWorldBounds, nodeWorldCenter } from '../scene/worldGeometry';
 import type { ScenePage } from '../document/types';
 import type { Bounds2d, Point2d } from '../geometry/types';
+import { snapBoundsToObjects } from './objectSnap';
 import type {
+  MoveTransformOptions,
   ResizeTransformInput,
   TransformHandle,
   TransformResult,
@@ -53,15 +55,25 @@ export function createTransformSnapshot(
 export function moveTransform(
   snapshot: TransformSnapshot,
   delta: Point2d,
-  options: { readonly gridSize?: number; readonly snap?: boolean } = {}
+  options: MoveTransformOptions = {}
 ): TransformResult {
   const gridSize = options.gridSize ?? DEFAULT_GRID_SIZE;
   const rawX = snapshot.bounds.x + delta.x;
   const rawY = snapshot.bounds.y + delta.y;
-  const x = options.snap === false ? rawX : snapValue(rawX, gridSize);
-  const y = options.snap === false ? rawY : snapValue(rawY, gridSize);
+  const gridX = options.snap === false ? rawX : snapValue(rawX, gridSize);
+  const gridY = options.snap === false ? rawY : snapValue(rawY, gridSize);
+  const object = options.objects
+    ? snapBoundsToObjects(
+        createBounds2d(gridX, gridY, snapshot.bounds.width, snapshot.bounds.height),
+        options.objects,
+        options.objectThreshold
+      )
+    : null;
+  const x = object?.bounds.x ?? gridX;
+  const y = object?.bounds.y ?? gridY;
   const applied = { x: x - snapshot.bounds.x, y: y - snapshot.bounds.y };
   return {
+    ...(object ? { guideX: object.guideX, guideY: object.guideY } : {}),
     nodes: snapshot.nodes.map((node) => ({
       ...node,
       transform: {

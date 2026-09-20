@@ -6,8 +6,8 @@ import { clearSelection, replaceSelection } from '../../application/selection/se
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import { useV2Pointer } from './useV2Pointer';
 
-function setup() {
-  const page = createTestDocument({ nodes: [createTestNode('a')] }).pages[0];
+function setup(extraNodes: ReturnType<typeof createTestNode>[] = []) {
+  const page = createTestDocument({ nodes: [createTestNode('a'), ...extraNodes] }).pages[0];
   const section = document.createElement('section');
   const canvas = document.createElement('canvas');
   section.append(canvas);
@@ -22,7 +22,7 @@ function setup() {
     pickConnectorHandle: vi.fn(() => null),
     pickTransformHandle: vi.fn((): 'south-east' | null => null),
     pickConnectHandle: vi.fn(() => null),
-    setMarquee: vi.fn(), setTransformPreview: vi.fn(), setConnectionPreview: vi.fn(),
+    setMarquee: vi.fn(), setTransformPreview: vi.fn(), setAlignmentGuides: vi.fn(), setConnectionPreview: vi.fn(),
     setConnectorSelection: vi.fn(), setConnectorPreview: vi.fn(),
   };
   const commit = vi.fn();
@@ -64,6 +64,26 @@ describe('V2 direct manipulation', () => {
       x: page.nodes[0].transform.translation.x + 17,
       y: page.nodes[0].transform.translation.y + 9,
     });
+  });
+
+  it('snaps a move onto another node and shows the guide; Alt bypasses; guide clears on release', () => {
+    const other = createTestNode('b', {
+      size: { width: 200, height: 50 },
+      transform: { translation: { x: 300, y: 300 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+    });
+    const { result, event, host, commit, page } = setup([other]);
+    const start = page.nodes[0].transform.translation;
+    // Drag so a's left edge lands 4px right of b's left edge (300) → snaps to 300.
+    act(() => result.current.handlePointerDown(event(100, 100)));
+    act(() => result.current.handlePointerMove(event(100 + 304 - start.x, 100)));
+    expect(host.setAlignmentGuides).toHaveBeenLastCalledWith({ x: 300, y: null });
+    expect(host.setTransformPreview.mock.calls.at(-1)?.[0].bounds.x).toBe(300);
+    act(() => result.current.handlePointerMove({ ...event(100 + 304 - start.x, 100), altKey: true }));
+    expect(host.setAlignmentGuides).toHaveBeenLastCalledWith(null);
+    expect(host.setTransformPreview.mock.calls.at(-1)?.[0].bounds.x).toBe(304);
+    act(() => result.current.handlePointerUp(event(100 + 304 - start.x, 100)));
+    expect(host.setAlignmentGuides).toHaveBeenLastCalledWith(null);
+    expect(commit.mock.calls[0][0].after.transform.translation.x).toBe(300);
   });
 
   it('finishes a drag from a window pointerup after the browser drops capture', () => {

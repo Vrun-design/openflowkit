@@ -907,8 +907,9 @@ describe('OpenCanvas editor surface', () => {
     const surface = await mounted();
     fireEvent.pointerDown(surface, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
     // Dragging node-1 right by 396 puts its left edge 4px from node-2's left edge.
+    // Same widths → left/centre/right all tie; ties prefer the centre line (484).
     fireEvent.pointerMove(surface, { pointerId: 1, clientX: 406, clientY: 10 });
-    expect(setAlignmentGuides).toHaveBeenLastCalledWith(expect.objectContaining({ x: 400 }));
+    expect(setAlignmentGuides).toHaveBeenLastCalledWith(expect.objectContaining({ x: 484 }));
     const preview = setTransformPreview.mock.calls.at(-1)?.[0];
     expect(preview.bounds.x).toBe(400);
     fireEvent.pointerUp(surface, { pointerId: 1, clientX: 406, clientY: 10 });

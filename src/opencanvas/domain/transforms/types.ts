@@ -22,6 +22,17 @@ export interface TransformResult {
   readonly bounds: Bounds2d;
   readonly snappedX: boolean;
   readonly snappedY: boolean;
+  /** World line the selection snapped to another object on; only set when `objects` was given. */
+  readonly guideX?: number | null;
+  readonly guideY?: number | null;
+}
+
+export interface MoveTransformOptions {
+  readonly gridSize?: number;
+  readonly snap?: boolean;
+  /** World bounds of non-selected nodes to snap against (after the grid). */
+  readonly objects?: readonly Bounds2d[];
+  readonly objectThreshold?: number;
 }
 
 export interface ResizeTransformInput {

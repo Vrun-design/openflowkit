@@ -50,6 +50,33 @@ try {
   await page.mouse.move(moved.x + 57, moved.y + 34, { steps: 4 });
   await page.mouse.up();
   await page.waitForFunction(() => window.__V2__.getState().revision === 3);
+  // V2-05a: object snapping. A second rectangle dragged to within 4px of the first's
+  // left edge snaps onto it and shows a guide while dragging.
+  await page.getByTestId('v2-canvas').focus();
+  await page.keyboard.press('r');
+  await page.mouse.click(900, 700);
+  await page.waitForFunction(() => window.__V2__.getState().nodes.length === 2);
+  const secondId = (await state()).nodes.find((nodeId) => nodeId !== id);
+  const firstRect = await rect(id);
+  const secondRect = await rect(secondId);
+  const revisionBeforeSnap = (await state()).revision;
+  await page.mouse.move(secondRect.x + 30, secondRect.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(firstRect.x + 4 + 30, secondRect.y + 20, { steps: 10 });
+  await page.waitForTimeout(100);
+  assert.equal((await page.evaluate(() => window.__V2__.getRenderDiagnostics())).alignmentGuidesVisible, true,
+    'alignment guide must show while snapped');
+  await page.screenshot({ path: `${evidence}/snap.png` });
+  await page.mouse.up();
+  await page.waitForFunction((rev) => window.__V2__.getState().revision === rev + 1, revisionBeforeSnap);
+  assert.equal((await page.evaluate(() => window.__V2__.getRenderDiagnostics())).alignmentGuidesVisible, false);
+  const snappedNodes = (await doc()).pages[0].nodes;
+  const a = snappedNodes.find((node) => node.id === id);
+  const b = snappedNodes.find((node) => node.id === secondId);
+  assert.ok(Math.abs(b.transform.translation.x - a.transform.translation.x) < 0.01, 'left edges must snap');
+  const reselect = await rect(id);
+  await page.mouse.click(reselect.x + reselect.width / 2, reselect.y + reselect.height / 2);
+  await page.waitForFunction((nodeId) => window.__V2__.getState().selectedNodes[0] === nodeId, id);
   const beforeResize = (await doc()).pages[0].nodes[0];
   const resizeRect = await rect(id);
   // Stay one screen pixel inside the 14px handle hit target. Exact fractional
@@ -62,7 +89,7 @@ try {
   await page.mouse.down();
   await page.mouse.move(resizeHandle.x + 32, resizeHandle.y + 24, { steps: 8 });
   await page.mouse.up();
-  await page.waitForFunction(() => window.__V2__.getState().revision === 4);
+  await page.waitForFunction(() => window.__V2__.getState().revision === 6);
   const resizedNode = (await doc()).pages[0].nodes[0];
   const resizedRect = await rect(id);
   // Canonical transforms preserve intrinsic size and resize through scale.
@@ -141,7 +168,7 @@ try {
   const savedAppearance = (await doc()).pages[0].nodes[0].appearance;
   await page.waitForFunction(() => window.__V2__.getState().save === 'saved');
   await page.reload();
-  await page.waitForFunction(() => window.__V2__?.getState().nodes.length === 1);
+  await page.waitForFunction(() => window.__V2__?.getState().nodes.length === 2);
   assert.deepEqual((await doc()).pages[0].nodes[0].appearance, savedAppearance);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(250);

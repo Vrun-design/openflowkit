@@ -65,6 +65,7 @@ export interface PixiRenderDiagnostics {
   readonly pendingFrame: boolean;
   readonly continuousTickerRunning: boolean;
   readonly proposalPreviewVisible: boolean;
+  readonly alignmentGuidesVisible: boolean;
 }
 
 interface PixiRendererHostOptions {
@@ -119,6 +120,7 @@ export class PixiRendererHost {
   private readonly marquee = new Graphics();
   private readonly connectionPreview = new Graphics();
   private readonly alignmentGuides = new Graphics();
+  private alignmentGuidesShown = false;
   private readonly onStatusChange?: PixiRendererHostOptions['onStatusChange'];
   private readonly connectorModelEnabled: boolean;
   private readonly nodeLayoutModelEnabled: boolean;
@@ -441,7 +443,8 @@ export class PixiRendererHost {
   /** Alignment guide lines (world coordinates) shown while a selection moves. */
   setAlignmentGuides(guides: { readonly x: number | null; readonly y: number | null } | null): void {
     this.alignmentGuides.clear();
-    if (guides && (guides.x !== null || guides.y !== null)) {
+    this.alignmentGuidesShown = Boolean(guides && (guides.x !== null || guides.y !== null));
+    if (this.alignmentGuidesShown && guides) {
       const view = visibleWorldBounds(this.camera, this.getViewportSize());
       const width = 1 / this.camera.zoom;
       if (guides.x !== null) {
@@ -620,7 +623,8 @@ export class PixiRendererHost {
       renderedNodeCount, renderedConnectorCount,
       detailLevel: this.viewportProjection?.detailLevel ?? 'full',
       pendingFrame: this.renderFrame !== null, continuousTickerRunning: this.app.ticker.started,
-      proposalPreviewVisible: this.proposalPreview.container.visible };
+      proposalPreviewVisible: this.proposalPreview.container.visible,
+      alignmentGuidesVisible: this.alignmentGuidesShown };
   }
 
   destroy(): void {

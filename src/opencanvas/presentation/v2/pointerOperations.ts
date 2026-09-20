@@ -8,6 +8,7 @@ import {
 } from '../../application/selection/selection';
 import type { ScenePage } from '../../domain/document/types';
 import { createBounds2d } from '../../domain/geometry/bounds';
+import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import type { Bounds2d, Point2d } from '../../domain/geometry/types';
 import {
   createTransformSnapshot,
@@ -38,6 +39,8 @@ export interface TransformPointerOperation {
   readonly start: Point2d;
   readonly snapshot: TransformSnapshot;
   readonly page: ScenePage;
+  /** World bounds of every non-selected node, computed once per drag (O(n) at begin). */
+  readonly others: readonly Bounds2d[];
   readonly result: TransformResult | null;
 }
 
@@ -121,6 +124,12 @@ export function beginTransformOperation(
   handle: TransformHandle | null,
   start: Point2d
 ): TransformPointerOperation {
+  const selected = new Set(nodeIds);
+  const matrices = buildNodeWorldMatrices(page);
+  // ponytail: every other node is a snap candidate; cull to the viewport if pages get huge.
+  const others = page.nodes
+    .filter((node) => !selected.has(node.id))
+    .map((node) => nodeWorldBounds(node, matrices.get(node.id)!));
   return {
     kind: 'transform',
     pointerId,
@@ -129,14 +138,17 @@ export function beginTransformOperation(
     start,
     snapshot: createTransformSnapshot(page, nodeIds),
     page,
+    others,
     result: null,
   };
 }
 
+/** `objectThreshold` in world units enables object snapping for moves; omit for grid only. */
 export function updateTransformOperation(
   operation: TransformPointerOperation,
   pointer: Point2d,
-  snap: boolean
+  snap: boolean,
+  objectThreshold?: number
 ): TransformPointerOperation {
   let result: TransformResult;
   switch (operation.transformKind) {
@@ -144,7 +156,9 @@ export function updateTransformOperation(
       result = moveTransform(
         operation.snapshot,
         { x: pointer.x - operation.start.x, y: pointer.y - operation.start.y },
-        { snap }
+        objectThreshold === undefined
+          ? { snap }
+          : { snap, objects: operation.others, objectThreshold }
       );
       break;
     case 'resize':
