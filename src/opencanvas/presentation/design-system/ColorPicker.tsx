@@ -1,4 +1,11 @@
-import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { clamp01, hexToHsva, hsvaToHex, type Hsva } from './color';
 export interface ColorPickerProps {
   /** Hex (#rrggbb or #rrggbbaa). `null` = mixed selection. */
@@ -22,6 +29,34 @@ const defaults = {
   presets: 'Presets',
   transparent: 'Transparent',
 };
+
+function rangeKeyValue(
+  event: ReactKeyboardEvent<HTMLInputElement>,
+  current: number,
+  min: number,
+  max: number,
+  step: number
+): number | null {
+  const multiplier = event.shiftKey ? 10 : 1;
+  switch (event.key) {
+    case 'ArrowLeft':
+    case 'ArrowDown':
+      return Math.max(min, current - step * multiplier);
+    case 'ArrowRight':
+    case 'ArrowUp':
+      return Math.min(max, current + step * multiplier);
+    case 'PageDown':
+      return Math.max(min, current - step * 10);
+    case 'PageUp':
+      return Math.min(max, current + step * 10);
+    case 'Home':
+      return min;
+    case 'End':
+      return max;
+    default:
+      return null;
+  }
+}
 /** HSV picker: pad + hue + alpha sliders, presets, hex and opacity fields. Pointer drags are immediate; keyboard steps the sliders. */
 export function ColorPicker({
   value,
@@ -111,6 +146,13 @@ export function ColorPicker({
           value={Math.round(hsva.h)}
           onChange={(e) => update({ h: Number(e.target.value) })}
           onPointerUp={() => onCommit?.(hsvaToHex(hsva, allowAlpha))}
+          onKeyDown={(event) => {
+            const h = rangeKeyValue(event, Math.round(hsva.h), 0, 360, 1);
+            if (h === null) return;
+            event.preventDefault();
+            update({ h });
+            onCommit?.(hsvaToHex({ ...hsva, h }, allowAlpha));
+          }}
         />
       </label>
       {allowAlpha && (
@@ -124,6 +166,14 @@ export function ColorPicker({
             value={Math.round(hsva.a * 100)}
             onChange={(e) => update({ a: Number(e.target.value) / 100 })}
             onPointerUp={() => onCommit?.(hsvaToHex(hsva, allowAlpha))}
+            onKeyDown={(event) => {
+              const percent = rangeKeyValue(event, Math.round(hsva.a * 100), 0, 100, 1);
+              if (percent === null) return;
+              event.preventDefault();
+              const a = percent / 100;
+              update({ a });
+              onCommit?.(hsvaToHex({ ...hsva, a }, allowAlpha));
+            }}
           />
         </label>
       )}

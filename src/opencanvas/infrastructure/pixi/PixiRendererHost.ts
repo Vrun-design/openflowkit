@@ -1,3 +1,5 @@
+import { PixiDotGrid } from './PixiDotGrid';
+import { PixiLiveTransformPreview } from './PixiLiveTransformPreview';
 import { Application, Container, Graphics } from 'pixi.js';
 import { screenToWorld, visibleWorldBounds, worldToScreen } from '../../domain/camera/camera';
 import {
@@ -64,6 +66,7 @@ export interface PixiRenderDiagnostics {
 }
 
 interface PixiRendererHostOptions {
+  readonly liveTransformPreview?: boolean;
   readonly onStatusChange?: (status: PixiRendererStatus) => void;
   readonly connectorModelEnabled?: boolean;
   readonly nodeLayoutModelEnabled?: boolean;
@@ -95,7 +98,12 @@ function abandonInitializedApplication(app: Application): void {
 
 export class PixiRendererHost {
   private readonly app = new Application();
+  private readonly livePreview: PixiLiveTransformPreview | null;
+  private previewResult: TransformResult | null = null;
+  private previewFrame: number | null = null;
   private readonly world = new Container();
+  private readonly dotGrid = new PixiDotGrid();
+  private showDotGrid = false;
   private readonly precisionGrid = new Graphics();
   private readonly connectorRenderer = new PixiConnectorRenderer();
   private readonly containerRenderer = new PixiContainerRenderer();
@@ -135,6 +143,7 @@ export class PixiRendererHost {
   private viewportProjection: ViewportSceneProjection | null = null;
 
   constructor(options: PixiRendererHostOptions = {}) {
+    this.livePreview = options.liveTransformPreview ? new PixiLiveTransformPreview() : null;
     this.onStatusChange = options.onStatusChange;
     this.connectorModelEnabled = options.connectorModelEnabled === true;
     this.nodeLayoutModelEnabled = options.nodeLayoutModelEnabled === true;
@@ -184,7 +193,8 @@ export class PixiRendererHost {
       this.connectionPreview,
       this.alignmentGuides
     );
-    this.app.stage.addChild(this.world, this.marquee);
+    if (this.livePreview) this.world.addChild(this.livePreview.container);
+    this.app.stage.addChild(this.dotGrid.graphics, this.world, this.marquee);
     const canvas = this.app.canvas as HTMLCanvasElement;
     canvas.className = 'pixi-spike__canvas';
     canvas.setAttribute('aria-label', 'PixiJS OpenCanvas renderer spike');
@@ -197,9 +207,21 @@ export class PixiRendererHost {
     return canvas;
   }
 
+  setDotGrid(visible: boolean): void {
+    this.showDotGrid = visible;
+    this.drawDotGrid();
+    this.requestRender();
+  }
+
+  private drawDotGrid(): void {
+    this.dotGrid.graphics.visible = this.showDotGrid;
+    if (this.showDotGrid) this.dotGrid.draw(this.camera, this.getViewportSize(), this.backgroundColor < 0x808080);
+  }
+
   /** Canvas ground color; applied at mount and live afterwards. */
   setBackground(background: number): void {
     this.backgroundColor = background;
+    this.drawDotGrid();
     if (this.app.renderer) {
       this.app.renderer.background.color.setValue(background);
       this.requestRender();
@@ -210,10 +232,18 @@ export class PixiRendererHost {
     const redrawNodes = shouldRedrawNodes(this.page, page);
     this.page = page;
     this.index = createSceneIndex(page);
-    this.selectedNodeIds = [];
-    this.primaryNodeId = null;
-    this.selectedConnectorId = null;
-    this.activeConnectorHandle = null;
+    const availableNodeIds = new Set(page.nodes.map((node) => node.id));
+    this.selectedNodeIds = this.selectedNodeIds.filter((id) => availableNodeIds.has(id));
+    if (!this.primaryNodeId || !availableNodeIds.has(this.primaryNodeId)) {
+      this.primaryNodeId = this.selectedNodeIds.at(-1) ?? null;
+    }
+    if (
+      this.selectedConnectorId &&
+      !page.connectors.some((connector) => connector.id === this.selectedConnectorId)
+    ) {
+      this.selectedConnectorId = null;
+      this.activeConnectorHandle = null;
+    }
     this.viewportProjection = this.createViewportProjection();
     this.rebuildScene(redrawNodes);
   }
@@ -222,6 +252,7 @@ export class PixiRendererHost {
     const cameraStartedAt = performance.now();
     this.camera = camera;
     this.applyCamera();
+    this.drawSelection();
     this.connectorRenderer.setZoom(camera.zoom);
 
     const overlayStartedAt = performance.now();
@@ -302,14 +333,14 @@ export class PixiRendererHost {
     });
     // Locked nodes stay selectable (their menu is how they get unlocked);
     // the pointer flow refuses to move them.
-    const states = this.page ? buildNodeStateMap(this.page) : null;
-    return [...hits].reverse().find((hit) => states?.get(hit.id)?.visible === true)?.id ?? null;
+    return [...hits].reverse().find((hit) => hit.visible)?.id ?? null;
   }
 
   pickConnector(screenPoint: Point2d): string | null {
     if (!this.page || !this.connectorModelEnabled) return null;
     const states = buildNodeStateMap(this.page);
-    const editable = (nodeId: string): boolean => {
+    const editable = (nodeId: string | null): boolean => {
+      if (nodeId === null) return true;
       const state = states.get(nodeId);
       return state?.visible === true && state.locked === false;
     };
@@ -426,6 +457,28 @@ export class PixiRendererHost {
   }
 
   setTransformPreview(result: TransformResult | null): void {
+    if (this.livePreview) {
+      const started = !this.previewResult && result !== null;
+      const ended = this.previewResult !== null && !result;
+      this.previewResult = result;
+      if (started || ended) this.rebuildScene();
+      this.selectionOverlay.graphics.visible = result === null;
+      if (!result) {
+        if (this.previewFrame !== null) cancelAnimationFrame(this.previewFrame);
+        this.previewFrame = null;
+        this.livePreview.clear();
+        this.requestRender();
+      } else if (this.previewFrame === null) {
+        this.previewFrame = requestAnimationFrame(() => {
+          this.previewFrame = null;
+          if (this.page && this.index && this.previewResult) {
+            this.livePreview?.draw(this.page, this.index, this.previewResult, this.camera.zoom);
+            this.renderNow();
+          }
+        });
+      }
+      return;
+    }
     if (!result || !this.page) this.transformOverlay.clear();
     else
       this.transformOverlay.draw(
@@ -509,6 +562,7 @@ export class PixiRendererHost {
   resize(): void {
     if (this.destroyed || !this.app.renderer) return;
     this.app.resize();
+    this.drawDotGrid();
     if (this.refreshViewportProjection()) this.rebuildScene();
     else this.updateLabelVisibility();
     this.requestRender();
@@ -539,6 +593,7 @@ export class PixiRendererHost {
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    if (this.previewFrame !== null) cancelAnimationFrame(this.previewFrame);
     if (this.renderFrame !== null) cancelAnimationFrame(this.renderFrame);
     if (this.app.renderer) {
       const canvas = this.app.canvas as HTMLCanvasElement;
@@ -552,8 +607,15 @@ export class PixiRendererHost {
   private rebuildScene(redrawNodes = true): void {
     if (!this.page || !this.index) return;
     this.drawPrecisionGrid();
-    const renderedNodeIds = this.viewportProjection?.nodeIds ?? null;
-    const renderedConnectorIds = this.viewportProjection?.connectorIds ?? null;
+    const excluded = new Set(this.previewResult?.nodes.map((node) => node.id));
+    const renderedNodeIds = excluded.size
+      ? new Set(this.page.nodes.filter((node) => !excluded.has(node.id)
+        && (!this.viewportProjection?.nodeIds || this.viewportProjection.nodeIds.has(node.id))).map((node) => node.id))
+      : this.viewportProjection?.nodeIds ?? null;
+    const renderedConnectorIds = excluded.size
+      ? new Set(this.page.connectors.filter((edge) => !excluded.has(edge.source.nodeId ?? '')
+        && !excluded.has(edge.target.nodeId ?? '')).map((edge) => edge.id))
+      : this.viewportProjection?.connectorIds ?? null;
     const detailLevel = this.viewportProjection?.detailLevel ?? 'full';
     this.connectorRenderer.draw(this.page, this.connectorModelEnabled, renderedConnectorIds);
     if (redrawNodes) {
@@ -620,7 +682,8 @@ export class PixiRendererHost {
       this.index,
       this.selectedNodeIds,
       this.primaryNodeId,
-      this.camera.zoom
+      this.camera.zoom,
+      this.livePreview !== null
     );
   }
 
@@ -628,6 +691,10 @@ export class PixiRendererHost {
     return (
       this.page?.connectors.find((connector) => connector.id === this.selectedConnectorId) ?? null
     );
+  }
+
+  getSelectedConnectorId(): string | null {
+    return this.selectedConnectorId;
   }
 
   private drawConnectorEditOverlay(): void {
@@ -647,6 +714,7 @@ export class PixiRendererHost {
   private applyCamera(): void {
     this.world.position.set(this.camera.x, this.camera.y);
     this.world.scale.set(this.camera.zoom);
+    this.drawDotGrid();
   }
 
   private updateLabelVisibility(): void {

@@ -1,3 +1,4 @@
+import type { V2SettingsProps } from './V2Settings';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { ToastItem } from '../design-system';
 import { V2CameraControls } from './V2CameraControls';
@@ -5,7 +6,7 @@ import { V2CreationToolbar, type V2Tool } from './V2CreationToolbar';
 import { V2DocumentBar } from './V2DocumentBar';
 import type { V2SaveStatus } from './useV2Autosave';
 
-interface V2ChromeProps {
+interface V2ChromeProps extends V2SettingsProps {
   readonly document: SceneDocumentV1;
   readonly saveStatus: V2SaveStatus;
   readonly canUndo: boolean;
@@ -19,6 +20,7 @@ interface V2ChromeProps {
   readonly onRetrySave: () => void;
   readonly onReload: () => void;
   readonly onToast: (toast: ToastItem) => void;
+  readonly onRename: (name: string) => void;
   readonly onToolChange: (tool: V2Tool) => void;
   readonly onZoomIn: () => void;
   readonly onZoomOut: () => void;
@@ -33,6 +35,8 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
   return (
     <>
       <V2DocumentBar
+        preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}
+        onPreferencesChange={props.onPreferencesChange}
         document={props.document}
         saveStatus={props.saveStatus}
         canUndo={props.canUndo}
@@ -43,9 +47,12 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         onRetrySave={props.onRetrySave}
         onReload={props.onReload}
         onToast={props.onToast}
+        onRename={props.onRename}
       />
       {props.readOnly ? null : <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange} />}
       <V2CameraControls
+        preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}
+        onPreferencesChange={props.onPreferencesChange}
         zoomPercent={props.zoomPercent}
         treeOpen={props.treeOpen}
         onZoomIn={props.onZoomIn}

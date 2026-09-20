@@ -47,7 +47,9 @@ export function Popover({
     if (!open) return;
     function place() {
       const anchor = anchorRef.current?.getBoundingClientRect();
-      const self = ref.current?.getBoundingClientRect();
+      // Entrance transforms shrink getBoundingClientRect. Use layout size so
+      // collision placement stays valid after the animation settles.
+      const self = ref.current ? { width: ref.current.offsetWidth, height: ref.current.offsetHeight } : null;
       if (!anchor || !self) return;
       const inset = foundation.layout.edgeInset;
       const vw = window.innerWidth,
@@ -109,6 +111,13 @@ export function Popover({
       window.removeEventListener('scroll', place, true);
     };
   }, [open, anchorRef, placement, gap]);
+  useEffect(() => {
+    if (!open || passive) return;
+    ref.current?.querySelector<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]'
+    )?.focus({ preventScroll: true });
+  }, [open, passive]);
+
   useEffect(() => {
     if (!open) return;
     const anchor = anchorRef.current;

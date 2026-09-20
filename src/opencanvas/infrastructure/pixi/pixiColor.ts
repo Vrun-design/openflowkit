@@ -11,6 +11,10 @@ export interface PixiPaintColor {
 }
 
 export function pixiPaintColor(value: string, fallback: number): PixiPaintColor {
+  if (value === 'transparent') return { color: 0, alpha: 0 };
+  if (/^#[0-9a-f]{8}$/i.test(value)) return {
+    color: Number.parseInt(value.slice(1, 7), 16), alpha: Number.parseInt(value.slice(7), 16) / 255,
+  };
   const normalized = normalizeHex(value);
   if (normalized) return { color: Number.parseInt(normalized.slice(1), 16), alpha: 1 };
   const rgba = value.match(

@@ -8,6 +8,14 @@ interface CommandBase {
   readonly pageId: string;
 }
 
+export interface SetDocumentNameCommand {
+  readonly kind: 'set-document-name';
+  readonly id: string;
+  readonly label: string;
+  readonly before: string;
+  readonly after: string;
+}
+
 export interface SetNodeCommand extends CommandBase {
   readonly kind: 'set-node';
   readonly before: SceneNode;
@@ -92,6 +100,7 @@ export interface BatchDocumentCommand {
 }
 
 export type DocumentCommand =
+  | SetDocumentNameCommand
   | SetNodeCommand
   | SetLayerCommand
   | InsertLayerCommand

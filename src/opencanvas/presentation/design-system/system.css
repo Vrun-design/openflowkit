@@ -325,6 +325,9 @@
   z-index: var(--ofk-layer-menu);
   border-radius: var(--ofk-radius-surface);
   max-width: min(400px, calc(100vw - 2 * var(--ofk-layout-edgeInset)));
+  max-height: calc(100dvh - 2 * var(--ofk-layout-edgeInset));
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 .ofk-tooltip {
   z-index: var(--ofk-layer-tooltip);

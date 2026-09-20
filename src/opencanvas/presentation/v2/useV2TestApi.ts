@@ -36,6 +36,7 @@ export function useV2TestApi(options: V2TestApiOptions) {
         tool: toolRef.current,
       }),
       getDocument: () => document,
+      getRenderDiagnostics: () => hostRef.current?.getRenderDiagnostics(),
       getNodeRect: (nodeId: string) => {
         const bounds = hostRef.current?.getNodeScreenBounds(nodeId);
         return bounds

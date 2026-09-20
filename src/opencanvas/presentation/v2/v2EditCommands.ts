@@ -49,7 +49,7 @@ function shapeNodeKind(kind: V2ShapeKind): { nodeKind: string; content: Record<s
       // placeholder the author replaces with F2. Explicit '' stays allowed.
       return { nodeKind: 'text', content: { label: 'Text' } };
     case 'rectangle':
-      return { nodeKind: 'process', content: { label: '' } };
+      return { nodeKind: 'process', content: { shape: 'rectangle', label: '' } };
   }
 }
 
@@ -70,7 +70,7 @@ export function buildInsertShapeCommand(
     transform: { translation: { ...options.at }, rotationRadians: 0, scale: { x: 1, y: 1 } },
     size: { ...size },
     content: { ...content },
-    appearance: {},
+    appearance: options.kind === 'text' ? {} : { fill: '#fdfdfb', stroke: '#555952', strokeWidth: 1.5 },
     ports: [],
     metadata: {},
     extensions: {},

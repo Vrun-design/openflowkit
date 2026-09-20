@@ -374,7 +374,7 @@ async function runJourney(browser, docId) {
     await page.mouse.move(720, 450);
     await page.mouse.wheel(0, 120);
     assert.equal(await page.getByRole('button', { name: /^Zoom \d+%$/ }).textContent(), zoomBefore, 'plain wheel pans, not zooms');
-    await page.getByTestId('v2-canvas').dispatchEvent('wheel', { deltaY: -120, clientX: 720, clientY: 450, ctrlKey: true, bubbles: true });
+    await page.locator('.ofk-v2-viewport canvas').dispatchEvent('wheel', { deltaY: -120, clientX: 720, clientY: 450, ctrlKey: true, bubbles: true });
     assert.notEqual(await page.getByRole('button', { name: /^Zoom \d+%$/ }).textContent(), zoomBefore, 'ctrl+wheel zooms');
     await page.keyboard.press('ControlOrMeta+a');
     current = await state(page);

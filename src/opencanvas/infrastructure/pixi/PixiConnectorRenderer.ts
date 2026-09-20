@@ -129,7 +129,7 @@ function drawSolidPath(
   graphics.stroke({ color: stroke.color, alpha: stroke.opacity, width: stroke.width });
 }
 
-function drawDashedPath(
+export function drawDashedPath(
   graphics: Graphics,
   samples: readonly Point2d[],
   stroke: ConnectorStrokePresentation
@@ -187,8 +187,8 @@ export class PixiConnectorRenderer {
       ...page,
       connectors: page.connectors.filter((connector) => {
         if (renderedConnectorIds && !renderedConnectorIds.has(connector.id)) return false;
-        return nodeStates.get(connector.source.nodeId)?.visible === true
-          && nodeStates.get(connector.target.nodeId)?.visible === true;
+        return (connector.source.nodeId === null || nodeStates.get(connector.source.nodeId)?.visible === true)
+          && (connector.target.nodeId === null || nodeStates.get(connector.target.nodeId)?.visible === true);
       }),
     };
     if (!advanced) {

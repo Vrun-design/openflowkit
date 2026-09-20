@@ -32,7 +32,11 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
 
   return useCallback((event: KeyboardEvent<HTMLElement>) => {
     const opts = optionsRef.current;
-    if (isEditableTarget(event.target)) return;
+    if (event.defaultPrevented || isEditableTarget(event.target)) return;
+    // Native chrome controls keep activation/navigation keys. Global tool and
+    // history shortcuts still work after choosing a tool with the mouse.
+    if (event.target instanceof HTMLElement && event.target.closest('button, [role="slider"], [role="menu"], [role="listbox"]')
+      && [' ', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
     if (event.key === ' ' && !event.repeat) {
       if (!opts.editingRef.current) {
         opts.onSpacePan(true);

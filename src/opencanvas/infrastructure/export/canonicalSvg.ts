@@ -1,3 +1,4 @@
+import { resolveNodeStroke } from '../../domain/nodes/nodeStroke';
 import { resolveAnnotationVisualStyle, resolveTextVisualStyle } from '@/theme';
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import { boundsFromPoints } from '../../domain/geometry/bounds';
@@ -233,6 +234,7 @@ function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' |
   const textFallback = theme === 'dark' ? '#f8fafc' : '#0f172a';
   const fill = safeColor(node.appearance.fill ?? node.content.backgroundColor, fillFallback);
   const stroke = safeColor(node.appearance.stroke ?? node.content.borderColor, strokeFallback);
+  const strokeStyle = resolveNodeStroke(node);
   const text = safeColor(node.appearance.textColor ?? node.content.textColor, textFallback);
   const outline = basic
     ? basicNodeOutlinePoints(basic.shape, node.size,
@@ -247,7 +249,7 @@ function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' |
     ? Math.min(1, Math.max(0, node.appearance.opacity)) : 1;
   return `<g data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}"${opacity < 1 ? ` opacity="${number(opacity)}"` : ''}>`
     + (sizing.clipContent ? `<defs><clipPath id="${clipId}"><path d="${pathData(outline)}"/></clipPath></defs>` : '')
-    + `<path d="${pathData(outline)}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>`
+    + `<path d="${pathData(outline)}" fill="${fill}" stroke="${stroke}" stroke-width="${number(strokeStyle.width)}"${strokeStyle.dash.length ? ` stroke-dasharray="${strokeStyle.dash.join(' ')}"` : ''}/>`
     + `<g${sizing.clipContent ? ` clip-path="url(#${clipId})"` : ''}>`
     + `<text x="${number(node.size.width / 2)}" y="${number(node.size.height / 2)}" text-anchor="middle" dominant-baseline="middle" fill="${text}" font-family="system-ui,sans-serif" font-size="14" font-weight="600">${xml(label)}</text>`
     + (subLabel ? `<text x="${number(node.size.width / 2)}" y="${number(node.size.height / 2 + 20)}" text-anchor="middle" fill="${text}" opacity="0.72" font-family="system-ui,sans-serif" font-size="11">${xml(subLabel)}</text>` : '')
@@ -260,7 +262,8 @@ function selectedPage(page: ScenePage, selectedNodeIds?: readonly string[]): Sce
   const nodes = page.nodes.filter((node) => visibleLayers.has(node.layerId) && (!selected || selected.has(node.id)));
   const ids = new Set(nodes.map(({ id }) => id));
   return { ...page, nodes, connectors: page.connectors.filter(({ source, target }) =>
-    ids.has(source.nodeId) && ids.has(target.nodeId)) };
+    (source.nodeId === null ? !selected : ids.has(source.nodeId))
+    && (target.nodeId === null ? !selected : ids.has(target.nodeId))) };
 }
 
 export function exportCanonicalSvg(
@@ -271,9 +274,9 @@ export function exportCanonicalSvg(
     : document.pages[0];
   if (!source) throw new RangeError('SVG export page was not found.');
   const page = selectedPage(source, options.selectedNodeIds);
-  if (page.nodes.length === 0) throw new TypeError('SVG export requires at least one visible node.');
   const matrices = buildNodeWorldMatrices(source);
   const connectors = projectPageConnectors({ ...source, connectors: page.connectors });
+  if (page.nodes.length === 0 && connectors.length === 0) throw new TypeError('SVG export requires at least one visible node or connector.');
   const points: Point2d[] = [];
   for (const node of page.nodes) {
     const matrix = matrices.get(node.id)!;

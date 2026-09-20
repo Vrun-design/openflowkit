@@ -1,3 +1,7 @@
+import { pixiPaintColor } from './pixiColor';
+import { resolveNodeStroke } from '../../domain/nodes/nodeStroke';
+import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
+import { drawDashedPath } from './PixiConnectorRenderer';
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { Container, Graphics, Text } from 'pixi.js';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
@@ -215,14 +219,28 @@ export class PixiNodeRenderer {
         page.nodes.length > DETAILED_OUTLINE_NODE_LIMIT && shape === 'rounded'
           ? 'rectangle'
           : shape;
-      const fill = visual?.fill ?? NODE_FILL;
-      const stroke = visual?.stroke ?? NODE_STROKE;
+      const fillPaint = pixiPaintColor(typeof node.appearance.fill === 'string' ? node.appearance.fill : '', visual?.fill ?? NODE_FILL);
+      const strokePaint = pixiPaintColor(typeof node.appearance.stroke === 'string' ? node.appearance.stroke : '', visual?.stroke ?? NODE_STROKE);
+      const fill = fillPaint.color;
+      const stroke = strokePaint.color;
+      const strokeStyle = resolveNodeStroke(node);
       // ponytail: opacity honoured for basic shapes only; family renderers
       // draw into the shared graphics and would each need an alpha argument.
       const alpha = nodeOpacity(node);
       drawPixiNodeOutline(this.graphics, renderedShape, node.size, matrix,
         typeof node.content.customSvgPath === 'string' ? node.content.customSvgPath : undefined);
-      this.graphics.fill({ color: fill, alpha }).stroke({ color: stroke, width: 1.5, alpha });
+      this.graphics.fill({ color: fill, alpha: alpha * fillPaint.alpha });
+      if (strokeStyle.width > 0 && strokeStyle.dash.length) {
+        const outline = basicNodeOutlinePoints(renderedShape, node.size,
+          typeof node.content.customSvgPath === 'string' ? node.content.customSvgPath : undefined)
+          .map((point) => applyMatrixToPoint(matrix, point));
+        drawDashedPath(this.graphics, [...outline, outline[0]], {
+          color: `#${stroke.toString(16).padStart(6, '0')}`, width: strokeStyle.width,
+          opacity: alpha * strokePaint.alpha, dash: strokeStyle.dash,
+        });
+      } else if (strokeStyle.width > 0) {
+        this.graphics.stroke({ color: stroke, width: strokeStyle.width, alpha: alpha * strokePaint.alpha });
+      }
       debugRecords.push({
         id: node.id,
         kind: visual?.kind ?? node.kind,

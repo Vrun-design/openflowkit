@@ -1,3 +1,4 @@
+import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import {
   useCallback,
   useEffect,
@@ -9,6 +10,7 @@ import {
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { ScenePage } from '../../domain/document/types';
 import type { CanvasCamera } from '../../domain/camera/types';
+import type { TransformHandle, TransformResult } from '../../domain/transforms/types';
 import type { Bounds2d, Point2d } from '../../domain/geometry/types';
 import { panCamera } from '../../domain/camera/camera';
 import { areStructurallyEqual } from '../../domain/commands/equality';
@@ -26,9 +28,16 @@ import {
   beginTransformOperation,
   boundsBetween,
   selectionAfterClick,
+  transformLabel,
   updateTransformOperation,
   type PixiPointerOperation,
 } from '../pixiPointerOperations';
+import {
+  beginConnectorOperation,
+  connectorEditLabel,
+  updateConnectorOperation,
+} from './v2ConnectorOperations';
+import { createConnectorEditCommand } from '../../domain/connectors/editing';
 import {
   V2_DEFAULT_SHAPE_SIZE,
   V2_DEFAULT_TEXT_SIZE,
@@ -40,6 +49,11 @@ import type { V2Tool } from './V2CreationToolbar';
 
 const CLICK_THRESHOLD_PX = 4;
 const MIN_CREATE_SIZE = 8;
+const HANDLE_CURSORS: Record<TransformHandle, string> = {
+  north: 'ns-resize', south: 'ns-resize', east: 'ew-resize', west: 'ew-resize',
+  'north-east': 'nesw-resize', 'south-west': 'nesw-resize',
+  'north-west': 'nwse-resize', 'south-east': 'nwse-resize', rotate: 'grab',
+};
 
 interface V2CreateOperation {
   readonly kind: 'create';
@@ -82,6 +96,8 @@ interface V2PointerOptions {
   readonly updateCamera: (camera: CanvasCamera) => void;
   readonly openEditor: (nodeId: string) => void;
   readonly onToolChange: (tool: V2Tool) => void;
+  readonly onTransformPreview?: (result: TransformResult | null) => void;
+  readonly snapToGrid?: boolean;
   readonly mintId: (prefix: string) => string;
 }
 
@@ -115,6 +131,7 @@ export function useV2Pointer(options: V2PointerOptions) {
     host?.setMarquee(null);
     host?.setTransformPreview(null);
     host?.setConnectionPreview(null);
+    optionsRef.current.onTransformPreview?.(null);
   }, []);
 
   const cancelGesture = useCallback((): boolean => {
@@ -130,11 +147,14 @@ export function useV2Pointer(options: V2PointerOptions) {
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {
+      if (event.target !== event.currentTarget && !(event.target instanceof HTMLCanvasElement)) return;
+      if (operationRef.current) return;
       const opts = optionsRef.current;
       const host = opts.hostRef.current;
       const page = opts.pageRef.current;
       if ((event.button !== 0 && event.button !== 1) || !host || !page) return;
-      event.currentTarget.focus();
+      event.preventDefault();
+      event.currentTarget.focus({ preventScroll: true });
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
       } catch {
@@ -188,12 +208,41 @@ export function useV2Pointer(options: V2PointerOptions) {
         return;
       }
       const additive = event.shiftKey || event.metaKey || event.ctrlKey;
+      const selectedConnectorId = host.getSelectedConnectorId();
+      const selectedConnector = selectedConnectorId
+        ? page.connectors.find(({ id }) => id === selectedConnectorId) ?? null
+        : null;
+      const connectorHandle = selectedConnector ? host.pickConnectorHandle(point) : null;
+      if (selectedConnector && connectorHandle && !additive) {
+        host.setConnectorSelection(selectedConnector.id, connectorHandle);
+        operationRef.current = beginConnectorOperation(
+          event.pointerId, page, selectedConnector, connectorHandle
+        );
+        return;
+      }
+      const states = buildNodeStateMap(page);
+      const canTransform = opts.selectionRef.current.nodeIds.every((id) => !states.get(id)?.locked);
+      const connectSide = host.pickConnectHandle(point);
+      const primary = opts.selectionRef.current.primaryNodeId;
+      if (connectSide && primary && !additive && canTransform) {
+        operationRef.current = { kind: 'connect', pointerId: event.pointerId, page,
+          sourceNodeId: primary, fromWorld: nodeCenterWorld(page, primary)!,
+          startScreen: point, toWorld: host.screenToWorld(point) };
+        return;
+      }
+      const handle = canTransform ? host.pickTransformHandle(point) : null;
+      if (handle && !additive && opts.selectionRef.current.nodeIds.length > 0) {
+        operationRef.current = beginTransformOperation(event.pointerId, page,
+          opts.selectionRef.current.nodeIds, handle, host.screenToWorld(point));
+        return;
+      }
       const nodeId = host.pickNode(point);
       if (nodeId && !additive) {
         if (!opts.selectionRef.current.nodeIds.includes(nodeId)) {
           opts.applyConnectorSelection(null);
           opts.applySelection(replaceSelection([nodeId]));
         }
+        if (opts.selectionRef.current.nodeIds.some((id) => states.get(id)?.locked)) return;
         operationRef.current = beginTransformOperation(
           event.pointerId,
           page,
@@ -205,6 +254,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       }
       const connectorId = host.pickConnector(point);
       if (connectorId && !nodeId) {
+        opts.applySelection(clearSelection());
         opts.applyConnectorSelection(connectorId);
         operationRef.current = null;
         try {
@@ -230,8 +280,17 @@ export function useV2Pointer(options: V2PointerOptions) {
       const opts = optionsRef.current;
       const operation = operationRef.current;
       const host = opts.hostRef.current;
-      if (!operation || operation.pointerId !== event.pointerId || !host) return;
+      if (!host) return;
       const point = localPoint(event);
+      if (!operation) {
+        if (opts.toolRef.current === 'select' && event.target instanceof HTMLCanvasElement) {
+          const handle = host.pickTransformHandle(point);
+          const cursor = handle ? HANDLE_CURSORS[handle] : (host.pickNode(point) ? 'move' : '');
+          event.target.style.cursor = cursor;
+        }
+        return;
+      }
+      if (operation.pointerId !== event.pointerId) return;
       if (operation.kind === 'pan') {
         opts.updateCamera(
           panCamera(opts.cameraRef.current, {
@@ -242,9 +301,13 @@ export function useV2Pointer(options: V2PointerOptions) {
         operationRef.current = { ...operation, last: point };
       } else if (operation.kind === 'transform') {
         const worldPoint = host.screenToWorld(point);
-        const next = updateTransformOperation(operation, worldPoint, !event.altKey);
+        const distance = Math.hypot(worldPoint.x - operation.start.x, worldPoint.y - operation.start.y)
+          * opts.cameraRef.current.zoom;
+        if (!operation.result && distance < CLICK_THRESHOLD_PX) return;
+        const next = updateTransformOperation(operation, worldPoint, Boolean(opts.snapToGrid) && !event.altKey);
         operationRef.current = next;
         host.setTransformPreview(next.result);
+        opts.onTransformPreview?.(next.result);
       } else if (operation.kind === 'create') {
         operationRef.current = { ...operation, currentScreen: point };
         host.setMarquee(boundsBetween(operation.startScreen, point));
@@ -252,6 +315,14 @@ export function useV2Pointer(options: V2PointerOptions) {
         const toWorld = host.screenToWorld(point);
         operationRef.current = { ...operation, toWorld };
         host.setConnectionPreview({ from: operation.fromWorld, to: toWorld });
+      } else if (operation.kind === 'connector-edit') {
+        const next = updateConnectorOperation(
+          operation,
+          host.screenToWorld(point),
+          operation.handle.kind === 'endpoint' ? host.pickNode(point) : null
+        );
+        operationRef.current = next;
+        host.setConnectorPreview(next.preview);
       } else if (operation.kind === 'marquee') {
         operationRef.current = { ...operation, current: point };
         host.setMarquee(boundsBetween(operation.start, point));
@@ -294,9 +365,13 @@ export function useV2Pointer(options: V2PointerOptions) {
           }
         }
       } else if (operation.kind === 'transform') {
+        const final = operation.result
+          ? updateTransformOperation(operation, host.screenToWorld(point), Boolean(opts.snapToGrid) && !event.altKey)
+          : operation;
         host.setTransformPreview(null);
-        if (operation.result) {
-          const changed = operation.result.nodes.some(
+        opts.onTransformPreview?.(null);
+        if (final.result) {
+          const changed = final.result.nodes.some(
             (node, index) => !areStructurallyEqual(node, operation.snapshot.nodes[index])
           );
           if (changed) {
@@ -304,8 +379,8 @@ export function useV2Pointer(options: V2PointerOptions) {
               createTransformCommand(
                 operation.page.id,
                 operation.snapshot.nodes,
-                operation.result.nodes,
-                'Move selection'
+                final.result.nodes,
+                transformLabel(operation.transformKind)
               )
             );
           }
@@ -370,6 +445,21 @@ export function useV2Pointer(options: V2PointerOptions) {
           opts.applyConnectorSelection(id);
           opts.onToolChange('select');
         }
+      } else if (operation.kind === 'connector-edit') {
+        const final = updateConnectorOperation(
+          operation,
+          host.screenToWorld(point),
+          operation.handle.kind === 'endpoint' ? host.pickNode(point) : null
+        );
+        host.setConnectorPreview(null);
+        const command = createConnectorEditCommand(
+          operation.page.id,
+          operation.before,
+          final.preview,
+          connectorEditLabel(operation.handle)
+        );
+        if (command) opts.commit(command);
+        host.setConnectorSelection(operation.before.id, null);
       }
       try {
         event.currentTarget.releasePointerCapture(event.pointerId);
@@ -387,6 +477,7 @@ export function useV2Pointer(options: V2PointerOptions) {
 
   const handleDoubleClick = useCallback(
     (event: ReactMouseEvent<HTMLElement>) => {
+      if (event.target !== event.currentTarget && !(event.target instanceof HTMLCanvasElement)) return;
       const opts = optionsRef.current;
       const host = opts.hostRef.current;
       if (!host || opts.toolRef.current !== 'select' || opts.readOnlyRef.current) return;

@@ -16,10 +16,8 @@ export function selectionWorldBounds(
   const bounds = selectedNodeIds
     .map(
       (nodeId) =>
-        [...index.objectsByKey.values()].find(
-          (object) =>
-            object.id === nodeId && (object.kind === 'node' || object.kind === 'container')
-        )?.bounds
+        (index.objectsByKey.get(`node:${nodeId}`)
+          ?? index.objectsByKey.get(`container:${nodeId}`))?.bounds
     )
     .filter((value): value is Bounds2d => Boolean(value));
   return bounds.reduce<Bounds2d | null>(
@@ -35,10 +33,11 @@ export class PixiSelectionOverlay {
     index: SceneIndex,
     selectedNodeIds: readonly string[],
     primaryNodeId: string | null,
-    zoom: number
+    zoom: number,
+    cleanFrame = false
   ): void {
     this.graphics.clear();
-    for (const nodeId of selectedNodeIds) {
+    for (const nodeId of cleanFrame && selectedNodeIds.length === 1 ? [] : selectedNodeIds) {
       const node = index.nodesById.get(nodeId);
       const matrix = node && index.worldMatricesByNodeId.get(node.id);
       if (!node || !matrix) continue;

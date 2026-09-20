@@ -1,8 +1,8 @@
+import { createTransformSnapshot } from '../../domain/transforms/transformSelection';
 import {
   useEffect,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   type RefObject,
   type WheelEvent as ReactWheelEvent,
@@ -16,7 +16,7 @@ import {
   type CanvasSelection,
 } from '../../application/selection/selection';
 import { PRODUCTION_RENDERER_FAMILY_FLAGS } from '../../application/renderer/rendererFamilyFlags';
-import { panCamera, zoomCameraAt } from '../../domain/camera/camera';
+import { worldToScreen, panCamera, zoomCameraAt } from '../../domain/camera/camera';
 import { detectWebGlCapability } from '../../infrastructure/pixi/capabilities';
 import {
   PixiRendererHost,
@@ -42,6 +42,7 @@ interface V2CanvasHostProps {
   readonly pageRef: RefObject<ScenePage | null>;
   readonly selectionRef: RefObject<CanvasSelection>;
   readonly toolRef: RefObject<V2Tool>;
+  readonly tool: V2Tool;
   readonly spacePanRef: RefObject<boolean>;
   readonly readOnlyRef: RefObject<boolean>;
   readonly gestureApiRef: RefObject<V2GestureApi | null>;
@@ -59,17 +60,18 @@ interface V2CanvasHostProps {
   readonly onCommitLabel: (value: string) => void;
   readonly onCancelEdit: () => void;
   readonly onStatusChange: (status: PixiRendererStatus) => void;
-  readonly onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
-  readonly onKeyUp: (event: ReactKeyboardEvent<HTMLElement>) => void;
   readonly sectionRef: RefObject<HTMLElement | null>;
   /** Numeric canvas-ground color from the same token source as SystemRoot. */
   readonly backgroundColor: number;
   readonly readOnly: boolean;
+  readonly snapToGrid: boolean;
+  readonly showGrid: boolean;
   readonly onDuplicate: () => void;
   readonly onDelete: () => void;
 }
 
 export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [viewport, setViewport] = useState<HTMLElement | null>(null);
   const [capability] = useState(detectWebGlCapability);
   const [status, setStatus] = useState<PixiRendererStatus>(
@@ -77,6 +79,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   );
   const [mountError, setMountError] = useState<string | null>(null);
 
+  const [previewBounds, setPreviewBounds] = useState<DOMRect | null>(null);
   const pointer = useV2Pointer({
     hostRef: props.hostRef,
     cameraRef: props.cameraRef,
@@ -93,7 +96,32 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     openEditor: props.openEditor,
     onToolChange: props.onToolChange,
     mintId: props.mintId,
+    snapToGrid: props.snapToGrid,
+    onTransformPreview: (result) => {
+      if (!result) { setPreviewBounds(null); return; }
+      const camera = props.cameraRef.current;
+      const point = worldToScreen(camera, result.bounds);
+      setPreviewBounds(new DOMRect(point.x, point.y,
+        result.bounds.width * camera.zoom, result.bounds.height * camera.zoom));
+    },
   });
+
+  const { cancelGesture } = pointer;
+  useEffect(() => {
+    cancelGesture();
+    const canvas = viewport?.querySelector('canvas');
+    if (canvas) canvas.style.cursor = '';
+  }, [props.page, props.tool, viewport, cancelGesture]);
+
+  useEffect(() => {
+    const section = props.sectionRef.current;
+    if (!section) return;
+    const preventBrowserZoom = (event: WheelEvent) => {
+      if (event.target instanceof HTMLCanvasElement) event.preventDefault();
+    };
+    section.addEventListener('wheel', preventBrowserZoom, { passive: false });
+    return () => section.removeEventListener('wheel', preventBrowserZoom);
+  }, [props.sectionRef]);
 
   const statusCallbackRef = useRef(props.onStatusChange);
   statusCallbackRef.current = props.onStatusChange;
@@ -106,12 +134,14 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     let disposed = false;
     const host = new PixiRendererHost({
       ...PRODUCTION_RENDERER_FAMILY_FLAGS,
+      liveTransformPreview: true,
       onStatusChange: (next) => {
         if (!disposed) setStatus(next);
       },
     });
     props.hostRef.current = host;
     host.setBackground(props.backgroundColor);
+    host.setDotGrid(props.showGrid);
     host.setCamera(props.cameraRef.current);
     void host
       .mount(viewport)
@@ -125,7 +155,10 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
         setMountError(error instanceof Error ? error.message : 'PixiJS could not start.');
         setStatus('unavailable');
       });
-    const observer = new ResizeObserver(() => host.resize());
+    const observer = new ResizeObserver(() => {
+      host.resize();
+      setViewportSize(host.getViewportSize());
+    });
     observer.observe(viewport);
     return () => {
       disposed = true;
@@ -135,6 +168,8 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewport]);
+
+  useEffect(() => { props.hostRef.current?.setDotGrid(props.showGrid); }, [props.showGrid, props.hostRef]);
 
   useEffect(() => {
     props.hostRef.current?.setBackground(props.backgroundColor);
@@ -159,7 +194,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   useEffect(() => {
     props.hostRef.current?.setSelection(props.selection.nodeIds, props.selection.primaryNodeId);
     props.hostRef.current?.setConnectorSelection(props.selectedConnectorId, null);
-  }, [props.selection, props.selectedConnectorId, props.hostRef]);
+  }, [props.selection, props.selectedConnectorId, props.hostRef, props.page, status]);
 
   // Context bar anchor follows selection, page geometry and camera; the state
   // only changes when the union actually moves.
@@ -174,13 +209,14 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
       selectionIds.map((nodeId) => props.hostRef.current?.getNodeScreenBounds(nodeId))
     );
     setContextAnchor((current) => (current && next && sameRect(current, next) ? current : next));
-  }, [selectionIds, props.editing, props.readOnly, props.hostRef, props.camera, props.page]);
+  }, [selectionIds, props.editing, props.readOnly, props.hostRef, props.camera, props.page, viewportSize]);
 
   const unavailableReason = mountError ?? capability.reason ?? null;
 
   // I-12: wheel/trackpad pans; ⌘/Ctrl+wheel (and pinch, which browsers
   // report as ctrlKey) zooms at the pointer — the Figma/tldraw convention.
   function handleWheel(event: ReactWheelEvent<HTMLElement>): void {
+    if (!(event.target instanceof HTMLCanvasElement)) return;
     const camera = props.cameraRef.current;
     if (!event.ctrlKey && !event.metaKey) {
       props.updateCamera(panCamera(camera, { x: -event.deltaX, y: -event.deltaY }));
@@ -205,10 +241,9 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
       onPointerMove={pointer.handlePointerMove}
       onPointerUp={pointer.handlePointerUp}
       onPointerCancel={pointer.handlePointerCancel}
+      onLostPointerCapture={pointer.handlePointerCancel}
       onDoubleClick={pointer.handleDoubleClick}
       onWheel={handleWheel}
-      onKeyDown={props.onKeyDown}
-      onKeyUp={props.onKeyUp}
     >
       <div ref={setViewport} className="ofk-v2-viewport" data-testid="v2-viewport" />
       {unavailableReason ? (
@@ -231,7 +266,18 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
       {contextAnchor ? (
         <V2ContextBar
           selectionCount={props.selection.nodeIds.length}
-          style={contextBarStyle(contextAnchor)}
+          page={props.page}
+          nodeIds={props.selection.nodeIds}
+          commit={props.commit}
+          onStylePreview={(patch) => {
+            if (!patch) { props.hostRef.current?.setTransformPreview(null); return; }
+            const snapshot = createTransformSnapshot(props.page, props.selection.nodeIds);
+            props.hostRef.current?.setTransformPreview(patch ? {
+              nodes: snapshot.nodes.map((node) => ({ ...node, appearance: { ...node.appearance, ...patch } })),
+              bounds: snapshot.bounds, snappedX: false, snappedY: false,
+            } : null);
+          }}
+          style={contextBarStyle(previewBounds ?? contextAnchor)}
           onEditLabel={() => {
             const primary = props.selection.primaryNodeId;
             if (primary) props.openEditor(primary);

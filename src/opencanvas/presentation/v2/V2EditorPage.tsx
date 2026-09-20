@@ -1,3 +1,4 @@
+import { useV2Preferences } from './useV2Preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -31,7 +32,10 @@ import './v2EditorPage.css';
 
 export function V2EditorPage(): React.JSX.Element {
   const { id } = useParams();
-  const appearance = useV2Appearance();
+  const { preferences, updatePreferences } = useV2Preferences();
+  const appearance = useV2Appearance(preferences.theme);
+  const canvasColor = preferences.canvasColor ?? (appearance === 'dark' ? '#191b19' : '#f7f7f5');
+  const rendererCanvasColor = Number.parseInt(canvasColor.slice(1), 16);
   const repository = useMemo(
     () => createV2Repository(typeof window === 'undefined' ? null : window.indexedDB),
     []
@@ -50,6 +54,15 @@ export function V2EditorPage(): React.JSX.Element {
   const spacePanRef = useRef(spacePan);
   useEffect(() => { toolRef.current = tool; }, [tool]);
   useEffect(() => { spacePanRef.current = spacePan; }, [spacePan]);
+
+  useEffect(() => {
+    const resetInput = () => {
+      setSpacePan(false);
+      gestureApiRef.current?.cancelGesture();
+    };
+    window.addEventListener('blur', resetInput);
+    return () => window.removeEventListener('blur', resetInput);
+  }, []);
 
   const pushToast = useCallback((toast: ToastItem) => {
     setToasts((current) => [...current.slice(-3), toast]);
@@ -162,7 +175,10 @@ export function V2EditorPage(): React.JSX.Element {
 
   return (
     <SystemRoot appearance={appearance}>
-      <div className="ofk-v2" data-testid="v2-editor" data-tool={tool}>
+      <div className="ofk-v2" data-testid="v2-editor" data-tool={spacePan ? 'hand' : tool}
+        style={{ backgroundColor: canvasColor }}
+        onKeyDown={handleKeyDown}
+        onKeyUp={(event) => { if (event.key === ' ') setSpacePan(false); }}>
         {load.phase === 'loading' || !page ? (
           <V2LoadCenter
             phase={load.phase}
@@ -179,6 +195,8 @@ export function V2EditorPage(): React.JSX.Element {
         ) : (
           <>
             <V2Chrome
+              preferences={preferences} canvasDefaultColor={appearance === 'dark' ? '#191b19' : '#f7f7f5'}
+              onPreferencesChange={updatePreferences}
               document={session.document!}
               saveStatus={saveStatus}
               canUndo={session.canUndo} canRedo={session.canRedo}
@@ -186,6 +204,17 @@ export function V2EditorPage(): React.JSX.Element {
               tool={tool} zoomPercent={camera.zoom} treeOpen={treeOpen}
               onUndo={session.undo} onRedo={session.redo}
               onRetrySave={retrySave} onReload={load.reload} onToast={pushToast}
+              onRename={(name) => {
+                const before = session.document!.name;
+                if (name === before) return;
+                session.commit({
+                  kind: 'set-document-name',
+                  id: `rename-document:${session.document!.id}`,
+                  label: 'Rename document',
+                  before,
+                  after: name,
+                });
+              }}
               onToolChange={setTool}
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
@@ -195,7 +224,7 @@ export function V2EditorPage(): React.JSX.Element {
             />
             <V2CanvasHost
               page={page} hostRef={hostRef} camera={camera.camera} cameraRef={camera.cameraRef} pageRef={pageRef}
-              selectionRef={selectionRef} toolRef={toolRef} spacePanRef={spacePanRef}
+              selectionRef={selectionRef} toolRef={toolRef} tool={tool} spacePanRef={spacePanRef}
               readOnlyRef={readOnlyRef} gestureApiRef={gestureApiRef}
               selection={selection} selectedConnectorId={selectedConnectorId}
               editing={editing}
@@ -204,10 +233,9 @@ export function V2EditorPage(): React.JSX.Element {
               updateCamera={camera.updateCamera} openEditor={openEditor} onToolChange={setTool} mintId={mintV2Id}
               onCommitLabel={labelEditing.commitLabel} onCancelEdit={labelEditing.cancelEdit}
               onStatusChange={setRendererStatus}
-              onKeyDown={handleKeyDown}
-              onKeyUp={(event) => { if (event.key === ' ') setSpacePan(false); }}
               sectionRef={sectionRef}
-              backgroundColor={appearance === 'dark' ? 0x191b19 : 0xf7f7f5}
+              showGrid={preferences.showGrid} snapToGrid={preferences.snapToGrid}
+              backgroundColor={rendererCanvasColor}
               readOnly={load.readOnly}
               onDuplicate={editActions.duplicateSelection}
               onDelete={editActions.deleteSelection}

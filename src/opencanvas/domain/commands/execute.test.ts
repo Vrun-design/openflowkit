@@ -9,6 +9,16 @@ import { applyDocumentCommand } from './execute';
 import type { BatchDocumentCommand, DocumentCommand } from './types';
 
 describe('canonical document commands', () => {
+  it('sets and exactly inverts the document name', () => {
+    const document = createTestDocument();
+    const applied = applyDocumentCommand(document, {
+      kind: 'set-document-name', id: 'rename-document', label: 'Rename document',
+      before: document.name, after: 'System map',
+    });
+    expect(applied.document.name).toBe('System map');
+    expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(document);
+  });
+
   it('applies and exactly inverts a node replacement without mutating input', () => {
     const beforeNode = createTestNode('node-1');
     const afterNode = { ...beforeNode, content: { label: 'Edited' } };

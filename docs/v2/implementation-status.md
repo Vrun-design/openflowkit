@@ -9,10 +9,10 @@ second backlog. Historical milestone approvals and test totals are not current g
 - Current specification set consolidated under `docs/v2/`, indexed at `docs/README.md`.
 - Product strategy, interaction contracts, technical design, and full external-agent
   file/live requirements are documented. Technical spikes remain proposed.
-- Reusable V2 presentation foundation is implemented; first consumer is the existing
-  opt-in OpenCanvas camera controls. No canonical V2 editor/core has shipped.
-- Next implementation slice: **V2-00 — baseline, compatibility fixtures, and customer
-  workflow evidence**. Then V2-01 proves schema/geometry/migration contracts.
+- Opt-in `/v2/:id` editor, revisioned session, isolated storage and V2 presentation
+  foundation are implemented. See V2-01/02/04 and V2-04e evidence below.
+- Next roadmap slices: remaining V2-05 object authoring and V2-10a agent proposals.
+  Open V2-00 customer/hardware gates remain requirements, not implied passes.
 - No launch deadline. Pro implementation is deferred. Advanced source-backed review
   and walkthrough features are hypotheses, not implied v2 completion requirements.
 - Legacy white-label and customer-facing design-system/theme-management UI are not
@@ -312,3 +312,68 @@ connector interaction and renderer adapters for free points.
   logo. Gate extended for each behavior.
 - Next: V2-04e UI polish against the lab shell; then V2-05 (moves
   `pixiPointerOperations`) and V2-10a agent proposals.
+
+## V2-04e — current-surface interaction and appearance polish (2026-09-20)
+
+Owner requested a polish pass over the shipped editor, explicitly allowing useful
+V2-05 appearance controls to move forward. This is not completion of V2-05 or the
+external-agent/connector release gates.
+
+- Revision/environment: `ab731d1` plus working-tree changes; Node v25.8.1,
+  macOS arm64, Chromium with SwiftShader for browser checks.
+- Selection/input: restores renderer selection after document commits; canvas
+  gestures ignore chrome/portal controls; a 4px drag threshold prevents click
+  jitter from writing history; final release coordinates commit once. Resize and
+  rotate handles and existing side-connect handles now respond. Free drag is the
+  default, optional 16-unit snapping can be bypassed with Alt. Escape, lost capture,
+  window blur, tool changes and document changes cancel active transforms.
+- Preview: V2 opts into a separate live renderer for its current basic/text objects
+  and affected connectors, hiding originals while previewing; heavy preview draws
+  coalesce at animation-frame cadence. Canonical document, validation, autosave and
+  history do not run per pointer move. Context bar follows preview bounds and
+  clears the top/bottom chrome lanes and rotation handle; viewport resize updates
+  its anchor. Existing legacy surfaces retain their transform preview behavior.
+- Appearance: reused ColorPicker/Popover/Segmented/NumberField for shape fill,
+  stroke, opacity, width and solid/dashed/dotted styles. Drafts preview transiently;
+  committed edits use one batch through the document session, support mixed
+  selection and undo, and persist in existing appearance records. Pixi and SVG
+  consume the same stroke width/dash policy. Rectangle creation now creates a
+  rectangle, with explicit portable paint defaults. Typography and stroke alignment
+  remain later work; controls for unsupported properties are not exposed.
+- Preferences/chrome follow-up: the logo opens the compact Settings panel; the
+  document title now edits inline and commits through an undoable canonical
+  `set-document-name` command. Settings includes light/dark/system, dot grid,
+  snap, and a persisted canvas color with reset. Preferences remain separate from
+  document history. Dots
+  are one viewport-bounded Pixi graphic (adaptive spacing, no per-dot DOM or ticker).
+  Narrow chrome truncates the title instead of overlapping export/history.
+- Shared corrections: popovers measure untransformed layout dimensions and scroll
+  within the viewport; color range keyboard gestures commit; free-end connectors
+  are no longer filtered out of Pixi/SVG, including connector-only SVG output.
+  Free connectors are also hit-testable in the editor now, and selected endpoint
+  handles can be dragged onto a node or left at a new free canvas point. Stroke
+  style and width controls use the full popover width with equal segments.
+- Code: `presentation/v2/` input, context, settings/preferences and style-command
+  modules; `infrastructure/pixi/{PixiRendererHost,PixiLiveTransformPreview,
+  PixiDotGrid,PixiNodeRenderer,PixiSelectionOverlay,PixiConnectorRenderer,pixiColor}`;
+  `domain/nodes/nodeStroke.ts`; `infrastructure/export/canonicalSvg.ts`;
+  design-system ColorPicker, Popover and popover CSS.
+- Validation: final full Vitest suite passed **2276 tests / 464 files**. ESLint,
+  TypeScript, `git diff --check`, the V2 graph boundary, and
+  `VITE_V2_EDITOR=1 npm run build:ci` pass; bundle budgets pass at 1143.4 KB
+  entry JS, 227.9 KB entry CSS and 9039 KB lazy JS. Reproducible Chromium gate:
+  `V2_BASE_URL=http://127.0.0.1:4191
+  node scripts/check-v2-polish.mjs` against the flag-on production build. It passes
+  create/select, repeated moves, live context-bar following, resize, Escape rollback,
+  fill/stroke pointer and keyboard edits, undo/redo, idle-render stability,
+  save/reload, inline rename, canvas color, free-arrow selection and endpoint drag,
+  light/dark and 390×844 non-overlap with zero page errors. Images and
+  result JSON are in `docs/evidence/v2-polish/` (ignored). `git diff --check` passes.
+- Limitations: no physical touch/pen, manual screen-reader, Firefox/WebKit or
+  large-document real-GPU benchmark claim. Live preview supports the currently
+  offered families; expand it alongside future family/group authoring. Existing
+  advanced connector semantics, text/export fidelity and full agent parity retain
+  their roadmap gates. No migration or rollout-default change.
+- Rollback: revert this slice's files to `ab731d1`; previous readers preserve
+  appearance JSON but older Pixi rendering ignores newly exposed paint overrides.
+  No storage migration is needed. Physical revert/rebuild not performed.

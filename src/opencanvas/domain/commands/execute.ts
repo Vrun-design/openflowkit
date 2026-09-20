@@ -14,6 +14,7 @@ import type {
   RemovePageCommand,
   RemoveNodeCommand,
   SetConnectorCommand,
+  SetDocumentNameCommand,
   SetLayerCommand,
   SetPageCommand,
   SetNodeCommand,
@@ -36,6 +37,22 @@ function updatePage(
   const pages = [...document.pages];
   pages[pageIndex] = update(pages[pageIndex]);
   return { ...document, pages };
+}
+
+function applySetDocumentName(
+  document: SceneDocumentV1,
+  command: SetDocumentNameCommand
+): AppliedDocumentCommand {
+  if (document.name !== command.before) {
+    throw new DocumentCommandError('Document name precondition failed.');
+  }
+  if (!command.after.trim() || command.before === command.after) {
+    throw new DocumentCommandError('set-document-name command must provide a changed name.');
+  }
+  return {
+    document: { ...document, name: command.after },
+    inverse: { ...command, before: command.after, after: command.before },
+  };
 }
 
 function requireIndex(index: number, length: number, allowEnd: boolean): void {
@@ -287,6 +304,8 @@ function applyUnchecked(
   command: DocumentCommand
 ): AppliedDocumentCommand {
   switch (command.kind) {
+    case 'set-document-name':
+      return applySetDocumentName(document, command);
     case 'set-node':
       return applySetNode(document, command);
     case 'set-layer':
