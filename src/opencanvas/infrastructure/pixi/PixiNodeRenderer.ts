@@ -45,6 +45,10 @@ function textAnchor(alignment: 'start' | 'center' | 'end'): number {
   return 0.5;
 }
 
+function textKey(text: string, fontSize: unknown, fontWeight: unknown, fill: unknown): string {
+  return `${String(fontSize)}|${String(fontWeight)}|${String(fill)}|${text}`;
+}
+
 function nodeOpacity(node: SceneNode): number {
   const value = node.appearance.opacity;
   return typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1;
@@ -55,6 +59,11 @@ export class PixiNodeRenderer {
   readonly media = new Container();
   readonly labels = new Container();
   private readonly labelByNodeId = new Map<string, Container>();
+  // Label Text objects rasterize to a texture on creation (~0.5–1 ms each), so
+  // a redraw reuses last frame's instances with the same text and style
+  // instead of destroying and re-creating every label.
+  private textPool = new Map<string, Text[]>();
+  private readonly textKeys = new WeakMap<Text, string>();
   private readonly freeformRenderer: PixiFreeformNodeRenderer;
   private readonly architectureRenderer: PixiArchitectureNodeRenderer;
   private readonly classEntityRenderer = new PixiClassEntityNodeRenderer();
@@ -108,7 +117,17 @@ export class PixiNodeRenderer {
     detailLevel: SemanticDetailLevel = 'full'
   ): void {
     this.graphics.clear();
-    this.labels.removeChildren().forEach((child) => child.destroy({ children: true }));
+    this.textPool = new Map();
+    for (const content of this.labels.removeChildren()) {
+      for (const child of [...content.children]) {
+        if (!(child instanceof Text)) continue;
+        child.removeFromParent();
+        const key = this.textKeys.get(child);
+        if (key === undefined) { child.destroy(); continue; }
+        this.textPool.set(key, [...(this.textPool.get(key) ?? []), child]);
+      }
+      content.destroy({ children: true });
+    }
     const freeformMediaGeneration = this.freeformRenderer.beginDraw();
     const architectureMediaGeneration = this.architectureRenderer.beginDraw();
     const wireframeMediaGeneration = this.wireframeRenderer.beginDraw();
@@ -261,15 +280,7 @@ export class PixiNodeRenderer {
           maxWidth: availableTextWidth, maxLines: sizing.maxLines, overflow: sizing.overflow,
         }),
       });
-      const label = new Text({
-        text: labelMeasurement.displayText,
-        style: {
-          fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-          fontSize: 14,
-          fontWeight: '600',
-          fill: visual?.text ?? 0x1e293b,
-        },
-      });
+      const label = this.acquireText(labelMeasurement.displayText, 14, '600', visual?.text ?? 0x1e293b);
       if (!nodeLayoutEnabled) {
         const bounds = nodeWorldBounds(node, matrix);
         label.position.set(bounds.x + 16, bounds.y + 25);
@@ -282,21 +293,16 @@ export class PixiNodeRenderer {
       }
       const subLabel =
         typeof node.content.subLabel === 'string' && node.content.subLabel.length > 0
-          ? new Text({
-              text: measurePortableText(node.content.subLabel, {
+          ? this.acquireText(
+              measurePortableText(node.content.subLabel, {
                 fontSize: 11, fontWeight: 400,
                 ...(sizing.overflow === 'visible' ? {} : {
                   maxWidth: availableTextWidth, maxLines: sizing.maxLines,
                   overflow: sizing.overflow,
                 }),
               }).displayText,
-              style: {
-                fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-                fontSize: 11,
-                fontWeight: '400',
-                fill: visual?.subText ?? 0x64748b,
-              },
-            })
+              11, '400', visual?.subText ?? 0x64748b
+            )
           : null;
       const hasIcon =
         (typeof node.content.icon === 'string' && node.content.icon !== 'none') ||
@@ -360,7 +366,24 @@ export class PixiNodeRenderer {
       this.labels.addChild(content);
       this.labelByNodeId.set(node.id, content);
     }
+    for (const leftovers of this.textPool.values()) leftovers.forEach((text) => text.destroy());
+    this.textPool.clear();
     this.debugRecords = debugRecords;
+  }
+
+  private acquireText(text: string, fontSize: number, fontWeight: '400' | '600', fill: number | string): Text {
+    const key = textKey(text, fontSize, fontWeight, fill);
+    const cached = this.textPool.get(key)?.pop();
+    if (cached) {
+      cached.anchor.set(0, 0);
+      return cached;
+    }
+    const created = new Text({
+      text,
+      style: { fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif', fontSize, fontWeight, fill },
+    });
+    this.textKeys.set(created, key);
+    return created;
   }
 
   getDebugSnapshot(): readonly PixiNodeDebugRecord[] {

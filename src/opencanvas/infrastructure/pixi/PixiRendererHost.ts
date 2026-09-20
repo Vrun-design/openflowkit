@@ -136,6 +136,7 @@ export class PixiRendererHost {
   private destroyed = false;
   private backgroundColor = 0xf8fafc;
   private renderFrame: number | null = null;
+  private cameraDirty = false;
   private renderCount = 0;
   private renderRequests = 0;
   private coalescedRequests = 0;
@@ -248,10 +249,23 @@ export class PixiRendererHost {
     this.rebuildScene(redrawNodes);
   }
 
+  // Wheel/trackpad deliver several camera updates per frame; only the world
+  // transform moves per call. Dot grid, overlays, projection and label
+  // visibility settle once, right before the next render.
   setCamera(camera: CanvasCamera): void {
-    const cameraStartedAt = performance.now();
     this.camera = camera;
-    this.applyCamera();
+    this.world.position.set(camera.x, camera.y);
+    this.world.scale.set(camera.zoom);
+    this.cameraDirty = true;
+    this.requestRender();
+  }
+
+  private settleCamera(): void {
+    if (!this.cameraDirty) return;
+    this.cameraDirty = false;
+    const cameraStartedAt = performance.now();
+    const camera = this.camera;
+    this.drawDotGrid();
     this.drawSelection();
     this.connectorRenderer.setZoom(camera.zoom);
 
@@ -285,7 +299,6 @@ export class PixiRendererHost {
       recordOpenCanvasCameraPhase(performance, 'labels', labelsStartedAt, performance.now());
     }
 
-    this.requestRender();
     recordOpenCanvasCameraPhase(performance, 'total', cameraStartedAt, performance.now());
   }
 
@@ -570,6 +583,7 @@ export class PixiRendererHost {
 
   renderNow(): void {
     if (this.destroyed || !this.app.renderer) return;
+    this.settleCamera();
     const startedAt = performance.now();
     this.app.render();
     const endedAt = performance.now();

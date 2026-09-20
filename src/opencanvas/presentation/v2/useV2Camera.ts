@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import {
   fitCameraToBounds,
   zoomCameraAt,
@@ -17,16 +17,27 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
   // overlays (text editor, context bar) so they track pan and zoom.
   const cameraRef = useRef<CanvasCamera>(DEFAULT_CANVAS_CAMERA);
   const fittedRef = useRef<string | null>(null);
+  const frameRef = useRef<number | null>(null);
   const [camera, setCamera] = useState<CanvasCamera>(DEFAULT_CANVAS_CAMERA);
 
+  // Ref and renderer update per input event; the React state (which
+  // re-renders the whole page) settles once per animation frame so a real
+  // mouse/trackpad at 120–1000 events/s cannot starve the frame.
   const updateCamera = useCallback(
     (next: CanvasCamera) => {
       cameraRef.current = next;
       hostRef.current?.setCamera(next);
-      setCamera(next);
+      if (frameRef.current !== null) return;
+      frameRef.current = requestAnimationFrame(() => {
+        frameRef.current = null;
+        setCamera(cameraRef.current);
+      });
     },
     [hostRef]
   );
+  useEffect(() => () => {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+  }, []);
 
   const viewportCenter = useCallback(() => {
     const size = hostRef.current?.getViewportSize() ?? { width: 800, height: 600 };

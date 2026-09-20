@@ -80,6 +80,11 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   const [mountError, setMountError] = useState<string | null>(null);
 
   const [previewBounds, setPreviewBounds] = useState<DOMRect | null>(null);
+  const previewFrameRef = useRef<number | null>(null);
+  const pendingPreviewRef = useRef<DOMRect | null>(null);
+  useEffect(() => () => {
+    if (previewFrameRef.current !== null) cancelAnimationFrame(previewFrameRef.current);
+  }, []);
   const pointer = useV2Pointer({
     hostRef: props.hostRef,
     cameraRef: props.cameraRef,
@@ -97,12 +102,24 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     onToolChange: props.onToolChange,
     mintId: props.mintId,
     snapToGrid: props.snapToGrid,
+    // Renderer preview is immediate; the React-side context bar anchor
+    // settles once per frame (same reason as useV2Camera).
     onTransformPreview: (result) => {
-      if (!result) { setPreviewBounds(null); return; }
+      if (!result) {
+        if (previewFrameRef.current !== null) cancelAnimationFrame(previewFrameRef.current);
+        previewFrameRef.current = null;
+        setPreviewBounds(null);
+        return;
+      }
       const camera = props.cameraRef.current;
       const point = worldToScreen(camera, result.bounds);
-      setPreviewBounds(new DOMRect(point.x, point.y,
-        result.bounds.width * camera.zoom, result.bounds.height * camera.zoom));
+      pendingPreviewRef.current = new DOMRect(point.x, point.y,
+        result.bounds.width * camera.zoom, result.bounds.height * camera.zoom);
+      if (previewFrameRef.current !== null) return;
+      previewFrameRef.current = requestAnimationFrame(() => {
+        previewFrameRef.current = null;
+        setPreviewBounds(pendingPreviewRef.current);
+      });
     },
   });
 
@@ -113,14 +130,22 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     if (canvas) canvas.style.cursor = '';
   }, [props.page, props.tool, viewport, cancelGesture]);
 
+  // Browser zoom never leaks from the editor: plain wheel over the canvas
+  // pans, ⌘/Ctrl+wheel (pinch) anywhere in the editor is ours, and Safari's
+  // proprietary gesture events (trackpad pinch) are swallowed too.
   useEffect(() => {
-    const section = props.sectionRef.current;
-    if (!section) return;
-    const preventBrowserZoom = (event: WheelEvent) => {
-      if (event.target instanceof HTMLCanvasElement) event.preventDefault();
+    const root = props.sectionRef.current?.closest<HTMLElement>('.ofk-v2');
+    if (!root) return;
+    const onWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || event.metaKey || event.target instanceof HTMLCanvasElement) event.preventDefault();
     };
-    section.addEventListener('wheel', preventBrowserZoom, { passive: false });
-    return () => section.removeEventListener('wheel', preventBrowserZoom);
+    const onGesture = (event: Event) => event.preventDefault();
+    root.addEventListener('wheel', onWheel, { passive: false });
+    for (const type of ['gesturestart', 'gesturechange', 'gestureend']) root.addEventListener(type, onGesture);
+    return () => {
+      root.removeEventListener('wheel', onWheel);
+      for (const type of ['gesturestart', 'gesturechange', 'gestureend']) root.removeEventListener(type, onGesture);
+    };
   }, [props.sectionRef]);
 
   const statusCallbackRef = useRef(props.onStatusChange);
@@ -216,12 +241,16 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   // I-12: wheel/trackpad pans; ⌘/Ctrl+wheel (and pinch, which browsers
   // report as ctrlKey) zooms at the pointer — the Figma/tldraw convention.
   function handleWheel(event: ReactWheelEvent<HTMLElement>): void {
-    if (!(event.target instanceof HTMLCanvasElement)) return;
     const camera = props.cameraRef.current;
     if (!event.ctrlKey && !event.metaKey) {
-      props.updateCamera(panCamera(camera, { x: -event.deltaX, y: -event.deltaY }));
+      if (event.target instanceof HTMLCanvasElement) {
+        props.updateCamera(panCamera(camera, { x: -event.deltaX, y: -event.deltaY }));
+      }
       return;
     }
+    // Pinch/⌘-wheel zooms from anywhere over the canvas area, including the
+    // floating context bar; the browser-zoom listener above already swallowed it.
+
     const bounds = event.currentTarget.getBoundingClientRect();
     props.updateCamera(zoomCameraAt(
       camera,
@@ -241,7 +270,6 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
       onPointerMove={pointer.handlePointerMove}
       onPointerUp={pointer.handlePointerUp}
       onPointerCancel={pointer.handlePointerCancel}
-      onLostPointerCapture={pointer.handlePointerCancel}
       onDoubleClick={pointer.handleDoubleClick}
       onWheel={handleWheel}
     >

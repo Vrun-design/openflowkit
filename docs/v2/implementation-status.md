@@ -377,3 +377,35 @@ external-agent/connector release gates.
 - Rollback: revert this slice's files to `ab731d1`; previous readers preserve
   appearance JSON but older Pixi rendering ignores newly exposed paint overrides.
   No storage migration is needed. Physical revert/rebuild not performed.
+
+## V2-04f — interaction reliability and smoothness (2026-09-20)
+
+Owner click-through of `1f8f025` reported: drags sometimes snap back, marquee
+sometimes needs two tries, browser page zooms on aggressive pinch, overall jerk.
+
+- Diagnosis: an instrumented headed Chromium logged the owner's real input.
+  Chrome drops mouse pointer capture on trackpads when the button-up is seen
+  before the `pointerup` (`lostpointercapture` ~2 ms early; the up then lands
+  uncaptured). The old `onLostPointerCapture → cancel` threw the gesture away:
+  6 drops in 10 s, each one a lost move or marquee. Headless Playwright cannot
+  reproduce this; the capture window is the tool for input-feel reports.
+- Fix: `useV2Pointer` no longer depends on capture — `lostpointercapture` is
+  ignored, capture is re-acquired on the next move, and window-level
+  `pointermove`/`pointerup` finish the gesture wherever it lands. Tripwire:
+  `useV2Pointer.test.ts` "finishes a drag from a window pointerup".
+  Second capture session: 56 drops, every gesture committed, 0 errors,
+  0 long tasks, 0 frames over 34 ms.
+- Smoothness (measured, headed Chromium, 30 labelled nodes): drag start/drop
+  frame 24–26 ms → within one frame (`PixiNodeRenderer` pools label `Text`
+  across redraws instead of destroy+re-rasterize); wheel pan dropped 35/90
+  frames at 40 nodes → `PixiRendererHost.setCamera` only moves the world
+  transform per event and settles dot grid/overlays/projection once per render;
+  `useV2Camera` and the context-bar preview anchor coalesce React state to rAF.
+- Zoom leak: ⌘/Ctrl-wheel and Safari `gesture*` are prevented on the whole
+  `.ofk-v2` root, and pinch over the context bar zooms the canvas.
+- Owner reconsidered sticky creation tools mid-slice; revert-to-Select after
+  one create stays (unchanged).
+- Validation: `tsc`, `eslint --max-warnings=0`, 2277 vitest / 464 files,
+  `check-v2-04.mjs` and `check-v2-polish.mjs` against the flag-on build.
+- Open: connector body drag inserts a waypoint (no whole-arrow move) — owner
+  report unclear; V2-05 connector work. Firefox/WebKit not installed locally.

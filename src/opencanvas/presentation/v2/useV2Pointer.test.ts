@@ -66,6 +66,24 @@ describe('V2 direct manipulation', () => {
     });
   });
 
+  it('finishes a drag from a window pointerup after the browser drops capture', () => {
+    const { result, event, commit, page } = setup();
+    act(() => result.current.handlePointerDown(event(100, 100)));
+    act(() => result.current.handlePointerMove(event(130, 120)));
+    // Chrome releases mouse capture early on trackpads; the up then lands
+    // on whatever is under the pointer, or outside the section entirely.
+    act(() => {
+      window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, clientX: 150, clientY: 130, bubbles: true }));
+    });
+    expect(commit).toHaveBeenCalledOnce();
+    expect(commit.mock.calls[0][0].after.transform.translation).toEqual({
+      x: page.nodes[0].transform.translation.x + 50,
+      y: page.nodes[0].transform.translation.y + 30,
+    });
+    act(() => result.current.handlePointerUp(event(150, 130)));
+    expect(commit).toHaveBeenCalledOnce();
+  });
+
   it('ignores floating controls and cancels preview without committing', () => {
     const { result, event, host, commit, selectionRef } = setup();
     act(() => result.current.handlePointerDown(event(100, 100, document.createElement('button'))));

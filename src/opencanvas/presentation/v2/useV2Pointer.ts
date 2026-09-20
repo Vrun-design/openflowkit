@@ -101,7 +101,18 @@ interface V2PointerOptions {
   readonly mintId: (prefix: string) => string;
 }
 
-function localPoint(event: ReactPointerEvent<HTMLElement>): Point2d {
+// Both React's synthetic event and a native window event, re-targeted at the
+// canvas section, satisfy this.
+interface PointerLike {
+  readonly currentTarget: HTMLElement;
+  readonly target: EventTarget | null;
+  readonly clientX: number;
+  readonly clientY: number;
+  readonly pointerId: number;
+  readonly altKey: boolean;
+}
+
+function localPoint(event: PointerLike): Point2d {
   const bounds = event.currentTarget.getBoundingClientRect();
   return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
 }
@@ -121,6 +132,11 @@ function nodeCenterWorld(page: ScenePage, nodeId: string): Point2d | null {
 
 export function useV2Pointer(options: V2PointerOptions) {
   const operationRef = useRef<V2Operation | null>(null);
+  // Gestures never depend on pointer capture: Chrome drops mouse capture when
+  // a trackpad reports the button up a moment before the pointerup arrives
+  // (lostpointercapture ~2 ms early, pointerup lands uncaptured, move lost).
+  // Capture is only an optimization; window listeners guarantee completion.
+  const windowListenersRef = useRef<(() => void) | null>(null);
   const optionsRef = useRef(options);
   const { gestureApiRef } = options;
   useEffect(() => {
@@ -134,149 +150,26 @@ export function useV2Pointer(options: V2PointerOptions) {
     optionsRef.current.onTransformPreview?.(null);
   }, []);
 
+  const detachWindow = useCallback(() => {
+    windowListenersRef.current?.();
+    windowListenersRef.current = null;
+  }, []);
+
   const cancelGesture = useCallback((): boolean => {
+    detachWindow();
     if (!operationRef.current) return false;
     operationRef.current = null;
     clearPreviews();
     return true;
-  }, [clearPreviews]);
+  }, [clearPreviews, detachWindow]);
+  useEffect(() => detachWindow, [detachWindow]);
 
   useEffect(() => {
     gestureApiRef.current = { cancelGesture };
   }, [gestureApiRef, cancelGesture]);
 
-  const handlePointerDown = useCallback(
-    (event: ReactPointerEvent<HTMLElement>) => {
-      if (event.target !== event.currentTarget && !(event.target instanceof HTMLCanvasElement)) return;
-      if (operationRef.current) return;
-      const opts = optionsRef.current;
-      const host = opts.hostRef.current;
-      const page = opts.pageRef.current;
-      if ((event.button !== 0 && event.button !== 1) || !host || !page) return;
-      event.preventDefault();
-      event.currentTarget.focus({ preventScroll: true });
-      try {
-        event.currentTarget.setPointerCapture(event.pointerId);
-      } catch {
-        /* pointer already released */
-      }
-      const point = localPoint(event);
-      const tool = opts.toolRef.current;
-      if (tool === 'hand' || opts.spacePanRef.current || event.button === 1) {
-        operationRef.current = { kind: 'pan', pointerId: event.pointerId, last: point };
-        return;
-      }
-      if (opts.readOnlyRef.current) {
-        operationRef.current = {
-          kind: 'marquee',
-          pointerId: event.pointerId,
-          start: point,
-          current: point,
-          additive: false,
-        };
-        return;
-      }
-      if (tool === 'rectangle' || tool === 'ellipse' || tool === 'text') {
-        const shape: V2ShapeKind = tool;
-        const world = host.screenToWorld(point);
-        operationRef.current = {
-          kind: 'create',
-          pointerId: event.pointerId,
-          shape,
-          page,
-          startWorld: world,
-          startScreen: point,
-          currentScreen: point,
-        };
-        host.setMarquee(boundsBetween(point, point));
-        return;
-      }
-      if (tool === 'connector') {
-        // Starts anywhere: over a shape binds that end, empty canvas leaves
-        // it free (ADR-001), like Excalidraw and tldraw arrows.
-        const nodeId = host.pickNode(point);
-        const world = host.screenToWorld(point);
-        operationRef.current = {
-          kind: 'connect',
-          pointerId: event.pointerId,
-          page,
-          sourceNodeId: nodeId,
-          fromWorld: (nodeId && nodeCenterWorld(page, nodeId)) || world,
-          startScreen: point,
-          toWorld: world,
-        };
-        return;
-      }
-      const additive = event.shiftKey || event.metaKey || event.ctrlKey;
-      const selectedConnectorId = host.getSelectedConnectorId();
-      const selectedConnector = selectedConnectorId
-        ? page.connectors.find(({ id }) => id === selectedConnectorId) ?? null
-        : null;
-      const connectorHandle = selectedConnector ? host.pickConnectorHandle(point) : null;
-      if (selectedConnector && connectorHandle && !additive) {
-        host.setConnectorSelection(selectedConnector.id, connectorHandle);
-        operationRef.current = beginConnectorOperation(
-          event.pointerId, page, selectedConnector, connectorHandle
-        );
-        return;
-      }
-      const states = buildNodeStateMap(page);
-      const canTransform = opts.selectionRef.current.nodeIds.every((id) => !states.get(id)?.locked);
-      const connectSide = host.pickConnectHandle(point);
-      const primary = opts.selectionRef.current.primaryNodeId;
-      if (connectSide && primary && !additive && canTransform) {
-        operationRef.current = { kind: 'connect', pointerId: event.pointerId, page,
-          sourceNodeId: primary, fromWorld: nodeCenterWorld(page, primary)!,
-          startScreen: point, toWorld: host.screenToWorld(point) };
-        return;
-      }
-      const handle = canTransform ? host.pickTransformHandle(point) : null;
-      if (handle && !additive && opts.selectionRef.current.nodeIds.length > 0) {
-        operationRef.current = beginTransformOperation(event.pointerId, page,
-          opts.selectionRef.current.nodeIds, handle, host.screenToWorld(point));
-        return;
-      }
-      const nodeId = host.pickNode(point);
-      if (nodeId && !additive) {
-        if (!opts.selectionRef.current.nodeIds.includes(nodeId)) {
-          opts.applyConnectorSelection(null);
-          opts.applySelection(replaceSelection([nodeId]));
-        }
-        if (opts.selectionRef.current.nodeIds.some((id) => states.get(id)?.locked)) return;
-        operationRef.current = beginTransformOperation(
-          event.pointerId,
-          page,
-          opts.selectionRef.current.nodeIds,
-          null,
-          host.screenToWorld(point)
-        );
-        return;
-      }
-      const connectorId = host.pickConnector(point);
-      if (connectorId && !nodeId) {
-        opts.applySelection(clearSelection());
-        opts.applyConnectorSelection(connectorId);
-        operationRef.current = null;
-        try {
-          event.currentTarget.releasePointerCapture(event.pointerId);
-        } catch {
-          /* already released */
-        }
-        return;
-      }
-      operationRef.current = {
-        kind: 'marquee',
-        pointerId: event.pointerId,
-        start: point,
-        current: point,
-        additive,
-      };
-    },
-    []
-  );
-
-  const handlePointerMove = useCallback(
-    (event: ReactPointerEvent<HTMLElement>) => {
+  const pointerMove = useCallback(
+    (event: PointerLike) => {
       const opts = optionsRef.current;
       const operation = operationRef.current;
       const host = opts.hostRef.current;
@@ -291,6 +184,13 @@ export function useV2Pointer(options: V2PointerOptions) {
         return;
       }
       if (operation.pointerId !== event.pointerId) return;
+      if (!event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+        try {
+          event.currentTarget.setPointerCapture(event.pointerId);
+        } catch {
+          /* pointer already released */
+        }
+      }
       if (operation.kind === 'pan') {
         opts.updateCamera(
           panCamera(opts.cameraRef.current, {
@@ -331,13 +231,14 @@ export function useV2Pointer(options: V2PointerOptions) {
     []
   );
 
-  const handlePointerUp = useCallback(
-    (event: ReactPointerEvent<HTMLElement>) => {
+  const pointerUp = useCallback(
+    (event: PointerLike) => {
       const opts = optionsRef.current;
       const operation = operationRef.current;
       const host = opts.hostRef.current;
       if (!operation || operation.pointerId !== event.pointerId || !host) return;
       operationRef.current = null;
+      detachWindow();
       const point = localPoint(event);
       if (operation.kind === 'marquee') {
         const bounds: Bounds2d = boundsBetween(operation.start, point);
@@ -467,13 +368,171 @@ export function useV2Pointer(options: V2PointerOptions) {
         /* already released */
       }
     },
-    []
+    [detachWindow]
+  );
+
+  const handlePointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => {
+      if (event.target !== event.currentTarget && !(event.target instanceof HTMLCanvasElement)) return;
+      if (operationRef.current) return;
+      const opts = optionsRef.current;
+      const host = opts.hostRef.current;
+      const page = opts.pageRef.current;
+      if ((event.button !== 0 && event.button !== 1) || !host || !page) return;
+      event.preventDefault();
+      const section = event.currentTarget;
+      section.focus({ preventScroll: true });
+      try {
+        section.setPointerCapture(event.pointerId);
+      } catch {
+        /* pointer already released */
+      }
+      detachWindow();
+      const retarget = (native: PointerEvent): PointerLike => ({
+        currentTarget: section, target: native.target, clientX: native.clientX,
+        clientY: native.clientY, pointerId: native.pointerId, altKey: native.altKey,
+      });
+      const onWindowMove = (native: PointerEvent) => {
+        if (!operationRef.current || section.contains(native.target as Node)) return;
+        pointerMove(retarget(native));
+      };
+      const onWindowUp = (native: PointerEvent) => {
+        if (operationRef.current) pointerUp(retarget(native));
+      };
+      window.addEventListener('pointermove', onWindowMove);
+      window.addEventListener('pointerup', onWindowUp);
+      windowListenersRef.current = () => {
+        window.removeEventListener('pointermove', onWindowMove);
+        window.removeEventListener('pointerup', onWindowUp);
+      };
+      const point = localPoint(event);
+      const tool = opts.toolRef.current;
+      if (tool === 'hand' || opts.spacePanRef.current || event.button === 1) {
+        operationRef.current = { kind: 'pan', pointerId: event.pointerId, last: point };
+        return;
+      }
+      if (opts.readOnlyRef.current) {
+        operationRef.current = {
+          kind: 'marquee',
+          pointerId: event.pointerId,
+          start: point,
+          current: point,
+          additive: false,
+        };
+        return;
+      }
+      if (tool === 'rectangle' || tool === 'ellipse' || tool === 'text') {
+        const shape: V2ShapeKind = tool;
+        const world = host.screenToWorld(point);
+        operationRef.current = {
+          kind: 'create',
+          pointerId: event.pointerId,
+          shape,
+          page,
+          startWorld: world,
+          startScreen: point,
+          currentScreen: point,
+        };
+        host.setMarquee(boundsBetween(point, point));
+        return;
+      }
+      if (tool === 'connector') {
+        // Starts anywhere: over a shape binds that end, empty canvas leaves
+        // it free (ADR-001), like Excalidraw and tldraw arrows.
+        const nodeId = host.pickNode(point);
+        const world = host.screenToWorld(point);
+        operationRef.current = {
+          kind: 'connect',
+          pointerId: event.pointerId,
+          page,
+          sourceNodeId: nodeId,
+          fromWorld: (nodeId && nodeCenterWorld(page, nodeId)) || world,
+          startScreen: point,
+          toWorld: world,
+        };
+        return;
+      }
+      const additive = event.shiftKey || event.metaKey || event.ctrlKey;
+      const selectedConnectorId = host.getSelectedConnectorId();
+      const selectedConnector = selectedConnectorId
+        ? page.connectors.find(({ id }) => id === selectedConnectorId) ?? null
+        : null;
+      const connectorHandle = selectedConnector ? host.pickConnectorHandle(point) : null;
+      if (selectedConnector && connectorHandle && !additive) {
+        host.setConnectorSelection(selectedConnector.id, connectorHandle);
+        operationRef.current = beginConnectorOperation(
+          event.pointerId, page, selectedConnector, connectorHandle
+        );
+        return;
+      }
+      const states = buildNodeStateMap(page);
+      const canTransform = opts.selectionRef.current.nodeIds.every((id) => !states.get(id)?.locked);
+      const connectSide = host.pickConnectHandle(point);
+      const primary = opts.selectionRef.current.primaryNodeId;
+      if (connectSide && primary && !additive && canTransform) {
+        operationRef.current = { kind: 'connect', pointerId: event.pointerId, page,
+          sourceNodeId: primary, fromWorld: nodeCenterWorld(page, primary)!,
+          startScreen: point, toWorld: host.screenToWorld(point) };
+        return;
+      }
+      const handle = canTransform ? host.pickTransformHandle(point) : null;
+      if (handle && !additive && opts.selectionRef.current.nodeIds.length > 0) {
+        operationRef.current = beginTransformOperation(event.pointerId, page,
+          opts.selectionRef.current.nodeIds, handle, host.screenToWorld(point));
+        return;
+      }
+      const nodeId = host.pickNode(point);
+      if (nodeId && !additive) {
+        if (!opts.selectionRef.current.nodeIds.includes(nodeId)) {
+          opts.applyConnectorSelection(null);
+          opts.applySelection(replaceSelection([nodeId]));
+        }
+        if (opts.selectionRef.current.nodeIds.some((id) => states.get(id)?.locked)) return;
+        operationRef.current = beginTransformOperation(
+          event.pointerId,
+          page,
+          opts.selectionRef.current.nodeIds,
+          null,
+          host.screenToWorld(point)
+        );
+        return;
+      }
+      const connectorId = host.pickConnector(point);
+      if (connectorId && !nodeId) {
+        opts.applySelection(clearSelection());
+        opts.applyConnectorSelection(connectorId);
+        operationRef.current = null;
+        detachWindow();
+        try {
+          section.releasePointerCapture(event.pointerId);
+        } catch {
+          /* already released */
+        }
+        return;
+      }
+      operationRef.current = {
+        kind: 'marquee',
+        pointerId: event.pointerId,
+        start: point,
+        current: point,
+        additive,
+      };
+    },
+    [detachWindow, pointerMove, pointerUp]
+  );
+
+  const handlePointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => pointerMove(event),
+    [pointerMove]
+  );
+  const handlePointerUp = useCallback(
+    (event: ReactPointerEvent<HTMLElement>) => pointerUp(event),
+    [pointerUp]
   );
 
   const handlePointerCancel = useCallback(() => {
-    operationRef.current = null;
-    clearPreviews();
-  }, [clearPreviews]);
+    cancelGesture();
+  }, [cancelGesture]);
 
   const handleDoubleClick = useCallback(
     (event: ReactMouseEvent<HTMLElement>) => {

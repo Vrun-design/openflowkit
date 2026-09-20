@@ -375,6 +375,7 @@ async function runJourney(browser, docId) {
     await page.mouse.wheel(0, 120);
     assert.equal(await page.getByRole('button', { name: /^Zoom \d+%$/ }).textContent(), zoomBefore, 'plain wheel pans, not zooms');
     await page.locator('.ofk-v2-viewport canvas').dispatchEvent('wheel', { deltaY: -120, clientX: 720, clientY: 450, ctrlKey: true, bubbles: true });
+    await page.waitForTimeout(50); // camera state settles on the next animation frame
     assert.notEqual(await page.getByRole('button', { name: /^Zoom \d+%$/ }).textContent(), zoomBefore, 'ctrl+wheel zooms');
     await page.keyboard.press('ControlOrMeta+a');
     current = await state(page);
