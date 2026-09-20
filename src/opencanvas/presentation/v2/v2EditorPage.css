@@ -147,3 +147,9 @@
     );
   }
 }
+.ofk-v2-intents { display: flex; flex-direction: column; gap: 4px; }
+.ofk-v2-intents > .ofk-button { justify-content: flex-start; }
+.ofk-v2 .ofk-agent-panel { --ofk-layout-panelWidth: 400px; --ofk-layout-panelMaxWidth: 400px; }
+.ofk-v2 .ofk-agent-panel .ofk-review { width: 100%; }
+.ofk-v2 .ofk-agent-panel .ofk-review-header { flex-wrap: wrap; }
+.ofk-v2 .ofk-agent-panel .ofk-review-bulk .ofk-button { white-space: nowrap; }

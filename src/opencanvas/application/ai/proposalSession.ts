@@ -2,7 +2,7 @@
 // MCP propose-for-review later) creates, decides on, and turns into ONE batch.
 // Owns no React, no provider, no storage; the session commits what it returns.
 import type { BatchDocumentCommand, DocumentCommand } from '../../domain/commands/types';
-import type { SceneDocumentV1, SceneNode } from '../../domain/document/types';
+import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import {
   acceptedAiProposalCommand, buildAiSceneProposal, decideAiProposalChange,
   type AiProposedChange, type AiSceneProposal,
@@ -104,26 +104,33 @@ function nodeLabel(node: SceneNode): string {
   return typeof node.content.label === 'string' && node.content.label ? node.content.label : node.id;
 }
 
-function changeLabel(command: DocumentCommand): string {
+function changeLabel(command: DocumentCommand, page: ScenePage | undefined): string {
+  const endpoint = (nodeId: string | null) => {
+    const node = nodeId ? page?.nodes.find((candidate) => candidate.id === nodeId) : undefined;
+    return node ? nodeLabel(node) : nodeId ?? '·';
+  };
   switch (command.kind) {
     case 'insert-node': case 'remove-node': return nodeLabel(command.node);
     case 'set-node': return nodeLabel(command.after);
     case 'insert-connector': case 'remove-connector':
-      return `${command.connector.source.nodeId ?? '·'} → ${command.connector.target.nodeId ?? '·'}`;
+      return `${endpoint(command.connector.source.nodeId)} → ${endpoint(command.connector.target.nodeId)}`;
     case 'set-connector':
-      return `${command.after.source.nodeId ?? '·'} → ${command.after.target.nodeId ?? '·'}`;
+      return `${endpoint(command.after.source.nodeId)} → ${endpoint(command.after.target.nodeId)}`;
     default: return command.label;
   }
 }
 
-export function summarizeChanges(changes: readonly Omit<AiProposedChange, 'status'>[]): ProposalChangeSummary[] {
+/** Rows for the review list; `page` (usually the preview) resolves endpoint labels. */
+export function summarizeChanges(
+  changes: readonly Omit<AiProposedChange, 'status'>[], page?: ScenePage
+): ProposalChangeSummary[] {
   return changes.map(({ id, explanation, command }) => {
     const last = leaf(command);
     return {
       id,
       kind: last.kind.startsWith('insert-') ? 'addition'
         : last.kind.startsWith('remove-') ? 'removal' : 'modification',
-      label: changeLabel(last),
+      label: changeLabel(last, page),
       reason: explanation,
     };
   });

@@ -2,6 +2,7 @@ export type RolloutFlagKey =
   | 'relationSemanticsV1'
   | 'documentModelV2'
   | 'v2Editor'
+  | 'v2Ai'
   | 'openCanvasDocumentV1'
   | 'openCanvasRendererV1'
   | 'openCanvasConnectorsV1'
@@ -55,6 +56,12 @@ const ROLLOUT_FLAG_DEFINITIONS: Record<RolloutFlagKey, RolloutFlagDefinition> = 
     envVar: 'VITE_V2_EDITOR',
     defaultEnabled: false,
     description: 'Revisioned v2 editing session as the single commit path (no legacy write-back)',
+  },
+  v2Ai: {
+    key: 'v2Ai',
+    envVar: 'VITE_V2_AI',
+    defaultEnabled: false,
+    description: 'Agent proposal panel in the v2 editor (local agent; providers arrive in V2-11)',
   },
   openCanvasDocumentV1: {
     key: 'openCanvasDocumentV1',
@@ -258,6 +265,7 @@ export const ROLLOUT_FLAGS: Record<RolloutFlagKey, boolean> = {
   relationSemanticsV1: isRolloutFlagEnabled('relationSemanticsV1'),
   documentModelV2: isRolloutFlagEnabled('documentModelV2'),
   v2Editor: isRolloutFlagEnabled('v2Editor'),
+  v2Ai: isRolloutFlagEnabled('v2Ai'),
   openCanvasDocumentV1: isRolloutFlagEnabled('openCanvasDocumentV1'),
   openCanvasRendererV1: isRolloutFlagEnabled('openCanvasRendererV1'),
   openCanvasConnectorsV1: isRolloutFlagEnabled('openCanvasConnectorsV1'),

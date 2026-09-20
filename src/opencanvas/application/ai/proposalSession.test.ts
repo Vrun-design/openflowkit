@@ -120,9 +120,11 @@ describe('proposal session', () => {
       { id: '4', explanation: 'move', command: agent('move_node', { id: 'a', x: 9, y: 9 }, document) },
       { id: '5', explanation: 'delete', command: agent('delete_node', { id: 'b' }, document) },
     ];
-    expect(summarizeChanges(changes)).toEqual([
+    const page = { ...document.pages[0], nodes: document.pages[0].nodes.map((node) =>
+      node.id === 'b' ? { ...node, content: { label: 'Bee' } } : node) };
+    expect(summarizeChanges(changes, page)).toEqual([
       { id: '1', kind: 'addition', label: 'Étape ✓', reason: 'add' },
-      { id: '2', kind: 'addition', label: 'a → b', reason: 'connect' },
+      { id: '2', kind: 'addition', label: 'a → Bee', reason: 'connect' },
       { id: '3', kind: 'modification', label: 'B', reason: 'label' },
       { id: '4', kind: 'modification', label: 'a', reason: 'move' },
       { id: '5', kind: 'removal', label: 'b', reason: 'delete' },

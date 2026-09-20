@@ -1,4 +1,5 @@
 import { useV2Preferences } from './useV2Preferences';
+import { isRolloutFlagEnabled } from '../../../config/rolloutFlags';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -15,6 +16,7 @@ import { V2Chrome } from './V2Chrome';
 import type { V2Tool } from './V2CreationToolbar';
 import { V2LoadCenter } from './V2LoadCenter';
 import { V2TreePanel } from './V2TreePanel';
+import { V2AgentPanel } from './V2AgentPanel';
 import { useV2Appearance } from './useV2Appearance';
 import { useV2Autosave } from './useV2Autosave';
 import { useV2Camera } from './useV2Camera';
@@ -22,6 +24,7 @@ import { useV2DocumentLoad } from './useV2DocumentLoad';
 import { useV2EditActions } from './useV2EditActions';
 import { useV2Keyboard } from './useV2Keyboard';
 import { useV2LabelEditing } from './useV2LabelEditing';
+import { useV2Proposal } from './useV2Proposal';
 import { useV2Selection } from './useV2Selection';
 import { useV2TestApi } from './useV2TestApi';
 import type { V2GestureApi } from './useV2Pointer';
@@ -30,9 +33,13 @@ import { downloadTextFile } from './v2Export';
 import type { ScenePage } from '../../domain/document/types';
 import './v2EditorPage.css';
 
+const AI_ENABLED = isRolloutFlagEnabled('v2Ai');
+
 export function V2EditorPage(): React.JSX.Element {
   const { id } = useParams();
   const { preferences, updatePreferences } = useV2Preferences();
+  const agentOpen = AI_ENABLED && preferences.agentOpen;
+  const toggleAgent = () => { if (AI_ENABLED) updatePreferences({ agentOpen: !preferences.agentOpen }); };
   const appearance = useV2Appearance(preferences.theme);
   const canvasColor = preferences.canvasColor ?? (appearance === 'dark' ? '#191b19' : '#f7f7f5');
   const rendererCanvasColor = Number.parseInt(canvasColor.slice(1), 16);
@@ -122,9 +129,15 @@ export function V2EditorPage(): React.JSX.Element {
     onConflict: () => setAnnouncement('Another tab saved first. Reload to continue.'),
   });
 
+  const proposal = useV2Proposal({
+    document: session.document, revision: session.revision, pageId: page?.id ?? null,
+    selectionRef, commit: session.commit, readOnly: load.readOnly,
+    announce: setAnnouncement, mintId: mintV2Id,
+  });
+
   useV2TestApi({
     hostRef, selectionRef, toolRef, selectedConnectorId,
-    document: session.document, revision: session.revision, saveStatus,
+    document: session.document, revision: session.revision, saveStatus, proposal,
   });
 
   useEffect(() => {
@@ -164,12 +177,17 @@ export function V2EditorPage(): React.JSX.Element {
     },
     onNudge: editActions.nudgeSelection,
     onCancelGesture: () => gestureApiRef.current?.cancelGesture() ?? false,
-    onClearSelection: selectionApi.clearAll,
+    // Escape chain tail: selection first, then the open agent panel.
+    onClearSelection: () => {
+      if (selectionRef.current.nodeIds.length > 0 || selectedConnectorId) selectionApi.clearAll();
+      else if (agentOpen) toggleAgent();
+    },
     onSelectAll: () => selectionApi.selectAllNodes(pageRef.current),
     onFitView: camera.fitView,
     onZoomStep: camera.zoomStep,
     onResetZoom: camera.resetZoom,
     onToggleTree: () => setTreeOpen((open) => !open),
+    onToggleAgent: toggleAgent,
     onSpacePan: setSpacePan,
   });
 
@@ -202,6 +220,7 @@ export function V2EditorPage(): React.JSX.Element {
               canUndo={session.canUndo} canRedo={session.canRedo}
               readOnly={load.readOnly}
               tool={tool} zoomPercent={camera.zoom} treeOpen={treeOpen}
+              agentOpen={AI_ENABLED ? agentOpen : null}
               onUndo={session.undo} onRedo={session.redo}
               onRetrySave={retrySave} onReload={load.reload} onToast={pushToast}
               onRename={(name) => {
@@ -221,6 +240,7 @@ export function V2EditorPage(): React.JSX.Element {
               onZoomTo={camera.zoomTo}
               onFitView={camera.fitView}
               onToggleTree={() => setTreeOpen((open) => !open)}
+              onToggleAgent={toggleAgent}
             />
             <V2CanvasHost
               page={page} hostRef={hostRef} camera={camera.camera} cameraRef={camera.cameraRef} pageRef={pageRef}
@@ -253,6 +273,10 @@ export function V2EditorPage(): React.JSX.Element {
                 }}
                 onClose={() => setTreeOpen(false)}
               />
+            ) : null}
+            {agentOpen ? (
+              <V2AgentPanel proposal={proposal} currentRevision={session.revision}
+                readOnly={load.readOnly} onUndo={session.undo} onClose={toggleAgent} />
             ) : null}
             <ToastRegion
               items={toasts}

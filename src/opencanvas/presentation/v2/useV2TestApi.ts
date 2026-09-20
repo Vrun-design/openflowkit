@@ -5,6 +5,7 @@ import type { CanvasSelection } from '../../application/selection/selection';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import type { V2Tool } from './V2CreationToolbar';
 import type { V2SaveStatus } from './useV2Autosave';
+import type { useV2Proposal } from './useV2Proposal';
 
 interface V2TestApiOptions {
   readonly hostRef: RefObject<PixiRendererHost | null>;
@@ -14,6 +15,7 @@ interface V2TestApiOptions {
   readonly document: SceneDocumentV1 | null;
   readonly revision: number;
   readonly saveStatus: V2SaveStatus;
+  readonly proposal: ReturnType<typeof useV2Proposal>;
 }
 
 // Read-only handle for the Playwright gate and deterministic evaluations
@@ -21,7 +23,7 @@ interface V2TestApiOptions {
 // the route itself; it exposes document state and geometry, never writes.
 export function useV2TestApi(options: V2TestApiOptions) {
   const {
-    hostRef, selectionRef, toolRef, selectedConnectorId, document, revision, saveStatus,
+    hostRef, selectionRef, toolRef, selectedConnectorId, document, revision, saveStatus, proposal,
   } = options;
   useEffect(() => {
     if (!isRolloutFlagEnabled('v2Editor')) return;
@@ -36,6 +38,12 @@ export function useV2TestApi(options: V2TestApiOptions) {
         tool: toolRef.current,
       }),
       getDocument: () => document,
+      getProposal: () => ({
+        phase: proposal.phase, stale: proposal.stale, id: proposal.proposal?.id ?? null,
+        baseRevision: proposal.proposal?.baseRevision ?? null,
+        changeIds: proposal.changes.map(({ id }) => id), decisions: proposal.decisions,
+        error: proposal.error,
+      }),
       getRenderDiagnostics: () => hostRef.current?.getRenderDiagnostics(),
       getNodeRect: (nodeId: string) => {
         const bounds = hostRef.current?.getNodeScreenBounds(nodeId);

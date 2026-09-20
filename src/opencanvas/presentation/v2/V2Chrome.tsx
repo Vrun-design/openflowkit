@@ -15,6 +15,7 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly tool: V2Tool;
   readonly zoomPercent: number;
   readonly treeOpen: boolean;
+  readonly agentOpen: boolean | null;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
   readonly onRetrySave: () => void;
@@ -27,6 +28,7 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly onZoomTo: (percent: number) => void;
   readonly onFitView: () => void;
   readonly onToggleTree: () => void;
+  readonly onToggleAgent: () => void;
 }
 
 // Persistent chrome (I-31): document bar, creation toolbar, camera controls.
@@ -49,7 +51,8 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         onToast={props.onToast}
         onRename={props.onRename}
       />
-      {props.readOnly ? null : <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange} />}
+      {props.readOnly ? null : <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange}
+        agentOpen={props.agentOpen} onToggleAgent={props.onToggleAgent} />}
       <V2CameraControls
         preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}
         onPreferencesChange={props.onPreferencesChange}

@@ -19,6 +19,7 @@ interface V2KeyboardOptions {
   readonly onZoomStep: (factor: number) => void;
   readonly onResetZoom: () => void;
   readonly onToggleTree: () => void;
+  readonly onToggleAgent: () => void;
   readonly onSpacePan: (active: boolean) => void;
 }
 
@@ -68,6 +69,9 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       event.preventDefault();
     } else if (command && key === 'd') {
       opts.onDuplicate();
+      event.preventDefault();
+    } else if (command && key === 'j') {
+      opts.onToggleAgent();
       event.preventDefault();
     } else if (!command && (event.key === 'Delete' || event.key === 'Backspace')) {
       opts.onDelete();

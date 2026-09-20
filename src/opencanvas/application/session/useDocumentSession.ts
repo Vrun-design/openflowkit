@@ -35,7 +35,8 @@ export function useDocumentSession(callbacks: DocumentSessionCallbacks) {
   const advance = useCallback(
     (
       step: (current: DocumentSession) => DocumentSession,
-      ready: (current: DocumentSession) => boolean = () => true
+      ready: (current: DocumentSession) => boolean = () => true,
+      rethrowStale = false
     ) => {
       const current = sessionRef.current;
       if (!current || !ready(current)) return;
@@ -44,16 +45,22 @@ export function useDocumentSession(callbacks: DocumentSessionCallbacks) {
         sessionRef.current = next;
         setSession(next);
       } catch (error) {
-        if (error instanceof StaleSessionRevisionError) staleRef.current();
+        if (error instanceof StaleSessionRevisionError && !rethrowStale) staleRef.current();
         else throw error;
       }
     },
     []
   );
 
+  // With an explicit expectedRevision the caller owns staleness (a proposal
+  // built on an older revision) and receives StaleSessionRevisionError.
   const commit = useCallback(
-    (command: DocumentCommand) =>
-      advance((current) => commitSessionCommand(current, command, current.revision)),
+    (command: DocumentCommand, expectedRevision?: number) =>
+      advance(
+        (current) => commitSessionCommand(current, command, expectedRevision ?? current.revision),
+        () => true,
+        expectedRevision !== undefined
+      ),
     [advance]
   );
   const undo = useCallback(
