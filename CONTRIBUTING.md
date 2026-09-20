@@ -94,7 +94,7 @@ Husky runs `lint-staged` on every commit. It lints changed `.ts` / `.tsx` files 
 
 - **TypeScript everywhere** — avoid `any`; if you must use it, add a comment explaining why.
 - **React 19 Compiler** rules: `useMemo` / `useCallback` dependencies must be stable store references, not inline-constructed objects.
-- **Component size**: aim for ≤ 250 lines per component. Larger components should be split (see `ARCHITECTURE.md` for how `CustomNode` was decomposed).
+- **Component size**: aim for ≤ 250 lines per component. Larger components should be split using the boundaries in [the current technical design](docs/v2/technical-design.md).
 - **No new runtime dependencies** without opening an issue and getting agreement first.
 
 ---
@@ -123,4 +123,4 @@ Persistence keys (`flowmind_snapshots`, `flowmind-clipboard`, etc.) use a legacy
 
 ## Architecture Reference
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for a full breakdown of the store slices, hook hierarchy, node system, DSL, and export pipeline.
+Start with [docs/README.md](docs/README.md) for current requirements, architecture, delivery order, and implementation evidence. Root reference files are pointers; archived plans are not instructions.

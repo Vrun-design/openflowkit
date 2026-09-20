@@ -38,6 +38,10 @@ docs/en/codebase-audit-*.md
 docs/en/fix-log.md
 docs/en/next-level-roadmap-*.md
 docs/internal
+# Superseded planning/history and generated evidence; current docs stay tracked.
+/docs/archive/
+/docs/evidence/
+# Current specifications and repository authority remain version-controlled.
 .claude/scheduled_tasks.lock
 docs-site/.astro/
 

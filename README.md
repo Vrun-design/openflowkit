@@ -345,22 +345,13 @@ Recently shipped (latest milestone):
 - ✅ **ELK in a Web Worker** — layout no longer blocks the UI thread
 - ✅ **Flowchart corpus 12 → 20 fixtures** with explicit known-gap pinning
 
-Current roadmap focus:
+Current planning and implementation authority:
 
-The [OpenCanvas product roadmap](docs/opencanvas-product-roadmap.md) defines the
-current M1–M7 delivery order: a unified editor, excellent diagramming, rich board
-content, navigation, interoperability, data-driven diagrams, and advanced tools.
-Collaboration and native desktop packaging are parked; offline web and
-self-hosting remain in scope. The items below are supporting backlog items,
-not a separate priority order.
-
-- **`render_to_svg` MCP tool** — headless SVG render so AI clients can see the diagram, not just code
-- **GIF export for cinematic animations** — MP4 ships today; GIF export for zero-conversion embeds is next
-- **Mermaid family coverage** — gantt, c4, timeline, gitGraph, sankey, quadrant (view + edit-as-code)
-- **Mac / Linux / Windows desktop app (parked)** — revisit after the web milestones
-- better layers and page workflows for larger technical diagrams
-- smarter auto-layout defaults with less cleanup after import
-- performance boosts for bigger canvases and heavier sessions
+Start at [docs/README.md](docs/README.md). It indexes the current OpenCanvas v2
+requirements, interaction and external-agent contracts, technical design, product
+strategy, delivery gates, and implementation status. Future plans are distinct
+from shipped capabilities. Superseded roadmaps are archived; do not use them as
+an implementation sequence.
 
 ---
 

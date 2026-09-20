@@ -116,8 +116,9 @@ function main() {
   if (process.argv.includes('--write')) {
     const outputPath = path.join(
       ROOT,
-      'docs/internal/wiki/opencanvas/release-readiness.latest.json'
+      'docs/evidence/opencanvas-release-readiness.latest.json'
     );
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.writeFileSync(outputPath, serialized);
   } else {
     process.stdout.write(serialized);
