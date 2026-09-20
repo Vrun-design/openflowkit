@@ -496,3 +496,14 @@ remaining limitations / next slice: local agent only (V2-11 providers); one
   popover's; colors validated as `#rrggbb[aa]`, unknown ids rejected, no-op
   returns null.
 - Validation: vitest (agent, domain/commands, v2, graph), tsc, eslint.
+
+## V2-10b-3 — capability manifest (2026-09-20)
+
+- `src/agent/manifest.ts`: `CAPABILITY_MANIFEST` v1 maps each shipped v2 editor
+  operation to its action and equivalence test, or names the slice that closes
+  the gap (duplicate, resize/rotate, free arrows, delete connector, rename
+  document). `manifest.test.ts` fails when an action is registered without a
+  row, a row's action or test file is missing, or the test does not reference
+  the action. 7 shipped / 12 rows.
+- Not yet exposed over MCP (V2-10c pairs the live bridge; `mcp-server/` is
+  untouched).
