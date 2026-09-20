@@ -295,6 +295,7 @@ function applyBatch(
       id: `${command.id}:inverse`,
       label: command.label,
       commands: inverses,
+      ...(command.attribution ? { attribution: command.attribution } : {}),
     },
   };
 }

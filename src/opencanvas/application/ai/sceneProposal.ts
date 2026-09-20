@@ -3,12 +3,10 @@ import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { classifyAiError, type AiSafeError } from './safeErrors';
 
-export type AtomicDocumentCommand = Exclude<DocumentCommand, { readonly kind: 'batch' }>;
-
 export interface AiProposedChange {
   readonly id: string;
   readonly explanation: string;
-  readonly command: AtomicDocumentCommand;
+  readonly command: DocumentCommand;
   readonly status: 'pending' | 'accepted' | 'rejected';
 }
 
@@ -66,7 +64,8 @@ export function acceptedAiProposalCommand(
   if (current.id !== proposal.baseDocumentId || current.updatedAt !== proposal.baseUpdatedAt) {
     throw new TypeError('AI proposal precondition failed because the document changed.');
   }
-  const commands = proposal.changes.filter(({ status }) => status === 'accepted').map(({ command }) => command);
+  // Non-rejected matches the preview: an undecided change still ships.
+  const commands = proposal.changes.filter(({ status }) => status !== 'rejected').map(({ command }) => command);
   return commands.length === 0 ? null : {
     kind: 'batch', id: `accept-ai-proposal:${proposal.id}`, label: 'Apply AI proposal', commands,
   };
