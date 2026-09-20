@@ -486,3 +486,13 @@ remaining limitations / next slice: local agent only (V2-11 providers); one
   own release; new kinds reach MCP clients then).
 - Validation: vitest (agent, v2, ai, graph), tsc, eslint, `check-v2-10a.mjs`,
   `check-v2-polish.mjs` against a fresh flag-on build.
+
+## V2-10b-2 — set_style action (2026-09-20)
+
+- `presentation/v2/v2StyleCommands.ts` moved to `domain/commands/styleNodes.ts`
+  (`buildStyleNodesCommand`); the v2 style popover and the new `set_style` agent
+  action (`ids`, `fill`, `stroke`, `strokeWidth`, `strokeStyle`, `opacity`) share
+  it. `src/agent/actions/setStyle.test.ts` asserts the agent batch `toEqual`s the
+  popover's; colors validated as `#rrggbb[aa]`, unknown ids rejected, no-op
+  returns null.
+- Validation: vitest (agent, domain/commands, v2, graph), tsc, eslint.

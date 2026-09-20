@@ -1,10 +1,12 @@
-import type { DocumentCommand } from '../../domain/commands/types';
-import type { ScenePage } from '../../domain/document/types';
-import type { JsonObject } from '../../domain/document/json';
-import { areStructurallyEqual } from '../../domain/commands/equality';
-import { buildNodeStateMap } from '../../domain/scene/nodeState';
+import type { DocumentCommand } from './types';
+import type { ScenePage } from '../document/types';
+import type { JsonObject } from '../document/json';
+import { areStructurallyEqual } from './equality';
+import { buildNodeStateMap } from '../scene/nodeState';
 
-export function buildV2StyleCommand(page: ScenePage, ids: readonly string[], patch: JsonObject): DocumentCommand | null {
+// One appearance patch over a set of nodes as one batch; locked and unchanged
+// nodes are skipped. Shared by the v2 style popover and the set_style action.
+export function buildStyleNodesCommand(page: ScenePage, ids: readonly string[], patch: JsonObject): DocumentCommand | null {
   const selected = new Set(ids);
   const states = buildNodeStateMap(page);
   const commands: DocumentCommand[] = [];

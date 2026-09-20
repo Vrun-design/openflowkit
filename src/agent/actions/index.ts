@@ -5,11 +5,12 @@ import { deleteNode } from './deleteNode';
 import { getDocument } from './getDocument';
 import { moveNode } from './moveNode';
 import { setLabel } from './setLabel';
+import { setStyle } from './setStyle';
 
 // Every surface (palette, WebMCP, MCP server, evals) reads this one list.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const AGENT_ACTIONS: readonly AgentAction<any, unknown>[] = [
-  getDocument, addNode, connect, setLabel, moveNode, deleteNode,
+  getDocument, addNode, connect, setLabel, setStyle, moveNode, deleteNode,
 ];
 
 export function findAgentAction(name: string) {

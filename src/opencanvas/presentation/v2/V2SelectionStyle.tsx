@@ -4,7 +4,7 @@ import type { JsonObject } from '../../domain/document/json';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { resolveNodeStroke, type NodeStrokeStyle } from '../../domain/nodes/nodeStroke';
 import { Button, ColorPicker, ColorSwatch, NumberField, Popover, PopoverHeader, Segmented } from '../design-system';
-import { buildV2StyleCommand } from './v2StyleCommands';
+import { buildStyleNodesCommand } from '../../domain/commands/styleNodes';
 
 interface V2SelectionStyleProps {
   page: ScenePage;
@@ -43,7 +43,7 @@ export function V2SelectionStyle({ page, nodeIds, commit, onPreview }: V2Selecti
   function apply(patch: JsonObject): void {
     onPreview(null);
     setDraft({});
-    const command = buildV2StyleCommand(page, nodeIds, patch);
+    const command = buildStyleNodesCommand(page, nodeIds, patch);
     if (command) commit(command);
   }
   function close(): void {
