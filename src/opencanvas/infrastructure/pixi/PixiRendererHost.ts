@@ -23,6 +23,7 @@ import type { TransformHandle, TransformResult } from '../../domain/transforms/t
 import { pickTransformHandle as pickHandle, PixiTransformOverlay } from './PixiTransformOverlay';
 import { PixiConnectorRenderer } from './PixiConnectorRenderer';
 import { PixiFreeformPreview, type FreeformPreviewFrame } from './PixiFreeformPreview';
+import { PixiProposalPreview, type ProposalPreviewFrame } from './PixiProposalPreview';
 import { PixiContainerRenderer } from './PixiContainerRenderer';
 import { PixiConnectorEditOverlay } from './PixiConnectorEditOverlay';
 import {
@@ -63,6 +64,7 @@ export interface PixiRenderDiagnostics {
   readonly detailLevel: SemanticDetailLevel;
   readonly pendingFrame: boolean;
   readonly continuousTickerRunning: boolean;
+  readonly proposalPreviewVisible: boolean;
 }
 
 interface PixiRendererHostOptions {
@@ -112,6 +114,8 @@ export class PixiRendererHost {
   private readonly selectionOverlay = new PixiSelectionOverlay();
   private readonly transformOverlay = new PixiTransformOverlay();
   private readonly freeformPreview = new PixiFreeformPreview();
+  private readonly proposalPreview = new PixiProposalPreview();
+  private proposalFrame: ProposalPreviewFrame | null = null;
   private readonly marquee = new Graphics();
   private readonly connectionPreview = new Graphics();
   private readonly alignmentGuides = new Graphics();
@@ -195,6 +199,7 @@ export class PixiRendererHost {
       this.alignmentGuides
     );
     if (this.livePreview) this.world.addChild(this.livePreview.container);
+    this.world.addChild(this.proposalPreview.container);
     this.app.stage.addChild(this.dotGrid.graphics, this.world, this.marquee);
     const canvas = this.app.canvas as HTMLCanvasElement;
     canvas.className = 'pixi-spike__canvas';
@@ -268,6 +273,7 @@ export class PixiRendererHost {
     this.drawDotGrid();
     this.drawSelection();
     this.connectorRenderer.setZoom(camera.zoom);
+    this.drawProposalPreview();
 
     const overlayStartedAt = performance.now();
     this.drawConnectorEditOverlay();
@@ -506,6 +512,18 @@ export class PixiRendererHost {
     this.requestRender();
   }
 
+  /** Ghost a proposal over the page; null clears. Redrawn on page and zoom changes. */
+  setProposalPreview(frame: ProposalPreviewFrame | null): void {
+    this.proposalFrame = frame;
+    this.drawProposalPreview();
+    this.requestRender();
+  }
+
+  private drawProposalPreview(): void {
+    if (this.proposalFrame && this.page) this.proposalPreview.draw(this.page, this.proposalFrame, this.camera.zoom);
+    else this.proposalPreview.clear();
+  }
+
   setFreeformPreview(frame: FreeformPreviewFrame | null): void {
     if (frame) this.freeformPreview.draw(frame);
     else this.freeformPreview.clear();
@@ -601,7 +619,8 @@ export class PixiRendererHost {
       nodeCount: this.page?.nodes.length ?? 0, connectorCount: this.page?.connectors.length ?? 0,
       renderedNodeCount, renderedConnectorCount,
       detailLevel: this.viewportProjection?.detailLevel ?? 'full',
-      pendingFrame: this.renderFrame !== null, continuousTickerRunning: this.app.ticker.started };
+      pendingFrame: this.renderFrame !== null, continuousTickerRunning: this.app.ticker.started,
+      proposalPreviewVisible: this.proposalPreview.container.visible };
   }
 
   destroy(): void {
@@ -657,6 +676,7 @@ export class PixiRendererHost {
     }
     this.updateLabelVisibility();
     this.drawSelection();
+    this.drawProposalPreview();
     this.requestRender();
   }
 

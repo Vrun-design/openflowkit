@@ -25,6 +25,7 @@ import { useV2EditActions } from './useV2EditActions';
 import { useV2Keyboard } from './useV2Keyboard';
 import { useV2LabelEditing } from './useV2LabelEditing';
 import { useV2Proposal } from './useV2Proposal';
+import type { Proposal } from '../../application/ai/proposalSession';
 import { useV2Selection } from './useV2Selection';
 import { useV2TestApi } from './useV2TestApi';
 import type { V2GestureApi } from './useV2Pointer';
@@ -34,6 +35,23 @@ import type { ScenePage } from '../../domain/document/types';
 import './v2EditorPage.css';
 
 const AI_ENABLED = isRolloutFlagEnabled('v2Ai');
+
+function changeObjectIds(changeId: string, proposal: Proposal | null): readonly string[] {
+  const change = proposal?.changes.find(({ id }) => id === changeId);
+  if (!change) return [];
+  const commands = change.command.kind === 'batch' ? change.command.commands : [change.command];
+  return commands.flatMap((command) => {
+    switch (command.kind) {
+      case 'insert-node': case 'remove-node': return [command.node.id];
+      case 'set-node': return [command.after.id];
+      case 'insert-connector': case 'remove-connector':
+        return [command.connector.source.nodeId, command.connector.target.nodeId].filter((id): id is string => !!id);
+      case 'set-connector':
+        return [command.after.source.nodeId, command.after.target.nodeId].filter((id): id is string => !!id);
+      default: return [];
+    }
+  });
+}
 
 export function V2EditorPage(): React.JSX.Element {
   const { id } = useParams();
@@ -143,6 +161,17 @@ export function V2EditorPage(): React.JSX.Element {
   useEffect(() => {
     camera.fitOnOpen(rendererStatus, session.document, id, session.revision);
   }, [rendererStatus, session.document, session.revision, id, camera]);
+
+  // Ghost the proposal preview while it is reviewable; clears on apply/discard/stale.
+  const ghostPage = proposal.phase === 'ready' && !proposal.stale && proposal.proposal
+    ? proposal.proposal.preview.pages[0] : null;
+  const highlightedChange = proposal.changes.find(({ id }) => id === proposal.highlightedChangeId);
+  const highlightIds = useMemo(() => (highlightedChange ? changeObjectIds(highlightedChange.id, proposal.proposal) : []),
+    [highlightedChange, proposal.proposal]);
+  useEffect(() => {
+    if (rendererStatus !== 'ready') return;
+    hostRef.current?.setProposalPreview(ghostPage ? { page: ghostPage, highlightIds } : null);
+  }, [ghostPage, highlightIds, rendererStatus]);
 
   const { openEditor: openLabelEditor } = labelEditing;
   const openEditor = useCallback(
