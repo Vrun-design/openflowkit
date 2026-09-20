@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTheme } from '@/context/ThemeContext';
+import { SystemRoot, Button, Toolbar } from './design-system';
 
 interface OpenCanvasCameraControlsProps {
   readonly canFitSelection: boolean;
@@ -9,25 +11,36 @@ interface OpenCanvasCameraControlsProps {
   readonly onRecallPrevious: () => void;
 }
 
-export function OpenCanvasCameraControls(
-  props: OpenCanvasCameraControlsProps
-): React.JSX.Element {
+export function OpenCanvasCameraControls(props: OpenCanvasCameraControlsProps): React.JSX.Element {
+  const { resolvedTheme } = useTheme();
   return (
-    <div role="group" aria-label="Canvas view">
-      <button type="button" title="Fit page (Shift+1)" onClick={props.onFitPage}>
-        Fit page
-      </button>
-      <button type="button" title="Fit selection (Shift+2)"
-        disabled={!props.canFitSelection} onClick={props.onFitSelection}>
-        Fit selection
-      </button>
-      <button type="button" title="Zoom to 100% (0)" onClick={props.onResetZoom}>
-        100%
-      </button>
-      <button type="button" title="Previous view (Shift+0)"
-        disabled={!props.canRecallPrevious} onClick={props.onRecallPrevious}>
-        Previous view
-      </button>
-    </div>
+    <SystemRoot appearance={resolvedTheme} className="ofk-camera-controls">
+      <Toolbar label="Canvas view">
+        <Button variant="quiet" type="button" title="Fit page (Shift+1)" onClick={props.onFitPage}>
+          Fit page
+        </Button>
+        <Button
+          variant="quiet"
+          type="button"
+          title="Fit selection (Shift+2)"
+          disabled={!props.canFitSelection}
+          onClick={props.onFitSelection}
+        >
+          Fit selection
+        </Button>
+        <Button variant="quiet" type="button" title="Zoom to 100% (0)" onClick={props.onResetZoom}>
+          100%
+        </Button>
+        <Button
+          variant="quiet"
+          type="button"
+          title="Previous view (Shift+0)"
+          disabled={!props.canRecallPrevious}
+          onClick={props.onRecallPrevious}
+        >
+          Previous view
+        </Button>
+      </Toolbar>
+    </SystemRoot>
   );
 }

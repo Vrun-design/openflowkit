@@ -66,6 +66,16 @@ const LazyPixiSpikePage =
       })
     : null;
 
+// Dev-only V2 design lab (mock shell + primitive gallery). Not a rollout flag:
+// `VITE_V2_LAB=1 npm run dev`, then open /_labs/v2. Tree-shaken from default builds.
+const LazyV2LabPage =
+  import.meta.env.VITE_V2_LAB === '1'
+    ? lazy(async () => {
+        const module = await import('./opencanvas/presentation/V2LabPage');
+        return { default: module.V2LabPage };
+      })
+    : null;
+
 const LazyOpenCanvasShadowProjection =
   import.meta.env.VITE_OPEN_CANVAS_DOCUMENT_V1 === '1'
     ? lazy(async () => {
@@ -290,6 +300,16 @@ function App(): React.JSX.Element {
               element={
                 <Suspense fallback={<RouteLoadingFallback />}>
                   <LazyPixiSpikePage />
+                </Suspense>
+              }
+            />
+          ) : null}
+          {LazyV2LabPage ? (
+            <Route
+              path="/_labs/v2"
+              element={
+                <Suspense fallback={<RouteLoadingFallback />}>
+                  <LazyV2LabPage />
                 </Suspense>
               }
             />

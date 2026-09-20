@@ -1,3 +1,4 @@
+import { foundation } from './design-system/tokens';
 import type { CanvasCamera } from '../domain/camera/types';
 import { cameraEquals, interpolateCamera } from '../domain/camera/transition';
 
@@ -12,7 +13,7 @@ export interface CameraMotionOptions {
   readonly reducedMotion?: boolean;
 }
 
-const DEFAULT_DURATION_MS = 180;
+const DEFAULT_DURATION_MS = foundation.motion.navigation;
 
 export function createBrowserCameraFrameScheduler(): CameraFrameScheduler {
   return {

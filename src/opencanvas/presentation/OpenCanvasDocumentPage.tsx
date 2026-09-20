@@ -914,14 +914,6 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
         <button type="button" disabled={status !== 'ready'} onClick={() =>
           setRenderDiagnostics(hostRef.current?.getRenderDiagnostics() ?? null)
         }>Render diagnostics</button>
-        <OpenCanvasCameraControls
-          canFitSelection={semanticSelection.nodeIds.length > 0}
-          canRecallPrevious={canRecallPreviousCamera}
-          onFitPage={fitPageCamera}
-          onFitSelection={fitSelectionCamera}
-          onResetZoom={resetCameraZoom}
-          onRecallPrevious={recallPreviousCamera}
-        />
         <button
           type="button"
           disabled={semanticSelection.nodeIds.length !== 2 || projection.status !== 'ready'}
@@ -991,6 +983,14 @@ export function OpenCanvasDocumentPage(): React.JSX.Element {
         }}>Layout selection</button>
         <Link to={fallbackPath}>Use React Flow</Link>
       </header>
+      <OpenCanvasCameraControls
+        canFitSelection={semanticSelection.nodeIds.length > 0}
+        canRecallPrevious={canRecallPreviousCamera}
+        onFitPage={fitPageCamera}
+        onFitSelection={fitSelectionCamera}
+        onResetZoom={resetCameraZoom}
+        onRecallPrevious={recallPreviousCamera}
+      />
       <section
         ref={viewportRef}
         className="pixi-spike__viewport"

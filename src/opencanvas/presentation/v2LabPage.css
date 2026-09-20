@@ -1,0 +1,156 @@
+/* V2 design lab: mock shell + primitive gallery. Not product CSS. */
+.ofk-lab {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--ofk-canvas);
+}
+.ofk-lab-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--ofk-space-lg);
+  padding: var(--ofk-space-sm) var(--ofk-space-lg);
+  background: var(--ofk-surface);
+  border-bottom: 1px solid var(--ofk-border);
+  flex-wrap: wrap;
+}
+
+/* Shell mock */
+.ofk-lab-shell {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}
+.ofk-lab-canvas {
+  position: absolute;
+  inset: 0;
+  background-color: var(--ofk-canvas);
+  background-image: radial-gradient(var(--ofk-border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.ofk-lab-canvas--strip {
+  position: relative;
+  height: 130px;
+  border-radius: var(--ofk-radius-surface);
+  border: 1px solid var(--ofk-border);
+}
+.ofk-lab-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.ofk-lab-edge {
+  fill: none;
+  stroke: var(--ofk-secondary);
+  stroke-width: 1.5;
+}
+.ofk-lab-node {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  background: var(--ofk-surface);
+  border: 1.5px solid var(--ofk-text);
+  border-radius: var(--ofk-radius-control);
+  font-weight: var(--ofk-weight-label);
+}
+.ofk-lab-node[data-proposed='true'] {
+  opacity: 0.7;
+}
+.ofk-lab-caption {
+  position: absolute;
+  font-size: var(--ofk-type-caption);
+  color: var(--ofk-secondary);
+}
+.ofk-lab-docbar {
+  position: absolute;
+  top: var(--ofk-layout-edgeInset);
+  left: var(--ofk-layout-edgeInset);
+  right: var(--ofk-layout-edgeInset);
+  z-index: var(--ofk-layer-toolbar);
+  display: flex;
+  align-items: center;
+  gap: var(--ofk-space-md);
+  pointer-events: none;
+}
+.ofk-lab-docbar > * {
+  pointer-events: auto;
+}
+.ofk-lab-docbar > .ofk-status:first-of-type {
+  margin-inline-end: auto;
+}
+.ofk-lab-tools {
+  position: absolute;
+  left: var(--ofk-layout-edgeInset);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: var(--ofk-layer-toolbar);
+}
+.ofk-lab-context {
+  position: absolute;
+  z-index: var(--ofk-layer-feedback);
+  flex-wrap: nowrap;
+}
+.ofk-lab-agent {
+  position: absolute;
+  bottom: var(--ofk-layout-edgeInset);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--ofk-layer-panel);
+  width: min(640px, calc(100% - 2 * var(--ofk-layout-edgeInset)));
+}
+.ofk-lab-agent > .ofk-toolbar {
+  margin: 0 auto;
+}
+
+/* Primitives */
+.ofk-lab-primitives {
+  flex: 1;
+  overflow: auto;
+  padding: var(--ofk-space-xl);
+  display: grid;
+  gap: var(--ofk-space-xxl);
+}
+.ofk-lab-primitives h2 {
+  margin: 0 0 var(--ofk-space-md);
+  font-size: var(--ofk-type-title);
+  font-weight: var(--ofk-weight-emphasis);
+}
+.ofk-lab-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ofk-space-md);
+  flex-wrap: wrap;
+  margin-bottom: var(--ofk-space-md);
+}
+.ofk-lab-stack {
+  display: grid;
+  gap: var(--ofk-space-md);
+  max-width: 720px;
+}
+.ofk-lab-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--ofk-space-md);
+}
+.ofk-lab-swatch {
+  display: grid;
+  gap: var(--ofk-space-xs);
+  font-size: var(--ofk-type-caption);
+}
+.ofk-lab-swatch > span {
+  height: 40px;
+  border-radius: var(--ofk-radius-control);
+  border: 1px solid var(--ofk-border);
+}
+.ofk-lab-scale {
+  display: flex;
+  align-items: center;
+  gap: var(--ofk-space-sm);
+  font-size: var(--ofk-type-caption);
+}
+.ofk-lab-scale > span {
+  background: var(--ofk-accent);
+  border-radius: 2px;
+}
