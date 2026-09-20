@@ -12,7 +12,7 @@ Modes: caveman (terse prose) + ponytail (minimal code). Honest scoring — prais
 
 ## State
 
-Branch `v2`, HEAD = V2-10a docs commit (after `bf01abe`). All green: `tsc`,
+Branch `v2`, HEAD after V2-10b-5 (`e56f7da`). All green (2309 vitest / 472 files): `tsc`,
 `eslint --max-warnings=0`, vitest, three Playwright gates
 (`scripts/check-v2-04.mjs`, `scripts/check-v2-polish.mjs`,
 `scripts/check-v2-10a.mjs`) against `VITE_V2_EDITOR=1 VITE_V2_AI=1 npm run build`
@@ -26,7 +26,14 @@ V2-02 revisioned session, V2-03 isolated IndexedDB repo, V2-04 editor route
 **V2-10a agent proposals** (`VITE_V2_AI`): `application/ai/{proposalSession,localAgent}`,
 `useV2Proposal`, `V2AgentPanel`, `PixiProposalPreview`, sparkle button in the creation
 toolbar + ⌘J, one attributed batch per proposal, revision-based stale refusal
-(ADR-004).
+(ADR-004). **V2-10b-1..5 operation parity**: `domain/commands/sceneEdits.ts` (moved
+from presentation) + `domain/nodes/shapeNode.ts` + `domain/commands/styleNodes.ts` are
+the single builders; actions `add_node` (toolbar shapes), `connect` (toolbar arrow /
+free point / port-bound with sides), `move_node`, `delete_node`, `delete_connector`,
+`duplicate_nodes`, `rename_document`, `set_style`, `transform_node` all `toEqual` the
+manual records (`src/agent/actions/parity.test.ts`); `src/agent/manifest.ts` is the
+capability manifest (11/12 shipped; gap = connector re-bind/waypoints → V2-05) with an
+honesty test. `mcp-server/` still bundles the old action set (regenerate at its release).
 
 Isolation: `src/opencanvas/v2Graph.test.ts` — v2 roots (now incl. `application/ai`)
 import only V2_ROOTS + SHARED_KERNEL (now incl. `src/agent/{actions,runAction}`) +
@@ -50,22 +57,28 @@ gate's port cost an hour of phantom bugs, twice now.
 
 ## Next
 
-1. Owner click-through of V2-10a (2 min): ⌘J → select a shape → "Add a step after the
-   selection" → hover rows → reject one → Apply → ⌘Z. Then move a shape while a
-   proposal is open and confirm the stale copy. Known: agent-added node is the rounded
-   catalog `process`, not the toolbar rectangle.
-2. V2-10b: capability manifest + operation parity (`agent-native-spec.md`
-   "Capability manifest"): every v2 toolbar/context-bar operation gets an action,
-   a manifest row and an equivalence test; `add_node` grows `shape`/paint so agent
-   rectangles match manual ones. Local agent intents can then cover styling.
+1. Owner click-through of V2-10a/b (2 min): ⌘J → select a shape → "Add a step after the
+   selection" (now a real rectangle) → hover rows → reject one → Apply → ⌘Z. Move a shape
+   while a proposal is open → stale copy. Then say which V2-11 shape below.
+2. **V2-11 provider decision (owner):** the local agent is a stub behind
+   `useV2Proposal.request(intent)`. Two real options, pick one:
+   - (a) **Claude tool-use planner** (`@anthropic-ai/sdk`, `dangerouslyAllowBrowser`,
+     BYOK key in memory): `AGENT_ACTIONS` become tools (zod → JSON schema), model plans
+     with `tool_choice: auto`, each `tool_use` resolves through
+     `resolveAgentActionCommand` against a running preview document → `createProposal`.
+     Best quality/latency, one provider. ~1 day incl. evals.
+   - (b) **Provider-neutral JSON planner** over the existing `src/services/aiService.ts`
+     (Gemini/OpenAI/Claude/Ollama/…): model returns `[{action, input, explanation}]`
+     as JSON, same resolve path. Matches the legacy product's BYOK matrix; weaker
+     structure guarantees, needs `services/aiService` (+deps) in SHARED_KERNEL. ~1.5 days.
+   Either way: free-text `Composer` in the panel (already provider-shaped), thread
+   history, `PermissionPrompt` for direct-edit grants, and `application/ai` stays React-free.
 3. V2-05: move `pixiPointerOperations.ts` into v2 (allowlist → zero), ports, connector
-   styles, groups; open item — connector body drag inserts a waypoint (owner wanted
-   select/move/delete).
-4. V2-11 BYOK provider behind `useV2Proposal.request` (same async shape); thread
-   history in the panel (`Composer` is already provider-shaped).
-5. Remaining spine: V2-08 pages, V2-12 import/collab, V2-13 migration, V2-14 cutover,
+   styles, groups, connector re-bind/waypoint action (last manifest gap); open item —
+   connector body drag inserts a waypoint (owner wanted select/move/delete; unclear which).
+4. Remaining spine: V2-08 pages, V2-12 import/collab, V2-13 migration, V2-14 cutover,
    V2-15 legacy delete.
 
 ## Roadmap estimate
 
-~50% by weight after 10a. Substrate + editor shell done; agent surface, multi-page, migration, and cutover remain. Parallel lanes are now possible (each lane = its own test file + worktree).
+~53% by weight after 10b. Substrate + editor shell done; agent surface, multi-page, migration, and cutover remain. Parallel lanes are now possible (each lane = its own test file + worktree).
