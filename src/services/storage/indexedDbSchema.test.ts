@@ -12,6 +12,8 @@ import {
   PERSISTED_DOCUMENTS_STORE_NAME,
   PREFERENCES_STORE_NAME,
   SCHEMA_META_STORE_NAME,
+  V2_DOCUMENTS_STORE_NAME,
+  V2_RECOVERY_STORE_NAME,
   WORKSPACE_META_STORE_NAME,
   ensureFlowPersistenceSchema,
 } from './indexedDbSchema';
@@ -113,6 +115,8 @@ describe('indexedDbSchema', () => {
     expect(mock.createObjectStore).toHaveBeenCalledWith(AI_SETTINGS_PERSISTENT_STORE_NAME, { keyPath: 'id' });
     expect(mock.createObjectStore).toHaveBeenCalledWith(PREFERENCES_STORE_NAME, { keyPath: 'id' });
     expect(mock.createObjectStore).toHaveBeenCalledWith(ASSETS_STORE_NAME, { keyPath: 'id' });
+    expect(mock.createObjectStore).toHaveBeenCalledWith(V2_DOCUMENTS_STORE_NAME, { keyPath: 'id' });
+    expect(mock.createObjectStore).toHaveBeenCalledWith(V2_RECOVERY_STORE_NAME, { keyPath: 'id' });
     expect(mock.createIndex).toHaveBeenCalledWith(
       CHAT_MESSAGES_STORE_NAME,
       CHAT_MESSAGES_BY_DOCUMENT_ID_INDEX,
@@ -141,6 +145,8 @@ describe('indexedDbSchema', () => {
       AI_SETTINGS_PERSISTENT_STORE_NAME,
       PREFERENCES_STORE_NAME,
       ASSETS_STORE_NAME,
+      V2_DOCUMENTS_STORE_NAME,
+      V2_RECOVERY_STORE_NAME,
     ]);
 
     await ensureFlowPersistenceSchema(mock.factory);
