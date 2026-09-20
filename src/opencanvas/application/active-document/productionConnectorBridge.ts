@@ -50,8 +50,8 @@ export function createProductionConnector(
   }
   return {
     id,
-    source: { nodeId: sourceNodeId, portId: null, anchor: null },
-    target: { nodeId: targetNodeId, portId: null, anchor: null },
+    source: { nodeId: sourceNodeId, portId: null, anchor: null, point: null },
+    target: { nodeId: targetNodeId, portId: null, anchor: null, point: null },
     route: { kind: 'orthogonal', ownership: 'automatic' },
     waypoints: [], labels: [], appearance: {}, semantics: {}, metadata: {}, extensions: {},
   };

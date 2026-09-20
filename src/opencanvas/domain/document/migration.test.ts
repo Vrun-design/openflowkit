@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { projectLegacyDocument } from './legacyProjection';
 import { migrateSceneDocument } from './migration';
+import { serializeSceneDocument } from './serialization';
 
 function createDocument() {
   return projectLegacyDocument(
@@ -32,14 +33,52 @@ describe('migrateSceneDocument', () => {
     expect(second).toEqual(first);
   });
 
-  it('rejects future versions without rewriting the payload', () => {
-    const input = { ...createDocument(), schemaVersion: 99 };
+  it('opens newer schemas read-only with preserved bytes instead of corrupting them', () => {
+    const input = { ...createDocument(), schemaVersion: 99, futureNode: { kept: true } };
     const before = structuredClone(input);
     const result = migrateSceneDocument(input);
 
-    expect(result.success).toBe(false);
     expect(input).toEqual(before);
-    if (result.success === false) expect(result.issues[0].path).toBe('$.schemaVersion');
+    expect(result).toEqual({
+      success: false,
+      reason: 'newer-schema',
+      schemaVersion: 99,
+      preserved: input,
+      issues: [
+        { path: '$.schemaVersion', message: 'Document uses a newer unsupported schema version.' },
+      ],
+    });
+  });
+
+  it('preserves unknown fields opaquely across migrate, serialize, and re-migrate', () => {
+    const input = createDocument();
+    const annotated = {
+      ...input,
+      futureDocumentFlag: true,
+      pages: input.pages.map((page, pageIndex) => ({
+        ...page,
+        ...(pageIndex === 0 ? { futurePageNote: 'keep' } : {}),
+        nodes: page.nodes.map((node, nodeIndex) => ({
+          ...node,
+          ...(nodeIndex === 0 ? { futureNodeBlob: { nested: [1, 2] } } : {}),
+        })),
+      })),
+    };
+    const first = migrateSceneDocument(annotated);
+    expect(first.success).toBe(true);
+    if (first.success === false) return;
+    expect(first.document).toMatchObject({ futureDocumentFlag: true });
+
+    const second = migrateSceneDocument(JSON.parse(serializeSceneDocument(first.document)));
+    expect(second.success).toBe(true);
+    if (second.success === false) return;
+    expect(second.document).toMatchObject({
+      futureDocumentFlag: true,
+      pages: [{ futurePageNote: 'keep' }],
+    });
+    expect(second.document.pages[0]?.nodes[0]).toMatchObject({
+      futureNodeBlob: { nested: [1, 2] },
+    });
   });
 
   it('rejects non-JSON values', () => {

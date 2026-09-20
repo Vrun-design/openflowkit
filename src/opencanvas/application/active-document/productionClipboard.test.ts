@@ -10,8 +10,8 @@ describe('production clipboard', () => {
     const child = createTestNode('child', { parentId: 'root', zIndex: 2 });
     const outside = createTestNode('outside');
     const document = createTestDocument({ nodes: [root, child, outside], connectors: [{
-      id: 'edge', source: { nodeId: 'root', portId: null, anchor: null },
-      target: { nodeId: 'child', portId: null, anchor: null },
+      id: 'edge', source: { nodeId: 'root', portId: null, anchor: null, point: null },
+      target: { nodeId: 'child', portId: null, anchor: null, point: null },
       route: { kind: 'direct', ownership: 'automatic' }, waypoints: [], labels: [],
       appearance: {}, semantics: {}, metadata: {}, extensions: {},
     }] });

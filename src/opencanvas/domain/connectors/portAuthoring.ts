@@ -70,5 +70,5 @@ export function nearestAcceptedPortEndpoint(
       ),
     }))
     .sort((left, right) => left.distance - right.distance || left.port.id.localeCompare(right.port.id));
-  return { nodeId, portId: candidates[0]?.port.id ?? null, anchor: null };
+  return { nodeId, portId: candidates[0]?.port.id ?? null, anchor: null, point: null };
 }

@@ -65,8 +65,8 @@ function createDocument(): SceneDocumentV1 {
         connectors: [
           {
             id: 'connector-1',
-            source: { nodeId: 'node-1', portId: 'right', anchor: null },
-            target: { nodeId: 'node-2', portId: null, anchor: { kind: 'center' } },
+            source: { nodeId: 'node-1', portId: 'right', anchor: null, point: null },
+            target: { nodeId: 'node-2', portId: null, anchor: { kind: 'center' }, point: null },
             route: { kind: 'orthogonal', ownership: 'automatic' },
             waypoints: [{ x: 230, y: 60 }],
             labels: [
@@ -97,6 +97,48 @@ describe('validateSceneDocumentV1', () => {
   it('accepts a complete renderer-independent document', () => {
     const document = createDocument();
     expect(validateSceneDocumentV1(document)).toEqual({ success: true, document });
+  });
+
+  it('accepts free endpoints without requiring node references', () => {
+    const document = createDocument();
+    const free = {
+      ...document,
+      pages: document.pages.map((page) => ({
+        ...page,
+        connectors: [
+          {
+            id: 'free',
+            source: { nodeId: null, portId: null, anchor: null, point: { x: 4, y: 8 } },
+            target: { nodeId: 'node-2', portId: null, anchor: null, point: null },
+            route: { kind: 'direct', ownership: 'automatic' },
+            waypoints: [],
+            labels: [],
+            appearance: {},
+            semantics: {},
+            metadata: {},
+            extensions: {},
+          },
+        ],
+      })),
+    };
+    expect(validateSceneDocumentV1(free).success).toBe(true);
+  });
+
+  it.each([
+    ['free end with a port', { nodeId: null, portId: 'right', anchor: null, point: { x: 1, y: 1 } }],
+    ['free end with an anchor', { nodeId: null, portId: null, anchor: { kind: 'center' }, point: { x: 1, y: 1 } }],
+    ['free end without a point', { nodeId: null, portId: null, anchor: null, point: null }],
+    ['bound end with a point', { nodeId: 'node-1', portId: null, anchor: null, point: { x: 1, y: 1 } }],
+  ])('rejects a %s', (_label, endpoint) => {
+    const document = createDocument();
+    const broken = {
+      ...document,
+      pages: document.pages.map((page) => ({
+        ...page,
+        connectors: [{ ...page.connectors[0]!, source: endpoint }],
+      })),
+    };
+    expect(validateSceneDocumentV1(broken).success).toBe(false);
   });
 
   it('validates optional canonical node content layout', () => {

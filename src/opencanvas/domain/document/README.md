@@ -11,6 +11,9 @@ Versioned, renderer-independent persisted contracts for OpenCanvas.
 - core geometry uses the canonical geometry domain and radians.
 - unknown provider data belongs in namespaced JSON `extensions`.
 - loaded values are validated before use and migration never mutates its input.
+- unknown fields are preserved opaquely through migrate/serialize; newer
+  schemas open read-only via `reason: 'newer-schema'` and are never edited
+  (see `docs/v2/decision-records/ADR-003-migration-policy.md`).
 - the legacy projection stores a recovery snapshot for exact fallback; it is not
   the React Flow rendering adapter planned for CS-004.
 

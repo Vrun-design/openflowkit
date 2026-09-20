@@ -31,8 +31,8 @@ describe('connector route projection', () => {
   it('resolves ports and boundary anchors instead of node centers', () => {
     const page = connectorFixture();
     const connector = createTestConnector('edge', 'source', 'target', {
-      source: { nodeId: 'source', portId: 'right', anchor: null },
-      target: { nodeId: 'target', portId: 'left', anchor: null },
+      source: { nodeId: 'source', portId: 'right', anchor: null, point: null },
+      target: { nodeId: 'target', portId: 'left', anchor: null, point: null },
       route: { kind: 'direct', ownership: 'automatic' },
     });
     const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
@@ -160,5 +160,60 @@ describe('connector route projection', () => {
       { x: -48, y: -48 }, { x: -48, y: 35 }, { x: 100, y: 35 },
     ]);
     expect(Math.min(...projected.samples.map(({ y }) => y))).toBeLessThan(0);
+  });
+
+  it('projects free endpoints at their page-space points', () => {
+    const page = connectorFixture();
+    const connector = createTestConnector('edge', 'source', 'target', {
+      source: { nodeId: null, portId: null, anchor: null, point: { x: 10, y: 10 } },
+      target: { nodeId: null, portId: null, anchor: null, point: { x: 400, y: 200 } },
+      route: { kind: 'direct', ownership: 'automatic' },
+    });
+    const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
+    expect(projected.samples).toEqual([
+      { x: 10, y: 10 },
+      { x: 400, y: 200 },
+    ]);
+  });
+
+  it('resolves the bound end of a half-free connector against its outline', () => {
+    const page = connectorFixture();
+    const connector = createTestConnector('edge', 'source', 'target', {
+      target: { nodeId: null, portId: null, anchor: null, point: { x: 400, y: 200 } },
+      route: { kind: 'direct', ownership: 'automatic' },
+    });
+    const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
+    expect(projected.samples[1]).toEqual({ x: 400, y: 200 });
+    expect(projected.samples[0]).not.toEqual({ x: 50, y: 25 });
+  });
+
+  it('returns null when a bound end references a missing node', () => {
+    const page = connectorFixture();
+    const connector = createTestConnector('edge', 'ghost', 'target', {
+      source: { nodeId: 'ghost', portId: null, anchor: null, point: null },
+      route: { kind: 'direct', ownership: 'automatic' },
+    });
+    expect(projectConnector({ ...page, connectors: [connector] }, connector)).toBeNull();
+  });
+
+  it('binds the automatic boundary to the true rotated outline', () => {
+    const source = createTestNode('source', {
+      transform: {
+        translation: { x: 200, y: 50 },
+        rotationRadians: Math.PI / 2,
+        scale: { x: 1, y: 1 },
+      },
+    });
+    const page = createTestDocument({ nodes: [source] }).pages[0];
+    const connector = createTestConnector('edge', 'source', 'free', {
+      target: { nodeId: null, portId: null, anchor: null, point: { x: 400, y: 100 } },
+      route: { kind: 'direct', ownership: 'automatic' },
+    });
+    const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
+    // Local top-edge midpoint maps onto the world right edge: an
+    // axis-aligned-box shortcut would exit at x=300 instead of x=200.
+    expect(projected.samples[0].x).toBeCloseTo(200, 4);
+    expect(projected.samples[0].y).toBeCloseTo(100, 4);
+    expect(projected.samples[1]).toEqual({ x: 400, y: 100 });
   });
 });

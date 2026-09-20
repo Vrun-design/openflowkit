@@ -76,8 +76,8 @@ describe('canonical collaboration runtime controller', () => {
     expect(controller.submit({
       kind: 'insert-connector', id: 'bad', label: 'Bad connector', pageId: 'page-1', index: 0,
       connector: {
-        id: 'bad', source: { nodeId: 'a', portId: null, anchor: null },
-        target: { nodeId: 'missing', portId: null, anchor: null },
+        id: 'bad', source: { nodeId: 'a', portId: null, anchor: null, point: null },
+        target: { nodeId: 'missing', portId: null, anchor: null, point: null },
         route: { kind: 'direct', ownership: 'automatic' }, waypoints: [], labels: [],
         appearance: {}, semantics: {}, metadata: {}, extensions: {},
       },

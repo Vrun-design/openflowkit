@@ -191,8 +191,8 @@ function fixtureConnector(index: number, nodes: readonly SceneNode[]): SceneConn
       : [];
   return {
     id: `connector-${index}`,
-    source: { nodeId: source.id, portId: null, anchor: null },
-    target: { nodeId: target.id, portId: null, anchor: null },
+    source: { nodeId: source.id, portId: null, anchor: null, point: null },
+    target: { nodeId: target.id, portId: null, anchor: null, point: null },
     route: {
       kind: routeKind,
       ownership: routeKind === 'polyline' ? 'manual' : 'automatic',

@@ -187,11 +187,13 @@ function projectConnector(value: JsonValue): SceneConnector {
       nodeId: requireString(edge.source, 'Legacy edge source'),
       portId: optionalString(edge.sourceHandle),
       anchor: null,
+      point: null,
     },
     target: {
       nodeId: requireString(edge.target, 'Legacy edge target'),
       portId: optionalString(edge.targetHandle),
       anchor: null,
+      point: null,
     },
     route: routeIntent(data),
     waypoints: projectWaypoints(data),

@@ -4,6 +4,7 @@ import {
   createTestDocument,
   createTestNode,
 } from '../../testing/builders/documentBuilder';
+import type { SceneDocumentV1 } from '../document/types';
 import { applyDocumentCommand } from './execute';
 import type { BatchDocumentCommand, DocumentCommand } from './types';
 
@@ -230,5 +231,42 @@ describe('canonical document commands', () => {
         commands: [empty],
       })
     ).toThrow(/Nested/);
+  });
+
+  it('round-trips every command kind through apply and inverse without residue', () => {
+    const a = createTestNode('a');
+    const b = createTestNode('b');
+    const c = createTestNode('c');
+    const edge = createTestConnector('a-b', 'a', 'b');
+    const edge2 = createTestConnector('a-b-2', 'a', 'b');
+    const notes = { id: 'notes', name: 'Notes', visible: true, locked: false };
+    const base = createTestDocument({ nodes: [a, b], connectors: [edge] });
+    function roundTrip(document: SceneDocumentV1, command: DocumentCommand) {
+      const applied = applyDocumentCommand(document, command);
+      expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(document);
+      return applied.document;
+    }
+
+    const page = base.pages[0];
+    roundTrip(base, { kind: 'set-node', id: 'c', label: 'c', pageId: 'page-1', before: a, after: { ...a, zIndex: 3 } });
+    const withC = roundTrip(base, { kind: 'insert-node', id: 'c', label: 'c', pageId: 'page-1', index: 0, node: c });
+    roundTrip(withC, { kind: 'remove-node', id: 'c', label: 'c', pageId: 'page-1', index: 0, node: c });
+    roundTrip(base, { kind: 'set-connector', id: 'c', label: 'c', pageId: 'page-1', before: edge, after: { ...edge, waypoints: [{ x: 1, y: 2 }] } });
+    const withEdge2 = roundTrip(base, { kind: 'insert-connector', id: 'c', label: 'c', pageId: 'page-1', index: 1, connector: edge2 });
+    roundTrip(withEdge2, { kind: 'remove-connector', id: 'c', label: 'c', pageId: 'page-1', index: 1, connector: edge2 });
+    const layer = page.layers[0];
+    roundTrip(base, { kind: 'set-layer', id: 'c', label: 'c', pageId: 'page-1', before: layer, after: { ...layer, visible: false } });
+    const withNotes = roundTrip(base, { kind: 'insert-layer', id: 'c', label: 'c', pageId: 'page-1', index: 1, layer: notes });
+    roundTrip(withNotes, { kind: 'remove-layer', id: 'c', label: 'c', pageId: 'page-1', index: 1, layer: notes });
+    roundTrip(base, { kind: 'set-page', id: 'c', label: 'c', pageId: 'page-1', before: page, after: { ...page, name: 'Renamed' } });
+    const withPage2 = roundTrip(base, { kind: 'insert-page', id: 'c', label: 'c', index: 1, page: { ...page, id: 'page-2', name: 'Page 2' } });
+    roundTrip(withPage2, { kind: 'remove-page', id: 'c', label: 'c', index: 1, page: withPage2.pages[1]! });
+    roundTrip(base, {
+      kind: 'batch', id: 'c', label: 'c',
+      commands: [
+        { kind: 'set-node', id: 'c1', label: 'c1', pageId: 'page-1', before: a, after: { ...a, zIndex: 5 } },
+        { kind: 'set-connector', id: 'c2', label: 'c2', pageId: 'page-1', before: edge, after: { ...edge, waypoints: [{ x: 3, y: 4 }] } },
+      ],
+    });
   });
 });

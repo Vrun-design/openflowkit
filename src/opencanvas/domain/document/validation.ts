@@ -73,11 +73,16 @@ function isPort(value: unknown): value is ScenePort {
 }
 
 function isEndpoint(value: unknown): value is ConnectorEndpoint {
+  if (!isRecord(value)) return false;
+  if (value.nodeId === null) {
+    return value.portId === null && value.anchor === null && isPoint2d(value.point);
+  }
   return (
-    isRecord(value) &&
     isNonEmptyString(value.nodeId) &&
     isNullableString(value.portId) &&
-    (value.anchor === null || isAnchor(value.anchor))
+    (value.anchor === null || isAnchor(value.anchor)) &&
+    // Pre-spike payloads omit point; absent reads as null, never as free.
+    (value.point === null || value.point === undefined)
   );
 }
 
@@ -215,19 +220,20 @@ function collectPageReferenceIssues(page: ScenePage, path: string): DocumentVali
   });
 
   page.connectors.forEach((connector, index) => {
-    if (!nodeIds.has(connector.source.nodeId)) {
+    if (connector.source.nodeId !== null && !nodeIds.has(connector.source.nodeId)) {
       issues.push({
         path: `${path}.connectors[${index}].source.nodeId`,
         message: 'Unknown node ID.',
       });
     }
-    if (!nodeIds.has(connector.target.nodeId)) {
+    if (connector.target.nodeId !== null && !nodeIds.has(connector.target.nodeId)) {
       issues.push({
         path: `${path}.connectors[${index}].target.nodeId`,
         message: 'Unknown node ID.',
       });
     }
-    const sourceNode = nodesById.get(connector.source.nodeId);
+    const sourceNode =
+      connector.source.nodeId === null ? undefined : nodesById.get(connector.source.nodeId);
     if (
       sourceNode &&
       connector.source.portId !== null &&
@@ -238,7 +244,8 @@ function collectPageReferenceIssues(page: ScenePage, path: string): DocumentVali
         message: 'Unknown source port ID.',
       });
     }
-    const targetNode = nodesById.get(connector.target.nodeId);
+    const targetNode =
+      connector.target.nodeId === null ? undefined : nodesById.get(connector.target.nodeId);
     if (
       targetNode &&
       connector.target.portId !== null &&

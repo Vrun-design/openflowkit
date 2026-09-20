@@ -242,8 +242,8 @@ describe('canonical edits projected to React Flow', () => {
           connectors: [
             {
               ...connector,
-              source: { nodeId: 'b', portId: null, anchor: null },
-              target: { nodeId: 'a', portId: 'right', anchor: null },
+              source: { nodeId: 'b', portId: null, anchor: null, point: null },
+              target: { nodeId: 'a', portId: 'right', anchor: null, point: null },
               route: { kind: 'polyline', ownership: 'imported-fixed' },
               waypoints: [{ x: 200, y: 250 }],
               labels: [

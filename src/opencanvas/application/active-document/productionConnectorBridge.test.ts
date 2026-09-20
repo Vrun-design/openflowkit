@@ -30,7 +30,7 @@ describe('production connector bridge', () => {
   it('reconnects canonically while preserving opaque legacy fields', () => {
     const source = document();
     const before = source.pages[0].connectors[0];
-    const after = reconnectConnector(before, 'target', { nodeId: 'c', portId: null, anchor: null });
+    const after = reconnectConnector(before, 'target', { nodeId: 'c', portId: null, anchor: null, point: null });
     const result = projectProductionConnectorEdit(source, 'page', before, after, source.updatedAt);
     expect(result.changed).toBe(true);
     expect(result.projection.edges[0]).toMatchObject({
@@ -58,7 +58,7 @@ describe('production connector bridge', () => {
     )).toThrow(/cannot change connector id/);
     expect(() => projectProductionConnectorEdit(
       source, 'page', before,
-      reconnectConnector(before, 'target', { nodeId: 'missing', portId: null, anchor: null }),
+      reconnectConnector(before, 'target', { nodeId: 'missing', portId: null, anchor: null, point: null }),
       source.updatedAt
     )).toThrow(/unknown node/);
   });

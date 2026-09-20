@@ -108,6 +108,7 @@ describe('connector editing', () => {
       nodeId: 'c',
       portId: null,
       anchor: { kind: 'side', side: 'left', ratio: 0.5 },
+      point: null,
     });
 
     expect(reconnected.target.nodeId).toBe('c');

@@ -38,7 +38,7 @@ describe('OpenCanvas mixed-family export goldens', () => {
       mermaid: sha256(mermaid),
     }).toMatchInlineSnapshot(`
       {
-        "canonicalJson": "d50e49111c7aba1970ccbcc7b7440978fdfe9ee4fff235a153f8f3649ea73d51",
+        "canonicalJson": "8520236ff1169794c51c00eddabd9957e4f35bc1907c7ffda261ec32ab919d70",
         "figmaSvg": "716ea25c6e6bb4a37e5cc61e5208db8e1e3352f0e55abc6d6d63e3f032fcc52a",
         "legacyJson": "e1c2e2f96da7f8555d9a50e446f17d0e230245865d943a514114080e2d09d3bb",
         "mermaid": "ceaa6739e62810079662052144272521c3b88de0899c39e006e9810e7d5bcd1d",

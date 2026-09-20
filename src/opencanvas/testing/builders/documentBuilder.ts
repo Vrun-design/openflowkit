@@ -38,8 +38,8 @@ export function createTestConnector(
 ): SceneConnector {
   return {
     id,
-    source: { nodeId: sourceNodeId, portId: null, anchor: null },
-    target: { nodeId: targetNodeId, portId: null, anchor: null },
+    source: { nodeId: sourceNodeId, portId: null, anchor: null, point: null },
+    target: { nodeId: targetNodeId, portId: null, anchor: null, point: null },
     route: { kind: 'direct', ownership: 'automatic' },
     waypoints: [],
     labels: [],

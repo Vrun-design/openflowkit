@@ -27,7 +27,9 @@ describe('Pixi connector operations', () => {
       kind: 'endpoint', role: 'target', point: { x: 100, y: 25 },
     });
     const next = updateConnectorOperation(operation, { x: 300, y: 25 }, 'target');
-    expect(next.preview.target).toEqual({ nodeId: 'target', portId: 'left', anchor: null });
+    expect(next.preview.target).toEqual({
+      nodeId: 'target', portId: 'left', anchor: null, point: null,
+    });
     expect(next.preview.route.ownership).toBe('automatic');
   });
 });

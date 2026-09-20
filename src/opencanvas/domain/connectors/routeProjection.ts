@@ -253,46 +253,60 @@ function projectConnectorWithContext(
   connector: SceneConnector,
   context: ConnectorProjectionContext
 ): ProjectedConnector | null {
-  const sourceNode = context.nodesById.get(connector.source.nodeId);
-  const targetNode = context.nodesById.get(connector.target.nodeId);
-  const sourceMatrix = sourceNode && context.matrices.get(sourceNode.id);
-  const targetMatrix = targetNode && context.matrices.get(targetNode.id);
-  if (!sourceNode || !targetNode || !sourceMatrix || !targetMatrix) return null;
-  const sourceCenter = nodeWorldCenter(sourceNode, sourceMatrix);
-  const targetCenter = nodeWorldCenter(targetNode, targetMatrix);
-  const sequenceEndpoints = sequenceMessageEndpoints(
-    connector,
-    sourceNode,
-    targetNode,
-    sourceMatrix,
-    targetMatrix
-  );
+  const sourceNode =
+    connector.source.nodeId === null ? undefined : context.nodesById.get(connector.source.nodeId);
+  const targetNode =
+    connector.target.nodeId === null ? undefined : context.nodesById.get(connector.target.nodeId);
+  const sourceMatrix = sourceNode ? context.matrices.get(sourceNode.id) : undefined;
+  const targetMatrix = targetNode ? context.matrices.get(targetNode.id) : undefined;
+  if (sourceNode && !sourceMatrix) return null;
+  if (targetNode && !targetMatrix) return null;
+  // Free ends resolve to their page-space point; bound ends resolve against
+  // the opposite center exactly as before. Missing data yields no geometry.
+  const sourceCenter =
+    sourceNode && sourceMatrix ? nodeWorldCenter(sourceNode, sourceMatrix) : null;
+  const targetCenter =
+    targetNode && targetMatrix ? nodeWorldCenter(targetNode, targetMatrix) : null;
+  const sourceToward = targetCenter ?? connector.target.point;
+  const targetToward = sourceCenter ?? connector.source.point;
+  if (!sourceToward || !targetToward) return null;
+  const sequenceEndpoints =
+    sourceNode && targetNode && sourceMatrix && targetMatrix
+      ? sequenceMessageEndpoints(connector, sourceNode, targetNode, sourceMatrix, targetMatrix)
+      : null;
   const start =
     sequenceEndpoints?.start ??
-    endpointPoint(connector.source, sourceNode, sourceMatrix, targetCenter);
+    connector.source.point ??
+    (sourceNode && sourceMatrix
+      ? endpointPoint(connector.source, sourceNode, sourceMatrix, sourceToward)
+      : null);
   const end =
     sequenceEndpoints?.end ??
-    endpointPoint(connector.target, targetNode, targetMatrix, sourceCenter);
+    connector.target.point ??
+    (targetNode && targetMatrix
+      ? endpointPoint(connector.target, targetNode, targetMatrix, targetToward)
+      : null);
+  if (!start || !end) return null;
   const path =
-    sequenceEndpoints && sourceNode.id === targetNode.id
+    sequenceEndpoints && sourceNode && targetNode && sourceNode.id === targetNode.id
       ? linearPath([
           start,
           { x: start.x + 56, y: start.y },
           { x: start.x + 56, y: start.y + 28 },
           { x: start.x, y: start.y + 28 },
         ])
-      : sourceNode.id === targetNode.id
-        && connector.route.ownership === 'automatic'
-        && connector.waypoints.length === 0
-        ? selfLoopPath(connector, sourceNode, sourceMatrix)
-        : connector.route.kind === 'orthogonal'
+      : sourceNode && sourceMatrix && targetNode && sourceNode.id === targetNode.id
           && connector.route.ownership === 'automatic'
           && connector.waypoints.length === 0
+        ? selfLoopPath(connector, sourceNode, sourceMatrix)
+        : connector.route.kind === 'orthogonal'
+            && connector.route.ownership === 'automatic'
+            && connector.waypoints.length === 0
           ? linearPath(routeOrthogonalAroundObstacles(
               start,
               end,
               [...context.nodesById.values()]
-                .filter((node) => node.id !== sourceNode.id && node.id !== targetNode.id)
+                .filter((node) => node.id !== sourceNode?.id && node.id !== targetNode?.id)
                 .map((node) => nodeWorldBounds(node, context.matrices.get(node.id)!))
             ))
           : connectorPath(connector, start, end);

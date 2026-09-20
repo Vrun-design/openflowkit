@@ -36,9 +36,15 @@ export interface SceneNode {
 }
 
 export interface ConnectorEndpoint {
-  readonly nodeId: string;
+  /** Bound node, or null for a free page-space point (drop on empty canvas). */
+  readonly nodeId: string | null;
   readonly portId: string | null;
   readonly anchor: SceneAnchor | null;
+  /**
+   * Free point in page coordinates. Required when nodeId is null, must be
+   * null when bound: an endpoint is either bound or free, never both.
+   */
+  readonly point: Point2d | null;
 }
 
 export type ConnectorRouteKind = 'direct' | 'polyline' | 'bezier' | 'orthogonal';
