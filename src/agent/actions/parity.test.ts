@@ -5,6 +5,9 @@ import {
   buildDeleteSelectionCommand, buildDuplicateSelectionCommand, buildInsertConnectorCommand,
   buildMoveNodesCommand,
 } from '@/opencanvas/domain/commands/sceneEdits';
+import {
+  createTransformCommand, createTransformSnapshot, resizeTransform, rotateTransform,
+} from '@/opencanvas/domain/transforms/transformSelection';
 import { createTestConnector, createTestDocument, createTestNode } from '@/opencanvas/testing/builders/documentBuilder';
 import { findAgentAction } from './index';
 import { resolveAgentActionCommand } from '../runAction';
@@ -71,5 +74,26 @@ describe('agent/manual record parity', () => {
     });
     expect(run('rename_document', { name: 'Test document' }, document).command).toBeNull();
     expect(() => run('rename_document', { name: '   ' }, document)).toThrow();
+  });
+});
+
+describe('transform_node parity', () => {
+  it('resize equals a south-east handle drag; rotate equals a rotate drag', () => {
+    const document = fixture();
+    const page = document.pages[0];
+    const resized = run('transform_node', { id: 'a', width: 200, height: 100 }, document);
+    const snapshot = createTransformSnapshot(page, ['a']);
+    const manualResize = resizeTransform(snapshot, {
+      handle: 'south-east', pointer: { x: snapshot.bounds.x + 200, y: snapshot.bounds.y + 100 }, snap: false,
+    });
+    expect(resized.command).toEqual(createTransformCommand(page.id, snapshot.nodes, manualResize.nodes,
+      'Resize selection', 'transform-node:a'));
+    const rotated = run('transform_node', { id: 'a', rotationDegrees: 90 }, document);
+    const center = { x: snapshot.bounds.x + snapshot.bounds.width / 2, y: snapshot.bounds.y + snapshot.bounds.height / 2 };
+    const manualRotate = rotateTransform(page, snapshot, { x: center.x + 1, y: center.y }, { x: center.x, y: center.y + 1 }, false);
+    expect(rotated.command).toEqual(createTransformCommand(page.id, snapshot.nodes, manualRotate.nodes,
+      'Rotate selection', 'transform-node:a'));
+    expect(run('transform_node', { id: 'a', width: 100, height: 50 }, document).command).toBeNull();
+    expect(() => run('transform_node', { id: 'a' }, document)).toThrow();
   });
 });

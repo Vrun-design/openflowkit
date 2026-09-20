@@ -9,11 +9,12 @@ import { moveNode } from './moveNode';
 import { renameDocument } from './renameDocument';
 import { setLabel } from './setLabel';
 import { setStyle } from './setStyle';
+import { transformNode } from './transformNode';
 
 // Every surface (palette, WebMCP, MCP server, evals) reads this one list.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const AGENT_ACTIONS: readonly AgentAction<any, unknown>[] = [
-  getDocument, addNode, connect, setLabel, setStyle, moveNode, duplicateNodes,
+  getDocument, addNode, connect, setLabel, setStyle, moveNode, transformNode, duplicateNodes,
   deleteNode, deleteConnector, renameDocument,
 ];
 

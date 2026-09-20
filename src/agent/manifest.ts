@@ -38,7 +38,7 @@ export const CAPABILITY_MANIFEST: readonly CapabilityRow[] = [
   shipped('Duplicate selection', 'context-bar', 'duplicate_nodes', 'src/agent/actions/parity.test.ts'),
   shipped('Delete connector', 'context-bar', 'delete_connector', 'src/agent/actions/parity.test.ts'),
   shipped('Rename document', 'document-bar', 'rename_document', 'src/agent/actions/parity.test.ts'),
-  gap('Resize / rotate', 'canvas', 'V2-10b-5'),
+  shipped('Resize / rotate', 'canvas', 'transform_node', 'src/agent/actions/parity.test.ts'),
   gap('Connector endpoint re-bind / waypoints', 'canvas', 'V2-05'),
 ];
 

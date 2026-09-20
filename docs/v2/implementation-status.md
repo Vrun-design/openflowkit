@@ -524,3 +524,12 @@ remaining limitations / next slice: local agent only (V2-11 providers); one
   adds side ports (it draws the same arrow a person draws); `delete_node` and
   `move_node` records change id/label only. `mcp-server/` untouched.
 - Validation: vitest (agent 20, opencanvas 696), tsc, eslint.
+
+## V2-10b-5 — transform_node (2026-09-20)
+
+- `transform_node { id, width?, height?, rotationDegrees? }` resizes through
+  `resizeTransform` (south-east handle, no snap) and rotates through
+  `rotateTransform` about the selection centre, then emits
+  `createTransformCommand` — the same record a handle drag commits. Parity test
+  in `parity.test.ts`; no-op returns null. Manifest 11 shipped / 12 (remaining
+  gap: connector re-bind/waypoints → V2-05).
