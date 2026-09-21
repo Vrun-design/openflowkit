@@ -219,8 +219,8 @@ export function V2Shortcuts({ onClose }: { onClose: () => void }) {
           'Canvas',
           [
             ['Pan', 'Space + drag'],
-            ['Zoom to fit', 'Shift + 1'],
-            ['Reset zoom', `${command} + 0`],
+            ['Zoom to fit', `${command} + 0`],
+            ['Zoom to 100%', `${command} + 1`],
             ['Layers', 'L'],
           ],
         ],

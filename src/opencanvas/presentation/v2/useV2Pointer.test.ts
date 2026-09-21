@@ -42,6 +42,12 @@ function setup(extraNodes: ReturnType<typeof createTestNode>[] = []) {
   return { result, host, commit, page, selectionRef, applyConnectorSelection, event };
 }
 
+async function flushFrame(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  });
+}
+
 describe('V2 direct manipulation', () => {
   it('selects on first press; sub-threshold jitter creates no history', () => {
     const { result, event, selectionRef, commit, host } = setup();
@@ -66,7 +72,7 @@ describe('V2 direct manipulation', () => {
     });
   });
 
-  it('snaps a move onto another node and shows the guide; Alt bypasses; guide clears on release', () => {
+  it('snaps a move onto another node and shows the guide; Alt bypasses; guide clears on release', async () => {
     const other = createTestNode('b', {
       size: { width: 200, height: 50 },
       transform: { translation: { x: 300, y: 300 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
@@ -76,14 +82,50 @@ describe('V2 direct manipulation', () => {
     // Drag so a's left edge lands 4px right of b's left edge (300) → snaps to 300.
     act(() => result.current.handlePointerDown(event(100, 100)));
     act(() => result.current.handlePointerMove(event(100 + 304 - start.x, 100)));
+    await flushFrame();
     expect(host.setAlignmentGuides).toHaveBeenLastCalledWith({ x: 300, y: null });
     expect(host.setTransformPreview.mock.calls.at(-1)?.[0].bounds.x).toBe(300);
     act(() => result.current.handlePointerMove({ ...event(100 + 304 - start.x, 100), altKey: true }));
+    await flushFrame();
     expect(host.setAlignmentGuides).toHaveBeenLastCalledWith(null);
     expect(host.setTransformPreview.mock.calls.at(-1)?.[0].bounds.x).toBe(304);
     act(() => result.current.handlePointerUp(event(100 + 304 - start.x, 100)));
     expect(host.setAlignmentGuides).toHaveBeenLastCalledWith(null);
     expect(commit.mock.calls[0][0].after.transform.translation.x).toBe(300);
+  });
+
+  it('collapses a coalesced burst to its latest point with one preview per frame', async () => {
+    const { result, event, host } = setup();
+    act(() => result.current.handlePointerDown(event(100, 100)));
+    const burst = (x: number, y: number) => ({
+      ...event(x, y),
+      nativeEvent: {
+        getCoalescedEvents: () => [{ clientX: x - 30, clientY: y }, { clientX: x, clientY: y }],
+      } as unknown as PointerEvent,
+    });
+    act(() => {
+      result.current.handlePointerMove(burst(150, 120));
+      result.current.handlePointerMove(burst(170, 130));
+      result.current.handlePointerMove(burst(190, 140));
+    });
+    expect(host.setTransformPreview).not.toHaveBeenCalled();
+    await flushFrame();
+    // One preview for the whole burst, at the latest coalesced point (+90/+40).
+    expect(host.setTransformPreview).toHaveBeenCalledOnce();
+    expect(host.setTransformPreview.mock.calls[0][0].bounds.x).toBe(90);
+    expect(host.setTransformPreview.mock.calls[0][0].bounds.y).toBe(40);
+  });
+
+  it('Escape mid-drag cancels the queued frame and commits nothing', async () => {
+    const { result, event, host, commit, page } = setup();
+    act(() => result.current.handlePointerDown(event(100, 100)));
+    act(() => result.current.handlePointerMove(event(190, 140)));
+    act(() => result.current.handlePointerCancel());
+    await flushFrame();
+    expect(host.setTransformPreview).toHaveBeenLastCalledWith(null);
+    expect(host.setTransformPreview).toHaveBeenCalledTimes(1);
+    expect(commit).not.toHaveBeenCalled();
+    expect(page.nodes[0].transform.translation).toEqual({ x: 0, y: 0 });
   });
 
   it('finishes a drag from a window pointerup after the browser drops capture', () => {

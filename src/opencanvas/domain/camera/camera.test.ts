@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   fitCameraToBounds,
   normalizeCamera,
+  normalizeWheelDelta,
   panCamera,
   screenToWorld,
   visibleWorldBounds,
@@ -42,5 +43,14 @@ describe('canonical canvas camera', () => {
       width: 200,
       height: 100,
     });
+  });
+
+  it('normalises wheel deltaModes to pixels', () => {
+    expect(normalizeWheelDelta({ deltaX: 0, deltaY: 40, deltaMode: 0 }, { width: 800, height: 600 }))
+      .toEqual({ x: 0, y: 40 });
+    expect(normalizeWheelDelta({ deltaX: 0, deltaY: 3, deltaMode: 1 }, { width: 800, height: 600 }))
+      .toEqual({ x: 0, y: 48 });
+    expect(normalizeWheelDelta({ deltaX: 1, deltaY: 0, deltaMode: 2 }, { width: 800, height: 600 }))
+      .toEqual({ x: 800, y: 0 });
   });
 });

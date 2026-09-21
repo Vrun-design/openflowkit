@@ -46,7 +46,7 @@ export function unionScreenBounds(rects: readonly (DOMRect | null | undefined)[]
 // I-31: contextual actions use the same command path as keyboard edits.
 export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
   return (
-    <ContextBar label="Selection actions" style={props.style}
+    <ContextBar label="Selection actions" data-context-bar style={props.style}
       onPointerDown={(event) => event.stopPropagation()}
       onDoubleClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}>

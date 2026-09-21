@@ -67,6 +67,9 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onZoomStep(1 / 1.2);
       event.preventDefault();
     } else if (command && key === '0') {
+      opts.onFitView();
+      event.preventDefault();
+    } else if (command && key === '1') {
       opts.onResetZoom();
       event.preventDefault();
     } else if (command && key === 'd') {
@@ -92,9 +95,6 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
               ? { x: 0, y: -amount }
               : { x: 0, y: amount };
       opts.onNudge(delta);
-      event.preventDefault();
-    } else if (event.shiftKey && event.code === 'Digit1') {
-      opts.onFitView();
       event.preventDefault();
     } else if (!command && !event.altKey && event.key.length === 1 && event.key !== ' '
       && opts.onTypeToEdit(event.key)) {

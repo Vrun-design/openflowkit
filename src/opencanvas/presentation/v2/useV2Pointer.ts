@@ -112,11 +112,25 @@ interface PointerLike {
   readonly clientY: number;
   readonly pointerId: number;
   readonly altKey: boolean;
+  readonly nativeEvent?: Partial<PointerEvent>;
 }
 
 function localPoint(event: PointerLike): Point2d {
   const bounds = event.currentTarget.getBoundingClientRect();
   return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+}
+
+// Trackpads report at 120 Hz+; the browser queues more moves than we can
+// paint. Collapse each batch to its latest point — intermediate positions are
+// never shown, so computing previews for them is pure waste.
+function latestLocalPoint(event: PointerLike): Point2d {
+  const coalesced = typeof event.nativeEvent?.getCoalescedEvents === 'function'
+    ? event.nativeEvent.getCoalescedEvents()
+    : null;
+  if (!coalesced || coalesced.length === 0) return localPoint(event);
+  const bounds = event.currentTarget.getBoundingClientRect();
+  const last = coalesced[coalesced.length - 1];
+  return { x: last.clientX - bounds.left, y: last.clientY - bounds.top };
 }
 
 function textOrigin(center: Point2d): Point2d {
@@ -134,6 +148,13 @@ function nodeCenterWorld(page: ScenePage, nodeId: string): Point2d | null {
 
 export function useV2Pointer(options: V2PointerOptions) {
   const operationRef = useRef<V2Operation | null>(null);
+  // One document preview per frame: moves store their latest point, a single
+  // rAF computes and previews it. Without this every queued move pays full
+  // transform math + a renderer preview and the main thread never catches up.
+  const pendingTransformRef = useRef<{
+    readonly pointerId: number; readonly world: Point2d; readonly altKey: boolean;
+  } | null>(null);
+  const transformFrameRef = useRef<number | null>(null);
   // Gestures never depend on pointer capture: Chrome drops mouse capture when
   // a trackpad reports the button up a moment before the pointerup arrives
   // (lostpointercapture ~2 ms early, pointerup lands uncaptured, move lost).
@@ -158,18 +179,49 @@ export function useV2Pointer(options: V2PointerOptions) {
     windowListenersRef.current = null;
   }, []);
 
+  const cancelTransformFrame = useCallback(() => {
+    if (transformFrameRef.current !== null) cancelAnimationFrame(transformFrameRef.current);
+    transformFrameRef.current = null;
+    pendingTransformRef.current = null;
+  }, []);
+
   const cancelGesture = useCallback((): boolean => {
     detachWindow();
+    cancelTransformFrame();
     if (!operationRef.current) return false;
     operationRef.current = null;
     clearPreviews();
     return true;
-  }, [clearPreviews, detachWindow]);
-  useEffect(() => detachWindow, [detachWindow]);
+  }, [clearPreviews, detachWindow, cancelTransformFrame]);
+  useEffect(() => () => {
+    detachWindow();
+    cancelTransformFrame();
+  }, [detachWindow, cancelTransformFrame]);
 
   useEffect(() => {
     gestureApiRef.current = { cancelGesture };
   }, [gestureApiRef, cancelGesture]);
+
+  const applyPendingTransformPreview = useCallback(() => {
+    const opts = optionsRef.current;
+    const pending = pendingTransformRef.current;
+    pendingTransformRef.current = null;
+    const operation = operationRef.current;
+    const host = opts.hostRef.current;
+    if (!pending || !host || !operation || operation.kind !== 'transform'
+      || operation.pointerId !== pending.pointerId) return;
+    const next = updateTransformOperation(operation, pending.world,
+      Boolean(opts.snapToGrid) && !pending.altKey,
+      pending.altKey ? undefined : OBJECT_SNAP_PX / opts.cameraRef.current.zoom);
+    operationRef.current = next;
+    host.setTransformPreview(next.result);
+    host.setAlignmentGuides(
+      next.result?.guideX != null || next.result?.guideY != null
+        ? { x: next.result.guideX ?? null, y: next.result.guideY ?? null }
+        : null
+    );
+    opts.onTransformPreview?.(next.result);
+  }, []);
 
   const pointerMove = useCallback(
     (event: PointerLike) => {
@@ -177,7 +229,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       const operation = operationRef.current;
       const host = opts.hostRef.current;
       if (!host) return;
-      const point = localPoint(event);
+      const point = latestLocalPoint(event);
       if (!operation) {
         if (opts.toolRef.current === 'select' && event.target instanceof HTMLCanvasElement) {
           const handle = host.pickTransformHandle(point);
@@ -207,16 +259,15 @@ export function useV2Pointer(options: V2PointerOptions) {
         const distance = Math.hypot(worldPoint.x - operation.start.x, worldPoint.y - operation.start.y)
           * opts.cameraRef.current.zoom;
         if (!operation.result && distance < CLICK_THRESHOLD_PX) return;
-        const next = updateTransformOperation(operation, worldPoint, Boolean(opts.snapToGrid) && !event.altKey,
-          event.altKey ? undefined : OBJECT_SNAP_PX / opts.cameraRef.current.zoom);
-        operationRef.current = next;
-        host.setTransformPreview(next.result);
-        host.setAlignmentGuides(
-          next.result?.guideX != null || next.result?.guideY != null
-            ? { x: next.result.guideX ?? null, y: next.result.guideY ?? null }
-            : null
-        );
-        opts.onTransformPreview?.(next.result);
+        pendingTransformRef.current = {
+          pointerId: operation.pointerId, world: worldPoint, altKey: event.altKey,
+        };
+        if (transformFrameRef.current === null) {
+          transformFrameRef.current = requestAnimationFrame(() => {
+            transformFrameRef.current = null;
+            applyPendingTransformPreview();
+          });
+        }
       } else if (operation.kind === 'create') {
         operationRef.current = { ...operation, currentScreen: point };
         host.setMarquee(boundsBetween(operation.startScreen, point));
@@ -237,7 +288,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         host.setMarquee(boundsBetween(operation.start, point));
       }
     },
-    []
+    [applyPendingTransformPreview]
   );
 
   const pointerUp = useCallback(
@@ -248,7 +299,8 @@ export function useV2Pointer(options: V2PointerOptions) {
       if (!operation || operation.pointerId !== event.pointerId || !host) return;
       operationRef.current = null;
       detachWindow();
-      const point = localPoint(event);
+      cancelTransformFrame();
+      const point = latestLocalPoint(event);
       if (operation.kind === 'marquee') {
         const bounds: Bounds2d = boundsBetween(operation.start, point);
         const moved = Math.hypot(point.x - operation.start.x, point.y - operation.start.y);
@@ -275,8 +327,13 @@ export function useV2Pointer(options: V2PointerOptions) {
           }
         }
       } else if (operation.kind === 'transform') {
-        const final = operation.result
-          ? updateTransformOperation(operation, host.screenToWorld(point), Boolean(opts.snapToGrid) && !event.altKey,
+        // The release point is authoritative: a fast flick may never have
+        // painted a preview frame, but a past-threshold release still commits.
+        const worldPoint = host.screenToWorld(point);
+        const releaseDistance = Math.hypot(worldPoint.x - operation.start.x, worldPoint.y - operation.start.y)
+          * opts.cameraRef.current.zoom;
+        const final = operation.result || releaseDistance >= CLICK_THRESHOLD_PX
+          ? updateTransformOperation(operation, worldPoint, Boolean(opts.snapToGrid) && !event.altKey,
               event.altKey ? undefined : OBJECT_SNAP_PX / opts.cameraRef.current.zoom)
           : operation;
         host.setTransformPreview(null);
@@ -379,7 +436,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         /* already released */
       }
     },
-    [detachWindow]
+    [detachWindow, cancelTransformFrame]
   );
 
   const handlePointerDown = useCallback(
@@ -402,6 +459,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       const retarget = (native: PointerEvent): PointerLike => ({
         currentTarget: section, target: native.target, clientX: native.clientX,
         clientY: native.clientY, pointerId: native.pointerId, altKey: native.altKey,
+        nativeEvent: native,
       });
       const onWindowMove = (native: PointerEvent) => {
         if (!operationRef.current || section.contains(native.target as Node)) return;

@@ -69,7 +69,7 @@ export function V2CameraControls(props: V2CameraControlsProps): React.JSX.Elemen
             {props.zoomPercent}%
           </Button>
           <span className="ofk-v2-divider" aria-hidden="true" />
-          <Tooltip content="Zoom to fit" shortcut="⇧1"><IconButton variant="quiet" label="Zoom to fit" icon={<Icon icon={IconMaximize} />} onClick={props.onFitView} /></Tooltip>
+          <Tooltip content="Zoom to fit" shortcut="⌘0"><IconButton variant="quiet" label="Zoom to fit" icon={<Icon icon={IconMaximize} />} onClick={props.onFitView} /></Tooltip>
           <span className="ofk-v2-divider" aria-hidden="true" />
           <Tooltip content="Undo" shortcut="⌘Z"><IconButton variant="quiet" label="Undo" icon={<Icon icon={IconArrowBackUp} />} disabled={!props.canUndo} onClick={props.onUndo} /></Tooltip>
           <Tooltip content="Redo" shortcut="⇧⌘Z"><IconButton variant="quiet" label="Redo" icon={<Icon icon={IconArrowForwardUp} />} disabled={!props.canRedo} onClick={props.onRedo} /></Tooltip>
@@ -96,14 +96,14 @@ export function V2CameraControls(props: V2CameraControlsProps): React.JSX.Elemen
       >
         <MenuItem onSelect={props.onZoomIn} shortcut={['⌘', '+']}>Zoom in</MenuItem>
         <MenuItem onSelect={props.onZoomOut} shortcut={['⌘', '−']}>Zoom out</MenuItem>
-        <MenuItem onSelect={props.onFitView} shortcut={['⇧', '1']}>Zoom to fit</MenuItem>
+        <MenuItem onSelect={props.onFitView} shortcut={['⌘', '0']}>Zoom to fit</MenuItem>
         <MenuSeparator />
         {ZOOM_PRESETS.map((percent) => (
           <MenuItem
             key={percent}
             onSelect={() => props.onZoomTo(percent)}
             checked={props.zoomPercent === percent}
-            shortcut={percent === 100 ? ['⌘', '0'] : undefined}
+            shortcut={percent === 100 ? ['⌘', '1'] : undefined}
           >
             Zoom to {percent}%
           </MenuItem>

@@ -19,7 +19,8 @@ const base = process.env.V2_BASE_URL ?? 'http://127.0.0.1:4191';
 const evidence = 'docs/evidence/feel';
 fs.mkdirSync(evidence, { recursive: true });
 
-const TARGET_NODES = 500;
+const TARGET_NODES = Number(process.env.FEEL_NODES ?? 500);
+const SELECT_ALL = process.env.FEEL_SELECT_ALL !== '0';
 const DRAG_MS = 3000;
 const MOVE_INTERVAL_MS = 8; // ~120 Hz pointermove bursts
 const PINCH_STEPS = 20;
@@ -37,7 +38,7 @@ function percentile(sorted, p) {
 async function installRecorder(page) {
   await page.evaluate(() => {
     const canvas = document.querySelector('[data-testid="v2-canvas"]');
-    const rec = { recording: false, samples: [], frames: [], events: [] };
+    const rec = { recording: false, samples: [], frames: [], events: [], longtasks: [] };
     canvas.addEventListener('pointermove', () => {
       if (!rec.recording) return;
       const t = performance.now();
@@ -58,6 +59,11 @@ async function installRecorder(page) {
           }
         }
       }).observe({ type: 'event', buffered: true });
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (rec.recording) rec.longtasks.push(entry.duration);
+        }
+      }).observe({ type: 'longtask', buffered: true });
     } catch { /* event-timing unsupported: rAF samples are the primary metric */ }
     window.__FEEL__ = rec;
   });
@@ -67,7 +73,7 @@ async function setRecording(page, on) {
   await page.evaluate((value) => {
     const rec = window.__FEEL__;
     rec.recording = value;
-    if (value) { rec.samples = []; rec.frames = []; rec.events = []; }
+    if (value) { rec.samples = []; rec.frames = []; rec.events = []; rec.longtasks = []; }
   }, on);
 }
 
@@ -76,6 +82,7 @@ async function readRecording(page) {
     samples: window.__FEEL__.samples,
     frames: window.__FEEL__.frames,
     events: window.__FEEL__.events,
+    longtasks: window.__FEEL__.longtasks,
   }));
 }
 
@@ -125,7 +132,12 @@ try {
   const nodeCount = await seedNodes(page, canvas);
 
   // --- 1+2. Latency + dropped frames over a 3 s drag of all nodes -----------
-  await page.keyboard.press('ControlOrMeta+a'); // warmup selection
+  if (SELECT_ALL) await page.keyboard.press('ControlOrMeta+a'); // warmup selection
+  else {
+    const firstId = (await state(page)).nodes[0];
+    const firstRect = await rectOf(page, firstId);
+    await page.mouse.click(firstRect.x + firstRect.width / 2, firstRect.y + firstRect.height / 2);
+  }
   const dragId = (await state(page)).selectedNodes[0];
   const dragRect = await rectOf(page, dragId);
   const startX = dragRect.x + dragRect.width / 2;
@@ -138,8 +150,9 @@ try {
   await page.mouse.up();
   await page.waitForTimeout(300);
 
-  await page.keyboard.press('ControlOrMeta+a');
+  if (SELECT_ALL) await page.keyboard.press('ControlOrMeta+a');
   await page.mouse.move(startX, startY);
+  const diagBefore = await page.evaluate(() => window.__V2__.getRenderDiagnostics());
   await setRecording(page, true);
   const dragStart = Date.now();
   await page.mouse.down();
@@ -157,7 +170,9 @@ try {
   await page.mouse.up();
   const dragMs = Date.now() - dragStart;
   await setRecording(page, false);
-  const { samples, frames, events } = await readRecording(page);
+  const diagAfter = await page.evaluate(() => window.__V2__.getRenderDiagnostics());
+  const renders = diagAfter.renderCount - diagBefore.renderCount;
+  const { samples, frames, events, longtasks } = await readRecording(page);
   iterMs.sort((a, b) => a - b);
   const lat = [...samples].sort((a, b) => a - b);
   const gaps = [];
@@ -234,6 +249,11 @@ try {
       frames: frames.length,
       fps: +(frames.length / (dragMs / 1000)).toFixed(1),
       droppedFrames: dropped,
+      renders,
+      lastRenderMs: +diagAfter.lastRenderDurationMs.toFixed(1),
+      longtasks: longtasks.length,
+      longtaskMsP50: longtasks.length ? +percentile([...longtasks].sort((a, b) => a - b), 50).toFixed(1) : 0,
+      selectedNodes: SELECT_ALL ? nodeCount : 1,
     },
     zoom: {
       pinchSteps: PINCH_STEPS, pinchDeltaY: PINCH_DELTA_Y,
@@ -260,6 +280,7 @@ try {
       result.targets.p95LatencyMs.pass ? 'PASS (≤ 16 ms)' : 'FAIL (> 16 ms)'],
     [`dropped frames / ${(dragMs / 1000).toFixed(1)} s drag`, `${dropped} (${result.drag.fps} fps, ${result.drag.achievedHz} Hz input)`,
       result.targets.droppedFrames.pass ? 'PASS (0)' : 'FAIL (> 0)'],
+    [`pixi renders during drag`, `${renders} renders, last ${result.drag.lastRenderMs} ms`, 'observe'],
     [`zoom-anchor drift, ${PINCH_STEPS} pinch steps`, `${result.zoom.anchorDriftPx} px`,
       result.targets.zoomDriftPx.pass ? 'PASS (≤ 1 px)' : 'FAIL (> 1 px)'],
     ['wheel pan, 40 px pixel-mode', `${result.wheel.panPixelModePx} px moved`, 'observe'],

@@ -10,12 +10,13 @@ import {
 import { Link } from 'react-router-dom';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { ScenePage } from '../../domain/document/types';
+import type { Point2d } from '../../domain/geometry/types';
 import type { CanvasCamera } from '../../domain/camera/types';
 import {
   replaceSelection,
   type CanvasSelection,
 } from '../../application/selection/selection';
-import { worldToScreen, panCamera, zoomCameraAt } from '../../domain/camera/camera';
+import { worldToScreen, panCamera, zoomCameraAt, normalizeWheelDelta } from '../../domain/camera/camera';
 import { detectWebGlCapability } from '../../infrastructure/pixi/capabilities';
 import {
   PixiRendererHost,
@@ -79,12 +80,19 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   );
   const [mountError, setMountError] = useState<string | null>(null);
 
-  const [previewBounds, setPreviewBounds] = useState<DOMRect | null>(null);
+  // No React state per move: the renderer preview goes through refs, and the
+  // context bar follows the drag by direct DOM writes. React re-renders only
+  // on operation end (commit/selection/camera), when contextAnchor settles.
   const previewFrameRef = useRef<number | null>(null);
   const pendingPreviewRef = useRef<DOMRect | null>(null);
+  // Safari trackpad pinch: gesturestart anchors, gesturechange scales from it.
+  const pinchRef = useRef<{ zoom: number; anchor: Point2d } | null>(null);
   useEffect(() => () => {
     if (previewFrameRef.current !== null) cancelAnimationFrame(previewFrameRef.current);
   }, []);
+  // Latest React-rendered bar anchor; the drag-follow path restores exactly
+  // this on operation end when no re-render follows (anchor truly unchanged).
+  const anchorForRestoreRef = useRef<DOMRect | null>(null);
   const pointer = useV2Pointer({
     hostRef: props.hostRef,
     cameraRef: props.cameraRef,
@@ -102,23 +110,35 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     onToolChange: props.onToolChange,
     mintId: props.mintId,
     snapToGrid: props.snapToGrid,
-    // Renderer preview is immediate; the React-side context bar anchor
-    // settles once per frame (same reason as useV2Camera).
+    // Renderer preview is immediate; the context bar follows the drag by
+    // direct DOM writes (no setState per move), restored to the React anchor
+    // on operation end.
     onTransformPreview: (result) => {
+      const bar = props.sectionRef.current?.querySelector<HTMLElement>('[data-context-bar]');
       if (!result) {
         if (previewFrameRef.current !== null) cancelAnimationFrame(previewFrameRef.current);
         previewFrameRef.current = null;
-        setPreviewBounds(null);
+        pendingPreviewRef.current = null;
+        if (bar && anchorForRestoreRef.current) {
+          const restore = contextBarStyle(anchorForRestoreRef.current);
+          if (restore.left !== undefined) bar.style.left = `${restore.left}px`;
+          if (restore.top !== undefined) bar.style.top = `${restore.top}px`;
+        }
         return;
       }
       const camera = props.cameraRef.current;
       const point = worldToScreen(camera, result.bounds);
       pendingPreviewRef.current = new DOMRect(point.x, point.y,
         result.bounds.width * camera.zoom, result.bounds.height * camera.zoom);
-      if (previewFrameRef.current !== null) return;
+      if (previewFrameRef.current !== null || !bar) return;
       previewFrameRef.current = requestAnimationFrame(() => {
         previewFrameRef.current = null;
-        setPreviewBounds(pendingPreviewRef.current);
+        const pending = pendingPreviewRef.current;
+        pendingPreviewRef.current = null;
+        if (!pending) return;
+        const follow = contextBarStyle(pending);
+        if (follow.left !== undefined) bar.style.left = `${follow.left}px`;
+        if (follow.top !== undefined) bar.style.top = `${follow.top}px`;
       });
     },
   });
@@ -132,21 +152,45 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
 
   // Browser zoom never leaks from the editor: plain wheel over the canvas
   // pans, ⌘/Ctrl+wheel (pinch) anywhere in the editor is ours, and Safari's
-  // proprietary gesture events (trackpad pinch) are swallowed too.
+  // proprietary gesture events (trackpad pinch) zoom at the pointer too.
+  const { sectionRef, cameraRef, updateCamera } = props;
   useEffect(() => {
-    const root = props.sectionRef.current?.closest<HTMLElement>('.ofk-v2');
+    const root = sectionRef.current?.closest<HTMLElement>('.ofk-v2');
     if (!root) return;
     const onWheel = (event: WheelEvent) => {
       if (event.ctrlKey || event.metaKey || event.target instanceof HTMLCanvasElement) event.preventDefault();
     };
-    const onGesture = (event: Event) => event.preventDefault();
+    const onGestureStart = (event: Event) => {
+      event.preventDefault();
+      const gesture = event as unknown as { scale?: unknown; clientX?: unknown; clientY?: unknown };
+      const bounds = sectionRef.current?.getBoundingClientRect();
+      const anchor = bounds && Number.isFinite(gesture.clientX) && Number.isFinite(gesture.clientY)
+        ? { x: (gesture.clientX as number) - bounds.left, y: (gesture.clientY as number) - bounds.top }
+        : { x: bounds ? bounds.width / 2 : 0, y: bounds ? bounds.height / 2 : 0 };
+      pinchRef.current = { zoom: cameraRef.current.zoom, anchor };
+    };
+    const onGestureChange = (event: Event) => {
+      event.preventDefault();
+      const started = pinchRef.current;
+      const scale = (event as unknown as { scale?: unknown }).scale;
+      if (!started || typeof scale !== 'number' || !(scale > 0)) return;
+      updateCamera(zoomCameraAt(cameraRef.current, started.anchor, started.zoom * scale));
+    };
+    const onGestureEnd = (event: Event) => {
+      event.preventDefault();
+      pinchRef.current = null;
+    };
     root.addEventListener('wheel', onWheel, { passive: false });
-    for (const type of ['gesturestart', 'gesturechange', 'gestureend']) root.addEventListener(type, onGesture);
+    root.addEventListener('gesturestart', onGestureStart);
+    root.addEventListener('gesturechange', onGestureChange);
+    root.addEventListener('gestureend', onGestureEnd);
     return () => {
       root.removeEventListener('wheel', onWheel);
-      for (const type of ['gesturestart', 'gesturechange', 'gestureend']) root.removeEventListener(type, onGesture);
+      root.removeEventListener('gesturestart', onGestureStart);
+      root.removeEventListener('gesturechange', onGestureChange);
+      root.removeEventListener('gestureend', onGestureEnd);
     };
-  }, [props.sectionRef]);
+  }, [sectionRef, cameraRef, updateCamera]);
 
   const statusCallbackRef = useRef(props.onStatusChange);
   statusCallbackRef.current = props.onStatusChange;
@@ -227,11 +271,13 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   useEffect(() => {
     if (selectionIds.length === 0 || props.editing || props.readOnly) {
       setContextAnchor(null);
+      anchorForRestoreRef.current = null;
       return;
     }
     const next = unionScreenBounds(
       selectionIds.map((nodeId) => props.hostRef.current?.getNodeScreenBounds(nodeId))
     );
+    if (next) anchorForRestoreRef.current = next;
     setContextAnchor((current) => (current && next && sameRect(current, next) ? current : next));
   }, [selectionIds, props.editing, props.readOnly, props.hostRef, props.camera, props.page, viewportSize]);
 
@@ -243,7 +289,9 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     const camera = props.cameraRef.current;
     if (!event.ctrlKey && !event.metaKey) {
       if (event.target instanceof HTMLCanvasElement) {
-        props.updateCamera(panCamera(camera, { x: -event.deltaX, y: -event.deltaY }));
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const delta = normalizeWheelDelta(event, { width: bounds.width, height: bounds.height });
+        props.updateCamera(panCamera(camera, { x: -delta.x, y: -delta.y }));
       }
       return;
     }
@@ -304,7 +352,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
               bounds: snapshot.bounds, snappedX: false, snappedY: false,
             } : null);
           }}
-          style={contextBarStyle(previewBounds ?? contextAnchor)}
+          style={contextBarStyle(contextAnchor)}
           onEditLabel={() => {
             const primary = props.selection.primaryNodeId;
             if (primary) props.openEditor(primary);

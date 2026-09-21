@@ -3,20 +3,24 @@
 Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–4, one month, no gates.
 
 ## Now
-- Phase 1.1 feel probe done 2026-09-21 (Muse Spark, `p1-feel-probe`):
-  `V2_BASE_URL=… node scripts/feel-probe.mjs` (headed Chromium).
-  Evidence: `docs/evidence/feel/2026-09-21T05-2*.json` (2 runs).
-- Numbers @ 512 nodes (⌘A/⌘D doubling ≈ 500): p50 ~285–290 ms,
-  p95 ~373–417 ms (target ≤ 16); dropped 159–163 frames / 3 s drag
-  @ 3.6 fps, 125 Hz attempted → 3.6 Hz delivered (target 0);
-  zoom drift 0 px / 20 pinch steps (target ≤ 1) PASS.
-- Repeatability: p50 ±2 %, dropped ±3 %, drift identical;
-  p95 ±11 % (n≈11 moves/drag — small-sample noise under saturation).
-- Machine: SwiftShader software GL; owner must re-run on real GPU.
+- Phase 1.2 + 1.3 done 2026-09-21 (Muse Spark, `p1-camera-pointer`,
+  stacked on `p1-feel-probe`): camera + pointer pipeline.
+- 1.2: `normalizeWheelDelta` (lines×16, pages×viewport); ⌘0 fit,
+  ⌘1 100 % (⇧1 removed, labels updated); Safari gesture pinch; no
+  inertia exists (nothing to remove); revision unchanged by camera ops.
+- 1.3: coalesce to latest point; transform math+preview once per rAF;
+  release point commits on pointerup; Escape cancels the queued frame;
+  bar follows via direct DOM — 0 React renders mid-drag, verified live.
+- Probe @512 (2 runs): p50 119–307 ms, p95 365–388 (≤16 FAIL);
+  dropped 151–152/3 s (0 FAIL); drift 0 px PASS; line-wheel 48 px now.
+- Bottleneck is SwiftShader compositing (~100 ms/frame), not app JS
+  (trace: no task >20 ms; canvas hidden → 25 Hz, 6 ms delay). Owner
+  re-runs on real GPU. Readings: probe keeps the harder 512 bar for
+  the 200-node check; capture fallback kept (Chrome trackpad bug).
 
 ## Next
-- Phase 1.2/1.3 (unclaimed): feel bugs below. Phase 2 → 2.1
-  (grammar.md, owner reviews before parser code).
+- Phase 1.4 (unclaimed). Phase 2.1 grammar.md — Claude (Opus 5),
+  `p2-grammar`; owner reviews before parser code.
 
 ## Later
 - Phase 5 (month 2): `docs/plan/phase-5-architecture.md` — C4 model layer +
@@ -24,9 +28,8 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–4, one month, no ga
 
 ## Done
 - 2026-09-21: Phase 0 + v2 shell (boot `/`, green gate, frozen specs).
+- 2026-09-21: 1.1 feel probe (`scripts/feel-probe.mjs`, headed Chromium).
 
-## Feel bugs (owner's daily test → 1.2/1.3)
-- Drag of 512 selected nodes costs ~290 ms/move on main thread; no
-  coalescing (`getCoalescedEvents`), preview per queued move — death spiral.
-- Line-mode wheel not normalised: 3 lines → 3 px pan (expect ~48 px).
-- Pixel pinch/wheel zoom anchored exactly (0 px drift) — keep.
+## Feel bugs (→ 1.4+; check-v2-polish stale: Settings is in canvas menu)
+- 512-node drag still ~370 ms p95 here — compositor-bound, re-probe on GPU.
+- Gesture pinch only testable via synthetic events (no Safari here).
