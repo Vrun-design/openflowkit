@@ -8,6 +8,8 @@ phase file for the slice you are taking. Everything under `docs/frozen/` and
 ## How to work here
 
 1. Take the next unclaimed slice in `STATE.md`; write your name + date next to it.
+   Work on `v2` directly — no slice branches. Several agents share this checkout:
+   never `git checkout`, `git add -A`, stash or reset; stage only the paths you touched.
 2. Read the code the slice touches end to end before editing (callers, consumers).
 3. Build the shortest thing that works. Reuse before write. No new dependency
    without a one-line why. No flags, shims, rollback plans, or "for later" code.

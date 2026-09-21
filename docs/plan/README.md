@@ -118,9 +118,9 @@ See phase 0 for the exact list and the keep-list.
 
 ## 5. Process — how we build fast without gates
 
-- **Slice** = one agent, one branch, ≤1 day, one spec of ≤15 bullets in the phase
+- **Slice** = one agent, ≤1 day, commits straight on `v2` (no branches), one spec of ≤15 bullets in the phase
   file (behaviour + how to check). Pick the next unclaimed slice in `STATE.md`,
-  write your name/date next to it, build, open a PR, move it to done in `STATE.md`.
+  write your name/date next to it, build, commit when green, move it to done in `STATE.md`.
 - **Merge when green:** `npm run typecheck && npm run lint && npm run test -- --run`.
   UX slices add one headed Playwright check (`npm run e2e:headed -- <file>`) because
   headless misses trackpad/pointer drops.
