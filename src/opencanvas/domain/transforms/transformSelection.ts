@@ -1,4 +1,5 @@
 import type { DocumentCommand } from '../commands/types';
+import { areStructurallyEqual } from '../commands/equality';
 import type { SceneNode } from '../document/types';
 import { createBounds2d, unionBounds } from '../geometry/bounds';
 import { buildNodeWorldMatrices, nodeWorldBounds, nodeWorldCenter } from '../scene/worldGeometry';
@@ -281,16 +282,20 @@ export function createTransformCommand(
   if (before.length !== after.length || before.length === 0) {
     throw new Error('Transform commands require matching non-empty node sets.');
   }
-  const commands = before.map((node, index) => {
+  // Members of a moved container ride along unchanged; a set-node that changes
+  // nothing is rejected by execute, so those pairs are dropped here.
+  const commands = before.flatMap((node, index) => {
     if (node.id !== after[index].id) throw new Error('Transform node order must be stable.');
-    return {
+    if (areStructurallyEqual(node, after[index])) return [];
+    return [{
       kind: 'set-node' as const,
       id: `${id}:${node.id}`,
       label,
       pageId,
       before: node,
       after: after[index],
-    };
+    }];
   });
+  if (commands.length === 0) throw new Error('Transform commands require a change.');
   return commands.length === 1 ? commands[0] : { kind: 'batch', id, label, commands };
 }

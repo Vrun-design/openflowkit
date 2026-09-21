@@ -133,11 +133,9 @@ export class PixiContainerRenderer {
       this.graphics.stroke({ color: stroke.color, width: style.strokeWidth, alpha: stroke.alpha * alpha });
     }
     if (!visual.presentation.header) return;
-    if (visual.presentation.kind === 'section') {
-      const titleWidth = Math.min(node.size.width - 16, Math.max(72, visual.presentation.label.length * 7.5 + 20));
-      drawPixiLocalRect(this.graphics, createBounds2d(8, 7, titleWidth, 27), matrix, 8);
-      this.graphics.fill({ color: visual.badgeFill, alpha: 0.72 * alpha });
-    } else {
+    // Sections title like Figma: plain text in the top-left, no band or pill,
+    // so the DOM editor is the same text in the same place.
+    if (visual.presentation.kind !== 'section') {
       drawPixiLocalRect(this.graphics, createBounds2d(0, 0, node.size.width, CONTAINER_TITLE_HEIGHT), matrix, style.cornerRadius);
       this.graphics.fill({ color: visual.badgeFill, alpha: 0.48 * alpha });
       drawPixiLocalRect(this.graphics, createBounds2d(0, CONTAINER_TITLE_HEIGHT - 1, node.size.width, 1), matrix);

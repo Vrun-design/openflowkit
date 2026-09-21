@@ -177,9 +177,11 @@ function computeNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
   const strokeWidth = a.strokeWidth === undefined ? (text ? 0 : defaults.strokeWidth) : stroke.width;
   const fill = paint(a.fill, defaults.fill);
   const explicitTextColor = a.textColor ?? (text ? c.customColor : undefined);
-  // Ink adapts to whatever is behind the label: the fill, or the canvas when
-  // the label sits outside the fill or the fill is transparent.
-  const textBackdrop = defaults.labelOnCanvas || fill === 'transparent' ? canvasColor : fill;
+  // Ink adapts to whatever is behind the label: a solid fill, or the canvas
+  // when the label sits outside the fill or the fill is transparent. A tinted
+  // (rgba) container fill keeps its palette ink.
+  const textBackdrop = defaults.labelOnCanvas || fill === 'transparent' ? canvasColor
+    : fill.startsWith('#') ? fill : undefined;
   return {
     fill,
     stroke: paint(a.stroke, defaults.stroke),

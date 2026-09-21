@@ -41,7 +41,37 @@ test('wrap in section pads the selection, resizes without scaling members; ⌘G 
     expect(after.find((node) => node.id === id)!.transform.scale.x).toBe(1);
   }
 
+  // Drag the section: it moves with its members. Drag a member far out: it leaves.
+  const sectionBefore = await screenRect(section!.id);
+  await page.mouse.click(sectionBefore!.x + 40, sectionBefore!.y + 20);
+  await page.mouse.move(sectionBefore!.x + 40, sectionBefore!.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(sectionBefore!.x + 140, sectionBefore!.y + 120, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => (await screenRect(section!.id))!.x).toBeGreaterThan(sectionBefore!.x + 80);
+  await page.keyboard.press('Escape');
+  const memberRect = await screenRect(memberIds[0]);
+  await page.mouse.click(memberRect!.x + 30, memberRect!.y + 30);
+  await page.mouse.move(memberRect!.x + 30, memberRect!.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(memberRect!.x + 30, memberRect!.y + 170, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => (await nodes(page)).find((node) => node.id === memberIds[0])!.parentId).toBeNull();
+  // …and back in.
+  const outRect = await screenRect(memberIds[0]);
+  const sectionNow = await screenRect(section!.id);
+  await page.mouse.click(outRect!.x + 30, outRect!.y + 30);
+  await page.mouse.move(outRect!.x + 30, outRect!.y + 30);
+  await page.mouse.down();
+  await page.mouse.move(sectionNow!.x + 120, sectionNow!.y + 120, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => (await nodes(page)).find((node) => node.id === memberIds[0])!.parentId).toBe(section!.id);
+
+  const sectionRect = await screenRect(section!.id);
+  await page.mouse.click(sectionRect!.x + 40, sectionRect!.y + 20);
   await page.keyboard.press(`${mod}+Shift+g`);
+  await expect.poll(async () => (await nodes(page)).some((node) => node.kind === 'section')).toBe(false);
+  await page.keyboard.press(`${mod}+a`);
   await page.keyboard.press(`${mod}+g`);
   expect((await nodes(page)).some((node) => node.kind === 'group')).toBe(true);
   await page.keyboard.press('Enter');

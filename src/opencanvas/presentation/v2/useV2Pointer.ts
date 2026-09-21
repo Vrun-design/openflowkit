@@ -22,6 +22,7 @@ import {
   type CanvasSelection,
 } from '../../application/selection/selection';
 import { createTransformCommand, transformBefore } from '../../domain/transforms/transformSelection';
+import { reparentByPosition } from '../../domain/transforms/containment';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 // Adoption allowlist (move in V2-05/V2-06): store-free pointer math shared
 // with the spike page. v2 owns the state machine; these own the geometry.
@@ -449,13 +450,17 @@ export function useV2Pointer(options: V2PointerOptions) {
         opts.onTransformPreview?.(null);
         if (final.result) {
           const before = transformBefore(operation.snapshot);
-          const changed = final.result.nodes.some((node, index) => !areStructurallyEqual(node, before[index]));
+          // A move can drop nodes into or out of a section (FigJam); the
+          // reparent rides in the same undo step.
+          const after = operation.transformKind === 'move'
+            ? reparentByPosition(operation.page, final.result.nodes) : final.result.nodes;
+          const changed = after.some((node, index) => !areStructurallyEqual(node, before[index]));
           if (changed) {
             opts.commit(
               createTransformCommand(
                 operation.page.id,
                 before,
-                final.result.nodes,
+                after,
                 transformLabel(operation.transformKind)
               )
             );
