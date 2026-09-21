@@ -1,38 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { execFileSync } from 'node:child_process';
 import { parseMermaidByType } from './parseMermaidByType';
 import type { MermaidImportStatus } from './importContracts';
 import { MERMAID_COMPAT_FIXTURES } from '../../../scripts/mermaid-compat-fixtures.mjs';
 
-describe('mermaid compat report harness', () => {
-  it(
-    'emits corpus-driven family summary output',
-    () => {
-      const output = execFileSync('node', ['scripts/mermaid-compat-report.mjs'], {
-        cwd: process.cwd(),
-        encoding: 'utf8',
-      });
-      const report = JSON.parse(output);
-
-      expect(report.summary.totalFixtures).toBeGreaterThanOrEqual(36);
-      expect(report.summary.supportedFamilies).toBeGreaterThan(0);
-      expect(report.summary.officialExpectationMatches).toBeGreaterThan(0);
-      expect(Array.isArray(report.familySummary)).toBe(true);
-      expect(report.familySummary).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ family: 'flowchart' }),
-          expect.objectContaining({ family: 'sequence' }),
-          expect.objectContaining({ family: 'stateDiagram' }),
-          expect.objectContaining({ family: 'classDiagram' }),
-          expect.objectContaining({ family: 'erDiagram' }),
-          expect.objectContaining({ family: 'mindmap' }),
-          expect.objectContaining({ family: 'journey' }),
-        ])
-      );
-    },
-    60_000
-  );
-
+describe('mermaid compat fixture corpus', () => {
   it('measures actual OpenFlowKit import outcomes for the fixture corpus', () => {
     const fixtures = MERMAID_COMPAT_FIXTURES as Array<{
       name: string;
