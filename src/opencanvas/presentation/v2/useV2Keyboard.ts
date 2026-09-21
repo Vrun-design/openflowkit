@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, type KeyboardEvent, type RefObject } from 'react';
 import { isEditableTarget } from './pointerOperations';
 import type { V2Tool } from './V2CreationToolbar';
+import type { AlignMode, DistributeAxis } from '../../domain/transforms/arrangement';
 
 interface V2KeyboardOptions {
   readonly toolRef: RefObject<V2Tool>;
@@ -10,8 +11,21 @@ interface V2KeyboardOptions {
   readonly onRedo: () => void;
   readonly onDelete: () => void;
   readonly onDuplicate: () => void;
-  readonly onReorder: (direction: 'front' | 'back') => void;
+  readonly onReorder: (direction: 'front' | 'back' | 'forward' | 'backward') => void;
   readonly onToggleLock: () => void;
+  readonly onGroup: () => void;
+  readonly onUngroup: () => void;
+  readonly onCut: () => void;
+  readonly onCopy: () => void;
+  readonly onPaste: () => void;
+  readonly onCopyStyle: () => void;
+  readonly onPasteStyle: () => void;
+  readonly onAlign: (mode: AlignMode) => void;
+  readonly onDistribute: (axis: DistributeAxis) => void;
+  readonly onFlip: (axis: 'horizontal' | 'vertical') => void;
+  readonly onZoomToSelection: () => void;
+  /** ⌘B / ⌘I / ⌘U on a selection (not while editing). */
+  readonly onTextStyle: (toggle: 'bold' | 'italic' | 'underline') => void;
   readonly onEditPrimary: () => void;
   readonly onNudge: (delta: { x: number; y: number }) => void;
   readonly onCancelGesture: () => boolean;
@@ -26,6 +40,11 @@ interface V2KeyboardOptions {
   /** Type-to-edit: return true when the key opened an editor, false to fall through to shortcuts. */
   readonly onTypeToEdit: (key: string) => boolean;
 }
+
+// ⌥ shortcuts read event.code: on macOS ⌥A produces "å" in event.key.
+const ALT_ALIGN: Readonly<Record<string, AlignMode>> = {
+  KeyA: 'left', KeyD: 'right', KeyW: 'top', KeyS: 'bottom', KeyH: 'center-x', KeyV: 'center-y',
+};
 
 // I-02: V/H/R/O/A/T switch tools; typing in a label or input never does.
 // Escape exits the active gesture, then an armed tool, then the selection.
@@ -80,8 +99,39 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
     } else if (command && key === 'l') {
       opts.onToggleLock();
       event.preventDefault();
+    } else if (command && event.altKey && (key === 'c' || event.code === 'KeyC')) {
+      opts.onCopyStyle();
+      event.preventDefault();
+    } else if (command && event.altKey && (key === 'v' || event.code === 'KeyV')) {
+      opts.onPasteStyle();
+      event.preventDefault();
+    } else if (command && key === 'g') {
+      if (event.shiftKey) opts.onUngroup(); else opts.onGroup();
+      event.preventDefault();
+    } else if (command && key === 'x') {
+      opts.onCut();
+      event.preventDefault();
+    } else if (command && key === 'c') {
+      opts.onCopy();
+      event.preventDefault();
+    } else if (command && key === 'v') {
+      opts.onPaste();
+      event.preventDefault();
+    } else if (command && (key === 'b' || key === 'i' || key === 'u')) {
+      opts.onTextStyle(key === 'b' ? 'bold' : key === 'i' ? 'italic' : 'underline');
+      event.preventDefault();
+    } else if (command && (event.code === 'BracketRight' || event.code === 'BracketLeft')) {
+      const front = event.code === 'BracketRight';
+      opts.onReorder(event.altKey ? (front ? 'front' : 'back') : (front ? 'forward' : 'backward'));
+      event.preventDefault();
     } else if (!command && (event.key === ']' || event.key === '[')) {
       opts.onReorder(event.key === ']' ? 'front' : 'back');
+      event.preventDefault();
+    } else if (!command && event.altKey && event.shiftKey && (event.code === 'KeyH' || event.code === 'KeyV')) {
+      opts.onDistribute(event.code === 'KeyH' ? 'horizontal' : 'vertical');
+      event.preventDefault();
+    } else if (!command && event.altKey && !event.shiftKey && ALT_ALIGN[event.code]) {
+      opts.onAlign(ALT_ALIGN[event.code]);
       event.preventDefault();
     } else if (command && key === 'j') {
       opts.onToggleAgent();
@@ -106,6 +156,14 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       event.preventDefault();
     } else if (!command && !event.altKey && event.key.length === 1 && event.key !== ' '
       && opts.onTypeToEdit(event.key)) {
+      event.preventDefault();
+    // ⇧H/V and ⇧1/⇧2 sit below type-to-edit: a capital letter on one selected
+    // shape starts its label; flips need none or several selected.
+    } else if (!command && !event.altKey && event.shiftKey && (event.code === 'KeyH' || event.code === 'KeyV')) {
+      opts.onFlip(event.code === 'KeyH' ? 'horizontal' : 'vertical');
+      event.preventDefault();
+    } else if (!command && !event.altKey && event.shiftKey && (event.code === 'Digit1' || event.code === 'Digit2')) {
+      if (event.code === 'Digit1') opts.onFitView(); else opts.onZoomToSelection();
       event.preventDefault();
     } else if (!command && !event.shiftKey && !event.altKey && key === 'v') {
       opts.onToolChange('select');

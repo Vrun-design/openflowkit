@@ -1,5 +1,6 @@
 import type { SceneNode, ScenePage } from '../document/types';
 import type { Point2d, Size2d } from '../geometry/types';
+import type { JsonObject } from '../document/json';
 
 // The three shapes the v2 toolbar creates. One factory serves the toolbar and
 // the add_node agent action so both produce byte-identical nodes (gate 2).
@@ -37,6 +38,8 @@ export interface CreateShapeNodeOptions {
   readonly size?: Size2d;
   /** Overrides the kind's default label; '' is allowed. */
   readonly label?: string;
+  /** Sticky style from the last edit, merged over the kind's default paint. */
+  readonly appearance?: JsonObject;
 }
 
 export function createShapeNode(page: ScenePage, options: CreateShapeNodeOptions): SceneNode {
@@ -50,7 +53,10 @@ export function createShapeNode(page: ScenePage, options: CreateShapeNodeOptions
     transform: { translation: { ...options.at }, rotationRadians: 0, scale: { x: 1, y: 1 } },
     size: { ...(options.size ?? defaultShapeSize(options.kind)) },
     content: { ...content, ...(options.label === undefined ? {} : { label: options.label }) },
-    appearance: options.kind === 'text' ? {} : { fill: '#fdfdfb', stroke: '#555952', strokeWidth: 1.5 },
+    appearance: {
+      ...(options.kind === 'text' ? {} : { fill: '#fdfdfb', stroke: '#555952', strokeWidth: 1.5 }),
+      ...options.appearance,
+    },
     ports: [],
     metadata: {},
     extensions: {},

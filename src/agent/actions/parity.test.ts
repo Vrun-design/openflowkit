@@ -63,7 +63,8 @@ describe('agent/manual record parity', () => {
     const agent = run('duplicate_nodes', { ids: ['a', 'b'], connectorIds: ['ab'] }, document);
     vi.restoreAllMocks();
     expect(agent.command).toEqual(manual);
-    expect(agent.output).toEqual({ ids: ['node-copy-1', 'node-copy-2'], connectorIds: ['connector-copy-3'] });
+    // b's child rides along: a container duplicates as a subtree.
+    expect(agent.output).toEqual({ ids: ['node-copy-1', 'node-copy-2', 'node-copy-3'], connectorIds: ['connector-copy-4'] });
   });
 
   it('rename_document matches the inline title edit', () => {

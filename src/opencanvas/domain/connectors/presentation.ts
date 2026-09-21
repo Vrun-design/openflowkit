@@ -5,6 +5,7 @@ import type {
   ConnectorPresentation,
   ConnectorStrokePresentation,
 } from './types';
+import { resolveConnectorLabelStyle } from './labelStyle';
 
 const DEFAULT_STROKE = '#64748b';
 
@@ -28,6 +29,7 @@ function markerFromAppearance(value: JsonValue | undefined): ConnectorMarkerGlyp
     const text = value.toLowerCase();
     if (text.includes('arrow')) return ['arrow'];
     if (text.includes('dot') || text.includes('circle')) return ['circle'];
+    if (text.includes('cross')) return ['cross'];
     return [];
   }
   if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
@@ -128,6 +130,8 @@ export function resolveConnectorPresentation(connector: SceneConnector): Connect
   };
   return {
     stroke,
+    cornerRadius: boundedNumber(connector.appearance.cornerRadius, 8, 0, 24),
+    label: resolveConnectorLabelStyle(connector),
     sourceMarkers:
       markers.source.length > 0
         ? markers.source

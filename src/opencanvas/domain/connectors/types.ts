@@ -1,4 +1,5 @@
 import type { Point2d } from '../geometry/types';
+import type { NodeStyle } from '../nodes/nodeStyle';
 
 export type ConnectorPathCommand =
   | { readonly kind: 'move'; readonly point: Point2d }
@@ -18,6 +19,7 @@ export type ConnectorMarkerGlyph =
   | 'diamond-filled'
   | 'circle'
   | 'bar'
+  | 'cross'
   | 'crow-foot';
 
 export interface ConnectorLabelGeometry {
@@ -35,6 +37,10 @@ export interface ConnectorStrokePresentation {
 
 export interface ConnectorPresentation {
   readonly stroke: ConnectorStrokePresentation;
+  /** Bend rounding for orthogonal/polyline routes, page px. */
+  readonly cornerRadius: number;
+  /** Label plate + typography; see connectors/labelStyle.ts. */
+  readonly label: NodeStyle;
   readonly sourceMarkers: readonly ConnectorMarkerGlyph[];
   readonly targetMarkers: readonly ConnectorMarkerGlyph[];
 }

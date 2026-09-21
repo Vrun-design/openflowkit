@@ -10,6 +10,9 @@ import type {
   RemoveNodeCommand,
   SetNodeCommand,
 } from './types';
+import type { JsonObject } from '../document/json';
+import { resolveNodeStyle, type NodeStyle } from '../nodes/nodeStyle';
+import { descendantIds } from './groupNodes';
 import type {
   ConnectorEndpoint,
   SceneConnector,
@@ -28,7 +31,6 @@ import {
 } from '../nodes/shapeNode';
 import { planQuickCreate } from '../connectors/quickCreate';
 import { measurePortableText } from '../text/measurement';
-import { DEFAULT_NODE_CONTENT_LAYOUT } from '../node-layout/model';
 import type { ConnectSide } from '../connectors/connectHandles';
 
 export const V2_DEFAULT_SHAPE_SIZE = DEFAULT_SHAPE_SIZE;
@@ -42,6 +44,7 @@ export interface V2CreateShapeOptions {
   readonly at: Point2d;
   readonly size?: Size2d;
   readonly label?: string;
+  readonly appearance?: JsonObject;
 }
 
 // I-03: click or drag creates at the theme default size; one history entry on
@@ -63,12 +66,14 @@ export function buildInsertShapeCommand(
 
 // Free-standing text hugs its content (tldraw/Excalidraw): the box is the
 // text, never a frame around it. Same font metrics the renderer uses.
-export function textNodeSize(label: string): Size2d {
-  const { padding } = DEFAULT_NODE_CONTENT_LAYOUT;
-  const measured = measurePortableText(label || ' ', { fontSize: 14, fontWeight: 600 });
+export function textNodeSize(label: string, style: NodeStyle): Size2d {
+  const measured = measurePortableText(label || ' ', {
+    fontSize: style.fontSize, fontWeight: style.fontWeight, lineHeight: style.fontSize * style.lineHeight,
+  });
+  const letterSpacing = style.letterSpacing * style.fontSize * Math.max(0, [...label].length - 1);
   return {
-    width: Math.max(24, Math.ceil(measured.width) + padding.left + padding.right),
-    height: Math.max(24, Math.ceil(measured.height) + padding.top + padding.bottom),
+    width: Math.max(24, Math.ceil(measured.width + letterSpacing) + style.textPadding * 2),
+    height: Math.max(24, Math.ceil(measured.height) + style.textPadding * 2),
   };
 }
 
@@ -89,7 +94,7 @@ export function buildSetNodeLabelCommand(
     after: {
       ...node,
       content: { ...node.content, label },
-      size: node.kind === 'text' ? textNodeSize(label) : node.size,
+      size: node.kind === 'text' ? textNodeSize(label, resolveNodeStyle(node)) : node.size,
     },
   };
 }
@@ -161,7 +166,8 @@ export function buildDeleteSelectionCommand(
   nodeIds: readonly string[],
   connectorIds: readonly string[]
 ): BatchDocumentCommand {
-  const nodes = new Set(nodeIds);
+  // A container takes its children with it; a dangling parentId is never stored.
+  const nodes = new Set([...nodeIds, ...descendantIds(page, nodeIds)]);
   const connectors = new Set(connectorIds);
   for (const attached of attachedConnectorIds(page, nodes)) connectors.add(attached);
   const commands: DocumentCommand[] = [
@@ -181,7 +187,9 @@ export function buildDuplicateSelectionCommand(
   mintId: (prefix: string) => string,
   offset: Point2d = { x: 20, y: 20 }
 ): BatchDocumentCommand {
-  const selectedNodes = new Set(nodeIds);
+  // A container brings its subtree; members keep their local transform, so
+  // only roots take the offset.
+  const selectedNodes = new Set([...nodeIds, ...descendantIds(page, nodeIds)]);
   const selectedConnectors = new Set(connectorIds);
   const idMap = new Map<string, string>();
   for (const id of selectedNodes) idMap.set(id, mintId('node'));
@@ -191,14 +199,15 @@ export function buildDuplicateSelectionCommand(
   for (const node of page.nodes) {
     const copyId = idMap.get(node.id);
     if (!copyId) continue;
+    const copiedParent = (node.parentId && idMap.get(node.parentId)) || null;
     const copy: SceneNode = {
       ...node,
       id: copyId,
-      parentId: (node.parentId && idMap.get(node.parentId)) || null,
+      parentId: copiedParent,
       zIndex: zIndex++,
       transform: {
         ...node.transform,
-        translation: {
+        translation: copiedParent ? { ...node.transform.translation } : {
           x: node.transform.translation.x + offset.x,
           y: node.transform.translation.y + offset.y,
         },
@@ -301,6 +310,8 @@ export interface V2ConnectorOptions {
   readonly id: string;
   readonly source: V2ConnectorEnd;
   readonly target: V2ConnectorEnd;
+  /** Sticky style from the last connector edit. */
+  readonly appearance?: JsonObject;
 }
 
 function connectorEndpoint(page: ScenePage, end: V2ConnectorEnd): ConnectorEndpoint {
@@ -330,7 +341,7 @@ export function buildInsertConnectorCommand(
       route: { kind: 'orthogonal', ownership: 'automatic' },
       waypoints: [],
       labels: [],
-      appearance: { markerEnd: 'arrow' },
+      appearance: { markerEnd: 'arrow', ...options.appearance },
       semantics: {},
       metadata: {},
       extensions: {},

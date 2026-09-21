@@ -1,4 +1,4 @@
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Text } from 'pixi.js';
 import { createBounds2d } from '../../domain/geometry/bounds';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import type { SceneNode } from '../../domain/document/types';
@@ -9,7 +9,9 @@ import { drawPixiNodeOutline } from './pixiNodeOutline';
 import type { PixiNodeDebugRecord } from './pixiNodeDebug';
 import { PixiMediaLayer } from './PixiMediaLayer';
 import { applyPixiNodeMatrix } from './pixiNodeTransform';
-import { createPixiText } from './pixiText';
+import { createPixiText, decoratePixiText, pixiTextStyle } from './pixiText';
+import { resolveNodeStyle } from '../../domain/nodes/nodeStyle';
+import { pixiPaintColor } from './pixiColor';
 
 export interface PixiFreeformNodeDrawResult {
   readonly label: Container;
@@ -45,6 +47,36 @@ function drawChrome(
     .stroke({ color: visual.foldStroke, width: 1 });
 }
 
+// Text nodes read the shared node style (fill/stroke/typography) so the
+// style bar, the label editor and this draw agree on every property.
+function drawTextNode(
+  node: SceneNode, matrix: Matrix2d, graphics: Graphics, visual: PixiFreeformNodeVisual
+): PixiFreeformNodeDrawResult {
+  const style = resolveNodeStyle(node);
+  const fill = pixiPaintColor(style.fill, 0xffffff);
+  const stroke = pixiPaintColor(style.stroke, 0x94a3b8);
+  if (fill.alpha > 0 || (stroke.alpha > 0 && style.strokeWidth > 0)) {
+    drawPixiNodeOutline(graphics, 'rectangle', node.size, matrix, undefined, style.cornerRadius);
+    graphics.fill({ color: fill.color, alpha: fill.alpha * style.opacity });
+    if (style.strokeWidth > 0) graphics.stroke({ color: stroke.color, width: style.strokeWidth, alpha: stroke.alpha * style.opacity });
+  }
+  const label = new Container();
+  label.alpha = style.opacity;
+  const pad = style.textPadding;
+  const wrap = Math.max(1, node.size.width - pad * 2);
+  const color = pixiPaintColor(style.textColor, visual.text).color;
+  const text = new Text({ text: typeof node.content.label === 'string' ? node.content.label : 'Text',
+    style: { ...pixiTextStyle(style, color, wrap), align: style.textAlign === 'start' ? 'left' : style.textAlign === 'end' ? 'right' : 'center' } });
+  const anchorX = style.textAlign === 'start' ? 0 : style.textAlign === 'end' ? 1 : 0.5;
+  const anchorY = style.textVerticalAlign === 'top' ? 0 : style.textVerticalAlign === 'bottom' ? 1 : 0.5;
+  text.anchor.set(anchorX, anchorY);
+  text.position.set(pad + anchorX * wrap, pad + anchorY * Math.max(1, node.size.height - pad * 2));
+  label.addChild(text);
+  decoratePixiText(label, text, style, color);
+  applyPixiNodeMatrix(label, matrix);
+  return { label, debug: { id: node.id, kind: 'text', shape: 'text', fill: fill.color, stroke: stroke.color, mediaState: 'none' } };
+}
+
 export class PixiFreeformNodeRenderer {
   private readonly mediaLayer: PixiMediaLayer;
 
@@ -72,6 +104,7 @@ export class PixiFreeformNodeRenderer {
   ): PixiFreeformNodeDrawResult | null {
     const visual = projectFreeformNodeVisual(node);
     if (!visual) return null;
+    if (visual.kind === 'text') return drawTextNode(node, matrix, graphics, visual);
     if (visual.kind === 'pen' || visual.kind === 'highlighter'
       || visual.kind === 'line' || visual.kind === 'arrow') {
       const points = visual.presentation.points.map((point) => applyMatrixToPoint(matrix, point));

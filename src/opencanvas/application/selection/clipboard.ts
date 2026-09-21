@@ -1,5 +1,4 @@
 import type { DocumentCommand } from '../../domain/commands/types';
-import type { JsonObject } from '../../domain/document/json';
 import type { SceneConnector, SceneNode, ScenePage } from '../../domain/document/types';
 import type { Point2d } from '../../domain/geometry/types';
 
@@ -55,11 +54,13 @@ export function buildPasteProductionSelectionCommand(
     nodeIds.set(node.id, id);
   }
   const commands: DocumentCommand[] = snapshot.nodes.map((node, index) => {
+    const pastedParent = node.parentId && nodeIds.has(node.parentId) ? nodeIds.get(node.parentId)! : null;
     const pasted: SceneNode = {
       ...structuredClone(node), id: nodeIds.get(node.id)!,
-      parentId: node.parentId && nodeIds.has(node.parentId) ? nodeIds.get(node.parentId)! : null,
+      parentId: pastedParent,
       zIndex: Math.max(0, ...page.nodes.map(({ zIndex }) => zIndex)) + index + 1,
-      transform: { ...node.transform, translation: {
+      // Members keep their local transform; only roots take the offset.
+      transform: { ...node.transform, translation: pastedParent ? { ...node.transform.translation } : {
         x: node.transform.translation.x + offset.x, y: node.transform.translation.y + offset.y,
       } },
     };
@@ -80,38 +81,4 @@ export function buildPasteProductionSelectionCommand(
   }
   return { command: { kind: 'batch', id: 'paste-selection', label: 'Paste selection', commands },
     pastedNodeIds: [...nodeIds.values()] };
-}
-
-const STYLE_CONTENT_KEYS = new Set([
-  'color', 'colorMode', 'customColor', 'shape', 'customSvgPath', 'fontSize', 'fontWeight',
-  'textColor', 'backgroundColor', 'borderColor', 'borderWidth', 'borderStyle', 'opacity',
-]);
-
-export interface ProductionStyleSnapshot {
-  readonly appearance: JsonObject;
-  readonly content: JsonObject;
-}
-
-export function copyProductionNodeStyle(node: SceneNode): ProductionStyleSnapshot {
-  return {
-    appearance: structuredClone(node.appearance),
-    content: Object.fromEntries(Object.entries(node.content)
-      .filter(([key]) => STYLE_CONTENT_KEYS.has(key))),
-  };
-}
-
-export function buildPasteProductionNodeStyleCommand(
-  page: ScenePage,
-  nodeId: string,
-  style: ProductionStyleSnapshot
-): DocumentCommand | null {
-  const before = page.nodes.find(({ id }) => id === nodeId);
-  if (!before) throw new RangeError(`Node "${nodeId}" was not found.`);
-  const content = Object.fromEntries(Object.entries(before.content)
-    .filter(([key]) => !STYLE_CONTENT_KEYS.has(key)));
-  const after = { ...before, appearance: structuredClone(style.appearance),
-    content: { ...content, ...structuredClone(style.content) } };
-  if (JSON.stringify(before) === JSON.stringify(after)) return null;
-  return { kind: 'set-node', id: `paste-style:${nodeId}`, label: 'Paste node style',
-    pageId: page.id, before, after };
 }

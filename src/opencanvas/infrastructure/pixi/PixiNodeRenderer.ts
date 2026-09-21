@@ -1,11 +1,11 @@
 import { pixiPaintColor } from './pixiColor';
-import { resolveNodeStroke } from '../../domain/nodes/nodeStroke';
+import { resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
 import { drawDashedPath } from './PixiConnectorRenderer';
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { Container, Graphics, Text } from 'pixi.js';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
-import type { SceneNode, ScenePage } from '../../domain/document/types';
+import type { ScenePage } from '../../domain/document/types';
 import type { SceneIndex } from '../../domain/scene/types';
 import { layoutNodeContent, resolveNodeContentLayout } from '../../domain/node-layout/model';
 import type { Bounds2d } from '../../domain/geometry/types';
@@ -23,7 +23,7 @@ import type { PixiNodeDebugRecord } from './pixiNodeDebug';
 import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
 import { measurePortableText } from '../../domain/text/measurement';
-import { currentPixiTextResolution } from './pixiText';
+import { currentPixiTextResolution, decoratePixiText, pixiTextStyle } from './pixiText';
 import type { SemanticDetailLevel } from './viewportProjection';
 
 const NODE_FILL = 0xffffff;
@@ -46,13 +46,14 @@ function textAnchor(alignment: 'start' | 'center' | 'end'): number {
   return 0.5;
 }
 
-function textKey(text: string, fontSize: unknown, fontWeight: unknown, fill: unknown): string {
-  return `${String(fontSize)}|${String(fontWeight)}|${String(fill)}|${text}`;
+function textKey(text: string, style: NodeStyle, fill: number, wrapWidth: number | null): string {
+  return [style.fontSize, style.fontFamily, style.fontWeight, style.fontStyle, style.textDecoration,
+    style.lineHeight, style.letterSpacing, fill, wrapWidth ?? '', text].join('|');
 }
 
-function nodeOpacity(node: SceneNode): number {
-  const value = node.appearance.opacity;
-  return typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1;
+/** Sub-labels use the node's family/colour at a fixed smaller size. */
+function subLabelStyle(style: NodeStyle): NodeStyle {
+  return { ...style, fontSize: 11, fontWeight: 400, textDecoration: 'none' };
 }
 
 export class PixiNodeRenderer {
@@ -240,27 +241,31 @@ export class PixiNodeRenderer {
         page.nodes.length > DETAILED_OUTLINE_NODE_LIMIT && shape === 'rounded'
           ? 'rectangle'
           : shape;
-      const fillPaint = pixiPaintColor(typeof node.appearance.fill === 'string' ? node.appearance.fill : '', visual?.fill ?? NODE_FILL);
-      const strokePaint = pixiPaintColor(typeof node.appearance.stroke === 'string' ? node.appearance.stroke : '', visual?.stroke ?? NODE_STROKE);
+      const style = resolveNodeStyle(node);
+      const fillPaint = pixiPaintColor(style.fill, visual?.fill ?? NODE_FILL);
+      const strokePaint = pixiPaintColor(style.stroke, visual?.stroke ?? NODE_STROKE);
       const fill = fillPaint.color;
       const stroke = strokePaint.color;
-      const strokeStyle = resolveNodeStroke(node);
       // ponytail: opacity honoured for basic shapes only; family renderers
       // draw into the shared graphics and would each need an alpha argument.
-      const alpha = nodeOpacity(node);
-      drawPixiNodeOutline(this.graphics, renderedShape, node.size, matrix,
-        typeof node.content.customSvgPath === 'string' ? node.content.customSvgPath : undefined);
+      const alpha = style.opacity;
+      const customPath = typeof node.content.customSvgPath === 'string' ? node.content.customSvgPath : undefined;
+      if (style.shadow && fillPaint.alpha > 0) {
+        drawPixiNodeOutline(this.graphics, renderedShape, node.size,
+          { ...matrix, tx: matrix.tx + 2, ty: matrix.ty + 4 }, customPath, style.cornerRadius);
+        this.graphics.fill({ color: 0x0f172a, alpha: 0.12 * alpha });
+      }
+      drawPixiNodeOutline(this.graphics, renderedShape, node.size, matrix, customPath, style.cornerRadius);
       this.graphics.fill({ color: fill, alpha: alpha * fillPaint.alpha });
-      if (strokeStyle.width > 0 && strokeStyle.dash.length) {
-        const outline = basicNodeOutlinePoints(renderedShape, node.size,
-          typeof node.content.customSvgPath === 'string' ? node.content.customSvgPath : undefined)
+      if (style.strokeWidth > 0 && style.dash.length) {
+        const outline = basicNodeOutlinePoints(renderedShape, node.size, customPath, style.cornerRadius)
           .map((point) => applyMatrixToPoint(matrix, point));
         drawDashedPath(this.graphics, [...outline, outline[0]], {
-          color: `#${stroke.toString(16).padStart(6, '0')}`, width: strokeStyle.width,
-          opacity: alpha * strokePaint.alpha, dash: strokeStyle.dash,
+          color: `#${stroke.toString(16).padStart(6, '0')}`, width: style.strokeWidth,
+          opacity: alpha * strokePaint.alpha, dash: style.dash,
         });
-      } else if (strokeStyle.width > 0) {
-        this.graphics.stroke({ color: stroke, width: strokeStyle.width, alpha: alpha * strokePaint.alpha });
+      } else if (style.strokeWidth > 0) {
+        this.graphics.stroke({ color: stroke, width: style.strokeWidth, alpha: alpha * strokePaint.alpha });
       }
       debugRecords.push({
         id: node.id,
@@ -273,16 +278,25 @@ export class PixiNodeRenderer {
       if (detailLevel === 'overview') continue;
       const labelText = typeof node.content.label === 'string' ? node.content.label : node.id;
       const sizing = resolveNodeSizingPolicy(node);
-      const layout = resolveNodeContentLayout(node.content, nodeLayoutEnabled);
-      const availableTextWidth = Math.max(1,
-        node.size.width - layout.padding.left - layout.padding.right);
+      const baseLayout = resolveNodeContentLayout(node.content, nodeLayoutEnabled);
+      // Style keys win over the stored content layout: one place to set alignment.
+      const pad = style.textPadding;
+      const layout = {
+        ...baseLayout,
+        horizontal: style.textAlign,
+        vertical: style.textVerticalAlign === 'top' ? 'start' as const
+          : style.textVerticalAlign === 'bottom' ? 'end' as const : 'center' as const,
+        labelAlignment: style.textAlign,
+        padding: { top: pad, right: pad, bottom: pad, left: pad },
+      };
+      const availableTextWidth = Math.max(1, node.size.width - pad * 2);
+      const wrap = sizing.overflow === 'visible' ? null : availableTextWidth;
       const labelMeasurement = measurePortableText(labelText, {
-        fontSize: 14, fontWeight: 600,
-        ...(sizing.overflow === 'visible' ? {} : {
-          maxWidth: availableTextWidth, maxLines: sizing.maxLines, overflow: sizing.overflow,
-        }),
+        fontSize: style.fontSize, fontWeight: style.fontWeight, lineHeight: style.fontSize * style.lineHeight,
+        ...(wrap === null ? {} : { maxWidth: wrap, maxLines: sizing.maxLines, overflow: sizing.overflow }),
       });
-      const label = this.acquireText(labelMeasurement.displayText, 14, '600', visual?.text ?? 0x1e293b);
+      const textColor = pixiPaintColor(style.textColor, visual?.text ?? 0x1e293b).color;
+      const label = this.acquireText(labelMeasurement.displayText, style, textColor, wrap);
       if (!nodeLayoutEnabled) {
         const bounds = nodeWorldBounds(node, matrix);
         label.position.set(bounds.x + 16, bounds.y + 25);
@@ -293,17 +307,15 @@ export class PixiNodeRenderer {
         this.labelByNodeId.set(node.id, content);
         continue;
       }
+      const subStyle = subLabelStyle(style);
       const subLabel =
         typeof node.content.subLabel === 'string' && node.content.subLabel.length > 0
           ? this.acquireText(
               measurePortableText(node.content.subLabel, {
                 fontSize: 11, fontWeight: 400,
-                ...(sizing.overflow === 'visible' ? {} : {
-                  maxWidth: availableTextWidth, maxLines: sizing.maxLines,
-                  overflow: sizing.overflow,
-                }),
+                ...(wrap === null ? {} : { maxWidth: wrap, maxLines: sizing.maxLines, overflow: sizing.overflow }),
               }).displayText,
-              11, '400', visual?.subText ?? 0x64748b
+              subStyle, visual?.subText ?? 0x64748b, wrap
             )
           : null;
       const hasIcon =
@@ -344,6 +356,7 @@ export class PixiNodeRenderer {
       const content = new Container();
       content.alpha = alpha;
       content.addChild(label);
+      decoratePixiText(content, label, style, textColor);
       if (subLabel && geometry.subLabelBounds) {
         const subLabelPoint = applyMatrixToPoint(matrix, {
           x: textPosition(geometry.subLabelBounds, geometry.labelAlignment),
@@ -373,8 +386,8 @@ export class PixiNodeRenderer {
     this.debugRecords = debugRecords;
   }
 
-  private acquireText(text: string, fontSize: number, fontWeight: '400' | '600', fill: number | string): Text {
-    const key = textKey(text, fontSize, fontWeight, fill);
+  private acquireText(text: string, style: NodeStyle, fill: number, wrapWidth: number | null): Text {
+    const key = textKey(text, style, fill, wrapWidth);
     const cached = this.textPool.get(key)?.pop();
     if (cached) {
       cached.anchor.set(0, 0);
@@ -383,7 +396,7 @@ export class PixiNodeRenderer {
     const created = new Text({
       text,
       resolution: currentPixiTextResolution(),
-      style: { fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif', fontSize, fontWeight, fill },
+      style: pixiTextStyle(style, fill, wrapWidth),
     });
     this.textKeys.set(created, key);
     return created;

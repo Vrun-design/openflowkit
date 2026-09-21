@@ -16,7 +16,7 @@ import {
   pickConnectorEditHandle as pickEditHandle,
   type ConnectorEditHandle,
 } from '../../domain/connectors/editing';
-import { querySceneBounds } from '../../domain/scene/queries';
+import { getDescendantNodeIds, querySceneBounds } from '../../domain/scene/queries';
 import { createSceneIndex } from '../../domain/scene/spatialIndex';
 import { nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import type { TransformHandle, TransformResult } from '../../domain/transforms/types';
@@ -388,7 +388,22 @@ export class PixiRendererHost {
     });
     // Locked nodes stay selectable (their menu is how they get unlocked);
     // the pointer flow refuses to move them.
-    return [...hits].reverse().find((hit) => hit.visible)?.id ?? null;
+    const hit = [...hits].reverse().find((hit) => hit.visible)?.id ?? null;
+    return hit ? this.outermostGroup(hit) : null;
+  }
+
+  // ⌘G groups select as one: a click on a member picks the top-most group.
+  // ponytail: no double-click "enter group"; ungroup to reach a member.
+  private outermostGroup(nodeId: string): string {
+    let result = nodeId;
+    let parentId = this.index?.nodesById.get(nodeId)?.parentId ?? null;
+    while (parentId) {
+      const parent = this.index?.nodesById.get(parentId);
+      if (!parent || parent.kind !== 'group') break;
+      result = parent.id;
+      parentId = parent.parentId;
+    }
+    return result;
   }
 
   pickConnector(screenPoint: Point2d): string | null {
@@ -592,10 +607,12 @@ export class PixiRendererHost {
     return { width: this.app.screen.width, height: this.app.screen.height };
   }
 
-  getContentBounds(): Bounds2d | null {
+  /** World bounds of all nodes, or of `nodeIds` only (zoom to selection). */
+  getContentBounds(nodeIds?: readonly string[]): Bounds2d | null {
     if (!this.index) return null;
+    const only = nodeIds ? new Set(nodeIds) : null;
     const nodeBounds = [...this.index.objectsByKey.values()]
-      .filter((object) => object.kind === 'node' || object.kind === 'container')
+      .filter((object) => (object.kind === 'node' || object.kind === 'container') && (!only || only.has(object.id)))
       .map((object) => object.bounds);
     return nodeBounds.reduce<Bounds2d | null>(
       (combined, bounds) => (combined ? unionBounds(combined, bounds) : bounds),
@@ -669,7 +686,9 @@ export class PixiRendererHost {
   private rebuildScene(redrawNodes = true): void {
     if (!this.page || !this.index) return;
     this.drawPrecisionGrid();
-    const excluded = new Set(this.previewResult?.nodes.map((node) => node.id));
+    // Preview nodes and everything under them draw in the live preview layer.
+    const excluded = new Set(this.previewResult?.nodes.flatMap((node) =>
+      [node.id, ...getDescendantNodeIds(this.index!, node.id)]));
     const renderedNodeIds = excluded.size
       ? new Set(this.page.nodes.filter((node) => !excluded.has(node.id)
         && (!this.viewportProjection?.nodeIds || this.viewportProjection.nodeIds.has(node.id))).map((node) => node.id))

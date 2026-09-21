@@ -10,6 +10,7 @@ import { useDocumentSession } from '../../application/session/useDocumentSession
 import type { PixiRendererHost, PixiRendererStatus } from '../../infrastructure/pixi/PixiRendererHost';
 import { createV2Repository } from '../../../services/storage/v2/v2Repository';
 import { SystemRoot, ToastRegion, type ToastItem } from '../design-system';
+import { V2ContextMenu, type ContextMenuTarget } from './V2ContextMenu';
 import { V2CanvasHost } from './V2CanvasHost';
 import { V2Chrome } from './V2Chrome';
 import { INITIAL_CODE, V2CanvasWelcome, V2DraftPanel, V2Shortcuts, V2WorkspaceRail, type V2WorkspaceMode } from './V2Workspace';
@@ -81,6 +82,7 @@ export function V2EditorPage(): React.JSX.Element {
   const [tool, setTool] = useState<V2Tool>('select');
   const [spacePan, setSpacePan] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
+  const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null);
   const toggleTree = () => {
     setTreeOpen((open) => !open);
     if (window.innerWidth < 1100) { setWorkspaceMode(null); setShortcutsOpen(false); }
@@ -262,6 +264,14 @@ export function V2EditorPage(): React.JSX.Element {
     onUndo: session.undo, onRedo: session.redo,
     onDelete: editActions.deleteSelection, onDuplicate: editActions.duplicateSelection,
     onReorder: editActions.reorderSelection, onToggleLock: editActions.toggleLock,
+    onGroup: editActions.groupSelection, onUngroup: editActions.ungroupSelection,
+    onCut: editActions.cutSelection, onCopy: editActions.copySelection,
+    onPaste: () => { void editActions.pasteClipboard(); },
+    onCopyStyle: editActions.copyStyle, onPasteStyle: editActions.pasteStyle,
+    onAlign: editActions.alignSelection, onDistribute: editActions.distributeSelection,
+    onFlip: editActions.flipSelection,
+    onZoomToSelection: () => camera.fitView(selectionRef.current.nodeIds.length ? selectionRef.current.nodeIds : undefined),
+    onTextStyle: editActions.toggleTextStyle,
     onEditPrimary: () => {
       if (load.readOnly) return;
       const primary = selectionRef.current.primaryNodeId;
@@ -286,7 +296,7 @@ export function V2EditorPage(): React.JSX.Element {
       else { setWorkspaceMode(null); setShortcutsOpen(false); setTreeOpen(false); }
     },
     onSelectAll: () => selectionApi.selectAllNodes(pageRef.current),
-    onFitView: camera.fitView,
+    onFitView: () => camera.fitView(),
     onZoomStep: camera.zoomStep,
     onResetZoom: camera.resetZoom,
     onToggleTree: toggleTree,
@@ -369,6 +379,22 @@ export function V2EditorPage(): React.JSX.Element {
               readOnly={load.readOnly}
               onDuplicate={editActions.duplicateSelection}
               onDelete={editActions.deleteSelection}
+              onContextMenu={setContextMenu}
+            />
+            <V2ContextMenu target={contextMenu} page={page} selectionCount={selection.nodeIds.length}
+              readOnly={load.readOnly} actions={editActions} commit={session.commit}
+              onEditLabel={() => {
+                const primary = selectionRef.current.primaryNodeId;
+                if (primary) openEditor(primary); else editSelectedConnectorLabel();
+              }}
+              onSelectAll={() => selectionApi.selectAllNodes(pageRef.current)}
+              onZoomToFit={() => camera.fitView()}
+              onZoomToSelection={() => camera.fitView(selectionRef.current.nodeIds)}
+              onZoomTo100={camera.resetZoom}
+              showGrid={preferences.showGrid} snapToGrid={preferences.snapToGrid}
+              onToggleGrid={() => updatePreferences({ showGrid: !preferences.showGrid })}
+              onToggleSnap={() => updatePreferences({ snapToGrid: !preferences.snapToGrid })}
+              onClose={() => { setContextMenu(null); sectionRef.current?.focus(); }}
             />
             <V2WorkspaceRail mode={workspaceMode}
               onChange={(mode) => { if (workspaceMode === mode) setWorkspaceMode(null); else openWorkspace(mode); }}

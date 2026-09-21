@@ -1,19 +1,61 @@
 import type { SetConnectorCommand } from './types';
 import type { ConnectorRouteKind, ScenePage } from '../document/types';
-import type { JsonValue } from '../document/json';
+import type { JsonObject, JsonValue } from '../document/json';
 import { areStructurallyEqual } from './equality';
 
-export type ConnectorMarkerEnd = 'none' | 'arrow' | 'dot';
-export type ConnectorDashStyle = 'solid' | 'dashed';
+export type ConnectorMarkerEnd = 'none' | 'arrow' | 'dot' | 'cross';
+export type ConnectorDashStyle = 'solid' | 'dashed' | 'dotted';
 
 export interface ConnectorStylePatch {
   readonly color?: string;
   readonly strokeWidth?: number;
+  readonly opacity?: number;
   readonly dash?: ConnectorDashStyle;
+  readonly cornerRadius?: number;
   readonly markerStart?: ConnectorMarkerEnd;
   readonly markerEnd?: ConnectorMarkerEnd;
   /** Path shape; switching it drops manual bends and goes back to automatic. */
   readonly route?: Exclude<ConnectorRouteKind, 'polyline'>;
+  /** Swap source and target; markers stay on their ends, so the arrow flips. */
+  readonly reverse?: boolean;
+  /** Label typography and plate (connectors/labelStyle.ts). */
+  readonly labelColor?: string;
+  readonly labelBackground?: string;
+  readonly labelFontSize?: number;
+  readonly labelFontFamily?: string;
+  readonly labelFontWeight?: number;
+  readonly labelFontStyle?: string;
+  readonly labelTextDecoration?: string;
+}
+
+const LABEL_KEYS = [
+  'labelColor', 'labelBackground', 'labelFontSize', 'labelFontFamily', 'labelFontWeight',
+  'labelFontStyle', 'labelTextDecoration',
+] as const;
+
+/** Appearance keys a style patch writes, over an existing appearance. */
+export function connectorAppearanceWithPatch(base: JsonObject, patch: ConnectorStylePatch): JsonObject {
+  const appearance: Record<string, JsonValue> = { ...base };
+  if (patch.color !== undefined) appearance.stroke = patch.color;
+  if (patch.strokeWidth !== undefined) appearance.strokeWidth = patch.strokeWidth;
+  if (patch.opacity !== undefined) appearance.opacity = patch.opacity;
+  if (patch.cornerRadius !== undefined) appearance.cornerRadius = patch.cornerRadius;
+  if (patch.dash !== undefined) {
+    if (patch.dash === 'solid') {
+      delete appearance.dashPattern;
+      delete appearance.strokeDasharray;
+    } else {
+      appearance.dashPattern = patch.dash;
+      delete appearance.strokeDasharray;
+    }
+  }
+  if (patch.markerStart !== undefined) appearance.markerStart = patch.markerStart;
+  if (patch.markerEnd !== undefined) appearance.markerEnd = patch.markerEnd;
+  for (const key of LABEL_KEYS) {
+    const value = patch[key];
+    if (value !== undefined) appearance[key] = value;
+  }
+  return appearance;
 }
 
 // One appearance patch over a single connector as one set-connector; no-op
@@ -25,22 +67,17 @@ export function buildStyleConnectorCommand(
 ): SetConnectorCommand | null {
   const before = page.connectors.find((connector) => connector.id === connectorId);
   if (!before) throw new RangeError(`Connector "${connectorId}" was not found.`);
-  const appearance: Record<string, JsonValue> = { ...before.appearance };
-  if (patch.color !== undefined) appearance.stroke = patch.color;
-  if (patch.strokeWidth !== undefined) appearance.strokeWidth = patch.strokeWidth;
-  if (patch.dash !== undefined) {
-    if (patch.dash === 'solid') {
-      delete appearance.dashPattern;
-      delete appearance.strokeDasharray;
-    } else {
-      appearance.dashPattern = patch.dash;
-    }
-  }
-  if (patch.markerStart !== undefined) appearance.markerStart = patch.markerStart;
-  if (patch.markerEnd !== undefined) appearance.markerEnd = patch.markerEnd;
-  const after = patch.route !== undefined && patch.route !== before.route.kind
+  const appearance = connectorAppearanceWithPatch(before.appearance, patch);
+  let after = patch.route !== undefined && patch.route !== before.route.kind
     ? { ...before, appearance, route: { kind: patch.route, ownership: 'automatic' as const }, waypoints: [] }
     : { ...before, appearance };
+  if (patch.reverse) {
+    after = {
+      ...after, source: after.target, target: after.source,
+      waypoints: [...after.waypoints].reverse(),
+      labels: after.labels.map((label) => ({ ...label, pathRatio: 1 - label.pathRatio })),
+    };
+  }
   if (areStructurallyEqual(after, before)) return null;
   return {
     kind: 'set-connector',

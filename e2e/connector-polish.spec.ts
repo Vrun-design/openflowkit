@@ -158,10 +158,13 @@ test('style bar sets dot markers and dashed line', async ({ page }) => {
   const offset = { x: r.x - world.x, y: r.y - world.y };
   await page.mouse.click(mid.x + offset.x, mid.y + offset.y);
   await expect(page.getByRole('toolbar', { name: 'Connector actions' })).toBeVisible();
-  await page.getByRole('button', { name: /^Line:/ }).click();
-  await expect(page.getByRole('dialog', { name: 'Line' })).toBeVisible();
+  const bar = page.locator('[data-context-bar]');
+  await bar.getByRole('button', { name: 'Ends' }).click();
   await page.getByRole('radiogroup', { name: 'End marker' }).getByRole('radio', { name: 'Dot' }).check();
-  await page.getByRole('radiogroup', { name: 'Line style' }).getByRole('radio', { name: 'Dashed' }).check();
+  await page.keyboard.press('Escape');
+  await bar.getByRole('button', { name: 'Line' }).click();
+  await expect(page.getByRole('dialog', { name: 'Line' })).toBeVisible();
+  await page.getByRole('radiogroup', { name: 'Line style' }).getByRole('radio', { name: '- -' }).check();
   await expect.poll(async () => {
     const c = (await doc(page)).pages[0].connectors[0];
     return c.appearance.markerEnd === 'dot' && c.appearance.dashPattern === 'dashed';

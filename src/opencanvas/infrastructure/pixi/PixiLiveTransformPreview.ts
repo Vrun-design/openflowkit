@@ -3,6 +3,7 @@ import type { SceneNode, ScenePage } from '../../domain/document/types';
 import type { SceneIndex } from '../../domain/scene/types';
 import type { TransformResult } from '../../domain/transforms/types';
 import { buildNodeWorldMatrices } from '../../domain/scene/worldGeometry';
+import { getDescendantNodeIds } from '../../domain/scene/queries';
 import { PixiNodeRenderer } from './PixiNodeRenderer';
 import { PixiConnectorRenderer } from './PixiConnectorRenderer';
 import { drawTransformFrame } from './PixiTransformOverlay';
@@ -20,7 +21,7 @@ export class PixiLiveTransformPreview {
   private context(page: ScenePage, index: SceneIndex, nodes: readonly SceneNode[]): ScenePage {
     if (this.sourcePage === page && this.contextPage && nodes.length === this.selectedIds.length
       && nodes.every((node, i) => node.id === this.selectedIds[i])) return this.contextPage;
-    const ids = new Set(nodes.map((node) => node.id));
+    const ids = new Set(nodes.flatMap((node) => [node.id, ...getDescendantNodeIds(index, node.id)]));
     const connectors = page.connectors.filter((edge) =>
       ids.has(edge.source.nodeId ?? '') || ids.has(edge.target.nodeId ?? ''));
     const contextNodes = new Map<string, SceneNode>();
@@ -50,7 +51,9 @@ export class PixiLiveTransformPreview {
     const context = this.context(page, index, result.nodes);
     const preview = { ...context, nodes: context.nodes.map((node) => replacements.get(node.id) ?? node) };
     const matrices = buildNodeWorldMatrices(preview);
-    const selectedPage = { ...preview, nodes: result.nodes };
+    // Members of a moved group ride along: same local transform, new parent matrix.
+    const carried = new Set(result.nodes.flatMap((node) => [node.id, ...getDescendantNodeIds(index, node.id)]));
+    const selectedPage = { ...preview, nodes: preview.nodes.filter((node) => carried.has(node.id)) };
     this.nodes.draw(selectedPage, { ...index, worldMatricesByNodeId: matrices },
       true, true, true, false, false, false, false, false, false);
     this.connectors.setZoom(zoom);

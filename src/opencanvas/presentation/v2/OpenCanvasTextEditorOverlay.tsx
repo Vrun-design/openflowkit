@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Bounds2d } from '../../domain/geometry/types';
-import { DEFAULT_NODE_CONTENT_LAYOUT } from '../../domain/node-layout/model';
+import { nodeStyleFont, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import './openCanvasTextEditorOverlay.css';
 
 interface OpenCanvasTextEditorOverlayProps {
@@ -9,12 +9,10 @@ interface OpenCanvasTextEditorOverlayProps {
   readonly label?: string;
   /** Screen scale: the editor's type matches the rendered label at any zoom. */
   readonly zoom?: number;
-  /** Rendered font size and weight of the label being replaced. */
-  readonly font?: { readonly size: number; readonly weight: 400 | 600 };
+  /** Resolved style of the label being replaced: typography, colour, padding. */
+  readonly style: NodeStyle;
   /** Select the existing text on open (default); false puts the caret at the end. */
   readonly selectAll?: boolean;
-  /** Unscaled insets; defaults to the node content padding. */
-  readonly padding?: { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
   /** Connector labels sit on a white plate so the line underneath never reads through. */
   readonly plate?: boolean;
   readonly onCommit: (value: string) => void;
@@ -37,18 +35,20 @@ export function OpenCanvasTextEditorOverlay({
   value,
   label = 'Edit node label',
   zoom = 1,
-  font = { size: 14, weight: 600 },
+  style,
   selectAll = true,
-  padding: pad = DEFAULT_NODE_CONTENT_LAYOUT.padding,
   plate = false,
   onCommit,
   onCancel,
 }: OpenCanvasTextEditorOverlayProps): React.JSX.Element {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const finishedRef = useRef(false);
+  // A plate is half as tall as it is wide in padding, like the Pixi label plate.
+  const vertical = plate ? style.textPadding / 2 : style.textPadding;
+  const pad = { top: vertical, right: style.textPadding, bottom: vertical, left: style.textPadding };
   const padTop = pad.top * zoom;
   const padBottom = pad.bottom * zoom;
-  const cssFont = `${font.weight} ${font.size * zoom}px/1.2 Inter, ui-sans-serif, system-ui, sans-serif`;
+  const cssFont = nodeStyleFont(style, zoom);
 
   // Grow with the text and keep it vertically centred like the rendered
   // label. Goes through state: React owns the inline style, so a direct DOM

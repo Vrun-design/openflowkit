@@ -634,7 +634,8 @@
   font-weight: var(--ofk-weight-label);
 }
 .ofk-system [data-hide-label] > label,
-.ofk-system [data-hide-label] > span:last-child {
+.ofk-system [data-hide-label] > :is(.ofk-progress-label, .ofk-dropdown-label),
+.ofk-system :is(.ofk-check, .ofk-switch)[data-hide-label] > span:last-child {
   position: absolute;
   width: 1px;
   height: 1px;

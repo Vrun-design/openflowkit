@@ -48,6 +48,11 @@ function drawStructuralGlyph(
   }
 }
 
+/** ⌘G groups have no label and no paint: the selection frame is their only chrome. */
+function isQuietGroup(node: SceneNode): boolean {
+  return node.kind === 'group' && node.content.label === '';
+}
+
 export class PixiContainerRenderer {
   readonly graphics = new Graphics();
   readonly labels = new Container();
@@ -77,10 +82,12 @@ export class PixiContainerRenderer {
       if (!visual || !matrix) continue;
       const childCount = index.childIdsByParentId.get(node.id)?.length ?? 0;
       this.drawContainer(node, matrix, visual);
-      const label = this.createLabel(node, visual, childCount);
-      applyPixiNodeMatrix(label, matrix);
-      this.labels.addChild(label);
-      this.labelByNodeId.set(node.id, label);
+      if (!isQuietGroup(node)) {
+        const label = this.createLabel(node, visual, childCount);
+        applyPixiNodeMatrix(label, matrix);
+        this.labels.addChild(label);
+        this.labelByNodeId.set(node.id, label);
+      }
       records.push({
         id: node.id,
         kind: visual.presentation.kind,
@@ -110,6 +117,7 @@ export class PixiContainerRenderer {
   }
 
   private drawContainer(node: SceneNode, matrix: Matrix2d, visual: PixiContainerNodeVisual): void {
+    if (isQuietGroup(node)) return;
     drawPixiNodeOutline(this.graphics, 'rounded', node.size, matrix);
     this.graphics
       .fill({ color: visual.fill.color, alpha: visual.fill.alpha })

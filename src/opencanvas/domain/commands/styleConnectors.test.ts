@@ -67,3 +67,25 @@ describe('route kind patch', () => {
     expect(buildStyleConnectorCommand(page, 'e', { route: 'orthogonal' })).toBeNull();
   });
 });
+
+describe('reverse and label keys', () => {
+  it('swaps ends, mirrors bends and labels, writes label keys', () => {
+    const page = createTestDocument({
+      nodes: [createTestNode('a'), createTestNode('b')],
+      connectors: [createTestConnector('e', 'a', 'b', {
+        waypoints: [{ x: 1, y: 1 }, { x: 2, y: 2 }],
+        labels: [{ id: 'l', text: 'x', pathRatio: 0.25, offset: { x: 0, y: 0 }, metadata: {} }],
+      })],
+    }).pages[0];
+    const command = buildStyleConnectorCommand(page, 'e', {
+      reverse: true, labelColor: '#ff0000', labelFontSize: 14, cornerRadius: 0, dash: 'dotted', markerEnd: 'cross',
+    })!;
+    expect(command.after.source.nodeId).toBe('b');
+    expect(command.after.target.nodeId).toBe('a');
+    expect(command.after.waypoints).toEqual([{ x: 2, y: 2 }, { x: 1, y: 1 }]);
+    expect(command.after.labels[0].pathRatio).toBe(0.75);
+    expect(command.after.appearance).toMatchObject({
+      labelColor: '#ff0000', labelFontSize: 14, cornerRadius: 0, dashPattern: 'dotted', markerEnd: 'cross',
+    });
+  });
+});

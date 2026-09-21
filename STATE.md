@@ -3,37 +3,36 @@
 Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–4, one month, no gates.
 
 ## Now
-- Phase 1 polish pass done 2026-09-21 (Claude Opus 5, on `v2`; slice
-  branches `p1-*` and stale `pr-*` worktrees deleted).
-- Connectors: sides are dynamic (bind to node, no side ports); orthogonal
-  router exits through a 20px stub, prefers the Z lane, treats own nodes as
-  obstacles, pulls stubs back in tight packs. Segment drag stores only that
-  segment; hybrid routes re-link both ends every frame. Drag-out preview is
-  the routed connector. Path: Elbow / Straight / Curve in the style bar.
-- Text: Pixi label resolution follows zoom (crisp at 400%). Label editor is
-  transparent, zoom-scaled, sits on the label (Pixi copy hidden); Escape
-  keeps typed text; text nodes fit content; type-to-edit keeps the seed char.
-  Connector label: plate hit-tests as the connector (dbl-click re-edits),
-  editor hugs text and hides the Pixi copy.
-- Chrome: one blue accent, 1px frames, no double outline; quick-create ghost
-  on side-handle hover (handles hover-detected outside node bounds).
-- 1.7: ⇧ aspect / ⌥ centre resize, ⌘ suspends snap, ⇧ 15° rotate, ]/[
-  z-order, ⌘L lock, ⌘D +20. 1.8: T tool, double-click text, zoomed editing.
-- Gate green: 865 unit, 8/8 headed e2e (headless has no WebGL here).
+- Phase 1 + polish + 1.9 style done 2026-09-21 (Claude Opus 5, on `v2`).
+- Connectors: dynamic sides, obstacle-aware orthogonal router (20px stub,
+  Z lane), segment drag stores one segment, hybrid re-links each frame.
+- Text: crisp at any zoom; transparent zoom-scaled label editor on the label;
+  Escape keeps text; type-to-edit; connector label plate is click/dbl-click.
+- Chrome: one blue accent, quick-create ghost on side-handle hover. 1.7/1.8:
+  modifier resize/rotate, ]/[ z-order, ⌘L lock, ⌘D, T tool, dbl-click text.
+- 1.9 style (spec `docs/plan/phase-1-style.md`, shipped 2026-09-21): one
+  resolver `domain/nodes/nodeStyle.ts` (flat `appearance` keys, legacy
+  `content.*` fallbacks) feeds Pixi, the label editor and measurement.
+  Style bar: Fill (palette pastel/solid, custom, corners, opacity, shadow) /
+  Outline / Text (family, size, B/I/U/S, align, padding, line height,
+  spacing) / Align / Position / Layer; connector Line / Ends (cross marker,
+  reverse) / Label. Sticky defaults per kind. Right-click menus (node,
+  connector, canvas). ⌘X/C/V, ⌘⌥C/V copy style, ⌘]/[ step, ⌥ align, ⇧H/V
+  flip, ⌘G/⌘⇧G quiet groups (members ride the live preview; delete/duplicate
+  take subtrees). Text nodes re-fit on typography edits.
+- Gate green: 888 unit, 10/10 headed e2e (headless has no WebGL here).
 
 ## Next
 - Phase 2.1 grammar.md exists (`docs/plan/grammar.md`); owner reviews, then
   parser. Owner feel-test on `/`: quick-create, bend + move, label edit, zoom.
 
 ## Deferred (phase 1)
-- ⌘G group / ⌘⇧G ungroup: `group` container kind exists but the transform
-  snapshot and live preview do not carry descendants; do it with the frame
-  work in phase 2 (Generate lands as a frame).
-- Rotate handle stem overlaps connectors above a node (tldraw rotates from
-  corners); cosmetic.
-- Feel probe reports ~260 ms p95 at 512 nodes, but rAF callbacks measure
-  4–7 ms with no long tasks during the same drag: the harness (Playwright
-  per-event acks) is suspect, not the renderer. Re-instrument before trusting.
+- Group: top-level only, no double-click enter, no resize/rotate of members
+  (phase 2 frame work). Flip mirrors positions, not glyphs (`ponytail:` in
+  `arrangeNodes.ts`). SVG/PNG export still reads legacy paint keys (phase 4).
+- Rotate handle stem overlaps connectors above a node; cosmetic.
+- Feel probe says ~260 ms p95 at 512 nodes but rAF measures 4–7 ms: the
+  Playwright harness is suspect, not the renderer. Re-instrument first.
 
 ## Later
 - Phase 5 (month 2): `docs/plan/phase-5-architecture.md` — C4 model layer +

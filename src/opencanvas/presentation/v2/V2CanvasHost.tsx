@@ -13,6 +13,7 @@ import type { ScenePage } from '../../domain/document/types';
 import type { Point2d } from '../../domain/geometry/types';
 import type { CanvasCamera } from '../../domain/camera/types';
 import {
+  clearSelection,
   replaceSelection,
   type CanvasSelection,
 } from '../../application/selection/selection';
@@ -23,8 +24,12 @@ import {
   type PixiRendererStatus,
 } from '../../infrastructure/pixi/PixiRendererHost';
 import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
+import { resolveNodeStyle } from '../../domain/nodes/nodeStyle';
+import { resolveConnectorLabelStyle } from '../../domain/connectors/labelStyle';
 import { V2ContextBar, contextBarStyle, sameRect, unionScreenBounds } from './V2ContextBar';
-import { useV2Pointer, type V2GestureApi } from './useV2Pointer';
+import type { ContextMenuTarget } from './V2ContextMenu';
+import { useV2Pointer, type StylePresets, type V2GestureApi } from './useV2Pointer';
+import { connectorAppearanceWithPatch } from '../../domain/commands/styleConnectors';
 import type { V2Tool } from './V2CreationToolbar';
 import './openCanvasTextEditorOverlay.css';
 
@@ -76,6 +81,8 @@ interface V2CanvasHostProps {
   readonly showGrid: boolean;
   readonly onDuplicate: () => void;
   readonly onDelete: () => void;
+  /** Right-click: the host has already selected the target; the page shows the menu. */
+  readonly onContextMenu: (target: ContextMenuTarget) => void;
 }
 
 export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
@@ -100,7 +107,11 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   // Latest React-rendered bar anchor; the drag-follow path restores exactly
   // this on operation end when no re-render follows (anchor truly unchanged).
   const anchorForRestoreRef = useRef<DOMRect | null>(null);
+  // Sticky defaults live with the host for the session: what you last styled
+  // is what the next shape/text/connector gets.
+  const stylePresetsRef = useRef<StylePresets>({ shape: {}, text: {}, connector: {} });
   const pointer = useV2Pointer({
+    stylePresetsRef,
     hostRef: props.hostRef,
     cameraRef: props.cameraRef,
     pageRef: props.pageRef,
@@ -338,6 +349,12 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     ));
   }
 
+  const editingNode = props.editing && props.page.nodes.find((node) => node.id === props.editing?.nodeId);
+  const editingStyle = editingNode ? resolveNodeStyle(editingNode) : null;
+  const editingConnector = props.connectorEditing
+    && props.page.connectors.find((connector) => connector.id === props.connectorEditing?.connectorId);
+  const connectorEditingStyle = editingConnector ? resolveConnectorLabelStyle(editingConnector) : null;
+
   return (
     <section
       ref={props.sectionRef}
@@ -351,6 +368,31 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
       onPointerCancel={pointer.handlePointerCancel}
       onDoubleClick={pointer.handleDoubleClick}
       onWheel={handleWheel}
+      onContextMenu={(event) => {
+        const host = props.hostRef.current;
+        if (!host || props.editing || props.connectorEditing) return;
+        event.preventDefault();
+        const rect = event.currentTarget.getBoundingClientRect();
+        const point = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+        const at = { x: event.clientX, y: event.clientY };
+        const nodeId = host.pickNode(point);
+        if (nodeId) {
+          if (!props.selection.nodeIds.includes(nodeId)) {
+            props.applyConnectorSelection(null);
+            props.applySelection(replaceSelection([nodeId]));
+          }
+          props.onContextMenu({ kind: 'nodes', ...at });
+          return;
+        }
+        const connectorId = host.pickConnector(point);
+        if (connectorId) {
+          props.applySelection(clearSelection());
+          props.applyConnectorSelection(connectorId);
+          props.onContextMenu({ kind: 'connector', id: connectorId, ...at });
+          return;
+        }
+        props.onContextMenu({ kind: 'canvas', ...at });
+      }}
     >
       <div ref={setViewport} className="ofk-v2-viewport" data-testid="v2-viewport" />
       {unavailableReason ? (
@@ -362,24 +404,24 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
           <Link to="/canvas">Open current canvas</Link>
         </div>
       ) : null}
-      {props.editing ? (
+      {props.editing && editingStyle ? (
         <OpenCanvasTextEditorOverlay
           bounds={props.editing.bounds}
           value={props.editing.value}
+          style={editingStyle}
           zoom={props.camera.zoom}
           selectAll={!props.editing.caretAtEnd}
           onCommit={props.onCommitLabel}
           onCancel={props.onCancelEdit}
         />
       ) : null}
-      {props.connectorEditing && !props.editing ? (
+      {props.connectorEditing && connectorEditingStyle && !props.editing ? (
         <OpenCanvasTextEditorOverlay
           bounds={props.connectorEditing.bounds}
           value={props.connectorEditing.value}
           label="Edit connector label"
           zoom={props.camera.zoom}
-          font={{ size: 11, weight: 600 }}
-          padding={{ top: 2.4, right: 5, bottom: 2.4, left: 5 }}
+          style={connectorEditingStyle}
           plate
           onCommit={props.onCommitConnectorLabel}
           onCancel={props.onCancelConnectorEdit}
@@ -404,6 +446,13 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
           onEditLabel={() => {
             const primary = props.selection.primaryNodeId;
             if (primary) props.openEditor(primary);
+          }}
+          onNodeStyleCommitted={(patch) => {
+            const kind = props.selection.nodeIds.every((id) => props.page.nodes.find((node) => node.id === id)?.kind === 'text') ? 'text' : 'shape';
+            stylePresetsRef.current[kind] = { ...stylePresetsRef.current[kind], ...patch };
+          }}
+          onConnectorStyleCommitted={(patch) => {
+            stylePresetsRef.current.connector = connectorAppearanceWithPatch(stylePresetsRef.current.connector, patch);
           }}
           onEditConnectorLabel={props.onEditConnectorLabel}
           onDuplicate={props.onDuplicate}

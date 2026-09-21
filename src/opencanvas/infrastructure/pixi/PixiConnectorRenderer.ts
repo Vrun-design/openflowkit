@@ -1,5 +1,8 @@
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { Container, Graphics, Text } from 'pixi.js';
+import { pixiPaintColor } from './pixiColor';
+import { decoratePixiText, pixiTextStyle } from './pixiText';
+import type { NodeStyle } from '../../domain/nodes/nodeStyle';
 import type { ScenePage } from '../../domain/document/types';
 import { roundPolylineCorners } from '../../domain/geometry/polyline';
 import { distanceBetweenPoints } from '../../domain/geometry/point';
@@ -13,9 +16,6 @@ import { buildNodeWorldMatrices, nodeWorldCenter } from '../../domain/scene/worl
 
 const LEGACY_STROKE = 0x94a3b8;
 const LABEL_DETAIL_ZOOM = 0.65;
-// Orthogonal corner radius: beziers sample their own curve, everything else
-// gets arc-sampled corners so solid and dashed walkers share one path.
-const CONNECTOR_CORNER_RADIUS_PX = 8;
 
 function normalizedDirection(from: Point2d, to: Point2d): Point2d {
   const distance = distanceBetweenPoints(from, to);
@@ -104,6 +104,16 @@ function drawMarker(
         .moveTo(barStart.x, barStart.y)
         .lineTo(barEnd.x, barEnd.y)
         .stroke({ color: stroke.color, width: stroke.width });
+      break;
+    }
+    case 'cross': {
+      const center = offsetPoint(tip, outward, -5);
+      const a = offsetPoint(offsetPoint(center, normal, 4.5), outward, 4.5);
+      const b = offsetPoint(offsetPoint(center, normal, -4.5), outward, -4.5);
+      const c = offsetPoint(offsetPoint(center, normal, 4.5), outward, -4.5);
+      const d = offsetPoint(offsetPoint(center, normal, -4.5), outward, 4.5);
+      graphics.moveTo(a.x, a.y).lineTo(b.x, b.y).moveTo(c.x, c.y).lineTo(d.x, d.y)
+        .stroke({ color: stroke.color, alpha: stroke.opacity, width: stroke.width });
       break;
     }
     case 'crow-foot': {
@@ -206,9 +216,11 @@ export class PixiConnectorRenderer {
     let markerCount = 0;
     for (const connector of connectors) {
       const hasCurve = connector.commands.some((command) => command.kind === 'cubic');
+      // Beziers sample their own curve; everything else gets arc-sampled
+      // corners so solid and dashed walkers share one path.
       const samples = hasCurve
         ? connector.samples
-        : roundPolylineCorners(connector.samples, CONNECTOR_CORNER_RADIUS_PX);
+        : roundPolylineCorners(connector.samples, connector.presentation.cornerRadius);
       const { presentation } = connector;
       if (presentation.stroke.dash.length > 0) {
         drawDashedPath(this.paths, samples, presentation.stroke);
@@ -232,7 +244,7 @@ export class PixiConnectorRenderer {
         markerCount += connector.presentation.targetMarkers.length;
       }
       if (connector.id !== this.editingConnectorId) {
-        for (const labelGeometry of connector.labels) this.drawLabel(labelGeometry);
+        for (const labelGeometry of connector.labels) this.drawLabel(labelGeometry, presentation.label);
         labelCount += connector.labels.length;
       }
     }
@@ -280,22 +292,22 @@ export class PixiConnectorRenderer {
     this.editingConnectorId = connectorId;
   }
 
-  private drawLabel(label: { readonly text: string; readonly point: Point2d }): void {
-    const text = new Text({
-      text: label.text,
-      style: {
-        fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-        fontSize: 11,
-        fontWeight: '600',
-        fill: 0x334155,
-      },
-    });
+  private drawLabel(label: { readonly text: string; readonly point: Point2d }, style: NodeStyle): void {
+    const color = pixiPaintColor(style.textColor, 0x334155).color;
+    const text = new Text({ text: label.text, style: pixiTextStyle(style, color, null) });
     text.anchor.set(0.5);
     text.position.set(label.point.x, label.point.y);
-    this.labelPlates
-      .roundRect(label.point.x - text.width / 2 - 5, label.point.y - 9, text.width + 10, 18, 4)
-      .fill({ color: 0xffffff, alpha: 0.96 })
-      .stroke({ color: 0xe2e8f0, width: 1 });
+    const plate = pixiPaintColor(style.fill, 0xffffff);
+    const border = pixiPaintColor(style.stroke, 0xe2e8f0);
+    const pad = style.textPadding;
+    if (plate.alpha > 0 || border.alpha > 0) {
+      this.labelPlates
+        .roundRect(label.point.x - text.width / 2 - pad, label.point.y - text.height / 2 - pad / 2,
+          text.width + pad * 2, text.height + pad, style.cornerRadius)
+        .fill({ color: plate.color, alpha: plate.alpha * 0.96 })
+        .stroke({ color: border.color, alpha: border.alpha, width: style.strokeWidth });
+    }
+    decoratePixiText(this.labels, text, style, color);
     this.labels.addChild(text);
   }
 }

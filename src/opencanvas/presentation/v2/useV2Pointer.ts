@@ -9,6 +9,7 @@ import {
 } from 'react';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneConnector, ScenePage } from '../../domain/document/types';
+import type { JsonObject } from '../../domain/document/json';
 import type { CanvasCamera } from '../../domain/camera/types';
 import type { TransformHandle, TransformResult } from '../../domain/transforms/types';
 import type { Bounds2d, Point2d } from '../../domain/geometry/types';
@@ -114,6 +115,14 @@ interface V2PointerOptions {
   readonly onTransformPreview?: (result: TransformResult | null) => void;
   readonly snapToGrid?: boolean;
   readonly mintId: (prefix: string) => string;
+  /** Sticky defaults: appearance the last style edit left behind, per kind (tldraw). */
+  readonly stylePresetsRef?: RefObject<StylePresets>;
+}
+
+export interface StylePresets {
+  shape: JsonObject;
+  text: JsonObject;
+  connector: JsonObject;
 }
 
 // Both React's synthetic event and a native window event, re-targeted at the
@@ -207,6 +216,10 @@ function previewConnector(
     waypoints: [], labels: [], appearance: { markerEnd: 'arrow' },
     semantics: {}, metadata: {}, extensions: {},
   };
+}
+
+function stickyAppearance(options: V2PointerOptions, shape: V2ShapeKind): JsonObject | undefined {
+  return options.stylePresetsRef?.current[shape === 'text' ? 'text' : 'shape'];
 }
 
 // Handle flow released on empty canvas (or clicked without dragging): the new
@@ -465,6 +478,7 @@ export function useV2Pointer(options: V2PointerOptions) {
               id,
               at: { x: world.x - size.width / 2, y: world.y - size.height / 2 },
               size,
+              appearance: stickyAppearance(opts, operation.shape),
             })
           );
         } else {
@@ -479,6 +493,7 @@ export function useV2Pointer(options: V2PointerOptions) {
                 y: Math.min(world.y, operation.startWorld.y),
               },
               size: { width, height },
+              appearance: stickyAppearance(opts, operation.shape),
             })
           );
         }
@@ -503,6 +518,7 @@ export function useV2Pointer(options: V2PointerOptions) {
             const id = opts.mintId('connector');
             opts.commit(buildInsertConnectorCommand(operation.page, {
               id, source: { nodeId: sourceNodeId }, target: { nodeId: targetId },
+              appearance: opts.stylePresetsRef?.current.connector,
             }));
             opts.applySelection(clearSelection());
             opts.applyConnectorSelection(id);
@@ -520,6 +536,7 @@ export function useV2Pointer(options: V2PointerOptions) {
                 ? { nodeId: operation.sourceNodeId }
                 : { point: operation.fromWorld },
               target: targetId ? { nodeId: targetId } : { point: host.screenToWorld(point) },
+              appearance: opts.stylePresetsRef?.current.connector,
             })
           );
           opts.applySelection(clearSelection());
@@ -772,7 +789,9 @@ export function useV2Pointer(options: V2PointerOptions) {
       const page = opts.pageRef.current;
       if (!page) return;
       const id = opts.mintId('node');
-      opts.commit(buildInsertShapeCommand(page, { kind: 'text', id, label: '', at: textOrigin(host.screenToWorld(point)) }));
+      opts.commit(buildInsertShapeCommand(page, {
+        kind: 'text', id, label: '', at: textOrigin(host.screenToWorld(point)), appearance: stickyAppearance(opts, 'text'),
+      }));
       opts.applyConnectorSelection(null);
       opts.applySelection(replaceSelection([id]));
       opts.openEditor(id, { isNew: true });

@@ -24,17 +24,22 @@ function roundedRectanglePoints(size: Size2d, radius: number): readonly Point2d[
   );
 }
 
-export function basicNodeOutlinePoints(shape: BasicNodeShape, size: Size2d, customPath?: string): readonly Point2d[] {
-  const cacheKey = `${shape}:${size.width}:${size.height}:${customPath ?? ''}`;
+/** `cornerRadius` applies to rectangle/rounded only; undefined keeps the shape default. */
+export function basicNodeOutlinePoints(
+  shape: BasicNodeShape, size: Size2d, customPath?: string, cornerRadius?: number
+): readonly Point2d[] {
+  const cacheKey = `${shape}:${size.width}:${size.height}:${customPath ?? ''}:${cornerRadius ?? ''}`;
   const cached = outlineCache.get(cacheKey);
   if (cached) return cached;
-  const computed = computeBasicNodeOutlinePoints(shape, size, customPath);
+  const computed = computeBasicNodeOutlinePoints(shape, size, customPath, cornerRadius);
   if (outlineCache.size >= MAX_OUTLINE_CACHE_ENTRIES) outlineCache.clear();
   outlineCache.set(cacheKey, computed);
   return computed;
 }
 
-function computeBasicNodeOutlinePoints(shape: BasicNodeShape, size: Size2d, customPath?: string): readonly Point2d[] {
+function computeBasicNodeOutlinePoints(
+  shape: BasicNodeShape, size: Size2d, customPath?: string, cornerRadius?: number
+): readonly Point2d[] {
   if (shape === 'custom-path') {
     return customPath ? customSvgPathOutline(customPath, size) : basicNodeOutlinePoints('rectangle', size);
   }
@@ -108,7 +113,8 @@ function computeBasicNodeOutlinePoints(shape: BasicNodeShape, size: Size2d, cust
     ];
   }
   if (shape === 'capsule') return roundedRectanglePoints(size, size.height / 2);
-  if (shape === 'rounded') return roundedRectanglePoints(size, 12);
+  if (shape === 'rounded') return roundedRectanglePoints(size, cornerRadius ?? 12);
+  if (shape === 'rectangle' && cornerRadius) return roundedRectanglePoints(size, cornerRadius);
   return [
     { x: 0, y: 0 },
     { x: size.width, y: 0 },

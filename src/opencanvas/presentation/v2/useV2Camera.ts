@@ -44,9 +44,9 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     return { x: size.width / 2, y: size.height / 2 };
   }, [hostRef]);
 
-  const fitView = useCallback(() => {
+  const fitView = useCallback((nodeIds?: readonly string[]) => {
     const host = hostRef.current;
-    const bounds = host?.getContentBounds();
+    const bounds = host?.getContentBounds(nodeIds);
     if (!host || !bounds) return;
     updateCamera(fitCameraToBounds(bounds, host.getViewportSize(), 64));
   }, [hostRef, updateCamera]);

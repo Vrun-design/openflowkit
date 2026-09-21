@@ -1,8 +1,10 @@
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { ScenePage } from '../../domain/document/types';
 import type { JsonObject } from '../../domain/document/json';
-import { V2SelectionStyle } from './V2SelectionStyle';
+import { V2NodeStylePanels } from './V2NodeStyle';
+import { V2ArrangeControls } from './V2ArrangeControls';
 import { V2ConnectorStyle } from './V2ConnectorStyle';
+import type { ConnectorStylePatch } from '../../domain/commands/styleConnectors';
 import { IconCopy, IconPencil, IconTrash } from '@tabler/icons-react';
 import { ContextBar, ContextGroup, Icon, IconButton, Tooltip } from '../design-system';
 
@@ -12,6 +14,9 @@ interface V2ContextBarProps {
   readonly connectorId: string | null;
   readonly commit: (command: DocumentCommand) => void;
   readonly onStylePreview: (patch: JsonObject | null) => void;
+  /** Sticky defaults: the last committed style patch seeds the next created item. */
+  readonly onNodeStyleCommitted: (patch: JsonObject) => void;
+  readonly onConnectorStyleCommitted: (patch: ConnectorStylePatch) => void;
   readonly selectionCount: number;
   readonly style: React.CSSProperties;
   readonly onEditLabel: () => void;
@@ -26,7 +31,7 @@ export function contextBarStyle(anchor: DOMRect): React.CSSProperties {
   const top = anchor.y - 104;
   return {
     position: 'absolute',
-    left: Math.max(8, Math.min(anchor.x, window.innerWidth - 284)),
+    left: Math.max(8, Math.min(anchor.x, window.innerWidth - 560)),
     top: Math.max(80, Math.min(top >= 80 ? top : anchor.y + anchor.height + 16, window.innerHeight - 144)),
     zIndex: 35,
   };
@@ -47,15 +52,17 @@ export function unionScreenBounds(rects: readonly (DOMRect | null | undefined)[]
 }
 
 // I-31: contextual actions use the same command path as keyboard edits.
+// Keydown bubbles to the page on purpose: ⌘Z after a swatch click must undo
+// (the page ignores keys aimed at inputs; buttons keep Enter/Space/arrows).
 export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
   if (props.connectorId) {
     return (
       <ContextBar label="Connector actions" data-context-bar style={props.style}
         onPointerDown={(event) => event.stopPropagation()}
-        onDoubleClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}>
+        onDoubleClick={(event) => event.stopPropagation()}>
         <ContextGroup label="Appearance">
-          <V2ConnectorStyle page={props.page} connectorId={props.connectorId} commit={props.commit} />
+          <V2ConnectorStyle page={props.page} connectorId={props.connectorId} commit={props.commit}
+            onCommitted={props.onConnectorStyleCommitted} />
         </ContextGroup>
         <ContextGroup label="Edit">
           <Tooltip content="Edit label" shortcut="Enter">
@@ -83,11 +90,13 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
   return (
     <ContextBar label="Selection actions" data-context-bar style={props.style}
       onPointerDown={(event) => event.stopPropagation()}
-      onDoubleClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => event.stopPropagation()}>
+      onDoubleClick={(event) => event.stopPropagation()}>
       <ContextGroup label="Appearance">
-        <V2SelectionStyle key={props.nodeIds.join(':')} page={props.page} nodeIds={props.nodeIds}
-          commit={props.commit} onPreview={props.onStylePreview} />
+        <V2NodeStylePanels key={props.nodeIds.join(':')} page={props.page} nodeIds={props.nodeIds}
+          commit={props.commit} onPreview={props.onStylePreview} onCommitted={props.onNodeStyleCommitted} />
+      </ContextGroup>
+      <ContextGroup label="Arrange">
+        <V2ArrangeControls page={props.page} nodeIds={props.nodeIds} commit={props.commit} />
       </ContextGroup>
       <ContextGroup label="Edit">
         <Tooltip content="Edit label" shortcut="Enter">
@@ -100,7 +109,7 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
           />
         </Tooltip>
       </ContextGroup>
-      <ContextGroup label="Arrange">
+      <ContextGroup label="Actions">
         <Tooltip content="Duplicate">
           <IconButton
             variant="quiet"

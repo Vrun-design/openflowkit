@@ -9,23 +9,22 @@ export function drawPixiNodeOutline(
   shape: BasicNodeShape,
   size: Size2d,
   matrix: Matrix2d,
-  customPath?: string
+  customPath?: string,
+  cornerRadius?: number
 ): void {
   const axisAligned = matrix.b === 0 && matrix.c === 0 && matrix.a > 0 && matrix.d > 0;
   if (axisAligned) {
     const width = size.width * matrix.a;
     const height = size.height * matrix.d;
-    if (shape === 'rectangle') {
-      graphics.rect(matrix.tx, matrix.ty, width, height);
-      return;
-    }
-    if (shape === 'rounded' || shape === 'capsule') {
-      const radius = shape === 'capsule' ? height / 2 : 12 * Math.min(matrix.a, matrix.d);
-      graphics.roundRect(matrix.tx, matrix.ty, width, height, radius);
+    if (shape === 'rectangle' || shape === 'rounded' || shape === 'capsule') {
+      const local = shape === 'capsule' ? size.height / 2 : shape === 'rounded' ? (cornerRadius ?? 12) : (cornerRadius ?? 0);
+      const radius = Math.min(local, size.width / 2, size.height / 2) * Math.min(matrix.a, matrix.d);
+      if (radius > 0) graphics.roundRect(matrix.tx, matrix.ty, width, height, radius);
+      else graphics.rect(matrix.tx, matrix.ty, width, height);
       return;
     }
   }
-  const points = basicNodeOutlinePoints(shape, size, customPath).map((point) =>
+  const points = basicNodeOutlinePoints(shape, size, customPath, cornerRadius).map((point) =>
     applyMatrixToPoint(matrix, point)
   );
   graphics.poly(points.flatMap((point) => [point.x, point.y]));
