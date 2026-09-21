@@ -75,6 +75,17 @@ describe('OpenCanvas text editor overlay', () => {
     expect(screen.getByRole('textbox')).toHaveStyle({ fontSize: '28px' });
   });
 
+  it('refits its box when the zoom changes mid-edit', () => {
+    const at = (zoom: number) => (
+      <OpenCanvasTextEditorOverlay style={style} bounds={{ x: 0, y: 0, width: 80 * zoom, height: 40 * zoom }}
+        value="Before" zoom={zoom} onCommit={vi.fn()} onCancel={vi.fn()} />
+    );
+    const { rerender } = render(at(1));
+    expect(screen.getByRole('textbox')).toHaveStyle({ height: '40px' });
+    rerender(at(2));
+    expect(screen.getByRole('textbox')).toHaveStyle({ height: '80px', width: '160px' });
+  });
+
   it('uses the resolved label colour while typing', () => {
     render(<OpenCanvasTextEditorOverlay style={{ ...style, textColor: '#ffffff' }}
       bounds={{ x: 0, y: 0, width: 80, height: 40 }} value="Dark canvas"

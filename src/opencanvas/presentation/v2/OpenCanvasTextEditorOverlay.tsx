@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Bounds2d } from '../../domain/geometry/types';
 import { nodeStyleFont, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import './openCanvasTextEditorOverlay.css';
@@ -57,13 +57,19 @@ export function OpenCanvasTextEditorOverlay({
   const fit = () => {
     const el = inputRef.current;
     if (!el) return;
+    // Measure with the base padding: the centring padding from the last fit
+    // is still on the element and would be counted as content.
     el.style.height = 'auto';
+    el.style.paddingTop = `${padTop}px`;
     const content = el.scrollHeight - padTop - padBottom;
     const height = Math.max(bounds.height, el.scrollHeight);
     el.style.height = `${height}px`;
     const paddingTop = style.textVerticalAlign === 'top' ? padTop
       : style.textVerticalAlign === 'bottom' ? Math.max(padTop, height - content - padBottom)
         : Math.max(padTop, (height - content) / 2);
+    // Written to the DOM as well as state: React skips the style write when
+    // the value is unchanged, which would leave the measuring padding behind.
+    el.style.paddingTop = `${paddingTop}px`;
     setMetrics({
       height,
       paddingTop,
@@ -80,9 +86,13 @@ export function OpenCanvasTextEditorOverlay({
     el.focus();
     if (selectAll) el.select();
     else el.setSelectionRange(value.length, value.length);
-    fit();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
   }, []);
+
+  // Zoom and camera moves re-render with new bounds and font size: the
+  // height and centring padding must be measured again before paint or the
+  // text sits where the old zoom put it.
+  useLayoutEffect(fit, [bounds.width, bounds.height, zoom]); // eslint-disable-line react-hooks/exhaustive-deps -- fit reads current props
 
   const commit = () => {
     if (finishedRef.current) return;

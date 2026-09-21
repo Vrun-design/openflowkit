@@ -29,8 +29,13 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–4, one month, no ga
   the one style source for every family (containers, icon nodes); style bar works on all;
   ⌘G group invisible, section = visible container (`⌘⌥G` wrap, header toggle, drop in/out by
   centre, resize changes `size` and keeps members); icon library (`I`, style-bar Icon) over
-  cloud packs + Tabler; previews use the real renderers. `e2e/sections|icon-library.spec.ts`.
-- Verified: typecheck, lint, 1198 unit tests, 26 MCP tests, headed `agent-live` + `phase-4`.
+  cloud packs + Tabler; previews use the real renderers. Label editor refits on zoom and
+  keystroke (was creeping up / drifting). `e2e/sections|icon-library|edit-zoom.spec.ts`.
+- Reconciled two stale e2e expectations with the shipped behaviour: the `Edit as code`
+  drag now stays inside the frame (dragging out reparents, so the frame's text drops it)
+  and the icon-library spec walks Cloud → AWS like the reorganized picker.
+- Verified: typecheck, lint, 1199 unit tests, 24 MCP tests, 29 headed e2e checks
+  (`agent-live`, `phase-4`, and the phase 1–3 suites).
 
 ## Next
 - Phase 5: C4 model, flows, discover/drift. Structurizr Cloud EOL 30 Sep 2026.
