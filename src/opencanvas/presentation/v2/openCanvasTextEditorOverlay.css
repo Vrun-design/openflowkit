@@ -6,7 +6,8 @@
   box-sizing: border-box;
   min-width: 48px;
   min-height: 32px;
-  padding: 8px 12px;
+  padding: 16px; /* overridden inline from DEFAULT_NODE_CONTENT_LAYOUT.padding */
+  text-align: center;
   resize: none;
   overflow: hidden;
   border: 2px solid #e95420;
@@ -15,5 +16,6 @@
   color: #1e293b;
   background: rgb(255 255 255 / 98%);
   box-shadow: 0 4px 16px rgb(15 23 42 / 14%);
-  font: 600 14px/1.35 Inter, ui-sans-serif, system-ui, sans-serif;
+  /* 14px/600 matches PixiNodeRenderer; 1.2 matches domain/text/measurement's default line height. */
+  font: 600 14px/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
 }

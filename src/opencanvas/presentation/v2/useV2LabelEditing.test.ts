@@ -8,10 +8,14 @@ import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHos
 import { useV2LabelEditing } from './useV2LabelEditing';
 
 function setup() {
-  const page = createTestDocument({ nodes: [createTestNode('n1', { content: { label: 'Old' } })] }).pages[0];
+  const page = createTestDocument({ nodes: [
+    createTestNode('n1', { content: { label: 'Old' } }),
+    createTestNode('new', { kind: 'text', content: { label: 'Text' } }),
+  ] }).pages[0];
   const getNodeScreenBounds = vi.fn(() => new DOMRect(10, 20, 100, 40));
   const commit = vi.fn();
   const focusCanvas = vi.fn();
+  const announce = vi.fn();
   const hostRef = { current: { getNodeScreenBounds } as unknown as PixiRendererHost };
   const hook = renderHook(
     ({ camera, page }: { camera: CanvasCamera; page: ScenePage }) =>
@@ -20,13 +24,13 @@ function setup() {
         page,
         camera,
         commit,
-        announce: () => undefined,
+        announce,
         focusCanvas,
       }),
     { initialProps: { camera: DEFAULT_CANVAS_CAMERA, page } }
   );
   act(() => hook.result.current.openEditor('n1'));
-  return { ...hook, page, getNodeScreenBounds, commit, focusCanvas };
+  return { ...hook, page, getNodeScreenBounds, commit, focusCanvas, announce };
 }
 
 describe('useV2LabelEditing', () => {
@@ -69,5 +73,33 @@ describe('useV2LabelEditing', () => {
     expect(commit).toHaveBeenCalledOnce();
     expect(commit.mock.calls[0][0]).toMatchObject({ kind: 'set-node', after: { content: { label: 'New' } } });
     expect(result.current.editing).toBeNull();
+  });
+
+  it('announces open and save', () => {
+    const { result, announce } = setup();
+    expect(announce).toHaveBeenLastCalledWith('Editing label');
+    act(() => result.current.commitLabel('New'));
+    expect(announce).toHaveBeenLastCalledWith('Label saved');
+  });
+
+  it('type-to-edit opens with the typed character replacing the label', () => {
+    const { result } = setup();
+    act(() => result.current.openEditor('n1', { initialValue: 'Q' }));
+    expect(result.current.editing).toMatchObject({ nodeId: 'n1', value: 'Q' });
+  });
+
+  it('empty commit or cancel on a new node deletes it instead of leaving a blank node', () => {
+    const { result, commit } = setup();
+    act(() => result.current.openEditor('new', { isNew: true }));
+    act(() => result.current.commitLabel('   '));
+    expect(commit).toHaveBeenCalledOnce();
+    expect(commit.mock.calls[0][0]).toMatchObject({ kind: 'batch', label: 'Delete selection' });
+    act(() => result.current.openEditor('new', { isNew: true }));
+    act(() => result.current.cancelEdit());
+    expect(commit).toHaveBeenCalledTimes(2);
+    // Existing nodes keep the old label on cancel and are never deleted.
+    act(() => result.current.openEditor('n1'));
+    act(() => result.current.cancelEdit());
+    expect(commit).toHaveBeenCalledTimes(2);
   });
 });

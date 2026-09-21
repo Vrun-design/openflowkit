@@ -21,6 +21,8 @@ interface V2KeyboardOptions {
   readonly onToggleTree: () => void;
   readonly onToggleAgent: () => void;
   readonly onSpacePan: (active: boolean) => void;
+  /** Type-to-edit: return true when the key opened an editor, false to fall through to shortcuts. */
+  readonly onTypeToEdit: (key: string) => boolean;
 }
 
 // I-02: V/H/R/O/A/T switch tools; typing in a label or input never does.
@@ -91,6 +93,12 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
               : { x: 0, y: amount };
       opts.onNudge(delta);
       event.preventDefault();
+    } else if (event.shiftKey && event.code === 'Digit1') {
+      opts.onFitView();
+      event.preventDefault();
+    } else if (!command && !event.altKey && event.key.length === 1 && event.key !== ' '
+      && opts.onTypeToEdit(event.key)) {
+      event.preventDefault();
     } else if (!command && !event.shiftKey && !event.altKey && key === 'v') {
       opts.onToolChange('select');
     } else if (!command && !event.shiftKey && !event.altKey && key === 'h') {
@@ -105,9 +113,6 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onToolChange('text');
     } else if (!command && key === 'l') {
       opts.onToggleTree();
-    } else if (event.shiftKey && event.code === 'Digit1') {
-      opts.onFitView();
-      event.preventDefault();
     } else if (event.key === 'F2') {
       opts.onEditPrimary();
       event.preventDefault();

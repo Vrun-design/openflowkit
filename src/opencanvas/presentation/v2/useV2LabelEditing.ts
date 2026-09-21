@@ -4,7 +4,7 @@ import type { DocumentCommand } from '../../domain/commands/types';
 import type { ScenePage } from '../../domain/document/types';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import { sameRect } from './V2ContextBar';
-import { buildSetNodeLabelCommand } from '../../domain/commands/sceneEdits';
+import { buildDeleteSelectionCommand, buildSetNodeLabelCommand } from '../../domain/commands/sceneEdits';
 import type { V2EditingState } from './V2CanvasHost';
 
 interface V2LabelEditingOptions {
@@ -14,6 +14,13 @@ interface V2LabelEditingOptions {
   readonly commit: (command: DocumentCommand) => void;
   readonly announce: (message: string) => void;
   readonly focusCanvas: () => void;
+}
+
+export interface OpenEditorOptions {
+  /** Node was created for this edit: an empty commit or a cancel removes it again. */
+  readonly isNew?: boolean;
+  /** Type-to-edit: the editor opens with this text instead of the current label. */
+  readonly initialValue?: string;
 }
 
 // In-place label editing owns keyboard input while open (I-02, I-06).
@@ -27,7 +34,7 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
   const optionsRef = useRef(options);
   // A node created and edited in one gesture is not on the renderer yet;
   // hold the request until the page that contains it has been drawn.
-  const pendingRef = useRef<string | null>(null);
+  const pendingRef = useRef<{ nodeId: string; editorOptions: OpenEditorOptions } | null>(null);
   useEffect(() => {
     optionsRef.current = options;
   }, [options]);
@@ -47,46 +54,63 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
   }, [camera, hostRef]);
 
   const openEditor = useCallback(
-    (nodeId: string) => {
+    (nodeId: string, editorOptions: OpenEditorOptions = {}) => {
       const node = optionsRef.current.page?.nodes.find((candidate) => candidate.id === nodeId);
       const bounds = node && hostRef.current?.getNodeScreenBounds(nodeId);
       if (!node || !bounds) {
-        pendingRef.current = nodeId;
+        pendingRef.current = { nodeId, editorOptions };
         return;
       }
       pendingRef.current = null;
       setEditing({
         nodeId,
         bounds,
-        value: typeof node.content.label === 'string' ? node.content.label : '',
+        value: editorOptions.initialValue
+          ?? (typeof node.content.label === 'string' ? node.content.label : ''),
+        isNew: editorOptions.isNew === true,
       });
+      optionsRef.current.announce('Editing label');
     },
     [hostRef]
   );
 
   useEffect(() => {
-    if (pendingRef.current && page?.nodes.some((node) => node.id === pendingRef.current)) {
-      openEditor(pendingRef.current);
+    const pending = pendingRef.current;
+    if (pending && page?.nodes.some((node) => node.id === pending.nodeId)) {
+      openEditor(pending.nodeId, pending.editorOptions);
     }
   }, [page, openEditor]);
 
+  // A node created for this edit and left blank is removed, so a double-click
+  // on empty canvas followed by Escape/blur leaves nothing invisible behind.
+  const removeIfNew = useCallback((): boolean => {
+    const { commit, page: currentPage } = optionsRef.current;
+    const current = editingStateRef.current;
+    if (!current?.isNew || !currentPage?.nodes.some((node) => node.id === current.nodeId)) return false;
+    commit(buildDeleteSelectionCommand(currentPage, [current.nodeId], []));
+    return true;
+  }, []);
+
   const cancelEdit = useCallback(() => {
+    removeIfNew();
     setEditing(null);
     optionsRef.current.focusCanvas();
-  }, []);
+  }, [removeIfNew]);
 
   const commitLabel = useCallback((value: string) => {
     const { commit, announce, focusCanvas, page: currentPage } = optionsRef.current;
     const current = editingStateRef.current;
     const node = current && currentPage?.nodes.find((candidate) => candidate.id === current.nodeId);
     const previous = typeof node?.content.label === 'string' ? node.content.label : '';
-    if (node && currentPage && value !== previous) {
+    if (value.trim() === '' && removeIfNew()) {
+      /* blank new node removed */
+    } else if (node && currentPage && value !== previous) {
       commit(buildSetNodeLabelCommand(currentPage, node.id, value));
-      announce('Label updated.');
+      announce('Label saved');
     }
     setEditing(null);
     focusCanvas();
-  }, []);
+  }, [removeIfNew]);
 
   return { editing, editingRef, openEditor, cancelEdit, commitLabel };
 }

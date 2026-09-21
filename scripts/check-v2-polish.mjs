@@ -53,6 +53,7 @@ try {
   // V2-05a: object snapping. A second rectangle dragged to within 4px of the first's
   // left edge snaps onto it and shows a guide while dragging.
   await page.getByTestId('v2-canvas').focus();
+  await page.keyboard.press('Escape'); // with a shape selected, letters type into it (V2-05e)
   await page.keyboard.press('r');
   await page.mouse.click(900, 700);
   await page.waitForFunction(() => window.__V2__.getState().nodes.length === 2);
@@ -77,6 +78,26 @@ try {
   const reselect = await rect(id);
   await page.mouse.click(reselect.x + reselect.width / 2, reselect.y + reselect.height / 2);
   await page.waitForFunction((nodeId) => window.__V2__.getState().selectedNodes[0] === nodeId, id);
+  // V2-05e: type-to-edit. A printable key on the selected shape opens the editor
+  // with that character; Enter saves. Double-click empty then Escape leaves no node.
+  await page.keyboard.press('Q');
+  const editor = page.getByRole('textbox', { name: 'Edit node label' });
+  await editor.waitFor();
+  assert.equal(await editor.inputValue(), 'Q');
+  await page.keyboard.type('uote');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction((nodeId) =>
+    window.__V2__.getDocument().pages[0].nodes.find((node) => node.id === nodeId)?.content.label === 'Quote', id);
+  assert.deepEqual((await state()).selectedNodes, [id], 'commit keeps the selection');
+  const countBeforeText = (await state()).nodes.length;
+  await page.mouse.dblclick(200, 200);
+  await editor.waitFor();
+  assert.equal((await state()).nodes.length, countBeforeText + 1);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction((count) => window.__V2__.getState().nodes.length === count, countBeforeText);
+  await page.getByTestId('v2-canvas').focus();
+  await page.mouse.click(reselect.x + reselect.width / 2, reselect.y + reselect.height / 2);
+  await page.waitForFunction((nodeId) => window.__V2__.getState().selectedNodes[0] === nodeId, id);
   const beforeResize = (await doc()).pages[0].nodes[0];
   const resizeRect = await rect(id);
   // Stay one screen pixel inside the 14px handle hit target. Exact fractional
@@ -89,7 +110,7 @@ try {
   await page.mouse.down();
   await page.mouse.move(resizeHandle.x + 32, resizeHandle.y + 24, { steps: 8 });
   await page.mouse.up();
-  await page.waitForFunction(() => window.__V2__.getState().revision === 6);
+  await page.waitForFunction(() => window.__V2__.getState().revision === 9);
   const resizedNode = (await doc()).pages[0].nodes[0];
   const resizedRect = await rect(id);
   // Canonical transforms preserve intrinsic size and resize through scale.

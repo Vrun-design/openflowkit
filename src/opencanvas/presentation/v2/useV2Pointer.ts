@@ -96,7 +96,7 @@ interface V2PointerOptions {
   readonly applySelection: (selection: CanvasSelection) => void;
   readonly applyConnectorSelection: (connectorId: string | null) => void;
   readonly updateCamera: (camera: CanvasCamera) => void;
-  readonly openEditor: (nodeId: string) => void;
+  readonly openEditor: (nodeId: string, options?: { readonly isNew?: boolean }) => void;
   readonly onToolChange: (tool: V2Tool) => void;
   readonly onTransformPreview?: (result: TransformResult | null) => void;
   readonly snapToGrid?: boolean;
@@ -333,7 +333,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         opts.applyConnectorSelection(null);
         opts.applySelection(replaceSelection([id]));
         opts.onToolChange('select');
-        if (operation.shape === 'text') opts.openEditor(id);
+        if (operation.shape === 'text') opts.openEditor(id, { isNew: true });
       } else if (operation.kind === 'connect') {
         host.setConnectionPreview(null);
         const moved = Math.hypot(
@@ -564,7 +564,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       opts.commit(buildInsertShapeCommand(page, { kind: 'text', id, at: textOrigin(host.screenToWorld(point)) }));
       opts.applyConnectorSelection(null);
       opts.applySelection(replaceSelection([id]));
-      opts.openEditor(id);
+      opts.openEditor(id, { isNew: true });
     },
     []
   );

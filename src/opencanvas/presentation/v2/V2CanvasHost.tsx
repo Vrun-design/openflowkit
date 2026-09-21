@@ -32,6 +32,7 @@ export interface V2EditingState {
   readonly nodeId: string;
   readonly bounds: DOMRect;
   readonly value: string;
+  readonly isNew: boolean;
 }
 
 interface V2CanvasHostProps {

@@ -20,6 +20,7 @@ const proposal = () => page.evaluate(() => window.__V2__.getProposal());
 const diag = () => page.evaluate(() => window.__V2__.getRenderDiagnostics());
 const rect = (id) => page.evaluate((id) => window.__V2__.getNodeRect(id), id);
 async function createRect(x, y, count) {
+  await page.keyboard.press('Escape'); // a selected shape would take 'r' as text (V2-05e)
   await page.keyboard.press('r');
   await page.mouse.click(x, y);
   await page.waitForFunction((count) => window.__V2__.getState().nodes.length === count, count);

@@ -23,7 +23,7 @@ import { useV2Camera } from './useV2Camera';
 import { useV2DocumentLoad } from './useV2DocumentLoad';
 import { useV2EditActions } from './useV2EditActions';
 import { useV2Keyboard } from './useV2Keyboard';
-import { useV2LabelEditing } from './useV2LabelEditing';
+import { useV2LabelEditing, type OpenEditorOptions } from './useV2LabelEditing';
 import { useV2Proposal } from './useV2Proposal';
 import type { Proposal } from '../../application/ai/proposalSession';
 import { useV2Selection } from './useV2Selection';
@@ -175,10 +175,10 @@ export function V2EditorPage(): React.JSX.Element {
 
   const { openEditor: openLabelEditor } = labelEditing;
   const openEditor = useCallback(
-    (nodeId: string) => {
+    (nodeId: string, editorOptions?: OpenEditorOptions) => {
       applyConnectorSelection(null);
       applySelection(replaceSelection([nodeId]));
-      openLabelEditor(nodeId);
+      openLabelEditor(nodeId, editorOptions);
     },
     [openLabelEditor, applyConnectorSelection, applySelection]
   );
@@ -203,6 +203,13 @@ export function V2EditorPage(): React.JSX.Element {
     onEditPrimary: () => {
       const primary = selectionRef.current.primaryNodeId;
       if (primary && !load.readOnly) openEditor(primary);
+    },
+    // FigJam/Excalidraw: typing on a single selected shape replaces its label.
+    onTypeToEdit: (key) => {
+      const { nodeIds, primaryNodeId } = selectionRef.current;
+      if (nodeIds.length !== 1 || !primaryNodeId || load.readOnly || toolRef.current !== 'select') return false;
+      openEditor(primaryNodeId, { initialValue: key });
+      return true;
     },
     onNudge: editActions.nudgeSelection,
     onCancelGesture: () => gestureApiRef.current?.cancelGesture() ?? false,

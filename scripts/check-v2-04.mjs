@@ -199,23 +199,30 @@ async function runJourney(browser, docId) {
     await page.mouse.down();
     await page.mouse.move(640, 402, { steps: 5 });
     await page.mouse.up();
+    // V2-05e: with a shape selected, letters type into it; clear first.
+    await page.keyboard.press('Escape');
     await page.keyboard.press('o');
     await page.mouse.move(780, 300);
     await page.mouse.down();
     await page.mouse.move(940, 372, { steps: 5 });
     await page.mouse.up();
+    await page.keyboard.press('Escape');
     await page.keyboard.press('t');
     await page.mouse.move(480, 500);
     await page.mouse.down();
     await page.mouse.up();
     // Text create opens the editor at once; the tool reverts to select.
+    // Escape here would remove the blank node (V2-05e), so give it a label.
     await page.getByLabel('Edit node label').waitFor();
-    await page.keyboard.press('Escape');
+    await page.keyboard.type('Note');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => window.__V2__.getDocument().pages[0].nodes.some((node) => node.content.label === 'Note'));
     current = await state(page);
     assert.equal(current.nodes.length, 3, 'three shapes created');
     assert.equal(current.tool, 'select', 'tool reverts to select after a create');
     const [firstId, secondId] = current.nodes;
     // Marquee-select the first two.
+    await page.keyboard.press('Escape');
     await page.keyboard.press('v');
     await page.mouse.move(440, 260);
     await page.mouse.down();
@@ -237,15 +244,17 @@ async function runJourney(browser, docId) {
     const dx = movedFirst.transform.translation.x - beforeFirst.transform.translation.x;
     const dy = movedFirst.transform.translation.y - beforeFirst.transform.translation.y;
     assert.ok(dx > 30 && dy > 15, `drag moves selection (got ${dx},${dy})`);
-    // Undo x2, redo x2.
+    // Undo x3 (move, label, text create), redo x3.
+    await page.keyboard.press('ControlOrMeta+z');
     await page.keyboard.press('ControlOrMeta+z');
     await page.keyboard.press('ControlOrMeta+z');
     current = await state(page);
-    assert.equal(current.nodes.length, 2, 'undo x2 removes move and third shape');
+    assert.equal(current.nodes.length, 2, 'undo x3 removes move, label and third shape');
+    await page.keyboard.press('ControlOrMeta+Shift+z');
     await page.keyboard.press('ControlOrMeta+Shift+z');
     await page.keyboard.press('ControlOrMeta+Shift+z');
     current = await state(page);
-    assert.equal(current.nodes.length, 3, 'redo x2 restores');
+    assert.equal(current.nodes.length, 3, 'redo x3 restores');
     assert.deepEqual(await documentJson(page), movedDoc, 'redo restores identical geometry');
     // Tree and canvas agree on selected IDs.
     checkStable('04b-move');
@@ -305,6 +314,7 @@ async function runJourney(browser, docId) {
     const targetId = current.nodes[1];
     const sourceRect = await page.evaluate((nodeId) => window.__V2__.getNodeRect(nodeId), sourceId);
     const targetRect = await page.evaluate((nodeId) => window.__V2__.getNodeRect(nodeId), targetId);
+    await page.keyboard.press('Escape');
     await page.keyboard.press('a');
     await page.mouse.move(sourceRect.x + sourceRect.width / 2, sourceRect.y + sourceRect.height / 2);
     await page.mouse.down();
@@ -319,6 +329,7 @@ async function runJourney(browser, docId) {
     assert.equal(edge.appearance.markerEnd, 'arrow', 'connector has an arrowhead');
     assert.equal((await state(page)).tool, 'select', 'tool reverts after connect');
     // Free arrow: drag on empty canvas, then delete it.
+    await page.keyboard.press('Escape');
     await page.keyboard.press('a');
     await page.mouse.move(300, 700);
     await page.mouse.down();
@@ -332,6 +343,7 @@ async function runJourney(browser, docId) {
     await page.keyboard.press('Delete');
     assert.equal((await state(page)).connectors.length, 1, 'delete removes the selected arrow');
     // Moving a bound shape keeps the binding.
+    await page.keyboard.press('Escape');
     await page.keyboard.press('v');
     await page.mouse.move(sourceRect.x + sourceRect.width / 2, sourceRect.y + sourceRect.height / 2);
     await page.mouse.down();
