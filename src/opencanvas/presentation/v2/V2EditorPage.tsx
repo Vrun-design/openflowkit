@@ -371,14 +371,11 @@ export function V2EditorPage(): React.JSX.Element {
               onCommitLabel={labelEditing.commitLabel} onCancelEdit={labelEditing.cancelEdit}
               connectorEditing={connectorEditing}
               onCommitConnectorLabel={commitConnectorLabel} onCancelConnectorEdit={cancelConnectorEdit}
-              onEditConnectorLabel={editSelectedConnectorLabel}
               onStatusChange={setRendererStatus}
               sectionRef={sectionRef}
               showGrid={preferences.showGrid} snapToGrid={preferences.snapToGrid}
               backgroundColor={rendererCanvasColor}
               readOnly={load.readOnly}
-              onDuplicate={editActions.duplicateSelection}
-              onDelete={editActions.deleteSelection}
               onContextMenu={setContextMenu}
             />
             <V2ContextMenu target={contextMenu} page={page} selectionCount={selection.nodeIds.length}

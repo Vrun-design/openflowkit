@@ -10,7 +10,7 @@ export { Popover } from './Popover';
 export type { PopoverProps, Placement } from './Popover';
 export { Tooltip } from './Tooltip';
 export { Kbd } from './Kbd';
-export { Menu, MenuItem, MenuSeparator, MenuGroup } from './Menu';
+export { Menu, MenuItem, MenuSeparator, MenuGroup, MenuSubmenu } from './Menu';
 export type { MenuProps, MenuItemProps } from './Menu';
 export { Dialog } from './Dialog';
 export type { DialogProps } from './Dialog';

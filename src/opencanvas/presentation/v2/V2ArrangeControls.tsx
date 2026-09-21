@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import {
-  IconArrowBarDown, IconArrowBarUp, IconArrowDown, IconArrowUp, IconDimensions,
+  IconArrowBarDown, IconArrowBarUp, IconArrowDown, IconArrowUp, IconTransform,
   IconLayoutAlignBottom, IconLayoutAlignCenter, IconLayoutAlignLeft, IconLayoutAlignMiddle,
-  IconLayoutAlignRight, IconLayoutAlignTop, IconLayoutDistributeHorizontal, IconLayoutDistributeVertical, IconStack2,
+  IconLayoutAlignRight, IconLayoutAlignTop, IconLayoutDistributeHorizontal, IconLayoutDistributeVertical,
 } from '@tabler/icons-react';
 import type { ScenePage } from '../../domain/document/types';
 import type { DocumentCommand } from '../../domain/commands/types';
@@ -11,7 +11,7 @@ import {
 } from '../../domain/commands/arrangeNodes';
 import { buildReorderCommand } from '../../domain/commands/sceneEdits';
 import type { AlignMode, DistributeAxis } from '../../domain/transforms/arrangement';
-import { Icon, IconButton, NumberField, Tooltip } from '../design-system';
+import { Icon, NumberField, Tooltip } from '../design-system';
 import { PanelRow, StyleButton } from './V2StyleControls';
 
 interface V2ArrangeControlsProps {
@@ -20,7 +20,7 @@ interface V2ArrangeControlsProps {
   readonly commit: (command: DocumentCommand) => void;
 }
 
-type Panel = 'align' | 'position' | 'layer';
+type Panel = 'align' | 'arrange';
 
 const ALIGNS: readonly { mode: AlignMode; label: string; shortcut: string; icon: typeof IconLayoutAlignLeft }[] = [
   { mode: 'left', label: 'Align left', shortcut: '⌥A', icon: IconLayoutAlignLeft },
@@ -37,7 +37,7 @@ const DISTRIBUTES: readonly { axis: DistributeAxis; label: string; shortcut: str
 
 const round = (value: number) => Math.round(value * 10) / 10;
 
-// Align (≥2), Position (1) and Layer buttons of the style bar. Every action is
+// Align stays visible for multiple nodes; Arrange holds position and order. Every action is
 // one command; no-ops commit nothing.
 export function V2ArrangeControls({ page, nodeIds, commit }: V2ArrangeControlsProps): React.JSX.Element {
   const [open, setOpen] = useState<Panel | null>(null);
@@ -87,45 +87,51 @@ export function V2ArrangeControls({ page, nodeIds, commit }: V2ArrangeControlsPr
         </StyleButton>
       ) : null}
 
+      <StyleButton label="Arrange" open={open === 'arrange'} onToggle={() => toggle('arrange')} onClose={close}
+        preview={<Icon icon={IconTransform} />}>
       {single ? (
-        <StyleButton label="Position" open={open === 'position'} onToggle={() => toggle('position')} onClose={close}
-          preview={<Icon icon={IconDimensions} />}>
+        <section className="ofk-style-section">
+          <h3>Position and size</h3>
           <div className="ofk-position-grid">
-            <NumberField label="X" prefix="X" hideLabel value={round(single.transform.translation.x)} step={1}
+            <NumberField stepper="none" label="X" prefix="X" hideLabel value={round(single.transform.translation.x)} step={1}
               onChange={() => undefined} onCommit={(x) => setTransform({ x })} />
-            <NumberField label="Y" prefix="Y" hideLabel value={round(single.transform.translation.y)} step={1}
+            <NumberField stepper="none" label="Y" prefix="Y" hideLabel value={round(single.transform.translation.y)} step={1}
               onChange={() => undefined} onCommit={(y) => setTransform({ y })} />
-            <NumberField label="Width" prefix="W" hideLabel value={round(single.size.width)} min={1} step={1}
+            <NumberField stepper="none" label="Width" prefix="W" hideLabel value={round(single.size.width)} min={1} step={1}
               onChange={() => undefined} onCommit={(width) => setTransform({ width })} />
-            <NumberField label="Height" prefix="H" hideLabel value={round(single.size.height)} min={1} step={1}
+            <NumberField stepper="none" label="Height" prefix="H" hideLabel value={round(single.size.height)} min={1} step={1}
               onChange={() => undefined} onCommit={(height) => setTransform({ height })} />
-            <NumberField label="Rotation" prefix="R" hideLabel unit="°" step={15}
+            <NumberField stepper="none" label="Rotation" prefix="R" hideLabel unit="°" step={15}
               value={round((single.transform.rotationRadians * 180) / Math.PI)}
               onChange={() => undefined} onCommit={(rotation) => setTransform({ rotation })} />
           </div>
-        </StyleButton>
+        </section>
       ) : null}
-
-      <StyleButton label="Layer" open={open === 'layer'} onToggle={() => toggle('layer')} onClose={close}
-        preview={<Icon icon={IconStack2} />}>
-        <div className="ofk-choice-row" role="group" aria-label="Layer order">
+        <section className="ofk-style-section">
+        <h3>Layer order</h3>
+        <div className="ofk-layer-actions" role="group" aria-label="Layer order">
           <Tooltip content="Bring to front" shortcut="⌘⌥]">
-            <IconButton variant="quiet" label="Bring to front" icon={<Icon icon={IconArrowBarUp} />}
-              onClick={() => run(buildReorderCommand(page, nodeIds, 'front'))} />
+            <button type="button" className="ofk-layer-action" aria-label="Bring to front" onClick={() => run(buildReorderCommand(page, nodeIds, 'front'))}>
+              <Icon icon={IconArrowBarUp} /><span>To front</span>
+            </button>
           </Tooltip>
           <Tooltip content="Bring forward" shortcut="⌘]">
-            <IconButton variant="quiet" label="Bring forward" icon={<Icon icon={IconArrowUp} />}
-              onClick={() => run(buildStepOrderCommand(page, nodeIds, 'forward'))} />
+            <button type="button" className="ofk-layer-action" aria-label="Bring forward" onClick={() => run(buildStepOrderCommand(page, nodeIds, 'forward'))}>
+              <Icon icon={IconArrowUp} /><span>Forward</span>
+            </button>
           </Tooltip>
           <Tooltip content="Send backward" shortcut="⌘[">
-            <IconButton variant="quiet" label="Send backward" icon={<Icon icon={IconArrowDown} />}
-              onClick={() => run(buildStepOrderCommand(page, nodeIds, 'backward'))} />
+            <button type="button" className="ofk-layer-action" aria-label="Send backward" onClick={() => run(buildStepOrderCommand(page, nodeIds, 'backward'))}>
+              <Icon icon={IconArrowDown} /><span>Backward</span>
+            </button>
           </Tooltip>
           <Tooltip content="Send to back" shortcut="⌘⌥[">
-            <IconButton variant="quiet" label="Send to back" icon={<Icon icon={IconArrowBarDown} />}
-              onClick={() => run(buildReorderCommand(page, nodeIds, 'back'))} />
+            <button type="button" className="ofk-layer-action" aria-label="Send to back" onClick={() => run(buildReorderCommand(page, nodeIds, 'back'))}>
+              <Icon icon={IconArrowBarDown} /><span>To back</span>
+            </button>
           </Tooltip>
         </div>
+        </section>
       </StyleButton>
     </>
   );

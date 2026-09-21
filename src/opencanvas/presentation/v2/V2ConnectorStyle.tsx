@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IconArrowsRightLeft, IconBold, IconItalic, IconUnderline } from '@tabler/icons-react';
+import { IconChevronDown, IconArrowsRightLeft, IconBold, IconItalic, IconUnderline } from '@tabler/icons-react';
 import type { ScenePage } from '../../domain/document/types';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { resolveConnectorPresentation } from '../../domain/connectors/presentation';
@@ -10,10 +10,10 @@ import {
   type ConnectorMarkerEnd,
   type ConnectorStylePatch,
 } from '../../domain/commands/styleConnectors';
-import { STYLE_LIMITS, type FontFamilyKey } from '../../domain/nodes/nodeStyle';
-import { Button, ColorPicker, Icon, NumberField, Segmented } from '../design-system';
+import { STYLE_LIMITS } from '../../domain/nodes/nodeStyle';
+import { Button, Icon, NumberField, Segmented } from '../design-system';
 import { INK_PRESETS, PALETTE_LABELS } from '../../domain/nodes/nodePalette';
-import { ChoiceRow, PanelRow, StyleButton, SwatchGrid, ToggleRow } from './V2StyleControls';
+import { ChoiceRow, CustomColorSwatch, FontPicker, PanelRow, StyleButton, SwatchGrid, ToggleRow } from './V2StyleControls';
 
 interface V2ConnectorStyleProps {
   readonly page: ScenePage;
@@ -32,7 +32,11 @@ const MARKERS: readonly { value: ConnectorMarkerEnd; label: string }[] = [
 const WIDTH_PRESETS = [1, 2, 3, 4].map((value) => ({
   value, label: <span className="ofk-width-glyph" style={{ height: value }} />, title: `${value}px`,
 }));
-const INK = INK_PRESETS.map(({ key, hex }) => ({ id: hex, label: PALETTE_LABELS[key], color: hex }));
+const INK = [
+  { id: '#ffffff', label: 'White', color: '#ffffff', border: '#cbd5e1' },
+  { id: '#64748b', label: 'Mid gray', color: '#64748b' },
+  ...INK_PRESETS.map(({ key, hex }) => ({ id: hex, label: PALETTE_LABELS[key], color: hex })),
+];
 
 function markerValue(markers: readonly ConnectorMarkerGlyph[]): ConnectorMarkerEnd | '' {
   if (markers.length === 0) return 'none';
@@ -71,17 +75,13 @@ export function V2ConnectorStyle({ page, connectorId, commit, onCommitted }: V2C
           borderTopStyle: dashValue(presentation.stroke.dash) === 'solid' ? 'solid' : dashValue(presentation.stroke.dash) }} />}>
         <PanelRow label="Color">
           <SwatchGrid label="Line colour" options={INK} selected={presentation.stroke.color.toLowerCase()}
-            onPick={(id) => apply({ color: id })} />
+            onPick={(id) => apply({ color: id })}
+            trailing={<CustomColorSwatch value={presentation.stroke.color} onChange={() => undefined} onCommit={(hex) => apply({ color: hex })} />} />
         </PanelRow>
-        <details className="ofk-style-more">
-          <summary className="ofk-caption">Custom</summary>
-          <ColorPicker value={presentation.stroke.color} presets={[]} onChange={() => undefined}
-            onCommit={(hex) => apply({ color: hex })} />
-        </details>
         <PanelRow label="Width">
           <ChoiceRow label="Width preset" value={presentation.stroke.width} options={WIDTH_PRESETS}
             onChange={(value) => apply({ strokeWidth: value })} />
-          <NumberField label="Line width" hideLabel value={presentation.stroke.width} min={0.5} max={8} step={0.5} unit="px"
+          <NumberField stepper="stacked" label="Line width" hideLabel value={presentation.stroke.width} min={0.5} max={8} step={0.5} unit="px"
             onChange={() => undefined} onCommit={(value) => apply({ strokeWidth: value })} />
         </PanelRow>
         <PanelRow label="Style">
@@ -95,12 +95,12 @@ export function V2ConnectorStyle({ page, connectorId, commit, onCommitted }: V2C
         </PanelRow>
         {route === 'orthogonal' ? (
           <PanelRow label="Corners">
-            <NumberField label="Corner radius" hideLabel value={presentation.cornerRadius} min={0} max={24} step={2} unit="px"
+            <NumberField stepper="stacked" label="Corner radius" hideLabel value={presentation.cornerRadius} min={0} max={24} step={2} unit="px"
               onChange={() => undefined} onCommit={(value) => apply({ cornerRadius: value })} />
           </PanelRow>
         ) : null}
         <PanelRow label="Opacity">
-          <NumberField label="Opacity" hideLabel value={Math.round(presentation.stroke.opacity * 100)} min={10} max={100} step={10} unit="%"
+          <NumberField stepper="stacked" label="Opacity" hideLabel value={Math.round(presentation.stroke.opacity * 100)} min={10} max={100} step={10} unit="%"
             onChange={() => undefined} onCommit={(value) => apply({ opacity: value / 100 })} />
         </PanelRow>
       </StyleButton>
@@ -123,26 +123,25 @@ export function V2ConnectorStyle({ page, connectorId, commit, onCommitted }: V2C
       </StyleButton>
 
       <StyleButton label="Label" open={open === 'label'} onToggle={() => toggle('label')} onClose={close}
-        preview={<span className="ofk-style-glyph" style={{ color: label.textColor }}>A</span>}>
+        preview={<span className="ofk-style-glyph" style={{ textDecorationColor: label.textColor }}>A</span>}>
         <PanelRow label="Color">
-          <SwatchGrid label="Label colour" options={INK} selected={label.textColor} onPick={(id) => apply({ labelColor: id })} />
+          <SwatchGrid label="Label colour" options={INK} selected={label.textColor} onPick={(id) => apply({ labelColor: id })}
+            trailing={<CustomColorSwatch value={label.textColor} onChange={() => undefined} onCommit={(hex) => apply({ labelColor: hex })} />} />
         </PanelRow>
-        <PanelRow label="Background">
-          <SwatchGrid label="Label background"
-            options={[{ id: 'transparent', label: 'None', color: 'transparent' }, { id: '#ffffff', label: 'White', color: '#ffffff', border: '#cbd5e1' }, ...INK]}
-            selected={label.fill} onPick={(id) => apply({ labelBackground: id })} />
-        </PanelRow>
+        <details className="ofk-style-more">
+          <summary className="ofk-caption">Label background<Icon icon={IconChevronDown} /></summary>
+          <PanelRow>
+            <SwatchGrid label="Label background"
+              options={[{ id: 'transparent', label: 'None', color: 'transparent' }, { id: '#ffffff', label: 'White', color: '#ffffff', border: '#cbd5e1' }, ...INK]}
+              selected={label.fill} onPick={(id) => apply({ labelBackground: id })}
+            trailing={<CustomColorSwatch value={label.fill} onChange={() => undefined} onCommit={(hex) => apply({ labelBackground: hex })} />} />
+          </PanelRow>
+        </details>
         <PanelRow label="Font">
-          <Segmented<FontFamilyKey> label="Label font" value={label.fontFamily} onChange={(value) => apply({ labelFontFamily: value })}
-            options={[
-              { value: 'sans', label: <span className="ofk-font-sans">Aa</span>, title: 'Sans' },
-              { value: 'serif', label: <span className="ofk-font-serif">Aa</span>, title: 'Serif' },
-              { value: 'mono', label: <span className="ofk-font-mono">Aa</span>, title: 'Mono' },
-              { value: 'hand', label: <span className="ofk-font-hand">Aa</span>, title: 'Hand' },
-            ]} />
+          <FontPicker label="Label font" value={label.fontFamily} onChange={(labelFontFamily) => apply({ labelFontFamily })} />
         </PanelRow>
         <PanelRow label="Size">
-          <NumberField label="Label size" hideLabel value={label.fontSize} min={STYLE_LIMITS.fontSize.min} max={48} step={1} unit="px"
+          <NumberField stepper="stacked" label="Label size" hideLabel value={label.fontSize} min={STYLE_LIMITS.fontSize.min} max={48} step={1} unit="px"
             onChange={() => undefined} onCommit={(value) => apply({ labelFontSize: value })} />
         </PanelRow>
         <PanelRow label="Style">

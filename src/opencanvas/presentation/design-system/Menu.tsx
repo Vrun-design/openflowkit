@@ -3,36 +3,45 @@ import {
   useContext,
   useEffect,
   useRef,
+  useId,
+  useState,
   type HTMLAttributes,
   type KeyboardEvent,
   type ReactNode,
   type RefObject,
 } from 'react';
-import { IconCheck } from '@tabler/icons-react';
+import { IconCheck, IconChevronRight } from '@tabler/icons-react';
 import { Popover, type Placement } from './Popover';
 import { Icon } from './Icon';
 import { Kbd } from './Kbd';
+import { useSystemRoot } from './SystemRoot';
 const MenuContext = createContext<() => void>(() => {});
+const SubmenuContext = createContext<{ active: string | null; setActive: (id: string | null) => void }>({ active: null, setActive: () => {} });
 export interface MenuProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onSelect'> {
   open: boolean;
   anchorRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   label: string;
   placement?: Placement;
+  focusOnOpen?: boolean;
+  /** A submenu dismisses itself on Escape, but selection closes the whole tree. */
+  onSelectClose?: () => void;
 }
 /** Menu: focus enters the first item, arrows wrap, Home/End, typeahead, Escape/outside close, focus returns. */
-// ponytail: no submenus; nested actions go to the command surface. Add if a real menu needs one level.
 export function Menu({
   open,
   anchorRef,
   onClose,
   label,
   placement,
+  focusOnOpen = true,
+  onSelectClose,
   children,
   className = '',
   ...props
 }: MenuProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState<string | null>(null);
   const typed = useRef({ text: '', at: 0 });
   function items() {
     return Array.from(
@@ -42,9 +51,12 @@ export function Menu({
     );
   }
   useEffect(() => {
-    if (open) requestAnimationFrame(() => items()[0]?.focus());
-  }, [open]);
+    if (!open || !focusOnOpen) return;
+    const frame = requestAnimationFrame(() => items()[0]?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open, focusOnOpen]);
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if ((event.target as HTMLElement).closest('[role="menu"]') !== ref.current) return;
     const list = items();
     const index = list.indexOf(document.activeElement as HTMLElement);
     let next: number | undefined;
@@ -55,7 +67,7 @@ export function Menu({
     else if (event.key === 'Tab') {
       event.preventDefault();
       anchorRef.current?.focus();
-      onClose();
+      (onSelectClose ?? onClose)();
       return;
     } else if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
       const now = Date.now();
@@ -81,10 +93,19 @@ export function Menu({
       placement={placement}
       className={`ofk-menu ${className}`}
     >
-      <MenuContext.Provider value={onClose}>
-        <div {...props} ref={ref} role="menu" aria-label={label} onKeyDown={onKeyDown}>
+      <MenuContext.Provider value={onSelectClose ?? onClose}>
+        <SubmenuContext.Provider value={{ active, setActive }}>
+        <div {...props} ref={ref} role="menu" aria-label={label} onKeyDown={onKeyDown}
+          onPointerMove={(event) => {
+            if ((event.target as HTMLElement).closest('[role="menu"]') !== ref.current) return;
+            const item = (event.target as HTMLElement).closest<HTMLElement>('[role^="menuitem"]');
+            if (item?.getAttribute('aria-disabled') !== 'true') item?.focus({ preventScroll: true });
+            if (!item?.matches('[aria-haspopup="menu"]')) setActive(null);
+            props.onPointerMove?.(event);
+          }}>
           {children}
         </div>
+        </SubmenuContext.Provider>
       </MenuContext.Provider>
     </Popover>
   );
@@ -156,4 +177,53 @@ export function MenuGroup({ label, children }: { label: string; children: ReactN
       {children}
     </div>
   );
+}
+
+/** Cascading menu with hover, touch, keyboard entry and collision-aware placement. */
+export function MenuSubmenu({ label, children }: { label: string; children: ReactNode }) {
+  const id = useId();
+  const rtl = useSystemRoot().element?.dir === 'rtl';
+  const enterKey = rtl ? 'ArrowLeft' : 'ArrowRight';
+  const exitKey = rtl ? 'ArrowRight' : 'ArrowLeft';
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const closeTree = useContext(MenuContext);
+  const { active, setActive } = useContext(SubmenuContext);
+  const [keyboard, setKeyboard] = useState(false);
+  const open = active === id;
+  const close = () => setActive(null);
+  const enter = () => {
+    setKeyboard(true);
+    setActive(id);
+  };
+  return <>
+    <div ref={anchorRef} role="menuitem" tabIndex={-1} aria-haspopup="menu"
+      aria-expanded={open} aria-controls={open ? id : undefined}
+      className="ofk-menu-item ofk-submenu-trigger"
+      onPointerEnter={(event) => {
+        if (event.pointerType === 'touch') return;
+        setKeyboard(false); setActive(id);
+      }}
+      onClick={enter}
+      onKeyDown={(event) => {
+        if (event.key === exitKey && open) {
+          event.preventDefault(); event.stopPropagation(); close();
+        } else if ([enterKey, 'Enter', ' '].includes(event.key)) {
+          event.preventDefault(); event.stopPropagation(); enter();
+        }
+      }}>
+      <span className="ofk-menu-item-label">{label}</span>
+      <Icon icon={IconChevronRight} />
+    </div>
+    {open ? <Menu open anchorRef={anchorRef} onClose={close} onSelectClose={closeTree}
+      focusOnOpen={keyboard} placement={rtl ? 'left-start' : 'right-start'} label={label} id={id}
+      className="ofk-cascade-menu" data-context-menu
+      onKeyDownCapture={(event) => {
+        if (event.key === exitKey) {
+          event.preventDefault(); event.stopPropagation();
+          anchorRef.current?.focus(); close();
+        }
+      }}>
+      {children}
+    </Menu> : null}
+  </>;
 }

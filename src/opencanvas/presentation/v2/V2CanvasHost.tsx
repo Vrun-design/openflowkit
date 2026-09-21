@@ -71,7 +71,6 @@ interface V2CanvasHostProps {
   readonly connectorEditing: { readonly connectorId: string; readonly bounds: DOMRect; readonly value: string } | null;
   readonly onCommitConnectorLabel: (value: string) => void;
   readonly onCancelConnectorEdit: () => void;
-  readonly onEditConnectorLabel: () => void;
   readonly onStatusChange: (status: PixiRendererStatus) => void;
   readonly sectionRef: RefObject<HTMLElement | null>;
   /** Numeric canvas-ground color from the same token source as SystemRoot. */
@@ -79,8 +78,6 @@ interface V2CanvasHostProps {
   readonly readOnly: boolean;
   readonly snapToGrid: boolean;
   readonly showGrid: boolean;
-  readonly onDuplicate: () => void;
-  readonly onDelete: () => void;
   /** Right-click: the host has already selected the target; the page shows the menu. */
   readonly onContextMenu: (target: ContextMenuTarget) => void;
 }
@@ -429,7 +426,6 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
       ) : null}
       {contextAnchor ? (
         <V2ContextBar
-          selectionCount={props.selection.nodeIds.length}
           page={props.page}
           nodeIds={props.selection.nodeIds}
           connectorId={props.selectedConnectorId}
@@ -443,10 +439,6 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
             } : null);
           }}
           style={contextBarStyle(contextAnchor)}
-          onEditLabel={() => {
-            const primary = props.selection.primaryNodeId;
-            if (primary) props.openEditor(primary);
-          }}
           onNodeStyleCommitted={(patch) => {
             const kind = props.selection.nodeIds.every((id) => props.page.nodes.find((node) => node.id === id)?.kind === 'text') ? 'text' : 'shape';
             stylePresetsRef.current[kind] = { ...stylePresetsRef.current[kind], ...patch };
@@ -454,9 +446,9 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
           onConnectorStyleCommitted={(patch) => {
             stylePresetsRef.current.connector = connectorAppearanceWithPatch(stylePresetsRef.current.connector, patch);
           }}
-          onEditConnectorLabel={props.onEditConnectorLabel}
-          onDuplicate={props.onDuplicate}
-          onDelete={props.onDelete}
+          onOpenMenu={(x, y) => props.onContextMenu(props.selectedConnectorId
+            ? { kind: 'connector', id: props.selectedConnectorId, x, y }
+            : { kind: 'nodes', x, y })}
         />
       ) : null}
       {props.children}

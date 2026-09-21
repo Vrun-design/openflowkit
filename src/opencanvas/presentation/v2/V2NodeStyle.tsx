@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   IconAlignCenter, IconAlignLeft, IconAlignRight, IconArrowBarToDown, IconArrowBarToUp,
-  IconArrowsVertical, IconBold, IconItalic, IconStrikethrough, IconUnderline,
+  IconArrowsVertical, IconChevronDown, IconBold, IconItalic, IconStrikethrough, IconUnderline,
 } from '@tabler/icons-react';
 import type { SceneNode, ScenePage } from '../../domain/document/types';
 import type { JsonObject } from '../../domain/document/json';
@@ -9,11 +9,11 @@ import type { DocumentCommand } from '../../domain/commands/types';
 import { buildStyleNodesCommand } from '../../domain/commands/styleNodes';
 import { resolveNodeStyle, STYLE_LIMITS, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
-import { ColorPicker, Icon, NumberField, Segmented } from '../design-system';
+import { Icon, NumberField, Segmented } from '../design-system';
 import {
   INK_PRESETS, PALETTE_KEYS, PALETTE_LABELS, paletteFillPatch, paletteKeyForFill, paletteSwatch, type PaletteMode,
 } from '../../domain/nodes/nodePalette';
-import { ChoiceRow, PanelRow, StyleButton, SwatchGrid, ToggleRow, useStyleDraft } from './V2StyleControls';
+import { ChoiceRow, CustomColorSwatch, FontPicker, PanelRow, StyleButton, SwatchGrid, ToggleRow, useStyleDraft } from './V2StyleControls';
 
 export type NodeStyleCommon = { readonly [K in keyof NodeStyle]: NodeStyle[K] | null };
 
@@ -105,25 +105,21 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
         <PanelRow label="Color">
           <SwatchGrid label="Fill colour" options={fillOptions}
             selected={fill === 'transparent' ? 'transparent' : paletteHit?.mode === mode ? paletteHit.key : null}
-            onPick={(id) => apply(paletteFillPatch(id as Parameters<typeof paletteFillPatch>[0], mode))} />
+            onPick={(id) => apply(paletteFillPatch(id as Parameters<typeof paletteFillPatch>[0], mode))}
+            trailing={<CustomColorSwatch value={fill} onChange={(hex) => preview({ fill: hex })} onCommit={(hex) => apply({ fill: hex })} />} />
         </PanelRow>
-        <details className="ofk-style-more">
-          <summary className="ofk-caption">Custom</summary>
-          <ColorPicker value={fill === 'transparent' ? null : fill} presets={[]}
-            onChange={(hex) => preview({ fill: hex })} onCommit={(hex) => apply({ fill: hex })} />
-        </details>
         <PanelRow label="Corners">
-          <NumberField label="Corner radius" hideLabel value={view('cornerRadius') as number | null}
+          <NumberField stepper="stacked" label="Corner radius" hideLabel value={view('cornerRadius') as number | null}
             min={STYLE_LIMITS.cornerRadius.min} max={STYLE_LIMITS.cornerRadius.max} step={2} unit="px"
             onChange={(value) => preview({ cornerRadius: value })} onCommit={(value) => apply({ cornerRadius: value })} />
         </PanelRow>
         <PanelRow label="Opacity">
-          <NumberField label="Opacity" hideLabel value={opacity === null ? null : Math.round(opacity * 100)}
+          <NumberField stepper="stacked" label="Opacity" hideLabel value={opacity === null ? null : Math.round(opacity * 100)}
             min={0} max={100} step={10} unit="%"
             onChange={(value) => preview({ opacity: value / 100 })} onCommit={(value) => apply({ opacity: value / 100 })} />
         </PanelRow>
         <PanelRow label="Shadow">
-          <Segmented<'on' | 'off'> label="Shadow" value={view('shadow') === true ? 'on' : 'off'}
+          <Segmented<'on' | 'off' | ''> label="Shadow" value={view('shadow') === null ? '' : view('shadow') === true ? 'on' : 'off'}
             onChange={(value) => apply({ shadow: value === 'on' })}
             options={[{ value: 'off', label: 'None' }, { value: 'on', label: 'Soft' }]} />
         </PanelRow>
@@ -135,18 +131,15 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
           style={stroke && stroke !== 'transparent' ? { borderColor: stroke } : undefined} />}>
         <PanelRow label="Color">
           <SwatchGrid label="Outline colour"
-            options={[{ id: 'transparent', label: 'No outline', color: 'transparent' }, ...inkOptions()]}
-            selected={stroke} onPick={(id) => apply({ stroke: id })} />
+            options={[{ id: 'transparent', label: 'No outline', color: 'transparent' },
+              { id: '#ffffff', label: 'White', color: '#ffffff', border: '#cbd5e1' }, ...inkOptions()]}
+            selected={stroke} onPick={(id) => apply({ stroke: id })}
+            trailing={<CustomColorSwatch value={stroke} onChange={(hex) => preview({ stroke: hex })} onCommit={(hex) => apply({ stroke: hex })} />} />
         </PanelRow>
-        <details className="ofk-style-more">
-          <summary className="ofk-caption">Custom</summary>
-          <ColorPicker value={stroke === 'transparent' ? null : stroke} presets={[]}
-            onChange={(hex) => preview({ stroke: hex })} onCommit={(hex) => apply({ stroke: hex })} />
-        </details>
         <PanelRow label="Width">
           <ChoiceRow label="Width preset" value={view('strokeWidth') as number | null} options={WIDTH_PRESETS}
             onChange={(value) => apply({ strokeWidth: value })} />
-          <NumberField label="Outline width" hideLabel value={view('strokeWidth') as number | null}
+          <NumberField stepper="stacked" label="Outline width" hideLabel value={view('strokeWidth') as number | null}
             min={STYLE_LIMITS.strokeWidth.min} max={STYLE_LIMITS.strokeWidth.max} step={0.5} unit="px"
             onChange={(value) => preview({ strokeWidth: value })} onCommit={(value) => apply({ strokeWidth: value })} />
         </PanelRow>
@@ -158,30 +151,21 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
       </StyleButton>
 
       <StyleButton label="Text" open={open === 'text'} onToggle={() => toggle('text')} onClose={close} panelClassName="ofk-style-panel--wide"
-        preview={<span className="ofk-style-glyph" style={{ color: textColor ?? undefined }}>A</span>}>
+        preview={<span className="ofk-style-glyph" style={{ textDecorationColor: textColor ?? undefined }}>A</span>}>
         <PanelRow label="Color">
-          <SwatchGrid label="Text colour" options={[{ id: '#ffffff', label: 'White', color: '#ffffff', border: '#cbd5e1' }, ...inkOptions()]}
-            selected={textColor} onPick={(id) => apply({ textColor: id })} />
+          <SwatchGrid label="Text colour" options={[{ id: '#ffffff', label: 'White', color: '#ffffff', border: '#cbd5e1' },
+            { id: '#64748b', label: 'Mid gray', color: '#64748b' }, ...inkOptions()]}
+            selected={textColor} onPick={(id) => apply({ textColor: id })}
+            trailing={<CustomColorSwatch value={textColor} onChange={(hex) => preview({ textColor: hex })} onCommit={(hex) => apply({ textColor: hex })} />} />
         </PanelRow>
-        <details className="ofk-style-more">
-          <summary className="ofk-caption">Custom</summary>
-          <ColorPicker value={textColor} presets={[]}
-            onChange={(hex) => preview({ textColor: hex })} onCommit={(hex) => apply({ textColor: hex })} />
-        </details>
         <PanelRow label="Font">
-          <Segmented<NodeStyle['fontFamily'] | ''> label="Font family" value={(view('fontFamily') as NodeStyle['fontFamily'] | null) ?? ''}
-            onChange={(value) => { if (value) apply({ fontFamily: value }); }}
-            options={[
-              { value: 'sans', label: <span className="ofk-font-sans">Aa</span>, title: 'Sans' },
-              { value: 'serif', label: <span className="ofk-font-serif">Aa</span>, title: 'Serif' },
-              { value: 'mono', label: <span className="ofk-font-mono">Aa</span>, title: 'Mono' },
-              { value: 'hand', label: <span className="ofk-font-hand">Aa</span>, title: 'Hand' },
-            ]} />
+          <FontPicker value={view('fontFamily') as NodeStyle['fontFamily'] | null}
+            onChange={(fontFamily) => apply({ fontFamily })} />
         </PanelRow>
         <PanelRow label="Size">
           <ChoiceRow label="Size preset" value={view('fontSize') as number | null} options={FONT_SIZE_PRESETS}
             onChange={(value) => apply({ fontSize: value })} />
-          <NumberField label="Font size" hideLabel value={view('fontSize') as number | null}
+          <NumberField stepper="stacked" label="Font size" hideLabel value={view('fontSize') as number | null}
             min={STYLE_LIMITS.fontSize.min} max={STYLE_LIMITS.fontSize.max} step={1} unit="px"
             onChange={(value) => preview({ fontSize: value })} onCommit={(value) => apply({ fontSize: value })} />
         </PanelRow>
@@ -212,18 +196,21 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
               { value: 'bottom', label: <Icon icon={IconArrowBarToDown} />, title: 'Bottom' },
             ]} />
         </PanelRow>
-        <PanelRow label="Padding">
-          <ChoiceRow label="Padding" value={view('textPadding') as number | null} options={PADDING_PRESETS}
-            onChange={(value) => apply({ textPadding: value })} />
-        </PanelRow>
-        <PanelRow label="Line height">
-          <ChoiceRow label="Line height" value={view('lineHeight') as number | null} options={LINE_HEIGHT_PRESETS}
-            onChange={(value) => apply({ lineHeight: value })} />
-        </PanelRow>
-        <PanelRow label="Letter spacing">
-          <ChoiceRow label="Letter spacing" value={view('letterSpacing') as number | null} options={LETTER_SPACING_PRESETS}
-            onChange={(value) => apply({ letterSpacing: value })} />
-        </PanelRow>
+        <details className="ofk-style-more">
+          <summary className="ofk-caption">Spacing<Icon icon={IconChevronDown} /></summary>
+          <PanelRow label="Padding">
+            <ChoiceRow label="Padding" value={view('textPadding') as number | null} options={PADDING_PRESETS}
+              onChange={(value) => apply({ textPadding: value })} />
+          </PanelRow>
+          <PanelRow label="Line height">
+            <ChoiceRow label="Line height" value={view('lineHeight') as number | null} options={LINE_HEIGHT_PRESETS}
+              onChange={(value) => apply({ lineHeight: value })} />
+          </PanelRow>
+          <PanelRow label="Letter spacing">
+            <ChoiceRow label="Letter spacing" value={view('letterSpacing') as number | null} options={LETTER_SPACING_PRESETS}
+              onChange={(value) => apply({ letterSpacing: value })} />
+          </PanelRow>
+        </details>
       </StyleButton>
     </>
   );

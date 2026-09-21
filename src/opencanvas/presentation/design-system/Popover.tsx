@@ -1,4 +1,7 @@
 import {
+  createContext,
+  useContext,
+  useMemo,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -10,6 +13,16 @@ import {
 import { createPortal } from 'react-dom';
 import { useSystemRoot } from './SystemRoot';
 import { foundation } from './tokens';
+// Portaled child layers belong to their parent for outside-click and Escape.
+interface OverlayBranch {
+  readonly ref: RefObject<HTMLDivElement | null>;
+  readonly children: Set<OverlayBranch>;
+}
+const OverlayContext = createContext<OverlayBranch | null>(null);
+function contains(branch: OverlayBranch, target: Node | null): boolean {
+  return !!target && (!!branch.ref.current?.contains(target) || [...branch.children].some((child) => contains(child, target)));
+}
+
 export type Placement =
   | 'bottom-start'
   | 'bottom-end'
@@ -41,7 +54,16 @@ export function Popover({
   ...props
 }: PopoverProps) {
   const root = useSystemRoot();
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
   const ref = useRef<HTMLDivElement>(null);
+  const parent = useContext(OverlayContext);
+  const branch = useMemo<OverlayBranch>(() => ({ ref, children: new Set() }), []);
+  useEffect(() => {
+    if (!open || passive || !parent) return;
+    parent.children.add(branch);
+    return () => { parent.children.delete(branch); };
+  }, [open, passive, parent, branch]);
   const [box, setBox] = useState<CSSProperties>({ visibility: 'hidden' });
   useLayoutEffect(() => {
     if (!open) return;
@@ -126,24 +148,24 @@ export function Popover({
     // Restore while the layer is still mounted. Unmount cleanups run after
     // the browser has already reset focus to body, so restoring there is
     // too late — every dismiss path below restores first, then closes.
-    function restoreFocus() {
+    function restoreFocus(force = false) {
       if (passive) return;
-      if (ref.current?.contains(document.activeElement)) {
+      if (force || ref.current?.contains(document.activeElement)) {
         (anchor ?? previouslyFocused)?.focus();
       }
     }
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && branch.children.size === 0) {
         event.stopPropagation();
-        restoreFocus();
-        onClose();
+        restoreFocus(true);
+        closeRef.current();
       }
     }
     function onPointer(event: PointerEvent) {
       const target = event.target as Node;
-      if (ref.current?.contains(target) || anchor?.contains(target)) return;
+      if (contains(branch, target) || anchor?.contains(target)) return;
       restoreFocus();
-      onClose();
+      closeRef.current();
     }
     document.addEventListener('keydown', onKey, true);
     if (!passive) document.addEventListener('pointerdown', onPointer, true);
@@ -154,7 +176,7 @@ export function Popover({
       if (!passive && layer?.contains(document.activeElement))
         (anchor ?? previouslyFocused)?.focus();
     };
-  }, [open, anchorRef, onClose, passive]);
+  }, [open, anchorRef, passive, branch]);
   if (!open) return null;
   const layer = (
     <div
@@ -167,5 +189,6 @@ export function Popover({
       {children}
     </div>
   );
-  return root.element ? createPortal(layer, root.element) : layer;
+  const ownedLayer = <OverlayContext.Provider value={branch}>{layer}</OverlayContext.Provider>;
+  return root.element ? createPortal(ownedLayer, root.element) : ownedLayer;
 }

@@ -5,7 +5,7 @@ import { V2NodeStylePanels } from './V2NodeStyle';
 import { V2ArrangeControls } from './V2ArrangeControls';
 import { V2ConnectorStyle } from './V2ConnectorStyle';
 import type { ConnectorStylePatch } from '../../domain/commands/styleConnectors';
-import { IconCopy, IconPencil, IconTrash } from '@tabler/icons-react';
+import { IconDots } from '@tabler/icons-react';
 import { ContextBar, ContextGroup, Icon, IconButton, Tooltip } from '../design-system';
 
 interface V2ContextBarProps {
@@ -17,12 +17,8 @@ interface V2ContextBarProps {
   /** Sticky defaults: the last committed style patch seeds the next created item. */
   readonly onNodeStyleCommitted: (patch: JsonObject) => void;
   readonly onConnectorStyleCommitted: (patch: ConnectorStylePatch) => void;
-  readonly selectionCount: number;
   readonly style: React.CSSProperties;
-  readonly onEditLabel: () => void;
-  readonly onEditConnectorLabel: () => void;
-  readonly onDuplicate: () => void;
-  readonly onDelete: () => void;
+  readonly onOpenMenu: (x: number, y: number) => void;
 }
 
 // Positioned above the selection union, falling below it near the viewport
@@ -55,6 +51,10 @@ export function unionScreenBounds(rects: readonly (DOMRect | null | undefined)[]
 // Keydown bubbles to the page on purpose: ⌘Z after a swatch click must undo
 // (the page ignores keys aimed at inputs; buttons keep Enter/Space/arrows).
 export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
+  const openMenu = (button: HTMLButtonElement) => {
+    const rect = button.getBoundingClientRect();
+    props.onOpenMenu(rect.left, rect.bottom + 6);
+  };
   if (props.connectorId) {
     return (
       <ContextBar label="Connector actions" data-context-bar style={props.style}
@@ -64,24 +64,10 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
           <V2ConnectorStyle page={props.page} connectorId={props.connectorId} commit={props.commit}
             onCommitted={props.onConnectorStyleCommitted} />
         </ContextGroup>
-        <ContextGroup label="Edit">
-          <Tooltip content="Edit label" shortcut="Enter">
-            <IconButton
-              variant="quiet"
-              label="Edit connector label"
-              icon={<Icon icon={IconPencil} />}
-              onClick={props.onEditConnectorLabel}
-            />
-          </Tooltip>
-        </ContextGroup>
-        <ContextGroup label="Arrange">
-          <Tooltip content="Delete" shortcut="⌫">
-            <IconButton
-              variant="quiet"
-              label="Delete connector"
-              icon={<Icon icon={IconTrash} />}
-              onClick={props.onDelete}
-            />
+        <ContextGroup label="Actions">
+          <Tooltip content="More options">
+            <IconButton variant="quiet" label="More options" icon={<Icon icon={IconDots} />}
+              onClick={(event) => openMenu(event.currentTarget)} />
           </Tooltip>
         </ContextGroup>
       </ContextBar>
@@ -98,33 +84,10 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
       <ContextGroup label="Arrange">
         <V2ArrangeControls page={props.page} nodeIds={props.nodeIds} commit={props.commit} />
       </ContextGroup>
-      <ContextGroup label="Edit">
-        <Tooltip content="Edit label" shortcut="Enter">
-          <IconButton
-            variant="quiet"
-            label={`Edit label (${props.selectionCount} selected)`}
-            icon={<Icon icon={IconPencil} />}
-            onClick={props.onEditLabel}
-            disabled={props.selectionCount !== 1}
-          />
-        </Tooltip>
-      </ContextGroup>
       <ContextGroup label="Actions">
-        <Tooltip content="Duplicate">
-          <IconButton
-            variant="quiet"
-            label="Duplicate selection"
-            icon={<Icon icon={IconCopy} />}
-            onClick={props.onDuplicate}
-          />
-        </Tooltip>
-        <Tooltip content="Delete" shortcut="⌫">
-          <IconButton
-            variant="quiet"
-            label="Delete selection"
-            icon={<Icon icon={IconTrash} />}
-            onClick={props.onDelete}
-          />
+        <Tooltip content="More options">
+          <IconButton variant="quiet" label="More options" icon={<Icon icon={IconDots} />}
+            onClick={(event) => openMenu(event.currentTarget)} />
         </Tooltip>
       </ContextGroup>
     </ContextBar>

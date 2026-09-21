@@ -6,7 +6,7 @@ import {
   type ReactNode,
   type SelectHTMLAttributes,
 } from 'react';
-import { IconAlertTriangle, IconChevronDown, IconMinus, IconPlus } from '@tabler/icons-react';
+import { IconAlertTriangle, IconChevronDown, IconChevronUp, IconMinus, IconPlus } from '@tabler/icons-react';
 import { Button, IconButton } from './Button';
 import { Icon } from './Icon';
 
@@ -116,6 +116,8 @@ export interface NumberFieldProps extends Omit<
   /** Short leading glyph such as W, H, X, Y. */
   prefix?: string;
   mixedLabel?: string;
+  /** Stacked arrows for inspector fields; none retains keyboard stepping. */
+  stepper?: 'inline' | 'stacked' | 'none';
 }
 /** Numeric property input with steppers; arrow keys step, Shift steps ×10. Host clamps/commits. */
 export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(function NumberField(
@@ -131,6 +133,7 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
     unit,
     prefix,
     mixedLabel = 'Mixed',
+    stepper = 'inline',
     id,
     className = '',
     onBlur,
@@ -162,7 +165,7 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
   }
   const shown = draft ?? (value === null ? '' : String(value));
   return (
-    <div className={`ofk-number ${className}`} data-hide-label={hideLabel || undefined}>
+    <div className={`ofk-number ${className}`} data-stepper={stepper} data-hide-label={hideLabel || undefined}>
       <label htmlFor={inputId}>{label}</label>
       <span className="ofk-number-control">
         {prefix && (
@@ -170,14 +173,16 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
             {prefix}
           </span>
         )}
-        <IconButton
+        {stepper !== 'none' && <IconButton
           variant="quiet"
           label={`Decrease ${label}`}
-          icon={<Icon icon={IconMinus} />}
+          className="ofk-number-decrease"
+          icon={<Icon icon={stepper === 'stacked' ? IconChevronDown : IconMinus} />}
           tabIndex={-1}
           disabled={props.disabled}
+          onPointerDown={(event) => event.preventDefault()}
           onClick={() => nudge(-1)}
-        />
+        />}
         <input
           {...props}
           ref={ref}
@@ -224,14 +229,16 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(functi
           }}
         />
         {unit && <span className="ofk-number-unit">{unit}</span>}
-        <IconButton
+        {stepper !== 'none' && <IconButton
           variant="quiet"
           label={`Increase ${label}`}
-          icon={<Icon icon={IconPlus} />}
+          className="ofk-number-increase"
+          icon={<Icon icon={stepper === 'stacked' ? IconChevronUp : IconPlus} />}
           tabIndex={-1}
           disabled={props.disabled}
+          onPointerDown={(event) => event.preventDefault()}
           onClick={() => nudge(1)}
-        />
+        />}
       </span>
     </div>
   );

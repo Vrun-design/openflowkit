@@ -2,6 +2,12 @@
 
 Status: SHIPPED 2026-09-21 (owner approved; floating bar). Lives between phase 1 and 2.
 
+UI refinement (2026-09-21, Codex): inspector panels use named fonts, inset numeric
+fields, section headings and expandable spacing/background controls. More contains
+position and labelled layer actions; label editing stays in the context menu or
+Enter/double-click. Context menus cascade beside their parent for Reorder, Transform,
+Style and Path, with hover, keyboard entry/return and viewport collision handling.
+
 Shipped deviations (kept the spec honest, not the code):
 - Corners, opacity and shadow live in the Fill panel (one popover fewer in the bar).
 - Flip mirrors positions and negates rotation; glyphs are not mirrored (negative
@@ -98,8 +104,8 @@ now). Buttons open one popover each; multi-select shows mixed state as `—`.
 - Every selection: `[Position ▾]` X/Y/W/H/R fields (existing `NumberField`, commit on
   Enter/blur, ⇧↑↓ ±10) and `[Layer ▾]` front/forward/backward/back.
 
-**Context menu** (`V2ContextMenu.tsx`, design-system `Menu`; one level, Reorder inline
-group instead of submenu — Menu has no submenus, adding one is not worth it):
+**Context menu** (`V2ContextMenu.tsx`, design-system `Menu` + `MenuSubmenu`; related
+actions cascade in Reorder, Transform, Style and Path submenus):
 - Node/multi: Cut ⌘X · Copy ⌘C · Duplicate ⌘D · ─ · Edit label ↵ · ─ · Copy style ⌘⌥C ·
   Paste style ⌘⌥V · ─ · Bring to front ⌘⌥] · Bring forward ⌘] · Send backward ⌘[ · Send to
   back ⌘⌥[ · ─ · Flip horizontal ⇧H · Flip vertical ⇧V · ─ · Zoom to selection ⇧2 · ─ ·

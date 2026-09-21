@@ -61,6 +61,23 @@ describe('dropdown listbox', () => {
 });
 
 describe('number field commits', () => {
+  it('stacked steppers clamp and commit once per click', () => {
+    const onCommit = vi.fn();
+    render(<NumberField stepper="stacked" label="Opacity" value={95} min={0} max={100} step={10}
+      onChange={() => {}} onCommit={onCommit} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Opacity' }));
+    expect(onCommit).toHaveBeenCalledExactlyOnceWith(100);
+  });
+
+  it('fields without visible steppers keep keyboard increments', () => {
+    const onCommit = vi.fn();
+    render(<NumberField stepper="none" label="X" value={20} step={1}
+      onChange={() => {}} onCommit={onCommit} />);
+    expect(screen.queryByRole('button', { name: 'Increase X' })).toBeNull();
+    fireEvent.keyDown(screen.getByRole('spinbutton', { name: 'X' }), { key: 'ArrowUp', shiftKey: true });
+    expect(onCommit).toHaveBeenCalledExactlyOnceWith(30);
+  });
+
   it('exposes spinbutton semantics and reverts drafts on Escape', () => {
     const onChange = vi.fn();
     const onCommit = vi.fn();

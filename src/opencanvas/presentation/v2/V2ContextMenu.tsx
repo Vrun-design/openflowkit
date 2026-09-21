@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { Menu, MenuItem, MenuSeparator } from '../design-system';
+import { Menu, MenuItem, MenuSeparator, MenuSubmenu } from '../design-system';
 import type { ScenePage } from '../../domain/document/types';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { buildStyleConnectorCommand } from '../../domain/commands/styleConnectors';
@@ -29,8 +29,6 @@ interface V2ContextMenuProps {
   readonly onClose: () => void;
 }
 
-// Right-click menu (docs/plan/phase-1-style.md §2). One level; the reorder
-// entries are inline because the design-system Menu has no submenus.
 export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | null {
   const anchorRef = useRef<HTMLDivElement>(null);
   const { target, actions, readOnly } = props;
@@ -57,19 +55,23 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
           <>
             <MenuItem onSelect={props.onEditLabel} shortcut="↵" disabled={!edit}>Edit label</MenuItem>
             <MenuSeparator />
-            {(['orthogonal', 'direct', 'bezier'] as const).map((route) => (
-              <MenuItem key={route} role="menuitemradio" disabled={!edit}
-                checked={(props.page.connectors.find((c) => c.id === target.id)?.route.kind ?? 'orthogonal') === route}
-                onSelect={() => { const c = buildStyleConnectorCommand(props.page, target.id, { route }); if (c) props.commit(c); }}>
-                {route === 'orthogonal' ? 'Elbow' : route === 'direct' ? 'Straight' : 'Curve'}
-              </MenuItem>
-            ))}
+            <MenuSubmenu label="Path">
+                {(['orthogonal', 'direct', 'bezier'] as const).map((route) => (
+                  <MenuItem key={route} role="menuitemradio" disabled={!edit}
+                    checked={props.page.connectors.find((c) => c.id === target.id)?.route.kind === route}
+                    onSelect={() => { const c = buildStyleConnectorCommand(props.page, target.id, { route }); if (c) props.commit(c); }}>
+                    {route === 'orthogonal' ? 'Elbow' : route === 'direct' ? 'Straight' : 'Curve'}
+                  </MenuItem>
+                ))}
+            </MenuSubmenu>
             <MenuItem onSelect={() => { const c = buildStyleConnectorCommand(props.page, target.id, { reverse: true }); if (c) props.commit(c); }} disabled={!edit}>
               Reverse direction
             </MenuItem>
             <MenuSeparator />
-            <MenuItem onSelect={actions.copyStyle} shortcut="⌘⌥C">Copy style</MenuItem>
-            <MenuItem onSelect={actions.pasteStyle} shortcut="⌘⌥V" disabled={!edit}>Paste style</MenuItem>
+            <MenuSubmenu label="Style">
+                <MenuItem onSelect={actions.copyStyle} shortcut="⌘⌥C">Copy style</MenuItem>
+                <MenuItem onSelect={actions.pasteStyle} shortcut="⌘⌥V" disabled={!edit}>Paste style</MenuItem>
+            </MenuSubmenu>
             <MenuSeparator />
             <MenuItem onSelect={actions.deleteSelection} shortcut="⌫" disabled={!edit} danger>Delete</MenuItem>
           </>
@@ -80,32 +82,31 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
             <MenuItem onSelect={actions.duplicateSelection} shortcut="⌘D" disabled={!edit}>Duplicate</MenuItem>
             <MenuSeparator />
             <MenuItem onSelect={props.onEditLabel} shortcut="↵" disabled={!edit || many}>Edit label</MenuItem>
-            <MenuItem onSelect={actions.copyStyle} shortcut="⌘⌥C">Copy style</MenuItem>
-            <MenuItem onSelect={actions.pasteStyle} shortcut="⌘⌥V" disabled={!edit}>Paste style</MenuItem>
+            <MenuSubmenu label="Style">
+                <MenuItem onSelect={actions.copyStyle} shortcut="⌘⌥C">Copy style</MenuItem>
+                <MenuItem onSelect={actions.pasteStyle} shortcut="⌘⌥V" disabled={!edit}>Paste style</MenuItem>
+            </MenuSubmenu>
             <MenuSeparator />
-            <MenuItem onSelect={() => actions.reorderSelection('front')} shortcut="⌘⌥]" disabled={!edit}>Bring to front</MenuItem>
-            <MenuItem onSelect={() => actions.reorderSelection('forward')} shortcut="⌘]" disabled={!edit}>Bring forward</MenuItem>
-            <MenuItem onSelect={() => actions.reorderSelection('backward')} shortcut="⌘[" disabled={!edit}>Send backward</MenuItem>
-            <MenuItem onSelect={() => actions.reorderSelection('back')} shortcut="⌘⌥[" disabled={!edit}>Send to back</MenuItem>
-            <MenuSeparator />
-            <MenuItem onSelect={() => actions.flipSelection('horizontal')} shortcut="⇧H" disabled={!edit}>Flip horizontal</MenuItem>
-            <MenuItem onSelect={() => actions.flipSelection('vertical')} shortcut="⇧V" disabled={!edit}>Flip vertical</MenuItem>
-            <MenuSeparator />
-            <MenuItem onSelect={actions.groupSelection} shortcut="⌘G" disabled={!edit || !many}>Group</MenuItem>
-            <MenuItem onSelect={actions.ungroupSelection} shortcut="⌘⇧G" disabled={!edit || !actions.canUngroup()}>Ungroup</MenuItem>
-            {many ? (
-              <>
-                <MenuSeparator />
-                <MenuItem onSelect={() => actions.alignSelection('left')} shortcut="⌥A" disabled={!edit}>Align left</MenuItem>
-                <MenuItem onSelect={() => actions.alignSelection('center-x')} shortcut="⌥H" disabled={!edit}>Align centre</MenuItem>
-                <MenuItem onSelect={() => actions.alignSelection('right')} shortcut="⌥D" disabled={!edit}>Align right</MenuItem>
-                <MenuItem onSelect={() => actions.alignSelection('top')} shortcut="⌥W" disabled={!edit}>Align top</MenuItem>
-                <MenuItem onSelect={() => actions.alignSelection('center-y')} shortcut="⌥V" disabled={!edit}>Align middle</MenuItem>
-                <MenuItem onSelect={() => actions.alignSelection('bottom')} shortcut="⌥S" disabled={!edit}>Align bottom</MenuItem>
-                <MenuItem onSelect={() => actions.distributeSelection('horizontal')} shortcut="⌥⇧H" disabled={!edit || props.selectionCount < 3}>Distribute horizontally</MenuItem>
-                <MenuItem onSelect={() => actions.distributeSelection('vertical')} shortcut="⌥⇧V" disabled={!edit || props.selectionCount < 3}>Distribute vertically</MenuItem>
-              </>
-            ) : null}
+            <MenuSubmenu label="Reorder">
+                <MenuItem onSelect={() => actions.reorderSelection('front')} shortcut="⌘⌥]" disabled={!edit}>Bring to front</MenuItem>
+                <MenuItem onSelect={() => actions.reorderSelection('forward')} shortcut="⌘]" disabled={!edit}>Bring forward</MenuItem>
+                <MenuItem onSelect={() => actions.reorderSelection('backward')} shortcut="⌘[" disabled={!edit}>Send backward</MenuItem>
+                <MenuItem onSelect={() => actions.reorderSelection('back')} shortcut="⌘⌥[" disabled={!edit}>Send to back</MenuItem>
+            </MenuSubmenu>
+            <MenuSubmenu label="Transform">
+                <MenuItem onSelect={() => actions.flipSelection('horizontal')} shortcut="⇧H" disabled={!edit}>Flip horizontal</MenuItem>
+                <MenuItem onSelect={() => actions.flipSelection('vertical')} shortcut="⇧V" disabled={!edit}>Flip vertical</MenuItem>
+                {many ? <>
+                  {(['left', 'center-x', 'right', 'top', 'center-y', 'bottom'] as const).map((mode, index) =>
+                    <MenuItem key={mode} onSelect={() => actions.alignSelection(mode)} disabled={!edit}>
+                      {['Align left', 'Align centre', 'Align right', 'Align top', 'Align middle', 'Align bottom'][index]}
+                    </MenuItem>)}
+                  <MenuItem onSelect={() => actions.distributeSelection('horizontal')} disabled={!edit || props.selectionCount < 3}>Distribute horizontally</MenuItem>
+                  <MenuItem onSelect={() => actions.distributeSelection('vertical')} disabled={!edit || props.selectionCount < 3}>Distribute vertically</MenuItem>
+                </> : null}
+            </MenuSubmenu>
+            {many ? <MenuItem onSelect={actions.groupSelection} shortcut="⌘G" disabled={!edit}>Group</MenuItem> : null}
+            {actions.canUngroup() ? <MenuItem onSelect={actions.ungroupSelection} shortcut="⌘⇧G" disabled={!edit}>Ungroup</MenuItem> : null}
             <MenuSeparator />
             <MenuItem onSelect={props.onZoomToSelection} shortcut="⇧2">Zoom to selection</MenuItem>
             <MenuSeparator />

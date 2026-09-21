@@ -160,6 +160,7 @@ test('style bar sets dot markers and dashed line', async ({ page }) => {
   await expect(page.getByRole('toolbar', { name: 'Connector actions' })).toBeVisible();
   const bar = page.locator('[data-context-bar]');
   await bar.getByRole('button', { name: 'Ends' }).click();
+  await page.screenshot({ animations: 'disabled', path: 'test-results/connector-ends.png' });
   await page.getByRole('radiogroup', { name: 'End marker' }).getByRole('radio', { name: 'Dot' }).check();
   await page.keyboard.press('Escape');
   await bar.getByRole('button', { name: 'Line' }).click();
