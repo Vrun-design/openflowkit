@@ -3,16 +3,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
 
 describe('OpenCanvas text editor overlay', () => {
-  it('places the caret at the end of a real label and selects only the placeholder', () => {
+  it('selects the label on open, or puts the caret after a type-to-edit seed', () => {
     const { unmount } = render(<OpenCanvasTextEditorOverlay bounds={{ x: 0, y: 0, width: 80, height: 40 }}
       value="Before" onCommit={vi.fn()} onCancel={vi.fn()} />);
     const editor = screen.getByRole('textbox') as HTMLTextAreaElement;
-    expect([editor.selectionStart, editor.selectionEnd]).toEqual([6, 6]);
+    expect([editor.selectionStart, editor.selectionEnd]).toEqual([0, 6]);
     unmount();
     render(<OpenCanvasTextEditorOverlay bounds={{ x: 0, y: 0, width: 80, height: 40 }}
-      value="Text" onCommit={vi.fn()} onCancel={vi.fn()} />);
-    const placeholder = screen.getByRole('textbox') as HTMLTextAreaElement;
-    expect([placeholder.selectionStart, placeholder.selectionEnd]).toEqual([0, 4]);
+      value="H" selectAll={false} onCommit={vi.fn()} onCancel={vi.fn()} />);
+    const seeded = screen.getByRole('textbox') as HTMLTextAreaElement;
+    expect([seeded.selectionStart, seeded.selectionEnd]).toEqual([1, 1]);
   });
 
   it('Tab commits', () => {
@@ -50,13 +50,21 @@ describe('OpenCanvas text editor overlay', () => {
     expect(onCommit).toHaveBeenCalledWith('After');
   });
 
-  it('cancels without committing on Escape', () => {
+  it('commits the typed text on Escape instead of discarding it', () => {
     const onCommit = vi.fn();
     const onCancel = vi.fn();
     render(<OpenCanvasTextEditorOverlay bounds={{ x: 0, y: 0, width: 80, height: 40 }}
       value="Before" onCommit={onCommit} onCancel={onCancel} />);
-    fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
-    expect(onCancel).toHaveBeenCalledOnce();
-    expect(onCommit).not.toHaveBeenCalled();
+    const editor = screen.getByRole('textbox');
+    fireEvent.change(editor, { target: { value: 'Typed' } });
+    fireEvent.keyDown(editor, { key: 'Escape' });
+    expect(onCommit).toHaveBeenCalledWith('Typed');
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it('scales its type with the zoom so it sits on the rendered label', () => {
+    render(<OpenCanvasTextEditorOverlay bounds={{ x: 0, y: 0, width: 80, height: 40 }}
+      value="Before" zoom={2} onCommit={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByRole('textbox')).toHaveStyle({ fontSize: '28px' });
   });
 });

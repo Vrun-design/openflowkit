@@ -6,8 +6,9 @@ import { nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import { drawTransformFrame } from './PixiTransformOverlay';
 import { connectHandlePoints, type ConnectSide } from '../../domain/connectors/connectHandles';
 
-const SELECTION_STROKE = 0xe95420;
-const CONNECT_HANDLE_PIXELS = 12;
+import { CHROME_ACCENT as SELECTION_STROKE, CHROME_SURFACE } from './chrome';
+
+const CONNECT_HANDLE_PIXELS = 11;
 
 export function selectionWorldBounds(
   index: SceneIndex,
@@ -36,14 +37,14 @@ export class PixiSelectionOverlay {
 
   private drawHandles(bounds: Bounds2d, zoom: number, highlight: ConnectSide | null): void {
     const radius = CONNECT_HANDLE_PIXELS / 2 / zoom;
-    const stroke = 1.5 / zoom;
+    const stroke = 1.25 / zoom;
     for (const { side, point } of connectHandlePoints(bounds, zoom)) {
       const active = side === highlight;
-      const ink = active ? 0xffffff : SELECTION_STROKE;
+      const ink = active ? CHROME_SURFACE : SELECTION_STROKE;
       this.graphics
         .circle(point.x, point.y, radius)
-        .fill({ color: active ? SELECTION_STROKE : 0xffffff })
-        .stroke({ color: ink, width: stroke });
+        .fill({ color: active ? SELECTION_STROKE : CHROME_SURFACE })
+        .stroke({ color: SELECTION_STROKE, width: stroke });
       this.graphics
         .moveTo(point.x - radius / 2, point.y).lineTo(point.x + radius / 2, point.y)
         .moveTo(point.x, point.y - radius / 2).lineTo(point.x, point.y + radius / 2)
@@ -66,14 +67,16 @@ export class PixiSelectionOverlay {
     hover: ConnectHover | null = null
   ): void {
     this.graphics.clear();
-    for (const nodeId of cleanFrame && selectedNodeIds.length === 1 ? [] : selectedNodeIds) {
-      const node = index.nodesById.get(nodeId);
-      const matrix = node && index.worldMatricesByNodeId.get(node.id);
-      if (!node || !matrix) continue;
-      const bounds = nodeWorldBounds(node, matrix);
-      this.graphics
-        .roundRect(bounds.x - 3, bounds.y - 3, bounds.width + 6, bounds.height + 6, 12)
-        .stroke({ color: SELECTION_STROKE, width: nodeId === primaryNodeId ? 2.5 : 1.5 });
+    // One frame for one node; members of a group get a hairline each so the
+    // union frame stays the only heavy line on screen.
+    if (selectedNodeIds.length > 1) {
+      for (const nodeId of cleanFrame ? [] : selectedNodeIds) {
+        const bounds = this.nodeBounds(index, nodeId);
+        if (!bounds) continue;
+        this.graphics
+          .rect(bounds.x, bounds.y, bounds.width, bounds.height)
+          .stroke({ color: SELECTION_STROKE, width: (nodeId === primaryNodeId ? 1.25 : 0.75) / zoom, alpha: 0.8 });
+      }
     }
     const bounds = selectionWorldBounds(index, selectedNodeIds);
     if (bounds) drawTransformFrame(this.graphics, bounds, zoom);

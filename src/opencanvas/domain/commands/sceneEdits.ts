@@ -27,6 +27,8 @@ import {
   createShapeNode, nextNodeZIndex, DEFAULT_SHAPE_SIZE, DEFAULT_TEXT_SIZE, type ShapeKind,
 } from '../nodes/shapeNode';
 import { planQuickCreate } from '../connectors/quickCreate';
+import { measurePortableText } from '../text/measurement';
+import { DEFAULT_NODE_CONTENT_LAYOUT } from '../node-layout/model';
 import type { ConnectSide } from '../connectors/connectHandles';
 
 export const V2_DEFAULT_SHAPE_SIZE = DEFAULT_SHAPE_SIZE;
@@ -39,6 +41,7 @@ export interface V2CreateShapeOptions {
   readonly id: string;
   readonly at: Point2d;
   readonly size?: Size2d;
+  readonly label?: string;
 }
 
 // I-03: click or drag creates at the theme default size; one history entry on
@@ -58,6 +61,17 @@ export function buildInsertShapeCommand(
   };
 }
 
+// Free-standing text hugs its content (tldraw/Excalidraw): the box is the
+// text, never a frame around it. Same font metrics the renderer uses.
+export function textNodeSize(label: string): Size2d {
+  const { padding } = DEFAULT_NODE_CONTENT_LAYOUT;
+  const measured = measurePortableText(label || ' ', { fontSize: 14, fontWeight: 600 });
+  return {
+    width: Math.max(24, Math.ceil(measured.width) + padding.left + padding.right),
+    height: Math.max(24, Math.ceil(measured.height) + padding.top + padding.bottom),
+  };
+}
+
 // I-06: completion commits exactly one set-node; empty string is a valid label.
 export function buildSetNodeLabelCommand(
   page: ScenePage,
@@ -72,7 +86,11 @@ export function buildSetNodeLabelCommand(
     label: 'Edit label',
     pageId: page.id,
     before: node,
-    after: { ...node, content: { ...node.content, label } },
+    after: {
+      ...node,
+      content: { ...node.content, label },
+      size: node.kind === 'text' ? textNodeSize(label) : node.size,
+    },
   };
 }
 

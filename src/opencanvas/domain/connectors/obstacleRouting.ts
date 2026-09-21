@@ -203,6 +203,25 @@ function sideAxis(side: ConnectSide): 'x' | 'y' {
   return side === 'left' || side === 'right' ? 'x' : 'y';
 }
 
+// The stub stops short of any clearance zone it would otherwise end inside
+// (nodes packed tighter than stub + clearance), so the lane router still
+// starts from a legal point instead of falling back to a crossing route.
+function stubEnd(start: Point2d, side: ConnectSide | null, obstacles: readonly Bounds2d[]): Point2d {
+  if (!side) return start;
+  const normal = sideNormal(side);
+  let length = STUB_LENGTH;
+  for (const bounds of obstacles) {
+    const zone = expandBounds(bounds, ROUTE_CLEARANCE);
+    if (containsPoint(zone, start)) continue;
+    const end = { x: start.x + normal.x * length, y: start.y + normal.y * length };
+    if (!containsPoint(zone, end)) continue;
+    const edge = normal.x > 0 ? zone.x : normal.x < 0 ? boundsMaxX(zone) : normal.y > 0 ? zone.y : boundsMaxY(zone);
+    const reach = Math.abs(normal.x !== 0 ? edge - start.x : edge - start.y) - 0.5;
+    length = Math.max(0, Math.min(length, reach));
+  }
+  return { x: start.x + normal.x * length, y: start.y + normal.y * length };
+}
+
 // A bound end leaves its node perpendicular to the side for one stub, then
 // the lane router takes over between the stubs. Own nodes belong in the
 // obstacle list: they are what stops a lane from doubling back through the
@@ -214,20 +233,16 @@ export function routeOrthogonalBetweenSides(
   endSide: ConnectSide | null,
   obstacleBounds: readonly Bounds2d[]
 ): readonly Point2d[] {
-  const stubStart = startSide
-    ? { x: start.x + sideNormal(startSide).x * STUB_LENGTH, y: start.y + sideNormal(startSide).y * STUB_LENGTH }
-    : start;
-  const stubEnd = endSide
-    ? { x: end.x + sideNormal(endSide).x * STUB_LENGTH, y: end.y + sideNormal(endSide).y * STUB_LENGTH }
-    : end;
+  // A box enclosing an end point (a container around the node, an
+  // overlapping shape) would block every lane; it is context, not an obstacle.
+  const obstacles = obstacleBounds.filter(
+    (bounds) => !containsPoint(bounds, start) && !containsPoint(bounds, end)
+  );
+  const stubStart = stubEnd(start, startSide, obstacles);
+  const stubEndPoint = stubEnd(end, endSide, obstacles);
   const axis = startSide ? sideAxis(startSide) : endSide ? sideAxis(endSide) : null;
   const opposite = startSide && endSide && sideAxis(startSide) === sideAxis(endSide);
-  // A box enclosing a stub (a container around the node, an overlapping
-  // shape) would block every lane; it is context, not an obstacle.
-  const obstacles = obstacleBounds.filter(
-    (bounds) => !containsPoint(bounds, stubStart) && !containsPoint(bounds, stubEnd)
-  );
-  const lane = routeOrthogonalAroundObstacles(stubStart, stubEnd, obstacles, {
+  const lane = routeOrthogonalAroundObstacles(stubStart, stubEndPoint, obstacles, {
     midSplit: opposite && axis ? axis : undefined,
   });
   return dropCollinear(dedupePolyline([start, ...lane, end]));

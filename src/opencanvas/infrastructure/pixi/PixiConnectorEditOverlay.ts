@@ -4,9 +4,7 @@ import { projectConnector } from '../../domain/connectors/routeProjection';
 import type { SceneConnector, ScenePage } from '../../domain/document/types';
 import type { Point2d } from '../../domain/geometry/types';
 
-const ACTIVE = 0xe95420;
-const ACTIVE_DEEP = 0xc2410c;
-const SURFACE = 0xffffff;
+import { CHROME_ACCENT as ACTIVE, CHROME_ACCENT_DEEP as ACTIVE_DEEP, CHROME_SURFACE as SURFACE } from './chrome';
 
 function sameHandle(left: ConnectorEditHandle | null, right: ConnectorEditHandle): boolean {
   if (!left || left.kind !== right.kind) return false;
@@ -50,7 +48,7 @@ export class PixiConnectorEditOverlay {
     if (first) {
       this.graphics.moveTo(first.x, first.y);
       for (const point of projected.samples.slice(1)) this.graphics.lineTo(point.x, point.y);
-      this.graphics.stroke({ color: ACTIVE, alpha: 0.9, width: 2.5 * scale });
+      this.graphics.stroke({ color: ACTIVE, alpha: 0.85, width: 1.5 * scale });
     }
     const handles = connectorEditHandles(page, connector);
     const controls = handles.filter(
@@ -70,11 +68,11 @@ export class PixiConnectorEditOverlay {
   }
 
   private drawHandle(handle: ConnectorEditHandle, scale: number, active: boolean): void {
-    const radius = (handle.kind === 'segment' ? 3.5 : 5) * scale;
+    const radius = (handle.kind === 'segment' ? 3 : 4.5) * scale;
     const fill = active ? ACTIVE : SURFACE;
-    const width = (active ? 2.5 : 1.75) * scale;
+    const width = (active ? 1.5 : 1.25) * scale;
     if (handle.kind === 'endpoint') {
-      this.graphics.rect(handle.point.x - radius, handle.point.y - radius, radius * 2, radius * 2);
+      this.graphics.circle(handle.point.x, handle.point.y, radius);
     } else if (handle.kind === 'waypoint') {
       drawDiamond(this.graphics, handle.point, radius);
     } else {

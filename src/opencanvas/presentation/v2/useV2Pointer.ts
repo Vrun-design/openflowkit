@@ -757,7 +757,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       const page = opts.pageRef.current;
       if (!page) return;
       const id = opts.mintId('node');
-      opts.commit(buildInsertShapeCommand(page, { kind: 'text', id, at: textOrigin(host.screenToWorld(point)) }));
+      opts.commit(buildInsertShapeCommand(page, { kind: 'text', id, label: '', at: textOrigin(host.screenToWorld(point)) }));
       opts.applyConnectorSelection(null);
       opts.applySelection(replaceSelection([id]));
       opts.openEditor(id, { isNew: true });

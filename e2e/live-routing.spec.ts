@@ -76,8 +76,8 @@ test('dragging a bound node around an obstacle reroutes without crossing', async
   await expect.poll(async () => (await state(page)).connectors.length).toBe(1);
   const edgeId = (await state(page)).connectors[0];
   const edge = (await doc(page)).pages[0].connectors[0];
-  expect(edge.source).toMatchObject({ nodeId: a, portId: 'right' });
-  expect(edge.target).toMatchObject({ nodeId: c, portId: 'left' });
+  expect(edge.source).toMatchObject({ nodeId: a, portId: null });
+  expect(edge.target).toMatchObject({ nodeId: c, portId: null });
 
   // Camera never moves here: screen = world + constant offset.
   const worldA = (await doc(page)).pages[0].nodes.find((n) => n.id === a)!.transform.translation;
@@ -118,6 +118,6 @@ test('dragging a bound node around an obstacle reroutes without crossing', async
   for (let i = 1; i < sides.length; i += 1) if (sides[i] !== sides[i - 1]) switches += 1;
   expect(switches).toBeLessThanOrEqual(4);
   const settled = (await doc(page)).pages[0].connectors[0];
-  expect(settled.source).toMatchObject({ nodeId: a, portId: 'right' });
-  expect(settled.target).toMatchObject({ nodeId: c, portId: 'left' });
+  expect(settled.source).toMatchObject({ nodeId: a, portId: null });
+  expect(settled.target).toMatchObject({ nodeId: c, portId: null });
 }, { timeout: 120_000 });

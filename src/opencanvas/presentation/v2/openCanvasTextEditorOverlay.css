@@ -3,18 +3,24 @@
   position: absolute;
   z-index: 5;
   box-sizing: border-box;
-  min-width: 48px;
-  min-height: 32px;
-  padding: 16px; /* overridden inline from DEFAULT_NODE_CONTENT_LAYOUT.padding */
+  min-width: 24px;
+  min-height: 24px;
   text-align: center;
   resize: none;
   overflow: hidden;
-  border: 2px solid #e95420;
-  border-radius: 8px;
-  outline: none;
+  border: 0;
+  outline: none !important; /* the label is the focus ring: the node frame already shows it */
   color: #1e293b;
-  background: rgb(255 255 255 / 98%);
-  box-shadow: 0 4px 16px rgb(15 23 42 / 14%);
-  /* 14px/600 matches PixiNodeRenderer; 1.2 matches domain/text/measurement's default line height. */
-  font: 600 14px/1.2 Inter, ui-sans-serif, system-ui, sans-serif;
+  background: transparent;
+  caret-color: #3b82f6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pixi-spike__text-editor::placeholder {
+  color: #94a3b8;
+}
+
+.pixi-spike__text-editor::selection {
+  background: rgb(59 130 246 / 25%);
 }

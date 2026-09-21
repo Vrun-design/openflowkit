@@ -68,6 +68,7 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
         value: editorOptions.initialValue
           ?? (typeof node.content.label === 'string' ? node.content.label : ''),
         isNew: editorOptions.isNew === true,
+        caretAtEnd: editorOptions.initialValue !== undefined,
       });
       optionsRef.current.announce('Editing label');
     },

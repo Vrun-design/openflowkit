@@ -6,9 +6,9 @@ import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import { buildNodeWorldMatrices } from '../../domain/scene/worldGeometry';
 import type { TransformHandle } from '../../domain/transforms/types';
 
-const ORANGE = 0xe95420;
-const WHITE = 0xffffff;
-const HANDLE_PIXELS = 8;
+import { CHROME_ACCENT as ORANGE, CHROME_SURFACE as WHITE } from './chrome';
+
+const HANDLE_PIXELS = 7;
 // Beyond the north connect handle (22px, 9px pick radius) so the two never
 // overlap: connect handles are picked first, which made rotation unreachable.
 const ROTATE_OFFSET_PIXELS = 48;
@@ -59,7 +59,7 @@ export function drawTransformFrame(
   zoom: number,
   showHandles = true
 ): void {
-  const width = 2 / zoom;
+  const width = 1 / zoom;
   graphics.rect(bounds.x, bounds.y, bounds.width, bounds.height).stroke({ color: ORANGE, width });
   if (!showHandles) return;
   const handles = transformHandlePoints(bounds, zoom);
@@ -67,19 +67,19 @@ export function drawTransformFrame(
   graphics
     .moveTo(bounds.x + bounds.width / 2, bounds.y)
     .lineTo(rotate.point.x, rotate.point.y)
-    .stroke({ color: ORANGE, width: 1.5 / zoom });
+    .stroke({ color: ORANGE, width: 1 / zoom });
   for (const { handle, point } of handles) {
     if (handle === 'rotate') {
       graphics
         .circle(point.x, point.y, HANDLE_PIXELS / 2 / zoom)
         .fill({ color: WHITE })
-        .stroke({ color: ORANGE, width: 1.5 / zoom });
+        .stroke({ color: ORANGE, width: 1 / zoom });
     } else {
       const size = HANDLE_PIXELS / zoom;
       graphics
-        .rect(point.x - size / 2, point.y - size / 2, size, size)
+        .roundRect(point.x - size / 2, point.y - size / 2, size, size, 1.5 / zoom)
         .fill({ color: WHITE })
-        .stroke({ color: ORANGE, width: 1.5 / zoom });
+        .stroke({ color: ORANGE, width: 1 / zoom });
     }
   }
 }

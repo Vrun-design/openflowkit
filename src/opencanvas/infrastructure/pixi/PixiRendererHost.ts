@@ -22,6 +22,8 @@ import { nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import type { TransformHandle, TransformResult } from '../../domain/transforms/types';
 import { pickTransformHandle as pickHandle, PixiTransformOverlay } from './PixiTransformOverlay';
 import { PixiConnectorRenderer } from './PixiConnectorRenderer';
+import { CHROME_ACCENT } from './chrome';
+import { applyTextResolution, currentPixiTextResolution, textResolutionForZoom } from './pixiText';
 import { PixiFreeformPreview, type FreeformPreviewFrame } from './PixiFreeformPreview';
 import { PixiProposalPreview, type ProposalPreviewFrame } from './PixiProposalPreview';
 import { PixiContainerRenderer } from './PixiContainerRenderer';
@@ -83,8 +85,8 @@ interface PixiRendererHostOptions {
   readonly wireframeNodesEnabled?: boolean;
 }
 
-const SELECTION_STROKE = 0xe95420;
-const MARQUEE_FILL = 0xe95420;
+const SELECTION_STROKE = CHROME_ACCENT;
+const MARQUEE_FILL = CHROME_ACCENT;
 const LABEL_DETAIL_ZOOM = 0.55;
 // Pixi 8 CanvasText can throw while returning pooled textures during stage-tree
 // destruction across overlapping React StrictMode lifecycles. The renderer owns
@@ -277,6 +279,8 @@ export class PixiRendererHost {
     this.drawDotGrid();
     this.drawSelection();
     this.connectorRenderer.setZoom(camera.zoom);
+    const textResolution = textResolutionForZoom(camera.zoom, window.devicePixelRatio || 1);
+    if (textResolution !== currentPixiTextResolution()) applyTextResolution(this.world, textResolution);
     this.drawProposalPreview();
 
     const overlayStartedAt = performance.now();
@@ -355,6 +359,10 @@ export class PixiRendererHost {
 
   getConnectorHandleScreenPoints(): readonly ConnectorHandleScreenPoint[] {
     return inspectConnectorHandleScreenPoints(this.page, this.selectedConnectorId, this.camera);
+  }
+
+  worldToScreen(point: Point2d): Point2d {
+    return worldToScreen(this.camera, point);
   }
 
   screenToWorld(point: Point2d): Point2d {
@@ -732,6 +740,12 @@ export class PixiRendererHost {
       this.livePreview !== null,
       this.hoveredNodeId ? { nodeId: this.hoveredNodeId, side: this.hoveredSide } : null
     );
+  }
+
+  /** While a label is edited in the DOM the Pixi copy underneath is hidden. */
+  setEditingNode(nodeId: string | null): void {
+    this.nodeRenderer.setEditingNode(nodeId);
+    this.requestRender();
   }
 
   /** Hovered node and connect handle; drives handle visibility, never selection. */

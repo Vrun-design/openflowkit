@@ -45,6 +45,10 @@ export function useV2TestApi(options: V2TestApiOptions) {
       getRenderDiagnostics: () => hostRef.current?.getRenderDiagnostics(),
       getLiveConnectorSamples: (connectorId: string) =>
         hostRef.current?.getLiveConnectorSamples(connectorId) ?? null,
+      getConnectorScreenSamples: (connectorId: string) => {
+        const host = hostRef.current;
+        return host?.getLiveConnectorSamples(connectorId)?.map((point) => host.worldToScreen(point)) ?? null;
+      },
       getNodeRect: (nodeId: string) => {
         const bounds = hostRef.current?.getNodeScreenBounds(nodeId);
         return bounds

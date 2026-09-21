@@ -33,6 +33,8 @@ export interface V2EditingState {
   readonly bounds: DOMRect;
   readonly value: string;
   readonly isNew: boolean;
+  /** Type-to-edit seeds the value: caret goes after it instead of selecting all. */
+  readonly caretAtEnd: boolean;
 }
 
 interface V2CanvasHostProps {
@@ -266,6 +268,10 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   }, [props.page]);
 
   useEffect(() => {
+    props.hostRef.current?.setEditingNode(props.editing?.nodeId ?? null);
+  }, [props.editing, props.hostRef, props.page, status]);
+
+  useEffect(() => {
     props.hostRef.current?.setSelection(props.selection.nodeIds, props.selection.primaryNodeId);
     props.hostRef.current?.setConnectorSelection(props.selectedConnectorId, null);
   }, [props.selection, props.selectedConnectorId, props.hostRef, props.page, status]);
@@ -356,6 +362,8 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
         <OpenCanvasTextEditorOverlay
           bounds={props.editing.bounds}
           value={props.editing.value}
+          zoom={props.camera.zoom}
+          selectAll={!props.editing.caretAtEnd}
           onCommit={props.onCommitLabel}
           onCancel={props.onCancelEdit}
         />
@@ -365,6 +373,8 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
           bounds={props.connectorEditing.bounds}
           value={props.connectorEditing.value}
           label="Edit connector label"
+          zoom={props.camera.zoom}
+          font={{ size: 11, weight: 600 }}
           onCommit={props.onCommitConnectorLabel}
           onCancel={props.onCancelConnectorEdit}
         />

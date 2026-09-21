@@ -23,6 +23,7 @@ import type { PixiNodeDebugRecord } from './pixiNodeDebug';
 import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
 import { measurePortableText } from '../../domain/text/measurement';
+import { currentPixiTextResolution } from './pixiText';
 import type { SemanticDetailLevel } from './viewportProjection';
 
 const NODE_FILL = 0xffffff;
@@ -72,6 +73,7 @@ export class PixiNodeRenderer {
   private readonly sequenceRenderer = new PixiSequenceNodeRenderer();
   private readonly wireframeRenderer: PixiWireframeNodeRenderer;
   private debugRecords: readonly PixiNodeDebugRecord[] = [];
+  private editingNodeId: string | null = null;
 
   constructor(onMediaReady: () => void = () => undefined) {
     this.freeformRenderer = new PixiFreeformNodeRenderer((nodeId) => {
@@ -380,6 +382,7 @@ export class PixiNodeRenderer {
     }
     const created = new Text({
       text,
+      resolution: currentPixiTextResolution(),
       style: { fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif', fontSize, fontWeight, fill },
     });
     this.textKeys.set(created, key);
@@ -394,7 +397,16 @@ export class PixiNodeRenderer {
     this.labels.visible = visibleNodeIds !== null;
     if (!visibleNodeIds) return;
     for (const [nodeId, label] of this.labelByNodeId) {
-      label.visible = visibleNodeIds.has(nodeId) && !this.freeformRenderer.isMediaLoaded(nodeId);
+      label.visible = visibleNodeIds.has(nodeId) && nodeId !== this.editingNodeId
+        && !this.freeformRenderer.isMediaLoaded(nodeId);
     }
+  }
+
+  /** The DOM editor replaces this node's label while it is open. */
+  setEditingNode(nodeId: string | null): void {
+    const previous = this.editingNodeId;
+    this.editingNodeId = nodeId;
+    if (previous) { const label = this.labelByNodeId.get(previous); if (label) label.visible = true; }
+    if (nodeId) { const label = this.labelByNodeId.get(nodeId); if (label) label.visible = false; }
   }
 }

@@ -54,8 +54,8 @@ test('dragging the right handle 200px quick-creates a bound, labelled node', asy
   const document = await doc(page);
   expect(document.pages[0].connectors).toHaveLength(1);
   const edge = document.pages[0].connectors[0];
-  expect(edge.source).toMatchObject({ nodeId: first, portId: 'right' });
-  expect(edge.target.portId).toBe('left');
+  expect(edge.source).toMatchObject({ nodeId: first, portId: null });
+  expect(edge.target.portId).toBeNull();
   expect(edge.target.nodeId).not.toBe(first);
   const editor = page.getByRole('textbox', { name: 'Edit node label' });
   await expect(editor).toBeVisible();
