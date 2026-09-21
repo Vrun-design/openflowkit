@@ -13,6 +13,8 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–4, one month, no ga
 - Text: Pixi label resolution follows zoom (crisp at 400%). Label editor is
   transparent, zoom-scaled, sits on the label (Pixi copy hidden); Escape
   keeps typed text; text nodes fit content; type-to-edit keeps the seed char.
+  Connector label: plate hit-tests as the connector (dbl-click re-edits),
+  editor hugs text and hides the Pixi copy.
 - Chrome: one blue accent, 1px frames, no double outline; quick-create ghost
   on side-handle hover (handles hover-detected outside node bounds).
 - 1.7: ⇧ aspect / ⌥ centre resize, ⌘ suspends snap, ⇧ 15° rotate, ]/[
