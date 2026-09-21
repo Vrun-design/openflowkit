@@ -59,7 +59,7 @@ export function V2CodePanel({
     requestAnimationFrame(() => { editor.focus(); editor.setSelectionRange(start + value.length, start + value.length); });
   };
   return (
-    <Panel title="Diagram as code" onClose={onClose} className="ofk-v2-workspace-panel ofk-v2-code-panel" tools={<span className="ofk-v2-preview-label">OpenFlow DSL</span>}>
+    <Panel title="Diagram as code" onClose={onClose} className="ofk-v2-workspace-panel ofk-v2-code-panel">
       <div className="ofk-v2-panel-stack">
         {canvasEdited ? <p className="ofk-v2-code-warning" role="status">Canvas edited — regenerate will overwrite those changes.</p> : null}
         <div className="ofk-v2-code-editor-wrap">

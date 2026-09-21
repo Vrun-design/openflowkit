@@ -282,7 +282,7 @@
 
 .ofk-v2[data-tree-open='true'] > .ofk-floating-region[data-slot='top-start'],
 .ofk-v2[data-tree-open='true'] > .ofk-floating-region[data-slot='bottom-start'] { left: calc(var(--v2-layers-width) + 16px); }
-.ofk-v2 .ofk-panel-header { min-height: 72px; padding: 16px 20px; }
+.ofk-v2 .ofk-panel-header { min-height: 52px; padding: 8px 12px 8px 20px; }
 .ofk-v2 .ofk-panel-title { font-size: 16px; }
 .ofk-v2 .ofk-panel-body { padding: 20px; }
 .ofk-v2 .ofk-agent-panel .ofk-panel-body { padding: 0; }
