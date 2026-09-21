@@ -1,8 +1,7 @@
-# OpenFlowKit V2 UI foundation
+# OpenFlowKit UI foundation
 
-Internal React + TypeScript foundation for the new editor. Design authority:
-[docs/v2/design-system.md](../../../../docs/v2/design-system.md). It is not the old
-customer-facing theme builder. No document storage or authoring ownership lives here.
+Internal React + TypeScript foundation for the editor. Product plan:
+[docs/plan/README.md](../../../../docs/plan/README.md). No document storage or authoring ownership lives here.
 
 ## Layers and integration
 

@@ -1,9 +1,9 @@
-# V2 design-system implementation contract
+# Design-system implementation contract
 
-Start with repository `docs/README.md`; design authority is `docs/v2/design-system.md`.
+Start with `docs/plan/README.md`.
 Read this module's README before adding or consuming primitives.
 
-- This directory is presentation infrastructure for V2, not a document theme engine.
+- This directory is presentation infrastructure for the editor, not a document theme engine.
 - Tokens and canvas/motion recipes remain pure TypeScript. They cannot import React,
   DOM APIs, stores, document records, legacy UI, Pixi, providers, or network clients.
 - React components accept data and callbacks. No store access, provider calls,

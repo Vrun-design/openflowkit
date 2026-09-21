@@ -1,5 +1,4 @@
-/* Owned by OpenCanvasTextEditorOverlay so it renders correctly wherever it is
-   mounted, not only inside the canary page that used to define this rule. */
+/* Owned by OpenCanvasTextEditorOverlay so it renders correctly wherever it is mounted. */
 .pixi-spike__text-editor {
   position: absolute;
   z-index: 5;

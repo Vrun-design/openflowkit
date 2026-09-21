@@ -13,9 +13,5 @@ Versioned, renderer-independent persisted contracts for OpenCanvas.
 - loaded values are validated before use and migration never mutates its input.
 - unknown fields are preserved opaquely through migrate/serialize; newer
   schemas open read-only via `reason: 'newer-schema'` and are never edited
-  (see `docs/v2/decision-records/ADR-003-migration-policy.md`).
-- the legacy projection stores a recovery snapshot for exact fallback; it is not
-  the React Flow rendering adapter planned for CS-004.
-
-CS-003 does not change active persistence. Adoption requires the default-off
-`openCanvasDocumentV1` rollout flag and a later adapter change set.
+  (see `docs/plan/README.md` §4 Architecture).
+- the legacy projection stores a recovery snapshot so V1 JSON files import losslessly.

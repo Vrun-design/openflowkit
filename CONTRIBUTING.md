@@ -94,7 +94,7 @@ Husky runs `lint-staged` on every commit. It lints changed `.ts` / `.tsx` files 
 
 - **TypeScript everywhere** — avoid `any`; if you must use it, add a comment explaining why.
 - **React 19 Compiler** rules: `useMemo` / `useCallback` dependencies must be stable store references, not inline-constructed objects.
-- **Component size**: aim for ≤ 250 lines per component. Larger components should be split using the boundaries in [the current technical design](docs/v2/technical-design.md).
+- **Component size**: aim for ≤ 250 lines per component. Larger components should be split along the layers in [the plan](docs/plan/README.md#4-architecture).
 - **No new runtime dependencies** without opening an issue and getting agreement first.
 
 ---

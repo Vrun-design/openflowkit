@@ -18,8 +18,8 @@ interface V2TestApiOptions {
 }
 
 // Read-only handle for the Playwright gate and deterministic evaluations
-// (create→…→reload→export). Mounted only with the v2Editor flag, alongside
-// the route itself; it exposes document state and geometry, never writes.
+// (create→…→reload→export). Mounted with the editor route; it exposes
+// document state and geometry, never writes.
 export function useV2TestApi(options: V2TestApiOptions) {
   const {
     hostRef, selectionRef, toolRef, selectedConnectorId, document, revision, saveStatus, proposal,

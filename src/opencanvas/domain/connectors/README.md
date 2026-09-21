@@ -8,7 +8,7 @@ React Flow.
 
 - endpoints resolve explicit anchors first, then port anchors, then the nearest
   transformed node boundary; free endpoints (`nodeId: null`) resolve to their
-  page-space point (see `docs/v2/decision-records/ADR-001-free-endpoints.md`)
+  page-space point (see `docs/plan/README.md` §3 Connectors)
 - direct routes ignore waypoints
 - polyline routes preserve authored waypoints
 - orthogonal routes preserve authored waypoints or create a deterministic elbow
