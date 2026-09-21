@@ -32,38 +32,18 @@ function statusText(visual: PixiContainerNodeVisual): string {
   return states.join(' · ');
 }
 
-function drawStructuralGlyph(
-  graphics: Graphics,
-  matrix: Matrix2d,
-  visual: PixiContainerNodeVisual
-): void {
-  const kind = visual.presentation.kind;
-  if (kind === 'group') {
-    drawPixiLocalRect(graphics, createBounds2d(12, 13, 17, 12), matrix, 3);
-    graphics.stroke({ color: visual.title, width: 1.25 });
-    drawPixiLocalRect(graphics, createBounds2d(14, 10, 8, 4), matrix, 2);
-    graphics.fill({ color: visual.badgeFill }).stroke({ color: visual.title, width: 1.25 });
-    return;
-  }
+function drawSwimlaneGlyph(graphics: Graphics, matrix: Matrix2d, visual: PixiContainerNodeVisual): void {
   drawPixiLocalRect(graphics, createBounds2d(12, 11, 17, 16), matrix, 3);
   graphics.stroke({ color: visual.title, width: 1.25 });
-  if (kind === 'swimlane') {
-    drawPixiLocalRect(graphics, createBounds2d(15, 16, 11, 1), matrix);
-    graphics.fill({ color: visual.title });
-    drawPixiLocalRect(graphics, createBounds2d(15, 21, 11, 1), matrix);
-    graphics.fill({ color: visual.title });
-  }
+  drawPixiLocalRect(graphics, createBounds2d(15, 16, 11, 1), matrix);
+  graphics.fill({ color: visual.title });
+  drawPixiLocalRect(graphics, createBounds2d(15, 21, 11, 1), matrix);
+  graphics.fill({ color: visual.title });
 }
 
-/** ⌘G groups have no label and no paint until styled: the selection frame is their only chrome. */
+/** ⌘G groups are invisible (Figma): the selection frame is their only chrome. */
 function isQuietGroup(node: SceneNode): boolean {
-  return node.kind === 'group' && node.content.label === ''
-    && node.appearance.fill === undefined && node.appearance.stroke === undefined;
-}
-
-/** Diagram frames always draw their boundary; the title band appears with a title. */
-function showsTitleBand(visual: PixiContainerNodeVisual): boolean {
-  return visual.presentation.kind !== 'frame' || visual.presentation.label.length > 0;
+  return node.kind === 'group';
 }
 
 export class PixiContainerRenderer {
@@ -71,6 +51,7 @@ export class PixiContainerRenderer {
   readonly labels = new Container();
   private readonly labelByNodeId = new Map<string, Container>();
   private debugRecords: readonly PixiNodeDebugRecord[] = [];
+  private editingNodeId: string | null = null;
 
   draw(
     page: ScenePage,
@@ -91,8 +72,9 @@ export class PixiContainerRenderer {
       const childCount = index.childIdsByParentId.get(node.id)?.length ?? 0;
       const style = resolveNodeStyle(node);
       this.drawContainer(node, matrix, visual, style);
-      if (!isQuietGroup(node)) {
-        const label = this.createLabel(node, visual, style, childCount);
+      if (!isQuietGroup(node) && visual.presentation.header) {
+        const label = this.createLabel(node, visual, style);
+        label.visible = node.id !== this.editingNodeId;
         applyPixiNodeMatrix(label, matrix);
         this.labels.addChild(label);
         this.labelByNodeId.set(node.id, label);
@@ -121,8 +103,16 @@ export class PixiContainerRenderer {
     this.labels.visible = visibleNodeIds !== null;
     if (!visibleNodeIds) return;
     for (const [nodeId, label] of this.labelByNodeId) {
-      label.visible = visibleNodeIds.has(nodeId);
+      label.visible = visibleNodeIds.has(nodeId) && nodeId !== this.editingNodeId;
     }
+  }
+
+  /** The DOM editor replaces this container's title while it is open. */
+  setEditingNode(nodeId: string | null): void {
+    const previous = this.editingNodeId;
+    this.editingNodeId = nodeId;
+    if (previous) { const label = this.labelByNodeId.get(previous); if (label) label.visible = true; }
+    if (nodeId) { const label = this.labelByNodeId.get(nodeId); if (label) label.visible = false; }
   }
 
   private drawContainer(node: SceneNode, matrix: Matrix2d, visual: PixiContainerNodeVisual, style: NodeStyle): void {
@@ -142,12 +132,9 @@ export class PixiContainerRenderer {
     } else if (style.strokeWidth > 0) {
       this.graphics.stroke({ color: stroke.color, width: style.strokeWidth, alpha: stroke.alpha * alpha });
     }
-    if (!showsTitleBand(visual)) return;
+    if (!visual.presentation.header) return;
     if (visual.presentation.kind === 'section') {
-      const titleWidth = Math.min(
-        node.size.width - 16,
-        Math.max(96, visual.presentation.label.length * 7 + 52)
-      );
+      const titleWidth = Math.min(node.size.width - 16, Math.max(72, visual.presentation.label.length * 7.5 + 20));
       drawPixiLocalRect(this.graphics, createBounds2d(8, 7, titleWidth, 27), matrix, 8);
       this.graphics.fill({ color: visual.badgeFill, alpha: 0.72 * alpha });
     } else {
@@ -156,18 +143,12 @@ export class PixiContainerRenderer {
       drawPixiLocalRect(this.graphics, createBounds2d(0, CONTAINER_TITLE_HEIGHT - 1, node.size.width, 1), matrix);
       this.graphics.fill({ color: stroke.color, alpha: 0.72 * alpha });
     }
-    if (visual.presentation.kind !== 'frame') drawStructuralGlyph(this.graphics, matrix, visual);
+    if (visual.presentation.kind === 'swimlane') drawSwimlaneGlyph(this.graphics, matrix, visual);
   }
 
-  private createLabel(
-    node: SceneNode,
-    visual: PixiContainerNodeVisual,
-    style: NodeStyle,
-    childCount: number
-  ): Container {
+  private createLabel(node: SceneNode, visual: PixiContainerNodeVisual, style: NodeStyle): Container {
     const content = new Container();
     content.alpha = style.opacity;
-    const frame = visual.presentation.kind === 'frame';
     const ink = pixiPaintColor(style.textColor, visual.title).color;
     const band = nodeLabelBounds(node);
     const title = createStyledPixiText(visual.presentation.label, style, ink, Math.max(1, band.width - style.textPadding * 2));
@@ -178,16 +159,6 @@ export class PixiContainerRenderer {
     title.position.set(x, band.y + band.height / 2);
     content.addChild(title);
     decoratePixiText(content, title, style, ink);
-    if (!frame) {
-      const count = createPixiText(`${childCount} ${childCount === 1 ? 'item' : 'items'}`, {
-        size: 10,
-        weight: '500',
-        fill: visual.badgeText,
-      });
-      count.anchor.set(1, 0);
-      count.position.set(node.size.width - 12, 14);
-      content.addChild(count);
-    }
     const detail = [visual.presentation.subLabel, statusText(visual)]
       .filter((value): value is string => Boolean(value))
       .join(' · ');

@@ -11,7 +11,7 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
   const onSpacePan = vi.fn();
   const onReorder = vi.fn();
   const onToggleLock = vi.fn();
-  const clipboard = { onGroup: vi.fn(), onUngroup: vi.fn(), onCut: vi.fn(), onCopy: vi.fn(), onPaste: vi.fn(), onCopyStyle: vi.fn(), onPasteStyle: vi.fn() };
+  const clipboard = { onGroup: vi.fn(), onUngroup: vi.fn(), onWrapInSection: vi.fn(), onCut: vi.fn(), onCopy: vi.fn(), onPaste: vi.fn(), onCopyStyle: vi.fn(), onPasteStyle: vi.fn() };
   const arrange = { onAlign: vi.fn(), onDistribute: vi.fn(), onFlip: vi.fn(), onZoomToSelection: vi.fn(), onTextStyle: vi.fn() };
   const { result } = renderHook(() => useV2Keyboard({
     onReorder, onToggleLock, ...clipboard, ...arrange,

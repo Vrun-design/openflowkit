@@ -12,6 +12,7 @@ import {
   moveTransform,
   resizeTransform,
   rotateTransform,
+  transformBefore,
 } from './transformSelection';
 
 describe('selection transforms', () => {
@@ -110,5 +111,28 @@ describe('selection transforms', () => {
     const history = commitDocumentCommand(createDocumentHistory(document), command);
     expect(history.past).toHaveLength(1);
     expect(undoDocumentCommand(history).present).toEqual(document);
+  });
+});
+
+describe('container resize', () => {
+  it('grows the box and keeps members in place', () => {
+    const section = createTestNode('s', {
+      kind: 'section', size: { width: 200, height: 200 },
+      transform: { translation: { x: 100, y: 100 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+    });
+    const child = createTestNode('c', {
+      parentId: 's', transform: { translation: { x: 40, y: 60 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+    });
+    const page = createTestDocument({ nodes: [section, child] }).pages[0];
+    const snapshot = createTransformSnapshot(page, ['s']);
+    expect(snapshot.members.map((node) => node.id)).toEqual(['c']);
+    // Drag the north-west corner 50px up-left: origin moves, child compensates.
+    const result = resizeTransform(snapshot, { handle: 'north-west', pointer: { x: 50, y: 50 }, snap: false });
+    const [resized, member] = result.nodes;
+    expect(resized.size).toEqual({ width: 250, height: 250 });
+    expect(resized.transform.scale).toEqual({ x: 1, y: 1 });
+    expect(resized.transform.translation).toEqual({ x: 50, y: 50 });
+    expect(member.transform.translation).toEqual({ x: 90, y: 110 });
+    expect(transformBefore(snapshot).map((node) => node.id)).toEqual(['s', 'c']);
   });
 });

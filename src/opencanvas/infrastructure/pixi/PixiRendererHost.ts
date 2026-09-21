@@ -739,6 +739,7 @@ export class PixiRendererHost {
   /** While a label is edited in the DOM the Pixi copy underneath is hidden. */
   setEditingNode(nodeId: string | null): void {
     this.nodeRenderer.setEditingNode(nodeId);
+    this.containerRenderer.setEditingNode(nodeId);
     this.requestRender();
   }
 

@@ -112,6 +112,7 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
                 </> : null}
             </MenuSubmenu>
             {many ? <MenuItem onSelect={actions.groupSelection} shortcut="⌘G" disabled={!edit}>Group</MenuItem> : null}
+            <MenuItem onSelect={actions.wrapInSection} shortcut="⌘⌥G" disabled={!edit}>Wrap in section</MenuItem>
             {actions.canUngroup() ? <MenuItem onSelect={actions.ungroupSelection} shortcut="⌘⇧G" disabled={!edit}>Ungroup</MenuItem> : null}
             <MenuSeparator />
             <MenuItem onSelect={props.onZoomToSelection} shortcut="⇧2">Zoom to selection</MenuItem>

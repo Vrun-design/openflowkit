@@ -12,6 +12,8 @@ export interface ContainerNodePresentation {
   readonly colorKey: string;
   readonly colorMode: 'subtle' | 'filled';
   readonly customColor?: string;
+  /** Title band/chip drawn; sections can hide it, frames show it only with a title. */
+  readonly header: boolean;
   readonly locked: boolean;
   readonly hidden: boolean;
   readonly collapsed: boolean;
@@ -47,9 +49,11 @@ export function resolveContainerNodePresentation(
   const kind = node.kind;
   const subLabel = optionalPresentationString(node.content.subLabel);
   const customColor = optionalPresentationString(node.content.customColor);
+  const label = presentationString(node.content.label, fallbackLabel(kind));
   return {
     kind,
-    label: presentationString(node.content.label, fallbackLabel(kind)),
+    label,
+    header: node.content.showHeader !== false && (kind !== 'frame' || Boolean(node.content.label)),
     ...(subLabel ? { subLabel } : {}),
     colorKey: presentationString(node.content.color, fallbackColorKey(node, kind)),
     colorMode: node.content.colorMode === 'filled' ? 'filled' : 'subtle',

@@ -24,6 +24,7 @@ import {
   createTransformCommand,
   createTransformSnapshot,
   moveTransform,
+  transformBefore,
 } from '../transforms/transformSelection';
 
 import {
@@ -107,7 +108,7 @@ export function buildMoveNodesCommand(
 ): DocumentCommand {
   const snapshot = createTransformSnapshot(page, nodeIds);
   const result = moveTransform(snapshot, delta, { snap: false });
-  return createTransformCommand(page.id, snapshot.nodes, result.nodes, 'Move selection');
+  return createTransformCommand(page.id, transformBefore(snapshot), result.nodes, 'Move selection');
 }
 
 function removeNodeCommands(

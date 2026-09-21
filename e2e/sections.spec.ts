@@ -1,0 +1,49 @@
+import { expect, test } from '@playwright/test';
+
+type NodeShape = { id: string; kind: string; parentId: string | null; size: { width: number; height: number }; transform: { translation: { x: number; y: number }; scale: { x: number } } };
+type Api = { getDocument(): { pages: Array<{ nodes: NodeShape[] }> } | null; getNodeRect(id: string): DOMRect | null };
+const nodes = (page: import('@playwright/test').Page) => page.evaluate(() =>
+  (window as unknown as { __V2__?: Api }).__V2__?.getDocument()?.pages[0]?.nodes ?? []);
+const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+test('wrap in section pads the selection, resizes without scaling members; ⌘G stays invisible', async ({ page }) => {
+  await page.goto('/');
+  const canvas = page.locator('[data-testid="v2-canvas"]');
+  await canvas.waitFor();
+  for (const x of [400, 700]) {
+    await canvas.focus(); await page.keyboard.press('r'); await page.mouse.click(x, 400); await page.keyboard.press('Escape');
+  }
+  await canvas.focus();
+  await page.keyboard.press(`${mod}+a`);
+  await page.keyboard.press(`${mod}+Alt+g`);
+  const section = (await nodes(page)).find((node) => node.kind === 'section');
+  expect(section).toBeTruthy();
+  expect((await nodes(page)).filter((node) => node.parentId === section!.id)).toHaveLength(2);
+
+  const screenRect = (id: string) => page.evaluate((nodeId) => (window as unknown as { __V2__: Api }).__V2__.getNodeRect(nodeId), id);
+  const memberIds = (await nodes(page)).filter((node) => node.parentId === section!.id).map((node) => node.id);
+  const memberRectsBefore = await Promise.all(memberIds.map(screenRect));
+  const rect = await screenRect(section!.id);
+  await page.mouse.click(rect!.x + 40, rect!.y + 20);
+  await page.mouse.move(rect!.x, rect!.y);
+  await page.mouse.down();
+  await page.mouse.move(rect!.x - 80, rect!.y - 80, { steps: 8 });
+  await page.mouse.up();
+  const after = await nodes(page);
+  const resized = after.find((node) => node.id === section!.id)!;
+  expect(resized.size.width).toBeGreaterThan(section!.size.width + 60);
+  expect(resized.transform.scale.x).toBe(1);
+  // Members keep their screen position and size: the section grew around them.
+  for (const [index, id] of memberIds.entries()) {
+    const now = await screenRect(id);
+    expect(now!.x).toBeCloseTo(memberRectsBefore[index]!.x, 0);
+    expect(now!.width).toBeCloseTo(memberRectsBefore[index]!.width, 0);
+    expect(after.find((node) => node.id === id)!.transform.scale.x).toBe(1);
+  }
+
+  await page.keyboard.press(`${mod}+Shift+g`);
+  await page.keyboard.press(`${mod}+g`);
+  expect((await nodes(page)).some((node) => node.kind === 'group')).toBe(true);
+  await page.keyboard.press('Enter');
+  await expect(page.locator('textarea.pixi-spike__text-editor')).toHaveCount(0);
+});

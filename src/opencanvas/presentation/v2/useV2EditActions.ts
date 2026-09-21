@@ -8,7 +8,7 @@ import {
 import {
   buildAlignCommand, buildDistributeCommand, buildFlipCommand, buildStepOrderCommand,
 } from '../../domain/commands/arrangeNodes';
-import { buildGroupCommand, buildUngroupCommand } from '../../domain/commands/groupNodes';
+import { buildUngroupCommand, buildWrapCommand, type WrapKind } from '../../domain/commands/groupNodes';
 import { buildPasteStyleCommand, copyConnectorStyle, copyNodeStyle, type StyleClipboard } from '../../domain/commands/styleClipboard';
 import type { AlignMode, DistributeAxis } from '../../domain/transforms/arrangement';
 import { resolveNodeStyle } from '../../domain/nodes/nodeStyle';
@@ -143,16 +143,18 @@ export function useV2EditActions(options: V2EditActionsOptions) {
   };
   const hasClipboard = () => clipboardRef.current !== null;
 
-  const groupSelection = () => {
+  const wrapSelection = (kind: WrapKind) => {
     const page = editablePage();
     if (!page) return;
-    const id = options.mintId('group');
-    const command = buildGroupCommand(page, selectionRef.current.nodeIds, id);
+    const id = options.mintId(kind);
+    const command = buildWrapCommand(page, selectionRef.current.nodeIds, id, kind);
     if (!command) return;
     options.commit(command);
     options.applySelection(replaceSelection([id]));
-    options.announce('Grouped.');
+    options.announce(kind === 'group' ? 'Grouped.' : 'Wrapped in a section.');
   };
+  const groupSelection = () => wrapSelection('group');
+  const wrapInSection = () => wrapSelection('section');
   const ungroupSelection = () => {
     const page = editablePage();
     if (!page) return;
@@ -165,7 +167,10 @@ export function useV2EditActions(options: V2EditActionsOptions) {
   };
   const canUngroup = () => {
     const page = pageRef.current;
-    return !!page && selectionRef.current.nodeIds.some((id) => page.nodes.find((node) => node.id === id)?.kind === 'group');
+    return !!page && selectionRef.current.nodeIds.some((id) => {
+      const kind = page.nodes.find((node) => node.id === id)?.kind;
+      return kind === 'group' || kind === 'section';
+    });
   };
 
   // ⌘B/I/U: toggle against the primary node's resolved style so mixed
@@ -211,6 +216,6 @@ export function useV2EditActions(options: V2EditActionsOptions) {
     deleteSelection, duplicateSelection, nudgeSelection, reorderSelection, toggleLock,
     alignSelection, distributeSelection, flipSelection,
     copySelection, cutSelection, pasteClipboard, hasClipboard, copyStyle, pasteStyle, toggleTextStyle,
-    groupSelection, ungroupSelection, canUngroup,
+    groupSelection, wrapInSection, ungroupSelection, canUngroup,
   };
 }

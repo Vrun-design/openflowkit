@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  createTransformCommand, createTransformSnapshot, resizeTransform, rotateTransform,
+  createTransformCommand, createTransformSnapshot, resizeTransform, rotateTransform, transformBefore,
 } from '@/opencanvas/domain/transforms/transformSelection';
 import { areStructurallyEqual } from '@/opencanvas/domain/commands/equality';
 import type { ScenePage } from '@/opencanvas/domain/document/types';
@@ -21,7 +21,8 @@ export const transformNode = defineAction({
   run: (input, { page }) => {
     requireNode(page, input.id);
     const snapshot = createTransformSnapshot(page, [input.id]);
-    let nodes = snapshot.nodes;
+    const before = transformBefore(snapshot);
+    let nodes = before;
     let label = 'Resize selection';
     if (input.width !== undefined || input.height !== undefined) {
       const { bounds } = snapshot;
@@ -38,9 +39,9 @@ export const transformNode = defineAction({
       nodes = rotateTransform(rotated, current, start, end, false).nodes;
       label = input.width === undefined && input.height === undefined ? 'Rotate selection' : 'Transform selection';
     }
-    const changed = nodes.some((node, index) => !areStructurallyEqual(node, snapshot.nodes[index]));
+    const changed = nodes.some((node, index) => !areStructurallyEqual(node, before[index]));
     return {
-      command: changed ? createTransformCommand(page.id, snapshot.nodes, nodes, label, `transform-node:${input.id}`) : null,
+      command: changed ? createTransformCommand(page.id, before, nodes, label, `transform-node:${input.id}`) : null,
       output: { id: input.id },
     };
   },

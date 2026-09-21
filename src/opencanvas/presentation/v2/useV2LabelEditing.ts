@@ -56,6 +56,8 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
   const openEditor = useCallback(
     (nodeId: string, editorOptions: OpenEditorOptions = {}) => {
       const node = optionsRef.current.page?.nodes.find((candidate) => candidate.id === nodeId);
+      // Groups are invisible containers: nothing to label.
+      if (node?.kind === 'group') return;
       const bounds = node && hostRef.current?.getNodeLabelScreenBounds(nodeId);
       if (!node || !bounds) {
         pendingRef.current = { nodeId, editorOptions };

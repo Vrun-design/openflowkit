@@ -5,6 +5,7 @@ import { buildNodeWorldMatrices, nodeWorldBounds, nodeWorldCenter } from '../sce
 import type { ScenePage } from '../document/types';
 import type { Bounds2d, Point2d } from '../geometry/types';
 import { snapBoundsToObjects } from './objectSnap';
+import { isContainerNodeKind } from '../nodes/containerNodePresentation';
 import type {
   MoveTransformOptions,
   ResizeTransformInput,
@@ -49,7 +50,14 @@ export function createTransformSnapshot(
   const selected = new Set(nodeIds);
   const nodes = page.nodes.filter((node) => selected.has(node.id));
   if (nodes.length !== selected.size) throw new Error('A selected node was not found.');
-  return { nodes, bounds: selectionBounds(page, nodes) };
+  const containers = new Set(nodes.filter((node) => isContainerNodeKind(node.kind)).map((node) => node.id));
+  const members = page.nodes.filter((node) => node.parentId !== null && containers.has(node.parentId) && !selected.has(node.id));
+  return { nodes, members, bounds: selectionBounds(page, nodes) };
+}
+
+/** The records a transform command replaces, in `TransformResult.nodes` order. */
+export function transformBefore(snapshot: TransformSnapshot): readonly SceneNode[] {
+  return [...snapshot.nodes, ...snapshot.members];
 }
 
 export function moveTransform(
@@ -83,7 +91,7 @@ export function moveTransform(
           y: node.transform.translation.y + applied.y,
         },
       },
-    })),
+    })).concat(snapshot.members),
     bounds: createBounds2d(x, y, snapshot.bounds.width, snapshot.bounds.height),
     snappedX: x !== rawX,
     snappedY: y !== rawY,
@@ -163,24 +171,52 @@ export function resizeTransform(
   const scaleX = nextBounds.width / before.width;
   const scaleY = nextBounds.height / before.height;
 
-  return {
-    nodes: snapshot.nodes.map((node) => {
-      const translation = node.transform.translation;
+  // Containers grow their box (Figma section): members keep their world
+  // position, so they shift by the origin change instead of scaling.
+  // ponytail: assumes unrotated, unscaled containers — true for every
+  // container the editor or the DSL creates today.
+  const originShift = new Map<string, Point2d>();
+  const nodes = snapshot.nodes.map((node) => {
+    const translation = node.transform.translation;
+    const moved = {
+      x: scalesX ? anchorX + (translation.x - anchorX) * scaleX : translation.x,
+      y: scalesY ? anchorY + (translation.y - anchorY) * scaleY : translation.y,
+    };
+    if (isContainerNodeKind(node.kind)) {
+      originShift.set(node.id, { x: translation.x - moved.x, y: translation.y - moved.y });
       return {
         ...node,
-        transform: {
-          ...node.transform,
-          translation: {
-            x: scalesX ? anchorX + (translation.x - anchorX) * scaleX : translation.x,
-            y: scalesY ? anchorY + (translation.y - anchorY) * scaleY : translation.y,
-          },
-          scale: {
-            x: node.transform.scale.x * (scalesX ? scaleX : 1),
-            y: node.transform.scale.y * (scalesY ? scaleY : 1),
-          },
+        transform: { ...node.transform, translation: moved },
+        size: {
+          width: node.size.width * (scalesX ? scaleX : 1),
+          height: node.size.height * (scalesY ? scaleY : 1),
         },
       };
-    }),
+    }
+    return {
+      ...node,
+      transform: {
+        ...node.transform,
+        translation: moved,
+        scale: {
+          x: node.transform.scale.x * (scalesX ? scaleX : 1),
+          y: node.transform.scale.y * (scalesY ? scaleY : 1),
+        },
+      },
+    };
+  });
+  const members = snapshot.members.map((member) => {
+    const shift = originShift.get(member.parentId ?? '');
+    if (!shift) return member;
+    return {
+      ...member,
+      transform: { ...member.transform, translation: {
+        x: member.transform.translation.x + shift.x, y: member.transform.translation.y + shift.y,
+      } },
+    };
+  });
+  return {
+    nodes: [...nodes, ...members],
     bounds: nextBounds,
     snappedX: snap && (candidateX !== rawX || candidateRight !== rawRight),
     snappedY: snap && (candidateY !== rawY || candidateBottom !== rawBottom),
@@ -228,7 +264,7 @@ export function rotateTransform(
     nodes: page.nodes.map((node) => nodes.find((next) => next.id === node.id) ?? node),
   };
   return {
-    nodes,
+    nodes: [...nodes, ...snapshot.members],
     bounds: selectionBounds(previewPage, nodes),
     snappedX: snap && delta !== rawDelta,
     snappedY: false,
@@ -240,7 +276,7 @@ export function createTransformCommand(
   before: readonly SceneNode[],
   after: readonly SceneNode[],
   label: string,
-  id = `transform-${Date.now()}`
+  id = `transform-${before.map((node) => node.id).join(',')}`
 ): DocumentCommand {
   if (before.length !== after.length || before.length === 0) {
     throw new Error('Transform commands require matching non-empty node sets.');

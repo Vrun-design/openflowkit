@@ -24,6 +24,7 @@ describe('container node presentation', () => {
     ).toEqual({
       kind: 'group',
       label: 'Platform',
+      header: true,
       subLabel: '3 services',
       colorKey: 'custom',
       colorMode: 'subtle',

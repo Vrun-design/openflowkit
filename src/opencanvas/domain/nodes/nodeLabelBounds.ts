@@ -16,8 +16,8 @@ export function nodeLabelBounds(node: SceneNode): Bounds2d {
   const { width, height } = node.size;
   const container = resolveContainerNodePresentation(node);
   if (container) {
-    const left = container.kind === 'frame' ? 16 : 37;
-    const right = container.kind === 'frame' ? 16 : 104;
+    const left = container.kind === 'swimlane' ? 37 : 16;
+    const right = 16;
     return createBounds2d(left, 0, Math.max(1, width - left - right), CONTAINER_TITLE_HEIGHT);
   }
   const architecture = resolveArchitectureNodePresentation(node);

@@ -15,9 +15,12 @@ export type TransformHandle =
 export interface TransformSnapshot {
   readonly bounds: Bounds2d;
   readonly nodes: readonly SceneNode[];
+  /** Direct children of selected containers: they ride along in the parent's frame. */
+  readonly members: readonly SceneNode[];
 }
 
 export interface TransformResult {
+  /** Transformed `snapshot.nodes` followed by `snapshot.members`, same order. */
   readonly nodes: readonly SceneNode[];
   readonly bounds: Bounds2d;
   readonly snappedX: boolean;

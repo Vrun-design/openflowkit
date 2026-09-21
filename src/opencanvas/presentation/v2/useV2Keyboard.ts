@@ -15,6 +15,7 @@ interface V2KeyboardOptions {
   readonly onToggleLock: () => void;
   readonly onGroup: () => void;
   readonly onUngroup: () => void;
+  readonly onWrapInSection: () => void;
   readonly onCut: () => void;
   readonly onCopy: () => void;
   readonly onPaste: () => void;
@@ -107,8 +108,8 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
     } else if (command && event.altKey && (key === 'v' || event.code === 'KeyV')) {
       opts.onPasteStyle();
       event.preventDefault();
-    } else if (command && key === 'g') {
-      if (event.shiftKey) opts.onUngroup(); else opts.onGroup();
+    } else if (command && (key === 'g' || event.code === 'KeyG')) {
+      if (event.shiftKey) opts.onUngroup(); else if (event.altKey) opts.onWrapInSection(); else opts.onGroup();
       event.preventDefault();
     } else if (command && key === 'x') {
       opts.onCut();

@@ -35,50 +35,66 @@ export function descendantIds(page: ScenePage, nodeIds: readonly string[]): stri
   return result;
 }
 
+export type WrapKind = 'group' | 'section';
+
+// Sections keep room for their title chip; groups hug their members.
+const WRAP_PADDING: Record<WrapKind, { top: number; side: number; bottom: number }> = {
+  group: { top: GROUP_PADDING, side: GROUP_PADDING, bottom: GROUP_PADDING },
+  section: { top: 56, side: 24, bottom: 24 },
+};
+
 /**
- * ⌘G: wrap the selected top-level nodes in a quiet `group` container (no
- * label, no paint) sized to their union + padding. Children keep their world
- * position by moving into the group's frame. One batch, one undo.
- * ponytail: top-level nodes only; grouping inside a section/group returns
- * null. Convert through the parent's inverse matrix when nesting is needed.
+ * ⌘G / ⌘⌥G: wrap the selected top-level nodes in a container sized to their
+ * union + padding. A group is invisible (its selection frame is its only
+ * chrome); a section draws a titled boundary. Children keep their world
+ * position by moving into the container's frame. One batch, one undo.
+ * ponytail: top-level nodes only; wrapping inside a container returns null.
+ * Convert through the parent's inverse matrix when nesting is needed.
  */
-export function buildGroupCommand(page: ScenePage, nodeIds: readonly string[], groupId: string): DocumentCommand | null {
+export function buildWrapCommand(page: ScenePage, nodeIds: readonly string[], id: string, kind: WrapKind): DocumentCommand | null {
   const roots = selectedRootIds(page, nodeIds);
   const nodes = page.nodes.filter((node) => roots.includes(node.id));
-  if (nodes.length < 2 || nodes.some((node) => node.parentId !== null)) return null;
-  if (page.nodes.some((node) => node.id === groupId)) throw new RangeError(`Node "${groupId}" already exists.`);
+  if (nodes.length < (kind === 'group' ? 2 : 1) || nodes.some((node) => node.parentId !== null)) return null;
+  if (page.nodes.some((node) => node.id === id)) throw new RangeError(`Node "${id}" already exists.`);
   const matrices = buildNodeWorldMatrices(page);
   const boxes = nodes.map((node) => nodeWorldBounds(node, matrices.get(node.id)!));
   const union = boxes.slice(1).reduce(unionBounds, boxes[0]);
-  const origin = { x: union.x - GROUP_PADDING, y: union.y - GROUP_PADDING };
-  const group: SceneNode = {
-    id: groupId, kind: 'group', parentId: null,
+  const pad = WRAP_PADDING[kind];
+  const origin = { x: union.x - pad.side, y: union.y - pad.top };
+  const label = kind === 'group' ? 'Group' : 'Wrap in section';
+  const container: SceneNode = {
+    id, kind, parentId: null,
     layerId: nodes[0].layerId,
     zIndex: Math.min(...nodes.map((node) => node.zIndex)),
     transform: { translation: origin, rotationRadians: 0, scale: { x: 1, y: 1 } },
-    size: { width: union.width + GROUP_PADDING * 2, height: union.height + GROUP_PADDING * 2 },
-    content: { label: '' },
-    appearance: { fill: 'transparent', stroke: 'transparent' },
+    size: { width: union.width + pad.side * 2, height: union.height + pad.top + pad.bottom },
+    content: { label: kind === 'group' ? '' : 'Section' },
+    appearance: {},
     ports: [], metadata: {}, extensions: {},
   };
   const commands: DocumentCommand[] = [
-    { kind: 'insert-node', id: `group:${groupId}`, label: 'Group', pageId: page.id, index: page.nodes.length, node: group },
+    { kind: 'insert-node', id: `${kind}:${id}`, label, pageId: page.id, index: page.nodes.length, node: container },
     ...nodes.map((node) => ({
-      kind: 'set-node' as const, id: `group-child:${node.id}`, label: 'Group', pageId: page.id, before: node,
+      kind: 'set-node' as const, id: `${kind}-child:${node.id}`, label, pageId: page.id, before: node,
       after: {
-        ...node, parentId: groupId,
+        ...node, parentId: id,
         transform: { ...node.transform, translation: {
           x: node.transform.translation.x - origin.x, y: node.transform.translation.y - origin.y,
         } },
       },
     })),
   ];
-  return { kind: 'batch', id: `group:${groupId}`, label: 'Group', commands };
+  return { kind: 'batch', id: `${kind}:${id}`, label, commands };
 }
 
-/** ⌘⇧G: dissolve every selected quiet group; children return to the page. */
+export function buildGroupCommand(page: ScenePage, nodeIds: readonly string[], groupId: string): DocumentCommand | null {
+  return buildWrapCommand(page, nodeIds, groupId, 'group');
+}
+
+/** ⌘⇧G: dissolve every selected top-level group or section; children return to the page. */
 export function buildUngroupCommand(page: ScenePage, nodeIds: readonly string[]): BatchDocumentCommand | null {
-  const groups = page.nodes.filter((node) => nodeIds.includes(node.id) && node.kind === 'group' && node.parentId === null);
+  const groups = page.nodes.filter((node) => nodeIds.includes(node.id)
+    && (node.kind === 'group' || node.kind === 'section') && node.parentId === null);
   if (groups.length === 0) return null;
   const commands: DocumentCommand[] = [];
   for (const group of groups) {
@@ -100,4 +116,15 @@ export function buildUngroupCommand(page: ScenePage, nodeIds: readonly string[])
     });
   }
   return { kind: 'batch', id: 'ungroup', label: 'Ungroup', commands };
+}
+
+/** Section setting: draw the title chip or not. Groups have no header to toggle. */
+export function buildSetHeaderCommand(page: ScenePage, nodeIds: readonly string[], show: boolean): DocumentCommand | null {
+  const commands: DocumentCommand[] = page.nodes
+    .filter((node) => nodeIds.includes(node.id) && node.kind !== 'group' && (node.content.showHeader !== false) !== show)
+    .map((before) => ({
+      kind: 'set-node' as const, id: `header:${before.id}`, label: show ? 'Show header' : 'Hide header', pageId: page.id, before,
+      after: { ...before, content: { ...before.content, showHeader: show } },
+    }));
+  return commands.length ? { kind: 'batch', id: 'set-header', label: commands[0].label, commands } : null;
 }

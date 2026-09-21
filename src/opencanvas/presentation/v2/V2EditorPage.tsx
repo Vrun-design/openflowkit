@@ -348,6 +348,7 @@ export function V2EditorPage(): React.JSX.Element {
     onDelete: editActions.deleteSelection, onDuplicate: editActions.duplicateSelection,
     onReorder: editActions.reorderSelection, onToggleLock: editActions.toggleLock,
     onGroup: editActions.groupSelection, onUngroup: editActions.ungroupSelection,
+    onWrapInSection: editActions.wrapInSection,
     onCut: editActions.cutSelection, onCopy: editActions.copySelection,
     onPaste: () => { void editActions.pasteClipboard(); },
     onCopyStyle: editActions.copyStyle, onPasteStyle: editActions.pasteStyle,

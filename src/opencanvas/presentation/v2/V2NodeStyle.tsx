@@ -10,6 +10,7 @@ import type { JsonObject } from '../../domain/document/json';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { buildStyleNodesCommand } from '../../domain/commands/styleNodes';
 import { buildSetIconCommand } from '../../domain/commands/iconCommands';
+import { buildSetHeaderCommand } from '../../domain/commands/groupNodes';
 import { resolveArchitectureNodePresentation } from '../../domain/nodes/architectureNodePresentation';
 import { V2IconPicker } from './V2IconPicker';
 import { resolveNodeStyle, STYLE_LIMITS, type NodeStyle } from '../../domain/nodes/nodeStyle';
@@ -75,7 +76,8 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
   });
   const common = commonNodeStyle(nodes);
   const [mode, setMode] = useState<PaletteMode>(() => paletteKeyForFill(common.fill)?.mode ?? 'pastel');
-  if (!nodes.length) return null;
+  // ⌘G groups are invisible: nothing to paint.
+  if (!nodes.length || nodes.every((node) => node.kind === 'group')) return null;
   const view = (key: keyof NodeStyle) => (draft && key in draft ? draft[key] : common[key]);
   const isText = nodes.every((node) => node.kind === 'text');
   // Containers carry a title band: vertical alignment and shadow do not apply.
@@ -175,6 +177,13 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
 
       <StyleButton label="Text" open={open === 'text'} onToggle={() => toggle('text')} onClose={close} panelClassName="ofk-style-panel--wide"
         preview={<span className="ofk-style-glyph" style={{ textDecorationColor: textColor ?? undefined }}>A</span>}>
+        {isContainer ? (
+          <PanelRow label="Header">
+            <Segmented<'shown' | 'hidden'> label="Header" value={nodes.every((node) => node.content.showHeader !== false) ? 'shown' : 'hidden'}
+              onChange={(value) => { const command = buildSetHeaderCommand(page, nodeIds, value === 'shown'); if (command) commit(command); }}
+              options={[{ value: 'shown', label: 'Shown' }, { value: 'hidden', label: 'Hidden' }]} />
+          </PanelRow>
+        ) : null}
         <PanelRow label="Color">
           <SwatchGrid label="Text colour" options={[{ id: 'auto', label: 'Auto', color: 'currentColor' },
             { id: '#ffffff', label: 'White', color: '#ffffff', border: '#cbd5e1' },

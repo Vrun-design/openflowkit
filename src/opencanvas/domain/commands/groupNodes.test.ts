@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import { applyDocumentCommand } from './execute';
 import { createEmptyV2Document } from '../../presentation/v2/v2Document';
-import { buildGroupCommand, buildUngroupCommand, descendantIds } from './groupNodes';
+import { buildGroupCommand, buildUngroupCommand, buildWrapCommand, descendantIds } from './groupNodes';
 import { buildDeleteSelectionCommand, buildDuplicateSelectionCommand } from './sceneEdits';
 import { buildNodeWorldMatrices, nodeWorldBounds } from '../scene/worldGeometry';
 import type { ScenePage } from '../document/types';
@@ -47,5 +47,20 @@ describe('group / ungroup', () => {
     expect(buildGroupCommand(page(), ['a'], 'g')).toBeNull();
     expect(() => buildGroupCommand(page(), ['a', 'b'], 'a')).toThrow(RangeError);
     expect(buildUngroupCommand(page(), ['a'])).toBeNull();
+  });
+});
+
+describe('wrap in section', () => {
+  it('pads for the title chip, names it, and ungroup dissolves it', () => {
+    const page = createTestDocument({ nodes: [
+      createTestNode('a', { transform: { translation: { x: 100, y: 100 }, rotationRadians: 0, scale: { x: 1, y: 1 } } }),
+    ] }).pages[0];
+    const wrap = buildWrapCommand(page, ['a'], 's1', 'section');
+    expect(wrap?.kind).toBe('batch');
+    const section = wrap && wrap.kind === 'batch' && wrap.commands[0].kind === 'insert-node' ? wrap.commands[0].node : null;
+    expect(section).toMatchObject({ kind: 'section', content: { label: 'Section' }, transform: { translation: { x: 76, y: 44 } } });
+    expect(section?.size).toEqual({ width: 148, height: 130 });
+    const wrapped = { ...page, nodes: [...page.nodes.map((node) => node.id === 'a' ? { ...node, parentId: 's1' } : node), section!] };
+    expect(buildUngroupCommand(wrapped, ['s1'])?.commands.map((command) => command.kind)).toEqual(['set-node', 'remove-node']);
   });
 });

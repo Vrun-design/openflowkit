@@ -10,7 +10,7 @@ describe('nodeLabelBounds', () => {
 
   it('is the title band for containers', () => {
     const group = createTestNode('g', { kind: 'group', size: { width: 300, height: 200 } });
-    expect(nodeLabelBounds(group)).toEqual({ x: 37, y: 0, width: 159, height: 40 });
+    expect(nodeLabelBounds(group)).toEqual({ x: 16, y: 0, width: 268, height: 40 });
     const frame = createTestNode('f', { kind: 'frame', size: { width: 300, height: 200 } });
     expect(nodeLabelBounds(frame)).toEqual({ x: 16, y: 0, width: 268, height: 40 });
   });

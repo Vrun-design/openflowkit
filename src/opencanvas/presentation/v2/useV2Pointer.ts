@@ -21,7 +21,7 @@ import {
   replaceSelection,
   type CanvasSelection,
 } from '../../application/selection/selection';
-import { createTransformCommand } from '../../domain/transforms/transformSelection';
+import { createTransformCommand, transformBefore } from '../../domain/transforms/transformSelection';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 // Adoption allowlist (move in V2-05/V2-06): store-free pointer math shared
 // with the spike page. v2 owns the state machine; these own the geometry.
@@ -448,14 +448,13 @@ export function useV2Pointer(options: V2PointerOptions) {
         host.setAlignmentGuides(null);
         opts.onTransformPreview?.(null);
         if (final.result) {
-          const changed = final.result.nodes.some(
-            (node, index) => !areStructurallyEqual(node, operation.snapshot.nodes[index])
-          );
+          const before = transformBefore(operation.snapshot);
+          const changed = final.result.nodes.some((node, index) => !areStructurallyEqual(node, before[index]));
           if (changed) {
             opts.commit(
               createTransformCommand(
                 operation.page.id,
-                operation.snapshot.nodes,
+                before,
                 final.result.nodes,
                 transformLabel(operation.transformKind)
               )
