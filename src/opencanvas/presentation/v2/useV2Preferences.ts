@@ -1,15 +1,17 @@
 import { useState } from 'react';
 
 export type V2ThemePreference = 'system' | 'light' | 'dark';
+export type V2Density = 'comfortable' | 'compact';
 export interface V2Preferences {
   theme: V2ThemePreference;
   showGrid: boolean;
   snapToGrid: boolean;
   canvasColor: string | null;
+  density: V2Density;
 }
 const KEY = 'openflowkit-v2-preferences';
 const DEFAULTS: V2Preferences = {
-  theme: 'system', showGrid: true, snapToGrid: false, canvasColor: null,
+  theme: 'system', showGrid: true, snapToGrid: false, canvasColor: null, density: 'comfortable',
 };
 
 function readPreferences(): V2Preferences {
@@ -20,7 +22,8 @@ function readPreferences(): V2Preferences {
       snapToGrid: value?.snapToGrid === true,
       canvasColor: typeof value?.canvasColor === 'string' && /^#[0-9a-f]{6}$/i.test(value.canvasColor)
         ? value.canvasColor
-        : null };
+        : null,
+      density: value?.density === 'compact' ? 'compact' : 'comfortable' };
   } catch { return DEFAULTS; }
 }
 

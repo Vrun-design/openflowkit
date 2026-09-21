@@ -63,7 +63,6 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(props.document.name);
   const [exportOpen, setExportOpen] = useState(false);
-  const exportRef = useRef<HTMLButtonElement>(null);
   const save = saveLabel(props.saveStatus);
   const page = props.document.pages[0];
   const canExportSvg = page && (page.nodes.length > 0 || page.connectors.length > 0);
@@ -138,10 +137,6 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               Reload
             </Button>
           ) : null}
-          <Tooltip content="Export">
-            <IconButton ref={exportRef} variant="quiet" label="Export" icon={<Icon icon={IconDownload} />}
-              aria-haspopup="menu" onClick={() => setExportOpen(true)} />
-          </Tooltip>
         </Toolbar>
       </FloatingRegion>
 
@@ -155,10 +150,10 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
         onPreferencesChange={props.onPreferencesChange} />
       <Menu
         open={exportOpen}
-        anchorRef={exportRef}
+        anchorRef={settingsRef}
         onClose={() => setExportOpen(false)}
         label="Export"
-        placement="bottom-end"
+        placement="bottom-start"
       >
         <MenuItem
           onSelect={() => {

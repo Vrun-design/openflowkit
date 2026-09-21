@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import { Button, Popover, PopoverHeader, Segmented, Switch } from '../design-system';
-import type { V2Preferences, V2ThemePreference } from './useV2Preferences';
+import type { V2Density, V2Preferences, V2ThemePreference } from './useV2Preferences';
 
 export interface V2SettingsProps {
   preferences: V2Preferences;
@@ -18,6 +18,9 @@ export function V2Settings({ open, anchorRef, onClose, preferences, onPreference
         <Segmented<V2ThemePreference> label="Appearance" value={preferences.theme}
           onChange={(theme) => onPreferencesChange({ theme })}
           options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }, { value: 'system', label: 'System' }]} />
+        <Segmented<V2Density> label="Density" value={preferences.density}
+          onChange={(density) => onPreferencesChange({ density })}
+          options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]} />
         <Switch label="Dot grid" checked={preferences.showGrid} onChange={(event) => onPreferencesChange({ showGrid: event.target.checked })} />
         <Switch label="Snap to grid" checked={preferences.snapToGrid} onChange={(event) => onPreferencesChange({ snapToGrid: event.target.checked })} />
         <p className="ofk-caption">Hold Alt while dragging to bypass snapping.</p>

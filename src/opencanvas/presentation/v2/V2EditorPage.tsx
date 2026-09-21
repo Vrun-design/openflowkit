@@ -244,7 +244,7 @@ export function V2EditorPage(): React.JSX.Element {
   });
 
   return (
-    <SystemRoot appearance={appearance}>
+    <SystemRoot appearance={appearance} density={preferences.density}>
       <div className="ofk-v2" data-testid="v2-editor" data-tool={spacePan ? 'hand' : tool}
         style={{ backgroundColor: canvasColor }}
         data-workspace-open={workspaceMode !== null || shortcutsOpen}
