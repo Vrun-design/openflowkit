@@ -48,7 +48,7 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
   // race cancel/commit with a stale re-open.
   useEffect(() => {
     setEditing((current) => {
-      const bounds = current && hostRef.current?.getNodeScreenBounds(current.nodeId);
+      const bounds = current && hostRef.current?.getNodeLabelScreenBounds(current.nodeId);
       return bounds && !sameRect(bounds, current.bounds) ? { ...current, bounds } : current;
     });
   }, [camera, hostRef]);
@@ -56,7 +56,7 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
   const openEditor = useCallback(
     (nodeId: string, editorOptions: OpenEditorOptions = {}) => {
       const node = optionsRef.current.page?.nodes.find((candidate) => candidate.id === nodeId);
-      const bounds = node && hostRef.current?.getNodeScreenBounds(nodeId);
+      const bounds = node && hostRef.current?.getNodeLabelScreenBounds(nodeId);
       if (!node || !bounds) {
         pendingRef.current = { nodeId, editorOptions };
         return;

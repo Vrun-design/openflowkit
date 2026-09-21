@@ -1,12 +1,16 @@
+import { useRef } from 'react';
 import {
   IconCircle,
   IconHandStop,
+  IconPhoto,
   IconPointer,
   IconSquare,
   IconTypography,
   IconArrowUpRight,
 } from '@tabler/icons-react';
-import { FloatingRegion, Icon, IconButton, Toolbar, Tooltip } from '../design-system';
+import type { IconChoice } from '../../domain/nodes/iconNode';
+import { FloatingRegion, Icon, IconButton, Popover, Toolbar, Tooltip } from '../design-system';
+import { V2IconPicker } from './V2IconPicker';
 
 export type V2Tool = 'select' | 'hand' | 'rectangle' | 'ellipse' | 'connector' | 'text';
 
@@ -22,7 +26,12 @@ const TOOLS: readonly { tool: V2Tool; label: string; shortcut: string; icon: typ
 export function V2CreationToolbar(props: {
   readonly tool: V2Tool;
   readonly onToolChange: (tool: V2Tool) => void;
+  /** Icon library pick: the page inserts the icon node and opens its label. */
+  readonly onInsertIcon: (icon: IconChoice) => void;
+  readonly iconsOpen: boolean;
+  readonly onIconsOpenChange: (open: boolean) => void;
 }): React.JSX.Element {
+  const iconsRef = useRef<HTMLButtonElement>(null);
   return (
     <FloatingRegion slot="top-start" className="ofk-v2-tools">
       <Toolbar label="Create" orientation="vertical">
@@ -37,8 +46,18 @@ export function V2CreationToolbar(props: {
             />
           </Tooltip>
         ))}
-
+        <Tooltip content="Icons" shortcut="I">
+          <IconButton ref={iconsRef} variant="quiet" label="Icons" icon={<Icon icon={IconPhoto} />}
+            selected={props.iconsOpen} aria-haspopup="dialog" aria-expanded={props.iconsOpen}
+            onClick={() => props.onIconsOpenChange(!props.iconsOpen)} />
+        </Tooltip>
       </Toolbar>
+      <Popover role="dialog" aria-label="Icon library" open={props.iconsOpen} anchorRef={iconsRef}
+        onClose={() => props.onIconsOpenChange(false)} placement="right-start" gap={12}
+        className="ofk-style-panel ofk-style-panel--icons" onPointerDown={(event) => event.stopPropagation()}>
+        <V2IconPicker onClose={() => props.onIconsOpenChange(false)}
+          onPick={(icon) => { props.onInsertIcon(icon); props.onIconsOpenChange(false); }} />
+      </Popover>
     </FloatingRegion>
   );
 }

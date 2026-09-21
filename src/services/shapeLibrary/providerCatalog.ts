@@ -1,4 +1,5 @@
 import type { DomainLibraryCategory, DomainLibraryItem } from '@/services/domainLibrary';
+import { loadTablerIconUrl, TABLER_ICON_NAMES, TABLER_PACK_ID, TABLER_PROVIDER } from './tablerIcons';
 
 export interface ProviderShapePreview {
   packId: string;
@@ -30,6 +31,7 @@ export const KNOWN_PROVIDER_PACK_IDS: Record<string, string> = {
   gcp: 'gcp-official-icons-v1',
   cncf: 'cncf-artwork-icons-v1',
   developer: 'developer-icons-v1',
+  [TABLER_PROVIDER]: TABLER_PACK_ID,
 };
 
 function normalizeProviderPathSegment(value: string): string {
@@ -103,9 +105,21 @@ function parseSvgSource(
   };
 }
 
-export const SVG_SOURCES: SvgSource[] = Object.entries(svgModules)
-  .map(([modulePath, previewLoader]) => parseSvgSource(modulePath, previewLoader))
-  .filter((value): value is SvgSource => value !== null);
+const tablerSources: SvgSource[] = TABLER_ICON_NAMES.map((name) => ({
+  provider: TABLER_PROVIDER,
+  packId: TABLER_PACK_ID,
+  shapeId: name,
+  label: inferLabelFromId(name),
+  category: 'Standard',
+  previewLoader: async () => (await loadTablerIconUrl(name)) ?? '',
+}));
+
+// Standard icons first, so an unfiltered picker opens on the general set.
+export const SVG_SOURCES: SvgSource[] = tablerSources.concat(
+  Object.entries(svgModules)
+    .map(([modulePath, previewLoader]) => parseSvgSource(modulePath, previewLoader))
+    .filter((value): value is SvgSource => value !== null)
+);
 
 function createProviderItem(provider: DomainLibraryCategory, source: SvgSource): DomainLibraryItem {
   return {

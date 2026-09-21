@@ -19,7 +19,7 @@ describe('Pixi canonical layer visibility', () => {
       layers,
     }).pages[0];
     const nodes = new PixiNodeRenderer();
-    nodes.draw(page, createSceneIndex(page), false, true, true, true, true, true, true, true, true);
+    nodes.draw(page, createSceneIndex(page));
     expect(nodes.getDebugSnapshot().map(({ id }) => id)).toEqual(['visible']);
     const connectors = new PixiConnectorRenderer();
     connectors.draw(page, true);

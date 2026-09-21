@@ -15,6 +15,7 @@ import { V2CanvasHost } from './V2CanvasHost';
 import { V2Chrome } from './V2Chrome';
 import { INITIAL_CODE, V2CanvasWelcome, V2DraftPanel, V2Shortcuts, V2WorkspaceRail, type V2WorkspaceMode } from './V2Workspace';
 import type { V2Tool } from './V2CreationToolbar';
+import { useV2IconLibrary } from './useV2IconLibrary';
 import { V2LoadCenter } from './V2LoadCenter';
 import { V2TreePanel } from './V2TreePanel';
 import { V2AgentPanel } from './V2AgentPanel';
@@ -335,9 +336,14 @@ export function V2EditorPage(): React.JSX.Element {
     announce: setAnnouncement,
   });
 
+  const iconLibrary = useV2IconLibrary({
+    hostRef, pageRef, commit: session.commit, mintId: mintV2Id, openEditor, readOnly: load.readOnly,
+  });
+
   const handleKeyDown = useV2Keyboard({
     toolRef, editingRef,
     onToolChange: setTool,
+    onToggleIcons: iconLibrary.toggle,
     onUndo: session.undo, onRedo: session.redo,
     onDelete: editActions.deleteSelection, onDuplicate: editActions.duplicateSelection,
     onReorder: editActions.reorderSelection, onToggleLock: editActions.toggleLock,
@@ -431,6 +437,7 @@ export function V2EditorPage(): React.JSX.Element {
                 });
               }}
               onToolChange={setTool}
+              iconsOpen={iconLibrary.open} onIconsOpenChange={iconLibrary.setOpen} onInsertIcon={iconLibrary.insertIcon}
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
               onZoomTo={camera.zoomTo}

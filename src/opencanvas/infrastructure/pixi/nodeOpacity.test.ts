@@ -9,7 +9,7 @@ describe('Pixi node opacity', () => {
     const plain = createTestNode('plain');
     const page = createTestDocument({ nodes: [dimmed, plain] }).pages[0];
     const renderer = new PixiNodeRenderer();
-    renderer.draw(page, createSceneIndex(page), false, true, true, true, true, true, true, true, true);
+    renderer.draw(page, createSceneIndex(page));
     expect(renderer.labels.children[0]?.alpha).toBeCloseTo(0.2);
     expect(renderer.labels.children[1]?.alpha).toBe(1);
   });

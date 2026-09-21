@@ -35,6 +35,7 @@ interface V2KeyboardOptions {
   readonly onZoomStep: (factor: number) => void;
   readonly onResetZoom: () => void;
   readonly onToggleTree: () => void;
+  readonly onToggleIcons: () => void;
   readonly onToggleAgent: () => void;
   readonly onToggleCode: () => void;
   readonly onSpacePan: (active: boolean) => void;
@@ -183,6 +184,8 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onToolChange('text');
     } else if (!command && key === 'l') {
       opts.onToggleTree();
+    } else if (!command && !event.shiftKey && !event.altKey && key === 'i') {
+      opts.onToggleIcons();
     } else if (event.key === 'F2') {
       opts.onEditPrimary();
       event.preventDefault();

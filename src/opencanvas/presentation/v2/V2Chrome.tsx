@@ -5,6 +5,7 @@ import { V2CameraControls } from './V2CameraControls';
 import { V2CreationToolbar, type V2Tool } from './V2CreationToolbar';
 import { V2DocumentBar } from './V2DocumentBar';
 import type { V2SaveStatus } from './useV2Autosave';
+import type { IconChoice } from '../../domain/nodes/iconNode';
 
 interface V2ChromeProps extends V2SettingsProps {
   readonly document: SceneDocumentV1;
@@ -22,6 +23,9 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly onToast: (toast: ToastItem) => void;
   readonly onRename: (name: string) => void;
   readonly onToolChange: (tool: V2Tool) => void;
+  readonly iconsOpen: boolean;
+  readonly onIconsOpenChange: (open: boolean) => void;
+  readonly onInsertIcon: (icon: IconChoice) => void;
   readonly onZoomIn: () => void;
   readonly onZoomOut: () => void;
   readonly onZoomTo: (percent: number) => void;
@@ -45,7 +49,10 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         onToast={props.onToast}
         onRename={props.onRename}
       />
-      {props.readOnly ? null : <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange} />}
+      {props.readOnly ? null : (
+        <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange}
+          iconsOpen={props.iconsOpen} onIconsOpenChange={props.onIconsOpenChange} onInsertIcon={props.onInsertIcon} />
+      )}
       <V2CameraControls
         preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}
         onPreferencesChange={props.onPreferencesChange}

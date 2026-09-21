@@ -4,6 +4,7 @@ import type { SceneIndex } from '../../domain/scene/types';
 import type { TransformResult } from '../../domain/transforms/types';
 import { buildNodeWorldMatrices } from '../../domain/scene/worldGeometry';
 import { getDescendantNodeIds } from '../../domain/scene/queries';
+import { PixiContainerRenderer } from './PixiContainerRenderer';
 import { PixiNodeRenderer } from './PixiNodeRenderer';
 import { PixiConnectorRenderer } from './PixiConnectorRenderer';
 import { drawTransformFrame } from './PixiTransformOverlay';
@@ -11,6 +12,7 @@ import { drawTransformFrame } from './PixiTransformOverlay';
 /** Transient selected objects only. Never writes or validates the document. */
 export class PixiLiveTransformPreview {
   readonly container = new Container();
+  private readonly containers = new PixiContainerRenderer();
   private readonly nodes = new PixiNodeRenderer();
   private readonly connectors = new PixiConnectorRenderer();
   private readonly frame = new Graphics();
@@ -41,12 +43,12 @@ export class PixiLiveTransformPreview {
   }
 
   constructor() {
-    this.container.addChild(this.connectors.container, this.nodes.graphics,
-      this.nodes.media, this.nodes.labels, this.frame);
+    this.container.addChild(this.containers.graphics, this.connectors.container, this.nodes.graphics,
+      this.nodes.media, this.nodes.labels, this.containers.labels, this.frame);
     this.container.visible = false;
   }
 
-  draw(page: ScenePage, index: SceneIndex, result: TransformResult, zoom: number): void {
+  draw(page: ScenePage, index: SceneIndex, result: TransformResult, zoom: number, canvasColor: number): void {
     const replacements = new Map(result.nodes.map((node) => [node.id, node]));
     const context = this.context(page, index, result.nodes);
     const preview = { ...context, nodes: context.nodes.map((node) => replacements.get(node.id) ?? node) };
@@ -54,8 +56,9 @@ export class PixiLiveTransformPreview {
     // Members of a moved group ride along: same local transform, new parent matrix.
     const carried = new Set(result.nodes.flatMap((node) => [node.id, ...getDescendantNodeIds(index, node.id)]));
     const selectedPage = { ...preview, nodes: preview.nodes.filter((node) => carried.has(node.id)) };
-    this.nodes.draw(selectedPage, { ...index, worldMatricesByNodeId: matrices },
-      true, true, true, false, false, false, false, false, false);
+    const previewIndex = { ...index, worldMatricesByNodeId: matrices };
+    this.containers.draw(selectedPage, previewIndex);
+    this.nodes.draw(selectedPage, previewIndex, null, 'full', canvasColor);
     this.connectors.setZoom(zoom);
     this.connectors.draw(preview, true);
     this.frame.clear();

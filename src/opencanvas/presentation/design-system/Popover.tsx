@@ -133,12 +133,16 @@ export function Popover({
       window.removeEventListener('scroll', place, true);
     };
   }, [open, anchorRef, placement, gap]);
+  // Focus moves in once the layer is placed and visible (a hidden element
+  // cannot take focus). A `data-autofocus` control wins over the first button.
+  const visible = box.visibility === 'visible';
   useEffect(() => {
-    if (!open || passive) return;
-    ref.current?.querySelector<HTMLElement>(
+    if (!open || passive || !visible || ref.current?.contains(document.activeElement)) return;
+    const layer = ref.current;
+    (layer?.querySelector<HTMLElement>('[data-autofocus]') ?? layer?.querySelector<HTMLElement>(
       'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]'
-    )?.focus({ preventScroll: true });
-  }, [open, passive]);
+    ))?.focus({ preventScroll: true });
+  }, [open, passive, visible]);
 
   useEffect(() => {
     if (!open) return;
@@ -172,8 +176,9 @@ export function Popover({
     return () => {
       document.removeEventListener('keydown', onKey, true);
       document.removeEventListener('pointerdown', onPointer, true);
-      // Fallback for host-driven closes where focus survived unmount.
-      if (!passive && layer?.contains(document.activeElement))
+      // Fallback for host-driven closes (a pick inside the layer closed it):
+      // focus either survived unmount or was already reset to body.
+      if (!passive && (layer?.contains(document.activeElement) || document.activeElement === document.body))
         (anchor ?? previouslyFocused)?.focus();
     };
   }, [open, anchorRef, passive, branch]);

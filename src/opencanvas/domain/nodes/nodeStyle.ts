@@ -1,6 +1,8 @@
 import type { SceneNode } from '../document/types';
-import { resolveNodeVisualStyle, resolveTextVisualStyle } from '../../../theme';
+import { resolveNodeVisualStyle, resolveSectionVisualStyle, resolveTextVisualStyle } from '../../../theme';
+import { resolveArchitectureNodePresentation } from './architectureNodePresentation';
 import { resolveBasicNodePresentation } from './basicNodePresentation';
+import { resolveContainerNodePresentation } from './containerNodePresentation';
 import { resolveNodeStroke, type NodeStrokeStyle } from './nodeStroke';
 import { optionalPresentationString } from './nodePresentationValues';
 import { resolveAdaptiveInk } from '../color/adaptiveColor';
@@ -24,7 +26,7 @@ export const FONT_STACKS: Readonly<Record<FontFamilyKey, string>> = {
 };
 
 export interface NodeStyle {
-  /** Hex or 'transparent'. */
+  /** Hex, rgba() or 'transparent'. */
   readonly fill: string;
   readonly stroke: string;
   readonly strokeWidth: number;
@@ -108,47 +110,99 @@ export function resolveNodeStyle(node: SceneNode, canvasColor?: string): NodeSty
   return style;
 }
 
-function computeNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
-  const a = node.appearance;
-  const c = node.content;
+// Per-family defaults: what a node looks like before any appearance key is
+// set. Containers and architecture nodes have their own palette and title
+// typography; everything else is a basic shape.
+interface FamilyDefaults {
+  readonly fill: string;
+  readonly stroke: string;
+  readonly strokeWidth: number;
+  readonly text: string;
+  readonly cornerRadius: number;
+  readonly fontSize: number;
+  readonly fontWeight: FontWeight;
+  readonly textAlign: TextAlign;
+  readonly textVerticalAlign: TextVerticalAlign;
+  readonly textPadding: number;
+  /** The label sits on the canvas, not on the node's fill (icon nodes). */
+  readonly labelOnCanvas: boolean;
+}
+
+function familyDefaults(node: SceneNode): FamilyDefaults {
+  const container = resolveContainerNodePresentation(node);
+  if (container) {
+    const colors = resolveSectionVisualStyle(container.colorKey, container.colorMode, container.customColor,
+      container.kind === 'group' ? 'violet' : 'blue');
+    return {
+      fill: colors.bg, stroke: colors.border, strokeWidth: container.kind === 'swimlane' ? 2 : 1.5,
+      text: colors.title, cornerRadius: 12, fontSize: container.kind === 'swimlane' ? 13 : 14, fontWeight: 700,
+      textAlign: 'start', textVerticalAlign: 'middle', textPadding: 0, labelOnCanvas: false,
+    };
+  }
+  const architecture = resolveArchitectureNodePresentation(node);
+  if (architecture) {
+    const colors = resolveNodeVisualStyle(architecture.colorKey, architecture.colorMode, architecture.customColor);
+    const icon = architecture.display === 'provider-icon';
+    return {
+      fill: icon ? colors.iconBg : colors.bg, stroke: colors.border, strokeWidth: icon ? 1 : 1.5, text: colors.text,
+      cornerRadius: icon ? 14 : 12,
+      fontSize: icon ? 12 : 14, fontWeight: 600, textAlign: icon ? 'center' : 'start', textVerticalAlign: 'top',
+      textPadding: icon ? 4 : 12, labelOnCanvas: icon,
+    };
+  }
   const text = isTextNode(node);
-  // Palette fallback: the legacy content.color / colorMode / customColor keys.
   const basic = resolveBasicNodePresentation(node);
+  const c = node.content;
   const palette = text
     ? { bg: 'transparent', border: 'transparent',
         text: resolveTextVisualStyle(optionalPresentationString(c.color) ?? 'slate', 'subtle',
           optionalPresentationString(c.customColor), 'slate').text }
     : resolveNodeVisualStyle(basic?.colorKey, basic?.colorMode, basic?.customColor);
-  const stroke = resolveNodeStroke(node);
-  const strokeWidth = text && a.strokeWidth === undefined ? 0 : stroke.width;
   const legacyBackground = text ? optionalPresentationString(c.backgroundColor) : undefined;
-  const defaultRadius = basic?.shape === 'rounded' ? 12 : 0;
-  const fill = paint(a.fill, legacyBackground ?? palette.bg);
+  return {
+    fill: legacyBackground ?? palette.bg, stroke: palette.border, strokeWidth: 1.5,
+    text: text ? optionalPresentationString(c.customColor) ?? palette.text : palette.text,
+    cornerRadius: basic?.shape === 'rounded' ? 12 : 0,
+    fontSize: fontSizeFallback(node), fontWeight: text ? fontWeightValue(c.fontWeight, 500) : 600,
+    textAlign: 'center', textVerticalAlign: 'middle', textPadding: text ? 8 : 16, labelOnCanvas: false,
+  };
+}
+
+function computeNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
+  const a = node.appearance;
+  const c = node.content;
+  const text = isTextNode(node);
+  const defaults = familyDefaults(node);
+  const stroke = resolveNodeStroke(node);
+  const strokeWidth = a.strokeWidth === undefined ? (text ? 0 : defaults.strokeWidth) : stroke.width;
+  const fill = paint(a.fill, defaults.fill);
   const explicitTextColor = a.textColor ?? (text ? c.customColor : undefined);
-  const textBackdrop = fill === 'transparent' ? canvasColor : fill;
+  // Ink adapts to whatever is behind the label: the fill, or the canvas when
+  // the label sits outside the fill or the fill is transparent.
+  const textBackdrop = defaults.labelOnCanvas || fill === 'transparent' ? canvasColor : fill;
   return {
     fill,
-    stroke: paint(a.stroke, palette.border),
+    stroke: paint(a.stroke, defaults.stroke),
     strokeWidth,
     strokeStyle: stroke.style,
     dash: strokeWidth > 0 ? stroke.dash : [],
-    cornerRadius: clampNumber(a.cornerRadius, STYLE_LIMITS.cornerRadius, defaultRadius),
+    cornerRadius: clampNumber(a.cornerRadius, STYLE_LIMITS.cornerRadius, defaults.cornerRadius),
     opacity: clampNumber(a.opacity, { min: 0, max: 1 }, 1),
     shadow: a.shadow === true,
     textColor: canvasColor !== undefined && textBackdrop !== undefined
       ? resolveAdaptiveInk(explicitTextColor, textBackdrop)
-      : paint(a.textColor, text ? optionalPresentationString(c.customColor) ?? palette.text : palette.text),
-    fontSize: clampNumber(a.fontSize, STYLE_LIMITS.fontSize, fontSizeFallback(node)),
+      : paint(a.textColor, defaults.text),
+    fontSize: clampNumber(a.fontSize, STYLE_LIMITS.fontSize, defaults.fontSize),
     fontFamily: oneOf<FontFamilyKey>(a.fontFamily, ['sans', 'serif', 'mono', 'hand'],
       FONT_FAMILY_ALIASES[optionalPresentationString(c.fontFamily) ?? ''] ?? 'sans'),
-    fontWeight: fontWeightValue(a.fontWeight, text ? fontWeightValue(c.fontWeight, 500) : 600),
+    fontWeight: fontWeightValue(a.fontWeight, defaults.fontWeight),
     fontStyle: oneOf(a.fontStyle, ['normal', 'italic'], text ? oneOf(c.fontStyle, ['normal', 'italic'], 'normal') : 'normal'),
     textDecoration: oneOf<TextDecoration>(a.textDecoration, ['none', 'underline', 'line-through'], 'none'),
-    textAlign: oneOf<TextAlign>(a.textAlign, ['start', 'center', 'end'], 'center'),
-    textVerticalAlign: oneOf<TextVerticalAlign>(a.textVerticalAlign, ['top', 'middle', 'bottom'], 'middle'),
+    textAlign: oneOf<TextAlign>(a.textAlign, ['start', 'center', 'end'], defaults.textAlign),
+    textVerticalAlign: oneOf<TextVerticalAlign>(a.textVerticalAlign, ['top', 'middle', 'bottom'], defaults.textVerticalAlign),
     lineHeight: clampNumber(a.lineHeight, STYLE_LIMITS.lineHeight, 1.2),
     letterSpacing: clampNumber(a.letterSpacing, STYLE_LIMITS.letterSpacing, 0),
-    textPadding: clampNumber(a.textPadding, STYLE_LIMITS.textPadding, text ? 8 : 16),
+    textPadding: clampNumber(a.textPadding, STYLE_LIMITS.textPadding, defaults.textPadding),
   };
 }
 

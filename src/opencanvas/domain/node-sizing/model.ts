@@ -81,7 +81,7 @@ export function resolveSizedNode(node: SceneNode, policy: NodeSizingPolicyV1): S
   const validation = validateNodeSizingPolicy(policy);
   if (!validation.success) throw new Error(`Invalid node sizing policy: ${validation.issues.join(' ')}`);
   const value = validation.value;
-  const layout = resolveNodeContentLayout(node.content, true);
+  const layout = resolveNodeContentLayout(node.content);
   const label = typeof node.content.label === 'string' ? node.content.label : node.id;
   const subLabel = typeof node.content.subLabel === 'string' ? node.content.subLabel : '';
   const hasIcon = (typeof node.content.icon === 'string' && node.content.icon !== 'none')

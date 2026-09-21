@@ -3,6 +3,8 @@ import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalo
 import { createBounds2d } from '../../domain/geometry/bounds';
 import type { SceneNode } from '../../domain/document/types';
 import type { Matrix2d } from '../../domain/geometry/types';
+import { resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
+import { nodeLabelBounds } from '../../domain/nodes/nodeLabelBounds';
 import {
   projectArchitectureNodeVisual,
   type PixiArchitectureNodeVisual,
@@ -10,8 +12,9 @@ import {
 import { PixiMediaLayer } from './PixiMediaLayer';
 import type { PixiNodeDebugRecord, PixiMediaState } from './pixiNodeDebug';
 import { drawPixiLocalRect, drawPixiNodeOutline } from './pixiNodeOutline';
+import { pixiPaintColor } from './pixiColor';
 import { applyPixiNodeMatrix } from './pixiNodeTransform';
-import { createPixiText } from './pixiText';
+import { createPixiText, createStyledPixiText, decoratePixiText } from './pixiText';
 
 export interface PixiArchitectureNodeDrawResult {
   readonly label: Container;
@@ -54,13 +57,15 @@ export class PixiArchitectureNodeRenderer {
     node: SceneNode,
     matrix: Matrix2d,
     graphics: Graphics,
-    generation: number
+    generation: number,
+    canvasColor: string
   ): PixiArchitectureNodeDrawResult | null {
     const visual = projectArchitectureNodeVisual(node);
     if (!visual) return null;
+    const style = resolveNodeStyle(node, canvasColor);
     const bounds = iconBounds(visual, node);
-    this.drawChrome(node, matrix, graphics, visual, bounds);
-    const label = this.createLabel(node, visual);
+    this.drawChrome(node, matrix, graphics, visual, bounds, style);
+    const label = this.createLabel(node, visual, style);
     applyPixiNodeMatrix(label, matrix);
     this.loadIcon(node.id, generation, matrix, bounds, visual);
     return {
@@ -83,52 +88,46 @@ export class PixiArchitectureNodeRenderer {
     matrix: Matrix2d,
     graphics: Graphics,
     visual: PixiArchitectureNodeVisual,
-    bounds: ReturnType<typeof createBounds2d>
+    bounds: ReturnType<typeof createBounds2d>,
+    style: NodeStyle
   ): void {
+    const fill = pixiPaintColor(style.fill, visual.fill);
+    const stroke = pixiPaintColor(style.stroke, visual.stroke);
     if (visual.presentation.display === 'architecture-card') {
-      drawPixiNodeOutline(graphics, 'rounded', node.size, matrix);
-      graphics.fill({ color: visual.fill }).stroke({ color: visual.stroke, width: 1.5 });
+      drawPixiNodeOutline(graphics, 'rounded', node.size, matrix, undefined, style.cornerRadius);
+      graphics.fill(fill);
+      if (style.strokeWidth > 0) graphics.stroke({ ...stroke, width: style.strokeWidth });
       drawPixiLocalRect(graphics, createBounds2d(10, 8, node.size.width - 20, 26), matrix, 7);
       graphics.fill({ color: visual.iconFill });
       return;
     }
-    drawPixiLocalRect(graphics, createBounds2d((node.size.width - 72) / 2, 4, 72, 72), matrix, 14);
-    graphics.fill({ color: visual.iconFill }).stroke({ color: visual.stroke, width: 1 });
+    // Icon nodes: the style paints the 72px plate; the label sits on the canvas below.
+    drawPixiLocalRect(graphics, createBounds2d((node.size.width - 72) / 2, 4, 72, 72), matrix, style.cornerRadius);
+    graphics.fill(fill);
+    if (style.strokeWidth > 0) graphics.stroke({ ...stroke, width: style.strokeWidth });
     drawPixiLocalRect(graphics, bounds, matrix, 8);
     graphics.stroke({ color: visual.iconStroke, width: 1 });
   }
 
-  private createLabel(node: SceneNode, visual: PixiArchitectureNodeVisual): Container {
+  private createLabel(node: SceneNode, visual: PixiArchitectureNodeVisual, style: NodeStyle): Container {
     const content = new Container();
     const { presentation } = visual;
+    const ink = pixiPaintColor(style.textColor, visual.text).color;
+    const labelBounds = nodeLabelBounds(node);
+    const wrap = Math.max(1, labelBounds.width - style.textPadding * 2);
     if (presentation.display === 'architecture-card') {
-      const provider = createPixiText(presentation.providerLabel, {
-        size: 10,
-        weight: '700',
-        fill: visual.subText,
-      });
+      const provider = createPixiText(presentation.providerLabel, { size: 10, weight: '700', fill: visual.subText });
       provider.position.set(38, 15);
-      const resource = createPixiText(presentation.resourceType, {
-        size: 10,
-        weight: '600',
-        fill: visual.subText,
-      });
+      const resource = createPixiText(presentation.resourceType, { size: 10, weight: '600', fill: visual.subText });
       resource.anchor.set(1, 0);
       resource.position.set(node.size.width - 16, 15);
-      const title = createPixiText(presentation.label, {
-        size: 14,
-        weight: '600',
-        fill: visual.text,
-        wrapWidth: Math.max(1, node.size.width - 24),
-      });
-      title.position.set(12, 43);
+      const title = createStyledPixiText(presentation.label, style, ink, wrap);
+      title.position.set(labelBounds.x + style.textPadding, labelBounds.y + style.textPadding);
       content.addChild(provider, resource, title);
+      decoratePixiText(content, title, style, ink);
       if (presentation.metadata.length > 0) {
         const metadata = createPixiText(presentation.metadata.join(' · '), {
-          size: 10,
-          weight: '500',
-          fill: visual.subText,
-          wrapWidth: Math.max(1, node.size.width - 24),
+          size: 10, weight: '500', fill: visual.subText, wrapWidth: Math.max(1, node.size.width - 24),
         });
         metadata.position.set(12, 67);
         content.addChild(metadata);
@@ -136,15 +135,11 @@ export class PixiArchitectureNodeRenderer {
       return content;
     }
     if (presentation.label) {
-      const title = createPixiText(presentation.label, {
-        size: 12,
-        weight: '600',
-        fill: visual.text,
-        wrapWidth: Math.max(1, node.size.width - 8),
-      });
+      const title = createStyledPixiText(presentation.label, style, ink, wrap);
       title.anchor.set(0.5, 0);
-      title.position.set(node.size.width / 2, 84);
+      title.position.set(labelBounds.x + labelBounds.width / 2, labelBounds.y + style.textPadding);
       content.addChild(title);
+      decoratePixiText(content, title, style, ink);
     }
     return content;
   }

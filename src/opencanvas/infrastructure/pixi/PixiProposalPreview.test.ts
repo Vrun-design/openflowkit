@@ -10,7 +10,7 @@ it('ghosts only added or changed objects and marks removals', () => {
     connectors: [...current.connectors, createTestConnector('bc', 'b', 'c')] };
   const ghost = new PixiProposalPreview();
   expect(ghost.container.visible).toBe(false);
-  ghost.draw(current, { page: preview, highlightIds: ['c'] }, 1);
+  ghost.draw(current, { page: preview, highlightIds: ['c'] }, 1, 0xf7f7f5);
   expect(ghost.container.visible).toBe(true);
   expect(ghost.getDebugSnapshot()).toEqual({ nodes: 2, connectors: 1, removals: 1, highlights: 1 });
   ghost.clear();

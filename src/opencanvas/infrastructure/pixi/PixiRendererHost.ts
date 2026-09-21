@@ -9,6 +9,8 @@ import {
 import type { CanvasCamera } from '../../domain/camera/types';
 import { createBounds2d, unionBounds } from '../../domain/geometry/bounds';
 import type { Bounds2d, Point2d, Size2d } from '../../domain/geometry/types';
+import { applyMatrixToPoint } from '../../domain/geometry/matrix';
+import { nodeLabelBounds } from '../../domain/nodes/nodeLabelBounds';
 import type { SceneConnector, ScenePage } from '../../domain/document/types';
 import {
   connectorEditHandles,
@@ -75,15 +77,6 @@ interface PixiRendererHostOptions {
   readonly liveTransformPreview?: boolean;
   readonly onStatusChange?: (status: PixiRendererStatus) => void;
   readonly connectorModelEnabled?: boolean;
-  readonly nodeLayoutModelEnabled?: boolean;
-  readonly basicNodesEnabled?: boolean;
-  readonly freeformNodesEnabled?: boolean;
-  readonly architectureNodesEnabled?: boolean;
-  readonly containerNodesEnabled?: boolean;
-  readonly classEntityNodesEnabled?: boolean;
-  readonly mindmapJourneyNodesEnabled?: boolean;
-  readonly sequenceNodesEnabled?: boolean;
-  readonly wireframeNodesEnabled?: boolean;
 }
 
 const SELECTION_STROKE = CHROME_ACCENT;
@@ -126,15 +119,6 @@ export class PixiRendererHost {
   private alignmentGuidesShown = false;
   private readonly onStatusChange?: PixiRendererHostOptions['onStatusChange'];
   private readonly connectorModelEnabled: boolean;
-  private readonly nodeLayoutModelEnabled: boolean;
-  private readonly basicNodesEnabled: boolean;
-  private readonly freeformNodesEnabled: boolean;
-  private readonly architectureNodesEnabled: boolean;
-  private readonly containerNodesEnabled: boolean;
-  private readonly classEntityNodesEnabled: boolean;
-  private readonly mindmapJourneyNodesEnabled: boolean;
-  private readonly sequenceNodesEnabled: boolean;
-  private readonly wireframeNodesEnabled: boolean;
   private camera: CanvasCamera = { x: 64, y: 64, zoom: 1 };
   private page: ScenePage | null = null;
   private index: ReturnType<typeof createSceneIndex> | null = null;
@@ -158,15 +142,6 @@ export class PixiRendererHost {
     this.livePreview = options.liveTransformPreview ? new PixiLiveTransformPreview() : null;
     this.onStatusChange = options.onStatusChange;
     this.connectorModelEnabled = options.connectorModelEnabled !== false;
-    this.nodeLayoutModelEnabled = options.nodeLayoutModelEnabled !== false;
-    this.basicNodesEnabled = options.basicNodesEnabled !== false;
-    this.freeformNodesEnabled = options.freeformNodesEnabled !== false;
-    this.architectureNodesEnabled = options.architectureNodesEnabled !== false;
-    this.containerNodesEnabled = options.containerNodesEnabled !== false;
-    this.classEntityNodesEnabled = options.classEntityNodesEnabled !== false;
-    this.mindmapJourneyNodesEnabled = options.mindmapJourneyNodesEnabled !== false;
-    this.sequenceNodesEnabled = options.sequenceNodesEnabled !== false;
-    this.wireframeNodesEnabled = options.wireframeNodesEnabled !== false;
   }
 
   async mount(container: HTMLElement): Promise<HTMLCanvasElement> {
@@ -535,7 +510,7 @@ export class PixiRendererHost {
         this.previewFrame = requestAnimationFrame(() => {
           this.previewFrame = null;
           if (this.page && this.index && this.previewResult) {
-            this.livePreview?.draw(this.page, this.index, this.previewResult, this.camera.zoom);
+            this.livePreview?.draw(this.page, this.index, this.previewResult, this.camera.zoom, this.backgroundColor);
             this.renderNow();
           }
         });
@@ -564,7 +539,7 @@ export class PixiRendererHost {
   }
 
   private drawProposalPreview(): void {
-    if (this.proposalFrame && this.page) this.proposalPreview.draw(this.page, this.proposalFrame, this.camera.zoom);
+    if (this.proposalFrame && this.page) this.proposalPreview.draw(this.page, this.proposalFrame, this.camera.zoom, this.backgroundColor);
     else this.proposalPreview.clear();
   }
 
@@ -626,14 +601,23 @@ export class PixiRendererHost {
     const node = this.index.nodesById.get(nodeId);
     const matrix = this.index.worldMatricesByNodeId.get(nodeId);
     if (!node || !matrix) return null;
-    const bounds = nodeWorldBounds(node, matrix);
+    return this.screenRect(nodeWorldBounds(node, matrix));
+  }
+
+  /** Where the label editor opens: the title band of a frame, under the plate of an icon node. */
+  getNodeLabelScreenBounds(nodeId: string): DOMRect | null {
+    if (!this.page || !this.index) return null;
+    const node = this.index.nodesById.get(nodeId);
+    const matrix = this.index.worldMatricesByNodeId.get(nodeId);
+    if (!node || !matrix) return null;
+    const local = nodeLabelBounds(node);
+    const origin = applyMatrixToPoint(matrix, { x: local.x, y: local.y });
+    return this.screenRect(createBounds2d(origin.x, origin.y, local.width * matrix.a, local.height * matrix.d));
+  }
+
+  private screenRect(bounds: Bounds2d): DOMRect {
     const topLeft = worldToScreen(this.camera, bounds);
-    return new DOMRect(
-      topLeft.x,
-      topLeft.y,
-      bounds.width * this.camera.zoom,
-      bounds.height * this.camera.zoom
-    );
+    return new DOMRect(topLeft.x, topLeft.y, bounds.width * this.camera.zoom, bounds.height * this.camera.zoom);
   }
 
   resize(): void {
@@ -701,28 +685,8 @@ export class PixiRendererHost {
     const detailLevel = this.viewportProjection?.detailLevel ?? 'full';
     this.connectorRenderer.draw(this.page, this.connectorModelEnabled, renderedConnectorIds);
     if (redrawNodes) {
-      this.containerRenderer.draw(
-        this.page,
-        this.index,
-        this.containerNodesEnabled,
-        renderedNodeIds
-      );
-      this.nodeRenderer.draw(
-        this.page,
-        this.index,
-        this.nodeLayoutModelEnabled,
-        this.basicNodesEnabled,
-        this.freeformNodesEnabled,
-        this.architectureNodesEnabled,
-        this.containerNodesEnabled,
-        this.classEntityNodesEnabled,
-        this.mindmapJourneyNodesEnabled,
-        this.sequenceNodesEnabled,
-        this.wireframeNodesEnabled,
-        renderedNodeIds,
-        detailLevel,
-        this.backgroundColor
-      );
+      this.containerRenderer.draw(this.page, this.index, renderedNodeIds);
+      this.nodeRenderer.draw(this.page, this.index, renderedNodeIds, detailLevel, this.backgroundColor);
     }
     this.updateLabelVisibility();
     this.drawSelection();

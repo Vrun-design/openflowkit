@@ -4,6 +4,7 @@ import type { ScenePage } from '../../domain/document/types';
 import { createSceneIndex } from '../../domain/scene/spatialIndex';
 import { nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import { PixiConnectorRenderer } from './PixiConnectorRenderer';
+import { PixiContainerRenderer } from './PixiContainerRenderer';
 import { PixiNodeRenderer } from './PixiNodeRenderer';
 
 export interface ProposalPreviewFrame {
@@ -22,6 +23,7 @@ const HIGHLIGHT = 0xe95420;
 export class PixiProposalPreview {
   readonly container = new Container();
   private readonly ghosts = new Container();
+  private readonly containers = new PixiContainerRenderer();
   private readonly nodes = new PixiNodeRenderer();
   private readonly connectors = new PixiConnectorRenderer();
   private readonly marks = new Graphics();
@@ -29,12 +31,13 @@ export class PixiProposalPreview {
 
   constructor() {
     this.ghosts.alpha = GHOST_ALPHA;
-    this.ghosts.addChild(this.connectors.container, this.nodes.graphics, this.nodes.media, this.nodes.labels);
+    this.ghosts.addChild(this.containers.graphics, this.connectors.container, this.nodes.graphics,
+      this.nodes.media, this.nodes.labels, this.containers.labels);
     this.container.addChild(this.ghosts, this.marks);
     this.container.visible = false;
   }
 
-  draw(current: ScenePage, frame: ProposalPreviewFrame, zoom: number): void {
+  draw(current: ScenePage, frame: ProposalPreviewFrame, zoom: number, canvasColor: number): void {
     const { page, highlightIds } = frame;
     const index = createSceneIndex(page);
     const currentIndex = createSceneIndex(current);
@@ -44,9 +47,8 @@ export class PixiProposalPreview {
     const changedConnectors = new Set(page.connectors
       .filter((edge) => !areStructurallyEqual(edge, currentIndex.connectorsById.get(edge.id)))
       .map((edge) => edge.id));
-    // ponytail: basic/freeform families only, matching what v2 authors today;
-    // pass the host's family flags when more families ship in v2.
-    this.nodes.draw(page, index, true, true, true, false, false, false, false, false, false, changedNodes);
+    this.containers.draw(page, index, changedNodes);
+    this.nodes.draw(page, index, changedNodes, 'full', canvasColor);
     this.connectors.setZoom(zoom);
     this.connectors.draw(page, true, changedConnectors);
     this.marks.clear();

@@ -69,6 +69,11 @@ export function pixiTextStyle(style: NodeStyle, fill: number, wrapWidth: number 
   };
 }
 
+/** A label drawn from the node's resolved style (family renderers). */
+export function createStyledPixiText(text: string, style: NodeStyle, fill: number, wrapWidth: number | null): Text {
+  return new Text({ text, resolution: currentTextResolution, style: pixiTextStyle(style, fill, wrapWidth) });
+}
+
 // Pixi text has no text-decoration; draw the rule per rendered line.
 export function decoratePixiText(parent: Container, text: Text, style: NodeStyle, color: number): void {
   if (style.textDecoration === 'none') return;

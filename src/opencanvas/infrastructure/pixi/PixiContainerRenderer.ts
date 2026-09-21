@@ -4,11 +4,17 @@ import { createBounds2d } from '../../domain/geometry/bounds';
 import type { SceneNode, ScenePage } from '../../domain/document/types';
 import type { Matrix2d } from '../../domain/geometry/types';
 import type { SceneIndex } from '../../domain/scene/types';
+import { resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
+import { CONTAINER_TITLE_HEIGHT, nodeLabelBounds } from '../../domain/nodes/nodeLabelBounds';
+import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
+import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import { projectContainerNodeVisual, type PixiContainerNodeVisual } from './containerNodeVisual';
+import { drawDashedPath } from './PixiConnectorRenderer';
+import { pixiPaintColor } from './pixiColor';
 import { drawPixiLocalRect, drawPixiNodeOutline } from './pixiNodeOutline';
 import type { PixiNodeDebugRecord } from './pixiNodeDebug';
 import { applyPixiNodeMatrix } from './pixiNodeTransform';
-import { createPixiText } from './pixiText';
+import { createPixiText, createStyledPixiText, decoratePixiText } from './pixiText';
 
 function containerShape(kind: PixiContainerNodeVisual['presentation']['kind']): string {
   if (kind === 'group') return 'group-frame';
@@ -49,9 +55,10 @@ function drawStructuralGlyph(
   }
 }
 
-/** ⌘G groups have no label and no paint: the selection frame is their only chrome. */
+/** ⌘G groups have no label and no paint until styled: the selection frame is their only chrome. */
 function isQuietGroup(node: SceneNode): boolean {
-  return node.kind === 'group' && node.content.label === '';
+  return node.kind === 'group' && node.content.label === ''
+    && node.appearance.fill === undefined && node.appearance.stroke === undefined;
 }
 
 /** Diagram frames always draw their boundary; the title band appears with a title. */
@@ -68,16 +75,11 @@ export class PixiContainerRenderer {
   draw(
     page: ScenePage,
     index: SceneIndex,
-    enabled: boolean,
     renderedNodeIds: ReadonlySet<string> | null = null
   ): void {
     this.graphics.clear();
     this.labels.removeChildren().forEach((child) => child.destroy({ children: true }));
     this.labelByNodeId.clear();
-    if (!enabled) {
-      this.debugRecords = [];
-      return;
-    }
     const records: PixiNodeDebugRecord[] = [];
     const nodeStates = buildNodeStateMap(page);
     for (const node of page.nodes) {
@@ -87,9 +89,10 @@ export class PixiContainerRenderer {
       const matrix = index.worldMatricesByNodeId.get(node.id);
       if (!visual || !matrix) continue;
       const childCount = index.childIdsByParentId.get(node.id)?.length ?? 0;
-      this.drawContainer(node, matrix, visual);
+      const style = resolveNodeStyle(node);
+      this.drawContainer(node, matrix, visual, style);
       if (!isQuietGroup(node)) {
-        const label = this.createLabel(node, visual, childCount);
+        const label = this.createLabel(node, visual, style, childCount);
         applyPixiNodeMatrix(label, matrix);
         this.labels.addChild(label);
         this.labelByNodeId.set(node.id, label);
@@ -98,9 +101,9 @@ export class PixiContainerRenderer {
         id: node.id,
         kind: visual.presentation.kind,
         shape: containerShape(visual.presentation.kind),
-        fill: visual.fill.color,
-        fillAlpha: visual.fill.alpha,
-        stroke: visual.stroke,
+        fill: pixiPaintColor(style.fill, visual.fill.color).color,
+        fillAlpha: pixiPaintColor(style.fill, visual.fill.color).alpha,
+        stroke: pixiPaintColor(style.stroke, visual.stroke).color,
         mediaState: 'none',
         childCount,
         parentId: node.parentId,
@@ -122,12 +125,23 @@ export class PixiContainerRenderer {
     }
   }
 
-  private drawContainer(node: SceneNode, matrix: Matrix2d, visual: PixiContainerNodeVisual): void {
+  private drawContainer(node: SceneNode, matrix: Matrix2d, visual: PixiContainerNodeVisual, style: NodeStyle): void {
     if (isQuietGroup(node)) return;
-    drawPixiNodeOutline(this.graphics, 'rounded', node.size, matrix);
-    this.graphics
-      .fill({ color: visual.fill.color, alpha: visual.fill.alpha })
-      .stroke({ color: visual.stroke, width: visual.presentation.kind === 'swimlane' ? 2 : 1.5 });
+    const fill = pixiPaintColor(style.fill, visual.fill.color);
+    const stroke = pixiPaintColor(style.stroke, visual.stroke);
+    const alpha = style.opacity;
+    drawPixiNodeOutline(this.graphics, 'rounded', node.size, matrix, undefined, style.cornerRadius);
+    this.graphics.fill({ color: fill.color, alpha: fill.alpha * alpha });
+    if (style.strokeWidth > 0 && style.dash.length) {
+      const outline = basicNodeOutlinePoints('rounded', node.size, undefined, style.cornerRadius)
+        .map((point) => applyMatrixToPoint(matrix, point));
+      drawDashedPath(this.graphics, [...outline, outline[0]], {
+        color: `#${stroke.color.toString(16).padStart(6, '0')}`, width: style.strokeWidth,
+        opacity: stroke.alpha * alpha, dash: style.dash,
+      });
+    } else if (style.strokeWidth > 0) {
+      this.graphics.stroke({ color: stroke.color, width: style.strokeWidth, alpha: stroke.alpha * alpha });
+    }
     if (!showsTitleBand(visual)) return;
     if (visual.presentation.kind === 'section') {
       const titleWidth = Math.min(
@@ -135,12 +149,12 @@ export class PixiContainerRenderer {
         Math.max(96, visual.presentation.label.length * 7 + 52)
       );
       drawPixiLocalRect(this.graphics, createBounds2d(8, 7, titleWidth, 27), matrix, 8);
-      this.graphics.fill({ color: visual.badgeFill, alpha: 0.72 });
+      this.graphics.fill({ color: visual.badgeFill, alpha: 0.72 * alpha });
     } else {
-      drawPixiLocalRect(this.graphics, createBounds2d(0, 0, node.size.width, 40), matrix, 12);
-      this.graphics.fill({ color: visual.badgeFill, alpha: 0.48 });
-      drawPixiLocalRect(this.graphics, createBounds2d(0, 39, node.size.width, 1), matrix);
-      this.graphics.fill({ color: visual.stroke, alpha: 0.72 });
+      drawPixiLocalRect(this.graphics, createBounds2d(0, 0, node.size.width, CONTAINER_TITLE_HEIGHT), matrix, style.cornerRadius);
+      this.graphics.fill({ color: visual.badgeFill, alpha: 0.48 * alpha });
+      drawPixiLocalRect(this.graphics, createBounds2d(0, CONTAINER_TITLE_HEIGHT - 1, node.size.width, 1), matrix);
+      this.graphics.fill({ color: stroke.color, alpha: 0.72 * alpha });
     }
     if (visual.presentation.kind !== 'frame') drawStructuralGlyph(this.graphics, matrix, visual);
   }
@@ -148,18 +162,22 @@ export class PixiContainerRenderer {
   private createLabel(
     node: SceneNode,
     visual: PixiContainerNodeVisual,
+    style: NodeStyle,
     childCount: number
   ): Container {
     const content = new Container();
+    content.alpha = style.opacity;
     const frame = visual.presentation.kind === 'frame';
-    const title = createPixiText(visual.presentation.label, {
-      size: visual.presentation.kind === 'swimlane' ? 13 : 14,
-      weight: '700',
-      fill: visual.title,
-      wrapWidth: Math.max(1, node.size.width - (frame ? 32 : 140)),
-    });
-    title.position.set(frame ? 16 : 37, 11);
+    const ink = pixiPaintColor(style.textColor, visual.title).color;
+    const band = nodeLabelBounds(node);
+    const title = createStyledPixiText(visual.presentation.label, style, ink, Math.max(1, band.width - style.textPadding * 2));
+    // Anchored to the band's vertical centre so the editor and the label share one baseline.
+    title.anchor.set(style.textAlign === 'end' ? 1 : style.textAlign === 'center' ? 0.5 : 0, 0.5);
+    const x = style.textAlign === 'end' ? band.x + band.width - style.textPadding
+      : style.textAlign === 'center' ? band.x + band.width / 2 : band.x + style.textPadding;
+    title.position.set(x, band.y + band.height / 2);
     content.addChild(title);
+    decoratePixiText(content, title, style, ink);
     if (!frame) {
       const count = createPixiText(`${childCount} ${childCount === 1 ? 'item' : 'items'}`, {
         size: 10,

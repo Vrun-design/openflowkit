@@ -50,8 +50,8 @@ export function OpenCanvasTextEditorOverlay({
   const padBottom = pad.bottom * zoom;
   const cssFont = nodeStyleFont(style, zoom);
 
-  // Grow with the text and keep it vertically centred like the rendered
-  // label. Goes through state: React owns the inline style, so a direct DOM
+  // Grow with the text and keep it aligned like the rendered label
+  // (centred by default). Goes through state: React owns the inline style, so a direct DOM
   // write would be undone by the next render (camera moves re-render this).
   const [metrics, setMetrics] = useState({ height: bounds.height, paddingTop: padTop, textWidth: 0 });
   const fit = () => {
@@ -61,9 +61,12 @@ export function OpenCanvasTextEditorOverlay({
     const content = el.scrollHeight - padTop - padBottom;
     const height = Math.max(bounds.height, el.scrollHeight);
     el.style.height = `${height}px`;
+    const paddingTop = style.textVerticalAlign === 'top' ? padTop
+      : style.textVerticalAlign === 'bottom' ? Math.max(padTop, height - content - padBottom)
+        : Math.max(padTop, (height - content) / 2);
     setMetrics({
       height,
-      paddingTop: Math.max(padTop, (height - content) / 2),
+      paddingTop,
       textWidth: plate ? measureWidth(el.value || el.placeholder, cssFont) : 0,
     });
   };
@@ -109,7 +112,7 @@ export function OpenCanvasTextEditorOverlay({
       style={{
         left, top: bounds.y, width, height: metrics.height,
         padding: `${metrics.paddingTop}px ${pad.right * zoom}px ${padBottom}px ${pad.left * zoom}px`,
-        font: cssFont, color: style.textColor,
+        font: cssFont, color: style.textColor, textAlign: style.textAlign === 'start' ? 'left' : style.textAlign === 'end' ? 'right' : 'center',
       }}
       onInput={fit}
       onBlur={blur}

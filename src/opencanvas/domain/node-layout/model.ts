@@ -128,10 +128,8 @@ export function validateNodeContentLayout(value: unknown): NodeContentLayoutVali
 }
 
 export function resolveNodeContentLayout(
-  content: { readonly contentLayout?: unknown },
-  enabled: boolean
+  content: { readonly contentLayout?: unknown }
 ): NodeContentLayoutV1 {
-  if (!enabled) return DEFAULT_NODE_CONTENT_LAYOUT;
   return validateNodeContentLayout(content.contentLayout).value;
 }
 

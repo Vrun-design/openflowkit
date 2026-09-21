@@ -9,7 +9,6 @@ import type { ScenePage } from '../../domain/document/types';
 import type { SceneIndex } from '../../domain/scene/types';
 import { layoutNodeContent, resolveNodeContentLayout } from '../../domain/node-layout/model';
 import type { Bounds2d } from '../../domain/geometry/types';
-import { nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import { projectBasicNodeVisual } from './basicNodeVisual';
 import { PixiArchitectureNodeRenderer } from './PixiArchitectureNodeRenderer';
 import { PixiClassEntityNodeRenderer } from './PixiClassEntityNodeRenderer';
@@ -105,18 +104,10 @@ export class PixiNodeRenderer {
     );
   }
 
+  /** Containers are drawn by PixiContainerRenderer; everything else lands here. */
   draw(
     page: ScenePage,
     index: SceneIndex,
-    nodeLayoutEnabled: boolean,
-    basicNodesEnabled: boolean,
-    freeformNodesEnabled: boolean,
-    architectureNodesEnabled: boolean,
-    containerNodesEnabled: boolean,
-    classEntityNodesEnabled: boolean,
-    mindmapJourneyNodesEnabled: boolean,
-    sequenceNodesEnabled: boolean,
-    wireframeNodesEnabled: boolean,
     renderedNodeIds: ReadonlySet<string> | null = null,
     detailLevel: SemanticDetailLevel = 'full',
     canvasColor = 0xf7f7f5
@@ -143,101 +134,26 @@ export class PixiNodeRenderer {
     for (const node of page.nodes) {
       if (!nodeStates.get(node.id)?.visible) continue;
       if (renderedNodeIds && !renderedNodeIds.has(node.id)) continue;
-      if (containerNodesEnabled && isContainerNodeKind(node.kind)) continue;
+      if (isContainerNodeKind(node.kind)) continue;
       const matrix = index.worldMatricesByNodeId.get(node.id);
       if (!matrix) continue;
-      const showFamilyDetail = detailLevel !== 'overview';
-      const architecture = showFamilyDetail && architectureNodesEnabled
-        ? this.architectureRenderer.drawNode(
-            node,
-            matrix,
-            this.graphics,
-            architectureMediaGeneration
-          )
-        : null;
-      const classEntity =
-        !architecture && showFamilyDetail && classEntityNodesEnabled
-          ? this.classEntityRenderer.drawNode(node, matrix, this.graphics)
-          : null;
-      const mindmap =
-        !architecture && !classEntity && showFamilyDetail && mindmapJourneyNodesEnabled
-          ? this.mindmapRenderer.drawNode(node, matrix, this.graphics)
-          : null;
-      const journey =
-        !architecture && !classEntity && !mindmap && showFamilyDetail && mindmapJourneyNodesEnabled
-          ? this.journeyRenderer.drawNode(node, matrix, this.graphics)
-          : null;
-      const sequence =
-        !architecture && !classEntity && !mindmap && !journey && showFamilyDetail && sequenceNodesEnabled
-          ? this.sequenceRenderer.drawNode(node, matrix, this.graphics)
-          : null;
-      const wireframe =
-        !architecture && !classEntity && !mindmap && !journey && !sequence && showFamilyDetail && wireframeNodesEnabled
-          ? this.wireframeRenderer.drawNode(node, matrix, this.graphics, wireframeMediaGeneration)
-          : null;
-      const freeform =
-        !architecture &&
-        !classEntity &&
-        !mindmap &&
-        !journey &&
-        !sequence &&
-        !wireframe &&
-        showFamilyDetail && freeformNodesEnabled
-          ? this.freeformRenderer.drawNode(node, matrix, this.graphics, freeformMediaGeneration, numericColorToHex(canvasColor))
-          : null;
-      const visual =
-        !architecture &&
-        !classEntity &&
-        !mindmap &&
-        !journey &&
-        !sequence &&
-        !wireframe &&
-        !freeform &&
-        basicNodesEnabled
-          ? projectBasicNodeVisual(node)
-          : null;
-      if (architecture) {
-        this.labels.addChild(architecture.label);
-        this.labelByNodeId.set(node.id, architecture.label);
-        debugRecords.push(architecture.debug);
+      const canvasHex = numericColorToHex(canvasColor);
+      // Family renderers take the node in order; the first one that claims it wins.
+      const family = detailLevel === 'overview' ? null
+        : this.architectureRenderer.drawNode(node, matrix, this.graphics, architectureMediaGeneration, canvasHex)
+          ?? this.classEntityRenderer.drawNode(node, matrix, this.graphics)
+          ?? this.mindmapRenderer.drawNode(node, matrix, this.graphics)
+          ?? this.journeyRenderer.drawNode(node, matrix, this.graphics)
+          ?? this.sequenceRenderer.drawNode(node, matrix, this.graphics)
+          ?? this.wireframeRenderer.drawNode(node, matrix, this.graphics, wireframeMediaGeneration)
+          ?? this.freeformRenderer.drawNode(node, matrix, this.graphics, freeformMediaGeneration, canvasHex);
+      if (family) {
+        this.labels.addChild(family.label);
+        this.labelByNodeId.set(node.id, family.label);
+        debugRecords.push(family.debug);
         continue;
       }
-      if (classEntity) {
-        this.labels.addChild(classEntity.label);
-        this.labelByNodeId.set(node.id, classEntity.label);
-        debugRecords.push(classEntity.debug);
-        continue;
-      }
-      if (mindmap) {
-        this.labels.addChild(mindmap.label);
-        this.labelByNodeId.set(node.id, mindmap.label);
-        debugRecords.push(mindmap.debug);
-        continue;
-      }
-      if (journey) {
-        this.labels.addChild(journey.label);
-        this.labelByNodeId.set(node.id, journey.label);
-        debugRecords.push(journey.debug);
-        continue;
-      }
-      if (sequence) {
-        this.labels.addChild(sequence.label);
-        this.labelByNodeId.set(node.id, sequence.label);
-        debugRecords.push(sequence.debug);
-        continue;
-      }
-      if (wireframe) {
-        this.labels.addChild(wireframe.label);
-        this.labelByNodeId.set(node.id, wireframe.label);
-        debugRecords.push(wireframe.debug);
-        continue;
-      }
-      if (freeform) {
-        this.labels.addChild(freeform.label);
-        this.labelByNodeId.set(node.id, freeform.label);
-        debugRecords.push(freeform.debug);
-        continue;
-      }
+      const visual = projectBasicNodeVisual(node);
       const shape = visual?.shape ?? 'rectangle';
       const renderedShape =
         page.nodes.length > DETAILED_OUTLINE_NODE_LIMIT && shape === 'rounded'
@@ -280,7 +196,7 @@ export class PixiNodeRenderer {
       if (detailLevel === 'overview') continue;
       const labelText = typeof node.content.label === 'string' ? node.content.label : node.id;
       const sizing = resolveNodeSizingPolicy(node);
-      const baseLayout = resolveNodeContentLayout(node.content, nodeLayoutEnabled);
+      const baseLayout = resolveNodeContentLayout(node.content);
       // Style keys win over the stored content layout: one place to set alignment.
       const pad = style.textPadding;
       const layout = {
@@ -299,16 +215,6 @@ export class PixiNodeRenderer {
       });
       const textColor = pixiPaintColor(style.textColor, visual?.text ?? 0x1e293b).color;
       const label = this.acquireText(labelMeasurement.displayText, style, textColor, wrap);
-      if (!nodeLayoutEnabled) {
-        const bounds = nodeWorldBounds(node, matrix);
-        label.position.set(bounds.x + 16, bounds.y + 25);
-        const content = new Container();
-        content.alpha = alpha;
-        content.addChild(label);
-        this.labels.addChild(content);
-        this.labelByNodeId.set(node.id, content);
-        continue;
-      }
       const subStyle = subLabelStyle(style);
       const subLabel =
         typeof node.content.subLabel === 'string' && node.content.subLabel.length > 0

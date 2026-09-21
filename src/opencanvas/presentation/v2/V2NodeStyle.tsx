@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   IconAlignCenter, IconAlignLeft, IconAlignRight, IconArrowBarToDown, IconArrowBarToUp,
-  IconArrowsVertical, IconChevronDown, IconBold, IconItalic, IconStrikethrough, IconUnderline,
+  IconArrowsVertical, IconChevronDown, IconBold, IconItalic, IconPhoto, IconStrikethrough, IconUnderline,
 } from '@tabler/icons-react';
+
+import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalog';
 import type { SceneNode, ScenePage } from '../../domain/document/types';
 import type { JsonObject } from '../../domain/document/json';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { buildStyleNodesCommand } from '../../domain/commands/styleNodes';
+import { buildSetIconCommand } from '../../domain/commands/iconCommands';
+import { resolveArchitectureNodePresentation } from '../../domain/nodes/architectureNodePresentation';
+import { V2IconPicker } from './V2IconPicker';
 import { resolveNodeStyle, STYLE_LIMITS, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
 import { Icon, NumberField, Segmented } from '../design-system';
@@ -46,7 +51,7 @@ interface NodeStylePanelsProps {
   readonly onCommitted: (patch: JsonObject) => void;
 }
 
-type Panel = 'fill' | 'outline' | 'text';
+type Panel = 'icon' | 'fill' | 'outline' | 'text';
 
 const FONT_SIZE_PRESETS = [{ value: 12, label: 'XS' }, { value: 14, label: 'S' }, { value: 18, label: 'M' }, { value: 24, label: 'L' }];
 const PADDING_PRESETS = [{ value: 8, label: 'S' }, { value: 16, label: 'M' }, { value: 24, label: 'L' }];
@@ -70,11 +75,16 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
   });
   const common = commonNodeStyle(nodes);
   const [mode, setMode] = useState<PaletteMode>(() => paletteKeyForFill(common.fill)?.mode ?? 'pastel');
-  // Containers draw their own chrome (or none, for ⌘G groups): no paint panel.
-  if (!nodes.length || nodes.every((node) => isContainerNodeKind(node.kind))) return null;
+  if (!nodes.length) return null;
   const view = (key: keyof NodeStyle) => (draft && key in draft ? draft[key] : common[key]);
   const isText = nodes.every((node) => node.kind === 'text');
-  const textColorIsAuto = isText && nodes.every((node) => node.appearance.textColor === undefined || node.appearance.textColor === 'auto');
+  // Containers carry a title band: vertical alignment and shadow do not apply.
+  const isContainer = nodes.every((node) => isContainerNodeKind(node.kind));
+  // Any shape can become an icon node; the current icon (one selected) shows in the button.
+  const canPickIcon = !isText && !isContainer;
+  const currentIcon = nodes.length === 1 ? resolveArchitectureNodePresentation(nodes[0])?.icon : undefined;
+  const selectedIcon = currentIcon?.kind === 'provider' ? currentIcon : null;
+  const textColorIsAuto = nodes.every((node) => node.appearance.textColor === undefined || node.appearance.textColor === 'auto');
   const toggle = (panel: Panel) => { clear(); setOpen((current) => (current === panel ? null : panel)); };
   const close = () => { clear(); setOpen(null); };
   const opacity = view('opacity') as number | null;
@@ -96,6 +106,16 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
 
   return (
     <>
+      {canPickIcon ? (
+        <StyleButton label="Icon" open={open === 'icon'} onToggle={() => toggle('icon')} onClose={close} panelClassName="ofk-style-panel--icons"
+          preview={selectedIcon ? <IconSwatch packId={selectedIcon.packId} shapeId={selectedIcon.shapeId} /> : <Icon icon={IconPhoto} />}>
+          <V2IconPicker selected={selectedIcon} onClose={close} onPick={(icon) => {
+            const command = buildSetIconCommand(page, nodeIds, icon);
+            if (command) commit(command);
+            close();
+          }} />
+        </StyleButton>
+      ) : null}
       <StyleButton label={isText ? 'Background' : 'Fill'} open={open === 'fill'} onToggle={() => toggle('fill')} onClose={close}
         preview={<span className="ofk-style-swatch" data-mixed={fill === null || undefined} data-transparent={fill === 'transparent' || undefined}
           style={fill && fill !== 'transparent' ? { background: fill, borderColor: stroke ?? fill } : undefined} />}>
@@ -119,11 +139,13 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
             min={0} max={100} step={10} unit="%"
             onChange={(value) => preview({ opacity: value / 100 })} onCommit={(value) => apply({ opacity: value / 100 })} />
         </PanelRow>
-        <PanelRow label="Shadow">
-          <Segmented<'on' | 'off' | ''> label="Shadow" value={view('shadow') === null ? '' : view('shadow') === true ? 'on' : 'off'}
-            onChange={(value) => apply({ shadow: value === 'on' })}
-            options={[{ value: 'off', label: 'None' }, { value: 'on', label: 'Soft' }]} />
-        </PanelRow>
+        {isContainer ? null : (
+          <PanelRow label="Shadow">
+            <Segmented<'on' | 'off' | ''> label="Shadow" value={view('shadow') === null ? '' : view('shadow') === true ? 'on' : 'off'}
+              onChange={(value) => apply({ shadow: value === 'on' })}
+              options={[{ value: 'off', label: 'None' }, { value: 'on', label: 'Soft' }]} />
+          </PanelRow>
+        )}
       </StyleButton>
 
       <StyleButton label="Outline" open={open === 'outline'} onToggle={() => toggle('outline')} onClose={close}
@@ -154,7 +176,7 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
       <StyleButton label="Text" open={open === 'text'} onToggle={() => toggle('text')} onClose={close} panelClassName="ofk-style-panel--wide"
         preview={<span className="ofk-style-glyph" style={{ textDecorationColor: textColor ?? undefined }}>A</span>}>
         <PanelRow label="Color">
-          <SwatchGrid label="Text colour" options={[...(isText ? [{ id: 'auto', label: 'Auto', color: 'currentColor' }] : []),
+          <SwatchGrid label="Text colour" options={[{ id: 'auto', label: 'Auto', color: 'currentColor' },
             { id: '#ffffff', label: 'White', color: '#ffffff', border: '#cbd5e1' },
             { id: '#64748b', label: 'Mid gray', color: '#64748b' }, ...inkOptions()]}
             selected={textColorIsAuto ? 'auto' : textColor} onPick={(id) => apply({ textColor: id })}
@@ -191,12 +213,14 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
               { value: 'center', label: <Icon icon={IconAlignCenter} />, title: 'Centre' },
               { value: 'end', label: <Icon icon={IconAlignRight} />, title: 'Right' },
             ]} />
-          <ChoiceRow<NodeStyle['textVerticalAlign']> label="Vertical align" value={view('textVerticalAlign') as NodeStyle['textVerticalAlign'] | null}
-            onChange={(value) => apply({ textVerticalAlign: value })} options={[
-              { value: 'top', label: <Icon icon={IconArrowBarToUp} />, title: 'Top' },
-              { value: 'middle', label: <Icon icon={IconArrowsVertical} />, title: 'Middle' },
-              { value: 'bottom', label: <Icon icon={IconArrowBarToDown} />, title: 'Bottom' },
-            ]} />
+          {isContainer ? null : (
+            <ChoiceRow<NodeStyle['textVerticalAlign']> label="Vertical align" value={view('textVerticalAlign') as NodeStyle['textVerticalAlign'] | null}
+              onChange={(value) => apply({ textVerticalAlign: value })} options={[
+                { value: 'top', label: <Icon icon={IconArrowBarToUp} />, title: 'Top' },
+                { value: 'middle', label: <Icon icon={IconArrowsVertical} />, title: 'Middle' },
+                { value: 'bottom', label: <Icon icon={IconArrowBarToDown} />, title: 'Bottom' },
+              ]} />
+          )}
         </PanelRow>
         <details className="ofk-style-more">
           <summary className="ofk-caption">Spacing<Icon icon={IconChevronDown} /></summary>
@@ -216,4 +240,15 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
       </StyleButton>
     </>
   );
+}
+
+/** The selected node's icon, drawn in the bar button. */
+function IconSwatch({ packId, shapeId }: { readonly packId: string; readonly shapeId: string }): React.JSX.Element {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void loadProviderShapePreview(packId, shapeId).then((preview) => { if (alive) setUrl(preview?.previewUrl ?? null); });
+    return () => { alive = false; };
+  }, [packId, shapeId]);
+  return url ? <img className="ofk-style-icon-swatch" src={url} alt="" /> : <Icon icon={IconPhoto} />;
 }

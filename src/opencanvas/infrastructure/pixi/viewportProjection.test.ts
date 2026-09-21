@@ -52,21 +52,7 @@ describe('viewport scene projection', () => {
       connectors: [createTestConnector('edge', 'visible', 'culled')],
     }).pages[0];
     const nodeRenderer = new PixiNodeRenderer();
-    nodeRenderer.draw(
-      page,
-      createSceneIndex(page),
-      false,
-      true,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      new Set(['visible']),
-      'overview'
-    );
+    nodeRenderer.draw(page, createSceneIndex(page), new Set(['visible']), 'overview');
     const connectorRenderer = new PixiConnectorRenderer();
     connectorRenderer.draw(page, false, new Set());
 

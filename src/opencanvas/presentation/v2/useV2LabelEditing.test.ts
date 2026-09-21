@@ -12,11 +12,11 @@ function setup() {
     createTestNode('n1', { content: { label: 'Old' } }),
     createTestNode('new', { kind: 'text', content: { label: 'Text' } }),
   ] }).pages[0];
-  const getNodeScreenBounds = vi.fn(() => new DOMRect(10, 20, 100, 40));
+  const getNodeLabelScreenBounds = vi.fn(() => new DOMRect(10, 20, 100, 40));
   const commit = vi.fn();
   const focusCanvas = vi.fn();
   const announce = vi.fn();
-  const hostRef = { current: { getNodeScreenBounds } as unknown as PixiRendererHost };
+  const hostRef = { current: { getNodeLabelScreenBounds } as unknown as PixiRendererHost };
   const hook = renderHook(
     ({ camera, page }: { camera: CanvasCamera; page: ScenePage }) =>
       useV2LabelEditing({
@@ -30,7 +30,7 @@ function setup() {
     { initialProps: { camera: DEFAULT_CANVAS_CAMERA, page } }
   );
   act(() => hook.result.current.openEditor('n1'));
-  return { ...hook, page, getNodeScreenBounds, commit, focusCanvas, announce };
+  return { ...hook, page, getNodeLabelScreenBounds, commit, focusCanvas, announce };
 }
 
 describe('useV2LabelEditing', () => {
@@ -45,19 +45,19 @@ describe('useV2LabelEditing', () => {
   });
 
   it('re-anchors the overlay only when the camera changes', () => {
-    const { result, rerender, getNodeScreenBounds, page } = setup();
+    const { result, rerender, getNodeLabelScreenBounds, page } = setup();
     const opened = result.current.editing;
     rerender({ camera: DEFAULT_CANVAS_CAMERA, page });
     expect(result.current.editing).toBe(opened);
-    getNodeScreenBounds.mockReturnValue(new DOMRect(50, 60, 100, 40));
+    getNodeLabelScreenBounds.mockReturnValue(new DOMRect(50, 60, 100, 40));
     rerender({ camera: { ...DEFAULT_CANVAS_CAMERA, zoom: 2 }, page });
     expect(result.current.editing?.bounds.x).toBe(50);
   });
 
   it('defers opening until the page containing the node renders', () => {
-    const { result, rerender, getNodeScreenBounds, page } = setup();
+    const { result, rerender, getNodeLabelScreenBounds, page } = setup();
     act(() => result.current.cancelEdit());
-    getNodeScreenBounds.mockReturnValueOnce(null as unknown as DOMRect);
+    getNodeLabelScreenBounds.mockReturnValueOnce(null as unknown as DOMRect);
     act(() => result.current.openEditor('n1'));
     expect(result.current.editing).toBeNull();
     rerender({ camera: DEFAULT_CANVAS_CAMERA, page: { ...page } });
