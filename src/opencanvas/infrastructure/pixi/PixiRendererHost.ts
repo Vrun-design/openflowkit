@@ -37,7 +37,7 @@ import { PixiNodeRenderer } from './PixiNodeRenderer';
 import { PixiSelectionOverlay, selectionWorldBounds } from './PixiSelectionOverlay';
 import { shouldRedrawNodes } from './sceneInvalidation';
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
-import { pickConnectHandle, type ConnectSide } from '../../domain/connectors/connectHandles';
+import { type ConnectSide } from '../../domain/connectors/connectHandles';
 import {
   projectSceneViewport,
   viewportProjectionEquals,
@@ -137,6 +137,8 @@ export class PixiRendererHost {
   private index: ReturnType<typeof createSceneIndex> | null = null;
   private selectedNodeIds: readonly string[] = [];
   private primaryNodeId: string | null = null;
+  private hoveredNodeId: string | null = null;
+  private hoveredSide: ConnectSide | null = null;
   private selectedConnectorId: string | null = null;
   private activeConnectorHandle: ConnectorEditHandle | null = null;
   private destroyed = false;
@@ -418,6 +420,8 @@ export class PixiRendererHost {
   setSelection(nodeIds: readonly string[], primaryNodeId: string | null): void {
     this.selectedNodeIds = nodeIds;
     this.primaryNodeId = primaryNodeId;
+    this.hoveredNodeId = null;
+    this.hoveredSide = null;
     if (this.refreshViewportProjection()) this.rebuildScene();
     this.drawSelection();
     this.drawConnectorEditOverlay();
@@ -431,13 +435,6 @@ export class PixiRendererHost {
   getNodesWorldBounds(nodeIds: readonly string[]): Bounds2d | null {
     if (!this.index) return null;
     return selectionWorldBounds(this.index, nodeIds);
-  }
-
-  /** Side connect handle under the pointer; only drawn for a single selected node. */
-  pickConnectHandle(screenPoint: Point2d): ConnectSide | null {
-    if (this.selectedNodeIds.length !== 1) return null;
-    const bounds = this.getSelectionWorldBounds();
-    return bounds ? pickConnectHandle(bounds, screenPoint, this.camera) : null;
   }
 
   /** Alignment guide lines (world coordinates) shown while a selection moves. */
@@ -721,8 +718,18 @@ export class PixiRendererHost {
       this.selectedNodeIds,
       this.primaryNodeId,
       this.camera.zoom,
-      this.livePreview !== null
+      this.livePreview !== null,
+      this.hoveredNodeId ? { nodeId: this.hoveredNodeId, side: this.hoveredSide } : null
     );
+  }
+
+  /** Hovered node and connect handle; drives handle visibility, never selection. */
+  setHover(nodeId: string | null, side: ConnectSide | null): void {
+    if (this.hoveredNodeId === nodeId && this.hoveredSide === side) return;
+    this.hoveredNodeId = nodeId;
+    this.hoveredSide = side;
+    this.drawSelection();
+    this.requestRender();
   }
 
   private getSelectedConnector(): SceneConnector | null {

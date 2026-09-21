@@ -5,9 +5,11 @@ import { createEmptyV2Document, createEmptyV2Page, firstV2Page } from '../../pre
 import {
   buildDeleteSelectionCommand,
   buildDuplicateSelectionCommand,
+  buildHandleConnectCommand,
   buildInsertConnectorCommand,
   buildInsertShapeCommand,
   buildMoveNodesCommand,
+  buildQuickCreateCommand,
   buildSetNodeLabelCommand,
 } from './sceneEdits';
 
@@ -225,5 +227,67 @@ describe('v2 empty document', () => {
     expect(document.pages).toHaveLength(1);
     expect(firstV2Page(document).layers).toHaveLength(1);
     expect(firstV2Page(document).nodes).toHaveLength(0);
+  });
+});
+
+describe('v2 quick-create command', () => {
+  it('adds the same-kind node at the fixed gap plus the side-bound connector in one batch', () => {
+    const page = pageWithTwoNodes();
+    const source = page.nodes[0];
+    const command = buildQuickCreateCommand(page, {
+      sourceNodeId: 'node-a', sourceSide: 'right', newNodeId: 'node-c', connectorId: 'edge-1',
+    });
+    expect(command.kind).toBe('batch');
+    expect(command.label).toBe('Quick create');
+    const applied = applyDocumentCommand(
+      { ...createEmptyV2Document('doc-1'), pages: [page] },
+      command
+    );
+    const result = applied.document.pages[0];
+    expect(result.nodes).toHaveLength(3);
+    const created = result.nodes[2];
+    expect(created.kind).toBe(source.kind);
+    expect(created.size).toEqual(source.size);
+    expect(created.content.label).toBe('');
+    expect(created.transform.translation).toEqual({
+      x: source.transform.translation.x + source.size.width * 2,
+      y: source.transform.translation.y,
+    });
+    expect(result.connectors).toHaveLength(1);
+    expect(result.connectors[0].source).toMatchObject({ nodeId: 'node-a', portId: 'right' });
+    expect(result.connectors[0].target).toMatchObject({ nodeId: 'node-c', portId: 'left' });
+    // One undo step removes node and connector (and the port, if it was added).
+    const undone = applyDocumentCommand(applied.document, applied.inverse);
+    expect(undone.document.pages[0].nodes).toHaveLength(2);
+    expect(undone.document.pages[0].connectors).toHaveLength(0);
+    expect(undone.document.pages[0].nodes[0].ports).toHaveLength(0);
+  });
+});
+
+describe('v2 handle-connect command', () => {
+  it('binds both sides and skips port set-nodes when the ports exist', () => {
+    const page = pageWithTwoNodes();
+    const primed = applyDocumentCommand(
+      { ...createEmptyV2Document('doc-1'), pages: [page] },
+      buildQuickCreateCommand(page, {
+        sourceNodeId: 'node-a', sourceSide: 'right', newNodeId: 'node-c', connectorId: 'edge-0',
+      })
+    ).document.pages[0];
+    const command = buildHandleConnectCommand(primed, {
+      id: 'edge-1', sourceNodeId: 'node-a', sourceSide: 'right',
+      targetNodeId: 'node-b', targetSide: 'left',
+    });
+    expect(command.commands).toHaveLength(2);
+    expect(command.commands[0].kind).toBe('set-node');
+    expect(command.commands[1].kind).toBe('insert-connector');
+    const applied = applyDocumentCommand(
+      { ...createEmptyV2Document('doc-1'), pages: [primed] },
+      command
+    );
+    const edge = applied.document.pages[0].connectors.at(-1)!;
+    expect(edge.source).toMatchObject({ nodeId: 'node-a', portId: 'right' });
+    expect(edge.target).toMatchObject({ nodeId: 'node-b', portId: 'left' });
+    const undone = applyDocumentCommand(applied.document, applied.inverse);
+    expect(undone.document.pages[0].connectors).toHaveLength(1);
   });
 });

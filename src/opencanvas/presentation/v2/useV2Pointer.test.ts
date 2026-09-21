@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import { clearSelection, replaceSelection } from '../../application/selection/selection';
+import type { Bounds2d } from '../../domain/geometry/types';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import { useV2Pointer } from './useV2Pointer';
 
@@ -16,7 +17,7 @@ function setup(extraNodes: ReturnType<typeof createTestNode>[] = []) {
   const selectionRef = { current: clearSelection() };
   const host = {
     screenToWorld: (point: { x: number; y: number }) => point,
-    pickNode: vi.fn((): string | null => 'a'),
+    pickNode: vi.fn((_point: { x: number; y: number }): string | null => 'a'),
     pickConnector: vi.fn((): string | null => null),
     getSelectedConnectorId: vi.fn((): string | null => null),
     pickConnectorHandle: vi.fn(() => null),
@@ -24,22 +25,25 @@ function setup(extraNodes: ReturnType<typeof createTestNode>[] = []) {
     pickConnectHandle: vi.fn(() => null),
     setMarquee: vi.fn(), setTransformPreview: vi.fn(), setAlignmentGuides: vi.fn(), setConnectionPreview: vi.fn(),
     setConnectorSelection: vi.fn(), setConnectorPreview: vi.fn(),
+    setHover: vi.fn(), getNodesWorldBounds: vi.fn((_ids: readonly string[]): Bounds2d | null => null),
+    pickNodesInScreenBounds: vi.fn((_bounds: Bounds2d): readonly string[] => []),
   };
   const commit = vi.fn();
   const applyConnectorSelection = vi.fn();
+  const openEditor = vi.fn();
   const { result } = renderHook(() => useV2Pointer({
     hostRef: { current: host as unknown as PixiRendererHost },
     cameraRef: { current: { x: 0, y: 0, zoom: 1 } }, pageRef: { current: page },
     selectionRef, toolRef: { current: 'select' }, spacePanRef: { current: false },
     readOnlyRef: { current: false }, gestureApiRef: { current: null }, commit,
     applySelection: (next) => { selectionRef.current = next; }, applyConnectorSelection,
-    updateCamera: vi.fn(), openEditor: vi.fn(), onToolChange: vi.fn(), mintId: () => 'new',
+    updateCamera: vi.fn(), openEditor, onToolChange: vi.fn(), mintId: () => 'new',
   }));
   function event(x: number, y: number, target: HTMLElement = canvas): ReactPointerEvent<HTMLElement> {
     return { currentTarget: section, target, clientX: x, clientY: y, button: 0,
       pointerId: 1, preventDefault: vi.fn() } as unknown as ReactPointerEvent<HTMLElement>;
   }
-  return { result, host, commit, page, selectionRef, applyConnectorSelection, event };
+  return { result, host, commit, page, selectionRef, applyConnectorSelection, openEditor, event };
 }
 
 async function flushFrame(): Promise<void> {
@@ -177,5 +181,79 @@ describe('V2 direct manipulation', () => {
     act(() => result.current.handlePointerDown(event(100, 100)));
     expect(selectionRef.current.nodeIds).toEqual([]);
     expect(applyConnectorSelection).toHaveBeenCalledWith('edge');
+  });
+});
+
+describe('V2 quick-create from side handles', () => {
+  // Node a spans (0,0)-(100,50); its right handle sits at (122,25).
+  const boundsOf = (ids: readonly string[]): Bounds2d | null =>
+    ids[0] === 'a' ? { x: 0, y: 0, width: 100, height: 50 }
+    : ids[0] === 'b' ? { x: 400, y: 0, width: 100, height: 50 } : null;
+
+  it('tracks hovered node and handle, and clears hover on press', () => {
+    const { result, event, host } = setup();
+    host.getNodesWorldBounds.mockImplementation(boundsOf);
+    act(() => result.current.handlePointerMove(event(100, 100)));
+    expect(host.setHover).toHaveBeenLastCalledWith('a', null);
+    act(() => result.current.handlePointerMove(event(122, 25)));
+    expect(host.setHover).toHaveBeenLastCalledWith('a', 'right');
+    act(() => result.current.handlePointerDown(event(122, 25)));
+    expect(host.setHover).toHaveBeenLastCalledWith(null, null);
+  });
+
+  it('drags from a handle to empty canvas: same-size node at the fixed gap, bound right→left, editor open', () => {
+    const { result, event, host, commit, selectionRef, openEditor } = setup();
+    host.getNodesWorldBounds.mockImplementation(boundsOf);
+    host.pickNodesInScreenBounds.mockReturnValue(['a']);
+    host.pickNode.mockImplementation((point: { x: number }) => (point.x < 150 ? 'a' : null));
+    act(() => result.current.handlePointerDown(event(122, 25)));
+    expect(selectionRef.current.nodeIds).toEqual(['a']);
+    act(() => result.current.handlePointerMove(event(322, 25)));
+    act(() => result.current.handlePointerUp(event(322, 25)));
+    expect(commit).toHaveBeenCalledOnce();
+    const batch = commit.mock.calls[0][0];
+    expect(batch.kind).toBe('batch');
+    expect(batch.label).toBe('Quick create');
+    const insertNode = batch.commands.find((command: { kind: string }) => command.kind === 'insert-node');
+    expect(insertNode.node.size).toEqual({ width: 100, height: 50 });
+    expect(insertNode.node.transform.translation).toEqual({ x: 200, y: 0 });
+    const insertEdge = batch.commands.find((command: { kind: string }) => command.kind === 'insert-connector');
+    expect(insertEdge.connector.source).toMatchObject({ nodeId: 'a', portId: 'right' });
+    expect(insertEdge.connector.target).toMatchObject({ portId: 'left' });
+    expect(selectionRef.current.nodeIds).toEqual([insertNode.node.id]);
+    expect(openEditor).toHaveBeenCalledWith(insertNode.node.id, { isNew: true });
+  });
+
+  it('clicks a handle without dragging: same quick-create in that direction', () => {
+    const { result, event, host, commit, openEditor } = setup();
+    host.getNodesWorldBounds.mockImplementation(boundsOf);
+    host.pickNodesInScreenBounds.mockReturnValue(['a']);
+    act(() => result.current.handlePointerDown(event(122, 25)));
+    act(() => result.current.handlePointerUp(event(123, 25)));
+    expect(commit).toHaveBeenCalledOnce();
+    expect(commit.mock.calls[0][0].label).toBe('Quick create');
+    expect(openEditor).toHaveBeenCalledWith('new', { isNew: true });
+  });
+
+  it('drags from a handle onto another node: binds the nearest side', () => {
+    const other = createTestNode('b', {
+      size: { width: 100, height: 50 },
+      transform: { translation: { x: 400, y: 0 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+    });
+    const { result, event, host, commit, selectionRef, applyConnectorSelection } = setup([other]);
+    host.getNodesWorldBounds.mockImplementation(boundsOf);
+    host.pickNodesInScreenBounds.mockReturnValue(['a']);
+    host.pickNode.mockImplementation((point: { x: number }) => (point.x < 150 ? 'a' : 'b'));
+    act(() => result.current.handlePointerDown(event(122, 25)));
+    act(() => result.current.handlePointerMove(event(395, 25)));
+    act(() => result.current.handlePointerUp(event(395, 25)));
+    expect(commit).toHaveBeenCalledOnce();
+    const batch = commit.mock.calls[0][0];
+    expect(batch.label).toBe('Connect');
+    const edge = batch.commands.find((command: { kind: string }) => command.kind === 'insert-connector');
+    expect(edge.connector.source).toMatchObject({ nodeId: 'a', portId: 'right' });
+    expect(edge.connector.target).toMatchObject({ nodeId: 'b', portId: 'left' });
+    expect(selectionRef.current.nodeIds).toEqual([]);
+    expect(applyConnectorSelection).toHaveBeenCalledWith(edge.connector.id);
   });
 });

@@ -3,23 +3,22 @@
 Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–4, one month, no gates.
 
 ## Now
-- Phase 1.2 + 1.3 done 2026-09-21 (Muse Spark, `p1-camera-pointer`,
-  stacked on `p1-feel-probe`): camera + pointer pipeline.
-- 1.2: `normalizeWheelDelta` (lines×16, pages×viewport); ⌘0 fit,
-  ⌘1 100 % (⇧1 removed, labels updated); Safari gesture pinch; no
-  inertia exists (nothing to remove); revision unchanged by camera ops.
-- 1.3: coalesce to latest point; transform math+preview once per rAF;
-  release point commits on pointerup; Escape cancels the queued frame;
-  bar follows via direct DOM — 0 React renders mid-drag, verified live.
-- Probe @512 (2 runs): p50 119–307 ms, p95 365–388 (≤16 FAIL);
-  dropped 151–152/3 s (0 FAIL); drift 0 px PASS; line-wheel 48 px now.
-- Bottleneck is SwiftShader compositing (~100 ms/frame), not app JS
-  (trace: no task >20 ms; canvas hidden → 25 Hz, 6 ms delay). Owner
-  re-runs on real GPU. Readings: probe keeps the harder 512 bar for
-  the 200-node check; capture fallback kept (Chrome trackpad bug).
+- Phase 1.4 done 2026-09-21 (Muse Spark, `p1-quick-create`,
+  stacked on `p1-camera-pointer`): hover handles + quick-create.
+- Hover any node → 4 side `+` handles (screen-space); hovered handle
+  inverts; drag from a handle previews from that side anchor.
+- Drop empty → same-kind/size node at 1× gap on the drag axis, bound
+  source-side→facing-side, selected, label editing open. Drop on node
+  → nearest-side bind. Click on handle → same as empty drop. All one
+  undo step. Drop back on source cancels (loops are 1.6).
+- Domain: `connectors/quickCreate.ts` (+tests); commands batch
+  port-ensuring (`buildQuickCreate/HandleConnectCommand` +tests).
+- e2e/quick-create green: right-handle 200 px → 2 nodes, 1 edge
+  right→left, editor focused. Probe: p95 357 ms, dropped 168, drift 0
+  (compositor-bound, unchanged). No keyboard path in slice — open.
 
 ## Next
-- Phase 1.4 (unclaimed). Phase 2.1 grammar.md — Claude (Opus 5),
+- Phase 1.5 (unclaimed). Phase 2.1 grammar.md — Claude (Opus 5),
   `p2-grammar`; owner reviews before parser code.
 
 ## Later
@@ -28,8 +27,8 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–4, one month, no ga
 
 ## Done
 - 2026-09-21: Phase 0 + v2 shell (boot `/`, green gate, frozen specs).
-- 2026-09-21: 1.1 feel probe (`scripts/feel-probe.mjs`, headed Chromium).
+- 2026-09-21: 1.1 feel probe; 1.2 camera; 1.3 pointer pipeline.
 
-## Feel bugs (→ 1.4+; check-v2-polish stale: Settings is in canvas menu)
-- 512-node drag still ~370 ms p95 here — compositor-bound, re-probe on GPU.
+## Feel bugs (→ 1.5+; check-v2-polish stale: Settings is in canvas menu)
+- 512-node drag still ~360 ms p95 here — compositor-bound, re-probe on GPU.
 - Gesture pinch only testable via synthetic events (no Safari here).

@@ -33,6 +33,12 @@ import {
   type PixiPointerOperation,
 } from './pointerOperations';
 import {
+  nearestSide,
+  pickConnectHandle,
+  sideAnchor,
+  type ConnectSide,
+} from '../../domain/connectors/connectHandles';
+import {
   beginConnectorOperation,
   connectorEditLabel,
   updateConnectorOperation,
@@ -41,13 +47,17 @@ import { createConnectorEditCommand } from '../../domain/connectors/editing';
 import {
   V2_DEFAULT_SHAPE_SIZE,
   V2_DEFAULT_TEXT_SIZE,
+  buildHandleConnectCommand,
   buildInsertConnectorCommand,
   buildInsertShapeCommand,
+  buildQuickCreateCommand,
   type V2ShapeKind,
 } from '../../domain/commands/sceneEdits';
 import type { V2Tool } from './V2CreationToolbar';
 
 const CLICK_THRESHOLD_PX = 4;
+// Handles sit 22 px outside the node edge; search a box around the press.
+const HANDLE_SEARCH_RADIUS_PX = 40;
 // Object-snap reach in screen pixels; divided by zoom before it meets world units.
 const OBJECT_SNAP_PX = 6;
 const MIN_CREATE_SIZE = 8;
@@ -72,6 +82,8 @@ interface V2ConnectOperation {
   readonly pointerId: number;
   readonly page: ScenePage;
   readonly sourceNodeId: string | null;
+  /** Handle side the drag started from; null for connector-tool drags. */
+  readonly sourceSide: ConnectSide | null;
   readonly fromWorld: Point2d;
   readonly startScreen: Point2d;
   readonly toWorld: Point2d;
@@ -144,6 +156,25 @@ function nodeCenterWorld(page: ScenePage, nodeId: string): Point2d | null {
     x: node.transform.translation.x + node.size.width / 2,
     y: node.transform.translation.y + node.size.height / 2,
   };
+}
+
+// Handle flow released on empty canvas (or clicked without dragging): the new
+// same-kind node at the fixed gap, side-bound, selected, label editing open.
+function commitQuickCreateDelivery(
+  options: V2PointerOptions,
+  operation: V2ConnectOperation,
+  sourceNodeId: string,
+  sourceSide: ConnectSide
+): void {
+  const nodeId = options.mintId('node');
+  const connectorId = options.mintId('connector');
+  options.commit(buildQuickCreateCommand(operation.page, {
+    sourceNodeId, sourceSide, newNodeId: nodeId, connectorId,
+  }));
+  options.applyConnectorSelection(null);
+  options.applySelection(replaceSelection([nodeId]));
+  options.onToolChange('select');
+  options.openEditor(nodeId, { isNew: true });
 }
 
 export function useV2Pointer(options: V2PointerOptions) {
@@ -233,8 +264,19 @@ export function useV2Pointer(options: V2PointerOptions) {
       if (!operation) {
         if (opts.toolRef.current === 'select' && event.target instanceof HTMLCanvasElement) {
           const handle = host.pickTransformHandle(point);
-          const cursor = handle ? HANDLE_CURSORS[handle] : (host.pickNode(point) ? 'move' : '');
+          const hoverNode = host.pickNode(point);
+          const hoverBounds = hoverNode && !opts.readOnlyRef.current
+            ? host.getNodesWorldBounds([hoverNode])
+            : null;
+          const hoverSide = hoverNode && hoverBounds
+            ? pickConnectHandle(hoverBounds, point, opts.cameraRef.current)
+            : null;
+          host.setHover(hoverNode, hoverSide);
+          const cursor = hoverSide ? 'crosshair'
+            : handle ? HANDLE_CURSORS[handle] : (hoverNode ? 'move' : '');
           event.target.style.cursor = cursor;
+        } else {
+          host.setHover(null, null);
         }
         return;
       }
@@ -398,8 +440,29 @@ export function useV2Pointer(options: V2PointerOptions) {
           point.y - operation.startScreen.y
         );
         const targetId = host.pickNode(point);
-        const selfLoop = targetId !== null && targetId === operation.sourceNodeId;
-        if (moved >= CLICK_THRESHOLD_PX && !selfLoop) {
+        if (operation.sourceSide && operation.sourceNodeId) {
+          const sourceNodeId = operation.sourceNodeId;
+          const sourceSide = operation.sourceSide;
+          if (moved < CLICK_THRESHOLD_PX) {
+            // Click on a handle: same as releasing on empty canvas that way.
+            commitQuickCreateDelivery(opts, operation, sourceNodeId, sourceSide);
+          } else if (targetId && targetId !== sourceNodeId) {
+            const targetBounds = host.getNodesWorldBounds([targetId]);
+            if (targetBounds) {
+              const targetSide = nearestSide(targetBounds, host.screenToWorld(point));
+              const id = opts.mintId('connector');
+              opts.commit(buildHandleConnectCommand(operation.page, {
+                id, sourceNodeId, sourceSide, targetNodeId: targetId, targetSide,
+              }));
+              opts.applySelection(clearSelection());
+              opts.applyConnectorSelection(id);
+              opts.onToolChange('select');
+            }
+          } else if (targetId === null) {
+            commitQuickCreateDelivery(opts, operation, sourceNodeId, sourceSide);
+          }
+          // Release back on the source node cancels; loops arrive in 1.6.
+        } else if (moved >= CLICK_THRESHOLD_PX && !(targetId && targetId === operation.sourceNodeId)) {
           const id = opts.mintId('connector');
           opts.commit(
             buildInsertConnectorCommand(operation.page, {
@@ -515,12 +578,14 @@ export function useV2Pointer(options: V2PointerOptions) {
           pointerId: event.pointerId,
           page,
           sourceNodeId: nodeId,
+          sourceSide: null,
           fromWorld: (nodeId && nodeCenterWorld(page, nodeId)) || world,
           startScreen: point,
           toWorld: world,
         };
         return;
       }
+      host.setHover(null, null);
       const additive = event.shiftKey || event.metaKey || event.ctrlKey;
       const selectedConnectorId = host.getSelectedConnectorId();
       const selectedConnector = selectedConnectorId
@@ -536,19 +601,44 @@ export function useV2Pointer(options: V2PointerOptions) {
       }
       const states = buildNodeStateMap(page);
       const canTransform = opts.selectionRef.current.nodeIds.every((id) => !states.get(id)?.locked);
-      const connectSide = host.pickConnectHandle(point);
-      const primary = opts.selectionRef.current.primaryNodeId;
-      if (connectSide && primary && !additive && canTransform) {
-        operationRef.current = { kind: 'connect', pointerId: event.pointerId, page,
-          sourceNodeId: primary, fromWorld: nodeCenterWorld(page, primary)!,
-          startScreen: point, toWorld: host.screenToWorld(point) };
-        return;
-      }
       const handle = canTransform ? host.pickTransformHandle(point) : null;
       if (handle && !additive && opts.selectionRef.current.nodeIds.length > 0) {
         operationRef.current = beginTransformOperation(event.pointerId, page,
           opts.selectionRef.current.nodeIds, handle, host.screenToWorld(point));
         return;
+      }
+      // A side handle starts a quick-create drag from that side, whether or
+      // not its node is selected; the preview runs from the side anchor.
+      // Handles sit outside the node bounds, so search neighbours by
+      // proximity (this also covers touch, which never hovers first).
+      if (!additive) {
+        const nearby = host.pickNodesInScreenBounds(boundsBetween(
+          { x: point.x - HANDLE_SEARCH_RADIUS_PX, y: point.y - HANDLE_SEARCH_RADIUS_PX },
+          { x: point.x + HANDLE_SEARCH_RADIUS_PX, y: point.y + HANDLE_SEARCH_RADIUS_PX }
+        ));
+        const hit = nearby
+          .filter((candidateId) => !states.get(candidateId)?.locked)
+          .map((candidateId) => {
+            const candidateBounds = host.getNodesWorldBounds([candidateId]);
+            const candidateSide = candidateBounds
+              ? pickConnectHandle(candidateBounds, point, opts.cameraRef.current)
+              : null;
+            return candidateSide && candidateBounds
+              ? { candidateId, candidateBounds, candidateSide }
+              : null;
+          })
+          .find((candidate): candidate is NonNullable<typeof candidate> => candidate !== null);
+        if (hit) {
+          if (!opts.selectionRef.current.nodeIds.includes(hit.candidateId)) {
+            opts.applyConnectorSelection(null);
+            opts.applySelection(replaceSelection([hit.candidateId]));
+          }
+          operationRef.current = { kind: 'connect', pointerId: event.pointerId, page,
+            sourceNodeId: hit.candidateId, sourceSide: hit.candidateSide,
+            fromWorld: sideAnchor(hit.candidateBounds, hit.candidateSide),
+            startScreen: point, toWorld: host.screenToWorld(point) };
+          return;
+        }
       }
       const nodeId = host.pickNode(point);
       if (nodeId && !additive) {
