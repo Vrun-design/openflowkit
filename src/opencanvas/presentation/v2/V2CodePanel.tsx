@@ -17,7 +17,8 @@ export function V2CodePanel({
   onGenerate: () => void;
   onClose: () => void;
 }) {
-  const errors = diagnostics.filter((item) => item.severity !== 'info');
+  // ponytail: an empty editor shows the placeholder, not "document is empty".
+  const errors = code.trim() ? diagnostics.filter((item) => item.severity !== 'info') : [];
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
   const [suggestions, setSuggestions] = useState<readonly string[]>([]);
@@ -65,6 +66,7 @@ export function V2CodePanel({
           <pre ref={highlightRef} className="ofk-v2-code-highlight" aria-hidden="true">{highlighted}</pre>
           <textarea
             ref={editorRef} id="v2-code" className="ofk-v2-code-editor" spellCheck={false} value={code} aria-label="Diagram source"
+            placeholder={'flowchart\nStart -> Build -> Ship\nBuild [diamond]'}
             aria-describedby={errors.length ? 'v2-code-diagnostics' : undefined}
             aria-invalid={errors.some((item) => item.severity === 'error') || undefined}
             aria-autocomplete="list" aria-controls={suggestions.length ? 'v2-code-suggestions' : undefined}

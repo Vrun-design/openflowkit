@@ -196,7 +196,9 @@
 .ofk-v2-code-editor-wrap { position: relative; flex: 1; min-height: 240px; }
 .ofk-v2-code-editor, .ofk-v2-code-highlight { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; overflow: auto; white-space: pre; tab-size: 2; border-radius: 8px; padding: 16px 12px; font: 14px/1.9 var(--ofk-font-mono, monospace); }
 .ofk-v2-code-editor { resize: none; border: 1px solid var(--ofk-border); color: transparent; caret-color: var(--ofk-text); background: transparent; -webkit-text-fill-color: transparent; }
-.ofk-v2-code-editor::selection { background: var(--ofk-accentSoft); -webkit-text-fill-color: transparent; }
+.ofk-v2-code-editor::selection { background: color-mix(in srgb, var(--ofk-accent) 28%, transparent); -webkit-text-fill-color: transparent; }
+.ofk-v2-code-editor::placeholder { color: var(--ofk-muted); -webkit-text-fill-color: var(--ofk-muted); opacity: 1; }
+.ofk-v2 textarea.ofk-v2-code-editor:focus-visible { outline: none; border-color: var(--ofk-accent); }
 .ofk-v2-code-highlight { pointer-events: none; border: 1px solid transparent; color: var(--ofk-secondary); background: var(--ofk-canvas); }
 .ofk-v2-code-highlight [data-token='arrow'], .ofk-v2-code-highlight [data-token='punctuation'] { color: var(--ofk-accent); }
 .ofk-v2-code-highlight [data-token='string'] { color: var(--ofk-success); }
