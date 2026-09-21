@@ -776,7 +776,7 @@
   border-radius: 0;
 }
 .ofk-segmented {
-  display: inline-flex;
+  display: flex;
   padding: 2px;
   gap: 2px;
   border-radius: var(--ofk-radius-control);
@@ -789,6 +789,7 @@
   justify-content: center;
   min-height: calc(var(--ofk-control-size) - 4px);
   min-width: calc(var(--ofk-control-size) - 4px);
+  flex: 1 1 0;
   padding: 0 var(--ofk-space-md);
   border-radius: calc(var(--ofk-radius-control) - 2px);
   font-size: var(--ofk-type-label);
