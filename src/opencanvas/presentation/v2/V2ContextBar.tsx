@@ -21,13 +21,33 @@ interface V2ContextBarProps {
   readonly onOpenMenu: (x: number, y: number) => void;
 }
 
+export interface ContextBarLayout {
+  /** Measured bar width; the caller observes the element. */
+  readonly width: number;
+  /** Visible canvas edges in viewport px: side panels shrink them. */
+  readonly left: number;
+  readonly right: number;
+}
+
+/** Canvas edges not covered by the layers/workspace panels. */
+export function visibleCanvasEdges(root: HTMLElement | null): Pick<ContextBarLayout, 'left' | 'right'> {
+  const style = root ? getComputedStyle(root) : null;
+  const panel = root?.dataset.workspaceOpen === 'true' ? parseFloat(style?.getPropertyValue('--v2-panel-width') ?? '') || 0 : 0;
+  const tree = root?.dataset.treeOpen === 'true' ? parseFloat(style?.getPropertyValue('--v2-layers-width') ?? '') || 0 : 0;
+  return { left: tree, right: window.innerWidth - panel };
+}
+
 // Positioned above the selection union, falling below it near the viewport
-// top. Coordinates are viewport CSS pixels from the render host.
-export function contextBarStyle(anchor: DOMRect): React.CSSProperties {
+// top, kept inside the visible canvas. A zero-width anchor is a point
+// (selected connector: x at its midpoint, y/height spanning the path) and
+// centres the bar on it instead of hanging it to the right.
+export function contextBarStyle(anchor: DOMRect, layout: ContextBarLayout): React.CSSProperties {
   const top = anchor.y - 104;
+  const left = anchor.width === 0 ? anchor.x - layout.width / 2 : anchor.x;
+  const minLeft = layout.left + 8;
   return {
     position: 'absolute',
-    left: Math.max(8, Math.min(anchor.x, window.innerWidth - 560)),
+    left: Math.max(minLeft, Math.min(left, Math.max(minLeft, layout.right - layout.width - 8))),
     top: Math.max(80, Math.min(top >= 80 ? top : anchor.y + anchor.height + 16, window.innerHeight - 144)),
     zIndex: 35,
   };

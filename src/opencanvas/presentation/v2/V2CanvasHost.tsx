@@ -1,6 +1,7 @@
 import { createTransformSnapshot } from '../../domain/transforms/transformSelection';
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -10,6 +11,7 @@ import {
 import { Link } from 'react-router-dom';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { ScenePage } from '../../domain/document/types';
+import { pointAtPolylineRatio } from '../../domain/geometry/polyline';
 import type { Point2d } from '../../domain/geometry/types';
 import type { CanvasCamera } from '../../domain/camera/types';
 import {
@@ -26,7 +28,7 @@ import {
 import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
 import { resolveNodeStyle } from '../../domain/nodes/nodeStyle';
 import { resolveConnectorLabelStyle } from '../../domain/connectors/labelStyle';
-import { V2ContextBar, contextBarStyle, sameRect, unionScreenBounds } from './V2ContextBar';
+import { V2ContextBar, contextBarStyle, sameRect, unionScreenBounds, visibleCanvasEdges } from './V2ContextBar';
 import type { ContextMenuTarget } from './V2ContextMenu';
 import { useV2Pointer, type StylePresets, type V2GestureApi } from './useV2Pointer';
 import { connectorAppearanceWithPatch } from '../../domain/commands/styleConnectors';
@@ -105,6 +107,10 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   // Latest React-rendered bar anchor; the drag-follow path restores exactly
   // this on operation end when no re-render follows (anchor truly unchanged).
   const anchorForRestoreRef = useRef<DOMRect | null>(null);
+  // Bar width is measured (node and connector bars differ); side panels
+  // shrink the visible canvas the bar is clamped into.
+  const [barWidth, setBarWidth] = useState(320);
+  const barLayout = (bar: HTMLElement) => ({ width: bar.offsetWidth, ...visibleCanvasEdges(bar.closest<HTMLElement>('.ofk-v2')) });
   // Sticky defaults live with the host for the session: what you last styled
   // is what the next shape/text/connector gets.
   const stylePresetsRef = useRef<StylePresets>({ shape: {}, text: {}, connector: {} });
@@ -137,7 +143,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
         previewFrameRef.current = null;
         pendingPreviewRef.current = null;
         if (bar && anchorForRestoreRef.current) {
-          const restore = contextBarStyle(anchorForRestoreRef.current);
+          const restore = contextBarStyle(anchorForRestoreRef.current, barLayout(bar));
           if (restore.left !== undefined) bar.style.left = `${restore.left}px`;
           if (restore.top !== undefined) bar.style.top = `${restore.top}px`;
         }
@@ -153,7 +159,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
         const pending = pendingPreviewRef.current;
         pendingPreviewRef.current = null;
         if (!pending) return;
-        const follow = contextBarStyle(pending);
+        const follow = contextBarStyle(pending, barLayout(bar));
         if (follow.left !== undefined) bar.style.left = `${follow.left}px`;
         if (follow.top !== undefined) bar.style.top = `${follow.top}px`;
       });
@@ -290,8 +296,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   }, [props.selection, props.selectedConnectorId, props.hostRef, props.page, status]);
 
   // Context bar anchor follows selection, page geometry and camera; the state
-  // only changes when the union actually moves. A selected connector anchors
-  // to its midpoint instead.
+  // only changes when the union actually moves.
   const [contextAnchor, setContextAnchor] = useState<DOMRect | null>(null);
   const selectionIds = props.selection.nodeIds;
   const selectedConnectorId = props.selectedConnectorId;
@@ -313,14 +318,27 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     const samples = selectedConnectorId
       ? props.hostRef.current?.getConnectorSamples(selectedConnectorId)
       : null;
-    const middle = samples?.length
-      ? worldToScreen(props.camera, samples[Math.floor(samples.length / 2)])
-      : null;
-    const next = middle ? new DOMRect(middle.x, middle.y, 1, 1) : null;
+    // Point anchor (width 0): x at the path's arc-length midpoint, y/height
+    // spanning the path so the bar sits above or below every run rather than
+    // crossing a vertical one.
+    const midpoint = samples ? pointAtPolylineRatio(samples, 0.5) : null;
+    const middle = midpoint ? worldToScreen(props.camera, midpoint) : null;
+    const ys = samples?.map((sample) => worldToScreen(props.camera, sample).y) ?? [];
+    const top = ys.length ? Math.min(...ys) : 0;
+    const next = middle && ys.length ? new DOMRect(middle.x, top, 0, Math.max(...ys) - top) : null;
     if (next) anchorForRestoreRef.current = next;
     setContextAnchor((current) => (current && next && sameRect(current, next) ? current : next));
   }, [selectionIds, selectedConnectorId, props.editing, props.readOnly, props.hostRef,
     props.camera, props.page, viewportSize]);
+
+  useLayoutEffect(() => {
+    const bar = props.sectionRef.current?.querySelector<HTMLElement>('[data-context-bar]');
+    if (!contextAnchor || !bar) return;
+    setBarWidth(bar.offsetWidth);
+    const observer = new ResizeObserver(() => setBarWidth(bar.offsetWidth));
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [contextAnchor, selectedConnectorId, props.sectionRef]);
 
   const unavailableReason = mountError ?? capability.reason ?? null;
 
@@ -439,7 +457,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
               bounds: snapshot.bounds, snappedX: false, snappedY: false,
             } : null);
           }}
-          style={contextBarStyle(contextAnchor)}
+          style={contextBarStyle(contextAnchor, { width: barWidth, ...visibleCanvasEdges(props.sectionRef.current?.closest<HTMLElement>('.ofk-v2') ?? null) })}
           onNodeStyleCommitted={(patch) => {
             const kind = props.selection.nodeIds.every((id) => props.page.nodes.find((node) => node.id === id)?.kind === 'text') ? 'text' : 'shape';
             stylePresetsRef.current[kind] = { ...stylePresetsRef.current[kind], ...patch };
