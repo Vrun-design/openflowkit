@@ -1,5 +1,9 @@
 import { getContrastText, mixHex, normalizeHex } from '../lib/colorUtils';
-import { NODE_EXPORT_COLORS, NODE_FILLED_COLORS } from './palettes';
+import {
+  DEFAULT_DIAGRAM_PALETTE, diagramPalette, paletteTablesForMode,
+  type DiagramPaletteName,
+} from '../opencanvas/domain/nodes/nodePalette';
+import { NODE_EXPORT_COLORS } from './palettes';
 import type {
   ContainerVisualStyle,
   EdgeVisualStyle,
@@ -28,7 +32,8 @@ const EDGE_CONDITION_COLOR_KEYS = {
 export function resolveNodeVisualStyle(
   colorKey?: string,
   colorMode: NodeColorMode = 'subtle',
-  customColor?: string
+  customColor?: string,
+  palette: DiagramPaletteName = DEFAULT_DIAGRAM_PALETTE
 ): NodeExportColor {
   if (colorKey === 'custom') {
     const normalized = normalizeHex(customColor || '');
@@ -59,11 +64,9 @@ export function resolveNodeVisualStyle(
     }
   }
 
-  const resolvedColor = colorKey && NODE_EXPORT_COLORS[colorKey] ? colorKey : 'white';
-  if (colorMode === 'filled') {
-    return NODE_FILLED_COLORS[resolvedColor] || NODE_FILLED_COLORS.white;
-  }
-  return NODE_EXPORT_COLORS[resolvedColor] || NODE_EXPORT_COLORS.white;
+  const tables = paletteTablesForMode(diagramPalette(palette), colorMode === 'filled' ? 'solid' : 'pastel');
+  const resolvedColor = colorKey && tables[colorKey as NodeColorKey] ? colorKey : 'white';
+  return tables[resolvedColor as NodeColorKey] ?? tables.white;
 }
 
 export function resolveSharedColorKey(
@@ -87,10 +90,11 @@ export function resolveContainerVisualStyle(
   colorKey?: string,
   colorMode: NodeColorMode = 'subtle',
   customColor?: string,
-  fallback: NodeColorKey = 'slate'
+  fallback: NodeColorKey = 'slate',
+  palette: DiagramPaletteName = DEFAULT_DIAGRAM_PALETTE
 ): ContainerVisualStyle {
   const resolvedColorKey = resolveSharedColorKey(colorKey, fallback);
-  const resolved = resolveNodeVisualStyle(resolvedColorKey, colorMode, customColor);
+  const resolved = resolveNodeVisualStyle(resolvedColorKey, colorMode, customColor, palette);
 
   if (colorMode === 'filled') {
     return {
@@ -127,12 +131,14 @@ export function resolveTextVisualStyle(
   colorKey?: string,
   colorMode: NodeColorMode = 'subtle',
   customColor?: string,
-  fallback: NodeColorKey = 'slate'
+  fallback: NodeColorKey = 'slate',
+  palette: DiagramPaletteName = DEFAULT_DIAGRAM_PALETTE
 ): Pick<ContainerVisualStyle, 'border' | 'text' | 'hoverBg'> {
   const resolved = resolveNodeVisualStyle(
     resolveSharedColorKey(colorKey, fallback),
     colorMode,
-    customColor
+    customColor,
+    palette
   );
   return {
     border: mixHex(resolved.border, '#ffffff', 0.18),
@@ -147,7 +153,8 @@ export function resolveTextVisualStyle(
 export function resolveAnnotationVisualStyle(
   colorKey?: string,
   colorMode: NodeColorMode = 'subtle',
-  customColor?: string
+  customColor?: string,
+  palette: DiagramPaletteName = DEFAULT_DIAGRAM_PALETTE
 ): {
   containerBg: string;
   containerBorder: string;
@@ -161,7 +168,8 @@ export function resolveAnnotationVisualStyle(
   const resolved = resolveNodeVisualStyle(
     resolveSharedColorKey(colorKey, 'yellow'),
     colorMode,
-    customColor
+    customColor,
+    palette
   );
   return {
     containerBg: resolved.bg,

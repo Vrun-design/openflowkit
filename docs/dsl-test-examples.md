@@ -300,7 +300,26 @@ Events --> Recovery API : recovery events
 5. Confirm panel says canvas was edited and shows serialized current canvas state.
 6. Generate again. Confirm warning disappears and code becomes authoritative.
 
-## 13. Layout cancellation stress test
+## 13. The other families
+
+Every family has a fixture set under `src/dsl/fixtures/`; paste any of them (they are the
+goldens the round-trip laws run over):
+
+- `gitgraph/` — lanes, merges, cherry-picks, tags.
+- `sequence/` — activations, fragments (`alt`/`else`/`opt`/`loop`/`par`), notes.
+- `state/` — `[*]` pseudo-states, composites, fork/join/choice.
+- `erd/` — entity blocks, keys, crow's-foot relations.
+- `class/` — members, compartments, relation tokens, multiplicity.
+- `mindmap/` — indentation, wrappers, colour cascades.
+
+## 14. Mermaid paste
+
+Paste any Mermaid diagram (flowchart, sequence, state, ER, class, gitGraph, mindmap) into
+the code panel. A **Mermaid detected** banner appears — press **Convert** (or `⌘⇧M`) to
+replace the text with our DSL; a loss list appears as W180 diagnostics, then `⌘↵` generates
+as usual. `journey` and `architecture-beta` report that they are not convertible yet.
+
+## 15. Layout cancellation stress test
 
 Create 500 chained nodes in browser console, paste result into panel, then generate twice
 quickly. First layout must cancel; only second result may commit.

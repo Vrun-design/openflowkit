@@ -44,6 +44,40 @@ export interface LayoutPort {
   run(graph: LayoutGraph, signal?: AbortSignal): Promise<LayoutResult>;
 }
 
+/** A family's layout wish: its own nodes (containers included), no frame knowledge. */
+export interface LayoutRequest {
+  nodes: readonly LayoutNodeInput[];
+  edges: readonly LayoutEdgeInput[];
+  direction: DslDirection;
+  rootPadding: LayoutInsets;
+  groupPadding: LayoutInsets;
+}
+
+export interface LayoutOutcome {
+  /** Parent-relative for nested nodes; root-relative for frame children. */
+  positions: Readonly<Record<string, Point2d>>;
+  sizes: Readonly<Record<string, Size2d>>;
+  /** Frame content size: the synthetic root's box. */
+  root: Size2d;
+}
+
+const ROOT_ID = '__root__';
+
+/** Wraps a port with the frame root so families never see root ids or padding plumbing. */
+export function layoutRunner(port: LayoutPort) {
+  return async (request: LayoutRequest, signal?: AbortSignal): Promise<LayoutOutcome> => {
+    const result = await port.run({
+      rootId: ROOT_ID,
+      rootPadding: request.rootPadding,
+      groupPadding: request.groupPadding,
+      nodes: request.nodes,
+      edges: request.edges,
+      direction: request.direction,
+    }, signal);
+    return { positions: result.positions, sizes: result.sizes, root: result.sizes[ROOT_ID] ?? { width: 0, height: 0 } };
+  };
+}
+
 const NODE_GAP = 48;
 
 function horizontal(direction: DslDirection): boolean {

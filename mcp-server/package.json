@@ -1,8 +1,8 @@
 {
   "name": "@vrun-design/openflowkit-mcp",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "mcpName": "io.github.Vrun-design/openflowkit-mcp",
-  "description": "Local-first Model Context Protocol server for OpenFlowKit \u2014 deterministic diagramming tools (validate DSL, templates, icons, viewer links) for Claude Desktop, Cursor, Windsurf, and other MCP clients. No API key, no cloud round-trip.",
+  "description": "Local-first Model Context Protocol server for OpenFlowKit \u2014 pair the live editor or edit .openflow.json files: create/update/read diagrams from DSL, scene ops, icon search, export. No account, no cloud.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -37,8 +37,8 @@
   },
   "scripts": {
     "build:icons": "node scripts/build-icon-manifest.mjs",
-    "prebuild": "npm run build:icons && npm run build:agent",
-    "build": "tsc -p tsconfig.json",
+    "prebuild": "npm run build:icons && npm run build:grammar && npm run build:agent",
+    "build": "node scripts/build-dist.mjs",
     "dev": "tsx src/index.ts",
     "test": "vitest --config vitest.config.ts",
     "test:run": "vitest --config vitest.config.ts --run",
@@ -48,7 +48,8 @@
     "pretest": "npm run build:agent",
     "pretest:run": "npm run build:agent",
     "prelint": "npm run build:agent",
-    "eval:agent": "npm run build:agent && vitest --config vitest.config.ts --run evals"
+    "eval:agent": "npm run build:agent && vitest --config vitest.config.ts --run evals",
+    "build:grammar": "node scripts/build-grammar-doc.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

@@ -15,6 +15,7 @@ import {
   Toolbar,
   Tooltip,
 } from '../design-system';
+import { shortcutGroups } from './v2Shortcuts';
 
 export type V2WorkspaceMode = 'assistant' | 'slides' | 'code';
 const MODES = [
@@ -199,48 +200,16 @@ export function V2DraftPanel({
 }
 
 export function V2Shortcuts({ onClose }: { onClose: () => void }) {
-  const command = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
   return (
     <Panel title="Keyboard shortcuts" onClose={onClose} className="ofk-v2-workspace-panel">
       <p className="ofk-v2-muted">Less reaching. More creating.</p>
-      {[
-        [
-          'Tools',
-          [
-            ['Select', 'V'],
-            ['Hand', 'H'],
-            ['Rectangle', 'R'],
-            ['Ellipse', 'O'],
-            ['Connector', 'A'],
-            ['Text', 'T'],
-          ],
-        ],
-        [
-          'Canvas',
-          [
-            ['Pan', 'Space + drag'],
-            ['Zoom to fit', `${command} + 0`],
-            ['Zoom to 100%', `${command} + 1`],
-            ['Layers', 'L'],
-          ],
-        ],
-        [
-          'Edit',
-          [
-            ['Undo', `${command} + Z`],
-            ['Redo', `${command} + Shift + Z`],
-            ['Duplicate', `${command} + D`],
-            ['Edit label', 'Enter'],
-            ['Dismiss panel', 'Esc'],
-          ],
-        ],
-      ].map(([title, rows]) => (
-        <section className="ofk-v2-shortcut-group" key={title as string}>
-          <h3>{title as string}</h3>
-          {(rows as string[][]).map(([label, key]) => (
+      {shortcutGroups().map(({ title, rows }) => (
+        <section className="ofk-v2-shortcut-group" key={title}>
+          <h3>{title}</h3>
+          {rows.map(({ label, keys }) => (
             <div key={label}>
               <span>{label}</span>
-              <Kbd keys={key} />
+              <Kbd keys={keys} />
             </div>
           ))}
         </section>

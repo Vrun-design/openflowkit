@@ -1,21 +1,27 @@
-import { IconPlayerPlay } from '@tabler/icons-react';
+import { IconPlayerPlay, IconTransform } from '@tabler/icons-react';
 import { useMemo, useRef, useState } from 'react';
 import type { DslDiagnostic } from '../../../dsl/ast';
 import { DSL_FAMILIES } from '../../../dsl/ast';
 import { tokenize } from '../../../dsl/tokenize';
 import { COLOR_WORDS, EDGE_FLAG_WORDS, FILL_WORDS, SHAPE_WORDS } from '../../../dsl/vocabulary';
-import { Button, Icon, Panel } from '../design-system';
+import { DIAGRAM_PALETTES, type DiagramPaletteName } from '../../domain/nodes/nodePalette';
+import { Button, Icon, Panel, Segmented } from '../design-system';
 
 export function V2CodePanel({
-  code, diagnostics, generating, canvasEdited, onCodeChange, onGenerate, onClose,
+  code, diagnostics, generating, canvasEdited, palette, onPaletteChange, onCodeChange, onGenerate, onClose, onConvertMermaid,
 }: {
   code: string;
   diagnostics: readonly DslDiagnostic[];
   generating: boolean;
   canvasEdited: boolean;
+  /** Palette applied when the code compiles; the DSL's own `appearance:` wins. */
+  palette: DiagramPaletteName;
+  onPaletteChange: (palette: DiagramPaletteName) => void;
   onCodeChange: (code: string) => void;
   onGenerate: () => void;
   onClose: () => void;
+  /** Present when the draft looks like Mermaid; converts it to DSL in place. */
+  onConvertMermaid?: (() => void) | undefined;
 }) {
   // ponytail: an empty editor shows the placeholder, not "document is empty".
   const errors = code.trim() ? diagnostics.filter((item) => item.severity !== 'info') : [];
@@ -62,6 +68,13 @@ export function V2CodePanel({
     <Panel title="Diagram as code" onClose={onClose} className="ofk-v2-workspace-panel ofk-v2-code-panel">
       <div className="ofk-v2-panel-stack">
         {canvasEdited ? <p className="ofk-v2-code-warning" role="status">Canvas edited — regenerate will overwrite those changes.</p> : null}
+        {onConvertMermaid ? (
+          <div className="ofk-v2-code-mermaid" role="status">
+            <Icon icon={IconTransform} />
+            <span>Mermaid detected.</span>
+            <Button onClick={onConvertMermaid}>Convert <kbd>⌘⇧M</kbd></Button>
+          </div>
+        ) : null}
         <div className="ofk-v2-code-editor-wrap">
           <pre ref={highlightRef} className="ofk-v2-code-highlight" aria-hidden="true">{highlighted}</pre>
           <textarea
@@ -77,6 +90,7 @@ export function V2CodePanel({
             if (suggestions.length && (event.key === 'Enter' || event.key === 'Tab')) { event.preventDefault(); chooseSuggestion(suggestions[suggestionIndex]!); return; }
             if (suggestions.length && event.key === 'Escape') { event.preventDefault(); setSuggestions([]); return; }
             if (event.ctrlKey && event.key === ' ') { event.preventDefault(); openSuggestions('all'); return; }
+            if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'm' && onConvertMermaid) { event.preventDefault(); onConvertMermaid(); return; }
             if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); onGenerate(); }
             if (event.key === 'Tab') {
               event.preventDefault();
@@ -101,7 +115,10 @@ export function V2CodePanel({
             }}><span>{item.code}</span><strong>Line {item.line}</strong>{item.message}</button>
           ))}
         </div>
-        <footer className="ofk-v2-panel-footer">
+        <footer className="ofk-v2-panel-footer ofk-v2-code-footer">
+          <Segmented<DiagramPaletteName> label="Diagram palette" value={palette}
+            onChange={onPaletteChange}
+            options={DIAGRAM_PALETTES.map(({ id, label, hint }) => ({ value: id, label, title: hint }))} />
           <Button onClick={onGenerate} busy={generating} disabled={generating}>
             <Icon icon={IconPlayerPlay} /> {generating ? 'Generating…' : 'Generate diagram'} <kbd>⌘↵</kbd>
           </Button>

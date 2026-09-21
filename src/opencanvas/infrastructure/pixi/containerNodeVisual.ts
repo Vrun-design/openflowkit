@@ -1,4 +1,5 @@
 import { resolveSectionVisualStyle } from '@/theme';
+import { nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneNode } from '../../domain/document/types';
 import {
   resolveContainerNodePresentation,
@@ -22,7 +23,8 @@ export function projectContainerNodeVisual(node: SceneNode): PixiContainerNodeVi
     presentation.colorKey,
     presentation.colorMode,
     presentation.customColor,
-    presentation.kind === 'group' ? 'violet' : 'blue'
+    presentation.kind === 'group' ? 'violet' : 'blue',
+    nodePaletteName(node)
   );
   return {
     presentation,

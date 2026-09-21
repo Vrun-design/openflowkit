@@ -2,6 +2,8 @@
 // Holds the proposal, decisions and applied ids; commits only through the
 // session with the base revision. Owns no rendering and no provider.
 import { useCallback, useMemo, useRef, useState } from 'react';
+import type { CompileResult } from '../../../dsl/compile';
+import { buildDslPageCommand } from '../../application/dsl/dslPageCommand';
 import { LOCAL_AGENT_SOURCE, proposeFromIntent, type LocalAgentIntent } from '../../application/ai/localAgent';
 import {
   applyCommand, createProposal, decideChange, StaleProposalError, summarizeChanges,
@@ -15,6 +17,14 @@ import type { ChangeDecision } from '../design-system';
 
 export type V2ProposalPhase = 'idle' | 'working' | 'ready' | 'stale' | 'applied' | 'failed';
 
+/** What a provider-backed request is: text plus the frame it replaces. */
+export interface V2DiagramRequest {
+  readonly dsl: string;
+  readonly intent: string;
+  readonly source?: string;
+  readonly frameId?: string;
+}
+
 interface V2ProposalOptions {
   readonly document: SceneDocumentV1 | null;
   readonly revision: number;
@@ -24,13 +34,15 @@ interface V2ProposalOptions {
   readonly readOnly: boolean;
   readonly announce: (message: string) => void;
   readonly mintId: (prefix: string) => string;
+  /** Compiles generated DSL for the AI path (host layout port, icons). */
+  readonly compileDsl?: (text: string) => Promise<CompileResult>;
 }
 
 export function useV2Proposal(options: V2ProposalOptions) {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [phase, setPhase] = useState<V2ProposalPhase>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [intent, setIntent] = useState<LocalAgentIntent | null>(null);
+  const [intent, setIntent] = useState<LocalAgentIntent | string | null>(null);
   const [highlightedChangeId, setHighlightedChangeId] = useState<string | null>(null);
   const [appliedSummary, setAppliedSummary] = useState('');
   const appliedIds = useRef(new Set<string>());
@@ -64,6 +76,46 @@ export function useV2Proposal(options: V2ProposalOptions) {
       baseDocument.current = document;
       setProposal(next);
       setPhase('ready');
+    } catch (caught) {
+      setProposal(null);
+      setError(caught instanceof Error ? caught.message : String(caught));
+      setPhase('failed');
+    }
+  }, []);
+
+  /**
+   * A provider (BYOK) or the code panel hands us DSL; compiling it produces one
+   * page command, which is exactly the shape the review UI already applies.
+   */
+  const requestDiagram = useCallback(async (request: V2DiagramRequest) => {
+    const { document, revision, pageId, compileDsl, announce } = optionsRef.current;
+    if (!document || !pageId) return;
+    setPhase('working');
+    setIntent(request.intent);
+    setError(null);
+    setHighlightedChangeId(null);
+    try {
+      if (!compileDsl) throw new Error('This editor has no DSL compiler wired.');
+      const currentPage = document.pages.find((page) => page.id === pageId);
+      if (!currentPage) throw new RangeError(`Page "${pageId}" was not found.`);
+      const bound = request.frameId ? currentPage.nodes.find((node) => node.id === request.frameId) : undefined;
+      const compiled = await compileDsl(request.dsl);
+      const command = buildDslPageCommand(currentPage, compiled, bound?.id);
+      const count = compiled.nodes.length + compiled.groups.length;
+      const next = createProposal({
+        document, revision, source: request.source ?? 'byok', intent: request.intent,
+        scope: { kind: bound ? 'selection' : 'page', pageId, objectIds: bound ? [bound.id] : [] },
+        changes: [{
+          id: `diagram:${bound?.id ?? compiled.frame.id}`,
+          explanation: `${compiled.meta.family} diagram · ${count} ${count === 1 ? 'shape' : 'shapes'}`,
+          command,
+        }],
+      });
+      if (next.error) throw new Error(next.error.message);
+      baseDocument.current = document;
+      setProposal(next);
+      setPhase('ready');
+      announce('Proposal ready. Review it, then apply.');
     } catch (caught) {
       setProposal(null);
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -123,6 +175,6 @@ export function useV2Proposal(options: V2ProposalOptions) {
     proposal, phase, intent, stale, error, changes, decisions, appliedSummary,
     canApply: phase === 'ready' && !stale && !options.readOnly,
     highlightedChangeId, highlight: setHighlightedChangeId,
-    request, decide, apply, discard,
+    request, requestDiagram, decide, apply, discard,
   };
 }

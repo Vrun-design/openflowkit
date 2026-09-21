@@ -1,4 +1,7 @@
 import { mixHex } from '../lib/colorUtils';
+import {
+  DEFAULT_DIAGRAM_PALETTE, type DiagramPaletteName,
+} from '../opencanvas/domain/nodes/nodePalette';
 import { resolveNodeVisualStyle, resolveSharedColorKey } from './resolvers';
 import type { NodeColorKey, NodeColorMode, SectionColors } from './types';
 
@@ -65,7 +68,8 @@ export function resolveSectionVisualStyle(
   colorKey?: string,
   colorMode: NodeColorMode = 'subtle',
   customColor?: string,
-  fallback: NodeColorKey = 'blue'
+  fallback: NodeColorKey = 'blue',
+  palette: DiagramPaletteName = DEFAULT_DIAGRAM_PALETTE
 ): {
   bg: string;
   border: string;
@@ -75,7 +79,7 @@ export function resolveSectionVisualStyle(
 } {
   const resolvedColorKey = resolveSharedColorKey(colorKey, fallback);
   if (colorMode === 'filled') {
-    const resolved = resolveNodeVisualStyle(resolvedColorKey, 'filled', customColor);
+    const resolved = resolveNodeVisualStyle(resolvedColorKey, 'filled', customColor, palette);
     return {
       bg: mixHex(resolved.bg, '#ffffff', 0.14),
       border: resolved.border,
@@ -85,7 +89,7 @@ export function resolveSectionVisualStyle(
     };
   }
 
-  if (resolvedColorKey !== 'custom') {
+  if (resolvedColorKey !== 'custom' && palette === 'pastel') {
     const sectionTheme = SECTION_COLOR_PALETTE[resolvedColorKey];
     if (sectionTheme) {
       return {
@@ -98,7 +102,7 @@ export function resolveSectionVisualStyle(
     }
   }
 
-  const resolved = resolveNodeVisualStyle(resolvedColorKey, 'subtle', customColor);
+  const resolved = resolveNodeVisualStyle(resolvedColorKey, 'subtle', customColor, palette);
   return {
     bg: mixHex(resolved.bg, '#ffffff', 0.16),
     border: mixHex(resolved.border, '#ffffff', 0.1),

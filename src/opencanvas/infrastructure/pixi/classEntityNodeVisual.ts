@@ -1,4 +1,5 @@
 import { resolveContainerVisualStyle } from '@/theme';
+import { nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneNode } from '../../domain/document/types';
 import {
   resolveClassEntityNodePresentation,
@@ -23,7 +24,8 @@ export function projectClassEntityNodeVisual(node: SceneNode): PixiClassEntityNo
     presentation.colorKey,
     presentation.colorMode,
     presentation.customColor,
-    'slate'
+    'slate',
+    nodePaletteName(node)
   );
   return {
     presentation,

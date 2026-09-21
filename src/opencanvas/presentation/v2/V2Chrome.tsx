@@ -9,6 +9,11 @@ import type { IconChoice } from '../../domain/nodes/iconNode';
 
 interface V2ChromeProps extends V2SettingsProps {
   readonly document: SceneDocumentV1;
+  /** Page controls; the active page drives the canvas and export. */
+  readonly pages: ReturnType<typeof import('./useV2Pages').useV2Pages>;
+  readonly pageId: string;
+  readonly selectedNodeIds: readonly string[];
+  readonly bridge: import('./V2AgentConnect').V2AgentConnectModel;
   readonly saveStatus: V2SaveStatus;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
@@ -42,6 +47,10 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}
         onPreferencesChange={props.onPreferencesChange}
         document={props.document}
+        pages={props.pages}
+        pageId={props.pageId}
+        selectedNodeIds={props.selectedNodeIds}
+        bridge={props.bridge}
         saveStatus={props.saveStatus}
         readOnly={props.readOnly}
         onRetrySave={props.onRetrySave}

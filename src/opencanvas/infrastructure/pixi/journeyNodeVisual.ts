@@ -1,4 +1,5 @@
 import { resolveContainerVisualStyle, resolveNodeVisualStyle } from '@/theme';
+import { nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneNode } from '../../domain/document/types';
 import {
   resolveJourneyNodePresentation,
@@ -31,9 +32,10 @@ export function projectJourneyNodeVisual(node: SceneNode): PixiJourneyNodeVisual
     presentation.colorKey,
     presentation.colorMode,
     presentation.customColor,
-    'violet'
+    'violet',
+    nodePaletteName(node)
   );
-  const scoreColors = resolveNodeVisualStyle(scoreColor(presentation.score), 'subtle');
+  const scoreColors = resolveNodeVisualStyle(scoreColor(presentation.score), 'subtle', undefined, nodePaletteName(node));
   return {
     presentation,
     fill: pixiHexColor(colors.bg, 0xffffff),

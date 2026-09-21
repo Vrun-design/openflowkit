@@ -15,10 +15,10 @@ export function registerListTemplates(server: McpServer): void {
         {
           type: 'text' as const,
           text: JSON.stringify(
-            STARTER_TEMPLATES.map(({ name, title, category, summary }) => ({
+            STARTER_TEMPLATES.map(({ name, title, family, summary }) => ({
               name,
               title,
-              category,
+              family,
               summary,
             })),
             null,

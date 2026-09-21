@@ -1,4 +1,5 @@
 import { resolveAnnotationVisualStyle, resolveTextVisualStyle } from '@/theme';
+import { nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneNode } from '../../domain/document/types';
 import {
   resolveFreeformNodePresentation,
@@ -61,7 +62,8 @@ export function projectFreeformNodeVisual(node: SceneNode): PixiFreeformNodeVisu
       presentation.colorKey,
       'subtle',
       presentation.customColor,
-      'slate'
+      'slate',
+      nodePaletteName(node)
     );
     return {
       presentation,
@@ -88,7 +90,8 @@ export function projectFreeformNodeVisual(node: SceneNode): PixiFreeformNodeVisu
   const colors = resolveAnnotationVisualStyle(
     presentation.colorKey,
     'subtle',
-    presentation.customColor
+    presentation.customColor,
+    nodePaletteName(node)
   );
   return {
     presentation,

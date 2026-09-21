@@ -24,6 +24,8 @@ const SHARED_KERNEL = [
   path.join(srcDir, 'dsl'),
   path.join(ocDir, 'application', 'history'),
   path.join(ocDir, 'application', 'selection'),
+  // Pure command builders for pages and layers; the document bar commits them.
+  path.join(ocDir, 'application', 'active-document'),
   path.join(ocDir, 'application', 'renderer'),
   path.join(ocDir, 'infrastructure', 'pixi'),
   path.join(ocDir, 'infrastructure', 'export'),
@@ -31,10 +33,17 @@ const SHARED_KERNEL = [
   path.join(srcDir, 'services', 'storage', 'indexedDbSchema'),
   path.join(srcDir, 'services', 'elk-layout'),
   path.join(srcDir, 'services', 'shapeLibrary'),
-  // Pure agent actions shared with the MCP server.
-  path.join(srcDir, 'agent', 'actions'),
-  path.join(srcDir, 'agent', 'runAction'),
+  // The Mermaid parsers feed the DSL hub's transpiler (services/dsl/mermaidToDsl).
+  path.join(srcDir, 'services', 'mermaid'),
+  // BYOK provider clients: pure fetch adapters (no DOM, no React).
+  path.join(srcDir, 'services', 'ai'),
+  // The pure agent surface: the editor hosts it (live bridge) and the MCP
+  // server bundles it. Nothing under src/agent may reach into presentation.
+  path.join(srcDir, 'agent'),
 ];
+
+// Data read as text at runtime (the grammar for get_syntax), not code.
+const RAW_DATA_ROOTS = [path.join(srcDir, '..', 'docs')];
 
 
 function sourceFiles(dir: string): string[] {
@@ -85,6 +94,11 @@ function under(file: string, root: string): boolean {
 
 function isAllowedImport(specifier: string, fromFile: string): boolean {
   if (specifier.endsWith('.css')) return true;
+  if (specifier.endsWith('?raw')) {
+    const absolute = resolveLocal(specifier.slice(0, -'?raw'.length), fromFile);
+    // Docs are data, not code: raw imports may only reach into docs/.
+    return absolute === null || RAW_DATA_ROOTS.some((root) => under(absolute, root));
+  }
   const absolute = resolveLocal(specifier, fromFile);
   if (!absolute) return true;
   return [...V2_ROOTS, ...SHARED_KERNEL].some((root) => under(absolute, root));

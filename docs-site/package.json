@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "astro dev --port 4321",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "generate:dsl": "node scripts/generate-dsl-reference.mjs",
+    "predev": "npm run generate:dsl",
+    "prebuild": "npm run generate:dsl"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.34.0",

@@ -1,6 +1,14 @@
 import type { JsonObject } from '../opencanvas/domain/document/json';
 import type { SceneConnector, SceneNode } from '../opencanvas/domain/document/types';
 
+/** A frame and everything the DSL owns inside it. `groups` are container-kind nodes. */
+export interface DslFrameScene {
+  frame: SceneNode;
+  nodes: readonly SceneNode[];
+  groups?: readonly SceneNode[];
+  connectors: readonly SceneConnector[];
+}
+
 /** One canonical `[key: value]` / bare word entry, as stored in `metadata.dsl.attrs`. */
 export interface CanonicalAttribute {
   key?: string;
@@ -47,6 +55,8 @@ export interface DslFrameMeta {
   hash?: string;
   /** Authored `title:`; the frame's `content.label` mirrors it. */
   title?: string;
+  /** Authored `appearance:` palette; absent when the default palette applies. */
+  appearance?: { palette?: string };
   comments?: readonly string[];
 }
 
@@ -54,8 +64,14 @@ function metaObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
+/** The raw `metadata.dsl` record, for family-specific keys the typed view does not model. */
+export function dslFrameRaw(frame: SceneNode): Record<string, unknown> {
+  return metaObject(frame.metadata.dsl);
+}
+
 export function dslFrameMeta(frame: SceneNode): DslFrameMeta {
   const meta = metaObject(frame.metadata.dsl);
+  const appearance = metaObject(meta.appearance);
   return {
     family: typeof meta.family === 'string' ? meta.family : 'architecture',
     version: typeof meta.version === 'number' ? meta.version : 1,
@@ -63,6 +79,7 @@ export function dslFrameMeta(frame: SceneNode): DslFrameMeta {
     ...(typeof meta.source === 'string' ? { source: meta.source } : {}),
     ...(typeof meta.hash === 'string' ? { hash: meta.hash } : {}),
     ...(typeof meta.title === 'string' ? { title: meta.title } : {}),
+    ...(typeof appearance.palette === 'string' ? { appearance: { palette: appearance.palette } } : {}),
     ...(Array.isArray(meta.comments) ? { comments: meta.comments.filter((item): item is string => typeof item === 'string') } : {}),
   };
 }

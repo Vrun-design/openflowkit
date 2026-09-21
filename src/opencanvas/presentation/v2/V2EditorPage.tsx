@@ -26,24 +26,33 @@ import { useV2DocumentLoad } from './useV2DocumentLoad';
 import { useV2EditActions } from './useV2EditActions';
 import { useV2Keyboard } from './useV2Keyboard';
 import { useV2LabelEditing, type OpenEditorOptions } from './useV2LabelEditing';
+import { useV2AgentBridge } from './useV2AgentBridge';
+import { useV2AgentHost } from './useV2AgentHost';
+import { useV2AiRequest } from './useV2AiRequest';
+import { useV2AiSettings } from './useV2AiSettings';
 import { useV2Proposal } from './useV2Proposal';
 import type { Proposal } from '../../application/ai/proposalSession';
+import { useV2Pages } from './useV2Pages';
 import { useV2Selection } from './useV2Selection';
 import { useV2TestApi } from './useV2TestApi';
 import type { V2GestureApi } from './useV2Pointer';
 import { worldToScreen } from '../../domain/camera/camera';
 import { createConnectorEditCommand, setPrimaryConnectorLabel } from '../../domain/connectors/editing';
 import type { Point2d } from '../../domain/geometry/types';
+import { isDiagramPalette, type DiagramPaletteName } from '../../domain/nodes/nodePalette';
 import { firstV2Page, mintV2Id } from './v2Document';
 import { downloadTextFile } from './v2Export';
 import type { ScenePage } from '../../domain/document/types';
-import { compile, hashDslScene } from '../../../dsl/compile';
+import { dslFrameRaw } from '../../../dsl/sceneMeta';
+import { frameEdited, frameScene } from '../../../dsl/frameScene';
+import { compile } from '../../../dsl/compile';
 import { parse } from '../../../dsl/parse';
 import { serialize } from '../../../dsl/serialize';
 import { buildDslPageCommand, nextDslFrameOrigin } from '../../application/dsl/dslPageCommand';
 import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { V2CodePanel } from './V2CodePanel';
+import { looksLikeMermaid, mermaidToDsl } from '../../../services/dsl/mermaidToDsl';
 import './v2EditorPage.css';
 
 function changeObjectIds(changeId: string, proposal: Proposal | null): readonly string[] {
@@ -144,7 +153,14 @@ export function V2EditorPage(): React.JSX.Element {
   const {
     selection, selectionRef, selectedConnectorId, applySelection, applyConnectorSelection,
   } = selectionApi;
-  const page = session.document ? firstV2Page(session.document) : null;
+  // Pages are documents-in-document: the active page drives the canvas, the
+  // context bar and export. Null means "the first page" (single-page default).
+  const [activePageId, setActivePageId] = useState<string | null>(null);
+  const page = session.document
+    ? session.document.pages.find((candidate) => candidate.id === activePageId) ?? firstV2Page(session.document)
+    : null;
+  const documentId = session.document?.id;
+  useEffect(() => { setActivePageId(null); }, [documentId]);
   const pageRef = useRef<ScenePage | null>(null);
   const labelEditing = useV2LabelEditing({
     hostRef,
@@ -169,40 +185,39 @@ export function V2EditorPage(): React.JSX.Element {
       return true;
     });
   }, [codeDraft, compileDiagnostics]);
+  const mermaidConversion = useMemo(() => (looksLikeMermaid(codeDraft) ? mermaidToDsl(codeDraft) : null), [codeDraft]);
+  const convertMermaid = useCallback(() => {
+    const conversion = mermaidToDsl(codeDraft);
+    if ('error' in conversion) {
+      setCompileDiagnostics([{ code: 'E003', severity: 'error', line: 1, col: 1, endCol: 1, message: conversion.error, source: 'parse' }]);
+      return;
+    }
+    setCodeDraft(conversion.dsl);
+    setCompileDiagnostics(conversion.diagnostics);
+    setAnnouncement(`Mermaid converted${conversion.losses.length ? ` with ${conversion.losses.length} loss notes` : ''}.`);
+  }, [codeDraft]);
   const codeCanvasEdited = useMemo(() => {
     if (!page || !codeFrameId) return false;
-    const frame = page.nodes.find((node) => node.id === codeFrameId);
-    const metadata = frame?.metadata.dsl && typeof frame.metadata.dsl === 'object' ? frame.metadata.dsl as Record<string, unknown> : {};
-    if (!frame || typeof metadata.hash !== 'string') return false;
-    const subtree = new Set([codeFrameId]);
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const node of page.nodes) if (node.parentId && subtree.has(node.parentId) && !subtree.has(node.id)) { subtree.add(node.id); changed = true; }
-    }
-    const nodes = page.nodes.filter((node) => node.kind !== 'frame' && subtree.has(node.id));
-    const groups = page.nodes.filter((node) => node.id !== codeFrameId && node.kind === 'frame' && subtree.has(node.id));
-    const connectors = page.connectors.filter((connector) => subtree.has(connector.source.nodeId ?? '') && subtree.has(connector.target.nodeId ?? ''));
-    return hashDslScene(JSON.stringify({ nodes, groups, connectors })) !== metadata.hash;
+    const scene = frameScene(page, codeFrameId);
+    return scene ? frameEdited(scene) : false;
   }, [page, codeFrameId]);
   const openFrameAsCode = useCallback((frameId: string) => {
     const currentPage = pageRef.current;
-    const frame = currentPage?.nodes.find((node) => node.id === frameId);
-    if (!currentPage || !frame) return;
-    const subtree = new Set([frameId]);
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const node of currentPage.nodes) if (node.parentId && subtree.has(node.parentId) && !subtree.has(node.id)) { subtree.add(node.id); changed = true; }
-    }
-    const metadata = frame.metadata.dsl && typeof frame.metadata.dsl === 'object' ? frame.metadata.dsl as Record<string, unknown> : {};
-    const nodes = currentPage.nodes.filter((node) => node.id !== frameId && subtree.has(node.id) && node.kind !== 'frame');
-    const groups = currentPage.nodes.filter((node) => node.id !== frameId && subtree.has(node.id) && node.kind === 'frame');
-    const connectors = currentPage.connectors.filter((connector) => subtree.has(connector.source.nodeId ?? '') && subtree.has(connector.target.nodeId ?? ''));
-    const unchanged = typeof metadata.hash === 'string' && hashDslScene(JSON.stringify({ nodes, groups, connectors })) === metadata.hash;
-    const source = unchanged && typeof metadata.source === 'string' ? metadata.source : serialize({ frame, nodes, groups, connectors });
+    const scene = currentPage ? frameScene(currentPage, frameId) : null;
+    if (!currentPage || !scene) return;
+    const metadata = dslFrameRaw(scene.frame);
+    const edited = frameEdited(scene);
+    const source = !edited && typeof metadata.source === 'string'
+      ? metadata.source
+      : serialize({ frame: scene.frame, nodes: scene.nodes, groups: scene.groups ?? [], connectors: scene.connectors });
+    // The picker follows the frame's authored palette so re-theming is explicit.
+    const framePalette = isDiagramPalette(metadata.appearance && typeof metadata.appearance === 'object'
+      ? (metadata.appearance as { palette?: unknown }).palette : undefined)
+      ? (metadata.appearance as { palette: DiagramPaletteName }).palette : null;
+    if (framePalette && framePalette !== preferences.diagramPalette) updatePreferences({ diagramPalette: framePalette });
     setCodeDraft(source); setCodeFrameId(frameId); openWorkspace('code'); setContextMenu(null);
-  }, []);
+  }, [preferences.diagramPalette, updatePreferences]);
+
   const load = useV2DocumentLoad({
     documentId: id,
     repository,
@@ -224,7 +239,11 @@ export function V2EditorPage(): React.JSX.Element {
     try {
       const bound = codeFrameId ? currentPage.nodes.find((node) => node.id === codeFrameId) : undefined;
       const origin = bound?.transform.translation ?? nextDslFrameOrigin(currentPage);
-      const compiled = await compile(codeDraft, { origin, layout: elkDslLayoutPort, signal: controller.signal, resolveIcon: resolveDslIcon });
+      const compiled = await compile(codeDraft, {
+        origin, layout: elkDslLayoutPort, signal: controller.signal, resolveIcon: resolveDslIcon,
+        // The panel's palette is a default: an authored `appearance:` line wins.
+        appearance: { palette: preferences.diagramPalette },
+      });
       setCompileDiagnostics(compiled.diagnostics);
       session.commit(buildDslPageCommand(currentPage, compiled, codeFrameId ?? undefined));
       setCodeFrameId(codeFrameId ?? compiled.frame.id);
@@ -235,7 +254,7 @@ export function V2EditorPage(): React.JSX.Element {
     } finally {
       if (codeAbortRef.current === controller) { codeAbortRef.current = null; setCodeGenerating(false); }
     }
-  }, [load.readOnly, codeGenerating, codeFrameId, codeDraft, session, applySelection, pushToast]);
+  }, [load.readOnly, codeGenerating, codeFrameId, codeDraft, session, applySelection, pushToast, preferences.diagramPalette]);
 
   const { status: saveStatus, retry: retrySave } = useV2Autosave({
     repository,
@@ -246,10 +265,13 @@ export function V2EditorPage(): React.JSX.Element {
     onConflict: () => setAnnouncement('Another tab saved first. Reload to continue.'),
   });
 
+  const compileDraft = useCallback(
+    (text: string) => compile(text, { origin: { x: 0, y: 0 }, layout: elkDslLayoutPort, resolveIcon: resolveDslIcon }),
+    []);
   const proposal = useV2Proposal({
     document: session.document, revision: session.revision, pageId: page?.id ?? null,
     selectionRef, commit: session.commit, readOnly: load.readOnly,
-    announce: setAnnouncement, mintId: mintV2Id,
+    announce: setAnnouncement, mintId: mintV2Id, compileDsl: compileDraft,
   });
 
   useV2TestApi({
@@ -271,6 +293,50 @@ export function V2EditorPage(): React.JSX.Element {
     if (rendererStatus !== 'ready') return;
     hostRef.current?.setProposalPreview(ghostPage ? { page: ghostPage, highlightIds } : null);
   }, [ghostPage, highlightIds, rendererStatus]);
+
+  const pages = useV2Pages({
+    document: session.document, pageId: page?.id ?? null, readOnly: load.readOnly,
+    commit: session.commit, onSelect: setActivePageId, mintId: mintV2Id,
+    announce: setAnnouncement,
+  });
+  // A page switch moves the camera to that page's content; the canvas only ever
+  // renders one page, so `fitView` is already page-scoped.
+  const fittedPageRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!page || rendererStatus !== 'ready') return;
+    if (fittedPageRef.current === page.id) return;
+    const first = fittedPageRef.current === null;
+    fittedPageRef.current = page.id;
+    if (!first) camera.fitView();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page?.id, rendererStatus]);
+
+  // Local agent pairing: the ops run here, against this session, through the
+  // same registry the MCP server uses. Off until the user connects.
+  const agentCapabilities = useV2AgentHost({ fitView: camera.fitView });
+  const aiSettings = useV2AiSettings();
+  const loadGrammar = useCallback(async () => String(await agentCapabilities.syntax()), [agentCapabilities]);
+  const ai = useV2AiRequest({
+    settings: aiSettings.settings,
+    proposal,
+    loadGrammar,
+    // The code panel owns the text the user is looking at; when it is bound to a
+    // frame the model edits that frame, otherwise it draws a fresh diagram.
+    currentDsl: () => (codeFrameId ? codeDraft : undefined),
+    frameId: () => codeFrameId ?? undefined,
+    announce: setAnnouncement,
+  });
+  const agentBridge = useV2AgentBridge({
+    enabled: preferences.agentBridgeEnabled,
+    port: preferences.bridgePort,
+    token: preferences.bridgeToken,
+    document: session.document,
+    pageId: page?.id ?? null,
+    revision: session.revision,
+    capabilities: agentCapabilities,
+    commit: session.commit,
+    onActivity: setAnnouncement,
+  });
 
   const { openEditor: openLabelEditor } = labelEditing;
   const openEditor = useCallback(
@@ -420,6 +486,14 @@ export function V2EditorPage(): React.JSX.Element {
               preferences={preferences} canvasDefaultColor={appearance === 'dark' ? '#191b19' : '#f7f7f5'}
               onPreferencesChange={updatePreferences}
               document={session.document!}
+              pages={pages}
+              pageId={page.id}
+              selectedNodeIds={selection.nodeIds}
+              bridge={{ status: agentBridge.status, detail: agentBridge.detail,
+                port: preferences.bridgePort, token: preferences.bridgeToken,
+                onPortChange: (bridgePort) => updatePreferences({ bridgePort }),
+                onTokenChange: (bridgeToken) => updatePreferences({ bridgeToken }),
+                onToggle: (connect) => updatePreferences({ agentBridgeEnabled: connect }) }}
               saveStatus={saveStatus}
               canUndo={session.canUndo} canRedo={session.canRedo}
               readOnly={load.readOnly}
@@ -484,8 +558,11 @@ export function V2EditorPage(): React.JSX.Element {
               onChange={(mode) => { if (workspaceMode === mode) setWorkspaceMode(null); else openWorkspace(mode); }}
               onShortcuts={toggleShortcuts} />
             {page.nodes.length === 0 && page.connectors.length === 0 && !load.readOnly && rendererStatus === 'ready' ? <V2CanvasWelcome onOpen={openWorkspace} /> : null}
-            {workspaceMode === 'code' ? <V2CodePanel code={codeDraft} onCodeChange={(value) => { setCodeDraft(value); setCompileDiagnostics([]); }}
+            {workspaceMode === 'code' ? <V2CodePanel code={codeDraft} palette={preferences.diagramPalette}
+              onPaletteChange={(diagramPalette) => updatePreferences({ diagramPalette })}
+              onCodeChange={(value) => { setCodeDraft(value); setCompileDiagnostics([]); }}
               diagnostics={codeDiagnostics} generating={codeGenerating} canvasEdited={codeCanvasEdited}
+              {...(mermaidConversion ? { onConvertMermaid: convertMermaid } : {})}
               onGenerate={() => { void generateCode(); }} onClose={() => { codeAbortRef.current?.abort(); setWorkspaceMode(null); }} /> : null}
             {workspaceMode === 'slides' ? <V2DraftPanel mode={workspaceMode}
               code={codeDraft} onCodeChange={setCodeDraft} slides={slideDraftCount}
@@ -506,7 +583,8 @@ export function V2EditorPage(): React.JSX.Element {
               />
             ) : null}
             {agentOpen ? (
-              <V2AgentPanel proposal={proposal} currentRevision={session.revision}
+              <V2AgentPanel proposal={proposal} ai={ai} aiSettings={aiSettings}
+                currentRevision={session.revision}
                 readOnly={load.readOnly} onUndo={session.undo} onClose={toggleAgent} />
             ) : null}
             <ToastRegion

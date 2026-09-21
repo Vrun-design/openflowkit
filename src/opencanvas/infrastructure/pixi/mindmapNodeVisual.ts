@@ -1,4 +1,5 @@
 import { resolveNodeVisualStyle } from '@/theme';
+import { nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneNode } from '../../domain/document/types';
 import {
   resolveMindmapNodePresentation,
@@ -21,7 +22,8 @@ export function projectMindmapNodeVisual(node: SceneNode): PixiMindmapNodeVisual
   const colors = resolveNodeVisualStyle(
     presentation.colorKey,
     presentation.colorMode,
-    presentation.customColor
+    presentation.customColor,
+    nodePaletteName(node)
   );
   return {
     presentation,

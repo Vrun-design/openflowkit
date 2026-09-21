@@ -23,10 +23,18 @@ import {
   type ToastItem,
 } from '../design-system';
 import type { V2SaveStatus } from './useV2Autosave';
-import { buildV2JsonExport, buildV2SvgExport, downloadTextFile } from './v2Export';
+import { V2ExportMenu } from './V2ExportMenu';
+import { V2PagesMenu } from './V2PagesMenu';
+import { V2AgentConnect, AgentPlugIcon, type V2AgentConnectModel } from './V2AgentConnect';
+import type { useV2Pages } from './useV2Pages';
 
 interface V2DocumentBarProps extends V2SettingsProps {
   readonly document: SceneDocumentV1;
+  /** Active page id; export and page controls act on it. */
+  readonly pageId: string;
+  readonly selectedNodeIds: readonly string[];
+  readonly pages: ReturnType<typeof useV2Pages>;
+  readonly bridge: V2AgentConnectModel;
   readonly saveStatus: V2SaveStatus;
   readonly readOnly: boolean;
   readonly onRetrySave: () => void;
@@ -63,9 +71,12 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(props.document.name);
   const [exportOpen, setExportOpen] = useState(false);
+  const [pagesOpen, setPagesOpen] = useState(false);
+  const [bridgeOpen, setBridgeOpen] = useState(false);
+  const pagesRef = useRef<HTMLButtonElement>(null);
+  const bridgeRef = useRef<HTMLButtonElement>(null);
+  const activePageName = props.pages.activePage?.name ?? 'Page 1';
   const save = saveLabel(props.saveStatus);
-  const page = props.document.pages[0];
-  const canExportSvg = page && (page.nodes.length > 0 || page.connectors.length > 0);
   useEffect(() => { if (editingTitle) titleRef.current?.select(); }, [editingTitle]);
 
   function startRename(): void {
@@ -81,18 +92,8 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
     setEditingTitle(false);
   }
 
-  function download(build: () => { filename: string; text: string; mime: string }): void {
-    try {
-      const { filename, text, mime } = build();
-      downloadTextFile(filename, text, mime);
-    } catch {
-      props.onToast({
-        id: `toast-${Date.now()}`,
-        tone: 'danger',
-        title: 'Export failed. Nothing was downloaded.',
-      });
-    }
-  }
+  const toast = (title: string, tone: ToastItem['tone']): void =>
+    props.onToast({ id: `toast-${Date.now()}`, tone, title });
 
   return (
     <>
@@ -137,55 +138,40 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               Reload
             </Button>
           ) : null}
+          <Tooltip content={props.bridge.status === 'connected'
+            ? 'Agent connected — click to manage'
+            : 'Connect agent (MCP)'}>
+            <IconButton ref={bridgeRef} variant="quiet"
+              label="Connect agent"
+              data-bridge-status={props.bridge.status}
+              aria-expanded={bridgeOpen} aria-haspopup="dialog"
+              icon={<Icon icon={props.bridge.status === 'connected' ? AgentPlugIcon.connected : AgentPlugIcon.off} />}
+              onClick={() => setBridgeOpen((open) => !open)} />
+          </Tooltip>
+          <Tooltip content="Pages">
+            <Button ref={pagesRef} variant="quiet" aria-expanded={pagesOpen} aria-haspopup="dialog"
+              aria-label={`Pages (current: ${activePageName})`}
+              onClick={() => setPagesOpen(true)}>
+              {activePageName}
+              {props.pages.pages.length > 1 ? <span className="ofk-v2-page-total">{` / ${props.pages.pages.length}`}</span> : null}
+            </Button>
+          </Tooltip>
         </Toolbar>
       </FloatingRegion>
 
       <Menu open={menuOpen} anchorRef={settingsRef} onClose={() => setMenuOpen(false)} label="Canvas menu" placement="bottom-start">
         <MenuItem icon={<Icon icon={IconPencil} />} disabled={props.readOnly} onSelect={startRename}>Rename diagram</MenuItem>
         <MenuItem icon={<Icon icon={IconSettings} />} onSelect={() => setSettingsOpen(true)}>Settings</MenuItem>
-        <MenuItem icon={<Icon icon={IconDownload} />} onSelect={() => setExportOpen(true)}>Export</MenuItem>
+        <MenuItem icon={<Icon icon={IconDownload} />} onSelect={() => setExportOpen(true)}>Export…</MenuItem>
       </Menu>
       <V2Settings open={settingsOpen} anchorRef={settingsRef} onClose={() => setSettingsOpen(false)}
         preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}
         onPreferencesChange={props.onPreferencesChange} />
-      <Menu
-        open={exportOpen}
-        anchorRef={settingsRef}
-        onClose={() => setExportOpen(false)}
-        label="Export"
-        placement="bottom-start"
-      >
-        <MenuItem
-          onSelect={() => {
-            if (!canExportSvg) {
-              props.onToast({
-                id: `toast-${Date.now()}`,
-                tone: 'info',
-                title: 'Add a shape or connector before exporting SVG.',
-              });
-              return;
-            }
-            download(() => {
-              const { filename, svg } = buildV2SvgExport(props.document);
-              return { filename, text: svg, mime: 'image/svg+xml' };
-            });
-          }}
-          icon={<Icon icon={IconDownload} />}
-        >
-          Download SVG
-        </MenuItem>
-        <MenuItem
-          onSelect={() =>
-            download(() => {
-              const { filename, json } = buildV2JsonExport(props.document);
-              return { filename, text: json, mime: 'application/json' };
-            })
-          }
-          icon={<Icon icon={IconDownload} />}
-        >
-          Download JSON
-        </MenuItem>
-      </Menu>
+      <V2PagesMenu open={pagesOpen} anchorRef={pagesRef} pages={props.pages} onClose={() => setPagesOpen(false)} />
+      <V2AgentConnect {...props.bridge} open={bridgeOpen} anchorRef={bridgeRef} onClose={() => setBridgeOpen(false)} />
+      <V2ExportMenu open={exportOpen} anchorRef={settingsRef} document={props.document}
+        pageId={props.pageId} selectedNodeIds={props.selectedNodeIds}
+        onClose={() => setExportOpen(false)} onToast={toast} />
     </>
   );
 }

@@ -9,7 +9,7 @@ export interface ProviderShapePreview {
   previewUrl: string;
 }
 
-interface SvgSource {
+export interface SvgSource {
   provider: string;
   packId: string;
   shapeId: string;

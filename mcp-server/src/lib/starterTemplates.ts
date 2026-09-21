@@ -1,13 +1,14 @@
 /**
- * Built-in starter templates that ship with the MCP server so agents can
- * generate diagrams without an API key. Each entry is a self-contained DSL
- * snippet that round-trips through the app's parser.
+ * Starter templates that ship with the MCP server so an agent can produce
+ * something real without any API key. Each is canonical OpenFlow DSL
+ * (docs/plan/grammar.md) that compiles through the same parser the app uses;
+ * the test suite compiles all of them.
  */
 
 export interface StarterTemplate {
   name: string;
   title: string;
-  category: 'flowchart' | 'architecture' | 'sequence' | 'pipeline';
+  family: 'flowchart' | 'architecture' | 'sequence' | 'state';
   summary: string;
   dsl: string;
 }
@@ -15,119 +16,92 @@ export interface StarterTemplate {
 export const STARTER_TEMPLATES: StarterTemplate[] = [
   {
     name: 'auth-flow',
-    title: 'User Authentication',
-    category: 'flowchart',
-    summary: 'Classic login flow with MFA branch and access-denied terminal.',
-    dsl: `flow: User Authentication
-direction: TB
+    title: 'User authentication',
+    family: 'flowchart',
+    summary: 'Login with an MFA branch and an access-denied terminal.',
+    dsl: `%% ofk 1
+flowchart down
+title: User authentication
 
-[start] Start
-[process] login: Login Form { icon: "LogIn", color: "blue" }
-[decision] valid: Credentials valid? { color: "amber" }
-[process] mfa: MFA Check { icon: "Smartphone", color: "blue" }
-[system] token: Issue JWT { icon: "Key", color: "violet" }
-[end] dashboard: Enter Dashboard { color: "emerald" }
-[end] fail: Access Denied { color: "red" }
-
-Start ==> login
-login -> valid
-valid ->|Yes| mfa
-valid ->|No| fail
-mfa ==> token
-token ==> dashboard
-`,
-  },
-  {
-    name: 'ci-cd-pipeline',
-    title: 'CI/CD Pipeline',
-    category: 'pipeline',
-    summary: 'Source → build → test → deploy with rollback on failure.',
-    dsl: `flow: Build, Test, Deploy
-direction: LR
-
-[start] commit: Push to main
-[process] build: Build { icon: "Cog", color: "blue" }
-[process] test: Test Suite { icon: "FlaskConical", color: "amber" }
-[decision] passed: All green?
-[process] deploy: Deploy to prod { icon: "Rocket", color: "violet" }
-[process] rollback: Rollback { icon: "Undo", color: "red" }
-[end] live: Production
-[end] revert: Reverted
-
-commit ==> build
-build ==> test
-test -> passed
-passed ->|Yes| deploy
-passed ->|No| rollback
-deploy ==> live
-rollback ==> revert
+  Start [ellipse, emerald] -> Login [rounded, blue] : credentials
+  Login -> Valid {"Valid?"} 
+  Valid [diamond, amber] -> MFA [rounded, violet] : yes
+  Valid -> Denied [ellipse, red] : no
+  MFA -> Token [rounded, blue]
+  Token -> Dashboard [ellipse, emerald]
 `,
   },
   {
     name: 'three-tier-architecture',
-    title: 'Three-Tier Web Architecture',
-    category: 'architecture',
-    summary: 'Browser → API → database with cache and CDN edge.',
-    dsl: `flow: Three-Tier Web Architecture
-direction: LR
+    title: 'Three-tier AWS architecture',
+    family: 'architecture',
+    summary: 'Edge, application and data tiers with real AWS icon slugs.',
+    dsl: `%% ofk 1
+architecture right
+title: Three-tier architecture
 
-[browser] web: Web App { color: "blue" }
-[architecture] cdn: CloudFront { archProvider: "aws", archResourceType: "networking-content-delivery-cloudfront", color: "blue" }
-[architecture] api: API Gateway { archProvider: "aws", archResourceType: "networking-content-delivery-api-gateway", color: "violet" }
-[architecture] svc: ECS Service { archProvider: "aws", archResourceType: "containers-elastic-container-service", color: "violet" }
-[architecture] cache: ElastiCache { archProvider: "aws", archResourceType: "databases-elasticache", color: "yellow" }
-[architecture] db: RDS Postgres { archProvider: "aws", archResourceType: "databases-rds", color: "emerald" }
-
-web --> cdn
-cdn --> api
-api --> svc
-svc --> cache
-svc --> db
+  Users [person] -> CDN [icon: aws/networking-content-delivery-cloudfront]
+  CDN -> Gateway [icon: aws/networking-content-delivery-api-gateway]
+  Gateway -> Compute [icon: aws/compute-lambda, green]
+  Compute -> Cache [icon: aws/databases-elasticache, amber]
+  Compute -> Store [icon: aws/databases-dynamodb, violet]
 `,
   },
   {
     name: 'request-sequence',
-    title: 'API Request Sequence',
-    category: 'sequence',
-    summary: 'Linear request/response sequence between client, gateway, service, and database.',
-    dsl: `flow: API Request Sequence
-direction: TB
+    title: 'Request lifecycle',
+    family: 'sequence',
+    summary: 'Browser, gateway and service with an alt fragment.',
+    dsl: `%% ofk 1
+sequence
+title: Request lifecycle
 
-[browser] client: Client
-[system] gateway: API Gateway { color: "violet" }
-[system] service: Order Service { color: "violet" }
-[architecture] db: Orders DB { color: "emerald" }
+  participant Browser
+  participant Gateway
+  participant Service
 
-client ==> gateway
-gateway ==> service
-service ==> db
-db ..|row| service
-service ..|payload| gateway
-gateway ..|JSON| client
+  Browser -> Gateway : POST /orders
+  Gateway -> Service : order.create
+  alt accepted
+    Service --> Gateway : 202 {orderId}
+  else rejected
+    Service --> Gateway : 409 {reason}
+  end
+  Gateway --> Browser : response
 `,
   },
   {
-    name: 'event-driven-pipeline',
-    title: 'Event-Driven Ingest Pipeline',
-    category: 'pipeline',
-    summary: 'Producer → queue → workers → storage with dead-letter side path.',
-    dsl: `flow: Event Ingest
-direction: LR
+    name: 'order-state',
+    title: 'Order state machine',
+    family: 'state',
+    summary: 'Draft, review, fulfilment and terminal states.',
+    dsl: `%% ofk 1
+state right
+title: Order lifecycle
 
-[architecture] producer: Web Producer { color: "blue" }
-[architecture] queue: SQS { archProvider: "aws", archResourceType: "application-integration-simple-queue-service", color: "amber" }
-[architecture] dlq: DLQ { archProvider: "aws", archResourceType: "application-integration-simple-queue-service", color: "red" }
-[architecture] worker1: Worker 1 { archProvider: "aws", archResourceType: "compute-lambda", color: "violet" }
-[architecture] worker2: Worker 2 { archProvider: "aws", archResourceType: "compute-lambda", color: "violet" }
-[architecture] store: S3 { archProvider: "aws", archResourceType: "storage-simple-storage-service", color: "emerald" }
+  [*] -> Draft
+  Draft -> Review : submit
+  Review -> Draft : request changes
+  Review -> Paid : approve
+  Paid -> Shipped : fulfil
+  Shipped -> Delivered : carrier
+  Delivered -> [*]
+`,
+  },
+  {
+    name: 'event-pipeline',
+    title: 'Event pipeline',
+    family: 'flowchart',
+    summary: 'Producer to stream to consumers, with a dead-letter path.',
+    dsl: `%% ofk 1
+flowchart right
+title: Event pipeline
 
-producer ==> queue
-queue --> worker1
-queue --> worker2
-worker1 ..|fail| dlq
-worker2 ..|fail| dlq
-worker1 ==> store
-worker2 ==> store
+  Producer [rounded, blue] -> Stream [cylinder, amber, bold]
+  Stream -> Enricher [rounded, violet]
+  Stream -> Archiver [cylinder, slate]
+  Enricher -> Warehouse [cylinder, emerald]
+  Enricher --> Dead Letter [note, red] : failed
 `,
   },
 ];

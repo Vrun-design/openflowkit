@@ -11,7 +11,9 @@ test('icon library inserts an icon node; the style bar swaps its icon as one und
   await page.keyboard.press('i');
   const search = page.getByRole('searchbox', { name: 'Search icons' });
   await expect(search).toBeFocused();
-  await page.getByRole('tab', { name: 'AWS' }).click();
+  // Cloud vendors live behind the Cloud tab (see V2IconPicker).
+  await page.getByRole('tab', { name: 'Cloud', exact: true }).click();
+  await page.getByRole('tab', { name: 'AWS', exact: true }).click();
   await search.fill('lambda');
   await page.getByRole('option').first().click();
   await expect.poll(() => icons(page)).toEqual(['architecture:aws/compute-lambda']);

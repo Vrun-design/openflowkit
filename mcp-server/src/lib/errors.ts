@@ -13,13 +13,6 @@ export function toolError(message: string, details?: unknown): {
   };
 }
 
-export function isAbortError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    (error.name === 'AbortError' || error.message.toLowerCase().includes('abort'))
-  );
-}
-
 export function describeError(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;

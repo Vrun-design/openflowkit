@@ -6,6 +6,7 @@ import { resolveContainerNodePresentation } from './containerNodePresentation';
 import { resolveNodeStroke, type NodeStrokeStyle } from './nodeStroke';
 import { optionalPresentationString } from './nodePresentationValues';
 import { resolveAdaptiveInk } from '../color/adaptiveColor';
+import { nodePaletteName } from './nodePalette';
 
 // Every visible property of a node, resolved from flat `appearance` keys
 // (docs/plan/phase-1-style.md §1) with legacy `content.*` palette/typography
@@ -132,7 +133,7 @@ function familyDefaults(node: SceneNode): FamilyDefaults {
   const container = resolveContainerNodePresentation(node);
   if (container) {
     const colors = resolveSectionVisualStyle(container.colorKey, container.colorMode, container.customColor,
-      container.kind === 'group' ? 'violet' : 'blue');
+      container.kind === 'group' ? 'violet' : 'blue', nodePaletteName(node));
     return {
       fill: colors.bg, stroke: colors.border, strokeWidth: container.kind === 'swimlane' ? 2 : 1.5,
       text: colors.title, cornerRadius: 12, fontSize: container.kind === 'swimlane' ? 13 : 14, fontWeight: 700,
@@ -141,7 +142,8 @@ function familyDefaults(node: SceneNode): FamilyDefaults {
   }
   const architecture = resolveArchitectureNodePresentation(node);
   if (architecture) {
-    const colors = resolveNodeVisualStyle(architecture.colorKey, architecture.colorMode, architecture.customColor);
+    const colors = resolveNodeVisualStyle(architecture.colorKey, architecture.colorMode, architecture.customColor,
+      nodePaletteName(node));
     const icon = architecture.display === 'provider-icon';
     return {
       fill: icon ? colors.iconBg : colors.bg, stroke: colors.border, strokeWidth: icon ? 1 : 1.5, text: colors.text,
@@ -156,8 +158,8 @@ function familyDefaults(node: SceneNode): FamilyDefaults {
   const palette = text
     ? { bg: 'transparent', border: 'transparent',
         text: resolveTextVisualStyle(optionalPresentationString(c.color) ?? 'slate', 'subtle',
-          optionalPresentationString(c.customColor), 'slate').text }
-    : resolveNodeVisualStyle(basic?.colorKey, basic?.colorMode, basic?.customColor);
+          optionalPresentationString(c.customColor), 'slate', nodePaletteName(node)).text }
+    : resolveNodeVisualStyle(basic?.colorKey, basic?.colorMode, basic?.customColor, nodePaletteName(node));
   const legacyBackground = text ? optionalPresentationString(c.backgroundColor) : undefined;
   return {
     fill: legacyBackground ?? palette.bg, stroke: palette.border, strokeWidth: 1.5,

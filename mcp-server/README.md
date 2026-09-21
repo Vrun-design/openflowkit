@@ -14,25 +14,21 @@
 
 OpenFlowKit MCP is **local-first by design** — it runs on your machine over stdio with no API key and no cloud round-trip, and its tools return deterministic output. Your MCP client already has an LLM; this server just gives it diagram-specific tools.
 
-Instead, it gives the agent diagram-specific powers:
+It gives the agent the same operations a human has, in two modes:
 
-- read the OpenFlow DSL reference
-- inspect starter templates
-- analyze local codebases
-- find exact cloud and developer icon slugs
-- validate agent-authored DSL
-- create shareable OpenFlowKit viewer URLs
+- **Live** — click **Connect agent** in the app and the tools act on the document you
+  see, over a local bridge on `127.0.0.1:43119` (origin-checked; optional
+  `OPENFLOWKIT_BRIDGE_TOKEN`). `screenshot` returns a real PNG and every edit is one undo.
+- **File** — `openflow_open` a `.openflow.json`, edit it with the same tools,
+  `openflow_save` it back.
 
 No API keys, no telemetry, no account, no server-side storage.
 
 ```
 You:    Create a checkout flow with a promo-code branch
-Claude: reads openflowkit://docs/dsl-cheatsheet
-        writes OpenFlow DSL itself
-        calls validate_openflow_dsl
-        fixes any issues
-        calls create_viewer_url
-        returns DSL + viewer link
+Claude: get_syntax → writes OpenFlow DSL itself → validate_openflow_dsl
+        fixes any issues → create_diagram → screenshot
+        returns DSL + what it drew
 ```
 
 ---
@@ -87,16 +83,26 @@ The server speaks the standard MCP stdio protocol. Client UIs differ, but the co
 
 All tools run locally and require no provider key.
 
+Every tool accepts an optional `documentId`: omit it while an editor is paired, pass
+one to target a file-mode document.
+
 | Tool | What it does |
 |---|---|
-| `validate_openflow_dsl` | Lint OpenFlow DSL with structured diagnostics |
-| `create_viewer_url` | Encode OpenFlow DSL into a shareable OpenFlowKit viewer URL |
-| `analyze_codebase` | Detect platforms, services, top-level structure, and language mix from a local repo |
-| `find_icon` | Fuzzy-search 1,600+ AWS, Azure, GCP, CNCF, and developer icons |
-| `list_starter_templates` | Browse built-in starter templates |
-| `get_starter_template` | Fetch a named starter template as DSL |
-| `list_diagram_node_types` | Return DSL node and edge reference data |
-| `server_info` | Return version and capability metadata |
+| `create_diagram` / `update_diagram` | Compile DSL into a new frame, or replace one in place — one undo step |
+| `get_diagram` / `list_diagrams` | Read a frame's DSL, its drift from the canvas, and what the text cannot express |
+| `get_syntax` | The grammar, or one family's section |
+| `search_icons` / `find_icons_for` | Search 2,121 provider icons, or expand a concept ("cache", "queue", "auth") |
+| `move` / `style` / `delete` / `add_shape` | Scene edits the language cannot say |
+| `export` | SVG, PNG, PDF (print HTML) or JSON for a page, a selection or the document |
+| `screenshot` | PNG of one frame (live mode) |
+| `fit_view` | Frame the camera |
+| `get_document` / `list_pages` | Nodes, connectors and pages with geometry |
+| `validate_openflow_dsl` | Parse DSL with the real parser, structured diagnostics |
+| `analyze_codebase` | Detect platforms, services, structure and language mix in a local repo |
+| `openflow_create` / `openflow_open` / `openflow_save` | File-mode lifecycle |
+| `list_starter_templates` / `get_starter_template` | Working DSL to start from |
+| `whoami` | Which mode you are in and what this server holds |
+| `list_diagram_node_types` / `server_info` | Reference data and capability metadata |
 
 ---
 
@@ -106,7 +112,7 @@ Agents can read these directly:
 
 | URI | Description |
 |---|---|
-| `openflowkit://docs/dsl-cheatsheet` | OpenFlow DSL syntax reference |
+| `openflowkit://docs/grammar` | The complete, versioned DSL reference |
 | `openflowkit://templates` | Starter template catalog |
 | `openflowkit://templates/{name}` | DSL for a named starter template |
 | `openflowkit://icons` | Full icon catalog |
@@ -120,9 +126,9 @@ Provider packs are `aws`, `azure`, `gcp`, `cncf`, and `developer`.
 
 Clients can surface three prompt templates:
 
-- `flowchart_from_description` — agent writes, validates, and links a flowchart
-- `convert_mermaid_to_openflow` — agent converts Mermaid into OpenFlow DSL, validates it, and links it
-- `architecture_from_codebase` — agent scans a local repo, picks icon slugs, validates DSL, and links the result
+- `flowchart_from_description` — agent writes the DSL, validates it and draws it
+- `convert_mermaid_to_openflow` — agent converts Mermaid into OpenFlow DSL and draws it
+- `architecture_from_codebase` — agent scans a local repo, picks icon slugs, validates the DSL and draws it
 
 ---
 
@@ -131,13 +137,13 @@ Clients can surface three prompt templates:
 Ask your MCP client:
 
 ```text
-Using the openflowkit MCP server: read openflowkit://docs/dsl-cheatsheet, then write an OpenFlow DSL flowchart for checkout with cart, shipping, promo-code decision, payment, Stripe webhook, and confirmation. Call validate_openflow_dsl, fix any issues, then call create_viewer_url. Return the final DSL and viewer URL.
+Using the openflowkit MCP server: read openflowkit://docs/grammar, then write an OpenFlow DSL flowchart for checkout with cart, shipping, promo-code decision, payment, Stripe webhook, and confirmation. Call validate_openflow_dsl, fix any issues, then draw it with create_diagram and show me a screenshot.
 ```
 
 For architecture diagrams:
 
 ```text
-Using openflowkit: call analyze_codebase on /path/to/project, read openflowkit://docs/dsl-cheatsheet, use find_icon for exact architecture icons, write OpenFlow DSL, validate it, then create a viewer URL.
+Using openflowkit: call analyze_codebase on /path/to/project, read openflowkit://docs/grammar, use search_icons for exact architecture icon slugs, write OpenFlow DSL, validate it, then draw it with create_diagram.
 ```
 
 ---
@@ -146,7 +152,7 @@ Using openflowkit: call analyze_codebase on /path/to/project, read openflowkit:/
 
 - **No telemetry.** The server never phones home.
 - **No provider keys.** The MCP client model authors diagrams directly.
-- **No OpenFlowKit account.** Viewer URLs encode the DSL locally in the URL hash.
+- **No OpenFlowKit account.** Nothing leaves the machine; the live bridge binds to 127.0.0.1.
 - **Local filesystem access only when requested.** Codebase analysis only reads the path passed to `analyze_codebase`.
 
 ---

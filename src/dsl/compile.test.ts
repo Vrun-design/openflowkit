@@ -115,6 +115,13 @@ describe('compile graph structure', () => {
     expect(result.diagnostics).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'W121' })]));
   });
 
+  it('resolves bare references to an explicit id', async () => {
+    const result = await compile('flowchart\napi = API Gateway [rounded]\ndb = Customer records [cylinder]\napi -> db : reads');
+    expect(result.nodes.map((node) => node.id)).toEqual(['api', 'db']);
+    expect(result.nodes[0]?.content.label).toBe('API Gateway');
+    expect(result.connectors[0]).toMatchObject({ source: { nodeId: 'api' }, target: { nodeId: 'db' } });
+  });
+
   it('warns when a repeated declaration tries to move a node between groups', async () => {
     const result = await compile('flowchart\ngroup One { A }\ngroup Two {\n  A\n}');
     expect(result.diagnostics).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'W121', severity: 'warning' })]));

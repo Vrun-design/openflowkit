@@ -13,6 +13,7 @@ type V2Api = {
 };
 
 const fixture = (name: string) => readFileSync(`src/dsl/fixtures/${name}.dsl`, 'utf8');
+const fixtureFile = (path: string) => readFileSync(`src/dsl/fixtures/${path}.dsl`, 'utf8');
 
 async function generate(page: import('@playwright/test').Page, source: string) {
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
@@ -60,6 +61,48 @@ test('groups nest their members inside the frame', async ({ page }) => {
   expect(nodes.find((node) => node.id === 'load-balancer')?.parentId).toBe(publicEdge?.id);
 });
 
+test('Mermaid pasted into the panel converts to DSL', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
+  const editor = page.getByRole('textbox', { name: 'Diagram source' });
+  await editor.fill('flowchart LR\n  A[Start] --> B{Check}\n  B -->|yes| C(Go)');
+  const convert = page.getByRole('button', { name: /Convert/ });
+  await expect(convert).toBeVisible();
+  await convert.click();
+  await expect(editor).toHaveValue(/flowchart right/);
+  await expect(editor).toHaveValue(/Check \[diamond\]/);
+  await editor.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __V2__?: V2Api }).__V2__?.getState().nodes.length ?? 0)).toBe(4);
+});
+
+test('every family generates scene records with its own node kinds', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  const families: Array<[string, string, string]> = [
+    ['gitgraph', 'gitgraph/basic', 'process'],
+    ['sequence', 'sequence/activations', 'sequence_participant'],
+    ['state', 'state/controls', 'process'],
+    ['erd', 'erd/shop', 'er_entity'],
+    ['class', 'class/shop', 'class'],
+    ['mindmap', 'mindmap/product', 'mindmap'],
+  ];
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
+  const editor = page.getByRole('textbox', { name: 'Diagram source' });
+  for (const [name, fixture, kind] of families) {
+    await editor.fill(fixtureFile(fixture));
+    await editor.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+    // Each generate replaces the bound frame, so wait for this family's kind to land.
+    await expect.poll(
+      async () => page.evaluate(() => {
+        const nodes = (window as unknown as { __V2__?: V2Api }).__V2__?.getDocument()?.pages[0]?.nodes ?? [];
+        return nodes.filter((node) => node.kind !== 'frame').map((node) => node.kind);
+      }),
+      { message: `${name} kinds` },
+    ).toContain(kind);
+  }
+});
+
 test('canvas edits re-serialize through Edit as code', async ({ page }) => {
   await page.goto('/');
   await page.waitForSelector('[data-testid="v2-canvas"]');
@@ -68,14 +111,16 @@ test('canvas edits re-serialize through Edit as code', async ({ page }) => {
   expect(frameId).toBeTruthy();
   await page.getByRole('button', { name: 'Close panel' }).click();
 
-  // Drag the first node so the canvas no longer matches the source hash.
+  // Drag the first node inside the frame so the canvas no longer matches the
+  // source hash. Stay inside: dragging a node out of a container reparents it
+  // (containment), and then it is no longer part of this frame's text.
   const rect = await page.evaluate((id) => (window as unknown as { __V2__?: V2Api }).__V2__?.getNodeRect(id) ?? null, 'a');
   expect(rect).toBeTruthy();
   const x = rect!.x + rect!.width / 2;
   const y = rect!.y + rect!.height / 2;
   await page.mouse.move(x, y);
   await page.mouse.down();
-  await page.mouse.move(x + 180, y + 120, { steps: 8 });
+  await page.mouse.move(x + 40, y + 30, { steps: 8 });
   await page.mouse.up();
 
   const frameRect = await page.evaluate((id) => (window as unknown as { __V2__?: V2Api }).__V2__?.getNodeRect(id) ?? null, frameId!);

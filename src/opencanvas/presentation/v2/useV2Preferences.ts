@@ -1,17 +1,26 @@
 import { useState } from 'react';
+import { BRIDGE_DEFAULT_PORT } from '../../../agent/bridge/protocol';
 
 export type V2ThemePreference = 'system' | 'light' | 'dark';
 export type V2Density = 'comfortable' | 'compact';
+export type V2DiagramPalette = 'pastel' | 'paper' | 'builder' | 'mono';
 export interface V2Preferences {
   theme: V2ThemePreference;
   showGrid: boolean;
   snapToGrid: boolean;
   canvasColor: string | null;
   density: V2Density;
+  /** Palette handed to every compile; the DSL's own `appearance:` wins. */
+  diagramPalette: V2DiagramPalette;
+  /** Local agent pairing: port, optional shared token, and whether to connect. */
+  bridgePort: number;
+  bridgeToken: string;
+  agentBridgeEnabled: boolean;
 }
 const KEY = 'openflowkit-v2-preferences';
 const DEFAULTS: V2Preferences = {
   theme: 'system', showGrid: true, snapToGrid: false, canvasColor: null, density: 'comfortable',
+  diagramPalette: 'pastel', bridgePort: BRIDGE_DEFAULT_PORT, bridgeToken: '', agentBridgeEnabled: false,
 };
 
 function readPreferences(): V2Preferences {
@@ -23,7 +32,13 @@ function readPreferences(): V2Preferences {
       canvasColor: typeof value?.canvasColor === 'string' && /^#[0-9a-f]{6}$/i.test(value.canvasColor)
         ? value.canvasColor
         : null,
-      density: value?.density === 'compact' ? 'compact' : 'comfortable' };
+      density: value?.density === 'compact' ? 'compact' : 'comfortable',
+      diagramPalette: ['pastel', 'paper', 'builder', 'mono'].includes(value?.diagramPalette)
+        ? value.diagramPalette : 'pastel',
+      bridgePort: Number.isInteger(value?.bridgePort) && value.bridgePort > 0 && value.bridgePort < 65536
+        ? value.bridgePort : BRIDGE_DEFAULT_PORT,
+      bridgeToken: typeof value?.bridgeToken === 'string' ? value.bridgeToken.slice(0, 64) : '',
+      agentBridgeEnabled: value?.agentBridgeEnabled === true };
   } catch { return DEFAULTS; }
 }
 

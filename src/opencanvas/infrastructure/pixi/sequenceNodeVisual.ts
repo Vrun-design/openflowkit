@@ -1,4 +1,5 @@
 import { resolveAnnotationVisualStyle, resolveContainerVisualStyle } from '@/theme';
+import { nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneNode } from '../../domain/document/types';
 import {
   resolveSequenceNodePresentation,
@@ -19,7 +20,7 @@ export function projectSequenceNodeVisual(node: SceneNode): PixiSequenceNodeVisu
   const presentation = resolveSequenceNodePresentation(node);
   if (!presentation) return null;
   if (presentation.kind === 'sequence_note') {
-    const colors = resolveAnnotationVisualStyle('yellow', 'subtle');
+    const colors = resolveAnnotationVisualStyle('yellow', 'subtle', undefined, nodePaletteName(node));
     return {
       presentation,
       fill: pixiHexColor(colors.containerBg, 0xfef9c3),
@@ -33,7 +34,8 @@ export function projectSequenceNodeVisual(node: SceneNode): PixiSequenceNodeVisu
     presentation.colorKey,
     presentation.colorMode,
     presentation.customColor,
-    presentation.kind === 'sequence_fragment' ? 'violet' : 'slate'
+    presentation.kind === 'sequence_fragment' ? 'violet' : 'slate',
+    nodePaletteName(node)
   );
   return {
     presentation,

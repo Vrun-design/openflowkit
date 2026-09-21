@@ -1,4 +1,3 @@
-// Single source of truth for the version reported during MCP initialization.
-// Bump together with package.json.
-export const MCP_SERVER_VERSION = '0.1.2';
+// Hand-synced with package.json (the build has no version injection).
 export const MCP_SERVER_NAME = 'openflowkit';
+export const MCP_SERVER_VERSION = '0.2.0';

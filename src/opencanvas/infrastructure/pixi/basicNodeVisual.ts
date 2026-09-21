@@ -1,4 +1,5 @@
 import { resolveNodeVisualStyle } from '@/theme';
+import { nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneNode } from '../../domain/document/types';
 import {
   resolveBasicNodePresentation,
@@ -36,7 +37,8 @@ export function projectBasicNodeVisual(node: SceneNode): PixiBasicNodeVisual | n
   const colors = resolveNodeVisualStyle(
     presentation.colorKey,
     presentation.colorMode,
-    presentation.customColor
+    presentation.customColor,
+    nodePaletteName(node)
   );
   const visual = {
     kind: presentation.kind,

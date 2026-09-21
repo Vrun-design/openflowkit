@@ -1,5 +1,5 @@
 import type { BasicNodeShape } from '../opencanvas/domain/nodes/basicNodePresentation';
-import { paletteSwatch, type PaletteKey } from '../opencanvas/domain/nodes/nodePalette';
+import { paletteSwatch, type PaletteKey, type SwatchResolver } from '../opencanvas/domain/nodes/nodePalette';
 import type { Size2d } from '../opencanvas/domain/geometry/types';
 import type { DslDirection } from './ast';
 import type { CanonicalAttribute } from './sceneMeta';
@@ -35,6 +35,9 @@ export const SHAPE_WORDS: Readonly<Record<string, DslShapeSpec>> = {
   component: { kind: 'process', shape: 'rounded', minSize: { width: 140, height: 60 }, maxSize: { width: 320, height: 240 }, wrap: 240 },
   browser: { kind: 'browser', minSize: { width: 240, height: 170 }, maxSize: { width: 480, height: 400 }, wrap: 300 },
   mobile: { kind: 'mobile', minSize: { width: 150, height: 280 }, maxSize: { width: 320, height: 480 }, wrap: 200 },
+  fork: { kind: 'process', shape: 'rectangle', minSize: { width: 150, height: 12 }, maxSize: { width: 150, height: 12 }, wrap: 150 },
+  join: { kind: 'process', shape: 'rectangle', minSize: { width: 150, height: 12 }, maxSize: { width: 150, height: 12 }, wrap: 150 },
+  choice: { kind: 'process', shape: 'diamond', minSize: { width: 64, height: 64 }, maxSize: { width: 96, height: 96 }, wrap: 80 },
 };
 
 export const SHAPE_ALIASES: Readonly<Record<string, string>> = {
@@ -114,16 +117,17 @@ export function nodeAppearance(
   color: string | undefined,
   fill: 'pastel' | 'bold' | 'outline',
   shadow: boolean,
+  swatchOf: SwatchResolver = paletteSwatch,
 ): Record<string, string | boolean> {
   const key = color && !isHexColor(color) ? COLOR_WORDS[color]?.key : undefined;
   const custom = color && isHexColor(color) ? color : undefined;
   const mode = fill === 'bold' ? 'solid' : 'pastel';
   const swatch = custom
-    ? { fill: custom, stroke: mode === 'solid' ? custom : custom, textColor: mode === 'solid' ? '#ffffff' : '#0f172a' }
-    : paletteSwatch((key ?? 'white') as PaletteKey, mode);
+    ? { fill: custom, stroke: custom, textColor: mode === 'solid' ? '#ffffff' : '#0f172a' }
+    : swatchOf((key ?? 'white') as PaletteKey, mode);
   return {
     fill: fill === 'outline' ? 'transparent' : swatch.fill,
-    stroke: fill === 'outline' ? paletteSwatch((key ?? 'slate') as PaletteKey, 'solid').stroke : swatch.stroke,
+    stroke: fill === 'outline' ? swatchOf((key ?? 'slate') as PaletteKey, 'solid').stroke : swatch.stroke,
     textColor: swatch.textColor,
     ...(shadow ? { shadow: true } : {}),
   };
@@ -192,3 +196,8 @@ export const DSL_FAMILY_DIRECTION: Readonly<Record<string, DslDirection>> = {
   flowchart: 'down', state: 'down', erd: 'right', class: 'down',
   architecture: 'right', gitgraph: 'right', sequence: 'right', mindmap: 'right',
 };
+
+/** Effective layout direction for a family name (grammar §3.2). */
+export function dslFamilyDirection(family: string): DslDirection {
+  return DSL_FAMILY_DIRECTION[family] ?? 'down';
+}

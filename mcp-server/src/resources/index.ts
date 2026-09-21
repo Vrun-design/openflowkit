@@ -1,58 +1,20 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { findStarterTemplate, STARTER_TEMPLATES } from '../lib/starterTemplates.js';
-import { getAllIcons, getIconProviders, getIconsByProvider } from '../lib/iconCatalog.js';
-
-const DSL_CHEATSHEET = `# OpenFlow DSL Cheatsheet
-
-flow: <Title>            # required header
-direction: TB | LR       # default TB
-
-# Nodes (declare before edges)
-[start] s1
-[end]   e1
-[process]      step1: Friendly Label { color: "blue" }
-[decision]     branch: Approved?     { color: "amber" }
-[system]       api:    Internal API
-[architecture] db:     Postgres     { archProvider: "aws", archResourceType: "databases-rds" }
-[browser]      web:    Dashboard
-[mobile]       app:    Mobile App
-[note]         n:      Latency 200ms
-
-# Edges
-s1 -> step1                 # default
-step1 ==> api               # primary path
-api  --> db                 # secondary
-api  ..|error| n            # async / dotted
-branch ->|Yes| step1
-branch ->|No|  e1
-
-# Architecture icons
-# Use the [architecture] node type with archProvider + archResourceType attributes
-# to render a real provider icon (AWS, Azure, GCP, CNCF, or developer brand logos).
-# Always call the find_icon tool to discover the correct slug; do not guess.
-# Providers: aws, azure, gcp, cncf, developer
-# Catalog resource: openflowkit://icons (full) or openflowkit://icons/{provider} (per pack)
-`;
+import { loadGrammar, loadIcons } from '../lib/fileCapabilities.js';
 
 export function registerResources(server: McpServer): void {
-  // Static cheatsheet — agents read it once to learn DSL surface.
+  // The canonical grammar, straight from the repository's docs/plan/grammar.md.
   server.registerResource(
-    'dsl-cheatsheet',
-    'openflowkit://docs/dsl-cheatsheet',
+    'grammar',
+    'openflowkit://docs/grammar',
     {
-      title: 'OpenFlow DSL Cheatsheet',
-      description: 'Quick reference for OpenFlow DSL node types, attributes, and edge styles.',
+      title: 'OpenFlow grammar',
+      description: 'The complete, versioned OpenFlow DSL reference (family headers, statements, attributes, families, loss tables).',
       mimeType: 'text/markdown',
     },
     async (uri) => ({
-      contents: [
-        {
-          uri: uri.href,
-          mimeType: 'text/markdown',
-          text: DSL_CHEATSHEET,
-        },
-      ],
+      contents: [{ uri: uri.href, mimeType: 'text/markdown', text: await loadGrammar() }],
     })
   );
 
@@ -71,10 +33,10 @@ export function registerResources(server: McpServer): void {
           uri: uri.href,
           mimeType: 'application/json',
           text: JSON.stringify(
-            STARTER_TEMPLATES.map(({ name, title, category, summary }) => ({
+            STARTER_TEMPLATES.map(({ name, title, family, summary }) => ({
               name,
               title,
-              category,
+              family,
               summary,
             })),
             null,
@@ -85,8 +47,8 @@ export function registerResources(server: McpServer): void {
     })
   );
 
-  // Full icon catalog — agents can read it once and remember slugs, or prefer the
-  // find_icon tool for targeted queries.
+  // Full icon catalog — agents can read it once and remember slugs, or use the
+  // search_icons / find_icons_for tools for targeted queries.
   server.registerResource(
     'icons-catalog',
     'openflowkit://icons',
@@ -102,7 +64,7 @@ export function registerResources(server: McpServer): void {
         {
           uri: uri.href,
           mimeType: 'application/json',
-          text: JSON.stringify(await getAllIcons(), null, 2),
+          text: JSON.stringify(await loadIcons(), null, 2),
         },
       ],
     })
@@ -112,7 +74,7 @@ export function registerResources(server: McpServer): void {
     'icons-by-provider',
     new ResourceTemplate('openflowkit://icons/{provider}', {
       list: async () => {
-        const providers = await getIconProviders();
+        const providers = [...new Set((await loadIcons()).map(({ provider }) => provider))].sort();
         return {
           resources: providers.map((provider) => ({
             uri: `openflowkit://icons/${provider}`,
@@ -125,7 +87,7 @@ export function registerResources(server: McpServer): void {
       },
       complete: {
         provider: async (value) => {
-          const providers = await getIconProviders();
+          const providers = [...new Set((await loadIcons()).map(({ provider }) => provider))].sort();
           return providers.filter((p) => p.startsWith(value.toLowerCase()));
         },
       },
@@ -137,7 +99,7 @@ export function registerResources(server: McpServer): void {
     },
     async (uri, variables) => {
       const provider = String(variables.provider ?? '').toLowerCase();
-      const icons = await getIconsByProvider(provider);
+      const icons = (await loadIcons()).filter((icon) => icon.provider === provider);
       return {
         contents: [
           {

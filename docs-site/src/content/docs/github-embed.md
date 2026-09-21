@@ -1,97 +1,50 @@
 ---
 draft: false
-title: Embed Diagrams in GitHub
-description: Create viewer links for OpenFlowKit diagrams and embed them into GitHub-flavored documentation workflows.
+title: Embed diagrams in GitHub
+description: Put OpenFlowKit diagrams in a README, wiki or PR with an exported SVG that stays crisp and versioned.
 ---
 
-OpenFlowKit diagrams can be embedded in any GitHub README or Markdown file as interactive, read-only views. No server setup or GitHub App required.
+A diagram belongs next to the code it explains. The reliable way to put one in a
+README, wiki page or PR description is to **export it and commit the file** — no server,
+no sharing link that can rot.
 
-## How it works
+## 1. Export from the app
 
-The `/view` route renders any OpenFlow DSL passed as a URL parameter. You encode your diagram as a URL-safe string and link to it from your README.
+Open the Canvas menu → **Export…**, choose:
 
-```
-https://app.openflowkit.com/#/view?flow=~COMPRESSED_DSL
-```
+- **SVG** for READMEs, wikis and PRs — vector, crisp at every zoom, diffable in review.
+- **PNG 2×** when the target renders SVG poorly (some chat clients, older wikis).
+- **All pages** if the document has more than one page; each page becomes its own file.
 
-When someone clicks the link, they see the fully rendered, interactive diagram and can pan, zoom, and click **Open in Editor** to load it into the canvas for editing.
+## 2. Commit it next to the docs
 
-## When this is useful
-
-Use the GitHub embed workflow when:
-
-- your team documents systems in Markdown
-- you want a richer diagram experience than a static PNG
-- you want readers to be able to open the diagram back in the editor
-
-## Step-by-step
-
-### 1. Write your diagram in OpenFlow DSL
-
-```
-flow: "My Architecture"
-direction: LR
-
-[browser] client: Web App
-[system] api: API Server
-[system] db: PostgreSQL
-
-client -> api |HTTP|
-api -> db |SQL|
+```bash
+mkdir -p docs/diagrams
+# move the exported file in, then:
+git add docs/diagrams/checkout.svg
 ```
 
-### 2. Create a viewer URL
+Keep the source text with it. A diagram whose DSL is lost becomes impossible to edit:
 
-The easiest path is to use the OpenFlowKit MCP server's `create_viewer_url` tool or the editor's **Share / Embed** action. Both create a compressed, URL-safe viewer link that opens on the app domain:
-
-```text
-https://app.openflowkit.com/#/view?flow=~...
+```bash
+openflowkit docs/diagrams/checkout.openflow.json   # or export JSON from the same menu
 ```
 
-### 3. Embed in your README
+## 3. Reference it in Markdown
 
 ```markdown
-[![Architecture Diagram](https://openflowkit.com/og-diagram.png)](https://app.openflowkit.com/#/view?flow=PASTE_ENCODED_VALUE_HERE)
+![Checkout flow](docs/diagrams/checkout.svg)
 ```
 
-The outer image link makes GitHub show a clickable preview image. Replace `og-diagram.png` with a screenshot of your diagram for the best preview.
+That is all GitHub needs. Two habits make this pleasant long-term:
 
-Or link directly without an image:
-
-```markdown
-[View Architecture Diagram →](https://app.openflowkit.com/#/view?flow=PASTE_ENCODED_VALUE_HERE)
-```
-
-## Updating diagrams
-
-Edit your DSL, re-encode, and update the URL in the README. Because the entire diagram is in the URL, there is no external file to keep in sync.
-
-For diagrams you want to iterate on frequently, store the raw DSL in a `.flow` file in your repo and reference it in a comment next to the embed link:
-
-```markdown
-<!-- Source: ./docs/architecture.flow -->
-[View Architecture →](https://app.openflowkit.com/#/view?flow=...)
-```
-
-## Encoding helper
-
-You can also export the viewer URL directly from the OpenFlowKit editor:
-
-1. Open your diagram in the editor
-2. Open **Studio → Code → OpenFlow DSL**
-3. Copy the DSL
-4. Encode it with the snippet above
-
-## Supported DSL features
-
-All OpenFlow DSL node types and edge types render in the viewer:
-
-- All node types: `[system]`, `[browser]`, `[mobile]`, `[process]`, `[decision]`, `[section]`, `[annotation]`, and more
-- All edge styles: solid, dashed (`..>`), curved (`-->`), thick (`==>`)
-- Edge labels, colors, icons, and grouping sections
-
-## Related reading
-
-- [OpenFlow DSL Reference](/openflow-dsl/)
-- [Exporting Diagrams](/exporting/)
-- [Import from Structured Data](/import-from-data/)
+- **Light and dark**: GitHub swaps your README's theme, not your SVG. Export a dark copy
+  too and use `<picture>`:
+  ```html
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/checkout-dark.svg">
+    <img alt="Checkout flow" src="docs/diagrams/checkout-light.svg">
+  </picture>
+  ```
+- **Review**: an SVG diff shows exactly which label moved, so a PR that changes a flow is
+  reviewable like code.

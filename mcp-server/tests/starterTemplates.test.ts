@@ -1,20 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { lintOpenFlowDsl } from '../src/lib/dslLinter.js';
+import { lintDsl } from '../src/lib/agent.js';
 import { findStarterTemplate, STARTER_TEMPLATES } from '../src/lib/starterTemplates.js';
+import { compileTemplate } from './helpers/compileTemplate.js';
 
 describe('starter templates', () => {
-  it('exposes a stable set of templates', () => {
+  it('exposes a stable set of uniquely named templates', () => {
     expect(STARTER_TEMPLATES.length).toBeGreaterThan(0);
     const names = STARTER_TEMPLATES.map((t) => t.name);
     expect(new Set(names).size).toBe(names.length);
+    for (const template of STARTER_TEMPLATES) expect(template.family).toBeTruthy();
   });
 
   for (const template of STARTER_TEMPLATES) {
-    it(`template "${template.name}" passes the lightweight DSL linter`, () => {
-      const result = lintOpenFlowDsl(template.dsl);
-      const errors = result.diagnostics.filter((d) => d.severity === 'error');
-      expect(errors, `${template.name} should have no errors:\n${JSON.stringify(errors, null, 2)}`).toEqual([]);
-      expect(result.declaredNodeIds.length).toBeGreaterThan(0);
+    it(`template "${template.name}" lints clean and compiles to nodes`, async () => {
+      const lint = lintDsl(template.dsl);
+      expect(lint.diagnostics.filter((d) => d.severity === 'error'), template.name).toEqual([]);
+      expect(lint.ok).toBe(true);
+      expect(lint.family).toBe(template.family);
+
+      const compiled = await compileTemplate(template.dsl);
+      expect(compiled.nodes + compiled.groups, `${template.name} draws something`).toBeGreaterThan(0);
+      expect(compiled.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
     });
   }
 

@@ -1,6 +1,38 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
-import { toStarlightSidebar } from '../src/docs/publicDocsCatalog.js';
+
+// The sidebar mirrors the file system, so a page can never be orphaned: every
+// markdown file under src/content/docs/ appears exactly once, titled by its
+// frontmatter. Curated groups come first, anything unlisted lands in "More".
+const DOCS_DIR = fileURLToPath(new URL('./src/content/docs', import.meta.url));
+
+const CURATED = {
+  'Start here': ['introduction', 'quick-start', 'local-first-diagramming', 'keyboard-shortcuts'],
+  'Diagram as code': ['openflow-dsl', 'openflow-dsl-reference', 'diagram-families', 'node-types', 'mermaid-integration', 'mermaid-vs-openflow'],
+  'Agents': ['mcp-server', 'prompting-agents', 'ai-generation'],
+  'Canvas': ['canvas-basics', 'context-menu', 'properties-panel', 'command-center', 'smart-layout'],
+  'Ship it': ['choose-export-format', 'exporting', 'github-embed', 'choose-input-mode'],
+};
+
+const slugs = readdirSync(DOCS_DIR).filter((file) => file.endsWith('.md')).map((file) => file.slice(0, -3));
+const titleOf = (slug) => {
+  const match = /^title:\s*(.+)$/m.exec(readFileSync(`${DOCS_DIR}/${slug}.md`, 'utf8'));
+  return match ? match[1].replace(/^["']|["']$/g, '') : slug;
+};
+const item = (slug) => ({ label: titleOf(slug), slug });
+
+const curated = Object.values(CURATED).flat();
+const sidebar = [
+  ...Object.entries(CURATED).map(([label, entries]) => ({
+    label,
+    items: entries.filter((slug) => slugs.includes(slug)).map(item),
+  })).filter(({ items }) => items.length > 0),
+  ...(slugs.some((slug) => !curated.includes(slug))
+    ? [{ label: 'More', items: slugs.filter((slug) => !curated.includes(slug)).sort().map(item) }]
+    : []),
+];
 
 export default defineConfig({
   site: 'https://docs.openflowkit.com',
@@ -28,7 +60,7 @@ export default defineConfig({
         root: { label: 'English', lang: 'en' },
         tr: { label: 'Türkçe', lang: 'tr' },
       },
-      sidebar: toStarlightSidebar(),
+      sidebar,
       customCss: ['./src/styles/custom.css'],
       head: [
         {

@@ -1,33 +1,22 @@
 ---
 draft: false
 title: MCP Server
-description: Use the OpenFlowKit MCP server with Claude Desktop, Cursor, Windsurf, and other MCP clients.
+description: Drive the live OpenFlowKit editor, or work on .openflow.json files, from Claude Code, Claude Desktop, Cursor, Windsurf and every other MCP client.
 ---
 
-The OpenFlowKit MCP server gives AI clients diagramming skills that run local-first — on your machine, no API key, no cloud round-trip, deterministic output. Claude Desktop, Cursor, Windsurf, and other MCP clients already have an LLM; OpenFlowKit supplies the local tools that make that model good at diagrams.
+The OpenFlowKit MCP server gives AI clients real diagramming tools that run local-first —
+on your machine, no account, no cloud round-trip, deterministic output. Your client
+already has the model; OpenFlowKit supplies the canvas.
 
-The package is `@vrun-design/openflowkit-mcp`. It runs locally over the standard MCP stdio transport.
+The package is `@vrun-design/openflowkit-mcp`, over the standard MCP stdio transport.
 
-## Install and run
-
-Use it directly with `npx`:
+## Install
 
 ```bash
 npx -y @vrun-design/openflowkit-mcp
 ```
 
-Or install it globally:
-
-```bash
-npm install -g @vrun-design/openflowkit-mcp
-openflowkit-mcp
-```
-
-The server requires Node 18 or newer.
-
-## Claude Desktop setup
-
-Add the server to your Claude Desktop config:
+Or put it in your client's config:
 
 ```json
 {
@@ -40,71 +29,67 @@ Add the server to your Claude Desktop config:
 }
 ```
 
-For Cursor, Windsurf, and other MCP clients, use the same command and args in that client's MCP settings.
+Node 18 or newer. The server prints its local bridge address to stderr on start.
 
-## How generation works
+## Two modes
 
-OpenFlowKit MCP is agent-native:
+| | Live (paired editor) | File |
+| --- | --- | --- |
+| What it edits | the document open in your browser, as you watch | a `.openflow.json` on disk |
+| How to start | click **Connect agent** in the app | `openflow_open` |
+| `screenshot` | real PNG of the frame | needs a live editor |
+| Undo | one <kbd>⌘Z</kbd> per agent edit | committed into the file on save |
 
-1. The agent reads `openflowkit://docs/dsl-cheatsheet`.
-2. The agent writes OpenFlow DSL itself.
-3. The agent calls `find_icon` when it needs exact cloud or developer icon slugs.
-4. The agent calls `validate_openflow_dsl`.
-5. The agent fixes any diagnostics.
-6. The agent calls `create_viewer_url`.
-7. The agent returns editable DSL and a viewer link.
-
-No API keys are required for MCP diagram generation.
+The live bridge is a local HTTP long-poll on `127.0.0.1:43119`. It checks the request
+origin, so a random web page cannot drive your editor; set
+`OPENFLOWKIT_BRIDGE_TOKEN` to require a shared token as well (paste it into the
+Connect-agent popover).
 
 ## Tools
 
-The current server exposes 8 local-first tools (no API key, deterministic, run on your machine):
+Every tool takes an optional `documentId`. Omit it while an editor is paired and the
+call happens in that window; pass one to target a file-mode document instead.
 
 | Tool | What it does |
 | --- | --- |
-| `validate_openflow_dsl` | Lint DSL with structured diagnostics |
-| `create_viewer_url` | Create a shareable OpenFlowKit viewer URL from DSL |
-| `analyze_codebase` | Detect platforms, services, top-level structure, and language mix from a local repo |
-| `find_icon` | Search 1,600+ provider and developer icons for exact `archProvider` and `archResourceType` values |
-| `list_starter_templates` | Browse built-in templates |
-| `get_starter_template` | Fetch a template's DSL |
-| `list_diagram_node_types` | Return DSL node and edge reference data |
-| `server_info` | Return version and capability metadata |
+| `create_diagram` | Compile DSL into a new diagram frame — one undo step |
+| `update_diagram` | Replace a frame's content from DSL, keeping its position |
+| `get_diagram` | The frame's DSL, whether the canvas has drifted from it, and what the text cannot express |
+| `list_diagrams` | Every diagram frame, with page, family and drift |
+| `get_syntax` | The grammar, or one family's section |
+| `search_icons` | Search the provider icon packs |
+| `find_icons_for` | Concept search ("cache", "queue", "auth") expanded and ranked |
+| `move` / `style` / `delete` / `add_shape` | Scene edits the language cannot say |
+| `export` | SVG, PNG, PDF (print HTML) or JSON, for a page, a selection or the whole document |
+| `screenshot` | PNG of one frame (live mode) |
+| `fit_view` | Frame the camera on a frame, a selection or the page |
+| `get_document` / `list_pages` | Nodes, connectors and pages with geometry |
+| `validate_openflow_dsl` | Parse DSL with the real parser and return structured diagnostics |
+| `analyze_codebase` | Detect platforms, services and structure in a local repo |
+| `openflow_create` / `openflow_open` / `openflow_save` | File mode lifecycle |
+| `list_starter_templates` / `get_starter_template` | Working DSL to start from |
+| `whoami` | Which mode you are in and what this server holds |
 
 ## Resources and prompts
 
-The server exposes five resources:
-
 | URI | Description |
 | --- | --- |
-| `openflowkit://docs/dsl-cheatsheet` | OpenFlow DSL syntax reference |
+| `openflowkit://docs/grammar` | The complete DSL reference |
 | `openflowkit://templates` | Starter template catalog |
-| `openflowkit://templates/{name}` | DSL for a named starter template |
-| `openflowkit://icons` | Full architecture icon catalog |
-| `openflowkit://icons/{provider}` | Icons for one provider pack (`aws`, `azure`, `gcp`, `cncf`, or `developer`) |
+| `openflowkit://templates/{name}` | One template's DSL |
+| `openflowkit://icons` | Full icon catalog |
+| `openflowkit://icons/{provider}` | One provider pack |
 
-Clients can also surface three prompt templates: `flowchart_from_description`, `convert_mermaid_to_openflow`, and `architecture_from_codebase`.
+Prompts: `flowchart_from_description`, `convert_mermaid_to_openflow`,
+`architecture_from_codebase`.
 
-## Try it
-
-Paste this into a connected MCP client:
-
-```text
-Using the openflowkit MCP server: read openflowkit://docs/dsl-cheatsheet, then write an OpenFlow DSL flowchart for a checkout flow (cart → shipping → promo-code decision → payment → Stripe webhook → confirm). Call validate_openflow_dsl on your output, fix any errors, then call create_viewer_url. Show me the final DSL and viewer URL.
-```
-
-For codebases:
+## What a session looks like
 
 ```text
-Using openflowkit: call analyze_codebase on /path/to/project, read openflowkit://docs/dsl-cheatsheet, use find_icon for exact architecture icons, write OpenFlow DSL, validate it, then create a viewer URL.
+You:   Draw the checkout flow: cart → shipping → promo-code decision → payment → Stripe webhook → confirmation.
+Agent: get_syntax → writes OpenFlow DSL → validate_openflow_dsl → create_diagram
+       → screenshot → "Drew it: 6 shapes, 6 connectors. Promo-code branch is the diamond."
 ```
 
-## Privacy model
-
-The server does not store diagrams, require an OpenFlowKit account, ask for provider keys, or phone home. Local tools run on your machine. Codebase analysis only reads the directory you explicitly pass to `analyze_codebase`.
-
-## Related pages
-
-- [OpenFlow DSL](/openflow-dsl/)
-- [AI Generation](/ai-generation/)
-- [Prompting AI Agents](/prompting-agents/)
+The DSL it writes is the same DSL the app's code panel uses, so you can press
+<kbd>⌥D</kbd> and keep editing by hand, or right-click the frame → **Edit as code**.

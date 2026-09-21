@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { findStarterTemplate, STARTER_TEMPLATES } from '../lib/starterTemplates.js';
 import { toolError } from '../lib/errors.js';
-import { buildViewerUrl } from '../lib/viewerUrl.js';
+import { lintDsl } from '../lib/agent.js';
 
 export function registerGetTemplate(server: McpServer): void {
   server.registerTool(
@@ -34,9 +34,10 @@ export function registerGetTemplate(server: McpServer): void {
               {
                 name: template.name,
                 title: template.title,
-                category: template.category,
+                family: template.family,
                 summary: template.summary,
-                viewerUrl: buildViewerUrl(template.dsl),
+                lint: lintDsl(template.dsl),
+                next: 'create_diagram(dsl) to draw it (paired editor) or openflow_create + create_diagram (file mode).',
               },
               null,
               2

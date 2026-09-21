@@ -1,9 +1,10 @@
-import { resolveNodeStroke } from '../../domain/nodes/nodeStroke';
+import { FONT_STACKS, resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import { resolveAnnotationVisualStyle, resolveTextVisualStyle } from '@/theme';
+import { nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import { boundsFromPoints } from '../../domain/geometry/bounds';
 import { boundsCorners } from '../../domain/geometry/bounds';
-import type { Matrix2d, Point2d } from '../../domain/geometry/types';
+import type { Matrix2d, Point2d, Size2d } from '../../domain/geometry/types';
 import { resolveBasicNodePresentation } from '../../domain/nodes/basicNodePresentation';
 import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
 import {
@@ -17,6 +18,8 @@ import { pressureTiltSegmentWidth } from '../../domain/nodes/strokeInput';
 import { projectPageConnectors } from '../../domain/connectors/routeProjection';
 import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
+
+export const SVG_BACKGROUND = { light: '#ffffff', dark: '#020617' } as const;
 
 export interface CanonicalSvgExportOptions {
   readonly pageId?: string;
@@ -138,7 +141,8 @@ function exportTextNode(
     presentation.colorKey,
     'subtle',
     presentation.customColor,
-    'slate'
+    'slate',
+    nodePaletteName(node)
   );
   const background = presentation.backgroundColor
     ? `<rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="8" fill="${safeColor(presentation.backgroundColor, '#ffffff')}" stroke="${safeColor(colors.border, '#94a3b8')}"/>`
@@ -184,7 +188,8 @@ function exportAnnotationNode(
   const colors = resolveAnnotationVisualStyle(
     presentation.colorKey,
     'subtle',
-    presentation.customColor
+    presentation.customColor,
+    nodePaletteName(node)
   );
   const foldSize = Math.min(28, node.size.width / 4, node.size.height / 3);
   const fold = pathData([
@@ -218,6 +223,48 @@ function connectorPathData(commands: ReturnType<typeof projectPageConnectors>[nu
   ).join(' ');
 }
 
+function labelElement(style: NodeStyle, size: Size2d, label: string, subLabel: string, clipId: string | null): string {
+  const padding = style.textPadding;
+  const x = style.textAlign === 'start' ? padding : style.textAlign === 'end' ? size.width - padding : size.width / 2;
+  const anchor = style.textAlign === 'start' ? 'start' : style.textAlign === 'end' ? 'end' : 'middle';
+  const baseline = style.textVerticalAlign === 'top' ? 'hanging' : style.textVerticalAlign === 'bottom' ? 'auto' : 'middle';
+  const y = style.textVerticalAlign === 'top' ? padding
+    : style.textVerticalAlign === 'bottom' ? size.height - padding
+      : size.height / 2;
+  const common = `fill="${style.textColor}" font-family="${xml(FONT_STACKS[style.fontFamily])}" font-size="${number(style.fontSize)}" font-weight="${style.fontWeight}"`;
+  const decoration = style.textDecoration === 'none' ? '' : ` text-decoration="${style.textDecoration}"`;
+  const styleAttr = style.fontStyle === 'normal' ? common : `${common} font-style="italic"`;
+  const spacing = style.letterSpacing === 0 ? '' : ` letter-spacing="${number(style.letterSpacing * style.fontSize)}"`;
+  const stretch = clipId ? ` clip-path="url(#${clipId})"` : '';
+  return `<g${stretch}>`
+    + `<text x="${number(x)}" y="${number(y)}" text-anchor="${anchor}" dominant-baseline="${baseline}" ${styleAttr}${decoration}${spacing}>${xml(label)}</text>`
+    + (subLabel ? `<text x="${number(x)}" y="${number(y + style.fontSize * 1.5)}" text-anchor="${anchor}" dominant-baseline="${baseline}" ${styleAttr} opacity="0.72">${xml(subLabel)}</text>` : '')
+    + '</g>';
+}
+
+function outlineMarkup(
+  outline: readonly Point2d[],
+  style: NodeStyle,
+  filter: string
+): string {
+  const fill = style.fill;
+  const stroke = style.strokeWidth > 0 ? style.stroke : 'none';
+  const dash = style.dash.length ? ` stroke-dasharray="${style.dash.map(number).join(' ')}"` : '';
+  const rect = outline.length === 4 ? plainRect(outline) : null;
+  const shape = rect
+    ? `<rect x="${number(rect.x)}" y="${number(rect.y)}" width="${number(rect.width)}" height="${number(rect.height)}"${style.cornerRadius > 0 ? ` rx="${number(style.cornerRadius)}"` : ''} fill="${fill}" stroke="${stroke}" stroke-width="${number(style.strokeWidth)}"${dash}${filter}/>`
+    : `<path d="${pathData(outline)}" fill="${fill}" stroke="${stroke}" stroke-width="${number(style.strokeWidth)}"${dash}${filter}/>`;
+  return shape;
+}
+
+/** Axis-aligned rectangle when the outline is one, so `rx` can round it. */
+function plainRect(outline: readonly Point2d[]): { x: number; y: number; width: number; height: number } | null {
+  const xs = [...new Set(outline.map(({ x }) => Math.round(x * 1000) / 1000))].sort((a, b) => a - b);
+  const ys = [...new Set(outline.map(({ y }) => Math.round(y * 1000) / 1000))].sort((a, b) => a - b);
+  if (xs.length !== 2 || ys.length !== 2) return null;
+  return { x: xs[0]!, y: ys[0]!, width: xs[1]! - xs[0]!, height: ys[1]! - ys[0]! };
+}
+
 function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' | 'print'): string {
   const freeform = resolveFreeformNodePresentation(node);
   if (freeform && (freeform.kind === 'pen' || freeform.kind === 'highlighter'
@@ -228,14 +275,11 @@ function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' |
   if (freeform?.kind === 'image') return exportImageNode(node, matrix, freeform, theme);
   if (freeform && (freeform.kind === 'annotation' || freeform.kind === 'sticky'
     || freeform.kind === 'callout')) return exportAnnotationNode(node, matrix, freeform);
+  const background = theme === 'dark' ? SVG_BACKGROUND.dark : SVG_BACKGROUND.light;
+  // One resolver for every node kind: the renderer, the label editor and the
+  // exporter cannot drift. Legacy content keys are its fallbacks, not ours.
+  const style = resolveNodeStyle(node, background);
   const basic = resolveBasicNodePresentation(node);
-  const fillFallback = theme === 'dark' ? '#1e293b' : '#ffffff';
-  const strokeFallback = theme === 'dark' ? '#94a3b8' : '#64748b';
-  const textFallback = theme === 'dark' ? '#f8fafc' : '#0f172a';
-  const fill = safeColor(node.appearance.fill ?? node.content.backgroundColor, fillFallback);
-  const stroke = safeColor(node.appearance.stroke ?? node.content.borderColor, strokeFallback);
-  const strokeStyle = resolveNodeStroke(node);
-  const text = safeColor(node.appearance.textColor ?? node.content.textColor, textFallback);
   const outline = basic
     ? basicNodeOutlinePoints(basic.shape, node.size,
       typeof node.content.customSvgPath === 'string' ? node.content.customSvgPath : undefined)
@@ -243,17 +287,20 @@ function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' |
       { x: node.size.width, y: node.size.height }, { x: 0, y: node.size.height }];
   const label = typeof node.content.label === 'string' ? node.content.label : node.id;
   const subLabel = typeof node.content.subLabel === 'string' ? node.content.subLabel : '';
-  const sizing = resolveNodeSizingPolicy(node);
-  const clipId = `clip-${node.id.replace(/[^A-Za-z0-9_-]/g, '-')}`;
-  const opacity = typeof node.appearance.opacity === 'number' && Number.isFinite(node.appearance.opacity)
-    ? Math.min(1, Math.max(0, node.appearance.opacity)) : 1;
-  return `<g data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}"${opacity < 1 ? ` opacity="${number(opacity)}"` : ''}>`
-    + (sizing.clipContent ? `<defs><clipPath id="${clipId}"><path d="${pathData(outline)}"/></clipPath></defs>` : '')
-    + `<path d="${pathData(outline)}" fill="${fill}" stroke="${stroke}" stroke-width="${number(strokeStyle.width)}"${strokeStyle.dash.length ? ` stroke-dasharray="${strokeStyle.dash.join(' ')}"` : ''}/>`
-    + `<g${sizing.clipContent ? ` clip-path="url(#${clipId})"` : ''}>`
-    + `<text x="${number(node.size.width / 2)}" y="${number(node.size.height / 2)}" text-anchor="middle" dominant-baseline="middle" fill="${text}" font-family="system-ui,sans-serif" font-size="14" font-weight="600">${xml(label)}</text>`
-    + (subLabel ? `<text x="${number(node.size.width / 2)}" y="${number(node.size.height / 2 + 20)}" text-anchor="middle" fill="${text}" opacity="0.72" font-family="system-ui,sans-serif" font-size="11">${xml(subLabel)}</text>` : '')
-    + '</g></g>';
+  const clip = resolveNodeSizingPolicy(node).clipContent
+    ? `clip-${node.id.replace(/[^A-Za-z0-9_-]/g, '-')}`
+    : null;
+  const shadowId = `shadow-${node.id.replace(/[^A-Za-z0-9_-]/g, '-')}`;
+  const filter = style.shadow ? ` filter="url(#${shadowId})"` : '';
+  const defs = (style.shadow
+    ? `<filter id="${shadowId}" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.18"/></filter>`
+    : '')
+    + (clip ? `<clipPath id="${clip}"><path d="${pathData(outline)}"/></clipPath>` : '');
+  return `<g data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}"${style.opacity < 1 ? ` opacity="${number(style.opacity)}"` : ''}>`
+    + (defs ? `<defs>${defs}</defs>` : '')
+    + outlineMarkup(outline, style, filter)
+    + labelElement(style, node.size, label, subLabel, clip)
+    + '</g>';
 }
 
 function selectedPage(page: ScenePage, selectedNodeIds?: readonly string[]): ScenePage {

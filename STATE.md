@@ -47,6 +47,8 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–4, one month, no ga
   group top-level only, no double-click enter; `person` is a crude polygon; container tints
   read grey on a dark canvas; editor vs Pixi label ≤1 device px apart (texture offset).
 - Hand-drawn stroke skipped (plan: skip if > 1 day). PDF is the print dialog by design.
+- README ships a 30-second text demo, not a GIF: `readme-media/` only holds V1-era clips
+  (34 MB / 23 MB, removed UI) and this environment has no recorder. Owner records one.
 - Document-scope PNG/SVG downloads one file per page (no zip).
 - docs-site prose beyond `mcp-server`, `github-embed` and the DSL reference is still
   V1-era and needs a rewrite pass.
