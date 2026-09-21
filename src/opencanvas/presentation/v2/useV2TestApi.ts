@@ -43,6 +43,7 @@ export function useV2TestApi(options: V2TestApiOptions) {
         error: proposal.error,
       }),
       getRenderDiagnostics: () => hostRef.current?.getRenderDiagnostics(),
+      getConnectorDebugSnapshot: () => hostRef.current?.getConnectorDebugSnapshot(),
       getLiveConnectorSamples: (connectorId: string) =>
         hostRef.current?.getLiveConnectorSamples(connectorId) ?? null,
       getConnectorScreenSamples: (connectorId: string) => {

@@ -17,6 +17,7 @@ type V2Api = {
     }];
   };
   getLiveConnectorSamples(id: string): { x: number; y: number }[] | null;
+  getConnectorDebugSnapshot(): { labels: number };
 };
 const state = (page: import('@playwright/test').Page) =>
   page.evaluate(() => (window as unknown as { __V2__: V2Api }).__V2__.getState());
@@ -135,6 +136,8 @@ test('double-click edits the connector label, Delete removes it, undo restores',
   expect(Math.abs(box.x + box.width / 2 - (mid.x + offset.x))).toBeLessThan(3);
   await page.keyboard.press('Escape');
   await expect(editor).toBeHidden();
+  // The Pixi label comes back as soon as the editor closes, without a camera move.
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __V2__: V2Api }).__V2__.getConnectorDebugSnapshot().labels)).toBe(1);
   const revision = (await state(page)).revision;
   await page.mouse.click(mid.x + offset.x, mid.y + offset.y);
   await page.keyboard.press('Delete');

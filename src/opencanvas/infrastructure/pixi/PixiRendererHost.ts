@@ -759,6 +759,9 @@ export class PixiRendererHost {
 
   setEditingConnector(connectorId: string | null): void {
     this.connectorRenderer.setEditingConnector(connectorId);
+    // Connector labels are rebuilt, not toggled: redraw them now or the label
+    // stays hidden until the next page/camera change.
+    this.rebuildScene(false);
     this.requestRender();
   }
 
