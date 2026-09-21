@@ -65,14 +65,16 @@ koboyo.com/mermaid-editor (public canvas), figma.com/figjam. Match, then beat.
 - Cost: route in ≤ 0.5 ms for 200 obstacles (spatial grid; add one if it isn't there).
   Manual waypoints (`ownership: 'manual'`/`'hybrid'`) are preserved; automatic
   routes are recomputed. `resetConnectorRoute` returns to automatic.
-- Binding picks the side facing the other endpoint, hysteresis 10 px so it doesn't
-  flicker while dragging across a corner.
+- Binding picks the side facing the other endpoint (pure geometry, gap-based:
+  `facingSide`), so it cannot flicker on its own; the 10 px hysteresis applies only
+  when dropping an endpoint on a node that has authored ports.
 - Check: unit tests for side hysteresis + obstacle avoidance; headed: drag node A
   around node B in a circle; route never crosses B, side switches ≤ 4 times.
 
 ### 1.6 Connector editing polish
-- Click a connector → selected: endpoint handles + midpoint handle. Drag midpoint →
-  adds a waypoint (ownership → hybrid). Double-click connector → label editor at the
+- Click a connector → selected: endpoint handles + segment handles. Drag a segment →
+  slides it; only that segment is stored (ownership → hybrid), the ends re-link
+  orthogonally every frame so a bent connector still follows its nodes. Double-click connector → label editor at the
   click point. Delete removes it. `⇧` + drag endpoint → free endpoint (not bound).
 - Markers: none/arrow/dot at each end; dashed/solid; stroke width; color — via a
   small floating style bar (`V2SelectionStyle.tsx` already exists; extend).
