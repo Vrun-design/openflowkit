@@ -13,7 +13,7 @@ const state = () => page.evaluate(() => window.__V2__.getState());
 const doc = () => page.evaluate(() => window.__V2__.getDocument());
 const rect = (id) => page.evaluate((id) => window.__V2__.getNodeRect(id), id);
 try {
-  await page.goto(`${base}/#/v2/polish-${Date.now()}`);
+  await page.goto(`${base}/#/d/polish-${Date.now()}`);
   await page.waitForFunction(() => window.__V2__?.getState());
   await page.locator('canvas').waitFor();
   await page.getByTestId('v2-canvas').focus();
