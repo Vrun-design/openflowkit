@@ -5,6 +5,7 @@ import {
   createTestNode,
 } from '../../testing/builders/documentBuilder';
 import { applyDocumentCommand } from '../commands/execute';
+import { projectConnector } from './routeProjection';
 import type { ScenePage } from '../document/types';
 import { createDefaultSceneLayer } from '../document/defaults';
 import { validateSceneDocumentV1 } from '../document/validation';
@@ -156,6 +157,13 @@ describe('connector editing', () => {
     expect(pickConnectorAtPoint(page, { x: 150, y: 70 }, 12)).toBe('edge');
     expect(pickConnectorAtPoint(page, { x: 150, y: 0 }, 4)).toBeNull();
     expect(pickConnectorEditHandle(handles, source.point, 10)).toEqual(source);
+  });
+
+  it('picks a connector through its label plate, off the line', () => {
+    const page = pageWith(setPrimaryConnectorLabel(createTestConnector('edge', 'a', 'b'), 'calls'));
+    const label = projectConnector(page, page.connectors[0])!.labels[0];
+    expect(pickConnectorAtPoint(page, { x: label.point.x + 15, y: label.point.y - 6 }, 1)).toBe('edge');
+    expect(pickConnectorAtPoint(page, { x: label.point.x + 40, y: label.point.y - 6 }, 1)).toBeNull();
   });
 
   it('creates, renames, and removes the primary label without disturbing secondary labels', () => {

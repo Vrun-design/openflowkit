@@ -126,6 +126,15 @@ test('double-click edits the connector label, Delete removes it, undo restores',
   await expect.poll(async () =>
     (await doc(page)).pages[0].connectors[0].labels[0]?.text
   ).toBe('API');
+  // The plate is the label: double-click it (14px above the line, off the stroke) to re-edit.
+  await page.mouse.dblclick(mid.x + offset.x + 8, mid.y + offset.y - 14);
+  await expect(editor).toBeVisible();
+  await expect(editor).toHaveValue('API');
+  const box = (await editor.boundingBox())!;
+  expect(box.width).toBeLessThan(60);
+  expect(Math.abs(box.x + box.width / 2 - (mid.x + offset.x))).toBeLessThan(3);
+  await page.keyboard.press('Escape');
+  await expect(editor).toBeHidden();
   const revision = (await state(page)).revision;
   await page.mouse.click(mid.x + offset.x, mid.y + offset.y);
   await page.keyboard.press('Delete');

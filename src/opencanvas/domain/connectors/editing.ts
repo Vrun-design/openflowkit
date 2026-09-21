@@ -73,8 +73,19 @@ export function pickConnectorAtPoint(
     const projected = projectConnector(page, connector);
     const closest = projected && closestPointOnPolyline(projected.samples, point);
     if (closest && closest.distance <= tolerance) return connector.id;
+    if (projected?.labels.some((label) => isPointOnConnectorLabel(label, point))) return connector.id;
   }
   return null;
+}
+
+/** The label plate is part of the connector: clicking it selects, double-clicking edits. */
+export function isPointOnConnectorLabel(
+  label: { readonly text: string; readonly point: Point2d },
+  point: Point2d
+): boolean {
+  // ponytail: 6.5px per glyph approximates Inter 600 11px; measure in the renderer if it misses.
+  const halfWidth = label.text.length * 6.5 / 2 + 5;
+  return Math.abs(point.x - label.point.x) <= halfWidth && Math.abs(point.y - label.point.y) <= 9;
 }
 
 export function pickConnectorEditHandle(

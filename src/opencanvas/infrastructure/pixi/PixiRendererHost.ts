@@ -757,6 +757,11 @@ export class PixiRendererHost {
     this.requestRender();
   }
 
+  setEditingConnector(connectorId: string | null): void {
+    this.connectorRenderer.setEditingConnector(connectorId);
+    this.requestRender();
+  }
+
   /** Hovered node and connect handle; drives handle visibility, never selection. */
   setHover(nodeId: string | null, side: ConnectSide | null): void {
     if (this.hoveredNodeId === nodeId && this.hoveredSide === side) return;

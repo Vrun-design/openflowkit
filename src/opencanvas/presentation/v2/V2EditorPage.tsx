@@ -217,7 +217,7 @@ export function V2EditorPage(): React.JSX.Element {
       ?? { x: at.x, y: at.y - 14 * zoom };
     setConnectorEditing({
       connectorId,
-      bounds: new DOMRect(labelPoint.x - 90 * zoom, labelPoint.y - 11 * zoom, 180 * zoom, 22 * zoom),
+      bounds: new DOMRect(labelPoint.x - 20 * zoom, labelPoint.y - 9 * zoom, 40 * zoom, 18 * zoom),
       value: connector.labels[0]?.text ?? '',
     });
     setAnnouncement('Editing connector label');

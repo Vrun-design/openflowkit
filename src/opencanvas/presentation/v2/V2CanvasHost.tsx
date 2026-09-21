@@ -63,7 +63,7 @@ interface V2CanvasHostProps {
   readonly mintId: (prefix: string) => string;
   readonly onCommitLabel: (value: string) => void;
   readonly onCancelEdit: () => void;
-  readonly connectorEditing: { readonly bounds: DOMRect; readonly value: string } | null;
+  readonly connectorEditing: { readonly connectorId: string; readonly bounds: DOMRect; readonly value: string } | null;
   readonly onCommitConnectorLabel: (value: string) => void;
   readonly onCancelConnectorEdit: () => void;
   readonly onEditConnectorLabel: () => void;
@@ -272,6 +272,10 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   }, [props.editing, props.hostRef, props.page, status]);
 
   useEffect(() => {
+    props.hostRef.current?.setEditingConnector(props.connectorEditing?.connectorId ?? null);
+  }, [props.connectorEditing, props.hostRef, props.page, status]);
+
+  useEffect(() => {
     props.hostRef.current?.setSelection(props.selection.nodeIds, props.selection.primaryNodeId);
     props.hostRef.current?.setConnectorSelection(props.selectedConnectorId, null);
   }, [props.selection, props.selectedConnectorId, props.hostRef, props.page, status]);
@@ -375,7 +379,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
           label="Edit connector label"
           zoom={props.camera.zoom}
           font={{ size: 11, weight: 600 }}
-          padding={{ top: 4, right: 6, bottom: 4, left: 6 }}
+          padding={{ top: 2.4, right: 5, bottom: 2.4, left: 5 }}
           plate
           onCommit={props.onCommitConnectorLabel}
           onCancel={props.onCancelConnectorEdit}

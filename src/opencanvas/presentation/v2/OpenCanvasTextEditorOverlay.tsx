@@ -21,6 +21,14 @@ interface OpenCanvasTextEditorOverlayProps {
   readonly onCancel: () => void;
 }
 
+let measureContext: CanvasRenderingContext2D | null | undefined;
+function measureWidth(text: string, font: string): number {
+  measureContext ??= document.createElement('canvas').getContext('2d');
+  if (!measureContext) return 0;
+  measureContext.font = font;
+  return Math.max(...text.split('\n').map((line) => measureContext!.measureText(line).width));
+}
+
 // The editor is the label: no box, no border. The renderer hides the Pixi
 // text underneath while this is open, so the user sees one piece of text
 // that simply became editable.
@@ -40,11 +48,12 @@ export function OpenCanvasTextEditorOverlay({
   const finishedRef = useRef(false);
   const padTop = pad.top * zoom;
   const padBottom = pad.bottom * zoom;
+  const cssFont = `${font.weight} ${font.size * zoom}px/1.2 Inter, ui-sans-serif, system-ui, sans-serif`;
 
   // Grow with the text and keep it vertically centred like the rendered
   // label. Goes through state: React owns the inline style, so a direct DOM
   // write would be undone by the next render (camera moves re-render this).
-  const [metrics, setMetrics] = useState({ height: bounds.height, paddingTop: padTop });
+  const [metrics, setMetrics] = useState({ height: bounds.height, paddingTop: padTop, textWidth: 0 });
   const fit = () => {
     const el = inputRef.current;
     if (!el) return;
@@ -52,8 +61,15 @@ export function OpenCanvasTextEditorOverlay({
     const content = el.scrollHeight - padTop - padBottom;
     const height = Math.max(bounds.height, el.scrollHeight);
     el.style.height = `${height}px`;
-    setMetrics({ height, paddingTop: Math.max(padTop, (height - content) / 2) });
+    setMetrics({
+      height,
+      paddingTop: Math.max(padTop, (height - content) / 2),
+      textWidth: plate ? measureWidth(el.value || el.placeholder, cssFont) : 0,
+    });
   };
+  // A plate hugs its text like the Pixi label it replaces, centred on the same point.
+  const width = plate ? Math.max(bounds.width, metrics.textWidth + (pad.left + pad.right) * zoom) : bounds.width;
+  const left = bounds.x + (bounds.width - width) / 2;
 
   useEffect(() => {
     const el = inputRef.current;
@@ -91,9 +107,9 @@ export function OpenCanvasTextEditorOverlay({
       defaultValue={value}
       placeholder="Text"
       style={{
-        left: bounds.x, top: bounds.y, width: bounds.width, height: metrics.height,
+        left, top: bounds.y, width, height: metrics.height,
         padding: `${metrics.paddingTop}px ${pad.right * zoom}px ${padBottom}px ${pad.left * zoom}px`,
-        font: `${font.weight} ${font.size * zoom}px/1.2 Inter, ui-sans-serif, system-ui, sans-serif`,
+        font: cssFont,
       }}
       onInput={fit}
       onBlur={blur}

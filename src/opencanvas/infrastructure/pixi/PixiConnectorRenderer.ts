@@ -173,6 +173,7 @@ export class PixiConnectorRenderer {
   private readonly labelPlates = new Graphics();
   private readonly labels = new Container();
   private debugSnapshot = { connectors: 0, labels: 0, markers: 0 };
+  private editingConnectorId: string | null = null;
 
   constructor() {
     this.container.addChild(this.paths, this.labelPlates, this.labels);
@@ -230,8 +231,10 @@ export class PixiConnectorRenderer {
         );
         markerCount += connector.presentation.targetMarkers.length;
       }
-      for (const labelGeometry of connector.labels) this.drawLabel(labelGeometry);
-      labelCount += connector.labels.length;
+      if (connector.id !== this.editingConnectorId) {
+        for (const labelGeometry of connector.labels) this.drawLabel(labelGeometry);
+        labelCount += connector.labels.length;
+      }
     }
     this.debugSnapshot = {
       connectors: connectors.length,
@@ -270,6 +273,11 @@ export class PixiConnectorRenderer {
         .lineTo(end.x, end.y)
         .stroke({ color: LEGACY_STROKE, width: 1.5 });
     }
+  }
+
+  /** While the DOM editor sits on a label the Pixi copy is not drawn. */
+  setEditingConnector(connectorId: string | null): void {
+    this.editingConnectorId = connectorId;
   }
 
   private drawLabel(label: { readonly text: string; readonly point: Point2d }): void {
