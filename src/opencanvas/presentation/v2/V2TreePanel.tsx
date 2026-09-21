@@ -48,7 +48,8 @@ export function V2TreePanel(props: V2TreePanelProps): React.JSX.Element {
   }
 
   return (
-    <Panel title="Layers" side="start" onClose={props.onClose} style={{ bottom: 88 }}>
+    <Panel title="Layers" side="start" onClose={props.onClose} className="ofk-v2-layers-panel">
+      {props.page.nodes.length === 0 && props.page.connectors.length === 0 ? <div className="ofk-v2-layer-empty"><span className="ofk-v2-preview-label">{props.page.name}</span><h3>A little structure for big ideas.</h3><p>Shapes and connections will appear here as you build.</p></div> : null}
       <Tree
         label="Layers"
         nodes={nodes}

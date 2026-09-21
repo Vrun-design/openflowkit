@@ -1,10 +1,11 @@
 // Agent panel for the v2 editor: intent picker, proposal review and status.
 // Composes design-system parts over useV2Proposal; owns no document state
 // and never touches the session directly.
-import { IconSparkles } from '@tabler/icons-react';
+import { useState } from 'react';
+import { IconArrowUp, IconSparkles } from '@tabler/icons-react';
 import { LOCAL_AGENT_INTENTS } from '../../application/ai/localAgent';
 import {
-  AgentPanel, Button, EmptyState, Icon, ProposalBar, ProposalReview, ProvenanceBadge,
+  AgentPanel, Button, Icon, IconButton, ProposalBar, ProposalReview, ProvenanceBadge,
   type AgentMessage, type ProposalView,
 } from '../design-system';
 import type { useV2Proposal } from './useV2Proposal';
@@ -24,6 +25,7 @@ const BAR_LABELS = {
 };
 
 export function V2AgentPanel({ proposal, currentRevision, readOnly, onUndo, onClose }: V2AgentPanelProps) {
+  const [draft, setDraft] = useState('');
   const { phase, proposal: current } = proposal;
   const intentLabel = LOCAL_AGENT_INTENTS.find(({ id }) => id === proposal.intent)?.label ?? 'Proposal';
   const scopeLabel = current
@@ -71,19 +73,32 @@ export function V2AgentPanel({ proposal, currentRevision, readOnly, onUndo, onCl
 
   return (
     <AgentPanel
-      title="Agent"
+      title="AI assistant"
+      tools={<span className="ofk-v2-preview-label">Preview</span>}
       onClose={onClose}
       messages={messages}
-      empty={<EmptyState icon={<Icon icon={IconSparkles} />} title="Ask for a change"
-        description="Changes arrive as a reviewable proposal, never as silent edits. Undo works the same as your own edits." />}
+      empty={<div className="ofk-v2-assistant-welcome">
+        <div className="ofk-v2-assistant-mark"><Icon icon={IconSparkles} /></div>
+        <h3>From a thought<br />to a clear picture.</h3>
+        <p>Explore an idea, map a system, or find the next connection.</p>
+        <span className="ofk-v2-eyebrow">TRY A STARTING POINT</span>
+        {['Map a user onboarding flow', 'Sketch a three-tier architecture', 'Plan a product launch'].map((prompt) =>
+          <Button key={prompt} variant="quiet" onClick={() => setDraft(prompt)}>{prompt}</Button>)}
+      </div>}
+
       composer={
-        <div className="ofk-v2-intents" role="group" aria-label="Request a proposal">
-          {LOCAL_AGENT_INTENTS.map(({ id, label }) => (
-            <Button key={id} variant="quiet" disabled={phase === 'working'}
-              onClick={() => { void proposal.request(id); }}>
-              {label}
-            </Button>
-          ))}
+        <div className="ofk-v2-assistant-composer">
+          <details className="ofk-v2-local-actions"><summary>Canvas quick actions</summary>
+            <div className="ofk-v2-intents" role="group" aria-label="Request a proposal">
+              {LOCAL_AGENT_INTENTS.map(({ id, label }) => <Button key={id} variant="quiet" disabled={phase === 'working' || readOnly}
+                onClick={() => { void proposal.request(id); }}>{label}</Button>)}
+            </div>
+          </details>
+          <p className="ofk-v2-muted">AI generation is coming soon. Explore a prompt below.</p>
+          <div className="ofk-v2-prompt-box">
+            <textarea aria-label="Ask AI assistant" placeholder="What would you like to create?" value={draft} onChange={(event) => setDraft(event.target.value)} rows={3} />
+            <div><span>Current canvas</span><IconButton label="Send prompt (coming soon)" disabled icon={<Icon icon={IconArrowUp} />} /></div>
+          </div>
         </div>
       }
     />

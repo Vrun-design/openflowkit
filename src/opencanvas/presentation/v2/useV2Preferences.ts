@@ -6,11 +6,10 @@ export interface V2Preferences {
   showGrid: boolean;
   snapToGrid: boolean;
   canvasColor: string | null;
-  agentOpen: boolean;
 }
 const KEY = 'openflowkit-v2-preferences';
 const DEFAULTS: V2Preferences = {
-  theme: 'system', showGrid: true, snapToGrid: false, canvasColor: null, agentOpen: false,
+  theme: 'system', showGrid: true, snapToGrid: false, canvasColor: null,
 };
 
 function readPreferences(): V2Preferences {
@@ -21,8 +20,7 @@ function readPreferences(): V2Preferences {
       snapToGrid: value?.snapToGrid === true,
       canvasColor: typeof value?.canvasColor === 'string' && /^#[0-9a-f]{6}$/i.test(value.canvasColor)
         ? value.canvasColor
-        : null,
-      agentOpen: value?.agentOpen === true };
+        : null };
   } catch { return DEFAULTS; }
 }
 

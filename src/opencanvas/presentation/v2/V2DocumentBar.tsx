@@ -1,9 +1,10 @@
 import { V2Settings, type V2SettingsProps } from './V2Settings';
 import { useEffect, useRef, useState } from 'react';
 import {
-  IconArrowBackUp,
-  IconArrowForwardUp,
   IconCloudCheck,
+  IconMenu2,
+  IconPencil,
+  IconSettings,
   IconCloudOff,
   IconDownload,
   IconLoader2,
@@ -27,11 +28,7 @@ import { buildV2JsonExport, buildV2SvgExport, downloadTextFile } from './v2Expor
 interface V2DocumentBarProps extends V2SettingsProps {
   readonly document: SceneDocumentV1;
   readonly saveStatus: V2SaveStatus;
-  readonly canUndo: boolean;
-  readonly canRedo: boolean;
   readonly readOnly: boolean;
-  readonly onUndo: () => void;
-  readonly onRedo: () => void;
   readonly onRetrySave: () => void;
   readonly onReload: () => void;
   readonly onToast: (toast: ToastItem) => void;
@@ -59,6 +56,7 @@ function saveLabel(status: V2SaveStatus): { tone: 'neutral' | 'success' | 'warni
 }
 
 export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
+  const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLButtonElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -70,6 +68,12 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
   const page = props.document.pages[0];
   const canExportSvg = page && (page.nodes.length > 0 || page.connectors.length > 0);
   useEffect(() => { if (editingTitle) titleRef.current?.select(); }, [editingTitle]);
+
+  function startRename(): void {
+    if (props.readOnly) return;
+    setTitleDraft(props.document.name);
+    setEditingTitle(true);
+  }
 
   function finishRename(commit: boolean): void {
     const name = titleDraft.trim();
@@ -95,11 +99,11 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
     <>
       <FloatingRegion slot="top-start">
         <Toolbar label="Document" className="ofk-v2-document-bar">
-          <Tooltip content="Settings">
-            <IconButton ref={settingsRef} variant="quiet" label="Settings"
-              icon={<img className="ofk-v2-logo" src="/Logo_openflowkit.svg" alt="" width={20} height={20} />}
-              aria-expanded={settingsOpen} aria-haspopup="dialog"
-              onClick={() => setSettingsOpen((open) => !open)} />
+          <Tooltip content="Canvas menu">
+            <IconButton ref={settingsRef} variant="quiet" label="Canvas menu"
+              icon={<Icon icon={IconMenu2} />}
+              aria-expanded={menuOpen} aria-haspopup="menu"
+              onClick={() => setMenuOpen((open) => !open)} />
           </Tooltip>
           {editingTitle ? (
             <input ref={titleRef} className="ofk-v2-document-title-input" value={titleDraft}
@@ -112,11 +116,7 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               }} />
           ) : (
             <Button variant="quiet" className="ofk-v2-document-title" title="Rename diagram"
-              onClick={() => {
-                if (props.readOnly) return;
-                setTitleDraft(props.document.name);
-                setEditingTitle(true);
-              }}>
+              onClick={startRename}>
               {props.document.name}
             </Button>
           )}
@@ -138,35 +138,18 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               Reload
             </Button>
           ) : null}
+          <Tooltip content="Export">
+            <IconButton ref={exportRef} variant="quiet" label="Export" icon={<Icon icon={IconDownload} />}
+              aria-haspopup="menu" onClick={() => setExportOpen(true)} />
+          </Tooltip>
         </Toolbar>
       </FloatingRegion>
 
-      <FloatingRegion slot="top-end">
-        <Toolbar label="History and export">
-          <Tooltip content="Undo" shortcut="⌘Z">
-            <IconButton
-              variant="quiet"
-              label="Undo"
-              icon={<Icon icon={IconArrowBackUp} />}
-              disabled={!props.canUndo}
-              onClick={props.onUndo}
-            />
-          </Tooltip>
-          <Tooltip content="Redo" shortcut="⇧⌘Z">
-            <IconButton
-              variant="quiet"
-              label="Redo"
-              icon={<Icon icon={IconArrowForwardUp} />}
-              disabled={!props.canRedo}
-              onClick={props.onRedo}
-            />
-          </Tooltip>
-          <Button ref={exportRef} variant="quiet" aria-haspopup="menu" onClick={() => setExportOpen(true)}>
-            Export
-          </Button>
-        </Toolbar>
-      </FloatingRegion>
-
+      <Menu open={menuOpen} anchorRef={settingsRef} onClose={() => setMenuOpen(false)} label="Canvas menu" placement="bottom-start">
+        <MenuItem icon={<Icon icon={IconPencil} />} disabled={props.readOnly} onSelect={startRename}>Rename diagram</MenuItem>
+        <MenuItem icon={<Icon icon={IconSettings} />} onSelect={() => setSettingsOpen(true)}>Settings</MenuItem>
+        <MenuItem icon={<Icon icon={IconDownload} />} onSelect={() => setExportOpen(true)}>Export</MenuItem>
+      </Menu>
       <V2Settings open={settingsOpen} anchorRef={settingsRef} onClose={() => setSettingsOpen(false)}
         preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}
         onPreferencesChange={props.onPreferencesChange} />

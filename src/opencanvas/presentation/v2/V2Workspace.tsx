@@ -1,0 +1,250 @@
+import {
+  IconCode,
+  IconKeyboard,
+  IconPlus,
+  IconPresentation,
+  IconSparkles,
+} from '@tabler/icons-react';
+import {
+  Button,
+  FloatingRegion,
+  Icon,
+  IconButton,
+  Kbd,
+  Panel,
+  Toolbar,
+  Tooltip,
+} from '../design-system';
+
+export type V2WorkspaceMode = 'assistant' | 'slides' | 'code';
+const MODES = [
+  { id: 'assistant', label: 'AI assistant', icon: IconSparkles },
+  { id: 'slides', label: 'Slides', icon: IconPresentation },
+  { id: 'code', label: 'Diagram as code', icon: IconCode },
+] as const;
+
+export function V2WorkspaceRail({
+  mode,
+  onChange,
+  onShortcuts,
+}: {
+  mode: V2WorkspaceMode | null;
+  onChange: (mode: V2WorkspaceMode) => void;
+  onShortcuts: () => void;
+}) {
+  return (
+    <>
+      <FloatingRegion slot="top-end" className="ofk-v2-workspace-rail">
+        <Toolbar label="Workspace" orientation="vertical">
+          {MODES.map(({ id, label, icon }) => (
+            <Tooltip key={id} content={label}>
+              <IconButton
+                variant="quiet"
+                label={label}
+                icon={<Icon icon={icon} />}
+                selected={mode === id}
+                aria-expanded={mode === id}
+                onClick={() => onChange(id)}
+              />
+            </Tooltip>
+          ))}
+        </Toolbar>
+      </FloatingRegion>
+      <FloatingRegion slot="bottom-end" className="ofk-v2-help">
+        <Toolbar label="Help">
+          <Tooltip content="Keyboard shortcuts" shortcut="?">
+            <IconButton
+              variant="quiet"
+              label="Keyboard shortcuts"
+              icon={<Icon icon={IconKeyboard} />}
+              onClick={onShortcuts}
+            />
+          </Tooltip>
+        </Toolbar>
+      </FloatingRegion>
+    </>
+  );
+}
+
+export function V2CanvasWelcome({ onOpen }: { onOpen: (mode: V2WorkspaceMode) => void }) {
+  return (
+    <div className="ofk-v2-welcome" data-testid="v2-welcome">
+      <div className="ofk-v2-guide ofk-v2-guide-tools" aria-hidden="true">
+        <svg viewBox="0 0 110 70"><path d="M103 9 C76 11 47 29 9 59 M11 44 Q7 54 9 60 Q20 60 29 55" /></svg><span>Start with a shape</span>
+      </div>
+      <div className="ofk-v2-guide ofk-v2-guide-workspace" aria-hidden="true">
+        <span>Another way to create</span><svg viewBox="0 0 120 80"><path d="M8 72 C30 43 67 13 111 13 M99 5 Q108 8 112 13 Q108 20 100 23" /></svg>
+      </div>
+      <div className="ofk-v2-welcome-center">
+        <img src="/Logo_openflowkit.svg" alt="OpenFlowKit" width="48" height="48" />
+        <h1>Make room for your next idea.</h1>
+        <p>Double-click anywhere to add text, or start with a shape.</p>
+        <div className="ofk-v2-welcome-keys">
+          <span>
+            <Kbd keys="R" /> rectangle
+          </span>
+          <span>
+            <Kbd keys="O" /> ellipse
+          </span>
+          <span>
+            <Kbd keys="A" /> connector
+          </span>
+        </div>
+        <div className="ofk-v2-welcome-actions">
+          {MODES.map(({ id, label, icon }) => (
+            <Button key={id} variant="secondary" onClick={() => onOpen(id)}>
+              <Icon icon={icon} />
+              {label}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div className="ofk-v2-guide ofk-v2-guide-view" aria-hidden="true">
+        <svg viewBox="0 0 110 100"><path d="M102 9 C58 12 25 43 17 89 M8 74 Q12 86 17 91 Q25 85 31 76" /></svg>
+        <span>Canvas, layers &amp; view</span>
+      </div>
+      <div className="ofk-v2-guide ofk-v2-guide-help" aria-hidden="true"><span>Keyboard shortcuts</span><svg viewBox="0 0 110 100"><path d="M8 9 C53 8 84 42 94 89 M82 78 Q90 87 95 91 Q101 82 102 73" /></svg></div>
+    </div>
+  );
+}
+
+export const INITIAL_CODE =
+  '// A small idea, connected.\ntitle: My first diagram\n\nClient [rectangle]\nAPI [rectangle]\nDatabase [cylinder]\n\nClient -> API: request\nAPI -> Database: query';
+
+// ponytail: local drafts only — connect these shells to the DSL compiler and slide model in their planned slices.
+export function V2DraftPanel({
+  mode,
+  onClose,
+  code,
+  onCodeChange,
+  slides,
+  onAddSlide,
+}: {
+  mode: 'slides' | 'code';
+  onClose: () => void;
+  code: string;
+  onCodeChange: (code: string) => void;
+  slides: number;
+  onAddSlide: () => void;
+}) {
+  return (
+    <Panel
+      title={mode === 'code' ? 'Diagram as code' : 'Slides'}
+      onClose={onClose}
+      className="ofk-v2-workspace-panel"
+      tools={<span className="ofk-v2-preview-label">Preview</span>}
+    >
+      {mode === 'code' ? (
+        <div className="ofk-v2-panel-stack">
+          <div>
+            <h3>Think in connections.</h3>
+            <p className="ofk-v2-muted">Describe your diagram. Keep the source close.</p>
+          </div>
+          <label className="ofk-v2-code-label" htmlFor="v2-code">
+            Diagram source <span>OpenFlow DSL</span>
+          </label>
+          <textarea
+            id="v2-code"
+            className="ofk-v2-code-editor"
+            spellCheck={false}
+            value={code}
+            onChange={(event) => onCodeChange(event.target.value)}
+          />
+          <footer className="ofk-v2-panel-footer">
+            <Button disabled>
+              <Icon icon={IconCode} /> Generate diagram
+            </Button>
+            <p>Editing preview. Diagram generation is coming soon.</p>
+          </footer>
+        </div>
+      ) : (
+        <div className="ofk-v2-panel-stack">
+          <div>
+            <h3>Give your ideas a storyline.</h3>
+            <p className="ofk-v2-muted">Turn moments on your canvas into a presentation.</p>
+          </div>
+          <div className="ofk-v2-slide-list">
+            {slides === 0 ? (
+              <div className="ofk-v2-slide-empty">
+                <Icon icon={IconPresentation} />
+                <strong>Your first slide starts here</strong>
+                <p>Add a slide to sketch out your story.</p>
+              </div>
+            ) : (
+              Array.from({ length: slides }, (_, index) => (
+                <div className="ofk-v2-slide" key={index}>
+                  <span>{String(index + 1).padStart(2, '0')}</span>
+                  <div>
+                    <img src="/Logo_openflowkit.svg" width="24" height="24" alt="" />
+                    <strong>{index === 0 ? 'The big idea' : `Slide ${index + 1}`}</strong>
+                    <small>Canvas frame preview</small>
+                  </div>
+                </div>
+              ))
+            )}
+            <Button onClick={onAddSlide}>
+              <Icon icon={IconPlus} /> Add slide
+            </Button>
+          </div>
+          <footer className="ofk-v2-panel-footer">
+            <Button disabled>
+              <Icon icon={IconPresentation} /> Start presentation
+            </Button>
+            <p>Layout preview. Slides are not saved yet.</p>
+          </footer>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+export function V2Shortcuts({ onClose }: { onClose: () => void }) {
+  const command = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
+  return (
+    <Panel title="Keyboard shortcuts" onClose={onClose} className="ofk-v2-workspace-panel">
+      <p className="ofk-v2-muted">Less reaching. More creating.</p>
+      {[
+        [
+          'Tools',
+          [
+            ['Select', 'V'],
+            ['Hand', 'H'],
+            ['Rectangle', 'R'],
+            ['Ellipse', 'O'],
+            ['Connector', 'A'],
+            ['Text', 'T'],
+          ],
+        ],
+        [
+          'Canvas',
+          [
+            ['Pan', 'Space + drag'],
+            ['Zoom to fit', 'Shift + 1'],
+            ['Reset zoom', `${command} + 0`],
+            ['Layers', 'L'],
+          ],
+        ],
+        [
+          'Edit',
+          [
+            ['Undo', `${command} + Z`],
+            ['Redo', `${command} + Shift + Z`],
+            ['Duplicate', `${command} + D`],
+            ['Edit label', 'Enter'],
+            ['Dismiss panel', 'Esc'],
+          ],
+        ],
+      ].map(([title, rows]) => (
+        <section className="ofk-v2-shortcut-group" key={title as string}>
+          <h3>{title as string}</h3>
+          {(rows as string[][]).map(([label, key]) => (
+            <div key={label}>
+              <span>{label}</span>
+              <Kbd keys={key} />
+            </div>
+          ))}
+        </section>
+      ))}
+    </Panel>
+  );
+}

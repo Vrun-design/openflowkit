@@ -21,7 +21,7 @@ export interface AgentPanelProps extends Omit<PanelProps, 'children'> {
 export function AgentPanel({ messages, composer, empty, streaming, ...panel }: AgentPanelProps) {
   const thread = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    thread.current?.scrollTo({ top: thread.current.scrollHeight });
+    thread.current?.scrollTo({ top: messages.length > 0 || streaming ? thread.current.scrollHeight : 0 });
   }, [messages.length, streaming]);
   return (
     <Panel {...panel} className={`ofk-agent-panel ${panel.className ?? ''}`}>

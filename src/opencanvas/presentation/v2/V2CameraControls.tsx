@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { IconStack2 } from '@tabler/icons-react';
+import { IconStack2, IconMaximize, IconArrowBackUp, IconArrowForwardUp } from '@tabler/icons-react';
 import {
   Button,
   ColorPicker,
@@ -18,6 +18,10 @@ import {
 import type { V2SettingsProps } from './V2Settings';
 
 interface V2CameraControlsProps extends V2SettingsProps {
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
+  readonly onUndo: () => void;
+  readonly onRedo: () => void;
   readonly zoomPercent: number;
   readonly treeOpen: boolean;
   readonly onZoomIn: () => void;
@@ -29,8 +33,6 @@ interface V2CameraControlsProps extends V2SettingsProps {
 
 const ZOOM_PRESETS = [50, 100, 200];
 
-// Lab shell composition: layers toggle plus one zoom readout that opens the
-// zoom menu. Buttons for ±/fit live in the menu and on the keyboard.
 export function V2CameraControls(props: V2CameraControlsProps): React.JSX.Element {
   const [menuOpen, setMenuOpen] = useState(false);
   const zoomRef = useRef<HTMLButtonElement>(null);
@@ -40,11 +42,12 @@ export function V2CameraControls(props: V2CameraControlsProps): React.JSX.Elemen
   return (
     <>
       <FloatingRegion slot="bottom-start">
-        <Toolbar label="View">
+        <Toolbar label="View" className="ofk-v2-view-controls">
           <Tooltip content="Canvas background">
             <ColorSwatch ref={colorRef} label="Canvas background" color={canvasColor}
               onClick={() => setColorOpen((open) => !open)} />
           </Tooltip>
+          <span className="ofk-v2-divider" aria-hidden="true" />
           <Tooltip content="Layers" shortcut="L">
             <IconButton
               variant="quiet"
@@ -54,6 +57,7 @@ export function V2CameraControls(props: V2CameraControlsProps): React.JSX.Elemen
               onClick={props.onToggleTree}
             />
           </Tooltip>
+          <span className="ofk-v2-divider" aria-hidden="true" />
           <Button
             ref={zoomRef}
             variant="quiet"
@@ -64,6 +68,11 @@ export function V2CameraControls(props: V2CameraControlsProps): React.JSX.Elemen
           >
             {props.zoomPercent}%
           </Button>
+          <span className="ofk-v2-divider" aria-hidden="true" />
+          <Tooltip content="Zoom to fit" shortcut="⇧1"><IconButton variant="quiet" label="Zoom to fit" icon={<Icon icon={IconMaximize} />} onClick={props.onFitView} /></Tooltip>
+          <span className="ofk-v2-divider" aria-hidden="true" />
+          <Tooltip content="Undo" shortcut="⌘Z"><IconButton variant="quiet" label="Undo" icon={<Icon icon={IconArrowBackUp} />} disabled={!props.canUndo} onClick={props.onUndo} /></Tooltip>
+          <Tooltip content="Redo" shortcut="⇧⌘Z"><IconButton variant="quiet" label="Redo" icon={<Icon icon={IconArrowForwardUp} />} disabled={!props.canRedo} onClick={props.onRedo} /></Tooltip>
         </Toolbar>
       </FloatingRegion>
       <Popover role="dialog" aria-label="Canvas background" open={colorOpen} anchorRef={colorRef}

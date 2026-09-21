@@ -12,6 +12,7 @@ import { createV2Repository } from '../../../services/storage/v2/v2Repository';
 import { SystemRoot, ToastRegion, type ToastItem } from '../design-system';
 import { V2CanvasHost } from './V2CanvasHost';
 import { V2Chrome } from './V2Chrome';
+import { INITIAL_CODE, V2CanvasWelcome, V2DraftPanel, V2Shortcuts, V2WorkspaceRail, type V2WorkspaceMode } from './V2Workspace';
 import type { V2Tool } from './V2CreationToolbar';
 import { V2LoadCenter } from './V2LoadCenter';
 import { V2TreePanel } from './V2TreePanel';
@@ -53,8 +54,17 @@ function changeObjectIds(changeId: string, proposal: Proposal | null): readonly 
 export function V2EditorPage(): React.JSX.Element {
   const { id } = useParams();
   const { preferences, updatePreferences } = useV2Preferences();
-  const agentOpen = preferences.agentOpen;
-  const toggleAgent = () => updatePreferences({ agentOpen: !preferences.agentOpen });
+  const [workspaceMode, setWorkspaceMode] = useState<V2WorkspaceMode | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [codeDraft, setCodeDraft] = useState(INITIAL_CODE);
+  const [slideDraftCount, setSlideDraftCount] = useState(0);
+  const agentOpen = workspaceMode === 'assistant';
+  const openWorkspace = (mode: V2WorkspaceMode) => {
+    setWorkspaceMode(mode);
+    setShortcutsOpen(false);
+    if (window.innerWidth < 1100) setTreeOpen(false);
+  };
+  const toggleAgent = () => { if (agentOpen) setWorkspaceMode(null); else openWorkspace('assistant'); };
   const appearance = useV2Appearance(preferences.theme);
   const canvasColor = preferences.canvasColor ?? (appearance === 'dark' ? '#191b19' : '#f7f7f5');
   const rendererCanvasColor = Number.parseInt(canvasColor.slice(1), 16);
@@ -68,6 +78,15 @@ export function V2EditorPage(): React.JSX.Element {
   const [tool, setTool] = useState<V2Tool>('select');
   const [spacePan, setSpacePan] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
+  const toggleTree = () => {
+    setTreeOpen((open) => !open);
+    if (window.innerWidth < 1100) { setWorkspaceMode(null); setShortcutsOpen(false); }
+  };
+  const toggleShortcuts = () => {
+    setShortcutsOpen((open) => !open);
+    setWorkspaceMode(null);
+    if (window.innerWidth < 1100) setTreeOpen(false);
+  };
   const [toasts, setToasts] = useState<readonly ToastItem[]>([]);
   const [announcement, setAnnouncement] = useState('');
   const [rendererStatus, setRendererStatus] = useState<PixiRendererStatus>('initializing');
@@ -213,13 +232,13 @@ export function V2EditorPage(): React.JSX.Element {
     // Escape chain tail: selection first, then the open agent panel.
     onClearSelection: () => {
       if (selectionRef.current.nodeIds.length > 0 || selectedConnectorId) selectionApi.clearAll();
-      else if (agentOpen) toggleAgent();
+      else { setWorkspaceMode(null); setShortcutsOpen(false); setTreeOpen(false); }
     },
     onSelectAll: () => selectionApi.selectAllNodes(pageRef.current),
     onFitView: camera.fitView,
     onZoomStep: camera.zoomStep,
     onResetZoom: camera.resetZoom,
-    onToggleTree: () => setTreeOpen((open) => !open),
+    onToggleTree: toggleTree,
     onToggleAgent: toggleAgent,
     onSpacePan: setSpacePan,
   });
@@ -228,7 +247,13 @@ export function V2EditorPage(): React.JSX.Element {
     <SystemRoot appearance={appearance}>
       <div className="ofk-v2" data-testid="v2-editor" data-tool={spacePan ? 'hand' : tool}
         style={{ backgroundColor: canvasColor }}
-        onKeyDown={handleKeyDown}
+        data-workspace-open={workspaceMode !== null || shortcutsOpen}
+        data-tree-open={treeOpen}
+        onKeyDown={(event) => {
+          if (event.key === '?' && !(event.target instanceof HTMLElement && event.target.closest('input, textarea, [contenteditable="true"]'))) {
+            event.preventDefault(); toggleShortcuts();
+          } else handleKeyDown(event);
+        }}
         onKeyUp={(event) => { if (event.key === ' ') setSpacePan(false); }}>
         {load.phase === 'loading' || !page ? (
           <V2LoadCenter
@@ -253,7 +278,6 @@ export function V2EditorPage(): React.JSX.Element {
               canUndo={session.canUndo} canRedo={session.canRedo}
               readOnly={load.readOnly}
               tool={tool} zoomPercent={camera.zoom} treeOpen={treeOpen}
-              agentOpen={agentOpen}
               onUndo={session.undo} onRedo={session.redo}
               onRetrySave={retrySave} onReload={load.reload} onToast={pushToast}
               onRename={(name) => {
@@ -272,8 +296,7 @@ export function V2EditorPage(): React.JSX.Element {
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
               onZoomTo={camera.zoomTo}
               onFitView={camera.fitView}
-              onToggleTree={() => setTreeOpen((open) => !open)}
-              onToggleAgent={toggleAgent}
+              onToggleTree={toggleTree}
             />
             <V2CanvasHost
               page={page} hostRef={hostRef} camera={camera.camera} cameraRef={camera.cameraRef} pageRef={pageRef}
@@ -293,6 +316,14 @@ export function V2EditorPage(): React.JSX.Element {
               onDuplicate={editActions.duplicateSelection}
               onDelete={editActions.deleteSelection}
             />
+            <V2WorkspaceRail mode={workspaceMode}
+              onChange={(mode) => { if (workspaceMode === mode) setWorkspaceMode(null); else openWorkspace(mode); }}
+              onShortcuts={toggleShortcuts} />
+            {page.nodes.length === 0 && page.connectors.length === 0 && !load.readOnly && rendererStatus === 'ready' ? <V2CanvasWelcome onOpen={openWorkspace} /> : null}
+            {workspaceMode === 'slides' || workspaceMode === 'code' ? <V2DraftPanel mode={workspaceMode}
+              code={codeDraft} onCodeChange={setCodeDraft} slides={slideDraftCount}
+              onAddSlide={() => setSlideDraftCount((count) => count + 1)} onClose={() => setWorkspaceMode(null)} /> : null}
+            {shortcutsOpen ? <V2Shortcuts onClose={() => setShortcutsOpen(false)} /> : null}
             {treeOpen ? (
               <V2TreePanel
                 page={page} selection={selection} selectedConnectorId={selectedConnectorId}

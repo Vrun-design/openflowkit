@@ -5,7 +5,6 @@ import {
   IconSquare,
   IconTypography,
   IconArrowUpRight,
-  IconSparkles,
 } from '@tabler/icons-react';
 import { FloatingRegion, Icon, IconButton, Toolbar, Tooltip } from '../design-system';
 
@@ -23,13 +22,10 @@ const TOOLS: readonly { tool: V2Tool; label: string; shortcut: string; icon: typ
 export function V2CreationToolbar(props: {
   readonly tool: V2Tool;
   readonly onToolChange: (tool: V2Tool) => void;
-  /** null hides the entry point (v2Ai flag off). */
-  readonly agentOpen: boolean | null;
-  readonly onToggleAgent: () => void;
 }): React.JSX.Element {
   return (
-    <FloatingRegion slot="bottom-center">
-      <Toolbar label="Create">
+    <FloatingRegion slot="top-start" className="ofk-v2-tools">
+      <Toolbar label="Create" orientation="vertical">
         {TOOLS.map(({ tool, label, shortcut, icon }) => (
           <Tooltip key={tool} content={label} shortcut={shortcut}>
             <IconButton
@@ -41,12 +37,7 @@ export function V2CreationToolbar(props: {
             />
           </Tooltip>
         ))}
-        {props.agentOpen === null ? null : (
-          <Tooltip content="Agent" shortcut="⌘J">
-            <IconButton variant="quiet" label="Agent" icon={<Icon icon={IconSparkles} />}
-              selected={props.agentOpen} data-testid="v2-agent-toggle" onClick={props.onToggleAgent} />
-          </Tooltip>
-        )}
+
       </Toolbar>
     </FloatingRegion>
   );
