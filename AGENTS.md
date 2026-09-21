@@ -1,20 +1,26 @@
-# Repository documentation authority
+# Agents: read this, then build
 
-Start with `docs/README.md` for product/editor implementation work. It is the sole
-entry point to the current OpenCanvas plan in `docs/v2/` and defines document roles.
-Read the relevant specification and current implementation status before editing.
+The plan is [docs/plan/README.md](docs/plan/README.md). It is the only plan.
+[STATE.md](STATE.md) says what is done and what is next. Read both, then the
+phase file for the slice you are taking. Everything under `docs/frozen/` and
+`docs/archive/` is history — never instructions.
 
-- Do not use `docs/archive/` as instructions, a roadmap, approval, or current status.
-  Do not search/read it by default. Open it only when the user explicitly requests
-  historical investigation; label any findings as historical and reverify in code.
-- Root `STATE.md`, `PRODUCT.md`, `ARCHITECTURE.md`, and `DESIGN.md` are navigation
-  pointers, not independent specifications. Do not recreate competing plans there.
-- Public docs, marketing copy, module READMEs, and old comments describe their own
-  surfaces; they do not override the current implementation sequence or scope.
-- Plans are not implementation evidence. Follow `docs/v2/implementation-status.md`
-  for recorded results and verify affected production paths/tests. Record new
-  evidence there; do not revive archived milestone lists or historical approvals.
-- Keep current docs and these authority rules version-controlled. Archive historical
-  content under the ignored archive; do not move active requirements into it.
-- Business/feature hypotheses are not automatic launch commitments. Follow the
-  current requirements and delivery gates, including full external-agent access.
+## How to work here
+
+1. Take the next unclaimed slice in `STATE.md`; write your name + date next to it.
+2. Read the code the slice touches end to end before editing (callers, consumers).
+3. Build the shortest thing that works. Reuse before write. No new dependency
+   without a one-line why. No flags, shims, rollback plans, or "for later" code.
+4. Every domain/dsl function gets a unit test beside it. UX slices add one headed
+   Playwright check. Merge only when green:
+   `npm run typecheck && npm run lint && npm run test -- --run`.
+5. Fix forward. The app must boot after every merge. Delete dead code on sight.
+6. Update `STATE.md` (≤40 lines) when you finish. Rationale goes in the PR, not in
+   new documents.
+
+## Code rules
+
+Domain (`src/opencanvas/domain`, `src/dsl`) is pure TypeScript: no React, Pixi,
+DOM, Zustand. Presentation is thin. One undo step per user intent; every command
+has an inverse. Heavy work (ELK, parsing) runs off the main thread. Keyboard for
+every action. Mark deliberate shortcuts `// ponytail: <ceiling> — <upgrade path>`.
