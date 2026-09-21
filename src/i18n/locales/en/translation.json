@@ -983,6 +983,15 @@
       "keySetupNote": "Key Setup Note",
       "enterApiKey": "Enter your API key",
       "selectModel": "Select a model",
+      "enterModelCode": "Enter model code",
+      "chooseFromList": "Select from presets",
+      "customModelRequired": "Model ID is required",
+      "customModelPlaceholder": "e.g. {{defaultModel}} or custom model code",
+      "providerModelHint": "Enter any valid model ID for {{provider}} (e.g. fine-tuned, preview, or newly released models).",
+      "presetsLabel": "Presets:",
+      "enterCustomModelOption": "✏️ Enter custom model code...",
+      "enterCustomModelOptionHint": "Type any custom or fine-tuned model ID",
+      "customGroup": "Custom",
       "customEndpoint": "Custom Base URL (e.g., https://api.example.com)",
       "providers": {
         "gemini": {
@@ -1019,32 +1028,66 @@
       },
       "models": {
         "gemini": {
+          "gemini-2.5-flash": {
+            "label": "2.5 Flash",
+            "hint": "Best price/performance balance",
+            "category": "Speed",
+            "badge": "Fast"
+          },
+          "gemini-2.5-pro": {
+            "label": "2.5 Pro",
+            "hint": "Best reasoning · Complex diagrams",
+            "category": "Reasoning",
+            "badge": "Flagship"
+          },
           "gemini-2.5-flash-lite": {
             "label": "2.5 Flash Lite",
             "hint": "Fastest · Free tier default",
             "category": "Speed",
             "badge": "Default"
           },
-          "gemini-2.5-flash": {
-            "label": "2.5 Flash",
-            "hint": "Best price/performance balance",
+          "gemini-2.0-flash": {
+            "label": "2.0 Flash",
+            "hint": "Next-gen multimodal · Low latency",
             "category": "Speed"
           },
-          "gemini-2.5-pro": {
-            "label": "2.5 Pro",
-            "hint": "Best reasoning · Complex diagrams",
-            "category": "Reasoning"
+          "gemini-2.0-flash-lite": {
+            "label": "2.0 Flash Lite",
+            "hint": "High throughput · Cost efficient",
+            "category": "Speed"
+          },
+          "gemini-2.0-flash-thinking-exp-01-21": {
+            "label": "2.0 Flash Thinking",
+            "hint": "Thinking process · Complex logic",
+            "category": "Reasoning",
+            "badge": "Thinking"
+          },
+          "gemini-2.0-pro-exp-02-05": {
+            "label": "2.0 Pro Experimental",
+            "hint": "Coding & advanced reasoning",
+            "category": "Reasoning",
+            "badge": "Experimental"
+          },
+          "gemini-1.5-pro": {
+            "label": "1.5 Pro",
+            "hint": "Long context · High capability",
+            "category": "Legacy"
+          },
+          "gemini-1.5-flash": {
+            "label": "1.5 Flash",
+            "hint": "Fast and versatile",
+            "category": "Legacy"
           },
           "gemini-3-flash": {
             "label": "3 Flash",
             "hint": "Frontier speed + intelligence",
-            "category": "Legacy",
+            "category": "Preview",
             "badge": "New"
           },
           "gemini-3-pro": {
             "label": "3 Pro",
             "hint": "Most powerful · Multimodal",
-            "category": "Legacy",
+            "category": "Preview",
             "badge": "New"
           }
         },

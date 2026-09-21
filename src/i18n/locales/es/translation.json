@@ -1160,7 +1160,16 @@
         "control": "Full control over cost and rate limits",
         "flexibility": "Switch providers anytime without re-linking",
         "cuttingEdge": "Access cutting-edge models as soon as they launch"
-      }
+      },
+      "customModelRequired": "Model ID is required",
+      "chooseFromList": "Select from presets",
+      "enterModelCode": "Enter model code",
+      "customModelPlaceholder": "e.g. {{defaultModel}} or custom model code",
+      "providerModelHint": "Enter any valid model ID for {{provider}} (e.g. fine-tuned, preview, or newly released models).",
+      "presetsLabel": "Presets:",
+      "enterCustomModelOption": "✏️ Enter custom model code...",
+      "enterCustomModelOptionHint": "Type any custom or fine-tuned model ID",
+      "customGroup": "Custom"
     },
     "brand": {
       "title": "Kits de marca",

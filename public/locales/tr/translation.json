@@ -1180,7 +1180,16 @@
         "browserFriendly": "Tarayıcı uyumlu",
         "proxyLikely": "Muhtemelen vekil sunucu gerekli",
         "mixed": "Uç noktasına bağlı"
-      }
+      },
+      "customModelRequired": "Model ID is required",
+      "chooseFromList": "Select from presets",
+      "enterModelCode": "Enter model code",
+      "customModelPlaceholder": "e.g. {{defaultModel}} or custom model code",
+      "providerModelHint": "Enter any valid model ID for {{provider}} (e.g. fine-tuned, preview, or newly released models).",
+      "presetsLabel": "Presets:",
+      "enterCustomModelOption": "✏️ Enter custom model code...",
+      "enterCustomModelOptionHint": "Type any custom or fine-tuned model ID",
+      "customGroup": "Custom"
     },
     "brand": {
       "title": "Marka Kitleri",
