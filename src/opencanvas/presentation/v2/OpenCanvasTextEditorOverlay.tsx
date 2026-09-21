@@ -9,6 +9,7 @@ const PLACEHOLDER_LABEL = 'Text';
 interface OpenCanvasTextEditorOverlayProps {
   readonly bounds: Bounds2d;
   readonly value: string;
+  readonly label?: string;
   readonly onCommit: (value: string) => void;
   readonly onCancel: () => void;
 }
@@ -16,6 +17,7 @@ interface OpenCanvasTextEditorOverlayProps {
 export function OpenCanvasTextEditorOverlay({
   bounds,
   value,
+  label = 'Edit node label',
   onCommit,
   onCancel,
 }: OpenCanvasTextEditorOverlayProps): React.JSX.Element {
@@ -64,7 +66,7 @@ export function OpenCanvasTextEditorOverlay({
     <textarea
       ref={inputRef}
       className="pixi-spike__text-editor"
-      aria-label="Edit node label"
+      aria-label={label}
       defaultValue={value}
       style={{
         left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height,

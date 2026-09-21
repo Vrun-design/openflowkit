@@ -1,4 +1,9 @@
-import type { ConnectorEndpoint, SceneConnector, ScenePage } from '../document/types';
+import type {
+  ConnectorEndpoint,
+  ConnectorRouteOwnership,
+  SceneConnector,
+  ScenePage,
+} from '../document/types';
 import { areStructurallyEqual } from '../commands/equality';
 import type { SetConnectorCommand } from '../commands/types';
 import { closestPointOnPolyline, dedupePolyline } from '../geometry/polyline';
@@ -87,11 +92,12 @@ export function pickConnectorEditHandle(
 function manualConnector(
   connector: SceneConnector,
   waypoints: readonly Point2d[],
-  kind = connector.route.kind
+  kind = connector.route.kind,
+  ownership: ConnectorRouteOwnership = 'manual'
 ): SceneConnector {
   return {
     ...connector,
-    route: { kind, ownership: 'manual' },
+    route: { kind, ownership },
     waypoints: dedupePolyline(waypoints),
   };
 }
@@ -124,7 +130,7 @@ function moveSegment(
     ];
   }
   const kind = connector.route.kind === 'orthogonal' ? 'orthogonal' : 'polyline';
-  return manualConnector(connector, dedupePolyline(points).slice(1, -1), kind);
+  return manualConnector(connector, dedupePolyline(points).slice(1, -1), kind, 'hybrid');
 }
 
 function moveBezierControl(
@@ -154,7 +160,7 @@ export function moveConnectorHandle(
       if (!connector.waypoints[handle.index]) return connector;
       const waypoints = [...connector.waypoints];
       waypoints[handle.index] = pointer;
-      return manualConnector(connector, waypoints);
+      return manualConnector(connector, waypoints, connector.route.kind, 'hybrid');
     }
     case 'segment':
       return moveSegment(page, connector, handle.index, pointer);
@@ -174,7 +180,7 @@ export function addConnectorWaypoint(
   const points = [...projected.samples];
   points.splice(closest.segmentIndex + 1, 0, pointer);
   const kind = connector.route.kind === 'orthogonal' ? 'orthogonal' : 'polyline';
-  return manualConnector(connector, dedupePolyline(points).slice(1, -1), kind);
+  return manualConnector(connector, dedupePolyline(points).slice(1, -1), kind, 'hybrid');
 }
 
 export function removeConnectorWaypoint(

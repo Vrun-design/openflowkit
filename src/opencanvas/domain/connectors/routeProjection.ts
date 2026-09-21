@@ -17,6 +17,7 @@ import type { ConnectorPathCommand, ProjectedConnector } from './types';
 interface ConnectorProjectionContext {
   readonly nodesById: ReadonlyMap<string, SceneNode>;
   readonly matrices: ReadonlyMap<string, Matrix2d>;
+  readonly lateralByConnectorId: ReadonlyMap<string, number>;
 }
 
 const SEQUENCE_PARTICIPANT_HEADER_HEIGHT = 48;
@@ -28,7 +29,56 @@ function createConnectorProjectionContext(page: ScenePage): ConnectorProjectionC
   return {
     nodesById: new Map(page.nodes.map((node) => [node.id, node])),
     matrices: buildNodeWorldMatrices(page),
+    lateralByConnectorId: parallelLateralOffsets(page.connectors),
   };
+}
+
+// Parallel (and reverse) edges between the same node pair fan out so none
+// hides behind another: member i rides (i-(n-1)/2)×12 px off the lane,
+// endpoints pinned to their ports. Free ends never group.
+export const PARALLEL_EDGE_OFFSET_PX = 12;
+
+function parallelLateralOffsets(connectors: readonly SceneConnector[]): ReadonlyMap<string, number> {
+  const groups = new Map<string, SceneConnector[]>();
+  for (const connector of connectors) {
+    if (!connector.source.nodeId || !connector.target.nodeId) continue;
+    const key = [connector.source.nodeId, connector.target.nodeId].sort().join('→');
+    const group = groups.get(key);
+    if (group) group.push(connector);
+    else groups.set(key, [connector]);
+  }
+  const offsets = new Map<string, number>();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    group.forEach((connector, index) => {
+      offsets.set(connector.id, (index - (group.length - 1) / 2) * PARALLEL_EDGE_OFFSET_PX);
+    });
+  }
+  return offsets;
+}
+
+function shiftInteriorOrthogonal(
+  samples: readonly Point2d[],
+  offset: number,
+  flipNormal: boolean
+): readonly Point2d[] {
+  if (samples.length < 2 || offset === 0) return samples;
+  const first = samples[0];
+  const last = samples[samples.length - 1];
+  const dx = last.x - first.x;
+  const dy = last.y - first.y;
+  const length = Math.hypot(dx, dy);
+  if (!(length > 1e-9)) return samples;
+  const sign = flipNormal ? -1 : 1;
+  const shift = { x: (-dy / length) * offset * sign, y: (dx / length) * offset * sign };
+  if (samples.length === 2) {
+    return [first, { x: (first.x + last.x) / 2 + shift.x, y: (first.y + last.y) / 2 + shift.y }, last];
+  }
+  return samples.map((point, index) =>
+    index === 0 || index === samples.length - 1
+      ? point
+      : { x: point.x + shift.x, y: point.y + shift.y }
+  );
 }
 
 function anchorLocalPoint(node: SceneNode, anchor: SceneAnchor): Point2d {
@@ -320,8 +370,14 @@ function projectConnectorWithContext(
                 .map((node) => nodeWorldBounds(node, context.matrices.get(node.id)!))
             ))
           : connectorPath(connector, start, end);
+  const lateral = context.lateralByConnectorId.get(connector.id) ?? 0;
+  // Reverse edges fan with the group: canonical normal runs from the
+  // lexicographically smaller endpoint, regardless of edge direction.
+  const flipNormal = !!connector.source.nodeId && !!connector.target.nodeId
+    && connector.source.nodeId > connector.target.nodeId;
+  const samples = shiftInteriorOrthogonal(path.samples, lateral, flipNormal);
   const labels = connector.labels.map((label) => {
-    const point = pointAtPolylineRatio(path.samples, label.pathRatio) ?? start;
+    const point = pointAtPolylineRatio(samples, label.pathRatio) ?? start;
     return {
       id: label.id,
       text: label.text,
@@ -331,7 +387,7 @@ function projectConnectorWithContext(
   return {
     id: connector.id,
     commands: path.commands,
-    samples: path.samples,
+    samples,
     labels,
     presentation: resolveConnectorPresentation(connector),
   };

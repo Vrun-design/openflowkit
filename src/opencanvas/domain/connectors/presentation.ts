@@ -24,7 +24,12 @@ function boundedNumber(
 }
 
 function markerFromAppearance(value: JsonValue | undefined): ConnectorMarkerGlyph[] {
-  if (typeof value === 'string' && value.toLowerCase().includes('arrow')) return ['arrow'];
+  if (typeof value === 'string') {
+    const text = value.toLowerCase();
+    if (text.includes('arrow')) return ['arrow'];
+    if (text.includes('dot') || text.includes('circle')) return ['circle'];
+    return [];
+  }
   if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
   const type = optionalString((value as JsonObject).type)?.toLowerCase();
   return type?.includes('arrow') ? ['arrow'] : [];

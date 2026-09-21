@@ -29,6 +29,9 @@ import type { Proposal } from '../../application/ai/proposalSession';
 import { useV2Selection } from './useV2Selection';
 import { useV2TestApi } from './useV2TestApi';
 import type { V2GestureApi } from './useV2Pointer';
+import { worldToScreen } from '../../domain/camera/camera';
+import { createConnectorEditCommand, setPrimaryConnectorLabel } from '../../domain/connectors/editing';
+import type { Point2d } from '../../domain/geometry/types';
 import { firstV2Page, mintV2Id } from './v2Document';
 import { downloadTextFile } from './v2Export';
 import type { ScenePage } from '../../domain/document/types';
@@ -199,6 +202,43 @@ export function V2EditorPage(): React.JSX.Element {
     [openLabelEditor, applyConnectorSelection, applySelection]
   );
 
+  const [connectorEditing, setConnectorEditing] = useState<{
+    connectorId: string; bounds: DOMRect; value: string;
+  } | null>(null);
+  const openConnectorEditor = useCallback((connectorId: string, at: Point2d) => {
+    const connector = pageRef.current?.connectors.find((candidate) => candidate.id === connectorId);
+    if (!connector || load.readOnly) return;
+    applySelection(clearSelection());
+    applyConnectorSelection(connectorId);
+    setConnectorEditing({
+      connectorId,
+      bounds: new DOMRect(at.x - 110, at.y - 24, 220, 48),
+      value: connector.labels[0]?.text ?? '',
+    });
+    setAnnouncement('Editing connector label');
+  }, [applyConnectorSelection, applySelection, load.readOnly]);
+  const commitConnectorLabel = useCallback((value: string) => {
+    const currentPage = pageRef.current;
+    const before = currentPage?.connectors.find((candidate) => candidate.id === connectorEditing?.connectorId);
+    if (currentPage && before) {
+      const command = createConnectorEditCommand(
+        currentPage.id, before, setPrimaryConnectorLabel(before, value), 'Edit label');
+      if (command) session.commit(command);
+    }
+    setConnectorEditing(null);
+    sectionRef.current?.focus();
+  }, [connectorEditing, session]);
+  const cancelConnectorEdit = useCallback(() => {
+    setConnectorEditing(null);
+    sectionRef.current?.focus();
+  }, []);
+  const editSelectedConnectorLabel = useCallback(() => {
+    if (!selectedConnectorId) return;
+    const samples = hostRef.current?.getConnectorSamples(selectedConnectorId);
+    const middle = samples?.length ? samples[Math.floor(samples.length / 2)] : null;
+    if (middle) openConnectorEditor(selectedConnectorId, worldToScreen(camera.camera, middle));
+  }, [selectedConnectorId, openConnectorEditor, camera.camera]);
+
   const editActions = useV2EditActions({
     commit: session.commit,
     pageRef,
@@ -217,8 +257,13 @@ export function V2EditorPage(): React.JSX.Element {
     onUndo: session.undo, onRedo: session.redo,
     onDelete: editActions.deleteSelection, onDuplicate: editActions.duplicateSelection,
     onEditPrimary: () => {
+      if (load.readOnly) return;
       const primary = selectionRef.current.primaryNodeId;
-      if (primary && !load.readOnly) openEditor(primary);
+      if (primary) {
+        openEditor(primary);
+        return;
+      }
+      editSelectedConnectorLabel();
     },
     // FigJam/Excalidraw: typing on a single selected shape replaces its label.
     onTypeToEdit: (key) => {
@@ -306,8 +351,11 @@ export function V2EditorPage(): React.JSX.Element {
               editing={editing}
               commit={session.commit}
               applySelection={applySelection} applyConnectorSelection={applyConnectorSelection}
-              updateCamera={camera.updateCamera} openEditor={openEditor} onToolChange={setTool} mintId={mintV2Id}
+              updateCamera={camera.updateCamera} openEditor={openEditor} openConnectorEditor={openConnectorEditor} onToolChange={setTool} mintId={mintV2Id}
               onCommitLabel={labelEditing.commitLabel} onCancelEdit={labelEditing.cancelEdit}
+              connectorEditing={connectorEditing}
+              onCommitConnectorLabel={commitConnectorLabel} onCancelConnectorEdit={cancelConnectorEdit}
+              onEditConnectorLabel={editSelectedConnectorLabel}
               onStatusChange={setRendererStatus}
               sectionRef={sectionRef}
               showGrid={preferences.showGrid} snapToGrid={preferences.snapToGrid}

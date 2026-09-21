@@ -64,7 +64,7 @@ describe('connector editing', () => {
     );
     const edited = moveConnectorHandle(page, connector, segment!, { x: 160, y: 20 });
 
-    expect(edited.route).toEqual({ kind: 'polyline', ownership: 'manual' });
+    expect(edited.route).toEqual({ kind: 'polyline', ownership: 'hybrid' });
     expect(edited.waypoints.length).toBeGreaterThan(0);
   });
 

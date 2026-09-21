@@ -2,17 +2,20 @@ import type { DocumentCommand } from '../../domain/commands/types';
 import type { ScenePage } from '../../domain/document/types';
 import type { JsonObject } from '../../domain/document/json';
 import { V2SelectionStyle } from './V2SelectionStyle';
+import { V2ConnectorStyle } from './V2ConnectorStyle';
 import { IconCopy, IconPencil, IconTrash } from '@tabler/icons-react';
 import { ContextBar, ContextGroup, Icon, IconButton, Tooltip } from '../design-system';
 
 interface V2ContextBarProps {
   readonly page: ScenePage;
   readonly nodeIds: readonly string[];
+  readonly connectorId: string | null;
   readonly commit: (command: DocumentCommand) => void;
   readonly onStylePreview: (patch: JsonObject | null) => void;
   readonly selectionCount: number;
   readonly style: React.CSSProperties;
   readonly onEditLabel: () => void;
+  readonly onEditConnectorLabel: () => void;
   readonly onDuplicate: () => void;
   readonly onDelete: () => void;
 }
@@ -45,6 +48,38 @@ export function unionScreenBounds(rects: readonly (DOMRect | null | undefined)[]
 
 // I-31: contextual actions use the same command path as keyboard edits.
 export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
+  if (props.connectorId) {
+    return (
+      <ContextBar label="Connector actions" data-context-bar style={props.style}
+        onPointerDown={(event) => event.stopPropagation()}
+        onDoubleClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}>
+        <ContextGroup label="Appearance">
+          <V2ConnectorStyle page={props.page} connectorId={props.connectorId} commit={props.commit} />
+        </ContextGroup>
+        <ContextGroup label="Edit">
+          <Tooltip content="Edit label" shortcut="Enter">
+            <IconButton
+              variant="quiet"
+              label="Edit connector label"
+              icon={<Icon icon={IconPencil} />}
+              onClick={props.onEditConnectorLabel}
+            />
+          </Tooltip>
+        </ContextGroup>
+        <ContextGroup label="Arrange">
+          <Tooltip content="Delete" shortcut="⌫">
+            <IconButton
+              variant="quiet"
+              label="Delete connector"
+              icon={<Icon icon={IconTrash} />}
+              onClick={props.onDelete}
+            />
+          </Tooltip>
+        </ContextGroup>
+      </ContextBar>
+    );
+  }
   return (
     <ContextBar label="Selection actions" data-context-bar style={props.style}
       onPointerDown={(event) => event.stopPropagation()}

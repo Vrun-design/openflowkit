@@ -4,7 +4,7 @@ import {
   createTestDocument,
   createTestNode,
 } from '../../testing/builders/documentBuilder';
-import { projectConnector } from './routeProjection';
+import { projectConnector, projectPageConnectors } from './routeProjection';
 
 function connectorFixture() {
   const source = createTestNode('source', {
@@ -101,16 +101,58 @@ describe('connector route projection', () => {
     }
   });
 
-  it('preserves manual waypoints instead of rerouting', () => {
+  it.each(['manual', 'hybrid'] as const)('preserves %s waypoints instead of rerouting', (ownership) => {
     const page = connectorFixture();
     const connector = createTestConnector('edge', 'source', 'target', {
       source: { nodeId: 'source', portId: 'right', anchor: null, point: null },
       target: { nodeId: 'target', portId: 'left', anchor: null, point: null },
-      route: { kind: 'orthogonal', ownership: 'manual' },
+      route: { kind: 'orthogonal', ownership },
       waypoints: [{ x: 200, y: 200 }],
     });
     const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
     expect(projected.samples).toContainEqual({ x: 200, y: 200 });
+  });
+
+  it('fans parallel and reverse edges 12 px apart with endpoints pinned', () => {
+    const page = connectorFixture();
+    const edges = ['e1', 'e2', 'e3'].map((id) => createTestConnector(id, 'source', 'target', {
+      source: { nodeId: 'source', portId: 'right', anchor: null, point: null },
+      target: { nodeId: 'target', portId: 'left', anchor: null, point: null },
+      route: { kind: 'direct', ownership: 'automatic' },
+    }));
+    const reversed = createTestConnector('e4', 'target', 'source', {
+      source: { nodeId: 'target', portId: 'left', anchor: null, point: null },
+      target: { nodeId: 'source', portId: 'right', anchor: null, point: null },
+      route: { kind: 'direct', ownership: 'automatic' },
+    });
+    const projected = projectPageConnectors({ ...page, connectors: [...edges, reversed] });
+    expect(projected).toHaveLength(4);
+    // Straight lanes gain a midpoint; endpoints stay glued to their ports.
+    for (const lane of projected.slice(0, 3)) {
+      expect(lane.samples.length).toBe(3);
+      expect(lane.samples[0]).toEqual({ x: 100, y: 25 });
+      expect(lane.samples.at(-1)).toEqual({ x: 300, y: 125 });
+    }
+    expect(projected[3].samples[0]).toEqual({ x: 300, y: 125 });
+    expect(projected[3].samples.at(-1)).toEqual({ x: 100, y: 25 });
+    // Neighbours in document order ride 12 px apart.
+    const middles = projected.map((lane) => lane.samples[1]);
+    for (let index = 1; index < middles.length; index += 1) {
+      const dx = middles[index].x - middles[index - 1].x;
+      const dy = middles[index].y - middles[index - 1].y;
+      expect(Math.hypot(dx, dy)).toBeCloseTo(12, 5);
+    }
+  });
+
+  it('routes a self-loop as a rounded rectangle out of the top-right', () => {
+    const page = connectorFixture();
+    const connector = createTestConnector('loop', 'source', 'source', {
+      route: { kind: 'orthogonal', ownership: 'automatic' },
+    });
+    const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
+    expect(projected.samples[0].x).toBe(100);
+    expect(projected.samples.at(-1)!.x).toBe(100);
+    expect(Math.max(...projected.samples.map((point) => point.x))).toBeGreaterThan(140);
   });
 
   it('projects labels, appearance, conditions, and class relation markers', () => {

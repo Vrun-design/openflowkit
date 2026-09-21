@@ -1,14 +1,24 @@
 import { act, renderHook } from '@testing-library/react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
+import {
+  createTestConnector,
+  createTestDocument,
+  createTestNode,
+} from '../../testing/builders/documentBuilder';
 import { clearSelection, replaceSelection } from '../../application/selection/selection';
 import type { Bounds2d } from '../../domain/geometry/types';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import { useV2Pointer } from './useV2Pointer';
 
-function setup(extraNodes: ReturnType<typeof createTestNode>[] = []) {
-  const page = createTestDocument({ nodes: [createTestNode('a'), ...extraNodes] }).pages[0];
+function setup(
+  extraNodes: ReturnType<typeof createTestNode>[] = [],
+  extraConnectors: ReturnType<typeof createTestConnector>[] = []
+) {
+  const page = createTestDocument({
+    nodes: [createTestNode('a'), ...extraNodes],
+    connectors: extraConnectors,
+  }).pages[0];
   const section = document.createElement('section');
   const canvas = document.createElement('canvas');
   section.append(canvas);
@@ -37,7 +47,7 @@ function setup(extraNodes: ReturnType<typeof createTestNode>[] = []) {
     selectionRef, toolRef: { current: 'select' }, spacePanRef: { current: false },
     readOnlyRef: { current: false }, gestureApiRef: { current: null }, commit,
     applySelection: (next) => { selectionRef.current = next; }, applyConnectorSelection,
-    updateCamera: vi.fn(), openEditor, onToolChange: vi.fn(), mintId: () => 'new',
+    updateCamera: vi.fn(), openEditor, openConnectorEditor: vi.fn(), onToolChange: vi.fn(), mintId: () => 'new',
   }));
   function event(x: number, y: number, target: HTMLElement = canvas): ReactPointerEvent<HTMLElement> {
     return { currentTarget: section, target, clientX: x, clientY: y, button: 0,
@@ -255,5 +265,21 @@ describe('V2 quick-create from side handles', () => {
     expect(edge.connector.target).toMatchObject({ nodeId: 'b', portId: 'left' });
     expect(selectionRef.current.nodeIds).toEqual([]);
     expect(applyConnectorSelection).toHaveBeenCalledWith(edge.connector.id);
+  });
+
+  it('shift-drags an endpoint free instead of rebinding it', () => {
+    const edge = createTestConnector('edge', 'a', 'a');
+    const { result, event, host, commit } = setup([], [edge]);
+    host.getSelectedConnectorId.mockReturnValue('edge');
+    host.pickConnectorHandle.mockReturnValue({ kind: 'endpoint', role: 'target', point: { x: 50, y: 25 } });
+    host.pickNode.mockReturnValue(null);
+    act(() => result.current.handlePointerDown(event(50, 25)));
+    act(() => result.current.handlePointerMove({ ...event(200, 100), shiftKey: true }));
+    act(() => result.current.handlePointerUp({ ...event(200, 100), shiftKey: true }));
+    expect(commit).toHaveBeenCalledOnce();
+    expect(commit.mock.calls[0][0]).toMatchObject({
+      kind: 'set-connector',
+      after: { target: { nodeId: null, point: { x: 200, y: 100 } } },
+    });
   });
 });

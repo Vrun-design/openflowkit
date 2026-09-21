@@ -56,10 +56,15 @@ interface V2CanvasHostProps {
   readonly applyConnectorSelection: (connectorId: string | null) => void;
   readonly updateCamera: (camera: CanvasCamera) => void;
   readonly openEditor: (nodeId: string) => void;
+  readonly openConnectorEditor: (connectorId: string, at: Point2d) => void;
   readonly onToolChange: (tool: V2Tool) => void;
   readonly mintId: (prefix: string) => string;
   readonly onCommitLabel: (value: string) => void;
   readonly onCancelEdit: () => void;
+  readonly connectorEditing: { readonly bounds: DOMRect; readonly value: string } | null;
+  readonly onCommitConnectorLabel: (value: string) => void;
+  readonly onCancelConnectorEdit: () => void;
+  readonly onEditConnectorLabel: () => void;
   readonly onStatusChange: (status: PixiRendererStatus) => void;
   readonly sectionRef: RefObject<HTMLElement | null>;
   /** Numeric canvas-ground color from the same token source as SystemRoot. */
@@ -107,6 +112,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     applyConnectorSelection: props.applyConnectorSelection,
     updateCamera: props.updateCamera,
     openEditor: props.openEditor,
+    openConnectorEditor: props.openConnectorEditor,
     onToolChange: props.onToolChange,
     mintId: props.mintId,
     snapToGrid: props.snapToGrid,
@@ -265,21 +271,37 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   }, [props.selection, props.selectedConnectorId, props.hostRef, props.page, status]);
 
   // Context bar anchor follows selection, page geometry and camera; the state
-  // only changes when the union actually moves.
+  // only changes when the union actually moves. A selected connector anchors
+  // to its midpoint instead.
   const [contextAnchor, setContextAnchor] = useState<DOMRect | null>(null);
   const selectionIds = props.selection.nodeIds;
+  const selectedConnectorId = props.selectedConnectorId;
   useEffect(() => {
-    if (selectionIds.length === 0 || props.editing || props.readOnly) {
+    if (props.editing || props.readOnly
+      || (selectionIds.length === 0 && !selectedConnectorId)) {
       setContextAnchor(null);
       anchorForRestoreRef.current = null;
       return;
     }
-    const next = unionScreenBounds(
-      selectionIds.map((nodeId) => props.hostRef.current?.getNodeScreenBounds(nodeId))
-    );
+    if (selectionIds.length > 0) {
+      const next = unionScreenBounds(
+        selectionIds.map((nodeId) => props.hostRef.current?.getNodeScreenBounds(nodeId))
+      );
+      if (next) anchorForRestoreRef.current = next;
+      setContextAnchor((current) => (current && next && sameRect(current, next) ? current : next));
+      return;
+    }
+    const samples = selectedConnectorId
+      ? props.hostRef.current?.getConnectorSamples(selectedConnectorId)
+      : null;
+    const middle = samples?.length
+      ? worldToScreen(props.camera, samples[Math.floor(samples.length / 2)])
+      : null;
+    const next = middle ? new DOMRect(middle.x, middle.y, 1, 1) : null;
     if (next) anchorForRestoreRef.current = next;
     setContextAnchor((current) => (current && next && sameRect(current, next) ? current : next));
-  }, [selectionIds, props.editing, props.readOnly, props.hostRef, props.camera, props.page, viewportSize]);
+  }, [selectionIds, selectedConnectorId, props.editing, props.readOnly, props.hostRef,
+    props.camera, props.page, viewportSize]);
 
   const unavailableReason = mountError ?? capability.reason ?? null;
 
@@ -338,11 +360,21 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
           onCancel={props.onCancelEdit}
         />
       ) : null}
+      {props.connectorEditing && !props.editing ? (
+        <OpenCanvasTextEditorOverlay
+          bounds={props.connectorEditing.bounds}
+          value={props.connectorEditing.value}
+          label="Edit connector label"
+          onCommit={props.onCommitConnectorLabel}
+          onCancel={props.onCancelConnectorEdit}
+        />
+      ) : null}
       {contextAnchor ? (
         <V2ContextBar
           selectionCount={props.selection.nodeIds.length}
           page={props.page}
           nodeIds={props.selection.nodeIds}
+          connectorId={props.selectedConnectorId}
           commit={props.commit}
           onStylePreview={(patch) => {
             if (!patch) { props.hostRef.current?.setTransformPreview(null); return; }
@@ -357,6 +389,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
             const primary = props.selection.primaryNodeId;
             if (primary) props.openEditor(primary);
           }}
+          onEditConnectorLabel={props.onEditConnectorLabel}
           onDuplicate={props.onDuplicate}
           onDelete={props.onDelete}
         />

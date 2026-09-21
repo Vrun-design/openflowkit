@@ -110,6 +110,7 @@ interface V2PointerOptions {
   readonly applyConnectorSelection: (connectorId: string | null) => void;
   readonly updateCamera: (camera: CanvasCamera) => void;
   readonly openEditor: (nodeId: string, options?: { readonly isNew?: boolean }) => void;
+  readonly openConnectorEditor: (connectorId: string, at: Point2d) => void;
   readonly onToolChange: (tool: V2Tool) => void;
   readonly onTransformPreview?: (result: TransformResult | null) => void;
   readonly snapToGrid?: boolean;
@@ -125,6 +126,7 @@ interface PointerLike {
   readonly clientY: number;
   readonly pointerId: number;
   readonly altKey: boolean;
+  readonly shiftKey: boolean;
   readonly nativeEvent?: Partial<PointerEvent>;
 }
 
@@ -319,11 +321,11 @@ export function useV2Pointer(options: V2PointerOptions) {
         operationRef.current = { ...operation, toWorld };
         host.setConnectionPreview({ from: operation.fromWorld, to: toWorld });
       } else if (operation.kind === 'connector-edit') {
-        const next = updateConnectorOperation(
-          operation,
-          host.screenToWorld(point),
-          operation.handle.kind === 'endpoint' ? host.pickNode(point) : null
-        );
+        // Shift pins a dragged endpoint to free canvas space instead of binding.
+        const overNode = operation.handle.kind === 'endpoint' && !event.shiftKey
+          ? host.pickNode(point)
+          : null;
+        const next = updateConnectorOperation(operation, host.screenToWorld(point), overNode);
         operationRef.current = next;
         host.setConnectorPreview(next.preview);
       } else if (operation.kind === 'marquee') {
@@ -482,7 +484,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         const final = updateConnectorOperation(
           operation,
           host.screenToWorld(point),
-          operation.handle.kind === 'endpoint' ? host.pickNode(point) : null
+          operation.handle.kind === 'endpoint' && !event.shiftKey ? host.pickNode(point) : null
         );
         host.setConnectorPreview(null);
         const command = createConnectorEditCommand(
@@ -546,6 +548,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       const retarget = (native: PointerEvent): PointerLike => ({
         currentTarget: section, target: native.target, clientX: native.clientX,
         clientY: native.clientY, pointerId: native.pointerId, altKey: native.altKey,
+        shiftKey: native.shiftKey,
         nativeEvent: native,
       });
       const onWindowMove = (native: PointerEvent) => {
@@ -730,8 +733,13 @@ export function useV2Pointer(options: V2PointerOptions) {
         opts.openEditor(nodeId);
         return;
       }
+      const connectorId = host.pickConnector(point);
+      if (connectorId) {
+        opts.openConnectorEditor(connectorId, point);
+        return;
+      }
       const page = opts.pageRef.current;
-      if (!page || host.pickConnector(point)) return;
+      if (!page) return;
       const id = opts.mintId('node');
       opts.commit(buildInsertShapeCommand(page, { kind: 'text', id, at: textOrigin(host.screenToWorld(point)) }));
       opts.applyConnectorSelection(null);
