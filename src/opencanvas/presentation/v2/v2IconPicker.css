@@ -1,27 +1,33 @@
 .ofk-icon-picker {
-  display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto;
-  width: min(360px, calc(100vw - 64px)); height: min(520px, calc(100dvh - 120px));
+  display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  width: min(360px, calc(100vw - 64px)); height: min(540px, calc(100dvh - 120px));
 }
-.ofk-icon-picker-tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 4px 10px; border-bottom: 1px solid var(--ofk-border); margin: 0 0 10px; }
+.ofk-icon-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 0 8px; border-bottom: 1px solid var(--ofk-border); }
+.ofk-icon-picker-head .ofk-icon-button { min-width: 26px; width: 26px; min-height: 26px; height: 26px; color: var(--ofk-secondary); }
+.ofk-icon-picker-tabs { display: flex; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.ofk-icon-picker-tabs--sub { padding: 8px 0 0; }
+.ofk-icon-picker-tabs--sub .ofk-icon-picker-tab { font-size: 11.5px; padding: 3px 9px; }
 .ofk-icon-picker-tab {
-  font: inherit; font-size: 12px; font-weight: 500; color: var(--ofk-secondary);
+  flex: none; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--ofk-secondary);
   padding: 5px 10px; border: 0; border-radius: 999px; background: transparent; cursor: pointer;
 }
 .ofk-icon-picker-tab:hover { color: var(--ofk-text); background: var(--ofk-raised); }
 .ofk-icon-picker-tab[aria-selected='true'] { color: var(--ofk-text); background: var(--ofk-raised); font-weight: 600; }
 .ofk-icon-picker-search {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; margin-top: 10px;
   min-height: 36px; padding: 0 6px 0 10px; border-radius: 10px; background: var(--ofk-raised); color: var(--ofk-secondary);
 }
-.ofk-icon-picker-search:focus-within { outline: 2px solid color-mix(in srgb, var(--ofk-focus) 30%, transparent); }
+.ofk-icon-picker-search:focus-within { box-shadow: 0 0 0 2px color-mix(in srgb, var(--ofk-focus) 30%, transparent); }
 .ofk-icon-picker-search .ofk-icon { width: 16px; height: 16px; }
-.ofk-icon-picker-search input { font: inherit; font-size: 13px; min-width: 0; border: 0; background: transparent; color: var(--ofk-text); outline: none; }
+.ofk-icon-picker-search input { font: inherit; font-size: 13px; min-width: 0; border: 0; background: transparent; color: var(--ofk-text); outline: none !important; box-shadow: none; }
 .ofk-icon-picker-search input::-webkit-search-cancel-button { display: none; }
 .ofk-icon-picker-search .ofk-icon-button { min-width: 24px; width: 24px; min-height: 24px; height: 24px; }
-.ofk-icon-picker-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 2px; align-content: start;
-  margin-top: 10px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
-}
+.ofk-icon-picker-body { margin-top: 8px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; display: grid; gap: 12px; align-content: start; }
+.ofk-icon-picker-group > h3 { display: flex; align-items: baseline; gap: 6px; margin: 4px 4px 4px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ofk-secondary); }
+.ofk-icon-picker-group > h3 > span { font-weight: 500; letter-spacing: 0; }
+.ofk-icon-picker-more { margin-left: auto; font: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; color: var(--ofk-accent); background: none; border: 0; cursor: pointer; padding: 0; }
+.ofk-icon-picker-more:hover { text-decoration: underline; }
+.ofk-icon-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 2px; align-content: start; }
 .ofk-icon-picker-cell {
   display: grid; place-items: center; aspect-ratio: 1; padding: 0; border: 0; border-radius: 8px;
   background: transparent; cursor: pointer; transition: background var(--ofk-motion-feedback, 120ms);
@@ -40,5 +46,6 @@
 }
 .ofk-icon-picker-footer > :first-child { color: var(--ofk-text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.ofk-style-panel.ofk-style-panel--icons { width: auto; padding-bottom: 12px; }
+.ofk-style-panel.ofk-style-panel--icons { width: auto; padding: 12px 12px 12px; gap: 0; }
+.ofk-style-panel--icons .ofk-style-panel-heading { display: none; }
 .ofk-style-icon-swatch { width: 18px; height: 18px; object-fit: contain; border-radius: 4px; }

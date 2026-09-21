@@ -31,9 +31,10 @@ export function V2CreationToolbar(props: {
   readonly iconsOpen: boolean;
   readonly onIconsOpenChange: (open: boolean) => void;
 }): React.JSX.Element {
-  const iconsRef = useRef<HTMLButtonElement>(null);
+  // The library opens beside the whole toolbar, top-aligned, not off its last button.
+  const toolsRef = useRef<HTMLDivElement>(null);
   return (
-    <FloatingRegion slot="top-start" className="ofk-v2-tools">
+    <FloatingRegion ref={toolsRef} slot="top-start" className="ofk-v2-tools">
       <Toolbar label="Create" orientation="vertical">
         {TOOLS.map(({ tool, label, shortcut, icon }) => (
           <Tooltip key={tool} content={label} shortcut={shortcut}>
@@ -47,12 +48,12 @@ export function V2CreationToolbar(props: {
           </Tooltip>
         ))}
         <Tooltip content="Icons" shortcut="I">
-          <IconButton ref={iconsRef} variant="quiet" label="Icons" icon={<Icon icon={IconPhoto} />}
+          <IconButton variant="quiet" label="Icons" icon={<Icon icon={IconPhoto} />}
             selected={props.iconsOpen} aria-haspopup="dialog" aria-expanded={props.iconsOpen}
             onClick={() => props.onIconsOpenChange(!props.iconsOpen)} />
         </Tooltip>
       </Toolbar>
-      <Popover role="dialog" aria-label="Icon library" open={props.iconsOpen} anchorRef={iconsRef}
+      <Popover role="dialog" aria-label="Icon library" open={props.iconsOpen} anchorRef={toolsRef}
         onClose={() => props.onIconsOpenChange(false)} placement="right-start" gap={12}
         className="ofk-style-panel ofk-style-panel--icons" onPointerDown={(event) => event.stopPropagation()}>
         <V2IconPicker onClose={() => props.onIconsOpenChange(false)}

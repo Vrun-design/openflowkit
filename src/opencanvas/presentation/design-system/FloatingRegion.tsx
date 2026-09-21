@@ -13,6 +13,6 @@ export function FloatingRegion({
   slot,
   className = '',
   ...props
-}: HTMLAttributes<HTMLDivElement> & { slot: FloatingSlot }) {
+}: HTMLAttributes<HTMLDivElement> & { slot: FloatingSlot; ref?: React.Ref<HTMLDivElement> }) {
   return <div {...props} className={`ofk-floating-region ${className}`} data-slot={slot} />;
 }

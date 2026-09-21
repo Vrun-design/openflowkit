@@ -172,10 +172,11 @@ export function resizeTransform(
   const scaleX = nextBounds.width / before.width;
   const scaleY = nextBounds.height / before.height;
 
-  // Containers grow their box (Figma section): members keep their world
-  // position, so they shift by the origin change instead of scaling.
-  // ponytail: assumes unrotated, unscaled containers — true for every
-  // container the editor or the DSL creates today.
+  // A resize changes the box, never the scale (Figma): labels wrap to the
+  // new width and the DOM editor sees the same size the renderer draws.
+  // Containers additionally shift their members so those keep their world
+  // position. ponytail: translation math is axis-aligned; rotated selections
+  // resize their own frame's box, which is what tldraw does too.
   const originShift = new Map<string, Point2d>();
   const nodes = snapshot.nodes.map((node) => {
     const translation = node.transform.translation;
@@ -185,24 +186,13 @@ export function resizeTransform(
     };
     if (isContainerNodeKind(node.kind)) {
       originShift.set(node.id, { x: translation.x - moved.x, y: translation.y - moved.y });
-      return {
-        ...node,
-        transform: { ...node.transform, translation: moved },
-        size: {
-          width: node.size.width * (scalesX ? scaleX : 1),
-          height: node.size.height * (scalesY ? scaleY : 1),
-        },
-      };
     }
     return {
       ...node,
-      transform: {
-        ...node.transform,
-        translation: moved,
-        scale: {
-          x: node.transform.scale.x * (scalesX ? scaleX : 1),
-          y: node.transform.scale.y * (scalesY ? scaleY : 1),
-        },
+      transform: { ...node.transform, translation: moved },
+      size: {
+        width: node.size.width * (scalesX ? scaleX : 1),
+        height: node.size.height * (scalesY ? scaleY : 1),
       },
     };
   });

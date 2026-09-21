@@ -66,7 +66,9 @@ describe('selection transforms', () => {
       pointer: { x: 200, y: 100 },
       snap: false,
     });
-    expect(expanded.nodes[0].transform.scale).toEqual({ x: 2, y: 2 });
+    // The box changes, never the scale, so labels wrap to the new width.
+    expect(expanded.nodes[0].size).toEqual({ width: 200, height: 100 });
+    expect(expanded.nodes[0].transform.scale).toEqual({ x: 1, y: 1 });
     const clamped = resizeTransform(snapshot, {
       handle: 'north-west',
       pointer: { x: 99, y: 79 },
