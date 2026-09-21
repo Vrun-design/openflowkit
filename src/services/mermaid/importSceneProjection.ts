@@ -1,5 +1,5 @@
 import { createDefaultEdge } from '@/constants';
-import { createGenericShapeNode, createSectionNode } from '@/hooks/node-operations/nodeFactories';
+import { SECTION_MIN_HEIGHT, SECTION_MIN_WIDTH } from '@/lib/sectionBounds';
 import { clearNodeParent, setNodeParent } from '@/lib/nodeParent';
 import { getNodeHandleIdForSide, type HandleSide } from '@/lib/nodeHandles';
 import type { FlowEdge, FlowNode, NodeData } from '@/lib/types';
@@ -236,12 +236,12 @@ function buildMermaidImportedContainerData(
 
 function createLeafNode(sceneNode: MermaidImportSceneNode): FlowNode {
   const mappedShape = mermaidVertexTypeToShape(sceneNode.mermaidShapeType);
-  const baseNode = createGenericShapeNode(sceneNode.id, { x: 0, y: 0 }, {
+  const baseNode: FlowNode = {
+    id: sceneNode.id,
+    position: { x: 0, y: 0 },
     type: 'process',
-    label: sceneNode.label,
-    color: 'slate',
-    shape: mappedShape,
-  });
+    data: { label: sceneNode.label, subLabel: '', color: 'slate', shape: mappedShape },
+  };
 
   const nextNode = applyNodeParent(baseNode, sceneNode.parentId);
   // Width comes from text estimation so labels wrap vertically rather than
@@ -271,7 +271,24 @@ function createLeafNode(sceneNode: MermaidImportSceneNode): FlowNode {
 }
 
 function createContainerNode(sceneNode: MermaidImportSceneNode): FlowNode {
-  const baseNode = createSectionNode(sceneNode.id, sceneNode.position, sceneNode.label);
+  const baseNode: FlowNode = {
+    id: sceneNode.id,
+    position: sceneNode.position,
+    type: 'section',
+    data: {
+      label: sceneNode.label,
+      subLabel: '',
+      color: 'blue',
+      sectionSizingMode: 'manual',
+      sectionLayoutMode: 'freeform',
+      sectionOrder: 0,
+      sectionLocked: false,
+      sectionHidden: false,
+      sectionCollapsed: false,
+    },
+    style: { width: SECTION_MIN_WIDTH, height: SECTION_MIN_HEIGHT },
+    zIndex: -1,
+  };
 
   const nextNode = applyNodeParent(baseNode, sceneNode.parentId);
   return attachMermaidImportedNodeMetadata({

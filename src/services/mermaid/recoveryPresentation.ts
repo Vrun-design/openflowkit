@@ -1,5 +1,5 @@
 import type { MermaidImportStatus } from './importContracts';
-import type { MermaidDiagnosticsSnapshot } from '@/store/types';
+import type { MermaidDiagnosticsSnapshot } from './diagnosticsSnapshot';
 
 export function isMermaidLayoutRecoveryRecommended(
   layoutMode: MermaidDiagnosticsSnapshot['layoutMode'] | undefined

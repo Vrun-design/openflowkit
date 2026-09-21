@@ -1,4 +1,4 @@
-import { resolveNodeSize } from '@/components/nodeHelpers';
+import { resolveNodeSize } from '@/lib/nodeSize';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import { estimateWrappedTextBox } from '@/services/elk-layout/textSizing';
 import {

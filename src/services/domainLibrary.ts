@@ -1,7 +1,7 @@
 import type { Node } from '@/lib/reactflowCompat';
 import type { NodeData } from '@/lib/types';
 import { createProviderIconData, normalizeNodeIconData } from '@/lib/nodeIconState';
-import { getIconAssetNodeMinSize } from '@/components/nodeHelpers';
+import { getIconAssetNodeMinSize } from '@/lib/nodeSize';
 
 export type DomainLibraryCategory = 'aws' | 'azure' | 'gcp' | 'cncf' | 'developer' | 'network' | 'security' | 'c4' | 'icons';
 

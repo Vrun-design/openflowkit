@@ -1,11 +1,11 @@
-import { getIconAssetNodeMinSize } from '@/components/nodeHelpers';
+import { getIconAssetNodeMinSize } from '@/lib/nodeSize';
 import {
   SECTION_CONTENT_PADDING_TOP,
   SECTION_MIN_HEIGHT,
   SECTION_MIN_WIDTH,
   SECTION_PADDING_BOTTOM,
   SECTION_PADDING_X,
-} from '@/hooks/node-operations/sectionBounds';
+} from '@/lib/sectionBounds';
 import type { FlowNode } from '@/lib/types';
 import type { NodeBounds } from './boundaryFanout';
 import { normalizeLayoutInputsForDeterminism } from './determinism';

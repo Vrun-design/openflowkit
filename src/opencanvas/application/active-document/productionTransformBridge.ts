@@ -1,8 +1,5 @@
-import type { ReactFlowProjection } from '../../infrastructure/reactflow/contracts';
-import { projectSceneDocumentToReactFlow } from '../../infrastructure/reactflow/toReactFlow';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { TransformResult } from '../../domain/transforms/types';
-import { applyDocumentCommand } from '../../domain/commands/execute';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { bakeTransformScale } from '../../domain/transforms/bakeScale';
 
@@ -27,17 +24,4 @@ export function buildProductionTransformCommand(
   });
   if (commands.length === 1) return commands[0];
   return { kind: 'batch', id: 'transform-selection', label: 'Transform selection', commands };
-}
-
-export function projectProductionTransform(
-  document: SceneDocumentV1,
-  pageId: string,
-  result: TransformResult,
-  updatedAt: string
-): ReactFlowProjection {
-  const command = buildProductionTransformCommand(document, pageId, result);
-  const nextDocument: SceneDocumentV1 = {
-    ...applyDocumentCommand(document, command).document, updatedAt,
-  };
-  return projectSceneDocumentToReactFlow(nextDocument, pageId);
 }

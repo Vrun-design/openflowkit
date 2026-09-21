@@ -7,7 +7,7 @@ import {
   buildProductionPortConnectorCommand,
   buildProductionRemoveConnectorCommand,
   createProductionConnector,
-  projectProductionConnectorEdit,
+  buildProductionConnectorCommand,
 } from './productionConnectorBridge';
 
 function document() {
@@ -31,35 +31,34 @@ describe('production connector bridge', () => {
     const source = document();
     const before = source.pages[0].connectors[0];
     const after = reconnectConnector(before, 'target', { nodeId: 'c', portId: null, anchor: null, point: null });
-    const result = projectProductionConnectorEdit(source, 'page', before, after, source.updatedAt);
-    expect(result.changed).toBe(true);
-    expect(result.projection.edges[0]).toMatchObject({
-      id: 'edge-1', source: 'a', target: 'c', label: 'calls', selected: true,
-      data: { opaque: 'keep', routingMode: 'auto' }, style: { stroke: '#123456' },
+    const command = buildProductionConnectorCommand(source, 'page', before, after);
+    expect(command).not.toBeNull();
+    const applied = applyDocumentCommand(source, command!).document.pages[0].connectors[0];
+    expect(applied).toMatchObject({
+      id: 'edge-1', source: { nodeId: 'a' }, target: { nodeId: 'c' },
+      route: { ownership: 'automatic' }, appearance: { stroke: '#123456' },
     });
+    expect(applied.labels[0]?.text).toBe('calls');
   });
 
   it('does not write no-op edits', () => {
     const source = document();
     const connector = source.pages[0].connectors[0];
-    expect(projectProductionConnectorEdit(
-      source, 'page', connector, connector, source.updatedAt
-    ).changed).toBe(false);
+    expect(buildProductionConnectorCommand(source, 'page', connector, connector)).toBeNull();
   });
 
   it('rejects stale edits, changed ids, and unknown endpoints', () => {
     const source = document();
     const before = source.pages[0].connectors[0];
-    expect(() => projectProductionConnectorEdit(
-      source, 'page', { ...before, labels: [] }, before, source.updatedAt
+    expect(() => buildProductionConnectorCommand(
+      source, 'page', { ...before, labels: [] }, before
     )).toThrow(/changed before/);
-    expect(() => projectProductionConnectorEdit(
-      source, 'page', before, { ...before, id: 'other' }, source.updatedAt
+    expect(() => buildProductionConnectorCommand(
+      source, 'page', before, { ...before, id: 'other' }
     )).toThrow(/cannot change connector id/);
-    expect(() => projectProductionConnectorEdit(
+    expect(() => buildProductionConnectorCommand(
       source, 'page', before,
-      reconnectConnector(before, 'target', { nodeId: 'missing', portId: null, anchor: null, point: null }),
-      source.updatedAt
+      reconnectConnector(before, 'target', { nodeId: 'missing', portId: null, anchor: null, point: null })
     )).toThrow(/unknown node/);
   });
 

@@ -1,4 +1,3 @@
-import { ICON_NAMES, ICON_PICKER_PRIORITY_NAMES } from '@/components/IconMap';
 import type { DomainLibraryItem } from '@/services/domainLibrary';
 
 type IconAssetCategory =
@@ -105,10 +104,80 @@ function createIconAssetItem(iconName: string): DomainLibraryItem {
     };
 }
 
-export const ICON_ASSET_ITEMS: DomainLibraryItem[] = [
-    ...ICON_PICKER_PRIORITY_NAMES.filter((iconName) => ICON_NAMES.includes(iconName)),
-    ...ICON_NAMES.filter((iconName) => !ICON_PICKER_PRIORITY_NAMES.includes(iconName)),
-].map(createIconAssetItem);
+// Lucide icon names offered as canvas assets, most-used first.
+const ICON_NAMES: string[] = [
+    'Database',
+    'Server',
+    'User',
+    'Users',
+    'Globe',
+    'Cloud',
+    'Lock',
+    'Unlock',
+    'Shield',
+    'ShieldCheck',
+    'Key',
+    'Mail',
+    'MessageSquare',
+    'File',
+    'FileText',
+    'Folder',
+    'Code',
+    'Terminal',
+    'Settings',
+    'Cpu',
+    'Smartphone',
+    'Tablet',
+    'Monitor',
+    'CreditCard',
+    'DollarSign',
+    'ShoppingCart',
+    'Box',
+    'Package',
+    'Truck',
+    'MapPin',
+    'Search',
+    'Bell',
+    'Calendar',
+    'Clock',
+    'Check',
+    'CheckCircle',
+    'X',
+    'AlertTriangle',
+    'Info',
+    'HelpCircle',
+    'Home',
+    'Link',
+    'Share',
+    'Trash',
+    'Save',
+    'Edit',
+    'GitBranch',
+    'Layers',
+    'Waypoints',
+    'Network',
+    'Activity',
+    'Cable',
+    'Container',
+    'FunctionSquare',
+    'GitFork',
+    'Group',
+    'ImageIcon',
+    'KeyRound',
+    'LifeBuoy',
+    'LockKeyhole',
+    'LogIn',
+    'Radar',
+    'Route',
+    'Rows3',
+    'ServerCog',
+    'ShipWheel',
+    'SlidersHorizontal',
+    'Upload',
+    'Zap',
+];
+
+export const ICON_ASSET_ITEMS: DomainLibraryItem[] = ICON_NAMES.map(createIconAssetItem);
 
 export function loadIconAssetCatalog(): DomainLibraryItem[] {
     return ICON_ASSET_ITEMS;

@@ -15,7 +15,6 @@ import {
   replaceSelection,
   type CanvasSelection,
 } from '../../application/selection/selection';
-import { PRODUCTION_RENDERER_FAMILY_FLAGS } from '../../application/renderer/rendererFamilyFlags';
 import { worldToScreen, panCamera, zoomCameraAt } from '../../domain/camera/camera';
 import { detectWebGlCapability } from '../../infrastructure/pixi/capabilities';
 import {
@@ -159,7 +158,6 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     if (!viewport || !capability.supported) return;
     let disposed = false;
     const host = new PixiRendererHost({
-      ...PRODUCTION_RENDERER_FAMILY_FLAGS,
       liveTransformPreview: true,
       onStatusChange: (next) => {
         if (!disposed) setStatus(next);

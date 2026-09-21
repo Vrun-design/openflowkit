@@ -1,5 +1,5 @@
 import type { FlowEdge, FlowNode } from '@/lib/types';
-import { resolveNodeSize } from '@/components/nodeHelpers';
+import { resolveNodeSize } from '@/lib/nodeSize';
 import { handleIdToSide } from '@/lib/nodeHandles';
 
 const NODE_WIDTH = 120;

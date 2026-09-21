@@ -1,4 +1,3 @@
-import type { ParseDiagnostic } from '@/lib/openFlowDSLParser';
 import type { DiagramType } from '@/lib/types';
 import { normalizeParseDiagnostics } from './diagnosticFormatting';
 
@@ -8,6 +7,13 @@ export type MermaidImportStatus =
   | 'invalid_source'
   | 'unsupported_family'
   | 'unsupported_construct';
+
+export interface ParseDiagnostic {
+  message: string;
+  line?: number;
+  snippet?: string;
+  hint?: string;
+}
 
 export interface MermaidImportDiagnostic extends ParseDiagnostic {
   code: string;

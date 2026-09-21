@@ -2,8 +2,7 @@
 // vite.agent.config.ts. Pure: no store, no browser, no React.
 import { projectLegacyDocument } from '@/opencanvas/domain/document/legacyProjection';
 import type { SceneDocumentV1 } from '@/opencanvas/domain/document/types';
-import { requireValidSceneDocument } from '@/opencanvas/infrastructure/reactflow/validationBoundary';
-import { projectSceneDocumentToReactFlow } from '@/opencanvas/infrastructure/reactflow/toReactFlow';
+import { validateSceneDocumentV1 } from '@/opencanvas/domain/document/validation';
 
 export { AGENT_ACTIONS, findAgentAction } from './actions';
 export type { ActionContext, ActionResult, AgentAction } from './actions';
@@ -19,11 +18,17 @@ export function createAgentDocument(name: string, id = crypto.randomUUID()): Sce
 }
 
 export function parseAgentDocument(value: unknown): SceneDocumentV1 {
-  return requireValidSceneDocument(value);
+  const result = validateSceneDocumentV1(value);
+  if (result.success === false) {
+    const summary = result.issues.map((issue) => `${issue.path}: ${issue.message}`).join('; ');
+    throw new TypeError(`Invalid OpenCanvas document: ${summary}`);
+  }
+  return result.document;
 }
 
-/** The JSON the OpenFlowKit app imports: nodes and edges of one page. */
+/** One page's canonical nodes and connectors. Phase 4 replaces this with DSL export. */
 export function exportAgentDocumentPage(document: SceneDocumentV1, pageId = document.pages[0]?.id ?? '') {
-  const { nodes, edges } = projectSceneDocumentToReactFlow(document, pageId);
-  return { name: document.name, nodes, edges };
+  const page = document.pages.find((candidate) => candidate.id === pageId);
+  if (!page) throw new RangeError(`Page "${pageId}" was not found.`);
+  return { name: document.name, nodes: page.nodes, edges: page.connectors };
 }

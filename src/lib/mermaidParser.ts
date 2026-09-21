@@ -1,6 +1,6 @@
 import { MarkerType } from '@/lib/reactflowCompat';
 import { createDefaultEdge } from '@/constants';
-import { SECTION_MIN_HEIGHT, SECTION_MIN_WIDTH } from '@/hooks/node-operations/sectionBounds';
+import { SECTION_MIN_HEIGHT, SECTION_MIN_WIDTH } from '@/lib/sectionBounds';
 import { setNodeParent } from './nodeParent';
 import {
   createMermaidParseState,

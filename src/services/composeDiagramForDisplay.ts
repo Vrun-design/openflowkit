@@ -1,5 +1,5 @@
 import type { DiagramType, FlowEdge, FlowNode } from '@/lib/types';
-import { autoFitSectionsToChildren } from '@/hooks/node-operations/sectionOperations';
+import { autoFitSectionsToChildren } from '@/lib/sectionBounds';
 import { clearStoredRouteData } from '@/lib/edgeRouteData';
 import type { LayoutAlgorithm, LayoutOptions } from '@/services/elkLayout';
 import { relayoutMindmapComponent, syncMindmapEdges } from '@/lib/mindmapLayout';

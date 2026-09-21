@@ -20,7 +20,7 @@
  * is small, and we want zero new heavy deps.
  */
 
-import { coerceEdgeCurve, type EdgeCurve } from '@/components/custom-edge/edgeCurve';
+import { coerceEdgeCurve, type EdgeCurve } from '@/lib/edgeCurve';
 
 export interface MermaidDirectiveConfig {
     flowchartCurve?: EdgeCurve;

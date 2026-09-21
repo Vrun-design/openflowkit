@@ -2,7 +2,7 @@ import {
   SECTION_CONTENT_PADDING_TOP,
   SECTION_PADDING_BOTTOM,
   SECTION_PADDING_X,
-} from '@/hooks/node-operations/sectionBounds';
+} from '@/lib/sectionBounds';
 import type {
   LayoutAlgorithm,
   LayoutDirection,

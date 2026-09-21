@@ -1,5 +1,5 @@
 import type { DiagramType } from '@/lib/types';
-import type { MermaidDiagnosticsSnapshot } from '@/store/types';
+import type { MermaidDiagnosticsSnapshot } from './diagnosticsSnapshot';
 import type { MermaidImportStatus } from './importContracts';
 import { isMermaidLayoutRecoveryRecommended } from './recoveryPresentation';
 import { getMermaidFamilySupportMatrixEntry } from './supportMatrix';

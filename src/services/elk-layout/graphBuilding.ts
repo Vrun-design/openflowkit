@@ -1,11 +1,11 @@
 import type { ElkExtendedEdge, ElkNode } from 'elkjs/lib/elk.bundled.js';
 import { NODE_HEIGHT, NODE_WIDTH } from '@/constants';
-import { getIconAssetNodeMinSize, resolveNodeSize } from '@/components/nodeHelpers';
+import { getIconAssetNodeMinSize, resolveNodeSize } from '@/lib/nodeSize';
 import {
   SECTION_CONTENT_PADDING_TOP,
   SECTION_PADDING_BOTTOM,
   SECTION_PADDING_X,
-} from '@/hooks/node-operations/sectionBounds';
+} from '@/lib/sectionBounds';
 import { getNodeParentId } from '@/lib/nodeParent';
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import { DEFAULT_MAX_WIDTH, estimateWrappedTextBox } from './textSizing';

@@ -1,9 +1,6 @@
-import { applyDocumentCommand } from '../../domain/commands/execute';
 import type { DocumentCommand } from '../../domain/commands/types';
-import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
+import type { SceneNode, ScenePage } from '../../domain/document/types';
 import type { Point2d } from '../../domain/geometry/types';
-import type { ReactFlowProjection } from '../../infrastructure/reactflow/contracts';
-import { projectSceneDocumentToReactFlow } from '../../infrastructure/reactflow/toReactFlow';
 import { createProductionSceneNode } from './productionNodeCatalog';
 
 export type ProductionNodeMutation =
@@ -11,12 +8,6 @@ export type ProductionNodeMutation =
   | { readonly kind: 'duplicate'; readonly nodeId: string; readonly newNodeId: string; readonly offset?: Point2d }
   | { readonly kind: 'insert'; readonly node: SceneNode }
   | { readonly kind: 'delete'; readonly nodeId: string };
-
-export interface ProductionNodeMutationResult {
-  readonly changed: boolean;
-  readonly selectedNodeId: string | null;
-  readonly projection: ReactFlowProjection;
-}
 
 function requireNode(page: ScenePage, nodeId: string): { node: SceneNode; index: number } {
   const index = page.nodes.findIndex((node) => node.id === nodeId);
@@ -137,25 +128,4 @@ export function createProductionFreeformNode(
   id: string, kind: ProductionFreeformKind, point: Point2d, layerId: string
 ): SceneNode {
   return createProductionSceneNode(kind, id, point, layerId);
-}
-
-export function applyProductionNodeMutation(
-  document: SceneDocumentV1,
-  pageId: string,
-  mutation: ProductionNodeMutation,
-  updatedAt: string
-): ProductionNodeMutationResult {
-  const page = document.pages.find((candidate) => candidate.id === pageId);
-  if (!page) throw new RangeError(`OpenCanvas page "${pageId}" was not found.`);
-  const { command, selectedNodeId } = buildProductionNodeMutationCommand(page, mutation);
-  if (!command) {
-    return { changed: false, selectedNodeId, projection: projectSceneDocumentToReactFlow(document, pageId) };
-  }
-  const applied = applyDocumentCommand(document, command).document;
-  const nextDocument = { ...applied, updatedAt };
-  return {
-    changed: true,
-    selectedNodeId,
-    projection: projectSceneDocumentToReactFlow(nextDocument, pageId),
-  };
 }

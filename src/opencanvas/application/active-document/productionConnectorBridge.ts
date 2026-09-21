@@ -1,8 +1,5 @@
 import { areStructurallyEqual } from '../../domain/commands/equality';
 import type { SceneConnector, SceneDocumentV1 } from '../../domain/document/types';
-import type { ReactFlowProjection } from '../../infrastructure/reactflow/contracts';
-import { projectSceneDocumentToReactFlow } from '../../infrastructure/reactflow/toReactFlow';
-import { applyDocumentCommand } from '../../domain/commands/execute';
 import type {
   BatchDocumentCommand,
   DocumentCommand,
@@ -16,11 +13,6 @@ import {
   type SidePort,
 } from '../../domain/connectors/portAuthoring';
 import { assertSemanticConnectorConstraint } from '../../domain/structured/diagramValidation';
-
-export interface ProductionConnectorProjection {
-  readonly changed: boolean;
-  readonly projection: ReactFlowProjection;
-}
 
 function requireEndpointPorts(
   document: SceneDocumentV1,
@@ -174,21 +166,4 @@ export function buildProductionConnectorCommand(
     kind: 'set-connector', id: `edit-connector:${before.id}`, label: 'Edit connector',
     pageId, before, after,
   };
-}
-
-export function projectProductionConnectorEdit(
-  document: SceneDocumentV1,
-  pageId: string,
-  before: SceneConnector,
-  after: SceneConnector,
-  updatedAt: string
-): ProductionConnectorProjection {
-  const command = buildProductionConnectorCommand(document, pageId, before, after);
-  if (!command) {
-    return { changed: false, projection: projectSceneDocumentToReactFlow(document, pageId) };
-  }
-  const nextDocument: SceneDocumentV1 = {
-    ...applyDocumentCommand(document, command).document, updatedAt,
-  };
-  return { changed: true, projection: projectSceneDocumentToReactFlow(nextDocument, pageId) };
 }

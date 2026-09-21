@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 
 // ---------------------------------------------------------------------------
 // Web Storage polyfill — Node.js 22+ ships a stub `localStorage` / `sessionStorage`

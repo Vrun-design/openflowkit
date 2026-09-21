@@ -1,4 +1,4 @@
-import type { ParseDiagnostic } from '@/lib/openFlowDSLParser';
+import type { ParseDiagnostic } from './importContracts';
 
 export interface StrictModeGuidanceItem {
   key: string;

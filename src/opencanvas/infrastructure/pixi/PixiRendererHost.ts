@@ -152,16 +152,16 @@ export class PixiRendererHost {
   constructor(options: PixiRendererHostOptions = {}) {
     this.livePreview = options.liveTransformPreview ? new PixiLiveTransformPreview() : null;
     this.onStatusChange = options.onStatusChange;
-    this.connectorModelEnabled = options.connectorModelEnabled === true;
-    this.nodeLayoutModelEnabled = options.nodeLayoutModelEnabled === true;
-    this.basicNodesEnabled = options.basicNodesEnabled === true;
-    this.freeformNodesEnabled = options.freeformNodesEnabled === true;
-    this.architectureNodesEnabled = options.architectureNodesEnabled === true;
-    this.containerNodesEnabled = options.containerNodesEnabled === true;
-    this.classEntityNodesEnabled = options.classEntityNodesEnabled === true;
-    this.mindmapJourneyNodesEnabled = options.mindmapJourneyNodesEnabled === true;
-    this.sequenceNodesEnabled = options.sequenceNodesEnabled === true;
-    this.wireframeNodesEnabled = options.wireframeNodesEnabled === true;
+    this.connectorModelEnabled = options.connectorModelEnabled !== false;
+    this.nodeLayoutModelEnabled = options.nodeLayoutModelEnabled !== false;
+    this.basicNodesEnabled = options.basicNodesEnabled !== false;
+    this.freeformNodesEnabled = options.freeformNodesEnabled !== false;
+    this.architectureNodesEnabled = options.architectureNodesEnabled !== false;
+    this.containerNodesEnabled = options.containerNodesEnabled !== false;
+    this.classEntityNodesEnabled = options.classEntityNodesEnabled !== false;
+    this.mindmapJourneyNodesEnabled = options.mindmapJourneyNodesEnabled !== false;
+    this.sequenceNodesEnabled = options.sequenceNodesEnabled !== false;
+    this.wireframeNodesEnabled = options.wireframeNodesEnabled !== false;
   }
 
   async mount(container: HTMLElement): Promise<HTMLCanvasElement> {

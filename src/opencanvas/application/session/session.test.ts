@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { DocumentCommand } from '../../domain/commands/types';
-import { isRolloutFlagEnabled } from '../../../config/rolloutFlags';
 import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import {
   StaleSessionRevisionError,
@@ -80,9 +79,5 @@ describe('revisioned document session', () => {
     const initial = session();
     expect(undoSessionCommand(initial, 0)).toBe(initial);
     expect(redoSessionCommand(initial, 0)).toBe(initial);
-  });
-
-  it('stays off by default behind v2Editor', () => {
-    expect(isRolloutFlagEnabled('v2Editor')).toBe(false);
   });
 });

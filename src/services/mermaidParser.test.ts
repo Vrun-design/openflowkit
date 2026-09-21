@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SECTION_MIN_HEIGHT, SECTION_MIN_WIDTH } from '@/hooks/node-operations/sectionBounds';
+import { SECTION_MIN_HEIGHT, SECTION_MIN_WIDTH } from '@/lib/sectionBounds';
 import { parseMermaid } from '@/lib/mermaidParser';
 
 describe('mermaidParser', () => {

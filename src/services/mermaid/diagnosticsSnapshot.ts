@@ -1,12 +1,25 @@
-import type { DiagramType } from '@/lib/types';
-import type { ParseDiagnostic } from '@/lib/openFlowDSLParser';
-import type { MermaidDiagnosticsSnapshot } from '@/store/types';
-import type { MermaidImportStatus } from './importContracts';
+import type { DiagramType, MermaidVisualMode } from '@/lib/types';
+import type { MermaidImportStatus, ParseDiagnostic } from './importContracts';
 import {
   appendMermaidImportGuidance,
   getMermaidImportStateDetail,
   getMermaidStatusLabel,
 } from './importStatePresentation';
+
+export interface MermaidDiagnosticsSnapshot {
+  source: 'paste' | 'import' | 'code';
+  diagramType?: DiagramType;
+  importState?: MermaidImportStatus;
+  statusLabel?: string;
+  statusDetail?: string;
+  layoutMode?: 'mermaid_exact' | 'mermaid_preserved_partial' | 'mermaid_partial' | 'elk_fallback';
+  visualMode?: MermaidVisualMode;
+  layoutFallbackReason?: string;
+  originalSource?: string;
+  diagnostics: ParseDiagnostic[];
+  error?: string;
+  updatedAt: number;
+}
 
 interface BuildMermaidDiagnosticsSnapshotParams {
   source: MermaidDiagnosticsSnapshot['source'];

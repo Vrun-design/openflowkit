@@ -5,7 +5,6 @@ import type {
   MermaidImportMode,
   MermaidVisualMode,
 } from '@/lib/types';
-import { createMermaidSvgNode } from '@/hooks/node-operations/nodeFactories';
 import { assignSmartHandles } from '@/services/smartEdgeRouting';
 import {
   composeDiagramForDisplay,
@@ -173,18 +172,25 @@ async function renderMermaidSvgNode(
 
     const { viewBox, width, height } = extractSvgDimensions(svg);
 
-    return createMermaidSvgNode(
-      createId('mermaid-svg'),
-      { x: 40, y: 40 },
-      {
+    return {
+      id: createId('mermaid-svg'),
+      position: { x: 40, y: 40 },
+      type: 'mermaid_svg',
+      data: {
         label: diagramType ? `Mermaid ${diagramType}` : 'Mermaid diagram',
         mermaidSource: source,
         mermaidSvg: svg,
         mermaidViewBox: viewBox,
-        width,
-        height,
-      }
-    );
+        mermaidImportMode: 'renderer_first',
+        mermaidRendererTheme: 'default',
+        transparency: 1,
+        rotation: 0,
+      },
+      draggable: true,
+      selectable: true,
+      connectable: false,
+      style: { width, height },
+    };
   } finally {
     container.remove();
   }

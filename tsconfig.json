@@ -28,6 +28,7 @@
     "noEmit": true
   },
   "include": [
-    "src"
+    "src",
+    "vitest.setup.ts"
   ],
 }

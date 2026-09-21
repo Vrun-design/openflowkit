@@ -305,7 +305,7 @@ export interface EdgeData {
     y: number;
   }[];
   /** Visual curve interpolation override (basis, linear, smoothstep, ...). Falls back to diagram-level setting. */
-  curve?: import('@/components/custom-edge/edgeCurve').EdgeCurve;
+  curve?: import('./edgeCurve').EdgeCurve;
   animation?: EdgeAnimationConfig;
 }
 
@@ -318,7 +318,7 @@ export interface GlobalEdgeOptions {
    * Diagram-wide edge curve. When set, overrides the legacy `type` mapping for the
    * visual interpolation pass (Mermaid-parity smoothing through ELK waypoints).
    */
-  curve?: import('@/components/custom-edge/edgeCurve').EdgeCurve;
+  curve?: import('./edgeCurve').EdgeCurve;
 }
 
 export type FlowEdge = LegacyEdge<EdgeData>;

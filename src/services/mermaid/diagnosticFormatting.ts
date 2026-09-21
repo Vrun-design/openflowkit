@@ -1,4 +1,4 @@
-import type { ParseDiagnostic } from '@/lib/openFlowDSLParser';
+import type { ParseDiagnostic } from './importContracts';
 
 const ARCHITECTURE_LINE_SNIPPET_PATTERN = /^(?<message>.+?) at line (?<line>\d+): "(?<snippet>.*)"$/;
 const ARCHITECTURE_LINE_ONLY_PATTERN = /^(?<message>.+?) at line (?<line>\d+)(?<suffix>.*)$/;

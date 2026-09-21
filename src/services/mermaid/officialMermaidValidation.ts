@@ -1,4 +1,4 @@
-import type { ParseDiagnostic } from '@/lib/openFlowDSLParser';
+import type { ParseDiagnostic } from './importContracts';
 import type { DiagramType } from '@/lib/types';
 import type { MermaidImportDiagnostic } from './importContracts';
 import { extractMermaidDiagramHeader } from './detectDiagramType';

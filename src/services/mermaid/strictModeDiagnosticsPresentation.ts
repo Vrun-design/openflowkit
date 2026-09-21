@@ -1,4 +1,4 @@
-import type { ParseDiagnostic } from '@/lib/openFlowDSLParser';
+import type { ParseDiagnostic } from './importContracts';
 
 export interface StrictModeDiagnosticGroup {
   id: 'syntax' | 'identity' | 'recovery' | 'general';

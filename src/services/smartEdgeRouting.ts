@@ -1,9 +1,8 @@
 import type { FlowEdge, FlowNode } from '@/lib/types';
 import { NODE_WIDTH, NODE_HEIGHT } from '../constants';
-import type { ViewSettings } from '@/store/types';
 import { getNodeParentId } from '@/lib/nodeParent';
 import { getNodeHandleIdForSide, type HandleSide } from '@/lib/nodeHandles';
-import { resolveNodeSize } from '@/components/nodeHelpers';
+import { resolveNodeSize } from '@/lib/nodeSize';
 import { estimateWrappedTextBox, DEFAULT_MAX_WIDTH } from './elk-layout/textSizing';
 import { readMermaidImportedEdgeMetadata } from './mermaid/importProvenance';
 
@@ -161,13 +160,6 @@ export function assignSmartHandles(nodes: FlowNode[], edges: FlowEdge[]): FlowEd
         profile: 'standard',
         bundlingEnabled: false,
     });
-}
-
-export function getSmartRoutingOptionsFromViewSettings(viewSettings: ViewSettings): SmartRoutingOptions {
-    return {
-        profile: viewSettings.smartRoutingProfile,
-        bundlingEnabled: viewSettings.smartRoutingBundlingEnabled,
-    };
 }
 
 export function assignSmartHandlesWithOptions(
