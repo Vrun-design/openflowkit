@@ -1,4 +1,4 @@
-import { IconCode, IconPlayerPlay } from '@tabler/icons-react';
+import { IconPlayerPlay } from '@tabler/icons-react';
 import { useMemo, useRef, useState } from 'react';
 import type { DslDiagnostic } from '../../../dsl/ast';
 import { DSL_FAMILIES } from '../../../dsl/ast';
@@ -60,16 +60,11 @@ export function V2CodePanel({
   return (
     <Panel title="Diagram as code" onClose={onClose} className="ofk-v2-workspace-panel ofk-v2-code-panel" tools={<span className="ofk-v2-preview-label">OpenFlow DSL</span>}>
       <div className="ofk-v2-panel-stack">
-        <div className="ofk-v2-code-intro">
-          <Icon icon={IconCode} />
-          <div><h3>Source and canvas, one diagram.</h3><p className="ofk-v2-muted">Write connections. Generate with <kbd>⌘↵</kbd>.</p></div>
-        </div>
         {canvasEdited ? <p className="ofk-v2-code-warning" role="status">Canvas edited — regenerate will overwrite those changes.</p> : null}
-        <label className="ofk-v2-code-label" htmlFor="v2-code">Diagram source <span>Flowchart + architecture</span></label>
         <div className="ofk-v2-code-editor-wrap">
           <pre ref={highlightRef} className="ofk-v2-code-highlight" aria-hidden="true">{highlighted}</pre>
           <textarea
-            ref={editorRef} id="v2-code" className="ofk-v2-code-editor" spellCheck={false} value={code}
+            ref={editorRef} id="v2-code" className="ofk-v2-code-editor" spellCheck={false} value={code} aria-label="Diagram source"
             aria-describedby={errors.length ? 'v2-code-diagnostics' : undefined}
             aria-invalid={errors.some((item) => item.severity === 'error') || undefined}
             aria-autocomplete="list" aria-controls={suggestions.length ? 'v2-code-suggestions' : undefined}
@@ -94,8 +89,8 @@ export function V2CodePanel({
             {suggestions.slice(0, 12).map((suggestion, index) => <button type="button" role="option" aria-selected={index === suggestionIndex} key={suggestion} onPointerDown={(event) => event.preventDefault()} onClick={() => chooseSuggestion(suggestion)}>{suggestion}</button>)}
           </div> : null}
         </div>
-        <div id="v2-code-diagnostics" className="ofk-v2-code-diagnostics" aria-live="polite">
-          {errors.length === 0 ? <p data-tone="success">Source ready</p> : errors.slice(0, 8).map((item, index) => (
+        <div id="v2-code-diagnostics" className="ofk-v2-code-diagnostics" aria-live="polite" hidden={errors.length === 0}>
+          {errors.slice(0, 8).map((item, index) => (
             <button type="button" key={`${item.line}:${item.col}:${item.code}:${index}`} data-tone={item.severity} onClick={() => {
               const editor = editorRef.current;
               if (!editor) return;
@@ -106,9 +101,9 @@ export function V2CodePanel({
         </div>
         <footer className="ofk-v2-panel-footer">
           <Button onClick={onGenerate} busy={generating} disabled={generating}>
-            <Icon icon={IconPlayerPlay} /> {generating ? 'Generating…' : 'Generate diagram'}
+            <Icon icon={IconPlayerPlay} /> {generating ? 'Generating…' : 'Generate diagram'} <kbd>⌘↵</kbd>
           </Button>
-          <p>Bad lines are skipped. Valid content still renders.</p>
+          {errors.length ? <p>Bad lines are skipped; the rest still renders.</p> : null}
         </footer>
       </div>
     </Panel>

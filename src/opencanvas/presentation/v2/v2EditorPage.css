@@ -193,8 +193,6 @@
 .ofk-v2-panel-footer { margin-top: auto; padding-top: 16px; border-top: 1px solid var(--ofk-border); }
 .ofk-v2-panel-footer .ofk-button { width: 100%; }
 .ofk-v2-panel-footer p { font-size: 11px; text-align: center; color: var(--ofk-muted); line-height: 1.6; }
-.ofk-v2-code-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--ofk-secondary); }
-.ofk-v2-code-label span { color: var(--ofk-muted); }
 .ofk-v2-code-editor-wrap { position: relative; flex: 1; min-height: 240px; }
 .ofk-v2-code-editor, .ofk-v2-code-highlight { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; overflow: auto; white-space: pre; tab-size: 2; border-radius: 8px; padding: 16px 12px; font: 14px/1.9 var(--ofk-font-mono, monospace); }
 .ofk-v2-code-editor { resize: none; border: 1px solid var(--ofk-border); color: transparent; caret-color: var(--ofk-text); background: transparent; -webkit-text-fill-color: transparent; }
@@ -208,13 +206,10 @@
 .ofk-v2-code-suggestions > button[aria-selected='true'], .ofk-v2-code-suggestions > button:hover { background: var(--ofk-raised); }
 .ofk-v2-code-panel .ofk-panel-body { overflow: hidden; }
 .ofk-v2-code-panel .ofk-v2-panel-stack { gap: 14px; height: 100%; }
-.ofk-v2-code-intro { display: flex; align-items: flex-start; gap: 10px; }
-.ofk-v2-code-intro > .ofk-icon { width: 18px; margin-top: 11px; color: var(--ofk-accent); }
-.ofk-v2-code-intro h3 { margin-bottom: 2px; }
-.ofk-v2-code-intro kbd { font: inherit; color: var(--ofk-secondary); }
+.ofk-v2-code-panel .ofk-v2-panel-footer kbd { margin-left: 6px; font: 11px var(--ofk-font-mono, monospace); opacity: 0.6; }
 .ofk-v2-code-warning { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--ofk-warningSoft); color: var(--ofk-warning); font-size: 12px; line-height: 1.45; }
 .ofk-v2-code-diagnostics { display: flex; flex-direction: column; gap: 3px; max-height: 132px; overflow: auto; }
-.ofk-v2-code-diagnostics > p { margin: 0; color: var(--ofk-success); font-size: 12px; }
+.ofk-v2-code-diagnostics[hidden] { display: none; }
 .ofk-v2-code-diagnostics > button { display: grid; grid-template-columns: 38px 52px minmax(0, 1fr); gap: 6px; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--ofk-secondary); font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
 .ofk-v2-code-diagnostics > button:hover { background: var(--ofk-raised); }
 .ofk-v2-code-diagnostics > button:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: -2px; }

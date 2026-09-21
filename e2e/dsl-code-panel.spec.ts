@@ -18,7 +18,7 @@ test('diagram source generates and regenerates as one undo step', async ({ page 
   await expect.poll(() => count(page)).toBe(5);
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect.poll(() => count(page)).toBe(4);
-  await expect(page.getByText('Source ready', { exact: true })).toBeVisible();
+  await expect(page.locator('#v2-code-diagnostics')).toBeHidden();
 });
 
 test('code panel reports bad lines and offers attribute completion', async ({ page }) => {
