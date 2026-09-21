@@ -49,8 +49,4 @@ docs-site/.astro/
 .agents/
 .claude/skills/
 .codex-skill-edits/
-
-# Internal planning — local only
-/docs/plan/
-/docs/frozen/
-/STATE.md
+tsconfig.tsbuildinfo
