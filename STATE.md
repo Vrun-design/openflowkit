@@ -10,8 +10,12 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–4, one month, no ga
 
 ## Next
 - Phase 1 (hands) and Phase 2 (brain) start in parallel the moment phase 0 is
-  green. Phase 1 → `docs/plan/phase-1-hands.md`, 1.1 first. Phase 2 →
-  `docs/plan/phase-2-brain.md`, 2.1 (grammar.md, owner reviews before parser code).
+  green. Phase 1 → `docs/plan/phase-1-hands.md`, 1.1 first.
+- Phase 2.1 grammar spec written 2026-09-21 (Claude Opus 5, branch `p2-grammar`,
+  `docs/plan/grammar.md`): WAITING FOR OWNER REVIEW. 2.2 (parser) must not start
+  until reviewed. Open decisions for owner: canonical expands chains/fans to one
+  edge per line; keywords lowercase-only; dropped lines = `warning` not `error`;
+  unknown attrs kept verbatim (not dropped like Koboyo).
 
 ## Later
 - Phase 5 (month 2): `docs/plan/phase-5-architecture.md` — C4 model layer +
