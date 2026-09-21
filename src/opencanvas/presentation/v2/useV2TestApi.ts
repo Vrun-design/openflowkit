@@ -1,5 +1,4 @@
 import { useEffect, type RefObject } from 'react';
-import { isRolloutFlagEnabled } from '../../../config/rolloutFlags';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { CanvasSelection } from '../../application/selection/selection';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
@@ -26,7 +25,6 @@ export function useV2TestApi(options: V2TestApiOptions) {
     hostRef, selectionRef, toolRef, selectedConnectorId, document, revision, saveStatus, proposal,
   } = options;
   useEffect(() => {
-    if (!isRolloutFlagEnabled('v2Editor')) return;
     const api = {
       getState: () => ({
         revision,

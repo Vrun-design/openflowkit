@@ -1,5 +1,4 @@
 import { useV2Preferences } from './useV2Preferences';
-import { isRolloutFlagEnabled } from '../../../config/rolloutFlags';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -34,8 +33,6 @@ import { downloadTextFile } from './v2Export';
 import type { ScenePage } from '../../domain/document/types';
 import './v2EditorPage.css';
 
-const AI_ENABLED = isRolloutFlagEnabled('v2Ai');
-
 function changeObjectIds(changeId: string, proposal: Proposal | null): readonly string[] {
   const change = proposal?.changes.find(({ id }) => id === changeId);
   if (!change) return [];
@@ -56,8 +53,8 @@ function changeObjectIds(changeId: string, proposal: Proposal | null): readonly 
 export function V2EditorPage(): React.JSX.Element {
   const { id } = useParams();
   const { preferences, updatePreferences } = useV2Preferences();
-  const agentOpen = AI_ENABLED && preferences.agentOpen;
-  const toggleAgent = () => { if (AI_ENABLED) updatePreferences({ agentOpen: !preferences.agentOpen }); };
+  const agentOpen = preferences.agentOpen;
+  const toggleAgent = () => updatePreferences({ agentOpen: !preferences.agentOpen });
   const appearance = useV2Appearance(preferences.theme);
   const canvasColor = preferences.canvasColor ?? (appearance === 'dark' ? '#191b19' : '#f7f7f5');
   const rendererCanvasColor = Number.parseInt(canvasColor.slice(1), 16);
@@ -256,7 +253,7 @@ export function V2EditorPage(): React.JSX.Element {
               canUndo={session.canUndo} canRedo={session.canRedo}
               readOnly={load.readOnly}
               tool={tool} zoomPercent={camera.zoom} treeOpen={treeOpen}
-              agentOpen={AI_ENABLED ? agentOpen : null}
+              agentOpen={agentOpen}
               onUndo={session.undo} onRedo={session.redo}
               onRetrySave={retrySave} onReload={load.reload} onToast={pushToast}
               onRename={(name) => {
