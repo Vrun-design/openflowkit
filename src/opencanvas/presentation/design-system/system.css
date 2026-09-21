@@ -593,7 +593,7 @@
 .ofk-floating-region .ofk-toolbar {
   background: var(--ofk-material-glass);
   border-color: var(--ofk-material-glassBorder);
-  box-shadow: var(--ofk-material-shadowFloating);
+  box-shadow: var(--ofk-material-shadowChrome);
   backdrop-filter: blur(var(--ofk-material-blur)) saturate(var(--ofk-material-saturate));
   -webkit-backdrop-filter: blur(var(--ofk-material-blur)) saturate(var(--ofk-material-saturate));
 }
@@ -1023,6 +1023,7 @@
   padding: var(--ofk-space-xs);
   gap: 0;
   border-radius: var(--ofk-radius-surface);
+  box-shadow: var(--ofk-material-shadowChrome);
   z-index: var(--ofk-layer-context);
 }
 .ofk-context-group {

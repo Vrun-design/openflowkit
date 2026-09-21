@@ -139,6 +139,9 @@ export const materials: Readonly<
       glassBorder: string;
       scrim: string;
       shadowRaised: string;
+      /** Persistent canvas chrome (toolbars, rails, context bar): tight, low spread. */
+      shadowChrome: string;
+      /** Transient layers (menus, popovers): lifted. */
       shadowFloating: string;
       shadowOverlay: string;
     }>
@@ -149,14 +152,16 @@ export const materials: Readonly<
     glassBorder: 'rgb(37 39 36 / 0.08)',
     scrim: 'rgb(37 39 36 / 0.32)',
     shadowRaised: '0 1px 2px rgb(37 39 36 / 0.06), 0 1px 1px rgb(37 39 36 / 0.04)',
-    shadowFloating: '0 1px 2px rgb(37 39 36 / 0.06), 0 8px 24px rgb(37 39 36 / 0.1)',
-    shadowOverlay: '0 2px 4px rgb(37 39 36 / 0.08), 0 24px 48px rgb(37 39 36 / 0.18)',
+    shadowChrome: '0 1px 2px rgb(37 39 36 / 0.05), 0 2px 8px rgb(37 39 36 / 0.05)',
+    shadowFloating: '0 1px 2px rgb(37 39 36 / 0.05), 0 6px 16px rgb(37 39 36 / 0.07)',
+    shadowOverlay: '0 2px 4px rgb(37 39 36 / 0.06), 0 16px 40px rgb(37 39 36 / 0.12)',
   },
   dark: {
     glass: 'rgb(35 38 34 / 0.8)',
     glassBorder: 'rgb(241 242 236 / 0.1)',
     scrim: 'rgb(0 0 0 / 0.5)',
     shadowRaised: '0 1px 2px rgb(0 0 0 / 0.3)',
+    shadowChrome: '0 1px 2px rgb(0 0 0 / 0.3), 0 3px 10px rgb(0 0 0 / 0.28)',
     shadowFloating: '0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.4)',
     shadowOverlay: '0 2px 4px rgb(0 0 0 / 0.4), 0 24px 48px rgb(0 0 0 / 0.55)',
   },
