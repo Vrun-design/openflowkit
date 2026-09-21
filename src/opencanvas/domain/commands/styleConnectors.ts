@@ -1,5 +1,5 @@
 import type { SetConnectorCommand } from './types';
-import type { ScenePage } from '../document/types';
+import type { ConnectorRouteKind, ScenePage } from '../document/types';
 import type { JsonValue } from '../document/json';
 import { areStructurallyEqual } from './equality';
 
@@ -12,6 +12,8 @@ export interface ConnectorStylePatch {
   readonly dash?: ConnectorDashStyle;
   readonly markerStart?: ConnectorMarkerEnd;
   readonly markerEnd?: ConnectorMarkerEnd;
+  /** Path shape; switching it drops manual bends and goes back to automatic. */
+  readonly route?: Exclude<ConnectorRouteKind, 'polyline'>;
 }
 
 // One appearance patch over a single connector as one set-connector; no-op
@@ -36,13 +38,16 @@ export function buildStyleConnectorCommand(
   }
   if (patch.markerStart !== undefined) appearance.markerStart = patch.markerStart;
   if (patch.markerEnd !== undefined) appearance.markerEnd = patch.markerEnd;
-  if (areStructurallyEqual(appearance, before.appearance)) return null;
+  const after = patch.route !== undefined && patch.route !== before.route.kind
+    ? { ...before, appearance, route: { kind: patch.route, ownership: 'automatic' as const }, waypoints: [] }
+    : { ...before, appearance };
+  if (areStructurallyEqual(after, before)) return null;
   return {
     kind: 'set-connector',
     id: `style-connector:${connectorId}`,
     label: 'Style connector',
     pageId: page.id,
     before,
-    after: { ...before, appearance },
+    after,
   };
 }

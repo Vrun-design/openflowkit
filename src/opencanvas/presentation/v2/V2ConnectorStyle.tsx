@@ -52,6 +52,10 @@ export function V2ConnectorStyle({ page, connectorId, commit }: V2ConnectorStyle
         onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
         <PopoverHeader title="Line" close={<Button variant="quiet" onClick={close}>Done</Button>} />
         <div className="ofk-v2-properties">
+          <Segmented<'orthogonal' | 'direct' | 'bezier'> label="Path"
+            value={connector.route.kind === 'polyline' ? 'direct' : connector.route.kind}
+            onChange={(route) => apply({ route })}
+            options={[{ value: 'orthogonal', label: 'Elbow' }, { value: 'direct', label: 'Straight' }, { value: 'bezier', label: 'Curve' }]} />
           <Segmented<ConnectorMarkerEnd | ''> label="Start marker"
             value={markerValue(presentation.sourceMarkers)}
             onChange={(marker) => { if (marker) apply({ markerStart: marker }); }}

@@ -9,7 +9,10 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
   const onResetZoom = vi.fn();
   const onZoomStep = vi.fn();
   const onSpacePan = vi.fn();
+  const onReorder = vi.fn();
+  const onToggleLock = vi.fn();
   const { result } = renderHook(() => useV2Keyboard({
+    onReorder, onToggleLock,
     toolRef: { current: 'select' }, editingRef: { current: false }, onToolChange,
     onUndo: vi.fn(), onRedo: vi.fn(), onDelete: vi.fn(), onDuplicate: vi.fn(), onEditPrimary: vi.fn(),
     onNudge: vi.fn(), onCancelGesture: () => false, onClearSelection: vi.fn(), onSelectAll: vi.fn(),
@@ -20,7 +23,7 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
     key: 'q', target: document.createElement('section'), preventDefault: vi.fn(),
     ...init,
   } as unknown as KeyboardEvent<HTMLElement>);
-  return { key, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan };
+  return { key, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan, onReorder, onToggleLock };
 }
 
 describe('useV2Keyboard type-to-edit', () => {
@@ -44,6 +47,16 @@ describe('useV2Keyboard type-to-edit', () => {
 });
 
 describe('useV2Keyboard camera', () => {
+  it('] / [ reorder ahead of type-to-edit, ⌘L toggles lock', () => {
+    const { key, onReorder, onToggleLock, onTypeToEdit } = setup();
+    key({ key: ']' });
+    key({ key: '[' });
+    expect(onReorder.mock.calls).toEqual([['front'], ['back']]);
+    expect(onTypeToEdit).not.toHaveBeenCalled();
+    key({ key: 'l', metaKey: true });
+    expect(onToggleLock).toHaveBeenCalledOnce();
+  });
+
   it('⌘0 fits, ⌘1 resets to 100 %, ⌘= / ⌘- step around the viewport centre', () => {
     const { key, onFitView, onResetZoom, onZoomStep } = setup(vi.fn(() => false));
     key({ key: '0', metaKey: true });

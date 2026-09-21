@@ -52,3 +52,18 @@ describe('v2 connector style command', () => {
     expect(() => buildStyleConnectorCommand(page, 'ghost', {})).toThrow(RangeError);
   });
 });
+
+describe('route kind patch', () => {
+  it('switches the path shape and drops manual bends', () => {
+    const page = createTestDocument({
+      nodes: [createTestNode('a'), createTestNode('b')],
+      connectors: [createTestConnector('e', 'a', 'b', {
+        route: { kind: 'orthogonal', ownership: 'hybrid' }, waypoints: [{ x: 5, y: 5 }],
+      })],
+    }).pages[0];
+    const command = buildStyleConnectorCommand(page, 'e', { route: 'bezier' })!;
+    expect(command.after.route).toEqual({ kind: 'bezier', ownership: 'automatic' });
+    expect(command.after.waypoints).toEqual([]);
+    expect(buildStyleConnectorCommand(page, 'e', { route: 'orthogonal' })).toBeNull();
+  });
+});

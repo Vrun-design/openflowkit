@@ -74,6 +74,21 @@ describe('selection transforms', () => {
     expect(clamped.bounds).toMatchObject({ width: 24, height: 24 });
   });
 
+  it('⇧ keeps the aspect ratio and ⌥ grows from the centre', () => {
+    const node = createTestNode('a');
+    const page = createTestDocument({ nodes: [node] }).pages[0];
+    const snapshot = createTransformSnapshot(page, ['a']);
+    const aspect = resizeTransform(snapshot, {
+      handle: 'east', pointer: { x: 200, y: 25 }, snap: false, keepAspect: true,
+    });
+    expect(aspect.bounds).toEqual({ x: 0, y: -25, width: 200, height: 100 });
+    const centred = resizeTransform(snapshot, {
+      handle: 'south-east', pointer: { x: 120, y: 60 }, snap: false, fromCenter: true,
+    });
+    expect(centred.bounds).toEqual({ x: -20, y: -10, width: 140, height: 70 });
+    expect(centred.nodes[0].transform.translation).toEqual({ x: -20, y: -10 });
+  });
+
   it('rotates a node around its center and snaps to 15 degrees', () => {
     const node = createTestNode('a');
     const page = createTestDocument({ nodes: [node] }).pages[0];

@@ -31,6 +31,7 @@ import {
   transformLabel,
   updateTransformOperation,
   type PixiPointerOperation,
+  type TransformModifiers,
 } from './pointerOperations';
 import {
   pickConnectHandle,
@@ -125,7 +126,13 @@ interface PointerLike {
   readonly pointerId: number;
   readonly altKey: boolean;
   readonly shiftKey: boolean;
+  readonly metaKey?: boolean;
+  readonly ctrlKey?: boolean;
   readonly nativeEvent?: Partial<PointerEvent>;
+}
+
+function modifiersOf(event: PointerLike): TransformModifiers {
+  return { shiftKey: event.shiftKey, altKey: event.altKey, metaKey: Boolean(event.metaKey || event.ctrlKey) };
 }
 
 function localPoint(event: PointerLike): Point2d {
@@ -205,7 +212,7 @@ export function useV2Pointer(options: V2PointerOptions) {
   // rAF computes and previews it. Without this every queued move pays full
   // transform math + a renderer preview and the main thread never catches up.
   const pendingTransformRef = useRef<{
-    readonly pointerId: number; readonly world: Point2d; readonly altKey: boolean;
+    readonly pointerId: number; readonly world: Point2d; readonly modifiers: TransformModifiers;
   } | null>(null);
   const transformFrameRef = useRef<number | null>(null);
   // Gestures never depend on pointer capture: Chrome drops mouse capture when
@@ -263,9 +270,8 @@ export function useV2Pointer(options: V2PointerOptions) {
     const host = opts.hostRef.current;
     if (!pending || !host || !operation || operation.kind !== 'transform'
       || operation.pointerId !== pending.pointerId) return;
-    const next = updateTransformOperation(operation, pending.world,
-      Boolean(opts.snapToGrid) && !pending.altKey,
-      pending.altKey ? undefined : OBJECT_SNAP_PX / opts.cameraRef.current.zoom);
+    const next = updateTransformOperation(operation, pending.world, Boolean(opts.snapToGrid),
+      OBJECT_SNAP_PX / opts.cameraRef.current.zoom, pending.modifiers);
     operationRef.current = next;
     host.setTransformPreview(next.result);
     host.setAlignmentGuides(
@@ -294,8 +300,12 @@ export function useV2Pointer(options: V2PointerOptions) {
             ? pickConnectHandle(hoverBounds, point, opts.cameraRef.current)
             : null;
           host.setHover(hoverNode, hoverSide);
+          const connectorHandle = host.getSelectedConnectorId() ? host.pickConnectorHandle(point) : null;
           const cursor = hoverSide ? 'crosshair'
-            : handle ? HANDLE_CURSORS[handle] : (hoverNode ? 'move' : '');
+            : handle ? HANDLE_CURSORS[handle]
+              : hoverNode ? 'move'
+                : connectorHandle ? (connectorHandle.kind === 'endpoint' ? 'crosshair' : 'grab')
+                  : host.pickConnector(point) ? 'pointer' : '';
           event.target.style.cursor = cursor;
         } else {
           host.setHover(null, null);
@@ -324,7 +334,7 @@ export function useV2Pointer(options: V2PointerOptions) {
           * opts.cameraRef.current.zoom;
         if (!operation.result && distance < CLICK_THRESHOLD_PX) return;
         pendingTransformRef.current = {
-          pointerId: operation.pointerId, world: worldPoint, altKey: event.altKey,
+          pointerId: operation.pointerId, world: worldPoint, modifiers: modifiersOf(event),
         };
         if (transformFrameRef.current === null) {
           transformFrameRef.current = requestAnimationFrame(() => {
@@ -398,8 +408,8 @@ export function useV2Pointer(options: V2PointerOptions) {
         const releaseDistance = Math.hypot(worldPoint.x - operation.start.x, worldPoint.y - operation.start.y)
           * opts.cameraRef.current.zoom;
         const final = operation.result || releaseDistance >= CLICK_THRESHOLD_PX
-          ? updateTransformOperation(operation, worldPoint, Boolean(opts.snapToGrid) && !event.altKey,
-              event.altKey ? undefined : OBJECT_SNAP_PX / opts.cameraRef.current.zoom)
+          ? updateTransformOperation(operation, worldPoint, Boolean(opts.snapToGrid),
+              OBJECT_SNAP_PX / opts.cameraRef.current.zoom, modifiersOf(event))
           : operation;
         host.setTransformPreview(null);
         host.setAlignmentGuides(null);
@@ -564,7 +574,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       const retarget = (native: PointerEvent): PointerLike => ({
         currentTarget: section, target: native.target, clientX: native.clientX,
         clientY: native.clientY, pointerId: native.pointerId, altKey: native.altKey,
-        shiftKey: native.shiftKey,
+        shiftKey: native.shiftKey, metaKey: native.metaKey, ctrlKey: native.ctrlKey,
         nativeEvent: native,
       });
       const onWindowMove = (native: PointerEvent) => {

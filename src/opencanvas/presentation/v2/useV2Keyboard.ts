@@ -10,6 +10,8 @@ interface V2KeyboardOptions {
   readonly onRedo: () => void;
   readonly onDelete: () => void;
   readonly onDuplicate: () => void;
+  readonly onReorder: (direction: 'front' | 'back') => void;
+  readonly onToggleLock: () => void;
   readonly onEditPrimary: () => void;
   readonly onNudge: (delta: { x: number; y: number }) => void;
   readonly onCancelGesture: () => boolean;
@@ -74,6 +76,12 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       event.preventDefault();
     } else if (command && key === 'd') {
       opts.onDuplicate();
+      event.preventDefault();
+    } else if (command && key === 'l') {
+      opts.onToggleLock();
+      event.preventDefault();
+    } else if (!command && (event.key === ']' || event.key === '[')) {
+      opts.onReorder(event.key === ']' ? 'front' : 'back');
       event.preventDefault();
     } else if (command && key === 'j') {
       opts.onToggleAgent();

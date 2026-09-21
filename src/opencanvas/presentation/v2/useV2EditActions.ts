@@ -10,6 +10,8 @@ import {
   buildDeleteSelectionCommand,
   buildDuplicateSelectionCommand,
   buildMoveNodesCommand,
+  buildReorderCommand,
+  buildToggleLockCommand,
 } from '../../domain/commands/sceneEdits';
 
 interface V2EditActionsOptions {
@@ -69,5 +71,20 @@ export function useV2EditActions(options: V2EditActionsOptions) {
     options.commit(buildMoveNodesCommand(page, selectionRef.current.nodeIds, delta));
   };
 
-  return { deleteSelection, duplicateSelection, nudgeSelection };
+  const reorderSelection = (direction: 'front' | 'back') => {
+    const page = editablePage();
+    if (!page || selectionRef.current.nodeIds.length === 0) return;
+    const command = buildReorderCommand(page, selectionRef.current.nodeIds, direction);
+    if (command.commands.length > 0) options.commit(command);
+  };
+
+  const toggleLock = () => {
+    const page = editablePage();
+    if (!page || selectionRef.current.nodeIds.length === 0) return;
+    const command = buildToggleLockCommand(page, selectionRef.current.nodeIds);
+    options.commit(command);
+    options.announce(command.label === 'Lock' ? 'Selection locked.' : 'Selection unlocked.');
+  };
+
+  return { deleteSelection, duplicateSelection, nudgeSelection, reorderSelection, toggleLock };
 }

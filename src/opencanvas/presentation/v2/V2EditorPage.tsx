@@ -256,6 +256,7 @@ export function V2EditorPage(): React.JSX.Element {
     onToolChange: setTool,
     onUndo: session.undo, onRedo: session.redo,
     onDelete: editActions.deleteSelection, onDuplicate: editActions.duplicateSelection,
+    onReorder: editActions.reorderSelection, onToggleLock: editActions.toggleLock,
     onEditPrimary: () => {
       if (load.readOnly) return;
       const primary = selectionRef.current.primaryNodeId;

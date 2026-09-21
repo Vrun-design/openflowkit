@@ -41,4 +41,8 @@ export interface ResizeTransformInput {
   readonly minimumSize?: number;
   readonly gridSize?: number;
   readonly snap?: boolean;
+  /** ⇧: keep the selection's aspect ratio. */
+  readonly keepAspect?: boolean;
+  /** ⌥: grow from the centre instead of the opposite edge. */
+  readonly fromCenter?: boolean;
 }

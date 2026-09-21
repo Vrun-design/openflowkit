@@ -179,7 +179,7 @@ export function buildDuplicateSelectionCommand(
   nodeIds: readonly string[],
   connectorIds: readonly string[],
   mintId: (prefix: string) => string,
-  offset: Point2d = { x: 24, y: 24 }
+  offset: Point2d = { x: 20, y: 20 }
 ): BatchDocumentCommand {
   const selectedNodes = new Set(nodeIds);
   const selectedConnectors = new Set(connectorIds);
@@ -250,6 +250,48 @@ export function buildDuplicateSelectionCommand(
   }
   if (commands.length === 0) throw new RangeError('Duplicate selection is empty.');
   return { kind: 'batch', id: 'duplicate-selection', label: 'Duplicate selection', commands };
+}
+
+// `]` / `[`: the selection moves above or below everything else, keeping
+// its own internal order. One batch, one undo.
+export function buildReorderCommand(
+  page: ScenePage,
+  nodeIds: readonly string[],
+  direction: 'front' | 'back'
+): BatchDocumentCommand {
+  const selected = new Set(nodeIds);
+  const others = page.nodes.filter((node) => !selected.has(node.id)).map((node) => node.zIndex);
+  const chosen = page.nodes.filter((node) => selected.has(node.id))
+    .sort((left, right) => left.zIndex - right.zIndex);
+  if (chosen.length === 0) throw new RangeError('Reorder selection is empty.');
+  const base = direction === 'front'
+    ? Math.max(-1, ...others) + 1
+    : Math.min(0, ...others) - chosen.length;
+  const commands: SetNodeCommand[] = chosen.flatMap((node, index) =>
+    node.zIndex === base + index ? [] : [{
+      kind: 'set-node' as const, id: `reorder:${node.id}`, label: 'Reorder',
+      pageId: page.id, before: node, after: { ...node, zIndex: base + index },
+    }]);
+  return { kind: 'batch', id: `reorder-${direction}`, label: direction === 'front' ? 'Bring to front' : 'Send to back', commands };
+}
+
+// ⌘L: lock when any selected node is unlocked, else unlock all. Locked
+// nodes stay selectable (that is how they get unlocked) but never move.
+export function buildToggleLockCommand(
+  page: ScenePage,
+  nodeIds: readonly string[]
+): BatchDocumentCommand {
+  const nodes = page.nodes.filter((node) => nodeIds.includes(node.id));
+  if (nodes.length === 0) throw new RangeError('Lock selection is empty.');
+  const lock = nodes.some((node) => node.content.sectionLocked !== true);
+  return {
+    kind: 'batch', id: lock ? 'lock-selection' : 'unlock-selection', label: lock ? 'Lock' : 'Unlock',
+    commands: nodes.map((node) => ({
+      kind: 'set-node' as const, id: `lock:${node.id}`, label: lock ? 'Lock' : 'Unlock',
+      pageId: page.id, before: node,
+      after: { ...node, content: { ...node.content, sectionLocked: lock } },
+    })),
+  };
 }
 
 /** A connector end: bound to a shape, or a free page-space point (ADR-001). */

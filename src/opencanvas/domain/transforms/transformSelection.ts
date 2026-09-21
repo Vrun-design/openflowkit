@@ -119,10 +119,11 @@ export function resizeTransform(
   const axes = resizeAxes(input.handle);
   const minimum = input.minimumSize ?? DEFAULT_MINIMUM_SIZE;
   const gridSize = input.gridSize ?? DEFAULT_GRID_SIZE;
-  const right = snapshot.bounds.x + snapshot.bounds.width;
-  const bottom = snapshot.bounds.y + snapshot.bounds.height;
-  const rawX = axes.west ? input.pointer.x : snapshot.bounds.x;
-  const rawY = axes.north ? input.pointer.y : snapshot.bounds.y;
+  const before = snapshot.bounds;
+  const right = before.x + before.width;
+  const bottom = before.y + before.height;
+  const rawX = axes.west ? input.pointer.x : before.x;
+  const rawY = axes.north ? input.pointer.y : before.y;
   const rawRight = axes.east ? input.pointer.x : right;
   const rawBottom = axes.south ? input.pointer.y : bottom;
   const snap = input.snap !== false;
@@ -130,14 +131,37 @@ export function resizeTransform(
   const candidateY = snap && axes.north ? snapValue(rawY, gridSize) : rawY;
   const candidateRight = snap && axes.east ? snapValue(rawRight, gridSize) : rawRight;
   const candidateBottom = snap && axes.south ? snapValue(rawBottom, gridSize) : rawBottom;
-  const x = axes.west ? Math.min(candidateX, right - minimum) : snapshot.bounds.x;
-  const y = axes.north ? Math.min(candidateY, bottom - minimum) : snapshot.bounds.y;
-  const nextRight = axes.east ? Math.max(candidateRight, snapshot.bounds.x + minimum) : right;
-  const nextBottom = axes.south ? Math.max(candidateBottom, snapshot.bounds.y + minimum) : bottom;
-  const nextBounds = createBounds2d(x, y, nextRight - x, nextBottom - y);
-  const scaleX = nextBounds.width / snapshot.bounds.width;
-  const scaleY = nextBounds.height / snapshot.bounds.height;
-  const anchor = fixedResizeAnchor(snapshot.bounds, axes);
+  const center = boundsCenter(before);
+  const anchor = input.fromCenter ? center : fixedResizeAnchor(before, axes);
+  // Dragged edge distance from the anchor, mirrored when growing from the centre.
+  const grow = input.fromCenter ? 2 : 1;
+  let width = axes.west ? (anchor.x - candidateX) * grow
+    : axes.east ? (candidateRight - anchor.x) * grow : before.width;
+  let height = axes.north ? (anchor.y - candidateY) * grow
+    : axes.south ? (candidateBottom - anchor.y) * grow : before.height;
+  const horizontal = axes.west || axes.east;
+  const vertical = axes.north || axes.south;
+  if (input.keepAspect && before.width > 0 && before.height > 0) {
+    const scale = horizontal && vertical
+      ? Math.max(width / before.width, height / before.height)
+      : horizontal ? width / before.width : height / before.height;
+    width = before.width * scale;
+    height = before.height * scale;
+  }
+  width = Math.max(minimum, width);
+  height = Math.max(minimum, height);
+  const scalesX = horizontal || input.keepAspect === true;
+  const scalesY = vertical || input.keepAspect === true;
+  // A side handle with aspect lock grows the other axis around its centre line.
+  const anchorX = scalesX && !horizontal ? center.x : anchor.x;
+  const anchorY = scalesY && !vertical ? center.y : anchor.y;
+  const x = !scalesX ? before.x
+    : input.fromCenter || !horizontal ? anchorX - width / 2 : axes.west ? anchorX - width : anchorX;
+  const y = !scalesY ? before.y
+    : input.fromCenter || !vertical ? anchorY - height / 2 : axes.north ? anchorY - height : anchorY;
+  const nextBounds = createBounds2d(x, y, width, height);
+  const scaleX = nextBounds.width / before.width;
+  const scaleY = nextBounds.height / before.height;
 
   return {
     nodes: snapshot.nodes.map((node) => {
@@ -147,18 +171,12 @@ export function resizeTransform(
         transform: {
           ...node.transform,
           translation: {
-            x:
-              axes.west || axes.east
-                ? anchor.x + (translation.x - anchor.x) * scaleX
-                : translation.x,
-            y:
-              axes.north || axes.south
-                ? anchor.y + (translation.y - anchor.y) * scaleY
-                : translation.y,
+            x: scalesX ? anchorX + (translation.x - anchorX) * scaleX : translation.x,
+            y: scalesY ? anchorY + (translation.y - anchorY) * scaleY : translation.y,
           },
           scale: {
-            x: node.transform.scale.x * (axes.west || axes.east ? scaleX : 1),
-            y: node.transform.scale.y * (axes.north || axes.south ? scaleY : 1),
+            x: node.transform.scale.x * (scalesX ? scaleX : 1),
+            y: node.transform.scale.y * (scalesY ? scaleY : 1),
           },
         },
       };

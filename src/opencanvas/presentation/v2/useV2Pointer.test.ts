@@ -99,7 +99,7 @@ describe('V2 direct manipulation', () => {
     await flushFrame();
     expect(host.setAlignmentGuides).toHaveBeenLastCalledWith({ x: 300, y: null });
     expect(host.setTransformPreview.mock.calls.at(-1)?.[0].bounds.x).toBe(300);
-    act(() => result.current.handlePointerMove({ ...event(100 + 304 - start.x, 100), altKey: true }));
+    act(() => result.current.handlePointerMove({ ...event(100 + 304 - start.x, 100), metaKey: true }));
     await flushFrame();
     expect(host.setAlignmentGuides).toHaveBeenLastCalledWith(null);
     expect(host.setTransformPreview.mock.calls.at(-1)?.[0].bounds.x).toBe(304);

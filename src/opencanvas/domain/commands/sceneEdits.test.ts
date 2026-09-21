@@ -8,6 +8,8 @@ import {
   buildInsertConnectorCommand,
   buildInsertShapeCommand,
   buildMoveNodesCommand,
+  buildReorderCommand,
+  buildToggleLockCommand,
   buildQuickCreateCommand,
   buildSetNodeLabelCommand,
 } from './sceneEdits';
@@ -163,7 +165,7 @@ describe('v2 duplicate command', () => {
     expect(result.connectors).toHaveLength(2);
     expect(result.connectors[1].source.nodeId).toBe('node-copy-1');
     expect(result.connectors[1].target.nodeId).toBe('node-copy-2');
-    expect(result.nodes[2].transform.translation).toEqual({ x: 34, y: 44 });
+    expect(result.nodes[2].transform.translation).toEqual({ x: 30, y: 40 });
   });
 
   it('excludes edges to omitted nodes', () => {
@@ -263,3 +265,27 @@ describe('v2 quick-create command', () => {
   });
 });
 
+
+describe('v2 reorder and lock commands', () => {
+  it('brings the selection above everything, keeping its internal order', () => {
+    const page = pageWithTwoNodes();
+    const command = buildReorderCommand(page, ['node-a'], 'front');
+    expect(command.commands.map((child) => child.kind === 'set-node' && child.after.zIndex)).toEqual([
+      Math.max(...page.nodes.map((node) => node.zIndex)) + 1,
+    ]);
+    const back = buildReorderCommand(page, ['node-b'], 'back');
+    expect(back.commands.map((child) => child.kind === 'set-node' && child.after.zIndex)).toEqual([
+      Math.min(0, ...page.nodes.filter((node) => node.id !== 'node-b').map((node) => node.zIndex)) - 1,
+    ]);
+  });
+
+  it('locks when any node is unlocked, then unlocks all', () => {
+    const page = pageWithTwoNodes();
+    const lock = buildToggleLockCommand(page, ['node-a', 'node-b']);
+    expect(lock.label).toBe('Lock');
+    const locked = applyDocumentCommand({ ...createEmptyV2Document('doc-1'), pages: [page] }, lock)
+      .document.pages[0];
+    expect(locked.nodes.every((node) => node.content.sectionLocked === true)).toBe(true);
+    expect(buildToggleLockCommand(locked, ['node-a']).label).toBe('Unlock');
+  });
+});

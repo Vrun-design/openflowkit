@@ -143,20 +143,32 @@ export function beginTransformOperation(
   };
 }
 
+// Figma/tldraw modifier set: ⌘ suspends snapping, ⇧ locks aspect (resize)
+// or steps rotation by 15°, ⌥ resizes from the centre.
+export interface TransformModifiers {
+  readonly shiftKey: boolean;
+  readonly altKey: boolean;
+  readonly metaKey: boolean;
+}
+
+export const NO_MODIFIERS: TransformModifiers = { shiftKey: false, altKey: false, metaKey: false };
+
 /** `objectThreshold` in world units enables object snapping for moves; omit for grid only. */
 export function updateTransformOperation(
   operation: TransformPointerOperation,
   pointer: Point2d,
-  snap: boolean,
-  objectThreshold?: number
+  snapToGrid: boolean,
+  objectThreshold?: number,
+  modifiers: TransformModifiers = NO_MODIFIERS
 ): TransformPointerOperation {
+  const snap = snapToGrid && !modifiers.metaKey;
   let result: TransformResult;
   switch (operation.transformKind) {
     case 'move':
       result = moveTransform(
         operation.snapshot,
         { x: pointer.x - operation.start.x, y: pointer.y - operation.start.y },
-        objectThreshold === undefined
+        objectThreshold === undefined || modifiers.metaKey
           ? { snap }
           : { snap, objects: operation.others, objectThreshold }
       );
@@ -166,10 +178,12 @@ export function updateTransformOperation(
         handle: operation.handle as Exclude<TransformHandle, 'rotate'>,
         pointer,
         snap,
+        keepAspect: modifiers.shiftKey,
+        fromCenter: modifiers.altKey,
       });
       break;
     case 'rotate':
-      result = rotateTransform(operation.page, operation.snapshot, operation.start, pointer, snap);
+      result = rotateTransform(operation.page, operation.snapshot, operation.start, pointer, modifiers.shiftKey);
       break;
   }
   return { ...operation, result };
