@@ -25,6 +25,7 @@ import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
 import { measurePortableText } from '../../domain/text/measurement';
 import { currentPixiTextResolution, decoratePixiText, pixiTextStyle } from './pixiText';
 import type { SemanticDetailLevel } from './viewportProjection';
+import { numericColorToHex } from '../../domain/color/adaptiveColor';
 
 const NODE_FILL = 0xffffff;
 const NODE_STROKE = 0xcbd5e1;
@@ -117,7 +118,8 @@ export class PixiNodeRenderer {
     sequenceNodesEnabled: boolean,
     wireframeNodesEnabled: boolean,
     renderedNodeIds: ReadonlySet<string> | null = null,
-    detailLevel: SemanticDetailLevel = 'full'
+    detailLevel: SemanticDetailLevel = 'full',
+    canvasColor = 0xf7f7f5
   ): void {
     this.graphics.clear();
     this.textPool = new Map();
@@ -181,7 +183,7 @@ export class PixiNodeRenderer {
         !sequence &&
         !wireframe &&
         showFamilyDetail && freeformNodesEnabled
-          ? this.freeformRenderer.drawNode(node, matrix, this.graphics, freeformMediaGeneration)
+          ? this.freeformRenderer.drawNode(node, matrix, this.graphics, freeformMediaGeneration, numericColorToHex(canvasColor))
           : null;
       const visual =
         !architecture &&
@@ -241,7 +243,7 @@ export class PixiNodeRenderer {
         page.nodes.length > DETAILED_OUTLINE_NODE_LIMIT && shape === 'rounded'
           ? 'rectangle'
           : shape;
-      const style = resolveNodeStyle(node);
+      const style = resolveNodeStyle(node, numericColorToHex(canvasColor));
       const fillPaint = pixiPaintColor(style.fill, visual?.fill ?? NODE_FILL);
       const strokePaint = pixiPaintColor(style.stroke, visual?.stroke ?? NODE_STROKE);
       const fill = fillPaint.color;

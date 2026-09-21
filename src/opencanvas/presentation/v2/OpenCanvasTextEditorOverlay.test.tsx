@@ -74,4 +74,11 @@ describe('OpenCanvas text editor overlay', () => {
       value="Before" zoom={2} onCommit={vi.fn()} onCancel={vi.fn()} />);
     expect(screen.getByRole('textbox')).toHaveStyle({ fontSize: '28px' });
   });
+
+  it('uses the resolved label colour while typing', () => {
+    render(<OpenCanvasTextEditorOverlay style={{ ...style, textColor: '#ffffff' }}
+      bounds={{ x: 0, y: 0, width: 80, height: 40 }} value="Dark canvas"
+      onCommit={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByRole('textbox')).toHaveStyle({ color: '#ffffff' });
+  });
 });

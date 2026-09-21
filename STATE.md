@@ -3,38 +3,38 @@
 Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–4, one month, no gates.
 
 ## Now
-- Phase 1 + polish + 1.9 style done 2026-09-21 (Claude Opus 5, on `v2`).
-- Connectors: dynamic sides, obstacle routing (20px stub, Z lane), live hybrid re-links.
-- Text: crisp at any zoom; transparent zoom-scaled label editor on the label;
-  Escape keeps text; type-to-edit; connector label plate is click/dbl-click.
-- Chrome: blue accent, quick-create ghost, modifier transforms, lock/z-order shortcuts.
-- 1.9 style (spec `docs/plan/phase-1-style.md`, shipped 2026-09-21): one
-  resolver `domain/nodes/nodeStyle.ts` (flat `appearance` keys, legacy
-  `content.*` fallbacks) feeds Pixi, the label editor and measurement.
-  Style bar: Fill (palette pastel/solid, custom, corners, opacity, shadow) /
-  Outline / Text (family, size, B/I/U/S, align, padding, line height,
-  spacing) / Align / More (Position, Reorder); connector Line / Ends (cross marker,
-  reverse) / Label. Sticky defaults per kind. Right-click menus (node,
-  connector, canvas). ⌘X/C/V, ⌘⌥C/V copy style, ⌘]/[ step, ⌥ align, ⇧H/V
-  flip, ⌘G/⌘⇧G quiet groups (members ride the live preview; delete/duplicate
-  take subtrees). Text nodes re-fit on typography edits.
-- UI refinement: Codex, 2026-09-21. Cascading hover/keyboard menus, no Back;
-  inset numeric fields, quiet segments, round swatches, panel headings;
-  Arrange exposes labelled layer actions. Light/dark visual checks.
-- Verified: typecheck, lint, 890 unit tests; 8 headed style/connector checks.
-
+- Phase 2 output pass done 2026-09-21 (Claude Opus 5, on `v2`): the DSL compiles to
+  real renderer primitives. `vocabulary.ts` is the single word→scene table (shapes
+  incl. person→actor, sticky notes, browser/mobile wireframes, provider-icon cards,
+  grammar palette onto `nodePalette` hexes); `sizing.ts` measures labels with the
+  renderer's portable text; ELK nests groups hierarchically (`frame` root, padding)
+  and children are parent-relative, so a moved frame no longer doubles its origin.
+- Connectors write the keys the renderer honours: `dashPattern`, `markerStart/End`,
+  `strokeWidth`, `opacity`, side anchors from `[from:, to:]`; parallel edges fan their
+  labels. Frames and groups render as containers with a title band (`containerNodePresentation`
+  gained `frame`).
+- Serializer is canonical over `src/dsl/fixtures/*.dsl` (the 11 owner examples +
+  aws-3tier): idempotent `format`, structure/attribute round-trip, comments, notes,
+  `align`, reserved `view` lines, unknown attrs kept. Inline edge attrs split by
+  vocabulary: `A -> B [dashed, red]` = dashed edge to a red B; grammar §4 updated.
+- Code panel lists every diagnostic (parse + compile, deduped), not just unknown icons.
+- Verified: typecheck, lint, 979 unit tests; `e2e/dsl-output.spec.ts` (4 headed checks)
+  and the existing panel/style specs.
+- Phase 1 + polish + 1.9 style done 2026-09-21. Connectors: dynamic sides, obstacle
+  routing, live re-links. Text: crisp any zoom, in-place editor. Chrome: style bar,
+  menus, quick-create ghost, clipboard, groups.
 ## Next
-- Phase 2.1 grammar.md exists (`docs/plan/grammar.md`); owner reviews, then
-  parser. Owner feel-test on `/`: quick-create, bend + move, label edit, zoom.
+- Phase 3.1 flowchart family. Owner feel-test: DSL generation, bends, labels, zoom.
 
 ## Deferred (phase 1)
 - Group: top-level only, no double-click enter, no resize/rotate of members
   (phase 2 frame work). Flip mirrors positions, not glyphs (`ponytail:` in
   `arrangeNodes.ts`). SVG/PNG export still reads legacy paint keys (phase 4).
 - Rotate handle stem overlaps connectors above a node; cosmetic.
+- DSL hints `rank:`/`group [direction]` round-trip but do not constrain ELK yet
+  (`ponytail:` in `compile.ts`); pins are applied after layout.
 - Feel probe says ~260 ms p95 at 512 nodes but rAF measures 4–7 ms: the
   Playwright harness is suspect, not the renderer. Re-instrument first.
 
 ## Later
-- Phase 5 (month 2): `docs/plan/phase-5-architecture.md` — C4 model layer +
-  flows + discover/drift. Structurizr Cloud EOL 30 Sep 2026 = launch window.
+- Phase 5: C4 model, flows, discover/drift. Structurizr Cloud EOL 30 Sep 2026.

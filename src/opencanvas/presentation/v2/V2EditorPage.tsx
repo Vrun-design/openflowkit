@@ -36,6 +36,13 @@ import type { Point2d } from '../../domain/geometry/types';
 import { firstV2Page, mintV2Id } from './v2Document';
 import { downloadTextFile } from './v2Export';
 import type { ScenePage } from '../../domain/document/types';
+import { compile, hashDslScene } from '../../../dsl/compile';
+import { parse } from '../../../dsl/parse';
+import { serialize } from '../../../dsl/serialize';
+import { buildDslPageCommand, nextDslFrameOrigin } from '../../application/dsl/dslPageCommand';
+import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
+import { resolveDslIcon } from '../../../services/dsl/iconResolver';
+import { V2CodePanel } from './V2CodePanel';
 import './v2EditorPage.css';
 
 function changeObjectIds(changeId: string, proposal: Proposal | null): readonly string[] {
@@ -61,6 +68,10 @@ export function V2EditorPage(): React.JSX.Element {
   const [workspaceMode, setWorkspaceMode] = useState<V2WorkspaceMode | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [codeDraft, setCodeDraft] = useState(INITIAL_CODE);
+  const [codeFrameId, setCodeFrameId] = useState<string | null>(null);
+  const [codeGenerating, setCodeGenerating] = useState(false);
+  const [compileDiagnostics, setCompileDiagnostics] = useState<ReturnType<typeof parse>['diagnostics']>([]);
+  const codeAbortRef = useRef<AbortController | null>(null);
   const [slideDraftCount, setSlideDraftCount] = useState(0);
   const agentOpen = workspaceMode === 'assistant';
   const openWorkspace = (mode: V2WorkspaceMode) => {
@@ -69,6 +80,7 @@ export function V2EditorPage(): React.JSX.Element {
     if (window.innerWidth < 1100) setTreeOpen(false);
   };
   const toggleAgent = () => { if (agentOpen) setWorkspaceMode(null); else openWorkspace('assistant'); };
+  const toggleCode = () => { if (workspaceMode === 'code') setWorkspaceMode(null); else { setCodeFrameId(null); openWorkspace('code'); } };
   const appearance = useV2Appearance(preferences.theme);
   const canvasColor = preferences.canvasColor ?? (appearance === 'dark' ? '#191b19' : '#f7f7f5');
   const rendererCanvasColor = Number.parseInt(canvasColor.slice(1), 16);
@@ -146,7 +158,50 @@ export function V2EditorPage(): React.JSX.Element {
   useEffect(() => {
     pageRef.current = page;
   });
-
+  const codeDiagnostics = useMemo(() => {
+    // compile() re-parses, so dedupe the live parse pass against the last generate.
+    const seen = new Set<string>();
+    return [...parse(codeDraft).diagnostics, ...compileDiagnostics].filter((item) => {
+      const key = `${item.code}:${item.line}:${item.col}:${item.message}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [codeDraft, compileDiagnostics]);
+  const codeCanvasEdited = useMemo(() => {
+    if (!page || !codeFrameId) return false;
+    const frame = page.nodes.find((node) => node.id === codeFrameId);
+    const metadata = frame?.metadata.dsl && typeof frame.metadata.dsl === 'object' ? frame.metadata.dsl as Record<string, unknown> : {};
+    if (!frame || typeof metadata.hash !== 'string') return false;
+    const subtree = new Set([codeFrameId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const node of page.nodes) if (node.parentId && subtree.has(node.parentId) && !subtree.has(node.id)) { subtree.add(node.id); changed = true; }
+    }
+    const nodes = page.nodes.filter((node) => node.kind !== 'frame' && subtree.has(node.id));
+    const groups = page.nodes.filter((node) => node.id !== codeFrameId && node.kind === 'frame' && subtree.has(node.id));
+    const connectors = page.connectors.filter((connector) => subtree.has(connector.source.nodeId ?? '') && subtree.has(connector.target.nodeId ?? ''));
+    return hashDslScene(JSON.stringify({ nodes, groups, connectors })) !== metadata.hash;
+  }, [page, codeFrameId]);
+  const openFrameAsCode = useCallback((frameId: string) => {
+    const currentPage = pageRef.current;
+    const frame = currentPage?.nodes.find((node) => node.id === frameId);
+    if (!currentPage || !frame) return;
+    const subtree = new Set([frameId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const node of currentPage.nodes) if (node.parentId && subtree.has(node.parentId) && !subtree.has(node.id)) { subtree.add(node.id); changed = true; }
+    }
+    const metadata = frame.metadata.dsl && typeof frame.metadata.dsl === 'object' ? frame.metadata.dsl as Record<string, unknown> : {};
+    const nodes = currentPage.nodes.filter((node) => node.id !== frameId && subtree.has(node.id) && node.kind !== 'frame');
+    const groups = currentPage.nodes.filter((node) => node.id !== frameId && subtree.has(node.id) && node.kind === 'frame');
+    const connectors = currentPage.connectors.filter((connector) => subtree.has(connector.source.nodeId ?? '') && subtree.has(connector.target.nodeId ?? ''));
+    const unchanged = typeof metadata.hash === 'string' && hashDslScene(JSON.stringify({ nodes, groups, connectors })) === metadata.hash;
+    const source = unchanged && typeof metadata.source === 'string' ? metadata.source : serialize({ frame, nodes, groups, connectors });
+    setCodeDraft(source); setCodeFrameId(frameId); openWorkspace('code'); setContextMenu(null);
+  }, []);
   const load = useV2DocumentLoad({
     documentId: id,
     repository,
@@ -158,6 +213,28 @@ export function V2EditorPage(): React.JSX.Element {
   }, [load.reload]);
   const readOnlyRef = useRef(load.readOnly);
   useEffect(() => { readOnlyRef.current = load.readOnly; }, [load.readOnly]);
+  const generateCode = useCallback(async () => {
+    const currentPage = pageRef.current;
+    if (!currentPage || load.readOnly || codeGenerating) return;
+    codeAbortRef.current?.abort();
+    const controller = new AbortController();
+    codeAbortRef.current = controller;
+    setCodeGenerating(true);
+    try {
+      const bound = codeFrameId ? currentPage.nodes.find((node) => node.id === codeFrameId) : undefined;
+      const origin = bound?.transform.translation ?? nextDslFrameOrigin(currentPage);
+      const compiled = await compile(codeDraft, { origin, layout: elkDslLayoutPort, signal: controller.signal, resolveIcon: resolveDslIcon });
+      setCompileDiagnostics(compiled.diagnostics);
+      session.commit(buildDslPageCommand(currentPage, compiled, codeFrameId ?? undefined));
+      setCodeFrameId(codeFrameId ?? compiled.frame.id);
+      applySelection(replaceSelection([codeFrameId ?? compiled.frame.id]));
+      setAnnouncement(`${compiled.nodes.length} nodes generated${compiled.diagnostics.some((item) => item.severity !== 'info') ? ' with diagnostics' : ''}.`);
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) pushToast({ id: `dsl-${Date.now()}`, tone: 'danger', title: error instanceof Error ? error.message : 'Diagram generation failed.' });
+    } finally {
+      if (codeAbortRef.current === controller) { codeAbortRef.current = null; setCodeGenerating(false); }
+    }
+  }, [load.readOnly, codeGenerating, codeFrameId, codeDraft, session, applySelection, pushToast]);
 
   const { status: saveStatus, retry: retrySave } = useV2Autosave({
     repository,
@@ -301,6 +378,7 @@ export function V2EditorPage(): React.JSX.Element {
     onResetZoom: camera.resetZoom,
     onToggleTree: toggleTree,
     onToggleAgent: toggleAgent,
+    onToggleCode: toggleCode,
     onSpacePan: setSpacePan,
   });
 
@@ -378,12 +456,13 @@ export function V2EditorPage(): React.JSX.Element {
               readOnly={load.readOnly}
               onContextMenu={setContextMenu}
             />
-            <V2ContextMenu target={contextMenu} page={page} selectionCount={selection.nodeIds.length}
+            <V2ContextMenu target={contextMenu} page={page} selectionCount={selection.nodeIds.length} selectedNodeId={selection.primaryNodeId}
               readOnly={load.readOnly} actions={editActions} commit={session.commit}
               onEditLabel={() => {
                 const primary = selectionRef.current.primaryNodeId;
                 if (primary) openEditor(primary); else editSelectedConnectorLabel();
               }}
+              onEditAsCode={openFrameAsCode}
               onSelectAll={() => selectionApi.selectAllNodes(pageRef.current)}
               onZoomToFit={() => camera.fitView()}
               onZoomToSelection={() => camera.fitView(selectionRef.current.nodeIds)}
@@ -397,7 +476,10 @@ export function V2EditorPage(): React.JSX.Element {
               onChange={(mode) => { if (workspaceMode === mode) setWorkspaceMode(null); else openWorkspace(mode); }}
               onShortcuts={toggleShortcuts} />
             {page.nodes.length === 0 && page.connectors.length === 0 && !load.readOnly && rendererStatus === 'ready' ? <V2CanvasWelcome onOpen={openWorkspace} /> : null}
-            {workspaceMode === 'slides' || workspaceMode === 'code' ? <V2DraftPanel mode={workspaceMode}
+            {workspaceMode === 'code' ? <V2CodePanel code={codeDraft} onCodeChange={(value) => { setCodeDraft(value); setCompileDiagnostics([]); }}
+              diagnostics={codeDiagnostics} generating={codeGenerating} canvasEdited={codeCanvasEdited}
+              onGenerate={() => { void generateCode(); }} onClose={() => { codeAbortRef.current?.abort(); setWorkspaceMode(null); }} /> : null}
+            {workspaceMode === 'slides' ? <V2DraftPanel mode={workspaceMode}
               code={codeDraft} onCodeChange={setCodeDraft} slides={slideDraftCount}
               onAddSlide={() => setSlideDraftCount((count) => count + 1)} onClose={() => setWorkspaceMode(null)} /> : null}
             {shortcutsOpen ? <V2Shortcuts onClose={() => setShortcutsOpen(false)} /> : null}

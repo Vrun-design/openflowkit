@@ -36,6 +36,7 @@ interface V2KeyboardOptions {
   readonly onResetZoom: () => void;
   readonly onToggleTree: () => void;
   readonly onToggleAgent: () => void;
+  readonly onToggleCode: () => void;
   readonly onSpacePan: (active: boolean) => void;
   /** Type-to-edit: return true when the key opened an editor, false to fall through to shortcuts. */
   readonly onTypeToEdit: (key: string) => boolean;
@@ -132,6 +133,9 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       event.preventDefault();
     } else if (!command && event.altKey && !event.shiftKey && ALT_ALIGN[event.code]) {
       opts.onAlign(ALT_ALIGN[event.code]);
+      event.preventDefault();
+    } else if (!command && event.altKey && event.code === 'KeyD') {
+      opts.onToggleCode();
       event.preventDefault();
     } else if (command && key === 'j') {
       opts.onToggleAgent();

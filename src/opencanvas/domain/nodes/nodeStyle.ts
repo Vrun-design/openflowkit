@@ -3,6 +3,7 @@ import { resolveNodeVisualStyle, resolveTextVisualStyle } from '../../../theme';
 import { resolveBasicNodePresentation } from './basicNodePresentation';
 import { resolveNodeStroke, type NodeStrokeStyle } from './nodeStroke';
 import { optionalPresentationString } from './nodePresentationValues';
+import { resolveAdaptiveInk } from '../color/adaptiveColor';
 
 // Every visible property of a node, resolved from flat `appearance` keys
 // (docs/plan/phase-1-style.md §1) with legacy `content.*` palette/typography
@@ -98,7 +99,8 @@ function fontWeightValue(value: unknown, fallback: FontWeight): FontWeight {
 // itself is the cache key and the renderer pays the resolve once per edit.
 const cache = new WeakMap<SceneNode, NodeStyle>();
 
-export function resolveNodeStyle(node: SceneNode): NodeStyle {
+export function resolveNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
+  if (canvasColor !== undefined) return computeNodeStyle(node, canvasColor);
   const cached = cache.get(node);
   if (cached) return cached;
   const style = computeNodeStyle(node);
@@ -106,7 +108,7 @@ export function resolveNodeStyle(node: SceneNode): NodeStyle {
   return style;
 }
 
-function computeNodeStyle(node: SceneNode): NodeStyle {
+function computeNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
   const a = node.appearance;
   const c = node.content;
   const text = isTextNode(node);
@@ -121,8 +123,11 @@ function computeNodeStyle(node: SceneNode): NodeStyle {
   const strokeWidth = text && a.strokeWidth === undefined ? 0 : stroke.width;
   const legacyBackground = text ? optionalPresentationString(c.backgroundColor) : undefined;
   const defaultRadius = basic?.shape === 'rounded' ? 12 : 0;
+  const fill = paint(a.fill, legacyBackground ?? palette.bg);
+  const explicitTextColor = a.textColor ?? (text ? c.customColor : undefined);
+  const textBackdrop = fill === 'transparent' ? canvasColor : fill;
   return {
-    fill: paint(a.fill, legacyBackground ?? palette.bg),
+    fill,
     stroke: paint(a.stroke, palette.border),
     strokeWidth,
     strokeStyle: stroke.style,
@@ -130,7 +135,9 @@ function computeNodeStyle(node: SceneNode): NodeStyle {
     cornerRadius: clampNumber(a.cornerRadius, STYLE_LIMITS.cornerRadius, defaultRadius),
     opacity: clampNumber(a.opacity, { min: 0, max: 1 }, 1),
     shadow: a.shadow === true,
-    textColor: paint(a.textColor, text ? optionalPresentationString(c.customColor) ?? palette.text : palette.text),
+    textColor: canvasColor !== undefined && textBackdrop !== undefined
+      ? resolveAdaptiveInk(explicitTextColor, textBackdrop)
+      : paint(a.textColor, text ? optionalPresentationString(c.customColor) ?? palette.text : palette.text),
     fontSize: clampNumber(a.fontSize, STYLE_LIMITS.fontSize, fontSizeFallback(node)),
     fontFamily: oneOf<FontFamilyKey>(a.fontFamily, ['sans', 'serif', 'mono', 'hand'],
       FONT_FAMILY_ALIASES[optionalPresentationString(c.fontFamily) ?? ''] ?? 'sans'),

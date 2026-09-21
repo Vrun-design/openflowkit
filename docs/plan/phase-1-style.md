@@ -45,7 +45,7 @@ resolver every renderer, editor overlay, exporter and DSL serializer reads. Flat
 | `cornerRadius` | 0–64 | shape default (`rounded`=12, `rectangle`=0) |
 | `opacity` | 0–1 | 1 |
 | `shadow` | boolean | false |
-| `textColor` | hex | palette text |
+| `textColor` | hex \| `'auto'` | palette text; free text `auto` follows canvas contrast |
 | `fontSize` | 8–96 | 14 / 16 |
 | `fontFamily` | `sans\|serif\|mono\|hand` | sans |
 | `fontWeight` | `400\|600\|700` | 600 / 500 |
@@ -95,6 +95,7 @@ now). Buttons open one popover each; multi-select shows mixed state as `—`.
   - Text popover: colour row, family (4), size presets XS/S/M/L + stepper, B/I/U/S,
     align 3×3 grid, padding S/M/L, line height 1/1.25/1.5/2, letter spacing –/S/M/L.
 - Text node: `[Text ▾] [Fill ▾] [Opacity] │ …` (Fill = background plate + outline).
+  - Text colour defaults to Auto: it follows canvas luminance until user chooses a fixed colour.
 - Connector: `[Line ▾] [Path] [Ends] [Label ▾] │ [Edit label] [Del]`
   - Line: colour, width presets + stepper, solid/dashed/dotted, corner radius (elbow only).
   - Ends: start/end marker `none/arrow/dot/cross` (cross = new marker draw).

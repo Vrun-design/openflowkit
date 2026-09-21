@@ -50,9 +50,9 @@ function drawChrome(
 // Text nodes read the shared node style (fill/stroke/typography) so the
 // style bar, the label editor and this draw agree on every property.
 function drawTextNode(
-  node: SceneNode, matrix: Matrix2d, graphics: Graphics, visual: PixiFreeformNodeVisual
+  node: SceneNode, matrix: Matrix2d, graphics: Graphics, visual: PixiFreeformNodeVisual, canvasColor: string
 ): PixiFreeformNodeDrawResult {
-  const style = resolveNodeStyle(node);
+  const style = resolveNodeStyle(node, canvasColor);
   const fill = pixiPaintColor(style.fill, 0xffffff);
   const stroke = pixiPaintColor(style.stroke, 0x94a3b8);
   if (fill.alpha > 0 || (stroke.alpha > 0 && style.strokeWidth > 0)) {
@@ -74,7 +74,8 @@ function drawTextNode(
   label.addChild(text);
   decoratePixiText(label, text, style, color);
   applyPixiNodeMatrix(label, matrix);
-  return { label, debug: { id: node.id, kind: 'text', shape: 'text', fill: fill.color, stroke: stroke.color, mediaState: 'none' } };
+  return { label, debug: { id: node.id, kind: 'text', shape: 'text', fill: fill.color,
+    stroke: stroke.color, textColor: color, mediaState: 'none' } };
 }
 
 export class PixiFreeformNodeRenderer {
@@ -100,11 +101,12 @@ export class PixiFreeformNodeRenderer {
     node: SceneNode,
     matrix: Matrix2d,
     graphics: Graphics,
-    generation: number
+    generation: number,
+    canvasColor = '#f7f7f5'
   ): PixiFreeformNodeDrawResult | null {
     const visual = projectFreeformNodeVisual(node);
     if (!visual) return null;
-    if (visual.kind === 'text') return drawTextNode(node, matrix, graphics, visual);
+    if (visual.kind === 'text') return drawTextNode(node, matrix, graphics, visual, canvasColor);
     if (visual.kind === 'pen' || visual.kind === 'highlighter'
       || visual.kind === 'line' || visual.kind === 'arrow') {
       const points = visual.presentation.points.map((point) => applyMatrixToPoint(matrix, point));

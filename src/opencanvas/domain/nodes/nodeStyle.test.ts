@@ -12,6 +12,15 @@ function node(overrides: Partial<SceneNode>): SceneNode {
 }
 
 describe('resolveNodeStyle', () => {
+  it('adapts unpinned text ink to canvas but preserves explicit ink', () => {
+    expect(resolveNodeStyle(node({ kind: 'text' }), '#191b19').textColor).toBe('#ffffff');
+    expect(resolveNodeStyle(node({ kind: 'text', appearance: { textColor: '#ef4444' } }), '#191b19').textColor).toBe('#ef4444');
+  });
+  it('adapts an unpinned shape label against its visible backdrop', () => {
+    expect(resolveNodeStyle(node({ appearance: { fill: 'transparent' } }), '#191b19').textColor).toBe('#ffffff');
+    expect(resolveNodeStyle(node({ appearance: { fill: '#fef2f2' } }), '#191b19').textColor).toBe('#0f172a');
+    expect(resolveNodeStyle(node({ appearance: { fill: 'transparent', textColor: '#ef4444' } }), '#191b19').textColor).toBe('#ef4444');
+  });
   it('falls back to the palette for shapes with no appearance keys', () => {
     const style = resolveNodeStyle(node({ content: { shape: 'rounded', color: 'blue' } }));
     expect(style.fill).toBe('#eff6ff');

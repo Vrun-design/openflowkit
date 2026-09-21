@@ -1,6 +1,6 @@
 # OFK grammar — version 1
 
-Status: DRAFT for owner review (slice 2.1, 2026-09-21). Spec only; no parser exists yet.
+Status: v1 implemented by slice 2.1 (2026-09-21); later-family sections remain forward specs.
 This file is the language. `src/dsl/grammar.md` will be a symlink or copy of it once 2.2 lands.
 
 Contents: §0 prior art · §1 goals and where we lose · §2 lexical rules · §3 header and
@@ -380,9 +380,12 @@ Edge arrows in graph families:
 | `<-` `<--` | no | reversed; canonical swaps endpoints and emits `->` / `-->` |
 
 Inline attrs on an edge line: a `[…]` that is followed by an arrow or by `:` belongs to
-the node it follows; a `[…]` after the label, or at end of line with no label, belongs to
-the edge (`A -> B [red]` is a red edge; `A -> B [red] : x` is a red B). Canonical never
-emits node attrs inline — the node gets its own declaration line.
+the node it follows; a `[…]` after the label belongs to the edge. A `[…]` at end of line
+with no label is split by vocabulary: edge flags (`dashed`, `thick`, `invisible`, `flow`)
+and edge keys (`head:`, `tail:`, `from:`, `to:`, `label:`) stay on the edge, everything
+else (shape, colour, fill, `shadow`, icon, `tech:`…) lands on the target node — so
+`A -> B [dashed, red]` is a dashed edge to a red B and `A -> B [from: right]` exits B's
+left. Canonical never emits node attrs inline — the node gets its own declaration line.
 
 Node membership: a node belongs to the innermost group in which it is **first declared or
 first mentioned**. Mentioning an already-declared node inside another group does not move
@@ -426,7 +429,15 @@ by vocabulary; the same word means the same thing everywhere. Two words of the s
 `shape, colour, fill, flags (shadow, thick, invisible, flow), icon, head/tail, from/to,
 label, tech, desc, kind, tags, link, pin, rank, width, height, unknown…`. Within a class,
 canonical spelling from the tables above. Defaults are never emitted (`rect`, `pastel`,
-`head: arrow`). An empty list is not emitted.
+`head: arrow`). An empty list is not emitted. `pin:` is written `pin: "x,y"` (a comma
+inside a value is quoted); `pin: 240,80` is accepted on input.
+
+Rendering notes (v1): every shape word above maps onto a renderer primitive — `rect`/
+`rounded`/`component` are boxes (component keeps its word for round-trip), `person` is
+the actor glyph with its label below, `note` is a sticky, `browser`/`mobile` are wireframe
+frames, and a node with a resolved `icon` renders as an icon card with the label beneath.
+The nine palette words map onto the app palette: `green`→emerald, `orange`→amber,
+`gray`→slate, `teal`→cyan.
 
 ---
 

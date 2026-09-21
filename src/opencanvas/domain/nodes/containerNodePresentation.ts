@@ -1,7 +1,7 @@
 import type { SceneNode } from '../document/types';
 import { optionalPresentationString, presentationString } from './nodePresentationValues';
 
-export const CONTAINER_NODE_KINDS = ['group', 'section', 'swimlane'] as const;
+export const CONTAINER_NODE_KINDS = ['group', 'section', 'swimlane', 'frame'] as const;
 
 export type ContainerNodeKind = (typeof CONTAINER_NODE_KINDS)[number];
 
@@ -26,6 +26,7 @@ export function isContainerNodeKind(kind: string): kind is ContainerNodeKind {
 
 function fallbackColorKey(node: SceneNode, kind: ContainerNodeKind): string {
   if (kind === 'group') return 'violet';
+  if (kind === 'frame') return 'slate';
   if (kind === 'section') return 'blue';
   const numericId = Number.parseInt(node.id.replace(/\D/g, ''), 10);
   const index = Number.isFinite(numericId) ? numericId : 0;
@@ -34,6 +35,7 @@ function fallbackColorKey(node: SceneNode, kind: ContainerNodeKind): string {
 
 function fallbackLabel(kind: ContainerNodeKind): string {
   if (kind === 'group') return 'Group';
+  if (kind === 'frame') return 'Diagram';
   if (kind === 'section') return 'Section';
   return 'Swimlane';
 }

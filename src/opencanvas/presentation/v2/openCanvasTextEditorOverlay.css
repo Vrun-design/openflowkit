@@ -10,7 +10,6 @@
   overflow: hidden;
   border: 0;
   outline: none !important; /* the label is the focus ring: the node frame already shows it */
-  color: #1e293b;
   background: transparent;
   caret-color: #3b82f6;
   white-space: pre-wrap;

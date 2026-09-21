@@ -19,7 +19,7 @@ export type NodeStyleCommon = { readonly [K in keyof NodeStyle]: NodeStyle[K] | 
 
 /** Per-key common value across the selection; null where they differ. */
 export function commonNodeStyle(nodes: readonly SceneNode[]): NodeStyleCommon {
-  const styles = nodes.map(resolveNodeStyle);
+  const styles = nodes.map((node) => resolveNodeStyle(node));
   const first = styles[0] ?? EMPTY_STYLE;
   const result: Record<string, unknown> = {};
   for (const key of Object.keys(first) as (keyof NodeStyle)[]) {
@@ -74,6 +74,7 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
   if (!nodes.length || nodes.every((node) => isContainerNodeKind(node.kind))) return null;
   const view = (key: keyof NodeStyle) => (draft && key in draft ? draft[key] : common[key]);
   const isText = nodes.every((node) => node.kind === 'text');
+  const textColorIsAuto = isText && nodes.every((node) => node.appearance.textColor === undefined || node.appearance.textColor === 'auto');
   const toggle = (panel: Panel) => { clear(); setOpen((current) => (current === panel ? null : panel)); };
   const close = () => { clear(); setOpen(null); };
   const opacity = view('opacity') as number | null;
@@ -153,9 +154,10 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
       <StyleButton label="Text" open={open === 'text'} onToggle={() => toggle('text')} onClose={close} panelClassName="ofk-style-panel--wide"
         preview={<span className="ofk-style-glyph" style={{ textDecorationColor: textColor ?? undefined }}>A</span>}>
         <PanelRow label="Color">
-          <SwatchGrid label="Text colour" options={[{ id: '#ffffff', label: 'White', color: '#ffffff', border: '#cbd5e1' },
+          <SwatchGrid label="Text colour" options={[...(isText ? [{ id: 'auto', label: 'Auto', color: 'currentColor' }] : []),
+            { id: '#ffffff', label: 'White', color: '#ffffff', border: '#cbd5e1' },
             { id: '#64748b', label: 'Mid gray', color: '#64748b' }, ...inkOptions()]}
-            selected={textColor} onPick={(id) => apply({ textColor: id })}
+            selected={textColorIsAuto ? 'auto' : textColor} onPick={(id) => apply({ textColor: id })}
             trailing={<CustomColorSwatch value={textColor} onChange={(hex) => preview({ textColor: hex })} onCommit={(hex) => apply({ textColor: hex })} />} />
         </PanelRow>
         <PanelRow label="Font">

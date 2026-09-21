@@ -233,11 +233,12 @@ export class PixiRendererHost {
 
   /** Canvas ground color; applied at mount and live afterwards. */
   setBackground(background: number): void {
+    if (this.backgroundColor === background) return;
     this.backgroundColor = background;
     this.drawDotGrid();
     if (this.app.renderer) {
       this.app.renderer.background.color.setValue(background);
-      this.requestRender();
+      this.rebuildScene();
     }
   }
 
@@ -719,7 +720,8 @@ export class PixiRendererHost {
         this.sequenceNodesEnabled,
         this.wireframeNodesEnabled,
         renderedNodeIds,
-        detailLevel
+        detailLevel,
+        this.backgroundColor
       );
     }
     this.updateLabelVisibility();

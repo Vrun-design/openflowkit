@@ -109,7 +109,7 @@ export function V2CanvasWelcome({ onOpen }: { onOpen: (mode: V2WorkspaceMode) =>
 }
 
 export const INITIAL_CODE =
-  '// A small idea, connected.\ntitle: My first diagram\n\nClient [rectangle]\nAPI [rectangle]\nDatabase [cylinder]\n\nClient -> API: request\nAPI -> Database: query';
+  '%% ofk 1\narchitecture\ntitle: My first diagram\n\nClient\nAPI\nDatabase [cylinder]\n\nClient -> API : request\nAPI -> Database : query';
 
 // ponytail: local drafts only — connect these shells to the DSL compiler and slide model in their planned slices.
 export function V2DraftPanel({

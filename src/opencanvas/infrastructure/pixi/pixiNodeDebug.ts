@@ -6,6 +6,7 @@ export interface PixiNodeDebugRecord {
   readonly shape: string;
   readonly fill: number;
   readonly stroke: number;
+  readonly textColor?: number;
   readonly mediaState: PixiMediaState;
   readonly provider?: string;
   readonly iconSource?: string;

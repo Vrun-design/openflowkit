@@ -1,13 +1,33 @@
 import { expect, test } from '@playwright/test';
 
-type NodeDebug = { readonly id: string; readonly fill: number };
+type NodeDebug = { readonly id: string; readonly fill: number; readonly textColor?: number };
 type V2Api = { getState(): { nodes: string[] }; getNodeDebugSnapshot(): readonly NodeDebug[] | undefined };
 const fills = (page: import('@playwright/test').Page) =>
   page.evaluate(() => ((window as unknown as { __V2__?: V2Api }).__V2__?.getNodeDebugSnapshot() ?? []).map((n) => n.fill));
 const count = (page: import('@playwright/test').Page) =>
   page.evaluate(() => (window as unknown as { __V2__?: V2Api }).__V2__?.getState().nodes.length ?? 0);
+const textColors = (page: import('@playwright/test').Page) =>
+  page.evaluate(() => ((window as unknown as { __V2__?: V2Api }).__V2__?.getNodeDebugSnapshot() ?? [])
+    .filter((node) => node.textColor !== undefined).map((node) => node.textColor));
 
 const BLUE_PASTEL = 0xeff6ff;
+
+test('free text uses adaptive ink until user pins a colour', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  await page.mouse.click(400, 300);
+  await page.keyboard.press('t');
+  await page.mouse.click(400, 300);
+  await page.keyboard.type('Adaptive');
+  await expect(page.getByRole('textbox', { name: 'Edit node label' })).toHaveCSS('color', 'rgb(255, 255, 255)');
+  await page.keyboard.press('Meta+Enter');
+  await expect.poll(() => textColors(page)).toEqual([0xffffff]);
+
+  await page.locator('[data-context-bar]').getByRole('button', { name: 'Text', exact: true }).click();
+  await page.getByRole('radio', { name: 'Red', exact: true }).click();
+  await expect.poll(() => textColors(page)).not.toEqual([0xffffff]);
+});
 
 // phase-1-style acceptance 1, 11, 12: a palette swatch recolours the shape as
 // one undo step, and the next shape inherits the last style.

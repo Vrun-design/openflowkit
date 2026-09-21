@@ -11,14 +11,17 @@ const srcDir = path.resolve(ocDir, '..');
 const V2_ROOTS = [
   path.join(ocDir, 'application', 'session'),
   path.join(ocDir, 'application', 'ai'),
+  path.join(ocDir, 'application', 'dsl'),
   path.join(ocDir, 'presentation', 'design-system'),
   path.join(ocDir, 'presentation', 'v2'),
   path.join(srcDir, 'services', 'storage', 'v2'),
+  path.join(srcDir, 'services', 'dsl'),
 ];
 
 // The kernel the editor builds on: pure domain, application services, adapters.
 const SHARED_KERNEL = [
   path.join(ocDir, 'domain'),
+  path.join(srcDir, 'dsl'),
   path.join(ocDir, 'application', 'history'),
   path.join(ocDir, 'application', 'selection'),
   path.join(ocDir, 'application', 'renderer'),
@@ -26,6 +29,8 @@ const SHARED_KERNEL = [
   path.join(ocDir, 'infrastructure', 'export'),
   path.join(srcDir, 'services', 'storage', 'indexedDbHelpers'),
   path.join(srcDir, 'services', 'storage', 'indexedDbSchema'),
+  path.join(srcDir, 'services', 'elk-layout'),
+  path.join(srcDir, 'services', 'shapeLibrary'),
   // Pure agent actions shared with the MCP server.
   path.join(srcDir, 'agent', 'actions'),
   path.join(srcDir, 'agent', 'runAction'),

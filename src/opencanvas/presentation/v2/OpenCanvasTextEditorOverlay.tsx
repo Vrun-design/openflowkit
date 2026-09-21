@@ -109,7 +109,7 @@ export function OpenCanvasTextEditorOverlay({
       style={{
         left, top: bounds.y, width, height: metrics.height,
         padding: `${metrics.paddingTop}px ${pad.right * zoom}px ${padBottom}px ${pad.left * zoom}px`,
-        font: cssFont,
+        font: cssFont, color: style.textColor,
       }}
       onInput={fit}
       onBlur={blur}

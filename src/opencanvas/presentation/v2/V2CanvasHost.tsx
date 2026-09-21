@@ -32,6 +32,7 @@ import { useV2Pointer, type StylePresets, type V2GestureApi } from './useV2Point
 import { connectorAppearanceWithPatch } from '../../domain/commands/styleConnectors';
 import type { V2Tool } from './V2CreationToolbar';
 import './openCanvasTextEditorOverlay.css';
+import { numericColorToHex } from '../../domain/color/adaptiveColor';
 
 export interface V2EditingState {
   readonly nodeId: string;
@@ -347,7 +348,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   }
 
   const editingNode = props.editing && props.page.nodes.find((node) => node.id === props.editing?.nodeId);
-  const editingStyle = editingNode ? resolveNodeStyle(editingNode) : null;
+  const editingStyle = editingNode ? resolveNodeStyle(editingNode, numericColorToHex(props.backgroundColor)) : null;
   const editingConnector = props.connectorEditing
     && props.page.connectors.find((connector) => connector.id === props.connectorEditing?.connectorId);
   const connectorEditingStyle = editingConnector ? resolveConnectorLabelStyle(editingConnector) : null;

@@ -13,6 +13,7 @@ import { createPixiText } from './pixiText';
 function containerShape(kind: PixiContainerNodeVisual['presentation']['kind']): string {
   if (kind === 'group') return 'group-frame';
   if (kind === 'section') return 'section-frame';
+  if (kind === 'frame') return 'frame';
   return 'swimlane';
 }
 
@@ -51,6 +52,11 @@ function drawStructuralGlyph(
 /** ⌘G groups have no label and no paint: the selection frame is their only chrome. */
 function isQuietGroup(node: SceneNode): boolean {
   return node.kind === 'group' && node.content.label === '';
+}
+
+/** Diagram frames always draw their boundary; the title band appears with a title. */
+function showsTitleBand(visual: PixiContainerNodeVisual): boolean {
+  return visual.presentation.kind !== 'frame' || visual.presentation.label.length > 0;
 }
 
 export class PixiContainerRenderer {
@@ -122,6 +128,7 @@ export class PixiContainerRenderer {
     this.graphics
       .fill({ color: visual.fill.color, alpha: visual.fill.alpha })
       .stroke({ color: visual.stroke, width: visual.presentation.kind === 'swimlane' ? 2 : 1.5 });
+    if (!showsTitleBand(visual)) return;
     if (visual.presentation.kind === 'section') {
       const titleWidth = Math.min(
         node.size.width - 16,
@@ -135,7 +142,7 @@ export class PixiContainerRenderer {
       drawPixiLocalRect(this.graphics, createBounds2d(0, 39, node.size.width, 1), matrix);
       this.graphics.fill({ color: visual.stroke, alpha: 0.72 });
     }
-    drawStructuralGlyph(this.graphics, matrix, visual);
+    if (visual.presentation.kind !== 'frame') drawStructuralGlyph(this.graphics, matrix, visual);
   }
 
   private createLabel(
@@ -144,22 +151,25 @@ export class PixiContainerRenderer {
     childCount: number
   ): Container {
     const content = new Container();
+    const frame = visual.presentation.kind === 'frame';
     const title = createPixiText(visual.presentation.label, {
       size: visual.presentation.kind === 'swimlane' ? 13 : 14,
       weight: '700',
       fill: visual.title,
-      wrapWidth: Math.max(1, node.size.width - 140),
+      wrapWidth: Math.max(1, node.size.width - (frame ? 32 : 140)),
     });
-    title.position.set(37, 11);
+    title.position.set(frame ? 16 : 37, 11);
     content.addChild(title);
-    const count = createPixiText(`${childCount} ${childCount === 1 ? 'item' : 'items'}`, {
-      size: 10,
-      weight: '500',
-      fill: visual.badgeText,
-    });
-    count.anchor.set(1, 0);
-    count.position.set(node.size.width - 12, 14);
-    content.addChild(count);
+    if (!frame) {
+      const count = createPixiText(`${childCount} ${childCount === 1 ? 'item' : 'items'}`, {
+        size: 10,
+        weight: '500',
+        fill: visual.badgeText,
+      });
+      count.anchor.set(1, 0);
+      count.position.set(node.size.width - 12, 14);
+      content.addChild(count);
+    }
     const detail = [visual.presentation.subLabel, statusText(visual)]
       .filter((value): value is string => Boolean(value))
       .join(' · ');

@@ -14,10 +14,12 @@ interface V2ContextMenuProps {
   readonly target: ContextMenuTarget | null;
   readonly page: ScenePage;
   readonly selectionCount: number;
+  readonly selectedNodeId: string | null;
   readonly readOnly: boolean;
   readonly actions: ReturnType<typeof useV2EditActions>;
   readonly commit: (command: DocumentCommand) => void;
   readonly onEditLabel: () => void;
+  readonly onEditAsCode: (frameId: string) => void;
   readonly onSelectAll: () => void;
   readonly onZoomToFit: () => void;
   readonly onZoomToSelection: () => void;
@@ -35,6 +37,9 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
   if (!target) return null;
   const many = props.selectionCount > 1;
   const edit = !readOnly;
+  const selectedFrame = target.kind === 'nodes' && props.selectionCount === 1
+    ? props.page.nodes.find((node) => node.id === props.selectedNodeId && node.kind === 'frame' && node.metadata.dsl && typeof node.metadata.dsl === 'object')
+    : undefined;
   return (
     <>
       <div ref={anchorRef} aria-hidden="true" style={{ position: 'fixed', left: target.x, top: target.y, width: 1, height: 1, pointerEvents: 'none' }} />
@@ -82,6 +87,7 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
             <MenuItem onSelect={actions.duplicateSelection} shortcut="⌘D" disabled={!edit}>Duplicate</MenuItem>
             <MenuSeparator />
             <MenuItem onSelect={props.onEditLabel} shortcut="↵" disabled={!edit || many}>Edit label</MenuItem>
+            {selectedFrame ? <MenuItem onSelect={() => props.onEditAsCode(selectedFrame.id)} shortcut="⌥D">Edit as code</MenuItem> : null}
             <MenuSubmenu label="Style">
                 <MenuItem onSelect={actions.copyStyle} shortcut="⌘⌥C">Copy style</MenuItem>
                 <MenuItem onSelect={actions.pasteStyle} shortcut="⌘⌥V" disabled={!edit}>Paste style</MenuItem>
