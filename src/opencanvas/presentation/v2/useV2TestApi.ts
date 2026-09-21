@@ -43,6 +43,8 @@ export function useV2TestApi(options: V2TestApiOptions) {
         error: proposal.error,
       }),
       getRenderDiagnostics: () => hostRef.current?.getRenderDiagnostics(),
+      getLiveConnectorSamples: (connectorId: string) =>
+        hostRef.current?.getLiveConnectorSamples(connectorId) ?? null,
       getNodeRect: (nodeId: string) => {
         const bounds = hostRef.current?.getNodeScreenBounds(nodeId);
         return bounds

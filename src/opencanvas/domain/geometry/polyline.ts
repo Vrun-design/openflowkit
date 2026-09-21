@@ -152,3 +152,41 @@ export function closestPointOnPolyline(
 
   return closest;
 }
+
+// Quadratic corner arcs sampled as short segments, so solid and dashed
+// walkers share one rounded path. Degenerate vertices pass through sharp.
+export function roundPolylineCorners(
+  points: readonly Point2d[],
+  radius: number
+): readonly Point2d[] {
+  if (points.length < 3 || !(radius > 0)) return points;
+  const rounded: Point2d[] = [createPoint2d(points[0].x, points[0].y)];
+  for (let index = 1; index < points.length - 1; index += 1) {
+    const previous = points[index - 1];
+    const vertex = points[index];
+    const next = points[index + 1];
+    const inLength = distanceBetweenPoints(previous, vertex);
+    const outLength = distanceBetweenPoints(vertex, next);
+    const arc = Math.min(radius, inLength / 2, outLength / 2);
+    if (!(arc > GEOMETRY_EPSILON)) {
+      rounded.push(createPoint2d(vertex.x, vertex.y));
+      continue;
+    }
+    const start = lerpPoint(vertex, previous, arc / inLength);
+    const end = lerpPoint(vertex, next, arc / outLength);
+    rounded.push(start);
+    const steps = 4;
+    for (let step = 1; step < steps; step += 1) {
+      const ratio = step / steps;
+      const inverse = 1 - ratio;
+      rounded.push(createPoint2d(
+        inverse * inverse * start.x + 2 * inverse * ratio * vertex.x + ratio * ratio * end.x,
+        inverse * inverse * start.y + 2 * inverse * ratio * vertex.y + ratio * ratio * end.y
+      ));
+    }
+    rounded.push(end);
+  }
+  const last = points[points.length - 1];
+  rounded.push(createPoint2d(last.x, last.y));
+  return rounded;
+}

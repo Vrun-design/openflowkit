@@ -7,6 +7,7 @@ import {
   pointAtPolylineRatio,
   polylineBounds,
   polylineLength,
+  roundPolylineCorners,
 } from './polyline';
 
 describe('polylines', () => {
@@ -97,5 +98,26 @@ describe('polylines', () => {
     expect(result!.segmentRatio).toBe(0.5);
     expect(result!.pathRatio).toBeCloseTo(5 / 7);
     expect(closestPointOnPolyline([], { x: 0, y: 0 })).toBeNull();
+  });
+});
+
+describe('roundPolylineCorners', () => {
+  it('replaces a right angle with an 8 px arc, keeping endpoints', () => {
+    const rounded = roundPolylineCorners(
+      [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }],
+      8
+    );
+    expect(rounded[0]).toEqual({ x: 0, y: 0 });
+    expect(rounded.at(-1)).toEqual({ x: 100, y: 100 });
+    expect(rounded).toContainEqual({ x: 92, y: 0 });
+    expect(rounded).toContainEqual({ x: 98, y: 2 });
+    expect(rounded).toContainEqual({ x: 100, y: 8 });
+    expect(rounded).not.toContainEqual({ x: 100, y: 0 });
+  });
+
+  it('leaves short polylines and degenerate vertices alone', () => {
+    const line = [{ x: 0, y: 0 }, { x: 50, y: 0 }];
+    expect(roundPolylineCorners(line, 8)).toBe(line);
+    expect(roundPolylineCorners(line, 0)).toBe(line);
   });
 });

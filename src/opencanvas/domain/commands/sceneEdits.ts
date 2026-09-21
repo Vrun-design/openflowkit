@@ -252,7 +252,7 @@ function connectorEndpoint(page: ScenePage, end: V2ConnectorEnd): ConnectorEndpo
   return { nodeId: end.nodeId, portId: null, anchor: null, point: null };
 }
 
-// I-13 basic: arrow with an automatic direct route and a target arrowhead.
+// I-13 basic: arrow with an automatic orthogonal route and a target arrowhead.
 // Ports, markers UI and labels arrive in V2-06.
 export function buildInsertConnectorCommand(
   page: ScenePage,
@@ -268,7 +268,7 @@ export function buildInsertConnectorCommand(
       id: options.id,
       source: connectorEndpoint(page, options.source),
       target: connectorEndpoint(page, options.target),
-      route: { kind: 'direct', ownership: 'automatic' },
+      route: { kind: 'orthogonal', ownership: 'automatic' },
       waypoints: [],
       labels: [],
       appearance: { markerEnd: 'arrow' },
@@ -354,7 +354,7 @@ export function buildHandleConnectCommand(
       id: options.id,
       source: { nodeId: source.id, portId: options.sourceSide, anchor: null, point: null },
       target: { nodeId: target.id, portId: options.targetSide, anchor: null, point: null },
-      route: { kind: 'direct', ownership: 'automatic' },
+      route: { kind: 'orthogonal', ownership: 'automatic' },
       waypoints: [],
       labels: [],
       appearance: { markerEnd: 'arrow' },

@@ -1,5 +1,5 @@
 import type { ConnectorEndpointRole } from './editing';
-import type { ConnectorEndpoint, SceneAnchor, SceneNode, ScenePage, ScenePort } from '../document/types';
+import type { ConnectorEndpoint, SceneAnchor, SceneConnector, SceneNode, ScenePage, ScenePort } from '../document/types';
 import { applyMatrixToPoint } from '../geometry/matrix';
 import { distanceBetweenPoints } from '../geometry/point';
 import type { Point2d } from '../geometry/types';
@@ -51,11 +51,14 @@ function localAnchorPoint(node: SceneNode, anchor: SceneAnchor): Point2d {
   }
 }
 
+export const BIND_HYSTERESIS_PX = 10;
+
 export function nearestAcceptedPortEndpoint(
   page: ScenePage,
   nodeId: string,
   role: ConnectorEndpointRole,
-  pointer: Point2d
+  pointer: Point2d,
+  currentPortId: string | null = null
 ): ConnectorEndpoint {
   const node = page.nodes.find((candidate) => candidate.id === nodeId);
   if (!node) throw new RangeError(`Node "${nodeId}" was not found.`);
@@ -70,5 +73,50 @@ export function nearestAcceptedPortEndpoint(
       ),
     }))
     .sort((left, right) => left.distance - right.distance || left.port.id.localeCompare(right.port.id));
-  return { nodeId, portId: candidates[0]?.port.id ?? null, anchor: null, point: null };
+  if (currentPortId === null) {
+    return { nodeId, portId: candidates[0]?.port.id ?? null, anchor: null, point: null };
+  }
+  // Hysteresis: a bound side survives dragging across a corner until another
+  // accepting port is a full step closer, so the line never flickers.
+  const current = candidates.find((candidate) => candidate.port.id === currentPortId);
+  const best = candidates[0];
+  if (!current || !best || best.port.id === currentPortId
+    || best.distance + BIND_HYSTERESIS_PX >= current.distance) {
+    return { nodeId, portId: current?.port.id ?? best?.port.id ?? null, anchor: null, point: null };
+  }
+  return { nodeId, portId: best.port.id, anchor: null, point: null };
+}
+
+const SIDE_PORT_IDS: readonly string[] = ['top', 'right', 'bottom', 'left'];
+
+function isSidePortId(portId: string): portId is SidePort {
+  return SIDE_PORT_IDS.includes(portId);
+}
+
+export interface PortEnsuring {
+  readonly before: SceneNode;
+  readonly after: SceneNode;
+}
+
+// Ports a connector references but its nodes lack (bound live mid-drag, or
+// authored elsewhere): side-named ones materialise, custom ids stay dangling
+// rather than turning into wrong side ports.
+export function ensureConnectorEndpointPorts(
+  page: ScenePage,
+  connector: SceneConnector
+): readonly PortEnsuring[] {
+  const fixings: PortEnsuring[] = [];
+  const ends: readonly (readonly [ConnectorEndpoint, ConnectorEndpointRole])[] = [
+    [connector.source, 'source'],
+    [connector.target, 'target'],
+  ];
+  for (const [endpoint, role] of ends) {
+    if (!endpoint.nodeId || !endpoint.portId) continue;
+    const node = page.nodes.find((candidate) => candidate.id === endpoint.nodeId);
+    if (!node || node.ports.some((port) => port.id === endpoint.portId)) continue;
+    if (!isSidePortId(endpoint.portId)) continue;
+    const ensured = ensureNodeSidePort(node, endpoint.portId, role);
+    if (ensured.changed) fixings.push({ before: node, after: ensured.node });
+  }
+  return fixings;
 }

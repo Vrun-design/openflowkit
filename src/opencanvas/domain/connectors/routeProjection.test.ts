@@ -64,6 +64,55 @@ describe('connector route projection', () => {
     }
   );
 
+  it('reroutes automatic orthogonal connectors around blocking nodes', () => {
+    const page = createTestDocument({
+      nodes: [
+        createTestNode('source', {
+          transform: { translation: { x: 0, y: 0 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+          ports: [{ id: 'right', anchor: { kind: 'side', side: 'right', ratio: 0.5 }, accepts: [], metadata: {} }],
+        }),
+        createTestNode('target', {
+          transform: { translation: { x: 400, y: 0 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+          ports: [{ id: 'left', anchor: { kind: 'side', side: 'left', ratio: 0.5 }, accepts: [], metadata: {} }],
+        }),
+        createTestNode('blocker', {
+          size: { width: 100, height: 70 },
+          transform: { translation: { x: 200, y: -10 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+        }),
+      ],
+    }).pages[0];
+    const connector = createTestConnector('edge', 'source', 'target', {
+      source: { nodeId: 'source', portId: 'right', anchor: null, point: null },
+      target: { nodeId: 'target', portId: 'left', anchor: null, point: null },
+      route: { kind: 'orthogonal', ownership: 'automatic' },
+    });
+    const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
+    expect(projected.samples[0]).toEqual({ x: 100, y: 25 });
+    expect(projected.samples.at(-1)).toEqual({ x: 400, y: 25 });
+    expect(projected.samples.length).toBeGreaterThan(2);
+    for (let index = 1; index < projected.samples.length; index += 1) {
+      const a = projected.samples[index - 1];
+      const b = projected.samples[index];
+      // Blocker padded by 12: (188,-22)-(312,72). No segment may cross it.
+      const crosses = a.y === b.y
+        ? a.y > -22 && a.y < 72 && Math.max(a.x, b.x) > 188 && Math.min(a.x, b.x) < 312
+        : a.x > 188 && a.x < 312 && Math.max(a.y, b.y) > -22 && Math.min(a.y, b.y) < 72;
+      expect(crosses).toBe(false);
+    }
+  });
+
+  it('preserves manual waypoints instead of rerouting', () => {
+    const page = connectorFixture();
+    const connector = createTestConnector('edge', 'source', 'target', {
+      source: { nodeId: 'source', portId: 'right', anchor: null, point: null },
+      target: { nodeId: 'target', portId: 'left', anchor: null, point: null },
+      route: { kind: 'orthogonal', ownership: 'manual' },
+      waypoints: [{ x: 200, y: 200 }],
+    });
+    const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
+    expect(projected.samples).toContainEqual({ x: 200, y: 200 });
+  });
+
   it('projects labels, appearance, conditions, and class relation markers', () => {
     const page = connectorFixture();
     const connector = createTestConnector('edge', 'source', 'target', {

@@ -70,7 +70,7 @@ export function planQuickCreate(
       id: connectorId,
       source: { nodeId: source.id, portId: sourceSide, anchor: null, point: null },
       target: { nodeId: newNodeId, portId: targetSide, anchor: null, point: null },
-      route: { kind: 'direct', ownership: 'automatic' },
+      route: { kind: 'orthogonal', ownership: 'automatic' },
       waypoints: [],
       labels: [],
       appearance: { markerEnd: 'arrow' },

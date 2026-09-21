@@ -77,11 +77,21 @@ function endpointPoint(
   matrix: Matrix2d,
   toward: Point2d
 ): Point2d {
-  const portAnchor = node.ports.find((port) => port.id === endpoint.portId)?.anchor;
+  const portAnchor = node.ports.find((port) => port.id === endpoint.portId)?.anchor
+    ?? sideAnchorForDanglingPort(endpoint.portId);
   const anchor = endpoint.anchor ?? portAnchor;
   return anchor
     ? applyMatrixToPoint(matrix, anchorLocalPoint(node, anchor))
     : automaticBoundaryPoint(node, matrix, toward);
+}
+
+// A side-named portId resolves even when the node record lacks the port
+// (bound live mid-drag, ports commit with the gesture): side anchors are
+// positional, so synthesis is exact. Anything else falls back to dynamic.
+function sideAnchorForDanglingPort(portId: string | null): SceneAnchor | null {
+  return portId === 'top' || portId === 'right' || portId === 'bottom' || portId === 'left'
+    ? { kind: 'side', side: portId, ratio: 0.5 }
+    : null;
 }
 
 function sequenceMessageEndpoints(

@@ -202,7 +202,7 @@ describe('v2 bound connector command', () => {
     });
     expect(command.connector.source.nodeId).toBe('node-a');
     expect(command.connector.target.nodeId).toBe('node-b');
-    expect(command.connector.route).toEqual({ kind: 'direct', ownership: 'automatic' });
+    expect(command.connector.route).toEqual({ kind: 'orthogonal', ownership: 'automatic' });
     const applied = applyDocumentCommand(
       { ...createEmptyV2Document('doc-1'), pages: [page] },
       command

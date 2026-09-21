@@ -1,6 +1,7 @@
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { Container, Graphics, Text } from 'pixi.js';
 import type { ScenePage } from '../../domain/document/types';
+import { roundPolylineCorners } from '../../domain/geometry/polyline';
 import { distanceBetweenPoints } from '../../domain/geometry/point';
 import type { Point2d } from '../../domain/geometry/types';
 import { projectPageConnectors } from '../../domain/connectors/routeProjection';
@@ -12,6 +13,9 @@ import { buildNodeWorldMatrices, nodeWorldCenter } from '../../domain/scene/worl
 
 const LEGACY_STROKE = 0x94a3b8;
 const LABEL_DETAIL_ZOOM = 0.65;
+// Orthogonal corner radius: beziers sample their own curve, everything else
+// gets arc-sampled corners so solid and dashed walkers share one path.
+const CONNECTOR_CORNER_RADIUS_PX = 8;
 
 function normalizedDirection(from: Point2d, to: Point2d): Point2d {
   const distance = distanceBetweenPoints(from, to);
@@ -200,7 +204,11 @@ export class PixiConnectorRenderer {
     let labelCount = 0;
     let markerCount = 0;
     for (const connector of connectors) {
-      const { samples, presentation } = connector;
+      const hasCurve = connector.commands.some((command) => command.kind === 'cubic');
+      const samples = hasCurve
+        ? connector.samples
+        : roundPolylineCorners(connector.samples, CONNECTOR_CORNER_RADIUS_PX);
+      const { presentation } = connector;
       if (presentation.stroke.dash.length > 0) {
         drawDashedPath(this.paths, samples, presentation.stroke);
       } else {

@@ -38,7 +38,8 @@ export function updateConnectorOperation(
   }
   const endpoint = reconnectNodeId
     ? nearestAcceptedPortEndpoint(
-        operation.page, reconnectNodeId, operation.handle.role, pointer
+        operation.page, reconnectNodeId, operation.handle.role, pointer,
+        operation.preview[operation.handle.role].portId
       )
     : { nodeId: null, portId: null, anchor: null, point: pointer };
   return {

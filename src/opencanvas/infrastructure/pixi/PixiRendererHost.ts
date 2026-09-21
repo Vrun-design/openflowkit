@@ -334,6 +334,21 @@ export class PixiRendererHost {
     return inspectConnectorSamples(this.page, connectorId);
   }
 
+  /** Live route samples: projected against the in-flight transform preview
+   * when a drag is active, so tests can observe rerouting mid-gesture. */
+  getLiveConnectorSamples(connectorId: string): readonly Point2d[] | null {
+    if (!this.page) return null;
+    const connector = this.page.connectors.find((candidate) => candidate.id === connectorId);
+    if (!connector) return null;
+    if (!this.previewResult) return inspectConnectorSamples(this.page, connectorId);
+    const replacements = new Map(this.previewResult.nodes.map((node) => [node.id, node]));
+    const previewPage = {
+      ...this.page,
+      nodes: this.page.nodes.map((node) => replacements.get(node.id) ?? node),
+    };
+    return inspectConnectorSamples(previewPage, connectorId);
+  }
+
   getConnectorEditDebugSnapshot(): ConnectorEditDebugSnapshot {
     return inspectConnectorEdit(this.page, this.selectedConnectorId, this.activeConnectorHandle);
   }

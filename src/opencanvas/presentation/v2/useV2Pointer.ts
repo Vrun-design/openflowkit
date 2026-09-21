@@ -44,6 +44,7 @@ import {
   updateConnectorOperation,
 } from './v2ConnectorOperations';
 import { createConnectorEditCommand } from '../../domain/connectors/editing';
+import { ensureConnectorEndpointPorts } from '../../domain/connectors/portAuthoring';
 import {
   V2_DEFAULT_SHAPE_SIZE,
   V2_DEFAULT_TEXT_SIZE,
@@ -490,7 +491,30 @@ export function useV2Pointer(options: V2PointerOptions) {
           final.preview,
           connectorEditLabel(operation.handle)
         );
-        if (command) opts.commit(command);
+        if (command) {
+          // Ports bound live mid-drag materialise with the gesture: one step.
+          const portFixings = ensureConnectorEndpointPorts(operation.page, final.preview);
+          if (portFixings.length === 0) {
+            opts.commit(command);
+          } else {
+            opts.commit({
+              kind: 'batch',
+              id: `${command.id}:ports`,
+              label: command.label,
+              commands: [
+                ...portFixings.map((fixing) => ({
+                  kind: 'set-node' as const,
+                  id: `connect-port:${fixing.after.id}`,
+                  label: command.label,
+                  pageId: operation.page.id,
+                  before: fixing.before,
+                  after: fixing.after,
+                })),
+                command,
+              ],
+            });
+          }
+        }
         host.setConnectorSelection(operation.before.id, null);
       }
       try {
