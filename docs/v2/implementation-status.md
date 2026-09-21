@@ -533,3 +533,106 @@ remaining limitations / next slice: local agent only (V2-11 providers); one
   `createTransformCommand` — the same record a handle drag commits. Parity test
   in `parity.test.ts`; no-op returns null. Manifest 11 shipped / 12 (remaining
   gap: connector re-bind/waypoints → V2-05).
+
+## V2-05a — pointer operations into v2; object snapping with guides (2026-09-21)
+
+```text
+change_id: V2-05a (commits 57451a7, d9bbd10)
+problem and user-visible result: the v2 graph still imported one legacy file
+  (presentation/pixiPointerOperations.ts) and had no object-to-object snapping.
+  Now a dragged selection pulls onto other shapes' left/centre/right and
+  top/middle/bottom lines within 6 screen px and a blue full-height/width
+  guide shows the matched line while dragging; Alt bypasses grid and object
+  snapping; the guide clears on release/cancel. The adoption allowlist is empty.
+requirement IDs / dependencies: delivery-roadmap V2-05 (move pointer ops,
+  allowlist → zero); interaction conventions (Excalidraw/FigJam snapping).
+existing implementation reused: domain/transforms/alignmentGuides.ts
+  (computeAlignmentSnap — objectSnap.ts is a thin wrapper), domain/scene/
+  worldGeometry (buildNodeWorldMatrices, nodeWorldBounds), PixiRendererHost.
+  setAlignmentGuides (legacy already drew guides), moveTransform grid snap.
+exact files touched: presentation/v2/pointerOperations.ts (+test, moved from
+  presentation/pixiPointerOperations.ts; CanvasMode inlined, union member →
+  V2ConnectorOperation so the file has no legacy imports); legacy importers
+  (usePixiKeyboardShortcuts, pixiGestureCancellation, usePixiPointerHandlers,
+  OpenCanvasSurface, usePixiConnectorActions, PixiSpikePage,
+  OpenCanvasDocumentPage) re-pointed at ./v2/pointerOperations; v2Graph.test.ts
+  (ADOPTION_ALLOWLIST = []); domain/transforms/{objectSnap.ts,+test,
+  alignmentGuides.ts (anchors centre-first → ties prefer centre),
+  transformSelection.ts (+test), types.ts (guideX/guideY, MoveTransformOptions)};
+  presentation/v2/useV2Pointer.ts (+test); infrastructure/pixi/PixiRendererHost.ts
+  (alignmentGuidesVisible diagnostic); presentation/OpenCanvasSurface.test.tsx
+  (tie now centre); scripts/check-v2-polish.mjs.
+feature flag and off-state behavior: none new; v2 editor behind VITE_V2_EDITOR.
+  Legacy surfaces unchanged except the tie-break (equal-width boxes report the
+  centre guide instead of the left; resulting position identical).
+schema/data impact: none.
+acceptance cases and observed results: objectSnap.test (7: left→left,
+  centre→centre, right→left, both axes, beyond threshold, ties prefer centre,
+  empty others) pass; transformSelection "snaps a move to other objects after
+  the grid and reports guides" pass; useV2Pointer "snaps a move onto another
+  node and shows the guide; Alt bypasses; guide clears on release" pass;
+  v2Graph.test.ts passes with an empty allowlist. Gate check-v2-polish.mjs:
+  second rectangle dragged to 4px from the first's left edge → guide visible
+  during drag (alignmentGuidesVisible true), cleared after, |b.x − a.x| < 0.01.
+commands run / revision / environment / evidence paths: npx tsc --noEmit;
+  npx eslint src --max-warnings=0; npx vitest run (474 files / 2326 tests);
+  VITE_V2_EDITOR=1 VITE_V2_AI=1 npm run build + vite preview :4191;
+  node scripts/check-v2-polish.mjs → "V2 polish browser check passed";
+  docs/evidence/v2-polish/snap.png.
+rollback procedure and verified result: git revert d9bbd10 57451a7 (the move
+  reverts cleanly; no data touched). Not executed.
+remaining limitations / next slice: resize does not object-snap (moving-edge
+  candidates differ from the move case; > 10 lines, deferred). Snap candidates
+  are every non-selected node on the page, computed once per drag (ponytail
+  comment: cull to the viewport if pages get huge). Next: V2-05b clipboard.
+```
+
+## V2-05e — text in shapes that feels right (2026-09-21)
+
+```text
+change_id: V2-05e (commit 720b49a)
+problem and user-visible result: label editing felt wrong — Enter selected all
+  text, the textarea was left-aligned with its own padding, a blur while
+  alt-tabbing could wipe a label, and double-click-empty then Escape left an
+  invisible 'Text' node. Now: Enter/F2 put the caret at the end (select-all only
+  for the 'Text' placeholder); typing a printable key on a single selected
+  shape opens the editor with that character (FigJam convention); the textarea
+  auto-grows, centres text, uses the renderer's 16px inset and 14px/600/1.2
+  metrics; Tab commits and keeps the selection; a blur during window
+  deactivation never commits '' over a non-empty label; a new text node left
+  blank (empty commit or Escape) is removed; 'Editing label' / 'Label saved'
+  announced.
+requirement IDs / dependencies: delivery-roadmap V2-05 text-in-shape; I-02/I-06
+  (editor owns keys while open; Escape chain unchanged).
+existing implementation reused: useV2LabelEditing, OpenCanvasTextEditorOverlay,
+  buildSetNodeLabelCommand, buildDeleteSelectionCommand,
+  DEFAULT_NODE_CONTENT_LAYOUT.padding, existing announce live region.
+exact files touched: presentation/v2/{useV2LabelEditing.ts,+test,
+  OpenCanvasTextEditorOverlay.tsx,+test,openCanvasTextEditorOverlay.css,
+  useV2Keyboard.ts,+test (new),useV2Pointer.ts,V2CanvasHost.tsx (isNew on
+  editing state),V2EditorPage.tsx}; scripts/check-v2-polish.mjs,
+  check-v2-04.mjs, check-v2-10a.mjs (gates now press Escape before tool letters
+  and label the created text node instead of Escaping it).
+feature flag and off-state behavior: none new.
+schema/data impact: none. Blank-new-node removal is a normal delete batch
+  (undoable), not a batch of set-label + remove — the label set was redundant.
+acceptance cases and observed results: useV2LabelEditing (7 incl. announce,
+  type-to-edit initial value, new-node delete on empty commit and on cancel,
+  existing node never deleted); overlay (5 incl. caret at end vs placeholder
+  select-all, Tab commits, window-blur guard cancels instead of committing '');
+  useV2Keyboard (2: printable key → onTypeToEdit, incl. tool letters; fall
+  through with modifiers/when handler declines). Gate check-v2-polish.mjs:
+  select → 'Q' → editor value 'Q' → 'uote' → Enter → label 'Quote', selection
+  kept; double-click empty → Escape → node count unchanged. check-v2-04 and
+  check-v2-10a (flag-off on :4192) pass with the updated key sequences.
+commands run / revision / environment / evidence paths: as V2-05a plus
+  node scripts/check-v2-04.mjs → "V2-04 GATE PASS"; node scripts/check-v2-10a.mjs
+  → "V2-10a browser check passed (flag-off checked)".
+rollback procedure and verified result: git revert 720b49a. Not executed.
+remaining limitations / next slice: with ONE shape selected, tool letters
+  (R/O/A/T/V/H/L) type into the label instead of switching tools — the spec'd
+  FigJam convention; Excalidraw/tldraw keep letters as tools. Owner to confirm
+  after a click-through; reverting is a one-line change in useV2Keyboard
+  (exclude tool letters from type-to-edit). Vertical centring is approximate
+  (padding-top from scrollHeight). Typography controls remain V2-06+.
+```

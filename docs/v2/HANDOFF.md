@@ -1,4 +1,4 @@
-# OpenCanvas v2 — session handoff (2026-09-20)
+# OpenCanvas v2 — session handoff (2026-09-21)
 
 Paste this into a fresh Claude Code session. Read it, then `docs/v2/implementation-status.md` (last three sections) and `git log --oneline -6` on branch `v2`.
 
@@ -12,7 +12,7 @@ Modes: caveman (terse prose) + ponytail (minimal code). Honest scoring — prais
 
 ## State
 
-Branch `v2`, HEAD after V2-10b-5 (`e56f7da`). All green (2309 vitest / 472 files): `tsc`,
+Branch `v2`, HEAD after V2-05a/e (`720b49a`). All green (2326 vitest / 474 files): `tsc`,
 `eslint --max-warnings=0`, vitest, three Playwright gates
 (`scripts/check-v2-04.mjs`, `scripts/check-v2-polish.mjs`,
 `scripts/check-v2-10a.mjs`) against `VITE_V2_EDITOR=1 VITE_V2_AI=1 npm run build`
@@ -34,10 +34,16 @@ free point / port-bound with sides), `move_node`, `delete_node`, `delete_connect
 manual records (`src/agent/actions/parity.test.ts`); `src/agent/manifest.ts` is the
 capability manifest (11/12 shipped; gap = connector re-bind/waypoints → V2-05) with an
 honesty test. `mcp-server/` still bundles the old action set (regenerate at its release).
+**V2-05a** pointer operations live in `presentation/v2/pointerOperations.ts` (legacy
+imports it; adoption allowlist is EMPTY); object snapping with guides
+(`domain/transforms/objectSnap.ts` over `alignmentGuides.ts`, move only, 6px/zoom, Alt
+bypasses). **V2-05e** type-to-edit (printable key on a single selected shape opens the
+editor — tool letters included, owner to confirm), caret-at-end, auto-grow centred
+overlay, Tab commits, window-blur guard, blank new text node removed.
 
 Isolation: `src/opencanvas/v2Graph.test.ts` — v2 roots (now incl. `application/ai`)
-import only V2_ROOTS + SHARED_KERNEL (now incl. `src/agent/{actions,runAction}`) +
-adoption allowlist (`pixiPointerOperations.ts`, moves in V2-05). Legacy direct-writer
+import only V2_ROOTS + SHARED_KERNEL (now incl. `src/agent/{actions,runAction}`);
+adoption allowlist is empty and stays empty. Legacy direct-writer
 ratchet (4 files). Legacy deletion at V2-15 = delete everything outside those.
 
 Dev: `VITE_V2_EDITOR=1 VITE_V2_AI=1 VITE_V2_LAB=1 npx vite --host 127.0.0.1 --port 5173`
@@ -57,28 +63,16 @@ gate's port cost an hour of phantom bugs, twice now.
 
 ## Next
 
-1. Owner click-through of V2-10a/b (2 min): ⌘J → select a shape → "Add a step after the
-   selection" (now a real rectangle) → hover rows → reject one → Apply → ⌘Z. Move a shape
-   while a proposal is open → stale copy. Then say which V2-11 shape below.
-2. **V2-11 provider decision (owner):** the local agent is a stub behind
-   `useV2Proposal.request(intent)`. Two real options, pick one:
-   - (a) **Claude tool-use planner** (`@anthropic-ai/sdk`, `dangerouslyAllowBrowser`,
-     BYOK key in memory): `AGENT_ACTIONS` become tools (zod → JSON schema), model plans
-     with `tool_choice: auto`, each `tool_use` resolves through
-     `resolveAgentActionCommand` against a running preview document → `createProposal`.
-     Best quality/latency, one provider. ~1 day incl. evals.
-   - (b) **Provider-neutral JSON planner** over the existing `src/services/aiService.ts`
-     (Gemini/OpenAI/Claude/Ollama/…): model returns `[{action, input, explanation}]`
-     as JSON, same resolve path. Matches the legacy product's BYOK matrix; weaker
-     structure guarantees, needs `services/aiService` (+deps) in SHARED_KERNEL. ~1.5 days.
-   Either way: free-text `Composer` in the panel (already provider-shaped), thread
-   history, `PermissionPrompt` for direct-edit grants, and `application/ai` stays React-free.
-3. V2-05: move `pixiPointerOperations.ts` into v2 (allowlist → zero), ports, connector
-   styles, groups, connector re-bind/waypoint action (last manifest gap); open item —
-   connector body drag inserts a waypoint (owner wanted select/move/delete; unclear which).
-4. Remaining spine: V2-08 pages, V2-12 import/collab, V2-13 migration, V2-14 cutover,
-   V2-15 legacy delete.
-
-## Roadmap estimate
-
-~53% by weight after 10b. Substrate + editor shell done; agent surface, multi-page, migration, and cutover remain. Parallel lanes are now possible (each lane = its own test file + worktree).
+1. Owner click-through of V2-05a/e (2 min): drag a shape near another and watch the
+   blue guide (Alt to bypass); select a shape and just start typing; Enter on a
+   labelled shape (caret at end); double-click empty → Escape (no ghost node); alt-tab
+   while the editor is empty (label survives). **Decide:** keep tool letters as
+   type-to-edit with a selection (FigJam) or exclude R/O/A/T/V/H/L (Excalidraw) — one
+   line in `useV2Keyboard.ts`.
+2. V2-05b clipboard → 05c groups → 05d lock/hide/order → V2-06 connectors (styles,
+   ports, re-bind/waypoint action = last manifest gap; open item — connector body drag
+   inserts a waypoint vs select/move/delete) → 07 → 08 pages → 09 → 10c/d → V2-11
+   provider decision (options (a) Claude tool-use planner / (b) provider-neutral JSON
+   planner, see git history of this file at c5a1d46).
+3. Remaining spine: V2-12 import/collab, V2-13 migration, V2-14 cutover, V2-15 legacy
+   delete.
