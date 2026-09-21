@@ -166,6 +166,28 @@ function nodeCenterWorld(page: ScenePage, nodeId: string): Point2d | null {
   };
 }
 
+// A side handle under the pointer, found by searching the neighbourhood:
+// handles sit outside node bounds (and touch never hovers first).
+function pickHandleNear(
+  host: PixiRendererHost,
+  opts: V2PointerOptions,
+  point: Point2d,
+  states?: ReturnType<typeof buildNodeStateMap>
+): { readonly nodeId: string; readonly side: ConnectSide; readonly bounds: Bounds2d } | null {
+  const nearby = host.pickNodesInScreenBounds(boundsBetween(
+    { x: point.x - HANDLE_SEARCH_RADIUS_PX, y: point.y - HANDLE_SEARCH_RADIUS_PX },
+    { x: point.x + HANDLE_SEARCH_RADIUS_PX, y: point.y + HANDLE_SEARCH_RADIUS_PX }
+  ));
+  const locked = states ?? (opts.pageRef.current ? buildNodeStateMap(opts.pageRef.current) : null);
+  for (const nodeId of nearby) {
+    if (locked?.get(nodeId)?.locked) continue;
+    const bounds = host.getNodesWorldBounds([nodeId]);
+    const side = bounds ? pickConnectHandle(bounds, point, opts.cameraRef.current) : null;
+    if (bounds && side) return { nodeId, side, bounds };
+  }
+  return null;
+}
+
 // The dragged-out connector as it will commit: routed live, so the user sees
 // the real lane and the side it will bind to before letting go.
 function previewConnector(
@@ -292,13 +314,11 @@ export function useV2Pointer(options: V2PointerOptions) {
       if (!operation) {
         if (opts.toolRef.current === 'select' && event.target instanceof HTMLCanvasElement) {
           const handle = host.pickTransformHandle(point);
-          const hoverNode = host.pickNode(point);
-          const hoverBounds = hoverNode && !opts.readOnlyRef.current
-            ? host.getNodesWorldBounds([hoverNode])
-            : null;
-          const hoverSide = hoverNode && hoverBounds
-            ? pickConnectHandle(hoverBounds, point, opts.cameraRef.current)
-            : null;
+          // Handles sit outside their node, so a hover over one comes from
+          // the neighbourhood search, not from the node under the pointer.
+          const handleHit = opts.readOnlyRef.current ? null : pickHandleNear(host, opts, point);
+          const hoverNode = handleHit?.nodeId ?? host.pickNode(point);
+          const hoverSide = handleHit?.side ?? null;
           host.setHover(hoverNode, hoverSide);
           const connectorHandle = host.getSelectedConnectorId() ? host.pickConnectorHandle(point) : null;
           const cursor = hoverSide ? 'crosshair'
@@ -665,30 +685,15 @@ export function useV2Pointer(options: V2PointerOptions) {
       // Handles sit outside the node bounds, so search neighbours by
       // proximity (this also covers touch, which never hovers first).
       if (!additive) {
-        const nearby = host.pickNodesInScreenBounds(boundsBetween(
-          { x: point.x - HANDLE_SEARCH_RADIUS_PX, y: point.y - HANDLE_SEARCH_RADIUS_PX },
-          { x: point.x + HANDLE_SEARCH_RADIUS_PX, y: point.y + HANDLE_SEARCH_RADIUS_PX }
-        ));
-        const hit = nearby
-          .filter((candidateId) => !states.get(candidateId)?.locked)
-          .map((candidateId) => {
-            const candidateBounds = host.getNodesWorldBounds([candidateId]);
-            const candidateSide = candidateBounds
-              ? pickConnectHandle(candidateBounds, point, opts.cameraRef.current)
-              : null;
-            return candidateSide && candidateBounds
-              ? { candidateId, candidateBounds, candidateSide }
-              : null;
-          })
-          .find((candidate): candidate is NonNullable<typeof candidate> => candidate !== null);
+        const hit = pickHandleNear(host, opts, point, states);
         if (hit) {
-          if (!opts.selectionRef.current.nodeIds.includes(hit.candidateId)) {
+          if (!opts.selectionRef.current.nodeIds.includes(hit.nodeId)) {
             opts.applyConnectorSelection(null);
-            opts.applySelection(replaceSelection([hit.candidateId]));
+            opts.applySelection(replaceSelection([hit.nodeId]));
           }
           operationRef.current = { kind: 'connect', pointerId: event.pointerId, page,
-            sourceNodeId: hit.candidateId, sourceSide: hit.candidateSide,
-            fromWorld: sideAnchor(hit.candidateBounds, hit.candidateSide),
+            sourceNodeId: hit.nodeId, sourceSide: hit.side,
+            fromWorld: sideAnchor(hit.bounds, hit.side),
             startScreen: point, toWorld: host.screenToWorld(point) };
           return;
         }

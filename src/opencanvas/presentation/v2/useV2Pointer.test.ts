@@ -203,6 +203,7 @@ describe('V2 quick-create from side handles', () => {
   it('tracks hovered node and handle, and clears hover on press', () => {
     const { result, event, host } = setup();
     host.getNodesWorldBounds.mockImplementation(boundsOf);
+    host.pickNodesInScreenBounds.mockReturnValue(['a']);
     act(() => result.current.handlePointerMove(event(100, 100)));
     expect(host.setHover).toHaveBeenLastCalledWith('a', null);
     act(() => result.current.handlePointerMove(event(122, 25)));

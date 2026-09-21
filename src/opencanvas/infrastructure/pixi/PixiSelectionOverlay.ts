@@ -4,7 +4,8 @@ import type { Bounds2d } from '../../domain/geometry/types';
 import type { SceneIndex } from '../../domain/scene/types';
 import { nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import { drawTransformFrame } from './PixiTransformOverlay';
-import { connectHandlePoints, type ConnectSide } from '../../domain/connectors/connectHandles';
+import { connectHandlePoints, sideAnchor, type ConnectSide } from '../../domain/connectors/connectHandles';
+import { oppositeSide, quickCreateOrigin } from '../../domain/connectors/quickCreate';
 
 import { CHROME_ACCENT as SELECTION_STROKE, CHROME_SURFACE } from './chrome';
 
@@ -52,6 +53,32 @@ export class PixiSelectionOverlay {
     }
   }
 
+  // Hovering a side handle previews what a click will do: the same-size
+  // node one gap away and the arrow into it (Koboyo's affordance).
+  private drawQuickCreateGhost(index: SceneIndex, nodeId: string, side: ConnectSide, zoom: number): void {
+    const node = index.nodesById.get(nodeId);
+    if (!node || node.transform.rotationRadians !== 0) return;
+    const origin = quickCreateOrigin(node, side);
+    const ghost: Bounds2d = { x: origin.x, y: origin.y, width: node.size.width, height: node.size.height };
+    const from = sideAnchor(this.nodeBounds(index, nodeId) ?? ghost, side);
+    const to = sideAnchor(ghost, oppositeSide(side));
+    this.graphics
+      .roundRect(ghost.x, ghost.y, ghost.width, ghost.height, 6)
+      .fill({ color: SELECTION_STROKE, alpha: 0.05 })
+      .stroke({ color: SELECTION_STROKE, alpha: 0.45, width: 1 / zoom });
+    this.graphics
+      .moveTo(from.x, from.y).lineTo(to.x, to.y)
+      .stroke({ color: SELECTION_STROKE, alpha: 0.45, width: 1.5 / zoom });
+    const back = 8 / zoom;
+    const dx = Math.sign(to.x - from.x);
+    const dy = Math.sign(to.y - from.y);
+    this.graphics
+      .moveTo(to.x - dx * back - dy * back * 0.6, to.y - dy * back - dx * back * 0.6)
+      .lineTo(to.x, to.y)
+      .lineTo(to.x - dx * back + dy * back * 0.6, to.y - dy * back + dx * back * 0.6)
+      .stroke({ color: SELECTION_STROKE, alpha: 0.45, width: 1.5 / zoom });
+  }
+
   private nodeBounds(index: SceneIndex, nodeId: string): Bounds2d | null {
     const node = index.nodesById.get(nodeId);
     const matrix = node && index.worldMatricesByNodeId.get(node.id);
@@ -92,5 +119,6 @@ export class PixiSelectionOverlay {
       const hovered = this.nodeBounds(index, hover.nodeId);
       if (hovered) this.drawHandles(hovered, zoom, hover.side);
     }
+    if (hover?.side) this.drawQuickCreateGhost(index, hover.nodeId, hover.side, zoom);
   }
 }

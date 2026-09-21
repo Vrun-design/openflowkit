@@ -210,13 +210,18 @@ export function V2EditorPage(): React.JSX.Element {
     if (!connector || load.readOnly) return;
     applySelection(clearSelection());
     applyConnectorSelection(connectorId);
+    // Sits on the existing label when there is one, else at the click; the
+    // box scales with zoom like the plate it replaces.
+    const zoom = camera.cameraRef.current.zoom;
+    const labelPoint = (connector.labels[0] && hostRef.current?.getConnectorLabelScreenPoint(connectorId))
+      ?? { x: at.x, y: at.y - 14 * zoom };
     setConnectorEditing({
       connectorId,
-      bounds: new DOMRect(at.x - 110, at.y - 24, 220, 48),
+      bounds: new DOMRect(labelPoint.x - 90 * zoom, labelPoint.y - 11 * zoom, 180 * zoom, 22 * zoom),
       value: connector.labels[0]?.text ?? '',
     });
     setAnnouncement('Editing connector label');
-  }, [applyConnectorSelection, applySelection, load.readOnly]);
+  }, [applyConnectorSelection, applySelection, load.readOnly, camera.cameraRef]);
   const commitConnectorLabel = useCallback((value: string) => {
     const currentPage = pageRef.current;
     const before = currentPage?.connectors.find((candidate) => candidate.id === connectorEditing?.connectorId);

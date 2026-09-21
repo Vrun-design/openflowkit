@@ -22,6 +22,7 @@ import { nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import type { TransformHandle, TransformResult } from '../../domain/transforms/types';
 import { pickTransformHandle as pickHandle, PixiTransformOverlay } from './PixiTransformOverlay';
 import { PixiConnectorRenderer } from './PixiConnectorRenderer';
+import { projectConnector } from '../../domain/connectors/routeProjection';
 import { CHROME_ACCENT } from './chrome';
 import { applyTextResolution, currentPixiTextResolution, textResolutionForZoom } from './pixiText';
 import { PixiFreeformPreview, type FreeformPreviewFrame } from './PixiFreeformPreview';
@@ -332,6 +333,14 @@ export class PixiRendererHost {
         return record ? [record] : [];
       }) ?? []
     );
+  }
+
+  /** Screen point of the connector's primary label, for the label editor. */
+  getConnectorLabelScreenPoint(connectorId: string): Point2d | null {
+    const connector = this.page?.connectors.find((candidate) => candidate.id === connectorId);
+    const projected = this.page && connector ? projectConnector(this.page, connector) : null;
+    const label = projected?.labels[0];
+    return label ? this.worldToScreen(label.point) : null;
   }
 
   getConnectorSamples(connectorId: string): readonly Point2d[] | null {

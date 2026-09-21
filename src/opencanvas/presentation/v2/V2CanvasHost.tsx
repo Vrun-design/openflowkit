@@ -375,6 +375,8 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
           label="Edit connector label"
           zoom={props.camera.zoom}
           font={{ size: 11, weight: 600 }}
+          padding={{ top: 4, right: 6, bottom: 4, left: 6 }}
+          plate
           onCommit={props.onCommitConnectorLabel}
           onCancel={props.onCancelConnectorEdit}
         />

@@ -24,3 +24,9 @@
 .pixi-spike__text-editor::selection {
   background: rgb(59 130 246 / 25%);
 }
+
+.pixi-spike__text-editor--plate {
+  background: rgb(255 255 255 / 96%);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px #e2e8f0;
+}

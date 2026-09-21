@@ -13,6 +13,10 @@ interface OpenCanvasTextEditorOverlayProps {
   readonly font?: { readonly size: number; readonly weight: 400 | 600 };
   /** Select the existing text on open (default); false puts the caret at the end. */
   readonly selectAll?: boolean;
+  /** Unscaled insets; defaults to the node content padding. */
+  readonly padding?: { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
+  /** Connector labels sit on a white plate so the line underneath never reads through. */
+  readonly plate?: boolean;
   readonly onCommit: (value: string) => void;
   readonly onCancel: () => void;
 }
@@ -27,12 +31,13 @@ export function OpenCanvasTextEditorOverlay({
   zoom = 1,
   font = { size: 14, weight: 600 },
   selectAll = true,
+  padding: pad = DEFAULT_NODE_CONTENT_LAYOUT.padding,
+  plate = false,
   onCommit,
   onCancel,
 }: OpenCanvasTextEditorOverlayProps): React.JSX.Element {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const finishedRef = useRef(false);
-  const pad = DEFAULT_NODE_CONTENT_LAYOUT.padding;
   const padTop = pad.top * zoom;
   const padBottom = pad.bottom * zoom;
 
@@ -81,7 +86,7 @@ export function OpenCanvasTextEditorOverlay({
     <textarea
       ref={inputRef}
       rows={1}
-      className="pixi-spike__text-editor"
+      className={plate ? 'pixi-spike__text-editor pixi-spike__text-editor--plate' : 'pixi-spike__text-editor'}
       aria-label={label}
       defaultValue={value}
       placeholder="Text"
