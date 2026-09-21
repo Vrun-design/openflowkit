@@ -161,8 +161,8 @@ export const materials: Readonly<
     glassBorder: 'rgb(241 242 236 / 0.1)',
     scrim: 'rgb(0 0 0 / 0.5)',
     shadowRaised: '0 1px 2px rgb(0 0 0 / 0.3)',
-    shadowChrome: '0 1px 2px rgb(0 0 0 / 0.3), 0 3px 10px rgb(0 0 0 / 0.28)',
-    shadowFloating: '0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.4)',
-    shadowOverlay: '0 2px 4px rgb(0 0 0 / 0.4), 0 24px 48px rgb(0 0 0 / 0.55)',
+    shadowChrome: '0 1px 2px rgb(0 0 0 / 0.25), 0 2px 8px rgb(0 0 0 / 0.2)',
+    shadowFloating: '0 1px 2px rgb(0 0 0 / 0.25), 0 6px 16px rgb(0 0 0 / 0.3)',
+    shadowOverlay: '0 2px 4px rgb(0 0 0 / 0.3), 0 16px 40px rgb(0 0 0 / 0.4)',
   },
 };
