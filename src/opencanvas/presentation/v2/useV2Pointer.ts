@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from 'react';
 import type { DocumentCommand } from '../../domain/commands/types';
-import type { ScenePage } from '../../domain/document/types';
+import type { SceneConnector, ScenePage } from '../../domain/document/types';
 import type { CanvasCamera } from '../../domain/camera/types';
 import type { TransformHandle, TransformResult } from '../../domain/transforms/types';
 import type { Bounds2d, Point2d } from '../../domain/geometry/types';
@@ -33,7 +33,6 @@ import {
   type PixiPointerOperation,
 } from './pointerOperations';
 import {
-  nearestSide,
   pickConnectHandle,
   sideAnchor,
   type ConnectSide,
@@ -48,7 +47,6 @@ import { ensureConnectorEndpointPorts } from '../../domain/connectors/portAuthor
 import {
   V2_DEFAULT_SHAPE_SIZE,
   V2_DEFAULT_TEXT_SIZE,
-  buildHandleConnectCommand,
   buildInsertConnectorCommand,
   buildInsertShapeCommand,
   buildQuickCreateCommand,
@@ -158,6 +156,27 @@ function nodeCenterWorld(page: ScenePage, nodeId: string): Point2d | null {
   return {
     x: node.transform.translation.x + node.size.width / 2,
     y: node.transform.translation.y + node.size.height / 2,
+  };
+}
+
+// The dragged-out connector as it will commit: routed live, so the user sees
+// the real lane and the side it will bind to before letting go.
+function previewConnector(
+  operation: V2ConnectOperation,
+  targetNodeId: string | null,
+  toWorld: Point2d
+): SceneConnector {
+  return {
+    id: '__connect-preview',
+    source: operation.sourceNodeId
+      ? { nodeId: operation.sourceNodeId, portId: null, anchor: null, point: null }
+      : { nodeId: null, portId: null, anchor: null, point: operation.fromWorld },
+    target: targetNodeId
+      ? { nodeId: targetNodeId, portId: null, anchor: null, point: null }
+      : { nodeId: null, portId: null, anchor: null, point: toWorld },
+    route: { kind: 'orthogonal', ownership: 'automatic' },
+    waypoints: [], labels: [], appearance: { markerEnd: 'arrow' },
+    semantics: {}, metadata: {}, extensions: {},
   };
 }
 
@@ -319,7 +338,8 @@ export function useV2Pointer(options: V2PointerOptions) {
       } else if (operation.kind === 'connect') {
         const toWorld = host.screenToWorld(point);
         operationRef.current = { ...operation, toWorld };
-        host.setConnectionPreview({ from: operation.fromWorld, to: toWorld });
+        const overNode = host.pickNode(point);
+        host.setConnectionPreview(previewConnector(operation, overNode !== operation.sourceNodeId ? overNode : null, toWorld));
       } else if (operation.kind === 'connector-edit') {
         // Shift pins a dragged endpoint to free canvas space instead of binding.
         const overNode = operation.handle.kind === 'endpoint' && !event.shiftKey
@@ -450,17 +470,13 @@ export function useV2Pointer(options: V2PointerOptions) {
             // Click on a handle: same as releasing on empty canvas that way.
             commitQuickCreateDelivery(opts, operation, sourceNodeId, sourceSide);
           } else if (targetId && targetId !== sourceNodeId) {
-            const targetBounds = host.getNodesWorldBounds([targetId]);
-            if (targetBounds) {
-              const targetSide = nearestSide(targetBounds, host.screenToWorld(point));
-              const id = opts.mintId('connector');
-              opts.commit(buildHandleConnectCommand(operation.page, {
-                id, sourceNodeId, sourceSide, targetNodeId: targetId, targetSide,
-              }));
-              opts.applySelection(clearSelection());
-              opts.applyConnectorSelection(id);
-              opts.onToolChange('select');
-            }
+            const id = opts.mintId('connector');
+            opts.commit(buildInsertConnectorCommand(operation.page, {
+              id, source: { nodeId: sourceNodeId }, target: { nodeId: targetId },
+            }));
+            opts.applySelection(clearSelection());
+            opts.applyConnectorSelection(id);
+            opts.onToolChange('select');
           } else if (targetId === null) {
             commitQuickCreateDelivery(opts, operation, sourceNodeId, sourceSide);
           }

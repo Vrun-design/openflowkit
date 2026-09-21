@@ -5,7 +5,6 @@ import { createEmptyV2Document, createEmptyV2Page, firstV2Page } from '../../pre
 import {
   buildDeleteSelectionCommand,
   buildDuplicateSelectionCommand,
-  buildHandleConnectCommand,
   buildInsertConnectorCommand,
   buildInsertShapeCommand,
   buildMoveNodesCommand,
@@ -254,9 +253,9 @@ describe('v2 quick-create command', () => {
       y: source.transform.translation.y,
     });
     expect(result.connectors).toHaveLength(1);
-    expect(result.connectors[0].source).toMatchObject({ nodeId: 'node-a', portId: 'right' });
-    expect(result.connectors[0].target).toMatchObject({ nodeId: 'node-c', portId: 'left' });
-    // One undo step removes node and connector (and the port, if it was added).
+    expect(result.connectors[0].source).toMatchObject({ nodeId: 'node-a', portId: null });
+    expect(result.connectors[0].target).toMatchObject({ nodeId: 'node-c', portId: null });
+    // One undo step removes node and connector.
     const undone = applyDocumentCommand(applied.document, applied.inverse);
     expect(undone.document.pages[0].nodes).toHaveLength(2);
     expect(undone.document.pages[0].connectors).toHaveLength(0);
@@ -264,30 +263,3 @@ describe('v2 quick-create command', () => {
   });
 });
 
-describe('v2 handle-connect command', () => {
-  it('binds both sides and skips port set-nodes when the ports exist', () => {
-    const page = pageWithTwoNodes();
-    const primed = applyDocumentCommand(
-      { ...createEmptyV2Document('doc-1'), pages: [page] },
-      buildQuickCreateCommand(page, {
-        sourceNodeId: 'node-a', sourceSide: 'right', newNodeId: 'node-c', connectorId: 'edge-0',
-      })
-    ).document.pages[0];
-    const command = buildHandleConnectCommand(primed, {
-      id: 'edge-1', sourceNodeId: 'node-a', sourceSide: 'right',
-      targetNodeId: 'node-b', targetSide: 'left',
-    });
-    expect(command.commands).toHaveLength(2);
-    expect(command.commands[0].kind).toBe('set-node');
-    expect(command.commands[1].kind).toBe('insert-connector');
-    const applied = applyDocumentCommand(
-      { ...createEmptyV2Document('doc-1'), pages: [primed] },
-      command
-    );
-    const edge = applied.document.pages[0].connectors.at(-1)!;
-    expect(edge.source).toMatchObject({ nodeId: 'node-a', portId: 'right' });
-    expect(edge.target).toMatchObject({ nodeId: 'node-b', portId: 'left' });
-    const undone = applyDocumentCommand(applied.document, applied.inverse);
-    expect(undone.document.pages[0].connectors).toHaveLength(1);
-  });
-});

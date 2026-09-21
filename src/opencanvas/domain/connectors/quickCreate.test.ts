@@ -36,17 +36,10 @@ describe('quick-create', () => {
     expect(plan.node.kind).toBe(page().nodes[0].kind);
     expect(plan.node.content.label).toBe('');
     expect(plan.node.transform.translation).toEqual(quickCreateOrigin(page().nodes[0], side));
-    expect(plan.node.ports.map((port) => port.id)).toEqual([oppositeSide(side)]);
-    expect(plan.connector.source).toMatchObject({ nodeId: 'source', portId: side });
-    expect(plan.connector.target).toMatchObject({ nodeId: 'new', portId: oppositeSide(side) });
-    expect(plan.sourceNode.ports.map((port) => port.id)).toEqual([side]);
-  });
-
-  it('keeps the source record identical when the side port already exists', () => {
-    const first = planQuickCreate(page(), 'source', 'right', 'new', 'edge');
-    const withPort = createTestDocument({ nodes: [first.sourceNode] }).pages[0];
-    const second = planQuickCreate(withPort, 'source', 'right', 'new2', 'edge2');
-    expect(second.sourceNode).toBe(first.sourceNode);
+    // Sides stay dynamic: no ports minted, routing faces the partner live.
+    expect(plan.node.ports).toEqual([]);
+    expect(plan.connector.source).toEqual({ nodeId: 'source', portId: null, anchor: null, point: null });
+    expect(plan.connector.target).toEqual({ nodeId: 'new', portId: null, anchor: null, point: null });
   });
 
   it('throws for an unknown source node', () => {

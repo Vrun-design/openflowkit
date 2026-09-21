@@ -228,8 +228,8 @@ describe('V2 quick-create from side handles', () => {
     expect(insertNode.node.size).toEqual({ width: 100, height: 50 });
     expect(insertNode.node.transform.translation).toEqual({ x: 200, y: 0 });
     const insertEdge = batch.commands.find((command: { kind: string }) => command.kind === 'insert-connector');
-    expect(insertEdge.connector.source).toMatchObject({ nodeId: 'a', portId: 'right' });
-    expect(insertEdge.connector.target).toMatchObject({ portId: 'left' });
+    expect(insertEdge.connector.source).toMatchObject({ nodeId: 'a', portId: null });
+    expect(insertEdge.connector.target).toMatchObject({ nodeId: insertNode.node.id, portId: null });
     expect(selectionRef.current.nodeIds).toEqual([insertNode.node.id]);
     expect(openEditor).toHaveBeenCalledWith(insertNode.node.id, { isNew: true });
   });
@@ -245,7 +245,7 @@ describe('V2 quick-create from side handles', () => {
     expect(openEditor).toHaveBeenCalledWith('new', { isNew: true });
   });
 
-  it('drags from a handle onto another node: binds the nearest side', () => {
+  it('drags from a handle onto another node: binds node to node', () => {
     const other = createTestNode('b', {
       size: { width: 100, height: 50 },
       transform: { translation: { x: 400, y: 0 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
@@ -258,11 +258,10 @@ describe('V2 quick-create from side handles', () => {
     act(() => result.current.handlePointerMove(event(395, 25)));
     act(() => result.current.handlePointerUp(event(395, 25)));
     expect(commit).toHaveBeenCalledOnce();
-    const batch = commit.mock.calls[0][0];
-    expect(batch.label).toBe('Connect');
-    const edge = batch.commands.find((command: { kind: string }) => command.kind === 'insert-connector');
-    expect(edge.connector.source).toMatchObject({ nodeId: 'a', portId: 'right' });
-    expect(edge.connector.target).toMatchObject({ nodeId: 'b', portId: 'left' });
+    const edge = commit.mock.calls[0][0];
+    expect(edge.label).toBe('Connect');
+    expect(edge.connector.source).toMatchObject({ nodeId: 'a', portId: null });
+    expect(edge.connector.target).toMatchObject({ nodeId: 'b', portId: null });
     expect(selectionRef.current.nodeIds).toEqual([]);
     expect(applyConnectorSelection).toHaveBeenCalledWith(edge.connector.id);
   });

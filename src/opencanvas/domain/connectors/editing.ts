@@ -102,6 +102,9 @@ function manualConnector(
   };
 }
 
+// Dragging a segment slides it along its normal. Only that segment's two
+// corners become waypoints (plus any the user placed before): the rest of
+// the route stays automatic, so the ends still re-link when a node moves.
 function moveSegment(
   page: ScenePage,
   connector: SceneConnector,
@@ -114,23 +117,19 @@ function moveSegment(
   const start = samples[segmentIndex];
   const end = samples[segmentIndex + 1];
   const horizontal = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y);
-  const shiftedStart = horizontal ? { x: start.x, y: pointer.y } : { x: pointer.x, y: start.y };
-  const shiftedEnd = horizontal ? { x: end.x, y: pointer.y } : { x: pointer.x, y: end.y };
-  let points: readonly Point2d[];
-  if (segmentIndex === 0) {
-    points = [start, shiftedStart, shiftedEnd, ...samples.slice(2)];
-  } else if (segmentIndex === samples.length - 2) {
-    points = [...samples.slice(0, segmentIndex), shiftedStart, shiftedEnd, end];
-  } else {
-    points = [
-      ...samples.slice(0, segmentIndex),
-      shiftedStart,
-      shiftedEnd,
-      ...samples.slice(segmentIndex + 2),
-    ];
-  }
+  const shifted = [
+    horizontal ? { x: start.x, y: pointer.y } : { x: pointer.x, y: start.y },
+    horizontal ? { x: end.x, y: pointer.y } : { x: pointer.x, y: end.y },
+  ];
+  const points = samples.map((point, index) =>
+    index === segmentIndex ? shifted[0] : index === segmentIndex + 1 ? shifted[1] : point);
+  const kept = new Set<Point2d>(shifted);
+  const authored = connector.waypoints;
+  const waypoints = points.filter((point, index) =>
+    kept.has(point) || (index > 0 && index < points.length - 1
+      && authored.some((existing) => existing.x === point.x && existing.y === point.y)));
   const kind = connector.route.kind === 'orthogonal' ? 'orthogonal' : 'polyline';
-  return manualConnector(connector, dedupePolyline(points).slice(1, -1), kind, 'hybrid');
+  return manualConnector(connector, waypoints, kind, 'hybrid');
 }
 
 function moveBezierControl(

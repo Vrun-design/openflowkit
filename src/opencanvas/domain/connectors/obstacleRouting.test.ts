@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createBounds2d } from '../geometry/bounds';
-import { routeOrthogonalAroundObstacles } from './obstacleRouting';
+import { routeOrthogonalAroundObstacles, routeOrthogonalBetweenSides } from './obstacleRouting';
 
 describe('orthogonal obstacle routing', () => {
   it('chooses a deterministic clear lane around a blocking node', () => {
@@ -15,7 +15,30 @@ describe('orthogonal obstacle routing', () => {
   it('keeps the shortest clear orthogonal path when no obstacle blocks it', () => {
     expect(routeOrthogonalAroundObstacles(
       { x: 0, y: 0 }, { x: 100, y: 80 }, [createBounds2d(200, 200, 20, 20)]
-    )).toEqual([{ x: 0, y: 0 }, { x: 0, y: 80 }, { x: 100, y: 80 }]);
+    )).toEqual([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 80 }]);
+  });
+
+  it('prefers the Z lane on the requested axis when it is clear', () => {
+    expect(routeOrthogonalAroundObstacles(
+      { x: 0, y: 0 }, { x: 100, y: 80 }, [], { midSplit: 'x' }
+    )).toEqual([{ x: 0, y: 0 }, { x: 50, y: 0 }, { x: 50, y: 80 }, { x: 100, y: 80 }]);
+  });
+
+  it('leaves each side through a stub and treats the own nodes as obstacles', () => {
+    const source = createBounds2d(0, 0, 100, 50);
+    const target = createBounds2d(300, 200, 100, 50);
+    const route = routeOrthogonalBetweenSides(
+      { x: 100, y: 25 }, 'right', { x: 300, y: 225 }, 'left', [source, target]
+    );
+    expect(route).toEqual([
+      { x: 100, y: 25 }, { x: 200, y: 25 }, { x: 200, y: 225 }, { x: 300, y: 225 },
+    ]);
+    // Facing the wrong way round: the lane must not cut back through the box it left.
+    const back = routeOrthogonalBetweenSides(
+      { x: 100, y: 25 }, 'right', { x: 50, y: 50 }, 'bottom', [source]
+    );
+    expect(back[1]).toEqual({ x: 120, y: 25 });
+    expect(back.every((p, i) => i === 0 || p.x >= 50)).toBe(true);
   });
 
   it('routes 200 obstacles far inside any per-frame budget', () => {

@@ -1,7 +1,8 @@
-import { boundsMaxX, boundsMaxY, expandBounds } from '../geometry/bounds';
+import { boundsMaxX, boundsMaxY, containsPoint, expandBounds } from '../geometry/bounds';
 import { dedupePolyline } from '../geometry/polyline';
 import { distanceBetweenPoints } from '../geometry/point';
 import type { Bounds2d, Point2d } from '../geometry/types';
+import type { ConnectSide } from './connectHandles';
 
 const ROUTE_CLEARANCE = 12;
 const MAX_DETOUR_ROUNDS = 4;
@@ -19,10 +20,7 @@ function shortestRoute(routes: readonly CandidateLane[]): CandidateLane {
   let best = routes[0];
   for (let index = 1; index < routes.length; index += 1) {
     const candidate = routes[index];
-    if (candidate.length < best.length
-      || (candidate.length === best.length && candidate.key.localeCompare(best.key) < 0)) {
-      best = candidate;
-    }
+    if (candidate.length < best.length) best = candidate;
   }
   return best;
 }
@@ -69,10 +67,16 @@ function detourLanes(start: Point2d, end: Point2d, obstacle: Bounds2d): DetourLa
 // Cost follows conflicts, not page size: each candidate lane tests only the
 // obstacles intersecting its own segments (one inline pass, no allocation),
 // and detour lanes generate around blocking obstacles alone.
+export interface OrthogonalRouteOptions {
+  /** Lane with a middle segment perpendicular to this axis is tried first (the Z shape). */
+  readonly midSplit?: 'x' | 'y';
+}
+
 export function routeOrthogonalAroundObstacles(
   start: Point2d,
   end: Point2d,
-  obstacleBounds: readonly Bounds2d[]
+  obstacleBounds: readonly Bounds2d[],
+  options: OrthogonalRouteOptions = {}
 ): readonly Point2d[] {
   const count = obstacleBounds.length;
   const minX = new Array<number>(count);
@@ -136,7 +140,16 @@ export function routeOrthogonalAroundObstacles(
     }
     return false;
   };
+  const midX = (start.x + end.x) / 2;
+  const midY = (start.y + end.y) / 2;
+  // Candidate order is the tie-break: equal-length lanes resolve to the
+  // earliest, so the Z for the requested axis wins over an L when both clear.
   const lanes: CandidateLane[] = [
+    ...(options.midSplit === 'x'
+      ? [makeJsonLane([start, { x: midX, y: start.y }, { x: midX, y: end.y }, end])]
+      : options.midSplit === 'y'
+        ? [makeJsonLane([start, { x: start.x, y: midY }, { x: end.x, y: midY }, end])]
+        : []),
     makeJsonLane([start, { x: end.x, y: start.y }, end]),
     makeJsonLane([start, { x: start.x, y: end.y }, end]),
   ];
@@ -173,4 +186,65 @@ export function routeOrthogonalAroundObstacles(
   return dedupePolyline([start, { x: (start.x + end.x) / 2, y: start.y }, {
     x: (start.x + end.x) / 2, y: end.y,
   }, end]);
+}
+
+const STUB_LENGTH = 20;
+
+function sideNormal(side: ConnectSide): Point2d {
+  switch (side) {
+    case 'top': return { x: 0, y: -1 };
+    case 'right': return { x: 1, y: 0 };
+    case 'bottom': return { x: 0, y: 1 };
+    case 'left': return { x: -1, y: 0 };
+  }
+}
+
+function sideAxis(side: ConnectSide): 'x' | 'y' {
+  return side === 'left' || side === 'right' ? 'x' : 'y';
+}
+
+// A bound end leaves its node perpendicular to the side for one stub, then
+// the lane router takes over between the stubs. Own nodes belong in the
+// obstacle list: they are what stops a lane from doubling back through the
+// shape it just left. Free ends have no side and no stub.
+export function routeOrthogonalBetweenSides(
+  start: Point2d,
+  startSide: ConnectSide | null,
+  end: Point2d,
+  endSide: ConnectSide | null,
+  obstacleBounds: readonly Bounds2d[]
+): readonly Point2d[] {
+  const stubStart = startSide
+    ? { x: start.x + sideNormal(startSide).x * STUB_LENGTH, y: start.y + sideNormal(startSide).y * STUB_LENGTH }
+    : start;
+  const stubEnd = endSide
+    ? { x: end.x + sideNormal(endSide).x * STUB_LENGTH, y: end.y + sideNormal(endSide).y * STUB_LENGTH }
+    : end;
+  const axis = startSide ? sideAxis(startSide) : endSide ? sideAxis(endSide) : null;
+  const opposite = startSide && endSide && sideAxis(startSide) === sideAxis(endSide);
+  // A box enclosing a stub (a container around the node, an overlapping
+  // shape) would block every lane; it is context, not an obstacle.
+  const obstacles = obstacleBounds.filter(
+    (bounds) => !containsPoint(bounds, stubStart) && !containsPoint(bounds, stubEnd)
+  );
+  const lane = routeOrthogonalAroundObstacles(stubStart, stubEnd, obstacles, {
+    midSplit: opposite && axis ? axis : undefined,
+  });
+  return dropCollinear(dedupePolyline([start, ...lane, end]));
+}
+
+// Stubs usually continue straight into the first lane segment; a vertex on
+// a straight run would only grow a pointless segment handle. A vertex where
+// the run reverses (a user corner) stays.
+export function dropCollinear(points: readonly Point2d[]): readonly Point2d[] {
+  return points.filter((point, index) => {
+    if (index === 0 || index === points.length - 1) return true;
+    const previous = points[index - 1];
+    const next = points[index + 1];
+    const straightX = previous.x === point.x && point.x === next.x
+      && Math.sign(point.y - previous.y) === Math.sign(next.y - point.y);
+    const straightY = previous.y === point.y && point.y === next.y
+      && Math.sign(point.x - previous.x) === Math.sign(next.x - point.x);
+    return !(straightX || straightY);
+  });
 }

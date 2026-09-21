@@ -111,6 +111,12 @@ describe('connector route projection', () => {
     });
     const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
     expect(projected.samples).toContainEqual({ x: 200, y: 200 });
+    // Re-linked orthogonally: every hop is axis-aligned, ends leave their sides.
+    for (let index = 1; index < projected.samples.length; index += 1) {
+      const a = projected.samples[index - 1];
+      const b = projected.samples[index];
+      expect(a.x === b.x || a.y === b.y).toBe(true);
+    }
   });
 
   it('fans parallel and reverse edges 12 px apart with endpoints pinned', () => {

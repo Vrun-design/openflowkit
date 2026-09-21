@@ -2,7 +2,6 @@ import { createShapeNode, type ShapeKind } from '../nodes/shapeNode';
 import type { SceneConnector, SceneNode, ScenePage } from '../document/types';
 import type { Point2d } from '../geometry/types';
 import type { ConnectSide } from './connectHandles';
-import { createSidePort, ensureNodeSidePort } from './portAuthoring';
 
 export function oppositeSide(side: ConnectSide): ConnectSide {
   switch (side) {
@@ -19,9 +18,7 @@ function sourceShapeKind(node: SceneNode): ShapeKind {
 }
 
 export interface QuickCreatePlan {
-  /** Source with its drag-side port ensured (identical record when present). */
-  readonly sourceNode: SceneNode;
-  /** New node: same kind and size, blank label, facing-side port included. */
+  /** New node: same kind and size, blank label. */
   readonly node: SceneNode;
   readonly connector: SceneConnector;
 }
@@ -49,7 +46,6 @@ export function planQuickCreate(
 ): QuickCreatePlan {
   const source = page.nodes.find((node) => node.id === sourceNodeId);
   if (!source) throw new RangeError(`Node "${sourceNodeId}" was not found.`);
-  const targetSide = oppositeSide(sourceSide);
   const base = createShapeNode(page, {
     kind: sourceShapeKind(source),
     id: newNodeId,
@@ -61,15 +57,15 @@ export function planQuickCreate(
     kind: source.kind,
     content: { ...source.content, label: '' },
     appearance: { ...source.appearance },
-    ports: [createSidePort(targetSide)],
   };
+  // Sides are not pinned: the drag side only placed the node. Routing picks
+  // the facing sides live, so the pair can be rearranged freely afterwards.
   return {
-    sourceNode: ensureNodeSidePort(source, sourceSide, 'source').node,
     node,
     connector: {
       id: connectorId,
-      source: { nodeId: source.id, portId: sourceSide, anchor: null, point: null },
-      target: { nodeId: newNodeId, portId: targetSide, anchor: null, point: null },
+      source: { nodeId: source.id, portId: null, anchor: null, point: null },
+      target: { nodeId: newNodeId, portId: null, anchor: null, point: null },
       route: { kind: 'orthogonal', ownership: 'automatic' },
       waypoints: [],
       labels: [],

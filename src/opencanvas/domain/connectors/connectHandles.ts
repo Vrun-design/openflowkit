@@ -60,3 +60,16 @@ export function nearestSide(bounds: Bounds2d, point: Point2d): ConnectSide {
   if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'right' : 'left';
   return dy >= 0 ? 'bottom' : 'top';
 }
+
+// The side of `self` an orthogonal connector should leave from to reach
+// `other`: the axis the two boxes are separated on wins, so a node beside
+// another never exits top/bottom just because its centre sits lower.
+// Overlapping boxes fall back to the centre direction.
+export function facingSide(self: Bounds2d, other: Bounds2d): ConnectSide {
+  const gapX = Math.max(other.x - (self.x + self.width), self.x - (other.x + other.width));
+  const gapY = Math.max(other.y - (self.y + self.height), self.y - (other.y + other.height));
+  const otherCenter = { x: other.x + other.width / 2, y: other.y + other.height / 2 };
+  if (gapX > 0 && gapX >= gapY) return otherCenter.x > self.x ? 'right' : 'left';
+  if (gapY > 0) return otherCenter.y > self.y ? 'bottom' : 'top';
+  return nearestSide(self, otherCenter);
+}

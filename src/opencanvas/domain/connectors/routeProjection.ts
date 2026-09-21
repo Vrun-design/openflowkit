@@ -8,10 +8,11 @@ import type {
 import { applyMatrixToPoint, invertMatrix } from '../geometry/matrix';
 import { dedupePolyline, pointAtPolylineRatio } from '../geometry/polyline';
 import { distanceBetweenPoints } from '../geometry/point';
-import type { Matrix2d, Point2d } from '../geometry/types';
+import type { Bounds2d, Matrix2d, Point2d } from '../geometry/types';
 import { buildNodeWorldMatrices, nodeWorldBounds, nodeWorldCenter } from '../scene/worldGeometry';
 import { resolveConnectorPresentation } from './presentation';
-import { routeOrthogonalAroundObstacles } from './obstacleRouting';
+import { dropCollinear, routeOrthogonalBetweenSides } from './obstacleRouting';
+import { facingSide, sideAnchor, type ConnectSide } from './connectHandles';
 import type { ConnectorPathCommand, ProjectedConnector } from './types';
 
 interface ConnectorProjectionContext {
@@ -187,15 +188,65 @@ function sequenceMessageEndpoints(
   };
 }
 
-function orthogonalPoints(start: Point2d, end: Point2d): readonly Point2d[] {
-  const dx = Math.abs(end.x - start.x);
-  const dy = Math.abs(end.y - start.y);
-  if (dx >= dy) {
-    const x = (start.x + end.x) / 2;
-    return dedupePolyline([start, { x, y: start.y }, { x, y: end.y }, end]);
+interface OrthogonalEnd {
+  readonly point: Point2d;
+  readonly side: ConnectSide | null;
+}
+
+function pointBounds(point: Point2d): Bounds2d {
+  return { x: point.x, y: point.y, width: 0, height: 0 };
+}
+
+// Where an orthogonal route meets its end. An authored side anchor pins the
+// side; anything else faces whatever comes next on the path (first waypoint,
+// or the other end), so a node dragged around its partner re-picks its side
+// every frame. Free ends are just their point.
+function orthogonalEnd(
+  endpoint: ConnectorEndpoint,
+  node: SceneNode | undefined,
+  matrix: Matrix2d | undefined,
+  toward: Bounds2d
+): OrthogonalEnd | null {
+  if (endpoint.point) return { point: endpoint.point, side: null };
+  if (!node || !matrix) return null;
+  const bounds = nodeWorldBounds(node, matrix);
+  const anchor = endpoint.anchor
+    ?? node.ports.find((port) => port.id === endpoint.portId)?.anchor
+    ?? sideAnchorForDanglingPort(endpoint.portId);
+  if (anchor) {
+    return {
+      point: applyMatrixToPoint(matrix, anchorLocalPoint(node, anchor)),
+      side: anchor.kind === 'side' ? anchor.side : facingSide(bounds, toward),
+    };
   }
-  const y = (start.y + end.y) / 2;
-  return dedupePolyline([start, { x: start.x, y }, { x: end.x, y }, end]);
+  const side = facingSide(bounds, toward);
+  return { point: sideAnchor(bounds, side), side };
+}
+
+// Hybrid routes keep the user's corners and re-link both ends every frame:
+// a diagonal hop between consecutive points gets one elbow, chosen so the
+// segment touching a node stays perpendicular to that node's side.
+function linkOrthogonal(
+  start: OrthogonalEnd,
+  waypoints: readonly Point2d[],
+  end: OrthogonalEnd
+): readonly Point2d[] {
+  const points = [start.point, ...waypoints, end.point];
+  const linked: Point2d[] = [points[0]];
+  for (let index = 1; index < points.length; index += 1) {
+    const from = points[index - 1];
+    const to = points[index];
+    if (from.x !== to.x && from.y !== to.y) {
+      const verticalFirst = index === 1
+        ? start.side === 'top' || start.side === 'bottom'
+        : index === points.length - 1
+          ? end.side === 'left' || end.side === 'right'
+          : false;
+      linked.push(verticalFirst ? { x: from.x, y: to.y } : { x: to.x, y: from.y });
+    }
+    linked.push(to);
+  }
+  return dropCollinear(dedupePolyline(linked));
 }
 
 function cubicPoint(
@@ -299,14 +350,38 @@ function connectorPath(
     case 'polyline':
       return linearPath([start, ...connector.waypoints, end]);
     case 'orthogonal':
-      return linearPath(
-        connector.waypoints.length > 0
-          ? [start, ...connector.waypoints, end]
-          : orthogonalPoints(start, end)
-      );
+      return linearPath([start, ...connector.waypoints, end]);
     case 'bezier':
       return bezierPath(start, end, connector.waypoints);
   }
+}
+
+function orthogonalPath(
+  connector: SceneConnector,
+  sourceNode: SceneNode | undefined,
+  sourceMatrix: Matrix2d | undefined,
+  targetNode: SceneNode | undefined,
+  targetMatrix: Matrix2d | undefined,
+  context: ConnectorProjectionContext
+): readonly Point2d[] | null {
+  const sourceBounds = sourceNode && sourceMatrix ? nodeWorldBounds(sourceNode, sourceMatrix)
+    : connector.source.point ? pointBounds(connector.source.point) : null;
+  const targetBounds = targetNode && targetMatrix ? nodeWorldBounds(targetNode, targetMatrix)
+    : connector.target.point ? pointBounds(connector.target.point) : null;
+  if (!sourceBounds || !targetBounds) return null;
+  const first = connector.waypoints[0];
+  const last = connector.waypoints.at(-1);
+  const start = orthogonalEnd(connector.source, sourceNode, sourceMatrix, first ? pointBounds(first) : targetBounds);
+  const end = orthogonalEnd(connector.target, targetNode, targetMatrix, last ? pointBounds(last) : sourceBounds);
+  if (!start || !end) return null;
+  if (connector.waypoints.length > 0) return linkOrthogonal(start, connector.waypoints, end);
+  // Every node is an obstacle, the endpoints' own included: that is what
+  // keeps a lane from doubling back through the shape it just left.
+  const obstacles: Bounds2d[] = [];
+  for (const node of context.nodesById.values()) {
+    obstacles.push(nodeWorldBounds(node, context.matrices.get(node.id)!));
+  }
+  return routeOrthogonalBetweenSides(start.point, start.side, end.point, end.side, obstacles);
 }
 
 function projectConnectorWithContext(
@@ -347,7 +422,11 @@ function projectConnectorWithContext(
       ? endpointPoint(connector.target, targetNode, targetMatrix, targetToward)
       : null);
   if (!start || !end) return null;
-  const path =
+  const orthogonal = connector.route.kind === 'orthogonal' && !sequenceEndpoints
+    && !(sourceNode && targetNode && sourceNode.id === targetNode.id)
+    ? orthogonalPath(connector, sourceNode, sourceMatrix, targetNode, targetMatrix, context)
+    : null;
+  const path = orthogonal ? linearPath(orthogonal) :
     sequenceEndpoints && sourceNode && targetNode && sourceNode.id === targetNode.id
       ? linearPath([
           start,
@@ -359,17 +438,7 @@ function projectConnectorWithContext(
           && connector.route.ownership === 'automatic'
           && connector.waypoints.length === 0
         ? selfLoopPath(connector, sourceNode, sourceMatrix)
-        : connector.route.kind === 'orthogonal'
-            && connector.route.ownership === 'automatic'
-            && connector.waypoints.length === 0
-          ? linearPath(routeOrthogonalAroundObstacles(
-              start,
-              end,
-              [...context.nodesById.values()]
-                .filter((node) => node.id !== sourceNode?.id && node.id !== targetNode?.id)
-                .map((node) => nodeWorldBounds(node, context.matrices.get(node.id)!))
-            ))
-          : connectorPath(connector, start, end);
+        : connectorPath(connector, start, end);
   const lateral = context.lateralByConnectorId.get(connector.id) ?? 0;
   // Reverse edges fan with the group: canonical normal runs from the
   // lexicographically smaller endpoint, regardless of edge direction.

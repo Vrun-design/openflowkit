@@ -118,7 +118,7 @@ export class PixiRendererHost {
   private readonly proposalPreview = new PixiProposalPreview();
   private proposalFrame: ProposalPreviewFrame | null = null;
   private readonly marquee = new Graphics();
-  private readonly connectionPreview = new Graphics();
+  private readonly connectionPreview = new PixiConnectorRenderer();
   private readonly alignmentGuides = new Graphics();
   private alignmentGuidesShown = false;
   private readonly onStatusChange?: PixiRendererHostOptions['onStatusChange'];
@@ -199,7 +199,7 @@ export class PixiRendererHost {
       this.transformOverlay.graphics,
       this.freeformPreview.graphics,
       this.connectorEditOverlay.graphics,
-      this.connectionPreview,
+      this.connectionPreview.container,
       this.alignmentGuides
     );
     if (this.livePreview) this.world.addChild(this.livePreview.container);
@@ -470,17 +470,13 @@ export class PixiRendererHost {
     this.requestRender();
   }
 
-  /** Rubber-band line (world coordinates) while a new connector is dragged. */
-  setConnectionPreview(line: { readonly from: Point2d; readonly to: Point2d } | null): void {
-    this.connectionPreview.clear();
-    if (line) {
-      this.connectionPreview
-        .moveTo(line.from.x, line.from.y)
-        .lineTo(line.to.x, line.to.y)
-        .stroke({ color: SELECTION_STROKE, width: 2 / this.camera.zoom, alpha: 0.9 });
-      this.connectionPreview
-        .circle(line.to.x, line.to.y, 4 / this.camera.zoom)
-        .fill({ color: SELECTION_STROKE });
+  /** The connector being dragged out, routed live like it will be once committed. */
+  setConnectionPreview(connector: SceneConnector | null): void {
+    if (!connector || !this.page) {
+      this.connectionPreview.container.visible = false;
+    } else {
+      this.connectionPreview.draw({ ...this.page, connectors: [connector] }, true);
+      this.connectionPreview.container.visible = true;
     }
     this.requestRender();
   }

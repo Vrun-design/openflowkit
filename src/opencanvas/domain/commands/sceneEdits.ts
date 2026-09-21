@@ -26,7 +26,6 @@ import {
 import {
   createShapeNode, nextNodeZIndex, DEFAULT_SHAPE_SIZE, DEFAULT_TEXT_SIZE, type ShapeKind,
 } from '../nodes/shapeNode';
-import { ensureNodeSidePort } from '../connectors/portAuthoring';
 import { planQuickCreate } from '../connectors/quickCreate';
 import type { ConnectSide } from '../connectors/connectHandles';
 
@@ -295,73 +294,19 @@ export function buildQuickCreateCommand(
   const plan = planQuickCreate(
     page, options.sourceNodeId, options.sourceSide, options.newNodeId, options.connectorId
   );
-  const before = page.nodes.find((node) => node.id === options.sourceNodeId)!;
-  const commands: DocumentCommand[] = [];
-  if (plan.sourceNode !== before) {
-    commands.push({
-      kind: 'set-node', id: `quick-create-port:${before.id}`, label: 'Quick create',
-      pageId: page.id, before, after: plan.sourceNode,
-    });
-  }
-  commands.push({
-    kind: 'insert-node', id: `create-node:${plan.node.id}`, label: 'Quick create',
-    pageId: page.id, index: page.nodes.length, node: plan.node,
-  });
-  commands.push({
-    kind: 'insert-connector', id: `create-connector:${plan.connector.id}`, label: 'Quick create',
-    pageId: page.id, index: page.connectors.length, connector: plan.connector,
-  });
-  return { kind: 'batch', id: `quick-create:${plan.node.id}`, label: 'Quick create', commands };
+  return {
+    kind: 'batch', id: `quick-create:${plan.node.id}`, label: 'Quick create',
+    commands: [
+      {
+        kind: 'insert-node', id: `create-node:${plan.node.id}`, label: 'Quick create',
+        pageId: page.id, index: page.nodes.length, node: plan.node,
+      },
+      {
+        kind: 'insert-connector', id: `create-connector:${plan.connector.id}`, label: 'Quick create',
+        pageId: page.id, index: page.connectors.length, connector: plan.connector,
+      },
+    ],
+  };
 }
 
-export interface HandleConnectOptions {
-  readonly id: string;
-  readonly sourceNodeId: string;
-  readonly sourceSide: ConnectSide;
-  readonly targetNodeId: string;
-  readonly targetSide: ConnectSide;
-}
 
-// Handle-drag released over a node: side-bound connector as one undo step.
-export function buildHandleConnectCommand(
-  page: ScenePage,
-  options: HandleConnectOptions
-): BatchDocumentCommand {
-  const source = page.nodes.find((node) => node.id === options.sourceNodeId);
-  const target = page.nodes.find((node) => node.id === options.targetNodeId);
-  if (!source) throw new RangeError(`Node "${options.sourceNodeId}" was not found.`);
-  if (!target) throw new RangeError(`Node "${options.targetNodeId}" was not found.`);
-  const sourceNode = ensureNodeSidePort(source, options.sourceSide, 'source').node;
-  const targetNode = ensureNodeSidePort(target, options.targetSide, 'target').node;
-  const commands: DocumentCommand[] = [];
-  if (sourceNode !== source) {
-    commands.push({
-      kind: 'set-node', id: `connect-port:${source.id}`, label: 'Connect',
-      pageId: page.id, before: source, after: sourceNode,
-    });
-  }
-  if (targetNode !== target) {
-    commands.push({
-      kind: 'set-node', id: `connect-port:${target.id}`, label: 'Connect',
-      pageId: page.id, before: target, after: targetNode,
-    });
-  }
-  commands.push({
-    kind: 'insert-connector', id: `create-connector:${options.id}`, label: 'Connect',
-    pageId: page.id,
-    index: page.connectors.length,
-    connector: {
-      id: options.id,
-      source: { nodeId: source.id, portId: options.sourceSide, anchor: null, point: null },
-      target: { nodeId: target.id, portId: options.targetSide, anchor: null, point: null },
-      route: { kind: 'orthogonal', ownership: 'automatic' },
-      waypoints: [],
-      labels: [],
-      appearance: { markerEnd: 'arrow' },
-      semantics: {},
-      metadata: {},
-      extensions: {},
-    },
-  });
-  return { kind: 'batch', id: `connect:${options.id}`, label: 'Connect', commands };
-}
