@@ -128,11 +128,15 @@ export function downloadTextFile(filename: string, text: string, mime: string): 
   downloadV2Export([{ filename, mime, text }]);
 }
 
-/** Copy a PNG artefact to the system clipboard; false when the API is missing. */
-export async function copyPngToClipboard(bytes: Uint8Array): Promise<boolean> {
+/** Copy an image artefact to the system clipboard; false when the API is missing. */
+export async function copyImageToClipboard(bytes: Uint8Array, mime: string): Promise<boolean> {
   if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) return false;
-  await navigator.clipboard.write([new ClipboardItem({ 'image/png': new Blob([bytes as BlobPart], { type: 'image/png' }) })]);
-  return true;
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ [mime]: new Blob([bytes as BlobPart], { type: mime }) })]);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function buildV2SvgExport(document: SceneDocumentV1): { filename: string; svg: string } {

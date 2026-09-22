@@ -6,7 +6,7 @@ import type { SceneDocumentV1 } from '../../domain/document/types';
 import { Button, Icon, Popover, PopoverHeader, Segmented } from '../design-system';
 import { V2MotionExport } from './V2MotionExport';
 import {
-  buildV2Export, copyPngToClipboard, downloadV2Export, printV2Export,
+  buildV2Export, copyImageToClipboard, downloadV2Export, printV2Export,
   type V2ExportFormat, type V2ExportScope, type V2ExportTheme,
 } from './v2Export';
 
@@ -58,7 +58,7 @@ export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeId
         onToast('Print dialog opened — choose "Save as PDF".', 'info');
       } else if (action === 'copy-png') {
         const [file] = await buildV2Export({ ...request, format: 'png', scale: 2 });
-        if (!file?.bytes || !(await copyPngToClipboard(file.bytes))) {
+        if (!file?.bytes || !(await copyImageToClipboard(file.bytes, 'image/png'))) {
           onToast('This browser cannot copy images to the clipboard.', 'danger');
         } else {
           onToast('PNG copied to the clipboard.', 'success');

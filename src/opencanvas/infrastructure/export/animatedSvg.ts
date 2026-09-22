@@ -35,6 +35,13 @@ export interface AnimatedSvgOptions {
   readonly pageId?: string;
   readonly theme?: 'light' | 'dark' | 'print';
   readonly padding?: number;
+  /**
+   * Start the animations this far into the clip (negative delay), so the
+   * preview can resume from the scrubber. Zero for files.
+   */
+  readonly seekMs?: number;
+  /** Repeat forever; the preview and the README loop both use it. */
+  readonly loop?: boolean;
 }
 
 type Stops = Map<string, string>;
@@ -55,9 +62,21 @@ function elementName(kind: 'node' | 'connector', id: string): string {
   return `ofk-${kind}-${id.replace(/[^A-Za-z0-9_-]/g, '-')}`;
 }
 
+/** Clip settings every keyframe animation shares: whole-clip span, seek, loop. */
+interface ClipSettings {
+  readonly durationMs: number;
+  readonly seekMs: number;
+  readonly loop: boolean;
+}
+
 /** Every element keyframe spans the whole clip; percentages are absolute. */
-function clipAnimation(name: string, durationMs: number): CssAnimation {
-  return { name, durationMs, delayMs: 0 };
+function clipAnimation(name: string, clip: ClipSettings): CssAnimation {
+  return {
+    name,
+    durationMs: clip.durationMs,
+    delayMs: -clip.seekMs,
+    ...(clip.loop ? { iterationCount: 'infinite' } : {}),
+  };
 }
 
 interface Planned {
@@ -99,10 +118,11 @@ function nodeCenters(document: SceneDocumentV1, pageId: string | undefined): Rea
 
 function planBuild(
   timeline: Timeline,
-  durationMs: number,
+  clip: ClipSettings,
   dashed: ReadonlySet<string>,
   centers: ReadonlyMap<string, { x: number; y: number }>,
 ): Planned {
+  const durationMs = clip.durationMs;
   const windows = stepWindows(timeline);
   const css: string[] = [];
   const elements = new Map<string, ElementAnimations>();
@@ -133,20 +153,21 @@ function planBuild(
       stop(draw, start, `stroke-dashoffset:1;animation-timing-function:${EASE}`);
       stop(draw, ((window.start + DRAW_MS) / durationMs) * 100, 'stroke-dashoffset:0');
       stop(draw, 100, 'stroke-dashoffset:0');
-      path = { ...clipAnimation(`${name}-draw`, durationMs), dash: '1' };
+      path = { ...clipAnimation(`${name}-draw`, clip), dash: '1' };
       css.push(keyframes(path.name, draw));
     }
-    elements.set(key, { group: clipAnimation(name, durationMs), ...(path ? { path } : {}) });
+    elements.set(key, { group: clipAnimation(name, clip), ...(path ? { path } : {}) });
   }
   return { css, elements };
 }
 
 function planWalkthrough(
   timeline: Timeline,
-  durationMs: number,
+  clip: ClipSettings,
   viewBox: Bounds2d,
   centers: ReadonlyMap<string, { x: number; y: number }>,
 ): Planned {
+  const durationMs = clip.durationMs;
   const windows = stepWindows(timeline);
   const css: string[] = [];
   const elements = new Map<string, ElementAnimations>();
@@ -179,9 +200,9 @@ function planWalkthrough(
     });
     const name = elementName(kind, id);
     css.push(keyframes(name, stops));
-    elements.set(key, { group: clipAnimation(name, durationMs) });
+    elements.set(key, { group: clipAnimation(name, clip) });
   }
-  const camera = planCamera(timeline, durationMs, viewBox);
+  const camera = planCamera(timeline, clip, viewBox);
   return camera
     ? { css: [...css, camera.css], elements, camera: camera.animation }
     : { css, elements };
@@ -202,8 +223,10 @@ function sameBounds(a: Bounds2d, b: Bounds2d): boolean {
  * cubic-bezier stops from the glide's own easing.
  */
 function planCamera(
-  timeline: Timeline, durationMs: number, viewBox: Bounds2d,
-): { readonly css: string; readonly animation: CssAnimation } | null {
+  timeline: Timeline, clip: ClipSettings, viewBox: Bounds2d,
+)
+: { readonly css: string; readonly animation: CssAnimation } | null {
+  const durationMs = clip.durationMs;
   if (!timeline.steps.some((step) => step.camera)) return null;
   const windows = stepWindows(timeline);
   const stops: Stops = new Map();
@@ -222,10 +245,10 @@ function planCamera(
     }
   });
   stop(stops, 100, transformAt(durationMs));
-  return { css: keyframes('ofk-camera', stops), animation: clipAnimation('ofk-camera', durationMs) };
+  return { css: keyframes('ofk-camera', stops), animation: clipAnimation('ofk-camera', clip) };
 }
 
-function planPulse(timeline: Timeline): Planned {
+function planPulse(timeline: Timeline, clip: ClipSettings): Planned {
   const elements = new Map<string, ElementAnimations>();
   const css = [keyframes('ofk-pulse', new Map([['0', 'stroke-dashoffset:0'], ['100', 'stroke-dashoffset:-1']]))];
   const order = new Set<string>();
@@ -233,7 +256,7 @@ function planPulse(timeline: Timeline): Planned {
   [...order].forEach((id, index) => {
     elements.set(`connector:${id}`, {
       path: {
-        name: 'ofk-pulse', durationMs: PULSE_MS, delayMs: -index * 0.25 * PULSE_MS,
+        name: 'ofk-pulse', durationMs: PULSE_MS, delayMs: -index * 0.25 * PULSE_MS - clip.seekMs,
         iterationCount: 'infinite', fill: 'none', timing: 'linear', dash: PULSE_DASH,
       },
     });
@@ -257,11 +280,12 @@ export function exportAnimatedSvg(
   }
   const viewBox = svgViewBox(document, options);
   const centers = nodeCenters(document, options.pageId);
+  const clip: ClipSettings = { durationMs, seekMs: Math.max(0, options.seekMs ?? 0), loop: options.loop ?? false };
   const plan = timeline.preset === 'pulse'
-    ? planPulse(timeline)
+    ? planPulse(timeline, clip)
     : timeline.preset === 'walkthrough'
-      ? planWalkthrough(timeline, durationMs, viewBox, centers)
-      : planBuild(timeline, durationMs, dashedConnectorIds(document, options.pageId), centers);
+      ? planWalkthrough(timeline, clip, viewBox, centers)
+      : planBuild(timeline, clip, dashedConnectorIds(document, options.pageId), centers);
   const svgOptions: CanonicalSvgExportOptions = {
     ...(options.pageId ? { pageId: options.pageId } : {}),
     ...(options.theme ? { theme: options.theme } : {}),

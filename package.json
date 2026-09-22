@@ -39,6 +39,8 @@
   "dependencies": {
     "@tabler/icons-react": "^3.47.0",
     "elkjs": "^0.11.0",
+    "gifenc": "^1.0.3",
+    "mediabunny": "^1.59.0",
     "pixi.js": "8.18.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

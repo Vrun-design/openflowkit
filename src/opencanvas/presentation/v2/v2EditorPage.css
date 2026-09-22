@@ -759,3 +759,8 @@
 .ofk-motion-hold { width: min(240px, calc(100vw - 48px)); }
 .ofk-motion-hold-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .ofk-motion-hold-actions .ofk-button { font-size: 11px; padding-inline: 8px; }
+.ofk-motion-progress { display: flex; align-items: center; gap: 8px; }
+.ofk-motion-progress progress { flex: 1; height: 6px; accent-color: var(--ofk-accent); }
+.ofk-motion-progress .ofk-button { font-size: 11px; padding-inline: 8px; }
+.ofk-motion-failure { margin: 0; color: var(--ofk-danger); font-size: 12px; }
+.ofk-motion-preview[data-busy] img { opacity: .5; }

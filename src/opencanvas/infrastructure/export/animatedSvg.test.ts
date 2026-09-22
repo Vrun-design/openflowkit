@@ -65,6 +65,16 @@ describe('animated SVG', () => {
     expect(svg).toContain('stroke-dasharray="0.03 0.07"');
   });
 
+  it('seeks and loops for the preview without touching the file', async () => {
+    const document = await fixtureDocument();
+    const timeline = autoSequence(document.pages[0]!, 'build');
+    const seeked = exportAnimatedSvg(document, timeline, { seekMs: 1000, loop: true });
+    expect(seeked).toContain('animation:ofk-node-idea');
+    expect(seeked).toContain('-1000ms');
+    expect(seeked).toContain('infinite');
+    expect(exportAnimatedSvg(document, timeline)).not.toContain('-1000ms');
+  });
+
   it('draws solid connectors on and leaves dashed ones to fade', async () => {
     const document = await fixtureDocument();
     const page = document.pages[0]!;

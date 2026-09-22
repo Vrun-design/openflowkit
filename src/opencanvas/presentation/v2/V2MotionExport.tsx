@@ -4,7 +4,7 @@
 // preview, the stills and the files share.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  IconDownload, IconPlayerPause, IconPlayerPlay, IconPlayerSkipBack, IconPlayerSkipForward,
+  IconCopy, IconDownload, IconPlayerPause, IconPlayerPlay, IconPlayerSkipBack, IconPlayerSkipForward, IconX,
 } from '@tabler/icons-react';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { stepWindows, timelineDuration } from '../../domain/animation/frame';
@@ -12,9 +12,20 @@ import type { AnimationPreset, Timeline } from '../../domain/animation/types';
 import { archModelOfPage } from '../../../dsl/model/model';
 import { animateBlockFromTimeline, timelineFromAnimate, type AnimateBlock } from '../../../dsl/animate';
 import { Button, Checkbox, Icon, IconButton, NumberField, Segmented, Slider } from '../design-system';
-import { animatedSvgFor, animateBlockFromText, motionFrameSvgFor, motionTimeline, buildMotionSvgFile } from './v2Motion';
+import { MOTION_FPS, MOTION_SIZES, motionFrameIntervalMs, motionFrameTimes, type MotionFormat, type MotionFps, type MotionSize } from '../../infrastructure/export/motionSchedule';
+import { renderMotionFile, webCodecsAvailable } from '../../infrastructure/export/motionFrames';
+import { animatedSvgFor, animateBlockFromText, motionFileStem, motionFrameSvgFor, motionTimeline, buildMotionSvgFile } from './v2Motion';
 import { V2MotionSteps } from './V2MotionSteps';
-import { downloadV2Export } from './v2Export';
+import { copyImageToClipboard, downloadV2Export } from './v2Export';
+
+type MotionOutput = 'svg' | MotionFormat;
+
+const FORMAT_OPTIONS: readonly { value: MotionOutput; label: string; title: string }[] = [
+  { value: 'svg', label: 'SVG', title: 'Animated vector; plays in GitHub READMEs, docs and Notion' },
+  { value: 'gif', label: 'GIF', title: 'Plays everywhere: Slack, GitHub, X, email' },
+  { value: 'mp4', label: 'MP4', title: 'Plays in Slack, Keynote, YouTube; not in a README' },
+  { value: 'webm', label: 'WebM', title: 'Plays in Chrome, Firefox and Slack' },
+];
 
 const PRESETS: readonly { value: AnimationPreset; label: string; title: string }[] = [
   { value: 'build', label: 'Build', title: 'Everything appears in order' },
@@ -40,6 +51,13 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
   const [loop, setLoop] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [targetMs, setTargetMs] = useState<number | null>(null);
+  const [output, setOutput] = useState<MotionOutput>('svg');
+  const [fps, setFps] = useState<MotionFps>(24);
+  const [size, setSize] = useState<MotionSize>(1080);
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<{ readonly done: number; readonly total: number } | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   // Editing a chip turns the order into an explicit animate block: the chips
   // ARE the DSL, rendered, and every edit is written back to the code panel.
   const [edited, setEdited] = useState<AnimateBlock | null>(null);
@@ -102,17 +120,68 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
     const index = current < 0 ? windows.length - 1 : current;
     setTMs(windows[Math.min(Math.max(0, index + direction), windows.length - 1)]!.start);
   };
+  // An edited timeline is written out as its block, so files match the chips.
+  const block = edited && page && timeline ? animateBlockFromTimeline(timeline, page) : null;
+  const request = {
+    document, pageId: page?.id ?? pageId, preset, order: block ? 'code' : order,
+    durationMs: block ? null : targetMs, loop: block ? block.loop : loop, theme,
+    ...(codeText ? { codeText } : {}),
+  };
   function download(): void {
     if (empty) return;
-    // An edited timeline is written out as its block, so the file matches the chips.
-    const block = edited && page && timeline ? animateBlockFromTimeline(timeline, page) : null;
-    const request = {
-      document, pageId: page?.id ?? pageId, preset, order: block ? 'code' : order,
-      durationMs: block ? null : targetMs, loop: block ? block.loop : loop, theme,
-    };
     const file = buildMotionSvgFile(request);
     downloadV2Export([file]);
     onToast(`${file.filename} downloaded.`, 'success');
+  }
+  async function encode(): Promise<void> {
+    if (empty || !timeline || !page || output === 'svg') return;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setBusy(true);
+    setFailure(null);
+    setProgress({ done: 0, total: motionFrameTimes(timelineDuration(timeline), motionFrameIntervalMs(output, fps)).length });
+    try {
+      const file = await renderMotionFile({
+        document, timeline, pageId: page.id, filenameStem: motionFileStem(request),
+        format: output, size, fps, theme, signal: controller.signal,
+        onProgress: (done, total) => setProgress({ done, total }),
+      });
+      downloadV2Export([file]);
+      onToast(`${file.filename} downloaded.`, 'success');
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        onToast('Export cancelled.', 'info');
+      } else {
+        // One sentence, and the dialog stays usable.
+        const message = error instanceof Error ? error.message : 'The export failed.';
+        setFailure(message);
+        onToast(message, 'danger');
+      }
+    } finally {
+      setBusy(false);
+      setProgress(null);
+      abortRef.current = null;
+    }
+  }
+  async function copy(): Promise<void> {
+    if (empty || !timeline || !page || output === 'svg') return;
+    setBusy(true);
+    setFailure(null);
+    try {
+      const file = await renderMotionFile({
+        document, timeline, pageId: page.id, filenameStem: motionFileStem(request),
+        format: output, size, fps, theme,
+      });
+      const copied = await copyImageToClipboard(file.bytes, file.mime);
+      if (copied) onToast(`${output.toUpperCase()} copied to the clipboard.`, 'success');
+      else setFailure('This browser cannot copy that format to the clipboard — download it instead.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The export failed.';
+      setFailure(message);
+      onToast(message, 'danger');
+    } finally {
+      setBusy(false);
+    }
   }
   const orderOptions = [
     { value: 'auto', label: 'Auto', title: 'Follow the connector graph' },
@@ -169,7 +238,7 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
           onChange={(value) => { setOrder(value); setEdited(value === 'code' ? (codeBlock ?? null) : null); }}
           options={orderOptions} />
       ) : null}
-      <div className="ofk-motion-preview" data-empty={empty || undefined}>
+      <div className="ofk-motion-preview" data-empty={empty || undefined} data-busy={busy || undefined}>
         {empty ? (
           <p className="ofk-caption">Nothing to animate here — this page has no shapes.</p>
         ) : (
@@ -212,6 +281,18 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
         />
         <IconButton label="Next step (right arrow)" disabled={empty} icon={<Icon icon={IconPlayerSkipForward} />} onClick={() => stepBy(1)} />
       </div>
+      <Segmented<MotionOutput> label="Format" value={output} onChange={setOutput}
+        options={FORMAT_OPTIONS.filter((option) => option.value !== 'mp4' || webCodecsAvailable())} />
+      {output !== 'svg' ? (
+        <>
+          <Segmented<'12' | '24' | '30'> label="Frame rate" value={String(fps) as '12' | '24' | '30'}
+            onChange={(value) => setFps(Number(value) as MotionFps)}
+            options={MOTION_FPS.map((value) => ({ value: String(value) as '12' | '24' | '30', label: `${value} fps` }))} />
+          <Segmented<'720' | '1080' | '1440'> label="Size" value={String(size) as '720' | '1080' | '1440'}
+            onChange={(value) => setSize(Number(value) as MotionSize)}
+            options={MOTION_SIZES.map((value) => ({ value: String(value) as '720' | '1080' | '1440', label: `${value}p` }))} />
+        </>
+      ) : null}
       <div className="ofk-motion-fields">
         <NumberField
           label="Duration"
@@ -230,15 +311,33 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
       {timeline && page && !empty ? (
         <V2MotionSteps steps={timeline.steps} page={page} onReorder={move} onMerge={merge} onHold={setHold} />
       ) : null}
+      {progress ? (
+        <div className="ofk-motion-progress" role="status">
+          <progress value={progress.done} max={Math.max(1, progress.total)} aria-label="Encoding progress" />
+          <span className="ofk-caption">Frame {progress.done} of {progress.total}</span>
+          <Button variant="quiet" onClick={() => abortRef.current?.abort()}>
+            <Icon icon={IconX} /> Cancel
+          </Button>
+        </div>
+      ) : null}
+      {failure ? <p className="ofk-motion-failure" role="alert">{failure}</p> : null}
       <div className="ofk-v2-export-actions">
-        <Button variant="primary" disabled={empty} onClick={download}>
-          <Icon icon={IconDownload} /> Download SVG
+        <Button variant="primary" disabled={empty || busy}
+          onClick={() => { if (output === 'svg') download(); else void encode(); }}>
+          <Icon icon={IconDownload} /> {output === 'svg' ? 'Download SVG' : `Export ${FORMAT_OPTIONS.find((option) => option.value === output)?.label ?? output}`}
         </Button>
+        {output !== 'svg' ? (
+          <Button variant="quiet" disabled={empty || busy} onClick={() => { void copy(); }}>
+            <Icon icon={IconCopy} /> Copy
+          </Button>
+        ) : null}
       </div>
       <p className="ofk-caption">
         {empty
           ? 'An animation needs at least one shape on the page.'
-          : `Plays in GitHub READMEs, docs and any browser. ${timeline?.steps.length ?? 0} steps, ${(durationMs / 1000).toFixed(1)}s${loop ? ', loops' : ''}.`}
+          : output === 'svg'
+            ? `Plays in GitHub READMEs, docs and any browser. ${timeline?.steps.length ?? 0} steps, ${(durationMs / 1000).toFixed(1)}s${loop ? ', loops' : ''}.`
+            : `${FORMAT_OPTIONS.find((option) => option.value === output)?.title ?? ''} ${timeline?.steps.length ?? 0} steps, ${(durationMs / 1000).toFixed(1)}s at ${fps} fps.`}
       </p>
     </div>
   );
