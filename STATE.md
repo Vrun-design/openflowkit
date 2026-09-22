@@ -21,6 +21,14 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–6 done (6.6, 6.7, 6
   @720p12 / 4.5 MB @1080p24 · MP4 135 KB @720p24 / 249 KB @1080p24 / 357 KB @1440p30 · WebM 323 KB.
 - Assumed: Slack, Notion, X and Keynote playback (no accounts/apps here; standard formats).
   Unknown: how a 500-node export feels on a slower machine — numbers below are this machine's.
+- **Animation UI out of the popover 2026-09-22 (Opus):** it was clipped at the window edge. Now
+  a LEFT-slot panel (shares it with the tree) so the code panel the chips write stays visible on
+  the right; Export… keeps Still + an "Animate this page…" launcher; preset/preview/transport
+  pinned; opens playing (Build starts on an empty canvas, so a paused first frame read as broken;
+  reduced motion opens paused); steps-arriving hero when empty. Two older bugs fixed with it: the
+  style bar read the root dataset *during render* (a frame stale, sat under a just-opened panel:
+  224 px vs 388 px) — now a layout effect; the left slot's width was hardcoded to the tree
+  (`--v2-left-width` + `data-left-open` replace `--v2-layers-width` + `data-tree-open`).
 
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; one `@keyframes` per element (~1 MB at 500 nodes).

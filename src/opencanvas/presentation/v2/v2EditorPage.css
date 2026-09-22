@@ -146,7 +146,9 @@
 .ofk-v2 .ofk-review-footer, .ofk-v2 .ofk-review-bulk, .ofk-v2 .ofk-review-actions { user-select: none; }
 
 /* V2 workspace: stable edge controls, generous canvas, task-scoped panels. */
-.ofk-v2 { --v2-panel-width: 400px; --v2-layers-width: 300px; }
+.ofk-v2 { --v2-panel-width: 400px; --v2-layers-width: 300px; --v2-left-width: var(--v2-layers-width); }
+/* The animation panel needs room for a preview and the step chips. */
+.ofk-v2[data-left-panel='motion'] { --v2-left-width: 380px; }
 .ofk-v2 .ofk-floating-region .ofk-toolbar { background: var(--ofk-surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .ofk-v2 .ofk-v2-tools { top: 80px; }
 .ofk-v2-tools .ofk-toolbar {
@@ -185,7 +187,7 @@
 .ofk-v2 .ofk-floating-region[data-slot='bottom-start'] .ofk-toolbar { gap: 0; padding: 5px; }
 .ofk-v2 .ofk-v2-workspace-panel,
 .ofk-v2 .ofk-agent-panel { top: 0; bottom: 0; right: 0; border-radius: 0; border-width: 0 0 0 1px; box-shadow: none; --ofk-layout-panelWidth: var(--v2-panel-width); --ofk-layout-panelMaxWidth: var(--v2-panel-width); }
-.ofk-v2 .ofk-v2-layers-panel { left: 0; top: 0; bottom: 0; border-radius: 0; border-width: 0 1px 0 0; box-shadow: none; --ofk-layout-panelWidth: var(--v2-layers-width); }
+.ofk-v2 .ofk-v2-layers-panel { left: 0; top: 0; bottom: 0; border-radius: 0; border-width: 0 1px 0 0; box-shadow: none; --ofk-layout-panelWidth: var(--v2-left-width); --ofk-layout-panelMaxWidth: var(--v2-left-width); }
 .ofk-v2-preview-label { font-size: 10px; font-weight: 500; color: var(--ofk-muted); border: 1px solid var(--ofk-border); border-radius: 5px; padding: 3px 6px; }
 .ofk-v2-welcome { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .ofk-v2-welcome-center { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: min(600px, calc(100% - 180px)); text-align: center; }
@@ -207,9 +209,9 @@
 .ofk-v2-guide-help { right: 28px; bottom: 76px; align-items: flex-start; }
 .ofk-v2-guide-help svg { height: 100px; margin-top: 8px; }
 .ofk-v2[data-workspace-open='true'] .ofk-v2-welcome { right: var(--v2-panel-width); }
-.ofk-v2[data-tree-open='true'] .ofk-v2-welcome { left: var(--v2-layers-width); }
+.ofk-v2[data-left-open='true'] .ofk-v2-welcome { left: var(--v2-left-width); }
 .ofk-v2[data-workspace-open='true'] .ofk-v2-guide-workspace,
-.ofk-v2[data-tree-open='true'] .ofk-v2-guide-tools { display: none; }
+.ofk-v2[data-left-open='true'] .ofk-v2-guide-tools { display: none; }
 .ofk-v2[data-workspace-open='true'] .ofk-v2-welcome-actions { flex-wrap: wrap; }
 .ofk-v2-panel-stack { display: flex; flex-direction: column; gap: 20px; min-height: 100%; }
 .ofk-v2-panel-stack h3 { font-size: 16px; font-weight: 500; line-height: 1.5; margin: 8px 0; letter-spacing: -.3px; }
@@ -340,7 +342,7 @@
 .ofk-v2-shortcut-group > div { display: flex; align-items: center; justify-content: space-between; font-size: 12px; padding: 7px 0; }
 @media (max-width: 1100px) {
   .ofk-v2 { --v2-panel-width: 360px; }
-  .ofk-v2[data-tree-open='true'][data-workspace-open='true'] .ofk-v2-welcome { display: none; }
+  .ofk-v2[data-left-open='true'][data-workspace-open='true'] .ofk-v2-welcome { display: none; }
   .ofk-v2-guide { display: none; }
   .ofk-v2-welcome-actions { flex-wrap: wrap; }
 }
@@ -349,7 +351,7 @@
   .ofk-v2[data-workspace-open='true'] .ofk-v2-workspace-rail { right: 16px; }
   .ofk-v2 .ofk-v2-workspace-rail .ofk-toolbar { flex-direction: row; }
   .ofk-v2[data-workspace-open='true'] .ofk-v2-help { right: 16px; }
-  .ofk-v2[data-workspace-open='true'] .ofk-v2-welcome, .ofk-v2[data-tree-open='true'] .ofk-v2-welcome { display: none; }
+  .ofk-v2[data-workspace-open='true'] .ofk-v2-welcome, .ofk-v2[data-left-open='true'] .ofk-v2-welcome { display: none; }
   .ofk-v2 .ofk-v2-document-bar { max-width: calc(100vw - 184px); }
   .ofk-v2-document-bar > .ofk-v2-save-status, .ofk-v2-document-bar > button:last-child { display: none; }
   .ofk-v2 .ofk-floating-region[data-slot='bottom-start'] { max-width: calc(100vw - 78px); }
@@ -379,8 +381,8 @@
   .ofk-v2 .ofk-v2-document-title { flex: 1; }
 }
 
-.ofk-v2[data-tree-open='true'] > .ofk-floating-region[data-slot='top-start'],
-.ofk-v2[data-tree-open='true'] > .ofk-floating-region[data-slot='bottom-start'] { left: calc(var(--v2-layers-width) + 16px); }
+.ofk-v2[data-left-open='true'] > .ofk-floating-region[data-slot='top-start'],
+.ofk-v2[data-left-open='true'] > .ofk-floating-region[data-slot='bottom-start'] { left: calc(var(--v2-left-width) + 16px); }
 .ofk-v2 .ofk-panel-header { min-height: 52px; padding: 8px 12px 8px 20px; }
 .ofk-v2 .ofk-panel-title { font-size: 16px; }
 .ofk-v2 .ofk-panel-body { padding: 20px; }
@@ -398,7 +400,7 @@
   .ofk-v2[data-workspace-open='true'] .ofk-v2-document-bar,
   .ofk-v2[data-workspace-open='true'] .ofk-floating-region[data-slot='bottom-start'],
   .ofk-v2[data-workspace-open='true'] .ofk-v2-help,
-  .ofk-v2[data-tree-open='true'] .ofk-floating-region { display: none; }
+  .ofk-v2[data-left-open='true'] .ofk-floating-region { display: none; }
   .ofk-v2 .ofk-panel-header { padding: 12px 16px; }
   .ofk-v2 .ofk-thread { padding: 16px; }
 }
@@ -764,3 +766,25 @@
 .ofk-motion-progress .ofk-button { font-size: 11px; padding-inline: 8px; }
 .ofk-motion-failure { margin: 0; color: var(--ofk-danger); font-size: 12px; }
 .ofk-motion-preview[data-busy] img { opacity: .5; }
+
+/* Animation export docks in the right-hand slot. A preview, a transport, ten
+   settings and the step chips never fitted a popover — they were clipped. */
+.ofk-motion-panel .ofk-panel-body { padding: 0; }
+.ofk-motion-panel .ofk-motion { width: auto; gap: 12px; padding: 0 16px 16px; }
+/* The preview and its transport stay put while the settings scroll under them:
+   scrubbing is the one control you always want in view. */
+.ofk-motion-stage { position: sticky; top: 0; z-index: 1; display: grid; gap: 8px; margin: 0 -16px; padding: 12px 16px; background: var(--ofk-surface); border-bottom: 1px solid var(--ofk-border); }
+.ofk-motion-panel .ofk-motion-preview { min-height: 200px; }
+.ofk-motion-panel .ofk-motion-preview img { max-height: 320px; }
+.ofk-motion-panel .ofk-motion-fields { grid-template-columns: 1fr 1fr; align-items: end; }
+.ofk-motion-panel .ofk-motion-fields .ofk-check { grid-column: 1 / -1; }
+.ofk-motion-panel .ofk-motion-chip { max-width: 100%; }
+.ofk-motion-empty { display: grid; justify-items: center; gap: 14px; padding: 14px 8px; text-align: center; }
+/* Three steps arriving in order — the hero IS what Build does. */
+.ofk-motion-hero { display: flex; align-items: center; gap: 8px; }
+.ofk-motion-hero i { width: 34px; height: 24px; border: 1px solid var(--ofk-border); border-radius: 5px; background: var(--ofk-canvas); opacity: .25; animation: ofk-motion-build 2.4s ease-in-out infinite; }
+.ofk-motion-hero i:nth-child(2) { animation-delay: .35s; }
+.ofk-motion-hero i:nth-child(3) { animation-delay: .7s; border-color: var(--ofk-accent); }
+@keyframes ofk-motion-build { 0%, 8% { opacity: .18; transform: scale(.94); } 28%, 72% { opacity: 1; transform: scale(1); } 92%, 100% { opacity: .18; transform: scale(.94); } }
+@media (prefers-reduced-motion: reduce) { .ofk-motion-hero i { animation: none; opacity: .6; } }
+.ofk-v2-export-animate { justify-content: flex-start; width: 100%; border: 1px dashed var(--ofk-border); }

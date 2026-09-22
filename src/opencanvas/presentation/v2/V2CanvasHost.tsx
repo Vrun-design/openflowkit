@@ -118,6 +118,17 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   // Bar width is measured (node and connector bars differ); side panels
   // shrink the visible canvas the bar is clamped into.
   const [barWidth, setBarWidth] = useState(320);
+  // Read after commit, never during render: a panel that opened this render has
+  // not written its width or its data attribute yet, and the bar would be
+  // clamped into the canvas it had a frame ago — i.e. under the new panel.
+  const [edges, setEdges] = useState(() => ({ left: 0, right: window.innerWidth }));
+  // No dep list on purpose: the panels that move these edges are not this
+  // component's props. The equality bail-out below is what terminates it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    const next = visibleCanvasEdges(props.sectionRef.current?.closest<HTMLElement>('.ofk-v2') ?? null);
+    setEdges((current) => (current.left === next.left && current.right === next.right ? current : next));
+  });
   const barLayout = (bar: HTMLElement) => ({ width: bar.offsetWidth, ...visibleCanvasEdges(bar.closest<HTMLElement>('.ofk-v2')) });
   // Sticky defaults live with the host for the session: what you last styled
   // is what the next shape/text/connector gets.
@@ -486,7 +497,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
               bounds: snapshot.bounds, snappedX: false, snappedY: false,
             } : null);
           }}
-          style={contextBarStyle(contextAnchor, { width: barWidth, ...visibleCanvasEdges(props.sectionRef.current?.closest<HTMLElement>('.ofk-v2') ?? null) })}
+          style={contextBarStyle(contextAnchor, { width: barWidth, ...edges })}
           onNodeStyleCommitted={(patch) => {
             const selected = props.selection.nodeIds
               .map((id) => props.page.nodes.find((node) => node.id === id))

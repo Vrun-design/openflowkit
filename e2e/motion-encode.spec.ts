@@ -32,7 +32,9 @@ async function openAnimation(page: import('@playwright/test').Page, source: stri
   await page.getByRole('button', { name: 'Close panel' }).click();
   await page.getByRole('button', { name: 'Canvas menu' }).click();
   await page.getByRole('menuitem', { name: 'Export…' }).click();
-  await page.getByRole('radio', { name: 'Animation' }).check();
+  await page.getByRole('button', { name: /Animate this page/ }).click();
+  // The panel opens playing; park the playhead so the encode is deterministic.
+  await page.locator('.ofk-motion-transport input[type="range"]').fill('0');
   const duration = page.getByRole('spinbutton', { name: 'Duration' });
   await duration.fill('2');
   await duration.blur();

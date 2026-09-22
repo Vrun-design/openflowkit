@@ -1,10 +1,9 @@
 // Export panel: one intent (format + scope + scale) over the shared exporter.
 // Owns no document state; the document bar passes the live document in.
 import { useState } from 'react';
-import { IconCopy, IconDownload } from '@tabler/icons-react';
+import { IconCopy, IconDownload, IconMovie } from '@tabler/icons-react';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { Button, Icon, Popover, PopoverHeader, Segmented } from '../design-system';
-import { V2MotionExport } from './V2MotionExport';
 import {
   buildV2Export, copyImageToClipboard, downloadV2Export, printV2Export,
   type V2ExportFormat, type V2ExportScope, type V2ExportTheme,
@@ -18,10 +17,8 @@ export interface V2ExportMenuProps {
   readonly selectedNodeIds: readonly string[];
   readonly onClose: () => void;
   readonly onToast: (title: string, tone: 'info' | 'success' | 'danger') => void;
-  /** Animation export writes its steps into the code panel through this. */
-  readonly onAnimateBlock?: (block: import('../../../dsl/animate').AnimateBlock) => void;
-  /** The code panel's live text; the animation export reads its animate block. */
-  readonly codeText?: string;
+  /** Animation is a docked panel, not a popover: too much to read in a flyout. */
+  readonly onOpenAnimation: () => void;
 }
 
 const FORMATS: readonly { value: V2ExportFormat; label: string; title: string }[] = [
@@ -31,8 +28,7 @@ const FORMATS: readonly { value: V2ExportFormat; label: string; title: string }[
   { value: 'json', label: 'JSON', title: 'Whole document, every page' },
 ];
 
-export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeIds, onClose, onToast, onAnimateBlock, codeText }: V2ExportMenuProps) {
-  const [mode, setMode] = useState<'still' | 'animation'>('still');
+export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeIds, onClose, onToast, onOpenAnimation }: V2ExportMenuProps) {
   const [format, setFormat] = useState<V2ExportFormat>('png');
   const [scope, setScope] = useState<V2ExportScope>('page');
   const [scale, setScale] = useState<1 | 2>(2);
@@ -80,14 +76,10 @@ export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeId
     <Popover role="dialog" aria-label="Export" open={open} anchorRef={anchorRef} onClose={onClose} placement="bottom-start">
       <PopoverHeader title="Export" close={<Button variant="quiet" onClick={onClose}>Done</Button>} />
       <div className="ofk-v2-properties">
-        <Segmented<'still' | 'animation'> label="Export kind" value={mode} onChange={setMode}
-          options={[{ value: 'still', label: 'Still' }, { value: 'animation', label: 'Animation' }]} />
-        {mode === 'animation' ? (
-          <V2MotionExport document={document} pageId={pageId} onToast={onToast}
-            {...(onAnimateBlock ? { onAnimateBlock } : {})}
-            {...(codeText === undefined ? {} : { codeText })} />
-        ) : (
-          <>
+        <Button className="ofk-v2-export-animate" variant="quiet"
+          onClick={() => { onClose(); onOpenAnimation(); }}>
+          <Icon icon={IconMovie} /> Animate this page…
+        </Button>
         <Segmented<V2ExportFormat> label="Format" value={format} onChange={setFormat} options={FORMATS} />
         <Segmented<V2ExportScope> label="Scope" value={effectiveScope} onChange={setScope}
           options={[
@@ -118,8 +110,6 @@ export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeId
           ? 'Nothing to export here — this page has no shapes.'
           : effectiveScope === 'selection' ? 'Selected shapes only.'
             : effectiveScope === 'document' ? 'Every page as its own file.' : 'The current page.'}</p>
-          </>
-        )}
       </div>
     </Popover>
   );

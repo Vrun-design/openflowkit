@@ -9,7 +9,7 @@ import {
 import { useDocumentSession } from '../../application/session/useDocumentSession';
 import type { PixiRendererHost, PixiRendererStatus } from '../../infrastructure/pixi/PixiRendererHost';
 import { createV2Repository } from '../../../services/storage/v2/v2Repository';
-import { SystemRoot, ToastRegion, type ToastItem } from '../design-system';
+import { Panel, SystemRoot, ToastRegion, type ToastItem } from '../design-system';
 import { V2ContextMenu, type ContextMenuTarget } from './V2ContextMenu';
 import { V2CanvasHost } from './V2CanvasHost';
 import { V2Chrome } from './V2Chrome';
@@ -27,6 +27,7 @@ import { isImageFile } from '../../../services/storage/assets';
 import { V2LoadCenter } from './V2LoadCenter';
 import { V2TreePanel } from './V2TreePanel';
 import { V2ChartDataPanel } from './V2ChartDataPanel';
+import { V2MotionExport } from './V2MotionExport';
 import { V2AgentPanel } from './V2AgentPanel';
 import { useV2Appearance } from './useV2Appearance';
 import { useV2Autosave } from './useV2Autosave';
@@ -114,12 +115,21 @@ export function V2EditorPage(): React.JSX.Element {
   // context bar's Data button, or inserting a chart opens it. It docks in the
   // same right-hand slot as the workspace panels, so only one of them is open.
   const [chartPanelId, setChartPanelId] = useState<string | null>(null);
+  // Animation export docks in the LEFT slot, beside the tree: a preview, a
+  // transport, ten settings and the step chips never fitted a popover, and the
+  // right slot holds the code panel the chips write into — both stay visible.
+  const [motionOpen, setMotionOpen] = useState(false);
   const agentOpen = workspaceMode === 'assistant';
   const openWorkspace = (mode: V2WorkspaceMode) => {
     setWorkspaceMode(mode);
     setShortcutsOpen(false);
     setChartPanelId(null);
-    if (window.innerWidth < 1100) setTreeOpen(false);
+    if (window.innerWidth < 1100) { setTreeOpen(false); setMotionOpen(false); }
+  };
+  // One panel per slot: the tree and the animation panel share the left one.
+  const openMotion = () => {
+    setTreeOpen(false);
+    setMotionOpen(true);
   };
   const toggleAgent = () => { if (agentOpen) setWorkspaceMode(null); else openWorkspace('assistant'); };
   const toggleModel = () => { if (workspaceMode === 'model') setWorkspaceMode(null); else openWorkspace('model'); };
@@ -142,6 +152,7 @@ export function V2EditorPage(): React.JSX.Element {
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null);
   const toggleTree = () => {
     setTreeOpen((open) => !open);
+    setMotionOpen(false);
     if (window.innerWidth < 1100) { setWorkspaceMode(null); setShortcutsOpen(false); }
   };
   const toggleShortcuts = () => {
@@ -757,7 +768,8 @@ export function V2EditorPage(): React.JSX.Element {
       <div className="ofk-v2" data-testid="v2-editor" data-tool={spacePan ? 'hand' : tool}
         style={{ backgroundColor: canvasColor }}
         data-workspace-open={workspaceMode !== null || shortcutsOpen || chartPanelNode !== null}
-        data-tree-open={treeOpen}
+        data-left-open={treeOpen || motionOpen}
+        data-left-panel={motionOpen ? 'motion' : undefined}
         onKeyDown={(event) => {
           if (playback.flow && !isEditableTarget(event.target)) {
             if (event.key === 'ArrowRight' || event.key === ' ') { playback.next(); event.preventDefault(); return; }
@@ -811,14 +823,7 @@ export function V2EditorPage(): React.JSX.Element {
               }}
               breadcrumb={architecture.breadcrumb}
               onCrumb={(crumb) => architectureActions.openCrumb(crumb)}
-              codeText={codeDraft}
-              onAnimateBlock={(block) => {
-                // The chips write the text hub; the panel opens so the user
-                // sees where the block went, and Generate re-renders from it.
-                setCodeDraft((draft) => writeAnimateBlock(draft, block));
-                setCodeFrameId(null);
-                setWorkspaceMode((mode) => mode ?? 'code');
-              }}
+              onOpenAnimation={openMotion}
               onRename={(name) => {
                 const before = session.document!.name;
                 if (name === before) return;
@@ -956,6 +961,21 @@ export function V2EditorPage(): React.JSX.Element {
               />
             ) : null}
             {shortcutsOpen ? <V2Shortcuts onClose={() => setShortcutsOpen(false)} /> : null}
+            {motionOpen ? (
+              <Panel title="Animation export" side="start" className="ofk-motion-panel ofk-v2-layers-panel"
+                onClose={() => setMotionOpen(false)}>
+                <V2MotionExport document={session.document!} pageId={page.id}
+                  onToast={(title, tone) => pushToast({ id: `motion-${Date.now()}`, tone, title })}
+                  codeText={codeDraft}
+                  onAnimateBlock={(block) => {
+                    // The chips write the text hub; the code panel opens on the
+                    // other side so the user sees where the block went.
+                    setCodeDraft((draft) => writeAnimateBlock(draft, block));
+                    setCodeFrameId(null);
+                    setWorkspaceMode((mode) => mode ?? 'code');
+                  }} />
+              </Panel>
+            ) : null}
             {chartPanelNode ? (
               <V2ChartDataPanel key={chartPanelNode.id} node={chartPanelNode} pageId={page.id}
                 commit={session.commit} onClose={() => setChartPanelId(null)} />

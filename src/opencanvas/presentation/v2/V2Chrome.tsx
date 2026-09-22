@@ -53,10 +53,8 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly onZoomTo: (percent: number) => void;
   readonly onFitView: () => void;
   readonly onToggleTree: () => void;
-  /** Animation export writes its steps into the code panel through this. */
-  readonly onAnimateBlock?: (block: import('../../../dsl/animate').AnimateBlock) => void;
-  /** The code panel's live text; the animation export reads its animate block. */
-  readonly codeText?: string;
+  /** Export… → Animation opens the docked panel. */
+  readonly onOpenAnimation: () => void;
 }
 
 // Persistent chrome (I-31): document bar, creation toolbar, camera controls.
@@ -81,8 +79,7 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         {...(props.workspace ? { workspace: props.workspace } : {})}
         {...(props.breadcrumb ? { breadcrumb: props.breadcrumb } : {})}
         {...(props.onCrumb ? { onCrumb: props.onCrumb } : {})}
-        {...(props.onAnimateBlock ? { onAnimateBlock: props.onAnimateBlock } : {})}
-        {...(props.codeText === undefined ? {} : { codeText: props.codeText })}
+        onOpenAnimation={props.onOpenAnimation}
       />
       {props.readOnly ? null : (
         <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange}

@@ -75,7 +75,7 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
   const durationMs = timeline ? timelineDuration(timeline) : 0;
   const empty = !timeline || timeline.steps.length === 0 || durationMs <= 0;
   const [tMs, setTMs] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(() => !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
   const [playFrom, setPlayFrom] = useState(0);
   // Derived, never reset in an effect: an edit that shortens the clip simply
   // clamps the playhead on the next render.
@@ -232,15 +232,14 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
         else if (event.key === 'ArrowRight') { event.preventDefault(); stepBy(1); }
       }}
     >
+      <div className="ofk-motion-stage">
       <Segmented<AnimationPreset> label="Preset" value={preset} onChange={setPreset} options={PRESETS} />
-      {orderOptions.length > 1 ? (
-        <Segmented<string> label="Order" value={edited ? 'code' : order}
-          onChange={(value) => { setOrder(value); setEdited(value === 'code' ? (codeBlock ?? null) : null); }}
-          options={orderOptions} />
-      ) : null}
       <div className="ofk-motion-preview" data-empty={empty || undefined} data-busy={busy || undefined}>
         {empty ? (
-          <p className="ofk-caption">Nothing to animate here — this page has no shapes.</p>
+          <div className="ofk-motion-empty">
+            <span className="ofk-motion-hero" aria-hidden="true"><i /><i /><i /></span>
+            <p className="ofk-caption">Nothing to animate yet. Add shapes and each one becomes a step.</p>
+          </div>
         ) : (
           <img
             src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(previewSvg ?? '')}`}
@@ -281,6 +280,12 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
         />
         <IconButton label="Next step (right arrow)" disabled={empty} icon={<Icon icon={IconPlayerSkipForward} />} onClick={() => stepBy(1)} />
       </div>
+      </div>
+      {orderOptions.length > 1 ? (
+        <Segmented<string> label="Order" value={edited ? 'code' : order}
+          onChange={(value) => { setOrder(value); setEdited(value === 'code' ? (codeBlock ?? null) : null); }}
+          options={orderOptions} />
+      ) : null}
       <Segmented<MotionOutput> label="Format" value={output} onChange={setOutput}
         options={FORMAT_OPTIONS.filter((option) => option.value !== 'mp4' || webCodecsAvailable())} />
       {output !== 'svg' ? (
@@ -334,7 +339,7 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
       </div>
       <p className="ofk-caption">
         {empty
-          ? 'An animation needs at least one shape on the page.'
+          ? 'Pick a preset now and it is ready the moment the page has shapes.'
           : output === 'svg'
             ? `Plays in GitHub READMEs, docs and any browser. ${timeline?.steps.length ?? 0} steps, ${(durationMs / 1000).toFixed(1)}s${loop ? ', loops' : ''}.`
             : `${FORMAT_OPTIONS.find((option) => option.value === output)?.title ?? ''} ${timeline?.steps.length ?? 0} steps, ${(durationMs / 1000).toFixed(1)}s at ${fps} fps.`}

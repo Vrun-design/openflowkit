@@ -35,8 +35,10 @@ export interface ContextBarLayout {
 export function visibleCanvasEdges(root: HTMLElement | null): Pick<ContextBarLayout, 'left' | 'right'> {
   const style = root ? getComputedStyle(root) : null;
   const panel = root?.dataset.workspaceOpen === 'true' ? parseFloat(style?.getPropertyValue('--v2-panel-width') ?? '') || 0 : 0;
-  const tree = root?.dataset.treeOpen === 'true' ? parseFloat(style?.getPropertyValue('--v2-layers-width') ?? '') || 0 : 0;
-  return { left: tree, right: window.innerWidth - panel };
+  // The left slot holds either the tree or the animation panel; its width is
+  // whichever one is open (--v2-left-width follows the panel).
+  const left = root?.dataset.leftOpen === 'true' ? parseFloat(style?.getPropertyValue('--v2-left-width') ?? '') || 0 : 0;
+  return { left, right: window.innerWidth - panel };
 }
 
 // Positioned above the selection union, falling below it near the viewport

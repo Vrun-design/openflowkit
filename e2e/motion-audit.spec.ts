@@ -58,11 +58,13 @@ test('the animation dialog is keyboard- and screen-reader-complete', async ({ pa
   await page.getByRole('button', { name: 'Close panel' }).click();
   await page.getByRole('button', { name: 'Canvas menu' }).click();
   await page.getByRole('menuitem', { name: 'Export…' }).click();
-  await page.getByRole('radio', { name: 'Animation' }).check();
+  await page.getByRole('button', { name: /Animate this page/ }).click();
 
   // The preview is described, and the scrubber announces its position.
   const preview = page.getByRole('img', { name: 'Animation preview' });
   await expect(preview).toBeVisible();
+  // The panel opens playing; park it so the transport state is steady.
+  await page.locator('.ofk-motion-transport input[type="range"]').fill('0');
   await expect(preview).toHaveAttribute('alt', /preview, \d+ steps/);
   const slider = page.locator('.ofk-motion-transport input[type="range"]');
   await expect(slider).toHaveAttribute('aria-valuetext', /of \d+\.\d seconds/);
@@ -86,6 +88,6 @@ test('the animation dialog is keyboard- and screen-reader-complete', async ({ pa
 
   // Escape closes and returns focus to the opener (the canvas menu button).
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('radio', { name: 'Animation' })).toBeHidden();
+  await expect(page.getByRole('complementary', { name: 'Animation export' })).toBeHidden();
   expect(await page.evaluate(() => document.activeElement?.getAttribute('aria-label'))).toBe('Canvas menu');
 });

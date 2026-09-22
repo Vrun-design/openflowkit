@@ -28,8 +28,10 @@ async function openAnimationExport(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: 'Close panel' }).click();
   await page.getByRole('button', { name: 'Canvas menu' }).click();
   await page.getByRole('menuitem', { name: 'Export…' }).click();
-  await page.getByRole('radio', { name: 'Animation' }).check();
+  await page.getByRole('button', { name: /Animate this page/ }).click();
   await expect(page.getByRole('img', { name: 'Animation preview' })).toBeVisible();
+  // The panel opens playing; park the playhead at 0 so the checks are steady.
+  await page.locator('.ofk-motion-transport input[type="range"]').fill('0');
 }
 
 const srcLength = (page: import('@playwright/test').Page) =>
@@ -90,12 +92,12 @@ test('an empty page says so instead of failing', async ({ page }) => {
   await page.waitForSelector('[data-testid="v2-canvas"]');
   await page.getByRole('button', { name: 'Canvas menu' }).click();
   await page.getByRole('menuitem', { name: 'Export…' }).click();
-  await page.getByRole('radio', { name: 'Animation' }).check();
-  await expect(page.getByText('Nothing to animate here')).toBeVisible();
+  await page.getByRole('button', { name: /Animate this page/ }).click();
+  await expect(page.getByText('Nothing to animate yet')).toBeVisible();
   await expect(page.getByRole('button', { name: /Download SVG/ })).toBeDisabled();
-  // Esc closes the dialog and returns focus to the opener.
+  // Esc closes the panel and returns focus to the opener.
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('radio', { name: 'Animation' })).toBeHidden();
+  await expect(page.getByRole('complementary', { name: 'Animation export' })).toBeHidden();
 });
 
 test('step chips write the animate block and read it back', async ({ page }) => {
