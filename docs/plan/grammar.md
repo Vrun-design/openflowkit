@@ -514,6 +514,8 @@ replaces the frame contents as one undo step; nodes whose id is unchanged keep t
 position unless the layout is forced (`⌘⇧↵`) — that is the only persistence of manual
 layout, and it lives in the scene, not the text. Tradeoff: text-only users lose nothing;
 canvas-first users must pin (§7) to make a position survive a fresh generate elsewhere.
+Exception: chart *data* is content, not layout — the chart data panel writes the source, so
+a cell edit regenerates the same chart with the new value (§8.9).
 
 ---
 
@@ -659,11 +661,31 @@ Unknown branch or commit → W150. Each branch is a lane, each commit a column; 
 circles with the label beneath, `merge` draws a curve from the merged branch's tip, and
 `cherry-pick` a dashed curve from the picked commit.
 
-### 8.9 Later families (header reserved, parsed as flowchart with W105 "family not yet
+### 8.9 chart — implemented (slice 6.9, 2026-09-22)
+```
+chart bar                     // bar | line | area | scatter | pie | donut | radar | heatmap | table | quadrant
+title: Monthly revenue
+Revenue: Jan 12, Feb 19, Mar 9, Apr 22, May 17     // series: category value pairs, one series per line
+Costs: Jan 8, Feb 9, Mar 7, Apr 11, May 12
+
+chart quadrant
+x: Low Effort, High Effort
+y: Low Impact, High Impact
+quadrants: Quick wins, Big bets, Deprioritise, Time sinks
+Feature A [0.32, 0.78]        // point: label [x, y] with x, y in 0–1
+```
+Canonical: the family line keeps the kind (`chart bar`), then `title:`, then one series
+line per series in declaration order (the first line's categories define the axis), or the
+quadrant directives and points. A series line is `Name: Category value, …`; a category with
+spaces is quoted. Chart *data* is the one place where a canvas edit writes text back: the
+chart data panel serializes through `Edit as code` (grammar §6.7), because moving a bar is
+a data edit, not a layout edit. Unknown kinds warn W131 and fall back to `bar`.
+
+### 8.10 Later families (header reserved, parsed as flowchart with W105 "family not yet
 rendered"): `bpmn` (lanes = groups, `[event|task|gateway]` shapes), `org` (edges = reports-to),
 `gantt` (`section`, `Task : 2026-01-01, 5d [done|active|crit|milestone]`), `wireframe`
-(control words), `chart bar|line|pie` (`label : value` rows), `sankey` (`A -> B : 12`),
-`journey` (`section`, `Task : 4 : Actor`), `timeline`.
+(control words), `sankey` (`A -> B : 12`), `journey` (`section`, `Task : 4 : Actor`),
+`timeline`.
 
 ---
 
@@ -1583,6 +1605,10 @@ Order ..> Money (depend)  Order "1" --> "*" Item : has (associate + multiplicity
 central: Topic       - Branch [green]        - Child          - Grandchild [icon: users]
 --- gitgraph ---
 commit Label [tag: v1, highlight|revert]   branch name   checkout name   merge name [tag: v2]   cherry-pick label-slug
+--- chart (family: chart <kind>) ---
+chart bar|line|area|scatter|pie|donut|radar|heatmap|table|quadrant
+Revenue: Jan 12, Feb 19        // one series per line: Category value pairs
+chart quadrant:  x: low, high   y: low, high   quadrants: tl, tr, bl, br   Feature A [0.32, 0.78]
 --- C4 model (phase 5; today renders as boxes/groups) ---
 model { person P  system S { container C [tech: Go] { component X }  store DB  queue Q }  external E   P -> C : uses [tech: HTTPS] }
 deployment Prod { node AWS [aws/cloud] { node ECS { instance S.C } } }

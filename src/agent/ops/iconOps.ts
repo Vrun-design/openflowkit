@@ -49,7 +49,7 @@ export const getSyntax = defineOp({
   name: 'get_syntax',
   title: 'Read the grammar',
   description: 'The OpenFlow DSL grammar: the full reference, or one family’s section.',
-  schema: z.object({ family: z.string().min(1).optional().describe('flowchart, architecture, sequence, state, erd, class, gitgraph, mindmap') }),
+  schema: z.object({ family: z.string().min(1).optional().describe('flowchart, architecture, sequence, state, erd, class, gitgraph, mindmap, chart') }),
   async run({ family }, context) {
     return { command: null, output: { family: family ?? null, syntax: await context.capabilities.syntax(family) } };
   },

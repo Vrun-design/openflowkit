@@ -7,6 +7,8 @@ import { buildStyleNodesCommand } from '../../opencanvas/domain/commands/styleNo
 import { PRODUCTION_NODE_CATALOG, createProductionSceneNode } from '../../opencanvas/application/active-document/productionNodeCatalog';
 import { buildProductionNodeMutationCommand } from '../../opencanvas/application/active-document/productionNodeBridge';
 import { SHAPE_KINDS, createShapeNode, type ShapeKind } from '../../opencanvas/domain/nodes/shapeNode';
+import { createChartNode } from '../../opencanvas/domain/nodes/chartNode';
+import { DEFAULT_QUADRANT } from '../../opencanvas/domain/nodes/chartNodePresentation';
 import { defineOp, pointOf, pointSchema, requirePage } from './types';
 
 // Toolbar shapes first: they are what a human creates, so agents get the same nodes.
@@ -91,12 +93,20 @@ export const addShape = defineOp({
   title: 'Add shape',
   description: `Add one shape without writing DSL (hand-layout only). Prefer create_diagram. Kinds: ${CATALOG_IDS.join(', ')}.`,
   schema: z.object({
-    kind: z.enum(CATALOG_IDS as [string, ...string[]]).default('process'),
+    kind: z.union([z.enum(CATALOG_IDS as [string, ...string[]]), z.literal('chart')]).default('process'),
     label: z.string().optional(),
     x: z.number().finite().default(0),
     y: z.number().finite().default(0),
     id: z.string().min(1).optional(),
-  }).refine((input) => (SHAPE_KINDS as readonly string[]).includes(input.kind) || !!input.label,
+    /** Charts only: the data the node renders (categories and series, or points). */
+    chart: z.object({
+      kind: z.enum(['bar', 'line', 'area', 'scatter', 'pie', 'donut', 'radar', 'heatmap', 'table', 'quadrant']).default('bar'),
+      categories: z.array(z.string()).optional(),
+      series: z.array(z.object({ name: z.string(), values: z.array(z.number()) })).optional(),
+      points: z.array(z.object({ label: z.string(), x: z.number(), y: z.number() })).optional(),
+    }).optional(),
+  }).refine((input) => (SHAPE_KINDS as readonly string[]).includes(input.kind)
+    || input.kind === 'chart' || !!input.label,
     { message: 'Catalog nodes need a label; toolbar shapes may be blank.', path: ['label'] }),
   async run(input, context) {
     const page = requirePage(context.document, context.pageId);
@@ -108,6 +118,27 @@ export const addShape = defineOp({
       const node = createShapeNode(page, { kind: input.kind as ShapeKind, id, at, label: input.label });
       return {
         command: { kind: 'insert-node', id: `create-node:${id}`, label: `Create ${input.kind}`, pageId: page.id, index: page.nodes.length, node },
+        output: { id },
+      };
+    }
+    if (input.kind === 'chart') {
+      const chart = input.chart ?? { kind: 'bar' as const };
+      const data = chart.series?.length
+        ? { categories: chart.categories ?? [], series: chart.series.map((series) => ({
+            name: series.name, values: [...series.values],
+          })) }
+        : undefined;
+      const node = createChartNode(page, {
+        id, at, chart: chart.kind,
+        ...(input.label ? { title: input.label } : {}),
+        ...(data ? { data } : {}),
+        ...(chart.kind === 'quadrant' && chart.points?.length
+          ? { quadrant: { ...DEFAULT_QUADRANT, points: chart.points.map((point) => ({
+              label: point.label ?? 'Point', x: point.x ?? 0.5, y: point.y ?? 0.5,
+            })) } } : {}),
+      });
+      return {
+        command: { kind: 'insert-node', id: `create-node:${id}`, label: 'Add chart', pageId: page.id, index: page.nodes.length, node },
         output: { id },
       };
     }

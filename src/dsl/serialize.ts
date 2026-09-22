@@ -24,7 +24,9 @@ export function serialize(scene: DslFrameScene): string {
   const raw = dslFrameRaw(frame);
   const direction = meta.direction && meta.direction !== dslFamilyDirection(meta.family) ? meta.direction : undefined;
   const title = typeof frame.content.label === 'string' && frame.content.label.length > 0 ? frame.content.label : meta.title;
-  const lines: string[] = ['%% ofk 1', `${meta.family}${direction ? ` ${direction}` : ''}`];
+  // A family may need words on its header line (the chart kind, for one).
+  const header = [meta.family, ...(meta.familyHeader ?? []), ...(direction ? [direction] : [])];
+  const lines: string[] = ['%% ofk 1', header.join(' ')];
   if (title) lines.push(`title: ${quote(title)}`);
   const palette = meta.appearance?.palette;
   if (palette && palette !== 'pastel') lines.push(`appearance: ${palette}`);

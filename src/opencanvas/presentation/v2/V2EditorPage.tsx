@@ -18,6 +18,7 @@ import { INITIAL_CODE, V2CanvasWelcome, V2DraftPanel, V2Shortcuts, V2WorkspaceRa
 import type { V2Tool } from './V2CreationToolbar';
 import { DEFAULT_TOOL_CONFIG, type V2ChartKind, type V2ConnectorTool, type V2ToolConfig } from './v2ToolCatalog';
 import { createChartNode, DEFAULT_CHART_SIZE } from '../../domain/nodes/chartNode';
+import { DEFAULT_QUADRANT } from '../../domain/nodes/chartNodePresentation';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
 import { useV2IconLibrary } from './useV2IconLibrary';
 import { useV2MediaInsert } from './useV2MediaInsert';
@@ -634,6 +635,7 @@ export function V2EditorPage(): React.JSX.Element {
       ...(chart === 'pie' || chart === 'donut' || chart === 'radar' || chart === 'heatmap'
         ? { data: { categories: ['A', 'B', 'C', 'D', 'E'], series: [{ name: 'Series 1', values: [4, 8, 6, 9, 3] }] } }
         : {}),
+      ...(chart === 'quadrant' ? { quadrant: DEFAULT_QUADRANT } : {}),
     });
     session.commit({
       kind: 'insert-node', id: `create-node:${node.id}`, label: 'Add chart',

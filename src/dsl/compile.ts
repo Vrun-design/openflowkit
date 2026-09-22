@@ -96,6 +96,7 @@ export async function compileWorkspace(text: string, options: CompileOptions = {
     text,
     origin,
     direction: document.direction ?? dslFamilyDirection(document.family),
+    header: document.header,
     ...(document.title ? { title: document.title } : {}),
     comments,
     diagnostics,

@@ -7,7 +7,7 @@ import {
   IconHeart, IconHexagon, IconIdBadge, IconLayersSubtract, IconLayoutBoard, IconLayoutList,
   IconLayoutSidebarRight, IconMessage, IconMinus, IconNote, IconOval, IconPin, IconPlus,
   IconPolygon, IconPrism, IconRectangle, IconShape2, IconShape3, IconSquareRounded, IconStar,
-  IconTable, IconTarget, IconTriangle, IconUser, IconVectorBezier2,
+  IconSquareDashed, IconTable, IconTarget, IconTriangle, IconUser, IconVectorBezier2,
 } from '@tabler/icons-react';
 import type { ConnectorRouteKind } from '../../domain/document/types';
 import type { ChartKind } from '../../domain/nodes/chartNodePresentation';
@@ -118,6 +118,7 @@ export const INK_OPTIONS: readonly ToolOption<V2InkTool>[] = [
 
 export const CHART_OPTIONS: readonly ToolOption<V2ChartKind>[] = [
   { id: 'table', label: 'Table', icon: IconTable },
+  { id: 'quadrant', label: 'Quadrant', icon: IconSquareDashed },
   { id: 'bar', label: 'Bar chart', icon: IconChartBar },
   { id: 'line', label: 'Line chart', icon: IconChartLine },
   { id: 'area', label: 'Area chart', icon: IconChartArea },

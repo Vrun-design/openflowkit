@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { JsonObject } from '../document/json';
+import type { JsonObject, JsonValue } from '../document/json';
 import { createTestNode } from '../../testing/builders/documentBuilder';
 import { CHART_KINDS, chartSeriesColor, niceTicks, resolveChartPresentation } from './chartNodePresentation';
 
@@ -110,5 +110,54 @@ describe('resolveChartPresentation', () => {
   it('puts the title above the plot', () => {
     const presentation = resolveChartPresentation(chartNode({ ...BAR_DATA, title: 'Monthly' }))!;
     expect(presentation.labels[0]).toMatchObject({ text: 'Monthly', role: 'title' });
+  });
+});
+
+describe('quadrant charts', () => {
+  const quadrant = (points: JsonValue) => chartNode({
+    chart: 'quadrant',
+    xLabels: ['Low Effort', 'High Effort'],
+    yLabels: ['Low Impact', 'High Impact'],
+    quadrants: ['Quick wins', 'Big bets', 'Deprioritise', 'Time sinks'],
+    points,
+  });
+
+  it('fills four cells, draws a cross and labels every point', () => {
+    const presentation = resolveChartPresentation(quadrant([
+      { label: 'Feature A', x: 0.32, y: 0.78 },
+      { label: 'Feature B', x: 0.74, y: 0.7 },
+    ]))!;
+    expect(presentation.chart).toBe('quadrant');
+    expect(presentation.marks.filter((mark) => mark.kind === 'cell')).toHaveLength(4);
+    expect(presentation.marks.filter((mark) => mark.kind === 'point')).toHaveLength(2);
+    expect(presentation.rules).toHaveLength(2);
+    expect(presentation.labels.map((label) => label.text)).toEqual(expect.arrayContaining([
+      'Quick wins', 'Big bets', 'Deprioritise', 'Time sinks', 'Feature A',
+    ]));
+  });
+
+  it('maps 0–1 onto the plot with y up', () => {
+    const presentation = resolveChartPresentation(quadrant([{ label: 'p', x: 0, y: 0 }]))!;
+    const point = presentation.marks.find((mark) => mark.kind === 'point')!.points[0]!;
+    expect(point.y).toBeGreaterThan(100);
+  });
+
+  it('clamps out-of-range and malformed points', () => {
+    const presentation = resolveChartPresentation(quadrant([
+      { label: 'a', x: 5, y: -3 }, { x: 'x' }, 7,
+    ]))!;
+    const points = presentation.marks.filter((mark) => mark.kind === 'point').map((mark) => mark.points[0]!);
+    expect(points).toHaveLength(2);
+    for (const at of points) {
+      expect(at.x).toBeGreaterThanOrEqual(0);
+      expect(at.x).toBeLessThanOrEqual(720);
+      expect(at.y).toBeGreaterThanOrEqual(0);
+      expect(at.y).toBeLessThanOrEqual(440);
+    }
+  });
+
+  it('falls back to the default points when content carries none', () => {
+    expect(resolveChartPresentation(quadrant(undefined))!.marks.filter((mark) => mark.kind === 'point'))
+      .toHaveLength(4);
   });
 });

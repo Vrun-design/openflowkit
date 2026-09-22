@@ -178,3 +178,20 @@ views { view context of Shop; view container of Shop }
     expect(run.document().pages[0]!.nodes).toHaveLength(0);
   });
 });
+
+describe('add_shape chart', () => {
+  it('inserts a bar chart with the given data as one node', async () => {
+    const run = await host();
+    const parsed = op('add_shape').schema.parse({
+      kind: 'chart', label: 'Revenue', x: 20, y: 30,
+      chart: { kind: 'bar', categories: ['Jan', 'Feb'], series: [{ name: 'Rev', values: [1, 2] }] },
+    });
+    const result = await op('add_shape').run(parsed, run.context());
+    const node = (result.command as unknown as { node: {
+      kind: string; content: { chart: string; categories: string[] };
+    } }).node;
+    expect(node.kind).toBe('chart');
+    expect(node.content.chart).toBe('bar');
+    expect(node.content.categories).toEqual(['Jan', 'Feb']);
+  });
+});

@@ -47,6 +47,8 @@ export interface DslConnectorMeta {
 export interface DslFrameMeta {
   family: string;
   version: number;
+  /** Extra family-line words a family needs (e.g. the chart kind). */
+  familyHeader?: readonly string[];
   /** Authored direction; absent when the family default applies. */
   direction?: string;
   /** Authored source text, when the frame is still exactly that diagram. */
@@ -75,6 +77,9 @@ export function dslFrameMeta(frame: SceneNode): DslFrameMeta {
   return {
     family: typeof meta.family === 'string' ? meta.family : 'architecture',
     version: typeof meta.version === 'number' ? meta.version : 1,
+    ...(Array.isArray(meta.familyHeader)
+      ? { familyHeader: meta.familyHeader.filter((item): item is string => typeof item === 'string') }
+      : {}),
     ...(typeof meta.direction === 'string' ? { direction: meta.direction } : {}),
     ...(typeof meta.source === 'string' ? { source: meta.source } : {}),
     ...(typeof meta.hash === 'string' ? { hash: meta.hash } : {}),

@@ -8,6 +8,8 @@ import {
   type RefObject,
 } from 'react';
 import type { DocumentCommand } from '../../domain/commands/types';
+import type { SceneNode } from '../../domain/document/types';
+import { quadrantContent, quadrantPointPosition } from '../../domain/nodes/chartNodePresentation';
 import type { ConnectorRouteKind, SceneConnector, ScenePage } from '../../domain/document/types';
 import type { JsonObject } from '../../domain/document/json';
 import type { CanvasCamera } from '../../domain/camera/types';
@@ -119,6 +121,15 @@ interface V2EraseOperation {
   readonly removed: Set<string>;
 }
 
+// Dragging a quadrant point writes x/y on release: one undo, like any drag.
+interface V2ChartPointOperation {
+  readonly kind: 'chart-point';
+  readonly pointerId: number;
+  readonly page: ScenePage;
+  readonly node: SceneNode;
+  readonly index: number;
+}
+
 interface V2LassoOperation {
   readonly kind: 'lasso';
   readonly pointerId: number;
@@ -128,7 +139,7 @@ interface V2LassoOperation {
 
 type V2Operation =
   | PixiPointerOperation | V2CreateOperation | V2ConnectOperation
-  | V2InkOperation | V2EraseOperation | V2LassoOperation;
+  | V2InkOperation | V2EraseOperation | V2LassoOperation | V2ChartPointOperation;
 
 // The path tool is click-by-click, so its draft lives beside the pointer
 // operations: points are the ends committed so far, cursor is the live end.
@@ -350,6 +361,40 @@ function buildEraseCommand(operation: V2EraseOperation): DocumentCommand | null 
 
 // Eraser reach: half the widest stroke it can hit, in world units.
 const ERASE_RADIUS_PX = 10;
+// How close a press must land to grab a quadrant point, in screen pixels.
+const CHART_POINT_REACH_PX = 14;
+
+/** A quadrant point within reach of the cursor, in a chart under it. */
+function pickChartPoint(
+  host: PixiRendererHost, page: ScenePage, point: Point2d, zoom: number
+): { readonly node: SceneNode; readonly index: number } | null {
+  const world = host.screenToWorld(point);
+  const reach = CHART_POINT_REACH_PX / zoom;
+  for (const node of page.nodes) {
+    const quadrant = quadrantContent(node);
+    if (!quadrant) continue;
+    const matrix = buildNodeWorldMatrices(page).get(node.id);
+    if (!matrix) continue;
+    const plot = { x: 48, y: 8, width: node.size.width - 86, height: node.size.height - 30 };
+    for (const [index, entry] of quadrant.points.entries()) {
+      const local = quadrantPointPosition(quadrant, entry, plot);
+      const at = applyMatrixToPoint(matrix, local);
+      if (Math.hypot(at.x - world.x, at.y - world.y) <= reach) return { node, index };
+    }
+  }
+  return null;
+}
+
+/** A quadrant point's new 0–1 coordinates from a world position. */
+function quadrantValueAt(node: SceneNode, world: Point2d): { x: number; y: number } {
+  const inverse = { a: 1, b: 0, c: 0, d: 1, tx: -node.transform.translation.x, ty: -node.transform.translation.y };
+  const local = applyMatrixToPoint(inverse, world);
+  const plot = { x: 48, y: 8, width: node.size.width - 86, height: node.size.height - 30 };
+  return {
+    x: Math.min(1, Math.max(0, (local.x - plot.x) / Math.max(1, plot.width))),
+    y: Math.min(1, Math.max(0, 1 - (local.y - plot.y) / Math.max(1, plot.height))),
+  };
+}
 
 /** The live stroke as the renderer needs it: world points, ink colours. */
 function inkPreview(
@@ -773,6 +818,28 @@ export function useV2Pointer(options: V2PointerOptions) {
           opts.applySelection(clearSelection());
           opts.commit(command);
         }
+      } else if (operation.kind === 'chart-point') {
+        const quadrant = quadrantContent(operation.node);
+        const current = quadrant?.points[operation.index];
+        const next = quadrantValueAt(operation.node, host.screenToWorld(point));
+        if (quadrant && current
+          && (Math.abs(current.x - next.x) > 1e-4 || Math.abs(current.y - next.y) > 1e-4)) {
+          opts.commit({
+            kind: 'set-node',
+            id: `chart-point:${operation.node.id}:${operation.index}`,
+            label: 'Move quadrant point',
+            pageId: operation.page.id,
+            before: operation.node,
+            after: {
+              ...operation.node,
+              content: {
+                ...operation.node.content,
+                points: quadrant.points.map((entry, index) =>
+                  index === operation.index ? { ...entry, x: next.x, y: next.y } : entry),
+              },
+            },
+          });
+        }
       } else if (operation.kind === 'lasso') {
         host.setMarquee(null);
         const matrices = buildNodeWorldMatrices(operation.page);
@@ -1048,6 +1115,17 @@ export function useV2Pointer(options: V2PointerOptions) {
             startScreen: point, toWorld: host.screenToWorld(point) };
           return;
         }
+      }
+      const chartPoint = opts.readOnlyRef.current ? null
+        : pickChartPoint(host, page, point, opts.cameraRef.current.zoom);
+      if (chartPoint && !additive) {
+        opts.applyConnectorSelection(null);
+        opts.applySelection(replaceSelection([chartPoint.node.id]));
+        operationRef.current = {
+          kind: 'chart-point', pointerId: event.pointerId, page,
+          node: chartPoint.node, index: chartPoint.index,
+        };
+        return;
       }
       const nodeId = host.pickNode(point);
       if (nodeId && !additive) {

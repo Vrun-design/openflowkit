@@ -30,7 +30,12 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
   `<table>` data panel (edit cells, +Row/+Series, Enter moves down, TSV/CSV paste, one undo
   per commit) and a Chart panel in the style bar that switches type without touching data.
   Order note: charts were built before 6.6/6.7 because the owner's reference screenshots are
-  chart-centric. 6.9 claimed (quadrant + chart DSL + agent).
+  chart-centric.
+- 6.9 done 2026-09-22 (opencode/deepseek-v4.1): quadrant (0–1 points, pastel cells, canvas
+  dragging writes x/y as one undo, label/x/y points panel) and the `chart` DSL family
+  (`chart bar|…|quadrant`, series pairs, quadrant directives + `[x, y]` points) with
+  round-trip fixtures; the family line now carries extra words (`familyHeader` on frame
+  meta), get_syntax documents it, `add_shape` accepts `chart` with data. 6.10 claimed (audit).
 - `check-v2-polish.mjs` fails on this machine at HEAD too (idle render count, context-bar
   follow, resize assertions in three separate runs) — environment, not a phase-6 regression.
   Re-run when the machine is quiet; the script's numbers are the phase gate.

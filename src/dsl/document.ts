@@ -31,12 +31,14 @@ export function createCommentTracker(comments: readonly DslComment[]): CommentTr
 
 /** Families whose header parses today but whose semantics land in phase 3.8. */
 export const RESERVED_FAMILIES: readonly DslFamily[] = [
-  'bpmn', 'org', 'gantt', 'wireframe', 'chart', 'sankey', 'journey', 'timeline',
+  'bpmn', 'org', 'gantt', 'wireframe', 'sankey', 'journey', 'timeline',
 ];
 
 export interface DslDocument {
   readonly version: number;
   readonly family: DslFamily;
+  /** Words on the family line after the family (e.g. `bar` in `chart bar`). */
+  readonly header: readonly string[];
   readonly direction?: DslDirection;
   readonly title?: string;
   /** `appearance:` palette; absent when the default palette applies. */
@@ -131,6 +133,7 @@ export function parseDocument(input: string): DslDocument {
   if (grouped.length === 0) diagnostics.push(lineDiagnostic(1, 'E001', 'error', 'Document is empty'));
   return {
     version, family,
+    header: headerWords.slice(1),
     direction: direction ?? directiveDirection,
     ...(title ? { title } : {}),
     ...(appearance ? { appearance } : {}),

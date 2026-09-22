@@ -14,6 +14,8 @@ export interface FamilyContext {
   readonly text: string;
   readonly origin: Point2d;
   readonly direction: DslDirection;
+  /** Family-line words after the family name (e.g. `bar` in `chart bar`). */
+  readonly header: readonly string[];
   /** Authored `title:`; families pad for the frame's title band when set. */
   readonly title?: string;
   readonly layout: LayoutRunner;

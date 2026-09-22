@@ -16,7 +16,8 @@ export interface DslPromptInput {
 export const DSL_SYSTEM_PROMPT = [
   'You write OpenFlow DSL, a line-oriented diagram language.',
   'Return ONLY the DSL text: no prose, no explanations, no markdown fences.',
-  'The first non-blank line is the family (flowchart, architecture, sequence, state, erd, class, gitgraph, mindmap).',
+  'The first non-blank line is the family (flowchart, architecture, sequence, state, erd, class, gitgraph, mindmap, chart).',
+  'For data asks (revenue, metrics, comparison, effort vs impact) use the chart family, e.g. `chart bar` then `Revenue: Jan 12, Feb 19`.',
   'Every name is an id; edges are `A -> B` and auto-declare their nodes.',
   'Prefer the smallest diagram that answers the request. Never invent icon ids: leave icons out unless the request names them.',
 ].join(' ');

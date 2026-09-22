@@ -2,7 +2,9 @@ import type { SceneNode, ScenePage } from '../document/types';
 import type { Point2d, Size2d } from '../geometry/types';
 import type { JsonObject } from '../document/json';
 import { nextNodeZIndex } from './shapeNode';
-import { DEFAULT_CHART_DATA, type ChartKind, type ChartData } from './chartNodePresentation';
+import {
+  DEFAULT_CHART_DATA, type ChartKind, type ChartData, type QuadrantData,
+} from './chartNodePresentation';
 
 export const DEFAULT_CHART_SIZE: Size2d = { width: 720, height: 440 };
 
@@ -12,6 +14,8 @@ export interface CreateChartNodeOptions {
   readonly chart: ChartKind;
   readonly size?: Size2d;
   readonly data?: ChartData;
+  /** Quadrant charts carry points instead of series. */
+  readonly quadrant?: QuadrantData;
   readonly title?: string;
   readonly options?: JsonObject;
   readonly appearance?: JsonObject;
@@ -29,8 +33,15 @@ export function createChartNode(page: ScenePage, options: CreateChartNodeOptions
     size: { ...(options.size ?? DEFAULT_CHART_SIZE) },
     content: {
       chart: options.chart,
-      categories: [...data.categories],
-      series: data.series.map((series) => ({ name: series.name, values: [...series.values] })),
+      ...(options.quadrant ? {
+        xLabels: [...options.quadrant.xLabels],
+        yLabels: [...options.quadrant.yLabels],
+        quadrants: [...options.quadrant.quadrants],
+        points: options.quadrant.points.map((point) => ({ ...point })),
+      } : {
+        categories: [...data.categories],
+        series: data.series.map((series) => ({ name: series.name, values: [...series.values] })),
+      }),
       ...(options.title ? { title: options.title } : {}),
       ...(options.options ? { options: options.options } : {}),
     },

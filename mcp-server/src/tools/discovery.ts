@@ -22,7 +22,7 @@ const EDGE_STYLES = [
   { syntax: '->>', usage: 'Async (sequence messages).' },
 ];
 
-const FAMILIES = ['flowchart', 'architecture', 'sequence', 'state', 'erd', 'class', 'gitgraph', 'mindmap'];
+const FAMILIES = ['flowchart', 'architecture', 'sequence', 'state', 'erd', 'class', 'gitgraph', 'mindmap', 'chart'];
 
 const STATIC_TOOLS = [
   'validate_openflow_dsl',

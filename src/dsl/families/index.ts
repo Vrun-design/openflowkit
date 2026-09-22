@@ -8,6 +8,7 @@ import { stateFamily } from './state';
 import { mindmapFamily } from './mindmap';
 import { classFamily, erdFamily } from './structured';
 import { architectureFamily } from './architecture';
+import { chartFamily } from './chart';
 
 /**
  * Family registry. Every family name in the grammar maps to exactly one
@@ -23,6 +24,7 @@ const FAMILIES: Partial<Record<DslFamily, Family>> = {
   erd: erdFamily,
   class: classFamily,
   mindmap: mindmapFamily,
+  chart: chartFamily,
 };
 
 export function familyFor(name: DslFamily): Family {
