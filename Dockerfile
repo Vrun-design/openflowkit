@@ -9,7 +9,6 @@ WORKDIR /app
 # Workspace manifests are required because the root package declares them.
 COPY package.json package-lock.json ./
 COPY pnpm-workspace.yaml ./
-COPY web/package.json ./web/package.json
 COPY docs-site/package.json ./docs-site/package.json
 
 # CI avoids running the husky prepare hook.

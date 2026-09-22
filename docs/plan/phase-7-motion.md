@@ -25,6 +25,10 @@ same timeline drives the preview, the SVG and every video frame — what you pre
 you get, bit for bit. An agent gets the same through `export` and can author the sequence
 in text.
 
+**Cost model: zero infra.** Everything — sequencing, SVG, rasterising, GIF/MP4 encoding — runs
+in the user's browser (WebCodecs uses their GPU). No render server, no queue, no storage, no
+per-export cost. A 1080p 15 s MP4 is ~10 s of local CPU. Same as PNG export today.
+
 ## 1. Research — formats and where they actually play
 
 | Format | Plays inline in | Does not | Size, 10 s / 8 nodes | How we make it |
@@ -103,6 +107,10 @@ flow (ph.5) ├─► Timeline (pure, domain/animation) ──┬─► exportAn
   `animate` block), duration (auto from step count, editable), fps (12/24/30), size
   (720/1080/1440), theme (light/dark/current), loop, format (SVG · GIF · MP4 · WebM, each with
   its one-line "plays in …" hint, MP4 hidden without WebCodecs).
+- **Steps row (the timeline editor, lite)**: the current order as chips (`1 A,B · 2 →C · 3 C→D`).
+  Drag to reorder, drop one chip onto another to merge them into one step, click a chip to
+  set its hold. Every edit writes the `animate` block into the code panel (text hub) — the
+  chips *are* the DSL, rendered. No per-object curves, no ruler, no keyframes (phase 8).
 - Preview: the animated SVG in an `<img>` (exact), a scrubber that re-renders `frameAt(t)` as
   a still, play/pause, ⎵ toggles, ←/→ step. Keyboard for everything (§0 of phase 6).
 - Export button → progress bar with frame count and cancel → download. Copy MP4/GIF to
@@ -133,7 +141,7 @@ writes code. `manifest.ts` + `get_syntax` updated in the same slice.
 | 7.2 | `canonicalSvg` `frame` option + `exportAnimatedSvg` | goldens per preset; still-vs-paused-SVG headed check |
 | 7.3 | `animate` DSL block, all families, manifest + `get_syntax`, llms.txt | round-trip fixtures + fuzz |
 | 7.4 | `motion.worker.ts`: GIF (`gifenc`), MP4/WebM (`mediabunny` + WebCodecs), MediaRecorder fallback, progress/cancel | 1080p 15 s export, canvas rAF never > 32 ms |
-| 7.5 | Export dialog Animation section + preview + scrubber | headed check above; VoiceOver pass on the dialog |
+| 7.5 | Export dialog Animation section + step chips (reorder/merge/hold → `animate` block) + preview + scrubber | headed check above; chips edit round-trips to code; VoiceOver pass on the dialog |
 | 7.6 | MCP `export` formats; docs page "Animated export" with the format table from §1 | `npm test -w mcp-server`; the README gains one animated SVG |
 | 7.7 | Audit: play each format in GitHub README, Slack, Notion, X, Keynote; size table; a11y | findings fixed, ceilings marked `// ponytail:` |
 
@@ -142,17 +150,13 @@ writes code. `manifest.ts` + `get_syntax` updated in the same slice.
 - Whole SVG re-generated per frame: O(nodes × frames). Fine to ~500 nodes × 450 frames;
   upgrade = patch only the groups whose state changed.
 - No custom keyframes, no camera paths, no audio, no per-element timing overrides. Steps are
-  the unit because steps are text. Excalimate-style keyframes are a future family, not v1.
+  the unit because steps are text. Excalimate-style keyframes are [phase 8](phase-8-keyframes.md).
 - Fonts in video frames are the SVG's system stack — what the machine has. Same as PNG today.
 - Safari < 26: GIF + animated SVG + WebM (real-time) only.
 
-## 5. Open owner calls (answer before 7.5)
+## 5. Owner calls (decided 2026-09-22)
 
-1. Default preset when the user just clicks "Animation": **Build** (recommended — it is the
-   "a and b go to c" ask) or Walkthrough?
-2. Where does it live besides Export…: a **Present** play button in the document bar that
-   plays Build/Walkthrough on the live canvas (phase-5 playback engine)? Recommended for
-   phase 8, not here — export is the differentiator, on-canvas presenting is a second feature.
-3. Watermark/"made with OpenFlowKit" end card on free exports? Recommend no — it is local
-   and free; a tiny optional badge toggle is a marketing call, not a product one.
-4. Ship order: 7.1 → 7.2 → 7.5 (SVG-only, visible early) before 7.3/7.4? Recommended.
+1. Default preset: **Build**.
+2. On-canvas **Present** button: phase 8, not here.
+3. No watermark.
+4. Ship order: 7.1 → 7.2 → 7.5 (SVG-only, visible early) → 7.3 → 7.4 → 7.6 → 7.7.

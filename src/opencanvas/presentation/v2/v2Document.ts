@@ -50,3 +50,15 @@ export function mintV2Id(prefix: string): string {
   v2IdCounter += 1;
   return `${prefix}-${Date.now().toString(36)}-${v2IdCounter}`;
 }
+
+// `/` reopens the document you had open last (Excalidraw's "refresh, same
+// drawing") instead of minting a fresh one on every visit.
+const LAST_DOCUMENT_KEY = 'ofk:last-document';
+
+export function rememberLastDocument(id: string): void {
+  try { localStorage.setItem(LAST_DOCUMENT_KEY, id); } catch { /* private mode: every visit is new */ }
+}
+
+export function lastDocumentId(): string | null {
+  try { return localStorage.getItem(LAST_DOCUMENT_KEY); } catch { return null; }
+}

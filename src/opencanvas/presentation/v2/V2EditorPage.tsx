@@ -49,7 +49,7 @@ import { worldToScreen } from '../../domain/camera/camera';
 import { createConnectorEditCommand, setPrimaryConnectorLabel } from '../../domain/connectors/editing';
 import type { Point2d } from '../../domain/geometry/types';
 import { isDiagramPalette, type DiagramPaletteName } from '../../domain/nodes/nodePalette';
-import { firstV2Page, mintV2Id } from './v2Document';
+import { firstV2Page, mintV2Id, rememberLastDocument } from './v2Document';
 import { downloadTextFile } from './v2Export';
 import type { ScenePage } from '../../domain/document/types';
 import { dslFrameRaw } from '../../../dsl/sceneMeta';
@@ -98,6 +98,7 @@ function changeObjectIds(changeId: string, proposal: Proposal | null): readonly 
 
 export function V2EditorPage(): React.JSX.Element {
   const { id } = useParams();
+  useEffect(() => { if (id) rememberLastDocument(id); }, [id]);
   const { preferences, updatePreferences } = useV2Preferences();
   const [workspaceMode, setWorkspaceMode] = useState<V2WorkspaceMode | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);

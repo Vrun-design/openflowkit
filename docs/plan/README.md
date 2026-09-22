@@ -19,6 +19,7 @@ building. `STATE.md` at the repo root says what is done and what is next.
 | [phase-5-architecture.md](phase-5-architecture.md) | C4 model layer, flows, drill-down, discover/drift, git workspace (month 2) |
 | [phase-6-library.md](phase-6-library.md) | Creation library: 42 shapes, connector kinds, ink, image/emoji, frames, wireframe, charts (month 2) |
 | [phase-7-motion.md](phase-7-motion.md) | Motion export: timeline → animated SVG / GIF / MP4, `animate` DSL block, agent parity (month 3) |
+| [phase-8-keyframes.md](phase-8-keyframes.md) | Keyframe tracks, timeline panel, camera, Present mode, `animate_diagram` MCP (after 7 has users) |
 
 ## 1. Goal
 

@@ -70,10 +70,13 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
   the click threshold. Click-place now uses the per-shape size table (was the 160×72 default
   for every library shape — actor/folder came out squashed).
 ## Next
-- Phase 7 — motion export ([phase-7-motion.md](docs/plan/phase-7-motion.md)): 7.1 timeline →
-  7.2 SVG → 7.3 DSL → 7.4 encoders → 7.5 dialog → 7.6 agent → 7.7 audit. Owner calls in §5 open.
-- Canvas menu "Open workspace folder…" now hidden where `showDirectoryPicker` is missing
-  (Safari/Firefox/Brave default); it was a silent no-op there (V2DocumentBar, 2026-09-22).
+- Phase 7 — motion export ([phase-7-motion.md](docs/plan/phase-7-motion.md)), owner calls
+  decided: ship 7.1 timeline → 7.2 SVG → 7.5 dialog (step chips) → 7.3 DSL → 7.4 encoders →
+  7.6 agent → 7.7 audit. Zero infra: all in-browser. Keyframes/Present = phase 8 (stub written).
+- 2026-09-22 (Opus): `/` reopens the last document (`ofk:last-document`, `e2e/home.spec.ts`);
+  it minted a new doc per visit. Canvas menu "Open workspace folder…" hidden where
+  `showDirectoryPicker` is missing (Brave default, Safari, Firefox) — was a silent no-op.
+  `web/` landing site deleted (openflowkit.com lives in another repo); docs-site stays.
 - Owner feel-test on `/`: paste the C4 example, drill 3 levels, play a flow, run `drift`.
 - Model JSON is copied onto every view frame (~3 KB/page today). Moving it to one
   document-level slot means `serialize(frame)` needs the document — an API change across

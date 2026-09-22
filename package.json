@@ -4,7 +4,6 @@
   "version": "0.1.1",
   "type": "module",
   "workspaces": [
-    "web",
     "docs-site",
     "mcp-server"
   ],
@@ -28,8 +27,7 @@
     "deploy": "gh-pages -d dist",
     "preview": "vite preview",
     "test": "vitest",
-    "lint": "eslint . --ext ts,tsx --ignore-pattern 'web/**' --ignore-pattern 'docs-site/**' --report-unused-disable-directives --max-warnings 0",
-    "build:web": "pnpm --filter openflowkit-web build",
+    "lint": "eslint . --ext ts,tsx --ignore-pattern 'docs-site/**' --report-unused-disable-directives --max-warnings 0",
     "build:docs": "pnpm --filter openflowkit-docs build",
     "shape-pack:manifest": "node scripts/shape-pack/generate-shape-pack-manifest.mjs",
     "shape-pack:validate": "node scripts/shape-pack/validate-shape-pack-manifests.mjs",
@@ -51,6 +49,8 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.14.0",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
     "@vitejs/plugin-react": "^5.1.4",

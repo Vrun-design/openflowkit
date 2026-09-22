@@ -1,5 +1,0 @@
-name = "openflowkit-web"
-compatibility_date = "2026-03-18"
-
-[assets]
-directory = "./dist"
