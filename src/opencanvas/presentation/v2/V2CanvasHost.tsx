@@ -33,6 +33,7 @@ import type { ContextMenuTarget } from './V2ContextMenu';
 import { useV2Pointer, type StylePresets, type V2GestureApi } from './useV2Pointer';
 import { connectorAppearanceWithPatch } from '../../domain/commands/styleConnectors';
 import type { V2Tool } from './V2CreationToolbar';
+import type { V2ToolConfig } from './v2ToolCatalog';
 import './openCanvasTextEditorOverlay.css';
 import { numericColorToHex } from '../../domain/color/adaptiveColor';
 
@@ -54,6 +55,7 @@ interface V2CanvasHostProps {
   readonly selectionRef: RefObject<CanvasSelection>;
   readonly toolRef: RefObject<V2Tool>;
   readonly tool: V2Tool;
+  readonly toolConfigRef: RefObject<V2ToolConfig>;
   readonly spacePanRef: RefObject<boolean>;
   readonly readOnlyRef: RefObject<boolean>;
   readonly gestureApiRef: RefObject<V2GestureApi | null>;
@@ -122,6 +124,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     pageRef: props.pageRef,
     selectionRef: props.selectionRef,
     toolRef: props.toolRef,
+    toolConfigRef: props.toolConfigRef,
     spacePanRef: props.spacePanRef,
     readOnlyRef: props.readOnlyRef,
     gestureApiRef: props.gestureApiRef,

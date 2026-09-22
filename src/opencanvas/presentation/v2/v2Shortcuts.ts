@@ -29,6 +29,7 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
         { label: 'Hand', keys: 'H', tokens: ['h'] },
         { label: 'Rectangle', keys: 'R', tokens: ['r'] },
         { label: 'Ellipse', keys: 'O', tokens: ['o'] },
+        { label: 'Shapes', keys: 'S', tokens: ['s'] },
         { label: 'Connector', keys: 'A', tokens: ['a'] },
         { label: 'Text', keys: 'T', tokens: ['t'] },
       ],

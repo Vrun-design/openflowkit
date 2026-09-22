@@ -4,7 +4,8 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
 ## Now
 - Phase 6 — creation library ([phase-6-library.md](docs/plan/phase-6-library.md)): slices
   6.1 rail → 6.2 shapes → 6.3 connectors → 6.4 ink → 6.5 image/emoji → 6.6 frames/tools →
-  6.7 wireframe → 6.8 charts → 6.9 quadrant+DSL+MCP → 6.10 audit. All unclaimed.
+  6.7 wireframe → 6.8 charts → 6.9 quadrant+DSL+MCP → 6.10 audit. 6.1 claimed
+  2026-09-22 (opencode/deepseek-v4.1).
 - Connect agent moved to the rail 2026-09-22 (Opus): 5th rail item + welcome button open a
   panel (`V2AgentConnect`: hero, steps when off, live card + capability grid when on); top-bar
   plug is status-only and opens the panel. No shortcut (Alt+A = align left).

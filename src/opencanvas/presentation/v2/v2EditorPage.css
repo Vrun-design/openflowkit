@@ -24,6 +24,7 @@
 
 .ofk-v2[data-tool='rectangle'] .ofk-v2-canvas,
 .ofk-v2[data-tool='ellipse'] .ofk-v2-canvas,
+.ofk-v2[data-tool='shape'] .ofk-v2-canvas,
 .ofk-v2[data-tool='text'] .ofk-v2-canvas,
 .ofk-v2[data-tool='connector'] .ofk-v2-canvas {
   cursor: crosshair;
@@ -149,7 +150,25 @@
 .ofk-v2 .ofk-floating-region .ofk-toolbar { background: var(--ofk-surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .ofk-v2 .ofk-v2-tools { top: 80px; }
 .ofk-v2-tools .ofk-toolbar { gap: 4px; padding: 5px; }
-.ofk-v2-tools .ofk-icon-button:nth-child(2) { margin-bottom: 8px; }
+.ofk-v2-tools-separator { width: 20px; height: 1px; margin: 4px 0; background: var(--ofk-border); flex: none; }
+.ofk-v2-lock-slot { display: inline-flex; }
+.ofk-v2-lock-slot .ofk-icon-button:disabled { pointer-events: none; opacity: .4; }
+/* A flyout trigger carries the small corner triangle at its bottom-right. */
+.ofk-v2-tools [data-flyout] { position: relative; }
+.ofk-v2-tools [data-flyout]::after {
+  content: ''; position: absolute; right: 3px; bottom: 3px; width: 5px; height: 5px;
+  background: currentColor; opacity: .5; clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+.ofk-v2-flyout { padding: 8px; }
+.ofk-v2-flyout-grid { display: grid; gap: 2px; }
+.ofk-v2-flyout-cell {
+  display: grid; place-items: center; width: 40px; height: 40px; padding: 0;
+  border: 0; border-radius: 8px; background: transparent; color: var(--ofk-text); cursor: pointer;
+}
+.ofk-v2-flyout-cell:hover { background: color-mix(in srgb, var(--ofk-text) 8%, transparent); }
+.ofk-v2-flyout-cell[data-selected] { background: color-mix(in srgb, var(--ofk-focus) 18%, transparent); }
+.ofk-v2-flyout-cell:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: -2px; }
+.ofk-v2-flyout-cell svg { width: 20px; height: 20px; }
 .ofk-v2 .ofk-v2-workspace-rail { top: 16px; }
 .ofk-v2-workspace-rail .ofk-toolbar { padding: 5px; gap: 4px; }
 .ofk-v2[data-workspace-open='true'] .ofk-v2-workspace-rail,

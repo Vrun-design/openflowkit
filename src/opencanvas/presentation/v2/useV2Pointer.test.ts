@@ -10,6 +10,7 @@ import { clearSelection, replaceSelection } from '../../application/selection/se
 import type { Bounds2d } from '../../domain/geometry/types';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import { useV2Pointer } from './useV2Pointer';
+import { DEFAULT_TOOL_CONFIG } from './v2ToolCatalog';
 
 function setup(
   extraNodes: ReturnType<typeof createTestNode>[] = [],
@@ -44,7 +45,8 @@ function setup(
   const { result } = renderHook(() => useV2Pointer({
     hostRef: { current: host as unknown as PixiRendererHost },
     cameraRef: { current: { x: 0, y: 0, zoom: 1 } }, pageRef: { current: page },
-    selectionRef, toolRef: { current: 'select' }, spacePanRef: { current: false },
+    selectionRef, toolRef: { current: 'select' }, toolConfigRef: { current: DEFAULT_TOOL_CONFIG },
+    spacePanRef: { current: false },
     readOnlyRef: { current: false }, gestureApiRef: { current: null }, commit,
     applySelection: (next) => { selectionRef.current = next; }, applyConnectorSelection,
     updateCamera: vi.fn(), openEditor, openConnectorEditor: vi.fn(), onToolChange: vi.fn(), mintId: () => 'new',

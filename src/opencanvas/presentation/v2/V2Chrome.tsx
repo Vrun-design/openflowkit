@@ -3,6 +3,8 @@ import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { ToastItem } from '../design-system';
 import { V2CameraControls } from './V2CameraControls';
 import { V2CreationToolbar, type V2Tool } from './V2CreationToolbar';
+import type { V2ConnectorTool, V2ToolConfig } from './v2ToolCatalog';
+import type { ShapeKind } from '../../domain/nodes/shapeNode';
 import { V2DocumentBar } from './V2DocumentBar';
 import type { V2SaveStatus } from './useV2Autosave';
 import type { IconChoice } from '../../domain/nodes/iconNode';
@@ -35,6 +37,11 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly breadcrumb?: readonly { readonly pageId: string; readonly label: string; readonly elementId?: string }[];
   readonly onCrumb?: (crumb: { readonly pageId: string; readonly elementId?: string }) => void;
   readonly onToolChange: (tool: V2Tool) => void;
+  readonly toolConfig: V2ToolConfig;
+  readonly onPickShape: (shape: ShapeKind) => void;
+  readonly onPickConnector: (kind: V2ConnectorTool) => void;
+  readonly selectionLocked: boolean;
+  readonly onToggleLock: () => void;
   readonly iconsOpen: boolean;
   readonly onIconsOpenChange: (open: boolean) => void;
   readonly onInsertIcon: (icon: IconChoice) => void;
@@ -70,6 +77,10 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
       />
       {props.readOnly ? null : (
         <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange}
+          toolConfig={props.toolConfig} onPickShape={props.onPickShape}
+          onPickConnector={props.onPickConnector}
+          selectionCount={props.selectedNodeIds.length} selectionLocked={props.selectionLocked}
+          onToggleLock={props.onToggleLock}
           iconsOpen={props.iconsOpen} onIconsOpenChange={props.onIconsOpenChange} onInsertIcon={props.onInsertIcon} />
       )}
       <V2CameraControls

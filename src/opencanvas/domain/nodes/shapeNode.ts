@@ -2,16 +2,40 @@ import type { SceneNode, ScenePage } from '../document/types';
 import type { Point2d, Size2d } from '../geometry/types';
 import type { JsonObject } from '../document/json';
 
-// The three shapes the v2 toolbar creates. One factory serves the toolbar and
-// the add_node agent action so both produce byte-identical nodes (gate 2).
-export type ShapeKind = 'rectangle' | 'ellipse' | 'text';
-export const SHAPE_KINDS: readonly ShapeKind[] = ['rectangle', 'ellipse', 'text'];
+// The shape library the v2 toolbar creates. One factory serves the toolbar and
+// the add_shape agent action so both produce byte-identical nodes.
+export type ShapeKind =
+  | 'text'
+  | 'rectangle' | 'rounded' | 'capsule'
+  | 'circle' | 'ellipse' | 'diamond' | 'parallelogram' | 'hexagon'
+  | 'cylinder' | 'document' | 'cloud' | 'actor';
+
+export const SHAPE_KINDS: readonly ShapeKind[] = [
+  'rectangle', 'ellipse', 'text',
+  'rounded', 'capsule', 'circle', 'diamond', 'parallelogram', 'hexagon',
+  'cylinder', 'document', 'cloud', 'actor',
+];
 
 export const DEFAULT_SHAPE_SIZE: Size2d = { width: 160, height: 72 };
 export const DEFAULT_TEXT_SIZE: Size2d = { width: 160, height: 48 };
 
+// Round and pointy shapes need more room than a box for the same label.
+const SHAPE_SIZES: Readonly<Partial<Record<ShapeKind, Size2d>>> = {
+  ellipse: { width: 160, height: 92 },
+  circle: { width: 120, height: 120 },
+  diamond: { width: 168, height: 104 },
+  hexagon: { width: 168, height: 92 },
+  parallelogram: { width: 176, height: 88 },
+  cylinder: { width: 150, height: 104 },
+  document: { width: 160, height: 104 },
+  cloud: { width: 184, height: 112 },
+  actor: { width: 112, height: 136 },
+  capsule: { width: 168, height: 64 },
+};
+
 export function defaultShapeSize(kind: ShapeKind): Size2d {
-  return kind === 'text' ? DEFAULT_TEXT_SIZE : DEFAULT_SHAPE_SIZE;
+  if (kind === 'text') return DEFAULT_TEXT_SIZE;
+  return SHAPE_SIZES[kind] ?? DEFAULT_SHAPE_SIZE;
 }
 
 export function nextNodeZIndex(page: ScenePage): number {
@@ -19,16 +43,15 @@ export function nextNodeZIndex(page: ScenePage): number {
 }
 
 function shapeNodeKind(kind: ShapeKind): { nodeKind: string; content: Record<string, string> } {
-  switch (kind) {
-    case 'ellipse':
-      return { nodeKind: 'custom', content: { shape: 'ellipse', label: '' } };
-    case 'text':
-      // An empty label renders nothing on the canvas; start with a visible
-      // placeholder the author replaces with F2. Explicit '' stays allowed.
-      return { nodeKind: 'text', content: { label: 'Text' } };
-    case 'rectangle':
-      return { nodeKind: 'process', content: { shape: 'rectangle', label: '' } };
+  if (kind === 'text') {
+    // An empty label renders nothing on the canvas; start with a visible
+    // placeholder the author replaces with F2. Explicit '' stays allowed.
+    return { nodeKind: 'text', content: { label: 'Text' } };
   }
+  // Every library shape is a `process` node carrying its outline id, exactly
+  // what the DSL compiler writes for a shape word — so canvas and code agree
+  // and the serializer can name the shape back.
+  return { nodeKind: 'process', content: { shape: kind, label: '' } };
 }
 
 export interface CreateShapeNodeOptions {

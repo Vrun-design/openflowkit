@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from 'react';
 import type { DocumentCommand } from '../../domain/commands/types';
-import type { SceneConnector, ScenePage } from '../../domain/document/types';
+import type { ConnectorRouteKind, SceneConnector, ScenePage } from '../../domain/document/types';
 import type { JsonObject } from '../../domain/document/json';
 import type { CanvasCamera } from '../../domain/camera/types';
 import type { TransformHandle, TransformResult } from '../../domain/transforms/types';
@@ -56,6 +56,7 @@ import {
   type V2ShapeKind,
 } from '../../domain/commands/sceneEdits';
 import type { V2Tool } from './V2CreationToolbar';
+import { CONNECTOR_ROUTE, connectorHeadEnd, type V2ToolConfig } from './v2ToolCatalog';
 
 const CLICK_THRESHOLD_PX = 4;
 // Handles sit 22 px outside the node edge; search a box around the press.
@@ -103,6 +104,8 @@ interface V2PointerOptions {
   readonly pageRef: RefObject<ScenePage | null>;
   readonly selectionRef: RefObject<CanvasSelection>;
   readonly toolRef: RefObject<V2Tool>;
+  /** Which variant a flyout tool draws with (shape library, connector kind). */
+  readonly toolConfigRef: RefObject<V2ToolConfig>;
   readonly spacePanRef: RefObject<boolean>;
   readonly readOnlyRef: RefObject<boolean>;
   readonly gestureApiRef: RefObject<V2GestureApi | null>;
@@ -206,10 +209,12 @@ function pickHandleNear(
 // The dragged-out connector as it will commit: routed live, so the user sees
 // the real lane and the side it will bind to before letting go.
 function previewConnector(
+  options: V2PointerOptions,
   operation: V2ConnectOperation,
   targetNodeId: string | null,
   toWorld: Point2d
 ): SceneConnector {
+  const kind = options.toolConfigRef.current.connector;
   return {
     id: '__connect-preview',
     source: operation.sourceNodeId
@@ -218,14 +223,25 @@ function previewConnector(
     target: targetNodeId
       ? { nodeId: targetNodeId, portId: null, anchor: null, point: null }
       : { nodeId: null, portId: null, anchor: null, point: toWorld },
-    route: { kind: 'orthogonal', ownership: 'automatic' },
-    waypoints: [], labels: [], appearance: { markerEnd: 'arrow' },
+    route: { kind: CONNECTOR_ROUTE[kind], ownership: 'automatic' },
+    waypoints: [], labels: [], appearance: { markerEnd: connectorHeadEnd(kind) },
     semantics: {}, metadata: {}, extensions: {},
   };
 }
 
 function stickyAppearance(options: V2PointerOptions, shape: V2ShapeKind): JsonObject | undefined {
   return options.stylePresetsRef?.current[shape === 'text' ? 'text' : 'shape'];
+}
+
+// The picked connector tool decides route and target marker; sticky style
+// carries the rest, so "arrow" always points and "line" never does.
+function connectorAppearance(options: V2PointerOptions): JsonObject {
+  const kind = options.toolConfigRef.current.connector;
+  return { ...options.stylePresetsRef?.current.connector, markerEnd: connectorHeadEnd(kind) };
+}
+
+function connectorRoute(options: V2PointerOptions): ConnectorRouteKind {
+  return CONNECTOR_ROUTE[options.toolConfigRef.current.connector];
 }
 
 // Handle flow released on empty canvas (or clicked without dragging): the new
@@ -388,7 +404,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         const toWorld = host.screenToWorld(point);
         operationRef.current = { ...operation, toWorld };
         const overNode = host.pickNode(point);
-        host.setConnectionPreview(previewConnector(operation, overNode !== operation.sourceNodeId ? overNode : null, toWorld));
+        host.setConnectionPreview(previewConnector(opts, operation, overNode !== operation.sourceNodeId ? overNode : null, toWorld));
       } else if (operation.kind === 'connector-edit') {
         // Shift pins a dragged endpoint to free canvas space instead of binding.
         const overNode = operation.handle.kind === 'endpoint' && !event.shiftKey
@@ -527,7 +543,7 @@ export function useV2Pointer(options: V2PointerOptions) {
             const id = opts.mintId('connector');
             const command = buildInsertConnectorCommand(operation.page, {
               id, source: { nodeId: sourceNodeId }, target: { nodeId: targetId },
-              appearance: opts.stylePresetsRef?.current.connector,
+              route: connectorRoute(opts), appearance: connectorAppearance(opts),
             });
             opts.commit(opts.extendConnectorCommand?.(command, sourceNodeId, targetId) ?? command);
             opts.applySelection(clearSelection());
@@ -545,7 +561,7 @@ export function useV2Pointer(options: V2PointerOptions) {
               ? { nodeId: operation.sourceNodeId }
               : { point: operation.fromWorld },
             target: targetId ? { nodeId: targetId } : { point: host.screenToWorld(point) },
-            appearance: opts.stylePresetsRef?.current.connector,
+            route: connectorRoute(opts), appearance: connectorAppearance(opts),
           });
           opts.commit(
             operation.sourceNodeId && targetId
@@ -656,8 +672,8 @@ export function useV2Pointer(options: V2PointerOptions) {
         };
         return;
       }
-      if (tool === 'rectangle' || tool === 'ellipse' || tool === 'text') {
-        const shape: V2ShapeKind = tool;
+      if (tool === 'rectangle' || tool === 'ellipse' || tool === 'text' || tool === 'shape') {
+        const shape: V2ShapeKind = tool === 'shape' ? opts.toolConfigRef.current.shape : tool;
         const world = host.screenToWorld(point);
         operationRef.current = {
           kind: 'create',

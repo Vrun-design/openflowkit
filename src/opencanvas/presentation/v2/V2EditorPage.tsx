@@ -16,6 +16,8 @@ import { V2Chrome } from './V2Chrome';
 import { V2AgentConnect } from './V2AgentConnect';
 import { INITIAL_CODE, V2CanvasWelcome, V2DraftPanel, V2Shortcuts, V2WorkspaceRail, type V2WorkspaceMode } from './V2Workspace';
 import type { V2Tool } from './V2CreationToolbar';
+import { DEFAULT_TOOL_CONFIG, type V2ConnectorTool, type V2ToolConfig } from './v2ToolCatalog';
+import type { ShapeKind } from '../../domain/nodes/shapeNode';
 import { useV2IconLibrary } from './useV2IconLibrary';
 import { V2LoadCenter } from './V2LoadCenter';
 import { V2TreePanel } from './V2TreePanel';
@@ -119,6 +121,8 @@ export function V2EditorPage(): React.JSX.Element {
   const sectionRef = useRef<HTMLElement | null>(null);
   const gestureApiRef = useRef<V2GestureApi | null>(null);
   const [tool, setTool] = useState<V2Tool>('select');
+  // Which variant a flyout tool draws with; the rail shows the last pick.
+  const [toolConfig, setToolConfig] = useState<V2ToolConfig>(DEFAULT_TOOL_CONFIG);
   const [spacePan, setSpacePan] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null);
@@ -136,9 +140,20 @@ export function V2EditorPage(): React.JSX.Element {
   const [rendererStatus, setRendererStatus] = useState<PixiRendererStatus>('initializing');
 
   const toolRef = useRef(tool);
+  const toolConfigRef = useRef(toolConfig);
   const spacePanRef = useRef(spacePan);
   useEffect(() => { toolRef.current = tool; }, [tool]);
+  useEffect(() => { toolConfigRef.current = toolConfig; }, [toolConfig]);
   useEffect(() => { spacePanRef.current = spacePan; }, [spacePan]);
+
+  const pickShape = useCallback((shape: ShapeKind) => {
+    setToolConfig((config) => ({ ...config, shape }));
+    setTool('shape');
+  }, []);
+  const pickConnector = useCallback((connector: V2ConnectorTool) => {
+    setToolConfig((config) => ({ ...config, connector }));
+    setTool('connector');
+  }, []);
 
   useEffect(() => {
     const resetInput = () => {
@@ -686,6 +701,11 @@ export function V2EditorPage(): React.JSX.Element {
                 });
               }}
               onToolChange={setTool}
+              toolConfig={toolConfig}
+              onPickShape={pickShape}
+              onPickConnector={pickConnector}
+              selectionLocked={page.nodes.find((node) => node.id === selection.nodeIds[0])?.content.sectionLocked === true}
+              onToggleLock={editActions.toggleLock}
               iconsOpen={iconLibrary.open} onIconsOpenChange={iconLibrary.setOpen} onInsertIcon={iconLibrary.insertIcon}
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
@@ -696,6 +716,7 @@ export function V2EditorPage(): React.JSX.Element {
             <V2CanvasHost
               page={page} hostRef={hostRef} camera={camera.camera} cameraRef={camera.cameraRef} pageRef={pageRef}
               selectionRef={selectionRef} toolRef={toolRef} tool={tool} spacePanRef={spacePanRef}
+              toolConfigRef={toolConfigRef}
               readOnlyRef={readOnlyRef} gestureApiRef={gestureApiRef}
               selection={selection} selectedConnectorId={selectedConnectorId}
               editing={editing}

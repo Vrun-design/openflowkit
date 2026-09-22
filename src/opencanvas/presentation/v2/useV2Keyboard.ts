@@ -189,6 +189,8 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onToolChange('rectangle');
     } else if (!command && !event.shiftKey && !event.altKey && key === 'o') {
       opts.onToolChange('ellipse');
+    } else if (!command && !event.shiftKey && !event.altKey && key === 's') {
+      opts.onToolChange('shape');
     } else if (!command && !event.shiftKey && !event.altKey && key === 'a') {
       opts.onToolChange('connector');
     } else if (!command && !event.shiftKey && !event.altKey && key === 't') {

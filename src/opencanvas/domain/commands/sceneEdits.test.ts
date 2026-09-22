@@ -31,7 +31,7 @@ function pageWithTwoNodes(): ScenePage {
 }
 
 describe('v2 shape creation commands', () => {
-  it.each([['rectangle', 'process'], ['ellipse', 'custom'], ['text', 'text']] as const)(
+  it.each([['rectangle', 'process'], ['ellipse', 'process'], ['diamond', 'process'], ['text', 'text']] as const)(
     'builds a valid %s insert at the theme default size',
     (kind, nodeKind) => {
       const page = emptyPage();

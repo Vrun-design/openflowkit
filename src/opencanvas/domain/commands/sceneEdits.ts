@@ -15,6 +15,7 @@ import { resolveNodeStyle, type NodeStyle } from '../nodes/nodeStyle';
 import { descendantIds } from './groupNodes';
 import type {
   ConnectorEndpoint,
+  ConnectorRouteKind,
   SceneConnector,
   SceneNode,
   ScenePage,
@@ -311,6 +312,8 @@ export interface V2ConnectorOptions {
   readonly id: string;
   readonly source: V2ConnectorEnd;
   readonly target: V2ConnectorEnd;
+  /** Route the connector tool was armed with; orthogonal when unspecified. */
+  readonly route?: ConnectorRouteKind;
   /** Sticky style from the last connector edit. */
   readonly appearance?: JsonObject;
 }
@@ -323,8 +326,8 @@ function connectorEndpoint(page: ScenePage, end: V2ConnectorEnd): ConnectorEndpo
   return { nodeId: end.nodeId, portId: null, anchor: null, point: null };
 }
 
-// I-13 basic: arrow with an automatic orthogonal route and a target arrowhead.
-// Ports, markers UI and labels arrive in V2-06.
+// I-13 basic: automatic route and a target arrowhead by default; the tool
+// picks the route kind and marker. Ports, labels and marker UI arrive in V2-06.
 export function buildInsertConnectorCommand(
   page: ScenePage,
   options: V2ConnectorOptions
@@ -339,7 +342,7 @@ export function buildInsertConnectorCommand(
       id: options.id,
       source: connectorEndpoint(page, options.source),
       target: connectorEndpoint(page, options.target),
-      route: { kind: 'orthogonal', ownership: 'automatic' },
+      route: { kind: options.route ?? 'orthogonal', ownership: 'automatic' },
       waypoints: [],
       labels: [],
       appearance: { markerEnd: 'arrow', ...options.appearance },
