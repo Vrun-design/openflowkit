@@ -50,7 +50,10 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
         { label: 'Zoom to 100%', keys: `${command} + 1`, tokens: ['1', meta] },
         { label: 'Zoom in / out', keys: `${command} + = / −`, tokens: ['=', '+', '-'] },
         { label: 'Layers', keys: 'L', tokens: ['l'] },
-        { label: 'Snap bypass while dragging', keys: 'Alt', tokens: [] },
+        // The dispatcher reads metaKey/ctrlKey for this, never altKey: Alt is
+        // taken by resize-from-centre.
+        { label: 'Snap bypass while dragging', keys: command, tokens: [] },
+        { label: 'Resize from the centre', keys: 'Alt + drag a handle', tokens: [] },
       ],
     },
     {
