@@ -22,6 +22,9 @@ const FAMILIES = ['flowchart', 'architecture', 'sequence', 'state', 'erd', 'clas
 const STATIC_TOOLS = [
   'validate_openflow_dsl',
   'analyze_codebase',
+  'discover_architecture',
+  'drift_report',
+  'explain_element',
   'list_starter_templates',
   'get_starter_template',
   'list_diagram_node_types',

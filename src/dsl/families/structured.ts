@@ -1,6 +1,7 @@
 import type { SceneConnector, SceneNode } from '../../opencanvas/domain/document/types';
 import type { Size2d } from '../../opencanvas/domain/geometry/types';
 import type { JsonObject } from '../../opencanvas/domain/document/json';
+import { isErRelationToken } from '../../opencanvas/domain/connectors/presentation';
 import { measurePortableText } from '../../opencanvas/domain/text/measurement';
 import type { DslDiagnostic } from '../ast';
 import { nonVisualAttributes, readAttributes, typedFrom } from '../attributes';
@@ -18,11 +19,7 @@ import type { DslToken } from '../tokenize';
 
 export type StructuredKind = 'erd' | 'class';
 
-const ER_TOKENS = [
-  '||--||', '||--o{', '||--|{', '}o--||', '}|--||', '}o..o{', '}|..|{', '}o--o{',
-  '}|--|{', '}o..||', '}|..||', '||..o{', '||..|{', '--',
-] as const;
-const CLASS_TOKENS = ['<|--', '--|>', '*--', '--*', 'o--', '--o', '..>', '<..', '<--', '-->', '<-->', '..', '--'] as const;
+const CLASS_TOKENS = ['<|--', '--|>', '<|..', '..|>', '*--', '--*', 'o--', '--o', '..>', '<..', '<--', '-->', '<-->', '..', '--'] as const;
 const ER_ALIASES: Readonly<Record<string, string>> = Object.fromEntries(Object.entries({
   '1:1': '||--||', '1:1..': '||..||', '1:n': '||--o{', 'n:1': '}o--||', 'n:m': '}o--o{', '1:n..': '||..o{', 'n:m..': '}o..o{',
   'one or one': '||--||', 'one or many': '||--o{', 'many or one': '}o--||', 'many or many': '}o--o{',
@@ -153,7 +150,7 @@ function classMemberText(value: string): string {
 
 /** Reversed relation forms: canonical token + whether the endpoints swap (grammar §8.6). */
 const REVERSED_RELATIONS: Readonly<Record<string, string>> = {
-  '<|--': '--|>', '<..': '..>', '<--': '-->', '--*': '*--', '--o': 'o--',
+  '<|--': '--|>', '<|..': '..|>', '<..': '..>', '<--': '-->', '--*': '*--', '--o': 'o--',
 };
 
 function canonicalRelationToken(kind: StructuredKind, raw: string): string | undefined {
@@ -164,12 +161,14 @@ function canonicalRelationToken(kind: StructuredKind, raw: string): string | und
   } else if (compact === '->') {
     return '-->';
   }
-  const tokens = kind === 'erd' ? ER_TOKENS : CLASS_TOKENS;
-  const candidate = (kind === 'erd' ? ER_ALIASES[compact] : undefined) ?? compact;
+  if (kind === 'erd') {
+    const candidate = ER_ALIASES[compact] ?? compact;
+    return candidate === '--' || isErRelationToken(candidate) ? candidate : undefined;
+  }
   // Reversed forms are canonicalized by swapping endpoints, not kept verbatim.
-  const reversed = REVERSED_RELATIONS[candidate];
-  if (reversed && (tokens as readonly string[]).includes(reversed)) return `reverse:${reversed}`;
-  return (tokens as readonly string[]).includes(candidate) ? candidate : undefined;
+  const reversed = REVERSED_RELATIONS[compact];
+  if (reversed) return `reverse:${reversed}`;
+  return (CLASS_TOKENS as readonly string[]).includes(compact) ? compact : undefined;
 }
 
 function parseStructured(kind: StructuredKind, segments: readonly DslSegment[], context: FamilyContext): StructuredModel {

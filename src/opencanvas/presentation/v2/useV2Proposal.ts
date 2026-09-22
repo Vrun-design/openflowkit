@@ -1,15 +1,13 @@
-// Proposal lifecycle for the v2 editor: request → ready → apply/stale/failed.
+// Proposal lifecycle for the v2 editor: requestDiagram → ready → apply/stale/failed.
 // Holds the proposal, decisions and applied ids; commits only through the
 // session with the base revision. Owns no rendering and no provider.
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CompileResult } from '../../../dsl/compile';
 import { buildDslPageCommand } from '../../application/dsl/dslPageCommand';
-import { LOCAL_AGENT_SOURCE, proposeFromIntent, type LocalAgentIntent } from '../../application/ai/localAgent';
 import {
   applyCommand, createProposal, decideChange, StaleProposalError, summarizeChanges,
   type Proposal, type ProposalChangeSummary,
 } from '../../application/ai/proposalSession';
-import type { CanvasSelection } from '../../application/selection/selection';
 import { StaleSessionRevisionError } from '../../application/session/session';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
@@ -29,11 +27,9 @@ interface V2ProposalOptions {
   readonly document: SceneDocumentV1 | null;
   readonly revision: number;
   readonly pageId: string | null;
-  readonly selectionRef: { readonly current: CanvasSelection };
   readonly commit: (command: DocumentCommand, expectedRevision?: number) => void;
   readonly readOnly: boolean;
   readonly announce: (message: string) => void;
-  readonly mintId: (prefix: string) => string;
   /** Compiles generated DSL for the AI path (host layout port, icons). */
   readonly compileDsl?: (text: string) => Promise<CompileResult>;
 }
@@ -42,7 +38,7 @@ export function useV2Proposal(options: V2ProposalOptions) {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [phase, setPhase] = useState<V2ProposalPhase>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [intent, setIntent] = useState<LocalAgentIntent | string | null>(null);
+  const [intent, setIntent] = useState<string | null>(null);
   const [highlightedChangeId, setHighlightedChangeId] = useState<string | null>(null);
   const [appliedSummary, setAppliedSummary] = useState('');
   const appliedIds = useRef(new Set<string>());
@@ -51,37 +47,6 @@ export function useV2Proposal(options: V2ProposalOptions) {
   optionsRef.current = options;
 
   const stale = phase === 'ready' && proposal !== null && proposal.baseRevision !== options.revision;
-
-  const request = useCallback(async (intent: LocalAgentIntent) => {
-    const { document, revision, pageId, selectionRef, mintId } = optionsRef.current;
-    if (!document || !pageId) return;
-    setPhase('working');
-    setIntent(intent);
-    setError(null);
-    setHighlightedChangeId(null);
-    try {
-      // ponytail: synchronous local agent behind an async shape; V2-11 awaits
-      // a provider here without changing the panel.
-      const changes = await Promise.resolve(proposeFromIntent(document, pageId, intent, {
-        selection: selectionRef.current, mintId,
-      }));
-      const next = createProposal({
-        document, revision, source: LOCAL_AGENT_SOURCE, intent, changes,
-        scope: {
-          kind: selectionRef.current.nodeIds.length > 0 ? 'selection' : 'page',
-          pageId, objectIds: selectionRef.current.nodeIds,
-        },
-      });
-      if (next.error) throw new Error(next.error.message);
-      baseDocument.current = document;
-      setProposal(next);
-      setPhase('ready');
-    } catch (caught) {
-      setProposal(null);
-      setError(caught instanceof Error ? caught.message : String(caught));
-      setPhase('failed');
-    }
-  }, []);
 
   /**
    * A provider (BYOK) or the code panel hands us DSL; compiling it produces one
@@ -101,6 +66,7 @@ export function useV2Proposal(options: V2ProposalOptions) {
       const bound = request.frameId ? currentPage.nodes.find((node) => node.id === request.frameId) : undefined;
       const compiled = await compileDsl(request.dsl);
       const command = buildDslPageCommand(currentPage, compiled, bound?.id);
+      if (!command) throw new Error('The diagram already matches this code.');
       const count = compiled.nodes.length + compiled.groups.length;
       const next = createProposal({
         document, revision, source: request.source ?? 'byok', intent: request.intent,
@@ -175,6 +141,6 @@ export function useV2Proposal(options: V2ProposalOptions) {
     proposal, phase, intent, stale, error, changes, decisions, appliedSummary,
     canApply: phase === 'ready' && !stale && !options.readOnly,
     highlightedChangeId, highlight: setHighlightedChangeId,
-    request, requestDiagram, decide, apply, discard,
+    requestDiagram, decide, apply, discard,
   };
 }

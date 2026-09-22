@@ -1,6 +1,6 @@
 // Test-only capability host: a deterministic in-process stand-in for the two
 // real hosts (live editor, MCP file server). Not imported by production code.
-import { compile } from '../../dsl/compile';
+import { compile, compileWorkspace } from '../../dsl/compile';
 import { deterministicLayout } from '../../dsl/layout';
 import type { OpCapabilities } from './types';
 
@@ -19,6 +19,7 @@ export function createTestCapabilities(icons: readonly { provider: string; slug:
   return {
     recording,
     compile: (text, options) => compile(text, { ...options, layout: options?.layout ?? deterministicLayout }),
+    compileWorkspace: (text, options) => compileWorkspace(text, { ...options, layout: options?.layout ?? deterministicLayout }),
     syntax: (family) => {
       recording.syntaxCalls.push(family ?? 'all');
       return family ? `## family ${family}` : '## grammar';

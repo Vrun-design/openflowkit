@@ -61,7 +61,7 @@ export class LiveBridge {
   async stop(): Promise<void> {
     for (const [, call] of this.pending) { clearTimeout(call.timer); call.reject(new Error('Bridge stopped.')); }
     this.pending.clear();
-    this.parked?.end();
+    if (this.parked) this.respond(this.parked, 204, null);
     this.parked = null;
     const server = this.server;
     this.server = null;
@@ -116,15 +116,17 @@ export class LiveBridge {
     this.respond(response, 200, request);
   }
 
+  // Every reply, including the empty 204 that closes a poll, carries the CORS
+  // headers: without them the browser rejects the fetch and the editor flaps
+  // between "connected" and "unavailable" every poll window.
   private respond(response: ServerResponse, status: number, body: unknown): void {
-    const payload = JSON.stringify(body);
     response.writeHead(status, {
-      'content-type': 'application/json;charset=utf-8',
+      ...(status === 204 ? {} : { 'content-type': 'application/json;charset=utf-8' }),
       'cache-control': 'no-store',
       'access-control-allow-origin': response.req.headers.origin ?? '*',
       'access-control-allow-headers': `content-type, ${bridgeTokenHeader}`,
     });
-    response.end(payload);
+    response.end(status === 204 ? undefined : JSON.stringify(body));
   }
 
   private reject401(response: ServerResponse, request: IncomingMessage): boolean {
@@ -191,7 +193,7 @@ export class LiveBridge {
 
   private next(response: ServerResponse, url: URL): void {
     this.lastSeenAt = Date.now();
-    if (this.parked) { this.parked.end(); this.parked = null; }
+    if (this.parked) { this.respond(this.parked, 204, null); this.parked = null; }
     if (this.queue.length > 0) {
       this.respond(response, 200, this.queue.shift());
       return;
@@ -203,7 +205,7 @@ export class LiveBridge {
     const timer = setTimeout(() => {
       if (this.parked === response) {
         this.parked = null;
-        response.writeHead(204).end();
+        this.respond(response, 204, null);
       }
     }, waitSeconds * 1000);
     response.on('close', () => { clearTimeout(timer); if (this.parked === response) this.parked = null; });

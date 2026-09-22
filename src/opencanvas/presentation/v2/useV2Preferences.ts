@@ -16,11 +16,14 @@ export interface V2Preferences {
   bridgePort: number;
   bridgeToken: string;
   agentBridgeEnabled: boolean;
+  /** Tag perspective: matching elements stay bright, the rest dims. */
+  perspectiveTags: string[];
 }
 const KEY = 'openflowkit-v2-preferences';
 const DEFAULTS: V2Preferences = {
   theme: 'system', showGrid: true, snapToGrid: false, canvasColor: null, density: 'comfortable',
   diagramPalette: 'pastel', bridgePort: BRIDGE_DEFAULT_PORT, bridgeToken: '', agentBridgeEnabled: false,
+  perspectiveTags: [],
 };
 
 function readPreferences(): V2Preferences {
@@ -38,7 +41,10 @@ function readPreferences(): V2Preferences {
       bridgePort: Number.isInteger(value?.bridgePort) && value.bridgePort > 0 && value.bridgePort < 65536
         ? value.bridgePort : BRIDGE_DEFAULT_PORT,
       bridgeToken: typeof value?.bridgeToken === 'string' ? value.bridgeToken.slice(0, 64) : '',
-      agentBridgeEnabled: value?.agentBridgeEnabled === true };
+      agentBridgeEnabled: value?.agentBridgeEnabled === true,
+      perspectiveTags: Array.isArray(value?.perspectiveTags)
+        ? value.perspectiveTags.filter((tag: unknown): tag is string => typeof tag === 'string').slice(0, 24)
+        : [] };
   } catch { return DEFAULTS; }
 }
 

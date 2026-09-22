@@ -80,3 +80,16 @@ describe('parse', () => {
     }
   });
 });
+
+describe('parse for non-graph families', () => {
+  it('does not report valid sequence or class lines as dropped', () => {
+    const sequence = parse('sequence\nparticipant A [actor]\nA -> B : hi\nactivate B\nloop retry {\n  B -> A : ok\n}\nnote over A,B : done');
+    expect(sequence.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    const cls = parse('class\nclass Order {\n  +id: int\n  +total(): Money\n}\nOrder --|> Base');
+    expect(cls.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+  });
+
+  it('still reports shared diagnostics for them', () => {
+    expect(parse('sequence\nA -> B : "open').diagnostics.map((item) => item.code)).toContain('W102');
+  });
+});

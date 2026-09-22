@@ -89,6 +89,66 @@ export interface DslLintReport {
   readonly diagnostics: readonly { readonly code: string; readonly severity: string; readonly line: number; readonly col: number; readonly message: string }[];
 }
 
+/** A compiled scene node, as much of it as headless consumers read. */
+export interface BundleSceneNode {
+  readonly id: string;
+  readonly kind: string;
+  readonly parentId: string | null;
+  readonly layerId: string;
+  readonly zIndex: number;
+  readonly content: Record<string, unknown>;
+  readonly metadata: Record<string, unknown>;
+  readonly size: { readonly width: number; readonly height: number };
+}
+
+export interface BundleSceneConnector {
+  readonly id: string;
+  readonly source: { readonly nodeId: string | null };
+  readonly target: { readonly nodeId: string | null };
+  readonly metadata: Record<string, unknown>;
+}
+
+export interface BundleCompileResult {
+  readonly frame: BundleSceneNode;
+  readonly nodes: readonly BundleSceneNode[];
+  readonly groups: readonly BundleSceneNode[];
+  readonly connectors: readonly BundleSceneConnector[];
+  readonly diagnostics: DslLintReport['diagnostics'];
+  readonly meta: { readonly family: string; readonly title?: string };
+}
+
+export interface BundleWorkspaceView {
+  readonly viewId: string;
+  readonly name: string;
+  readonly result: BundleCompileResult;
+}
+
+export interface BundleWorkspace {
+  readonly family: string;
+  readonly views: readonly BundleWorkspaceView[];
+}
+
+/** Structural shape `exportCanonicalSvg` reads; the real document is richer. */
+export interface SvgExportPage {
+  readonly id: string;
+  readonly layers: readonly { readonly id: string; readonly visible: boolean }[];
+  readonly nodes: readonly unknown[];
+  readonly connectors: readonly unknown[];
+}
+
+export interface SvgExportDocument {
+  readonly id: string;
+  readonly pages: readonly SvgExportPage[];
+}
+
+export interface SvgExportOptions {
+  readonly pageId?: string;
+  readonly theme?: 'light' | 'dark' | 'print';
+  readonly padding?: number;
+  readonly pixelRatio?: number;
+  readonly transparent?: boolean;
+}
+
 export interface OpCapabilities {
   readonly compile: (text: string, options?: unknown) => Promise<unknown>;
   readonly syntax: (family?: string) => string | Promise<string>;
@@ -112,6 +172,11 @@ interface AgentBundle {
   lintDsl(source: string): DslLintReport;
   createAgentDocument(name: string, id?: string): SceneDocumentV1;
   parseAgentDocument(value: unknown): SceneDocumentV1;
+  compileWorkspace(text: string, options?: { readonly layout?: unknown; readonly origin?: { readonly x: number; readonly y: number } }): Promise<BundleWorkspace>;
+  readonly deterministicLayout: unknown;
+  architectureWorkspaceText(model: unknown): string;
+  archModelFromJson(value: unknown): unknown;
+  exportCanonicalSvg(document: SvgExportDocument, options?: SvgExportOptions): string;
   readonly BRIDGE_PROTOCOL_VERSION: number;
   readonly BRIDGE_DEFAULT_PORT: number;
   readonly BRIDGE_POLL_SECONDS: number;
@@ -125,6 +190,7 @@ interface AgentBundle {
 export const {
   AGENT_OPS, findAgentOp, runAgentOp, createFileCapabilities, grammarSection, lintDsl,
   createAgentDocument, parseAgentDocument,
+  compileWorkspace, deterministicLayout, architectureWorkspaceText, archModelFromJson, exportCanonicalSvg,
   BRIDGE_PROTOCOL_VERSION, BRIDGE_DEFAULT_PORT, BRIDGE_POLL_SECONDS, BRIDGE_IDLE_MS,
   bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeRequest,
 } = bundle as unknown as AgentBundle;

@@ -20,6 +20,11 @@ interface V2ContextMenuProps {
   readonly commit: (command: DocumentCommand) => void;
   readonly onEditLabel: () => void;
   readonly onEditAsCode: (frameId: string) => void;
+  /** Set when the selection is a model placement; drives the C4 actions. */
+  readonly modelElement?: { readonly id: string; readonly name: string; readonly childView: boolean } | null;
+  readonly onDrillInto?: () => void;
+  readonly onUnplace?: () => void;
+  readonly onRemoveElement?: () => void;
   readonly onSelectAll: () => void;
   readonly onZoomToFit: () => void;
   readonly onZoomToSelection: () => void;
@@ -88,6 +93,16 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
             <MenuSeparator />
             <MenuItem onSelect={props.onEditLabel} shortcut="↵" disabled={!edit || many}>Edit label</MenuItem>
             {selectedFrame ? <MenuItem onSelect={() => props.onEditAsCode(selectedFrame.id)} shortcut="⌥D">Edit as code</MenuItem> : null}
+            {props.modelElement ? (
+              <>
+                <MenuSeparator />
+                {props.modelElement.childView ? (
+                  <MenuItem onSelect={() => props.onDrillInto?.()}>Open {props.modelElement.name} view</MenuItem>
+                ) : null}
+                <MenuItem onSelect={() => props.onUnplace?.()} disabled={!edit || many}>Unplace from this view</MenuItem>
+                <MenuItem onSelect={() => props.onRemoveElement?.()} disabled={!edit} danger>Remove from model</MenuItem>
+              </>
+            ) : null}
             <MenuSubmenu label="Style">
                 <MenuItem onSelect={actions.copyStyle} shortcut="⌘⌥C">Copy style</MenuItem>
                 <MenuItem onSelect={actions.pasteStyle} shortcut="⌘⌥V" disabled={!edit}>Paste style</MenuItem>

@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { applyDocumentCommand } from '@/opencanvas/domain/commands/execute';
 import { buildDeleteSelectionCommand, buildMoveNodesCommand } from '@/opencanvas/domain/commands/sceneEdits';
+import { createShapeNode } from '../../opencanvas/domain/nodes/shapeNode';
 import { buildStyleNodesCommand } from '@/opencanvas/domain/commands/styleNodes';
 import type { SceneDocumentV1, ScenePage } from '@/opencanvas/domain/document/types';
-import { addNode } from '../actions/addNode';
 import { createAgentDocument } from '../index';
 import { AGENT_OPS } from './index';
 import type { AgentOp, OpContext } from './types';
@@ -50,6 +50,27 @@ describe('agent ops', () => {
     const read = await run.run('get_diagram', { frameId: run.frame().id });
     expect(read.output).toMatchObject({ edited: false, losses: [], dsl: FLOW });
     expect(run.page().diagramKind).toBe('flowchart');
+  });
+
+  it('lands a C4 workspace as one page per view, and regenerates the same pages', async () => {
+    const run = await host();
+    const C4 = `architecture
+model {
+  person Customer
+  system Shop { container Web; container API; Web -> API }
+  Customer -> Shop.Web : uses
+}
+views { view context of Shop; view container of Shop }
+`;
+    const created = await run.run('create_diagram', { dsl: C4 });
+    expect(created.command!.kind).toBe('batch');
+    expect(created.output).toMatchObject({ family: 'architecture', views: [{ viewId: 'view:context:shop' }, { viewId: 'view:container:shop' }] });
+    expect(run.document().pages.map((page) => page.name)).toEqual(['Page 1', 'context of Shop', 'container of Shop']);
+    const again = await run.run('create_diagram', { dsl: C4 });
+    expect(again.command).toBeNull();
+    expect(run.document().pages).toHaveLength(3);
+    const listed = await run.run('list_diagrams', {});
+    expect((listed.output as { diagrams: unknown[] }).diagrams).toHaveLength(2);
   });
 
   it('reports canvas drift and unrepresentable paint through get_diagram', async () => {
@@ -137,13 +158,14 @@ describe('agent ops', () => {
     const deleted = await op('delete').run(op('delete').schema.parse({ ids: [ids[0]!] }), run.context());
     expect(deleted.command).toEqual(buildDeleteSelectionCommand(run.page(), [ids[0]!], []));
 
-    // add_shape is the toolbar's add_node: identical insert record, same ids.
+    // add_shape is the toolbar's create: identical insert record, same ids.
     const added = await op('add_shape').run(
-      op('add_shape').schema.parse({ kind: 'process', label: 'Added', x: 10, y: 20, id: 'added-1' }), run.context());
-    const manual = addNode.run(
-      { kind: 'process', label: 'Added', x: 10, y: 20, id: 'added-1' },
-      { document: run.document(), page: run.page() });
-    expect(added.command).toEqual(manual.command);
+      op('add_shape').schema.parse({ kind: 'rectangle', x: 10, y: 20, id: 'added-1' }), run.context());
+    expect(added.command).toEqual({
+      kind: 'insert-node', id: 'create-node:added-1', label: 'Create rectangle', pageId: run.page().id, index: run.page().nodes.length,
+      node: createShapeNode(run.page(), { kind: 'rectangle', id: 'added-1', at: { x: 10, y: 20 } }),
+    });
+    await expect(run.run('add_shape', { kind: 'process', x: 0, y: 0 })).rejects.toThrow(/label/);
   });
 
   it('refuses unknown ids, missing diagrams and unknown palettes with clear errors', async () => {

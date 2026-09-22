@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { CompileOptions, CompileResult } from '../../dsl/compile';
+import type { CompileOptions, CompileResult, CompileWorkspaceResult } from '../../dsl/compile';
 import type { DocumentCommand } from '../../opencanvas/domain/commands/types';
 import type { SceneDocumentV1, ScenePage } from '../../opencanvas/domain/document/types';
 
@@ -20,6 +20,8 @@ export function pointOf(value: { readonly x?: number; readonly y?: number }): { 
 export interface OpCapabilities {
   /** text → compiled frame scene. The host injects its layout port. */
   readonly compile: (text: string, options?: CompileOptions) => Promise<CompileResult>;
+  /** text → one scene per view (a C4 workspace); single-frame families yield one view. */
+  readonly compileWorkspace: (text: string, options?: CompileOptions) => Promise<CompileWorkspaceResult>;
   /** Grammar reference, narrowed to one family when asked (async: may load a chunk). */
   readonly syntax: (family?: string) => string | Promise<string>;
   /** Icon catalog search over the packs this host ships. */

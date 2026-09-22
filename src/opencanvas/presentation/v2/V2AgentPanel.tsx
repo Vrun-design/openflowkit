@@ -3,7 +3,6 @@
 // and useV2AiRequest; owns no document state and never touches the session.
 import { useState } from 'react';
 import { IconArrowUp, IconSparkles } from '@tabler/icons-react';
-import { LOCAL_AGENT_INTENTS } from '../../application/ai/localAgent';
 import {
   AgentPanel, Button, Icon, IconButton, ProposalBar, ProposalReview, ProvenanceBadge,
   type AgentMessage, type ProposalView,
@@ -35,7 +34,7 @@ export function V2AgentPanel({ proposal, ai, aiSettings, currentRevision, readOn
   const [draft, setDraft] = useState('');
   const { phase, proposal: current } = proposal;
   const intentLabel = typeof proposal.intent === 'string'
-    ? LOCAL_AGENT_INTENTS.find(({ id }) => id === proposal.intent)?.label ?? proposal.intent
+    ? proposal.intent
     : 'Proposal';
   const scopeLabel = current
     ? `Scope: ${current.scope.kind === 'selection' ? `${current.scope.objectIds.length} selected` : 'this page'}`
@@ -109,12 +108,6 @@ export function V2AgentPanel({ proposal, ai, aiSettings, currentRevision, readOn
         <div className="ofk-v2-assistant-composer">
           <V2AiProviderForm settings={aiSettings.settings} configured={aiSettings.configured}
             lastModel={ai.lastModel} onChange={aiSettings.update} onClearKey={aiSettings.clearKey} />
-          <details className="ofk-v2-local-actions"><summary>Canvas quick actions</summary>
-            <div className="ofk-v2-intents" role="group" aria-label="Request a proposal">
-              {LOCAL_AGENT_INTENTS.map(({ id, label }) => <Button key={id} variant="quiet" disabled={phase === 'working' || readOnly}
-                onClick={() => { void proposal.request(id); }}>{label}</Button>)}
-            </div>
-          </details>
           <div className="ofk-v2-prompt-box">
             <textarea aria-label="Ask AI assistant" rows={3}
               placeholder={aiSettings.configured ? 'What would you like to create?' : 'Add an API key above to generate diagrams'}

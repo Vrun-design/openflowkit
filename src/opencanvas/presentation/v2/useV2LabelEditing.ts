@@ -14,6 +14,11 @@ interface V2LabelEditingOptions {
   readonly commit: (command: DocumentCommand) => void;
   readonly announce: (message: string) => void;
   readonly focusCanvas: () => void;
+  /**
+   * Model pages route a label edit to the element instead of the node, so the
+   * rename lands on every view. Return true when the rename was handled.
+   */
+  readonly onRenamePlacedElement?: (nodeId: string, label: string) => boolean;
 }
 
 export interface OpenEditorOptions {
@@ -108,8 +113,12 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
     if (value.trim() === '' && removeIfNew()) {
       /* blank new node removed */
     } else if (node && currentPage && value !== previous) {
-      commit(buildSetNodeLabelCommand(currentPage, node.id, value));
-      announce('Label saved');
+      if (optionsRef.current.onRenamePlacedElement?.(node.id, value)) {
+        announce('Element renamed in every view');
+      } else {
+        commit(buildSetNodeLabelCommand(currentPage, node.id, value));
+        announce('Label saved');
+      }
     }
     setEditing(null);
     focusCanvas();

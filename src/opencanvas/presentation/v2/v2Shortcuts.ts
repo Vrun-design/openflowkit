@@ -53,7 +53,8 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
         { label: 'Copy / cut / paste', keys: `${command} + C / X / V`, tokens: ['c', 'x', 'KeyC'] },
         { label: 'Copy / paste style', keys: `${command} + Alt + C / V`, tokens: [] },
         { label: 'Duplicate', keys: `${command} + D`, tokens: ['d'] },
-        { label: 'Delete', keys: 'Backspace', tokens: ['Delete', 'Backspace'] },
+        { label: 'Delete / unplace', keys: 'Backspace', tokens: ['Delete', 'Backspace'] },
+        { label: 'Remove from model', keys: `${command} + Shift + Backspace`, tokens: [] },
         { label: 'Nudge (10 px with Shift)', keys: 'Arrows', tokens: ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'] },
         { label: 'Edit label', keys: 'Enter / F2', tokens: ['Enter', 'F2'] },
         { label: 'Select all', keys: `${command} + A`, tokens: [] },
@@ -75,8 +76,16 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
       ],
     },
     {
+      title: 'Architecture',
+      rows: [
+        { label: 'Open element view', keys: 'Enter', tokens: [] },
+        { label: 'Step through a flow', keys: '← / → / Space', tokens: [] },
+      ],
+    },
+    {
       title: 'Panels',
       rows: [
+        { label: 'Architecture model', keys: 'Alt + M', tokens: ['KeyM'] },
         { label: 'Diagram as code', keys: 'Alt + D', tokens: ['KeyD'] },
         { label: 'AI assistant', keys: `${command} + J`, tokens: ['j'] },
         { label: 'This cheatsheet', keys: '?', tokens: ['?'] },

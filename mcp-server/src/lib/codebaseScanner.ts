@@ -27,7 +27,12 @@ export interface CodebaseScanResult {
   languages: Record<string, number>;
 }
 
-const INCLUDE_EXT = new Set([
+export interface ScannedFile {
+  path: string;
+  content: string;
+}
+
+export const INCLUDE_EXT = new Set([
   '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
   '.py', '.rb', '.go', '.rs', '.java', '.kt', '.swift',
   '.php', '.cs', '.scala', '.clj', '.ex', '.exs',
@@ -41,7 +46,7 @@ const SKIP_DIRS = new Set([
   '.gradle', '.idea', '.vscode',
 ]);
 
-const LANGUAGE_BY_EXT: Record<string, string> = {
+export const LANGUAGE_BY_EXT: Record<string, string> = {
   '.ts': 'typescript', '.tsx': 'typescript',
   '.js': 'javascript', '.jsx': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript',
   '.py': 'python', '.rb': 'ruby', '.go': 'go', '.rs': 'rust',
@@ -51,14 +56,14 @@ const LANGUAGE_BY_EXT: Record<string, string> = {
   '.json': 'json', '.toml': 'toml',
 };
 
-interface DetectionRule {
+export interface DetectionRule {
   name: string;
   type: DetectedService['type'];
   provider: DetectedService['provider'];
   patterns: RegExp[];
 }
 
-const SERVICE_RULES: DetectionRule[] = [
+export const SERVICE_RULES: DetectionRule[] = [
   { name: 'PostgreSQL', type: 'database', provider: 'unknown', patterns: [/\bpsycopg\b/i, /\bpostgres\b/i, /\bpostgresql\b/i, /\bpg\b/i] },
   { name: 'MySQL', type: 'database', provider: 'unknown', patterns: [/\bmysql2?\b/i, /\bpymysql\b/i] },
   { name: 'MongoDB', type: 'database', provider: 'unknown', patterns: [/\bmongodb\b/i, /\bmongoose\b/i] },
@@ -106,11 +111,21 @@ function shouldVisit(entryName: string): boolean {
   return !SKIP_DIRS.has(entryName) && !entryName.startsWith('.');
 }
 
-async function walk(
+export function isScannedFileName(name: string): boolean {
+  return INCLUDE_EXT.has(path.extname(name).toLowerCase());
+}
+
+/**
+ * The one walk both the analyzer and architecture discovery use: same skip
+ * list, same size cap. `accept` widens the extension filter (Dockerfiles,
+ * go.mod) without forking the ignore rules.
+ */
+export async function walkProjectFiles(
   rootDir: string,
-  maxFiles: number
-): Promise<{ files: Array<{ path: string; content: string }>; totalFiles: number }> {
-  const collected: Array<{ path: string; content: string }> = [];
+  maxFiles: number,
+  accept: (name: string) => boolean = isScannedFileName
+): Promise<{ files: ScannedFile[]; totalFiles: number }> {
+  const collected: ScannedFile[] = [];
   let totalFiles = 0;
   const stack: string[] = [rootDir];
 
@@ -131,8 +146,7 @@ async function walk(
       }
       if (!entry.isFile()) continue;
       totalFiles += 1;
-      const ext = path.extname(entry.name).toLowerCase();
-      if (!INCLUDE_EXT.has(ext)) continue;
+      if (!accept(entry.name)) continue;
       if (collected.length >= maxFiles) break;
       try {
         const stat = await fs.promises.stat(fullPath);
@@ -158,7 +172,7 @@ export async function scanCodebase(
     throw new Error(`rootPath "${rootPath}" is not a directory.`);
   }
 
-  const { files, totalFiles } = await walk(resolvedRoot, maxFiles);
+  const { files, totalFiles } = await walkProjectFiles(resolvedRoot, maxFiles);
   const allContent = files.map((f) => f.content).join('\n');
   const allPaths = files.map((f) => f.path);
   const cloudPlatform = detectCloudPlatform(allContent, allPaths);

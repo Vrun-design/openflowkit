@@ -29,6 +29,7 @@ import { CHROME_ACCENT } from './chrome';
 import { applyTextResolution, currentPixiTextResolution, textResolutionForZoom } from './pixiText';
 import { PixiFreeformPreview, type FreeformPreviewFrame } from './PixiFreeformPreview';
 import { PixiProposalPreview, type ProposalPreviewFrame } from './PixiProposalPreview';
+import { PixiFocusOverlay, type FocusFrame } from './PixiFocusOverlay';
 import { PixiContainerRenderer } from './PixiContainerRenderer';
 import { PixiConnectorEditOverlay } from './PixiConnectorEditOverlay';
 import {
@@ -113,6 +114,8 @@ export class PixiRendererHost {
   private readonly freeformPreview = new PixiFreeformPreview();
   private readonly proposalPreview = new PixiProposalPreview();
   private proposalFrame: ProposalPreviewFrame | null = null;
+  private readonly focusOverlay = new PixiFocusOverlay();
+  private focusFrame: FocusFrame | null = null;
   private readonly marquee = new Graphics();
   private readonly connectionPreview = new PixiConnectorRenderer();
   private readonly alignmentGuides = new Graphics();
@@ -181,8 +184,8 @@ export class PixiRendererHost {
       this.alignmentGuides
     );
     if (this.livePreview) this.world.addChild(this.livePreview.container);
-    this.world.addChild(this.proposalPreview.container);
-    this.app.stage.addChild(this.dotGrid.graphics, this.world, this.marquee);
+    this.world.addChild(this.proposalPreview.container, this.focusOverlay.content);
+    this.app.stage.addChild(this.dotGrid.graphics, this.world, this.focusOverlay.veil, this.marquee);
     const canvas = this.app.canvas as HTMLCanvasElement;
     canvas.className = 'pixi-spike__canvas';
     canvas.setAttribute('aria-label', 'PixiJS OpenCanvas renderer spike');
@@ -219,6 +222,10 @@ export class PixiRendererHost {
 
   setPage(page: ScenePage): void {
     const redrawNodes = shouldRedrawNodes(this.page, page);
+    if (this.page && this.page.id !== page.id && this.focusFrame) {
+      this.focusFrame = null;
+      this.focusOverlay.clear();
+    }
     this.page = page;
     this.index = createSceneIndex(page);
     const availableNodeIds = new Set(page.nodes.map((node) => node.id));
@@ -259,6 +266,7 @@ export class PixiRendererHost {
     const textResolution = textResolutionForZoom(camera.zoom, window.devicePixelRatio || 1);
     if (textResolution !== currentPixiTextResolution()) applyTextResolution(this.world, textResolution);
     this.drawProposalPreview();
+    this.drawFocus();
 
     const overlayStartedAt = performance.now();
     this.drawConnectorEditOverlay();
@@ -543,6 +551,22 @@ export class PixiRendererHost {
     else this.proposalPreview.clear();
   }
 
+  /** Dim everything but these objects; null clears. Flow playback + tag perspectives. */
+  setFocus(frame: FocusFrame | null): void {
+    this.focusFrame = frame;
+    this.drawFocus();
+    this.requestRender();
+  }
+
+  private drawFocus(): void {
+    if (!this.page || !this.focusFrame) {
+      this.focusOverlay.clear();
+      return;
+    }
+    this.focusOverlay.drawScreen(this.getViewportSize(), this.backgroundColor, 0.62);
+    this.focusOverlay.draw(this.page, this.focusFrame, this.camera.zoom, this.backgroundColor);
+  }
+
   setFreeformPreview(frame: FreeformPreviewFrame | null): void {
     if (frame) this.freeformPreview.draw(frame);
     else this.freeformPreview.clear();
@@ -691,6 +715,7 @@ export class PixiRendererHost {
     this.updateLabelVisibility();
     this.drawSelection();
     this.drawProposalPreview();
+    this.drawFocus();
     this.requestRender();
   }
 
@@ -762,7 +787,8 @@ export class PixiRendererHost {
 
   private getSelectedConnector(): SceneConnector | null {
     return (
-      this.page?.connectors.find((connector) => connector.id === this.selectedConnectorId) ?? null
+      this.page?.connectors.find((connector) => connector.id === this.selectedConnectorId
+        && connector.metadata.hidden !== true && connector.metadata.locked !== true) ?? null
     );
   }
 

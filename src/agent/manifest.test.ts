@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { applyDocumentCommand } from '@/opencanvas/domain/commands/execute';
 import type { SceneDocumentV1 } from '@/opencanvas/domain/document/types';
-import { compile } from '@/dsl/compile';
+import { compile, compileWorkspace } from '@/dsl/compile';
 import { deterministicLayout } from '@/dsl/layout';
 import { AGENT_OPS, CAPABILITY_MANIFEST, MANIFEST_VERSION, manifestCoverage, unlistedOps } from './manifest';
 import { resolveAgentOpCommand } from './runAction';
@@ -14,6 +14,7 @@ import type { OpCapabilities, OpContext } from './ops/types';
 // layout port so no worker is needed; export/screenshot hand back fake bytes.
 const capabilities: OpCapabilities = {
   compile: (text, options) => compile(text, { ...options, layout: options?.layout ?? deterministicLayout }),
+  compileWorkspace: (text, options) => compileWorkspace(text, { ...options, layout: options?.layout ?? deterministicLayout }),
   syntax: (family) => `grammar${family ? `:${family}` : ''}`,
   searchIcons: async (query, limit) => Array.from({ length: Math.min(limit, 2) }, (_, index) => ({
     provider: 'aws', slug: `${query}-${index}`, label: `${query} ${index}`,

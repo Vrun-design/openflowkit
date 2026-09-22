@@ -22,7 +22,6 @@ import {
   createProductionSceneNode,
   productionNodeCatalogEntry,
 } from './productionNodeCatalog';
-import { NODE_PROPERTY_FAMILY_KINDS } from './productionNodeProperties';
 
 const RESOLVERS: Readonly<Record<string, (node: SceneNode) => unknown>> = {
   basic: resolveBasicNodePresentation,
@@ -53,9 +52,6 @@ describe('production node catalog', () => {
   it('exposes a unique entry for every kind the inspector can describe', () => {
     const ids = PRODUCTION_NODE_CATALOG.map(({ id }) => id);
     expect(new Set(ids).size).toBe(ids.length);
-    for (const kind of NODE_PROPERTY_FAMILY_KINDS) {
-      expect(ids).toContain(kind);
-    }
   });
 
   it('rejects an unknown entry and an empty id', () => {

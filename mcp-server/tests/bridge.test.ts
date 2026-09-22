@@ -98,8 +98,18 @@ describe('live bridge', () => {
     const port = await bridge.start();
     const editor = await startEditor(port);
     await editor.hello();
-    const empty = await fetch(`${bridgeUrls(port).next}?wait=1`, { headers: { 'content-type': 'text/plain' } });
+    const origin = 'http://127.0.0.1:5173';
+    const empty = await fetch(`${bridgeUrls(port).next}?wait=1`, { headers: { origin } });
     expect(empty.status).toBe(204);
+    // A browser drops a cross-origin reply without this header — the editor would flap.
+    expect(empty.headers.get('access-control-allow-origin')).toBe(origin);
+    const superseded = fetch(`${bridgeUrls(port).next}?wait=5`, { headers: { origin } });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    const replacement = fetch(`${bridgeUrls(port).next}?wait=1`, { headers: { origin } });
+    const closed = await superseded;
+    expect(closed.status).toBe(204);
+    expect(closed.headers.get('access-control-allow-origin')).toBe(origin);
+    await replacement;
 
     const parked = editor.next();
     const timedOut = expect(bridge.call('get_document', {})).rejects.toThrow(/did not answer/);

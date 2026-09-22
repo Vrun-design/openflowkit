@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { grammarSection } from '../../../agent/host';
 import type { OpCapabilities } from '../../../agent/ops/types';
 import type { CompileOptions } from '../../../dsl/compile';
-import { compile } from '../../../dsl/compile';
+import { compile, compileWorkspace } from '../../../dsl/compile';
 import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { SVG_SOURCES } from '../../../services/shapeLibrary/providerCatalog';
@@ -41,6 +41,8 @@ export function useV2AgentHost(options: V2AgentHostOptions): OpCapabilities {
   return useMemo<OpCapabilities>(() => ({
     compile: (text: string, compileOptions?: CompileOptions) =>
       compile(text, { ...compileOptions, layout: compileOptions?.layout ?? elkDslLayoutPort, resolveIcon: compileOptions?.resolveIcon ?? resolveDslIcon }),
+    compileWorkspace: (text: string, compileOptions?: CompileOptions) =>
+      compileWorkspace(text, { ...compileOptions, layout: compileOptions?.layout ?? elkDslLayoutPort, resolveIcon: compileOptions?.resolveIcon ?? resolveDslIcon }),
     syntax: (family?: string) => loadGrammar().then((grammar) => grammarSection(grammar, family)),
     searchIcons,
     exportFiles: async (request) => {

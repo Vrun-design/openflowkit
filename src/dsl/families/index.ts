@@ -7,6 +7,7 @@ import { sequenceFamily } from './sequence';
 import { stateFamily } from './state';
 import { mindmapFamily } from './mindmap';
 import { classFamily, erdFamily } from './structured';
+import { architectureFamily } from './architecture';
 
 /**
  * Family registry. Every family name in the grammar maps to exactly one
@@ -15,7 +16,7 @@ import { classFamily, erdFamily } from './structured';
  */
 const FAMILIES: Partial<Record<DslFamily, Family>> = {
   flowchart: graphFamily,
-  architecture: graphFamily,
+  architecture: architectureFamily,
   gitgraph: gitgraphFamily,
   sequence: sequenceFamily,
   state: stateFamily,

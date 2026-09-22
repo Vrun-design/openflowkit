@@ -17,6 +17,7 @@ import {
 import { pressureTiltSegmentWidth } from '../../domain/nodes/strokeInput';
 import { projectPageConnectors } from '../../domain/connectors/routeProjection';
 import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worldGeometry';
+import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
 
 export const SVG_BACKGROUND = { light: '#ffffff', dark: '#020617' } as const;
@@ -304,9 +305,9 @@ function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' |
 }
 
 function selectedPage(page: ScenePage, selectedNodeIds?: readonly string[]): ScenePage {
-  const visibleLayers = new Set(page.layers.filter(({ visible }) => visible).map(({ id }) => id));
+  const states = buildNodeStateMap(page);
   const selected = selectedNodeIds ? new Set(selectedNodeIds) : null;
-  const nodes = page.nodes.filter((node) => visibleLayers.has(node.layerId) && (!selected || selected.has(node.id)));
+  const nodes = page.nodes.filter((node) => states.get(node.id)?.visible && (!selected || selected.has(node.id)));
   const ids = new Set(nodes.map(({ id }) => id));
   return { ...page, nodes, connectors: page.connectors.filter(({ source, target }) =>
     (source.nodeId === null ? !selected : ids.has(source.nodeId))

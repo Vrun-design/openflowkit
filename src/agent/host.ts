@@ -6,7 +6,7 @@
 import { exportCanonicalSvg } from '../opencanvas/infrastructure/export/canonicalSvg';
 import { serializeCanonicalJson } from '../opencanvas/infrastructure/export/canonicalJson';
 import { buildPrintDocument } from '../opencanvas/infrastructure/export/print';
-import { compile, type CompileOptions } from '../dsl/compile';
+import { compile, compileWorkspace, type CompileOptions } from '../dsl/compile';
 import { grammarSection } from '../dsl/grammar';
 import { deterministicLayout } from '../dsl/layout';
 import type { IconMatch, OpCapabilities } from './ops/types';
@@ -37,6 +37,7 @@ export function createFileCapabilities(options: FileHostOptions): OpCapabilities
   const icons = options.icons ?? [];
   return {
     compile: (text, compileOptions) => compile(text, { ...compileOptions, layout: compileOptions?.layout ?? deterministicLayout }),
+    compileWorkspace: (text, compileOptions) => compileWorkspace(text, { ...compileOptions, layout: compileOptions?.layout ?? deterministicLayout }),
     syntax: (family) => grammarSection(options.grammar, family),
     searchIcons: async (query, limit) => icons
       .map((icon) => ({ icon, score: score(icon, query) }))

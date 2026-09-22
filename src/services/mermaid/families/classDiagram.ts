@@ -148,6 +148,13 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
       continue;
     }
 
+    // `<<interface>> Shape` annotates an existing (or new) class from outside its body.
+    const annotation = line.match(new RegExp(`^<<\\s*(.+?)\\s*>>\\s+(${CLASS_ID_PATTERN})\\s*$`));
+    if (annotation) {
+      ensureClassRecord(classes, normalizeClassIdentifier(annotation[2])).stereotype = annotation[1];
+      continue;
+    }
+
     const standaloneClass = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})\\s*$`));
     if (standaloneClass) {
       const id = normalizeClassIdentifier(standaloneClass[1]);

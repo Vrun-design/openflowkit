@@ -34,6 +34,8 @@ export const foundation = {
     exit: 120,
     feedback: 150,
     navigation: 180,
+    /** Camera glides: drill-down and flow playback. */
+    camera: 280,
     reveal: 220,
     settle: 240,
     tooltipDelay: 500,

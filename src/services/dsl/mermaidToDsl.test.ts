@@ -41,6 +41,76 @@ describe('mermaidToDsl', () => {
     expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
   });
 
+  it('opens a new fragment after a closed one and interleaves activations and notes', async () => {
+    const { dsl, losses } = convert(`sequenceDiagram
+  autonumber
+  A->>B: one
+  loop retry
+    A->>B: again
+    loop inner
+      B->>A: nested
+    end
+  end
+  par x
+    A->>B: p1
+  and y
+    A->>B: p2
+  end
+  note over A: after
+  A->>B: last`);
+    expect(dsl).toContain('autonumber');
+    expect(dsl).toContain('loop retry {');
+    expect(dsl).not.toContain('} else');
+    expect(dsl).toContain('par x {');
+    expect(dsl).toContain('} and y {');
+    expect(dsl.indexOf('note over A : after')).toBeLessThan(dsl.indexOf('A -> B : last'));
+    expect(losses.some((loss) => loss.includes('flattened'))).toBe(true);
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+  });
+
+  it('converts state composites with their members and one-line notes', async () => {
+    const { dsl } = convert(`stateDiagram-v2
+  [*] --> Still
+  Still --> Moving : go
+  state Moving {
+    [*] --> Slow
+    Slow --> Fast
+  }
+  Moving --> [*]
+  note right of Still : idle`);
+    expect(dsl).toContain('state Moving {');
+    expect(dsl).toMatch(/state Moving \{\n {2}Slow\n {2}Fast\n {2}\[\*\] -> Slow\n {2}Slow -> Fast\n\}/);
+    expect(dsl).toContain('note Still : idle');
+    expect(dsl).not.toContain('moving-1');
+    const compiled = await compile(dsl);
+    expect(compiled.groups).toHaveLength(1);
+    expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+  });
+
+  it('converts every crow-foot cardinality, hyphenated entities and class annotations', async () => {
+    const erd = convert(`erDiagram
+  CUSTOMER ||--o{ ORDER : places
+  ORDER ||--|{ LINE-ITEM : contains
+  CUSTOMER }|..|{ DELIVERY-ADDRESS : uses
+  PERSON |o--o| PASSPORT : holds`);
+    expect(erd.losses).toEqual([]);
+    expect(erd.dsl).toContain('|o--o|');
+    const compiledErd = await compile(erd.dsl);
+    expect(compiledErd.connectors).toHaveLength(4);
+    expect(compiledErd.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    const cls = convert(`classDiagram
+  class Shape
+  <<interface>> Shape
+  Square ..|> Shape
+  Animal "1" *-- "many" Leg : has`);
+    expect(cls.dsl).toContain('Shape [interface]');
+    expect(cls.dsl).toContain('..|>');
+    const compiledCls = await compile(cls.dsl);
+    expect(compiledCls.connectors).toHaveLength(2);
+    expect(compiledCls.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+  });
+
   it('converts sequence diagrams into participants, messages and flat fragments', async () => {
     const { dsl, losses } = convert(`sequenceDiagram
   participant A as Alice
@@ -61,7 +131,9 @@ describe('mermaidToDsl', () => {
     expect(dsl).toContain('alt ok {');
     expect(dsl).toContain('} else no {');
     expect(dsl).toContain('note over a, B : shared');
-    expect(losses.some((loss) => loss.includes('flattened'))).toBe(true);
+    expect(dsl).toContain('activate B');
+    expect(dsl.indexOf('activate B')).toBeLessThan(dsl.indexOf('alt ok {'));
+    expect(losses).toEqual([]);
     const compiled = await compile(dsl);
     expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
   });

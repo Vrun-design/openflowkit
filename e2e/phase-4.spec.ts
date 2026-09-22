@@ -47,24 +47,22 @@ test('palette, pages, export and cheatsheet work end to end', async ({ page }) =
   await expect.poll(async () => (await state(page)).pages.length).toBe(2);
   const firstPageName = (await state(page)).pages[0]!.name;
   const second = (await state(page)).pages[1]!;
-  // Row actions reveal on hover (and always on touch/trackpad pointers).
-  const rowFor = (name: string) => page.getByRole('listitem').filter({ hasText: name }).first();
-  await rowFor(second.name).hover();
-  await page.getByLabel(`Move ${second.name} left`).click();
+  await page.getByLabel(`Actions for ${second.name}`).click();
+  await page.getByRole('menuitem', { name: 'Move up' }).click();
   await expect.poll(async () => (await state(page)).pages[0]!.id).toBe(second.id);
-  await rowFor(second.name).hover();
-  await page.getByLabel(`Move ${second.name} right`).click();
+  await page.getByLabel(`Actions for ${second.name}`).click();
+  await page.getByRole('menuitem', { name: 'Move down' }).click();
   await expect.poll(async () => (await state(page)).pages[1]!.id).toBe(second.id);
-  await rowFor(second.name).hover();
-  await page.getByLabel(`Duplicate ${second.name}`).click();
+  await page.getByLabel(`Actions for ${second.name}`).click();
+  await page.getByRole('menuitem', { name: 'Duplicate', exact: true }).click();
   await expect.poll(async () => (await state(page)).pages.length).toBe(3);
   const third = (await state(page)).pages[2]!;
-  await rowFor(third.name).hover();
-  await page.getByLabel(`Delete ${third.name}`).click();
+  await page.getByLabel(`Actions for ${third.name}`).click();
+  await page.getByRole('menuitem', { name: 'Delete page' }).click();
   await expect.poll(async () => (await state(page)).pages.length).toBe(2);
   // Switch to the empty page (row button, not the bar button), then close.
   await page.locator('.ofk-v2-page-select').filter({ hasText: second.name }).click();
-  await page.getByRole('button', { name: 'Done' }).click();
+  await page.getByRole('button', { name: 'Close pages' }).click();
 
   // The empty page cannot be exported: the button says so instead of failing.
   await page.getByRole('button', { name: 'Canvas menu' }).click();
@@ -76,7 +74,7 @@ test('palette, pages, export and cheatsheet work end to end', async ({ page }) =
   // Back to the page with the diagram before exporting.
   await page.getByRole('button', { name: /^Pages/ }).click();
   await page.locator('.ofk-v2-page-select').filter({ hasText: firstPageName }).click();
-  await page.getByRole('button', { name: 'Done' }).click();
+  await page.getByRole('button', { name: 'Close pages' }).click();
 
   // --- export: a real 2x PNG download --------------------------------------
   await page.getByRole('button', { name: 'Canvas menu' }).click();

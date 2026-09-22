@@ -1,0 +1,74 @@
+workspace "Telemetry" "Streaming telemetry platform" {
+
+    model {
+        person "Platform Engineer" "Runs the platform"
+
+        softwareSystem "Collector" "Receives metrics and traces" "Rust" "core" {
+            container "Ingest" "Validates and batches" "Rust" "critical" {
+                perspectives {
+                    "Security" "Encrypted at rest" "high"
+                }
+            }
+            container "Buffer" "Durable queue" "Kafka" "critical"
+        }
+        softwareSystem "Warehouse" "Long-term storage" "database"
+        softwareSystem "Dashboards" "Grafana dashboards" "Grafana" "internal"
+
+        Platform Engineer -> Collector "Operates" "SSH"
+        Ingest -> Buffer "Publishes" "Kafka"
+        Buffer -> Warehouse "Ships batches" "S3"
+        Dashboards -> Warehouse "Queries" "HTTP"
+        Ingest -> Dashboards "Health checks" "HTTP"
+
+        properties {
+            "team" "observability"
+        }
+    }
+
+    views {
+        systemLandscape "Landscape" {
+            include *
+            include element.type==Container
+            exclude element.tag==internal
+            include -> Warehouse ->
+            include Dashboards ->
+            include Ingest Buffer
+            include element.type==Container && element.tag==critical
+            include element.parent==Collector
+            include technology==Kafka
+            include relationship.tag==async
+            autoLayout lr 400 300
+            title "Telemetry landscape"
+        }
+        container Collector {
+            include *
+        }
+        dynamic Collector "Ingest trace" {
+            Ingest -> Buffer "Batches spans"
+            1. Buffer -> Warehouse "Ships batch"
+        }
+        styles {
+            element "critical" {
+                background #b20000
+                shape RoundedBox
+            }
+            element "database" {
+                background #438dd5
+                shape Cylinder
+                icon "aws:rds"
+                color #ffffff
+                border Solid
+            }
+        }
+        theme default
+        branding {
+            logo "https://example.com/logo.png"
+        }
+        terminology {
+            person "User"
+        }
+        !docs docs
+        !adrs adrs
+    }
+    !include extra.dsl
+}

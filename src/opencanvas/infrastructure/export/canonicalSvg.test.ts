@@ -3,6 +3,17 @@ import { createTestConnector, createTestDocument, createTestNode } from '../../t
 import { exportCanonicalSvg } from './canonicalSvg';
 
 describe('canonical SVG export', () => {
+  it('omits hidden objects, their children and attached connectors', () => {
+    const visible = createTestNode('visible');
+    const hidden = createTestNode('hidden', { content: { sectionHidden: true } });
+    const child = createTestNode('child', { parentId: 'hidden' });
+    const svg = exportCanonicalSvg(createTestDocument({ nodes: [visible, hidden, child],
+      connectors: [createTestConnector('hidden-edge', 'child', 'visible')] }));
+    expect(svg).toContain('data-node-id="visible"');
+    expect(svg).not.toContain('data-node-id="hidden"');
+    expect(svg).not.toContain('data-node-id="child"');
+    expect(svg).not.toContain('data-connector-id="hidden-edge"');
+  });
   it('is deterministic, renderer-independent, escaped, themed, and high-DPI', () => {
     const a = createTestNode('a', { content: { label: '<Alpha & beta>', shape: 'diamond' } });
     const b = createTestNode('b', { transform: { ...createTestNode('x').transform,

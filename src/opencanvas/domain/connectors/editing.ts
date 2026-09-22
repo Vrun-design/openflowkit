@@ -70,6 +70,7 @@ export function pickConnectorAtPoint(
   tolerance: number
 ): string | null {
   for (const connector of [...page.connectors].reverse()) {
+    if (connector.metadata.locked === true) continue;
     const projected = projectConnector(page, connector);
     const closest = projected && closestPointOnPolyline(projected.samples, point);
     if (closest && closest.distance <= tolerance) return connector.id;

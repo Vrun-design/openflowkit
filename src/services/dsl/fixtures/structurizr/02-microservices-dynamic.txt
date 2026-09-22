@@ -1,0 +1,58 @@
+workspace "Payments" {
+
+    model {
+        person "Merchant" "Accepts card payments" "external"
+
+        group "Channels" {
+            softwareSystem "Storefront" "Merchant checkout" {
+                container "Checkout" "Collects card details" "TypeScript"
+            }
+            softwareSystem "Mobile" "Mobile SDK"
+        }
+
+        group "Core" {
+            softwareSystem "Payments" "Authorises payments" {
+                container "Gateway" "Rate limits and routes" "Go"
+                container "Authorisation" "Talks to the card networks" "Go"
+                container "Ledger" "Double-entry ledger" "Kotlin"
+                container "Events" "Publishes payment events" "Kafka"
+            }
+        }
+
+        softwareSystem "Card Network" "External card network" "Visa" "external"
+
+        Merchant -> Storefront "Pays with" "HTTPS"
+        Checkout -> Gateway "Submits authorisation" "REST/JSON"
+        Mobile -> Gateway "Submits authorisation" "REST/JSON"
+        Gateway -> Authorisation "Routes" "gRPC"
+        Authorisation -> Card Network "Authorises" "ISO 8583"
+        Authorisation -> Ledger "Writes entries" "gRPC"
+        Ledger -> Events "Publishes" "Kafka"
+    }
+
+    views {
+        systemLandscape {
+            include *
+            autoLayout lr
+        }
+        container Payments {
+            include *
+        }
+        dynamic Payments "Authorise payment" {
+            Merchant -> Storefront "Starts checkout"
+            1. Checkout -> Gateway "POST /authorise"
+            2. Gateway -> Authorisation "Authorise"
+            -> Card Network "Calls card network"
+            Ledger -> Events "Publishes event"
+        }
+        dynamic Gateway {
+            Checkout -> Gateway "Submits"
+            -> Authorisation "Routes"
+        }
+        styles {
+            element "external" {
+                background #999999
+            }
+        }
+    }
+}

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { findAgentAction } from '../../../agent/actions';
-import { resolveAgentActionCommand } from '../../../agent/runAction';
+import { findAgentOp } from '../../../agent/ops';
+import { createTestCapabilities } from '../../../agent/ops/testHost';
+import { resolveAgentOpCommand } from '../../../agent/runAction';
 import type { DocumentCommand } from '../../domain/commands/types';
+import { buildMoveNodesCommand } from '../../domain/commands/sceneEdits';
 import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import { commitSessionCommand, createDocumentSession } from './session';
 
@@ -9,32 +11,24 @@ function baseDocument() {
   return createTestDocument({ nodes: [createTestNode('node-1')] });
 }
 
-function manualRename(): DocumentCommand {
-  const before = createTestNode('node-1');
-  return {
-    kind: 'set-node',
-    id: 'rename-node:node-1',
-    label: 'Rename node',
-    pageId: 'page-1',
-    before,
-    after: { ...before, content: { label: 'Renamed' } },
-  };
+/** The command the canvas commits when the user drags node-1 by 40px. */
+function manualMove(): DocumentCommand {
+  return buildMoveNodesCommand(baseDocument().pages[0]!, ['node-1'], { x: 40, y: 0 });
 }
 
 describe('single session commit path', () => {
-  it('produces identical state for manual, mock-agent, and import commits', () => {
-    const manual = manualRename();
-    const agent = resolveAgentActionCommand(
-      findAgentAction('set_label')!,
-      { id: 'node-1', label: 'Renamed' },
-      baseDocument(),
-      'page-1'
+  it('produces identical state for manual, agent-op, and import commits', async () => {
+    const manual = manualMove();
+    const agent = await resolveAgentOpCommand(
+      findAgentOp('move')!,
+      { ids: ['node-1'], delta: { x: 40, y: 0 } },
+      { document: baseDocument(), pageId: 'page-1', capabilities: createTestCapabilities() },
     );
     expect(agent.command).toEqual(manual);
 
     const importBatch: DocumentCommand = {
       kind: 'batch',
-      id: 'import:rename-node-1',
+      id: 'import:move-node-1',
       label: 'Apply import',
       commands: [manual],
     };
@@ -49,19 +43,18 @@ describe('single session commit path', () => {
 
     expect(viaAgent.document).toEqual(viaManual.document);
     expect(viaImport.document).toEqual(viaManual.document);
-    expect(viaManual.document.pages[0].nodes[0].content.label).toBe('Renamed');
+    expect(viaManual.document.pages[0].nodes[0].transform.translation.x).toBe(createTestNode('node-1').transform.translation.x + 40);
     for (const session of [viaManual, viaAgent, viaImport]) {
       expect(session.revision).toBe(1);
       expect(session.history.past).toHaveLength(1);
     }
   });
 
-  it('commits nothing for read-only agent actions', () => {
-    const read = resolveAgentActionCommand(
-      findAgentAction('get_document')!,
+  it('commits nothing for read-only agent ops', async () => {
+    const read = await resolveAgentOpCommand(
+      findAgentOp('get_document')!,
       {},
-      baseDocument(),
-      'page-1'
+      { document: baseDocument(), pageId: 'page-1', capabilities: createTestCapabilities() },
     );
     expect(read.command).toBeNull();
   });

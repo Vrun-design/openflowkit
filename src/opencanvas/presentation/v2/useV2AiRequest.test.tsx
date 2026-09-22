@@ -15,11 +15,10 @@ const settings: V2AiSettings = { provider: 'openai', apiKey: 'sk-test', baseUrl:
 function harness() {
   const document = createTestDocument({ nodes: [], connectors: [] });
   const commit = vi.fn((_command: DocumentCommand) => undefined);
-  const selectionRef = { current: { nodeIds: [], primaryNodeId: null } };
   const hook = renderHook(() => {
     const proposal = useV2Proposal({
-      document, revision: 1, pageId: 'page-1', selectionRef, commit,
-      readOnly: false, announce: vi.fn(), mintId: (prefix) => `${prefix}-1`,
+      document, revision: 1, pageId: 'page-1', commit,
+      readOnly: false, announce: vi.fn(),
       compileDsl: (text) => compile(text, { layout: deterministicLayout }),
     });
     const ai = useV2AiRequest({

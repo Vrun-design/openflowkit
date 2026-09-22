@@ -183,7 +183,7 @@ function flowchartDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[], di
   return { dsl: `${lines.join('\n')}\n`, losses, diagnostics };
 }
 
-function sequenceDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): MermaidConversion {
+function sequenceDsl(source: string, nodes: readonly FlowNode[], edges: readonly FlowEdge[]): MermaidConversion {
   const losses: string[] = [];
   const participants = nodes.filter((node) => node.type === 'sequence_participant');
   const notes = nodes.filter((node) => node.type === 'sequence_note');
@@ -203,6 +203,7 @@ function sequenceDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Me
     return slug === (slugifyDslId(id) || 'n') ? quote(label) : (slugifyDslId(id) || 'n');
   };
   const lines: string[] = ['sequence'];
+  if (/^\s*autonumber\b/m.test(source)) lines.push('autonumber');
   for (const participant of participants) {
     const attrs: string[] = [];
     if (participant.data?.seqParticipantKind === 'actor') attrs.push('actor');
@@ -210,8 +211,6 @@ function sequenceDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Me
     if (typeof alias === 'string' && alias && alias !== participant.data?.label) losses.push(`Participant alias "${alias}" folded into the label`);
     lines.push(`participant ${participantDecl(participant)}${attrText(attrs)}`);
   }
-  const messages = [...edges].sort((a, b) => numberData(a.data?.seqMessageOrder) - numberData(b.data?.seqMessageOrder));
-  let openFragment: { type: string; branch: string } | null = null;
   const arrowOf = (kind: string | undefined, self: boolean): string => {
     if (self) return '->';
     if (kind === 'return') return '-->';
@@ -219,89 +218,150 @@ function sequenceDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Me
     if (kind === 'destroy') return '<->';
     return '->';
   };
-  for (const message of messages) {
-    const fragment = message.data?.seqFragment ?? null;
-    if (fragment?.type) {
-      const branch = fragment.branchKind ?? 'start';
-      if (!openFragment) {
-        lines.push(`${fragment.type}${fragment.condition ? ` ${fragment.condition}` : ''} {`);
-        openFragment = { type: fragment.type, branch };
-      } else if (openFragment.type !== fragment.type || openFragment.branch !== branch) {
-        const keyword = openFragment.type === 'par' ? 'and' : 'else';
-        lines.push(`} ${keyword}${fragment.condition ? ` ${fragment.condition}` : ''} {`);
-        openFragment = { type: fragment.type, branch };
-      }
-    } else if (openFragment) {
-      lines.push('}');
-      openFragment = null;
+  // Messages, notes and activations interleave by source order. The parser
+  // stamps notes and activations with the index of the message that follows
+  // them, so at equal order they come first.
+  type Event =
+    | { order: number; rank: 0; text: string; fragment: FlowEdgeData['seqFragment'] | null }
+    | { order: number; rank: 1; text: string; fragment: FlowEdgeData['seqFragment'] | null };
+  const events: Event[] = [];
+  for (const participant of participants) {
+    const activations = (participant.data as { seqActivations?: Array<{ order: number; activate: boolean }> } | undefined)?.seqActivations ?? [];
+    for (const activation of activations) {
+      events.push({ order: activation.order, rank: 0, text: `${activation.activate ? 'activate' : 'deactivate'} ${participantRef(participant.id)}`, fragment: null });
     }
-    const label = typeof message.label === 'string' && message.label ? ` : ${quote(message.label)}` : ' : ';
-    const self = message.source === message.target;
-    const indent = openFragment ? '  ' : '';
-    lines.push(`${indent}${participantRef(message.source)} ${arrowOf(message.data?.seqMessageKind, self)} ${participantRef(message.target)}${label}`);
   }
-  if (openFragment) lines.push('}');
   for (const note of notes) {
     const targets = Array.isArray(note.data?.seqNoteTargets) && note.data.seqNoteTargets.length > 0
       ? note.data.seqNoteTargets
       : note.data?.seqNoteTarget ? [note.data.seqNoteTarget] : [];
     const position = note.data?.seqNotePosition === 'left' || note.data?.seqNotePosition === 'right' ? `${note.data.seqNotePosition} of` : 'over';
-    lines.push(`note ${position} ${targets.map((id: string) => participantRef(id)).join(', ')} : ${quote(String(note.data?.label ?? ''))}`);
+    events.push({
+      order: numberData(note.data?.seqMessageOrder), rank: 0,
+      text: `note ${position} ${targets.map((id: string) => participantRef(id)).join(', ')} : ${quote(String(note.data?.label ?? ''))}`,
+      fragment: note.data?.seqFragment ?? null,
+    });
   }
-  losses.push('Sequence fragments are flattened; nesting depth is not restored');
+  for (const message of edges) {
+    const label = typeof message.label === 'string' && message.label ? ` : ${quote(message.label)}` : ' : ';
+    const self = message.source === message.target;
+    events.push({
+      order: numberData(message.data?.seqMessageOrder), rank: 1,
+      text: `${participantRef(message.source)} ${arrowOf(message.data?.seqMessageKind, self)} ${participantRef(message.target)}${label}`,
+      fragment: message.data?.seqFragment ?? null,
+    });
+  }
+  events.sort((a, b) => a.order - b.order || a.rank - b.rank);
+  // The parser tags each event with its innermost fragment branch only, so
+  // one block is open at a time: a `start` branch opens a new block, any other
+  // branch kind continues the open one with `else`/`and`.
+  let open: { type: string; branch: string; condition: string } | null = null;
+  for (const event of events) {
+    const fragment = event.fragment?.type ? event.fragment : null;
+    if (fragment) {
+      const branch = fragment.branchKind ?? 'start';
+      const condition = fragment.condition ?? '';
+      const same = open && open.type === fragment.type && open.branch === branch && open.condition === condition;
+      if (!same) {
+        if (open && branch !== 'start' && open.type === fragment.type) {
+          lines.push(`} ${fragment.type === 'par' ? 'and' : 'else'}${condition ? ` ${condition}` : ''} {`);
+        } else {
+          if (open) lines.push('}');
+          lines.push(`${fragment.type}${condition ? ` ${condition}` : ''} {`);
+        }
+        open = { type: fragment.type, branch, condition };
+      }
+    } else if (open) {
+      lines.push('}');
+      open = null;
+    }
+    lines.push(`${open ? '  ' : ''}${event.text}`);
+  }
+  if (open) lines.push('}');
+  if (fragmentDepth(source) > 1) losses.push('Nested sequence fragments are flattened to their innermost block');
   return { dsl: `${lines.join('\n')}\n`, losses, diagnostics: losses.map((message, index) => lossDiagnostic(index + 1, message)) };
 }
 
-function stateDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[], direction: string | undefined): MermaidConversion {
+/** Deepest `loop/alt/opt/par/break/critical … end` nesting in the source. */
+function fragmentDepth(source: string): number {
+  let depth = 0;
+  let deepest = 0;
+  for (const line of source.split('\n')) {
+    if (/^\s*(?:loop|alt|opt|par|break|critical|rect)\b/i.test(line)) deepest = Math.max(deepest, ++depth);
+    else if (/^\s*end\s*$/i.test(line)) depth = Math.max(0, depth - 1);
+  }
+  return deepest;
+}
+
+function stateDsl(source: string, nodes: readonly FlowNode[], edges: readonly FlowEdge[], direction: string | undefined): MermaidConversion {
   const losses: string[] = [];
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const pseudo = (id: string) => id.startsWith('state_start') || id.startsWith('state_end');
-  const nameOf = (id: string): string => {
+  const refOf = (id: string): string => {
     if (pseudo(id)) return '[*]';
     const node = byId.get(id);
-    if (!node) return id;
-    return nodeName(node);
+    return node ? nodeRef(node) : id;
   };
   const lines: string[] = ['state' + (direction && DIRECTION_WORDS[direction] ? ` ${DIRECTION_WORDS[direction]}` : '')];
-  const sections = nodes.filter((node) => node.type === 'section');
-  const sectionIds = new Set(sections.map((section) => section.id));
-  const emitted = new Set<string>();
+  // The parser links composite members through `parentId`, but splits a
+  // composite into a `section` node (`Moving_1`) and the plain state of the
+  // same label that transitions reference. Fold the section into the state so
+  // our DSL writes one `state X { … }` block.
+  const canonical = (id: string): string => {
+    const node = byId.get(id);
+    if (node?.type !== 'section') return id;
+    const twin = nodes.find((candidate) => candidate.type !== 'section' && candidate.data?.label === node.data?.label);
+    return twin?.id ?? id;
+  };
+  const insideOf = (id: string): string | undefined => {
+    const parent = byId.get(id)?.parentId;
+    return parent ? canonical(parent) : undefined;
+  };
+  const childrenOf = (id: string) => nodes.filter((candidate) => candidate.parentId && canonical(candidate.parentId) === id);
+  const composites = new Set(nodes.flatMap((node) => (node.parentId ? [canonical(node.parentId)] : [])));
   const controlWord = (node: FlowNode): string | undefined => {
     const kind = node.data?.stateControlKind;
     return kind === 'fork' || kind === 'join' || kind === 'choice' ? kind : undefined;
   };
-  // A `state X { }` composite is one thing in our DSL: the group carries the
-  // name, so a plain node with the same label is dropped (transitions resolve
-  // to the composite).
-  const compositeLabels = new Set(sections.map((section) => section.data?.label ?? ''));
+  const emitted = new Set<string>();
   const emitNode = (node: FlowNode, indent: string) => {
     if (emitted.has(node.id) || pseudo(node.id)) return;
     emitted.add(node.id);
     const control = controlWord(node);
     const attrs = control ? [control] : nodeAttributes(node);
-    // A composite is a fresh group in our DSL, so its label is its name.
-    const name = node.type === 'section' ? quote(node.data?.label ?? node.id) : nodeName(node);
-    lines.push(`${indent}${node.type === 'section' ? 'state ' : ''}${name}${attrText(attrs)}${node.type === 'section' ? ' {' : ''}`);
-    if (node.type === 'section') {
-      for (const child of nodes.filter((candidate) => candidate.parentId === node.id)) emitNode(child, `${indent}  `);
-      lines.push(`${indent}}`);
+    if (!composites.has(node.id)) {
+      lines.push(`${indent}${nodeName(node)}${attrText(attrs)}`);
+      return;
     }
+    lines.push(`${indent}state ${nodeName(node)}${attrText(attrs)} {`);
+    for (const child of childrenOf(node.id)) emitNode(child, `${indent}  `);
+    for (const edge of edges) {
+      if (insideOf(edge.source) === node.id && insideOf(edge.target) === node.id) lines.push(`${indent}  ${edgeText(edge)}`);
+    }
+    lines.push(`${indent}}`);
+  };
+  const edgeText = (edge: FlowEdge): string => {
+    const label = typeof edge.label === 'string' && edge.label ? ` : ${quote(edge.label)}` : '';
+    return `${refOf(edge.source)} ${edgeArrow(edge)} ${refOf(edge.target)}${label}`;
   };
   for (const node of nodes) {
-    if (node.parentId || sectionIds.has(node.id) || node.type === 'start') continue;
-    if (node.type === 'process' && compositeLabels.has(node.data?.label ?? '')) continue;
+    if (node.parentId || pseudo(node.id) || canonical(node.id) !== node.id) continue;
     emitNode(node, '');
   }
-  for (const section of sections) if (!section.parentId) emitNode(section, '');
   for (const edge of edges) {
-    const source = byId.get(edge.source);
-    const target = byId.get(edge.target);
-    if (!source || !target) continue;
-    const label = typeof edge.label === 'string' && edge.label ? ` : ${quote(edge.label)}` : '';
-    lines.push(`${nameOf(edge.source)} ${edgeArrow(edge)} ${nameOf(edge.target)}${label}`);
+    if (!byId.has(edge.source) || !byId.has(edge.target)) continue;
+    const inside = insideOf(edge.source);
+    if (inside && inside === insideOf(edge.target)) continue;
+    lines.push(edgeText(edge));
   }
-  void losses;
-  return { dsl: `${lines.join('\n')}\n`, losses, diagnostics: [] };
+  // The parser drops notes; one-line `note right of X : text` maps straight
+  // onto our `note X : text`, block notes (`end note`) do not.
+  for (const line of source.split('\n')) {
+    const note = /^\s*note\s+(?:left|right)\s+of\s+(\S+)\s*:\s*(.+)$/i.exec(line);
+    if (note && byId.has(note[1]!)) lines.push(`note ${refOf(note[1]!)} : ${quote(note[2]!.trim())}`);
+    else if (/^\s*note\s+(?:left|right)\s+of\s+\S+\s*$/i.test(line)) losses.push('Multi-line state notes are dropped');
+  }
+  return { dsl: `${lines.join('\n')}\n`, losses, diagnostics: losses.map((message, index) => lossDiagnostic(index + 1, message)) };
 }
 
 function erDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): MermaidConversion {
@@ -486,8 +546,8 @@ export function mermaidToDsl(text: string): MermaidConversion | MermaidConversio
   const conversion = (() => {
     switch (parsed.diagramType) {
       case 'flowchart': return flowchartDsl(nodes, edges, direction);
-      case 'sequence': return sequenceDsl(nodes, edges);
-      case 'stateDiagram': return stateDsl(nodes, edges, direction);
+      case 'sequence': return sequenceDsl(text, nodes, edges);
+      case 'stateDiagram': return stateDsl(text, nodes, edges, direction);
       case 'erDiagram': return erDsl(nodes, edges);
       case 'classDiagram': return classDsl(nodes, edges);
       case 'mindmap': return mindmapDsl(nodes);

@@ -259,7 +259,9 @@ Where we are consciously worse:
   far is used.
 
 ### 2.2 Comments
-- `//` to end of line is a comment, unless inside a quoted string. Full-line comments are
+- `//` to end of line is a comment, unless inside a quoted string or glued to a word:
+  a comment needs a whitespace boundary (or line start) before it, so `[link: https://…]`
+  and `https://…` in a label stay one token. Full-line comments are
   preserved by `format()` and by `serialize()` only when they were parsed
   (`metadata.dsl.comments` keyed by the following statement's line); a comment with no
   following statement is kept at end. Trailing comments are dropped with info I001 —
@@ -665,7 +667,7 @@ rendered"): `bpmn` (lanes = groups, `[event|task|gateway]` shapes), `org` (edges
 
 ---
 
-## 9. Model layer — phase 5 reservations (parse today, semantics in month 2)
+## 9. Model layer — implemented in phase 5 (2026-09-22)
 
 ### 9.1 Blocks
 ```
@@ -706,12 +708,25 @@ flow "Checkout" {
   note "Idempotent by order id"
 }
 ```
-Today (v1 parser): `model {}` / `views {}` / `flow {}` / `deployment {}` are groups;
-`person|system|container|component|store|queue|external|node|instance` lines are nodes
-(nested block = group + node of that kind) with `metadata.dsl.kind`; `view …` and `step …`
-lines are kept verbatim as `metadata.dsl.reserved` so they round-trip unchanged; no
-diagnostics. Tradeoff: a v1 user who writes a model gets a big flat architecture diagram
-instead of views — acceptable, and better than an error.
+Implementation (phase 5, `src/dsl/model/` + `families/architecture/`): the architecture
+family detects a `model|views|flow|deployment` block and switches to C4 semantics; plain
+graph lines in the same family keep the v1 contract. The model is compiled into one frame
+per view (`compileWorkspace`), each frame carries `metadata.dsl.arch = { model, view }`,
+and placed nodes carry `metadata.model.elementId`. Pages are matched to views by stable
+view id (`view:container:shop`, `view:custom:<slug>`), so Generate updates the same pages
+instead of duplicating them. The serializer re-emits the whole workspace from any view
+frame, so "Edit as code" anywhere gives the same text.
+
+Editing rules (the product contract for the model layer): a label edit on a placed node
+renames the element in every view (one undo step); Delete unplaces from the current view
+only (`⌘⇧⌫` or the context menu removes it from the model everywhere); a connector drawn
+between two placed nodes records the matching relation; tags drive perspectives; snapping
+`views/*.snap` positions overrides ELK per element.
+
+Flow step keywords (`flow "Name" { … }`): `intro "text"`, `step A -> B : label`
+(message), `process "text"`, `alt "x" { } else { }`, `par { } and { }`,
+`goto "Flow name"`, `note "text"` (IcePanel's info), `conclusion "text"`. Exports:
+sequence-family DSL, Mermaid `sequenceDiagram`, PlantUML (`flowTo*` in `src/dsl/model/flowExport.ts`).
 
 ### 9.2 Paths and ids
 Element ids inside `model` are dotted paths of their explicit ids or slugs
@@ -724,7 +739,14 @@ slugs, exact on explicit ids. Outside `model`, `.` in an id is W120 (§2.6).
 not, **unless any explicit relation `a -> b` exists**. Implied relations are derived, never
 serialized; they carry `metadata.model.implied = true`.
 
-### 9.4 View predicates (subset)
+### 9.4 View predicates (subset) — implemented
+
+A typed view starts from its scope's default element set and `include`/`exclude` refine it
+(Structurizr semantics); a `view custom` starts empty so it can be a real subset.
+Relations project onto the nearest shown ancestor, which is exactly the ancestor pair the
+plan spells out as an implied relationship; `deriveImpliedRelations` remains the model-level
+helper (agent reports, `explain`) and is never serialized.
+
 `include X`, `include X.*` (children), `include X.**` (descendants), `include *`, `include
 X -> Y`, `include -> X`, `include X ->`, `exclude …` same forms, `where kind is
 container`, `where tag is @core`, `where tag is not @deprecated`, `and`/`or`. Order matters
@@ -774,6 +796,7 @@ test: random bytes → diagnostics only).
 | W112 | chain/fan not allowed in this family | one edge per line |
 | W120 | `.` in id outside `model`, slugified | — |
 | W121 | node mentioned in a second group, not moved | — |
+| W122 | unknown element reference, relation dropped | nearest declared name |
 | W130 | two attributes of the same type, last wins | — |
 | W131 | unknown attribute word, kept verbatim | nearest known word (Levenshtein ≤ 2) |
 | W132 | unknown icon, plain node | `find_icon` suggestion |

@@ -38,6 +38,15 @@ export interface FamilyScene {
   readonly meta?: Record<string, unknown>;
 }
 
+/** One view of a family that compiles to several frames (the C4 model layer). */
+export interface FamilyViewScene {
+  /** Stable view id; used for frame ids and page matching. */
+  readonly id: string;
+  /** Page name the editor gives this view. */
+  readonly name: string;
+  readonly scene: FamilyScene;
+}
+
 /**
  * One diagram family: its statement parser, layout and scene mapping, plus the
  * canonical text it writes back. Families share the tokenizer, the attribute
@@ -47,6 +56,8 @@ export interface Family {
   readonly name: string;
   /** Statement parse + scene mapping. Never throws; diagnostics go to `context.diagnostics`. */
   compile(segments: readonly DslSegment[], context: FamilyContext): Promise<FamilyScene>;
+  /** Multi-frame families (architecture workspaces) override the single-frame path. */
+  compileViews?(segments: readonly DslSegment[], context: FamilyContext): Promise<readonly FamilyViewScene[]>;
   /** Body lines after the pragma, family line and title. Pure function of the scene. */
   serialize(scene: DslFrameScene): string[];
 }

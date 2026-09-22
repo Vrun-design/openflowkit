@@ -13,7 +13,7 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly pages: ReturnType<typeof import('./useV2Pages').useV2Pages>;
   readonly pageId: string;
   readonly selectedNodeIds: readonly string[];
-  readonly bridge: import('./V2AgentConnect').V2AgentConnectModel;
+  readonly bridge: { readonly status: import('./useV2AgentBridge').V2BridgeStatus; readonly onOpen: () => void };
   readonly saveStatus: V2SaveStatus;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
@@ -27,6 +27,13 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly onReload: () => void;
   readonly onToast: (toast: ToastItem) => void;
   readonly onRename: (name: string) => void;
+  readonly workspace?: {
+    readonly name: string | null;
+    readonly onOpenFolder: () => void;
+    readonly onCloseFolder: () => void;
+  };
+  readonly breadcrumb?: readonly { readonly pageId: string; readonly label: string; readonly elementId?: string }[];
+  readonly onCrumb?: (crumb: { readonly pageId: string; readonly elementId?: string }) => void;
   readonly onToolChange: (tool: V2Tool) => void;
   readonly iconsOpen: boolean;
   readonly onIconsOpenChange: (open: boolean) => void;
@@ -57,6 +64,9 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         onReload={props.onReload}
         onToast={props.onToast}
         onRename={props.onRename}
+        {...(props.workspace ? { workspace: props.workspace } : {})}
+        {...(props.breadcrumb ? { breadcrumb: props.breadcrumb } : {})}
+        {...(props.onCrumb ? { onCrumb: props.onCrumb } : {})}
       />
       {props.readOnly ? null : (
         <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange}

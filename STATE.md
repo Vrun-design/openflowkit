@@ -1,57 +1,40 @@
 # State
 
-Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–4, one month, no gates.
-
+Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5, no gates.
 ## Now
-- Phase 4 done 2026-09-21 (opencode/deepseek-v4.1, on `v2`): agents, export, pages, themes.
-  - Agent surface (`src/agent/`): one registry, 16 ops — DSL first (`create_diagram`,
-    `update_diagram`, `get_diagram` with drift + losses, `list_diagrams`, `get_syntax`,
-    `search_icons`, `find_icons_for`), scene ops (`move`/`style`/`delete`/`add_shape`),
-    pipes (`export`/`screenshot`/`fit_view`/`get_document`/`list_pages`). Every mutating
-    op has an inverse (`manifest.test.ts`) and produces the UI's record (`ops.test.ts`).
-  - MCP live mode: local HTTP long-poll bridge on `127.0.0.1:43119` (origin-checked,
-    optional token) — **Connect agent** pairs the editor; the same tools run file mode on
-    `.openflow.json` (`openflow_open`/`openflow_save`), `whoami` reports the mode. The
-    V1-era tools (viewer URL, V1 linter, V1 templates) are gone; lint and templates use
-    the real parser.
-  - BYOK (`⌘J`): Anthropic or any OpenAI-compatible endpoint, key local to the browser;
-    prompt = grammar cheat-sheet + current frame; the reply compiles into a ghost
-    proposal, accept = one undo step.
-  - Export: PNG 2× / SVG / PDF (print) / JSON for selection, page or document, plus
-    copy-PNG; export now reads `resolveNodeStyle` (legacy paint keys gone) and has
-    light+dark goldens per family. Pages: add/duplicate/rename/reorder/delete.
-    Themes: `appearance:` DSL directive with four palettes, carried on every compiled
-    record so renderers and the serializer agree without the document.
-  - Ship: README, MCP README + docs-site (DSL reference generated from `grammar.md`),
-    complete `?` cheatsheet (test-guarded), `npm run eval:agent` (file mode) and
-    `e2e/agent-live.spec.ts` (agent drives the real editor: create→get→update→screenshot).
-- Canvas UX pass 2026-09-21 (Claude Opus 5, commits f44533d…0b9f297): `resolveNodeStyle` is
-  the one style source for every family (containers, icon nodes); style bar works on all;
-  ⌘G group invisible, section = visible container (`⌘⌥G` wrap, header toggle, drop in/out by
-  centre, resize changes `size` and keeps members); icon library (`I`, style-bar Icon) over
-  cloud packs + Tabler; previews use the real renderers. Label editor refits on zoom and
-  keystroke (was creeping up / drifting). `e2e/sections|icon-library|edit-zoom.spec.ts`.
-- Reconciled two stale e2e expectations with the shipped behaviour: the `Edit as code`
-  drag now stays inside the frame (dragging out reparents, so the frame's text drops it)
-  and the icon-library spec walks Cloud → AWS like the reorganized picker.
-- Verified: typecheck, lint, 1199 unit tests, 24 MCP tests, 29 headed e2e checks
-  (`agent-live`, `phase-4`, and the phase 1–3 suites).
-
+- Connect agent moved to the rail 2026-09-22 (Opus): 5th rail item + welcome button open a
+  panel (`V2AgentConnect`: hero, steps when off, live card + capability grid when on); top-bar
+  plug is status-only and opens the panel. No shortcut (Alt+A = align left).
+- UI cleanup 2026-09-22 (Codex): layer hierarchy, undoable visibility/lock, page badge+rename.
+- Phase 5 done 2026-09-22 (opencode/deepseek-v4.1): C4 model layer. `src/dsl/model/`
+  (`ArchModel` elements/relations/views/flows, dotted ids, implied relations, view
+  predicates); architecture family v2 + Structurizr importer (`services/dsl/structurizrToDsl`);
+  generate = one page per view, one undo, matched by view id; model-aware rename/remove/
+  unplace/relate across views; model panel (Alt+M), breadcrumb, drill-down, flow playback
+  + Mermaid/PlantUML/sequence export, tag perspectives, ADRs; folder workspace
+  (`architecture.ofk`, `views/*.snap`, `adr/*.md`); MCP discover/drift/explain +
+  `openflowkit discover|drift|build`.
+- Verified: typecheck, lint, vite build, 1097 unit tests, 31 MCP tests, 34 headed e2e checks.
+- Review 2026-09-22 (Opus, phases 2–4): live diagnostics no longer flag valid
+  sequence/class/erd lines; Mermaid → DSL fixed (alt/else, par/and, activations, note order,
+  autonumber, state composites + notes, hyphenated ER names, all 32 crow's-foot tokens via one
+  regex in `domain/connectors/presentation.ts`, class `..|>`, `<<iface>> X`); Canvas menu →
+  Open file… (JSON export or V1 file → new doc); DSL fuzz test. Deleted 124 dead V1 files +
+  8 unused deps (`mermaid`, `zustand`, …) and the `localAgent`/`agent/actions` surface
+  (align+distribute already cover "tidy row"); Structurizr paste converts like Mermaid.
+- Phase 5 review (Opus): fixed `X.*` predicate, empty custom views, regenerate-unchanged
+  throwing, relation only on current view, remove keeping child view/page, `list_diagrams`
+  counting boundary frames; MCP `create/update_diagram` land a C4 workspace as pages.
 ## Next
-- Phase 5: C4 model, flows, discover/drift. Structurizr Cloud EOL 30 Sep 2026.
-- Owner feel-test: paste Mermaid, generate each family, drag/resize, pair an agent, export.
+- Owner feel-test on `/`: paste the C4 example, drill 3 levels, play a flow, run `drift`.
+- Model JSON is copied onto every view frame (~3 KB/page today). Moving it to one
+  document-level slot means `serialize(frame)` needs the document — an API change across
+  Edit-as-code, `get_diagram`, folder save. Do it when a workspace passes ~20 views.
 
 ## Deferred
-- Feel bugs: Pixi stray `1` glyph after several generates (pooled label textures are
-  dropped, not destroyed, on redraw — suspect a stale recycled canvas; cosmetic);
-  group top-level only, no double-click enter; `person` is a crude polygon; container tints
-  read grey on a dark canvas; editor vs Pixi label ≤1 device px apart (texture offset).
-- Hand-drawn stroke skipped (plan: skip if > 1 day). PDF is the print dialog by design.
-- README ships a 30-second text demo, not a GIF: `readme-media/` only holds V1-era clips
-  (34 MB / 23 MB, removed UI) and this environment has no recorder. Owner records one.
-- Document-scope PNG/SVG downloads one file per page (no zip).
-- docs-site prose beyond `mcp-server`, `github-embed` and the DSL reference is still
-  V1-era and needs a rewrite pass.
-- DSL `rank:`/`group [direction]` round-trip but do not constrain ELK yet
-  (`ponytail:` in `families/graph/scene.ts`); pins are applied after layout.
-- Live bridge is HTTP long-poll, not WebSocket: no dependency, same pairing UX.
+- Drafts (5.5) model diff/merge not built. Plan checks not run: 10 GitHub Structurizr
+  workspaces (4 shipped), discovery precision on 3 OSS repos. Canvas-only content on a model
+  page is not in the DSL (document JSON only, not folder save); perspectives dim, not hide.
+- `drift` matches by name/tech only; Pixi stray `1` glyph after repeated generates; group
+  top-level only; crude `person`; no hand-drawn stroke; PDF = print dialog; no zip export;
+  docs-site prose outside mcp-server/github-embed/dsl-reference is V1-era; bridge is long-poll.

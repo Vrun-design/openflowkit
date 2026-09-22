@@ -27,7 +27,10 @@ interface V2KeyboardOptions {
   readonly onZoomToSelection: () => void;
   /** ⌘B / ⌘I / ⌘U on a selection (not while editing). */
   readonly onTextStyle: (toggle: 'bold' | 'italic' | 'underline') => void;
-  readonly onEditPrimary: () => void;
+  /** Enter drills into a model view when there is one; F2/⌘Enter always rename. */
+  readonly onEditPrimary: (source: 'enter' | 'f2') => void;
+  /** ⌘⇧⌫ on a C4 element: remove it from the model and every view. */
+  readonly onRemoveFromModel: () => void;
   readonly onNudge: (delta: { x: number; y: number }) => void;
   readonly onCancelGesture: () => boolean;
   readonly onClearSelection: () => void;
@@ -39,6 +42,7 @@ interface V2KeyboardOptions {
   readonly onToggleIcons: () => void;
   readonly onToggleAgent: () => void;
   readonly onToggleCode: () => void;
+  readonly onToggleModel: () => void;
   readonly onSpacePan: (active: boolean) => void;
   /** Type-to-edit: return true when the key opened an editor, false to fall through to shortcuts. */
   readonly onTypeToEdit: (key: string) => boolean;
@@ -139,8 +143,14 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
     } else if (!command && event.altKey && event.code === 'KeyD') {
       opts.onToggleCode();
       event.preventDefault();
+    } else if (!command && event.altKey && event.code === 'KeyM') {
+      opts.onToggleModel();
+      event.preventDefault();
     } else if (command && key === 'j') {
       opts.onToggleAgent();
+      event.preventDefault();
+    } else if (command && event.shiftKey && (event.key === 'Delete' || event.key === 'Backspace')) {
+      opts.onRemoveFromModel();
       event.preventDefault();
     } else if (!command && (event.key === 'Delete' || event.key === 'Backspace')) {
       opts.onDelete();
@@ -188,10 +198,10 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
     } else if (!command && !event.shiftKey && !event.altKey && key === 'i') {
       opts.onToggleIcons();
     } else if (event.key === 'F2') {
-      opts.onEditPrimary();
+      opts.onEditPrimary('f2');
       event.preventDefault();
     } else if (event.key === 'Enter') {
-      opts.onEditPrimary();
+      opts.onEditPrimary(event.metaKey || event.shiftKey ? 'f2' : 'enter');
       event.preventDefault();
     } else if (event.key === 'Escape') {
       if (opts.onCancelGesture()) {

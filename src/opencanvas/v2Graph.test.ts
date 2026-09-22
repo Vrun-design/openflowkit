@@ -40,6 +40,9 @@ const SHARED_KERNEL = [
   // The pure agent surface: the editor hosts it (live bridge) and the MCP
   // server bundles it. Nothing under src/agent may reach into presentation.
   path.join(srcDir, 'agent'),
+  // Folder workspaces (File System Access API adapter) and their pure merge
+  // helpers; no DOM beyond the picker call itself.
+  path.join(srcDir, 'services', 'workspace'),
 ];
 
 // Data read as text at runtime (the grammar for get_syntax), not code.

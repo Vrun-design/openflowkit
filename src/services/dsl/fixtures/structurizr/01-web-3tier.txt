@@ -1,0 +1,68 @@
+workspace "Banking" "A three-tier internet banking system" {
+
+    model {
+        person "Personal Banking Customer" "A customer of the bank" "external"
+
+        softwareSystem "Banking" "Allows customers to view accounts" {
+            container "Web" "Delivers the static content and SPA" "Java, Spring MVC" "web" {
+                component "Sign In Controller" "Allows users to sign in" "Spring MVC"
+                component "Security Component" "Provides security" "Spring Security"
+                Sign In Controller -> Security Component "Uses" "HTTPS"
+            }
+            container "API" "Provides account services" "Java, Spring MVC" {
+                component "Accounts" "Account operations" "Spring"
+                Security Component -> Accounts "Uses" "HTTPS"
+            }
+            container "Database" "Stores account data" "Oracle" "database"
+        }
+
+        softwareSystem "E-mail" "Sends account notifications" "Microsoft Exchange" "external"
+
+        Personal Banking Customer -> Web "Visits" "HTTPS"
+        Web -> API "Makes API calls" "JSON/HTTPS"
+        Accounts -> Database "Reads from and writes to" "JDBC"
+        API -> E-mail "Sends e-mail using" "SMTP"
+    }
+
+    views {
+        systemLandscape "Landscape" {
+            include *
+            autoLayout lr 300 300
+        }
+        systemContext Banking "Context" {
+            include *
+            exclude E-mail
+            autoLayout tb
+        }
+        container Banking {
+            include *
+        }
+        component API {
+            include *
+        }
+        deployment Banking "Live" {
+            include *
+            deploymentNode "AWS" "Cloud hosting" "Amazon Web Services" "cloud" {
+                deploymentNode "EC2" {
+                    containerInstance Web
+                    containerInstance API
+                }
+                deploymentNode "RDS" {
+                    containerInstance Database
+                }
+                infrastructureNode "Load Balancer" "Balances incoming traffic" "ELB" "lb"
+            }
+        }
+        styles {
+            element "external" {
+                background #999999
+                shape Box
+            }
+            element "database" {
+                background #438dd5
+                shape Cylinder
+                icon "aws:rds"
+            }
+        }
+    }
+}

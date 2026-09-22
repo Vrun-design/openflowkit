@@ -7,6 +7,7 @@ import { registerAnalyzeCodebase } from './tools/analyzeCodebase.js';
 import { registerListTemplates } from './tools/listTemplates.js';
 import { registerGetTemplate } from './tools/getTemplate.js';
 import { registerDiscoveryTools } from './tools/discovery.js';
+import { registerArchitectureTools } from './tools/architecture.js';
 import { registerDocumentTools, registerOpTools, type OpToolDeps } from './tools/ops.js';
 import { registerResources } from './resources/index.js';
 import { registerPrompts } from './prompts/index.js';
@@ -43,6 +44,7 @@ export function createServerWithDeps(options: ServerOptions = {}): CreatedServer
   registerListTemplates(server);
   registerGetTemplate(server);
   registerDiscoveryTools(server);
+  registerArchitectureTools(server, store);
   registerDocumentTools(server, deps);
   registerOpTools(server, deps);
   registerResources(server);

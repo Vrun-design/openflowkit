@@ -13,6 +13,7 @@ import { SystemRoot, ToastRegion, type ToastItem } from '../design-system';
 import { V2ContextMenu, type ContextMenuTarget } from './V2ContextMenu';
 import { V2CanvasHost } from './V2CanvasHost';
 import { V2Chrome } from './V2Chrome';
+import { V2AgentConnect } from './V2AgentConnect';
 import { INITIAL_CODE, V2CanvasWelcome, V2DraftPanel, V2Shortcuts, V2WorkspaceRail, type V2WorkspaceMode } from './V2Workspace';
 import type { V2Tool } from './V2CreationToolbar';
 import { useV2IconLibrary } from './useV2IconLibrary';
@@ -45,14 +46,29 @@ import { downloadTextFile } from './v2Export';
 import type { ScenePage } from '../../domain/document/types';
 import { dslFrameRaw } from '../../../dsl/sceneMeta';
 import { frameEdited, frameScene } from '../../../dsl/frameScene';
-import { compile } from '../../../dsl/compile';
+import { compile, compileWorkspace, type CompileWorkspaceResult } from '../../../dsl/compile';
 import { parse } from '../../../dsl/parse';
 import { serialize } from '../../../dsl/serialize';
 import { buildDslPageCommand, nextDslFrameOrigin } from '../../application/dsl/dslPageCommand';
 import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { V2CodePanel } from './V2CodePanel';
+import { V2ModelPanel } from './V2ModelPanel';
+import { V2FlowPanel } from './V2FlowPanel';
+import { useV2Architecture } from './useV2Architecture';
+import { useV2ArchitectureActions } from './useV2ArchitectureActions';
+import { useV2FlowPlayback } from './useV2FlowPlayback';
+import { useV2WorkspaceFolder } from './useV2WorkspaceFolder';
+import { applySnapsToWorkspace, type WorkspaceSnap } from '../../../services/workspace/workspaceFolder';
+import { architectureWorkspaceText } from '../../../dsl/families/architecture/text';
+import { buildArchRelationCommands, buildWorkspacePagesCommand } from '../../application/dsl/architectureCommands';
+import { buildDeleteSelectionCommand, buildDuplicateSelectionCommand, buildToggleLockCommand } from '../../domain/commands/sceneEdits';
+import { buildConnectorObjectAction } from '../../application/active-document/connectorActions';
+import type { DocumentCommand } from '../../domain/commands/types';
+import { archViewIdOfPage, placedElementId } from '../../../dsl/model/model';
+import { isEditableTarget } from './pointerOperations';
 import { looksLikeMermaid, mermaidToDsl } from '../../../services/dsl/mermaidToDsl';
+import { looksLikeStructurizr, structurizrToDsl } from '../../../services/dsl/structurizrToDsl';
 import './v2EditorPage.css';
 
 function changeObjectIds(changeId: string, proposal: Proposal | null): readonly string[] {
@@ -90,6 +106,7 @@ export function V2EditorPage(): React.JSX.Element {
     if (window.innerWidth < 1100) setTreeOpen(false);
   };
   const toggleAgent = () => { if (agentOpen) setWorkspaceMode(null); else openWorkspace('assistant'); };
+  const toggleModel = () => { if (workspaceMode === 'model') setWorkspaceMode(null); else openWorkspace('model'); };
   const toggleCode = () => { if (workspaceMode === 'code') setWorkspaceMode(null); else { setCodeFrameId(null); openWorkspace('code'); } };
   const appearance = useV2Appearance(preferences.theme);
   const canvasColor = preferences.canvasColor ?? (appearance === 'dark' ? '#191b19' : '#f7f7f5');
@@ -162,6 +179,9 @@ export function V2EditorPage(): React.JSX.Element {
   const documentId = session.document?.id;
   useEffect(() => { setActivePageId(null); }, [documentId]);
   const pageRef = useRef<ScenePage | null>(null);
+  const [pendingView, setPendingView] = useState<string | null>(null);
+  const architecture = useV2Architecture(session.document, page);
+  const architectureActionsRef = useRef<ReturnType<typeof useV2ArchitectureActions> | null>(null);
   const labelEditing = useV2LabelEditing({
     hostRef,
     page,
@@ -169,6 +189,13 @@ export function V2EditorPage(): React.JSX.Element {
     commit: session.commit,
     announce: setAnnouncement,
     focusCanvas: useCallback(() => sectionRef.current?.focus(), []),
+    onRenamePlacedElement: (nodeId, label) => {
+      const node = page?.nodes.find((candidate) => candidate.id === nodeId);
+      const elementId = node ? placedElementId(node) : null;
+      if (!elementId) return false;
+      architectureActionsRef.current?.editElement(elementId, { name: label });
+      return true;
+    },
   });
   const { editing, editingRef } = labelEditing;
 
@@ -185,17 +212,23 @@ export function V2EditorPage(): React.JSX.Element {
       return true;
     });
   }, [codeDraft, compileDiagnostics]);
-  const mermaidConversion = useMemo(() => (looksLikeMermaid(codeDraft) ? mermaidToDsl(codeDraft) : null), [codeDraft]);
-  const convertMermaid = useCallback(() => {
-    const conversion = mermaidToDsl(codeDraft);
+  // Foreign text in the panel: Mermaid or Structurizr DSL converts in place.
+  const foreignSyntax = useMemo(() => (
+    looksLikeMermaid(codeDraft) ? { label: 'Mermaid', convert: mermaidToDsl }
+      : looksLikeStructurizr(codeDraft) ? { label: 'Structurizr', convert: structurizrToDsl }
+        : null
+  ), [codeDraft]);
+  const convertForeign = useCallback(() => {
+    if (!foreignSyntax) return;
+    const conversion = foreignSyntax.convert(codeDraft);
     if ('error' in conversion) {
       setCompileDiagnostics([{ code: 'E003', severity: 'error', line: 1, col: 1, endCol: 1, message: conversion.error, source: 'parse' }]);
       return;
     }
     setCodeDraft(conversion.dsl);
     setCompileDiagnostics(conversion.diagnostics);
-    setAnnouncement(`Mermaid converted${conversion.losses.length ? ` with ${conversion.losses.length} loss notes` : ''}.`);
-  }, [codeDraft]);
+    setAnnouncement(`${foreignSyntax.label} converted${conversion.losses.length ? ` with ${conversion.losses.length} loss notes` : ''}.`);
+  }, [codeDraft, foreignSyntax]);
   const codeCanvasEdited = useMemo(() => {
     if (!page || !codeFrameId) return false;
     const scene = frameScene(page, codeFrameId);
@@ -229,7 +262,7 @@ export function V2EditorPage(): React.JSX.Element {
   }, [load.reload]);
   const readOnlyRef = useRef(load.readOnly);
   useEffect(() => { readOnlyRef.current = load.readOnly; }, [load.readOnly]);
-  const generateCode = useCallback(async () => {
+  const generateCode = useCallback(async (overrideText?: string, snaps?: Readonly<Record<string, WorkspaceSnap>>) => {
     const currentPage = pageRef.current;
     if (!currentPage || load.readOnly || codeGenerating) return;
     codeAbortRef.current?.abort();
@@ -239,16 +272,33 @@ export function V2EditorPage(): React.JSX.Element {
     try {
       const bound = codeFrameId ? currentPage.nodes.find((node) => node.id === codeFrameId) : undefined;
       const origin = bound?.transform.translation ?? nextDslFrameOrigin(currentPage);
-      const compiled = await compile(codeDraft, {
+      const compiledWorkspace = await compileWorkspace(overrideText ?? codeDraft, {
         origin, layout: elkDslLayoutPort, signal: controller.signal, resolveIcon: resolveDslIcon,
         // The panel's palette is a default: an authored `appearance:` line wins.
         appearance: { palette: preferences.diagramPalette },
       });
-      setCompileDiagnostics(compiled.diagnostics);
-      session.commit(buildDslPageCommand(currentPage, compiled, codeFrameId ?? undefined));
-      setCodeFrameId(codeFrameId ?? compiled.frame.id);
-      applySelection(replaceSelection([codeFrameId ?? compiled.frame.id]));
-      setAnnouncement(`${compiled.nodes.length} nodes generated${compiled.diagnostics.some((item) => item.severity !== 'info') ? ' with diagnostics' : ''}.`);
+      // Saved layout overrides win over ELK for the elements they name.
+      const workspace = snaps ? applySnapsToWorkspace(compiledWorkspace, snaps) : compiledWorkspace;
+      const primary = workspace.views[0]!.result;
+      setCompileDiagnostics(primary.diagnostics);
+      if (workspace.views.length > 1) {
+        // A C4 workspace: one page per view, all pages in one undo step. The
+        // view we land on is applied once the committed document arrives.
+        const command = buildWorkspacePagesCommand(session.document!, workspace, {
+          mintId: mintV2Id,
+          ...(codeFrameId ? { replaceFrameId: codeFrameId } : {}),
+        });
+        if (command) session.commit(command);
+        setCodeFrameId(null);
+        setPendingView(workspace.views[0]!.viewId);
+        setAnnouncement(`Generated ${workspace.views.length} views. Every element is shared across them.`);
+      } else {
+        const command = buildDslPageCommand(currentPage, primary, codeFrameId ?? undefined);
+        if (command) session.commit(command);
+        setCodeFrameId(codeFrameId ?? primary.frame.id);
+        applySelection(replaceSelection([codeFrameId ?? primary.frame.id]));
+        setAnnouncement(`${primary.nodes.length} nodes generated${primary.diagnostics.some((item) => item.severity !== 'info') ? ' with diagnostics' : ''}.`);
+      }
     } catch (error) {
       if (!(error instanceof DOMException && error.name === 'AbortError')) pushToast({ id: `dsl-${Date.now()}`, tone: 'danger', title: error instanceof Error ? error.message : 'Diagram generation failed.' });
     } finally {
@@ -268,10 +318,16 @@ export function V2EditorPage(): React.JSX.Element {
   const compileDraft = useCallback(
     (text: string) => compile(text, { origin: { x: 0, y: 0 }, layout: elkDslLayoutPort, resolveIcon: resolveDslIcon }),
     []);
+  const compileAny = useCallback(
+    (text: string): Promise<CompileWorkspaceResult> => compileWorkspace(text, {
+      origin: { x: 0, y: 0 }, layout: elkDslLayoutPort, resolveIcon: resolveDslIcon,
+      appearance: { palette: preferences.diagramPalette },
+    }),
+    [preferences.diagramPalette]);
   const proposal = useV2Proposal({
     document: session.document, revision: session.revision, pageId: page?.id ?? null,
-    selectionRef, commit: session.commit, readOnly: load.readOnly,
-    announce: setAnnouncement, mintId: mintV2Id, compileDsl: compileDraft,
+    commit: session.commit, readOnly: load.readOnly,
+    announce: setAnnouncement, compileDsl: compileDraft,
   });
 
   useV2TestApi({
@@ -310,6 +366,101 @@ export function V2EditorPage(): React.JSX.Element {
     if (!first) camera.fitView();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page?.id, rendererStatus]);
+
+  // Drawing a connector between two model objects records the relation too:
+  // one batch, one undo step, and Generate brings it back.
+  const extendConnectorCommand = useCallback((command: DocumentCommand, fromNodeId: string, toNodeId: string): DocumentCommand => {
+    const currentPage = pageRef.current;
+    if (!currentPage || !architecture.model) return command;
+    const elementOf = (nodeId: string) => {
+      const node = currentPage.nodes.find((candidate) => candidate.id === nodeId);
+      return node ? placedElementId(node) : null;
+    };
+    const from = elementOf(fromNodeId);
+    const to = elementOf(toNodeId);
+    if (!from || !to || from === to || !session.document) return command;
+    const relation = buildArchRelationCommands(session.document, from, to, undefined, { exceptPageId: currentPage.id });
+    if (!relation) return command;
+    // The drawn connector keeps its minted id (selection follows it) but
+    // records which relation it is, so flows and the panel can find it.
+    const linked: DocumentCommand = command.kind === 'insert-connector' ? {
+      ...command,
+      connector: {
+        ...command.connector,
+        metadata: { ...command.connector.metadata, model: { relationId: relation.relation.id } },
+      },
+    } : command;
+    // Model pages first (they replace the page), then the connector insert:
+    // inserting into a page whose `before` snapshot is stale would fail.
+    return {
+      kind: 'batch',
+      id: 'connector-with-relation',
+      label: 'Connect elements',
+      commands: [...relation.commands, linked],
+    };
+  }, [architecture, session.document]);
+
+  const architectureActions = useV2ArchitectureActions(
+    { architecture, document: session.document, pageRef, readOnly: load.readOnly, mintId: mintV2Id },
+    {
+      glideToNodes: camera.glideToNodes,
+      openPage: setActivePageId,
+      selectNodes: (nodeIds) => { applyConnectorSelection(null); applySelection(replaceSelection(nodeIds)); },
+      commit: session.commit,
+      announce: setAnnouncement,
+      compileWorkspace: compileAny,
+      compileSequence: compileAny,
+    },
+  );
+  architectureActionsRef.current = architectureActions;
+  const workspaceFolder = useV2WorkspaceFolder({
+    onLoad: (dsl, snaps) => { setCodeDraft(dsl); void generateCode(dsl, snaps); },
+    onToast: (title, tone) => pushToast({ id: `workspace-${Date.now()}`, tone, title }),
+  });
+  // Committing a view writes the DSL + snaps back to the open folder. The
+  // folder is the git-facing artifact; IndexedDB stays the app's storage.
+  useEffect(() => {
+    if (!workspaceFolder.folder || !session.document || load.readOnly) return;
+    const dsl = architecture.model ? architectureWorkspaceText(architecture.model) : null;
+    if (!dsl) return;
+    const timer = window.setTimeout(() => { void workspaceFolder.save(dsl, session.document!); }, 900);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.revision, workspaceFolder.folder, architecture.model, load.readOnly]);
+  // A workspace generate commits pages for views that may not exist yet; land
+  // on the requested view as soon as the committed document arrives.
+  useEffect(() => {
+    if (!pendingView || !session.document) return;
+    const target = session.document.pages.find((candidate) => archViewIdOfPage(candidate) === pendingView);
+    if (target) { setActivePageId(target.id); setPendingView(null); }
+  }, [pendingView, session.document]);
+  const playback = useV2FlowPlayback({
+    model: architecture.model,
+    document: session.document,
+    page,
+    glideToNodes: camera.glideToNodes,
+    onOpenPage: setActivePageId,
+  });
+  const placedElementIds = useMemo(() => new Set(
+    (page?.nodes ?? []).flatMap((node) => {
+      const elementId = placedElementId(node);
+      return elementId ? [elementId] : [];
+    }),
+  ), [page]);
+  const selectedNode = selection.primaryNodeId && page
+    ? page.nodes.find((node) => node.id === selection.primaryNodeId)
+    : undefined;
+  const selectedElementId = selectedNode ? placedElementId(selectedNode) : null;
+  const perspectiveFocus = useMemo(
+    () => (playback.flow ? null : architectureActions.perspectiveFocus(preferences.perspectiveTags)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [architectureActions, playback.flow, preferences.perspectiveTags, page],
+  );
+  // One spotlight source: flow playback wins while it is open, then tags.
+  useEffect(() => {
+    if (rendererStatus !== 'ready') return;
+    hostRef.current?.setFocus(playback.focus ?? perspectiveFocus);
+  }, [playback.focus, perspectiveFocus, rendererStatus]);
 
   // Local agent pairing: the ops run here, against this session, through the
   // same registry the MCP server uses. Off until the user connects.
@@ -411,7 +562,18 @@ export function V2EditorPage(): React.JSX.Element {
     onToolChange: setTool,
     onToggleIcons: iconLibrary.toggle,
     onUndo: session.undo, onRedo: session.redo,
-    onDelete: editActions.deleteSelection, onDuplicate: editActions.duplicateSelection,
+    // On a C4 view Delete unplaces; the model keeps the element.
+    onDelete: () => {
+      const nodeIds = selectionRef.current.nodeIds;
+      if (architectureActions.unplaceSelection(nodeIds)) return;
+      editActions.deleteSelection();
+    },
+    onRemoveFromModel: () => {
+      const elementId = selectedElementId;
+      if (!elementId) return;
+      architectureActions.removeElement(elementId);
+    },
+    onDuplicate: editActions.duplicateSelection,
     onReorder: editActions.reorderSelection, onToggleLock: editActions.toggleLock,
     onGroup: editActions.groupSelection, onUngroup: editActions.ungroupSelection,
     onWrapInSection: editActions.wrapInSection,
@@ -422,10 +584,13 @@ export function V2EditorPage(): React.JSX.Element {
     onFlip: editActions.flipSelection,
     onZoomToSelection: () => camera.fitView(selectionRef.current.nodeIds.length ? selectionRef.current.nodeIds : undefined),
     onTextStyle: editActions.toggleTextStyle,
-    onEditPrimary: () => {
+    onEditPrimary: (source) => {
       if (load.readOnly) return;
       const primary = selectionRef.current.primaryNodeId;
       if (primary) {
+        // Enter on a model object with children drills into its view; F2 or
+        // ⌘Enter edits the label instead.
+        if (source === 'enter' && selectedElementId && architectureActions.drillInto(selectedElementId)) return;
         openEditor(primary);
         return;
       }
@@ -452,6 +617,7 @@ export function V2EditorPage(): React.JSX.Element {
     onToggleTree: toggleTree,
     onToggleAgent: toggleAgent,
     onToggleCode: toggleCode,
+    onToggleModel: toggleModel,
     onSpacePan: setSpacePan,
   });
 
@@ -462,6 +628,11 @@ export function V2EditorPage(): React.JSX.Element {
         data-workspace-open={workspaceMode !== null || shortcutsOpen}
         data-tree-open={treeOpen}
         onKeyDown={(event) => {
+          if (playback.flow && !isEditableTarget(event.target)) {
+            if (event.key === 'ArrowRight' || event.key === ' ') { playback.next(); event.preventDefault(); return; }
+            if (event.key === 'ArrowLeft') { playback.prev(); event.preventDefault(); return; }
+            if (event.key === 'Escape') { playback.close(); event.preventDefault(); return; }
+          }
           if (event.key === '?' && !(event.target instanceof HTMLElement && event.target.closest('input, textarea, [contenteditable="true"]'))) {
             event.preventDefault(); toggleShortcuts();
           } else handleKeyDown(event);
@@ -489,17 +660,20 @@ export function V2EditorPage(): React.JSX.Element {
               pages={pages}
               pageId={page.id}
               selectedNodeIds={selection.nodeIds}
-              bridge={{ status: agentBridge.status, detail: agentBridge.detail,
-                port: preferences.bridgePort, token: preferences.bridgeToken,
-                onPortChange: (bridgePort) => updatePreferences({ bridgePort }),
-                onTokenChange: (bridgeToken) => updatePreferences({ bridgeToken }),
-                onToggle: (connect) => updatePreferences({ agentBridgeEnabled: connect }) }}
+              bridge={{ status: agentBridge.status, onOpen: () => openWorkspace('agent') }}
               saveStatus={saveStatus}
               canUndo={session.canUndo} canRedo={session.canRedo}
               readOnly={load.readOnly}
               tool={tool} zoomPercent={camera.zoom} treeOpen={treeOpen}
               onUndo={session.undo} onRedo={session.redo}
               onRetrySave={retrySave} onReload={load.reload} onToast={pushToast}
+              workspace={{
+                name: workspaceFolder.folder?.name ?? null,
+                onOpenFolder: () => { void workspaceFolder.openFolder(); },
+                onCloseFolder: workspaceFolder.closeFolder,
+              }}
+              breadcrumb={architecture.breadcrumb}
+              onCrumb={(crumb) => architectureActions.openCrumb(crumb)}
               onRename={(name) => {
                 const before = session.document!.name;
                 if (name === before) return;
@@ -528,6 +702,7 @@ export function V2EditorPage(): React.JSX.Element {
               commit={session.commit}
               applySelection={applySelection} applyConnectorSelection={applyConnectorSelection}
               updateCamera={camera.updateCamera} openEditor={openEditor} openConnectorEditor={openConnectorEditor} onToolChange={setTool} mintId={mintV2Id}
+              extendConnectorCommand={extendConnectorCommand}
               onCommitLabel={labelEditing.commitLabel} onCancelEdit={labelEditing.cancelEdit}
               connectorEditing={connectorEditing}
               onCommitConnectorLabel={commitConnectorLabel} onCancelConnectorEdit={cancelConnectorEdit}
@@ -545,6 +720,15 @@ export function V2EditorPage(): React.JSX.Element {
                 if (primary) openEditor(primary); else editSelectedConnectorLabel();
               }}
               onEditAsCode={openFrameAsCode}
+              modelElement={selectedElementId && selectedNode ? {
+                id: selectedElementId,
+                name: selectedNode.content.label as string ?? selectedElementId,
+                childView: Boolean(architecture.childViewOf(selectedElementId)
+                  && architecture.pageForView(architecture.childViewOf(selectedElementId)!.id)),
+              } : null}
+              onDrillInto={() => { if (selectedElementId) architectureActions.drillInto(selectedElementId); }}
+              onUnplace={() => architectureActions.unplaceSelection(selectionRef.current.nodeIds)}
+              onRemoveElement={() => { if (selectedElementId) architectureActions.removeElement(selectedElementId); }}
               onSelectAll={() => selectionApi.selectAllNodes(pageRef.current)}
               onZoomToFit={() => camera.fitView()}
               onZoomToSelection={() => camera.fitView(selectionRef.current.nodeIds)}
@@ -556,21 +740,109 @@ export function V2EditorPage(): React.JSX.Element {
             />
             <V2WorkspaceRail mode={workspaceMode}
               onChange={(mode) => { if (workspaceMode === mode) setWorkspaceMode(null); else openWorkspace(mode); }}
-              onShortcuts={toggleShortcuts} />
+              onShortcuts={toggleShortcuts} agentConnected={agentBridge.status === 'connected'} />
             {page.nodes.length === 0 && page.connectors.length === 0 && !load.readOnly && rendererStatus === 'ready' ? <V2CanvasWelcome onOpen={openWorkspace} /> : null}
             {workspaceMode === 'code' ? <V2CodePanel code={codeDraft} palette={preferences.diagramPalette}
               onPaletteChange={(diagramPalette) => updatePreferences({ diagramPalette })}
               onCodeChange={(value) => { setCodeDraft(value); setCompileDiagnostics([]); }}
               diagnostics={codeDiagnostics} generating={codeGenerating} canvasEdited={codeCanvasEdited}
-              {...(mermaidConversion ? { onConvertMermaid: convertMermaid } : {})}
+              {...(foreignSyntax ? { convertFrom: { label: foreignSyntax.label, convert: convertForeign } } : {})}
               onGenerate={() => { void generateCode(); }} onClose={() => { codeAbortRef.current?.abort(); setWorkspaceMode(null); }} /> : null}
+            {workspaceMode === 'agent' ? <V2AgentConnect status={agentBridge.status} detail={agentBridge.detail}
+              port={preferences.bridgePort} token={preferences.bridgeToken}
+              onPortChange={(bridgePort) => updatePreferences({ bridgePort })}
+              onTokenChange={(bridgeToken) => updatePreferences({ bridgeToken })}
+              onToggle={(connect) => updatePreferences({ agentBridgeEnabled: connect })}
+              onClose={() => setWorkspaceMode(null)} /> : null}
             {workspaceMode === 'slides' ? <V2DraftPanel mode={workspaceMode}
               code={codeDraft} onCodeChange={setCodeDraft} slides={slideDraftCount}
               onAddSlide={() => setSlideDraftCount((count) => count + 1)} onClose={() => setWorkspaceMode(null)} /> : null}
+            {workspaceMode === 'model' ? (
+              <V2ModelPanel
+                onOpenCode={() => openWorkspace('code')}
+                architecture={architecture}
+                documentPages={session.document!.pages.map((candidate) => ({ id: candidate.id, name: candidate.name }))}
+                selectedElementId={selectedElementId}
+                placedElementIds={placedElementIds}
+                perspectiveTags={preferences.perspectiveTags}
+                onPerspectiveChange={(tags) => updatePreferences({ perspectiveTags: [...tags] })}
+                onNavigate={(crumb) => architectureActions.openCrumb(crumb)}
+                onDrillInto={architectureActions.drillInto}
+                onSelectElement={(elementId) => {
+                  const node = page.nodes.find((candidate) => placedElementId(candidate) === elementId);
+                  if (node) {
+                    applyConnectorSelection(null);
+                    applySelection(replaceSelection([node.id]));
+                    camera.glideToNodes([node.id]);
+                    return;
+                  }
+                  const target = architecture.pageForElement(elementId);
+                  if (target) { setActivePageId(target.id); setAnnouncement('Opened the view that shows this element.'); }
+                  else setAnnouncement('This element is not placed in any view yet.');
+                }}
+                onEditElement={architectureActions.editElement}
+                onRemoveElement={architectureActions.removeElement}
+                onPlayFlow={playback.open}
+                onClose={() => setWorkspaceMode(null)}
+                readOnly={load.readOnly}
+                adrs={workspaceFolder.adrs}
+              />
+            ) : null}
+            {playback.flow ? (
+              <V2FlowPanel
+                playback={playback}
+                onClose={playback.close}
+                onCopy={(kind) => {
+                  if (kind === 'sequence') { void architectureActions.openFlowAsSequence(playback.flow!); return; }
+                  const text = playback.exportText(kind);
+                  if (!text) return;
+                  void navigator.clipboard?.writeText(text).then(
+                    () => pushToast({ id: `flow-${kind}`, tone: 'success', title: `${kind === 'mermaid' ? 'Mermaid' : 'PlantUML'} copied to the clipboard.` }),
+                    () => pushToast({ id: `flow-${kind}`, tone: 'danger', title: 'Clipboard unavailable.' }),
+                  );
+                }}
+              />
+            ) : null}
             {shortcutsOpen ? <V2Shortcuts onClose={() => setShortcutsOpen(false)} /> : null}
             {treeOpen ? (
               <V2TreePanel
+                key={page.id}
                 page={page} selection={selection} selectedConnectorId={selectedConnectorId}
+                readOnly={load.readOnly}
+                onObjectAction={(nodeId, action) => {
+                  if (load.readOnly) return;
+                  const node = page.nodes.find((item) => item.id === nodeId);
+                  if (!node) return;
+                  if (action === 'lock') session.commit(buildToggleLockCommand(page, [nodeId]));
+                  if (action === 'hide') session.commit({
+                    kind: 'set-node', id: `visibility:${nodeId}`, label: node.content.sectionHidden ? 'Show object' : 'Hide object',
+                    pageId: page.id, before: node,
+                    after: { ...node, content: { ...node.content, sectionHidden: !node.content.sectionHidden } },
+                  });
+                  if (action === 'duplicate') {
+                    const command = buildDuplicateSelectionCommand(page, [nodeId], page.connectors.map((item) => item.id), mintV2Id);
+                    session.commit(command);
+                    applyConnectorSelection(null);
+                    applySelection(replaceSelection(command.commands.flatMap((item) => item.kind === 'insert-node' ? [item.node.id] : [])));
+                  }
+                  if (action === 'delete') {
+                    if (!architectureActions.unplaceSelection([nodeId])) session.commit(buildDeleteSelectionCommand(page, [nodeId], []));
+                    applySelection(clearSelection());
+                  }
+                }}
+                onConnectorMenu={(connectorId, x, y) => {
+                  applySelection(clearSelection());
+                  applyConnectorSelection(connectorId);
+                  setContextMenu({ kind: 'connector', id: connectorId, x, y });
+                }}
+                onConnectorAction={(connectorId, action) => {
+                  if (load.readOnly) return;
+                  const command = buildConnectorObjectAction(page, connectorId, action, mintV2Id);
+                  if (!command) return;
+                  session.commit(command);
+                  applySelection(clearSelection());
+                  applyConnectorSelection(command.kind === 'insert-connector' ? command.connector.id : null);
+                }}
                 onSelectNode={(nodeId, additive) => {
                   applyConnectorSelection(null);
                   applySelection(additive ? toggleSelection(selection, nodeId) : replaceSelection([nodeId]));

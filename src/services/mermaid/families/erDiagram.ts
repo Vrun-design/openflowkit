@@ -21,7 +21,7 @@ interface RelationRecord {
   label?: string;
 }
 
-const ENTITY_ID_PATTERN = '[A-Za-z_][\\w.]*';
+const ENTITY_ID_PATTERN = '[A-Za-z_][\\w.-]*';
 
 function parseReferenceTarget(reference: string): {
   referencesTable?: string;

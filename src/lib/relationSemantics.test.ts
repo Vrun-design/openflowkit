@@ -3,7 +3,6 @@ import {
   CLASS_RELATION_TOKENS,
   DEFAULT_CLASS_RELATION,
   DEFAULT_ER_RELATION,
-  ER_RELATION_TOKENS,
   buildClassRelationTokenRegexPattern,
   buildERRelationTokenRegexPattern,
   isClassRelationToken,
@@ -22,11 +21,12 @@ describe('relationSemantics', () => {
   });
 
   it('recognizes valid ER relation tokens and rejects invalid ones', () => {
-    ER_RELATION_TOKENS.forEach((token) => {
-      expect(isERRelationToken(token)).toBe(true);
-    });
-
-    expect(isERRelationToken('||--o|')).toBe(false);
+    for (const left of ['|o', '||', '}o', '}|']) {
+      for (const line of ['--', '..']) {
+        for (const right of ['o|', '||', 'o{', '|{']) expect(isERRelationToken(`${left}${line}${right}`)).toBe(true);
+      }
+    }
+    expect(isERRelationToken('||-->')).toBe(false);
     expect(isERRelationToken('}->')).toBe(false);
     expect(DEFAULT_ER_RELATION).toBe('||--||');
   });

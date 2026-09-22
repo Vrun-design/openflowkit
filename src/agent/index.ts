@@ -4,8 +4,6 @@ import { projectLegacyDocument } from '@/opencanvas/domain/document/legacyProjec
 import type { SceneDocumentV1 } from '@/opencanvas/domain/document/types';
 import { validateSceneDocumentV1 } from '@/opencanvas/domain/document/validation';
 
-export { AGENT_ACTIONS, findAgentAction } from './actions';
-export type { ActionContext, ActionResult, AgentAction } from './actions';
 export { AGENT_OPS, findAgentOp } from './ops';
 export { createFileCapabilities, grammarSection } from './host';
 export type { FileHostOptions } from './host';
@@ -19,9 +17,17 @@ export type { AgentOp, ExportedFile, ExportRequest, IconMatch, OpCapabilities, O
 export { CAPABILITY_MANIFEST, MANIFEST_VERSION, manifestCoverage, unlistedOps } from './manifest';
 export { lintDsl } from './lint';
 export type { DslLintReport } from './lint';
-export { resolveAgentActionCommand, resolveAgentOpCommand, runAgentAction, runAgentOp } from './runAction';
-export type { RunActionResult, RunOpResult } from './runAction';
+export { resolveAgentOpCommand, runAgentOp } from './runAction';
+export type { RunOpResult } from './runAction';
 export type { SceneDocumentV1 };
+
+// Headless consumers (the `openflowkit` CLI) compile whole workspaces and
+// render canonical SVG without a browser. Re-exported, not re-implemented.
+export { compileWorkspace } from '../dsl/compile';
+export { deterministicLayout } from '../dsl/layout';
+export { architectureWorkspaceText } from '../dsl/families/architecture/text';
+export { archModelFromJson } from '../dsl/model/model';
+export { exportCanonicalSvg } from '../opencanvas/infrastructure/export/canonicalSvg';
 
 export function createAgentDocument(name: string, id: string = crypto.randomUUID()): SceneDocumentV1 {
   const now = new Date().toISOString();

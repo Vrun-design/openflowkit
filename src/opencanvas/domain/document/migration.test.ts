@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { projectLegacyDocument } from './legacyProjection';
 import { migrateSceneDocument } from './migration';
-import { serializeSceneDocument } from './serialization';
 
 function createDocument() {
   return projectLegacyDocument(
@@ -69,7 +68,7 @@ describe('migrateSceneDocument', () => {
     if (first.success === false) return;
     expect(first.document).toMatchObject({ futureDocumentFlag: true });
 
-    const second = migrateSceneDocument(JSON.parse(serializeSceneDocument(first.document)));
+    const second = migrateSceneDocument(JSON.parse(JSON.stringify(first.document)));
     expect(second.success).toBe(true);
     if (second.success === false) return;
     expect(second.document).toMatchObject({

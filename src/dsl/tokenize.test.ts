@@ -18,6 +18,20 @@ describe('tokenize', () => {
     expect(tokenize('A -> "broken').diagnostics).toMatchObject([{ code: 'W102', line: 1, col: 6 }]);
   });
 
+  it('keeps URLs in one word; a comment needs a space before //', () => {
+    const result = tokenize('Docs [link: https://example.com/adr/1] // note');
+    expect(result.tokens.map(({ kind, value }) => ({ kind, value }))).toEqual([
+      { kind: 'word', value: 'Docs' },
+      { kind: 'punctuation', value: '[' },
+      { kind: 'word', value: 'link' },
+      { kind: 'punctuation', value: ':' },
+      { kind: 'word', value: 'https://example.com/adr/1' },
+      { kind: 'punctuation', value: ']' },
+      { kind: 'comment', value: 'note' },
+    ]);
+    expect(tokenize('A//nospace').tokens[0]).toMatchObject({ kind: 'word', value: 'A//nospace' });
+  });
+
   it('bounds work at 20,000 lines', () => {
     const result = tokenize(Array.from({ length: MAX_DSL_LINES + 1 }, () => 'A').join('\n'));
     expect(result.tokens).toHaveLength(MAX_DSL_LINES);

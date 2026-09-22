@@ -388,6 +388,7 @@ function projectConnectorWithContext(
   connector: SceneConnector,
   context: ConnectorProjectionContext
 ): ProjectedConnector | null {
+  if (connector.metadata.hidden === true) return null;
   const sourceNode =
     connector.source.nodeId === null ? undefined : context.nodesById.get(connector.source.nodeId);
   const targetNode =

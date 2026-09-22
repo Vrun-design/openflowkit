@@ -4,6 +4,7 @@ import {
   zoomCameraAt,
   DEFAULT_CANVAS_CAMERA,
 } from '../../domain/camera/camera';
+import { foundation } from '../design-system/tokens';
 import type { CanvasCamera } from '../../domain/camera/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { PixiRendererStatus } from '../../infrastructure/pixi/PixiRendererHost';
@@ -18,6 +19,8 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
   const cameraRef = useRef<CanvasCamera>(DEFAULT_CANVAS_CAMERA);
   const fittedRef = useRef<string | null>(null);
   const frameRef = useRef<number | null>(null);
+  const glideRef = useRef<number | null>(null);
+  const glidingRef = useRef(false);
   const [camera, setCamera] = useState<CanvasCamera>(DEFAULT_CANVAS_CAMERA);
 
   // Ref and renderer update per input event; the React state (which
@@ -25,6 +28,7 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
   // mouse/trackpad at 120–1000 events/s cannot starve the frame.
   const updateCamera = useCallback(
     (next: CanvasCamera) => {
+      if (glidingRef.current) stopGlide();
       cameraRef.current = next;
       hostRef.current?.setCamera(next);
       if (frameRef.current !== null) return;
@@ -33,10 +37,66 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
         setCamera(cameraRef.current);
       });
     },
+    // stopGlide is a stable ref-based function; keeping it out avoids rotating
+    // the identity every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [hostRef]
   );
+
+  const stopGlide = useCallback(() => {
+    if (glideRef.current !== null) cancelAnimationFrame(glideRef.current);
+    glideRef.current = null;
+    glidingRef.current = false;
+  }, []);
+
+  /** Frames update directly (one rAF, no per-frame React render). */
+  const applyGlideFrame = useCallback((next: CanvasCamera) => {
+    cameraRef.current = next;
+    hostRef.current?.setCamera(next);
+    if (frameRef.current !== null) return;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      setCamera(cameraRef.current);
+    });
+  }, [hostRef]);
+
+  /** Navigation motion: a short glide the user can interrupt by touching the canvas. */
+  const animateTo = useCallback((destination: CanvasCamera, durationMs = foundation.motion.camera) => {
+    stopGlide();
+    const reduced = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const start = { ...cameraRef.current };
+    if (reduced || durationMs <= 0) {
+      applyGlideFrame(destination);
+      return;
+    }
+    const startedAt = performance.now();
+    glidingRef.current = true;
+    const step = (now: number) => {
+      const t = Math.min(1, (now - startedAt) / durationMs);
+      const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      applyGlideFrame({
+        x: start.x + (destination.x - start.x) * eased,
+        y: start.y + (destination.y - start.y) * eased,
+        zoom: start.zoom + (destination.zoom - start.zoom) * eased,
+      });
+      if (t < 1) glideRef.current = requestAnimationFrame(step);
+      else { glideRef.current = null; glidingRef.current = false; }
+    };
+    glideRef.current = requestAnimationFrame(step);
+  }, [applyGlideFrame, stopGlide]);
+
+  /** Drill-down / flow camera: frame the nodes without zooming in past readability. */
+  const glideToNodes = useCallback((nodeIds: readonly string[], padding = 96) => {
+    const host = hostRef.current;
+    const bounds = host?.getContentBounds(nodeIds);
+    if (!host || !bounds) return;
+    const fitted = fitCameraToBounds(bounds, host.getViewportSize(), padding);
+    animateTo({ ...fitted, zoom: Math.min(fitted.zoom, 1.4) });
+  }, [animateTo, hostRef]);
+
   useEffect(() => () => {
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    if (glideRef.current !== null) cancelAnimationFrame(glideRef.current);
   }, []);
 
   const viewportCenter = useCallback(() => {
@@ -100,6 +160,8 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     camera,
     zoom: Math.round(camera.zoom * 100),
     updateCamera,
+    animateTo,
+    glideToNodes,
     fitView,
     zoomStep,
     zoomTo,

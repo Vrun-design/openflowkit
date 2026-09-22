@@ -99,10 +99,29 @@ one to target a file-mode document.
 | `get_document` / `list_pages` | Nodes, connectors and pages with geometry |
 | `validate_openflow_dsl` | Parse DSL with the real parser, structured diagnostics |
 | `analyze_codebase` | Detect platforms, services, structure and language mix in a local repo |
+| `discover_architecture` | Walk a repo (compose, Dockerfiles, k8s, terraform, manifests) and propose a C4 `architecture` workspace as DSL, with evidence per element |
+| `drift_report` | Re-run discovery against a model (DSL text, open document, or `architecture.ofk` in an open folder) and report `missing` / `undrawn` / `changed` with evidence lines |
+| `explain_element` | An element with its relations, discovery evidence, and the text of any linked `adr/*.md` |
 | `openflow_create` / `openflow_open` / `openflow_save` | File-mode lifecycle |
 | `list_starter_templates` / `get_starter_template` | Working DSL to start from |
 | `whoami` | Which mode you are in and what this server holds |
 | `list_diagram_node_types` / `server_info` | Reference data and capability metadata |
+
+### `openflowkit` CLI
+
+The package also ships the `openflowkit` binary — the same discovery engine without an
+MCP client:
+
+```bash
+openflowkit discover ./my-app --out architecture.ofk   # propose a model, with evidence
+openflowkit drift ./my-app --model architecture.ofk    # report drift; exit 1 when the model is stale
+openflowkit build ./docs-architecture --out dist       # static site: every view, drill-down, flows
+```
+
+`build` reads `architecture.ofk` (plus `views/*.snap` layout overrides) and writes a
+self-contained `index.html` with inline SVG views, breadcrumb drill-down and a flow
+player. It replaces the Structurizr Cloud static export for wiki/GitHub Pages hosting:
+no server, no account.
 
 ---
 

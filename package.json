@@ -39,28 +39,18 @@
     "eval:agent": "npm --prefix mcp-server run eval:agent"
   },
   "dependencies": {
-    "@mermaid-js/layout-elk": "^0.2.1",
     "@tabler/icons-react": "^3.47.0",
-    "d3-shape": "^3.2.0",
     "elkjs": "^0.11.0",
-    "jszip": "^3.10.1",
-    "lucide-react": "^0.563.0",
-    "mermaid": "^11.15.0",
-    "pako": "^2.1.0",
     "pixi.js": "8.18.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.0",
-    "zod-to-json-schema": "^3.25.2",
-    "zustand": "^5.0.11"
+    "react-router-dom": "^7.13.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.53.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@types/d3-shape": "^3.1.8",
     "@types/node": "^22.14.0",
-    "@types/pako": "^2.0.4",
     "@typescript-eslint/eslint-plugin": "^8.55.0",
     "@typescript-eslint/parser": "^8.55.0",
     "@vitejs/plugin-react": "^5.1.4",

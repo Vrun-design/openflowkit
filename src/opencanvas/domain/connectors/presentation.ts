@@ -55,8 +55,20 @@ function classRelationMarkers(token: string): {
   return { source, target, dashed: token.includes('..') };
 }
 
+/**
+ * Every crow's-foot relation Mermaid writes: `<left>(--|..)<right>` with
+ * `|o` zero-or-one, `||` exactly one, `}o` zero-or-many, `}|` one-or-many.
+ * One definition for the DSL, the Mermaid importer and the renderer.
+ */
+export const ER_RELATION_TOKEN = /^(?:\|o|\|\||\}o|\}\|)(?:--|\.\.)(?:o\||\|\||o\{|\|\{)$/;
+
+export function isErRelationToken(value: string): boolean {
+  return ER_RELATION_TOKEN.test(value);
+}
+
 function erCardinalityMarkers(symbol: string): ConnectorMarkerGlyph[] {
   if (symbol === '||') return ['bar', 'bar'];
+  if (symbol === '|o' || symbol === 'o|') return ['bar', 'circle'];
   if (symbol === '}o' || symbol === 'o{') return ['crow-foot', 'circle'];
   if (symbol === '}|' || symbol === '|{') return ['crow-foot', 'bar'];
   return [];

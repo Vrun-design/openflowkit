@@ -1,6 +1,7 @@
 import type { CompileResult } from '../../../dsl/compile';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneNode, ScenePage } from '../../domain/document/types';
+import { areStructurallyEqual } from '../../domain/commands/equality';
 
 function descendants(page: ScenePage, rootId: string): Set<string> {
   const ids = new Set([rootId]);
@@ -25,8 +26,11 @@ function remapFrame(node: SceneNode, generatedId: string, frameId: string): Scen
   };
 }
 
-/** Creates one reversible page replacement for one Generate intent. */
-export function buildDslPageCommand(page: ScenePage, compiled: CompileResult, boundFrameId?: string): DocumentCommand {
+/**
+ * Creates one reversible page replacement for one Generate intent, or null when
+ * the regenerated frame is identical (set-page rejects no-op commands).
+ */
+export function buildDslPageCommand(page: ScenePage, compiled: CompileResult, boundFrameId?: string): DocumentCommand | null {
   const frameId = boundFrameId ?? compiled.frame.id;
   const generated = [compiled.frame, ...compiled.groups, ...compiled.nodes].map((node) => remapFrame(node, compiled.frame.id, frameId));
   let retainedNodes = [...page.nodes];
@@ -42,6 +46,7 @@ export function buildDslPageCommand(page: ScenePage, compiled: CompileResult, bo
     nodes: [...retainedNodes, ...generated],
     connectors: [...retainedConnectors, ...compiled.connectors],
   };
+  if (areStructurallyEqual(page, after)) return null;
   return { kind: 'set-page', id: `dsl-generate:${frameId}`, label: boundFrameId ? 'Regenerate diagram' : 'Generate diagram', pageId: page.id, before: page, after };
 }
 

@@ -1,7 +1,6 @@
 // Capability manifest: the agent surface as external clients see it. One row
 // per op, each naming the human operation it mirrors and the test that proves
-// the two produce the same record. Owns no behaviour — ops live in ./ops, the
-// command library they reuse in ./actions.
+// the two produce the same record. Owns no behaviour — ops live in ./ops.
 import { AGENT_OPS, type AnyAgentOp } from './ops';
 
 export { AGENT_OPS } from './ops';

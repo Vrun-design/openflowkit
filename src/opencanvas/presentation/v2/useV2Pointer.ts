@@ -116,6 +116,11 @@ interface V2PointerOptions {
   readonly onTransformPreview?: (result: TransformResult | null) => void;
   readonly snapToGrid?: boolean;
   readonly mintId: (prefix: string) => string;
+  /**
+   * Model pages wrap a connector insert with the matching model relation, so a
+   * connector drawn on a C4 view survives the next Generate.
+   */
+  readonly extendConnectorCommand?: (command: DocumentCommand, fromNodeId: string, toNodeId: string) => DocumentCommand;
   /** Sticky defaults: appearance the last style edit left behind, per kind (tldraw). */
   readonly stylePresetsRef?: RefObject<StylePresets>;
 }
@@ -520,10 +525,11 @@ export function useV2Pointer(options: V2PointerOptions) {
             commitQuickCreateDelivery(opts, operation, sourceNodeId, sourceSide);
           } else if (targetId && targetId !== sourceNodeId) {
             const id = opts.mintId('connector');
-            opts.commit(buildInsertConnectorCommand(operation.page, {
+            const command = buildInsertConnectorCommand(operation.page, {
               id, source: { nodeId: sourceNodeId }, target: { nodeId: targetId },
               appearance: opts.stylePresetsRef?.current.connector,
-            }));
+            });
+            opts.commit(opts.extendConnectorCommand?.(command, sourceNodeId, targetId) ?? command);
             opts.applySelection(clearSelection());
             opts.applyConnectorSelection(id);
             opts.onToolChange('select');
@@ -533,15 +539,18 @@ export function useV2Pointer(options: V2PointerOptions) {
           // Release back on the source node cancels; loops arrive in 1.6.
         } else if (moved >= CLICK_THRESHOLD_PX && !(targetId && targetId === operation.sourceNodeId)) {
           const id = opts.mintId('connector');
+          const command = buildInsertConnectorCommand(operation.page, {
+            id,
+            source: operation.sourceNodeId
+              ? { nodeId: operation.sourceNodeId }
+              : { point: operation.fromWorld },
+            target: targetId ? { nodeId: targetId } : { point: host.screenToWorld(point) },
+            appearance: opts.stylePresetsRef?.current.connector,
+          });
           opts.commit(
-            buildInsertConnectorCommand(operation.page, {
-              id,
-              source: operation.sourceNodeId
-                ? { nodeId: operation.sourceNodeId }
-                : { point: operation.fromWorld },
-              target: targetId ? { nodeId: targetId } : { point: host.screenToWorld(point) },
-              appearance: opts.stylePresetsRef?.current.connector,
-            })
+            operation.sourceNodeId && targetId
+              ? opts.extendConnectorCommand?.(command, operation.sourceNodeId, targetId) ?? command
+              : command
           );
           opts.applySelection(clearSelection());
           opts.applyConnectorSelection(id);

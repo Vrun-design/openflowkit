@@ -1,0 +1,49 @@
+workspace "Shop (flat identifiers)" {
+
+    !identifiers flat
+
+    model {
+        person "Customer" "Buys things" "external"
+        softwareSystem "Shop" "Sells things" {
+            container "Web" "Storefront" "Next.js"
+            container "API" "Orders and catalog" "Go"
+            container "Database" "Product data" "Postgres"
+        }
+
+        Customer -> Web "Uses" "HTTPS"
+        Web -> API "Calls" "JSON/HTTPS"
+        API -> Database "Reads and writes" "JDBC"
+
+        deploymentEnvironment "Live" {
+            deploymentNode "Cloud" "Managed hosting" {
+                containerInstance Web
+                containerInstance API
+                containerInstance Database
+            }
+        }
+    }
+
+    views {
+        systemContext Shop {
+            include *
+            autoLayout tb
+        }
+        container Shop {
+            include *
+        }
+        deployment Shop Live {
+            include *
+        }
+        dynamic Shop "Place order" {
+            Customer -> Web "Browses"
+            -> API "POST /orders"
+            -> Database "INSERT order"
+        }
+        styles {
+            element "database" {
+                background #438dd5
+                shape Cylinder
+            }
+        }
+    }
+}

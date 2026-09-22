@@ -25,7 +25,8 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "openflowkit-mcp": "./dist/index.js"
+    "openflowkit-mcp": "./dist/index.js",
+    "openflowkit": "./dist/cli.js"
   },
   "files": [
     "dist",

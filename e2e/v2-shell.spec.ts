@@ -42,6 +42,20 @@ test('v2 workspace shell supports panels, view controls, and canvas creation', a
   await page.mouse.move(630, 390);
   await page.mouse.up();
   await expect(page.getByTestId('v2-welcome')).not.toBeVisible();
+  await page.getByRole('button', { name: 'Layers', exact: true }).click();
+  const layers = page.getByRole('complementary', { name: 'Layers' });
+  await expect(layers.locator('.ofk-v2-panel-badge')).toHaveText('Page 1');
+  await layers.getByRole('button', { name: /^Hide / }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as {
+    __V2__?: { getDocument(): { pages: { nodes: { content: { sectionHidden?: boolean } }[] }[] } | null }
+  }).__V2__?.getDocument()?.pages[0]?.nodes[0]?.content.sectionHidden)).toBe(true);
+  await layers.getByRole('button', { name: /^Lock / }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as {
+    __V2__?: { getDocument(): { pages: { nodes: { content: { sectionLocked?: boolean } }[] }[] } | null }
+  }).__V2__?.getDocument()?.pages[0]?.nodes[0]?.content.sectionLocked)).toBe(true);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(page.getByTestId('v2-welcome')).toBeVisible();
   await page.screenshot({ animations: 'disabled', path: '/tmp/v2-shell-light.png' });

@@ -8,7 +8,7 @@ import { DIAGRAM_PALETTES, type DiagramPaletteName } from '../../domain/nodes/no
 import { Button, Icon, Panel, Segmented } from '../design-system';
 
 export function V2CodePanel({
-  code, diagnostics, generating, canvasEdited, palette, onPaletteChange, onCodeChange, onGenerate, onClose, onConvertMermaid,
+  code, diagnostics, generating, canvasEdited, palette, onPaletteChange, onCodeChange, onGenerate, onClose, convertFrom,
 }: {
   code: string;
   diagnostics: readonly DslDiagnostic[];
@@ -20,8 +20,8 @@ export function V2CodePanel({
   onCodeChange: (code: string) => void;
   onGenerate: () => void;
   onClose: () => void;
-  /** Present when the draft looks like Mermaid; converts it to DSL in place. */
-  onConvertMermaid?: (() => void) | undefined;
+  /** Present when the draft is foreign syntax (Mermaid, Structurizr); converts it to DSL in place. */
+  convertFrom?: { readonly label: string; readonly convert: () => void } | undefined;
 }) {
   // ponytail: an empty editor shows the placeholder, not "document is empty".
   const errors = code.trim() ? diagnostics.filter((item) => item.severity !== 'info') : [];
@@ -67,12 +67,13 @@ export function V2CodePanel({
   return (
     <Panel title="Diagram as code" onClose={onClose} className="ofk-v2-workspace-panel ofk-v2-code-panel">
       <div className="ofk-v2-panel-stack">
+        <div className="ofk-code-caption"><span>Source</span><span>OpenFlowKit DSL</span></div>
         {canvasEdited ? <p className="ofk-v2-code-warning" role="status">Canvas edited — regenerate will overwrite those changes.</p> : null}
-        {onConvertMermaid ? (
+        {convertFrom ? (
           <div className="ofk-v2-code-mermaid" role="status">
             <Icon icon={IconTransform} />
-            <span>Mermaid detected.</span>
-            <Button onClick={onConvertMermaid}>Convert <kbd>⌘⇧M</kbd></Button>
+            <span>{convertFrom.label} detected.</span>
+            <Button onClick={convertFrom.convert}>Convert <kbd>⌘⇧M</kbd></Button>
           </div>
         ) : null}
         <div className="ofk-v2-code-editor-wrap">
@@ -90,7 +91,7 @@ export function V2CodePanel({
             if (suggestions.length && (event.key === 'Enter' || event.key === 'Tab')) { event.preventDefault(); chooseSuggestion(suggestions[suggestionIndex]!); return; }
             if (suggestions.length && event.key === 'Escape') { event.preventDefault(); setSuggestions([]); return; }
             if (event.ctrlKey && event.key === ' ') { event.preventDefault(); openSuggestions('all'); return; }
-            if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'm' && onConvertMermaid) { event.preventDefault(); onConvertMermaid(); return; }
+            if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'm' && convertFrom) { event.preventDefault(); convertFrom.convert(); return; }
             if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); onGenerate(); }
             if (event.key === 'Tab') {
               event.preventDefault();
@@ -116,10 +117,11 @@ export function V2CodePanel({
           ))}
         </div>
         <footer className="ofk-v2-panel-footer ofk-v2-code-footer">
+          <span className="ofk-code-palette-label">Diagram palette</span>
           <Segmented<DiagramPaletteName> label="Diagram palette" value={palette}
             onChange={onPaletteChange}
             options={DIAGRAM_PALETTES.map(({ id, label, hint }) => ({ value: id, label, title: hint }))} />
-          <Button onClick={onGenerate} busy={generating} disabled={generating}>
+          <Button variant="primary" onClick={onGenerate} busy={generating} disabled={generating || !code.trim()}>
             <Icon icon={IconPlayerPlay} /> {generating ? 'Generating…' : 'Generate diagram'} <kbd>⌘↵</kbd>
           </Button>
           {errors.length ? <p>Bad lines are skipped; the rest still renders.</p> : null}

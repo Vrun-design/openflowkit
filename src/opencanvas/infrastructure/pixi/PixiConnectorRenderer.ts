@@ -201,6 +201,7 @@ export class PixiConnectorRenderer {
     const visiblePage = {
       ...page,
       connectors: page.connectors.filter((connector) => {
+        if (connector.metadata.hidden === true) return false;
         if (renderedConnectorIds && !renderedConnectorIds.has(connector.id)) return false;
         return (connector.source.nodeId === null || nodeStates.get(connector.source.nodeId)?.visible === true)
           && (connector.target.nodeId === null || nodeStates.get(connector.target.nodeId)?.visible === true);

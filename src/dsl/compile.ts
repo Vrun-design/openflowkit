@@ -1,12 +1,14 @@
 import { isContainerNodeKind } from '../opencanvas/domain/nodes/containerNodePresentation';
 import type { SceneConnector, SceneNode } from '../opencanvas/domain/document/types';
 import type { Point2d, Size2d } from '../opencanvas/domain/geometry/types';
-import type { DslDiagnostic } from './ast';
-import { createCommentTracker, parseDocument } from './document';
+import type { DslDiagnostic, DslDirection } from './ast';
+import { createCommentTracker, parseDocument, type CommentTracker } from './document';
 import { familyFor } from './families';
+import type { FamilyContext, FamilyScene } from './families/types';
 import { deterministicLayout, layoutRunner, type LayoutPort } from './layout';
 import { diagramPalette, paletteResolver, type DiagramPaletteName } from '../opencanvas/domain/nodes/nodePalette';
 import { dslFamilyDirection } from './vocabulary';
+import { slugifyDslId } from './text';
 
 export interface CompileOptions {
   origin?: Point2d;
@@ -40,6 +42,20 @@ export interface CompileResult {
   meta: CompileMeta;
 }
 
+/** One view of a compiled workspace: a C4 model view page, or the family's only frame. */
+export interface CompileViewResult {
+  /** Stable view id; empty for single-frame families. */
+  viewId: string;
+  /** Page name for workspace views. */
+  name: string;
+  result: CompileResult;
+}
+
+export interface CompileWorkspaceResult {
+  family: string;
+  views: readonly CompileViewResult[];
+}
+
 export function hashDslScene(value: string): string {
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
@@ -51,20 +67,32 @@ export function hashDslScene(value: string): string {
 
 export { slugifyDslId } from './text';
 
+interface AssembleOptions {
+  scene: FamilyScene;
+  family: string;
+  origin: Point2d;
+  palette: DiagramPaletteName;
+  frameId: string;
+  text: string;
+  direction?: DslDirection;
+  title?: string;
+  comments: CommentTracker;
+  diagnostics: DslDiagnostic[];
+}
+
 /**
- * text → scene. One parse, one family, one frame. The frame and its metadata
- * are assembled here so every family gets identical identity, hashing and
- * code-panel behaviour.
+ * text → scene(s). One parse, one family, one frame per view. The frame and its
+ * metadata are assembled here so every family gets identical identity, hashing
+ * and code-panel behaviour, and a C4 workspace gets one page per view.
  */
-export async function compile(text: string, options: CompileOptions = {}): Promise<CompileResult> {
+export async function compileWorkspace(text: string, options: CompileOptions = {}): Promise<CompileWorkspaceResult> {
   const document = parseDocument(text);
   const diagnostics = [...document.diagnostics];
   const family = familyFor(document.family);
   const comments = createCommentTracker(document.comments);
   const origin = options.origin ?? { x: 0, y: 0 };
   const palette = diagramPalette(document.appearance ?? options.appearance?.palette);
-
-  const scene = await family.compile(document.segments, {
+  const context: FamilyContext = {
     text,
     origin,
     direction: document.direction ?? dslFamilyDirection(document.family),
@@ -76,9 +104,40 @@ export async function compile(text: string, options: CompileOptions = {}): Promi
     ...(options.measureLabel ? { measureLabel: options.measureLabel } : {}),
     ...(options.resolveIcon ? { resolveIcon: options.resolveIcon } : {}),
     ...(options.signal ? { signal: options.signal } : {}),
-  });
+  };
 
-  const frameId = `dsl-${hashDslScene(text)}`;
+  const frameIdBase = `dsl-${hashDslScene(text)}`;
+  const familyViews = family.compileViews
+    ? await family.compileViews(document.segments, context)
+    : [{ id: '', name: document.title ?? '', scene: await family.compile(document.segments, context) }];
+
+  return {
+    family: document.family,
+    views: familyViews.map((view) => {
+      const frameId = familyViews.length === 1 || !view.id ? frameIdBase : `${frameIdBase}-${slugifyDslId(view.id)}`;
+      return {
+        viewId: view.id,
+        name: view.name,
+        result: assembleResult({
+          scene: view.scene, family: document.family, origin, palette, frameId, text,
+          ...(document.direction ? { direction: document.direction } : {}),
+          ...(document.title ? { title: document.title } : {}),
+          comments,
+          diagnostics,
+        }),
+      };
+    }),
+  };
+}
+
+/** The single-frame front door: the first view of the workspace. */
+export async function compile(text: string, options: CompileOptions = {}): Promise<CompileResult> {
+  const workspace = await compileWorkspace(text, options);
+  return workspace.views[0]!.result;
+}
+
+function assembleResult(options: AssembleOptions): CompileResult {
+  const { scene, family, origin, palette, frameId, text, direction, title, comments, diagnostics } = options;
   // The palette rides on every record, not just the frame: renderers and the
   // serializer read a node without its page, so key-based families stay themed.
   const themed = <T extends SceneNode | SceneConnector>(record: T): T => palette === 'pastel' ? record : {
@@ -96,9 +155,9 @@ export async function compile(text: string, options: CompileOptions = {}): Promi
   const connectors = scene.connectors.map(themed);
   const hash = hashDslScene(JSON.stringify({ nodes, groups, connectors }));
   const meta: CompileMeta = {
-    family: document.family, version: 1, source: text, hash,
-    ...(document.direction ? { direction: document.direction } : {}),
-    ...(document.title ? { title: document.title } : {}),
+    family, version: 1, source: text, hash,
+    ...(direction ? { direction } : {}),
+    ...(title ? { title } : {}),
     ...(palette === 'pastel' ? {} : { appearance: { palette } }),
   };
   const trailing = comments.remaining();
@@ -106,7 +165,7 @@ export async function compile(text: string, options: CompileOptions = {}): Promi
     id: frameId, kind: 'frame', parentId: null, layerId: 'default', zIndex: 0,
     transform: { translation: { ...origin }, rotationRadians: 0, scale: { x: 1, y: 1 } },
     size: scene.size,
-    content: { label: document.title ?? '' },
+    content: { label: title ?? '' },
     appearance: {}, ports: [],
     metadata: {
       dsl: {

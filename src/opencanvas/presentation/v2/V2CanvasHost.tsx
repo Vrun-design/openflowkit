@@ -69,6 +69,7 @@ interface V2CanvasHostProps {
   readonly openConnectorEditor: (connectorId: string, at: Point2d) => void;
   readonly onToolChange: (tool: V2Tool) => void;
   readonly mintId: (prefix: string) => string;
+  readonly extendConnectorCommand?: (command: DocumentCommand, fromNodeId: string, toNodeId: string) => DocumentCommand;
   readonly onCommitLabel: (value: string) => void;
   readonly onCancelEdit: () => void;
   readonly connectorEditing: { readonly connectorId: string; readonly bounds: DOMRect; readonly value: string } | null;
@@ -132,6 +133,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     openConnectorEditor: props.openConnectorEditor,
     onToolChange: props.onToolChange,
     mintId: props.mintId,
+    ...(props.extendConnectorCommand ? { extendConnectorCommand: props.extendConnectorCommand } : {}),
     snapToGrid: props.snapToGrid,
     // Renderer preview is immediate; the context bar follows the drag by
     // direct DOM writes (no setState per move), restored to the React anchor

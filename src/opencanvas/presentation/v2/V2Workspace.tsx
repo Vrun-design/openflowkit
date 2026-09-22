@@ -1,8 +1,10 @@
 import {
   IconCode,
   IconKeyboard,
+  IconPlugConnected,
   IconPlus,
   IconPresentation,
+  IconSitemap,
   IconSparkles,
 } from '@tabler/icons-react';
 import {
@@ -17,21 +19,25 @@ import {
 } from '../design-system';
 import { shortcutGroups } from './v2Shortcuts';
 
-export type V2WorkspaceMode = 'assistant' | 'slides' | 'code';
+export type V2WorkspaceMode = 'assistant' | 'slides' | 'code' | 'model' | 'agent';
 const MODES = [
   { id: 'assistant', label: 'AI assistant', icon: IconSparkles },
+  { id: 'model', label: 'Architecture model', icon: IconSitemap },
   { id: 'slides', label: 'Slides', icon: IconPresentation },
   { id: 'code', label: 'Diagram as code', icon: IconCode },
+  { id: 'agent', label: 'Connect agent', icon: IconPlugConnected },
 ] as const;
 
 export function V2WorkspaceRail({
   mode,
   onChange,
   onShortcuts,
+  agentConnected,
 }: {
   mode: V2WorkspaceMode | null;
   onChange: (mode: V2WorkspaceMode) => void;
   onShortcuts: () => void;
+  agentConnected: boolean;
 }) {
   return (
     <>
@@ -45,6 +51,7 @@ export function V2WorkspaceRail({
                 icon={<Icon icon={icon} />}
                 selected={mode === id}
                 aria-expanded={mode === id}
+                data-live={(id === 'agent' && agentConnected) || undefined}
                 onClick={() => onChange(id)}
               />
             </Tooltip>

@@ -50,7 +50,9 @@ export function tokenize(input: string): TokenizeResult {
         continue;
       }
       const col = offset + 1;
-      if (line.startsWith('//', offset)) {
+      // A comment needs a whitespace boundary (or line start) so URLs like
+      // https://… inside labels and `[link: …]` stay one token.
+      if (line.startsWith('//', offset) && (offset === 0 || /\s/.test(line[offset - 1] ?? ''))) {
         tokens.push({ kind: 'comment', value: line.slice(offset + 2).trim(), line: lineIndex + 1, col, endCol: line.length + 1 });
         break;
       }
@@ -84,6 +86,12 @@ export function tokenize(input: string): TokenizeResult {
         tokens.push({ kind: 'string', value, line: lineIndex + 1, col, endCol: offset + 1 });
         continue;
       }
+      const url = /^[a-z][a-z0-9+.-]*:\/\/[^\s\][{}]*/i.exec(line.slice(offset));
+      if (url) {
+        offset += url[0].length;
+        tokens.push({ kind: 'word', value: url[0], line: lineIndex + 1, col, endCol: offset + 1 });
+        continue;
+      }
       const operator = OPERATORS.find((candidate) => line.startsWith(candidate, offset));
       if (operator) {
         offset += operator.length;
@@ -98,7 +106,7 @@ export function tokenize(input: string): TokenizeResult {
       }
       let end = offset + 1;
       while (end < line.length) {
-        if (/\s/u.test(line[end] ?? '') || PUNCTUATION.has(line[end] ?? '') || line.startsWith('//', end) || OPERATORS.some((candidate) => line.startsWith(candidate, end))) break;
+        if (/\s/u.test(line[end] ?? '') || PUNCTUATION.has(line[end] ?? '') || OPERATORS.some((candidate) => line.startsWith(candidate, end))) break;
         end += 1;
       }
       tokens.push({ kind: 'word', value: line.slice(offset, end), line: lineIndex + 1, col, endCol: end + 1 });

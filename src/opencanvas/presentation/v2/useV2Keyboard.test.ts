@@ -16,10 +16,10 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
   const { result } = renderHook(() => useV2Keyboard({
     onReorder, onToggleLock, ...clipboard, ...arrange,
     toolRef: { current: 'select' }, editingRef: { current: false }, onToolChange,
-    onUndo: vi.fn(), onRedo: vi.fn(), onDelete: vi.fn(), onDuplicate: vi.fn(), onEditPrimary: vi.fn(),
+    onUndo: vi.fn(), onRedo: vi.fn(), onDelete: vi.fn(), onDuplicate: vi.fn(), onEditPrimary: vi.fn(), onRemoveFromModel: vi.fn(),
     onNudge: vi.fn(), onCancelGesture: () => false, onClearSelection: vi.fn(), onSelectAll: vi.fn(),
     onFitView, onZoomStep, onResetZoom, onToggleTree: vi.fn(), onToggleIcons: vi.fn(),
-    onToggleAgent: vi.fn(), onToggleCode: vi.fn(), onSpacePan, onTypeToEdit,
+    onToggleAgent: vi.fn(), onToggleCode: vi.fn(), onToggleModel: vi.fn(), onSpacePan, onTypeToEdit,
   }));
   const key = (init: Partial<KeyboardEvent<HTMLElement>>) => result.current({
     key: 'q', target: document.createElement('section'), preventDefault: vi.fn(),

@@ -39,6 +39,8 @@ export interface PopoverProps extends HTMLAttributes<HTMLDivElement> {
   gap?: number;
   /** Tooltips do not take focus and do not dismiss on outside pointer. */
   passive?: boolean;
+  /** An inline editor can consume Escape before the overlay dismisses. */
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
 }
 /** Anchored layer: flips when it would overflow, clamps to the viewport inset, grows from its anchor. */
 export function Popover({
@@ -48,6 +50,7 @@ export function Popover({
   placement = 'bottom-start',
   gap = foundation.space.xs,
   passive = false,
+  onEscapeKeyDown,
   className = '',
   style,
   children,
@@ -55,6 +58,8 @@ export function Popover({
 }: PopoverProps) {
   const root = useSystemRoot();
   const closeRef = useRef(onClose);
+  const escapeRef = useRef(onEscapeKeyDown);
+  useEffect(() => { escapeRef.current = onEscapeKeyDown; }, [onEscapeKeyDown]);
   useEffect(() => { closeRef.current = onClose; }, [onClose]);
   const ref = useRef<HTMLDivElement>(null);
   const parent = useContext(OverlayContext);
@@ -160,6 +165,8 @@ export function Popover({
     }
     function onKey(event: KeyboardEvent) {
       if (event.key === 'Escape' && branch.children.size === 0) {
+        escapeRef.current?.(event);
+        if (event.defaultPrevented) return;
         event.stopPropagation();
         restoreFocus(true);
         closeRef.current();
