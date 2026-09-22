@@ -23,7 +23,14 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
   go to the IndexedDB assets store, the node keeps `assetId` (plus an inline data URL for
   export) and Pixi resolves it; images fit 480 px on the long side. Emoji (E) opens a
   searchable static catalogue with recents in preferences; picking inserts a 48 px glyph.
-  Pickers now anchor to their trigger, so focus returns to a real button. 6.6 claimed.
+  Pickers now anchor to their trigger, so focus returns to a real button.
+- 6.8 done 2026-09-22 (opencode/deepseek-v4.1): charts — `chart` node kind with a pure
+  presentation (bar, line, area, scatter, pie, donut, radar, heatmap, table; handwritten
+  niceTicks), one Pixi renderer, SVG export with the same marks, the C flyout, a real
+  `<table>` data panel (edit cells, +Row/+Series, Enter moves down, TSV/CSV paste, one undo
+  per commit) and a Chart panel in the style bar that switches type without touching data.
+  Order note: charts were built before 6.6/6.7 because the owner's reference screenshots are
+  chart-centric. 6.9 claimed (quadrant + chart DSL + agent).
 - `check-v2-polish.mjs` fails on this machine at HEAD too (idle render count, context-bar
   follow, resize assertions in three separate runs) — environment, not a phase-6 regression.
   Re-run when the machine is quiet; the script's numbers are the phase gate.

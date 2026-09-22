@@ -107,7 +107,7 @@ export function useV2MediaInsert(options: V2MediaInsertOptions) {
     await insertImageBytes(file, at, natural ?? undefined);
   }, [insertImageBytes]);
 
-  return { insertImageFile, insertImageUrl, insertEmoji };
+  return { insertImageFile, insertImageUrl, insertEmoji, centreWorld: () => optionsRef.current.centreWorld() };
 }
 
 function naturalSizeOf(file: File): Promise<Size2d | null> {

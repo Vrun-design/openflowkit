@@ -113,3 +113,36 @@ describe('canonical SVG export', () => {
     expect(svg).toContain('opacity="0.7"');
   });
 });
+
+describe('chart export', () => {
+  const chartDocument = (chart: 'bar' | 'pie') => {
+    const node = createTestNode('chart-1', {
+      kind: 'chart',
+      size: { width: 720, height: 440 },
+      content: {
+        chart,
+        title: 'Monthly',
+        categories: ['Jan', 'Feb', 'Mar'],
+        series: [{ name: 'Revenue', values: [12, 19, 9] }],
+      },
+    });
+    return createTestDocument({ nodes: [node] });
+  };
+
+  it('draws bars as rects with a tick axis and the title', () => {
+    const svg = exportCanonicalSvg(chartDocument('bar'));
+    expect(svg).toContain('data-node-kind="chart"');
+    const bars = [...svg.matchAll(/<rect x="[\d.]+" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)];
+    expect(bars.length).toBeGreaterThanOrEqual(3);
+    expect(bars.every((bar) => Number(bar[3]) > 10)).toBe(true);
+    expect(svg).toContain('>Monthly<');
+    expect(svg).toContain('>Jan<');
+    expect(svg).toContain('fill="#2563eb"');
+  });
+
+  it('draws pie slices as polygonal paths with percent labels', () => {
+    const svg = exportCanonicalSvg(chartDocument('pie'));
+    expect(svg.match(/<path /g)!.length).toBeGreaterThanOrEqual(3);
+    expect(svg).toMatch(/>\d+%</);
+  });
+});

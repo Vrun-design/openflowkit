@@ -668,3 +668,21 @@
   background: transparent; font-size: 20px; line-height: 1; cursor: pointer; }
 .ofk-emoji-cell:hover { background: color-mix(in srgb, var(--ofk-text) 8%, transparent); }
 .ofk-emoji-cell:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: -2px; }
+
+/* Chart data panel: a real table, one row per category, one column per series. */
+.ofk-chart-panel { top: 80px; bottom: 16px; width: 380px; display: flex; flex-direction: column; }
+.ofk-chart-panel-body { flex: 1; min-height: 0; overflow: auto; }
+.ofk-chart-table { border-collapse: collapse; width: 100%; }
+.ofk-chart-table th, .ofk-chart-table td { padding: 2px; }
+.ofk-chart-table thead th { padding-bottom: 6px; }
+.ofk-chart-head-cell { display: flex; align-items: center; gap: 2px; }
+.ofk-chart-head-cell input { width: 100%; min-width: 0; }
+.ofk-chart-table input {
+  width: 100%; min-width: 64px; padding: 6px 8px; font: inherit; font-size: 13px;
+  color: var(--ofk-text); background: var(--ofk-surface); border: 1px solid var(--ofk-border);
+  border-radius: 8px;
+}
+.ofk-chart-table input:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 0; border-color: var(--ofk-focus); }
+.ofk-chart-table input[aria-invalid='true'] { border-color: var(--ofk-danger); color: var(--ofk-danger); }
+.ofk-chart-table .ofk-icon-button { min-width: 24px; width: 24px; min-height: 24px; height: 24px; color: var(--ofk-muted); }
+.ofk-chart-panel-foot { display: flex; gap: 8px; padding-top: 10px; border-top: 1px solid var(--ofk-border); }

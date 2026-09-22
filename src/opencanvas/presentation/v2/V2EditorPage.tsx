@@ -16,7 +16,8 @@ import { V2Chrome } from './V2Chrome';
 import { V2AgentConnect } from './V2AgentConnect';
 import { INITIAL_CODE, V2CanvasWelcome, V2DraftPanel, V2Shortcuts, V2WorkspaceRail, type V2WorkspaceMode } from './V2Workspace';
 import type { V2Tool } from './V2CreationToolbar';
-import { DEFAULT_TOOL_CONFIG, type V2ConnectorTool, type V2ToolConfig } from './v2ToolCatalog';
+import { DEFAULT_TOOL_CONFIG, type V2ChartKind, type V2ConnectorTool, type V2ToolConfig } from './v2ToolCatalog';
+import { createChartNode, DEFAULT_CHART_SIZE } from '../../domain/nodes/chartNode';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
 import { useV2IconLibrary } from './useV2IconLibrary';
 import { useV2MediaInsert } from './useV2MediaInsert';
@@ -24,6 +25,7 @@ import { IMAGE_URL_PATTERN } from './useV2MediaInsert';
 import { isImageFile } from '../../../services/storage/assets';
 import { V2LoadCenter } from './V2LoadCenter';
 import { V2TreePanel } from './V2TreePanel';
+import { V2ChartDataPanel } from './V2ChartDataPanel';
 import { V2AgentPanel } from './V2AgentPanel';
 import { useV2Appearance } from './useV2Appearance';
 import { useV2Autosave } from './useV2Autosave';
@@ -468,6 +470,10 @@ export function V2EditorPage(): React.JSX.Element {
   const selectedNode = selection.primaryNodeId && page
     ? page.nodes.find((node) => node.id === selection.primaryNodeId)
     : undefined;
+  // The data panel follows a single chart selection (and the close button).
+  const [chartPanelClosed, setChartPanelOpen] = useState(false);
+  const chartPanelNode = !chartPanelClosed && selectedNode?.kind === 'chart' ? selectedNode : null;
+  useEffect(() => { setChartPanelOpen(false); }, [selectedNode?.id]);
   const selectedElementId = selectedNode ? placedElementId(selectedNode) : null;
   const perspectiveFocus = useMemo(
     () => (playback.flow ? null : architectureActions.perspectiveFocus(preferences.perspectiveTags)),
@@ -616,6 +622,26 @@ export function V2EditorPage(): React.JSX.Element {
       event.preventDefault();
       media.insertImageUrl(text);
     }
+  };
+  const pickChart = (chart: V2ChartKind) => {
+    const page = pageRef.current;
+    if (!page) return;
+    const centre = media.centreWorld();
+    const size = DEFAULT_CHART_SIZE;
+    const node = createChartNode(page, {
+      id: mintV2Id('node'), chart, size,
+      at: { x: centre.x - size.width / 2, y: centre.y - size.height / 2 },
+      ...(chart === 'pie' || chart === 'donut' || chart === 'radar' || chart === 'heatmap'
+        ? { data: { categories: ['A', 'B', 'C', 'D', 'E'], series: [{ name: 'Series 1', values: [4, 8, 6, 9, 3] }] } }
+        : {}),
+    });
+    session.commit({
+      kind: 'insert-node', id: `create-node:${node.id}`, label: 'Add chart',
+      pageId: page.id, index: page.nodes.length, node,
+    });
+    applyConnectorSelection(null);
+    applySelection(replaceSelection([node.id]));
+    setAnnouncement('Chart added.');
   };
   const pickEmoji = (glyph: string) => {
     media.insertEmoji(glyph);
@@ -769,7 +795,7 @@ export function V2EditorPage(): React.JSX.Element {
               onToggleLock={editActions.toggleLock}
               iconsOpen={iconLibrary.open} onIconsOpenChange={iconLibrary.setOpen} onInsertIcon={iconLibrary.insertIcon}
               onInsertImage={pickImageFile} emojiOpen={emojiOpen} onEmojiOpenChange={setEmojiOpen}
-              onPickEmoji={pickEmoji} recentEmoji={preferences.recentEmoji}
+              onPickEmoji={pickEmoji} recentEmoji={preferences.recentEmoji} onPickChart={pickChart}
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
               onZoomTo={camera.zoomTo}
@@ -888,6 +914,10 @@ export function V2EditorPage(): React.JSX.Element {
               />
             ) : null}
             {shortcutsOpen ? <V2Shortcuts onClose={() => setShortcutsOpen(false)} /> : null}
+            {chartPanelNode ? (
+              <V2ChartDataPanel key={chartPanelNode.id} node={chartPanelNode} pageId={page.id}
+                commit={session.commit} onClose={() => setChartPanelOpen(false)} />
+            ) : null}
             {treeOpen ? (
               <V2TreePanel
                 key={page.id}

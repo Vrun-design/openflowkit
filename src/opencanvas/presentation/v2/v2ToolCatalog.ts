@@ -1,14 +1,16 @@
 import {
   IconArrowCurveLeft, IconArrowDown, IconArrowLeft, IconArrowRight, IconArrowUp,
   IconArrowUpRight, IconBolt, IconBookmark, IconBrackets, IconBraces, IconCapsuleHorizontal,
-  IconCircle, IconCircleCheck, IconCircleNumber1, IconCircleX, IconCircles, IconCloud,
-  IconCube, IconCylinder, IconDiamond, IconFile, IconFolder, IconHeart, IconHexagon,
-  IconIdBadge, IconLayersSubtract, IconLayoutBoard, IconLayoutList, IconLayoutSidebarRight,
-  IconMessage, IconMinus, IconNote, IconOval, IconPin, IconPlus, IconPolygon,
-  IconPrism, IconRectangle, IconShape2, IconShape3, IconSquareRounded, IconStar, IconTarget,
-  IconTriangle, IconUser, IconVectorBezier2,
+  IconChartArea, IconChartBar, IconChartDots, IconChartDonut, IconChartLine, IconChartPie,
+  IconChartRadar, IconCircle, IconCircleCheck, IconCircleNumber1, IconCircleX, IconCircles,
+  IconCloud, IconCube, IconCylinder, IconDiamond, IconFile, IconFolder, IconGridDots,
+  IconHeart, IconHexagon, IconIdBadge, IconLayersSubtract, IconLayoutBoard, IconLayoutList,
+  IconLayoutSidebarRight, IconMessage, IconMinus, IconNote, IconOval, IconPin, IconPlus,
+  IconPolygon, IconPrism, IconRectangle, IconShape2, IconShape3, IconSquareRounded, IconStar,
+  IconTable, IconTarget, IconTriangle, IconUser, IconVectorBezier2,
 } from '@tabler/icons-react';
 import type { ConnectorRouteKind } from '../../domain/document/types';
+import type { ChartKind } from '../../domain/nodes/chartNodePresentation';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
 import { IconHighlight, IconPencil } from '@tabler/icons-react';
 
@@ -27,6 +29,7 @@ export type V2Tool =
 
 export type V2ConnectorTool = 'arrow' | 'line' | 'curve' | 'path';
 export type V2InkTool = 'pen' | 'highlighter';
+export type V2ChartKind = ChartKind;
 
 export interface V2ToolConfig {
   /** Last shape picked in the shapes flyout; the `shape` tool draws it. */
@@ -111,6 +114,18 @@ export const CONNECTOR_OPTIONS: readonly ToolOption<V2ConnectorTool>[] = [
 export const INK_OPTIONS: readonly ToolOption<V2InkTool>[] = [
   { id: 'pen', label: 'Pen', icon: IconPencil },
   { id: 'highlighter', label: 'Highlighter', icon: IconHighlight },
+];
+
+export const CHART_OPTIONS: readonly ToolOption<V2ChartKind>[] = [
+  { id: 'table', label: 'Table', icon: IconTable },
+  { id: 'bar', label: 'Bar chart', icon: IconChartBar },
+  { id: 'line', label: 'Line chart', icon: IconChartLine },
+  { id: 'area', label: 'Area chart', icon: IconChartArea },
+  { id: 'scatter', label: 'Scatter plot', icon: IconChartDots },
+  { id: 'pie', label: 'Pie chart', icon: IconChartPie },
+  { id: 'donut', label: 'Donut chart', icon: IconChartDonut },
+  { id: 'radar', label: 'Radar chart', icon: IconChartRadar },
+  { id: 'heatmap', label: 'Heatmap', icon: IconGridDots },
 ];
 
 const CONNECTOR_BY_ID = new Map(CONNECTOR_OPTIONS.map((option) => [option.id, option]));

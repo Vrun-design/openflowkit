@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   IconAlignCenter, IconAlignLeft, IconAlignRight, IconArrowBarToDown, IconArrowBarToUp,
-  IconArrowsVertical, IconChevronDown, IconBold, IconItalic, IconPhoto, IconStrikethrough, IconUnderline,
+  IconArrowsVertical, IconChartBar, IconChevronDown, IconBold, IconItalic, IconPhoto,
+  IconStrikethrough, IconUnderline,
 } from '@tabler/icons-react';
 
 import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalog';
@@ -11,6 +12,8 @@ import type { DocumentCommand } from '../../domain/commands/types';
 import { buildStyleNodesCommand } from '../../domain/commands/styleNodes';
 import { buildSetIconCommand } from '../../domain/commands/iconCommands';
 import { buildSetInkCommand } from '../../domain/commands/inkCommands';
+import { buildSetChartKindCommand } from '../../domain/commands/chartCommands';
+import { CHART_KINDS, type ChartKind } from '../../domain/nodes/chartNodePresentation';
 import { buildSetHeaderCommand } from '../../domain/commands/groupNodes';
 import { resolveArchitectureNodePresentation } from '../../domain/nodes/architectureNodePresentation';
 import { V2IconPicker } from './V2IconPicker';
@@ -53,7 +56,7 @@ interface NodeStylePanelsProps {
   readonly onCommitted: (patch: JsonObject) => void;
 }
 
-type Panel = 'icon' | 'fill' | 'outline' | 'text' | 'ink';
+type Panel = 'icon' | 'fill' | 'outline' | 'text' | 'ink' | 'chart';
 
 const FONT_SIZE_PRESETS = [{ value: 12, label: 'XS' }, { value: 14, label: 'S' }, { value: 18, label: 'M' }, { value: 24, label: 'L' }];
 const PADDING_PRESETS = [{ value: 8, label: 'S' }, { value: 16, label: 'M' }, { value: 24, label: 'L' }];
@@ -88,6 +91,13 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
     ? nodes[0].content.strokeColor : '#334155';
   const inkWidth = typeof nodes[0]?.content.strokeWidth === 'number'
     ? nodes[0].content.strokeWidth : 3;
+  const isChart = nodes.every((node) => node.kind === 'chart');
+  const chartKind = typeof nodes[0]?.content.chart === 'string'
+    ? nodes[0]!.content.chart as ChartKind : 'bar';
+  const commitChart = (kind: ChartKind) => {
+    const command = buildSetChartKindCommand(page, nodeIds, kind);
+    if (command) commit(command);
+  };
   const commitInk = (patch: { strokeColor?: string; strokeWidth?: number }) => {
     const command = buildSetInkCommand(page, nodeIds, patch);
     if (command) commit(command);
@@ -131,6 +141,18 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
           }} />
         </StyleButton>
       ) : null}
+      {isChart ? (
+        <StyleButton label="Chart" open={open === 'chart'} onToggle={() => toggle('chart')} onClose={close}
+          preview={<Icon icon={IconChartBar} />}>
+          <PanelRow label="Type">
+            <ChoiceRow<ChartKind> label="Chart type" value={chartKind} onChange={commitChart}
+              options={CHART_KINDS.map((kind) => ({
+                value: kind,
+                label: kind.charAt(0).toUpperCase() + kind.slice(1),
+              }))} />
+          </PanelRow>
+        </StyleButton>
+      ) : null}
       {isStroke ? (
         <StyleButton label="Ink" open={open === 'ink'} onToggle={() => toggle('ink')} onClose={close}
           preview={<span className="ofk-style-line" style={{ borderTopColor: inkColor, borderTopWidth: Math.min(4, inkWidth) }} />}>
@@ -148,7 +170,7 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
           </PanelRow>
         </StyleButton>
       ) : null}
-      {isStroke ? null : (
+      {isStroke || isChart ? null : (
       <StyleButton label={isText ? 'Background' : 'Fill'} open={open === 'fill'} onToggle={() => toggle('fill')} onClose={close}
         preview={<span className="ofk-style-swatch" data-mixed={fill === null || undefined} data-transparent={fill === 'transparent' || undefined}
           style={fill && fill !== 'transparent' ? { background: fill, borderColor: stroke ?? fill } : undefined} />}>
@@ -182,7 +204,7 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
       </StyleButton>
       )}
 
-      {isStroke ? null : (
+      {isStroke || isChart ? null : (
       <StyleButton label="Outline" open={open === 'outline'} onToggle={() => toggle('outline')} onClose={close}
         preview={<span className="ofk-style-swatch ofk-style-swatch--ring" data-mixed={stroke === null || undefined}
           data-transparent={(stroke === 'transparent' || view('strokeWidth') === 0) || undefined}
@@ -209,7 +231,7 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
       </StyleButton>
       )}
 
-      {isStroke ? null : (
+      {isStroke || isChart ? null : (
       <StyleButton label="Text" open={open === 'text'} onToggle={() => toggle('text')} onClose={close} panelClassName="ofk-style-panel--wide"
         preview={<span className="ofk-style-glyph" style={{ textDecorationColor: textColor ?? undefined }}>A</span>}>
         {isContainer ? (

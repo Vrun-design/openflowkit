@@ -3,7 +3,7 @@ import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { ToastItem } from '../design-system';
 import { V2CameraControls } from './V2CameraControls';
 import { V2CreationToolbar, type V2Tool } from './V2CreationToolbar';
-import type { V2ConnectorTool, V2ToolConfig } from './v2ToolCatalog';
+import type { V2ChartKind, V2ConnectorTool, V2ToolConfig } from './v2ToolCatalog';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
 import { V2DocumentBar } from './V2DocumentBar';
 import type { V2SaveStatus } from './useV2Autosave';
@@ -37,6 +37,7 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly breadcrumb?: readonly { readonly pageId: string; readonly label: string; readonly elementId?: string }[];
   readonly onCrumb?: (crumb: { readonly pageId: string; readonly elementId?: string }) => void;
   readonly onToolChange: (tool: V2Tool) => void;
+  readonly onPickChart: (kind: V2ChartKind) => void;
   readonly toolConfig: V2ToolConfig;
   readonly onPickShape: (shape: ShapeKind) => void;
   readonly onPickConnector: (kind: V2ConnectorTool) => void;
@@ -89,7 +90,7 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
           iconsOpen={props.iconsOpen} onIconsOpenChange={props.onIconsOpenChange} onInsertIcon={props.onInsertIcon}
           onInsertImage={props.onInsertImage} emojiOpen={props.emojiOpen}
           onEmojiOpenChange={props.onEmojiOpenChange} onPickEmoji={props.onPickEmoji}
-          recentEmoji={props.recentEmoji} />
+          recentEmoji={props.recentEmoji} onPickChart={props.onPickChart} />
       )}
       <V2CameraControls
         preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}

@@ -18,6 +18,7 @@ import { PixiJourneyNodeRenderer } from './PixiJourneyNodeRenderer';
 import { PixiMindmapNodeRenderer } from './PixiMindmapNodeRenderer';
 import { PixiSequenceNodeRenderer } from './PixiSequenceNodeRenderer';
 import { PixiWireframeNodeRenderer } from './PixiWireframeNodeRenderer';
+import { PixiChartNodeRenderer } from './PixiChartNodeRenderer';
 import { drawPixiNodeOutline } from './pixiNodeOutline';
 import type { PixiNodeDebugRecord } from './pixiNodeDebug';
 import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
@@ -74,6 +75,7 @@ export class PixiNodeRenderer {
   private readonly journeyRenderer = new PixiJourneyNodeRenderer();
   private readonly sequenceRenderer = new PixiSequenceNodeRenderer();
   private readonly wireframeRenderer: PixiWireframeNodeRenderer;
+  private readonly chartRenderer: PixiChartNodeRenderer;
   private debugRecords: readonly PixiNodeDebugRecord[] = [];
   private editingNodeId: string | null = null;
 
@@ -95,6 +97,7 @@ export class PixiNodeRenderer {
       );
       onMediaReady();
     });
+    this.chartRenderer = new PixiChartNodeRenderer();
     this.wireframeRenderer = new PixiWireframeNodeRenderer((nodeId) => {
       this.debugRecords = this.debugRecords.map((record) =>
         record.id === nodeId ? { ...record, mediaState: 'loaded' } : record
@@ -106,6 +109,7 @@ export class PixiNodeRenderer {
       this.architectureRenderer.media,
       this.wireframeRenderer.media
     );
+    this.labels.addChild(this.chartRenderer.label);
   }
 
   /** Containers are drawn by PixiContainerRenderer; everything else lands here. */
@@ -144,7 +148,8 @@ export class PixiNodeRenderer {
       const canvasHex = numericColorToHex(canvasColor);
       // Family renderers take the node in order; the first one that claims it wins.
       const family = detailLevel === 'overview' ? null
-        : this.architectureRenderer.drawNode(node, matrix, this.graphics, architectureMediaGeneration, canvasHex)
+        : this.chartRenderer.drawNode(node, matrix, this.graphics, canvasHex)
+          ?? this.architectureRenderer.drawNode(node, matrix, this.graphics, architectureMediaGeneration, canvasHex)
           ?? this.classEntityRenderer.drawNode(node, matrix, this.graphics)
           ?? this.mindmapRenderer.drawNode(node, matrix, this.graphics)
           ?? this.journeyRenderer.drawNode(node, matrix, this.graphics)

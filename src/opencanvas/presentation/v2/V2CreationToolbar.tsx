@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import {
+  IconChartBar,
   IconCircle,
   IconHandStop,
   IconHighlight,
@@ -19,12 +20,12 @@ import { V2IconPicker } from './V2IconPicker';
 import { V2EmojiPicker } from './V2EmojiPicker';
 import { FlyoutButton } from './V2Flyout';
 import {
-  CONNECTOR_OPTIONS, INK_OPTIONS, SHAPE_OPTIONS, connectorOption, shapeOption,
-  type V2ConnectorTool, type V2InkTool, type V2Tool, type V2ToolConfig,
+  CHART_OPTIONS, CONNECTOR_OPTIONS, INK_OPTIONS, SHAPE_OPTIONS, connectorOption, shapeOption,
+  type V2ChartKind, type V2ConnectorTool, type V2InkTool, type V2Tool, type V2ToolConfig,
 } from './v2ToolCatalog';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
 
-type V2FlyoutId = 'shapes' | 'connector' | 'ink';
+type V2FlyoutId = 'shapes' | 'connector' | 'ink' | 'charts';
 
 export type { V2Tool, V2ToolConfig, V2ConnectorTool, V2InkTool };
 
@@ -48,6 +49,8 @@ export function V2CreationToolbar(props: {
   readonly onEmojiOpenChange: (open: boolean) => void;
   readonly onPickEmoji: (glyph: string) => void;
   readonly recentEmoji: readonly string[];
+  /** A chart pick inserts the chart; there is no armed chart tool. */
+  readonly onPickChart: (kind: V2ChartKind) => void;
 }): React.JSX.Element {
   // Each picker anchors to its own trigger: the popover opens at the button's
   // height and, more importantly, focus returns to a real button when it closes.
@@ -86,6 +89,10 @@ export function V2CreationToolbar(props: {
           selectedId={props.toolConfig.connector} onPick={props.onPickConnector} />
         <span className="ofk-v2-tools-separator" aria-hidden="true" />
         {plain('text', 'Text', 'T', IconTypography)}
+        <FlyoutButton label="Charts" shortcut="C" icon={<Icon icon={IconChartBar} />}
+          selected={flyout === 'charts'} open={flyout === 'charts'}
+          onOpenChange={setFlyoutOpen('charts')} options={CHART_OPTIONS}
+          selectedId={'bar' as V2ChartKind} onPick={props.onPickChart} />
         <FlyoutButton label="Draw" shortcut="P" icon={<Icon icon={ink === 'pen' ? IconPencil : IconHighlight} />}
           selected={props.tool === 'pen' || props.tool === 'highlighter'} open={flyout === 'ink'}
           onOpenChange={setFlyoutOpen('ink')} options={INK_OPTIONS} columns={1}
