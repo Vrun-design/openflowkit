@@ -36,7 +36,7 @@ const searchIcons = async (query: string, limit: number) => {
 
 let grammarPromise: Promise<string> | null = null;
 const loadGrammar = (): Promise<string> => {
-  grammarPromise ??= import('../../../../docs/plan/grammar.md?raw').then((module) => module.default);
+  grammarPromise ??= import('../../../dsl/grammar.md?raw').then((module) => module.default);
   return grammarPromise;
 };
 

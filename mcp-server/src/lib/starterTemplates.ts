@@ -1,7 +1,7 @@
 /**
  * Starter templates that ship with the MCP server so an agent can produce
  * something real without any API key. Each is canonical OpenFlow DSL
- * (docs/plan/grammar.md) that compiles through the same parser the app uses;
+ * (src/dsl/grammar.md) that compiles through the same parser the app uses;
  * the test suite compiles all of them.
  */
 

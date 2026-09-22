@@ -1,5 +1,5 @@
 // Generates the DSL reference page from the canonical grammar
-// (docs/plan/grammar.md). Run by `predev`/`prebuild` so the page can never
+// (src/dsl/grammar.md). Run by `predev`/`prebuild` so the page can never
 // drift from the parser: one grammar, one source.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve } from 'node:path';
@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..');
-const SOURCE = resolve(REPO_ROOT, 'docs', 'plan', 'grammar.md');
+const SOURCE = resolve(REPO_ROOT, 'src', 'dsl', 'grammar.md');
 const OUT_FILE = resolve(HERE, '..', 'src', 'content', 'docs', 'openflow-dsl-reference.md');
 
 const FRONTMATTER = `---
@@ -16,7 +16,7 @@ description: The complete, versioned OpenFlow DSL grammar — families, statemen
 ---
 
 :::note[Generated]
-This page is generated from \`docs/plan/grammar.md\` in the repository by
+This page is generated from \`src/dsl/grammar.md\` in the repository by
 \`npm run generate:dsl\`. Edit the grammar, not this file.
 :::
 

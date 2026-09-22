@@ -122,7 +122,7 @@ export interface DslColorSpec {
   readonly key: string;
 }
 
-// docs/plan/grammar.md §5.1 palette mapped onto PALETTE_KEYS: green is the
+// src/dsl/grammar.md §5.1 palette mapped onto PALETTE_KEYS: green is the
 // theme's emerald, orange its amber, gray its slate, teal its cyan.
 export const COLOR_WORDS: Readonly<Record<string, DslColorSpec>> = {
   blue: { key: 'blue' },

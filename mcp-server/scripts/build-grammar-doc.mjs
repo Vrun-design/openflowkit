@@ -1,4 +1,4 @@
-// Copies the canonical grammar (docs/plan/grammar.md) into mcp-server/data so
+// Copies the canonical grammar (src/dsl/grammar.md) into mcp-server/data so
 // the published package can serve `get_syntax` and the grammar resource without
 // the repository around it. Run by `prebuild`; missing source is tolerated.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, '..', '..');
-const SOURCE = resolve(REPO_ROOT, 'docs', 'plan', 'grammar.md');
+const SOURCE = resolve(REPO_ROOT, 'src', 'dsl', 'grammar.md');
 const OUT_FILE = resolve(HERE, '..', 'data', 'grammar.md');
 
 async function main() {

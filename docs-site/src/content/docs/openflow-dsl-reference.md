@@ -4,7 +4,7 @@ description: The complete, versioned OpenFlow DSL grammar — families, statemen
 ---
 
 :::note[Generated]
-This page is generated from `docs/plan/grammar.md` in the repository by
+This page is generated from `src/dsl/grammar.md` in the repository by
 `npm run generate:dsl`. Edit the grammar, not this file.
 :::
 

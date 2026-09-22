@@ -2,7 +2,7 @@ import { NODE_EXPORT_COLORS, NODE_FILLED_COLORS } from '../../../theme/palettes'
 import type { NodeExportColor } from '../../../theme/types';
 import type { JsonObject } from '../document/json';
 
-// The grammar's palette (docs/plan/grammar.md §5.1) mapped onto the theme
+// The grammar's palette (src/dsl/grammar.md §5.1) mapped onto the theme
 // tables. Swatches write concrete hex into `appearance`; the document never
 // stores palette names, the DSL serializer snaps hex back to a name.
 export type PaletteKey = 'white' | 'slate' | 'blue' | 'emerald' | 'red' | 'amber'

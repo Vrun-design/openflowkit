@@ -38,10 +38,10 @@ docs/en/codebase-audit-*.md
 docs/en/fix-log.md
 docs/en/next-level-roadmap-*.md
 docs/internal
-# Superseded planning/history and generated evidence; current docs stay tracked.
-/docs/archive/
-/docs/evidence/
-# Current specifications and repository authority remain version-controlled.
+# Planning, strategy and evidence are the owner's working notes, not the product.
+# The grammar is NOT here: it lives at src/dsl/grammar.md because the MCP package
+# and the docs site generate from it at build time.
+/docs/
 .claude/scheduled_tasks.lock
 docs-site/.astro/
 

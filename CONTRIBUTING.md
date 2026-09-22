@@ -16,7 +16,7 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 
 ## I Have a Question
 
-> If you want to ask a question, we assume that you have read the available [Documentation](docs/).
+> If you want to ask a question, we assume that you have read the available [Documentation](https://openflowkit.com).
 
 Before you ask a question, it is best to search for existing [Issues](https://github.com/Vrun-design/OpenFlowKit/issues) that might help you. In case you have found a suitable issue and still need clarification, you can write your question in this issue. It is also advisable to search the internet for answers first.
 
@@ -94,7 +94,7 @@ Husky runs `lint-staged` on every commit. It lints changed `.ts` / `.tsx` files 
 
 - **TypeScript everywhere** — avoid `any`; if you must use it, add a comment explaining why.
 - **React 19 Compiler** rules: `useMemo` / `useCallback` dependencies must be stable store references, not inline-constructed objects.
-- **Component size**: aim for ≤ 250 lines per component. Larger components should be split along the layers in [the plan](docs/plan/README.md#4-architecture).
+- **Component size**: aim for ≤ 250 lines per component. Larger components should be split along the layers described in [AGENTS.md](AGENTS.md).
 - **No new runtime dependencies** without opening an issue and getting agreement first.
 
 ---
@@ -123,4 +123,4 @@ Persistence keys (`flowmind_snapshots`, `flowmind-clipboard`, etc.) use a legacy
 
 ## Architecture Reference
 
-Start with [docs/README.md](docs/README.md) for current requirements, architecture, delivery order, and implementation evidence. Root reference files are pointers; archived plans are not instructions.
+Start with [AGENTS.md](AGENTS.md) for the layering and code rules, and [STATE.md](STATE.md) for what is done and what is next.

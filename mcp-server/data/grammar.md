@@ -294,6 +294,7 @@ an arrow treats it as text and warns W111.
 - Header/family: `flowchart architecture sequence state erd class mindmap gitgraph bpmn org
   gantt wireframe chart sankey journey timeline`.
 - Directives: `title direction autonumber legend align`.
+- Motion: `animate` (§6.8); `step` and `hold` are keywords only inside its block.
 - Structure: `group note`.
 - Sequence: `participant activate deactivate loop alt else opt par and break`.
 - State: `state fork join choice`.
@@ -514,8 +515,42 @@ replaces the frame contents as one undo step; nodes whose id is unchanged keep t
 position unless the layout is forced (`⌘⇧↵`) — that is the only persistence of manual
 layout, and it lives in the scene, not the text. Tradeoff: text-only users lose nothing;
 canvas-first users must pin (§7) to make a position survive a fresh generate elsewhere.
+Exception: chart *data* is content, not layout — the chart data panel writes the source, so
+a cell edit regenerates the same chart with the new value (§8.9).
 
 ---
+
+### 6.8 The `animate` block (motion)
+
+Motion is a projection of the text like everything else: a short block names the steps an
+export plays, and an agent can write it. Omitted block = the compiler's `autoSequence`
+(topological order over the connector graph, one step per node).
+
+```
+animate build 10s loop {
+  step a, b            // reveal these nodes together
+  step a -> c : POST   // a step about the edge a -> c; both endpoints show too
+  step c hold 2s       // hold longer than the default beat
+}
+```
+
+- **Header**: `animate <preset> [<duration>] [loop]`. Presets: `build` (cumulative
+  reveal), `walkthrough` (spotlight one step at a time, camera glides), `pulse`
+  (everything shown, connectors carry a travelling light). `<duration>` is `10s` or
+  `8500ms`; the step timings scale to it. Unknown preset → W190, `build` assumed;
+  unreadable duration → W190, natural length used.
+- **Steps**: one per line inside the block. `step <refs…>` reveals nodes (comma-separated
+  refs, the ids as written in the diagram). `step <a> -> <c>` is about that edge and
+  shows both endpoints. `hold <duration>` overrides the step's beat. A label after `:` is
+  the step's note and reads longer by default.
+- **Canonical form**: the header, then one `step` line per step in order, then `}`. Refs
+  joined by `, `; labels quoted only when required (§2.4). The block is emitted after the
+  family body and before trailing comments, for every family. The serializer never
+  invents a block; canvas scrubbing never writes one.
+- **Resolution**: refs are node ids; an edge step resolves to the connectors between the
+  two nodes. An unknown node warns W122 and the step reveals nothing — the text is kept,
+  so round-trip is unaffected.
+- **Diagnostics**: W190 (animate header or step not understood), W103 (unclosed block).
 
 ## 7. Layout hints (survive round-trip, never written by drags)
 
@@ -659,11 +694,31 @@ Unknown branch or commit → W150. Each branch is a lane, each commit a column; 
 circles with the label beneath, `merge` draws a curve from the merged branch's tip, and
 `cherry-pick` a dashed curve from the picked commit.
 
-### 8.9 Later families (header reserved, parsed as flowchart with W105 "family not yet
+### 8.9 chart — implemented (slice 6.9, 2026-09-22)
+```
+chart bar                     // bar | line | area | scatter | pie | donut | radar | heatmap | table | quadrant
+title: Monthly revenue
+Revenue: Jan 12, Feb 19, Mar 9, Apr 22, May 17     // series: category value pairs, one series per line
+Costs: Jan 8, Feb 9, Mar 7, Apr 11, May 12
+
+chart quadrant
+x: Low Effort, High Effort
+y: Low Impact, High Impact
+quadrants: Quick wins, Big bets, Deprioritise, Time sinks
+Feature A [0.32, 0.78]        // point: label [x, y] with x, y in 0–1
+```
+Canonical: the family line keeps the kind (`chart bar`), then `title:`, then one series
+line per series in declaration order (the first line's categories define the axis), or the
+quadrant directives and points. A series line is `Name: Category value, …`; a category with
+spaces is quoted. Chart *data* is the one place where a canvas edit writes text back: the
+chart data panel serializes through `Edit as code` (grammar §6.7), because moving a bar is
+a data edit, not a layout edit. Unknown kinds warn W131 and fall back to `bar`.
+
+### 8.10 Later families (header reserved, parsed as flowchart with W105 "family not yet
 rendered"): `bpmn` (lanes = groups, `[event|task|gateway]` shapes), `org` (edges = reports-to),
 `gantt` (`section`, `Task : 2026-01-01, 5d [done|active|crit|milestone]`), `wireframe`
-(control words), `chart bar|line|pie` (`label : value` rows), `sankey` (`A -> B : 12`),
-`journey` (`section`, `Task : 4 : Actor`), `timeline`.
+(control words), `sankey` (`A -> B : 12`), `journey` (`section`, `Task : 4 : Actor`),
+`timeline`.
 
 ---
 
@@ -805,6 +860,7 @@ test: random bytes → diagnostics only).
 | W160 | unsupported view predicate, kept verbatim | — |
 | W170 | self-edge in a family that cannot draw it (erd, class), dropped | — |
 | W180 | import: construct has no equivalent, dropped (see §11) | — |
+| W190 | animate header or step not understood; defaults used | shows the expected form |
 | E001 | empty document | — |
 | E002 | > 20 000 lines, rest ignored | — |
 | E003 | import: unknown source header | — |
@@ -1583,6 +1639,12 @@ Order ..> Money (depend)  Order "1" --> "*" Item : has (associate + multiplicity
 central: Topic       - Branch [green]        - Child          - Grandchild [icon: users]
 --- gitgraph ---
 commit Label [tag: v1, highlight|revert]   branch name   checkout name   merge name [tag: v2]   cherry-pick label-slug
+--- chart (family: chart <kind>) ---
+chart bar|line|area|scatter|pie|donut|radar|heatmap|table|quadrant
+Revenue: Jan 12, Feb 19        // one series per line: Category value pairs
+chart quadrant:  x: low, high   y: low, high   quadrants: tl, tr, bl, br   Feature A [0.32, 0.78]
+--- animate (motion export; §6.8) ---
+animate build|walkthrough|pulse [10s] [loop] {   step a, b   step a -> c : POST   step c hold 2s }
 --- C4 model (phase 5; today renders as boxes/groups) ---
 model { person P  system S { container C [tech: Go] { component X }  store DB  queue Q }  external E   P -> C : uses [tech: HTTPS] }
 deployment Prod { node AWS [aws/cloud] { node ECS { instance S.C } } }

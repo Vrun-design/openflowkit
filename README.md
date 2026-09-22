@@ -50,7 +50,7 @@ with the last-known-good copy kept for crash recovery.
 
 ## Diagram as code
 
-The language is versioned and written down: **[docs/plan/grammar.md](docs/plan/grammar.md)**.
+The language is versioned and written down: **[src/dsl/grammar.md](src/dsl/grammar.md)**.
 The same text powers the panel, the AI and the MCP tools.
 
 ```
@@ -130,11 +130,10 @@ tools · <kbd>⌘↵</kbd> generate · <kbd>⌥D</kbd> code panel · <kbd>⌘J</
 | `src/dsl/` | grammar, parser, families, compile/serialize, fixtures |
 | `src/agent/` | op registry, MCP bridge protocol, file host, manifest |
 | `mcp-server/` | the published MCP server (`@vrun-design/openflowkit-mcp`) |
-| `docs/plan/` | the plan, the phase files and the grammar |
 | `STATE.md` | what is done, what is next, what is deliberately deferred |
 
 Built in slices with one rule: **the app must boot after every merge.** Methodology and
-code rules live in [AGENTS.md](AGENTS.md) and [docs/plan/README.md](docs/plan/README.md).
+code rules live in [AGENTS.md](AGENTS.md).
 
 ## Contributing & license
 

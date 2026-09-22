@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { grammarAppendix, grammarSection } from '../../../dsl/grammar';
 import { buildDslPrompt, DSL_SYSTEM_PROMPT, extractDsl } from './dslPrompt';
 
-const grammar = readFileSync('docs/plan/grammar.md', 'utf8');
+const grammar = readFileSync('src/dsl/grammar.md', 'utf8');
 
 describe('grammar text helpers', () => {
   it('extracts the cheat-sheet appendix without its fence', () => {

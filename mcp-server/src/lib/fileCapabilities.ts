@@ -21,11 +21,11 @@ async function readText(path: string): Promise<string> {
 }
 
 export function loadGrammar(): Promise<string> {
-  // The build copies docs/plan/grammar.md here (scripts/build-grammar-doc.mjs).
+  // The build copies src/dsl/grammar.md here (scripts/build-grammar-doc.mjs).
   grammarPromise ??= readText(resolve(DATA_DIR, 'grammar.md')).then((text) =>
     text.trim().length > 0
       ? text
-      : 'Grammar unavailable in this install. See docs/plan/grammar.md in the repository.');
+      : 'Grammar unavailable in this install. See src/dsl/grammar.md in the repository.');
   return grammarPromise;
 }
 

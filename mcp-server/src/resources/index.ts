@@ -4,7 +4,7 @@ import { findStarterTemplate, STARTER_TEMPLATES } from '../lib/starterTemplates.
 import { loadGrammar, loadIcons } from '../lib/fileCapabilities.js';
 
 export function registerResources(server: McpServer): void {
-  // The canonical grammar, straight from the repository's docs/plan/grammar.md.
+  // The canonical grammar, straight from the repository's src/dsl/grammar.md.
   server.registerResource(
     'grammar',
     'openflowkit://docs/grammar',

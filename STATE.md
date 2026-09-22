@@ -1,6 +1,6 @@
 # State
 
-Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–6 done (6.6, 6.7, 6.10 partly — see Deferred).
+Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–6 done (6.6, 6.7, 6.10 partly — see Deferred).
 
 ## Now
 - **Phase 7 — motion export: DONE 2026-09-22** (opencode/deepseek-v4.1, order 7.1 → 7.2 → 7.5 →
@@ -37,7 +37,7 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–6 done (6.6, 6.7, 6
   two workers, cause unconfirmed (the bridge is long-poll). Capture the error before fixing it.
 
 ## Next
-- Phase 8 — keyframes/Present ([phase-8-keyframes.md](docs/plan/phase-8-keyframes.md)) when 7 has users.
+- Phase 8 — keyframes/Present (`docs/plan/phase-8-keyframes.md`) when 7 has users.
 - Phase 6 leftovers: 6.6 frames/tools, 6.7 wireframe, 6.10 VoiceOver sweep + export diff.
 
 ## Deferred

@@ -1,9 +1,10 @@
 # Agents: read this, then build
 
-The plan is [docs/plan/README.md](docs/plan/README.md). It is the only plan.
-[STATE.md](STATE.md) says what is done and what is next. Read both, then the
-phase file for the slice you are taking. Everything under `docs/frozen/` and
-`docs/archive/` is history — never instructions.
+The plan lives in `docs/` and is deliberately untracked — it is the owner's
+working copy, not part of the repository. Ask the owner for it if your checkout
+has no `docs/plan/`. [STATE.md](STATE.md) is tracked and says what is done and
+what is next; read it first, then the phase file for the slice you are taking.
+Anything under `docs/frozen/` or `docs/archive/` is history — never instructions.
 
 ## How to work here
 

@@ -47,8 +47,10 @@ const SHARED_KERNEL = [
   path.join(srcDir, 'services', 'workspace'),
 ];
 
-// Data read as text at runtime (the grammar for get_syntax), not code.
-const RAW_DATA_ROOTS = [path.join(srcDir, '..', 'docs')];
+// Data read as text at runtime (the grammar for get_syntax), not code. It sits
+// beside the DSL it specifies because the app bundle, the published MCP package
+// and the docs site all read or generate from that one file.
+const RAW_DATA_ROOTS = [path.join(srcDir, 'dsl')];
 
 
 function sourceFiles(dir: string): string[] {
@@ -101,8 +103,10 @@ function isAllowedImport(specifier: string, fromFile: string): boolean {
   if (specifier.endsWith('.css')) return true;
   if (specifier.endsWith('?raw')) {
     const absolute = resolveLocal(specifier.slice(0, -'?raw'.length), fromFile);
-    // Docs are data, not code: raw imports may only reach into docs/.
-    return absolute === null || RAW_DATA_ROOTS.some((root) => under(absolute, root));
+    if (absolute === null) return true;
+    // Markdown is data, not code. The roots sit inside src/ now, so the
+    // extension is what stops this becoming a way to raw-import a module.
+    return absolute.endsWith('.md') && RAW_DATA_ROOTS.some((root) => under(absolute, root));
   }
   const absolute = resolveLocal(specifier, fromFile);
   if (!absolute) return true;

@@ -1,4 +1,4 @@
-// Text helpers over the canonical grammar (docs/plan/grammar.md): the two
+// Text helpers over the canonical grammar (src/dsl/grammar.md): the two
 // views non-readers need — one family's section, and the cheat-sheet appendix
 // agents and prompts are written against.
 
