@@ -1,59 +1,39 @@
 # State
-
-Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–6 done (6.6, 6.7, 6.10 partly — see Deferred).
+Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on hold; 6.6, 6.7, 6.10 partly — see Deferred).
 
 ## Now
-- **Phase 10 — BYOK expansion: IN PROGRESS 2026-09-22** (opencode/deepseek-v4.1). 10.1 catalogue
-  `src/services/ai/providers.ts` (ten entries, three wires); 10.2 `_headers` fixed; 10.3+10.4
-  three adapters in `provider.ts` (Gemini generateContent; one OpenAI client for eight
-  providers; quirks are catalogue fields). 10.3 and 10.4 landed together on purpose: adding the
-  Gemini adapter while the old two-provider client existed would have left two OpenAI clients.
-  **10.2 decision — (a) widen `connect-src` to `https: http://localhost:* http://127.0.0.1:* ws://localhost:*`**
-  and record the cost: the CSP no longer limits exfiltration targets. Accepted because
-  `img-src … https:` already allowed beacons to any https origin and `script-src 'unsafe-inline'
-  'unsafe-eval'` already neuters CSP against XSS, so the allowlist was never the key's guard;
-  `custom` working beats a lock that does not lock. Cost of the test: a new **https** provider
-  passes without its origin being named; a new http (non-local) provider still fails it.
-  Removed posthog, `signaling.yjs.dev` and dead `wss://*.openflowkit.com`.
-- **Phase 7 — motion export: DONE 2026-09-22** (opencode/deepseek-v4.1). One pure Timeline
-  (`domain/animation`) feeds the preview, stills, animated SVG and every video frame; the
-  `animate` block round-trips. GIF/MP4/WebM encode in a worker; MCP `export` serves all four
-  plus `svg-animated`. 7.8 paints plain pages in the worker's own canvas: 500 nodes × 451
-  frames @1080p30 went 30.7 s → 3.1 s wall. Chart, ink, image, annotation and text pages keep
-  the SVG raster. Commits `cfcda9c`…`1ac1a47`. Unknown: a 500-node export on a slower machine.
-- **Coverage sweep + 2.0.0 release 2026-09-22** (Claude Opus 5). Specced the editing shortcuts
-  nothing exercised — `arrange`, `clipboard`, `transform`, `waypoints` specs on a shared
-  `e2e/helpers.ts`. Fixed: `buildMoveNodesCommand` moved locked nodes (keyboard nudge *and* the
-  agent `move` op); the cheatsheet said Alt for snap bypass where the code reads ⌘. Untracked
-  `docs/`, moved the grammar to `src/dsl/grammar.md` (the app, the MCP package and the docs site
-  all build from it), deleted 72MB of unreferenced assets and four docs pages describing features
-  that do not exist. Tagged `v2.0.0`; MCP server stays on its own line at 0.2.0.
-- Verified: typecheck, lint, 1473 unit tests, 75/75 headed Playwright, app + docs-site builds.
+- **Phase 9 — documentation rebuild: 9.1 DONE 2026-09-22** (opencode/deepseek-v4.1; order
+  9.1 → 9.6). `docs-site/inventory.json` = the feature truth: 115 rows, every `shipped` row
+  carries file:line, absence is explicit (collaboration/share, infra-sync, flowpilot, GitHub
+  embed, 6.6/6.7, slides/Present, keyframes, command center, diff, snapshots, structured
+  imports, Figma, lint rules, design systems, hand-drawn ink, canvas re-layout). `partial`:
+  PDF (print dialog), drift (name+tech), BYOK (frozen until phase 10), canvas perf.
+  `docs-site/inventory.test.ts` proves evidence files exist and that every `v2Shortcuts.ts`
+  row, every agent op and every implemented/reserved family is claimed.
+  Next 9.2: compile every ```` ```openflow ```` block with the real parser + `canonicalSvg` at
+  docs build time; a broken block fails the docs build naming file and line.
+- **Phase 7 — motion export: DONE 2026-09-22.** One pure Timeline feeds the preview, the stills,
+  the animated SVG and every video frame; GIF/MP4/WebM encode in a worker; MCP `export` serves
+  all four plus `svg-animated`. 7.8: the worker paints plain pages itself (500 nodes × 451
+  frames @1080p30: 30.7 s → 3.1 s wall). Unknown: a 500-node export on a slower machine.
+- **Coverage sweep 2026-09-22** (Opus 5): `e2e/arrange|clipboard|transform|waypoints.spec.ts`;
+  fixed locked nodes moving via `buildMoveNodesCommand` and the cheatsheet's Alt-vs-⌘ snap claim.
 
 ## Ceilings (`// ponytail:` in code)
-- Motion: whole SVG re-emitted per export (~1 MB at 500 nodes); dashed connectors fade rather than
-  draw on; chart/ink/image/annotation/text pages fall back to the SVG raster (text on purpose — its
-  webfont key is invisible to an `<img>` SVG); GIF is 256 colours ≤ 20 fps; steps are text, so no
-  keyframes, camera paths or audio until phase 8.
-- Four older e2e specs still carry their own `emptyPoint`; fold them into `e2e/helpers.ts` when one
-  next needs editing. No coverage for frames/wireframe (6.6/6.7, unbuilt).
-- Docs carry sentence-level fiction the page deletions did not reach (e.g. `choose-export-format`
-  still offers share/embed). Phase 9.1's inventory is what finds the rest.
-- `agent-live` failed once in three full headed sweeps and passes alone every time — a flake under
-  two workers, cause unconfirmed (the bridge is long-poll). Capture the error before fixing it.
-
+- Whole SVG re-emitted per export; one `@keyframes` per element (~1 MB at 500 nodes).
+- Any chart, ink, image, annotation or text node sends every frame back to the SVG raster.
+- GIF: 256 colours, ≤ 20 fps, palette from the finished diagram. No custom keyframes, camera
+  paths, audio or per-element timing (phase 8).
+- `agent-live` flaked once in three full headed sweeps and passes alone; cause unconfirmed.
+- Docs carry sentence-level fiction until phase 9 deletes it (e.g. `choose-export-format` still
+  offers share/embed); 9.1's inventory is what finds the rest.
 ## Next — owner's order, 2026-09-22
-- **Phase 9 — documentation rebuild** (`docs/plan/phase-9-docs.md`, run with
-  `prompt-phase-9.md`). Docs regenerated against a verified feature inventory; every example
-  compiled by the real parser so a stale page fails the build. English only, `tr/` dropped.
-- **Phase 10 — BYOK expansion** (`docs/plan/phase-10-byok.md`, run with `prompt-phase-10.md`).
-  Ten providers on three wire formats, and the CSP fixed: `connect-src` omits NVIDIA and
-  localhost today, so those calls are blocked by our own header and look exactly like CORS.
-  It also still allows posthog and `signaling.yjs.dev` against a no-telemetry promise.
-- **On hold** (owner, 2026-09-22): phase 7b film look, phase 8 keyframes/Present. Both specs
-  stay written; neither starts until 9 and 10 land.
+- **Phase 9** as above. **Phase 10 — BYOK** (`docs/plan/phase-10-byok.md`): CSP omits NVIDIA and
+  localhost so those calls are blocked by our own header, and still allows posthog and
+  `signaling.yjs.dev` against a no-telemetry promise.
+- **On hold**: phase 7b film look, phase 8 keyframes/Present. Both specs stay written.
 - Phase 6 leftovers: 6.6 frames/tools, 6.7 wireframe, 6.10 VoiceOver sweep + export diff.
 
 ## Deferred
-- Phase 6 6.6/6.7 as above; chart data panel commits per blur; image aspect lock is Shift-lock.
-- `drift` matches by name/tech only; PDF = print dialog; no zip export; bridge is long-poll.
+- PDF = print dialog; no zip export; bridge is long-poll; chart data panel commits per blur;
+  image aspect lock is Shift-lock; V2Settings still captions Alt for snap bypass (dispatcher reads ⌘).
