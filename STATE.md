@@ -3,6 +3,15 @@
 Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–6 done (6.6, 6.7, 6.10 partly — see Deferred).
 
 ## Now
+- **Phase 10 — BYOK expansion: IN PROGRESS 2026-09-22** (opencode/deepseek-v4.1). 10.1 catalogue
+  `src/services/ai/providers.ts` (ten entries, three wires); 10.2 `_headers` fixed.
+  **10.2 decision — (a) widen `connect-src` to `https: http://localhost:* http://127.0.0.1:* ws://localhost:*`**
+  and record the cost: the CSP no longer limits exfiltration targets. Accepted because
+  `img-src … https:` already allowed beacons to any https origin and `script-src 'unsafe-inline'
+  'unsafe-eval'` already neuters CSP against XSS, so the allowlist was never the key's guard;
+  `custom` working beats a lock that does not lock. Cost of the test: a new **https** provider
+  passes without its origin being named; a new http (non-local) provider still fails it.
+  Removed posthog, `signaling.yjs.dev` and dead `wss://*.openflowkit.com`.
 - **Phase 7 — motion export: DONE 2026-09-22** (opencode/deepseek-v4.1). One pure Timeline
   (`domain/animation`) feeds the preview, stills, animated SVG and every video frame; the
   `animate` block round-trips. GIF/MP4/WebM encode in a worker; MCP `export` serves all four
