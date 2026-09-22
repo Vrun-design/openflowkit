@@ -51,22 +51,6 @@ describe('google wire', () => {
     });
     expect(text).toBe('flowchart\n  A -> B');
   });
-
-  it('reads its error envelope and still says something actionable', async () => {
-    const fetchMock = vi.fn(async () => fail(400, JSON.stringify({
-      error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT' },
-    })));
-    vi.stubGlobal('fetch', fetchMock);
-    const provider = createProvider({ provider: 'gemini', apiKey: 'sk-bad' });
-    const error = await provider.complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught);
-    expect(error).toBeInstanceOf(AiProviderError);
-    expect((error as AiProviderError).status).toBe(400);
-    vi.unstubAllGlobals();
-  });
-
-  it('completes a prompt sent through the openai-wire shape by refusing a model-less custom call', async () => {
-    expect(() => createProvider({ provider: 'custom', apiKey: KEY })).toThrow(/endpoint URL/);
-  });
 });
 
 describe('openai wire', () => {
@@ -126,35 +110,91 @@ describe('openai wire', () => {
 
 describe('failures and secrets', () => {
   it('maps the statuses that matter and never repeats the provider body', async () => {
-    const cases: [number, RegExp][] = [
-      [401, /rejected the key/],
-      [403, /rejected the key/],
-      [404, /did not find that model/],
-      [429, /Rate limited/],
-      [503, /server error \(503\)/],
+    const cases: [number, RegExp, string][] = [
+      [401, /rejected the key/, 'bad-key'],
+      [403, /rejected the key/, 'bad-key'],
+      [404, /did not find the model/, 'bad-model'],
+      [429, /rate limiting this key/, 'rate-limited'],
+      [503, /server error \(503\)/, 'provider-down'],
     ];
-    for (const [status, pattern] of cases) {
+    for (const [status, pattern, cause] of cases) {
       vi.stubGlobal('fetch', vi.fn(async () => fail(status, JSON.stringify({ error: { message: `Incorrect API key provided: ${KEY}` } }))));
       const provider = createProvider({ provider: 'openai', apiKey: KEY });
-      const error = await provider.complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught as AiProviderError);
-      expect((error as AiProviderError).message, String(status)).toMatch(pattern);
-      expect((error as AiProviderError).message, String(status)).not.toContain(KEY);
-      expect((error as AiProviderError).message, String(status)).not.toContain('sk-secret');
+      const error = (await provider.complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught)) as AiProviderError;
+      expect(error.message, String(status)).toMatch(pattern);
+      expect(error.cause, String(status)).toBe(cause);
+      expect(error.message, String(status)).not.toContain(KEY);
+      expect(error.message, String(status)).not.toContain('sk-secret');
       vi.unstubAllGlobals();
     }
   });
 
-  it('turns a rejected fetch into a diagnosis, not a TypeError', async () => {
+  it('doctors a Gemini API_KEY_INVALID 400 into a bad key', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => fail(400, JSON.stringify({ error: { code: 400, message: 'API key not valid. Please pass a valid API key.', status: 'INVALID_ARGUMENT' } }))));
+    const provider = createProvider({ provider: 'gemini', apiKey: 'sk-bad' });
+    const error = (await provider.complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught)) as AiProviderError;
+    expect(error.cause).toBe('bad-key');
+    expect(error.message).toContain('https://aistudio.google.com/app/apikey');
+    vi.unstubAllGlobals();
+  });
+
+  it('turns a rejected fetch into a browser-refused diagnosis, not a TypeError', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError(`failed to fetch ${KEY}`); }));
     const provider = createProvider({ provider: 'openai', apiKey: KEY });
     const error = (await provider.complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught)) as AiProviderError;
     expect(error).toBeInstanceOf(AiProviderError);
+    expect(error.cause).toBe('blocked-by-browser');
     expect(error.message).not.toContain(KEY);
     vi.unstubAllGlobals();
   });
 
+  it('reports our own CSP when a connect-src violation fires, and names the origin', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      const violation = Object.assign(new Event('securitypolicyviolation'), {
+        effectiveDirective: 'connect-src', blockedURI: 'https://api.openai.com',
+      });
+      document.dispatchEvent(violation);
+      throw new TypeError('Failed to fetch');
+    }));
+    const provider = createProvider({ provider: 'openai', apiKey: KEY });
+    const error = (await provider.complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught)) as AiProviderError;
+    expect(error.cause).toBe('blocked-by-browser');
+    expect(error.origin).toBe('https://api.openai.com');
+    expect(error.message).toContain('security policy blocked https://api.openai.com');
+    vi.unstubAllGlobals();
+  });
+
+  it('reports offline when the browser knows it is offline', async () => {
+    const onLine = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine');
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+    const provider = createProvider({ provider: 'openai', apiKey: KEY });
+    const error = (await provider.complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught)) as AiProviderError;
+    expect(error.cause).toBe('offline');
+    vi.unstubAllGlobals();
+    if (onLine) Object.defineProperty(Navigator.prototype, 'onLine', onLine);
+  });
+
+  it('treats a timeout as a down endpoint, and passes AbortError through untouched', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new DOMException('The operation timed out.', 'TimeoutError'); }));
+    const provider = createProvider({ provider: 'openai', apiKey: KEY });
+    const error = (await provider.complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught)) as AiProviderError;
+    expect(error.cause).toBe('provider-down');
+    expect(error.message).toMatch(/30 seconds/);
+    vi.unstubAllGlobals();
+
+    const abort = new DOMException('aborted', 'AbortError');
+    vi.stubGlobal('fetch', vi.fn(async () => { throw abort; }));
+    await expect(provider.complete({ system: 's', prompt: 'p' })).rejects.toBe(abort);
+    vi.unstubAllGlobals();
+  });
+
   it('refuses to build a keyed provider without a key, and Ollama without anything', () => {
-    expect(() => createProvider({ provider: 'openai', apiKey: '  ' })).toThrow(/API key/);
+    const missing = (() => { try { createProvider({ provider: 'openai', apiKey: '  ' }); } catch (error) { return error; } return null; })() as AiProviderError;
+    expect(missing).toBeInstanceOf(AiProviderError);
+    expect(missing.cause).toBe('not-configured');
+    expect(missing.message).toMatch(/API key/);
+    expect(() => createProvider({ provider: 'custom', apiKey: KEY })).toThrow(/endpoint URL/);
     expect(createProvider({ provider: 'ollama', apiKey: '' }).endpoint).toBe('http://localhost:11434/v1/chat/completions');
   });
 });

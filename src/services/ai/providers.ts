@@ -34,6 +34,8 @@ export interface AiProviderDefinition {
   readonly maxTokensParam?: 'max_tokens' | 'max_completion_tokens';
   /** Extra request headers the provider asks for (OpenRouter attribution). */
   readonly extraHeaders?: Readonly<Record<string, string>>;
+  /** The provider-specific fix when the browser refuses the call. */
+  readonly corsFix?: 'ollama-origins';
 }
 
 export const RISK_LABELS: Readonly<Record<ProviderRisk, string>> = {
@@ -132,6 +134,7 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
     consoleUrl: 'https://ollama.com/download', consoleName: 'Ollama',
     logoPath: '/logos/ollama.svg', risk: 'browser_friendly',
     hint: "Local daemon. Start it with OLLAMA_ORIGINS='*' ollama serve.",
+    corsFix: 'ollama-origins',
   },
   {
     id: 'custom', label: 'Custom', wire: 'openai',
