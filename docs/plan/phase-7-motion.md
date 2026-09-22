@@ -144,6 +144,7 @@ writes code. `manifest.ts` + `get_syntax` updated in the same slice.
 | 7.5 | Export dialog Animation section + step chips (reorder/merge/hold → `animate` block) + preview + scrubber | headed check above; chips edit round-trips to code; VoiceOver pass on the dialog | ✅ 2026-09-22 `4dc8d32` `5c9e46e` |
 | 7.6 | MCP `export` formats; docs page "Animated export" with the format table from §1 | `npm test -w mcp-server`; the README gains one animated SVG | ✅ 2026-09-22 `d2b3fdc` |
 | 7.7 | Audit: play each format in GitHub README, Slack, Notion, X, Keynote; size table; a11y | findings fixed, ceilings marked `// ponytail:` | ✅ 2026-09-22 (GitHub + browser playback verified; Slack/Notion/X/Keynote assumed — STATE.md) |
+| 7.8 | Frame renderer: draw frames with Canvas2D instead of rasterising SVG, so the last 32 ms gap closes | parity ≤2 % vs the SVG still; 500 nodes × 450 frames with no blocking task and <5 % late frames | ⏳ owner call 2026-09-22 |
 
 ## 4. Ceilings (deliberate, marked in code)
 
@@ -160,3 +161,96 @@ writes code. `manifest.ts` + `get_syntax` updated in the same slice.
 2. On-canvas **Present** button: phase 8, not here.
 3. No watermark.
 4. Ship order: 7.1 → 7.2 → 7.5 (SVG-only, visible early) → 7.3 → 7.4 → 7.6 → 7.7.
+
+---
+
+## 8. Slice 7.8 — frame renderer (uplift, owner call 2026-09-22)
+
+**Why.** The 32 ms bar is met for normal pages and missed at 500 nodes: browsers rasterise
+SVG only on the main thread (`createImageBitmap(svgBlob)` throws in a worker — verified in
+Chrome), so a 500-node frame at 1080p costs ~100 ms of raster time in the same process as
+the visible canvas. Measured today: 450 frames in 30.5 s, ~20 % of animation frames late,
+1–6 blocking tasks of 60–100 ms (the rasteriser, never our JS). Phase 8 makes *every* frame
+a changed frame, so the current "reuse the canvas while the picture is unchanged" trick
+(`frameSignature` in `motion.worker.ts`) stops helping and exports get slower on the same
+code. This slice builds the frame primitive phase 8 needs anyway, and deletes the ceiling.
+
+**What ships**
+
+- `domain/animation/drawList.ts` (pure TS, unit-tested beside it): `frameDrawList(page,
+  frameState, theme) → DrawOp[]` — an ordered, renderer-neutral list (`rect`, `path`,
+  `text`, `image`) carrying geometry, fill/stroke, dash, opacity and the pop scale. Order and
+  geometry come from the same resolvers `canonicalSvg` and Pixi already read:
+  `resolveNodeStyle`, `resolveBasicNodePresentation` + `basicNodeOutlinePoints` +
+  `basicNodeDecorations`, `resolveContainerNodePresentation`, `resolveFreeformNodePresentation`
+  (text), `projectPageConnectors` (commands, samples, labels, markers), `nodeWorldBounds`.
+  Nothing new is invented; the list is a projection of the presentation layer.
+- `infrastructure/export/framePainter.ts`: `paintFrame(ctx, ops, viewBox, scale)` — a thin
+  executor, no logic of its own. The worker calls it with its `OffscreenCanvas`; the
+  MediaRecorder WebM fallback calls it with a real canvas (its `captureStream` needs one).
+- Hybrid scope: canvas draws plain nodes (everything `resolveBasicNodePresentation` resolves,
+  including the shape library), containers/groups, text, connectors + labels + markers.
+  **Any other node kind (charts, ink, images, annotations) puts the whole frame back on the
+  SVG raster path** — one rule, no per-kind negotiation, and a `// ponytail:` note.
+- Worker: for canvas frames there is no main-thread round trip at all — `start` → draw →
+  encode → `done`. The existing `svg`/`frame`/`frame-done` protocol stays for fallback frames.
+  `frameSignature` stays (it now saves draw calls, not rasters).
+- Delete `decodeFrame`'s per-frame `requestAnimationFrame` yield for canvas frames. Keep the
+  SVG path intact: the animated SVG file, the stills, the dialog preview and
+  `prefers-reduced-motion` are untouched, so every existing golden stays green.
+
+**Acceptance (all must be evidence, run headed where stated)**
+
+1. **Parity is the law**: the canvas frame and the SVG still, rasterised through the same
+   path, differ by ≤2 % of pixels at 1080p for the same timeline time — on a plain
+   nodes+connectors fixture *and* the shape-library fixture, at three times, two presets.
+   New test hook: `__V2__.getMotionFrameCanvas(tMs)` returns a PNG data URL of the painted
+   frame (read-only, like `getMotionExport`).
+2. **The gap closes**: 500 nodes × 450 frames, 1080p, 30 fps (the existing
+   `e2e/motion-encode.spec.ts` case): no blocking task over 32 ms, median rAF < 32 ms,
+   <5 % of frames late (today ~20 %), and the wall time printed (today 30.5 s).
+3. **No regression**: the realistic-page case still shows ≤1 late frame and no blocking
+   task; `e2e/motion-svg.spec.ts`, `motion-dialog.spec.ts`, `motion-audit.spec.ts`,
+   `phase-4` and `phase-5` stay green; unit suite green.
+4. A page with one chart (or ink) still exports correctly through the fallback — a unit test
+   asserts the frame is marked as a fallback frame, and one headed export proves it.
+
+**Traps already paid for (do not rediscover)**
+
+- `createImageBitmap(svgBlob)` in a worker: `InvalidStateError`. SVG rasterisation is
+  main-thread-only; that is the whole reason for this slice.
+- Scaling must happen about the **node centre**, and `transform-box: fill-box` can shave a
+  stroke's outer half-pixel in Chrome. The SVG path uses `transform-origin: 0 0` plus
+  `translate(c) scale(s) translate(-c)`; the canvas renderer must scale about the same point
+  (`ctx.translate/scale` around the node's local centre, inside the world matrix).
+- `transform-box: view-box` with `transform-origin: 0 0` behaves exactly like an SVG
+  `transform` attribute (user-space origin). The camera is `cameraFitMatrix(camera, viewBox)`
+  from `domain/animation/camera`; apply the same matrix to the canvas.
+- The still-vs-animated parity technique in `e2e/motion-svg.spec.ts` (shift every
+  `animation-delay` by `-t` and add `animation-play-state: paused`) works and is exact; reuse
+  it for the SVG side of the new parity test.
+- Scene node ids are slugified labels (`n0_0` → `n0-0`). Test fixtures must use ids that
+  survive slugification, or the animate block silently reveals nothing (this cost a false
+  perf run).
+- `Button` sets `aria-pressed={selected}`; pass `selected`, never `aria-pressed`.
+- The export popover closes on an outside pointerdown: in headed tests, zoom the canvas with
+  a wheel, never drag it, while the dialog is open.
+- `mediabunny`: `new Output({ format: new Mp4OutputFormat() | new WebMOutputFormat(), target:
+  new BufferTarget() })`, `new CanvasSource(canvas, { codec: 'avc' | 'vp9', bitrate,
+  keyFrameInterval })`, `output.addVideoTrack(source, { frameRate })`, `await output.start()`,
+  `await source.add(seconds, durationSeconds)`, `await output.finalize()`,
+  `output.target.buffer`. `gifenc`: `quantize(rgba, 256, { format: 'rgb565' })`,
+  `applyPalette(rgba, palette, 'rgb565')`, `GIFEncoder()`,
+  `writeFrame(index, w, h, { palette, delay })` (delay in ms), `finish()`, `bytes()`.
+- Keep the worker's `frame-done` ack discipline: frames must be encoded in order and the
+  worker must not be handed the next frame before the previous one is written.
+
+**Ceilings to mark**
+
+- Per-frame fallback: one chart or ink stroke in a page sends the whole frame back to the SVG
+  raster. Upgrade = per-node SVG raster cache for the exotic kinds only.
+- Text metrics differ from the SVG's system stack by a pixel or two, which is why parity is
+  a tolerance, not a byte compare. Upgrade = ship a font, or measure once per label and
+  cache the width.
+- No per-element raster cache: a frame is redrawn whole. Upgrade = cache element rasters
+  keyed by their `frameAt` state when Present mode needs it.
