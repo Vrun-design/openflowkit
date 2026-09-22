@@ -4,7 +4,10 @@ Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–6 done (6.6, 6
 
 ## Now
 - **Phase 10 — BYOK expansion: IN PROGRESS 2026-09-22** (opencode/deepseek-v4.1). 10.1 catalogue
-  `src/services/ai/providers.ts` (ten entries, three wires); 10.2 `_headers` fixed.
+  `src/services/ai/providers.ts` (ten entries, three wires); 10.2 `_headers` fixed; 10.3+10.4
+  three adapters in `provider.ts` (Gemini generateContent; one OpenAI client for eight
+  providers; quirks are catalogue fields). 10.3 and 10.4 landed together on purpose: adding the
+  Gemini adapter while the old two-provider client existed would have left two OpenAI clients.
   **10.2 decision — (a) widen `connect-src` to `https: http://localhost:* http://127.0.0.1:* ws://localhost:*`**
   and record the cost: the CSP no longer limits exfiltration targets. Accepted because
   `img-src … https:` already allowed beacons to any https origin and `script-src 'unsafe-inline'

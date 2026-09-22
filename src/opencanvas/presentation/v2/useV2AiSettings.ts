@@ -1,7 +1,7 @@
 // AI settings: provider, key, base URL and model. Local only — written to
 // localStorage on this machine, sent only to the provider the user picked.
 import { useCallback, useState } from 'react';
-import { AI_PROVIDERS, type AiProviderId } from '../../../services/ai/provider';
+import { AI_PROVIDERS, isConfigured, providerById, type AiProviderId } from '../../../services/ai/providers';
 
 export interface V2AiSettings {
   provider: AiProviderId;
@@ -11,7 +11,7 @@ export interface V2AiSettings {
 }
 
 const KEY = 'openflowkit-v2-ai';
-const DEFAULTS: V2AiSettings = { provider: 'anthropic', apiKey: '', baseUrl: '', model: '' };
+const DEFAULTS: V2AiSettings = { provider: 'claude', apiKey: '', baseUrl: '', model: '' };
 
 function read(): V2AiSettings {
   try {
@@ -37,5 +37,5 @@ export function useV2AiSettings() {
       return next;
     });
   }, []);
-  return { settings, update, configured: settings.apiKey.trim().length > 0 };
+  return { settings, update, configured: isConfigured(providerById(settings.provider), settings) };
 }

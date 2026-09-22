@@ -3,7 +3,7 @@
 // persists. The key stays in localStorage and is sent only to that provider.
 import { useEffect, useRef, useState } from 'react';
 import { IconChevronDown } from '@tabler/icons-react';
-import { AI_PROVIDERS, type AiProviderId } from '../../../services/ai/provider';
+import { AI_PROVIDERS, type AiProviderId } from '../../../services/ai/providers';
 import { Button, Dialog, Field, Icon, Segmented } from '../design-system';
 import type { V2AiSettings } from './useV2AiSettings';
 
@@ -39,7 +39,7 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
           onChange={(provider) => patch({ provider })}
           options={AI_PROVIDERS.map(({ id, label }) => ({ value: id, label }))} />
         <Field label="API key" hint={definition.hint} type="password" autoComplete="off" spellCheck={false}
-          ref={keyInput} value={draft.apiKey} placeholder="sk-…" onChange={(event) => patch({ apiKey: event.target.value })} />
+          ref={keyInput} value={draft.apiKey} placeholder={definition.keyPlaceholder} onChange={(event) => patch({ apiKey: event.target.value })} />
         <details className="ofk-connection-details" open={Boolean(draft.baseUrl || draft.model) || undefined}>
           <summary>Endpoint and model<Icon icon={IconChevronDown} /></summary>
           <div className="ofk-v2-provider-advanced">

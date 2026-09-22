@@ -1,8 +1,10 @@
-// BYOK provider clients. Two wire formats cover the field: Anthropic's
-// messages API and every OpenAI-compatible endpoint (OpenAI, OpenRouter,
-// Groq, Together, Ollama, LM Studio, vLLM…). Keys never leave this module's
-// request headers: nothing is logged, stored or echoed.
-export type AiProviderId = 'anthropic' | 'openai';
+// BYOK provider clients. Three wire formats cover all ten catalogue entries
+// (providers.ts): Anthropic messages, OpenAI chat completions, Google
+// generateContent. Provider differences are read from the catalogue, not
+// branched on here. Keys never leave this module's request headers: nothing is
+// logged, stored or echoed — including provider error bodies, which can quote
+// a key back at us.
+import { providerById, type AiProviderDefinition, type AiProviderId } from './providers';
 
 export interface AiProviderConfig {
   readonly provider: AiProviderId;
@@ -26,17 +28,6 @@ export interface AiProvider {
   complete(request: AiCompletionRequest): Promise<string>;
 }
 
-export const AI_PROVIDERS: readonly { readonly id: AiProviderId; readonly label: string; readonly defaultBaseUrl: string; readonly defaultModel: string; readonly hint: string }[] = [
-  {
-    id: 'anthropic', label: 'Anthropic', defaultBaseUrl: 'https://api.anthropic.com', defaultModel: 'claude-sonnet-4-5',
-    hint: 'Key from console.anthropic.com',
-  },
-  {
-    id: 'openai', label: 'OpenAI-compatible', defaultBaseUrl: 'https://api.openai.com', defaultModel: 'gpt-4o-mini',
-    hint: 'Any /v1/chat/completions endpoint: OpenAI, OpenRouter, Groq, Ollama…',
-  },
-];
-
 export class AiProviderError extends Error {
   readonly status: number | null;
   readonly retryable: boolean;
@@ -51,7 +42,7 @@ export class AiProviderError extends Error {
 
 const trimSlash = (value: string): string => value.replace(/\/+$/, '');
 
-/** Answers the question users actually have when a call fails. */
+/** Answers the question users actually have when a call fails. Never includes the provider's raw body. */
 function describeStatus(status: number): { message: string; retryable: boolean } {
   if (status === 401 || status === 403) return { message: 'The provider rejected the key. Check the provider settings.', retryable: false };
   if (status === 404) return { message: 'The provider did not find that model or endpoint.', retryable: false };
@@ -76,7 +67,7 @@ async function postJson(url: string, headers: Record<string, string>, body: unkn
   const text = await response.text();
   if (!response.ok) {
     const { message, retryable } = describeStatus(response.status);
-    throw new AiProviderError(`${message} ${firstLine(text)}`.trim(), response.status, retryable);
+    throw new AiProviderError(message, response.status, retryable);
   }
   try {
     return JSON.parse(text);
@@ -85,56 +76,81 @@ async function postJson(url: string, headers: Record<string, string>, body: unkn
   }
 }
 
-const firstLine = (text: string): string => {
-  const trimmed = text.trim();
-  if (!trimmed) return '';
-  const parsed = /"message"\s*:\s*"([^"]+)"/.exec(trimmed);
-  return parsed ? `(${parsed[1]})` : '';
-};
-
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? value as Record<string, unknown> : {};
 }
 
-export function createProvider(config: AiProviderConfig): AiProvider {
-  const definition = AI_PROVIDERS.find(({ id }) => id === config.provider) ?? AI_PROVIDERS[1]!;
-  const baseUrl = trimSlash(config.baseUrl?.trim() || definition.defaultBaseUrl);
-  const model = config.model?.trim() || definition.defaultModel;
-  const apiKey = config.apiKey.trim();
-  if (!apiKey) throw new AiProviderError('Add an API key in AI settings first.', null, false);
+const requireText = (text: string): string => {
+  if (!text.trim()) throw new AiProviderError('The provider returned no text.', null, true);
+  return text;
+};
 
-  if (definition.id === 'anthropic') {
-    const endpoint = `${baseUrl}/v1/messages`;
-    return {
-      id: 'anthropic', model, endpoint,
-      async complete({ system, prompt, maxTokens = 4096, signal }) {
-        const payload = await postJson(endpoint, {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        }, { model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: prompt }] }, signal);
-        const blocks = asRecord(payload).content;
-        const text = Array.isArray(blocks)
-          ? blocks.map((block) => (asRecord(block).type === 'text' ? String(asRecord(block).text ?? '') : '')).join('')
-          : '';
-        if (!text.trim()) throw new AiProviderError('The provider returned no text.', null, true);
-        return text;
-      },
-    };
-  }
-
-  const endpoint = `${baseUrl}/v1/chat/completions`;
+function createAnthropicProvider(definition: AiProviderDefinition, baseUrl: string, model: string, apiKey: string): AiProvider {
+  const endpoint = `${baseUrl}/v1/messages`;
   return {
-    id: 'openai', model, endpoint,
+    id: definition.id, model, endpoint,
     async complete({ system, prompt, maxTokens = 4096, signal }) {
-      const payload = await postJson(endpoint, { authorization: `Bearer ${apiKey}` }, {
-        model, max_tokens: maxTokens,
+      const payload = await postJson(endpoint, {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      }, { model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: prompt }] }, signal);
+      const blocks = asRecord(payload).content;
+      return requireText(Array.isArray(blocks)
+        ? blocks.map((block) => (asRecord(block).type === 'text' ? String(asRecord(block).text ?? '') : '')).join('')
+        : '');
+    },
+  };
+}
+
+function createOpenAiProvider(definition: AiProviderDefinition, baseUrl: string, model: string, apiKey: string): AiProvider {
+  const endpoint = `${baseUrl}/chat/completions`;
+  const headers: Record<string, string> = { ...definition.extraHeaders };
+  if (definition.needsKey) headers.authorization = `Bearer ${apiKey}`;
+  const maxTokensParam = definition.maxTokensParam ?? 'max_tokens';
+  return {
+    id: definition.id, model, endpoint,
+    async complete({ system, prompt, maxTokens = 4096, signal }) {
+      const payload = await postJson(endpoint, headers, {
+        model, [maxTokensParam]: maxTokens,
         messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
       }, signal);
       const choices = asRecord(payload).choices;
-      const text = Array.isArray(choices) ? String(asRecord(asRecord(choices[0]).message).content ?? '') : '';
-      if (!text.trim()) throw new AiProviderError('The provider returned no text.', null, true);
-      return text;
+      return requireText(Array.isArray(choices) ? String(asRecord(asRecord(choices[0]).message).content ?? '') : '');
     },
   };
+}
+
+function createGoogleProvider(definition: AiProviderDefinition, baseUrl: string, model: string, apiKey: string): AiProvider {
+  // ponytail: model ids with slashes are encoded; tuned-model resource names would need the full path — the override field is the escape hatch.
+  const endpoint = `${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  return {
+    id: definition.id, model, endpoint,
+    async complete({ system, prompt, maxTokens = 4096, signal }) {
+      const payload = await postJson(endpoint, { 'x-goog-api-key': apiKey }, {
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: maxTokens },
+      }, signal);
+      const candidates = asRecord(payload).candidates;
+      const parts = Array.isArray(candidates) ? asRecord(asRecord(candidates[0]).content).parts : [];
+      return requireText(Array.isArray(parts)
+        ? parts.map((part) => String(asRecord(part).text ?? '')).join('')
+        : '');
+    },
+  };
+}
+
+export function createProvider(config: AiProviderConfig): AiProvider {
+  const definition = providerById(config.provider);
+  const baseUrl = trimSlash(config.baseUrl?.trim() || definition.defaultBaseUrl);
+  const model = config.model?.trim() || definition.defaultModel;
+  const apiKey = config.apiKey.trim();
+  if (definition.needsKey && !apiKey) throw new AiProviderError('Add an API key in AI settings first.', null, false);
+  if (!baseUrl) throw new AiProviderError('Add the endpoint URL for this provider.', null, false);
+  if (!model) throw new AiProviderError('Add a model id for this provider.', null, false);
+
+  if (definition.wire === 'anthropic') return createAnthropicProvider(definition, baseUrl, model, apiKey);
+  if (definition.wire === 'google') return createGoogleProvider(definition, baseUrl, model, apiKey);
+  return createOpenAiProvider(definition, baseUrl, model, apiKey);
 }

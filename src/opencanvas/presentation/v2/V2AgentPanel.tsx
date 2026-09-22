@@ -5,7 +5,7 @@
 // state and never touches the session.
 import { useRef, useState } from 'react';
 import { IconArrowUp, IconPlayerStop, IconRocket, IconRoute, IconSparkles, IconStack2 } from '@tabler/icons-react';
-import { AI_PROVIDERS } from '../../../services/ai/provider';
+import { AI_PROVIDERS } from '../../../services/ai/providers';
 import {
   AgentPanel, Button, Icon, IconButton, Kbd, ProposalBar, ProposalReview, ProvenanceBadge,
   type AgentMessage, type ProposalView,
