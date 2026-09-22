@@ -99,7 +99,7 @@ export function V2CanvasWelcome({ onOpen }: { onOpen: (mode: V2WorkspaceMode) =>
           </span>
         </div>
         <div className="ofk-v2-welcome-actions">
-          {MODES.map(({ id, label, icon }) => (
+          {MODES.filter(({ id }) => id !== 'model' && id !== 'slides').map(({ id, label, icon }) => (
             <Button key={id} variant="secondary" onClick={() => onOpen(id)}>
               <Icon icon={icon} />
               {label}
@@ -167,18 +167,17 @@ export function V2DraftPanel({
         </div>
       ) : (
         <div className="ofk-v2-panel-stack">
-          <div>
-            <h3>Give your ideas a storyline.</h3>
-            <p className="ofk-v2-muted">Turn moments on your canvas into a presentation.</p>
-          </div>
+          {slides === 0 ? (
+            <div className="ofk-model-welcome ofk-v2-slides-welcome">
+              <div className="ofk-v2-slides-hero" aria-hidden="true"><i /><i /><span><b />01</span></div>
+              <h3>Give your ideas a storyline.</h3>
+              <p>Frame moments on your canvas and walk through them as a presentation.</p>
+              <Button onClick={onAddSlide}><Icon icon={IconPlus} /> Add slide</Button>
+              <span className="ofk-model-welcome-note">Each slide is a frame of this canvas.</span>
+            </div>
+          ) : (
           <div className="ofk-v2-slide-list">
-            {slides === 0 ? (
-              <div className="ofk-v2-slide-empty">
-                <Icon icon={IconPresentation} />
-                <strong>Your first slide starts here</strong>
-                <p>Add a slide to sketch out your story.</p>
-              </div>
-            ) : (
+            {
               Array.from({ length: slides }, (_, index) => (
                 <div className="ofk-v2-slide" key={index}>
                   <span>{String(index + 1).padStart(2, '0')}</span>
@@ -189,11 +188,12 @@ export function V2DraftPanel({
                   </div>
                 </div>
               ))
-            )}
+            }
             <Button onClick={onAddSlide}>
               <Icon icon={IconPlus} /> Add slide
             </Button>
           </div>
+          )}
           <footer className="ofk-v2-panel-footer">
             <Button disabled>
               <Icon icon={IconPresentation} /> Start presentation

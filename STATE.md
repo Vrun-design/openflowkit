@@ -9,6 +9,8 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
 - Connect agent moved to the rail 2026-09-22 (Opus): 5th rail item + welcome button open a
   panel (`V2AgentConnect`: hero, steps when off, live card + capability grid when on); top-bar
   plug is status-only and opens the panel. No shortcut (Alt+A = align left).
+- Rail polish 2026-09-22 (Opus): assistant hero empty state; provider config is a header badge →
+  `V2AiProviderDialog` (send without key opens it); error row Retry/Check provider; slides hero.
 - UI cleanup 2026-09-22 (Codex): layer hierarchy, undoable visibility/lock, page badge+rename.
 - Phase 5 done 2026-09-22 (opencode/deepseek-v4.1): C4 model layer. `src/dsl/model/`
   (`ArchModel` elements/relations/views/flows, dotted ids, implied relations, view

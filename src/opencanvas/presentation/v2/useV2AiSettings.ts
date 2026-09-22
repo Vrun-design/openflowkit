@@ -37,6 +37,5 @@ export function useV2AiSettings() {
       return next;
     });
   }, []);
-  const clearKey = useCallback(() => update({ apiKey: '' }), [update]);
-  return { settings, update, clearKey, configured: settings.apiKey.trim().length > 0 };
+  return { settings, update, configured: settings.apiKey.trim().length > 0 };
 }

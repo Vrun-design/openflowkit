@@ -1,13 +1,16 @@
-// Agent panel for the v2 editor: prompt composer (BYOK), intent picker,
-// proposal review and status. Composes design-system parts over useV2Proposal
-// and useV2AiRequest; owns no document state and never touches the session.
-import { useState } from 'react';
-import { IconArrowUp, IconSparkles } from '@tabler/icons-react';
+// AI assistant panel for the v2 editor: hero empty state, one exchange with
+// the provider, proposal review and a prompt composer. The provider itself is
+// configured in V2AiProviderDialog, reached from the header badge. Composes
+// design-system parts over useV2Proposal and useV2AiRequest; owns no document
+// state and never touches the session.
+import { useRef, useState } from 'react';
+import { IconArrowUp, IconPlayerStop, IconRocket, IconRoute, IconSparkles, IconStack2 } from '@tabler/icons-react';
+import { AI_PROVIDERS } from '../../../services/ai/provider';
 import {
-  AgentPanel, Button, Icon, IconButton, ProposalBar, ProposalReview, ProvenanceBadge,
+  AgentPanel, Button, Icon, IconButton, Kbd, ProposalBar, ProposalReview, ProvenanceBadge,
   type AgentMessage, type ProposalView,
 } from '../design-system';
-import { V2AiProviderForm } from './V2AiProviderForm';
+import { V2AiProviderDialog } from './V2AiProviderDialog';
 import type { useV2AiRequest } from './useV2AiRequest';
 import type { useV2AiSettings } from './useV2AiSettings';
 import type { useV2Proposal } from './useV2Proposal';
@@ -28,14 +31,19 @@ const BAR_LABELS = {
   failed: 'Could not apply. Nothing changed.',
 };
 
-const STARTERS = ['Map a user onboarding flow', 'Sketch a three-tier architecture', 'Plan a product launch'];
+const STARTERS = [
+  { icon: IconRoute, prompt: 'Map a user onboarding flow' },
+  { icon: IconStack2, prompt: 'Sketch a three-tier architecture' },
+  { icon: IconRocket, prompt: 'Plan a product launch' },
+] as const;
 
 export function V2AgentPanel({ proposal, ai, aiSettings, currentRevision, readOnly, onUndo, onClose }: V2AgentPanelProps) {
   const [draft, setDraft] = useState('');
+  const [providerOpen, setProviderOpen] = useState(false);
+  const input = useRef<HTMLTextAreaElement>(null);
   const { phase, proposal: current } = proposal;
-  const intentLabel = typeof proposal.intent === 'string'
-    ? proposal.intent
-    : 'Proposal';
+  const { configured, settings } = aiSettings;
+  const modelLabel = ai.lastModel || settings.model || AI_PROVIDERS.find(({ id }) => id === settings.provider)!.defaultModel;
   const scopeLabel = current
     ? `Scope: ${current.scope.kind === 'selection' ? `${current.scope.objectIds.length} selected` : 'this page'}`
     : 'Scope: this page';
@@ -57,8 +65,15 @@ export function V2AgentPanel({ proposal, ai, aiSettings, currentRevision, readOn
         labels={readOnly ? { apply: 'Read-only' } : undefined}
       />
     );
+  } else if (ai.error) {
+    attachment = (
+      <div className="ofk-v2-assistant-actions">
+        <Button onClick={() => { void ai.ask(ai.lastPrompt); }}>Retry</Button>
+        <Button variant="quiet" onClick={() => setProviderOpen(true)}>Check provider</Button>
+      </div>
+    );
   } else if (phase !== 'idle') {
-    const view: ProposalView = phase === 'working'
+    const view: ProposalView = phase === 'working' || ai.busy
       ? { phase: 'working', scopeLabel }
       : phase === 'applied'
         ? { phase: 'applied', summary: proposal.appliedSummary }
@@ -70,11 +85,12 @@ export function V2AgentPanel({ proposal, ai, aiSettings, currentRevision, readOn
   }
 
   // ponytail: one exchange, no thread history; a conversation keeps a list.
-  const messages: readonly AgentMessage[] = phase === 'idle' && !ai.error ? [] : [
-    { id: 'user', role: 'user', text: intentLabel },
+  const active = ai.busy || ai.error !== null || phase !== 'idle';
+  const messages: readonly AgentMessage[] = !active ? [] : [
+    { id: 'user', role: 'user', text: ai.lastPrompt || proposal.intent || '' },
     {
       id: 'agent', role: 'agent',
-      text: ai.error ?? (phase === 'working' ? 'Working on it…'
+      text: ai.error ?? (ai.busy || phase === 'working' ? `Asking ${modelLabel}…`
         : phase === 'failed' ? 'Could not build a proposal.' : 'Proposed changes'),
       attachment: <>{current ? <ProvenanceBadge standalone /> : null}{attachment}</>,
     },
@@ -83,52 +99,88 @@ export function V2AgentPanel({ proposal, ai, aiSettings, currentRevision, readOn
   const send = (): void => {
     const prompt = draft.trim();
     if (!prompt || ai.busy) return;
+    if (!configured) { setProviderOpen(true); return; }
     setDraft('');
     void ai.ask(prompt);
   };
+  const canSend = !readOnly && draft.trim().length > 0;
+  // The dialog unmounts rather than close()s, so the platform cannot return focus; hand it to the composer.
+  const closeProvider = (): void => {
+    setProviderOpen(false);
+    requestAnimationFrame(() => input.current?.focus());
+  };
 
   return (
-    <AgentPanel
-      title="AI assistant"
-      tools={<span className="ofk-v2-preview-label">Preview</span>}
-      onClose={onClose}
-      messages={messages}
-      empty={<div className="ofk-v2-assistant-welcome">
-        <div className="ofk-v2-assistant-mark"><Icon icon={IconSparkles} /></div>
-        <h3>From a thought<br />to a clear picture.</h3>
-        <p>{aiSettings.configured
-          ? 'Describe the diagram; it arrives as a proposal you can review before it lands.'
-          : 'Bring your own key (Anthropic or any OpenAI-compatible endpoint) to generate diagrams here.'}</p>
-        <span className="ofk-v2-eyebrow">TRY A STARTING POINT</span>
-        {STARTERS.map((prompt) =>
-          <Button key={prompt} variant="quiet" onClick={() => setDraft(prompt)}>{prompt}</Button>)}
-      </div>}
-
-      composer={
-        <div className="ofk-v2-assistant-composer">
-          <V2AiProviderForm settings={aiSettings.settings} configured={aiSettings.configured}
-            lastModel={ai.lastModel} onChange={aiSettings.update} onClearKey={aiSettings.clearKey} />
-          <div className="ofk-v2-prompt-box">
-            <textarea aria-label="Ask AI assistant" rows={3}
-              placeholder={aiSettings.configured ? 'What would you like to create?' : 'Add an API key above to generate diagrams'}
-              value={draft} disabled={!aiSettings.configured || ai.busy}
+    <>
+      <AgentPanel
+        title="AI assistant"
+        onClose={onClose}
+        className="ofk-v2-assistant-panel"
+        data-status={ai.busy ? 'connecting' : configured ? 'connected' : 'off'}
+        tools={
+          <button type="button" className="ofk-connection-badge ofk-v2-provider-badge"
+            aria-label={configured ? `AI provider: ${modelLabel}. Change` : 'Connect an AI provider'}
+            onClick={() => setProviderOpen(true)}>
+            <span className="ofk-connection-dot" />{configured ? modelLabel : 'No provider'}
+          </button>
+        }
+        messages={messages}
+        empty={<div className="ofk-v2-assistant-welcome">
+          <div className="ofk-v2-assistant-hero" aria-hidden="true">
+            <span className="ofk-v2-assistant-hero-prompt">Map onboarding</span>
+            <span className="ofk-connection-hero-link"><i /><i /><i /></span>
+            <span className="ofk-v2-assistant-hero-diagram">
+              <span className="ofk-v2-assistant-mark"><Icon icon={IconSparkles} /></span>
+              <i /><i /><i />
+            </span>
+          </div>
+          <h3>From a thought to a clear picture.</h3>
+          <p className="ofk-connection-lede">
+            {configured
+              ? 'Describe the diagram. It arrives as a proposal you review before it lands on the page.'
+              : 'Bring your own key — Anthropic or any OpenAI-compatible endpoint — and describe the diagram you need.'}
+          </p>
+          {!configured ? <>
+            <Button variant="primary" onClick={() => setProviderOpen(true)}><Icon icon={IconSparkles} />Connect a provider</Button>
+            <span className="ofk-model-welcome-note">Your key stays on this machine.</span>
+          </> : null}
+          <h4 className="ofk-connection-heading">Try a starting point</h4>
+          <ul className="ofk-v2-assistant-starters">
+            {STARTERS.map(({ icon, prompt }) =>
+              <li key={prompt}><Button variant="quiet" onClick={() => { setDraft(prompt); input.current?.focus(); }}>
+                <Icon icon={icon} />{prompt}
+              </Button></li>)}
+          </ul>
+        </div>}
+        composer={
+          <div className="ofk-v2-prompt-box" data-busy={ai.busy || undefined}>
+            <textarea ref={input} aria-label="Ask AI assistant" rows={2}
+              placeholder={configured ? 'What would you like to create?' : 'Describe a diagram — you will be asked for a key'}
+              value={draft} disabled={ai.busy}
               onChange={(event) => setDraft(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
                   event.preventDefault();
                   send();
+                } else if (event.key === 'Escape' && ai.busy) {
+                  event.stopPropagation();
+                  ai.cancel();
                 }
               }} />
             <div>
-              <span>{ai.busy ? `Waiting for ${ai.lastModel}…` : 'Scope: this page'}</span>
-              <IconButton label={ai.busy ? 'Cancel request' : 'Send prompt'}
-                disabled={readOnly || !aiSettings.configured || (!ai.busy && draft.trim().length === 0)}
-                icon={<Icon icon={IconArrowUp} />}
-                onClick={() => { if (ai.busy) ai.cancel(); else send(); }} />
+              <span>{ai.busy ? `Waiting for ${modelLabel}…` : readOnly ? 'Read-only document' : 'Scope: this page'}</span>
+              {!ai.busy && canSend ? <span className="ofk-v2-prompt-hint"><Kbd keys="Enter" /> send</span> : null}
+              {ai.busy
+                ? <Button variant="secondary" onClick={ai.cancel}><Icon icon={IconPlayerStop} />Stop</Button>
+                : <IconButton variant="primary" label="Send prompt" disabled={!canSend}
+                  icon={<Icon icon={IconArrowUp} />} onClick={send} />}
             </div>
           </div>
-        </div>
-      }
-    />
+        }
+      />
+      {providerOpen ? <V2AiProviderDialog open settings={settings}
+        onSave={(next) => { aiSettings.update(next); ai.clearError(); }}
+        onClose={closeProvider} /> : null}
+    </>
   );
 }

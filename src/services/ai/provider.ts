@@ -53,7 +53,7 @@ const trimSlash = (value: string): string => value.replace(/\/+$/, '');
 
 /** Answers the question users actually have when a call fails. */
 function describeStatus(status: number): { message: string; retryable: boolean } {
-  if (status === 401 || status === 403) return { message: 'The provider rejected the key. Check it in AI settings.', retryable: false };
+  if (status === 401 || status === 403) return { message: 'The provider rejected the key. Check the provider settings.', retryable: false };
   if (status === 404) return { message: 'The provider did not find that model or endpoint.', retryable: false };
   if (status === 429) return { message: 'Rate limited by the provider. Try again in a moment.', retryable: true };
   if (status >= 500) return { message: `The provider had a server error (${status}).`, retryable: true };

@@ -21,6 +21,8 @@ export interface V2AiRequestState {
   readonly busy: boolean;
   readonly error: string | null;
   readonly lastModel: string;
+  /** Prompt of the latest request; what Retry re-sends. */
+  readonly lastPrompt: string;
   readonly ask: (prompt: string) => Promise<void>;
   readonly cancel: () => void;
   readonly clearError: () => void;
@@ -30,6 +32,7 @@ export function useV2AiRequest(options: V2AiRequestOptions): V2AiRequestState {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastModel, setLastModel] = useState('');
+  const [lastPrompt, setLastPrompt] = useState('');
   const abortRef = useRef<AbortController | null>(null);
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -48,6 +51,7 @@ export function useV2AiRequest(options: V2AiRequestOptions): V2AiRequestState {
     abortRef.current = controller;
     setBusy(true);
     setError(null);
+    setLastPrompt(prompt);
     try {
       const provider = createProvider({
         provider: settings.provider, apiKey: settings.apiKey,
@@ -78,5 +82,5 @@ export function useV2AiRequest(options: V2AiRequestOptions): V2AiRequestState {
     }
   }, [busy]);
 
-  return { busy, error, lastModel, ask, cancel, clearError: () => setError(null) };
+  return { busy, error, lastModel, lastPrompt, ask, cancel, clearError: () => setError(null) };
 }
