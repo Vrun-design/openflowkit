@@ -5,8 +5,10 @@ import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/documen
 import { boundsFromPoints } from '../../domain/geometry/bounds';
 import { boundsCorners } from '../../domain/geometry/bounds';
 import type { Matrix2d, Point2d, Size2d } from '../../domain/geometry/types';
-import { resolveBasicNodePresentation } from '../../domain/nodes/basicNodePresentation';
+import { resolveBasicNodePresentation, type BasicNodeShape } from '../../domain/nodes/basicNodePresentation';
 import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
+import { basicNodeDecorations } from '../../domain/nodes/basicNodeDecorations';
+import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import {
   resolveFreeformNodePresentation,
   type AnnotationNodePresentation,
@@ -300,8 +302,26 @@ function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' |
   return `<g data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}"${style.opacity < 1 ? ` opacity="${number(style.opacity)}"` : ''}>`
     + (defs ? `<defs>${defs}</defs>` : '')
     + outlineMarkup(outline, style, filter)
+    + (basic ? decorationMarkup(basic.shape, node.size, style, matrix) : '')
     + labelElement(style, node.size, label, subLabel, clip)
     + '</g>';
+}
+
+/** Inner lines (venn lens, target rings, note fold) in the node's stroke. */
+function decorationMarkup(
+  shape: BasicNodeShape, size: Size2d, style: NodeStyle, matrix: Matrix2d
+): string {
+  if (style.strokeWidth <= 0) return '';
+  const stroke = style.stroke === 'transparent' || !style.stroke ? 'none' : style.stroke;
+  if (stroke === 'none') return '';
+  const dash = style.dash.length ? ` stroke-dasharray="${style.dash.map(number).join(' ')}"` : '';
+  return basicNodeDecorations(shape, size).map((line) => {
+    const [first, ...rest] = line.map((point) => applyMatrixToPoint(matrix, point));
+    if (!first) return '';
+    return `<path d="M ${number(first.x)} ${number(first.y)}`
+      + rest.map((point) => ` L ${number(point.x)} ${number(point.y)}`).join('')
+      + `" fill="none" stroke="${stroke}" stroke-width="${number(style.strokeWidth)}"${dash}/>`;
+  }).join('');
 }
 
 function selectedPage(page: ScenePage, selectedNodeIds?: readonly string[]): ScenePage {

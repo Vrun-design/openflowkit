@@ -6,6 +6,11 @@ import { MCP_SERVER_NAME, MCP_SERVER_VERSION } from '../lib/version.js';
 const SHAPE_WORDS = [
   'rect', 'rounded', 'circle', 'ellipse', 'diamond', 'cylinder', 'hexagon', 'cloud',
   'doc', 'note', 'parallelogram', 'person', 'queue', 'component', 'browser', 'mobile',
+  'triangle', 'trapezoid', 'venn', 'speech', 'comment', 'star', 'check-circle',
+  'cross-circle', 'heart', 'bolt', 'bookmark', 'bar', 'prism', 'tag', 'chevron',
+  'octagon', 'cube', 'target', 'page', 'half-round', 'callout-stack', 'layer-stack',
+  'folder', 'panel', 'brace', 'bracket', 'numbered-circle', 'list-card', 'pin',
+  'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 'plus', 'stadium',
 ];
 
 const EDGE_STYLES = [

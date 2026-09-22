@@ -12,7 +12,7 @@ describe('createShapeNode', () => {
     expect(node.appearance.fill).toBeUndefined();
   });
 
-  it.each(SHAPE_KINDS.filter((kind) => kind !== 'text'))(
+  it.each(SHAPE_KINDS.filter((kind) => kind !== 'text' && kind !== 'numbered-circle'))(
     'makes a process node carrying the %s outline',
     (kind) => {
       const node = createShapeNode(page(), { kind, id: 'n1', at: { x: 0, y: 0 } });
@@ -22,6 +22,16 @@ describe('createShapeNode', () => {
       expect(node.appearance).toMatchObject({ fill: '#fdfdfb', strokeWidth: 1.5 });
     }
   );
+
+  it('numbers circles up per page', () => {
+    const document = createTestDocument({ nodes: [] });
+    const first = createShapeNode(document.pages[0], { kind: 'numbered-circle', id: 'a', at: { x: 0, y: 0 } });
+    expect(first.content.label).toBe('1');
+    const second = createShapeNode(
+      { ...document.pages[0], nodes: [first] }, { kind: 'numbered-circle', id: 'b', at: { x: 0, y: 0 } }
+    );
+    expect(second.content.label).toBe('2');
+  });
 
   it('stacks new nodes above the page and honours an explicit size', () => {
     const document = createTestDocument({ nodes: [] });

@@ -4,7 +4,8 @@ import type { CanonicalAttribute } from './sceneMeta';
 import { joinTokens } from './segments';
 import type { DslToken } from './tokenize';
 import {
-  ATTRIBUTE_KEYS, DIRECTIONS, EDGE_FLAG_WORDS, FILL_WORDS, SIDE_WORDS, attributeSlot,
+  ATTRIBUTE_KEYS, COLOR_ALIASES, COLOR_WORDS, DIRECTIONS, EDGE_FLAG_WORDS, FILL_WORDS,
+  NODE_FLAG_WORDS, SHAPE_ALIASES, SHAPE_WORDS, SIDE_WORDS, attributeSlot,
   canonicalColorWord, canonicalShapeWord, isHexColor, isIconWord, sortAttributes,
 } from './vocabulary';
 import type { Side } from './vocabulary';
@@ -30,14 +31,13 @@ export interface TypedAttributes {
 /** Attributes kept in `metadata.dsl.attrs` because no scene property holds them. */
 export const NON_VISUAL_KEYS = new Set(['tech', 'desc', 'kind', 'tags', 'link', 'pin', 'rank', 'width', 'height', 'order']);
 
+// Derived from the vocabulary tables so a new shape or colour word can never
+// ship without its attribute spelling being recognised (W131 would hide it).
 const KNOWN_ATTRIBUTE_WORDS = new Set([
-  'rect', 'rounded', 'circle', 'ellipse', 'diamond', 'cylinder', 'hexagon', 'cloud',
-  'doc', 'note', 'parallelogram', 'person', 'queue', 'component', 'browser', 'mobile',
-  'box', 'oval', 'decision', 'database', 'db', 'storage', 'document', 'actor', 'user',
-  'io', 'data', 'start', 'end', 'terminator', 'process', 'prep', 'subroutine',
-  'blue', 'green', 'red', 'orange', 'violet', 'teal', 'pink', 'yellow', 'gray',
-  'grey', 'purple', 'pastel', 'bold', 'outline', 'shadow', 'dashed', 'thick',
-  'invisible', 'flow', 'right', 'left', 'up', 'down', 'fork', 'join', 'choice',
+  ...Object.keys(SHAPE_WORDS), ...Object.keys(SHAPE_ALIASES),
+  ...Object.keys(COLOR_WORDS), ...Object.keys(COLOR_ALIASES),
+  ...FILL_WORDS, ...NODE_FLAG_WORDS, ...EDGE_FLAG_WORDS, ...Object.keys(DIRECTIONS),
+  'fork', 'join', 'choice',
   'highlight', 'revert', 'interface', 'abstract', 'enum', 'class', 'entity',
 ]);
 

@@ -1,6 +1,7 @@
 import { pixiPaintColor } from './pixiColor';
 import { resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
+import { basicNodeDecorations } from '../../domain/nodes/basicNodeDecorations';
 import { drawDashedPath } from './PixiConnectorRenderer';
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { Container, Graphics, Text } from 'pixi.js';
@@ -184,6 +185,14 @@ export class PixiNodeRenderer {
         });
       } else if (style.strokeWidth > 0) {
         this.graphics.stroke({ color: stroke, width: style.strokeWidth, alpha: alpha * strokePaint.alpha });
+      }
+      // Inner lines (venn lens, target rings, note fold) ride the same stroke.
+      if (detailLevel !== 'overview' && style.strokeWidth > 0) {
+        for (const decoration of basicNodeDecorations(renderedShape, node.size)) {
+          const points = decoration.map((point) => applyMatrixToPoint(matrix, point));
+          this.graphics.poly(points.flatMap((point) => [point.x, point.y]));
+          this.graphics.stroke({ color: stroke, width: style.strokeWidth, alpha: alpha * strokePaint.alpha });
+        }
       }
       debugRecords.push({
         id: node.id,

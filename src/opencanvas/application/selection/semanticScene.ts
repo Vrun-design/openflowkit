@@ -1,4 +1,5 @@
-import type { ScenePage } from '../../domain/document/types';
+import type { ScenePage, SceneNode } from '../../domain/document/types';
+import { resolveBasicNodePresentation } from '../../domain/nodes/basicNodePresentation';
 
 export type SemanticSceneItem =
   | {
@@ -21,6 +22,13 @@ function nodeLabel(page: ScenePage, nodeId: string): string {
   return typeof node?.content.label === 'string' ? node.content.label : nodeId;
 }
 
+/** Screen-reader name: a library shape says its shape, not its renderer kind. */
+function nodeDescription(node: SceneNode, locked: boolean): string {
+  const basic = resolveBasicNodePresentation(node);
+  const name = basic ? `${basic.shape} shape` : `${node.kind} node`;
+  return locked ? `${name}, locked` : name;
+}
+
 export function buildSemanticSceneItems(page: ScenePage): readonly SemanticSceneItem[] {
   const visibleLayerIds = new Set(
     page.layers.filter((layer) => layer.visible).map((layer) => layer.id)
@@ -33,9 +41,9 @@ export function buildSemanticSceneItems(page: ScenePage): readonly SemanticScene
       kind: 'node',
       id: node.id,
       label,
-      description: `${node.kind} node${
-        page.layers.find((layer) => layer.id === node.layerId)?.locked ? ', locked' : ''
-      }`,
+      description: nodeDescription(
+        node, Boolean(page.layers.find((layer) => layer.id === node.layerId)?.locked)
+      ),
     };
   });
   const connectors: SemanticSceneItem[] = page.connectors

@@ -22,7 +22,16 @@ describe('semantic scene projection', () => {
       nodes: page.nodes.map((node) => node.id === 'hidden' ? { ...node, layerId: hiddenLayer.id } : node),
     });
     expect(projected).toEqual([{
-      kind: 'node', id: 'visible', label: 'Visible', description: 'process node',
+      kind: 'node', id: 'visible', label: 'Visible', description: 'rounded shape',
+    }]);
+  });
+
+  it('names a library shape by its outline, not its renderer kind', () => {
+    const page = createTestDocument({
+      nodes: [createTestNode('star', { content: { shape: 'star', label: 'Launch' } })],
+    }).pages[0];
+    expect(buildSemanticSceneItems(page)).toEqual([{
+      kind: 'node', id: 'star', label: 'Launch', description: 'star shape',
     }]);
   });
 

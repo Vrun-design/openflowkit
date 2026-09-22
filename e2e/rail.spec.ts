@@ -39,10 +39,12 @@ test('the rail opens flyouts by mouse and keyboard, picks a shape, locks and und
   await expect(shapes).toHaveAttribute('aria-expanded', 'false');
   await expect(shapes).toBeFocused();
 
-  // Keyboard: ArrowRight opens the grid with focus on the current pick, Enter picks.
+  // Keyboard: ArrowRight opens the grid with focus on the current pick, arrows
+  // move between cells, Enter picks.
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('option', { name: 'Diamond' })).toBeFocused();
   await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('option', { name: 'Triangle' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(shapes).toHaveAttribute('aria-expanded', 'false');
   await expect(shapes).toBeFocused();
@@ -52,7 +54,7 @@ test('the rail opens flyouts by mouse and keyboard, picks a shape, locks and und
   await page.mouse.click(420, 330);
   await expect.poll(async () => (await state(page)).nodes.length).toBe(1);
   const shapesOnPage = (await doc(page)).pages[0].nodes;
-  expect(['circle', 'ellipse']).toContain(String(shapesOnPage[0]?.content.shape));
+  expect(String(shapesOnPage[0]?.content.shape)).toBe('triangle');
 
   // Lock is undoable: lock the selection, then undo it.
   const rect = (await nodeRect(page, (await state(page)).nodes[0]))!;

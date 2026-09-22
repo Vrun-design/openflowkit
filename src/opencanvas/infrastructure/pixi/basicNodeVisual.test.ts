@@ -22,3 +22,15 @@ describe('Pixi basic node visual adapter', () => {
     expect(new Set(visuals.map((visual) => visual?.stroke)).size).toBe(4);
   });
 });
+
+describe('library shape projection', () => {
+  it('projects a library shape as its own outline', () => {
+    const node = { ...createPixiSpikePage(1).nodes[0]!, content: { shape: 'star' } };
+    expect(projectBasicNodeVisual(node)?.shape).toBe('star');
+  });
+
+  it('falls back to the kind default for an unknown shape id', () => {
+    const node = { ...createPixiSpikePage(1).nodes[0]!, content: { shape: 'octahedron' } };
+    expect(projectBasicNodeVisual(node)?.shape).toBe('rounded');
+  });
+});

@@ -4,7 +4,15 @@ export type BasicNodeKind = 'process' | 'start' | 'decision' | 'end' | 'custom';
 export type BasicNodeShape =
   | 'rectangle' | 'rounded' | 'capsule' | 'circle' | 'ellipse' | 'diamond'
   | 'hexagon' | 'parallelogram' | 'cylinder' | 'cloud' | 'document'
-  | 'queue' | 'database' | 'actor' | 'custom-path';
+  | 'queue' | 'database' | 'actor' | 'custom-path'
+  // The shape library (slice 6.2). All are `process` nodes carrying this id.
+  | 'triangle' | 'trapezoid' | 'venn' | 'speech-bubble' | 'comment'
+  | 'star' | 'check-circle' | 'cross-circle' | 'heart' | 'lightning'
+  | 'bookmark' | 'filled-bar' | 'prism' | 'pentagon-tag' | 'chevron'
+  | 'octagon' | 'cube' | 'target' | 'page' | 'half-round'
+  | 'callout-stack' | 'layer-stack' | 'folder' | 'panel' | 'brace'
+  | 'numbered-circle' | 'list-card' | 'pin' | 'bracket'
+  | 'arrow-up' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'plus';
 export type BasicNodeColorMode = 'subtle' | 'filled';
 
 export interface BasicNodePresentation {
@@ -26,16 +34,25 @@ const BASIC_NODE_DEFAULTS: Record<
   custom: { shape: 'rounded', colorKey: 'white' },
 };
 
+const BASIC_NODE_SHAPES: readonly BasicNodeShape[] = [
+  'rectangle', 'rounded', 'capsule', 'circle', 'ellipse', 'diamond',
+  'hexagon', 'parallelogram', 'cylinder', 'cloud', 'document', 'queue', 'database', 'actor',
+  'custom-path',
+  'triangle', 'trapezoid', 'venn', 'speech-bubble', 'comment',
+  'star', 'check-circle', 'cross-circle', 'heart', 'lightning',
+  'bookmark', 'filled-bar', 'prism', 'pentagon-tag', 'chevron',
+  'octagon', 'cube', 'target', 'page', 'half-round',
+  'callout-stack', 'layer-stack', 'folder', 'panel', 'brace',
+  'numbered-circle', 'list-card', 'pin', 'bracket',
+  'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 'plus',
+];
+
 function isBasicNodeKind(value: string): value is BasicNodeKind {
   return Object.hasOwn(BASIC_NODE_DEFAULTS, value);
 }
 
 function isBasicNodeShape(value: unknown): value is BasicNodeShape {
-  return typeof value === 'string' && new Set<BasicNodeShape>([
-    'rectangle', 'rounded', 'capsule', 'circle', 'ellipse', 'diamond',
-    'hexagon', 'parallelogram', 'cylinder', 'cloud', 'document', 'queue', 'database', 'actor',
-    'custom-path',
-  ]).has(value as BasicNodeShape);
+  return typeof value === 'string' && (BASIC_NODE_SHAPES as readonly string[]).includes(value);
 }
 
 export function resolveBasicNodePresentation(node: SceneNode): BasicNodePresentation | null {
