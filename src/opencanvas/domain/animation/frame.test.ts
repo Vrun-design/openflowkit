@@ -42,7 +42,8 @@ describe('frameAt', () => {
     const frame = frameAt(timeline, STEP_MS + 320);
     expect(frame.nodes.b?.opacity).toBe(1);
     expect(frame.nodes.a?.opacity).toBe(0.25);
-    expect(frame.camera).toEqual(timeline.steps[1]?.camera ?? null);
+    expect(frameAt(timeline, STEP_MS + 400).camera).toEqual(timeline.steps[1]?.camera ?? null);
+    expect(frameAt(timeline, STEP_MS + 200).camera).not.toEqual(timeline.steps[1]?.camera ?? null);
   });
 
   it('shows everything with a travelling dash phase for pulse', () => {

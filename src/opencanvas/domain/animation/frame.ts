@@ -1,4 +1,5 @@
 import type { Bounds2d } from '../geometry/types';
+import { interpolateBounds } from './camera';
 import type { ElementFrameState, FrameState, Timeline } from './types';
 
 /**
@@ -13,8 +14,11 @@ export const REVEAL_MS = 320;
 export const DRAW_MS = 480;
 /** Walkthrough veil for every step but the current one. */
 export const STORYBOARD_DIM = 0.25;
-/** Pulse dash cycle length. */
+/** Pulse dash cycle length and the unit dash the travelling light rides on. */
 export const PULSE_MS = 1200;
+export const PULSE_DASH = '0.03 0.07';
+/** Walkthrough camera glide length at the start of a step. */
+export const GLIDE_MS = 400;
 
 export function stepDuration(step: { readonly holdMs?: number; readonly note?: string }): number {
   return step.holdMs ?? (step.note ? NOTE_MS : STEP_MS);
@@ -34,9 +38,23 @@ export function stepWindows(timeline: Pick<Timeline, 'steps'>): readonly StepWin
   });
 }
 
+export function timelineDuration(timeline: Pick<Timeline, 'steps'>): number {
+  return stepWindows(timeline).at(-1)?.end ?? 0;
+}
+
 export function easeOutCubic(progress: number): number {
   const clamped = Math.min(1, Math.max(0, progress));
   return 1 - (1 - clamped) ** 3;
+}
+
+function clampTime(timeline: Timeline, tMs: number, durationMs: number): number {
+  if (durationMs <= 0) return 0;
+  return timeline.loop ? ((tMs % durationMs) + durationMs) % durationMs : Math.min(Math.max(0, tMs), durationMs);
+}
+
+function activeWindowIndex(windows: readonly StepWindow[], timeMs: number): number {
+  const found = windows.findIndex((window) => timeMs < window.end);
+  return found < 0 ? windows.length - 1 : found;
 }
 
 const FULL: ElementFrameState = { opacity: 1, scale: 1, drawProgress: 1 };
@@ -51,6 +69,35 @@ function reveal(localMs: number): ElementFrameState {
   };
 }
 
+/** Adjacent step indexes collapse into one run, so a spotlight does not blink. */
+export function stepRuns(places: readonly number[]): readonly (readonly [number, number])[] {
+  const runs: [number, number][] = [];
+  for (const place of [...places].sort((a, b) => a - b)) {
+    const last = runs.at(-1);
+    if (last && place === last[1] + 1) last[1] = place;
+    else runs.push([place, place]);
+  }
+  return runs;
+}
+
+/**
+ * Where the camera looks at time t: the active step's box, glided in from the
+ * previous step's box. Only the walkthrough preset moves the camera — build
+ * and pulse always frame the whole page.
+ */
+export function cameraAt(timeline: Timeline, tMs: number): Bounds2d | null {
+  if (timeline.preset !== 'walkthrough') return null;
+  const windows = stepWindows(timeline);
+  if (windows.length === 0) return null;
+  const timeMs = clampTime(timeline, tMs, windows.at(-1)!.end);
+  const active = activeWindowIndex(windows, timeMs);
+  const current = timeline.steps[active]?.camera ?? null;
+  const previous = timeline.steps.slice(0, active).reverse().find((step) => step.camera)?.camera ?? null;
+  if (!current) return previous;
+  if (!previous) return current;
+  return interpolateBounds(previous, current, easeOutCubic((timeMs - windows[active]!.start) / GLIDE_MS));
+}
+
 /**
  * The single answer to "what is on screen at time t". Build reveals
  * cumulatively and ends with everything shown; walkthrough spotlights the
@@ -63,9 +110,8 @@ export function frameAt(timeline: Timeline, tMs: number): FrameState {
   if (windows.length === 0 || durationMs <= 0) {
     return { timeMs: 0, durationMs: 0, activeStepIndex: -1, nodes: {}, connectors: {}, camera: null };
   }
-  const timeMs = timeline.loop ? ((tMs % durationMs) + durationMs) % durationMs : Math.min(Math.max(0, tMs), durationMs);
-  let active = windows.findIndex((window) => timeMs < window.end);
-  if (active < 0) active = windows.length - 1;
+  const timeMs = clampTime(timeline, tMs, durationMs);
+  const active = activeWindowIndex(windows, timeMs);
   const nodes: Record<string, ElementFrameState> = {};
   const connectors: Record<string, ElementFrameState> = {};
   // Element → step indexes, built once: per-frame lookups stay O(1).
@@ -85,26 +131,38 @@ export function frameAt(timeline: Timeline, tMs: number): FrameState {
   }
   for (const [id, places] of nodeSteps) {
     if (timeline.preset === 'walkthrough') {
-      nodes[id] = places.includes(active) ? reveal(timeMs - windows[active]!.start) : { ...FULL, opacity: STORYBOARD_DIM };
+      const runs = stepRuns(places);
+      const run = runs.find(([from, to]) => active >= from && active <= to);
+      if (!run) {
+        nodes[id] = { ...FULL, opacity: STORYBOARD_DIM };
+      } else if (run === runs[0] && timeMs < windows[run[0]]!.start + REVEAL_MS) {
+        nodes[id] = reveal(timeMs - windows[run[0]]!.start);
+      } else {
+        nodes[id] = FULL;
+      }
     } else {
       const first = Math.min(...places);
-      nodes[id] = timeMs >= windows[first]!.start ? reveal(timeMs - windows[first]!.start) : { ...HIDDEN };
+      nodes[id] = timeMs >= windows[first]!.start ? reveal(timeMs - windows[first]!.start) : HIDDEN;
     }
   }
   for (const [id, places] of connectorSteps) {
     if (timeline.preset === 'walkthrough') {
-      connectors[id] = places.includes(active)
-        ? { ...FULL, drawProgress: easeOutCubic((timeMs - windows[active]!.start) / DRAW_MS) }
-        : { ...FULL, opacity: STORYBOARD_DIM };
+      const runs = stepRuns(places);
+      const run = runs.find(([from, to]) => active >= from && active <= to);
+      if (!run) {
+        connectors[id] = { ...FULL, opacity: STORYBOARD_DIM };
+      } else if (run === runs[0] && timeMs < windows[run[0]]!.start + REVEAL_MS) {
+        connectors[id] = { ...FULL, opacity: easeOutCubic((timeMs - windows[run[0]]!.start) / REVEAL_MS) };
+      } else {
+        connectors[id] = FULL;
+      }
     } else {
       const first = Math.min(...places);
       const local = timeMs - windows[first]!.start;
       connectors[id] = timeMs >= windows[first]!.start
         ? { ...FULL, opacity: easeOutCubic(local / REVEAL_MS), drawProgress: easeOutCubic(local / DRAW_MS) }
-        : { ...HIDDEN };
+        : HIDDEN;
     }
   }
-  const camera: Bounds2d | null = timeline.preset === 'walkthrough'
-    ? (timeline.steps[active]?.camera ?? null) : null;
-  return { timeMs, durationMs, activeStepIndex: active, nodes, connectors, camera };
+  return { timeMs, durationMs, activeStepIndex: active, nodes, connectors, camera: cameraAt(timeline, timeMs) };
 }
