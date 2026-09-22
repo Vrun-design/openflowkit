@@ -17,6 +17,8 @@ building. `STATE.md` at the repo root says what is done and what is next.
 | [phase-3-families.md](phase-3-families.md) | Diagram families + Mermaid transpiler (week 3) |
 | [phase-4-agent-ship.md](phase-4-agent-ship.md) | MCP live, BYOK AI, export, pages, polish (week 4) |
 | [phase-5-architecture.md](phase-5-architecture.md) | C4 model layer, flows, drill-down, discover/drift, git workspace (month 2) |
+| [phase-6-library.md](phase-6-library.md) | Creation library: 42 shapes, connector kinds, ink, image/emoji, frames, wireframe, charts (month 2) |
+| [phase-7-motion.md](phase-7-motion.md) | Motion export: timeline → animated SVG / GIF / MP4, `animate` DSL block, agent parity (month 3) |
 
 ## 1. Goal
 

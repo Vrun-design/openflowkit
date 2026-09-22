@@ -36,6 +36,7 @@ import { V2ExportMenu } from './V2ExportMenu';
 import { V2PagesMenu } from './V2PagesMenu';
 import type { V2BridgeStatus } from './useV2AgentBridge';
 import type { useV2Pages } from './useV2Pages';
+import { isWorkspacePickerSupported } from '../../../services/workspace/workspaceFolder';
 
 interface V2DocumentBarProps extends V2SettingsProps {
   readonly document: SceneDocumentV1;
@@ -212,7 +213,8 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
         <MenuItem icon={<Icon icon={IconSettings} />} onSelect={() => setSettingsOpen(true)}>Settings</MenuItem>
         <MenuItem icon={<Icon icon={IconFileImport} />} onSelect={() => fileRef.current?.click()}>Open file…</MenuItem>
         <MenuItem icon={<Icon icon={IconDownload} />} onSelect={() => setExportOpen(true)}>Export…</MenuItem>
-        {props.workspace ? (
+        {/* File System Access API only (Chrome/Edge); elsewhere the item would be a silent no-op. */}
+        {props.workspace && isWorkspacePickerSupported() ? (
           <>
             <MenuSeparator />
             <MenuItem icon={<Icon icon={IconFolderOpen} />} onSelect={props.workspace.onOpenFolder}>

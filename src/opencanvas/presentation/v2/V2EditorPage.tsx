@@ -107,10 +107,16 @@ export function V2EditorPage(): React.JSX.Element {
   const [compileDiagnostics, setCompileDiagnostics] = useState<ReturnType<typeof parse>['diagnostics']>([]);
   const codeAbortRef = useRef<AbortController | null>(null);
   const [slideDraftCount, setSlideDraftCount] = useState(0);
+  // The data panel is pinned to one chart: opening it never covers the canvas
+  // on a plain select, and it stays while you click around. Double-click, the
+  // context bar's Data button, or inserting a chart opens it. It docks in the
+  // same right-hand slot as the workspace panels, so only one of them is open.
+  const [chartPanelId, setChartPanelId] = useState<string | null>(null);
   const agentOpen = workspaceMode === 'assistant';
   const openWorkspace = (mode: V2WorkspaceMode) => {
     setWorkspaceMode(mode);
     setShortcutsOpen(false);
+    setChartPanelId(null);
     if (window.innerWidth < 1100) setTreeOpen(false);
   };
   const toggleAgent = () => { if (agentOpen) setWorkspaceMode(null); else openWorkspace('assistant'); };
@@ -139,6 +145,7 @@ export function V2EditorPage(): React.JSX.Element {
   const toggleShortcuts = () => {
     setShortcutsOpen((open) => !open);
     setWorkspaceMode(null);
+    setChartPanelId(null);
     if (window.innerWidth < 1100) setTreeOpen(false);
   };
   const [toasts, setToasts] = useState<readonly ToastItem[]>([]);
@@ -472,10 +479,6 @@ export function V2EditorPage(): React.JSX.Element {
   const selectedNode = selection.primaryNodeId && page
     ? page.nodes.find((node) => node.id === selection.primaryNodeId)
     : undefined;
-  // The data panel is pinned to one chart: opening it never covers the canvas
-  // on a plain select, and it stays while you click around. Double-click, the
-  // context bar's Data button, or inserting a chart opens it.
-  const [chartPanelId, setChartPanelId] = useState<string | null>(null);
   const chartPanelNode = page && chartPanelId
     ? page.nodes.find((node) => node.id === chartPanelId && node.kind === 'chart') ?? null
     : null;
@@ -483,6 +486,8 @@ export function V2EditorPage(): React.JSX.Element {
     const node = pageRef.current?.nodes.find((candidate) => candidate.id === nodeId);
     if (node?.kind !== 'chart') return false;
     setChartPanelId(nodeId);
+    setWorkspaceMode(null);
+    setShortcutsOpen(false);
     return true;
   }, []);
   const selectedElementId = selectedNode ? placedElementId(selectedNode) : null;
@@ -655,6 +660,8 @@ export function V2EditorPage(): React.JSX.Element {
     applyConnectorSelection([]);
     applySelection(replaceSelection([node.id]));
     setChartPanelId(node.id);
+    setWorkspaceMode(null);
+    setShortcutsOpen(false);
     setAnnouncement('Chart added.');
   };
   const pickEmoji = (glyph: string) => {
@@ -747,7 +754,7 @@ export function V2EditorPage(): React.JSX.Element {
     <SystemRoot appearance={appearance} density={preferences.density}>
       <div className="ofk-v2" data-testid="v2-editor" data-tool={spacePan ? 'hand' : tool}
         style={{ backgroundColor: canvasColor }}
-        data-workspace-open={workspaceMode !== null || shortcutsOpen}
+        data-workspace-open={workspaceMode !== null || shortcutsOpen || chartPanelNode !== null}
         data-tree-open={treeOpen}
         onKeyDown={(event) => {
           if (playback.flow && !isEditableTarget(event.target)) {

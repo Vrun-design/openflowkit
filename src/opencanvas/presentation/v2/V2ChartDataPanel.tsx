@@ -161,7 +161,7 @@ export function V2ChartDataPanel({ node, pageId, commit, onClose }: V2ChartDataP
   };
 
   return (
-    <Panel className="ofk-chart-panel" title={isQuadrant ? 'Quadrant points' : 'Chart data'}
+    <Panel className="ofk-chart-panel ofk-v2-workspace-panel" title={isQuadrant ? 'Quadrant points' : 'Chart data'}
       onClose={onClose}>
       <label className="ofk-chart-title">
         <span className="ofk-visually-hidden">Chart title</span>
@@ -273,6 +273,7 @@ export function V2ChartDataPanel({ node, pageId, commit, onClose }: V2ChartDataP
           <>
             <Button variant="secondary" onClick={addRow}><Icon icon={IconPlus} /> Row</Button>
             <Button variant="secondary" onClick={addSeries}><Icon icon={IconPlus} /> Series</Button>
+            <span className="ofk-chart-hint">Paste rows from a spreadsheet</span>
           </>
         )}
       </footer>

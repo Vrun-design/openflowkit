@@ -30,9 +30,10 @@ describe('resolveChartPresentation', () => {
   it('draws one bar per value inside the node box', () => {
     const presentation = resolveChartPresentation(chartNode(BAR_DATA))!;
     expect(presentation.chart).toBe('bar');
-    expect(presentation.marks).toHaveLength(6);
+    expect(presentation.marks.filter((mark) => mark.kind === 'bar')).toHaveLength(6);
+    // Two series → a legend swatch each.
+    expect(presentation.marks.filter((mark) => mark.kind === 'swatch')).toHaveLength(2);
     for (const mark of presentation.marks) {
-      expect(mark.kind).toBe('bar');
       for (const point of mark.points) {
         expect(point.x).toBeGreaterThanOrEqual(0);
         expect(point.x).toBeLessThanOrEqual(720);
@@ -70,7 +71,20 @@ describe('resolveChartPresentation', () => {
     }))!;
     const percents = presentation.labels.filter((label) => label.role === 'value').map((label) => label.text);
     expect(percents).toEqual(['25%', '25%', '50%']);
-    expect(presentation.marks).toHaveLength(3);
+    const slices = presentation.marks.filter((mark) => mark.kind === 'slice');
+    expect(slices).toHaveLength(3);
+    // Every wedge closes through the centre; the key names each slice.
+    const centre = slices[0]!.points.at(-1)!;
+    expect(slices.every((mark) => mark.points.at(-1)!.x === centre.x && mark.points.at(-1)!.y === centre.y)).toBe(true);
+    expect(presentation.labels.filter((label) => label.role === 'legend').map((label) => label.text)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('skips zero pie values and labels for slivers', () => {
+    const presentation = resolveChartPresentation(chartNode({
+      chart: 'pie', categories: ['a', 'b', 'c'], series: [{ name: 'Share', values: [0, 1, 99] }],
+    }))!;
+    expect(presentation.marks.filter((mark) => mark.kind === 'slice')).toHaveLength(2);
+    expect(presentation.labels.filter((label) => label.role === 'value').map((label) => label.text)).toEqual(['99%']);
   });
 
   it('draws a heatmap cell per value and a radar spoke per category', () => {
@@ -80,7 +94,10 @@ describe('resolveChartPresentation', () => {
       chart: 'radar', categories: ['a', 'b', 'c'], series: [{ name: 'S', values: [1, 2, 3] }],
     }))!;
     expect(radar.marks[0]!.points).toHaveLength(3);
-    expect(radar.rules.length).toBeGreaterThan(0);
+    // Four rings (closed: axes + 1 points) and one spoke per axis.
+    expect(radar.rules).toHaveLength(4 + 3);
+    expect(radar.rules[0]).toHaveLength(4);
+    expect(radar.rules[0]![0]).toEqual(radar.rules[0]![3]);
   });
 
   it('lays a table out with a header row plus one row per series', () => {

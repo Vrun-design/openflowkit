@@ -129,7 +129,7 @@ export interface ChartData {
 }
 
 export interface ChartMark {
-  readonly kind: 'bar' | 'line' | 'area' | 'point' | 'slice' | 'cell';
+  readonly kind: 'bar' | 'line' | 'area' | 'point' | 'slice' | 'cell' | 'swatch';
   /** Local node coordinates; a line has its full polyline. */
   readonly points: readonly Point2d[];
   readonly seriesIndex: number;
@@ -143,7 +143,9 @@ export interface ChartLabel {
   readonly at: Point2d;
   readonly text: string;
   readonly anchor: 'start' | 'middle' | 'end';
-  readonly role: 'title' | 'axis' | 'tick' | 'value' | 'cell';
+  readonly role: 'title' | 'axis' | 'tick' | 'value' | 'cell' | 'legend';
+  /** Overrides the theme text colour, e.g. white on a saturated wedge. */
+  readonly color?: string;
 }
 
 export interface ChartPresentation {
@@ -193,7 +195,7 @@ export function niceTicks(max: number, count = 4): number[] {
 
 const AXIS_LEFT = 44;
 const AXIS_BOTTOM = 30;
-const PADDING = { top: 16, right: 16 };
+const PADDING = { top: 12, right: 16, left: 16 };
 const LEGEND_ROW = 18;
 
 export function chartContent(node: SceneNode): { chart: ChartKind; data: ChartData; options: Record<string, unknown> } {
@@ -228,9 +230,10 @@ export function chartTitle(node: SceneNode): string {
   return typeof label === 'string' && label !== 'chart-1' ? label : '';
 }
 
-function plotBounds(size: Size2d, legendRows: number): Bounds2d {
+/** `headerRows` = title row (0/1) + legend rows; the plot starts under them. */
+function plotBounds(size: Size2d, headerRows: number): Bounds2d {
   const left = AXIS_LEFT;
-  const top = PADDING.top + (legendRows > 0 ? LEGEND_ROW : 0) + (legendRows > 1 ? LEGEND_ROW : 0);
+  const top = PADDING.top + headerRows * LEGEND_ROW;
   const width = Math.max(10, size.width - left - PADDING.right);
   const height = Math.max(10, size.height - top - AXIS_BOTTOM);
   return createBounds2d(left, top, width, height);
@@ -240,9 +243,9 @@ function cartesianPresentation(
   chart: 'bar' | 'line' | 'area' | 'scatter',
   data: ChartData,
   size: Size2d,
-  legendRows: number
+  headerRows: number
 ): ChartPresentation {
-  const plot = plotBounds(size, legendRows);
+  const plot = plotBounds(size, headerRows);
   const values = data.series.flatMap((series) => series.values);
   const max = Math.max(0, ...values);
   const min = Math.min(0, ...values);
@@ -299,8 +302,8 @@ function cartesianPresentation(
   return { chart, data, marks, rules, labels, legend: data.series.map((series, index) => ({ color: chartSeriesColor(index), label: series.name })) };
 }
 
-function piePresentation(chart: 'pie' | 'donut', data: ChartData, size: Size2d, legendRows: number): ChartPresentation {
-  const plot = plotBounds(size, legendRows);
+function piePresentation(chart: 'pie' | 'donut', data: ChartData, size: Size2d, headerRows: number): ChartPresentation {
+  const plot = plotBounds(size, headerRows);
   const radius = Math.max(10, Math.min(plot.width, plot.height) / 2 - 4);
   const cx = plot.x + plot.width / 2;
   const cy = plot.y + plot.height / 2;
@@ -311,7 +314,9 @@ function piePresentation(chart: 'pie' | 'donut', data: ChartData, size: Size2d, 
   const labels: ChartLabel[] = [];
   let angle = -Math.PI / 2;
   first.forEach((value, index) => {
-    const sweep = (Math.max(0, value) / total) * Math.PI * 2;
+    // Zero and negative values have no slice and no label.
+    if (!(value > 0)) return;
+    const sweep = (value / total) * Math.PI * 2;
     const pointCount = Math.max(3, Math.ceil((sweep / (Math.PI * 2)) * 48));
     const points: Point2d[] = [];
     for (let step = 0; step <= pointCount; step += 1) {
@@ -323,15 +328,21 @@ function piePresentation(chart: 'pie' | 'donut', data: ChartData, size: Size2d, 
         const at = angle + (sweep * step) / pointCount;
         points.push({ x: cx + Math.cos(at) * inner, y: cy + Math.sin(at) * inner });
       }
+    } else {
+      // A wedge closes through the centre; without it the polygon is arc-minus-chord.
+      points.push({ x: cx, y: cy });
     }
     marks.push({ kind: 'slice', points, seriesIndex: index, color: chartSeriesColor(index), opacity: 1, value });
     const mid = angle + sweep / 2;
     const labelRadius = math_mid(inner, radius);
-    labels.push({
-      at: { x: cx + Math.cos(mid) * labelRadius, y: cy + Math.sin(mid) * labelRadius },
-      text: `${Math.round((Math.max(0, value) / total) * 100)}%`,
-      anchor: 'middle', role: 'value',
-    });
+    // Slivers under ~5% cannot hold a label; the legend still names them.
+    if (sweep >= Math.PI * 0.1) {
+      labels.push({
+        at: { x: cx + Math.cos(mid) * labelRadius, y: cy + Math.sin(mid) * labelRadius },
+        text: `${Math.round((value / total) * 100)}%`,
+        anchor: 'middle', role: 'value', color: '#ffffff',
+      });
+    }
     angle += sweep;
   });
   return {
@@ -345,8 +356,8 @@ function math_mid(inner: number, outer: number): number {
   return inner > 0 ? (inner + outer) / 2 : (outer * 2) / 3;
 }
 
-function heatmapPresentation(data: ChartData, size: Size2d, legendRows: number): ChartPresentation {
-  const plot = plotBounds(size, legendRows);
+function heatmapPresentation(data: ChartData, size: Size2d, headerRows: number): ChartPresentation {
+  const plot = plotBounds(size, headerRows);
   const rows = data.series.length;
   const columns = Math.max(1, data.categories.length);
   const cellWidth = plot.width / columns;
@@ -390,9 +401,10 @@ function heatmapPresentation(data: ChartData, size: Size2d, legendRows: number):
   };
 }
 
-function radarPresentation(data: ChartData, size: Size2d, legendRows: number): ChartPresentation {
-  const plot = plotBounds(size, legendRows);
-  const radius = Math.max(10, Math.min(plot.width, plot.height) / 2 - 6);
+function radarPresentation(data: ChartData, size: Size2d, headerRows: number): ChartPresentation {
+  const plot = plotBounds(size, headerRows);
+  // Axis captions sit at 1.12 r and need a line of room beyond that.
+  const radius = Math.max(10, (Math.min(plot.width, plot.height) / 2 - 14) / 1.12);
   const cx = plot.x + plot.width / 2;
   const cy = plot.y + plot.height / 2;
   const axes = Math.max(3, data.categories.length);
@@ -401,7 +413,12 @@ function radarPresentation(data: ChartData, size: Size2d, legendRows: number): C
     const angle = -Math.PI / 2 + (index * Math.PI * 2) / axes;
     return { x: cx + Math.cos(angle) * radius * ratio, y: cy + Math.sin(angle) * radius * ratio };
   };
-  const rules: Point2d[][] = [Array.from({ length: axes }, (_, index) => spoke(index, 1)), [spoke(0, 1), spoke(0, 0)]];
+  // Grid: four closed rings at 25/50/75/100 % plus a spoke per axis.
+  const ring = (ratio: number): Point2d[] => Array.from({ length: axes + 1 }, (_, index) => spoke(index % axes, ratio));
+  const rules: Point2d[][] = [
+    ...[0.25, 0.5, 0.75, 1].map(ring),
+    ...Array.from({ length: axes }, (_, index) => [spoke(index, 0), spoke(index, 1)]),
+  ];
   const labels: ChartLabel[] = data.categories.map((category, index) => {
     const at = spoke(index, 1.12);
     return { at, text: category, anchor: 'middle', role: 'axis' };
@@ -464,13 +481,47 @@ export function resolveChartPresentation(node: SceneNode): ChartPresentation | n
       ? { ...presentation, labels: [...presentation.labels, { at: { x: size.width / 2, y: 6 }, text: title, anchor: 'middle', role: 'title' }] }
       : presentation;
   }
-  const legendRows = chart === 'table' || chart === 'pie' || chart === 'donut' ? 0 : data.series.length > 1 ? 2 : 1;
-  const presentation = chart === 'pie' || chart === 'donut' ? piePresentation(chart, data, size, legendRows)
-    : chart === 'heatmap' ? heatmapPresentation(data, size, legendRows)
-      : chart === 'radar' ? radarPresentation(data, size, legendRows)
-        : chart === 'table' ? tablePresentation(data, size)
-          : cartesianPresentation(chart, data, size, legendRows);
   const title = chartTitle(node);
-  if (!title) return presentation;
-  return { ...presentation, labels: [{ at: { x: size.width / 2, y: 12 }, text: title, anchor: 'middle', role: 'title' }, ...presentation.labels] };
+  const titleRows = title ? 1 : 0;
+  // A key earns its row only when there is something to tell apart: several
+  // series, or the slices of a pie. Two rows at most; the rest is in the data panel.
+  const legendItems = chart === 'pie' || chart === 'donut' ? data.categories.length : data.series.length;
+  const wantsLegend = chart !== 'table' && (chart === 'pie' || chart === 'donut' || data.series.length > 1);
+  const legendRows = wantsLegend ? Math.min(2, legendLayout(legendItems, size.width).rows) : 0;
+  const headerRows = titleRows + legendRows;
+  const presentation = chart === 'pie' || chart === 'donut' ? piePresentation(chart, data, size, headerRows)
+    : chart === 'heatmap' ? heatmapPresentation(data, size, headerRows)
+      : chart === 'radar' ? radarPresentation(data, size, headerRows)
+        : chart === 'table' ? tablePresentation(data, size)
+          : cartesianPresentation(chart, data, size, headerRows);
+  const marks = [...presentation.marks];
+  const labels = [...presentation.labels];
+  if (title) labels.unshift({ at: { x: size.width / 2, y: PADDING.top + LEGEND_ROW / 2 }, text: title, anchor: 'middle', role: 'title' });
+  if (legendRows > 0) {
+    const top = PADDING.top + titleRows * LEGEND_ROW;
+    let x = PADDING.left;
+    let row = 0;
+    for (const item of presentation.legend) {
+      const width = legendItemWidth(item.label);
+      if (x + width > size.width - PADDING.right && x > PADDING.left) { x = PADDING.left; row += 1; }
+      if (row >= legendRows) break;
+      const y = top + row * LEGEND_ROW + LEGEND_ROW / 2;
+      marks.push({ kind: 'swatch', points: [{ x, y: y - 5 }, { x: x + 10, y: y + 5 }], seriesIndex: -1, color: item.color, opacity: 1 });
+      labels.push({ at: { x: x + 15, y }, text: item.label, anchor: 'start', role: 'legend' });
+      x += width;
+    }
+  }
+  return { ...presentation, marks, labels };
+}
+
+// ponytail: legend text width is estimated at 6.2 px per character (11 px
+// system font); measure in the renderer if long series names misalign.
+function legendItemWidth(label: string): number {
+  return 10 + 5 + label.length * 6.2 + 14;
+}
+
+function legendLayout(items: number, width: number): { rows: number } {
+  // Rows the key needs at a typical label length; exact wrapping happens in resolve.
+  const perRow = Math.max(1, Math.floor((width - PADDING.left - PADDING.right) / legendItemWidth('Series 10')));
+  return { rows: items === 0 ? 0 : Math.ceil(items / perRow) };
 }

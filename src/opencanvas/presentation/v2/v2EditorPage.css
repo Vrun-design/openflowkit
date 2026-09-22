@@ -667,38 +667,60 @@
 @media (max-width: 520px) { .ofk-connection-capabilities { grid-template-columns: 1fr; } }
 
 
-/* Chart data panel: a real table, one row per category, one column per series. */
-.ofk-chart-panel { top: 80px; bottom: 16px; width: 380px; display: flex; flex-direction: column; }
-.ofk-chart-panel-body { flex: 1; min-height: 0; overflow: auto; }
-.ofk-chart-table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-.ofk-chart-table th, .ofk-chart-table td { padding: 2px; overflow: hidden; font-weight: 500; }
-/* The label column gets the room; series columns share what is left. */
-.ofk-chart-table th:first-child { width: 46%; }
-.ofk-chart-table thead th { padding-bottom: 6px; font-size: 11px; font-weight: 500; color: var(--ofk-muted); text-align: start; }
-.ofk-chart-head-cell { display: flex; align-items: center; gap: 2px; min-width: 0; }
-.ofk-chart-head-cell input { width: 100%; min-width: 0; }
-.ofk-chart-table input {
-  width: 100%; min-width: 0; padding: 6px 8px; font: inherit; font-size: 13px;
-  color: var(--ofk-text); background: var(--ofk-surface); border: 1px solid var(--ofk-border);
-  border-radius: 8px;
+/* Chart data panel: docked in the workspace slot, a spreadsheet grid inside.
+   Label column and header row stay put; series columns keep a real width and
+   the grid scrolls, so ten series never squash into slivers. */
+.ofk-chart-panel .ofk-panel-body { display: flex; flex-direction: column; gap: 12px; padding: 12px 16px 16px; }
+.ofk-chart-title { display: block; margin: 0; }
+.ofk-chart-title input {
+  width: 100%; padding: 8px 10px; font: inherit; font-size: 15px; font-weight: 600; letter-spacing: -.01em;
+  color: var(--ofk-text); background: transparent; border: 1px solid transparent; border-radius: 8px;
 }
-.ofk-chart-table input:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 0; border-color: var(--ofk-focus); }
-.ofk-chart-table input[aria-invalid='true'] { border-color: var(--ofk-danger); color: var(--ofk-danger); }
-.ofk-chart-table .ofk-icon-button { min-width: 24px; width: 24px; min-height: 24px; height: 24px; color: var(--ofk-muted); }
-.ofk-chart-panel-foot { display: flex; gap: 8px; padding-top: 10px; border-top: 1px solid var(--ofk-border); }
+.ofk-chart-title input::placeholder { color: var(--ofk-muted); font-weight: 500; }
+.ofk-chart-title input:hover { background: color-mix(in srgb, var(--ofk-text) 5%, transparent); }
+.ofk-chart-title input:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 0; border-color: var(--ofk-focus); }
+.ofk-chart-panel-body {
+  flex: 0 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain;
+  border: 1px solid var(--ofk-border); border-radius: 10px; background: var(--ofk-surface);
+}
+.ofk-chart-table { border-collapse: separate; border-spacing: 0; table-layout: auto; min-width: 100%; }
+.ofk-chart-table th, .ofk-chart-table td {
+  padding: 0; font-weight: 500; text-align: start; vertical-align: middle;
+  border-right: 1px solid var(--ofk-border); border-bottom: 1px solid var(--ofk-border);
+}
+.ofk-chart-table tr > :last-child { border-right: 0; }
+.ofk-chart-table tbody tr:last-child > * { border-bottom: 0; }
+.ofk-chart-table th { min-width: 120px; }
+.ofk-chart-table td { min-width: 96px; }
+.ofk-chart-table :is(th, td):has(> .ofk-chart-remove) { min-width: 0; width: 32px; padding: 0 4px; }
+.ofk-chart-table thead th { position: sticky; top: 0; z-index: 2; background: var(--ofk-raised); }
+.ofk-chart-table th[scope='row'] { position: sticky; left: 0; z-index: 1; background: var(--ofk-raised); }
+.ofk-chart-table thead th:first-child { left: 0; z-index: 3; }
+.ofk-chart-table thead th:not(:has(input)) { padding: 0 10px; font-size: 11px; font-weight: 500; color: var(--ofk-muted); }
+.ofk-chart-head-cell { display: flex; align-items: center; min-width: 0; padding-inline-end: 2px; }
+.ofk-chart-head-cell input { flex: 1; }
+.ofk-chart-table thead input { font-weight: 600; }
+.ofk-chart-table input {
+  width: 100%; min-width: 0; height: 34px; padding: 0 10px; font: inherit; font-size: 13px;
+  color: var(--ofk-text); background: transparent; border: 0; border-radius: 0;
+}
+.ofk-chart-table td input { text-align: end; font-variant-numeric: tabular-nums; }
+.ofk-chart-table input:hover { background: color-mix(in srgb, var(--ofk-text) 4%, transparent); }
+.ofk-chart-table input:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: -2px; background: var(--ofk-surface); position: relative; z-index: 1; }
+.ofk-chart-table input[aria-invalid='true'] { color: var(--ofk-danger); box-shadow: inset 0 0 0 2px var(--ofk-danger); }
+.ofk-chart-table .ofk-icon-button { min-width: 24px; width: 24px; min-height: 24px; height: 24px; color: var(--ofk-muted); flex: none; }
+/* Row and column actions stay out of the way until that row or column is hovered or focused. */
+.ofk-chart-table .ofk-chart-remove { opacity: 0; transition: opacity 120ms ease; }
+.ofk-chart-table tr:hover .ofk-chart-remove, .ofk-chart-table th:hover .ofk-chart-remove,
+.ofk-chart-table tr:focus-within .ofk-chart-remove { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .ofk-chart-table .ofk-chart-remove { transition: none; } }
+.ofk-chart-panel-foot { display: flex; align-items: center; gap: 8px; }
+.ofk-chart-panel-foot .ofk-chart-hint { margin-inline-start: auto; font-size: 11px; color: var(--ofk-muted); }
 
 /* Emoji live inside the icon library: bigger glyph cells, same grid rhythm. */
 .ofk-icon-picker-grid--emoji { grid-template-columns: repeat(8, 1fr); }
 .ofk-icon-picker-cell--emoji { font-size: 20px; line-height: 1; }
-.ofk-chart-title { display: block; margin: 0 0 10px; }
-.ofk-chart-title input {
-  width: 100%; padding: 7px 10px; font: inherit; font-size: 13px; font-weight: 600;
-  color: var(--ofk-text); background: transparent; border: 1px solid transparent; border-radius: 8px;
-}
-.ofk-chart-title input:hover { border-color: var(--ofk-border); }
-.ofk-chart-title input:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 0; border-color: var(--ofk-focus); }
-/* Row actions stay out of the way until the row is hovered or focused. */
-.ofk-chart-table .ofk-chart-remove { opacity: 0; transition: opacity 120ms ease; }
-.ofk-chart-table tr:hover .ofk-chart-remove,
-.ofk-chart-table tr:focus-within .ofk-chart-remove { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .ofk-chart-table .ofk-chart-remove { transition: none; } }
+/* Chart type picker: icon over caption, wrapping grid instead of a squeezed segment row. */
+.ofk-choice-row--grid { grid-auto-flow: row; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 4px; }
+.ofk-choice-row--grid .ofk-choice { flex-direction: column; gap: 5px; min-height: 56px; padding: 6px 2px; font-size: 11px; line-height: 1; }
+.ofk-choice-row--grid .ofk-choice .ofk-icon { width: 20px; height: 20px; }

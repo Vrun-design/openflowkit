@@ -78,7 +78,7 @@ export function Popover({
       // collision placement stays valid after the animation settles.
       const self = ref.current ? { width: ref.current.offsetWidth, height: ref.current.offsetHeight } : null;
       if (!anchor || !self) return;
-      const inset = foundation.layout.edgeInset;
+      const { edgeInset: inset, topLane: laneTop, bottomLane: laneBottom } = foundation.layout;
       const vw = window.innerWidth,
         vh = window.innerHeight;
       let side = placement.split('-')[0] as 'top' | 'bottom' | 'left' | 'right';
@@ -108,21 +108,30 @@ export function Popover({
       )
         side = 'right';
       let x: number, y: number;
+      let growsUp = side === 'top';
       if (side === 'bottom' || side === 'top') {
         y = side === 'bottom' ? anchor.bottom + gap : anchor.top - gap - self.height;
         x = align === 'start' ? anchor.left : anchor.right - self.width;
       } else {
         x = side === 'right' ? anchor.right + gap : anchor.left - gap - self.width;
-        y = anchor.top;
+        // Side layers live in the band between the toolbar lanes. Top-aligned
+        // with the anchor; a tall layer from a low anchor grows upward instead.
+        const fitsBelow = anchor.top + self.height <= vh - laneBottom;
+        const fitsAbove = anchor.bottom - self.height >= laneTop;
+        growsUp = !fitsBelow && fitsAbove;
+        y = growsUp ? anchor.bottom - self.height : anchor.top;
       }
+      const minY = side === 'left' || side === 'right' ? laneTop : inset;
+      const maxY = side === 'left' || side === 'right' ? vh - laneBottom : vh - inset;
       x = Math.min(Math.max(inset, x), Math.max(inset, vw - inset - self.width));
-      y = Math.min(Math.max(inset, y), Math.max(inset, vh - inset - self.height));
-      const originY = side === 'top' ? 'bottom' : 'top';
+      y = Math.min(Math.max(minY, y), Math.max(minY, maxY - self.height));
+      const originY = growsUp ? 'bottom' : 'top';
       const originX =
         side === 'left' ? 'right' : align === 'end' && side !== 'right' ? 'right' : 'left';
       setBox({
         left: x,
         top: y,
+        maxHeight: maxY - minY,
         '--ofk-origin': `${originY} ${originX}`,
         visibility: 'visible',
       } as CSSProperties);

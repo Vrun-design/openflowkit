@@ -24,6 +24,8 @@ export const foundation = {
     edgeInset: 16,
     /** Clearance from the viewport top for side panels: reserves the top toolbar lane. */
     topLane: 72,
+    /** Clearance from the viewport bottom: reserves the zoom/history toolbar lane. */
+    bottomLane: 72,
     panelWidth: 320,
     panelMaxWidth: 400,
     contextGap: 12,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   IconAlignCenter, IconAlignLeft, IconAlignRight, IconArrowBarToDown, IconArrowBarToUp,
-  IconArrowsVertical, IconChartBar, IconChevronDown, IconBold, IconItalic, IconPhoto,
+  IconArrowsVertical, IconChevronDown, IconBold, IconItalic, IconMoodSmile,
   IconStrikethrough, IconUnderline,
 } from '@tabler/icons-react';
 
@@ -13,7 +13,8 @@ import { buildStyleNodesCommand } from '../../domain/commands/styleNodes';
 import { buildSetIconCommand } from '../../domain/commands/iconCommands';
 import { buildSetInkCommand } from '../../domain/commands/inkCommands';
 import { buildSetChartKindCommand } from '../../domain/commands/chartCommands';
-import { CHART_KINDS, type ChartKind } from '../../domain/nodes/chartNodePresentation';
+import type { ChartKind } from '../../domain/nodes/chartNodePresentation';
+import { CHART_OPTIONS } from './v2ToolCatalog';
 import { buildSetHeaderCommand } from '../../domain/commands/groupNodes';
 import { resolveArchitectureNodePresentation } from '../../domain/nodes/architectureNodePresentation';
 import { V2IconPicker } from './V2IconPicker';
@@ -94,6 +95,7 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
   const isChart = nodes.every((node) => node.kind === 'chart');
   const chartKind = typeof nodes[0]?.content.chart === 'string'
     ? nodes[0]!.content.chart as ChartKind : 'bar';
+  const chartOption = CHART_OPTIONS.find((option) => option.id === chartKind) ?? CHART_OPTIONS[0]!;
   const commitChart = (kind: ChartKind) => {
     const command = buildSetChartKindCommand(page, nodeIds, kind);
     if (command) commit(command);
@@ -105,8 +107,10 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
   };
   // Containers carry a title band: vertical alignment and shadow do not apply.
   const isContainer = nodes.every((node) => isContainerNodeKind(node.kind));
-  // Any shape can become an icon node; the current icon (one selected) shows in the button.
-  const canPickIcon = !isText && !isContainer;
+  // Picking an icon turns the node into an icon node, so only shapes offer it:
+  // text, containers, ink, images and charts would lose what they are.
+  const isImage = nodes.every((node) => node.kind === 'image');
+  const canPickIcon = !isText && !isContainer && !isStroke && !isChart && !isImage;
   const currentIcon = nodes.length === 1 ? resolveArchitectureNodePresentation(nodes[0])?.icon : undefined;
   const selectedIcon = currentIcon?.kind === 'provider' ? currentIcon : null;
   const textColorIsAuto = nodes.every((node) => node.appearance.textColor === undefined || node.appearance.textColor === 'auto');
@@ -133,7 +137,7 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
     <>
       {canPickIcon ? (
         <StyleButton label="Icon" open={open === 'icon'} onToggle={() => toggle('icon')} onClose={close} panelClassName="ofk-style-panel--icons"
-          preview={selectedIcon ? <IconSwatch packId={selectedIcon.packId} shapeId={selectedIcon.shapeId} /> : <Icon icon={IconPhoto} />}>
+          preview={selectedIcon ? <IconSwatch packId={selectedIcon.packId} shapeId={selectedIcon.shapeId} /> : <Icon icon={IconMoodSmile} />}>
           <V2IconPicker selected={selectedIcon} onClose={close} onPick={(icon) => {
             const command = buildSetIconCommand(page, nodeIds, icon);
             if (command) commit(command);
@@ -142,15 +146,14 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
         </StyleButton>
       ) : null}
       {isChart ? (
-        <StyleButton label="Chart" open={open === 'chart'} onToggle={() => toggle('chart')} onClose={close}
-          preview={<Icon icon={IconChartBar} />}>
-          <PanelRow label="Type">
-            <ChoiceRow<ChartKind> label="Chart type" value={chartKind} onChange={commitChart}
-              options={CHART_KINDS.map((kind) => ({
-                value: kind,
-                label: kind.charAt(0).toUpperCase() + kind.slice(1),
-              }))} />
-          </PanelRow>
+        <StyleButton label="Chart" panelTitle="Chart type" open={open === 'chart'} onToggle={() => toggle('chart')} onClose={close}
+          preview={<Icon icon={chartOption.icon} />}>
+          <ChoiceRow<ChartKind> label="Chart type" value={chartKind} onChange={commitChart} layout="grid"
+            options={CHART_OPTIONS.map((option) => ({
+              value: option.id,
+              title: option.label,
+              label: <><Icon icon={option.icon} /><span>{option.label.replace(/ (chart|plot)$/, '')}</span></>,
+            }))} />
         </StyleButton>
       ) : null}
       {isStroke ? (
@@ -317,5 +320,5 @@ function IconSwatch({ packId, shapeId }: { readonly packId: string; readonly sha
     void loadProviderShapePreview(packId, shapeId).then((preview) => { if (alive) setUrl(preview?.previewUrl ?? null); });
     return () => { alive = false; };
   }, [packId, shapeId]);
-  return url ? <img className="ofk-style-icon-swatch" src={url} alt="" /> : <Icon icon={IconPhoto} />;
+  return url ? <img className="ofk-style-icon-swatch" src={url} alt="" /> : <Icon icon={IconMoodSmile} />;
 }

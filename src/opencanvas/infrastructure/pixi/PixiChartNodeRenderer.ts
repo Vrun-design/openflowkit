@@ -63,6 +63,12 @@ export class PixiChartNodeRenderer {
           graphics.poly(points.flatMap((point) => [point.x, point.y]));
           graphics.fill({ color, alpha: mark.opacity });
         }
+      } else if (mark.kind === 'swatch') {
+        const [first, second] = points;
+        if (first && second) {
+          graphics.roundRect(first.x, first.y, second.x - first.x, second.y - first.y, 2);
+          graphics.fill({ color, alpha: mark.opacity });
+        }
       } else if (mark.kind === 'cell') {
         const [first, second] = points;
         if (first && second) {
@@ -104,7 +110,7 @@ export class PixiChartNodeRenderer {
       const labelStyle: NodeStyle = entry.role === 'title'
         ? { ...style, fontSize: style.fontSize + 2, fontWeight: 600 }
         : { ...style, fontSize: 11, fontWeight: 500 };
-      const text = createStyledPixiText(entry.text, labelStyle, textColor, null);
+      const text = createStyledPixiText(entry.text, labelStyle, entry.color ? pixiHexColor(entry.color, textColor) : textColor, null);
       text.anchor.set(entry.anchor === 'start' ? 0 : entry.anchor === 'end' ? 1 : 0.5, 0.5);
       text.position.set(at.x, at.y);
       label.addChild(text);

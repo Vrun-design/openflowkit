@@ -31,6 +31,16 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
   SVG: decorations and charts were double-transformed. Selection holds many connectors
   (marquee, ⌘A, Delete, tree); free-end connectors indexed by their point. Style bar for a
   multi-connector selection is a marked ceiling. `OpenCanvasSemanticSceneTree` has no caller.
+- Chart UI review 2026-09-22 (Opus): data panel docks in the right workspace slot (rail shifts,
+  one panel at a time) as a spreadsheet grid — sticky header/label column, fixed column widths,
+  scrolls; chart type is an icon grid and the bar button shows the current kind; the Icon button
+  is hidden for charts/ink/images (`withIcon` would have turned them into architecture nodes)
+  and uses the smiley glyph to match the rail. Pie wedges close through the centre (were
+  arc-minus-chord), zero slices skipped, white % labels; radar draws 4 rings + spokes with label
+  room; the `legend` array is now rendered (swatch marks + labels) for pie/donut and multi-series
+  charts. Popover side placement grows upward when it does not fit below the anchor (rail
+  flyouts from low buttons use the space above) and side layers are clamped to the band between
+  the top and bottom toolbar lanes (`layout.bottomLane` token), capped in height so they scroll.
 - Connect agent moved to the rail 2026-09-22 (Opus): 5th rail item + welcome button open a
   panel (`V2AgentConnect`: hero, steps when off, live card + capability grid when on); top-bar
   plug is status-only and opens the panel. No shortcut (Alt+A = align left).
@@ -60,6 +70,10 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
   the click threshold. Click-place now uses the per-shape size table (was the 160×72 default
   for every library shape — actor/folder came out squashed).
 ## Next
+- Phase 7 — motion export ([phase-7-motion.md](docs/plan/phase-7-motion.md)): 7.1 timeline →
+  7.2 SVG → 7.3 DSL → 7.4 encoders → 7.5 dialog → 7.6 agent → 7.7 audit. Owner calls in §5 open.
+- Canvas menu "Open workspace folder…" now hidden where `showDirectoryPicker` is missing
+  (Safari/Firefox/Brave default); it was a silent no-op there (V2DocumentBar, 2026-09-22).
 - Owner feel-test on `/`: paste the C4 example, drill 3 levels, play a flow, run `drift`.
 - Model JSON is copied onto every view frame (~3 KB/page today). Moving it to one
   document-level slot means `serialize(frame)` needs the document — an API change across

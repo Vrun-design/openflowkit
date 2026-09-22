@@ -126,9 +126,12 @@ export function ChoiceRow<T extends string | number>(props: {
   readonly value: T | null;
   readonly options: readonly { readonly value: T; readonly label: ReactNode; readonly title?: string }[];
   readonly onChange: (value: T) => void;
+  /** `grid` wraps icon + caption cells; the default is one segmented row. */
+  readonly layout?: 'row' | 'grid';
 }): React.JSX.Element {
   return (
-    <div className="ofk-choice-row" role="radiogroup" aria-label={props.label} onKeyDown={radioKeys}>
+    <div className={props.layout === 'grid' ? 'ofk-choice-row ofk-choice-row--grid' : 'ofk-choice-row'}
+      role="radiogroup" aria-label={props.label} onKeyDown={radioKeys}>
       {props.options.map((option) => (
         <button key={String(option.value)} type="button" role="radio" aria-checked={props.value === option.value}
           className="ofk-choice" title={option.title ?? String(option.label)} aria-label={option.title ?? String(option.value)}

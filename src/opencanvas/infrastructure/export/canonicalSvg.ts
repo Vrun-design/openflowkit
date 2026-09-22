@@ -291,10 +291,10 @@ function exportChartNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'da
   parts.push(`<path d="${pathData(corners)}" fill="${xml(style.fill)}"${cardStroke}/>`);
   for (const mark of presentation.marks) {
     const points = mark.points.map((point) => applyMatrixToPoint(matrix, point));
-    if (mark.kind === 'bar' || mark.kind === 'cell') {
+    if (mark.kind === 'bar' || mark.kind === 'cell' || mark.kind === 'swatch') {
       const [first, second] = points;
       if (!first || !second) continue;
-      parts.push(`<rect x="${number(first.x)}" y="${number(first.y)}" width="${number(second.x - first.x)}" height="${number(second.y - first.y)}" fill="${xml(mark.color)}" fill-opacity="${number(mark.opacity)}"${mark.kind === 'cell' ? ` stroke="${xml(style.fill)}" stroke-opacity="0.6"` : ''}/>`);
+      parts.push(`<rect x="${number(first.x)}" y="${number(first.y)}" width="${number(second.x - first.x)}" height="${number(second.y - first.y)}"${mark.kind === 'swatch' ? ' rx="2"' : ''} fill="${xml(mark.color)}" fill-opacity="${number(mark.opacity)}"${mark.kind === 'cell' ? ` stroke="${xml(style.fill)}" stroke-opacity="0.6"` : ''}/>`);
     } else if (mark.kind === 'point') {
       for (const point of points) {
         parts.push(`<circle cx="${number(point.x)}" cy="${number(point.y)}" r="3.5" fill="${xml(mark.color)}" fill-opacity="${number(mark.opacity)}"/>`);
@@ -327,7 +327,7 @@ function exportChartNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'da
     const at = applyMatrixToPoint(matrix, label.at);
     const anchor = label.anchor === 'start' ? 'start' : label.anchor === 'end' ? 'end' : 'middle';
     const size = label.role === 'title' ? style.fontSize + 2 : 11;
-    parts.push(`<text x="${number(at.x)}" y="${number(at.y)}" text-anchor="${anchor}" dominant-baseline="middle" fill="${xml(textColor)}" font-family="system-ui,sans-serif" font-size="${number(size)}">${xml(label.text)}</text>`);
+    parts.push(`<text x="${number(at.x)}" y="${number(at.y)}" text-anchor="${anchor}" dominant-baseline="middle" fill="${xml(label.color ?? textColor)}" font-family="system-ui,sans-serif" font-size="${number(size)}">${xml(label.text)}</text>`);
   }
   return `<g data-node-id="${xml(node.id)}" data-node-kind="chart">${parts.join('')}</g>`;
 }

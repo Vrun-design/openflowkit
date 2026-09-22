@@ -1,0 +1,158 @@
+# Phase 7 — motion export (animated SVG · GIF · MP4)
+
+Owner decision, 2026-09-22: every diagram can be exported as a short animation, not just a
+still. Nobody in our lane ships this natively — Koboyo, Eraser, Whimsical, tldraw, Mermaid,
+draw.io, Miro all export static PNG/SVG/PDF (draw.io animates edges on screen only). The one
+real prior art is [Excalimate](https://github.com/excalimate/excalimate): an Excalidraw add-on
+with a keyframe timeline, camera moves, sequence reveals and MP4/WebM/GIF/animated-SVG export,
+plus an MCP server. Our edge is that motion is a *projection of the text*: an `animate` block
+in the DSL (an agent can write it), an auto sequence for diagrams that have none, and phase-5
+flows as ready-made walkthroughs. Steps, not keyframes — steps round-trip to text, keyframes
+do not.
+
+Read first: `AGENTS.md`, `docs/plan/README.md` §4–§6, `STATE.md`, `grammar.md` §6.6,
+`phase-6-library.md` §0 (the non-negotiables apply verbatim), then the code each slice
+touches end to end: `infrastructure/export/canonicalSvg.ts`, `export/raster.ts`,
+`presentation/v2/V2ExportMenu.tsx`, `useV2FlowPlayback.ts`, `PixiFocusOverlay.ts`,
+`dsl/model/flowExport.ts`, the ELK worker (for the worker pattern).
+
+## 0. What ships (the deliverable in one paragraph)
+
+Export… gains an **Animation** section. Pick a preset (Build · Walkthrough · Pulse), an
+order (Auto · a flow · the DSL `animate` block), duration/fps/size/theme, watch the exact
+result play in the dialog, scrub it, then download **animated SVG, GIF, MP4 or WebM**. The
+same timeline drives the preview, the SVG and every video frame — what you preview is what
+you get, bit for bit. An agent gets the same through `export` and can author the sequence
+in text.
+
+## 1. Research — formats and where they actually play
+
+| Format | Plays inline in | Does not | Size, 10 s / 8 nodes | How we make it |
+|---|---|---|---|---|
+| **Animated SVG** (CSS keyframes) | GitHub README (`<img>` runs CSS/SMIL, no JS), docs sites, Notion, web pages | Slack, X/LinkedIn, Google Docs, most chat | ~40–80 KB, vector, loops | string from `canonicalSvg` + `<style>` |
+| **GIF** | everywhere (Slack, GitHub, Notion, X, email) | — (256 colours, no half-alpha, ≤ ~20 fps sane) | 3–15 MB at 800 px | frames → `gifenc` (≈3 KB, palette quantiser) |
+| **MP4 / H.264** | Slack, X, LinkedIn, YouTube, Keynote/PowerPoint, GitHub issues/PRs (as attachment) | GitHub README inline | 1–3 MB at 1080p | frames → WebCodecs `VideoEncoder` → `mediabunny` mux |
+| **WebM / VP9** | Chrome, Firefox, Slack | Safari-only contexts, Office | ~1 MB | same path, or `MediaRecorder` fallback |
+
+WebCodecs (`VideoEncoder`) is full in Chrome/Edge 94+, Firefox 130+ desktop, Safari 26+
+(partial from 16.4). No WebCodecs → MP4 is hidden, WebM comes from `MediaRecorder`
+(real time, so a 10 s clip takes 10 s), GIF and SVG always work. Lottie/dotLottie: skipped —
+needs a player everywhere it goes, and GIF/MP4 already cover the "paste it anywhere" case.
+
+Two new deps, both justified in one line: `mediabunny` (tree-shakable muxer, the successor
+of mp4-muxer/webm-muxer, zero deps — writing an MP4 box writer by hand is a week) and
+`gifenc` (median-cut quantiser + LZW in ~200 lines — the part that is easy to get wrong).
+
+## 2. Architecture — one timeline, three outputs
+
+```
+ScenePage ──┐
+flow (ph.5) ├─► Timeline (pure, domain/animation) ──┬─► exportAnimatedSvg (CSS keyframes)
+`animate {}`┘                                        ├─► frameAt(t) ─► canonicalSvg(frame) ─► raster ─► encoder (worker)
+                                                     └─► preview (<img> of the SVG + scrubber)
+```
+
+**Timeline** (`src/opencanvas/domain/animation/`): pure TypeScript, no DOM.
+- `Timeline = { steps: Step[]; preset; loop; durationMs }`, `Step = { nodeIds, connectorIds,
+  note?, holdMs, camera?: Bounds }`. That is the whole model. No keyframes, no per-property
+  curves — a step is "these things appear/light up, hold, next".
+- `autoSequence(page)`: topological order over the connector graph (containers before their
+  children, roots first, cycles broken by position, unconnected nodes last, stable tie-break
+  by `y` then `x`). One step per node; a connector joins the step of its target. This is the
+  zero-config path and must look right for a plain flowchart.
+- `flowToTimeline(flow, model, document)`: phase-5 flows already resolve steps to node and
+  connector ids (`useV2FlowPlayback` does it in a hook — lift that resolution into the domain
+  and have the hook call it). Notes hold longer (`NOTE_MS`), camera = bounds of the step.
+- `frameAt(timeline, tMs) → FrameState`: per element `{ opacity, scale, drawProgress }` plus
+  the camera box. Easing: one `easeOutCubic`, node pop 0.92 → 1 over 320 ms, connector draw-on
+  via `drawProgress` (rendered as `stroke-dashoffset`), the storyboard dim at 0.25.
+- Presets: **Build** (cumulative reveal, ends with everything shown), **Walkthrough**
+  (spotlight one step at a time, everything else dimmed, camera glides — the flow playback
+  look), **Pulse** (everything shown, connectors carry a travelling dash forever; the looping
+  "system is alive" GIF for a README).
+- Unit tests beside every function: order on the fixtures in `dsl/families/**`, `frameAt`
+  at t=0/mid/end, loop wrap, empty page, 1 node, 500 nodes under 5 ms.
+
+**SVG** (`infrastructure/export/canonicalSvg.ts`): today nodes/connectors are emitted as
+`<g data-node-id>` / `<g data-connector-id>` — the hooks are already there.
+- `exportCanonicalSvg(document, { frame })` applies a `FrameState` as attributes on those
+  groups (`opacity`, `transform`, `stroke-dasharray/offset` with `pathLength="1"`). No frame →
+  unchanged output; the golden tests stay green.
+- `exportAnimatedSvg(document, timeline)` = the same markup plus one `<style>` block: one
+  `@keyframes` per effect, per-element `animation-delay`. Walkthrough camera = animated
+  `transform` on a root `<g>` (CSS cannot animate `viewBox` inside `<img>`). Golden test per
+  preset. `prefers-reduced-motion` → show the final frame.
+- Law: `frameAt(timeline, t)` rendered as a still must match the animated SVG paused at `t`
+  (headed check: screenshot both at three times, pixel-compare within tolerance).
+
+**Frames → file** (`infrastructure/export/motion.worker.ts`): the existing worker pattern.
+- Main thread builds the SVG strings per frame (`canonicalSvg` is pure, so this could also
+  move into the worker; do it there if a 300-frame render blocks input in the headed check),
+  decodes each via `createImageBitmap` (Safari cannot decode SVG in a worker → `<img>` on
+  main, transfer the bitmap), the worker owns an `OffscreenCanvas` and the encoder.
+- GIF: `gifenc`, global palette from the final frame, 20 fps cap, delay per frame.
+- MP4/WebM: `VideoEncoder` (`avc1.42001f` / `vp09`) → `mediabunny` `Output`. Bitrate from
+  size (≈ 0.1 bpp × fps). WebM fallback via `MediaRecorder` on the offscreen canvas when
+  `VideoEncoder` is missing.
+- Progress messages every 10 frames; cancel via a `MessagePort` close. Never freeze the
+  canvas: the headed check records rAF while a 1080p 15 s export runs.
+
+**UI** (`presentation/v2/V2ExportMenu.tsx`, one new `V2MotionExport.tsx`):
+- Export… gets a **Still / Animation** toggle at the top; Animation shows: preset (3 segmented
+  buttons), order (Auto · flow picker if the page has flows · "from code" when the DSL has an
+  `animate` block), duration (auto from step count, editable), fps (12/24/30), size
+  (720/1080/1440), theme (light/dark/current), loop, format (SVG · GIF · MP4 · WebM, each with
+  its one-line "plays in …" hint, MP4 hidden without WebCodecs).
+- Preview: the animated SVG in an `<img>` (exact), a scrubber that re-renders `frameAt(t)` as
+  a still, play/pause, ⎵ toggles, ←/→ step. Keyboard for everything (§0 of phase 6).
+- Export button → progress bar with frame count and cancel → download. Copy MP4/GIF to
+  clipboard where the browser allows (`ClipboardItem` with `image/gif` works in Chrome).
+- One headed Playwright check: build preset on the smoke fixture → GIF and MP4 download,
+  sizes within bounds, preview `<img>` visible, scrubber changes the still.
+
+**Text hub** (`src/dsl`): an `animate` block in every family, round-trip per `grammar.md` §6.6.
+```
+animate build 10s loop {
+  step a, b            // reveal
+  step a -> c : "POST" // connector joins its target's step
+  step c hold 2s
+}
+```
+Omitted block = `autoSequence`. Serialize never invents a block. Canvas scrubbing never
+writes code. `manifest.ts` + `get_syntax` updated in the same slice.
+
+**Agent parity** (`mcp-server/src/tools/export.ts`): `format: 'svg-animated' | 'gif' | 'mp4'
+| 'webm'`, `preset`, `flow`, returns the file through the bridge like PNG does today. The CLI
+(`openflowkit export`) has no browser, so it ships animated SVG only and says so.
+
+## 3. Slices (one agent, ≤ 1 day each, green before commit, `STATE.md` updated)
+
+| # | Slice | Done when |
+|---|---|---|
+| 7.1 | `domain/animation/`: types, `autoSequence`, `flowToTimeline` (lifted from the hook), `frameAt`, presets | unit tests; `useV2FlowPlayback` uses the lifted resolver, phase-5 e2e still green |
+| 7.2 | `canonicalSvg` `frame` option + `exportAnimatedSvg` | goldens per preset; still-vs-paused-SVG headed check |
+| 7.3 | `animate` DSL block, all families, manifest + `get_syntax`, llms.txt | round-trip fixtures + fuzz |
+| 7.4 | `motion.worker.ts`: GIF (`gifenc`), MP4/WebM (`mediabunny` + WebCodecs), MediaRecorder fallback, progress/cancel | 1080p 15 s export, canvas rAF never > 32 ms |
+| 7.5 | Export dialog Animation section + preview + scrubber | headed check above; VoiceOver pass on the dialog |
+| 7.6 | MCP `export` formats; docs page "Animated export" with the format table from §1 | `npm test -w mcp-server`; the README gains one animated SVG |
+| 7.7 | Audit: play each format in GitHub README, Slack, Notion, X, Keynote; size table; a11y | findings fixed, ceilings marked `// ponytail:` |
+
+## 4. Ceilings (deliberate, marked in code)
+
+- Whole SVG re-generated per frame: O(nodes × frames). Fine to ~500 nodes × 450 frames;
+  upgrade = patch only the groups whose state changed.
+- No custom keyframes, no camera paths, no audio, no per-element timing overrides. Steps are
+  the unit because steps are text. Excalimate-style keyframes are a future family, not v1.
+- Fonts in video frames are the SVG's system stack — what the machine has. Same as PNG today.
+- Safari < 26: GIF + animated SVG + WebM (real-time) only.
+
+## 5. Open owner calls (answer before 7.5)
+
+1. Default preset when the user just clicks "Animation": **Build** (recommended — it is the
+   "a and b go to c" ask) or Walkthrough?
+2. Where does it live besides Export…: a **Present** play button in the document bar that
+   plays Build/Walkthrough on the live canvas (phase-5 playback engine)? Recommended for
+   phase 8, not here — export is the differentiator, on-canvas presenting is a second feature.
+3. Watermark/"made with OpenFlowKit" end card on free exports? Recommend no — it is local
+   and free; a tiny optional badge toggle is a marketing call, not a product one.
+4. Ship order: 7.1 → 7.2 → 7.5 (SVG-only, visible early) before 7.3/7.4? Recommended.

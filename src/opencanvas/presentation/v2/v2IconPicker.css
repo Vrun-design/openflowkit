@@ -1,6 +1,6 @@
 .ofk-icon-picker {
   display: grid; grid-template-rows: auto auto auto minmax(0, 1fr) auto;
-  width: min(360px, calc(100vw - 64px)); height: min(540px, calc(100dvh - 120px));
+  width: min(360px, calc(100vw - 64px)); height: min(540px, calc(100dvh - 168px));
 }
 .ofk-icon-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 0 8px; border-bottom: 1px solid var(--ofk-border); }
 .ofk-icon-picker-head .ofk-icon-button { min-width: 26px; width: 26px; min-height: 26px; height: 26px; color: var(--ofk-secondary); }
