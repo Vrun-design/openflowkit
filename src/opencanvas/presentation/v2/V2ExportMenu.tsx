@@ -18,6 +18,10 @@ export interface V2ExportMenuProps {
   readonly selectedNodeIds: readonly string[];
   readonly onClose: () => void;
   readonly onToast: (title: string, tone: 'info' | 'success' | 'danger') => void;
+  /** Animation export writes its steps into the code panel through this. */
+  readonly onAnimateBlock?: (block: import('../../../dsl/animate').AnimateBlock) => void;
+  /** The code panel's live text; the animation export reads its animate block. */
+  readonly codeText?: string;
 }
 
 const FORMATS: readonly { value: V2ExportFormat; label: string; title: string }[] = [
@@ -27,7 +31,7 @@ const FORMATS: readonly { value: V2ExportFormat; label: string; title: string }[
   { value: 'json', label: 'JSON', title: 'Whole document, every page' },
 ];
 
-export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeIds, onClose, onToast }: V2ExportMenuProps) {
+export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeIds, onClose, onToast, onAnimateBlock, codeText }: V2ExportMenuProps) {
   const [mode, setMode] = useState<'still' | 'animation'>('still');
   const [format, setFormat] = useState<V2ExportFormat>('png');
   const [scope, setScope] = useState<V2ExportScope>('page');
@@ -79,7 +83,9 @@ export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeId
         <Segmented<'still' | 'animation'> label="Export kind" value={mode} onChange={setMode}
           options={[{ value: 'still', label: 'Still' }, { value: 'animation', label: 'Animation' }]} />
         {mode === 'animation' ? (
-          <V2MotionExport document={document} pageId={pageId} onToast={onToast} />
+          <V2MotionExport document={document} pageId={pageId} onToast={onToast}
+            {...(onAnimateBlock ? { onAnimateBlock } : {})}
+            {...(codeText === undefined ? {} : { codeText })} />
         ) : (
           <>
         <Segmented<V2ExportFormat> label="Format" value={format} onChange={setFormat} options={FORMATS} />

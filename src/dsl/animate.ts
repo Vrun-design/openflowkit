@@ -17,10 +17,10 @@ import type { AnimationStep, Timeline } from '../opencanvas/domain/animation/typ
  */
 
 export interface AnimateStep {
-  /** Node refs for a reveal step; `[from, to]` for an edge step. */
+  /** Node refs the step reveals. */
   readonly refs: readonly string[];
-  /** Set when the step is about an edge (`step a -> c`). */
-  readonly edge?: boolean;
+  /** Edges the step reveals (`a -> c`); both endpoints show too. */
+  readonly edges?: readonly (readonly [string, string])[];
   readonly label?: string;
   readonly holdMs?: number;
 }
@@ -64,23 +64,37 @@ function parseStep(segment: DslSegment, diagnostics: DslDiagnostic[]): AnimateSt
   if (holdToken && holdMs === null) {
     diagnostics.push(diagnostic(segment, 'W190', 'warning', `animate: unreadable hold "${holdToken.value}"; default timing used`, 'hold 2s'));
   }
-  const arrow = head.findIndex((token) => token.kind === 'arrow');
-  let step: AnimateStep;
-  if (arrow > 0) {
-    const colon = head.findIndex((token, index) => index > arrow && token.value === ':');
-    const from = joinTokens(head.slice(0, arrow));
-    const to = joinTokens(colon > arrow ? head.slice(arrow + 1, colon) : head.slice(arrow + 1));
-    const label = colon > arrow ? joinTokens(head.slice(colon + 1)) : '';
-    step = { refs: [from, to], edge: true, ...(label ? { label } : {}), ...(holdMs ? { holdMs } : {}) };
-  } else {
-    const refs = joinTokens(head).split(',').map((ref) => ref.trim()).filter(Boolean);
-    step = { refs, ...(holdMs ? { holdMs } : {}) };
+  const colon = head.findIndex((token) => token.value === ':');
+  const refsPart = colon >= 0 ? head.slice(0, colon) : head;
+  const label = colon >= 0 ? joinTokens(head.slice(colon + 1)) : '';
+  // Comma-separated items: a node ref, or `a -> c` for an edge.
+  const items = joinTokens(refsPart).split(',').map((item) => item.trim()).filter(Boolean);
+  const refs: string[] = [];
+  const edges: [string, string][] = [];
+  for (const item of items) {
+    const arrow = item.indexOf('->');
+    if (arrow > 0) {
+      const from = item.slice(0, arrow).trim();
+      const to = item.slice(arrow + 2).trim();
+      if (!from || !to) {
+        diagnostics.push(diagnostic(segment, 'W190', 'warning', `animate: unreadable edge "${item}"; item dropped`, 'a -> c'));
+        continue;
+      }
+      edges.push([from, to]);
+    } else if (item) {
+      refs.push(item);
+    }
   }
-  if (step.refs.length === 0 || step.refs.some((ref) => ref.length === 0)) {
+  if (refs.length === 0 && edges.length === 0) {
     diagnostics.push(diagnostic(segment, 'W190', 'warning', 'animate: step has no node to reveal; line dropped', 'step a, b'));
     return null;
   }
-  return step;
+  return {
+    refs,
+    ...(edges.length ? { edges } : {}),
+    ...(label ? { label } : {}),
+    ...(holdMs ? { holdMs } : {}),
+  };
 }
 
 /**
@@ -140,10 +154,8 @@ export function animateBlockLines(block: AnimateBlock): string[] {
   return [
     `${header.join(' ')} {`,
     ...block.steps.map((step) => {
-      const body = step.edge
-        ? `${step.refs[0] ?? ''} -> ${step.refs[1] ?? ''}${step.label ? ` : ${quote(step.label)}` : ''}`
-        : step.refs.join(', ');
-      return `  step ${body}${step.holdMs ? ` hold ${formatAnimateDuration(step.holdMs)}` : ''}`;
+      const items = [...step.refs, ...(step.edges ?? []).map(([from, to]) => `${from} -> ${to}`)];
+      return `  step ${items.join(', ')}${step.label ? ` : ${quote(step.label)}` : ''}${step.holdMs ? ` hold ${formatAnimateDuration(step.holdMs)}` : ''}`;
     }),
     '}',
   ];
@@ -157,7 +169,7 @@ export function animateToJson(block: AnimateBlock): JsonObject {
     loop: block.loop,
     steps: block.steps.map((step) => ({
       refs: [...step.refs],
-      ...(step.edge ? { edge: true } : {}),
+      ...(step.edges ? { edges: step.edges.map(([from, to]) => [from, to]) } : {}),
       ...(step.label ? { label: step.label } : {}),
       ...(step.holdMs ? { holdMs: step.holdMs } : {}),
     })),
@@ -176,10 +188,16 @@ export function animateFromJson(value: unknown): AnimateBlock | null {
     ? value.steps.flatMap((entry): AnimateStep[] => {
       if (!isRecord(entry) || !Array.isArray(entry.refs)) return [];
       const refs = entry.refs.filter((ref): ref is string => typeof ref === 'string');
-      if (refs.length === 0) return [];
+      const edges = Array.isArray(entry.edges)
+        ? entry.edges.flatMap((pair): [string, string][] =>
+          Array.isArray(pair) && typeof pair[0] === 'string' && typeof pair[1] === 'string'
+            ? [[pair[0], pair[1]]]
+            : [])
+        : [];
+      if (refs.length === 0 && edges.length === 0) return [];
       return [{
         refs,
-        ...(entry.edge === true ? { edge: true } : {}),
+        ...(edges.length ? { edges } : {}),
         ...(typeof entry.label === 'string' ? { label: entry.label } : {}),
         ...(typeof entry.holdMs === 'number' && entry.holdMs > 0 ? { holdMs: entry.holdMs } : {}),
       }];
@@ -209,13 +227,15 @@ export function timelineFromAnimate(
       .filter((connector) => connector.source.nodeId === from && connector.target.nodeId === to)
       .map((connector) => connector.id);
   const steps: AnimationStep[] = block.steps.map((step) => {
-    const known = step.refs.filter((ref) => nodeIds.has(ref));
-    for (const ref of step.refs) {
+    const edgeRefs = (step.edges ?? []).flatMap(([from, to]) => [from, to]);
+    const all = [...step.refs, ...edgeRefs];
+    const known = all.filter((ref) => nodeIds.has(ref));
+    for (const ref of all) {
       if (!nodeIds.has(ref)) {
         diagnostics.push({ code: 'W122', severity: 'warning', line: 0, col: 1, endCol: 1, message: `animate: unknown node "${ref}"`, source: 'parse' });
       }
     }
-    const connectorIds = step.edge && step.refs.length >= 2 ? connectorsFor(step.refs[0]!, step.refs[1]!) : [];
+    const connectorIds = (step.edges ?? []).flatMap(([from, to]) => connectorsFor(from, to));
     const camera = boundsOfNodes(page, known);
     return {
       nodeIds: known,
@@ -227,4 +247,62 @@ export function timelineFromAnimate(
   });
   const timeline: Timeline = { steps, preset: block.preset, loop: block.loop, durationMs: steps.reduce((sum, step) => sum + stepDuration(step), 0) };
   return block.durationMs ? scaleTimeline(timeline, block.durationMs) : timeline;
+}
+
+/**
+ * A timeline as an animate block: scene ids are the DSL ids for every family
+ * that compiles one node per reference, so the chips can write text that
+ * compiles back to the same steps. A duration is only written when it differs
+ * from the natural sum of the steps.
+ */
+export function animateBlockFromTimeline(timeline: Timeline, page: ScenePage): AnimateBlock {
+  const endpointOf = (connectorId: string): [string, string] | null => {
+    const connector = page.connectors.find((candidate) => candidate.id === connectorId);
+    if (!connector?.source.nodeId || !connector.target.nodeId) return null;
+    return [connector.source.nodeId, connector.target.nodeId];
+  };
+  const steps: AnimateStep[] = timeline.steps.map((step) => {
+    const edges = step.connectorIds.flatMap((id) => {
+      const pair = endpointOf(id);
+      return pair ? [pair] : [];
+    });
+    // An edge already reveals both endpoints, so they are not repeated as refs.
+    const covered = new Set(edges.flat());
+    return {
+      refs: step.nodeIds.filter((id) => !covered.has(id)),
+      ...(edges.length ? { edges } : {}),
+      ...(step.note ? { label: step.note } : {}),
+      ...(step.holdMs ? { holdMs: step.holdMs } : {}),
+    };
+  });
+  const natural = steps.reduce((sum, step) => sum + stepDuration(step), 0);
+  return {
+    preset: timeline.preset,
+    loop: timeline.loop,
+    steps,
+    ...(timeline.durationMs !== natural && timeline.durationMs > 0 ? { durationMs: timeline.durationMs } : {}),
+  };
+}
+
+/**
+ * Replaces the animate block in a document, or appends one. Idempotent:
+ * writing the same block twice yields the same text.
+ */
+export function writeAnimateBlock(text: string, block: AnimateBlock): string {
+  const lines = text.split('\n');
+  const start = lines.findIndex((line) => /^\s*animate\b.*\{\s*$/.test(line));
+  if (start >= 0) {
+    let depth = 0;
+    let end = start;
+    for (let at = start; at < lines.length; at += 1) {
+      depth += (lines[at]!.match(/\{/g) ?? []).length;
+      depth -= (lines[at]!.match(/\}/g) ?? []).length;
+      if (depth <= 0) { end = at; break; }
+    }
+    lines.splice(start, end - start + 1, ...animateBlockLines(block));
+    return lines.join('\n');
+  }
+  const body = [...animateBlockLines(block)];
+  const trimmed = lines.join('\n').replace(/\n+$/, '');
+  return `${trimmed}${trimmed ? '\n' : ''}\n${body.join('\n')}\n`;
 }

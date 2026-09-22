@@ -742,3 +742,20 @@
 .ofk-choice-row--grid { grid-auto-flow: row; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 4px; }
 .ofk-choice-row--grid .ofk-choice { flex-direction: column; gap: 5px; min-height: 56px; padding: 6px 2px; font-size: 11px; line-height: 1; }
 .ofk-choice-row--grid .ofk-choice .ofk-icon { width: 20px; height: 20px; }
+
+/* Step chips: the current order, and the animate block they write. */
+.ofk-motion-steps { display: grid; gap: 6px; }
+.ofk-motion-steps-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--ofk-secondary); }
+.ofk-motion-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.ofk-motion-chip-row > li { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.ofk-motion-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 150px; padding: 4px 8px 4px 5px; border: 1px solid var(--ofk-border); border-radius: 999px; background: var(--ofk-canvas); color: var(--ofk-text); font: inherit; font-size: 11px; cursor: grab; }
+.ofk-motion-chip:hover { border-color: var(--ofk-muted); }
+.ofk-motion-chip:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 1px; }
+.ofk-motion-chip[data-dragging] { opacity: .5; cursor: grabbing; }
+.ofk-motion-chip[data-drop] { border-color: var(--ofk-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ofk-accent) 30%, transparent); }
+.ofk-motion-chip-index { display: grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: var(--ofk-raised); color: var(--ofk-secondary); font-size: 9.5px; font-variant-numeric: tabular-nums; flex: none; }
+.ofk-motion-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ofk-motion-chip-gap { width: 6px; height: 18px; }
+.ofk-motion-hold { width: min(240px, calc(100vw - 48px)); }
+.ofk-motion-hold-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.ofk-motion-hold-actions .ofk-button { font-size: 11px; padding-inline: 8px; }

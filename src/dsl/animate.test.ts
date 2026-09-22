@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  animateBlockLines, animateFromJson, animateToJson, extractAnimateBlock,
-  formatAnimateDuration, parseAnimateDuration, timelineFromAnimate,
+  animateBlockFromTimeline, animateBlockLines, animateFromJson, animateToJson, extractAnimateBlock,
+  formatAnimateDuration, parseAnimateDuration, timelineFromAnimate, writeAnimateBlock,
 } from './animate';
 import { compile } from './compile';
 import { parseDocument } from './document';
@@ -31,7 +31,7 @@ describe('animate block', () => {
       loop: true,
       steps: [
         { refs: ['a', 'b'] },
-        { refs: ['b', 'c'], edge: true, label: 'POST' },
+        { refs: [], edges: [['b', 'c']], label: 'POST' },
         { refs: ['c'], holdMs: 2000 },
       ],
     });
@@ -97,7 +97,7 @@ describe('animate block', () => {
       preset: 'build' as const, loop: false,
       steps: [
         { refs: ['a', 'b'] },
-        { refs: ['a', 'b'], edge: true, label: 'POST' },
+        { refs: ['a'], edges: [['a', 'b']] as [string, string][], label: 'POST' },
         { refs: ['ghost'] },
       ],
     };
@@ -124,7 +124,7 @@ describe('animate block', () => {
   it('round-trips the JSON form', () => {
     const block = {
       preset: 'walkthrough' as const, loop: true, durationMs: 5000,
-      steps: [{ refs: ['a'], holdMs: 900 }, { refs: ['a', 'b'], edge: true, label: 'POST' }],
+      steps: [{ refs: ['a'], holdMs: 900 }, { refs: ['b'], edges: [['a', 'b']] as [string, string][], label: 'POST' }],
     };
     expect(animateFromJson(animateToJson(block))).toEqual(block);
   });
@@ -132,7 +132,7 @@ describe('animate block', () => {
   it('emits the canonical block text', () => {
     expect(animateBlockLines({
       preset: 'build', durationMs: 6000, loop: true,
-      steps: [{ refs: ['a', 'b'] }, { refs: ['b', 'c'], edge: true, label: 'POST' }, { refs: ['c'], holdMs: 2000 }],
+      steps: [{ refs: ['a', 'b'] }, { refs: [], edges: [['b', 'c']] as [string, string][], label: 'POST' }, { refs: ['c'], holdMs: 2000 }],
     })).toEqual([
       'animate build 6s loop {',
       '  step a, b',
@@ -148,5 +148,57 @@ describe('animate block', () => {
     const scene = { frame: compiled.frame, nodes: compiled.nodes, groups: compiled.groups, connectors: compiled.connectors };
     expect(serialize(scene)).toContain('animate pulse {');
     expect(compiled.nodes.length).toBeGreaterThan(0);
+  });
+});
+
+describe('timeline → animate block', () => {
+  const page = animPage(
+    [animNode('a', 0, 0), animNode('b', 0, 100), animNode('c', 0, 200)],
+    [animEdge('ab', 'a', 'b'), animEdge('bc', 'b', 'c')],
+  );
+
+  it('writes steps, edges, notes and holds', () => {
+    const block = animateBlockFromTimeline({
+      preset: 'walkthrough', loop: true, durationMs: 0,
+      steps: [
+        { nodeIds: ['a', 'b'], connectorIds: [] },
+        { nodeIds: [], connectorIds: ['ab'], note: 'POST', holdMs: 900 },
+      ],
+    }, page);
+    expect(block.steps).toEqual([
+      { refs: ['a', 'b'] },
+      { refs: [], edges: [['a', 'b']], label: 'POST', holdMs: 900 },
+    ]);
+    expect(animateBlockLines(block)).toEqual([
+      'animate walkthrough loop {',
+      '  step a, b',
+      '  step a -> b : POST hold 900ms',
+      '}',
+    ]);
+  });
+
+  it('omits a natural duration and keeps an explicit one', () => {
+    const steps = [{ nodeIds: ['a'], connectorIds: [] }];
+    const natural = animateBlockFromTimeline({ preset: 'build', loop: false, durationMs: 1700, steps }, page);
+    expect(natural.durationMs).toBeUndefined();
+    const explicit = animateBlockFromTimeline({ preset: 'build', loop: false, durationMs: 6000, steps }, page);
+    expect(explicit.durationMs).toBe(6000);
+  });
+
+  it('writes the block into a document idempotently', () => {
+    const block = animateBlockFromTimeline({
+      preset: 'build', loop: false, durationMs: 0,
+      steps: [{ nodeIds: ['a'], connectorIds: [] }],
+    }, page);
+    const once = writeAnimateBlock('%% ofk 1\nflowchart\n\na -> b\n', block);
+    expect(once).toContain('animate build {');
+    expect(writeAnimateBlock(once, block)).toBe(once);
+    // An existing block is replaced, not duplicated.
+    const twice = writeAnimateBlock(once, { ...block, preset: 'pulse' });
+    expect(twice.match(/animate /g)).toHaveLength(1);
+    expect(twice).toContain('animate pulse {');
+    // And it still parses.
+    const document = parseDocument(twice);
+    expect(extractAnimateBlock(document.segments, []).block?.preset).toBe('pulse');
   });
 });

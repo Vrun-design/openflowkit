@@ -97,3 +97,40 @@ test('an empty page says so instead of failing', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.getByRole('radio', { name: 'Animation' })).toBeHidden();
 });
+
+test('step chips write the animate block and read it back', async ({ page }) => {
+  await openAnimationExport(page);
+  const chips = page.locator('.ofk-motion-chip');
+  await expect(chips).toHaveCount(5);
+  await expect(chips.first()).toContainText('Client');
+  const code = page.getByRole('textbox', { name: 'Diagram source' });
+
+  // Reorder: Alt+left moves a chip and rewrites the block in the code panel.
+  await chips.nth(1).focus();
+  await page.keyboard.press('Alt+ArrowLeft');
+  await expect.poll(async () => (await code.inputValue()).indexOf('animate build')).toBeGreaterThan(-1);
+  expect((await code.inputValue())).toContain('step client -> api');
+  await expect(chips.first()).toContainText('Client → API');
+
+  // Merge: Alt+up folds a chip into the previous one.
+  await chips.nth(2).focus();
+  await page.keyboard.press('Alt+ArrowUp');
+  await expect(chips).toHaveCount(4);
+  expect(await code.inputValue()).toMatch(/step [^\n]*client[^\n]*-> cache/);
+
+  // Hold: click a chip, set 3 s.
+  await chips.first().click();
+  const hold = page.getByRole('dialog', { name: /hold/ });
+  await expect(hold).toBeVisible();
+  await hold.getByRole('spinbutton', { name: 'Hold' }).fill('3');
+  await hold.getByRole('spinbutton', { name: 'Hold' }).blur();
+  await expect.poll(async () => (await code.inputValue())).toContain('hold 3s');
+  await hold.getByRole('button', { name: 'Done' }).click();
+
+  // From code: the block just written is a valid order, and it round-trips.
+  const before = await chips.allTextContents();
+  await page.getByRole('radio', { name: 'From code' }).check();
+  await expect.poll(async () => (await chips.allTextContents()).join('|')).toBe(before.join('|'));
+  // And the clip now lasts what the block says: 3 s + 3 beats.
+  expect(await readout(page)).toMatch(/^0\.0s \/ 8\.1s/);
+});

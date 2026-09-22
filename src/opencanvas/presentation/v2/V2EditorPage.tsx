@@ -57,6 +57,7 @@ import { frameEdited, frameScene } from '../../../dsl/frameScene';
 import { compile, compileWorkspace, type CompileWorkspaceResult } from '../../../dsl/compile';
 import { parse } from '../../../dsl/parse';
 import { serialize } from '../../../dsl/serialize';
+import { writeAnimateBlock } from '../../../dsl/animate';
 import { buildDslPageCommand, nextDslFrameOrigin } from '../../application/dsl/dslPageCommand';
 import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
@@ -810,6 +811,14 @@ export function V2EditorPage(): React.JSX.Element {
               }}
               breadcrumb={architecture.breadcrumb}
               onCrumb={(crumb) => architectureActions.openCrumb(crumb)}
+              codeText={codeDraft}
+              onAnimateBlock={(block) => {
+                // The chips write the text hub; the panel opens so the user
+                // sees where the block went, and Generate re-renders from it.
+                setCodeDraft((draft) => writeAnimateBlock(draft, block));
+                setCodeFrameId(null);
+                setWorkspaceMode((mode) => mode ?? 'code');
+              }}
               onRename={(name) => {
                 const before = session.document!.name;
                 if (name === before) return;

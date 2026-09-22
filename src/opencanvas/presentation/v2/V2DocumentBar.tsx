@@ -51,6 +51,10 @@ interface V2DocumentBarProps extends V2SettingsProps {
   readonly onReload: () => void;
   readonly onToast: (toast: ToastItem) => void;
   readonly onRename: (name: string) => void;
+  /** Animation export writes its steps into the code panel through this. */
+  readonly onAnimateBlock?: (block: import('../../../dsl/animate').AnimateBlock) => void;
+  /** The code panel's live text; the animation export reads its animate block. */
+  readonly codeText?: string;
   readonly workspace?: {
     readonly name: string | null;
     readonly onOpenFolder: () => void;
@@ -240,7 +244,9 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
       <V2PagesMenu open={pagesOpen} anchorRef={pagesRef} pages={props.pages} onClose={() => setPagesOpen(false)} />
       <V2ExportMenu open={exportOpen} anchorRef={settingsRef} document={props.document}
         pageId={props.pageId} selectedNodeIds={props.selectedNodeIds}
-        onClose={() => setExportOpen(false)} onToast={toast} />
+        onClose={() => setExportOpen(false)} onToast={toast}
+        {...(props.onAnimateBlock ? { onAnimateBlock: props.onAnimateBlock } : {})}
+        {...(props.codeText === undefined ? {} : { codeText: props.codeText })} />
     </>
   );
 }

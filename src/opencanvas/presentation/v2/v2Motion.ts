@@ -8,11 +8,13 @@ import { scaleTimeline, timelineDuration } from '../../domain/animation/frame';
 import { flowToTimeline } from '../../domain/animation/flow';
 import type { AnimationPreset, Timeline } from '../../domain/animation/types';
 import { archModelOfPage } from '../../../dsl/model/model';
+import { extractAnimateBlock, timelineFromAnimate, type AnimateBlock } from '../../../dsl/animate';
+import { parseDocument } from '../../../dsl/document';
 import { exportAnimatedSvg, exportMotionFrameSvg } from '../../infrastructure/export/animatedSvg';
 import type { V2ExportFile } from './v2Export';
 
-/** `auto` walks the connector graph; a flow id replays a phase-5 flow. */
-export type V2MotionOrder = 'auto' | (string & {});
+/** `auto` walks the connector graph; a flow id replays a phase-5 flow; `code` reads the frame's animate block. */
+export type V2MotionOrder = 'auto' | 'code' | (string & {});
 
 export interface V2MotionRequest {
   readonly document: SceneDocumentV1;
@@ -23,10 +25,22 @@ export interface V2MotionRequest {
   readonly durationMs?: number | null;
   readonly loop?: boolean;
   readonly theme?: 'light' | 'dark' | 'print';
+  /** The code panel's current text; `code` order reads its animate block. */
+  readonly codeText?: string;
 }
 
 function pageOf(request: V2MotionRequest) {
   return request.document.pages.find(({ id }) => id === request.pageId) ?? request.document.pages[0];
+}
+
+/** The animate block in a document's source text, if it has one. */
+export function animateBlockFromText(text: string | undefined): AnimateBlock | null {
+  if (!text) return null;
+  try {
+    return extractAnimateBlock(parseDocument(text).segments, []).block;
+  } catch {
+    return null;
+  }
 }
 
 /** The timeline the dialog previews and every output is rendered from. */
@@ -35,12 +49,15 @@ export function motionTimeline(request: V2MotionRequest): Timeline {
   if (!page) throw new RangeError('Motion export requires a page.');
   const preset = request.preset ?? 'build';
   const model = archModelOfPage(page);
-  const flow = request.order && request.order !== 'auto'
+  const flow = request.order && request.order !== 'auto' && request.order !== 'code'
     ? model?.flows.find((candidate) => candidate.id === request.order)
     : undefined;
-  const base = flow && model
-    ? flowToTimeline(flow, model, request.document, page, preset)
-    : autoSequence(page, preset);
+  const block = request.order === 'code' ? animateBlockFromText(request.codeText) : null;
+  const base = block
+    ? timelineFromAnimate(page, block)
+    : flow && model
+      ? flowToTimeline(flow, model, request.document, page, preset)
+      : autoSequence(page, preset);
   return request.durationMs ? scaleTimeline(base, request.durationMs) : base;
 }
 
