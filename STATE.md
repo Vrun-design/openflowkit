@@ -5,40 +5,28 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
 - Phase 6 — creation library ([phase-6-library.md](docs/plan/phase-6-library.md)): slices
   6.1 rail → 6.2 shapes → 6.3 connectors → 6.4 ink → 6.5 image/emoji → 6.6 frames/tools →
   6.7 wireframe → 6.8 charts → 6.9 quadrant+DSL+MCP → 6.10 audit.
-- 6.1 done 2026-09-22 (opencode/deepseek-v4.1): rail flyouts (shapes, connector) + lock.
-- 6.2 done 2026-09-22 (opencode/deepseek-v4.1): 46 library shapes end to end — outlines,
-  label insets, Pixi decorations (venn lens, target rings, cube/prism depth), SVG export,
-  DSL words + Mermaid aliases, numbered-circle auto-labels, scene-tree names.
-- 6.3 done 2026-09-22 (opencode/deepseek-v4.1): connector variants — click-by-click path
-  tool (Enter/double-click ends, Esc peels a point), diamond marker in the DSL + style bar,
-  Path in the Path panel, and SVG export now draws every end glyph like Pixi does.
-- 6.4 done 2026-09-22 (opencode/deepseek-v4.1): ink — pen P (Shift+P highlighter) with
-  coalesced capture, RDP simplify, Catmull-Rom render in Pixi and SVG, live preview, one
-  undo per stroke; eraser X removes whole strokes per drag; lasso Q selects by polygon;
-  Ink panel (colour/width) and a sticky ink preset. Two design-system fixes rode along:
-  a tooltip no longer swallows Escape, and focus returns to the canvas when the context
-  bar unmounts.
-- 6.5 done 2026-09-22 (opencode/deepseek-v4.1): image + emoji — rail Image (⇧I) opens a
-  file picker, dropping or pasting an image (or pasting an image URL) inserts one; bytes
-  go to the IndexedDB assets store, the node keeps `assetId` (plus an inline data URL for
-  export) and Pixi resolves it; images fit 480 px on the long side. Emoji (E) opens a
-  searchable static catalogue with recents in preferences; picking inserts a 48 px glyph.
-  Pickers now anchor to their trigger, so focus returns to a real button.
-- 6.8 done 2026-09-22 (opencode/deepseek-v4.1): charts — `chart` node kind with a pure
-  presentation (bar, line, area, scatter, pie, donut, radar, heatmap, table; handwritten
-  niceTicks), one Pixi renderer, SVG export with the same marks, the C flyout, a real
-  `<table>` data panel (edit cells, +Row/+Series, Enter moves down, TSV/CSV paste, one undo
-  per commit) and a Chart panel in the style bar that switches type without touching data.
-  Order note: charts were built before 6.6/6.7 because the owner's reference screenshots are
-  chart-centric.
-- 6.9 done 2026-09-22 (opencode/deepseek-v4.1): quadrant (0–1 points, pastel cells, canvas
-  dragging writes x/y as one undo, label/x/y points panel) and the `chart` DSL family
-  (`chart bar|…|quadrant`, series pairs, quadrant directives + `[x, y]` points) with
-  round-trip fixtures; the family line now carries extra words (`familyHeader` on frame
-  meta), get_syntax documents it, `add_shape` accepts `chart` with data. 6.10 claimed (audit).
-- `check-v2-polish.mjs` fails on this machine at HEAD too (idle render count, context-bar
-  follow, resize assertions in three separate runs) — environment, not a phase-6 regression.
-  Re-run when the machine is quiet; the script's numbers are the phase gate.
+- Phase 6 slices 6.1–6.5 + 6.8–6.9 done 2026-09-22 (opencode/deepseek-v4.1); 6.6, 6.7, 6.10
+  NOT built (see Deferred). Rail: flyouts for shapes/connector/charts/ink, lock, separators.
+  Shapes: 46 library shapes end to end (outlines, label insets, Pixi decorations, SVG, DSL
+  words + Mermaid aliases, numbered-circle labels, scene-tree names). Connectors: click-by-click
+  path tool, diamond marker, Path in the style bar, SVG end glyphs. Ink: pen/highlighter with
+  coalesced capture + RDP + Catmull-Rom, eraser, lasso, Ink panel. Media: image via picker,
+  drop, paste or URL (IndexedDB assets, Pixi resolves assetId), emoji picker with search and
+  recents. Charts: 10 kinds (bar…table, quadrant) via a pure presentation → one Pixi renderer
+  and matching SVG, the data panel (cells, +Row/+Series, TSV paste, one undo per commit), the
+  Chart type panel, draggable quadrant points, and a `chart` DSL family with round-trip
+  fixtures + agent surface. Built with `docs/plan/phase-6-library.md` §0 as the bar.
+- Verified after 6.9: typecheck, lint, 1393 unit tests (185 files), headed e2e for every slice
+  (rail, shapes, connector-variants, ink, image-emoji, charts, quadrant — 9 checks green).
+  The grew rail now wraps into a second column on short windows instead of covering the
+  bottom-left camera controls. `check-v2-polish.mjs`
+  fails on this machine at unmodified HEAD too (idle render count / context-bar follow / resize
+  assertions in three separate runs) — environmental, not a phase-6 regression; re-run when the
+  machine is quiet.
+- Four shared bugs surfaced and were fixed: a tooltip swallowed Escape (passive Popover
+  stopPropagation); clearing the selection left focus on body so the next shortcut died; pickers
+  anchored to a div could not return focus (now anchored to their trigger); SVG export dropped
+  every connector arrowhead and every family-renderer node shape (now draws markers + charts).
 - Connect agent moved to the rail 2026-09-22 (Opus): 5th rail item + welcome button open a
   panel (`V2AgentConnect`: hero, steps when off, live card + capability grid when on); top-bar
   plug is status-only and opens the panel. No shortcut (Alt+A = align left).
@@ -70,6 +58,17 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
   Edit-as-code, `get_diagram`, folder save. Do it when a workspace passes ~20 views.
 
 ## Deferred
+- Phase 6: **6.6 frames/tools** (phones/tablet/browser presets, row/column split, laser
+  pointer) and **6.7 wireframe widgets** (40 `widget` kinds + `wireframe` DSL family) not
+  built; **6.10** audit partly done (docs + llms.txt + regenerated DSL reference shipped,
+  VoiceOver sweep and the export diff not run). Reason: slice order was changed to put the
+  owner's chart screenshots first, and the remaining budget went into making 6.1–6.5/6.8–6.9
+  complete rather than starting two more kinds of node. Reclaimed rail space: eraser and lasso
+  are keyboard-only (X/Q) until 6.6 builds the Insert panel; sticky markers and laser are
+  missing with them.
+- Phase 6 ceilings marked in code: chart data panel commits per blur (not per keystroke);
+  image aspect lock is Shift-lock (the inverse of the spec's default); pen strokes with
+  pressure samples skip Catmull-Rom; the venn outline is the union envelope (no lens fill).
 - Drafts (5.5) model diff/merge not built. Plan checks not run: 10 GitHub Structurizr
   workspaces (4 shipped), discovery precision on 3 OSS repos. Canvas-only content on a model
   page is not in the DSL (document JSON only, not folder save); perspectives dim, not hide.

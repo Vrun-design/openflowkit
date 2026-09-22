@@ -149,7 +149,15 @@
 .ofk-v2 { --v2-panel-width: 400px; --v2-layers-width: 300px; }
 .ofk-v2 .ofk-floating-region .ofk-toolbar { background: var(--ofk-surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .ofk-v2 .ofk-v2-tools { top: 80px; }
-.ofk-v2-tools .ofk-toolbar { gap: 4px; padding: 5px; }
+.ofk-v2-tools .ofk-toolbar {
+  gap: 4px; padding: 5px;
+  /* 14 tools at 900 px fit one column; a short window wraps into a second
+     column instead of colliding with the camera controls at the bottom. */
+  max-height: calc(100dvh - 168px);
+  flex-wrap: wrap;
+  align-content: flex-start;
+  overflow: hidden;
+}
 .ofk-v2-tools-separator { width: 20px; height: 1px; margin: 4px 0; background: var(--ofk-border); flex: none; }
 .ofk-v2-lock-slot { display: inline-flex; }
 .ofk-v2-lock-slot .ofk-icon-button:disabled { pointer-events: none; opacity: .4; }
