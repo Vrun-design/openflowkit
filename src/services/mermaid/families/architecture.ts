@@ -19,7 +19,7 @@ interface ParsedArchEdge {
   label?: string;
   protocol?: string;
   port?: string;
-  direction?: '-->' | '<--' | '<-->';
+  direction?: '-->' | '<--' | '<-->' | '--';
   sourceSide?: 'L' | 'R' | 'T' | 'B';
   targetSide?: 'L' | 'R' | 'T' | 'B';
 }
@@ -164,12 +164,13 @@ function parseEdgeLine(line: string): ParsedArchEdge | null {
 
   if (!sourceEndpoint || !targetEndpoint) return null;
 
-  const direction = directionToken === '<->' ? '<-->' : directionToken === '--' ? '-->' : directionToken;
+  // `--` is a plain link in mermaid: no arrow head on either end.
+  const direction = directionToken === '<->' ? '<-->' : directionToken;
   return {
     source: sourceEndpoint.id,
     target: targetEndpoint.id,
     label: targetEndpoint.label,
-    direction: direction as '-->' | '<--' | '<-->',
+    direction: direction as ParsedArchEdge['direction'],
     sourceSide: sourceEndpoint.side,
     targetSide: targetEndpoint.side,
   };
@@ -336,7 +337,7 @@ function parseArchitecture(input: string): { nodes: FlowNode[]; edges: FlowEdge[
 
   const edges: FlowEdge[] = parsedEdges.map((edge, index) => {
     const parsedMeta = parseProtocolPort(edge.label);
-    const direction = edge.direction || '-->';
+    const direction = edge.direction ?? '-->';
     const markerStart = direction === '<--' || direction === '<-->'
       ? { type: MarkerType.ArrowClosed, color: '#94a3b8' as const }
       : undefined;

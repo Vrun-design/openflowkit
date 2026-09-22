@@ -15,6 +15,19 @@ describe('parseMermaidByType', () => {
     expect(result.edges).toHaveLength(1);
   });
 
+  it('unwraps slanted and subroutine brackets instead of keeping them in the label', () => {
+    const result = parseMermaidByType('flowchart TD\n  A[/Report/] --> B[\\Skew\\]\n  C[/Trap\\] --> D[[Sub]]\n  E[\\Trap2/] --> A');
+
+    expect(result.error).toBeUndefined();
+    const byId = new Map(result.nodes.map((node) => [node.id, node]));
+    expect(byId.get('A')?.data.label).toBe('Report');
+    expect(byId.get('A')?.data.shape).toBe('parallelogram');
+    expect(byId.get('B')?.data.label).toBe('Skew');
+    expect(byId.get('C')?.data.label).toBe('Trap');
+    expect(byId.get('D')?.data.label).toBe('Sub');
+    expect(byId.get('E')?.data.label).toBe('Trap2');
+  });
+
   it('uses plugin-backed flowchart path', () => {
     const result = parseMermaidByType(`
       graph LR

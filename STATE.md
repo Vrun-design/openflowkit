@@ -3,6 +3,21 @@
 Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on hold; 6.6, 6.7, 6.10 partly — see Deferred).
 
 ## Now
+- **Mermaid import gate 2026-09-23** (Claude Opus 5). `e2e/mermaid-import.spec.ts` drives the real
+  app for every family (flowchart, sequence, state, erd, class, mindmap, gitgraph, architecture):
+  simple + deliberately complex source each, the 40 editable rows of
+  `scripts/mermaid-compat-fixtures.json`, a full edit session on a 14-node import (rename, drag,
+  resize, new connector, connector delete, undo chain), group containment, direction, and the
+  reserved-family error. Three product defects fixed, not just covered: **(a)** `architecture-beta`
+  never converted (`mermaidToDsl` had no case) — now groups, icons, junctions and `a:L -- R:b`
+  sides map to `group`/`icon:`/`from:`/`to:`, and mermaid `--` keeps its plain link; **(b)**
+  `[/x/] [\x\] [/x\] [\x/] [[x]]` kept their brackets in the label; **(c)** *no imported
+  connector was clickable* — `spatialIndex` had its own container-kind list missing `frame`, so a
+  diagram's frame ate every click; it now reuses `CONTAINER_NODE_KINDS`, and `pickNode` yields to a
+  connector lying over a container.
+- Verified: typecheck, lint, 1517 unit tests, 29/29 headed on the import + picking specs, 92/99 on
+  the full headed sweep — the 7 are all `motion-*` (6 pass as their own group; `motion-audit`
+  "reduced motion leaves a finished still" fails alone too and loads no app code: pre-existing).
 - **Phase 10 — BYOK: 10.1–10.7 DONE 2026-09-22** (deepseek-v4.1). `providers.ts` ten entries /
   three wires; `provider.ts` Anthropic + OpenAI (eight providers, quirks as fields) + Gemini
   generateContent; `diagnosis.ts` eight causes, one sentence + one action each; a rejected fetch

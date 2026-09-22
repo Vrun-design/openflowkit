@@ -385,8 +385,13 @@ export class PixiRendererHost {
     });
     // Locked nodes stay selectable (their menu is how they get unlocked);
     // the pointer flow refuses to move them.
-    const hit = [...hits].reverse().find((hit) => hit.visible)?.id ?? null;
-    return hit ? this.outermostGroup(hit) : null;
+    const hit = [...hits].reverse().find((hit) => hit.visible) ?? null;
+    if (!hit) return null;
+    // A connector drawn across a container is painted on top of it, so a click
+    // on the line belongs to the line. Without this, nothing inside a section
+    // or frame — every imported diagram — could ever select its own arrows.
+    if (hit.kind === 'container' && this.pickConnector(screenPoint)) return null;
+    return this.outermostGroup(hit.id);
   }
 
   // ⌘G groups select as one: a click on a member picks the top-most group.

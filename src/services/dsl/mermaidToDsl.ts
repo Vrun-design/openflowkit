@@ -47,6 +47,9 @@ interface FlowNodeData {
   stateControlKind?: string;
   mindmapDepth?: number;
   mindmapParentId?: string;
+  archTitle?: string;
+  archProvider?: string;
+  archResourceType?: string;
 }
 
 interface FlowNode {
@@ -62,6 +65,8 @@ interface FlowEdgeData {
   seqMessageOrder?: number;
   seqFragment?: { type?: string; condition?: string; branchKind?: string };
   erRelation?: string;
+  archSourceSide?: string;
+  archTargetSide?: string;
   classRelation?: string;
   classRelationSourceCardinality?: string;
   classRelationTargetCardinality?: string;
@@ -132,10 +137,17 @@ function edgeArrow(edge: FlowEdge): string {
   return dashed ? '-->' : '->';
 }
 
+const SIDE_WORDS: Readonly<Record<string, string>> = { L: 'left', R: 'right', T: 'top', B: 'bottom' };
+
 function edgeAttributes(edge: FlowEdge): string[] {
   const attrs: string[] = [];
   if (typeof edge.style?.strokeWidth === 'number' && edge.style.strokeWidth > 2) attrs.push('thick');
   if (typeof edge.style?.stroke === 'string' && edge.style.stroke === 'transparent') attrs.push('invisible');
+  // Mermaid architecture pins each end to a side (`a:L -- R:b`); the DSL says `from:`/`to:`.
+  const from = SIDE_WORDS[String(edge.data?.archSourceSide ?? '').toUpperCase()];
+  const to = SIDE_WORDS[String(edge.data?.archTargetSide ?? '').toUpperCase()];
+  if (from) attrs.push(`from: ${from}`);
+  if (to) attrs.push(`to: ${to}`);
   return attrs;
 }
 
@@ -181,6 +193,47 @@ function flowchartDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[], di
   }
   const diagnostics: DslDiagnostic[] = losses.map((message, index) => lossDiagnostic(index + 1, message));
   return { dsl: `${lines.join('\n')}\n`, losses, diagnostics };
+}
+
+/**
+ * Mermaid `architecture-beta`: groups nest, services keep their icon (`pack:name`
+ * → `pack/name`), junctions become small circles. Edge sides ride on `from:`/`to:`.
+ */
+function architectureDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): MermaidConversion {
+  const losses: string[] = [];
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const kindOf = (node: FlowNode) => node.data?.archResourceType ?? 'service';
+  const lines: string[] = ['architecture'];
+  const title = nodes.map((node) => node.data?.archTitle).find((value) => typeof value === 'string' && value);
+  if (title) lines.push(`title: ${quote(title)}`);
+  const childrenOf = (id: string | undefined) => nodes.filter((node) => (node.parentId ?? undefined) === id);
+  const attributesFor = (node: FlowNode): string[] => {
+    const attrs: string[] = [];
+    if (kindOf(node) === 'junction') attrs.push('circle');
+    const provider = node.data?.archProvider;
+    if (typeof provider === 'string' && provider && provider !== 'custom' && provider !== 'group') {
+      attrs.push(`icon: ${provider.replace(':', '/')}`);
+    }
+    return attrs;
+  };
+  // `group a in b` / `group b in a` is legal text; emitted once, it cannot loop.
+  const emitted = new Set<string>();
+  const emit = (node: FlowNode, indent: string) => {
+    if (emitted.has(node.id)) return;
+    emitted.add(node.id);
+    const group = kindOf(node) === 'group';
+    lines.push(`${indent}${group ? 'group ' : ''}${nodeName(node)}${attrText(attributesFor(node))}${group ? ' {' : ''}`);
+    if (!group) return;
+    for (const child of childrenOf(node.id)) emit(child, `${indent}  `);
+    lines.push(`${indent}}`);
+  };
+  for (const node of childrenOf(undefined)) emit(node, '');
+  for (const node of nodes) emit(node, '');
+  for (const edge of edges) {
+    const line = edgeLine(edge, byId, losses);
+    if (line) lines.push(line);
+  }
+  return { dsl: `${lines.join('\n')}\n`, losses, diagnostics: losses.map((message, index) => lossDiagnostic(index + 1, message)) };
 }
 
 function sequenceDsl(source: string, nodes: readonly FlowNode[], edges: readonly FlowEdge[]): MermaidConversion {
@@ -551,6 +604,7 @@ export function mermaidToDsl(text: string): MermaidConversion | MermaidConversio
       case 'erDiagram': return erDsl(nodes, edges);
       case 'classDiagram': return classDsl(nodes, edges);
       case 'mindmap': return mindmapDsl(nodes);
+      case 'architecture': return architectureDsl(nodes, edges);
       default: return null;
     }
   })();

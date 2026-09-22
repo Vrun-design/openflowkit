@@ -271,7 +271,7 @@ export interface EdgeData {
   opacity?: number; // 0-1, default 1
   archProtocol?: string;
   archPort?: string;
-  archDirection?: '-->' | '<--' | '<-->';
+  archDirection?: '-->' | '<--' | '<-->' | '--';
   archSourceSide?: 'L' | 'R' | 'T' | 'B';
   archTargetSide?: 'L' | 'R' | 'T' | 'B';
   classRelation?: ClassRelationToken;

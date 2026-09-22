@@ -73,6 +73,19 @@ describe('OpenCanvas scene index', () => {
     ).toEqual(['container:container', 'connector:edge', 'node:low', 'node:high']);
   });
 
+  it('indexes a frame as a container so its children pick before it', () => {
+    const frame = createTestNode('frame', { kind: 'frame', size: { width: 500, height: 300 } });
+    const child = createTestNode('child', {
+      zIndex: 1,
+      transform: { translation: { x: 40, y: 40 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+    });
+    const index = createSceneIndex(createTestDocument({ nodes: [child, frame] }).pages[0]);
+
+    expect(
+      querySceneBounds(index, createBounds2d(0, 0, 500, 300)).map(({ kind, id }) => `${kind}:${id}`)
+    ).toEqual(['container:frame', 'node:child']);
+  });
+
   it('filters hidden layers and object kinds', () => {
     const layers = [
       { id: 'default', name: 'Default', visible: true, locked: false },

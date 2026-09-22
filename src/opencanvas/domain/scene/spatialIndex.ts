@@ -5,12 +5,15 @@ import { DEFAULT_SCENE_LAYER_ID } from '../document/defaults';
 import type { SceneConnector, SceneNode, ScenePage } from '../document/types';
 import { validateSceneDocumentV1 } from '../document/validation';
 import type { IndexedSceneObject, SceneIndex, SceneObjectKind } from './types';
+import { CONTAINER_NODE_KINDS } from '../nodes/containerNodePresentation';
 import { buildNodeStateMap } from './nodeState';
 import { buildNodeWorldMatrices, nodeWorldBounds, nodeWorldCenter } from './worldGeometry';
 
 const DEFAULT_CELL_SIZE = 256;
 const MAX_CELLS_PER_OBJECT = 4_096;
-const CONTAINER_KINDS = new Set(['group', 'section', 'swimlane']);
+// One list of container kinds; a frame is one too, and forgetting it here put
+// generated diagrams' frames in front of their own children for picking.
+const CONTAINER_KINDS = new Set<string>(CONTAINER_NODE_KINDS);
 
 function objectKey(kind: SceneObjectKind, id: string): string {
   return `${kind}:${id}`;

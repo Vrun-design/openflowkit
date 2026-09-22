@@ -10,6 +10,13 @@ export const SHAPE_OPENERS: Array<{
   { open: '((', close: '))', type: 'end', shape: 'circle' },
   { open: '{{', close: '}}', type: 'custom', shape: 'hexagon' },
   { open: '[(', close: ')]', type: 'process', shape: 'cylinder' },
+  { open: '[[', close: ']]', type: 'process', shape: 'rectangle' },
+  // ponytail: mermaid's four slanted brackets all land on `parallelogram` —
+  // the shape union has no trapezoid; add one when the renderer grows one.
+  { open: '[/', close: '/]', type: 'process', shape: 'parallelogram' },
+  { open: '[\\', close: '\\]', type: 'process', shape: 'parallelogram' },
+  { open: '[/', close: '\\]', type: 'process', shape: 'parallelogram' },
+  { open: '[\\', close: '/]', type: 'process', shape: 'parallelogram' },
   { open: '{', close: '}', type: 'decision', shape: 'diamond' },
   { open: '[', close: ']', type: 'process', shape: 'rounded' },
   { open: '(', close: ')', type: 'process', shape: 'rounded' },

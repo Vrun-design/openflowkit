@@ -215,8 +215,40 @@ describe('mermaidToDsl', () => {
     expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
   });
 
+  it('converts architecture groups, icons, junctions and pinned edge sides', async () => {
+    const { dsl } = convert(`architecture-beta
+  group api(cloud)[API]
+  service db(database)[Database] in api
+  service disk1(disk)[Storage] in api
+  junction junctionCenter in api
+  db:L -- R:disk1
+  service gateway(internet)[Gateway]
+  gateway:B --> T:db`);
+    expect(dsl).toContain('architecture');
+    expect(dsl).toContain('group API [icon: cloud] {');
+    expect(dsl).toContain('db = Database [icon: database]');
+    expect(dsl).toContain('[circle]');
+    expect(dsl).toMatch(/db -- disk1 \[from: left, to: right\]/);
+    expect(dsl).toMatch(/Gateway -> db \[from: bottom, to: top\]/);
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
+    expect(compiled.nodes.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('emits every architecture node once, even when two groups claim each other', async () => {
+    const { dsl } = convert(`architecture-beta
+  group a(cloud)[Alpha] in b
+  group b(cloud)[Beta] in a
+  service api(server)[API] in a`);
+    expect(dsl.match(/Alpha/g)).toHaveLength(1);
+    expect(dsl.match(/Beta/g)).toHaveLength(1);
+    expect(dsl).toContain('API');
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
+  });
+
   it('converts every supported corpus fixture into compiling DSL', async () => {
-    const convertible = new Set(['flowchart', 'sequence', 'stateDiagram', 'erDiagram', 'classDiagram', 'mindmap', 'gitGraph']);
+    const convertible = new Set(['flowchart', 'sequence', 'stateDiagram', 'erDiagram', 'classDiagram', 'mindmap', 'gitGraph', 'architecture']);
     const fixtures = (MERMAID_COMPAT_FIXTURES as Array<{ name: string; source: string; family?: string; bucket?: string }>)
       .filter((fixture) => (fixture.bucket === 'editable_full' || fixture.bucket === 'editable_partial')
         && convertible.has(fixture.family ?? ''));
@@ -237,7 +269,7 @@ describe('mermaidToDsl', () => {
   });
 
   it('reports reserved families as errors instead of guessing', () => {
-    for (const source of ['journey\n  title: Trip', 'architecture-beta\n  service api(server)[API]']) {
+    for (const source of ['journey\n  title: Trip']) {
       const result = mermaidToDsl(source);
       if (!('error' in result)) throw new Error(`expected an error for ${source}`);
       expect(typeof result.error).toBe('string');
