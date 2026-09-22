@@ -138,7 +138,7 @@ export function V2AgentPanel({ proposal, ai, aiSettings, currentRevision, readOn
           <p className="ofk-connection-lede">
             {configured
               ? 'Describe the diagram. It arrives as a proposal you review before it lands on the page.'
-              : 'Bring your own key — Anthropic or any OpenAI-compatible endpoint — and describe the diagram you need.'}
+              : 'Bring your own key — Gemini, Claude, OpenAI, Ollama and six more — and describe the diagram you need.'}
           </p>
           {!configured ? <>
             <Button variant="primary" onClick={() => setProviderOpen(true)}><Icon icon={IconSparkles} />Connect a provider</Button>

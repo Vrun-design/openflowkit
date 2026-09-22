@@ -189,6 +189,21 @@ describe('failures and secrets', () => {
     vi.unstubAllGlobals();
   });
 
+  it('never logs the key, on success or failure', async () => {
+    const spies = [vi.spyOn(console, 'log'), vi.spyOn(console, 'warn'), vi.spyOn(console, 'error'), vi.spyOn(console, 'info')];
+    vi.stubGlobal('fetch', vi.fn(async () => ok({ choices: [{ message: { content: 'x' } }] })));
+    await createProvider({ provider: 'openai', apiKey: KEY }).complete({ system: 's', prompt: 'p' });
+    vi.stubGlobal('fetch', vi.fn(async () => fail(401, JSON.stringify({ error: { message: `bad key ${KEY}` } }))));
+    await createProvider({ provider: 'openai', apiKey: KEY }).complete({ system: 's', prompt: 'p' }).catch(() => undefined);
+    for (const spy of spies) {
+      const written = spy.mock.calls.flat().map(String).join(' ');
+      expect(written).not.toContain(KEY);
+      expect(written).not.toContain('sk-secret');
+    }
+    for (const spy of spies) spy.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
   it('refuses to build a keyed provider without a key, and Ollama without anything', () => {
     const missing = (() => { try { createProvider({ provider: 'openai', apiKey: '  ' }); } catch (error) { return error; } return null; })() as AiProviderError;
     expect(missing).toBeInstanceOf(AiProviderError);
