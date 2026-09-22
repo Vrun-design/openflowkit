@@ -280,12 +280,21 @@ function exportChartNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'da
   const style = resolveNodeStyle(node, theme === 'dark' ? SVG_BACKGROUND.dark : SVG_BACKGROUND.light);
   const textColor = style.textColor === 'transparent' ? '#334155' : style.textColor;
   const parts: string[] = [];
+  // Points are already in world space, so the card is drawn there too and the
+  // group carries no transform.
+  const corners = [
+    { x: 0, y: 0 }, { x: node.size.width, y: 0 },
+    { x: node.size.width, y: node.size.height }, { x: 0, y: node.size.height },
+  ].map((point) => applyMatrixToPoint(matrix, point));
+  const cardStroke = style.strokeWidth > 0 && style.stroke !== 'transparent'
+    ? ` stroke="${xml(style.stroke)}" stroke-width="${number(style.strokeWidth)}"` : '';
+  parts.push(`<path d="${pathData(corners)}" fill="${xml(style.fill)}"${cardStroke}/>`);
   for (const mark of presentation.marks) {
     const points = mark.points.map((point) => applyMatrixToPoint(matrix, point));
     if (mark.kind === 'bar' || mark.kind === 'cell') {
       const [first, second] = points;
       if (!first || !second) continue;
-      parts.push(`<rect x="${number(first.x)}" y="${number(first.y)}" width="${number(second.x - first.x)}" height="${number(second.y - first.y)}" fill="${xml(mark.color)}" fill-opacity="${number(mark.opacity)}"${mark.kind === 'cell' ? ' stroke="#ffffff" stroke-opacity="0.6"' : ''}/>`);
+      parts.push(`<rect x="${number(first.x)}" y="${number(first.y)}" width="${number(second.x - first.x)}" height="${number(second.y - first.y)}" fill="${xml(mark.color)}" fill-opacity="${number(mark.opacity)}"${mark.kind === 'cell' ? ` stroke="${xml(style.fill)}" stroke-opacity="0.6"` : ''}/>`);
     } else if (mark.kind === 'point') {
       for (const point of points) {
         parts.push(`<circle cx="${number(point.x)}" cy="${number(point.y)}" r="3.5" fill="${xml(mark.color)}" fill-opacity="${number(mark.opacity)}"/>`);
@@ -297,7 +306,7 @@ function exportChartNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'da
     }
   }
   for (const rule of presentation.rules) {
-    parts.push(`<path d="${openPathData(rule.map((point) => applyMatrixToPoint(matrix, point)))}" fill="none" stroke="#cbd5e1" stroke-width="1"/>`);
+    parts.push(`<path d="${openPathData(rule.map((point) => applyMatrixToPoint(matrix, point)))}" fill="none" stroke="${xml(textColor)}" stroke-opacity="0.2" stroke-width="1"/>`);
   }
   if (presentation.table) {
     const { columns, rows } = presentation.table;
@@ -306,12 +315,12 @@ function exportChartNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'da
     const left = columns[0]!;
     const right = columns[columns.length - 1]!;
     const line = (x1: number, y1: number, x2: number, y2: number) =>
-      `<path d="${openPathData([applyMatrixToPoint(matrix, { x: x1, y: y1 }), applyMatrixToPoint(matrix, { x: x2, y: y2 })])}" stroke="#cbd5e1" stroke-width="1" fill="none"/>`;
+      `<path d="${openPathData([applyMatrixToPoint(matrix, { x: x1, y: y1 }), applyMatrixToPoint(matrix, { x: x2, y: y2 })])}" stroke="${xml(textColor)}" stroke-opacity="0.2" stroke-width="1" fill="none"/>`;
     for (const x of columns) parts.push(line(x, top, x, bottom));
     for (const y of rows) parts.push(line(left, y, right, y));
     const header = applyMatrixToPoint(matrix, { x: left, y: top });
     const headerCorner = applyMatrixToPoint(matrix, { x: right, y: rows[1]! });
-    parts.push(`<rect x="${number(header.x)}" y="${number(header.y)}" width="${number(headerCorner.x - header.x)}" height="${number(headerCorner.y - header.y)}" fill="#f1f5f9" fill-opacity="0.9"/>`);
+    parts.push(`<rect x="${number(header.x)}" y="${number(header.y)}" width="${number(headerCorner.x - header.x)}" height="${number(headerCorner.y - header.y)}" fill="${xml(textColor)}" fill-opacity="0.06"/>`);
   }
   for (const label of presentation.labels) {
     if (!label.text) continue;
@@ -320,7 +329,7 @@ function exportChartNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'da
     const size = label.role === 'title' ? style.fontSize + 2 : 11;
     parts.push(`<text x="${number(at.x)}" y="${number(at.y)}" text-anchor="${anchor}" dominant-baseline="middle" fill="${xml(textColor)}" font-family="system-ui,sans-serif" font-size="${number(size)}">${xml(label.text)}</text>`);
   }
-  return `<g data-node-id="${xml(node.id)}" data-node-kind="chart" transform="${matrixAttribute(matrix)}">${parts.join('')}</g>`;
+  return `<g data-node-id="${xml(node.id)}" data-node-kind="chart">${parts.join('')}</g>`;
 }
 
 function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' | 'print'): string {
@@ -359,21 +368,20 @@ function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' |
   return `<g data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}"${style.opacity < 1 ? ` opacity="${number(style.opacity)}"` : ''}>`
     + (defs ? `<defs>${defs}</defs>` : '')
     + outlineMarkup(outline, style, filter)
-    + (basic ? decorationMarkup(basic.shape, node.size, style, matrix) : '')
+    + (basic ? decorationMarkup(basic.shape, node.size, style) : '')
     + labelElement(style, node.size, label, subLabel, clip)
     + '</g>';
 }
 
 /** Inner lines (venn lens, target rings, note fold) in the node's stroke. */
-function decorationMarkup(
-  shape: BasicNodeShape, size: Size2d, style: NodeStyle, matrix: Matrix2d
-): string {
+function decorationMarkup(shape: BasicNodeShape, size: Size2d, style: NodeStyle): string {
   if (style.strokeWidth <= 0) return '';
   const stroke = style.stroke === 'transparent' || !style.stroke ? 'none' : style.stroke;
   if (stroke === 'none') return '';
   const dash = style.dash.length ? ` stroke-dasharray="${style.dash.map(number).join(' ')}"` : '';
+  // Node space: the enclosing <g> already carries the node's transform.
   return basicNodeDecorations(shape, size).map((line) => {
-    const [first, ...rest] = line.map((point) => applyMatrixToPoint(matrix, point));
+    const [first, ...rest] = line;
     if (!first) return '';
     return `<path d="M ${number(first.x)} ${number(first.y)}`
       + rest.map((point) => ` L ${number(point.x)} ${number(point.y)}`).join('')

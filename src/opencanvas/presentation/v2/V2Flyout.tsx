@@ -5,11 +5,11 @@ import type { ToolOption } from './v2ToolCatalog';
 const HOLD_MS = 350;
 
 // A rail button with a corner triangle that opens a grid of variants. Click
-// toggles the grid; ArrowRight opens it and moves focus in; picking arms the
-// variant and closes. Long-press opens too, for pointer users who never tab.
+// arms the last pick (tldraw/Figma); a click on the already-armed tool, a
+// long-press or ArrowRight opens the grid. Picking arms the variant and closes.
 export function FlyoutButton<T extends string>(props: {
   readonly label: string;
-  readonly shortcut: string;
+  readonly shortcut?: string;
   readonly icon: ReactNode;
   readonly selected: boolean;
   readonly open: boolean;
@@ -19,6 +19,8 @@ export function FlyoutButton<T extends string>(props: {
   readonly onPick: (id: T) => void;
   /** Narrow grids (connectors) read better at half width. */
   readonly columns?: number;
+  /** Charts have no armed tool: every click opens the grid. */
+  readonly openOnClick?: boolean;
 }): React.JSX.Element {
   const anchorRef = useRef<HTMLButtonElement>(null);
   const holdRef = useRef<number | null>(null);
@@ -93,7 +95,8 @@ export function FlyoutButton<T extends string>(props: {
           onClick={() => {
             clearHold();
             if (props.open && Date.now() - pressedAtRef.current >= HOLD_MS) return;
-            props.onOpenChange(!props.open);
+            if (props.open || props.selected || props.openOnClick) props.onOpenChange(!props.open);
+            else props.onPick(props.selectedId);
           }}
         />
       </Tooltip>
@@ -105,24 +108,24 @@ export function FlyoutButton<T extends string>(props: {
           tabIndex={-1}
           style={{ gridTemplateColumns: `repeat(${props.columns ?? 4}, 1fr)` }}>
           {props.options.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              role="option"
-              aria-selected={option.id === props.selectedId}
-              aria-label={option.label}
-              title={option.label}
-              className="ofk-v2-flyout-cell"
-              data-selected={option.id === props.selectedId || undefined}
-              {...(autofocusId === option.id ? { 'data-autofocus': '' } : {})}
-              tabIndex={-1}
-              onClick={() => {
-                props.onPick(option.id);
-                props.onOpenChange(false);
-              }}
-            >
-              <Icon icon={option.icon} />
-            </button>
+            <Tooltip key={option.id} content={option.label}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={option.id === props.selectedId}
+                aria-label={option.label}
+                className="ofk-v2-flyout-cell"
+                data-selected={option.id === props.selectedId || undefined}
+                {...(autofocusId === option.id ? { 'data-autofocus': '' } : {})}
+                tabIndex={-1}
+                onClick={() => {
+                  props.onPick(option.id);
+                  props.onOpenChange(false);
+                }}
+              >
+                <Icon icon={option.icon} />
+              </button>
+            </Tooltip>
           ))}
         </div>
       </Popover>

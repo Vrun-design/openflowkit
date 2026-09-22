@@ -5,18 +5,19 @@ import type { BasicNodeShape } from './basicNodePresentation';
 
 // The shape library the v2 toolbar creates. One factory serves the toolbar and
 // the add_shape agent action so both produce byte-identical nodes.
-// queue/database are DSL aliases of cylinder and custom-path needs an authored
-// SVG path, so neither is a pickable library shape.
+// queue/database are DSL aliases of cylinder, custom-path needs an authored SVG
+// path, and rectangle/comment/panel/callout-stack duplicate the R tool or another
+// shape: all stay DSL words, none is a pickable library shape.
 export type LibraryShape = Exclude<BasicNodeShape, 'custom-path' | 'queue' | 'database'>;
 export type ShapeKind = 'text' | LibraryShape;
 
 export const LIBRARY_SHAPES: readonly LibraryShape[] = [
-  'rectangle', 'rounded', 'capsule', 'circle', 'ellipse', 'diamond',
+  'rounded', 'capsule', 'circle', 'ellipse', 'diamond',
   'triangle', 'trapezoid', 'parallelogram', 'hexagon', 'octagon', 'pentagon-tag',
   'chevron', 'plus', 'star', 'heart', 'cloud', 'lightning', 'bookmark',
-  'speech-bubble', 'comment', 'page', 'folder', 'panel', 'list-card',
+  'speech-bubble', 'page', 'folder', 'list-card',
   'filled-bar', 'half-round', 'cylinder', 'document', 'cube', 'prism',
-  'layer-stack', 'callout-stack', 'target', 'check-circle', 'cross-circle',
+  'layer-stack', 'target', 'check-circle', 'cross-circle',
   'numbered-circle', 'brace', 'bracket', 'pin', 'actor',
   'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right', 'venn',
 ];
@@ -45,10 +46,8 @@ const SHAPE_SIZES: Readonly<Partial<Record<ShapeKind, Size2d>>> = {
   lightning: { width: 104, height: 136 },
   bookmark: { width: 96, height: 132 },
   'speech-bubble': { width: 180, height: 104 },
-  comment: { width: 180, height: 96 },
   page: { width: 150, height: 140 },
   folder: { width: 168, height: 120 },
-  panel: { width: 168, height: 128 },
   'list-card': { width: 168, height: 120 },
   'filled-bar': { width: 140, height: 22 },
   'half-round': { width: 176, height: 104 },
@@ -57,7 +56,6 @@ const SHAPE_SIZES: Readonly<Partial<Record<ShapeKind, Size2d>>> = {
   cube: { width: 140, height: 132 },
   prism: { width: 160, height: 128 },
   'layer-stack': { width: 180, height: 120 },
-  'callout-stack': { width: 180, height: 120 },
   target: { width: 108, height: 108 },
   'check-circle': { width: 108, height: 108 },
   'cross-circle': { width: 108, height: 108 },

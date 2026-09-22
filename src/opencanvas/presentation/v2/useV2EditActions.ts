@@ -33,11 +33,11 @@ interface V2EditActionsOptions {
   readonly commit: (command: DocumentCommand) => void;
   readonly pageRef: RefObject<ScenePage | null>;
   readonly selectionRef: RefObject<CanvasSelection>;
-  readonly selectedConnectorId: string | null;
+  readonly selectedConnectorIds: readonly string[];
   readonly mintId: (prefix: string) => string;
   readonly readOnly: boolean;
   readonly applySelection: (selection: CanvasSelection) => void;
-  readonly applyConnectorSelection: (connectorId: string | null) => void;
+  readonly applyConnectorSelection: (connectorIds: readonly string[]) => void;
   readonly announce: (message: string) => void;
 }
 
@@ -45,10 +45,12 @@ interface V2EditActionsOptions {
 // share these, and both stay inert in read-only mode. Consumers read them
 // through refs or plain props, so no memoization is needed.
 export function useV2EditActions(options: V2EditActionsOptions) {
-  const { pageRef, selectionRef, selectedConnectorId, readOnly } = options;
+  const { pageRef, selectionRef, selectedConnectorIds, readOnly } = options;
   const clipboardRef = useRef<ProductionClipboardSnapshot | null>(null);
   const styleClipboardRef = useRef<StyleClipboard>({});
-  const connectorIds = () => (selectedConnectorId ? [selectedConnectorId] : []);
+  // Style copy/paste wants one subject; delete and duplicate take them all.
+  const selectedConnectorId = selectedConnectorIds.length === 1 ? selectedConnectorIds[0]! : null;
+  const connectorIds = () => selectedConnectorIds;
   const editablePage = () => {
     const page = pageRef.current;
     return page && !readOnly ? page : null;
@@ -56,10 +58,10 @@ export function useV2EditActions(options: V2EditActionsOptions) {
 
   const deleteSelection = () => {
     const page = editablePage();
-    if (!page || (selectionRef.current.nodeIds.length === 0 && !selectedConnectorId)) return;
+    if (!page || (selectionRef.current.nodeIds.length === 0 && selectedConnectorIds.length === 0)) return;
     options.commit(buildDeleteSelectionCommand(page, selectionRef.current.nodeIds, connectorIds()));
     options.applySelection(clearSelection());
-    options.applyConnectorSelection(null);
+    options.applyConnectorSelection([]);
     options.announce('Selection deleted.');
   };
 
@@ -78,7 +80,7 @@ export function useV2EditActions(options: V2EditActionsOptions) {
         command.commands.flatMap((child) => (child.kind === 'insert-node' ? [child.node.id] : []))
       )
     );
-    options.applyConnectorSelection(null);
+    options.applyConnectorSelection([]);
     options.announce('Selection duplicated.');
   };
 
@@ -137,7 +139,7 @@ export function useV2EditActions(options: V2EditActionsOptions) {
       pageRef.current ?? page, snapshot, (kind) => options.mintId(kind)
     );
     options.commit(command);
-    options.applyConnectorSelection(null);
+    options.applyConnectorSelection([]);
     options.applySelection(replaceSelection(pastedNodeIds));
     options.announce(`${pastedNodeIds.length} pasted.`);
   };

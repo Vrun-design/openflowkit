@@ -8,7 +8,7 @@ export type LayerObjectAction = 'hide' | 'lock' | 'duplicate' | 'delete';
 interface V2TreePanelProps {
   readonly page: ScenePage;
   readonly selection: CanvasSelection;
-  readonly selectedConnectorId: string | null;
+  readonly selectedConnectorIds: readonly string[];
   readonly onSelectNode: (id: string, additive: boolean) => void;
   readonly onSelectConnector: (id: string) => void;
   readonly onObjectAction: (id: string, action: LayerObjectAction) => void;
@@ -112,7 +112,7 @@ export function V2TreePanel(props: V2TreePanelProps): React.JSX.Element {
         const hidden = connector.metadata.hidden === true;
         const locked = connector.metadata.locked === true;
         const open = (element: HTMLElement) => { anchorRef.current = element; setMenuNode(null); setMenuConnector(connector.id); };
-        return <li key={connector.id}><div className="ofk-object-row" data-selected={props.selectedConnectorId === connector.id || undefined}
+        return <li key={connector.id}><div className="ofk-object-row" data-selected={props.selectedConnectorIds.includes(connector.id) || undefined}
           data-hidden={hidden || undefined}
           onContextMenu={(event) => { event.preventDefault(); open(event.currentTarget); }}>
           <span className="ofk-object-indent" /><button type="button" className="ofk-object-select"

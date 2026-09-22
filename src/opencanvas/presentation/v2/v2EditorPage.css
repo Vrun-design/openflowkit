@@ -167,7 +167,7 @@
   content: ''; position: absolute; right: 3px; bottom: 3px; width: 5px; height: 5px;
   background: currentColor; opacity: .5; clip-path: polygon(100% 0, 100% 100%, 0 100%);
 }
-.ofk-v2-flyout { padding: 8px; }
+.ofk-v2-flyout { padding: 8px; max-height: calc(100vh - 32px); overflow-y: auto; }
 .ofk-v2-flyout-grid { display: grid; gap: 2px; }
 .ofk-v2-flyout-cell {
   display: grid; place-items: center; width: 40px; height: 40px; padding: 0;
@@ -671,10 +671,10 @@
 .ofk-chart-panel { top: 80px; bottom: 16px; width: 380px; display: flex; flex-direction: column; }
 .ofk-chart-panel-body { flex: 1; min-height: 0; overflow: auto; }
 .ofk-chart-table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-.ofk-chart-table th, .ofk-chart-table td { padding: 2px; overflow: hidden; }
+.ofk-chart-table th, .ofk-chart-table td { padding: 2px; overflow: hidden; font-weight: 500; }
 /* The label column gets the room; series columns share what is left. */
 .ofk-chart-table th:first-child { width: 46%; }
-.ofk-chart-table thead th { padding-bottom: 6px; }
+.ofk-chart-table thead th { padding-bottom: 6px; font-size: 11px; font-weight: 500; color: var(--ofk-muted); text-align: start; }
 .ofk-chart-head-cell { display: flex; align-items: center; gap: 2px; min-width: 0; }
 .ofk-chart-head-cell input { width: 100%; min-width: 0; }
 .ofk-chart-table input {

@@ -10,7 +10,7 @@ interface V2TestApiOptions {
   readonly hostRef: RefObject<PixiRendererHost | null>;
   readonly selectionRef: RefObject<CanvasSelection>;
   readonly toolRef: RefObject<V2Tool>;
-  readonly selectedConnectorId: string | null;
+  readonly selectedConnectorIds: readonly string[];
   readonly document: SceneDocumentV1 | null;
   readonly revision: number;
   readonly saveStatus: V2SaveStatus;
@@ -22,7 +22,7 @@ interface V2TestApiOptions {
 // document state and geometry, never writes.
 export function useV2TestApi(options: V2TestApiOptions) {
   const {
-    hostRef, selectionRef, toolRef, selectedConnectorId, document, revision, saveStatus, proposal,
+    hostRef, selectionRef, toolRef, selectedConnectorIds, document, revision, saveStatus, proposal,
   } = options;
   useEffect(() => {
     const api = {
@@ -32,7 +32,8 @@ export function useV2TestApi(options: V2TestApiOptions) {
         nodes: document?.pages[0]?.nodes.map((node) => node.id) ?? [],
         connectors: document?.pages[0]?.connectors.map((connector) => connector.id) ?? [],
         selectedNodes: selectionRef.current.nodeIds,
-        selectedConnector: selectedConnectorId,
+        selectedConnector: selectedConnectorIds.length === 1 ? selectedConnectorIds[0]! : null,
+        selectedConnectors: selectedConnectorIds,
         tool: toolRef.current,
       }),
       getDocument: () => document,

@@ -89,6 +89,9 @@ describe('resolveChartPresentation', () => {
     // column → 5 column boundaries.
     expect(presentation.table!.rows).toHaveLength(4);
     expect(presentation.table!.columns).toHaveLength(5);
+    // Rows never stretch past a readable height, whatever the card size.
+    const [, headerBottom, firstRowBottom] = presentation.table!.rows;
+    expect(firstRowBottom! - headerBottom!).toBeLessThanOrEqual(40);
     const cells = presentation.labels.filter((label) => label.role === 'cell');
     expect(cells).toHaveLength(6);
   });

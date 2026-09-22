@@ -11,12 +11,6 @@ import type { PixiNodeDebugRecord } from './pixiNodeDebug';
 // One renderer for every chart kind: the presentation says what marks exist,
 // this draws them. Nothing here decides data, scale or colour.
 export class PixiChartNodeRenderer {
-  readonly label = new Container();
-
-  beginDraw(): void {
-    this.label.removeChildren().forEach((child) => child.destroy({ children: true }));
-  }
-
   drawNode(
     node: SceneNode,
     matrix: Matrix2d,
@@ -26,6 +20,19 @@ export class PixiChartNodeRenderer {
     const presentation = resolveChartPresentation(node);
     if (!presentation) return null;
     const style = resolveNodeStyle(node, canvasColor);
+    const textColor = pixiHexColor(style.textColor, 0x334155);
+
+    // The card: the fill the ink adapts to, so labels read in every theme.
+    // Rules and the table header are the ink at low alpha for the same reason.
+    const corners = [
+      { x: 0, y: 0 }, { x: node.size.width, y: 0 },
+      { x: node.size.width, y: node.size.height }, { x: 0, y: node.size.height },
+    ].map((point) => applyMatrixToPoint(matrix, point));
+    graphics.poly(corners.flatMap((point) => [point.x, point.y]));
+    if (style.fill !== 'transparent') graphics.fill({ color: pixiHexColor(style.fill, 0xffffff) });
+    if (style.strokeWidth > 0 && style.stroke !== 'transparent') {
+      graphics.stroke({ color: pixiHexColor(style.stroke, 0xe2e8f0), width: style.strokeWidth });
+    }
 
     for (const mark of presentation.marks) {
       const color = pixiHexColor(mark.color, 0x60a5fa);
@@ -61,7 +68,7 @@ export class PixiChartNodeRenderer {
         if (first && second) {
           graphics.rect(first.x, first.y, second.x - first.x, second.y - first.y);
           graphics.fill({ color, alpha: mark.opacity });
-          graphics.stroke({ color: 0xffffff, width: 1, alpha: 0.6 });
+          graphics.stroke({ color: pixiHexColor(style.fill, 0xffffff), width: 1, alpha: 0.6 });
         }
       }
     }
@@ -70,7 +77,7 @@ export class PixiChartNodeRenderer {
       if (points.length < 2) continue;
       graphics.moveTo(points[0]!.x, points[0]!.y);
       for (const point of points.slice(1)) graphics.lineTo(point.x, point.y);
-      graphics.stroke({ color: 0xcbd5e1, width: 1, alpha: 0.9 });
+      graphics.stroke({ color: textColor, width: 1, alpha: 0.2 });
     }
     if (presentation.table) {
       const { columns, rows, headerHeight } = presentation.table;
@@ -82,13 +89,15 @@ export class PixiChartNodeRenderer {
         graphics.moveTo(matrix.tx + columns[0]! * matrix.a, matrix.ty + y * matrix.d);
         graphics.lineTo(matrix.tx + columns[columns.length - 1]! * matrix.a, matrix.ty + y * matrix.d);
       }
-      graphics.stroke({ color: 0xcbd5e1, width: 1, alpha: 0.9 });
+      graphics.stroke({ color: textColor, width: 1, alpha: 0.2 });
       graphics.rect(matrix.tx + columns[0]! * matrix.a, matrix.ty + rows[0]! * matrix.d,
         (columns[columns.length - 1]! - columns[0]!) * matrix.a, headerHeight * matrix.d);
-      graphics.fill({ color: 0xf1f5f9, alpha: 0.9 });
+      graphics.fill({ color: textColor, alpha: 0.06 });
     }
 
-    const textColor = pixiHexColor(style.textColor, 0x334155);
+    // A fresh container per draw: the node renderer destroys every label
+    // container each frame, so nothing here may outlive one draw.
+    const label = new Container();
     for (const entry of presentation.labels) {
       if (!entry.text) continue;
       const at = applyMatrixToPoint(matrix, entry.at);
@@ -98,13 +107,13 @@ export class PixiChartNodeRenderer {
       const text = createStyledPixiText(entry.text, labelStyle, textColor, null);
       text.anchor.set(entry.anchor === 'start' ? 0 : entry.anchor === 'end' ? 1 : 0.5, 0.5);
       text.position.set(at.x, at.y);
-      this.label.addChild(text);
+      label.addChild(text);
     }
     return {
-      label: this.label,
+      label,
       debug: {
         id: node.id, kind: 'chart', shape: presentation.chart,
-        fill: 0xffffff, stroke: 0xcbd5e1, textColor,
+        fill: pixiHexColor(style.fill, 0xffffff), stroke: pixiHexColor(style.stroke, 0xe2e8f0), textColor,
         mediaState: 'none',
       },
     };

@@ -2,7 +2,7 @@
 import { expect, test } from '@playwright/test';
 
 type V2Api = {
-  getState(): { nodes: string[]; connectors: string[]; selectedConnector: string | null };
+  getState(): { nodes: string[]; connectors: string[]; selectedConnector: string | null; selectedConnectors: string[] };
   getNodeRect(id: string): { x: number; y: number; width: number; height: number } | null;
   getLiveConnectorSamples(id: string): readonly { x: number; y: number }[];
   getDocument(): {
@@ -43,7 +43,10 @@ test('each connector kind binds to shapes and re-routes when a shape moves', asy
   const to = centre(b);
 
   const pick = async (name: string) => {
-    await page.getByRole('button', { name: 'Connector' }).click();
+    // The first click arms the tool; a click on the armed tool opens the grid.
+    const button = page.getByRole('button', { name: 'Connector' });
+    await button.click();
+    if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click();
     await page.getByRole('option', { name }).click();
   };
 
@@ -101,4 +104,47 @@ test('each connector kind binds to shapes and re-routes when a shape moves', asy
   });
   // The straight route stays a straight line after the move.
   expect(after[1]).toHaveLength(3);
+});
+
+test('a marquee selects connectors with their shapes, and Delete removes them all', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('v2-canvas').focus();
+  const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
+  for (const [x, y] of [[380, 300], [980, 300]] as const) {
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('r');
+    await page.mouse.click(x, y);
+  }
+  await page.keyboard.press('Escape');
+  const [first, second] = (await state(page)).nodes;
+  const a = (await nodeRect(page, first!))!;
+  const b = (await nodeRect(page, second!))!;
+  await page.keyboard.press('a');
+  await page.mouse.move(box.x + a.x + a.width / 2, box.y + a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + b.x + b.width / 2, box.y + b.y + b.height / 2, { steps: 10 });
+  await page.mouse.up();
+  await expect.poll(async () => (await state(page)).connectors.length).toBe(1);
+
+  // Marquee over everything: shapes and the connector are selected together.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await page.mouse.move(200, 150);
+  await page.mouse.down();
+  await page.mouse.move(1200, 500, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(async () => (await state(page)).selectedConnectors.length).toBe(1);
+  expect((await state(page)).nodes).toHaveLength(2);
+
+  // Marquee over the connector's middle only (no shape): it is selectable alone.
+  await page.keyboard.press('Escape');
+  await page.mouse.move(640, 250);
+  await page.mouse.down();
+  await page.mouse.move(720, 350, { steps: 6 });
+  await page.mouse.up();
+  await expect.poll(async () => (await state(page)).selectedConnector).not.toBeNull();
+  expect((await state(page)).selectedConnectors).toHaveLength(1);
+  await page.keyboard.press('Delete');
+  await expect.poll(async () => (await state(page)).connectors.length).toBe(0);
+  expect((await state(page)).nodes).toHaveLength(2);
 });

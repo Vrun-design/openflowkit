@@ -92,6 +92,17 @@ describe('OpenCanvas scene index', () => {
     expect(querySceneBounds(index, viewport, { kinds: new Set(['connector']) })).toEqual([]);
   });
 
+  it('indexes a connector with a free end by its point', () => {
+    const anchor = createTestNode('anchor');
+    const free = createTestConnector('free', 'anchor', 'anchor', {
+      target: { nodeId: null, portId: null, anchor: null, point: { x: 400, y: 20 } },
+    });
+    const index = createSceneIndex(createTestDocument({ nodes: [anchor], connectors: [free] }).pages[0]);
+    const nearFreeEnd = createBounds2d(380, 0, 40, 40);
+    expect(querySceneBounds(index, nearFreeEnd, { kinds: new Set(['connector']) }).map((item) => item.id))
+      .toEqual(['free']);
+  });
+
   it('handles negative cells, touching bounds, and huge overflow objects', () => {
     const negative = createTestNode('negative', {
       transform: { translation: { x: -100, y: -50 }, rotationRadians: 0, scale: { x: 1, y: 1 } },

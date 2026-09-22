@@ -16,17 +16,21 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
   and matching SVG, the data panel (cells, +Row/+Series, TSV paste, one undo per commit), the
   Chart type panel, draggable quadrant points, and a `chart` DSL family with round-trip
   fixtures + agent surface. Built with `docs/plan/phase-6-library.md` §0 as the bar.
-- Verified after 6.9: typecheck, lint, 1393 unit tests (185 files), headed e2e for every slice
-  (rail, shapes, connector-variants, ink, image-emoji, charts, quadrant — 9 checks green).
-  The grew rail now wraps into a second column on short windows instead of covering the
-  bottom-left camera controls. `check-v2-polish.mjs`
-  fails on this machine at unmodified HEAD too (idle render count / context-bar follow / resize
-  assertions in three separate runs) — environmental, not a phase-6 regression; re-run when the
-  machine is quiet.
+- Verified after 6.9: typecheck, lint, unit + headed e2e for every slice. `check-v2-polish.mjs`
+  fails at unmodified HEAD on this machine (environmental); re-run when the machine is quiet.
 - Four shared bugs surfaced and were fixed: a tooltip swallowed Escape (passive Popover
   stopPropagation); clearing the selection left focus on body so the next shortcut died; pickers
   anchored to a div could not return focus (now anchored to their trigger); SVG export dropped
   every connector arrowhead and every family-renderer node shape (now draws markers + charts).
+- Phase 6 owner review 2026-09-22 (Opus): rail click arms the last pick, second click /
+  long-press / → opens the grid (Charts always opens); flyouts scroll, shapes 6 columns, real
+  tooltips per cell. 42 library shapes: cloud/actor/cube/prism/layer-stack/check/cross redrawn,
+  rectangle/comment/panel/callout-stack culled from the flyout (still DSL words). Charts draw
+  their card so ink adapts per theme; fixed a Pixi crash (shared label container destroyed each
+  frame) that froze the canvas after any chart; table rows cap at 40 px; panel `sr-only` leak.
+  SVG: decorations and charts were double-transformed. Selection holds many connectors
+  (marquee, ⌘A, Delete, tree); free-end connectors indexed by their point. Style bar for a
+  multi-connector selection is a marked ceiling. `OpenCanvasSemanticSceneTree` has no caller.
 - Connect agent moved to the rail 2026-09-22 (Opus): 5th rail item + welcome button open a
   panel (`V2AgentConnect`: hero, steps when off, live card + capability grid when on); top-bar
   plug is status-only and opens the panel. No shortcut (Alt+A = align left).

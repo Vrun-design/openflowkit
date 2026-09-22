@@ -421,7 +421,9 @@ function tablePresentation(data: ChartData, size: Size2d): ChartPresentation {
   const columns = data.categories.length + 1;
   const headerHeight = 26;
   const columnWidth = (size.width - 8) / Math.max(1, columns);
-  const rowHeight = Math.max(18, (size.height - 8 - headerHeight) / Math.max(1, rows - 1));
+  // Rows share the height up to a readable cap; a tall card leaves space below
+  // rather than stretching one row over it.
+  const rowHeight = Math.min(40, Math.max(18, (size.height - 8 - headerHeight) / Math.max(1, rows - 1)));
   const columnsX = Array.from({ length: columns + 1 }, (_, index) => 4 + index * columnWidth);
   const rowsY = [4, 4 + headerHeight,
     ...Array.from({ length: rows - 1 }, (_, index) => 4 + headerHeight + (index + 1) * rowHeight)];

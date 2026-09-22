@@ -73,7 +73,7 @@ export function V2CreationToolbar(props: {
         {plain('ellipse', 'Ellipse', 'O', IconCircle)}
         <FlyoutButton label="Shapes" shortcut="S" icon={<Icon icon={shape.icon} />}
           selected={props.tool === 'shape'} open={flyout === 'shapes'}
-          onOpenChange={setFlyoutOpen('shapes')} options={SHAPE_OPTIONS}
+          onOpenChange={setFlyoutOpen('shapes')} options={SHAPE_OPTIONS} columns={6}
           selectedId={props.toolConfig.shape} onPick={props.onPickShape} />
         <FlyoutButton label="Connector" shortcut="A" icon={<Icon icon={connector.icon} />}
           selected={props.tool === 'connector'} open={flyout === 'connector'}
@@ -81,9 +81,9 @@ export function V2CreationToolbar(props: {
           selectedId={props.toolConfig.connector} onPick={props.onPickConnector} />
         <span className="ofk-v2-tools-separator" aria-hidden="true" />
         {plain('text', 'Text', 'T', IconTypography)}
-        <FlyoutButton label="Charts" shortcut="C" icon={<Icon icon={IconChartBar} />}
+        <FlyoutButton label="Charts" icon={<Icon icon={IconChartBar} />}
           selected={flyout === 'charts'} open={flyout === 'charts'}
-          onOpenChange={setFlyoutOpen('charts')} options={CHART_OPTIONS}
+          onOpenChange={setFlyoutOpen('charts')} options={CHART_OPTIONS} openOnClick
           selectedId={'bar' as V2ChartKind} onPick={props.onPickChart} />
         <FlyoutButton label="Draw" shortcut="P" icon={<Icon icon={ink === 'pen' ? IconPencil : IconHighlight} />}
           selected={props.tool === 'pen' || props.tool === 'highlighter'} open={flyout === 'ink'}

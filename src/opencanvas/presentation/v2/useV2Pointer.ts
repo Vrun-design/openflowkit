@@ -165,6 +165,7 @@ interface V2PointerOptions {
   readonly cameraRef: RefObject<CanvasCamera>;
   readonly pageRef: RefObject<ScenePage | null>;
   readonly selectionRef: RefObject<CanvasSelection>;
+  readonly selectedConnectorIdsRef: RefObject<readonly string[]>;
   readonly toolRef: RefObject<V2Tool>;
   /** Which variant a flyout tool draws with (shape library, connector kind). */
   readonly toolConfigRef: RefObject<V2ToolConfig>;
@@ -173,7 +174,7 @@ interface V2PointerOptions {
   readonly gestureApiRef: RefObject<V2GestureApi | null>;
   readonly commit: (command: DocumentCommand) => void;
   readonly applySelection: (selection: CanvasSelection) => void;
-  readonly applyConnectorSelection: (connectorId: string | null) => void;
+  readonly applyConnectorSelection: (connectorIds: readonly string[]) => void;
   readonly updateCamera: (camera: CanvasCamera) => void;
   readonly openEditor: (nodeId: string, options?: { readonly isNew?: boolean }) => void;
   readonly openConnectorEditor: (connectorId: string, at: Point2d) => void;
@@ -444,7 +445,7 @@ function commitQuickCreateDelivery(
   options.commit(buildQuickCreateCommand(operation.page, {
     sourceNodeId, sourceSide, newNodeId: nodeId, connectorId,
   }));
-  options.applyConnectorSelection(null);
+  options.applyConnectorSelection([]);
   options.applySelection(replaceSelection([nodeId]));
   options.onToolChange('select');
   options.openEditor(nodeId, { isNew: true });
@@ -521,7 +522,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       appearance: connectorAppearance(opts),
     }));
     opts.applySelection(clearSelection());
-    opts.applyConnectorSelection(id);
+    opts.applyConnectorSelection([id]);
     opts.onToolChange('select');
     return true;
   }, []);
@@ -712,20 +713,23 @@ export function useV2Pointer(options: V2PointerOptions) {
         host.setMarquee(null);
         if (moved >= CLICK_THRESHOLD_PX) {
           const ids = host.pickNodesInScreenBounds(bounds);
-          if (ids.length > 0 || !operation.additive) opts.applyConnectorSelection(null);
+          const connectorIds = host.pickConnectorsInScreenBounds(bounds);
           opts.applySelection(
             operation.additive
               ? addToSelection(opts.selectionRef.current, ids)
               : replaceSelection(ids)
           );
+          opts.applyConnectorSelection(operation.additive
+            ? [...new Set([...opts.selectedConnectorIdsRef.current, ...connectorIds])]
+            : connectorIds);
         } else {
           const nodeId = host.pickNode(point);
           const connectorId = nodeId ? null : host.pickConnector(point);
           if (connectorId) {
             opts.applySelection(clearSelection());
-            opts.applyConnectorSelection(connectorId);
+            opts.applyConnectorSelection([connectorId]);
           } else {
-            if (nodeId || !operation.additive) opts.applyConnectorSelection(null);
+            if (nodeId || !operation.additive) opts.applyConnectorSelection([]);
             opts.applySelection(
               selectionAfterClick(opts.selectionRef.current, nodeId, operation.additive)
             );
@@ -797,7 +801,7 @@ export function useV2Pointer(options: V2PointerOptions) {
             })
           );
         }
-        opts.applyConnectorSelection(null);
+        opts.applyConnectorSelection([]);
         opts.applySelection(replaceSelection([id]));
         opts.onToolChange('select');
         if (operation.shape === 'text') opts.openEditor(id, { isNew: true });
@@ -808,7 +812,7 @@ export function useV2Pointer(options: V2PointerOptions) {
           opts.commit(command);
           const nodeId = 'node' in command && command.kind === 'insert-node' ? command.node.id : null;
           if (nodeId) {
-            opts.applyConnectorSelection(null);
+            opts.applyConnectorSelection([]);
             opts.applySelection(replaceSelection([nodeId]));
           }
         }
@@ -816,7 +820,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       } else if (operation.kind === 'erase') {
         const command = buildEraseCommand(operation);
         if (command) {
-          opts.applyConnectorSelection(null);
+          opts.applyConnectorSelection([]);
           opts.applySelection(clearSelection());
           opts.commit(command);
         }
@@ -853,7 +857,7 @@ export function useV2Pointer(options: V2PointerOptions) {
             })
             .map((node) => node.id)
           : [];
-        if (hit.length > 0) opts.applyConnectorSelection(null);
+        if (hit.length > 0) opts.applyConnectorSelection([]);
         opts.applySelection(replaceSelection(hit));
         opts.onToolChange('select');
       } else if (operation.kind === 'connect') {
@@ -877,7 +881,7 @@ export function useV2Pointer(options: V2PointerOptions) {
             });
             opts.commit(opts.extendConnectorCommand?.(command, sourceNodeId, targetId) ?? command);
             opts.applySelection(clearSelection());
-            opts.applyConnectorSelection(id);
+            opts.applyConnectorSelection([id]);
             opts.onToolChange('select');
           } else if (targetId === null) {
             commitQuickCreateDelivery(opts, operation, sourceNodeId, sourceSide);
@@ -899,7 +903,7 @@ export function useV2Pointer(options: V2PointerOptions) {
               : command
           );
           opts.applySelection(clearSelection());
-          opts.applyConnectorSelection(id);
+          opts.applyConnectorSelection([id]);
           opts.onToolChange('select');
         }
       } else if (operation.kind === 'connector-edit') {
@@ -939,7 +943,7 @@ export function useV2Pointer(options: V2PointerOptions) {
             });
           }
         }
-        host.setConnectorSelection(operation.before.id, null);
+        host.setConnectorSelection([operation.before.id], null);
       }
       try {
         event.currentTarget.releasePointerCapture(event.pointerId);
@@ -1086,7 +1090,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         : null;
       const connectorHandle = selectedConnector ? host.pickConnectorHandle(point) : null;
       if (selectedConnector && connectorHandle && !additive) {
-        host.setConnectorSelection(selectedConnector.id, connectorHandle);
+        host.setConnectorSelection([selectedConnector.id], connectorHandle);
         operationRef.current = beginConnectorOperation(
           event.pointerId, page, selectedConnector, connectorHandle
         );
@@ -1108,7 +1112,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         const hit = pickHandleNear(host, opts, point, states);
         if (hit) {
           if (!opts.selectionRef.current.nodeIds.includes(hit.nodeId)) {
-            opts.applyConnectorSelection(null);
+            opts.applyConnectorSelection([]);
             opts.applySelection(replaceSelection([hit.nodeId]));
           }
           operationRef.current = { kind: 'connect', pointerId: event.pointerId, page,
@@ -1121,7 +1125,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       const chartPoint = opts.readOnlyRef.current ? null
         : pickChartPoint(host, page, point, opts.cameraRef.current.zoom);
       if (chartPoint && !additive) {
-        opts.applyConnectorSelection(null);
+        opts.applyConnectorSelection([]);
         opts.applySelection(replaceSelection([chartPoint.node.id]));
         operationRef.current = {
           kind: 'chart-point', pointerId: event.pointerId, page,
@@ -1132,7 +1136,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       const nodeId = host.pickNode(point);
       if (nodeId && !additive) {
         if (!opts.selectionRef.current.nodeIds.includes(nodeId)) {
-          opts.applyConnectorSelection(null);
+          opts.applyConnectorSelection([]);
           opts.applySelection(replaceSelection([nodeId]));
         }
         if (opts.selectionRef.current.nodeIds.some((id) => states.get(id)?.locked)) return;
@@ -1148,7 +1152,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       const connectorId = host.pickConnector(point);
       if (connectorId && !nodeId) {
         opts.applySelection(clearSelection());
-        opts.applyConnectorSelection(connectorId);
+        opts.applyConnectorSelection([connectorId]);
         operationRef.current = null;
         detachWindow();
         try {
@@ -1220,7 +1224,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       opts.commit(buildInsertShapeCommand(page, {
         kind: 'text', id, label: '', at: textOrigin(host.screenToWorld(point)), appearance: stickyAppearance(opts, 'text'),
       }));
-      opts.applyConnectorSelection(null);
+      opts.applyConnectorSelection([]);
       opts.applySelection(replaceSelection([id]));
       opts.openEditor(id, { isNew: true });
     },

@@ -54,6 +54,7 @@ interface V2CanvasHostProps {
   readonly cameraRef: RefObject<CanvasCamera>;
   readonly pageRef: RefObject<ScenePage | null>;
   readonly selectionRef: RefObject<CanvasSelection>;
+  readonly selectedConnectorIdsRef: RefObject<readonly string[]>;
   readonly toolRef: RefObject<V2Tool>;
   readonly tool: V2Tool;
   readonly toolConfigRef: RefObject<V2ToolConfig>;
@@ -64,11 +65,12 @@ interface V2CanvasHostProps {
   readonly gestureApiRef: RefObject<V2GestureApi | null>;
   readonly selection: CanvasSelection;
   readonly selectedConnectorId: string | null;
+  readonly selectedConnectorIds: readonly string[];
   readonly editing: V2EditingState | null;
   readonly children?: ReactNode;
   readonly commit: (command: DocumentCommand) => void;
   readonly applySelection: (selection: CanvasSelection) => void;
-  readonly applyConnectorSelection: (connectorId: string | null) => void;
+  readonly applyConnectorSelection: (connectorIds: readonly string[]) => void;
   readonly updateCamera: (camera: CanvasCamera) => void;
   readonly openEditor: (nodeId: string) => void;
   readonly openConnectorEditor: (connectorId: string, at: Point2d) => void;
@@ -126,6 +128,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     cameraRef: props.cameraRef,
     pageRef: props.pageRef,
     selectionRef: props.selectionRef,
+    selectedConnectorIdsRef: props.selectedConnectorIdsRef,
     toolRef: props.toolRef,
     toolConfigRef: props.toolConfigRef,
     ...(props.onOpenChartData ? { onOpenChartData: props.onOpenChartData } : {}),
@@ -283,12 +286,9 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     if (kept.length !== props.selectionRef.current.nodeIds.length) {
       props.applySelection(replaceSelection(kept));
     }
-    if (
-      props.selectedConnectorId &&
-      !props.page.connectors.some((connector) => connector.id === props.selectedConnectorId)
-    ) {
-      props.applyConnectorSelection(null);
-    }
+    const connectors = new Set(props.page.connectors.map((connector) => connector.id));
+    const keptConnectors = props.selectedConnectorIds.filter((id) => connectors.has(id));
+    if (keptConnectors.length !== props.selectedConnectorIds.length) props.applyConnectorSelection(keptConnectors);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.page]);
 
@@ -302,8 +302,8 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
 
   useEffect(() => {
     props.hostRef.current?.setSelection(props.selection.nodeIds, props.selection.primaryNodeId);
-    props.hostRef.current?.setConnectorSelection(props.selectedConnectorId, null);
-  }, [props.selection, props.selectedConnectorId, props.hostRef, props.page, status]);
+    props.hostRef.current?.setConnectorSelection(props.selectedConnectorIds, null);
+  }, [props.selection, props.selectedConnectorIds, props.hostRef, props.page, status]);
 
   // Context bar anchor follows selection, page geometry and camera; the state
   // only changes when the union actually moves.
@@ -422,7 +422,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
         const nodeId = host.pickNode(point);
         if (nodeId) {
           if (!props.selection.nodeIds.includes(nodeId)) {
-            props.applyConnectorSelection(null);
+            props.applyConnectorSelection([]);
             props.applySelection(replaceSelection([nodeId]));
           }
           props.onContextMenu({ kind: 'nodes', ...at });
@@ -431,7 +431,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
         const connectorId = host.pickConnector(point);
         if (connectorId) {
           props.applySelection(clearSelection());
-          props.applyConnectorSelection(connectorId);
+          props.applyConnectorSelection([connectorId]);
           props.onContextMenu({ kind: 'connector', id: connectorId, ...at });
           return;
         }
@@ -513,11 +513,13 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
       ) : null}
       {props.children}
       <p className="sr-only" aria-live="polite">
-        {props.selection.nodeIds.length === 0 && !props.selectedConnectorId
+        {props.selection.nodeIds.length === 0 && props.selectedConnectorIds.length === 0
           ? 'Nothing selected.'
           : props.selectedConnectorId
             ? `Connector ${props.selectedConnectorId} selected.`
-            : `${props.selection.nodeIds.length} shapes selected.`}
+            : [props.selection.nodeIds.length ? `${props.selection.nodeIds.length} shapes` : '',
+              props.selectedConnectorIds.length ? `${props.selectedConnectorIds.length} connectors` : '']
+              .filter(Boolean).join(' and ') + ' selected.'}
       </p>
     </section>
   );

@@ -3,13 +3,14 @@ import {
   CONNECTOR_OPTIONS, CONNECTOR_ROUTE, SHAPE_OPTIONS, connectorHeadEnd, connectorOption,
   shapeOption,
 } from './v2ToolCatalog';
+import { LIBRARY_SHAPES } from '../../domain/nodes/shapeNode';
 
 describe('v2 tool catalog', () => {
-  it('offers every library shape once', () => {
+  it('offers every library shape once, and nothing the R/O tools already draw', () => {
     const ids = SHAPE_OPTIONS.map((option) => option.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toContain('diamond');
-    expect(ids).toContain('rectangle');
+    expect([...ids].sort()).toEqual([...LIBRARY_SHAPES].sort());
+    expect(ids).not.toContain('rectangle');
   });
 
   it('resolves a shape option and falls back to the first for an unknown id', () => {

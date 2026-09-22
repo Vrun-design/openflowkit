@@ -164,7 +164,7 @@ export function V2ChartDataPanel({ node, pageId, commit, onClose }: V2ChartDataP
     <Panel className="ofk-chart-panel" title={isQuadrant ? 'Quadrant points' : 'Chart data'}
       onClose={onClose}>
       <label className="ofk-chart-title">
-        <span className="sr-only">Chart title</span>
+        <span className="ofk-visually-hidden">Chart title</span>
         <input placeholder="Add a title" aria-label="Chart title"
           value={valueOf('title', typeof node.content.title === 'string' ? node.content.title : '')}
           onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
@@ -175,10 +175,10 @@ export function V2ChartDataPanel({ node, pageId, commit, onClose }: V2ChartDataP
           <table className="ofk-chart-table">
             <thead>
               <tr>
-                <th scope="col"><span className="sr-only">Point</span><span aria-hidden="true">–</span></th>
+                <th scope="col">Point</th>
                 <th scope="col">x</th>
                 <th scope="col">y</th>
-                <th scope="col"><span className="sr-only">Remove</span></th>
+                <th scope="col"><span className="ofk-visually-hidden">Remove</span></th>
               </tr>
             </thead>
             <tbody>
@@ -215,7 +215,7 @@ export function V2ChartDataPanel({ node, pageId, commit, onClose }: V2ChartDataP
         <table className="ofk-chart-table">
           <thead>
             <tr>
-              <th scope="col"><span className="sr-only">Category</span><span aria-hidden="true">–</span></th>
+              <th scope="col">Category</th>
               {data.series.map((series, row) => (
                 <th scope="col" key={`head-${row}`}>
                   <span className="ofk-chart-head-cell">
@@ -276,7 +276,7 @@ export function V2ChartDataPanel({ node, pageId, commit, onClose }: V2ChartDataP
           </>
         )}
       </footer>
-      <p className="sr-only" aria-live="polite">
+      <p className="ofk-visually-hidden" aria-live="polite">
         {cell ? `Editing ${data.series[cell.row]?.name ?? ''} ${data.categories[cell.column] ?? ''}` : ''}
       </p>
     </Panel>

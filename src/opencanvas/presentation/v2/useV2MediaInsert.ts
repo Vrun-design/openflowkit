@@ -15,7 +15,7 @@ export interface V2MediaInsertOptions {
   readonly pageRef: RefObject<ScenePage | null>;
   readonly commit: (command: DocumentCommand) => void;
   readonly applySelection: (selection: CanvasSelection) => void;
-  readonly applyConnectorSelection: (connectorId: string | null) => void;
+  readonly applyConnectorSelection: (connectorIds: readonly string[]) => void;
   readonly announce: (message: string) => void;
   readonly mintId: (prefix: string) => string;
   /** Viewport centre in world space: where a picker-inserted image lands. */
@@ -39,7 +39,7 @@ export function useV2MediaInsert(options: V2MediaInsertOptions) {
       index: page.nodes.length,
       node,
     });
-    opts.applyConnectorSelection(null);
+    opts.applyConnectorSelection([]);
     opts.applySelection(replaceSelection([node.id]));
   }, []);
 

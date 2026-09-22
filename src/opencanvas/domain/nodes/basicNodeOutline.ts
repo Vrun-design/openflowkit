@@ -115,6 +115,32 @@ export function offsetNormalised(
   return face.map(([x, y]) => [x + offset[0], y + offset[1]] as const);
 }
 
+// A cloud is the envelope of a few overlapping bumps: sample each circle, keep
+// the samples no other circle covers, walk them by angle around the centre.
+function cloudPoints(): Normalised {
+  const bumps = [
+    [0.22, 0.6, 0.2], [0.42, 0.36, 0.26], [0.68, 0.42, 0.24],
+    [0.84, 0.62, 0.16], [0.4, 0.74, 0.2], [0.64, 0.74, 0.2],
+  ] as const;
+  const outside = bumps.flatMap(([cx, cy, r], self) =>
+    Array.from({ length: 24 }, (_, index) => {
+      const angle = (index * Math.PI * 2) / 24;
+      return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r] as const;
+    }).filter(([x, y]) => bumps.every(([ox, oy, or], other) =>
+      other === self || Math.hypot(x - ox, y - oy) >= or))
+  );
+  const centre = [0.53, 0.58] as const;
+  const sorted = [...outside].sort((a, b) =>
+    Math.atan2(a[1] - centre[1], a[0] - centre[0]) - Math.atan2(b[1] - centre[1], b[0] - centre[0]));
+  const xs = sorted.map(([x]) => x), ys = sorted.map(([, y]) => y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  return sorted.map(([x, y]) => [(x - minX) / (maxX - minX), (y - minY) / (maxY - minY)] as const);
+}
+
+// The stack's three layers never overlap, so its silhouette is their hull.
+export const LAYER_STACK_LAYER: Normalised = [[0.06, 0.22], [0.72, 0.22], [0.94, 0], [0.28, 0]];
+export const LAYER_STACK_STEPS = [0, 0.32, 0.62] as const;
+
 const NORMALISED_OUTLINES: Readonly<Partial<Record<BasicNodeShape, Normalised>>> = {
   triangle: [[0.5, 0], [1, 1], [0, 1]],
   trapezoid: [[0.18, 0], [0.82, 0], [1, 1], [0, 1]],
@@ -139,7 +165,8 @@ const NORMALISED_OUTLINES: Readonly<Partial<Record<BasicNodeShape, Normalised>>>
   'arrow-up': [[0.32, 1], [0.32, 0.42], [0.02, 0.42], [0.5, 0], [0.98, 0.42], [0.68, 0.42], [0.68, 1]],
   cube: extrudedSilhouette(CUBE_FACE, CUBE_OFFSET),
   prism: extrudedSilhouette(PRISM_FACE, PRISM_OFFSET),
-  'layer-stack': [[0.06, 0.22], [0.72, 0.22], [0.94, 0], [0.28, 0], [0.06, 0.22]],
+  'layer-stack': [[0.28, 0], [0.94, 0], [0.94, 0.62], [0.72, 0.84], [0.06, 0.84], [0.06, 0.22]],
+  cloud: cloudPoints(),
   star: starPoints(5, 0.44),
   heart: heartPoints(22),
 };
@@ -166,6 +193,20 @@ function pinPoints(size: Size2d): Point2d[] {
   const centerY = radius;
   const head = arcPoints(centerX, centerY, radius, radius, Math.PI * 1.16, Math.PI * 1.84, 16);
   return [...head, { x: centerX, y: size.height }];
+}
+
+/** A bust: round head over a domed body, joined at the neck. */
+function actorPoints(size: Size2d): Point2d[] {
+  const w = size.width, h = size.height;
+  const r = Math.min(w * 0.22, h * 0.18);
+  const head = arcPoints(w * 0.5, r, r, r, Math.PI * 0.62, Math.PI * 2.38, 20);
+  const dome = (from: number, to: number) => arcPoints(w * 0.5, h * 0.98, w * 0.47, h * 0.56, from, to, 8);
+  return [
+    ...head,
+    ...dome(Math.PI * 1.5 + 0.28, Math.PI * 2),
+    { x: w * 0.97, y: h }, { x: w * 0.03, y: h },
+    ...dome(Math.PI, Math.PI * 1.5 - 0.28),
+  ];
 }
 
 /** A flat-left, round-right D. */
@@ -214,7 +255,7 @@ function bracePoints(size: Size2d): readonly Point2d[] {
     { x: midX, y: size.height * 0.94 },
     { x: size.width * 0.92, y: size.height * 0.94 },
   ];
-  return ribbonPoints(centreline, Math.min(size.width, size.height) * 0.055);
+  return ribbonPoints(centreline, Math.min(size.width, size.height) * 0.04);
 }
 
 function bracketPoints(size: Size2d): readonly Point2d[] {
@@ -224,7 +265,7 @@ function bracketPoints(size: Size2d): readonly Point2d[] {
     { x: size.width * 0.3, y: size.height * 0.92 },
     { x: size.width * 0.82, y: size.height * 0.92 },
   ];
-  return ribbonPoints(centreline, Math.min(size.width, size.height) * 0.07);
+  return ribbonPoints(centreline, Math.min(size.width, size.height) * 0.05);
 }
 
 /** `cornerRadius` applies to rectangle/rounded only; undefined keeps the shape default. */
@@ -297,25 +338,7 @@ function computeBasicNodeOutlinePoints(
       { x: size.width * 0.25, y: size.height },
       { x: 0, y: size.height * 0.82 }];
   }
-  if (shape === 'cloud') {
-    const normalized = [
-      [0.06, 0.62], [0.02, 0.45], [0.12, 0.31], [0.25, 0.3], [0.31, 0.12],
-      [0.5, 0.04], [0.65, 0.18], [0.8, 0.18], [0.91, 0.32], [0.97, 0.5],
-      [0.91, 0.69], [0.75, 0.76], [0.61, 0.94], [0.4, 0.9], [0.24, 0.82], [0.1, 0.78],
-    ];
-    return normalized.map(([x, y]) => ({ x: x * size.width, y: y * size.height }));
-  }
-  if (shape === 'actor') {
-    return [
-      { x: size.width * 0.5, y: 0 }, { x: size.width * 0.65, y: size.height * 0.12 },
-      { x: size.width * 0.58, y: size.height * 0.25 }, { x: size.width * 0.58, y: size.height * 0.48 },
-      { x: size.width, y: size.height * 0.48 }, { x: size.width * 0.58, y: size.height * 0.56 },
-      { x: size.width * 0.82, y: size.height }, { x: size.width * 0.5, y: size.height * 0.62 },
-      { x: size.width * 0.18, y: size.height }, { x: size.width * 0.42, y: size.height * 0.56 },
-      { x: 0, y: size.height * 0.48 }, { x: size.width * 0.42, y: size.height * 0.48 },
-      { x: size.width * 0.42, y: size.height * 0.25 }, { x: size.width * 0.35, y: size.height * 0.12 },
-    ];
-  }
+  if (shape === 'actor') return actorPoints(size);
   if (shape === 'venn') return vennPoints(size);
   if (shape === 'pin') return pinPoints(size);
   if (shape === 'half-round') return halfRoundPoints(size);

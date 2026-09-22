@@ -109,7 +109,6 @@ export class PixiNodeRenderer {
       this.architectureRenderer.media,
       this.wireframeRenderer.media
     );
-    this.labels.addChild(this.chartRenderer.label);
   }
 
   /** Containers are drawn by PixiContainerRenderer; everything else lands here. */
@@ -197,8 +196,9 @@ export class PixiNodeRenderer {
       // Inner lines (venn lens, target rings, note fold) ride the same stroke.
       if (detailLevel !== 'overview' && style.strokeWidth > 0) {
         for (const decoration of basicNodeDecorations(renderedShape, node.size)) {
+          // Open polylines, like the SVG export: a closed shape repeats its first point.
           const points = decoration.map((point) => applyMatrixToPoint(matrix, point));
-          this.graphics.poly(points.flatMap((point) => [point.x, point.y]));
+          this.graphics.poly(points.flatMap((point) => [point.x, point.y]), false);
           this.graphics.stroke({ color: stroke, width: style.strokeWidth, alpha: alpha * strokePaint.alpha });
         }
       }

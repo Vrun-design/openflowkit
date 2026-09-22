@@ -1,7 +1,8 @@
 import type { Point2d, Size2d } from '../geometry/types';
 import type { BasicNodeShape } from './basicNodePresentation';
 import {
-  CUBE_FACE, CUBE_OFFSET, PRISM_FACE, PRISM_OFFSET, offsetNormalised,
+  CUBE_FACE, CUBE_OFFSET, LAYER_STACK_LAYER, LAYER_STACK_STEPS, PRISM_FACE, PRISM_OFFSET,
+  offsetNormalised,
 } from './basicNodeOutline';
 
 // Inner lines a silhouette alone cannot say: the lens of a venn, the rings of a
@@ -20,6 +21,10 @@ function arc(
 
 function circle(cx: number, cy: number, r: number, count: number): Point2d[] {
   return arc(cx, cy, r, r, 0, Math.PI * 2, count);
+}
+
+function scaled(points: readonly (readonly [number, number])[], size: Size2d): Point2d[] {
+  return points.map(([x, y]) => ({ x: x * size.width, y: y * size.height }));
 }
 
 function compute(shape: BasicNodeShape, size: Size2d): readonly (readonly Point2d[])[] {
@@ -42,17 +47,33 @@ function compute(shape: BasicNodeShape, size: Size2d): readonly (readonly Point2
         circle(size.width / 2, size.height / 2, radius * 0.33, 14),
       ];
     }
-    case 'cube':
+    // Glyphs inside a circle measure from the circle, not the (wider) box.
+    case 'check-circle': {
+      const r = Math.min(size.width, size.height) / 2;
+      const cx = size.width / 2, cy = size.height / 2;
+      return [[
+        { x: cx - r * 0.42, y: cy + r * 0.02 }, { x: cx - r * 0.12, y: cy + r * 0.32 },
+        { x: cx + r * 0.44, y: cy - r * 0.3 },
+      ]];
+    }
+    case 'cross-circle': {
+      const r = Math.min(size.width, size.height) / 2;
+      const cx = size.width / 2, cy = size.height / 2;
+      return [
+        [{ x: cx - r * 0.34, y: cy - r * 0.34 }, { x: cx + r * 0.34, y: cy + r * 0.34 }],
+        [{ x: cx + r * 0.34, y: cy - r * 0.34 }, { x: cx - r * 0.34, y: cy + r * 0.34 }],
+      ];
+    }
+    // Only the edges inside the silhouette are drawn; the hull already is.
+    case 'cube': {
+      const [topLeft, topRight, bottomRight] = scaled(CUBE_FACE, size);
+      const [, backTopRight] = scaled(offsetNormalised(CUBE_FACE, CUBE_OFFSET), size);
+      return [[topLeft!, topRight!, bottomRight!], [topRight!, backTopRight!]];
+    }
     case 'prism': {
-      // Both faces of the extrusion: the hull edges are drawn twice (same
-      // stroke, invisible) and the interior edges show the depth.
-      const [face, offset] = shape === 'cube'
-        ? [CUBE_FACE, CUBE_OFFSET] as const
-        : [PRISM_FACE, PRISM_OFFSET] as const;
-      const back = offsetNormalised(face, offset);
-      const scaled = (points: readonly (readonly [number, number])[]): Point2d[] =>
-        points.map(([x, y]) => ({ x: x * size.width, y: y * size.height }));
-      return [scaled(face), [...scaled(back), scaled(back)[0]!]];
+      const face = scaled(PRISM_FACE, size);
+      const [, backTopRight] = scaled(offsetNormalised(PRISM_FACE, PRISM_OFFSET), size);
+      return [[...face, face[0]!], [face[1]!, backTopRight!]];
     }
     case 'page': {
       const w = size.width;
@@ -60,22 +81,6 @@ function compute(shape: BasicNodeShape, size: Size2d): readonly (readonly Point2
       return [
         [{ x: 0.78 * w, y: 0 }, { x: 0.78 * w, y: 0.24 * h }],
         [{ x: 0.78 * w, y: 0.24 * h }, { x: w, y: 0.24 * h }],
-      ];
-    }
-    case 'check-circle': {
-      const w = size.width;
-      const h = size.height;
-      return [[
-        { x: 0.3 * w, y: 0.52 * h }, { x: 0.44 * w, y: 0.66 * h },
-        { x: 0.72 * w, y: 0.36 * h },
-      ]];
-    }
-    case 'cross-circle': {
-      const w = size.width;
-      const h = size.height;
-      return [
-        [{ x: 0.34 * w, y: 0.34 * h }, { x: 0.66 * w, y: 0.66 * h }],
-        [{ x: 0.66 * w, y: 0.34 * h }, { x: 0.34 * w, y: 0.66 * h }],
       ];
     }
     case 'list-card': {
@@ -87,15 +92,11 @@ function compute(shape: BasicNodeShape, size: Size2d): readonly (readonly Point2
         { x: left, y: y * h }, { x: right, y: y * h },
       ]);
     }
-    case 'layer-stack': {
-      const w = size.width;
-      const h = size.height;
-      const outline = (dy: number): Point2d[] => [
-        { x: 0.06 * w, y: (0.22 + dy) * h }, { x: 0.72 * w, y: (0.22 + dy) * h },
-        { x: 0.94 * w, y: (0 + dy) * h }, { x: 0.28 * w, y: (0 + dy) * h },
-      ];
-      return [outline(0.32), outline(0.62)];
-    }
+    case 'layer-stack':
+      return LAYER_STACK_STEPS.map((dy) => {
+        const layer = scaled(offsetNormalised(LAYER_STACK_LAYER, [0, dy]), size);
+        return [...layer, layer[0]!];
+      });
     case 'callout-stack': {
       const w = size.width;
       const h = size.height;

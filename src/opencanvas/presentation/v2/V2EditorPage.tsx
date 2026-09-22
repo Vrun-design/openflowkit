@@ -189,7 +189,8 @@ export function V2EditorPage(): React.JSX.Element {
   }), []));
   const selectionApi = useV2Selection();
   const {
-    selection, selectionRef, selectedConnectorId, applySelection, applyConnectorSelection,
+    selection, selectionRef, selectedConnectorId, selectedConnectorIds, selectedConnectorIdsRef,
+    applySelection, applyConnectorSelection,
   } = selectionApi;
   // Pages are documents-in-document: the active page drives the canvas, the
   // context bar and export. Null means "the first page" (single-page default).
@@ -352,7 +353,7 @@ export function V2EditorPage(): React.JSX.Element {
   });
 
   useV2TestApi({
-    hostRef, selectionRef, toolRef, selectedConnectorId,
+    hostRef, selectionRef, toolRef, selectedConnectorIds,
     document: session.document, revision: session.revision, saveStatus, proposal,
   });
 
@@ -426,7 +427,7 @@ export function V2EditorPage(): React.JSX.Element {
     {
       glideToNodes: camera.glideToNodes,
       openPage: setActivePageId,
-      selectNodes: (nodeIds) => { applyConnectorSelection(null); applySelection(replaceSelection(nodeIds)); },
+      selectNodes: (nodeIds) => { applyConnectorSelection([]); applySelection(replaceSelection(nodeIds)); },
       commit: session.commit,
       announce: setAnnouncement,
       compileWorkspace: compileAny,
@@ -526,7 +527,7 @@ export function V2EditorPage(): React.JSX.Element {
   const { openEditor: openLabelEditor } = labelEditing;
   const openEditor = useCallback(
     (nodeId: string, editorOptions?: OpenEditorOptions) => {
-      applyConnectorSelection(null);
+      applyConnectorSelection([]);
       applySelection(replaceSelection([nodeId]));
       openLabelEditor(nodeId, editorOptions);
     },
@@ -540,7 +541,7 @@ export function V2EditorPage(): React.JSX.Element {
     const connector = pageRef.current?.connectors.find((candidate) => candidate.id === connectorId);
     if (!connector || load.readOnly) return;
     applySelection(clearSelection());
-    applyConnectorSelection(connectorId);
+    applyConnectorSelection([connectorId]);
     // Sits on the existing label when there is one, else at the click; the
     // box scales with zoom like the plate it replaces.
     const zoom = camera.cameraRef.current.zoom;
@@ -579,7 +580,7 @@ export function V2EditorPage(): React.JSX.Element {
     commit: session.commit,
     pageRef,
     selectionRef,
-    selectedConnectorId,
+    selectedConnectorIds,
     mintId: mintV2Id,
     readOnly: load.readOnly,
     applySelection,
@@ -651,7 +652,7 @@ export function V2EditorPage(): React.JSX.Element {
       kind: 'insert-node', id: `create-node:${node.id}`, label: 'Add chart',
       pageId: page.id, index: page.nodes.length, node,
     });
-    applyConnectorSelection(null);
+    applyConnectorSelection([]);
     applySelection(replaceSelection([node.id]));
     setChartPanelId(node.id);
     setAnnouncement('Chart added.');
@@ -728,10 +729,10 @@ export function V2EditorPage(): React.JSX.Element {
     },
     // Escape chain tail: selection first, then the open agent panel.
     onClearSelection: () => {
-      if (selectionRef.current.nodeIds.length > 0 || selectedConnectorId) selectionApi.clearAll();
+      if (selectionRef.current.nodeIds.length > 0 || selectedConnectorIds.length > 0) selectionApi.clearAll();
       else { setWorkspaceMode(null); setShortcutsOpen(false); setTreeOpen(false); }
     },
-    onSelectAll: () => selectionApi.selectAllNodes(pageRef.current),
+    onSelectAll: () => selectionApi.selectAll(pageRef.current),
     onFitView: () => camera.fitView(),
     onZoomStep: camera.zoomStep,
     onResetZoom: camera.resetZoom,
@@ -828,10 +829,10 @@ export function V2EditorPage(): React.JSX.Element {
             />
             <V2CanvasHost
               page={page} hostRef={hostRef} camera={camera.camera} cameraRef={camera.cameraRef} pageRef={pageRef}
-              selectionRef={selectionRef} toolRef={toolRef} tool={tool} spacePanRef={spacePanRef}
+              selectionRef={selectionRef} selectedConnectorIdsRef={selectedConnectorIdsRef} toolRef={toolRef} tool={tool} spacePanRef={spacePanRef}
               toolConfigRef={toolConfigRef} onOpenChartData={openChartData}
               readOnlyRef={readOnlyRef} gestureApiRef={gestureApiRef}
-              selection={selection} selectedConnectorId={selectedConnectorId}
+              selection={selection} selectedConnectorId={selectedConnectorId} selectedConnectorIds={selectedConnectorIds}
               editing={editing}
               commit={session.commit}
               applySelection={applySelection} applyConnectorSelection={applyConnectorSelection}
@@ -863,7 +864,7 @@ export function V2EditorPage(): React.JSX.Element {
               onDrillInto={() => { if (selectedElementId) architectureActions.drillInto(selectedElementId); }}
               onUnplace={() => architectureActions.unplaceSelection(selectionRef.current.nodeIds)}
               onRemoveElement={() => { if (selectedElementId) architectureActions.removeElement(selectedElementId); }}
-              onSelectAll={() => selectionApi.selectAllNodes(pageRef.current)}
+              onSelectAll={() => selectionApi.selectAll(pageRef.current)}
               onZoomToFit={() => camera.fitView()}
               onZoomToSelection={() => camera.fitView(selectionRef.current.nodeIds)}
               onZoomTo100={camera.resetZoom}
@@ -905,7 +906,7 @@ export function V2EditorPage(): React.JSX.Element {
                 onSelectElement={(elementId) => {
                   const node = page.nodes.find((candidate) => placedElementId(candidate) === elementId);
                   if (node) {
-                    applyConnectorSelection(null);
+                    applyConnectorSelection([]);
                     applySelection(replaceSelection([node.id]));
                     camera.glideToNodes([node.id]);
                     return;
@@ -945,7 +946,7 @@ export function V2EditorPage(): React.JSX.Element {
             {treeOpen ? (
               <V2TreePanel
                 key={page.id}
-                page={page} selection={selection} selectedConnectorId={selectedConnectorId}
+                page={page} selection={selection} selectedConnectorIds={selectedConnectorIds}
                 readOnly={load.readOnly}
                 onObjectAction={(nodeId, action) => {
                   if (load.readOnly) return;
@@ -960,7 +961,7 @@ export function V2EditorPage(): React.JSX.Element {
                   if (action === 'duplicate') {
                     const command = buildDuplicateSelectionCommand(page, [nodeId], page.connectors.map((item) => item.id), mintV2Id);
                     session.commit(command);
-                    applyConnectorSelection(null);
+                    applyConnectorSelection([]);
                     applySelection(replaceSelection(command.commands.flatMap((item) => item.kind === 'insert-node' ? [item.node.id] : [])));
                   }
                   if (action === 'delete') {
@@ -970,7 +971,7 @@ export function V2EditorPage(): React.JSX.Element {
                 }}
                 onConnectorMenu={(connectorId, x, y) => {
                   applySelection(clearSelection());
-                  applyConnectorSelection(connectorId);
+                  applyConnectorSelection([connectorId]);
                   setContextMenu({ kind: 'connector', id: connectorId, x, y });
                 }}
                 onConnectorAction={(connectorId, action) => {
@@ -979,15 +980,15 @@ export function V2EditorPage(): React.JSX.Element {
                   if (!command) return;
                   session.commit(command);
                   applySelection(clearSelection());
-                  applyConnectorSelection(command.kind === 'insert-connector' ? command.connector.id : null);
+                  applyConnectorSelection(command.kind === 'insert-connector' ? [command.connector.id] : []);
                 }}
                 onSelectNode={(nodeId, additive) => {
-                  applyConnectorSelection(null);
+                  applyConnectorSelection([]);
                   applySelection(additive ? toggleSelection(selection, nodeId) : replaceSelection([nodeId]));
                 }}
                 onSelectConnector={(connectorId) => {
                   applySelection(clearSelection());
-                  applyConnectorSelection(connectorId);
+                  applyConnectorSelection([connectorId]);
                 }}
                 onClose={() => setTreeOpen(false)}
               />

@@ -27,6 +27,7 @@ function setup(
   section.setPointerCapture = vi.fn();
   section.releasePointerCapture = vi.fn();
   const selectionRef = { current: clearSelection() };
+  const selectedConnectorIdsRef = { current: [] as readonly string[] };
   const host = {
     screenToWorld: (point: { x: number; y: number }) => point,
     pickNode: vi.fn((_point: { x: number; y: number }): string | null => 'a'),
@@ -39,10 +40,11 @@ function setup(
     setConnectorSelection: vi.fn(), setConnectorPreview: vi.fn(),
     setHover: vi.fn(), getNodesWorldBounds: vi.fn((_ids: readonly string[]): Bounds2d | null => null),
     pickNodesInScreenBounds: vi.fn((_bounds: Bounds2d): readonly string[] => []),
+    pickConnectorsInScreenBounds: vi.fn((_bounds: Bounds2d): readonly string[] => []),
   };
   const commit = vi.fn();
   const applySelection = vi.fn((next: CanvasSelection) => { selectionRef.current = next; });
-  const applyConnectorSelection = vi.fn();
+  const applyConnectorSelection = vi.fn((ids: readonly string[]) => { selectedConnectorIdsRef.current = ids; });
   const openEditor = vi.fn();
   const toolRef: { current: V2Tool } = { current: 'select' };
   const toolConfigRef = { current: DEFAULT_TOOL_CONFIG };
@@ -50,7 +52,7 @@ function setup(
   const { result } = renderHook(() => useV2Pointer({
     hostRef: { current: host as unknown as PixiRendererHost },
     cameraRef: { current: { x: 0, y: 0, zoom: 1 } }, pageRef: { current: page },
-    selectionRef, toolRef, toolConfigRef,
+    selectionRef, selectedConnectorIdsRef, toolRef, toolConfigRef,
     spacePanRef: { current: false },
     readOnlyRef: { current: false }, gestureApiRef, commit,
     applySelection, applyConnectorSelection,
@@ -198,7 +200,19 @@ describe('V2 direct manipulation', () => {
     host.pickConnector.mockReturnValue('edge');
     act(() => result.current.handlePointerDown(event(100, 100)));
     expect(selectionRef.current.nodeIds).toEqual([]);
-    expect(applyConnectorSelection).toHaveBeenCalledWith('edge');
+    expect(applyConnectorSelection).toHaveBeenCalledWith(['edge']);
+  });
+
+  it('a marquee selects the nodes and the connectors it crosses', () => {
+    const { result, event, host, selectionRef, applyConnectorSelection } = setup();
+    host.pickNode.mockReturnValue(null);
+    host.pickNodesInScreenBounds.mockReturnValue(['a']);
+    host.pickConnectorsInScreenBounds.mockReturnValue(['edge', 'free']);
+    act(() => result.current.handlePointerDown(event(10, 10)));
+    act(() => result.current.handlePointerMove(event(300, 300)));
+    act(() => result.current.handlePointerUp(event(300, 300)));
+    expect(selectionRef.current.nodeIds).toEqual(['a']);
+    expect(applyConnectorSelection).toHaveBeenLastCalledWith(['edge', 'free']);
   });
 });
 
@@ -272,7 +286,7 @@ describe('V2 quick-create from side handles', () => {
     expect(edge.connector.source).toMatchObject({ nodeId: 'a', portId: null });
     expect(edge.connector.target).toMatchObject({ nodeId: 'b', portId: null });
     expect(selectionRef.current.nodeIds).toEqual([]);
-    expect(applyConnectorSelection).toHaveBeenCalledWith(edge.connector.id);
+    expect(applyConnectorSelection).toHaveBeenCalledWith([edge.connector.id]);
   });
 
   it('shift-drags an endpoint free instead of rebinding it', () => {

@@ -34,22 +34,27 @@ export class PixiConnectorEditOverlay {
     this.graphics.clear();
   }
 
+  /** Every selected connector gets the highlight; handles only when there is one. */
   draw(
     page: ScenePage,
-    connector: SceneConnector,
+    connectors: readonly SceneConnector[],
     zoom: number,
     activeHandle: ConnectorEditHandle | null = null
   ): void {
     this.graphics.clear();
-    const projected = projectConnector(page, connector);
-    if (!projected) return;
     const scale = 1 / Math.max(zoom, 0.05);
-    const first = projected.samples[0];
-    if (first) {
+    const projections = connectors.map((connector) => [connector, projectConnector(page, connector)] as const);
+    for (const [, projected] of projections) {
+      const [first, ...rest] = projected?.samples ?? [];
+      if (!first) continue;
       this.graphics.moveTo(first.x, first.y);
-      for (const point of projected.samples.slice(1)) this.graphics.lineTo(point.x, point.y);
+      for (const point of rest) this.graphics.lineTo(point.x, point.y);
       this.graphics.stroke({ color: ACTIVE, alpha: 0.85, width: 1.5 * scale });
     }
+    if (projections.length !== 1) return;
+    const [connector, projected] = projections[0]!;
+    if (!projected) return;
+    const first = projected.samples[0];
     const handles = connectorEditHandles(page, connector);
     const controls = handles.filter(
       (handle): handle is Extract<ConnectorEditHandle, { kind: 'control' }> =>

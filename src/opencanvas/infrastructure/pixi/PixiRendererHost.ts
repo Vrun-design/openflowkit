@@ -131,7 +131,8 @@ export class PixiRendererHost {
   private primaryNodeId: string | null = null;
   private hoveredNodeId: string | null = null;
   private hoveredSide: ConnectSide | null = null;
-  private selectedConnectorId: string | null = null;
+  // Many connectors can be selected (marquee, ⌘A); edit handles show for one.
+  private selectedConnectorIds: readonly string[] = [];
   private activeConnectorHandle: ConnectorEditHandle | null = null;
   private destroyed = false;
   private backgroundColor = 0xf8fafc;
@@ -236,11 +237,9 @@ export class PixiRendererHost {
     if (!this.primaryNodeId || !availableNodeIds.has(this.primaryNodeId)) {
       this.primaryNodeId = this.selectedNodeIds.at(-1) ?? null;
     }
-    if (
-      this.selectedConnectorId &&
-      !page.connectors.some((connector) => connector.id === this.selectedConnectorId)
-    ) {
-      this.selectedConnectorId = null;
+    const connectorIds = new Set(page.connectors.map((connector) => connector.id));
+    if (!this.selectedConnectorIds.every((id) => connectorIds.has(id))) {
+      this.selectedConnectorIds = this.selectedConnectorIds.filter((id) => connectorIds.has(id));
       this.activeConnectorHandle = null;
     }
     this.viewportProjection = this.createViewportProjection();
@@ -350,11 +349,11 @@ export class PixiRendererHost {
   }
 
   getConnectorEditDebugSnapshot(): ConnectorEditDebugSnapshot {
-    return inspectConnectorEdit(this.page, this.selectedConnectorId, this.activeConnectorHandle);
+    return inspectConnectorEdit(this.page, this.getSelectedConnectorId(), this.activeConnectorHandle);
   }
 
   getConnectorHandleScreenPoints(): readonly ConnectorHandleScreenPoint[] {
-    return inspectConnectorHandleScreenPoints(this.page, this.selectedConnectorId, this.camera);
+    return inspectConnectorHandleScreenPoints(this.page, this.getSelectedConnectorId(), this.camera);
   }
 
   worldToScreen(point: Point2d): Point2d {
@@ -421,10 +420,10 @@ export class PixiRendererHost {
   }
 
   setConnectorSelection(
-    connectorId: string | null,
+    connectorIds: readonly string[],
     handle: ConnectorEditHandle | null = null
   ): void {
-    this.selectedConnectorId = connectorId;
+    this.selectedConnectorIds = connectorIds;
     this.activeConnectorHandle = handle;
     this.drawConnectorEditOverlay();
     this.requestRender();
@@ -441,12 +440,7 @@ export class PixiRendererHost {
           item.id === connector.id ? connector : item
         ),
       };
-      this.connectorEditOverlay.draw(
-        previewPage,
-        connector,
-        this.camera.zoom,
-        this.activeConnectorHandle
-      );
+      this.connectorEditOverlay.draw(previewPage, [connector], this.camera.zoom, this.activeConnectorHandle);
     }
     this.requestRender();
   }
@@ -577,6 +571,14 @@ export class PixiRendererHost {
   }
 
   pickNodesInScreenBounds(screenBounds: Bounds2d): readonly string[] {
+    return this.pickInScreenBounds(screenBounds, 'node');
+  }
+
+  pickConnectorsInScreenBounds(screenBounds: Bounds2d): readonly string[] {
+    return this.pickInScreenBounds(screenBounds, 'connector');
+  }
+
+  private pickInScreenBounds(screenBounds: Bounds2d, kind: 'node' | 'connector'): readonly string[] {
     if (!this.index) return [];
     const topLeft = this.screenToWorld(screenBounds);
     const bottomRight = this.screenToWorld({
@@ -589,9 +591,7 @@ export class PixiRendererHost {
       Math.abs(bottomRight.x - topLeft.x),
       Math.abs(bottomRight.y - topLeft.y)
     );
-    return querySceneBounds(this.index, worldBounds, { kinds: new Set(['node']) }).map(
-      (object) => object.id
-    );
+    return querySceneBounds(this.index, worldBounds, { kinds: new Set([kind]) }).map((object) => object.id);
   }
 
   setMarquee(screenBounds: Bounds2d | null): void {
@@ -788,29 +788,29 @@ export class PixiRendererHost {
     this.requestRender();
   }
 
-  private getSelectedConnector(): SceneConnector | null {
-    return (
-      this.page?.connectors.find((connector) => connector.id === this.selectedConnectorId
-        && connector.metadata.hidden !== true && connector.metadata.locked !== true) ?? null
-    );
+  private getSelectedConnectors(): readonly SceneConnector[] {
+    const selected = new Set(this.selectedConnectorIds);
+    return this.page?.connectors.filter((connector) => selected.has(connector.id)
+      && connector.metadata.hidden !== true && connector.metadata.locked !== true) ?? [];
   }
 
+  private getSelectedConnector(): SceneConnector | null {
+    const connectors = this.getSelectedConnectors();
+    return connectors.length === 1 ? connectors[0]! : null;
+  }
+
+  /** The one editable connector: handles and the label editor need exactly one. */
   getSelectedConnectorId(): string | null {
-    return this.selectedConnectorId;
+    return this.getSelectedConnector()?.id ?? null;
   }
 
   private drawConnectorEditOverlay(): void {
-    const connector = this.getSelectedConnector();
-    if (!this.page || !connector) {
+    const connectors = this.getSelectedConnectors();
+    if (!this.page || connectors.length === 0) {
       this.connectorEditOverlay.clear();
       return;
     }
-    this.connectorEditOverlay.draw(
-      this.page,
-      connector,
-      this.camera.zoom,
-      this.activeConnectorHandle
-    );
+    this.connectorEditOverlay.draw(this.page, connectors, this.camera.zoom, this.activeConnectorHandle);
   }
 
   private applyCamera(): void {

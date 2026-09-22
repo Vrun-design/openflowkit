@@ -1,6 +1,6 @@
 import { boundsFromPoints, createBounds2d } from '../geometry/bounds';
 import { requireFiniteNumber } from '../geometry/finite';
-import type { Bounds2d } from '../geometry/types';
+import type { Bounds2d, Point2d } from '../geometry/types';
 import { DEFAULT_SCENE_LAYER_ID } from '../document/defaults';
 import type { SceneConnector, SceneNode, ScenePage } from '../document/types';
 import { validateSceneDocumentV1 } from '../document/validation';
@@ -25,19 +25,17 @@ function connectorBounds(
   nodesById: ReadonlyMap<string, SceneNode>,
   worldMatricesByNodeId: SceneIndex['worldMatricesByNodeId']
 ): Bounds2d {
-  const source = nodesById.get(connector.source.nodeId);
-  const target = nodesById.get(connector.target.nodeId);
+  // A bound end sits at its node's centre; a free end is its own point.
+  const endpoint = (end: SceneConnector['source']): Point2d | null => {
+    if (end.nodeId === null) return end.point;
+    const node = nodesById.get(end.nodeId);
+    const matrix = node && worldMatricesByNodeId.get(node.id);
+    return node && matrix ? nodeWorldCenter(node, matrix) : null;
+  };
+  const source = endpoint(connector.source);
+  const target = endpoint(connector.target);
   if (!source || !target) return createBounds2d(0, 0, 0, 0);
-  const sourceMatrix = worldMatricesByNodeId.get(source.id);
-  const targetMatrix = worldMatricesByNodeId.get(target.id);
-  if (!sourceMatrix || !targetMatrix) return createBounds2d(0, 0, 0, 0);
-  return (
-    boundsFromPoints([
-      nodeWorldCenter(source, sourceMatrix),
-      ...connector.waypoints,
-      nodeWorldCenter(target, targetMatrix),
-    ]) ?? createBounds2d(0, 0, 0, 0)
-  );
+  return boundsFromPoints([source, ...connector.waypoints, target]) ?? createBounds2d(0, 0, 0, 0);
 }
 
 function cellRange(bounds: Bounds2d, cellSize: number): readonly [number, number, number, number] {
@@ -136,9 +134,9 @@ export function createSceneIndex(page: ScenePage, cellSize = DEFAULT_CELL_SIZE):
       layerId,
       zIndex: 0,
       documentOrder,
-      visible:
-        (source ? nodeStates.get(source.id)?.visible === true : false) &&
-        (target ? nodeStates.get(target.id)?.visible === true : false),
+      // A free end (no node) hides nothing; the page validator rules out dangling ids.
+      visible: (!source || nodeStates.get(source.id)?.visible === true)
+        && (!target || nodeStates.get(target.id)?.visible === true),
       bounds: connectorBounds(connector, nodesById, worldMatricesByNodeId),
     };
     objectsByKey.set(objectKey('connector', connector.id), object);
