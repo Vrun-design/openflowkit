@@ -3,25 +3,25 @@
 Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–6 done (6.6, 6.7, 6.10 partly — see Deferred).
 
 ## Now
-- **Phase 7 — motion export: DONE 2026-09-22** (opencode/deepseek-v4.1, owner's order
-  7.1 → 7.2 → 7.5 → 7.3 → 7.4 → 7.6 → 7.7 → 7.8). One pure Timeline (`domain/animation`) feeds the
-  preview, the stills, the animated SVG and every video frame; the `animate` block round-trips in
-  every family and the chips (drag / merge / hold) write it from the panel. GIF (`gifenc`), MP4/WebM
-  (WebCodecs + `mediabunny`) and MediaRecorder WebM encode in a worker; MCP `export` serves all four
-  plus `svg-animated`. **7.8 frame renderer**: `domain/animation/drawList.ts` (pure, ordered ops
-  from the same resolvers) + `infrastructure/export/framePainter.ts` paint plain pages in the
-  worker's own canvas — no main-thread round trip, no rAF yield. 500 nodes × 451 frames @1080p30:
-  30.7 s → 3.1 s wall, 19.9 % → 2.1 % late, no pipeline long task. Chart, ink, image, annotation
-  and text pages keep the SVG raster.
+- **Phase 7 — motion export: DONE 2026-09-22** (opencode/deepseek-v4.1, order 7.1 → 7.2 → 7.5 →
+  7.3 → 7.4 → 7.6 → 7.7 → 7.8). One pure Timeline (`domain/animation`) feeds the preview, the
+  stills, the animated SVG and every video frame; the `animate` block round-trips in every family.
+  GIF (`gifenc`), MP4/WebM (WebCodecs + `mediabunny`) encode in a worker; MCP `export` serves all
+  four plus `svg-animated`. 7.8: `domain/animation/drawList.ts` + `export/framePainter.ts` paint
+  plain pages in the worker's own canvas — 500 nodes × 451 frames @1080p30 went 30.7 s → 3.1 s
+  wall, 19.9 % → 2.1 % late. Chart, ink, image, annotation and text pages keep the SVG raster.
   Commits: `cfcda9c` `ac8595b` `1638663` `a004fa5` `4dc8d32` `5c9e46e` `2f43874` `d2b3fdc` `1ac1a47`.
-- Verified: typecheck, lint, 1472 unit tests; headed `motion-svg` (still vs paused animated, and
-  canvas frame vs still ≤2 % pixels: 2 fixtures × 3 presets × 3 times @1080p), `motion-dialog` (3),
-  `motion-encode` (5), `motion-audit` (3), `motion-cancel` (1), phase-4/5 (3). GIF animates in
-  Chrome, MP4 3.08 s and WebM 2.08 s play real frames. Size table (5 nodes, 10 s): SVG 8.8 KB ·
-  GIF 1.8 MB @720p12 / 4.5 MB @1080p24 · MP4 135 KB @720p24 / 249 KB @1080p24 / 357 KB @1440p30.
-- Assumed: Slack, Notion, X and Keynote playback (standard formats, no apps here). Unknown: a
-  500-node export on a slower machine; the 500-node gate is load-sensitive (under 5 s wall it
-  asserts the 5 % late bar, above it reports).
+  Assumed: Slack/Notion/X/Keynote playback. Unknown: a 500-node export on a slower machine.
+- **Coverage sweep 2026-09-22** (Claude Opus 5). Audited every `v2Shortcuts.ts` row against the
+  e2e suite and specced the uncovered user-facing ones: `e2e/arrange.spec.ts` (align, distribute,
+  flip, 4 z-order modes), `e2e/clipboard.spec.ts` (duplicate, copy/cut/paste, paste style, nudge,
+  lock), `e2e/transform.spec.ts` (resize + Shift aspect, rotate handle, snap + guides + ⌘ bypass),
+  `e2e/waypoints.spec.ts` (a dragged segment survives a bound node moving), on a shared
+  `e2e/helpers.ts`. Two defects found and fixed: `buildMoveNodesCommand` moved locked nodes
+  (keyboard nudge *and* the agent `move` op, while every other builder already consulted
+  `buildNodeStateMap`), and the cheatsheet advertised Alt for snap bypass where the dispatcher
+  reads ⌘/Ctrl — Alt is resize-from-centre.
+- Verified: typecheck, lint, 1473 unit tests, 75/75 headed Playwright in 2.2 min.
 
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; one `@keyframes` per element (~1 MB at 500 nodes).
@@ -31,6 +31,8 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–6 done (6.6, 6.7, 6
   purpose — its font key resolves through the document's webfonts, which an `<img>` SVG cannot see.
 - GIF: 256 colours, ≤ 20 fps, palette from the finished diagram. Pulse replaces an authored dash.
 - No custom keyframes, camera paths, audio or per-element timing: steps are text (phase 8).
+- Four older e2e specs still carry their own `emptyPoint`; fold them into `e2e/helpers.ts` when one
+  next needs editing. No coverage for frames/wireframe (6.6/6.7, unbuilt) or crash recovery.
 
 ## Next
 - Phase 8 — keyframes/Present ([phase-8-keyframes.md](docs/plan/phase-8-keyframes.md)) when 7 has users.
