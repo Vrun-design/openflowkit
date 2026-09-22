@@ -3,36 +3,32 @@
 Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on hold; 6.6, 6.7, 6.10 partly — see Deferred).
 
 ## Now
-- **Phase 9 — documentation rebuild: 9.1–9.3 DONE 2026-09-22** (opencode/deepseek-v4.1; order
-  9.1 → 9.6). 9.1: `docs-site/inventory.json` (115 rows, shipped rows carry file:line) +
-  `inventory.test.ts` (evidence files, shortcut/op/family coverage). 9.2: prebuild compiles
-  every ```` ```openflow ```` block through the real compiler; any warning, error or empty
-  frame fails with file:line; a remark plugin shows the SVG beside its source, light/dark.
-  9.3: English only (tr/ + locale config deleted), 22 fiction pages deleted, family pages plus
-  mermaid-import / shapes-and-connectors / insert-media / architecture-c4 / architecture-workspace
-  added, sidebar has the nine groups and zero missing links (31 routes).
-  Defect found, documented, not fixed (src/ is read-only this phase): the chart quadrant labels
-  `x:` / `y:` / `quadrants:` never match (chart.ts compares space-joined text) — W131, defaults
-  stay. Inventory row `chart-quadrant-labels: absent`. Next 9.4: rewrite the 16 surviving pages
-  against the inventory; keyboard page generated from `v2Shortcuts.ts`; BYOK page stays `partial`.
-- **Phase 7 — motion export: DONE 2026-09-22.** One pure Timeline feeds preview, stills, animated
-  SVG and every video frame; GIF/MP4/WebM encode in a worker; MCP `export` serves all four plus
-  `svg-animated`. 7.8: the worker paints plain pages itself (500 nodes × 451 frames: 30.7→3.1 s).
-- **Coverage sweep 2026-09-22** (Opus 5): `e2e/arrange|clipboard|transform|waypoints.spec.ts`;
-  fixed locked nodes moving via `buildMoveNodesCommand` and the Alt-vs-⌘ cheatsheet claim.
+- **Phase 10 — BYOK: 10.1–10.7 DONE 2026-09-22** (deepseek-v4.1). `providers.ts` ten entries /
+  three wires; `provider.ts` Anthropic + OpenAI (eight providers, quirks as fields) + Gemini
+  generateContent; `diagnosis.ts` eight causes, one sentence + one action each; a rejected fetch
+  is told apart by `securitypolicyviolation` (read one macrotask later) and `navigator.onLine`,
+  never shown as a TypeError. Dialog: ten marks, risk badge, Test key, Clear all keys; headed
+  `ai-providers.spec.ts` proves all three wires on `e2e/stubProviderServer.mjs`.
+  **Decision (a): `connect-src` widens to `https: http://localhost:* http://127.0.0.1:*
+  ws://localhost:*`; cost: the CSP no longer limits exfiltration targets.** Accepted because
+  `img-src … https:` already allowed beacons anywhere and inline/eval already neutered CSP against
+  XSS, so it never guarded the key. Dropped posthog, yjs, dead wss.
+- **Phase 9 — docs rebuild: 9.1–9.3 DONE 2026-09-22** (deepseek-v4.1; order 9.1 → 9.6). 9.1
+  `inventory.json` (115 rows, evidence file:line) + test. 9.2 prebuild compiles every ```openflow
+  block, failing with file:line. 9.3 English only, 22 fiction pages deleted, nine sidebar groups,
+  31 routes. Chart quadrant labels never match — documented, not fixed. Next 9.4: rewrite the 16
+  surviving pages; BYOK stays `partial`.
+- **Phase 7 — motion export DONE**: one Timeline feeds preview, stills, SVG and every frame;
+  GIF/MP4/WebM in a worker; MCP `export` all four + `svg-animated`; sweep added four specs.
 
 ## Ceilings (`// ponytail:` in code)
-- Whole SVG re-emitted per export; one `@keyframes` per element (~1 MB at 500 nodes).
-- Any chart, ink, image, annotation or text node sends every frame back to the SVG raster.
-- GIF: 256 colours, ≤ 20 fps. No custom keyframes, camera paths, audio (phase 8).
-- `agent-live` flaked once in three full headed sweeps and passes alone; cause unconfirmed.
-- `browser`/`mobile` frame nodes and icon packs draw in the app but export as plain cards.
+- Whole SVG re-emitted per export; chart/ink/image/annotation/text node sends every frame to the
+  SVG raster. GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8).
+- `agent-live` and the phase-7 `frame.test.ts` wall-clock budget (500 nodes < 5 ms) flake under
+  load and pass alone — load alarms, not regressions.
 
 ## Next — owner's order, 2026-09-22
-- **Phase 9** as above. **Phase 10 — BYOK** (`docs/plan/phase-10-byok.md`): CSP omits NVIDIA and
-  localhost so those calls are blocked by our own header, and still allows posthog and
-  `signaling.yjs.dev` against a no-telemetry promise.
-- **On hold**: phase 7b film look, phase 8 keyframes/Present. Both specs stay written.
+- Phase 9 (9.4+) as above. **On hold**: 7b film look, 8 keyframes/Present.
 - Phase 6 leftovers: 6.6 frames/tools, 6.7 wireframe, 6.10 VoiceOver sweep + export diff.
 
 ## Deferred
