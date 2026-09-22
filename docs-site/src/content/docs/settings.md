@@ -24,27 +24,43 @@ These preferences persist across sessions and apply to all diagrams.
 
 ## AI Settings
 
-The AI tab configures how Flowpilot generates diagrams:
+The AI tab configures how Flowpilot generates diagrams.
 
 ### Supported Providers
 
-- **OpenAI** (GPT-4o, GPT-4o mini)
-- **Anthropic** (Claude 3.5 Sonnet, Claude 3 Haiku)
-- **Google** (Gemini 1.5 Pro, Gemini 1.5 Flash)
+Ten providers ship. Each shows a risk badge for browser calls, because some providers only accept server-to-server requests:
+
+| Provider | Default model | Browser calls |
+| --- | --- | --- |
+| Gemini | `gemini-2.5-flash-lite` | Browser-ready |
+| OpenAI | `gpt-5-mini` | Depends on endpoint |
+| Claude | `claude-sonnet-4-6` | Depends on endpoint |
+| Groq | `openai/gpt-oss-120b` | Proxy likely |
+| NVIDIA | `meta/llama-4-maverick-17b-128e-instruct` | Proxy likely |
+| Cerebras | `gpt-oss-120b` | Depends on endpoint |
+| Mistral | `mistral-large-latest` | Depends on endpoint |
+| OpenRouter | `google/gemini-2.5-pro` | Browser-ready |
+| Ollama (local) | `llama3.2` | Browser-ready (local daemon) |
+| Custom | your model id | Unknown — any OpenAI-compatible endpoint |
+
+"Proxy likely" is honest, not a bug: those providers do not send CORS headers to browsers, so the request is stopped by the provider, not by OpenFlowKit. **Test key** names the exact cause and the fix instead of showing a network error.
 
 ### Configuration Options
 
-1. **Select Provider**: Choose your preferred AI provider from the dropdown
-2. **Enter API Key**: Paste your API key for the selected provider
-3. **Key Persistence**: Choose whether the key persists across browser sessions or is cleared when the tab closes
+1. **Provider**: choose one of the ten marks.
+2. **API key**: paste it; the field shows the shape that provider's keys use.
+3. **Test key**: sends one minimal completion and reports exactly what happened.
+4. **Endpoint and model** (optional): override the base URL or model id. Required for **Custom**.
+5. **Clear all keys**: removes every stored key from this browser.
 
-If you don't have an API key, visit the provider's website to create one. OpenFlowKit does not require any server-side configuration — all AI requests go directly from your browser to the provider.
+Keys are stored in this browser only. Requests go directly from your browser to the provider — OpenFlowKit has no server, no proxy and no telemetry. A provider that refuses browser calls therefore cannot be used without your own proxy endpoint; the risk badge and **Test key** tell you before you commit.
 
 ### Troubleshooting
 
-- **Key not working**: Verify the key is valid and has API access
-- **Rate limits**: Check the provider's dashboard for usage limits
-- **Model availability**: Some models may not be available in all regions
+- **Rejected key**: the provider refused it. The dialog links to the provider's console.
+- **Does not accept browser calls (CORS)**: use a browser-ready provider (Gemini, OpenRouter) or point **Custom** at your own endpoint.
+- **Ollama refused the browser request**: restart it with the exact `OLLAMA_ORIGINS` command the dialog shows.
+- **Rate limits and server errors**: retryable; the dialog says so.
 
 ## Keyboard Shortcuts
 

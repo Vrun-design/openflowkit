@@ -53,7 +53,7 @@ The app supports multiple BYOK providers, including:
 
 This matters because you are not locked to one hosted AI vendor or one billing model. Ollama can run locally with no API key when its daemon and model are available.
 
-API keys stay browser-local. Persistent keys can be stored for reuse on the current device, and session-only mode is available when you do not want the key to survive the browser session.
+API keys stay browser-local — never in the document, never in an error message, never sent to any origin but the provider's own. A visible **Clear all keys** control in the provider dialog removes them. Requests go straight from your browser to the provider: there is no proxy and no backend. Providers whose CORS policy refuses browser calls (Groq and NVIDIA are flagged **Proxy likely**) cannot work from the hosted app; the picker says so and **Test key** reports the exact cause instead of a generic network error.
 
 ## When AI is the right tool
 
