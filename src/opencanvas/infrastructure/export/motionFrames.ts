@@ -129,7 +129,13 @@ export async function renderMotionFile(request: MotionEncodeRequest): Promise<Mo
     else failure?.(new Error(message.message));
   };
   worker.onerror = (event) => failure?.(new Error(event.message || 'The encoder stopped unexpectedly.'));
-  const abort = () => worker.terminate();
+  // Terminating the worker kills the only thing that can settle `done`, so the
+  // abort has to reject it too — otherwise cancelling hangs the export promise
+  // and the dialog stays busy for ever.
+  const abort = () => {
+    worker.terminate();
+    failure?.(abortError());
+  };
   request.signal?.addEventListener('abort', abort, { once: true });
   try {
     worker.postMessage({
