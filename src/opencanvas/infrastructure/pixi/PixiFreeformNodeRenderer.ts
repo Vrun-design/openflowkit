@@ -4,6 +4,7 @@ import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import type { SceneNode } from '../../domain/document/types';
 import type { Matrix2d, Size2d } from '../../domain/geometry/types';
 import { pressureTiltSegmentWidth } from '../../domain/nodes/strokeInput';
+import { smoothStroke } from '../../domain/nodes/strokeGeometry';
 import { projectFreeformNodeVisual, type PixiFreeformNodeVisual } from './freeformNodeVisual';
 import { drawPixiNodeOutline } from './pixiNodeOutline';
 import type { PixiNodeDebugRecord } from './pixiNodeDebug';
@@ -109,8 +110,13 @@ export class PixiFreeformNodeRenderer {
     if (visual.kind === 'text') return drawTextNode(node, matrix, graphics, visual, canvasColor);
     if (visual.kind === 'pen' || visual.kind === 'highlighter'
       || visual.kind === 'line' || visual.kind === 'arrow') {
-      const points = visual.presentation.points.map((point) => applyMatrixToPoint(matrix, point));
-      const inputSamples = visual.presentation.inputSamples;
+      // Pressure strokes keep their sampled points (widths ride them); a
+      // pointer stroke is smoothed so it reads as a curve, not chords.
+      const raw = visual.presentation.points;
+      const smoothed = visual.presentation.inputSamples ? raw
+        : visual.kind === 'pen' || visual.kind === 'highlighter' ? smoothStroke(raw) : raw;
+      const points = smoothed.map((point) => applyMatrixToPoint(matrix, point));
+      const inputSamples = smoothed === raw ? visual.presentation.inputSamples : null;
       if (inputSamples) {
         for (let index = 1; index < points.length; index += 1) {
           const previous = points[index - 1];

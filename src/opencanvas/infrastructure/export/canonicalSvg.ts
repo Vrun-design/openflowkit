@@ -18,6 +18,7 @@ import {
   type TextNodePresentation,
 } from '../../domain/nodes/freeformNodePresentation';
 import { pressureTiltSegmentWidth } from '../../domain/nodes/strokeInput';
+import { smoothStroke } from '../../domain/nodes/strokeGeometry';
 import { projectPageConnectors } from '../../domain/connectors/routeProjection';
 import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
@@ -98,6 +99,8 @@ function exportStrokeNode(
 ): string {
   const color = safeColor(presentation.color, '#334155');
   const inputSamples = presentation.inputSamples;
+  const smoothed = inputSamples || (presentation.kind !== 'pen' && presentation.kind !== 'highlighter')
+    ? presentation.points : smoothStroke(presentation.points);
   const paths = inputSamples
     ? presentation.points.slice(1).map((point, index) => strokePath(
         openPathData([presentation.points[index], point]),
@@ -110,12 +113,12 @@ function exportStrokeNode(
         presentation.opacity
       )).join('')
     : strokePath(
-        openPathData(presentation.points),
+        openPathData(smoothed),
         color,
         presentation.width,
         presentation.opacity
       );
-  const arrowHead = arrowHeadPath(presentation);
+  const arrowHead = arrowHeadPath({ ...presentation, points: smoothed });
   return `<g data-node-id="${xml(node.id)}" data-node-kind="${presentation.kind}" transform="${matrixAttribute(matrix)}">${paths}${
     arrowHead ? strokePath(arrowHead, color, presentation.width, presentation.opacity) : ''
   }</g>`;

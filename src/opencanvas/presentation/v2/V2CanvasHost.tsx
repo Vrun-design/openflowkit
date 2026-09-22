@@ -116,7 +116,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   const barLayout = (bar: HTMLElement) => ({ width: bar.offsetWidth, ...visibleCanvasEdges(bar.closest<HTMLElement>('.ofk-v2')) });
   // Sticky defaults live with the host for the session: what you last styled
   // is what the next shape/text/connector gets.
-  const stylePresetsRef = useRef<StylePresets>({ shape: {}, text: {}, connector: {} });
+  const stylePresetsRef = useRef<StylePresets>({ shape: {}, text: {}, connector: {}, ink: {} });
   const pointer = useV2Pointer({
     stylePresetsRef,
     hostRef: props.hostRef,
@@ -303,6 +303,24 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   // Context bar anchor follows selection, page geometry and camera; the state
   // only changes when the union actually moves.
   const [contextAnchor, setContextAnchor] = useState<DOMRect | null>(null);
+  // The bar can hold focus when it disappears (Escape clears the selection).
+  // Focus would fall to body and every shortcut would go dead; hand it back.
+  const barVisible = Boolean(contextAnchor) || Boolean(props.selectedConnectorId);
+  const barRef = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const bar = props.sectionRef.current
+      ?.querySelector<HTMLElement>('[data-context-bar]') ?? null;
+    const previous = barRef.current;
+    barRef.current = bar;
+    if (bar || !previous) return;
+    // The bar just went away. If it held focus, that focus is now on body or
+    // on a detached button: hand the keyboard back to the canvas.
+    const active = document.activeElement;
+    const focusSurvived = Boolean(active && active !== document.body && active.isConnected
+      && !previous.contains(active));
+    if (focusSurvived) return;
+    props.sectionRef.current?.focus({ preventScroll: true });
+  }, [barVisible, props.sectionRef]);
   const selectionIds = props.selection.nodeIds;
   const selectedConnectorId = props.selectedConnectorId;
   useEffect(() => {
@@ -464,7 +482,16 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
           }}
           style={contextBarStyle(contextAnchor, { width: barWidth, ...visibleCanvasEdges(props.sectionRef.current?.closest<HTMLElement>('.ofk-v2') ?? null) })}
           onNodeStyleCommitted={(patch) => {
-            const kind = props.selection.nodeIds.every((id) => props.page.nodes.find((node) => node.id === id)?.kind === 'text') ? 'text' : 'shape';
+            const selected = props.selection.nodeIds
+              .map((id) => props.page.nodes.find((node) => node.id === id))
+              .filter((node): node is NonNullable<typeof node> => Boolean(node));
+            // Ink lives in content: keep it apart from the shape/text presets.
+            if (selected.length > 0 && selected.every((node) => node.kind === 'pen'
+              || node.kind === 'highlighter' || node.kind === 'line' || node.kind === 'arrow')) {
+              stylePresetsRef.current.ink = { ...stylePresetsRef.current.ink, ...patch };
+              return;
+            }
+            const kind = selected.every((node) => node.kind === 'text') ? 'text' : 'shape';
             stylePresetsRef.current[kind] = { ...stylePresetsRef.current[kind], ...patch };
           }}
           onConnectorStyleCommitted={(patch) => {

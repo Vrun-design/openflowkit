@@ -12,7 +12,7 @@ import type { ConnectorRouteKind, SceneConnector, ScenePage } from '../../domain
 import type { JsonObject } from '../../domain/document/json';
 import type { CanvasCamera } from '../../domain/camera/types';
 import type { TransformHandle, TransformResult } from '../../domain/transforms/types';
-import type { Bounds2d, Point2d } from '../../domain/geometry/types';
+import type { Bounds2d, Matrix2d, Point2d } from '../../domain/geometry/types';
 import { panCamera } from '../../domain/camera/camera';
 import { areStructurallyEqual } from '../../domain/commands/equality';
 import {
@@ -56,6 +56,13 @@ import {
   type V2ShapeKind,
 } from '../../domain/commands/sceneEdits';
 import type { V2Tool } from './V2CreationToolbar';
+import {
+  polygonIntersectsBounds, simplifyStroke, strokeBounds, strokeHitBySegment,
+} from '../../domain/nodes/strokeGeometry';
+import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worldGeometry';
+import { applyMatrixToPoint } from '../../domain/geometry/matrix';
+import type { FreeformPreviewFrame } from '../../infrastructure/pixi/PixiFreeformPreview';
+import { buildDeleteSelectionCommand } from '../../domain/commands/sceneEdits';
 import { CONNECTOR_ROUTE, connectorHeadEnd, type V2ToolConfig } from './v2ToolCatalog';
 
 const CLICK_THRESHOLD_PX = 4;
@@ -92,7 +99,36 @@ interface V2ConnectOperation {
   readonly toWorld: Point2d;
 }
 
-type V2Operation = PixiPointerOperation | V2CreateOperation | V2ConnectOperation;
+// The ink tools capture raw points; the document is written once on release.
+interface V2InkOperation {
+  readonly kind: 'ink';
+  readonly pointerId: number;
+  readonly page: ScenePage;
+  readonly stroke: 'pen' | 'highlighter';
+  readonly points: Point2d[];
+}
+
+// Eraser and lasso are drags too: the eraser collects the strokes it crossed,
+// the lasso collects the nodes whose box the polygon touches.
+interface V2EraseOperation {
+  readonly kind: 'erase';
+  readonly pointerId: number;
+  readonly page: ScenePage;
+  readonly matrices: ReadonlyMap<string, Matrix2d>;
+  readonly from: Point2d;
+  readonly removed: Set<string>;
+}
+
+interface V2LassoOperation {
+  readonly kind: 'lasso';
+  readonly pointerId: number;
+  readonly page: ScenePage;
+  readonly points: Point2d[];
+}
+
+type V2Operation =
+  | PixiPointerOperation | V2CreateOperation | V2ConnectOperation
+  | V2InkOperation | V2EraseOperation | V2LassoOperation;
 
 // The path tool is click-by-click, so its draft lives beside the pointer
 // operations: points are the ends committed so far, cursor is the live end.
@@ -147,6 +183,8 @@ export interface StylePresets {
   shape: JsonObject;
   text: JsonObject;
   connector: JsonObject;
+  /** Last ink pick: colour, width and opacity for the next stroke. */
+  ink: JsonObject;
 }
 
 // Both React's synthetic event and a native window event, re-targeted at the
@@ -258,6 +296,92 @@ function connectorAppearance(options: V2PointerOptions): JsonObject {
 
 function connectorRoute(options: V2PointerOptions): ConnectorRouteKind {
   return CONNECTOR_ROUTE[options.toolConfigRef.current.connector];
+}
+
+// Ink defaults, overridden by the style bar's last ink pick. Numbers stay in
+// the catalogue's range so a stroke and a catalog star look like siblings.
+function inkDefaults(options: V2PointerOptions, stroke: 'pen' | 'highlighter'): JsonObject {
+  const preset = options.stylePresetsRef?.current.ink;
+  return stroke === 'highlighter'
+    ? { strokeColor: '#fde047', strokeWidth: 16, transparency: 0.45, ...preset }
+    : { strokeColor: '#334155', strokeWidth: 3, transparency: 1, ...preset };
+}
+
+/** One insert-node per stroke: the points are local to the node's own box. */
+function buildInkCommand(options: V2PointerOptions, operation: V2InkOperation): DocumentCommand | null {
+  const tolerance = 0.75 / options.cameraRef.current.zoom;
+  const simplified = simplifyStroke(operation.points, tolerance);
+  if (simplified.length < 2) return null;
+  const bounds = strokeBounds(simplified);
+  const id = options.mintId('node');
+  const local = simplified.map((point) => ({ x: point.x - bounds.x, y: point.y - bounds.y }));
+  return {
+    kind: 'insert-node',
+    id: `create-node:${id}`,
+    label: operation.stroke === 'pen' ? 'Draw' : 'Highlight',
+    pageId: operation.page.id,
+    index: operation.page.nodes.length,
+    node: {
+      id,
+      kind: operation.stroke,
+      parentId: null,
+      layerId: operation.page.layers[0]?.id ?? 'default',
+      zIndex: operation.page.nodes.reduce((max, node) => Math.max(max, node.zIndex), -1) + 1,
+      transform: {
+        translation: { x: bounds.x, y: bounds.y },
+        rotationRadians: 0,
+        scale: { x: 1, y: 1 },
+      },
+      size: { width: Math.max(1, bounds.width), height: Math.max(1, bounds.height) },
+      content: { ...inkDefaults(options, operation.stroke), points: local },
+      appearance: {},
+      ports: [],
+      metadata: {},
+      extensions: {},
+    },
+  };
+}
+
+/** Every stroke the eraser has crossed so far, as one undo step. */
+function buildEraseCommand(operation: V2EraseOperation): DocumentCommand | null {
+  if (operation.removed.size === 0) return null;
+  return buildDeleteSelectionCommand(operation.page, [...operation.removed], []);
+}
+
+// Eraser reach: half the widest stroke it can hit, in world units.
+const ERASE_RADIUS_PX = 10;
+
+/** The live stroke as the renderer needs it: world points, ink colours. */
+function inkPreview(
+  options: V2PointerOptions, stroke: 'pen' | 'highlighter', points: readonly Point2d[]
+): FreeformPreviewFrame {
+  const preset = inkDefaults(options, stroke);
+  return {
+    confirmed: [...points],
+    predicted: [],
+    color: Number.parseInt(String(preset.strokeColor).slice(1), 16),
+    width: Number(preset.strokeWidth),
+    alpha: Number(preset.transparency),
+  };
+}
+
+/** A coalesced sample re-pointed at the section, so its client coords resolve. */
+function retargetSample(event: PointerLike, sample: { clientX: number; clientY: number }): PointerLike {
+  return { ...event, clientX: sample.clientX, clientY: sample.clientY };
+}
+
+function strokeWorldPoints(
+  node: ScenePage['nodes'][number], matrices: ReadonlyMap<string, Matrix2d>
+): Point2d[] {
+  const matrix = matrices.get(node.id);
+  const raw = node.content.points;
+  if (!matrix || !Array.isArray(raw)) return [];
+  return raw.flatMap((point) => {
+    if (!point || typeof point !== 'object' || Array.isArray(point)) return [];
+    const { x, y } = point as { x?: unknown; y?: unknown };
+    return typeof x === 'number' && typeof y === 'number'
+      ? [applyMatrixToPoint(matrix, { x, y })] : [];
+  });
 }
 
 // Handle flow released on empty canvas (or clicked without dragging): the new
@@ -470,6 +594,34 @@ export function useV2Pointer(options: V2PointerOptions) {
       } else if (operation.kind === 'create') {
         operationRef.current = { ...operation, currentScreen: point };
         host.setMarquee(boundsBetween(operation.startScreen, point));
+      } else if (operation.kind === 'ink') {
+        const world = host.screenToWorld(point);
+        // Coalesced events are the real input rate; a plain mouse move reports
+        // one point, a stylus or trackpad reports the whole batch.
+        const native = event.nativeEvent?.getCoalescedEvents?.();
+        const batch = native && native.length > 0
+          ? native.map((sample) => host.screenToWorld(localPoint(retargetSample(event, sample))))
+          : [world];
+        const last = operation.points.at(-1)!;
+        for (const sample of batch) {
+          if (Math.hypot(sample.x - last.x, sample.y - last.y) > 0.35) operation.points.push(sample);
+        }
+        host.setFreeformPreview(inkPreview(opts, operation.stroke, operation.points));
+      } else if (operation.kind === 'erase') {
+        const world = host.screenToWorld(point);
+        const radius = ERASE_RADIUS_PX / opts.cameraRef.current.zoom;
+        for (const node of operation.page.nodes) {
+          if (operation.removed.has(node.id)) continue;
+          if (node.kind !== 'pen' && node.kind !== 'highlighter') continue;
+          const points = strokeWorldPoints(node, operation.matrices);
+          if (points.length < 2) continue;
+          if (strokeHitBySegment(points, [operation.from, world], radius)) operation.removed.add(node.id);
+        }
+        operationRef.current = { ...operation, from: world };
+      } else if (operation.kind === 'lasso') {
+        const world = host.screenToWorld(point);
+        operationRef.current = { ...operation, points: [...operation.points, world] };
+        host.setMarquee(boundsBetween(operation.points[0]!, point));
       } else if (operation.kind === 'connect') {
         const toWorld = host.screenToWorld(point);
         operationRef.current = { ...operation, toWorld };
@@ -602,6 +754,39 @@ export function useV2Pointer(options: V2PointerOptions) {
         opts.applySelection(replaceSelection([id]));
         opts.onToolChange('select');
         if (operation.shape === 'text') opts.openEditor(id, { isNew: true });
+      } else if (operation.kind === 'ink') {
+        host.setFreeformPreview(null);
+        const command = buildInkCommand(opts, operation);
+        if (command) {
+          opts.commit(command);
+          const nodeId = 'node' in command && command.kind === 'insert-node' ? command.node.id : null;
+          if (nodeId) {
+            opts.applyConnectorSelection(null);
+            opts.applySelection(replaceSelection([nodeId]));
+          }
+        }
+        opts.onToolChange('select');
+      } else if (operation.kind === 'erase') {
+        const command = buildEraseCommand(operation);
+        if (command) {
+          opts.applyConnectorSelection(null);
+          opts.applySelection(clearSelection());
+          opts.commit(command);
+        }
+      } else if (operation.kind === 'lasso') {
+        host.setMarquee(null);
+        const matrices = buildNodeWorldMatrices(operation.page);
+        const hit = operation.points.length >= 3
+          ? operation.page.nodes
+            .filter((node) => {
+              const matrix = matrices.get(node.id);
+              return matrix ? polygonIntersectsBounds(operation.points, nodeWorldBounds(node, matrix)) : false;
+            })
+            .map((node) => node.id)
+          : [];
+        if (hit.length > 0) opts.applyConnectorSelection(null);
+        opts.applySelection(replaceSelection(hit));
+        opts.onToolChange('select');
       } else if (operation.kind === 'connect') {
         host.setConnectionPreview(null);
         const moved = Math.hypot(
@@ -760,6 +945,28 @@ export function useV2Pointer(options: V2PointerOptions) {
           startScreen: point,
           currentScreen: point,
         };
+        host.setMarquee(boundsBetween(point, point));
+        return;
+      }
+      if (tool === 'pen' || tool === 'highlighter') {
+        const world = host.screenToWorld(point);
+        operationRef.current = {
+          kind: 'ink', pointerId: event.pointerId, page, stroke: tool, points: [world],
+        };
+        host.setFreeformPreview(inkPreview(opts, tool, [world]));
+        return;
+      }
+      if (tool === 'eraser') {
+        operationRef.current = {
+          kind: 'erase', pointerId: event.pointerId, page,
+          matrices: buildNodeWorldMatrices(page),
+          from: host.screenToWorld(point), removed: new Set(),
+        };
+        return;
+      }
+      if (tool === 'lasso') {
+        const world = host.screenToWorld(point);
+        operationRef.current = { kind: 'lasso', pointerId: event.pointerId, page, points: [world] };
         host.setMarquee(boundsBetween(point, point));
         return;
       }

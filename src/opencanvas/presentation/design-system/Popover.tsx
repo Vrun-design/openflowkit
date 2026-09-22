@@ -164,6 +164,9 @@ export function Popover({
       }
     }
     function onKey(event: KeyboardEvent) {
+      // A passive layer is a tooltip: it hides on its own Escape handler and
+      // must never keep the key from reaching the editor's shortcuts.
+      if (passive) return;
       if (event.key === 'Escape' && branch.children.size === 0) {
         escapeRef.current?.(event);
         if (event.defaultPrevented) return;

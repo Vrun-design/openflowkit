@@ -10,6 +10,7 @@ import type { JsonObject } from '../../domain/document/json';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { buildStyleNodesCommand } from '../../domain/commands/styleNodes';
 import { buildSetIconCommand } from '../../domain/commands/iconCommands';
+import { buildSetInkCommand } from '../../domain/commands/inkCommands';
 import { buildSetHeaderCommand } from '../../domain/commands/groupNodes';
 import { resolveArchitectureNodePresentation } from '../../domain/nodes/architectureNodePresentation';
 import { V2IconPicker } from './V2IconPicker';
@@ -52,7 +53,7 @@ interface NodeStylePanelsProps {
   readonly onCommitted: (patch: JsonObject) => void;
 }
 
-type Panel = 'icon' | 'fill' | 'outline' | 'text';
+type Panel = 'icon' | 'fill' | 'outline' | 'text' | 'ink';
 
 const FONT_SIZE_PRESETS = [{ value: 12, label: 'XS' }, { value: 14, label: 'S' }, { value: 18, label: 'M' }, { value: 24, label: 'L' }];
 const PADDING_PRESETS = [{ value: 8, label: 'S' }, { value: 16, label: 'M' }, { value: 24, label: 'L' }];
@@ -80,6 +81,18 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
   if (!nodes.length || nodes.every((node) => node.kind === 'group')) return null;
   const view = (key: keyof NodeStyle) => (draft && key in draft ? draft[key] : common[key]);
   const isText = nodes.every((node) => node.kind === 'text');
+  // Freeform strokes carry their ink in content, not appearance.
+  const isStroke = nodes.every((node) => node.kind === 'pen' || node.kind === 'highlighter'
+    || node.kind === 'line' || node.kind === 'arrow');
+  const inkColor = typeof nodes[0]?.content.strokeColor === 'string'
+    ? nodes[0].content.strokeColor : '#334155';
+  const inkWidth = typeof nodes[0]?.content.strokeWidth === 'number'
+    ? nodes[0].content.strokeWidth : 3;
+  const commitInk = (patch: { strokeColor?: string; strokeWidth?: number }) => {
+    const command = buildSetInkCommand(page, nodeIds, patch);
+    if (command) commit(command);
+    onCommitted(patch);
+  };
   // Containers carry a title band: vertical alignment and shadow do not apply.
   const isContainer = nodes.every((node) => isContainerNodeKind(node.kind));
   // Any shape can become an icon node; the current icon (one selected) shows in the button.
@@ -118,6 +131,24 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
           }} />
         </StyleButton>
       ) : null}
+      {isStroke ? (
+        <StyleButton label="Ink" open={open === 'ink'} onToggle={() => toggle('ink')} onClose={close}
+          preview={<span className="ofk-style-line" style={{ borderTopColor: inkColor, borderTopWidth: Math.min(4, inkWidth) }} />}>
+          <PanelRow label="Colour">
+            <SwatchGrid label="Ink colour" options={inkOptions()} selected={inkColor}
+              onPick={(id) => commitInk({ strokeColor: id })} />
+          </PanelRow>
+          <PanelRow label="Width">
+            <ChoiceRow label="Ink width" value={inkWidth}
+              options={[1, 2, 3, 4, 6, 8, 12, 16].map((value) => ({
+                value, label: <span className="ofk-width-glyph" style={{ height: Math.min(6, value) }} />,
+                title: `${value}px`,
+              }))}
+              onChange={(value) => commitInk({ strokeWidth: value })} />
+          </PanelRow>
+        </StyleButton>
+      ) : null}
+      {isStroke ? null : (
       <StyleButton label={isText ? 'Background' : 'Fill'} open={open === 'fill'} onToggle={() => toggle('fill')} onClose={close}
         preview={<span className="ofk-style-swatch" data-mixed={fill === null || undefined} data-transparent={fill === 'transparent' || undefined}
           style={fill && fill !== 'transparent' ? { background: fill, borderColor: stroke ?? fill } : undefined} />}>
@@ -149,7 +180,9 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
           </PanelRow>
         )}
       </StyleButton>
+      )}
 
+      {isStroke ? null : (
       <StyleButton label="Outline" open={open === 'outline'} onToggle={() => toggle('outline')} onClose={close}
         preview={<span className="ofk-style-swatch ofk-style-swatch--ring" data-mixed={stroke === null || undefined}
           data-transparent={(stroke === 'transparent' || view('strokeWidth') === 0) || undefined}
@@ -174,7 +207,9 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
             options={[{ value: 'solid', label: '—' }, { value: 'dashed', label: '- -' }, { value: 'dotted', label: '···' }]} />
         </PanelRow>
       </StyleButton>
+      )}
 
+      {isStroke ? null : (
       <StyleButton label="Text" open={open === 'text'} onToggle={() => toggle('text')} onClose={close} panelClassName="ofk-style-panel--wide"
         preview={<span className="ofk-style-glyph" style={{ textDecorationColor: textColor ?? undefined }}>A</span>}>
         {isContainer ? (
@@ -247,6 +282,7 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
           </PanelRow>
         </details>
       </StyleButton>
+      )}
     </>
   );
 }

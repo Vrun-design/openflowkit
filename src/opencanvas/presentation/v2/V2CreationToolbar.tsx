@@ -2,6 +2,8 @@ import { useRef, useState } from 'react';
 import {
   IconCircle,
   IconHandStop,
+  IconHighlight,
+  IconPencil,
   IconLock,
   IconLockOpen,
   IconPhoto,
@@ -14,14 +16,14 @@ import { FloatingRegion, Icon, IconButton, Popover, Toolbar, Tooltip } from '../
 import { V2IconPicker } from './V2IconPicker';
 import { FlyoutButton } from './V2Flyout';
 import {
-  CONNECTOR_OPTIONS, SHAPE_OPTIONS, connectorOption, shapeOption,
-  type V2ConnectorTool, type V2Tool, type V2ToolConfig,
+  CONNECTOR_OPTIONS, INK_OPTIONS, SHAPE_OPTIONS, connectorOption, shapeOption,
+  type V2ConnectorTool, type V2InkTool, type V2Tool, type V2ToolConfig,
 } from './v2ToolCatalog';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
 
-type V2FlyoutId = 'shapes' | 'connector';
+type V2FlyoutId = 'shapes' | 'connector' | 'ink';
 
-export type { V2Tool, V2ToolConfig, V2ConnectorTool };
+export type { V2Tool, V2ToolConfig, V2ConnectorTool, V2InkTool };
 
 export function V2CreationToolbar(props: {
   readonly tool: V2Tool;
@@ -45,6 +47,7 @@ export function V2CreationToolbar(props: {
   const setFlyoutOpen = (id: V2FlyoutId) => (open: boolean) => setFlyout(open ? id : null);
   const shape = shapeOption(props.toolConfig.shape);
   const connector = connectorOption(props.toolConfig.connector);
+  const ink: V2InkTool = props.tool === 'highlighter' ? 'highlighter' : 'pen';
 
   const plain = (tool: V2Tool, label: string, shortcut: string, icon: typeof IconPointer) => (
     <Tooltip content={label} shortcut={shortcut}>
@@ -71,6 +74,10 @@ export function V2CreationToolbar(props: {
           selectedId={props.toolConfig.connector} onPick={props.onPickConnector} />
         <span className="ofk-v2-tools-separator" aria-hidden="true" />
         {plain('text', 'Text', 'T', IconTypography)}
+        <FlyoutButton label="Draw" shortcut="P" icon={<Icon icon={ink === 'pen' ? IconPencil : IconHighlight} />}
+          selected={props.tool === 'pen' || props.tool === 'highlighter'} open={flyout === 'ink'}
+          onOpenChange={setFlyoutOpen('ink')} options={INK_OPTIONS} columns={1}
+          selectedId={ink} onPick={(id) => props.onToolChange(id)} />
         <Tooltip content="Icons" shortcut="I">
           <IconButton variant="quiet" label="Icons" icon={<Icon icon={IconPhoto} />}
             selected={props.iconsOpen} aria-haspopup="dialog" aria-expanded={props.iconsOpen}

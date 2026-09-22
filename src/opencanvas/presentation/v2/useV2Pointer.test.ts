@@ -6,7 +6,7 @@ import {
   createTestDocument,
   createTestNode,
 } from '../../testing/builders/documentBuilder';
-import { clearSelection, replaceSelection } from '../../application/selection/selection';
+import { clearSelection, replaceSelection, type CanvasSelection } from '../../application/selection/selection';
 import type { Bounds2d } from '../../domain/geometry/types';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import { useV2Pointer } from './useV2Pointer';
@@ -41,6 +41,7 @@ function setup(
     pickNodesInScreenBounds: vi.fn((_bounds: Bounds2d): readonly string[] => []),
   };
   const commit = vi.fn();
+  const applySelection = vi.fn((next: CanvasSelection) => { selectionRef.current = next; });
   const applyConnectorSelection = vi.fn();
   const openEditor = vi.fn();
   const toolRef: { current: V2Tool } = { current: 'select' };
@@ -52,14 +53,14 @@ function setup(
     selectionRef, toolRef, toolConfigRef,
     spacePanRef: { current: false },
     readOnlyRef: { current: false }, gestureApiRef, commit,
-    applySelection: (next) => { selectionRef.current = next; }, applyConnectorSelection,
+    applySelection, applyConnectorSelection,
     updateCamera: vi.fn(), openEditor, openConnectorEditor: vi.fn(), onToolChange: vi.fn(), mintId: () => 'new',
   }));
   function event(x: number, y: number, target: HTMLElement = canvas): ReactPointerEvent<HTMLElement> {
     return { currentTarget: section, target, clientX: x, clientY: y, button: 0,
       pointerId: 1, preventDefault: vi.fn() } as unknown as ReactPointerEvent<HTMLElement>;
   }
-  return { result, host, commit, page, selectionRef, applyConnectorSelection, openEditor, event,
+  return { result, host, commit, page, selectionRef, applySelection, applyConnectorSelection, openEditor, event,
     toolRef, toolConfigRef, gestureApiRef };
 }
 
@@ -338,5 +339,38 @@ describe('path connector tool', () => {
     const command = commit.mock.calls[0]![0] as { connector: { source: { nodeId: string }, target: { nodeId: string } } };
     expect(command.connector.source.nodeId).toBe('a');
     expect(command.connector.target.nodeId).toBe('b');
+  });
+});
+
+/** The selection the hook last applied. */
+function useSelection(applySelection: ReturnType<typeof vi.fn>) {
+  const last = applySelection.mock.calls.at(-1)?.[0] as { nodeIds: readonly string[] } | undefined;
+  return { nodeIds: last?.nodeIds ?? [] };
+}
+
+describe('lasso tool', () => {
+  it('selects the nodes whose box the polygon touches', () => {
+    const { result, event, toolRef, applySelection, host } = setup();
+    toolRef.current = 'lasso';
+    host.pickNode = vi.fn((): string | null => null);
+    // Node 'a' occupies (0,0)-(100,50); the polygon wraps it.
+    act(() => result.current.handlePointerDown(event(-20, -20)));
+    act(() => result.current.handlePointerMove(event(200, -20)));
+    act(() => result.current.handlePointerMove(event(200, 200)));
+    act(() => result.current.handlePointerMove(event(-20, 200)));
+    act(() => result.current.handlePointerUp(event(-20, -20)));
+    expect(applySelection).toHaveBeenCalled();
+    expect(useSelection(applySelection).nodeIds).toEqual(['a']);
+  });
+
+  it('selects nothing when the polygon misses every node', () => {
+    const { result, event, toolRef, applySelection, host } = setup();
+    toolRef.current = 'lasso';
+    host.pickNode = vi.fn((): string | null => null);
+    act(() => result.current.handlePointerDown(event(400, 400)));
+    act(() => result.current.handlePointerMove(event(500, 400)));
+    act(() => result.current.handlePointerMove(event(500, 500)));
+    act(() => result.current.handlePointerUp(event(400, 400)));
+    expect(useSelection(applySelection).nodeIds).toEqual([]);
   });
 });

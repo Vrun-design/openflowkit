@@ -11,7 +11,13 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
   DSL words + Mermaid aliases, numbered-circle auto-labels, scene-tree names.
 - 6.3 done 2026-09-22 (opencode/deepseek-v4.1): connector variants — click-by-click path
   tool (Enter/double-click ends, Esc peels a point), diamond marker in the DSL + style bar,
-  Path in the Path panel, and SVG export now draws every end glyph like Pixi does. 6.4 claimed.
+  Path in the Path panel, and SVG export now draws every end glyph like Pixi does.
+- 6.4 done 2026-09-22 (opencode/deepseek-v4.1): ink — pen P (Shift+P highlighter) with
+  coalesced capture, RDP simplify, Catmull-Rom render in Pixi and SVG, live preview, one
+  undo per stroke; eraser X removes whole strokes per drag; lasso Q selects by polygon;
+  Ink panel (colour/width) and a sticky ink preset. Two design-system fixes rode along:
+  a tooltip no longer swallows Escape, and focus returns to the canvas when the context
+  bar unmounts. 6.5 claimed.
 - `check-v2-polish.mjs` fails on this machine at HEAD too (idle render count, context-bar
   follow, resize assertions in three separate runs) — environment, not a phase-6 regression.
   Re-run when the machine is quiet; the script's numbers are the phase gate.

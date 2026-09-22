@@ -10,6 +10,7 @@ import {
 } from '@tabler/icons-react';
 import type { ConnectorRouteKind } from '../../domain/document/types';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
+import { IconHighlight, IconPencil } from '@tabler/icons-react';
 
 // The rail's data: which tools exist, what a flyout offers, and how a picked
 // option maps onto the document. Keeping it here lets the toolbar, the keyboard
@@ -20,9 +21,12 @@ export type V2Tool =
   | 'rectangle' | 'ellipse'
   | 'shape'
   | 'connector'
-  | 'text';
+  | 'text'
+  | 'pen' | 'highlighter'
+  | 'eraser' | 'lasso';
 
 export type V2ConnectorTool = 'arrow' | 'line' | 'curve' | 'path';
+export type V2InkTool = 'pen' | 'highlighter';
 
 export interface V2ToolConfig {
   /** Last shape picked in the shapes flyout; the `shape` tool draws it. */
@@ -102,6 +106,11 @@ export const CONNECTOR_OPTIONS: readonly ToolOption<V2ConnectorTool>[] = [
   { id: 'line', label: 'Line', icon: IconMinus },
   { id: 'curve', label: 'Curve', icon: IconArrowCurveLeft },
   { id: 'path', label: 'Path', icon: IconVectorBezier2 },
+];
+
+export const INK_OPTIONS: readonly ToolOption<V2InkTool>[] = [
+  { id: 'pen', label: 'Pen', icon: IconPencil },
+  { id: 'highlighter', label: 'Highlighter', icon: IconHighlight },
 ];
 
 const CONNECTOR_BY_ID = new Map(CONNECTOR_OPTIONS.map((option) => [option.id, option]));

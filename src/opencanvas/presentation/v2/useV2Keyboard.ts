@@ -177,6 +177,9 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       event.preventDefault();
     // ⇧H/V and ⇧1/⇧2 sit below type-to-edit: a capital letter on one selected
     // shape starts its label; flips need none or several selected.
+    } else if (!command && !event.altKey && event.shiftKey && event.code === 'KeyP') {
+      opts.onToolChange('highlighter');
+      event.preventDefault();
     } else if (!command && !event.altKey && event.shiftKey && (event.code === 'KeyH' || event.code === 'KeyV')) {
       opts.onFlip(event.code === 'KeyH' ? 'horizontal' : 'vertical');
       event.preventDefault();
@@ -197,6 +200,12 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onToolChange('connector');
     } else if (!command && !event.shiftKey && !event.altKey && key === 't') {
       opts.onToolChange('text');
+    } else if (!command && !event.shiftKey && !event.altKey && key === 'p') {
+      opts.onToolChange('pen');
+    } else if (!command && !event.shiftKey && !event.altKey && key === 'x') {
+      opts.onToolChange('eraser');
+    } else if (!command && !event.shiftKey && !event.altKey && key === 'q') {
+      opts.onToolChange('lasso');
     } else if (!command && key === 'l') {
       opts.onToggleTree();
     } else if (!command && !event.shiftKey && !event.altKey && key === 'i') {
