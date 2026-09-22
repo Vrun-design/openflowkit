@@ -12,6 +12,16 @@ export function motionBitrate(width: number, height: number, fps: number): numbe
   return Math.round(0.1 * width * height * fps);
 }
 
+/** Export size for a viewBox at the picked width, even-sided. */
+export function motionCanvasSize(
+  viewBox: { readonly width: number; readonly height: number }, size: MotionSize,
+): { readonly width: number; readonly height: number } {
+  return {
+    width: Math.round(size / 2) * 2,
+    height: Math.max(2, Math.round((viewBox.height / viewBox.width) * size / 2) * 2),
+  };
+}
+
 /** GIF stays at or under 20 fps; video follows the picker. */
 export function motionFrameIntervalMs(format: MotionFormat, fps: number): number {
   return format === 'gif' ? Math.max(1000 / fps, 50) : 1000 / fps;

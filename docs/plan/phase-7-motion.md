@@ -144,7 +144,7 @@ writes code. `manifest.ts` + `get_syntax` updated in the same slice.
 | 7.5 | Export dialog Animation section + step chips (reorder/merge/hold → `animate` block) + preview + scrubber | headed check above; chips edit round-trips to code; VoiceOver pass on the dialog | ✅ 2026-09-22 `4dc8d32` `5c9e46e` |
 | 7.6 | MCP `export` formats; docs page "Animated export" with the format table from §1 | `npm test -w mcp-server`; the README gains one animated SVG | ✅ 2026-09-22 `d2b3fdc` |
 | 7.7 | Audit: play each format in GitHub README, Slack, Notion, X, Keynote; size table; a11y | findings fixed, ceilings marked `// ponytail:` | ✅ 2026-09-22 (GitHub + browser playback verified; Slack/Notion/X/Keynote assumed — STATE.md) |
-| 7.8 | Frame renderer: draw frames with Canvas2D instead of rasterising SVG, so the last 32 ms gap closes | parity ≤2 % vs the SVG still; 500 nodes × 450 frames with no blocking task and <5 % late frames | ⏳ owner call 2026-09-22 |
+| 7.8 | Frame renderer: draw frames with Canvas2D instead of rasterising SVG, so the last 32 ms gap closes | parity ≤2 % vs the SVG still; 500 nodes × 450 frames with no blocking task and <5 % late frames | ✅ 2026-09-22 (500 nodes × 451 frames: 30.7 s → 3.1 s, 19.9 % → 2.1 % late, no pipeline long task; chart/ink/image/annotation/text pages keep the SVG raster) |
 
 ## 4. Ceilings (deliberate, marked in code)
 

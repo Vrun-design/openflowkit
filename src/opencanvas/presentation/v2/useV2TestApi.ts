@@ -3,6 +3,11 @@ import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { CanvasSelection } from '../../application/selection/selection';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import type { AnimationPreset } from '../../domain/animation/types';
+import { frameAt } from '../../domain/animation/frame';
+import { frameDrawList } from '../../domain/animation/drawList';
+import { svgViewBox } from '../../infrastructure/export/canonicalSvg';
+import { motionCanvasSize } from '../../infrastructure/export/motionSchedule';
+import { paintFrame } from '../../infrastructure/export/framePainter';
 import { animatedSvgFor, motionFrameSvgFor, motionTimeline, timelineDuration } from './v2Motion';
 import type { V2Tool } from './V2CreationToolbar';
 import type { V2SaveStatus } from './useV2Autosave';
@@ -73,6 +78,28 @@ export function useV2TestApi(options: V2TestApiOptions) {
           animatedSvg: animatedSvgFor({ ...request, timeline }),
           stillAt: (tMs: number) => motionFrameSvgFor({ ...request, timeline }, tMs),
         };
+      },
+      // The frame renderer's own output at the export size, as a PNG; null
+      // when the frame is a fallback (the encoder rasterises the SVG instead).
+      // The parity gate rasterises the SVG still into the same pixels and
+      // diffs them, so the canvas path can never drift from the file.
+      getMotionFrameCanvas: (tMs: number, preset: AnimationPreset = 'build', pageId?: string) => {
+        if (!document) return null;
+        const page = document.pages.find(({ id }) => id === (pageId ?? document.pages[0]?.id));
+        if (!page) return null;
+        const timeline = motionTimeline({ document, pageId: page.id, preset });
+        const viewBox = svgViewBox(document, { pageId: page.id });
+        const { width, height } = motionCanvasSize(viewBox, 1080);
+        const ops = frameDrawList(page, frameAt(timeline, tMs), 'light', viewBox);
+        if (ops[0]?.kind === 'fallback') return null;
+        const canvas = window.document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        if (!context) return null;
+        const scale = Math.min(width / viewBox.width, height / viewBox.height);
+        paintFrame(context, ops, viewBox, scale);
+        return canvas.toDataURL('image/png');
       },
     };
     (window as unknown as { __V2__?: typeof api }).__V2__ = api;

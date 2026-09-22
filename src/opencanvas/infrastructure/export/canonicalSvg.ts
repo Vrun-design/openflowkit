@@ -10,6 +10,7 @@ import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
 import { basicNodeDecorations } from '../../domain/nodes/basicNodeDecorations';
 import { resolveChartPresentation } from '../../domain/nodes/chartNodePresentation';
 import type { ConnectorMarkerGlyph, ProjectedConnector } from '../../domain/connectors/types';
+import { connectorMarkerShapes, type MarkerShape } from '../../domain/connectors/markers';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import {
   resolveFreeformNodePresentation,
@@ -530,7 +531,8 @@ function markerMarkup(connector: ProjectedConnector, stroke: string): string {
   const last = samples[samples.length - 1]!;
   const width = presentation.stroke.width;
   const glyph = (value: ConnectorMarkerGlyph, endpoint: Point2d, outward: Point2d, index: number) =>
-    markerPath(value, endpoint, outward, index * 9, stroke, width, presentation.stroke.opacity);
+    connectorMarkerShapes(value, endpoint, outward, index * 9)
+      .map((shape) => markerShapeMarkup(shape, stroke, width, presentation.stroke.opacity)).join('');
   const start = presentation.sourceMarkers
     .map((value, index) => glyph(value, first, directionBetween(samples[1]!, first), index)).join('');
   const end = presentation.targetMarkers
@@ -545,59 +547,16 @@ function directionBetween(from: Point2d, to: Point2d): Point2d {
   return length > 1e-9 ? { x: dx / length, y: dy / length } : { x: 1, y: 0 };
 }
 
-function offsetPoint(point: Point2d, direction: Point2d, distance: number): Point2d {
-  return { x: point.x + direction.x * distance, y: point.y + direction.y * distance };
-}
-
-function markerPath(
-  glyph: ConnectorMarkerGlyph,
-  endpoint: Point2d,
-  outward: Point2d,
-  offset: number,
-  stroke: string,
-  width: number,
-  opacity: number
-): string {
-  const tip = offsetPoint(endpoint, outward, -offset);
-  const normal = { x: -outward.y, y: outward.x };
+function markerShapeMarkup(shape: MarkerShape, stroke: string, width: number, opacity: number): string {
   const strokeAttrs = `fill="none" stroke="${stroke}" stroke-width="${number(width)}" opacity="${number(opacity)}"`;
-  const polygon = (points: readonly Point2d[], filled: boolean) => {
-    const data = points.map((point, index) => `${index ? 'L' : 'M'}${number(point.x)} ${number(point.y)}`).join(' ') + ' Z';
-    return filled
-      ? `<path d="${data}" fill="${stroke}" opacity="${number(opacity)}"/>`
-      : `<path d="${data}" ${strokeAttrs}/>`;
-  };
-  if (glyph === 'arrow' || glyph === 'triangle-open' || glyph === 'triangle-filled') {
-    const back = offsetPoint(tip, outward, -9);
-    const points = [tip, offsetPoint(back, normal, 4.5), offsetPoint(back, normal, -4.5)];
-    if (glyph === 'arrow') {
-      return `<path d="M${number(points[1]!.x)} ${number(points[1]!.y)} L${number(points[0]!.x)} ${number(points[0]!.y)} L${number(points[2]!.x)} ${number(points[2]!.y)}" ${strokeAttrs} stroke-linejoin="round"/>`;
-    }
-    return polygon(points, glyph === 'triangle-filled');
+  if (shape.kind === 'circle') {
+    return `<circle cx="${number(shape.center.x)}" cy="${number(shape.center.y)}" r="${number(shape.radius)}" fill="none" ${strokeAttrs}/>`;
   }
-  if (glyph === 'diamond-open' || glyph === 'diamond-filled') {
-    const far = offsetPoint(tip, outward, -14);
-    const middle = offsetPoint(tip, outward, -7);
-    return polygon([tip, offsetPoint(middle, normal, 4.5), far, offsetPoint(middle, normal, -4.5)],
-      glyph === 'diamond-filled');
-  }
-  if (glyph === 'circle') {
-    const center = offsetPoint(tip, outward, -5);
-    return `<circle cx="${number(center.x)}" cy="${number(center.y)}" r="4" fill="none" ${strokeAttrs}/>`;
-  }
-  if (glyph === 'bar') {
-    const center = offsetPoint(tip, outward, -3);
-    return `<path d="M${number(offsetPoint(center, normal, 5).x)} ${number(offsetPoint(center, normal, 5).y)} L${number(offsetPoint(center, normal, -5).x)} ${number(offsetPoint(center, normal, -5).y)}" ${strokeAttrs}/>`;
-  }
-  if (glyph === 'cross') {
-    const center = offsetPoint(tip, outward, -5);
-    const a = offsetPoint(offsetPoint(center, normal, 4.5), outward, 4.5);
-    const b = offsetPoint(offsetPoint(center, normal, -4.5), outward, -4.5);
-    const c = offsetPoint(offsetPoint(center, normal, 4.5), outward, -4.5);
-    const d = offsetPoint(offsetPoint(center, normal, -4.5), outward, 4.5);
-    return `<path d="M${number(a.x)} ${number(a.y)} L${number(b.x)} ${number(b.y)} M${number(c.x)} ${number(c.y)} L${number(d.x)} ${number(d.y)}" ${strokeAttrs}/>`;
-  }
-  return '';
+  const data = shape.subpaths
+    .map((points) => points.map((point, index) => `${index ? 'L' : 'M'}${number(point.x)} ${number(point.y)}`).join(' '))
+    .join(' ') + (shape.closed ? ' Z' : '');
+  if (shape.filled) return `<path d="${data}" fill="${stroke}" opacity="${number(opacity)}"/>`;
+  return `<path d="${data}" ${strokeAttrs}${shape.round ? ' stroke-linejoin="round"' : ''}/>`;
 }
 
 function selectedPage(page: ScenePage, selectedNodeIds?: readonly string[]): ScenePage {

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MOTION_FPS, MOTION_SIZES, motionBitrate, motionFrameIntervalMs, motionFrameTimes,
+  MOTION_FPS, MOTION_SIZES, motionBitrate, motionCanvasSize, motionFrameIntervalMs, motionFrameTimes,
 } from './motionSchedule';
-import { motionCanvasSize, motionMime, webCodecsAvailable } from './motionFrames';
+import { motionMime, webCodecsAvailable } from './motionFrames';
+import { svgViewBox } from './canonicalSvg';
 import { compile } from '../../../dsl/compile';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 
@@ -45,7 +46,7 @@ describe('motion schedule', () => {
         metadata: {}, extensions: {},
       }],
     } as SceneDocumentV1;
-    const { width, height } = motionCanvasSize(document, 'p', 1080);
+    const { width, height } = motionCanvasSize(svgViewBox(document, { pageId: 'p' }), 1080);
     expect(width).toBe(1080);
     expect(width % 2).toBe(0);
     expect(height % 2).toBe(0);

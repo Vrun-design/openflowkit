@@ -1,10 +1,13 @@
-// Frames out, one file in. The worker owns the frame schedule, the SVG build
-// (canonicalSvg is pure, so it runs here), the canvas and the encoder; the
-// main thread only decodes SVG strings into bitmaps. A 500-node page builds a
-// frame in ~50 ms, so building here is what keeps the canvas at 60 fps.
+// Frames out, one file in. The worker owns the frame schedule, the canvas and
+// the encoder. A page of plain nodes and connectors is drawn here, from the
+// domain draw list, with no main-thread round trip at all; pages the canvas
+// cannot draw (charts, ink, images, annotations) fall back to the SVG path —
+// the worker builds the markup, the main thread rasterises it (browsers only
+// rasterise SVG on the main thread) and hands back a bitmap.
 //
-// Protocol: `start` → the worker pushes up to WINDOW `svg` messages → the main
-// answers each with a `frame` bitmap; the last one finalises the file.
+// Protocol: `start` → in canvas mode the worker paints and encodes on its own;
+// in SVG mode it pushes up to WINDOW `svg` messages → the main answers each
+// with a `frame` bitmap; the last frame finalises the file.
 // Answers: `svg`, `ready`, `progress` every ten frames, one `done`/`error`.
 //
 // ponytail: GIF is 256 colours at ≤ 20 fps and pulse replaces an authored dash
@@ -12,19 +15,21 @@
 // per-frame palettes (bigger files) and a masked dash so the pattern survives.
 import { GIFEncoder, applyPalette, quantize } from 'gifenc';
 import { BufferTarget, CanvasSource, Mp4OutputFormat, Output, WebMOutputFormat } from 'mediabunny';
-import type { SceneDocumentV1 } from '../../domain/document/types';
+import type { Bounds2d } from '../../domain/geometry/types';
+import type { SceneDocumentV1, ScenePage } from '../../domain/document/types';
 import type { Timeline } from '../../domain/animation/types';
 import { frameAt, timelineDuration } from '../../domain/animation/frame';
+import { frameDrawList } from '../../domain/animation/drawList';
 import { exportMotionFrameSvg } from './animatedSvg';
-import { motionFrameIntervalMs, motionFrameTimes } from './motionSchedule';
+import { svgViewBox } from './canonicalSvg';
+import { paintFrame } from './framePainter';
+import { motionBitrate, motionCanvasSize, motionFrameIntervalMs, motionFrameTimes, type MotionSize } from './motionSchedule';
 
 interface StartMessage {
   readonly type: 'start';
   readonly format: 'gif' | 'mp4' | 'webm';
-  readonly width: number;
-  readonly height: number;
+  readonly size: MotionSize;
   readonly fps: number;
-  readonly bitrate: number;
   readonly document: SceneDocumentV1;
   readonly timeline: Timeline;
   readonly pageId: string;
@@ -43,6 +48,8 @@ interface SvgMessage {
   readonly type: 'svg';
   readonly index: number;
   readonly svg: string;
+  readonly width: number;
+  readonly height: number;
 }
 interface ProgressMessage {
   readonly type: 'progress';
@@ -73,8 +80,12 @@ interface Session {
   readonly fps: number;
   readonly document: SceneDocumentV1;
   readonly timeline: Timeline;
-  readonly pageId: string;
   readonly theme: StartMessage['theme'];
+  readonly page: ScenePage;
+  readonly viewBox: Bounds2d;
+  readonly scale: number;
+  /** `canvas` draws here; `svg` posts markup for the main thread to rasterise. */
+  readonly mode: 'canvas' | 'svg';
   readonly times: readonly number[];
   readonly intervalMs: number;
   /** Order frames are handed to the main thread; GIF needs the last one first. */
@@ -121,9 +132,17 @@ function frameSignature(timeline: Timeline, tMs: number): string {
 
 function svgFor(state: Session, index: number): string {
   return exportMotionFrameSvg(state.document, state.timeline, state.times[index]!, {
-    pageId: state.pageId,
+    pageId: state.page.id,
     theme: state.theme,
   });
+}
+
+/** Paints one frame from the domain draw list; the canvas then holds it. */
+function drawCanvasFrame(state: Session, index: number): void {
+  const at = state.times[index]!;
+  const ops = frameDrawList(state.page, frameAt(state.timeline, at), state.theme, state.viewBox);
+  paintFrame(state.context, ops, state.viewBox, state.scale);
+  state.drawnSignature = frameSignature(state.timeline, at);
 }
 
 /** Hands out the next frame while the window has room. */
@@ -134,14 +153,21 @@ function pump(): void {
     const index = state.order[state.handed]!;
     state.handed += 1;
     // Nothing in flight and the picture has not changed: encode what the
-    // canvas already shows instead of rasterising it again.
+    // canvas already shows instead of drawing or rasterising it again.
     if (state.handed - 1 === state.encoded
       && state.drawnSignature !== null
       && frameSignature(state.timeline, state.times[index]!) === state.drawnSignature) {
       enqueue(state, () => encodeCurrent(state, index));
       continue;
     }
-    post({ type: 'svg', index, svg: svgFor(state, index) });
+    if (state.mode === 'canvas') {
+      enqueue(state, () => {
+        drawCanvasFrame(state, index);
+        return encodeCurrent(state, index);
+      });
+      continue;
+    }
+    post({ type: 'svg', index, svg: svgFor(state, index), width: state.width, height: state.height });
   }
 }
 
@@ -153,20 +179,31 @@ function enqueue(state: Session, work: () => Promise<void>): void {
 }
 
 async function start(message: StartMessage): Promise<void> {
-  const canvas = new OffscreenCanvas(message.width, message.height);
+  const page = message.document.pages.find(({ id }) => id === message.pageId)
+    ?? message.document.pages[0];
+  if (!page) throw new Error('The page to animate was not found.');
+  const viewBox = svgViewBox(message.document, { pageId: page.id });
+  const { width, height } = motionCanvasSize(viewBox, message.size);
+  const canvas = new OffscreenCanvas(width, height);
   const context = canvas.getContext('2d', { alpha: false, willReadFrequently: message.format === 'gif' });
   if (!context) throw new Error('This browser cannot draw offscreen.');
   context.imageSmoothingQuality = 'high';
+  // One rule for the whole export: any visible node the canvas cannot draw
+  // puts every frame back on the SVG path, so the protocol never changes
+  // mid-file.
+  const mode = frameDrawList(page, frameAt(message.timeline, 0), message.theme, viewBox)[0]?.kind === 'fallback'
+    ? 'svg' : 'canvas';
   const times = motionFrameTimes(timelineDuration(message.timeline), motionFrameIntervalMs(message.format, message.fps));
   const state: Session = {
     format: message.format,
-    width: message.width,
-    height: message.height,
+    width,
+    height,
     fps: message.fps,
     document: message.document,
     timeline: message.timeline,
-    pageId: message.pageId,
     theme: message.theme,
+    page, viewBox, mode,
+    scale: Math.min(width / viewBox.width, height / viewBox.height),
     times,
     intervalMs: motionFrameIntervalMs(message.format, message.fps),
     // GIF quantises from the finished diagram, so that frame is decoded first.
@@ -185,7 +222,7 @@ async function start(message: StartMessage): Promise<void> {
     });
     const source = new CanvasSource(canvas, {
       codec: message.format === 'mp4' ? 'avc' : 'vp9',
-      bitrate: message.bitrate,
+      bitrate: motionBitrate(width, height, message.fps),
       keyFrameInterval: 2,
     });
     output.addVideoTrack(source, { frameRate: message.fps });

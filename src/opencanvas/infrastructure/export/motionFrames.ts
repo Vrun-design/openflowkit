@@ -1,12 +1,19 @@
-// Motion encoding, main thread: decode one SVG frame at a time and hand the
-// bitmap to the worker, which owns the frame schedule, the canvas and the
-// encoder. Keeping the SVG build in the worker is what keeps the canvas at
-// 60 fps while a 500-node page renders 450 frames.
+// Motion encoding, main thread: start the worker and answer its SVG frames
+// with bitmaps. A page the canvas can draw never comes back here at all — the
+// worker paints and encodes it on its own. Only fallback frames (charts, ink,
+// images, annotations) still rasterise an SVG, because browsers rasterise SVG
+// only on the main thread.
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { Timeline } from '../../domain/animation/types';
+import { frameAt } from '../../domain/animation/frame';
+import { frameDrawList } from '../../domain/animation/drawList';
 import { exportMotionFrameSvg } from './animatedSvg';
 import { svgViewBox } from './canonicalSvg';
-import { motionFrameIntervalMs, motionFrameTimes, type MotionFormat, type MotionFps, type MotionSize } from './motionSchedule';
+import { paintFrame } from './framePainter';
+import {
+  motionCanvasSize, motionFrameIntervalMs, motionFrameTimes,
+  type MotionFormat, type MotionFps, type MotionSize,
+} from './motionSchedule';
 import type { MotionWorkerOut } from './motion.worker';
 
 export interface MotionEncodeRequest {
@@ -35,16 +42,6 @@ export function webCodecsAvailable(): boolean {
 
 export function motionMime(format: MotionFormat): string {
   return format === 'gif' ? 'image/gif' : format === 'mp4' ? 'video/mp4' : 'video/webm';
-}
-
-/** Export size for a page: the page's aspect at the picked width, even-sided. */
-export function motionCanvasSize(
-  document: SceneDocumentV1, pageId: string, size: MotionSize,
-): { readonly width: number; readonly height: number } {
-  const viewBox = svgViewBox(document, { pageId });
-  const width = Math.round(size / 2) * 2;
-  const height = Math.max(2, Math.round((viewBox.height / viewBox.width) * size / 2) * 2);
-  return { width, height };
 }
 
 function abortError(): Error {
@@ -77,26 +74,20 @@ async function decodeFrame(
 }
 
 /**
- * Frames → one file. The worker pushes SVG strings ahead, the main thread
- * decodes them in order, progress lands every ten frames and cancelling
- * terminates the worker immediately, leaving the dialog usable.
+ * Frames → one file. The worker paints plain pages itself and only asks the
+ * main thread for the SVG frames it must rasterise; those are decoded in
+ * order. Progress lands every ten frames and cancelling terminates the worker
+ * immediately, leaving the dialog usable.
  *
- * ponytail: browsers rasterise SVG only on the main thread, so a very large
- * page (500 nodes) at 1080p costs the compositor ~100 ms per *changed* frame:
- * measured 450 frames in 30 s with ~20 % of animation frames late and 1–6
- * blocking tasks (the rasteriser, never our code), while a normal page keeps
- * every frame. Upgrade = a canvas renderer for frames in the worker, or a
- * per-element raster cache so only changed shapes re-rasterise.
+ * ponytail: a page with a chart, ink, an image or an annotation still
+ * rasterises SVG on the main thread, so those pages pay the old cost —
+ * upgrade = a per-node raster cache for the exotic kinds only.
  */
 export async function renderMotionFile(request: MotionEncodeRequest): Promise<MotionEncodeResult> {
   const { document, timeline, pageId, format, size, fps } = request;
   const theme = request.theme ?? 'light';
   if (request.signal?.aborted) throw abortError();
   if (format === 'webm' && !webCodecsAvailable()) return recordWebmFallback(request);
-  const { width, height } = motionCanvasSize(document, pageId, size);
-  const canvas = new OffscreenCanvas(width, height);
-  const context = canvas.getContext('2d', { alpha: false });
-  if (!context) throw new Error('This browser cannot draw a canvas.');
   const worker = new Worker(new URL('./motion.worker.ts', import.meta.url), { type: 'module' });
   let frames = 0;
   let failure: ((error: Error) => void) | null = null;
@@ -105,12 +96,24 @@ export async function renderMotionFile(request: MotionEncodeRequest): Promise<Mo
     finish = resolve;
     failure = reject;
   });
+  // The worker owns the export size — it is the side that knows the viewBox —
+  // so the canvas it rasterises SVG frames into is built on the first one. A
+  // page the canvas renderer covers never needs it at all.
+  let surface: { readonly width: number; readonly height: number; readonly canvas: OffscreenCanvas; readonly context: OffscreenCanvasRenderingContext2D } | null = null;
+  const surfaceFor = (width: number, height: number) => {
+    if (surface && surface.width === width && surface.height === height) return surface;
+    const canvas = new OffscreenCanvas(width, height);
+    const context = canvas.getContext('2d', { alpha: false });
+    if (!context) throw new Error('This browser cannot draw a canvas.');
+    surface = { width, height, canvas, context };
+    return surface;
+  };
   // Decodes run one at a time, in the order the worker handed the frames out.
   let queue: Promise<void> = Promise.resolve();
   const decodeInto = (index: number, svg: string) => {
     queue = queue.then(async () => {
-      if (request.signal?.aborted) return;
-      const bitmap = await decodeFrame(svg, width, height, canvas, context);
+      if (request.signal?.aborted || !surface) return;
+      const bitmap = await decodeFrame(svg, surface.width, surface.height, surface.canvas, surface.context);
       if (request.signal?.aborted) { bitmap.close(); return; }
       worker.postMessage({ type: 'frame', index, bitmap }, [bitmap]);
       // Hand the editor's next animation frame a clear slot before the next
@@ -122,8 +125,10 @@ export async function renderMotionFile(request: MotionEncodeRequest): Promise<Mo
   };
   worker.onmessage = (event: MessageEvent<MotionWorkerOut>) => {
     const message = event.data;
-    if (message.type === 'svg') decodeInto(message.index, message.svg);
-    else if (message.type === 'ready') frames = message.total;
+    if (message.type === 'svg') {
+      surfaceFor(message.width, message.height);
+      decodeInto(message.index, message.svg);
+    } else if (message.type === 'ready') frames = message.total;
     else if (message.type === 'progress') request.onProgress?.(message.done, frames);
     else if (message.type === 'done') finish?.(message.bytes);
     else failure?.(new Error(message.message));
@@ -138,11 +143,7 @@ export async function renderMotionFile(request: MotionEncodeRequest): Promise<Mo
   };
   request.signal?.addEventListener('abort', abort, { once: true });
   try {
-    worker.postMessage({
-      type: 'start', format, width, height, fps,
-      bitrate: Math.round(0.1 * width * height * fps),
-      document, timeline, pageId, theme,
-    });
+    worker.postMessage({ type: 'start', format, size, fps, document, timeline, pageId, theme });
     const bytes = await done;
     return { filename: `${request.filenameStem}.${format}`, mime: motionMime(format), bytes: new Uint8Array(bytes) };
   } finally {
@@ -189,7 +190,9 @@ function waitUntil(deadline: number, signal?: AbortSignal): Promise<void> {
  */
 async function recordWebmFallback(request: MotionEncodeRequest): Promise<MotionEncodeResult> {
   const { document, timeline, pageId, format, size, fps } = request;
-  const { width, height } = motionCanvasSize(document, pageId, size);
+  const theme = request.theme ?? 'light';
+  const viewBox = svgViewBox(document, { pageId });
+  const { width, height } = motionCanvasSize(viewBox, size);
   const times = motionFrameTimes(
     timeline.durationMs,
     motionFrameIntervalMs(format, fps),
@@ -199,6 +202,10 @@ async function recordWebmFallback(request: MotionEncodeRequest): Promise<MotionE
   canvas.height = height;
   const context = canvas.getContext('2d');
   if (!context) throw new Error('This browser cannot draw a canvas.');
+  const page = document.pages.find(({ id }) => id === pageId) ?? document.pages[0];
+  const drawable = page !== undefined
+    && frameDrawList(page, frameAt(timeline, 0), theme, viewBox)[0]?.kind !== 'fallback';
+  const scale = Math.min(width / viewBox.width, height / viewBox.height);
   const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
     .find((candidate) => MediaRecorder.isTypeSupported(candidate));
   if (!mime) throw new Error('This browser cannot record WebM.');
@@ -212,12 +219,16 @@ async function recordWebmFallback(request: MotionEncodeRequest): Promise<MotionE
     for (const [index, at] of times.entries()) {
       if (request.signal?.aborted) throw abortError();
       await waitUntil(started + at, request.signal);
-      const bitmap = await fallbackFrameBitmap(
-        exportMotionFrameSvg(document, timeline, at, { pageId, theme: request.theme ?? 'light' }),
-        width, height,
-      );
-      context.drawImage(bitmap, 0, 0);
-      bitmap.close();
+      if (drawable) {
+        paintFrame(context, frameDrawList(page, frameAt(timeline, at), theme, viewBox), viewBox, scale);
+      } else {
+        const bitmap = await fallbackFrameBitmap(
+          exportMotionFrameSvg(document, timeline, at, { pageId, theme }),
+          width, height,
+        );
+        context.drawImage(bitmap, 0, 0);
+        bitmap.close();
+      }
       request.onProgress?.(index, times.length);
     }
     await waitUntil(started + times[times.length - 1]! + 250, request.signal);
