@@ -4,7 +4,7 @@ import { nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import { boundsFromPoints } from '../../domain/geometry/bounds';
 import { boundsCorners } from '../../domain/geometry/bounds';
-import type { Matrix2d, Point2d, Size2d } from '../../domain/geometry/types';
+import type { Bounds2d, Matrix2d, Point2d, Size2d } from '../../domain/geometry/types';
 import { resolveBasicNodePresentation, type BasicNodeShape } from '../../domain/nodes/basicNodePresentation';
 import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
 import { basicNodeDecorations } from '../../domain/nodes/basicNodeDecorations';
@@ -24,8 +24,28 @@ import { projectPageConnectors } from '../../domain/connectors/routeProjection';
 import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
+import { cameraFitMatrix } from '../../domain/animation/camera';
+import { PULSE_DASH } from '../../domain/animation/frame';
+import type { ElementFrameState, FrameState } from '../../domain/animation/types';
 
 export const SVG_BACKGROUND = { light: '#ffffff', dark: '#020617' } as const;
+
+/** One CSS animation on an exported element; the keyframes live in `<style>`. */
+export interface CssAnimation {
+  readonly name: string;
+  readonly durationMs: number;
+  readonly delayMs: number;
+  /** `both` holds the final keyframe; `backwards` reverts to the base look. */
+  readonly fill?: 'both' | 'backwards' | 'none';
+  readonly timing?: string;
+  readonly iterationCount?: number | 'infinite';
+}
+
+export interface ElementAnimations {
+  readonly group?: CssAnimation;
+  /** Connector draw-on / travelling dash: needs `pathLength="1"` and a unit dash. */
+  readonly path?: CssAnimation & { readonly dash: string };
+}
 
 export interface CanonicalSvgExportOptions {
   readonly pageId?: string;
@@ -35,7 +55,17 @@ export interface CanonicalSvgExportOptions {
   readonly pixelRatio?: number;
   /** Omit the background rectangle (transparent PNG / SVG). */
   readonly transparent?: boolean;
+  /** Pause the export at one timeline frame; absent keeps the static output. */
+  readonly frame?: FrameState;
+  /** Per-element CSS animations, for the animated export. */
+  readonly animations?: (kind: 'node' | 'connector', id: string) => ElementAnimations | undefined;
+  /** Camera glide on the root group, for the animated walkthrough. */
+  readonly cameraAnimation?: CssAnimation;
+  /** Extra CSS inserted as the first child, before any artwork. */
+  readonly styleSheet?: string;
 }
+
+export const ANIMATED_CLASS = 'ofk-anim';
 
 function number(value: number): string {
   return Number(value.toFixed(3)).toString();
@@ -54,6 +84,69 @@ function safeColor(value: unknown, fallback: string): string {
 
 function matrixAttribute(matrix: Matrix2d): string {
   return `matrix(${number(matrix.a)} ${number(matrix.b)} ${number(matrix.c)} ${number(matrix.d)} ${number(matrix.tx)} ${number(matrix.ty)})`;
+}
+
+/**
+ * The same matrix as a CSS `transform` value. One formatter for the still and
+ * the animated keyframes: identical strings, identical rendering.
+ */
+export function matrixCss(matrix: Matrix2d): string {
+  return `matrix(${number(matrix.a)}, ${number(matrix.b)}, ${number(matrix.c)}, ${number(matrix.d)}, ${number(matrix.tx)}, ${number(matrix.ty)})`;
+}
+
+function cssAnimation(animation: CssAnimation): string {
+  const iteration = animation.iterationCount === undefined ? '1' : String(animation.iterationCount);
+  return `animation:${animation.name} ${number(animation.durationMs)}ms ${animation.timing ?? 'linear'} ${number(animation.delayMs)}ms ${iteration} ${animation.fill ?? 'both'}`;
+}
+
+/**
+ * Scale about a point, as a CSS transform list. The wrapper sits inside the
+ * node's group, so the point is node-local — no reference box, no origin
+ * property, and the node's stroke is never clipped by a layer.
+ */
+export function scaleAbout(center: Point2d, scale: number): string {
+  return `translate(${number(center.x)}px,${number(center.y)}px) scale(${number(scale)}) translate(${number(-center.x)}px,${number(-center.y)}px)`;
+}
+
+/**
+ * The visible state of one element at a paused frame, as CSS on a wrapper
+ * group. The animated export animates the same properties on the same group,
+ * so a still and the animated SVG paused at the same time cannot drift.
+ */
+function elementFrameStyle(
+  kind: 'node' | 'connector',
+  id: string,
+  state: ElementFrameState | undefined,
+  size: Size2d | undefined,
+  animations: CanonicalSvgExportOptions['animations']
+): { readonly className: string; readonly style: string } | null {
+  const animation = animations?.(kind, id)?.group;
+  const declarations: string[] = [];
+  if (animation) declarations.push(cssAnimation(animation));
+  if (state && state.opacity < 1) declarations.push(`opacity:${number(state.opacity)}`);
+  if (kind === 'node' && (animation || (state && state.scale !== 1))) {
+    declarations.push('transform-origin:0 0');
+  }
+  if (kind === 'node' && state && state.scale !== 1 && size) {
+    declarations.push(`transform:${scaleAbout({ x: size.width / 2, y: size.height / 2 }, state.scale)}`);
+  }
+  if (declarations.length === 0) return null;
+  return {
+    className: animation ? ` class="${ANIMATED_CLASS}"` : '',
+    style: ` style="${declarations.join(';')}"`,
+  };
+}
+
+/** Dash state a paused frame needs on the connector path, if any. */
+function connectorPathDash(state: ElementFrameState | undefined): string {
+  if (!state) return '';
+  if (state.pulsePhase !== undefined) {
+    return ` pathLength="1" stroke-dasharray="${PULSE_DASH}" stroke-dashoffset="${number(-state.pulsePhase)}"`;
+  }
+  if (state.drawProgress < 1) {
+    return ` pathLength="1" stroke-dasharray="1" stroke-dashoffset="${number(1 - state.drawProgress)}"`;
+  }
+  return '';
 }
 
 function pathData(points: readonly Point2d[]): string {
@@ -93,10 +186,19 @@ function arrowHeadPath(presentation: StrokeNodePresentation): string {
   return `M${number(left.x)} ${number(left.y)} L${number(end.x)} ${number(end.y)} L${number(right.x)} ${number(right.y)}`;
 }
 
+/** Node group with the paused-frame wrapper inside it, so CSS animates the art
+ *  while the world transform stays a plain attribute. */
+function nodeGroup(attributes: string, body: string, frame: { readonly className: string; readonly style: string } | null): string {
+  return frame
+    ? `<g ${attributes}><g${frame.className}${frame.style}>${body}</g></g>`
+    : `<g ${attributes}>${body}</g>`;
+}
+
 function exportStrokeNode(
   node: SceneNode,
   matrix: Matrix2d,
-  presentation: StrokeNodePresentation
+  presentation: StrokeNodePresentation,
+  frame: { readonly className: string; readonly style: string } | null
 ): string {
   const color = safeColor(presentation.color, '#334155');
   const inputSamples = presentation.inputSamples;
@@ -120,9 +222,11 @@ function exportStrokeNode(
         presentation.opacity
       );
   const arrowHead = arrowHeadPath({ ...presentation, points: smoothed });
-  return `<g data-node-id="${xml(node.id)}" data-node-kind="${presentation.kind}" transform="${matrixAttribute(matrix)}">${paths}${
-    arrowHead ? strokePath(arrowHead, color, presentation.width, presentation.opacity) : ''
-  }</g>`;
+  return nodeGroup(
+    `data-node-id="${xml(node.id)}" data-node-kind="${presentation.kind}" transform="${matrixAttribute(matrix)}"`,
+    paths + (arrowHead ? strokePath(arrowHead, color, presentation.width, presentation.opacity) : ''),
+    frame
+  );
 }
 
 function textElement(
@@ -143,7 +247,8 @@ function exportTextNode(
   node: SceneNode,
   matrix: Matrix2d,
   presentation: TextNodePresentation,
-  theme: 'light' | 'dark' | 'print'
+  theme: 'light' | 'dark' | 'print',
+  frame: { readonly className: string; readonly style: string } | null
 ): string {
   const colors = resolveTextVisualStyle(
     presentation.colorKey,
@@ -166,14 +271,19 @@ function exportTextNode(
     `text-anchor="middle" dominant-baseline="middle" fill="${color}" font-family="${xml(presentation.fontFamily)}" font-size="${number(presentation.fontSizePx)}" font-weight="${xml(presentation.fontWeight)}" font-style="${xml(presentation.fontStyle)}"`,
     presentation.fontSizePx * 1.25
   );
-  return `<g data-node-id="${xml(node.id)}" data-node-kind="text" transform="${matrixAttribute(matrix)}">${background}${text}</g>`;
+  return nodeGroup(
+    `data-node-id="${xml(node.id)}" data-node-kind="text" transform="${matrixAttribute(matrix)}"`,
+    background + text,
+    frame
+  );
 }
 
 function exportImageNode(
   node: SceneNode,
   matrix: Matrix2d,
   presentation: ImageNodePresentation,
-  theme: 'light' | 'dark' | 'print'
+  theme: 'light' | 'dark' | 'print',
+  frame: { readonly className: string; readonly style: string } | null
 ): string {
   const background = theme === 'dark' ? '#1e293b' : '#fff7ed';
   const media = presentation.sourceUrl
@@ -185,13 +295,18 @@ function exportImageNode(
         `text-anchor="middle" dominant-baseline="middle" fill="${theme === 'dark' ? '#f8fafc' : '#9a3412'}" font-family="system-ui,sans-serif" font-size="12" font-weight="600"`,
         15
       );
-  return `<g data-node-id="${xml(node.id)}" data-node-kind="image" transform="${matrixAttribute(matrix)}"><rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="8" fill="${background}" stroke="#e95420"/>${media}</g>`;
+  return nodeGroup(
+    `data-node-id="${xml(node.id)}" data-node-kind="image" transform="${matrixAttribute(matrix)}"`,
+    `<rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="8" fill="${background}" stroke="#e95420"/>${media}`,
+    frame
+  );
 }
 
 function exportAnnotationNode(
   node: SceneNode,
   matrix: Matrix2d,
-  presentation: AnnotationNodePresentation
+  presentation: AnnotationNodePresentation,
+  frame: { readonly className: string; readonly style: string } | null
 ): string {
   const colors = resolveAnnotationVisualStyle(
     presentation.colorKey,
@@ -221,7 +336,11 @@ function exportAnnotationNode(
     `fill="${safeColor(colors.bodyText, '#854d0e')}" font-family="system-ui,sans-serif" font-size="12" font-weight="500"`,
     15
   );
-  return `<g data-node-id="${xml(node.id)}" data-node-kind="${presentation.kind}" transform="${matrixAttribute(matrix)}"><rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="8" fill="${safeColor(colors.containerBg, '#fef9c3')}" stroke="${safeColor(colors.containerBorder, '#eab308')}" stroke-width="1.5"/><path d="${fold}" fill="${safeColor(colors.foldBg, '#fef08a')}" stroke="${safeColor(colors.foldBorder, '#ca8a04')}"/>${title}${body}</g>`;
+  return nodeGroup(
+    `data-node-id="${xml(node.id)}" data-node-kind="${presentation.kind}" transform="${matrixAttribute(matrix)}"`,
+    `<rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="8" fill="${safeColor(colors.containerBg, '#fef9c3')}" stroke="${safeColor(colors.containerBorder, '#eab308')}" stroke-width="1.5"/><path d="${fold}" fill="${safeColor(colors.foldBg, '#fef08a')}" stroke="${safeColor(colors.foldBorder, '#ca8a04')}"/>${title}${body}`,
+    frame
+  );
 }
 
 function connectorPathData(commands: ReturnType<typeof projectPageConnectors>[number]['commands']): string {
@@ -274,7 +393,12 @@ function plainRect(outline: readonly Point2d[]): { x: number; y: number; width: 
 }
 
 // Charts draw exactly what the presentation says, in the same order as Pixi.
-function exportChartNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' | 'print'): string | null {
+function exportChartNode(
+  node: SceneNode,
+  matrix: Matrix2d,
+  theme: 'light' | 'dark' | 'print',
+  frame: { readonly className: string; readonly style: string } | null
+): string | null {
   const presentation = resolveChartPresentation(node);
   if (!presentation) return null;
   const style = resolveNodeStyle(node, theme === 'dark' ? SVG_BACKGROUND.dark : SVG_BACKGROUND.light);
@@ -329,21 +453,28 @@ function exportChartNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'da
     const size = label.role === 'title' ? style.fontSize + 2 : 11;
     parts.push(`<text x="${number(at.x)}" y="${number(at.y)}" text-anchor="${anchor}" dominant-baseline="middle" fill="${xml(label.color ?? textColor)}" font-family="system-ui,sans-serif" font-size="${number(size)}">${xml(label.text)}</text>`);
   }
-  return `<g data-node-id="${xml(node.id)}" data-node-kind="chart">${parts.join('')}</g>`;
+  return nodeGroup(`data-node-id="${xml(node.id)}" data-node-kind="chart"`, parts.join(''), frame);
 }
 
-function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' | 'print'): string {
-  const chart = exportChartNode(node, matrix, theme);
+function exportNode(
+  node: SceneNode,
+  matrix: Matrix2d,
+  theme: 'light' | 'dark' | 'print',
+  frame: ElementFrameState | undefined,
+  animations: CanonicalSvgExportOptions['animations']
+): string {
+  const wrapper = elementFrameStyle('node', node.id, frame, node.size, animations);
+  const chart = exportChartNode(node, matrix, theme, wrapper);
   if (chart) return chart;
   const freeform = resolveFreeformNodePresentation(node);
   if (freeform && (freeform.kind === 'pen' || freeform.kind === 'highlighter'
     || freeform.kind === 'line' || freeform.kind === 'arrow')) {
-    return exportStrokeNode(node, matrix, freeform);
+    return exportStrokeNode(node, matrix, freeform, wrapper);
   }
-  if (freeform?.kind === 'text') return exportTextNode(node, matrix, freeform, theme);
-  if (freeform?.kind === 'image') return exportImageNode(node, matrix, freeform, theme);
+  if (freeform?.kind === 'text') return exportTextNode(node, matrix, freeform, theme, wrapper);
+  if (freeform?.kind === 'image') return exportImageNode(node, matrix, freeform, theme, wrapper);
   if (freeform && (freeform.kind === 'annotation' || freeform.kind === 'sticky'
-    || freeform.kind === 'callout')) return exportAnnotationNode(node, matrix, freeform);
+    || freeform.kind === 'callout')) return exportAnnotationNode(node, matrix, freeform, wrapper);
   const background = theme === 'dark' ? SVG_BACKGROUND.dark : SVG_BACKGROUND.light;
   // One resolver for every node kind: the renderer, the label editor and the
   // exporter cannot drift. Legacy content keys are its fallbacks, not ours.
@@ -365,12 +496,14 @@ function exportNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' |
     ? `<filter id="${shadowId}" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.18"/></filter>`
     : '')
     + (clip ? `<clipPath id="${clip}"><path d="${pathData(outline)}"/></clipPath>` : '');
-  return `<g data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}"${style.opacity < 1 ? ` opacity="${number(style.opacity)}"` : ''}>`
-    + (defs ? `<defs>${defs}</defs>` : '')
-    + outlineMarkup(outline, style, filter)
-    + (basic ? decorationMarkup(basic.shape, node.size, style) : '')
-    + labelElement(style, node.size, label, subLabel, clip)
-    + '</g>';
+  return nodeGroup(
+    `data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}"${style.opacity < 1 ? ` opacity="${number(style.opacity)}"` : ''}`,
+    (defs ? `<defs>${defs}</defs>` : '')
+      + outlineMarkup(outline, style, filter)
+      + (basic ? decorationMarkup(basic.shape, node.size, style) : '')
+      + labelElement(style, node.size, label, subLabel, clip),
+    wrapper
+  );
 }
 
 /** Inner lines (venn lens, target rings, note fold) in the node's stroke. */
@@ -477,9 +610,16 @@ function selectedPage(page: ScenePage, selectedNodeIds?: readonly string[]): Sce
     && (target.nodeId === null ? !selected : ids.has(target.nodeId))) };
 }
 
-export function exportCanonicalSvg(
-  document: SceneDocumentV1, options: CanonicalSvgExportOptions = {}
-): string {
+interface PageExport {
+  readonly source: ScenePage;
+  readonly page: ScenePage;
+  readonly matrices: ReadonlyMap<string, Matrix2d>;
+  readonly connectors: ReturnType<typeof projectPageConnectors>;
+  readonly viewBox: Bounds2d;
+}
+
+/** Everything an SVG export reads off a page, viewBox included. */
+function pageExport(document: SceneDocumentV1, options: CanonicalSvgExportOptions): PageExport {
   const source = options.pageId
     ? document.pages.find(({ id }) => id === options.pageId)
     : document.pages[0];
@@ -496,19 +636,55 @@ export function exportCanonicalSvg(
   for (const connector of connectors) points.push(...connector.samples);
   const bounds = boundsFromPoints(points)!;
   const padding = Math.max(0, options.padding ?? 24);
+  return {
+    source, page, matrices, connectors,
+    viewBox: {
+      x: bounds.x - padding, y: bounds.y - padding,
+      width: bounds.width + padding * 2, height: bounds.height + padding * 2,
+    },
+  };
+}
+
+/** The viewBox `exportCanonicalSvg` frames; the animated export fits cameras to it. */
+export function svgViewBox(document: SceneDocumentV1, options: CanonicalSvgExportOptions = {}): Bounds2d {
+  return pageExport(document, options).viewBox;
+}
+
+export function exportCanonicalSvg(
+  document: SceneDocumentV1, options: CanonicalSvgExportOptions = {}
+): string {
+  const { page, matrices, connectors, viewBox } = pageExport(document, options);
+  const { x, y, width, height } = viewBox;
   const pixelRatio = Math.min(4, Math.max(1, options.pixelRatio ?? 1));
-  const x = bounds.x - padding; const y = bounds.y - padding;
-  const width = bounds.width + padding * 2; const height = bounds.height + padding * 2;
   const theme = options.theme ?? 'light';
   const background = theme === 'dark' ? '#020617' : '#ffffff';
   const connectorMarkup = connectors.map((connector) => {
     const stroke = safeColor(connector.presentation.stroke.color, theme === 'dark' ? '#cbd5e1' : '#475569');
-    return `<g data-connector-id="${xml(connector.id)}"><path d="${connectorPathData(connector.commands)}" fill="none" stroke="${stroke}" stroke-width="${number(connector.presentation.stroke.width)}" opacity="${number(connector.presentation.stroke.opacity)}"${connector.presentation.stroke.dash.length ? ` stroke-dasharray="${connector.presentation.stroke.dash.map(number).join(' ')}"` : ''}/>`
+    const state = options.frame?.connectors[connector.id];
+    const animation = options.animations?.('connector', connector.id);
+    const pathAnimation = animation?.path ? ` style="${cssAnimation(animation.path)}"` : '';
+    const dash = animation?.path
+      ? ` pathLength="1" stroke-dasharray="${animation.path.dash}"`
+      : connectorPathDash(state);
+    const group = elementFrameStyle('connector', connector.id, state, undefined, options.animations);
+    return `<g data-connector-id="${xml(connector.id)}"${group?.className ?? ''}${group?.style ?? ''}><path d="${connectorPathData(connector.commands)}"${pathAnimation} fill="none" stroke="${stroke}" stroke-width="${number(connector.presentation.stroke.width)}" opacity="${number(connector.presentation.stroke.opacity)}"${dash}${connector.presentation.stroke.dash.length && !dash ? ` stroke-dasharray="${connector.presentation.stroke.dash.map(number).join(' ')}"` : ''}/>`
       + connector.labels.map((label) => `<text x="${number(label.point.x)}" y="${number(label.point.y)}" text-anchor="middle" fill="${theme === 'dark' ? '#f8fafc' : '#0f172a'}" font-family="system-ui,sans-serif" font-size="11">${xml(label.text)}</text>`).join('')
       + markerMarkup(connector, stroke)
       + '</g>';
   }).join('');
   const nodeMarkup = [...page.nodes].sort((a, b) => a.zIndex - b.zIndex || a.id.localeCompare(b.id))
-    .map((node) => exportNode(node, matrices.get(node.id)!, theme)).join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${number(x)} ${number(y)} ${number(width)} ${number(height)}" width="${number(width * pixelRatio)}" height="${number(height * pixelRatio)}" data-openflowkit-document="${xml(document.id)}" data-page="${xml(page.id)}" data-theme="${theme}" data-pixel-ratio="${number(pixelRatio)}">${options.transparent ? '' : `<rect x="${number(x)}" y="${number(y)}" width="${number(width)}" height="${number(height)}" fill="${background}"/>`}${connectorMarkup}${nodeMarkup}</svg>`;
+    .map((node) => exportNode(node, matrices.get(node.id)!, theme, options.frame?.nodes[node.id], options.animations)).join('');
+  // Camera glide lives on a root group: CSS cannot animate `viewBox` inside an
+  // `<img>`. The still path applies the same matrix, so both stay in step.
+  const cameraMatrix = options.frame?.camera ? cameraFitMatrix(options.frame.camera, viewBox) : null;
+  const cameraStyle = [
+    'transform-box:view-box',
+    'transform-origin:0 0',
+    ...(options.cameraAnimation ? [cssAnimation(options.cameraAnimation)] : []),
+    ...(cameraMatrix ? [`transform:${matrixCss(cameraMatrix)}`] : []),
+  ].join(';');
+  const content = options.cameraAnimation || cameraMatrix
+    ? `<g${options.cameraAnimation ? ` class="${ANIMATED_CLASS}"` : ''} style="${cameraStyle}">${connectorMarkup}${nodeMarkup}</g>`
+    : `${connectorMarkup}${nodeMarkup}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${number(x)} ${number(y)} ${number(width)} ${number(height)}" width="${number(width * pixelRatio)}" height="${number(height * pixelRatio)}" data-openflowkit-document="${xml(document.id)}" data-page="${xml(page.id)}" data-theme="${theme}" data-pixel-ratio="${number(pixelRatio)}">${options.styleSheet ? `<style>${options.styleSheet}</style>` : ''}${options.transparent ? '' : `<rect x="${number(x)}" y="${number(y)}" width="${number(width)}" height="${number(height)}" fill="${background}"/>`}${content}</svg>`;
 }

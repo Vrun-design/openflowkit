@@ -2,6 +2,8 @@ import { useEffect, type RefObject } from 'react';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { CanvasSelection } from '../../application/selection/selection';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
+import type { AnimationPreset } from '../../domain/animation/types';
+import { animatedSvgFor, autoTimelineFor, motionFrameSvgFor, timelineDuration } from './v2Motion';
 import type { V2Tool } from './V2CreationToolbar';
 import type { V2SaveStatus } from './useV2Autosave';
 import type { useV2Proposal } from './useV2Proposal';
@@ -43,8 +45,7 @@ export function useV2TestApi(options: V2TestApiOptions) {
         changeIds: proposal.changes.map(({ id }) => id), decisions: proposal.decisions,
         error: proposal.error,
       }),
-      getRenderDiagnostics: () => hostRef.current?.getRenderDiagnostics(),
-      getNodeDebugSnapshot: () => hostRef.current?.getNodeDebugSnapshot(),
+      getRenderDiagnostics: () => hostRef.current?.getRenderDiagnostics(),      getNodeDebugSnapshot: () => hostRef.current?.getNodeDebugSnapshot(),
       getConnectorDebugSnapshot: () => hostRef.current?.getConnectorDebugSnapshot(),
       getLiveConnectorSamples: (connectorId: string) =>
         hostRef.current?.getLiveConnectorSamples(connectorId) ?? null,
@@ -57,6 +58,21 @@ export function useV2TestApi(options: V2TestApiOptions) {
         return bounds
           ? { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height }
           : null;
+      },
+      // Animated-export parity probe: the animated SVG and the still at any t
+      // come from the same timeline, so the gate can pixel-compare them.
+      getMotionExport: (preset: AnimationPreset = 'build', pageId?: string) => {
+        if (!document) return null;
+        const target = pageId ?? document.pages[0]?.id;
+        if (!target) return null;
+        const request = { document, pageId: target, preset };
+        const timeline = autoTimelineFor(request);
+        return {
+          durationMs: timelineDuration(timeline),
+          steps: timeline.steps.length,
+          animatedSvg: animatedSvgFor({ ...request, timeline }),
+          stillAt: (tMs: number) => motionFrameSvgFor({ ...request, timeline }, tMs),
+        };
       },
     };
     (window as unknown as { __V2__?: typeof api }).__V2__ = api;
