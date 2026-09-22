@@ -56,15 +56,16 @@ test('the rail opens flyouts by mouse and keyboard, picks a shape, locks and und
   const shapesOnPage = (await doc(page)).pages[0].nodes;
   expect(String(shapesOnPage[0]?.content.shape)).toBe('triangle');
 
-  // Lock is undoable: lock the selection, then undo it.
+  // Lock is a keyboard action (⌘L) since the rail lost its button, and it undoes.
   const rect = (await nodeRect(page, (await state(page)).nodes[0]))!;
   const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
   await page.mouse.click(box.x + rect.x + rect.width / 2, box.y + rect.y + rect.height / 2);
   await expect.poll(async () => (await state(page)).nodes.length).toBe(1);
-  await page.getByRole('button', { name: 'Lock' }).click();
+  await page.keyboard.press('Meta+l');
   await expect.poll(async () => String((await doc(page)).pages[0].nodes[0]?.content.sectionLocked)).toBe('true');
   await page.keyboard.press('Meta+z');
   await expect.poll(async () => String((await doc(page)).pages[0].nodes[0]?.content.sectionLocked)).toBe('undefined');
+  await expect(page.getByRole('button', { name: 'Lock' })).toHaveCount(0);
 });
 
 test('the connector flyout picks a route kind used by the next connector', async ({ page }) => {

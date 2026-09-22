@@ -4,6 +4,7 @@ import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalo
 import { CLOUD_PROVIDERS, ICON_PACKS, iconCounts, packLabel, searchIcons } from '@/services/shapeLibrary/iconSearch';
 import type { IconChoice } from '../../domain/nodes/iconNode';
 import { Icon, IconButton } from '../design-system';
+import { EMOJI_GROUPS, searchEmoji } from './emojiCatalog';
 import './v2IconPicker.css';
 
 interface V2IconPickerProps {
@@ -11,6 +12,11 @@ interface V2IconPickerProps {
   readonly selected?: { readonly packId: string; readonly shapeId: string } | null;
   readonly onPick: (icon: IconChoice) => void;
   readonly onClose: () => void;
+  /** Tab to open on; the caller remounts to switch (`key`). */
+  readonly initialPack?: string;
+  /** Emoji live on their own tab, beside the icon packs. */
+  readonly recentEmoji?: readonly string[];
+  readonly onPickEmoji?: (glyph: string) => void;
 }
 
 const PAGE = 160;
@@ -37,16 +43,20 @@ function rememberRecent(icon: IconChoice): void {
 // per pack (Cloud nests its vendors), a search box focused on open, a grid
 // arrows can walk. Browsing shows provider groups with counts; searching
 // shows one ranked list. Previews are the SVGs the canvas draws.
-export function V2IconPicker({ selected, onPick, onClose }: V2IconPickerProps): React.JSX.Element {
-  const [pack, setPack] = useState('all');
+export function V2IconPicker({
+  selected, onPick, onClose, initialPack = 'all', recentEmoji = [], onPickEmoji,
+}: V2IconPickerProps): React.JSX.Element {
+  const [pack, setPack] = useState(initialPack);
   const [vendor, setVendor] = useState('cloud');
   const [query, setQuery] = useState('');
   const [hovered, setHovered] = useState<IconChoice | null>(null);
   const [recent, setRecent] = useState<IconChoice[]>(readRecent);
   const gridRef = useRef<HTMLDivElement>(null);
+  const emojiTab = pack === 'emoji';
   const scope = pack === 'cloud' ? vendor : pack;
   const q = query.trim();
-  const result = useMemo(() => searchIcons(q, scope, PAGE), [q, scope]);
+  const emojiHits = useMemo(() => (emojiTab ? searchEmoji(q) : []), [emojiTab, q]);
+  const result = useMemo(() => (emojiTab ? { icons: [], total: 0 } : searchIcons(q, scope, PAGE)), [emojiTab, q, scope]);
   const groups = useMemo(() => (q ? [] : iconCounts(scope).map(({ provider, total }) => ({
     provider, total, icons: searchIcons('', provider, GROUP_PREVIEW).icons,
   }))), [q, scope]);
@@ -77,6 +87,12 @@ export function V2IconPicker({ selected, onPick, onClose }: V2IconPickerProps): 
   const tab = (id: string, label: string, current: string, set: (id: string) => void) => (
     <button key={id} type="button" role="tab" aria-selected={current === id} className="ofk-icon-picker-tab" onClick={() => set(id)}>{label}</button>
   );
+  const emojiCell = (glyph: string, key: string) => (
+    <button key={key} type="button" role="option" aria-selected={false} aria-label={glyph}
+      className="ofk-icon-picker-cell ofk-icon-picker-cell--emoji" onClick={() => onPickEmoji?.(glyph)}>
+      {glyph}
+    </button>
+  );
 
   return (
     <div className="ofk-icon-picker" onKeyDown={(event) => { if (event.key === 'Escape') { event.stopPropagation(); onClose(); } }}>
@@ -84,6 +100,7 @@ export function V2IconPicker({ selected, onPick, onClose }: V2IconPickerProps): 
         <div className="ofk-icon-picker-tabs" role="tablist" aria-label="Icon packs">
           {tab('all', 'All', pack, setPack)}
           {ICON_PACKS.map((item) => tab(item.id, item.label, pack, setPack))}
+          {onPickEmoji ? tab('emoji', 'Emoji', pack, setPack) : null}
         </div>
         <IconButton variant="quiet" label="Close icons" icon={<Icon icon={IconX} />} onClick={onClose} />
       </header>
@@ -95,16 +112,56 @@ export function V2IconPicker({ selected, onPick, onClose }: V2IconPickerProps): 
       ) : null}
       <label className="ofk-icon-picker-search">
         <Icon icon={IconSearch} />
-        <input type="search" value={query} data-autofocus placeholder={`Search ${scope === 'all' ? 'all' : packLabel(scope)} icons`}
-          aria-label="Search icons" onChange={(event) => setQuery(event.target.value)}
+        <input type="search" value={query} data-autofocus
+          placeholder={emojiTab ? 'Search emoji' : `Search ${scope === 'all' ? 'all' : packLabel(scope)} icons`}
+          aria-label={emojiTab ? 'Search emoji' : 'Search icons'} onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'ArrowDown') { event.preventDefault(); gridRef.current?.querySelector<HTMLButtonElement>('[role="option"]')?.focus(); }
-            if (event.key === 'Enter' && result.icons[0]) pick(result.icons[0]);
+            // Enter picks and closes: preventDefault stops the browser from
+            // then clicking the trigger focus returns to (which would reopen).
+            if (event.key === 'Enter' && emojiTab && emojiHits[0]) {
+              event.preventDefault();
+              onPickEmoji?.(emojiHits[0]);
+            } else if (event.key === 'Enter' && result.icons[0]) {
+              event.preventDefault();
+              pick(result.icons[0]);
+            }
           }} />
         {query ? <IconButton variant="quiet" label="Clear search" icon={<Icon icon={IconX} />} onClick={() => setQuery('')} /> : null}
       </label>
       <div ref={gridRef} className="ofk-icon-picker-body" onKeyDown={moveFocus}>
-        {q ? (
+        {emojiTab ? (
+          <>
+            {q ? (
+              <section className="ofk-icon-picker-group">
+                <h3 className="ofk-caption">Results <span>{emojiHits.length}</span></h3>
+                <div className="ofk-icon-picker-grid ofk-icon-picker-grid--emoji" role="listbox" aria-label="Emoji results">
+                  {emojiHits.map((glyph) => emojiCell(glyph, `hit:${glyph}`))}
+                  {emojiHits.length === 0 ? <p className="ofk-icon-picker-empty">No emoji match “{q}”.</p> : null}
+                </div>
+              </section>
+            ) : (
+              <>
+                {recentEmoji.length > 0 ? (
+                  <section className="ofk-icon-picker-group">
+                    <h3 className="ofk-caption">Recent <span>{recentEmoji.length}</span></h3>
+                    <div className="ofk-icon-picker-grid ofk-icon-picker-grid--emoji" role="listbox" aria-label="Recent emoji">
+                      {recentEmoji.map((glyph) => emojiCell(glyph, `recent:${glyph}`))}
+                    </div>
+                  </section>
+                ) : null}
+                {EMOJI_GROUPS.map((group) => (
+                  <section key={group.id} className="ofk-icon-picker-group">
+                    <h3 className="ofk-caption">{group.label} <span>{group.glyphs.length}</span></h3>
+                    <div className="ofk-icon-picker-grid ofk-icon-picker-grid--emoji" role="listbox" aria-label={group.label}>
+                      {group.glyphs.map((glyph) => emojiCell(glyph, `${group.id}:${glyph}`))}
+                    </div>
+                  </section>
+                ))}
+              </>
+            )}
+          </>
+        ) : q ? (
           <div className="ofk-icon-picker-grid" role="listbox" aria-label="Icons">
             {result.icons.map(cell)}
             {result.total === 0 ? <p className="ofk-icon-picker-empty">No icons match “{q}”.</p> : null}
@@ -134,7 +191,7 @@ export function V2IconPicker({ selected, onPick, onClose }: V2IconPickerProps): 
       </div>
       <footer className="ofk-icon-picker-footer">
         <span>{hovered?.label ?? (q && result.total > PAGE ? `Showing ${PAGE} of ${result.total.toLocaleString()}` : ' ')}</span>
-        <span>{hovered ? packLabel(hovered.provider) : `${result.total.toLocaleString()} icons`}</span>
+        <span>{emojiTab ? 'Emoji' : hovered ? packLabel(hovered.provider) : `${result.total.toLocaleString()} icons`}</span>
       </footer>
     </div>
   );

@@ -7,9 +7,6 @@ import {
   IconMoodSmile,
   IconPencil,
   IconPhotoPlus,
-  IconLock,
-  IconLockOpen,
-  IconPhoto,
   IconPointer,
   IconSquare,
   IconTypography,
@@ -17,7 +14,6 @@ import {
 import type { IconChoice } from '../../domain/nodes/iconNode';
 import { FloatingRegion, Icon, IconButton, Popover, Toolbar, Tooltip } from '../design-system';
 import { V2IconPicker } from './V2IconPicker';
-import { V2EmojiPicker } from './V2EmojiPicker';
 import { FlyoutButton } from './V2Flyout';
 import {
   CHART_OPTIONS, CONNECTOR_OPTIONS, INK_OPTIONS, SHAPE_OPTIONS, connectorOption, shapeOption,
@@ -35,27 +31,23 @@ export function V2CreationToolbar(props: {
   readonly onToolChange: (tool: V2Tool) => void;
   readonly onPickShape: (shape: ShapeKind) => void;
   readonly onPickConnector: (kind: V2ConnectorTool) => void;
-  /** Lock toggles the selection; disabled until something is selected. */
-  readonly selectionCount: number;
-  readonly selectionLocked: boolean;
-  readonly onToggleLock: () => void;
   /** Icon library pick: the page inserts the icon node and opens its label. */
   readonly onInsertIcon: (icon: IconChoice) => void;
   readonly iconsOpen: boolean;
   readonly onIconsOpenChange: (open: boolean) => void;
-  /** Image picks a file; the page stores the bytes and inserts the node. */
-  readonly onInsertImage: () => void;
-  readonly emojiOpen: boolean;
-  readonly onEmojiOpenChange: (open: boolean) => void;
+  /** Emoji live in the same library, on their own tab. */
   readonly onPickEmoji: (glyph: string) => void;
   readonly recentEmoji: readonly string[];
+  /** Which tab the library opens on: E asks for emoji, I for icons. */
+  readonly librarySection: 'icons' | 'emoji';
+  /** Image picks a file; the page stores the bytes and inserts the node. */
+  readonly onInsertImage: () => void;
   /** A chart pick inserts the chart; there is no armed chart tool. */
   readonly onPickChart: (kind: V2ChartKind) => void;
 }): React.JSX.Element {
   // Each picker anchors to its own trigger: the popover opens at the button's
   // height and, more importantly, focus returns to a real button when it closes.
   const toolsRef = useRef<HTMLDivElement>(null);
-  const emojiRef = useRef<HTMLButtonElement>(null);
   const iconsRef = useRef<HTMLButtonElement>(null);
   // One flyout at a time: a rail with two open grids reads as two selections.
   const [flyout, setFlyout] = useState<V2FlyoutId | null>(null);
@@ -101,39 +93,18 @@ export function V2CreationToolbar(props: {
           <IconButton variant="quiet" label="Image" icon={<Icon icon={IconPhotoPlus} />}
             onClick={props.onInsertImage} />
         </Tooltip>
-        <Tooltip content="Emoji" shortcut="E">
-          <IconButton ref={emojiRef} variant="quiet" label="Emoji" icon={<Icon icon={IconMoodSmile} />}
-            selected={props.emojiOpen} aria-haspopup="dialog" aria-expanded={props.emojiOpen}
-            onClick={() => props.onEmojiOpenChange(!props.emojiOpen)} />
-        </Tooltip>
-        <Tooltip content="Icons" shortcut="I">
-          <IconButton ref={iconsRef} variant="quiet" label="Icons" icon={<Icon icon={IconPhoto} />}
+        <Tooltip content="Icons and emoji" shortcut="I / E">
+          <IconButton ref={iconsRef} variant="quiet" label="Icons and emoji" icon={<Icon icon={IconMoodSmile} />}
             selected={props.iconsOpen} aria-haspopup="dialog" aria-expanded={props.iconsOpen}
             onClick={() => props.onIconsOpenChange(!props.iconsOpen)} />
         </Tooltip>
-        <span className="ofk-v2-tools-separator" aria-hidden="true" />
-        <Tooltip shortcut="⌘L"
-          content={props.selectionCount === 0 ? 'Select something to lock' : props.selectionLocked ? 'Unlock' : 'Lock'}>
-          {/* A disabled button swallows pointer events; the wrapper keeps the
-              "select something" hint reachable while staying natively disabled. */}
-          <span className="ofk-v2-lock-slot">
-            <IconButton variant="quiet" label={props.selectionLocked ? 'Unlock' : 'Lock'}
-              icon={<Icon icon={props.selectionLocked ? IconLock : IconLockOpen} />}
-              disabled={props.selectionCount === 0} aria-pressed={props.selectionLocked}
-              onClick={props.onToggleLock} />
-          </span>
-        </Tooltip>
       </Toolbar>
-      <Popover role="dialog" aria-label="Emoji" open={props.emojiOpen} anchorRef={emojiRef}
-        onClose={() => props.onEmojiOpenChange(false)} placement="right-start" gap={12}
-        className="ofk-emoji-panel" onPointerDown={(event) => event.stopPropagation()}>
-        <V2EmojiPicker recent={props.recentEmoji}
-          onClose={() => props.onEmojiOpenChange(false)} onPick={props.onPickEmoji} />
-      </Popover>
       <Popover role="dialog" aria-label="Icon library" open={props.iconsOpen} anchorRef={iconsRef}
         onClose={() => props.onIconsOpenChange(false)} placement="right-start" gap={12}
         className="ofk-style-panel ofk-style-panel--icons" onPointerDown={(event) => event.stopPropagation()}>
-        <V2IconPicker onClose={() => props.onIconsOpenChange(false)}
+        <V2IconPicker key={props.librarySection} initialPack={props.librarySection === 'emoji' ? 'emoji' : 'all'}
+          recentEmoji={props.recentEmoji} onPickEmoji={props.onPickEmoji}
+          onClose={() => props.onIconsOpenChange(false)}
           onPick={(icon) => { props.onInsertIcon(icon); props.onIconsOpenChange(false); }} />
       </Popover>
     </FloatingRegion>

@@ -222,7 +222,10 @@ export function chartContent(node: SceneNode): { chart: ChartKind; data: ChartDa
 
 export function chartTitle(node: SceneNode): string {
   const title = node.content.title;
-  return typeof title === 'string' ? title : '';
+  if (typeof title === 'string' && title.length > 0) return title;
+  // A DSL or agent label doubles as the chart title.
+  const label = node.content.label;
+  return typeof label === 'string' && label !== 'chart-1' ? label : '';
 }
 
 function plotBounds(size: Size2d, legendRows: number): Bounds2d {

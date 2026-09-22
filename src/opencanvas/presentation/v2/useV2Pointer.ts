@@ -188,6 +188,8 @@ interface V2PointerOptions {
   readonly extendConnectorCommand?: (command: DocumentCommand, fromNodeId: string, toNodeId: string) => DocumentCommand;
   /** Sticky defaults: appearance the last style edit left behind, per kind (tldraw). */
   readonly stylePresetsRef?: RefObject<StylePresets>;
+  /** Double-click on a chart opens its data panel; true means it was handled. */
+  readonly onOpenChartData?: (nodeId: string) => boolean;
 }
 
 export interface StylePresets {
@@ -1202,6 +1204,8 @@ export function useV2Pointer(options: V2PointerOptions) {
       const point = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
       const nodeId = host.pickNode(point);
       if (nodeId) {
+        // Charts are data: their double-click edits the numbers, not a label.
+        if (opts.onOpenChartData?.(nodeId)) return;
         opts.openEditor(nodeId);
         return;
       }

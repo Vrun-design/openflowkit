@@ -7,7 +7,9 @@ export interface EmojiGroup {
   readonly glyphs: readonly string[];
 }
 
-export const EMOJI_GROUPS: readonly EmojiGroup[] = [
+// One glyph per group: the lists are hand-written and a repeat would give the
+// grid two children with the same key (and two identical cells).
+const RAW_GROUPS: readonly EmojiGroup[] = [
   {
     id: 'smileys', label: 'Smileys', glyphs: [
       '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰',
@@ -106,6 +108,11 @@ export const EMOJI_GROUPS: readonly EmojiGroup[] = [
 
 // ponytail: names cover the searches people actually type; the grid group is
 // the fallback ("nature", "flags"). Upgrade path is a CLDR name table.
+export const EMOJI_GROUPS: readonly EmojiGroup[] = RAW_GROUPS.map((group) => ({
+  ...group,
+  glyphs: group.glyphs.filter((glyph, index) => group.glyphs.indexOf(glyph) === index),
+}));
+
 const EMOJI_NAMES: Readonly<Record<string, string>> = {
   '🚀': 'rocket launch ship', '✈️': 'airplane flight travel', '🚁': 'helicopter',
   '🛸': 'ufo alien', '⚡': 'lightning bolt zap', '🔥': 'fire hot flame',

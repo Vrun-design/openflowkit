@@ -41,16 +41,13 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly toolConfig: V2ToolConfig;
   readonly onPickShape: (shape: ShapeKind) => void;
   readonly onPickConnector: (kind: V2ConnectorTool) => void;
-  readonly selectionLocked: boolean;
-  readonly onToggleLock: () => void;
   readonly iconsOpen: boolean;
   readonly onIconsOpenChange: (open: boolean) => void;
   readonly onInsertIcon: (icon: IconChoice) => void;
   readonly onInsertImage: () => void;
-  readonly emojiOpen: boolean;
-  readonly onEmojiOpenChange: (open: boolean) => void;
   readonly onPickEmoji: (glyph: string) => void;
   readonly recentEmoji: readonly string[];
+  readonly librarySection: 'icons' | 'emoji';
   readonly onZoomIn: () => void;
   readonly onZoomOut: () => void;
   readonly onZoomTo: (percent: number) => void;
@@ -85,12 +82,10 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange}
           toolConfig={props.toolConfig} onPickShape={props.onPickShape}
           onPickConnector={props.onPickConnector}
-          selectionCount={props.selectedNodeIds.length} selectionLocked={props.selectionLocked}
-          onToggleLock={props.onToggleLock}
           iconsOpen={props.iconsOpen} onIconsOpenChange={props.onIconsOpenChange} onInsertIcon={props.onInsertIcon}
-          onInsertImage={props.onInsertImage} emojiOpen={props.emojiOpen}
-          onEmojiOpenChange={props.onEmojiOpenChange} onPickEmoji={props.onPickEmoji}
-          recentEmoji={props.recentEmoji} onPickChart={props.onPickChart} />
+          onInsertImage={props.onInsertImage} onPickEmoji={props.onPickEmoji}
+          recentEmoji={props.recentEmoji} librarySection={props.librarySection}
+          onPickChart={props.onPickChart} />
       )}
       <V2CameraControls
         preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}

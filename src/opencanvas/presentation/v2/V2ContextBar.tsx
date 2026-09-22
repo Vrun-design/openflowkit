@@ -5,8 +5,8 @@ import { V2NodeStylePanels } from './V2NodeStyle';
 import { V2ArrangeControls } from './V2ArrangeControls';
 import { V2ConnectorStyle } from './V2ConnectorStyle';
 import type { ConnectorStylePatch } from '../../domain/commands/styleConnectors';
-import { IconDots } from '@tabler/icons-react';
-import { ContextBar, ContextGroup, Icon, IconButton, Tooltip } from '../design-system';
+import { IconDots, IconTable } from '@tabler/icons-react';
+import { Button, ContextBar, ContextGroup, Icon, IconButton, Tooltip } from '../design-system';
 
 interface V2ContextBarProps {
   readonly page: ScenePage;
@@ -19,6 +19,8 @@ interface V2ContextBarProps {
   readonly onConnectorStyleCommitted: (patch: ConnectorStylePatch) => void;
   readonly style: React.CSSProperties;
   readonly onOpenMenu: (x: number, y: number) => void;
+  /** Single chart selected: jump straight to its data panel. */
+  readonly onOpenChartData?: () => void;
 }
 
 export interface ContextBarLayout {
@@ -101,6 +103,15 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
         <V2NodeStylePanels key={props.nodeIds.join(':')} page={props.page} nodeIds={props.nodeIds}
           commit={props.commit} onPreview={props.onStylePreview} onCommitted={props.onNodeStyleCommitted} />
       </ContextGroup>
+      {props.onOpenChartData ? (
+        <ContextGroup label="Data">
+          <Tooltip content="Edit chart data">
+            <Button variant="secondary" onClick={props.onOpenChartData}>
+              <Icon icon={IconTable} /> Data
+            </Button>
+          </Tooltip>
+        </ContextGroup>
+      ) : null}
       <ContextGroup label="Arrange">
         <V2ArrangeControls page={props.page} nodeIds={props.nodeIds} commit={props.commit} />
       </ContextGroup>

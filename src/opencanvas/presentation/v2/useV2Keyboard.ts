@@ -33,6 +33,8 @@ interface V2KeyboardOptions {
   readonly onRemoveFromModel: () => void;
   readonly onNudge: (delta: { x: number; y: number }) => void;
   readonly onCancelGesture: () => boolean;
+  /** Escape: close an open utility panel first; false falls through. */
+  readonly onEscapePanel?: () => boolean;
   /** Enter: finish a click-by-click path; false falls through to label editing. */
   readonly onCommitGesture: () => boolean;
   readonly onClearSelection: () => void;
@@ -227,6 +229,8 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
     } else if (event.key === 'Escape') {
       if (opts.onCancelGesture()) {
         /* gesture dropped */
+      } else if (opts.onEscapePanel?.()) {
+        /* panel closed */
       } else if (opts.toolRef.current !== 'select') {
         opts.onToolChange('select');
       } else {

@@ -24,16 +24,22 @@ const PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAgAAAAIAQMAAAD+wSzIAAAABlBMVEX///+/v7+jQ3Y5AAAADklEQVQI12P4AIX8EAgALgAD/aNpbtEAAAAASUVORK5CYII=';
 
 test('emoji search inserts a glyph and undo removes it', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
   await page.goto('/');
   await page.getByTestId('v2-canvas').focus();
-  await page.getByRole('button', { name: 'Emoji' }).click();
-  await page.getByRole('textbox', { name: 'Search emoji' }).fill('rocket');
+  // Emoji live in the icon library: E opens it straight on the Emoji tab.
+  await page.keyboard.press('e');
+  await expect(page.getByRole('tab', { name: 'Emoji' })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('searchbox', { name: 'Search emoji' }).fill('rocket');
   await page.keyboard.press('Enter');
   await expect.poll(async () => (await state(page)).nodes.length).toBe(1);
   const node = (await doc(page)).pages[0].nodes[0]!;
   expect(node.kind).toBe('text');
   expect(node.content.label).toBe('🚀');
   expect(node.appearance.fontSize).toBe(48);
+  expect(errors).toEqual([]);
   // The picker closes onto its trigger: the shortcut still lands.
   await expect.poll(() => page.evaluate(() =>
     Boolean((document.activeElement as HTMLElement)?.closest?.('.ofk-v2')))).toBe(true);

@@ -57,6 +57,8 @@ interface V2CanvasHostProps {
   readonly toolRef: RefObject<V2Tool>;
   readonly tool: V2Tool;
   readonly toolConfigRef: RefObject<V2ToolConfig>;
+  /** Double-click on a chart opens its data panel (the page owns the panel). */
+  readonly onOpenChartData?: (nodeId: string) => boolean;
   readonly spacePanRef: RefObject<boolean>;
   readonly readOnlyRef: RefObject<boolean>;
   readonly gestureApiRef: RefObject<V2GestureApi | null>;
@@ -126,6 +128,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     selectionRef: props.selectionRef,
     toolRef: props.toolRef,
     toolConfigRef: props.toolConfigRef,
+    ...(props.onOpenChartData ? { onOpenChartData: props.onOpenChartData } : {}),
     spacePanRef: props.spacePanRef,
     readOnlyRef: props.readOnlyRef,
     gestureApiRef: props.gestureApiRef,
@@ -499,6 +502,10 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
           onConnectorStyleCommitted={(patch) => {
             stylePresetsRef.current.connector = connectorAppearanceWithPatch(stylePresetsRef.current.connector, patch);
           }}
+          {...(props.onOpenChartData && props.selection.nodeIds.length === 1
+            && props.page.nodes.find((node) => node.id === props.selection.nodeIds[0])?.kind === 'chart'
+            ? { onOpenChartData: () => props.onOpenChartData!(props.selection.nodeIds[0]!) }
+            : {})}
           onOpenMenu={(x, y) => props.onContextMenu(props.selectedConnectorId
             ? { kind: 'connector', id: props.selectedConnectorId, x, y }
             : { kind: 'nodes', x, y })}

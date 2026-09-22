@@ -163,6 +163,13 @@ export function V2ChartDataPanel({ node, pageId, commit, onClose }: V2ChartDataP
   return (
     <Panel className="ofk-chart-panel" title={isQuadrant ? 'Quadrant points' : 'Chart data'}
       onClose={onClose}>
+      <label className="ofk-chart-title">
+        <span className="sr-only">Chart title</span>
+        <input placeholder="Add a title" aria-label="Chart title"
+          value={valueOf('title', typeof node.content.title === 'string' ? node.content.title : '')}
+          onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
+          onBlur={() => commitDraft('title', (value) => writeContent({ title: value }, 'Edit chart title'))} />
+      </label>
       <div className="ofk-chart-panel-body">
         {isQuadrant && quadrant ? (
           <table className="ofk-chart-table">
@@ -196,7 +203,7 @@ export function V2ChartDataPanel({ node, pageId, commit, onClose }: V2ChartDataP
                       onBlur={() => commitDraft(`y:${index}`, (value) => setPoint(index, { y: numberIn(value, point.y) }))} />
                   </td>
                   <td>
-                    <IconButton variant="quiet" label={`Remove point ${index + 1}`}
+                    <IconButton className="ofk-chart-remove" variant="quiet" label={`Remove point ${index + 1}`}
                       icon={<Icon icon={IconX} />} disabled={quadrant.points.length <= 1}
                       onClick={() => removePoint(index)} />
                   </td>
@@ -216,7 +223,7 @@ export function V2ChartDataPanel({ node, pageId, commit, onClose }: V2ChartDataP
                       value={valueOf(`series:${row}`, series.name)}
                       onChange={(event) => setDraft((current) => ({ ...current, [`series:${row}`]: event.target.value }))}
                       onBlur={() => commitDraft(`series:${row}`, (value) => setSeriesName(row, value))} />
-                    <IconButton variant="quiet" label={`Remove series ${row + 1}`}
+                    <IconButton className="ofk-chart-remove" variant="quiet" label={`Remove series ${row + 1}`}
                       icon={<Icon icon={IconX} />} disabled={data.series.length <= 1}
                       onClick={() => removeSeries(row)} />
                   </span>
@@ -233,7 +240,7 @@ export function V2ChartDataPanel({ node, pageId, commit, onClose }: V2ChartDataP
                       value={valueOf(`category:${row}`, category)}
                       onChange={(event) => setDraft((current) => ({ ...current, [`category:${row}`]: event.target.value }))}
                       onBlur={() => commitDraft(`category:${row}`, (value) => setCategory(row, value))} />
-                    <IconButton variant="quiet" label={`Remove row ${row + 1}`}
+                    <IconButton className="ofk-chart-remove" variant="quiet" label={`Remove row ${row + 1}`}
                       icon={<Icon icon={IconX} />} disabled={data.categories.length <= 1}
                       onClick={() => removeRow(row)} />
                   </span>

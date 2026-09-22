@@ -62,3 +62,40 @@ test('chart flyout, data panel edits, type switch and three undos', async ({ pag
   await page.keyboard.press('Meta+z');
   await expect.poll(async () => (await chart(page)).content.series![0]!.values).toEqual(originalValues);
 });
+
+test('the data panel opens on demand, not on every select, and Esc closes it', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('v2-canvas').focus();
+  await page.getByRole('button', { name: 'Charts' }).click();
+  await page.getByRole('option', { name: 'Bar chart' }).click();
+  await expect.poll(async () => (await state(page)).nodes.length).toBe(1);
+
+  const panel = page.getByRole('complementary', { name: 'Chart data' });
+  // Inserting opens it: the author just asked for a chart and wants its data.
+  await expect(panel).toBeVisible();
+  await panel.getByRole('button', { name: 'Close panel' }).click();
+  await expect(panel).toBeHidden();
+
+  // Selecting the chart again does not shove the panel over the canvas.
+  const id = (await state(page)).nodes[0]!;
+  const rect = (await page.evaluate((nodeId: string) =>
+    (window as unknown as { __V2__: { getNodeRect(id: string): { x: number; y: number; width: number; height: number } | null } })
+      .__V2__.getNodeRect(nodeId), id))!;
+  const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
+  await page.mouse.click(box.x + rect.x + rect.width / 2, box.y + rect.y + rect.height / 2);
+  await expect(panel).toBeHidden();
+
+  // The context bar offers Data for a selected chart; Esc closes the panel.
+  await page.locator('[data-context-bar]').getByRole('button', { name: 'Data' }).click();
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole('textbox', { name: 'Chart title' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+  await expect.poll(() => page.evaluate(() =>
+    Boolean((document.activeElement as HTMLElement)?.closest?.('.ofk-v2')))).toBe(true);
+
+  // Double-click reopens it — charts are data, so it edits numbers, not a label.
+  await page.mouse.dblclick(box.x + rect.x + rect.width / 2, box.y + rect.y + rect.height / 2);
+  await expect(panel).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Edit node label' })).toHaveCount(0);
+});

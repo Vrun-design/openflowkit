@@ -471,10 +471,19 @@ export function V2EditorPage(): React.JSX.Element {
   const selectedNode = selection.primaryNodeId && page
     ? page.nodes.find((node) => node.id === selection.primaryNodeId)
     : undefined;
-  // The data panel follows a single chart selection (and the close button).
-  const [chartPanelClosed, setChartPanelOpen] = useState(false);
-  const chartPanelNode = !chartPanelClosed && selectedNode?.kind === 'chart' ? selectedNode : null;
-  useEffect(() => { setChartPanelOpen(false); }, [selectedNode?.id]);
+  // The data panel is pinned to one chart: opening it never covers the canvas
+  // on a plain select, and it stays while you click around. Double-click, the
+  // context bar's Data button, or inserting a chart opens it.
+  const [chartPanelId, setChartPanelId] = useState<string | null>(null);
+  const chartPanelNode = page && chartPanelId
+    ? page.nodes.find((node) => node.id === chartPanelId && node.kind === 'chart') ?? null
+    : null;
+  const openChartData = useCallback((nodeId: string): boolean => {
+    const node = pageRef.current?.nodes.find((candidate) => candidate.id === nodeId);
+    if (node?.kind !== 'chart') return false;
+    setChartPanelId(nodeId);
+    return true;
+  }, []);
   const selectedElementId = selectedNode ? placedElementId(selectedNode) : null;
   const perspectiveFocus = useMemo(
     () => (playback.flow ? null : architectureActions.perspectiveFocus(preferences.perspectiveTags)),
@@ -582,7 +591,8 @@ export function V2EditorPage(): React.JSX.Element {
     hostRef, pageRef, commit: session.commit, mintId: mintV2Id, openEditor, readOnly: load.readOnly,
   });
 
-  const [emojiOpen, setEmojiOpen] = useState(false);
+  // The icon library hosts emoji on their own tab; I and E open it there.
+  const [librarySection, setLibrarySection] = useState<'icons' | 'emoji'>('icons');
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const media = useV2MediaInsert({
     pageRef, commit: session.commit, applySelection, applyConnectorSelection,
@@ -643,20 +653,27 @@ export function V2EditorPage(): React.JSX.Element {
     });
     applyConnectorSelection(null);
     applySelection(replaceSelection([node.id]));
+    setChartPanelId(node.id);
     setAnnouncement('Chart added.');
   };
   const pickEmoji = (glyph: string) => {
     media.insertEmoji(glyph);
     const recent = [glyph, ...preferences.recentEmoji.filter((entry) => entry !== glyph)].slice(0, 24);
     updatePreferences({ recentEmoji: recent });
-    setEmojiOpen(false);
+    iconLibrary.setOpen(false);
   };
 
   const handleKeyDown = useV2Keyboard({
     toolRef, editingRef,
     onToolChange: setTool,
-    onToggleIcons: iconLibrary.toggle,
-    onToggleEmoji: () => setEmojiOpen((open) => !open),
+    onToggleIcons: () => {
+      setLibrarySection('icons');
+      iconLibrary.toggle();
+    },
+    onToggleEmoji: () => {
+      setLibrarySection('emoji');
+      iconLibrary.setOpen(true);
+    },
     onInsertImage: pickImageFile,
     onUndo: session.undo, onRedo: session.redo,
     // On a C4 view Delete unplaces; the model keeps the element.
@@ -703,6 +720,12 @@ export function V2EditorPage(): React.JSX.Element {
     onNudge: editActions.nudgeSelection,
     onCancelGesture: () => gestureApiRef.current?.cancelGesture() ?? false,
     onCommitGesture: () => gestureApiRef.current?.commitGesture() ?? false,
+    onEscapePanel: () => {
+      if (!chartPanelId) return false;
+      setChartPanelId(null);
+      sectionRef.current?.focus({ preventScroll: true });
+      return true;
+    },
     // Escape chain tail: selection first, then the open agent panel.
     onClearSelection: () => {
       if (selectionRef.current.nodeIds.length > 0 || selectedConnectorId) selectionApi.clearAll();
@@ -793,11 +816,10 @@ export function V2EditorPage(): React.JSX.Element {
               toolConfig={toolConfig}
               onPickShape={pickShape}
               onPickConnector={pickConnector}
-              selectionLocked={page.nodes.find((node) => node.id === selection.nodeIds[0])?.content.sectionLocked === true}
-              onToggleLock={editActions.toggleLock}
               iconsOpen={iconLibrary.open} onIconsOpenChange={iconLibrary.setOpen} onInsertIcon={iconLibrary.insertIcon}
-              onInsertImage={pickImageFile} emojiOpen={emojiOpen} onEmojiOpenChange={setEmojiOpen}
-              onPickEmoji={pickEmoji} recentEmoji={preferences.recentEmoji} onPickChart={pickChart}
+              onInsertImage={pickImageFile} onPickEmoji={pickEmoji}
+              recentEmoji={preferences.recentEmoji} librarySection={librarySection}
+              onPickChart={pickChart}
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
               onZoomTo={camera.zoomTo}
@@ -807,7 +829,7 @@ export function V2EditorPage(): React.JSX.Element {
             <V2CanvasHost
               page={page} hostRef={hostRef} camera={camera.camera} cameraRef={camera.cameraRef} pageRef={pageRef}
               selectionRef={selectionRef} toolRef={toolRef} tool={tool} spacePanRef={spacePanRef}
-              toolConfigRef={toolConfigRef}
+              toolConfigRef={toolConfigRef} onOpenChartData={openChartData}
               readOnlyRef={readOnlyRef} gestureApiRef={gestureApiRef}
               selection={selection} selectedConnectorId={selectedConnectorId}
               editing={editing}
@@ -918,7 +940,7 @@ export function V2EditorPage(): React.JSX.Element {
             {shortcutsOpen ? <V2Shortcuts onClose={() => setShortcutsOpen(false)} /> : null}
             {chartPanelNode ? (
               <V2ChartDataPanel key={chartPanelNode.id} node={chartPanelNode} pageId={page.id}
-                commit={session.commit} onClose={() => setChartPanelOpen(false)} />
+                commit={session.commit} onClose={() => setChartPanelId(null)} />
             ) : null}
             {treeOpen ? (
               <V2TreePanel
