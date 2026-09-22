@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { IconChevronDown, IconArrowsRightLeft, IconBold, IconItalic, IconUnderline } from '@tabler/icons-react';
-import type { ScenePage } from '../../domain/document/types';
+import type { ConnectorRouteKind, ScenePage } from '../../domain/document/types';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { resolveConnectorPresentation } from '../../domain/connectors/presentation';
 import type { ConnectorMarkerGlyph } from '../../domain/connectors/types';
@@ -24,10 +24,11 @@ interface V2ConnectorStyleProps {
 }
 
 type Panel = 'line' | 'ends' | 'label';
-type RouteChoice = 'orthogonal' | 'direct' | 'bezier';
+type RouteChoice = ConnectorRouteKind;
 
 const MARKERS: readonly { value: ConnectorMarkerEnd; label: string }[] = [
-  { value: 'none', label: 'None' }, { value: 'arrow', label: 'Arrow' }, { value: 'dot', label: 'Dot' }, { value: 'cross', label: 'Cross' },
+  { value: 'none', label: 'None' }, { value: 'arrow', label: 'Arrow' }, { value: 'dot', label: 'Dot' },
+  { value: 'cross', label: 'Cross' }, { value: 'diamond', label: 'Diamond' },
 ];
 const WIDTH_PRESETS = [1, 2, 3, 4].map((value) => ({
   value, label: <span className="ofk-width-glyph" style={{ height: value }} />, title: `${value}px`,
@@ -43,6 +44,7 @@ function markerValue(markers: readonly ConnectorMarkerGlyph[]): ConnectorMarkerE
   if (markers.includes('arrow')) return 'arrow';
   if (markers.includes('circle')) return 'dot';
   if (markers.includes('cross')) return 'cross';
+  if (markers.some((glyph) => glyph.startsWith('diamond'))) return 'diamond';
   return '';
 }
 
@@ -57,7 +59,7 @@ export function V2ConnectorStyle({ page, connectorId, commit, onCommitted }: V2C
   if (!connector) return null;
   const presentation = resolveConnectorPresentation(connector);
   const label = presentation.label;
-  const route: RouteChoice = connector.route.kind === 'polyline' ? 'direct' : connector.route.kind;
+  const route: RouteChoice = connector.route.kind;
 
   function apply(patch: ConnectorStylePatch): void {
     const command = buildStyleConnectorCommand(page, connectorId, patch);
@@ -91,7 +93,8 @@ export function V2ConnectorStyle({ page, connectorId, commit, onCommitted }: V2C
         </PanelRow>
         <PanelRow label="Path">
           <Segmented<RouteChoice> label="Path" value={route} onChange={(value) => apply({ route: value })}
-            options={[{ value: 'orthogonal', label: 'Elbow' }, { value: 'direct', label: 'Straight' }, { value: 'bezier', label: 'Curve' }]} />
+            options={[{ value: 'orthogonal', label: 'Elbow' }, { value: 'direct', label: 'Straight' },
+              { value: 'bezier', label: 'Curve' }, { value: 'polyline', label: 'Path' }]} />
         </PanelRow>
         {route === 'orthogonal' ? (
           <PanelRow label="Corners">

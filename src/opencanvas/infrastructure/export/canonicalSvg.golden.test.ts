@@ -19,6 +19,7 @@ const FIXTURES: readonly { readonly family: string; readonly file: string }[] = 
   { family: 'gitgraph', file: 'gitgraph/basic.dsl' },
   { family: 'mindmap', file: 'mindmap/product.dsl' },
   { family: 'shape-library', file: 'shapes/library.dsl' },
+  { family: 'edge-markers', file: 'flowchart/markers.dsl' },
 ] as const;
 
 function documentFrom(compiled: CompileResult, name: string): SceneDocumentV1 {

@@ -314,6 +314,8 @@ export interface V2ConnectorOptions {
   readonly target: V2ConnectorEnd;
   /** Route the connector tool was armed with; orthogonal when unspecified. */
   readonly route?: ConnectorRouteKind;
+  /** Authored bends for the path tool, page-space, in order. */
+  readonly waypoints?: readonly Point2d[];
   /** Sticky style from the last connector edit. */
   readonly appearance?: JsonObject;
 }
@@ -342,8 +344,8 @@ export function buildInsertConnectorCommand(
       id: options.id,
       source: connectorEndpoint(page, options.source),
       target: connectorEndpoint(page, options.target),
-      route: { kind: options.route ?? 'orthogonal', ownership: 'automatic' },
-      waypoints: [],
+      route: { kind: options.route ?? 'orthogonal', ownership: options.waypoints?.length ? 'manual' : 'automatic' },
+      waypoints: options.waypoints?.map((point) => ({ ...point })) ?? [],
       labels: [],
       appearance: { markerEnd: 'arrow', ...options.appearance },
       semantics: {},

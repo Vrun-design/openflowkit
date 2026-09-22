@@ -110,7 +110,7 @@ export function compareNodes(a: SceneNode, b: SceneNode): number {
   return left[0] - right[0] || left[1] - right[1] || left[2] - right[2] || left[3].localeCompare(right[3]);
 }
 
-export type MarkerName = 'arrow' | 'circle' | 'cross';
+export type MarkerName = 'arrow' | 'circle' | 'cross' | 'diamond';
 
 export function markerName(value: unknown): MarkerName | undefined {
   if (typeof value === 'string') {
@@ -118,6 +118,7 @@ export function markerName(value: unknown): MarkerName | undefined {
     if (text.includes('arrow')) return 'arrow';
     if (text.includes('dot') || text.includes('circle')) return 'circle';
     if (text.includes('cross')) return 'cross';
+    if (text.includes('diamond')) return 'diamond';
   }
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     const type = (value as Record<string, unknown>).type;

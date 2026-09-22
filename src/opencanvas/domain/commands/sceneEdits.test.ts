@@ -289,3 +289,25 @@ describe('v2 reorder and lock commands', () => {
     expect(buildToggleLockCommand(locked, ['node-a']).label).toBe('Unlock');
   });
 });
+
+describe('path connector creation', () => {
+  it('writes authored waypoints as a manual polyline', () => {
+    const page = emptyPage();
+    const command = buildInsertConnectorCommand(page, {
+      id: 'edge-1', source: { point: { x: 0, y: 0 } }, target: { point: { x: 90, y: 40 } },
+      route: 'polyline', waypoints: [{ x: 40, y: 0 }, { x: 40, y: 40 }],
+    });
+    expect(command.connector.route).toEqual({ kind: 'polyline', ownership: 'manual' });
+    expect(command.connector.waypoints).toEqual([{ x: 40, y: 0 }, { x: 40, y: 40 }]);
+    expect(command.connector.appearance.markerEnd).toBe('arrow');
+  });
+
+  it('keeps a plain drag automatic with no bends', () => {
+    const page = emptyPage();
+    const command = buildInsertConnectorCommand(page, {
+      id: 'edge-2', source: { point: { x: 0, y: 0 } }, target: { point: { x: 90, y: 40 } },
+    });
+    expect(command.connector.route).toEqual({ kind: 'orthogonal', ownership: 'automatic' });
+    expect(command.connector.waypoints).toEqual([]);
+  });
+});

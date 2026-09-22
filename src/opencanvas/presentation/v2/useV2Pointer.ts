@@ -94,8 +94,23 @@ interface V2ConnectOperation {
 
 type V2Operation = PixiPointerOperation | V2CreateOperation | V2ConnectOperation;
 
+// The path tool is click-by-click, so its draft lives beside the pointer
+// operations: points are the ends committed so far, cursor is the live end.
+interface V2PathPoint {
+  readonly at: Point2d;
+  readonly nodeId: string | null;
+}
+
+interface V2PathDraft {
+  readonly page: ScenePage;
+  readonly points: V2PathPoint[];
+  cursor: Point2d;
+}
+
 export interface V2GestureApi {
   readonly cancelGesture: () => boolean;
+  /** Enter: finish the click-by-click path (false when no draft is open). */
+  readonly commitGesture: () => boolean;
 }
 
 interface V2PointerOptions {
@@ -206,25 +221,26 @@ function pickHandleNear(
   return null;
 }
 
-// The dragged-out connector as it will commit: routed live, so the user sees
-// the real lane and the side it will bind to before letting go.
-function previewConnector(
-  options: V2PointerOptions,
-  operation: V2ConnectOperation,
-  targetNodeId: string | null,
-  toWorld: Point2d
-): SceneConnector {
-  const kind = options.toolConfigRef.current.connector;
+// The dragged-out (or click-by-click) connector as it will commit: routed live,
+// so the user sees the real lane and the side it will bind to before letting go.
+function connectorPreview(options: V2PointerOptions, ends: {
+  readonly source: { readonly nodeId: string | null; readonly point: Point2d };
+  readonly target: { readonly nodeId: string | null; readonly point: Point2d };
+  readonly waypoints?: readonly Point2d[];
+}, routeKind?: ConnectorRouteKind): SceneConnector {
+  const kind = routeKind ?? CONNECTOR_ROUTE[options.toolConfigRef.current.connector];
+  const waypoints = ends.waypoints ?? [];
   return {
     id: '__connect-preview',
-    source: operation.sourceNodeId
-      ? { nodeId: operation.sourceNodeId, portId: null, anchor: null, point: null }
-      : { nodeId: null, portId: null, anchor: null, point: operation.fromWorld },
-    target: targetNodeId
-      ? { nodeId: targetNodeId, portId: null, anchor: null, point: null }
-      : { nodeId: null, portId: null, anchor: null, point: toWorld },
-    route: { kind: CONNECTOR_ROUTE[kind], ownership: 'automatic' },
-    waypoints: [], labels: [], appearance: { markerEnd: connectorHeadEnd(kind) },
+    source: ends.source.nodeId
+      ? { nodeId: ends.source.nodeId, portId: null, anchor: null, point: null }
+      : { nodeId: null, portId: null, anchor: null, point: ends.source.point },
+    target: ends.target.nodeId
+      ? { nodeId: ends.target.nodeId, portId: null, anchor: null, point: null }
+      : { nodeId: null, portId: null, anchor: null, point: ends.target.point },
+    route: { kind, ownership: waypoints.length ? 'manual' : 'automatic' },
+    waypoints: waypoints.map((point) => ({ ...point })),
+    labels: [], appearance: { markerEnd: kind === 'direct' ? 'none' : 'arrow' },
     semantics: {}, metadata: {}, extensions: {},
   };
 }
@@ -302,22 +318,71 @@ export function useV2Pointer(options: V2PointerOptions) {
     pendingTransformRef.current = null;
   }, []);
 
+  const pathDraftRef = useRef<V2PathDraft | null>(null);
+  const renderPathPreview = useCallback(() => {
+    const draft = pathDraftRef.current;
+    const host = optionsRef.current.hostRef.current;
+    if (!draft || !host) return;
+    const [first, ...rest] = draft.points;
+    if (!first) return;
+    host.setConnectionPreview(connectorPreview(optionsRef.current, {
+      source: { nodeId: first.nodeId, point: first.at },
+      target: { nodeId: null, point: draft.cursor },
+      waypoints: [...rest.map((point) => point.at), draft.cursor],
+    }, 'polyline'));
+  }, []);
+
+  const commitPathDraft = useCallback((): boolean => {
+    const draft = pathDraftRef.current;
+    const opts = optionsRef.current;
+    if (!draft || draft.points.length < 2) return false;
+    pathDraftRef.current = null;
+    opts.hostRef.current?.setConnectionPreview(null);
+    const [first, ...rest] = draft.points;
+    const last = rest.pop()!;
+    const id = opts.mintId('connector');
+    opts.commit(buildInsertConnectorCommand(draft.page, {
+      id,
+      source: first!.nodeId ? { nodeId: first!.nodeId } : { point: first!.at },
+      target: last.nodeId ? { nodeId: last.nodeId } : { point: last.at },
+      route: 'polyline',
+      waypoints: rest.map((point) => point.at),
+      appearance: connectorAppearance(opts),
+    }));
+    opts.applySelection(clearSelection());
+    opts.applyConnectorSelection(id);
+    opts.onToolChange('select');
+    return true;
+  }, []);
+
   const cancelGesture = useCallback((): boolean => {
     detachWindow();
     cancelTransformFrame();
+    const draft = pathDraftRef.current;
+    if (draft) {
+      // Escape peels the last click off the path; the first click cancels it.
+      if (draft.points.length > 1) {
+        draft.points.pop();
+        renderPathPreview();
+        return true;
+      }
+      pathDraftRef.current = null;
+      optionsRef.current.hostRef.current?.setConnectionPreview(null);
+      return true;
+    }
     if (!operationRef.current) return false;
     operationRef.current = null;
     clearPreviews();
     return true;
-  }, [clearPreviews, detachWindow, cancelTransformFrame]);
+  }, [clearPreviews, detachWindow, cancelTransformFrame, renderPathPreview]);
   useEffect(() => () => {
     detachWindow();
     cancelTransformFrame();
   }, [detachWindow, cancelTransformFrame]);
 
   useEffect(() => {
-    gestureApiRef.current = { cancelGesture };
-  }, [gestureApiRef, cancelGesture]);
+    gestureApiRef.current = { cancelGesture, commitGesture: commitPathDraft };
+  }, [gestureApiRef, cancelGesture, commitPathDraft]);
 
   const applyPendingTransformPreview = useCallback(() => {
     const opts = optionsRef.current;
@@ -347,6 +412,11 @@ export function useV2Pointer(options: V2PointerOptions) {
       if (!host) return;
       const point = latestLocalPoint(event);
       if (!operation) {
+        if (pathDraftRef.current) {
+          pathDraftRef.current.cursor = host.screenToWorld(point);
+          renderPathPreview();
+          return;
+        }
         if (opts.toolRef.current === 'select' && event.target instanceof HTMLCanvasElement) {
           const handle = host.pickTransformHandle(point);
           // Handles sit outside their node, so a hover over one comes from
@@ -404,7 +474,13 @@ export function useV2Pointer(options: V2PointerOptions) {
         const toWorld = host.screenToWorld(point);
         operationRef.current = { ...operation, toWorld };
         const overNode = host.pickNode(point);
-        host.setConnectionPreview(previewConnector(opts, operation, overNode !== operation.sourceNodeId ? overNode : null, toWorld));
+        host.setConnectionPreview(connectorPreview(opts, {
+          source: { nodeId: operation.sourceNodeId, point: operation.fromWorld },
+          target: {
+            nodeId: overNode !== operation.sourceNodeId ? overNode : null,
+            point: toWorld,
+          },
+        }));
       } else if (operation.kind === 'connector-edit') {
         // Shift pins a dragged endpoint to free canvas space instead of binding.
         const overNode = operation.handle.kind === 'endpoint' && !event.shiftKey
@@ -418,7 +494,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         host.setMarquee(boundsBetween(operation.start, point));
       }
     },
-    [applyPendingTransformPreview]
+    [applyPendingTransformPreview, renderPathPreview]
   );
 
   const pointerUp = useCallback(
@@ -687,6 +763,28 @@ export function useV2Pointer(options: V2PointerOptions) {
         host.setMarquee(boundsBetween(point, point));
         return;
       }
+      if (tool === 'connector' && opts.toolConfigRef.current.connector === 'path') {
+        // Click by click: each click extends the polyline, Enter or a click on
+        // another shape finishes it, Escape peels the last point off.
+        const world = host.screenToWorld(point);
+        const hit = host.pickNode(point);
+        const draft = pathDraftRef.current;
+        if (!draft) {
+          pathDraftRef.current = {
+            page, points: [{ at: world, nodeId: hit }], cursor: world,
+          };
+          renderPathPreview();
+          return;
+        }
+        draft.points.push({ at: world, nodeId: hit });
+        draft.cursor = world;
+        if (hit && hit !== draft.points[0]!.nodeId) {
+          commitPathDraft();
+          return;
+        }
+        renderPathPreview();
+        return;
+      }
       if (tool === 'connector') {
         // Starts anywhere: over a shape binds that end, empty canvas leaves
         // it free (ADR-001), like Excalidraw and tldraw arrows.
@@ -781,7 +879,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         additive,
       };
     },
-    [detachWindow, pointerMove, pointerUp]
+    [detachWindow, pointerMove, pointerUp, renderPathPreview, commitPathDraft]
   );
 
   const handlePointerMove = useCallback(
@@ -802,7 +900,19 @@ export function useV2Pointer(options: V2PointerOptions) {
       if (event.target !== event.currentTarget && !(event.target instanceof HTMLCanvasElement)) return;
       const opts = optionsRef.current;
       const host = opts.hostRef.current;
-      if (!host || opts.toolRef.current !== 'select' || opts.readOnlyRef.current) return;
+      if (!host || opts.readOnlyRef.current) return;
+      if (pathDraftRef.current) {
+        // A double-click anywhere is "that is the last point".
+        const draft = pathDraftRef.current;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        draft.points.push({
+          at: host.screenToWorld({ x: event.clientX - bounds.left, y: event.clientY - bounds.top }),
+          nodeId: null,
+        });
+        commitPathDraft();
+        return;
+      }
+      if (opts.toolRef.current !== 'select') return;
       const bounds = event.currentTarget.getBoundingClientRect();
       const point = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
       const nodeId = host.pickNode(point);
@@ -825,7 +935,7 @@ export function useV2Pointer(options: V2PointerOptions) {
       opts.applySelection(replaceSelection([id]));
       opts.openEditor(id, { isNew: true });
     },
-    []
+    [commitPathDraft]
   );
 
   return {

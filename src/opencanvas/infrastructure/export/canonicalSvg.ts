@@ -8,6 +8,7 @@ import type { Matrix2d, Point2d, Size2d } from '../../domain/geometry/types';
 import { resolveBasicNodePresentation, type BasicNodeShape } from '../../domain/nodes/basicNodePresentation';
 import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
 import { basicNodeDecorations } from '../../domain/nodes/basicNodeDecorations';
+import type { ConnectorMarkerGlyph, ProjectedConnector } from '../../domain/connectors/types';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import {
   resolveFreeformNodePresentation,
@@ -324,6 +325,84 @@ function decorationMarkup(
   }).join('');
 }
 
+/** Arrowheads and end glyphs, with the exact geometry the Pixi renderer uses. */
+function markerMarkup(connector: ProjectedConnector, stroke: string): string {
+  const { samples, presentation } = connector;
+  if (samples.length < 2) return '';
+  const first = samples[0]!;
+  const last = samples[samples.length - 1]!;
+  const width = presentation.stroke.width;
+  const glyph = (value: ConnectorMarkerGlyph, endpoint: Point2d, outward: Point2d, index: number) =>
+    markerPath(value, endpoint, outward, index * 9, stroke, width, presentation.stroke.opacity);
+  const start = presentation.sourceMarkers
+    .map((value, index) => glyph(value, first, directionBetween(samples[1]!, first), index)).join('');
+  const end = presentation.targetMarkers
+    .map((value, index) => glyph(value, last, directionBetween(samples[samples.length - 2]!, last), index)).join('');
+  return start + end;
+}
+
+function directionBetween(from: Point2d, to: Point2d): Point2d {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  return length > 1e-9 ? { x: dx / length, y: dy / length } : { x: 1, y: 0 };
+}
+
+function offsetPoint(point: Point2d, direction: Point2d, distance: number): Point2d {
+  return { x: point.x + direction.x * distance, y: point.y + direction.y * distance };
+}
+
+function markerPath(
+  glyph: ConnectorMarkerGlyph,
+  endpoint: Point2d,
+  outward: Point2d,
+  offset: number,
+  stroke: string,
+  width: number,
+  opacity: number
+): string {
+  const tip = offsetPoint(endpoint, outward, -offset);
+  const normal = { x: -outward.y, y: outward.x };
+  const strokeAttrs = `fill="none" stroke="${stroke}" stroke-width="${number(width)}" opacity="${number(opacity)}"`;
+  const polygon = (points: readonly Point2d[], filled: boolean) => {
+    const data = points.map((point, index) => `${index ? 'L' : 'M'}${number(point.x)} ${number(point.y)}`).join(' ') + ' Z';
+    return filled
+      ? `<path d="${data}" fill="${stroke}" opacity="${number(opacity)}"/>`
+      : `<path d="${data}" ${strokeAttrs}/>`;
+  };
+  if (glyph === 'arrow' || glyph === 'triangle-open' || glyph === 'triangle-filled') {
+    const back = offsetPoint(tip, outward, -9);
+    const points = [tip, offsetPoint(back, normal, 4.5), offsetPoint(back, normal, -4.5)];
+    if (glyph === 'arrow') {
+      return `<path d="M${number(points[1]!.x)} ${number(points[1]!.y)} L${number(points[0]!.x)} ${number(points[0]!.y)} L${number(points[2]!.x)} ${number(points[2]!.y)}" ${strokeAttrs} stroke-linejoin="round"/>`;
+    }
+    return polygon(points, glyph === 'triangle-filled');
+  }
+  if (glyph === 'diamond-open' || glyph === 'diamond-filled') {
+    const far = offsetPoint(tip, outward, -14);
+    const middle = offsetPoint(tip, outward, -7);
+    return polygon([tip, offsetPoint(middle, normal, 4.5), far, offsetPoint(middle, normal, -4.5)],
+      glyph === 'diamond-filled');
+  }
+  if (glyph === 'circle') {
+    const center = offsetPoint(tip, outward, -5);
+    return `<circle cx="${number(center.x)}" cy="${number(center.y)}" r="4" fill="none" ${strokeAttrs}/>`;
+  }
+  if (glyph === 'bar') {
+    const center = offsetPoint(tip, outward, -3);
+    return `<path d="M${number(offsetPoint(center, normal, 5).x)} ${number(offsetPoint(center, normal, 5).y)} L${number(offsetPoint(center, normal, -5).x)} ${number(offsetPoint(center, normal, -5).y)}" ${strokeAttrs}/>`;
+  }
+  if (glyph === 'cross') {
+    const center = offsetPoint(tip, outward, -5);
+    const a = offsetPoint(offsetPoint(center, normal, 4.5), outward, 4.5);
+    const b = offsetPoint(offsetPoint(center, normal, -4.5), outward, -4.5);
+    const c = offsetPoint(offsetPoint(center, normal, 4.5), outward, -4.5);
+    const d = offsetPoint(offsetPoint(center, normal, -4.5), outward, 4.5);
+    return `<path d="M${number(a.x)} ${number(a.y)} L${number(b.x)} ${number(b.y)} M${number(c.x)} ${number(c.y)} L${number(d.x)} ${number(d.y)}" ${strokeAttrs}/>`;
+  }
+  return '';
+}
+
 function selectedPage(page: ScenePage, selectedNodeIds?: readonly string[]): ScenePage {
   const states = buildNodeStateMap(page);
   const selected = selectedNodeIds ? new Set(selectedNodeIds) : null;
@@ -361,7 +440,9 @@ export function exportCanonicalSvg(
   const connectorMarkup = connectors.map((connector) => {
     const stroke = safeColor(connector.presentation.stroke.color, theme === 'dark' ? '#cbd5e1' : '#475569');
     return `<g data-connector-id="${xml(connector.id)}"><path d="${connectorPathData(connector.commands)}" fill="none" stroke="${stroke}" stroke-width="${number(connector.presentation.stroke.width)}" opacity="${number(connector.presentation.stroke.opacity)}"${connector.presentation.stroke.dash.length ? ` stroke-dasharray="${connector.presentation.stroke.dash.map(number).join(' ')}"` : ''}/>`
-      + connector.labels.map((label) => `<text x="${number(label.point.x)}" y="${number(label.point.y)}" text-anchor="middle" fill="${theme === 'dark' ? '#f8fafc' : '#0f172a'}" font-family="system-ui,sans-serif" font-size="11">${xml(label.text)}</text>`).join('') + '</g>';
+      + connector.labels.map((label) => `<text x="${number(label.point.x)}" y="${number(label.point.y)}" text-anchor="middle" fill="${theme === 'dark' ? '#f8fafc' : '#0f172a'}" font-family="system-ui,sans-serif" font-size="11">${xml(label.text)}</text>`).join('')
+      + markerMarkup(connector, stroke)
+      + '</g>';
   }).join('');
   const nodeMarkup = [...page.nodes].sort((a, b) => a.zIndex - b.zIndex || a.id.localeCompare(b.id))
     .map((node) => exportNode(node, matrices.get(node.id)!, theme)).join('');

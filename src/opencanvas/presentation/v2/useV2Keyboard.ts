@@ -33,6 +33,8 @@ interface V2KeyboardOptions {
   readonly onRemoveFromModel: () => void;
   readonly onNudge: (delta: { x: number; y: number }) => void;
   readonly onCancelGesture: () => boolean;
+  /** Enter: finish a click-by-click path; false falls through to label editing. */
+  readonly onCommitGesture: () => boolean;
   readonly onClearSelection: () => void;
   readonly onSelectAll: () => void;
   readonly onFitView: () => void;
@@ -203,7 +205,7 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onEditPrimary('f2');
       event.preventDefault();
     } else if (event.key === 'Enter') {
-      opts.onEditPrimary(event.metaKey || event.shiftKey ? 'f2' : 'enter');
+      if (!opts.onCommitGesture()) opts.onEditPrimary(event.metaKey || event.shiftKey ? 'f2' : 'enter');
       event.preventDefault();
     } else if (event.key === 'Escape') {
       if (opts.onCancelGesture()) {

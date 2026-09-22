@@ -68,6 +68,22 @@ describe('route kind patch', () => {
   });
 });
 
+describe('markers and polyline', () => {
+  it('accepts the diamond marker and keeps bends when switching to polyline', () => {
+    const page = createTestDocument({
+      nodes: [createTestNode('a'), createTestNode('b')],
+      connectors: [createTestConnector('e', 'a', 'b', {
+        route: { kind: 'orthogonal', ownership: 'hybrid' }, waypoints: [{ x: 5, y: 5 }],
+      })],
+    }).pages[0];
+    const markers = buildStyleConnectorCommand(page, 'e', { markerEnd: 'diamond' })!;
+    expect(markers.after.appearance.markerEnd).toBe('diamond');
+    const polyline = buildStyleConnectorCommand(page, 'e', { route: 'polyline' })!;
+    expect(polyline.after.route).toEqual({ kind: 'polyline', ownership: 'automatic' });
+    expect(polyline.after.waypoints).toEqual([{ x: 5, y: 5 }]);
+  });
+});
+
 describe('reverse and label keys', () => {
   it('swaps ends, mirrors bends and labels, writes label keys', () => {
     const page = createTestDocument({

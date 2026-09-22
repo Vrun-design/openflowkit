@@ -620,6 +620,7 @@ export function V2EditorPage(): React.JSX.Element {
     },
     onNudge: editActions.nudgeSelection,
     onCancelGesture: () => gestureApiRef.current?.cancelGesture() ?? false,
+    onCommitGesture: () => gestureApiRef.current?.commitGesture() ?? false,
     // Escape chain tail: selection first, then the open agent panel.
     onClearSelection: () => {
       if (selectionRef.current.nodeIds.length > 0 || selectedConnectorId) selectionApi.clearAll();

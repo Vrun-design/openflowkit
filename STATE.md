@@ -8,7 +8,10 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
 - 6.1 done 2026-09-22 (opencode/deepseek-v4.1): rail flyouts (shapes, connector) + lock.
 - 6.2 done 2026-09-22 (opencode/deepseek-v4.1): 46 library shapes end to end — outlines,
   label insets, Pixi decorations (venn lens, target rings, cube/prism depth), SVG export,
-  DSL words + Mermaid aliases, numbered-circle auto-labels, scene-tree names. 6.3 claimed.
+  DSL words + Mermaid aliases, numbered-circle auto-labels, scene-tree names.
+- 6.3 done 2026-09-22 (opencode/deepseek-v4.1): connector variants — click-by-click path
+  tool (Enter/double-click ends, Esc peels a point), diamond marker in the DSL + style bar,
+  Path in the Path panel, and SVG export now draws every end glyph like Pixi does. 6.4 claimed.
 - `check-v2-polish.mjs` fails on this machine at HEAD too (idle render count, context-bar
   follow, resize assertions in three separate runs) — environment, not a phase-6 regression.
   Re-run when the machine is quiet; the script's numbers are the phase gate.

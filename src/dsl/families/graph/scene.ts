@@ -282,8 +282,12 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     duplicates.set(pair, occurrence);
     const total = pairTotals.get(pair) ?? 1;
     const typed = typedFrom(edge.entries);
-    const head = edge.arrow === '--' ? 'none' : typed.head;
-    const tail = edge.arrow === '--' ? 'none' : typed.tail;
+    // `--` means a bare line, unless the author named a marker on it:
+    // `A -- B [head: diamond]` is a line with a diamond at the target.
+    const anchored = (key: 'head' | 'tail', value: string): string =>
+      edge.arrow === '--' && !edge.entries.some((entry) => entry.key === key) ? 'none' : value;
+    const head = anchored('head', typed.head);
+    const tail = anchored('tail', typed.tail);
     const dashed = edge.arrow === '-->' || edge.arrow === '<-->' || typed.flags.has('dashed');
     const tailArrow = edge.arrow === '<->' || edge.arrow === '<-->' || tail === 'arrow';
     return {
@@ -409,7 +413,10 @@ function endpoint(nodeId: string, side: TypedAttributes['from']): SceneConnector
 }
 
 function marker(value: string): string {
-  return value === 'circle' ? 'circle' : value === 'cross' ? 'cross' : 'arrow';
+  if (value === 'circle') return 'circle';
+  if (value === 'cross') return 'cross';
+  if (value === 'diamond') return 'diamond-open';
+  return 'arrow';
 }
 
 function iconProvider(icon: string): string {

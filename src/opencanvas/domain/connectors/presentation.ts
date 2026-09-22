@@ -30,6 +30,7 @@ function markerFromAppearance(value: JsonValue | undefined): ConnectorMarkerGlyp
     if (text.includes('arrow')) return ['arrow'];
     if (text.includes('dot') || text.includes('circle')) return ['circle'];
     if (text.includes('cross')) return ['cross'];
+    if (text.includes('diamond')) return ['diamond-open'];
     return [];
   }
   if (!value || typeof value !== 'object' || Array.isArray(value)) return [];

@@ -3,7 +3,7 @@ import type { ConnectorRouteKind, ScenePage } from '../document/types';
 import type { JsonObject, JsonValue } from '../document/json';
 import { areStructurallyEqual } from './equality';
 
-export type ConnectorMarkerEnd = 'none' | 'arrow' | 'dot' | 'cross';
+export type ConnectorMarkerEnd = 'none' | 'arrow' | 'dot' | 'cross' | 'diamond';
 export type ConnectorDashStyle = 'solid' | 'dashed' | 'dotted';
 
 export interface ConnectorStylePatch {
@@ -14,8 +14,8 @@ export interface ConnectorStylePatch {
   readonly cornerRadius?: number;
   readonly markerStart?: ConnectorMarkerEnd;
   readonly markerEnd?: ConnectorMarkerEnd;
-  /** Path shape; switching it drops manual bends and goes back to automatic. */
-  readonly route?: Exclude<ConnectorRouteKind, 'polyline'>;
+  /** Path shape; switching away from polyline drops manual bends. */
+  readonly route?: ConnectorRouteKind;
   /** Swap source and target; markers stay on their ends, so the arrow flips. */
   readonly reverse?: boolean;
   /** Label typography and plate (connectors/labelStyle.ts). */
@@ -69,7 +69,11 @@ export function buildStyleConnectorCommand(
   if (!before) throw new RangeError(`Connector "${connectorId}" was not found.`);
   const appearance = connectorAppearanceWithPatch(before.appearance, patch);
   let after = patch.route !== undefined && patch.route !== before.route.kind
-    ? { ...before, appearance, route: { kind: patch.route, ownership: 'automatic' as const }, waypoints: [] }
+    ? {
+        ...before, appearance, route: { kind: patch.route, ownership: 'automatic' as const },
+        // A polyline keeps the bends it already has; every other kind routes itself.
+        waypoints: patch.route === 'polyline' ? before.waypoints : [],
+      }
     : { ...before, appearance };
   if (patch.reverse) {
     after = {

@@ -11,6 +11,7 @@ import type { Bounds2d } from '../../domain/geometry/types';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import { useV2Pointer } from './useV2Pointer';
 import { DEFAULT_TOOL_CONFIG } from './v2ToolCatalog';
+import type { V2Tool } from './V2CreationToolbar';
 
 function setup(
   extraNodes: ReturnType<typeof createTestNode>[] = [],
@@ -42,12 +43,15 @@ function setup(
   const commit = vi.fn();
   const applyConnectorSelection = vi.fn();
   const openEditor = vi.fn();
+  const toolRef: { current: V2Tool } = { current: 'select' };
+  const toolConfigRef = { current: DEFAULT_TOOL_CONFIG };
+  const gestureApiRef = { current: null as null | { cancelGesture: () => boolean; commitGesture: () => boolean } };
   const { result } = renderHook(() => useV2Pointer({
     hostRef: { current: host as unknown as PixiRendererHost },
     cameraRef: { current: { x: 0, y: 0, zoom: 1 } }, pageRef: { current: page },
-    selectionRef, toolRef: { current: 'select' }, toolConfigRef: { current: DEFAULT_TOOL_CONFIG },
+    selectionRef, toolRef, toolConfigRef,
     spacePanRef: { current: false },
-    readOnlyRef: { current: false }, gestureApiRef: { current: null }, commit,
+    readOnlyRef: { current: false }, gestureApiRef, commit,
     applySelection: (next) => { selectionRef.current = next; }, applyConnectorSelection,
     updateCamera: vi.fn(), openEditor, openConnectorEditor: vi.fn(), onToolChange: vi.fn(), mintId: () => 'new',
   }));
@@ -55,7 +59,8 @@ function setup(
     return { currentTarget: section, target, clientX: x, clientY: y, button: 0,
       pointerId: 1, preventDefault: vi.fn() } as unknown as ReactPointerEvent<HTMLElement>;
   }
-  return { result, host, commit, page, selectionRef, applyConnectorSelection, openEditor, event };
+  return { result, host, commit, page, selectionRef, applyConnectorSelection, openEditor, event,
+    toolRef, toolConfigRef, gestureApiRef };
 }
 
 async function flushFrame(): Promise<void> {
@@ -283,5 +288,55 @@ describe('V2 quick-create from side handles', () => {
       kind: 'set-connector',
       after: { target: { nodeId: null, point: { x: 200, y: 100 } } },
     });
+  });
+});
+
+describe('path connector tool', () => {
+  it('collects clicks into a polyline and commits on Enter', () => {
+    const { result, event, commit, toolRef, toolConfigRef, gestureApiRef, host } = setup();
+    toolRef.current = 'connector';
+    toolConfigRef.current = { shape: 'diamond', connector: 'path' };
+    host.pickNode = vi.fn((): string | null => null);
+    act(() => result.current.handlePointerDown(event(100, 100)));
+    act(() => result.current.handlePointerDown(event(200, 140)));
+    expect(host.setConnectionPreview).toHaveBeenCalled();
+    expect(commit).not.toHaveBeenCalled();
+    act(() => result.current.handlePointerDown(event(300, 180)));
+    let committed = false;
+    act(() => { committed = gestureApiRef.current!.commitGesture(); });
+    expect(committed).toBe(true);
+    expect(commit).toHaveBeenCalledTimes(1);
+    const command = commit.mock.calls[0]![0] as { connector: { route: { kind: string }, waypoints: unknown[] } };
+    expect(command.connector.route.kind).toBe('polyline');
+    expect(command.connector.waypoints).toHaveLength(1);
+  });
+
+  it('peels the last click on Escape and cancels at the first', () => {
+    const { result, event, commit, toolRef, toolConfigRef, gestureApiRef, host } = setup();
+    toolRef.current = 'connector';
+    toolConfigRef.current = { shape: 'diamond', connector: 'path' };
+    host.pickNode = vi.fn((): string | null => null);
+    act(() => result.current.handlePointerDown(event(100, 100)));
+    act(() => result.current.handlePointerDown(event(200, 140)));
+    act(() => { expect(gestureApiRef.current!.cancelGesture()).toBe(true); });
+    act(() => { expect(gestureApiRef.current!.commitGesture()).toBe(false); });
+    act(() => { expect(gestureApiRef.current!.cancelGesture()).toBe(true); });
+    act(() => { expect(gestureApiRef.current!.cancelGesture()).toBe(false); });
+    expect(commit).not.toHaveBeenCalled();
+  });
+
+  it('finishes the path when a click lands on another shape', () => {
+    const { result, event, commit, toolRef, toolConfigRef, host } = setup([
+      { ...createTestNode('b'), id: 'b' } as ReturnType<typeof createTestNode>,
+    ]);
+    toolRef.current = 'connector';
+    toolConfigRef.current = { shape: 'diamond', connector: 'path' };
+    host.pickNode = vi.fn((point: { x: number; y: number }): string | null => (point.x > 250 ? 'b' : 'a'));
+    act(() => result.current.handlePointerDown(event(100, 100)));
+    act(() => result.current.handlePointerDown(event(260, 140)));
+    expect(commit).toHaveBeenCalledTimes(1);
+    const command = commit.mock.calls[0]![0] as { connector: { source: { nodeId: string }, target: { nodeId: string } } };
+    expect(command.connector.source.nodeId).toBe('a');
+    expect(command.connector.target.nodeId).toBe('b');
   });
 });
