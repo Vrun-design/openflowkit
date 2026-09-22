@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import { remarkOpenflowExamples } from './src/plugins/remark-openflow-examples.mjs';
 
 // The sidebar mirrors the file system, so a page can never be orphaned: every
 // markdown file under src/content/docs/ appears exactly once, titled by its
@@ -38,6 +39,11 @@ export default defineConfig({
   site: 'https://docs.openflowkit.com',
   legacy: {
     collections: true,
+  },
+  // Every ```` ```openflow ```` block becomes a figure whose SVG was compiled
+  // from the same block at build time (scripts/build-examples.mts).
+  markdown: {
+    remarkPlugins: [remarkOpenflowExamples],
   },
   integrations: [
     starlight({

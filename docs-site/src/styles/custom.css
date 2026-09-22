@@ -104,6 +104,73 @@
   line-height: 0.92;
 }
 
+/* Compiled examples: the rendered diagram beside the DSL that produced it.
+   Both SVGs exist; CSS picks the one that matches the active theme. */
+.ofk-example {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--docs-border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--docs-surface-soft) 70%, transparent);
+}
+
+.ofk-example-render {
+  display: grid;
+  gap: 0.85rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.ofk-example-view {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+}
+
+.ofk-example-view img {
+  max-width: 100%;
+  height: auto;
+}
+
+.ofk-example-view-name {
+  font-size: 0.78rem;
+  color: var(--docs-text-soft);
+}
+
+.ofk-example-dark {
+  display: none;
+}
+
+:root[data-theme='dark'] .ofk-example-light {
+  display: none;
+}
+
+:root[data-theme='dark'] .ofk-example-dark {
+  display: block;
+}
+
+.ofk-example-source,
+.ofk-example-source .expressive-code {
+  min-width: 0;
+  margin: 0;
+}
+
+.ofk-example-source pre {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 60em) {
+  .ofk-example {
+    grid-template-columns: 1fr;
+  }
+}
+
 .docs-home-lead,
 .docs-home-section-copy p,
 .docs-home-card p,

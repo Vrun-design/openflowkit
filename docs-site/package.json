@@ -8,8 +8,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "generate:dsl": "node scripts/generate-dsl-reference.mjs",
-    "predev": "npm run generate:dsl",
-    "prebuild": "npm run generate:dsl"
+    "generate:examples": "tsx scripts/build-examples.mts",
+    "predev": "npm run generate:dsl && npm run generate:examples",
+    "prebuild": "npm run generate:dsl && npm run generate:examples"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.34.0",

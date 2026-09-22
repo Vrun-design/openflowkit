@@ -44,6 +44,8 @@ docs/internal
 /docs/
 .claude/scheduled_tasks.lock
 docs-site/.astro/
+# Rendered `openflow` examples: regenerated from the docs markdown by prebuild.
+docs-site/public/examples/
 
 # Local AI tooling (skills, agents, scratch edits) — not product code
 .agents/

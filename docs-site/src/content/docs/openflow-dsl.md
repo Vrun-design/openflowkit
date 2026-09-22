@@ -6,6 +6,14 @@ description: Use OpenFlow DSL as the editor-native text representation for OpenF
 
 OpenFlow DSL is the native text representation used by OpenFlowKit Studio. It is the best option when you want a code-first representation that stays close to the editor's own graph model.
 
+## Smallest example
+
+```openflow
+flowchart
+Client -> API : request
+API -> Database : query
+```
+
 ## Where it fits
 
 Use OpenFlow DSL when you want:

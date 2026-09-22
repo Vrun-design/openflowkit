@@ -46,10 +46,15 @@ work.
   rendered.
 
 ```openflow
+flowchart
+order = Order service [rounded]
+db    = Database [cylinder]
+queue = Queue [hexagon]
+
 animate build 10s loop {
-  step a, b            // reveal these nodes together
-  step a -> c : POST   // a step about the edge a -> c; both endpoints show too
-  step c hold 2s       // hold longer than the default beat
+  step order, db       // reveal these nodes together
+  step order -> queue : POST   // a step about the edge; both endpoints show too
+  step queue hold 2s   // hold longer than the default beat
 }
 ```
 
