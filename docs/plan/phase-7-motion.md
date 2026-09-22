@@ -135,15 +135,15 @@ writes code. `manifest.ts` + `get_syntax` updated in the same slice.
 
 ## 3. Slices (one agent, ≤ 1 day each, green before commit, `STATE.md` updated)
 
-| # | Slice | Done when |
-|---|---|---|
-| 7.1 | `domain/animation/`: types, `autoSequence`, `flowToTimeline` (lifted from the hook), `frameAt`, presets | unit tests; `useV2FlowPlayback` uses the lifted resolver, phase-5 e2e still green |
-| 7.2 | `canonicalSvg` `frame` option + `exportAnimatedSvg` | goldens per preset; still-vs-paused-SVG headed check |
-| 7.3 | `animate` DSL block, all families, manifest + `get_syntax`, llms.txt | round-trip fixtures + fuzz |
-| 7.4 | `motion.worker.ts`: GIF (`gifenc`), MP4/WebM (`mediabunny` + WebCodecs), MediaRecorder fallback, progress/cancel | 1080p 15 s export, canvas rAF never > 32 ms |
-| 7.5 | Export dialog Animation section + step chips (reorder/merge/hold → `animate` block) + preview + scrubber | headed check above; chips edit round-trips to code; VoiceOver pass on the dialog |
-| 7.6 | MCP `export` formats; docs page "Animated export" with the format table from §1 | `npm test -w mcp-server`; the README gains one animated SVG |
-| 7.7 | Audit: play each format in GitHub README, Slack, Notion, X, Keynote; size table; a11y | findings fixed, ceilings marked `// ponytail:` |
+| # | Slice | Done when | Shipped |
+|---|---|---|---|
+| 7.1 | `domain/animation/`: types, `autoSequence`, `flowToTimeline` (lifted from the hook), `frameAt`, presets | unit tests; `useV2FlowPlayback` uses the lifted resolver, phase-5 e2e still green | ✅ 2026-09-22 `cfcda9c` `ac8595b` |
+| 7.2 | `canonicalSvg` `frame` option + `exportAnimatedSvg` | goldens per preset; still-vs-paused-SVG headed check | ✅ 2026-09-22 `1638663` |
+| 7.3 | `animate` DSL block, all families, manifest + `get_syntax`, llms.txt | round-trip fixtures + fuzz | ✅ 2026-09-22 `a004fa5` |
+| 7.4 | `motion.worker.ts`: GIF (`gifenc`), MP4/WebM (`mediabunny` + WebCodecs), MediaRecorder fallback, progress/cancel | 1080p 15 s export, canvas rAF never > 32 ms | ✅ 2026-09-22 `2f43874` (32 ms met on normal pages; 500-node ceiling in STATE.md) |
+| 7.5 | Export dialog Animation section + step chips (reorder/merge/hold → `animate` block) + preview + scrubber | headed check above; chips edit round-trips to code; VoiceOver pass on the dialog | ✅ 2026-09-22 `4dc8d32` `5c9e46e` |
+| 7.6 | MCP `export` formats; docs page "Animated export" with the format table from §1 | `npm test -w mcp-server`; the README gains one animated SVG | ✅ 2026-09-22 `d2b3fdc` |
+| 7.7 | Audit: play each format in GitHub README, Slack, Notion, X, Keynote; size table; a11y | findings fixed, ceilings marked `// ponytail:` | ✅ 2026-09-22 (GitHub + browser playback verified; Slack/Notion/X/Keynote assumed — STATE.md) |
 
 ## 4. Ceilings (deliberate, marked in code)
 

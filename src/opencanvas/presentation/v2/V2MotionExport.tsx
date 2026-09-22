@@ -253,7 +253,7 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
       <div className="ofk-motion-transport">
         <IconButton
           label={playing ? 'Pause (space)' : 'Play (space)'}
-          aria-pressed={playing}
+          selected={playing}
           disabled={empty}
           icon={<Icon icon={playing ? IconPlayerPause : IconPlayerPlay} />}
           onClick={toggle}

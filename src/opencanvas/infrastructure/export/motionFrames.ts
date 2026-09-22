@@ -80,6 +80,13 @@ async function decodeFrame(
  * Frames → one file. The worker pushes SVG strings ahead, the main thread
  * decodes them in order, progress lands every ten frames and cancelling
  * terminates the worker immediately, leaving the dialog usable.
+ *
+ * ponytail: browsers rasterise SVG only on the main thread, so a very large
+ * page (500 nodes) at 1080p costs the compositor ~100 ms per *changed* frame:
+ * measured 450 frames in 30 s with ~20 % of animation frames late and 1–6
+ * blocking tasks (the rasteriser, never our code), while a normal page keeps
+ * every frame. Upgrade = a canvas renderer for frames in the worker, or a
+ * per-element raster cache so only changed shapes re-rasterise.
  */
 export async function renderMotionFile(request: MotionEncodeRequest): Promise<MotionEncodeResult> {
   const { document, timeline, pageId, format, size, fps } = request;
@@ -169,6 +176,10 @@ function waitUntil(deadline: number, signal?: AbortSignal): Promise<void> {
 /**
  * WebM without WebCodecs: MediaRecorder over a captured canvas, in real time,
  * so a ten-second clip takes ten seconds. The spec's Safari-26-and-older path.
+ *
+ * ponytail: real-time recording means the clip cannot be faster than it plays,
+ * and frames the machine misses are frames the file misses. Upgrade = a wasm
+ * VP9 encoder for the offline path.
  */
 async function recordWebmFallback(request: MotionEncodeRequest): Promise<MotionEncodeResult> {
   const { document, timeline, pageId, format, size, fps } = request;

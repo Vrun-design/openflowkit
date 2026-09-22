@@ -6,6 +6,10 @@
 // Protocol: `start` → the worker pushes up to WINDOW `svg` messages → the main
 // answers each with a `frame` bitmap; the last one finalises the file.
 // Answers: `svg`, `ready`, `progress` every ten frames, one `done`/`error`.
+//
+// ponytail: GIF is 256 colours at ≤ 20 fps and pulse replaces an authored dash
+// with its travelling light — deliberate preset looks, not bugs. Upgrade =
+// per-frame palettes (bigger files) and a masked dash so the pattern survives.
 import { GIFEncoder, applyPalette, quantize } from 'gifenc';
 import { BufferTarget, CanvasSource, Mp4OutputFormat, Output, WebMOutputFormat } from 'mediabunny';
 import type { SceneDocumentV1 } from '../../domain/document/types';
