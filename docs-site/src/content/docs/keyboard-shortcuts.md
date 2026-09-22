@@ -64,4 +64,4 @@ These are the current shortcut groups shown in the app.
 - Shortcut availability depends on editor focus, current mode, and selection state.
 - Mind map shortcuts only apply when a mind map node is selected.
 - Annotation color shortcuts only apply when an annotation node is selected.
-- Use the [Command Center](/command-center/) for actions that do not need a dedicated shortcut.
+- Use the [Command Center](/keyboard-shortcuts/) for actions that do not need a dedicated shortcut.

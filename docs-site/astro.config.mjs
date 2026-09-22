@@ -10,11 +10,18 @@ import { remarkOpenflowExamples } from './src/plugins/remark-openflow-examples.m
 const DOCS_DIR = fileURLToPath(new URL('./src/content/docs', import.meta.url));
 
 const CURATED = {
-  'Start here': ['introduction', 'quick-start', 'local-first-diagramming', 'keyboard-shortcuts'],
-  'Diagram as code': ['openflow-dsl', 'openflow-dsl-reference', 'diagram-families', 'node-types', 'mermaid-integration', 'mermaid-vs-openflow'],
-  'Agents': ['mcp-server', 'prompting-agents', 'ai-generation'],
-  'Canvas': ['canvas-basics', 'context-menu', 'properties-panel', 'command-center', 'smart-layout'],
-  'Ship it': ['choose-export-format', 'exporting', 'animated-export', 'github-embed', 'choose-input-mode'],
+  'Start here': ['introduction', 'quick-start', 'local-first-diagramming'],
+  'Diagram as code': ['openflow-dsl', 'mermaid-import'],
+  'Diagram families': [
+    'diagram-flowchart', 'diagram-architecture', 'diagram-sequence', 'diagram-state',
+    'diagram-erd', 'diagram-class', 'diagram-mindmap', 'diagram-gitgraph', 'diagram-chart',
+  ],
+  'The canvas': ['canvas-basics', 'shapes-and-connectors', 'insert-media', 'context-menu', 'properties-panel', 'settings', 'theming'],
+  'Agents & MCP': ['mcp-server', 'prompting-agents'],
+  'AI (bring your own key)': ['ai-generation'],
+  'Export & motion': ['exporting', 'animated-export'],
+  'Architecture (C4)': ['architecture-c4', 'architecture-workspace'],
+  Reference: ['openflow-dsl-reference', 'keyboard-shortcuts'],
 };
 
 const slugs = readdirSync(DOCS_DIR).filter((file) => file.endsWith('.md')).map((file) => file.slice(0, -3));
@@ -60,12 +67,8 @@ export default defineConfig({
       editLink: {
         baseUrl: 'https://github.com/Vrun-design/openflowkit/edit/main/docs-site/src/content/docs/',
       },
-      // Root locale keeps English at clean URLs (/introduction not /en/introduction)
+      // English only: root locale keeps clean URLs (/introduction, not /en/introduction).
       defaultLocale: 'root',
-      locales: {
-        root: { label: 'English', lang: 'en' },
-        tr: { label: 'Türkçe', lang: 'tr' },
-      },
       sidebar,
       customCss: ['./src/styles/custom.css'],
       head: [

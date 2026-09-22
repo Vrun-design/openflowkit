@@ -70,7 +70,7 @@ Avoid AI when:
 - you need deterministic output from infrastructure files
 - the diagram is small enough that manual editing is faster
 
-In those cases, prefer [OpenFlow DSL](/openflow-dsl/) or [Mermaid Integration](/mermaid-integration/).
+In those cases, prefer [OpenFlow DSL](/openflow-dsl/) or [Mermaid Integration](/mermaid-import/).
 
 ## How to get better results
 
@@ -89,7 +89,7 @@ Weak prompts ask for “a diagram” without constraints. Strong prompts explain
 1. Generate a first draft with Flowpilot.
 2. Inspect the structure on the canvas.
 3. Use the [Properties Panel](/properties-panel/) to normalize labels, color, and routing.
-4. Run [Smart Layout](/smart-layout/) if the structure is right but spacing is poor.
+4. Run [Smart Layout](/openflow-dsl/) if the structure is right but spacing is poor.
 5. Save a snapshot before another major rewrite.
 
 ## Practical caution
@@ -99,6 +99,6 @@ AI output should be treated as a draft, not a certified system model. For docume
 ## Related pages
 
 - [MCP Server](/mcp-server/)
-- [Studio Overview](/studio-overview/)
-- [Choose an Input Mode](/choose-input-mode/)
+- [Studio Overview](/introduction/)
+- [Choose an Input Mode](/openflow-dsl/)
 - [Prompting AI Agents](/prompting-agents/)

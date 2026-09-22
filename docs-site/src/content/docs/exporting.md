@@ -68,4 +68,4 @@ For serious work, a practical pattern is:
 
 ## Related pages
 
-- [Choose an Export Format](/choose-export-format/)
+- [Choose an Export Format](/exporting/)

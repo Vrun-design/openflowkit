@@ -73,8 +73,8 @@ OpenFlowKit now treats the home screen as the workspace listing surface and the 
 ## Start here
 
 - Read [Quick Start](/quick-start/) for the fastest first-run workflow.
-- Read [Import from Structured Data](/import-from-data/) if you already have SQL, OpenAPI, code, or infra text.
-- Read [Choose an Input Mode](/choose-input-mode/) if you are deciding between templates, import, AI, and diagram-as-code.
-- Read [Studio Overview](/studio-overview/) for the AI, code, import, and lint flows.
+- Read [Import from Structured Data](/mermaid-import/) if you already have SQL, OpenAPI, code, or infra text.
+- Read [Choose an Input Mode](/openflow-dsl/) if you are deciding between templates, import, AI, and diagram-as-code.
+- Read [Studio Overview](/introduction/) for the AI, code, import, and lint flows.
 - Read [MCP Server](/mcp-server/) to drive OpenFlowKit from AI coding clients.
-- Read [Templates & Asset Libraries](/templates-assets/) for starter flows and reusable visual libraries.
+- Read [Templates & Asset Libraries](/introduction/) for starter flows and reusable visual libraries.

@@ -58,18 +58,18 @@ Once something is on the canvas:
 
 - move nodes into rough position
 - use the [Properties Panel](/properties-panel/) for exact edits and architecture metadata
-- use [Layers](/command-center/) and page tabs when the diagram needs more structure
-- run [Smart Layout](/smart-layout/) when the structure is right but spacing is rough
-- use the [Command Center](/command-center/) to search, switch workflows, or insert more assets
+- use [Layers](/keyboard-shortcuts/) and page tabs when the diagram needs more structure
+- run [Smart Layout](/openflow-dsl/) when the structure is right but spacing is rough
+- use the [Command Center](/keyboard-shortcuts/) to search, switch workflows, or insert more assets
 
 ## 4. Save recovery points
 
-Before a major AI rewrite or import refresh, review the snapshot/history tooling so you can recover quickly if the new result is worse. See [Playback & History](/playback-history/).
+Before a major AI rewrite or import refresh, review the snapshot/history tooling so you can recover quickly if the new result is worse. See [Playback & History](/canvas-basics/).
 
 ## 5. Share or export the result
 
 Use the export menu when you are ready to move the diagram into docs, design tools, code review threads, or launch assets.
 
-- See [Choose an Export Format](/choose-export-format/)
+- See [Choose an Export Format](/exporting/)
 - See [Exporting](/exporting/)
 - Use viewer links and embed snippets when you want the diagram to stay live instead of pasting a screenshot

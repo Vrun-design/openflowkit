@@ -25,7 +25,7 @@ Use OpenFlow DSL when you want:
 
 The Studio code panel can generate DSL from the current canvas and apply DSL back onto it.
 
-Use Mermaid instead when ecosystem compatibility matters more than editor-native fidelity. See [Mermaid vs OpenFlow](/mermaid-vs-openflow/).
+Use Mermaid instead when ecosystem compatibility matters more than editor-native fidelity. See [Mermaid vs OpenFlow](/mermaid-import/).
 
 ## Basic document structure
 
@@ -101,7 +101,7 @@ Use DSL when you want to control the structure, then switch back to the canvas f
 
 ## Related pages
 
-- [Mermaid vs OpenFlow](/mermaid-vs-openflow/)
+- [Mermaid vs OpenFlow](/mermaid-import/)
 - [MCP Server](/mcp-server/)
-- [Studio Overview](/studio-overview/)
-- [Choose an Input Mode](/choose-input-mode/)
+- [Studio Overview](/introduction/)
+- [Choose an Input Mode](/openflow-dsl/)

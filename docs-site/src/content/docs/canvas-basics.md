@@ -51,8 +51,8 @@ When multiple nodes are selected, the right rail switches to **Bulk edit** mode.
 
 ## Direct manipulation vs exact editing
 
-The canvas is where you move, select, and compose the graph. For exact values and family-specific settings, switch to the [Properties Panel](/properties-panel/). For templates, search, layout, and workflow switching, use the [Command Center](/command-center/).
+The canvas is where you move, select, and compose the graph. For exact values and family-specific settings, switch to the [Properties Panel](/properties-panel/). For templates, search, layout, and workflow switching, use the [Command Center](/keyboard-shortcuts/).
 
 ## History and recovery
 
-Use regular undo/redo for short corrections and snapshots for larger rollback points. See [Playback & History](/playback-history/).
+Use regular undo/redo for short corrections and snapshots for larger rollback points. See [Playback & History](/canvas-basics/).

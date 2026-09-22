@@ -54,4 +54,4 @@ If no document exists, the app stays on the workspace home instead of silently r
 ## Recommended next reads
 
 - [Introduction](/introduction/)
-- [Choose an Export Format](/choose-export-format/)
+- [Choose an Export Format](/exporting/)

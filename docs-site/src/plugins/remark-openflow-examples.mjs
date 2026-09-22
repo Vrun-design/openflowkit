@@ -57,6 +57,9 @@ function transform(children, file) {
     const node = children[index];
     if (node?.type === 'code' && node.lang === EXAMPLE_LANG) {
       const [open, close] = figureFor(node.value, file);
+      // Expressive Code has no `openflow` grammar; `text` is the honest
+      // fallback and keeps the build quiet. The rendered diagram is the point.
+      node.lang = 'text';
       children.splice(index, 1, html(open), node, html(close));
       index += 2;
       continue;

@@ -511,6 +511,20 @@
       "families": ["chart"]
     },
     {
+      "id": "frame-nodes",
+      "name": "Browser and mobile frame nodes",
+      "status": "shipped",
+      "evidence": "src/opencanvas/domain/nodes/wireframeNodePresentation.ts:61",
+      "notes": "Reachable through the DSL shape words `browser` and `mobile`; the app draws the frame chrome. The SVG/PNG export draws them as plain labelled cards. The wireframe widget library is separately absent."
+    },
+    {
+      "id": "chart-quadrant-labels",
+      "name": "Quadrant axis and region labels in the DSL",
+      "status": "absent",
+      "evidence": "src/dsl/families/chart.ts:100",
+      "notes": "`x:`, `y:` and `quadrants:` lines never match: the family compares the space-joined statement text against `x:`, so the lines are reported as invalid points (W131) and ignored. The quadrant chart itself and its `Label [x, y]` points are shipped; labels are fixed defaults."
+    },
+    {
       "id": "reserved-families",
       "name": "Reserved families (bpmn, org, gantt, wireframe, sankey, journey, timeline)",
       "status": "absent",
@@ -760,7 +774,7 @@
       "name": "Frame presets and presentation tools (phase 6.6)",
       "status": "absent",
       "evidence": "docs/plan/phase-6-library.md:182",
-      "notes": "Unbuilt: phone/browser frame presets, laser pointer, sticky-note tool. Generated diagram frames exist, but that is not this feature."
+      "notes": "Unbuilt: phone/tablet/window frame presets, the laser pointer and the sticky-note tool. DSL browser/mobile frame nodes and the `note` sticky kind are separately shipped."
     },
     {
       "id": "wireframe-library",

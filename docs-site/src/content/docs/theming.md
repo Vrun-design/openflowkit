@@ -41,6 +41,6 @@ Too many themes usually create drift instead of flexibility. In most cases, one 
 
 ## Related pages
 
-- [Design Systems & Branding](/design-systems-branding/)
-- [Command Center](/command-center/)
-- [Figma Design Import](/figma-design-import/)
+- [Design Systems & Branding](/theming/)
+- [Command Center](/keyboard-shortcuts/)
+- [Figma Design Import](/theming/)
