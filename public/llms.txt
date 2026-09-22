@@ -28,17 +28,17 @@ Format: `[type] id: Label { attributes }`
 - `Label`: The text displayed inside the node.
 - `{ attributes }`: Optional JSON-like string of extra properties.
 
-**Supported Node Types (MUST use exactly one of these):**
-- `[start]` / `[end]`: Rounded pill shapes for entry/exit points.
-- `[process]`: Standard rectangle.
-- `[decision]`: Diamond shape for logic branching.
-- `[system]`: Hexagon shape.
-- `[note]`: A sticky note appearance.
-- `[browser]`: A window frame that looks like a web browser.
-- `[mobile]`: A frame that looks like an iPhone.
-- `[button]`: A UI wireframe button.
-- `[input]`: A UI wireframe text input.
-- `[placeholder]`: An image wireframe block.
+**Supported Node Types (any one of these as a positional attribute):**
+- Core: `rect` (default), `rounded`, `circle`, `ellipse`, `diamond`, `cylinder`, `hexagon`,
+  `cloud`, `doc`, `note`, `parallelogram`, `person`, `queue`, `component`, `browser`, `mobile`.
+- Shape library: `triangle`, `trapezoid`, `venn`, `speech`, `comment`, `star`,
+  `check-circle`, `cross-circle`, `heart`, `bolt`, `bookmark`, `bar`, `prism`, `tag`,
+  `chevron`, `octagon`, `cube`, `target`, `page`, `half-round`, `callout-stack`,
+  `layer-stack`, `folder`, `panel`, `brace`, `bracket`, `numbered-circle`, `list-card`,
+  `pin`, `arrow-up|down|left|right`, `plus`, `stadium`.
+- Mermaid aliases accepted: `tri`, `trap`, `hex`, `docs`, `db`, `stadium`, `delay`.
+- Data: `chart bar|line|area|scatter|pie|donut|radar|heatmap|table|quadrant` — a family,
+  not a shape; data is a series per line (`Revenue: Jan 12, Feb 19`).
 
 **Examples:**
 ```openflow
