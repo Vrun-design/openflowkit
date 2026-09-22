@@ -30,6 +30,5 @@ Cursor, Copilot, ChatGPT, Claude veya başka bir ajan kullanıyor olmanızdan ba
 ## İlgili sayfalar
 
 - [AI Generation](/tr/ai-generation/)
-- [Ask Flowpilot](/tr/ask-flowpilot/)
 - [OpenFlow DSL](/tr/openflow-dsl/)
 - [Mermaid Integration](/tr/mermaid-integration/)

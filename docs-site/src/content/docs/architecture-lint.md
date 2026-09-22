@@ -47,5 +47,4 @@ Many diagrams are only descriptive. Architecture linting makes them evaluative a
 ## Related pages
 
 - [Studio Overview](/studio-overview/)
-- [Infrastructure Sync](/infra-sync/)
 - [Diagram Diff & Compare](/diagram-diff/)

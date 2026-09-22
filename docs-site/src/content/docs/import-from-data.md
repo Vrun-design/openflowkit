@@ -18,8 +18,6 @@ Your text → specialized import flow → DSL or graph model → layout → canv
 
 All your existing AI provider and API key settings apply.
 
-For fully deterministic infrastructure parsing that does not need AI, use [Infrastructure Sync](/infra-sync/).
-
 ## SQL DDL → Entity-Relationship Diagram
 
 Paste one or more `CREATE TABLE` statements to generate an ER diagram.
@@ -48,4 +46,4 @@ These imports are best treated as editable first drafts, not perfect final diagr
 
 ## When to choose this flow
 
-Choose structured import when a source artifact already exists and you want a fast editable draft. Choose manual editing when the diagram is primarily conceptual. Choose [Infrastructure Sync](/infra-sync/) when determinism matters more than AI interpretation.
+Choose structured import when a source artifact already exists and you want a fast editable draft. Choose manual editing when the diagram is primarily conceptual.

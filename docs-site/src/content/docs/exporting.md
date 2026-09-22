@@ -69,5 +69,3 @@ For serious work, a practical pattern is:
 ## Related pages
 
 - [Choose an Export Format](/choose-export-format/)
-- [Collaboration & Sharing](/collaboration-sharing/)
-- [Embed Diagrams in GitHub](/github-embed/)

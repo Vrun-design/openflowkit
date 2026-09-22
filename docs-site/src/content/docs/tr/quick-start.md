@@ -49,7 +49,7 @@ Elinizde Mermaid veya OpenFlow DSL varsa Studio içindeki **Code** sekmesinden d
 
 ### Yapılandırılmış giriş
 
-Elinizde SQL, OpenAPI, Terraform veya Kubernetes girdisi varsa Studio içe aktarma akışlarını kullanın. Bkz. [Import from Structured Data](/tr/import-from-data/) ve [Infrastructure Sync](/tr/infra-sync/).
+Elinizde SQL, OpenAPI, Terraform veya Kubernetes girdisi varsa Studio içe aktarma akışlarını kullanın. Bkz. [Import from Structured Data](/tr/import-from-data/).
 
 ## 3. Taslağı iyileştirin
 
@@ -70,4 +70,3 @@ Diyagramı dokümantasyon, tasarım veya iş birliği akışına taşımaya haz�
 
 - [Choose an Export Format](/tr/choose-export-format/)
 - [Exporting](/tr/exporting/)
-- [Collaboration & Sharing](/tr/collaboration-sharing/)

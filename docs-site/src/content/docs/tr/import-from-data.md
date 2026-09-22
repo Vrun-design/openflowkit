@@ -16,4 +16,3 @@ Studio içindeki yapılandırılmış içe aktarma akışları, mevcut kaynak me
 
 Kaynak metni yapıştırın, uygun modu seçin ve diyagramı üretin. Girdi türüne göre OpenFlowKit ya uzmanlaşmış AI destekli akış ya da daha deterministik parse akışı kullanır.
 
-Tamamen deterministik altyapı parse’ı gerektiğinde [Infrastructure Sync](/tr/infra-sync/) kullanın.

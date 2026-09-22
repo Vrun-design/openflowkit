@@ -25,6 +25,5 @@ OpenFlowKit, sağlayıcı ikonları, mimari odaklı yerleşim ve AI/kod tabanlı
 
 ## İlgili sayfalar
 
-- [Infrastructure Sync](/tr/infra-sync/)
 - [Templates & Starter Flows](/tr/templates-assets/)
 - [Choose an Export Format](/tr/choose-export-format/)

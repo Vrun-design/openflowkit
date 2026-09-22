@@ -65,6 +65,5 @@ For architecture reviews:
 
 ## Related pages
 
-- [Infrastructure Sync](/infra-sync/)
 - [Templates & Starter Flows](/templates-assets/)
 - [Choose an Export Format](/choose-export-format/)

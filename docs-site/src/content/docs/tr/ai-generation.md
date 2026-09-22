@@ -74,7 +74,6 @@ Uygulama birden çok BYOK sağlayıcıyı destekler:
 
 ## İlgili sayfalar
 
-- [Ask Flowpilot](/tr/ask-flowpilot/)
 - [Studio Overview](/tr/studio-overview/)
 - [Choose an Input Mode](/tr/choose-input-mode/)
 - [Prompting AI Agents](/tr/prompting-agents/)

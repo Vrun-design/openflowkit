@@ -98,6 +98,5 @@ For most serious diagrams, a good sequence is:
 
 - [AI Generation](/ai-generation/)
 - [OpenFlow DSL](/openflow-dsl/)
-- [Infrastructure Sync](/infra-sync/)
 - [Architecture Linting](/architecture-lint/)
 - [Choose an Input Mode](/choose-input-mode/)

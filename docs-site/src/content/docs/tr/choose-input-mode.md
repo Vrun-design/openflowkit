@@ -15,7 +15,6 @@ OpenFlowKit bir diyagramı üretmek için birden fazla yol sunar. Doğru seçim,
 | editör-doğal metin kontrolü | [OpenFlow DSL](/tr/openflow-dsl/) |
 | mevcut Mermaid | [Mermaid Integration](/tr/mermaid-integration/) |
 | SQL, OpenAPI, Terraform veya K8s metni | [Import from Structured Data](/tr/import-from-data/) |
-| deterministik parse edilecek altyapı dosyaları | [Infrastructure Sync](/tr/infra-sync/) |
 
 ## Temel kural
 

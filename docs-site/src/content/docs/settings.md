@@ -63,4 +63,3 @@ Shortcuts automatically adapt to Mac or Windows — `Cmd` becomes `Ctrl` on Wind
 - [Quick Start](/quick-start/)
 - [Keyboard Shortcuts](/keyboard-shortcuts/)
 - [AI Generation](/ai-generation/)
-- [Ask Flowpilot](/ask-flowpilot/)

@@ -6,6 +6,10 @@ is driven by agents (MCP and BYOK) better than either.
 
 [![quality](https://github.com/Vrun-design/openflowkit/actions/workflows/quality.yml/badge.svg)](https://github.com/Vrun-design/openflowkit/actions/workflows/quality.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![version](https://img.shields.io/badge/version-2.0.0-6d28d9.svg)](CHANGELOG.md)
+
+**2.0 is a rebuild, not an upgrade** — new canvas, new document model, new language,
+new agent surface. What changed and why: [CHANGELOG.md](CHANGELOG.md).
 
 - **Canvas that keeps up.** Pixi/WebGL renderer, zoom-to-cursor, connectors that bind to
   sides and never leave a stale route, one undo step per intent.
@@ -31,7 +35,7 @@ flowchart
 3. Press <kbd>⌘↵</kbd> again: the frame is replaced from the text, one undo step.
 4. Click **Connect agent**, ask your MCP client for `create_diagram` — the same thing
    happens while you watch.
-5. Export PNG (2×), SVG, PDF, JSON or an animation (animated SVG, GIF, MP4, WebM);
+5. Export PNG (2×), SVG, JSON, print-to-PDF, or an animation (animated SVG, GIF, MP4, WebM);
    switch the palette to `paper`, `builder` or `mono` and regenerate.
 
 ## Run it
@@ -131,6 +135,7 @@ tools · <kbd>⌘↵</kbd> generate · <kbd>⌥D</kbd> code panel · <kbd>⌘J</
 | `src/agent/` | op registry, MCP bridge protocol, file host, manifest |
 | `mcp-server/` | the published MCP server (`@vrun-design/openflowkit-mcp`) |
 | `STATE.md` | what is done, what is next, what is deliberately deferred |
+| `CHANGELOG.md` | what shipped in each version |
 
 Built in slices with one rule: **the app must boot after every merge.** Methodology and
 code rules live in [AGENTS.md](AGENTS.md).

@@ -72,5 +72,4 @@ Use the export menu when you are ready to move the diagram into docs, design too
 
 - See [Choose an Export Format](/choose-export-format/)
 - See [Exporting](/exporting/)
-- See [Collaboration & Sharing](/collaboration-sharing/)
 - Use viewer links and embed snippets when you want the diagram to stay live instead of pasting a screenshot

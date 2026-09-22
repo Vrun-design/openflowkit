@@ -70,7 +70,7 @@ Avoid AI when:
 - you need deterministic output from infrastructure files
 - the diagram is small enough that manual editing is faster
 
-In those cases, prefer [OpenFlow DSL](/openflow-dsl/), [Mermaid Integration](/mermaid-integration/), or [Infrastructure Sync](/infra-sync/).
+In those cases, prefer [OpenFlow DSL](/openflow-dsl/) or [Mermaid Integration](/mermaid-integration/).
 
 ## How to get better results
 
@@ -98,7 +98,6 @@ AI output should be treated as a draft, not a certified system model. For docume
 
 ## Related pages
 
-- [Ask Flowpilot](/ask-flowpilot/)
 - [MCP Server](/mcp-server/)
 - [Studio Overview](/studio-overview/)
 - [Choose an Input Mode](/choose-input-mode/)

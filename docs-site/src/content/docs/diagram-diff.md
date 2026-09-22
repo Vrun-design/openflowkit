@@ -60,4 +60,3 @@ Click the "Exit Compare" button or press `Escape` to return to normal editing mo
 
 - [Playback & History](/playback-history/)
 - [AI Generation](/ai-generation/)
-- [Infrastructure Sync](/infra-sync/)

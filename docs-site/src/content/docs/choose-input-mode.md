@@ -16,7 +16,6 @@ OpenFlowKit supports multiple ways to create a diagram. The best choice depends 
 | editor-native text you want to control precisely | [OpenFlow DSL](/openflow-dsl/) |
 | Mermaid already used elsewhere | [Mermaid Integration](/mermaid-integration/) |
 | SQL, OpenAPI, Terraform, or K8s source text | [Import from Structured Data](/import-from-data/) |
-| infra files you want parsed deterministically | [Infrastructure Sync](/infra-sync/) |
 
 ## Rules of thumb
 
