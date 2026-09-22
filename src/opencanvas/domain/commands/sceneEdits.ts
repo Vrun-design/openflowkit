@@ -29,14 +29,11 @@ import {
 } from '../transforms/transformSelection';
 
 import {
-  createShapeNode, nextNodeZIndex, DEFAULT_SHAPE_SIZE, DEFAULT_TEXT_SIZE, type ShapeKind,
+  createShapeNode, nextNodeZIndex, type ShapeKind,
 } from '../nodes/shapeNode';
 import { planQuickCreate } from '../connectors/quickCreate';
 import { measurePortableText } from '../text/measurement';
 import type { ConnectSide } from '../connectors/connectHandles';
-
-export const V2_DEFAULT_SHAPE_SIZE = DEFAULT_SHAPE_SIZE;
-export const V2_DEFAULT_TEXT_SIZE = DEFAULT_TEXT_SIZE;
 
 export type V2ShapeKind = ShapeKind;
 

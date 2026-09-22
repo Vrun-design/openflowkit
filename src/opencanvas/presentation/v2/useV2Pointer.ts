@@ -49,9 +49,8 @@ import {
 } from './v2ConnectorOperations';
 import { createConnectorEditCommand } from '../../domain/connectors/editing';
 import { ensureConnectorEndpointPorts } from '../../domain/connectors/portAuthoring';
+import { defaultShapeSize } from '../../domain/nodes/shapeNode';
 import {
-  V2_DEFAULT_SHAPE_SIZE,
-  V2_DEFAULT_TEXT_SIZE,
   buildInsertConnectorCommand,
   buildInsertShapeCommand,
   buildQuickCreateCommand,
@@ -239,7 +238,8 @@ function latestLocalPoint(event: PointerLike): Point2d {
 }
 
 function textOrigin(center: Point2d): Point2d {
-  return { x: center.x - V2_DEFAULT_TEXT_SIZE.width / 2, y: center.y - V2_DEFAULT_TEXT_SIZE.height / 2 };
+  const size = defaultShapeSize('text');
+  return { x: center.x - size.width / 2, y: center.y - size.height / 2 };
 }
 
 function nodeCenterWorld(page: ScenePage, nodeId: string): Point2d | null {
@@ -473,6 +473,7 @@ export function useV2Pointer(options: V2PointerOptions) {
   const clearPreviews = useCallback(() => {
     const host = optionsRef.current.hostRef.current;
     host?.setMarquee(null);
+    host?.setPlacementGhost(null);
     host?.setTransformPreview(null);
     host?.setAlignmentGuides(null);
     host?.setConnectionPreview(null);
@@ -589,7 +590,21 @@ export function useV2Pointer(options: V2PointerOptions) {
           renderPathPreview();
           return;
         }
-        if (opts.toolRef.current === 'select' && event.target instanceof HTMLCanvasElement) {
+        const tool = opts.toolRef.current;
+        const shapeTool = tool === 'rectangle' || tool === 'ellipse' || tool === 'text' || tool === 'shape';
+        if (shapeTool && !opts.readOnlyRef.current && event.target instanceof HTMLCanvasElement) {
+          // The shape a click will drop, centred on the pointer like the click is.
+          const shape: V2ShapeKind = tool === 'shape' ? opts.toolConfigRef.current.shape : tool;
+          const size = defaultShapeSize(shape);
+          const world = host.screenToWorld(point);
+          host.setPlacementGhost({ shape, bounds: {
+            x: world.x - size.width / 2, y: world.y - size.height / 2, width: size.width, height: size.height,
+          } });
+          host.setHover(null, null);
+          return;
+        }
+        host.setPlacementGhost(null);
+        if (tool === 'select' && event.target instanceof HTMLCanvasElement) {
           const handle = host.pickTransformHandle(point);
           // Handles sit outside their node, so a hover over one comes from
           // the neighbourhood search, not from the node under the pointer.
@@ -641,7 +656,17 @@ export function useV2Pointer(options: V2PointerOptions) {
         }
       } else if (operation.kind === 'create') {
         operationRef.current = { ...operation, currentScreen: point };
-        host.setMarquee(boundsBetween(operation.startScreen, point));
+        const moved = Math.hypot(point.x - operation.startScreen.x, point.y - operation.startScreen.y);
+        if (moved >= CLICK_THRESHOLD_PX) {
+          // Past the click threshold the ghost is the drag box: what release commits.
+          const world = host.screenToWorld(point);
+          host.setPlacementGhost({ shape: operation.shape, bounds: {
+            x: Math.min(world.x, operation.startWorld.x),
+            y: Math.min(world.y, operation.startWorld.y),
+            width: Math.max(MIN_CREATE_SIZE, Math.abs(world.x - operation.startWorld.x)),
+            height: Math.max(MIN_CREATE_SIZE, Math.abs(world.y - operation.startWorld.y)),
+          } });
+        }
       } else if (operation.kind === 'ink') {
         const world = host.screenToWorld(point);
         // Coalesced events are the real input rate; a plain mouse move reports
@@ -767,7 +792,7 @@ export function useV2Pointer(options: V2PointerOptions) {
           }
         }
       } else if (operation.kind === 'create') {
-        host.setMarquee(null);
+        host.setPlacementGhost(null);
         const world = host.screenToWorld(point);
         const moved = Math.hypot(
           point.x - operation.startScreen.x,
@@ -775,7 +800,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         );
         const id = opts.mintId('node');
         if (moved < CLICK_THRESHOLD_PX) {
-          const size = operation.shape === 'text' ? V2_DEFAULT_TEXT_SIZE : V2_DEFAULT_SHAPE_SIZE;
+          const size = defaultShapeSize(operation.shape);
           opts.commit(
             buildInsertShapeCommand(operation.page, {
               kind: operation.shape,
@@ -1018,7 +1043,6 @@ export function useV2Pointer(options: V2PointerOptions) {
           startScreen: point,
           currentScreen: point,
         };
-        host.setMarquee(boundsBetween(point, point));
         return;
       }
       if (tool === 'pen' || tool === 'highlighter') {
@@ -1185,6 +1209,10 @@ export function useV2Pointer(options: V2PointerOptions) {
   const handlePointerCancel = useCallback(() => {
     cancelGesture();
   }, [cancelGesture]);
+  // Leaving the canvas for the rail takes the placement ghost with it.
+  const handlePointerLeave = useCallback(() => {
+    if (!operationRef.current) optionsRef.current.hostRef.current?.setPlacementGhost(null);
+  }, []);
 
   const handleDoubleClick = useCallback(
     (event: ReactMouseEvent<HTMLElement>) => {
@@ -1236,6 +1264,7 @@ export function useV2Pointer(options: V2PointerOptions) {
     handlePointerMove,
     handlePointerUp,
     handlePointerCancel,
+    handlePointerLeave,
     handleDoubleClick,
     cancelGesture,
   };

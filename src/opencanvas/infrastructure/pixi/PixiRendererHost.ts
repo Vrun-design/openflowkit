@@ -28,6 +28,9 @@ import { projectConnector } from '../../domain/connectors/routeProjection';
 import { CHROME_ACCENT } from './chrome';
 import { applyTextResolution, currentPixiTextResolution, textResolutionForZoom } from './pixiText';
 import { PixiFreeformPreview, type FreeformPreviewFrame } from './PixiFreeformPreview';
+import { drawPixiNodeOutline } from './pixiNodeOutline';
+import { basicNodeDecorations } from '../../domain/nodes/basicNodeDecorations';
+import type { BasicNodeShape } from '../../domain/nodes/basicNodePresentation';
 import { PixiProposalPreview, type ProposalPreviewFrame } from './PixiProposalPreview';
 import { PixiFocusOverlay, type FocusFrame } from './PixiFocusOverlay';
 import { PixiContainerRenderer } from './PixiContainerRenderer';
@@ -83,6 +86,12 @@ interface PixiRendererHostOptions {
 }
 
 const SELECTION_STROKE = CHROME_ACCENT;
+
+export interface PlacementGhost {
+  readonly shape: BasicNodeShape | 'text';
+  /** World bounds of the node a click (or the current drag) would create. */
+  readonly bounds: Bounds2d;
+}
 const MARQUEE_FILL = CHROME_ACCENT;
 const LABEL_DETAIL_ZOOM = 0.55;
 // Pixi 8 CanvasText can throw while returning pooled textures during stage-tree
@@ -119,6 +128,7 @@ export class PixiRendererHost {
   private readonly focusOverlay = new PixiFocusOverlay();
   private focusFrame: FocusFrame | null = null;
   private readonly marquee = new Graphics();
+  private readonly placementGhost = new Graphics();
   private readonly connectionPreview = new PixiConnectorRenderer();
   private readonly alignmentGuides = new Graphics();
   private alignmentGuidesShown = false;
@@ -183,6 +193,7 @@ export class PixiRendererHost {
       this.selectionOverlay.graphics,
       this.transformOverlay.graphics,
       this.freeformPreview.graphics,
+      this.placementGhost,
       this.connectorEditOverlay.graphics,
       this.connectionPreview.container,
       this.alignmentGuides
@@ -592,6 +603,28 @@ export class PixiRendererHost {
       Math.abs(bottomRight.y - topLeft.y)
     );
     return querySceneBounds(this.index, worldBounds, { kinds: new Set([kind]) }).map((object) => object.id);
+  }
+
+  /** The shape a creation tool will drop, drawn under the pointer in world
+   * space (Koboyo's placement affordance); null clears. Text ghosts as its box. */
+  setPlacementGhost(ghost: PlacementGhost | null): void {
+    this.placementGhost.clear();
+    if (ghost) {
+      const zoom = this.camera.zoom;
+      const matrix = { a: 1, b: 0, c: 0, d: 1, tx: ghost.bounds.x, ty: ghost.bounds.y };
+      const size = { width: ghost.bounds.width, height: ghost.bounds.height };
+      const shape: BasicNodeShape = ghost.shape === 'text' ? 'rectangle' : ghost.shape;
+      drawPixiNodeOutline(this.placementGhost, shape, size, matrix);
+      this.placementGhost
+        .fill({ color: SELECTION_STROKE, alpha: 0.05 })
+        .stroke({ color: SELECTION_STROKE, alpha: 0.45, width: 1 / zoom });
+      for (const decoration of basicNodeDecorations(shape, size)) {
+        const points = decoration.map((point) => applyMatrixToPoint(matrix, point));
+        this.placementGhost.poly(points.flatMap((point) => [point.x, point.y]), false)
+          .stroke({ color: SELECTION_STROKE, alpha: 0.45, width: 1 / zoom });
+      }
+    }
+    this.requestRender();
   }
 
   setMarquee(screenBounds: Bounds2d | null): void {

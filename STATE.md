@@ -55,6 +55,10 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
 - 2026-09-22 (Opus): every `<details>` summary (agent connect, ADRs, style "more") uses our
   `IconChevronDown`, native marker hidden. `Checkbox` draws its own box + IconCheck/IconMinus;
   native `Select` primitive deleted (unused; `Dropdown` is the listbox).
+- Placement 2026-09-22 (Opus): every shape tool ghosts its real outline under the pointer
+  (`setPlacementGhost`, world-space, quick-create colours); the ghost becomes the drag box past
+  the click threshold. Click-place now uses the per-shape size table (was the 160×72 default
+  for every library shape — actor/folder came out squashed).
 ## Next
 - Owner feel-test on `/`: paste the C4 example, drill 3 levels, play a flow, run `drift`.
 - Model JSON is copied onto every view frame (~3 KB/page today). Moving it to one

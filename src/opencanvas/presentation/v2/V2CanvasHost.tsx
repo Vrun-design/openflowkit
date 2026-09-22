@@ -410,6 +410,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
       onPointerMove={pointer.handlePointerMove}
       onPointerUp={pointer.handlePointerUp}
       onPointerCancel={pointer.handlePointerCancel}
+      onPointerLeave={pointer.handlePointerLeave}
       onDoubleClick={pointer.handleDoubleClick}
       onWheel={handleWheel}
       onContextMenu={(event) => {

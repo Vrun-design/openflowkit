@@ -36,7 +36,7 @@ function setup(
     pickConnectorHandle: vi.fn(() => null),
     pickTransformHandle: vi.fn((): 'south-east' | null => null),
     pickConnectHandle: vi.fn(() => null),
-    setMarquee: vi.fn(), setTransformPreview: vi.fn(), setAlignmentGuides: vi.fn(), setConnectionPreview: vi.fn(),
+    setMarquee: vi.fn(), setPlacementGhost: vi.fn(), setTransformPreview: vi.fn(), setAlignmentGuides: vi.fn(), setConnectionPreview: vi.fn(),
     setConnectorSelection: vi.fn(), setConnectorPreview: vi.fn(),
     setHover: vi.fn(), getNodesWorldBounds: vi.fn((_ids: readonly string[]): Bounds2d | null => null),
     pickNodesInScreenBounds: vi.fn((_bounds: Bounds2d): readonly string[] => []),
@@ -213,6 +213,32 @@ describe('V2 direct manipulation', () => {
     act(() => result.current.handlePointerUp(event(300, 300)));
     expect(selectionRef.current.nodeIds).toEqual(['a']);
     expect(applyConnectorSelection).toHaveBeenLastCalledWith(['edge', 'free']);
+  });
+});
+
+describe('shape placement', () => {
+  it('ghosts the shape at its own size under the pointer; a click drops exactly that', () => {
+    const { result, event, host, commit, toolRef, toolConfigRef } = setup();
+    toolRef.current = 'shape';
+    toolConfigRef.current = { ...DEFAULT_TOOL_CONFIG, shape: 'actor' };
+    act(() => result.current.handlePointerMove(event(300, 200)));
+    const ghost = host.setPlacementGhost.mock.lastCall?.[0];
+    expect(ghost).toEqual({ shape: 'actor', bounds: { x: 300 - 56, y: 200 - 68, width: 112, height: 136 } });
+    act(() => result.current.handlePointerDown(event(300, 200)));
+    act(() => result.current.handlePointerUp(event(300, 200)));
+    expect(host.setPlacementGhost).toHaveBeenLastCalledWith(null);
+    const node = commit.mock.calls[0][0].node;
+    expect(node.size).toEqual({ width: 112, height: 136 });
+    expect(node.transform.translation).toEqual({ x: 300 - 56, y: 200 - 68 });
+  });
+
+  it('the ghost becomes the drag box past the click threshold', () => {
+    const { result, event, host, toolRef } = setup();
+    toolRef.current = 'rectangle';
+    act(() => result.current.handlePointerDown(event(100, 100)));
+    act(() => result.current.handlePointerMove(event(180, 150)));
+    expect(host.setPlacementGhost).toHaveBeenLastCalledWith(
+      { shape: 'rectangle', bounds: { x: 100, y: 100, width: 80, height: 50 } });
   });
 });
 
