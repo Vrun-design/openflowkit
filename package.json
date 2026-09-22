@@ -13,7 +13,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/generate-sitemap.js && tsc -b && vite build",
+    "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "build:analyze": "npm run build && node scripts/analyze-bundle.mjs",
     "bundle:check": "node scripts/check-bundle-budget.mjs",
