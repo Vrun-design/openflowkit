@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { IconCopy, IconDownload } from '@tabler/icons-react';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { Button, Icon, Popover, PopoverHeader, Segmented } from '../design-system';
+import { V2MotionExport } from './V2MotionExport';
 import {
   buildV2Export, copyPngToClipboard, downloadV2Export, printV2Export,
   type V2ExportFormat, type V2ExportScope, type V2ExportTheme,
@@ -27,6 +28,7 @@ const FORMATS: readonly { value: V2ExportFormat; label: string; title: string }[
 ];
 
 export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeIds, onClose, onToast }: V2ExportMenuProps) {
+  const [mode, setMode] = useState<'still' | 'animation'>('still');
   const [format, setFormat] = useState<V2ExportFormat>('png');
   const [scope, setScope] = useState<V2ExportScope>('page');
   const [scale, setScale] = useState<1 | 2>(2);
@@ -74,6 +76,12 @@ export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeId
     <Popover role="dialog" aria-label="Export" open={open} anchorRef={anchorRef} onClose={onClose} placement="bottom-start">
       <PopoverHeader title="Export" close={<Button variant="quiet" onClick={onClose}>Done</Button>} />
       <div className="ofk-v2-properties">
+        <Segmented<'still' | 'animation'> label="Export kind" value={mode} onChange={setMode}
+          options={[{ value: 'still', label: 'Still' }, { value: 'animation', label: 'Animation' }]} />
+        {mode === 'animation' ? (
+          <V2MotionExport document={document} pageId={pageId} onToast={onToast} />
+        ) : (
+          <>
         <Segmented<V2ExportFormat> label="Format" value={format} onChange={setFormat} options={FORMATS} />
         <Segmented<V2ExportScope> label="Scope" value={effectiveScope} onChange={setScope}
           options={[
@@ -104,6 +112,8 @@ export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeId
           ? 'Nothing to export here — this page has no shapes.'
           : effectiveScope === 'selection' ? 'Selected shapes only.'
             : effectiveScope === 'document' ? 'Every page as its own file.' : 'The current page.'}</p>
+          </>
+        )}
       </div>
     </Popover>
   );

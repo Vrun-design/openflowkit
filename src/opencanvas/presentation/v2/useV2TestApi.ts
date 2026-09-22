@@ -3,7 +3,7 @@ import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { CanvasSelection } from '../../application/selection/selection';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import type { AnimationPreset } from '../../domain/animation/types';
-import { animatedSvgFor, autoTimelineFor, motionFrameSvgFor, timelineDuration } from './v2Motion';
+import { animatedSvgFor, motionFrameSvgFor, motionTimeline, timelineDuration } from './v2Motion';
 import type { V2Tool } from './V2CreationToolbar';
 import type { V2SaveStatus } from './useV2Autosave';
 import type { useV2Proposal } from './useV2Proposal';
@@ -66,7 +66,7 @@ export function useV2TestApi(options: V2TestApiOptions) {
         const target = pageId ?? document.pages[0]?.id;
         if (!target) return null;
         const request = { document, pageId: target, preset };
-        const timeline = autoTimelineFor(request);
+        const timeline = motionTimeline(request);
         return {
           durationMs: timelineDuration(timeline),
           steps: timeline.steps.length,

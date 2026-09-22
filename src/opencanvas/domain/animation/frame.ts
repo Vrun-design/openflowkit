@@ -24,6 +24,21 @@ export function stepDuration(step: { readonly holdMs?: number; readonly note?: s
   return step.holdMs ?? (step.note ? NOTE_MS : STEP_MS);
 }
 
+/** Shortest a step may be squeezed to when the duration is scaled. */
+export const MIN_STEP_MS = 200;
+
+/** Rescale every step so the clip lasts `targetMs`; notes keep their extra weight. */
+export function scaleTimeline(timeline: Timeline, targetMs: number): Timeline {
+  const base = timelineDuration(timeline);
+  if (base <= 0 || targetMs <= 0) return timeline;
+  const factor = targetMs / base;
+  const steps = timeline.steps.map((step) => ({
+    ...step,
+    holdMs: Math.max(MIN_STEP_MS, Math.round(stepDuration(step) * factor)),
+  }));
+  return { ...timeline, steps, durationMs: steps.reduce((sum, step) => sum + stepDuration(step), 0) };
+}
+
 export interface StepWindow {
   readonly start: number;
   readonly end: number;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { easeOutCubic, frameAt, NOTE_MS, STEP_MS, stepDuration, stepWindows } from './frame';
+import { easeOutCubic, frameAt, MIN_STEP_MS, NOTE_MS, scaleTimeline, STEP_MS, stepDuration, stepWindows } from './frame';
 import { autoSequence } from './sequence';
 import { animEdge, animNode, animPage } from './testFixtures';
 import type { Timeline } from './types';
@@ -85,6 +85,14 @@ describe('frameAt', () => {
     expect(easeOutCubic(0)).toBe(0);
     expect(easeOutCubic(1)).toBe(1);
     expect(easeOutCubic(0.5)).toBeGreaterThan(0.5);
+  });
+
+  it('scales the clip to a target duration and floors short steps', () => {
+    const timeline = buildTimeline();
+    const halved = scaleTimeline(timeline, STEP_MS);
+    expect(halved.durationMs).toBe(2 * 850);
+    expect(scaleTimeline(timeline, 10).steps.every((step) => step.holdMs === MIN_STEP_MS)).toBe(true);
+    expect(scaleTimeline(timeline, 0)).toBe(timeline);
   });
 
   it('frames 500 nodes in under 5 ms', () => {
