@@ -80,6 +80,35 @@ export function zoomCameraAt(
   );
 }
 
+/** Two screen points, as a pinch holds them at one instant. */
+export interface PinchPoints {
+  readonly a: Point2d;
+  readonly b: Point2d;
+}
+
+// A pinch is computed from where it started, never from the last frame: the
+// world under the fingers' midpoint stays under it, and the zoom is the
+// ratio of the finger distances. Stateless from the start means no drift.
+export function pinchCamera(
+  start: { readonly camera: CanvasCamera; readonly points: PinchPoints },
+  current: PinchPoints,
+  limits: CameraLimits = DEFAULT_CAMERA_LIMITS
+): CanvasCamera {
+  const startMid = midpoint(start.points);
+  const startDistance = Math.max(1, distance(start.points));
+  const zoomed = zoomCameraAt(start.camera, startMid, start.camera.zoom * (distance(current) / startDistance), limits);
+  const mid = midpoint(current);
+  return panCamera(zoomed, { x: mid.x - startMid.x, y: mid.y - startMid.y });
+}
+
+function midpoint({ a, b }: PinchPoints): Point2d {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function distance({ a, b }: PinchPoints): number {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
 export function fitCameraToBounds(
   content: Bounds2d,
   viewport: Size2d,

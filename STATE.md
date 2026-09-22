@@ -78,6 +78,12 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
   `showDirectoryPicker` is missing (Brave default, Safari, Firefox) — was a silent no-op.
   `web/` landing site deleted (openflowkit.com lives in another repo); docs-site stays.
 - Owner feel-test on `/`: paste the C4 example, drill 3 levels, play a flow, run `drift`.
+- Touch 2026-09-22 (Opus): `useV2Touch` synthesises what touch lacks — two fingers pinch/pan
+  (`pinchCamera`, stateless from the gesture start), second tap ≤300 ms/24 px is a double-tap,
+  500 ms still press dispatches `contextmenu`. `dblclick` ignored after a touch pointer. ≤600 px
+  the workspace rail drops under the document bar. `scripts/touch-probe.mjs` (headed) proves
+  all three on a 390 px viewport. Known: style bar can still cover the left rail on phones.
+  Dev servers on 5173/4173 had a stale Vite dep cache (pixi loaded twice → blank page); restart.
 - Model JSON is copied onto every view frame (~3 KB/page today). Moving it to one
   document-level slot means `serialize(frame)` needs the document — an API change across
   Edit-as-code, `get_diagram`, folder save. Do it when a workspace passes ~20 views.

@@ -65,6 +65,7 @@ import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import type { FreeformPreviewFrame } from '../../infrastructure/pixi/PixiFreeformPreview';
 import { buildDeleteSelectionCommand } from '../../domain/commands/sceneEdits';
 import { CONNECTOR_ROUTE, connectorHeadEnd, type V2ToolConfig } from './v2ToolCatalog';
+import { useV2Touch } from './useV2Touch';
 
 const CLICK_THRESHOLD_PX = 4;
 // Handles sit 22 px outside the node edge; search a box around the press.
@@ -212,6 +213,7 @@ interface PointerLike {
   readonly shiftKey: boolean;
   readonly metaKey?: boolean;
   readonly ctrlKey?: boolean;
+  readonly pointerType?: string;
   readonly nativeEvent?: Partial<PointerEvent>;
 }
 
@@ -528,6 +530,16 @@ export function useV2Pointer(options: V2PointerOptions) {
     return true;
   }, []);
 
+  // Drops the drag in flight without touching the path draft.
+  const abandonOperation = useCallback((): boolean => {
+    detachWindow();
+    cancelTransformFrame();
+    if (!operationRef.current) return false;
+    operationRef.current = null;
+    clearPreviews();
+    return true;
+  }, [clearPreviews, detachWindow, cancelTransformFrame]);
+
   const cancelGesture = useCallback((): boolean => {
     detachWindow();
     cancelTransformFrame();
@@ -543,11 +555,8 @@ export function useV2Pointer(options: V2PointerOptions) {
       optionsRef.current.hostRef.current?.setConnectionPreview(null);
       return true;
     }
-    if (!operationRef.current) return false;
-    operationRef.current = null;
-    clearPreviews();
-    return true;
-  }, [clearPreviews, detachWindow, cancelTransformFrame, renderPathPreview]);
+    return abandonOperation();
+  }, [abandonOperation, detachWindow, cancelTransformFrame, renderPathPreview]);
   useEffect(() => () => {
     detachWindow();
     cancelTransformFrame();
@@ -556,6 +565,10 @@ export function useV2Pointer(options: V2PointerOptions) {
   useEffect(() => {
     gestureApiRef.current = { cancelGesture, commitGesture: commitPathDraft };
   }, [gestureApiRef, cancelGesture, commitPathDraft]);
+
+  const lastPointerTypeRef = useRef<string>('mouse');
+  const doubleTapAt = useDoubleTap(optionsRef, pathDraftRef, commitPathDraft);
+  const { beginTouch, moveTouch, endTouch, resetTouch } = useV2Touch(optionsRef, abandonOperation);
 
   const applyPendingTransformPreview = useCallback(() => {
     const opts = optionsRef.current;
@@ -982,6 +995,8 @@ export function useV2Pointer(options: V2PointerOptions) {
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {
       if (event.target !== event.currentTarget && !(event.target instanceof HTMLCanvasElement)) return;
+      lastPointerTypeRef.current = event.pointerType;
+      if (event.pointerType === 'touch' && !beginTouch(event)) return;
       if (operationRef.current) return;
       const opts = optionsRef.current;
       const host = opts.hostRef.current;
@@ -1000,7 +1015,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         currentTarget: section, target: native.target, clientX: native.clientX,
         clientY: native.clientY, pointerId: native.pointerId, altKey: native.altKey,
         shiftKey: native.shiftKey, metaKey: native.metaKey, ctrlKey: native.ctrlKey,
-        nativeEvent: native,
+        pointerType: native.pointerType, nativeEvent: native,
       });
       const onWindowMove = (native: PointerEvent) => {
         if (!operationRef.current || section.contains(native.target as Node)) return;
@@ -1194,21 +1209,29 @@ export function useV2Pointer(options: V2PointerOptions) {
         additive,
       };
     },
-    [detachWindow, pointerMove, pointerUp, renderPathPreview, commitPathDraft]
+    [beginTouch, detachWindow, pointerMove, pointerUp, renderPathPreview, commitPathDraft]
   );
 
   const handlePointerMove = useCallback(
-    (event: ReactPointerEvent<HTMLElement>) => pointerMove(event),
-    [pointerMove]
+    (event: ReactPointerEvent<HTMLElement>) => {
+      if (moveTouch(event)) return;
+      pointerMove(event);
+    },
+    [moveTouch, pointerMove]
   );
   const handlePointerUp = useCallback(
-    (event: ReactPointerEvent<HTMLElement>) => pointerUp(event),
-    [pointerUp]
+    (event: ReactPointerEvent<HTMLElement>) => {
+      const tap = endTouch(event);
+      pointerUp(event);
+      if (tap) doubleTapAt(tap.at);
+    },
+    [endTouch, pointerUp, doubleTapAt]
   );
 
   const handlePointerCancel = useCallback(() => {
+    resetTouch();
     cancelGesture();
-  }, [cancelGesture]);
+  }, [resetTouch, cancelGesture]);
   // Leaving the canvas for the rail takes the placement ghost with it.
   const handlePointerLeave = useCallback(() => {
     if (!operationRef.current) optionsRef.current.hostRef.current?.setPlacementGhost(null);
@@ -1217,23 +1240,43 @@ export function useV2Pointer(options: V2PointerOptions) {
   const handleDoubleClick = useCallback(
     (event: ReactMouseEvent<HTMLElement>) => {
       if (event.target !== event.currentTarget && !(event.target instanceof HTMLCanvasElement)) return;
+      // Touch double-taps are synthesised on release; the dblclick some
+      // browsers fire afterwards would open the editor (or add text) twice.
+      if (lastPointerTypeRef.current === 'touch') return;
+      const bounds = event.currentTarget.getBoundingClientRect();
+      doubleTapAt({ x: event.clientX - bounds.left, y: event.clientY - bounds.top });
+    },
+    [doubleTapAt]
+  );
+
+  return {
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handlePointerCancel,
+    handlePointerLeave,
+    handleDoubleClick,
+    cancelGesture,
+  };
+}
+
+function useDoubleTap(
+  optionsRef: RefObject<V2PointerOptions>,
+  pathDraftRef: RefObject<V2PathDraft | null>,
+  commitPathDraft: () => boolean
+) {
+  return useCallback(
+    (point: Point2d) => {
       const opts = optionsRef.current;
       const host = opts.hostRef.current;
       if (!host || opts.readOnlyRef.current) return;
       if (pathDraftRef.current) {
         // A double-click anywhere is "that is the last point".
-        const draft = pathDraftRef.current;
-        const bounds = event.currentTarget.getBoundingClientRect();
-        draft.points.push({
-          at: host.screenToWorld({ x: event.clientX - bounds.left, y: event.clientY - bounds.top }),
-          nodeId: null,
-        });
+        pathDraftRef.current.points.push({ at: host.screenToWorld(point), nodeId: null });
         commitPathDraft();
         return;
       }
       if (opts.toolRef.current !== 'select') return;
-      const bounds = event.currentTarget.getBoundingClientRect();
-      const point = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
       const nodeId = host.pickNode(point);
       if (nodeId) {
         // Charts are data: their double-click edits the numbers, not a label.
@@ -1256,16 +1299,6 @@ export function useV2Pointer(options: V2PointerOptions) {
       opts.applySelection(replaceSelection([id]));
       opts.openEditor(id, { isNew: true });
     },
-    [commitPathDraft]
+    [optionsRef, pathDraftRef, commitPathDraft]
   );
-
-  return {
-    handlePointerDown,
-    handlePointerMove,
-    handlePointerUp,
-    handlePointerCancel,
-    handlePointerLeave,
-    handleDoubleClick,
-    cancelGesture,
-  };
 }

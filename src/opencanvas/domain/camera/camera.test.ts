@@ -4,6 +4,7 @@ import {
   normalizeCamera,
   normalizeWheelDelta,
   panCamera,
+  pinchCamera,
   screenToWorld,
   visibleWorldBounds,
   worldToScreen,
@@ -11,6 +12,17 @@ import {
 } from './camera';
 
 describe('canonical canvas camera', () => {
+  it('pinch keeps the world under the midpoint and zooms by the finger ratio', () => {
+    const start = { camera: { x: 10, y: 20, zoom: 1 }, points: { a: { x: 100, y: 100 }, b: { x: 200, y: 100 } } };
+    const worldUnderMid = screenToWorld(start.camera, { x: 150, y: 100 });
+    // Fingers spread to twice the distance and drift 30 px right, 10 px down.
+    const next = pinchCamera(start, { a: { x: 80, y: 110 }, b: { x: 280, y: 110 } });
+    expect(next.zoom).toBe(2);
+    expect(worldToScreen(next, worldUnderMid)).toEqual({ x: 180, y: 110 });
+    // Unmoved fingers leave the camera alone.
+    expect(pinchCamera(start, start.points)).toEqual(start.camera);
+  });
+
   it('round-trips world and screen points', () => {
     const camera = { x: 20, y: -10, zoom: 2 };
     expect(screenToWorld(camera, worldToScreen(camera, { x: 12, y: 8 }))).toEqual({ x: 12, y: 8 });
