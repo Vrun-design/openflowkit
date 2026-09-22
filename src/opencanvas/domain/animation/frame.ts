@@ -36,6 +36,13 @@ export function scaleTimeline(timeline: Timeline, targetMs: number): Timeline {
     ...step,
     holdMs: Math.max(MIN_STEP_MS, Math.round(stepDuration(step) * factor)),
   }));
+  // Rounding each step can miss the target by a few ms; the last step absorbs
+  // it so the clip is exactly as long as the dialog says.
+  const total = steps.reduce((sum, step) => sum + stepDuration(step), 0);
+  const last = steps.at(-1);
+  if (last && last.holdMs !== undefined && Math.abs(total - targetMs) <= steps.length) {
+    steps[steps.length - 1] = { ...last, holdMs: Math.max(MIN_STEP_MS, last.holdMs + (targetMs - total)) };
+  }
   return { ...timeline, steps, durationMs: steps.reduce((sum, step) => sum + stepDuration(step), 0) };
 }
 

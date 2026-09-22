@@ -72,6 +72,12 @@ describe('op tools', () => {
 
     const exported = await run(target, 'export', { documentId, format: 'svg', scope: 'document' });
     const [file] = exported.files as { filename: string; text: string }[];
+    // Animated SVG is a file-mode format too; raster animation is not.
+    const animated = await run(target, 'export', { documentId, format: 'svg-animated', scope: 'page', preset: 'walkthrough' });
+    expect((animated.files as { text: string }[])[0]?.text).toContain('@keyframes');
+    const refused = await target.callTool({ name: 'export', arguments: { documentId, format: 'mp4', scope: 'page' } });
+    expect(refused.isError).toBe(true);
+    expect(JSON.stringify(refused.content)).toContain('live editor');
     expect(file?.text).toContain('<svg');
     expect(file?.text).toContain('Cache');
 

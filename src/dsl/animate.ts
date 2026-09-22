@@ -6,6 +6,10 @@ import { joinTokens, type DslSegment } from './segments';
 import { quote } from './text';
 import { ANIMATION_PRESETS, type AnimationPreset } from '../opencanvas/domain/animation/types';
 import { boundsOfNodes } from '../opencanvas/domain/animation/bounds';
+import { autoSequence } from '../opencanvas/domain/animation/sequence';
+import { flowToTimeline } from '../opencanvas/domain/animation/flow';
+import { archModelOfPage } from './model/model';
+import type { SceneDocumentV1 } from '../opencanvas/domain/document/types';
 import { scaleTimeline, stepDuration } from '../opencanvas/domain/animation/frame';
 import type { AnimationStep, Timeline } from '../opencanvas/domain/animation/types';
 
@@ -247,6 +251,45 @@ export function timelineFromAnimate(
   });
   const timeline: Timeline = { steps, preset: block.preset, loop: block.loop, durationMs: steps.reduce((sum, step) => sum + stepDuration(step), 0) };
   return block.durationMs ? scaleTimeline(timeline, block.durationMs) : timeline;
+}
+
+export type AnimateOrder = 'auto' | 'code' | (string & {});
+
+export interface MotionTimelineRequest {
+  readonly document: SceneDocumentV1;
+  readonly pageId: string;
+  readonly preset?: AnimationPreset;
+  readonly order?: AnimateOrder;
+  /** Explicit clip length; null keeps the natural one. */
+  readonly durationMs?: number | null;
+}
+
+/**
+ * The one timeline every host resolves: `auto` walks the connector graph, a
+ * flow id replays that phase-5 flow, `code` plays the animate block in the
+ * document's text. Omitted block means `autoSequence`.
+ */
+export function motionTimelineFor(request: MotionTimelineRequest): Timeline {
+  const page = request.document.pages.find(({ id }) => id === request.pageId) ?? request.document.pages[0];
+  if (!page) throw new RangeError('Motion export requires a page.');
+  const preset = request.preset ?? 'build';
+  const model = archModelOfPage(page);
+  const flow = request.order && request.order !== 'auto' && request.order !== 'code'
+    ? model?.flows.find((candidate) => candidate.id === request.order)
+    : undefined;
+  const block = request.order === 'code' ? animateFromJson(frameAnimate(page)) : null;
+  const base = block
+    ? timelineFromAnimate(page, block)
+    : flow && model
+      ? flowToTimeline(flow, model, request.document, page, preset)
+      : autoSequence(page, preset);
+  return request.durationMs ? scaleTimeline(base, request.durationMs) : base;
+}
+
+/** The animate block a compiled page's frame carries, if any. */
+function frameAnimate(page: ScenePage): unknown {
+  const dsl = page.nodes.find((node) => node.kind === 'frame')?.metadata.dsl;
+  return dsl && typeof dsl === 'object' && !Array.isArray(dsl) ? (dsl as Record<string, unknown>).animate : undefined;
 }
 
 /**

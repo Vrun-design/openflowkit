@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   animateBlockFromTimeline, animateBlockLines, animateFromJson, animateToJson, extractAnimateBlock,
-  formatAnimateDuration, parseAnimateDuration, timelineFromAnimate, writeAnimateBlock,
+  formatAnimateDuration, motionTimelineFor, parseAnimateDuration, timelineFromAnimate, writeAnimateBlock,
 } from './animate';
 import { compile } from './compile';
 import { parseDocument } from './document';
 import { serialize } from './serialize';
 import { animEdge, animNode, animPage } from '../opencanvas/domain/animation/testFixtures';
+import type { SceneDocumentV1 } from '../opencanvas/domain/document/types';
 
 const BLOCK = `%% ofk 1
 flowchart
@@ -200,5 +201,30 @@ describe('timeline → animate block', () => {
     // And it still parses.
     const document = parseDocument(twice);
     expect(extractAnimateBlock(document.segments, []).block?.preset).toBe('pulse');
+  });
+});
+
+describe('motionTimelineFor', () => {
+  it('defaults to autoSequence and reads a code block on request', async () => {
+    const compiled = await compile('%% ofk 1\nflowchart\na -> b\nb -> c\n\nanimate pulse 4s {\n  step a\n  step b\n}\n');
+    const document: SceneDocumentV1 = {
+      format: 'openflowkit.scene', schemaVersion: 1, id: 'x', name: 'x',
+      createdAt: '', updatedAt: '', metadata: {}, extensions: {},
+      pages: [{
+        id: 'p', name: 'P', diagramKind: 'flowchart',
+        layers: [{ id: 'default', name: 'L', visible: true, locked: false }],
+        nodes: [compiled.frame, ...compiled.groups, ...compiled.nodes], connectors: compiled.connectors,
+        metadata: {}, extensions: {},
+      }],
+    };
+    const auto = motionTimelineFor({ document, pageId: 'p' });
+    expect(auto.preset).toBe('build');
+    expect(auto.steps.length).toBe(3);
+    const code = motionTimelineFor({ document, pageId: 'p', order: 'code' });
+    expect(code.preset).toBe('pulse');
+    expect(code.steps.map((step) => step.nodeIds)).toEqual([['a'], ['b']]);
+    expect(code.durationMs).toBe(4000);
+    expect(motionTimelineFor({ document, pageId: 'p', durationMs: 10_000 }).durationMs).toBe(10_000);
+    expect(() => motionTimelineFor({ document: { ...document, pages: [] }, pageId: 'p' })).toThrow(RangeError);
   });
 });

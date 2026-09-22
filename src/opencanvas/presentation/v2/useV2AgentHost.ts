@@ -2,13 +2,16 @@
 // the live app can answer (worker layout, camera, raster, real export).
 import { useMemo } from 'react';
 import { grammarSection } from '../../../agent/host';
-import type { OpCapabilities } from '../../../agent/ops/types';
+import type { ExportFormat, ExportRequest, OpCapabilities } from '../../../agent/ops/types';
 import type { CompileOptions } from '../../../dsl/compile';
 import { compile, compileWorkspace } from '../../../dsl/compile';
 import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { SVG_SOURCES } from '../../../services/shapeLibrary/providerCatalog';
 import { buildV2Export, bytesToBase64 } from './v2Export';
+import { animatedSvgFor, buildMotionRasterFile } from './v2Motion';
+
+const MOTION_FORMATS: readonly ExportFormat[] = ['svg-animated', 'gif', 'mp4', 'webm'];
 
 export interface V2AgentHostOptions {
   readonly fitView: (ids?: readonly string[]) => void;
@@ -45,10 +48,27 @@ export function useV2AgentHost(options: V2AgentHostOptions): OpCapabilities {
       compileWorkspace(text, { ...compileOptions, layout: compileOptions?.layout ?? elkDslLayoutPort, resolveIcon: compileOptions?.resolveIcon ?? resolveDslIcon }),
     syntax: (family?: string) => loadGrammar().then((grammar) => grammarSection(grammar, family)),
     searchIcons,
-    exportFiles: async (request) => {
-      const files = await buildV2Export(request);
-      return files.map(({ filename, mime, text, bytes }) =>
-        bytes ? { filename, mime, base64: bytesToBase64(bytes) } : { filename, mime, text: text ?? '' });
+    exportFiles: async (request: ExportRequest) => {
+      if (!MOTION_FORMATS.includes(request.format)) {
+        const files = await buildV2Export(request as Parameters<typeof buildV2Export>[0]);
+        return files.map(({ filename, mime, text, bytes }) =>
+          bytes ? { filename, mime, base64: bytesToBase64(bytes) } : { filename, mime, text: text ?? '' });
+      }
+      const motion = {
+        document: request.document, pageId: request.pageId,
+        preset: request.preset, order: request.order, durationMs: request.durationMs,
+        loop: request.loop, theme: request.theme,
+      };
+      if (request.format === 'svg-animated') {
+        return [{ filename: `${request.document.id}.svg`, mime: 'image/svg+xml', text: animatedSvgFor(motion) }];
+      }
+      const file = await buildMotionRasterFile({
+        ...motion,
+        format: request.format as 'gif' | 'mp4' | 'webm',
+        size: request.size ?? 1080,
+        fps: request.fps ?? 24,
+      });
+      return [{ filename: file.filename, mime: file.mime, base64: file.bytes ? bytesToBase64(file.bytes) : '' }];
     },
     fitView: options.fitView,
   }), [options.fitView]);

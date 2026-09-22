@@ -4,6 +4,8 @@
 // text formats directly. PNG is absent by construction — that is the live
 // editor's job.
 import { exportCanonicalSvg } from '../opencanvas/infrastructure/export/canonicalSvg';
+import { exportAnimatedSvg } from '../opencanvas/infrastructure/export/animatedSvg';
+import { motionTimelineFor } from '../dsl/animate';
 import { serializeCanonicalJson } from '../opencanvas/infrastructure/export/canonicalJson';
 import { buildPrintDocument } from '../opencanvas/infrastructure/export/print';
 import { compile, compileWorkspace, type CompileOptions } from '../dsl/compile';
@@ -46,8 +48,27 @@ export function createFileCapabilities(options: FileHostOptions): OpCapabilities
       .slice(0, limit)
       .map(({ icon }) => icon),
     exportFiles: async (request) => {
-      if (request.format === 'png') {
-        throw new Error('PNG export needs a live editor: open the app and click "Connect agent".');
+      if (request.format === 'png' || request.format === 'gif' || request.format === 'mp4' || request.format === 'webm') {
+        // No canvas, no codecs: this host has no rasterizer by construction.
+        throw new Error(`${request.format.toUpperCase()} export needs a live editor: open the app and click "Connect agent". Animated SVG works here.`);
+      }
+      if (request.format === 'svg-animated') {
+        const page = request.document.pages.find(({ id }) => id === request.pageId) ?? request.document.pages[0]!;
+        const timeline = motionTimelineFor({
+          document: request.document, pageId: page.id,
+          ...(request.preset ? { preset: request.preset } : {}),
+          ...(request.order ? { order: request.order } : {}),
+          ...(request.durationMs === undefined ? {} : { durationMs: request.durationMs }),
+        });
+        return [{
+          filename: `${request.document.id}.svg`,
+          mime: 'image/svg+xml',
+          text: exportAnimatedSvg(request.document, timeline, {
+            pageId: page.id,
+            ...(request.theme ? { theme: request.theme } : {}),
+            ...(request.loop ? { loop: true } : {}),
+          }),
+        }];
       }
       const pages = request.scope === 'document'
         ? request.document.pages

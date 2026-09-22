@@ -31,8 +31,8 @@ flowchart
 3. Press <kbd>⌘↵</kbd> again: the frame is replaced from the text, one undo step.
 4. Click **Connect agent**, ask your MCP client for `create_diagram` — the same thing
    happens while you watch.
-5. Export PNG (2×), SVG, PDF or JSON; switch the palette to `paper`, `builder` or `mono`
-   and regenerate.
+5. Export PNG (2×), SVG, PDF, JSON or an animation (animated SVG, GIF, MP4, WebM);
+   switch the palette to `paper`, `builder` or `mono` and regenerate.
 
 ## Run it
 
@@ -66,6 +66,18 @@ title: Image upload
 - Paste Mermaid and press <kbd>⌘⇧M</kbd>: it converts, with an honest loss list.
 - Right-click a frame → **Edit as code** to reopen its source; the serializer only
   rewrites the frame, never the rest of the page.
+- Motion is part of the text too: an `animate` block names the steps an export plays, and
+  the export writes animated SVG, GIF, MP4 or WebM in your browser.
+
+```openflow
+animate build 10s loop {
+  step a, b            // reveal these nodes together
+  step a -> c : POST   // a step about the edge a -> c
+  step c hold 2s
+}
+```
+
+<img src="assets/motion/flow-walkthrough.svg" alt="A flowchart walking through its steps: the walkthrough preset spotlights each node in turn" width="420">
 
 ## Agents
 

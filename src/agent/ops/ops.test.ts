@@ -133,6 +133,13 @@ views { view context of Shop; view container of Shop }
     const exported = await run.run('export', { format: 'svg', scope: 'document' });
     expect(exported.output).toMatchObject({ files: [{ filename: 'diagram.svg', text: '<svg/>' }] });
 
+    // Animated SVG comes from the same host; raster animation asks for an editor.
+    const animated = await run.run('export', { format: 'svg-animated', scope: 'page', preset: 'pulse', order: 'code' });
+    expect(animated.output).toMatchObject({ files: [{ filename: 'diagram.svg-animated', text: '<svg-animated/>' }] });
+    const lastMotion = run.capabilities.recording.exported.at(-1) as { format: string; preset?: string };
+    expect(lastMotion).toMatchObject({ format: 'svg-animated', preset: 'pulse' });
+
+
     const shot = await run.run('screenshot', { frameId, scale: 2 });
     expect(shot.output).toMatchObject({ frameId, mime: 'image/png', base64: 'UE5H' });
     const lastExport = run.capabilities.recording.exported.at(-1) as { selectedNodeIds: readonly string[] };

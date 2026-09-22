@@ -85,6 +85,15 @@ describe('file host', () => {
 
     await expect(host.exportFiles!({ document: documentWithFrame, format: 'png', scope: 'page', pageId: 'doc-host:page-1' }))
       .rejects.toThrow(/live editor/);
+
+    // Animated SVG is the one motion format a browserless host can serve.
+    const animated = await host.exportFiles!({ document: documentWithFrame, format: 'svg-animated', scope: 'page', pageId: 'doc-host:page-1', preset: 'pulse' });
+    expect(animated[0]?.text).toContain('@keyframes');
+    expect(animated[0]?.text).toContain('prefers-reduced-motion');
+    for (const format of ['gif', 'mp4', 'webm'] as const) {
+      await expect(host.exportFiles!({ document: documentWithFrame, format, scope: 'page', pageId: 'doc-host:page-1' }))
+        .rejects.toThrow(/live editor/);
+    }
   });
 
   it('has no viewport to fit', () => {

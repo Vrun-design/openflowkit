@@ -13,7 +13,7 @@ const CURATED = {
   'Diagram as code': ['openflow-dsl', 'openflow-dsl-reference', 'diagram-families', 'node-types', 'mermaid-integration', 'mermaid-vs-openflow'],
   'Agents': ['mcp-server', 'prompting-agents', 'ai-generation'],
   'Canvas': ['canvas-basics', 'context-menu', 'properties-panel', 'command-center', 'smart-layout'],
-  'Ship it': ['choose-export-format', 'exporting', 'github-embed', 'choose-input-mode'],
+  'Ship it': ['choose-export-format', 'exporting', 'animated-export', 'github-embed', 'choose-input-mode'],
 };
 
 const slugs = readdirSync(DOCS_DIR).filter((file) => file.endsWith('.md')).map((file) => file.slice(0, -3));

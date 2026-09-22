@@ -29,20 +29,27 @@ function filesOutput(files: readonly ExportedFile[]) {
 export const exportDiagram = defineOp({
   name: 'export',
   title: 'Export',
-  description: 'Export the document, a page, or a selection as SVG, PNG, PDF (print HTML) or JSON. Returns the file bodies.',
+  description: 'Export the document, a page, or a selection as SVG, PNG, PDF (print HTML), JSON, or an animation (animated SVG, GIF, MP4, WebM). Returns the file bodies. Raster animation needs a live editor (WebCodecs); a file host serves animated SVG only.',
   schema: z.object({
-    format: z.enum(['svg', 'png', 'pdf', 'json']).default('svg'),
+    format: z.enum(['svg', 'png', 'pdf', 'json', 'svg-animated', 'gif', 'mp4', 'webm']).default('svg'),
     scope: z.enum(['selection', 'page', 'document']).default('document'),
     pageId: z.string().min(1).optional(),
     ids: z.array(z.string().min(1)).optional().describe('Selection scope ids; defaults to everything on the page.'),
     scale: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(1),
     theme: z.enum(['light', 'dark', 'print']).default('light'),
+    preset: z.enum(['build', 'walkthrough', 'pulse']).default('build').describe('Animation preset: build reveals in order, walkthrough spotlights each step, pulse shows everything with a moving light.'),
+    order: z.string().min(1).optional().describe('Animation order: a phase-5 flow id, or "code" for the animate block in the diagram source. Omit for the connector graph.'),
+    durationMs: z.number().int().min(500).max(600_000).optional().describe('Animation clip length in milliseconds; omit for the natural length.'),
+    loop: z.boolean().default(false),
+    size: z.union([z.literal(720), z.literal(1080), z.literal(1440)]).default(1080).describe('Raster animation width in pixels.'),
+    fps: z.union([z.literal(12), z.literal(24), z.literal(30)]).default(24),
   }),
-  async run({ format, scope, pageId, ids, scale, theme }, context) {
+  async run({ format, scope, pageId, ids, scale, theme, preset, order, durationMs, loop, size, fps }, context) {
     if (!context.capabilities.exportFiles) throw new Error('This host cannot export files; connect a live editor or use a host with an export pipeline.');
     const page = requirePage(context.document, pageId ?? context.pageId);
     const files = await context.capabilities.exportFiles({
       document: context.document, format, scope, pageId: page.id, scale, theme,
+      preset, ...(order ? { order } : {}), ...(durationMs === undefined ? {} : { durationMs }), loop, size, fps,
       ...(scope === 'selection' ? { selectedNodeIds: ids ?? page.nodes.filter((node) => !isContainerNodeKind(node.kind)).map((node) => node.id) } : {}),
     });
     return { command: null, output: filesOutput(files) };

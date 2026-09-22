@@ -3,14 +3,13 @@
 // and the test hook cannot drift.
 
 import type { SceneDocumentV1 } from '../../domain/document/types';
-import { autoSequence } from '../../domain/animation/sequence';
 import { scaleTimeline, timelineDuration } from '../../domain/animation/frame';
-import { flowToTimeline } from '../../domain/animation/flow';
 import type { AnimationPreset, Timeline } from '../../domain/animation/types';
-import { archModelOfPage } from '../../../dsl/model/model';
-import { extractAnimateBlock, timelineFromAnimate, type AnimateBlock } from '../../../dsl/animate';
+import { extractAnimateBlock, motionTimelineFor, timelineFromAnimate, type AnimateBlock } from '../../../dsl/animate';
 import { parseDocument } from '../../../dsl/document';
+import type { MotionFormat, MotionFps, MotionSize } from '../../infrastructure/export/motionSchedule';
 import { exportAnimatedSvg, exportMotionFrameSvg } from '../../infrastructure/export/animatedSvg';
+import { renderMotionFile } from '../../infrastructure/export/motionFrames';
 import type { V2ExportFile } from './v2Export';
 
 /** `auto` walks the connector graph; a flow id replays a phase-5 flow; `code` reads the frame's animate block. */
@@ -43,22 +42,21 @@ export function animateBlockFromText(text: string | undefined): AnimateBlock | n
   }
 }
 
-/** The timeline the dialog previews and every output is rendered from. */
+/**
+ * The timeline the dialog previews and every output is rendered from. The
+ * shared resolver handles auto/flow/the frame's block; the dialog's live code
+ * draft wins when it is present, so chips and preview never lag the panel.
+ */
 export function motionTimeline(request: V2MotionRequest): Timeline {
-  const page = pageOf(request);
-  if (!page) throw new RangeError('Motion export requires a page.');
-  const preset = request.preset ?? 'build';
-  const model = archModelOfPage(page);
-  const flow = request.order && request.order !== 'auto' && request.order !== 'code'
-    ? model?.flows.find((candidate) => candidate.id === request.order)
-    : undefined;
-  const block = request.order === 'code' ? animateBlockFromText(request.codeText) : null;
-  const base = block
-    ? timelineFromAnimate(page, block)
-    : flow && model
-      ? flowToTimeline(flow, model, request.document, page, preset)
-      : autoSequence(page, preset);
-  return request.durationMs ? scaleTimeline(base, request.durationMs) : base;
+  if (request.order === 'code' && request.codeText !== undefined) {
+    const page = pageOf(request);
+    const block = animateBlockFromText(request.codeText);
+    if (page && block) {
+      const timeline = timelineFromAnimate(page, block);
+      return request.durationMs ? scaleTimeline(timeline, request.durationMs) : timeline;
+    }
+  }
+  return motionTimelineFor(request);
 }
 
 export function animatedSvgFor(
@@ -106,3 +104,25 @@ export function buildMotionSvgFile(request: V2MotionRequest): V2ExportFile {
 }
 
 export { timelineDuration };
+
+export interface V2MotionEncodeRequest extends V2MotionRequest {
+  readonly timeline?: Timeline;
+  readonly format: MotionFormat;
+  readonly size: MotionSize;
+  readonly fps: MotionFps;
+}
+
+/** The raster/video motion file for a request; the live host's extra path. */
+export async function buildMotionRasterFile(request: V2MotionEncodeRequest): Promise<V2ExportFile> {
+  const file = await renderMotionFile({
+    document: request.document,
+    timeline: request.timeline ?? motionTimeline(request),
+    pageId: pageOf(request)?.id ?? request.pageId,
+    filenameStem: motionFileStem(request),
+    format: request.format,
+    size: request.size,
+    fps: request.fps,
+    ...(request.theme ? { theme: request.theme } : {}),
+  });
+  return { filename: file.filename, mime: file.mime, bytes: file.bytes };
+}

@@ -41,9 +41,12 @@ export interface IconMatch {
   readonly category?: string;
 }
 
-export type ExportFormat = 'png' | 'svg' | 'pdf' | 'json';
+export type ExportFormat = 'png' | 'svg' | 'pdf' | 'json' | 'svg-animated' | 'gif' | 'mp4' | 'webm';
 export type ExportScope = 'selection' | 'page' | 'document';
 export type ExportTheme = 'light' | 'dark' | 'print';
+
+/** Motion presets the animated formats accept. */
+export type ExportPreset = 'build' | 'walkthrough' | 'pulse';
 
 export interface ExportRequest {
   readonly document: SceneDocumentV1;
@@ -53,6 +56,16 @@ export interface ExportRequest {
   readonly selectedNodeIds?: readonly string[];
   readonly scale?: 1 | 2 | 3;
   readonly theme?: ExportTheme;
+  /** Motion only: how the steps are ordered. */
+  readonly preset?: ExportPreset;
+  /** Motion only: a phase-5 flow id, `auto`, or `code` for the animate block. */
+  readonly order?: string;
+  /** Motion only: clip length in milliseconds; null keeps the natural one. */
+  readonly durationMs?: number | null;
+  readonly loop?: boolean;
+  /** Motion only: raster width in pixels (720, 1080, 1440). */
+  readonly size?: 720 | 1080 | 1440;
+  readonly fps?: 12 | 24 | 30;
 }
 
 export interface ExportedFile {
