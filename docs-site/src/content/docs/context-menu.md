@@ -1,91 +1,60 @@
 ---
-draft: false
-title: Context Menu & Right-Click Actions
-description: Right-click on nodes, edges, or canvas to access quick actions for editing, organizing, and managing diagram elements.
+title: Context menu
+description: Right-click on a shape, a connector, a generated frame or empty canvas for the actions that apply to it.
 ---
 
-The context menu appears when you right-click on the canvas, a node, an edge, or multiple selected elements. It provides quick access to common editing operations without using the toolbar or keyboard shortcuts.
+Right-click (or long-press on touch) opens a menu scoped to what is under the pointer. Menu
+items that cannot apply are disabled rather than hidden, so the shape of the menu tells you
+what is possible.
 
-## Canvas Right-Click (Pane Menu)
+## On empty canvas
 
-Right-click on an empty area of the canvas to see:
+| Item | What it does |
+| --- | --- |
+| Paste | Paste the clipboard at the cursor |
+| Select all | Select every node on the page |
+| Zoom to fit | Frame the whole page |
+| Zoom to 100% | Reset to one-to-one scale |
+| Show grid | Toggle the dot grid |
+| Snap to grid | Toggle grid snapping |
 
-- **Paste**: Paste copied nodes at the cursor position (if clipboard has content)
+The last two are the same preferences as [Settings](/settings/), kept here because they are
+things you reach for mid-drag.
 
-## Node Right-Click Menu
+## On a shape or a selection
 
-Right-click on a single node to access:
+| Item | What it does |
+| --- | --- |
+| Cut / Copy / Duplicate | Clipboard and duplication |
+| Edit label | Open the in-place label editor |
+| Edit as code | Appears on a generated frame; reopens its DSL source |
+| Open … view / Unplace / Remove from model | Appears when the shape is a [C4 model](/architecture-c4/) placement |
+| Style → Copy style / Paste style | Copy the appearance between shapes |
+| Reorder → Front / Forward / Backward / Back | Z-order, or the whole selection's order |
+| Transform → Flip, Align, Distribute | The arrange actions, with Align and Distribute enabled for multi-selections |
+| Group / Wrap in section / Ungroup | Container actions; Ungroup appears when the selection can be unwrapped |
+| Zoom to selection | Frame the selection |
+| Lock / Unlock | Toggle the lock |
+| Delete | Delete the selection |
 
-### Editing
+## On a connector
 
-- **Copy**: Copy the selected node to clipboard
-- **Duplicate**: Create an exact copy offset from the original
+| Item | What it does |
+| --- | --- |
+| Edit label | Edit the connector's label |
+| Path → Elbow / Straight / Curve | Change the routing |
+| Reverse direction | Swap the endpoints and the arrow head |
+| Style → Copy / Paste style | Appearance between connectors |
+| Delete | Remove the connector |
 
-### Layer Order
+## What it cannot do
 
-- **Bring to Front**: Move the node above all other elements
-- **Send to Back**: Move the node behind all other elements
+- **No custom menus or plugins.** The menu is the set of operations the editor has.
+- **No multi-connector operations.** One connector at a time; style copy/paste works from a
+  node to a node and from a connector to a connector, not across the two.
+- **No "open in new tab" style items.** Everything acts on the current page.
 
-### Section Actions (for Section nodes)
+## Where to go next
 
-When right-clicking on a Section node:
-
-- **Fit Contents**: Resize the section to fit all its children
-- **Bring Inside**: Move selected nodes into this section
-- **Lock Section**: Prevent editing of section contents
-- **Hide Section**: Toggle section visibility
-
-When a node is inside a section:
-
-- **Release From Section**: Remove the node from the current section
-
-### Delete
-
-- **Delete**: Remove the node from the diagram
-
-## Edge Right-Click Menu
-
-Right-click on an edge to access:
-
-- **Edit Label**: Open inline editing to change the edge label
-- **Reverse Direction**: Flip the edge to flow the opposite way
-- **Delete Connection**: Remove the edge from the diagram
-
-## Multi-Select Right-Click Menu
-
-When multiple nodes are selected and you right-click:
-
-### Alignment
-
-A 6-button grid for aligning selected nodes:
-
-- Align Left / Center / Right
-- Align Top / Middle / Bottom
-
-### Distribution
-
-- **Distribute Horizontally**: Space nodes evenly from left to right
-- **Distribute Vertically**: Space nodes evenly from top to bottom
-
-### Grouping
-
-- **Group**: Create a new group containing all selected nodes
-- **Wrap in Section**: Create a new section and move all selected nodes into it
-
-### Delete
-
-- **Delete**: Remove all selected nodes from the diagram
-
-## Keyboard Navigation
-
-The context menu supports keyboard navigation:
-
-- **Arrow keys**: Navigate between menu items
-- **Enter**: Select the focused item
-- **Escape**: Close the menu without making a selection
-
-## Tips
-
-- The menu auto-positions to stay within the viewport
-- For frequently used actions, consider learning the corresponding keyboard shortcuts
-- Multi-select alignment is faster with `Shift+Click` to select multiple nodes first
+- [Keyboard shortcuts](/keyboard-shortcuts/) — the same actions on keys.
+- [Properties panel](/properties-panel/) — the style editors the menu links to.

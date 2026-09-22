@@ -21,6 +21,7 @@ interface Feature {
   readonly status: (typeof STATUSES)[number];
   readonly evidence: string;
   readonly notes: string;
+  readonly page?: string;
   readonly shortcuts?: readonly string[];
   readonly ops?: readonly string[];
   readonly families?: readonly string[];
@@ -45,6 +46,14 @@ describe('feature inventory', () => {
       const path = feature.evidence.replace(/:\d+$/, '');
       expect(path.startsWith('src/') || path.startsWith('mcp-server/') || path.startsWith('scripts/') || path.startsWith('package.json'), `${feature.id} evidence must be repo-relative`).toBe(true);
       expect(existsSync(resolve(REPO_ROOT, path)), `${feature.id}: ${path} does not exist`).toBe(true);
+    }
+  });
+
+  it('gives every shipped feature a page that exists', () => {
+    for (const feature of features.filter(({ status }) => status === 'shipped')) {
+      expect(feature.page, `${feature.id} has no page`).toBeTruthy();
+      const page = resolve(REPO_ROOT, 'docs-site', 'src', 'content', 'docs', `${feature.page}.md`);
+      expect(existsSync(page), `${feature.id}: page ${feature.page}.md does not exist`).toBe(true);
     }
   });
 

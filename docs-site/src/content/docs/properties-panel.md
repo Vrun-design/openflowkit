@@ -1,55 +1,60 @@
 ---
-draft: false
-title: Properties Panel
-description: Use the right-side inspector to make exact node, edge, bulk-edit, and Studio-related adjustments in OpenFlowKit.
+title: Properties panel
+description: The selection's style panels — fill, outline, text, icon, ink, chart and connector editors.
 ---
 
-The Properties panel is the right-side inspector that appears when you select a node or edge. It is the main place for exact edits after rough structure is already on the canvas.
+Selection drives the inspector: the context bar floats over what you selected and shows the
+style panels that apply to it. Each panel opens in place, previews live while you drag a
+value, and commits one undo step when you let go.
 
-## When to use it
+## Node panels
 
-Use the Properties panel when:
+| Panel | What it edits |
+| --- | --- |
+| **Fill** | Palette swatch (pastel or solid mode), transparent, or a custom colour; corner radius, opacity, shadow |
+| **Outline** | Stroke colour (or no outline), width, dash (solid, dashed, dotted) |
+| **Text** | Colour (or auto), font family, size, weight/italic/underline/strikethrough, alignment, vertical alignment, padding, line height, letter spacing; containers get a header shown/hidden toggle instead of vertical alignment |
+| **Icon** | Pick an icon for a shape, turning it into an icon card |
+| **Ink** | Pen and highlighter colour and width; stroke nodes keep their ink in `content`, not appearance |
+| **Chart** | The chart kind, for chart nodes |
 
-- the rough structure is correct but the details are not
-- you need exact labels, colors, shapes, or typography
-- you want edge labels and routing adjustments
-- a diagram family exposes settings that are not convenient to edit directly on the graph
+The fill palette is the document's diagram palette (`pastel`, `paper`, `builder`, `mono`);
+**solid** switches a swatch to its stronger mode. A custom colour is kept verbatim — the
+palette does not have to approve it.
 
-## What opens in the right rail
+## Connector panels
 
-The rail changes based on selection state:
+| Panel | What it edits |
+| --- | --- |
+| **Line** | Colour, width, dash, path (elbow, straight, curve, path), corner radius for elbows, opacity |
+| **Ends** | Start and end markers (none, arrow, dot, cross, diamond) and reverse direction |
+| **Label** | Label colour, background, font, size, bold/italic/underline |
 
-- one node selected: node inspector
-- multiple nodes selected: bulk edit
-- one edge selected: edge inspector
-- Studio mode active: AI, code, lint, or other Studio tabs instead of properties
+## Mixed selections
 
-## Node editing
+With several shapes selected, a field shows the common value or nothing when they differ;
+editing it sets every selected shape to the new value. Panels that cannot apply — an icon for
+a text node, for example — are not offered.
 
-For a typical node, the inspector exposes combinations of these sections:
+Style choices are sticky: the last committed style seeds the next shape you draw.
 
-- **Content** for label and sublabel
-- **Shape** for geometry selection
-- **Color** for presets and custom color
-- **Icon** for icon changes
-- **Typography** for font and emphasis controls
-- **Image** settings for image nodes
-- **Variant** settings for browser/mobile wireframes
+## Chart data
 
-Some families add their own controls. For example:
+A chart's numbers are edited in the chart data panel, not by dragging bars: cells write the
+diagram's DSL source and regenerate the same chart with the new value. See the
+[chart family](/diagram-chart/) for the data format.
 
-- mind maps expose child and sibling creation actions
-- architecture nodes expose architecture-specific semantics
-- icon-backed asset nodes expose asset search and category filtering
+## What it cannot do
 
-## Edge editing
+- **No per-property keyframes or effects.** Style is static; motion comes from the
+  [`animate` block](/animated-export/).
+- **No reusable named styles.** Copy style (`⌘Alt + C` / `⌘Alt + V`) moves a style between
+  shapes; there is no style library.
+- **No design-token binding.** Palette colours are the app's; custom colours are values, not
+  tokens.
+- **No arrowheads on ink.** Marker ends exist for connectors only.
 
-When an edge is selected, the panel exposes:
+## Where to go next
 
-- **Label**
-- **Route**
-- appearance-related settings where supported
-
-## Bulk edit
-
-When multiple nodes are selected, the right rail switches to bulk edit so you can update common styling and shared properties together.
+- [Theming](/theming/) — palettes, light/dark and the app's own look.
+- [Canvas basics](/canvas-basics/) — the manipulation side of the same selection.

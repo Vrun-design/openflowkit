@@ -1,75 +1,56 @@
 ---
-draft: false
-title: Quick Start
-description: Create your first OpenFlowKit diagram from builder templates, imports, AI, code, or the canvas.
+title: Quick start
+description: From an empty canvas to an exported diagram in five minutes — shapes, connectors, code, export.
 ---
 
-This is the fastest reliable way to get productive if you are building software, documenting systems, or preparing technical diagrams for docs and reviews.
+Open the app at [app.openflowkit.com](https://app.openflowkit.com), or run it yourself:
+`npm install` then `npm run dev` in the repository and open the URL Vite prints.
 
-## 1. Start from the home screen
+## 1. Draw something
 
-The first screen is the workspace home, not a forced blank diagram. From there you can:
+Press `R` and click to place a rectangle. Press `O` and place an ellipse next to it. Hover the
+rectangle: four side handles appear — drag from the right one to the ellipse to connect them.
+The canvas is infinite: `Space + drag` to pan, `⌘`/`Ctrl + scroll` to zoom at the pointer.
 
-- create a blank flow
-- open an existing browser-stored flow
-- duplicate a saved flow
-- import a JSON diagram document
-- jump directly into templates or AI-assisted generation paths
+Everything is autosaved to your browser; the cloud icon in the document bar shows the save
+state. Press `?` any time for the shortcut cheatsheet.
 
-Each flow opens in the editor only after a real document exists.
+## 2. Or write it
 
-## 2. Pick the strongest input you already have
+Press `⌥D` for the code panel, paste this, then press `⌘↵` or click **Generate diagram**:
 
-OpenFlowKit works best when you start from the most truthful source available, then refine visually.
+```openflow
+flowchart
+Start [ellipse]
+Check [diamond]
+Ship [rounded]
 
-### Template-first
-
-Use **Browse Templates** when you need a strong developer-oriented starting structure fast. The starter set is strongest for release flows, incident runbooks, cloud diagrams, sequence flows, C4 context, and architecture communication.
-
-### Import or code-first
-
-Use import or the Studio code flows when you already have a technical source artifact:
-
-- Mermaid or OpenFlow DSL for editable diagram-as-code
-- SQL or OpenAPI for structured system drafts
-- Terraform, source code, or infrastructure text for system and architecture imports
-- JSON/OpenFlow when you are restoring a saved graph exactly
-
-### Prompt-to-diagram
-
-Switch the right rail to Studio and open the **Flowpilot** tab. Enter a prompt such as:
-
-```text
-Create a SaaS onboarding workflow with signup, email verification,
-team invite, workspace creation, billing setup, and first success milestone.
+Start -> Check : submit
+Check -> Ship : yes
+Check -> Start : no
 ```
 
-Use this when the shape is still fuzzy and you want a first draft quickly. For technical work, prompt generation is usually strongest after you already know the systems involved.
+The text compiles into one frame. Edit the text and generate again: the frame is replaced in
+place, and one undo restores what was there before. Right-click a generated frame and choose
+**Edit as code** to get its source back at any time.
 
-If AI is not configured yet, use the **Add key** action to open the shared AI settings modal, choose your provider, and decide whether the key should persist on this device or only for the current session.
+## 3. Export
 
-### Blank canvas and assets
+Open the canvas menu → **Export…**, or the document bar's export item. Pick a format (PNG, SVG,
+PDF or JSON), a scope (selection, page or all pages), and for PNG an image scale. The export
+carries the theme you pick — light, dark or print — and transparency is free for PNG and SVG.
 
-Use blank canvas when the structure is already in your head and visual iteration is faster than import. Open **Assets** from the Command Center to add developer logos, cloud-provider libraries, CNCF shapes, and icon packs into the current flow.
+## 4. Put an agent on it
 
-## 3. Refine the diagram visually
+- **MCP** — open the **Connect agent** panel, enable the bridge, and point an MCP client at
+  `npx -y @vrun-design/openflowkit-mcp`. Every tool then acts on the document you see.
+  See [MCP Server](/mcp-server/).
+- **Bring your own key** — press `⌘J`, add a provider key in the assistant panel, and describe
+  the diagram you want. The proposal is shown before it lands and accepts as one undo step.
+  See [AI generation](/ai-generation/).
 
-Once something is on the canvas:
+## Where to go next
 
-- move nodes into rough position
-- use the [Properties Panel](/properties-panel/) for exact edits and architecture metadata
-- use [Layers](/keyboard-shortcuts/) and page tabs when the diagram needs more structure
-- run [Smart Layout](/openflow-dsl/) when the structure is right but spacing is rough
-- use the [Command Center](/keyboard-shortcuts/) to search, switch workflows, or insert more assets
-
-## 4. Save recovery points
-
-Before a major AI rewrite or import refresh, review the snapshot/history tooling so you can recover quickly if the new result is worse. See [Playback & History](/canvas-basics/).
-
-## 5. Share or export the result
-
-Use the export menu when you are ready to move the diagram into docs, design tools, code review threads, or launch assets.
-
-- See [Choose an Export Format](/exporting/)
-- See [Exporting](/exporting/)
-- Use viewer links and embed snippets when you want the diagram to stay live instead of pasting a screenshot
+- [OpenFlow DSL](/openflow-dsl/) — the language behind **Generate**.
+- [Keyboard shortcuts](/keyboard-shortcuts/) — the full map.
+- [Exporting](/exporting/) — every format and option.

@@ -1,71 +1,54 @@
 ---
-draft: false
 title: Exporting
-description: Export diagrams from OpenFlowKit as images, cinematic media, JSON, code formats, design-tool handoff, or share/embed links.
+description: PNG, SVG, PDF and JSON — scopes, themes, scale, transparency, and what each format is actually good for.
 ---
 
-Export lives in the top-right menu of the editor and covers both downloadable files and clipboard-oriented formats.
+Canvas menu → **Export…** opens one panel: format, scope, and the options that belong to the
+format. Everything is produced in the browser from the same exported SVG.
 
-The right export choice depends on whether your next step is editing, publishing, presenting, embedding, or collaboration.
+## Formats
 
-## Downloaded file exports
+| Format | What you get | Options |
+| --- | --- | --- |
+| **PNG** | A raster image of the current view | 1× or 2× resolution; light/dark/print theme; transparent background; **Copy 2×** to the clipboard |
+| **SVG** | Vector markup that opens in Figma, Illustrator and browsers | Light/dark/print theme |
+| **PDF** | The browser's print dialog over the exported SVG — choose "Save as PDF" | — |
+| **JSON** | The whole document, every page, in the canonical format | — |
 
-### PNG and JPG
+## Scope
 
-Use PNG or JPG for:
+- **Selection** — just the selected shapes and the connectors between them.
+- **Page** — everything on the current page (the default).
+- **All pages** — one file per page for PNG and SVG; JSON is always the whole document.
 
-- docs
-- slides
-- tickets
-- lightweight visual sharing
+Exporting an empty page is refused with a message rather than producing an empty file.
 
-PNG is usually the better default when you want cleaner transparency handling. JPG is useful when a simple white-background image is enough.
+## Themes and transparency
 
-### SVG
+The export theme is independent of the app theme: **Light** matches the light canvas, **Dark**
+the dark one, and **Print** forces the white page background for paper. PNG and SVG can be
+transparent; a transparent PNG has no background rectangle at all, which is what you want for
+slides and dark READMEs.
 
-Use SVG when you need vector output for docs, websites, or further design-tool handling. SVG is the best choice when the diagram needs to stay crisp across sizes.
+## JSON is the round-trip format
 
-### JSON
+**Export… → JSON** writes the document in the canonical format the app itself opens; **Open
+file…** reads it back, including on a different browser. It is also what `openflow_save`
+writes over [MCP](/mcp-server/). JSON export always covers every page and every asset
+reference — the file is the document, not a rendering of it.
 
-This is the most faithful archival format for re-import into OpenFlowKit. Use it for:
+## What it cannot do
 
-- backups
-- browser-to-browser handoff
-- preserving the most editable version of the graph
-- long-term retention of a diagram you may need to revise later
+- **No direct PDF file.** PDF is the print dialog; the file is written by the browser and the
+  page setup (margins, headers) belongs to the print dialog, not to OpenFlowKit.
+- **No ZIP of all pages.** All-pages export downloads one file per page.
+- **No Mermaid export.** Mermaid is an import path only — see
+  [Mermaid import](/mermaid-import/).
+- **No share links or embeds.** Exports are files; see
+  [Local-first diagramming](/local-first-diagramming/) for why.
+- **No format options beyond those above** — no JPEG, no WebP, no size presets for PNG.
 
-If you are unsure what to save as the master file, choose JSON.
+## Where to go next
 
-### Cinematic video
-
-Use cinematic video export when the diagram is meant to communicate change over time rather than a single static state. This is useful for demos, changelogs, social posts, and process walkthroughs.
-
-These exports are presentation-oriented. Keep JSON as the editable master if you may need to revise the underlying diagram later.
-
-## Clipboard-oriented exports
-
-These exports are generated from the current graph and copied rather than downloaded:
-
-- OpenFlow DSL
-- Mermaid
-- PlantUML
-- Figma editable export
-
-Use these when the next tool in the workflow expects text or design-tool-compatible handoff rather than an image.
-
-## Sharing
-
-The export menu also includes **Share / Embed** for viewer-link and collaboration-oriented workflows. Use this when you want a room link, viewer URL, or embed-style flow instead of a file.
-
-## Recommended export pattern
-
-For serious work, a practical pattern is:
-
-1. keep JSON as the editable master
-2. export Mermaid or DSL for text workflows
-3. export PNG, JPG, or SVG for presentation
-4. use share/embed when the diagram should remain interactive
-
-## Related pages
-
-- [Choose an Export Format](/exporting/)
+- [Animated export](/animated-export/) — SVG animation, GIF, MP4 and WebM.
+- [Theming](/theming/) — where the light/dark/print themes come from.

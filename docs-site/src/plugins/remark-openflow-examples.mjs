@@ -40,7 +40,10 @@ function figureFor(value, file) {
   const entry = manifest[hashExample(value)];
   const where = file?.path ? relative(REPO_ROOT, file.path) : 'a markdown file';
   if (!entry) throw new Error(`${where}: an \`\`\`openflow block is not in examples.json; run \`npm run generate:examples\`.`);
-  const views = entry.views.map((view) => viewMarkup(view, entry.family)).join('');
+  // A view name only earns a caption when there is more than one view; a
+  // single-view family's name is just the document title, already drawn in the SVG.
+  const named = entry.views.length > 1;
+  const views = entry.views.map((view) => viewMarkup(named ? view : { ...view, name: '' }, entry.family)).join('');
   return [
     `<figure class="ofk-example" data-family="${xml(entry.family)}"><div class="ofk-example-render">${views}</div><div class="ofk-example-source">`,
     '</div></figure>',

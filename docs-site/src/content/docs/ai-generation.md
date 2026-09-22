@@ -1,104 +1,53 @@
 ---
-draft: false
-title: AI Generation
-description: Generate and refine diagrams in Studio with Flowpilot, BYOK providers, code-to-architecture, and structured imports.
+title: AI generation
+description: Bring your own key — describe a diagram, review the proposal, accept it as one undo step.
 ---
 
-OpenFlowKit includes AI-assisted diagram generation through the Studio rail. Flowpilot is best used for first drafts, structural revisions, and code-backed architecture exploration.
+OpenFlowKit's assistant turns a prompt into a diagram without a hosted service in between: your
+browser calls the provider you configured, directly, with your key. The provider's answer is
+compiled by the same DSL compiler as everything else, then shown for review.
 
-AI generation is most valuable when you need to go from ambiguity to structure quickly. It is not the only way to create diagrams in OpenFlowKit, and it is usually not the final step. Think of it as a draft accelerator.
+## Set up a provider
 
-## Access and setup
+Press `⌘J` for the assistant panel and open its provider dialog. Pick a provider, paste a key,
+and optionally set the model and a base URL; the dialog has a **Test** action that asks the
+provider for one response.
 
-Flowpilot lives inside Studio. If an API key is not configured yet, OpenFlowKit prompts you to open the shared AI settings modal instead of keeping setup inline inside the panel.
+The settings are stored in this browser's `localStorage` and are sent only to the provider you
+picked. There is no OpenFlowKit account and no relay: if the request fails, the error names the
+cause — bad key, unknown model, rate limit, network.
 
-That matters for two reasons:
+## Ask for a diagram
 
-- the same AI settings surface is used across the product
-- provider choice, model choice, and key storage behavior stay consistent whether you open AI from Home, Studio, or Settings
+Type what you want, in plain language: what it is for, the systems or actors, the important
+branches, the direction if it matters. To refine an existing diagram, open its code panel first
+— the assistant includes the current frame's DSL in the request, and the result is a proposal
+against that frame instead of a new one.
 
-## Where AI lives in the product
+Every request also carries the canonical grammar, so the model writes OpenFlow DSL rather than
+inventing a syntax.
 
-AI is available in the Studio panel under **Flowpilot** and through the **Open Flowpilot** command in the Command Center. Common sub-flows include:
+## Review, then accept
 
-| Mode | What it does |
-| --- | --- |
-| **Flowpilot** | Chat-based generation and iteration |
-| **From Code** | Paste source code and generate an architecture diagram |
-| **Import** | Paste SQL, Terraform, K8s, or OpenAPI and generate a draft |
+The reply is converted to DSL, compiled, and shown as a **proposal**:
 
-Typical generation flow:
+- a ghost preview of the result on the canvas;
+- the list of changes, which you can step through and reject one by one;
+- **Accept**, which applies the proposal as a single undo step.
 
-1. capture your prompt and optional image
-2. send it through the configured provider
-3. receive a structured graph representation
-4. compose nodes and edges
-5. apply layout
-6. replace or update the current graph
+A proposal built against a document that changed while you were reviewing is marked stale and
+cannot be applied — ask again.
 
-## Provider model
+## What it cannot do
 
-The app supports multiple BYOK providers, including:
+- **No provider list here on purpose.** The catalogue lives in the panel; the providers,
+  endpoints and wire formats change independently of this page.
+- **No chat.** One prompt, one proposal; the model does not see the conversation beyond the
+  grammar and the current frame.
+- **No server-side AI.** No OpenFlowKit proxy, key escrow or usage metering.
+- **No streaming edits.** The proposal lands complete; it never typewrites onto the canvas.
 
-- Ollama
-- Gemini
-- OpenAI
-- Claude
-- Groq
-- NVIDIA
-- Cerebras
-- Mistral
-- OpenRouter
-- Custom OpenAI-compatible endpoint
+## Where to go next
 
-This matters because you are not locked to one hosted AI vendor or one billing model. Ollama can run locally with no API key when its daemon and model are available.
-
-API keys stay browser-local — never in the document, never in an error message, never sent to any origin but the provider's own. A visible **Clear all keys** control in the provider dialog removes them. Requests go straight from your browser to the provider: there is no proxy and no backend. Providers whose CORS policy refuses browser calls (Groq and NVIDIA are flagged **Proxy likely**) cannot work from the hosted app; the picker says so and **Test key** reports the exact cause instead of a generic network error.
-
-## When AI is the right tool
-
-Use AI when:
-
-- you are starting from a plain-language idea
-- you want a fast first-pass architecture or workflow draft
-- you want to revise an existing diagram conceptually rather than move boxes one by one
-- you have source code and want a generated architecture view
-
-Avoid AI when:
-
-- you already have a precise text format such as Mermaid or OpenFlow DSL
-- you need deterministic output from infrastructure files
-- the diagram is small enough that manual editing is faster
-
-In those cases, prefer [OpenFlow DSL](/openflow-dsl/) or [Mermaid Integration](/mermaid-import/).
-
-## How to get better results
-
-Strong prompts usually include:
-
-- the intended audience
-- the systems or actors involved
-- important branches or failure paths
-- the preferred diagram direction
-- the level of detail you want
-
-Weak prompts ask for “a diagram” without constraints. Strong prompts explain the system.
-
-## Recommended workflow
-
-1. Generate a first draft with Flowpilot.
-2. Inspect the structure on the canvas.
-3. Use the [Properties Panel](/properties-panel/) to normalize labels, color, and routing.
-4. Run [Smart Layout](/openflow-dsl/) if the structure is right but spacing is poor.
-5. Save a snapshot before another major rewrite.
-
-## Practical caution
-
-AI output should be treated as a draft, not a certified system model. For documentation, architecture review, or infra communication, you should still check naming, boundaries, and missing branches before exporting or sharing.
-
-## Related pages
-
-- [MCP Server](/mcp-server/)
-- [Studio Overview](/introduction/)
-- [Choose an Input Mode](/openflow-dsl/)
-- [Prompting AI Agents](/prompting-agents/)
+- [MCP Server](/mcp-server/) — the other agent path, driven by your own MCP client.
+- [OpenFlow DSL](/openflow-dsl/) — what the model is asked to write.

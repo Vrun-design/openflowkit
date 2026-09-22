@@ -1,90 +1,58 @@
 ---
-draft: false
-title: Prompting AI Agents
-description: Write better prompts for coding assistants and AI systems when you want diagram output for OpenFlowKit.
+title: Prompting agents
+description: How to ask an MCP client or a bring-your-own-key model for a diagram that compiles.
 ---
 
-If you use Cursor, Copilot, ChatGPT, Claude, or any other coding agent to help author diagrams, the prompt quality matters more than the model brand.
+The two agent paths — [MCP](/mcp-server/) and [BYOK](/ai-generation/) — both end in OpenFlow
+DSL. What you ask for decides whether the result is usable.
 
-## What to ask for
+## With MCP tools available
 
-Ask the agent for one of these outputs explicitly:
-
-- OpenFlow DSL
-- Mermaid
-- a diagram plan before code
-
-Do not ask for "a diagram" and hope it guesses the right syntax.
-
-## Good prompt structure
-
-Include all of the following:
-
-- diagram purpose
-- intended audience
-- required systems or actors
-- important branches or failure paths
-- preferred direction (`TB` or `LR`)
-- preferred syntax (`OpenFlow DSL` or `Mermaid`)
-
-## Example prompt for OpenFlow DSL
+Let the client do the work in order: read the syntax, write the DSL, validate it, then create
+the diagram. A prompt that names the tools gets a better result than one that just describes a
+picture:
 
 ```text
-Generate OpenFlow DSL for OpenFlowKit.
-Make a left-to-right payment recovery workflow.
-Include invoice due, charge attempt, success decision,
-retry sequence, manual review, customer notification,
-and terminal success/failure nodes.
-Use explicit node ids and label every branch edge.
+Read the OpenFlow grammar, then create a checkout flow with a promo-code
+branch. Validate the DSL before creating it, and screenshot the result.
 ```
 
-## Example prompt for Mermaid
+In live mode the tools act on the document you see, so ask for changes in terms of what exists
+(`the frame on the active page`, `the selection`) and the client will call `get_diagram` or
+`list_diagrams` first.
 
-```text
-Generate Mermaid flowchart code for a SaaS onboarding diagram.
-Use LR layout.
-Include signup, email verification, workspace provisioning,
-billing activation, support fallback, and success.
-Keep labels concise and production-ready.
-```
+## With a bring-your-own-key model
 
-## What to avoid
+The assistant already sends the grammar and the frame you are editing, so the prompt should say
+what the diagram *means*, not what syntax to use:
 
-Avoid prompts that:
+- name the family if you care (a sequence diagram, a state machine, a mind map);
+- list the actors and systems, and the direction of the important flows;
+- describe the branches and failure paths — they are the part models skip;
+- say what the audience is, so detail level is right.
 
-- mix multiple diagram families at once
-- ask for visual styling and architecture semantics in the same sentence
-- omit failure cases
-- omit the target syntax
+## What helps every time
 
-## Best workflow with agents
+- **One family per request.** Asking for "an architecture diagram and a sequence diagram" gets
+  you one of them, badly.
+- **Concrete names.** `Checkout API -> Payments`, not `service -> service`.
+- **Ask for a review step.** `Validate before creating` for MCP; the BYOK path already shows a
+  proposal you accept or reject.
+- **Iterate in the text.** After the diagram lands, edit the DSL in the code panel; regenerating
+  is faster than re-prompting.
 
-1. generate first draft in text
-2. paste into Studio
-3. apply to canvas
-4. fix structure and styling visually
-5. export in the format your team needs
+## What not to ask for
 
-The secret to perfect AI generation is our `llms.txt` file. We host a machine-readable set of rules that teaches any AI exactly how to write OpenFlow DSL V2 code.
+- Mermaid, if the client can write OpenFlow DSL — conversion is an import path with reported
+  losses ([Mermaid import](/mermaid-import/)).
+- Manual coordinates. Layout is computed; use `pin` and `rank` only when you truly need to
+  nudge the result.
+- Features that do not exist: collaboration, share links, embedded viewers, slide decks,
+  camera paths. Ask for what is in the [feature inventory](/introduction/) — or better, in the
+  pages of this site.
 
-When prompting an AI agent, just include a reference to this file.
+## Where to go next
 
-### Example Prompt for Cursor IDE
-Open your Composer or Chat window and type:
-
-> `"Read https://openflowkit.com/llms.txt and then generate an architecture diagram showing our Next.js frontend connecting to a Supabase backend."`
-
-### Example Prompt for ChatGPT
-If you are using ChatGPT with web-browsing enabled:
-
-> `"Go to https://openflowkit.com/llms.txt to learn the OpenFlowKit syntax. Then, write a flowchart detailing an OAuth2 login sequence. Output the result using the \`\`\`openflow code block."`
-
-## Best Practices for Prompting
-
-Even with the rules, LLMs can sometimes get confused. Here are three tips for perfect diagrams every time:
-
-1. **Be specific about shapes**: Instead of just saying "add a database", say "add a Node with the `[process]` type labeled 'Database'". 
-2. **Name your connections**: The diagram is much more useful if edges have labels. Example: "Connect the frontend to the backend with the label '|REST API|'".
-3. **Use Groups for clarity**: If you have multiple microservices, tell the AI to wrap them in a group: "Put the 'Auth Service' and 'User DB' inside a group called 'Backend Infrastructure'."
-
-[Return to Editor](/#/canvas)
+- [MCP Server](/mcp-server/) — the tool surface, with arguments.
+- [AI generation](/ai-generation/) — the key-in-browser path.
+- [OpenFlow DSL](/openflow-dsl/) — the language both paths write.

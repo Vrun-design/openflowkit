@@ -1,80 +1,42 @@
 ---
-draft: false
 title: Introduction
-description: OpenFlowKit turns code, structured imports, templates, and prompts into editable technical diagrams inside a local-first workspace.
+description: OpenFlowKit is a local-first, agent-native canvas where technical diagrams live as text first and as pictures always.
 ---
 
-OpenFlowKit is a local-first diagramming workspace for developers and builders. Its strongest path is simple: start from the most truthful input you already have, turn it into an editable diagram, then refine it visually instead of redrawing everything from scratch.
+OpenFlowKit is an infinite canvas for technical diagrams that treats text as the source of
+truth. A small line-oriented language — OpenFlow DSL — compiles to shapes, connectors and
+layout; the canvas edits the same document; and an agent can drive either through MCP.
 
-## Best reasons to use it
+## Three ways in
 
-OpenFlowKit works best when a diagram needs to evolve instead of staying static:
+- **Draw it.** Shapes, connectors, ink, images and charts, with the [canvas](/canvas-basics/)
+  shortcuts a drawing tool should have.
+- **Write it.** [OpenFlow DSL](/openflow-dsl/) in the code panel: nine diagram families, one
+  forgiving grammar, per-line diagnostics.
+- **Delegate it.** Connect an [MCP client](/mcp-server/) or bring your own key to
+  [generate from a prompt](/ai-generation/); both paths produce the same DSL through the same
+  compiler.
 
-- start from code, Mermaid, SQL, OpenAPI, Terraform, infrastructure files, or a strong starter template
-- convert that source into an editable first draft instead of a dead export
-- refine the result visually instead of treating generation as a one-shot output
-- keep a text representation close to the editor model when needed
-- export or share the same diagram across docs, design, and collaboration workflows
+All three land in the same document. Code generates a frame; dragging on the canvas never
+rewrites the text; **Generate** makes the text authoritative again as one undo step.
 
-## Strongest starting paths
+## Smallest example
 
-If you are evaluating OpenFlowKit quickly, start with one of these:
+```openflow
+flowchart
+Client -> API : request
+API -> Database : query
+```
 
-- paste SQL or OpenAPI and generate a structured first draft
-- import Terraform, Kubernetes, or other infra-oriented source text
-- paste Mermaid or OpenFlow DSL and keep editing on the canvas
-- start from a developer-oriented template when structure matters more than exact content
-- use Flowpilot when you need a fast architecture draft from code or a prompt
-- connect the MCP server when you want Claude Desktop, Cursor, Windsurf, or another MCP client to generate, validate, convert, or revise OpenFlowKit diagrams
+## What local-first means here
 
-## Core product surfaces
+Documents live in your browser's storage, not on a server. There is no account and no
+telemetry; exports are files you download. See [Local-first diagramming](/local-first-diagramming/)
+for the details, including crash recovery and what "opening a file" does.
 
-The current product centers on four major surfaces:
+## Where to go next
 
-- A workspace home for creating, opening, importing, and organizing flows
-- A visual canvas for direct editing once a real document is open
-- A command-driven launcher for search, templates, assets, imports, layers, pages, layout, and design systems
-- A Studio rail for AI, code, imports, infrastructure sync, and linting
-- Export, embed, and share flows for moving work outside the editor
-
-## Diagram families in the app
-
-The editor currently has first-class support for these diagram types:
-
-- `flowchart`
-- `stateDiagram`
-- `classDiagram`
-- `erDiagram`
-- `gitGraph`
-- `mindmap`
-- `journey`
-- `architecture`
-
-You will also see reusable node families for general-purpose flows, architecture icon nodes, annotations, sections, images, and wireframe-style surfaces.
-
-## Core product concepts
-
-### Local-first by default
-
-Diagram state lives in the browser by default. You choose when to export, share, or join collaboration-style room flows.
-
-### Multiple input modes
-
-OpenFlowKit does not force a single source of truth. You can work visually, with AI, through OpenFlow DSL, through Mermaid, through structured imports, or from developer-oriented starter flows.
-
-### Editable outputs
-
-Generated and imported diagrams come back into the same editable canvas model rather than becoming dead screenshots.
-
-### Home and editor are separate surfaces
-
-OpenFlowKit now treats the home screen as the workspace listing surface and the editor as the action surface. The app does not create a fake default flow just to get you onto the canvas.
-
-## Start here
-
-- Read [Quick Start](/quick-start/) for the fastest first-run workflow.
-- Read [Import from Structured Data](/mermaid-import/) if you already have SQL, OpenAPI, code, or infra text.
-- Read [Choose an Input Mode](/openflow-dsl/) if you are deciding between templates, import, AI, and diagram-as-code.
-- Read [Studio Overview](/introduction/) for the AI, code, import, and lint flows.
-- Read [MCP Server](/mcp-server/) to drive OpenFlowKit from AI coding clients.
-- Read [Templates & Asset Libraries](/introduction/) for starter flows and reusable visual libraries.
+- [Quick start](/quick-start/) — five minutes from empty canvas to exported diagram.
+- [OpenFlow DSL](/openflow-dsl/) — the text language and its workflow.
+- [MCP Server](/mcp-server/) — put an agent on the canvas.
+- [Keyboard shortcuts](/keyboard-shortcuts/) — every key, generated from the app's map.
