@@ -393,13 +393,13 @@
 .ofk-style-panel .ofk-number[data-stepper='stacked'] .ofk-icon-button:hover { background: var(--ofk-border); color: var(--ofk-text); }
 
 .ofk-style-more { border-top: 1px solid var(--ofk-border); padding-top: 12px; }
-.ofk-style-more > summary { cursor: pointer; list-style: none; user-select: none; display: flex; align-items: center; justify-content: space-between; min-height: 24px; font-size: 12px; color: var(--ofk-secondary); }
-.ofk-style-more > summary > .ofk-icon { width: 16px; height: 16px; }
-.ofk-style-more[open] > summary > .ofk-icon { transform: rotate(180deg); }
-.ofk-style-more > summary::-webkit-details-marker { display: none; }
+.ofk-style-more > summary, .ofk-connection-details > summary, .ofk-v2-model-adr > summary { cursor: pointer; list-style: none; user-select: none; display: flex; align-items: center; justify-content: space-between; min-height: 24px; font-size: 12px; color: var(--ofk-secondary); }
+.ofk-style-more > summary > .ofk-icon, .ofk-connection-details > summary > .ofk-icon, .ofk-v2-model-adr > summary > .ofk-icon { width: 16px; height: 16px; }
+.ofk-style-more[open] > summary > .ofk-icon, .ofk-connection-details[open] > summary > .ofk-icon, .ofk-v2-model-adr[open] > summary > .ofk-icon { transform: rotate(180deg); }
+.ofk-style-more > summary::-webkit-details-marker, .ofk-connection-details > summary::-webkit-details-marker, .ofk-v2-model-adr > summary::-webkit-details-marker { display: none; }
 .ofk-style-more > :not(summary) { margin-top: 12px; }
-.ofk-style-more > summary:hover { color: var(--ofk-text); }
-.ofk-style-more > summary:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 3px; border-radius: 4px; }
+.ofk-style-more > summary:hover, .ofk-connection-details > summary:hover, .ofk-v2-model-adr > summary:hover { color: var(--ofk-text); }
+.ofk-style-more > summary:focus-visible, .ofk-connection-details > summary:focus-visible, .ofk-v2-model-adr > summary:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 3px; border-radius: 4px; }
 
 .ofk-swatch-grid { display: grid; grid-template-columns: repeat(6, 1fr); justify-items: center; gap: 10px; padding: 2px; }
 .ofk-swatch-cell { height: 30px; width: 30px; border-radius: 50%; border: 1px solid var(--ofk-border); cursor: pointer; padding: 0; position: relative; }
@@ -533,8 +533,6 @@
 .ofk-connection-capabilities strong { color: var(--ofk-text); font-weight: 500; }
 .ofk-connection-capabilities span { grid-column: 2; }
 .ofk-connection-details { border-top: 1px solid var(--ofk-border); padding: 12px 0; }
-.ofk-connection-details summary { font-size: 12px; color: var(--ofk-secondary); cursor: pointer; }
-.ofk-connection-details summary::marker { color: var(--ofk-muted); font-size: 10px; }
 .ofk-connection-fields { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; margin-top: 12px; }
 .ofk-connection-fields label { font-size: 11px; color: var(--ofk-secondary); }
 .ofk-connection-fields label > span { color: var(--ofk-muted); }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
-  IconArrowsSplit2, IconCircleDot, IconExternalLink, IconPlayerPlay, IconTrash,
+  IconArrowsSplit2, IconChevronDown, IconCircleDot, IconExternalLink, IconPlayerPlay, IconTrash,
 } from '@tabler/icons-react';
 import { modelTags } from '../../../dsl/model/predicates';
 import { elementDescendantIds, elementPathRef, type ArchIndex } from '../../../dsl/model/model';
@@ -350,7 +350,7 @@ function ElementInspector(props: ElementInspectorProps): React.JSX.Element {
             if (!adr) return [];
             return [
               <details key={adr.path} className="ofk-v2-model-adr">
-                <summary>{name}</summary>
+                <summary>{name}<Icon icon={IconChevronDown} /></summary>
                 <pre>{adr.text}</pre>
               </details>,
             ];

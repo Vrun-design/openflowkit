@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  IconBrush, IconCamera, IconCheck, IconCopy, IconDownload, IconEye, IconPencil, IconPhotoSearch,
+  IconBrush, IconCamera, IconCheck, IconChevronDown, IconCopy, IconDownload, IconEye, IconPencil, IconPhotoSearch,
   IconPlugConnected, IconTerminal2,
 } from '@tabler/icons-react';
 import { Button, Icon, Panel } from '../design-system';
@@ -78,7 +78,7 @@ export function V2AgentConnect(props: V2AgentConnectProps) {
           {running ? <Button variant="quiet" onClick={() => props.onToggle(false)}>Cancel</Button> : null}</div></li>
       </ol>
     </>}
-    <details className="ofk-connection-details"><summary>Connection settings</summary>
+    <details className="ofk-connection-details"><summary>Connection settings<Icon icon={IconChevronDown} /></summary>
       <div className="ofk-connection-fields">
         <label htmlFor="ofk-bridge-port">Port<input id="ofk-bridge-port" className="ofk-v2-bridge-input" inputMode="numeric" value={draftPort}
           disabled={running} aria-invalid={!validPort || undefined} onChange={(event) => setDraftPort(event.target.value.replace(/[^0-9]/g, ''))}
@@ -90,7 +90,7 @@ export function V2AgentConnect(props: V2AgentConnectProps) {
       {!validPort ? <p role="alert" className="ofk-connection-error">Use a port between 1 and 65535.</p> : null}
       <p>Disconnect to change settings.</p>
     </details>
-    <details className="ofk-connection-details"><summary>MCP configuration</summary>
+    <details className="ofk-connection-details"><summary>MCP configuration<Icon icon={IconChevronDown} /></summary>
       <pre className="ofk-v2-bridge-snippet">{config}</pre>
       <Button variant="quiet" onClick={() => { void copyConfig(); }}><Icon icon={IconCopy} />Copy config</Button>
     </details>
