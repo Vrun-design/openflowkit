@@ -33,6 +33,8 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–6 done (6.6, 6.7, 6
 - No custom keyframes, camera paths, audio or per-element timing: steps are text (phase 8).
 - Four older e2e specs still carry their own `emptyPoint`; fold them into `e2e/helpers.ts` when one
   next needs editing. No coverage for frames/wireframe (6.6/6.7, unbuilt) or crash recovery.
+- `agent-live` failed once in three full headed sweeps and passes alone every time — a flake under
+  two workers, cause unconfirmed (the bridge is long-poll). Capture the error before fixing it.
 
 ## Next
 - Phase 8 — keyframes/Present ([phase-8-keyframes.md](docs/plan/phase-8-keyframes.md)) when 7 has users.
