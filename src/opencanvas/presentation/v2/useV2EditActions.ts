@@ -87,7 +87,8 @@ export function useV2EditActions(options: V2EditActionsOptions) {
   const nudgeSelection = (delta: { x: number; y: number }) => {
     const page = editablePage();
     if (!page || selectionRef.current.nodeIds.length === 0) return;
-    options.commit(buildMoveNodesCommand(page, selectionRef.current.nodeIds, delta));
+    const command = buildMoveNodesCommand(page, selectionRef.current.nodeIds, delta);
+    if (command) options.commit(command);
   };
 
   const reorderSelection = (direction: 'front' | 'back' | 'forward' | 'backward') => {

@@ -97,7 +97,7 @@ describe('v2 label edit command', () => {
 describe('v2 move command', () => {
   it('moves selected nodes without touching selection or other nodes', () => {
     const page = pageWithTwoNodes();
-    const command = buildMoveNodesCommand(page, ['node-a'], { x: 30, y: -10 });
+    const command = buildMoveNodesCommand(page, ['node-a'], { x: 30, y: -10 })!;
     const applied = applyDocumentCommand(
       { ...createEmptyV2Document('doc-1'), pages: [page] },
       command
@@ -105,6 +105,25 @@ describe('v2 move command', () => {
     const moved = applied.document.pages[0].nodes[0];
     expect(moved.transform.translation).toEqual({ x: 40, y: 10 });
     expect(applied.document.pages[0].nodes[1].transform.translation).toEqual({ x: 300, y: 20 });
+  });
+
+  it('leaves locked nodes where they are, and moves the rest', () => {
+    const page = pageWithTwoNodes();
+    const locked = applyDocumentCommand(
+      { ...createEmptyV2Document('doc-1'), pages: [page] },
+      buildToggleLockCommand(page, ['node-a'])
+    ).document.pages[0];
+
+    // Every id locked: nothing to commit, so no empty undo entry either.
+    expect(buildMoveNodesCommand(locked, ['node-a'], { x: 30, y: -10 })).toBeNull();
+
+    const mixed = buildMoveNodesCommand(locked, ['node-a', 'node-b'], { x: 30, y: -10 })!;
+    const applied = applyDocumentCommand(
+      { ...createEmptyV2Document('doc-1'), pages: [locked] },
+      mixed
+    );
+    expect(applied.document.pages[0].nodes[0].transform.translation).toEqual({ x: 10, y: 20 });
+    expect(applied.document.pages[0].nodes[1].transform.translation).toEqual({ x: 330, y: 10 });
   });
 });
 

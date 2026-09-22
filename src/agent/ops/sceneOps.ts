@@ -41,7 +41,9 @@ export const moveNodes = defineOp({
 
     if (offset.x === 0 && offset.y === 0) return { command: null, output: { moved: [] } };
     // Same builder the nudge/pointer path commits, so records stay identical.
-    return { command: buildMoveNodesCommand(page, ids, offset), output: { moved: ids } };
+    // Locked nodes are dropped there, so only report what actually moved.
+    const command = buildMoveNodesCommand(page, ids, offset);
+    return { command, output: { moved: command ? ids : [] } };
   },
 });
 

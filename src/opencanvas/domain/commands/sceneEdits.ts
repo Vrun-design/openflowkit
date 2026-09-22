@@ -13,6 +13,7 @@ import type {
 import type { JsonObject } from '../document/json';
 import { resolveNodeStyle, type NodeStyle } from '../nodes/nodeStyle';
 import { descendantIds } from './groupNodes';
+import { buildNodeStateMap } from '../scene/nodeState';
 import type {
   ConnectorEndpoint,
   ConnectorRouteKind,
@@ -98,13 +99,18 @@ export function buildSetNodeLabelCommand(
   };
 }
 
-// Keyboard nudge and drag-move share one commit shape: snapshot, move, command.
+// Keyboard nudge, agent `move` and drag-move share one commit shape: snapshot,
+// move, command. Null when every id is locked — style, align and icon edits skip
+// locked nodes the same way, and the pointer path never picks one up at all.
 export function buildMoveNodesCommand(
   page: ScenePage,
   nodeIds: readonly string[],
   delta: Point2d
-): DocumentCommand {
-  const snapshot = createTransformSnapshot(page, nodeIds);
+): DocumentCommand | null {
+  const states = buildNodeStateMap(page);
+  const movable = nodeIds.filter((id) => !states.get(id)?.locked);
+  if (movable.length === 0) return null;
+  const snapshot = createTransformSnapshot(page, movable);
   const result = moveTransform(snapshot, delta, { snap: false });
   return createTransformCommand(page.id, transformBefore(snapshot), result.nodes, 'Move selection');
 }
