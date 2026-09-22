@@ -616,7 +616,7 @@
 }
 
 /* Form controls */
-.ofk-system :is(.ofk-check, .ofk-switch, .ofk-select, .ofk-slider, .ofk-number) {
+.ofk-system :is(.ofk-check, .ofk-switch, .ofk-slider, .ofk-number) {
   font-size: var(--ofk-type-label);
 }
 .ofk-system :is(.ofk-check, .ofk-switch) {
@@ -626,11 +626,11 @@
   min-height: var(--ofk-control-size);
   cursor: pointer;
 }
-.ofk-system :is(.ofk-select, .ofk-slider, .ofk-number) {
+.ofk-system :is(.ofk-slider, .ofk-number) {
   display: grid;
   gap: var(--ofk-space-xs);
 }
-.ofk-system :is(.ofk-select, .ofk-slider, .ofk-number) > label {
+.ofk-system :is(.ofk-slider, .ofk-number) > label {
   font-weight: var(--ofk-weight-label);
 }
 .ofk-system [data-hide-label] > label,
@@ -643,12 +643,7 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
-.ofk-check input {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  accent-color: var(--ofk-inverse);
-}
+.ofk-check input,
 .ofk-switch input {
   position: absolute;
   opacity: 0;
@@ -683,47 +678,37 @@
 [dir='rtl'] .ofk-switch input:checked + .ofk-switch-track::after {
   transform: translateX(-14px);
 }
+.ofk-check-box {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--ofk-controlBorder);
+  background: var(--ofk-surface);
+  color: var(--ofk-surface);
+  transition: background-color var(--ofk-motion-feedback) var(--ofk-curve-standard);
+}
+.ofk-check-box > .ofk-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+}
+.ofk-check input:is(:checked, :indeterminate) + .ofk-check-box {
+  background: var(--ofk-inverse);
+  border-color: var(--ofk-inverse);
+}
+.ofk-check input:is(:checked, :indeterminate) + .ofk-check-box > .ofk-icon {
+  opacity: 1;
+}
 .ofk-switch input:focus-visible + .ofk-switch-track,
-.ofk-check input:focus-visible {
+.ofk-check input:focus-visible + .ofk-check-box {
   outline: var(--ofk-focus-width) solid var(--ofk-focus);
   outline-offset: var(--ofk-focus-offset);
 }
 .ofk-switch input:disabled ~ span,
 .ofk-check input:disabled ~ span {
   color: var(--ofk-disabled);
-}
-.ofk-select-control {
-  position: relative;
-  display: inline-flex;
-}
-.ofk-select select {
-  font: inherit;
-  appearance: none;
-  min-height: var(--ofk-control-size);
-  padding: 0 calc(var(--ofk-space-md) + var(--ofk-control-icon) + var(--ofk-space-sm)) 0
-    var(--ofk-space-md);
-  border: 1px solid var(--ofk-controlBorder);
-  border-radius: var(--ofk-radius-control);
-  background: var(--ofk-surface);
-  color: var(--ofk-text);
-  width: 100%;
-}
-.ofk-select-control > svg {
-  position: absolute;
-  inset-inline-end: var(--ofk-space-sm);
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  color: var(--ofk-secondary);
-}
-.ofk-select select:focus-visible {
-  outline: var(--ofk-focus-width) solid var(--ofk-focus);
-  outline-offset: var(--ofk-focus-offset);
-}
-.ofk-select select:disabled {
-  color: var(--ofk-disabled);
-  background: var(--ofk-raised);
-  cursor: default;
 }
 .ofk-slider {
   grid-template-columns: 1fr auto;
@@ -1558,7 +1543,7 @@ li[data-decision='rejected'] .ofk-review-label {
   text-align: center;
 }
 
-/* Dropdown: custom listbox for canvas chrome. Native Select stays for dense forms. */
+/* Dropdown: custom listbox. */
 .ofk-dropdown {
   display: grid;
   gap: var(--ofk-space-xs);

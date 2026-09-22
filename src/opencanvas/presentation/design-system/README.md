@@ -10,7 +10,7 @@ Internal React + TypeScript foundation for the editor. Product plan:
 | Foundation          | `foundation`                                         | Spacing, typography, density, geometry, timing, brand seed      |
 | Semantic appearance | `themes`, `ColorRole`                                | Light/dark surface, text, interaction and status roles          |
 | Platform adapter    | `SystemRoot`, `rendererColor`                        | Scoped CSS variables; numeric Pixi colors from same source      |
-| Primitives          | `Button`, `IconButton`, `Field`, `NumberField`, `Select`, `Dropdown`, `Slider`, `Segmented`, `Checkbox`, `Switch`, `ColorSwatch`, `Tabs`, `Toolbar`, `Status` | Native control behavior and shared states; `Dropdown` is the custom listbox for canvas chrome, `Select` stays native for dense forms |
+| Primitives          | `Button`, `IconButton`, `Field`, `NumberField`, `Dropdown`, `Slider`, `Segmented`, `Checkbox`, `Switch`, `ColorSwatch`, `Tabs`, `Toolbar`, `Status` | Native inputs underneath (keyboard, AT, forms), our tokens and icons on top; `Dropdown` is the listbox |
 | Overlays            | `Popover`, `Menu`, `Dialog`, `Panel`, `CommandPalette`, `Tooltip`, `ToastRegion`, `ContextBar` | Anchored layers with collision flip, focus entry/return, Escape; panels clear the top toolbar lane, the context bar floats above panels |
 | Loading             | `Skeleton`, `SkeletonLines`, `Spinner`, `Progress`, `Thinking`, `EmptyState`, `ErrorState` | Shimmer placeholders, busy marks, determinate/indeterminate bars, agent cognition, empty/failed states with recovery |
 | Workflow pattern    | `ProposalBar`, `ProposalReview`, `Composer`, `AgentPanel`, `AgentPresence` | Scope, preview, stale, pending, failed and applied presentation |

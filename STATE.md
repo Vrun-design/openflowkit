@@ -25,7 +25,8 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
   throwing, relation only on current view, remove keeping child view/page, `list_diagrams`
   counting boundary frames; MCP `create/update_diagram` land a C4 workspace as pages.
 - 2026-09-22 (Opus): every `<details>` summary (agent connect, ADRs, style "more") uses our
-  `IconChevronDown`, native marker hidden. Select/Switch/Segmented already hide native chrome.
+  `IconChevronDown`, native marker hidden. `Checkbox` draws its own box + IconCheck/IconMinus;
+  native `Select` primitive deleted (unused; `Dropdown` is the listbox).
 ## Next
 - Owner feel-test on `/`: paste the C4 example, drill 3 levels, play a flow, run `drift`.
 - Model JSON is copied onto every view frame (~3 KB/page today). Moving it to one

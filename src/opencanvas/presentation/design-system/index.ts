@@ -20,7 +20,6 @@ export { FloatingRegion } from './FloatingRegion';
 export {
   Checkbox,
   Switch,
-  Select,
   Slider,
   NumberField,
   Segmented,
@@ -30,7 +29,6 @@ export {
   ErrorState,
 } from './Controls';
 export type {
-  SelectProps,
   SliderProps,
   NumberFieldProps,
   SegmentedProps,

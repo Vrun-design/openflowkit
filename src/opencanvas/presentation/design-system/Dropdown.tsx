@@ -45,8 +45,7 @@ function typeaheadQuery(state: TypeaheadState, key: string): string {
 
 /**
  * Canvas-chrome dropdown: a button trigger plus an anchored listbox.
- * The native `Select` stays for dense forms; this is for toolbars, context
- * bars and inspectors where the menu must match system motion, collision
+ * The only select control: for forms, toolbars, context bars and inspectors where the menu must match system motion, collision
  * avoidance and typeahead. Single Tab stop; arrows move, Enter commits,
  * Escape returns focus to the trigger.
  */

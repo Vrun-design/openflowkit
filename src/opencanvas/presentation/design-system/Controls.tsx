@@ -4,9 +4,8 @@ import {
   useState,
   type InputHTMLAttributes,
   type ReactNode,
-  type SelectHTMLAttributes,
 } from 'react';
-import { IconAlertTriangle, IconChevronDown, IconChevronUp, IconMinus, IconPlus } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconMinus, IconPlus } from '@tabler/icons-react';
 import { Button, IconButton } from './Button';
 import { Icon } from './Icon';
 
@@ -30,6 +29,9 @@ export const Checkbox = forwardRef<HTMLInputElement, LabelledProps & { indetermi
           }}
           type="checkbox"
         />
+        <span className="ofk-check-box" aria-hidden="true">
+          <Icon icon={indeterminate ? IconMinus : IconCheck} />
+        </span>
         <span>{label}</span>
       </label>
     );
@@ -45,33 +47,6 @@ export const Switch = forwardRef<HTMLInputElement, LabelledProps>(function Switc
       <span className="ofk-switch-track" aria-hidden="true" />
       <span>{label}</span>
     </label>
-  );
-});
-export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
-  label: string;
-  hideLabel?: boolean;
-  options: readonly { value: string; label: string; disabled?: boolean }[];
-}
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select(
-  { label, hideLabel, options, id, className = '', ...props },
-  ref
-) {
-  const generated = useId();
-  const selectId = id ?? generated;
-  return (
-    <div className={`ofk-select ${className}`} data-hide-label={hideLabel || undefined}>
-      <label htmlFor={selectId}>{label}</label>
-      <span className="ofk-select-control">
-        <select {...props} ref={ref} id={selectId}>
-          {options.map((o) => (
-            <option key={o.value} value={o.value} disabled={o.disabled}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <Icon icon={IconChevronDown} />
-      </span>
-    </div>
   );
 });
 export interface SliderProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
