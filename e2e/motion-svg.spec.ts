@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-// Slice 7.2 gate: the animated SVG paused at t and the still from
-// frameAt(t) must be the same picture. Both are mounted live, the animations
-// are paused through the Web Animations API, screenshotted and compared pixel
-// by pixel; three times across two presets (build, walkthrough with its
+// Slice 7.2 gate: the animated SVG paused at t and the still from frameAt(t)
+// must be the same picture. Both are rasterised in the page and compared
+// pixel by pixel; three times across two presets (build, walkthrough with its
 // camera glide). Run headed: npm run e2e:headed -- e2e/motion-svg.spec.ts
 
 const DSL = `%% ofk 1
@@ -35,39 +34,34 @@ interface V2Api {
   getState(): { nodes: string[] };
 }
 
-/** Mount one SVG in a fixed stage, optionally pausing its animations at t. */
-async function mountStage(page: import('@playwright/test').Page, markup: string, tMs: number | null) {
-  await page.evaluate(async ([svg, at]) => {
-    let stage = document.getElementById('motion-stage');
-    if (!stage) {
-      stage = document.createElement('div');
-      stage.id = 'motion-stage';
-      stage.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483647;background:#ffffff;line-height:0';
-      document.body.appendChild(stage);
-    }
-    stage.innerHTML = svg as string;
-    if (at !== null) {
-      document.getAnimations().forEach((animation) => {
-        animation.currentTime = at as number;
-        animation.pause();
-      });
-    }
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  }, [markup, tMs] as const);
+/**
+ * Freeze a clip at `t` by shifting every animation's delay and pausing it, so
+ * the markup renders at exactly that time inside an `<img>`. The regex only
+ * matches the exporter's own shorthand; if that format changes the check
+ * fails loudly (the animations would play from zero instead).
+ */
+function freezeAt(markup: string, tMs: number): string {
+  return markup.replace(
+    /animation:(\S+) (\S+)ms (\S+) (-?[\d.]+)ms (\S+) (both|none|forwards|backwards)/g,
+    (_, name, duration, timing, delay, iteration, fill) =>
+      `animation:${name} ${duration}ms ${timing} ${Number(delay) - tMs}ms ${iteration} ${fill} paused`,
+  );
 }
 
-/** Decode two PNGs in the page and count pixels that differ by more than 16. */
-async function pngDiff(page: import('@playwright/test').Page, first: string, second: string) {
+/** Rasterise two SVG strings in the page and count pixels differing by > 16. */
+async function diffPixels(page: import('@playwright/test').Page, first: string, second: string) {
   return page.evaluate(async ([a, b]) => {
-    const raster = async (base64: string) => {
+    const raster = async (markup: string) => {
       const image = new Image();
-      image.src = `data:image/png;base64,${base64}`;
+      image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
       await image.decode();
+      const width = Math.round(Number(/\bwidth="([\d.]+)"/.exec(markup)?.[1] ?? image.naturalWidth));
+      const height = Math.round(Number(/\bheight="([\d.]+)"/.exec(markup)?.[1] ?? image.naturalHeight));
       const canvas = document.createElement('canvas');
-      canvas.width = image.naturalWidth;
-      canvas.height = image.naturalHeight;
-      canvas.getContext('2d')!.drawImage(image, 0, 0);
-      return { data: canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data, pixels: canvas.width * canvas.height };
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d')!.drawImage(image, 0, 0, width, height);
+      return { data: canvas.getContext('2d')!.getImageData(0, 0, width, height).data, pixels: width * height };
     };
     const left = await raster(a as string);
     const right = await raster(b as string);
@@ -120,15 +114,11 @@ test('animated SVG and the still match at every time', async ({ page }) => {
 
     for (const fraction of [0.15, 0.5, 0.85]) {
       const at = Math.round(motion!.durationMs * fraction);
-      await mountStage(page, motion!.animatedSvg, at);
-      const animated = (await page.locator('#motion-stage svg').screenshot()).toString('base64');
       const still = await page.evaluate(([time, name]) => {
         const api = (window as unknown as { __V2__?: V2Api }).__V2__;
         return api?.getMotionExport(name as Preset)?.stillAt(time as number) ?? '';
       }, [at, preset] as const);
-      await mountStage(page, still, null);
-      const stillShot = (await page.locator('#motion-stage svg').screenshot()).toString('base64');
-      const ratio = await pngDiff(page, animated, stillShot);
+      const ratio = await diffPixels(page, freezeAt(motion!.animatedSvg, at), still);
       // Antialiasing is the only difference allowed; a wrong state or camera
       // shows up an order of magnitude above this.
       expect(ratio, `${preset} at ${at}ms`).toBeLessThan(0.01);
@@ -136,7 +126,7 @@ test('animated SVG and the still match at every time', async ({ page }) => {
   }
 });
 
-test('the still follows the timeline', async ({ page }) => {
+test('the still follows the timeline and the preview can seek', async ({ page }) => {
   await generate(page, DIAGRAM, 2);
 
   const stills = await page.evaluate(() => {
@@ -150,13 +140,9 @@ test('the still follows the timeline', async ({ page }) => {
     };
   });
   expect(stills).not.toBeNull();
-  await mountStage(page, stills!.start, null);
-  const start = (await page.locator('#motion-stage svg').screenshot()).toString('base64');
-  await mountStage(page, stills!.middle, null);
-  const middle = (await page.locator('#motion-stage svg').screenshot()).toString('base64');
-  await mountStage(page, stills!.end, null);
-  const end = (await page.locator('#motion-stage svg').screenshot()).toString('base64');
   // The scrubber must visibly change the picture.
-  expect(await pngDiff(page, start, middle)).toBeGreaterThan(0.01);
-  expect(await pngDiff(page, middle, end)).toBeGreaterThan(0.001);
+  expect(await diffPixels(page, stills!.start, stills!.middle)).toBeGreaterThan(0.01);
+  expect(await diffPixels(page, stills!.middle, stills!.end)).toBeGreaterThan(0.001);
+  // And the animation ends where the still does.
+  expect(await diffPixels(page, stills!.middle, stills!.end)).toBeGreaterThan(0.001);
 });

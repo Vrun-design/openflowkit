@@ -34,6 +34,7 @@ export function workspaceBody(model: ArchModel): string[] {
   ];
 }
 
+
 /**
  * The full workspace text for a model. The source text is the hub: adding a
  * view, drilling down or exporting a flow all go back through the compiler.

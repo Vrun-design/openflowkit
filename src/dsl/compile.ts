@@ -1,7 +1,9 @@
 import { isContainerNodeKind } from '../opencanvas/domain/nodes/containerNodePresentation';
 import type { SceneConnector, SceneNode } from '../opencanvas/domain/document/types';
 import type { Point2d, Size2d } from '../opencanvas/domain/geometry/types';
+import type { JsonObject } from '../opencanvas/domain/document/json';
 import type { DslDiagnostic, DslDirection } from './ast';
+import { animateToJson, extractAnimateBlock } from './animate';
 import { createCommentTracker, parseDocument, type CommentTracker } from './document';
 import { familyFor } from './families';
 import type { FamilyContext, FamilyScene } from './families/types';
@@ -76,6 +78,7 @@ interface AssembleOptions {
   text: string;
   direction?: DslDirection;
   title?: string;
+  animate?: JsonObject;
   comments: CommentTracker;
   diagnostics: DslDiagnostic[];
 }
@@ -88,6 +91,9 @@ interface AssembleOptions {
 export async function compileWorkspace(text: string, options: CompileOptions = {}): Promise<CompileWorkspaceResult> {
   const document = parseDocument(text);
   const diagnostics = [...document.diagnostics];
+  // The animate block is family-neutral: it is pulled out before the family
+  // parser runs, so `step a -> c` inside it can never become a real edge.
+  const { block: animate, segments } = extractAnimateBlock(document.segments, diagnostics);
   const family = familyFor(document.family);
   const comments = createCommentTracker(document.comments);
   const origin = options.origin ?? { x: 0, y: 0 };
@@ -109,8 +115,8 @@ export async function compileWorkspace(text: string, options: CompileOptions = {
 
   const frameIdBase = `dsl-${hashDslScene(text)}`;
   const familyViews = family.compileViews
-    ? await family.compileViews(document.segments, context)
-    : [{ id: '', name: document.title ?? '', scene: await family.compile(document.segments, context) }];
+    ? await family.compileViews(segments, context)
+    : [{ id: '', name: document.title ?? '', scene: await family.compile(segments, context) }];
 
   return {
     family: document.family,
@@ -123,6 +129,7 @@ export async function compileWorkspace(text: string, options: CompileOptions = {
           scene: view.scene, family: document.family, origin, palette, frameId, text,
           ...(document.direction ? { direction: document.direction } : {}),
           ...(document.title ? { title: document.title } : {}),
+          ...(animate ? { animate: animateToJson(animate) } : {}),
           comments,
           diagnostics,
         }),
@@ -138,7 +145,7 @@ export async function compile(text: string, options: CompileOptions = {}): Promi
 }
 
 function assembleResult(options: AssembleOptions): CompileResult {
-  const { scene, family, origin, palette, frameId, text, direction, title, comments, diagnostics } = options;
+  const { scene, family, origin, palette, frameId, text, direction, title, animate, comments, diagnostics } = options;
   // The palette rides on every record, not just the frame: renderers and the
   // serializer read a node without its page, so key-based families stay themed.
   const themed = <T extends SceneNode | SceneConnector>(record: T): T => palette === 'pastel' ? record : {
@@ -172,6 +179,7 @@ function assembleResult(options: AssembleOptions): CompileResult {
       dsl: {
         ...scene.meta,
         ...meta,
+        ...(animate ? { animate } : {}),
         ...(trailing.length ? { comments: trailing } : {}),
       },
     },

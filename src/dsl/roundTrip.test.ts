@@ -35,6 +35,7 @@ function normalize(scene: CompileResult) {
     comments: (scene.frame.metadata.dsl as { comments?: unknown }).comments ?? null,
     reserved: (scene.frame.metadata.dsl as { reserved?: unknown }).reserved ?? null,
     align: (scene.frame.metadata.dsl as { align?: unknown }).align ?? null,
+    animate: (scene.frame.metadata.dsl as { animate?: unknown }).animate ?? null,
   };
 }
 

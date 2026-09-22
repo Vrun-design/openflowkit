@@ -77,6 +77,24 @@ group "Authentication Service" {
 }
 ```
 
+### 5. Motion (any family)
+An `animate` block exports the diagram as a short animation (animated SVG, GIF, MP4).
+Omit it and the export builds the diagram in topological order. Presets: `build`
+(cumulative reveal), `walkthrough` (spotlight one step at a time), `pulse` (everything
+shown, connectors carry a travelling light).
+
+```openflow
+animate build 10s loop {
+  step a, b            // reveal these nodes together
+  step a -> c : POST   // a step about the edge a -> c; both endpoints show too
+  step c hold 2s       // hold longer than the default beat
+}
+```
+
+Header: `animate <preset> [<duration>] [loop]` where duration is `10s` or `8500ms`.
+Steps are one per line: comma-separated node ids to reveal, `a -> c` for an edge step,
+`hold <duration>` to change the beat, `: label` for a note that reads longer.
+
 ## Complete Example
 When generating a diagram, combine the rules above:
 

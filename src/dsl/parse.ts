@@ -1,4 +1,5 @@
 import type { DslDiagram, DslFamily } from './ast';
+import { extractAnimateBlock } from './animate';
 import { isReservedFamily, parseDocument } from './document';
 import { parseGraphStatements } from './families/graph/parse';
 
@@ -17,8 +18,11 @@ const GRAPH_FAMILIES: readonly DslFamily[] = ['flowchart', 'architecture'];
 export function parse(input: string): DslDiagram {
   const document = parseDocument(input);
   const diagnostics = [...document.diagnostics];
+  // Same extraction the compiler runs, so panel diagnostics match the compile
+  // and `step a -> c` inside the block is never reported as a graph edge.
+  const { segments } = extractAnimateBlock(document.segments, diagnostics);
   const graphSyntax = GRAPH_FAMILIES.includes(document.family) || isReservedFamily(document.family);
-  const statements = graphSyntax ? parseGraphStatements(document.segments, diagnostics) : [];
+  const statements = graphSyntax ? parseGraphStatements(segments, diagnostics) : [];
   return {
     version: document.version,
     family: document.family,

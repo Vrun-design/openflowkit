@@ -1,4 +1,5 @@
 import { dslFrameMeta, dslFrameRaw, type DslFrameScene } from './sceneMeta';
+import { animateBlockLines, animateFromJson } from './animate';
 import type { DslFamily } from './ast';
 import { compile } from './compile';
 import { familyFor } from './families';
@@ -31,6 +32,13 @@ export function serialize(scene: DslFrameScene): string {
   const palette = meta.appearance?.palette;
   if (palette && palette !== 'pastel') lines.push(`appearance: ${palette}`);
   lines.push('', ...familyFor(meta.family as DslFamily).serialize(scene));
+  // Motion is a projection of the text like everything else: emitted exactly
+  // when the frame carries a block, for every family, and never invented.
+  const animate = animateFromJson(raw.animate);
+  if (animate) {
+    if (lines.at(-1) !== '') lines.push('');
+    lines.push(...animateBlockLines(animate));
+  }
   if (Array.isArray(raw.comments)) lines.push(...commentLines(raw.comments.filter((item): item is string => typeof item === 'string'), ''));
   while (lines.length > 0 && lines.at(-1) === '') lines.pop();
   return `${lines.join('\n')}\n`;

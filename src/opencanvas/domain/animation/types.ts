@@ -8,7 +8,8 @@ import type { Bounds2d } from '../geometry/types';
  * at time t".
  */
 
-export type AnimationPreset = 'build' | 'walkthrough' | 'pulse';
+export const ANIMATION_PRESETS = ['build', 'walkthrough', 'pulse'] as const;
+export type AnimationPreset = (typeof ANIMATION_PRESETS)[number];
 
 export interface AnimationStep {
   readonly nodeIds: readonly string[];
