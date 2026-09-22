@@ -17,7 +17,13 @@ Plan: [docs/plan/README.md](docs/plan/README.md). Phases 0–5 done, no gates.
   undo per stroke; eraser X removes whole strokes per drag; lasso Q selects by polygon;
   Ink panel (colour/width) and a sticky ink preset. Two design-system fixes rode along:
   a tooltip no longer swallows Escape, and focus returns to the canvas when the context
-  bar unmounts. 6.5 claimed.
+  bar unmounts.
+- 6.5 done 2026-09-22 (opencode/deepseek-v4.1): image + emoji — rail Image (⇧I) opens a
+  file picker, dropping or pasting an image (or pasting an image URL) inserts one; bytes
+  go to the IndexedDB assets store, the node keeps `assetId` (plus an inline data URL for
+  export) and Pixi resolves it; images fit 480 px on the long side. Emoji (E) opens a
+  searchable static catalogue with recents in preferences; picking inserts a 48 px glyph.
+  Pickers now anchor to their trigger, so focus returns to a real button. 6.6 claimed.
 - `check-v2-polish.mjs` fails on this machine at HEAD too (idle render count, context-bar
   follow, resize assertions in three separate runs) — environment, not a phase-6 regression.
   Re-run when the machine is quiet; the script's numbers are the phase gate.

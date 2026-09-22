@@ -78,6 +78,8 @@ interface PixiRendererHostOptions {
   readonly liveTransformPreview?: boolean;
   readonly onStatusChange?: (status: PixiRendererStatus) => void;
   readonly connectorModelEnabled?: boolean;
+  /** Resolves an IndexedDB asset id to a loadable URL (image nodes). */
+  readonly resolveAsset?: (assetId: string) => Promise<string | null>;
 }
 
 const SELECTION_STROKE = CHROME_ACCENT;
@@ -108,7 +110,7 @@ export class PixiRendererHost {
   private readonly connectorRenderer = new PixiConnectorRenderer();
   private readonly containerRenderer = new PixiContainerRenderer();
   private readonly connectorEditOverlay = new PixiConnectorEditOverlay();
-  private readonly nodeRenderer = new PixiNodeRenderer(() => this.requestRender());
+  private readonly nodeRenderer: PixiNodeRenderer;
   private readonly selectionOverlay = new PixiSelectionOverlay();
   private readonly transformOverlay = new PixiTransformOverlay();
   private readonly freeformPreview = new PixiFreeformPreview();
@@ -142,6 +144,7 @@ export class PixiRendererHost {
   private viewportProjection: ViewportSceneProjection | null = null;
 
   constructor(options: PixiRendererHostOptions = {}) {
+    this.nodeRenderer = new PixiNodeRenderer(() => this.requestRender(), options.resolveAsset);
     this.livePreview = options.liveTransformPreview ? new PixiLiveTransformPreview() : null;
     this.onStatusChange = options.onStatusChange;
     this.connectorModelEnabled = options.connectorModelEnabled !== false;

@@ -17,7 +17,7 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
     onReorder, onToggleLock, ...clipboard, ...arrange,
     toolRef: { current: 'select' }, editingRef: { current: false }, onToolChange,
     onUndo: vi.fn(), onRedo: vi.fn(), onDelete: vi.fn(), onDuplicate: vi.fn(), onEditPrimary: vi.fn(), onRemoveFromModel: vi.fn(),
-    onNudge: vi.fn(), onCommitGesture: () => false, onCancelGesture: () => false, onClearSelection: vi.fn(), onSelectAll: vi.fn(),
+    onNudge: vi.fn(), onCommitGesture: () => false, onToggleEmoji: () => undefined, onInsertImage: () => undefined, onCancelGesture: () => false, onClearSelection: vi.fn(), onSelectAll: vi.fn(),
     onFitView, onZoomStep, onResetZoom, onToggleTree: vi.fn(), onToggleIcons: vi.fn(),
     onToggleAgent: vi.fn(), onToggleCode: vi.fn(), onToggleModel: vi.fn(), onSpacePan, onTypeToEdit,
   }));

@@ -45,6 +45,11 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly iconsOpen: boolean;
   readonly onIconsOpenChange: (open: boolean) => void;
   readonly onInsertIcon: (icon: IconChoice) => void;
+  readonly onInsertImage: () => void;
+  readonly emojiOpen: boolean;
+  readonly onEmojiOpenChange: (open: boolean) => void;
+  readonly onPickEmoji: (glyph: string) => void;
+  readonly recentEmoji: readonly string[];
   readonly onZoomIn: () => void;
   readonly onZoomOut: () => void;
   readonly onZoomTo: (percent: number) => void;
@@ -81,7 +86,10 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
           onPickConnector={props.onPickConnector}
           selectionCount={props.selectedNodeIds.length} selectionLocked={props.selectionLocked}
           onToggleLock={props.onToggleLock}
-          iconsOpen={props.iconsOpen} onIconsOpenChange={props.onIconsOpenChange} onInsertIcon={props.onInsertIcon} />
+          iconsOpen={props.iconsOpen} onIconsOpenChange={props.onIconsOpenChange} onInsertIcon={props.onInsertIcon}
+          onInsertImage={props.onInsertImage} emojiOpen={props.emojiOpen}
+          onEmojiOpenChange={props.onEmojiOpenChange} onPickEmoji={props.onPickEmoji}
+          recentEmoji={props.recentEmoji} />
       )}
       <V2CameraControls
         preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}

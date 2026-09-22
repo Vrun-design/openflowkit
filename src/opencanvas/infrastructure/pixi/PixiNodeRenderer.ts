@@ -77,7 +77,10 @@ export class PixiNodeRenderer {
   private debugRecords: readonly PixiNodeDebugRecord[] = [];
   private editingNodeId: string | null = null;
 
-  constructor(onMediaReady: () => void = () => undefined) {
+  constructor(
+    onMediaReady: () => void = () => undefined,
+    private readonly resolveAsset?: (assetId: string) => Promise<string | null>
+  ) {
     this.freeformRenderer = new PixiFreeformNodeRenderer((nodeId) => {
       this.debugRecords = this.debugRecords.map((record) =>
         record.id === nodeId ? { ...record, mediaState: 'loaded' } : record
@@ -85,7 +88,7 @@ export class PixiNodeRenderer {
       const label = this.labelByNodeId.get(nodeId);
       if (label) label.visible = false;
       onMediaReady();
-    });
+    }, resolveAsset);
     this.architectureRenderer = new PixiArchitectureNodeRenderer((nodeId) => {
       this.debugRecords = this.debugRecords.map((record) =>
         record.id === nodeId ? { ...record, mediaState: 'loaded' } : record

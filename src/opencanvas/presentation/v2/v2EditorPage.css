@@ -657,3 +657,14 @@
 .ofk-icon-button[data-bridge-status='connected'] { color: var(--ofk-success); }
 .ofk-icon-button[data-bridge-status='connected']::after { content: ''; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--ofk-success); box-shadow: 0 0 0 2px var(--ofk-surface); }
 @media (max-width: 520px) { .ofk-connection-capabilities { grid-template-columns: 1fr; } }
+
+/* Emoji picker: the same panel material as the icon library, one grid per group. */
+.ofk-emoji-panel { width: 320px; max-height: min(520px, 70vh); overflow: hidden; display: flex; }
+.ofk-emoji-picker { display: flex; flex-direction: column; gap: 8px; min-height: 0; width: 100%; }
+.ofk-emoji-body { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.ofk-emoji-body h3 { margin: 0 0 4px; font-size: 11px; font-weight: 600; color: var(--ofk-muted); }
+.ofk-emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+.ofk-emoji-cell { display: grid; place-items: center; height: 34px; border: 0; border-radius: 8px;
+  background: transparent; font-size: 20px; line-height: 1; cursor: pointer; }
+.ofk-emoji-cell:hover { background: color-mix(in srgb, var(--ofk-text) 8%, transparent); }
+.ofk-emoji-cell:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: -2px; }

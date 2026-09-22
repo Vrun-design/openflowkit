@@ -82,7 +82,10 @@ function drawTextNode(
 export class PixiFreeformNodeRenderer {
   private readonly mediaLayer: PixiMediaLayer;
 
-  constructor(onMediaReady: (nodeId: string) => void) {
+  constructor(
+    onMediaReady: (nodeId: string) => void,
+    private readonly resolveAsset?: (assetId: string) => Promise<string | null>
+  ) {
     this.mediaLayer = new PixiMediaLayer(onMediaReady);
   }
 
@@ -155,14 +158,17 @@ export class PixiFreeformNodeRenderer {
     drawChrome(graphics, visual, node.size, matrix);
     const label = this.createLabel(visual, node.size);
     applyPixiNodeMatrix(label, matrix);
-    if (visual.kind === 'image' && visual.presentation.sourceUrl) {
+    const imageUrl = visual.kind === 'image' ? visual.presentation.sourceUrl : null;
+    const assetId = visual.kind === 'image' ? visual.presentation.assetId : null;
+    if (visual.kind === 'image' && (imageUrl || assetId)) {
       this.mediaLayer.load({
         nodeId: node.id,
         generation,
         matrix,
         bounds: createBounds2d(0, 0, node.size.width, node.size.height),
         opacity: visual.presentation.opacity,
-        resolveUrl: async () => visual.presentation.sourceUrl,
+        resolveUrl: async () => imageUrl
+          ?? (assetId && this.resolveAsset ? this.resolveAsset(assetId) : null),
       });
     }
     return {

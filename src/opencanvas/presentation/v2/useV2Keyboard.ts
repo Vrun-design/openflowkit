@@ -42,6 +42,9 @@ interface V2KeyboardOptions {
   readonly onResetZoom: () => void;
   readonly onToggleTree: () => void;
   readonly onToggleIcons: () => void;
+  /** E opens the emoji picker; ⇧I picks an image file. */
+  readonly onToggleEmoji: () => void;
+  readonly onInsertImage: () => void;
   readonly onToggleAgent: () => void;
   readonly onToggleCode: () => void;
   readonly onToggleModel: () => void;
@@ -177,6 +180,9 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       event.preventDefault();
     // ⇧H/V and ⇧1/⇧2 sit below type-to-edit: a capital letter on one selected
     // shape starts its label; flips need none or several selected.
+    } else if (!command && !event.altKey && event.shiftKey && event.code === 'KeyI') {
+      opts.onInsertImage();
+      event.preventDefault();
     } else if (!command && !event.altKey && event.shiftKey && event.code === 'KeyP') {
       opts.onToolChange('highlighter');
       event.preventDefault();
@@ -210,6 +216,8 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onToggleTree();
     } else if (!command && !event.shiftKey && !event.altKey && key === 'i') {
       opts.onToggleIcons();
+    } else if (!command && !event.shiftKey && !event.altKey && key === 'e') {
+      opts.onToggleEmoji();
     } else if (event.key === 'F2') {
       opts.onEditPrimary('f2');
       event.preventDefault();

@@ -19,6 +19,9 @@ import type { V2Tool } from './V2CreationToolbar';
 import { DEFAULT_TOOL_CONFIG, type V2ConnectorTool, type V2ToolConfig } from './v2ToolCatalog';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
 import { useV2IconLibrary } from './useV2IconLibrary';
+import { useV2MediaInsert } from './useV2MediaInsert';
+import { IMAGE_URL_PATTERN } from './useV2MediaInsert';
+import { isImageFile } from '../../../services/storage/assets';
 import { V2LoadCenter } from './V2LoadCenter';
 import { V2TreePanel } from './V2TreePanel';
 import { V2AgentPanel } from './V2AgentPanel';
@@ -572,10 +575,61 @@ export function V2EditorPage(): React.JSX.Element {
     hostRef, pageRef, commit: session.commit, mintId: mintV2Id, openEditor, readOnly: load.readOnly,
   });
 
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const media = useV2MediaInsert({
+    pageRef, commit: session.commit, applySelection, applyConnectorSelection,
+    announce: setAnnouncement, mintId: mintV2Id, readOnlyRef,
+    centreWorld: () => {
+      const bounds = sectionRef.current?.getBoundingClientRect();
+      return hostRef.current && bounds
+        ? hostRef.current.screenToWorld({ x: bounds.width / 2, y: bounds.height / 2 })
+        : { x: 0, y: 0 };
+    },
+  });
+  const pickImageFile = () => imageInputRef.current?.click();
+  const onImageChosen = (file: File | undefined) => { if (file) void media.insertImageFile(file); };
+  const imageFiles = (list: DataTransfer | null): File[] =>
+    Array.from(list?.files ?? []).filter(isImageFile);
+  const pointFromEvent = (event: { clientX: number; clientY: number }) => {
+    const bounds = sectionRef.current?.getBoundingClientRect();
+    return bounds && hostRef.current
+      ? hostRef.current.screenToWorld({ x: event.clientX - bounds.left, y: event.clientY - bounds.top })
+      : undefined;
+  };
+  const handleDrop = (event: React.DragEvent<HTMLElement>) => {
+    const files = imageFiles(event.dataTransfer);
+    if (files.length === 0) return;
+    event.preventDefault();
+    const at = pointFromEvent(event);
+    for (const file of files) void media.insertImageFile(file, at);
+  };
+  const handlePaste = (event: React.ClipboardEvent<HTMLElement>) => {
+    const files = imageFiles(event.clipboardData);
+    if (files.length > 0) {
+      event.preventDefault();
+      for (const file of files) void media.insertImageFile(file);
+      return;
+    }
+    const text = event.clipboardData.getData('text/plain').trim();
+    if (IMAGE_URL_PATTERN.test(text)) {
+      event.preventDefault();
+      media.insertImageUrl(text);
+    }
+  };
+  const pickEmoji = (glyph: string) => {
+    media.insertEmoji(glyph);
+    const recent = [glyph, ...preferences.recentEmoji.filter((entry) => entry !== glyph)].slice(0, 24);
+    updatePreferences({ recentEmoji: recent });
+    setEmojiOpen(false);
+  };
+
   const handleKeyDown = useV2Keyboard({
     toolRef, editingRef,
     onToolChange: setTool,
     onToggleIcons: iconLibrary.toggle,
+    onToggleEmoji: () => setEmojiOpen((open) => !open),
+    onInsertImage: pickImageFile,
     onUndo: session.undo, onRedo: session.redo,
     // On a C4 view Delete unplaces; the model keeps the element.
     onDelete: () => {
@@ -653,7 +707,13 @@ export function V2EditorPage(): React.JSX.Element {
             event.preventDefault(); toggleShortcuts();
           } else handleKeyDown(event);
         }}
-        onKeyUp={(event) => { if (event.key === ' ') setSpacePan(false); }}>
+        onKeyUp={(event) => { if (event.key === ' ') setSpacePan(false); }}
+        onDragOver={(event) => { if (imageFiles(event.dataTransfer).length > 0) event.preventDefault(); }}
+        onDrop={handleDrop}
+        onPaste={handlePaste}>
+        <input ref={imageInputRef} type="file" hidden
+          accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
+          onChange={(event) => { onImageChosen(event.target.files?.[0]); event.target.value = ''; }} />
         {load.phase === 'loading' || !page ? (
           <V2LoadCenter
             phase={load.phase}
@@ -708,6 +768,8 @@ export function V2EditorPage(): React.JSX.Element {
               selectionLocked={page.nodes.find((node) => node.id === selection.nodeIds[0])?.content.sectionLocked === true}
               onToggleLock={editActions.toggleLock}
               iconsOpen={iconLibrary.open} onIconsOpenChange={iconLibrary.setOpen} onInsertIcon={iconLibrary.insertIcon}
+              onInsertImage={pickImageFile} emojiOpen={emojiOpen} onEmojiOpenChange={setEmojiOpen}
+              onPickEmoji={pickEmoji} recentEmoji={preferences.recentEmoji}
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
               onZoomTo={camera.zoomTo}

@@ -18,12 +18,15 @@ export interface V2Preferences {
   agentBridgeEnabled: boolean;
   /** Tag perspective: matching elements stay bright, the rest dims. */
   perspectiveTags: string[];
+  /** Last emoji picks, newest first (slice 6.5). */
+  recentEmoji: string[];
 }
 const KEY = 'openflowkit-v2-preferences';
 const DEFAULTS: V2Preferences = {
   theme: 'system', showGrid: true, snapToGrid: false, canvasColor: null, density: 'comfortable',
   diagramPalette: 'pastel', bridgePort: BRIDGE_DEFAULT_PORT, bridgeToken: '', agentBridgeEnabled: false,
   perspectiveTags: [],
+  recentEmoji: [],
 };
 
 function readPreferences(): V2Preferences {
@@ -44,6 +47,9 @@ function readPreferences(): V2Preferences {
       agentBridgeEnabled: value?.agentBridgeEnabled === true,
       perspectiveTags: Array.isArray(value?.perspectiveTags)
         ? value.perspectiveTags.filter((tag: unknown): tag is string => typeof tag === 'string').slice(0, 24)
+        : [],
+      recentEmoji: Array.isArray(value?.recentEmoji)
+        ? value.recentEmoji.filter((glyph: unknown): glyph is string => typeof glyph === 'string').slice(0, 24)
         : [] };
   } catch { return DEFAULTS; }
 }

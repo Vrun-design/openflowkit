@@ -36,6 +36,7 @@ import type { V2Tool } from './V2CreationToolbar';
 import type { V2ToolConfig } from './v2ToolCatalog';
 import './openCanvasTextEditorOverlay.css';
 import { numericColorToHex } from '../../domain/color/adaptiveColor';
+import { readAssetUrl } from '../../../services/storage/assets';
 
 export interface V2EditingState {
   readonly nodeId: string;
@@ -231,6 +232,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     let disposed = false;
     const host = new PixiRendererHost({
       liveTransformPreview: true,
+      resolveAsset: (assetId) => readAssetUrl(assetId),
       onStatusChange: (next) => {
         if (!disposed) setStatus(next);
       },

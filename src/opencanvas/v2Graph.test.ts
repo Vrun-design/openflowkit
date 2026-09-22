@@ -31,6 +31,8 @@ const SHARED_KERNEL = [
   path.join(ocDir, 'infrastructure', 'export'),
   path.join(srcDir, 'services', 'storage', 'indexedDbHelpers'),
   path.join(srcDir, 'services', 'storage', 'indexedDbSchema'),
+  // Image bytes for the canvas: a thin IndexedDB adapter beside the two above.
+  path.join(srcDir, 'services', 'storage', 'assets'),
   path.join(srcDir, 'services', 'elk-layout'),
   path.join(srcDir, 'services', 'shapeLibrary'),
   // The Mermaid parsers feed the DSL hub's transpiler (services/dsl/mermaidToDsl).
