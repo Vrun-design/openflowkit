@@ -2,7 +2,7 @@ import type { SceneDocumentV1, SceneNode, ScenePage } from '../../opencanvas/dom
 import { slugifyDslId } from '../text';
 import {
   ELEMENT_KINDS, ELEMENT_KINDS_WITH_CHILDREN, FLOW_STEP_KINDS, VIEW_KINDS,
-  type ArchElement, type ArchFlow, type ArchModel, type ArchRelation, type ArchView,
+  type ArchElement, type ArchModel, type ArchRelation, type ArchView,
   type ElementKind, type FlowStep, type FlowStepKind, type ViewKind,
 } from './types';
 
@@ -363,20 +363,5 @@ export function archPageOfView(document: SceneDocumentV1, viewId: string): Scene
 }
 
 /** Flattened, playback-ordered steps with their structural depth and branch label. */
-export interface FlatFlowStep {
-  readonly step: FlowStep;
-  readonly depth: number;
-  readonly branch?: string;
-}
-
-export function flattenFlowSteps(flow: ArchFlow): readonly FlatFlowStep[] {
-  const out: FlatFlowStep[] = [];
-  const walk = (steps: readonly FlowStep[], depth: number, branch?: string) => {
-    for (const step of steps) {
-      out.push({ step, depth, ...(branch ? { branch } : {}) });
-      for (const lane of step.branches ?? []) walk(lane.steps, depth + 1, lane.label);
-    }
-  };
-  walk(flow.steps, 0);
-  return out;
-}
+export type { FlatTimelineStep as FlatFlowStep } from '../../opencanvas/domain/animation/flow';
+export { flattenTimelineSteps as flattenFlowSteps } from '../../opencanvas/domain/animation/flow';
