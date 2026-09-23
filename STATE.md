@@ -29,8 +29,8 @@ Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on 
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text node sends every frame to the
   SVG raster. GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8).
-- `agent-live` and the phase-7 `frame.test.ts` wall-clock budget flake under load, pass alone.
-- `browser`/`mobile` frames and icon packs draw in the app but export as plain cards.
+- `agent-live` and the phase-7 `frame.test.ts` wall-clock budget flake under load, pass alone;
+  `browser`/`mobile` frames and icon packs draw in the app but export as plain cards.
 
 ## Next — owner's order, 2026-09-22
 - **Phase 9** 9.6 (the four-failure gate + quality workflow). **On hold**: phase 7b film look,
