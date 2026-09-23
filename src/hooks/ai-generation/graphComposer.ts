@@ -122,46 +122,56 @@ export function toFinalEdges(
 export function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     const message = error.message;
+    const normalizedMessage = message.toLowerCase();
 
     if (
-      message.includes('401') ||
-      message.includes('invalid api key') ||
-      message.includes('API key')
+      normalizedMessage.includes('model') &&
+      (normalizedMessage.includes('404') ||
+        normalizedMessage.includes('not found') ||
+        normalizedMessage.includes('unavailable') ||
+        normalizedMessage.includes('not supported'))
+    ) {
+      return 'The selected AI model is unavailable or no longer supported. Please select another model and try again.';
+    }
+
+    if (
+      normalizedMessage.includes('401') ||
+      normalizedMessage.includes('invalid api key') ||
+      normalizedMessage.includes('api key')
     ) {
       return 'Invalid or missing API key. Please check your AI settings.';
     }
-    if (message.includes('403') || message.includes('Forbidden')) {
+    if (normalizedMessage.includes('403') || normalizedMessage.includes('forbidden')) {
       return 'Access forbidden. Please check your API key permissions.';
     }
-    if (message.includes('429') || message.includes('rate limit') || message.includes('quota')) {
+    if (
+      normalizedMessage.includes('429') ||
+      normalizedMessage.includes('rate limit') ||
+      normalizedMessage.includes('quota')
+    ) {
       return 'Rate limit exceeded. Please wait a moment and try again.';
     }
-    if (message.includes('500') || message.includes('internal server error')) {
+    if (
+      /\b5\d{2}\b/.test(normalizedMessage) ||
+      normalizedMessage.includes('internal server error')
+    ) {
       return 'AI provider server error. Please try again later.';
     }
     if (
-      message.includes('network') ||
-      message.includes('fetch') ||
-      message.includes('Failed to fetch')
+      normalizedMessage.includes('network') ||
+      normalizedMessage.includes('fetch')
     ) {
       return 'Network error. Please check your internet connection.';
     }
-    if (message.includes('timeout') || message.includes('timed out')) {
+    if (normalizedMessage.includes('timeout') || normalizedMessage.includes('timed out')) {
       return 'Request timed out. Please try again.';
     }
-    if (message.includes('cursor') || message.includes('parse')) {
+    if (normalizedMessage.includes('cursor') || normalizedMessage.includes('parse')) {
       return 'Failed to parse AI response. Please try a different prompt.';
     }
-    if (message.includes('context length') || message.includes('token')) {
+    if (normalizedMessage.includes('context length') || normalizedMessage.includes('token')) {
       return 'Prompt too long. Try simplifying your request.';
     }
-
-    if (message) {
-      return message;
-    }
   }
-  if (typeof error === 'string' && error) {
-    return error;
-  }
-  return 'An unexpected error occurred. Please try again.';
+  return 'The AI request failed. Please try again or choose a different model.';
 }

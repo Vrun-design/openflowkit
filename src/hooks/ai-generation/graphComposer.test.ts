@@ -84,9 +84,32 @@ describe('graphComposer', () => {
     expect(warnSpy).toHaveBeenCalled();
   });
 
-  it('maps unknown errors to a stable message', () => {
-    expect(toErrorMessage(new Error('boom'))).toBe('boom');
-    expect(toErrorMessage('bad')).toBe('bad');
-    expect(toErrorMessage('')).toBe('An unexpected error occurred. Please try again.');
+  it('maps a raw model-not-found response to a user-friendly message', () => {
+    const rawError =
+      'models/gemini-3-pro is not found for API version v1beta, or is not supported for generateContent. Service: generativelanguage.googleapis.com (404)';
+    const message = toErrorMessage(new Error(rawError));
+
+    expect(message).toBe(
+      'The selected AI model is unavailable or no longer supported. Please select another model and try again.'
+    );
+    expect(message).not.toContain('generativelanguage.googleapis.com');
+  });
+
+  it.each([
+    ['INVALID API KEY', 'Invalid or missing API key. Please check your AI settings.'],
+    ['Request failed with status 403', 'Access forbidden. Please check your API key permissions.'],
+    ['Quota exceeded', 'Rate limit exceeded. Please wait a moment and try again.'],
+    ['Provider returned 503', 'AI provider server error. Please try again later.'],
+    ['Failed to fetch', 'Network error. Please check your internet connection.'],
+  ])('maps %s without exposing provider details', (rawError, expectedMessage) => {
+    expect(toErrorMessage(new Error(rawError))).toBe(expectedMessage);
+  });
+
+  it('does not expose unknown error details', () => {
+    const expectedMessage = 'The AI request failed. Please try again or choose a different model.';
+
+    expect(toErrorMessage(new Error('upstream service secret detail'))).toBe(expectedMessage);
+    expect(toErrorMessage('raw provider response')).toBe(expectedMessage);
+    expect(toErrorMessage('')).toBe(expectedMessage);
   });
 });
