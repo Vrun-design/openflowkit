@@ -27,15 +27,13 @@ Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on 
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; one `@keyframes` per element; chart, ink, image, annotation
   and text nodes send every frame back to the SVG raster; GIF is 256 colours at ≤ 20 fps; no
-  custom keyframes, camera paths or audio (phase 8); `browser`/`mobile` frames and icon packs
-  draw in the app but export as plain cards.
+  custom keyframes, camera paths or audio (phase 8); frames and icon packs export as cards.
 
 ## Next — owner's order, 2026-09-22
 - **Phase 9** as above. **Phase 10 — BYOK** (`docs/plan/phase-10-byok.md`): CSP omits NVIDIA and
-  localhost so those calls are blocked by our own header, and still allows posthog and
-  `signaling.yjs.dev` against a no-telemetry promise.
-- **On hold**: phase 7b film look, phase 8 keyframes/Present. Phase 6 leftovers: 6.6
-  frames/tools, 6.7 wireframe, 6.10 VoiceOver sweep + export diff.
+  localhost (blocked by our own header) and still allows posthog and `signaling.yjs.dev`
+  against a no-telemetry promise. **On hold**: phase 7b film look, phase 8 keyframes/Present.
+- Phase 6 leftovers: 6.6 frames/tools, 6.7 wireframe, 6.10 VoiceOver sweep + export diff.
 
 ## Deferred
 - PDF = print dialog; no zip; bridge is long-poll; chart data panel commits per blur; image

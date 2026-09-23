@@ -1,32 +1,93 @@
-/* OpenFlowKit docs visual system */
+/* OpenFlowKit docs visual system. Colours mirror the app's design-system
+   tokens (src/opencanvas/presentation/design-system/tokens.ts): warm neutrals,
+   #e95420 as the single primary, #b63e14 light / #ffb18e dark as the accent. */
 :root {
-  --sl-color-accent-low: #fff1e8;
-  --sl-color-accent: #f05a24;
-  --sl-color-accent-high: #b9380e;
-  --docs-surface: #ffffff;
-  --docs-surface-soft: #f7f4f1;
-  --docs-border: rgba(19, 24, 33, 0.1);
-  --docs-border-strong: rgba(19, 24, 33, 0.18);
-  --docs-text-strong: #171922;
-  --docs-text: #4f5565;
-  --docs-text-soft: #727887;
-  --docs-hero-glow: rgba(240, 90, 36, 0.12);
-  --docs-panel-shadow: 0 24px 80px rgba(17, 20, 28, 0.08);
+  --sl-color-accent-low: #fce9df;
+  --sl-color-accent: #b63e14;
+  --sl-color-accent-high: #99330f;
+  --sl-color-bg: #fdfdfb;
+  --sl-color-bg-nav: #fdfdfb;
+  --sl-color-bg-sidebar: #fdfdfb;
+  --sl-color-hairline-shade: #dedfd9;
+  --sl-color-text: #252724;
+  --sl-color-text-accent: #b63e14;
+  --docs-surface: #fdfdfb;
+  --docs-surface-soft: #efefec;
+  --docs-border: rgba(37, 39, 36, 0.12);
+  --docs-border-strong: rgba(37, 39, 36, 0.2);
+  --docs-text-strong: #252724;
+  --docs-text: #535750;
+  --docs-text-soft: #62665f;
+  --docs-cta-bg: #b63e14;
+  --docs-cta-text: #ffffff;
+  --docs-hero-glow: rgba(233, 84, 32, 0.12);
+  --docs-panel-shadow: 0 24px 80px rgba(37, 39, 36, 0.08);
 }
 
 :root[data-theme='dark'] {
-  --sl-color-accent-low: #38170d;
-  --sl-color-accent: #ff6b2c;
-  --sl-color-accent-high: #ffd0ba;
-  --docs-surface: #171922;
-  --docs-surface-soft: #1e212d;
-  --docs-border: rgba(205, 214, 244, 0.12);
-  --docs-border-strong: rgba(205, 214, 244, 0.2);
-  --docs-text-strong: #edf1ff;
-  --docs-text: #b7bfd6;
-  --docs-text-soft: #929ab1;
-  --docs-hero-glow: rgba(255, 107, 44, 0.18);
+  --sl-color-accent-low: #482b20;
+  --sl-color-accent: #ffb18e;
+  --sl-color-accent-high: #ffc6ad;
+  --sl-color-bg: #232622;
+  --sl-color-bg-nav: #232622;
+  --sl-color-bg-sidebar: #232622;
+  --sl-color-hairline-shade: #41483c;
+  --sl-color-text: #f1f2ec;
+  --sl-color-text-accent: #ffb18e;
+  --docs-surface: #232622;
+  --docs-surface-soft: #2e322c;
+  --docs-border: rgba(241, 242, 236, 0.14);
+  --docs-border-strong: rgba(241, 242, 236, 0.24);
+  --docs-text-strong: #f1f2ec;
+  --docs-text: #c1c6ba;
+  --docs-text-soft: #a3ab9c;
+  --docs-cta-bg: #ffb18e;
+  --docs-cta-text: #301b12;
+  --docs-hero-glow: rgba(233, 84, 32, 0.18);
   --docs-panel-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+}
+
+/* Type scale: one reading size, tighter headings, comfortable prose. */
+.sl-markdown-content {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--docs-text);
+}
+
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+.sl-markdown-content h4 {
+  color: var(--docs-text-strong);
+  letter-spacing: -0.02em;
+}
+
+.sl-markdown-content h2 {
+  margin-top: 2.5rem;
+  font-size: 1.55rem;
+}
+
+.sl-markdown-content h3 {
+  margin-top: 1.9rem;
+  font-size: 1.2rem;
+}
+
+.sl-markdown-content p,
+.sl-markdown-content li {
+  color: var(--docs-text);
+}
+
+.sl-markdown-content table {
+  width: 100%;
+  font-size: 0.92rem;
+}
+
+.sl-markdown-content :not(pre) > code {
+  background: color-mix(in srgb, var(--docs-surface-soft) 80%, transparent);
+  border: 1px solid var(--docs-border);
+  border-radius: 0.35rem;
+  padding: 0.1rem 0.3rem;
+  color: var(--docs-text-strong);
 }
 
 .docs-home-shell {
@@ -129,6 +190,8 @@
   display: grid;
   gap: 0.4rem;
   justify-items: center;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 
 .ofk-example-view img {
@@ -168,6 +231,12 @@
 @media (max-width: 60em) {
   .ofk-example {
     grid-template-columns: 1fr;
+  }
+
+  /* Below ~600px a diagram at full width drops under ~10px labels. Keep a
+     legible floor and let the figure scroll sideways instead. */
+  .ofk-example-view img {
+    min-width: min(640px, 190%);
   }
 }
 

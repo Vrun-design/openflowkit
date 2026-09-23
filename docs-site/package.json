@@ -16,10 +16,12 @@
   "dependencies": {
     "@astrojs/starlight": "^0.34.0",
     "astro": "^5.7.0",
-    "posthog-js": "^1.347.2",
     "sharp": "^0.34.1"
   },
   "overrides": {
     "zod": "3"
+  },
+  "devDependencies": {
+    "lighthouse": "^13.5.0"
   }
 }
