@@ -11,6 +11,7 @@ import { resolveChartPresentation } from '../../domain/nodes/chartNodePresentati
 import { nodeLabelBounds, nodeOutline } from '../../domain/nodes/nodeLabelBounds';
 import type { ConnectorMarkerGlyph, ProjectedConnector } from '../../domain/connectors/types';
 import { connectorMarkerShapes, type MarkerShape } from '../../domain/connectors/markers';
+import { connectorLabelPlate } from '../../domain/connectors/labelStyle';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import {
   resolveFreeformNodePresentation,
@@ -523,6 +524,16 @@ function decorationMarkup(shape: BasicNodeShape, size: Size2d, style: NodeStyle)
   }).join('');
 }
 
+/** A connector label as the canvas draws it: text on a rounded plate over the line. */
+function connectorLabelMarkup(text: string, point: Point2d, style: NodeStyle): string {
+  if (!text) return '';
+  const plate = connectorLabelPlate(text, style, point);
+  const fill = style.fill === 'transparent' ? 'none' : style.fill;
+  const stroke = style.stroke === 'transparent' || style.strokeWidth <= 0 ? 'none' : style.stroke;
+  return `<rect x="${number(plate.x)}" y="${number(plate.y)}" width="${number(plate.width)}" height="${number(plate.height)}" rx="${number(style.cornerRadius)}" fill="${fill}" stroke="${stroke}" stroke-width="${number(style.strokeWidth)}"/>`
+    + `<text x="${number(point.x)}" y="${number(point.y)}" text-anchor="middle" dominant-baseline="middle" fill="${xml(style.textColor)}" font-family="${xml(FONT_STACKS[style.fontFamily])}" font-size="${number(style.fontSize)}" font-weight="${style.fontWeight}">${xml(text)}</text>`;
+}
+
 /** Arrowheads and end glyphs, with the exact geometry the Pixi renderer uses. */
 function markerMarkup(connector: ProjectedConnector, stroke: string): string {
   const { samples, presentation } = connector;
@@ -627,7 +638,7 @@ export function exportCanonicalSvg(
       : connectorPathDash(state);
     const group = elementFrameStyle('connector', connector.id, state, undefined, options.animations);
     return `<g data-connector-id="${xml(connector.id)}"${group?.className ?? ''}${group?.style ?? ''}><path d="${connectorPathData(connector.commands)}"${pathAnimation} fill="none" stroke="${stroke}" stroke-width="${number(connector.presentation.stroke.width)}" opacity="${number(connector.presentation.stroke.opacity)}"${dash}${connector.presentation.stroke.dash.length && !dash ? ` stroke-dasharray="${connector.presentation.stroke.dash.map(number).join(' ')}"` : ''}/>`
-      + connector.labels.map((label) => `<text x="${number(label.point.x)}" y="${number(label.point.y)}" text-anchor="middle" fill="${theme === 'dark' ? '#f8fafc' : '#0f172a'}" font-family="system-ui,sans-serif" font-size="11">${xml(label.text)}</text>`).join('')
+      + connector.labels.map((label) => connectorLabelMarkup(label.text, label.point, connector.presentation.label)).join('')
       + markerMarkup(connector, stroke)
       + '</g>';
   }).join('');

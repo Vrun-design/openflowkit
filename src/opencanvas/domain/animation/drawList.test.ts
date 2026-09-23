@@ -95,13 +95,15 @@ describe('frame draw list', () => {
     });
     const page = pageOf({ nodes: [a, b], connectors: [edge] });
     const ops = frameDrawList(page, frameOf({}, { 'a->b': { opacity: 1, scale: 1, drawProgress: 0.25 } }), 'light', VIEW_BOX);
-    expect(ops.slice(1, 3).map((op) => op.kind)).toEqual(['path', 'text']);
+    expect(ops.slice(1, 4).map((op) => op.kind)).toEqual(['path', 'rect', 'text']);
     const [path] = paths(ops);
     // The route runs from a's bottom (50, 50) to b's top (50, 200): length 150.
     expect(path!.dash).toEqual([150, 150]);
     expect(path!.dashOffset).toBeCloseTo((1 - 0.25) * 150);
     expect(path!.stroke).toMatchObject({ color: '#64748b', alpha: 1 });
-    expect(texts(ops)[0]).toMatchObject({ text: 'POST', fontSize: 11, color: '#0f172a' });
+    // The label sits on a white plate, centred on the line, as on the canvas.
+    expect(ops[2]).toMatchObject({ kind: 'rect', fill: { color: '#ffffff' }, radius: 4 });
+    expect(texts(ops)[0]).toMatchObject({ text: 'POST', fontSize: 11, color: '#334155', baseline: 'middle' });
   });
 
   it('carries the pulse phase as a travelling dash', () => {

@@ -7,6 +7,7 @@ import { buildNodeStateMap } from '../scene/nodeState';
 import { buildNodeWorldMatrices } from '../scene/worldGeometry';
 import { projectPageConnectors } from '../connectors/routeProjection';
 import { connectorMarkerShapes, type MarkerShape } from '../connectors/markers';
+import { connectorLabelPlate } from '../connectors/labelStyle';
 import { resolveBasicNodePresentation } from '../nodes/basicNodePresentation';
 import { basicNodeDecorations } from '../nodes/basicNodeDecorations';
 import { nodeLabelBounds, nodeOutline } from '../nodes/nodeLabelBounds';
@@ -115,9 +116,6 @@ const BACKGROUNDS: Readonly<Record<DrawTheme, string>> = {
 };
 const CONNECTOR_STROKES: Readonly<Record<DrawTheme, string>> = {
   light: '#475569', dark: '#cbd5e1', print: '#475569',
-};
-const CONNECTOR_LABELS: Readonly<Record<DrawTheme, string>> = {
-  light: '#0f172a', dark: '#f8fafc', print: '#0f172a',
 };
 const SHADOW: DrawShadow = { color: '#0f172a', alpha: 0.18, blur: 5, offsetX: 0, offsetY: 2 };
 
@@ -299,14 +297,22 @@ function connectorOps(
     strokeWidth: presentation.stroke.width,
     dash, dashOffset, lineJoin: 'miter', shadow: null,
   }, ...markerOps(connector, opacity, color)];
+  // Labels as `connectorLabelMarkup` draws them: text on a plate over the line.
+  const style = connector.presentation.label;
   for (const label of connector.labels) {
     if (!label.text) continue;
+    const plate = connectorLabelPlate(label.text, style, label.point);
     ops.push({
+      kind: 'rect', transform: IDENTITY, opacity, clip: null, ...plate, radius: style.cornerRadius,
+      fill: style.fill === 'transparent' ? null : paint(style.fill),
+      stroke: style.stroke === 'transparent' || style.strokeWidth <= 0 ? null : paint(style.stroke),
+      strokeWidth: style.strokeWidth,
+    }, {
       kind: 'text', transform: IDENTITY, opacity, clip: null,
       text: label.text, x: label.point.x, y: label.point.y,
-      fontSize: 11, fontFamily: 'system-ui,sans-serif', fontWeight: '400', fontStyle: 'normal',
-      letterSpacing: 0, align: 'center', baseline: 'alphabetic',
-      color: CONNECTOR_LABELS[theme], decoration: null,
+      fontSize: style.fontSize, fontFamily: FONT_STACKS[style.fontFamily], fontWeight: String(style.fontWeight),
+      fontStyle: style.fontStyle, letterSpacing: 0, align: 'center', baseline: 'middle',
+      color: style.textColor, decoration: null,
     });
   }
   return ops;

@@ -1,4 +1,5 @@
 import type { SceneConnector } from '../document/types';
+import type { Bounds2d, Point2d } from '../geometry/types';
 import { resolveNodeStyle, type NodeStyle } from '../nodes/nodeStyle';
 
 // Connector labels share the node style vocabulary (docs/plan/phase-1-style.md
@@ -33,4 +34,15 @@ export function resolveConnectorLabelStyle(connector: SceneConnector): NodeStyle
   });
   cache.set(a, style);
   return style;
+}
+
+/**
+ * The plate behind a label, centred on its point, padded as the canvas pads it.
+ * ponytail: exporters cannot measure text, so width is estimated at 0.58em per
+ * character — upgrade to a shared metrics table if long labels overflow.
+ */
+export function connectorLabelPlate(text: string, style: NodeStyle, point: Point2d): Bounds2d {
+  const width = text.length * style.fontSize * 0.58 + style.textPadding * 2;
+  const height = style.fontSize * 1.25 + style.textPadding;
+  return { x: point.x - width / 2, y: point.y - height / 2, width, height };
 }
