@@ -21,6 +21,9 @@ Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on 
   labels in `nodeLabelBounds`, icon plates, connector label plates, dark backdrop #191b19, dark-canvas
   frames a 0.08 wash. Docs in app tokens + real screenshot (`docs-site/scripts/capture-screens.mjs`,
   rerun on chrome change); gate checks assets. Fixed quadrant labels + Shift+1 label.
+- **BYOK dialog 2026-09-23** (opus-5.5): model ids verified against provider docs 2026-09-23
+  (`providers.ts` ponytail — re-check each release); a key per provider (`connections`, legacy
+  migrates); marks are `currentColor` masks; hosted output budget 16k (thinking models).
 - **Phase 9 — docs rebuild DONE 2026-09-23**: inventory.json + test; prebuild compiles every
   ```` ```openflow ```` block; `check-docs.mjs` fails dead links/assets, unbacked pages, bad examples.
 - **Phase 7 — motion export DONE 2026-09-22**: one Timeline feeds preview, stills, SVG, GIF/MP4/WebM.
