@@ -10,6 +10,7 @@ import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { SVG_SOURCES } from '../../../services/shapeLibrary/providerCatalog';
 import { buildV2Export, bytesToBase64 } from './v2Export';
 import { animatedSvgFor, buildMotionRasterFile } from './v2Motion';
+import { loadIconArt } from './v2IconArt';
 
 const MOTION_FORMATS: readonly ExportFormat[] = ['svg-animated', 'gif', 'mp4', 'webm'];
 
@@ -60,6 +61,7 @@ export function useV2AgentHost(options: V2AgentHostOptions): OpCapabilities {
         document: request.document, pageId: request.pageId,
         preset: request.preset, order: request.order, durationMs: request.durationMs,
         loop: request.loop, theme: request.theme,
+        iconArt: await loadIconArt(request.document),
       };
       if (request.format === 'svg-animated') {
         return [{ filename: `${request.document.id}.svg`, mime: 'image/svg+xml', text: animatedSvgFor(motion) }];

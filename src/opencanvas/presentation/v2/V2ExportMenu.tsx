@@ -50,7 +50,7 @@ export function V2ExportMenu({ open, anchorRef, document, pageId, selectedNodeId
     setBusy(true);
     try {
       if (format === 'pdf') {
-        printV2Export(request);
+        await printV2Export(request);
         onToast('Print dialog opened — choose "Save as PDF".', 'info');
       } else if (action === 'copy-png') {
         const [file] = await buildV2Export({ ...request, format: 'png', scale: 2 });

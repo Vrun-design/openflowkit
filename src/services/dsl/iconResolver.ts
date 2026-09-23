@@ -1,20 +1,19 @@
-import { KNOWN_PROVIDER_PACK_IDS, SVG_SOURCES } from '../shapeLibrary/providerCatalog';
+import { matchIconId, type IconResolution } from '../../dsl/iconMatch';
+import { SVG_SOURCES } from '../shapeLibrary/providerCatalog';
 
-export interface DslIconResolution {
-  packId: string;
-  shapeId: string;
+export type DslIconResolution = IconResolution;
+
+let byProvider: Map<string, string[]> | null = null;
+
+function shapeIds(provider: string): readonly string[] {
+  if (!byProvider) {
+    byProvider = new Map();
+    for (const source of SVG_SOURCES) byProvider.set(source.provider, [...(byProvider.get(source.provider) ?? []), source.shapeId]);
+  }
+  return byProvider.get(provider) ?? [];
 }
 
 /** Resolves stable provider/icon DSL ids against bundled local catalogs. */
 export function resolveDslIcon(id: string): DslIconResolution | null {
-  const normalized = id.trim().toLowerCase();
-  const separator = normalized.includes('/') ? '/' : normalized.includes(':') ? ':' : '-';
-  const [provider, ...rest] = normalized.split(separator);
-  const query = rest.join('-').replace(/[^a-z0-9]+/g, '-');
-  if (!provider || !query || !KNOWN_PROVIDER_PACK_IDS[provider]) return null;
-  const candidates = SVG_SOURCES.filter((source) => source.provider === provider);
-  const source = candidates.find((candidate) => candidate.shapeId === query)
-    ?? candidates.find((candidate) => candidate.shapeId.endsWith(`-${query}`))
-    ?? candidates.find((candidate) => candidate.shapeId.includes(query));
-  return source ? { packId: source.packId, shapeId: source.shapeId } : null;
+  return matchIconId(id, shapeIds);
 }

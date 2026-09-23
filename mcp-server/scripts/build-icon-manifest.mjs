@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * Build a compact icon manifest from the third-party-icons folder.
+ * Build a compact icon manifest from the third-party-icons folder plus the
+ * Tabler outline set the editor ships as its "Standard" pack.
  * Output: mcp-server/data/icons.json
  *
  * Schema: [{ provider, slug, label, category }]
  *
  * Run automatically before `npm run build` in mcp-server.
  */
-import { mkdir, readdir, writeFile, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,6 +17,19 @@ const REPO_ROOT = resolve(HERE, '..', '..');
 const ICONS_ROOT = resolve(REPO_ROOT, 'assets', 'third-party-icons');
 const OUT_DIR = resolve(HERE, '..', 'data');
 const OUT_FILE = resolve(OUT_DIR, 'icons.json');
+const TABLER_NODES = resolve(REPO_ROOT, 'node_modules', '@tabler', 'icons', 'tabler-nodes-outline.json');
+
+/** The editor's Standard pack: every Tabler outline icon, filled variants excluded. */
+async function tablerIcons() {
+  const text = await readFile(TABLER_NODES, 'utf8').catch(() => null);
+  if (!text) {
+    console.warn(`[icons] ${TABLER_NODES} not found; Standard icons left out.`);
+    return [];
+  }
+  return Object.keys(JSON.parse(text))
+    .filter((name) => !name.endsWith('-filled'))
+    .map((slug) => ({ provider: 'tabler', slug, label: humanize(slug), category: 'Standard' }));
+}
 
 function slugify(value) {
   return value
@@ -82,6 +96,8 @@ async function main() {
       });
     }
   }
+
+  manifest.push(...(await tablerIcons()));
 
   manifest.sort((a, b) => {
     if (a.provider !== b.provider) return a.provider.localeCompare(b.provider);

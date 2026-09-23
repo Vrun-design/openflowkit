@@ -1,4 +1,5 @@
 import { iconsList } from '@tabler/icons-react';
+import { ICON_PACK_IDS } from '@/dsl/iconMatch';
 
 // Tabler outline icons as one more provider pack ("standard" icons). Names
 // come from the installed package; path data loads once, lazily, as a single
@@ -7,7 +8,7 @@ import { iconsList } from '@tabler/icons-react';
 // a Tabler node ever matters more than bundle count.
 
 export const TABLER_PROVIDER = 'tabler';
-export const TABLER_PACK_ID = 'tabler-outline-v3';
+export const TABLER_PACK_ID = ICON_PACK_IDS[TABLER_PROVIDER]!;
 // Outline only: the filled variants double the list without adding meaning.
 export const TABLER_ICON_NAMES: readonly string[] = iconsList.default.filter((name) => !name.endsWith('-filled'));
 

@@ -1,4 +1,6 @@
 import type { SceneNode } from '../document/types';
+import { createBounds2d } from '../geometry/bounds';
+import type { Bounds2d } from '../geometry/types';
 import {
   optionalPresentationString,
   presentationString,
@@ -48,6 +50,17 @@ function metadata(node: SceneNode): readonly string[] {
     .map(optionalPresentationString)
     .filter((value): value is string => value !== undefined);
   return [...new Set(values)];
+}
+
+/**
+ * Where the icon art sits, node-local: centred in the 72px plate of an icon
+ * node, or the small badge in a card's header. The canvas and every export
+ * place it here, so they cannot drift.
+ */
+export function architectureIconBounds(node: SceneNode, display: ArchitectureNodeDisplay): Bounds2d {
+  return display === 'provider-icon'
+    ? createBounds2d((node.size.width - 72) / 2 + 6, 10, 60, 60)
+    : createBounds2d(14, 12, 18, 18);
 }
 
 export function resolveArchitectureNodePresentation(

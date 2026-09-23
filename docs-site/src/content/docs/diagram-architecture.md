@@ -68,9 +68,18 @@ Legacy box [icon: none]
 ```
 
 Undo brings back whatever a removal took. Turning icons back on for a diagram lays it out
-again, since cards are larger than plain shapes. In a C4 workspace the model owns the
-text, so the diagram toggle is not offered there: remove icons per element (every view
-follows) or use the Settings switch.
+again, since cards are larger than plain shapes. In a C4 workspace the model holds the
+choice: removing an element's icon, or ticking the toggle off on any view, changes every
+view, and the regenerated workspace text keeps `icon: none` and `icons: off` (and
+`appearance:`).
+
+Renaming a node moves an inferred icon with it — `Postgres` renamed `MySQL` swaps the logo,
+renamed `Ledger` goes back to a plain shape. A chosen icon never moves, and a plain node is
+not turned into a card by a rename; the next Generate does that.
+
+Exports carry the icon art (SVG, PNG, PDF, animated SVG, GIF and video), inlined so the
+file opens anywhere. An agent working through the MCP server gets icons from labels too;
+its own SVG export, with no editor open, draws the plates without the art.
 
 ## The C4 workspace
 
@@ -80,8 +89,6 @@ own — [Architecture (C4)](/architecture-c4/).
 
 ## What it does not do
 
-- **Icons are app-side art.** The app draws the icon; the SVG and PNG exports draw the card,
-  the label and the technology line. Keep that in mind for icon-heavy handoff.
 - **`kind:` is metadata, not syntax.** An element typed `container` is still drawn as a node
   unless a view or group says otherwise.
 - **Reserved families are not here.** `bpmn`, `org`, `gantt`, `wireframe`, `sankey`,

@@ -10,6 +10,7 @@ import {
   type PixiArchitectureNodeVisual,
 } from './architectureNodeVisual';
 import { PixiMediaLayer } from './PixiMediaLayer';
+import { architectureIconBounds } from '../../domain/nodes/architectureNodePresentation';
 import type { PixiNodeDebugRecord, PixiMediaState } from './pixiNodeDebug';
 import { drawPixiLocalRect, drawPixiNodeOutline } from './pixiNodeOutline';
 import { pixiPaintColor } from './pixiColor';
@@ -33,9 +34,7 @@ function mediaState(visual: PixiArchitectureNodeVisual): PixiMediaState {
 }
 
 function iconBounds(visual: PixiArchitectureNodeVisual, node: SceneNode) {
-  return visual.presentation.display === 'provider-icon'
-    ? createBounds2d((node.size.width - 72) / 2 + 6, 10, 60, 60)
-    : createBounds2d(14, 12, 18, 18);
+  return architectureIconBounds(node, visual.presentation.display);
 }
 
 export class PixiArchitectureNodeRenderer {

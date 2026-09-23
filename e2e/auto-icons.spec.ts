@@ -96,3 +96,114 @@ test('an AI-generated diagram gets icons once the proposal is applied', async ({
     'Web app': 'developer/frontend-nextjs', API: 'developer/others-fast-api', 'Redis cache': 'developer/database-redis',
   });
 });
+
+test('SVG and PNG exports carry the icon art, self-contained', async ({ page }) => {
+  await openCanvas(page);
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
+  const source = page.getByRole('textbox', { name: 'Diagram source' });
+  await source.fill('flowchart right\nUsers -> Web app [tech: React] -> Postgres');
+  await source.press(`${META}+Enter`);
+  await expect.poll(async () => (await iconsByLabel(page))['Postgres'], { timeout: 15_000 }).toBe('developer/database-postgresql');
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  const exportAs = async (format: 'SVG' | 'PNG') => {
+    await page.getByRole('button', { name: 'Canvas menu' }).click();
+    await page.getByRole('menuitem', { name: 'Export…' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Export' });
+    await dialog.getByRole('radio', { name: format }).click();
+    const download = page.waitForEvent('download');
+    await dialog.getByRole('button', { name: 'Download' }).click();
+    return download;
+  };
+  const svgFile = await exportAs('SVG');
+  const svg = (await (await svgFile.createReadStream()).toArray()).join('');
+  // Three icons (a Tabler glyph, a React logo, a Postgres logo), all inlined:
+  // the file opens anywhere with no fetch.
+  expect(svg.match(/<image href="data:image\//g)).toHaveLength(3);
+  expect(svg).not.toMatch(/<image href="(?!data:)/);
+
+  // The animated SVG from the motion dialog inlines the same art.
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Canvas menu' }).click();
+  await page.getByRole('menuitem', { name: 'Export…' }).click();
+  await page.getByRole('button', { name: /Animate this page/ }).click();
+  const animated = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download SVG' }).click();
+  const motion = (await (await (await animated).createReadStream()).toArray()).join('');
+  expect(motion.match(/<image href="data:image\//g)).toHaveLength(3);
+  await page.keyboard.press('Escape');
+
+  const pngFile = await exportAs('PNG');
+  const path = await pngFile.path();
+  expect(path).toBeTruthy();
+  if (process.env.AUTO_ICONS_SHOT) await pngFile.saveAs(process.env.AUTO_ICONS_SHOT);
+});
+
+test('C4: removing an element\'s icon updates every view, and the workspace toggle sticks', async ({ page }) => {
+  await openCanvas(page);
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
+  const source = page.getByRole('textbox', { name: 'Diagram source' });
+  await source.fill(`architecture
+model {
+  system Shop {
+    container Web [tech: React]
+    container API [tech: Node.js]
+    store DB [tech: PostgreSQL]
+    Web -> API
+    API -> DB
+  }
+}
+views {
+  view container of Shop
+}`);
+  await source.press(`${META}+Enter`);
+  const nodes = async () => (await doc(page))!.pages.flatMap((candidate) => candidate.nodes) as unknown as {
+    id: string; kind: string; content: { label?: string; icon?: string }; metadata: { dsl?: { arch?: { model?: { icons?: string } } } };
+  }[];
+  const byLabel = async (label: string) => (await nodes()).filter((candidate) => candidate.content.label === label);
+  await expect.poll(async () => (await byLabel('DB'))[0]?.content.icon, { timeout: 15_000 }).toBe('developer/database-postgresql');
+  await page.getByRole('button', { name: 'Close panel' }).click();
+
+  const dbId = (await doc(page))!.pages.flatMap((candidate) => candidate.nodes)
+    .find((candidate) => (candidate as unknown as { content: { label?: string } }).content.label === 'DB')!.id;
+  const centre = await centreOf(page, dbId);
+  await page.mouse.click(centre.x, centre.y);
+  await page.mouse.click(centre.x, centre.y, { button: 'right' });
+  await page.getByRole('menuitem', { name: 'Remove icon' }).click();
+  await expect.poll(async () => (await byLabel('DB')).every((candidate) => !candidate.content.icon && candidate.kind === 'process')).toBe(true);
+  expect((await byLabel('API'))[0]!.content.icon).toBe('developer/backend-nodejs');
+
+  const frameId = (await nodes()).find((candidate) => candidate.kind === 'frame' && candidate.metadata.dsl?.arch)!.id;
+  const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
+  const frame = (await rect(page, frameId))!;
+  await page.mouse.click(box.x + frame.x + frame.width / 2, box.y + frame.y + 12, { button: 'right' });
+  const toggle = page.getByRole('menuitemcheckbox', { name: 'Icons from labels' });
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await toggle.click();
+  await expect.poll(async () => (await nodes()).filter((candidate) => candidate.content.icon).length).toBe(0);
+  expect((await nodes()).find((candidate) => candidate.metadata.dsl?.arch)!.metadata.dsl!.arch!.model!.icons).toBe('off');
+});
+
+test('renaming a node moves its inferred icon with the label', async ({ page }) => {
+  await openCanvas(page);
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
+  const source = page.getByRole('textbox', { name: 'Diagram source' });
+  await source.fill('flowchart right\nAPI [tech: Node.js] -> Postgres');
+  await source.press(`${META}+Enter`);
+  await expect.poll(async () => (await iconsByLabel(page))['Postgres'], { timeout: 15_000 }).toBe('developer/database-postgresql');
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  const rename = async (from: string, to: string) => {
+    const id = (await doc(page))!.pages[0]!.nodes
+      .find((candidate) => (candidate as unknown as { content: { label?: string } }).content.label === from)!.id;
+    const centre = await centreOf(page, id);
+    await page.mouse.dblclick(centre.x, centre.y);
+    await page.keyboard.press(`${META}+a`);
+    await page.keyboard.type(to);
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => Object.keys(await iconsByLabel(page))).toContain(to);
+  };
+  await rename('Postgres', 'MySQL');
+  expect((await iconsByLabel(page))['MySQL']).toBe('developer/database-mysql');
+  await rename('MySQL', 'Ledger');
+  expect((await iconsByLabel(page))['Ledger']).toBeUndefined();
+});

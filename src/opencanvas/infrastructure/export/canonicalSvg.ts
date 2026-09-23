@@ -12,6 +12,7 @@ import { nodeLabelBounds, nodeOutline } from '../../domain/nodes/nodeLabelBounds
 import type { ConnectorMarkerGlyph, ProjectedConnector } from '../../domain/connectors/types';
 import { connectorMarkerShapes, type MarkerShape } from '../../domain/connectors/markers';
 import { connectorLabelPlate } from '../../domain/connectors/labelStyle';
+import { architectureIconBounds, resolveArchitectureNodePresentation } from '../../domain/nodes/architectureNodePresentation';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import {
   resolveFreeformNodePresentation,
@@ -66,6 +67,28 @@ export interface CanonicalSvgExportOptions {
   readonly cameraAnimation?: CssAnimation;
   /** Extra CSS inserted as the first child, before any artwork. */
   readonly styleSheet?: string;
+  /**
+   * Icon art as data URLs, keyed `packId:shapeId` (see `iconArtKey`). The
+   * exporter is synchronous and has no catalog, so the host loads the art;
+   * an icon missing here exports as its plate alone.
+   */
+  readonly iconArt?: Readonly<Record<string, string>>;
+}
+
+export function iconArtKey(packId: string, shapeId: string): string {
+  return `${packId}:${shapeId}`;
+}
+
+/** The icon on an architecture node as an `<image>` at the canvas's position, or ''. */
+function iconMarkup(node: SceneNode, iconArt: CanonicalSvgExportOptions['iconArt']): string {
+  const presentation = resolveArchitectureNodePresentation(node);
+  if (!presentation) return '';
+  const { icon } = presentation;
+  const href = icon.kind === 'provider' ? iconArt?.[iconArtKey(icon.packId, icon.shapeId)]
+    : icon.kind === 'url' && icon.url.startsWith('data:image/') ? icon.url : undefined;
+  if (!href) return '';
+  const box = architectureIconBounds(node, presentation.display);
+  return `<image href="${xml(href)}" x="${number(box.x)}" y="${number(box.y)}" width="${number(box.width)}" height="${number(box.height)}" preserveAspectRatio="xMidYMid meet"/>`;
 }
 
 export const ANIMATED_CLASS = 'ofk-anim';
@@ -467,7 +490,8 @@ function exportNode(
   matrix: Matrix2d,
   theme: 'light' | 'dark' | 'print',
   frame: ElementFrameState | undefined,
-  animations: CanonicalSvgExportOptions['animations']
+  animations: CanonicalSvgExportOptions['animations'],
+  iconArt: CanonicalSvgExportOptions['iconArt'],
 ): string {
   const wrapper = elementFrameStyle('node', node.id, frame, node.size, animations);
   const chart = exportChartNode(node, matrix, theme, wrapper);
@@ -503,7 +527,8 @@ function exportNode(
     (defs ? `<defs>${defs}</defs>` : '')
       + outlineMarkup(outline, style, filter)
       + (basic ? decorationMarkup(basic.shape, node.size, style) : '')
-      + labelElement(style, nodeLabelBounds(node), label, subLabel, clip),
+      + labelElement(style, nodeLabelBounds(node), label, subLabel, clip)
+      + iconMarkup(node, iconArt),
     wrapper
   );
 }
@@ -643,7 +668,7 @@ export function exportCanonicalSvg(
       + '</g>';
   }).join('');
   const nodeMarkup = [...page.nodes].sort((a, b) => a.zIndex - b.zIndex || a.id.localeCompare(b.id))
-    .map((node) => exportNode(node, matrices.get(node.id)!, theme, options.frame?.nodes[node.id], options.animations)).join('');
+    .map((node) => exportNode(node, matrices.get(node.id)!, theme, options.frame?.nodes[node.id], options.animations, options.iconArt)).join('');
   // Camera glide lives on a root group: CSS cannot animate `viewBox` inside an
   // `<img>`. The still path applies the same matrix, so both stay in step.
   const cameraMatrix = options.frame?.camera ? cameraFitMatrix(options.frame.camera, viewBox) : null;

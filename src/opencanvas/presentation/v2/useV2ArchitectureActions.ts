@@ -5,11 +5,12 @@ import { flowToSequenceDsl } from '../../../dsl/model/flowExport';
 import type { ArchFlow, ArchModel, ArchView } from '../../../dsl/model/types';
 import { buildWorkspacePagesCommand, type ArchElementPatch } from '../../application/dsl/architectureCommands';
 import {
-  buildArchElementEditCommand, buildArchElementRemoveCommand, buildArchUnplaceCommand,
+  buildArchElementEditCommand, buildArchElementRemoveCommand, buildArchIconsOffCommand, buildArchUnplaceCommand,
 } from '../../application/dsl/architectureCommands';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1, ScenePage } from '../../domain/document/types';
 import type { V2Architecture } from './useV2Architecture';
+import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 
 /** Camera + selection side effects the actions ask the page to perform. */
 export interface ArchitectureActionHost {
@@ -33,6 +34,8 @@ export interface ArchitectureActionsOptions {
 export interface ArchitectureActions {
   editElement: (elementId: string, patch: ArchElementPatch) => void;
   removeElement: (elementId: string) => void;
+  /** Icons from labels for the whole workspace; on re-lays out every view (cards are bigger). */
+  setModelIcons: (on: boolean) => Promise<void>;
   /** Delete on a model view unplaces instead; false lets the normal delete run. */
   unplaceSelection: (nodeIds: readonly string[]) => boolean;
   drillInto: (elementId: string) => boolean;
@@ -77,7 +80,7 @@ export function useV2ArchitectureActions(options: ArchitectureActionsOptions, ho
   const editElement = useCallback((elementId: string, patch: ArchElementPatch) => {
     const current = hostRef.current;
     if (readOnly || !document) return;
-    const command = buildArchElementEditCommand(document, elementId, patch);
+    const command = buildArchElementEditCommand(document, elementId, patch, resolveDslIcon);
     if (!command) return;
     current.commit(command);
     current.announce(patch.name !== undefined ? 'Element renamed in every view.' : 'Element updated in every view.');
@@ -91,6 +94,22 @@ export function useV2ArchitectureActions(options: ArchitectureActionsOptions, ho
     current.commit(command);
     current.announce('Element removed from the model and every view.');
   }, [document, readOnly]);
+
+  const setModelIcons = useCallback(async (on: boolean) => {
+    const current = hostRef.current;
+    const model = architecture.model;
+    if (readOnly || !document || !model) return;
+    if (!on) {
+      const command = buildArchIconsOffCommand(document);
+      if (command) current.commit(command);
+      current.announce('Icons from labels off in every view.');
+      return;
+    }
+    const workspace = await current.compileWorkspace(architectureWorkspaceText({ ...model, icons: 'auto' }));
+    const command = buildWorkspacePagesCommand(document, workspace, { mintId });
+    if (command) current.commit(command);
+    current.announce('Icons from labels on in every view.');
+  }, [architecture, document, mintId, readOnly]);
 
   const unplaceSelection = useCallback((nodeIds: readonly string[]): boolean => {
     const current = hostRef.current;
@@ -195,5 +214,5 @@ export function useV2ArchitectureActions(options: ArchitectureActionsOptions, ho
     return { nodeIds, connectorIds: [] };
   }, [architecture, pageRef]);
 
-  return { editElement, removeElement, unplaceSelection, drillInto, createChildView, openCrumb, openFlowAsSequence, perspectiveFocus };
+  return { editElement, removeElement, setModelIcons, unplaceSelection, drillInto, createChildView, openCrumb, openFlowAsSequence, perspectiveFocus };
 }

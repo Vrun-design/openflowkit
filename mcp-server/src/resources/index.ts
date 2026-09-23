@@ -56,7 +56,8 @@ export function registerResources(server: McpServer): void {
       title: 'Provider icon catalog',
       description:
         'Full JSON list of every provider icon available for [architecture] nodes ' +
-        '(AWS, Azure, GCP, CNCF, developer brand logos). Each entry has provider, slug, label, category.',
+        '(AWS, Azure, GCP, CNCF, developer brand logos). Each entry has provider, slug, label, category. ' +
+        'The 5,000 Standard glyphs are at openflowkit://icons/tabler and in search_icons.',
       mimeType: 'application/json',
     },
     async (uri) => ({
@@ -64,7 +65,8 @@ export function registerResources(server: McpServer): void {
         {
           uri: uri.href,
           mimeType: 'application/json',
-          text: JSON.stringify(await loadIcons(), null, 2),
+          // Standard glyphs stay out: they would triple what an agent reads here.
+          text: JSON.stringify((await loadIcons()).filter(({ provider }) => provider !== 'tabler'), null, 2),
         },
       ],
     })

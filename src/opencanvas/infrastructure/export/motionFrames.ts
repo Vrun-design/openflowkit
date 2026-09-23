@@ -25,6 +25,8 @@ export interface MotionEncodeRequest {
   readonly size: MotionSize;
   readonly fps: MotionFps;
   readonly theme?: 'light' | 'dark' | 'print';
+  /** Icon art for the SVG frames (see `CanonicalSvgExportOptions.iconArt`). */
+  readonly iconArt?: Readonly<Record<string, string>>;
   readonly signal?: AbortSignal;
   readonly onProgress?: (done: number, total: number) => void;
 }
@@ -143,7 +145,7 @@ export async function renderMotionFile(request: MotionEncodeRequest): Promise<Mo
   };
   request.signal?.addEventListener('abort', abort, { once: true });
   try {
-    worker.postMessage({ type: 'start', format, size, fps, document, timeline, pageId, theme });
+    worker.postMessage({ type: 'start', format, size, fps, document, timeline, pageId, theme, iconArt: request.iconArt ?? {} });
     const bytes = await done;
     return { filename: `${request.filenameStem}.${format}`, mime: motionMime(format), bytes: new Uint8Array(bytes) };
   } finally {
@@ -223,7 +225,7 @@ async function recordWebmFallback(request: MotionEncodeRequest): Promise<MotionE
         paintFrame(context, frameDrawList(page, frameAt(timeline, at), theme, viewBox), viewBox, scale);
       } else {
         const bitmap = await fallbackFrameBitmap(
-          exportMotionFrameSvg(document, timeline, at, { pageId, theme }),
+          exportMotionFrameSvg(document, timeline, at, { pageId, theme, ...(request.iconArt ? { iconArt: request.iconArt } : {}) }),
           width, height,
         );
         context.drawImage(bitmap, 0, 0);

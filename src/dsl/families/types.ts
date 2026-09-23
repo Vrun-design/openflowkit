@@ -18,6 +18,8 @@ export interface FamilyContext {
   readonly header: readonly string[];
   /** Authored `title:`; families pad for the frame's title band when set. */
   readonly title?: string;
+  /** Authored `appearance:` / `icons:` values, for families that regenerate their own text. */
+  readonly authored?: { readonly palette?: string; readonly icons?: 'auto' | 'off' };
   readonly layout: LayoutRunner;
   /** Palette for this compile (grammar `appearance:`); every swatch goes through it. */
   readonly swatch: SwatchResolver;

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createTestConnector, createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
-import { exportCanonicalSvg } from './canonicalSvg';
+import { exportCanonicalSvg, iconArtKey } from './canonicalSvg';
+import { iconContent } from '../../domain/nodes/iconNode';
+import { architectureIconBounds } from '../../domain/nodes/architectureNodePresentation';
 
 describe('canonical SVG export', () => {
   it('omits hidden objects, their children and attached connectors', () => {
@@ -26,6 +28,21 @@ describe('canonical SVG export', () => {
     expect(first).toContain('&lt;Alpha &amp; beta&gt;');
     expect(first).toContain('data-connector-id="a-b"');
     expect(first).not.toContain('<Alpha & beta>');
+  });
+
+  it('draws icon art where the canvas draws it, and only art it was given', () => {
+    const card = createTestNode('db', {
+      kind: 'architecture', size: { width: 148, height: 116 },
+      content: { label: 'Postgres', ...iconContent({ provider: 'developer', packId: 'developer-icons-v1', shapeId: 'database-postgresql', label: 'Postgres' }) },
+    });
+    const document = createTestDocument({ nodes: [card] });
+    const art = 'data:image/svg+xml;charset=utf-8,%3Csvg%2F%3E';
+    const svg = exportCanonicalSvg(document, { iconArt: { [iconArtKey('developer-icons-v1', 'database-postgresql')]: art } });
+    const box = architectureIconBounds(card, 'provider-icon');
+    expect(svg).toContain(`<image href="${art}" x="${box.x}" y="${box.y}" width="${box.width}" height="${box.height}"`);
+    // No art loaded (headless, or a failed fetch): the plate alone, never a broken link.
+    expect(exportCanonicalSvg(document)).not.toContain('<image');
+    expect(exportCanonicalSvg(document, { iconArt: {} })).not.toContain('<image');
   });
 
   it('exports a visible selection and rejects empty output', () => {

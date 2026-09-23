@@ -10,6 +10,7 @@ import { serializeCanonicalJson } from '../opencanvas/infrastructure/export/cano
 import { buildPrintDocument } from '../opencanvas/infrastructure/export/print';
 import { compile, compileWorkspace, type CompileOptions } from '../dsl/compile';
 import { grammarSection } from '../dsl/grammar';
+import { matchIconId } from '../dsl/iconMatch';
 import { deterministicLayout } from '../dsl/layout';
 import type { IconMatch, OpCapabilities } from './ops/types';
 
@@ -20,8 +21,10 @@ export interface FileHostOptions {
   readonly grammar: string;
   /** Icon manifest entries; search is a scored substring match over provider/slug/label. */
   readonly icons?: readonly IconMatch[];
-  /** Icon id → pack/shape, when the host ships the packs. */
+  /** Icon id → pack/shape; defaults to matching against `icons`, the way the editor matches its packs. */
   readonly resolveIcon?: CompileOptions['resolveIcon'];
+  /** Icons from labels when the DSL has no `icons:` line (the editor's default: on). */
+  readonly autoIcons?: boolean;
 }
 
 function score(icon: IconMatch, query: string): number {
@@ -35,11 +38,25 @@ function score(icon: IconMatch, query: string): number {
   return hits > 0 ? 20 + hits * 10 : 0;
 }
 
+/** A resolver over a manifest: the same matching the editor runs over its bundled packs. */
+export function manifestIconResolver(icons: readonly IconMatch[]): NonNullable<CompileOptions['resolveIcon']> {
+  const byProvider = new Map<string, string[]>();
+  for (const icon of icons) byProvider.set(icon.provider, [...(byProvider.get(icon.provider) ?? []), icon.slug]);
+  return (id) => matchIconId(id, (provider) => byProvider.get(provider) ?? []);
+}
+
 export function createFileCapabilities(options: FileHostOptions): OpCapabilities {
   const icons = options.icons ?? [];
+  // No manifest, no resolver: ids stay unchecked and no icon is inferred.
+  const resolveIcon = options.resolveIcon ?? (icons.length ? manifestIconResolver(icons) : undefined);
+  const defaults: CompileOptions = {
+    layout: deterministicLayout,
+    ...(resolveIcon ? { resolveIcon } : {}),
+    autoIcons: options.autoIcons ?? true,
+  };
   return {
-    compile: (text, compileOptions) => compile(text, { ...compileOptions, layout: compileOptions?.layout ?? deterministicLayout }),
-    compileWorkspace: (text, compileOptions) => compileWorkspace(text, { ...compileOptions, layout: compileOptions?.layout ?? deterministicLayout }),
+    compile: (text, compileOptions) => compile(text, { ...defaults, ...compileOptions }),
+    compileWorkspace: (text, compileOptions) => compileWorkspace(text, { ...defaults, ...compileOptions }),
     syntax: (family) => grammarSection(options.grammar, family),
     searchIcons: async (query, limit) => icons
       .map((icon) => ({ icon, score: score(icon, query) }))

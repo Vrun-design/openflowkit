@@ -5,6 +5,8 @@ import type { ScenePage } from '../../domain/document/types';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 import { sameRect } from './V2ContextBar';
 import { buildDeleteSelectionCommand, buildSetNodeLabelCommand } from '../../domain/commands/sceneEdits';
+import { nodeTechHint, refreshAutoIcon, withoutIcon } from '../../application/dsl/iconCommands';
+import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import type { V2EditingState } from './V2CanvasHost';
 
 interface V2LabelEditingOptions {
@@ -116,7 +118,10 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
       if (optionsRef.current.onRenamePlacedElement?.(node.id, value)) {
         announce('Element renamed in every view');
       } else {
-        commit(buildSetNodeLabelCommand(currentPage, node.id, value));
+        const command = buildSetNodeLabelCommand(currentPage, node.id, value);
+        // An inferred icon follows the new label (or leaves with it).
+        const after = refreshAutoIcon(command.after, value, nodeTechHint(command.after), resolveDslIcon, (plain) => withoutIcon(plain, false));
+        commit({ ...command, after });
         announce('Label saved');
       }
     }

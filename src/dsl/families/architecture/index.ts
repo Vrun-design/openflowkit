@@ -13,14 +13,14 @@ export const architectureFamily: Family = {
   name: 'architecture',
 
   async compile(segments, context) {
-    const workspace = parseArchitectureWorkspace(segments, context.diagnostics);
+    const workspace = parseWorkspace(segments, context);
     if (!workspace) return compileGraphGraph(segments, context);
     const view = primaryView(workspace.model);
     return withReserved(await compileArchitectureView(workspace.model, view, context), workspace.reserved);
   },
 
   async compileViews(segments, context): Promise<readonly FamilyViewScene[]> {
-    const workspace = parseArchitectureWorkspace(segments, context.diagnostics);
+    const workspace = parseWorkspace(segments, context);
     if (!workspace) {
       return [{ id: 'primary', name: context.title ?? 'Diagram', scene: await compileGraphGraph(segments, context) }];
     }
@@ -35,6 +35,13 @@ export const architectureFamily: Family = {
 
   serialize: architectureText,
 };
+
+/** The workspace with the authored directives folded into its model. */
+function parseWorkspace(segments: Parameters<Family['compile']>[0], context: FamilyContext) {
+  const workspace = parseArchitectureWorkspace(segments, context.diagnostics);
+  if (!workspace || !context.authored) return workspace;
+  return { ...workspace, model: { ...workspace.model, ...context.authored } };
+}
 
 async function compileGraphGraph(segments: Parameters<Family['compile']>[0], context: FamilyContext): Promise<FamilyScene> {
   const statements = parseGraphStatements(segments, context.diagnostics);

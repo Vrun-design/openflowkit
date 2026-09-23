@@ -3,6 +3,7 @@ import { exportCanonicalSvg, SVG_BACKGROUND } from '../../infrastructure/export/
 import { serializeCanonicalJson } from '../../infrastructure/export/canonicalJson';
 import { printSvgDocument } from '../../infrastructure/export/print';
 import { rasterizeSvgToPng } from '../../infrastructure/export/raster';
+import { loadIconArt } from './v2IconArt';
 
 export type V2ExportFormat = 'png' | 'svg' | 'pdf' | 'json';
 export type V2ExportScope = 'selection' | 'page' | 'document';
@@ -46,9 +47,10 @@ function exportPages(request: V2ExportRequest) {
   return [page];
 }
 
-function svgFor(request: V2ExportRequest, pageId: string, scale: number): string {
+function svgFor(request: V2ExportRequest, pageId: string, scale: number, iconArt: Readonly<Record<string, string>>): string {
   return exportCanonicalSvg(request.document, {
     pageId,
+    iconArt,
     ...(request.scope === 'selection' && request.selectedNodeIds?.length
       ? { selectedNodeIds: request.selectedNodeIds }
       : {}),
@@ -71,10 +73,11 @@ export async function buildV2Export(request: V2ExportRequest): Promise<readonly 
   }
   const pages = exportPages(request);
   const scale = request.scale ?? 1;
+  const iconArt = await loadIconArt(request.document);
   const files: V2ExportFile[] = [];
   for (const [index, page] of pages.entries()) {
     const suffix = pages.length > 1 ? `-${index + 1}-${slug(page.name, page.id)}` : '';
-    const svg = svgFor(request, page.id, scale);
+    const svg = svgFor(request, page.id, scale, iconArt);
     if (request.format === 'svg') {
       files.push({ filename: `${stem}${suffix}.svg`, mime: 'image/svg+xml', text: svg });
       continue;
@@ -89,10 +92,10 @@ export async function buildV2Export(request: V2ExportRequest): Promise<readonly 
 }
 
 /** PDF is the browser's print dialog over the same SVG the other formats use. */
-export function printV2Export(request: V2ExportRequest): void {
+export async function printV2Export(request: V2ExportRequest): Promise<void> {
   const [page] = exportPages(request);
   if (!page) throw new RangeError('Export requires at least one page.');
-  printSvgDocument(svgFor(request, page.id, 1), request.document.name);
+  printSvgDocument(svgFor(request, page.id, 1, await loadIconArt(request.document)), request.document.name);
 }
 
 /** Base64 for the wire (agent bridge / MCP JSON results); chunked for big PNGs. */

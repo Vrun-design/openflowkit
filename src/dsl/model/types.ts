@@ -119,6 +119,9 @@ export interface ArchFlow {
 
 export interface ArchModel {
   readonly name?: string;
+  /** Authored `appearance:` and `icons:` directives; the model regenerates the text, so it keeps them. */
+  readonly palette?: string;
+  readonly icons?: 'auto' | 'off';
   readonly elements: readonly ArchElement[];
   readonly relations: readonly ArchRelation[];
   readonly views: readonly ArchView[];

@@ -16,8 +16,11 @@ flowchart down
   Store -> Worker [rounded, violet]
 `;
 
+// The painter and scrubber checks below are about plain shapes: icons from
+// labels would turn Client/API/Store into icon cards, which take the SVG path.
 const DIAGRAM = `%% ofk 1
 flowchart down
+icons: off
 
   Client -> API
   API -> Cache
@@ -26,6 +29,7 @@ flowchart down
 
 const MARKED = `%% ofk 1
 flowchart down
+icons: off
 
   Client [blue] -> API [green] : HTTPS
   API -> Cache [cylinder, orange]
@@ -35,6 +39,7 @@ flowchart down
 
 const SHAPES = `%% ofk 1
 flowchart
+icons: off
 
 Decision [diamond]
 Ledger [cylinder, blue]

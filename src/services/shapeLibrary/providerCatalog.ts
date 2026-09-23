@@ -1,4 +1,5 @@
 import type { DomainLibraryCategory, DomainLibraryItem } from '@/services/domainLibrary';
+import { ICON_PACK_IDS } from '@/dsl/iconMatch';
 import { loadTablerIconUrl, TABLER_ICON_NAMES, TABLER_PACK_ID, TABLER_PROVIDER } from './tablerIcons';
 
 export interface ProviderShapePreview {
@@ -25,14 +26,7 @@ const svgModules = import.meta.glob('../../../assets/third-party-icons/*/process
 const providerCatalogPromiseCache = new Map<string, Promise<DomainLibraryItem[]>>();
 const shapePreviewCache = new Map<string, ProviderShapePreview>();
 const shapePreviewPromiseCache = new Map<string, Promise<ProviderShapePreview | null>>();
-export const KNOWN_PROVIDER_PACK_IDS: Record<string, string> = {
-  aws: 'aws-official-starter-v1',
-  azure: 'azure-official-icons-v20',
-  gcp: 'gcp-official-icons-v1',
-  cncf: 'cncf-artwork-icons-v1',
-  developer: 'developer-icons-v1',
-  [TABLER_PROVIDER]: TABLER_PACK_ID,
-};
+export const KNOWN_PROVIDER_PACK_IDS: Readonly<Record<string, string>> = ICON_PACK_IDS;
 
 function normalizeProviderPathSegment(value: string): string {
   return value.trim().toLowerCase();

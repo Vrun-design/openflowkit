@@ -13,7 +13,8 @@ import type { Point2d } from '../../opencanvas/domain/geometry/types';
 import type { SceneDocumentV1 } from '../../opencanvas/domain/document/types';
 import { defineOp, pointOf, pointSchema, requireFrame, requirePage } from './types';
 
-const DSL_HELP = 'OpenFlow DSL source. Call get_syntax when unsure.';
+const DSL_HELP = 'OpenFlow DSL source. Call get_syntax when unsure. A node whose label or tech: names a technology '
+  + '(Postgres, React, S3) gets its icon automatically; `icon: none` opts one node out, `icons: off` the diagram.';
 
 function diagramOutput(pageId: string, frameId: string, compiled: CompileResult) {
   return {
@@ -23,6 +24,12 @@ function diagramOutput(pageId: string, frameId: string, compiled: CompileResult)
     title: compiled.meta.title ?? null,
     nodes: compiled.nodes.length + compiled.groups.length,
     connectors: compiled.connectors.length,
+    // What icons from labels added, so an agent can see it and correct a wrong guess.
+    inferredIcons: compiled.nodes.flatMap((node) => {
+      const inferred = (node.metadata.dsl as { autoIcon?: unknown } | undefined)?.autoIcon;
+      return typeof inferred === 'string' && node.content.icon === inferred
+        ? [{ label: String(node.content.label ?? node.id), icon: inferred }] : [];
+    }),
     diagnostics: compiled.diagnostics,
   };
 }

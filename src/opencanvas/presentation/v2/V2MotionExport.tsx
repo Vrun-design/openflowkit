@@ -16,6 +16,7 @@ import { MOTION_FPS, MOTION_SIZES, motionFrameIntervalMs, motionFrameTimes, type
 import { renderMotionFile, webCodecsAvailable } from '../../infrastructure/export/motionFrames';
 import { animatedSvgFor, animateBlockFromText, motionFileStem, motionFrameSvgFor, motionTimeline, buildMotionSvgFile } from './v2Motion';
 import { V2MotionSteps } from './V2MotionSteps';
+import { loadIconArt } from './v2IconArt';
 import { copyImageToClipboard, downloadV2Export } from './v2Export';
 
 type MotionOutput = 'svg' | MotionFormat;
@@ -56,6 +57,13 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
   const [size, setSize] = useState<MotionSize>(1080);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ readonly done: number; readonly total: number } | null>(null);
+  // Icon art loads once per document; the preview redraws with it when it lands.
+  const [iconArt, setIconArt] = useState<Readonly<Record<string, string>>>({});
+  useEffect(() => {
+    let live = true;
+    void loadIconArt(document).then((art) => { if (live) setIconArt(art); });
+    return () => { live = false; };
+  }, [document]);
   const [failure, setFailure] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   // Editing a chip turns the order into an explicit animate block: the chips
@@ -99,12 +107,12 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
   }, [playing, playFrom, durationMs, loop]);
   const playingSvg = useMemo(() => {
     if (empty || !page) return null;
-    return animatedSvgFor({ document, pageId: page.id, preset, order, durationMs: targetMs, loop, theme }, { seekMs: playFrom });
-  }, [empty, page, document, preset, order, targetMs, loop, theme, playFrom]);
+    return animatedSvgFor({ document, pageId: page.id, preset, order, durationMs: targetMs, loop, theme, iconArt }, { seekMs: playFrom });
+  }, [empty, page, document, preset, order, targetMs, loop, theme, playFrom, iconArt]);
   const stillSvg = useMemo(() => {
     if (empty || !page) return null;
-    return motionFrameSvgFor({ document, pageId: page.id, preset, order, durationMs: targetMs, loop, theme }, at);
-  }, [empty, page, document, preset, order, targetMs, loop, theme, at]);
+    return motionFrameSvgFor({ document, pageId: page.id, preset, order, durationMs: targetMs, loop, theme, iconArt }, at);
+  }, [empty, page, document, preset, order, targetMs, loop, theme, at, iconArt]);
   const previewSvg = playing ? playingSvg : stillSvg;
   const play = () => {
     if (empty) return;
@@ -124,7 +132,7 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
   const block = edited && page && timeline ? animateBlockFromTimeline(timeline, page) : null;
   const request = {
     document, pageId: page?.id ?? pageId, preset, order: block ? 'code' : order,
-    durationMs: block ? null : targetMs, loop: block ? block.loop : loop, theme,
+    durationMs: block ? null : targetMs, loop: block ? block.loop : loop, theme, iconArt,
     ...(codeText ? { codeText } : {}),
   };
   function download(): void {
@@ -143,7 +151,7 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
     try {
       const file = await renderMotionFile({
         document, timeline, pageId: page.id, filenameStem: motionFileStem(request),
-        format: output, size, fps, theme, signal: controller.signal,
+        format: output, size, fps, theme, iconArt, signal: controller.signal,
         onProgress: (done, total) => setProgress({ done, total }),
       });
       downloadV2Export([file]);
@@ -170,7 +178,7 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
     try {
       const file = await renderMotionFile({
         document, timeline, pageId: page.id, filenameStem: motionFileStem(request),
-        format: output, size, fps, theme,
+        format: output, size, fps, theme, iconArt,
       });
       const copied = await copyImageToClipboard(file.bytes, file.mime);
       if (copied) onToast(`${output.toUpperCase()} copied to the clipboard.`, 'success');

@@ -113,6 +113,9 @@ export async function compileWorkspace(text: string, options: CompileOptions = {
     direction: document.direction ?? dslFamilyDirection(document.family),
     header: document.header,
     ...(document.title ? { title: document.title } : {}),
+    ...(document.appearance || document.icons ? {
+      authored: { ...(document.appearance ? { palette: document.appearance } : {}), ...(document.icons ? { icons: document.icons } : {}) },
+    } : {}),
     comments,
     diagnostics,
     swatch: paletteResolver(palette),

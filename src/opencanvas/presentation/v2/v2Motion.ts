@@ -11,6 +11,7 @@ import type { MotionFormat, MotionFps, MotionSize } from '../../infrastructure/e
 import { exportAnimatedSvg, exportMotionFrameSvg } from '../../infrastructure/export/animatedSvg';
 import { renderMotionFile } from '../../infrastructure/export/motionFrames';
 import type { V2ExportFile } from './v2Export';
+import { loadIconArt } from './v2IconArt';
 
 /** `auto` walks the connector graph; a flow id replays a phase-5 flow; `code` reads the frame's animate block. */
 export type V2MotionOrder = 'auto' | 'code' | (string & {});
@@ -26,6 +27,8 @@ export interface V2MotionRequest {
   readonly theme?: 'light' | 'dark' | 'print';
   /** The code panel's current text; `code` order reads its animate block. */
   readonly codeText?: string;
+  /** Icon art from `loadIconArt`; without it icons export as their plates. */
+  readonly iconArt?: Readonly<Record<string, string>>;
 }
 
 function pageOf(request: V2MotionRequest) {
@@ -69,6 +72,7 @@ export function animatedSvgFor(
     ...(request.theme ? { theme: request.theme } : {}),
     ...(request.loop ? { loop: true } : {}),
     ...(options.seekMs ? { seekMs: options.seekMs } : {}),
+    ...(request.iconArt ? { iconArt: request.iconArt } : {}),
   });
 }
 
@@ -81,6 +85,7 @@ export function motionFrameSvgFor(
   return exportMotionFrameSvg(request.document, timeline, tMs, {
     pageId: request.pageId,
     ...(request.theme ? { theme: request.theme } : {}),
+    ...(request.iconArt ? { iconArt: request.iconArt } : {}),
   });
 }
 
@@ -123,6 +128,7 @@ export async function buildMotionRasterFile(request: V2MotionEncodeRequest): Pro
     size: request.size,
     fps: request.fps,
     ...(request.theme ? { theme: request.theme } : {}),
+    iconArt: request.iconArt ?? await loadIconArt(request.document),
   });
   return { filename: file.filename, mime: file.mime, bytes: file.bytes };
 }

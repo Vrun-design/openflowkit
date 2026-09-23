@@ -10,6 +10,7 @@ import type { JsonObject } from '../../domain/document/json';
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import { buildDeleteSelectionCommand } from '../../domain/commands/sceneEdits';
 import { buildDslPageCommand } from './dslPageCommand';
+import { hasAutoIcon, hasIcon, refreshAutoIcon, withoutElementIcon, type IconResolver } from './iconCommands';
 
 /**
  * Model-aware commands: one element, many views. Every builder returns ONE
@@ -37,7 +38,7 @@ export function isModelPlacement(node: SceneNode): boolean {
 }
 
 /** Rewrites a page so its frames carry the new model and its placements follow it. */
-function pageWithModel(page: ScenePage, model: ArchModel): ScenePage {
+function pageWithModel(page: ScenePage, model: ArchModel, resolveIcon?: IconResolver): ScenePage {
   const index = createArchIndex(model);
   const carriesModel = archFrameOf(page) !== null;
   const nodes = page.nodes.map((node) => {
@@ -47,16 +48,23 @@ function pageWithModel(page: ScenePage, model: ArchModel): ScenePage {
     const elementId = placedElementId(node);
     const element = elementId ? index.byId.get(elementId) : undefined;
     if (!element) return withModelCopy;
-    const content: Record<string, unknown> = { ...withModelCopy.content, label: element.name };
+    // `icon: none` on the element, or `icons: off` on the model, takes the card back to its shape.
+    const iconGone = hasIcon(withModelCopy) && (element.icon === 'none' || (model.icons === 'off' && hasAutoIcon(withModelCopy)));
+    const stripped = iconGone ? withoutElementIcon(withModelCopy, element) : withModelCopy;
+    // A rename or a new `tech:` moves an inferred icon with it (needs the host's resolver).
+    const drawn = resolveIcon
+      ? refreshAutoIcon(stripped, element.name, element.tech, resolveIcon, (plain) => withoutElementIcon(plain, element))
+      : stripped;
+    const content: Record<string, unknown> = { ...drawn.content, label: element.name };
     if (element.tech) content.subLabel = element.tech;
     else delete content.subLabel;
-    const placement: Record<string, unknown> = { ...(isRecord(withModelCopy.metadata.model) ? withModelCopy.metadata.model : {}), tags: [...element.tags] };
+    const placement: Record<string, unknown> = { ...(isRecord(drawn.metadata.model) ? drawn.metadata.model : {}), tags: [...element.tags] };
     if (element.desc) placement.desc = element.desc; else delete placement.desc;
     if (element.links.length) placement.links = [...element.links]; else delete placement.links;
     return {
-      ...withModelCopy,
+      ...drawn,
       content: content as JsonObject,
-      metadata: { ...withModelCopy.metadata, model: placement as JsonObject },
+      metadata: { ...drawn.metadata, model: placement as JsonObject },
     };
   });
   return { ...page, nodes };
@@ -193,6 +201,7 @@ export function buildArchElementEditCommand(
   document: SceneDocumentV1,
   elementId: string,
   patch: ArchElementPatch,
+  resolveIcon?: IconResolver,
 ): DocumentCommand | null {
   const pages = modelPages(document);
   const source = pages[0];
@@ -206,8 +215,35 @@ export function buildArchElementEditCommand(
     elements: source.model.elements.map((candidate) => candidate.id === elementId ? merged : candidate),
   };
   const label = patch.name !== undefined && merged.name !== element.name ? 'Rename element' : 'Edit element';
-  const commands = pages.map(({ page }) => setPage(page, pageWithModel(page, next), `model-edit:${elementId}`, label));
+  const commands = pages.map(({ page }) => setPage(page, pageWithModel(page, next, resolveIcon), `model-edit:${elementId}`, label));
   return commands.length === 1 ? commands[0]! : batch('model-edit', label, commands);
+}
+
+/** `icon: none` on several elements at once; every view that places them follows. */
+export function buildArchRemoveIconsCommand(document: SceneDocumentV1, elementIds: readonly string[]): DocumentCommand | null {
+  const pages = modelPages(document);
+  const source = pages[0];
+  const ids = new Set(elementIds);
+  if (!source || !source.model.elements.some((element) => ids.has(element.id))) return null;
+  const next: ArchModel = {
+    ...source.model,
+    elements: source.model.elements.map((element) => ids.has(element.id) ? { ...element, icon: 'none' } : element),
+  };
+  const commands = pages.map(({ page }) => setPage(page, pageWithModel(page, next), 'model-remove-icons', 'Remove icon'));
+  return commands.length === 1 ? commands[0]! : batch('model-remove-icons', 'Remove icon', commands);
+}
+
+/**
+ * `icons: off` for a whole workspace: the model records it (so regenerated
+ * text keeps it) and every inferred icon on every view comes off in place.
+ */
+export function buildArchIconsOffCommand(document: SceneDocumentV1): DocumentCommand | null {
+  const pages = modelPages(document);
+  const source = pages[0];
+  if (!source || source.model.icons === 'off') return null;
+  const next: ArchModel = { ...source.model, icons: 'off' };
+  const commands = pages.map(({ page }) => setPage(page, pageWithModel(page, next), 'model-icons-off', 'Turn off icons from labels'));
+  return commands.length === 1 ? commands[0]! : batch('model-icons-off', 'Turn off icons from labels', commands);
 }
 
 /**

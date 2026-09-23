@@ -313,6 +313,8 @@ export function archModelFromJson(value: unknown): ArchModel | null {
   if (!Array.isArray(value.elements) || !Array.isArray(value.relations) || !Array.isArray(value.views)) return null;
   return {
     ...(typeof value.name === 'string' ? { name: value.name } : {}),
+    ...(typeof value.palette === 'string' ? { palette: value.palette } : {}),
+    ...(value.icons === 'auto' || value.icons === 'off' ? { icons: value.icons } : {}),
     elements: value.elements.flatMap((element) => elementFromJson(element) ?? []),
     relations: value.relations.flatMap((relation) => relationFromJson(relation) ?? []),
     views: value.views.flatMap((view) => viewFromJson(view) ?? []),

@@ -42,6 +42,8 @@ export interface AnimatedSvgOptions {
   readonly seekMs?: number;
   /** Repeat forever; the preview and the README loop both use it. */
   readonly loop?: boolean;
+  /** Icon art, as for the static export. */
+  readonly iconArt?: CanonicalSvgExportOptions['iconArt'];
 }
 
 type Stops = Map<string, string>;
@@ -290,6 +292,7 @@ export function exportAnimatedSvg(
     ...(options.pageId ? { pageId: options.pageId } : {}),
     ...(options.theme ? { theme: options.theme } : {}),
     ...(options.padding === undefined ? {} : { padding: options.padding }),
+    ...(options.iconArt ? { iconArt: options.iconArt } : {}),
     animations: (kind, id) => plan.elements.get(`${kind}:${id}`),
     ...(plan.camera ? { cameraAnimation: plan.camera } : {}),
     styleSheet: [
@@ -311,6 +314,7 @@ export function exportMotionFrameSvg(
     ...(options.pageId ? { pageId: options.pageId } : {}),
     ...(options.theme ? { theme: options.theme } : {}),
     ...(options.padding === undefined ? {} : { padding: options.padding }),
+    ...(options.iconArt ? { iconArt: options.iconArt } : {}),
     frame: frameAt(timeline, tMs),
   });
 }

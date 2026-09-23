@@ -516,7 +516,7 @@ export function V2EditorPage(): React.JSX.Element {
   }), [preferences.diagramPalette, preferences.autoIcons]);
   const iconActions = useV2IconActions({
     pageRef, readOnly: load.readOnly, commit: session.commit, announce: setAnnouncement,
-    compileAt, editElement: architectureActions.editElement,
+    compileAt, document: session.document, setModelIcons: architectureActions.setModelIcons,
   });
   const selectedNode = selection.primaryNodeId && page
     ? page.nodes.find((node) => node.id === selection.primaryNodeId)

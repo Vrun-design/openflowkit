@@ -34,6 +34,7 @@ interface StartMessage {
   readonly timeline: Timeline;
   readonly pageId: string;
   readonly theme: 'light' | 'dark' | 'print';
+  readonly iconArt: Readonly<Record<string, string>>;
 }
 
 interface FrameMessage {
@@ -81,6 +82,7 @@ interface Session {
   readonly document: SceneDocumentV1;
   readonly timeline: Timeline;
   readonly theme: StartMessage['theme'];
+  readonly iconArt: StartMessage['iconArt'];
   readonly page: ScenePage;
   readonly viewBox: Bounds2d;
   readonly scale: number;
@@ -134,6 +136,7 @@ function svgFor(state: Session, index: number): string {
   return exportMotionFrameSvg(state.document, state.timeline, state.times[index]!, {
     pageId: state.page.id,
     theme: state.theme,
+    iconArt: state.iconArt,
   });
 }
 
@@ -202,6 +205,7 @@ async function start(message: StartMessage): Promise<void> {
     document: message.document,
     timeline: message.timeline,
     theme: message.theme,
+    iconArt: message.iconArt,
     page, viewBox, mode,
     scale: Math.min(width / viewBox.width, height / viewBox.height),
     times,

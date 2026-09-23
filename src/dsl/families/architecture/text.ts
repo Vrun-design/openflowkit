@@ -42,6 +42,8 @@ export function workspaceBody(model: ArchModel): string[] {
 export function architectureWorkspaceText(model: ArchModel): string {
   const lines = ['%% ofk 1', 'architecture'];
   if (model.name) lines.push(`title: ${quote(model.name)}`);
+  if (model.palette && model.palette !== 'pastel') lines.push(`appearance: ${model.palette}`);
+  if (model.icons) lines.push(`icons: ${model.icons}`);
   lines.push('', ...workspaceBody(model));
   return `${lines.join('\n')}\n`;
 }

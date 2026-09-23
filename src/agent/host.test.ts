@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { nodePaletteName } from '../opencanvas/domain/nodes/nodePalette';
 import { createAgentDocument } from './index';
-import { createFileCapabilities, grammarSection } from './host';
+import manifestText from '../../mcp-server/data/icons.json?raw';
+import { AUTO_ICON_IDS } from '../dsl/autoIcon';
+import { resolveDslIcon } from '../services/dsl/iconResolver';
+import { createFileCapabilities, grammarSection, manifestIconResolver } from './host';
+import type { IconMatch } from './ops/types';
+
+const MANIFEST = JSON.parse(manifestText) as IconMatch[];
 import { findAgentOp } from './ops';
 
 const GRAMMAR = `# OpenFlow DSL
@@ -62,6 +68,31 @@ describe('file host', () => {
     expect((await host.searchIcons('rds', 5)).map(({ provider }) => provider)).toEqual(['aws']);
     expect(await host.searchIcons('kubernetes', 5)).toEqual([]);
     expect((await host.searchIcons('aws lambda', 1)).length).toBe(1);
+  });
+
+  it('resolves every auto-icon id through the shipped MCP manifest, exactly as the editor does', () => {
+    const resolve = manifestIconResolver(MANIFEST);
+    const differing = AUTO_ICON_IDS.filter((id) => resolve(id)?.shapeId !== id.split('/')[1]
+      || JSON.stringify(resolve(id)) !== JSON.stringify(resolveDslIcon(id)));
+    expect(differing).toEqual([]);
+    expect(resolve('aws/lambda')).toEqual(resolveDslIcon('aws/lambda'));
+  });
+
+  it('puts icons from labels on file-mode diagrams, and honours icons: off', async () => {
+    const host = createFileCapabilities({ grammar: GRAMMAR, icons: MANIFEST });
+    const nodesOf = async (dsl: string) => {
+      const outcome = await findAgentOp('create_diagram')!.run({ dsl }, {
+        document: document(), pageId: 'doc-host:page-1', capabilities: host,
+      });
+      if (!outcome.command || outcome.command.kind !== 'set-page') throw new Error('expected a page command');
+      return Object.fromEntries(outcome.command.after.nodes.map((node) => [node.id, node.content]));
+    };
+    const on = await nodesOf('flowchart\n  Web app [tech: React] -> Postgres -> Orders DB\n  Validate order');
+    expect(on['web-app']).toMatchObject({ icon: 'developer/frontend-reactjs', archIconPackId: 'developer-icons-v1' });
+    expect(on['orders-db']).toMatchObject({ icon: 'tabler/database', archIconPackId: 'tabler-outline-v3' });
+    expect(on['validate-order']?.icon).toBeUndefined();
+    const off = await nodesOf('flowchart\nicons: off\n  Postgres');
+    expect(off.postgres?.icon).toBeUndefined();
   });
 
   it('exports svg, json and print html from the same source, and refuses png', async () => {

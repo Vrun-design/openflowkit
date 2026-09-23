@@ -91,7 +91,7 @@ one to target a file-mode document.
 | `create_diagram` / `update_diagram` | Compile DSL into a new frame, or replace one in place — one undo step |
 | `get_diagram` / `list_diagrams` | Read a frame's DSL, its drift from the canvas, and what the text cannot express |
 | `get_syntax` | The grammar, or one family's section |
-| `search_icons` / `find_icons_for` | Search 2,121 provider icons, or expand a concept ("cache", "queue", "auth") |
+| `search_icons` / `find_icons_for` | Search 7,269 icons (AWS, Azure, GCP, CNCF, developer logos, 5,148 Standard glyphs), or expand a concept ("cache", "queue", "auth") |
 | `move` / `style` / `delete` / `add_shape` | Scene edits the language cannot say |
 | `export` | SVG, PNG, PDF (print HTML) or JSON for a page, a selection or the document |
 | `screenshot` | PNG of one frame (live mode) |
