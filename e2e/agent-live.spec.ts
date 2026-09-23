@@ -84,11 +84,14 @@ test('an MCP agent creates, reads, updates and screenshots a diagram in the open
       nodes: page?.nodes.filter((node) => node.kind !== 'frame').length ?? 0,
       frames: page?.nodes.filter((node) => node.kind === 'frame').length ?? 0,
       labels: page?.nodes.map((node) => node.content?.label).filter(Boolean) ?? [],
+      clientIcon: (page?.nodes.find((node) => node.content?.label === 'Client')?.content as { icon?: string } | undefined)?.icon,
       revision: (api as { getState?: () => { revision?: number } } | undefined)?.getState?.().revision ?? 0,
     };
   });
   expect(canvas.frames).toBe(1);
   expect(canvas.nodes).toBe(4);
   expect(canvas.labels).toEqual(expect.arrayContaining(['Client', 'Queue']));
+  // An agent's diagram gets icons from labels like any other generation.
+  expect(canvas.clientIcon).toBe('tabler/browser');
   expect(canvas.revision).toBeGreaterThan(0);
 });

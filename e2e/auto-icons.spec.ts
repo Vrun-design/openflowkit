@@ -49,3 +49,50 @@ test('generated nodes get icons from their labels, and each scale of "no" works'
   await expect.poll(async () => (await doc(page))!.pages[0]!.nodes.filter((candidate) => (candidate as unknown as { content: { icon?: string } }).content.icon).length).toBe(0);
   expect((await nodeById(page, frameId)).metadata.dsl).toMatchObject({ icons: 'off' });
 });
+
+const iconsByLabel = async (page: Page): Promise<Record<string, unknown>> => Object.fromEntries(
+  (await doc(page))!.pages[0]!.nodes.map((candidate) => {
+    const content = (candidate as unknown as { content: { label?: string; icon?: unknown } }).content;
+    return [content.label ?? candidate.id, content.icon];
+  }));
+
+test('a Mermaid import gets icons from its labels', async ({ page }) => {
+  await openCanvas(page);
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
+  const source = page.getByRole('textbox', { name: 'Diagram source' });
+  await source.fill('flowchart LR\n  fe[React App] --> api[Node.js API]\n  api --> db[(Postgres)]\n  api --> ok{Valid?}');
+  await page.getByRole('button', { name: /^Convert/ }).click();
+  await expect(source).not.toHaveValue(/-->/);
+  await source.press(`${META}+Enter`);
+  await expect.poll(async () => (await iconsByLabel(page))['Postgres'], { timeout: 15_000 }).toBe('developer/database-postgresql');
+  expect(await iconsByLabel(page)).toMatchObject({
+    'React App': 'developer/frontend-reactjs', 'Node.js API': 'developer/backend-nodejs', 'Valid?': undefined,
+  });
+});
+
+test('an AI-generated diagram gets icons once the proposal is applied', async ({ page }) => {
+  const reply = 'flowchart right\nWeb app [tech: Next.js] -> API [tech: FastAPI] -> Postgres\nAPI -> Redis cache';
+  await page.route('http://127.0.0.1:4399/v1/chat/completions', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    headers: { 'Access-Control-Allow-Origin': '*' },
+    body: JSON.stringify({ choices: [{ message: { content: reply } }] }),
+  }));
+  await page.goto('/');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'AI assistant', exact: true }).click();
+  const panel = page.getByRole('complementary', { name: 'AI assistant' });
+  await panel.getByRole('button', { name: 'Connect an AI provider' }).click();
+  const dialog = page.getByRole('dialog', { name: 'AI provider' });
+  await dialog.getByRole('button', { name: 'Use Custom' }).click();
+  await dialog.getByLabel('API key').fill('sk-ok');
+  await dialog.locator('summary').click();
+  await dialog.getByLabel('Base URL').fill('http://127.0.0.1:4399/v1');
+  await dialog.getByLabel('Model').fill('stub-model');
+  await dialog.getByRole('button', { name: 'Connect', exact: true }).click();
+  await panel.getByRole('textbox').fill('A web app with an API, Postgres and a cache');
+  await panel.getByRole('textbox').press('Enter');
+  await panel.getByRole('button', { name: 'Apply' }).click();
+  await expect.poll(async () => (await iconsByLabel(page))['Postgres'], { timeout: 15_000 }).toBe('developer/database-postgresql');
+  expect(await iconsByLabel(page)).toMatchObject({
+    'Web app': 'developer/frontend-nextjs', API: 'developer/others-fast-api', 'Redis cache': 'developer/database-redis',
+  });
+});
