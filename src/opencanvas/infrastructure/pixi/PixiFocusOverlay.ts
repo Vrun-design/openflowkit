@@ -63,7 +63,7 @@ export class PixiFocusOverlay {
       .filter((node) => nodes.has(node.id) && isContainerNodeKind(node.kind))
       .map((node) => node.id));
     const plainNodes = new Set([...nodes].filter((id) => !containers.has(id)));
-    this.containers.draw(page, index, containers);
+    this.containers.draw(page, index, containers, canvasColor);
     this.nodes.draw(page, index, plainNodes, 'full', canvasColor);
     this.connectors.setZoom(zoom);
     this.connectors.draw(page, true, new Set(frame.connectorIds));

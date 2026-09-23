@@ -47,7 +47,7 @@ export class PixiProposalPreview {
     const changedConnectors = new Set(page.connectors
       .filter((edge) => !areStructurallyEqual(edge, currentIndex.connectorsById.get(edge.id)))
       .map((edge) => edge.id));
-    this.containers.draw(page, index, changedNodes);
+    this.containers.draw(page, index, changedNodes, canvasColor);
     this.nodes.draw(page, index, changedNodes, 'full', canvasColor);
     this.connectors.setZoom(zoom);
     this.connectors.draw(page, true, changedConnectors);

@@ -5,6 +5,7 @@ import type { SceneNode, ScenePage } from '../../domain/document/types';
 import type { Matrix2d } from '../../domain/geometry/types';
 import type { SceneIndex } from '../../domain/scene/types';
 import { resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
+import { numericColorToHex } from '../../domain/color/adaptiveColor';
 import { CONTAINER_TITLE_HEIGHT, nodeLabelBounds } from '../../domain/nodes/nodeLabelBounds';
 import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
@@ -56,9 +57,11 @@ export class PixiContainerRenderer {
   draw(
     page: ScenePage,
     index: SceneIndex,
-    renderedNodeIds: ReadonlySet<string> | null = null
+    renderedNodeIds: ReadonlySet<string> | null = null,
+    canvasColor?: number
   ): void {
     this.graphics.clear();
+    const canvas = canvasColor === undefined ? undefined : numericColorToHex(canvasColor);
     this.labels.removeChildren().forEach((child) => child.destroy({ children: true }));
     this.labelByNodeId.clear();
     const records: PixiNodeDebugRecord[] = [];
@@ -70,7 +73,7 @@ export class PixiContainerRenderer {
       const matrix = index.worldMatricesByNodeId.get(node.id);
       if (!visual || !matrix) continue;
       const childCount = index.childIdsByParentId.get(node.id)?.length ?? 0;
-      const style = resolveNodeStyle(node);
+      const style = resolveNodeStyle(node, canvas);
       this.drawContainer(node, matrix, visual, style);
       if (!isQuietGroup(node) && visual.presentation.header) {
         const label = this.createLabel(node, visual, style);
@@ -137,7 +140,8 @@ export class PixiContainerRenderer {
     // so the DOM editor is the same text in the same place.
     if (visual.presentation.kind !== 'section') {
       drawPixiLocalRect(this.graphics, createBounds2d(0, 0, node.size.width, CONTAINER_TITLE_HEIGHT), matrix, style.cornerRadius);
-      this.graphics.fill({ color: visual.badgeFill, alpha: 0.48 * alpha });
+      // Never louder than the body wash, so a dark-canvas frame keeps a faint band.
+      this.graphics.fill({ color: visual.badgeFill, alpha: Math.min(0.48, fill.alpha) * alpha });
       drawPixiLocalRect(this.graphics, createBounds2d(0, CONTAINER_TITLE_HEIGHT - 1, node.size.width, 1), matrix);
       this.graphics.fill({ color: stroke.color, alpha: 0.72 * alpha });
     }

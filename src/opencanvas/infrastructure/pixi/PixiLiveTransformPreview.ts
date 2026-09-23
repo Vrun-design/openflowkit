@@ -57,7 +57,7 @@ export class PixiLiveTransformPreview {
     const carried = new Set(result.nodes.flatMap((node) => [node.id, ...getDescendantNodeIds(index, node.id)]));
     const selectedPage = { ...preview, nodes: preview.nodes.filter((node) => carried.has(node.id)) };
     const previewIndex = { ...index, worldMatricesByNodeId: matrices };
-    this.containers.draw(selectedPage, previewIndex);
+    this.containers.draw(selectedPage, previewIndex, null, canvasColor);
     this.nodes.draw(selectedPage, previewIndex, null, 'full', canvasColor);
     this.connectors.setZoom(zoom);
     this.connectors.draw(preview, true);

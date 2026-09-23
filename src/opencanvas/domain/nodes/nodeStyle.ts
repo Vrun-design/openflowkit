@@ -6,6 +6,7 @@ import { resolveContainerNodePresentation } from './containerNodePresentation';
 import { resolveNodeStroke, type NodeStrokeStyle } from './nodeStroke';
 import { optionalPresentationString } from './nodePresentationValues';
 import { resolveAdaptiveInk } from '../color/adaptiveColor';
+import { getContrastText } from '../../../lib/colorUtils';
 import { nodePaletteName } from './nodePalette';
 
 // Every visible property of a node, resolved from flat `appearance` keys
@@ -177,12 +178,16 @@ function computeNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
   const defaults = familyDefaults(node);
   const stroke = resolveNodeStroke(node);
   const strokeWidth = a.strokeWidth === undefined ? (text ? 0 : defaults.strokeWidth) : stroke.width;
-  const fill = paint(a.fill, defaults.fill);
+  // A container's default tint is a light wash; on a dark canvas it turns into
+  // a grey slab. Keep the hue as a faint wash and let the title ink follow the canvas.
+  const darkWash = a.fill === undefined && defaults.fill.startsWith('rgba(')
+    && canvasColor !== undefined && getContrastText(canvasColor) === '#ffffff';
+  const fill = darkWash ? defaults.fill.replace(/,\s*[\d.]+\)$/, ',0.08)') : paint(a.fill, defaults.fill);
   const explicitTextColor = a.textColor ?? (text ? c.customColor : undefined);
   // Ink adapts to whatever is behind the label: a solid fill, or the canvas
   // when the label sits outside the fill or the fill is transparent. A tinted
-  // (rgba) container fill keeps its palette ink.
-  const textBackdrop = defaults.labelOnCanvas || fill === 'transparent' ? canvasColor
+  // (rgba) container fill keeps its palette ink, except as a dark-canvas wash.
+  const textBackdrop = defaults.labelOnCanvas || fill === 'transparent' || darkWash ? canvasColor
     : fill.startsWith('#') ? fill : undefined;
   return {
     fill,

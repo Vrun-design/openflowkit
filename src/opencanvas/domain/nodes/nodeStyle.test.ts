@@ -21,6 +21,15 @@ describe('resolveNodeStyle', () => {
     expect(resolveNodeStyle(node({ appearance: { fill: '#fef2f2' } }), '#191b19').textColor).toBe('#0f172a');
     expect(resolveNodeStyle(node({ appearance: { fill: 'transparent', textColor: '#ef4444' } }), '#191b19').textColor).toBe('#ef4444');
   });
+  it('turns a frame default wash faint on a dark canvas and keeps authored fills', () => {
+    const frame = node({ kind: 'section', content: { label: 'Frame', color: 'slate' } });
+    const light = resolveNodeStyle(frame, '#f7f7f5');
+    expect(light.fill).toBe('rgba(241,245,249,0.52)');
+    const dark = resolveNodeStyle(frame, '#191b19');
+    expect(dark.fill).toBe('rgba(241,245,249,0.08)');
+    expect(dark.textColor).toBe('#ffffff');
+    expect(resolveNodeStyle(node({ kind: 'section', appearance: { fill: '#fef2f2' } }), '#191b19').fill).toBe('#fef2f2');
+  });
   it('falls back to the palette for shapes with no appearance keys', () => {
     const style = resolveNodeStyle(node({ content: { shape: 'rounded', color: 'blue' } }));
     expect(style.fill).toBe('#eff6ff');

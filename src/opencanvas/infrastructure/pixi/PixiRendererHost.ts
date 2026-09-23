@@ -750,7 +750,7 @@ export class PixiRendererHost {
     const detailLevel = this.viewportProjection?.detailLevel ?? 'full';
     this.connectorRenderer.draw(this.page, this.connectorModelEnabled, renderedConnectorIds);
     if (redrawNodes) {
-      this.containerRenderer.draw(this.page, this.index, renderedNodeIds);
+      this.containerRenderer.draw(this.page, this.index, renderedNodeIds, this.backgroundColor);
       this.nodeRenderer.draw(this.page, this.index, renderedNodeIds, detailLevel, this.backgroundColor);
     }
     this.updateLabelVisibility();
