@@ -23,14 +23,17 @@ series line, categories with spaces are quoted, and the first series defines the
 
 ```openflow
 chart quadrant
+x: Low effort, High effort
+y: Low impact, High impact
+quadrants: Quick wins, Big bets, Deprioritise, Time sinks
 Ship faster [0.8, 0.9]
 Fix onboarding [0.7, 0.4]
 Automate billing [0.35, 0.75]
 Rewrite docs [0.3, 0.25]
 ```
 
-Points are `Label [x, y]` with both axes in `0`–`1`; the four quadrant captions and both
-axis labels are the fixed defaults the renderer draws.
+Points are `Label [x, y]` with both axes in `0`–`1`. `x:` and `y:` name each axis's low and
+high end; `quadrants:` names the four regions. Leave any of them out for the defaults.
 
 ## Statements
 
@@ -39,6 +42,8 @@ axis labels are the fixed defaults the renderer draws.
 | Kind | `chart line` | ten kinds; `bar` when omitted |
 | Title | `title: Monthly revenue` | the chart card's title |
 | Series | `Revenue: Jan 12, Feb 19` | `Name: Category value, …` |
+| Axis labels | `x: Low effort, High effort` | quadrant only; `y:` likewise, low end first |
+| Regions | `quadrants: Quick wins, Big bets, Deprioritise, Time sinks` | quadrant only, four names |
 | Point | `Feature A [0.32, 0.78]` | quadrant only, `0`–`1` per axis |
 
 ## What it does not do
@@ -48,8 +53,7 @@ axis labels are the fixed defaults the renderer draws.
 - **No computed values.** There is no aggregation syntax, no formulas and no links to a data
   source — the numbers are the numbers you typed.
 - **No axis configuration.** Scales and gridlines come from the data range; units are just
-  text in the category or series names. Quadrant axis and region labels are fixed defaults:
-  `x:`, `y:` and `quadrants:` lines are reported as invalid points and ignored.
+  text in the category or series names.
 - Editing a chart on the canvas goes through the data panel, which rewrites the DSL source;
   dragging a bar is not a data edit the canvas can perform.
 

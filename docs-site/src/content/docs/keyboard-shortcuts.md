@@ -10,13 +10,6 @@ This page is generated from `src/opencanvas/presentation/v2/v2Shortcuts.ts` by `
 Keys are shown with `⌘`; on Windows and Linux read the same rows as `Ctrl`. The app
 renders this list itself, from the same data, so it cannot drift from what the keys do.
 
-:::caution[One row differs from the in-app cheatsheet]
-The app's `?` panel currently
-labels `Shift + 1` as "Zoom to 100% (Shift)". The dispatcher actually fits the view on
-`Shift + 1` (the same as `⌘ + 0`); the table below says what the keys do. The label in
-`v2Shortcuts.ts` is the thing to fix.
-:::
-
 ## Tools
 
 | Action | Keys |

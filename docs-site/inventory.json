@@ -91,13 +91,6 @@
       "page": "keyboard-shortcuts"
     },
     {
-      "id": "shortcut-map-shift-1-label",
-      "name": "Shift+1 label in the shortcut map",
-      "status": "absent",
-      "evidence": "src/opencanvas/presentation/v2/v2Shortcuts.ts:49",
-      "notes": "The map labels Shift+1 \"Zoom to 100% (Shift)\" but the dispatcher (useV2Keyboard.ts:195) runs fit-view for Shift+1 and reset-zoom for ⌘1. The generated docs page corrects the row and names the discrepancy; the source label is the thing to fix (src/ is read-only in phase 9)."
-    },
-    {
       "id": "shortcuts-cheatsheet",
       "name": "Shortcut cheatsheet (?)",
       "status": "shipped",
@@ -132,7 +125,7 @@
         "Pan",
         "Zoom to fit",
         "Zoom to selection",
-        "Zoom to 100% (Shift)",
+        "Zoom to fit (Shift)",
         "Zoom to 100%",
         "Zoom in / out"
       ]
@@ -691,13 +684,6 @@
       "evidence": "src/opencanvas/domain/nodes/wireframeNodePresentation.ts:61",
       "notes": "Reachable through the DSL shape words `browser` and `mobile`; the app draws the frame chrome. The SVG/PNG export draws them as plain labelled cards. The wireframe widget library is separately absent.",
       "page": "diagram-flowchart"
-    },
-    {
-      "id": "chart-quadrant-labels",
-      "name": "Quadrant axis and region labels in the DSL",
-      "status": "absent",
-      "evidence": "src/dsl/families/chart.ts:100",
-      "notes": "`x:`, `y:` and `quadrants:` lines never match: the family compares the space-joined statement text against `x:`, so the lines are reported as invalid points (W131) and ignored. The quadrant chart itself and its `Label [x, y]` points are shipped; labels are fixed defaults."
     },
     {
       "id": "reserved-families",

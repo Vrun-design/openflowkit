@@ -46,7 +46,7 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
         { label: 'Pan', keys: 'Space + drag', tokens: [' '] },
         { label: 'Zoom to fit', keys: `${command} + 0`, tokens: ['0', meta] },
         { label: 'Zoom to selection', keys: 'Shift + 2', tokens: ['Digit2'] },
-        { label: 'Zoom to 100% (Shift)', keys: 'Shift + 1', tokens: ['Digit1'] },
+        { label: 'Zoom to fit (Shift)', keys: 'Shift + 1', tokens: ['Digit1'] },
         { label: 'Zoom to 100%', keys: `${command} + 1`, tokens: ['1', meta] },
         { label: 'Zoom in / out', keys: `${command} + = / −`, tokens: ['=', '+', '-'] },
         { label: 'Layers', keys: 'L', tokens: ['l'] },

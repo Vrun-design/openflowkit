@@ -73,22 +73,11 @@ function argumentRows(schema: ZodLike): string {
 
 // --- the pages ---------------------------------------------------------------
 
-/**
- * The shortcut map is the source of truth for this page, with one exception it
- * gets wrong: `v2Shortcuts.ts` labels Shift+1 "Zoom to 100% (Shift)", but the
- * dispatcher (`useV2Keyboard.ts:195`) runs fit-view for Shift+1 and reset-zoom
- * for ⌘1. The page says what the keys do; the in-app cheatsheet is what needs
- * fixing. Delete this correction together with the label.
- */
-const SHORTCUT_LABELS: Record<string, string> = {
-  'Zoom to 100% (Shift)': 'Zoom to fit (Shift)',
-};
-
 function keyboardPage(): string {
   const groups = shortcutGroups('⌘');
   const sections = groups.map(({ title, rows }) =>
     `## ${title}\n\n| Action | Keys |\n| --- | --- |\n${rows.map(({ label, keys }) =>
-      `| ${SHORTCUT_LABELS[label] ?? label} | ${keys === '' ? '—' : `\`${keys}\``} |`).join('\n')}\n`,
+      `| ${label} | ${keys === '' ? '—' : `\`${keys}\``} |`).join('\n')}\n`,
   ).join('\n');
   return frontmatter(
     'Keyboard shortcuts',
@@ -96,7 +85,6 @@ function keyboardPage(): string {
   )
     + GENERATED('`src/opencanvas/presentation/v2/v2Shortcuts.ts`')
     + `Keys are shown with \`⌘\`; on Windows and Linux read the same rows as \`Ctrl\`. The app\nrenders this list itself, from the same data, so it cannot drift from what the keys do.\n\n`
-    + `:::caution[One row differs from the in-app cheatsheet]\nThe app's \`?\` panel currently\nlabels \`Shift + 1\` as "Zoom to 100% (Shift)". The dispatcher actually fits the view on\n\`Shift + 1\` (the same as \`⌘ + 0\`); the table below says what the keys do. The label in\n\`v2Shortcuts.ts\` is the thing to fix.\n:::\n\n`
     + sections;
 }
 

@@ -5,7 +5,7 @@ import {
 } from '../../opencanvas/domain/nodes/chartNodePresentation';
 import type { DslDiagnostic } from '../ast';
 import { tokenDiagnostic } from '../diagnostics';
-import type { DslSegment } from '../segments';
+import { joinTokens, type DslSegment } from '../segments';
 import type { DslFrameScene } from '../sceneMeta';
 import { quote } from '../text';
 import type { Family, FamilyContext, FamilyScene } from './types';
@@ -97,16 +97,21 @@ export const chartFamily: Family = {
     for (const segment of segments) {
       const text = segmentText(segment);
       if (!text) continue;
-      if (text.startsWith('x:')) {
-        quadrant = { ...quadrant, xLabels: pairOf(text.slice(2), quadrant.xLabels) };
+      // Axis and region labels, matched on tokens: the joined text spaces the
+      // colon (`x : Low, High`), so a prefix test on it never matched.
+      const [head, colon] = segment.tokens;
+      const key = colon?.value === ':' ? head?.value : undefined;
+      const rest = key ? joinTokens(segment.tokens.slice(2)) : '';
+      if (key === 'x') {
+        quadrant = { ...quadrant, xLabels: pairOf(rest, quadrant.xLabels) };
         continue;
       }
-      if (text.startsWith('y:')) {
-        quadrant = { ...quadrant, yLabels: pairOf(text.slice(2), quadrant.yLabels) };
+      if (key === 'y') {
+        quadrant = { ...quadrant, yLabels: pairOf(rest, quadrant.yLabels) };
         continue;
       }
-      if (text.startsWith('quadrants:')) {
-        quadrant = { ...quadrant, quadrants: quadOf(text.slice('quadrants:'.length), quadrant.quadrants) };
+      if (key === 'quadrants') {
+        quadrant = { ...quadrant, quadrants: quadOf(rest, quadrant.quadrants) };
         continue;
       }
       if (kind === 'quadrant' || text.endsWith(']')) {
