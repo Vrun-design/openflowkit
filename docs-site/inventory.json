@@ -941,10 +941,18 @@
     },
     {
       "id": "ai-prompt-builder",
-      "name": "AI prompt builder",
+      "name": "AI assistant conversation",
       "status": "shipped",
-      "evidence": "src/opencanvas/application/ai/dslPrompt.ts:25",
-      "notes": "Injects the canonical grammar and the current frame's DSL into every request.",
+      "evidence": "src/opencanvas/application/ai/assistantPrompt.ts:79",
+      "notes": "A streamed chat that answers, reviews or edits: it sees every diagram in scope (page or selection), takes attached images, keeps past chats per document, and only changes the canvas through reviewable proposals.",
+      "page": "ai-generation"
+    },
+    {
+      "id": "ai-assistant-agent",
+      "name": "AI assistant tool use",
+      "status": "shipped",
+      "evidence": "src/opencanvas/application/ai/assistantAgent.ts:36",
+      "notes": "Multi-step: the model reads diagrams, checks syntax and finds icons through native tool calls on all three wires, then drafts changes that compile before they reach review. Models without tools fall back to diagram blocks.",
       "page": "ai-generation"
     },
     {

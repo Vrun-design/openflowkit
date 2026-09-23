@@ -69,9 +69,10 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
     id: 'gemini', label: 'Gemini', wire: 'google',
     defaultBaseUrl: 'https://generativelanguage.googleapis.com',
     defaultModel: 'gemini-3.8-flash',
-    suggestedModels: ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.7-flash'],
+    suggestedModels: ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.7-flash', 'gemini-3.1-flash-lite'],
     maxOutputTokens: HOSTED_OUTPUT,
-    keyPlaceholder: 'AIzaSy...', keyPattern: '^AIza', needsKey: true,
+    // AI Studio issues AIza… keys and, newer, AQ.… keys; both authenticate.
+    keyPlaceholder: 'AIzaSy...', keyPattern: '^(?:AIza|AQ\\.)', needsKey: true,
     consoleUrl: 'https://aistudio.google.com/app/apikey', consoleName: 'Google AI Studio',
     logoPath: '/logos/Gemini.svg', risk: 'browser_friendly',
     hint: 'Browser-ready. Create a key in Google AI Studio.',

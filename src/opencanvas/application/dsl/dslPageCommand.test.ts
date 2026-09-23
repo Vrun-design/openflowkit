@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compile } from '../../../dsl/compile';
 import { createEmptyV2Page } from '../../presentation/v2/v2Document';
+import { frameEdited, frameScene } from '../../../dsl/frameScene';
 import { buildDslPageCommand, nextDslFrameOrigin } from './dslPageCommand';
 
 describe('DSL page command', () => {
@@ -25,5 +26,26 @@ describe('DSL page command', () => {
     const compiled = await compile('flowchart\nA');
     const command = buildDslPageCommand(createEmptyV2Page(), compiled) as Extract<ReturnType<typeof buildDslPageCommand>, { kind: 'set-page' }>;
     expect(nextDslFrameOrigin(command.after).x).toBeGreaterThan(compiled.frame.size.width);
+  });
+});
+
+describe('DSL page command: two diagrams on one page', () => {
+  type SetPage = Extract<ReturnType<typeof buildDslPageCommand>, { kind: 'set-page' }>;
+  it('scopes names the page already uses, and the frame still reads as untouched', async () => {
+    const first = buildDslPageCommand(createEmptyV2Page(), await compile('flowchart\nStart -> End')) as SetPage;
+    const secondCompiled = await compile('flowchart\nStart -> Middle -> End');
+    const second = buildDslPageCommand(first.after, secondCompiled) as SetPage;
+    const ids = [...second.after.nodes, ...second.after.connectors].map(({ id }) => id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain(`${secondCompiled.frame.id}-start`);
+    expect(frameEdited(frameScene(second.after, secondCompiled.frame.id)!)).toBe(false);
+  });
+
+  it('gives a repeated diagram its own frame', async () => {
+    const compiled = await compile('flowchart\nA -> B');
+    const first = buildDslPageCommand(createEmptyV2Page(), compiled) as SetPage;
+    const second = buildDslPageCommand(first.after, compiled) as SetPage;
+    expect(second.after.nodes.filter((node) => node.kind === 'frame').map(({ id }) => id))
+      .toEqual([compiled.frame.id, `${compiled.frame.id}-2`]);
   });
 });

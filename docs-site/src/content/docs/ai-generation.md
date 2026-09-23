@@ -1,6 +1,6 @@
 ---
 title: AI generation
-description: Bring your own key — describe a diagram, review the proposal, accept it as one undo step.
+description: Bring your own key — talk through a diagram, let the assistant draft changes, review them, apply as one undo step.
 ---
 
 OpenFlowKit's assistant turns a prompt into a diagram without a hosted service in between: your
@@ -16,37 +16,53 @@ sits under **Endpoint**. **Test key** asks the provider for one short response.
 Each provider keeps its own key, marked with a dot on its tile, so switching providers never
 sends one vendor's key to another; **Clear all keys** removes every one. Keys are stored in this
 browser's `localStorage` and sent only to the provider they were entered for. There is no OpenFlowKit account and no relay: if the request fails, the error names the
-cause — bad key, unknown model, rate limit, network.
+cause — bad key, unknown mode## Talk, review, or change
 
-## Ask for a diagram
+The assistant is a conversation. Ask a question, ask for a critique, or describe a change — it
+answers in text when that is what you asked for, and only drafts diagram changes when you want
+them. Each message carries what is in scope:
 
-Type what you want, in plain language: what it is for, the systems or actors, the important
-branches, the direction if it matters. To refine an existing diagram, open its code panel first
-— the assistant includes the current frame's DSL in the request, and the result is a proposal
-against that frame instead of a new one.
+- **This page** — every diagram on the current page;
+- **Selection** — only the diagrams holding your selection (picked automatically when you have
+  one; the chip under the prompt switches back).
 
-Every request also carries the canonical grammar, so the model writes OpenFlow DSL rather than
-inventing a syntax.
+The assistant can look things up before it acts: read a diagram in full, check a family's
+syntax, and search the icon packs for real icon ids. Each lookup shows as a step above the
+reply. Drafts are compiled as they are written; a draft that does not compile goes back to the
+model to fix before you ever see it. Providers or local models without tool support get the
+same assistant without the lookups.
 
-## Review, then accept
+Attach images with the photo button, by pasting, or by dropping them on the prompt — a
+whiteboard photo, a screenshot, a sketch to redraw. Up to four per message; they are
+downscaled before they are sent. The model you pick must accept images.
 
-The reply is converted to DSL, compiled, and shown as a **proposal**:
+**Think** asks the model to reason first (Claude, Gemini, and OpenAI-wire models that share
+their reasoning); the reasoning shows as a collapsible "Thought for …" line.
 
-- a ghost preview of the result on the canvas;
-- the list of changes, which you can step through and reject one by one;
-- **Accept**, which applies the proposal as a single undo step.
+## Review, then apply
 
-A proposal built against a document that changed while you were reviewing is marked stale and
-cannot be applied — ask again.
+Changes arrive as a **proposal** under the reply: one row per diagram, each accepted or
+rejected on its own, with **Apply** landing everything accepted as a single undo step. Hover a
+row to find its diagram on the canvas. A proposal built against a document that changed while
+you were reviewing is marked stale — retry the message for a fresh one.
+
+## Chats
+
+Chats are kept in this browser, per document. **New chat** starts fresh and keeps the old one
+under **Chat history**, where you can reopen or delete it. Edit a sent message (or press ↑ in an
+empty prompt) to ask again; **Retry**, **Copy**, and **Report on GitHub** sit under each reply.
+The report opens a prefilled issue with the prompt, reply and model — never your key.
 
 ## What it cannot do
 
 - **No provider list here on purpose.** The catalogue lives in the panel; the providers,
   endpoints and wire formats change independently of this page.
-- **No chat.** One prompt, one proposal; the model does not see the conversation beyond the
-  grammar and the current frame.
 - **No server-side AI.** No OpenFlowKit proxy, key escrow or usage metering.
-- **No streaming edits.** The proposal lands complete; it never typewrites onto the canvas.
+- **No direct edits.** Every change goes through the proposal; nothing lands until you apply it.
+- **No sync.** Chats stay in this browser; images in older chats may be dropped to fit its
+  storage.
+
+writes onto the canvas.
 
 ## Where to go next
 

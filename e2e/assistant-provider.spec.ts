@@ -7,7 +7,7 @@ test('assistant asks for a provider on first send, then remembers it', async ({ 
   const panel = page.getByRole('complementary', { name: 'AI assistant' });
   await expect(panel.getByRole('button', { name: 'Connect an AI provider' })).toBeVisible();
 
-  await panel.getByRole('button', { name: 'Sketch a three-tier architecture' }).click();
+  await panel.getByRole('button', { name: 'Sketch a three-tier web architecture' }).click();
   await expect(panel.getByRole('textbox', { name: 'Ask AI assistant' })).toBeFocused();
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', { name: 'AI provider' });
@@ -19,5 +19,5 @@ test('assistant asks for a provider on first send, then remembers it', async ({ 
   await expect(dialog).toBeHidden();
   await expect(panel.getByRole('button', { name: /^AI provider: claude/ })).toBeVisible();
   await expect(panel.getByRole('textbox', { name: 'Ask AI assistant' })).toBeFocused();
-  await expect(panel.getByRole('textbox', { name: 'Ask AI assistant' })).toHaveValue('Sketch a three-tier architecture');
+  await expect(panel.getByRole('textbox', { name: 'Ask AI assistant' })).toHaveValue('Sketch a three-tier web architecture');
 });

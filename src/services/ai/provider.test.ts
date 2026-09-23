@@ -213,3 +213,152 @@ describe('failures and secrets', () => {
     expect(createProvider({ provider: 'ollama', apiKey: '' }).endpoint).toBe('http://localhost:11434/v1/chat/completions');
   });
 });
+
+describe('streaming and conversation', () => {
+  const sse = (...events: unknown[]) => {
+    const text = events.map((event) => `data: ${typeof event === 'string' ? event : JSON.stringify(event)}\n\n`).join('');
+    const bytes = new TextEncoder().encode(text);
+    // Split mid-event so the reader has to buffer across chunks.
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(bytes.slice(0, 17)); controller.enqueue(bytes.slice(17)); controller.close(); },
+    });
+    return new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+  };
+  const stream = async (id: Parameters<typeof createProvider>[0]['provider'], reply: Response) => {
+    const fetchMock = vi.fn(async () => reply);
+    vi.stubGlobal('fetch', fetchMock);
+    const deltas: { text?: string; thinking?: string }[] = [];
+    const text = await createProvider({ provider: id, apiKey: KEY }).complete({
+      system: 's', thinking: true, onDelta: (delta) => deltas.push(delta),
+      messages: [{ role: 'user', content: 'hi' }, { role: 'assistant', content: 'Hello' }, { role: 'user', content: 'draw' }],
+    });
+    const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
+    vi.unstubAllGlobals();
+    return { text, deltas, url, body: JSON.parse(String(init.body)) as Record<string, unknown> };
+  };
+
+  it('streams Claude text and thinking, and sends the whole conversation', async () => {
+    const { text, deltas, body } = await stream('claude', sse(
+      { type: 'content_block_delta', delta: { type: 'thinking_delta', thinking: 'Plan.' } },
+      { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Hel' } },
+      { type: 'content_block_delta', delta: { type: 'text_delta', text: 'lo' } },
+      { type: 'message_stop' },
+    ));
+    expect(text).toBe('Hello');
+    expect(deltas).toEqual([{ thinking: 'Plan.' }, { text: 'Hel' }, { text: 'lo' }]);
+    expect(body).toMatchObject({ stream: true, thinking: { type: 'enabled', budget_tokens: 4000 } });
+    expect((body.messages as unknown[]).length).toBe(3);
+  });
+
+  it('streams Gemini from the SSE endpoint and marks thought parts as thinking', async () => {
+    const { text, deltas, url, body } = await stream('gemini', sse(
+      { candidates: [{ content: { parts: [{ text: 'Hmm', thought: true }] } }] },
+      { candidates: [{ content: { parts: [{ text: 'Hi' }] } }] },
+    ));
+    expect(url).toContain(':streamGenerateContent?alt=sse');
+    expect(text).toBe('Hi');
+    expect(deltas).toEqual([{ thinking: 'Hmm' }, { text: 'Hi' }]);
+    expect(body).toMatchObject({
+      contents: [{ role: 'user' }, { role: 'model', parts: [{ text: 'Hello' }] }, { role: 'user' }],
+      generationConfig: { thinkingConfig: { includeThoughts: true } },
+    });
+  });
+
+  it('streams OpenAI-wire content and whichever reasoning field the server names', async () => {
+    const { text, deltas, body } = await stream('openrouter', sse(
+      { choices: [{ delta: { reasoning: 'Think' } }] },
+      { choices: [{ delta: { reasoning_content: ' more' } }] },
+      { choices: [{ delta: { content: 'Done' } }] },
+      '[DONE]',
+    ));
+    expect(text).toBe('Done');
+    expect(deltas).toEqual([{ thinking: 'Think', text: '' }, { thinking: ' more', text: '' }, { thinking: '', text: 'Done' }]);
+    expect(body).toMatchObject({ stream: true, messages: [{ role: 'system' }, { role: 'user' }, { role: 'assistant' }, { role: 'user' }] });
+  });
+
+  it('reads a JSON reply whole when a streamed request is not answered with SSE', async () => {
+    const { text, deltas } = await stream('claude', ok({ content: [{ type: 'text', text: 'flowchart\n  A -> B' }] }));
+    expect(text).toBe('flowchart\n  A -> B');
+    expect(deltas).toEqual([{ text: 'flowchart\n  A -> B' }]);
+  });
+});
+
+describe('tool calls and images', () => {
+  const sse = (...events: unknown[]) => new Response(
+    events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(''),
+    { status: 200, headers: { 'content-type': 'text/event-stream' } },
+  );
+  const TOOLS = [{ name: 'read_diagram', description: 'Read one.', parameters: { type: 'object', properties: { frame_id: { type: 'string' } } } }];
+  const IMAGE = { mediaType: 'image/png', data: 'iVBORw0' };
+  /** Round one returns `reply`; round two replays the call and its result. */
+  const loop = async (id: Parameters<typeof createProvider>[0]['provider'], reply: Response) => {
+    const fetchMock = vi.fn(async () => reply);
+    vi.stubGlobal('fetch', fetchMock);
+    const provider = createProvider({ provider: id, apiKey: KEY });
+    const user = { role: 'user' as const, content: 'look', images: [IMAGE] };
+    const turn = await provider.respond({ system: 's', tools: TOOLS, messages: [user], onDelta: () => undefined });
+    fetchMock.mockResolvedValueOnce(ok({}));
+    await provider.respond({
+      system: 's', tools: TOOLS,
+      messages: [user, { role: 'assistant', content: turn.text, toolCalls: turn.toolCalls, replay: turn.replay },
+        { role: 'tool', results: turn.toolCalls.map(({ id: callId, name }) => ({ callId, name, content: 'flowchart\n  A -> B' })) }],
+    }).catch(() => undefined);
+    const bodies = fetchMock.mock.calls.map((call) => JSON.parse(String((call as unknown as [string, RequestInit])[1].body)) as Record<string, unknown>);
+    vi.unstubAllGlobals();
+    return { turn, first: bodies[0]!, second: bodies[1]! };
+  };
+
+  it('Claude: tool_use input streams as JSON fragments; thinking and its signature replay', async () => {
+    const { turn, first, second } = await loop('claude', sse(
+      { type: 'content_block_start', index: 0, content_block: { type: 'thinking', thinking: '' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'thinking_delta', thinking: 'Read it.' } },
+      { type: 'content_block_delta', index: 0, delta: { type: 'signature_delta', signature: 'sig' } },
+      { type: 'content_block_start', index: 1, content_block: { type: 'tool_use', id: 'toolu_1', name: 'read_diagram', input: {} } },
+      { type: 'content_block_delta', index: 1, delta: { type: 'input_json_delta', partial_json: '{"frame_' } },
+      { type: 'content_block_delta', index: 1, delta: { type: 'input_json_delta', partial_json: 'id":"f1"}' } },
+    ));
+    expect(turn.toolCalls).toEqual([{ id: 'toolu_1', name: 'read_diagram', input: { frame_id: 'f1' } }]);
+    expect(first).toMatchObject({
+      tools: [{ name: 'read_diagram', input_schema: TOOLS[0]!.parameters }],
+      messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBORw0' } }, { type: 'text', text: 'look' }] }],
+    });
+    expect(second.messages).toMatchObject([{ role: 'user' },
+      { role: 'assistant', content: [{ type: 'thinking', thinking: 'Read it.', signature: 'sig' }, { type: 'tool_use', id: 'toolu_1', input: { frame_id: 'f1' } }] },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'toolu_1', content: 'flowchart\n  A -> B' }] }]);
+  });
+
+  it('OpenAI wire: tool_calls stream by index; results go back as tool messages', async () => {
+    const { turn, first, second } = await loop('openai', sse(
+      { choices: [{ delta: { tool_calls: [{ index: 0, id: 'call_a', type: 'function', function: { name: 'read_diagram', arguments: '{"frame' } }] } }] },
+      { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '_id":"f1"}' } }] } }] },
+    ));
+    expect(turn).toMatchObject({ text: '', toolCalls: [{ id: 'call_a', name: 'read_diagram', input: { frame_id: 'f1' } }] });
+    expect(first).toMatchObject({
+      tools: [{ type: 'function', function: { name: 'read_diagram', parameters: TOOLS[0]!.parameters } }],
+      messages: [{ role: 'system' }, { role: 'user', content: [{ type: 'text', text: 'look' }, { type: 'image_url', image_url: { url: 'data:image/png;base64,iVBORw0' } }] }],
+    });
+    expect(second.messages).toMatchObject([{ role: 'system' }, { role: 'user' },
+      { role: 'assistant', content: null, tool_calls: [{ id: 'call_a', type: 'function', function: { name: 'read_diagram', arguments: '{"frame_id":"f1"}' } }] },
+      { role: 'tool', tool_call_id: 'call_a', content: 'flowchart\n  A -> B' }]);
+  });
+
+  it('Gemini: a function call replays with its thoughtSignature; minted ids never go back', async () => {
+    const { turn, first, second } = await loop('gemini', sse(
+      { candidates: [{ content: { parts: [{ text: 'Planning', thought: true }] } }] },
+      { candidates: [{ content: { parts: [{ functionCall: { name: 'read_diagram', args: { frame_id: 'f1' } }, thoughtSignature: 'sig' }] } }] },
+    ));
+    expect(turn.toolCalls).toEqual([{ id: 'gemini-call-0', name: 'read_diagram', input: { frame_id: 'f1' } }]);
+    expect(first).toMatchObject({
+      tools: [{ functionDeclarations: [{ name: 'read_diagram' }] }],
+      contents: [{ role: 'user', parts: [{ inlineData: { mimeType: 'image/png', data: 'iVBORw0' } }, { text: 'look' }] }],
+    });
+    expect(second.contents).toEqual([expect.anything(),
+      { role: 'model', parts: [{ functionCall: { name: 'read_diagram', args: { frame_id: 'f1' } }, thoughtSignature: 'sig' }] },
+      { role: 'user', parts: [{ functionResponse: { name: 'read_diagram', response: { result: 'flowchart\n  A -> B' } } }] }]);
+  });
+
+  it('a turn with tool calls and no text is not an empty reply', async () => {
+    const { turn } = await loop('openai', ok({ choices: [{ message: { content: null, tool_calls: [{ id: 'c', function: { name: 'read_diagram', arguments: '{}' } }] } }] }));
+    expect(turn.toolCalls).toHaveLength(1);
+  });
+});

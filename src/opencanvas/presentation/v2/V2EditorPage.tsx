@@ -38,7 +38,8 @@ import { useV2Keyboard } from './useV2Keyboard';
 import { useV2LabelEditing, type OpenEditorOptions } from './useV2LabelEditing';
 import { useV2AgentBridge } from './useV2AgentBridge';
 import { useV2AgentHost } from './useV2AgentHost';
-import { useV2AiRequest } from './useV2AiRequest';
+import { useV2Assistant } from './useV2Assistant';
+import { selectedFrameIds } from '../../application/ai/assistantContext';
 import { useV2AiSettings } from './useV2AiSettings';
 import { useV2Proposal } from './useV2Proposal';
 import type { Proposal } from '../../application/ai/proposalSession';
@@ -54,7 +55,7 @@ import { firstV2Page, mintV2Id, rememberLastDocument } from './v2Document';
 import { downloadTextFile } from './v2Export';
 import type { ScenePage } from '../../domain/document/types';
 import { dslFrameRaw } from '../../../dsl/sceneMeta';
-import { frameEdited, frameScene } from '../../../dsl/frameScene';
+import { dslFrames, frameEdited, frameScene } from '../../../dsl/frameScene';
 import { compile, compileWorkspace, type CompileWorkspaceResult } from '../../../dsl/compile';
 import { parse } from '../../../dsl/parse';
 import { serialize } from '../../../dsl/serialize';
@@ -95,6 +96,8 @@ function changeObjectIds(changeId: string, proposal: Proposal | null): readonly 
         return [command.connector.source.nodeId, command.connector.target.nodeId].filter((id): id is string => !!id);
       case 'set-connector':
         return [command.after.source.nodeId, command.after.target.nodeId].filter((id): id is string => !!id);
+      // A diagram row: nodes it keeps are the same objects, so new identity = added or rebuilt.
+      case 'set-page': return command.after.nodes.filter((node) => !command.before.nodes.includes(node)).map(({ id }) => id);
       default: return [];
     }
   });
@@ -549,16 +552,16 @@ export function V2EditorPage(): React.JSX.Element {
   const agentCapabilities = useV2AgentHost({ fitView: camera.fitView, autoIcons: preferences.autoIcons });
   const aiSettings = useV2AiSettings();
   const loadGrammar = useCallback(async () => String(await agentCapabilities.syntax()), [agentCapabilities]);
-  const ai = useV2AiRequest({
-    settings: aiSettings.settings,
-    proposal,
-    loadGrammar,
-    // The code panel owns the text the user is looking at; when it is bound to a
-    // frame the model edits that frame, otherwise it draws a fresh diagram.
-    currentDsl: () => (codeFrameId ? codeDraft : undefined),
-    frameId: () => codeFrameId ?? undefined,
-    announce: setAnnouncement,
+  const assistant = useV2Assistant({
+    documentId: id ?? null, page, selectedIds: selection.nodeIds,
+    settings: aiSettings.settings, proposal, loadGrammar,
+    tools: { document: session.document, capabilities: agentCapabilities, compile: compileDraft },
+    undo: session.undo, announce: setAnnouncement,
+    // The committed page arrives next frame; fit once it has.
+    onApplied: () => requestAnimationFrame(() => camera.fitView()),
   });
+  const diagramCount = useMemo(() => (page ? dslFrames(page).length : 0), [page]);
+  const selectedDiagramCount = useMemo(() => (page ? selectedFrameIds(page, selection.nodeIds).length : 0), [page, selection.nodeIds]);
   const agentBridge = useV2AgentBridge({
     enabled: preferences.agentBridgeEnabled,
     port: preferences.bridgePort,
@@ -1070,9 +1073,10 @@ export function V2EditorPage(): React.JSX.Element {
               />
             ) : null}
             {agentOpen ? (
-              <V2AgentPanel proposal={proposal} ai={ai} aiSettings={aiSettings}
-                currentRevision={session.revision}
-                readOnly={load.readOnly} onUndo={session.undo} onClose={toggleAgent} />
+              <V2AgentPanel assistant={assistant} proposal={proposal} aiSettings={aiSettings}
+                currentRevision={session.revision} readOnly={load.readOnly}
+                diagramCount={diagramCount} selectedDiagramCount={selectedDiagramCount}
+                onClose={toggleAgent} />
             ) : null}
             <ToastRegion
               items={toasts}
