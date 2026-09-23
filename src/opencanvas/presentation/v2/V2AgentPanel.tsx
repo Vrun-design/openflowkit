@@ -61,7 +61,22 @@ const ACTIVITY: Record<string, string> = {
 const WAITING = ['Reading the page', 'Thinking', 'Writing'] as const;
 const WAITING_BLANK = ['Thinking', 'Writing'] as const;
 
-/** Sparkle, shimmering label, three dots. While waiting, the label walks the stages. */
+/**
+ * The OpenFlowKit mark as a line drawing: two nodes and the flow between them.
+ * Reading, the nodes pulse; otherwise the flow draws from one node to the
+ * other and loops. Without motion it rests fully drawn.
+ */
+function FlowMark({ stage }: { readonly stage: 'read' | 'draw' }) {
+  return (
+    <svg className="ofk-v2-flow-mark" data-stage={stage} viewBox="8 8 24 24" aria-hidden="true">
+      <path pathLength={1} d="M14.5 14.4 L10.6 21.3 C9.4 23.4 11.9 26.4 14.2 24.6 L25.8 14.6 C28.1 12.8 30.6 15.8 29.4 17.9 L25.5 25.5" />
+      <circle cx="14.5" cy="14.4" r="3.4" />
+      <circle cx="25.5" cy="25.5" r="3.4" />
+    </svg>
+  );
+}
+
+/** The mark, shimmering label, three dots. While waiting, the label walks the stages. */
 function Activity({ phase, reading }: { readonly phase: string; readonly reading: boolean }) {
   const [step, setStep] = useState(0);
   const steps = reading ? WAITING : WAITING_BLANK;
@@ -73,7 +88,7 @@ function Activity({ phase, reading }: { readonly phase: string; readonly reading
   const label = phase === 'waiting' ? steps[Math.min(step, steps.length - 1)] : ACTIVITY[phase];
   return (
     <p className="ofk-v2-activity" role="status">
-      <span className="ofk-v2-activity-mark" aria-hidden="true"><Icon icon={IconSparkles} /></span>
+      <span className="ofk-v2-activity-mark" aria-hidden="true"><FlowMark stage={label === 'Reading the page' ? 'read' : 'draw'} /></span>
       <span key={label} className="ofk-v2-shimmer">{label}</span>
       <span className="ofk-v2-dots" aria-hidden="true"><i /><i /><i /></span>
     </p>
