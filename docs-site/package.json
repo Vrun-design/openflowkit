@@ -10,8 +10,9 @@
     "generate:dsl": "node scripts/generate-dsl-reference.mjs",
     "generate:examples": "tsx scripts/build-examples.mts",
     "generate:refs": "tsx scripts/generate-references.mts",
-    "predev": "npm run generate:dsl && npm run generate:examples && npm run generate:refs",
-    "prebuild": "npm run generate:dsl && npm run generate:examples && npm run generate:refs"
+    "check:docs": "node scripts/check-docs.mjs",
+    "predev": "npm run generate:dsl && npm run generate:examples && npm run generate:refs && npm run check:docs",
+    "prebuild": "npm run generate:dsl && npm run generate:examples && npm run generate:refs && npm run check:docs"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.34.0",

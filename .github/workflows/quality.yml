@@ -30,3 +30,24 @@ jobs:
 
       - name: Run E2E smoke suite
         run: npm run e2e:ci
+
+  docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Fails on: an example that does not compile, a dead internal link, a
+      # shipped feature with no page, or a page with no inventory backing.
+      - name: Build docs
+        run: npm run build --workspace docs-site
