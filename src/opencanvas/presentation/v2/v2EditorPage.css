@@ -304,7 +304,8 @@
 .ofk-v2-scope-tag { display: inline-flex; align-items: center; gap: 4px; margin-inline-end: 4px; font-size: 11px; color: var(--ofk-accent); }
 .ofk-v2-scope-tag .ofk-icon { width: 12px; height: 12px; }
 .ofk-v2-reply { display: grid; gap: 8px; font-size: 14px; line-height: 1.6; color: var(--ofk-text); }
-.ofk-v2-reply[data-streaming] .ofk-v2-md > :last-child::after { content: ''; display: inline-block; width: 7px; height: 14px; margin-inline-start: 2px; vertical-align: -2px; border-radius: 1px; background: var(--ofk-accent); animation: ofk-pulse 1s steps(2) infinite; }
+.ofk-v2-reply[data-streaming] > .ofk-v2-md > :last-child::after,
+.ofk-v2-thinking summary[data-live] + .ofk-v2-thinking-body .ofk-v2-md > :last-child::after { content: ''; display: inline-block; width: 7px; height: 14px; margin-inline-start: 2px; vertical-align: -2px; border-radius: 1px; background: var(--ofk-accent); animation: ofk-pulse 1s steps(2) infinite; }
 /* Markdown */
 .ofk-v2-md { display: grid; gap: 10px; overflow-wrap: anywhere; }
 .ofk-v2-md p, .ofk-v2-md ul, .ofk-v2-md ol, .ofk-v2-md pre, .ofk-v2-md h4 { margin: 0; white-space: normal; }
@@ -325,12 +326,12 @@
 .ofk-v2-thinking summary .ofk-icon { width: 13px; height: 13px; }
 .ofk-v2-thinking summary::after { content: '›'; transition: transform .15s; }
 .ofk-v2-thinking[open] summary::after { transform: rotate(90deg); }
-.ofk-v2-thinking summary[data-live], .ofk-v2-shimmer {
+.ofk-v2-shimmer {
   background: linear-gradient(90deg, var(--ofk-muted) 0%, var(--ofk-text) 50%, var(--ofk-muted) 100%);
   background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
   animation: ofk-v2-shimmer 1.6s linear infinite;
 }
-.ofk-v2-thinking summary[data-live] .ofk-icon { color: var(--ofk-accent); }
+.ofk-v2-thinking summary .ofk-v2-flow-mark { width: 13px; height: 13px; color: var(--ofk-accent); }
 @keyframes ofk-v2-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 .ofk-v2-thinking-body { margin: 6px 0 2px; padding: 2px 0 2px 12px; border-inline-start: 2px solid var(--ofk-border); color: var(--ofk-secondary); font-size: 12.5px; line-height: 1.55; max-height: 220px; overflow: auto; }
 .ofk-v2-activity { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; }
@@ -419,11 +420,6 @@
 .ofk-v2-steps summary .ofk-icon { width: 13px; height: 13px; }
 .ofk-v2-steps summary::after { content: '›'; transition: transform .15s; }
 .ofk-v2-steps[open] summary::after { transform: rotate(90deg); }
-.ofk-v2-steps summary[data-live] {
-  background: linear-gradient(90deg, var(--ofk-muted) 0%, var(--ofk-text) 50%, var(--ofk-muted) 100%) 0 0 / 200% 100%;
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  animation: ofk-v2-shimmer 1.6s linear infinite;
-}
 .ofk-v2-steps summary[data-live] .ofk-icon { color: var(--ofk-accent); }
 .ofk-v2-steps ol { list-style: none; margin: 6px 0 2px; padding: 0 0 0 12px; border-inline-start: 2px solid var(--ofk-border); display: grid; gap: 2px; }
 .ofk-v2-steps li { display: flex; align-items: center; gap: 7px; min-height: 24px; font-size: 12.5px; color: var(--ofk-secondary); animation: ofk-v2-label-in .2s ease-out; }
@@ -436,6 +432,8 @@
 .ofk-v2-steps li[data-status="error"] .ofk-v2-step-state .ofk-icon { color: var(--ofk-warning, #d97706); }
 .ofk-v2-step-state i { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--ofk-accent) 30%, transparent); border-top-color: var(--ofk-accent); animation: ofk-v2-spin .7s linear infinite; }
 .ofk-v2-steps li[data-status="running"] .ofk-v2-step-label { color: var(--ofk-text); }
+.ofk-v2-steps li[data-note] { color: var(--ofk-text); font-size: 13px; white-space: normal; }
+.ofk-v2-steps li[data-note] .ofk-v2-step-label { white-space: normal; }
 
 /* Images: thumbnails in the composer and on sent turns. */
 .ofk-v2-attachments { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }

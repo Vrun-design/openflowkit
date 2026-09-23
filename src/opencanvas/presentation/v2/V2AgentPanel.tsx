@@ -64,9 +64,9 @@ const WAITING_BLANK = ['Thinking', 'Writing'] as const;
 /**
  * The OpenFlowKit mark as a line drawing: two nodes and the flow between them.
  * Reading, the nodes pulse; otherwise the flow draws from one node to the
- * other and loops. Without motion it rests fully drawn.
+ * other and loops. Still (and without motion) it rests fully drawn.
  */
-function FlowMark({ stage }: { readonly stage: 'read' | 'draw' }) {
+function FlowMark({ stage }: { readonly stage: 'read' | 'draw' | 'still' }) {
   return (
     <svg className="ofk-v2-flow-mark" data-stage={stage} viewBox="8 8 24 24" aria-hidden="true">
       <path pathLength={1} d="M14.5 14.4 L10.6 21.3 C9.4 23.4 11.9 26.4 14.2 24.6 L25.8 14.6 C28.1 12.8 30.6 15.8 29.4 17.9 L25.5 25.5" />
@@ -129,13 +129,15 @@ function CopyButton({ text, label = 'Copy' }: { readonly text: string; readonly 
     onClick={() => { void navigator.clipboard?.writeText(text).then(() => setCopied(true)); }} />;
 }
 
-function Thinking({ message, live }: { readonly message: ChatMessage; readonly live: boolean }) {
+function Thinking({ message, live: streaming }: { readonly message: ChatMessage; readonly live: boolean }) {
   if (!message.thinking) return null;
+  // Live only until the reply moves on: to text, or to its first tool step.
+  const live = streaming && !message.steps?.length;
   const seconds = message.thoughtMs ? Math.max(1, Math.round(message.thoughtMs / 1000)) : 0;
   return (
     <details className="ofk-v2-thinking" open={live && !message.text ? true : undefined}>
       <summary data-live={live && !message.text ? '' : undefined}>
-        <Icon icon={IconBulb} />{live && !message.text ? 'Thinking…' : seconds ? `Thought for ${seconds}s` : 'Thoughts'}
+        <FlowMark stage={live && !message.text ? 'draw' : 'still'} />{live && !message.text ? <span className="ofk-v2-shimmer">Thinking…</span> : seconds ? `Thought for ${seconds}s` : 'Thoughts'}
       </summary>
       <div className="ofk-v2-thinking-body"><Markdown text={message.thinking} /></div>
     </details>
@@ -151,23 +153,26 @@ const STEP_ICONS: Record<string, TablerIcon> = {
 function Steps({ steps, live }: { readonly steps: readonly AgentStep[] | undefined; readonly live: boolean }) {
   if (!steps?.length) return null;
   const running = steps.find(({ status }) => status === 'running');
-  const failed = steps.filter(({ status }) => status === 'error').length;
+  const tools = steps.filter(({ tool }) => tool !== 'note');
+  const failed = tools.filter(({ status }) => status === 'error').length;
   const summary = live && running ? `${running.label}…`
-    : `${steps.length} ${steps.length === 1 ? 'step' : 'steps'}${failed ? ` · ${failed} retried` : ''}`;
+    : `${tools.length} ${tools.length === 1 ? 'step' : 'steps'}${failed ? ` · ${failed} retried` : ''}`;
   return (
     <details className="ofk-v2-steps" open={live || undefined}>
-      <summary data-live={live && running ? '' : undefined}><Icon icon={IconListDetails} />{summary}</summary>
+      <summary data-live={live && running ? '' : undefined}>
+        <Icon icon={IconListDetails} />{live && running ? <span className="ofk-v2-shimmer">{summary}</span> : summary}
+      </summary>
       <ol>
-        {steps.map((step) => (
-          <li key={step.id} data-status={step.status}>
+        {steps.map((step) => (step.tool === 'note'
+          ? <li key={step.id} data-note=""><span className="ofk-v2-step-label"><Markdown text={step.label} /></span></li>
+          : <li key={step.id} data-status={step.status}>
             <Icon icon={STEP_ICONS[step.tool] ?? IconSparkles} />
             <span className="ofk-v2-step-label">{step.label}</span>
             {step.detail ? <span className="ofk-v2-step-detail">{step.detail}</span> : null}
             <span className="ofk-v2-step-state" aria-label={step.status === 'running' ? 'Running' : step.status === 'error' ? 'Needed a fix' : 'Done'}>
               {step.status === 'running' ? <i /> : <Icon icon={step.status === 'error' ? IconAlertTriangle : IconCheck} />}
             </span>
-          </li>
-        ))}
+          </li>))}
       </ol>
     </details>
   );

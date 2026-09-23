@@ -39,13 +39,16 @@ describe('assistant agent', () => {
       turn('Added a refund path.'),
     ];
     const steps = new Map<string, AgentStep>();
+    const narration: string[] = [];
     const result = await runAssistantAgent({
+      onNarration: (text) => narration.push(text),
       messages: [{ role: 'user', content: 'add a refund path' }], toolkit,
       respond: async (messages) => { seen.push([...messages]); return replies.shift()!; },
       onStep: (step) => steps.set(step.id, step),
     });
 
-    expect(result).toEqual({ text: 'Let me look.\n\nAdded a refund path.', rounds: 4 });
+    expect(result).toEqual({ text: 'Added a refund path.', rounds: 4 });
+    expect(narration).toEqual(['Let me look.']);
     expect([...steps.values()].map(({ status, label }) => `${status}: ${label}`)).toEqual([
       'done: Read the diagram',
       'error: Draft for the diagram did not compile',

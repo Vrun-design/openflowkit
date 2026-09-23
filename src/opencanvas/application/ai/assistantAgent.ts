@@ -20,6 +20,8 @@ export interface AgentRunOptions {
   readonly respond: (messages: readonly AiMessage[], round: number) => Promise<AiTurn>;
   /** A step started (status running) or settled; same id both times. */
   readonly onStep: (step: AgentStep) => void;
+  /** Text the model wrote before calling tools ("Let me look first"); the reply is the last round's text. */
+  readonly onNarration?: (text: string, round: number) => void;
   readonly signal?: AbortSignal;
   readonly maxRounds?: number;
 }
@@ -32,16 +34,15 @@ const aborted = (signal?: AbortSignal): void => {
   if (signal?.aborted) throw new DOMException('Stopped', 'AbortError');
 };
 
-/** Resolves to the text of every round, joined; tool calls past the cap are dropped. */
+/** Resolves to the last round's text; earlier text goes to `onNarration`. Tool calls past the cap are dropped. */
 export async function runAssistantAgent(options: AgentRunOptions): Promise<{ readonly text: string; readonly rounds: number }> {
-  const { toolkit, respond, onStep, signal, maxRounds = MAX_ROUNDS } = options;
+  const { toolkit, respond, onStep, onNarration, signal, maxRounds = MAX_ROUNDS } = options;
   const messages: AiMessage[] = [...options.messages];
-  const texts: string[] = [];
   for (let round = 0; ; round += 1) {
     aborted(signal);
     const turn = await respond(messages, round);
-    if (turn.text.trim()) texts.push(turn.text.trim());
-    if (!turn.toolCalls.length || round + 1 >= maxRounds) return { text: texts.join('\n\n'), rounds: round + 1 };
+    if (!turn.toolCalls.length || round + 1 >= maxRounds) return { text: turn.text.trim(), rounds: round + 1 };
+    if (turn.text.trim()) onNarration?.(turn.text.trim(), round);
     messages.push({ role: 'assistant', content: turn.text, toolCalls: turn.toolCalls, replay: turn.replay });
     const results = [];
     for (const [index, call] of turn.toolCalls.entries()) {

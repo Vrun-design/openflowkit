@@ -159,17 +159,13 @@ export function useV2Assistant(options: V2AssistantOptions) {
         .slice(-HISTORY_TURNS).map(turnOf);
       const grammar = await loadGrammar();
 
-      // Each round streams into the same reply; rounds after the first start a new paragraph.
       let roundText = false;
-      let breakBefore = false;
       const onDelta = ({ text, thinking }: { text?: string; thinking?: string }) => {
         if (text) {
           if (!firstText) firstText = performance.now();
-          const gap = breakBefore;
-          breakBefore = false;
           roundText = true;
           setActivity((current) => (current === 'fixing' ? current : 'streaming'));
-          patch(id, (message) => ({ text: message.text + (gap && message.text.trim() ? '\n\n' : '') + text }));
+          patch(id, (message) => ({ text: message.text + text }));
         }
         if (thinking) patch(id, (message) => ({ thinking: (message.thinking ?? '') + thinking }));
       };
@@ -203,11 +199,14 @@ export function useV2Assistant(options: V2AssistantOptions) {
           const result = await runAssistantAgent({
             messages: toAi(turns), toolkit, signal: controller.signal,
             respond: (conversation, round) => {
-              breakBefore = round > 0;
               if (round > 0) setActivity('waiting');
               return ask(() => provider.respond({ ...request, system, messages: conversation, tools: toolkit.tools }));
             },
             onStep: (step) => { stepped = true; patch(id, (message) => ({ steps: upsertStep(message.steps, step) })); },
+            // What the model said before a tool call moves into the steps, where it happened in time.
+            onNarration: (said, round) => patch(id, (message) => ({
+              text: '', steps: upsertStep(message.steps, { id: `note:${round}`, tool: 'note', label: said, status: 'done' }),
+            })),
           });
           text = result.text;
           // A block pasted in the reply never doubles a diagram a tool already drafted.
