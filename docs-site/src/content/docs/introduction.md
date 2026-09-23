@@ -7,6 +7,11 @@ OpenFlowKit is an infinite canvas for technical diagrams that treats text as the
 truth. A small line-oriented language — OpenFlow DSL — compiles to shapes, connectors and
 layout; the canvas edits the same document; and an agent can drive either through MCP.
 
+<figure class="ofk-screen">
+  <img class="ofk-screen-light" src="/screens/editor-light.webp" width="2880" height="1800" loading="lazy" alt="The OpenFlowKit editor: an architecture diagram on the canvas, generated from the OpenFlow DSL in the code panel beside it" />
+  <img class="ofk-screen-dark" src="/screens/editor-dark.webp" width="2880" height="1800" loading="lazy" alt="The OpenFlowKit editor in dark mode: an architecture diagram generated from the OpenFlow DSL in the code panel" />
+</figure>
+
 ## Three ways in
 
 - **Draw it.** Shapes, connectors, ink, images and charts, with the [canvas](/canvas-basics/)

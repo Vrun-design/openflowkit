@@ -1,80 +1,140 @@
-/* OpenFlowKit docs visual system. Colours mirror the app's design-system
-   tokens (src/opencanvas/presentation/design-system/tokens.ts): warm neutrals,
-   #e95420 as the single primary, #b63e14 light / #ffb18e dark as the accent. */
+/* OpenFlowKit docs: the app's own visual system, so the docs read as part of
+   the product. Values mirror src/opencanvas/presentation/design-system/tokens.ts:
+   warm neutrals, Inter, radii 8/12/16, orange only for the primary action (the
+   accessible accent, not the 3.1:1 brand seed the app allows itself),
+   selected chrome as inverse neutral. Starlight's styles sit in cascade layers,
+   so these unlayered rules win without specificity games. */
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter-400-700-latin.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
 :root {
+  --sl-font: Inter, ui-sans-serif, system-ui, sans-serif;
+  --sl-font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
   --sl-color-accent-low: #fce9df;
   --sl-color-accent: #b63e14;
   --sl-color-accent-high: #99330f;
   --sl-color-bg: #fdfdfb;
   --sl-color-bg-nav: #fdfdfb;
   --sl-color-bg-sidebar: #fdfdfb;
+  --sl-color-hairline: #dedfd9;
+  --sl-color-hairline-light: #dedfd9;
   --sl-color-hairline-shade: #dedfd9;
-  --sl-color-text: #252724;
+  --sl-color-text: #535750;
   --sl-color-text-accent: #b63e14;
-  --docs-surface: #fdfdfb;
-  --docs-surface-soft: #efefec;
-  --docs-border: rgba(37, 39, 36, 0.12);
-  --docs-border-strong: rgba(37, 39, 36, 0.2);
-  --docs-text-strong: #252724;
-  --docs-text: #535750;
-  --docs-text-soft: #62665f;
-  --docs-cta-bg: #b63e14;
-  --docs-cta-text: #ffffff;
-  --docs-hero-glow: rgba(233, 84, 32, 0.12);
-  --docs-panel-shadow: 0 24px 80px rgba(37, 39, 36, 0.08);
+  --sl-color-white: #252724;
+  --sl-color-gray-1: #252724;
+  --sl-color-gray-2: #535750;
+  --sl-color-gray-3: #62665f;
+  --ofk-canvas: #f7f7f5;
+  --ofk-surface: #fdfdfb;
+  --ofk-raised: #efefec;
+  --ofk-text: #252724;
+  --ofk-muted: #62665f;
+  --ofk-border: #dedfd9;
+  --ofk-dot: rgb(83 87 80 / 0.2);
+  --ofk-inverse: #252724;
+  --ofk-on-inverse: #fdfdfb;
+  --ofk-primary: #b63e14;
+  --ofk-primary-hover: #99330f;
+  --ofk-on-primary: #fdfdfb;
+  --ofk-shadow-overlay: 0 2px 4px rgb(37 39 36 / 0.06), 0 16px 40px rgb(37 39 36 / 0.12);
 }
 
 :root[data-theme='dark'] {
   --sl-color-accent-low: #482b20;
   --sl-color-accent: #ffb18e;
   --sl-color-accent-high: #ffc6ad;
-  --sl-color-bg: #232622;
-  --sl-color-bg-nav: #232622;
-  --sl-color-bg-sidebar: #232622;
+  --sl-color-bg: #191b19;
+  --sl-color-bg-nav: #191b19;
+  --sl-color-bg-sidebar: #191b19;
+  --sl-color-hairline: #41483c;
+  --sl-color-hairline-light: #41483c;
   --sl-color-hairline-shade: #41483c;
-  --sl-color-text: #f1f2ec;
+  --sl-color-text: #c1c6ba;
   --sl-color-text-accent: #ffb18e;
-  --docs-surface: #232622;
-  --docs-surface-soft: #2e322c;
-  --docs-border: rgba(241, 242, 236, 0.14);
-  --docs-border-strong: rgba(241, 242, 236, 0.24);
-  --docs-text-strong: #f1f2ec;
-  --docs-text: #c1c6ba;
-  --docs-text-soft: #a3ab9c;
-  --docs-cta-bg: #ffb18e;
-  --docs-cta-text: #301b12;
-  --docs-hero-glow: rgba(233, 84, 32, 0.18);
-  --docs-panel-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+  --sl-color-white: #f1f2ec;
+  --sl-color-gray-1: #f1f2ec;
+  --sl-color-gray-2: #c1c6ba;
+  --sl-color-gray-3: #a3ab9c;
+  --sl-color-gray-5: #2e322c;
+  --sl-color-gray-6: #232622;
+  --ofk-canvas: #191b19;
+  --ofk-surface: #232622;
+  --ofk-raised: #2e322c;
+  --ofk-text: #f1f2ec;
+  --ofk-muted: #a3ab9c;
+  --ofk-border: #41483c;
+  --ofk-dot: rgb(193 198 186 / 0.26);
+  --ofk-inverse: #f1f2ec;
+  --ofk-on-inverse: #191b19;
+  --ofk-primary: #ffb18e;
+  --ofk-primary-hover: #ffc6ad;
+  --ofk-on-primary: #301b12;
+  --ofk-shadow-overlay: 0 2px 4px rgb(0 0 0 / 0.3), 0 16px 40px rgb(0 0 0 / 0.4);
 }
 
-/* Type scale: one reading size, tighter headings, comfortable prose. */
-.sl-markdown-content {
+/* Chrome: a neutral wordmark like the app's title bar, not an orange headline. */
+.site-title {
+  color: var(--ofk-text);
   font-size: 1rem;
-  line-height: 1.7;
-  color: var(--docs-text);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-.sl-markdown-content h1,
-.sl-markdown-content h2,
-.sl-markdown-content h3,
-.sl-markdown-content h4 {
-  color: var(--docs-text-strong);
-  letter-spacing: -0.02em;
+.site-title img {
+  height: 1.75rem;
+  width: auto;
+}
+
+/* Selected chrome is inverse neutral; orange is reserved for the primary action. */
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover,
+.sidebar-content a[aria-current='page']:focus {
+  color: var(--ofk-on-inverse);
+  background-color: var(--ofk-inverse);
+  border-radius: 8px;
+}
+
+.sidebar-content a {
+  border-radius: 8px;
+}
+
+.sidebar-content summary .group-label .large {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ofk-muted);
+}
+
+/* Prose: one reading size, headings in the app's weight, not display type. */
+.sl-markdown-content {
+  line-height: 1.7;
+}
+
+.sl-markdown-content :is(h1, h2, h3, h4) {
+  color: var(--ofk-text);
+  font-weight: 600;
+  letter-spacing: -0.015em;
 }
 
 .sl-markdown-content h2 {
   margin-top: 2.5rem;
-  font-size: 1.55rem;
+  font-size: 1.5rem;
 }
 
 .sl-markdown-content h3 {
-  margin-top: 1.9rem;
-  font-size: 1.2rem;
+  margin-top: 1.75rem;
+  font-size: 1.15rem;
 }
 
-.sl-markdown-content p,
-.sl-markdown-content li {
-  color: var(--docs-text);
+h1#_top {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ofk-text);
 }
 
 .sl-markdown-content table {
@@ -83,107 +143,63 @@
 }
 
 .sl-markdown-content :not(pre) > code {
-  background: color-mix(in srgb, var(--docs-surface-soft) 80%, transparent);
-  border: 1px solid var(--docs-border);
-  border-radius: 0.35rem;
+  background: var(--ofk-raised);
+  border: 1px solid var(--ofk-border);
+  border-radius: 6px;
   padding: 0.1rem 0.3rem;
-  color: var(--docs-text-strong);
+  color: var(--ofk-text);
 }
 
-.docs-home-shell {
-  position: relative;
-  margin-top: 2.75rem;
+.sl-markdown-content img {
+  border-radius: 12px;
 }
 
-.docs-home-shell--hero {
-  margin-top: 0.5rem;
+/* A product screenshot: framed like the app window it is. */
+.ofk-screen {
+  margin: 1.5rem 0;
+  border: 1px solid var(--ofk-border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--ofk-shadow-overlay);
+  line-height: 0;
 }
 
-.docs-home-shell--hero::before {
-  content: '';
-  position: absolute;
-  inset: -2rem -1.5rem auto;
-  height: 24rem;
-  border-radius: 2rem;
-  background:
-    radial-gradient(circle at top left, var(--docs-hero-glow), transparent 45%),
-    linear-gradient(135deg, color-mix(in srgb, var(--sl-color-accent) 6%, transparent), transparent 55%);
-  pointer-events: none;
-  z-index: 0;
+.ofk-screen img {
+  width: 100%;
+  height: auto;
+  border-radius: 0;
 }
 
-.docs-home-hero {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.85fr);
-  align-items: stretch;
+.ofk-screen-dark,
+:root[data-theme='dark'] .ofk-screen-light {
+  display: none;
 }
 
-.docs-home-hero-copy,
-.docs-home-panel,
-.docs-home-card,
-.docs-home-link-list a {
-  border: 1px solid var(--docs-border);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--docs-surface) 96%, transparent), var(--docs-surface));
-  box-shadow: var(--docs-panel-shadow);
+:root[data-theme='dark'] .ofk-screen-dark {
+  display: block;
 }
 
-.docs-home-hero-copy {
-  border-radius: 2rem;
-  padding: 2.4rem;
-}
-
-.docs-home-panel {
-  border-radius: 1.6rem;
-  padding: 1.4rem;
-}
-
-.docs-home-panel-label,
-.docs-home-eyebrow,
-.docs-home-section-label,
-.docs-home-kicker {
-  margin: 0 0 0.9rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--sl-color-accent);
-}
-
-.docs-home-hero h1,
-.docs-home-section h2 {
-  margin: 0;
-  letter-spacing: -0.04em;
-  color: var(--docs-text-strong);
-}
-
-.docs-home-hero h1 {
-  max-width: 11ch;
-  font-size: clamp(2.8rem, 5.6vw, 5.2rem);
-  line-height: 0.92;
-}
-
-/* Compiled examples: the rendered diagram beside the DSL that produced it.
-   Both SVGs exist; CSS picks the one that matches the active theme. */
+/* Compiled examples: the diagram on a patch of canvas (canvas colour and dot
+   grid, as in the app) above the DSL that produced it. Stacked, so a wide
+   diagram gets the full column. Both SVGs exist; CSS picks the theme's. */
 .ofk-example {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
   margin: 1.5rem 0;
-  padding: 1rem;
-  border: 1px solid var(--docs-border);
-  border-radius: 1rem;
-  background: color-mix(in srgb, var(--docs-surface-soft) 70%, transparent);
+  border: 1px solid var(--ofk-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--ofk-surface);
 }
 
 .ofk-example-render {
   display: grid;
   gap: 0.85rem;
-  align-content: start;
+  align-content: center;
   min-width: 0;
+  padding: 1.5rem 1.25rem;
+  background-color: var(--ofk-canvas);
+  background-image: radial-gradient(circle, var(--ofk-dot) 1px, transparent 1.2px);
+  background-size: 16px 16px;
 }
 
 .ofk-example-view {
@@ -196,12 +212,14 @@
 
 .ofk-example-view img {
   max-width: 100%;
+  max-height: 26rem;
+  width: auto;
   height: auto;
 }
 
 .ofk-example-view-name {
   font-size: 0.78rem;
-  color: var(--docs-text-soft);
+  color: var(--ofk-muted);
 }
 
 .ofk-example-dark {
@@ -216,260 +234,35 @@
   display: block;
 }
 
-.ofk-example-source,
-.ofk-example-source .expressive-code {
+.ofk-example-source {
   min-width: 0;
+  border-top: 1px solid var(--ofk-border);
+}
+
+.ofk-example-source,
+.ofk-example-source .expressive-code,
+.ofk-example-source figure,
+.ofk-example-source pre {
+  height: 100%;
   margin: 0;
 }
 
+.ofk-example-source .expressive-code .frame {
+  box-shadow: none;
+}
+
 .ofk-example-source pre {
-  margin: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
   font-size: 0.82rem;
   line-height: 1.6;
 }
 
 @media (max-width: 60em) {
-  .ofk-example {
-    grid-template-columns: 1fr;
-  }
-
   /* Below ~600px a diagram at full width drops under ~10px labels. Keep a
      legible floor and let the figure scroll sideways instead. */
   .ofk-example-view img {
     min-width: min(640px, 190%);
-  }
-}
-
-.docs-home-lead,
-.docs-home-section-copy p,
-.docs-home-card p,
-.docs-home-signal-list li {
-  color: var(--docs-text);
-}
-
-.docs-home-lead {
-  max-width: 44rem;
-  margin-top: 1rem;
-  font-size: 1.06rem;
-  line-height: 1.75;
-}
-
-.docs-home-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.85rem;
-  margin-top: 1.65rem;
-}
-
-.docs-home-actions a {
-  text-decoration: none;
-}
-
-.docs-home-primary,
-.docs-home-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 3rem;
-  padding: 0.85rem 1.25rem;
-  border-radius: 999px;
-  font-weight: 700;
-  transition:
-    transform 160ms ease,
-    border-color 160ms ease,
-    background-color 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.docs-home-primary:hover,
-.docs-home-secondary:hover,
-.docs-home-card:hover,
-.docs-home-link-list a:hover {
-  transform: translateY(-1px);
-}
-
-.docs-home-primary {
-  background: var(--sl-color-accent);
-  color: white;
-  box-shadow: 0 14px 34px color-mix(in srgb, var(--sl-color-accent) 24%, transparent);
-}
-
-.docs-home-secondary {
-  border: 1px solid var(--docs-border-strong);
-  color: var(--docs-text-strong);
-  background: color-mix(in srgb, var(--docs-surface-soft) 78%, transparent);
-}
-
-.docs-home-signal-list {
-  display: grid;
-  gap: 0.8rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.docs-home-signal-list li {
-  position: relative;
-  padding-left: 1rem;
-  line-height: 1.55;
-}
-
-.docs-home-signal-list li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.55rem;
-  width: 0.42rem;
-  height: 0.42rem;
-  border-radius: 999px;
-  background: var(--sl-color-accent);
-}
-
-.docs-home-mini-grid {
-  display: grid;
-  gap: 0.8rem;
-  margin-top: 1.25rem;
-}
-
-.docs-home-mini-card {
-  display: block;
-  padding: 0.95rem 1rem;
-  border-radius: 1rem;
-  text-decoration: none;
-  border: 1px solid var(--docs-border);
-  background: color-mix(in srgb, var(--docs-surface-soft) 78%, transparent);
-}
-
-.docs-home-mini-card span {
-  display: block;
-  margin-bottom: 0.35rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--sl-color-accent);
-}
-
-.docs-home-mini-card strong {
-  color: var(--docs-text-strong);
-  font-size: 0.96rem;
-  line-height: 1.4;
-}
-
-.docs-home-section-copy {
-  max-width: 46rem;
-  margin-bottom: 1.2rem;
-}
-
-.docs-home-section-copy h2 {
-  font-size: clamp(2rem, 3.6vw, 3.4rem);
-  line-height: 0.98;
-}
-
-.docs-home-section-copy p {
-  margin-top: 0.8rem;
-  font-size: 1rem;
-  line-height: 1.7;
-}
-
-.docs-home-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.docs-home-grid--tracks {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.docs-home-grid--insight {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.docs-home-card {
-  display: block;
-  padding: 1.3rem;
-  border-radius: 1.25rem;
-  text-decoration: none;
-  transition:
-    transform 160ms ease,
-    border-color 160ms ease,
-    background-color 160ms ease;
-}
-
-.docs-home-card h3 {
-  margin: 0.3rem 0 0.5rem;
-  color: var(--docs-text-strong);
-  font-size: 1.06rem;
-  line-height: 1.35;
-}
-
-.docs-home-card p {
-  margin: 0;
-  line-height: 1.65;
-}
-
-.docs-home-card--track,
-.docs-home-card--workflow {
-  background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--sl-color-accent) 10%, transparent), transparent 45%),
-    linear-gradient(180deg, color-mix(in srgb, var(--docs-surface-soft) 78%, transparent), var(--docs-surface));
-}
-
-.docs-home-link-list {
-  display: grid;
-  gap: 0.85rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.docs-home-link-list a {
-  display: block;
-  padding: 1rem 1.05rem;
-  border-radius: 1rem;
-  text-decoration: none;
-  font-weight: 600;
-  color: var(--docs-text-strong);
-}
-
-@media (max-width: 70em) {
-  .docs-home-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .docs-home-grid--insight {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 50em) {
-  .docs-home-shell {
-    margin-top: 2rem;
-  }
-
-  .docs-home-shell--hero::before {
-    inset: -1rem -0.5rem auto;
-    height: 16rem;
-  }
-
-  .docs-home-hero-copy,
-  .docs-home-panel {
-    padding: 1.35rem;
-    border-radius: 1.35rem;
-  }
-
-  .docs-home-grid,
-  .docs-home-grid--tracks,
-  .docs-home-link-list {
-    grid-template-columns: 1fr;
-  }
-
-  .docs-home-hero h1 {
-    max-width: none;
-    font-size: clamp(2.4rem, 10vw, 3.5rem);
-  }
-
-  .docs-home-section-copy h2 {
-    font-size: clamp(1.8rem, 8vw, 2.6rem);
+    max-height: none;
   }
 }

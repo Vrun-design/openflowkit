@@ -97,8 +97,9 @@ async function renderExample(example: Example, hash: string): Promise<{ entry: E
   const files: { name: string; svg: string }[] = [];
   const views = workspace.views.map((view, index) => {
     const document = documentFrom(view.result, `example-${hash}-${index}`, view.name || hash);
-    const light = exportCanonicalSvg(document, { theme: 'light', pixelRatio: 1 });
-    const dark = exportCanonicalSvg(document, { theme: 'dark', pixelRatio: 1 });
+    // Transparent: the page draws the canvas (colour and dot grid) behind it.
+    const light = exportCanonicalSvg(document, { theme: 'light', pixelRatio: 1, transparent: true });
+    const dark = exportCanonicalSvg(document, { theme: 'dark', pixelRatio: 1, transparent: true });
     const suffix = workspace.views.length > 1 ? `-${index + 1}-${slug(view.name || view.viewId)}` : '';
     const lightName = `${hash}${suffix}-light.svg`;
     const darkName = `${hash}${suffix}-dark.svg`;

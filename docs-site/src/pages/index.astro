@@ -1,27 +1,8 @@
 ---
-// The landing page: one screen, one compiled example, three ways in. The
-// example SVG is read from the manifest the docs build generates, so the hero
-// is the same compiler output the reference pages show.
-import { readFileSync } from 'node:fs';
+// The landing page: one screen of the real app (captured by
+// scripts/capture-screens.mjs), three ways in, and where to read next. It uses
+// the docs' app tokens (custom.css), so it looks like the product it describes.
 import '../styles/custom.css';
-
-interface ExampleView {
-  readonly name: string;
-  readonly light: string;
-  readonly dark: string;
-  readonly width: number;
-  readonly height: number;
-}
-interface ExampleEntry {
-  readonly family: string;
-  readonly views: readonly ExampleView[];
-}
-
-const manifest = JSON.parse(
-  readFileSync(new URL('../../public/examples/examples.json', import.meta.url), 'utf8'),
-) as Record<string, ExampleEntry>;
-const hero = Object.values(manifest).find((entry) => entry.family === 'architecture' && entry.views.length === 1);
-const heroView = hero?.views[0];
 
 const paths = [
   {
@@ -54,259 +35,239 @@ const paths = [
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="canonical" href="https://docs.openflowkit.com/" />
+    <link rel="preload" href="/fonts/inter-400-700-latin.woff2" as="font" type="font/woff2" crossorigin />
     <script is:inline>
-      // Outside Starlight there is no theme toggle; follow the OS and reuse the
-      // docs dark tokens by setting the same data-theme attribute Starlight uses.
-      document.documentElement.dataset.theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      // Outside Starlight there is no theme toggle: follow the OS, and honour a
+      // choice made in the docs (Starlight stores it under this key).
+      const stored = (() => { try { return localStorage.getItem('starlight-theme'); } catch { return null; } })();
+      document.documentElement.dataset.theme = stored === 'light' || stored === 'dark' ? stored
+        : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     </script>
     <style>
       body {
         margin: 0;
-        background: var(--docs-surface);
-        color: var(--docs-text);
-        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        color: var(--sl-color-text);
+        font: 400 1rem/1.6 var(--sl-font);
+        background-color: var(--ofk-canvas);
+        background-image: radial-gradient(circle, var(--ofk-dot) 1px, transparent 1.2px);
+        background-size: 20px 20px;
       }
       a {
         color: inherit;
+        text-decoration: none;
       }
-      .ofk-landing-nav {
+      .wrap {
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 0 1rem;
+      }
+      /* The nav is a floating bar, like the app's title bar. */
+      .nav {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        max-width: 72rem;
-        margin: 0 auto;
-        padding: 1.25rem 1.5rem;
+        margin: 1rem auto 0;
+        padding: 0.5rem 0.5rem 0.5rem 1rem;
+        border: 1px solid var(--ofk-border);
+        border-radius: 12px;
+        background: var(--ofk-surface);
       }
-      .ofk-landing-nav nav {
-        display: flex;
-        gap: 1.1rem;
-        font-size: 0.92rem;
-        font-weight: 600;
-      }
-      .ofk-landing-nav a {
-        text-decoration: none;
-      }
-      .ofk-landing-brand {
+      .brand {
         display: flex;
         align-items: center;
         gap: 0.6rem;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        color: var(--docs-text-strong);
+        font-weight: 600;
+        color: var(--ofk-text);
       }
-      .ofk-landing-brand img {
-        width: 26px;
-        height: 26px;
+      .brand img {
+        width: 24px;
+        height: 24px;
       }
-      main {
-        max-width: 72rem;
-        margin: 0 auto;
-        padding: 0 1.5rem 4rem;
-      }
-      .ofk-landing-hero {
-        display: grid;
-        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-        gap: 1.25rem;
-        align-items: stretch;
-        margin-top: 1rem;
-      }
-      .ofk-landing-copy,
-      .ofk-landing-hero figure,
-      .ofk-landing-path,
-      .ofk-landing-next a {
-        border: 1px solid var(--docs-border);
-        border-radius: 1.6rem;
-        background: var(--docs-surface);
-        box-shadow: var(--docs-panel-shadow);
-      }
-      .ofk-landing-copy {
-        padding: clamp(1.6rem, 4vw, 2.6rem);
-      }
-      .ofk-landing-copy h1 {
-        margin: 0.4rem 0 0;
-        font-size: clamp(2.1rem, 4.4vw, 3.4rem);
-        line-height: 1.02;
-        letter-spacing: -0.04em;
-        color: var(--docs-text-strong);
-      }
-      .ofk-landing-copy p {
-        max-width: 42rem;
-        line-height: 1.7;
-      }
-      .ofk-landing-eyebrow {
-        margin: 0;
-        font-size: 0.72rem;
-        font-weight: 700;
-        letter-spacing: 0.16em;
-        text-transform: uppercase;
-        color: var(--sl-color-accent);
-      }
-      .ofk-landing-actions {
+      .nav nav {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.85rem;
-        margin-top: 1.6rem;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
       }
-      .ofk-landing-actions a {
+      .nav nav a:not(.button) {
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+      }
+      .nav nav a:not(.button):hover {
+        background: var(--ofk-raised);
+        color: var(--ofk-text);
+      }
+      .button {
         display: inline-flex;
         align-items: center;
-        min-height: 3rem;
-        padding: 0.8rem 1.25rem;
-        border-radius: 999px;
-        font-weight: 700;
-        text-decoration: none;
-      }
-      .ofk-landing-primary {
-        background: var(--docs-cta-bg);
-        color: var(--docs-cta-text);
-      }
-      .ofk-landing-secondary {
-        border: 1px solid var(--docs-border-strong);
-        color: var(--docs-text-strong);
-        background: var(--docs-surface-soft);
-      }
-      .ofk-landing-hero figure {
-        display: grid;
-        place-items: center;
-        gap: 0.5rem;
-        margin: 0;
-        padding: 1.25rem;
-      }
-      .ofk-landing-hero img {
-        max-width: 100%;
-        height: auto;
-      }
-      .ofk-landing-hero figcaption {
-        font-size: 0.78rem;
-        color: var(--docs-text-soft);
-      }
-      .ofk-landing-dark {
-        display: none;
-      }
-      .ofk-landing-section {
-        margin-top: 2.5rem;
-      }
-      .ofk-landing-section h2 {
-        margin: 0 0 1rem;
-        font-size: clamp(1.4rem, 2.6vw, 1.9rem);
-        letter-spacing: -0.03em;
-        color: var(--docs-text-strong);
-      }
-      .ofk-landing-paths {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 1rem;
-      }
-      .ofk-landing-path {
-        display: block;
-        padding: 1.3rem;
-        text-decoration: none;
-      }
-      .ofk-landing-path strong {
-        display: block;
-        margin-bottom: 0.4rem;
-        font-size: 1.05rem;
-        color: var(--docs-text-strong);
-      }
-      .ofk-landing-path p {
-        margin: 0;
-        line-height: 1.65;
-      }
-      .ofk-landing-next {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 0.85rem;
-      }
-      .ofk-landing-next a {
-        padding: 1rem 1.05rem;
-        text-decoration: none;
+        min-height: 40px;
+        padding: 0 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
         font-weight: 600;
-        color: var(--docs-text-strong);
+        white-space: nowrap;
+        transition: background-color 150ms cubic-bezier(0.2, 0, 0, 1);
       }
-      :root[data-theme='dark'] .ofk-landing-light {
-        display: none;
+      .button-primary {
+        background: var(--ofk-primary);
+        color: var(--ofk-on-primary);
       }
-      :root[data-theme='dark'] .ofk-landing-dark {
+      .button-primary:hover {
+        background: var(--ofk-primary-hover);
+      }
+      .button-quiet {
+        border: 1px solid var(--ofk-border);
+        background: var(--ofk-surface);
+        color: var(--ofk-text);
+      }
+      .button-quiet:hover {
+        background: var(--ofk-raised);
+      }
+      .hero {
+        max-width: 44rem;
+        margin: 4.5rem auto 2.5rem;
+        text-align: center;
+      }
+      .hero h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 600;
+        line-height: 1.1;
+        letter-spacing: -0.025em;
+        color: var(--ofk-text);
+      }
+      .hero p {
+        margin: 1rem auto 0;
+        max-width: 38rem;
+        font-size: 1.0625rem;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1.75rem;
+      }
+      .screen {
+        margin: 0;
+      }
+      section {
+        margin-top: 3.5rem;
+      }
+      h2 {
+        margin: 0 0 1rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: var(--ofk-text);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+      }
+      .card {
         display: block;
+        padding: 1.25rem;
+        border: 1px solid var(--ofk-border);
+        border-radius: 12px;
+        background: var(--ofk-surface);
+        transition: border-color 150ms cubic-bezier(0.2, 0, 0, 1);
       }
-      @media (max-width: 60em) {
-        .ofk-landing-hero,
-        .ofk-landing-paths,
-        .ofk-landing-next {
+      .card:hover {
+        border-color: var(--sl-color-gray-3);
+      }
+      .card strong {
+        display: block;
+        margin-bottom: 0.35rem;
+        color: var(--ofk-text);
+        font-weight: 600;
+      }
+      .card p {
+        margin: 0;
+        font-size: 0.9375rem;
+      }
+      .card-link {
+        font-weight: 500;
+        color: var(--ofk-text);
+      }
+      footer {
+        margin: 4rem 0 2rem;
+        font-size: 0.8125rem;
+        color: var(--ofk-muted);
+        text-align: center;
+      }
+      @media (max-width: 50em) {
+        .grid {
           grid-template-columns: 1fr;
+        }
+        .nav nav a:not(.button):not(.keep) {
+          display: none;
+        }
+        .hero {
+          margin-top: 3rem;
         }
       }
     </style>
   </head>
   <body>
-    <header class="ofk-landing-nav">
-      <span class="ofk-landing-brand">
-        <img src="/favicon.svg" alt="" />
-        OpenFlowKit
-      </span>
-      <nav aria-label="Main">
-        <a href="/introduction/">Docs</a>
-        <a href="/quick-start/">Quick start</a>
-        <a href="https://app.openflowkit.com">Open the app</a>
-      </nav>
-    </header>
-    <main>
-      <section class="ofk-landing-hero">
-        <div class="ofk-landing-copy">
-          <p class="ofk-landing-eyebrow">OpenFlowKit 2.0</p>
+    <div class="wrap">
+      <header class="nav">
+        <a class="brand" href="/">
+          <img src="/favicon.svg" alt="" />
+          OpenFlowKit
+        </a>
+        <nav aria-label="Main">
+          <a class="keep" href="/introduction/">Docs</a>
+          <a href="/openflow-dsl-reference/">DSL reference</a>
+          <a href="https://github.com/Vrun-design/openflowkit">GitHub</a>
+          <a class="button button-primary" href="https://app.openflowkit.com">Open the app</a>
+        </nav>
+      </header>
+      <main>
+        <div class="hero">
           <h1>Diagrams that start as text and end as pictures.</h1>
           <p>
             OpenFlowKit is a local-first, agent-native canvas. Write OpenFlow DSL, draw on the
             canvas, or hand either to an agent — one compiler turns all three into the same
             document, and nothing leaves your machine.
           </p>
-          <div class="ofk-landing-actions">
-            <a class="ofk-landing-primary" href="/quick-start/">Start in five minutes</a>
-            <a class="ofk-landing-secondary" href="/openflow-dsl/">Read the DSL</a>
+          <div class="actions">
+            <a class="button button-primary" href="/quick-start/">Start in five minutes</a>
+            <a class="button button-quiet" href="/openflow-dsl/">Read the DSL</a>
           </div>
         </div>
-        {heroView ? (
-          <figure>
-            <img
-              class="ofk-landing-light"
-              src={`/examples/${heroView.light}`}
-              alt="An architecture diagram compiled by OpenFlowKit from OpenFlow DSL"
-              width={heroView.width}
-              height={heroView.height}
-            />
-            <img
-              class="ofk-landing-dark"
-              src={`/examples/${heroView.dark}`}
-              alt="An architecture diagram compiled by OpenFlowKit from OpenFlow DSL"
-              width={heroView.width}
-              height={heroView.height}
-            />
-            <figcaption>Compiled from the DSL at build time — the same output the reference shows.</figcaption>
-          </figure>
-        ) : null}
-      </section>
+        <figure class="ofk-screen screen">
+          <img class="ofk-screen-light" src="/screens/editor-light.webp" width="2880" height="1800" loading="lazy"
+            alt="The OpenFlowKit editor: an architecture diagram on the canvas, generated from the OpenFlow DSL in the code panel beside it" />
+          <img class="ofk-screen-dark" src="/screens/editor-dark.webp" width="2880" height="1800" loading="lazy"
+            alt="The OpenFlowKit editor in dark mode: an architecture diagram generated from the OpenFlow DSL in the code panel" />
+        </figure>
 
-      <section class="ofk-landing-section">
-        <h2>Three ways in</h2>
-        <div class="ofk-landing-paths">
-          {paths.map((path) => (
-            <a class="ofk-landing-path" href={path.href}>
-              <strong>{path.label}</strong>
-              <p>{path.copy}</p>
-            </a>
-          ))}
-        </div>
-      </section>
+        <section>
+          <h2>Three ways in</h2>
+          <div class="grid">
+            {paths.map((path) => (
+              <a class="card" href={path.href}>
+                <strong>{path.label}</strong>
+                <p>{path.copy}</p>
+              </a>
+            ))}
+          </div>
+        </section>
 
-      <section class="ofk-landing-section">
-        <h2>Keep reading</h2>
-        <div class="ofk-landing-next">
-          <a href="/keyboard-shortcuts/">Every shortcut, generated from the app</a>
-          <a href="/animated-export/">Animated SVG, GIF, MP4 and WebM</a>
-          <a href="/architecture-c4/">The C4 model layer</a>
-        </div>
-      </section>
-    </main>
+        <section>
+          <h2>Keep reading</h2>
+          <div class="grid">
+            <a class="card card-link" href="/keyboard-shortcuts/">Every shortcut, generated from the app</a>
+            <a class="card card-link" href="/animated-export/">Animated SVG, GIF, MP4 and WebM</a>
+            <a class="card card-link" href="/architecture-c4/">The C4 model layer</a>
+          </div>
+        </section>
+      </main>
+      <footer>OpenFlowKit is open source and local-first.</footer>
+    </div>
   </body>
 </html>

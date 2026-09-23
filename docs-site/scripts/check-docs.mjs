@@ -2,12 +2,13 @@
 // reference, the compiled examples and the generated references exist. It fails
 // on the three failures the build itself cannot see:
 //
-//   1. an internal link whose target page does not exist;
+//   1. an internal link whose target page (or public/ asset) does not exist;
 //   2. a `shipped` inventory feature whose page does not exist;
 //   3. a page no inventory feature backs (editorial pages are named below).
 //
 // The fourth failure — an example that does not compile — is the build-examples
 // script, which runs before this one.
+import { existsSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,12 +42,12 @@ function slugOf(file) {
 function linkTargets(text) {
   const targets = new Set();
   for (const match of text.matchAll(/\]\((\/[^)\s]*)\)/g)) targets.add(match[1]);
-  for (const match of text.matchAll(/href="(\/[^"\s]*)"/g)) targets.add(match[1]);
+  for (const match of text.matchAll(/(?:href|src)="(\/[^"\s]*)"/g)) targets.add(match[1]);
   return targets;
 }
 
 function isAsset(href) {
-  return /\.(svg|png|jpg|jpeg|webp|gif|ico|xml|txt|json|css|js)$/.test(href);
+  return /\.(svg|png|jpg|jpeg|webp|gif|ico|xml|txt|json|css|js|woff2)$/.test(href);
 }
 
 async function main() {
@@ -63,7 +64,11 @@ async function main() {
   for (const file of [...files, ...astroPages.map((name) => resolve(PAGES, name))]) {
     const text = await readFile(file, 'utf8');
     for (const href of linkTargets(text)) {
-      if (isAsset(href) || href.startsWith('//')) continue;
+      if (href.startsWith('//')) continue;
+      if (isAsset(href)) {
+        if (!existsSync(resolve(DOCS_SITE, 'public', href.slice(1)))) problems.push(`${relative(REPO_ROOT, file)}: asset ${href} is not in public/`);
+        continue;
+      }
       if (!routeExists(href)) problems.push(`${relative(REPO_ROOT, file)}: link ${href} has no page`);
     }
   }

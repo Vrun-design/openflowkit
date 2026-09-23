@@ -54,7 +54,7 @@ export default defineConfig({
   },
   integrations: [
     starlight({
-      title: 'OpenFlowKit Docs',
+      title: 'OpenFlowKit',
       description: 'Documentation for OpenFlowKit — the local-first, AI-powered diagramming tool.',
       favicon: '/favicon.svg',
       logo: {
@@ -71,8 +71,16 @@ export default defineConfig({
       defaultLocale: 'root',
       sidebar,
       // Neutral code themes: the warm palette stays the only colour story.
+      // Frames take the app's surface radius and hairline, no drop shadow.
       expressiveCode: {
         themes: ['github-light', 'github-dark'],
+        styleOverrides: {
+          borderRadius: '12px',
+          borderColor: 'var(--sl-color-hairline)',
+          codeFontFamily: 'var(--sl-font-mono)',
+          uiFontFamily: 'var(--sl-font)',
+          frames: { frameBoxShadowCssValue: 'none' },
+        },
       },
       customCss: ['./src/styles/custom.css'],
     }),
