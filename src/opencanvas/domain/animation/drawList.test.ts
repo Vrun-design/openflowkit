@@ -28,7 +28,7 @@ describe('frame draw list', () => {
     const ops = frameDrawList(pageOf({}), frameOf(), 'light', VIEW_BOX);
     expect(ops).toHaveLength(1);
     expect(ops[0]).toMatchObject({ kind: 'rect', fill: { color: '#ffffff' }, transform: { tx: 0, ty: 0 } });
-    expect(frameDrawList(pageOf({}), frameOf(), 'dark', VIEW_BOX)[0]).toMatchObject({ fill: { color: '#020617' } });
+    expect(frameDrawList(pageOf({}), frameOf(), 'dark', VIEW_BOX)[0]).toMatchObject({ fill: { color: '#191b19' } });
   });
 
   it('draws a node as its outline then its label, in node-local coordinates', () => {
@@ -71,14 +71,15 @@ describe('frame draw list', () => {
     expect(kinds(frameDrawList(pageOf({ nodes: [hidden] }), frameOf(), 'light', VIEW_BOX))).toEqual(['rect']);
   });
 
-  it('draws containers as a plain rectangle with their title', () => {
+  it('draws containers as a plain rectangle with their title in the header band', () => {
     const group = createTestNode('g', {
       kind: 'section', size: { width: 200, height: 120 }, content: { label: 'Boundary' },
     });
     const ops = frameDrawList(pageOf({ nodes: [group] }), frameOf(), 'light', VIEW_BOX);
     expect(kinds(ops)).toEqual(['rect', 'path', 'text']);
     expect(paths(ops)[0]!.commands).toHaveLength(4);
-    expect(texts(ops)[0]).toMatchObject({ text: 'Boundary', align: 'start', x: 0 });
+    // Where the canvas draws it: 16px in, centred in the 40px title band.
+    expect(texts(ops)[0]).toMatchObject({ text: 'Boundary', align: 'start', x: 16, y: 20 });
   });
 
   it('marks a text node page as a fallback frame', () => {

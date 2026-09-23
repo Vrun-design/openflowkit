@@ -53,3 +53,16 @@ describe('canonical SVG goldens', () => {
     });
   }
 });
+
+describe('canonical SVG labels', () => {
+  it('places labels where the canvas does: frame title band, icon label below its plate', async () => {
+    const compiled = await compile(readFixture('architecture/aws-3tier.dsl'));
+    const dark = exportCanonicalSvg(documentFrom(compiled, 'architecture'), { theme: 'dark', pixelRatio: 1 });
+    // The frame title sits in the 40px header band, not halfway down the frame.
+    expect(dark).toMatch(/<text x="16" y="20"[^>]*>AWS three-tier service</);
+    // An icon node paints a 72px plate; its white-on-dark label sits below it, on the canvas.
+    const gateway = /<g data-node-id="gateway"[^>]*><rect x="(\d+)" y="4" width="72" height="72"[^]*?<text x="\d+" y="(\d+)"[^>]*fill="#ffffff"[^>]*>Gateway</.exec(dark);
+    expect(gateway).not.toBeNull();
+    expect(Number(gateway![2])).toBeGreaterThanOrEqual(84);
+  });
+});

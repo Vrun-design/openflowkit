@@ -6,9 +6,9 @@ import { boundsFromPoints } from '../../domain/geometry/bounds';
 import { boundsCorners } from '../../domain/geometry/bounds';
 import type { Bounds2d, Matrix2d, Point2d, Size2d } from '../../domain/geometry/types';
 import { resolveBasicNodePresentation, type BasicNodeShape } from '../../domain/nodes/basicNodePresentation';
-import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
 import { basicNodeDecorations } from '../../domain/nodes/basicNodeDecorations';
 import { resolveChartPresentation } from '../../domain/nodes/chartNodePresentation';
+import { nodeLabelBounds, nodeOutline } from '../../domain/nodes/nodeLabelBounds';
 import type { ConnectorMarkerGlyph, ProjectedConnector } from '../../domain/connectors/types';
 import { connectorMarkerShapes, type MarkerShape } from '../../domain/connectors/markers';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
@@ -29,7 +29,8 @@ import { cameraFitMatrix } from '../../domain/animation/camera';
 import { PULSE_DASH } from '../../domain/animation/frame';
 import type { ElementFrameState, FrameState } from '../../domain/animation/types';
 
-export const SVG_BACKGROUND = { light: '#ffffff', dark: '#020617' } as const;
+// Dark matches the app's dark canvas (tokens.ts darkColors.canvas), so an export looks like the screen.
+export const SVG_BACKGROUND = { light: '#ffffff', dark: '#191b19' } as const;
 
 /** One CSS animation on an exported element; the keyframes live in `<style>`. */
 export interface CssAnimation {
@@ -351,14 +352,17 @@ function connectorPathData(commands: ReturnType<typeof projectPageConnectors>[nu
   ).join(' ');
 }
 
-function labelElement(style: NodeStyle, size: Size2d, label: string, subLabel: string, clipId: string | null): string {
+// The label sits in `nodeLabelBounds`, the rect the Pixi renderers and the DOM
+// editor use: a frame's title band, the canvas below an icon plate, a shape's inset.
+function labelElement(style: NodeStyle, box: Bounds2d, label: string, subLabel: string, clipId: string | null): string {
   const padding = style.textPadding;
-  const x = style.textAlign === 'start' ? padding : style.textAlign === 'end' ? size.width - padding : size.width / 2;
+  const x = style.textAlign === 'start' ? box.x + padding
+    : style.textAlign === 'end' ? box.x + box.width - padding : box.x + box.width / 2;
   const anchor = style.textAlign === 'start' ? 'start' : style.textAlign === 'end' ? 'end' : 'middle';
   const baseline = style.textVerticalAlign === 'top' ? 'hanging' : style.textVerticalAlign === 'bottom' ? 'auto' : 'middle';
-  const y = style.textVerticalAlign === 'top' ? padding
-    : style.textVerticalAlign === 'bottom' ? size.height - padding
-      : size.height / 2;
+  const y = style.textVerticalAlign === 'top' ? box.y + padding
+    : style.textVerticalAlign === 'bottom' ? box.y + box.height - padding
+      : box.y + box.height / 2;
   const common = `fill="${style.textColor}" font-family="${xml(FONT_STACKS[style.fontFamily])}" font-size="${number(style.fontSize)}" font-weight="${style.fontWeight}"`;
   const decoration = style.textDecoration === 'none' ? '' : ` text-decoration="${style.textDecoration}"`;
   const styleAttr = style.fontStyle === 'normal' ? common : `${common} font-style="italic"`;
@@ -481,11 +485,7 @@ function exportNode(
   // exporter cannot drift. Legacy content keys are its fallbacks, not ours.
   const style = resolveNodeStyle(node, background);
   const basic = resolveBasicNodePresentation(node);
-  const outline = basic
-    ? basicNodeOutlinePoints(basic.shape, node.size,
-      typeof node.content.customSvgPath === 'string' ? node.content.customSvgPath : undefined)
-    : [{ x: 0, y: 0 }, { x: node.size.width, y: 0 },
-      { x: node.size.width, y: node.size.height }, { x: 0, y: node.size.height }];
+  const outline = nodeOutline(node);
   const label = typeof node.content.label === 'string' ? node.content.label : node.id;
   const subLabel = typeof node.content.subLabel === 'string' ? node.content.subLabel : '';
   const clip = resolveNodeSizingPolicy(node).clipContent
@@ -502,7 +502,7 @@ function exportNode(
     (defs ? `<defs>${defs}</defs>` : '')
       + outlineMarkup(outline, style, filter)
       + (basic ? decorationMarkup(basic.shape, node.size, style) : '')
-      + labelElement(style, node.size, label, subLabel, clip),
+      + labelElement(style, nodeLabelBounds(node), label, subLabel, clip),
     wrapper
   );
 }
@@ -616,7 +616,7 @@ export function exportCanonicalSvg(
   const { x, y, width, height } = viewBox;
   const pixelRatio = Math.min(4, Math.max(1, options.pixelRatio ?? 1));
   const theme = options.theme ?? 'light';
-  const background = theme === 'dark' ? '#020617' : '#ffffff';
+  const background = theme === 'dark' ? SVG_BACKGROUND.dark : SVG_BACKGROUND.light;
   const connectorMarkup = connectors.map((connector) => {
     const stroke = safeColor(connector.presentation.stroke.color, theme === 'dark' ? '#cbd5e1' : '#475569');
     const state = options.frame?.connectors[connector.id];

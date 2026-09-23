@@ -9,7 +9,7 @@ import { projectPageConnectors } from '../connectors/routeProjection';
 import { connectorMarkerShapes, type MarkerShape } from '../connectors/markers';
 import { resolveBasicNodePresentation } from '../nodes/basicNodePresentation';
 import { basicNodeDecorations } from '../nodes/basicNodeDecorations';
-import { basicNodeOutlinePoints } from '../nodes/basicNodeOutline';
+import { nodeLabelBounds, nodeOutline } from '../nodes/nodeLabelBounds';
 import { isContainerNodeKind } from '../nodes/containerNodePresentation';
 import { resolveNodeSizingPolicy } from '../node-sizing/model';
 import { FONT_STACKS, resolveNodeStyle, type NodeStyle } from '../nodes/nodeStyle';
@@ -109,8 +109,9 @@ export type DrawOp = DrawRectOp | DrawPathOp | DrawTextOp | DrawFallbackOp;
 
 const IDENTITY: Matrix2d = { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
 
+// Same backdrops as canonicalSvg's SVG_BACKGROUND: dark is the app's dark canvas.
 const BACKGROUNDS: Readonly<Record<DrawTheme, string>> = {
-  light: '#ffffff', dark: '#020617', print: '#ffffff',
+  light: '#ffffff', dark: '#191b19', print: '#ffffff',
 };
 const CONNECTOR_STROKES: Readonly<Record<DrawTheme, string>> = {
   light: '#475569', dark: '#cbd5e1', print: '#475569',
@@ -158,18 +159,18 @@ function decorationOf(style: NodeStyle, baselineY: number): DrawTextOp['decorati
 
 /** One label line, placed exactly as `labelElement` places it. */
 function labelOp(
-  transform: Matrix2d, style: NodeStyle, size: { readonly width: number; readonly height: number },
+  transform: Matrix2d, style: NodeStyle, box: Bounds2d,
   text: string, opacity: number, clip: readonly Point2d[] | null,
 ): DrawTextOp {
-  const x = style.textAlign === 'start' ? style.textPadding
-    : style.textAlign === 'end' ? size.width - style.textPadding
-      : size.width / 2;
+  const x = style.textAlign === 'start' ? box.x + style.textPadding
+    : style.textAlign === 'end' ? box.x + box.width - style.textPadding
+      : box.x + box.width / 2;
   const baseline: DrawTextOp['baseline'] = style.textVerticalAlign === 'top' ? 'hanging'
     : style.textVerticalAlign === 'bottom' ? 'alphabetic'
       : 'middle';
-  const y = style.textVerticalAlign === 'top' ? style.textPadding
-    : style.textVerticalAlign === 'bottom' ? size.height - style.textPadding
-      : size.height / 2;
+  const y = style.textVerticalAlign === 'top' ? box.y + style.textPadding
+    : style.textVerticalAlign === 'bottom' ? box.y + box.height - style.textPadding
+      : box.y + box.height / 2;
   const baselineY = baseline === 'alphabetic' ? y
     : baseline === 'hanging' ? y + style.fontSize * 0.8
       : y + style.fontSize * 0.3;
@@ -188,18 +189,6 @@ function labelOp(
   };
 }
 
-function outlineOf(node: SceneNode): readonly Point2d[] {
-  const basic = resolveBasicNodePresentation(node);
-  if (basic) {
-    const customPath = typeof node.content.customSvgPath === 'string' ? node.content.customSvgPath : undefined;
-    return basicNodeOutlinePoints(basic.shape, node.size, customPath);
-  }
-  return [
-    { x: 0, y: 0 }, { x: node.size.width, y: 0 },
-    { x: node.size.width, y: node.size.height }, { x: 0, y: node.size.height },
-  ];
-}
-
 function shapeNodeOps(
   node: SceneNode, matrix: Matrix2d, state: ElementFrameState | undefined, theme: DrawTheme,
 ): readonly DrawOp[] {
@@ -209,7 +198,7 @@ function shapeNodeOps(
     : multiplyMatrices(matrix, popAbout({ x: node.size.width / 2, y: node.size.height / 2 }, state.scale));
   const opacity = (state?.opacity ?? 1) * style.opacity;
   const basic = resolveBasicNodePresentation(node);
-  const outline = outlineOf(node);
+  const outline = nodeOutline(node);
   const ops: DrawOp[] = [{
     kind: 'path', transform, opacity, clip: null,
     commands: subpathCommands([outline]), closed: true,
@@ -231,10 +220,11 @@ function shapeNodeOps(
   }
   const label = typeof node.content.label === 'string' ? node.content.label : node.id;
   const clip = resolveNodeSizingPolicy(node).clipContent ? outline : null;
-  ops.push(labelOp(transform, style, node.size, label, opacity, clip));
+  const labelBox = nodeLabelBounds(node);
+  ops.push(labelOp(transform, style, labelBox, label, opacity, clip));
   const subLabel = typeof node.content.subLabel === 'string' ? node.content.subLabel : '';
   if (subLabel) {
-    const sub = labelOp(transform, style, node.size, subLabel, opacity * 0.72, clip);
+    const sub = labelOp(transform, style, labelBox, subLabel, opacity * 0.72, clip);
     ops.push({ ...sub, y: sub.y + style.fontSize * 1.5, decoration: null });
   }
   return ops;

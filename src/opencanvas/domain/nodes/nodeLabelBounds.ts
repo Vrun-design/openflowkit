@@ -1,6 +1,7 @@
 import type { SceneNode } from '../document/types';
-import type { Bounds2d } from '../geometry/types';
-import { createBounds2d } from '../geometry/bounds';
+import type { Bounds2d, Point2d } from '../geometry/types';
+import { boundsCorners, createBounds2d } from '../geometry/bounds';
+import { basicNodeOutlinePoints } from './basicNodeOutline';
 import { resolveArchitectureNodePresentation } from './architectureNodePresentation';
 import { resolveContainerNodePresentation } from './containerNodePresentation';
 import { resolveBasicNodePresentation, type BasicNodeShape } from './basicNodePresentation';
@@ -91,4 +92,19 @@ export function nodeLabelBounds(node: SceneNode): Bounds2d {
   }
   const basic = resolveBasicNodePresentation(node);
   return insetBounds(node, (basic && SHAPE_LABEL_INSETS[basic.shape]) || FULL);
+}
+
+// The painted silhouette in node-local coordinates, shared by the SVG exporter
+// and the motion frames: a basic shape's outline, an icon node's 72px plate,
+// otherwise the box.
+export function nodeOutline(node: SceneNode): readonly Point2d[] {
+  const basic = resolveBasicNodePresentation(node);
+  if (basic) {
+    const customPath = typeof node.content.customSvgPath === 'string' ? node.content.customSvgPath : undefined;
+    return basicNodeOutlinePoints(basic.shape, node.size, customPath);
+  }
+  const { width, height } = node.size;
+  return boundsCorners(resolveArchitectureNodePresentation(node)?.display === 'provider-icon'
+    ? createBounds2d((width - 72) / 2, 4, 72, 72)
+    : createBounds2d(0, 0, width, height));
 }
