@@ -50,6 +50,19 @@ describe('AI provider catalogue', () => {
     }
   });
 
+  it('suggests models with the default first, and gives thinking models room to answer', () => {
+    for (const definition of AI_PROVIDERS) {
+      if (definition.id === 'custom') {
+        expect(definition.suggestedModels).toEqual([]);
+        continue;
+      }
+      expect(definition.suggestedModels[0], definition.id).toBe(definition.defaultModel);
+      expect(new Set(definition.suggestedModels).size).toBe(definition.suggestedModels.length);
+      // Hosted defaults think before they answer; a 4k budget truncates the diagram.
+      if (definition.id !== 'ollama') expect(definition.maxOutputTokens, definition.id).toBeGreaterThanOrEqual(16_000);
+    }
+  });
+
   it('places the key the way each provider documents it', () => {
     for (const definition of AI_PROVIDERS) {
       const key = definition.keyPlaceholder.replace(/\.\.\.$/, '');

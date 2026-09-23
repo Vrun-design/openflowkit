@@ -20,6 +20,15 @@ export interface AiProviderDefinition {
   readonly defaultBaseUrl: string;
   /** '' for `custom`: unknowable until the user says. */
   readonly defaultModel: string;
+  /** Offered in the model field, `defaultModel` first. Free text still wins. */
+  readonly suggestedModels: readonly string[];
+  /**
+   * Output budget per request. Current hosted models think before they answer
+   * and the thinking counts against it, so hosted providers get room; local and
+   * custom endpoints keep a small one because some servers reject a budget
+   * larger than the model's context.
+   */
+  readonly maxOutputTokens: number;
   readonly keyPlaceholder: string;
   /** Regex source a real key matches; '' when the provider has no fixed shape. */
   readonly keyPattern: string;
@@ -50,11 +59,18 @@ export const RISK_DETAILS: Readonly<Record<ProviderRisk, string>> = {
   proxy_likely: 'The provider usually refuses browser calls (CORS). Expect to pick another provider or point at your own endpoint.',
 };
 
+// ponytail: model ids go stale with every vendor release. Verified 2026-09-23
+// against each provider's model docs / live catalogue; re-check on a release.
+const HOSTED_OUTPUT = 16_000;
+const LOCAL_OUTPUT = 4096;
+
 export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
   {
     id: 'gemini', label: 'Gemini', wire: 'google',
     defaultBaseUrl: 'https://generativelanguage.googleapis.com',
-    defaultModel: 'gemini-2.5-flash-lite',
+    defaultModel: 'gemini-3.8-flash',
+    suggestedModels: ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.7-flash'],
+    maxOutputTokens: HOSTED_OUTPUT,
     keyPlaceholder: 'AIzaSy...', keyPattern: '^AIza', needsKey: true,
     consoleUrl: 'https://aistudio.google.com/app/apikey', consoleName: 'Google AI Studio',
     logoPath: '/logos/Gemini.svg', risk: 'browser_friendly',
@@ -63,7 +79,9 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
   {
     id: 'openai', label: 'OpenAI', wire: 'openai',
     defaultBaseUrl: 'https://api.openai.com/v1',
-    defaultModel: 'gpt-5-mini',
+    defaultModel: 'gpt-6-sol',
+    suggestedModels: ['gpt-6-sol', 'gpt-6-astra', 'gpt-6-luna'],
+    maxOutputTokens: HOSTED_OUTPUT,
     keyPlaceholder: 'sk-...', keyPattern: '^sk-', needsKey: true,
     consoleUrl: 'https://platform.openai.com/api-keys', consoleName: 'OpenAI Platform',
     logoPath: '/logos/Openai.svg', risk: 'mixed',
@@ -74,7 +92,9 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
   {
     id: 'claude', label: 'Claude', wire: 'anthropic',
     defaultBaseUrl: 'https://api.anthropic.com',
-    defaultModel: 'claude-sonnet-4-6',
+    defaultModel: 'claude-opus-5',
+    suggestedModels: ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5', 'claude-fable-5-1'],
+    maxOutputTokens: HOSTED_OUTPUT,
     keyPlaceholder: 'sk-ant-...', keyPattern: '^sk-ant-', needsKey: true,
     consoleUrl: 'https://console.anthropic.com/settings/keys', consoleName: 'Anthropic Console',
     logoPath: '/logos/claude.svg', risk: 'mixed',
@@ -84,6 +104,8 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
     id: 'groq', label: 'Groq', wire: 'openai',
     defaultBaseUrl: 'https://api.groq.com/openai/v1',
     defaultModel: 'openai/gpt-oss-120b',
+    suggestedModels: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.3-70b-versatile'],
+    maxOutputTokens: HOSTED_OUTPUT,
     keyPlaceholder: 'gsk_...', keyPattern: '^gsk_', needsKey: true,
     consoleUrl: 'https://console.groq.com/keys', consoleName: 'Groq Console',
     logoPath: '/logos/Groq.svg', risk: 'proxy_likely',
@@ -92,7 +114,9 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
   {
     id: 'nvidia', label: 'NVIDIA', wire: 'openai',
     defaultBaseUrl: 'https://integrate.api.nvidia.com/v1',
-    defaultModel: 'meta/llama-4-maverick-17b-128e-instruct',
+    defaultModel: 'z-ai/glm-5.3-flash',
+    suggestedModels: ['z-ai/glm-5.3-flash', 'mistralai/mistral-nemotron', 'nvidia/llama-3.3-nemotron-super-49b-v1.5', 'meta/llama-3.3-70b-instruct'],
+    maxOutputTokens: HOSTED_OUTPUT,
     keyPlaceholder: 'nvapi-...', keyPattern: '^nvapi-', needsKey: true,
     consoleUrl: 'https://build.nvidia.com', consoleName: 'NVIDIA Build',
     logoPath: '/logos/Nvidia.svg', risk: 'proxy_likely',
@@ -102,6 +126,8 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
     id: 'cerebras', label: 'Cerebras', wire: 'openai',
     defaultBaseUrl: 'https://api.cerebras.ai/v1',
     defaultModel: 'gpt-oss-120b',
+    suggestedModels: ['gpt-oss-120b', 'qwen-3.8-27b'],
+    maxOutputTokens: HOSTED_OUTPUT,
     keyPlaceholder: 'csk-...', keyPattern: '^csk-', needsKey: true,
     consoleUrl: 'https://cloud.cerebras.ai', consoleName: 'Cerebras Cloud',
     logoPath: '/logos/cerebras.svg', risk: 'mixed',
@@ -110,7 +136,9 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
   {
     id: 'mistral', label: 'Mistral', wire: 'openai',
     defaultBaseUrl: 'https://api.mistral.ai/v1',
-    defaultModel: 'mistral-large-latest',
+    defaultModel: 'mistral-medium-latest',
+    suggestedModels: ['mistral-medium-latest', 'mistral-large-latest', 'mistral-small-latest'],
+    maxOutputTokens: HOSTED_OUTPUT,
     keyPlaceholder: 'your-mistral-key...', keyPattern: '', needsKey: true,
     consoleUrl: 'https://console.mistral.ai/api-keys', consoleName: 'Mistral Console',
     logoPath: '/logos/Mistral.svg', risk: 'mixed',
@@ -119,7 +147,9 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
   {
     id: 'openrouter', label: 'OpenRouter', wire: 'openai',
     defaultBaseUrl: 'https://openrouter.ai/api/v1',
-    defaultModel: 'google/gemini-2.5-pro',
+    defaultModel: 'google/gemini-3.8-flash',
+    suggestedModels: ['google/gemini-3.8-flash', 'anthropic/claude-opus-5', 'anthropic/claude-sonnet-5', 'openai/gpt-6-sol'],
+    maxOutputTokens: HOSTED_OUTPUT,
     keyPlaceholder: 'sk-or-v1-...', keyPattern: '^sk-or-', needsKey: true,
     consoleUrl: 'https://openrouter.ai/settings/keys', consoleName: 'OpenRouter Dashboard',
     logoPath: '/logos/openrouter.svg', risk: 'browser_friendly',
@@ -127,19 +157,23 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
     extraHeaders: Object.freeze({ 'HTTP-Referer': 'https://openflowkit.com', 'X-Title': 'OpenFlowKit' }),
   },
   {
-    id: 'ollama', label: 'Ollama (local)', wire: 'openai',
+    id: 'ollama', label: 'Ollama', wire: 'openai',
     defaultBaseUrl: 'http://localhost:11434/v1',
-    defaultModel: 'llama3.2',
+    defaultModel: 'gemma4',
+    suggestedModels: ['gemma4', 'qwen3.8', 'gpt-oss:20b'],
+    maxOutputTokens: LOCAL_OUTPUT,
     keyPlaceholder: 'leave blank', keyPattern: '', needsKey: false,
     consoleUrl: 'https://ollama.com/download', consoleName: 'Ollama',
     logoPath: '/logos/ollama.svg', risk: 'browser_friendly',
-    hint: "Local daemon. Start it with OLLAMA_ORIGINS='*' ollama serve.",
+    hint: "Runs on this machine. Pull a model (ollama pull gemma4), then start it with OLLAMA_ORIGINS='*' ollama serve.",
     corsFix: 'ollama-origins',
   },
   {
     id: 'custom', label: 'Custom', wire: 'openai',
     defaultBaseUrl: '',
     defaultModel: '',
+    suggestedModels: [],
+    maxOutputTokens: LOCAL_OUTPUT,
     keyPlaceholder: 'your-api-key', keyPattern: '', needsKey: true,
     consoleUrl: '', consoleName: '',
     logoPath: '/logos/custom.svg', risk: 'mixed',

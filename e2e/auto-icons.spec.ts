@@ -84,7 +84,7 @@ test('an AI-generated diagram gets icons once the proposal is applied', async ({
   const dialog = page.getByRole('dialog', { name: 'AI provider' });
   await dialog.getByRole('button', { name: 'Use Custom' }).click();
   await dialog.getByLabel('API key').fill('sk-ok');
-  await dialog.locator('summary').click();
+  // Custom has no default endpoint, so its Endpoint section is already open.
   await dialog.getByLabel('Base URL').fill('http://127.0.0.1:4399/v1');
   await dialog.getByLabel('Model').fill('stub-model');
   await dialog.getByRole('button', { name: 'Connect', exact: true }).click();

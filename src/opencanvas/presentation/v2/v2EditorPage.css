@@ -292,24 +292,28 @@
 .ofk-v2-provider-form { display: grid; gap: 14px; }
 .ofk-v2-provider-advanced { display: grid; gap: 12px; padding-top: 12px; }
 .ofk-v2-provider-clear { margin-inline-end: auto; }
-.ofk-v2-provider-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
-.ofk-v2-provider-tile { display: grid; justify-items: center; gap: 4px; padding: 8px 2px; border: 1px solid var(--ofk-border); border-radius: 10px; background: var(--ofk-canvas); color: var(--ofk-secondary); font: inherit; font-size: 10px; line-height: 1.2; cursor: pointer; transition: border-color var(--ofk-motion-fast, .12s), color var(--ofk-motion-fast, .12s); }
-.ofk-v2-provider-tile img { width: 20px; height: 20px; object-fit: contain; }
-.ofk-v2-provider-tile:hover { border-color: var(--ofk-secondary); color: var(--ofk-text); }
-.ofk-v2-provider-tile[aria-pressed='true'] { border-color: var(--ofk-accent); color: var(--ofk-text); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ofk-accent) 22%, transparent); }
+.ofk-v2-provider-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+/* Tiles follow the app's chrome rule: selected is inverse-neutral emphasis, never orange. */
+.ofk-v2-provider-tile { position: relative; display: grid; justify-items: center; gap: 6px; padding: 12px 4px 10px; border: 1px solid var(--ofk-border); border-radius: 10px; background: transparent; color: var(--ofk-muted); font: inherit; font-size: 12px; font-weight: 500; line-height: 1.2; cursor: pointer; transition: border-color var(--ofk-motion-fast, .12s), color var(--ofk-motion-fast, .12s), background-color var(--ofk-motion-fast, .12s); }
+.ofk-v2-provider-tile:hover { background: var(--ofk-raised); color: var(--ofk-text); }
+.ofk-v2-provider-tile[aria-pressed='true'] { border-color: var(--ofk-text); background: var(--ofk-raised); color: var(--ofk-text); }
+/* A saved key: a small dot, so switching providers shows which ones are ready. */
+.ofk-v2-provider-tile[data-has-key]::after { content: ''; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--ofk-success); }
 .ofk-v2-provider-tile:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 2px; }
-.ofk-v2-provider-current { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--ofk-border); border-radius: 10px; background: var(--ofk-raised); }
-.ofk-v2-provider-current > img { flex: none; width: 22px; height: 22px; margin-top: 1px; object-fit: contain; }
-.ofk-v2-provider-current-name { display: flex; align-items: center; gap: 8px; margin: 0 0 2px; font-size: 13px; }
-.ofk-v2-provider-hint { margin: 0; font-size: 11px; color: var(--ofk-secondary); }
+/* Marks are single-colour SVGs painted through a mask in the text colour, so they read in both themes. */
+.ofk-v2-provider-mark { display: block; flex: none; width: 22px; height: 22px; background-color: currentColor; -webkit-mask: var(--mark) center / contain no-repeat; mask: var(--mark) center / contain no-repeat; }
+.ofk-v2-provider-current { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--ofk-border); border-radius: 10px; background: var(--ofk-raised); color: var(--ofk-text); }
+.ofk-v2-provider-current > .ofk-v2-provider-mark { width: 24px; height: 24px; }
+.ofk-v2-provider-current-name { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 14px; }
+.ofk-v2-provider-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--ofk-secondary); }
 .ofk-v2-provider-hint a { display: inline-flex; align-items: center; gap: 3px; color: var(--ofk-accent); }
 .ofk-v2-provider-hint .ofk-icon { width: 11px; height: 11px; }
-.ofk-v2-risk-badge { padding: 1px 7px; border: 1px solid var(--ofk-border); border-radius: 999px; font-size: 10px; font-weight: 500; color: var(--ofk-secondary); }
+.ofk-v2-risk-badge { padding: 1px 8px; border: 1px solid var(--ofk-border); border-radius: 999px; font-size: 11px; font-weight: 500; color: var(--ofk-secondary); }
 .ofk-v2-risk-badge[data-risk='browser_friendly'] { color: var(--ofk-success); }
 .ofk-v2-risk-badge[data-risk='proxy_likely'] { color: var(--ofk-warning); }
 .ofk-v2-provider-test { display: flex; align-items: center; gap: 10px; }
 .ofk-v2-provider-test .ofk-button { flex: none; font-size: 12px; }
-.ofk-v2-provider-test p { flex: 1; min-width: 0; margin: 0; font-size: 11px; color: var(--ofk-secondary); }
+.ofk-v2-provider-test p { flex: 1; min-width: 0; margin: 0; font-size: 12px; color: var(--ofk-secondary); }
 .ofk-v2-provider-test p[data-state='ok'] { color: var(--ofk-success); }
 .ofk-v2-provider-test p[data-state='fail'] { color: var(--ofk-danger); }
 .ofk-v2-prompt-box { border: 1px solid var(--ofk-border); border-radius: 12px; padding: 10px 10px 8px; background: var(--ofk-canvas); transition: border-color var(--ofk-motion-fast, .12s), box-shadow var(--ofk-motion-fast, .12s); }

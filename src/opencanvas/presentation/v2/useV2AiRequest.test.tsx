@@ -10,7 +10,7 @@ import type { DocumentCommand } from '../../domain/commands/types';
 
 const GRAMMAR = `# OpenFlow DSL\n\n## Appendix A — cheat sheet\n\n\`\`\`\nOFK diagram language, v1\nflowchart\n  A -> B\n\`\`\`\n`;
 
-const settings: V2AiSettings = { provider: 'openai', apiKey: 'sk-test', baseUrl: '', model: 'test-model' };
+const settings: V2AiSettings = { provider: 'openai', connections: { openai: { apiKey: 'sk-test', baseUrl: '', model: 'test-model' } } };
 
 function harness() {
   const document = createTestDocument({ nodes: [], connectors: [] });

@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { buildDslPrompt, detectFamily, extractDsl } from '../../application/ai/dslPrompt';
 import { createProvider } from '../../../services/ai/provider';
-import type { useV2AiSettings } from './useV2AiSettings';
+import { activeConnection, type useV2AiSettings } from './useV2AiSettings';
 import type { useV2Proposal } from './useV2Proposal';
 
 export interface V2AiRequestOptions {
@@ -53,10 +53,11 @@ export function useV2AiRequest(options: V2AiRequestOptions): V2AiRequestState {
     setError(null);
     setLastPrompt(prompt);
     try {
+      const connection = activeConnection(settings);
       const provider = createProvider({
-        provider: settings.provider, apiKey: settings.apiKey,
-        ...(settings.baseUrl.trim() ? { baseUrl: settings.baseUrl } : {}),
-        ...(settings.model.trim() ? { model: settings.model } : {}),
+        provider: settings.provider, apiKey: connection.apiKey,
+        ...(connection.baseUrl.trim() ? { baseUrl: connection.baseUrl } : {}),
+        ...(connection.model.trim() ? { model: connection.model } : {}),
       });
       setLastModel(provider.model);
       const grammar = await loadGrammar();

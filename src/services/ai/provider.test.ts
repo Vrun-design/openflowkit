@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { AI_PROVIDERS } from './providers';
+import { AI_PROVIDERS, providerById } from './providers';
 import { AiProviderError, createProvider } from './provider';
 
 const ok = (body: unknown) => ({ ok: true, status: 200, text: async () => JSON.stringify(body) }) as Response;
@@ -26,7 +26,7 @@ describe('anthropic wire', () => {
     expect(headers['anthropic-version']).toBe('2023-06-01');
     expect(headers['anthropic-dangerous-direct-browser-access']).toBe('true');
     expect(text).toBe('flowchart\n  A -> B');
-    expect(body).toMatchObject({ model: 'claude-sonnet-4-6', system: 'sys', messages: [{ role: 'user', content: 'draw' }] });
+    expect(body).toMatchObject({ model: 'claude-opus-5', max_tokens: 16_000, system: 'sys', messages: [{ role: 'user', content: 'draw' }] });
   });
 
   it('joins multiple text blocks and ignores non-text ones', async () => {
@@ -40,14 +40,14 @@ describe('google wire', () => {
     const { provider, text, url, headers, body } = await call('gemini', ok({
       candidates: [{ content: { parts: [{ text: 'flowchart\n  A -> B' }] } }],
     }));
-    expect(provider.endpoint).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent');
+    expect(provider.endpoint).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent');
     expect(url).toBe(provider.endpoint);
     expect(headers['x-goog-api-key']).toBe(KEY);
     expect(url).not.toContain(KEY);
     expect(body).toMatchObject({
       systemInstruction: { parts: [{ text: 'sys' }] },
       contents: [{ role: 'user', parts: [{ text: 'draw' }] }],
-      generationConfig: { maxOutputTokens: 4096 },
+      generationConfig: { maxOutputTokens: providerById('gemini').maxOutputTokens },
     });
     expect(text).toBe('flowchart\n  A -> B');
   });
@@ -78,10 +78,10 @@ describe('openai wire', () => {
       const body = JSON.parse(String(init.body)) as { model: string; max_tokens?: number; max_completion_tokens?: number };
       expect(body.model).toBe(id === 'custom' ? 'm' : definition.defaultModel);
       if (definition.maxTokensParam === 'max_completion_tokens') {
-        expect(body.max_completion_tokens).toBe(4096);
+        expect(body.max_completion_tokens).toBe(definition.maxOutputTokens);
         expect(body.max_tokens).toBeUndefined();
       } else {
-        expect(body.max_tokens).toBe(4096);
+        expect(body.max_tokens).toBe(definition.maxOutputTokens);
       }
       vi.unstubAllGlobals();
     },

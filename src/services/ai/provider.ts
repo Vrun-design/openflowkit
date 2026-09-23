@@ -18,6 +18,7 @@ export interface AiProviderConfig {
 export interface AiCompletionRequest {
   readonly system: string;
   readonly prompt: string;
+  /** Output budget; the provider's `maxOutputTokens` when absent. */
   readonly maxTokens?: number;
   readonly signal?: AbortSignal;
 }
@@ -148,7 +149,7 @@ function createAnthropicProvider(definition: AiProviderDefinition, baseUrl: stri
   const endpoint = `${baseUrl}/v1/messages`;
   return {
     id: definition.id, model, endpoint,
-    async complete({ system, prompt, maxTokens = 4096, signal }) {
+    async complete({ system, prompt, maxTokens = definition.maxOutputTokens, signal }) {
       const payload = await postJson({
         url: endpoint, definition, model, signal,
         headers: {
@@ -173,7 +174,7 @@ function createOpenAiProvider(definition: AiProviderDefinition, baseUrl: string,
   const maxTokensParam = definition.maxTokensParam ?? 'max_tokens';
   return {
     id: definition.id, model, endpoint,
-    async complete({ system, prompt, maxTokens = 4096, signal }) {
+    async complete({ system, prompt, maxTokens = definition.maxOutputTokens, signal }) {
       const payload = await postJson({
         url: endpoint, definition, model, signal,
         headers,
@@ -193,7 +194,7 @@ function createGoogleProvider(definition: AiProviderDefinition, baseUrl: string,
   const endpoint = `${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent`;
   return {
     id: definition.id, model, endpoint,
-    async complete({ system, prompt, maxTokens = 4096, signal }) {
+    async complete({ system, prompt, maxTokens = definition.maxOutputTokens, signal }) {
       const payload = await postJson({
         url: endpoint, definition, model, signal,
         headers: { 'x-goog-api-key': apiKey },

@@ -17,11 +17,17 @@ async function openProviderDialog(page: Page) {
   return dialog;
 }
 
+/** The endpoint section starts open when the provider has no default URL (Custom). */
+async function showEndpoint(dialog: ReturnType<Page['getByRole']>) {
+  const details = dialog.locator('details.ofk-connection-details');
+  if (!(await details.evaluate((element) => (element as HTMLDetailsElement).open))) await details.locator('summary').click();
+}
+
 test('diagnoses a bad key, never echoes it, and clears every stored key', async ({ page }) => {
   const dialog = await openProviderDialog(page);
   await dialog.getByRole('button', { name: 'Use Custom' }).click();
   await dialog.getByLabel('API key').fill('sk-bad');
-  await dialog.locator('summary').click();
+  await showEndpoint(dialog);
   await dialog.getByLabel('Base URL').fill(`${STUB}/v1`);
   await dialog.getByLabel('Model').fill('stub-model');
   await dialog.getByRole('button', { name: 'Test key' }).click();
@@ -45,7 +51,7 @@ test('tests a key through the Google wire and shows the provider risk honestly',
   await expect(dialog.getByRole('button', { name: 'Use Gemini' })).toHaveAttribute('aria-pressed', 'true');
   await expect(dialog.getByText('Browser-ready', { exact: true })).toBeVisible();
   await dialog.getByLabel('API key').fill('sk-ok');
-  await dialog.locator('summary').click();
+  await showEndpoint(dialog);
   await dialog.getByLabel('Base URL').fill(STUB);
   await dialog.getByLabel('Model').fill('stub-gemini');
   await dialog.getByRole('button', { name: 'Test key' }).click();
@@ -66,7 +72,7 @@ test('sends the Anthropic wire and warns where the browser may refuse', async ({
   await dialog.getByRole('button', { name: 'Use Claude' }).click();
 
   await dialog.getByLabel('API key').fill('sk-ok');
-  await dialog.locator('summary').click();
+  await showEndpoint(dialog);
   await dialog.getByLabel('Base URL').fill(STUB);
   await dialog.getByLabel('Model').fill('stub-claude');
   await dialog.getByRole('button', { name: 'Test key' }).click();

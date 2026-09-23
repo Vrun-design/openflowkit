@@ -12,7 +12,7 @@ import {
 } from '../design-system';
 import { V2AiProviderDialog } from './V2AiProviderDialog';
 import type { useV2AiRequest } from './useV2AiRequest';
-import type { useV2AiSettings } from './useV2AiSettings';
+import { activeConnection, type useV2AiSettings } from './useV2AiSettings';
 import type { useV2Proposal } from './useV2Proposal';
 
 interface V2AgentPanelProps {
@@ -43,7 +43,7 @@ export function V2AgentPanel({ proposal, ai, aiSettings, currentRevision, readOn
   const input = useRef<HTMLTextAreaElement>(null);
   const { phase, proposal: current } = proposal;
   const { configured, settings } = aiSettings;
-  const modelLabel = ai.lastModel || settings.model || AI_PROVIDERS.find(({ id }) => id === settings.provider)!.defaultModel;
+  const modelLabel = ai.lastModel || activeConnection(settings).model || AI_PROVIDERS.find(({ id }) => id === settings.provider)!.defaultModel;
   const scopeLabel = current
     ? `Scope: ${current.scope.kind === 'selection' ? `${current.scope.objectIds.length} selected` : 'this page'}`
     : 'Scope: this page';
@@ -179,7 +179,7 @@ export function V2AgentPanel({ proposal, ai, aiSettings, currentRevision, readOn
         }
       />
       {providerOpen ? <V2AiProviderDialog open settings={settings}
-        onSave={(next) => { aiSettings.update(next); ai.clearError(); }}
+        onSave={(next) => { aiSettings.save(next); ai.clearError(); }}
         onClose={closeProvider} /> : null}
     </>
   );

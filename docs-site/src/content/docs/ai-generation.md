@@ -9,12 +9,13 @@ compiled by the same DSL compiler as everything else, then shown for review.
 
 ## Set up a provider
 
-Press `⌘J` for the assistant panel and open its provider dialog. Pick a provider, paste a key,
-and optionally set the model and a base URL; the dialog has a **Test** action that asks the
-provider for one response.
+Press `⌘J` for the assistant panel and open its provider dialog. Pick a provider and paste a
+key. The model field suggests that provider's current models and accepts any id; the base URL
+sits under **Endpoint**. **Test key** asks the provider for one short response.
 
-The settings are stored in this browser's `localStorage` and are sent only to the provider you
-picked. There is no OpenFlowKit account and no relay: if the request fails, the error names the
+Each provider keeps its own key, marked with a dot on its tile, so switching providers never
+sends one vendor's key to another; **Clear all keys** removes every one. Keys are stored in this
+browser's `localStorage` and sent only to the provider they were entered for. There is no OpenFlowKit account and no relay: if the request fails, the error names the
 cause — bad key, unknown model, rate limit, network.
 
 ## Ask for a diagram
