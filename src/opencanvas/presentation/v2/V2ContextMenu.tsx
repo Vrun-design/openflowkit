@@ -20,6 +20,12 @@ interface V2ContextMenuProps {
   readonly commit: (command: DocumentCommand) => void;
   readonly onEditLabel: () => void;
   readonly onEditAsCode: (frameId: string) => void;
+  /** Selected nodes that carry an icon; drives "Remove icon". */
+  readonly iconCount: number;
+  readonly onRemoveIcons: () => void;
+  /** Set when the selection is one diagram frame whose icons can be toggled. */
+  readonly diagramIcons: { readonly on: boolean } | null;
+  readonly onToggleDiagramIcons: () => void;
   /** Set when the selection is a model placement; drives the C4 actions. */
   readonly modelElement?: { readonly id: string; readonly name: string; readonly childView: boolean } | null;
   readonly onDrillInto?: () => void;
@@ -93,6 +99,12 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
             <MenuSeparator />
             <MenuItem onSelect={props.onEditLabel} shortcut="↵" disabled={!edit || many}>Edit label</MenuItem>
             {selectedFrame ? <MenuItem onSelect={() => props.onEditAsCode(selectedFrame.id)} shortcut="⌥D">Edit as code</MenuItem> : null}
+            {props.diagramIcons ? (
+              <MenuItem onSelect={props.onToggleDiagramIcons} checked={props.diagramIcons.on} disabled={!edit}>Icons from labels</MenuItem>
+            ) : null}
+            {props.iconCount > 0 ? (
+              <MenuItem onSelect={props.onRemoveIcons} disabled={!edit}>{props.iconCount === 1 ? 'Remove icon' : `Remove ${props.iconCount} icons`}</MenuItem>
+            ) : null}
             {props.modelElement ? (
               <>
                 <MenuSeparator />

@@ -49,6 +49,7 @@ export interface V2EditingState {
 
 interface V2CanvasHostProps {
   readonly page: ScenePage;
+  readonly onRemoveIcons: () => void;
   readonly hostRef: RefObject<PixiRendererHost | null>;
   readonly camera: CanvasCamera;
   readonly cameraRef: RefObject<CanvasCamera>;
@@ -498,6 +499,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
             } : null);
           }}
           style={contextBarStyle(contextAnchor, { width: barWidth, ...edges })}
+          onRemoveIcons={props.onRemoveIcons}
           onNodeStyleCommitted={(patch) => {
             const selected = props.selection.nodeIds
               .map((id) => props.page.nodes.find((node) => node.id === id))

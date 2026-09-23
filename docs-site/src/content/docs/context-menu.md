@@ -28,6 +28,8 @@ things you reach for mid-drag.
 | Cut / Copy / Duplicate | Clipboard and duplication |
 | Edit label | Open the in-place label editor |
 | Edit as code | Appears on a generated frame; reopens its DSL source |
+| Icons from labels | Appears on a generated flowchart or architecture frame; ticks on or off [icons from labels](/diagram-architecture/#icons-from-labels) for that diagram |
+| Remove icon | Appears when the selection has icons; one undo step for all of them |
 | Open … view / Unplace / Remove from model | Appears when the shape is a [C4 model](/architecture-c4/) placement |
 | Style → Copy style / Paste style | Copy the appearance between shapes |
 | Reorder → Front / Forward / Backward / Back | Z-order, or the whole selection's order |

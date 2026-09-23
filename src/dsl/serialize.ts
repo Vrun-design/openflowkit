@@ -31,6 +31,7 @@ export function serialize(scene: DslFrameScene): string {
   if (title) lines.push(`title: ${quote(title)}`);
   const palette = meta.appearance?.palette;
   if (palette && palette !== 'pastel') lines.push(`appearance: ${palette}`);
+  if (meta.icons) lines.push(`icons: ${meta.icons}`);
   lines.push('', ...familyFor(meta.family as DslFamily).serialize(scene));
   // Motion is a projection of the text like everything else: emitted exactly
   // when the frame carries a block, for every family, and never invented.

@@ -5,6 +5,7 @@ import { diagnostic } from '../../diagnostics';
 import {
   canonicalizeAttributes, nonVisualAttributes, typedFrom, type TypedAttributes,
 } from '../../attributes';
+import { AUTO_ICON_SHAPES } from '../../autoIcon';
 import type { FamilyContext, FamilyScene } from '../types';
 import { attrsToJson, type CanonicalAttribute } from '../../sceneMeta';
 import { ACTOR_CONTENT_LAYOUT, measureGroupSize, measureNodeSize } from '../../sizing';
@@ -186,15 +187,20 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     const typed = typedFrom(node.entries);
     const canonicalWord = canonicalShapeWord(typed.shape ?? RESERVED_SHAPE[node.reservedKind ?? ''] ?? 'rect') ?? 'rect';
     const spec = SHAPE_WORDS[canonicalWord]!;
-    const icon = typed.icon;
+    const label = typed.label ?? node.name;
+    const desc = typed.entries.find((entry) => entry.key === 'desc')?.value;
+    // `icon: none` opts a node out; otherwise a box-like node may take the icon its label names.
+    const authoredIcon = typed.icon === 'none' ? undefined : typed.icon;
+    const autoIcon = !typed.icon && AUTO_ICON_SHAPES.has(canonicalWord) && context.inferIcon
+      ? context.inferIcon(label, typed.entries.find((entry) => entry.key === 'tech')?.value) ?? undefined
+      : undefined;
+    const icon = authoredIcon ?? autoIcon;
     const resolvedIcon = icon && context.resolveIcon ? context.resolveIcon(icon) : null;
-    if (icon && context.resolveIcon && !resolvedIcon) {
-      diagnostics.push(diagnostic({ line: node.line, col: 1, endCol: 1 }, 'W132', 'warning', `Unknown icon ${icon}; plain node used`));
+    if (authoredIcon && context.resolveIcon && !resolvedIcon) {
+      diagnostics.push(diagnostic({ line: node.line, col: 1, endCol: 1 }, 'W132', 'warning', `Unknown icon ${authoredIcon}; plain node used`));
     }
     const isIconCard = Boolean(icon && (!context.resolveIcon || resolvedIcon));
     const kind = isIconCard ? 'architecture' : spec.kind;
-    const label = typed.label ?? node.name;
-    const desc = typed.entries.find((entry) => entry.key === 'desc')?.value;
     const size = context.measureLabel
       ? context.measureLabel(label, kind)
       : measureNodeSize({
@@ -236,10 +242,12 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
         dsl: {
           id: node.id, line: node.line,
           ...(label !== node.name ? { name: node.name } : {}),
-          ...(lossyShape ? { shape: canonicalWord } : {}),
+          // An icon card has no shape of its own; remember the authored one.
+          ...(lossyShape || (isIconCard && canonicalWord !== 'rect') ? { shape: canonicalWord } : {}),
           ...(typed.color ? { color: typed.color } : {}),
           ...(typed.fill !== 'pastel' ? { fill: typed.fill } : {}),
-          ...(icon ? { icon } : {}),
+          ...(typed.icon ? { icon: typed.icon } : {}),
+          ...(autoIcon ? { autoIcon } : {}),
           ...(node.reservedKind ? { kind: node.reservedKind } : {}),
           ...(nonVisualAttributes(typed, 'node').length ? { attrs: attrsToJson(nonVisualAttributes(typed, 'node')) } : {}),
           ...(node.comments.length ? { comments: node.comments } : {}),

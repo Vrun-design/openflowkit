@@ -15,6 +15,8 @@ const MOTION_FORMATS: readonly ExportFormat[] = ['svg-animated', 'gif', 'mp4', '
 
 export interface V2AgentHostOptions {
   readonly fitView: (ids?: readonly string[]) => void;
+  /** The user's "Icons from labels" setting; a DSL `icons:` line still wins. */
+  readonly autoIcons: boolean;
 }
 
 const searchIcons = async (query: string, limit: number) => {
@@ -43,9 +45,9 @@ const loadGrammar = (): Promise<string> => {
 export function useV2AgentHost(options: V2AgentHostOptions): OpCapabilities {
   return useMemo<OpCapabilities>(() => ({
     compile: (text: string, compileOptions?: CompileOptions) =>
-      compile(text, { ...compileOptions, layout: compileOptions?.layout ?? elkDslLayoutPort, resolveIcon: compileOptions?.resolveIcon ?? resolveDslIcon }),
+      compile(text, { autoIcons: options.autoIcons, ...compileOptions, layout: compileOptions?.layout ?? elkDslLayoutPort, resolveIcon: compileOptions?.resolveIcon ?? resolveDslIcon }),
     compileWorkspace: (text: string, compileOptions?: CompileOptions) =>
-      compileWorkspace(text, { ...compileOptions, layout: compileOptions?.layout ?? elkDslLayoutPort, resolveIcon: compileOptions?.resolveIcon ?? resolveDslIcon }),
+      compileWorkspace(text, { autoIcons: options.autoIcons, ...compileOptions, layout: compileOptions?.layout ?? elkDslLayoutPort, resolveIcon: compileOptions?.resolveIcon ?? resolveDslIcon }),
     syntax: (family?: string) => loadGrammar().then((grammar) => grammarSection(grammar, family)),
     searchIcons,
     exportFiles: async (request: ExportRequest) => {
@@ -71,5 +73,5 @@ export function useV2AgentHost(options: V2AgentHostOptions): OpCapabilities {
       return [{ filename: file.filename, mime: file.mime, base64: file.bytes ? bytesToBase64(file.bytes) : '' }];
     },
     fitView: options.fitView,
-  }), [options.fitView]);
+  }), [options.fitView, options.autoIcons]);
 }

@@ -25,7 +25,10 @@ export interface DslNodeMeta {
   /** Canonical DSL colour word when the palette key alone cannot say it. */
   color?: string;
   fill?: 'bold' | 'outline';
+  /** Authored icon id, or `none` when the author opted this node out of auto icons. */
   icon?: string;
+  /** Icon id the compiler inferred from the label; never written back to text. */
+  autoIcon?: string;
   /** Reserved model kind (`person`, `system`, …) and block kinds. */
   kind?: string;
   /** Attributes with no scene representation: tech, desc, tags, link, pin, rank, width, height, order, unknown words. */
@@ -59,6 +62,8 @@ export interface DslFrameMeta {
   title?: string;
   /** Authored `appearance:` palette; absent when the default palette applies. */
   appearance?: { palette?: string };
+  /** Authored `icons:` directive. */
+  icons?: 'auto' | 'off';
   comments?: readonly string[];
 }
 
@@ -85,6 +90,7 @@ export function dslFrameMeta(frame: SceneNode): DslFrameMeta {
     ...(typeof meta.hash === 'string' ? { hash: meta.hash } : {}),
     ...(typeof meta.title === 'string' ? { title: meta.title } : {}),
     ...(typeof appearance.palette === 'string' ? { appearance: { palette: appearance.palette } } : {}),
+    ...(meta.icons === 'auto' || meta.icons === 'off' ? { icons: meta.icons } : {}),
     ...(Array.isArray(meta.comments) ? { comments: meta.comments.filter((item): item is string => typeof item === 'string') } : {}),
   };
 }
@@ -99,6 +105,7 @@ export function dslNodeMeta(node: SceneNode): DslNodeMeta {
     ...(typeof meta.color === 'string' ? { color: meta.color } : {}),
     ...(meta.fill === 'bold' || meta.fill === 'outline' ? { fill: meta.fill } : {}),
     ...(typeof meta.icon === 'string' ? { icon: meta.icon } : {}),
+    ...(typeof meta.autoIcon === 'string' ? { autoIcon: meta.autoIcon } : {}),
     ...(typeof meta.kind === 'string' ? { kind: meta.kind } : {}),
     ...(Array.isArray(meta.attrs) ? { attrs: canonicalAttributes(meta.attrs) } : {}),
     ...(Array.isArray(meta.comments) ? { comments: meta.comments.filter((item): item is string => typeof item === 'string') } : {}),

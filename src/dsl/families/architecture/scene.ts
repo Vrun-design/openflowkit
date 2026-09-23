@@ -6,6 +6,7 @@ import { attrsToJson } from '../../sceneMeta';
 import { ACTOR_CONTENT_LAYOUT, measureGroupSize, measureNodeSize } from '../../sizing';
 import { COLOR_WORDS, nodeAppearance, SHAPE_WORDS, type DslShapeSpec } from '../../vocabulary';
 import type { LayoutNodeInput } from '../../layout';
+import { AUTO_ICON_SHAPES } from '../../autoIcon';
 import type { FamilyContext, FamilyScene } from '../types';
 
 /**
@@ -135,7 +136,11 @@ function boundaryNode(element: ArchElement, parentId: string | null, zIndex: num
 function elementNode(element: ArchElement, parentId: string | null, zIndex: number, context: FamilyContext): SceneNode {
   const shapeWord = elementShapeWord(element);
   const spec = specFor(shapeWord);
-  const authoredIcon = element.icon;
+  // `icon: none` opts out; a person or a boundary keeps its C4 shape.
+  const autoIcon = !element.icon && context.inferIcon && AUTO_ICON_SHAPES.has(shapeWord)
+    ? context.inferIcon(element.name, element.tech) ?? undefined
+    : undefined;
+  const authoredIcon = element.icon === 'none' ? undefined : element.icon ?? autoIcon;
   const resolvedIcon = authoredIcon && context.resolveIcon ? context.resolveIcon(authoredIcon) : null;
   const isIconCard = Boolean(authoredIcon && (!context.resolveIcon || resolvedIcon));
   const label = element.name;
@@ -183,7 +188,9 @@ function elementNode(element: ArchElement, parentId: string | null, zIndex: numb
         ...(element.links.length ? { links: element.links } : {}),
         ...(element.instanceOf ? { instanceOf: element.instanceOf } : {}),
       },
-      ...(element.attrs?.length ? { dsl: { attrs: attrsToJson(element.attrs) } } : {}),
+      ...(element.attrs?.length || autoIcon ? {
+        dsl: { ...(element.attrs?.length ? { attrs: attrsToJson(element.attrs) } : {}), ...(autoIcon ? { autoIcon } : {}) },
+      } : {}),
     },
     extensions: {},
   };

@@ -16,6 +16,7 @@ interface V2ContextBarProps {
   readonly onStylePreview: (patch: JsonObject | null) => void;
   /** Sticky defaults: the last committed style patch seeds the next created item. */
   readonly onNodeStyleCommitted: (patch: JsonObject) => void;
+  readonly onRemoveIcons: () => void;
   readonly onConnectorStyleCommitted: (patch: ConnectorStylePatch) => void;
   readonly style: React.CSSProperties;
   readonly onOpenMenu: (x: number, y: number) => void;
@@ -103,7 +104,8 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
       onDoubleClick={(event) => event.stopPropagation()}>
       <ContextGroup label="Appearance">
         <V2NodeStylePanels key={props.nodeIds.join(':')} page={props.page} nodeIds={props.nodeIds}
-          commit={props.commit} onPreview={props.onStylePreview} onCommitted={props.onNodeStyleCommitted} />
+          commit={props.commit} onPreview={props.onStylePreview} onCommitted={props.onNodeStyleCommitted}
+          onRemoveIcons={props.onRemoveIcons} />
       </ContextGroup>
       {props.onOpenChartData ? (
         <ContextGroup label="Data">

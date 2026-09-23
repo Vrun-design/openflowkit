@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveDslIcon } from './iconResolver';
 import { compile } from '../../dsl/compile';
+import { AUTO_ICON_IDS } from '../../dsl/autoIcon';
 import awsFixture from '../../dsl/fixtures/architecture/aws-3tier.dsl?raw';
 
 describe('resolveDslIcon', () => {
@@ -20,5 +21,10 @@ describe('resolveDslIcon', () => {
     const result = await compile(awsFixture, { resolveIcon: resolveDslIcon });
     expect(result.nodes.filter((node) => typeof node.content.archIconShapeId === 'string')).toHaveLength(3);
     expect(result.diagnostics.filter((item) => item.code === 'W132')).toEqual([]);
+  });
+
+  it('resolves every auto-icon id to exactly that icon', () => {
+    const unresolved = AUTO_ICON_IDS.filter((id) => resolveDslIcon(id)?.shapeId !== id.split('/')[1]);
+    expect(unresolved).toEqual([]);
   });
 });

@@ -43,6 +43,35 @@ a plain node.
 Everything in [DSL reference](/openflow-dsl-reference/) §4 works, including notes and layout
 hints.
 
+## Icons from labels
+
+A node whose label names a technology gets its logo without an icon id: `Postgres`,
+`React app`, `Node.js API`, `Cloudflare Workers`, `S3 bucket`. Short noun labels get a
+neutral glyph for the concept — `Orders DB`, `Email queue`, `Load balancer`, `Users`. On
+C4 elements `tech:` is read first. Decisions, terminals, people and notes keep their shape,
+and a step that starts with a verb (`Validate user`) is left alone.
+
+The inferred icon is never written into the text, so the source stays as you wrote it.
+Three ways to say no, from narrow to wide:
+
+| Scope | How |
+| --- | --- |
+| One node (or a selection) | Right-click → **Remove icon**, or **Remove icon** in the style bar's icon picker; the text gets `icon: none` |
+| This diagram | Right-click the frame → **Icons from labels**, or **Remove all** on the toast after Generate; the text gets `icons: off` |
+| Every new diagram | Settings → **Icons from labels** |
+
+```text
+flowchart right
+icons: auto              // or off; absent = the Settings switch
+Web app [tech: React] -> API [tech: Node.js] -> Postgres
+Legacy box [icon: none]
+```
+
+Undo brings back whatever a removal took. Turning icons back on for a diagram lays it out
+again, since cards are larger than plain shapes. In a C4 workspace the model owns the
+text, so the diagram toggle is not offered there: remove icons per element (every view
+follows) or use the Settings switch.
+
 ## The C4 workspace
 
 The same family hosts the model layer: `model`, `views`, `flow` and `deployment` blocks turn

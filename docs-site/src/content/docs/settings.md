@@ -1,6 +1,6 @@
 ---
 title: Settings and preferences
-description: Every preference OpenFlowKit keeps — appearance, grid, palette, the agent bridge — and where each one lives.
+description: Every preference OpenFlowKit keeps — appearance, grid, palette, icons from labels, the agent bridge — and where each one lives.
 ---
 
 Preferences are stored per browser in `localStorage` under one key and are validated
@@ -17,6 +17,7 @@ Open the canvas menu → **Settings**.
 | Density | Comfortable, Compact | Control sizes throughout the chrome |
 | Dot grid | On, Off | The canvas grid |
 | Snap to grid | On, Off | Whether drags snap to the grid (hold `⌘`/`Ctrl` to bypass) |
+| Icons from labels | On (default), Off | Generated diagrams put a logo on nodes that name a technology; a diagram's `icons:` line wins — see [Architecture](/diagram-architecture/#icons-from-labels) |
 
 ## Elsewhere in the app
 

@@ -78,6 +78,8 @@ import type { DocumentCommand } from '../../domain/commands/types';
 import { archViewIdOfPage, placedElementId } from '../../../dsl/model/model';
 import { isEditableTarget } from './pointerOperations';
 import { looksLikeMermaid, mermaidToDsl } from '../../../services/dsl/mermaidToDsl';
+import { buildAutoIconsOffCommand, hasAutoIcon, hasIcon } from '../../application/dsl/iconCommands';
+import { diagramIconsOn, iconToggleFrame, useV2IconActions } from './useV2IconActions';
 import { looksLikeStructurizr, structurizrToDsl } from '../../../services/dsl/structurizrToDsl';
 import './v2EditorPage.css';
 
@@ -109,6 +111,7 @@ export function V2EditorPage(): React.JSX.Element {
   const [codeGenerating, setCodeGenerating] = useState(false);
   const [compileDiagnostics, setCompileDiagnostics] = useState<ReturnType<typeof parse>['diagnostics']>([]);
   const codeAbortRef = useRef<AbortController | null>(null);
+  const iconToastFramesRef = useRef(new Set<string>());
   const [slideDraftCount, setSlideDraftCount] = useState(0);
   // The data panel is pinned to one chart: opening it never covers the canvas
   // on a plain select, and it stays while you click around. Double-click, the
@@ -316,8 +319,8 @@ export function V2EditorPage(): React.JSX.Element {
       const origin = bound?.transform.translation ?? nextDslFrameOrigin(currentPage);
       const compiledWorkspace = await compileWorkspace(overrideText ?? codeDraft, {
         origin, layout: elkDslLayoutPort, signal: controller.signal, resolveIcon: resolveDslIcon,
-        // The panel's palette is a default: an authored `appearance:` line wins.
-        appearance: { palette: preferences.diagramPalette },
+        // Panel defaults: an authored `appearance:` or `icons:` line wins.
+        appearance: { palette: preferences.diagramPalette }, autoIcons: preferences.autoIcons,
       });
       // Saved layout overrides win over ELK for the elements they name.
       const workspace = snaps ? applySnapsToWorkspace(compiledWorkspace, snaps) : compiledWorkspace;
@@ -337,7 +340,25 @@ export function V2EditorPage(): React.JSX.Element {
       } else {
         const command = buildDslPageCommand(currentPage, primary, codeFrameId ?? undefined);
         if (command) session.commit(command);
-        setCodeFrameId(codeFrameId ?? primary.frame.id);
+        const frameId = codeFrameId ?? primary.frame.id;
+        // Say once per diagram what the compiler added, with the way out beside it.
+        const inferred = primary.nodes.filter(hasAutoIcon).length;
+        if (inferred && !iconToastFramesRef.current.has(frameId)) {
+          iconToastFramesRef.current.add(frameId);
+          const toastId = `auto-icons-${frameId}`;
+          pushToast({
+            id: toastId, tone: 'info',
+            title: `${inferred} ${inferred === 1 ? 'icon' : 'icons'} added from labels.`,
+            description: 'Right-click a node to remove one, or turn this off in Settings.',
+            action: { label: 'Remove all', onClick: () => {
+              setToasts((current) => current.filter((toast) => toast.id !== toastId));
+              const latest = pageRef.current;
+              const off = latest ? buildAutoIconsOffCommand(latest, frameId) : null;
+              if (off) session.commit(off);
+            } },
+          });
+        }
+        setCodeFrameId(frameId);
         applySelection(replaceSelection([codeFrameId ?? primary.frame.id]));
         setAnnouncement(`${primary.nodes.length} nodes generated${primary.diagnostics.some((item) => item.severity !== 'info') ? ' with diagnostics' : ''}.`);
       }
@@ -346,7 +367,7 @@ export function V2EditorPage(): React.JSX.Element {
     } finally {
       if (codeAbortRef.current === controller) { codeAbortRef.current = null; setCodeGenerating(false); }
     }
-  }, [load.readOnly, codeGenerating, codeFrameId, codeDraft, session, applySelection, pushToast, preferences.diagramPalette]);
+  }, [load.readOnly, codeGenerating, codeFrameId, codeDraft, session, applySelection, pushToast, preferences.diagramPalette, preferences.autoIcons]);
 
   const { status: saveStatus, retry: retrySave } = useV2Autosave({
     repository,
@@ -358,14 +379,14 @@ export function V2EditorPage(): React.JSX.Element {
   });
 
   const compileDraft = useCallback(
-    (text: string) => compile(text, { origin: { x: 0, y: 0 }, layout: elkDslLayoutPort, resolveIcon: resolveDslIcon }),
-    []);
+    (text: string) => compile(text, { origin: { x: 0, y: 0 }, layout: elkDslLayoutPort, resolveIcon: resolveDslIcon, autoIcons: preferences.autoIcons }),
+    [preferences.autoIcons]);
   const compileAny = useCallback(
     (text: string): Promise<CompileWorkspaceResult> => compileWorkspace(text, {
       origin: { x: 0, y: 0 }, layout: elkDslLayoutPort, resolveIcon: resolveDslIcon,
-      appearance: { palette: preferences.diagramPalette },
+      appearance: { palette: preferences.diagramPalette }, autoIcons: preferences.autoIcons,
     }),
-    [preferences.diagramPalette]);
+    [preferences.diagramPalette, preferences.autoIcons]);
   const proposal = useV2Proposal({
     document: session.document, revision: session.revision, pageId: page?.id ?? null,
     commit: session.commit, readOnly: load.readOnly,
@@ -489,6 +510,14 @@ export function V2EditorPage(): React.JSX.Element {
       return elementId ? [elementId] : [];
     }),
   ), [page]);
+  const compileAt = useCallback((text: string, origin: Point2d) => compile(text, {
+    origin, layout: elkDslLayoutPort, resolveIcon: resolveDslIcon,
+    appearance: { palette: preferences.diagramPalette }, autoIcons: preferences.autoIcons,
+  }), [preferences.diagramPalette, preferences.autoIcons]);
+  const iconActions = useV2IconActions({
+    pageRef, readOnly: load.readOnly, commit: session.commit, announce: setAnnouncement,
+    compileAt, editElement: architectureActions.editElement,
+  });
   const selectedNode = selection.primaryNodeId && page
     ? page.nodes.find((node) => node.id === selection.primaryNodeId)
     : undefined;
@@ -517,7 +546,7 @@ export function V2EditorPage(): React.JSX.Element {
 
   // Local agent pairing: the ops run here, against this session, through the
   // same registry the MCP server uses. Off until the user connects.
-  const agentCapabilities = useV2AgentHost({ fitView: camera.fitView });
+  const agentCapabilities = useV2AgentHost({ fitView: camera.fitView, autoIcons: preferences.autoIcons });
   const aiSettings = useV2AiSettings();
   const loadGrammar = useCallback(async () => String(await agentCapabilities.syntax()), [agentCapabilities]);
   const ai = useV2AiRequest({
@@ -853,6 +882,7 @@ export function V2EditorPage(): React.JSX.Element {
               page={page} hostRef={hostRef} camera={camera.camera} cameraRef={camera.cameraRef} pageRef={pageRef}
               selectionRef={selectionRef} selectedConnectorIdsRef={selectedConnectorIdsRef} toolRef={toolRef} tool={tool} spacePanRef={spacePanRef}
               toolConfigRef={toolConfigRef} onOpenChartData={openChartData}
+              onRemoveIcons={() => iconActions.removeIcons(selectionRef.current.nodeIds)}
               readOnlyRef={readOnlyRef} gestureApiRef={gestureApiRef}
               selection={selection} selectedConnectorId={selectedConnectorId} selectedConnectorIds={selectedConnectorIds}
               editing={editing}
@@ -877,6 +907,15 @@ export function V2EditorPage(): React.JSX.Element {
                 if (primary) openEditor(primary); else editSelectedConnectorLabel();
               }}
               onEditAsCode={openFrameAsCode}
+              // Only worked out while the menu is open: both walk the page.
+              iconCount={contextMenu ? page.nodes.filter((node) => selection.nodeIds.includes(node.id) && hasIcon(node)).length : 0}
+              onRemoveIcons={() => iconActions.removeIcons(selectionRef.current.nodeIds)}
+              diagramIcons={contextMenu && selection.nodeIds.length === 1 && iconToggleFrame(page, selection.nodeIds[0]!)
+                ? { on: diagramIconsOn(page, selection.nodeIds[0]!) } : null}
+              onToggleDiagramIcons={() => {
+                const frameId = selectionRef.current.nodeIds[0];
+                if (frameId) void iconActions.setDiagramIcons(frameId, !diagramIconsOn(page, frameId));
+              }}
               modelElement={selectedElementId && selectedNode ? {
                 id: selectedElementId,
                 name: selectedNode.content.label as string ?? selectedElementId,

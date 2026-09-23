@@ -600,6 +600,14 @@
       ]
     },
     {
+      "id": "auto-icons",
+      "name": "Icons from labels",
+      "status": "shipped",
+      "evidence": "src/dsl/autoIcon.ts:1",
+      "notes": "Label or tech: names a technology → its icon card at compile time; `icons: auto|off` per diagram, `icon: none` per node, Remove icon in the context menu and style bar, Settings switch.",
+      "page": "diagram-architecture"
+    },
+    {
       "id": "family-sequence",
       "name": "Sequence family",
       "status": "shipped",

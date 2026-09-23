@@ -72,13 +72,16 @@ export function colorInfoFor(node: SceneNode, swatchOf: SwatchResolver = palette
 export function nodeAttributes(node: SceneNode, swatchOf: SwatchResolver = paletteSwatch): CanonicalAttribute[] {
   const meta = dslNodeMeta(node);
   const entries: CanonicalAttribute[] = [];
-  const shape = dslShapeWord(node.kind, node.content.shape, meta.shape);
+  // An icon card draws no shape; the authored word rides in metadata.
+  const shape = node.kind === 'architecture' && meta.shape ? meta.shape : dslShapeWord(node.kind, node.content.shape, meta.shape);
   if (shape && shape !== 'rect') entries.push({ value: shape });
   const color = colorInfoFor(node, swatchOf);
   if (color.word) entries.push({ value: color.word });
   if (color.fill) entries.push({ value: color.fill });
   if (node.appearance.shadow === true) entries.push({ value: 'shadow' });
-  const icon = typeof node.content.icon === 'string' && node.content.icon ? node.content.icon : meta.icon;
+  const shown = typeof node.content.icon === 'string' && node.content.icon ? node.content.icon : undefined;
+  // An inferred icon is the compiler's, not the author's: the text stays as written.
+  const icon = shown && shown !== meta.autoIcon ? shown : meta.icon;
   if (icon) entries.push(isIconWord(icon) ? { value: icon } : { key: 'icon', value: icon });
   const label = nodeLabel(node);
   if (label !== nodeReference(node)) entries.push({ key: 'label', value: label });

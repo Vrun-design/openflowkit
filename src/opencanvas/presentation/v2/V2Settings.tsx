@@ -24,6 +24,9 @@ export function V2Settings({ open, anchorRef, onClose, preferences, onPreference
         <Switch label="Dot grid" checked={preferences.showGrid} onChange={(event) => onPreferencesChange({ showGrid: event.target.checked })} />
         <Switch label="Snap to grid" checked={preferences.snapToGrid} onChange={(event) => onPreferencesChange({ snapToGrid: event.target.checked })} />
         <p className="ofk-caption">Hold Alt while dragging to bypass snapping.</p>
+        <span className="ofk-caption">Diagrams</span>
+        <Switch label="Icons from labels" checked={preferences.autoIcons} onChange={(event) => onPreferencesChange({ autoIcons: event.target.checked })} />
+        <p className="ofk-caption">Postgres, React, S3… get their logo when a diagram is generated. A diagram&rsquo;s own <code>icons:</code> line wins.</p>
         <p className="ofk-caption">V Select · H Hand · R Rectangle · O Ellipse · T Text<br />Space + drag to pan · Ctrl/⌘ + scroll to zoom</p>
       </div>
     </Popover>

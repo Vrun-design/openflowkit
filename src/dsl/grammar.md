@@ -341,6 +341,7 @@ gitgraph=`right`, mindmap radial), `right`, `left`, `up`. Aliases accepted, not 
 title: Image upload service
 direction: right            // same as on the family line; family line wins if both
 appearance: paper           // diagram palette: pastel | paper | builder | mono
+icons: auto                 // icons from labels: auto | off (default: the host's setting)
 autonumber                  // sequence only
 legend { key: meaning }     // reserved, parsed and re-emitted, not rendered in v1
 ```
@@ -348,6 +349,14 @@ Canonical: `title:` is the third line (after pragma and family), `appearance:` t
 fourth. `direction` is folded into the family line. Directives elsewhere in the file
 are hoisted, warning W104 if a directive repeats (first wins); an unknown `appearance`
 value is W102 and the default palette applies.
+
+`icons:` turns icons from labels on or off for this diagram. With `auto`, a box-like node
+(`rect rounded cylinder queue component hexagon cloud`) with no `icon` whose label (or
+`tech:`) names a known technology or concept becomes an icon card: `Postgres`, `React app`,
+`Orders DB`, `S3 bucket`. Decisions, terminals, people and notes keep their shape. The
+inferred icon is never written back to text, and `icon: none` opts one node out. Absent,
+the host decides (the editor's "Icons from labels" setting, on by default); `icons` without
+a colon is a node, not the directive. Flowchart, architecture and C4 elements only.
 
 `appearance:` picks the palette colours are resolved from at compile time — the
 language keeps using colour words, the palette decides their hex. `pastel` is the
@@ -431,7 +440,7 @@ by vocabulary; the same word means the same thing everywhere. Two words of the s
 - **icon**: `set/name` (`aws/lambda`, `gcp/pubsub`, `tech/react`) resolved against
   `src/services/shapeLibrary` packs; a bare word that is a known icon name (`server`,
   `database` — note `database` is a shape alias first; use `icon: database` to force).
-  Unknown → W132, plain node.
+  Unknown → W132, plain node. `icon: none` = no icon, not even an inferred one (§3.3).
 - **edge heads**: `head: arrow|circle|cross|none`, `tail: none|arrow|circle|cross`,
   `from: top|right|bottom|left`, `to: …` (port side hints, §7).
 - **keys**: `label:` (override display label; needed when the id is the name), `link:`,
@@ -1611,6 +1620,7 @@ OFK diagram language, v1. One statement per line. // comment. Bad lines are skip
 Line 1 (optional): %% ofk 1     Line 2 (optional): family [direction]  → flowchart | architecture (default) |
   sequence | state | erd | class | mindmap | gitgraph ; direction: down | right | left | up
 title: My diagram         PALETTE   appearance: pastel | paper | builder | mono  (compile-time colours)
+ICONS     icons: auto | off   (icons from labels; icon: none opts one node out)
 NODES     Name                      Name [shape, colour, icon, key: value]      id = Long Name [attrs]
           Names are ids (slugified). Quote a name only if it has -> : = , [ ] { } // or starts with a keyword: "Cache: L2"
 EDGES     A -> B : label [attrs]     -> solid   --> dashed   <-> both   --  line     A -> B -> C  A -> B, C (expanded)

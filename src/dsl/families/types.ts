@@ -27,6 +27,8 @@ export interface FamilyContext {
   readonly comments: CommentTracker;
   readonly measureLabel?: (label: string, kind: string) => Size2d;
   readonly resolveIcon?: (id: string) => { packId: string; shapeId: string } | null;
+  /** Set when auto icons are on: the drawable icon id a label (or `tech:` hint) names. */
+  readonly inferIcon?: (label: string, hint?: string) => string | null;
   readonly signal?: AbortSignal;
 }
 

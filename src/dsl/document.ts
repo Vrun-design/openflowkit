@@ -34,6 +34,9 @@ export const RESERVED_FAMILIES: readonly DslFamily[] = [
   'bpmn', 'org', 'gantt', 'wireframe', 'sankey', 'journey', 'timeline',
 ];
 
+/** `icons: auto` puts an icon on every node whose label names one; `off` never does. */
+export type DslIconsMode = 'auto' | 'off';
+
 export interface DslDocument {
   readonly version: number;
   readonly family: DslFamily;
@@ -43,6 +46,8 @@ export interface DslDocument {
   readonly title?: string;
   /** `appearance:` palette; absent when the default palette applies. */
   readonly appearance?: DiagramPaletteName;
+  /** `icons:` — auto icons from labels on or off; absent when the host decides. */
+  readonly icons?: DslIconsMode;
   readonly comments: readonly DslComment[];
   readonly segments: readonly DslSegment[];
   readonly diagnostics: DslDiagnostic[];
@@ -70,6 +75,7 @@ export function parseDocument(input: string): DslDocument {
   let directiveDirection: DslDirection | undefined;
   let title: string | undefined;
   let appearance: DiagramPaletteName | undefined;
+  let icons: DslIconsMode | undefined;
   let consumedThrough = 0;
 
   const first = grouped[0];
@@ -103,13 +109,15 @@ export function parseDocument(input: string): DslDocument {
     .filter((token) => token.kind === 'comment' && token.line > consumedThrough)
     .map((token) => ({ text: token.value, line: token.line }));
 
-  // `title:`, `direction:` and `appearance:` are shared directives: their
+  // `title:`, `direction:`, `appearance:` and `icons:` are shared directives: their
   // values are hoisted into the document (grammar §3.3) and their lines are
   // consumed here so no family parser has to know about them.
   const segments: DslSegment[] = [];
   for (const segment of splitStatements(tokenized.tokens.filter((token) => token.line > consumedThrough))) {
     const keyword = segment.tokens[0]?.kind === 'comment' ? undefined : segment.tokens[0]?.value;
-    if (keyword !== 'title' && keyword !== 'direction' && keyword !== 'appearance') {
+    // `icons` is a common word, so only `icons:` is the directive.
+    const directive = keyword === 'icons' ? segment.tokens[1]?.value === ':' : keyword === 'title' || keyword === 'direction' || keyword === 'appearance';
+    if (!directive) {
       segments.push(segment);
       continue;
     }
@@ -122,6 +130,12 @@ export function parseDocument(input: string): DslDocument {
         diagnostics.push(diagnostic(segment, 'W102', 'warning', `Unknown appearance ${value}; default palette used`));
       } else if (appearance) diagnostics.push(diagnostic(segment, 'W104', 'warning', 'Duplicate appearance; first wins'));
       else appearance = value.toLowerCase() as DiagramPaletteName;
+    } else if (keyword === 'icons') {
+      const mode = value.toLowerCase();
+      if (mode !== 'auto' && mode !== 'off') {
+        diagnostics.push(diagnostic(segment, 'W102', 'warning', `Unknown icons ${value}; expected auto or off`));
+      } else if (icons) diagnostics.push(diagnostic(segment, 'W104', 'warning', 'Duplicate icons; first wins'));
+      else icons = mode;
     } else {
       const parsed = DIRECTIONS[value.toLowerCase()];
       if (!parsed) diagnostics.push(diagnostic(segment, 'W101', 'warning', `Unknown direction ${value}; ignored`));
@@ -137,6 +151,7 @@ export function parseDocument(input: string): DslDocument {
     direction: direction ?? directiveDirection,
     ...(title ? { title } : {}),
     ...(appearance ? { appearance } : {}),
+    ...(icons ? { icons } : {}),
     comments, segments, diagnostics, lineCount: tokenized.lineCount,
   };
 }

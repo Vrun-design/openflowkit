@@ -4,7 +4,8 @@ import type { Point2d, Size2d } from '../opencanvas/domain/geometry/types';
 import type { JsonObject } from '../opencanvas/domain/document/json';
 import type { DslDiagnostic, DslDirection } from './ast';
 import { animateToJson, extractAnimateBlock } from './animate';
-import { createCommentTracker, parseDocument, type CommentTracker } from './document';
+import { createCommentTracker, parseDocument, type CommentTracker, type DslIconsMode } from './document';
+import { inferIcon } from './autoIcon';
 import { familyFor } from './families';
 import type { FamilyContext, FamilyScene } from './families/types';
 import { deterministicLayout, layoutRunner, type LayoutPort } from './layout';
@@ -20,6 +21,8 @@ export interface CompileOptions {
   resolveIcon?: (id: string) => { packId: string; shapeId: string } | null;
   /** Palette override; an authored `appearance:` directive wins when present. */
   appearance?: { palette?: DiagramPaletteName };
+  /** Icons from labels when the text has no `icons:` directive; needs `resolveIcon`. */
+  autoIcons?: boolean;
 }
 
 export interface CompileMeta {
@@ -31,6 +34,8 @@ export interface CompileMeta {
   title?: string;
   /** Set only for a non-default palette, so default output stays unchanged. */
   appearance?: { palette: DiagramPaletteName };
+  /** Authored `icons:` directive, kept so the serializer writes it back. */
+  icons?: DslIconsMode;
 }
 
 export interface CompileResult {
@@ -79,6 +84,7 @@ interface AssembleOptions {
   direction?: DslDirection;
   title?: string;
   animate?: JsonObject;
+  icons?: DslIconsMode;
   comments: CommentTracker;
   diagnostics: DslDiagnostic[];
 }
@@ -98,6 +104,9 @@ export async function compileWorkspace(text: string, options: CompileOptions = {
   const comments = createCommentTracker(document.comments);
   const origin = options.origin ?? { x: 0, y: 0 };
   const palette = diagramPalette(document.appearance ?? options.appearance?.palette);
+  // Only an id the host can draw counts, so an auto icon never warns or dangles.
+  const resolveIcon = options.resolveIcon;
+  const autoIcons = (document.icons ?? (options.autoIcons ? 'auto' : 'off')) === 'auto' && resolveIcon;
   const context: FamilyContext = {
     text,
     origin,
@@ -109,7 +118,13 @@ export async function compileWorkspace(text: string, options: CompileOptions = {
     swatch: paletteResolver(palette),
     layout: layoutRunner(options.layout ?? deterministicLayout),
     ...(options.measureLabel ? { measureLabel: options.measureLabel } : {}),
-    ...(options.resolveIcon ? { resolveIcon: options.resolveIcon } : {}),
+    ...(resolveIcon ? { resolveIcon } : {}),
+    ...(autoIcons ? {
+      inferIcon: (label: string, hint?: string) => {
+        const id = inferIcon(label, hint);
+        return id && resolveIcon(id) ? id : null;
+      },
+    } : {}),
     ...(options.signal ? { signal: options.signal } : {}),
   };
 
@@ -130,6 +145,7 @@ export async function compileWorkspace(text: string, options: CompileOptions = {
           ...(document.direction ? { direction: document.direction } : {}),
           ...(document.title ? { title: document.title } : {}),
           ...(animate ? { animate: animateToJson(animate) } : {}),
+          ...(document.icons ? { icons: document.icons } : {}),
           comments,
           diagnostics,
         }),
@@ -145,7 +161,7 @@ export async function compile(text: string, options: CompileOptions = {}): Promi
 }
 
 function assembleResult(options: AssembleOptions): CompileResult {
-  const { scene, family, origin, palette, frameId, text, direction, title, animate, comments, diagnostics } = options;
+  const { scene, family, origin, palette, frameId, text, direction, title, animate, icons, comments, diagnostics } = options;
   // The palette rides on every record, not just the frame: renderers and the
   // serializer read a node without its page, so key-based families stay themed.
   const themed = <T extends SceneNode | SceneConnector>(record: T): T => palette === 'pastel' ? record : {
@@ -167,6 +183,7 @@ function assembleResult(options: AssembleOptions): CompileResult {
     ...(direction ? { direction } : {}),
     ...(title ? { title } : {}),
     ...(palette === 'pastel' ? {} : { appearance: { palette } }),
+    ...(icons ? { icons } : {}),
   };
   const trailing = comments.remaining();
   const frame: SceneNode = {

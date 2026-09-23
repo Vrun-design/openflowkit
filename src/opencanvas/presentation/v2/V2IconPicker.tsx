@@ -3,7 +3,7 @@ import { IconSearch, IconX } from '@tabler/icons-react';
 import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalog';
 import { CLOUD_PROVIDERS, ICON_PACKS, iconCounts, packLabel, searchIcons } from '@/services/shapeLibrary/iconSearch';
 import type { IconChoice } from '../../domain/nodes/iconNode';
-import { Icon, IconButton } from '../design-system';
+import { Button, Icon, IconButton } from '../design-system';
 import { EMOJI_GROUPS, searchEmoji } from './emojiCatalog';
 import './v2IconPicker.css';
 
@@ -12,6 +12,8 @@ interface V2IconPickerProps {
   readonly selected?: { readonly packId: string; readonly shapeId: string } | null;
   readonly onPick: (icon: IconChoice) => void;
   readonly onClose: () => void;
+  /** Set when the selection has an icon to take off. */
+  readonly onRemove?: () => void;
   /** Tab to open on; the caller remounts to switch (`key`). */
   readonly initialPack?: string;
   /** Emoji live on their own tab, beside the icon packs. */
@@ -44,7 +46,7 @@ function rememberRecent(icon: IconChoice): void {
 // arrows can walk. Browsing shows provider groups with counts; searching
 // shows one ranked list. Previews are the SVGs the canvas draws.
 export function V2IconPicker({
-  selected, onPick, onClose, initialPack = 'all', recentEmoji = [], onPickEmoji,
+  selected, onPick, onClose, onRemove, initialPack = 'all', recentEmoji = [], onPickEmoji,
 }: V2IconPickerProps): React.JSX.Element {
   const [pack, setPack] = useState(initialPack);
   const [vendor, setVendor] = useState('cloud');
@@ -102,6 +104,7 @@ export function V2IconPicker({
           {ICON_PACKS.map((item) => tab(item.id, item.label, pack, setPack))}
           {onPickEmoji ? tab('emoji', 'Emoji', pack, setPack) : null}
         </div>
+        {onRemove ? <Button variant="quiet" onClick={onRemove}>Remove icon</Button> : null}
         <IconButton variant="quiet" label="Close icons" icon={<Icon icon={IconX} />} onClick={onClose} />
       </header>
       {pack === 'cloud' ? (

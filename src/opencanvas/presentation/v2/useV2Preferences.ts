@@ -12,6 +12,8 @@ export interface V2Preferences {
   density: V2Density;
   /** Palette handed to every compile; the DSL's own `appearance:` wins. */
   diagramPalette: V2DiagramPalette;
+  /** Icons from labels on generated diagrams; the DSL's own `icons:` wins. */
+  autoIcons: boolean;
   /** Local agent pairing: port, optional shared token, and whether to connect. */
   bridgePort: number;
   bridgeToken: string;
@@ -24,7 +26,7 @@ export interface V2Preferences {
 const KEY = 'openflowkit-v2-preferences';
 const DEFAULTS: V2Preferences = {
   theme: 'system', showGrid: true, snapToGrid: false, canvasColor: null, density: 'comfortable',
-  diagramPalette: 'pastel', bridgePort: BRIDGE_DEFAULT_PORT, bridgeToken: '', agentBridgeEnabled: false,
+  diagramPalette: 'pastel', autoIcons: true, bridgePort: BRIDGE_DEFAULT_PORT, bridgeToken: '', agentBridgeEnabled: false,
   perspectiveTags: [],
   recentEmoji: [],
 };
@@ -41,6 +43,7 @@ function readPreferences(): V2Preferences {
       density: value?.density === 'compact' ? 'compact' : 'comfortable',
       diagramPalette: ['pastel', 'paper', 'builder', 'mono'].includes(value?.diagramPalette)
         ? value.diagramPalette : 'pastel',
+      autoIcons: value?.autoIcons !== false,
       bridgePort: Number.isInteger(value?.bridgePort) && value.bridgePort > 0 && value.bridgePort < 65536
         ? value.bridgePort : BRIDGE_DEFAULT_PORT,
       bridgeToken: typeof value?.bridgeToken === 'string' ? value.bridgeToken.slice(0, 64) : '',
