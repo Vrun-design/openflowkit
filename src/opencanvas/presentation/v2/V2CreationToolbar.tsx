@@ -1,14 +1,15 @@
 import { useRef, useState } from 'react';
 import {
+  IconArrowUpRight,
   IconChartBar,
   IconCircle,
   IconHandStop,
-  IconHighlight,
   IconMoodSmile,
   IconPencil,
   IconPhotoPlus,
   IconPointer,
   IconSquare,
+  IconTriangleSquareCircle,
   IconTypography,
 } from '@tabler/icons-react';
 import type { IconChoice } from '../../domain/nodes/iconNode';
@@ -16,7 +17,7 @@ import { FloatingRegion, Icon, IconButton, Popover, Toolbar, Tooltip } from '../
 import { V2IconPicker } from './V2IconPicker';
 import { FlyoutButton } from './V2Flyout';
 import {
-  CHART_OPTIONS, CONNECTOR_OPTIONS, INK_OPTIONS, SHAPE_OPTIONS, connectorOption, shapeOption,
+  CHART_OPTIONS, CONNECTOR_OPTIONS, INK_OPTIONS, SHAPE_OPTIONS,
   type V2ChartKind, type V2ConnectorTool, type V2InkTool, type V2Tool, type V2ToolConfig,
 } from './v2ToolCatalog';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
@@ -52,8 +53,6 @@ export function V2CreationToolbar(props: {
   // One flyout at a time: a rail with two open grids reads as two selections.
   const [flyout, setFlyout] = useState<V2FlyoutId | null>(null);
   const setFlyoutOpen = (id: V2FlyoutId) => (open: boolean) => setFlyout(open ? id : null);
-  const shape = shapeOption(props.toolConfig.shape);
-  const connector = connectorOption(props.toolConfig.connector);
   const ink: V2InkTool = props.tool === 'highlighter' ? 'highlighter' : 'pen';
 
   const plain = (tool: V2Tool, label: string, shortcut: string, icon: typeof IconPointer) => (
@@ -71,21 +70,21 @@ export function V2CreationToolbar(props: {
         <span className="ofk-v2-tools-separator" aria-hidden="true" />
         {plain('rectangle', 'Rectangle', 'R', IconSquare)}
         {plain('ellipse', 'Ellipse', 'O', IconCircle)}
-        <FlyoutButton label="Shapes" shortcut="S" icon={<Icon icon={shape.icon} />}
+        <FlyoutButton label="Shapes" shortcut="S" icon={<Icon icon={IconTriangleSquareCircle} />}
           selected={props.tool === 'shape'} open={flyout === 'shapes'}
           onOpenChange={setFlyoutOpen('shapes')} options={SHAPE_OPTIONS} columns={6}
           selectedId={props.toolConfig.shape} onPick={props.onPickShape} />
-        <FlyoutButton label="Connector" shortcut="A" icon={<Icon icon={connector.icon} />}
+        <FlyoutButton label="Connector" shortcut="A" icon={<Icon icon={IconArrowUpRight} />}
           selected={props.tool === 'connector'} open={flyout === 'connector'}
-          onOpenChange={setFlyoutOpen('connector')} options={CONNECTOR_OPTIONS} columns={2}
+          onOpenChange={setFlyoutOpen('connector')} options={CONNECTOR_OPTIONS} columns={5}
           selectedId={props.toolConfig.connector} onPick={props.onPickConnector} />
         <span className="ofk-v2-tools-separator" aria-hidden="true" />
         {plain('text', 'Text', 'T', IconTypography)}
         <FlyoutButton label="Charts" icon={<Icon icon={IconChartBar} />}
           selected={flyout === 'charts'} open={flyout === 'charts'}
-          onOpenChange={setFlyoutOpen('charts')} options={CHART_OPTIONS} openOnClick
+          onOpenChange={setFlyoutOpen('charts')} options={CHART_OPTIONS}
           selectedId={'bar' as V2ChartKind} onPick={props.onPickChart} />
-        <FlyoutButton label="Draw" shortcut="P" icon={<Icon icon={ink === 'pen' ? IconPencil : IconHighlight} />}
+        <FlyoutButton label="Draw" shortcut="P" icon={<Icon icon={IconPencil} />}
           selected={props.tool === 'pen' || props.tool === 'highlighter'} open={flyout === 'ink'}
           onOpenChange={setFlyoutOpen('ink')} options={INK_OPTIONS} columns={1}
           selectedId={ink} onPick={(id) => props.onToolChange(id)} />

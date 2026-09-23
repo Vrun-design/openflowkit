@@ -294,7 +294,7 @@ function connectorPreview(options: V2PointerOptions, ends: {
       : { nodeId: null, portId: null, anchor: null, point: ends.target.point },
     route: { kind, ownership: waypoints.length ? 'manual' : 'automatic' },
     waypoints: waypoints.map((point) => ({ ...point })),
-    labels: [], appearance: { markerEnd: kind === 'direct' ? 'none' : 'arrow' },
+    labels: [], appearance: { markerEnd: connectorHeadEnd(options.toolConfigRef.current.connector) },
     semantics: {}, metadata: {}, extensions: {},
   };
 }

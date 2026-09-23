@@ -31,17 +31,15 @@ test('the rail opens flyouts by mouse and keyboard, picks a shape, locks and und
   const shapes = page.getByRole('button', { name: 'Shapes' });
   await expect(shapes).toHaveAttribute('aria-expanded', 'false');
 
-  // Mouse: the first click arms the last pick, a click on the armed tool
-  // opens the grid, Esc closes, focus returns to the opener.
-  await shapes.click();
-  await expect(shapes).toHaveAttribute('aria-expanded', 'false');
-  await expect.poll(async () => (await state(page)).tool).toBe('shape');
+  // Mouse: a click opens the grid (the rail icon never changes), Esc closes,
+  // focus returns to the opener, and nothing was armed.
   await shapes.click();
   await expect(shapes).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByRole('option', { name: 'Diamond' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(shapes).toHaveAttribute('aria-expanded', 'false');
   await expect(shapes).toBeFocused();
+  expect((await state(page)).tool).toBe('select');
 
   // Keyboard: ArrowRight opens the grid with focus on the current pick, arrows
   // move between cells, Enter picks.
@@ -79,7 +77,6 @@ test('the connector flyout picks a route kind used by the next connector', async
   await placeShape(page, 760, 300);
 
   const connector = page.getByRole('button', { name: 'Connector' });
-  await connector.click();
   await connector.click();
   await page.getByRole('option', { name: 'Line' }).click();
   await expect(connector).toHaveAttribute('aria-expanded', 'false');

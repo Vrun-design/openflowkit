@@ -1,4 +1,4 @@
-// Slice 6.3 headed check: four connector kinds bind, route, and re-route live.
+// Slice 6.3 headed check: the connector kinds bind, route, and re-route live.
 import { expect, test } from '@playwright/test';
 
 type V2Api = {
@@ -43,22 +43,19 @@ test('each connector kind binds to shapes and re-routes when a shape moves', asy
   const to = centre(b);
 
   const pick = async (name: string) => {
-    // The first click arms the tool; a click on the armed tool opens the grid.
-    const button = page.getByRole('button', { name: 'Connector' });
-    await button.click();
-    if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click();
+    await page.getByRole('button', { name: 'Connector' }).click();
     await page.getByRole('option', { name }).click();
   };
 
-  // Arrow, line and curve: drag one onto the other.
-  for (const name of ['Arrow', 'Line', 'Curve']) {
+  // Elbow, line and curve: drag one onto the other.
+  for (const name of ['Elbow', 'Line', 'Curve']) {
     await pick(name);
     await page.mouse.move(from.x, from.y);
     await page.mouse.down();
     await page.mouse.move(to.x, to.y, { steps: 10 });
     await page.mouse.up();
     await expect.poll(async () => (await state(page)).connectors.length).toBe(
-      ['Arrow', 'Line', 'Curve'].indexOf(name) + 1
+      ['Elbow', 'Line', 'Curve'].indexOf(name) + 1
     );
   }
 
@@ -125,6 +122,10 @@ test('a marquee selects connectors with their shapes, and Delete removes them al
   await page.mouse.move(box.x + b.x + b.width / 2, box.y + b.y + b.height / 2, { steps: 10 });
   await page.mouse.up();
   await expect.poll(async () => (await state(page)).connectors.length).toBe(1);
+  // The default arrow goes straight where it was dragged, head at the target.
+  const [arrow] = (await doc(page)).pages[0].connectors;
+  expect(arrow!.route.kind).toBe('direct');
+  expect(arrow!.appearance.markerEnd).toBe('arrow');
 
   // Marquee over everything: shapes and the connector are selected together.
   await page.keyboard.press('Escape');

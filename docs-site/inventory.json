@@ -181,8 +181,8 @@
       "id": "connector-tools",
       "name": "Connector tools",
       "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts:103",
-      "notes": "Arrow (orthogonal), line (direct), curve (bezier), path (click-by-click polyline).",
+      "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts:97",
+      "notes": "Arrow (direct, the default), elbow (orthogonal), curve (bezier), line (direct, no head), path (click-by-click polyline).",
       "page": "shapes-and-connectors",
       "shortcuts": [
         "Connector"

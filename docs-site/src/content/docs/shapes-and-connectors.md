@@ -32,13 +32,14 @@ corner.
 
 ## Connectors
 
-Four kinds sit behind the Connector tool (A):
+Click the Connector button to open its five kinds; `A` arms the last one picked:
 
 | Kind | Route | Use for |
 | --- | --- | --- |
-| Arrow | orthogonal | flowcharts and architecture; routes around obstacles |
+| Arrow | direct | the default; goes straight where you drag it |
+| Elbow | orthogonal | flowcharts and architecture; routes around obstacles |
+| Curve | bezier | soft links where the elbow path looks busy |
 | Line | direct | a straight link with no head |
-| Curve | bezier | soft links where the orthogonal path looks busy |
 | Path | polyline | click each waypoint yourself |
 
 A connector binds to a node's side or to a free point. Orthogonal routes recompute while
@@ -53,7 +54,7 @@ plain, plus `head:`/`tail:` markers, `from:`/`to:` port hints and a `: label`.
 
 - **No custom shapes.** The library is the library; DSL shape words and toolbar entries are
   the same set.
-- **No connector kinds beyond the four.** Dashes, heads and labels are attributes, not kinds.
+- **No connector kinds beyond the five.** Dashes, heads and labels are attributes, not kinds.
 - **No arrowheads on free ink.** Pen strokes are ink nodes; only connectors have marker heads.
 - **Waypoints are per connector and manual.** There is no "route through this corridor"
   control.

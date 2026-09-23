@@ -3,7 +3,7 @@ import {
   IconArrowUpRight, IconBolt, IconBookmark, IconBrackets, IconBraces, IconCapsuleHorizontal, IconChevronRight,
   IconChartArea, IconChartBar, IconChartDots, IconChartDonut, IconChartLine, IconChartPie,
   IconChartRadar, IconCircle, IconCircleCheck, IconCircleNumber1, IconCircleX, IconCircles,
-  IconCloud, IconCube, IconCylinder, IconDiamond, IconFile, IconFolder, IconGridDots,
+  IconCloud, IconCornerDownRight, IconCube, IconCylinder, IconDiamond, IconFile, IconFolder, IconGridDots,
   IconHeart, IconHexagon, IconIdBadge, IconLayersSubtract, IconLayoutList,
   IconLayoutSidebarRight, IconMessage, IconMinus, IconNote, IconOval, IconPin, IconPlus,
   IconPolygon, IconPrism, IconShape2, IconShape3, IconSquareRounded, IconStar,
@@ -27,7 +27,7 @@ export type V2Tool =
   | 'pen' | 'highlighter'
   | 'eraser' | 'lasso';
 
-export type V2ConnectorTool = 'arrow' | 'line' | 'curve' | 'path';
+export type V2ConnectorTool = 'arrow' | 'elbow' | 'curve' | 'line' | 'path';
 export type V2InkTool = 'pen' | 'highlighter';
 export type V2ChartKind = ChartKind;
 
@@ -94,16 +94,11 @@ export const SHAPE_OPTIONS: readonly ToolOption<ShapeKind>[] = [
   { id: 'actor', label: 'Actor', icon: IconUser },
 ];
 
-const SHAPE_BY_ID = new Map(SHAPE_OPTIONS.map((option) => [option.id, option]));
-
-export function shapeOption(kind: ShapeKind): ToolOption<ShapeKind> {
-  return SHAPE_BY_ID.get(kind) ?? SHAPE_OPTIONS[0]!;
-}
-
 export const CONNECTOR_OPTIONS: readonly ToolOption<V2ConnectorTool>[] = [
   { id: 'arrow', label: 'Arrow', icon: IconArrowUpRight },
-  { id: 'line', label: 'Line', icon: IconMinus },
+  { id: 'elbow', label: 'Elbow', icon: IconCornerDownRight },
   { id: 'curve', label: 'Curve', icon: IconArrowCurveLeft },
+  { id: 'line', label: 'Line', icon: IconMinus },
   { id: 'path', label: 'Path', icon: IconVectorBezier2 },
 ];
 
@@ -125,21 +120,17 @@ export const CHART_OPTIONS: readonly ToolOption<V2ChartKind>[] = [
   { id: 'heatmap', label: 'Heatmap', icon: IconGridDots },
 ];
 
-const CONNECTOR_BY_ID = new Map(CONNECTOR_OPTIONS.map((option) => [option.id, option]));
-
-export function connectorOption(kind: V2ConnectorTool): ToolOption<V2ConnectorTool> {
-  return CONNECTOR_BY_ID.get(kind) ?? CONNECTOR_OPTIONS[0]!;
-}
-
-/** The route a picked connector tool draws. `polyline` is the click-by-click path. */
+/** The route a picked connector tool draws. The arrow goes where it is dragged,
+ * like its icon; elbows are asked for. `polyline` is the click-by-click path. */
 export const CONNECTOR_ROUTE: Readonly<Record<V2ConnectorTool, ConnectorRouteKind>> = {
-  arrow: 'orthogonal',
+  arrow: 'direct',
+  elbow: 'orthogonal',
   line: 'direct',
   curve: 'bezier',
   path: 'polyline',
 };
 
-/** A line has no head; the other three point at their target. */
+/** A line has no head; every other connector points at its target. */
 export function connectorHeadEnd(kind: V2ConnectorTool): 'arrow' | 'none' {
   return kind === 'line' ? 'none' : 'arrow';
 }

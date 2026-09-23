@@ -145,7 +145,7 @@ export function V2EditorPage(): React.JSX.Element {
   const sectionRef = useRef<HTMLElement | null>(null);
   const gestureApiRef = useRef<V2GestureApi | null>(null);
   const [tool, setTool] = useState<V2Tool>('select');
-  // Which variant a flyout tool draws with; the rail shows the last pick.
+  // Which variant a flyout tool draws with; its grid marks the last pick.
   const [toolConfig, setToolConfig] = useState<V2ToolConfig>(DEFAULT_TOOL_CONFIG);
   const [spacePan, setSpacePan] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);

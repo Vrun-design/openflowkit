@@ -24,8 +24,7 @@ test('draws a library shape, connects it, restyles it and undoes', async ({ page
   await page.goto('/');
   await page.getByTestId('v2-canvas').focus();
 
-  // Pick the star from the flyout (click arms, second click opens), then place it.
-  await page.getByRole('button', { name: 'Shapes' }).click();
+  // Pick the star from the flyout, then place it.
   await page.getByRole('button', { name: 'Shapes' }).click();
   await page.getByRole('option', { name: 'Star' }).click();
   await page.mouse.click(420, 320);

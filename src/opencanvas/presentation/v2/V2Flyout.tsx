@@ -1,12 +1,11 @@
-import { useRef, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { Icon, IconButton, Popover, Tooltip } from '../design-system';
 import type { ToolOption } from './v2ToolCatalog';
 
-const HOLD_MS = 350;
-
-// A rail button with a corner triangle that opens a grid of variants. Click
-// arms the last pick (tldraw/Figma); a click on the already-armed tool, a
-// long-press or ArrowRight opens the grid. Picking arms the variant and closes.
+// A rail button with a corner triangle that opens a grid of variants. The
+// button keeps one icon and a click always opens the grid (Miro): the pick is
+// one visible step, never a hidden second click. The tool's letter re-arms the
+// last pick without the grid. Picking arms the variant and closes.
 export function FlyoutButton<T extends string>(props: {
   readonly label: string;
   readonly shortcut?: string;
@@ -19,27 +18,8 @@ export function FlyoutButton<T extends string>(props: {
   readonly onPick: (id: T) => void;
   /** Narrow grids (connectors) read better at half width. */
   readonly columns?: number;
-  /** Charts have no armed tool: every click opens the grid. */
-  readonly openOnClick?: boolean;
 }): React.JSX.Element {
   const anchorRef = useRef<HTMLButtonElement>(null);
-  const holdRef = useRef<number | null>(null);
-  // When the press began: a click that follows its own long-press must not
-  // toggle the grid shut again. Comparing timestamps self-heals a press that
-  // ends off the button (no click, no stale flag).
-  const pressedAtRef = useRef(0);
-
-  const clearHold = () => {
-    if (holdRef.current !== null) window.clearTimeout(holdRef.current);
-    holdRef.current = null;
-  };
-
-  const onPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (event.button !== 0) return;
-    clearHold();
-    pressedAtRef.current = Date.now();
-    holdRef.current = window.setTimeout(() => props.onOpenChange(true), HOLD_MS);
-  };
 
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key !== 'ArrowRight') return;
@@ -88,16 +68,8 @@ export function FlyoutButton<T extends string>(props: {
           data-flyout=""
           aria-haspopup="dialog"
           aria-expanded={props.open}
-          onPointerDown={onPointerDown}
-          onPointerUp={clearHold}
-          onPointerLeave={clearHold}
           onKeyDown={onKeyDown}
-          onClick={() => {
-            clearHold();
-            if (props.open && Date.now() - pressedAtRef.current >= HOLD_MS) return;
-            if (props.open || props.selected || props.openOnClick) props.onOpenChange(!props.open);
-            else props.onPick(props.selectedId);
-          }}
+          onClick={() => props.onOpenChange(!props.open)}
         />
       </Tooltip>
       <Popover role="dialog" aria-label={`${props.label} options`} open={props.open}

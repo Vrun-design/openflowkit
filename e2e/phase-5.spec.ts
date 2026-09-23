@@ -138,6 +138,7 @@ views { view landscape; view container of Shop }
   const api = await rect('shop.api');
   expect(web && api).toBeTruthy();
   await page.getByRole('toolbar', { name: 'Create' }).getByRole('button', { name: 'Connector' }).click();
+  await page.getByRole('option', { name: 'Arrow' }).click();
   await page.mouse.move(web!.x + web!.width / 2, web!.y + web!.height / 2);
   await page.mouse.down();
   await page.mouse.move(web!.x + web!.width / 2 + 30, web!.y + web!.height / 2, { steps: 4 });

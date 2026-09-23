@@ -17,7 +17,6 @@ test('shape tools ghost under the pointer and drop at the shape size', async ({ 
   await page.getByTestId('v2-canvas').focus();
   const shapes = page.getByRole('button', { name: 'Shapes' });
   await shapes.click();
-  await shapes.click();
   await page.getByRole('option', { name: 'Actor' }).click();
   await expect.poll(async () => (await api(page)).state.tool).toBe('shape');
 
@@ -29,7 +28,6 @@ test('shape tools ghost under the pointer and drop at the shape size', async ({ 
   expect(actor.content.shape).toBe('actor');
   expect(actor.size).toEqual({ width: 112, height: 136 });
 
-  await shapes.click();
   await shapes.click();
   await page.getByRole('option', { name: 'Folder' }).click();
   await page.mouse.move(800, 400);
