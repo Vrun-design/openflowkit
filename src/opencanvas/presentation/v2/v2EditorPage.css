@@ -331,7 +331,11 @@
   background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
   animation: ofk-v2-shimmer 1.6s linear infinite;
 }
-.ofk-v2-thinking summary .ofk-v2-flow-mark { width: 13px; height: 13px; color: var(--ofk-accent); }
+.ofk-v2-activity-mark[data-still] { animation: none; }
+.ofk-v2-thinking summary { gap: 8px; }
+/* The steps icon takes the mark's 20px column so the two summaries line up. */
+.ofk-v2-steps summary { gap: 8px; }
+.ofk-v2-steps summary > .ofk-icon { margin-inline: 3.5px; }
 @keyframes ofk-v2-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 .ofk-v2-thinking-body { margin: 6px 0 2px; padding: 2px 0 2px 12px; border-inline-start: 2px solid var(--ofk-border); color: var(--ofk-secondary); font-size: 12.5px; line-height: 1.55; max-height: 220px; overflow: auto; }
 .ofk-v2-activity { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; }

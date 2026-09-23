@@ -137,7 +137,9 @@ function Thinking({ message, live: streaming }: { readonly message: ChatMessage;
   return (
     <details className="ofk-v2-thinking" open={live && !message.text ? true : undefined}>
       <summary data-live={live && !message.text ? '' : undefined}>
-        <FlowMark stage={live && !message.text ? 'draw' : 'still'} />{live && !message.text ? <span className="ofk-v2-shimmer">Thinking…</span> : seconds ? `Thought for ${seconds}s` : 'Thoughts'}
+        <span className="ofk-v2-activity-mark" data-still={live && !message.text ? undefined : ''} aria-hidden="true">
+          <FlowMark stage={live && !message.text ? 'draw' : 'still'} />
+        </span>{live && !message.text ? <span className="ofk-v2-shimmer">Thinking…</span> : seconds ? `Thought for ${seconds}s` : 'Thoughts'}
       </summary>
       <div className="ofk-v2-thinking-body"><Markdown text={message.thinking} /></div>
     </details>
