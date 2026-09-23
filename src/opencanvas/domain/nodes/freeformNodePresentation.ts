@@ -130,7 +130,8 @@ export function resolveFreeformNodePresentation(node: SceneNode): FreeformNodePr
     return {
       kind: node.kind,
       title: presentationString(node.content.label),
-      body: presentationString(node.content.subLabel, 'Add a note…'),
+      // A note with no body shows none: the editor's hint is not content.
+      body: presentationString(node.content.subLabel),
       colorKey: presentationString(node.content.color, 'yellow'),
       ...(customColor ? { customColor } : {}),
     };

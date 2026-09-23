@@ -77,6 +77,6 @@ describe('freeform node presentation', () => {
     expect(resolveFreeformNodePresentation(node('sticky', { subLabel: 'Remember' })))
       .toMatchObject({ kind: 'sticky', body: 'Remember' });
     expect(resolveFreeformNodePresentation(node('callout', { label: 'Watch out' })))
-      .toMatchObject({ kind: 'callout', title: 'Watch out' });
+      .toMatchObject({ kind: 'callout', title: 'Watch out', body: '' });
   });
 });
