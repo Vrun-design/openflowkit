@@ -3,25 +3,26 @@
 Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on hold; 6.6, 6.7, 6.10 partly — see Deferred).
 
 ## Now
-- **Phase 9 — documentation rebuild: 9.1–9.4 DONE 2026-09-23** (opencode/deepseek-v4.1;
-  9.1 → 9.6). 9.1 inventory.json (115 rows; shipped rows carry file:line evidence and a page)
-  + inventory.test.ts. 9.2 prebuild compiles every ```` ```openflow ```` block through the real
-  compiler; any warning, error or empty frame fails with file:line; a remark plugin renders
-  the SVG beside its source, light/dark. 9.3 English only (tr/ deleted), 22 fiction pages
-  deleted, nine sidebar groups, zero missing links. 9.4 all 16 surviving pages rewritten
-  against the inventory; keyboard page generated from `v2Shortcuts.ts`, MCP chapter from the
-  manifest + tool registrations (arguments, modes, resources); 32 pages build.
+- **Phase 9 — documentation rebuild: 9.1–9.5 DONE 2026-09-23** (opencode/deepseek-v4.1).
+  9.1 inventory.json (115 rows; shipped rows carry file:line evidence and a page) +
+  inventory.test.ts. 9.2 prebuild compiles every ```` ```openflow ```` block through the real
+  compiler; any warning/error/empty frame fails with file:line; a remark plugin renders the SVG
+  beside its source, light/dark. 9.3 English only (tr/ deleted), 22 fiction pages deleted, nine
+  sidebar groups, zero missing links. 9.4 all 16 surviving pages rewritten; keyboard page
+  generated from `v2Shortcuts.ts`, MCP chapter from the manifest + tool registrations.
+  9.5 warm palette from the app tokens, real landing page with a compiled hero, phone-legible
+  examples; Lighthouse 100/100/100/100 mobile at 375px on three pages, dark axe contrast 0.
   Defects found, documented, not fixed (src/ read-only): chart quadrant `x:`/`y:`/`quadrants:`
-  never parse (W131) and `v2Shortcuts.ts:49` labels Shift+1 "Zoom to 100%" while the
-  dispatcher fits the view; the generated keyboard page corrects that row and names it.
-  Next 9.5: Starlight theme override, real landing page (index.astro is a redirect today),
-  phone-legible SVGs; then 9.6 the four-failure gate.
-- **Phase 7 — motion export: DONE 2026-09-22.** One Timeline feeds preview, stills, animated
-  SVG and every frame; GIF/MP4/WebM encode in a worker; MCP `export` serves all four plus
+  never parse (W131); `v2Shortcuts.ts:49` labels Shift+1 "Zoom to 100%" while the dispatcher
+  fits the view — the generated page corrects it. Deleted the docs-site analytics head script
+  (imported a file phase 0 removed, 404 on every page; CSP blocked posthog anyway) and its
+  unused posthog-js dep; added lighthouse as a docs-site devDep (why: the 9.5 check).
+  Next 9.6: the four-failure gate + quality workflow.
+- **Phase 7 — motion export: DONE 2026-09-22.** One Timeline feeds preview, stills, animated SVG
+  and every frame; GIF/MP4/WebM encode in a worker; MCP `export` serves all four plus
   `svg-animated`; the worker paints plain pages itself (500 nodes × 451 frames: 30.7→3.1 s).
-- **Coverage sweep 2026-09-22** (Opus 5): `e2e/arrange|clipboard|transform|waypoints.spec.ts`;
-  fixed locked nodes moving via `buildMoveNodesCommand`. `agent-live` flaked once in three
-  full headed sweeps and passes alone; cause unconfirmed.
+  Coverage sweep (Opus 5): `e2e/arrange|clipboard|transform|waypoints.spec.ts`; fixed locked
+  nodes moving via `buildMoveNodesCommand`; `agent-live` flaked once in three headed sweeps.
 
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; one `@keyframes` per element; chart, ink, image, annotation

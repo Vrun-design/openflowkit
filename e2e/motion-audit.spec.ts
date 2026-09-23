@@ -34,8 +34,13 @@ test('the README animation plays through an <img>, GitHub-style', async ({ page 
 
 test('reduced motion leaves a finished still', async ({ page }) => {
   const svg = readFileSync('assets/motion/flow-walkthrough.svg', 'utf8');
+  expect(svg).toContain('@media (prefers-reduced-motion: reduce)');
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.setContent(`<body style="margin:0;background:#fff"><img id="still" width="420" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}"></body>`);
+  // Inline, not <img>: Chromium's emulated prefers-reduced-motion never reaches
+  // a document loaded as an image, so the <img> above keeps animating whatever
+  // the rule says. Inlining renders the same markup in a document the emulation
+  // does reach, which is what proves the rule actually stops the animation.
+  await page.setContent(`<body style="margin:0;background:#fff"><div id="still" style="width:420px">${svg}</div></body>`);
   await page.waitForSelector('#still');
   await page.waitForTimeout(400);
   const first = await page.locator('#still').screenshot();
