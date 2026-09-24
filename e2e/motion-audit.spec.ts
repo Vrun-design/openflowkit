@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 // Slice 7.7 audit: the formats that can be verified in a browser are verified
 // here — the committed README asset animates through the exact GitHub

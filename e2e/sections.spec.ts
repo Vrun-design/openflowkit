@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type NodeShape = { id: string; kind: string; parentId: string | null; size: { width: number; height: number }; transform: { translation: { x: number; y: number }; scale: { x: number } } };
 type Api = { getDocument(): { pages: Array<{ nodes: NodeShape[] }> } | null; getNodeRect(id: string): DOMRect | null };

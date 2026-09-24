@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 // `/` reopens the document you had open last instead of minting a new one.
 // npm run e2e:headed -- e2e/home.spec.ts

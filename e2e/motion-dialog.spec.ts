@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 // Slice 7.5 gate: the Animation section of Export previews the exact SVG it
 // downloads, the scrubber re-renders the still, space plays and the preset

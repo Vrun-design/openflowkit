@@ -44,7 +44,7 @@ export function V2CameraControls(props: V2CameraControlsProps): React.JSX.Elemen
       <FloatingRegion slot="bottom-start">
         <Toolbar label="View" className="ofk-v2-view-controls">
           <Tooltip content="Canvas background">
-            <ColorSwatch ref={colorRef} label="Canvas background" color={canvasColor}
+            <ColorSwatch ref={colorRef} label="Canvas background" color={canvasColor} expanded={colorOpen}
               onClick={() => setColorOpen((open) => !open)} />
           </Tooltip>
           <span className="ofk-v2-divider" aria-hidden="true" />
@@ -58,17 +58,19 @@ export function V2CameraControls(props: V2CameraControlsProps): React.JSX.Elemen
             />
           </Tooltip>
           <span className="ofk-v2-divider" aria-hidden="true" />
-          <Button
-            ref={zoomRef}
-            variant="quiet"
-            className="ofk-numeric"
-            aria-haspopup="menu"
-            aria-label={`Zoom ${props.zoomPercent}%`}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            {props.zoomPercent}%
-          </Button>
+          <Tooltip content="Zoom">
+            <Button
+              ref={zoomRef}
+              variant="quiet"
+              className="ofk-numeric"
+              aria-haspopup="menu"
+              aria-label={`Zoom ${props.zoomPercent}%`}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              {props.zoomPercent}%
+            </Button>
+          </Tooltip>
           <span className="ofk-v2-divider" aria-hidden="true" />
           <Tooltip content="Zoom to fit" shortcut="⌘0"><IconButton variant="quiet" label="Zoom to fit" icon={<Icon icon={IconMaximize} />} onClick={props.onFitView} /></Tooltip>
           <span className="ofk-v2-divider" aria-hidden="true" />

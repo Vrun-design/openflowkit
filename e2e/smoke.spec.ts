@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type V2Api = { getState(): { nodes: string[]; save: string } };
 const state = (page: import('@playwright/test').Page) =>
@@ -7,7 +7,7 @@ const state = (page: import('@playwright/test').Page) =>
     return api ? api.getState() : { nodes: [], save: 'booting' };
   });
 
-test('boots to the canvas, draws a rectangle, and keeps it across reload', async ({ page }) => {
+test('boots to the canvas, draws a rectangle, and keeps it across reload @gate', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveURL(/#\/d\//);
   await expect(page.getByTestId('v2-welcome')).toBeVisible();

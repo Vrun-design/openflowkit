@@ -1,5 +1,5 @@
 // Slice 6.4 headed check: ink draws at input rate, erases and lassos.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type V2Api = {
   getState(): { nodes: string[]; tool: string };

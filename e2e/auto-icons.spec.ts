@@ -1,7 +1,7 @@
 // Icons from labels, end to end: generate from text, see the icons land, then
 // take them off at each scale a user reaches for — one node, then the diagram —
 // and check undo gives back exactly what a removal took.
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 import { centreOf, doc, openCanvas, rect, state, type V2Node } from './helpers';
 
 const META = process.platform === 'darwin' ? 'Meta' : 'Control';

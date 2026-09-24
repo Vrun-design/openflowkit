@@ -1,7 +1,7 @@
 // Gap check: duplicate, copy/cut/paste, paste style, nudge and lock are on the
 // cheatsheet and in the dispatcher, but no end-to-end check proved their effect.
 // npm run e2e:headed -- e2e/clipboard.spec.ts
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { clickNode, drawShape, isLocked, node, openCanvas, rect, state } from './helpers';
 
 // Paste prefers the system clipboard when it can read it; granting the

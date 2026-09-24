@@ -148,6 +148,16 @@ describe('failures and secrets', () => {
     vi.unstubAllGlobals();
   });
 
+  it('quotes the provider error but never the key, however short', async () => {
+    for (const provider of ['openai', 'claude', 'gemini'] as const) {
+      vi.stubGlobal('fetch', vi.fn(async () => fail(401, '{"error":{"message":"Incorrect API key provided: sk-x"}}')));
+      const error = (await createProvider({ provider, apiKey: 'sk-x' }).complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught)) as AiProviderError;
+      vi.unstubAllGlobals();
+      expect(error.message).toContain('Incorrect API key provided: [key]');
+      expect(error.message).not.toContain('sk-x');
+    }
+  });
+
   it('tells a closed Ollama port from a CORS refusal with a no-cors probe', async () => {
     const run = async (listening: boolean) => {
       vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {

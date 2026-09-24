@@ -11,7 +11,7 @@ export function Tooltip({
 }: {
   content: ReactNode;
   shortcut?: string;
-  children: ReactElement<{ 'aria-describedby'?: string }>;
+  children: ReactElement<{ 'aria-describedby'?: string; title?: string }>;
 }) {
   const id = useId();
   const anchorRef = useRef<HTMLSpanElement>(null);
@@ -31,9 +31,11 @@ export function Tooltip({
     setOpen(false);
   }
   const described = children.props['aria-describedby'];
-  const trigger = open
-    ? cloneElement(children, { 'aria-describedby': [described, id].filter(Boolean).join(' ') })
-    : children;
+  // The native title would show a second, late tooltip; this one owns the hint.
+  const trigger = cloneElement(children, {
+    title: '',
+    ...(open ? { 'aria-describedby': [described, id].filter(Boolean).join(' ') } : {}),
+  });
   return (
     <>
       <span

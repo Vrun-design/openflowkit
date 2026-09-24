@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 // Slice 7.4 gate: real files, real codecs, and a canvas that keeps painting.
 // GIF, MP4 and WebM all download from the Animation section, each starts with

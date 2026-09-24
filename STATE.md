@@ -3,8 +3,9 @@
 Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on hold; 6.6, 6.7, 6.10 partly — see Deferred).
 
 ## Now
-- **Fixes 2026-09-24**: popovers toggle shut; fit button fixed; tooltips warm. AI errors: no-cors probe
-  splits closed port from CORS; provider text quoted, keys redacted. Docs: AI Troubleshooting + Ollama.
+- **Quality gate 2026-09-24**: merge on `npm run verify` (adds headed `@gate`, ~1 min). `e2e/test.ts`
+  fails a spec on any uncaught page error; `controls.spec.ts` sweeps every toolbar control. e2e is
+  serial (2 WebGL workers starved = the old flakes). AI errors: closed port ≠ CORS; key-redacted text.
 - **Phase 11 — assistant is a conversation DONE 2026-09-23** (opus-5.5). Talks or draws; sees every
   diagram in scope (page/selection chip, `assistantContext.ts`); SSE + thinking on 3 wires; edit/retry/
   copy/report(GitHub issue); multi-diagram rows chain (`assistantChanges.ts`); 503/429 retry once.
@@ -15,11 +16,9 @@ Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on 
 - **Icons from labels DONE 2026-09-23**: `dsl/autoIcon.ts` table; `autoIcons` setting < `icons:` <
   `icon: none`; inferred id in `metadata.dsl.autoIcon`, never serialized. `dsl/iconMatch.ts` is the one
   id→icon rule (editor + MCP); exports inline art (`v2IconArt.ts`). Gap: headless MCP SVG has no art.
-- **Phase 10 — BYOK: 10.1–10.7 DONE 2026-09-22** (deepseek-v4.1). `providers.ts` ten entries /
-  three wires; `diagnosis.ts` eight causes; a blocked fetch is told apart by
-  `securitypolicyviolation` + `navigator.onLine`, never a TypeError; headed `ai-providers.spec.ts`
-  on `e2e/stubProviderServer.mjs`. Decision (a): `connect-src` widens to `https:` + localhost; cost:
-  CSP no longer limits exfiltration — accepted (`img-src https:` already allowed beacons).
+- **Phase 10 — BYOK DONE 2026-09-22**: `providers.ts` ten entries / three wires; `diagnosis.ts` causes
+  (CSP event, onLine, no-cors probe); headed `ai-providers.spec.ts` on `e2e/stubProviderServer.mjs`.
+  Decision: `connect-src` = `https:` + localhost; cost: CSP no longer limits exfiltration — accepted.
 - **Polish pass 2026-09-23**: Arrow straight, Elbow its own pick; export matches canvas (label bounds,
   plates, dark backdrop). Docs screenshots: `docs-site/scripts/capture-screens.mjs`, rerun on chrome change.
 - **BYOK dialog 2026-09-23**: model ids verified vs provider docs (re-check each release); a key per
@@ -30,7 +29,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on 
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text node sends every frame to the
   SVG raster. GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8).
-- `agent-live`/phase-7 `frame.test.ts` flake under load, pass alone; frames export plain.
+- Phase-7 `frame.test.ts` flakes under load, passes alone; frames export plain.
 
 ## Next — owner's order, 2026-09-22
 - **On hold**: phase 7b film look, phase 8 keyframes/Present. Phase 6 leftovers: 6.6

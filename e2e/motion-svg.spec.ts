@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 // Slice 7.2 gate: the animated SVG paused at t and the still from frameAt(t)
 // must be the same picture. Both are rasterised in the page and compared

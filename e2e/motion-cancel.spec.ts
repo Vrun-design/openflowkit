@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 // Cancelling a running encode must give the panel back. Terminating the worker
 // leaves nothing to settle the export promise, so the abort rejects it too.

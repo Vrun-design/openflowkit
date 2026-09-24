@@ -1,5 +1,5 @@
 // Slice 6.2 headed check: library shapes draw, connect, restyle and undo.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type V2Api = {
   getState(): { nodes: string[]; connectors: string[] };

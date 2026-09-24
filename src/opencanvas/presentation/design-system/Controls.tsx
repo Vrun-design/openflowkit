@@ -253,15 +253,17 @@ export function Segmented<T extends string>({
 /** Displays a color; the host opens its picker. Mixed values show a split swatch. */
 export const ColorSwatch = forwardRef<
   HTMLButtonElement,
-  { label: string; color: string | null; onClick?: () => void; disabled?: boolean }
->(function ColorSwatch({ label, color, onClick, disabled }, ref) {
+  /** `expanded` marks the swatch as the trigger of the picker it opens. */
+  { label: string; color: string | null; onClick?: () => void; disabled?: boolean; expanded?: boolean }
+>(function ColorSwatch({ label, color, onClick, disabled, expanded }, ref) {
   return (
     <button
       ref={ref}
       type="button"
       className="ofk-button ofk-swatch"
       aria-label={`${label}: ${color ?? 'mixed'}`}
-      title={label}
+      aria-haspopup={expanded === undefined ? undefined : 'dialog'}
+      aria-expanded={expanded}
       disabled={disabled}
       onClick={onClick}
     >

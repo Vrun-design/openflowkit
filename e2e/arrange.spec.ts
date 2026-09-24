@@ -1,7 +1,7 @@
 // Gap check: align, distribute, flip and z-order are bound in v2Shortcuts and
 // drawn in V2ArrangeControls, but nothing proved the document actually moves.
 // npm run e2e:headed -- e2e/arrange.spec.ts
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { clickNode, drawShape, openCanvas, rect, stackOrder, state } from './helpers';
 
 const lefts = async (page: import('@playwright/test').Page, ids: string[]) =>

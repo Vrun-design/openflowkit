@@ -1,6 +1,6 @@
 // Slice 1.5 headed check: dragging a bound node around an obstacle reroutes
 // live without crossing it and without side flicker.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type V2Api = {
   getState(): { nodes: string[]; connectors: string[]; revision: number };
@@ -66,14 +66,18 @@ test('dragging a bound node around an obstacle reroutes without crossing', async
   const [a, b, c] = ids;
   const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
 
-  // Bind A→C from A's right handle, dropping on C's left half.
+  // Bind A→C with an Elbow: the orthogonal router is what avoids obstacles
+  // (the default Arrow goes straight, by design).
   const rectA = (await nodeRect(page, a))!;
   const rectC = (await nodeRect(page, c))!;
-  await page.mouse.move(box.x + rectA.x + rectA.width + 22, box.y + rectA.y + rectA.height / 2);
+  await page.getByRole('button', { name: 'Connector' }).click();
+  await page.getByRole('option', { name: 'Elbow' }).click();
+  await page.mouse.move(box.x + rectA.x + rectA.width / 2, box.y + rectA.y + rectA.height / 2);
   await page.mouse.down();
   await page.mouse.move(box.x + rectC.x + 20, box.y + rectC.y + rectC.height / 2, { steps: 10 });
   await page.mouse.up();
   await expect.poll(async () => (await state(page)).connectors.length).toBe(1);
+  await page.keyboard.press('v');
   const edgeId = (await state(page)).connectors[0];
   const edge = (await doc(page)).pages[0].connectors[0];
   expect(edge.source).toMatchObject({ nodeId: a, portId: null });

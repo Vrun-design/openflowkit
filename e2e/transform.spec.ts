@@ -1,7 +1,7 @@
 // Gap check: resize, rotate and object snapping are pointer-only paths with
 // domain tests but no end-to-end proof that the handles are reachable at all.
 // npm run e2e:headed -- e2e/transform.spec.ts
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { clickNode, drawShape, guidesVisible, node, openCanvas, rect, state } from './helpers';
 
 const canvasBox = async (page: import('@playwright/test').Page) =>

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type Api = { getNodeRect(id: string): DOMRect | null; getDocument(): { pages: Array<{ nodes: Array<{ id: string }> }> } | null };
 const api = (page: import('@playwright/test').Page) =>

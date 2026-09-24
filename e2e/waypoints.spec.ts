@@ -1,7 +1,7 @@
 // Gap check: "manual waypoints survive" is a headline promise in the plan, and
 // nothing proved a dragged segment keeps its shape when a bound node moves.
 // npm run e2e:headed -- e2e/waypoints.spec.ts
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import {
   centreOf, connect, connector, connectorSamples, drawShape, midpointOf, openCanvas, rect, state, worldToScreen,
 } from './helpers';

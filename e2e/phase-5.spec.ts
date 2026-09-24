@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 // Phase 5 UX: C4 workspace generate (one page per view), drill-down + breadcrumb,
 // model-level rename across views, flow playback. One headed check for the slice —

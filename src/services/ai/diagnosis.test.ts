@@ -100,6 +100,7 @@ describe('failure causes', () => {
       .toBe('Incorrect API key provided: [key]');
     expect(providerDetail('{"error":"model \\"gemma4\\" not found, try pulling it first"}', [])).toBe('model "gemma4" not found, try pulling it first');
     expect(providerDetail('[{"error":{"message":"key my-custom-secret-123 bad"}}]', ['Bearer my-custom-secret-123', 'my-custom-secret-123'])).toBe('key [key] bad');
+    expect(providerDetail('{"error":{"message":"Incorrect API key provided: sk-bad"}}', ['sk-bad'])).toBe('Incorrect API key provided: [key]');
     expect(providerDetail('<html>502</html>', [])).toBe('');
     expect(providerDetail(JSON.stringify({ message: 'x'.repeat(500) }), [])).toHaveLength(200);
   });

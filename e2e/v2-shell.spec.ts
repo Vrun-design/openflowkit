@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
-test('v2 workspace shell supports panels, view controls, and canvas creation', async ({ page }) => {
+test('v2 workspace shell supports panels, view controls, and canvas creation @gate', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('v2-welcome')).toBeVisible();
   await expect(page.getByRole('toolbar', { name: 'View', exact: true }).locator('.ofk-v2-divider')).toHaveCount(4);

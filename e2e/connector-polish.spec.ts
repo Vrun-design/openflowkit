@@ -1,5 +1,5 @@
 // Slice 1.6 headed checks: parallel edges, connector label, delete, style.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type V2Api = {
   getState(): { nodes: string[]; connectors: string[]; revision: number };

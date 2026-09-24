@@ -6,7 +6,9 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : 2,
+  // One browser at a time: two headed WebGL canvases starve each other and
+  // canvas specs fail with "no empty point". Serial is slower, never flaky.
+  workers: 1,
   reporter: 'html',
   use: {
     baseURL: 'http://127.0.0.1:4173',

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type NodeDebug = { readonly id: string; readonly fill: number; readonly textColor?: number };
 type V2Api = { getState(): { nodes: string[] }; getNodeDebugSnapshot(): readonly NodeDebug[] | undefined };

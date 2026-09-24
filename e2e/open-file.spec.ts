@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 // Canvas menu → Open file…: a V1 JSON file lands as a new document.
 // npm run e2e:headed -- e2e/open-file.spec.ts

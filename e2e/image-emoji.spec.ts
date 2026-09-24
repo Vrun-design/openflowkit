@@ -1,5 +1,5 @@
 // Slice 6.5 headed check: image insert (picker + drop), emoji search + insert.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

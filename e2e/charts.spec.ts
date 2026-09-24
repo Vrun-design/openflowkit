@@ -1,6 +1,6 @@
 // Slice 6.8 headed check: insert a bar chart, edit a cell, add a series,
 // switch to donut, and undo back to the original — three undos.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type V2Api = {
   getState(): { nodes: string[]; tool: string };

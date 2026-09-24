@@ -1,5 +1,5 @@
 // Slice 1.4 headed check: drag from a side handle quick-creates.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type V2Api = {
   getState(): { nodes: string[]; connectors: string[] };

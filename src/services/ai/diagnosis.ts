@@ -45,7 +45,7 @@ export function providerDetail(bodyText: string, secrets: readonly string[]): st
     const found = typeof error === 'string' ? error : error?.message ?? root?.message;
     if (typeof found === 'string') text = found;
   } catch { /* not JSON: say nothing rather than echo a page */ }
-  for (const secret of secrets) if (secret.length >= 8) text = text.split(secret).join('[key]');
+  for (const secret of secrets) if (secret) text = text.split(secret).join('[key]');
   text = text.replace(/\b(?:sk|AIza|gsk|csk|xai)[-_A-Za-z0-9]{12,}/g, '[key]').replace(/\s+/g, ' ').trim();
   return text.length > 200 ? `${text.slice(0, 199)}…` : text;
 }

@@ -1,5 +1,5 @@
 // Slice 6.3 headed check: the connector kinds bind, route, and re-route live.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type V2Api = {
   getState(): { nodes: string[]; connectors: string[]; selectedConnector: string | null; selectedConnectors: string[] };

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 // Phase 4 UX: code-panel palette, pages, export (real PNG raster), cheatsheet.
 // One headed check for the slice — npm run e2e:headed -- e2e/phase-4.spec.ts

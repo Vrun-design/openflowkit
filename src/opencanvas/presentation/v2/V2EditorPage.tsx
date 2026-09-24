@@ -200,6 +200,23 @@ export function V2EditorPage(): React.JSX.Element {
     setToasts((current) => [...current.slice(-3), toast]);
   }, []);
 
+  // Dev only: an uncaught error is a bug, so it must not fail silently while
+  // testing by hand. Production stays quiet (extensions throw into the page too).
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const show = (message: string) =>
+      pushToast({ id: `dev-error-${Date.now()}`, tone: 'danger', title: 'Uncaught error (dev)', description: message });
+    const onError = (event: ErrorEvent) => show(event.message);
+    const onRejection = (event: PromiseRejectionEvent) =>
+      show(event.reason instanceof Error ? event.reason.message : String(event.reason));
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+    };
+  }, [pushToast]);
+
   const camera = useV2Camera(hostRef);
   const reloadRef = useRef<() => void>(() => undefined);
   const session = useDocumentSession(useMemo(() => ({

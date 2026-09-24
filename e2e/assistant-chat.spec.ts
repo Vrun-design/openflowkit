@@ -3,7 +3,7 @@
 // attached image reaches the provider; the thread survives a reload, New chat
 // starts fresh and History reopens the old one. Every call goes to the local
 // stub (stubProviderServer.mjs).
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 const STUB = 'http://127.0.0.1:4399/v1';
 // A 1×1 PNG.

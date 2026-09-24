@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 // The live half of the agent check: a real editor window paired with a real MCP
 // server, driven over stdio through create → get_diagram → update → screenshot.
@@ -61,7 +61,9 @@ test('an MCP agent creates, reads, updates and screenshots a diagram in the open
   // to pair, so the driver starts first and polls until the window shows up.
   const driver = runDriver();
   await page.goto(`/d/agent-live-${Date.now().toString(36)}`);
-  await expect(page.getByTestId('v2-editor')).toBeVisible();
+  // Same load budget as `openCanvas`: as the first spec of a full run the first
+  // load has missed 5s twice (alone it never does; cause not pinned down).
+  await expect(page.getByTestId('v2-editor')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('[data-bridge-status="connected"]')).toBeVisible({ timeout: 45_000 });
 
   const result = await driver;

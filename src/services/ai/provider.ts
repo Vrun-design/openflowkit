@@ -193,7 +193,9 @@ async function send({ url, headers, body, definition, model, signal }: WireCall)
   if (!response.ok) {
     const bodyText = await response.text();
     const cause = classifyStatus(response.status, bodyText);
-    const detail = providerDetail(bodyText, Object.values(headers));
+    // The key travels in one of these three headers; redact it whatever its length.
+    const keys = [headers['x-api-key'], headers['x-goog-api-key'], headers.authorization?.replace(/^Bearer\s+/i, '')];
+    const detail = providerDetail(bodyText, keys.filter((key): key is string => !!key));
     throw new AiProviderError(describeCause(cause, {
       definition, endpoint: url, model, status: response.status,
       ...(pageOrigin() ? { pageOrigin: pageOrigin()! } : {}),

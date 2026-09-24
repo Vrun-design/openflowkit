@@ -1,7 +1,7 @@
 // Mermaid import, end to end: paste into the code panel, convert, generate, and
 // check what actually lands on the canvas. The unit suites cover text → DSL;
 // this one covers DSL → real nodes the user can then edit.
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 import { MERMAID_COMPAT_FIXTURES } from '../scripts/mermaid-compat-fixtures.mjs';
 import { centreOf, clickNode, connect, doc, midpointOf, node, openCanvas, rect, state } from './helpers';
 

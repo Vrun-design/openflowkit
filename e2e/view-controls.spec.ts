@@ -1,10 +1,8 @@
-// Headed: the bottom view toolbar — zoom menu dismissal, zoom to fit, tooltip sweep.
-import { expect, test } from '@playwright/test';
+// Headed @gate: regressions a user reported — the fit button, the zoom menu, tooltip warm-up.
+import { expect, test } from './test';
 import { drawShape, emptyPoint, openCanvas } from './helpers';
 
-test('zoom menu toggles and dismisses, fit button fits, tooltips sweep', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (error) => errors.push(error.message));
+test('zoom menu toggles and dismisses, fit button fits, tooltips sweep @gate', async ({ page }) => {
   await openCanvas(page);
   await drawShape(page, 'r', 300, 300);
   const bar = page.getByRole('toolbar', { name: 'View' });
@@ -25,7 +23,6 @@ test('zoom menu toggles and dismisses, fit button fits, tooltips sweep', async (
   await expect(zoom).toHaveAccessibleName('Zoom 200%');
   await bar.getByRole('button', { name: 'Zoom to fit' }).click();
   await expect(zoom).not.toHaveAccessibleName('Zoom 200%');
-  expect(errors).toEqual([]);
 
   const tip = page.getByRole('tooltip');
   await bar.getByRole('button', { name: 'Layers' }).hover();
@@ -37,7 +34,7 @@ test('zoom menu toggles and dismisses, fit button fits, tooltips sweep', async (
   }
 });
 
-test('a closed port and a CORS refusal get different messages', async ({ page }) => {
+test('a no-cors probe tells a closed port from a listening server @gate', async ({ page }) => {
   await page.goto('/');
   const probe = (url: string) => page.evaluate(async (target) => {
     try { await fetch(target, { mode: 'no-cors' }); return true; } catch { return false; }

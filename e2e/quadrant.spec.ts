@@ -1,6 +1,6 @@
 // Slice 6.9 headed check: a quadrant chart from the flyout, a point dragged on
 // canvas writes x/y, the panel shows it, and one undo restores the old value.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type V2Api = {
   getState(): { nodes: string[] };

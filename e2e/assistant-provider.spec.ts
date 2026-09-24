@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 test('assistant asks for a provider on first send, then remembers it', async ({ page }) => {
   await page.goto('/');

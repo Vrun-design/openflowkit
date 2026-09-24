@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type Api = { getDocument(): { pages: Array<{ nodes: Array<{ kind: string; content: Record<string, unknown> }> }> } | null };
 const icons = (page: import('@playwright/test').Page) => page.evaluate(() =>

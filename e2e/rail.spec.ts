@@ -1,5 +1,5 @@
 // Slice 6.1 headed check: the rail's flyouts, their keyboard path, and lock.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type V2Api = {
   getState(): { nodes: string[]; connectors: string[]; tool: string };

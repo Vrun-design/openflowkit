@@ -2,7 +2,7 @@
 // local stub server (e2e/stubProviderServer.mjs); no real provider or key is
 // touched. The stub echoes the key in its 401 body, so "the key never reaches
 // the user" is asserted against a server that is actively trying to leak it.
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from './test';
 
 const STUB = 'http://127.0.0.1:4399';
 

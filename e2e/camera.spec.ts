@@ -1,5 +1,5 @@
 // Slice 1.2 headed check: pinch stays anchored, shortcuts rebind, wheel modes.
-import { expect, test } from '@playwright/test';
+import { expect, test } from './test';
 
 type V2Api = {
   getState(): { nodes: string[]; revision: number };
