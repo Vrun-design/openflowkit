@@ -1013,6 +1013,10 @@
           "hint": "Le Chat · Codestral · European AI leader",
           "keySetupNote": "Free tier with generous limits — no credit card needed"
         },
+        "requesty": {
+          "hint": "LLM gateway · 700+ models · One key",
+          "keySetupNote": "Pay as you go · Add credits in the Requesty dashboard"
+        },
         "custom": {
           "hint": "Any OpenAI-compatible endpoint"
         }
@@ -1210,6 +1214,34 @@
             "hint": "Vision + reasoning · Multimodal",
             "category": "Multimodal",
             "badge": "Vision"
+          }
+        },
+        "requesty": {
+          "openai/gpt-4o-mini": {
+            "label": "GPT-4o mini",
+            "hint": "Fast · Cost-efficient",
+            "category": "Speed",
+            "badge": "Default"
+          },
+          "gpt-5.4-mini": {
+            "label": "GPT-5.4 mini",
+            "hint": "Managed policy · Multi-provider failover",
+            "category": "Speed"
+          },
+          "claude-sonnet-4-6": {
+            "label": "Claude Sonnet 4.6",
+            "hint": "Managed policy · Best coding",
+            "category": "Flagship"
+          },
+          "gemini-3.5-flash": {
+            "label": "Gemini 3.5 Flash",
+            "hint": "Managed policy · Fast multimodal",
+            "category": "Speed"
+          },
+          "deepseek-v4-flash": {
+            "label": "DeepSeek V4 Flash",
+            "hint": "Managed policy · Low cost",
+            "category": "Speed"
           }
         },
         "custom": {

@@ -10,6 +10,7 @@ export const aiProviderSchema = z.enum([
   'cerebras',
   'mistral',
   'openrouter',
+  'requesty',
   'ollama',
   'custom',
 ] satisfies [AIProvider, ...AIProvider[]]);

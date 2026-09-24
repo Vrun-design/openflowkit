@@ -7,6 +7,7 @@ export const PROVIDER_BASE_URLS: Record<Exclude<AIProvider, 'gemini' | 'claude' 
     cerebras: 'https://api.cerebras.ai/v1',
     mistral: 'https://api.mistral.ai/v1',
     openrouter: 'https://openrouter.ai/api/v1',
+    requesty: 'https://router.requesty.ai/v1',
     // Ollama exposes an OpenAI-compatible endpoint at /v1 on the local daemon.
     ollama: 'http://localhost:11434/v1',
 };
@@ -20,6 +21,7 @@ export const DEFAULT_MODELS: Record<AIProvider, string> = {
     cerebras: 'gpt-oss-120b',
     mistral: 'mistral-large-latest',
     openrouter: 'google/gemini-2.5-pro',
+    requesty: 'openai/gpt-4o-mini',
     ollama: 'llama3.2',
     custom: 'gpt-4o',
 };
@@ -131,6 +133,17 @@ export const PROVIDERS: ProviderMeta[] = [
         defaultModel: getDefaultModel('openrouter'),
     },
     {
+        id: 'requesty',
+        name: 'Requesty',
+        icon: '⇄',
+        color: '#1677FF',
+        logoPath: '/logos/requesty.svg',
+        keyPlaceholder: 'rqsty-...',
+        keyLink: 'https://app.requesty.ai/api-keys',
+        consoleName: 'Requesty Dashboard',
+        defaultModel: getDefaultModel('requesty'),
+    },
+    {
         id: 'ollama',
         name: 'Ollama (local)',
         icon: '⌘',
@@ -210,6 +223,13 @@ export const PROVIDER_MODELS: Record<AIProvider, { id: string; translateKey: str
         { id: 'anthropic/claude-sonnet-4', translateKey: 'anthropic/claude-sonnet-4' },
         { id: 'deepseek/deepseek-chat-v3.1', translateKey: 'deepseek/deepseek-chat-v3.1' },
     ],
+    requesty: [
+        { id: 'openai/gpt-4o-mini', translateKey: 'openai/gpt-4o-mini' },
+        { id: 'gpt-5.4-mini', translateKey: 'gpt-5.4-mini' },
+        { id: 'claude-sonnet-4-6', translateKey: 'claude-sonnet-4-6' },
+        { id: 'gemini-3.5-flash', translateKey: 'gemini-3.5-flash' },
+        { id: 'deepseek-v4-flash', translateKey: 'deepseek-v4-flash' },
+    ],
     ollama: [
         { id: 'llama3.2', translateKey: 'llama3.2' },
         { id: 'llama3.1', translateKey: 'llama3.1' },
@@ -236,6 +256,7 @@ export const DEFAULT_BASE_URLS: Record<Exclude<AIProvider, 'gemini' | 'claude'>,
     cerebras: PROVIDER_BASE_URLS.cerebras,
     mistral: PROVIDER_BASE_URLS.mistral,
     openrouter: PROVIDER_BASE_URLS.openrouter,
+    requesty: PROVIDER_BASE_URLS.requesty,
     ollama: PROVIDER_BASE_URLS.ollama,
     custom: 'https://api.example.com/v1',
 };
@@ -245,6 +266,7 @@ export type ProviderRisk = 'browser_friendly' | 'mixed' | 'proxy_likely';
 export const PROVIDER_RISK: Record<AIProvider, ProviderRisk> = {
     gemini: 'browser_friendly',
     openrouter: 'browser_friendly',
+    requesty: 'browser_friendly',
     openai: 'mixed',
     claude: 'mixed',
     groq: 'proxy_likely',

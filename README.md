@@ -56,7 +56,7 @@
 <table>
 <tr>
 <td align="center"><b>✨ Mermaid → Icons</b><br/><sub>Paste Mermaid · 1,600+ icons<br/>auto-assigned · beautiful</sub></td>
-<td align="center"><b>🤖 AI Generation</b><br/><sub>10 providers inc. local Ollama<br/>Direct-to-canvas output</sub></td>
+<td align="center"><b>🤖 AI Generation</b><br/><sub>11 providers inc. local Ollama<br/>Direct-to-canvas output</sub></td>
 <td align="center"><b>`{}` Diagram as Code</b><br/><sub>Bidirectional live sync<br/>Git-friendly DSL</sub></td>
 <td align="center"><b>🧩 Asset Libraries</b><br/><sub>Developer · AWS · Azure<br/>GCP · CNCF · Icons</sub></td>
 <td align="center"><b>🎬 Cinematic MP4</b><br/><sub>WebCodecs H.264<br/>Faster-than-realtime</sub></td>
@@ -108,7 +108,7 @@ Every diagramming tool makes a compromise. OpenFlowKit doesn't.
 | **Lucidchart / Miro**   | Cloud lock-in — expensive, account required, your data lives on their servers |
 | **PlantUML**            | Server-dependent rendering — no visual editor, no local-first model           |
 
-OpenFlowKit is the **only MIT-licensed tool** that combines a real workspace home, a professional visual canvas, bidirectional diagram-as-code, AI generation from 10 providers (including fully-local Ollama), **automatic icon assignment from 1,600+ tech icons**, anchored auto-layout, hardware-encoded cinematic MP4 export, and a Model Context Protocol server so Claude / Cursor / Windsurf can drive it directly — all with zero server-side storage.
+OpenFlowKit is the **only MIT-licensed tool** that combines a real workspace home, a professional visual canvas, bidirectional diagram-as-code, AI generation from 11 providers (including fully-local Ollama), **automatic icon assignment from 1,600+ tech icons**, anchored auto-layout, hardware-encoded cinematic MP4 export, and a Model Context Protocol server so Claude / Cursor / Windsurf can drive it directly — all with zero server-side storage.
 
 ---
 
@@ -118,7 +118,7 @@ OpenFlowKit is the **only MIT-licensed tool** that combines a real workspace hom
 | ------------------------------------- | :---------: | :--------: | :-----: | :-----: | :--------: |
 | Visual canvas editor                  |     ✅      |     ✅     |   ✅    |   ❌    |     ✅     |
 | Bidirectional diagram-as-code         |     ✅      |     ❌     |   ❌    |   ✅    |     ❌     |
-| AI generation (10 providers + Ollama) |     ✅      |     ❌     |   ❌    |   ❌    |  Limited   |
+| AI generation (11 providers + Ollama) |     ✅      |     ❌     |   ❌    |   ❌    |  Limited   |
 | Mermaid import (8 types)              |     ✅      |     ❌     |   ⚠️    |   ✅    |     ❌     |
 | Auto-icon assignment (1,600+)         |     ✅      |     ❌     |   ❌    |   ❌    |     ❌     |
 | AWS / Azure / GCP / CNCF icons        |     ✅      |     ❌     |   ✅    | Partial |     ✅     |
@@ -169,7 +169,7 @@ Describe your system in plain English. AI generates a diagram on the canvas with
 | "AWS Lambda → SQS → DynamoDB"             | 3 nodes with AWS icons                  |
 | "React frontend → Express → MongoDB → S3" | 4 nodes across developer + AWS catalogs |
 
-10 providers supported: Google Gemini, OpenAI, Anthropic Claude, Groq, Mistral, NVIDIA NIM, Cerebras, OpenRouter, **Ollama (fully local)**, or any custom OpenAI-compatible endpoint. Bad DSL from any provider is now auto-repaired — the model sees its own broken output and the parser error, then returns corrected DSL in a single follow-up turn.
+11 providers supported: Google Gemini, OpenAI, Anthropic Claude, Groq, Mistral, NVIDIA NIM, Cerebras, OpenRouter, Requesty, **Ollama (fully local)**, or any custom OpenAI-compatible endpoint. Bad DSL from any provider is now auto-repaired — the model sees its own broken output and the parser error, then returns corrected DSL in a single follow-up turn.
 
 ---
 
@@ -188,7 +188,7 @@ That means the app does not create a fake default flow just to get you onto the 
 
 Flowpilot sits directly in the editor. Describe a system, paste source code, upload a screenshot, or ask it to refine what's already on the canvas. Your API key is stored in your browser and sent directly to the provider — OpenFlowKit's servers never see it.
 
-**10 providers. Bring your own key. Switch any time. One runs entirely on your laptop.**
+**11 providers. Bring your own key. Switch any time. One runs entirely on your laptop.**
 
 | Provider            | Default model                              | Why use it                                      |
 | ------------------- | ------------------------------------------ | ----------------------------------------------- |
@@ -201,6 +201,7 @@ Flowpilot sits directly in the editor. Describe a system, paste source code, upl
 | NVIDIA NIM          | `meta/llama-4-maverick-17b-128e-instruct`  | Enterprise GPU inference                        |
 | Cerebras            | `gpt-oss-120b`                             | Ultra-fast on WSE-3 silicon                     |
 | OpenRouter          | `google/gemini-2.5-pro`                    | Access 300+ models through one key              |
+| Requesty            | `openai/gpt-4o-mini`                       | 700+ models, managed failover policies          |
 | **Custom endpoint** | Any model                                  | LM Studio, vLLM, or any OpenAI-compatible API   |
 
 No proxy. No middleman. Direct browser-to-provider requests.

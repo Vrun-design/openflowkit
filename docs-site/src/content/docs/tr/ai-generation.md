@@ -37,6 +37,7 @@ Uygulama birden çok BYOK sağlayıcıyı destekler:
 - Cerebras
 - Mistral
 - OpenRouter
+- Requesty
 - özel OpenAI-uyumlu uç nokta
 
 ## AI ne zaman doğru araçtır?

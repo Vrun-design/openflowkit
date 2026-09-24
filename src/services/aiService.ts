@@ -39,6 +39,7 @@ function getEnvApiKey(provider: AIProvider): string | undefined {
         case 'cerebras': return import.meta.env.VITE_CEREBRAS_API_KEY;
         case 'mistral': return import.meta.env.VITE_MISTRAL_API_KEY;
         case 'openrouter': return import.meta.env.VITE_OPENROUTER_API_KEY;
+        case 'requesty': return import.meta.env.VITE_REQUESTY_API_KEY;
         case 'ollama': return import.meta.env.VITE_OLLAMA_API_KEY;
         case 'custom': return import.meta.env.VITE_CUSTOM_AI_API_KEY;
         default: return undefined;

@@ -9,6 +9,7 @@ export const AI_PROVIDERS = [
   'cerebras',
   'mistral',
   'openrouter',
+  'requesty',
   'ollama',
   'custom',
 ] as const satisfies readonly AIProvider[];
