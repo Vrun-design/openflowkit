@@ -49,6 +49,7 @@ The app supports multiple BYOK providers, including:
 - Cerebras
 - Mistral
 - OpenRouter
+- Requesty
 - Custom OpenAI-compatible endpoint
 
 This matters because you are not locked to one hosted AI vendor or one billing model. Ollama can run locally with no API key when its daemon and model are available.

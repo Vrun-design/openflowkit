@@ -61,7 +61,7 @@ export function AdvancedEndpointSection({
                             {t('settingsModal.ai.resetEndpoint', { defaultValue: 'Reset to default' })}
                         </button>
                     </div>
-                    {(currentProvider === 'custom' || currentProvider === 'openrouter' || !!customBaseUrl) && (
+                    {(currentProvider === 'custom' || currentProvider === 'openrouter' || currentProvider === 'requesty' || !!customBaseUrl) && (
                         <p className="text-[11px] text-[var(--brand-secondary)]">
                             <Trans i18nKey="settingsModal.ai.customEndpointMustSupport">
                                 Must support <code className="rounded-[var(--radius-xs)] bg-[var(--brand-background)] px-1 text-[10px]">POST /chat/completions</code> (OpenAI format)

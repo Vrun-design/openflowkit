@@ -47,6 +47,7 @@ export type AIProvider =
   | 'cerebras'
   | 'mistral'
   | 'openrouter'
+  | 'requesty'
   | 'ollama'
   | 'custom';
 
