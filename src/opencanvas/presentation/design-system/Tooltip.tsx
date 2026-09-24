@@ -1,6 +1,8 @@
 import { cloneElement, useEffect, useId, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { Popover } from './Popover';
 import { foundation } from './tokens';
+// Shared across tooltips: sweeping a toolbar should not pay the delay per button.
+let lastHiddenAt = -Infinity;
 /** Supplemental text only; never the sole label. Hover/focus after a delay, long-press on touch, Escape hides. */
 export function Tooltip({
   content,
@@ -15,13 +17,17 @@ export function Tooltip({
   const anchorRef = useRef<HTMLSpanElement>(null);
   const timer = useRef<number | undefined>(undefined);
   const [open, setOpen] = useState(false);
+  const openRef = useRef(false);
   useEffect(() => () => window.clearTimeout(timer.current), []);
   function schedule(delay: number) {
     window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setOpen(true), delay);
+    const warm = performance.now() - lastHiddenAt < foundation.motion.tooltipWarm;
+    timer.current = window.setTimeout(() => { openRef.current = true; setOpen(true); }, warm ? 0 : delay);
   }
   function hide() {
     window.clearTimeout(timer.current);
+    if (openRef.current) lastHiddenAt = performance.now();
+    openRef.current = false;
     setOpen(false);
   }
   const described = children.props['aria-describedby'];

@@ -64,7 +64,8 @@ export function V2CameraControls(props: V2CameraControlsProps): React.JSX.Elemen
             className="ofk-numeric"
             aria-haspopup="menu"
             aria-label={`Zoom ${props.zoomPercent}%`}
-            onClick={() => setMenuOpen(true)}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
           >
             {props.zoomPercent}%
           </Button>

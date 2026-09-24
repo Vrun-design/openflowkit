@@ -16,7 +16,9 @@ sits under **Endpoint**. **Test key** asks the provider for one short response.
 Each provider keeps its own key, marked with a dot on its tile, so switching providers never
 sends one vendor's key to another; **Clear all keys** removes every one. Keys are stored in this
 browser's `localStorage` and sent only to the provider they were entered for. There is no OpenFlowKit account and no relay: if the request fails, the error names the
-cause — bad key, unknown mode## Talk, review, or change
+cause and the next step. See [Troubleshooting](#troubleshooting).
+
+## Talk, review, or change
 
 The assistant is a conversation. Ask a question, ask for a critique, or describe a change — it
 answers in text when that is what you asked for, and only drafts diagram changes when you want
@@ -62,7 +64,44 @@ The report opens a prefilled issue with the prompt, reply and model — never yo
 - **No sync.** Chats stay in this browser; images in older chats may be dropped to fit its
   storage.
 
-writes onto the canvas.
+## Troubleshooting
+
+The error under a failed message names one cause. What to do for each:
+
+| Message starts with | Do this |
+| --- | --- |
+| The provider rejected the key | Paste a fresh key from the provider's console; check it has credit. |
+| The provider did not find the model | Fix the model id, or clear it to use the default. For Ollama, `ollama pull <model>` first. |
+| Rate limiting | Wait a minute, or switch key or provider. |
+| Nothing answered at … | The service is not running or the base URL is wrong. Start it, check the address. |
+| … does not accept browser calls (CORS) | That provider blocks browsers. Use Gemini or OpenRouter, or your own endpoint as **Custom**. |
+| Our page's security policy blocked … | Endpoints must be `https://` or `localhost`. |
+
+### Ollama
+
+Ollama runs on your machine, so the browser needs two things: Ollama running, and Ollama
+allowing this page's origin.
+
+1. Install it from [ollama.com/download](https://ollama.com/download) and pull a model:
+   `ollama pull gemma4`.
+2. **Quit the Ollama menu-bar or tray app.** It owns port 11434 and ignores the variable below,
+   so a second `ollama serve` fails silently and the old, locked-down one keeps answering.
+3. Start it with the origin allowed — the exact origin is in the error message:
+
+   ```sh
+   OLLAMA_ORIGINS='https://your-openflowkit-origin' ollama serve
+   ```
+
+   `OLLAMA_ORIGINS='*'` works too, and lets any site you visit use your local models.
+   To keep the menu-bar app instead on macOS, run
+   `launchctl setenv OLLAMA_ORIGINS '*'`, then quit and reopen the app.
+4. If Chrome asks to let the page access devices on your local network, allow it. Brave's
+   shields and Safari may block `localhost` from an `https://` page — use Chrome, or run
+   OpenFlowKit locally.
+5. Press **Test key** in the provider dialog.
+
+Check Ollama itself with `curl http://localhost:11434/api/version`; no answer means step 2 or 3
+did not take.
 
 ## Where to go next
 

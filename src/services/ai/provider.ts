@@ -5,7 +5,7 @@
 // logged, stored or echoed — including provider error bodies, which can quote
 // a key back at us.
 import { providerById, type AiProviderDefinition, type AiProviderId } from './providers';
-import { RETRYABLE, classifyStatus, describeCause, originOf, type AiFailureCause } from './diagnosis';
+import { RETRYABLE, classifyStatus, describeCause, originOf, providerDetail, type AiFailureCause } from './diagnosis';
 
 export interface AiProviderConfig {
   readonly provider: AiProviderId;
@@ -137,6 +137,19 @@ function watchCspViolations(): { blocked: (url: string) => string | null; stop: 
   };
 }
 
+/**
+ * CORS and a closed port throw the same TypeError. An opaque no-cors GET needs
+ * no CORS headers, so it resolves whenever something listens at the origin.
+ */
+async function probe(url: string): Promise<boolean> {
+  try {
+    await fetch(originOf(url), { mode: 'no-cors', signal: AbortSignal.timeout(3000) });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 interface WireCall {
   readonly url: string;
   readonly headers: Record<string, string>;
@@ -167,20 +180,24 @@ async function send({ url, headers, body, definition, model, signal }: WireCall)
       : timedOut ? 'provider-down'
         : isOffline() ? 'offline'
           : 'blocked-by-browser';
+    const reachable = cause === 'blocked-by-browser' && !blockedOrigin ? await probe(url) : undefined;
     throw new AiProviderError(describeCause(cause, {
       definition, endpoint: url, model, status: null,
       ...(blockedOrigin ? { blockedOrigin } : {}),
+      ...(reachable === undefined ? {} : { reachable }),
       ...(timedOut ? { timedOut: true } : {}),
       ...(pageOrigin() ? { pageOrigin: pageOrigin()! } : {}),
     }), { cause, ...(blockedOrigin ? { origin: blockedOrigin } : {}) });
   }
   csp.stop();
   if (!response.ok) {
-    const cause = classifyStatus(response.status, await response.text());
+    const bodyText = await response.text();
+    const cause = classifyStatus(response.status, bodyText);
+    const detail = providerDetail(bodyText, Object.values(headers));
     throw new AiProviderError(describeCause(cause, {
       definition, endpoint: url, model, status: response.status,
       ...(pageOrigin() ? { pageOrigin: pageOrigin()! } : {}),
-    }), { cause, status: response.status });
+    }) + (detail ? ` ${definition.label} said: “${detail}”` : ''), { cause, status: response.status });
   }
   return response;
 }

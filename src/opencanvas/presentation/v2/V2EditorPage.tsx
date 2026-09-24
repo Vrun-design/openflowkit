@@ -878,7 +878,7 @@ export function V2EditorPage(): React.JSX.Element {
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
               onZoomTo={camera.zoomTo}
-              onFitView={camera.fitView}
+              onFitView={() => camera.fitView()}
               onToggleTree={toggleTree}
             />
             <V2CanvasHost

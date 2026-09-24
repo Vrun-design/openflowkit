@@ -148,6 +148,21 @@ describe('failures and secrets', () => {
     vi.unstubAllGlobals();
   });
 
+  it('tells a closed Ollama port from a CORS refusal with a no-cors probe', async () => {
+    const run = async (listening: boolean) => {
+      vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+        if (init?.mode === 'no-cors' && listening) return { ok: false, status: 0 } as Response;
+        throw new TypeError('Failed to fetch');
+      }));
+      const provider = createProvider({ provider: 'ollama', apiKey: '' });
+      const error = (await provider.complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught)) as AiProviderError;
+      vi.unstubAllGlobals();
+      return error.message;
+    };
+    expect(await run(false)).toMatch(/Ollama is not running/);
+    expect(await run(true)).toMatch(/OLLAMA_ORIGINS=/);
+  });
+
   it('reports our own CSP when a connect-src violation fires, and names the origin', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => {
       const violation = Object.assign(new Event('securitypolicyviolation'), {

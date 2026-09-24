@@ -166,7 +166,7 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
     keyPlaceholder: 'leave blank', keyPattern: '', needsKey: false,
     consoleUrl: 'https://ollama.com/download', consoleName: 'Ollama',
     logoPath: '/logos/ollama.svg', risk: 'browser_friendly',
-    hint: "Runs on this machine. Pull a model (ollama pull gemma4), then start it with OLLAMA_ORIGINS='*' ollama serve.",
+    hint: "Runs on this machine. Pull a model (ollama pull gemma4), quit the Ollama app, then run OLLAMA_ORIGINS='*' ollama serve.",
     corsFix: 'ollama-origins',
   },
   {

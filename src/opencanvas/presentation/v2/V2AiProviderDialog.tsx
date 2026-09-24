@@ -147,6 +147,9 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
                   {definition.consoleName}<Icon icon={IconExternalLink} />
                 </a>
               </> : null}
+              {' '}<a href="https://docs.openflowkit.com/ai-generation/#troubleshooting" target="_blank" rel="noreferrer">
+                Troubleshooting<Icon icon={IconExternalLink} />
+              </a>
             </p>
           </div>
         </div>

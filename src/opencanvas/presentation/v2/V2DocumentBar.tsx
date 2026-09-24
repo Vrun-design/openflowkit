@@ -202,7 +202,7 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
           <Tooltip content="Pages">
             <Button ref={pagesRef} variant="quiet" aria-expanded={pagesOpen} aria-haspopup="dialog"
               aria-label={`Pages (current: ${activePageName})`}
-              onClick={() => setPagesOpen(true)}>
+              onClick={() => setPagesOpen((open) => !open)}>
               {activePageName}
               {props.pages.pages.length > 1 ? <span className="ofk-v2-page-total">{` / ${props.pages.pages.length}`}</span> : null}
             </Button>

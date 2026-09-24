@@ -1,7 +1,7 @@
 // Failure classification for provider calls. Pure typing and prose: given what
-// happened, name the cause and the user's next action. The provider's response
-// body is read for classification only — it is never repeated to the user,
-// because OpenAI's 401 quotes the key back.
+// happened, name the cause and the user's next action. The provider's own
+// error text is quoted only through `providerDetail`, which redacts keys —
+// OpenAI's 401 quotes the key back.
 import type { AiProviderDefinition } from './providers';
 
 export type AiFailureCause =
@@ -35,6 +35,21 @@ export function classifyStatus(status: number, bodyText: string): AiFailureCause
   return 'bad-response';
 }
 
+/** The provider's own error sentence, keys redacted, ≤ 200 chars; '' when the body has none. */
+export function providerDetail(bodyText: string, secrets: readonly string[]): string {
+  let text = '';
+  try {
+    const json = JSON.parse(bodyText) as unknown;
+    const root = (Array.isArray(json) ? json[0] : json) as { error?: unknown; message?: unknown } | null;
+    const error = root?.error as { message?: unknown } | string | undefined;
+    const found = typeof error === 'string' ? error : error?.message ?? root?.message;
+    if (typeof found === 'string') text = found;
+  } catch { /* not JSON: say nothing rather than echo a page */ }
+  for (const secret of secrets) if (secret.length >= 8) text = text.split(secret).join('[key]');
+  text = text.replace(/\b(?:sk|AIza|gsk|csk|xai)[-_A-Za-z0-9]{12,}/g, '[key]').replace(/\s+/g, ' ').trim();
+  return text.length > 200 ? `${text.slice(0, 199)}…` : text;
+}
+
 export interface FailureContext {
   readonly definition: AiProviderDefinition;
   readonly endpoint: string;
@@ -45,6 +60,8 @@ export interface FailureContext {
   /** Where this page is served from; the Ollama fix names it exactly. */
   readonly pageOrigin?: string;
   readonly timedOut?: boolean;
+  /** A no-cors probe of the endpoint's origin: false means nothing is listening there. */
+  readonly reachable?: boolean;
 }
 
 const consoleLine = (definition: AiProviderDefinition): string =>
@@ -73,8 +90,13 @@ export function describeCause(cause: AiFailureCause, context: FailureContext): s
       if (context.blockedOrigin) {
         return `Our page's security policy blocked ${context.blockedOrigin}. Endpoints must be https:// (or localhost) — check the base URL.`;
       }
+      if (context.reachable === false) {
+        return definition.corsFix === 'ollama-origins'
+          ? `Nothing answered at ${originOf(context.endpoint)} — Ollama is not running. Start it (open the app or run ollama serve), allow local network access if the browser asks, then test again.`
+          : `Nothing answered at ${originOf(context.endpoint)}. Check the service is running and the base URL is right.`;
+      }
       if (definition.corsFix === 'ollama-origins') {
-        return `Ollama refused the browser request. Restart it with OLLAMA_ORIGINS='${context.pageOrigin ?? '*'}' ollama serve, then test again.`;
+        return `Ollama is running but refused this page. Quit the Ollama app (it ignores the variable), run OLLAMA_ORIGINS='${context.pageOrigin ?? '*'}' ollama serve, then test again.`;
       }
       if (definition.id === 'custom') {
         return `The browser could not reach ${originOf(context.endpoint)}. Check the endpoint is running and sends Access-Control-Allow-Origin for this page.`;

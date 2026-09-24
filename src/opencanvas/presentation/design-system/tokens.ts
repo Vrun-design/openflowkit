@@ -41,6 +41,8 @@ export const foundation = {
     reveal: 220,
     settle: 240,
     tooltipDelay: 500,
+    /** A tooltip hidden this recently makes the next one open at once (toolbar sweep). */
+    tooltipWarm: 800,
     toastDuration: 5000,
   },
   /** Default curve (emphasized decelerate). Use `curve` for enter/exit/move pairs. */

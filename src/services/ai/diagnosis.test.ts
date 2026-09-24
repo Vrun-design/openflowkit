@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { providerById } from './providers';
-import { RETRYABLE, classifyStatus, describeCause, originOf, type FailureContext } from './diagnosis';
+import { RETRYABLE, classifyStatus, describeCause, originOf, providerDetail, type FailureContext } from './diagnosis';
 
 const context = (overrides: Partial<FailureContext> = {}): FailureContext => ({
   definition: providerById('openai'),
@@ -72,6 +72,17 @@ describe('failure causes', () => {
       definition: providerById('ollama'), endpoint: 'http://localhost:11434/v1/chat/completions', pageOrigin: 'http://localhost:4173',
     }));
     expect(message).toContain("OLLAMA_ORIGINS='http://localhost:4173' ollama serve");
+    expect(message).toMatch(/Quit the Ollama app/);
+  });
+
+  it('says Ollama is not running when nothing listens, instead of blaming CORS', () => {
+    const message = describeCause('blocked-by-browser', context({
+      definition: providerById('ollama'), endpoint: 'http://localhost:11434/v1/chat/completions', reachable: false,
+    }));
+    expect(message).toMatch(/Nothing answered at http:\/\/localhost:11434 — Ollama is not running/);
+    expect(message).not.toMatch(/OLLAMA_ORIGINS/);
+    expect(describeCause('blocked-by-browser', context({ definition: providerById('custom'), endpoint: 'http://localhost:1234/v1', reachable: false })))
+      .toMatch(/Nothing answered at http:\/\/localhost:1234/);
   });
 
   it('covers the last two causes with a next action', () => {
@@ -82,5 +93,14 @@ describe('failure causes', () => {
   it('extracts the origin from whatever the browser reported', () => {
     expect(originOf('https://api.openai.com/v1/chat/completions')).toBe('https://api.openai.com');
     expect(originOf('not a url')).toBe('not a url');
+  });
+
+  it('quotes the provider sentence with every key redacted', () => {
+    expect(providerDetail('{"error":{"message":"Incorrect API key provided: sk-live-abcdefghijklmnop"}}', []))
+      .toBe('Incorrect API key provided: [key]');
+    expect(providerDetail('{"error":"model \\"gemma4\\" not found, try pulling it first"}', [])).toBe('model "gemma4" not found, try pulling it first');
+    expect(providerDetail('[{"error":{"message":"key my-custom-secret-123 bad"}}]', ['Bearer my-custom-secret-123', 'my-custom-secret-123'])).toBe('key [key] bad');
+    expect(providerDetail('<html>502</html>', [])).toBe('');
+    expect(providerDetail(JSON.stringify({ message: 'x'.repeat(500) }), [])).toHaveLength(200);
   });
 });

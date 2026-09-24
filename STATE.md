@@ -3,6 +3,8 @@
 Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on hold; 6.6, 6.7, 6.10 partly — see Deferred).
 
 ## Now
+- **Fixes 2026-09-24**: popovers toggle shut; fit button fixed; tooltips warm. AI errors: no-cors probe
+  splits closed port from CORS; provider text quoted, keys redacted. Docs: AI Troubleshooting + Ollama.
 - **Phase 11 — assistant is a conversation DONE 2026-09-23** (opus-5.5). Talks or draws; sees every
   diagram in scope (page/selection chip, `assistantContext.ts`); SSE + thinking on 3 wires; edit/retry/
   copy/report(GitHub issue); multi-diagram rows chain (`assistantChanges.ts`); 503/429 retry once.
@@ -24,7 +26,6 @@ Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on 
   provider (`connections`, legacy migrates); marks are `currentColor` masks; hosted budget 16k.
 - **Phase 9 — docs rebuild DONE 2026-09-23**: inventory.json + test; prebuild compiles every
   ```` ```openflow ```` block; `check-docs.mjs` fails dead links/assets, unbacked pages, bad examples.
-- **Phase 7 — motion export DONE 2026-09-22**: one Timeline feeds preview, stills, SVG, GIF/MP4/WebM.
 
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text node sends every frame to the
