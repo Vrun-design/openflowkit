@@ -2,7 +2,7 @@ name: Quality Checks
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, v2 ]
   pull_request:
 
 jobs:
@@ -28,7 +28,7 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: Run E2E smoke suite
+      - name: Run E2E suite (software WebGL; @local specs need a GPU)
         run: npm run e2e:ci
 
   docs:

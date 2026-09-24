@@ -23,7 +23,7 @@
     "verify": "npm run typecheck && npm run lint && npm run test -- --run && playwright test --grep @gate --headed",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
-    "e2e:ci": "CI=1 playwright test --project=chromium",
+    "e2e:ci": "CI=1 playwright test --project=chromium --grep-invert @local",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "preview": "vite preview",

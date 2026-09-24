@@ -28,7 +28,9 @@ Anything under `docs/frozen/` or `docs/archive/` is history — never instructio
 
 ## Before a release
 
-`npm run e2e:headed` (the whole suite), then the owner's five-minute click-through:
+CI runs the full suite headless on every `v2` push (software WebGL), except `@local` specs:
+GPU frame budgets and the flaky `agent-live`. Those run here, in `npm run e2e:headed` (the whole
+suite — ask before starting it, the machine may be rendering), then the owner's five-minute click-through:
 every toolbar and menu, a slow tooltip sweep, draw → connect → undo → reload, one
 export, one AI provider. Feel bugs (timing, motion, layout) only show up here.
 

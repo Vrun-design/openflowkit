@@ -5,7 +5,8 @@ Plan: `docs/plan/README.md` (untracked, owner's copy). Phases 0–7 done (7b on 
 ## Now
 - **Quality gate 2026-09-24**: merge on `npm run verify` (adds headed `@gate`, ~1 min). `e2e/test.ts`
   fails a spec on any uncaught page error; `controls.spec.ts` sweeps every toolbar control. e2e is
-  serial (2 WebGL workers starved = the old flakes). AI errors: closed port ≠ CORS; key-redacted text.
+  serial (2 WebGL workers starved = the old flakes). CI: full suite on `v2` push, SwiftShader, minus
+  `@local` (GPU budgets + `agent-live`: fails in full runs, not alone, cause unknown, now instrumented).
 - **Phase 11 — assistant is a conversation DONE 2026-09-23** (opus-5.5). Talks or draws; sees every
   diagram in scope (page/selection chip, `assistantContext.ts`); SSE + thinking on 3 wires; edit/retry/
   copy/report(GitHub issue); multi-diagram rows chain (`assistantChanges.ts`); 503/429 retry once.

@@ -17,7 +17,11 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      // CI has no GPU: SwiftShader gives headless Chromium a (slow) WebGL.
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(process.env.CI ? { launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } } : {}),
+      },
     },
   ],
   webServer: [

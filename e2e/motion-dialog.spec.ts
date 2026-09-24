@@ -39,7 +39,8 @@ const srcLength = (page: import('@playwright/test').Page) =>
 const readout = (page: import('@playwright/test').Page) =>
   page.evaluate(() => document.querySelector('.ofk-motion-transport output')?.textContent ?? '');
 
-test('animation export previews, scrubs, plays and downloads', async ({ page }) => {
+// @local: playback speed is asserted, and a software renderer (CI) is too slow.
+test('animation export previews, scrubs, plays and downloads', { tag: '@local' }, async ({ page }) => {
   await openAnimationExport(page);
   const preview = page.getByRole('img', { name: 'Animation preview' });
   await expect(preview).toHaveAttribute('alt', /Build preview, 5 steps/);
