@@ -3,9 +3,15 @@
 // writes the animate block into the code panel — the chips are the DSL,
 // rendered. No per-object curves, no ruler, no keyframes (phase 8).
 import { useRef, useState } from 'react';
+import { IconChevronDown } from '@tabler/icons-react';
 import type { ScenePage } from '../../domain/document/types';
 import type { AnimationStep } from '../../domain/animation/types';
-import { Button, NumberField, Popover, PopoverHeader } from '../design-system';
+import { Button, Icon, NumberField, Popover, PopoverHeader } from '../design-system';
+
+/** A long auto sequence is not an editor; the list stays a bounded window. */
+const MAX_CHIPS = 100;
+/** Below this, the chips are short enough to show without asking. */
+const OPEN_STEPS = 12;
 
 export interface V2MotionStepsProps {
   readonly steps: readonly AnimationStep[];
@@ -47,64 +53,75 @@ export function V2MotionSteps({ steps, page, onReorder, onMerge, onHold }: V2Mot
   const [holdIndex, setHoldIndex] = useState<number | null>(null);
   const holdAnchor = useRef<HTMLElement | null>(null);
   const holdStep = holdIndex === null ? null : steps[holdIndex] ?? null;
+  const shown = steps.slice(0, MAX_CHIPS);
   return (
     <div className="ofk-motion-steps">
-      <div className="ofk-motion-steps-head">
-        <span>Steps</span>
-        <span className="ofk-caption">{steps.length} step{steps.length === 1 ? '' : 's'}</span>
-      </div>
-      <ol className="ofk-motion-chip-row" aria-label="Animation steps">
-        {steps.map((step, index) => (
-          <li key={`${index}:${step.nodeIds.join(',')}:${step.connectorIds.join(',')}`}>
-            <button
-              type="button"
-              className="ofk-motion-chip"
-              data-dragging={dragFrom === index || undefined}
-              data-drop={dropAt === index || undefined}
-              draggable
-              aria-label={`Step ${index + 1} of ${steps.length}: ${chipLabel(page, step)}${step.holdMs ? `, held ${(step.holdMs / 1000).toFixed(1)} seconds` : ''}. Alt+left and right move it, Alt+up merges it into the previous step, Enter sets its hold.`}
-              onDragStart={(event) => {
-                setDragFrom(index);
-                event.dataTransfer.effectAllowed = 'move';
-                event.dataTransfer.setData('text/plain', String(index));
-              }}
-              onDragOver={(event) => { event.preventDefault(); setDropAt(index); }}
-              onDragLeave={() => setDropAt((current) => (current === index ? null : current))}
-              onDrop={(event) => {
-                event.preventDefault();
-                const from = dragFrom ?? Number(event.dataTransfer.getData('text/plain'));
-                setDragFrom(null);
-                setDropAt(null);
-                if (!Number.isInteger(from) || from === index) return;
-                if (event.altKey || event.shiftKey) onMerge(from, index);
-                else onReorder(from, index);
-              }}
-              onDragEnd={() => { setDragFrom(null); setDropAt(null); }}
-              onClick={(event) => { holdAnchor.current = event.currentTarget; setHoldIndex(index); }}
-              onKeyDown={(event) => {
-                if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
-                  event.preventDefault();
-                  onReorder(index, index + (event.key === 'ArrowLeft' ? -1 : 1));
-                } else if (event.altKey && event.key === 'ArrowUp' && index > 0) {
-                  event.preventDefault();
-                  onMerge(index, index - 1);
-                } else if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  holdAnchor.current = event.currentTarget;
-                  setHoldIndex(index);
-                }
-              }}
-            >
-              <span className="ofk-motion-chip-index" aria-hidden="true">{index + 1}</span>
-              <span className="ofk-motion-chip-label">{chipLabel(page, step)}</span>
-            </button>
-            {index < steps.length - 1 ? (
-              <span className="ofk-motion-chip-gap" aria-hidden="true" onDragOver={(event) => event.preventDefault()} onDrop={() => { if (dragFrom !== null) { onReorder(dragFrom, index); setDragFrom(null); setDropAt(null); } }} />
-            ) : null}
-          </li>
-        ))}
-      </ol>
-      <p className="ofk-caption">Drag to reorder, drop one onto another to merge, click for its hold. Every edit writes the <code>animate</code> block.</p>
+      <details className="ofk-accordion ofk-motion-steps-disclosure" open={steps.length <= OPEN_STEPS}>
+        <summary>
+          <span>Steps</span>
+          <span className="ofk-accordion-meta">
+            <span className="ofk-caption">{steps.length} step{steps.length === 1 ? '' : 's'}</span>
+            <Icon icon={IconChevronDown} />
+          </span>
+        </summary>
+        <div className="ofk-accordion-body">
+          <ol className="ofk-motion-chip-row" aria-label="Animation steps">
+            {shown.map((step, index) => (
+              <li key={`${index}:${step.nodeIds.join(',')}:${step.connectorIds.join(',')}`}>
+                <button
+                  type="button"
+                  className="ofk-motion-chip"
+                  data-dragging={dragFrom === index || undefined}
+                  data-drop={dropAt === index || undefined}
+                  draggable
+                  aria-label={`Step ${index + 1} of ${steps.length}: ${chipLabel(page, step)}${step.holdMs ? `, held ${(step.holdMs / 1000).toFixed(1)} seconds` : ''}. Alt+left and right move it, Alt+up merges it into the previous step, Enter sets its hold.`}
+                  onDragStart={(event) => {
+                    setDragFrom(index);
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', String(index));
+                  }}
+                  onDragOver={(event) => { event.preventDefault(); setDropAt(index); }}
+                  onDragLeave={() => setDropAt((current) => (current === index ? null : current))}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const from = dragFrom ?? Number(event.dataTransfer.getData('text/plain'));
+                    setDragFrom(null);
+                    setDropAt(null);
+                    if (!Number.isInteger(from) || from === index) return;
+                    if (event.altKey || event.shiftKey) onMerge(from, index);
+                    else onReorder(from, index);
+                  }}
+                  onDragEnd={() => { setDragFrom(null); setDropAt(null); }}
+                  onClick={(event) => { holdAnchor.current = event.currentTarget; setHoldIndex(index); }}
+                  onKeyDown={(event) => {
+                    if (event.altKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+                      event.preventDefault();
+                      onReorder(index, index + (event.key === 'ArrowLeft' ? -1 : 1));
+                    } else if (event.altKey && event.key === 'ArrowUp' && index > 0) {
+                      event.preventDefault();
+                      onMerge(index, index - 1);
+                    } else if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      holdAnchor.current = event.currentTarget;
+                      setHoldIndex(index);
+                    }
+                  }}
+                >
+                  <span className="ofk-motion-chip-index" aria-hidden="true">{index + 1}</span>
+                  <span className="ofk-motion-chip-label">{chipLabel(page, step)}</span>
+                </button>
+                {index < shown.length - 1 ? (
+                  <span className="ofk-motion-chip-gap" aria-hidden="true" onDragOver={(event) => event.preventDefault()} onDrop={() => { if (dragFrom !== null) { onReorder(dragFrom, index); setDragFrom(null); setDropAt(null); } }} />
+                ) : null}
+              </li>
+            ))}
+          </ol>
+          <p className="ofk-caption">Drag to reorder, drop one onto another to merge, click for its hold. Every edit writes the <code>animate</code> block.</p>
+          {steps.length > MAX_CHIPS ? (
+            <p className="ofk-caption">Showing the first {MAX_CHIPS} steps — the rest are in the <code>animate</code> block in the code panel.</p>
+          ) : null}
+        </div>
+      </details>
       {holdStep ? (
         <Popover role="dialog" aria-label={`Step ${(holdIndex ?? 0) + 1} hold`} open anchorRef={holdAnchor} onClose={() => setHoldIndex(null)} placement="bottom-start">
           <PopoverHeader title={`Step ${(holdIndex ?? 0) + 1} hold`} close={<Button variant="quiet" onClick={() => setHoldIndex(null)}>Done</Button>} />

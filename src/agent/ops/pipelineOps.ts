@@ -1,19 +1,8 @@
 // Pipeline ops: files and the camera. These never touch the document, so they
 // carry no command — they hand back artefacts or move the viewport.
 import { z } from 'zod';
-import { isContainerNodeKind } from '../../opencanvas/domain/nodes/containerNodePresentation';
+import { descendantIds } from '../../opencanvas/domain/scene/queries';
 import { defineOp, requireFrame, requirePage, type ExportedFile } from './types';
-
-function subtreeIds(pageNodes: readonly { id: string; parentId: string | null }[], rootId: string): string[] {
-  const ids = new Set([rootId]);
-  for (let grew = true; grew;) {
-    grew = false;
-    for (const node of pageNodes) {
-      if (node.parentId && ids.has(node.parentId) && !ids.has(node.id)) { ids.add(node.id); grew = true; }
-    }
-  }
-  return [...ids];
-}
 
 function filesOutput(files: readonly ExportedFile[]) {
   return {
@@ -47,10 +36,16 @@ export const exportDiagram = defineOp({
   async run({ format, scope, pageId, ids, scale, theme, preset, order, durationMs, loop, size, fps }, context) {
     if (!context.capabilities.exportFiles) throw new Error('This host cannot export files; connect a live editor or use a host with an export pipeline.');
     const page = requirePage(context.document, pageId ?? context.pageId);
+    const requested = ids ?? page.nodes.map((node) => node.id);
+    // The serializer expands nodes to their subtrees; connections are their own kind.
+    const nodeIds = requested.filter((id) => page.nodes.some((node) => node.id === id));
+    const connectorIds = requested.filter((id) => page.connectors.some((connector) => connector.id === id));
     const files = await context.capabilities.exportFiles({
       document: context.document, format, scope, pageId: page.id, scale, theme,
       preset, ...(order ? { order } : {}), ...(durationMs === undefined ? {} : { durationMs }), loop, size, fps,
-      ...(scope === 'selection' ? { selectedNodeIds: ids ?? page.nodes.filter((node) => !isContainerNodeKind(node.kind)).map((node) => node.id) } : {}),
+      ...(scope === 'selection'
+        ? { selectedNodeIds: nodeIds, ...(connectorIds.length ? { selectedConnectorIds: connectorIds } : {}) }
+        : {}),
     });
     return { command: null, output: filesOutput(files) };
   },
@@ -69,7 +64,8 @@ export const screenshotDiagram = defineOp({
   async run({ frameId, pageId, scale, theme }, context) {
     if (!context.capabilities.exportFiles) throw new Error('screenshot needs a live editor: click "Connect agent" and retry.');
     const page = requirePage(context.document, pageId ?? context.pageId);
-    const ids = frameId ? subtreeIds(page.nodes, requireFrame(page, frameId).id) : undefined;
+    // Selection expands to the frame's whole subtree in the serializer.
+    const ids = frameId ? [requireFrame(page, frameId).id] : undefined;
     const files = await context.capabilities.exportFiles({
       document: context.document, format: 'png', scope: ids ? 'selection' : 'page', pageId: page.id, scale, theme,
       ...(ids ? { selectedNodeIds: ids } : {}),
@@ -91,7 +87,8 @@ export const fitView = defineOp({
   async run({ ids, frameId }, context) {
     if (!context.capabilities.fitView) throw new Error('This host has no viewport.');
     const page = requirePage(context.document, context.pageId);
-    const target = frameId ? subtreeIds(page.nodes, requireFrame(page, frameId).id) : ids;
+    const frame = frameId ? requireFrame(page, frameId) : null;
+    const target = frame ? [frame.id, ...descendantIds(page, [frame.id])] : ids;
     context.capabilities.fitView(target);
     return { command: null, output: { fitted: target ?? 'page' } };
   },

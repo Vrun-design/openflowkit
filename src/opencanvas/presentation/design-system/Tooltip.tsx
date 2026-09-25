@@ -33,7 +33,7 @@ export function Tooltip({
   const described = children.props['aria-describedby'];
   // The native title would show a second, late tooltip; this one owns the hint.
   const trigger = cloneElement(children, {
-    title: '',
+    title: undefined,
     ...(open ? { 'aria-describedby': [described, id].filter(Boolean).join(' ') } : {}),
   });
   return (

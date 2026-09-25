@@ -682,20 +682,19 @@
       "name": "Browser and mobile frame nodes",
       "status": "shipped",
       "evidence": "src/opencanvas/domain/nodes/wireframeNodePresentation.ts:61",
-      "notes": "Reachable through the DSL shape words `browser` and `mobile`; the app draws the frame chrome. The SVG/PNG export draws them as plain labelled cards. The wireframe widget library is separately absent.",
+      "notes": "Reachable through the DSL shape words `browser` and `mobile`; the app draws the frame chrome. The SVG/PNG export draws them as plain labelled cards. The More flyout's device frames are separate containers (see frames-tools).",
       "page": "diagram-flowchart"
     },
     {
       "id": "reserved-families",
-      "name": "Reserved families (bpmn, org, gantt, wireframe, sankey, journey, timeline)",
+      "name": "Reserved families (bpmn, org, gantt, sankey, journey, timeline)",
       "status": "absent",
       "evidence": "src/dsl/document.ts:33",
-      "notes": "Reserved names parse to a flowchart with warning W105. Wireframe is explicitly unbuilt (phase 6.7).",
+      "notes": "Reserved names parse to a flowchart with warning W105.",
       "families": [
         "bpmn",
         "org",
         "gantt",
-        "wireframe",
         "sankey",
         "journey",
         "timeline"
@@ -1001,17 +1000,28 @@
     },
     {
       "id": "frames-tools",
-      "name": "Frame presets and presentation tools (phase 6.6)",
-      "status": "absent",
-      "evidence": "docs/plan/phase-6-library.md:182",
-      "notes": "Unbuilt: phone/tablet/window frame presets, the laser pointer and the sticky-note tool. DSL browser/mobile frame nodes and the `note` sticky kind are separately shipped."
+      "name": "More flyout: frame presets and tools",
+      "status": "shipped",
+      "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts",
+      "notes": "Frame, phone, tablet, browser and window frames adopt what is dropped on them and draw their chrome in the export too. Tools: lasso, laser pointer (presentation only), eraser, sticky note.",
+      "page": "insert-media",
+      "shortcuts": [
+        "Laser pointer",
+        "Frame",
+        "Sticky note",
+        "More: frames, tools, wireframe"
+      ]
     },
     {
       "id": "wireframe-library",
-      "name": "Wireframe widget library and family (phase 6.7)",
-      "status": "absent",
-      "evidence": "docs/plan/phase-6-library.md:197",
-      "notes": "Unbuilt; `wireframe` stays a reserved family that parses as a flowchart."
+      "name": "Wireframe widget library and family",
+      "status": "shipped",
+      "evidence": "src/opencanvas/domain/nodes/widgetNodePresentation.ts",
+      "notes": "35 controls in Koboyo's vocabulary; state (on/off, value, selected item, variant) from the style bar; the `wireframe` family compiles Koboyo's screen syntax.",
+      "page": "diagram-wireframe",
+      "families": [
+        "wireframe"
+      ]
     },
     {
       "id": "slides-present",

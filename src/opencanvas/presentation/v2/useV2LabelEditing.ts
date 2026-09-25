@@ -8,6 +8,7 @@ import { buildDeleteSelectionCommand, buildSetNodeLabelCommand } from '../../dom
 import { nodeTechHint, refreshAutoIcon, withoutIcon } from '../../application/dsl/iconCommands';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import type { V2EditingState } from './V2CanvasHost';
+import { widgetLabelBox } from '../../domain/nodes/widgetNodePresentation';
 
 interface V2LabelEditingOptions {
   readonly hostRef: RefObject<PixiRendererHost | null>;
@@ -63,8 +64,9 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
   const openEditor = useCallback(
     (nodeId: string, editorOptions: OpenEditorOptions = {}) => {
       const node = optionsRef.current.page?.nodes.find((candidate) => candidate.id === nodeId);
-      // Groups are invisible containers: nothing to label.
-      if (node?.kind === 'group') return;
+      // Groups are invisible containers, and some widgets (an image, a divider)
+      // draw no label: nothing to edit.
+      if (node?.kind === 'group' || (node?.kind === 'widget' && !widgetLabelBox(node))) return;
       const bounds = node && hostRef.current?.getNodeLabelScreenBounds(nodeId);
       if (!node || !bounds) {
         pendingRef.current = { nodeId, editorOptions };

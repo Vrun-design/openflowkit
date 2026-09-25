@@ -29,13 +29,13 @@ is download-only. Sizes are 720p, 1080p or 1440p, at 12, 24 or 30 fps, in light 
 | **Walkthrough** | Spotlights one step at a time, everything else dimmed, the camera glides |
 | **Pulse** | Everything shown; connectors carry a travelling light, forever |
 
-## Order: Auto, a flow, or your own steps
+## Order: connections, a flow, or your own steps
 
-- **Auto** walks the connector graph: roots first, containers before their children, cycles
+- **Connections** walks the connector graph: roots first, containers before their children, cycles
   broken by position, unconnected shapes last.
 - **A flow** — when the page belongs to a [C4 model](/architecture-c4/) with flows — replays
   that flow's steps, with longer holds for notes.
-- **From code** plays the `animate` block in the diagram source. The step chips in the dialog
+- **Custom** plays the `animate` block in the diagram source. The step chips in the dialog
   write that block: drag to reorder, drop one chip onto another to merge them, click a chip to
   set its hold. Every edit lands in the code panel, so the chips *are* the DSL, rendered.
 
@@ -52,7 +52,7 @@ animate build 10s loop {
 }
 ```
 
-Omit the block and you get **Auto**. The serializer never invents a block, and moving things on
+Omit the block and you get **Connections**. The serializer never invents a block, and moving things on
 the canvas never rewrites the text. The block's grammar — presets, durations, `hold`, unknown
 reference warnings — is in the [DSL reference](/openflow-dsl-reference/).
 

@@ -8,6 +8,11 @@ import type { Bounds2d, Matrix2d, Point2d, Size2d } from '../../domain/geometry/
 import { resolveBasicNodePresentation, type BasicNodeShape } from '../../domain/nodes/basicNodePresentation';
 import { basicNodeDecorations } from '../../domain/nodes/basicNodeDecorations';
 import { resolveChartPresentation } from '../../domain/nodes/chartNodePresentation';
+import {
+  resolveWidgetInks, resolveWidgetPresentation, widgetBackdrop, type WidgetInk, type WidgetInkPaint, type WidgetPrimitive,
+} from '../../domain/nodes/widgetNodePresentation';
+import { frameChromePrimitives, framePresetOf } from '../../domain/nodes/framePreset';
+import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
 import { nodeLabelBounds, nodeOutline } from '../../domain/nodes/nodeLabelBounds';
 import type { ConnectorMarkerGlyph, ProjectedConnector } from '../../domain/connectors/types';
 import { connectorMarkerShapes, type MarkerShape } from '../../domain/connectors/markers';
@@ -26,6 +31,7 @@ import { smoothStroke } from '../../domain/nodes/strokeGeometry';
 import { projectPageConnectors } from '../../domain/connectors/routeProjection';
 import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
+import { descendantIds } from '../../domain/scene/queries';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
 import { cameraFitMatrix } from '../../domain/animation/camera';
 import { PULSE_DASH } from '../../domain/animation/frame';
@@ -53,7 +59,10 @@ export interface ElementAnimations {
 
 export interface CanonicalSvgExportOptions {
   readonly pageId?: string;
+  /** Export these nodes and everything inside them; absent exports the page. */
   readonly selectedNodeIds?: readonly string[];
+  /** Connectors drawn without requiring either endpoint to be selected. */
+  readonly selectedConnectorIds?: readonly string[];
   readonly theme?: 'light' | 'dark' | 'print';
   readonly padding?: number;
   readonly pixelRatio?: number;
@@ -485,6 +494,60 @@ function exportChartNode(
   return nodeGroup(`data-node-id="${xml(node.id)}" data-node-kind="chart"`, parts.join(''), frame);
 }
 
+// Widgets and frame chrome: the same primitives Pixi paints, node-local, so the
+// group carries the node matrix.
+function widgetPrimitivesMarkup(
+  primitives: readonly WidgetPrimitive[],
+  inks: Readonly<Record<WidgetInk, WidgetInkPaint>>,
+  style: NodeStyle
+): string {
+  const paint = (primitive: Exclude<WidgetPrimitive, { kind: 'text' }>): string => {
+    const opacity = primitive.opacity ?? 1;
+    const fill = primitive.fill ? inks[primitive.fill] : null;
+    const stroke = primitive.stroke ? inks[primitive.stroke] : null;
+    const width = primitive.strokeWidth ?? style.strokeWidth;
+    return (fill ? ` fill="${xml(fill.color)}"${fill.alpha * opacity < 1 ? ` fill-opacity="${number(fill.alpha * opacity)}"` : ''}` : ' fill="none"')
+      + (stroke && width > 0
+        ? ` stroke="${xml(stroke.color)}" stroke-width="${number(width)}"${stroke.alpha * opacity < 1 ? ` stroke-opacity="${number(stroke.alpha * opacity)}"` : ''} stroke-linecap="round" stroke-linejoin="round"`
+        : '');
+  };
+  return primitives.map((primitive) => {
+    if (primitive.kind === 'text') {
+      if (!primitive.text) return '';
+      const ink = inks[primitive.ink];
+      return `<text x="${number(primitive.x)}" y="${number(primitive.y)}" text-anchor="${primitive.anchor}" dominant-baseline="middle" fill="${xml(ink.color)}"${ink.alpha < 1 ? ` fill-opacity="${number(ink.alpha)}"` : ''} font-family="${xml(FONT_STACKS[style.fontFamily])}" font-size="${number(primitive.size)}" font-weight="${primitive.weight}">${xml(primitive.text)}</text>`;
+    }
+    if (primitive.kind === 'rect') {
+      if (primitive.width <= 0 || primitive.height <= 0) return '';
+      const radius = Math.min(primitive.radius, primitive.width / 2, primitive.height / 2);
+      return `<rect x="${number(primitive.x)}" y="${number(primitive.y)}" width="${number(primitive.width)}" height="${number(primitive.height)}"${radius > 0 ? ` rx="${number(radius)}"` : ''}${paint(primitive)}/>`;
+    }
+    if (primitive.kind === 'circle') {
+      return primitive.radius > 0 ? `<circle cx="${number(primitive.x)}" cy="${number(primitive.y)}" r="${number(primitive.radius)}"${paint(primitive)}/>` : '';
+    }
+    if (primitive.points.length < 2) return '';
+    return `<path d="${primitive.closed ? pathData(primitive.points) : openPathData(primitive.points)}"${paint(primitive)}/>`;
+  }).join('');
+}
+
+function exportWidgetNode(
+  node: SceneNode,
+  matrix: Matrix2d,
+  theme: 'light' | 'dark' | 'print',
+  frame: { readonly className: string; readonly style: string } | null,
+  parentOf: (id: string) => SceneNode | undefined
+): string | null {
+  const presentation = resolveWidgetPresentation(node);
+  if (!presentation) return null;
+  const background = theme === 'dark' ? SVG_BACKGROUND.dark : SVG_BACKGROUND.light;
+  const style = resolveNodeStyle(node, background);
+  return nodeGroup(
+    `data-node-id="${xml(node.id)}" data-node-kind="widget" transform="${matrixAttribute(matrix)}"${style.opacity < 1 ? ` opacity="${number(style.opacity)}"` : ''}`,
+    widgetPrimitivesMarkup(presentation.primitives, resolveWidgetInks(node, style, widgetBackdrop(node, parentOf, background)), style),
+    frame
+  );
+}
+
 function exportNode(
   node: SceneNode,
   matrix: Matrix2d,
@@ -492,9 +555,10 @@ function exportNode(
   frame: ElementFrameState | undefined,
   animations: CanonicalSvgExportOptions['animations'],
   iconArt: CanonicalSvgExportOptions['iconArt'],
+  parentOf: (id: string) => SceneNode | undefined,
 ): string {
   const wrapper = elementFrameStyle('node', node.id, frame, node.size, animations);
-  const chart = exportChartNode(node, matrix, theme, wrapper);
+  const chart = exportChartNode(node, matrix, theme, wrapper) ?? exportWidgetNode(node, matrix, theme, wrapper, parentOf);
   if (chart) return chart;
   const freeform = resolveFreeformNodePresentation(node);
   if (freeform && (freeform.kind === 'pen' || freeform.kind === 'highlighter'
@@ -510,6 +574,7 @@ function exportNode(
   // exporter cannot drift. Legacy content keys are its fallbacks, not ours.
   const style = resolveNodeStyle(node, background);
   const basic = resolveBasicNodePresentation(node);
+  const preset = framePresetOf(node);
   const outline = nodeOutline(node);
   const label = typeof node.content.label === 'string' ? node.content.label : node.id;
   const subLabel = typeof node.content.subLabel === 'string' ? node.content.subLabel : '';
@@ -527,6 +592,7 @@ function exportNode(
     (defs ? `<defs>${defs}</defs>` : '')
       + outlineMarkup(outline, style, filter)
       + (basic ? decorationMarkup(basic.shape, node.size, style) : '')
+      + (preset ? widgetPrimitivesMarkup(frameChromePrimitives(preset, node.size), resolveWidgetInks(node, style, background), style) : '')
       + labelElement(style, nodeLabelBounds(node), label, subLabel, clip)
       + iconMarkup(node, iconArt),
     wrapper
@@ -595,14 +661,25 @@ function markerShapeMarkup(shape: MarkerShape, stroke: string, width: number, op
   return `<path d="${data}" ${strokeAttrs}${shape.round ? ' stroke-linejoin="round"' : ''}/>`;
 }
 
-function selectedPage(page: ScenePage, selectedNodeIds?: readonly string[]): ScenePage {
+/**
+ * The page an export draws: the selected nodes plus everything inside them, an
+ * explicitly selected connector (which needs neither endpoint), and the
+ * connectors whose endpoints both survive. Hidden nodes never draw.
+ */
+function selectedPage(
+  page: ScenePage,
+  selectedNodeIds?: readonly string[],
+  selectedConnectorIds?: readonly string[]
+): ScenePage {
   const states = buildNodeStateMap(page);
-  const selected = selectedNodeIds ? new Set(selectedNodeIds) : null;
+  const selected = selectedNodeIds ? new Set([...selectedNodeIds, ...descendantIds(page, selectedNodeIds)]) : null;
+  const selectedConnectors = selectedConnectorIds?.length ? new Set(selectedConnectorIds) : null;
   const nodes = page.nodes.filter((node) => states.get(node.id)?.visible && (!selected || selected.has(node.id)));
   const ids = new Set(nodes.map(({ id }) => id));
-  return { ...page, nodes, connectors: page.connectors.filter(({ source, target }) =>
-    (source.nodeId === null ? !selected : ids.has(source.nodeId))
-    && (target.nodeId === null ? !selected : ids.has(target.nodeId))) };
+  return { ...page, nodes, connectors: page.connectors.filter(({ id, source, target }) =>
+    (selectedConnectors?.has(id) ?? false)
+    || ((source.nodeId === null ? !selected : ids.has(source.nodeId))
+      && (target.nodeId === null ? !selected : ids.has(target.nodeId)))) };
 }
 
 interface PageExport {
@@ -619,7 +696,7 @@ function pageExport(document: SceneDocumentV1, options: CanonicalSvgExportOption
     ? document.pages.find(({ id }) => id === options.pageId)
     : document.pages[0];
   if (!source) throw new RangeError('SVG export page was not found.');
-  const page = selectedPage(source, options.selectedNodeIds);
+  const page = selectedPage(source, options.selectedNodeIds, options.selectedConnectorIds);
   const matrices = buildNodeWorldMatrices(source);
   const connectors = projectPageConnectors({ ...source, connectors: page.connectors });
   if (page.nodes.length === 0 && connectors.length === 0) throw new TypeError('SVG export requires at least one visible node or connector.');
@@ -648,7 +725,8 @@ export function svgViewBox(document: SceneDocumentV1, options: CanonicalSvgExpor
 export function exportCanonicalSvg(
   document: SceneDocumentV1, options: CanonicalSvgExportOptions = {}
 ): string {
-  const { page, matrices, connectors, viewBox } = pageExport(document, options);
+  const { source, page, matrices, connectors, viewBox } = pageExport(document, options);
+  const byId = new Map(source.nodes.map((node) => [node.id, node]));
   const { x, y, width, height } = viewBox;
   const pixelRatio = Math.min(4, Math.max(1, options.pixelRatio ?? 1));
   const theme = options.theme ?? 'light';
@@ -667,8 +745,11 @@ export function exportCanonicalSvg(
       + markerMarkup(connector, stroke)
       + '</g>';
   }).join('');
-  const nodeMarkup = [...page.nodes].sort((a, b) => a.zIndex - b.zIndex || a.id.localeCompare(b.id))
-    .map((node) => exportNode(node, matrices.get(node.id)!, theme, options.frame?.nodes[node.id], options.animations, options.iconArt)).join('');
+  // Containers first, like the canvas: Pixi paints them on a layer under every
+  // node, so a shape dropped into a newer frame still shows in the file.
+  const layer = (node: SceneNode) => (isContainerNodeKind(node.kind) ? 0 : 1);
+  const nodeMarkup = [...page.nodes].sort((a, b) => layer(a) - layer(b) || a.zIndex - b.zIndex || a.id.localeCompare(b.id))
+    .map((node) => exportNode(node, matrices.get(node.id)!, theme, options.frame?.nodes[node.id], options.animations, options.iconArt, (id) => byId.get(id))).join('');
   // Camera glide lives on a root group: CSS cannot animate `viewBox` inside an
   // `<img>`. The still path applies the same matrix, so both stay in step.
   const cameraMatrix = options.frame?.camera ? cameraFitMatrix(options.frame.camera, viewBox) : null;

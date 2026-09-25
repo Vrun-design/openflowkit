@@ -14,7 +14,7 @@ const CURATED = {
   'Diagram as code': ['openflow-dsl', 'mermaid-import'],
   'Diagram families': [
     'diagram-flowchart', 'diagram-architecture', 'diagram-sequence', 'diagram-state',
-    'diagram-erd', 'diagram-class', 'diagram-mindmap', 'diagram-gitgraph', 'diagram-chart',
+    'diagram-erd', 'diagram-class', 'diagram-mindmap', 'diagram-gitgraph', 'diagram-chart', 'diagram-wireframe',
   ],
   'The canvas': ['canvas-basics', 'shapes-and-connectors', 'insert-media', 'context-menu', 'properties-panel', 'settings', 'theming'],
   'Agents & MCP': ['mcp-server', 'prompting-agents'],

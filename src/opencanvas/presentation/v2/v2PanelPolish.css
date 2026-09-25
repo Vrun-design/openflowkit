@@ -1,0 +1,16 @@
+/* Document settings: one compact form rhythm for the grouped panel. */
+.ofk-v2-panel-section { display: grid; gap: var(--ofk-space-md); }
+.ofk-v2-panel-section + .ofk-v2-panel-section { border-top: 1px solid var(--ofk-border); padding-top: var(--ofk-space-lg); }
+.ofk-v2-panel-section h3 { margin: 0; font-size: 13px; font-weight: var(--ofk-weight-emphasis); color: var(--ofk-text); }
+.ofk-v2-properties.ofk-v2-settings { gap: var(--ofk-space-lg); width: min(320px, calc(100vw - 48px)); }
+.ofk-v2-panel-field { display: grid; gap: var(--ofk-space-xs); min-width: 0; }
+.ofk-v2-field-label { font-size: 11px; color: var(--ofk-secondary); }
+.ofk-v2-panel-field > .ofk-segmented { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); width: 100%; }
+.ofk-v2-panel-field > .ofk-segmented label { min-width: 0; padding-inline: var(--ofk-space-sm); }
+.ofk-v2-setting-row { display: grid; gap: var(--ofk-space-xs); }
+.ofk-v2-settings .ofk-switch { display: flex; flex-direction: row-reverse; justify-content: space-between; width: 100%; }
+.ofk-v2-settings .ofk-switch-track { flex: none; }
+.ofk-v2-setting-row .ofk-caption { max-width: 36ch; line-height: 1.5; }
+@media (pointer: coarse) {
+  .ofk-v2-settings .ofk-switch { min-height: 44px; }
+}

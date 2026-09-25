@@ -12,7 +12,7 @@ import type {
 } from './types';
 import type { JsonObject } from '../document/json';
 import { resolveNodeStyle, type NodeStyle } from '../nodes/nodeStyle';
-import { descendantIds } from './groupNodes';
+import { descendantIds } from '../scene/queries';
 import { buildNodeStateMap } from '../scene/nodeState';
 import type {
   ConnectorEndpoint,

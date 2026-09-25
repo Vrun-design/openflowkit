@@ -15,6 +15,8 @@ export interface V2ExportRequest {
   readonly scope: V2ExportScope;
   readonly pageId: string;
   readonly selectedNodeIds?: readonly string[];
+  /** An element export of connections: drawn without their endpoints. */
+  readonly selectedConnectorIds?: readonly string[];
   readonly theme?: V2ExportTheme;
   /** Pixel multiplier baked into the emitted file (PNG and SVG alike). */
   readonly scale?: 1 | 2 | 3;
@@ -32,11 +34,29 @@ function slug(value: string, fallback: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || fallback;
 }
 
+/** A lone element names the file: its label, else its kind (`rect-1` stays unique enough). */
+function selectionStem(request: V2ExportRequest, page: SceneDocumentV1['pages'][number] | undefined): string {
+  const nodeIds = request.selectedNodeIds ?? [];
+  const connectorIds = request.selectedConnectorIds ?? [];
+  if (nodeIds.length === 1 && connectorIds.length === 0) {
+    const node = page?.nodes.find(({ id }) => id === nodeIds[0]);
+    const label = typeof node?.content.label === 'string' ? node.content.label : '';
+    return slug(label, node?.kind ?? 'element');
+  }
+  if (connectorIds.length === 1 && nodeIds.length === 0) {
+    const connector = page?.connectors.find(({ id }) => id === connectorIds[0]);
+    return slug(connector?.labels[0]?.text ?? '', 'connection');
+  }
+  return 'selection';
+}
+
 function fileStem(request: V2ExportRequest): string {
   const base = slug(request.document.name, 'diagram');
-  if (request.scope === 'document') return `${base}-document`;
+  // JSON holds every page whatever the scope says; the file should say so.
+  if (request.scope === 'document' || request.format === 'json') return `${base}-document`;
   const page = request.document.pages.find(({ id }) => id === request.pageId) ?? request.document.pages[0];
-  return `${base}-${page ? slug(page.name, page.id) : request.pageId}${request.scope === 'selection' ? '-selection' : ''}`;
+  if (request.scope === 'selection') return `${base}-${selectionStem(request, page)}`;
+  return `${base}-${page ? slug(page.name, page.id) : request.pageId}`;
 }
 
 /** Pages an export touches: one for page/selection scope, every page for document scope. */
@@ -48,11 +68,15 @@ function exportPages(request: V2ExportRequest) {
 }
 
 function svgFor(request: V2ExportRequest, pageId: string, scale: number, iconArt: Readonly<Record<string, string>>): string {
+  const selection = request.scope === 'selection';
   return exportCanonicalSvg(request.document, {
     pageId,
     iconArt,
-    ...(request.scope === 'selection' && request.selectedNodeIds?.length
-      ? { selectedNodeIds: request.selectedNodeIds }
+    // Selection is strict: an empty list draws nothing and says so, rather
+    // than silently widening to the page.
+    ...(selection ? { selectedNodeIds: request.selectedNodeIds ?? [] } : {}),
+    ...(selection && request.selectedConnectorIds?.length
+      ? { selectedConnectorIds: request.selectedConnectorIds }
       : {}),
     theme: request.theme ?? 'light',
     pixelRatio: scale,

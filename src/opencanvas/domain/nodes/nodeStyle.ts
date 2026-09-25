@@ -8,6 +8,7 @@ import { optionalPresentationString } from './nodePresentationValues';
 import { resolveAdaptiveInk } from '../color/adaptiveColor';
 import { getContrastText } from '../../../lib/colorUtils';
 import { nodePaletteName } from './nodePalette';
+import { widgetLabelBox } from './widgetNodePresentation';
 
 // Every visible property of a node, resolved from flat `appearance` keys
 // (docs/plan/phase-1-style.md §1) with legacy `content.*` palette/typography
@@ -138,7 +139,16 @@ function familyDefaults(node: SceneNode): FamilyDefaults {
     return {
       fill: colors.bg, stroke: colors.border, strokeWidth: container.kind === 'swimlane' ? 2 : 1.5,
       text: colors.title, cornerRadius: 12, fontSize: container.kind === 'swimlane' ? 13 : 14, fontWeight: 700,
-      textAlign: 'start', textVerticalAlign: 'middle', textPadding: 0, labelOnCanvas: false,
+      textAlign: 'start', textVerticalAlign: 'middle', textPadding: 0, labelOnCanvas: container.preset !== null,
+    };
+  }
+  // A widget paints its own text; these only shape the label editor to match.
+  const widget = widgetLabelBox(node);
+  if (widget) {
+    return {
+      fill: '#ffffff', stroke: '#555952', strokeWidth: 1.5, text: '#1f2937', cornerRadius: 6,
+      fontSize: widget.size, fontWeight: widget.weight, textAlign: widget.align === 'center' ? 'center' : 'start',
+      textVerticalAlign: widget.verticalAlign, textPadding: 0, labelOnCanvas: false,
     };
   }
   const architecture = resolveArchitectureNodePresentation(node);

@@ -179,6 +179,10 @@
 .ofk-v2-flyout-cell[data-selected] { background: color-mix(in srgb, var(--ofk-focus) 18%, transparent); }
 .ofk-v2-flyout-cell:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: -2px; }
 .ofk-v2-flyout-cell svg { width: 20px; height: 20px; }
+.ofk-v2-laser { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.ofk-v2-canvas:has(.ofk-v2-laser) { cursor: crosshair; }
+.ofk-v2-flyout-section + .ofk-v2-flyout-section { margin-top: 6px; }
+.ofk-v2-flyout-heading { padding: 6px 6px 4px; font-size: 12px; font-weight: 500; color: var(--ofk-muted); }
 .ofk-v2 .ofk-v2-workspace-rail { top: 16px; }
 .ofk-v2-workspace-rail .ofk-toolbar { padding: 5px; gap: 4px; }
 .ofk-v2[data-workspace-open='true'] .ofk-v2-workspace-rail,
@@ -638,6 +642,7 @@
 .ofk-style-swatch[data-mixed] { background: conic-gradient(var(--ofk-text) 0 25%, var(--ofk-surface) 0 50%, var(--ofk-text) 0 75%, var(--ofk-surface) 0); }
 .ofk-style-glyph { color: var(--ofk-text); font-weight: 600; font-size: 16px; line-height: 1; text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 4px; }
 .ofk-style-line { display: block; width: 20px; border-top: 2px solid var(--ofk-text); }
+.ofk-style-state { font-size: 12px; font-weight: 500; max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .ofk-style-panel {
   display: grid; gap: 14px; padding: 16px;
@@ -674,13 +679,13 @@
 .ofk-style-panel .ofk-number[data-stepper='stacked'] .ofk-icon-button:hover { background: var(--ofk-border); color: var(--ofk-text); }
 
 .ofk-style-more { border-top: 1px solid var(--ofk-border); padding-top: 12px; }
-.ofk-style-more > summary, .ofk-connection-details > summary, .ofk-v2-model-adr > summary { cursor: pointer; list-style: none; user-select: none; display: flex; align-items: center; justify-content: space-between; min-height: 24px; font-size: 12px; color: var(--ofk-secondary); }
-.ofk-style-more > summary > .ofk-icon, .ofk-connection-details > summary > .ofk-icon, .ofk-v2-model-adr > summary > .ofk-icon { width: 16px; height: 16px; }
-.ofk-style-more[open] > summary > .ofk-icon, .ofk-connection-details[open] > summary > .ofk-icon, .ofk-v2-model-adr[open] > summary > .ofk-icon { transform: rotate(180deg); }
-.ofk-style-more > summary::-webkit-details-marker, .ofk-connection-details > summary::-webkit-details-marker, .ofk-v2-model-adr > summary::-webkit-details-marker { display: none; }
+.ofk-style-more > summary, .ofk-accordion > summary, .ofk-v2-model-adr > summary { cursor: pointer; list-style: none; user-select: none; display: flex; align-items: center; justify-content: space-between; min-height: 24px; font-size: 12px; color: var(--ofk-secondary); }
+.ofk-style-more > summary > .ofk-icon, .ofk-accordion > summary > .ofk-icon, .ofk-v2-model-adr > summary > .ofk-icon { width: 16px; height: 16px; }
+.ofk-style-more[open] > summary > .ofk-icon, .ofk-accordion[open] > summary > .ofk-icon, .ofk-v2-model-adr[open] > summary > .ofk-icon { transform: rotate(180deg); }
+.ofk-style-more > summary::-webkit-details-marker, .ofk-accordion > summary::-webkit-details-marker, .ofk-v2-model-adr > summary::-webkit-details-marker { display: none; }
 .ofk-style-more > :not(summary) { margin-top: 12px; }
-.ofk-style-more > summary:hover, .ofk-connection-details > summary:hover, .ofk-v2-model-adr > summary:hover { color: var(--ofk-text); }
-.ofk-style-more > summary:focus-visible, .ofk-connection-details > summary:focus-visible, .ofk-v2-model-adr > summary:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 3px; border-radius: 4px; }
+.ofk-style-more > summary:hover, .ofk-accordion > summary:hover, .ofk-v2-model-adr > summary:hover { color: var(--ofk-text); }
+.ofk-style-more > summary:focus-visible, .ofk-accordion > summary:focus-visible, .ofk-v2-model-adr > summary:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 3px; border-radius: 4px; }
 
 .ofk-swatch-grid { display: grid; grid-template-columns: repeat(6, 1fr); justify-items: center; gap: 10px; padding: 2px; }
 .ofk-swatch-cell { height: 30px; width: 30px; border-radius: 50%; border: 1px solid var(--ofk-border); cursor: pointer; padding: 0; position: relative; }
@@ -778,7 +783,7 @@
 .ofk-v2-code-footer > .ofk-segmented { width: 100%; }
 .ofk-v2-code-footer > .ofk-segmented label { flex: 1; justify-content: center; }
 /* Connect agent — rail panel. Hero echoes the model welcome; status lives in the header badge. */
-.ofk-connection-panel .ofk-panel-body { padding: 8px 24px 24px; }
+.ofk-connection-panel .ofk-panel-body { padding: 8px 24px 24px; --ofk-panel-gutter: var(--ofk-space-xl); }
 .ofk-connection-badge { display: inline-flex; align-items: center; gap: 6px; margin-inline-start: auto; padding: 3px 9px 3px 7px; border: 1px solid var(--ofk-border); border-radius: 999px; font-size: 11px; color: var(--ofk-secondary); white-space: nowrap; }
 .ofk-connection-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ofk-muted); flex: none; }
 .ofk-panel[data-status='connecting'] .ofk-connection-dot { background: var(--ofk-accent); animation: ofk-connection-pulse 1.2s ease-in-out infinite; }
@@ -819,14 +824,21 @@
 .ofk-connection-capabilities .ofk-icon { width: 14px; height: 14px; color: var(--ofk-accent); margin-top: 1px; }
 .ofk-connection-capabilities strong { color: var(--ofk-text); font-weight: 500; }
 .ofk-connection-capabilities span { grid-column: 2; }
-.ofk-connection-details { border-top: 1px solid var(--ofk-border); padding: 12px 0; }
+/* Accordion: the row and its divider run the panel's full width, the label and
+   content keep the panel's gutter. Hosts set --ofk-panel-gutter to match. */
+.ofk-accordion { border-top: 1px solid var(--ofk-border); margin-inline: calc(-1 * var(--ofk-panel-gutter, var(--ofk-space-lg))); }
+.ofk-accordion > summary { min-height: var(--ofk-control-size); padding-inline: var(--ofk-panel-gutter, var(--ofk-space-lg)); }
+.ofk-accordion > summary:hover { background: color-mix(in srgb, var(--ofk-text) 5%, transparent); }
+.ofk-accordion > summary:focus-visible { outline-offset: -2px; }
+.ofk-accordion-body { padding: 0 var(--ofk-panel-gutter, var(--ofk-space-lg)) var(--ofk-space-md); }
+.ofk-accordion-meta { display: inline-flex; align-items: center; gap: var(--ofk-space-sm); }
 .ofk-connection-fields { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; margin-top: 12px; }
 .ofk-connection-fields label { font-size: 11px; color: var(--ofk-secondary); }
 .ofk-connection-fields label > span { color: var(--ofk-muted); }
 .ofk-v2-bridge-input { width: 100%; margin-top: 6px; box-sizing: border-box; padding: 8px; border: 1px solid var(--ofk-border); border-radius: 6px; background: var(--ofk-canvas); color: var(--ofk-text); font: inherit; font-size: 12px; }
 .ofk-v2-bridge-input:disabled { opacity: .6; }
-.ofk-connection-details > p { font-size: 11px; color: var(--ofk-muted); margin: 8px 0 0; }
-.ofk-connection-details > .ofk-button { margin-top: 6px; font-size: 12px; }
+.ofk-connection-details p { font-size: 11px; color: var(--ofk-muted); margin: 8px 0 0; }
+.ofk-connection-details .ofk-button { margin-top: 6px; font-size: 12px; }
 .ofk-v2-bridge-snippet { margin: 10px 0 0; padding: 10px; border-radius: 6px; background: var(--ofk-canvas); border: 1px solid var(--ofk-border); font: 10.5px/1.6 var(--ofk-font-mono, monospace); overflow: auto; max-height: 220px; }
 .ofk-connection-error { margin: 0 0 16px; font-size: 12px; line-height: 1.5; color: var(--ofk-danger); text-align: center; }
 .ofk-connection-details .ofk-connection-error { text-align: start; margin: 8px 0 0; }
@@ -962,8 +974,10 @@
 
 /* Step chips: the current order, and the animate block they write. */
 .ofk-motion-steps { display: grid; gap: 6px; }
-.ofk-motion-steps-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--ofk-secondary); }
+.ofk-motion-steps-disclosure[open] > summary { margin-bottom: 6px; }
 .ofk-motion-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.ofk-motion-steps-disclosure .ofk-motion-chip-row { max-height: 240px; overflow-y: auto; padding: 2px 0; }
+.ofk-motion-format { display: grid; gap: 6px; }
 .ofk-motion-chip-row > li { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .ofk-motion-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 150px; padding: 4px 8px 4px 5px; border: 1px solid var(--ofk-border); border-radius: 999px; background: var(--ofk-canvas); color: var(--ofk-text); font: inherit; font-size: 11px; cursor: grab; }
 .ofk-motion-chip:hover { border-color: var(--ofk-muted); }
@@ -984,7 +998,7 @@
 
 /* Animation export docks in the right-hand slot. A preview, a transport, ten
    settings and the step chips never fitted a popover — they were clipped. */
-.ofk-motion-panel .ofk-panel-body { padding: 0; }
+.ofk-motion-panel .ofk-panel-body { padding: 0; --ofk-panel-gutter: var(--ofk-space-lg); }
 .ofk-motion-panel .ofk-motion { width: auto; gap: 12px; padding: 0 16px 16px; }
 /* The preview and its transport stay put while the settings scroll under them:
    scrubbing is the one control you always want in view. */

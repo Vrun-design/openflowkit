@@ -5,7 +5,10 @@ import type { SceneNode, ScenePage } from '../../domain/document/types';
 import type { Matrix2d } from '../../domain/geometry/types';
 import type { SceneIndex } from '../../domain/scene/types';
 import { resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
-import { numericColorToHex } from '../../domain/color/adaptiveColor';
+import { DEFAULT_CANVAS_COLOR, numericColorToHex } from '../../domain/color/adaptiveColor';
+import { frameChromePrimitives } from '../../domain/nodes/framePreset';
+import { resolveWidgetInks } from '../../domain/nodes/widgetNodePresentation';
+import { drawWidgetPrimitives } from './PixiWidgetNodeRenderer';
 import { CONTAINER_TITLE_HEIGHT, nodeLabelBounds } from '../../domain/nodes/nodeLabelBounds';
 import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
@@ -74,7 +77,7 @@ export class PixiContainerRenderer {
       if (!visual || !matrix) continue;
       const childCount = index.childIdsByParentId.get(node.id)?.length ?? 0;
       const style = resolveNodeStyle(node, canvas);
-      this.drawContainer(node, matrix, visual, style);
+      this.drawContainer(node, matrix, visual, style, canvas ?? DEFAULT_CANVAS_COLOR);
       if (!isQuietGroup(node) && visual.presentation.header) {
         const label = this.createLabel(node, visual, style);
         label.visible = node.id !== this.editingNodeId;
@@ -118,7 +121,7 @@ export class PixiContainerRenderer {
     if (nodeId) { const label = this.labelByNodeId.get(nodeId); if (label) label.visible = false; }
   }
 
-  private drawContainer(node: SceneNode, matrix: Matrix2d, visual: PixiContainerNodeVisual, style: NodeStyle): void {
+  private drawContainer(node: SceneNode, matrix: Matrix2d, visual: PixiContainerNodeVisual, style: NodeStyle, canvas: string): void {
     if (isQuietGroup(node)) return;
     const fill = pixiPaintColor(style.fill, visual.fill.color);
     const stroke = pixiPaintColor(style.stroke, visual.stroke);
@@ -134,6 +137,12 @@ export class PixiContainerRenderer {
       });
     } else if (style.strokeWidth > 0) {
       this.graphics.stroke({ color: stroke.color, width: style.strokeWidth, alpha: stroke.alpha * alpha });
+    }
+    const preset = visual.presentation.preset;
+    if (preset) {
+      drawWidgetPrimitives(this.graphics, null, frameChromePrimitives(preset, node.size), matrix,
+        resolveWidgetInks(node, style, canvas), style);
+      return;
     }
     if (!visual.presentation.header) return;
     // Sections title like Figma: plain text in the top-left, no band or pill,

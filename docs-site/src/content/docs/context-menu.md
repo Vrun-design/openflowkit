@@ -35,6 +35,7 @@ things you reach for mid-drag.
 | Reorder → Front / Forward / Backward / Back | Z-order, or the whole selection's order |
 | Transform → Flip, Align, Distribute | The arrange actions, with Align and Distribute enabled for multi-selections |
 | Group / Wrap in section / Ungroup | Container actions; Ungroup appears when the selection can be unwrapped |
+| Export… | Open the [export panel](/exporting/) scoped to this element — a container brings its whole subtree |
 | Zoom to selection | Frame the selection |
 | Lock / Unlock | Toggle the lock |
 | Delete | Delete the selection |
@@ -47,6 +48,7 @@ things you reach for mid-drag.
 | Path → Elbow / Straight / Curve | Change the routing |
 | Reverse direction | Swap the endpoints and the arrow head |
 | Style → Copy / Paste style | Appearance between connectors |
+| Export… | Export just this connection, without its endpoints |
 | Delete | Remove the connector |
 
 ## What it cannot do

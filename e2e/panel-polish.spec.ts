@@ -1,4 +1,5 @@
 import { expect, test } from './test';
+import { openCanvas } from './helpers';
 
 test('object actions, page menus and connection states stay usable', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('openflowkit-v2-preferences', JSON.stringify({ theme: 'dark' })));
@@ -82,4 +83,50 @@ test('connected agent stays compact on a narrow screen', async ({ page }) => {
   await page.screenshot({ animations: 'disabled', path: '/tmp/ofk-mcp-connected.png' });
   await connection.getByRole('button', { name: 'Disconnect' }).click();
   await expect(connection.getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
+});
+
+test('document panels replace each other instead of stacking @gate', async ({ page }) => {
+  await openCanvas(page);
+  const menu = page.getByRole('button', { name: 'Canvas menu', exact: true });
+  for (const name of ['Settings', 'Export']) {
+    await menu.click();
+    await page.getByRole('menuitem', { name: name === 'Export' ? 'Export…' : name, exact: true }).click();
+    await expect(page.getByRole('dialog', { name, exact: true })).toBeVisible();
+    await menu.click();
+    await expect(page.getByRole('menu', { name: 'Canvas menu', exact: true })).toBeVisible();
+    await expect(page.getByRole('dialog', { name, exact: true })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeFocused();
+  }
+});
+
+test('settings and export remain clear in dark, light and narrow layouts', async ({ page }) => {
+  await openCanvas(page);
+  const menu = page.getByRole('button', { name: 'Canvas menu', exact: true });
+  for (const theme of ['Dark', 'Light']) {
+    await menu.click();
+    await page.getByRole('menuitem', { name: 'Settings', exact: true }).click();
+    const settings = page.getByRole('dialog', { name: 'Settings', exact: true });
+    await settings.getByRole('radio', { name: theme, exact: true }).check();
+    await expect(settings.getByRole('region', { name: 'Canvas', exact: true })).toBeVisible();
+    await expect(settings.locator('details')).toHaveCount(0);
+    await settings.screenshot({ path: `/tmp/ofk-settings-${theme.toLowerCase()}.png` });
+    await settings.getByRole('button', { name: 'Done' }).click();
+  }
+  await page.setViewportSize({ width: 390, height: 600 });
+  await menu.click();
+  await page.getByRole('menuitem', { name: 'Export…', exact: true }).click();
+  const panel = page.getByRole('dialog', { name: 'Export', exact: true });
+  await expect(panel.getByRole('button', { name: 'Download', exact: true })).toBeDisabled();
+  await panel.getByRole('radio', { name: 'Transparent', exact: true }).check();
+  await expect(panel.getByRole('radio', { name: 'Transparent', exact: true })).toBeChecked();
+  const box = await panel.boundingBox();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  // The popover re-clamps on the frame after a format switch settles.
+  await expect.poll(async () => {
+    const settled = (await panel.boundingBox())!;
+    return Math.round(settled.y + settled.height);
+  }).toBeLessThanOrEqual(600);
+  await panel.screenshot({ path: '/tmp/ofk-export-narrow.png' });
 });

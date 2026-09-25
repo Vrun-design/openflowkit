@@ -3,6 +3,8 @@ import { createTestConnector, createTestDocument, createTestNode } from '../../t
 import { exportCanonicalSvg, iconArtKey } from './canonicalSvg';
 import { iconContent } from '../../domain/nodes/iconNode';
 import { architectureIconBounds } from '../../domain/nodes/architectureNodePresentation';
+import { createPresetFrame } from '../../domain/nodes/framePreset';
+import { createWidgetNode } from '../../domain/nodes/widgetNode';
 
 describe('canonical SVG export', () => {
   it('omits hidden objects, their children and attached connectors', () => {
@@ -16,6 +18,21 @@ describe('canonical SVG export', () => {
     expect(svg).not.toContain('data-node-id="child"');
     expect(svg).not.toContain('data-connector-id="hidden-edge"');
   });
+  it('draws wireframe widgets and device chrome from the canvas primitives, frames under their children', () => {
+    const page = createTestDocument({ nodes: [] }).pages[0]!;
+    const toggle = createWidgetNode(page, { id: 'toggle', widget: 'toggle', at: { x: 16, y: 60 }, label: 'Dark <mode>' });
+    // The frame is newer (higher zIndex) than the toggle dropped into it.
+    const phone = { ...createPresetFrame(page, { id: 'phone', preset: 'phone', at: { x: 0, y: 0 }, label: 'Login' }), zIndex: 9 };
+    const light = exportCanonicalSvg(createTestDocument({ nodes: [{ ...toggle, parentId: 'phone' }, phone] }));
+    expect(light.indexOf('data-node-id="phone"')).toBeLessThan(light.indexOf('data-node-id="toggle"'));
+    expect(light).toContain('data-node-kind="widget"');
+    expect(light).toContain('Dark &lt;mode&gt;');
+    expect(light).toMatch(/<circle [^>]*fill="#ffffff"/); // the knob
+    expect(light).toContain('>Login</text>');
+    const dark = exportCanonicalSvg(createTestDocument({ nodes: [toggle] }), { theme: 'dark' });
+    expect(dark).toMatch(/fill="#ffffff"[^>]*>Dark &lt;mode&gt;/); // canvas text turns light on dark
+  });
+
   it('is deterministic, renderer-independent, escaped, themed, and high-DPI', () => {
     const a = createTestNode('a', { content: { label: '<Alpha & beta>', shape: 'diamond' } });
     const b = createTestNode('b', { transform: { ...createTestNode('x').transform,
@@ -53,6 +70,33 @@ describe('canonical SVG export', () => {
     expect(selected).not.toContain('data-node-id="b"');
     expect(selected).not.toContain('data-connector-id="edge"');
     expect(() => exportCanonicalSvg(document, { selectedNodeIds: ['missing'] })).toThrow(/visible node/);
+  });
+
+  it('expands a selected container to its whole subtree, dropping connectors that leave it', () => {
+    const section = createTestNode('section', { kind: 'section' });
+    const child = createTestNode('child', { parentId: 'section' });
+    const grandchild = createTestNode('grandchild', { parentId: 'child' });
+    const outside = createTestNode('outside');
+    const document = createTestDocument({
+      nodes: [section, child, grandchild, outside],
+      connectors: [createTestConnector('inside-edge', 'child', 'grandchild'), createTestConnector('leaving-edge', 'grandchild', 'outside')],
+    });
+    const svg = exportCanonicalSvg(document, { selectedNodeIds: ['section'] });
+    expect(svg).toContain('data-node-id="section"');
+    expect(svg).toContain('data-node-id="child"');
+    expect(svg).toContain('data-node-id="grandchild"');
+    expect(svg).not.toContain('data-node-id="outside"');
+    expect(svg).toContain('data-connector-id="inside-edge"');
+    expect(svg).not.toContain('data-connector-id="leaving-edge"');
+  });
+
+  it('exports a lone connection without its endpoints', () => {
+    const a = createTestNode('a'); const b = createTestNode('b');
+    const document = createTestDocument({ nodes: [a, b], connectors: [createTestConnector('edge', 'a', 'b')] });
+    const svg = exportCanonicalSvg(document, { selectedNodeIds: [], selectedConnectorIds: ['edge'] });
+    expect(svg).toContain('data-connector-id="edge"');
+    expect(svg).not.toContain('data-node-id="a"');
+    expect(svg).not.toContain('data-node-id="b"');
   });
 
   it('exports freeform paths, pressure-width segments, and arrowheads', () => {

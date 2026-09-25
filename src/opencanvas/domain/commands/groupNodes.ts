@@ -19,22 +19,6 @@ export function selectedRootIds(page: ScenePage, nodeIds: readonly string[]): st
   });
 }
 
-/** Every node under `nodeIds`, depth first, excluding the ids themselves. */
-export function descendantIds(page: ScenePage, nodeIds: readonly string[]): string[] {
-  const children = new Map<string, string[]>();
-  for (const node of page.nodes) {
-    if (node.parentId) children.set(node.parentId, [...(children.get(node.parentId) ?? []), node.id]);
-  }
-  const result: string[] = [];
-  const pending = nodeIds.flatMap((id) => children.get(id) ?? []);
-  while (pending.length) {
-    const id = pending.shift()!;
-    result.push(id);
-    pending.push(...(children.get(id) ?? []));
-  }
-  return result;
-}
-
 export type WrapKind = 'group' | 'section';
 
 // Sections keep room for their title chip; groups hug their members.

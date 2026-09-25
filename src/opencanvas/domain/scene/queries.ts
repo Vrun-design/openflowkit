@@ -1,5 +1,6 @@
 import { intersectsBounds, isBounds2d } from '../geometry/bounds';
 import type { Bounds2d } from '../geometry/types';
+import type { ScenePage } from '../document/types';
 import type { IndexedSceneObject, SceneIndex, SceneObjectKind, SceneQueryOptions } from './types';
 import { cellRange, objectKey } from './spatialIndex';
 
@@ -54,6 +55,26 @@ export function querySceneBounds(
     .filter((object) => !options.kinds || options.kinds.has(object.kind))
     .filter((object) => intersectsBounds(object.bounds, bounds))
     .sort((left, right) => compareSceneObjects(left, right, layerOrder));
+}
+
+/** Every node under `nodeIds`, depth first, excluding the ids themselves. */
+export function descendantIds(page: ScenePage, nodeIds: readonly string[]): string[] {
+  const children = new Map<string, string[]>();
+  for (const node of page.nodes) {
+    if (node.parentId) children.set(node.parentId, [...(children.get(node.parentId) ?? []), node.id]);
+  }
+  const result: string[] = [];
+  const seen = new Set(nodeIds);
+  const pending = nodeIds.flatMap((id) => children.get(id) ?? []);
+  while (pending.length) {
+    const id = pending.shift()!;
+    // A parent cycle is invalid data, not a reason to hang.
+    if (seen.has(id)) continue;
+    seen.add(id);
+    result.push(id);
+    pending.push(...(children.get(id) ?? []));
+  }
+  return result;
 }
 
 export function getDescendantNodeIds(index: SceneIndex, parentId: string): readonly string[] {

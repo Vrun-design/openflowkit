@@ -9,6 +9,9 @@ import { buildProductionNodeMutationCommand } from '../../opencanvas/application
 import { SHAPE_KINDS, createShapeNode, type ShapeKind } from '../../opencanvas/domain/nodes/shapeNode';
 import { createChartNode } from '../../opencanvas/domain/nodes/chartNode';
 import { DEFAULT_QUADRANT } from '../../opencanvas/domain/nodes/chartNodePresentation';
+import { createWidgetNode } from '../../opencanvas/domain/nodes/widgetNode';
+import { WIDGET_KINDS, WIDGET_SEVERITIES } from '../../opencanvas/domain/nodes/widgetNodePresentation';
+import { FRAME_PRESETS, createPresetFrame } from '../../opencanvas/domain/nodes/framePreset';
 import { defineOp, pointOf, pointSchema, requirePage } from './types';
 
 // Toolbar shapes first: they are what a human creates, so agents get the same nodes.
@@ -93,9 +96,9 @@ export const deleteShapes = defineOp({
 export const addShape = defineOp({
   name: 'add_shape',
   title: 'Add shape',
-  description: `Add one shape without writing DSL (hand-layout only). Prefer create_diagram. Kinds: ${CATALOG_IDS.join(', ')}.`,
+  description: `Add one shape without writing DSL (hand-layout only). Prefer create_diagram. Kinds: ${CATALOG_IDS.join(', ')}, chart, widget (wireframe control), frame (phone, browser… preset; drop widgets in with parentId).`,
   schema: z.object({
-    kind: z.union([z.enum(CATALOG_IDS as [string, ...string[]]), z.literal('chart')]).default('process'),
+    kind: z.union([z.enum(CATALOG_IDS as [string, ...string[]]), z.literal('chart'), z.literal('widget'), z.literal('frame')]).default('process'),
     label: z.string().optional(),
     x: z.number().finite().default(0),
     y: z.number().finite().default(0),
@@ -107,8 +110,20 @@ export const addShape = defineOp({
       series: z.array(z.object({ name: z.string(), values: z.array(z.number()) })).optional(),
       points: z.array(z.object({ label: z.string(), x: z.number(), y: z.number() })).optional(),
     }).optional(),
+    /** Widgets only: which control, and its state. `label` holds items as `A | B | C`. */
+    widget: z.object({
+      kind: z.enum(WIDGET_KINDS),
+      checked: z.boolean().optional(),
+      value: z.number().min(0).max(1).optional(),
+      active: z.number().int().min(0).optional(),
+      variant: z.enum(['primary', ...WIDGET_SEVERITIES]).optional(),
+    }).optional(),
+    /** Frames only: the device or layout preset. */
+    preset: z.enum(FRAME_PRESETS).optional(),
+    /** Widgets only: the frame to place it in; x/y are then frame-local. */
+    parentId: z.string().min(1).optional(),
   }).refine((input) => (SHAPE_KINDS as readonly string[]).includes(input.kind)
-    || input.kind === 'chart' || !!input.label,
+    || input.kind === 'chart' || input.kind === 'widget' || input.kind === 'frame' || !!input.label,
     { message: 'Catalog nodes need a label; toolbar shapes may be blank.', path: ['label'] }),
   async run(input, context) {
     const page = requirePage(context.document, context.pageId);
@@ -141,6 +156,29 @@ export const addShape = defineOp({
       });
       return {
         command: { kind: 'insert-node', id: `create-node:${id}`, label: 'Add chart', pageId: page.id, index: page.nodes.length, node },
+        output: { id },
+      };
+    }
+    if (input.kind === 'widget') {
+      if (!input.widget) throw new TypeError('Widgets need widget: { kind }.');
+      if (input.parentId && !page.nodes.some((node) => node.id === input.parentId)) {
+        throw new RangeError(`Parent "${input.parentId}" was not found on this page.`);
+      }
+      const { kind: widget, ...state } = input.widget;
+      const node = createWidgetNode(page, {
+        id, widget, at, ...state,
+        ...(input.label === undefined ? {} : { label: input.label }),
+        ...(input.parentId ? { parentId: input.parentId } : {}),
+      });
+      return {
+        command: { kind: 'insert-node', id: `create-node:${id}`, label: 'Add widget', pageId: page.id, index: page.nodes.length, node },
+        output: { id },
+      };
+    }
+    if (input.kind === 'frame') {
+      const node = createPresetFrame(page, { id, at, preset: input.preset ?? 'frame', ...(input.label ? { label: input.label } : {}) });
+      return {
+        command: { kind: 'insert-node', id: `create-node:${id}`, label: 'Add frame', pageId: page.id, index: page.nodes.length, node },
         output: { id },
       };
     }

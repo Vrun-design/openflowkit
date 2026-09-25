@@ -32,6 +32,8 @@ interface V2ContextMenuProps {
   readonly onUnplace?: () => void;
   readonly onRemoveElement?: () => void;
   readonly onSelectAll: () => void;
+  /** Opens the export panel on the current selection, anchored at the menu. */
+  readonly onExport: () => void;
   readonly onZoomToFit: () => void;
   readonly onZoomToSelection: () => void;
   readonly onZoomTo100: () => void;
@@ -89,6 +91,8 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
                 <MenuItem onSelect={actions.pasteStyle} shortcut="⌘⌥V" disabled={!edit}>Paste style</MenuItem>
             </MenuSubmenu>
             <MenuSeparator />
+            <MenuItem onSelect={props.onExport}>Export…</MenuItem>
+            <MenuSeparator />
             <MenuItem onSelect={actions.deleteSelection} shortcut="⌫" disabled={!edit} danger>Delete</MenuItem>
           </>
         ) : (
@@ -141,6 +145,8 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
             {many ? <MenuItem onSelect={actions.groupSelection} shortcut="⌘G" disabled={!edit}>Group</MenuItem> : null}
             <MenuItem onSelect={actions.wrapInSection} shortcut="⌘⌥G" disabled={!edit}>Wrap in section</MenuItem>
             {actions.canUngroup() ? <MenuItem onSelect={actions.ungroupSelection} shortcut="⌘⇧G" disabled={!edit}>Ungroup</MenuItem> : null}
+            <MenuSeparator />
+            <MenuItem onSelect={props.onExport}>Export…</MenuItem>
             <MenuSeparator />
             <MenuItem onSelect={props.onZoomToSelection} shortcut="⇧2">Zoom to selection</MenuItem>
             <MenuSeparator />

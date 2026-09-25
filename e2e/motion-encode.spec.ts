@@ -148,7 +148,7 @@ test('a 1080p export keeps the canvas painting and the dialog live', { tag: '@lo
   const clip = page.getByRole('spinbutton', { name: 'Duration' });
   await clip.fill('5');
   await clip.blur();
-  await page.getByRole('radio', { name: 'From code' }).check();
+  await page.getByRole('radio', { name: 'Custom', exact: true }).check();
   await page.getByRole('radio', { name: 'MP4' }).check();
   await page.getByRole('radio', { name: '1080p' }).check();
   await page.getByRole('radio', { name: '30 fps' }).check();

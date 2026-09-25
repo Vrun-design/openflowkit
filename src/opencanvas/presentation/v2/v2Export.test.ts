@@ -9,7 +9,7 @@ import {
   buildInsertShapeCommand,
   buildSetNodeLabelCommand,
 } from '../../domain/commands/sceneEdits';
-import { buildV2JsonExport, buildV2SvgExport } from './v2Export';
+import { buildV2Export, buildV2JsonExport, buildV2SvgExport } from './v2Export';
 
 function labeledConnectedDocument() {
   const steps: ((page: ScenePage) => DocumentCommand)[] = [
@@ -39,6 +39,15 @@ describe('v2 export', () => {
     expect(filename).toBe('journey-doc.json');
     expect(migrated.success).toBe(true);
     expect(migrated.success && migrated.document).toEqual(document);
+  });
+
+  it('names a single-element export after the element and a lone connection after its own', async () => {
+    const document = labeledConnectedDocument();
+    const pageId = document.pages[0]!.id;
+    const [node] = await buildV2Export({ document, format: 'svg', scope: 'selection', pageId, selectedNodeIds: ['node-a'] });
+    expect(node?.filename).toBe('journey-checkout-flow.svg');
+    const [edge] = await buildV2Export({ document, format: 'svg', scope: 'selection', pageId, selectedNodeIds: [], selectedConnectorIds: ['edge-1'] });
+    expect(edge?.filename).toBe('journey-connection.svg');
   });
 
   it('emits SVG containing the label text', () => {

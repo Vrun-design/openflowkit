@@ -3,7 +3,7 @@ import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { ToastItem } from '../design-system';
 import { V2CameraControls } from './V2CameraControls';
 import { V2CreationToolbar, type V2Tool } from './V2CreationToolbar';
-import type { V2ChartKind, V2ConnectorTool, V2ToolConfig } from './v2ToolCatalog';
+import type { V2ChartKind, V2ConnectorTool, V2MoreItem, V2ToolConfig } from './v2ToolCatalog';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
 import { V2DocumentBar } from './V2DocumentBar';
 import type { V2SaveStatus } from './useV2Autosave';
@@ -14,7 +14,6 @@ interface V2ChromeProps extends V2SettingsProps {
   /** Page controls; the active page drives the canvas and export. */
   readonly pages: ReturnType<typeof import('./useV2Pages').useV2Pages>;
   readonly pageId: string;
-  readonly selectedNodeIds: readonly string[];
   readonly bridge: { readonly status: import('./useV2AgentBridge').V2BridgeStatus; readonly onOpen: () => void };
   readonly saveStatus: V2SaveStatus;
   readonly canUndo: boolean;
@@ -48,13 +47,17 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly onPickEmoji: (glyph: string) => void;
   readonly recentEmoji: readonly string[];
   readonly librarySection: 'icons' | 'emoji';
+  readonly moreOpen: boolean;
+  readonly onMoreOpenChange: (open: boolean) => void;
+  readonly onPickMore: (item: V2MoreItem) => void;
   readonly onZoomIn: () => void;
   readonly onZoomOut: () => void;
   readonly onZoomTo: (percent: number) => void;
   readonly onFitView: () => void;
   readonly onToggleTree: () => void;
-  /** Export… → Animation opens the docked panel. */
-  readonly onOpenAnimation: () => void;
+  /** Export… opens the shared panel; a document panel closes it again. */
+  readonly onOpenExport: (anchor: HTMLElement | null) => void;
+  readonly onDismissExport: () => void;
 }
 
 // Persistent chrome (I-31): document bar, creation toolbar, camera controls.
@@ -68,7 +71,6 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         document={props.document}
         pages={props.pages}
         pageId={props.pageId}
-        selectedNodeIds={props.selectedNodeIds}
         bridge={props.bridge}
         saveStatus={props.saveStatus}
         readOnly={props.readOnly}
@@ -79,7 +81,8 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         {...(props.workspace ? { workspace: props.workspace } : {})}
         {...(props.breadcrumb ? { breadcrumb: props.breadcrumb } : {})}
         {...(props.onCrumb ? { onCrumb: props.onCrumb } : {})}
-        onOpenAnimation={props.onOpenAnimation}
+        onOpenExport={props.onOpenExport}
+        onDismissExport={props.onDismissExport}
       />
       {props.readOnly ? null : (
         <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange}
@@ -88,7 +91,8 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
           iconsOpen={props.iconsOpen} onIconsOpenChange={props.onIconsOpenChange} onInsertIcon={props.onInsertIcon}
           onInsertImage={props.onInsertImage} onPickEmoji={props.onPickEmoji}
           recentEmoji={props.recentEmoji} librarySection={props.librarySection}
-          onPickChart={props.onPickChart} />
+          onPickChart={props.onPickChart}
+          moreOpen={props.moreOpen} onMoreOpenChange={props.onMoreOpenChange} onPickMore={props.onPickMore} />
       )}
       <V2CameraControls
         preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}

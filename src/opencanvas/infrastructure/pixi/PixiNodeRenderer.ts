@@ -18,6 +18,7 @@ import { PixiJourneyNodeRenderer } from './PixiJourneyNodeRenderer';
 import { PixiMindmapNodeRenderer } from './PixiMindmapNodeRenderer';
 import { PixiSequenceNodeRenderer } from './PixiSequenceNodeRenderer';
 import { PixiWireframeNodeRenderer } from './PixiWireframeNodeRenderer';
+import { PixiWidgetNodeRenderer } from './PixiWidgetNodeRenderer';
 import { PixiChartNodeRenderer } from './PixiChartNodeRenderer';
 import { drawPixiNodeOutline } from './pixiNodeOutline';
 import type { PixiNodeDebugRecord } from './pixiNodeDebug';
@@ -76,6 +77,7 @@ export class PixiNodeRenderer {
   private readonly sequenceRenderer = new PixiSequenceNodeRenderer();
   private readonly wireframeRenderer: PixiWireframeNodeRenderer;
   private readonly chartRenderer: PixiChartNodeRenderer;
+  private readonly widgetRenderer = new PixiWidgetNodeRenderer((text, style, fill) => this.acquireText(text, style, fill, null));
   private debugRecords: readonly PixiNodeDebugRecord[] = [];
   private editingNodeId: string | null = null;
 
@@ -148,6 +150,7 @@ export class PixiNodeRenderer {
       // Family renderers take the node in order; the first one that claims it wins.
       const family = detailLevel === 'overview' ? null
         : this.chartRenderer.drawNode(node, matrix, this.graphics, canvasHex)
+          ?? this.widgetRenderer.drawNode(node, matrix, this.graphics, canvasHex, (id) => index.nodesById.get(id))
           ?? this.architectureRenderer.drawNode(node, matrix, this.graphics, architectureMediaGeneration, canvasHex)
           ?? this.classEntityRenderer.drawNode(node, matrix, this.graphics)
           ?? this.mindmapRenderer.drawNode(node, matrix, this.graphics)

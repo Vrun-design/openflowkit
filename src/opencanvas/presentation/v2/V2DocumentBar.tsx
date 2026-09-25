@@ -32,7 +32,6 @@ import {
   type ToastItem,
 } from '../design-system';
 import type { V2SaveStatus } from './useV2Autosave';
-import { V2ExportMenu } from './V2ExportMenu';
 import { V2PagesMenu } from './V2PagesMenu';
 import type { V2BridgeStatus } from './useV2AgentBridge';
 import type { useV2Pages } from './useV2Pages';
@@ -42,7 +41,6 @@ interface V2DocumentBarProps extends V2SettingsProps {
   readonly document: SceneDocumentV1;
   /** Active page id; export and page controls act on it. */
   readonly pageId: string;
-  readonly selectedNodeIds: readonly string[];
   readonly pages: ReturnType<typeof useV2Pages>;
   readonly bridge: { readonly status: V2BridgeStatus; readonly onOpen: () => void };
   readonly saveStatus: V2SaveStatus;
@@ -51,8 +49,10 @@ interface V2DocumentBarProps extends V2SettingsProps {
   readonly onReload: () => void;
   readonly onToast: (toast: ToastItem) => void;
   readonly onRename: (name: string) => void;
-  /** Export… → Animation opens the docked panel; the bar only launches it. */
-  readonly onOpenAnimation: () => void;
+  /** Opens the shared export panel, anchored on the canvas-menu button. */
+  readonly onOpenExport: (anchor: HTMLElement | null) => void;
+  /** A document panel taking the foreground closes an open export panel. */
+  readonly onDismissExport: () => void;
   readonly workspace?: {
     readonly name: string | null;
     readonly onOpenFolder: () => void;
@@ -84,14 +84,23 @@ function saveLabel(status: V2SaveStatus): { tone: 'neutral' | 'success' | 'warni
 }
 
 export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [panel, setPanel] = useState<'menu' | 'settings' | 'pages' | null>(null);
+  function closePanel(name: typeof panel): void {
+    setPanel((current) => current === name ? null : current);
+  }
+  /** Opening a document panel replaces an element export panel. */
+  function openPanel(name: Exclude<typeof panel, null>): void {
+    props.onDismissExport();
+    setPanel(name);
+  }
+  function togglePanel(name: 'menu' | 'pages'): void {
+    if (panel === name) { setPanel(null); return; }
+    openPanel(name);
+  }
   const settingsRef = useRef<HTMLButtonElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(props.document.name);
-  const [exportOpen, setExportOpen] = useState(false);
-  const [pagesOpen, setPagesOpen] = useState(false);
   const pagesRef = useRef<HTMLButtonElement>(null);
   const activePageName = props.pages.activePage?.name ?? 'Page 1';
   const save = saveLabel(props.saveStatus);
@@ -137,8 +146,8 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
           <Tooltip content="Canvas menu">
             <IconButton ref={settingsRef} variant="quiet" label="Canvas menu"
               icon={<Icon icon={IconMenu2} />}
-              aria-expanded={menuOpen} aria-haspopup="menu"
-              onClick={() => setMenuOpen((open) => !open)} />
+              aria-expanded={panel === 'menu'} aria-haspopup="menu"
+              onClick={() => togglePanel('menu')} />
           </Tooltip>
           {editingTitle ? (
             <input ref={titleRef} className="ofk-v2-document-title-input" value={titleDraft}
@@ -200,9 +209,9 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               onClick={props.bridge.onOpen} />
           </Tooltip>
           <Tooltip content="Pages">
-            <Button ref={pagesRef} variant="quiet" aria-expanded={pagesOpen} aria-haspopup="dialog"
+            <Button ref={pagesRef} variant="quiet" aria-expanded={panel === 'pages'} aria-haspopup="dialog"
               aria-label={`Pages (current: ${activePageName})`}
-              onClick={() => setPagesOpen((open) => !open)}>
+              onClick={() => togglePanel('pages')}>
               {activePageName}
               {props.pages.pages.length > 1 ? <span className="ofk-v2-page-total">{` / ${props.pages.pages.length}`}</span> : null}
             </Button>
@@ -210,11 +219,11 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
         </Toolbar>
       </FloatingRegion>
 
-      <Menu open={menuOpen} anchorRef={settingsRef} onClose={() => setMenuOpen(false)} label="Canvas menu" placement="bottom-start">
+      <Menu open={panel === 'menu'} anchorRef={settingsRef} onClose={() => closePanel('menu')} label="Canvas menu" placement="bottom-start">
         <MenuItem icon={<Icon icon={IconPencil} />} disabled={props.readOnly} onSelect={startRename}>Rename diagram</MenuItem>
-        <MenuItem icon={<Icon icon={IconSettings} />} onSelect={() => setSettingsOpen(true)}>Settings</MenuItem>
+        <MenuItem icon={<Icon icon={IconSettings} />} onSelect={() => openPanel('settings')}>Settings</MenuItem>
         <MenuItem icon={<Icon icon={IconFileImport} />} onSelect={() => fileRef.current?.click()}>Open file…</MenuItem>
-        <MenuItem icon={<Icon icon={IconDownload} />} onSelect={() => setExportOpen(true)}>Export…</MenuItem>
+        <MenuItem icon={<Icon icon={IconDownload} />} onSelect={() => { setPanel(null); props.onOpenExport(settingsRef.current); }}>Export…</MenuItem>
         {/* File System Access API only (Chrome/Edge); elsewhere the item would be a silent no-op. */}
         {props.workspace && isWorkspacePickerSupported() ? (
           <>
@@ -236,14 +245,10 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
           event.currentTarget.value = '';
           if (file) void openFile(file).catch((error: unknown) => toast(error instanceof Error ? error.message : 'Could not open the file.', 'danger'));
         }} />
-      <V2Settings open={settingsOpen} anchorRef={settingsRef} onClose={() => setSettingsOpen(false)}
+      <V2Settings open={panel === 'settings'} anchorRef={settingsRef} onClose={() => closePanel('settings')}
         preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}
         onPreferencesChange={props.onPreferencesChange} />
-      <V2PagesMenu open={pagesOpen} anchorRef={pagesRef} pages={props.pages} onClose={() => setPagesOpen(false)} />
-      <V2ExportMenu open={exportOpen} anchorRef={settingsRef} document={props.document}
-        pageId={props.pageId} selectedNodeIds={props.selectedNodeIds}
-        onClose={() => setExportOpen(false)} onToast={toast}
-        onOpenAnimation={props.onOpenAnimation} />
+      <V2PagesMenu open={panel === 'pages'} anchorRef={pagesRef} pages={props.pages} onClose={() => closePanel('pages')} />
     </>
   );
 }

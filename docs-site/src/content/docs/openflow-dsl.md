@@ -51,10 +51,10 @@ their panels, because there they *are* the data.
 
 [Flowchart](/diagram-flowchart/), [architecture](/diagram-architecture/),
 [sequence](/diagram-sequence/), [state](/diagram-state/), [ERD](/diagram-erd/),
-[class](/diagram-class/), [mindmap](/diagram-mindmap/), [gitgraph](/diagram-gitgraph/) and
-[chart](/diagram-chart/) — plus the model layer for [C4 workspaces](/architecture-c4/).
+[class](/diagram-class/), [mindmap](/diagram-mindmap/), [gitgraph](/diagram-gitgraph/),
+[chart](/diagram-chart/) and [wireframe](/diagram-wireframe/) — plus the model layer for [C4 workspaces](/architecture-c4/).
 
-Reserved family names (`bpmn`, `org`, `gantt`, `wireframe`, `sankey`, `journey`, `timeline`)
+Reserved family names (`bpmn`, `org`, `gantt`, `sankey`, `journey`, `timeline`)
 parse as a flowchart with warning W105; they are not rendered as their own family yet.
 
 ## Foreign syntax

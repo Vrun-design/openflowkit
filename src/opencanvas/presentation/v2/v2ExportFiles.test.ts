@@ -11,6 +11,10 @@ vi.mock('../../infrastructure/export/print', async (importOriginal) => {
   return { ...actual, printSvgDocument: vi.fn() };
 });
 
+/** Ids can contain characters the serializer escapes inside attributes. */
+const attr = (id: string): string =>
+  id.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 describe('v2 export', () => {
   it('exports the active page as SVG at the requested scale', async () => {
     const document = await buildCanonicalFixtureDocument();
@@ -21,15 +25,29 @@ describe('v2 export', () => {
     expect(file?.text).toContain('data-page="page-1"');
   });
 
-  it('narrows to the selection when asked and refuses an empty one', async () => {
+  it('exports a selected frame with everything inside it, and refuses an empty selection', async () => {
     const document = await buildCanonicalFixtureDocument();
-    const pageId = document.pages[0]!.id;
-    const first = document.pages[0]!.nodes[0]!;
-    const [selected] = await buildV2Export({ document, format: 'svg', scope: 'selection', pageId, selectedNodeIds: [first.id] });
-    expect(selected?.filename).toContain('-selection');
-    expect(selected?.text).toContain(`data-node-id="${first.id}"`);
-    await expect(buildV2Export({ document, format: 'svg', scope: 'selection', pageId, selectedNodeIds: ['missing'] }))
+    const page = document.pages[0]!;
+    const frame = page.nodes.find(({ kind }) => kind === 'frame')!;
+    const [selected] = await buildV2Export({ document, format: 'svg', scope: 'selection', pageId: page.id, selectedNodeIds: [frame.id] });
+    expect(selected?.filename).toBe('diagram-frame.svg');
+    for (const node of page.nodes.filter(({ id }) => id !== frame.id)) {
+      expect(selected?.text).toContain(`data-node-id="${attr(node.id)}"`);
+    }
+    for (const connector of page.connectors) {
+      expect(selected?.text).toContain(`data-connector-id="${attr(connector.id)}"`);
+    }
+    await expect(buildV2Export({ document, format: 'svg', scope: 'selection', pageId: page.id, selectedNodeIds: ['missing'] }))
       .rejects.toThrow(/visible node/);
+  });
+
+  it('exports a lone connection without its endpoints', async () => {
+    const document = await buildCanonicalFixtureDocument();
+    const page = document.pages[0]!;
+    const edge = page.connectors[0]!;
+    const [file] = await buildV2Export({ document, format: 'svg', scope: 'selection', pageId: page.id, selectedNodeIds: [], selectedConnectorIds: [edge.id] });
+    expect(file?.text).toContain(`data-connector-id="${attr(edge.id)}"`);
+    for (const node of page.nodes) expect(file?.text).not.toContain(`data-node-id="${attr(node.id)}"`);
   });
 
   it('emits one file per page for document scope', async () => {

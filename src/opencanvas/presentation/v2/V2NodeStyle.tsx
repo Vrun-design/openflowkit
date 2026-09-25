@@ -16,6 +16,8 @@ import { buildSetInkCommand } from '../../domain/commands/inkCommands';
 import { buildSetChartKindCommand } from '../../domain/commands/chartCommands';
 import type { ChartKind } from '../../domain/nodes/chartNodePresentation';
 import { CHART_OPTIONS } from './v2ToolCatalog';
+import { buildSetWidgetStateCommand, type WidgetStatePatch } from '../../domain/commands/widgetCommands';
+import { WIDGETS, WIDGET_SEVERITIES, resolveWidgetPresentation } from '../../domain/nodes/widgetNodePresentation';
 import { buildSetHeaderCommand } from '../../domain/commands/groupNodes';
 import { resolveArchitectureNodePresentation } from '../../domain/nodes/architectureNodePresentation';
 import { V2IconPicker } from './V2IconPicker';
@@ -60,7 +62,7 @@ interface NodeStylePanelsProps {
   readonly onRemoveIcons: () => void;
 }
 
-type Panel = 'icon' | 'fill' | 'outline' | 'text' | 'ink' | 'chart';
+type Panel = 'icon' | 'fill' | 'outline' | 'text' | 'ink' | 'chart' | 'widget';
 
 const FONT_SIZE_PRESETS = [{ value: 12, label: 'XS' }, { value: 14, label: 'S' }, { value: 18, label: 'M' }, { value: 24, label: 'L' }];
 const PADDING_PRESETS = [{ value: 8, label: 'S' }, { value: 16, label: 'M' }, { value: 24, label: 'L' }];
@@ -110,10 +112,20 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
   };
   // Containers carry a title band: vertical alignment and shadow do not apply.
   const isContainer = nodes.every((node) => isContainerNodeKind(node.kind));
+  // Widgets draw fixed type and corners; only colour, font, width and opacity reach them.
+  const isWidget = nodes.every((node) => node.kind === 'widget');
   // Picking an icon turns the node into an icon node, so only shapes offer it:
   // text, containers, ink, images and charts would lose what they are.
   const isImage = nodes.every((node) => node.kind === 'image');
-  const canPickIcon = !isText && !isContainer && !isStroke && !isChart && !isImage;
+  // One kind of widget selected: its state (on/off, value, selected item, variant).
+  const widget = nodes.length > 0 && nodes.every((node) => node.kind === 'widget' && node.content.widget === nodes[0]!.content.widget)
+    ? resolveWidgetPresentation(nodes[0]!) : null;
+  const widgetState = widget ? WIDGETS[widget.widget].state : undefined;
+  const commitWidget = (patch: WidgetStatePatch) => {
+    const command = buildSetWidgetStateCommand(page, nodeIds, patch);
+    if (command) commit(command);
+  };
+  const canPickIcon = !isText && !isContainer && !isStroke && !isChart && !isImage && !nodes.some((node) => node.kind === 'widget');
   const currentIcon = nodes.length === 1 ? resolveArchitectureNodePresentation(nodes[0])?.icon : undefined;
   const selectedIcon = currentIcon?.kind === 'provider' ? currentIcon : null;
   const textColorIsAuto = nodes.every((node) => node.appearance.textColor === undefined || node.appearance.textColor === 'auto');
@@ -161,6 +173,48 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
             }))} />
         </StyleButton>
       ) : null}
+      {widget && widgetState ? (
+        <StyleButton label="State" panelTitle={WIDGETS[widget.widget].name} open={open === 'widget'}
+          onToggle={() => toggle('widget')} onClose={close} preview={<span className="ofk-style-state">{widgetStateSummary(widget)}</span>}>
+          {widgetState === 'checked' ? (
+            <PanelRow label="State">
+              <Segmented<'on' | 'off'> label="State" value={widget.checked ? 'on' : 'off'}
+                onChange={(value) => commitWidget({ checked: value === 'on' })}
+                options={[{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }]} />
+            </PanelRow>
+          ) : null}
+          {widgetState === 'value' ? (
+            <PanelRow label="Value">
+              <NumberField stepper="stacked" label="Value" hideLabel value={Math.round(widget.value * 100)}
+                min={0} max={100} step={10} unit="%" onChange={ignoreDraft} onCommit={(value) => commitWidget({ value: value / 100 })} />
+            </PanelRow>
+          ) : null}
+          {widgetState === 'active' && widget.widget === 'datepicker' ? (
+            <PanelRow label="Day">
+              <NumberField stepper="stacked" label="Selected day" hideLabel value={widget.active > 0 ? widget.active : null}
+                min={0} max={30} step={1} onChange={ignoreDraft} onCommit={(value) => commitWidget({ active: value > 0 ? value : -1 })} />
+            </PanelRow>
+          ) : null}
+          {widgetState === 'active' && widget.widget !== 'datepicker' ? (
+            <PanelRow label="Selected">
+              <ChoiceRow<number> label="Selected item" value={widget.active} layout="grid" onChange={(index) => commitWidget({ active: index })}
+                options={[
+                  { value: -1, label: 'None' },
+                  ...widget.items.map((item, index) => ({ value: index, label: item })),
+                ]} />
+            </PanelRow>
+          ) : null}
+          {widgetState === 'variant' ? (
+            <PanelRow label="Style">
+              <ChoiceRow<string> label="Widget style" value={widget.variant ?? 'none'} layout="grid"
+                onChange={(value) => commitWidget({ variant: value === 'none' ? null : value as WidgetStatePatch['variant'] })}
+                options={widget.widget === 'button'
+                  ? [{ value: 'none', label: 'Default' }, { value: 'primary', label: 'Primary' }]
+                  : WIDGET_SEVERITIES.map((severity) => ({ value: severity, label: severity[0]!.toUpperCase() + severity.slice(1) }))} />
+            </PanelRow>
+          ) : null}
+        </StyleButton>
+      ) : null}
       {isStroke ? (
         <StyleButton label="Ink" open={open === 'ink'} onToggle={() => toggle('ink')} onClose={close}
           preview={<span className="ofk-style-line" style={{ borderTopColor: inkColor, borderTopWidth: Math.min(4, inkWidth) }} />}>
@@ -192,17 +246,19 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
             onPick={(id) => apply(paletteFillPatch(id as Parameters<typeof paletteFillPatch>[0], mode))}
             trailing={<CustomColorSwatch value={fill} onChange={(hex) => preview({ fill: hex })} onCommit={(hex) => apply({ fill: hex })} />} />
         </PanelRow>
-        <PanelRow label="Corners">
-          <NumberField stepper="stacked" label="Corner radius" hideLabel value={view('cornerRadius') as number | null}
-            min={STYLE_LIMITS.cornerRadius.min} max={STYLE_LIMITS.cornerRadius.max} step={2} unit="px"
-            onChange={(value) => preview({ cornerRadius: value })} onCommit={(value) => apply({ cornerRadius: value })} />
-        </PanelRow>
+        {isWidget ? null : (
+          <PanelRow label="Corners">
+            <NumberField stepper="stacked" label="Corner radius" hideLabel value={view('cornerRadius') as number | null}
+              min={STYLE_LIMITS.cornerRadius.min} max={STYLE_LIMITS.cornerRadius.max} step={2} unit="px"
+              onChange={(value) => preview({ cornerRadius: value })} onCommit={(value) => apply({ cornerRadius: value })} />
+          </PanelRow>
+        )}
         <PanelRow label="Opacity">
           <NumberField stepper="stacked" label="Opacity" hideLabel value={opacity === null ? null : Math.round(opacity * 100)}
             min={0} max={100} step={10} unit="%"
             onChange={(value) => preview({ opacity: value / 100 })} onCommit={(value) => apply({ opacity: value / 100 })} />
         </PanelRow>
-        {isContainer ? null : (
+        {isContainer || isWidget ? null : (
           <PanelRow label="Shadow">
             <Segmented<'on' | 'off' | ''> label="Shadow" value={view('shadow') === null ? '' : view('shadow') === true ? 'on' : 'off'}
               onChange={(value) => apply({ shadow: value === 'on' })}
@@ -231,11 +287,13 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
             min={STYLE_LIMITS.strokeWidth.min} max={STYLE_LIMITS.strokeWidth.max} step={0.5} unit="px"
             onChange={(value) => preview({ strokeWidth: value })} onCommit={(value) => apply({ strokeWidth: value })} />
         </PanelRow>
-        <PanelRow label="Style">
-          <Segmented<'solid' | 'dashed' | 'dotted' | ''> label="Outline style" value={(view('strokeStyle') as 'solid' | 'dashed' | 'dotted' | null) ?? ''}
-            onChange={(value) => { if (value) apply({ strokeStyle: value }); }}
-            options={[{ value: 'solid', label: '—' }, { value: 'dashed', label: '- -' }, { value: 'dotted', label: '···' }]} />
-        </PanelRow>
+        {isWidget ? null : (
+          <PanelRow label="Style">
+            <Segmented<'solid' | 'dashed' | 'dotted' | ''> label="Outline style" value={(view('strokeStyle') as 'solid' | 'dashed' | 'dotted' | null) ?? ''}
+              onChange={(value) => { if (value) apply({ strokeStyle: value }); }}
+              options={[{ value: 'solid', label: '—' }, { value: 'dashed', label: '- -' }, { value: 'dotted', label: '···' }]} />
+          </PanelRow>
+        )}
       </StyleButton>
       )}
 
@@ -260,57 +318,59 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
           <FontPicker value={view('fontFamily') as NodeStyle['fontFamily'] | null}
             onChange={(fontFamily) => apply({ fontFamily })} />
         </PanelRow>
-        <PanelRow label="Size">
-          <ChoiceRow label="Size preset" value={view('fontSize') as number | null} options={FONT_SIZE_PRESETS}
-            onChange={(value) => apply({ fontSize: value })} />
-          <NumberField stepper="stacked" label="Font size" hideLabel value={view('fontSize') as number | null}
-            min={STYLE_LIMITS.fontSize.min} max={STYLE_LIMITS.fontSize.max} step={1} unit="px"
-            onChange={(value) => preview({ fontSize: value })} onCommit={(value) => apply({ fontSize: value })} />
-        </PanelRow>
-        <PanelRow label="Style">
-          <ToggleRow label="Text style" onToggle={(id) => {
-            if (id === 'bold') apply({ fontWeight: fontWeight === 700 ? 400 : 700 });
-            else if (id === 'italic') apply({ fontStyle: fontStyle === 'italic' ? 'normal' : 'italic' });
-            else if (id === 'underline') apply({ textDecoration: decoration === 'underline' ? 'none' : 'underline' });
-            else apply({ textDecoration: decoration === 'line-through' ? 'none' : 'line-through' });
-          }} options={[
-            { id: 'bold', label: 'Bold', icon: <Icon icon={IconBold} />, on: fontWeight === 700, shortcut: '⌘B' },
-            { id: 'italic', label: 'Italic', icon: <Icon icon={IconItalic} />, on: fontStyle === 'italic', shortcut: '⌘I' },
-            { id: 'underline', label: 'Underline', icon: <Icon icon={IconUnderline} />, on: decoration === 'underline', shortcut: '⌘U' },
-            { id: 'strike', label: 'Strikethrough', icon: <Icon icon={IconStrikethrough} />, on: decoration === 'line-through' },
-          ]} />
-        </PanelRow>
-        <PanelRow label="Align">
-          <ChoiceRow<NodeStyle['textAlign']> label="Horizontal align" value={view('textAlign') as NodeStyle['textAlign'] | null}
-            onChange={(value) => apply({ textAlign: value })} options={[
-              { value: 'start', label: <Icon icon={IconAlignLeft} />, title: 'Left' },
-              { value: 'center', label: <Icon icon={IconAlignCenter} />, title: 'Centre' },
-              { value: 'end', label: <Icon icon={IconAlignRight} />, title: 'Right' },
+        {isWidget ? null : (<>
+          <PanelRow label="Size">
+            <ChoiceRow label="Size preset" value={view('fontSize') as number | null} options={FONT_SIZE_PRESETS}
+              onChange={(value) => apply({ fontSize: value })} />
+            <NumberField stepper="stacked" label="Font size" hideLabel value={view('fontSize') as number | null}
+              min={STYLE_LIMITS.fontSize.min} max={STYLE_LIMITS.fontSize.max} step={1} unit="px"
+              onChange={(value) => preview({ fontSize: value })} onCommit={(value) => apply({ fontSize: value })} />
+          </PanelRow>
+          <PanelRow label="Style">
+            <ToggleRow label="Text style" onToggle={(id) => {
+              if (id === 'bold') apply({ fontWeight: fontWeight === 700 ? 400 : 700 });
+              else if (id === 'italic') apply({ fontStyle: fontStyle === 'italic' ? 'normal' : 'italic' });
+              else if (id === 'underline') apply({ textDecoration: decoration === 'underline' ? 'none' : 'underline' });
+              else apply({ textDecoration: decoration === 'line-through' ? 'none' : 'line-through' });
+            }} options={[
+              { id: 'bold', label: 'Bold', icon: <Icon icon={IconBold} />, on: fontWeight === 700, shortcut: '⌘B' },
+              { id: 'italic', label: 'Italic', icon: <Icon icon={IconItalic} />, on: fontStyle === 'italic', shortcut: '⌘I' },
+              { id: 'underline', label: 'Underline', icon: <Icon icon={IconUnderline} />, on: decoration === 'underline', shortcut: '⌘U' },
+              { id: 'strike', label: 'Strikethrough', icon: <Icon icon={IconStrikethrough} />, on: decoration === 'line-through' },
             ]} />
-          {isContainer ? null : (
-            <ChoiceRow<NodeStyle['textVerticalAlign']> label="Vertical align" value={view('textVerticalAlign') as NodeStyle['textVerticalAlign'] | null}
-              onChange={(value) => apply({ textVerticalAlign: value })} options={[
-                { value: 'top', label: <Icon icon={IconArrowBarToUp} />, title: 'Top' },
-                { value: 'middle', label: <Icon icon={IconArrowsVertical} />, title: 'Middle' },
-                { value: 'bottom', label: <Icon icon={IconArrowBarToDown} />, title: 'Bottom' },
+          </PanelRow>
+          <PanelRow label="Align">
+            <ChoiceRow<NodeStyle['textAlign']> label="Horizontal align" value={view('textAlign') as NodeStyle['textAlign'] | null}
+              onChange={(value) => apply({ textAlign: value })} options={[
+                { value: 'start', label: <Icon icon={IconAlignLeft} />, title: 'Left' },
+                { value: 'center', label: <Icon icon={IconAlignCenter} />, title: 'Centre' },
+                { value: 'end', label: <Icon icon={IconAlignRight} />, title: 'Right' },
               ]} />
-          )}
-        </PanelRow>
-        <details className="ofk-style-more">
-          <summary className="ofk-caption">Spacing<Icon icon={IconChevronDown} /></summary>
-          <PanelRow label="Padding">
-            <ChoiceRow label="Padding" value={view('textPadding') as number | null} options={PADDING_PRESETS}
-              onChange={(value) => apply({ textPadding: value })} />
+            {isContainer ? null : (
+              <ChoiceRow<NodeStyle['textVerticalAlign']> label="Vertical align" value={view('textVerticalAlign') as NodeStyle['textVerticalAlign'] | null}
+                onChange={(value) => apply({ textVerticalAlign: value })} options={[
+                  { value: 'top', label: <Icon icon={IconArrowBarToUp} />, title: 'Top' },
+                  { value: 'middle', label: <Icon icon={IconArrowsVertical} />, title: 'Middle' },
+                  { value: 'bottom', label: <Icon icon={IconArrowBarToDown} />, title: 'Bottom' },
+                ]} />
+            )}
           </PanelRow>
-          <PanelRow label="Line height">
-            <ChoiceRow label="Line height" value={view('lineHeight') as number | null} options={LINE_HEIGHT_PRESETS}
-              onChange={(value) => apply({ lineHeight: value })} />
-          </PanelRow>
-          <PanelRow label="Letter spacing">
-            <ChoiceRow label="Letter spacing" value={view('letterSpacing') as number | null} options={LETTER_SPACING_PRESETS}
-              onChange={(value) => apply({ letterSpacing: value })} />
-          </PanelRow>
-        </details>
+          <details className="ofk-style-more">
+            <summary className="ofk-caption">Spacing<Icon icon={IconChevronDown} /></summary>
+            <PanelRow label="Padding">
+              <ChoiceRow label="Padding" value={view('textPadding') as number | null} options={PADDING_PRESETS}
+                onChange={(value) => apply({ textPadding: value })} />
+            </PanelRow>
+            <PanelRow label="Line height">
+              <ChoiceRow label="Line height" value={view('lineHeight') as number | null} options={LINE_HEIGHT_PRESETS}
+                onChange={(value) => apply({ lineHeight: value })} />
+            </PanelRow>
+            <PanelRow label="Letter spacing">
+              <ChoiceRow label="Letter spacing" value={view('letterSpacing') as number | null} options={LETTER_SPACING_PRESETS}
+                onChange={(value) => apply({ letterSpacing: value })} />
+            </PanelRow>
+          </details>
+        </>)}
       </StyleButton>
       )}
     </>
@@ -326,4 +386,17 @@ function IconSwatch({ packId, shapeId }: { readonly packId: string; readonly sha
     return () => { alive = false; };
   }, [packId, shapeId]);
   return url ? <img className="ofk-style-icon-swatch" src={url} alt="" /> : <Icon icon={IconMoodSmile} />;
+}
+
+/** Widget state is content, not a style draft: it commits once, on Enter or blur. */
+const ignoreDraft = (): void => undefined;
+
+/** The State button's face: what the widget is set to, in one word. */
+function widgetStateSummary(widget: NonNullable<ReturnType<typeof resolveWidgetPresentation>>): string {
+  const state = WIDGETS[widget.widget].state;
+  if (state === 'checked') return widget.checked ? 'On' : 'Off';
+  if (state === 'value') return `${Math.round(widget.value * 100)}%`;
+  if (state === 'variant') return widget.variant ? widget.variant[0]!.toUpperCase() + widget.variant.slice(1) : 'Default';
+  if (widget.widget === 'datepicker') return widget.active > 0 ? String(widget.active) : '–';
+  return widget.items[widget.active] ?? 'None';
 }

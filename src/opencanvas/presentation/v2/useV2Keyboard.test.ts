@@ -11,10 +11,11 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
   const onSpacePan = vi.fn();
   const onReorder = vi.fn();
   const onToggleLock = vi.fn();
+  const insert = { onInsertFrame: vi.fn(), onInsertSticky: vi.fn(), onToggleMore: vi.fn() };
   const clipboard = { onGroup: vi.fn(), onUngroup: vi.fn(), onWrapInSection: vi.fn(), onCut: vi.fn(), onCopy: vi.fn(), onPaste: vi.fn(), onCopyStyle: vi.fn(), onPasteStyle: vi.fn() };
   const arrange = { onAlign: vi.fn(), onDistribute: vi.fn(), onFlip: vi.fn(), onZoomToSelection: vi.fn(), onTextStyle: vi.fn() };
   const { result } = renderHook(() => useV2Keyboard({
-    onReorder, onToggleLock, ...clipboard, ...arrange,
+    onReorder, onToggleLock, ...clipboard, ...arrange, ...insert,
     toolRef: { current: 'select' }, editingRef: { current: false }, onToolChange,
     onUndo: vi.fn(), onRedo: vi.fn(), onDelete: vi.fn(), onDuplicate: vi.fn(), onEditPrimary: vi.fn(), onRemoveFromModel: vi.fn(),
     onNudge: vi.fn(), onCommitGesture: () => false, onEscapePanel: () => false, onToggleEmoji: () => undefined, onInsertImage: () => undefined, onCancelGesture: () => false, onClearSelection: vi.fn(), onSelectAll: vi.fn(),
@@ -25,7 +26,7 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
     key: 'q', target: document.createElement('section'), preventDefault: vi.fn(),
     ...init,
   } as unknown as KeyboardEvent<HTMLElement>);
-  return { key, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan, onReorder, onToggleLock, ...clipboard, ...arrange };
+  return { key, ...insert, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan, onReorder, onToggleLock, ...clipboard, ...arrange };
 }
 
 describe('useV2Keyboard type-to-edit', () => {
@@ -45,6 +46,20 @@ describe('useV2Keyboard type-to-edit', () => {
     expect(onToolChange).toHaveBeenCalledWith('rectangle');
     key({ key: 'z', metaKey: true });
     expect(onTypeToEdit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useV2Keyboard insert', () => {
+  it('K arms the laser, F adds a frame, N a sticky note, ⇧S opens More', () => {
+    const { key, onToolChange, onInsertFrame, onInsertSticky, onToggleMore } = setup(vi.fn(() => false));
+    key({ key: 'k' });
+    expect(onToolChange).toHaveBeenCalledWith('laser');
+    key({ key: 'f' });
+    key({ key: 'n' });
+    key({ key: 'S', code: 'KeyS', shiftKey: true });
+    expect(onInsertFrame).toHaveBeenCalledOnce();
+    expect(onInsertSticky).toHaveBeenCalledOnce();
+    expect(onToggleMore).toHaveBeenCalledOnce();
   });
 });
 

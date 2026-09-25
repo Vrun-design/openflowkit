@@ -144,8 +144,8 @@ views { view context of Shop; view container of Shop }
     expect(shot.output).toMatchObject({ frameId, mime: 'image/png', base64: 'UE5H' });
     const lastExport = run.capabilities.recording.exported.at(-1) as { selectedNodeIds: readonly string[] };
     expect(lastExport).toMatchObject({ format: 'png', scale: 2 });
-    expect(lastExport.selectedNodeIds).toHaveLength(run.page().nodes.length);
-    expect(lastExport.selectedNodeIds).toContain(frameId);
+    // The frame id alone: the serializer expands a selected container itself.
+    expect(lastExport.selectedNodeIds).toEqual([frameId]);
 
     await run.run('fit_view', { frameId });
     expect(run.capabilities.recording.fitted.at(-1)).toContain(frameId);
@@ -200,5 +200,25 @@ describe('add_shape chart', () => {
     expect(node.kind).toBe('chart');
     expect(node.content.chart).toBe('bar');
     expect(node.content.categories).toEqual(['Jan', 'Feb']);
+  });
+});
+
+describe('add_shape wireframe', () => {
+  it('adds a phone frame and a widget inside it, as the rail would', async () => {
+    const run = await host();
+    await run.run('add_shape', { kind: 'frame', preset: 'phone', id: 'phone', x: 0, y: 0, label: 'Login' });
+    await run.run('add_shape', {
+      kind: 'widget', id: 'remember', parentId: 'phone', x: 16, y: 60, label: 'Remember me',
+      widget: { kind: 'checkbox', checked: false },
+    });
+    const [frame, widget] = run.document().pages[0]!.nodes;
+    expect(frame).toMatchObject({ kind: 'frame', content: { preset: 'phone', label: 'Login' } });
+    expect(widget).toMatchObject({ kind: 'widget', parentId: 'phone', content: { widget: 'checkbox', label: 'Remember me', checked: false } });
+  });
+
+  it('refuses a widget without a control or with a missing parent', async () => {
+    const run = await host();
+    await expect(run.run('add_shape', { kind: 'widget', x: 0, y: 0 })).rejects.toThrow(/widget/);
+    await expect(run.run('add_shape', { kind: 'widget', parentId: 'nope', x: 0, y: 0, widget: { kind: 'button' } })).rejects.toThrow(/nope/);
   });
 });

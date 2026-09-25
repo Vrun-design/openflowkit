@@ -1,5 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { AGENT_OPS } from '../lib/agent.js';
+import { AGENT_OPS, FRAME_PRESETS, WIDGET_KINDS } from '../lib/agent.js';
 import { MCP_SERVER_NAME, MCP_SERVER_VERSION } from '../lib/version.js';
 
 // Shape words an agent can write inside `[...]` attributes (grammar §5.1).
@@ -22,7 +22,7 @@ const EDGE_STYLES = [
   { syntax: '->>', usage: 'Async (sequence messages).' },
 ];
 
-const FAMILIES = ['flowchart', 'architecture', 'sequence', 'state', 'erd', 'class', 'gitgraph', 'mindmap', 'chart'];
+const FAMILIES = ['flowchart', 'architecture', 'sequence', 'state', 'erd', 'class', 'gitgraph', 'mindmap', 'chart', 'wireframe'];
 
 const STATIC_TOOLS = [
   'validate_openflow_dsl',
@@ -45,14 +45,17 @@ export function registerDiscoveryTools(server: McpServer): void {
     {
       title: 'List OpenFlow DSL shapes, families and edge styles',
       description:
-        'Quick reference for the OpenFlow DSL vocabulary: family names, shape words and edge arrows. ' +
+        'Quick reference for the OpenFlow DSL vocabulary: family names, shape words, edge arrows, and the wireframe controls and screen frames. ' +
         'Call get_syntax for the full grammar.',
     },
     async () => ({
       content: [
         {
           type: 'text' as const,
-          text: JSON.stringify({ families: FAMILIES, shapeWords: SHAPE_WORDS, edgeStyles: EDGE_STYLES }, null, 2),
+          text: JSON.stringify({
+            families: FAMILIES, shapeWords: SHAPE_WORDS, edgeStyles: EDGE_STYLES,
+            wireframe: { controls: WIDGET_KINDS, frames: FRAME_PRESETS },
+          }, null, 2),
         },
       ],
     })

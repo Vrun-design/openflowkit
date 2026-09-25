@@ -31,7 +31,7 @@ export function createCommentTracker(comments: readonly DslComment[]): CommentTr
 
 /** Families whose header parses today but whose semantics land in phase 3.8. */
 export const RESERVED_FAMILIES: readonly DslFamily[] = [
-  'bpmn', 'org', 'gantt', 'wireframe', 'sankey', 'journey', 'timeline',
+  'bpmn', 'org', 'gantt', 'sankey', 'journey', 'timeline',
 ];
 
 /** `icons: auto` puts an icon on every node whose label names one; `off` never does. */

@@ -16,7 +16,18 @@ import { V2Chrome } from './V2Chrome';
 import { V2AgentConnect } from './V2AgentConnect';
 import { INITIAL_CODE, V2CanvasWelcome, V2DraftPanel, V2Shortcuts, V2WorkspaceRail, type V2WorkspaceMode } from './V2Workspace';
 import type { V2Tool } from './V2CreationToolbar';
-import { DEFAULT_TOOL_CONFIG, type V2ChartKind, type V2ConnectorTool, type V2ToolConfig } from './v2ToolCatalog';
+import {
+  DEFAULT_TOOL_CONFIG, type V2ChartKind, type V2ConnectorTool, type V2MoreItem, type V2ToolConfig,
+} from './v2ToolCatalog';
+import {
+  FRAME_PRESET_SPECS, createPresetFrame, enclosingPresetFrame, nextFrameSlot, type FramePreset,
+} from '../../domain/nodes/framePreset';
+import { WIDGETS, type WidgetKind } from '../../domain/nodes/widgetNodePresentation';
+import { createWidgetNode } from '../../domain/nodes/widgetNode';
+import { nextNodeZIndex } from '../../domain/nodes/shapeNode';
+import { createProductionSceneNode } from '../../application/active-document/productionNodeCatalog';
+import { reparentByPosition } from '../../domain/transforms/containment';
+import type { SceneNode } from '../../domain/document/types';
 import { createChartNode, DEFAULT_CHART_SIZE } from '../../domain/nodes/chartNode';
 import { DEFAULT_QUADRANT } from '../../domain/nodes/chartNodePresentation';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
@@ -28,6 +39,7 @@ import { V2LoadCenter } from './V2LoadCenter';
 import { V2TreePanel } from './V2TreePanel';
 import { V2ChartDataPanel } from './V2ChartDataPanel';
 import { V2MotionExport } from './V2MotionExport';
+import { V2ExportMenu } from './V2ExportMenu';
 import { V2AgentPanel } from './V2AgentPanel';
 import { useV2Appearance } from './useV2Appearance';
 import { useV2Autosave } from './useV2Autosave';
@@ -52,7 +64,7 @@ import { createConnectorEditCommand, setPrimaryConnectorLabel } from '../../doma
 import type { Point2d } from '../../domain/geometry/types';
 import { isDiagramPalette, type DiagramPaletteName } from '../../domain/nodes/nodePalette';
 import { firstV2Page, mintV2Id, rememberLastDocument } from './v2Document';
-import { downloadTextFile } from './v2Export';
+import { downloadTextFile, type V2ExportScope } from './v2Export';
 import type { ScenePage } from '../../domain/document/types';
 import { dslFrameRaw } from '../../../dsl/sceneMeta';
 import { dslFrames, frameEdited, frameScene } from '../../../dsl/frameScene';
@@ -156,6 +168,25 @@ export function V2EditorPage(): React.JSX.Element {
   const [spacePan, setSpacePan] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null);
+  // Export is one panel with two doors: the canvas menu (Page) and an element's
+  // context menu (Selection + its subtree). One instance, so both share state.
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportScope, setExportScope] = useState<V2ExportScope>('page');
+  const [exportPoint, setExportPoint] = useState<{ readonly x: number; readonly y: number } | null>(null);
+  const exportPointRef = useRef<HTMLDivElement | null>(null);
+  const exportAnchorRef = useRef<HTMLElement | null>(null);
+  const openExport = (anchor: HTMLElement | null, scope: V2ExportScope) => {
+    exportAnchorRef.current = anchor;
+    setExportScope(scope);
+    setExportOpen(true);
+  };
+  // The context menu is still open here; the panel takes over its click point.
+  const openElementExport = () => {
+    const point = contextMenu;
+    if (!point || point.kind === 'canvas') return;
+    setExportPoint({ x: point.x, y: point.y });
+    openExport(exportPointRef.current, 'selection');
+  };
   const toggleTree = () => {
     setTreeOpen((open) => !open);
     setMotionOpen(false);
@@ -702,6 +733,65 @@ export function V2EditorPage(): React.JSX.Element {
       media.insertImageUrl(text);
     }
   };
+  const [moreOpen, setMoreOpen] = useState(false);
+  /** One insert path for More: commit, select, and say what happened. */
+  const insertAndSelect = (node: SceneNode, label: string, announcement: string, also: readonly DocumentCommand[] = []) => {
+    const page = pageRef.current;
+    if (!page) return;
+    const insert: DocumentCommand = { kind: 'insert-node', id: `create-node:${node.id}`, label, pageId: page.id, index: page.nodes.length, node };
+    session.commit(also.length ? { kind: 'batch', id: insert.id, label, commands: [insert, ...also] } : insert);
+    applyConnectorSelection([]);
+    applySelection(replaceSelection([node.id]));
+    setTool('select');
+    setAnnouncement(announcement);
+  };
+  const centredAt = (size: { width: number; height: number }) => {
+    const centre = media.centreWorld();
+    return { x: centre.x - size.width / 2, y: centre.y - size.height / 2 };
+  };
+  const insertFrame = (preset: FramePreset) => {
+    const page = pageRef.current;
+    if (!page || readOnlyRef.current) return;
+    const spec = FRAME_PRESET_SPECS[preset];
+    insertAndSelect(createPresetFrame(page, { id: mintV2Id('node'), preset, at: centredAt(spec.size) }),
+      `Add ${spec.name.toLowerCase()}`, `${spec.name} added.`);
+  };
+  // With a frame (or anything in one) selected, widgets stack down its column,
+  // so a screen is built by picking controls one after another.
+  const insertWidget = (widget: WidgetKind) => {
+    const page = pageRef.current;
+    if (!page || readOnlyRef.current) return;
+    const spec = WIDGETS[widget];
+    const id = mintV2Id('node');
+    const frame = enclosingPresetFrame(page, selectionRef.current.primaryNodeId);
+    const slot = frame ? nextFrameSlot(page, frame, spec.size, !spec.intrinsic) : null;
+    const node = slot && frame
+      ? createWidgetNode(page, { id, widget, at: slot.at, size: slot.size, parentId: frame.id })
+      : createWidgetNode(page, { id, widget, at: centredAt(spec.size) });
+    // Dropped at the viewport centre over a frame, it joins that frame, like a drag would.
+    const placed = frame ? node : reparentByPosition({ ...page, nodes: [...page.nodes, node] }, [node])[0]!;
+    // A frame that is full grows to hold the pick, in the same undo step (the DSL does too).
+    const grow = frame && slot && slot.frameHeight > frame.size.height
+      ? { ...frame, size: { ...frame.size, height: slot.frameHeight } } : null;
+    insertAndSelect(placed, `Add ${spec.name.toLowerCase()}`, `${spec.name} added.`,
+      grow && frame ? [{ kind: 'set-node', id: `grow-frame:${frame.id}`, label: 'Grow frame', pageId: page.id, before: frame, after: grow }] : []);
+  };
+  const insertSticky = () => {
+    const page = pageRef.current;
+    if (!page || readOnlyRef.current) return;
+    const id = mintV2Id('node');
+    const sticky = createProductionSceneNode('sticky', id, { x: 0, y: 0 }, page.layers[0]?.id ?? 'default', { label: '', subLabel: '' });
+    insertAndSelect({ ...sticky, zIndex: nextNodeZIndex(page), transform: { ...sticky.transform, translation: centredAt(sticky.size) } },
+      'Add sticky note', 'Sticky note added.');
+    openEditor(id);
+  };
+  const pickMore = (item: V2MoreItem) => {
+    const [group, name] = item.split(':') as [string, string];
+    if (group === 'frame') insertFrame(name as FramePreset);
+    else if (group === 'widget') insertWidget(name as WidgetKind);
+    else if (name === 'sticky') insertSticky();
+    else setTool(name as 'lasso' | 'laser' | 'eraser');
+  };
   const pickChart = (chart: V2ChartKind) => {
     const page = pageRef.current;
     if (!page) return;
@@ -745,6 +835,9 @@ export function V2EditorPage(): React.JSX.Element {
       iconLibrary.setOpen(true);
     },
     onInsertImage: pickImageFile,
+    onInsertFrame: () => insertFrame('frame'),
+    onInsertSticky: insertSticky,
+    onToggleMore: () => setMoreOpen((open) => !open),
     onUndo: session.undo, onRedo: session.redo,
     // On a C4 view Delete unplaces; the model keeps the element.
     onDelete: () => {
@@ -857,7 +950,6 @@ export function V2EditorPage(): React.JSX.Element {
               document={session.document!}
               pages={pages}
               pageId={page.id}
-              selectedNodeIds={selection.nodeIds}
               bridge={{ status: agentBridge.status, onOpen: () => openWorkspace('agent') }}
               saveStatus={saveStatus}
               canUndo={session.canUndo} canRedo={session.canRedo}
@@ -872,7 +964,8 @@ export function V2EditorPage(): React.JSX.Element {
               }}
               breadcrumb={architecture.breadcrumb}
               onCrumb={(crumb) => architectureActions.openCrumb(crumb)}
-              onOpenAnimation={openMotion}
+              onOpenExport={(anchor) => openExport(anchor, 'page')}
+              onDismissExport={() => setExportOpen(false)}
               onRename={(name) => {
                 const before = session.document!.name;
                 if (name === before) return;
@@ -892,6 +985,7 @@ export function V2EditorPage(): React.JSX.Element {
               onInsertImage={pickImageFile} onPickEmoji={pickEmoji}
               recentEmoji={preferences.recentEmoji} librarySection={librarySection}
               onPickChart={pickChart}
+              moreOpen={moreOpen} onMoreOpenChange={setMoreOpen} onPickMore={pickMore}
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
               onZoomTo={camera.zoomTo}
@@ -946,6 +1040,7 @@ export function V2EditorPage(): React.JSX.Element {
               onUnplace={() => architectureActions.unplaceSelection(selectionRef.current.nodeIds)}
               onRemoveElement={() => { if (selectedElementId) architectureActions.removeElement(selectedElementId); }}
               onSelectAll={() => selectionApi.selectAll(pageRef.current)}
+              onExport={openElementExport}
               onZoomToFit={() => camera.fitView()}
               onZoomToSelection={() => camera.fitView(selectionRef.current.nodeIds)}
               onZoomTo100={camera.resetZoom}
@@ -954,6 +1049,21 @@ export function V2EditorPage(): React.JSX.Element {
               onToggleSnap={() => updatePreferences({ snapToGrid: !preferences.snapToGrid })}
               onClose={() => { setContextMenu(null); sectionRef.current?.focus(); }}
             />
+            {/* The export panel's click-point anchor; 1×1 and never interactive. */}
+            <div ref={exportPointRef} aria-hidden="true" style={{
+              position: 'fixed', left: exportPoint?.x ?? 0, top: exportPoint?.y ?? 0,
+              width: 1, height: 1, pointerEvents: 'none',
+            }} />
+            <V2ExportMenu open={exportOpen} anchorRef={exportAnchorRef} initialScope={exportScope}
+              document={session.document!} pageId={page.id}
+              selectedNodeIds={selection.nodeIds} selectedConnectorIds={selectedConnectorIds}
+              onClose={() => {
+                setExportOpen(false);
+                // Element export returns you to the canvas; the bar keeps its own focus.
+                if (exportAnchorRef.current === exportPointRef.current) sectionRef.current?.focus();
+              }}
+              onToast={(title, tone) => pushToast({ id: `export-${Date.now()}`, tone, title })}
+              onOpenAnimation={openMotion} />
             <V2WorkspaceRail mode={workspaceMode}
               onChange={(mode) => { if (workspaceMode === mode) setWorkspaceMode(null); else openWorkspace(mode); }}
               onShortcuts={toggleShortcuts} agentConnected={agentBridge.status === 'connected'} />
@@ -1023,7 +1133,7 @@ export function V2EditorPage(): React.JSX.Element {
             {motionOpen ? (
               <Panel title="Animation export" side="start" className="ofk-motion-panel ofk-v2-layers-panel"
                 onClose={() => setMotionOpen(false)}>
-                <V2MotionExport document={session.document!} pageId={page.id}
+                <V2MotionExport key={page.id} document={session.document!} pageId={page.id}
                   onToast={(title, tone) => pushToast({ id: `motion-${Date.now()}`, tone, title })}
                   codeText={codeDraft}
                   onAnimateBlock={(block) => {

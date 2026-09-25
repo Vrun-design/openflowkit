@@ -91,7 +91,7 @@ own — [Architecture (C4)](/architecture-c4/).
 
 - **`kind:` is metadata, not syntax.** An element typed `container` is still drawn as a node
   unless a view or group says otherwise.
-- **Reserved families are not here.** `bpmn`, `org`, `gantt`, `wireframe`, `sankey`,
+- **Reserved families are not here.** `bpmn`, `org`, `gantt`, `sankey`,
   `journey` and `timeline` parse as a flowchart with warning W105.
 - Icons do not affect layout size beyond the icon-card default.
 

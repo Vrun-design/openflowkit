@@ -1036,6 +1036,8 @@ export function useV2Pointer(options: V2PointerOptions) {
         operationRef.current = { kind: 'pan', pointerId: event.pointerId, last: point };
         return;
       }
+      // The laser only points: V2LaserTrail draws it, the document never hears of it.
+      if (tool === 'laser') return;
       if (opts.readOnlyRef.current) {
         operationRef.current = {
           kind: 'marquee',

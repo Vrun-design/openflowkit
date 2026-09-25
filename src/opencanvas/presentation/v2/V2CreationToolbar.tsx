@@ -4,6 +4,7 @@ import {
   IconChartBar,
   IconCircle,
   IconHandStop,
+  IconLayoutGridAdd,
   IconMoodSmile,
   IconPencil,
   IconPhotoPlus,
@@ -17,8 +18,8 @@ import { FloatingRegion, Icon, IconButton, Popover, Toolbar, Tooltip } from '../
 import { V2IconPicker } from './V2IconPicker';
 import { FlyoutButton } from './V2Flyout';
 import {
-  CHART_OPTIONS, CONNECTOR_OPTIONS, INK_OPTIONS, SHAPE_OPTIONS,
-  type V2ChartKind, type V2ConnectorTool, type V2InkTool, type V2Tool, type V2ToolConfig,
+  CHART_OPTIONS, CONNECTOR_OPTIONS, INK_OPTIONS, MORE_SECTIONS, SHAPE_OPTIONS,
+  type V2ChartKind, type V2ConnectorTool, type V2InkTool, type V2MoreItem, type V2Tool, type V2ToolConfig,
 } from './v2ToolCatalog';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
 
@@ -45,6 +46,10 @@ export function V2CreationToolbar(props: {
   readonly onInsertImage: () => void;
   /** A chart pick inserts the chart; there is no armed chart tool. */
   readonly onPickChart: (kind: V2ChartKind) => void;
+  /** More: frames and widgets insert, tools arm. Open state lives on the page so ⇧S reaches it. */
+  readonly moreOpen: boolean;
+  readonly onMoreOpenChange: (open: boolean) => void;
+  readonly onPickMore: (item: V2MoreItem) => void;
 }): React.JSX.Element {
   // Each picker anchors to its own trigger: the popover opens at the button's
   // height and, more importantly, focus returns to a real button when it closes.
@@ -52,7 +57,11 @@ export function V2CreationToolbar(props: {
   const iconsRef = useRef<HTMLButtonElement>(null);
   // One flyout at a time: a rail with two open grids reads as two selections.
   const [flyout, setFlyout] = useState<V2FlyoutId | null>(null);
-  const setFlyoutOpen = (id: V2FlyoutId) => (open: boolean) => setFlyout(open ? id : null);
+  const setFlyoutOpen = (id: V2FlyoutId) => (open: boolean) => {
+    if (open) props.onMoreOpenChange(false);
+    setFlyout(open ? id : null);
+  };
+  const moreTool = props.tool === 'lasso' || props.tool === 'laser' || props.tool === 'eraser' ? props.tool : null;
   const ink: V2InkTool = props.tool === 'highlighter' ? 'highlighter' : 'pen';
 
   const plain = (tool: V2Tool, label: string, shortcut: string, icon: typeof IconPointer) => (
@@ -97,6 +106,12 @@ export function V2CreationToolbar(props: {
             selected={props.iconsOpen} aria-haspopup="dialog" aria-expanded={props.iconsOpen}
             onClick={() => props.onIconsOpenChange(!props.iconsOpen)} />
         </Tooltip>
+        <FlyoutButton label="More" shortcut="⇧S" icon={<Icon icon={IconLayoutGridAdd} />}
+          selected={moreTool !== null} open={props.moreOpen}
+          onOpenChange={(open) => { if (open) setFlyout(null); props.onMoreOpenChange(open); }}
+          options={MORE_SECTIONS} columns={5}
+          selectedId={moreTool ? `tool:${moreTool}` : null}
+          onPick={props.onPickMore} />
       </Toolbar>
       <Popover role="dialog" aria-label="Icon library" open={props.iconsOpen} anchorRef={iconsRef}
         onClose={() => props.onIconsOpenChange(false)} placement="right-start" gap={12}

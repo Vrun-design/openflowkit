@@ -100,6 +100,7 @@ export function createFileCapabilities(options: FileHostOptions): OpCapabilities
           theme: request.theme ?? 'light',
           pixelRatio: request.scale ?? 1,
           ...(request.selectedNodeIds?.length ? { selectedNodeIds: request.selectedNodeIds } : {}),
+          ...(request.selectedConnectorIds?.length ? { selectedConnectorIds: request.selectedConnectorIds } : {}),
         });
         return request.format === 'pdf'
           ? [{ filename: `${request.document.id}${suffix}.html`, mime: 'text/html', text: buildPrintDocument(svg, request.document.name) }]

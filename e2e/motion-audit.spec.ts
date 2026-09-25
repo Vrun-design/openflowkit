@@ -81,15 +81,14 @@ test('the animation dialog is keyboard- and screen-reader-complete', async ({ pa
 
   // Tab order stays inside the dialog and reaches the download button.
   await preview.focus();
-  const reached: string[] = [];
-  for (let step = 0; step < 12; step += 1) {
+  let reachedDownload = false;
+  for (let step = 0; step < 20 && !reachedDownload; step += 1) {
     await page.keyboard.press('Tab');
-    reached.push(await page.evaluate(() => {
-      const active = document.activeElement;
-      return active ? `${active.tagName}:${active.getAttribute('aria-label') ?? active.textContent?.trim().slice(0, 24) ?? ''}` : 'none';
-    }));
+    reachedDownload = await page.evaluate(() =>
+      document.activeElement?.textContent?.includes('Download SVG') ?? false
+    );
   }
-  expect(reached.some((entry) => entry.includes('Download SVG'))).toBe(true);
+  expect(reachedDownload).toBe(true);
 
   // Escape closes and returns focus to the opener (the canvas menu button).
   await page.keyboard.press('Escape');

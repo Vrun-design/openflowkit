@@ -185,6 +185,8 @@ interface AgentBundle {
   bridgeUrls(port: number, host?: string): { base: string; health: string; hello: string; next: string; result: string };
   isAllowedBridgeOrigin(origin: string | undefined | null): boolean;
   isBridgeRequest(value: unknown): value is BridgeRequest;
+  readonly WIDGET_KINDS: readonly string[];
+  readonly FRAME_PRESETS: readonly string[];
 }
 
 export const {
@@ -192,7 +194,7 @@ export const {
   createAgentDocument, parseAgentDocument,
   compileWorkspace, deterministicLayout, architectureWorkspaceText, archModelFromJson, exportCanonicalSvg,
   BRIDGE_PROTOCOL_VERSION, BRIDGE_DEFAULT_PORT, BRIDGE_POLL_SECONDS, BRIDGE_IDLE_MS,
-  bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeRequest,
+  bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeRequest, WIDGET_KINDS, FRAME_PRESETS,
 } = bundle as unknown as AgentBundle;
 
 export type { ZodType, ZodRawShape, ZodObject } from 'zod';

@@ -1,4 +1,5 @@
 import { createTransformSnapshot } from '../../domain/transforms/transformSelection';
+import { V2LaserTrail } from './V2LaserTrail';
 import {
   useEffect,
   useLayoutEffect,
@@ -10,7 +11,7 @@ import {
 } from 'react';
 import { Link } from 'react-router-dom';
 import type { DocumentCommand } from '../../domain/commands/types';
-import type { ScenePage } from '../../domain/document/types';
+import type { SceneNode, ScenePage } from '../../domain/document/types';
 import { pointAtPolylineRatio } from '../../domain/geometry/polyline';
 import type { Point2d } from '../../domain/geometry/types';
 import type { CanvasCamera } from '../../domain/camera/types';
@@ -26,7 +27,8 @@ import {
   type PixiRendererStatus,
 } from '../../infrastructure/pixi/PixiRendererHost';
 import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
-import { resolveNodeStyle } from '../../domain/nodes/nodeStyle';
+import { resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
+import { resolveWidgetInks, widgetBackdrop, widgetLabelBox } from '../../domain/nodes/widgetNodePresentation';
 import { resolveConnectorLabelStyle } from '../../domain/connectors/labelStyle';
 import { V2ContextBar, contextBarStyle, sameRect, unionScreenBounds, visibleCanvasEdges } from './V2ContextBar';
 import type { ContextMenuTarget } from './V2ContextMenu';
@@ -406,7 +408,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   }
 
   const editingNode = props.editing && props.page.nodes.find((node) => node.id === props.editing?.nodeId);
-  const editingStyle = editingNode ? resolveNodeStyle(editingNode, numericColorToHex(props.backgroundColor)) : null;
+  const editingStyle = editingNode ? editorStyle(editingNode, props.page, numericColorToHex(props.backgroundColor)) : null;
   const editingConnector = props.connectorEditing
     && props.page.connectors.find((connector) => connector.id === props.connectorEditing?.connectorId);
   const connectorEditingStyle = editingConnector ? resolveConnectorLabelStyle(editingConnector) : null;
@@ -452,6 +454,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
       }}
     >
       <div ref={setViewport} className="ofk-v2-viewport" data-testid="v2-viewport" />
+      {props.tool === 'laser' ? <V2LaserTrail sectionRef={props.sectionRef} /> : null}
       {unavailableReason ? (
         <div className="ofk-v2-fallback" role="alert">
           <h2>WebGL renderer unavailable</h2>
@@ -537,4 +540,13 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
       </p>
     </section>
   );
+}
+
+/** The label editor's type: a widget's label is drawn in its own ink (white in a tooltip), not the node's text colour. */
+function editorStyle(node: SceneNode, page: ScenePage, canvasColor: string): NodeStyle {
+  const style = resolveNodeStyle(node, canvasColor);
+  const box = widgetLabelBox(node);
+  if (!box) return style;
+  const parentOf = (id: string) => page.nodes.find((candidate) => candidate.id === id);
+  return { ...style, textColor: resolveWidgetInks(node, style, widgetBackdrop(node, parentOf, canvasColor))[box.ink].color };
 }

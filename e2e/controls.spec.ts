@@ -79,6 +79,7 @@ test('every toolbar button presses without an error and Escape backs out of it @
 test('every icon-only toolbar button names itself in a tooltip @gate', async ({ page }) => {
   const iconOnly = (await controls(page)).filter(({ text }) => !text);
   expect(iconOnly.length, 'discovery found icon buttons').toBeGreaterThanOrEqual(15);
+  await expect(page.locator('.ofk-tooltip-anchor [title]'), 'custom tooltips own every visible hint').toHaveCount(0);
   const tip = page.getByRole('tooltip');
   for (const control of iconOnly) {
     const { name } = control;
@@ -86,6 +87,6 @@ test('every icon-only toolbar button names itself in a tooltip @gate', async ({ 
     await expect(tip, `${name}: tooltip`).toBeVisible();
     await expect(tip, `${name}: tooltip text`).not.toHaveText('');
     // A native title would pop a second, late tooltip over ours.
-    expect(await button(page, control).getAttribute('title') ?? '', `${name}: no native title`).toBe('');
+    await expect(button(page, control), `${name}: no native title`).not.toHaveAttribute('title');
   }
 });

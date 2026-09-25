@@ -1,6 +1,6 @@
 ---
 title: Insert media
-description: Icons, emoji and images — search the bundled icon packs, pick an emoji, or drop an image onto the canvas.
+description: Icons, emoji, images, frames and wireframe controls — everything the toolbar inserts besides shapes.
 ---
 
 Besides shapes, four kinds of content go onto the canvas: icons, emoji, images and charts.
@@ -40,6 +40,19 @@ broken image. Hold `Shift` while resizing an image to keep its aspect ratio.
 The Charts flyout inserts a chart node of any of the ten kinds (bar, line, area, scatter,
 pie, donut, radar, heatmap, table, quadrant). Charts are also a diagram family — the [chart
 family](/diagram-chart/) page covers the data format and the data panel.
+
+## More: frames, tools and wireframe
+
+The **More** button (`Shift + S`) at the bottom of the toolbar opens three sections:
+
+- **Frames** — a plain frame (`F`), phone, tablet, browser and window. A frame is named above
+  its top edge, holds whatever you drop on it, and moves it along. Device chrome is part of the
+  export; for a dashed frame, set the outline style.
+- **Tools** — lasso (`Q`), laser pointer (`K`), eraser (`X`) and sticky note (`N`). The laser
+  draws a fading red trail for presenting and never touches the document.
+- **Wireframe** — 35 controls, from buttons and toggles to date pickers. With a frame selected,
+  each one stacks into the frame. The [wireframe family](/diagram-wireframe/) writes the same
+  screens as text.
 
 ## What it cannot do
 

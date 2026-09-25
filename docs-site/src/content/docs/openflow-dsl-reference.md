@@ -727,11 +727,36 @@ spaces is quoted. Chart *data* is the one place where a canvas edit writes text 
 chart data panel serializes through `Edit as code` (grammar §6.7), because moving a bar is
 a data edit, not a layout edit. Unknown kinds warn W131 and fall back to `bar`.
 
-### 8.10 Later families (header reserved, parsed as flowchart with W105 "family not yet
+### 8.10 wireframe — implemented (slices 6.6–6.7, 2026-09-24)
+Koboyo's syntax, so their wireframe text compiles unchanged.
+```
+wireframe
+title: Onboarding
+screen Login [phone] {        // phone (default) | tablet | browser | window | frame
+  heading: Welcome back
+  input: Email [half]         // widths: full (default) | half | third | two-thirds (1/2, 1/3, 2/3)
+  input: Phone [half]         // consecutive controls share a row while their fractions fit
+  toggle: Dark mode [on]      // on / checked, off
+  slider [60%]                // 60% or 0.6: slider, progress, rating
+  tabs: Overview | Reports [active: 1]     // items are `A | B | C`; active: N selects one
+  alert: Storage almost full [warning]     // info | success | warning | error; buttons take primary
+  tabbar: Home | Search | Me [active: 0]   // pins to the screen bottom; fab floats above it
+}
+```
+Controls: button input search checkbox radio toggle dropdown slider navbar tabs image
+avatar heading paragraph divider link textarea stepper badge progress breadcrumbs
+pagination rating card list alert menu tooltip accordion datepicker sidebar
+segmented tabbar statusbar fab. A screen is a preset frame named above its
+edge; controls stack down its column (16 px padding, 12 px gaps) and the screen grows to
+fit. Screens sit side by side. Canonical: `screen Name [frame] {`, one control per line in
+top-to-bottom, left-to-right order, attributes in the order width, state, value, active,
+variant. Unknown controls warn W141, unknown attributes W142, unknown frames W143 (phone
+used). Controls outside a screen collect into one phone.
+
+### 8.11 Later families (header reserved, parsed as flowchart with W105 "family not yet
 rendered"): `bpmn` (lanes = groups, `[event|task|gateway]` shapes), `org` (edges = reports-to),
-`gantt` (`section`, `Task : 2026-01-01, 5d [done|active|crit|milestone]`), `wireframe`
-(control words), `sankey` (`A -> B : 12`), `journey` (`section`, `Task : 4 : Actor`),
-`timeline`.
+`gantt` (`section`, `Task : 2026-01-01, 5d [done|active|crit|milestone]`),
+`sankey` (`A -> B : 12`), `journey` (`section`, `Task : 4 : Actor`), `timeline`.
 
 ---
 
@@ -1622,7 +1647,7 @@ input: 3 KB of random bytes → some W101/W102 lines, never a throw; canonical i
 ```
 OFK diagram language, v1. One statement per line. // comment. Bad lines are skipped with a warning.
 Line 1 (optional): %% ofk 1     Line 2 (optional): family [direction]  → flowchart | architecture (default) |
-  sequence | state | erd | class | mindmap | gitgraph ; direction: down | right | left | up
+  sequence | state | erd | class | mindmap | gitgraph | chart | wireframe ; direction: down | right | left | up
 title: My diagram         PALETTE   appearance: pastel | paper | builder | mono  (compile-time colours)
 ICONS     icons: auto | off   (icons from labels; icon: none opts one node out)
 NODES     Name                      Name [shape, colour, icon, key: value]      id = Long Name [attrs]
@@ -1657,6 +1682,12 @@ commit Label [tag: v1, highlight|revert]   branch name   checkout name   merge n
 chart bar|line|area|scatter|pie|donut|radar|heatmap|table|quadrant
 Revenue: Jan 12, Feb 19        // one series per line: Category value pairs
 chart quadrant:  x: low, high   y: low, high   quadrants: tl, tr, bl, br   Feature A [0.32, 0.78]
+--- wireframe (Koboyo syntax) ---
+screen Login [phone|tablet|browser|window] {   heading: Hi   input: Email [half]   button: Go [half, primary]   }
+toggle: Dark mode [on]   slider [60%]   tabs: A | B | C [active: 1]   alert: Low disk [warning]   tabbar: Home | Me
+controls: button input search checkbox radio toggle dropdown slider navbar tabs image avatar heading paragraph divider
+  link textarea stepper badge progress breadcrumbs pagination rating card list alert menu tooltip accordion datepicker
+  sidebar segmented tabbar statusbar fab
 --- animate (motion export; §6.8) ---
 animate build|walkthrough|pulse [10s] [loop] {   step a, b   step a -> c : POST   step c hold 2s }
 --- C4 model (phase 5; today renders as boxes/groups) ---

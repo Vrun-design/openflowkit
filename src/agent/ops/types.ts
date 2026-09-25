@@ -54,6 +54,8 @@ export interface ExportRequest {
   readonly scope: ExportScope;
   readonly pageId: string;
   readonly selectedNodeIds?: readonly string[];
+  /** Selection scope connections, exported without their endpoints. */
+  readonly selectedConnectorIds?: readonly string[];
   readonly scale?: 1 | 2 | 3;
   readonly theme?: ExportTheme;
   /** Motion only: how the steps are ordered. */

@@ -47,6 +47,11 @@ interface V2KeyboardOptions {
   /** E opens the emoji picker; ⇧I picks an image file. */
   readonly onToggleEmoji: () => void;
   readonly onInsertImage: () => void;
+  /** F: a plain frame at the viewport centre; N: a sticky note, label open. */
+  readonly onInsertFrame: () => void;
+  readonly onInsertSticky: () => void;
+  /** ⇧S: the More flyout (frames, tools, wireframe). */
+  readonly onToggleMore: () => void;
   readonly onToggleAgent: () => void;
   readonly onToggleCode: () => void;
   readonly onToggleModel: () => void;
@@ -185,6 +190,9 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
     } else if (!command && !event.altKey && event.shiftKey && event.code === 'KeyI') {
       opts.onInsertImage();
       event.preventDefault();
+    } else if (!command && !event.altKey && event.shiftKey && event.code === 'KeyS') {
+      opts.onToggleMore();
+      event.preventDefault();
     } else if (!command && !event.altKey && event.shiftKey && event.code === 'KeyP') {
       opts.onToolChange('highlighter');
       event.preventDefault();
@@ -214,6 +222,12 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onToolChange('eraser');
     } else if (!command && !event.shiftKey && !event.altKey && key === 'q') {
       opts.onToolChange('lasso');
+    } else if (!command && !event.shiftKey && !event.altKey && key === 'k') {
+      opts.onToolChange('laser');
+    } else if (!command && !event.shiftKey && !event.altKey && key === 'f') {
+      opts.onInsertFrame();
+    } else if (!command && !event.shiftKey && !event.altKey && key === 'n') {
+      opts.onInsertSticky();
     } else if (!command && key === 'l') {
       opts.onToggleTree();
     } else if (!command && !event.shiftKey && !event.altKey && key === 'i') {

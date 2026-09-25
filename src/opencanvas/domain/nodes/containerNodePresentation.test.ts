@@ -25,6 +25,7 @@ describe('container node presentation', () => {
       kind: 'group',
       label: 'Platform',
       header: true,
+      preset: null,
       subLabel: '3 services',
       colorKey: 'custom',
       colorMode: 'subtle',

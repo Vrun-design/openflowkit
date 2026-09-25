@@ -101,6 +101,30 @@ test('an empty page says so instead of failing', async ({ page }) => {
   await expect(page.getByRole('complementary', { name: 'Animation export' })).toBeHidden();
 });
 
+test('the format hint follows the pick and steps stay a disclosure @gate', async ({ page }) => {
+  await openAnimationExport(page);
+  // The one-line hint under the format pick says where that file plays.
+  const hint = page.locator('.ofk-motion-format .ofk-caption');
+  await expect(hint).toHaveText('Animated vector; plays in GitHub READMEs, docs and Notion');
+  await page.getByRole('radio', { name: 'GIF', exact: true }).check();
+  await expect(hint).toHaveText('Plays everywhere: Slack, GitHub, X, email');
+  await page.getByRole('radio', { name: 'SVG', exact: true }).check();
+
+  // Steps: the shared accordion, open while the sequence is short. Its row and
+  // divider run the panel's full width, like the Connect agent accordions.
+  const steps = page.locator('details.ofk-motion-steps-disclosure');
+  await expect(steps).toHaveAttribute('open', '');
+  const panelBox = (await page.locator('.ofk-motion-panel').boundingBox())!;
+  const rowBox = (await steps.locator('summary').boundingBox())!;
+  expect(Math.abs(rowBox.x - panelBox.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(rowBox.x + rowBox.width - (panelBox.x + panelBox.width))).toBeLessThanOrEqual(1);
+  await steps.locator('summary').click();
+  await expect(steps).not.toHaveAttribute('open', '');
+  await expect(page.locator('.ofk-motion-chip').first()).toBeHidden();
+  await steps.locator('summary').click();
+  await expect(page.locator('.ofk-motion-chip').first()).toBeVisible();
+});
+
 test('step chips write the animate block and read it back', async ({ page }) => {
   await openAnimationExport(page);
   const chips = page.locator('.ofk-motion-chip');
@@ -130,9 +154,10 @@ test('step chips write the animate block and read it back', async ({ page }) => 
   await expect.poll(async () => (await code.inputValue())).toContain('hold 3s');
   await hold.getByRole('button', { name: 'Done' }).click();
 
-  // From code: the block just written is a valid order, and it round-trips.
+  // Custom: the block just written is a valid order, and it round-trips.
   const before = await chips.allTextContents();
-  await page.getByRole('radio', { name: 'From code' }).check();
+  await expect(page.getByRole('radio', { name: 'Connections', exact: true })).toBeVisible();
+  await page.getByRole('radio', { name: 'Custom', exact: true }).check();
   await expect.poll(async () => (await chips.allTextContents()).join('|')).toBe(before.join('|'));
   // And the clip now lasts what the block says: 3 s + 3 beats.
   expect(await readout(page)).toMatch(/^0\.0s \/ 8\.1s/);

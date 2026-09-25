@@ -1,5 +1,6 @@
 import type { SceneNode } from '../document/types';
 import { optionalPresentationString, presentationString } from './nodePresentationValues';
+import { framePresetOf, type FramePreset } from './framePreset';
 
 export const CONTAINER_NODE_KINDS = ['group', 'section', 'swimlane', 'frame'] as const;
 
@@ -14,6 +15,8 @@ export interface ContainerNodePresentation {
   readonly customColor?: string;
   /** Title band/chip drawn; sections can hide it, frames show it only with a title. */
   readonly header: boolean;
+  /** A frame from the More flyout: named above its edge, device chrome inside. */
+  readonly preset: FramePreset | null;
   readonly locked: boolean;
   readonly hidden: boolean;
   readonly collapsed: boolean;
@@ -54,6 +57,7 @@ export function resolveContainerNodePresentation(
     kind,
     label,
     header: node.content.showHeader !== false && (kind !== 'frame' || Boolean(node.content.label)),
+    preset: framePresetOf(node),
     ...(subLabel ? { subLabel } : {}),
     colorKey: presentationString(node.content.color, fallbackColorKey(node, kind)),
     colorMode: node.content.colorMode === 'filled' ? 'filled' : 'subtle',

@@ -5,6 +5,8 @@ import { basicNodeOutlinePoints } from './basicNodeOutline';
 import { resolveArchitectureNodePresentation } from './architectureNodePresentation';
 import { resolveContainerNodePresentation } from './containerNodePresentation';
 import { resolveBasicNodePresentation, type BasicNodeShape } from './basicNodePresentation';
+import { FRAME_NAME_HEIGHT, FRAME_NAME_OFFSET } from './framePreset';
+import { widgetLabelBox } from './widgetNodePresentation';
 
 /** Height of a container's title band; the frame boundary below it is the body. */
 export const CONTAINER_TITLE_HEIGHT = 40;
@@ -78,11 +80,15 @@ function insetBounds(node: SceneNode, inset: LabelInset): Bounds2d {
 export function nodeLabelBounds(node: SceneNode): Bounds2d {
   const { width, height } = node.size;
   const container = resolveContainerNodePresentation(node);
+  // Figma: a frame's name sits on the canvas just above its top edge.
+  if (container?.preset) return createBounds2d(0, -FRAME_NAME_OFFSET, width, FRAME_NAME_HEIGHT);
   if (container) {
     const left = container.kind === 'swimlane' ? 37 : 16;
     const right = 16;
     return createBounds2d(left, 0, Math.max(1, width - left - right), CONTAINER_TITLE_HEIGHT);
   }
+  const widget = widgetLabelBox(node);
+  if (widget) return createBounds2d(widget.x, widget.y, widget.width, widget.height);
   const architecture = resolveArchitectureNodePresentation(node);
   if (architecture?.display === 'provider-icon') {
     return createBounds2d(0, ICON_PLATE_HEIGHT, width, Math.max(1, height - ICON_PLATE_HEIGHT));

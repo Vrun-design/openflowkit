@@ -1,5 +1,7 @@
 import type { ScenePage, SceneNode } from '../../domain/document/types';
 import { resolveBasicNodePresentation } from '../../domain/nodes/basicNodePresentation';
+import { FRAME_PRESET_SPECS, framePresetOf } from '../../domain/nodes/framePreset';
+import { describeWidget, resolveWidgetPresentation } from '../../domain/nodes/widgetNodePresentation';
 
 export type SemanticSceneItem =
   | {
@@ -25,7 +27,11 @@ function nodeLabel(page: ScenePage, nodeId: string): string {
 /** Screen-reader name: a library shape says its shape, not its renderer kind. */
 function nodeDescription(node: SceneNode, locked: boolean): string {
   const basic = resolveBasicNodePresentation(node);
-  const name = basic ? `${basic.shape} shape` : `${node.kind} node`;
+  const widget = resolveWidgetPresentation(node);
+  const preset = framePresetOf(node);
+  const name = basic ? `${basic.shape} shape`
+    : widget ? describeWidget(widget)
+      : preset ? `${FRAME_PRESET_SPECS[preset].name} frame` : `${node.kind} node`;
   return locked ? `${name}, locked` : name;
 }
 

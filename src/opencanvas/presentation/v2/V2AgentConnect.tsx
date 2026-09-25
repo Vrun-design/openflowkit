@@ -78,21 +78,25 @@ export function V2AgentConnect(props: V2AgentConnectProps) {
           {running ? <Button variant="quiet" onClick={() => props.onToggle(false)}>Cancel</Button> : null}</div></li>
       </ol>
     </>}
-    <details className="ofk-connection-details"><summary>Connection settings<Icon icon={IconChevronDown} /></summary>
-      <div className="ofk-connection-fields">
-        <label htmlFor="ofk-bridge-port">Port<input id="ofk-bridge-port" className="ofk-v2-bridge-input" inputMode="numeric" value={draftPort}
-          disabled={running} aria-invalid={!validPort || undefined} onChange={(event) => setDraftPort(event.target.value.replace(/[^0-9]/g, ''))}
-          onBlur={() => { if (validPort) props.onPortChange(port); }} /></label>
-        <label htmlFor="ofk-bridge-token">Token <span>optional</span><input id="ofk-bridge-token" type="password" autoComplete="off" className="ofk-v2-bridge-input"
-          value={draftToken} disabled={running} placeholder="Server token" onChange={(event) => setDraftToken(event.target.value)}
-          onBlur={() => props.onTokenChange(draftToken.trim())} /></label>
+    <details className="ofk-accordion ofk-connection-details"><summary>Connection settings<Icon icon={IconChevronDown} /></summary>
+      <div className="ofk-accordion-body">
+        <div className="ofk-connection-fields">
+          <label htmlFor="ofk-bridge-port">Port<input id="ofk-bridge-port" className="ofk-v2-bridge-input" inputMode="numeric" value={draftPort}
+            disabled={running} aria-invalid={!validPort || undefined} onChange={(event) => setDraftPort(event.target.value.replace(/[^0-9]/g, ''))}
+            onBlur={() => { if (validPort) props.onPortChange(port); }} /></label>
+          <label htmlFor="ofk-bridge-token">Token <span>optional</span><input id="ofk-bridge-token" type="password" autoComplete="off" className="ofk-v2-bridge-input"
+            value={draftToken} disabled={running} placeholder="Server token" onChange={(event) => setDraftToken(event.target.value)}
+            onBlur={() => props.onTokenChange(draftToken.trim())} /></label>
+        </div>
+        {!validPort ? <p role="alert" className="ofk-connection-error">Use a port between 1 and 65535.</p> : null}
+        <p>Disconnect to change settings.</p>
       </div>
-      {!validPort ? <p role="alert" className="ofk-connection-error">Use a port between 1 and 65535.</p> : null}
-      <p>Disconnect to change settings.</p>
     </details>
-    <details className="ofk-connection-details"><summary>MCP configuration<Icon icon={IconChevronDown} /></summary>
-      <pre className="ofk-v2-bridge-snippet">{config}</pre>
-      <Button variant="quiet" onClick={() => { void copyConfig(); }}><Icon icon={IconCopy} />Copy config</Button>
+    <details className="ofk-accordion ofk-connection-details"><summary>MCP configuration<Icon icon={IconChevronDown} /></summary>
+      <div className="ofk-accordion-body">
+        <pre className="ofk-v2-bridge-snippet">{config}</pre>
+        <Button variant="quiet" onClick={() => { void copyConfig(); }}><Icon icon={IconCopy} />Copy config</Button>
+      </div>
     </details>
     {copyStatus ? <span className="ofk-copy-feedback" role="status">{copyStatus}</span> : null}
   </Panel>;

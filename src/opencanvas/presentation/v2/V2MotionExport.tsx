@@ -192,9 +192,9 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
     }
   }
   const orderOptions = [
-    { value: 'auto', label: 'Auto', title: 'Follow the connector graph' },
+    { value: 'auto', label: 'Connections', title: 'Follow the connectors between shapes, in order' },
     ...flows.map((flow) => ({ value: flow.id, label: flow.name, title: `Replay the "${flow.name}" flow` })),
-    ...(codeBlock ? [{ value: 'code', label: 'From code', title: 'Play the animate block in the diagram source' }] : []),
+    ...(codeBlock ? [{ value: 'code', label: 'Custom', title: 'Play the step order written in the code panel' }] : []),
   ];
   // A chip edit rebuilds the block from the timeline the user is looking at.
   const editSteps = (mutate: (steps: ReturnType<typeof animateBlockFromTimeline>['steps']) => ReturnType<typeof animateBlockFromTimeline>['steps']): void => {
@@ -294,8 +294,12 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
           onChange={(value) => { setOrder(value); setEdited(value === 'code' ? (codeBlock ?? null) : null); }}
           options={orderOptions} />
       ) : null}
-      <Segmented<MotionOutput> label="Format" value={output} onChange={setOutput}
-        options={FORMAT_OPTIONS.filter((option) => option.value !== 'mp4' || webCodecsAvailable())} />
+      <div className="ofk-motion-format">
+        <Segmented<MotionOutput> label="Format" value={output} onChange={setOutput}
+          options={FORMAT_OPTIONS.filter((option) => option.value !== 'mp4' || webCodecsAvailable())} />
+        {/* Where the pick actually plays, in one line — no promo, no icon. */}
+        <p className="ofk-caption">{FORMAT_OPTIONS.find((option) => option.value === output)?.title}</p>
+      </div>
       {output !== 'svg' ? (
         <>
           <Segmented<'12' | '24' | '30'> label="Frame rate" value={String(fps) as '12' | '24' | '30'}
@@ -345,12 +349,11 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
           </Button>
         ) : null}
       </div>
+      {/* Where the file plays lives under the format pick; this line is the math. */}
       <p className="ofk-caption">
         {empty
           ? 'Pick a preset now and it is ready the moment the page has shapes.'
-          : output === 'svg'
-            ? `Plays in GitHub READMEs, docs and any browser. ${timeline?.steps.length ?? 0} steps, ${(durationMs / 1000).toFixed(1)}s${loop ? ', loops' : ''}.`
-            : `${FORMAT_OPTIONS.find((option) => option.value === output)?.title ?? ''} ${timeline?.steps.length ?? 0} steps, ${(durationMs / 1000).toFixed(1)}s at ${fps} fps.`}
+          : `${timeline?.steps.length ?? 0} steps, ${(durationMs / 1000).toFixed(1)}s${output === 'svg' ? '' : ` at ${fps} fps`}${loop ? ', loops' : ''}.`}
       </p>
     </div>
   );

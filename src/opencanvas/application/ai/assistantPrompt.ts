@@ -70,8 +70,9 @@ const TOOL_RULES = [
 ];
 
 const DSL_RULES = [
-  'OpenFlow DSL: the first non-blank line is the family (flowchart, architecture, sequence, state, erd, class, gitgraph, mindmap, chart).',
+  'OpenFlow DSL: the first non-blank line is the family (flowchart, architecture, sequence, state, erd, class, gitgraph, mindmap, chart, wireframe).',
   'For data asks (revenue, metrics, comparison) use the chart family, e.g. `chart bar` then `Revenue: Jan 12, Feb 19`.',
+  'For screens, UI mockups and app flows use the wireframe family, e.g. `wireframe` then `screen Login [phone] {`, `input: Email`, `button: Sign in [primary]`, `}`.',
   'Every name is an id; edges are `A -> B` and auto-declare their nodes. Prefer the smallest diagram that answers the request. Never invent icon ids.',
 ];
 

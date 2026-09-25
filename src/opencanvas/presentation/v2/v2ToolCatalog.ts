@@ -12,7 +12,17 @@ import {
 import type { ConnectorRouteKind } from '../../domain/document/types';
 import type { ChartKind } from '../../domain/nodes/chartNodePresentation';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
-import { IconHighlight, IconPencil } from '@tabler/icons-react';
+import {
+  IconAdjustmentsHorizontal, IconAlertTriangle, IconAlignLeft, IconAntennaBars5, IconAppWindow,
+  IconBrowser, IconCalendar, IconChevronsDown, IconChevronsRight, IconCircleDot, IconCirclePlus, IconCursorText,
+  IconDeviceMobile, IconDeviceTablet, IconDotsCircleHorizontal, IconEraser, IconFlare, IconForms, IconFrame,
+  IconHeading, IconHighlight, IconLasso, IconLayoutBottombar, IconLayoutCards, IconLayoutNavbar,
+  IconLayoutSidebar, IconLink, IconList, IconMenu2, IconPencil, IconPhoto, IconProgress,
+  IconRectangle, IconSearch, IconSeparatorHorizontal, IconSquareCheck, IconSquareChevronDown, IconStairs,
+  IconSwitchHorizontal, IconTabs, IconTag, IconToggleRight, IconTooltip, IconUserCircle,
+} from '@tabler/icons-react';
+import type { FramePreset } from '../../domain/nodes/framePreset';
+import { WIDGETS, type WidgetKind } from '../../domain/nodes/widgetNodePresentation';
 
 // The rail's data: which tools exist, what a flyout offers, and how a picked
 // option maps onto the document. Keeping it here lets the toolbar, the keyboard
@@ -25,7 +35,7 @@ export type V2Tool =
   | 'connector'
   | 'text'
   | 'pen' | 'highlighter'
-  | 'eraser' | 'lasso';
+  | 'eraser' | 'lasso' | 'laser';
 
 export type V2ConnectorTool = 'arrow' | 'elbow' | 'curve' | 'line' | 'path';
 export type V2InkTool = 'pen' | 'highlighter';
@@ -46,6 +56,7 @@ export interface ToolOption<T extends string> {
   readonly id: T;
   readonly label: string;
   readonly icon: TablerIcon;
+  readonly shortcut?: string;
 }
 
 /** Grid order matches the reference rail: pointy, round, then the box family. */
@@ -134,3 +145,51 @@ export const CONNECTOR_ROUTE: Readonly<Record<V2ConnectorTool, ConnectorRouteKin
 export function connectorHeadEnd(kind: V2ConnectorTool): 'arrow' | 'none' {
   return kind === 'line' ? 'none' : 'arrow';
 }
+
+/** A More pick names its group, so one grid can hold frames, tools and widgets. */
+export type V2MoreTool = 'lasso' | 'laser' | 'eraser' | 'sticky';
+export type V2MoreItem = `frame:${FramePreset}` | `tool:${V2MoreTool}` | `widget:${WidgetKind}`;
+
+export interface ToolSection<T extends string> {
+  readonly title: string;
+  readonly options: readonly ToolOption<T>[];
+}
+
+/** The More flyout, in Koboyo's order: frames, drawing tools, then the wireframe kit. */
+export const MORE_SECTIONS: readonly ToolSection<V2MoreItem>[] = [
+  {
+    title: 'Frames',
+    options: [
+      { id: 'frame:frame', label: 'Frame', icon: IconFrame, shortcut: 'F' },
+      { id: 'frame:phone', label: 'Phone', icon: IconDeviceMobile },
+      { id: 'frame:tablet', label: 'Tablet', icon: IconDeviceTablet },
+      { id: 'frame:browser', label: 'Browser', icon: IconBrowser },
+      { id: 'frame:window', label: 'Window', icon: IconAppWindow },
+    ],
+  },
+  {
+    title: 'Tools',
+    options: [
+      { id: 'tool:lasso', label: 'Lasso', icon: IconLasso, shortcut: 'Q' },
+      { id: 'tool:laser', label: 'Laser pointer', icon: IconFlare, shortcut: 'K' },
+      { id: 'tool:eraser', label: 'Eraser', icon: IconEraser, shortcut: 'X' },
+      { id: 'tool:sticky', label: 'Sticky note', icon: IconNote, shortcut: 'N' },
+    ],
+  },
+  {
+    title: 'Wireframe',
+    options: ([
+      ['button', IconRectangle], ['input', IconCursorText], ['search', IconSearch], ['checkbox', IconSquareCheck],
+      ['radio', IconCircleDot], ['toggle', IconToggleRight], ['dropdown', IconSquareChevronDown],
+      ['slider', IconAdjustmentsHorizontal], ['navbar', IconLayoutNavbar], ['tabs', IconTabs], ['image', IconPhoto],
+      ['avatar', IconUserCircle], ['heading', IconHeading], ['paragraph', IconAlignLeft],
+      ['divider', IconSeparatorHorizontal], ['link', IconLink], ['textarea', IconForms], ['stepper', IconStairs],
+      ['badge', IconTag], ['progress', IconProgress], ['breadcrumbs', IconChevronsRight],
+      ['pagination', IconDotsCircleHorizontal], ['rating', IconStar], ['card', IconLayoutCards], ['list', IconList],
+      ['alert', IconAlertTriangle], ['menu', IconMenu2], ['tooltip', IconTooltip], ['accordion', IconChevronsDown],
+      ['datepicker', IconCalendar], ['sidebar', IconLayoutSidebar],
+      ['segmented', IconSwitchHorizontal], ['tabbar', IconLayoutBottombar], ['statusbar', IconAntennaBars5],
+      ['fab', IconCirclePlus],
+    ] as const).map(([widget, icon]) => ({ id: `widget:${widget}` as const, label: WIDGETS[widget].name, icon })),
+  },
+];

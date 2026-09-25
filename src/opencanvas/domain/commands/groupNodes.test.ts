@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import { applyDocumentCommand } from './execute';
 import { createEmptyV2Document } from '../../presentation/v2/v2Document';
-import { buildGroupCommand, buildUngroupCommand, buildWrapCommand, descendantIds } from './groupNodes';
+import { buildGroupCommand, buildUngroupCommand, buildWrapCommand } from './groupNodes';
+import { descendantIds } from '../scene/queries';
 import { buildDeleteSelectionCommand, buildDuplicateSelectionCommand } from './sceneEdits';
 import { buildNodeWorldMatrices, nodeWorldBounds } from '../scene/worldGeometry';
 import type { ScenePage } from '../document/types';
@@ -24,6 +25,11 @@ describe('group / ungroup', () => {
     const matrices = buildNodeWorldMatrices(grouped);
     expect(nodeWorldBounds(grouped.nodes.find((n) => n.id === 'b')!, matrices.get('b')!)).toMatchObject({ x: 300, y: 200 });
     expect(descendantIds(grouped, ['g'])).toEqual(['a', 'b']);
+    // Corrupt parent cycles terminate instead of hanging the walk.
+    const cyclic = createTestDocument({ nodes: [
+      createTestNode('x', { parentId: 'y' }), createTestNode('y', { parentId: 'x' }),
+    ] }).pages[0];
+    expect(descendantIds(cyclic, ['x'])).toEqual(['y']);
     expect(buildGroupCommand(grouped, ['a', 'b'], 'g2')).toBeNull(); // nested: not supported
     const ungrouped = run(grouped, buildUngroupCommand(grouped, ['g'])).document.pages[0];
     expect(ungrouped.nodes.map((n) => [n.id, n.parentId])).toEqual([['a', null], ['b', null]]);

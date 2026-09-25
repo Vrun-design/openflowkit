@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CONNECTOR_OPTIONS, CONNECTOR_ROUTE, SHAPE_OPTIONS, connectorHeadEnd,
+  CONNECTOR_OPTIONS, CONNECTOR_ROUTE, MORE_SECTIONS, SHAPE_OPTIONS, connectorHeadEnd,
 } from './v2ToolCatalog';
 import { LIBRARY_SHAPES } from '../../domain/nodes/shapeNode';
+import { FRAME_PRESETS } from '../../domain/nodes/framePreset';
+import { WIDGET_KINDS } from '../../domain/nodes/widgetNodePresentation';
 
 describe('v2 tool catalog', () => {
   it('offers every library shape once, and nothing the R/O tools already draw', () => {
@@ -22,5 +24,14 @@ describe('v2 tool catalog', () => {
     expect(connectorHeadEnd('line')).toBe('none');
     expect(connectorHeadEnd('arrow')).toBe('arrow');
     expect(connectorHeadEnd('elbow')).toBe('arrow');
+  });
+
+  it('offers every frame preset and every wireframe widget in More, each once', () => {
+    const ids = MORE_SECTIONS.flatMap((section) => section.options.map((option) => option.id));
+    expect(new Set(ids).size).toBe(ids.length);
+    const of = (group: string) => ids.filter((id) => id.startsWith(`${group}:`)).map((id) => id.slice(group.length + 1));
+    expect(of('frame')).toEqual([...FRAME_PRESETS]);
+    expect(of('widget')).toEqual([...WIDGET_KINDS]);
+    expect(of('tool')).toEqual(['lasso', 'laser', 'eraser', 'sticky']);
   });
 });

@@ -35,6 +35,17 @@ describe('semantic scene projection', () => {
     }]);
   });
 
+  it('names a wireframe widget with its state, and a preset frame by its device', () => {
+    const page = createTestDocument({
+      nodes: [
+        createTestNode('toggle', { kind: 'widget', content: { widget: 'toggle', label: 'Dark mode', checked: true } }),
+        createTestNode('phone', { kind: 'frame', content: { preset: 'phone', label: 'Login' } }),
+      ],
+    }).pages[0];
+    expect(buildSemanticSceneItems(page).map(({ description }) => description))
+      .toEqual(["Wireframe toggle 'Dark mode', on", 'Phone frame']);
+  });
+
   it('locates items in bounded semantic pages', () => {
     const items = Array.from({ length: 205 }, (_, index) => ({
       kind: 'node' as const,

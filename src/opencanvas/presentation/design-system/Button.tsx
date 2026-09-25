@@ -56,7 +56,6 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       ref={ref}
       className={`ofk-icon-button ${className}`}
       aria-label={label}
-      title={props.title ?? label}
     >
       <span aria-hidden="true">{icon}</span>
     </Button>

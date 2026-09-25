@@ -4,7 +4,8 @@ description: PNG, SVG, PDF and JSON — scopes, themes, scale, transparency, and
 ---
 
 Canvas menu → **Export…** opens one panel: format, scope, and the options that belong to the
-format. Everything is produced in the browser from the same exported SVG.
+format. Right-clicking an element and choosing **Export…** opens the same panel already scoped
+to that element. Everything is produced in the browser from the same exported SVG.
 
 ## Formats
 
@@ -17,7 +18,9 @@ format. Everything is produced in the browser from the same exported SVG.
 
 ## Scope
 
-- **Selection** — just the selected shapes and the connectors between them.
+- **Selection** — the selected elements and everything inside them: a group, frame or section
+  takes its whole subtree, connectors between those children come along, and a lone connection
+  exports on its own. One element names the file after itself (`my-doc-login-frame.svg`).
 - **Page** — everything on the current page (the default).
 - **All pages** — one file per page for PNG and SVG; JSON is always the whole document.
 
