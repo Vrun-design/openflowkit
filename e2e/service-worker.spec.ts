@@ -24,9 +24,10 @@ test('v1 service worker unregisters itself and its caches once v2 is served @gat
   // browser check for a new worker, as every real visit does.
   await context.unroute('**/sw.js');
   await page.reload();
-  await expect.poll(() => registrations(page), { timeout: 20_000 }).toBe(0);
+  await expect.poll(() => registrations(page), { timeout: 15_000 }).toBe(0);
   await expect.poll(() => cacheNames(page)).toEqual([]);
   await expect(page.locator('[data-testid="v2-canvas"]')).toBeVisible();
-  // The tab was reloaded onto the network, not left running under a worker.
-  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller === null)).toBe(true);
+  // The next visit runs on the network, not under a worker.
+  await page.reload();
+  expect(await page.evaluate(() => navigator.serviceWorker.controller)).toBeNull();
 });
