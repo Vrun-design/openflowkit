@@ -1035,3 +1035,4 @@
 .ofk-home-tag { flex: none; padding: 1px 6px; border-radius: 999px; background: var(--ofk-accentSoft); color: var(--ofk-accent); font-size: 11px; }
 .ofk-home-meta { flex: none; color: var(--ofk-muted); font-size: 12px; }
 .ofk-home-rows .ofk-icon-button { width: 28px; height: 28px; color: var(--ofk-muted); }
+.ofk-legacy-text { display: block; box-sizing: border-box; width: 100%; margin: 0 0 12px; padding: 10px; border: 1px solid var(--ofk-border); border-radius: 8px; background: var(--ofk-raised); color: var(--ofk-text); font: 12px/1.5 ui-monospace, monospace; resize: vertical; }

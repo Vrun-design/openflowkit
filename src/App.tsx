@@ -8,6 +8,20 @@ const HomePage = lazy(async () => {
   return { default: module.V2HomePage };
 });
 
+const LegacyFlowRedirect = lazy(async () => ({ default: (await import('@/opencanvas/presentation/v2/V2LegacyRoutes')).LegacyFlowRedirect }));
+const LegacyViewPage = lazy(async () => ({ default: (await import('@/opencanvas/presentation/v2/V2LegacyRoutes')).LegacyViewPage }));
+
+/** v1 routes that were screens of the old app (phase 12.5); bookmarks land on All diagrams. */
+export const LEGACY_HOME_PATHS = ['/templates', '/settings', '/canvas', '/mcp'] as const;
+/** v1 forwarded `#/docs…` to the docs site. Its pages were rebuilt (phase 9), so old slugs land on its home. */
+export const LEGACY_DOCS_PATHS = ['/docs', '/docs/:slug', '/docs/:lang/:slug'] as const;
+const DOCS_SITE = 'https://docs.openflowkit.com/';
+
+function DocsSiteRedirect(): null {
+  useEffect(() => { window.location.replace(DOCS_SITE); }, []);
+  return null;
+}
+
 const EditorPage = lazy(async () => {
   const module = await import('@/opencanvas/presentation/v2/V2EditorPage');
   return { default: module.V2EditorPage };
@@ -43,6 +57,10 @@ export default function App(): React.JSX.Element {
       <Suspense fallback={null}>
         <Routes>
           <Route path="/home" element={<HomePage />} />
+          <Route path="/flow/:flowId" element={<LegacyFlowRedirect />} />
+          <Route path="/view" element={<LegacyViewPage />} />
+          {LEGACY_HOME_PATHS.map((path) => <Route key={path} path={path} element={<Navigate to="/home" replace />} />)}
+          {LEGACY_DOCS_PATHS.map((path) => <Route key={path} path={path} element={<DocsSiteRedirect />} />)}
           <Route path="/d/:id" element={<EditorPage />} />
           <Route path="/v2/:id" element={<LegacyV2Redirect />} />
           <Route path="*" element={<HomeDocument />} />

@@ -57,6 +57,7 @@ export interface V2DocumentSummary {
   readonly name: string;
   readonly savedAt: string;
   readonly pageCount: number;
+  readonly pageIds: readonly string[];
 }
 
 type OpenedRecord =
@@ -204,6 +205,7 @@ async function listRecords(database: IDBDatabase): Promise<V2DocumentSummary[]> 
       name: typeof record.document.name === 'string' ? record.document.name : 'Untitled diagram',
       savedAt: record.savedAt,
       pageCount: Array.isArray(record.document.pages) ? record.document.pages.length : 0,
+      pageIds: Array.isArray(record.document.pages) ? record.document.pages.map((page) => page.id) : [],
     }))
     .sort((a, b) => (a.savedAt < b.savedAt ? 1 : -1));
 }

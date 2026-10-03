@@ -1,9 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
-import App from './App';
+import { useLocation } from 'react-router-dom';
+import App, { LEGACY_HOME_PATHS } from './App';
 
 vi.mock('@/opencanvas/presentation/v2/V2EditorPage', () => ({
   V2EditorPage: () => <div data-testid="editor" />,
+}));
+vi.mock('@/opencanvas/presentation/v2/V2HomePage', () => ({
+  V2HomePage: function Home() {
+    return <div data-testid="home">{(useLocation().state as { notice?: string } | null)?.notice}</div>;
+  },
 }));
 
 describe('App routing', () => {
@@ -18,5 +24,25 @@ describe('App routing', () => {
     window.location.hash = '#/v2/abc';
     render(<App />);
     await waitFor(() => expect(window.location.hash).toBe('#/d/abc'));
+  });
+
+  // Phase 12.5: every v1 route lands somewhere real. jsdom has no IndexedDB, so no v1 document exists.
+  const v1Routes: readonly (readonly [string, string])[] = [
+    ['#/home', '#/home'],
+    ...LEGACY_HOME_PATHS.map((path) => [`#${path.replace(':slug', 'intro').replace(':lang', 'en')}`, '#/home'] as const),
+    ['#/view', '#/home'],
+    ['#/flow/doc-gone', '#/home'],
+  ];
+  it.each(v1Routes)('sends v1 %s to %s', async (from, to) => {
+    window.location.hash = from;
+    const { findByTestId } = render(<App />);
+    await findByTestId('home');
+    expect(window.location.hash).toBe(to);
+  });
+
+  it('tells a visitor whose old diagram link found nothing', async () => {
+    window.location.hash = '#/flow/doc-gone';
+    const { findByText } = render(<App />);
+    await findByText("That diagram isn't in this browser.");
   });
 });

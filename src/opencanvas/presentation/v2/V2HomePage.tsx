@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { IconFile, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import type { HomeNotice } from './V2LegacyRoutes';
 import { Button, Dialog, Icon, IconButton, SystemRoot, Tooltip } from '../design-system';
 import { createV2Repository, type V2DocumentSummary } from '../../../services/storage/v2/v2Repository';
 import { readV1ImportMarker, runV1Import } from '../../../services/storage/v2/v1Import';
@@ -18,7 +19,13 @@ export function V2HomePage(): React.JSX.Element {
   const navigate = useNavigate();
   const repository = useMemo(() => createV2Repository(window.indexedDB), []);
   const [documents, setDocuments] = useState<readonly V2DocumentSummary[] | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  // An old link that found nothing arrives with a notice in router state; clear it so a reload
+  // or Back does not show it again.
+  const location = useLocation();
+  const [problem, setProblem] = useState<string | null>((location.state as HomeNotice | null)?.notice ?? null);
+  useEffect(() => {
+    if (location.state) navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate]);
   const [renaming, setRenaming] = useState<{ id: string; draft: string } | null>(null);
   const [deleting, setDeleting] = useState<V2DocumentSummary | null>(null);
   const renameRef = useRef<HTMLInputElement>(null);
