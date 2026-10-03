@@ -5,7 +5,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compileWorkspace, deterministicLayout, exportCanonicalSvg, type SvgExportDocument } from './lib/agent.js';
+import { collectIconArt, compileWorkspace, deterministicLayout, exportCanonicalSvg, type SvgExportDocument } from './lib/agent.js';
+import { loadFileCapabilities, loadIconArt } from './lib/fileCapabilities.js';
 import {
   discoverySummary, discoveryToDsl, driftReport, modelFromNode, runArchitectureDiscovery,
   type ArchFlowData, type ArchFlowStepData, type ArchModelData, type ArchitectureDiscovery,
@@ -481,7 +482,8 @@ async function runBuild(args: readonly string[], io: CliIo): Promise<number> {
   const outDir = parsed.flags.get('out') ?? 'dist';
   try {
     const source = await readFile(path.join(dir, 'architecture.ofk'), 'utf8');
-    const workspace = await compileWorkspace(source, { layout: deterministicLayout });
+    // The MCP file host's compile: deterministic layout plus the editor's icon rule and art.
+    const workspace = await (await loadFileCapabilities()).compileWorkspace(source) as unknown as Awaited<ReturnType<typeof compileWorkspace>>;
     if (workspace.views.length === 0) {
       io.err('openflowkit build: architecture.ofk compiled to no views');
       return 2;
@@ -503,9 +505,10 @@ async function runBuild(args: readonly string[], io: CliIo): Promise<number> {
           connectors: view.result.connectors,
         }],
       };
+      const iconArt = await collectIconArt(document, loadIconArt);
       const render = (theme: 'light' | 'dark'): string => {
         try {
-          return exportCanonicalSvg(document, { pageId, theme, padding: 32 });
+          return exportCanonicalSvg(document, { pageId, theme, padding: 32, iconArt });
         } catch {
           return EMPTY_SVG(escapeHtml(`${view.name} — empty view`));
         }

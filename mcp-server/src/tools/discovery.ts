@@ -82,7 +82,6 @@ export function registerDiscoveryTools(server: McpServer): void {
               tools: [...STATIC_TOOLS, ...AGENT_OPS.map(({ name }) => name)].sort(),
               resources: [
                 'openflowkit://docs/grammar',
-                'openflowkit://docs/grammar',
                 'openflowkit://templates',
                 'openflowkit://templates/{name}',
                 'openflowkit://icons',
@@ -90,7 +89,6 @@ export function registerDiscoveryTools(server: McpServer): void {
               ],
               prompts: [
                 'flowchart_from_description',
-                'convert_mermaid_to_openflow',
                 'architecture_from_codebase',
               ],
             },

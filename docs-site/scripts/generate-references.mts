@@ -166,7 +166,7 @@ async function mcpPage(): Promise<string> {
       return `| \`${name}\` | ${descriptions[name] ?? 'See the tool description in your client'} |`;
     }).join('\n') + '\n\n'
     + `## Resources and prompts\n\n`
-    + `The server also exposes MCP resources: ${resources.map((name) => `\`${name}\``).join(', ')} — the\ngrammar, the icon catalogs and the starter templates. Three prompts steer a client toward\nthe right tools: \`flowchart_from_description\`, \`convert_mermaid_to_openflow\` and\n\`architecture_from_codebase\`.\n\n`
+    + `The server also exposes MCP resources: ${resources.map((name) => `\`${name}\``).join(', ')} — the\ngrammar, the icon catalogs and the starter templates. Two prompts steer a client toward\nthe right tools: \`flowchart_from_description\` and \`architecture_from_codebase\`. Mermaid needs no\nprompt: \`create_diagram\`, \`update_diagram\` and \`validate_openflow_dsl\` take it directly.\n\n`
     + `## The operations\n\n`
     + `One MCP tool per operation; every mutating op has an inverse, and the live editor applies it\nas a single undo step. The manifest names the human operation each one mirrors.\n\n`
     + opSections()

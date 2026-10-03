@@ -43,8 +43,6 @@ what the diagram *means*, not what syntax to use:
 
 ## What not to ask for
 
-- Mermaid, if the client can write OpenFlow DSL — conversion is an import path with reported
-  losses ([Mermaid import](/mermaid-import/)).
 - Manual coordinates. Layout is computed; use `pin` and `rank` only when you truly need to
   nudge the result.
 - Features that do not exist: collaboration, share links, embedded viewers, slide decks,

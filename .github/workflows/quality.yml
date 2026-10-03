@@ -25,6 +25,9 @@ jobs:
       - name: Run CI quality suite
         run: npm run test:ci
 
+      - name: MCP server tests (typecheck + suite)
+        run: npm --prefix mcp-server run lint && npm --prefix mcp-server run test:run
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 

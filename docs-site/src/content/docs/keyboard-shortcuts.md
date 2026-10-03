@@ -25,6 +25,10 @@ renders this list itself, from the same data, so it cannot drift from what the k
 | Highlighter | `Shift + P` |
 | Eraser | `X` |
 | Lasso | `Q` |
+| Laser pointer | `K` |
+| Frame | `F` |
+| Sticky note | `N` |
+| More: frames, tools, wireframe | `Shift + S` |
 | Icons and emoji | `I / E` |
 | Image | `Shift + I` |
 

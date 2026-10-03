@@ -3,7 +3,7 @@
 // the caller ships, searches the icon manifest it was given, and exports the
 // text formats directly. PNG is absent by construction — that is the live
 // editor's job.
-import { exportCanonicalSvg } from '../opencanvas/infrastructure/export/canonicalSvg';
+import { collectIconArt, exportCanonicalSvg } from '../opencanvas/infrastructure/export/canonicalSvg';
 import { exportAnimatedSvg } from '../opencanvas/infrastructure/export/animatedSvg';
 import { motionTimelineFor } from '../dsl/animate';
 import { serializeCanonicalJson } from '../opencanvas/infrastructure/export/canonicalJson';
@@ -25,6 +25,8 @@ export interface FileHostOptions {
   readonly resolveIcon?: CompileOptions['resolveIcon'];
   /** Icons from labels when the DSL has no `icons:` line (the editor's default: on). */
   readonly autoIcons?: boolean;
+  /** One icon's art as a data URL, or null; without it, exported icons are plates alone. */
+  readonly loadIcon?: (packId: string, shapeId: string) => Promise<string | null>;
 }
 
 function score(icon: IconMatch, query: string): number {
@@ -69,6 +71,7 @@ export function createFileCapabilities(options: FileHostOptions): OpCapabilities
         // No canvas, no codecs: this host has no rasterizer by construction.
         throw new Error(`${request.format.toUpperCase()} export needs a live editor: open the app and click "Connect agent". Animated SVG works here.`);
       }
+      const iconArt = options.loadIcon && request.format !== 'json' ? await collectIconArt(request.document, options.loadIcon) : {};
       if (request.format === 'svg-animated') {
         const page = request.document.pages.find(({ id }) => id === request.pageId) ?? request.document.pages[0]!;
         const timeline = motionTimelineFor({
@@ -84,6 +87,7 @@ export function createFileCapabilities(options: FileHostOptions): OpCapabilities
             pageId: page.id,
             ...(request.theme ? { theme: request.theme } : {}),
             ...(request.loop ? { loop: true } : {}),
+            iconArt,
           }),
         }];
       }
@@ -99,6 +103,7 @@ export function createFileCapabilities(options: FileHostOptions): OpCapabilities
           pageId: page.id,
           theme: request.theme ?? 'light',
           pixelRatio: request.scale ?? 1,
+          iconArt,
           ...(request.selectedNodeIds?.length ? { selectedNodeIds: request.selectedNodeIds } : {}),
           ...(request.selectedConnectorIds?.length ? { selectedConnectorIds: request.selectedConnectorIds } : {}),
         });

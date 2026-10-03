@@ -88,6 +88,25 @@ export function iconArtKey(packId: string, shapeId: string): string {
   return `${packId}:${shapeId}`;
 }
 
+/**
+ * Every provider icon the document draws, loaded once each by the host's `load`
+ * (the editor fetches its bundled art, the MCP server reads its data files).
+ * An icon whose load fails or returns null exports as its plate alone.
+ */
+export async function collectIconArt(
+  document: SceneDocumentV1,
+  load: (packId: string, shapeId: string) => Promise<string | null>,
+): Promise<Record<string, string>> {
+  const wanted = new Map<string, { packId: string; shapeId: string }>();
+  for (const node of document.pages.flatMap((page) => page.nodes)) {
+    const icon = resolveArchitectureNodePresentation(node)?.icon;
+    if (icon?.kind === 'provider') wanted.set(iconArtKey(icon.packId, icon.shapeId), icon);
+  }
+  const entries = await Promise.all([...wanted].map(async ([key, { packId, shapeId }]) =>
+    [key, await load(packId, shapeId).catch(() => null)] as const));
+  return Object.fromEntries(entries.filter((entry): entry is readonly [string, string] => entry[1] !== null));
+}
+
 /** The icon on an architecture node as an `<image>` at the canvas's position, or ''. */
 function iconMarkup(node: SceneNode, iconArt: CanonicalSvgExportOptions['iconArt']): string {
   const presentation = resolveArchitectureNodePresentation(node);

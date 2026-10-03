@@ -65,9 +65,9 @@ document; without it, tools use the paired editor or the first open document.
 ## Resources and prompts
 
 The server also exposes MCP resources: `grammar`, `icons-by-provider`, `icons-catalog`, `template`, `templates-catalog` — the
-grammar, the icon catalogs and the starter templates. Three prompts steer a client toward
-the right tools: `flowchart_from_description`, `convert_mermaid_to_openflow` and
-`architecture_from_codebase`.
+grammar, the icon catalogs and the starter templates. Two prompts steer a client toward
+the right tools: `flowchart_from_description` and `architecture_from_codebase`. Mermaid needs no
+prompt: `create_diagram`, `update_diagram` and `validate_openflow_dsl` take it directly.
 
 ## The operations
 
@@ -175,12 +175,15 @@ Add shape — mirrors **Create rectangle / ellipse / text** in the toolbar; chan
 
 | Argument | Type |
 | --- | --- |
-| `kind` | `rectangle` \| `ellipse` \| `text` \| `rounded` \| `capsule` \| `circle` \| `ellipse` \| `diamond` \| `triangle` \| `trapezoid` \| `parallelogram` \| `hexagon` \| `octagon` \| `pentagon-tag` \| `chevron` \| `plus` \| `star` \| `heart` \| `cloud` \| `lightning` \| `bookmark` \| `speech-bubble` \| `page` \| `folder` \| `list-card` \| `filled-bar` \| `half-round` \| `cylinder` \| `document` \| `cube` \| `prism` \| `layer-stack` \| `target` \| `check-circle` \| `cross-circle` \| `numbered-circle` \| `brace` \| `bracket` \| `pin` \| `actor` \| `arrow-up` \| `arrow-down` \| `arrow-left` \| `arrow-right` \| `venn` \| `process` \| `start` \| `decision` \| `end` \| `custom` \| `text` \| `image` \| `annotation` \| `sticky` \| `callout` \| `pen` \| `highlighter` \| `line` \| `arrow` \| `architecture` \| `provider_icon` \| `group` \| `section` \| `swimlane` \| `class` \| `er_entity` \| `mindmap` \| `journey` \| `sequence_participant` \| `sequence_note` \| `sequence_fragment` \| `browser` \| `mobile` \| "chart" *(default `"process"`)* |
+| `kind` | `rectangle` \| `ellipse` \| `text` \| `rounded` \| `capsule` \| `circle` \| `ellipse` \| `diamond` \| `triangle` \| `trapezoid` \| `parallelogram` \| `hexagon` \| `octagon` \| `pentagon-tag` \| `chevron` \| `plus` \| `star` \| `heart` \| `cloud` \| `lightning` \| `bookmark` \| `speech-bubble` \| `page` \| `folder` \| `list-card` \| `filled-bar` \| `half-round` \| `cylinder` \| `document` \| `cube` \| `prism` \| `layer-stack` \| `target` \| `check-circle` \| `cross-circle` \| `numbered-circle` \| `brace` \| `bracket` \| `pin` \| `actor` \| `arrow-up` \| `arrow-down` \| `arrow-left` \| `arrow-right` \| `venn` \| `process` \| `start` \| `decision` \| `end` \| `custom` \| `text` \| `image` \| `annotation` \| `sticky` \| `callout` \| `pen` \| `highlighter` \| `line` \| `arrow` \| `architecture` \| `provider_icon` \| `group` \| `section` \| `swimlane` \| `class` \| `er_entity` \| `mindmap` \| `journey` \| `sequence_participant` \| `sequence_note` \| `sequence_fragment` \| `browser` \| `mobile` \| "chart" \| "widget" \| "frame" *(default `"process"`)* |
 | `label` | string *(optional)* |
 | `x` | number *(default `0`)* |
 | `y` | number *(default `0`)* |
 | `id` | string *(optional)* |
 | `chart` | object: kind (`bar` \| `line` \| `area` \| `scatter` \| `pie` \| `donut` \| `radar` \| `heatmap` \| `table` \| `quadrant` *(default `"bar"`)*), categories (string[] *(optional)*), series (object: name (string), values (number[])[] *(optional)*), points (object: label (string), x (number), y (number)[] *(optional)*) *(optional)* |
+| `widget` | object: kind (`button` \| `input` \| `search` \| `checkbox` \| `radio` \| `toggle` \| `dropdown` \| `slider` \| `navbar` \| `tabs` \| `image` \| `avatar` \| `heading` \| `paragraph` \| `divider` \| `link` \| `textarea` \| `stepper` \| `badge` \| `progress` \| `breadcrumbs` \| `pagination` \| `rating` \| `card` \| `list` \| `alert` \| `menu` \| `tooltip` \| `accordion` \| `datepicker` \| `sidebar` \| `segmented` \| `tabbar` \| `statusbar` \| `fab`), checked (boolean *(optional)*), value (number *(optional)*), active (number *(optional)*), variant (`primary` \| `info` \| `success` \| `warning` \| `error` *(optional)*) *(optional)* |
+| `preset` | `frame` \| `phone` \| `tablet` \| `browser` \| `window` *(optional)* |
+| `parentId` | string *(optional)* |
 
 ### `export`
 

@@ -3,3 +3,4 @@ node_modules
 *.tsbuildinfo
 .DS_Store
 src/generated/
+data/icon-art/

@@ -27,7 +27,9 @@ export { compileWorkspace } from '../dsl/compile';
 export { deterministicLayout } from '../dsl/layout';
 export { architectureWorkspaceText } from '../dsl/families/architecture/text';
 export { archModelFromJson } from '../dsl/model/model';
-export { exportCanonicalSvg } from '../opencanvas/infrastructure/export/canonicalSvg';
+export { collectIconArt, exportCanonicalSvg } from '../opencanvas/infrastructure/export/canonicalSvg';
+export { tablerSvg } from '../services/shapeLibrary/tablerSvg';
+export { ICON_PACK_IDS } from '../dsl/iconMatch';
 // The wireframe vocabulary, so discovery lists what the renderer draws.
 export { WIDGET_KINDS } from '../opencanvas/domain/nodes/widgetNodePresentation';
 export { FRAME_PRESETS } from '../opencanvas/domain/nodes/framePreset';

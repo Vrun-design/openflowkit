@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -113,5 +113,16 @@ describe('openflowkit CLI', () => {
     const views = await readFile(join(outDir, 'views', 'view-landscape.svg'), 'utf8');
     expect(views).toContain('<svg');
     expect(views).toContain('data-node-id=');
+  });
+
+  it('draws icon art in the built views, the way the editor does', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'openflowkit-cli-icons-'));
+    tempDirs.push(root);
+    await writeFile(join(root, 'architecture.ofk'), 'architecture\n  API [aws/lambda] -> Orders [postgres]\n', 'utf8');
+    const outDir = join(root, 'site');
+    expect(await main(['build', root, '--out', outDir], capture().io)).toBe(0);
+    const [view] = await readdir(join(outDir, 'views'));
+    const svg = await readFile(join(outDir, 'views', view!), 'utf8');
+    expect(svg.match(/<image href="data:image\/svg\+xml/g)?.length).toBe(2);
   });
 });

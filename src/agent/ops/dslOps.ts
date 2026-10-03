@@ -11,10 +11,18 @@ import { dslFrameMeta } from '../../dsl/sceneMeta';
 import type { CompileResult, CompileWorkspaceResult } from '../../dsl/compile';
 import type { Point2d } from '../../opencanvas/domain/geometry/types';
 import type { SceneDocumentV1 } from '../../opencanvas/domain/document/types';
+import { readAgentSource, type AgentSource } from '../lint';
 import { defineOp, pointOf, pointSchema, requireFrame, requirePage } from './types';
 
-const DSL_HELP = 'OpenFlow DSL source. Call get_syntax when unsure. A node whose label or tech: names a technology '
-  + '(Postgres, React, S3) gets its icon automatically; `icon: none` opts one node out, `icons: off` the diagram.';
+const DSL_HELP = 'OpenFlow DSL source, or Mermaid (flowchart, sequenceDiagram, stateDiagram, classDiagram, erDiagram, '
+  + 'mindmap, architecture, gitGraph), which converts first and comes back as `mermaid.dsl`. Call get_syntax when unsure. '
+  + 'A node whose label or tech: names a technology (Postgres, React, S3) gets its icon automatically; '
+  + '`icon: none` opts one node out, `icons: off` the diagram.';
+
+/** What a Mermaid input became, so the agent can keep editing in DSL. */
+function mermaidOutput(source: AgentSource) {
+  return source.mermaidLosses ? { mermaid: { dsl: source.dsl, losses: source.mermaidLosses } } : {};
+}
 
 function diagramOutput(pageId: string, frameId: string, compiled: CompileResult) {
   return {
@@ -66,8 +74,9 @@ export const createDiagram = defineOp({
   }),
   async run({ dsl, pageId, at, palette }, context) {
     const page = requirePage(context.document, pageId ?? context.pageId);
+    const source = readAgentSource(dsl);
     const origin: Point2d = at ? pointOf(at) : nextDslFrameOrigin(page);
-    const workspace = await context.capabilities.compileWorkspace(dsl, {
+    const workspace = await context.capabilities.compileWorkspace(source.dsl, {
       origin,
       ...(palette ? { appearance: { palette } } : {}),
     });
@@ -75,7 +84,7 @@ export const createDiagram = defineOp({
     const compiled = workspace.views[0]!.result;
     return {
       command: buildDslPageCommand(page, compiled),
-      output: { ...diagramOutput(page.id, compiled.frame.id, compiled), views: [] },
+      output: { ...diagramOutput(page.id, compiled.frame.id, compiled), views: [], ...mermaidOutput(source) },
     };
   },
 });
@@ -92,7 +101,8 @@ export const updateDiagram = defineOp({
   async run({ frameId, dsl, palette }, context) {
     const page = requirePage(context.document, context.pageId);
     const frame = requireFrame(page, frameId);
-    const workspace = await context.capabilities.compileWorkspace(dsl, {
+    const source = readAgentSource(dsl);
+    const workspace = await context.capabilities.compileWorkspace(source.dsl, {
       origin: frame.transform.translation,
       ...(palette ? { appearance: { palette } } : {}),
     });
@@ -100,7 +110,7 @@ export const updateDiagram = defineOp({
     const compiled = workspace.views[0]!.result;
     return {
       command: buildDslPageCommand(page, compiled, frameId),
-      output: { ...diagramOutput(page.id, frameId, compiled), views: [] },
+      output: { ...diagramOutput(page.id, frameId, compiled), views: [], ...mermaidOutput(source) },
     };
   },
 });

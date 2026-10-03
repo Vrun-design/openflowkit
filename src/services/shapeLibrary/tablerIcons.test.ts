@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { TABLER_ICON_NAMES, tablerSvg } from './tablerIcons';
+import { TABLER_ICON_NAMES } from './tablerIcons';
+import { tablerSvg } from './tablerSvg';
 
 describe('tabler icons', () => {
   it('lists the installed outline icons', () => {

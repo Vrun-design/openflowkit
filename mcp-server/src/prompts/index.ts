@@ -12,7 +12,7 @@ export function registerPrompts(server: McpServer): void {
     {
       title: 'Create a flowchart from a description',
       description:
-        'Guides the assistant to write OpenFlow DSL itself, validate it, and create a viewer URL.',
+        'Guides the assistant to write OpenFlow DSL itself, validate it, and draw it.',
       argsSchema: {
         description: z
           .string()
@@ -37,31 +37,6 @@ export function registerPrompts(server: McpServer): void {
   );
 
   server.registerPrompt(
-    'convert_mermaid_to_openflow',
-    {
-      title: 'Convert a Mermaid diagram to OpenFlow DSL',
-      description: 'Guides the assistant to convert Mermaid to OpenFlow DSL itself and validate it.',
-      argsSchema: {
-        mermaidSource: z.string().describe('The Mermaid diagram to convert.'),
-      },
-    },
-    ({ mermaidSource }) => ({
-      messages: [
-        {
-          role: 'user' as const,
-          content: {
-            type: 'text' as const,
-            text:
-              `Read \`openflowkit://docs/grammar\`, then convert this Mermaid source into OpenFlow DSL yourself.\n\n` +
-              `Mermaid source:\n\`\`\`mermaid\n${mermaidSource}\n\`\`\`\n\n` +
-              `Preserve direction, node labels, edge labels, and edge emphasis where possible. Call \`validate_openflow_dsl\`, fix any errors, then draw it with \`create_diagram\`. Return the final DSL and lint status.`,
-          },
-        },
-      ],
-    })
-  );
-
-  server.registerPrompt(
     'architecture_from_codebase',
     {
       title: 'Draft an architecture diagram from a local codebase',
@@ -79,7 +54,7 @@ export function registerPrompts(server: McpServer): void {
             text:
               `Call \`analyze_codebase\` on rootPath=\`${rootPath}\`, then read \`openflowkit://docs/grammar\`.\n\n` +
               `Write an OpenFlow DSL architecture diagram yourself from the scan. Use \`search_icons\` before assigning architecture icon slugs. Call \`validate_openflow_dsl\`, fix any errors, then draw it with \`create_diagram\`.\n\n` +
-              `Return the final DSL, lint status, viewer URL, and a short architecture summary.`,
+              `Return the final DSL, lint status, and a short architecture summary.`,
           },
         },
       ],

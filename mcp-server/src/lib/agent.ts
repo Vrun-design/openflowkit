@@ -87,6 +87,7 @@ export interface DslLintReport {
   readonly statements: number;
   readonly lines: number;
   readonly diagnostics: readonly { readonly code: string; readonly severity: string; readonly line: number; readonly col: number; readonly message: string }[];
+  readonly mermaid?: { readonly dsl: string; readonly losses: readonly { readonly line: number; readonly message: string }[] };
 }
 
 /** A compiled scene node, as much of it as headless consumers read. */
@@ -147,10 +148,12 @@ export interface SvgExportOptions {
   readonly padding?: number;
   readonly pixelRatio?: number;
   readonly transparent?: boolean;
+  readonly iconArt?: Readonly<Record<string, string>>;
 }
 
 export interface OpCapabilities {
   readonly compile: (text: string, options?: unknown) => Promise<unknown>;
+  readonly compileWorkspace: (text: string, options?: unknown) => Promise<unknown>;
   readonly syntax: (family?: string) => string | Promise<string>;
   readonly searchIcons: (query: string, limit: number) => Promise<readonly IconMatch[]>;
   readonly exportFiles?: (request: unknown) => Promise<readonly ExportedFile[]>;
@@ -167,6 +170,7 @@ interface AgentBundle {
     grammar: string;
     icons?: readonly IconMatch[];
     resolveIcon?: (id: string) => { packId: string; shapeId: string } | null;
+    loadIcon?: (packId: string, shapeId: string) => Promise<string | null>;
   }): OpCapabilities;
   grammarSection(grammar: string, family?: string): string;
   lintDsl(source: string): DslLintReport;
@@ -177,6 +181,9 @@ interface AgentBundle {
   architectureWorkspaceText(model: unknown): string;
   archModelFromJson(value: unknown): unknown;
   exportCanonicalSvg(document: SvgExportDocument, options?: SvgExportOptions): string;
+  collectIconArt(document: SvgExportDocument, load: (packId: string, shapeId: string) => Promise<string | null>): Promise<Record<string, string>>;
+  tablerSvg(nodes: readonly (readonly [string, Readonly<Record<string, string>>])[]): string;
+  readonly ICON_PACK_IDS: Readonly<Record<string, string>>;
   readonly BRIDGE_PROTOCOL_VERSION: number;
   readonly BRIDGE_DEFAULT_PORT: number;
   readonly BRIDGE_POLL_SECONDS: number;
@@ -193,6 +200,7 @@ export const {
   AGENT_OPS, findAgentOp, runAgentOp, createFileCapabilities, grammarSection, lintDsl,
   createAgentDocument, parseAgentDocument,
   compileWorkspace, deterministicLayout, architectureWorkspaceText, archModelFromJson, exportCanonicalSvg,
+  collectIconArt, tablerSvg, ICON_PACK_IDS,
   BRIDGE_PROTOCOL_VERSION, BRIDGE_DEFAULT_PORT, BRIDGE_POLL_SECONDS, BRIDGE_IDLE_MS,
   bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeRequest, WIDGET_KINDS, FRAME_PRESETS,
 } = bundle as unknown as AgentBundle;

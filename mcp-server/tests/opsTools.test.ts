@@ -154,3 +154,45 @@ describe('op tools', () => {
     expect(status).toMatchObject({ mode: 'live-editor', editor: { documentId: 'live-doc' } });
   });
 });
+
+describe('Mermaid in', () => {
+  it('create_diagram takes Mermaid, returns the DSL it became, and get_diagram reads that DSL back', async () => {
+    const target = await client();
+    const { id: documentId } = await call(target, 'openflow_create', { name: 'Mermaid doc' });
+    const diagram = await run(target, 'create_diagram', {
+      documentId, dsl: '```mermaid\nflowchart LR\n  A[Client] -->|HTTPS| B(API)\n  B --> C[(Postgres)]\n```',
+    });
+    expect(diagram).toMatchObject({ nodes: 3, connectors: 2, mermaid: { losses: [] } });
+    const read = await run(target, 'get_diagram', { documentId });
+    expect(read.dsl).toBe((diagram.mermaid as { dsl: string }).dsl);
+  });
+
+  it('validate_openflow_dsl answers Mermaid with its Mermaid line, and names what converts', async () => {
+    const target = await client();
+    const broken = await call(target, 'validate_openflow_dsl', { dsl: 'flowchart TD\n  A --> B\n  A[Start --> C' });
+    expect(broken.mermaid).toMatchObject({ losses: [{ line: 3 }] });
+    const gantt = await call(target, 'validate_openflow_dsl', { dsl: 'gantt\n  title Plan' });
+    expect(gantt).toMatchObject({ ok: false, diagnostics: [{ code: 'E003', message: expect.stringMatching(/Convertible: flowchart/) }] });
+    const { id: documentId } = await call(target, 'openflow_create', { name: 'Pie' });
+    await expect(call(target, 'create_diagram', { documentId, dsl: 'pie\n  "a" : 1' })).rejects.toThrow(/"pie" cannot be converted/);
+  });
+
+  it('no longer ships the convert-Mermaid prompt', async () => {
+    const { prompts } = await (await client()).listPrompts();
+    expect(prompts.map(({ name }) => name)).toEqual(['flowchart_from_description', 'architecture_from_codebase']);
+  });
+});
+
+describe('icon art in file mode', () => {
+  it('exports the icons a diagram draws as inline art, explicit and inferred, in SVG and animated SVG', async () => {
+    const target = await client();
+    const { id: documentId } = await call(target, 'openflow_create', { name: 'Icons' });
+    const diagram = await run(target, 'create_diagram', { documentId, dsl: 'architecture\n  API [aws/lambda] -> Orders DB\n  API -> Users [icon: tabler/user]' });
+    expect(diagram.inferredIcons).toEqual([expect.objectContaining({ label: 'Orders DB' })]);
+    for (const format of ['svg', 'svg-animated']) {
+      const exported = await run(target, 'export', { documentId, format, scope: 'page' });
+      const [file] = exported.files as { text: string }[];
+      expect(file!.text.match(/<image href="data:image\/svg\+xml/g)?.length, format).toBe(3);
+    }
+  });
+});
