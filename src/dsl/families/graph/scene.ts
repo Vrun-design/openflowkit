@@ -96,10 +96,12 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     reference: DslReference, parentId: string | null, line: number,
     reservedKind: string | undefined, at: { line: number; col: number; endCol: number }, warnOnMove = false,
   ): NodeDraft => {
-    // Resolve by explicit id, by that id written bare, then by label.
-    const existing = (reference.id ? byExplicitId.get(reference.id) : undefined)
-      ?? byExplicitId.get(reference.label)
-      ?? byName.get(reference.label);
+    // `id = Label` names exactly one node: that id, declared or derived — never another node
+    // that shares the label (`api-2 = API` is the second API). A bare word is an explicit id
+    // written bare, then a label.
+    const existing = reference.id
+      ? byExplicitId.get(reference.id)
+      : byExplicitId.get(reference.label) ?? byName.get(reference.label);
     if (existing) {
       mergeAttributes(existing.entries, canonicalizeAttributes(reference.attributes, diagnostics));
       if (warnOnMove && parentId !== null && existing.parentId !== null && existing.parentId !== parentId) {
@@ -115,7 +117,8 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     };
     nodes.push(draft);
     byExplicitId.set(id, draft);
-    byName.set(reference.label, draft);
+    // A bare label means the first node that carries it.
+    if (!byName.has(reference.label)) byName.set(reference.label, draft);
     return draft;
   };
 

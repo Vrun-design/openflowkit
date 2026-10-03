@@ -59,7 +59,13 @@ export function graphText(scene: DslFrameScene, options: GraphTextOptions = {}):
     if (tail !== 'none' && tail !== 'arrow') extra.push({ key: 'tail', value: tail });
     return connectorAttrs(connector, extra);
   };
-  const nameOf = (node: SceneNode): string => options.nodeRef?.(node) ?? nodeName(node);
+  // Two nodes may share a label (`API`, `api-2 = API`); then each is declared with its id
+  // and edges name it by that id, so a re-read can never fold one into the other.
+  const labelCount = new Map<string, number>();
+  for (const node of nodes) labelCount.set(nodeReference(node), (labelCount.get(nodeReference(node)) ?? 0) + 1);
+  const shared = (node: SceneNode) => nodes.includes(node) && (labelCount.get(nodeReference(node)) ?? 0) > 1;
+  const declared = (node: SceneNode) => shared(node) ? `${node.id} = ${quote(nodeReference(node))}` : nodeName(node);
+  const nameOf = (node: SceneNode): string => options.nodeRef?.(node) ?? (shared(node) ? node.id : nodeName(node));
   const edgeLine = (connector: SceneConnector): string | undefined => {
     const source = connector.source.nodeId ? byId.get(connector.source.nodeId) : undefined;
     const target = connector.target.nodeId ? byId.get(connector.target.nodeId) : undefined;
@@ -84,7 +90,7 @@ export function graphText(scene: DslFrameScene, options: GraphTextOptions = {}):
 
   const emitNode = (node: SceneNode, indent: string) => {
     lines.push(...commentLines(dslNodeMeta(node).comments, indent));
-    lines.push(`${indent}${nodeName(node)}${attributeText(nodeAttributes(node, swatchOf))}`);
+    lines.push(`${indent}${declared(node)}${attributeText(nodeAttributes(node, swatchOf))}`);
   };
   const edges = scene.connectors
     .map((connector) => ({ connector, line: edgeLine(connector), depth: deepestCommon(connector.source.nodeId ?? '', connector.target.nodeId ?? '') }))
@@ -111,7 +117,7 @@ export function graphText(scene: DslFrameScene, options: GraphTextOptions = {}):
   for (const node of nodes.filter((node) => node.parentId === frame.id).sort(compareNodes)) {
     if (options.nodeRef?.(node)) continue;
     const hasAttributes = nodeAttributes(node, swatchOf).length > 0;
-    const needsName = dslNodeMeta(node).name !== undefined || slugifyDslId(nodeReference(node)) !== node.id;
+    const needsName = dslNodeMeta(node).name !== undefined || slugifyDslId(nodeReference(node)) !== node.id || shared(node);
     if (hasAttributes || needsName || !connected.has(node.id)) emitNode(node, '');
   }
   for (const group of groups.filter((group) => group.parentId === frame.id).sort(compareNodes)) emitGroup(group, '');

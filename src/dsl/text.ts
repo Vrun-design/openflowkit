@@ -12,6 +12,8 @@ const RESERVED_LABELS = new Set([
   'chart', 'sankey', 'journey', 'timeline', 'model', 'views', 'view', 'flow', 'step', 'participant',
   'activate', 'deactivate', 'loop', 'alt', 'else', 'opt', 'par', 'and', 'break', 'critical', 'box',
   'commit', 'branch', 'checkout', 'switch', 'merge', 'cherry-pick', 'fork', 'join', 'choice', 'central',
+  // C4 element kinds (§9.1): a bare `queue` line is a declaration keyword, not a node.
+  'person', 'system', 'container', 'component', 'store', 'queue', 'external', 'node', 'instance', 'deployment',
 ]);
 
 export function slugifyDslId(label: string): string {
@@ -20,7 +22,9 @@ export function slugifyDslId(label: string): string {
 
 export function quote(value: string): string {
   // Keywords are case-sensitive lowercase (grammar §2.5), so `Join` needs no quotes.
-  const mustQuote = RESERVED_LABELS.has(value) || /(?:->|-->|<->|<-->|<-|<--|:|=|,|\[|\]|\{|\}|\/\/|;)/.test(value);
+  const mustQuote = RESERVED_LABELS.has(value) || /(?:->|-->|<->|<-->|<-|<--|:|=|,|\[|\]|\{|\}|\/\/|;)/.test(value)
+    // A label that does not open with a letter or digit (`...etc`, `(beta) API`) is not a word to the lexer.
+    || /^[^\p{L}\p{N}_]/u.test(value);
   return mustQuote ? `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"` : value;
 }
 

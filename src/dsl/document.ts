@@ -114,7 +114,8 @@ export function parseDocument(input: string): DslDocument {
   // consumed here so no family parser has to know about them.
   const segments: DslSegment[] = [];
   for (const segment of splitStatements(tokenized.tokens.filter((token) => token.line > consumedThrough))) {
-    const keyword = segment.tokens[0]?.kind === 'comment' ? undefined : segment.tokens[0]?.value;
+    // Only a bare word is a directive; `"title"` is a node called title (grammar §2.4).
+    const keyword = segment.tokens[0]?.kind === 'word' ? segment.tokens[0].value : undefined;
     // `icons` is a common word, so only `icons:` is the directive.
     const directive = keyword === 'icons' ? segment.tokens[1]?.value === ':' : keyword === 'title' || keyword === 'direction' || keyword === 'appearance';
     if (!directive) {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { serialize } from './serialize';
 import { compile, hashDslScene, slugifyDslId } from './compile';
 
 describe('compile presentation mapping', () => {
@@ -120,6 +121,38 @@ describe('compile graph structure', () => {
     expect(result.nodes.map((node) => node.id)).toEqual(['api', 'db']);
     expect(result.nodes[0]?.content.label).toBe('API Gateway');
     expect(result.connectors[0]).toMatchObject({ source: { nodeId: 'api' }, target: { nodeId: 'db' } });
+  });
+
+  it('an explicit id is a new node even when its label is taken (two nodes called API)', async () => {
+    const result = await compile('flowchart\ngroup A {\n  API\n}\ngroup B {\n  api-2 = API\n}\nAPI -> api-2\nAPI -> Client');
+    expect(result.nodes.slice(0, 2).map((node) => [node.id, node.content.label, node.parentId])).toEqual([['api', 'API', 'a'], ['api-2', 'API', 'b']]);
+    expect(result.diagnostics.filter((item) => item.code === 'W121')).toEqual([]);
+    expect(result.connectors.map((connector) => connector.source.nodeId)).toEqual(['api', 'api']);
+    const again = await compile(serialize({ frame: result.frame, nodes: result.nodes, groups: result.groups, connectors: result.connectors }));
+    expect(again.nodes.map((node) => [node.id, node.content.label])).toEqual(result.nodes.map((node) => [node.id, node.content.label]));
+  });
+
+  it.each([
+    'flowchart\nAPI -> DB\ngateway = API [blue]',
+    'flowchart\ngw = API\napi = API\ngw -> api',
+    'flowchart\nAPI -> DB\nAPI = API [blue]',
+  ])('shared labels survive serialize → compile: %s', async (source) => {
+    const first = await compile(source);
+    const shape = (result: typeof first) => [
+      result.nodes.map((node) => `${node.id}:${String(node.content.label)}`).sort(),
+      result.connectors.map((connector) => `${connector.source.nodeId}->${connector.target.nodeId}`).sort(),
+    ];
+    const again = await compile(serialize({ frame: first.frame, nodes: first.nodes, groups: first.groups, connectors: first.connectors }));
+    expect(shape(again)).toEqual(shape(first));
+  });
+
+  it('labels that read as keywords or punctuation (queue, ...etc) survive serialize → compile', async () => {
+    const result = await compile('flowchart\n"queue" [queue]\n"person" [person]\n"system"\n"...etc" -> "(beta) API"\n"title" [blue]\n"direction" -> "group"');
+    expect(result.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    const text = serialize({ frame: result.frame, nodes: result.nodes, groups: result.groups, connectors: result.connectors });
+    const again = await compile(text);
+    expect(again.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    expect(again.nodes.map((node) => node.content.label).sort()).toEqual(['queue', 'person', 'system', '...etc', '(beta) API', 'title', 'direction', 'group'].sort());
   });
 
   it('warns when a repeated declaration tries to move a node between groups', async () => {

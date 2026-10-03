@@ -154,7 +154,8 @@ export function parseGraphStatements(segments: readonly DslSegment[], diagnostic
     if (segment.tokens.length === 0) continue;
     const firstToken = segment.tokens[0]!;
     const lastToken = segment.tokens.at(-1)!;
-    const keyword = firstToken.value;
+    // A quoted first word is a label, never a keyword (grammar §2.4: quoting is the escape).
+    const keyword = firstToken.kind === 'word' ? firstToken.value : '';
     const edge = parseEdge(segment.tokens, diagnostics);
     let statement: DslStatement | undefined;
     if (edge) {
