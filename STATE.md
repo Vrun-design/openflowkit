@@ -20,10 +20,8 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - MCP 0.2.0 was never published; `npx @vrun-design/openflowkit-mcp` still serves 0.1.2 until it is.
 
 ## Found, not fixed (owner calls)
-- `legacyWorkspace`: a stale copy may resurrect a deleted v1 doc (owner may veto).
-- Mermaid ids differing only in case (`A`, `a`) slug to one id and merge, silently (pre-existing; rare).
-- Fixed 2026-10-03: edges end on groups (grammar §4, D2/Mermaid containers), quoted `\n` keeps its line
-  break, BYOK defaults `claude-opus-5-5` / `gpt-6.1-sol`.
+- None. Fixed 2026-10-03: edges end on groups (grammar §4), quoted `\n` keeps its break, BYOK ids,
+  Mermaid `A`/`a` stay two nodes, v1 import lists only what v1 showed (stray copies go to the backup).
 
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.

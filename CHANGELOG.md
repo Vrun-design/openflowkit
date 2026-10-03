@@ -54,6 +54,10 @@ This project follows [Semantic Versioning](https://semver.org/).
   theme tags as icons.
 - Icon ids: `tech/react` (in the docs) resolves, and `developer/react` no longer picks Preact.
 - A quoted `\n` in a label stays a line break; it was flattened to a space on every re-read.
+- Mermaid ids that differ only in case (`A`, `a`) stay two nodes; they merged into one.
+- The v1 import lists exactly what v1 showed: an old localStorage or pre-March copy of a diagram
+  deleted in v1 no longer comes back (it stays in the v1 backup download). The backup also reads
+  the localStorage copies when IndexedDB will not open.
 
 ### Removed
 
