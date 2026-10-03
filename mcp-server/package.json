@@ -50,7 +50,8 @@
     "pretest:run": "npm run build:icons && npm run build:agent",
     "prelint": "npm run build:agent",
     "eval:agent": "npm run build:agent && vitest --config vitest.config.ts --run evals",
-    "build:grammar": "node scripts/build-grammar-doc.mjs"
+    "build:grammar": "node scripts/build-grammar-doc.mjs",
+    "eval:validity": "npm run build:icons && npm run build:agent && tsx evals/validity/run.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
