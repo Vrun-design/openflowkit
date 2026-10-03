@@ -157,11 +157,16 @@ export function layoutNodeContent(
   const textGap = subLabelSize ? Math.min(4, layout.gap) : 0;
   const textWidth = Math.max(labelSize.width, subLabelSize?.width ?? 0);
   const textHeight = labelSize.height + textGap + (subLabelSize?.height ?? 0);
-  const scaledIcon = metrics.iconSize
+  const requestedIcon = metrics.iconSize
     ? {
         width: metrics.iconSize.width * layout.iconScale,
         height: metrics.iconSize.height * layout.iconScale,
       }
+    : null;
+  // An icon that cannot fit inside the node at all (a v1 state-diagram dot, a node shrunk
+  // below the icon) is dropped rather than painted outside it.
+  const scaledIcon = requestedIcon && requestedIcon.width <= nodeSize.width && requestedIcon.height <= nodeSize.height
+    ? requestedIcon
     : null;
 
   let groupWidth = textWidth;

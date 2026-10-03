@@ -11,6 +11,14 @@ interface PixiMediaLoadRequest {
   readonly resolveUrl: () => Promise<string | null>;
 }
 
+/**
+ * Pixi's asset resolver brace-expands `{a,b}` in URLs, so a data-URL SVG coloured by
+ * CSS (`.cls-1{fill:…}`) loses its braces and paints black. Escape them first.
+ */
+export function pixiAssetUrl(url: string): string {
+  return url.startsWith('data:') ? url.replace(/[{}]/g, (brace) => encodeURIComponent(brace)) : url;
+}
+
 export class PixiMediaLayer {
   readonly container = new Container();
   private generation = 0;
@@ -36,7 +44,7 @@ export class PixiMediaLayer {
     try {
       const url = await request.resolveUrl();
       if (!url || request.generation !== this.generation) return;
-      const texture = await Assets.load<Texture>(url);
+      const texture = await Assets.load<Texture>(pixiAssetUrl(url));
       if (request.generation !== this.generation) return;
       const container = new Container();
       applyPixiNodeMatrix(container, request.matrix);

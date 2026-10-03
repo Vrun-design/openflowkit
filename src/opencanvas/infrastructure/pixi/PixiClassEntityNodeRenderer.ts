@@ -177,7 +177,7 @@ export class PixiClassEntityNodeRenderer {
     graphics.fill({ color: visual.fill }).stroke({ color: visual.stroke, width: 1.5 });
     drawPixiLocalRect(
       graphics,
-      createBounds2d(1, 1, node.size.width - 2, HEADER_HEIGHT - 1),
+      createBounds2d(1, 1, Math.max(0, node.size.width - 2), HEADER_HEIGHT - 1),
       matrix,
       11
     );

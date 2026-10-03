@@ -96,7 +96,7 @@ export class PixiArchitectureNodeRenderer {
       drawPixiNodeOutline(graphics, 'rounded', node.size, matrix, undefined, style.cornerRadius);
       graphics.fill(fill);
       if (style.strokeWidth > 0) graphics.stroke({ ...stroke, width: style.strokeWidth });
-      drawPixiLocalRect(graphics, createBounds2d(10, 8, node.size.width - 20, 26), matrix, 7);
+      drawPixiLocalRect(graphics, createBounds2d(10, 8, Math.max(0, node.size.width - 20), 26), matrix, 7);
       graphics.fill({ color: visual.iconFill });
       return;
     }

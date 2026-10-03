@@ -1,9 +1,38 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { serializeCanonicalJson } from '../../../opencanvas/infrastructure/export/canonicalJson';
 import { createEmptyV2Document } from '../../../opencanvas/presentation/v2/v2Document';
 import { documentFromFileText } from './openDocumentFile';
 
+type V1Page = { diagramType?: string; nodes: unknown[]; edges: unknown[] };
+const fixture = (name: string) => JSON.parse(readFileSync(`src/services/storage/v2/__fixtures__/v1/${name}`, 'utf8'));
+
+// Every page phase 12.0 captured from a real v1 (main and the last pre-March build).
+function capturedV1Pages(): V1Page[] {
+  type Doc = { pages: { diagramType?: string; content: V1Page }[] };
+  const fromDocs = (docs: Doc[]) => docs.flatMap((doc) => doc.pages.map((page) => ({ ...page.content, diagramType: page.diagramType })));
+  const premarch = fixture('premarch-tabs.json').indexedDb.flowMetadata.find((row: { id: string }) => row.id === 'openflowkit-storage');
+  return [
+    ...fromDocs(fixture('indexeddb.json').indexedDb.documents),
+    ...fromDocs(JSON.parse(fixture('localstorage-fallback.json').localStorage['openflowkit-documents-fallback'])),
+    ...JSON.parse(premarch.value).state.tabs,
+  ];
+}
+
 describe('documentFromFileText', () => {
+  it('opens every captured v1 page with every node and connector, each node sized', () => {
+    const pages = capturedV1Pages();
+    expect(pages.length).toBeGreaterThan(30);
+    for (const page of pages) {
+      const opened = documentFromFileText(JSON.stringify(page), 'doc-v1');
+      if (!('document' in opened)) throw new Error(opened.error);
+      const [projected] = opened.document.pages;
+      expect(projected.nodes).toHaveLength(page.nodes.length);
+      expect(projected.connectors).toHaveLength(page.edges.length);
+      expect(projected.nodes.filter((node) => !(node.size.width > 0 && node.size.height > 0)).map((node) => node.kind)).toEqual([]);
+    }
+  });
+
   it('opens our own JSON export under a fresh id', () => {
     const exported = serializeCanonicalJson({ ...createEmptyV2Document('doc-old', 'Shipped'), updatedAt: '2020-01-01T00:00:00.000Z' });
     const opened = documentFromFileText(exported, 'doc-new', '2026-09-22T00:00:00.000Z');

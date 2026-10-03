@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_NODE_CONTENT_LAYOUT, layoutNodeContent, validateNodeContentLayout } from './model';
 
 describe('node content layout model', () => {
+  it('drops an icon larger than the node instead of drawing it outside', () => {
+    const metrics = { iconSize: { width: 28, height: 28 }, labelSize: { width: 0, height: 0 }, subLabelSize: null };
+    const dot = layoutNodeContent(DEFAULT_NODE_CONTENT_LAYOUT, { ...metrics, nodeSize: { width: 20, height: 20 } });
+    const start = layoutNodeContent(DEFAULT_NODE_CONTENT_LAYOUT, { ...metrics, nodeSize: { width: 140, height: 56 } });
+
+    expect(dot.iconBounds).toBeNull();
+    expect(start.iconBounds).not.toBeNull();
+  });
+
   it('preserves legacy top-centered defaults when field is absent', () => {
     expect(validateNodeContentLayout(undefined)).toEqual({
       success: true,

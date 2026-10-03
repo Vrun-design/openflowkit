@@ -62,11 +62,16 @@ function nodeSize(
   resolve: LegacyProjectionOptions['resolveNodeSize']
 ): Size2d {
   const style = isJsonObject(node.style) ? node.style : {};
+  // React Flow 12 keeps the DOM-measured size in `measured`; v1 saves most nodes with no other.
+  const measured = isJsonObject(node.measured) ? node.measured : {};
   const stated = createSize2d(
-    nonNegativeNumber(node.width, nonNegativeNumber(style.width, nonNegativeNumber(data.width, 0))),
+    nonNegativeNumber(
+      node.width,
+      nonNegativeNumber(style.width, nonNegativeNumber(data.width, nonNegativeNumber(measured.width, 0)))
+    ),
     nonNegativeNumber(
       node.height,
-      nonNegativeNumber(style.height, nonNegativeNumber(data.height, 0))
+      nonNegativeNumber(style.height, nonNegativeNumber(data.height, nonNegativeNumber(measured.height, 0)))
     )
   );
   if ((stated.width > 0 && stated.height > 0) || !resolve) return stated;
@@ -78,12 +83,24 @@ function nodeSize(
   );
 }
 
+// v1 paints nodes through `data.color`. Its state-diagram dot is the one node drawn by
+// inline style; other inline fills (Mermaid `classDef`) sat hidden behind the node body.
+function nodeAppearance(node: JsonObject): JsonObject {
+  const style = isJsonObject(node.style) ? node.style : {};
+  return style.borderRadius === '50%' && typeof style.backgroundColor === 'string'
+    ? { fill: style.backgroundColor }
+    : {};
+}
+
 function projectNode(
   value: JsonValue,
   resolveNodeSize: LegacyProjectionOptions['resolveNodeSize']
 ): SceneNode {
   const node = requireRecord(value, 'Legacy node');
-  const data = isJsonObject(node.data) ? cloneJsonValue(node.data) : {};
+  const raw = isJsonObject(node.data) ? cloneJsonValue(node.data) : {};
+  // v1 drew every `architecture` node as a card; only v2 reads this flag as "icon only".
+  const { assetPresentation: _iconOnly, ...card } = raw;
+  const data = node.type === 'architecture' ? card : raw;
   const position = requireRecord(node.position ?? {}, `Legacy node ${String(node.id)} position`);
   const rotationDegrees = finiteNumber(data.rotation, 0);
   return {
@@ -98,7 +115,7 @@ function projectNode(
     }),
     size: nodeSize(node, data, resolveNodeSize),
     content: data,
-    appearance: {},
+    appearance: nodeAppearance(node),
     ports: [],
     metadata: {},
     extensions: {},
@@ -147,6 +164,9 @@ function connectorAppearance(edge: JsonObject, data: JsonObject): JsonObject {
   }
   if (typeof edge.markerEnd === 'string' || isJsonObject(edge.markerEnd)) {
     appearance.markerEnd = cloneJsonValue(edge.markerEnd);
+  } else if (!('markerEnd' in edge)) {
+    // v1's React Flow merged this default into every edge that stored no marker.
+    appearance.markerEnd = { type: 'arrowclosed' };
   }
   if (typeof edge.animated === 'boolean') appearance.animated = edge.animated;
   return appearance;

@@ -199,10 +199,7 @@ function write(name, value) {
   console.log(`wrote ${OUT}/${name}`);
 }
 
-// HEADED=1: headless Chromium can't measure Mermaid SVG text, so renderer_first imports
-// fall back to a 100×480 box and native imports get ELK positions instead of Mermaid's.
-// Headed capture needs the owner's go.
-const browser = await chromium.launch({ headless: !process.env.HEADED });
+const browser = await chromium.launch();
 const fresh = async (init) => {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await context.addInitScript(() => localStorage.setItem('hasSeenWelcome_v1', 'true'));
@@ -217,8 +214,9 @@ const manifest = {};
 // 1. IndexedDB `documents`: one doc per diagramType, multi-page, image, deleted.
 {
   const { context, page } = await fresh();
-  // v1's default Mermaid mode is renderer_first: most types land as one mermaid_svg
-  // node. Users who switched Settings → Mermaid Import Mode got editable nodes.
+  // v1's default Mermaid mode is renderer_first: most types land as one mermaid_svg node,
+  // sized 100×480 (v1 reads Mermaid's `width="100%"` as 100 px). Users who switched
+  // Settings → Mermaid Import Mode got editable nodes. Headed and headless capture agree.
   for (const mode of ['renderer_first', 'native_editable']) {
     await page.goto(`${V1}/#/home`);
     await page.evaluate(async (mermaidImportMode) => {

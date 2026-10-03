@@ -156,16 +156,12 @@ for (const [index, item] of cases.entries()) {
   const v2Connectors = v2?.v2Doc?.connectors.length ?? 0;
   if (v2 && v2Nodes !== item.nodes.length) fatal.push(`v2 has ${v2Nodes}/${item.nodes.length} nodes`);
   if (v2 && v2Connectors !== item.edges.length) fatal.push(`v2 has ${v2Connectors}/${item.edges.length} connectors`);
-  if (item.nodes.some((n) => n.data?.imageAssetId) && !v2?.assetUrl) problems.push('image asset unreadable (v1 `bytes` Blob, v2 wants `dataUrl`)');
-  // ponytail: v1's fallback box when headless Chromium can't measure the Mermaid SVG —
-  // these rows say nothing about real users until `HEADED=1` capture replaces them.
-  const artifact = item.nodes.some((n) => n.type === 'mermaid_svg' && n.style?.width === 100 && n.style?.height === 480);
-  if (artifact) problems.push('headless capture artifact: mermaid_svg at v1 fallback 100×480; recapture headed');
+  if (item.nodes.some((n) => n.data?.imageAssetId) && !v2?.assetUrl) problems.push('image asset unreadable by v2');
   // A node count can't tell a drawn Mermaid SVG from an empty box: a person must look.
-  const needsEyes = !artifact && item.nodes.some((n) => n.type === 'mermaid_svg');
+  const needsEyes = item.nodes.some((n) => n.type === 'mermaid_svg');
   if (needsEyes) problems.push('mermaid_svg: judge the PNG');
   writeFileSync(`${OUT}/${slug}.png`, await sideBySide(sheet, item.label, v1Png, v2?.png ?? null));
-  const verdict = artifact || (needsEyes && !fatal.length && problems.length === 1) ? 'unknown' : fatal.length ? 'failed' : problems.length ? 'degraded' : 'clean';
+  const verdict = needsEyes && !fatal.length && problems.length === 1 ? 'unknown' : fatal.length ? 'failed' : problems.length ? 'degraded' : 'clean';
   tally[verdict]++;
   const what = [...fatal, ...problems].join('; ');
   rows.push(`| ${index + 1} | ${item.label} | ${item.source} | ${item.nodes.length}/${item.edges.length} | ${v2Nodes}/${v2Connectors} | ${verdict} | ${what} | ${slug}.png |`);

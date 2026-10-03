@@ -1,7 +1,14 @@
-import { isJsonObject } from '../../../opencanvas/domain/document/json';
+import { productionNodeCatalogEntry } from '../../../opencanvas/application/active-document/productionNodeCatalog';
+import { isJsonObject, type JsonObject } from '../../../opencanvas/domain/document/json';
 import { projectLegacyDocument } from '../../../opencanvas/domain/document/legacyProjection';
 import { migrateSceneDocument } from '../../../opencanvas/domain/document/migration';
 import { SCENE_DOCUMENT_FORMAT, type SceneDocumentV1 } from '../../../opencanvas/domain/document/types';
+
+// A v1 node saved with no size at all (pre-March builds): the size v2 inserts that kind at.
+// ponytail: catalog default, not v1's content-fitted DOM size — a long label may overflow.
+function defaultLegacyNodeSize(node: JsonObject) {
+  return (productionNodeCatalogEntry(String(node.type)) ?? productionNodeCatalogEntry('custom'))?.size ?? null;
+}
 
 export type OpenedDocumentFile = { readonly document: SceneDocumentV1 } | { readonly error: string };
 
@@ -30,7 +37,9 @@ export function documentFromFileText(text: string, id: string, now = new Date().
   }
   if (Array.isArray(parsed.nodes) && Array.isArray(parsed.edges)) {
     try {
-      return { document: projectLegacyDocument(parsed, { documentId: id, pageId: `${id}:page-1`, pageName: 'Page 1', now }) };
+      return { document: projectLegacyDocument(parsed, {
+        documentId: id, pageId: `${id}:page-1`, pageName: 'Page 1', now, resolveNodeSize: defaultLegacyNodeSize,
+      }) };
     } catch (error) {
       return { error: error instanceof Error ? error.message : 'Invalid V1 document.' };
     }

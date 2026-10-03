@@ -144,6 +144,24 @@ describe('legacy document projection', () => {
     expect(node.size).toEqual({ width: 0, height: 0 });
   });
 
+  it('sizes a node from React Flow `measured` when it states no size, as v1 saves most nodes', () => {
+    const page = projectLegacyDocument(
+      {
+        nodes: [
+          { id: 'measured', position: { x: 0, y: 0 }, measured: { width: 150, height: 40 }, data: {} },
+          { id: 'stated', position: { x: 0, y: 0 }, style: { width: 90 }, measured: { width: 150, height: 40 }, data: {} },
+        ],
+        edges: [],
+      },
+      { ...options, resolveNodeSize: () => ({ width: 1, height: 1 }) }
+    ).pages[0];
+
+    expect(page.nodes.map((node) => node.size)).toEqual([
+      { width: 150, height: 40 },
+      { width: 90, height: 40 },
+    ]);
+  });
+
   it('preserves every basic node family and its authored presentation data', () => {
     const kinds = ['process', 'start', 'decision', 'end', 'custom'];
     const input = {
@@ -239,6 +257,68 @@ describe('legacy document projection', () => {
       { archProvider: 'aws', archIconShapeId: 'compute-lambda' },
       { assetPresentation: 'icon', iconAssetId: 'sha256:icon' },
     ]);
+    expect(restoreLegacyDocumentSnapshot(document)).toEqual(input);
+  });
+
+  // React Flow merged v1's defaultEdgeOptions into every edge: no stored marker
+  // still drew a closed arrow; an explicit empty marker drew none.
+  it('gives an edge that stores no end marker v1\'s default closed arrow', () => {
+    const page = projectLegacyDocument(
+      {
+        nodes: [
+          { id: 'a', position: { x: 0, y: 0 } },
+          { id: 'b', position: { x: 0, y: 0 } },
+        ],
+        edges: [
+          { id: 'default', source: 'a', target: 'b' },
+          { id: 'none', source: 'a', target: 'b', markerEnd: '' },
+        ],
+      },
+      options
+    ).pages[0];
+
+    expect(page.connectors.map((connector) => connector.appearance.markerEnd)).toEqual([
+      { type: 'arrowclosed' },
+      '',
+    ]);
+  });
+
+  // v1 drew the state-diagram dot as its node's inline style; a Mermaid `classDef` fill
+  // also lands in `style.backgroundColor` but sat hidden behind the node body.
+  it('paints a v1 state-diagram dot with its inline fill and leaves other inline fills alone', () => {
+    const [dot, styled] = projectLegacyDocument(
+      {
+        nodes: [
+          { id: 'start', type: 'start', position: { x: 0, y: 0 }, style: { width: 20, height: 20, borderRadius: '50%', backgroundColor: '#000' }, data: {} },
+          { id: 'step', type: 'process', position: { x: 0, y: 0 }, style: { backgroundColor: 'lightblue' }, data: {} },
+        ],
+        edges: [],
+      },
+      options
+    ).pages[0].nodes;
+
+    expect(dot.appearance).toEqual({ fill: '#000' });
+    expect(styled.appearance).toEqual({});
+  });
+
+  // v1's Mermaid icon enrichment tags architecture nodes `assetPresentation: icon`, but
+  // v1 only ever drew `architecture` nodes as cards; v2 would draw a bare icon.
+  it('keeps a v1 architecture node a card even when v1 tagged it icon-only', () => {
+    const input = {
+      nodes: [
+        {
+          id: 'db',
+          type: 'architecture',
+          position: { x: 0, y: 0 },
+          data: { label: 'Database', archProvider: 'database', assetPresentation: 'icon' },
+        },
+      ],
+      edges: [],
+    };
+    const document = projectLegacyDocument(input, options);
+
+    expect(document.pages[0].nodes[0].content).not.toHaveProperty('assetPresentation');
+    expect(document.pages[0].nodes[0].content).toMatchObject({ label: 'Database', archProvider: 'database' });
     expect(restoreLegacyDocumentSnapshot(document)).toEqual(input);
   });
 

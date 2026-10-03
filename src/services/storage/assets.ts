@@ -30,13 +30,36 @@ export async function putImageAsset(dataUrl: string, name: string, mime: string)
   return id;
 }
 
+/** v1 keeps its images in the same store, as raw bytes. */
+interface V1StoredAsset {
+  readonly id: string;
+  readonly bytes: Blob;
+  readonly mimeType: string;
+}
+
+const v1DataUrls = new Map<string, Promise<string>>();
+
+async function blobToDataUrl(blob: Blob, mime: string): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  for (let start = 0; start < bytes.length; start += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(start, start + 0x8000));
+  }
+  return `data:${blob.type || mime};base64,${btoa(binary)}`;
+}
+
 export async function readAssetUrl(id: string): Promise<string | null> {
   const factory = getIndexedDbFactory();
   if (!factory) return null;
-  return withDatabase(async (database) => {
-    const asset = await getRecord<StoredAsset>(database, ASSETS_STORE_NAME, id);
-    return asset?.dataUrl ?? null;
-  });
+  const asset = await withDatabase((database) =>
+    getRecord<StoredAsset | V1StoredAsset>(database, ASSETS_STORE_NAME, id));
+  if (!asset) return null;
+  if ('dataUrl' in asset) return asset.dataUrl;
+  // The canvas asks again on every redraw; v1 ids are content hashes, so the bytes never change.
+  // ponytail: unbounded, one entry per v1 image ever shown — fine for a person's own diagrams.
+  const cached = v1DataUrls.get(id) ?? blobToDataUrl(asset.bytes, asset.mimeType);
+  v1DataUrls.set(id, cached);
+  return cached;
 }
 
 export function readFileAsDataUrl(file: File): Promise<string> {

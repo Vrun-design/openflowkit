@@ -90,12 +90,16 @@ export class PixiJourneyNodeRenderer {
       { size: 11, weight: '500', fill: visual.subText }
     );
     actor.position.set(12, 76);
+    content.addChild(section, task, actor);
+    // A short card (v1 saved them 95 px tall) has no room under the actor line.
+    const titleY = Math.min(node.size.height - 19, 101);
+    if (titleY < 90) return content;
     const title = createPixiText(
       truncateTextToWidth(visual.presentation.title, node.size.width - 24, 5.7),
       { size: 9, weight: '500', fill: visual.subText }
     );
-    title.position.set(12, Math.min(node.size.height - 19, 101));
-    content.addChild(section, task, actor, title);
+    title.position.set(12, titleY);
+    content.addChild(title);
     return content;
   }
 }
