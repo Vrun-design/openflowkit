@@ -51,6 +51,8 @@ interface LegacyRecord {
   readonly updatedAt: string;
   readonly deleted: boolean;
   readonly pages: readonly JsonValue[];
+  /** The v1 row as stored (a tab already in document shape), for the backup file. */
+  readonly row: JsonObject;
 }
 
 export const legacyDocumentId = (v1Id: string): string => `v1-${v1Id}`;
@@ -79,7 +81,7 @@ function fromPersisted(value: JsonObject, id: string): LegacyRecord {
     ?? '1970-01-01T00:00:00.000Z';
   return {
     id, name: text(value.name) ?? 'Untitled Flow', createdAt: isoDate(value.createdAt) ?? updatedAt, updatedAt,
-    deleted: value.deletedAt !== null && value.deletedAt !== undefined, pages,
+    deleted: value.deletedAt !== null && value.deletedAt !== undefined, pages, row: value,
   };
 }
 
@@ -146,17 +148,8 @@ async function migrateRecord(record: LegacyRecord, options: LegacyWorkspaceOptio
   return document;
 }
 
-/**
- * v1 workspace → v2 documents. One document per v1 document (`v1-<v1Id>`), one
- * page per v1 page. The same id in several sources: newest `updatedAt` wins
- * (a deleted copy too), ties go to the earlier source. One document that
- * throws is reported and never stops the rest.
- */
-export async function migrateLegacyWorkspace(
-  sources: LegacyWorkspaceSources,
-  options: LegacyWorkspaceOptions = {}
-): Promise<LegacyWorkspace> {
-  const failures: LegacyImportFailure[] = [];
+// The newest live copy of every v1 document across the three sources.
+function collectLegacyRecords(sources: LegacyWorkspaceSources, failures: LegacyImportFailure[]): LegacyRecord[] {
   // A row that is not plain JSON is reported, never dropped without a word.
   const rows: JsonObject[] = [];
   for (const row of sources.documents) {
@@ -182,11 +175,29 @@ export async function migrateLegacyWorkspace(
     const held = winners.get(id);
     if (!held || record.updatedAt > held.updatedAt) winners.set(id, record);
   }
+  return [...winners.values()].filter((record) => !record.deleted).sort((a, b) => (a.id < b.id ? -1 : 1));
+}
 
+/** Every live v1 document as v1 stored it (pre-March tabs in document shape), for the 12.1 backup file. */
+export function legacyWorkspaceRows(sources: LegacyWorkspaceSources): readonly JsonObject[] {
+  return collectLegacyRecords(sources, []).map((record) => record.row);
+}
+
+/**
+ * v1 workspace → v2 documents. One document per v1 document (`v1-<v1Id>`), one
+ * page per v1 page. The same id in several sources: newest `updatedAt` wins
+ * (a deleted copy too), ties go to the earlier source. One document that
+ * throws is reported and never stops the rest.
+ */
+export async function migrateLegacyWorkspace(
+  sources: LegacyWorkspaceSources,
+  options: LegacyWorkspaceOptions = {}
+): Promise<LegacyWorkspace> {
+  const failures: LegacyImportFailure[] = [];
   const documents: SceneDocumentV1[] = [];
   const idMap: Record<string, string> = {};
-  for (const record of [...winners.values()].sort((a, b) => (a.id < b.id ? -1 : 1))) {
-    if (record.deleted || options.skip?.(record.id, record.updatedAt)) continue;
+  for (const record of collectLegacyRecords(sources, failures)) {
+    if (options.skip?.(record.id, record.updatedAt)) continue;
     try {
       documents.push(await migrateRecord(record, options));
       idMap[record.id] = legacyDocumentId(record.id);

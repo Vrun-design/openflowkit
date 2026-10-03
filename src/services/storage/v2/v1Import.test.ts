@@ -1,9 +1,11 @@
+// @vitest-environment node
+// Node's Blob survives IndexedDB cloning and has arrayBuffer(); jsdom's does neither.
 import 'fake-indexeddb/auto';
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { putRecord } from '../indexedDbHelpers';
-import { FLOW_PERSISTENCE_DB_NAME, PERSISTED_DOCUMENTS_STORE_NAME, openFlowPersistenceDatabase } from '../indexedDbSchema';
-import { V1_IMPORT_MARKER_KEY, importV1Workspace, readV1ImportMarker } from './v1Import';
+import { ASSETS_STORE_NAME, FLOW_PERSISTENCE_DB_NAME, PERSISTED_DOCUMENTS_STORE_NAME, V2_DOCUMENTS_STORE_NAME, openFlowPersistenceDatabase } from '../indexedDbSchema';
+import { V1_BACKUP_FORMAT, V1_IMPORT_MARKER_KEY, buildV1Backup, importV1Workspace, isV1Backup, openV1Backup, readV1ImportMarker } from './v1Import';
 import { createV2Repository } from './v2Repository';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped v1 fixture JSON
@@ -102,3 +104,40 @@ describe('importV1Workspace', () => {
     expect(await run(storage)).toEqual({ imported: [], failures: [], firstRun: false });
   });
 });
+
+describe('v1 backup file', () => {
+  const imageRow = (fixture.documents as Json[]).find((row) => manifest[row.id] === 'image')!;
+  const asset = fixture.assets[0] as Json;
+
+  it('writes the 12.1 format read-only: live documents, no undo history, images inline', async () => {
+    const database = await openFlowPersistenceDatabase(indexedDB);
+    const bytes = await (await fetch(asset.bytes.$blob)).blob();
+    await putRecord(database, ASSETS_STORE_NAME, { ...asset, bytes });
+    const withHistory = { ...imageRow, pages: imageRow.pages.map((page: Json) => ({ ...page, content: { ...page.content, history: { past: [1], future: [] } } })) };
+    await putRecord(database, PERSISTED_DOCUMENTS_STORE_NAME, withHistory);
+    database.close();
+
+    const backup = await buildV1Backup(indexedDB, memoryStorage(), new Date('2026-10-03T00:00:00.000Z'));
+    expect(isV1Backup(backup)).toBe(true);
+    expect([backup.format, backup.version, backup.exportedAt]).toEqual([V1_BACKUP_FORMAT, 1, '2026-10-03T00:00:00.000Z']);
+    expect(backup.documents.map((row) => row.id).sort()).toEqual([...rows.map((row) => row.id), imageRow.id].sort());
+    const page = (backup.documents.find((row) => row.id === imageRow.id)!.pages as Json[])[0]!;
+    expect(page.content.history).toBeUndefined();
+    const image = (page.content.nodes as Json[]).find((node) => node.type === 'image')!;
+    expect(image.data.imageAssetId).toBeUndefined();
+    expect(image.data.imageUrl).toMatch(/^data:image\//);
+  });
+
+  it('opens a backup as one document per diagram; opening it again adds nothing', async () => {
+    const backup = JSON.parse(JSON.stringify(await buildV1Backup(indexedDB, memoryStorage())));
+    const database = await openFlowPersistenceDatabase(indexedDB);
+    database.transaction(V2_DOCUMENTS_STORE_NAME, 'readwrite').objectStore(V2_DOCUMENTS_STORE_NAME).clear();
+    database.close();
+    const repository = createV2Repository(indexedDB);
+    const first = await openV1Backup(backup, repository);
+    expect([...first.opened].sort()).toEqual(rows.map(v2Id).sort());
+    expect(first.failures).toEqual([]);
+    expect(await openV1Backup(backup, repository)).toEqual({ opened: [], existing: rows.length, failures: [] });
+  });
+});
+

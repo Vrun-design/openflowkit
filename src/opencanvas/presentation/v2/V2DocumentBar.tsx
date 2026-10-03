@@ -11,6 +11,7 @@ import {
   IconDownload,
   IconFileImport,
   IconFiles,
+  IconArchive,
   IconLoader2,
   IconLock,
   IconPlugConnected,
@@ -19,6 +20,9 @@ import { useNavigate } from 'react-router-dom';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { createV2Repository } from '../../../services/storage/v2/v2Repository';
 import { documentFromFileText } from '../../../services/storage/v2/openDocumentFile';
+import { buildV1Backup, isV1Backup, openV1Backup, readV1ImportMarker } from '../../../services/storage/v2/v1Import';
+import { downloadTextFile } from './v2Export';
+import type { HomeNotice } from './V2LegacyRoutes';
 import { mintV2Id } from './v2Document';
 import {
   Button,
@@ -127,7 +131,19 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const openFile = async (file: File): Promise<void> => {
-    const opened = documentFromFileText(await file.text(), mintV2Id('doc'));
+    const text = await file.text();
+    let parsed: unknown = null;
+    try { parsed = JSON.parse(text); } catch { /* documentFromFileText reports it */ }
+    if (isV1Backup(parsed)) {
+      // 12.1's "Export all my diagrams" file: every diagram in it, then the list.
+      const { opened, existing, failures } = await openV1Backup(parsed, createV2Repository(window.indexedDB));
+      const parts = [`Opened ${opened.length} ${opened.length === 1 ? 'diagram' : 'diagrams'} from the backup.`];
+      if (existing) parts.push(`${existing} ${existing === 1 ? 'was' : 'were'} already here and kept as is.`);
+      if (failures.length) parts.push(`${failures.length} could not be opened: ${failures.map((failure) => failure.name).join(', ')}.`);
+      navigate('/home', { state: { notice: parts.join(' ') } satisfies HomeNotice });
+      return;
+    }
+    const opened = documentFromFileText(text, mintV2Id('doc'));
     if ('error' in opened) {
       toast(opened.error, 'danger');
       return;
@@ -138,6 +154,14 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
       return;
     }
     navigate(`/d/${opened.document.id}`);
+  };
+
+  const hasV1Diagrams = Object.keys(readV1ImportMarker()?.docs ?? {}).length > 0;
+  const downloadV1Backup = async (): Promise<void> => {
+    toast('Preparing the v1 backup…', 'info');
+    const backup = await buildV1Backup(window.indexedDB, localStorage);
+    // ponytail: built and serialised on the main thread like the boot import; a worker if backups grow large.
+    downloadTextFile(`openflowkit-backup-${backup.exportedAt.slice(0, 10)}.json`, JSON.stringify(backup), 'application/json');
   };
 
   return (
@@ -226,6 +250,13 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
         <MenuItem icon={<Icon icon={IconSettings} />} onSelect={() => openPanel('settings')}>Settings</MenuItem>
         <MenuItem icon={<Icon icon={IconFileImport} />} onSelect={() => fileRef.current?.click()}>Open file…</MenuItem>
         <MenuItem icon={<Icon icon={IconDownload} />} onSelect={() => { setPanel(null); props.onOpenExport(settingsRef.current); }}>Export…</MenuItem>
+        {/* Only where v1 diagrams were found; the permanent stand-in for Classic (12.7). */}
+        {hasV1Diagrams ? (
+          <MenuItem icon={<Icon icon={IconArchive} />} onSelect={() => void downloadV1Backup().catch((error: unknown) =>
+            toast(error instanceof Error ? error.message : 'Could not read the previous editor’s diagrams.', 'danger'))}>
+            Download v1 backup
+          </MenuItem>
+        ) : null}
         {/* File System Access API only (Chrome/Edge); elsewhere the item would be a silent no-op. */}
         {props.workspace && isWorkspacePickerSupported() ? (
           <>

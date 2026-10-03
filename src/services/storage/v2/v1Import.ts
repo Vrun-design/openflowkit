@@ -1,11 +1,12 @@
 import { legacyMermaidConverter } from '@/opencanvas/application/dsl/legacyMermaid';
-import { isJsonObject } from '@/opencanvas/domain/document/json';
-import { migrateLegacyWorkspace, type LegacyImportFailure, type LegacyWorkspaceSources } from '@/opencanvas/domain/document/legacyWorkspace';
+import { isJsonObject, type JsonObject } from '@/opencanvas/domain/document/json';
+import { legacyWorkspaceRows, migrateLegacyWorkspace, type LegacyImportFailure, type LegacyWorkspaceSources } from '@/opencanvas/domain/document/legacyWorkspace';
 import type { SceneDocumentV1 } from '@/opencanvas/domain/document/types';
 import { elkDslLayoutPort } from '../../dsl/elkLayoutPort';
 import { readAssetUrl } from '../assets';
 import { getIndexedDbFactory, requestToPromise } from '../indexedDbHelpers';
 import {
+  AI_SETTINGS_PERSISTENT_STORE_NAME,
   FLOW_METADATA_STORE_NAME,
   PERSISTED_DOCUMENTS_STORE_NAME,
   openFlowPersistenceDatabase,
@@ -69,17 +70,28 @@ export async function readV1Sources(factory: IDBFactory, storage: Storage): Prom
   }
 }
 
-// v1 image nodes keep only an id into the shared `assets` store; v2 exports inline
-// `imageUrl`. Copying the bytes into the document makes the import self-contained.
+// v1 nodes keep only an id into the shared `assets` store; exports and other browsers need the
+// bytes. The same pairs v1's own export inlined (main `assetInlining.ts`).
+const ASSET_FIELDS = [['imageAssetId', 'imageUrl'], ['iconAssetId', 'customIconUrl']] as const;
+
+async function inlineAssets(data: JsonObject, dropIds: boolean): Promise<JsonObject> {
+  let next = data;
+  for (const [idField, urlField] of ASSET_FIELDS) {
+    const assetId = next[idField];
+    if (typeof assetId !== 'string') continue;
+    // The asset is the truth, as in v1 (its image ref prefers the id over a stale URL).
+    const url = await readAssetUrl(assetId).catch(() => null);
+    if (!url) continue;
+    const { [idField]: _id, ...rest } = next;
+    next = { ...(dropIds ? rest : next), [urlField]: url };
+  }
+  return next;
+}
+
 async function inlineImages(document: SceneDocumentV1): Promise<SceneDocumentV1> {
   const pages = await Promise.all(document.pages.map(async (page) => ({
     ...page,
-    nodes: await Promise.all(page.nodes.map(async (node) => {
-      const assetId = node.content.imageAssetId;
-      if (typeof assetId !== 'string' || typeof node.content.imageUrl === 'string') return node;
-      const url = await readAssetUrl(assetId).catch(() => null);
-      return url ? { ...node, content: { ...node.content, imageUrl: url } } : node;
-    })),
+    nodes: await Promise.all(page.nodes.map(async (node) => ({ ...node, content: await inlineAssets(node.content, false) }))),
   })));
   return { ...document, pages };
 }
@@ -147,6 +159,91 @@ export async function importV1Workspace(deps: V1ImportDeps): Promise<V1ImportRep
   // but a v1-* doc deleted in v2 returns) — move the marker into IndexedDB if that shows up.
   try { deps.storage.setItem(V1_IMPORT_MARKER_KEY, JSON.stringify(next)); } catch { /* see above */ }
   return { imported, failures, firstRun: marker === null };
+}
+
+export interface V1AiSettingsRaw {
+  /** v1's `AISettings` JSON without the key: IndexedDB `aiSettingsPersistent`, else localStorage. */
+  readonly settings: string | null;
+  /** v1's masked key (`v1:<base64>`); only `storageMode: 'local'` kept it past the session. */
+  readonly secret: string | null;
+}
+
+/** v1's BYOK, read-only, for the one-time carry-over (12.7). */
+export async function readV1AiSettings(factory: IDBFactory, storage: Storage): Promise<V1AiSettingsRaw> {
+  const database = await openFlowPersistenceDatabase(factory);
+  try {
+    const row = await requestToPromise(database.transaction(AI_SETTINGS_PERSISTENT_STORE_NAME, 'readonly')
+      .objectStore(AI_SETTINGS_PERSISTENT_STORE_NAME).get('default'));
+    const stored = isJsonObject(row) && typeof row.value === 'string' ? row.value : null;
+    return { settings: stored ?? storage.getItem('openflowkit-ai-settings'), secret: storage.getItem('openflowkit-ai-settings-secret') };
+  } finally {
+    database.close();
+  }
+}
+
+/** 12.1's "Export all my diagrams" file; v2 writes it too and opens it as a multi-document import. */
+export const V1_BACKUP_FORMAT = 'openflowkit-v1-backup';
+
+export interface V1Backup {
+  readonly format: typeof V1_BACKUP_FORMAT;
+  readonly version: 1;
+  readonly exportedAt: string;
+  readonly documents: readonly JsonObject[];
+}
+
+// As 12.1 writes it: undo history left behind, images inline (asset ids only resolve here).
+async function backupContent(content: JsonObject): Promise<JsonObject> {
+  const { history: _history, ...rest } = content;
+  const nodes = Array.isArray(rest.nodes) ? rest.nodes : [];
+  return { ...rest, nodes: await Promise.all(nodes.map(async (node) =>
+    isJsonObject(node) && isJsonObject(node.data) ? { ...node, data: await inlineAssets(node.data, true) } : node)) };
+}
+
+/** Every live v1 diagram in this browser, read-only, in the 12.1 backup format. The permanent stand-in for Classic. */
+export async function buildV1Backup(factory: IDBFactory, storage: Storage, now = new Date()): Promise<V1Backup> {
+  const rows = legacyWorkspaceRows(await readV1Sources(factory, storage));
+  const documents = await Promise.all(rows.map(async (row) => ({
+    ...row,
+    ...(isJsonObject(row.content) ? { content: await backupContent(row.content) } : {}),
+    ...(Array.isArray(row.pages) ? { pages: await Promise.all(row.pages.map(async (page) =>
+      isJsonObject(page) && isJsonObject(page.content) ? { ...page, content: await backupContent(page.content) } : page)) } : {}),
+  })));
+  return { format: V1_BACKUP_FORMAT, version: 1, exportedAt: now.toISOString(), documents };
+}
+
+export function isV1Backup(value: unknown): value is V1Backup {
+  return isJsonObject(value) && value.format === V1_BACKUP_FORMAT && Array.isArray(value.documents);
+}
+
+export interface V1BackupOpenReport {
+  readonly opened: readonly string[];
+  /** Already in this browser (an earlier import or open); the copy here is kept. */
+  readonly existing: number;
+  readonly failures: readonly LegacyImportFailure[];
+}
+
+/** Opens every diagram in a backup file as `v1-<id>`, the same id the boot import gives it. */
+export async function openV1Backup(backup: V1Backup, repository: V2DocumentRepository): Promise<V1BackupOpenReport> {
+  if (backup.version !== 1) {
+    return { opened: [], existing: 0, failures: [{ v1Id: '', name: 'backup', error: `Backup version ${String(backup.version)} is newer than this OpenFlowKit.` }] };
+  }
+  const workspace = await migrateLegacyWorkspace({ documents: backup.documents, fallback: null, tabStates: [] }, {
+    resolveNodeSize: defaultLegacyNodeSize,
+    convertMermaid: legacyMermaidConverter({ layout: elkDslLayoutPort }),
+  });
+  const opened: string[] = [];
+  let existing = 0;
+  const failures = [...workspace.failures];
+  for (const document of workspace.documents) {
+    try {
+      const result = await repository.saveDocument(document.id, document, 1);
+      if (result.status === 'saved') opened.push(document.id);
+      else existing += 1;
+    } catch (error) {
+      failures.push({ v1Id: document.id.slice('v1-'.length), name: document.name, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+  return { opened, existing, failures };
 }
 
 let running: Promise<V1ImportReport> | null = null;
