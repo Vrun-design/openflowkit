@@ -75,4 +75,30 @@ describe('importV1Workspace', () => {
     expect(report.failures.map((failure) => failure.name)).toEqual(['openflowkit-documents-fallback']);
     expect(Object.keys(readV1ImportMarker(storage)!.docs).sort()).toEqual(rows.map((row) => row.id).sort());
   });
+  it('takes a v1 edit made after the import: replaces an untouched copy, keeps both when v2 edited it too', async () => {
+    const storage = memoryStorage();
+    const repository = createV2Repository(indexedDB);
+    await run(storage);
+    const [untouched, edited] = [rows[0]!, rows[1]!];
+    const loaded = await repository.loadDocument(v2Id(edited));
+    if (loaded.status !== 'ok') throw new Error(loaded.status);
+    await repository.saveDocument(v2Id(edited), { ...loaded.record.document, name: 'Edited in v2' }, 2);
+    // An old v1 tab, still open after the cutover, saves both documents again.
+    const database = await openFlowPersistenceDatabase(indexedDB);
+    for (const row of [untouched, edited]) {
+      await putRecord(database, PERSISTED_DOCUMENTS_STORE_NAME, { ...row, name: `${row.name} v1-later`, updatedAt: '2027-01-01T00:00:00.000Z' });
+    }
+    database.close();
+
+    const report = await run(storage);
+    const replaced = await repository.loadDocument(v2Id(untouched));
+    expect(replaced.status === 'ok' && [replaced.record.revision, replaced.record.document.name]).toEqual([2, `${untouched.name} v1-later`]);
+    const kept = await repository.loadDocument(v2Id(edited));
+    expect(kept.status === 'ok' && kept.record.document.name).toBe('Edited in v2');
+    const copyId = `${v2Id(edited)}~20270101000000000`;
+    const copy = await repository.loadDocument(copyId);
+    expect(copy.status === 'ok' && copy.record.document.name).toBe(`${edited.name} v1-later (later v1 edit)`);
+    expect([...report.imported].sort()).toEqual([v2Id(untouched), copyId].sort());
+    expect(await run(storage)).toEqual({ imported: [], failures: [], firstRun: false });
+  });
 });

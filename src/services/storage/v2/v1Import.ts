@@ -26,6 +26,8 @@ export interface V1ImportEntry {
   readonly sourceUpdatedAt: string;
   readonly status: 'imported' | 'failed';
   readonly error?: string;
+  /** Revision this import wrote; a stored copy still at it was never edited in v2. */
+  readonly v2Revision?: number;
 }
 
 export interface V1ImportMarker {
@@ -90,11 +92,11 @@ interface V1ImportDeps {
 }
 
 export async function importV1Workspace(deps: V1ImportDeps): Promise<V1ImportReport> {
+  if (!deps.factory) return { imported: [], failures: [], firstRun: false };
   const marker = readV1ImportMarker(deps.storage);
-  // v1 is gone after the cutover, so its rows can't change: a clean marker means nothing to do.
-  if (!deps.factory || (marker && Object.values(marker.docs).every((entry) => entry.status === 'imported'))) {
-    return { imported: [], failures: [], firstRun: false };
-  }
+  // ponytail: v1 is read on every boot, because a v1 tab left open across the cutover keeps
+  // saving (12.1 bridge). Unchanged documents are skipped before any migration work; drop
+  // the read once `v1-final` is old enough that no such tab can be alive.
   const previous = marker?.docs ?? {};
   const workspace = await migrateLegacyWorkspace(await readV1Sources(deps.factory, deps.storage), {
     resolveNodeSize: defaultLegacyNodeSize,
@@ -111,10 +113,29 @@ export async function importV1Workspace(deps: V1ImportDeps): Promise<V1ImportRep
   const newestFirst = [...workspace.documents].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   for (const [v1Id, document] of newestFirst.map((item) => [item.id.slice('v1-'.length), item] as const)) {
     try {
-      // Revision 1 never overwrites: an existing copy (maybe edited in v2) comes back `stale` and stays.
-      const result = await deps.repository.saveDocument(document.id, await inlineImages(document), 1);
-      if (result.status === 'saved') imported.push(document.id);
-      docs[v1Id] = { name: document.name, importedAt, sourceUpdatedAt: document.updatedAt, status: 'imported' };
+      const prepared = await inlineImages(document);
+      let id = document.id;
+      let revision = 1;
+      let result = await deps.repository.saveDocument(id, prepared, revision);
+      const earlier = previous[v1Id];
+      // `stale` = a copy exists. If it came from an earlier import and v1 has moved on since,
+      // the newer v1 edit must not be dropped: replace the copy if v2 never touched it,
+      // otherwise keep both.
+      if (result.status === 'stale' && earlier?.status === 'imported') {
+        if (result.storedRevision === (earlier.v2Revision ?? 1)) {
+          revision = result.storedRevision + 1;
+          result = await deps.repository.saveDocument(id, prepared, revision);
+        } else {
+          id = `${document.id}~${document.updatedAt.replace(/\D/g, '')}`;
+          revision = 1;
+          result = await deps.repository.saveDocument(id, { ...prepared, id, name: `${document.name} (later v1 edit)` }, revision);
+        }
+      }
+      if (result.status === 'saved') imported.push(id);
+      docs[v1Id] = {
+        name: document.name, importedAt, sourceUpdatedAt: document.updatedAt, status: 'imported',
+        v2Revision: id === document.id && result.status === 'saved' ? revision : earlier?.v2Revision ?? 1,
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       failures.push({ v1Id, name: document.name, error: message });
