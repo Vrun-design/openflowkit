@@ -3,7 +3,7 @@ import { expect, test } from './test';
 // Phase 12.4: All diagrams — list → open → rename → delete (confirmed), keyboard only.
 // npm run e2e:headed -- e2e/home-list.spec.ts
 
-test('all diagrams: open, rename and delete from the keyboard', async ({ page }) => {
+test('all diagrams: open, rename and delete from the keyboard @gate', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('[data-testid="v2-canvas"]')).toBeVisible();
   // An untouched new document is never saved, so the list gets two saved ones.
