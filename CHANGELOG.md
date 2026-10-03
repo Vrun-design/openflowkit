@@ -6,6 +6,41 @@ npm consumers whose upgrades should not be driven by the app's brand version.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Your v1 diagrams move over by themselves.** On first boot, every diagram from the
+  previous editor (IndexedDB, the localStorage fallback and the pre-March tabs store) is
+  copied into the new document store, read-only; the old rows are never touched. A home
+  list shows them tagged "From v1", the document menu offers a v1 backup download, and
+  Open file accepts that backup. Bring-your-own-key settings carry over.
+- Old links resolve: `#/flow/:id` opens the imported diagram, `#/view?flow=…` explains
+  what it was, and the other v1 routes land on home. The v1 service worker removes itself.
+- **MCP: Mermaid in.** `create_diagram`, `update_diagram` and `validate_openflow_dsl` take
+  Mermaid (fenced or not, front matter included) and return the DSL it became plus a loss
+  report on Mermaid line numbers. Unconvertible families say which ones convert.
+- **MCP: icons in headless exports.** File-mode SVG and animated SVG, and the
+  `openflowkit build` site, draw the same icon art as the editor.
+
+### Changed
+
+- **MCP server 0.2.0 is a breaking release** for 0.1.x users: `create_viewer_url` and
+  `find_icon` are gone (use `create_diagram` + `export`, and `search_icons`), and the
+  `convert_mermaid_to_openflow` prompt is gone because the tools take Mermaid directly.
+- The `openflowkit build` CLI compiles with the editor's icon rule (icons from labels on).
+
+### Fixed
+
+- Mermaid: one-line flowcharts (`graph LR; A-->B; B-->C`) import; loss notes point at the
+  real Mermaid line (they were numbered 1, 2, 3…); a label with a line break stays one
+  label; our own `mindmap`, `architecture` and `gitgraph` DSL is no longer offered as
+  Mermaid to convert.
+
+### Removed
+
+- The `gh-pages` deploy script and `public/CNAME`; the app deploys on Cloudflare Pages.
+
 ## [2.0.0] — 2026-09-22
 
 A rebuild, not a release on top of 1.x. The React Flow editor is gone; the canvas,
