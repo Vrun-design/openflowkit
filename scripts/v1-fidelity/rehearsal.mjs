@@ -113,7 +113,12 @@ await page.waitForFunction(() => localStorage.getItem('ofk.v1Import') !== null, 
 const marker = JSON.parse(await page.evaluate(() => localStorage.getItem('ofk.v1Import')));
 const v2Docs = (await readStore(page, 'v2Documents')).filter((row) => row.id.startsWith('v1-'));
 const v1Intact = JSON.stringify(await readStore(page, 'documents')) === v1Snapshot;
-const v2Workers = await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length);
+// v1's worker meets the 12.6 kill switch on this visit; give it time to unregister and reload.
+let v2Workers = 1;
+for (let i = 0; i < 30 && v2Workers > 0; i++) {
+  await page.waitForTimeout(500);
+  v2Workers = await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length).catch(() => 1);
+}
 await context.close();
 server.close();
 rmSync(profile, { recursive: true, force: true });
@@ -126,8 +131,8 @@ const pageLoss = v1Docs.filter((row) => {
 log(`v2 shell: ${shell}; imported ${v2Docs.length}/${v1Docs.length}; missing ${missing.length}; pages short of nodes ${pageLoss.length}`);
 const markerFailures = Object.values(marker.docs).filter((d) => d.status !== 'imported').length;
 log(`marker failures: ${markerFailures}; v1 rows byte-identical after: ${v1Intact}`);
-log(`service workers after v2 boot: ${v2Workers} (12.6 removes v1's); page errors: ${errors.length ? errors.join(' | ') : 'none'}`);
-const ok = missing.length === 0 && pageLoss.length === 0 && markerFailures === 0 && v1Intact && errors.length === 0;
+log(`service workers after v2 boot: ${v2Workers}; page errors: ${errors.length ? errors.join(' | ') : 'none'}`);
+const ok = missing.length === 0 && pageLoss.length === 0 && markerFailures === 0 && v1Intact && v2Workers === 0 && errors.length === 0;
 log(ok ? 'REHEARSAL PASS' : 'REHEARSAL FAIL');
 mkdirSync(OUT, { recursive: true });
 writeFileSync(`${OUT}/rehearsal.md`, `# v1 → v2 same-origin rehearsal (${new Date().toISOString().slice(0, 10)})\n\n${lines.map((line) => `- ${line}`).join('\n')}\n`);

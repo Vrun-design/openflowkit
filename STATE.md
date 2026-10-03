@@ -30,9 +30,9 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   `mermaid_svg` broken in v1 too → mermaidToDsl; import inlines `imageUrl`.
 - **12.1 bridge BUILT 2026-10-03 (opus-5.5), NOT pushed**: branch `v1-bridge` @99589ce in `../ofk-main`; owner pushes + merges to `main` ~2–4 wk pre-launch, then tags `v1-final`.
   For 12.3: a v1 tab can still save after import (warns, but saves) → if a v1 doc's `updatedAt` moved since import, don't drop it as `stale`.
-- **12.2–12.5 DONE 2026-10-03 (opus-5.5)**: `legacyWorkspace.ts` (all sources merge; stale copy may resurrect a deleted
+- **12.2–12.6 DONE 2026-10-03 (opus-5.5)**: `legacyWorkspace.ts` (all sources merge; stale copy may resurrect a deleted
   doc, owner may veto), `v1Import.ts` (re-reads v1 each boot for open-tab edits) + `rehearsal.mjs` PASS, `#/home`, old URLs
-  (`V2LegacyRoutes.tsx`). Open v1 tab blocks v4 upgrade → 12.1: close on `versionchange`. Headed `home-list.spec.ts` NOT run.
+  (`V2LegacyRoutes.tsx`), `public/sw.js` kill switch (12.6). Open v1 tab blocks v4 upgrade → 12.1: close on `versionchange`. Headed `home-list.spec.ts` NOT run.
 - **13.1 Mermaid into MCP** + 13.2 headless icons, parallel with 12 (different files).
 - Open calls (plan README §2): D7 paid (owner); D8 labs; D11 own UI (V2 recommended, docs/plan/design). D6 encrypted links + D9 analytics = yes.
 ## Deferred
