@@ -26,7 +26,7 @@ describe('anthropic wire', () => {
     expect(headers['anthropic-version']).toBe('2023-06-01');
     expect(headers['anthropic-dangerous-direct-browser-access']).toBe('true');
     expect(text).toBe('flowchart\n  A -> B');
-    expect(body).toMatchObject({ model: 'claude-opus-5', max_tokens: 16_000, system: 'sys', messages: [{ role: 'user', content: 'draw' }] });
+    expect(body).toMatchObject({ model: 'claude-opus-5-5', max_tokens: 16_000, system: 'sys', messages: [{ role: 'user', content: 'draw' }] });
   });
 
   it('joins multiple text blocks and ignores non-text ones', async () => {
