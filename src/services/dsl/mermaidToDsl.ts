@@ -14,6 +14,9 @@ export interface MermaidConversion {
   diagnostics: DslDiagnostic[];
 }
 
+/** An adapter's result; mermaidToDsl attaches the diagnostics. */
+type Converted = Omit<MermaidConversion, 'diagnostics'> & { readonly lossLines?: readonly number[] };
+
 export interface MermaidConversionError {
   error: string;
 }
@@ -91,7 +94,7 @@ const SHAPE_WORDS: Readonly<Record<string, string>> = {
 const DIRECTION_WORDS: Readonly<Record<string, string>> = { TB: 'down', TD: 'down', LR: 'right', RL: 'left', BT: 'up' };
 
 function quote(value: string): string {
-  return /(?:->|-->|<->|:|=|,|\[|\]|\{|\}|\/\/|;)/.test(value) || value.trim() !== value
+  return /(?:->|-->|<->|:|=|,|\[|\]|\{|\}|\/\/|;|\n)/.test(value) || value.trim() !== value
     ? `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
     : value;
 }
@@ -167,7 +170,7 @@ function edgeLine(edge: FlowEdge, nodes: ReadonlyMap<string, FlowNode>, losses: 
   return `${nodeRef(source)} ${edgeArrow(edge)} ${nodeRef(target)}${label}${attrText(edgeAttributes(edge))}`;
 }
 
-function flowchartDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[], direction: string | undefined): MermaidConversion {
+function flowchartDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[], direction: string | undefined): Converted {
   const losses: string[] = [];
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const sections = nodes.filter((node) => node.type === 'section');
@@ -191,15 +194,14 @@ function flowchartDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[], di
     const line = edgeLine(edge, byId, losses);
     if (line) lines.push(line);
   }
-  const diagnostics: DslDiagnostic[] = losses.map((message, index) => lossDiagnostic(index + 1, message));
-  return { dsl: `${lines.join('\n')}\n`, losses, diagnostics };
+  return { dsl: `${lines.join('\n')}\n`, losses };
 }
 
 /**
  * Mermaid `architecture-beta`: groups nest, services keep their icon (`pack:name`
  * → `pack/name`), junctions become small circles. Edge sides ride on `from:`/`to:`.
  */
-function architectureDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): MermaidConversion {
+function architectureDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Converted {
   const losses: string[] = [];
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const kindOf = (node: FlowNode) => node.data?.archResourceType ?? 'service';
@@ -233,10 +235,10 @@ function architectureDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[])
     const line = edgeLine(edge, byId, losses);
     if (line) lines.push(line);
   }
-  return { dsl: `${lines.join('\n')}\n`, losses, diagnostics: losses.map((message, index) => lossDiagnostic(index + 1, message)) };
+  return { dsl: `${lines.join('\n')}\n`, losses };
 }
 
-function sequenceDsl(source: string, nodes: readonly FlowNode[], edges: readonly FlowEdge[]): MermaidConversion {
+function sequenceDsl(source: string, nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Converted {
   const losses: string[] = [];
   const participants = nodes.filter((node) => node.type === 'sequence_participant');
   const notes = nodes.filter((node) => node.type === 'sequence_note');
@@ -332,7 +334,7 @@ function sequenceDsl(source: string, nodes: readonly FlowNode[], edges: readonly
   }
   if (open) lines.push('}');
   if (fragmentDepth(source) > 1) losses.push('Nested sequence fragments are flattened to their innermost block');
-  return { dsl: `${lines.join('\n')}\n`, losses, diagnostics: losses.map((message, index) => lossDiagnostic(index + 1, message)) };
+  return { dsl: `${lines.join('\n')}\n`, losses };
 }
 
 /** Deepest `loop/alt/opt/par/break/critical … end` nesting in the source. */
@@ -346,7 +348,7 @@ function fragmentDepth(source: string): number {
   return deepest;
 }
 
-function stateDsl(source: string, nodes: readonly FlowNode[], edges: readonly FlowEdge[], direction: string | undefined): MermaidConversion {
+function stateDsl(source: string, nodes: readonly FlowNode[], edges: readonly FlowEdge[], direction: string | undefined): Converted {
   const losses: string[] = [];
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const pseudo = (id: string) => id.startsWith('state_start') || id.startsWith('state_end');
@@ -414,10 +416,10 @@ function stateDsl(source: string, nodes: readonly FlowNode[], edges: readonly Fl
     if (note && byId.has(note[1]!)) lines.push(`note ${refOf(note[1]!)} : ${quote(note[2]!.trim())}`);
     else if (/^\s*note\s+(?:left|right)\s+of\s+\S+\s*$/i.test(line)) losses.push('Multi-line state notes are dropped');
   }
-  return { dsl: `${lines.join('\n')}\n`, losses, diagnostics: losses.map((message, index) => lossDiagnostic(index + 1, message)) };
+  return { dsl: `${lines.join('\n')}\n`, losses };
 }
 
-function erDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): MermaidConversion {
+function erDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Converted {
   const lines: string[] = ['erd'];
   const byId = new Map(nodes.map((node) => [node.id, node]));
   for (const node of nodes) {
@@ -444,10 +446,10 @@ function erDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): MermaidC
     const label = typeof edge.label === 'string' && edge.label ? ` : ${quote(edge.label)}` : '';
     lines.push(`${nodeName(source)} ${token} ${nodeName(target)}${label}`);
   }
-  return { dsl: `${lines.join('\n')}\n`, losses: [], diagnostics: [] };
+  return { dsl: `${lines.join('\n')}\n`, losses: [] };
 }
 
-function classDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): MermaidConversion {
+function classDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Converted {
   const losses: string[] = [];
   const lines: string[] = ['class'];
   const byId = new Map(nodes.map((node) => [node.id, node]));
@@ -474,13 +476,13 @@ function classDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Merma
     );
   }
   if (losses.length === 0) losses.push('Namespaces and `note for` are dropped');
-  return { dsl: `${lines.join('\n')}\n`, losses, diagnostics: losses.map((message, index) => lossDiagnostic(index + 1, message)) };
+  return { dsl: `${lines.join('\n')}\n`, losses };
 }
 
-function mindmapDsl(nodes: readonly FlowNode[]): MermaidConversion {
+function mindmapDsl(nodes: readonly FlowNode[]): Converted {
   const lines: string[] = ['mindmap'];
   const root = nodes.find((node) => numberData(node.data?.mindmapDepth) === 0) ?? nodes[0];
-  if (!root) return { dsl: 'mindmap\n', losses: [], diagnostics: [] };
+  if (!root) return { dsl: 'mindmap\n', losses: [] };
   lines.push(`central: ${quote(String(root.data?.label ?? 'Root'))}`);
   const depthOf = (node: FlowNode) => numberData(node.data?.mindmapDepth);
   const parentOf = (node: FlowNode) => typeof node.data?.mindmapParentId === 'string' ? node.data.mindmapParentId : null;
@@ -493,14 +495,15 @@ function mindmapDsl(nodes: readonly FlowNode[]): MermaidConversion {
     }
   };
   walk(root);
-  return { dsl: `${lines.join('\n')}\n`, losses: ['Mindmap icons and classes are dropped'], diagnostics: [lossDiagnostic(1, 'Mindmap icons and classes are dropped')] };
+  return { dsl: `${lines.join('\n')}\n`, losses: ['Mindmap icons and classes are dropped'] };
 }
 
 /** Mermaid gitGraph has no app-side parser; the five statements map one-to-one. */
-function gitgraphDsl(source: string): MermaidConversion {
+function gitgraphDsl(source: string): Converted {
   const lines: string[] = ['gitgraph'];
   const losses: string[] = [];
-  for (const rawLine of source.split('\n')) {
+  const lossLines: number[] = [];
+  for (const [index, rawLine] of source.split('\n').entries()) {
     const line = rawLine.trim();
     if (!line || line.startsWith('%%') || /^gitGraph/i.test(line)) continue;
     const commit = /^commit(?:\s+id:\s*("[^"]*"|\S+))?(.*)$/i.exec(line);
@@ -541,8 +544,9 @@ function gitgraphDsl(source: string): MermaidConversion {
       continue;
     }
     losses.push(`Unsupported gitGraph line: ${line}`);
+    lossLines.push(index + 1);
   }
-  return { dsl: `${lines.join('\n')}\n`, losses, diagnostics: losses.map((message, index) => lossDiagnostic(index + 1, message)) };
+  return { dsl: `${lines.join('\n')}\n`, losses, lossLines };
 }
 
 /** Legacy ER fields arrive as `"name: type FLAGS"` strings. */
@@ -567,12 +571,33 @@ function lossDiagnostic(line: number, message: string): DslDiagnostic {
   return { code: 'W180', severity: 'warning', line, col: 1, endCol: 1, message, source: 'parse' };
 }
 
+/**
+ * A line that opens with a Mermaid shape — `root((x))`, `id[Label]`, `::icon(…)`,
+ * `service api(server)[API]`. Our DSL puts a space before `[attrs]` and keeps
+ * brackets inside quoted labels, so it never starts a line like this.
+ */
+const MERMAID_SHAPED = /^\s*([\w.-]*(\(\(|\[|\(|\{\{|\)\))|::icon\(|(service|group|junction)\s+[\w-]+\s*[([])/m;
+
+/**
+ * Mermaid YAML front matter (`---` … `---` before the header) as blank lines, so
+ * detection sees the header and every later line keeps its number.
+ */
+function withoutFrontMatter(text: string): { body: string; title?: string; keys: string[] } {
+  const match = /^(\s*---[ \t]*\r?\n)([\s\S]*?\r?\n)([ \t]*---[ \t]*)(?=\r?\n|$)/.exec(text);
+  if (!match) return { body: text, keys: [] };
+  const yaml = match[2]!;
+  const title = /^title:\s*["']?(.*?)["']?\s*$/m.exec(yaml)?.[1];
+  const keys = [...yaml.matchAll(/^([A-Za-z][\w-]*):/gm)].map((key) => key[1]!).filter((key) => key !== 'title');
+  return { body: match[0].replace(/[^\n]/g, '') + text.slice(match[0].length), ...(title ? { title } : {}), keys };
+}
+
 const MERMAID_ONLY = /-->|-\.->|==>|~~~|subgraph|@\{|\|\w+\||-\[\||\[\[\(|\}\]/;
 
 /** True when the text starts a Mermaid diagram (used for the panel banner). */
 export function looksLikeMermaid(text: string): boolean {
   // Our own pragma is decisive: a DSL document is never Mermaid.
   if (/^\s*%%\s*ofk\b/m.test(text)) return false;
+  text = withoutFrontMatter(text).body;
   const first = text.split('\n').map((line) => line.trim()).find((line) => line && !line.startsWith('%%'));
   if (!first) return false;
   if (/^(flowchart|graph)\b/i.test(first)) {
@@ -581,39 +606,63 @@ export function looksLikeMermaid(text: string): boolean {
     if (/\w\[/.test(text) || /\|\w+\|/.test(text)) return true;
     return false;
   }
-  return /^(sequenceDiagram|stateDiagram(-v2)?|classDiagram|erDiagram|gitGraph|mindmap|journey|architecture(-beta)?|gantt|pie|timeline|sankey-beta|C4Context|quadrantChart|requirementDiagram|xychart-beta|block-beta|packet-beta|kanban|radar-beta|treemap)\b/i.test(first);
+  // Three headers are also our family words; only Mermaid-only syntax makes those Mermaid.
+  if (/^gitgraph\b/i.test(first)) return first.startsWith('gitGraph');
+  if (/^(mindmap|architecture)\s*$/i.test(first)) return MERMAID_SHAPED.test(text);
+  return /^(sequenceDiagram|stateDiagram(-v2)?|classDiagram|erDiagram|journey|architecture-beta|gantt|pie|timeline|sankey-beta|C4Context|quadrantChart|requirementDiagram|xychart-beta|block-beta|packet-beta|kanban|radar-beta|treemap)\b/i.test(first);
 }
 
+const CONVERTIBLE = 'flowchart, sequenceDiagram, stateDiagram, classDiagram, erDiagram, mindmap, architecture, gitGraph';
+
 /** Mermaid text → OFK DSL, or an error explaining why it cannot be converted. */
-export function mermaidToDsl(text: string): MermaidConversion | MermaidConversionError {
-  if (!looksLikeMermaid(text)) return { error: 'No Mermaid diagram header found' };
-  if (/^\s*gitGraph/mi.test(text)) return gitgraphDsl(text);
-  const detected = detectMermaidDiagramType(text);
-  if (!detected) return { error: 'Unsupported Mermaid diagram type' };
-  const parsed = parseMermaidByType(text);
-  if (parsed.error) return { error: parsed.error };
-  // The parser's model is structurally wider; the adapter reads these fields only.
-  const nodes = parsed.nodes as unknown as FlowNode[];
-  const edges = parsed.edges as unknown as FlowEdge[];
-  const direction = parsed.direction;
+export function mermaidToDsl(source: string): MermaidConversion | MermaidConversionError {
+  const front = withoutFrontMatter(source);
+  const text = front.body;
+  const header = /^\s*([A-Za-z][\w-]*)/m.exec(text.split('\n').filter((line) => !line.trim().startsWith('%%')).join('\n'))?.[1] ?? '';
+  // Asked explicitly, a shared header (`mindmap`) is taken as Mermaid even without Mermaid-only syntax.
+  const shared = /^(mindmap|architecture|gitgraph)$/i.test(header) && !/^\s*%%\s*ofk\b/m.test(text);
+  if (!shared && !looksLikeMermaid(text)) return { error: 'No Mermaid diagram header found' };
+  const unsupported = { error: `Mermaid "${header}" cannot be converted. Convertible: ${CONVERTIBLE}.` };
   const conversion = (() => {
-    switch (parsed.diagramType) {
-      case 'flowchart': return flowchartDsl(nodes, edges, direction);
-      case 'sequence': return sequenceDsl(text, nodes, edges);
-      case 'stateDiagram': return stateDsl(text, nodes, edges, direction);
-      case 'erDiagram': return erDsl(nodes, edges);
-      case 'classDiagram': return classDsl(nodes, edges);
-      case 'mindmap': return mindmapDsl(nodes);
-      case 'architecture': return architectureDsl(nodes, edges);
-      default: return null;
-    }
+    if (/^gitGraph$/i.test(header)) return gitgraphDsl(text);
+    // journey parses but has no DSL family: say so before the parser complains about its steps.
+    const detected = detectMermaidDiagramType(text);
+    if (!detected || detected === 'journey') return unsupported;
+    const parsed = parseMermaidByType(text);
+    if (parsed.error) return { error: parsed.error };
+    // The parser's model is structurally wider; the adapter reads these fields only.
+    const nodes = parsed.nodes as unknown as FlowNode[];
+    const edges = parsed.edges as unknown as FlowEdge[];
+    const converted = (() => {
+      switch (parsed.diagramType) {
+        case 'flowchart': return flowchartDsl(nodes, edges, parsed.direction);
+        case 'sequence': return sequenceDsl(text, nodes, edges);
+        case 'stateDiagram': return stateDsl(text, nodes, edges, parsed.direction);
+        case 'erDiagram': return erDsl(nodes, edges);
+        case 'classDiagram': return classDsl(nodes, edges);
+        case 'mindmap': return mindmapDsl(nodes);
+        case 'architecture': return architectureDsl(nodes, edges);
+        default: return null;
+      }
+    })();
+    if (!converted) return unsupported;
+    // Parser findings keep their Mermaid line; adapter losses are about the whole diagram (line 1).
+    const found = (parsed.structuredDiagnostics ?? []).filter((item) => item.message);
+    return {
+      dsl: converted.dsl,
+      losses: [...converted.losses, ...found.map((item) => item.message)],
+      lossLines: [...converted.losses.map(() => 1), ...found.map((item) => item.line ?? 1)],
+    };
   })();
-  if (!conversion) return { error: `${parsed.diagramType} is not convertible yet` };
-  const parserLosses = (parsed.structuredDiagnostics ?? []).map((item) => item.message).filter(Boolean);
-  const losses = [...conversion.losses, ...parserLosses];
+  if ('error' in conversion) return conversion;
+  const { losses, lossLines = [] } = conversion;
+  // Front matter: the title becomes our `title:` directive; config has no DSL form.
+  const dsl = front.title && !/^title:/m.test(conversion.dsl)
+    ? conversion.dsl.replace(/^.*\n/, (family) => `${family}title: ${front.title}\n`) : conversion.dsl;
+  const dropped = front.keys.length ? [`Front matter ${front.keys.join(', ')} dropped`] : [];
   return {
-    dsl: conversion.dsl,
-    losses,
-    diagnostics: losses.map((message, index) => lossDiagnostic(index + 1, message)),
+    dsl,
+    losses: [...dropped, ...losses],
+    diagnostics: [...dropped.map((message) => lossDiagnostic(1, message)), ...losses.map((message, index) => lossDiagnostic(lossLines[index] ?? 1, message))],
   };
 }

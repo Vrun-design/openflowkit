@@ -44,9 +44,42 @@ export interface ParseResult {
   diagnostics?: string[];
 }
 
-function preprocessMermaidInput(input: string): string[] {
-  const processed = normalizeEdgeLabels(normalizeMultilineStrings(input.replace(/\r\n/g, '\n')));
-  return processed.split('\n');
+/** Flowchart `;` ends a statement (`graph LR; A-->B; B-->C`) unless it sits in quotes, brackets or a |label|. */
+function splitStatements(line: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let quoted = false;
+  let piped = false;
+  let start = 0;
+  for (let index = 0; index < line.length; index++) {
+    const char = line[index];
+    if (char === '"') quoted = !quoted;
+    else if (quoted) continue;
+    else if (char === '|' && depth === 0) piped = !piped;
+    else if ('[({'.includes(char)) depth++;
+    else if (')]}'.includes(char)) depth = Math.max(0, depth - 1);
+    else if (char === ';' && depth === 0 && !piped) {
+      parts.push(line.slice(start, index));
+      start = index + 1;
+    }
+  }
+  parts.push(line.slice(start));
+  return parts;
+}
+
+/** Source lines, with flowchart statements split apart; each keeps its 1-based source line. */
+function preprocessMermaidInput(input: string): { lines: string[]; lineNumbers: number[] } {
+  const processed = normalizeEdgeLabels(normalizeMultilineStrings(input.replace(/\r\n/g, '\n'))).split('\n');
+  const flowchart = /^(?:flowchart|graph)\b/i.test(processed.find((line) => line.trim() && !line.trim().startsWith('%%'))?.trim() ?? '');
+  const lines: string[] = [];
+  const lineNumbers: number[] = [];
+  processed.forEach((line, index) => {
+    for (const part of flowchart && !line.trim().startsWith('%%') ? splitStatements(line) : [line]) {
+      lines.push(part);
+      lineNumbers.push(index + 1);
+    }
+  });
+  return { lines, lineNumbers };
 }
 
 function isSkippableLine(line: string): boolean {
@@ -267,12 +300,12 @@ function parseStateDiagramNodeDeclaration(
   return false;
 }
 
-function buildMermaidParseModel(lines: string[]): MermaidParseModel {
+function buildMermaidParseModel({ lines, lineNumbers }: { lines: string[]; lineNumbers: number[] }): MermaidParseModel {
   const state = createMermaidParseState();
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    const lineNumber = i + 1;
+    const lineNumber = lineNumbers[i];
     if (isSkippableLine(line)) {
       continue;
     }

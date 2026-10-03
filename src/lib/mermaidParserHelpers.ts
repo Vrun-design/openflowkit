@@ -86,9 +86,11 @@ export function parseLinkStyleLine(
   return { indices, style };
 }
 
+/** Quoted newlines become `\n`; the swallowed lines come back as blanks after the line, so line numbers hold. */
 export function normalizeMultilineStrings(input: string): string {
   let result = '';
   let inQuote = false;
+  let swallowed = 0;
 
   for (let i = 0; i < input.length; i++) {
     const char = input[i];
@@ -96,7 +98,11 @@ export function normalizeMultilineStrings(input: string): string {
       inQuote = !inQuote;
     }
 
-    if (inQuote && char === '\n') {
+    if (!inQuote && char === '\n' && swallowed > 0) {
+      result += '\n'.repeat(swallowed + 1);
+      swallowed = 0;
+    } else if (inQuote && char === '\n') {
+      swallowed++;
       result += '\\n';
       let nextIndex = i + 1;
       while (nextIndex < input.length && (input[nextIndex] === ' ' || input[nextIndex] === '\t')) {

@@ -379,6 +379,26 @@ describe('parseMermaidByType', () => {
     expect(result.structuredDiagnostics?.[0]?.severity).toBe('error');
   });
 
+  it('splits one-line flowcharts on semicolons, keeping quoted, bracketed and |label| ones', () => {
+    const result = parseMermaidByType('graph LR; A["a;b"]-->|x;y| B(c;d); B-->C\nC-->D[x]');
+    expect(result.nodes.map((node) => node.id)).toEqual(['A', 'B', 'C', 'D']);
+    expect(result.nodes.find((node) => node.id === 'A')?.data.label).toBe('a;b');
+    expect(result.edges.map((edge) => edge.label ?? '')).toEqual(['x;y', '', '']);
+  });
+
+  it('keeps Mermaid line numbers across a semicolon split and a multi-line quoted label', () => {
+    const split = parseMermaidByType('graph LR; A-->B\n  B-->C; C[bad --> D');
+    expect(split.structuredDiagnostics?.map((item) => item.line)).toEqual([2]);
+    const multiline = parseMermaidByType('flowchart LR\n  A["line1\n  line2"]-->B\n  B-->C\n  C[bad --> D');
+    expect(multiline.structuredDiagnostics?.map((item) => item.line)).toEqual([5]);
+  });
+
+  it('never splits a %% comment, or a | inside brackets', () => {
+    const result = parseMermaidByType('flowchart LR\n  %% TODO: A; B-->Z\n  A[a|b]; B-->C\n  C-->D');
+    expect(result.nodes.map((node) => node.id).sort()).toEqual(['A', 'B', 'C', 'D']);
+    expect(result.nodes.find((node) => node.id === 'A')?.data.label).toBe('a|b');
+  });
+
   it('parses semicolon-terminated node declarations correctly', () => {
     const result = parseMermaidByType(`
       graph TB

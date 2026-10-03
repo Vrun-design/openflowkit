@@ -18,6 +18,36 @@ describe('mermaidToDsl', () => {
     expect(mermaidToDsl('not a diagram')).toEqual({ error: 'No Mermaid diagram header found' });
   });
 
+  it('leaves our own mindmap, architecture and gitgraph DSL alone unless the text is Mermaid-only', () => {
+    expect(looksLikeMermaid('architecture\nmodel {\n  person Customer\n}')).toBe(false);
+    expect(looksLikeMermaid('architecture right\n  API [aws/lambda] -> DB')).toBe(false);
+    expect(looksLikeMermaid('architecture-beta\n  service api(server)[API]')).toBe(true);
+    expect(looksLikeMermaid('architecture\n  service api(server)[API]')).toBe(true);
+    expect(looksLikeMermaid('mindmap\ncentral: Product\n- Growth [green]')).toBe(false);
+    expect(looksLikeMermaid('mindmap\n  root((Product))\n    Growth')).toBe(true);
+    expect(looksLikeMermaid('gitgraph\ncommit Initial')).toBe(false);
+    expect(looksLikeMermaid('gitGraph\n  commit id: "a"')).toBe(true);
+  });
+
+  it('names what converts when a Mermaid family cannot', () => {
+    expect(mermaidToDsl('gantt\n  title Plan')).toEqual({ error: expect.stringMatching(/^Mermaid "gantt" cannot be converted\. Convertible: flowchart/) });
+    expect(mermaidToDsl('journey\n  title Trip')).toEqual({ error: expect.stringMatching(/"journey" cannot be converted/) });
+  });
+
+  it('carries a front-matter title, reports config, and quotes a label with a line break', () => {
+    const result = mermaidToDsl('---\ntitle: "Checkout"\nconfig:\n  theme: dark\n---\nflowchart LR\n  A["line1\n  line2"] --> B');
+    if ('error' in result) throw new Error(result.error);
+    expect(result.dsl).toMatch(/^flowchart right\ntitle: Checkout\n/);
+    expect(result.dsl).toContain('"line1\\nline2"');
+    expect(result.losses).toEqual(['Front matter config dropped']);
+    expect(looksLikeMermaid('---\ntitle: x\n---\nflowchart LR\n  A-->B')).toBe(true);
+  });
+
+  it('puts parser findings on their Mermaid line', () => {
+    const result = mermaidToDsl('flowchart TD\n  A --> B\n  A[Start --> C');
+    expect('diagnostics' in result && result.diagnostics.map(({ line }) => line)).toEqual([3]);
+  });
+
   it('converts flowcharts with shapes, groups, styles and arrow styles', async () => {
     const { dsl, losses } = convert(`flowchart LR
   A[Start] --> B{Check}
