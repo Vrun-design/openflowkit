@@ -31,6 +31,8 @@
     "shape-pack:manifest": "node scripts/shape-pack/generate-shape-pack-manifest.mjs",
     "shape-pack:validate": "node scripts/shape-pack/validate-shape-pack-manifests.mjs",
     "shape-pack:intake-check": "node scripts/shape-pack/check-provider-intake.mjs",
+    "stress:generate": "tsx scripts/generate-stress-doc.ts",
+    "stress:open": "node scripts/open-stress-sheet.mjs",
     "prepare": "node -e \"if (process.env.CI) process.exit(0)\" && husky || true",
     "build:agent": "vite build -c vite.agent.config.ts",
     "eval:agent": "npm --prefix mcp-server run eval:agent",
@@ -68,6 +70,7 @@
     "jsdom": "^28.0.0",
     "lint-staged": "^15.5.2",
     "prettier": "^3.8.1",
+    "tsx": "^4.22.3",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
     "vitest": "^4.0.18"

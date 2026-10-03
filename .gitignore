@@ -47,6 +47,9 @@ docs-site/.astro/
 # Rendered `openflow` examples: regenerated from the docs markdown by prebuild.
 docs-site/public/examples/
 
+# Generated stress-test canvases; regenerate with `npm run stress:generate`.
+stress/*.json
+
 # Local AI tooling (skills, agents, scratch edits) — not product code
 .agents/
 .claude/skills/
