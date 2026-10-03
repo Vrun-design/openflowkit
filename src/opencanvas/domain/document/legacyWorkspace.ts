@@ -31,6 +31,7 @@ export interface LegacyWorkspaceOptions {
 }
 
 export interface LegacyImportFailure {
+  /** Empty when no single document is to blame: an unreadable source blob, or a row with no id. */
   readonly v1Id: string;
   readonly name: string;
   readonly error: string;
@@ -99,7 +100,7 @@ function parse(source: string, blob: string | null, pick: (value: unknown) => un
     if (!Array.isArray(rows)) throw new TypeError('no list of diagrams');
     return rows.filter(isJsonObject);
   } catch (error) {
-    failures.push({ v1Id: source, name: source, error: message(error) });
+    failures.push({ v1Id: '', name: source, error: message(error) });
     return [];
   }
 }
@@ -156,8 +157,14 @@ export async function migrateLegacyWorkspace(
   options: LegacyWorkspaceOptions = {}
 ): Promise<LegacyWorkspace> {
   const failures: LegacyImportFailure[] = [];
+  // A row that is not plain JSON is reported, never dropped without a word.
+  const rows: JsonObject[] = [];
+  for (const row of sources.documents) {
+    if (isJsonObject(row)) rows.push(row);
+    else failures.push({ v1Id: String((row as { id?: unknown } | null)?.id ?? ''), name: 'Untitled Flow', error: 'v1 row is not plain JSON.' });
+  }
   const raw = [
-    ...sources.documents.filter(isJsonObject),
+    ...rows,
     ...parse('openflowkit-documents-fallback', sources.fallback, (value) => value, failures),
     ...sources.tabStates.flatMap((blob) => parse('openflowkit-storage', blob, (value) =>
       isJsonObject(value) && isJsonObject(value.state) ? (value.state.tabs ?? []) : null, failures).map(fromTab)),
@@ -168,7 +175,7 @@ export async function migrateLegacyWorkspace(
   for (const row of raw) {
     const id = text(row.id);
     if (!id) {
-      failures.push({ v1Id: '(no id)', name: text(row.name) ?? 'Untitled Flow', error: 'v1 diagram has no id.' });
+      failures.push({ v1Id: '', name: text(row.name) ?? 'Untitled Flow', error: 'v1 diagram has no id.' });
       continue;
     }
     const record = fromPersisted(row, id);

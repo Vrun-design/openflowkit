@@ -26,12 +26,12 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - Phase-7 `frame.test.ts` flakes under load, passes alone.
 
 ## Next — owner's order, 2026-10-03
-- **12.0 fidelity DONE 2026-10-03 (opus-5.5): 27/27 clean after fixes** (was 0/27) → no Classic per D4 (owner confirms).
-  Real v1 fixtures `storage/v2/__fixtures__/v1/`; `scripts/v1-fidelity/{capture.mjs,compare.ts}` → `test-results/v1-fidelity/`.
-  For 12.2/12.3: pre-March `tabs` live in IDB `flowMetadata`; v1 hard-deletes; 7 renderer_first `mermaid_svg` nodes are
-  broken in v1 too (no viewBox) → convert `mermaidSource` via mermaidToDsl; import must inline `imageUrl` for exports.
-- → 12.1 v1 bridge on `main` (separate agent) → 12.2–12.8.
+- **12.0 DONE (opus-5.5): 27/27 clean** → no Classic (owner confirms). Fixtures `storage/v2/__fixtures__/v1/`, `scripts/v1-fidelity/`;
+  `mermaid_svg` broken in v1 too → mermaidToDsl; import inlines `imageUrl`.
+- **12.1 bridge BUILT 2026-10-03 (opus-5.5), NOT pushed**: branch `v1-bridge` @99589ce in `../ofk-main`; owner pushes + merges to `main` ~2–4 wk pre-launch, then tags `v1-final`.
+  For 12.3: a v1 tab can still save after import (warns, but saves) → if a v1 doc's `updatedAt` moved since import, don't drop it as `stale`.
 - **12.2 DONE 2026-10-03 (opus-5.5)**: `legacyWorkspace.ts` 3 sources → `v1-<id>`; all merge (stale copy may resurrect a deleted doc; owner may veto).
+- **12.3 DONE 2026-10-03**: `v1Import.ts` on boot + `rehearsal.mjs` PASS. Open v1 tab blocks v4 upgrade → 12.1: close on `versionchange`.
 - **13.1 Mermaid into MCP** + 13.2 headless icons, parallel with 12 (different files).
 - Open calls (plan README §2): D7 paid (owner); D8 labs; D11 own UI (V2 recommended, docs/plan/design). D6 encrypted links + D9 analytics = yes.
 ## Deferred

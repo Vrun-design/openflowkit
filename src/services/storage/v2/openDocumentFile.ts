@@ -6,7 +6,7 @@ import { SCENE_DOCUMENT_FORMAT, type SceneDocumentV1 } from '../../../opencanvas
 
 // A v1 node saved with no size at all (pre-March builds): the size v2 inserts that kind at.
 // ponytail: catalog default, not v1's content-fitted DOM size — a long label may overflow.
-function defaultLegacyNodeSize(node: JsonObject) {
+export function defaultLegacyNodeSize(node: JsonObject) {
   return (productionNodeCatalogEntry(String(node.type)) ?? productionNodeCatalogEntry('custom'))?.size ?? null;
 }
 

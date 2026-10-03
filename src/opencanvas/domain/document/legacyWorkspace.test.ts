@@ -83,7 +83,7 @@ describe('migrateLegacyWorkspace rules', () => {
       fallback: '{not json', tabStates: [null, '{"state":{}}'],
     });
     expect(result.documents.map((document) => document.id)).toEqual([`v1-${row.id}`]);
-    expect(result.failures.map((failure) => failure.v1Id)).toEqual(['openflowkit-documents-fallback', 'broken']);
+    expect(result.failures.map((failure) => failure.v1Id)).toEqual(['', 'broken']);
   });
   it('lets a newer deleted copy win, so a delete is not undone by an older copy', async () => {
     const result = await migrateLegacyWorkspace({
@@ -99,11 +99,15 @@ describe('migrateLegacyWorkspace rules', () => {
     const result = await migrateLegacyWorkspace({ documents: [twin, dupeNodes], fallback: null,
       tabStates: [JSON.stringify({ state: { tabs: [{ name: 'no id', nodes: [], edges: [] }] } })] });
     expect(result.documents.map((document) => document.pages.map((page) => page.id))).toEqual([[row.pages[0].id, `${row.pages[0].id}:2`]]);
-    expect(result.failures.map((failure) => failure.v1Id)).toEqual(['(no id)', 'dupe']);
+    expect(result.failures.map((failure) => failure.v1Id)).toEqual(['', 'dupe']);
   });
 
   it('skips what the caller already imported', async () => {
     const result = await migrateLegacyWorkspace({ documents: [row], fallback: null, tabStates: [] }, { skip: (id) => id === row.id });
     expect(result).toEqual({ documents: [], idMap: {}, failures: [] });
+  });
+  it('reports a row that is not plain JSON instead of dropping it', async () => {
+    const result = await migrateLegacyWorkspace({ documents: [{ ...row, playback: undefined }], fallback: null, tabStates: [] });
+    expect(result.failures).toEqual([{ v1Id: row.id, name: 'Untitled Flow', error: 'v1 row is not plain JSON.' }]);
   });
 });
