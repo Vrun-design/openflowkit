@@ -1,0 +1,32 @@
+direction: right
+Before and after becoming friends: {
+  2007: Office chatter in 2007 {
+    shape: sequence_diagram
+    alice: Alice
+    bob: Bobby
+    awkward small talk: {
+      alice -> bob: uhm, hi
+      bob -> alice: oh, hello
+      icebreaker attempt: {
+        alice -> bob: what did you have for lunch?
+      }
+      unfortunate outcome: {
+        bob -> alice: that's personal
+      }
+    }
+  }
+
+  2012: Office chatter in 2012 {
+    shape: sequence_diagram
+    alice: Alice
+    bob: Bobby
+    alice -> bob: Want to play with ChatGPT?
+    bob -> alice: Yes!
+    bob -> alice.play: Write a play...
+    alice.play -> bob.play: about 2 friends...
+    bob.play -> alice.play: who find love...
+    alice.play -> bob.play: in a sequence diagram
+  }
+
+  2007 -> 2012: Five\nyears\nlater
+}

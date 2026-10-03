@@ -1,0 +1,84 @@
+# Shape catalog of standard shapes
+
+classes: {
+  hidden: {
+    label: ""
+    style.fill: transparent
+    style.stroke-width: 0
+  }
+  example: {
+    style.fill: white
+    width: 180
+    height: 120
+    style.font-size: 20
+    style.bold: false
+  }
+}
+
+style.fill: transparent
+
+grid-rows: 5
+grid-gap: 0
+
+one: {
+  class: hidden
+  rectangle.shape: rectangle
+  square.shape: square
+  page.shape: page
+  parallelogram.shape: parallelogram
+
+  # Color fixups to ensure all shapes have white fill
+  # TODO change this to use globs when implemented
+  rectangle.class: example
+  square.class: example
+  page.class: example
+  parallelogram.class: example
+}
+
+two: {
+  class: hidden
+  document.shape: document
+  cylinder.shape: cylinder
+  queue.shape: queue
+  package.shape: package
+
+  document.class: example
+  cylinder.class: example
+  queue.class: example
+  package.class: example
+}
+
+three: {
+  class: hidden
+  step.shape: step
+  callout.shape: callout
+  stored_data.shape: stored_data
+  person.shape: person
+
+  step.class: example
+  callout.class: example
+  stored_data.class: example
+  person.class: example
+}
+
+four: {
+  class: hidden
+  diamond.shape: diamond
+  oval.shape: oval
+  circle.shape: circle
+  hexagon.shape: hexagon
+
+  diamond.class: example
+  oval.class: example
+  circle.class: example
+  hexagon.class: example
+}
+
+five: {
+  class: hidden
+  cloud.shape: cloud
+  cloud.class: example
+  c4person.shape: c4-person
+  c4person.class: example
+  c4person.label: c4-person
+}

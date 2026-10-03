@@ -1,0 +1,8 @@
+my_table: {
+  shape: sql_table
+  # This is defined using the shorthand syntax for labels discussed in the containers section.
+  # But here it's for the type of a constraint.
+  # The id field becomes a map that looks like {type: int; constraint: primary_key}
+  id: int {constraint: primary_key}
+  last_updated: timestamp with time zone
+}

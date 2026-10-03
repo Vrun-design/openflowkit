@@ -90,6 +90,20 @@ test('Structurizr pasted into the panel converts to a C4 workspace', async ({ pa
   await expect.poll(() => page.evaluate(() => (window as unknown as { __V2__?: V2Api }).__V2__?.getDocument()?.pages.length ?? 0)).toBe(3);
 });
 
+test('D2 pasted into the panel converts and generates', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
+  const editor = page.getByRole('textbox', { name: 'Diagram source' });
+  await editor.fill('direction: right\nclouds: {\n  aws: AWS {\n    lb -> api\n    db: { shape: cylinder }\n    api -> db: reads\n  }\n}\nusers -> clouds.aws.lb');
+  await expect(page.getByText('D2 detected.')).toBeVisible();
+  await page.getByRole('button', { name: /Convert/ }).click();
+  await expect(editor).toHaveValue(/flowchart right/);
+  await expect(editor).toHaveValue(/db \[cylinder\]/);
+  await editor.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __V2__?: V2Api }).__V2__?.getState().nodes.length ?? 0)).toBeGreaterThanOrEqual(4);
+});
+
 test('every family generates scene records with its own node kinds', async ({ page }) => {
   await page.goto('/');
   await page.waitForSelector('[data-testid="v2-canvas"]');

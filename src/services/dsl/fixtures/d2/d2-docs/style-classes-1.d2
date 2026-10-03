@@ -1,0 +1,34 @@
+direction: right
+classes: {
+  load balancer: {
+    label: load\nbalancer
+    width: 100
+    height: 200
+    style: {
+      stroke-width: 0
+      fill: "#44C7B1"
+      shadow: true
+      border-radius: 5
+    }
+  }
+  unhealthy: {
+    style: {
+      fill: "#FE7070"
+      stroke: "#F69E03"
+    }
+  }
+}
+
+web traffic -> web lb
+web lb.class: load balancer
+
+web lb -> api1
+web lb -> api2
+web lb -> api3
+
+api2.class: unhealthy
+
+api1 -> cache lb
+api3 -> cache lb
+
+cache lb.class: load balancer

@@ -571,6 +571,14 @@
       "page": "architecture-c4"
     },
     {
+      "id": "d2-import",
+      "name": "D2 import",
+      "status": "shipped",
+      "evidence": "src/services/dsl/d2ToDsl.ts:1",
+      "notes": "D2 pasted into the code panel, or passed to the MCP tools, converts to flowchart, sequence or erd with a loss report; tested on the d2 and d2-docs example files.",
+      "page": "mermaid-import"
+    },
+    {
       "id": "family-flowchart",
       "name": "Flowchart family",
       "status": "shipped",
@@ -1070,7 +1078,7 @@
       "name": "SQL / OpenAPI / Terraform import",
       "status": "absent",
       "evidence": "src/",
-      "notes": "No such importers; the only foreign syntaxes are Mermaid and Structurizr."
+      "notes": "No such importers; the foreign syntaxes are Mermaid, Structurizr and D2."
     },
     {
       "id": "figma-import",

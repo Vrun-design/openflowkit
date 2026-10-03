@@ -95,6 +95,7 @@ import { runV1Import } from '../../../services/storage/v2/v1Import';
 import { buildAutoIconsOffCommand, hasAutoIcon, hasIcon } from '../../application/dsl/iconCommands';
 import { diagramIconsOn, iconToggleFrame, useV2IconActions } from './useV2IconActions';
 import { looksLikeStructurizr, structurizrToDsl } from '../../../services/dsl/structurizrToDsl';
+import { d2ToDsl, looksLikeD2 } from '../../../services/dsl/d2ToDsl';
 import './v2EditorPage.css';
 
 function changeObjectIds(changeId: string, proposal: Proposal | null): readonly string[] {
@@ -337,6 +338,7 @@ export function V2EditorPage(): React.JSX.Element {
   const foreignSyntax = useMemo(() => (
     looksLikeMermaid(codeDraft) ? { label: 'Mermaid', convert: mermaidToDsl }
       : looksLikeStructurizr(codeDraft) ? { label: 'Structurizr', convert: structurizrToDsl }
+        : looksLikeD2(codeDraft) ? { label: 'D2', convert: d2ToDsl }
         : null
   ), [codeDraft]);
   const convertForeign = useCallback(() => {

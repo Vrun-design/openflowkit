@@ -244,7 +244,15 @@ test('every editable corpus fixture imports onto the canvas', async ({ page }) =
   for (const fixture of editable) {
     try {
       await clearCanvas(page);
-      await importMermaid(page, source, fixture.source);
+      // A mindmap with no Mermaid shapes is valid DSL as written: no banner, it generates as is.
+      if (fixture.family === 'mindmap' && !/[[({]/.test(fixture.source)) {
+        await source.fill(fixture.source);
+        await expect(page.getByText('Mermaid detected.')).toBeHidden();
+        await source.press(`${META}+Enter`);
+        await expect.poll(async () => (await state(page)).nodes.length, { timeout: 15_000 }).toBeGreaterThan(0);
+      } else {
+        await importMermaid(page, source, fixture.source);
+      }
       const found = await labels(page);
       const wanted = fixture.structuralAssertions?.requiredLabels ?? [];
       const missing = wanted.filter((label) => !found.includes(label));

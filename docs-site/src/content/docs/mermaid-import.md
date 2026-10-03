@@ -1,11 +1,13 @@
 ---
-title: Mermaid import
-description: Paste Mermaid into the code panel and convert it to OpenFlow DSL, with every loss reported.
+title: Mermaid, Structurizr and D2 import
+description: Paste Mermaid, Structurizr DSL or D2 into the code panel, or hand it to an agent tool, and get OpenFlow DSL with every loss reported.
 ---
 
-Mermaid files can be brought in through the code panel (⌥D). Paste the source; when the draft
-starts with a Mermaid header the panel offers **Convert**, which rewrites the draft in place as
-OpenFlow DSL.
+Mermaid, Structurizr DSL and D2 come in through the code panel (⌥D). Paste the source; when
+the panel recognises the language it offers **Convert**, which rewrites the draft in place as
+OpenFlow DSL. Agents skip the panel: `create_diagram`, `update_diagram` and
+`validate_openflow_dsl` take the same text and answer with `converted.dsl` and
+`converted.losses` ([MCP Server](/mcp-server/)).
 
 ## What converts
 
@@ -19,6 +21,13 @@ OpenFlow DSL.
 | `mindmap` | `mindmap` |
 | `architecture` | `architecture` |
 
+Structurizr DSL becomes an `architecture` workspace — model, views and deployment
+environments ([C4 architecture](/architecture-c4/)).
+
+D2 becomes a `flowchart` (containers as groups, shapes, colours, dashes, links, AWS/GCP/Azure
+icons), a `sequence` when the file says `shape: sequence_diagram`, or an `erd` when every shape
+is a `sql_table`. Globs, `vars`, layers, grids and `near` are reported as losses.
+
 The conversion runs locally, in the browser. Nothing is uploaded.
 
 ## Losses are reported, not hidden
@@ -29,9 +38,9 @@ not kept.
 
 ## The conversion is one-way
 
-There is no Mermaid export. OpenFlowKit compiles DSL to the canvas and to SVG, PNG, JSON and
+There is no Mermaid, Structurizr or D2 export. OpenFlowKit compiles DSL to the canvas and to SVG, PNG, JSON and
 motion formats; it does not emit Mermaid. If a round-trip with Mermaid is a hard requirement,
-edit in Mermaid and paste again after changes.
+edit in the original language and paste again after changes.
 
 ## Where to go next
 
