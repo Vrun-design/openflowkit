@@ -46,6 +46,13 @@ openflowkit-mcp
 
 Requires **Node 18+**.
 
+### Teach your agent when and how to draw
+
+[`skills/openflowkit/SKILL.md`](https://github.com/Vrun-design/openflowkit/blob/main/skills/openflowkit/SKILL.md)
+tells an agent when a diagram helps, how to write it (Mermaid or DSL), and to save it as a
+`.openflow.json` beside the code. For Claude Code, copy it into `~/.claude/skills/openflowkit/`.
+Agents that fetch the web read the same text at `https://app.openflowkit.com/llms.txt`.
+
 ---
 
 ## Claude Desktop setup

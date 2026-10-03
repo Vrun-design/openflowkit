@@ -33,7 +33,8 @@
     "shape-pack:intake-check": "node scripts/shape-pack/check-provider-intake.mjs",
     "prepare": "node -e \"if (process.env.CI) process.exit(0)\" && husky || true",
     "build:agent": "vite build -c vite.agent.config.ts",
-    "eval:agent": "npm --prefix mcp-server run eval:agent"
+    "eval:agent": "npm --prefix mcp-server run eval:agent",
+    "skill:sync": "node scripts/sync-llms.mjs"
   },
   "dependencies": {
     "@tabler/icons-react": "^3.47.0",

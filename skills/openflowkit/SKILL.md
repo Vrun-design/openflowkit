@@ -1,7 +1,9 @@
-# OpenFlowKit
+---
+name: openflowkit
+description: Draw diagrams that stay valid, editable and saved next to the code. Use when a flowchart, architecture, sequence, state, ER, class, mindmap or git graph would explain something better than prose, or when the user asks for a diagram. Needs the openflowkit MCP server.
+---
 
-> Diagrams agents write, kept valid, editable and saved next to the code.
-> Install as a skill: skills/openflowkit/SKILL.md in https://github.com/Vrun-design/openflowkit
+# OpenFlowKit diagrams
 
 Write Mermaid or OpenFlow DSL, hand it to the `openflowkit` MCP server, and save the
 result as a `.openflow.json` file beside the code it explains. The file opens on a real

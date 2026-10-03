@@ -21,6 +21,13 @@ In live mode the tools act on the document you see, so ask for changes in terms 
 (`the frame on the active page`, `the selection`) and the client will call `get_diagram` or
 `list_diagrams` first.
 
+## Give the agent the skill
+
+[`skills/openflowkit/SKILL.md`](https://github.com/Vrun-design/openflowkit/blob/main/skills/openflowkit/SKILL.md)
+is one page an agent reads once: when a diagram is worth drawing, Mermaid or DSL, which tools
+to call, and to save a `.openflow.json` beside the code. In Claude Code, copy it into
+`~/.claude/skills/openflowkit/`. The app serves the same text at `/llms.txt`.
+
 ## With a bring-your-own-key model
 
 The assistant already sends the grammar and the frame you are editing, so the prompt should say

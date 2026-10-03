@@ -18,21 +18,28 @@ export interface IconResolution {
   shapeId: string;
 }
 
+/** Provider words the docs use that name another pack. */
+const PROVIDER_ALIASES: Readonly<Record<string, string>> = { tech: 'developer' };
+
 /**
  * `shapeIds(provider)` lists that provider's catalog. The name after the
  * provider matches exactly first, then as a suffix (`aws/lambda` →
- * `compute-lambda`), then anywhere in the id.
+ * `compute-lambda`), then as the start of the last word (`tech/react` →
+ * `frontend-reactjs`, not `frontend-preact`), then as a whole word, then anywhere.
  */
 export function matchIconId(id: string, shapeIds: (provider: string) => readonly string[]): IconResolution | null {
   const normalized = id.trim().toLowerCase();
   const separator = normalized.includes('/') ? '/' : normalized.includes(':') ? ':' : '-';
-  const [provider, ...rest] = normalized.split(separator);
+  const [written, ...rest] = normalized.split(separator);
+  const provider = written ? PROVIDER_ALIASES[written] ?? written : undefined;
   const query = rest.join('-').replace(/[^a-z0-9]+/g, '-');
   const packId = provider ? ICON_PACK_IDS[provider] : undefined;
   if (!provider || !query || !packId) return null;
   const candidates = shapeIds(provider);
   const shapeId = candidates.find((candidate) => candidate === query)
     ?? candidates.find((candidate) => candidate.endsWith(`-${query}`))
+    ?? candidates.find((candidate) => candidate.split('-').at(-1)!.startsWith(query))
+    ?? candidates.find((candidate) => `-${candidate}-`.includes(`-${query}-`))
     ?? candidates.find((candidate) => candidate.includes(query));
   return shapeId ? { packId, shapeId } : null;
 }
