@@ -349,7 +349,7 @@ function fragmentDepth(source: string): number {
   return deepest;
 }
 
-function stateDsl(source: string, nodes: readonly FlowNode[], edges: readonly FlowEdge[], direction: string | undefined): Converted {
+function stateDsl(source: string, nodes: readonly FlowNode[], edges: readonly FlowEdge[], direction: string | undefined, rename: (id: string) => string = (id) => id): Converted {
   const losses: string[] = [];
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const pseudo = (id: string) => id.startsWith('state_start') || id.startsWith('state_end');
@@ -414,7 +414,9 @@ function stateDsl(source: string, nodes: readonly FlowNode[], edges: readonly Fl
   // onto our `note X : text`, block notes (`end note`) do not.
   for (const line of source.split('\n')) {
     const note = /^\s*note\s+(?:left|right)\s+of\s+(\S+)\s*:\s*(.+)$/i.exec(line);
-    if (note && byId.has(note[1]!)) lines.push(`note ${refOf(note[1]!)} : ${quote(note[2]!.trim())}`);
+    // The note names the Mermaid id; `distinctIds` may have renamed it (`a` → `a-2`).
+    if (note && byId.has(rename(note[1]!))) lines.push(`note ${refOf(rename(note[1]!))} : ${quote(note[2]!.trim())}`);
+    else if (note) losses.push(`Note on unknown state ${note[1]} dropped`);
     else if (/^\s*note\s+(?:left|right)\s+of\s+\S+\s*$/i.test(line)) losses.push('Multi-line state notes are dropped');
   }
   return { dsl: `${lines.join('\n')}\n`, losses };
@@ -445,7 +447,7 @@ function erDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Converte
     if (!source || !target) continue;
     const token = typeof edge.data?.erRelation === 'string' ? edge.data.erRelation : '||--||';
     const label = typeof edge.label === 'string' && edge.label ? ` : ${quote(edge.label)}` : '';
-    lines.push(`${nodeName(source)} ${token} ${nodeName(target)}${label}`);
+    lines.push(`${nodeRef(source)} ${token} ${nodeRef(target)}${label}`);
   }
   return { dsl: `${lines.join('\n')}\n`, losses: [] };
 }
@@ -473,7 +475,7 @@ function classDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Conve
     const targetCardinality = typeof edge.data?.classRelationTargetCardinality === 'string' ? edge.data.classRelationTargetCardinality : undefined;
     const label = typeof edge.label === 'string' && edge.label ? ` : ${quote(edge.label)}` : '';
     lines.push(
-      `${nodeName(source)} ${sourceCardinality ? `"${sourceCardinality}" ` : ''}${token} ${targetCardinality ? `"${targetCardinality}" ` : ''}${nodeName(target)}${label}`,
+      `${nodeRef(source)} ${sourceCardinality ? `"${sourceCardinality}" ` : ''}${token} ${targetCardinality ? `"${targetCardinality}" ` : ''}${nodeRef(target)}${label}`,
     );
   }
   if (losses.length === 0) losses.push('Namespaces and `note for` are dropped');
@@ -615,6 +617,47 @@ export function looksLikeMermaid(text: string): boolean {
 
 const CONVERTIBLE = 'flowchart, sequenceDiagram, stateDiagram, classDiagram, erDiagram, mindmap, architecture, gitGraph';
 
+/**
+ * Mermaid ids are case-sensitive; ours are slugs. `A` and `a` would both slug to `a` and
+ * merge, so the later one is renamed (`a-2`) everywhere it is referenced. Ids that do not
+ * collide are left exactly as parsed (the state writer reads `state_start…` prefixes).
+ */
+function distinctIds(nodes: FlowNode[], edges: FlowEdge[]): { nodes: FlowNode[]; edges: FlowEdge[]; rename: (id: string) => string } {
+  const taken = new Set<string>();
+  const renamed = new Map<string, string>();
+  for (const { id } of nodes) {
+    const slug = slugifyDslId(id) || 'n';
+    if (!taken.has(slug)) {
+      taken.add(slug);
+      continue;
+    }
+    let suffix = 2;
+    while (taken.has(`${slug}-${suffix}`)) suffix += 1;
+    taken.add(`${slug}-${suffix}`);
+    renamed.set(id, `${slug}-${suffix}`);
+  }
+  const rename = (id: string) => renamed.get(id) ?? id;
+  if (renamed.size === 0) return { nodes, edges, rename };
+  const to = (id: unknown) => (typeof id === 'string' ? rename(id) : id);
+  return {
+    rename,
+    nodes: nodes.map((node) => ({
+      ...node,
+      id: to(node.id) as string,
+      ...(node.parentId ? { parentId: to(node.parentId) as string } : {}),
+      ...(node.data ? {
+        data: {
+          ...node.data,
+          ...(node.data.mindmapParentId ? { mindmapParentId: to(node.data.mindmapParentId) } : {}),
+          ...(node.data.seqNoteTarget ? { seqNoteTarget: to(node.data.seqNoteTarget) } : {}),
+          ...(Array.isArray(node.data.seqNoteTargets) ? { seqNoteTargets: node.data.seqNoteTargets.map(to) } : {}),
+        },
+      } : {}),
+    })) as FlowNode[],
+    edges: edges.map((edge) => ({ ...edge, source: to(edge.source) as string, target: to(edge.target) as string })),
+  };
+}
+
 /** Mermaid text → OFK DSL, or an error explaining why it cannot be converted. */
 export function mermaidToDsl(source: string): MermaidConversion | MermaidConversionError {
   const front = withoutFrontMatter(source);
@@ -632,13 +675,12 @@ export function mermaidToDsl(source: string): MermaidConversion | MermaidConvers
     const parsed = parseMermaidByType(text);
     if (parsed.error) return { error: parsed.error };
     // The parser's model is structurally wider; the adapter reads these fields only.
-    const nodes = parsed.nodes as unknown as FlowNode[];
-    const edges = parsed.edges as unknown as FlowEdge[];
+    const { nodes, edges, rename } = distinctIds(parsed.nodes as unknown as FlowNode[], parsed.edges as unknown as FlowEdge[]);
     const converted = (() => {
       switch (parsed.diagramType) {
         case 'flowchart': return flowchartDsl(nodes, edges, parsed.direction);
         case 'sequence': return sequenceDsl(text, nodes, edges);
-        case 'stateDiagram': return stateDsl(text, nodes, edges, parsed.direction);
+        case 'stateDiagram': return stateDsl(text, nodes, edges, parsed.direction, rename);
         case 'erDiagram': return erDsl(nodes, edges);
         case 'classDiagram': return classDsl(nodes, edges);
         case 'mindmap': return mindmapDsl(nodes);

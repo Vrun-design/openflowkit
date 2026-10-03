@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MERMAID_COMPAT_FIXTURES } from '../../../scripts/mermaid-compat-fixtures.mjs';
 import { compile } from '../../dsl/compile';
+import { format } from '../../dsl/serialize';
 import { looksLikeMermaid, mermaidToDsl } from './mermaidToDsl';
 
 const convert = (source: string) => {
@@ -79,6 +80,34 @@ describe('mermaidToDsl', () => {
     expect(compiled.nodes.map((node) => node.id).sort()).toEqual(['a1', 'a2', 'b1', 'c']);
     expect(compiled.connectors.map((connector) => `${connector.source.nodeId}->${connector.target.nodeId}`))
       .toEqual(['a1->a2', 'c->one', 'one->two', 'a1->two']);
+  });
+
+  it('ids that differ only in case stay separate nodes, groups and participants', async () => {
+    const flow = convert('flowchart LR\n  A[Upper] --> a[Lower]\n  subgraph B [Box]\n    x\n  end\n  subgraph b [Box]\n    y\n  end\n  c --> B\n  c --> b');
+    const compiled = await compile(flow.dsl);
+    expect(compiled.nodes.map((node) => node.content.label).sort()).toEqual(['Lower', 'Upper', 'c', 'x', 'y']);
+    expect(compiled.groups).toHaveLength(2);
+    const ends = compiled.connectors.map((connector) => `${connector.source.nodeId}->${connector.target.nodeId}`);
+    expect(new Set(ends).size).toBe(3);
+    expect(ends.filter((end) => end.startsWith('c->')).map((end) => end.slice(3)).sort()).toEqual(compiled.groups.map((group) => group.id).sort());
+
+    const sequence = convert('sequenceDiagram\n  participant A\n  participant a\n  A->>a: hi\n  Note over a: lower');
+    const messages = await compile(sequence.dsl);
+    expect(messages.nodes.filter((node) => node.kind !== 'sticky' && /^(A|a)$/.test(String(node.content.label)))).toHaveLength(2);
+    // Saved and reopened, the message still goes A → a and the note stays on a.
+    const reopened = await compile(await format(sequence.dsl));
+    expect(reopened.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    expect(await format(await format(sequence.dsl))).toBe(await format(sequence.dsl));
+    expect(await format(sequence.dsl)).toMatch(/A -> a-2 = a : hi[\s\S]*note over a-2 = a : lower/);
+
+    for (const source of ['classDiagram\n  class A\n  class a\n  A <|-- a', 'erDiagram\n  A ||--o{ a : has']) {
+      const relations = await compile(convert(source).dsl);
+      expect(relations.nodes, source).toHaveLength(2);
+      expect(new Set(relations.connectors.flatMap((connector) => [connector.source.nodeId, connector.target.nodeId])).size, source).toBe(2);
+    }
+    const state = convert('stateDiagram-v2\n  [*] --> A\n  A --> a\n  note right of a : lower');
+    expect(state.dsl).toContain('note a-2 : lower');
+    expect(convert('stateDiagram-v2\n  [*] --> A\n  note right of Nope : x').losses).toContain('Note on unknown state Nope dropped');
   });
 
   it('opens a new fragment after a closed one and interleaves activations and notes', async () => {

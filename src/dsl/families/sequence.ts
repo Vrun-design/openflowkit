@@ -120,9 +120,10 @@ function parseSequence(segments: readonly DslSegment[], context: FamilyContext):
   const fail = (segment: DslSegment, code: DslDiagnostic['code'], message: string, hint?: string): void => {
     context.diagnostics.push(tokenDiagnostic(code, 'warning', segment.tokens[0], message, hint));
   };
+  const resolve = (name: string): ParticipantDraft | undefined => byId.get(name) ?? byLabel.get(name) ?? byId.get(slugifyDslId(name));
   const declare = (name: string, line: number, explicit: boolean, explicitId?: string): ParticipantDraft => {
-    const existing = (explicitId ? byId.get(explicitId) : undefined) ?? byLabel.get(name)
-      ?? byId.get(name) ?? byId.get(slugifyDslId(name));
+    // `id = Label` names exactly that id (`a-2 = a` is not `A`); a bare name is an id, a label, then a slug.
+    const existing = explicitId ? byId.get(explicitId) : resolve(name);
     if (existing) {
       if (explicit) existing.declared = true;
       return existing;
@@ -131,10 +132,9 @@ function parseSequence(segments: readonly DslSegment[], context: FamilyContext):
     const participant: ParticipantDraft = { id, label: name, kind: 'participant', line, declared: explicit, firstUseLine: null, attrs: [], activations: [], comments: [] };
     participants.push(participant);
     byId.set(id, participant);
-    byLabel.set(name, participant);
+    if (!byLabel.has(name)) byLabel.set(name, participant);
     return participant;
   };
-  const resolve = (name: string): ParticipantDraft | undefined => byId.get(slugifyDslId(name)) ?? byLabel.get(name) ?? byId.get(name);
 
   for (const segment of segments) {
     const claimed = context.comments.claim(segment.line);
@@ -196,7 +196,8 @@ function parseSequence(segments: readonly DslSegment[], context: FamilyContext):
         continue;
       }
       const targets = joinTokens(head.slice(position === 'over' ? 1 : 2)).split(',')
-        .map((name) => resolve(name.trim()))
+        // A target written `id = Label` (how the serializer names it) is that id.
+        .map((name) => resolve(name.split('=')[0]!.trim()))
         .filter((participant): participant is ParticipantDraft => Boolean(participant));
       if (targets.length === 0) {
         fail(segment, 'W150', 'note target is not a participant', 'declare it with participant or a message');
@@ -265,7 +266,7 @@ function parseSequence(segments: readonly DslSegment[], context: FamilyContext):
       }
       const toEquals = toName.indexOf('=');
       const from = declare(fromName, segment.line, false, fromId);
-      const to = declare(toEquals >= 0 ? toName.slice(toEquals + 1).trim() : toName, segment.line, false);
+      const to = declare(toEquals >= 0 ? toName.slice(toEquals + 1).trim() : toName, segment.line, false, toEquals >= 0 ? toName.slice(0, toEquals).trim() : undefined);
       if (from.firstUseLine === null) from.firstUseLine = segment.line;
       if (to.firstUseLine === null) to.firstUseLine = segment.line;
       const label = joinTokens(parsed.body, true);

@@ -3,6 +3,12 @@ import { compile } from '../compile';
 import { format, serialize } from '../serialize';
 
 describe('sequence family', () => {
+  it('`id = Label` names exactly that participant, as sender, receiver or note target', async () => {
+    const result = await compile('sequence\nparticipant b = a\nparticipant a = Z\na -> b = a : hi\nnote over b = a : here');
+    expect(result.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    expect(result.connectors.map((connector) => `${connector.source.nodeId}->${connector.target.nodeId}`)).toEqual(['a->b']);
+  });
+
   it('lays participants out left to right and messages down the timeline', async () => {
     const result = await compile('sequence\nparticipant Alice\nBob\nAlice -> Bob : hi\nBob -->> Alice : there');
     const alice = result.nodes.find((node) => node.id === 'alice')!;
