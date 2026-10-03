@@ -16,11 +16,9 @@ const seed = {
   localStorage: fallback.localStorage as Record<string, string>,
 };
 export const tabs = JSON.parse(premarch.indexedDb.flowMetadata.find((row: Json) => row.id === 'openflowkit-storage').value).state.tabs;
-export const expected = [
-  ...current.indexedDb.documents.map((row: Json) => `v1-${row.id}`),
-  ...JSON.parse(fallback.localStorage['openflowkit-documents-fallback']).map((row: Json) => `v1-${row.id}`),
-  ...tabs.map((tab: Json) => `v1-${tab.id}`),
-].sort();
+// v1 showed IndexedDB whenever it held a live diagram, so the fallback and tab copies here are
+// strays: not listed (a delete in v1 must stay deleted), kept in the v1 backup download.
+export const expected = current.indexedDb.documents.map((row: Json) => `v1-${row.id}`).sort();
 
 // A same-origin page with no app on it, so v1's database is written before v2 ever opens it.
 export async function seedV1(page: Page): Promise<void> {

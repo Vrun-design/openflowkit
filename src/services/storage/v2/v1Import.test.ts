@@ -128,6 +128,12 @@ describe('v1 backup file', () => {
     expect(image.data.imageUrl).toMatch(/^data:image\//);
   });
 
+  it('backs up the localStorage copies when IndexedDB will not open, as v1 read them then', async () => {
+    const blocked = { open: () => { throw new DOMException('blocked', 'SecurityError'); } } as unknown as IDBFactory;
+    const backup = await buildV1Backup(blocked, memoryStorage({ 'openflowkit-documents-fallback': JSON.stringify([rows[0]]) }));
+    expect(backup.documents.map((row) => row.id)).toEqual([rows[0]!.id]);
+  });
+
   it('opens a backup as one document per diagram; opening it again adds nothing', async () => {
     const backup = JSON.parse(JSON.stringify(await buildV1Backup(indexedDB, memoryStorage())));
     const database = await openFlowPersistenceDatabase(indexedDB);

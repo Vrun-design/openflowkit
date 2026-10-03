@@ -201,7 +201,12 @@ async function backupContent(content: JsonObject): Promise<JsonObject> {
 
 /** Every live v1 diagram in this browser, read-only, in the 12.1 backup format. The permanent stand-in for Classic. */
 export async function buildV1Backup(factory: IDBFactory, storage: Storage, now = new Date()): Promise<V1Backup> {
-  const rows = legacyWorkspaceRows(await readV1Sources(factory, storage));
+  // v1 read its localStorage copies whenever IndexedDB would not open, so the backup does too.
+  // Not the boot import: a blocked open (a v1 tab still holding the database) is often transient,
+  // and importing the localStorage strays then would list them for good.
+  const sources = await readV1Sources(factory, storage)
+    .catch(() => ({ documents: [], fallback: storage.getItem(V1_FALLBACK_KEY), tabStates: [storage.getItem(V1_ZUSTAND_KEY)] }));
+  const rows = legacyWorkspaceRows(sources);
   const documents = await Promise.all(rows.map(async (row) => ({
     ...row,
     ...(isJsonObject(row.content) ? { content: await backupContent(row.content) } : {}),

@@ -148,8 +148,15 @@ async function migrateRecord(record: LegacyRecord, options: LegacyWorkspaceOptio
   return document;
 }
 
-// The newest live copy of every v1 document across the three sources.
-function collectLegacyRecords(sources: LegacyWorkspaceSources, failures: LegacyImportFailure[]): LegacyRecord[] {
+/**
+ * The newest live copy of every v1 document across the three sources. v1 showed
+ * IndexedDB whenever it held a live diagram; the fallback and the pre-March tabs
+ * stood in only when it held none. So with live IndexedDB rows, a copy elsewhere
+ * may update one of them (a failed IndexedDB write lands in the fallback), but an
+ * id IndexedDB lacks was deleted in v1 or never shown: `everything` keeps it, for
+ * the backup file, so a lost write is never lost for good.
+ */
+function collectLegacyRecords(sources: LegacyWorkspaceSources, failures: LegacyImportFailure[], everything = false): LegacyRecord[] {
   // A row that is not plain JSON is reported, never dropped without a word.
   const rows: JsonObject[] = [];
   for (const row of sources.documents) {
@@ -162,8 +169,9 @@ function collectLegacyRecords(sources: LegacyWorkspaceSources, failures: LegacyI
     ...sources.tabStates.flatMap((blob) => parse('openflowkit-storage', blob, (value) =>
       isJsonObject(value) && isJsonObject(value.state) ? (value.state.tabs ?? []) : null, failures).map(fromTab)),
   ];
-  // ponytail: every source merges, so a stale fallback/tab copy of a document v1 later
-  // hard-deleted comes back — recoverable (delete it again), unlike dropping a live one.
+  const shown = rows.some((row) => row.deletedAt === null || row.deletedAt === undefined)
+    ? new Set(rows.map((row) => text(row.id)))
+    : null;
   const winners = new Map<string, LegacyRecord>();
   for (const row of raw) {
     const id = text(row.id);
@@ -171,6 +179,7 @@ function collectLegacyRecords(sources: LegacyWorkspaceSources, failures: LegacyI
       failures.push({ v1Id: '', name: text(row.name) ?? 'Untitled Flow', error: 'v1 diagram has no id.' });
       continue;
     }
+    if (shown && !shown.has(id) && !everything) continue;
     const record = fromPersisted(row, id);
     const held = winners.get(id);
     if (!held || record.updatedAt > held.updatedAt) winners.set(id, record);
@@ -178,15 +187,15 @@ function collectLegacyRecords(sources: LegacyWorkspaceSources, failures: LegacyI
   return [...winners.values()].filter((record) => !record.deleted).sort((a, b) => (a.id < b.id ? -1 : 1));
 }
 
-/** Every live v1 document as v1 stored it (pre-March tabs in document shape), for the 12.1 backup file. */
+/** Every live v1 document as v1 stored it (pre-March tabs in document shape), stray copies too, for the 12.1 backup file. */
 export function legacyWorkspaceRows(sources: LegacyWorkspaceSources): readonly JsonObject[] {
-  return collectLegacyRecords(sources, []).map((record) => record.row);
+  return collectLegacyRecords(sources, [], true).map((record) => record.row);
 }
 
 /**
- * v1 workspace → v2 documents. One document per v1 document (`v1-<v1Id>`), one
- * page per v1 page. The same id in several sources: newest `updatedAt` wins
- * (a deleted copy too), ties go to the earlier source. One document that
+ * v1 workspace → v2 documents: the diagrams v1 showed. One document per v1 document
+ * (`v1-<v1Id>`), one page per v1 page. The same id in several sources: newest
+ * `updatedAt` wins (a deleted copy too), ties go to the earlier source. One document that
  * throws is reported and never stops the rest.
  */
 export async function migrateLegacyWorkspace(

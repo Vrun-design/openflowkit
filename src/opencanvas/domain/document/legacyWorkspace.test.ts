@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { legacyMermaidConverter } from '../../application/dsl/legacyMermaid';
 import { deterministicLayout } from '../../../dsl/layout';
 import { restoreLegacyDocumentSnapshot } from './legacyProjection';
-import { migrateLegacyWorkspace, type LegacyWorkspaceSources } from './legacyWorkspace';
+import { legacyWorkspaceRows, migrateLegacyWorkspace, type LegacyWorkspaceSources } from './legacyWorkspace';
 import { validateSceneDocumentV1 } from './validation';
 
 // Real records v1 wrote (scripts/v1-fidelity/capture.mjs), not look-alikes.
@@ -21,9 +21,16 @@ const convertMermaid = legacyMermaidConverter({ layout: deterministicLayout });
 const byId = <T extends { id: string }>(documents: readonly T[], id: string) => documents.find((document) => document.id === id);
 
 describe('migrateLegacyWorkspace on captured v1 workspaces', () => {
-  it('brings every live document from all three sources, valid and page for page', async () => {
-    const { documents, idMap, failures } = await migrateLegacyWorkspace(sources, { convertMermaid });
-    expect(failures).toEqual([]);
+  it('brings every live document from each captured browser, valid and page for page', async () => {
+    // Three captures, three browsers: v1 on IndexedDB, v1 without it, the pre-March build.
+    const runs = await Promise.all([
+      { documents: indexedDb.documents, fallback: null, tabStates: [] },
+      { documents: [], fallback, tabStates: [] },
+      { documents: [], fallback: null, tabStates: [tabState] },
+    ].map((browser) => migrateLegacyWorkspace(browser, { convertMermaid })));
+    const documents = runs.flatMap((run) => run.documents);
+    const idMap = Object.assign({}, ...runs.map((run) => run.idMap)) as Record<string, string>;
+    expect(runs.flatMap((run) => run.failures)).toEqual([]);
     const tabs = JSON.parse(tabState).state.tabs as Json[];
     const v1 = [...indexedDb.documents, ...JSON.parse(fallback)] as Json[];
     expect(documents).toHaveLength(v1.length + tabs.length);
@@ -100,6 +107,24 @@ describe('migrateLegacyWorkspace rules', () => {
       tabStates: [JSON.stringify({ state: { tabs: [{ name: 'no id', nodes: [], edges: [] }] } })] });
     expect(result.documents.map((document) => document.pages.map((page) => page.id))).toEqual([[row.pages[0].id, `${row.pages[0].id}:2`]]);
     expect(result.failures.map((failure) => failure.v1Id)).toEqual(['', 'dupe']);
+  });
+
+  it('imports what v1 showed: with live IndexedDB rows, a fallback or tab copy only updates one of them', async () => {
+    // v1 read IndexedDB whenever it held a live diagram, so `stray` (only in the fallback and
+    // the old tabs) was deleted in v1 or never shown; it stays out of the list, in the backup.
+    const stray = { ...at('2026-03-01T00:00:00.000Z', 'stray'), id: 'stray' };
+    const browser = {
+      documents: [at('2026-01-01T00:00:00.000Z', 'idb')],
+      fallback: JSON.stringify([stray, at('2026-02-01T00:00:00.000Z', 'newer write')]),
+      tabStates: [JSON.stringify({ state: { tabs: [{ id: 'old-tab', name: 'old tab', nodes: [], edges: [] }] } })],
+    };
+    const result = await migrateLegacyWorkspace(browser);
+    expect(result.documents.map((document) => [document.id, document.name])).toEqual([[`v1-${row.id}`, 'newer write']]);
+    expect(result.failures).toEqual([]);
+    expect(legacyWorkspaceRows(browser).map((kept) => kept.id).sort()).toEqual([row.id, 'old-tab', 'stray'].sort());
+    // With no live IndexedDB row, v1 fell back to the other sources, and so does the import.
+    const empty = await migrateLegacyWorkspace({ ...browser, documents: [{ ...row, deletedAt: '2026-01-01T00:00:00.000Z' }] });
+    expect(empty.documents.map((document) => document.id).sort()).toEqual(['v1-old-tab', 'v1-stray'].sort());
   });
 
   it('skips what the caller already imported', async () => {
