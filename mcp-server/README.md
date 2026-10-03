@@ -95,7 +95,7 @@ one to target a file-mode document.
 
 | Tool | What it does |
 |---|---|
-| `create_diagram` / `update_diagram` | Compile DSL — or Mermaid, converted with a loss report — into a new frame, or replace one in place; one undo step |
+| `create_diagram` / `update_diagram` | Compile DSL — or Mermaid, Structurizr DSL or D2, converted with a loss report — into a new frame, or replace one in place; one undo step |
 | `get_diagram` / `list_diagrams` | Read a frame's DSL, its drift from the canvas, and what the text cannot express |
 | `get_syntax` | The grammar, or one family's section |
 | `search_icons` / `find_icons_for` | Search 7,269 icons (AWS, Azure, GCP, CNCF, developer logos, 5,148 Standard glyphs), or expand a concept ("cache", "queue", "auth") |
@@ -104,7 +104,7 @@ one to target a file-mode document.
 | `screenshot` | PNG of one frame (live mode) |
 | `fit_view` | Frame the camera |
 | `get_document` / `list_pages` | Nodes, connectors and pages with geometry |
-| `validate_openflow_dsl` | Parse DSL (or Mermaid, converted first) with the real parser, structured diagnostics |
+| `validate_openflow_dsl` | Parse DSL (or Mermaid, Structurizr DSL, D2 — converted first) with the real parser, structured diagnostics |
 | `analyze_codebase` | Detect platforms, services, structure and language mix in a local repo |
 | `discover_architecture` | Walk a repo (compose, Dockerfiles, k8s, terraform, manifests) and propose a C4 `architecture` workspace as DSL, with evidence per element |
 | `drift_report` | Re-run discovery against a model (DSL text, open document, or `architecture.ofk` in an open folder) and report `missing` / `undrawn` / `changed` with evidence lines |

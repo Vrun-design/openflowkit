@@ -2,7 +2,9 @@
 // second grammar. Compilation (layout, icons) is the caller's next step.
 import { parseDocument } from '../dsl/document';
 import { isReservedFamily } from '../dsl/document';
+import { d2ToDsl, looksLikeD2 } from '../services/dsl/d2ToDsl';
 import { looksLikeMermaid, mermaidToDsl } from '../services/dsl/mermaidToDsl';
+import { looksLikeStructurizr, structurizrToDsl } from '../services/dsl/structurizrToDsl';
 
 export interface DslLintReport {
   readonly ok: boolean;
@@ -17,11 +19,14 @@ export interface DslLintReport {
     readonly col: number;
     readonly message: string;
   }[];
-  /** Set when the input was Mermaid: the DSL it became, and what did not carry over (Mermaid lines). */
-  readonly mermaid?: { readonly dsl: string; readonly losses: readonly MermaidLoss[] };
+  /** Set when the input was Mermaid, Structurizr or D2: the DSL it became, and what did not carry over. */
+  readonly converted?: { readonly from: ForeignFormat; readonly dsl: string; readonly losses: readonly ConversionLoss[] };
 }
 
-export interface MermaidLoss {
+export type ForeignFormat = 'mermaid' | 'structurizr' | 'd2';
+
+/** A construct the DSL cannot express; `line` counts lines of the text the agent sent. */
+export interface ConversionLoss {
   readonly line: number;
   readonly message: string;
 }
@@ -29,9 +34,21 @@ export interface MermaidLoss {
 export interface AgentSource {
   /** OpenFlow DSL, ready to compile. */
   readonly dsl: string;
-  /** Present when the input was Mermaid; lines refer to the Mermaid text. */
-  readonly mermaidLosses?: readonly MermaidLoss[];
+  /** Present when the input was another language; lines refer to the text the agent sent. */
+  readonly converted?: { readonly from: ForeignFormat; readonly losses: readonly ConversionLoss[] };
 }
+
+/** Detector and converter per language, tried in this order; DSL is what is left. */
+const FOREIGN: readonly {
+  readonly from: ForeignFormat;
+  readonly label: string;
+  readonly detect: (text: string) => boolean;
+  readonly convert: (text: string) => { dsl: string; diagnostics: readonly { line: number; message: string }[] } | { error: string };
+}[] = [
+  { from: 'mermaid', label: 'Mermaid', detect: looksLikeMermaid, convert: mermaidToDsl },
+  { from: 'structurizr', label: 'Structurizr DSL', detect: looksLikeStructurizr, convert: structurizrToDsl },
+  { from: 'd2', label: 'D2', detect: looksLikeD2, convert: d2ToDsl },
+];
 
 /** The first ```fenced``` block in an agent's markdown, prose around it included. */
 const FENCED = /```[\w-]*[ \t]*\r?\n([\s\S]*?)\r?\n?[ \t]*```/;
@@ -46,19 +63,20 @@ function unfenced(text: string): string {
 }
 
 /**
- * Whatever an agent wrote → DSL. Mermaid converts through the editor's own
- * transpiler; anything else is taken as DSL. Throws a RangeError naming the
- * convertible families when Mermaid cannot be converted.
+ * Whatever an agent wrote → DSL. Mermaid, Structurizr DSL and D2 convert through
+ * the editor's own importers; anything else is taken as DSL. Throws a RangeError
+ * saying why when a recognised language cannot be converted.
  */
 export function readAgentSource(text: string): AgentSource {
   const source = unfenced(text);
+  const foreign = FOREIGN.find(({ detect }) => detect(source));
   // DSL is stored as written inside the fence; only lint keeps the padded line numbers.
-  if (!looksLikeMermaid(source)) return { dsl: FENCED.exec(text)?.[1] ?? text };
-  const conversion = mermaidToDsl(source);
-  if ('error' in conversion) throw new RangeError(conversion.error);
+  if (!foreign) return { dsl: FENCED.exec(text)?.[1] ?? text };
+  const conversion = foreign.convert(source);
+  if ('error' in conversion) throw new RangeError(conversion.error.startsWith(foreign.label) ? conversion.error : `${foreign.label}: ${conversion.error}`);
   return {
     dsl: conversion.dsl,
-    mermaidLosses: conversion.diagnostics.map(({ line, message }) => ({ line, message })),
+    converted: { from: foreign.from, losses: conversion.diagnostics.map(({ line, message }) => ({ line, message })) },
   };
 }
 
@@ -68,9 +86,9 @@ export function lintDsl(text: string): DslLintReport {
     source = readAgentSource(text);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, family: 'mermaid', reserved: false, statements: 0, lines: text.split('\n').length, diagnostics: [{ code: 'E003', severity: 'error', line: 1, col: 1, message }] };
+    return { ok: false, family: 'unknown', reserved: false, statements: 0, lines: text.split('\n').length, diagnostics: [{ code: 'E003', severity: 'error', line: 1, col: 1, message }] };
   }
-  const document = parseDocument(source.mermaidLosses ? source.dsl : unfenced(text));
+  const document = parseDocument(source.converted ? source.dsl : unfenced(text));
   return {
     ok: !document.diagnostics.some(({ severity }) => severity === 'error'),
     family: document.family,
@@ -78,6 +96,6 @@ export function lintDsl(text: string): DslLintReport {
     statements: document.segments.length,
     lines: document.lineCount,
     diagnostics: document.diagnostics.map(({ code, severity, line, col, message }) => ({ code, severity, line, col, message })),
-    ...(source.mermaidLosses ? { mermaid: { dsl: source.dsl, losses: source.mermaidLosses } } : {}),
+    ...(source.converted ? { converted: { ...source.converted, dsl: source.dsl } } : {}),
   };
 }

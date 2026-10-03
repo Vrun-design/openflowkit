@@ -11,10 +11,11 @@ export function registerValidateDsl(server: McpServer): void {
     {
       title: 'Validate OpenFlow DSL',
       description:
-        'Parse OpenFlow DSL (or Mermaid, converted first) and return structured diagnostics (code, severity, line, column, message). ' +
-        'Warnings are recoverable; errors mean the line was dropped. For Mermaid, `mermaid.dsl` is what it became and ' +
-        '`mermaid.losses` name the Mermaid lines that did not carry over; diagnostics refer to `mermaid.dsl`.',
-      inputSchema: { dsl: z.string().describe('OpenFlow DSL or Mermaid source to validate.') },
+        'Parse OpenFlow DSL — or Mermaid, Structurizr DSL or D2, converted first — and return structured diagnostics ' +
+        '(code, severity, line, column, message). Warnings are recoverable; errors mean the line was dropped. For another ' +
+        'language, `converted.dsl` is what it became and `converted.losses` name the lines of your text that did not carry ' +
+        'over; diagnostics then refer to `converted.dsl`.',
+      inputSchema: { dsl: z.string().describe('OpenFlow DSL, Mermaid, Structurizr DSL or D2 source to validate.') },
     },
     async ({ dsl }) => {
       const report = lintDsl(dsl);
@@ -28,7 +29,7 @@ export function registerValidateDsl(server: McpServer): void {
             statements: report.statements,
             lines: report.lines,
             diagnostics: report.diagnostics,
-            ...(report.mermaid ? { mermaid: report.mermaid } : {}),
+            ...(report.converted ? { converted: report.converted } : {}),
             hint: report.ok
               ? 'Valid. Next: create_diagram(dsl) in the paired editor, or openflow_create + create_diagram for file mode.'
               : 'Fix the errors, then re-validate. See get_syntax for the grammar section that applies.',

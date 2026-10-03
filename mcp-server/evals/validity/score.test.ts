@@ -16,7 +16,7 @@ describe('validity scoring', () => {
   it('scores DSL, fenced Mermaid, a broken draw and an unconvertible family', async () => {
     const target = await client();
     expect(await scoreCase(target, 'flowchart\n  A -> B')).toMatchObject({ valid: true, nodes: 2, problems: [] });
-    expect(await scoreCase(target, '```mermaid\nflowchart LR\n  A[x] --> B\n```')).toMatchObject({ valid: true, mermaidLosses: 0 });
+    expect(await scoreCase(target, '```mermaid\nflowchart LR\n  A[x] --> B\n```')).toMatchObject({ valid: true, losses: 0 });
     expect(await scoreCase(target, 'gantt\n  title Plan')).toMatchObject({ valid: false, problems: [expect.stringMatching(/cannot be converted/)] });
     expect(await scoreCase(target, 'flowchart')).toMatchObject({ valid: false, problems: ['The diagram compiled to no nodes.'] });
   });

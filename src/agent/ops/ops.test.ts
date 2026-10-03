@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { applyDocumentCommand } from '@/opencanvas/domain/commands/execute';
 import { buildDeleteSelectionCommand, buildMoveNodesCommand } from '@/opencanvas/domain/commands/sceneEdits';
@@ -236,13 +237,14 @@ describe('Mermaid input', () => {
     for (const fixture of corpus) {
       const run = await host();
       const created = await run.run('create_diagram', { dsl: fixture.source });
-      const output = created.output as { nodes: number; mermaid?: { dsl: string } };
+      const output = created.output as { nodes: number; converted?: { from: string; dsl: string } };
       expect(output.nodes, fixture.name).toBeGreaterThan(0);
       // A plain indented `mindmap` is valid DSL as well, and lands as DSL.
-      if (!output.mermaid) continue;
+      if (!output.converted) continue;
+      expect(output.converted.from).toBe('mermaid');
       converted++;
       const read = await run.run('get_diagram', {});
-      expect((read.output as { dsl: string }).dsl, fixture.name).toBe(output.mermaid.dsl);
+      expect((read.output as { dsl: string }).dsl, fixture.name).toBe(output.converted.dsl);
     }
     expect(converted).toBe(corpus.length - 1);
   });
@@ -252,14 +254,14 @@ describe('Mermaid input', () => {
     await run.run('create_diagram', { dsl: '```mermaid\nflowchart TD\n  A[Start] --> B{Ok?}\n```' });
     expect(run.dataIds()).toHaveLength(2);
     const updated = await run.run('update_diagram', { frameId: run.frame().id, dsl: 'graph LR; A-->B; B-->C' });
-    expect(updated.output).toMatchObject({ nodes: 3, connectors: 2, mermaid: { losses: [] } });
+    expect(updated.output).toMatchObject({ nodes: 3, connectors: 2, converted: { from: 'mermaid', losses: [] } });
   });
 
   it('finds the fence inside prose and front matter, and counts lines as the agent sent them', async () => {
     const sent = 'Here is the flow:\n\n```mermaid\n---\ntitle: Checkout\n---\nflowchart LR\n  A --> B\n  A[Start --> C\n```\nIt shows checkout.';
     const report = lintDsl(sent);
-    expect(report.mermaid?.dsl).toMatch(/^flowchart right\ntitle: Checkout\n/);
-    expect(report.mermaid?.losses).toContainEqual({ line: 9, message: expect.stringMatching(/edge syntax/i) });
+    expect(report.converted?.dsl).toMatch(/^flowchart right\ntitle: Checkout\n/);
+    expect(report.converted?.losses).toContainEqual({ line: 9, message: expect.stringMatching(/edge syntax/i) });
     const run = await host();
     await run.run('create_diagram', { dsl: sent });
     expect(run.frame().content.label).toBe('Checkout');
@@ -273,24 +275,44 @@ describe('Mermaid input', () => {
   });
 
   it('our DSL with brackets inside quoted labels stays DSL', () => {
-    expect(lintDsl('mindmap\ncentral: "Product(v2)"\n- Growth')).not.toHaveProperty('mermaid');
+    expect(lintDsl('mindmap\ncentral: "Product(v2)"\n- Growth')).not.toHaveProperty('converted');
     expect(lintDsl('architecture\nmodel {\n  container api "call foo()"\n}')).toMatchObject({ ok: true });
   });
 
   it('keeps DSL as DSL, even when it starts with a Mermaid-looking header', async () => {
     const run = await host();
     const created = await run.run('create_diagram', { dsl: 'flowchart\n  A -> B' });
-    expect(created.output).not.toHaveProperty('mermaid');
+    expect(created.output).not.toHaveProperty('converted');
   });
 
   it('broken Mermaid reports the Mermaid line instead of throwing', () => {
     const report = lintDsl('flowchart TD\n  A --> B\n  A[Start --> C');
-    expect(report.mermaid?.losses).toContainEqual({ line: 3, message: expect.stringMatching(/edge syntax/i) });
+    expect(report.converted?.losses).toContainEqual({ line: 3, message: expect.stringMatching(/edge syntax/i) });
   });
 
   it('an unconvertible family names what converts, in lint and in create', async () => {
     const report = lintDsl('gantt\n  title Plan\n  section A\n  Task :a1, 2024-01-01, 3d');
     expect(report).toMatchObject({ ok: false, diagnostics: [{ code: 'E003', line: 1, message: expect.stringMatching(/"gantt".*flowchart/) }] });
     await expect((await host()).run('create_diagram', { dsl: 'pie\n  "a" : 1' })).rejects.toThrow(/"pie" cannot be converted/);
+  });
+});
+
+describe('Structurizr and D2 in', () => {
+  const read = (path: string) => readFileSync(path, 'utf8');
+
+  it('a Structurizr workspace lands as one page per view, with what it became', async () => {
+    const run = await host();
+    const created = await run.run('create_diagram', { dsl: read('src/services/dsl/fixtures/structurizr-real/big-bank-plc.dsl') });
+    const output = created.output as { views: unknown[]; converted: { from: string; dsl: string; losses: unknown[] } };
+    expect(output.converted.from).toBe('structurizr');
+    expect(output.views).toHaveLength(6);
+    expect(output.converted.losses.length).toBeGreaterThan(0);
+  });
+
+  it('a D2 file lands as a diagram; lint names the D2 line a construct came from', async () => {
+    const run = await host();
+    const created = await run.run('create_diagram', { dsl: read('src/services/dsl/fixtures/d2/d2-examples/chess_dia.d2') });
+    expect(created.output).toMatchObject({ nodes: 7, connectors: 7, converted: { from: 'd2', losses: [{ line: 16, message: 'connections to a container (defendants) end on a box of the same name' }] } });
+    expect(lintDsl('a -> b\nx: { shape: cylinder; near: top-center }')).toMatchObject({ ok: true, converted: { from: 'd2', losses: [{ line: 2, message: 'near dropped' }] } });
   });
 });

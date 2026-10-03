@@ -162,15 +162,15 @@ describe('Mermaid in', () => {
     const diagram = await run(target, 'create_diagram', {
       documentId, dsl: '```mermaid\nflowchart LR\n  A[Client] -->|HTTPS| B(API)\n  B --> C[(Postgres)]\n```',
     });
-    expect(diagram).toMatchObject({ nodes: 3, connectors: 2, mermaid: { losses: [] } });
+    expect(diagram).toMatchObject({ nodes: 3, connectors: 2, converted: { from: 'mermaid', losses: [] } });
     const read = await run(target, 'get_diagram', { documentId });
-    expect(read.dsl).toBe((diagram.mermaid as { dsl: string }).dsl);
+    expect(read.dsl).toBe((diagram.converted as { dsl: string }).dsl);
   });
 
   it('validate_openflow_dsl answers Mermaid with its Mermaid line, and names what converts', async () => {
     const target = await client();
     const broken = await call(target, 'validate_openflow_dsl', { dsl: 'flowchart TD\n  A --> B\n  A[Start --> C' });
-    expect(broken.mermaid).toMatchObject({ losses: [{ line: 3 }] });
+    expect(broken.converted).toMatchObject({ from: 'mermaid', losses: [{ line: 3 }] });
     const gantt = await call(target, 'validate_openflow_dsl', { dsl: 'gantt\n  title Plan' });
     expect(gantt).toMatchObject({ ok: false, diagnostics: [{ code: 'E003', message: expect.stringMatching(/Convertible: flowchart/) }] });
     const { id: documentId } = await call(target, 'openflow_create', { name: 'Pie' });

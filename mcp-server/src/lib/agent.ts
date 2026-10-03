@@ -87,7 +87,7 @@ export interface DslLintReport {
   readonly statements: number;
   readonly lines: number;
   readonly diagnostics: readonly { readonly code: string; readonly severity: string; readonly line: number; readonly col: number; readonly message: string }[];
-  readonly mermaid?: { readonly dsl: string; readonly losses: readonly { readonly line: number; readonly message: string }[] };
+  readonly converted?: { readonly from: 'mermaid' | 'structurizr' | 'd2'; readonly dsl: string; readonly losses: readonly { readonly line: number; readonly message: string }[] };
 }
 
 /** A compiled scene node, as much of it as headless consumers read. */

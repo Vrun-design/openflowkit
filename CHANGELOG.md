@@ -17,9 +17,14 @@ This project follows [Semantic Versioning](https://semver.org/).
   Open file accepts that backup. Bring-your-own-key settings carry over.
 - Old links resolve: `#/flow/:id` opens the imported diagram, `#/view?flow=…` explains
   what it was, and the other v1 routes land on home. The v1 service worker removes itself.
-- **MCP: Mermaid in.** `create_diagram`, `update_diagram` and `validate_openflow_dsl` take
-  Mermaid (fenced or not, front matter included) and return the DSL it became plus a loss
-  report on Mermaid line numbers. Unconvertible families say which ones convert.
+- **MCP: Mermaid, Structurizr and D2 in.** `create_diagram`, `update_diagram` and
+  `validate_openflow_dsl` take Mermaid (fenced or not, front matter included), Structurizr DSL
+  or D2 and return `converted: { from, dsl, losses }`, losses on the agent's own line numbers.
+  Unconvertible Mermaid families say which ones convert.
+- **D2 import** in the code panel and the agent tools: flowchart with groups, sequence, or erd
+  from `sql_table`s, tested on the D2 project's own example files.
+- **Agent skill** (`skills/openflowkit/SKILL.md`) and a `llms.txt` that describes v2 (it still
+  described the 1.x DSL). `npm run eval:validity` measures how often a model's diagrams compile.
 - **MCP: icons in headless exports.** File-mode SVG and animated SVG, and the
   `openflowkit build` site, draw the same icon art as the editor.
 
@@ -36,6 +41,14 @@ This project follows [Semantic Versioning](https://semver.org/).
   real Mermaid line (they were numbered 1, 2, 3…); a label with a line break stays one
   label; our own `mindmap`, `architecture` and `gitgraph` DSL is no longer offered as
   Mermaid to convert.
+- DSL: two nodes with the same label (`API` and `api-2 = API`) no longer merge on re-read;
+  a node labelled `queue`, `person` or `...etc` survives a round trip; a quoted first word is
+  never read as a keyword.
+- C4 deployment views draw the model's relations between instances (they drew none).
+- Structurizr import, checked against Structurizr's own example workspaces: `/* */` comments,
+  `live = deploymentEnvironment`, instance references, a bare `autoLayout`, and AWS/Azure/GCP
+  theme tags as icons.
+- Icon ids: `tech/react` (in the docs) resolves, and `developer/react` no longer picks Preact.
 
 ### Removed
 

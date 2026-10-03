@@ -8,7 +8,8 @@ export interface CaseScore {
   /** Diagnostics an agent would act on: errors, or the tool's refusal message. */
   readonly problems: readonly string[];
   readonly warnings: number;
-  readonly mermaidLosses: number;
+  /** Constructs a Mermaid answer lost on conversion. */
+  readonly losses: number;
   readonly nodes: number;
 }
 
@@ -24,16 +25,16 @@ export async function scoreCase(client: Client, text: string): Promise<CaseScore
   const lint = await call(client, 'validate_openflow_dsl', { dsl: text });
   const report = lint.value ?? {};
   const diagnostics = (report.diagnostics ?? []) as Diagnostic[];
-  const losses = ((report.mermaid as { losses?: unknown[] } | undefined)?.losses ?? []).length;
+  const losses = ((report.converted as { losses?: unknown[] } | undefined)?.losses ?? []).length;
   const errors = diagnostics.filter(({ severity }) => severity === 'error').map(({ line, message }) => `line ${line}: ${message}`);
   const warnings = diagnostics.filter(({ severity }) => severity === 'warning').length;
-  if (lint.error || errors.length) return { valid: false, problems: lint.error ? [lint.error] : errors, warnings, mermaidLosses: losses, nodes: 0 };
+  if (lint.error || errors.length) return { valid: false, problems: lint.error ? [lint.error] : errors, warnings, losses, nodes: 0 };
 
   const created = await call(client, 'openflow_create', { name: 'eval' });
   const documentId = (created.value as { id: string }).id;
   const drawn = await call(client, 'create_diagram', { documentId, dsl: text });
-  if (drawn.error) return { valid: false, problems: [drawn.error], warnings, mermaidLosses: losses, nodes: 0 };
+  if (drawn.error) return { valid: false, problems: [drawn.error], warnings, losses, nodes: 0 };
   const output = (drawn.value!.output ?? {}) as { nodes?: number };
   const nodes = output.nodes ?? 0;
-  return { valid: nodes > 0, problems: nodes > 0 ? [] : ['The diagram compiled to no nodes.'], warnings, mermaidLosses: losses, nodes };
+  return { valid: nodes > 0, problems: nodes > 0 ? [] : ['The diagram compiled to no nodes.'], warnings, losses, nodes };
 }

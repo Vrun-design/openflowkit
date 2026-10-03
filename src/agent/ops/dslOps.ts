@@ -14,14 +14,18 @@ import type { SceneDocumentV1 } from '../../opencanvas/domain/document/types';
 import { readAgentSource, type AgentSource } from '../lint';
 import { defineOp, pointOf, pointSchema, requireFrame, requirePage } from './types';
 
-const DSL_HELP = 'OpenFlow DSL source, or Mermaid (flowchart, sequenceDiagram, stateDiagram, classDiagram, erDiagram, '
-  + 'mindmap, architecture, gitGraph), which converts first and comes back as `mermaid.dsl`. Call get_syntax when unsure. '
+const DSL_HELP = 'OpenFlow DSL source — or Mermaid, Structurizr DSL or D2, which convert first and come back as '
+  + '`converted.dsl` with `converted.losses`. Call get_syntax when unsure. '
   + 'A node whose label or tech: names a technology (Postgres, React, S3) gets its icon automatically; '
   + '`icon: none` opts one node out, `icons: off` the diagram.';
 
-/** What a Mermaid input became, so the agent can keep editing in DSL. */
-function mermaidOutput(source: AgentSource) {
-  return source.mermaidLosses ? { mermaid: { dsl: source.dsl, losses: source.mermaidLosses } } : {};
+/** What a foreign input became, so the agent can keep editing in DSL. */
+function convertedOutput(source: AgentSource) {
+  return source.converted ? { converted: { ...source.converted, dsl: source.dsl } } : {};
+}
+
+function withConverted<T extends { output: object }>(outcome: T, source: AgentSource): T {
+  return { ...outcome, output: { ...outcome.output, ...convertedOutput(source) } };
 }
 
 function diagramOutput(pageId: string, frameId: string, compiled: CompileResult) {
@@ -80,11 +84,11 @@ export const createDiagram = defineOp({
       origin,
       ...(palette ? { appearance: { palette } } : {}),
     });
-    if (workspace.views.length > 1) return workspaceOutcome(context.document, workspace);
+    if (workspace.views.length > 1) return withConverted(workspaceOutcome(context.document, workspace), source);
     const compiled = workspace.views[0]!.result;
     return {
       command: buildDslPageCommand(page, compiled),
-      output: { ...diagramOutput(page.id, compiled.frame.id, compiled), views: [], ...mermaidOutput(source) },
+      output: { ...diagramOutput(page.id, compiled.frame.id, compiled), views: [], ...convertedOutput(source) },
     };
   },
 });
@@ -106,11 +110,11 @@ export const updateDiagram = defineOp({
       origin: frame.transform.translation,
       ...(palette ? { appearance: { palette } } : {}),
     });
-    if (workspace.views.length > 1) return workspaceOutcome(context.document, workspace, frameId);
+    if (workspace.views.length > 1) return withConverted(workspaceOutcome(context.document, workspace, frameId), source);
     const compiled = workspace.views[0]!.result;
     return {
       command: buildDslPageCommand(page, compiled, frameId),
-      output: { ...diagramOutput(page.id, frameId, compiled), views: [], ...mermaidOutput(source) },
+      output: { ...diagramOutput(page.id, frameId, compiled), views: [], ...convertedOutput(source) },
     };
   },
 });

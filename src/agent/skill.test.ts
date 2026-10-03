@@ -33,7 +33,7 @@ describe('agent skill', () => {
 
   it('every Mermaid example converts with nothing lost', () => {
     for (const source of blocks('mermaid')) {
-      expect(lintDsl(source)).toMatchObject({ ok: true, mermaid: { losses: [] } });
+      expect(lintDsl(source)).toMatchObject({ ok: true, converted: { from: 'mermaid', losses: [] } });
     }
   });
 

@@ -66,8 +66,9 @@ document; without it, tools use the paired editor or the first open document.
 
 The server also exposes MCP resources: `grammar`, `icons-by-provider`, `icons-catalog`, `template`, `templates-catalog` — the
 grammar, the icon catalogs and the starter templates. Two prompts steer a client toward
-the right tools: `flowchart_from_description` and `architecture_from_codebase`. Mermaid needs no
-prompt: `create_diagram`, `update_diagram` and `validate_openflow_dsl` take it directly.
+the right tools: `flowchart_from_description` and `architecture_from_codebase`. Mermaid,
+Structurizr DSL and D2 need no prompt: `create_diagram`, `update_diagram` and
+`validate_openflow_dsl` take them directly.
 
 ## The operations
 

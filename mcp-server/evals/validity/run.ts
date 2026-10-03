@@ -61,7 +61,7 @@ async function runCase(model: AiProvider, client: Client, prompt: Prompt, format
     const secondText = await model.complete({ system, messages: retry });
     return { id: prompt.id, family: prompt.family, format, first, second: { text: secondText, ...await scoreCase(client, secondText) } };
   } catch (error) {
-    const empty: Attempt = { text: '', valid: false, problems: [], warnings: 0, mermaidLosses: 0, nodes: 0 };
+    const empty: Attempt = { text: '', valid: false, problems: [], warnings: 0, losses: 0, nodes: 0 };
     return { id: prompt.id, family: prompt.family, format, first: empty, error: error instanceof Error ? error.message : String(error) };
   }
 }

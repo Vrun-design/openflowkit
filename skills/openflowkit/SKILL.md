@@ -23,8 +23,8 @@ the command is `npx -y @vrun-design/openflowkit-mcp`). Nothing leaves the machin
 ## Draw and save
 
 1. Write the diagram in Mermaid (what you already know) or OpenFlow DSL (below).
-2. `validate_openflow_dsl` with `{ dsl }`. Fix every `error`; warnings are fine. For Mermaid,
-   `mermaid.losses` name what did not carry over and `mermaid.dsl` is what it became.
+2. `validate_openflow_dsl` with `{ dsl }`. Fix every `error`; warnings are fine. For Mermaid (or
+   Structurizr DSL, D2), `converted.losses` name what did not carry over and `converted.dsl` is what it became.
 3. With the editor open and paired ("Connect agent"), `create_diagram` with `{ dsl }` draws it
    where the user is looking. Otherwise use file mode: `openflow_create`, then
    `create_diagram` with `{ dsl, documentId }`.
@@ -106,7 +106,8 @@ flowchart LR
 
 Converts: flowchart, sequenceDiagram, stateDiagram, classDiagram, erDiagram, mindmap,
 architecture-beta, gitGraph. Not: gantt, pie, journey and the other chart types — write
-those as DSL (`chart bar`, see `get_syntax`) or say they are out of scope.
+those as DSL (`chart bar`, see `get_syntax`) or say they are out of scope. A Structurizr
+workspace or a D2 file converts the same way: pass the file's text as `dsl`.
 
 ## Rules
 
