@@ -1,4 +1,4 @@
-import { createArchIndex, elementPathRef, type ArchIndex } from '../../model/model';
+import { createArchIndex, elementAncestors, elementPathRef, type ArchIndex } from '../../model/model';
 import type { ArchElement, ArchFlow, ArchModel, ArchRelation, ArchView, FlowStep } from '../../model/types';
 import { dslFrameRaw, type CanonicalAttribute, type DslFrameScene } from '../../sceneMeta';
 import { attributeText, quote, slugifyDslId } from '../../text';
@@ -55,6 +55,8 @@ function modelText(model: ArchModel): string[] {
   const lines: string[] = ['model {'];
   for (const element of roots) emitElement(index, element, '  ', lines);
   for (const relation of model.relations) {
+    // Deployment relations are written in their deployment block.
+    if (index.byId.get(relation.from)?.env) continue;
     if (!sharedScope(index, relation)) lines.push(`  ${relationLine(index, relation, null)}`);
   }
   lines.push('}');
@@ -145,6 +147,11 @@ function sharedScope(index: ArchIndex, relation: ArchRelation): string | null {
   const from = index.byId.get(relation.from);
   const to = index.byId.get(relation.to);
   if (!from || !to) return null;
+  if (from.env) {
+    // A deployment relation is read inside a node block, so it lives in the deepest node above both ends.
+    const above = new Set(elementAncestors(index, to.id));
+    return elementAncestors(index, from.id).find((ancestor) => above.has(ancestor)) ?? null;
+  }
   return from.parent !== null && from.parent === to.parent ? from.parent : null;
 }
 

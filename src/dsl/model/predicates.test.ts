@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createArchIndex } from './model';
-import { selectViewElements } from './predicates';
+import { projectRelations, selectViewElements } from './predicates';
 import type { ArchModel, ArchView } from './types';
 
 const model: ArchModel = {
@@ -41,5 +41,30 @@ describe('selectViewElements', () => {
   it('where filters apply to wildcards and unknown subjects select nothing', () => {
     expect([...selectViewElements(index, view({ rules: [{ op: 'include', subject: 'Shop.*', where: { tag: 'legacy' } }] })).shown]).toEqual(['shop.db']);
     expect([...selectViewElements(index, view({ rules: [{ op: 'include', subject: 'Nope' }] })).shown]).toEqual([]);
+  });
+});
+
+describe('projectRelations on a deployment view', () => {
+  it('draws a model relation between every instance of its endpoints, components through their container', () => {
+    const element = (id: string, kind: ArchModel['elements'][number]['kind'], parent: string | null, extra = {}) =>
+      ({ id, kind, name: id, parent, tags: [], links: [], ...extra });
+    const model: ArchModel = {
+      elements: [
+        element('shop', 'system', null), element('shop.api', 'container', 'shop'), element('shop.api.auth', 'component', 'shop.api'),
+        element('shop.db', 'store', 'shop'),
+        element('aws', 'node', null, { env: 'Prod' }),
+        element('aws.api', 'instance', 'aws', { env: 'Prod', instanceOf: 'shop.api' }),
+        element('aws.db', 'instance', 'aws', { env: 'Prod', instanceOf: 'shop.db' }),
+        element('aws.replica', 'instance', 'aws', { env: 'Prod', instanceOf: 'shop.db' }),
+      ],
+      relations: [
+        { id: 'rel:shop.api.auth->shop.db', from: 'shop.api.auth', to: 'shop.db', tags: [] },
+        { id: 'rel:shop.db->shop.db', from: 'shop.db', to: 'shop.db', tags: [] },
+      ],
+      views: [], flows: [],
+    } as unknown as ArchModel;
+    const index = createArchIndex(model);
+    const pairs = projectRelations(index, new Set(['aws', 'aws.api', 'aws.db', 'aws.replica'])).map(({ from, to }) => `${from}->${to}`);
+    expect(pairs).toEqual(['aws.api->aws.db', 'aws.api->aws.replica']);
   });
 });

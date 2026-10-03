@@ -31,6 +31,9 @@ interface StStatement {
   readonly line: number;
 }
 
+const THEME_TAG = /^(amazon web services|microsoft azure|google cloud platform) - (.+)$/i;
+const THEME_PROVIDER: Readonly<Record<string, string>> = { 'amazon web services': 'aws', 'microsoft azure': 'azure', 'google cloud platform': 'gcp' };
+
 /** Structurizr keywords that do not exist in OFK; used by the detector. */
 const STRUCTURIZR_KEYWORDS = /\b(?:person|softwareSystem|container|component|deploymentEnvironment|containerInstance|infrastructureNode|systemLandscape|systemContext)\b|\bdynamic\s|!identifiers|!include|!impliedRelationships/;
 const OFK_FAMILY_HEADER = /^\s*(architecture|flowchart|sequence|state|erd|class|mindmap|gitgraph)\b/m;
@@ -117,6 +120,8 @@ interface DraftElement {
   env?: string;
   ofkId: string;
   dropped?: boolean;
+  /** A deployment instance's model element; its reference is written once ids exist. */
+  instanceOf?: DraftElement;
 }
 
 interface DraftRelation {
@@ -224,13 +229,26 @@ function readStatements(text: string): StStatement[] {
     pending = [];
     if (opens) stack.push(statement.children);
   };
+  let inComment = false;
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? '';
     let offset = 0;
     while (offset < line.length) {
+      if (inComment) {
+        const end = line.indexOf('*/', offset);
+        if (end === -1) break;
+        inComment = false;
+        offset = end + 2;
+        continue;
+      }
       const char = line[offset]!;
       if (/\s/.test(char) || char === ',') {
         offset += 1;
+        continue;
+      }
+      if (line.startsWith('/*', offset)) {
+        inComment = true;
+        offset += 2;
         continue;
       }
       if (line.startsWith('//', offset)) break;
@@ -393,6 +411,7 @@ class StructurizrConverter {
   private modelElements: DraftElement[] = [];
   private readonly deployment = new Map<string, DraftElement[]>();
   private readonly envOrder: string[] = [];
+  private readonly envAliases = new Map<string, string>();
   private readonly bySid = new Map<string, DraftElement>();
   private readonly bySidLower = new Map<string, DraftElement>();
   private readonly byPath = new Map<string, DraftElement>();
@@ -438,7 +457,14 @@ class StructurizrConverter {
   }
 
   private walkStatements(statements: readonly StStatement[], parent: DraftElement | null, env: string | null): void {
-    for (const statement of statements) {
+    for (const written of statements) {
+      // `live = deploymentEnvironment "Live"`: the identifier only names the block; views may use it.
+      const assigned = written.tokens[1]?.value === '=' && /^(?:deploymentenvironment|group|deploymentgroup)$/i.test(written.tokens[2]?.value ?? '');
+      const statement = assigned ? { ...written, tokens: written.tokens.slice(2) } : written;
+      if (assigned && /^deploymentenvironment$/i.test(statement.tokens[0]!.value)) {
+        const name = statement.tokens[1]?.kind === 'string' ? statement.tokens[1].value : '';
+        if (name) this.envAliases.set(written.tokens[0]!.value.toLowerCase(), normalizeName(name));
+      }
       const first = statement.tokens[0]?.value ?? '';
       const lower = first.toLowerCase();
       if (first === '') continue;
@@ -656,7 +682,8 @@ class StructurizrConverter {
   private readView(statement: StStatement, kind: DraftView['kind']): void {
     const args = statement.tokens.slice(1);
     const scopeRef = kind === 'landscape' ? undefined : args[0]?.value;
-    const env = kind === 'deployment' ? args[1]?.value : undefined;
+    const envWord = kind === 'deployment' ? args[1]?.value : undefined;
+    const env = envWord ? this.envAliases.get(envWord.toLowerCase()) ?? envWord : undefined;
     const key = kind === 'deployment' ? args[2]?.value : args[1]?.value;
     const view: DraftView = {
       kind,
@@ -682,11 +709,12 @@ class StructurizrConverter {
       return;
     }
     if (head === 'autolayout') {
-      const word = statement.tokens[1]?.value.toLowerCase() ?? '';
+      // Bare `autoLayout` is Structurizr's default (tb): nothing to report.
+      const word = statement.tokens[1]?.value.toLowerCase() ?? 'tb';
       const direction = DIRECTIONS[word];
       if (direction) view.direction = direction;
       else this.loss(statement.line, `autoLayout "${word}" dropped`);
-      this.loss(statement.line, 'autoLayout separations dropped');
+      if (statement.tokens.length > 2) this.loss(statement.line, 'autoLayout separations dropped');
       return;
     }
     if (head === 'title') {
@@ -778,6 +806,7 @@ class StructurizrConverter {
     this.prune();
     this.indexModel();
     this.applyStyles();
+    this.iconsFromThemeTags();
     const relations = this.resolveRelations();
     this.resolveViews();
     const flows = this.resolveFlows();
@@ -799,6 +828,23 @@ class StructurizrConverter {
     };
   }
 
+  /**
+   * The official cloud themes key their icons on tags (`Amazon Web Services - EC2`);
+   * the same tag becomes `icon: aws/ec2`, resolved by the editor's icon rule.
+   */
+  private iconsFromThemeTags(): void {
+    for (const element of this.elements) {
+      if (element.icon) continue;
+      for (const tag of element.tags) {
+        const match = THEME_TAG.exec(tag);
+        if (match) {
+          element.icon = `${THEME_PROVIDER[match[1]!.toLowerCase()]}/${slugifyDslId(match[2]!)}`;
+          break;
+        }
+      }
+    }
+  }
+
   private resolveInstances(): void {
     for (const entry of this.instances) {
       const target = this.resolveRef(entry.ref, entry.scope);
@@ -807,7 +853,8 @@ class StructurizrConverter {
         entry.element.dropped = true;
         continue;
       }
-      entry.element.name = this.instanceRef(target);
+      entry.element.instanceOf = target;
+      entry.element.name = this.displayPath(target);
     }
   }
 
@@ -903,6 +950,12 @@ class StructurizrConverter {
       }
       if ((from.env ?? null) !== (to.env ?? null)) {
         this.loss(draft.line, `relation ${draft.from ?? '->'} -> ${draft.to} dropped: endpoints in different environments`);
+        continue;
+      }
+      if (from.env && !this.commonNode(from, to)) {
+        // ponytail: a deployment relation is read inside a node block (§9), so one between two
+        // top-level nodes has nowhere to live. Add top-level deployment relations if a file needs one.
+        this.loss(draft.line, `deployment relation ${from.name} -> ${to.name} dropped: no deployment node holds both ends`);
         continue;
       }
       let tags = draft.tags;
@@ -1006,6 +1059,8 @@ class StructurizrConverter {
   }
 
   private elementAttributes(element: DraftElement): CanonicalAttribute[] {
+    // `instance Shop.API` takes no attributes (grammar §9); it draws as its model element.
+    if (element.instanceOf) return [];
     const entries: CanonicalAttribute[] = [];
     if (element.shape) entries.push({ value: element.shape });
     if (element.color) entries.push({ key: 'color', value: element.color });
@@ -1019,13 +1074,25 @@ class StructurizrConverter {
   /** `id = kind Name`, or `kind Name` when the id is the label slug (grammar §6.2/§9.2). */
   private elementHead(element: DraftElement): string {
     const localId = element.parent ? element.ofkId.slice(element.parent.ofkId.length + 1) : element.ofkId;
-    const name = quote(element.name);
+    const name = element.instanceOf ? this.instanceRef(element.instanceOf) : quote(element.name);
     return slugifyDslId(element.name) === localId
       ? `${element.kind} ${name}`
       : `${localId} = ${element.kind} ${name}`;
   }
 
+  /** The deepest deployment node above both ends, where the relation is written. */
+  private commonNode(from: DraftElement, to: DraftElement): DraftElement | null {
+    const above = (element: DraftElement) => {
+      const chain: DraftElement[] = [];
+      for (let node = element.parent; node; node = node.parent) chain.push(node);
+      return chain;
+    };
+    const toChain = new Set(above(to));
+    return above(from).find((node) => toChain.has(node)) ?? null;
+  }
+
   private sharedScope(relation: ResolvedRelation): DraftElement | null {
+    if (relation.from.env) return this.commonNode(relation.from, relation.to);
     const from = relation.from.parent;
     return from && from === relation.to.parent ? from : null;
   }
@@ -1078,11 +1145,9 @@ class StructurizrConverter {
     for (const env of this.envOrder) {
       const elements = this.deployment.get(env) ?? [];
       const roots = elements.filter((element) => !element.parent);
-      const top = relations.filter((relation) => relation.env === env && this.sharedScope(relation) === null);
-      if (roots.length === 0 && top.length === 0) continue;
+      if (roots.length === 0) continue;
       lines.push(`deployment ${quote(env)} {`);
       for (const root of roots) this.emitElement(lines, root, '  ', relations);
-      for (const relation of top) lines.push(`  ${this.relationText(relation)}`);
       lines.push('}');
     }
   }

@@ -399,7 +399,8 @@ describe('views', () => {
     expect(result.dsl).toContain('view context of Shop right');
     expect(result.dsl).toContain('view container of Shop left');
     expect(result.dsl).toContain('view component of Shop.Web up');
-    expect(result.losses.filter((loss) => loss === 'autoLayout separations dropped')).toHaveLength(4);
+    expect(result.losses.filter((loss) => loss === 'autoLayout separations dropped')).toHaveLength(1);
+    expect(result.losses.filter((loss) => loss.startsWith('autoLayout "'))).toEqual([]);
     await expectCleanAndIdempotent(result.dsl);
   });
 
@@ -679,5 +680,39 @@ describe('fixture corpus', () => {
     expect(result.losses.some((loss) => loss.includes('conjunction flattened to a union'))).toBe(true);
     expect(result.losses.some((loss) => loss.includes('no OFK equivalent'))).toBe(true);
     await expectClean(result.dsl);
+  });
+});
+
+const realFiles = import.meta.glob('./fixtures/structurizr-real/*.dsl', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+const real = (name: string) => convert(realFiles[`./fixtures/structurizr-real/${name}.dsl`]!);
+
+describe('real workspaces (structurizr/structurizr test corpus)', () => {
+  it.each(Object.keys(realFiles).sort())('%s converts clean, every view draws, format-idempotent', async (path) => {
+    const result = convert(realFiles[path]!);
+    await expectCleanAndIdempotent(result.dsl);
+    const workspace = await compileWorkspace(result.dsl);
+    for (const view of workspace.views) expect(view.result.nodes.length, `${path} ${view.name}`).toBeGreaterThan(0);
+  });
+
+  it('big-bank-plc: block comments vanish, six views, deployment instances keep their model element', async () => {
+    const result = real('big-bank-plc');
+    expect(result.losses.some((loss) => loss.includes('"*"') || loss.includes('"/*"'))).toBe(false);
+    expect((await compileWorkspace(result.dsl)).views).toHaveLength(6);
+    expect(result.dsl).not.toMatch(/instance\s*$/m);
+    expect(result.losses.filter((loss) => loss.includes('relation'))).toEqual([]);
+    expect(result.dsl).toContain('Oracle - Primary -> Oracle - Secondary : Replicates data to');
+  });
+
+  it('amazon-web-services: an assigned environment, theme tags as icons, deployment and model relations drawn', async () => {
+    const result = real('amazon-web-services');
+    expect(result.dsl).toContain('deployment Live {');
+    expect(result.dsl).toMatch(/node Route 53 \[[^\]]*icon: aws\/route-53/);
+    const [view] = (await compileWorkspace(result.dsl)).views;
+    expect(view!.result.connectors).toHaveLength(3);
+    expect(view!.result.diagnostics.filter(({ severity }) => severity !== 'info')).toEqual([]);
+  });
+
+  it('getting-started: a bare autoLayout is not a loss', () => {
+    expect(real('getting-started').losses.filter((loss) => loss.startsWith('autoLayout'))).toEqual([]);
   });
 });

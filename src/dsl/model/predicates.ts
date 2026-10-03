@@ -213,21 +213,35 @@ function candidateScore(candidate: ProjectedRelation): number {
 export function projectRelations(index: ArchIndex, shown: ReadonlySet<string>): readonly ProjectedRelation[] {
   const best = new Map<string, ProjectedRelation>();
   const order: string[] = [];
+  const instances = [...shown].map((id) => index.byId.get(id)).filter((element) => element?.kind === 'instance');
+  // Where an endpoint draws: its nearest shown ancestor, or (deployment views) every shown
+  // instance of it or of an ancestor — `API -> DB` joins the API and DB instances.
+  const drawnAs = (id: string): readonly string[] => {
+    const near = nearestShown(index, id, shown);
+    if (near) return [near];
+    const lineage = new Set([id, ...elementAncestors(index, id)]);
+    return instances.filter((instance) => lineage.has(instance!.instanceOf ?? '')).map((instance) => instance!.id);
+  };
   for (const relation of index.model.relations) {
-    const from = nearestShown(index, relation.from, shown);
-    const to = nearestShown(index, relation.to, shown);
-    if (!from || !to || from === to) continue;
-    const key = relationPairKey(from, to);
-    const candidate: ProjectedRelation = {
-      relation, from, to,
-      implied: relation.implied === true || relation.from !== from || relation.to !== to,
-    };
-    const existing = best.get(key);
-    if (!existing) {
-      best.set(key, candidate);
-      order.push(key);
-    } else if (candidateScore(candidate) > candidateScore(existing)) {
-      best.set(key, candidate);
+    for (const from of drawnAs(relation.from)) {
+      for (const to of drawnAs(relation.to)) {
+        if (from === to) continue;
+        // Two instances of the same container: the relation is internal to it (`api.auth -> api`).
+        const fromTarget = index.byId.get(from)?.instanceOf;
+        if (fromTarget && fromTarget === index.byId.get(to)?.instanceOf) continue;
+        const key = relationPairKey(from, to);
+        const candidate: ProjectedRelation = {
+          relation, from, to,
+          implied: relation.implied === true || relation.from !== from || relation.to !== to,
+        };
+        const existing = best.get(key);
+        if (!existing) {
+          best.set(key, candidate);
+          order.push(key);
+        } else if (candidateScore(candidate) > candidateScore(existing)) {
+          best.set(key, candidate);
+        }
+      }
     }
   }
   return order.map((key) => best.get(key)!);
