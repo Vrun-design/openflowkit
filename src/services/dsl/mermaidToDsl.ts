@@ -181,7 +181,8 @@ function flowchartDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[], di
     if (emitted.has(node.id)) return;
     emitted.add(node.id);
     const isSection = node.type === 'section';
-    const name = isSection ? quote(node.data?.label ?? node.id) : nodeName(node);
+    // `subgraph one [Group One]`: edges say `one`, so the group keeps that id; a title-only subgraph has no id to keep.
+    const name = isSection && !(node.data as { sectionMermaidId?: string } | undefined)?.sectionMermaidId ? quote(node.data?.label ?? node.id) : nodeName(node);
     lines.push(`${indent}${isSection ? 'group ' : ''}${name}${attrText(nodeAttributes(node))}${isSection ? ' {' : ''}`);
     if (isSection) {
       for (const child of nodes.filter((candidate) => candidate.parentId === node.id)) emitNode(child, `${indent}  `);

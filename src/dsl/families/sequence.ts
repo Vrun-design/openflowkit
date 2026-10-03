@@ -203,7 +203,7 @@ function parseSequence(segments: readonly DslSegment[], context: FamilyContext):
         continue;
       }
       notes.push({
-        id: `note-${notes.length + 1}`, text: joinTokens(rest.slice(colon + 1)), position,
+        id: `note-${notes.length + 1}`, text: joinTokens(rest.slice(colon + 1), true), position,
         targets: targets.map((participant) => participant.id), order: messages.length,
         line: segment.line, comments: claimed, parent: open.at(-1)?.id ?? null,
       });
@@ -268,7 +268,7 @@ function parseSequence(segments: readonly DslSegment[], context: FamilyContext):
       const to = declare(toEquals >= 0 ? toName.slice(toEquals + 1).trim() : toName, segment.line, false);
       if (from.firstUseLine === null) from.firstUseLine = segment.line;
       if (to.firstUseLine === null) to.firstUseLine = segment.line;
-      const label = joinTokens(parsed.body);
+      const label = joinTokens(parsed.body, true);
       messages.push({
         id: `msg-${messages.length + 1}`, from: from.id, to: to.id, arrow, order: messages.length,
         ...(label ? { label } : {}), line: segment.line, attrs: parsed.attributes,

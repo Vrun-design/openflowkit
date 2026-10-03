@@ -30,6 +30,7 @@ export function graphText(scene: DslFrameScene, options: GraphTextOptions = {}):
   const noteCarriers = nodes.filter((node) => (dslNodeMeta(node).notes ?? []).length > 0);
   const byId = new Map([...nodes, ...groups].map((node) => [node.id, node]));
   const groupIds = new Set(groups.map((group) => group.id));
+  const groupNames = new Set(groups.map(nodeReference));
   const connected = new Set(scene.connectors.flatMap((connector) => [connector.source.nodeId, connector.target.nodeId].filter((id): id is string => !!id)));
   const lines: string[] = [];
 
@@ -65,7 +66,12 @@ export function graphText(scene: DslFrameScene, options: GraphTextOptions = {}):
   for (const node of nodes) labelCount.set(nodeReference(node), (labelCount.get(nodeReference(node)) ?? 0) + 1);
   const shared = (node: SceneNode) => nodes.includes(node) && (labelCount.get(nodeReference(node)) ?? 0) > 1;
   const declared = (node: SceneNode) => shared(node) ? `${node.id} = ${quote(nodeReference(node))}` : nodeName(node);
-  const nameOf = (node: SceneNode): string => options.nodeRef?.(node) ?? (shared(node) ? node.id : nodeName(node));
+  const nodeNames = new Set(nodes.map(nodeReference));
+  const nameOf = (node: SceneNode): string => {
+    // A group whose name a node also carries is named by its id, or the edge would end on the node (§4).
+    if (groupIds.has(node.id) && nodeNames.has(nodeReference(node))) return `${node.id} = ${quote(nodeReference(node))}`;
+    return options.nodeRef?.(node) ?? (shared(node) ? node.id : nodeName(node));
+  };
   const edgeLine = (connector: SceneConnector): string | undefined => {
     const source = connector.source.nodeId ? byId.get(connector.source.nodeId) : undefined;
     const target = connector.target.nodeId ? byId.get(connector.target.nodeId) : undefined;
@@ -117,7 +123,8 @@ export function graphText(scene: DslFrameScene, options: GraphTextOptions = {}):
   for (const node of nodes.filter((node) => node.parentId === frame.id).sort(compareNodes)) {
     if (options.nodeRef?.(node)) continue;
     const hasAttributes = nodeAttributes(node, swatchOf).length > 0;
-    const needsName = dslNodeMeta(node).name !== undefined || slugifyDslId(nodeReference(node)) !== node.id || shared(node);
+    // A node named like a group is declared, or its edges would end on the group (§4).
+    const needsName = dslNodeMeta(node).name !== undefined || slugifyDslId(nodeReference(node)) !== node.id || shared(node) || groupNames.has(nodeReference(node));
     if (hasAttributes || needsName || !connected.has(node.id)) emitNode(node, '');
   }
   for (const group of groups.filter((group) => group.parentId === frame.id).sort(compareNodes)) emitGroup(group, '');

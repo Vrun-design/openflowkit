@@ -61,7 +61,7 @@ describe('mermaidToDsl', () => {
     expect(dsl).toContain('flowchart right');
     expect(dsl).toContain('b = Check [diamond]');
     expect(dsl).toContain('d = Store [cylinder]');
-    expect(dsl).toContain('group API Layer {');
+    expect(dsl).toContain('group api = API Layer {');
     expect(dsl).toContain('b -> c : yes');
     expect(dsl).toContain('b --> d');
     expect(dsl).toContain('c -> d [thick]');
@@ -69,6 +69,16 @@ describe('mermaidToDsl', () => {
     expect(losses).toEqual([]);
     const compiled = await compile(dsl);
     expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
+  });
+
+  it('edges to a subgraph end on its group, by the subgraph id or its title', async () => {
+    const { dsl, losses } = convert('flowchart LR\n  subgraph one [Group One]\n    a1 --> a2\n  end\n  subgraph two\n    b1\n  end\n  c --> one\n  one --> two\n  a1 --> two');
+    expect(dsl).toContain('group one = Group One {');
+    expect(losses).toEqual([]);
+    const compiled = await compile(dsl);
+    expect(compiled.nodes.map((node) => node.id).sort()).toEqual(['a1', 'a2', 'b1', 'c']);
+    expect(compiled.connectors.map((connector) => `${connector.source.nodeId}->${connector.target.nodeId}`))
+      .toEqual(['a1->a2', 'c->one', 'one->two', 'a1->two']);
   });
 
   it('opens a new fragment after a closed one and interleaves activations and notes', async () => {

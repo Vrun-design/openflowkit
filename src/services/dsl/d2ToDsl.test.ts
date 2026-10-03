@@ -27,9 +27,11 @@ describe('d2ToDsl over real files', () => {
     expect(dsl).toContain('group defendants {\n  mc = Magnus Carlsen');
     expect(dsl).toContain('hans -> defendants : sueing for $100M');
     expect(dsl).toContain('playmagnus <-> chesscom : Merger talks');
-    expect(losses).toEqual(['connections to a container (defendants) end on a box of the same name']);
+    expect(losses).toEqual([]);
     const compiled = await compile(dsl);
     expect(compiled.nodes.find((node) => node.id === 'mc')?.parentId).toBe('defendants');
+    expect(compiled.nodes.some((node) => node.id === 'defendants')).toBe(false);
+    expect(compiled.connectors.find((connector) => connector.target.nodeId === 'defendants')?.source.nodeId).toBe('hans');
   });
 
   it('containers: dotted paths and `_` resolve, the same leaf name in two boxes stays two nodes', async () => {

@@ -436,7 +436,8 @@ const COMPLEX_BY_FAMILY: ReadonlyArray<{ family: string; source: string; labels:
   {
     family: 'state',
     minConnectors: 7,
-    labels: ['Queued', 'Running', 'Preparing', 'Working', 'Paused', 'Failed', 'Archived'],
+    // Last is the node the test renames: `Failed` sits clear of the selection toolbar.
+    labels: ['Queued', 'Running', 'Preparing', 'Working', 'Paused', 'Archived', 'Failed'],
     source: `stateDiagram-v2
   [*] --> Queued
   Queued --> Running : pick up

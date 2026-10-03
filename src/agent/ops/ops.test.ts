@@ -312,7 +312,8 @@ describe('Structurizr and D2 in', () => {
   it('a D2 file lands as a diagram; lint names the D2 line a construct came from', async () => {
     const run = await host();
     const created = await run.run('create_diagram', { dsl: read('src/services/dsl/fixtures/d2/d2-examples/chess_dia.d2') });
-    expect(created.output).toMatchObject({ nodes: 7, connectors: 7, converted: { from: 'd2', losses: [{ line: 16, message: 'connections to a container (defendants) end on a box of the same name' }] } });
+    // The connection to the `defendants` container ends on its group, not a stand-in box.
+    expect(created.output).toMatchObject({ nodes: 6, connectors: 7, converted: { from: 'd2', losses: [] } });
     expect(lintDsl('a -> b\nx: { shape: cylinder; near: top-center }')).toMatchObject({ ok: true, converted: { from: 'd2', losses: [{ line: 2, message: 'near dropped' }] } });
   });
 });

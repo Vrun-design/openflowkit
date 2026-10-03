@@ -24,7 +24,7 @@ export function quote(value: string): string {
   // Keywords are case-sensitive lowercase (grammar §2.5), so `Join` needs no quotes.
   const mustQuote = RESERVED_LABELS.has(value) || /(?:->|-->|<->|<-->|<-|<--|:|=|,|\[|\]|\{|\}|\/\/|;)/.test(value)
     // A label that does not open with a letter or digit (`...etc`, `(beta) API`) is not a word to the lexer.
-    || /^[^\p{L}\p{N}_]/u.test(value);
+    || /^[^\p{L}\p{N}_]/u.test(value) || value.includes('\n');
   return mustQuote ? `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"` : value;
 }
 

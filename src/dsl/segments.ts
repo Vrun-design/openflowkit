@@ -13,9 +13,15 @@ export interface DslSegment extends SourceLocation {
   readonly raw: string;
 }
 
-/** Tokens joined back into text: single spaces, tight before `,` and `]`, collapsed runs (grammar §2.4). */
-export function joinTokens(tokens: readonly DslToken[]): string {
-  return tokens.map((token) => token.value).join(' ').replace(/\s+([,\]])/g, '$1').replace(/\[\s+/g, '[').replace(/\s+/g, ' ').trim();
+/**
+ * Tokens joined back into text: single spaces, tight before `,` and `]`, collapsed runs (grammar §2.4).
+ * `keepBreaks` keeps a quoted `\n` for labels whose writer quotes them; anything else
+ * (attribute values, conditions, directives) stays one line so its writer needs no quotes.
+ */
+export function joinTokens(tokens: readonly DslToken[], keepBreaks = false): string {
+  const text = tokens.map((token) => token.value).join(' ');
+  return (keepBreaks ? text : text.replace(/\s+/g, ' '))
+    .replace(/[^\S\n]+([,\]])/g, '$1').replace(/\[[^\S\n]+/g, '[').replace(/[^\S\n]+/g, ' ').trim();
 }
 
 /** Splits a token stream into statements; never throws. */

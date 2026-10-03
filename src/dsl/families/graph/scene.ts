@@ -122,6 +122,32 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     return draft;
   };
 
+  // An edge end that names a group ends on the group's frame (grammar §4): its label or
+  // explicit id wherever the group opens, its derived id once it has opened. A node
+  // statement with that name wins; an edge alone never implies a box shadowing a group.
+  const groupKeys = new Set<string>();
+  const nodeKeys = new Set<string>();
+  const scan = (statements: readonly DslStatement[]) => {
+    for (const statement of statements) {
+      if (statement.kind === 'group') {
+        groupKeys.add(statement.group.label);
+        if (statement.group.id) groupKeys.add(statement.group.id);
+        scan(statement.statements);
+      } else if (statement.kind === 'node') {
+        nodeKeys.add(statement.node.label);
+        if (statement.node.id) nodeKeys.add(statement.node.id);
+      } else if (statement.kind === 'reserved' && statement.statements) scan(statement.statements);
+    }
+  };
+  scan(input.statements);
+  const groupIdByKey = new Map<string, string>();
+  const groupEnds: Array<{ edge: EdgeDraft; end: 'sourceId' | 'targetId'; key: string; attributes: CanonicalAttribute[] }> = [];
+  const groupKeyOf = (reference: DslReference): string | undefined => {
+    const key = reference.id ?? reference.label;
+    if (nodeKeys.has(key)) return undefined;
+    return groupKeys.has(key) || (groupIdByKey.has(key) && !byExplicitId.has(key)) ? key : undefined;
+  };
+
   const walk = (statements: readonly DslStatement[], parentId: string | null) => {
     for (const statement of statements) {
       const claimed = context.comments.claim(statement.line);
@@ -132,19 +158,28 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
           entries: canonicalizeAttributes(statement.group.attributes, diagnostics),
           ...(statement.reservedKind ? { reservedKind: statement.reservedKind } : {}), comments: claimed,
         });
+        for (const key of [statement.group.label, statement.group.id, id]) {
+          if (key && !groupIdByKey.has(key)) groupIdByKey.set(key, id);
+        }
         walk(statement.statements, id);
       } else if (statement.kind === 'node') {
         const draft = declare(statement.node, parentId, statement.line, statement.reservedKind, statement, true);
         if (draft.line === statement.line) draft.comments.push(...claimed);
       } else if (statement.kind === 'edge') {
         const entries = canonicalizeAttributes(statement.attributes, diagnostics);
-        const from = declare(statement.from, parentId, statement.line, undefined, statement);
-        const to = declare(statement.to, parentId, statement.line, undefined, statement);
+        const fromGroup = groupKeyOf(statement.from);
+        const toGroup = groupKeyOf(statement.to);
+        const from = fromGroup ? '' : declare(statement.from, parentId, statement.line, undefined, statement).id;
+        const to = toGroup ? '' : declare(statement.to, parentId, statement.line, undefined, statement).id;
         const label = typedFrom(entries).label ?? statement.label;
-        edges.push({
-          sourceId: from.id, targetId: to.id, arrow: statement.arrow,
+        const edge: EdgeDraft = {
+          sourceId: from, targetId: to, arrow: statement.arrow,
           ...(label ? { label } : {}), line: statement.line, entries, comments: claimed,
-        });
+        };
+        edges.push(edge);
+        // The group may open after this line; its id is known once the walk is done.
+        if (fromGroup) groupEnds.push({ edge, end: 'sourceId', key: fromGroup, attributes: canonicalizeAttributes(statement.from.attributes, diagnostics) });
+        if (toGroup) groupEnds.push({ edge, end: 'targetId', key: toGroup, attributes: canonicalizeAttributes(statement.to.attributes, diagnostics) });
       } else if (statement.kind === 'directive') {
         if (statement.name === 'note') notes.push({ line: statement.line, target: '', text: statement.value });
         else if (statement.name === 'align') alignLines.push(statement.raw);
@@ -156,6 +191,11 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     }
   };
   walk(input.statements, null);
+  for (const { edge, end, key, attributes } of groupEnds) {
+    edge[end] = groupIdByKey.get(key)!;
+    const group = groups.find((candidate) => candidate.id === edge[end])!;
+    mergeAttributes(group.entries, attributes);
+  }
 
   const groupsById = new Map(groups.map((group) => [group.id, group]));
 

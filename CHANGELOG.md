@@ -30,6 +30,10 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Edges can end on a group.** `Client -> Payments` next to `group Payments { … }` connects to the
+  group's frame instead of drawing a second box called Payments. D2 containers and Mermaid
+  subgraphs (`subgraph one [Group One]`, `c --> one`) import the same way, with no loss note.
+- Bring-your-own-key defaults: Claude `claude-opus-5-5` (Sonnet 5.5 in the list), OpenAI `gpt-6.1-sol`.
 - **MCP server 0.2.0 is a breaking release** for 0.1.x users: `create_viewer_url` and
   `find_icon` are gone (use `create_diagram` + `export`, and `search_icons`), and the
   `convert_mermaid_to_openflow` prompt is gone because the tools take Mermaid directly.
@@ -49,6 +53,7 @@ This project follows [Semantic Versioning](https://semver.org/).
   `live = deploymentEnvironment`, instance references, a bare `autoLayout`, and AWS/Azure/GCP
   theme tags as icons.
 - Icon ids: `tech/react` (in the docs) resolves, and `developer/react` no longer picks Preact.
+- A quoted `\n` in a label stays a line break; it was flattened to a space on every re-read.
 
 ### Removed
 

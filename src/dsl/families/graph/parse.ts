@@ -20,7 +20,7 @@ function parseReference(tokens: readonly DslToken[], diagnostics: DslDiagnostic[
   if (parsed.body.length === 0) return undefined;
   const equals = parsed.body.findIndex((token) => token.value === '=');
   const labelTokens = equals >= 0 ? parsed.body.slice(equals + 1) : parsed.body;
-  const label = joinTokens(labelTokens);
+  const label = joinTokens(labelTokens, true);
   if (!label) return undefined;
   const first = parsed.body[0]!;
   const last = parsed.body.at(-1)!;
@@ -94,7 +94,7 @@ export function parseEdge(tokens: readonly DslToken[], diagnostics: DslDiagnosti
       }
       if (colon >= 0) {
         const labelPart = readAttributes(rightTokens.slice(colon + 1), diagnostics);
-        label = joinTokens(labelPart.body);
+        label = joinTokens(labelPart.body, true);
         edgeAttributes = labelPart.attributes;
         rightTokens = rightTokens.slice(0, colon);
       } else if (rightTokens.at(-1)?.value === ']') {

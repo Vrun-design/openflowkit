@@ -66,6 +66,7 @@ Pay -> Stripe : charge [thick]
   technology (`Postgres`, `Redis`, `S3 bucket`) gets its icon by itself; `icon: none` stops it.
   `search_icons` finds exact ids.
 - `group Name { … }` boxes the nodes first mentioned inside it, so open groups before edges.
+  An edge to `Name` ends on the group itself.
   `note Name : text` pins a sticky to a node.
 
 ```dsl

@@ -571,14 +571,7 @@ function writeGraph(converter: Converter): string {
     lines.push(`${indent}}`);
   };
   for (const root of children(null)) emit(root, '');
-  for (const edge of converter.edges) {
-    // ponytail: DSL edges end on nodes, not groups; a box stands in for the container.
-    // Upgrade path: let graph-family edges bind to a group frame (grammar §4 + layout ports).
-    for (const end of [edge.from, edge.to]) {
-      if (children(end).length) converter.loss(edge.line, `connections to a container (${converter.nodes.get(end)!.label?.trim() || converter.nodes.get(end)!.key}) end on a box of the same name`);
-    }
-    lines.push(edgeText(edge, ids));
-  }
+  for (const edge of converter.edges) lines.push(edgeText(edge, ids));
   return `${lines.join('\n')}\n`;
 }
 

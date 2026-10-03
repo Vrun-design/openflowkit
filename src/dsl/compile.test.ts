@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { serialize } from './serialize';
+import { format, serialize } from './serialize';
 import { compile, hashDslScene, slugifyDslId } from './compile';
 
 describe('compile presentation mapping', () => {
@@ -153,6 +153,60 @@ describe('compile graph structure', () => {
     const again = await compile(text);
     expect(again.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
     expect(again.nodes.map((node) => node.content.label).sort()).toEqual(['queue', 'person', 'system', '...etc', '(beta) API', 'title', 'direction', 'group'].sort());
+  });
+
+  it('an edge that names a group ends on the group frame, wherever the group opens; a node statement of that name wins', async () => {
+    const result = await compile('flowchart\nClient -> Payments : pays\ngroup Payments {\n  Pay -> Stripe\n  Pay -> Payments\n}\ngroup pay-box = Box {\n  x\n}\nClient -> pay-box');
+    expect(result.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    expect(result.nodes.map((node) => node.id).sort()).toEqual(['client', 'pay', 'stripe', 'x']);
+    expect(result.connectors.map((connector) => `${connector.source.nodeId}->${connector.target.nodeId}`))
+      .toEqual(['client->payments', 'pay->stripe', 'pay->payments', 'client->pay-box']);
+    const text = serialize({ frame: result.frame, nodes: result.nodes, groups: result.groups, connectors: result.connectors });
+    const again = await compile(text);
+    expect(again.nodes.map((node) => node.id).sort()).toEqual(['client', 'pay', 'stripe', 'x']);
+    expect(again.connectors.map((connector) => connector.target.nodeId).sort()).toEqual(['pay-box', 'payments', 'payments', 'stripe']);
+
+    const shadowed = await compile('flowchart\ngroup Payments {\n  Pay\n}\nPayments [red]\nClient -> Payments');
+    expect(shadowed.connectors[0]?.target.nodeId).toBe('payments-2');
+    const shadowedText = serialize({ frame: shadowed.frame, nodes: shadowed.nodes, groups: shadowed.groups, connectors: shadowed.connectors });
+    expect((await compile(shadowedText)).connectors[0]?.target.nodeId).toBe('payments-2');
+
+    // A group and a node that share a label, with edges to both: the edge to the group names its id.
+    for (const source of ['flowchart\ngroup API {\n  API\n}\nClient -> API\nAPI -> Client', 'flowchart\nAPI [red]\ngroup API {\n  x\n}\nClient -> API']) {
+      const both = await compile(source);
+      both.connectors.forEach((connector) => connector.target.nodeId === 'client' || expect(connector.target.nodeId).toBe(both.nodes.find((node) => node.content.label === 'API')!.id));
+      const bothText = serialize({ frame: both.frame, nodes: both.nodes, groups: both.groups, connectors: both.connectors });
+      const ends = (scene: typeof both) => scene.connectors.map((connector) => `${connector.source.nodeId}->${connector.target.nodeId}`);
+      expect(ends(await compile(bothText)), bothText).toEqual(ends(both));
+    }
+    const toGroup = await compile('flowchart\ngroup API {\n  API\n}\nClient -> api');
+    const groupText = serialize({ frame: toGroup.frame, nodes: toGroup.nodes, groups: toGroup.groups, connectors: toGroup.connectors });
+    expect(toGroup.connectors[0]?.target.nodeId).toBe('api');
+    expect((await compile(groupText)).connectors[0]?.target.nodeId, groupText).toBe('api');
+  });
+
+  it('a quoted \\n is a line break in node, edge and mindmap labels, and survives serialize → compile', async () => {
+    const result = await compile('flowchart\n"Line one\\nLine two" -> B : "edge\\nlabel"');
+    expect(result.nodes.map((node) => node.content.label)).toEqual(['Line one\nLine two', 'B']);
+    expect(result.connectors[0]?.labels[0]?.text).toBe('edge\nlabel');
+    const text = serialize({ frame: result.frame, nodes: result.nodes, groups: result.groups, connectors: result.connectors });
+    expect(text).toContain('"Line one\\nLine two" -> B : "edge\\nlabel"');
+    expect((await compile(text)).nodes[0]?.content.label).toBe('Line one\nLine two');
+    expect((await compile('mindmap\nRoot\n  "kid\\nline"')).nodes.map((node) => node.content.label)).toContain('kid\nline');
+  });
+
+  it('a quoted \\n anywhere a writer does not quote (attrs, notes, conditions, steps, members) stays one line', async () => {
+    for (const source of [
+      'flowchart\nx [desc: "a\\nb"] -> y',
+      'flowchart\nx -> y\nnote x : "a\\nb"',
+      'sequence\nalt "c1\\nc2" {\n  A -> B : x\n}',
+      'flowchart\nx -> y\nanimate {\n  step "one\\ntwo" : x -> y\n}',
+      'class\nFoo {\n  "+a\\nb"\n}',
+    ]) {
+      const once = await format(source);
+      expect(await format(once), once).toBe(once);
+      expect((await compile(once)).diagnostics.filter((item) => item.severity !== 'info'), once).toEqual([]);
+    }
   });
 
   it('warns when a repeated declaration tries to move a node between groups', async () => {
