@@ -62,3 +62,8 @@ export function rememberLastDocument(id: string): void {
 export function lastDocumentId(): string | null {
   try { return localStorage.getItem(LAST_DOCUMENT_KEY); } catch { return null; }
 }
+
+/** A deleted document must not be where `/` lands next. */
+export function forgetLastDocument(id: string): void {
+  try { if (localStorage.getItem(LAST_DOCUMENT_KEY) === id) localStorage.removeItem(LAST_DOCUMENT_KEY); } catch { /* private mode */ }
+}

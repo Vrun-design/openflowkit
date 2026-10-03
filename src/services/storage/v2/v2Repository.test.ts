@@ -165,3 +165,22 @@ describe('v2 document repository', () => {
     expect(exportCanonicalSvg(loaded)).toBe(exportCanonicalSvg(original));
   });
 });
+
+describe('v2 document list', () => {
+  it('lists documents newest first and deletes one with its recovery copy', async () => {
+    const repository = createV2Repository(indexedDB);
+    await repository.saveDocument('older', { ...labeledDocument('A'), name: 'Older' }, 1);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    await repository.saveDocument('newer', { ...labeledDocument('B'), name: 'Newer' }, 1);
+    await repository.saveDocument('newer', { ...labeledDocument('C'), name: 'Newer' }, 2);
+    expect((await repository.listDocuments()).map(({ id, name, pageCount }) => [id, name, pageCount]))
+      .toEqual([['newer', 'Newer', 1], ['older', 'Older', 1]]);
+
+    await repository.deleteDocument('newer');
+    expect((await repository.listDocuments()).map(({ id }) => id)).toEqual(['older']);
+    expect(await repository.loadDocument('newer')).toEqual({ status: 'missing' });
+    const database = await openFlowPersistenceDatabase(indexedDB);
+    expect(await getRecord(database, 'v2Recovery', 'newer')).toBeNull();
+    database.close();
+  });
+});

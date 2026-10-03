@@ -10,6 +10,7 @@ import {
   IconCloudOff,
   IconDownload,
   IconFileImport,
+  IconFiles,
   IconLoader2,
   IconLock,
   IconPlugConnected,
@@ -220,6 +221,7 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
       </FloatingRegion>
 
       <Menu open={panel === 'menu'} anchorRef={settingsRef} onClose={() => closePanel('menu')} label="Canvas menu" placement="bottom-start">
+        <MenuItem icon={<Icon icon={IconFiles} />} onSelect={() => navigate('/home')}>All diagrams</MenuItem>
         <MenuItem icon={<Icon icon={IconPencil} />} disabled={props.readOnly} onSelect={startRename}>Rename diagram</MenuItem>
         <MenuItem icon={<Icon icon={IconSettings} />} onSelect={() => openPanel('settings')}>Settings</MenuItem>
         <MenuItem icon={<Icon icon={IconFileImport} />} onSelect={() => fileRef.current?.click()}>Open file…</MenuItem>

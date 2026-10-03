@@ -20,6 +20,8 @@ const V1_FALLBACK_KEY = 'openflowkit-documents-fallback';
 const V1_ZUSTAND_KEY = 'openflowkit-storage';
 
 export interface V1ImportEntry {
+  /** The v1 name, so a failure can be listed by what the user called it. */
+  readonly name?: string;
   readonly importedAt: string;
   readonly sourceUpdatedAt: string;
   readonly status: 'imported' | 'failed';
@@ -35,6 +37,8 @@ export interface V1ImportReport {
   /** v2 ids written by this run, most recently edited in v1 first. */
   readonly imported: readonly string[];
   readonly failures: readonly LegacyImportFailure[];
+  /** No marker existed before this run: the first time this browser met v2. */
+  readonly firstRun: boolean;
 }
 
 export function readV1ImportMarker(storage: Storage = localStorage): V1ImportMarker | null {
@@ -89,7 +93,7 @@ export async function importV1Workspace(deps: V1ImportDeps): Promise<V1ImportRep
   const marker = readV1ImportMarker(deps.storage);
   // v1 is gone after the cutover, so its rows can't change: a clean marker means nothing to do.
   if (!deps.factory || (marker && Object.values(marker.docs).every((entry) => entry.status === 'imported'))) {
-    return { imported: [], failures: [] };
+    return { imported: [], failures: [], firstRun: false };
   }
   const previous = marker?.docs ?? {};
   const workspace = await migrateLegacyWorkspace(await readV1Sources(deps.factory, deps.storage), {
@@ -102,7 +106,7 @@ export async function importV1Workspace(deps: V1ImportDeps): Promise<V1ImportRep
   const failures = [...workspace.failures];
   const importedAt = deps.now();
   for (const failure of workspace.failures.filter((item) => item.v1Id)) {
-    docs[failure.v1Id] = { importedAt, sourceUpdatedAt: '', status: 'failed', error: failure.error };
+    docs[failure.v1Id] = { name: failure.name, importedAt, sourceUpdatedAt: '', status: 'failed', error: failure.error };
   }
   const newestFirst = [...workspace.documents].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
   for (const [v1Id, document] of newestFirst.map((item) => [item.id.slice('v1-'.length), item] as const)) {
@@ -110,18 +114,18 @@ export async function importV1Workspace(deps: V1ImportDeps): Promise<V1ImportRep
       // Revision 1 never overwrites: an existing copy (maybe edited in v2) comes back `stale` and stays.
       const result = await deps.repository.saveDocument(document.id, await inlineImages(document), 1);
       if (result.status === 'saved') imported.push(document.id);
-      docs[v1Id] = { importedAt, sourceUpdatedAt: document.updatedAt, status: 'imported' };
+      docs[v1Id] = { name: document.name, importedAt, sourceUpdatedAt: document.updatedAt, status: 'imported' };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       failures.push({ v1Id, name: document.name, error: message });
-      docs[v1Id] = { importedAt, sourceUpdatedAt: document.updatedAt, status: 'failed', error: message };
+      docs[v1Id] = { name: document.name, importedAt, sourceUpdatedAt: document.updatedAt, status: 'failed', error: message };
     }
   }
   const next: V1ImportMarker = { completedAt: importedAt, docs };
   // ponytail: a full localStorage loses the marker, so every boot re-reads v1 (saves stay no-ops,
   // but a v1-* doc deleted in v2 returns) — move the marker into IndexedDB if that shows up.
   try { deps.storage.setItem(V1_IMPORT_MARKER_KEY, JSON.stringify(next)); } catch { /* see above */ }
-  return { imported, failures };
+  return { imported, failures, firstRun: marker === null };
 }
 
 let running: Promise<V1ImportReport> | null = null;

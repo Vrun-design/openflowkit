@@ -50,7 +50,8 @@ describe('importV1Workspace', () => {
     const first = await run(storage);
     expect([...first.imported].sort()).toEqual(rows.map(v2Id).sort());
     expect(Object.values(readV1ImportMarker(storage)!.docs).map((entry) => entry.status)).toEqual(rows.map(() => 'imported'));
-    expect(await run(storage)).toEqual({ imported: [], failures: [] });
+    expect(first.firstRun).toBe(true);
+    expect(await run(storage)).toEqual({ imported: [], failures: [], firstRun: false });
   });
 
   it('never overwrites a copy that already exists, and retries what failed', async () => {

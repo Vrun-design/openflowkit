@@ -1017,3 +1017,21 @@
 @keyframes ofk-motion-build { 0%, 8% { opacity: .18; transform: scale(.94); } 28%, 72% { opacity: 1; transform: scale(1); } 92%, 100% { opacity: .18; transform: scale(.94); } }
 @media (prefers-reduced-motion: reduce) { .ofk-motion-hero i { animation: none; opacity: .6; } }
 .ofk-v2-export-animate { justify-content: flex-start; width: 100%; border: 1px dashed var(--ofk-border); }
+
+/* Home: every diagram in this browser (phase 12.4). */
+.ofk-home { min-height: 100vh; padding: 48px max(16px, calc(50vw - 360px)); background: var(--ofk-canvas); color: var(--ofk-text); }
+.ofk-home-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.ofk-home-header h1 { margin: 0; font-size: 20px; font-weight: var(--ofk-weight-emphasis); }
+.ofk-home-header h1 span { color: var(--ofk-muted); font-weight: normal; }
+.ofk-home-notice { margin: 0 0 16px; padding: 10px 12px; border: 1px solid var(--ofk-border); border-radius: 8px; background: var(--ofk-raised); font-size: 13px; }
+.ofk-home-notice p { margin: 0; }
+.ofk-home-notice ul { margin: 6px 0 0; padding-left: 18px; color: var(--ofk-secondary); }
+.ofk-home-empty { color: var(--ofk-muted); font-size: 13px; }
+.ofk-home-rows { list-style: none; margin: 0; padding: 0; }
+.ofk-home-rows > li { display: flex; align-items: center; gap: 4px; padding: 2px 4px; border-radius: 6px; }
+.ofk-home-rows > li:hover, .ofk-home-rows > li:focus-within { background: var(--ofk-raised); }
+.ofk-home-open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; min-height: 40px; padding: 4px; border: 0; background: none; color: var(--ofk-text); font: inherit; font-size: 14px; text-align: start; cursor: pointer; }
+.ofk-home-open svg { width: 16px; height: 16px; flex: none; color: var(--ofk-secondary); }
+.ofk-home-tag { flex: none; padding: 1px 6px; border-radius: 999px; background: var(--ofk-accentSoft); color: var(--ofk-accent); font-size: 11px; }
+.ofk-home-meta { flex: none; color: var(--ofk-muted); font-size: 12px; }
+.ofk-home-rows .ofk-icon-button { width: 28px; height: 28px; color: var(--ofk-muted); }

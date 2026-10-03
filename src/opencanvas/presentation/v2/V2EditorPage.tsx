@@ -1,6 +1,6 @@
 import { useV2Preferences } from './useV2Preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   clearSelection,
   replaceSelection,
@@ -91,6 +91,7 @@ import type { DocumentCommand } from '../../domain/commands/types';
 import { archViewIdOfPage, placedElementId } from '../../../dsl/model/model';
 import { isEditableTarget } from './pointerOperations';
 import { looksLikeMermaid, mermaidToDsl } from '../../../services/dsl/mermaidToDsl';
+import { runV1Import } from '../../../services/storage/v2/v1Import';
 import { buildAutoIconsOffCommand, hasAutoIcon, hasIcon } from '../../application/dsl/iconCommands';
 import { diagramIconsOn, iconToggleFrame, useV2IconActions } from './useV2IconActions';
 import { looksLikeStructurizr, structurizrToDsl } from '../../../services/dsl/structurizrToDsl';
@@ -114,6 +115,9 @@ function changeObjectIds(changeId: string, proposal: Proposal | null): readonly 
     }
   });
 }
+
+// One import run per page load, so one notice per page load, whichever editor mounts first.
+let v1NoticeShown = false;
 
 export function V2EditorPage(): React.JSX.Element {
   const { id } = useParams();
@@ -247,6 +251,27 @@ export function V2EditorPage(): React.JSX.Element {
       window.removeEventListener('unhandledrejection', onRejection);
     };
   }, [pushToast]);
+
+  // The one notice after v1 diagrams come over (12.4); later boots import nothing and stay quiet.
+  const navigate = useNavigate();
+  useEffect(() => {
+    let live = true;
+    runV1Import().then(({ imported, failures, firstRun }) => {
+      // A failure that repeats on every boot is listed on Home, not toasted again.
+      if (!live || v1NoticeShown || (imported.length === 0 && !(firstRun && failures.length))) return;
+      v1NoticeShown = true;
+      const names = failures.slice(0, 3).map((failure) => `“${failure.name}”`).join(', ');
+      pushToast({
+        id: 'v1-import', tone: failures.length ? 'warning' : 'success', persistent: failures.length > 0,
+        title: imported.length
+          ? `Brought over ${imported.length} ${imported.length === 1 ? 'diagram' : 'diagrams'} from the previous editor.`
+          : 'Diagrams from the previous editor could not be brought over yet.',
+        ...(failures.length ? { description: `Not yet: ${names}${failures.length > 3 ? ` and ${failures.length - 3} more` : ''}. They stay safe in this browser.` } : {}),
+        action: { label: 'See all diagrams', onClick: () => navigate('/home') },
+      });
+    }, () => undefined);
+    return () => { live = false; };
+  }, [pushToast, navigate]);
 
   const camera = useV2Camera(hostRef);
   const reloadRef = useRef<() => void>(() => undefined);

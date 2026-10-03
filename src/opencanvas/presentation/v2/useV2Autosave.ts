@@ -37,9 +37,12 @@ export function useV2Autosave(options: V2AutosaveOptions) {
   const { repository, documentId, document, revision, baseRevision, onConflict } = options;
   const [retryCount, setRetryCount] = useState(0);
   const [outcome, setOutcome] = useState<V2SaveOutcome | null>(null);
-  const [savedRevision, setSavedRevision] = useState(-1);
+  // A document nobody touched is not saved: opening `/` or New diagram leaves no empty row behind.
+  const [savedRevision, setSavedRevision] = useState(baseRevision);
   const [openedKey, setOpenedKey] = useState(`${documentId}:${baseRevision}`);
   const chainRef = useRef(Promise.resolve());
+  /** The debounced save not yet started; leaving the editor runs it at once instead of dropping it. */
+  const pendingRef = useRef<(() => void) | null>(null);
   const conflictRef = useRef(onConflict);
   useEffect(() => {
     conflictRef.current = onConflict;
@@ -58,8 +61,10 @@ export function useV2Autosave(options: V2AutosaveOptions) {
   const dirty = documentId !== null && document !== null && saveRevision > savedRevision;
 
   useEffect(() => {
+    pendingRef.current = null;
     if (!repository || !documentId || !document || !dirty) return;
-    const timer = window.setTimeout(() => {
+    const save = () => {
+      pendingRef.current = null;
       const task = chainRef.current.then(async () => {
         try {
           const result = await repository.saveDocument(documentId, document, saveRevision);
@@ -84,9 +89,12 @@ export function useV2Autosave(options: V2AutosaveOptions) {
         }
       });
       chainRef.current = task.catch(() => undefined);
-    }, AUTOSAVE_DELAY_MS);
+    };
+    pendingRef.current = save;
+    const timer = window.setTimeout(save, AUTOSAVE_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [repository, documentId, document, saveRevision, dirty, retryCount]);
+  useEffect(() => () => pendingRef.current?.(), []);
 
   const status: V2SaveStatus =
     outcome?.state === 'conflict'

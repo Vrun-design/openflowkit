@@ -3,6 +3,11 @@ import { HashRouter, Navigate, Route, Routes, useParams } from 'react-router-dom
 import { lastDocumentId, mintV2Id } from '@/opencanvas/presentation/v2/v2Document';
 import { runV1Import } from '@/services/storage/v2/v1Import';
 
+const HomePage = lazy(async () => {
+  const module = await import('@/opencanvas/presentation/v2/V2HomePage');
+  return { default: module.V2HomePage };
+});
+
 const EditorPage = lazy(async () => {
   const module = await import('@/opencanvas/presentation/v2/V2EditorPage');
   return { default: module.V2EditorPage };
@@ -37,6 +42,7 @@ export default function App(): React.JSX.Element {
     <HashRouter>
       <Suspense fallback={null}>
         <Routes>
+          <Route path="/home" element={<HomePage />} />
           <Route path="/d/:id" element={<EditorPage />} />
           <Route path="/v2/:id" element={<LegacyV2Redirect />} />
           <Route path="*" element={<HomeDocument />} />

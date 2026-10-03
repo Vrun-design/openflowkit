@@ -46,6 +46,17 @@ export interface V2DocumentRepository {
     revision: number
   ) => Promise<SaveV2DocumentResult>;
   readonly loadDocument: (id: string) => Promise<LoadV2DocumentResult>;
+  /** Every stored document, most recently saved first. */
+  readonly listDocuments: () => Promise<readonly V2DocumentSummary[]>;
+  /** Removes a document and its last-known-good copy. */
+  readonly deleteDocument: (id: string) => Promise<void>;
+}
+
+export interface V2DocumentSummary {
+  readonly id: string;
+  readonly name: string;
+  readonly savedAt: string;
+  readonly pageCount: number;
 }
 
 type OpenedRecord =
@@ -182,6 +193,30 @@ async function loadRecord(database: IDBDatabase, id: string): Promise<LoadV2Docu
   return { status: 'corrupt', issues: primary.issues };
 }
 
+// ponytail: reads every whole document to list a few fields — fine for one person's diagrams;
+// a summary store written beside each save is the upgrade if lists get slow.
+async function listRecords(database: IDBDatabase): Promise<V2DocumentSummary[]> {
+  const records = await requestToPromise(database.transaction(V2_DOCUMENTS_STORE_NAME, 'readonly').objectStore(V2_DOCUMENTS_STORE_NAME).getAll());
+  return records
+    .filter(isV2DocumentRecord)
+    .map((record) => ({
+      id: record.id,
+      name: typeof record.document.name === 'string' ? record.document.name : 'Untitled diagram',
+      savedAt: record.savedAt,
+      pageCount: Array.isArray(record.document.pages) ? record.document.pages.length : 0,
+    }))
+    .sort((a, b) => (a.savedAt < b.savedAt ? 1 : -1));
+}
+
+// ponytail: no tombstone — a tab still editing this document saves it back on its next edit;
+// a deleted-ids set checked in saveRecord is the upgrade if that bites.
+async function deleteRecord(database: IDBDatabase, id: string): Promise<void> {
+  const transaction = database.transaction([V2_DOCUMENTS_STORE_NAME, V2_RECOVERY_STORE_NAME], 'readwrite');
+  transaction.objectStore(V2_DOCUMENTS_STORE_NAME).delete(id);
+  transaction.objectStore(V2_RECOVERY_STORE_NAME).delete(id);
+  await transactionComplete(transaction);
+}
+
 // v2 records live in dedicated stores, never alongside v1 records; the
 // store name is the namespace, so keys need no prefix.
 export function createV2Repository(factory: IDBFactory | null): V2DocumentRepository {
@@ -200,6 +235,26 @@ export function createV2Repository(factory: IDBFactory | null): V2DocumentReposi
         return await loadRecord(database, id);
       } catch (error) {
         throwAsV2StorageError(error, 'load');
+      } finally {
+        database.close();
+      }
+    },
+    listDocuments: async () => {
+      const database = await openV2Database(factory);
+      try {
+        return await listRecords(database);
+      } catch (error) {
+        throwAsV2StorageError(error, 'list');
+      } finally {
+        database.close();
+      }
+    },
+    deleteDocument: async (id) => {
+      const database = await openV2Database(factory);
+      try {
+        await deleteRecord(database, id);
+      } catch (error) {
+        throwAsV2StorageError(error, 'delete');
       } finally {
         database.close();
       }
