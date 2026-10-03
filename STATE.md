@@ -4,6 +4,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 (0–11) done, archived at `docs/archive/plan-executed-2026-10-03/`; 7b/8 parked; 6.10 → 14.1.
 
 ## Now
+- **Stress sheet DONE 2026-09-25 (opencode)**: `npm run stress:generate` writes `stress/*.json` (everything on one page, plus 500/2000/5000-node scales); load via Canvas menu → Open file…; `@local` `e2e/stress.spec.ts` proves the 5k page in ~7 s.
 - **Gate**: `npm run verify` = typecheck, lint, unit, MCP server tests, headed `@gate` (~2 min). CI (v2 push):
   `test:ci`, MCP lint+tests, full e2e minus `@local`. Every toolbar control swept by `controls.spec.ts`.
 - **Phase 12 DONE 2026-10-03 (opus-5.5)** except the merge: 27/27 v1 fidelity (no Classic); bridge merged to
@@ -19,11 +20,10 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - MCP 0.2.0 was never published; `npx @vrun-design/openflowkit-mcp` still serves 0.1.2 until it is.
 
 ## Found, not fixed (owner calls)
-- DSL edges cannot end on a group: D2/Mermaid container edges land on a stand-in box (reported as a loss).
-  Fix = grammar §4 + layout ports; decision row.
-- A `\n` line break in a label is flattened to a space on parse (`src/dsl/segments.ts:18`), so labels lose breaks.
-- BYOK suggested models are stale (claude default `claude-opus-5`; no opus-5-5 / sonnet-5-5).
 - `legacyWorkspace`: a stale copy may resurrect a deleted v1 doc (owner may veto).
+- Mermaid ids differing only in case (`A`, `a`) slug to one id and merge, silently (pre-existing; rare).
+- Fixed 2026-10-03: edges end on groups (grammar §4, D2/Mermaid containers), quoted `\n` keeps its line
+  break, BYOK defaults `claude-opus-5-5` / `gpt-6.1-sol`.
 
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.
