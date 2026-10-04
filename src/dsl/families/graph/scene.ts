@@ -379,7 +379,7 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
         ...(hint ? { direction: DIRECTIONS[hint.value]! } : {}),
       } satisfies LayoutNodeInput;
     }),
-    // Notes are not laid out; their target reserves their room, centred so edges stay straight.
+    // Notes are not laid out; their target reserves their room.
     ...sceneNodes.filter(({ id }) => !noteIds.has(id)).map((node) => ({
       id: node.id, parentId: node.parentId, size: noteRoom.get(node.id)?.box ?? node.size,
     } satisfies LayoutNodeInput)),
@@ -400,7 +400,7 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
   const positionOf = new Map<string, Point2d>(Object.entries(laid.positions));
   for (const [id, slot] of noteRoom) {
     const at = positionOf.get(id);
-    if (at) positionOf.set(id, { x: at.x + slot.dx, y: at.y + slot.dy });
+    if (at) positionOf.set(id, { x: at.x, y: at.y + slot.dy });
   }
   for (const node of sceneNodes) {
     const pin = typedFrom(nodes.find((candidate) => candidate.id === node.id)?.entries ?? []).pin;
@@ -446,17 +446,17 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
 }
 
 const NOTE_GAP = 36;
-// ponytail: room is reserved on both sides so edges stay straight, ~2x the width of a noted node — one-sided ELK port constraints would halve it.
+// ponytail: the room is reserved to the right of the node only, so a noted node sits a little left of its row's centre — a centred reservation doubled the frame width.
 
 /**
  * The room a node's notes take to its right, as the box the layout reserves. The node
- * sits in the middle of that box (`dx`/`dy` from its corner) so neighbours still line up with it.
+ * sits `dy` below the box's top when its notes stack taller than it.
  */
 function noteSlots(
   drafts: readonly { id: string; targetId: string }[],
   nodes: readonly SceneNode[],
-): Map<string, { box: Size2d; dx: number; dy: number }> {
-  const slots = new Map<string, { box: Size2d; dx: number; dy: number }>();
+): Map<string, { box: Size2d; dy: number }> {
+  const slots = new Map<string, { box: Size2d; dy: number }>();
   const size = (id: string) => nodes.find((node) => node.id === id)!.size;
   for (const targetId of new Set(drafts.map((draft) => draft.targetId))) {
     const notes = drafts.filter((draft) => draft.targetId === targetId).map(({ id }) => size(id));
@@ -464,7 +464,7 @@ function noteSlots(
     const reach = NOTE_GAP + Math.max(...notes.map(({ width }) => width));
     const stack = notes.reduce((sum, { height }) => sum + height + NOTE_GAP / 2, -NOTE_GAP / 2);
     const height = Math.max(target.height, stack);
-    slots.set(targetId, { box: { width: target.width + 2 * reach, height }, dx: reach, dy: (height - target.height) / 2 });
+    slots.set(targetId, { box: { width: target.width + reach, height }, dy: (height - target.height) / 2 });
   }
   return slots;
 }
