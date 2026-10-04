@@ -95,6 +95,28 @@ describe('compile layout', () => {
     expect(note.transform.translation.x).toBeGreaterThan(api.transform.translation.x + api.size.width);
   });
 
+  it('reserves room for a note: it overlaps no node and stays inside its group and the frame', async () => {
+    const result = await compile('flowchart down\ngroup G {\n  A\n  B\n}\nA -> B -> C\nnote B : a longer note about B that wraps over lines\nnote B : and a second one');
+    const box = (node: { transform: { translation: { x: number; y: number } }; size: { width: number; height: number } }) =>
+      ({ ...node.transform.translation, ...node.size });
+    const overlap = (a: ReturnType<typeof box>, b: ReturnType<typeof box>) =>
+      a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+    const notes = result.nodes.filter((node) => node.kind === 'sticky');
+    expect(notes).toHaveLength(2);
+    const group = result.groups.find((node) => node.id === 'g')!;
+    for (const note of notes) {
+      // Children are placed relative to their group, so only siblings are compared.
+      for (const other of result.nodes.filter((node) => node.id !== note.id && node.parentId === note.parentId)) {
+        expect(overlap(box(note), box(other)), `${note.id} over ${other.id}`).toBe(false);
+      }
+      expect(note.parentId).toBe('g');
+      expect(note.transform.translation.x + note.size.width).toBeLessThanOrEqual(group.size.width);
+      expect(note.transform.translation.y + note.size.height).toBeLessThanOrEqual(group.size.height);
+    }
+    const b = result.nodes.find((node) => node.id === 'b')!;
+    expect(notes.every((note) => note.transform.translation.x > b.transform.translation.x + b.size.width)).toBe(true);
+  });
+
   it('uses injected measurement and layout ports', async () => {
     const result = await compile('flowchart\nA -> B', {
       measureLabel: () => ({ width: 99, height: 44 }),

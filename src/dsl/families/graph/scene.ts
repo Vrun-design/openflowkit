@@ -1,5 +1,5 @@
 import type { SceneConnector, SceneNode } from '../../../opencanvas/domain/document/types';
-import type { Point2d } from '../../../opencanvas/domain/geometry/types';
+import type { Point2d, Size2d } from '../../../opencanvas/domain/geometry/types';
 import type { DslDirection, DslReference, DslStatement } from '../../ast';
 import { diagnostic } from '../../diagnostics';
 import {
@@ -367,6 +367,8 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
   });
 
   // ponytail: `rank:` and `group [direction]` round-trip but do not constrain ELK yet — wire them to layer options when a family needs them.
+  const noteIds = new Set(noteDrafts.map(({ id }) => id));
+  const noteRoom = noteSlots(noteDrafts, sceneNodes);
   const layoutNodes: LayoutNodeInput[] = [
     ...groupNodes.map((group) => {
       const draft = groupsById.get(group.id)!;
@@ -377,7 +379,10 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
         ...(hint ? { direction: DIRECTIONS[hint.value]! } : {}),
       } satisfies LayoutNodeInput;
     }),
-    ...sceneNodes.map((node) => ({ id: node.id, parentId: node.parentId, size: node.size } satisfies LayoutNodeInput)),
+    // Notes are not laid out; their target reserves their room, centred so edges stay straight.
+    ...sceneNodes.filter(({ id }) => !noteIds.has(id)).map((node) => ({
+      id: node.id, parentId: node.parentId, size: noteRoom.get(node.id)?.box ?? node.size,
+    } satisfies LayoutNodeInput)),
   ];
   const laid = await context.layout({
     nodes: layoutNodes,
@@ -393,18 +398,27 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     transform: { ...group.transform, translation: laid.positions[group.id] ?? { x: 0, y: 0 } },
   }));
   const positionOf = new Map<string, Point2d>(Object.entries(laid.positions));
+  for (const [id, slot] of noteRoom) {
+    const at = positionOf.get(id);
+    if (at) positionOf.set(id, { x: at.x + slot.dx, y: at.y + slot.dy });
+  }
   for (const node of sceneNodes) {
     const pin = typedFrom(nodes.find((candidate) => candidate.id === node.id)?.entries ?? []).pin;
     // ponytail: pins are applied after layout, so ELK reserves the unpinned slot — fine for a hint the canvas never writes.
     if (pin) positionOf.set(node.id, pin);
   }
   const noteTextByTarget = new Map<string, string[]>();
+  const stackedBelow = new Map<string, number>();
   for (const note of noteDrafts) {
     const target = sceneNodes.find((node) => node.id === note.targetId);
     if (!target) continue;
     const noteNode = sceneNodes.find((node) => node.id === note.id);
     const targetPosition = positionOf.get(target.id) ?? { x: 0, y: 0 };
-    if (noteNode) positionOf.set(note.id, { x: targetPosition.x + target.size.width + 36, y: targetPosition.y });
+    const offset = stackedBelow.get(target.id) ?? 0;
+    if (noteNode) {
+      positionOf.set(note.id, { x: targetPosition.x + target.size.width + NOTE_GAP, y: targetPosition.y - (noteRoom.get(target.id)?.dy ?? 0) + offset });
+      stackedBelow.set(target.id, offset + noteNode.size.height + NOTE_GAP / 2);
+    }
     noteTextByTarget.set(note.targetId, [...(noteTextByTarget.get(note.targetId) ?? []), note.text]);
   }
   applyAlignDirectives(alignLines, positionOf, sceneNodes);
@@ -429,6 +443,30 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
       ...(reserved.length ? { reserved } : {}),
     },
   };
+}
+
+const NOTE_GAP = 36;
+// ponytail: room is reserved on both sides so edges stay straight, ~2x the width of a noted node — one-sided ELK port constraints would halve it.
+
+/**
+ * The room a node's notes take to its right, as the box the layout reserves. The node
+ * sits in the middle of that box (`dx`/`dy` from its corner) so neighbours still line up with it.
+ */
+function noteSlots(
+  drafts: readonly { id: string; targetId: string }[],
+  nodes: readonly SceneNode[],
+): Map<string, { box: Size2d; dx: number; dy: number }> {
+  const slots = new Map<string, { box: Size2d; dx: number; dy: number }>();
+  const size = (id: string) => nodes.find((node) => node.id === id)!.size;
+  for (const targetId of new Set(drafts.map((draft) => draft.targetId))) {
+    const notes = drafts.filter((draft) => draft.targetId === targetId).map(({ id }) => size(id));
+    const target = size(targetId);
+    const reach = NOTE_GAP + Math.max(...notes.map(({ width }) => width));
+    const stack = notes.reduce((sum, { height }) => sum + height + NOTE_GAP / 2, -NOTE_GAP / 2);
+    const height = Math.max(target.height, stack);
+    slots.set(targetId, { box: { width: target.width + 2 * reach, height }, dx: reach, dy: (height - target.height) / 2 });
+  }
+  return slots;
 }
 
 /** `align row A, B` / `align column A, B`: one coordinate shared after layout. */
