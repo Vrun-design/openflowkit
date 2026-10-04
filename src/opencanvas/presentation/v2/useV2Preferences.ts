@@ -24,6 +24,10 @@ export interface V2Preferences {
   recentEmoji: string[];
 }
 const KEY = 'openflowkit-v2-preferences';
+/** Pairing secret: the copied MCP config carries it, so the bridge is token-gated without typing. */
+function freshBridgeToken(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 const DEFAULTS: V2Preferences = {
   theme: 'system', showGrid: true, snapToGrid: false, canvasColor: null, density: 'comfortable',
   diagramPalette: 'pastel', autoIcons: true, bridgePort: BRIDGE_DEFAULT_PORT, bridgeToken: '', agentBridgeEnabled: false,
@@ -31,10 +35,11 @@ const DEFAULTS: V2Preferences = {
   recentEmoji: [],
 };
 
-function readPreferences(): V2Preferences {
+export function readPreferences(): V2Preferences {
   try {
     const value = JSON.parse(localStorage.getItem(KEY) ?? 'null');
-    return { theme: value?.theme === 'light' || value?.theme === 'dark' ? value.theme : 'system',
+    const storedToken = typeof value?.bridgeToken === 'string' ? value.bridgeToken.slice(0, 64) : '';
+    const preferences: V2Preferences = { theme: value?.theme === 'light' || value?.theme === 'dark' ? value.theme : 'system',
       showGrid: typeof value?.showGrid === 'boolean' ? value.showGrid : true,
       snapToGrid: value?.snapToGrid === true,
       canvasColor: typeof value?.canvasColor === 'string' && /^#[0-9a-f]{6}$/i.test(value.canvasColor)
@@ -46,7 +51,7 @@ function readPreferences(): V2Preferences {
       autoIcons: value?.autoIcons !== false,
       bridgePort: Number.isInteger(value?.bridgePort) && value.bridgePort > 0 && value.bridgePort < 65536
         ? value.bridgePort : BRIDGE_DEFAULT_PORT,
-      bridgeToken: typeof value?.bridgeToken === 'string' ? value.bridgeToken.slice(0, 64) : '',
+      bridgeToken: storedToken || freshBridgeToken(),
       agentBridgeEnabled: value?.agentBridgeEnabled === true,
       perspectiveTags: Array.isArray(value?.perspectiveTags)
         ? value.perspectiveTags.filter((tag: unknown): tag is string => typeof tag === 'string').slice(0, 24)
@@ -54,7 +59,10 @@ function readPreferences(): V2Preferences {
       recentEmoji: Array.isArray(value?.recentEmoji)
         ? value.recentEmoji.filter((glyph: unknown): glyph is string => typeof glyph === 'string').slice(0, 24)
         : [] };
-  } catch { return DEFAULTS; }
+    // Saved now so every tab and reload pairs with the config copied from this one; a full store keeps it for the session.
+    if (!storedToken) try { localStorage.setItem(KEY, JSON.stringify({ ...value, ...preferences })); } catch { /* session only */ }
+    return preferences;
+  } catch { return { ...DEFAULTS, bridgeToken: freshBridgeToken() }; }
 }
 
 export function useV2Preferences() {

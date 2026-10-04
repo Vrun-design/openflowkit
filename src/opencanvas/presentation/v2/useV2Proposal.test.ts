@@ -5,6 +5,7 @@ import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { compile } from '../../../dsl/compile';
 import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
+import { addShape, moveNodes, styleNodes } from '../../../agent/ops/sceneOps';
 import { useV2Proposal } from './useV2Proposal';
 
 const DSL = 'flowchart\nStart -> Finish';
@@ -55,10 +56,10 @@ describe('useV2Proposal', () => {
     const { result, commit, announce, sync } = setup();
     await act(() => result.current.propose(draw));
     const [diagram] = result.current.changes.map(({ id }) => id);
-    act(() => result.current.decide(diagram!, 'rejected'));
+    await act(() => result.current.decide(diagram!, 'rejected'));
     expect(result.current.decisions[diagram!]).toBe('rejected');
     expect(result.current.proposal?.preview.pages[0].nodes).toHaveLength(2);
-    act(() => result.current.decide(diagram!, 'accepted'));
+    await act(() => result.current.decide(diagram!, 'accepted'));
     expect(result.current.proposal?.preview.pages[0].nodes.length).toBeGreaterThan(2);
     await act(() => result.current.apply());
     expect(commit).toHaveBeenCalledTimes(1);
@@ -109,7 +110,7 @@ describe('useV2Proposal', () => {
     await act(async () => { await result.current.propose({ blocks: [{ dsl: DSL, frameId: null }, { dsl: 'flowchart\nLogin -> Home', frameId: null }], intent: 'Two flows' }); });
     const [first, second] = result.current.changes.map(({ id }) => id);
     expect(second).toBeDefined();
-    act(() => result.current.decide(first!, 'rejected'));
+    await act(() => result.current.decide(first!, 'rejected'));
     await act(async () => { expect(await result.current.apply()).toBe(true); });
     const [command] = commit.mock.calls[0]!;
     const commands = (command as { commands: readonly { kind: string; after: { nodes: readonly { id: string }[] } }[] }).commands;
@@ -138,5 +139,29 @@ describe('useV2Proposal', () => {
     expect(result.current.phase).toBe('idle');
     expect(result.current.proposal).toBeNull();
     expect(result.current.highlightedChangeId).toBeNull();
+  });
+
+  it('reviews scene ops as rows; rejecting one rebuilds the rest and drops what depended on it', async () => {
+    const { result, commit } = setup();
+    const op = (name: string, opDef: typeof moveNodes | typeof styleNodes | typeof addShape, input: Record<string, unknown>) => ({ op: opDef, input, label: name });
+    await act(async () => { await result.current.propose({ intent: 'tidy', blocks: [
+      op('Move a', moveNodes, { ids: ['a'], delta: { x: 100, y: 0 } }),
+      op('Style a', styleNodes, { ids: ['a'], fill: '#ff0000' }),
+      op('Move a again', moveNodes, { ids: ['a'], delta: { x: 10, y: 0 } }),
+      op('Add note', addShape, { kind: 'rectangle', id: 'note', x: 0, y: 0 }),
+      op('Style note', styleNodes, { ids: ['note'], fill: '#00ff00' }),
+    ] }); });
+    expect(result.current.phase).toBe('ready');
+    const ids = result.current.changes.map(({ id }) => id);
+    expect(result.current.changes.map(({ reason }) => reason)).toEqual(['Move a', 'Style a', 'Move a again', 'Add note', 'Style note']);
+    await act(() => result.current.decide(ids[1]!, 'rejected'));
+    await act(() => result.current.decide(ids[3]!, 'rejected'));
+    expect(result.current.proposal?.error).toBeUndefined();
+    expect(result.current.decisions[ids[4]!]).toBe('rejected');
+    const a = () => result.current.proposal!.preview.pages[0]!.nodes.find(({ id }) => id === 'a')!;
+    expect(a().appearance.fill).not.toBe('#ff0000');
+    await act(async () => { expect(await result.current.apply()).toBe(true); });
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(result.current.appliedSummary).toBe('Applied 2 changes.');
   });
 });

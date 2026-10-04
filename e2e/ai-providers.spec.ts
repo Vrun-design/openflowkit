@@ -85,3 +85,24 @@ test('the Endpoint disclosure shows one chevron, not the native marker too @gate
   await expect(summary).toHaveCSS('list-style-type', 'none');
   await expect(summary).toHaveCSS('display', 'flex');
 });
+
+test('the model field offers the provider’s own list, falls back on a bad key, and never shows another provider’s @gate', async ({ page }) => {
+  const dialog = await openProviderDialog(page);
+  const options = () => dialog.locator('datalist option').evaluateAll((list) => list.map((option) => (option as HTMLOptionElement).value));
+  // A wrong key: the fetch fails and the built-in suggestions stay.
+  await dialog.getByRole('button', { name: 'Use OpenAI' }).click();
+  await dialog.getByLabel('API key').fill('sk-bad');
+  await showEndpoint(dialog);
+  await dialog.getByLabel('Base URL').fill(`${STUB}/v1`);
+  await dialog.getByLabel('Model').focus();
+  await expect.poll(options).toContain('gpt-6.1-sol');
+  // A good key: the provider's list, chat models only.
+  await dialog.getByLabel('API key').fill('sk-ok');
+  await dialog.getByLabel('Model').focus();
+  await expect.poll(options).toEqual(['stub-chat']);
+  // Another provider (nothing listening on Ollama's port here) shows its own suggestions, not OpenAI's list.
+  await dialog.getByRole('button', { name: 'Use Ollama' }).click();
+  await dialog.getByLabel('Model').focus();
+  await expect.poll(options).not.toContain('stub-chat');
+  expect((await options()).length).toBeGreaterThan(0);
+});

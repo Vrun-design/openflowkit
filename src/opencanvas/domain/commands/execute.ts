@@ -336,11 +336,14 @@ function applyUnchecked(
   }
 }
 
-function requireValidDocument(document: SceneDocumentV1, stage: string): void {
+// ponytail: only the result is checked — every document in play is a loaded (validated) one or an
+// earlier result, and a second full pass cost half of each edit at 5k nodes. Check the input
+// too if a path ever hands in a document that skipped load.
+function requireValidDocument(document: SceneDocumentV1): void {
   const result = validateSceneDocumentV1(document);
   if (result.success === false) {
     throw new DocumentCommandError(
-      `${stage} document is invalid: ${result.issues[0].path} ${result.issues[0].message}`
+      `Result document is invalid: ${result.issues[0].path} ${result.issues[0].message}`
     );
   }
 }
@@ -349,8 +352,7 @@ export function applyDocumentCommand(
   document: SceneDocumentV1,
   command: DocumentCommand
 ): AppliedDocumentCommand {
-  requireValidDocument(document, 'Input');
   const applied = applyUnchecked(document, command);
-  requireValidDocument(applied.document, 'Result');
+  requireValidDocument(applied.document);
   return applied;
 }

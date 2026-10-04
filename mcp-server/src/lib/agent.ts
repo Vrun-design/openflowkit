@@ -194,6 +194,16 @@ interface AgentBundle {
   isBridgeRequest(value: unknown): value is BridgeRequest;
   readonly WIDGET_KINDS: readonly string[];
   readonly FRAME_PRESETS: readonly string[];
+  readonly STARTER_TEMPLATES: readonly StarterTemplate[];
+  readonly findStarterTemplate: (name: string) => StarterTemplate | undefined;
+}
+
+export interface StarterTemplate {
+  readonly name: string;
+  readonly title: string;
+  readonly family: 'flowchart' | 'architecture' | 'sequence' | 'state';
+  readonly summary: string;
+  readonly dsl: string;
 }
 
 export const {
@@ -203,6 +213,7 @@ export const {
   collectIconArt, tablerSvg, ICON_PACK_IDS,
   BRIDGE_PROTOCOL_VERSION, BRIDGE_DEFAULT_PORT, BRIDGE_POLL_SECONDS, BRIDGE_IDLE_MS,
   bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeRequest, WIDGET_KINDS, FRAME_PRESETS,
+  STARTER_TEMPLATES, findStarterTemplate,
 } = bundle as unknown as AgentBundle;
 
 export type { ZodType, ZodRawShape, ZodObject } from 'zod';

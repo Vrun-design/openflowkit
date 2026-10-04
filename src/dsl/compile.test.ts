@@ -300,4 +300,16 @@ describe('compile connectors', () => {
     expect(result.diagnostics).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'W131', line: 2 })]));
     expect(result.connectors[0]?.metadata.dsl).toMatchObject({ attrs: [{ key: 'custom', value: '1' }] });
   });
+
+  it('keeps a column named title, direction or appearance inside its entity', async () => {
+    const result = await compile('erd\ncourses {\n  id uuid pk\n  title text\n  direction text\n  appearance text\n}\nlessons {\n  title text\n}\ncourses ||--o{ lessons : contains\n');
+    const fields = (id: string) => (result.nodes.find((node) => node.id === id)!.content.erFields as { name: string }[]).map((field) => field.name);
+    expect(fields('courses')).toEqual(['id', 'title', 'direction', 'appearance']);
+    expect(fields('lessons')).toEqual(['title']);
+    expect(result.meta.title).toBeUndefined();
+    expect(result.diagnostics.filter((item) => item.code === 'W104' || item.code === 'W101' || item.code === 'W102')).toEqual([]);
+    const titled = await compile('erd\ntitle: School\ncourses {\n  title text\n}\n');
+    expect(titled.meta.title).toBe('School');
+    expect((titled.nodes[0]!.content.erFields as { name: string }[]).map((field) => field.name)).toEqual(['title']);
+  });
 });

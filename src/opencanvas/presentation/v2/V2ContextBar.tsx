@@ -46,14 +46,24 @@ export function visibleCanvasEdges(root: HTMLElement | null): Pick<ContextBarLay
 // top, kept inside the visible canvas. A zero-width anchor is a point
 // (selected connector: x at its midpoint, y/height spanning the path) and
 // centres the bar on it instead of hanging it to the right.
-export function contextBarStyle(anchor: DOMRect, layout: ContextBarLayout): React.CSSProperties {
-  const top = anchor.y - 104;
+const BAR_HEIGHT = 48;
+
+// `avoid` (connector label plates) moves the bar below the selection when the spot above would cover one.
+export function contextBarStyle(anchor: DOMRect, layout: ContextBarLayout, avoid: readonly DOMRect[] = []): React.CSSProperties {
   const left = anchor.width === 0 ? anchor.x - layout.width / 2 : anchor.x;
   const minLeft = layout.left + 8;
+  const x = Math.max(minLeft, Math.min(left, Math.max(minLeft, layout.right - layout.width - 8)));
+  // 8px of room: the bar's shadow touching a label reads as covering it.
+  const covers = (y: number) => avoid.some((rect) => rect.x - 8 < x + layout.width && rect.x + rect.width + 8 > x
+    && rect.y - 8 < y + BAR_HEIGHT && rect.y + rect.height + 8 > y);
+  const above = anchor.y - 104;
+  // Below clears the + handle that sits ~28px under the selection.
+  const below = anchor.y + anchor.height + 40;
+  const top = above < 80 ? anchor.y + anchor.height + 16 : covers(above) && !covers(below) ? below : above;
   return {
     position: 'absolute',
-    left: Math.max(minLeft, Math.min(left, Math.max(minLeft, layout.right - layout.width - 8))),
-    top: Math.max(80, Math.min(top >= 80 ? top : anchor.y + anchor.height + 16, window.innerHeight - 144)),
+    left: x,
+    top: Math.max(80, Math.min(top, window.innerHeight - 144)),
     zIndex: 35,
   };
 }

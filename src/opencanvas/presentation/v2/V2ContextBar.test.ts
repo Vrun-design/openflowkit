@@ -17,4 +17,14 @@ describe('contextBarStyle', () => {
     expect(contextBarStyle(new DOMRect(-500, 400, 120, 60), { ...layout, left: 300 }).left).toBe(308);
     expect(contextBarStyle(new DOMRect(1200, 400, 120, 60), { ...layout, right: 880 }).left).toBe(572);
   });
+
+  it('drops below the selection, clear of its + handle, when the spot above holds a connector label', () => {
+    const node = new DOMRect(300, 400, 120, 60);
+    const label = new DOMRect(320, 340, 90, 20);
+    expect(contextBarStyle(node, layout, [label]).top).toBe(500);
+    // A label elsewhere changes nothing.
+    expect(contextBarStyle(node, layout, [new DOMRect(900, 340, 90, 20)]).top).toBe(296);
+    // Labels on both sides: stay above, where people look first.
+    expect(contextBarStyle(node, layout, [label, new DOMRect(320, 510, 90, 20)]).top).toBe(296);
+  });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { compile } from '../../../dsl/compile';
 import { createEmptyV2Page } from '../../presentation/v2/v2Document';
 import type { ScenePage } from '../../domain/document/types';
+import { createShapeNode } from '../../domain/nodes/shapeNode';
 import { buildDslPageCommand } from '../dsl/dslPageCommand';
 import { assistantContext, selectedFrameIds } from './assistantContext';
 
@@ -38,5 +39,13 @@ describe('assistant context', () => {
     const context = assistantContext(page, [first], 'selection');
     expect(context.frames.map(({ id }) => id)).toEqual([first]);
     expect(context.focus).toEqual([]);
+  });
+
+  it('gives a selected hand-drawn shape its id, so the tools can act on it', async () => {
+    const { page } = await twoDiagrams();
+    const drawn = { ...page, nodes: [...page.nodes,
+      createShapeNode(page, { kind: 'rectangle', id: 'box', at: { x: 0, y: 900 }, label: 'Box' }),
+      createShapeNode(page, { kind: 'ellipse', id: 'blank', at: { x: 300, y: 900 } })] };
+    expect(assistantContext(drawn, ['box', 'blank', 'login'], 'selection').focus).toEqual(['Login', 'Box (shape id box)', 'ellipse (shape id blank)']);
   });
 });

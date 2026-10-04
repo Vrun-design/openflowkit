@@ -579,3 +579,33 @@ export function createProvider(config: AiProviderConfig): AiProvider {
   if (definition.wire === 'google') return createGoogleProvider(definition, baseUrl, model, apiKey);
   return createOpenAiProvider(definition, baseUrl, model, apiKey);
 }
+
+// Ids an OpenAI-wire `/models` lists that cannot answer a chat call.
+const NOT_CHAT = /embed|whisper|tts|dall-e|moderation|transcri|rerank|realtime|audio/i;
+
+/**
+ * The provider's own model ids, chat-capable only: a GET with the chat call's
+ * headers. Rejects on anything else (CORS, offline, 401, closed port); callers
+ * fall back to `suggestedModels` and never block typing on it.
+ */
+export async function listModels(config: Omit<AiProviderConfig, 'model'>, signal?: AbortSignal): Promise<string[]> {
+  const definition = providerById(config.provider);
+  const baseUrl = trimSlash(config.baseUrl?.trim() || definition.defaultBaseUrl);
+  const apiKey = config.apiKey.trim();
+  if (!baseUrl) throw new Error('No endpoint to ask.');
+  const [url, headers]: [string, Record<string, string>] = definition.wire === 'anthropic'
+    ? [`${baseUrl}/v1/models?limit=1000`, { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }]
+    : definition.wire === 'google'
+      ? [`${baseUrl}/v1beta/models?pageSize=1000`, { 'x-goog-api-key': apiKey }]
+      : [`${baseUrl}/models`, { ...definition.extraHeaders, ...(definition.needsKey ? { authorization: `Bearer ${apiKey}` } : {}) }];
+  const response = await fetch(url, { headers, signal });
+  if (!response.ok) throw new Error(`The model list answered ${response.status}.`);
+  const payload = asRecord(await response.json());
+  if (definition.wire === 'google') {
+    return (Array.isArray(payload.models) ? payload.models : []).map(asRecord)
+      .filter((model) => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))
+      .map((model) => String(model.name ?? '').replace(/^models\//, '')).filter(Boolean);
+  }
+  return (Array.isArray(payload.data) ? payload.data : []).map((model) => String(asRecord(model).id ?? ''))
+    .filter((id) => id && !NOT_CHAT.test(id));
+}

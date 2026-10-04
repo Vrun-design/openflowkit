@@ -131,5 +131,32 @@ describe('live bridge', () => {
     });
     expect(allowed.status).toBe(200);
     expect(await allowed.json()).toMatchObject({ ok: true, connected: false });
+
+    const inQuery = await fetch(`${bridgeUrls(port).health}?token=secret-token`, { headers: { origin: 'http://localhost:5173' } });
+    expect(inQuery.status).toBe(200);
+    const wrongQuery = await fetch(`${bridgeUrls(port).health}?token=nope`, { headers: { origin: 'http://localhost:5173' } });
+    expect(wrongQuery.status).toBe(401);
+  });
+
+  it('answers a browser preflight for the token header without needing the token', async () => {
+    bridge = new LiveBridge({ port: 0, token: 'secret-token' });
+    const port = await bridge.start();
+    const origin = 'http://localhost:5173';
+    const preflight = await fetch(bridgeUrls(port).hello, {
+      method: 'OPTIONS',
+      headers: {
+        origin, 'access-control-request-method': 'POST',
+        'access-control-request-headers': `content-type, ${bridgeTokenHeader}`,
+        'access-control-request-private-network': 'true',
+      },
+    });
+    expect(preflight.status).toBe(204);
+    expect(preflight.headers.get('access-control-allow-origin')).toBe(origin);
+    expect(preflight.headers.get('access-control-allow-headers')).toContain(bridgeTokenHeader);
+    expect(preflight.headers.get('access-control-allow-methods')).toContain('POST');
+    expect(preflight.headers.get('access-control-allow-private-network')).toBe('true');
+
+    const foreign = await fetch(bridgeUrls(port).hello, { method: 'OPTIONS', headers: { origin: 'https://evil.example' } });
+    expect(foreign.status).toBe(403);
   });
 });

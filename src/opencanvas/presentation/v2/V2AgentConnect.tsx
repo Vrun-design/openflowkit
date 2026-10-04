@@ -27,6 +27,15 @@ const CAPABILITIES = [
   { icon: IconDownload, title: 'Export', text: 'Hand you PNG, SVG or JSON when it is done.' },
 ] as const;
 
+/** The MCP client config: the editor's token goes in env so the server and this window pair on their own. */
+export function mcpConfig(port: number, token: string): string {
+  const env = { ...(port !== 43119 ? { OPENFLOWKIT_BRIDGE_PORT: String(port) } : {}), ...(token ? { OPENFLOWKIT_BRIDGE_TOKEN: token } : {}) };
+  return JSON.stringify({ mcpServers: { openflowkit: {
+    command: 'npx', args: ['-y', '@vrun-design/openflowkit-mcp'],
+    ...(Object.keys(env).length ? { env } : {}),
+  } } }, null, 2);
+}
+
 /** Rail panel for the MCP bridge: onboarding when off, a live status card when an agent is on. */
 export function V2AgentConnect(props: V2AgentConnectProps) {
   const [draftPort, setDraftPort] = useState(String(props.port));
@@ -36,10 +45,7 @@ export function V2AgentConnect(props: V2AgentConnectProps) {
   const running = props.status !== 'off';
   const port = Number(draftPort);
   const validPort = Number.isInteger(port) && port > 0 && port < 65536;
-  const config = JSON.stringify({ mcpServers: { openflowkit: {
-    command: 'npx', args: ['-y', '@vrun-design/openflowkit-mcp'],
-    ...(props.port !== 43119 ? { env: { OPENFLOWKIT_BRIDGE_PORT: String(props.port) } } : {}),
-  } } }, null, 2);
+  const config = mcpConfig(props.port, props.token);
   async function copyConfig(): Promise<void> {
     try { await navigator.clipboard.writeText(config); setCopyStatus('Copied'); }
     catch { setCopyStatus('Could not copy. Select the config below.'); }
@@ -84,7 +90,7 @@ export function V2AgentConnect(props: V2AgentConnectProps) {
           <label htmlFor="ofk-bridge-port">Port<input id="ofk-bridge-port" className="ofk-v2-bridge-input" inputMode="numeric" value={draftPort}
             disabled={running} aria-invalid={!validPort || undefined} onChange={(event) => setDraftPort(event.target.value.replace(/[^0-9]/g, ''))}
             onBlur={() => { if (validPort) props.onPortChange(port); }} /></label>
-          <label htmlFor="ofk-bridge-token">Token <span>optional</span><input id="ofk-bridge-token" type="password" autoComplete="off" className="ofk-v2-bridge-input"
+          <label htmlFor="ofk-bridge-token">Token<input id="ofk-bridge-token" type="password" autoComplete="off" className="ofk-v2-bridge-input"
             value={draftToken} disabled={running} placeholder="Server token" onChange={(event) => setDraftToken(event.target.value)}
             onBlur={() => props.onTokenChange(draftToken.trim())} /></label>
         </div>

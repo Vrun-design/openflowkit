@@ -1119,7 +1119,7 @@ export function V2EditorPage(): React.JSX.Element {
             <V2WorkspaceRail mode={workspaceMode}
               onChange={(mode) => { if (workspaceMode === mode) setWorkspaceMode(null); else openWorkspace(mode); }}
               onShortcuts={toggleShortcuts} agentConnected={agentBridge.status === 'connected'} />
-            {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !load.readOnly && rendererStatus === 'ready' ? <V2CanvasWelcome onOpen={openWorkspace} /> : null}
+            {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !load.readOnly && rendererStatus === 'ready' ? <V2CanvasWelcome onOpen={openWorkspace} onTemplate={({ dsl }) => { setCodeFrameId(null); setCodeDraft(dsl); openWorkspace('code'); void generateCode(dsl); }} /> : null}
             {workspaceMode === 'code' ? <V2CodePanel code={codeDraft} palette={preferences.diagramPalette}
               onPaletteChange={(diagramPalette) => updatePreferences({ diagramPalette })}
               onCodeChange={(value) => { setCodeDraft(value); setCompileDiagnostics([]); }}

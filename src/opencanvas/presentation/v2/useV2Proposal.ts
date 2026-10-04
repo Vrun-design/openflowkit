@@ -4,6 +4,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CompileResult } from '../../../dsl/compile';
 import { chainAssistantChanges, type AssistantDraft } from '../../application/ai/assistantChanges';
+import type { AssistantWrite } from '../../application/ai/assistantTools';
 import {
   applyCommand, createProposal, decideChange, StaleProposalError, summarizeChanges,
   type Proposal, type ProposalChangeSummary,
@@ -15,9 +16,9 @@ import type { ChangeDecision } from '../design-system';
 
 export type V2ProposalPhase = 'idle' | 'working' | 'ready' | 'stale' | 'applied' | 'failed';
 
-/** Diagram blocks from one reply: each replaces `frameId`, or adds a diagram when null. */
+/** Writes from one reply, in order: diagram blocks (replace `frameId`, or add when null) and scene ops. */
 export interface V2ProposalRequest {
-  readonly blocks: readonly { readonly dsl: string; readonly frameId: string | null }[];
+  readonly blocks: readonly AssistantWrite[];
   readonly intent: string;
   readonly source?: string;
   readonly scope?: 'selection' | 'page';
@@ -44,6 +45,10 @@ export function useV2Proposal(options: V2ProposalOptions) {
   const appliedIds = useRef(new Set<string>());
   const baseDocument = useRef<SceneDocumentV1 | null>(null);
   const drafts = useRef<readonly AssistantDraft[]>([]);
+  // decide() awaits the rebuilt chain, so it reads and writes the proposal here, one decision at a time.
+  const current = useRef<Proposal | null>(null);
+  const deciding = useRef<Promise<void>>(Promise.resolve());
+  const show = (next: Proposal | null): void => { current.current = next; setProposal(next); };
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
@@ -68,6 +73,7 @@ export function useV2Proposal(options: V2ProposalOptions) {
       if (!currentPage) throw new RangeError(`Page "${pageId}" was not found.`);
       const next: AssistantDraft[] = [];
       for (const [index, block] of request.blocks.entries()) {
+        if ('op' in block) { next.push({ id: `op:${index}`, ...block }); continue; }
         const compiled = await compileDsl(block.dsl);
         const errors = compiled.diagnostics.filter(({ severity }) => severity === 'error');
         if (errors.length) {
@@ -76,9 +82,9 @@ export function useV2Proposal(options: V2ProposalOptions) {
         }
         next.push({ id: `diagram:${index}:${block.frameId ?? compiled.frame.id}`, compiled, ...(block.frameId ? { frameId: block.frameId } : {}) });
       }
-      const changes = chainAssistantChanges(currentPage, next);
+      const changes = await chainAssistantChanges(document, pageId, next);
       if (!changes.length) throw new Error('The diagram already matches this request.');
-      const bound = next.flatMap(({ frameId }) => (frameId ? [frameId] : []));
+      const bound = next.flatMap((draft) => ('frameId' in draft && draft.frameId ? [draft.frameId] : []));
       const proposal = createProposal({
         document, revision, source: request.source ?? 'byok', intent: request.intent,
         scope: { kind: request.scope ?? (bound.length ? 'selection' : 'page'), pageId, objectIds: bound },
@@ -87,33 +93,39 @@ export function useV2Proposal(options: V2ProposalOptions) {
       if (proposal.error) throw new Error(proposal.error.message);
       drafts.current = next;
       baseDocument.current = document;
-      setProposal(proposal);
+      show(proposal);
       setPhase('ready');
       announce('Proposal ready. Review it, then apply.');
       return { id: proposal.id };
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
-      setProposal(null);
+      show(null);
       setError(message);
       setPhase('failed');
       return { error: message, compile: compileFailed };
     }
   }, []);
 
-  const decide = useCallback((changeId: string, decision: ChangeDecision) => {
-    setProposal((current) => {
+  const decide = useCallback((changeId: string, decision: ChangeDecision): Promise<void> => {
+    deciding.current = deciding.current.then(async () => {
+      const proposal = current.current;
       const base = baseDocument.current;
-      const page = base?.pages.find(({ id }) => id === current?.scope.pageId);
-      if (!current || !base || !page) return current;
+      if (!proposal || !base) return;
       // The review toggles back to 'pending'; the preview and the batch both
       // treat undecided as accepted, so record it that way.
       const status = decision === 'rejected' ? 'rejected' : 'accepted';
-      const rejected = new Set(current.changes.filter(({ id, status: was }) => (id === changeId ? status : was) === 'rejected').map(({ id }) => id));
+      const rejected = new Set(proposal.changes.filter(({ id, status: was }) => (id === changeId ? status : was) === 'rejected').map(({ id }) => id));
       // Later rows were built on earlier ones; rebuild the chain around the rejections.
-      const rebuilt = chainAssistantChanges(page, drafts.current, rejected);
-      const changes = current.changes.map((change) => ({ ...change, command: rebuilt.find(({ id }) => id === change.id)?.command ?? change.command }));
-      return decideChange({ ...current, changes }, changeId, status, base);
-    });
+      const rebuilt = await chainAssistantChanges(base, proposal.scope.pageId, drafts.current, rejected);
+      if (current.current !== proposal) return;
+      // A row that no longer resolves (styling a shape whose add was rejected) is rejected with it.
+      const changes = proposal.changes.map((change) => {
+        const row = rebuilt.find(({ id }) => id === change.id);
+        return row ? { ...change, command: row.command } : { ...change, status: 'rejected' as const };
+      });
+      show(decideChange({ ...proposal, changes }, changeId, status, base));
+    }).catch(() => undefined);
+    return deciding.current;
   }, []);
 
   /** Resolves true once the accepted rows are committed. */
@@ -122,7 +134,7 @@ export function useV2Proposal(options: V2ProposalOptions) {
     if (!proposal || !document || readOnly || appliedIds.current.has(proposal.id)) return false;
     try {
       const command = applyCommand(proposal, revision, document);
-      if (!command) { setPhase('idle'); setProposal(null); return false; }
+      if (!command) { setPhase('idle'); show(null); return false; }
       commit(command, proposal.baseRevision);
       appliedIds.current.add(proposal.id);
       const count = command.commands.length;
@@ -145,7 +157,7 @@ export function useV2Proposal(options: V2ProposalOptions) {
   }, [proposal]);
 
   const discard = useCallback(() => {
-    setProposal(null);
+    show(null);
     setPhase('idle');
     setIntent(null);
     setError(null);

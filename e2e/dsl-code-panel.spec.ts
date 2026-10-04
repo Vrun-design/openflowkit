@@ -70,3 +70,40 @@ test('a long edge label wraps instead of running over the nodes it joins @gate',
   expect(widest).toBeGreaterThan(0);
   expect(widest).toBeLessThanOrEqual(150);
 });
+
+test('the code editor wraps long lines in step with its highlight, and ⌘Z undoes a Tab or a completion, not the text @gate', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
+  const source = page.getByRole('textbox', { name: 'Diagram source' });
+  await source.fill('');
+  await page.keyboard.type('flowchart\nA -> B');
+  await page.keyboard.press('Tab');
+  await expect(source).toHaveValue('flowchart\nA -> B  ');
+  await page.keyboard.press('Meta+z');
+  await expect(source).toHaveValue('flowchart\nA -> B');
+  await page.keyboard.type(' [');
+  await expect(page.getByRole('listbox')).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(source).not.toHaveValue('flowchart\nA -> B [');
+  await page.keyboard.press('Meta+z');
+  await expect(source).toHaveValue('flowchart\nA -> B [');
+
+  // A long AI-written line wraps; the highlight underneath wraps at the same places.
+  const long = `flowchart\n${Array.from({ length: 12 }, (_, index) => `Step${index}`).join(' -> ')} -> ${'x'.repeat(120)}\nEmoji 🚀 -> Tab\tEnd`;
+  await source.fill(long);
+  const metrics = await page.evaluate(() => {
+    const editor = document.querySelector<HTMLTextAreaElement>('.ofk-v2-code-editor')!;
+    const highlight = document.querySelector<HTMLPreElement>('.ofk-v2-code-highlight')!;
+    return {
+      sideways: editor.scrollWidth > editor.clientWidth + 1,
+      editorHeight: editor.scrollHeight, highlightHeight: highlight.scrollHeight,
+      editorWidth: editor.clientWidth, highlightWidth: highlight.clientWidth,
+      text: highlight.textContent, value: editor.value,
+    };
+  });
+  expect(metrics.sideways).toBe(false);
+  expect(metrics.highlightWidth).toBe(metrics.editorWidth);
+  expect(Math.abs(metrics.highlightHeight - metrics.editorHeight)).toBeLessThanOrEqual(2);
+  expect(metrics.text?.replace(/\n$/, '')).toBe(metrics.value);
+});

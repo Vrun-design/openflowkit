@@ -118,9 +118,14 @@ export function parseDocument(input: string): DslDocument {
   // values are hoisted into the document (grammar §3.3) and their lines are
   // consumed here so no family parser has to know about them.
   const segments: DslSegment[] = [];
+  // Only a top-level line is a directive: `title text` inside `courses { … }` is a column.
+  let depth = 0;
   for (const segment of splitStatements(tokenized.tokens.filter((token) => token.line > consumedThrough))) {
+    const topLevel = depth === 0;
+    if (segment.opens) depth += 1;
+    if (segment.closes) depth = Math.max(0, depth - 1);
     // Only a bare word is a directive; `"title"` is a node called title (grammar §2.4).
-    const keyword = segment.tokens[0]?.kind === 'word' ? segment.tokens[0].value : undefined;
+    const keyword = topLevel && segment.tokens[0]?.kind === 'word' ? segment.tokens[0].value : undefined;
     // `icons` is a common word, so only `icons:` is the directive.
     const directive = keyword === 'icons' ? segment.tokens[1]?.value === ':' : keyword === 'title' || keyword === 'direction' || keyword === 'appearance';
     if (!directive) {

@@ -1,5 +1,5 @@
 import { expect, test } from './test';
-import { openCanvas } from './helpers';
+import { clickNode, openCanvas, state } from './helpers';
 
 test('object actions, page menus and connection states stay usable', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('openflowkit-v2-preferences', JSON.stringify({ theme: 'dark' })));
@@ -129,4 +129,23 @@ test('settings and export remain clear in dark, light and narrow layouts', async
     return Math.round(settled.y + settled.height);
   }).toBeLessThanOrEqual(600);
   await panel.screenshot({ path: '/tmp/ofk-export-narrow.png' });
+});
+
+test('on a phone the selection toolbar does not sit on an open panel @gate', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  const bar = page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' });
+  await bar.click();
+  const source = page.getByRole('textbox', { name: 'Diagram source' });
+  await source.fill('flowchart\nA -> B -> C');
+  await source.press('Meta+Enter');
+  await expect.poll(async () => (await state(page)).nodes.length).toBe(4);
+  await page.getByRole('button', { name: 'Close', exact: false }).first().click();
+  await clickNode(page, (await state(page)).nodes[1]!);
+  await expect(page.locator('[data-context-bar]')).toBeVisible();
+
+  await bar.click();
+  await expect(source).toBeVisible();
+  await expect(page.locator('[data-context-bar]')).toBeHidden();
 });

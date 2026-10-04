@@ -3,6 +3,7 @@ import { V2LaserTrail } from './V2LaserTrail';
 import {
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -29,7 +30,9 @@ import {
 import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
 import { resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import { resolveWidgetInks, widgetBackdrop, widgetLabelBox } from '../../domain/nodes/widgetNodePresentation';
-import { resolveConnectorLabelStyle } from '../../domain/connectors/labelStyle';
+import { connectorLabelPlate, resolveConnectorLabelStyle } from '../../domain/connectors/labelStyle';
+import { projectConnectors } from '../../domain/connectors/routeProjection';
+import { semanticDetailLevel } from '../../infrastructure/pixi/viewportProjection';
 import { V2ContextBar, contextBarStyle, sameRect, unionScreenBounds, visibleCanvasEdges } from './V2ContextBar';
 import type { ContextMenuTarget } from './V2ContextMenu';
 import { useV2Pointer, type StylePresets, type V2GestureApi } from './useV2Pointer';
@@ -118,6 +121,8 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   // Latest React-rendered bar anchor; the drag-follow path restores exactly
   // this on operation end when no re-render follows (anchor truly unchanged).
   const anchorForRestoreRef = useRef<DOMRect | null>(null);
+  // Label plates the bar keeps off; the restore below writes the DOM directly, so it reads them here.
+  const labelPlatesRef = useRef<readonly DOMRect[]>([]);
   // Bar width is measured (node and connector bars differ); side panels
   // shrink the visible canvas the bar is clamped into.
   const [barWidth, setBarWidth] = useState(320);
@@ -169,7 +174,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
         previewFrameRef.current = null;
         pendingPreviewRef.current = null;
         if (bar && anchorForRestoreRef.current) {
-          const restore = contextBarStyle(anchorForRestoreRef.current, barLayout(bar));
+          const restore = contextBarStyle(anchorForRestoreRef.current, barLayout(bar), labelPlatesRef.current);
           if (restore.left !== undefined) bar.style.left = `${restore.left}px`;
           if (restore.top !== undefined) bar.style.top = `${restore.top}px`;
         }
@@ -373,6 +378,26 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   }, [selectionIds, selectedConnectorId, props.editing, props.readOnly, props.hostRef,
     props.camera, props.page, viewportSize]);
 
+  // Label plates of the connectors touching the selection, in screen space: the bar keeps off them.
+  const labelPlates = useMemo(() => {
+    // Below full detail the canvas draws no connector labels, so there is nothing to keep off.
+    if (!contextAnchor || selectionIds.length === 0 || semanticDetailLevel(props.camera.zoom) !== 'full') return [];
+    const selected = new Set(selectionIds);
+    const touching = props.page.connectors.filter((connector) => connector.labels.length > 0
+      && (selected.has(connector.source.nodeId ?? '') || selected.has(connector.target.nodeId ?? '')));
+    const byId = new Map(touching.map((connector) => [connector.id, connector]));
+    return projectConnectors(props.page, touching).flatMap((projected) => {
+      const style = resolveConnectorLabelStyle(byId.get(projected.id)!);
+      return projected.labels.map(({ text, point }) => {
+        const plate = connectorLabelPlate(text, style, point);
+        const from = worldToScreen(props.camera, { x: plate.x, y: plate.y });
+        const to = worldToScreen(props.camera, { x: plate.x + plate.width, y: plate.y + plate.height });
+        return new DOMRect(from.x, from.y, to.x - from.x, to.y - from.y);
+      });
+    });
+  }, [contextAnchor, selectionIds, props.page, props.camera]);
+  labelPlatesRef.current = labelPlates;
+
   useLayoutEffect(() => {
     const bar = props.sectionRef.current?.querySelector<HTMLElement>('[data-context-bar]');
     if (!contextAnchor || !bar) return;
@@ -501,7 +526,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
               bounds: snapshot.bounds, snappedX: false, snappedY: false,
             } : null);
           }}
-          style={contextBarStyle(contextAnchor, { width: barWidth, ...edges })}
+          style={contextBarStyle(contextAnchor, { width: barWidth, ...edges }, labelPlates)}
           onRemoveIcons={props.onRemoveIcons}
           onNodeStyleCommitted={(patch) => {
             const selected = props.selection.nodeIds

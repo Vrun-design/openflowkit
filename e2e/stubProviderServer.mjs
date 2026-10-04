@@ -33,6 +33,12 @@ const replyFor = (body, path) => {
   const images = imagesIn(last);
   if (images) return { text: `I can see ${images} ${images === 1 ? 'image' : 'images'}.` };
   if (/(?:^|\n)hi\s*$/i.test(textOf(last))) return { text: CHAT };
+  // A scene edit on the selected shape: the canvas description names it as `shape id …`.
+  const shape = textOf(last).includes('make the selected box red') ? /shape id ([\w-]+)/.exec(textOf(last))?.[1] : undefined;
+  if (shape && path.includes('/chat/completions') && request.tools?.some((tool) => tool.function?.name === 'style_shapes')) {
+    const call = (id, name, args) => ({ id, type: 'function', function: { name, arguments: JSON.stringify(args) } });
+    return { calls: [call('call_red', 'style_shapes', { ids: [shape], fill: '#ef4444' }), call('call_right', 'move_shapes', { ids: [shape], dx: 200, dy: 0 })] };
+  }
   if (path.includes('/chat/completions') && request.tools?.some((tool) => tool.function?.name === 'add_diagram')) {
     return { call: { id: 'call_stub', type: 'function', function: { name: 'add_diagram', arguments: JSON.stringify({ dsl: 'flowchart\n  Stub -> Works' }) } } };
   }
@@ -44,7 +50,20 @@ const successFor = (path, body) => {
   const text = reply.text ?? '';
   if (path.includes(':generateContent')) return { candidates: [{ content: { parts: [{ text }] } }] };
   if (path === '/v1/messages') return { content: [{ type: 'text', text }] };
-  return { choices: [{ message: reply.call ? { content: null, tool_calls: [reply.call] } : { content: text } }] };
+  const calls = reply.calls ?? (reply.call ? [reply.call] : null);
+  return { choices: [{ message: calls ? { content: null, tool_calls: calls } : { content: text } }] };
+};
+
+/** Each wire's model list, with one entry a chat picker must leave out. */
+const modelsFor = (path, headers) => {
+  if (path.includes('/v1beta/models')) {
+    return { models: [
+      { name: 'models/gemini-stub', supportedGenerationMethods: ['generateContent'] },
+      { name: 'models/embedding-stub', supportedGenerationMethods: ['embedContent'] },
+    ] };
+  }
+  if (headers['x-api-key']) return { data: [{ id: 'claude-stub-1', type: 'model' }] };
+  return { data: [{ id: 'stub-chat' }, { id: 'stub-text-embedding' }, { id: 'stub-whisper' }] };
 };
 
 const failureFor = (key) => {
@@ -59,7 +78,7 @@ export function createStubProviderServer() {
   return createServer((request, response) => {
     const cors = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'content-type, authorization, x-api-key, x-goog-api-key, http-referer, x-title, anthropic-version, anthropic-dangerous-direct-browser-access',
     };
     if (request.method === 'OPTIONS') {
@@ -94,7 +113,7 @@ export function createStubProviderServer() {
         return;
       }
       response.writeHead(200, { ...cors, 'content-type': 'application/json' });
-      response.end(JSON.stringify(successFor(path, body)));
+      response.end(JSON.stringify(request.method === 'GET' && /\/models(\?|$)/.test(path) ? modelsFor(path, request.headers) : successFor(path, body)));
       console.log(`stub ${path} → 200`);
     });
   });

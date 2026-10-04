@@ -9,9 +9,9 @@ import type { CompileResult } from '../../../dsl/compile';
 import { runAssistantAgent, type AgentStep } from '../../application/ai/assistantAgent';
 import { assistantContext } from '../../application/ai/assistantContext';
 import {
-  assistantSystemPrompt, buildAssistantMessages, parseAssistantReply, type AssistantBlock, type AssistantTurn,
+  assistantSystemPrompt, buildAssistantMessages, parseAssistantReply, type AssistantTurn,
 } from '../../application/ai/assistantPrompt';
-import { assistantToolkit } from '../../application/ai/assistantTools';
+import { assistantToolkit, type AssistantWrite } from '../../application/ai/assistantTools';
 import type { SceneDocumentV1, ScenePage } from '../../domain/document/types';
 import { AiProviderError, createProvider, type AiMessage, type AiTurn } from '../../../services/ai/provider';
 import {
@@ -185,11 +185,12 @@ export function useV2Assistant(options: V2AssistantOptions) {
       const request = { thinking: thinkRef.current, signal: controller.signal, onDelta };
       const toolKey = `${provider.id}:${provider.model}`;
       let text = '';
-      let blocks: readonly AssistantBlock[] | null = null;
+      let blocks: readonly AssistantWrite[] | null = null;
 
       if (tools?.document && !noTools.current.has(toolKey)) {
         const toolkit = assistantToolkit({
           document: tools.document, pageId: page.id, inScope: new Set(context.frames.map((frame) => frame.id)),
+          selection: scope === 'selection' ? new Set(selectedIds) : null,
           capabilities: tools.capabilities, compile: tools.compile,
         });
         const system = assistantSystemPrompt(grammar, { tools: true });
@@ -211,7 +212,7 @@ export function useV2Assistant(options: V2AssistantOptions) {
           text = result.text;
           // A block pasted in the reply never doubles a diagram a tool already drafted.
           const drafted = toolkit.blocks();
-          const taken = new Set(drafted.map(({ frameId }) => frameId).filter(Boolean));
+          const taken = new Set(drafted.flatMap((write) => ('frameId' in write && write.frameId ? [write.frameId] : [])));
           blocks = [...drafted, ...parseAssistantReply(text).blocks.filter(({ frameId }) => !frameId || !taken.has(frameId))];
         } catch (caught) {
           // A model without tool support refuses the first request (400); fall back to blocks.
@@ -242,11 +243,11 @@ export function useV2Assistant(options: V2AssistantOptions) {
         announce('The assistant replied.');
         return;
       }
-      // Blocks may only replace diagrams in scope; an unknown id is a new diagram.
+      // Blocks may only replace diagrams in scope; an unknown id is a new diagram. Scene ops were scoped by their tool.
       const inScope = new Set(context.frames.map((frame) => frame.id));
       const onPage = new Set(page.nodes.map((node) => node.id));
-      const allowed = blocks.flatMap((block) => {
-        if (!block.frameId || inScope.has(block.frameId)) return [block];
+      const allowed = blocks.flatMap((block): AssistantWrite[] => {
+        if ('op' in block || !block.frameId || inScope.has(block.frameId)) return [block];
         return onPage.has(block.frameId) ? [] : [{ ...block, frameId: null }];
       });
       const skipped = blocks.length - allowed.length;
@@ -274,7 +275,7 @@ export function useV2Assistant(options: V2AssistantOptions) {
         if (controller.signal.aborted) return;
         const again = parseAssistantReply(repair).blocks;
         if (again.length) {
-          result = await proposal.propose({ blocks: again, intent: user.text, source: `byok:${provider.id}`, scope });
+          result = await proposal.propose({ blocks: [...again, ...allowed.filter((write) => 'op' in write)], intent: user.text, source: `byok:${provider.id}`, scope });
           fixed = 'id' in result;
         }
       }

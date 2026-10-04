@@ -125,6 +125,9 @@ export class LiveBridge {
       'cache-control': 'no-store',
       'access-control-allow-origin': response.req.headers.origin ?? '*',
       'access-control-allow-headers': `content-type, ${bridgeTokenHeader}`,
+      'access-control-allow-methods': 'GET, POST, OPTIONS',
+      // Chrome asks before a public page may reach 127.0.0.1.
+      'access-control-allow-private-network': 'true',
     });
     response.end(status === 204 ? undefined : JSON.stringify(body));
   }
@@ -136,7 +139,9 @@ export class LiveBridge {
       return true;
     }
     if (!this.options.token) return false;
-    if (request.headers[bridgeTokenHeader] === this.options.token) return false;
+    // The editor sends it as `?token=` (a plain request, so no preflight an older server could not answer); CLIs may use the header.
+    const supplied = request.headers[bridgeTokenHeader] ?? new URL(request.url ?? '/', 'http://127.0.0.1').searchParams.get('token');
+    if (supplied === this.options.token) return false;
     this.respond(response, 401, { error: `Missing or wrong ${bridgeTokenHeader}.` });
     return true;
   }
@@ -156,6 +161,12 @@ export class LiveBridge {
   private async handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
     const url = new URL(request.url ?? '/', 'http://127.0.0.1');
     try {
+      // A preflight cannot carry the token it asks permission to send: origin-check it, nothing more.
+      if (request.method === 'OPTIONS') {
+        if (isAllowedBridgeOrigin(request.headers.origin)) this.respond(response, 204, null);
+        else this.respond(response, 403, { error: 'Origin not allowed. The bridge is local-only.' });
+        return;
+      }
       if (this.reject401(response, request)) return;
       if (request.method === 'GET' && url.pathname === '/health') { this.respond(response, 200, this.health()); return; }
       if (request.method === 'POST' && url.pathname === '/hello') {

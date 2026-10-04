@@ -93,8 +93,9 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
   {
     id: 'claude', label: 'Claude', wire: 'anthropic',
     defaultBaseUrl: 'https://api.anthropic.com',
-    defaultModel: 'claude-opus-5-5',
-    suggestedModels: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-4-5', 'claude-fable-5-1'],
+    // Mid-tier by default: BYOK users pay per call, and Opus is a choice, not a surprise.
+    defaultModel: 'claude-sonnet-5-5',
+    suggestedModels: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-haiku-4-5', 'claude-fable-5-1'],
     maxOutputTokens: HOSTED_OUTPUT,
     keyPlaceholder: 'sk-ant-...', keyPattern: '^sk-ant-', needsKey: true,
     consoleUrl: 'https://console.anthropic.com/settings/keys', consoleName: 'Anthropic Console',

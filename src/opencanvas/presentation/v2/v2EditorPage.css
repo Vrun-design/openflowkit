@@ -202,6 +202,8 @@
 .ofk-v2-welcome-keys > span { display: flex; align-items: center; gap: 6px; }
 .ofk-v2-welcome-actions { display: flex; justify-content: center; gap: 8px; margin-top: 34px; pointer-events: auto; }
 .ofk-v2-welcome-actions .ofk-button { font-size: 14px; min-height: 38px; padding: 0 12px; gap: 8px; }
+.ofk-v2-welcome-templates { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; max-width: 560px; margin: 14px auto 0; pointer-events: auto; color: var(--ofk-muted); font-size: 13px; }
+.ofk-v2-welcome-templates > span { margin-right: 4px; }
 
 .ofk-v2-guide { position: absolute; color: var(--ofk-muted); font-size: 17px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
 .ofk-v2-guide svg { width: 100px; height: 80px; fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -225,7 +227,8 @@
 .ofk-v2-panel-footer .ofk-button { width: 100%; }
 .ofk-v2-panel-footer p { font-size: 11px; text-align: center; color: var(--ofk-muted); line-height: 1.6; }
 .ofk-v2-code-editor-wrap { position: relative; flex: 1; min-height: 240px; }
-.ofk-v2-code-editor, .ofk-v2-code-highlight { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; overflow: auto; white-space: pre; tab-size: 2; border-radius: 8px; padding: 16px 12px; font: 14px/1.9 var(--ofk-font-mono, monospace); }
+/* Both layers wrap the same way and keep the same scrollbar room, so the caret never drifts off its glyph. */
+.ofk-v2-code-editor, .ofk-v2-code-highlight { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; overflow: hidden auto; scrollbar-gutter: stable; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; tab-size: 2; border-radius: 8px; padding: 16px 12px; font: 14px/1.9 var(--ofk-font-mono, monospace); letter-spacing: 0; }
 .ofk-v2-code-editor { resize: none; border: 1px solid var(--ofk-border); color: transparent; caret-color: var(--ofk-text); background: transparent; -webkit-text-fill-color: transparent; }
 .ofk-v2-code-editor::selection { background: color-mix(in srgb, var(--ofk-accent) 28%, transparent); -webkit-text-fill-color: transparent; }
 .ofk-v2-code-editor::placeholder { color: var(--ofk-muted); -webkit-text-fill-color: var(--ofk-muted); opacity: 1; }
@@ -567,6 +570,8 @@
 }
 @media (max-width: 720px) {
   .ofk-v2 .ofk-v2-workspace-panel, .ofk-v2 .ofk-agent-panel, .ofk-v2 .ofk-v2-layers-panel { top: 0; bottom: 0; left: 64px; right: 0; width: auto; max-width: none; max-height: none; border-radius: 0; }
+  /* The panel covers the canvas here, so a selection toolbar would only sit on top of it. */
+  .ofk-v2:has(.ofk-v2-workspace-panel, .ofk-agent-panel, .ofk-v2-layers-panel) [data-context-bar] { display: none; }
   .ofk-v2[data-workspace-open='true'] .ofk-v2-workspace-rail { right: 16px; }
   .ofk-v2 .ofk-v2-workspace-rail .ofk-toolbar { flex-direction: row; }
   .ofk-v2[data-workspace-open='true'] .ofk-v2-help { right: 16px; }

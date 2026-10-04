@@ -87,7 +87,7 @@ describe('assistant conversation', () => {
     const last = hook.result.current.assistant.messages.at(-1)!;
     expect(last).toMatchObject({ status: 'done', text: 'Added a two-step flow.', proposalId: hook.result.current.proposal.proposal!.id });
     expect(last.steps).toEqual([expect.objectContaining({ tool: 'add_diagram', status: 'done', label: 'Drafted a new flowchart' })]);
-    expect(bodies()[0]!.tools).toHaveLength(6);
+    expect(bodies()[0]!.tools).toHaveLength(11);
     expect(bodies()[1]!.messages.map(({ role }) => role)).toEqual(['system', 'user', 'assistant', 'tool']);
   });
 

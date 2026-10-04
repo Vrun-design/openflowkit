@@ -4,6 +4,7 @@
 // starts fresh and History reopens the old one. Every call goes to the local
 // stub (stubProviderServer.mjs).
 import { expect, test } from './test';
+import { clickNode, drawShape, node, openCanvas } from './helpers';
 
 const STUB = 'http://127.0.0.1:4399/v1';
 // A 1×1 PNG.
@@ -96,4 +97,43 @@ test('a proposal under review is brought into view and the welcome steps aside @
     const at = await screenOf(300, 150);
     return at !== null && at.x > 0 && at.x < 1040 && at.y > 0 && at.y < 900;
   }).toBe(true);
+});
+
+test('"make the selected box red and move it right" is one reviewable change and one undo step @gate', async ({ page }) => {
+  await page.addInitScript((baseUrl) => {
+    localStorage.setItem('openflowkit-v2-ai', JSON.stringify({
+      provider: 'custom', connections: { custom: { apiKey: 'sk-ok', baseUrl, model: 'stub-model' } },
+    }));
+  }, STUB);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openCanvas(page);
+  const box = await drawShape(page, 'r', 360, 320);
+  const before = await node(page, box);
+  await clickNode(page, box);
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true })
+    .getByRole('button', { name: 'AI assistant', exact: true }).click();
+  const panel = page.getByRole('complementary', { name: 'AI assistant' });
+  const composer = panel.getByRole('textbox', { name: 'Ask AI assistant' });
+  const ask = async () => {
+    await composer.fill('make the selected box red and move it right');
+    await composer.press('Enter');
+    await expect(panel.getByText('Review changes')).toBeVisible();
+  };
+
+  // Discarded, the canvas is untouched.
+  await ask();
+  await expect(panel.getByText('2 steps')).toBeVisible();
+  await panel.getByRole('button', { name: 'Discard', exact: true }).click();
+  expect(await node(page, box)).toEqual(before);
+
+  // Applied, both edits land as one change that one undo takes back.
+  await ask();
+  await panel.getByRole('button', { name: /^Apply/ }).click();
+  await expect(panel.getByText('Applied 2 changes.')).toBeVisible();
+  const after = await node(page, box);
+  expect(after.appearance?.fill).toBe('#ef4444');
+  expect(after.transform!.translation.x).toBe(before.transform!.translation.x + 200);
+  await page.getByTestId('v2-canvas').focus();
+  await page.keyboard.press('Meta+z');
+  await expect.poll(async () => node(page, box)).toEqual(before);
 });

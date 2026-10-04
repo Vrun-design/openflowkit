@@ -1,12 +1,9 @@
 # State
-
 Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phases 12–16. Build plan
 (0–11) done, archived at `docs/archive/plan-executed-2026-10-03/`; 7b/8 parked; 6.10 → 14.1.
 
 ## Now
-- **Stress sheet DONE 2026-09-25 (opencode)**: `npm run stress:generate` writes `stress/*.json` (everything on one page, plus 500/2000/5000-node scales); load via Canvas menu → Open file…; `@local` `e2e/stress.spec.ts` proves the 5k page in ~7 s.
-- **Gate**: `npm run verify` = typecheck, lint, unit, MCP server tests, headed `@gate` (~2 min). CI (v2 push):
-  `test:ci`, MCP lint+tests, full e2e minus `@local`. Every toolbar control swept by `controls.spec.ts`.
+- Stress sheet: `npm run stress:generate` → `stress/*.json`; gate: `npm run verify` (~2 min); CI runs the rest.
 - **Phase 12 DONE 2026-10-03 (opus-5.5)** except the merge: 27/27 v1 fidelity, bridge on `main` (PR #84), boot import,
   old URLs, `sw.js` kill switch, BYOK carry-over, v1 backup. Owner's: merge `main` → `v2`, PR `v2` → `main`,
   Cloudflare Landing project, tag `v1-final`.
@@ -14,19 +11,22 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   13.1 tools take Mermaid / Structurizr / D2 (`readAgentSource`, `src/agent/lint.ts`) → `converted: {from, dsl, losses}`;
   13.2 headless SVG + `openflowkit build` draw icon art (`mcp-server/data/icon-art`, built by `build:icons`, ~11 MB);
   13.3 `skills/openflowkit/SKILL.md` = `public/llms.txt` (`npm run skill:sync`; `skill.test.ts` fails on drift);
-  13.4 `npm run eval:validity` RAN 2026-10-04 on nemotron-3-ultra (OpenRouter free): first-try valid Mermaid 96%, DSL 90%,
-  after one retry 100% / 96% — target ≥ 90% met (`mcp-server/evals/validity/results/`). That run was BEFORE the detector fix below;
-  re-run on a stronger model (free tier is 50 req/day, a full run is 100+) for the launch number;
+  13.4 `npm run eval:validity` ran 2026-10-04 (nemotron free): first-try Mermaid 96%, DSL 90% (100% replayed on
+  current code); re-run on a stronger model (free tier 50 req/day, a run is 100+) for the launch number;
   13.5 `d2ToDsl` (32 real D2 files) + Structurizr fixed on its own 4 example workspaces.
 - MCP 0.2.0 was never published; `npx @vrun-design/openflowkit-mcp` still serves 0.1.2 until it is.
-
+## Review follow-ups 2026-10-04 (sonnet-5.5, then opus-5.5) — UNCOMMITTED, `npm run verify` green, see CHANGELOG
+- Bridge token default-on; pairing after reload; one validation per command; DSL `title` column; Mermaid keywords;
+  assistant scene ops (5 tools, one undo); code panel wrap/undo/CRLF/IME; toolbar dodges labels; model list fetch;
+  starter gallery (data moved to `src/agent/starterTemplates.ts`, MCP re-exports via the agent bundle).
 ## Found, not fixed (owner calls)
-- AI diagrams come out wide, so fit lands under 65% zoom, where labels hide by design. Edge-label room in ELK was tried
-  (2026-10-04) and made left/right flows ~60% wider; wrapping long labels at 140px is what shipped. ELK ignores a label with no `text`.
-- Fixed 2026-10-04: `flowchart right … -->` read as Mermaid; fit under the open panel; notes overlap/leave the frame;
-  402 shown as "unreadable"; send button 26×40; Endpoint double chevron; empty-turn "success"; `family x` header;
-  opposite edges on one line; self-loop box; long labels over nodes; `service-worker` + `frame` flakes.
-
+- Fit under 65% zoom: 27/50 replayed DSL replies, median 0.63 (1040×900 canvas). Not a layout knob: 16 of 27 are
+  sequence/class/mindmap (own layouts); ELK wrapping moved it to 22 but tangled long flows (screenshots), reverted.
+  Recommend: land AI results at ≥65% anchored on the start, fit button for the overview.
+- Editor chunk 1500.7 KB at HEAD vs 1500 KB budget (CI does not run `bundle:check`); this pass adds ~11 KB.
+- MCP 0.1.2 on npm has no live bridge at all: pairing needs 0.2.0 published.
+- Auto-icons on for flowcharts (keep); dark mode pastel tiles. Not done: split V2EditorPage/useV2Pointer, incremental
+  index (9 ms at 5k), on-device model, code-panel virtualisation (0.8 s/key at 10k lines).
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.

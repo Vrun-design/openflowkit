@@ -11,6 +11,9 @@ import type { AssistantContext, AssistantFrame } from './assistantPrompt';
 const label = (node: SceneNode): string | null =>
   typeof node.content.label === 'string' && node.content.label.trim() ? node.content.label.trim() : null;
 
+/** What a person calls the shape: library shapes are `process` nodes carrying their outline. */
+export const shapeKindOf = (node: SceneNode): string => (typeof node.content.shape === 'string' ? node.content.shape : node.kind);
+
 /** The diagram frames that hold (or are) the selected nodes, in page order. */
 export function selectedFrameIds(page: ScenePage, nodeIds: readonly string[]): string[] {
   const frames = new Set(dslFrames(page).map(({ id }) => id));
@@ -41,8 +44,15 @@ export function assistantContext(
     });
   }
   const frameIds = new Set(all.map(({ id }) => id));
+  const byId = new Map(page.nodes.map((node) => [node.id, node]));
+  const inDiagram = (node: SceneNode): boolean => {
+    for (let parent = node.parentId; parent; parent = byId.get(parent)?.parentId ?? null) if (frameIds.has(parent)) return true;
+    return false;
+  };
+  // A hand-drawn shape is named with its id: the scene tools act on ids, and a blank one has no label.
   const focus = page.nodes
     .filter((node) => nodeIds.includes(node.id) && !frameIds.has(node.id))
-    .map(label).filter((text): text is string => text !== null);
+    .map((node) => (inDiagram(node) ? label(node) : `${label(node) ?? shapeKindOf(node)} (shape id ${node.id})`))
+    .filter((text): text is string => text !== null);
   return { pageName: page.name, frames, scope, focus, outOfScope: all.length - frames.length };
 }

@@ -46,6 +46,27 @@ describe('CLASS_DIAGRAM_PLUGIN', () => {
     expect(result.nodes.find((node) => node.id === 'Domain.Account')?.data.classMethods).toContain('+balance(): Money');
   });
 
+  it('reads interface, abstract and enum declarations as stereotyped classes, and says so', () => {
+    const result = CLASS_DIAGRAM_PLUGIN.parseMermaid(`
+      classDiagram
+      interface PaymentProcessor {
+        +processPayment(amount: double) Payment
+      }
+      abstract class Shape {
+        +area() double
+      }
+      enum Status
+      class Stripe
+      Stripe --|> PaymentProcessor
+    `);
+    const byId = (id: string) => result.nodes.find((node) => node.id === id)?.data;
+    expect(byId('PaymentProcessor')).toMatchObject({ classStereotype: 'interface', classMethods: ['+processPayment(amount: double) Payment'] });
+    expect(byId('Shape')).toMatchObject({ classStereotype: 'abstract', classMethods: ['+area() double'] });
+    expect(byId('Status')).toMatchObject({ classStereotype: 'enumeration' });
+    expect(result.diagnostics?.join('\n')).toContain('`interface PaymentProcessor` is not Mermaid; read as `class PaymentProcessor <<interface>>`');
+    expect(result.diagnostics?.join('\n')).not.toContain('Unrecognized');
+  });
+
   it('normalizes generic class identifiers and preserves relation cardinality metadata', () => {
     const input = `
       classDiagram

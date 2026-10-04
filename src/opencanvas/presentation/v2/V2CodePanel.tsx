@@ -30,10 +30,12 @@ export function V2CodePanel({
   const [suggestions, setSuggestions] = useState<readonly string[]>([]);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const names = useMemo(() => Array.from(new Set(code.split('\n').map((line) => line.split(/\s*(?:-->|->|<->|=|\[)/)[0]?.trim()).filter((name): name is string => !!name && !name.startsWith('//')))), [code]);
+  // ponytail: re-highlights every line per keystroke — ~0.2 s/key at 3k lines, ~0.8 s at 10k (2026-10-04); highlight only the visible lines, or a lazy CodeMirror chunk, if real sources get that long.
   const highlighted = useMemo(() => {
     const byLine = new Map<number, ReturnType<typeof tokenize>['tokens']>();
     for (const token of tokenize(code).tokens) byLine.set(token.line, [...(byLine.get(token.line) ?? []), token]);
-    return code.split('\n').map((line, lineIndex) => {
+    // The textarea holds CRLF as LF; the tokens are counted on LF lines too.
+    return code.replace(/\r\n?/g, '\n').split('\n').map((line, lineIndex) => {
       const parts: React.ReactNode[] = [];
       let cursor = 0;
       for (const token of byLine.get(lineIndex + 1) ?? []) {
@@ -56,13 +58,18 @@ export function V2CodePanel({
     setSuggestions(kind === 'attrs' ? attrs : [...DSL_FAMILIES, ...names]);
     setSuggestionIndex(0);
   };
-  const chooseSuggestion = (value: string) => {
+  // Typed through the browser's own edit path, so ⌘Z undoes it like a keystroke (setting `value` drops the undo entry).
+  const insert = (text: string) => {
     const editor = editorRef.current;
     if (!editor) return;
-    const start = editor.selectionStart;
-    onCodeChange(`${code.slice(0, start)}${value}${code.slice(editor.selectionEnd)}`);
+    editor.focus();
+    if (document.execCommand?.('insertText', false, text)) return;
+    editor.setRangeText(text, editor.selectionStart, editor.selectionEnd, 'end');
+    onCodeChange(editor.value);
+  };
+  const chooseSuggestion = (value: string) => {
+    insert(value);
     setSuggestions([]);
-    requestAnimationFrame(() => { editor.focus(); editor.setSelectionRange(start + value.length, start + value.length); });
   };
   return (
     <Panel title="Diagram as code" onClose={onClose} className="ofk-v2-workspace-panel ofk-v2-code-panel">
@@ -87,19 +94,15 @@ export function V2CodePanel({
             onScroll={(event) => { if (highlightRef.current) { highlightRef.current.scrollTop = event.currentTarget.scrollTop; highlightRef.current.scrollLeft = event.currentTarget.scrollLeft; } }}
             onChange={(event) => { onCodeChange(event.target.value); if (event.target.value[event.target.selectionStart - 1] === '[') openSuggestions('attrs'); }}
             onKeyDown={(event) => {
+            // Enter and Tab belong to the input method while it composes (CJK, accents).
+            if (event.nativeEvent.isComposing) return;
             if (suggestions.length && ['ArrowDown', 'ArrowUp'].includes(event.key)) { event.preventDefault(); setSuggestionIndex((current) => (current + (event.key === 'ArrowDown' ? 1 : suggestions.length - 1)) % suggestions.length); return; }
             if (suggestions.length && (event.key === 'Enter' || event.key === 'Tab')) { event.preventDefault(); chooseSuggestion(suggestions[suggestionIndex]!); return; }
             if (suggestions.length && event.key === 'Escape') { event.preventDefault(); setSuggestions([]); return; }
             if (event.ctrlKey && event.key === ' ') { event.preventDefault(); openSuggestions('all'); return; }
             if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === 'm' && convertFrom) { event.preventDefault(); convertFrom.convert(); return; }
             if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') { event.preventDefault(); onGenerate(); }
-            if (event.key === 'Tab') {
-              event.preventDefault();
-              const target = event.currentTarget;
-              const start = target.selectionStart;
-              onCodeChange(`${code.slice(0, start)}  ${code.slice(target.selectionEnd)}`);
-              requestAnimationFrame(() => target.setSelectionRange(start + 2, start + 2));
-            }
+            if (event.key === 'Tab') { event.preventDefault(); insert('  '); }
             }}
           />
           {suggestions.length ? <div id="v2-code-suggestions" role="listbox" className="ofk-v2-code-suggestions">
@@ -111,7 +114,7 @@ export function V2CodePanel({
             <button type="button" key={`${item.line}:${item.col}:${item.code}:${index}`} data-tone={item.severity} onClick={() => {
               const editor = editorRef.current;
               if (!editor) return;
-              const offset = code.split('\n').slice(0, item.line - 1).reduce((sum, line) => sum + line.length + 1, 0) + item.col - 1;
+              const offset = editor.value.split('\n').slice(0, item.line - 1).reduce((sum, line) => sum + line.length + 1, 0) + item.col - 1;
               editor.focus(); editor.setSelectionRange(offset, offset + Math.max(1, item.endCol - item.col));
             }}><span>{item.code}</span><strong>Line {item.line}</strong>{item.message}</button>
           ))}

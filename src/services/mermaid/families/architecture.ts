@@ -11,6 +11,8 @@ interface ParsedArchNode {
   icon?: string;
   label: string;
   parentId?: string;
+  /** The keyword Mermaid does not have (`database`) that was read as a service. */
+  notMermaid?: string;
 }
 
 interface ParsedArchEdge {
@@ -82,20 +84,33 @@ function stripQuotes(value: string): string {
   return trimmed;
 }
 
-const NODE_KEYWORDS = 'group|service|junction|person|system|container|component|database_container|router|switch|firewall|load_balancer|cdn|dns';
+// Mermaid only has group, service and junction. Models also write `database pg[Postgres]`; keep the label.
+const NOT_MERMAID_KINDS: Record<string, ArchNodeKind> = {
+  database: 'database_container', db: 'database_container', queue: 'service', external: 'service',
+  storage: 'service', cache: 'service', server: 'service', bucket: 'service', lambda: 'service',
+};
+const NODE_KEYWORDS = `group|service|junction|person|system|container|component|database_container|router|switch|firewall|load_balancer|cdn|dns|${Object.keys(NOT_MERMAID_KINDS).join('|')}`;
 
 function parseNodeLine(line: string): ParsedArchNode | null {
   const pattern = new RegExp(`^(${NODE_KEYWORDS})\\s+([A-Za-z_][\\w.-]*)(?:\\(([^)]+)\\))?(?:\\[(.+?)\\])?(?:\\s+in\\s+([A-Za-z_][\\w.-]*))?$`, 'i');
   const match = line.match(pattern);
   if (!match) return null;
 
-  const kind = match[1].toLowerCase() as ParsedArchNode['kind'];
+  const word = match[1].toLowerCase();
+  const kind = NOT_MERMAID_KINDS[word] ?? word as ParsedArchNode['kind'];
   const id = match[2];
-  const icon = match[3]?.trim().toLowerCase();
-  const label = stripQuotes((match[4] || id).trim());
+  let icon = match[3]?.trim().toLowerCase();
+  let rawLabel = (match[4] || id).trim();
+  // `service dns[internet][Global DNS]`: icon and label both in brackets.
+  const doubled = rawLabel.split('][');
+  if (doubled.length === 2) {
+    icon = doubled[0].trim().toLowerCase();
+    rawLabel = doubled[1].trim();
+  }
+  const label = stripQuotes(rawLabel);
   const parentId = match[5]?.trim();
 
-  return { id, kind, icon, label, parentId };
+  return { id, kind, icon, label, parentId, ...(word in NOT_MERMAID_KINDS ? { notMermaid: word } : {}) };
 }
 
 function parseEdgeLine(line: string): ParsedArchEdge | null {
@@ -255,6 +270,7 @@ function parseArchitecture(input: string): { nodes: FlowNode[]; edges: FlowEdge[
         );
         continue;
       }
+      if (node.notMermaid) diagnostics.push(`Line ${lineNumber}: \`${node.notMermaid}\` is not Mermaid architecture syntax; read as a service.`);
       parsedNodes.push(node);
       knownNodeIds.add(node.id);
       nodeFirstDefinedAt.set(node.id, lineNumber);
@@ -282,7 +298,7 @@ function parseArchitecture(input: string): { nodes: FlowNode[]; edges: FlowEdge[
   }
 
   if (parsedNodes.length === 0) {
-    return { nodes: [], edges: [], error: 'No valid architecture nodes found.' };
+    return { nodes: [], edges: [], error: 'No valid architecture nodes found. Write nodes as `service id(icon)[Label] in group`, e.g. `service api(server)[API] in backend`.' };
   }
 
   for (const edge of parsedEdges) {

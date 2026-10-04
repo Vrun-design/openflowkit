@@ -477,8 +477,13 @@ export function projectConnector(
 }
 
 export function projectPageConnectors(page: ScenePage): readonly ProjectedConnector[] {
+  return projectConnectors(page, page.connectors);
+}
+
+/** Some of a page's connectors, sharing one projection context. */
+export function projectConnectors(page: ScenePage, connectors: readonly SceneConnector[]): readonly ProjectedConnector[] {
   const context = createConnectorProjectionContext(page);
-  return page.connectors
+  return connectors
     .map((connector) => projectConnectorWithContext(connector, context))
     .filter((connector): connector is ProjectedConnector => connector !== null);
 }

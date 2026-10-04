@@ -64,6 +64,8 @@ const TOOL_RULES = [
   'You change the canvas only through tools, and every change is queued for the user to review:',
   '- update_diagram replaces an in-scope diagram with its COMPLETE new DSL, not a diff. Keep the names and labels the user did not ask to change.',
   '- add_diagram adds a new diagram.',
+  '- Hand-drawn shapes (and whole diagrams, by frame id) change with move_shapes, style_shapes, delete_shapes, add_shape. A shape inside a diagram changes through update_diagram instead.',
+  '- Use the ids given as "shape id" or by list_shapes; never invent one.',
   '- Look things up before acting when it helps: read_diagram for a diagram not shown in full, get_syntax when unsure of a family, find_icons for icon ids.',
   '- A write that returns compile errors queued nothing: fix the DSL and call it again.',
   '- Once done, reply briefly with what you changed. Never paste DSL in the reply. Answer questions without tools when the canvas shown is enough.',

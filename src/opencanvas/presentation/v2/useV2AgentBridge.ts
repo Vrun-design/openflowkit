@@ -4,7 +4,7 @@
 // session, so an agent edit is one undo step like any other edit.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  BRIDGE_POLL_SECONDS, bridgeTokenHeader, bridgeUrls, isBridgeRequest,
+  BRIDGE_POLL_SECONDS, bridgeUrls, isBridgeRequest,
   type BridgeClientInfo, type BridgePageSummary, type BridgeRequest,
 } from '../../../agent/bridge/protocol';
 import { findAgentOp } from '../../../agent/ops';
@@ -44,6 +44,7 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
 
   const identity = JSON.stringify({ documentId: options.document?.id ?? null, revision: options.revision });
   const lastHelloRef = useRef(identity);
+  const announceRef = useRef<(() => Promise<void>) | null>(null);
 
   const stop = useCallback(() => {
     setStatus('off');
@@ -54,12 +55,16 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
     if (!enabled) { stop(); return; }
     const controller = new AbortController();
     const urls = bridgeUrls(port);
-    const headers = (): Record<string, string> => ({
-      'content-type': 'text/plain;charset=UTF-8',
-      ...(optionsRef.current.token ? { [bridgeTokenHeader]: optionsRef.current.token } : {}),
-    });
+    // The token rides in the query, not a header: a custom header makes every request a CORS preflight,
+    // which a bridge server older than the editor cannot answer.
+    const withToken = (url: string, params: Record<string, string> = {}): string => {
+      const target = new URL(url);
+      for (const [key, value] of Object.entries(params)) target.searchParams.set(key, value);
+      if (optionsRef.current.token) target.searchParams.set('token', optionsRef.current.token);
+      return target.toString();
+    };
     const post = (url: string, body: unknown): Promise<Response> =>
-      fetch(url, { method: 'POST', headers: headers(), body: JSON.stringify(body), signal: controller.signal });
+      fetch(withToken(url), { method: 'POST', headers: { 'content-type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(body), signal: controller.signal });
 
     const hello = async (): Promise<void> => {
       const { document, pageId, revision } = optionsRef.current;
@@ -72,7 +77,8 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
         })),
         app: 'openflowkit-editor',
       };
-      await post(urls.hello, { document: info });
+      const response = await post(urls.hello, { document: info });
+      if (response.status === 401) throw new Error('The agent server did not accept this token. Copy the MCP configuration again and restart your MCP client.');
     };
 
     const runRequest = async (request: BridgeRequest): Promise<void> => {
@@ -95,14 +101,17 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
     const poll = async (): Promise<void> => {
       // Re-announce the document whenever it changed since the last hello so a
       // server that restarted (or missed a revision) still sees the truth.
-      if (lastHelloRef.current !== identity) await hello();
-      const response = await fetch(`${urls.next}?wait=${BRIDGE_POLL_SECONDS}`, { headers: headers(), signal: controller.signal });
+      const current = JSON.stringify({ documentId: optionsRef.current.document?.id ?? null, revision: optionsRef.current.revision });
+      if (lastHelloRef.current !== current) await hello();
+      const response = await fetch(withToken(urls.next, { wait: String(BRIDGE_POLL_SECONDS) }), { signal: controller.signal });
       if (response.status === 204) return;
+      if (response.status === 401) throw new Error('The agent server did not accept this token. Copy the MCP configuration again and restart your MCP client.');
       if (!response.ok) throw new Error(`The agent bridge answered ${response.status}.`);
       const payload: unknown = await response.json();
       if (isBridgeRequest(payload)) await runRequest(payload);
     };
 
+    announceRef.current = () => hello().catch(() => undefined);
     void (async () => {
       while (!controller.signal.aborted) {
         try {
@@ -125,12 +134,21 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
 
     return () => {
       controller.abort();
+      announceRef.current = null;
       stop();
     };
     // Identity changes must NOT restart the loop (it would drop the socket on
     // every edit); hello() re-announces instead.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, port, token, stop]);
+
+  // The bridge can start before the document has loaded (a reload with the agent still enabled). hello()
+  // had nothing to send then, so tell the server the moment a document exists instead of at the next poll.
+  const documentId = options.document?.id ?? null;
+  useEffect(() => {
+    if (documentId && lastHelloRef.current !== identity) void announceRef.current?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentId]);
 
   return { status, detail };
 }

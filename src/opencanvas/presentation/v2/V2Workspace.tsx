@@ -17,6 +17,7 @@ import {
   Toolbar,
   Tooltip,
 } from '../design-system';
+import { STARTER_TEMPLATES, type StarterTemplate } from '../../../agent/starterTemplates';
 import { shortcutGroups } from './v2Shortcuts';
 
 export type V2WorkspaceMode = 'assistant' | 'slides' | 'code' | 'model' | 'agent';
@@ -74,7 +75,11 @@ export function V2WorkspaceRail({
   );
 }
 
-export function V2CanvasWelcome({ onOpen }: { onOpen: (mode: V2WorkspaceMode) => void }) {
+export function V2CanvasWelcome({ onOpen, onTemplate }: {
+  onOpen: (mode: V2WorkspaceMode) => void;
+  /** Draws a starter diagram: the first minute needs no API key. */
+  onTemplate: (template: StarterTemplate) => void;
+}) {
   return (
     <div className="ofk-v2-welcome" data-testid="v2-welcome">
       <div className="ofk-v2-guide ofk-v2-guide-tools" aria-hidden="true">
@@ -104,6 +109,12 @@ export function V2CanvasWelcome({ onOpen }: { onOpen: (mode: V2WorkspaceMode) =>
               <Icon icon={icon} />
               {label}
             </Button>
+          ))}
+        </div>
+        <div className="ofk-v2-welcome-templates" role="group" aria-label="Start from a template">
+          <span>Or start from</span>
+          {STARTER_TEMPLATES.map((template) => (
+            <Button key={template.name} variant="quiet" title={template.summary} onClick={() => onTemplate(template)}>{template.title}</Button>
           ))}
         </div>
       </div>

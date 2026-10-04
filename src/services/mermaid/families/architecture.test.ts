@@ -128,6 +128,32 @@ describe('ARCHITECTURE_PLUGIN', () => {
     expect(result.error).toBe('Missing architecture header.');
   });
 
+  it('keeps the label of a node written with a keyword Mermaid does not have, and says so', () => {
+    const result = ARCHITECTURE_PLUGIN.parseMermaid(`
+      architecture-beta
+      service api(server)[API]
+      database postgres(aws)[PostgreSQL]
+      queue jobs[Job Queue]
+      api:R --> L:postgres
+      api --> jobs
+    `);
+    const labels = Object.fromEntries(result.nodes.map((node) => [node.id, node.data.label]));
+    expect(labels).toMatchObject({ postgres: 'PostgreSQL', jobs: 'Job Queue' });
+    expect(result.nodes.find((node) => node.id === 'postgres')?.data.archResourceType).toBe('database_container');
+    expect(result.diagnostics?.join('\n')).toContain('`database` is not Mermaid architecture syntax; read as a service');
+    expect(result.diagnostics?.join('\n')).not.toContain('Recovered implicit');
+  });
+
+  it('reads an icon and a label given as [icon][label]', () => {
+    const result = ARCHITECTURE_PLUGIN.parseMermaid('architecture-beta\nservice dns[internet][Global DNS]');
+    expect(result.nodes[0]?.data).toMatchObject({ label: 'Global DNS', archProvider: 'internet' });
+  });
+
+  it('shows the real node syntax when nothing parses', () => {
+    const result = ARCHITECTURE_PLUGIN.parseMermaid('architecture-beta\nservice feature_store(name="Feature Store") <<database>>');
+    expect(result.error).toContain('service id(icon)[Label] in group');
+  });
+
   it('returns diagnostics for unrecognized architecture lines', () => {
     const input = `
       architecture-beta

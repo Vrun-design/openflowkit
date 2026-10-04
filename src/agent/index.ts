@@ -16,6 +16,8 @@ export type { AnyAgentOp } from './ops';
 export type { AgentOp, ExportedFile, ExportRequest, IconMatch, OpCapabilities, OpContext, OpOutcome } from './ops';
 export { CAPABILITY_MANIFEST, MANIFEST_VERSION, manifestCoverage, unlistedOps } from './manifest';
 export { lintDsl } from './lint';
+export { STARTER_TEMPLATES, findStarterTemplate } from './starterTemplates';
+export type { StarterTemplate } from './starterTemplates';
 export type { DslLintReport } from './lint';
 export { resolveAgentOpCommand, runAgentOp } from './runAction';
 export type { RunOpResult } from './runAction';

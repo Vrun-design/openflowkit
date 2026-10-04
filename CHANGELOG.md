@@ -27,19 +27,53 @@ This project follows [Semantic Versioning](https://semver.org/).
   described the 1.x DSL). `npm run eval:validity` measures how often a model's diagrams compile.
 - **MCP: icons in headless exports.** File-mode SVG and animated SVG, and the
   `openflowkit build` site, draw the same icon art as the editor.
+- **The assistant edits hand-drawn shapes, not only diagrams.** "Make the selected box red and move it right" now
+  works: `move_shapes`, `style_shapes`, `delete_shapes`, `add_shape` and `list_shapes` queue into the same review as
+  diagram changes, each row rebuilt on the page the rows before it leave, and apply as one undo step. Shapes inside a
+  generated diagram still change through its text; locked shapes and shapes outside the selection are left alone.
+- **Start from a template, no API key.** The empty canvas offers the five starter diagrams the MCP server ships;
+  one click draws it and opens the text that drew it.
+- The provider dialog's model field lists the provider's own models (fetched when you focus it, chat models only,
+  kept for the session). A wrong key, a closed port or a refused request quietly keeps the built-in suggestions.
 
 ### Changed
 
 - **Edges can end on a group.** `Client -> Payments` next to `group Payments { … }` connects to the
   group's frame instead of drawing a second box called Payments. D2 containers and Mermaid
   subgraphs (`subgraph one [Group One]`, `c --> one`) import the same way, with no loss note.
-- Bring-your-own-key defaults: Claude `claude-opus-5-5` (Sonnet 5.5 in the list), OpenAI `gpt-6.1-sol`.
+- Bring-your-own-key defaults: Claude `claude-sonnet-5-5` (Opus 5.5 is one pick away; mid-tier is the cheaper surprise), OpenAI `gpt-6.1-sol`.
+- **The agent bridge is token-gated by default.** The editor makes a pairing token once; "Copy MCP configuration"
+  puts it in the config's `env`, so the server and the window pair without typing. The token travels in the query
+  string (a plain request), so servers that predate it still pair, and a server started without a token stays open.
+  The server also answers browser preflights now, for clients that send the token as a header, and the editor says
+  so when a server rejects the token.
+- Edits at 5,000 nodes cost about half as much: the document is checked once per command, not twice.
 - **MCP server 0.2.0 is a breaking release** for 0.1.x users: `create_viewer_url` and
   `find_icon` are gone (use `create_diagram` + `export`, and `search_icons`), and the
   `convert_mermaid_to_openflow` prompt is gone because the tools take Mermaid directly.
 - The `openflowkit build` CLI compiles with the editor's icon rule (icons from labels on).
 
+### Thanks
+
+V1's contributors: [@Ken-vdE](https://github.com/Ken-vdE) (edge dash animation loop, #76) and
+[@Mr-Macharia](https://github.com/Mr-Macharia) (retired Groq model IDs, #79; one `AIProvider` type, #80).
+Their work shipped in v1; v2 is a rewrite, so the code itself did not carry over. Thank you.
+
 ### Fixed
+
+- **Code panel:** long lines wrap instead of scrolling sideways, with the highlight wrapping at the same places;
+  ⌘Z undoes a Tab or an accepted completion (it did nothing); a CRLF file highlights and jumps to diagnostics on the
+  right line; Enter during IME composition no longer picks a completion.
+- The selection toolbar moves below the selection when it would cover the label of a connector arriving from above.
+- The `auth-flow` starter template dropped its decision line (`Valid {"Valid?"}` opened a block).
+- A full or blocked browser storage no longer resets every preference when the bridge token is first saved.
+- **Agent pairing after a reload.** With the agent still enabled, a reload started the bridge before the document
+  had loaded, and the editor never told the server about it: it looked connected while the agent saw no editor.
+- DSL: a column named `title`, `direction` or `appearance` inside an entity (`courses { title text }`) was read as
+  the diagram's title and dropped. Only top-level lines are directives now.
+- Mermaid import keeps what models actually write: `interface X {}`, `abstract class` and `enum` become stereotyped
+  classes; `database id[Label]` or `queue id[Label]` in an architecture diagram becomes a labelled service; both
+  say what they assumed. "No valid architecture nodes" now shows the real node syntax.
 
 - Mermaid: one-line flowcharts (`graph LR; A-->B; B-->C`) import; loss notes point at the
   real Mermaid line (they were numbered 1, 2, 3…); a label with a line break stays one

@@ -119,6 +119,21 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
       continue;
     }
 
+    // Not Mermaid, but models write it: `interface X {`, `abstract class X {`, `enum X`.
+    const typed = line.match(new RegExp(`^(abstract(?:\\s+class)?|interface|enum)\\s+(${CLASS_ID_PATTERN})\\s*(\\{)?\\s*$`, 'i'));
+    if (typed) {
+      const word = typed[1].toLowerCase().split(/\s+/)[0];
+      const id = normalizeClassIdentifier(typed[2]);
+      const record = ensureClassRecord(classes, id);
+      record.stereotype = word === 'enum' ? 'enumeration' : word;
+      diagnostics.push(`Line ${lineNumber}: \`${line.replace(/\s*\{$/, '')}\` is not Mermaid; read as \`class ${id} <<${record.stereotype}>>\`.`);
+      if (typed[3]) {
+        activeClass = record;
+        activeClassLine = lineNumber;
+      }
+      continue;
+    }
+
     const inlineBlock = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})\\s*\\{\\s*(.*?)\\s*\\}$`));
     if (inlineBlock) {
       const id = normalizeClassIdentifier(inlineBlock[1]);

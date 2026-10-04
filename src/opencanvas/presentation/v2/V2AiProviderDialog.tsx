@@ -6,7 +6,7 @@
 // key is only ever sent to the provider it was entered for.
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { IconChevronDown, IconExternalLink } from '@tabler/icons-react';
-import { AiProviderError, createProvider } from '../../../services/ai/provider';
+import { AiProviderError, createProvider, listModels } from '../../../services/ai/provider';
 import {
   AI_PROVIDERS, RISK_DETAILS, RISK_LABELS, isConfigured, providerById, type AiProviderDefinition,
 } from '../../../services/ai/providers';
@@ -35,6 +35,9 @@ interface TestResult {
 
 const IDLE: TestResult = { state: 'idle', message: '' };
 
+// Model lists fetched this session, by provider and endpoint; a failure is not kept, so the next focus asks again.
+const fetchedModels = new Map<string, readonly string[]>();
+
 /** A provider's mark, painted in the text colour so it reads in both themes. */
 function ProviderMark({ definition }: { readonly definition: AiProviderDefinition }) {
   return <span className="ofk-v2-provider-mark" aria-hidden="true"
@@ -54,6 +57,7 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
   const keyInput = useRef<HTMLInputElement>(null);
   const testAbort = useRef<AbortController | null>(null);
   const modelListId = useId();
+  const [, setModelsFetched] = useState(0);
   // showModal() moves focus to the first control (the close button); the key is what people came for.
   useEffect(() => { if (open) keyInput.current?.focus(); }, [open]);
   useEffect(() => () => testAbort.current?.abort(), []);
@@ -62,6 +66,15 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
   const key = connection.apiKey.trim();
   const ready = isConfigured(definition, connection);
   const saved = settings.provider === draft.provider && Boolean(activeConnection(settings).apiKey);
+  const modelsKey = `${definition.id}|${connection.baseUrl.trim() || definition.defaultBaseUrl}`;
+  // Keyed by provider: switching never shows another provider's list (GitHub #69).
+  const models = fetchedModels.get(modelsKey) ?? definition.suggestedModels;
+  const fetchModels = () => {
+    if (fetchedModels.has(modelsKey) || (definition.needsKey && !key) || !(connection.baseUrl.trim() || definition.defaultBaseUrl)) return;
+    listModels({ provider: definition.id, apiKey: key, baseUrl: connection.baseUrl }, AbortSignal.timeout(8000))
+      .then((list) => { if (list.length) { fetchedModels.set(modelsKey, list); setModelsFetched((count) => count + 1); } })
+      .catch(() => undefined);
+  };
   const patch = (next: Partial<V2AiConnection>) => { setTest(IDLE); setDraft((current) => withConnection(current, next)); };
   const pick = (provider: V2AiSettings['provider']) => {
     setTest(IDLE);
@@ -162,9 +175,9 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
         <Field label="Model" list={modelListId} spellCheck={false} autoComplete="off"
           hint={definition.defaultModel ? `Leave empty for ${definition.defaultModel}. Any model id works.` : 'Required for a custom endpoint.'}
           value={connection.model} placeholder={definition.defaultModel || 'your-model-id'}
-          onChange={(event) => patch({ model: event.target.value })} />
+          onFocus={fetchModels} onChange={(event) => patch({ model: event.target.value })} />
         <datalist id={modelListId}>
-          {definition.suggestedModels.map((model) => <option key={model} value={model} />)}
+          {models.map((model) => <option key={model} value={model} />)}
         </datalist>
         <div className="ofk-v2-provider-test">
           <Button variant="secondary" busy={test.state === 'testing'} disabled={!ready}
