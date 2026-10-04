@@ -91,6 +91,16 @@ describe('assistant conversation', () => {
     expect(bodies()[1]!.messages.map(({ role }) => role)).toEqual(['system', 'user', 'assistant', 'tool']);
   });
 
+  it('says so when every draft failed and the model just talks on', async () => {
+    const { hook } = harness([toolCall('add_diagram', { dsl: '' }), reply('Let me create the flow.')], true);
+    act(() => hook.result.current.assistant.send('draw a flow', 'page'));
+    await waitFor(() => expect(hook.result.current.assistant.busy).toBe(false));
+    const last = hook.result.current.assistant.messages.at(-1)!;
+    expect(last.proposalId).toBeUndefined();
+    expect(last.note).toMatch(/Nothing was added/);
+    expect(hook.result.current.proposal.phase).toBe('idle');
+  });
+
   it('falls back to diagram blocks when the model refuses tools', async () => {
     const refused = { ok: false, status: 400, headers: new Headers(), text: async () => '{"error":"does not support tools"}' } as Response;
     const { hook, bodies } = harness([refused, reply('Sure.\n```openflow new\nflowchart\n  A -> B\n```')], true);

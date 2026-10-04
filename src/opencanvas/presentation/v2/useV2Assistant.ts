@@ -234,7 +234,11 @@ export function useV2Assistant(options: V2AssistantOptions) {
       patch(id, (message) => ({ text, ...(message.thinking ? { thoughtMs: Math.round((firstText || performance.now()) - started) } : {}) }));
 
       if (!blocks.length) {
-        patch(id, { status: 'done' });
+        // A turn whose drafts all failed reads like a reply ("Let me create it…"); say that nothing was drawn.
+        patch(id, (message) => ({
+          status: 'done',
+          ...(message.steps?.some((step) => step.status === 'error') ? { note: 'Nothing was added: the draft did not work. Retry, or pick a stronger model.' } : {}),
+        }));
         announce('The assistant replied.');
         return;
       }
