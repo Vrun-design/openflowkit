@@ -40,6 +40,15 @@ describe('parse', () => {
     expect(diagram.diagnostics.map((item) => item.code)).toEqual(expect.arrayContaining(['I002', 'I003', 'W110', 'W101', 'W103']));
   });
 
+  it('warns when a header is wrapped in `family`, `type:` or `diagram`', () => {
+    for (const header of ['family architecture down', 'type: flowchart', 'Diagram sequence']) {
+      const diagram = parse(`${header}\nA -> B`);
+      expect(diagram.diagnostics.map((item) => item.code), header).toContain('W110');
+    }
+    expect(parse('flowchart\nType -> Family').diagnostics.map((item) => item.code)).not.toContain('W110');
+    expect(parse('A -> B').diagnostics.map((item) => item.code)).not.toContain('W110');
+  });
+
   it('splits trailing attribute lists by intent: edge flags on the edge, node words on the node', () => {
     const diagram = parse('flowchart\nA -> B [dashed, red]\nA -> C [thick, head: circle]\nA -> D [cylinder]');
     expect(diagram.statements[0]).toMatchObject({ kind: 'edge', attributes: [{ value: 'dashed' }], to: { label: 'B', attributes: [{ value: 'red' }] } });

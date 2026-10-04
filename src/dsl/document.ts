@@ -103,6 +103,11 @@ export function parseDocument(input: string): DslDocument {
     if (candidate && candidate !== headerWords[0] && DSL_FAMILIES.includes(candidate as DslFamily)) {
       diagnostics.push(tokenDiagnostic('W110', 'warning', header[1][0], 'First statement looks like a family header with wrong case', candidate));
     }
+    // LLMs wrap the header: `family architecture down`, `type: flowchart`. The family word goes first.
+    const wrapped = /^(?:family|type|diagram|kind)\s*[:=]?\s*(\w+)(?:\s+\w+)?\s*$/i.exec(lineText(header[1]))?.[1]?.toLowerCase();
+    if (wrapped && DSL_FAMILIES.includes(wrapped as DslFamily)) {
+      diagnostics.push(tokenDiagnostic('W110', 'warning', header[1][0], `First line is not a family header; write \`${wrapped}\` alone, with an optional direction`, wrapped));
+    }
   }
 
   const comments: DslComment[] = tokenized.tokens

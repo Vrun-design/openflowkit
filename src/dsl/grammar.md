@@ -332,7 +332,7 @@ sequence
 Optional; first non-blank line after the pragma. Missing → `architecture`, info I003.
 Unknown word in that position is a node (a diagram can legitimately start with a node), so
 the parser also emits W110 when the first statement is a single bare word that
-case-insensitively equals a family name. Directions: `down` (default for flowchart, state,
+case-insensitively equals a family name, or wraps one (`family architecture down`, `type: flowchart`). Directions: `down` (default for flowchart, state,
 gitgraph=`right`, mindmap radial), `right`, `left`, `up`. Aliases accepted, not canonical:
 `TB TD LR RL BT`, `top-down`, `left-right`.
 
@@ -889,7 +889,7 @@ test: random bytes → diagnostics only).
 | W103 | unclosed block at EOF | `}` inserted |
 | W104 | duplicate directive, first wins | — |
 | W105 | family reserved, rendered as flowchart | — |
-| W110 | first statement looks like a family header with wrong case | `flowchart` |
+| W110 | first statement looks like a family header with wrong case or a `family`/`type`/`diagram` wrapper | `flowchart` |
 | W111 | arrow not valid in this family, line dropped | list of valid arrows |
 | W112 | chain/fan not allowed in this family | one edge per line |
 | W120 | `.` in id outside `model`, slugified | — |
