@@ -10,7 +10,9 @@ import {
   type RefObject,
   type WheelEvent as ReactWheelEvent,
 } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Button, ErrorState } from '../design-system';
+import { V2StateHero } from './V2StateHero';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneNode, ScenePage } from '../../domain/document/types';
 import { pointAtPolylineRatio } from '../../domain/geometry/polyline';
@@ -55,6 +57,8 @@ export interface V2EditingState {
 interface V2CanvasHostProps {
   readonly page: ScenePage;
   readonly onRemoveIcons: () => void;
+  /** WebGL off: Diagram as code still works, so the fallback offers it. */
+  readonly onOpenCode: () => void;
   readonly hostRef: RefObject<PixiRendererHost | null>;
   readonly camera: CanvasCamera;
   readonly cameraRef: RefObject<CanvasCamera>;
@@ -408,6 +412,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   }, [contextAnchor, selectedConnectorId, props.sectionRef]);
 
   const unavailableReason = mountError ?? capability.reason ?? null;
+  const navigate = useNavigate();
 
   // I-12: wheel/trackpad pans; ⌘/Ctrl+wheel (and pinch, which browsers
   // report as ctrlKey) zooms at the pointer — the Figma/tldraw convention.
@@ -481,12 +486,12 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
       <div ref={setViewport} className="ofk-v2-viewport" data-testid="v2-viewport" />
       {props.tool === 'laser' ? <V2LaserTrail sectionRef={props.sectionRef} /> : null}
       {unavailableReason ? (
-        <div className="ofk-v2-fallback" role="alert">
-          <h2>WebGL renderer unavailable</h2>
-          <p>
-            {unavailableReason} Your existing workspace remains available.
-          </p>
-          <Link to="/canvas">Open current canvas</Link>
+        <div className="ofk-v2-fallback" data-testid="v2-webgl-off" title={unavailableReason}>
+          <ErrorState hero={<V2StateHero kind="no-canvas" />}
+            title="This browser can’t draw the canvas."
+            description="OpenFlowKit needs WebGL. Turn on hardware acceleration in your browser settings, or open this page in Chrome, Edge or Firefox."
+            action={<Button variant="primary" onClick={props.onOpenCode}>Diagram as code</Button>}
+            secondary={<Button variant="quiet" onClick={() => navigate('/home')}>Back to home</Button>} />
         </div>
       ) : null}
       {props.editing && editingStyle ? (

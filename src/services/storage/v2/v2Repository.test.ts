@@ -13,6 +13,7 @@ import {
   openFlowPersistenceDatabase,
 } from '../indexedDbSchema';
 import {
+  V2_THUMBNAIL_MAX_CHARS,
   createV2Repository,
   type LoadV2DocumentResult,
   type V2DocumentRecord,
@@ -182,5 +183,60 @@ describe('v2 document list', () => {
     const database = await openFlowPersistenceDatabase(indexedDB);
     expect(await getRecord(database, 'v2Recovery', 'newer')).toBeNull();
     database.close();
+  });
+
+  it('archives documents and restores them; a save from a tab still editing one restores it', async () => {
+    const repository = createV2Repository(indexedDB);
+    await repository.saveDocument('a', { ...labeledDocument('A'), name: 'A' }, 1);
+    await repository.saveDocument('b', { ...labeledDocument('B'), name: 'B' }, 1);
+    await repository.archiveDocuments(['a', 'b', 'never-saved']);
+    expect(await repository.listDocuments()).toEqual([]);
+    const archive = await repository.listArchive();
+    expect(archive.map(({ id }) => id).sort()).toEqual(['a', 'b']);
+    expect(archive.every(({ archivedAt }) => typeof archivedAt === 'string')).toBe(true);
+    // The archive keeps the document whole: it still opens.
+    expect(requireOk(await repository.loadDocument('a')).document.name).toBe('A');
+
+    await repository.restoreDocuments(['a']);
+    expect((await repository.listDocuments()).map(({ id }) => id)).toEqual(['a']);
+    expect((await repository.listDocuments())[0]).not.toHaveProperty('archivedAt');
+
+    await repository.saveDocument('b', { ...labeledDocument('B2'), name: 'B' }, 2);
+    expect((await repository.listArchive()).map(({ id }) => id)).toEqual([]);
+  });
+});
+
+describe('v2 thumbnails', () => {
+  const light = '<svg xmlns="http://www.w3.org/2000/svg"><rect fill="#fff"/></svg>';
+  const dark = '<svg xmlns="http://www.w3.org/2000/svg"><rect fill="#000"/></svg>';
+
+  it('stores one per document beside the record and lists them by id', async () => {
+    const repository = createV2Repository(indexedDB);
+    await repository.saveDocument('a', labeledDocument('A'), 1);
+    await repository.saveThumbnail('a', { light, dark });
+    await repository.saveThumbnail('a', { light: dark, dark: light });
+    const thumbnails = await repository.listThumbnails();
+    expect(thumbnails.get('a')).toEqual({ light: dark, dark: light });
+    expect(thumbnails.has('never-saved')).toBe(false);
+    // The document record itself carries no image: listing and saving stay as cheap as before.
+    const database = await openFlowPersistenceDatabase(indexedDB);
+    expect(Object.keys(await getRecord(database, V2_DOCUMENTS_STORE_NAME, 'a') as object).sort())
+      .toEqual(['document', 'id', 'revision', 'savedAt', 'schemaVersion']);
+    database.close();
+  });
+
+  it('keeps an oversized pair as a placeholder, not a partial image', async () => {
+    const repository = createV2Repository(indexedDB);
+    const huge = `<svg>${'x'.repeat(V2_THUMBNAIL_MAX_CHARS)}</svg>`;
+    await repository.saveThumbnail('big', { light: huge, dark });
+    expect((await repository.listThumbnails()).get('big')).toBeNull();
+  });
+
+  it('deletes the thumbnail with its document', async () => {
+    const repository = createV2Repository(indexedDB);
+    await repository.saveDocument('gone', labeledDocument('G'), 1);
+    await repository.saveThumbnail('gone', { light, dark });
+    await repository.deleteDocument('gone');
+    expect((await repository.listThumbnails()).has('gone')).toBe(false);
   });
 });

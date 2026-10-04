@@ -124,7 +124,9 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
           }
         } catch (error) {
           if (controller.signal.aborted) return;
-          const message = error instanceof Error ? error.message : String(error);
+          // fetch rejects with a TypeError when no server answers at all.
+          const message = error instanceof TypeError ? `Nothing is listening on 127.0.0.1:${port}.`
+            : error instanceof Error ? error.message : String(error);
           setStatus('error');
           setDetail(message);
           await new Promise((resolve) => window.setTimeout(resolve, RETRY_MS));

@@ -23,6 +23,8 @@ interface V2AutosaveOptions {
   /** Stored revision the session loaded from (0 for a new document). */
   readonly baseRevision: number;
   readonly onConflict: () => void;
+  /** After a durable save: work that may lag behind it (home thumbnail). */
+  readonly onSaved?: (document: SceneDocumentV1) => void;
 }
 
 type V2SaveOutcome =
@@ -34,7 +36,7 @@ type V2SaveOutcome =
 // `saved` only resolves after the durable commit — never before. A stale
 // result means a second tab wrote first: surface the conflict, never overwrite.
 export function useV2Autosave(options: V2AutosaveOptions) {
-  const { repository, documentId, document, revision, baseRevision, onConflict } = options;
+  const { repository, documentId, document, revision, baseRevision, onConflict, onSaved } = options;
   const [retryCount, setRetryCount] = useState(0);
   const [outcome, setOutcome] = useState<V2SaveOutcome | null>(null);
   // A document nobody touched is not saved: opening `/` or New diagram leaves no empty row behind.
@@ -44,9 +46,11 @@ export function useV2Autosave(options: V2AutosaveOptions) {
   /** The debounced save not yet started; leaving the editor runs it at once instead of dropping it. */
   const pendingRef = useRef<(() => void) | null>(null);
   const conflictRef = useRef(onConflict);
+  const savedRef = useRef(onSaved);
   useEffect(() => {
     conflictRef.current = onConflict;
-  }, [onConflict]);
+    savedRef.current = onSaved;
+  }, [onConflict, onSaved]);
 
   const openKey = `${documentId}:${baseRevision}`;
   if (openedKey !== openKey) {
@@ -71,6 +75,7 @@ export function useV2Autosave(options: V2AutosaveOptions) {
           if (result.status === 'saved') {
             setSavedRevision(saveRevision);
             setOutcome({ state: 'saved' });
+            savedRef.current?.(document);
           } else {
             setSavedRevision(result.storedRevision);
             setOutcome({ state: 'conflict', storedRevision: result.storedRevision });

@@ -47,16 +47,31 @@
   padding: 24px;
 }
 
+/* WebGL off: the state covers the dead canvas; canvas-only chrome is not rendered. */
 .ofk-v2-fallback {
   position: absolute;
   inset: 0;
   display: grid;
-  place-content: center;
-  gap: 8px;
-  text-align: center;
+  place-items: center;
   background: var(--ofk-canvas);
-  padding: 24px;
+  padding: 96px 16px 24px;
 }
+
+/* State heroes (V2StateHero): draw once in ~600ms, then rest. Off under reduced motion (system.css). */
+.ofk-state-hero .ofk-state-hero-accent { fill: var(--ofk-accent); stroke: none; transform-box: fill-box; transform-origin: center; animation: ofk-state-pop 400ms 200ms ease-out both; }
+.ofk-state-hero .ofk-state-hero-link { stroke-dasharray: 2 4; animation: ofk-state-flicker 900ms 150ms ease-in-out both; }
+.ofk-state-hero .ofk-state-hero-tear { transform-box: fill-box; transform-origin: 0 0; animation: ofk-state-tear 450ms 150ms cubic-bezier(.2, .8, .2, 1) both; }
+.ofk-state-hero .ofk-state-hero-accent-box { stroke: var(--ofk-accent); }
+.ofk-state-hero .ofk-state-hero-half { stroke-dasharray: 1; animation: ofk-state-draw 300ms ease-out both; }
+.ofk-state-hero .ofk-state-hero-left { animation-name: ofk-state-draw, ofk-state-part-left; animation-duration: 300ms, 300ms; animation-delay: 0ms, 500ms; }
+.ofk-state-hero .ofk-state-hero-right { animation-name: ofk-state-draw, ofk-state-part-right; animation-duration: 300ms, 300ms; animation-delay: 200ms, 500ms; }
+@keyframes ofk-state-pop { from { opacity: 0; transform: scale(.5); } 70% { transform: scale(1.2); } }
+@keyframes ofk-state-flicker { 0% { opacity: 0; } 30% { opacity: 1; } 45% { opacity: .2; } 60% { opacity: .9; } 75% { opacity: .3; } 100% { opacity: .55; } }
+@keyframes ofk-state-tear { from { transform: translate(0, -3px) rotate(0); } to { transform: translate(2px, 1px) rotate(3deg); } }
+@keyframes ofk-state-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes ofk-state-part-left { to { transform: translateX(-4px); } }
+@keyframes ofk-state-part-right { to { transform: translateX(4px); } }
+@media (prefers-reduced-motion: reduce) { .ofk-state-hero * { animation: none !important; } }
 
 .ofk-v2-document-bar { gap: 2px; padding: 5px; }
 .ofk-v2-document-title {
@@ -202,8 +217,13 @@
 .ofk-v2-welcome-keys > span { display: flex; align-items: center; gap: 6px; }
 .ofk-v2-welcome-actions { display: flex; justify-content: center; gap: 8px; margin-top: 34px; pointer-events: auto; }
 .ofk-v2-welcome-actions .ofk-button { font-size: 14px; min-height: 38px; padding: 0 12px; gap: 8px; }
-.ofk-v2-welcome-templates { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; max-width: 560px; margin: 14px auto 0; pointer-events: auto; color: var(--ofk-muted); font-size: 13px; }
-.ofk-v2-welcome-templates > span { margin-right: 4px; }
+/* Templates: label on its own line, then tight chips that wrap as a block. */
+.ofk-v2-welcome-templates { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; max-width: 600px; margin: 22px auto 0; pointer-events: auto; color: var(--ofk-muted); font-size: 12px; }
+.ofk-v2-welcome-templates > span { flex-basis: 100%; margin-bottom: 2px; }
+.ofk-v2-welcome-templates .ofk-button { min-height: 28px; padding: 0 12px; border: 1px solid var(--ofk-border); border-radius: 999px; background: var(--ofk-surface); font-size: 12.5px; transition: transform 120ms ease-out, border-color 120ms ease-out; }
+@media (hover: hover) and (pointer: fine) { .ofk-v2-welcome-templates .ofk-button:hover { border-color: var(--ofk-accent); transform: translateY(-1px); } }
+.ofk-v2-welcome-templates .ofk-button:active { transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) { .ofk-v2-welcome-templates .ofk-button { transition: none; } }
 
 .ofk-v2-guide { position: absolute; color: var(--ofk-muted); font-size: 17px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
 .ofk-v2-guide svg { width: 100px; height: 80px; fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -512,7 +532,8 @@
 .ofk-v2-risk-badge[data-risk='proxy_likely'] { color: var(--ofk-warning); }
 .ofk-v2-provider-test { display: flex; align-items: center; gap: 10px; }
 .ofk-v2-provider-test .ofk-button { flex: none; font-size: 12px; }
-.ofk-v2-provider-test p { flex: 1; min-width: 0; margin: 0; font-size: 12px; color: var(--ofk-secondary); }
+.ofk-v2-provider-test p { flex: 1; min-width: 0; margin: 0; display: flex; align-items: flex-start; gap: 6px; font-size: 12px; line-height: 1.5; color: var(--ofk-secondary); }
+.ofk-v2-provider-test p .ofk-icon { flex: none; width: 14px; height: 14px; margin-top: 2px; }
 .ofk-v2-provider-test p[data-state='ok'] { color: var(--ofk-success); }
 .ofk-v2-provider-test p[data-state='fail'] { color: var(--ofk-danger); }
 .ofk-v2-prompt-box { border: 1px solid var(--ofk-border); border-radius: 12px; padding: 10px 10px 8px; background: var(--ofk-canvas); transition: border-color var(--ofk-motion-fast, .12s), box-shadow var(--ofk-motion-fast, .12s); }
@@ -592,6 +613,12 @@
   /* One lane is too narrow for both: the document bar keeps the top edge, the workspace rail drops under it. */
   .ofk-v2 .ofk-v2-document-bar { max-width: none; }
   .ofk-v2 .ofk-v2-workspace-rail { top: var(--ofk-layout-topLane); }
+  /* Start under the rail instead of centring behind it; templates scroll as one row. */
+  .ofk-v2-welcome-center { top: 136px; transform: translateX(-50%); }
+  .ofk-v2-welcome-center > img { width: 36px; height: 36px; margin-bottom: 14px; }
+  .ofk-v2-welcome-templates { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; margin-inline: -4px; padding: 2px 4px 4px; }
+  .ofk-v2-welcome-templates > span { display: none; }
+  .ofk-v2-welcome-templates .ofk-button { flex: none; }
 }
 @media (max-height: 650px) { .ofk-v2-guide { display: none; } .ofk-v2-welcome-center > img { width: 32px; height: 32px; margin-bottom: 12px; } }
 .ofk-v2 .ofk-panel { background: var(--ofk-surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
@@ -807,6 +834,9 @@
 .ofk-connection-panel[data-status='connecting'] .ofk-connection-hero-link i { background: var(--ofk-accent); }
 .ofk-connection-hero-link i:nth-child(2) { animation-delay: .2s; }
 .ofk-connection-hero-link i:nth-child(3) { animation-delay: .4s; }
+/* Bridge down: the link breaks — middle dot gone, ends in danger. */
+.ofk-connection-panel[data-status='error'] .ofk-connection-hero-link i { background: var(--ofk-danger); opacity: .6; }
+.ofk-connection-panel[data-status='error'] .ofk-connection-hero-link i:nth-child(2) { visibility: hidden; }
 @keyframes ofk-connection-flow { 0%, 100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
 @media (prefers-reduced-motion: reduce) { .ofk-connection-panel *, .ofk-v2-assistant-panel *, .ofk-v2-assistant-panel .ofk-message { animation: none !important; } }
 .ofk-connection-panel h3 { margin: 0 0 8px; font-size: 18px; font-weight: 500; letter-spacing: -.3px; text-align: center; }
@@ -1028,16 +1058,28 @@
 .ofk-home-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .ofk-home-header h1 { margin: 0; font-size: 20px; font-weight: var(--ofk-weight-emphasis); }
 .ofk-home-header h1 span { color: var(--ofk-muted); font-weight: normal; }
-.ofk-home-notice { margin: 0 0 16px; padding: 10px 12px; border: 1px solid var(--ofk-border); border-radius: 8px; background: var(--ofk-raised); font-size: 13px; }
+/* Notice strip: tone sets icon + tint, text stays body colour for contrast. */
+.ofk-home-notice { --tone: var(--ofk-info); display: flex; align-items: flex-start; gap: 10px; margin: 0 0 16px; padding: 10px 8px 10px 12px; border: 1px solid color-mix(in srgb, var(--tone) 30%, var(--ofk-border)); border-radius: 10px; background: color-mix(in srgb, var(--tone) 7%, var(--ofk-surface)); font-size: 13px; line-height: 1.55; animation: ofk-empty-in 250ms ease-out both; }
+.ofk-home-notice[data-tone='success'] { --tone: var(--ofk-success); }
+.ofk-home-notice[data-tone='warning'] { --tone: var(--ofk-warning); }
+.ofk-home-notice[data-tone='danger'] { --tone: var(--ofk-danger); }
+.ofk-home-notice > .ofk-icon { flex: none; width: 16px; height: 16px; margin-top: 2px; color: var(--tone); }
+.ofk-home-notice > p, .ofk-home-notice > div { flex: 1; margin: 2px 0 0; min-width: 0; }
 .ofk-home-notice p { margin: 0; }
+.ofk-home-notice strong { font-weight: var(--ofk-weight-emphasis); }
 .ofk-home-notice ul { margin: 6px 0 0; padding-left: 18px; color: var(--ofk-secondary); }
-.ofk-home-empty { color: var(--ofk-muted); font-size: 13px; }
-.ofk-home-rows { list-style: none; margin: 0; padding: 0; }
-.ofk-home-rows > li { display: flex; align-items: center; gap: 4px; padding: 2px 4px; border-radius: 6px; }
-.ofk-home-rows > li:hover, .ofk-home-rows > li:focus-within { background: var(--ofk-raised); }
-.ofk-home-open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; min-height: 40px; padding: 4px; border: 0; background: none; color: var(--ofk-text); font: inherit; font-size: 14px; text-align: start; cursor: pointer; }
-.ofk-home-open svg { width: 16px; height: 16px; flex: none; color: var(--ofk-secondary); }
-.ofk-home-tag { flex: none; padding: 1px 6px; border-radius: 999px; background: var(--ofk-accentSoft); color: var(--ofk-accent); font-size: 11px; }
-.ofk-home-meta { flex: none; color: var(--ofk-muted); font-size: 12px; }
-.ofk-home-rows .ofk-icon-button { width: 28px; height: 28px; color: var(--ofk-muted); }
+.ofk-home-notice > .ofk-icon-button { flex: none; width: 24px; height: 24px; margin: -1px 0; color: var(--ofk-muted); }
+@media (prefers-reduced-motion: reduce) { .ofk-home-notice { animation: none; } }
 .ofk-legacy-text { display: block; box-sizing: border-box; width: 100%; margin: 0 0 12px; padding: 10px; border: 1px solid var(--ofk-border); border-radius: 8px; background: var(--ofk-raised); color: var(--ofk-text); font: 12px/1.5 ui-monospace, monospace; resize: vertical; }
+
+/* Feature tip (V2FeatureTip): a quiet card beside its control. Only its buttons catch the pointer. */
+.ofk-v2-tip { width: min(280px, calc(100vw - 32px)); pointer-events: none; }
+.ofk-v2-tip-body { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 10px; padding: 12px 6px 12px 14px; }
+.ofk-v2-tip-body strong { display: block; margin-bottom: 3px; font-size: 13px; font-weight: 600; }
+.ofk-v2-tip-body p { margin: 0; color: var(--ofk-secondary); font-size: 12.5px; line-height: 1.5; }
+.ofk-v2-tip-body .ofk-button { margin-top: 10px; font-size: 12px; }
+.ofk-v2-tip-body :is(button, a) { pointer-events: auto; }
+.ofk-v2-tip-body > .ofk-icon-button { width: 24px; height: 24px; margin-top: -4px; color: var(--ofk-muted); }
+.ofk-v2-tip-dot { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--ofk-accent); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ofk-accent) 40%, transparent); animation: ofk-v2-tip-ping 1.6s ease-out 3; }
+@keyframes ofk-v2-tip-ping { 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+@media (prefers-reduced-motion: reduce) { .ofk-v2-tip-dot { animation: none; } }

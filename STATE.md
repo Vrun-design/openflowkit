@@ -15,15 +15,16 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   current code); re-run on a stronger model (free tier 50 req/day, a run is 100+) for the launch number;
   13.5 `d2ToDsl` (32 real D2 files) + Structurizr fixed on its own 4 example workspaces.
 - MCP 0.2.0 was never published; `npx @vrun-design/openflowkit-mcp` still serves 0.1.2 until it is.
-## Review follow-ups 2026-10-04 (sonnet-5.5, then opus-5.5) — UNCOMMITTED, `npm run verify` green, see CHANGELOG
-- Bridge token default-on; pairing after reload; one validation per command; DSL `title` column; Mermaid keywords;
-  assistant scene ops (5 tools, one undo); code panel wrap/undo/CRLF/IME; toolbar dodges labels; model list fetch;
-  starter gallery (data moved to `src/agent/starterTemplates.ts`, MCP re-exports via the agent bundle).
+## Polish pass 2026-10-04 (opus-5.5) — UNCOMMITTED, `npm run verify` green, brief `docs/plan/polish-pass-brief.md`
+- A: failure/empty states share `ErrorState`/`EmptyState` (+ `hero`, `secondary`) and `V2StateHero`; WebGL off hides
+  canvas tools; storage copy from `describeStorageFailure`. B: home v3 — sidebar views (`?view=`), Archive (`archivedAt`
+  on the record, kept until deleted, a save restores), multi-select, ⌘K, import/drop (`{source}` intent), thumbnails IDB (**DB v5**).
+  C: feature tips (`v2FeatureTips.ts`, one a session, once ever). Decided: **auto-icons stay on by default**.
 ## Found, not fixed (owner calls)
 - Fit under 65% zoom: 27/50 replayed DSL replies, median 0.63 (1040×900 canvas). Not a layout knob: 16 of 27 are
   sequence/class/mindmap (own layouts); ELK wrapping moved it to 22 but tangled long flows (screenshots), reverted.
   Recommend: land AI results at ≥65% anchored on the start, fit button for the overview.
-- Editor chunk 1500.7 KB at HEAD vs 1500 KB budget (CI does not run `bundle:check`); this pass adds ~11 KB.
+- Editor chunk 1511.6 KB at `ff154d3`, 1510.7 KB after the polish pass, vs 1500 KB budget (CI does not run `bundle:check`).
 - MCP 0.1.2 on npm has no live bridge at all: pairing needs 0.2.0 published.
 - Auto-icons on for flowcharts (keep); dark mode pastel tiles. Not done: split V2EditorPage/useV2Pointer, incremental
   index (9 ms at 5k), on-device model, code-panel virtualisation (0.8 s/key at 10k lines).

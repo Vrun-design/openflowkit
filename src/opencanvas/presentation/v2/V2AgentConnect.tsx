@@ -73,7 +73,7 @@ export function V2AgentConnect(props: V2AgentConnectProps) {
     </> : <>
       <h3>Your agent, on your canvas.</h3>
       <p className="ofk-connection-lede">Claude Code, Cursor or any MCP client can read this document and draw on it — you review every change.</p>
-      {props.status === 'error' ? <p role="alert" className="ofk-connection-error">Start the MCP server, then check the connection settings. Retrying automatically.</p> : null}
+      {props.status === 'error' ? <p role="alert" className="ofk-connection-error"><strong>{props.detail}</strong> Start the MCP server in your agent, or check the settings below. Retrying every few seconds.</p> : null}
       <ol className="ofk-connection-steps">
         <li><span>1</span><div><strong>Add OpenFlowKit to your MCP client</strong>
           <Button onClick={() => { void copyConfig(); }}><Icon icon={copyStatus === 'Copied' ? IconCheck : IconCopy} />{copyStatus === 'Copied' ? 'Config copied' : 'Copy MCP configuration'}</Button></div></li>
@@ -84,7 +84,7 @@ export function V2AgentConnect(props: V2AgentConnectProps) {
           {running ? <Button variant="quiet" onClick={() => props.onToggle(false)}>Cancel</Button> : null}</div></li>
       </ol>
     </>}
-    <details className="ofk-accordion ofk-connection-details"><summary>Connection settings<Icon icon={IconChevronDown} /></summary>
+    <details className="ofk-accordion ofk-connection-details" open={props.status === 'error' || undefined}><summary>Connection settings<Icon icon={IconChevronDown} /></summary>
       <div className="ofk-accordion-body">
         <div className="ofk-connection-fields">
           <label htmlFor="ofk-bridge-port">Port<input id="ofk-bridge-port" className="ofk-v2-bridge-input" inputMode="numeric" value={draftPort}

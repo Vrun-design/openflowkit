@@ -1,6 +1,6 @@
 import { expect, test } from './test';
 
-// Phase 12.4: All diagrams — list → open → rename → delete (confirmed), keyboard only.
+// Phase 12.4: home — list → open → rename → delete (confirmed), keyboard only.
 // npm run e2e:headed -- e2e/home-list.spec.ts
 
 test('all diagrams: open, rename and delete from the keyboard @gate', async ({ page }) => {
@@ -17,7 +17,7 @@ test('all diagrams: open, rename and delete from the keyboard @gate', async ({ p
 
   await page.getByRole('button', { name: 'Canvas menu' }).focus();
   await page.keyboard.press('Enter');
-  await page.getByRole('menuitem', { name: 'All diagrams' }).focus();
+  await page.getByRole('menuitem', { name: 'Back to home' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('v2-home')).toBeVisible();
   const rows = page.getByRole('list', { name: 'Diagrams' }).getByRole('listitem');
@@ -25,27 +25,43 @@ test('all diagrams: open, rename and delete from the keyboard @gate', async ({ p
   await expect(rows.filter({ hasText: 'Beta' })).toContainText('From v1');
   await expect(rows.filter({ hasText: 'Alpha' })).not.toContainText('From v1');
 
-  await page.getByRole('button', { name: 'Rename Alpha' }).focus();
+  // Rename and delete live in each card's overflow menu; focus enters its first item.
+  await page.getByRole('button', { name: 'More actions for Alpha' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('menuitem', { name: 'Open in new tab' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeFocused();
   await page.keyboard.press('Enter');
   await page.keyboard.type('Quarterly plan');
   await page.keyboard.press('Enter');
-  const renamed = page.getByRole('button', { name: /^Quarterly plan/ });
+  const renamed = page.getByRole('link', { name: 'Quarterly plan' });
   await expect(renamed).toBeVisible();
+  await expect(renamed).toBeFocused();
 
-  await renamed.focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('[data-testid="v2-canvas"]')).toBeVisible();
   await expect(page.locator('.ofk-v2-document-title')).toHaveText('Quarterly plan');
 
   await page.goto('/#/home');
-  await page.getByRole('button', { name: 'Delete Quarterly plan' }).focus();
+  await page.getByRole('button', { name: 'More actions for Quarterly plan' }).focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Open in new tab' })).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(page.getByRole('menuitem', { name: 'Archive' })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(rows).toHaveCount(2);
-  await page.getByRole('button', { name: 'Delete Quarterly plan' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true }).click();
+  await page.getByRole('button', { name: 'More actions for Quarterly plan' }).click();
+  await page.getByRole('menuitem', { name: 'Archive' }).click();
   await expect(rows).toHaveCount(1);
-  await page.reload();
+  // Focus lands on the card that took its place, not back at the top of the page.
+  await expect(page.getByRole('link', { name: 'Beta' })).toBeFocused();
+
+  // Archive: nothing is gone until it is deleted forever, behind a confirm.
+  await page.getByRole('navigation', { name: 'Home' }).getByRole('link', { name: /Archive/ }).click();
+  await page.getByRole('button', { name: 'More actions for Quarterly plan' }).click();
+  await page.getByRole('menuitem', { name: 'Delete forever…' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete forever', exact: true }).click();
+  await expect(page.getByText('Nothing archived.')).toBeVisible();
+  await page.goto('/#/home');
   await expect(rows).toHaveCount(1);
 });

@@ -76,7 +76,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
 
   if (!model || !index) {
     return (
-      <Panel title="Model" onClose={props.onClose} className="ofk-v2-workspace-panel ofk-v2-model-panel">
+      <Panel title="Architecture model" onClose={props.onClose} className="ofk-v2-workspace-panel ofk-v2-model-panel">
         <div className="ofk-model-welcome">
           <div className="ofk-model-preview" aria-hidden="true"><span>System</span><div><span>App</span><span>Data</span></div></div>
           <h3>One system. Every view.</h3>
@@ -92,7 +92,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
 
   return (
     <Panel
-      title="Model"
+      title="Architecture model"
       onClose={props.onClose}
       className="ofk-agent-panel ofk-v2-model-panel"
       tools={<span className="ofk-v2-model-count">{model.elements.length} elements</span>}

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { DocumentValidationIssue } from '../../domain/document/validation';
 import type { V2DocumentRepository } from '../../../services/storage/v2/v2Repository';
+import { describeStorageFailure } from '../../../services/storage/v2/v2Errors';
 import { createEmptyV2Document } from './v2Document';
 
 interface V2DocumentLoadOptions {
@@ -20,7 +21,7 @@ export function useV2DocumentLoad(options: V2DocumentLoadOptions) {
   const [readOnly, setReadOnly] = useState(false);
   const [baseRevision, setBaseRevision] = useState(0);
   const [corruptIssues, setCorruptIssues] = useState<readonly DocumentValidationIssue[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<ReturnType<typeof describeStorageFailure> | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
 
   const reload = useCallback(() => setReloadCount((count) => count + 1), []);
@@ -66,7 +67,7 @@ export function useV2DocumentLoad(options: V2DocumentLoadOptions) {
       })
       .catch((error: unknown) => {
         if (cancelled) return;
-        setLoadError(error instanceof Error ? error.message : 'Document could not be loaded.');
+        setLoadError(describeStorageFailure(error));
         setPhase('failed');
       });
     return () => {

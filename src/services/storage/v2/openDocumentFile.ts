@@ -10,6 +10,8 @@ export function defaultLegacyNodeSize(node: JsonObject) {
   return (productionNodeCatalogEntry(String(node.type)) ?? productionNodeCatalogEntry('custom'))?.size ?? null;
 }
 
+const OPENS = 'OpenFlowKit opens the .json files it exports, from this version or the previous one.';
+
 export type OpenedDocumentFile = { readonly document: SceneDocumentV1 } | { readonly error: string };
 
 /**
@@ -23,9 +25,9 @@ export function documentFromFileText(text: string, id: string, now = new Date().
   try {
     parsed = JSON.parse(text);
   } catch {
-    return { error: 'Not a JSON file.' };
+    return { error: `It isn’t valid JSON. ${OPENS}` };
   }
-  if (!isJsonObject(parsed)) return { error: 'Not an OpenFlowKit document.' };
+  if (!isJsonObject(parsed)) return { error: `It isn’t an OpenFlowKit diagram. ${OPENS}` };
   if (parsed.format === SCENE_DOCUMENT_FORMAT) {
     const migrated = migrateSceneDocument({ ...parsed, id });
     if (migrated.success === true) return { document: { ...migrated.document, updatedAt: now } };
@@ -44,5 +46,5 @@ export function documentFromFileText(text: string, id: string, now = new Date().
       return { error: error instanceof Error ? error.message : 'Invalid V1 document.' };
     }
   }
-  return { error: 'Not an OpenFlowKit document.' };
+  return { error: `It isn’t an OpenFlowKit diagram. ${OPENS}` };
 }

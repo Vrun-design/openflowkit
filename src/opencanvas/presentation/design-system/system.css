@@ -872,6 +872,40 @@
 .ofk-empty p {
   margin: 0;
 }
+.ofk-empty .ofk-caption {
+  max-width: 42ch;
+  line-height: 1.6;
+}
+.ofk-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ofk-space-sm);
+  margin-top: var(--ofk-space-sm);
+}
+/* Hero states: illustration, then title, reason and actions rise in once. */
+.ofk-empty[data-hero] {
+  gap: var(--ofk-space-md);
+}
+.ofk-empty[data-hero] .ofk-empty-icon svg {
+  width: 140px;
+  height: 84px;
+  color: var(--ofk-secondary);
+}
+.ofk-empty[data-hero] .ofk-empty-title {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.3px;
+}
+.ofk-empty[data-hero] > * {
+  animation: ofk-empty-in 250ms ease-out both;
+}
+.ofk-empty[data-hero] > :nth-child(2) { animation-delay: 40ms; }
+.ofk-empty[data-hero] > :nth-child(3) { animation-delay: 80ms; }
+.ofk-empty[data-hero] > :nth-child(4) { animation-delay: 120ms; }
+@keyframes ofk-empty-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
 
 /* Toasts */
 .ofk-toasts {
@@ -1752,13 +1786,15 @@ li[data-decision='rejected'] .ofk-review-label {
     opacity: 1;
   }
 }
-.ofk-empty[data-tone='danger'] .ofk-empty-icon svg {
+.ofk-empty[data-tone='danger']:not([data-hero]) .ofk-empty-icon svg {
   color: var(--ofk-danger);
 }
 @media (prefers-reduced-motion: reduce) {
   .ofk-skeleton::after,
   .ofk-progress-fill[data-indeterminate],
-  .ofk-thinking-dots i {
+  .ofk-thinking-dots i,
+  .ofk-empty[data-hero] > *,
+  .ofk-empty[data-hero] svg * {
     animation: none;
   }
   .ofk-thinking-dots i {

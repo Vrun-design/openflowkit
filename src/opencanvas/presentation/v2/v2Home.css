@@ -1,0 +1,291 @@
+/* Home (#/home). Tokens only; motion is transform/opacity and stops under reduced motion.
+   Shell: a quiet sidebar for where you are, one main column for what you have. 8px rhythm throughout. */
+.ofk-home-page { --ofk-home-ease: cubic-bezier(.23, 1, .32, 1); --ofk-home-gutter: 32px; --ofk-home-hover: color-mix(in srgb, var(--ofk-text) 6%, transparent); --ofk-home-active: color-mix(in srgb, var(--ofk-text) 9%, transparent);
+  display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100vh; background: var(--ofk-canvas); color: var(--ofk-text); font-size: 13px; -webkit-font-smoothing: antialiased; }
+
+/* Sidebar: brand, search, views, starred, then the small print at the foot. */
+.ofk-home-sidebar { position: sticky; top: 0; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; padding: 8px 8px 12px; border-inline-end: 1px solid color-mix(in srgb, var(--ofk-border) 75%, transparent); background: color-mix(in srgb, var(--ofk-surface) 55%, var(--ofk-canvas)); scrollbar-width: thin; }
+.ofk-home-sidebar-top { display: flex; align-items: center; justify-content: space-between; height: 40px; margin-bottom: 8px; }
+.ofk-home-sidebar-top .ofk-icon-button { width: 28px; min-width: 28px; height: 28px; min-height: 28px; color: var(--ofk-muted); }
+.ofk-home-brand { display: inline-flex; align-items: center; gap: 8px; min-width: 0; height: 32px; padding: 0 8px 0 6px; border-radius: 6px; color: var(--ofk-text); font-size: 13.5px; font-weight: 600; letter-spacing: -.15px; text-decoration: none; }
+.ofk-home-brand img { width: 20px; height: 20px; }
+.ofk-home-brand:hover { background: var(--ofk-home-hover); }
+.ofk-home-brand:focus-visible { outline: var(--ofk-focus-width) solid var(--ofk-focus); outline-offset: -2px; }
+
+.ofk-home-search { position: relative; display: flex; align-items: center; margin: 0 0 12px; color: var(--ofk-muted); }
+.ofk-home-search > svg { position: absolute; left: 9px; width: 14px; height: 14px; pointer-events: none; }
+.ofk-home-search input { width: 100%; height: 30px; padding: 0 28px 0 29px; border: 1px solid transparent; border-radius: 6px; background: var(--ofk-home-hover); color: var(--ofk-text); font: inherit; font-size: 13px; transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease; }
+.ofk-home-search input::placeholder { color: var(--ofk-muted); }
+.ofk-home-search input:hover { background: var(--ofk-home-active); }
+.ofk-home-search input:focus { outline: none; border-color: var(--ofk-focus); background: var(--ofk-surface); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ofk-focus) 18%, transparent); }
+.ofk-home-search input::-webkit-search-cancel-button { display: none; }
+.ofk-home-search kbd { position: absolute; right: 7px; min-width: 16px; padding: 0 4px; border: 1px solid var(--ofk-border); border-radius: 4px; background: var(--ofk-surface); color: var(--ofk-muted); font: 10.5px/15px var(--ofk-mono); text-align: center; pointer-events: none; }
+.ofk-home-search input:focus + kbd, .ofk-home-search input:not(:placeholder-shown) + kbd { opacity: 0; }
+
+.ofk-home-nav { display: grid; gap: 1px; }
+.ofk-home-nav-item { display: flex; align-items: center; gap: 8px; width: 100%; height: 30px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--ofk-secondary); font: inherit; font-size: 13px; line-height: 1; text-align: start; text-decoration: none; cursor: pointer; }
+.ofk-home-nav-item > svg { flex: none; width: 16px; height: 16px; color: var(--ofk-muted); }
+.ofk-home-nav-item > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ofk-home-nav-item:hover { background: var(--ofk-home-hover); color: var(--ofk-text); }
+.ofk-home-nav-item[aria-current='page'] { background: var(--ofk-home-active); color: var(--ofk-text); font-weight: 500; }
+.ofk-home-nav-item[aria-current='page'] > svg { color: var(--ofk-text); }
+.ofk-home-nav-item:focus-visible { outline: var(--ofk-focus-width) solid var(--ofk-focus); outline-offset: -2px; }
+.ofk-home-nav-count { flex: none; color: var(--ofk-muted); font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.ofk-home-sidebar-section { display: grid; margin-top: 20px; }
+.ofk-home-sidebar-section h2 { margin: 0 0 4px; padding-inline: 8px; color: var(--ofk-muted); font-size: 12px; font-weight: 500; }
+.ofk-home-sidebar-section ul { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.ofk-home-sidebar-foot { display: grid; gap: 1px; margin-top: auto; padding-top: 16px; }
+.ofk-home-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ofk-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ofk-primary) 20%, transparent); }
+.ofk-home-nav-item > svg:last-child:not(:first-child) { width: 14px; height: 14px; opacity: .7; }
+.ofk-home-stars { display: inline-flex; flex: none; align-items: center; gap: 3px; padding: 0 6px; border: 1px solid color-mix(in srgb, var(--ofk-border) 85%, transparent); border-radius: 999px; color: var(--ofk-secondary); font-size: 11.5px; font-weight: 500; line-height: 18px; font-variant-numeric: tabular-nums; }
+.ofk-home-stars svg { width: 11px; height: 11px; color: var(--ofk-primary); }
+/* Local-first, said once and quietly: a small card above the footer links. */
+.ofk-home-local { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 10px; border: 1px solid color-mix(in srgb, var(--ofk-border) 75%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--ofk-surface) 70%, transparent); }
+.ofk-home-local-icon { display: grid; flex: none; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--ofk-successSoft); color: var(--ofk-success); }
+.ofk-home-local-icon svg { width: 15px; height: 15px; }
+.ofk-home-local p { display: grid; gap: 1px; margin: 0; color: var(--ofk-muted); font-size: 11.5px; line-height: 1.4; }
+.ofk-home-local strong { color: var(--ofk-text); font-size: 12px; font-weight: 500; }
+
+/* What's new: a dated changelog in the main column. */
+.ofk-home-lede a { color: var(--ofk-text); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ofk-text) 30%, transparent); text-underline-offset: 3px; }
+.ofk-home-lede a:hover { text-decoration-color: currentColor; }
+.ofk-home-changelog { display: grid; max-width: 760px; margin: 0; padding: 0; list-style: none; }
+.ofk-home-changelog li { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 24px; padding: 20px 0; border-top: 1px solid color-mix(in srgb, var(--ofk-border) 75%, transparent); }
+.ofk-home-changelog li:has(> span:first-child) { border-top-style: dashed; }
+.ofk-home-changelog time { padding-top: 2px; color: var(--ofk-muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.ofk-home-changelog h2 { margin: 0 0 4px; font-size: 14px; font-weight: 600; letter-spacing: -.1px; }
+.ofk-home-changelog p { margin: 0; color: var(--ofk-secondary); font-size: 13.5px; line-height: 1.6; }
+@media (max-width: 600px) { .ofk-home-changelog li { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+
+/* Main: a sticky header (title · sort · layout · New), then content on the same gutter. */
+.ofk-home-main { display: flex; flex-direction: column; min-width: 0; }
+.ofk-home-head { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 var(--ofk-home-gutter); border-bottom: 1px solid color-mix(in srgb, var(--ofk-border) 75%, transparent); background: color-mix(in srgb, var(--ofk-canvas) 85%, transparent); backdrop-filter: blur(12px) saturate(1.4); }
+.ofk-home-head h1 { flex: 1; min-width: 0; margin: 0; overflow: hidden; font-size: 15px; font-weight: 600; letter-spacing: -.2px; text-overflow: ellipsis; white-space: nowrap; }
+.ofk-home-head-tools { display: flex; align-items: center; gap: 4px; padding-inline-end: 8px; margin-inline-end: 4px; border-inline-end: 1px solid color-mix(in srgb, var(--ofk-border) 75%, transparent); }
+.ofk-home-head .ofk-button { min-height: 32px; height: 32px; font-size: 13px; }
+.ofk-home-head .ofk-button[data-variant='primary'] { gap: 6px; padding: 0 12px; border-radius: 7px; }
+.ofk-home-head .ofk-button[data-variant='primary'] svg { width: 16px; height: 16px; }
+.ofk-home-sort { gap: 4px; padding: 0 8px; color: var(--ofk-secondary); font-weight: 400; }
+.ofk-home-sort svg { width: 14px; height: 14px; color: var(--ofk-muted); }
+.ofk-home-head .ofk-segmented { padding: 2px; background: var(--ofk-home-hover); }
+.ofk-home-head .ofk-segmented label { min-width: 28px; min-height: 26px; padding: 0 6px; }
+/* Segmented wraps each label in an inline span; an inline svg sits on the text baseline, off-centre. */
+.ofk-home-head .ofk-segmented label > span { display: grid; place-items: center; }
+.ofk-home-head .ofk-segmented svg { display: block; width: 15px; height: 15px; }
+/* The selected pill must read in both themes: lifted above the track in light, lighter than it in dark. */
+.ofk-home-head .ofk-segmented label { color: var(--ofk-muted); transition: color 120ms ease, background-color 120ms ease; }
+.ofk-home-head .ofk-segmented label:hover { color: var(--ofk-text); }
+.ofk-home-head .ofk-segmented label[data-selected] { background: var(--ofk-surface); color: var(--ofk-text); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ofk-text) 10%, transparent), 0 1px 2px color-mix(in srgb, #000 12%, transparent); }
+[data-ofk-appearance='dark'] .ofk-home-head .ofk-segmented label[data-selected] { background: color-mix(in srgb, var(--ofk-text) 16%, var(--ofk-surface)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ofk-text) 8%, transparent); }
+
+.ofk-home-content { display: flex; flex-direction: column; gap: 32px; width: 100%; max-width: 1680px; padding: 24px var(--ofk-home-gutter) 64px; }
+.ofk-home-lede { margin: 0; color: var(--ofk-secondary); font-size: 13.5px; line-height: 1.6; }
+.ofk-home-content > .ofk-home-lede + * { margin-top: -16px; }
+.ofk-home-content > .ofk-home-notice { margin: 0; }
+
+/* Create row, once there are diagrams: four even tiles, icon · title · hint. */
+.ofk-home-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.ofk-home-chip { display: flex; align-items: center; gap: 12px; width: 100%; height: 60px; padding: 0 12px; border: 1px solid color-mix(in srgb, var(--ofk-border) 85%, transparent); border-radius: 10px; background: var(--ofk-surface); color: var(--ofk-text); font: inherit; text-align: start; cursor: pointer; transition: border-color 120ms ease, background-color 120ms ease, transform 120ms var(--ofk-home-ease); }
+.ofk-home-chip-icon { display: grid; flex: none; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: var(--ofk-home-hover); color: var(--ofk-secondary); }
+.ofk-home-chip-icon svg { width: 17px; height: 17px; }
+.ofk-home-chip[data-kind='assistant'] .ofk-home-chip-icon { background: var(--ofk-accentSoft); color: var(--ofk-accent); }
+.ofk-home-chip-text { display: grid; gap: 2px; min-width: 0; }
+.ofk-home-chip-text > span { overflow: hidden; font-size: 13px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.ofk-home-chip-text > .ofk-home-chip-hint { color: var(--ofk-muted); font-size: 12px; font-weight: 400; }
+.ofk-home-chip:hover { border-color: var(--ofk-border); background: color-mix(in srgb, var(--ofk-surface) 70%, var(--ofk-raised)); }
+.ofk-home-chip:active { transform: scale(.985); }
+.ofk-home-chip:focus-visible { outline: var(--ofk-focus-width) solid var(--ofk-focus); outline-offset: 2px; }
+
+/* Ways to start: four cards, each with its own small loop. */
+.ofk-home-starts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 0; padding: 0; list-style: none; }
+.ofk-home-start-button { display: grid; width: 100%; height: 100%; align-content: start; gap: 4px; padding: 8px 8px 16px; border: 1px solid color-mix(in srgb, var(--ofk-border) 85%, transparent); border-radius: 12px; background: var(--ofk-surface); color: var(--ofk-text); font: inherit; text-align: start; cursor: pointer; transition: transform 150ms var(--ofk-home-ease), box-shadow 150ms var(--ofk-home-ease), border-color 150ms ease; }
+.ofk-home-start-art { display: grid; place-items: center; height: 96px; margin-bottom: 10px; border-radius: 8px; background: color-mix(in srgb, var(--ofk-raised) 55%, var(--ofk-surface)); color: var(--ofk-secondary); }
+.ofk-home-start-title { padding-inline: 6px; font-size: 14px; font-weight: 600; letter-spacing: -.1px; }
+.ofk-home-start-text { padding-inline: 6px; color: var(--ofk-secondary); font-size: 12.5px; line-height: 1.5; }
+.ofk-home-start-button:active { transform: scale(.98); }
+.ofk-home-start-button:focus-visible { outline: var(--ofk-focus-width) solid var(--ofk-focus); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .ofk-home-start-button:hover { border-color: var(--ofk-controlBorder); }
+  
+}
+
+/* Start heroes: complete picture at rest (what reduced motion sees); the loop replays it. */
+.ofk-home-start-hero { width: 120px; height: 64px; overflow: visible; }
+.ofk-home-start-hero .ofk-home-dots { fill: currentColor; stroke: none; opacity: .45; }
+.ofk-home-start-hero .ofk-home-draw { stroke: var(--ofk-accent); stroke-dasharray: 1; animation: ofk-home-draw 3.6s var(--ofk-home-ease) infinite; }
+.ofk-home-start-hero .ofk-home-cursor { fill: var(--ofk-text); stroke: var(--ofk-surface); stroke-width: 1; transform: translate(86px, 46px); animation: ofk-home-cursor 3.6s var(--ofk-home-ease) infinite; }
+.ofk-home-start-hero .ofk-home-spark { fill: var(--ofk-accent); stroke: none; transform-box: fill-box; transform-origin: center; animation: ofk-home-spark 3.6s ease-in-out infinite; }
+.ofk-home-start-hero .ofk-home-pop { fill: var(--ofk-surface); transform-box: fill-box; transform-origin: center; animation: ofk-home-pop 3.6s var(--ofk-home-ease) infinite; }
+.ofk-home-start-hero .ofk-home-pop-2 { animation-delay: .15s; }
+.ofk-home-start-hero .ofk-home-pop-3 { animation-delay: .3s; }
+.ofk-home-start-hero .ofk-home-link { stroke: var(--ofk-accent); stroke-dasharray: 1; animation: ofk-home-link 3.6s ease-out infinite; }
+.ofk-home-start-hero .ofk-home-link-2 { animation-delay: .12s; }
+.ofk-home-start-hero[data-kind='code'] .ofk-home-pop, .ofk-home-start-hero[data-kind='code'] .ofk-home-link { animation-delay: .5s; }
+.ofk-home-start-hero[data-kind='code'] .ofk-home-pop-2 { animation-delay: .65s; }
+.ofk-home-start-hero .ofk-home-type { fill: currentColor; stroke: none; opacity: .6; transform-box: fill-box; transform-origin: left center; animation: ofk-home-type 3.6s var(--ofk-home-ease) infinite; }
+.ofk-home-start-hero .ofk-home-type-2 { animation-delay: .12s; }
+.ofk-home-start-hero .ofk-home-type-3 { animation-delay: .24s; }
+.ofk-home-start-hero .ofk-home-arrow { animation: ofk-home-fade 3.6s ease-out .4s infinite; }
+.ofk-home-start-hero .ofk-home-accent { stroke: var(--ofk-accent); }
+.ofk-home-start-hero path.ofk-home-accent { fill: var(--ofk-accentSoft); }
+.ofk-home-start-hero .ofk-home-flow circle { fill: var(--ofk-accent); stroke: none; transform-box: fill-box; transform-origin: center; animation: ofk-connection-flow 1.4s ease-in-out infinite; }
+.ofk-home-start-hero .ofk-home-flow circle:nth-child(2) { animation-delay: .2s; }
+.ofk-home-start-hero .ofk-home-flow circle:nth-child(3) { animation-delay: .4s; }
+@keyframes ofk-home-draw { 0% { stroke-dashoffset: 1; opacity: 1; } 40%, 82% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+@keyframes ofk-home-cursor { 0% { transform: translate(34px, 18px); opacity: 0; } 6% { opacity: 1; } 40%, 82% { transform: translate(86px, 46px); opacity: 1; } 100% { transform: translate(86px, 46px); opacity: 0; } }
+@keyframes ofk-home-spark { 0%, 100% { transform: scale(.85) rotate(0); opacity: .7; } 20% { transform: scale(1.1) rotate(12deg); opacity: 1; } 40% { transform: scale(.95) rotate(0); } }
+@keyframes ofk-home-pop { 0%, 18% { transform: scale(.85); opacity: 0; } 30%, 84% { transform: scale(1); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+@keyframes ofk-home-link { 0%, 34% { stroke-dashoffset: 1; opacity: 1; } 50%, 84% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+@keyframes ofk-home-type { 0% { transform: scaleX(0); } 22%, 84% { transform: scaleX(1); opacity: .6; } 100% { transform: scaleX(1); opacity: 0; } }
+@keyframes ofk-home-fade { 0%, 10% { opacity: 0; } 25%, 84% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Sections and the card grid. */
+.ofk-home-section { display: grid; gap: 16px; }
+.ofk-home-section-title { margin: 0; font-size: 13px; font-weight: 600; }
+.ofk-home-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(216px, 1fr)); gap: 24px 20px; margin: 0; padding: 0; list-style: none; }
+
+/* A card is a framed preview with its caption beneath, like a file in a folder. */
+.ofk-home-card { position: relative; display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+.ofk-home-preview { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 10; overflow: hidden; border: 1px solid color-mix(in srgb, var(--ofk-border) 85%, transparent); border-radius: 10px; background: radial-gradient(circle, color-mix(in srgb, var(--ofk-border) 70%, transparent) 1px, transparent 1.2px) 0 0 / 16px 16px, color-mix(in srgb, var(--ofk-surface) 40%, var(--ofk-canvas)); transition: border-color 150ms ease, box-shadow 150ms ease, transform 200ms var(--ofk-home-ease); }
+.ofk-home-preview .ofk-skeleton { position: absolute; inset: 0; }
+/* Absolutely placed: an image's own height can never stretch the 16:10 box. */
+.ofk-home-preview-image { position: absolute; inset: 14px; width: calc(100% - 28px); height: calc(100% - 28px); object-fit: contain; transition: transform 300ms var(--ofk-home-ease); }
+.ofk-home-placeholder { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--ofk-surface); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ofk-border) 85%, transparent); color: var(--ofk-muted); }
+.ofk-home-placeholder svg { width: 18px; height: 18px; }
+.ofk-home-card-body { display: grid; align-content: start; gap: 2px; min-width: 0; padding: 10px 2px 0; }
+@media (hover: hover) and (pointer: fine) {
+  .ofk-home-card:hover .ofk-home-preview { border-color: var(--ofk-controlBorder); box-shadow: 0 1px 2px color-mix(in srgb, #000 6%, transparent), 0 8px 24px -8px color-mix(in srgb, #000 18%, transparent); }
+  .ofk-home-card:hover .ofk-home-preview-image { transform: scale(1.02); }
+}
+.ofk-home-card:has(.ofk-home-card-hit:active) .ofk-home-preview { transform: scale(.985); }
+.ofk-home-card:has(.ofk-home-card-hit:focus-visible) .ofk-home-preview { outline: var(--ofk-focus-width) solid var(--ofk-focus); outline-offset: 2px; }
+.ofk-home-card-hit { min-width: 0; padding: 0; border: 0; background: none; color: var(--ofk-text); font: inherit; text-align: start; text-decoration: none; cursor: pointer; }
+.ofk-home-card-hit:focus-visible { outline: none; }
+/* The title's target covers the whole card; star and menu sit above it. */
+.ofk-home-card-hit::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+.ofk-home-card-title { display: block; overflow: hidden; font-size: 13px; font-weight: 500; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.ofk-home-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; color: var(--ofk-muted); font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.ofk-home-card-meta > * + *:not(.ofk-home-tag)::before { content: '·'; margin-inline-end: 6px; }
+.ofk-home-templates .ofk-home-card-meta { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.ofk-home-tag { padding: 0 6px; border-radius: 4px; background: var(--ofk-home-hover); color: var(--ofk-secondary); font-size: 11px; font-weight: 500; line-height: 18px; }
+.ofk-home-card-actions { position: absolute; top: 8px; right: 8px; z-index: 2; display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--ofk-surface); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ofk-border) 85%, transparent), 0 2px 8px -2px color-mix(in srgb, #000 16%, transparent); opacity: 0; transition: opacity 120ms ease; }
+.ofk-home-card-actions .ofk-icon-button { width: 28px; min-width: 28px; height: 28px; min-height: 28px; color: var(--ofk-secondary); }
+.ofk-home-card:hover .ofk-home-card-actions, .ofk-home-card:focus-within .ofk-home-card-actions, .ofk-home-card-actions:has([aria-expanded='true']) { opacity: 1; }
+@media (hover: none) { .ofk-home-card-actions { opacity: 1; } }
+.ofk-home-card[data-editing] .ofk-home-card-actions { display: none; }
+/* A starred card keeps its star in view at rest; the menu waits (opacity, so Tab still reaches it). */
+.ofk-home-card-actions:has(.ofk-home-star[data-on]) { opacity: 1; }
+.ofk-home-card:not(:hover, :focus-within) .ofk-home-card-actions:has(.ofk-home-star[data-on]) { background: none; box-shadow: none; }
+.ofk-home-card:not(:hover, :focus-within) .ofk-home-card-actions:has(.ofk-home-star[data-on]) > :not(:has(.ofk-home-star)) { opacity: 0; }
+/* A star is a toggle, not a selected pill: the filled glyph is the cue. */
+.ofk-system .ofk-button.ofk-home-star[aria-pressed='true'], .ofk-system .ofk-button.ofk-home-star[aria-pressed='true']:hover:not([aria-disabled='true']) { border-color: transparent; background: none; color: var(--ofk-primary); }
+.ofk-home-rename { width: 100%; margin: -3px -6px; padding: 2px 6px; border: 1px solid var(--ofk-focus); border-radius: 6px; background: var(--ofk-surface); color: var(--ofk-text); font: inherit; font-size: 13px; font-weight: 500; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ofk-focus) 18%, transparent); }
+.ofk-home-rename:focus { outline: none; }
+.ofk-home-nomatch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; color: var(--ofk-secondary); font-size: 13px; }
+
+/* List layout: the same cards as rows — preview, name, meta on the right, actions at hand. */
+.ofk-home-grid[data-layout='list'] { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.ofk-home-grid[data-layout='list'] > .ofk-home-card { grid-template-rows: none; grid-template-columns: 22px 56px minmax(0, 1fr) 64px; align-items: center; gap: 12px; height: 52px; padding: 0 8px; border-radius: 8px; }
+.ofk-home-grid[data-layout='list'] .ofk-home-select { position: static; grid-row: 1; grid-column: 1; }
+.ofk-home-grid[data-layout='list'] .ofk-home-preview { grid-row: 1; grid-column: 2; }
+.ofk-home-grid[data-layout='list'] .ofk-home-card-body { grid-row: 1; grid-column: 3; }
+.ofk-home-grid[data-layout='list'] .ofk-home-card-actions { grid-row: 1; grid-column: 4; }
+.ofk-home-grid[data-layout='list'] > .ofk-home-card + .ofk-home-card::before { content: ''; position: absolute; top: 0; right: 8px; left: 110px; border-top: 1px solid color-mix(in srgb, var(--ofk-border) 65%, transparent); }
+.ofk-home-grid[data-layout='list'] > .ofk-home-card:hover { background: var(--ofk-home-hover); }
+.ofk-home-grid[data-layout='list'] > .ofk-home-card:hover::before, .ofk-home-grid[data-layout='list'] > .ofk-home-card:hover + .ofk-home-card::before { opacity: 0; }
+.ofk-home-grid[data-layout='list'] .ofk-home-preview { border-radius: 6px; box-shadow: none; transform: none; }
+.ofk-home-grid[data-layout='list'] .ofk-home-preview-image { inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); transform: none; }
+.ofk-home-grid[data-layout='list'] .ofk-home-placeholder { width: 20px; height: 20px; border-radius: 5px; box-shadow: none; background: none; }
+.ofk-home-grid[data-layout='list'] .ofk-home-placeholder svg { width: 14px; height: 14px; }
+.ofk-home-grid[data-layout='list'] .ofk-home-card-body { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 0; }
+.ofk-home-grid[data-layout='list'] .ofk-home-card-actions { position: static; justify-self: end; background: none; box-shadow: none; }
+.ofk-home-grid[data-layout='list'] .ofk-home-card:has(.ofk-home-card-hit:focus-visible) { outline: var(--ofk-focus-width) solid var(--ofk-focus); outline-offset: -2px; }
+.ofk-home-grid[data-layout='list'] .ofk-home-card:has(.ofk-home-card-hit:focus-visible) .ofk-home-preview { outline: none; }
+
+/* Selection: a checkbox on hover; once anything is selected every card shows one. Selected chrome is inverse neutral. */
+.ofk-home-select { position: absolute; top: 8px; left: 8px; z-index: 2; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 1.5px solid color-mix(in srgb, var(--ofk-text) 35%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--ofk-surface) 92%, transparent); color: transparent; cursor: pointer; opacity: 0; transition: opacity 120ms ease, background-color 120ms ease, border-color 120ms ease; }
+.ofk-home-select svg { width: 14px; height: 14px; stroke-width: 2.5; }
+.ofk-home-select:hover { border-color: var(--ofk-text); }
+.ofk-home-select:focus-visible { opacity: 1; outline: var(--ofk-focus-width) solid var(--ofk-focus); outline-offset: 2px; }
+.ofk-home-card:hover .ofk-home-select, .ofk-home-card[data-selecting] .ofk-home-select { opacity: 1; }
+.ofk-home-select[aria-checked='true'] { border-color: var(--ofk-inverse); background: var(--ofk-inverse); color: var(--ofk-onInverse); opacity: 1; }
+@media (hover: none) { .ofk-home-card[data-selecting] .ofk-home-select { opacity: 1; } }
+.ofk-home-card[data-selected] .ofk-home-preview { border-color: var(--ofk-inverse); box-shadow: 0 0 0 1px var(--ofk-inverse); }
+.ofk-home-grid[data-layout='list'] > .ofk-home-card[data-selected] { background: var(--ofk-home-active); }
+.ofk-home-grid[data-layout='list'] > .ofk-home-card[data-selected] .ofk-home-preview { box-shadow: none; }
+
+/* The selection's actions: a floating bar at the bottom, like Figma's and Linear's. */
+.ofk-home-selectionbar { position: fixed; bottom: 24px; left: calc(50% + 120px); z-index: 30; display: flex; align-items: center; gap: 2px; max-width: calc(100vw - 24px); padding: 4px 4px 4px 14px; border-radius: 12px; background: var(--ofk-inverse); color: var(--ofk-onInverse); box-shadow: 0 12px 32px -8px color-mix(in srgb, #000 40%, transparent); transform: translateX(-50%); animation: ofk-home-bar-in 200ms var(--ofk-home-ease) both; }
+.ofk-home-selectionbar-count { margin-inline-end: 8px; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ofk-system .ofk-home-selectionbar .ofk-button { flex: none; white-space: nowrap; height: 32px; min-height: 32px; gap: 6px; padding: 0 10px; border-color: transparent; background: none; color: inherit; font-size: 13px; }
+.ofk-system .ofk-home-selectionbar .ofk-button:hover:not([aria-disabled='true']) { background: color-mix(in srgb, var(--ofk-onInverse) 14%, transparent); }
+.ofk-home-selectionbar .ofk-button svg { width: 16px; height: 16px; }
+.ofk-home-selectionbar .ofk-icon-button { width: 32px; min-width: 32px; padding: 0; }
+@keyframes ofk-home-bar-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+.ofk-system .ofk-home-head-danger.ofk-button { color: var(--ofk-danger); }
+.ofk-system .ofk-home-selectionbar .ofk-home-head-danger.ofk-button { color: inherit; }
+
+/* Toasts above the selection bar, fixed to the window rather than the page. */
+.ofk-home-page .ofk-toasts { position: fixed; left: calc(50% + 120px); bottom: 24px; }
+.ofk-home-page[data-selecting] .ofk-toasts { bottom: 80px; }
+
+/* Drop anywhere to import. */
+.ofk-home-drop { position: fixed; inset: 12px; z-index: 40; display: grid; place-content: center; justify-items: center; gap: 8px; border: 2px dashed var(--ofk-controlBorder); border-radius: 16px; background: color-mix(in srgb, var(--ofk-canvas) 88%, transparent); backdrop-filter: blur(4px); color: var(--ofk-secondary); font-size: 13px; pointer-events: none; animation: ofk-home-fade-in 150ms ease both; }
+.ofk-home-drop svg { width: 28px; height: 28px; margin-bottom: 4px; color: var(--ofk-text); }
+.ofk-home-drop strong { color: var(--ofk-text); font-size: 15px; font-weight: 600; }
+@keyframes ofk-home-fade-in { from { opacity: 0; } }
+
+/* Right-click menu anchor: a point in the body. */
+.ofk-home-menu-point { position: fixed; width: 0; height: 0; pointer-events: none; }
+
+.ofk-home-import svg { width: 16px; height: 16px; }
+.ofk-home-keys { display: grid; gap: 2px; min-width: min(380px, 80vw); margin: 0; }
+.ofk-home-keys > div { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 6px 0; border-bottom: 1px solid color-mix(in srgb, var(--ofk-border) 60%, transparent); }
+.ofk-home-keys > div:last-child { border-bottom: 0; }
+.ofk-home-keys dt { color: var(--ofk-secondary); font-size: 13px; }
+.ofk-home-keys dd { margin: 0; }
+
+/* First paint only: content rises in a quick stagger. Inserted nodes animate; re-renders do not. */
+.ofk-home-starts > li, .ofk-home-chips > li, .ofk-home-grid > li { animation: ofk-home-rise 240ms var(--ofk-home-ease) both; }
+.ofk-home-starts > li:nth-child(2), .ofk-home-chips > li:nth-child(2), .ofk-home-grid > li:nth-child(2) { animation-delay: 25ms; }
+.ofk-home-starts > li:nth-child(3), .ofk-home-chips > li:nth-child(3), .ofk-home-grid > li:nth-child(3) { animation-delay: 50ms; }
+.ofk-home-starts > li:nth-child(4), .ofk-home-chips > li:nth-child(4), .ofk-home-grid > li:nth-child(4) { animation-delay: 75ms; }
+.ofk-home-grid > li:nth-child(n + 5) { animation-delay: 100ms; }
+@keyframes ofk-home-rise { from { opacity: 0; transform: translateY(4px); } }
+
+@media (max-width: 1100px) {
+  .ofk-home-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Narrow: the sidebar folds into a top bar; views become a row of tabs. */
+@media (max-width: 860px) {
+  .ofk-home-page { --ofk-home-gutter: 16px; grid-template-columns: minmax(0, 1fr); }
+  .ofk-home-sidebar { position: static; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; height: auto; overflow: visible; padding: 8px 16px 0; border-inline-end: 0; border-bottom: 1px solid color-mix(in srgb, var(--ofk-border) 75%, transparent); }
+  .ofk-home-sidebar-top { height: auto; margin: 0; }
+  .ofk-home-brand span { display: none; }
+  .ofk-home-search { margin: 0; }
+  .ofk-home-nav { grid-column: 1 / -1; display: flex; gap: 16px; overflow-x: auto; scrollbar-width: none; }
+  .ofk-home-nav-item { width: auto; flex: none; height: 40px; padding: 0 2px; border-radius: 0; box-shadow: inset 0 -2px transparent; }
+  .ofk-home-nav-item:hover { background: none; }
+  .ofk-home-nav-item[aria-current='page'] { background: none; box-shadow: inset 0 -2px var(--ofk-text); }
+  .ofk-home-sidebar-section, .ofk-home-sidebar-foot { display: none; }
+  .ofk-home-starts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ofk-home-selectionbar, .ofk-home-page .ofk-toasts { left: 50%; }
+  .ofk-home-import span { display: none; }
+}
+@media (max-width: 600px) {
+  .ofk-home-head-tools .ofk-home-sort { display: none; }
+  .ofk-home-starts { gap: 8px; }
+  .ofk-home-start-art { height: 72px; margin-bottom: 6px; }
+  .ofk-home-start-hero { width: 96px; height: 52px; }
+  .ofk-home-start-text { display: none; }
+  .ofk-home-chips { gap: 8px; }
+  .ofk-home-chip { height: 52px; gap: 8px; padding: 0 8px; }
+  .ofk-home-chip-hint { display: none; }
+  .ofk-home-grid:not([data-layout='list']) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
+  /* Templates scroll sideways in one row instead of five screens of cards. */
+  .ofk-home-templates { grid-auto-flow: column; grid-template-columns: none !important; grid-auto-columns: 72%; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; scrollbar-width: none; margin-inline: -16px; padding: 2px 16px 6px; }
+  .ofk-home-templates > li { scroll-snap-align: start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ofk-home-page *, .ofk-home-page *::before, .ofk-home-page *::after { animation: none !important; transition: none !important; }
+}

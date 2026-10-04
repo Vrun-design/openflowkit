@@ -146,6 +146,16 @@ describe('loading language', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     expect(retry).toHaveBeenCalledTimes(1);
   });
+
+  it('puts a hero in place of the icon and a quiet way out beside the recovery', () => {
+    const { container } = render(<ErrorState hero={<svg data-testid="hero" />} title="Damaged" onRetry={vi.fn()}
+      secondary={<button type="button">Back to home</button>} />);
+    expect(container.querySelector('.ofk-empty')).toHaveAttribute('data-hero');
+    expect(screen.getByTestId('hero').closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(container.querySelector('.ofk-empty-icon .ofk-icon')).toBeNull();
+    const actions = container.querySelector('.ofk-empty-actions');
+    expect([...actions!.querySelectorAll('button')].map((button) => button.textContent)).toEqual(['Try again', 'Back to home']);
+  });
 });
 
 describe('layered surfaces', () => {

@@ -4,13 +4,13 @@ import {
   IconCloudCheck,
   IconFolderOff,
   IconFolderOpen,
+  IconArrowLeft,
   IconMenu2,
   IconPencil,
   IconSettings,
   IconCloudOff,
   IconDownload,
   IconFileImport,
-  IconFiles,
   IconArchive,
   IconLoader2,
   IconLock,
@@ -140,12 +140,12 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
       const parts = [`Opened ${opened.length} ${opened.length === 1 ? 'diagram' : 'diagrams'} from the backup.`];
       if (existing) parts.push(`${existing} ${existing === 1 ? 'was' : 'were'} already here and kept as is.`);
       if (failures.length) parts.push(`${failures.length} could not be opened: ${failures.map((failure) => failure.name).join(', ')}.`);
-      navigate('/home', { state: { notice: parts.join(' ') } satisfies HomeNotice });
+      navigate('/home', { state: { notice: parts.join(' '), tone: failures.length ? 'warning' : 'success' } satisfies HomeNotice });
       return;
     }
     const opened = documentFromFileText(text, mintV2Id('doc'));
     if ('error' in opened) {
-      toast(opened.error, 'danger');
+      props.onToast({ id: `toast-${Date.now()}`, tone: 'danger', title: 'That file couldn’t be opened.', description: opened.error });
       return;
     }
     const saved = await createV2Repository(window.indexedDB).saveDocument(opened.document.id, opened.document, 0);
@@ -245,7 +245,8 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
       </FloatingRegion>
 
       <Menu open={panel === 'menu'} anchorRef={settingsRef} onClose={() => closePanel('menu')} label="Canvas menu" placement="bottom-start">
-        <MenuItem icon={<Icon icon={IconFiles} />} onSelect={() => navigate('/home')}>All diagrams</MenuItem>
+        <MenuItem icon={<Icon icon={IconArrowLeft} />} onSelect={() => navigate('/home')}>Back to home</MenuItem>
+        <MenuSeparator />
         <MenuItem icon={<Icon icon={IconPencil} />} disabled={props.readOnly} onSelect={startRename}>Rename diagram</MenuItem>
         <MenuItem icon={<Icon icon={IconSettings} />} onSelect={() => openPanel('settings')}>Settings</MenuItem>
         <MenuItem icon={<Icon icon={IconFileImport} />} onSelect={() => fileRef.current?.click()}>Open file…</MenuItem>

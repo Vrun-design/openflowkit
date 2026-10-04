@@ -336,51 +336,64 @@ export function Tabs<T extends string>({ label, value, onChange, tabs }: TabsPro
 }
 export function EmptyState({
   icon,
+  hero,
   title,
   description,
   action,
+  secondary,
 }: {
   icon?: ReactNode;
+  /** Decorative inline-SVG illustration; replaces the icon. */
+  hero?: ReactNode;
   title: string;
   description?: string;
   action?: ReactNode;
+  /** A quiet second way out, beside the primary action. */
+  secondary?: ReactNode;
 }) {
   return (
-    <div className="ofk-empty">
-      {icon && (
+    <div className="ofk-empty" data-hero={hero ? '' : undefined}>
+      {(hero ?? icon) && (
         <span className="ofk-empty-icon" aria-hidden="true">
-          {icon}
+          {hero ?? icon}
         </span>
       )}
       <p className="ofk-empty-title">{title}</p>
       {description && <p className="ofk-caption">{description}</p>}
-      {action}
+      {(action || secondary) && <div className="ofk-empty-actions">{action}{secondary}</div>}
     </div>
   );
 }
 /** Failed work with a way back. Announced assertively; always names what stayed safe. */
 export function ErrorState({
+  hero,
   title,
   description,
   action,
+  secondary,
   onRetry,
   retryLabel = 'Try again',
 }: {
+  /** Decorative inline-SVG illustration; replaces the warning icon. */
+  hero?: ReactNode;
   title: string;
   description?: string;
   /** Custom recovery (open backup, pick another file). Defaults to a retry button. */
   action?: ReactNode;
+  /** A quiet second way out (back to the list), beside the primary action. */
+  secondary?: ReactNode;
   onRetry?: () => void;
   retryLabel?: string;
 }) {
+  const primary = action ?? (onRetry && <Button variant="primary" onClick={onRetry}>{retryLabel}</Button>);
   return (
-    <div className="ofk-empty" data-tone="danger" role="alert">
+    <div className="ofk-empty" data-tone="danger" data-hero={hero ? '' : undefined} role="alert">
       <span className="ofk-empty-icon" aria-hidden="true">
-        <Icon icon={IconAlertTriangle} />
+        {hero ?? <Icon icon={IconAlertTriangle} />}
       </span>
       <p className="ofk-empty-title">{title}</p>
       {description && <p className="ofk-caption">{description}</p>}
-      {action ?? (onRetry && <Button onClick={onRetry}>{retryLabel}</Button>)}
+      {(primary || secondary) && <div className="ofk-empty-actions">{primary}{secondary}</div>}
     </div>
   );
 }

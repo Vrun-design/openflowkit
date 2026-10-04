@@ -19,6 +19,8 @@ function capturedV1Pages(): V1Page[] {
   ];
 }
 
+const OPENS = 'OpenFlowKit opens the .json files it exports, from this version or the previous one.';
+
 describe('documentFromFileText', () => {
   it('opens every captured v1 page with every node and connector, each node sized', () => {
     const pages = capturedV1Pages();
@@ -56,8 +58,9 @@ describe('documentFromFileText', () => {
   });
 
   it('explains what it cannot open', () => {
-    expect(documentFromFileText('{not json', 'x')).toEqual({ error: 'Not a JSON file.' });
-    expect(documentFromFileText('[1,2]', 'x')).toEqual({ error: 'Not an OpenFlowKit document.' });
+    // Each reason says what the file is not and what does open.
+    expect(documentFromFileText('{not json', 'x')).toEqual({ error: `It isn’t valid JSON. ${OPENS}` });
+    expect(documentFromFileText('[1,2]', 'x')).toEqual({ error: `It isn’t an OpenFlowKit diagram. ${OPENS}` });
     expect(documentFromFileText(JSON.stringify({ format: 'openflowkit.scene', schemaVersion: 99, pages: [] }), 'x'))
       .toMatchObject({ error: expect.stringContaining('newer') });
   });

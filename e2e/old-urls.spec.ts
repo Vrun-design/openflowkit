@@ -53,7 +53,7 @@ test('#/docs links still reach the docs site @gate', async ({ page }) => {
   await expect(page).toHaveURL('https://docs.openflowkit.com/');
 });
 
-test('other v1 screens land on All diagrams @gate', async ({ page }) => {
+test('other v1 screens land on home @gate', async ({ page }) => {
   for (const route of ['/templates', '/settings', '/canvas', '/mcp']) {
     await page.goto(`/#${route}`);
     await expect(page).toHaveURL(/#\/home$/);

@@ -319,6 +319,7 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
           step={0.5}
           unit="s"
           stepper="none"
+          disabled={empty}
           onChange={(value) => setTargetMs(value * 1000)}
         />
         <Segmented<'light' | 'dark'> label="Theme" value={theme} onChange={setTheme}

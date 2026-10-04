@@ -67,3 +67,16 @@ export function lastDocumentId(): string | null {
 export function forgetLastDocument(id: string): void {
   try { if (localStorage.getItem(LAST_DOCUMENT_KEY) === id) localStorage.removeItem(LAST_DOCUMENT_KEY); } catch { /* private mode */ }
 }
+
+/** What a new diagram opened from home starts with; router state, read once by the editor. */
+export type V2StartIntent =
+  | { readonly start: 'assistant' | 'code' | 'agent' }
+  | { readonly template: string }
+  /** A file's text from home's Import: OpenFlow DSL, or Mermaid / Structurizr / D2 to convert first. */
+  | { readonly source: string };
+
+export function isV2StartIntent(value: unknown): value is V2StartIntent {
+  if (typeof value !== 'object' || value === null) return false;
+  const { start, template, source } = value as { start?: unknown; template?: unknown; source?: unknown };
+  return start === 'assistant' || start === 'code' || start === 'agent' || typeof template === 'string' || typeof source === 'string';
+}

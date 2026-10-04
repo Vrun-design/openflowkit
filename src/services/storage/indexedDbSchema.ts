@@ -1,5 +1,5 @@
 export const FLOW_PERSISTENCE_DB_NAME = 'openflowkit-persistence';
-export const FLOW_PERSISTENCE_DB_VERSION = 4;
+export const FLOW_PERSISTENCE_DB_VERSION = 5;
 export const FLOW_DOCUMENT_STORE_NAME = 'flowDocuments';
 export const FLOW_METADATA_STORE_NAME = 'flowMetadata';
 export const SCHEMA_META_STORE_NAME = 'schemaMeta';
@@ -13,6 +13,8 @@ export const PREFERENCES_STORE_NAME = 'preferences';
 export const ASSETS_STORE_NAME = 'assets';
 export const V2_DOCUMENTS_STORE_NAME = 'v2Documents';
 export const V2_RECOVERY_STORE_NAME = 'v2Recovery';
+/** v5: home-page previews, one per document, kept apart so listing and saving stay cheap. */
+export const V2_THUMBNAILS_STORE_NAME = 'v2Thumbnails';
 export const CHAT_MESSAGES_BY_DOCUMENT_ID_INDEX = 'byDocumentId';
 export const CHAT_MESSAGES_BY_DOCUMENT_ID_AND_CREATED_AT_INDEX =
   'byDocumentIdAndCreatedAt';
@@ -56,6 +58,7 @@ const OBJECT_STORE_DEFINITIONS: ObjectStoreDefinition[] = [
   { name: ASSETS_STORE_NAME, keyPath: 'id' },
   { name: V2_DOCUMENTS_STORE_NAME, keyPath: 'id' },
   { name: V2_RECOVERY_STORE_NAME, keyPath: 'id' },
+  { name: V2_THUMBNAILS_STORE_NAME, keyPath: 'id' },
 ];
 
 function ensureObjectStore(
@@ -107,6 +110,8 @@ export function openFlowPersistenceDatabase(indexedDbFactory: IDBFactory): Promi
     };
 
     request.onsuccess = () => {
+      // A newer tab upgrading the schema must not wait on this connection.
+      request.result.onversionchange = () => request.result.close();
       resolve(request.result);
     };
   });

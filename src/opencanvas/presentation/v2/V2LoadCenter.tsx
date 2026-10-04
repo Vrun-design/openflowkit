@@ -1,31 +1,39 @@
+import { useNavigate } from 'react-router-dom';
 import type { DocumentValidationIssue } from '../../domain/document/validation';
 import { Button, ErrorState, Spinner } from '../design-system';
+import { V2StateHero } from './V2StateHero';
 
 interface V2LoadCenterProps {
   readonly phase: 'loading' | 'ready' | 'corrupt' | 'failed';
   readonly documentId: string | undefined;
   readonly corruptIssues: readonly DocumentValidationIssue[];
-  readonly loadError: string | null;
+  readonly loadError: { readonly blocked: boolean; readonly message: string } | null;
   readonly onRetry: () => void;
   readonly onDownloadDiagnostic: () => void;
 }
 
 // Full-viewport load states: spinner, failed with retry, corrupt with a
-// diagnostic download. Recovery and read-only notices live in the doc bar.
+// diagnostic download. Both failures keep a way back to the list.
 export function V2LoadCenter(props: V2LoadCenterProps): React.JSX.Element {
+  const navigate = useNavigate();
+  const home = <Button variant="quiet" onClick={() => navigate('/home')}>Back to home</Button>;
   return (
     <div className="ofk-v2-center" role="status">
       {props.phase === 'failed' ? (
         <ErrorState
-          title="Document could not be loaded"
-          description={props.loadError ?? undefined}
+          hero={<V2StateHero kind="torn-page" />}
+          title={props.loadError?.blocked ? 'Diagrams can’t be opened here.' : 'This diagram didn’t open.'}
+          description={props.loadError?.message}
           onRetry={props.onRetry}
+          secondary={home}
         />
       ) : props.phase === 'corrupt' ? (
         <ErrorState
-          title="This document is damaged"
-          description="The last good content could not be read. Your work may still be recoverable."
-          action={<Button onClick={props.onDownloadDiagnostic}>Download diagnostic report</Button>}
+          hero={<V2StateHero kind="torn-page" />}
+          title="This diagram is damaged."
+          description="We couldn’t read it or its last good copy. A diagnostic report can help recover it."
+          action={<Button variant="primary" onClick={props.onDownloadDiagnostic}>Download diagnostic report</Button>}
+          secondary={home}
         />
       ) : (
         <Spinner label="Loading diagram" />

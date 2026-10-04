@@ -12,7 +12,7 @@ Internal React + TypeScript foundation for the editor. Product plan:
 | Platform adapter    | `SystemRoot`, `rendererColor`                        | Scoped CSS variables; numeric Pixi colors from same source      |
 | Primitives          | `Button`, `IconButton`, `Field`, `NumberField`, `Dropdown`, `Slider`, `Segmented`, `Checkbox`, `Switch`, `ColorSwatch`, `Tabs`, `Toolbar`, `Status` | Native inputs underneath (keyboard, AT, forms), our tokens and icons on top; `Dropdown` is the listbox |
 | Overlays            | `Popover`, `Menu`, `Dialog`, `Panel`, `CommandPalette`, `Tooltip`, `ToastRegion`, `ContextBar` | Anchored layers with collision flip, focus entry/return, Escape; panels clear the top toolbar lane, the context bar floats above panels |
-| Loading             | `Skeleton`, `SkeletonLines`, `Spinner`, `Progress`, `Thinking`, `EmptyState`, `ErrorState` | Shimmer placeholders, busy marks, determinate/indeterminate bars, agent cognition, empty/failed states with recovery |
+| Loading             | `Skeleton`, `SkeletonLines`, `Spinner`, `Progress`, `Thinking`, `EmptyState`, `ErrorState` | Shimmer placeholders, busy marks, determinate/indeterminate bars, agent cognition, empty/failed states with recovery; `hero` (decorative inline SVG) replaces the icon, `secondary` adds a quiet second way out |
 | Workflow pattern    | `ProposalBar`, `ProposalReview`, `Composer`, `AgentPanel`, `AgentPresence` | Scope, preview, stale, pending, failed and applied presentation |
 | Canvas feedback     | `canvasFeedback`, `CanvasFeedbackOverlay`            | Selection/binding/change cues in CSS screen pixels              |
 | Motion policy       | `motionRecipe`, `spring`                             | Immediate manipulation; bounded, interruptible feedback         |

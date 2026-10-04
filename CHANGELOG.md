@@ -10,6 +10,21 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **A real home page.** A sidebar with Recents, Starred, Templates and Archive, search (`/`), your starred diagrams,
+  a dated What's new page, and links to request a feature or star the project (with its live star count). Diagrams show as a grid
+  or a list with a live thumbnail, sorted by last edited or name. Each card has star, rename, duplicate, open in a
+  new tab and archive, from its menu or a right-click. Select several with ⌘/Ctrl- or Shift-click, the
+  checkbox, Shift+arrows or ⌘A, then star or archive them from the bar. Arrow keys walk the cards (Space, S, F2,
+  Delete). Archiving takes a diagram off the list with an Undo and keeps it until you
+  delete it forever. ⌘K finds any diagram, template or
+  action. Import (or drop anywhere) OpenFlowKit `.json` files, or a Mermaid, D2, Structurizr or OpenFlow DSL file,
+  which opens drawn. A first visit gets four ways in and the templates as pictures. `N` starts a new diagram.
+  In the editor the logo is now the menu, and its first item is Back to home.
+- **Tips at the moment they help.** Draw three shapes and Diagram as code offers to do it from text; paste Mermaid on
+  the canvas and it offers to draw it; select two shapes for the connect shortcut; a first export points at
+  animation; a growing diagram without an AI key points at the assistant. One a session, each once, never over an
+  open panel, Escape closes it.
+
 - **Your v1 diagrams move over by themselves.** On first boot, every diagram from the
   previous editor (IndexedDB, the localStorage fallback and the pre-March tabs store) is
   copied into the new document store, read-only; the old rows are never touched. A home
@@ -37,6 +52,12 @@ This project follows [Semantic Versioning](https://semver.org/).
   kept for the session). A wrong key, a closed port or a refused request quietly keeps the built-in suggestions.
 
 ### Changed
+
+- **Failures say what happened and what to do.** No WebGL: the canvas says how to turn it on, hides the drawing
+  tools and offers Diagram as code and All diagrams (the old link went nowhere). Blocked or full storage, a damaged
+  diagram, an unreadable old link, a broken file, and an agent bridge with nothing listening (it names the port) each
+  have their own copy, an illustration and a way back. Home notices carry a tone; a backup opening is no longer an alert.
+- The canvas welcome's templates are one tidy row of chips, and on a phone the welcome starts below the rail.
 
 - **Edges can end on a group.** `Client -> Payments` next to `group Payments { … }` connects to the
   group's frame instead of drawing a second box called Payments. D2 containers and Mermaid

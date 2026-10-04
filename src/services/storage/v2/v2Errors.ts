@@ -30,3 +30,14 @@ export function isQuotaFailure(error: unknown): boolean {
     (error as { readonly name?: unknown }).name === 'QuotaExceededError'
   );
 }
+
+/** What a person reads when storage fails: the cause in their terms and what to do next. */
+export function describeStorageFailure(error: unknown): { readonly blocked: boolean; readonly message: string } {
+  if (error instanceof V2StorageUnavailableError) {
+    return { blocked: true, message: 'This browser is blocking site storage — private windows and some privacy settings do this. Allow storage for this site, then try again.' };
+  }
+  if (error instanceof V2StorageQuotaError || isQuotaFailure(error)) {
+    return { blocked: false, message: 'This browser’s storage for this site is full. Delete diagrams you no longer need, then try again.' };
+  }
+  return { blocked: false, message: 'This browser’s storage didn’t answer. Try again; if it keeps happening, reload the page.' };
+}

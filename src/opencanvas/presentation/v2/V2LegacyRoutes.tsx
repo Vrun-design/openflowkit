@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { IconCopy } from '@tabler/icons-react';
-import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { legacyDocumentId } from '../../domain/document/legacyWorkspace';
-import { Button, Icon, SystemRoot } from '../design-system';
+import { Button, ErrorState, Icon, SystemRoot } from '../design-system';
+import { V2StateHero } from './V2StateHero';
 import { decodeLegacyViewerParam } from '../../../services/storage/v2/legacyViewerLink';
 import { runV1Import } from '../../../services/storage/v2/v1Import';
 import { createV2Repository } from '../../../services/storage/v2/v2Repository';
@@ -11,7 +12,11 @@ import { useV2Preferences } from './useV2Preferences';
 import './v2EditorPage.css';
 
 /** Home reads this from router state and shows it once. */
-export interface HomeNotice { readonly notice: string }
+export interface HomeNotice {
+  readonly notice: string;
+  readonly detail?: string;
+  readonly tone: 'info' | 'success' | 'warning' | 'danger';
+}
 
 /**
  * v1 `#/flow/:id` → `#/d/v1-:id`. The import may still be running on the first visit,
@@ -33,7 +38,11 @@ export function LegacyFlowRedirect(): React.JSX.Element | null {
       const found = (await locate()) ?? (await runV1Import().then(locate, () => null));
       if (!live) return;
       if (found) navigate(`/d/${found}`, { replace: true });
-      else navigate('/home', { replace: true, state: { notice: "That diagram isn't in this browser." } satisfies HomeNotice });
+      else navigate('/home', { replace: true, state: {
+        notice: "That diagram isn't in this browser.",
+        detail: 'Diagrams are saved per browser. Open it where you made it and export it, or start a new one.',
+        tone: 'info',
+      } satisfies HomeNotice });
     })();
     return () => { live = false; };
   }, [flowId, navigate]);
@@ -52,6 +61,7 @@ export function LegacyViewPage(): React.JSX.Element {
 function LegacyViewText({ flow }: { readonly flow: string }): React.JSX.Element {
   const { preferences } = useV2Preferences();
   const appearance = useV2Appearance(preferences.theme);
+  const navigate = useNavigate();
   const [text, setText] = useState<string | null>(null);
   const [copied, setCopied] = useState<'yes' | 'manual' | null>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -68,11 +78,17 @@ function LegacyViewText({ flow }: { readonly flow: string }): React.JSX.Element 
     <SystemRoot appearance={appearance} density={preferences.density}>
       <main className="ofk-home" data-testid="v2-legacy-view">
         <header className="ofk-home-header"><h1>Made with the previous editor</h1></header>
-        <p className="ofk-home-notice">
-          This link holds a diagram written in the previous OpenFlowKit’s text format, which this version can’t draw.
-          Copy the text to keep it.
-        </p>
-        {text === '' ? <p role="alert">This link could not be read in this browser.</p> : null}
+        {text === '' ? null : (
+          <p className="ofk-home-notice">
+            This link holds a diagram written in the previous OpenFlowKit’s text format, which this version can’t draw.
+            Copy the text to keep it.
+          </p>
+        )}
+        {text === '' ? (
+          <ErrorState hero={<V2StateHero kind="lost-link" />} title="This link couldn’t be read."
+            description="It may have been cut short when it was copied. Ask for the link again."
+            action={<Button variant="primary" onClick={() => navigate('/home')}>Back to home</Button>} />
+        ) : null}
         {text ? (
           <>
             <textarea ref={textRef} className="ofk-legacy-text" readOnly value={text} aria-label="Diagram text" rows={14} />
@@ -82,7 +98,7 @@ function LegacyViewText({ flow }: { readonly flow: string }): React.JSX.Element 
             {copied === 'manual' ? <p role="status">Selected — press ⌘C or Ctrl+C to copy.</p> : null}
           </>
         ) : null}
-        <p><Link to="/home">All diagrams</Link></p>
+        {text === '' ? null : <Button variant="quiet" onClick={() => navigate('/home')}>Back to home</Button>}
       </main>
     </SystemRoot>
   );

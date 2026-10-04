@@ -5,7 +5,7 @@
 // so a half-typed key never persists. Each provider keeps its own key, so a
 // key is only ever sent to the provider it was entered for.
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
-import { IconChevronDown, IconExternalLink } from '@tabler/icons-react';
+import { IconAlertTriangle, IconChevronDown, IconCircleCheck, IconExternalLink } from '@tabler/icons-react';
 import { AiProviderError, createProvider, listModels } from '../../../services/ai/provider';
 import {
   AI_PROVIDERS, RISK_DETAILS, RISK_LABELS, isConfigured, providerById, type AiProviderDefinition,
@@ -183,6 +183,7 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
           <Button variant="secondary" busy={test.state === 'testing'} disabled={!ready}
             onClick={() => { void testKey(); }}>Test key</Button>
           <p role="status" aria-live="polite" data-state={test.state} {...(test.cause ? { 'data-cause': test.cause } : {})}>
+            {test.state === 'ok' ? <Icon icon={IconCircleCheck} /> : test.state === 'fail' ? <Icon icon={IconAlertTriangle} /> : null}
             {test.message}
           </p>
         </div>

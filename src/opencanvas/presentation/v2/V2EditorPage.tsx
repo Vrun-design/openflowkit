@@ -1,6 +1,6 @@
 import { useV2Preferences } from './useV2Preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   clearSelection,
   replaceSelection,
@@ -9,6 +9,9 @@ import {
 import { useDocumentSession } from '../../application/session/useDocumentSession';
 import type { PixiRendererHost, PixiRendererStatus } from '../../infrastructure/pixi/PixiRendererHost';
 import { createV2Repository } from '../../../services/storage/v2/v2Repository';
+import { scheduleV2Thumbnail } from './v2Thumbnail';
+import { V2FeatureTip } from './V2FeatureTip';
+import { TIP_QUIET_MS, V2_TIPS, markTipSeen, mayShowTip, recordTipShown, type V2TipId } from './v2FeatureTips';
 import { Panel, SystemRoot, ToastRegion, type ToastItem } from '../design-system';
 import { V2ContextMenu, type ContextMenuTarget } from './V2ContextMenu';
 import { V2CanvasHost } from './V2CanvasHost';
@@ -63,7 +66,8 @@ import { worldToScreen } from '../../domain/camera/camera';
 import { createConnectorEditCommand, setPrimaryConnectorLabel } from '../../domain/connectors/editing';
 import type { Point2d } from '../../domain/geometry/types';
 import { isDiagramPalette, type DiagramPaletteName } from '../../domain/nodes/nodePalette';
-import { firstV2Page, mintV2Id, rememberLastDocument } from './v2Document';
+import { firstV2Page, isV2StartIntent, mintV2Id, rememberLastDocument } from './v2Document';
+import { findStarterTemplate } from '../../../agent/starterTemplates';
 import { downloadTextFile, type V2ExportScope } from './v2Export';
 import type { ScenePage } from '../../domain/document/types';
 import { dslFrameRaw } from '../../../dsl/sceneMeta';
@@ -455,6 +459,34 @@ export function V2EditorPage(): React.JSX.Element {
       if (codeAbortRef.current === controller) { codeAbortRef.current = null; setCodeGenerating(false); }
     }
   }, [load.readOnly, codeGenerating, codeFrameId, codeDraft, session, applySelection, pushToast, preferences.diagramPalette, preferences.autoIcons]);
+  // One template path for the canvas welcome and for home's template cards.
+  const startFromTemplate = ({ dsl }: { readonly dsl: string }) => {
+    setCodeFrameId(null);
+    setCodeDraft(dsl);
+    openWorkspace('code');
+    void generateCode(dsl);
+  };
+  // Home hands a new diagram what to start with; run it once the empty document is open.
+  const location = useLocation();
+  const startIntent = isV2StartIntent(location.state) ? location.state : null;
+  useEffect(() => {
+    if (!startIntent || load.phase !== 'ready' || !page) return;
+    navigate(location.pathname, { replace: true, state: null });
+    if ('start' in startIntent) openWorkspace(startIntent.start);
+    else if ('source' in startIntent) {
+      // Foreign text converts first; if that fails it stays in the panel with the convert offer and its error.
+      const converter = looksLikeMermaid(startIntent.source) ? mermaidToDsl : looksLikeStructurizr(startIntent.source) ? structurizrToDsl
+        : looksLikeD2(startIntent.source) ? d2ToDsl : null;
+      const converted = converter ? converter(startIntent.source) : null;
+      if (!converted) startFromTemplate({ dsl: startIntent.source });
+      else if ('error' in converted) { setCodeDraft(startIntent.source); openWorkspace('code'); }
+      else startFromTemplate({ dsl: converted.dsl });
+    } else {
+      const template = findStarterTemplate(startIntent.template);
+      if (template) startFromTemplate(template);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per intent
+  }, [startIntent, load.phase, page === null]);
 
   const { status: saveStatus, retry: retrySave } = useV2Autosave({
     repository,
@@ -463,6 +495,7 @@ export function V2EditorPage(): React.JSX.Element {
     revision: session.revision,
     baseRevision: load.baseRevision,
     onConflict: () => setAnnouncement('Another tab saved first. Reload to continue.'),
+    onSaved: (saved) => { if (id) scheduleV2Thumbnail(repository, id, saved); },
   });
 
   const compileDraft = useCallback(
@@ -783,6 +816,10 @@ export function V2EditorPage(): React.JSX.Element {
     if (IMAGE_URL_PATTERN.test(text)) {
       event.preventDefault();
       media.insertImageUrl(text);
+    } else if (looksLikeMermaid(text)) {
+      // Mermaid on the canvas has nowhere to go; point at the panel that draws it.
+      pastedMermaidRef.current = text;
+      offerTip('mermaid');
     }
   };
   const [moreOpen, setMoreOpen] = useState(false);
@@ -957,6 +994,47 @@ export function V2EditorPage(): React.JSX.Element {
     onSpacePan: setSpacePan,
   });
 
+
+  // Feature tips: one hint at the moment it pays off, at most one a session, never twice.
+  const [tip, setTip] = useState<V2TipId | null>(null);
+  const pastedMermaidRef = useRef('');
+  const offerTip = (id: V2TipId) => {
+    // Never over an open panel, menu or dialog (passive tooltips do not count).
+    if (tip || !mayShowTip(id) || document.querySelector('.ofk-panel, .ofk-popover:not([data-passive]), dialog[open]')) return;
+    recordTipShown(id);
+    setTip(id);
+    setAnnouncement(`Tip: ${V2_TIPS[id].title}. ${V2_TIPS[id].text}`);
+  };
+  // Typing a label is not the moment: the tip waits, so the Escape that ends editing cannot eat it.
+  const tipBlocked = workspaceMode !== null || motionOpen || exportOpen || contextMenu !== null || treeOpen || shortcutsOpen
+    || editing !== null || connectorEditing !== null;
+  useEffect(() => {
+    if (workspaceMode === 'code') { markTipSeen('code'); markTipSeen('mermaid'); }
+    if (workspaceMode === 'assistant') markTipSeen('assistant');
+    if (motionOpen) markTipSeen('motion');
+    if (page && page.connectors.length > 0) markTipSeen('connect');
+    if (tipBlocked) setTip(null);
+  }, [workspaceMode, motionOpen, page, tipBlocked]);
+  // Offered after a quiet moment: drawing a shape opens its label editor a render later, and a tip
+  // must not appear just to be swept away by it. Any change in between restarts the wait.
+  useEffect(() => {
+    if (!page || load.readOnly || rendererStatus !== 'ready' || tipBlocked) return;
+    const generated = page.nodes.some((node) => node.kind === 'frame');
+    const id: V2TipId | null = page.nodes.length >= 3 && !generated ? 'code'
+      : page.nodes.length >= 5 && !aiSettings.configured ? 'assistant'
+        : selection.nodeIds.length === 2 && page.connectors.length === 0 ? 'connect' : null;
+    if (!id || !mayShowTip(id)) return;
+    const timer = window.setTimeout(() => offerTip(id), TIP_QUIET_MS);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- offerTip reads the latest state; these are the triggers
+  }, [page, selection.nodeIds.length, rendererStatus, tipBlocked, aiSettings.configured]);
+  const runTip = (id: V2TipId) => {
+    setTip(null);
+    if (id === 'code') { setCodeFrameId(null); openWorkspace('code'); }
+    if (id === 'mermaid') { setCodeFrameId(null); setCodeDraft(pastedMermaidRef.current); openWorkspace('code'); }
+    if (id === 'assistant') openWorkspace('assistant');
+    if (id === 'motion') openMotion();
+  };
   return (
     <SystemRoot appearance={appearance} density={preferences.density}>
       <div className="ofk-v2" data-testid="v2-editor" data-tool={spacePan ? 'hand' : tool}
@@ -1005,7 +1083,7 @@ export function V2EditorPage(): React.JSX.Element {
               bridge={{ status: agentBridge.status, onOpen: () => openWorkspace('agent') }}
               saveStatus={saveStatus}
               canUndo={session.canUndo} canRedo={session.canRedo}
-              readOnly={load.readOnly}
+              readOnly={load.readOnly} canvasUnavailable={rendererStatus === 'unavailable'}
               tool={tool} zoomPercent={camera.zoom} treeOpen={treeOpen}
               onUndo={session.undo} onRedo={session.redo}
               onRetrySave={retrySave} onReload={load.reload} onToast={pushToast}
@@ -1049,6 +1127,7 @@ export function V2EditorPage(): React.JSX.Element {
               selectionRef={selectionRef} selectedConnectorIdsRef={selectedConnectorIdsRef} toolRef={toolRef} tool={tool} spacePanRef={spacePanRef}
               toolConfigRef={toolConfigRef} onOpenChartData={openChartData}
               onRemoveIcons={() => iconActions.removeIcons(selectionRef.current.nodeIds)}
+              onOpenCode={() => { setCodeFrameId(null); openWorkspace('code'); }}
               readOnlyRef={readOnlyRef} gestureApiRef={gestureApiRef}
               selection={selection} selectedConnectorId={selectedConnectorId} selectedConnectorIds={selectedConnectorIds}
               editing={editing}
@@ -1114,12 +1193,12 @@ export function V2EditorPage(): React.JSX.Element {
                 // Element export returns you to the canvas; the bar keeps its own focus.
                 if (exportAnchorRef.current === exportPointRef.current) sectionRef.current?.focus();
               }}
-              onToast={(title, tone) => pushToast({ id: `export-${Date.now()}`, tone, title })}
+              onToast={(title, tone) => { pushToast({ id: `export-${Date.now()}`, tone, title }); if (tone === 'success') offerTip('motion'); }}
               onOpenAnimation={openMotion} />
             <V2WorkspaceRail mode={workspaceMode}
               onChange={(mode) => { if (workspaceMode === mode) setWorkspaceMode(null); else openWorkspace(mode); }}
               onShortcuts={toggleShortcuts} agentConnected={agentBridge.status === 'connected'} />
-            {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !load.readOnly && rendererStatus === 'ready' ? <V2CanvasWelcome onOpen={openWorkspace} onTemplate={({ dsl }) => { setCodeFrameId(null); setCodeDraft(dsl); openWorkspace('code'); void generateCode(dsl); }} /> : null}
+            {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !load.readOnly && rendererStatus === 'ready' ? <V2CanvasWelcome onOpen={openWorkspace} onTemplate={startFromTemplate} /> : null}
             {workspaceMode === 'code' ? <V2CodePanel code={codeDraft} palette={preferences.diagramPalette}
               onPaletteChange={(diagramPalette) => updatePreferences({ diagramPalette })}
               onCodeChange={(value) => { setCodeDraft(value); setCompileDiagnostics([]); }}
@@ -1182,6 +1261,7 @@ export function V2EditorPage(): React.JSX.Element {
               />
             ) : null}
             {shortcutsOpen ? <V2Shortcuts onClose={() => setShortcutsOpen(false)} /> : null}
+            {tip ? <V2FeatureTip id={tip} onAction={() => runTip(tip)} onClose={() => setTip(null)} /> : null}
             {motionOpen ? (
               <Panel title="Animation export" side="start" className="ofk-motion-panel ofk-v2-layers-panel"
                 onClose={() => setMotionOpen(false)}>

@@ -14,6 +14,7 @@ import {
   SCHEMA_META_STORE_NAME,
   V2_DOCUMENTS_STORE_NAME,
   V2_RECOVERY_STORE_NAME,
+  V2_THUMBNAILS_STORE_NAME,
   WORKSPACE_META_STORE_NAME,
   ensureFlowPersistenceSchema,
 } from './indexedDbSchema';
@@ -147,6 +148,7 @@ describe('indexedDbSchema', () => {
       ASSETS_STORE_NAME,
       V2_DOCUMENTS_STORE_NAME,
       V2_RECOVERY_STORE_NAME,
+      V2_THUMBNAILS_STORE_NAME,
     ]);
 
     await ensureFlowPersistenceSchema(mock.factory);

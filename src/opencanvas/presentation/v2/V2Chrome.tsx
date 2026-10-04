@@ -19,6 +19,8 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
   readonly readOnly: boolean;
+  /** WebGL off: drawing and camera tools would act on nothing, so they are not shown. */
+  readonly canvasUnavailable: boolean;
   readonly tool: V2Tool;
   readonly zoomPercent: number;
   readonly treeOpen: boolean;
@@ -84,7 +86,7 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         onOpenExport={props.onOpenExport}
         onDismissExport={props.onDismissExport}
       />
-      {props.readOnly ? null : (
+      {props.readOnly || props.canvasUnavailable ? null : (
         <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange}
           toolConfig={props.toolConfig} onPickShape={props.onPickShape}
           onPickConnector={props.onPickConnector}
@@ -94,7 +96,7 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
           onPickChart={props.onPickChart}
           moreOpen={props.moreOpen} onMoreOpenChange={props.onMoreOpenChange} onPickMore={props.onPickMore} />
       )}
-      <V2CameraControls
+      {props.canvasUnavailable ? null : <V2CameraControls
         preferences={props.preferences} canvasDefaultColor={props.canvasDefaultColor}
         onPreferencesChange={props.onPreferencesChange}
         canUndo={props.canUndo} canRedo={props.canRedo}
@@ -106,7 +108,7 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         onZoomTo={props.onZoomTo}
         onFitView={props.onFitView}
         onToggleTree={props.onToggleTree}
-      />
+      />}
     </>
   );
 }
