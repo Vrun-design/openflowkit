@@ -52,3 +52,21 @@ test('a generated diagram fits the canvas the open panel leaves free @gate', asy
     return frameRect ? Math.round(frameRect.x + frameRect.width) : Infinity;
   }).toBeLessThanOrEqual(panelLeft);
 });
+
+test('a long edge label wraps instead of running over the nodes it joins @gate', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
+  const source = page.getByRole('textbox', { name: 'Diagram source' });
+  await source.fill('flowchart right\nA -> B : email the customer a receipt once the order has shipped');
+  await source.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+  await expect.poll(() => count(page)).toBeGreaterThan(2);
+  await expect.poll(async () => page.evaluate(() => (window as unknown as {
+    __V2__: { getConnectorDebugSnapshot(): { labels: number; widestLabel: number } };
+  }).__V2__.getConnectorDebugSnapshot())).toMatchObject({ labels: 1, widestLabel: expect.any(Number) });
+  const widest = await page.evaluate(() => (window as unknown as {
+    __V2__: { getConnectorDebugSnapshot(): { widestLabel: number } };
+  }).__V2__.getConnectorDebugSnapshot().widestLabel);
+  expect(widest).toBeGreaterThan(0);
+  expect(widest).toBeLessThanOrEqual(150);
+});

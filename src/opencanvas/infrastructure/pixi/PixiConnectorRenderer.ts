@@ -16,6 +16,8 @@ import { buildNodeWorldMatrices, nodeWorldCenter } from '../../domain/scene/worl
 
 const LEGACY_STROKE = 0x94a3b8;
 const LABEL_DETAIL_ZOOM = 0.65;
+/** A longer label wraps: one line would run over the nodes the edge joins. */
+const LABEL_WRAP_WIDTH = 140;
 
 function normalizedDirection(from: Point2d, to: Point2d): Point2d {
   const distance = distanceBetweenPoints(from, to);
@@ -182,7 +184,8 @@ export class PixiConnectorRenderer {
   private readonly paths = new Graphics();
   private readonly labelPlates = new Graphics();
   private readonly labels = new Container();
-  private debugSnapshot = { connectors: 0, labels: 0, markers: 0 };
+  private debugSnapshot = { connectors: 0, labels: 0, markers: 0, widestLabel: 0 };
+  private widestLabel = 0;
   private editingConnectorId: string | null = null;
 
   constructor() {
@@ -209,12 +212,13 @@ export class PixiConnectorRenderer {
     };
     if (!advanced) {
       this.drawLegacy(visiblePage);
-      this.debugSnapshot = { connectors: visiblePage.connectors.length, labels: 0, markers: 0 };
+      this.debugSnapshot = { connectors: visiblePage.connectors.length, labels: 0, markers: 0, widestLabel: 0 };
       return;
     }
     const connectors = projectPageConnectors(visiblePage);
     let labelCount = 0;
     let markerCount = 0;
+    this.widestLabel = 0;
     for (const connector of connectors) {
       const hasCurve = connector.commands.some((command) => command.kind === 'cubic');
       // Beziers sample their own curve; everything else gets arc-sampled
@@ -253,6 +257,7 @@ export class PixiConnectorRenderer {
       connectors: connectors.length,
       labels: labelCount,
       markers: markerCount,
+      widestLabel: Math.round(this.widestLabel),
     };
   }
 
@@ -260,6 +265,8 @@ export class PixiConnectorRenderer {
     readonly connectors: number;
     readonly labels: number;
     readonly markers: number;
+    /** Width in world px of the widest label drawn: long labels wrap at LABEL_WRAP_WIDTH. */
+    readonly widestLabel: number;
   } {
     return this.debugSnapshot;
   }
@@ -295,7 +302,8 @@ export class PixiConnectorRenderer {
 
   private drawLabel(label: { readonly text: string; readonly point: Point2d }, style: NodeStyle): void {
     const color = pixiPaintColor(style.textColor, 0x334155).color;
-    const text = new Text({ text: label.text, style: pixiTextStyle(style, color, null) });
+    const text = new Text({ text: label.text, style: { ...pixiTextStyle(style, color, LABEL_WRAP_WIDTH), align: 'center' } });
+    this.widestLabel = Math.max(this.widestLabel, text.width);
     text.anchor.set(0.5);
     text.position.set(label.point.x, label.point.y);
     const plate = pixiPaintColor(style.fill, 0xffffff);
