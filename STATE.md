@@ -21,17 +21,16 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - MCP 0.2.0 was never published; `npx @vrun-design/openflowkit-mcp` still serves 0.1.2 until it is.
 
 ## Found, not fixed (owner calls)
-- Horizontal flows: a long edge label can run over the next node (`A -> B : email the customer a receipt`). ELK edge
-  labels fix it but make left/right flows ~60% wider (labels then hide below 65% zoom); tried 2026-10-04, not shipped.
-  The experiment is discarded; ELK needs `text` on a label or it ignores it.
-- A pair of opposite edges (`A -> B`, `B --> A`) draws on one line; a self-loop (`A --> A`) draws as a box.
+- AI diagrams come out wide, so fit lands under 65% zoom, where labels hide by design. Edge-label room in ELK was tried
+  (2026-10-04) and made left/right flows ~60% wider; wrapping long labels at 140px is what shipped. ELK ignores a label with no `text`.
 - Fixed 2026-10-04: `flowchart right … -->` read as Mermaid; fit under the open panel; notes overlap/leave the frame;
-  402 shown as "unreadable"; send button 26×40; Endpoint double chevron; empty-turn "success"; `family x` header.
+  402 shown as "unreadable"; send button 26×40; Endpoint double chevron; empty-turn "success"; `family x` header;
+  opposite edges on one line; self-loop box; long labels over nodes; `service-worker` + `frame` flakes.
+
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.
 - Animation is page-scoped only; deployment relations (node → node) are not in the grammar.
-  Phase-7 `frame.test.ts` and `service-worker.spec.ts` flake under load, pass alone.
 ## Next — owner's order, 2026-10-03
 - Re-run 13.4 after the detector fix on a model with quota. Then 14.1 quality pass, D11 UI,
   14.4 analytics, 15 share links. Open calls: D7 paid; D8 labs (Claude: yes); D11 (V2 recommended).
