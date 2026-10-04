@@ -117,6 +117,29 @@ describe('compile layout', () => {
     expect(notes.every((note) => note.transform.translation.x > b.transform.translation.x + b.size.width)).toBe(true);
   });
 
+  it('draws opposite edges as two lanes on the facing sides', async () => {
+    const result = await compile('flowchart right\nA -> B\nB --> A\nC --> C\nD -> E\nE -> F\nD -> F');
+    const anchor = (connectorId: string, end: 'source' | 'target') => result.connectors.find((c) => c.id === connectorId)![end].anchor;
+    const forward = result.connectors[0]!;
+    const back = result.connectors[1]!;
+    expect(forward.source.anchor).toMatchObject({ side: 'right' });
+    expect(forward.target.anchor).toMatchObject({ side: 'left' });
+    expect(back.source.anchor).toMatchObject({ side: 'left' });
+    expect(back.target.anchor).toMatchObject({ side: 'right' });
+    // Lane 1 is the same height at both ends, lane 2 another one: two straight, separate lines.
+    expect(forward.source.anchor).toMatchObject({ ratio: (forward.target.anchor as { ratio: number }).ratio });
+    expect((forward.source.anchor as { ratio: number }).ratio).not.toBe((back.source.anchor as { ratio: number }).ratio);
+    // An edge with no twin keeps the router's choice.
+    expect(anchor(result.connectors[3]!.id, 'source')).toBeNull();
+  });
+
+  it('leaves room for a self-loop and its label inside the frame', async () => {
+    const result = await compile('flowchart right\nA --> A : again');
+    const a = result.nodes.find((node) => node.id === 'a')!;
+    // The loop bumps 48px out of the right side; its label sits on that bump.
+    expect(a.transform.translation.x + a.size.width + 48 + 'again'.length * 7).toBeLessThanOrEqual(result.frame.size.width);
+  });
+
   it('uses injected measurement and layout ports', async () => {
     const result = await compile('flowchart\nA -> B', {
       measureLabel: () => ({ width: 99, height: 44 }),

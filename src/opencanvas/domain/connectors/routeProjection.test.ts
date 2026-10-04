@@ -150,7 +150,7 @@ describe('connector route projection', () => {
     }
   });
 
-  it('routes a self-loop as a rounded rectangle out of the top-right', () => {
+  it('routes a self-loop as a bump out of the right side', () => {
     const page = connectorFixture();
     const connector = createTestConnector('loop', 'source', 'source', {
       route: { kind: 'orthogonal', ownership: 'automatic' },
@@ -252,11 +252,10 @@ describe('connector route projection', () => {
       route: { kind: 'orthogonal', ownership: 'automatic' },
     });
     const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
+    // Out of the right side and back into it: it never crosses the node it loops on.
     expect(projected.samples).toEqual([
-      { x: 100, y: 15 }, { x: 148, y: 15 }, { x: 148, y: -48 },
-      { x: -48, y: -48 }, { x: -48, y: 35 }, { x: 100, y: 35 },
+      { x: 100, y: 15 }, { x: 148, y: 15 }, { x: 148, y: 35 }, { x: 100, y: 35 },
     ]);
-    expect(Math.min(...projected.samples.map(({ y }) => y))).toBeLessThan(0);
   });
 
   it('projects free endpoints at their page-space points', () => {

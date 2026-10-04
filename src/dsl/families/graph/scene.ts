@@ -369,6 +369,7 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
   // ponytail: `rank:` and `group [direction]` round-trip but do not constrain ELK yet — wire them to layer options when a family needs them.
   const noteIds = new Set(noteDrafts.map(({ id }) => id));
   const noteRoom = noteSlots(noteDrafts, sceneNodes);
+  const loopRoom = loopReach(edges);
   const layoutNodes: LayoutNodeInput[] = [
     ...groupNodes.map((group) => {
       const draft = groupsById.get(group.id)!;
@@ -381,7 +382,7 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     }),
     // Notes are not laid out; their target reserves their room.
     ...sceneNodes.filter(({ id }) => !noteIds.has(id)).map((node) => ({
-      id: node.id, parentId: node.parentId, size: noteRoom.get(node.id)?.box ?? node.size,
+      id: node.id, parentId: node.parentId, size: withLoopRoom(noteRoom.get(node.id)?.box ?? node.size, loopRoom.get(node.id)),
     } satisfies LayoutNodeInput)),
   ];
   const laid = await context.layout({
@@ -433,10 +434,14 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     transform: { ...node.transform, translation: positionOf.get(node.id) ?? { x: 0, y: 0 } },
   }));
 
+  const boxes = new Map<string, Box>();
+  for (const group of positionedGroups) boxes.set(group.id, { parentId: group.parentId, at: group.transform.translation, size: group.size });
+  for (const node of positionedNodes) boxes.set(node.id, { parentId: node.parentId, at: node.transform.translation, size: node.size });
+
   return {
     // Containers first keeps the deterministic order the editor hashes.
     nodes: [...positionedGroups, ...positionedNodes],
-    connectors,
+    connectors: separateLanes(connectors, boxes),
     size: laid.root.width > 0 && laid.root.height > 0 ? laid.root : { width: 640, height: 420 },
     meta: {
       ...(alignLines.length ? { align: alignLines } : {}),
@@ -469,6 +474,55 @@ function noteSlots(
   return slots;
 }
 
+type Box = { parentId: string | null; at: Point2d; size: Size2d };
+
+/**
+ * Opposite edges (`A -> B`, `B --> A`) would draw on one line. Once the layout has placed the nodes, each
+ * gets its own lane on the two sides that face, at two heights. Edges with a side of their own are left alone.
+ */
+function separateLanes(connectors: readonly SceneConnector[], boxes: ReadonlyMap<string, Box>): SceneConnector[] {
+  const centre = (id: string): Point2d | null => {
+    let box = boxes.get(id);
+    if (!box) return null;
+    let x = box.size.width / 2;
+    let y = box.size.height / 2;
+    while (box) {
+      x += box.at.x;
+      y += box.at.y;
+      box = box.parentId ? boxes.get(box.parentId) : undefined;
+    }
+    return { x, y };
+  };
+  const free = (connector: SceneConnector) => connector.source.anchor === null && connector.target.anchor === null && connector.source.nodeId && connector.target.nodeId;
+  return connectors.map((connector, index) => {
+    if (!free(connector)) return connector;
+    const from = connector.source.nodeId!;
+    const to = connector.target.nodeId!;
+    if (from === to) return connector;
+    const twin = connectors.findIndex((other) => free(other) && other.source.nodeId === to && other.target.nodeId === from);
+    const [a, b] = [centre(from), centre(to)];
+    if (twin < 0 || !a || !b) return connector;
+    const horizontal = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
+    const out = horizontal ? (b.x >= a.x ? 'right' : 'left') : (b.y >= a.y ? 'bottom' : 'top');
+    const into = ({ right: 'left', left: 'right', bottom: 'top', top: 'bottom' } as const)[out];
+    // Both ends of a lane sit at the same ratio, so it runs straight; the earlier edge takes the first lane.
+    const ratio = index < twin ? 0.3 : 0.7;
+    return { ...connector, source: endpoint(from, out, ratio), target: endpoint(to, into, ratio) };
+  });
+}
+
+/** The bump a self-loop makes out of the right side (see `selfLoopPath`), plus the label on it. */
+function loopReach(edges: readonly { sourceId: string; targetId: string; label?: string }[]): Map<string, number> {
+  const reach = new Map<string, number>();
+  for (const edge of edges) {
+    if (edge.sourceId !== edge.targetId) continue;
+    reach.set(edge.sourceId, Math.max(reach.get(edge.sourceId) ?? 0, 48 + (edge.label ? Math.min(220, edge.label.length * 7 + 14) : 0)));
+  }
+  return reach;
+}
+
+const withLoopRoom = (size: Size2d, reach = 0): Size2d => (reach ? { ...size, width: size.width + reach } : size);
+
 /** `align row A, B` / `align column A, B`: one coordinate shared after layout. */
 function applyAlignDirectives(
   alignLines: readonly string[],
@@ -496,8 +550,8 @@ function isLossyShape(word: string, kind: string): boolean {
   return Boolean(spec) && spec!.kind === kind && dslShapeWord(spec!.kind, spec!.shape) !== word;
 }
 
-function endpoint(nodeId: string, side: TypedAttributes['from']): SceneConnector['source'] {
-  const anchor = side ? { kind: 'side' as const, side, ratio: 0.5 } : null;
+function endpoint(nodeId: string, side: TypedAttributes['from'], ratio = 0.5): SceneConnector['source'] {
+  const anchor = side ? { kind: 'side' as const, side, ratio } : null;
   return { nodeId, portId: null, anchor, point: null };
 }
 

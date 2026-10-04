@@ -329,6 +329,12 @@ function selfLoopPath(
   const start = anchorLocalPoint(node, sourceAnchor);
   const end = anchorLocalPoint(node, targetAnchor);
   const margin = 48;
+  // Both ends on one side: a bump out of that side and back, never across the node.
+  if (sourceAnchor.kind === 'side' && targetAnchor.kind === 'side' && sourceAnchor.side === targetAnchor.side) {
+    const out = { right: { x: 1, y: 0 }, left: { x: -1, y: 0 }, top: { x: 0, y: -1 }, bottom: { x: 0, y: 1 } }[sourceAnchor.side];
+    const bump = (point: Point2d) => ({ x: point.x + out.x * margin, y: point.y + out.y * margin });
+    return linearPath([start, bump(start), bump(end), end].map((point) => applyMatrixToPoint(matrix, point)));
+  }
   return linearPath([
     start,
     { x: node.size.width + margin, y: start.y },
