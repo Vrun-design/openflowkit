@@ -7,10 +7,9 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - **Stress sheet DONE 2026-09-25 (opencode)**: `npm run stress:generate` writes `stress/*.json` (everything on one page, plus 500/2000/5000-node scales); load via Canvas menu → Open file…; `@local` `e2e/stress.spec.ts` proves the 5k page in ~7 s.
 - **Gate**: `npm run verify` = typecheck, lint, unit, MCP server tests, headed `@gate` (~2 min). CI (v2 push):
   `test:ci`, MCP lint+tests, full e2e minus `@local`. Every toolbar control swept by `controls.spec.ts`.
-- **Phase 12 DONE 2026-10-03 (opus-5.5)** except the merge: 27/27 v1 fidelity (no Classic); bridge merged to
-  `main` by owner (PR #84); boot import, home list (`home-list` now `@gate`), old URLs, `sw.js` kill switch,
-  BYOK carry-over, v1 backup; `gh-pages` script + `public/CNAME` gone; CHANGELOG has an Unreleased section.
-  Owner's: merge `main` → `v2`, PR `v2` → `main`, Cloudflare Landing project (`web/` is gone), tag `v1-final`.
+- **Phase 12 DONE 2026-10-03 (opus-5.5)** except the merge: 27/27 v1 fidelity, bridge on `main` (PR #84), boot import,
+  old URLs, `sw.js` kill switch, BYOK carry-over, v1 backup. Owner's: merge `main` → `v2`, PR `v2` → `main`,
+  Cloudflare Landing project, tag `v1-final`.
 - **Phase 13 DONE 2026-10-03 (opus-5.5)** except the 13.4 run:
   13.1 tools take Mermaid / Structurizr / D2 (`readAgentSource`, `src/agent/lint.ts`) → `converted: {from, dsl, losses}`;
   13.2 headless SVG + `openflowkit build` draw icon art (`mcp-server/data/icon-art`, built by `build:icons`, ~11 MB);
@@ -22,9 +21,12 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - MCP 0.2.0 was never published; `npx @vrun-design/openflowkit-mcp` still serves 0.1.2 until it is.
 
 ## Found, not fixed (owner calls)
-- None. Fixed 2026-10-04: `flowchart right … A --> B` (the skill's own example) was read as Mermaid, because `-->` is our dashed edge
-  too; `looksLikeMermaid` now lets DSL-only signals (word direction, `title:`, `A ->`) win. Fixed 2026-10-03: edges end on groups (grammar §4), quoted `\n` keeps its break, BYOK ids,
-  Mermaid `A`/`a` stay two nodes, v1 import lists only what v1 showed (stray copies go to the backup).
+- Horizontal flows: a long edge label can run over the next node (`A -> B : email the customer a receipt`). ELK edge
+  labels fix it but make left/right flows ~60% wider (labels then hide below 65% zoom); tried 2026-10-04, not shipped.
+  Uncommitted experiment still in the tree: `scene.ts`, `layout.ts`, `elkLayoutPort.ts/.test.ts` — discard it.
+- A pair of opposite edges (`A -> B`, `B --> A`) draws on one line; a self-loop (`A --> A`) draws as a box.
+- Fixed 2026-10-04: `flowchart right … -->` read as Mermaid; fit under the open panel; notes overlap/leave the frame;
+  402 shown as "unreadable"; send button 26×40; Endpoint double chevron; empty-turn "success"; `family x` header.
 
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.
