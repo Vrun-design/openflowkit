@@ -23,7 +23,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 ## Found, not fixed (owner calls)
 - Horizontal flows: a long edge label can run over the next node (`A -> B : email the customer a receipt`). ELK edge
   labels fix it but make left/right flows ~60% wider (labels then hide below 65% zoom); tried 2026-10-04, not shipped.
-  Uncommitted experiment still in the tree: `scene.ts`, `layout.ts`, `elkLayoutPort.ts/.test.ts` — discard it.
+  The experiment is discarded; ELK needs `text` on a label or it ignores it.
 - A pair of opposite edges (`A -> B`, `B --> A`) draws on one line; a self-loop (`A --> A`) draws as a box.
 - Fixed 2026-10-04: `flowchart right … -->` read as Mermaid; fit under the open panel; notes overlap/leave the frame;
   402 shown as "unreadable"; send button 26×40; Endpoint double chevron; empty-turn "success"; `family x` header.
