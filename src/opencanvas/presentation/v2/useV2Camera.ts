@@ -7,6 +7,7 @@ import {
 import { foundation } from '../design-system/tokens';
 import { visibleCanvasEdges } from './V2ContextBar';
 import type { CanvasCamera } from '../../domain/camera/types';
+import type { Bounds2d } from '../../domain/geometry/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { PixiRendererStatus } from '../../infrastructure/pixi/PixiRendererHost';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
@@ -105,18 +106,33 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     return { x: size.width / 2, y: size.height / 2 };
   }, [hostRef]);
 
-  const fitView = useCallback((nodeIds?: readonly string[]) => {
-    const host = hostRef.current;
-    const bounds = host?.getContentBounds(nodeIds);
-    if (!host || !bounds) return;
-    const size = host.getViewportSize();
+  /** The camera that frames `bounds` in the canvas the side panels leave free, and that free region. */
+  const fitInto = useCallback((bounds: Bounds2d) => {
+    const size = hostRef.current!.getViewportSize();
     // The canvas runs under the side panels: fit into what they leave free (a phone-width
     // panel covers it all, so that falls back to the whole viewport).
     const { left, right } = visibleCanvasEdges(document.querySelector<HTMLElement>('.ofk-v2'));
     const clear = right - left >= size.width / 2;
-    const fitted = fitCameraToBounds(bounds, { width: clear ? right - left : size.width, height: size.height }, 64);
-    updateCamera({ ...fitted, x: fitted.x + (clear ? left : 0) });
-  }, [hostRef, updateCamera]);
+    const free = { left: clear ? left : 0, right: clear ? right : size.width, height: size.height };
+    const fitted = fitCameraToBounds(bounds, { width: free.right - free.left, height: free.height }, 64);
+    return { camera: { ...fitted, x: fitted.x + free.left }, free };
+  }, [hostRef]);
+
+  const fitView = useCallback((nodeIds?: readonly string[]) => {
+    const bounds = hostRef.current?.getContentBounds(nodeIds);
+    if (!bounds) return;
+    updateCamera(fitInto(bounds).camera);
+  }, [hostRef, updateCamera, fitInto]);
+
+  /** Brings `bounds` into view, and leaves the camera alone when it is already fully visible. */
+  const revealBounds = useCallback((bounds: Bounds2d) => {
+    if (!hostRef.current) return;
+    const { camera: target, free } = fitInto(bounds);
+    const { x, y, zoom } = cameraRef.current;
+    const inside = bounds.x * zoom + x >= free.left && (bounds.x + bounds.width) * zoom + x <= free.right
+      && bounds.y * zoom + y >= 0 && (bounds.y + bounds.height) * zoom + y <= free.height;
+    if (!inside) updateCamera(target);
+  }, [hostRef, updateCamera, fitInto]);
 
   const zoomStep = useCallback(
     (factor: number) => {
@@ -170,6 +186,7 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     animateTo,
     glideToNodes,
     fitView,
+    revealBounds,
     zoomStep,
     zoomTo,
     resetZoom,

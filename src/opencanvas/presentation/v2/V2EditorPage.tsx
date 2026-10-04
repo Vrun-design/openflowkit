@@ -495,6 +495,22 @@ export function V2EditorPage(): React.JSX.Element {
   const highlightedChange = proposal.changes.find(({ id }) => id === proposal.highlightedChangeId);
   const highlightIds = useMemo(() => (highlightedChange ? changeObjectIds(highlightedChange.id, proposal.proposal) : []),
     [highlightedChange, proposal.proposal]);
+  // A proposed diagram that lands off screen (or under the panel) is brought into view to be reviewed.
+  const ghostId = ghostPage ? proposal.proposal?.id : null;
+  useEffect(() => {
+    if (!ghostPage || rendererStatus !== 'ready') return;
+    const tops = ghostPage.nodes.filter((node) => !node.parentId);
+    if (!tops.length) return;
+    const x = Math.min(...tops.map((node) => node.transform.translation.x));
+    const y = Math.min(...tops.map((node) => node.transform.translation.y));
+    camera.revealBounds({
+      x, y,
+      width: Math.max(...tops.map((node) => node.transform.translation.x + node.size.width)) - x,
+      height: Math.max(...tops.map((node) => node.transform.translation.y + node.size.height)) - y,
+    });
+    // Once per proposal, not per render of its ghost.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ghostId, rendererStatus]);
   useEffect(() => {
     if (rendererStatus !== 'ready') return;
     hostRef.current?.setProposalPreview(ghostPage ? { page: ghostPage, highlightIds } : null);
@@ -1103,7 +1119,7 @@ export function V2EditorPage(): React.JSX.Element {
             <V2WorkspaceRail mode={workspaceMode}
               onChange={(mode) => { if (workspaceMode === mode) setWorkspaceMode(null); else openWorkspace(mode); }}
               onShortcuts={toggleShortcuts} agentConnected={agentBridge.status === 'connected'} />
-            {page.nodes.length === 0 && page.connectors.length === 0 && !load.readOnly && rendererStatus === 'ready' ? <V2CanvasWelcome onOpen={openWorkspace} /> : null}
+            {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !load.readOnly && rendererStatus === 'ready' ? <V2CanvasWelcome onOpen={openWorkspace} /> : null}
             {workspaceMode === 'code' ? <V2CodePanel code={codeDraft} palette={preferences.diagramPalette}
               onPaletteChange={(diagramPalette) => updatePreferences({ diagramPalette })}
               onCodeChange={(value) => { setCodeDraft(value); setCompileDiagnostics([]); }}

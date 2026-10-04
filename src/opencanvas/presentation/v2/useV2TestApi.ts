@@ -50,6 +50,7 @@ export function useV2TestApi(options: V2TestApiOptions) {
         changeIds: proposal.changes.map(({ id }) => id), decisions: proposal.decisions,
         error: proposal.error,
       }),
+      worldToScreen: (point: { x: number; y: number }) => hostRef.current?.worldToScreen(point) ?? null,
       getRenderDiagnostics: () => hostRef.current?.getRenderDiagnostics(),      getNodeDebugSnapshot: () => hostRef.current?.getNodeDebugSnapshot(),
       getConnectorDebugSnapshot: () => hostRef.current?.getConnectorDebugSnapshot(),
       getLiveConnectorSamples: (connectorId: string) =>

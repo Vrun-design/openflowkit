@@ -67,3 +67,33 @@ test('talks, draws on request, and keeps the thread per document', async ({ page
   await expect(panel.getByText('Here is a start.')).toBeVisible();
   await expect(panel.getByText('I can see 1 image.')).toHaveCount(0);
 });
+
+test('a proposal under review is brought into view and the welcome steps aside @gate', async ({ page }) => {
+  await page.addInitScript((baseUrl) => {
+    localStorage.setItem('openflowkit-v2-ai', JSON.stringify({
+      provider: 'custom', connections: { custom: { apiKey: 'sk-ok', baseUrl, model: 'stub-model' } },
+    }));
+  }, STUB);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  const screenOf = (x: number, y: number) => page.evaluate(
+    (point) => (window as unknown as { __V2__: { worldToScreen(p: { x: number; y: number }): { x: number; y: number } | null } }).__V2__.worldToScreen(point), { x, y });
+  // Pan the empty canvas far away, so wherever the draft lands it is off screen.
+  await page.mouse.move(500, 450);
+  for (let step = 0; step < 6; step += 1) await page.mouse.wheel(3000, 3000);
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true })
+    .getByRole('button', { name: 'AI assistant', exact: true }).click();
+  const panel = page.getByRole('complementary', { name: 'AI assistant' });
+  const composer = panel.getByRole('textbox', { name: 'Ask AI assistant' });
+  await composer.fill('draw a flow for the stub');
+  await composer.press('Enter');
+  await expect(panel.getByText('Review changes')).toBeVisible();
+  await expect(page.getByText('Make room for your next idea.')).toBeHidden();
+  const origin = await screenOf(0, 0);
+  expect(origin).not.toBeNull();
+  await expect.poll(async () => {
+    const at = await screenOf(300, 150);
+    return at !== null && at.x > 0 && at.x < 1040 && at.y > 0 && at.y < 900;
+  }).toBe(true);
+});
