@@ -78,3 +78,10 @@ test('sends the Anthropic wire and warns where the browser may refuse', async ({
   await dialog.getByRole('button', { name: 'Test key' }).click();
   await expect(dialog.getByRole('status')).toContainText('stub-claude answered');
 });
+
+test('the Endpoint disclosure shows one chevron, not the native marker too @gate', async ({ page }) => {
+  const dialog = await openProviderDialog(page);
+  const summary = dialog.locator('details.ofk-connection-details > summary');
+  await expect(summary).toHaveCSS('list-style-type', 'none');
+  await expect(summary).toHaveCSS('display', 'flex');
+});
