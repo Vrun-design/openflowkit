@@ -5,7 +5,7 @@
 import type { AiProviderDefinition } from './providers';
 
 export type AiFailureCause =
-  | 'bad-key' | 'bad-model' | 'rate-limited' | 'provider-down'
+  | 'bad-key' | 'bad-model' | 'out-of-credits' | 'rate-limited' | 'provider-down'
   | 'blocked-by-browser' | 'offline' | 'bad-response'
   /** Setup is incomplete (missing key, endpoint or model) — caught before any request. */
   | 'not-configured';
@@ -13,6 +13,7 @@ export type AiFailureCause =
 export const RETRYABLE: Readonly<Record<AiFailureCause, boolean>> = {
   'bad-key': false,
   'bad-model': false,
+  'out-of-credits': false,
   'rate-limited': true,
   'provider-down': true,
   'blocked-by-browser': false,
@@ -24,6 +25,7 @@ export const RETRYABLE: Readonly<Record<AiFailureCause, boolean>> = {
 /** HTTP status plus body keywords decide the cause; the body never leaves this function. */
 export function classifyStatus(status: number, bodyText: string): AiFailureCause {
   if (status === 401 || status === 403) return 'bad-key';
+  if (status === 402 || (status === 429 && /insufficient_quota|exceeded your current quota/i.test(bodyText))) return 'out-of-credits';
   if (status === 429) return 'rate-limited';
   if (status >= 500) return 'provider-down';
   if (status === 404) return 'bad-model';
@@ -80,6 +82,8 @@ export function describeCause(cause: AiFailureCause, context: FailureContext): s
       return `The provider rejected the key${context.status ? ` (${context.status})` : ''}.${consoleLine(definition)}`;
     case 'bad-model':
       return `The provider did not find the model "${context.model}". Check the model id, and the base URL if you overrode it.`;
+    case 'out-of-credits':
+      return `The provider says this key is out of credit${context.status ? ` (${context.status})` : ''}. Add credit, pick a cheaper model, or use another key.${consoleLine(definition)}`;
     case 'rate-limited':
       return 'The provider is rate limiting this key (429). Wait a moment, or use a different key.';
     case 'provider-down':

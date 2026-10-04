@@ -22,6 +22,10 @@ describe('failure causes', () => {
     expect(classifyStatus(400, 'invalid model id')).toBe('bad-model');
     expect(classifyStatus(400, 'malformed field')).toBe('bad-response');
     expect(classifyStatus(418, '')).toBe('bad-response');
+    // Out of money is not a bad answer: OpenRouter sends 402, OpenAI a 429 with insufficient_quota.
+    expect(classifyStatus(402, '{"error":{"message":"This request requires more credits"}}')).toBe('out-of-credits');
+    expect(classifyStatus(429, '{"error":{"code":"insufficient_quota"}}')).toBe('out-of-credits');
+    expect(classifyStatus(429, '{"error":{"message":"Rate limit exceeded: free-models-per-day"}}')).toBe('rate-limited');
   });
 
   it('marks only transient causes retryable', () => {
@@ -29,7 +33,7 @@ describe('failure causes', () => {
     expect(RETRYABLE['provider-down']).toBe(true);
     expect(RETRYABLE.offline).toBe(true);
     expect(RETRYABLE['bad-response']).toBe(true);
-    for (const cause of ['bad-key', 'bad-model', 'blocked-by-browser', 'not-configured'] as const) {
+    for (const cause of ['bad-key', 'bad-model', 'out-of-credits', 'blocked-by-browser', 'not-configured'] as const) {
       expect(RETRYABLE[cause], cause).toBe(false);
     }
   });
@@ -40,6 +44,7 @@ describe('failure causes', () => {
     expect(message).toContain('https://platform.openai.com/api-keys');
     expect(describeCause('bad-model', context({ status: 404 }))).toMatch(/did not find the model "gpt-5-mini"/);
     expect(describeCause('rate-limited', context({ status: 429 }))).toMatch(/429/);
+    expect(describeCause('out-of-credits', context({ status: 402, definition: providerById('openrouter') }))).toMatch(/out of credit.*openrouter\.ai/s);
     expect(describeCause('provider-down', context({ status: 502 }))).toMatch(/server error \(502\)/);
     expect(describeCause('bad-response', context({ status: 200 }))).toMatch(/could not read/);
     expect(describeCause('not-configured', context())).toMatch(/settings/);
