@@ -8,6 +8,12 @@ const V1_WORKER = readFileSync('e2e/fixtures/v1-sw.js', 'utf8'); // main's publi
 
 const registrations = (page: Page) => page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length);
 const cacheNames = (page: Page) => page.evaluate(() => caches.keys());
+// The kill-switch worker navigates open tabs when it activates, which can land on top of the
+// test's own reload: that navigation winning is the worker doing its job, not a failure.
+const reload = (page: Page) => page.reload().catch((error: unknown) => {
+  if (!/ERR_ABORTED|detached/.test(String(error))) throw error;
+  return page.waitForLoadState('load');
+});
 
 test('v1 service worker unregisters itself and its caches once v2 is served @gate', async ({ page, context }) => {
   // Before the deploy: `/sw.js` is v1's, registered the way v1 did on load.
@@ -23,11 +29,11 @@ test('v1 service worker unregisters itself and its caches once v2 is served @gat
   // The deploy: the server's `/sw.js` is now the kill switch. A navigation makes the
   // browser check for a new worker, as every real visit does.
   await context.unroute('**/sw.js');
-  await page.reload();
+  await reload(page);
   await expect.poll(() => registrations(page), { timeout: 15_000 }).toBe(0);
   await expect.poll(() => cacheNames(page)).toEqual([]);
   await expect(page.locator('[data-testid="v2-canvas"]')).toBeVisible();
   // The next visit runs on the network, not under a worker.
-  await page.reload();
+  await reload(page);
   expect(await page.evaluate(() => navigator.serviceWorker.controller)).toBeNull();
 });
