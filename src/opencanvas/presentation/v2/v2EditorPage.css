@@ -453,7 +453,7 @@
 @media (hover: none) { .ofk-v2-attachments .ofk-icon-button { opacity: 1; } }
 .ofk-v2-attach-error { margin: 0 0 6px; font-size: 11.5px; color: var(--ofk-danger, #dc2626); }
 .ofk-v2-prompt-box[data-dragging] { border-color: var(--ofk-accent); border-style: dashed; background: color-mix(in srgb, var(--ofk-accent) 5%, var(--ofk-canvas)); }
-.ofk-v2-prompt-box > div > .ofk-icon-button { width: 26px; height: 26px; min-width: 0; }
+.ofk-v2-prompt-box > div > .ofk-icon-button { width: 26px; height: 26px; min-width: 0; min-height: 0; }
 /* A turn with images: the images sit above the bubble, not inside it. */
 .ofk-v2-assistant-panel .ofk-message[data-role='user']:has(.ofk-v2-turn-images) { padding: 0; background: none; justify-items: end; }
 .ofk-message[data-role='user']:has(.ofk-v2-turn-images) .ofk-v2-user-text { padding: 8px 12px; border-radius: 16px 16px 4px 16px; background: var(--ofk-raised); }

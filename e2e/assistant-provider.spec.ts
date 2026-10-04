@@ -21,3 +21,18 @@ test('assistant asks for a provider on first send, then remembers it', async ({ 
   await expect(panel.getByRole('textbox', { name: 'Ask AI assistant' })).toBeFocused();
   await expect(panel.getByRole('textbox', { name: 'Ask AI assistant' })).toHaveValue('Sketch a three-tier web architecture');
 });
+
+test('the send button is a square on the chips’ row, empty or not @gate', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true })
+    .getByRole('button', { name: 'AI assistant', exact: true }).click();
+  const panel = page.getByRole('complementary', { name: 'AI assistant' });
+  const send = panel.getByRole('button', { name: 'Send prompt' });
+  const chip = panel.getByRole('button', { name: 'Think' });
+  for (const text of ['', 'Sketch a login flow']) {
+    await panel.getByRole('textbox', { name: 'Ask AI assistant' }).fill(text);
+    const [button, row] = [(await send.boundingBox())!, (await chip.boundingBox())!];
+    expect(button.width).toBe(button.height);
+    expect(Math.abs(button.y + button.height / 2 - (row.y + row.height / 2))).toBeLessThanOrEqual(1);
+  }
+});
