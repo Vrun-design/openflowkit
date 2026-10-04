@@ -385,6 +385,13 @@ export function V2EditorPage(): React.JSX.Element {
   }, [load.reload]);
   const readOnlyRef = useRef(load.readOnly);
   useEffect(() => { readOnlyRef.current = load.readOnly; }, [load.readOnly]);
+  // A new diagram is fitted once the renderer has its frame; regenerating keeps the camera.
+  const [fitFrameId, setFitFrameId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!fitFrameId || !hostRef.current?.getContentBounds([fitFrameId])) return;
+    setFitFrameId(null);
+    camera.fitView([fitFrameId]);
+  }, [fitFrameId, page, camera]);
   const generateCode = useCallback(async (overrideText?: string, snaps?: Readonly<Record<string, WorkspaceSnap>>) => {
     const currentPage = pageRef.current;
     if (!currentPage || load.readOnly || codeGenerating) return;
@@ -436,6 +443,8 @@ export function V2EditorPage(): React.JSX.Element {
             } },
           });
         }
+        // A new diagram lands where the user can see it; regenerating keeps their camera.
+        if (!codeFrameId) setFitFrameId(frameId);
         setCodeFrameId(frameId);
         applySelection(replaceSelection([codeFrameId ?? primary.frame.id]));
         setAnnouncement(`${primary.nodes.length} nodes generated${primary.diagnostics.some((item) => item.severity !== 'info') ? ' with diagnostics' : ''}.`);

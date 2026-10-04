@@ -5,6 +5,7 @@ import {
   DEFAULT_CANVAS_CAMERA,
 } from '../../domain/camera/camera';
 import { foundation } from '../design-system/tokens';
+import { visibleCanvasEdges } from './V2ContextBar';
 import type { CanvasCamera } from '../../domain/camera/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { PixiRendererStatus } from '../../infrastructure/pixi/PixiRendererHost';
@@ -108,7 +109,13 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     const host = hostRef.current;
     const bounds = host?.getContentBounds(nodeIds);
     if (!host || !bounds) return;
-    updateCamera(fitCameraToBounds(bounds, host.getViewportSize(), 64));
+    const size = host.getViewportSize();
+    // The canvas runs under the side panels: fit into what they leave free (a phone-width
+    // panel covers it all, so that falls back to the whole viewport).
+    const { left, right } = visibleCanvasEdges(document.querySelector<HTMLElement>('.ofk-v2'));
+    const clear = right - left >= size.width / 2;
+    const fitted = fitCameraToBounds(bounds, { width: clear ? right - left : size.width, height: size.height }, 64);
+    updateCamera({ ...fitted, x: fitted.x + (clear ? left : 0) });
   }, [hostRef, updateCamera]);
 
   const zoomStep = useCallback(

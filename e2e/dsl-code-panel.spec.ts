@@ -1,3 +1,4 @@
+import { rect, state } from './helpers';
 import { expect, test } from './test';
 
 type V2Api = { getState(): { nodes: string[] } };
@@ -33,4 +34,21 @@ test('code panel reports bad lines and offers attribute completion', async ({ pa
   await expect(source).not.toHaveValue('flowchart\nCache [');
   await source.fill('flowchart\nBroken [oops');
   await expect(page.getByText('W101', { exact: true })).toBeVisible();
+});
+
+test('a generated diagram fits the canvas the open panel leaves free @gate', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
+  const source = page.getByRole('textbox', { name: 'Diagram source' });
+  await source.fill('flowchart right\nA -> B -> C -> D -> E -> F -> G -> H -> I -> J');
+  await source.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+  await expect.poll(() => count(page)).toBeGreaterThan(5);
+  const panelLeft = (await page.getByRole('textbox', { name: 'Diagram source' }).boundingBox())!.x;
+  await expect.poll(async () => {
+    const [frame] = (await state(page)).selectedNodes;
+    const frameRect = frame ? await rect(page, frame) : null;
+    return frameRect ? Math.round(frameRect.x + frameRect.width) : Infinity;
+  }).toBeLessThanOrEqual(panelLeft);
 });
