@@ -15,6 +15,11 @@ describe('mermaidToDsl', () => {
     expect(looksLikeMermaid('flowchart LR\nA --> B')).toBe(true);
     expect(looksLikeMermaid('%% ofk 1\nflowchart\nA -> B')).toBe(false);
     expect(looksLikeMermaid('sequenceDiagram\nA->>B: hi')).toBe(true);
+    // `-->` is also our dashed edge: DSL-only signals (word direction, `title:`, `A ->`) win over it.
+    expect(looksLikeMermaid('flowchart right\nA -> B\nB --> A : no [red]')).toBe(false);
+    expect(looksLikeMermaid('flowchart\ntitle: Checkout\nA --> B')).toBe(false);
+    expect(looksLikeMermaid('flowchart down\nA --> B')).toBe(false);
+    expect(looksLikeMermaid('flowchart LR\nA[Go -> next] --> B')).toBe(true);
     expect(mermaidToDsl('flowchart LR\nA --> B')).toMatchObject({ losses: [] });
     expect(mermaidToDsl('not a diagram')).toEqual({ error: 'No Mermaid diagram header found' });
   });

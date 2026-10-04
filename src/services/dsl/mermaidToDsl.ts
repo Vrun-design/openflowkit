@@ -594,7 +594,8 @@ function withoutFrontMatter(text: string): { body: string; title?: string; keys:
   return { body: match[0].replace(/[^\n]/g, '') + text.slice(match[0].length), ...(title ? { title } : {}), keys };
 }
 
-const MERMAID_ONLY = /-->|-\.->|==>|~~~|subgraph|@\{|\|\w+\||-\[\||\[\[\(|\}\]/;
+const DSL_ONLY = /^\s*title\s*:|^\s*[\w.-]+\s+->\s/m;
+const MERMAID_ONLY =/-->|-\.->|==>|~~~|subgraph|@\{|\|\w+\||-\[\||\[\[\(|\}\]/;
 
 /** True when the text starts a Mermaid diagram (used for the panel banner). */
 export function looksLikeMermaid(text: string): boolean {
@@ -604,6 +605,8 @@ export function looksLikeMermaid(text: string): boolean {
   const first = text.split('\n').map((line) => line.trim()).find((line) => line && !line.startsWith('%%'));
   if (!first) return false;
   if (/^(flowchart|graph)\b/i.test(first)) {
+    // `-->` is our dashed edge too, so these DSL-only signals decide before MERMAID_ONLY does.
+    if (/^(flowchart|graph)\s+(right|left|down|up)\b/i.test(first) || DSL_ONLY.test(text)) return false;
     if (MERMAID_ONLY.test(text)) return true;
     // `A[Label]` is Mermaid shorthand; our DSL writes `A [shape]` with a space.
     if (/\w\[/.test(text) || /\|\w+\|/.test(text)) return true;

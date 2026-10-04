@@ -1,0 +1,1514 @@
+{
+  "date": "2026-10-04",
+  "provider": "openrouter",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "prompts": 50,
+  "summary": {
+    "overall": {
+      "mermaid": {
+        "cases": 50,
+        "firstTryValid": 96,
+        "validAfterOneRound": 100,
+        "withWarnings": 2,
+        "providerErrors": 0
+      },
+      "dsl": {
+        "cases": 50,
+        "firstTryValid": 90,
+        "validAfterOneRound": 96,
+        "withWarnings": 2,
+        "providerErrors": 0
+      }
+    },
+    "byFamily": {
+      "flowchart": {
+        "mermaid": {
+          "cases": 10,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 0,
+          "providerErrors": 0
+        },
+        "dsl": {
+          "cases": 10,
+          "firstTryValid": 50,
+          "validAfterOneRound": 80,
+          "withWarnings": 0,
+          "providerErrors": 0
+        }
+      },
+      "architecture": {
+        "mermaid": {
+          "cases": 10,
+          "firstTryValid": 80,
+          "validAfterOneRound": 100,
+          "withWarnings": 0,
+          "providerErrors": 0
+        },
+        "dsl": {
+          "cases": 10,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 0,
+          "providerErrors": 0
+        }
+      },
+      "sequence": {
+        "mermaid": {
+          "cases": 10,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 0,
+          "providerErrors": 0
+        },
+        "dsl": {
+          "cases": 10,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 0,
+          "providerErrors": 0
+        }
+      },
+      "erd": {
+        "mermaid": {
+          "cases": 5,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 20,
+          "providerErrors": 0
+        },
+        "dsl": {
+          "cases": 5,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 20,
+          "providerErrors": 0
+        }
+      },
+      "state": {
+        "mermaid": {
+          "cases": 5,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 0,
+          "providerErrors": 0
+        },
+        "dsl": {
+          "cases": 5,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 0,
+          "providerErrors": 0
+        }
+      },
+      "class": {
+        "mermaid": {
+          "cases": 5,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 0,
+          "providerErrors": 0
+        },
+        "dsl": {
+          "cases": 5,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 0,
+          "providerErrors": 0
+        }
+      },
+      "mindmap": {
+        "mermaid": {
+          "cases": 5,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 0,
+          "providerErrors": 0
+        },
+        "dsl": {
+          "cases": 5,
+          "firstTryValid": 100,
+          "validAfterOneRound": 100,
+          "withWarnings": 0,
+          "providerErrors": 0
+        }
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "flow-checkout",
+      "family": "flowchart",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nflowchart TD\n    A([Cart]) --> B{Cart Valid?}\n    B -- Yes --> C[Shipping Address]\n    B -- No --> F1[Cart Error]\n\n    C --> D{Address Valid?}\n    D -- Yes --> E[Promo Code Decision]\n    D -- No --> F2[Address Error]\n\n    E --> G{Promo Applied?}\n    G -- Yes --> H[Apply Discount]\n    G -- No --> H\n\n    H --> I[Payment]\n    I --> J{Payment Success?}\n    J -- Yes --> K[3‑D Secure Challenge]\n    J -- No --> F3[Payment Failed]\n\n    K --> L{3DS Success?}\n    L -- Yes --> M[Order Confirmation]\n    L -- No --> F4[3DS Failed]\n\n    M --> N([End])\n    F1 --> N\n    F2 --> N\n    F3 --> N\n    F4 --> N\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 17
+      }
+    },
+    {
+      "id": "flow-checkout",
+      "family": "flowchart",
+      "format": "dsl",
+      "first": {
+        "text": "{\"dsl\": \"flowchart right\\n    title: Checkout Flow\\n    \\n    Cart [rect, blue]\\n    Shipping [rect, blue]\\n    PromoDecision [diamond, orange]\\n    Payment [rect, blue]\\n    ThreeDSecure [diamond, violet]\\n    Confirmation [ellipse, green]\\n    \\n    FailureShipping [ellipse, red]\\n    FailurePromo [ellipse, red]\\n    FailurePayment [ellipse, red]\\n    Failure3DS [ellipse, red]\\n    \\n    Cart -> Shipping : proceed\\n    Shipping -> PromoDecision : address ok\\n    Shipping --> FailureShipping : invalid address\\n    \\n    PromoDecision -> Payment : apply / skip\\n    PromoDecision --> FailurePromo : invalid code\\n    \\n    Payment -> ThreeDSecure : 3DS required\\n    Payment --> FailurePayment : declined / error\\n    \\n    ThreeDSecure -> Confirmation : authenticated\\n    ThreeDSecure --> Failure3DS : failed / timeout\\n    \\n    group HappyPath {\\n        Cart\\n        Shipping\\n        PromoDecision\\n        Payment\\n        ThreeDSecure\\n        Confirmation\\n    }\\n    \\n    group FailurePaths {\\n        FailureShipping\\n        FailurePromo\\n        FailurePayment\\n        Failure3DS\\n    }\"}",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 1
+      }
+    },
+    {
+      "id": "flow-ci",
+      "family": "flowchart",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nflowchart TD\n    Push --> Lint\n    Push --> UnitTests\n    Lint --> Build\n    UnitTests --> Build\n    Build --> DeployStaging\n    DeployStaging --> SmokeTests\n    SmokeTests --> ManualApproval\n    ManualApproval --> DeployProduction\n    DeployProduction -->|Success| End\n    DeployProduction -->|Failure| Rollback\n    Rollback --> End\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 10
+      }
+    },
+    {
+      "id": "flow-ci",
+      "family": "flowchart",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nflowchart top\ntitle: CI Pipeline\n\ngroup Trigger {\n  Push [ellipse, blue]\n}\n\ngroup Validate {\n  Lint [rect, teal]\n  UnitTests [rect, teal]\n}\n\nBuild [component, violet]\n\ngroup Staging {\n  DeployStaging [component, green]\n  SmokeTests [rect, green]\n}\n\nApproval [diamond, orange]\n\ngroup Production {\n  DeployProd [component, blue]\n  Rollback [component, red]\n}\n\nPush -> Lint\nPush -> UnitTests\nLint -> Build\nUnitTests -> Build\nBuild -> DeployStaging\nDeployStaging -> SmokeTests\nSmokeTests -> Approval\nApproval -> DeployProd : approve\nApproval --> Rollback : reject\nDeployProd --> Rollback : failure [red, thick]\n```",
+        "valid": false,
+        "problems": [
+          "line 1: Mermaid: Missing chart type declaration. Start with \"flowchart TD\" or related."
+        ],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 0
+      },
+      "second": {
+        "text": "```dsl\nflowchart TD\ntitle: CI Pipeline\n\ngroup Trigger {\n  Push [ellipse, blue]\n}\n\ngroup Validate {\n  Lint [rect, teal]\n  UnitTests [rect, teal]\n}\n\nBuild [component, violet]\n\ngroup Staging {\n  DeployStaging [component, green]\n  SmokeTests [rect, green]\n}\n\nApproval [diamond, orange]\n\ngroup Production {\n  DeployProd [component, blue]\n  Rollback [component, red]\n}\n\nPush -> Lint\nPush -> UnitTests\nLint -> Build\nUnitTests -> Build\nBuild -> DeployStaging\nDeployStaging -> SmokeTests\nSmokeTests -> Approval\nApproval -> DeployProd : approve\nApproval --> Rollback : reject\nDeployProd --> Rollback : failure [red, thick]\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 17,
+        "nodes": 11
+      }
+    },
+    {
+      "id": "flow-signup",
+      "family": "flowchart",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nflowchart TD\n    Start([Start Signup]) --> EnterEmail[Enter Email]\n    EnterEmail --> SendCode[Send Verification Code\\nStart 10-min Resend Timer]\n    SendCode --> EnterCode[User Enters Code]\n    \n    EnterCode --> ValidateCode{Code Valid?}\n    \n    ValidateCode -- Yes --> Success[Account Verified\\nSignup Complete]\n    ValidateCode -- No --> IncrementAttempts[Increment Failed Attempts]\n    \n    IncrementAttempts --> CheckAttempts{Attempts >= 5?}\n    \n    CheckAttempts -- Yes --> LockAccount[Lock Account\\nRequire Admin/Unlock Flow]\n    CheckAttempts -- No --> ShowError[Show Error\\nAttempts Remaining: 5 - count]\n    \n    ShowError --> ResendCheck{10 min elapsed\\nsince last send?}\n    \n    ResendCheck -- Yes --> ResendOption[Offer Resend Link]\n    ResendCheck -- No --> WaitTimer[Wait for Timer\\nShow Countdown]\n    \n    WaitTimer --> EnterCode\n    ResendOption --> UserResend{User Requests Resend?}\n    \n    UserResend -- Yes --> SendCode\n    UserResend -- No --> EnterCode\n    \n    LockAccount --> End([End - Account Locked])\n    Success --> End\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 15
+      }
+    },
+    {
+      "id": "flow-signup",
+      "family": "flowchart",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nflowchart right\ntitle: User Signup with Email Verification\ngroup Signup {\n  Start [ellipse, green]\n  SignupForm [rect]\n  SendCode [component, blue]\n}\ngroup Verification {\n  EnterCode [rect]\n  ValidateCode [diamond]\n  Success [ellipse, green]\n  InvalidCode [note, red]\n  Attempts [cylinder, orange]\n  Locked [ellipse, red]\n  ResendTimer [hexagon, teal]\n  ResendLink [parallelogram, blue]\n}\nStart -> SignupForm : user visits\nSignupForm -> SendCode : submits email\nSendCode -> EnterCode : email sent\nEnterCode -> ValidateCode : submits code\nValidateCode -> Success : valid [green, thick]\nValidateCode -> InvalidCode : invalid [red]\nInvalidCode -> Attempts : increment\nAttempts -> Locked : count >= 5 [thick, red]\nAttempts -> EnterCode : count < 5 [dashed]\nLocked --> ResendTimer : locked [dashed, red]\nEnterCode -> ResendTimer : waits 10 min [dashed, teal]\nResendTimer -> ResendLink : timer elapsed\nResendLink -> SendCode : clicks resend [blue]\nResendLink -> EnterCode : enters new code\n```",
+        "valid": false,
+        "problems": [
+          "line 1: Mermaid: Missing chart type declaration. Start with \"flowchart TD\" or related."
+        ],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 0
+      },
+      "second": {
+        "text": "```dsl\nflowchart right\ntitle: User Signup with Email Verification\ngroup Signup {\n  Start [ellipse, green]\n  SignupForm [rect]\n  SendCode [component, blue]\n}\ngroup Verification {\n  EnterCode [rect]\n  ValidateCode [diamond]\n  Success [ellipse, green]\n  InvalidCode [note, red]\n  Attempts [cylinder, orange]\n  Locked [ellipse, red]\n  ResendTimer [hexagon, teal]\n  ResendLink [parallelogram, blue]\n}\nStart -> SignupForm : user visits\nSignupForm -> SendCode : submits email\nSendCode -> EnterCode : email sent\nEnterCode -> ValidateCode : submits code\nValidateCode -> Success : valid [green, thick]\nValidateCode -> InvalidCode : invalid [red]\nInvalidCode -> Attempts : increment\nAttempts -> Locked : count >= 5 [thick, red]\nAttempts -> EnterCode : count < 5 [dashed]\nLocked --> ResendTimer : locked [dashed, red]\nEnterCode -> ResendTimer : waits 10 min [dashed, teal]\nResendTimer -> ResendLink : timer elapsed\nResendLink -> SendCode : clicks resend [blue]\nResendLink -> EnterCode : enters new code\n```",
+        "valid": false,
+        "problems": [
+          "line 1: Mermaid: Missing chart type declaration. Start with \"flowchart TD\" or related."
+        ],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 0
+      }
+    },
+    {
+      "id": "flow-incident",
+      "family": "flowchart",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nflowchart TD\n    A[Alert Fires] --> B[On-Call Acknowledges]\n    B --> C[Severity Triage]\n    C --> D{SEV1?}\n    D -- Yes --> E[Escalate to Incident Commander]\n    D -- No --> F[Handle per Severity]\n    E --> G[Mitigate]\n    F --> G\n    G --> H[Postmortem]\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 8
+      }
+    },
+    {
+      "id": "flow-incident",
+      "family": "flowchart",
+      "format": "dsl",
+      "first": {
+        "text": "```mermaid\nflowchart TD\n  Alert[Alert fires] --> Ack[On-call acknowledges]\n  Ack --> Triage[Severity triage]\n  Triage -->|SEV1| Escalate[Escalate to incident commander]\n  Triage -->|SEV2/3| Mitigate[Mitigate]\n  Escalate --> Mitigate\n  Mitigate --> Postmortem[Postmortem]\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "flow-refund",
+      "family": "flowchart",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nflowchart TD\n    A([Refund Request Received]) --> B{Amount < $50?}\n    B -- Yes --> C[Auto-Approve]\n    B -- No --> D[Support Review]\n    C --> E[Fraud Check]\n    D --> E\n    E --> F{Fraud Detected?}\n    F -- Yes --> G[Reject Request / Escalate]\n    F -- No --> H{Refund Type?}\n    H -->|Partial| I[Process Partial Refund]\n    H -->|Full| J[Process Full Refund]\n    I --> K[Notify Customer]\n    J --> K\n    G --> K\n    K --> L([End])\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 12
+      }
+    },
+    {
+      "id": "flow-refund",
+      "family": "flowchart",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nflowchart right\ntitle: Refund Request Handling\ngroup Entry {\n  Request [ellipse, blue]\n}\ngroup AmountCheck {\n  CheckAmount [diamond, orange]\n}\ngroup AutoPath {\n  AutoApprove [rect rounded, green]\n}\ngroup ReviewPath {\n  SupportReview [rect, violet]\n  FraudCheck [diamond, red]\n  Decision [diamond, teal]\n  Partial [ellipse, yellow]\n  Full [ellipse, green]\n}\ngroup Notify {\n  NotifyCustomer [component, blue]\n}\n\nRequest -> CheckAmount\nCheckAmount -> AutoApprove : \"< $50\" [green]\nCheckAmount -> SupportReview : \">= $50\" [orange]\nAutoApprove -> NotifyCustomer : approved\nSupportReview -> FraudCheck : review done\nFraudCheck -> Decision : fraud check\nDecision -> Partial : partial refund [dashed]\nDecision -> Full : full refund [thick]\nPartial -> NotifyCustomer : processed\nFull -> NotifyCustomer : processed\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 14
+      }
+    },
+    {
+      "id": "flow-pr-review",
+      "family": "flowchart",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nflowchart TD\n    A[Developer creates Draft PR] --> B{Convert to Ready for Review?}\n    B -->|No| A\n    B -->|Yes| C[PR marked Ready for Review]\n    C --> D[GitHub evaluates CODEOWNERS]\n    D --> E[CODEOWNERS automatically requested for review]\n    D --> F[Required reviewers from branch protection requested]\n    E --> G[Reviewers conduct reviews]\n    F --> G\n    G --> H{All required approvals received?}\n    H -->|No| G\n    H -->|Yes| I[PR enters Merge Queue]\n    I --> J[Merge Queue runs CI checks]\n    J --> K{CI passes?}\n    K -->|No| L[PR removed from queue\\nDeveloper fixes issues]\n    L --> G\n    K -->|Yes| M[PR merged automatically]\n    M --> N[Branch deleted\\nIssue linked/closed]\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 14
+      }
+    },
+    {
+      "id": "flow-pr-review",
+      "family": "flowchart",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nflowchart right\ntitle: Pull Request Lifecycle — Draft to Merged (Reviews, CODEOWNERS, Merge Queue)\n\ngroup \"Author\" {\n  Draft [ellipse, blue] \n  Ready [rect rounded, green]\n}\n\ngroup \"Automation\" {\n  CI [component, orange]\n  CODEOWNERS [component, orange]\n  MergeQueue [queue, violet]\n  Merge [component, green]\n}\n\ngroup \"Reviewers\" {\n  Review [person, teal]\n  Approve [person, green]\n  RequestChanges [person, red]\n}\n\ngroup \"Branch Protection\" {\n  RequiredReviews [diamond, red]\n  StatusChecks [diamond, red]\n}\n\nDraft -> Ready : \"mark ready for review\"\nReady -> CI : \"push / sync\"\nCI -> CODEOWNERS : \"status checks pass\"\nCODEOWNERS -> RequiredReviews : \"determine required reviewers\"\nRequiredReviews -> Review : \"request reviews from CODEOWNERS + others\"\nReview -> Approve : \"approve\"\nReview -> RequestChanges : \"request changes\"\nRequestChanges -> Ready : \"push fixes\"\nApprove -> RequiredReviews : \"check: all required approved?\"\nRequiredReviews --> Review : \"no [red]\"\nRequiredReviews -> StatusChecks : \"yes\"\nStatusChecks -> MergeQueue : \"all checks green + approvals met\"\nMergeQueue -> Merge : \"turn + checks still green\"\nMerge -> Done [ellipse, green] : \"merged to main\"\n\nnote Draft : \"draft PRs skip CI + reviews\"\nnote Ready : \"converts to ready-for-review\"\nnote CI : \"runs tests, lint, build\"\nnote CODEOWNERS : \"matches changed files → owners\"\nnote RequiredReviews : \"enforces min approvals + CODEOWNERS\"\nnote StatusChecks : \"required status contexts must pass\"\nnote MergeQueue : \"serializes merges, re-tests before merge\"\nnote Merge : \"squash / merge / rebase per repo setting\"\nnote Done : \"branch deleted, issue auto-closed\"\n```",
+        "valid": false,
+        "problems": [
+          "line 1: Mermaid: Missing chart type declaration. Start with \"flowchart TD\" or related."
+        ],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 0
+      },
+      "second": {
+        "text": "```dsl\nflowchart LR\ntitle: Pull Request Lifecycle — Draft to Merged (Reviews, CODEOWNERS, Merge Queue)\n\ngroup \"Author\" {\n  Draft [ellipse, blue] \n  Ready [rect rounded, green]\n}\n\ngroup \"Automation\" {\n  CI [component, orange]\n  CODEOWNERS [component, orange]\n  MergeQueue [queue, violet]\n  Merge [component, green]\n}\n\ngroup \"Reviewers\" {\n  Review [person, teal]\n  Approve [person, green]\n  RequestChanges [person, red]\n}\n\ngroup \"Branch Protection\" {\n  RequiredReviews [diamond, red]\n  StatusChecks [diamond, red]\n}\n\nDraft -> Ready : \"mark ready for review\"\nReady -> CI : \"push / sync\"\nCI -> CODEOWNERS : \"status checks pass\"\nCODEOWNERS -> RequiredReviews : \"determine required reviewers\"\nRequiredReviews -> Review : \"request reviews from CODEOWNERS + others\"\nReview -> Approve : \"approve\"\nReview -> RequestChanges : \"request changes\"\nRequestChanges -> Ready : \"push fixes\"\nApprove -> RequiredReviews : \"check: all required approved?\"\nRequiredReviews --> Review : \"no [red]\"\nRequiredReviews -> StatusChecks : \"yes\"\nStatusChecks -> MergeQueue : \"all checks green + approvals met\"\nMergeQueue -> Merge : \"turn + checks still green\"\nMerge -> Done [ellipse, green] : \"merged to main\"\n\nnote Draft : \"draft PRs skip CI + reviews\"\nnote Ready : \"converts to ready-for-review\"\nnote CI : \"runs tests, lint, build\"\nnote CODEOWNERS : \"matches changed files → owners\"\nnote RequiredReviews : \"enforces min approvals + CODEOWNERS\"\nnote StatusChecks : \"required status contexts must pass\"\nnote MergeQueue : \"serializes merges, re-tests before merge\"\nnote Merge : \"squash / merge / rebase per repo setting\"\nnote Done : \"branch deleted, issue auto-closed\"\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 31,
+        "nodes": 12
+      }
+    },
+    {
+      "id": "flow-cache",
+      "family": "flowchart",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nflowchart TD\n    Start([Request Received]) --> CheckRedis{Redis Available?}\n    \n    CheckRedis -- No --> FallbackDB[Query Database Directly]\n    FallbackDB --> ReturnData[Return Data to Client]\n    \n    CheckRedis -- Yes --> CacheLookup[Lookup Key in Redis]\n    CacheLookup --> CacheHit{Cache Hit?}\n    \n    CacheHit -- No --> FetchDB[Query Database]\n    FetchDB --> PopulateCache[Store Fresh Data in Redis with TTL]\n    PopulateCache --> ReturnData\n    \n    CacheHit -- Yes --> CheckFreshness{Data Fresh? <br/>(TTL not expired)}\n    \n    CheckFreshness -- Yes --> ReturnCached[Return Cached Data]\n    ReturnCached --> End([Done])\n    \n    CheckFreshness -- No --> ReturnStale[Return Stale Data to Client]\n    ReturnStale --> AsyncRevalidate[Trigger Background Revalidation]\n    \n    AsyncRevalidate --> BG_DB[Query Database in Background]\n    BG_DB --> BG_Update[Update Redis with Fresh Data]\n    BG_Update --> End\n    \n    ReturnData --> End\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 15
+      }
+    },
+    {
+      "id": "flow-cache",
+      "family": "flowchart",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nflowchart right\ntitle: Read-Through Cache with Stale-While-Revalidate & Redis Fallback\n\ngroup Client {\n  Request [ellipse, blue]\n}\n\ngroup CacheLayer {\n  Redis [icon: tabler/brand-redis, cylinder]\n  RedisDown [diamond, red]\n}\n\ngroup Background {\n  Revalidate [component, orange]\n}\n\ngroup DataLayer {\n  Database [icon: tabler/database, cylinder]\n}\n\nRequest -> Redis : GET key\nRedis -> RedisDown : reachable?\nRedisDown -> Redis : yes [green]\nRedisDown --> Database : no [red, dashed]\n\nRedis -> Request : hit & fresh [green]\nRedis -> Request : hit & stale [orange]\nRedis -> Revalidate : async refresh [dashed, orange]\nRevalidate -> Redis : SET key [dashed, orange]\n\nRedis -> Database : miss\nDatabase -> Redis : store fresh\nDatabase -> Request : return data\n```",
+        "valid": false,
+        "problems": [
+          "line 1: Mermaid: Missing chart type declaration. Start with \"flowchart TD\" or related."
+        ],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 0
+      },
+      "second": {
+        "text": "```dsl\nflowchart right\ntitle: Read-Through Cache with Stale-While-Revalidate & Redis Fallback\n\ngroup Client {\n  Request [ellipse, blue]\n}\n\ngroup CacheLayer {\n  Redis [icon: tabler/brand-redis, cylinder]\n  RedisDown [diamond, red]\n}\n\ngroup Background {\n  Revalidate [component, orange]\n}\n\ngroup DataLayer {\n  Database [icon: tabler/database, cylinder]\n}\n\nRequest -> Redis : GET key\nRedis -> RedisDown : reachable?\nRedisDown -> Redis : yes [green]\nRedisDown --> Database : no [red, dashed]\n\nRedis -> Request : hit & fresh [green]\nRedis -> Request : hit & stale [orange]\nRedis -> Revalidate : async refresh [dashed, orange]\nRevalidate -> Redis : SET key [dashed, orange]\n\nRedis -> Database : miss\nDatabase -> Redis : store fresh\nDatabase -> Request : return data\n```",
+        "valid": false,
+        "problems": [
+          "line 1: Mermaid: Missing chart type declaration. Start with \"flowchart TD\" or related."
+        ],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 0
+      }
+    },
+    {
+      "id": "flow-onboarding",
+      "family": "flowchart",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nflowchart TD\n    Start([New Employee Onboarding]) --> Laptop[Laptop Setup & Configuration]\n    Start --> Accounts[Account Creation & Access]\n    Start --> Buddy[Buddy Assignment]\n    Laptop --> FirstWeek[First-Week Checklist]\n    Accounts --> FirstWeek\n    Buddy --> FirstWeek\n    FirstWeek --> Review[30-Day Review]\n    Review --> End([Onboarding Complete])\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 7
+      }
+    },
+    {
+      "id": "flow-onboarding",
+      "family": "flowchart",
+      "format": "dsl",
+      "first": {
+        "text": "{\"dsl\": \"flowchart right\\ntitle: New Employee Onboarding\\n\\nStart [ellipse, green]\\nLaptop [rect, blue] : Provision laptop\\nAccounts [rect, blue] : Create accounts\\nBuddy [person, teal] : Assign buddy\\nChecklist [doc, orange] : First-week checklist\\nReview [diamond, violet] : 30-day review\\nDone [ellipse, green]\\n\\nStart -> Laptop\\nLaptop -> Accounts\\nAccounts -> Buddy\\nBuddy -> Checklist\\nChecklist -> Review\\nReview -> Done : pass [green]\\nReview --> Checklist : extend [red, dashed]\\n\"}",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 1
+      }
+    },
+    {
+      "id": "flow-retry",
+      "family": "flowchart",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nflowchart TD\n    Start([Start HTTP Request]) --> CB_Check{Circuit Breaker<br/>State?}\n    CB_Check -->|Open| FailFast[Fail Fast: Circuit Open]\n    CB_Check -->|Half-Open| Attempt[Attempt Request]\n    CB_Check -->|Closed| Attempt\n    \n    Attempt --> Result{Request<br/>Succeeded?}\n    Result -->|Yes| Success[Return Success]\n    Result -->|No| IncAttempt[Increment Attempt Count]\n    \n    IncAttempt --> MaxCheck{Attempt <br/>>= 5?}\n    MaxCheck -->|Yes| OpenCB[Open Circuit Breaker]\n    OpenCB --> FailMax[Return Failure: Max Attempts]\n    \n    MaxCheck -->|No| CalcBackoff[Calculate Backoff:<br/>base * 2^attempt + jitter]\n    CalcBackoff --> Wait[Wait Backoff Duration]\n    Wait --> CB_Check\n    \n    Success --> CB_Success{Circuit Breaker<br/>Half-Open?}\n    CB_Success -->|Yes| CloseCB[Close Circuit Breaker]\n    CB_Success -->|No| ResetCount[Reset Attempt Count]\n    CloseCB --> ResetCount\n    ResetCount --> End([End])\n    \n    FailFast --> End\n    FailMax --> End\n    \n    classDef decision fill:#f9f,stroke:#333,stroke-width:2px;\n    classDef action fill:#bbf,stroke:#333,stroke-width:2px;\n    classDef terminal fill:#fb4,stroke:#333,stroke-width:2px;\n    \n    class CB_Check,Result,MaxCheck,CB_Success decision;\n    class Attempt,IncAttempt,CalcBackoff,Wait,OpenCB,CloseCB,ResetCount action;\n    class Start,Success,FailFast,FailMax,End terminal;\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 16
+      }
+    },
+    {
+      "id": "flow-retry",
+      "family": "flowchart",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nflowchart right\ntitle: HTTP Retry Policy with Circuit Breaker\n\ngroup Client {\n  Start [ellipse, green]\n  Request [rect rounded]\n  Response [ellipse, blue]\n  Error [rect rounded, red]\n}\n\ngroup RetryLogic {\n  AttemptCount [doc]\n  MaxReached [diamond, orange]\n  Backoff [parallelogram, violet]\n  Jitter [parallelogram, violet]\n  Wait [rect rounded, teal]\n}\n\ngroup CircuitBreaker {\n  CBState [hexagon, pink]\n  CBOpen [diamond, red]\n  CBHalfOpen [diamond, orange]\n  CBClosed [diamond, green]\n  FailureCount [doc]\n  SuccessCount [doc]\n  Threshold [doc]\n}\n\nStart -> Request : send HTTP\nRequest -> Response : success [thick, green]\nRequest -> Error : failure [thick, red]\n\nError -> AttemptCount : increment\nAttemptCount -> MaxReached : attempt >= 5?\nMaxReached -> Response : yes [red, dashed]\nMaxReached -> CBState : no\n\nCBState -> CBOpen : state = open?\nCBOpen -> Error : yes [red, dashed] // fail fast\nCBOpen -> CBHalfOpen : timeout elapsed?\n\nCBHalfOpen -> Request : test request [thick]\nCBHalfOpen -> CBOpen : test fails [red]\nCBHalfOpen -> CBClosed : test succeeds [green]\n\nCBState -> CBClosed : state = closed?\nCBClosed -> FailureCount : on failure\nFailureCount -> Threshold : failures >= 5?\nThreshold -> CBOpen : yes [red]\nThreshold -> Backoff : no\n\nBackoff -> Jitter : calculate delay\nJitter -> Wait : sleep [thick]\nWait -> Request : retry [dashed, blue]\n\nCBState -> Response : success [green]\nResponse -> SuccessCount : increment\nSuccessCount -> CBClosed : reset failures [green]\n\nnote MaxReached : max 5 attempts\nnote Backoff : delay = 2^attempt * base\nnote Jitter : ±25% random\nnote CBOpen : fail fast, no request sent\nnote CBHalfOpen : single test request\nnote CBClosed : normal operation\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 25
+      }
+    },
+    {
+      "id": "flow-data-import",
+      "family": "flowchart",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nflowchart TD\n    Start([Start]) --> Upload[/Upload CSV/]\n    Upload --> ValidateHeaders{Validate Headers}\n    ValidateHeaders -- Valid --> RowValidation{Row-level Validation}\n    ValidateHeaders -- Invalid --> ErrorReport[Generate Error Report]\n    RowValidation -- All Rows Valid --> Dedupe[Dedupe]\n    RowValidation -- Invalid Rows Found --> ErrorReport\n    ErrorReport --> EmailSummary[/Email Summary/]\n    Dedupe --> WriteBatches[Write in Batches]\n    WriteBatches --> EmailSummary\n    EmailSummary --> End([End])\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "flow-data-import",
+      "family": "flowchart",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nflowchart top\ntitle: CSV Import Pipeline\n\ngroup Input {\n  Upload [icon: tabler/upload, blue]\n  Headers [diamond, orange]\n}\n\ngroup Validation {\n  RowValidation [icon: tabler/clipboard-check, green]\n  ErrorReport [note, red]\n}\n\ngroup Processing {\n  Dedupe [icon: tabler/database-minus, violet]\n  BatchWrite [icon: tabler/database-plus, teal]\n}\n\ngroup Output {\n  EmailSummary [icon: tabler/mail, pink]\n}\n\nUpload -> Headers : validate headers\nHeaders -> RowValidation : ok\nHeaders --> Upload : invalid headers [red, dashed]\nRowValidation -> ErrorReport : collect errors [dashed]\nRowValidation -> Dedupe : valid rows\nDedupe -> BatchWrite : unique rows\nBatchWrite -> EmailSummary : done\nErrorReport --> EmailSummary : attach [dashed]\n```",
+        "valid": false,
+        "problems": [
+          "line 1: Mermaid: Missing chart type declaration. Start with \"flowchart TD\" or related."
+        ],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 0
+      },
+      "second": {
+        "text": "```dsl\nflowchart TD\ntitle: CSV Import Pipeline\n\ngroup Input {\n  Upload [icon: tabler/upload, blue]\n  Headers [diamond, orange]\n}\n\ngroup Validation {\n  RowValidation [icon: tabler/clipboard-check, green]\n  ErrorReport [note, red]\n}\n\ngroup Processing {\n  Dedupe [icon: tabler/database-minus, violet]\n  BatchWrite [icon: tabler/database-plus, teal]\n}\n\ngroup Output {\n  EmailSummary [icon: tabler/mail, pink]\n}\n\nUpload -> Headers : validate headers\nHeaders -> RowValidation : ok\nHeaders --> Upload : invalid headers [red, dashed]\nRowValidation -> ErrorReport : collect errors [dashed]\nRowValidation -> Dedupe : valid rows\nDedupe -> BatchWrite : unique rows\nBatchWrite -> EmailSummary : done\nErrorReport --> EmailSummary : attach [dashed]\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 15,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "arch-saas",
+      "family": "architecture",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\narchitecture-beta\n    group internet(cloud)[Internet]\n    group aws(cloud)[AWS Cloud]\n\n    service cdn(internet)[CDN]\n    service frontend(cdn)[React Frontend]\n    \n    service gateway(aws)[API Gateway]\n    service auth(aws)[Auth Service]\n    service api(aws)[Node.js API]\n    service worker(aws)[Background Worker]\n    \n    database postgres(aws)[PostgreSQL]\n    database redis(aws)[Redis Cache]\n    service s3(aws)[S3 Storage]\n    service queue(aws)[Message Queue]\n\n    frontend:R -- L:gateway\n    gateway:R -- L:auth\n    gateway:R -- L:api\n    api:T -- B:postgres\n    api:R -- L:redis\n    api:R -- L:s3\n    api:R -- L:queue\n    queue:T -- B:worker\n    worker:T -- B:postgres\n    worker:R -- L:redis\n    worker:R -- L:s3\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 4,
+        "nodes": 13
+      }
+    },
+    {
+      "id": "arch-saas",
+      "family": "architecture",
+      "format": "dsl",
+      "first": {
+        "text": "{\"dsl\": \"architecture\\nreact = Frontend [tech: react, icon: tech/react]\\ncdn = CDN [icon: aws/cloudfront]\\nauth = Auth Service [tech: node, icon: tech/node]\\ngateway = API Gateway [icon: aws/apigateway]\\napi = Node API [tech: node, icon: tech/node]\\ndb = Postgres [icon: aws/rds-postgresql]\\ncache = Redis [icon: tech/redis]\\nstorage = S3 [icon: aws/s3]\\nworker = Background Worker [tech: node, icon: tech/node]\\nqueue = Queue [icon: aws/sqs]\\n\\nreact -> cdn\\ncdn -> gateway\\ngateway -> auth : authenticate\\ngateway -> api : forward\\nauth -> cache : token check\\napi -> db : query\\napi -> cache : cache read/write\\napi -> storage : uploads\\napi -> queue : enqueue jobs\\nqueue -> worker : process\"}",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 1
+      }
+    },
+    {
+      "id": "arch-aws-serverless",
+      "family": "architecture",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\narchitecture-beta\n    group aws[AWS Cloud]\n\n    service api_gateway(aws-api-gateway)[API Gateway] in aws\n    service lambda_upload(aws-lambda)[Upload Lambda] in aws\n    service s3_upload(aws-s3)[S3 Upload Bucket] in aws\n    service sqs(aws-sqs)[SQS Queue] in aws\n    service lambda_resize(aws-lambda)[Resize Lambda] in aws\n    service dynamodb(aws-dynamodb)[DynamoDB Metadata] in aws\n    service cloudfront(aws-cloudfront)[CloudFront] in aws\n\n    api_gateway:R -- L:lambda_upload\n    lambda_upload:R -- L:s3_upload\n    s3_upload:T -- B:sqs\n    sqs:T -- B:lambda_resize\n    lambda_resize:R -- L:dynamodb\n    lambda_resize:B -- T:cloudfront\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 8
+      }
+    },
+    {
+      "id": "arch-aws-serverless",
+      "family": "architecture",
+      "format": "dsl",
+      "first": {
+        "text": "\nvalidate_openflow_dsl({\"dsl\": \"architecture\\nparticipant Client [person]\\nservice \\\"API Gateway\\\" as APIGW\\ngroup AWS {\\n  lambda UploadLambda [icon: aws/lambda]\\n  bucket UploadBucket [icon: aws/s3]\\n  queue ResizeQueue [icon: aws/sqs]\\n  lambda ResizeLambda [icon: aws/lambda]\\n  table MetadataTable [icon: aws/dynamodb]\\n  cdn CloudFront [icon: aws/cloudfront]\\n}\\nClient -> APIGW : HTTPS upload\\nAPIGW -> UploadLambda : trigger\\nUploadLambda -> UploadBucket : put object\\nUploadBucket -> ResizeQueue : event notification\\nResizeQueue -> ResizeLambda : trigger\\nResizeLambda -> UploadBucket : put resized\\nResizeLambda -> MetadataTable : write metadata\\nClient -> CloudFront : GET image\\nCloudFront -> UploadBucket : origin fetch\"})",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 3
+      }
+    },
+    {
+      "id": "arch-event",
+      "family": "architecture",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\narchitecture-beta\n    group kafka_system(logos:apache-kafka) \"Kafka Cluster\"\n    service order_svc(logos:shopify) \"Order Service\" in kafka_system\n    queue kafka(logos:apache-kafka) \"Kafka Topic: orders\" in kafka_system\n\n    group consumers \"Consumer Services\"\n    service inv_svc(logos:database) \"Inventory Service\" in consumers\n    service bill_svc(logos:credit-card) \"Billing Service\" in consumers\n    service ship_svc(logos:truck) \"Shipping Service\" in consumers\n\n    group dbs \"Service Databases\"\n    database inv_db(logos:postgresql) \"Inventory DB\" in dbs\n    database bill_db(logos:postgresql) \"Billing DB\" in dbs\n    database ship_db(logos:postgresql) \"Shipping DB\" in dbs\n\n    order_svc -> kafka\n    kafka -> inv_svc\n    kafka -> bill_svc\n    kafka -> ship_svc\n\n    inv_svc -> inv_db\n    bill_svc -> bill_db\n    ship_svc -> ship_db\n```",
+        "valid": false,
+        "problems": [
+          "line 1: Mermaid: No valid architecture nodes found."
+        ],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 0
+      },
+      "second": {
+        "text": "```mermaid\narchitecture-beta\n    group kafka_cluster(\"Kafka Cluster\")\n    service order_svc(\"Order Service\") in kafka_cluster\n    queue kafka_topic(\"Kafka Topic: orders\") in kafka_cluster\n\n    group consumer_svcs(\"Consumer Services\")\n    service inv_svc(\"Inventory Service\") in consumer_svcs\n    service bill_svc(\"Billing Service\") in consumer_svcs\n    service ship_svc(\"Shipping Service\") in consumer_svcs\n\n    group svc_dbs(\"Service Databases\")\n    database inv_db(\"Inventory DB\") in svc_dbs\n    database bill_db(\"Billing DB\") in svc_dbs\n    database ship_db(\"Shipping DB\") in svc_dbs\n\n    order_svc -> kafka_topic\n    kafka_topic -> inv_svc\n    kafka_topic -> bill_svc\n    kafka_topic -> ship_svc\n\n    inv_svc -> inv_db\n    bill_svc -> bill_db\n    ship_svc -> ship_db\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 11,
+        "nodes": 7
+      }
+    },
+    {
+      "id": "arch-event",
+      "family": "architecture",
+      "format": "dsl",
+      "first": {
+        "text": "{\"dsl\": \"architecture\\ntitle: Event-Driven Order System\\ngroup Order Service {\\n  OrderService [component]\\n}\\ngroup Kafka {\\n  Kafka [queue]\\n}\\ngroup Inventory Service {\\n  InventoryService [component]\\n  InventoryDB [cylinder]\\n}\\ngroup Billing Service {\\n  BillingService [component]\\n  BillingDB [cylinder]\\n}\\ngroup Shipping Service {\\n  ShippingService [component]\\n  ShippingDB [cylinder]\\n}\\nOrderService -> Kafka : publish OrderCreated\\nKafka -> InventoryService : consume\\nKafka -> BillingService : consume\\nKafka -> ShippingService : consume\\nInventoryService -> InventoryDB : read/write\\nBillingService -> BillingDB : read/write\\nShippingService -> ShippingDB : read/write\"}",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 1
+      }
+    },
+    {
+      "id": "arch-ml",
+      "family": "architecture",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\narchitecture-beta\n    service feature_store(name=\"Feature Store\") <<database>>\n    service k8s_training(name=\"Training Jobs (K8s)\") <<kubernetes>>\n    service model_registry(name=\"Model Registry\") <<database>>\n    service load_balancer(name=\"Load Balancer\") <<loadbalancer>>\n    service inference_service(name=\"Online Inference Service\") <<server>>\n    service prometheus(name=\"Prometheus\") <<monitoring>>\n    service grafana(name=\"Grafana\") <<dashboard>>\n\n    feature_store - k8s_training\n    k8s_training - model_registry\n    model_registry - inference_service\n    load_balancer - inference_service\n    \n    prometheus - feature_store\n    prometheus - k8s_training\n    prometheus - model_registry\n    prometheus - inference_service\n    prometheus - load_balancer\n    grafana - prometheus\n```",
+        "valid": false,
+        "problems": [
+          "line 1: Mermaid: No valid architecture nodes found."
+        ],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 0
+      },
+      "second": {
+        "text": "```mermaid\narchitecture-beta\n    service feature_store[Feature Store]\n    kubernetes k8s_training[Training Jobs (K8s)]\n    database model_registry[Model Registry]\n    loadbalancer load_balancer[Load Balancer]\n    server inference_service[Online Inference Service]\n    monitoring prometheus[Prometheus]\n    dashboard grafana[Grafana]\n\n    feature_store - k8s_training\n    k8s_training - model_registry\n    model_registry - inference_service\n    load_balancer - inference_service\n    \n    prometheus - feature_store\n    prometheus - k8s_training\n    prometheus - model_registry\n    prometheus - inference_service\n    prometheus - load_balancer\n    grafana - prometheus\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 16,
+        "nodes": 1
+      }
+    },
+    {
+      "id": "arch-ml",
+      "family": "architecture",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\narchitecture\ntitle: ML Platform Architecture\n\ngroup \"Data Layer\" {\n  FeatureStore [component, icon: tabler/database, green]\n  ModelRegistry [component, icon: tabler/package, blue]\n}\n\ngroup \"Compute Layer\" {\n  K8sCluster [component, icon: tech/kubernetes, orange] {\n    TrainingJobs [component, icon: tabler/cpu, violet]\n  }\n}\n\ngroup \"Serving Layer\" {\n  LoadBalancer [component, icon: tabler/route, teal]\n  InferenceService [component, icon: tabler/rocket, green]\n}\n\ngroup \"Observability\" {\n  Prometheus [component, icon: tech/prometheus, red]\n  Grafana [component, icon: tech/grafana, orange]\n}\n\nFeatureStore -> TrainingJobs : read features\nTrainingJobs -> ModelRegistry : register model\nModelRegistry -> InferenceService : load model\nLoadBalancer -> InferenceService : route requests\nInferenceService -> FeatureStore : fetch online features\nTrainingJobs -> Prometheus : metrics\nInferenceService -> Prometheus : metrics\nPrometheus -> Grafana : scrape\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 12
+      }
+    },
+    {
+      "id": "arch-mobile",
+      "family": "architecture",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\narchitecture-beta\n    group mobile[Mobile Clients]\n    group backend[Backend Services]\n    group data[Data Layer]\n\n    service ios(in: mobile)[iOS App]\n    service android(in: mobile)[Android App]\n\n    service gateway(in: backend)[GraphQL Gateway]\n    service user_svc(in: backend)[User Service]\n    service notif_svc(in: backend)[Notification Service]\n\n    service apns(external)[APNs]\n    service fcm(external)[FCM]\n\n    service pg(in: data)[PostgreSQL]\n    service redis(in: data)[Redis]\n\n    ios:R -- L:gateway\n    android:R -- L:gateway\n\n    gateway:B -- T:user_svc\n    gateway:B -- T:notif_svc\n\n    user_svc:R -- L:pg\n    user_svc:R -- L:redis\n\n    notif_svc:R -- L:apns\n    notif_svc:R -- L:fcm\n    notif_svc:B -- T:redis\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 12
+      }
+    },
+    {
+      "id": "arch-mobile",
+      "family": "architecture",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\narchitecture right\ntitle: Mobile App Backend\n\ngroup Clients {\n  iOS [icon: tabler/brand-apple, teal]\n  Android [icon: tabler/brand-android, green]\n}\n\ngroup Gateway {\n  GraphQL [component, blue]\n}\n\ngroup Services {\n  User [component, violet]\n  Notification [component, orange]\n}\n\ngroup Data {\n  Postgres [cylinder, aws/rds-postgresql]\n  Redis [queue, tech/redis]\n}\n\ngroup PushProviders {\n  APNs [icon: tabler/brand-apple, red]\n  FCM [icon: tabler/brand-firebase, yellow]\n}\n\niOS -> GraphQL : HTTPS\nAndroid -> GraphQL : HTTPS\n\nGraphQL -> User : gRPC\nGraphQL -> Notification : gRPC\n\nUser -> Postgres : SQL\nUser -> Redis : cache\n\nNotification -> APNs : HTTP/2\nNotification -> FCM : HTTP/2\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 14
+      }
+    },
+    {
+      "id": "arch-gcp",
+      "family": "architecture",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\narchitecture-beta\n    group gcp[GCP Data Platform]\n    \n    service pubsub(queue)[Pub/Sub] in gcp\n    service dataflow(function)[Dataflow] in gcp\n    service bigquery(analytics)[BigQuery] in gcp\n    service looker(analytics)[Looker] in gcp\n    service storage(storage)[Cloud Storage] in gcp\n    \n    pubsub:R -- L:dataflow\n    dataflow:R -- L:bigquery\n    dataflow:B -- T:storage\n    bigquery:R -- L:looker\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "arch-gcp",
+      "family": "architecture",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\narchitecture right\ntitle: GCP Data Platform\n\ngroup Ingestion {\n  PubSub [icon: gcp/pubsub]\n}\n\ngroup Processing {\n  Dataflow [icon: gcp/dataflow]\n}\n\ngroup Storage {\n  BigQuery [icon: gcp/bigquery]\n  CloudStorage [icon: gcp/cloud-storage, label: \"Cloud Storage\\narchive\"]\n}\n\ngroup Analytics {\n  Looker [icon: gcp/looker]\n}\n\nPubSub -> Dataflow : streaming events\nDataflow -> BigQuery : transformed data\nDataflow -> CloudStorage : raw + DLQ\nBigQuery -> Looker : SQL queries\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "arch-monolith-split",
+      "family": "architecture",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\narchitecture-beta\n    group internet[Internet]\n    group proxy[Strangler Fig Proxy]\n    group monolith_group[Rails Monolith]\n    group payments_group[Payments Service]\n    group db_group[Shared Postgres (Migration in Progress)]\n    group stripe_group[External]\n\n    service proxy_svc[Proxy] in proxy\n    service monolith[Rails Monolith] in monolith_group\n    service payments[Payments Service] in payments_group\n    database postgres[Postgres] in db_group\n    external stripe[Stripe] in stripe_group\n\n    internet:L -- proxy_svc:T\n    proxy_svc:B -- monolith:T\n    proxy_svc:B -- payments:T\n    monolith:R -- postgres:L\n    payments:L -- postgres:R\n    payments:R -- stripe:L\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 4,
+        "nodes": 11
+      }
+    },
+    {
+      "id": "arch-monolith-split",
+      "family": "architecture",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\narchitecture\ntitle: Rails Monolith Strangler Fig Migration\ngroup \"Current System\" {\n  Proxy [component, icon: tabler/route, teal]\n  Monolith [component, icon: tech/rails, red]\n  Postgres [cylinder, icon: tech/postgresql, blue]\n}\ngroup \"New Services\" {\n  Payments [component, icon: tabler/credit-card, green]\n  Stripe [component, icon: tabler/brand-stripe, violet]\n}\ngroup \"Migration Target\" {\n  NewPostgres [cylinder, icon: tech/postgresql, blue, dashed]\n}\nProxy -> Monolith : routes legacy traffic\nProxy -> Payments : routes /payments/*\nMonolith -> Postgres : reads/writes [thick]\nPayments -> Postgres : reads legacy tables [dashed]\nPayments -> NewPostgres : writes new schema [thick, green]\nPayments -> Stripe : charge / webhook [thick, violet]\nMonolith -.-> Payments : async events [dashed, orange]\nnote Proxy : Strangler Fig —\\nincremental cutover\nnote Postgres : Shared DB —\\nschema split in progress\nnote NewPostgres : Target schema —\\nowned by Payments\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 13
+      }
+    },
+    {
+      "id": "arch-observability",
+      "family": "architecture",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\narchitecture-beta\n    group services(cloud)[Services]\n    group collector(cloud)[Collection]\n    group storage(cloud)[Storage]\n    group viz(cloud)[Visualization]\n\n    service svc1(server)[Service A] in services\n    service svc2(server)[Service B] in services\n    service svc3(server)[Service C] in services\n\n    service otel_collector(database)[OTel Collector] in collector\n\n    service tempo(database)[Tempo\\n(Traces)] in storage\n    service prometheus(database)[Prometheus\\n(Metrics)] in storage\n    service loki(database)[Loki\\n(Logs)] in storage\n\n    service grafana(monitor)[Grafana] in viz\n\n    svc1:R -- L:otel_collector\n    svc2:R -- L:otel_collector\n    svc3:R -- L:otel_collector\n\n    otel_collector:R -- L:tempo\n    otel_collector:R -- L:prometheus\n    otel_collector:R -- L:loki\n\n    tempo:T -- B:grafana\n    prometheus:T -- B:grafana\n    loki:T -- B:grafana\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 12
+      }
+    },
+    {
+      "id": "arch-observability",
+      "family": "architecture",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\narchitecture\ntitle: Observability Stack\ngroup Services {\n  ServiceA [icon: tabler/server, tech: opentelemetry]\n  ServiceB [icon: tabler/server, tech: opentelemetry]\n  ServiceC [icon: tabler/server, tech: opentelemetry]\n}\nCollector [icon: tabler/route, tech: opentelemetry] : OpenTelemetry Collector\ngroup Storage {\n  Tempo [icon: tech/tempo] : Traces\n  Prometheus [icon: tech/prometheus] : Metrics\n  Loki [icon: tech/loki] : Logs\n}\nGrafana [icon: tech/grafana] : Visualization\n\nServiceA -> Collector : OTLP\nServiceB -> Collector : OTLP\nServiceC -> Collector : OTLP\nCollector -> Tempo : traces\nCollector -> Prometheus : metrics\nCollector -> Loki : logs\nTempo -> Grafana : queries\nPrometheus -> Grafana : queries\nLoki -> Grafana : queries\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 15
+      }
+    },
+    {
+      "id": "arch-rag",
+      "family": "architecture",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\narchitecture-beta\n    group internet[Internet]\n    group cloud[Cloud Infrastructure]\n    group external[External Services]\n\n    service ui[Web UI] in internet\n    service api[API Server] in cloud\n    service worker[Embedding Worker] in cloud\n    service vectordb[Vector Database] in cloud\n    service s3[Document Store (S3)] in cloud\n    service llm[LLM Provider] in external\n\n    ui:L -- R:api\n    api:B -- T:vectordb\n    api:R -- L:llm\n    worker:T -- B:s3\n    worker:R -- L:vectordb\n    api:L -- R:s3\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "arch-rag",
+      "family": "architecture",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\narchitecture right\ntitle: RAG Chatbot Architecture\n\ngroup Frontend {\n  WebUI [browser, blue]\n}\n\ngroup Backend {\n  API [component, green]\n}\n\ngroup Workers {\n  EmbeddingWorker [component, orange]\n}\n\ngroup Storage {\n  VectorDB [cylinder, violet]\n  DocStore [icon: aws/s3, teal]\n}\n\ngroup External {\n  LLMProvider [cloud, pink]\n}\n\nWebUI -> API : HTTPS /chat\nAPI -> EmbeddingWorker : embed docs [dashed]\nAPI -> VectorDB : query vectors\nAPI -> DocStore : fetch chunks\nAPI -> LLMProvider : generate answer\nEmbeddingWorker -> VectorDB : upsert vectors\nEmbeddingWorker -> DocStore : read docs\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 11
+      }
+    },
+    {
+      "id": "arch-multiregion",
+      "family": "architecture",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\narchitecture-beta\n    group primary-region[Primary Region]\n    group standby-region[Standby Region]\n    \n    service dns[internet][Global DNS]\n    \n    service primary-lb[internet][Load Balancer] in primary-region\n    service primary-app[server][App Servers] in primary-region\n    service primary-db[database][Primary Database] in primary-region\n    \n    service standby-lb[internet][Load Balancer] in standby-region\n    service standby-app[server][App Servers] in standby-region\n    service standby-db[database][Standby Database] in standby-region\n    \n    dns:R -- L:primary-lb\n    dns:R -- L:standby-lb\n    \n    primary-lb:B -- T:primary-app\n    primary-app:B -- T:primary-db\n    \n    standby-lb:B -- T:standby-app\n    standby-app:B -- T:standby-db\n    \n    primary-db:R -- L:standby-db[Replication]\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 10
+      }
+    },
+    {
+      "id": "arch-multiregion",
+      "family": "architecture",
+      "format": "dsl",
+      "first": {
+        "text": "dsl\narchitecture\ntitle: Multi-Region Active-Passive Deployment\n\ngroup \"Global DNS\" {\n  DNS [component, icon: tabler/dns]\n}\n\ngroup \"Primary Region (Active)\" {\n  LB1 [component, icon: aws/elastic-load-balancing]\n  App1 [component, icon: tech/nodejs, label: \"App Servers\"]\n  DB1 [cylinder, icon: tech/postgresql, label: \"Primary DB\"]\n}\n\ngroup \"Standby Region (Passive)\" {\n  LB2 [component, icon: aws/elastic-load-balancing]\n  App2 [component, icon: tech/nodejs, label: \"App Servers\"]\n  DB2 [cylinder, icon: tech/postgresql, label: \"Standby DB\"]\n}\n\nDNS -> LB1 : primary [thick]\nDNS --> LB2 : failover [dashed]\n\nLB1 -> App1\nApp1 -> DB1\n\nLB2 -> App2\nApp2 -> DB2\n\nDB1 -> DB2 : async replication [dashed, blue, label: \"replication\"]",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 12
+      }
+    },
+    {
+      "id": "seq-oauth",
+      "family": "sequence",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nsequenceDiagram\n    autonumber\n    actor User as Browser (User Agent)\n    participant Client as Client App\n    participant AuthZ as Authorization Server\n    participant Resource as Resource Server\n\n    Note over Client: 1. Generate PKCE Parameters\n    Client->>Client: Generate code_verifier (random string)\n    Client->>Client: Generate code_challenge = BASE64URL(SHA256(code_verifier))\n    Client->>Client: Store code_verifier securely\n\n    User->>Client: Clicks \"Login\"\n    Client-->>User: HTTP 302 Redirect to /authorize<br/>(client_id, redirect_uri, scope, state,<br/>response_type=code, code_challenge,<br/>code_challenge_method=S256)\n    User->>AuthZ: GET /authorize (with PKCE params)\n    \n    Note over AuthZ, User: 2. User Authentication & Consent\n    AuthZ->>User: Prompt for Credentials / Consent\n    User->>AuthZ: Submits Credentials / Grants Consent\n    AuthZ->>AuthZ: Store code_challenge linked to auth_code\n    AuthZ-->>User: HTTP 302 Redirect to redirect_uri<br/>(code=AUTH_CODE, state=STATE)\n    User->>Client: GET redirect_uri?code=AUTH_CODE&state=STATE\n\n    Note over Client: 3. Token Exchange (Backend)\n    Client->>AuthZ: POST /token<br/>(grant_type=authorization_code,<br/>code=AUTH_CODE, redirect_uri,<br/>client_id, code_verifier)\n    AuthZ->>AuthZ: Verify code_verifier:<br/>SHA256(code_verifier) == stored code_challenge\n    AuthZ-->>Client: 200 OK { access_token, refresh_token,<br/>id_token, expires_in, token_type }\n    \n    Note over Client, Resource: 4. Access Protected Resource\n    Client->>Resource: GET /api/resource<br/>Authorization: Bearer <access_token>\n    Resource->>Resource: Validate Token (Signature, Expiry, Scope)\n    Resource-->>Client: 200 OK { Protected Data }\n    Client-->>User: Display Data\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 8
+      }
+    },
+    {
+      "id": "seq-oauth",
+      "family": "sequence",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nsequence\nparticipant Browser [person]\nparticipant \"Client App\" as Client\nparticipant \"Authorization Server\" as AuthServer\nparticipant \"Resource Server\" as ResourceServer\n\nBrowser -> Client : User clicks \"Login\"\nnote over Client : Generate code_verifier (random)\\nCompute code_challenge = SHA256(code_verifier)\n\nClient -> Browser : Redirect to AuthServer\\n/authorize?response_type=code\\n&client_id=...\\n&redirect_uri=...\\n&scope=...\\n&code_challenge=...\\n&code_challenge_method=S256\n\nBrowser -> AuthServer : GET /authorize\\n(code_challenge, code_challenge_method)\nAuthServer -> Browser : Login / Consent page\nBrowser -> AuthServer : User authenticates & consents\nAuthServer -> Browser : Redirect to Client\\n/callback?code=AUTH_CODE\n\nBrowser -> Client : GET /callback?code=AUTH_CODE\nClient -> AuthServer : POST /token\\ngrant_type=authorization_code\\ncode=AUTH_CODE\\nredirect_uri=...\\ncode_verifier=...\nAuthServer -> Client : Access Token + Refresh Token\n\nClient -> ResourceServer : API Request\\nAuthorization: Bearer <access_token>\nResourceServer -> Client : Protected Resource\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 8
+      }
+    },
+    {
+      "id": "seq-payment",
+      "family": "sequence",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nsequenceDiagram\n    autonumber\n    actor Client\n    participant API as Our API\n    participant Stripe\n    participant Webhook as Stripe Webhook\n\n    Client->>API: POST /payments (amount, currency, order_id)\n    API->>Stripe: Create PaymentIntent (amount, currency, metadata)\n    Stripe-->>API: PaymentIntent { id, client_secret, status: requires_payment_method }\n    API-->>Client: 201 { payment_intent_id, client_secret }\n\n    Client->>Stripe: confirmCardPayment(client_secret, payment_method)\n    activate Stripe\n    Note over Stripe: Processing payment...\n    \n    par Webhook path (async, may arrive first)\n        Stripe->>Webhook: POST /webhooks/stripe (event: payment_intent.succeeded)\n        activate Webhook\n        Webhook->>API: Handle webhook (verify signature, update order=paid)\n        API-->>Webhook: 200 OK\n        deactivate Webhook\n    and Redirect path\n        Stripe-->>Client: PaymentIntent { status: succeeded }\n        deactivate Stripe\n        Client->>API: GET /orders/{order_id} (or redirect to success page)\n        API-->>Client: 200 { status: paid } (or redirect response)\n    end\n\n    Note right of Client: Webhook may process<br/>before redirect completes\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 10
+      }
+    },
+    {
+      "id": "seq-payment",
+      "family": "sequence",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nsequence\nparticipant Client [person]\nparticipant \"Our API\" as API\nparticipant Stripe [icon: tabler/brand-stripe]\nparticipant \"Stripe Webhook\" as Webhook\n\nClient -> API : POST /payments (amount, currency)\nAPI -> Stripe : Create PaymentIntent\nStripe --> API : PaymentIntent { client_secret }\nAPI --> Client : { client_secret, publishable_key }\nClient -> Stripe : confirmCardPayment(client_secret)\nalt payment succeeds {\n  Stripe -> Webhook : payment_intent.succeeded\n  Webhook -> API : POST /webhooks/stripe\n  API --> Webhook : 200 OK\n  Stripe --> Client : redirect to success_url\n  Client -> API : GET /payments/:id/status\n  API --> Client : { status: \"succeeded\" }\n} else payment fails {\n  Stripe --> Client : error\n  Client -> API : GET /payments/:id/status\n  API --> Client : { status: \"failed\" }\n}\nnote over Webhook, API : Webhook may arrive\\nbefore client redirect\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 13
+      }
+    },
+    {
+      "id": "seq-login-mfa",
+      "family": "sequence",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nsequenceDiagram\n    actor User\n    participant Client as Client App\n    participant AuthServer as Auth Server\n    participant TOTPApp as Authenticator App\n\n    User->>Client: Enters username & password\n    Client->>AuthServer: POST /login {username, password}\n    AuthServer->>AuthServer: Validate password\n    alt Password valid\n        AuthServer-->>Client: 200 OK {requires_totp: true, session_id}\n        Client->>User: Prompt for TOTP code\n        User->>TOTPApp: Opens app, reads code\n        TOTPApp-->>User: Shows TOTP code (e.g., 123456)\n        User->>Client: Enters wrong code (e.g., 123456)\n        Client->>AuthServer: POST /verify-totp {session_id, code: \"123456\"}\n        AuthServer->>AuthServer: Validate TOTP (fails)\n        AuthServer-->>Client: 401 Unauthorized {error: \"Invalid TOTP code\"}\n        Client->>User: Shows error, prompts retry\n        User->>TOTPApp: Waits for next code, reads new code\n        TOTPApp-->>User: Shows new TOTP code (e.g., 789012)\n        User->>Client: Enters correct code (e.g., 789012)\n        Client->>AuthServer: POST /verify-totp {session_id, code: \"789012\"}\n        AuthServer->>AuthServer: Validate TOTP (success)\n        AuthServer-->>Client: 200 OK {access_token, refresh_token}\n        Client->>User: Login successful\n    else Password invalid\n        AuthServer-->>Client: 401 Unauthorized {error: \"Invalid credentials\"}\n        Client->>User: Shows error\n    end\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "seq-login-mfa",
+      "family": "sequence",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nsequence\nparticipant User [person]\nparticipant Frontend [browser]\nparticipant AuthAPI [component]\nparticipant DB [db]\nparticipant TOTP [component]\n\nUser -> Frontend : enters username + password\nFrontend -> AuthAPI : POST /login {username, password}\nAuthAPI -> DB : find user by username\nDB --> AuthAPI : user record (with TOTP secret)\nalt invalid credentials {\n  AuthAPI --> Frontend : 401 Invalid credentials\n  Frontend --> User : show error\n} else valid {\n  AuthAPI --> Frontend : 200 {requireTotp: true, challengeId}\n  Frontend --> User : prompt for TOTP code\n  \n  loop up to 3 attempts {\n    User -> Frontend : enters TOTP code\n    Frontend -> AuthAPI : POST /login/totp {challengeId, code}\n    AuthAPI -> TOTP : verify(code, secret)\n    alt code valid {\n      TOTP --> AuthAPI : valid\n      AuthAPI --> Frontend : 200 {token, refreshToken}\n      Frontend --> User : redirect to app\n      break\n    } else code invalid {\n      TOTP --> AuthAPI : invalid\n      AuthAPI --> Frontend : 401 Invalid TOTP code\n      Frontend --> User : show error, retry\n    }\n  }\n  \n  opt max attempts exceeded {\n    AuthAPI --> Frontend : 429 Too many attempts\n    Frontend --> User : lockout, try again later\n  }\n}\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 15
+      }
+    },
+    {
+      "id": "seq-upload",
+      "family": "sequence",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nsequenceDiagram\n    autonumber\n    participant Browser\n    participant API\n    participant S3\n    participant Processor\n    participant StatusStore\n\n    Browser->>API: POST /api/upload-url {filename, contentType}\n    API->>S3: Generate presigned PUT URL (expires in 5-15 min)\n    S3-->>API: Presigned URL + key\n    API-->>Browser: 200 OK {uploadUrl, key, objectId}\n\n    Browser->>S3: PUT {uploadUrl} file binary\n    S3-->>Browser: 200 OK\n\n    S3->>Processor: S3 Event (ObjectCreated) {bucket, key, objectId}\n    Processor->>StatusStore: SET status=PROCESSING objectId\n    Processor->>Processor: Process file (validate, transform, etc.)\n    Processor->>StatusStore: SET status=COMPLETE result={...} objectId\n\n    loop Poll until complete\n        Browser->>API: GET /api/status/{objectId}\n        API->>StatusStore: GET status objectId\n        StatusStore-->>API: {status, result?}\n        API-->>Browser: 200 OK {status, result?}\n        alt status != COMPLETE\n            Browser->>Browser: wait (exponential backoff)\n        end\n    end\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "seq-upload",
+      "family": "sequence",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nsequence\nparticipant Browser [browser]\nparticipant API [component]\nparticipant S3 [icon: aws/s3]\nparticipant Processor [icon: aws/lambda]\n\nBrowser -> API : GET /upload/presigned-url\nAPI --> Browser : { url, fields }\nBrowser -> S3 : POST { url, fields, file }\nS3 --> Browser : 204 No Content\nS3 -> Processor : ObjectCreated event\nProcessor -> S3 : process file\nProcessor -> API : update status\nBrowser -> API : GET /upload/status/:id\nalt processing {\n  API --> Browser : { status: \"processing\" }\n} else complete {\n  API --> Browser : { status: \"complete\", result }\n}\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 10
+      }
+    },
+    {
+      "id": "seq-saga",
+      "family": "sequence",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nsequenceDiagram\n    participant Client\n    participant FlightService\n    participant HotelService\n    participant PaymentService\n\n    Client->>FlightService: Reserve Flight\n    FlightService-->>Client: Flight Reserved (flightId)\n    Client->>HotelService: Reserve Hotel\n    HotelService-->>Client: Hotel Reserved (hotelId)\n    Client->>PaymentService: Charge Card\n    alt Charge Succeeds\n        PaymentService-->>Client: Payment Confirmed\n    else Charge Fails\n        PaymentService-->>Client: Payment Failed\n        Client->>HotelService: Cancel Hotel (hotelId)\n        HotelService-->>Client: Hotel Cancelled\n        Client->>FlightService: Cancel Flight (flightId)\n        FlightService-->>Client: Flight Cancelled\n    end\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "seq-saga",
+      "family": "sequence",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nsequence\nparticipant Client [person]\nparticipant FlightService\nparticipant HotelService\nparticipant PaymentService\n\nClient -> FlightService : reserveFlight()\nFlightService --> Client : flightId\nClient -> HotelService : reserveHotel()\nHotelService --> Client : hotelId\nClient -> PaymentService : chargeCard(amount)\nalt success {\n  PaymentService --> Client : charged\n  Client --> FlightService : confirm(flightId)\n  Client --> HotelService : confirm(hotelId)\n} else failure {\n  PaymentService --> Client : declined\n  Client --> FlightService : cancel(flightId)\n  FlightService --> Client : cancelled\n  Client --> HotelService : cancel(hotelId)\n  HotelService --> Client : cancelled\n}\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "seq-chat",
+      "family": "sequence",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nsequenceDiagram\n    autonumber\n    participant C1 as Client (Sender)\n    participant GW as Gateway\n    participant CS as Chat Service\n    participant MS as Message Store\n    participant C2 as Client (Recipient 1)\n    participant C3 as Client (Recipient 2)\n\n    Note over C1,GW: WebSocket connection established\n    C1->>GW: WS: send(message)\n    GW->>CS: forward(message)\n    CS->>MS: persist(message)\n    MS-->>CS: ack\n    CS-->>GW: stored(message_id)\n    GW-->>C1: WS: ack(message_id)\n\n    par Fan-out to connected clients\n        CS->>GW: broadcast(message, exclude=C1)\n        GW->>C2: WS: push(message)\n        GW->>C3: WS: push(message)\n    end\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 8
+      }
+    },
+    {
+      "id": "seq-chat",
+      "family": "sequence",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nsequence\nparticipant Client [person]\nparticipant Gateway [icon: tabler/server]\nparticipant ChatService [component]\nparticipant MessageStore [db]\nparticipant OtherClients [person]\n\nClient -> Gateway : WebSocket: send message\nGateway -> ChatService : validate & enrich\nChatService -> MessageStore : persist message\nMessageStore --> ChatService : saved\nChatService --> Gateway : ack\nGateway --> Client : delivered\n\npar fan-out {\n  Gateway -> OtherClients : push message\n} and {\n  Gateway -> OtherClients : push message\n}\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 7
+      }
+    },
+    {
+      "id": "seq-cache-miss",
+      "family": "sequence",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nsequenceDiagram\n    participant Client\n    participant API\n    participant Redis\n    participant Postgres\n\n    Client->>API: GET /resource\n    API->>Redis: GET cache:resource\n    Redis-->>API: MISS (nil)\n    API->>Postgres: SELECT * FROM resource WHERE id = ?\n    Postgres-->>API: Resource data\n    API->>Redis: SET cache:resource <data> EX 3600\n    Redis-->>API: OK\n    API-->>Client: 200 OK + Resource data\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 4
+      }
+    },
+    {
+      "id": "seq-cache-miss",
+      "family": "sequence",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nsequence\nparticipant Client [person]\nparticipant API\nparticipant Redis [db]\nparticipant Postgres [db]\n\nClient -> API : GET /resource\nAPI -> Redis : GET key\nRedis --> API : MISS\nAPI -> Postgres : SELECT * WHERE id = ?\nPostgres --> API : row\nAPI -> Redis : SET key, value, TTL\nRedis --> API : OK\nAPI --> Client : 200 + resource\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 4
+      }
+    },
+    {
+      "id": "seq-deploy",
+      "family": "sequence",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nsequenceDiagram\n    autonumber\n    participant CI as CI Pipeline\n    participant LB as Load Balancer\n    participant Blue as Blue Fleet (Active)\n    participant Green as Green Fleet (Inactive)\n    participant HC as Health Checks\n\n    Note over CI,Green: Deploy new version to inactive fleet (Green)\n    CI->>Green: Deploy artifact v2.1.0\n    CI->>HC: Trigger health checks on Green\n    HC->>Green: HTTP GET /health\n    Green-->>HC: 200 OK (healthy)\n    HC-->>CI: All checks passed\n    \n    Note over CI,LB: Switch traffic to Green\n    CI->>LB: Update target group weights<br/>(Blue: 0%, Green: 100%)\n    LB->>Green: Route 100% traffic\n    \n    Note over LB,Blue: Verify & decommission Blue\n    LB->>Green: HTTP GET /health (post-switch)\n    Green-->>LB: 200 OK\n    CI->>Blue: Drain connections (30s grace)\n    CI->>Blue: Scale down / terminate\n    \n    Note over CI,Blue: Blue becomes new inactive fleet\n    CI->>CI: Record deployment metadata<br/>(v2.1.0 active on Green)\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "seq-deploy",
+      "family": "sequence",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nsequence\nparticipant CI\nparticipant LB [icon: tabler/load-balancer]\nparticipant Blue [icon: tabler/server]\nparticipant Green [icon: tabler/server]\nparticipant Health [icon: tabler/heartbeat]\n\nCI -> Green : deploy new version\nGreen -> Health : start health checks\nloop every 10s {\n  Health --> Green : probe\n  alt healthy {\n    Health --> CI : all checks pass\n  } else unhealthy {\n    Health --> CI : failure\n    break deployment failed\n  }\n}\nCI -> LB : switch traffic to Green\nLB -> Blue : drain connections\nLB -> Green : route 100% traffic\nnote over Blue, Green : Blue becomes standby for rollback\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "seq-llm-tool",
+      "family": "sequence",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nsequenceDiagram\n    autonumber\n    actor User\n    participant App\n    participant ModelAPI as Model API\n    participant WeatherTool as Weather Tool\n\n    User->>App: \"What's the weather in Paris and London?\"\n    App->>ModelAPI: Request with user message\n    ModelAPI-->>App: Tool call: get_weather(\"Paris\")\n    App->>WeatherTool: get_weather(\"Paris\")\n    WeatherTool-->>App: {temp: 18, condition: \"cloudy\"}\n    App->>ModelAPI: Tool result for Paris\n    ModelAPI-->>App: Tool call: get_weather(\"London\")\n    App->>WeatherTool: get_weather(\"London\")\n    WeatherTool-->>App: {temp: 15, condition: \"rainy\"}\n    App->>ModelAPI: Tool result for London\n    ModelAPI-->>App: Final answer with both weather reports\n    App-->>User: \"Paris: 18°C cloudy. London: 15°C rainy.\"\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 4
+      }
+    },
+    {
+      "id": "seq-llm-tool",
+      "family": "sequence",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nsequence\nparticipant User [person]\nparticipant App\nparticipant ModelAPI\nparticipant WeatherTool\n\nUser -> App : \"What's the weather in Paris?\"\nApp -> ModelAPI : chat(messages=[user])\nModelAPI --> App : tool_call(get_weather, city=\"Paris\")\nApp -> WeatherTool : get_weather(city=\"Paris\")\nWeatherTool --> App : {temp: 18, conditions: \"cloudy\"}\nApp -> ModelAPI : chat(messages=[user, tool_call, tool_result])\nModelAPI --> App : tool_call(get_forecast, city=\"Paris\", days=3)\nApp -> WeatherTool : get_forecast(city=\"Paris\", days=3)\nWeatherTool --> App : [{day:1, high:20}, {day:2, high:19}, {day:3, high:17}]\nApp -> ModelAPI : chat(messages=[user, tool_call, tool_result, tool_call2, tool_result2])\nModelAPI --> App : \"Paris is 18°C and cloudy today. The next 3 days...\"\nApp --> User : \"Paris is 18°C and cloudy today. The next 3 days...\"\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "seq-password-reset",
+      "family": "sequence",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nsequenceDiagram\n    autonumber\n    actor User\n    participant Frontend as Frontend App\n    participant Backend as Backend API\n    participant DB as Database\n    participant Email as Email Service\n\n    Note over User, Email: Password Reset Request Phase\n    User->>Frontend: Clicks \"Forgot Password\"\n    Frontend->>User: Shows email input form\n    User->>Frontend: Enters email address\n    Frontend->>Backend: POST /api/auth/forgot-password {email}\n    Backend->>DB: SELECT user WHERE email = ?\n    alt Email not found\n        DB-->>Backend: No user found\n        Backend-->>Frontend: 200 OK (generic response for security)\n        Frontend-->>User: \"If email exists, reset link sent\"\n    else Email found\n        DB-->>Backend: User record\n        Backend->>Backend: Generate secure random token\n        Backend->>Backend: Set expiry (e.g., 1 hour from now)\n        Backend->>DB: INSERT reset_token {user_id, token_hash, expires_at, used=false}\n        Backend->>Email: Send reset email with link: https://app.com/reset?token={token}\n        Email-->>Backend: Email queued/sent\n        Backend-->>Frontend: 200 OK\n        Frontend-->>User: \"If email exists, reset link sent\"\n        Email->>User: Delivers reset email\n    end\n\n    Note over User, Email: Token Validation & Password Reset Phase\n    User->>Frontend: Clicks reset link in email\n    Frontend->>Frontend: Extracts token from URL\n    Frontend->>Backend: GET /api/auth/validate-reset-token?token={token}\n    Backend->>DB: SELECT reset_token WHERE token_hash = HASH(token) AND used = false\n    alt Token not found or already used\n        DB-->>Backend: No valid token\n        Backend-->>Frontend: 400 Invalid/used token\n        Frontend-->>User: Shows \"Invalid or expired reset link\"\n    else Token found\n        DB-->>Backend: Token record\n        Backend->>Backend: Check expires_at > NOW()\n        alt Token expired\n            Backend-->>Frontend: 400 Token expired\n            Frontend-->>User: Shows \"Reset link expired, request new one\"\n        else Token valid\n            Backend-->>Frontend: 200 OK {token_valid: true}\n            Frontend-->>User: Shows new password form\n            User->>Frontend: Enters new password & confirmation\n            Frontend->>Backend: POST /api/auth/reset-password {token, new_password}\n            Backend->>DB: SELECT reset_token WHERE token_hash = HASH(token) AND used = false\n            DB-->>Backend: Token record\n            Backend->>Backend: Verify expires_at > NOW()\n            Backend->>Backend: Hash new password\n            Backend->>DB: UPDATE users SET password_hash = ? WHERE id = ?\n            Backend->>DB: UPDATE reset_tokens SET used = true WHERE token_hash = ?\n            Backend-->>Frontend: 200 OK Password reset successful\n            Frontend-->>User: Shows success message, redirects to login\n        end\n    end\n\n    Note over User, Email: Cleanup (Background Job)\n    participant Job as Cleanup Job\n    Job->>DB: DELETE FROM reset_tokens WHERE expires_at < NOW() OR used = true\n    DB-->>Job: Expired/used tokens removed\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 15
+      }
+    },
+    {
+      "id": "seq-password-reset",
+      "family": "sequence",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nsequence\nparticipant User [person]\nparticipant Frontend [browser]\nparticipant API\nparticipant DB [db]\nparticipant Email [icon: tabler/mail]\n\nUser -> Frontend : clicks \"Forgot password\"\nFrontend -> API : POST /auth/forgot-password {email}\nAPI -> DB : find user by email\nDB --> API : user record\nalt user exists {\n  API -> DB : create reset_token (hash, expiry=1h, user_id)\n  API -> Email : send reset link with token\n  Email --> User : email with link\n  API --> Frontend : 200 OK (generic)\n} else not found {\n  API --> Frontend : 200 OK (generic)\n}\n\nUser -> Frontend : clicks link in email\nFrontend -> API : GET /auth/reset-password?token=…\nAPI -> DB : find valid token (not used, not expired)\nDB --> API : token record + user\nalt token valid {\n  API --> Frontend : 200 OK (show reset form)\n  User -> Frontend : enters new password\n  Frontend -> API : POST /auth/reset-password {token, password}\n  API -> DB : verify token still valid\n  DB --> API : ok\n  API -> DB : hash password, update user\n  API -> DB : mark token used\n  API --> Frontend : 200 OK\n  Frontend --> User : shows success, redirect to login\n} else token invalid/expired {\n  API --> Frontend : 400 Invalid or expired token\n  Frontend --> User : shows error, link to request new\n}\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "erd-shop",
+      "family": "erd",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nerDiagram\n    CUSTOMER ||--o{ ADDRESS : has\n    CUSTOMER ||--o{ ORDER : places\n    ORDER ||--o{ ORDER_ITEM : contains\n    ORDER_ITEM }|--|| PRODUCT : references\n    PRODUCT }|--|| CATEGORY : belongs_to\n    CATEGORY ||--o{ CATEGORY : \"parent_of\"\n\n    CUSTOMER {\n        uuid id PK\n        string email UK\n        string password_hash\n        string first_name\n        string last_name\n        string phone\n        timestamp created_at\n        timestamp updated_at\n    }\n\n    ADDRESS {\n        uuid id PK\n        uuid customer_id FK\n        string type \"billing|shipping\"\n        string line1\n        string line2\n        string city\n        string state\n        string postal_code\n        string country\n        boolean is_default\n        timestamp created_at\n    }\n\n    ORDER {\n        uuid id PK\n        uuid customer_id FK\n        uuid shipping_address_id FK\n        uuid billing_address_id FK\n        string status \"pending|paid|shipped|delivered|cancelled\"\n        decimal subtotal\n        decimal tax\n        decimal shipping\n        decimal total\n        timestamp placed_at\n        timestamp shipped_at\n        timestamp delivered_at\n    }\n\n    ORDER_ITEM {\n        uuid id PK\n        uuid order_id FK\n        uuid product_id FK\n        string product_name\n        decimal unit_price\n        int quantity\n        decimal line_total\n    }\n\n    PRODUCT {\n        uuid id PK\n        uuid category_id FK\n        string sku UK\n        string name\n        text description\n        decimal price\n        int stock_quantity\n        boolean is_active\n        timestamp created_at\n        timestamp updated_at\n    }\n\n    CATEGORY {\n        uuid id PK\n        uuid parent_id FK\n        string name\n        string slug UK\n        text description\n        int display_order\n        boolean is_active\n    }\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "erd-shop",
+      "family": "erd",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nerd\ncustomers {\n  id uuid pk\n  email text unique\n  name text\n  created_at timestamp\n}\naddresses {\n  id uuid pk\n  customer_id uuid fk\n  type text\n  street text\n  city text\n  state text\n  zip text\n  country text\n}\norders {\n  id uuid pk\n  customer_id uuid fk\n  shipping_address_id uuid fk\n  status text\n  total decimal\n  created_at timestamp\n}\norder_items {\n  id uuid pk\n  order_id uuid fk\n  product_id uuid fk\n  quantity int\n  unit_price decimal\n}\nproducts {\n  id uuid pk\n  category_id uuid fk\n  name text\n  description text\n  price decimal\n  stock int\n  created_at timestamp\n}\ncategories {\n  id uuid pk\n  parent_id uuid fk\n  name text\n  description text\n}\n\ncustomers ||--o{ addresses : has\ncustomers ||--o{ orders : places\norders }|--o| addresses : ships_to\norders ||--o{ order_items : contains\norder_items }|--o| products : references\nproducts }|--o| categories : belongs_to\ncategories ||--o{ categories : parent\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "erd-saas-tenancy",
+      "family": "erd",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nerDiagram\n    ORGANIZATIONS {\n        uuid id PK\n        string name\n        string slug UK\n        timestamp created_at\n        timestamp updated_at\n    }\n\n    USERS {\n        uuid id PK\n        string email UK\n        string password_hash\n        string full_name\n        timestamp created_at\n        timestamp updated_at\n    }\n\n    MEMBERSHIPS {\n        uuid id PK\n        uuid organization_id FK\n        uuid user_id FK\n        string role\n        timestamp created_at\n    }\n\n    PROJECTS {\n        uuid id PK\n        uuid organization_id FK\n        string name\n        text description\n        timestamp created_at\n        timestamp updated_at\n    }\n\n    API_KEYS {\n        uuid id PK\n        uuid organization_id FK\n        uuid user_id FK\n        uuid project_id FK\n        string name\n        string key_hash UK\n        json permissions\n        timestamp expires_at\n        timestamp created_at\n    }\n\n    ORGANIZATIONS ||--o{ MEMBERSHIPS : has\n    USERS ||--o{ MEMBERSHIPS : has\n    ORGANIZATIONS ||--o{ PROJECTS : owns\n    ORGANIZATIONS ||--o{ API_KEYS : owns\n    USERS ||--o{ API_KEYS : creates\n    PROJECTS ||--o{ API_KEYS : scopes\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 5
+      }
+    },
+    {
+      "id": "erd-saas-tenancy",
+      "family": "erd",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nerd\norganizations {\n  id uuid pk\n  name text\n  slug text unique\n  plan text\n  created_at timestamp\n  updated_at timestamp\n}\n\nusers {\n  id uuid pk\n  email text unique\n  name text\n  avatar_url text\n  created_at timestamp\n  updated_at timestamp\n}\n\nmemberships {\n  id uuid pk\n  organization_id uuid fk\n  user_id uuid fk\n  role text\n  joined_at timestamp\n}\n\nprojects {\n  id uuid pk\n  organization_id uuid fk\n  name text\n  description text\n  created_at timestamp\n  updated_at timestamp\n}\n\napi_keys {\n  id uuid pk\n  project_id uuid fk\n  name text\n  key_hash text unique\n  prefix text\n  scopes text[]\n  last_used_at timestamp\n  expires_at timestamp\n  created_at timestamp\n}\n\norganizations ||--o{ memberships : has\nusers ||--o{ memberships : has\nmemberships }|--|| organizations : belongs_to\nmemberships }|--|| users : belongs_to\n\norganizations ||--o{ projects : owns\nprojects }|--|| organizations : belongs_to\n\nprojects ||--o{ api_keys : has\napi_keys }|--|| projects : belongs_to\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 5
+      }
+    },
+    {
+      "id": "erd-blog",
+      "family": "erd",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nerDiagram\n    AUTHOR {\n        uuid id PK\n        string name\n        string email UK\n        text bio\n        timestamp created_at\n    }\n\n    POST {\n        uuid id PK\n        string title\n        text content\n        string slug UK\n        timestamp published_at\n        uuid author_id FK\n        timestamp created_at\n        timestamp updated_at\n    }\n\n    TAG {\n        uuid id PK\n        string name UK\n        string slug UK\n        timestamp created_at\n    }\n\n    POST_TAG {\n        uuid post_id FK\n        uuid tag_id FK\n        timestamp created_at\n    }\n\n    COMMENT {\n        uuid id PK\n        text content\n        uuid post_id FK\n        uuid author_id FK\n        uuid parent_comment_id FK\n        timestamp created_at\n        timestamp updated_at\n    }\n\n    AUTHOR ||--o{ POST : writes\n    POST }|--o{ TAG : \"has tags\"\n    POST ||--o{ COMMENT : contains\n    AUTHOR ||--o{ COMMENT : writes\n    COMMENT ||--o{ COMMENT : replies_to\n    POST ||--o{ POST_TAG : tagged\n    TAG ||--o{ POST_TAG : used_in\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 5
+      }
+    },
+    {
+      "id": "erd-blog",
+      "family": "erd",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nerd\nauthors {\n  id uuid pk\n  name text\n  email text unique\n  bio text\n  created_at timestamp\n}\n\nposts {\n  id uuid pk\n  author_id uuid fk\n  title text\n  slug text unique\n  content text\n  published boolean\n  published_at timestamp\n  created_at timestamp\n  updated_at timestamp\n}\n\ntags {\n  id uuid pk\n  name text unique\n  slug text unique\n}\n\npost_tags {\n  post_id uuid fk\n  tag_id uuid fk\n  pk (post_id, tag_id)\n}\n\ncomments {\n  id uuid pk\n  post_id uuid fk\n  author_id uuid fk\n  parent_id uuid fk nullable\n  content text\n  created_at timestamp\n  updated_at timestamp\n}\n\nauthors ||--o{ posts : writes\nposts }|--o{ post_tags : tagged\ntags ||--o{ post_tags : tags\nposts ||--o{ comments : has\ncomments }o--o{ comments : replies\nauthors ||--o{ comments : writes\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 5
+      }
+    },
+    {
+      "id": "erd-booking",
+      "family": "erd",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nerDiagram\n    PATIENT {\n        int patient_id PK\n        string name\n        string email\n        string phone\n        date dob\n        string address\n    }\n    DOCTOR {\n        int doctor_id PK\n        string name\n        string specialty\n        string email\n        string phone\n        int clinic_id FK\n    }\n    CLINIC {\n        int clinic_id PK\n        string name\n        string address\n        string phone\n    }\n    APPOINTMENT {\n        int appointment_id PK\n        int patient_id FK\n        int doctor_id FK\n        int clinic_id FK\n        datetime appointment_date\n        string status\n        string reason\n    }\n    INVOICE {\n        int invoice_id PK\n        int appointment_id FK\n        int patient_id FK\n        decimal amount\n        date issue_date\n        date due_date\n        string status\n    }\n\n    PATIENT ||--o{ APPOINTMENT : has\n    DOCTOR ||--o{ APPOINTMENT : has\n    CLINIC ||--o{ APPOINTMENT : hosts\n    CLINIC ||--o{ DOCTOR : employs\n    APPOINTMENT ||--|| INVOICE : generates\n    PATIENT ||--o{ INVOICE : receives\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 5
+      }
+    },
+    {
+      "id": "erd-booking",
+      "family": "erd",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nerd\npatients {\n  id uuid pk\n  first_name text\n  last_name text\n  email text unique\n  phone text\n  date_of_birth date\n  created_at timestamp\n}\ndoctors {\n  id uuid pk\n  first_name text\n  last_name text\n  email text unique\n  phone text\n  specialty text\n  license_number text unique\n  clinic_id uuid fk\n  created_at timestamp\n}\nclinics {\n  id uuid pk\n  name text\n  address text\n  phone text\n  email text\n  created_at timestamp\n}\nappointments {\n  id uuid pk\n  patient_id uuid fk\n  doctor_id uuid fk\n  clinic_id uuid fk\n  scheduled_at timestamp\n  duration_minutes integer\n  status text // scheduled, completed, cancelled, no_show\n  notes text\n  created_at timestamp\n}\ninvoices {\n  id uuid pk\n  appointment_id uuid fk unique\n  patient_id uuid fk\n  amount decimal\n  status text // pending, paid, overdue, cancelled\n  issued_at timestamp\n  paid_at timestamp null\n  due_date date\n}\n\nclinics ||--o{ doctors : employs\nclinics ||--o{ appointments : hosts\npatients ||--o{ appointments : books\ndoctors ||--o{ appointments : performs\nappointments ||--|| invoices : generates\npatients ||--o{ invoices : receives\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 5
+      }
+    },
+    {
+      "id": "erd-lms",
+      "family": "erd",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nerDiagram\n    COURSE ||--o{ LESSON : contains\n    USER }|--o{ ENROLLMENT : makes\n    COURSE ||--o{ ENROLLMENT : has\n    ENROLLMENT ||--o{ QUIZ_ATTEMPT : generates\n    LESSON ||--o{ QUIZ_ATTEMPT : includes\n    ENROLLMENT ||--o{ CERTIFICATE : earns\n    USER ||--o{ CERTIFICATE : receives\n\n    COURSE {\n        uuid id PK\n        string title\n        text description\n        datetime created_at\n        datetime updated_at\n        boolean is_published\n        string category\n        decimal price\n    }\n\n    LESSON {\n        uuid id PK\n        uuid course_id FK\n        string title\n        text content\n        integer order_index\n        datetime created_at\n        boolean is_free_preview\n        integer duration_minutes\n    }\n\n    USER {\n        uuid id PK\n        string email UK\n        string password_hash\n        string full_name\n        string avatar_url\n        datetime created_at\n        datetime last_login\n        boolean is_active\n        string role\n    }\n\n    ENROLLMENT {\n        uuid id PK\n        uuid user_id FK\n        uuid course_id FK\n        datetime enrolled_at\n        datetime completed_at\n        decimal progress_percentage\n        string status\n        datetime last_accessed\n    }\n\n    QUIZ_ATTEMPT {\n        uuid id PK\n        uuid enrollment_id FK\n        uuid lesson_id FK\n        integer score\n        integer max_score\n        json answers\n        datetime started_at\n        datetime submitted_at\n        boolean is_passed\n        integer attempt_number\n    }\n\n    CERTIFICATE {\n        uuid id PK\n        uuid enrollment_id FK\n        uuid user_id FK\n        string certificate_code UK\n        datetime issued_at\n        string verification_url\n        json metadata\n        boolean is_revoked\n    }\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 1,
+        "losses": 0,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "erd-lms",
+      "family": "erd",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nerd\nusers {\n  id uuid pk\n  email text unique\n  name text\n  created_at timestamp\n}\n\ncourses {\n  id uuid pk\n  title text\n  description text\n  instructor_id uuid fk\n  created_at timestamp\n  published boolean\n}\n\nlessons {\n  id uuid pk\n  course_id uuid fk\n  title text\n  content text\n  position integer\n  duration_minutes integer\n}\n\nenrollments {\n  id uuid pk\n  user_id uuid fk\n  course_id uuid fk\n  enrolled_at timestamp\n  completed_at timestamp nullable\n  progress_percent integer\n}\n\nquiz_attempts {\n  id uuid pk\n  user_id uuid fk\n  lesson_id uuid fk\n  score integer\n  max_score integer\n  started_at timestamp\n  completed_at timestamp nullable\n  passed boolean\n}\n\ncertificates {\n  id uuid pk\n  user_id uuid fk\n  course_id uuid fk\n  issued_at timestamp\n  certificate_code text unique\n  expires_at timestamp nullable\n}\n\nusers ||--o{ courses : teaches\ncourses ||--o{ lessons : contains\nusers ||--o{ enrollments : enrolls_in\ncourses ||--o{ enrollments : has\nusers ||--o{ quiz_attempts : attempts\nlessons ||--o{ quiz_attempts : has\nusers ||--o{ certificates : earns\ncourses ||--o{ certificates : awards\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 1,
+        "losses": 0,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "state-order",
+      "family": "state",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nstateDiagram-v2\n    [*] --> pending\n    pending --> paid\n    pending --> cancelled\n    paid --> packed\n    paid --> cancelled\n    paid --> refunded\n    packed --> shipped\n    packed --> cancelled\n    shipped --> delivered\n    shipped --> cancelled\n    delivered --> refunded\n    cancelled --> [*]\n    refunded --> [*]\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "state-order",
+      "family": "state",
+      "format": "dsl",
+      "first": {
+        "text": "{\"tool\":\"validate_openflow_dsl\",\"arguments\":{\"dsl\":\"state\\n  title: Order Lifecycle\\n  [*] -> pending\\n  pending -> paid : payment received\\n  pending -> cancelled : cancelled\\n  paid -> packed : packed\\n  paid -> cancelled : cancelled\\n  paid -> refunded : refunded\\n  packed -> shipped : shipped\\n  packed -> cancelled : cancelled\\n  shipped -> delivered : delivered\\n  shipped -> cancelled : lost/damaged\\n  delivered -> refunded : returned\\n  cancelled -> [*]\\n  refunded -> [*]\"}}",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 2
+      }
+    },
+    {
+      "id": "state-tcp",
+      "family": "state",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nstateDiagram-v2\n    [*] --> CLOSED\n    CLOSED --> LISTEN : passive open\n    LISTEN --> SYN_RCVD : recv SYN\n    SYN_RCVD --> ESTABLISHED : recv ACK\n    CLOSED --> SYN_SENT : active open\n    SYN_SENT --> SYN_RCVD : recv SYN\n    SYN_SENT --> ESTABLISHED : recv SYN+ACK\n    SYN_RCVD --> LISTEN : recv RST\n    SYN_RCVD --> CLOSED : timeout\n\n    ESTABLISHED --> FIN_WAIT_1 : active close\n    ESTABLISHED --> CLOSE_WAIT : recv FIN\n    FIN_WAIT_1 --> FIN_WAIT_2 : recv ACK\n    FIN_WAIT_1 --> CLOSING : recv FIN\n    FIN_WAIT_1 --> TIME_WAIT : recv FIN+ACK\n    FIN_WAIT_2 --> TIME_WAIT : recv FIN\n    CLOSE_WAIT --> LAST_ACK : passive close\n    CLOSING --> TIME_WAIT : recv ACK\n    LAST_ACK --> CLOSED : recv ACK\n    TIME_WAIT --> CLOSED : timeout (2*MSL)\n\n    CLOSED --> [*]\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 13
+      }
+    },
+    {
+      "id": "state-tcp",
+      "family": "state",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nstate\ntitle: Simplified TCP Connection States\nCLOSED [ellipse]\nLISTEN\nSYN_SENT\nSYN_RECEIVED\nESTABLISHED [ellipse, green]\nFIN_WAIT_1\nFIN_WAIT_2\nCLOSE_WAIT\nCLOSING\nLAST_ACK\nTIME_WAIT\n\nCLOSED -> LISTEN : passive open\nLISTEN -> SYN_RECEIVED : SYN\nSYN_RECEIVED -> ESTABLISHED : ACK\nCLOSED -> SYN_SENT : active open\nSYN_SENT -> SYN_RECEIVED : SYN\nSYN_SENT -> ESTABLISHED : SYN+ACK\nSYN_RECEIVED -> CLOSED : RST\nESTABLISHED -> FIN_WAIT_1 : active close (FIN)\nESTABLISHED -> CLOSE_WAIT : passive close (FIN)\nFIN_WAIT_1 -> FIN_WAIT_2 : ACK\nFIN_WAIT_1 -> CLOSING : FIN\nFIN_WAIT_2 -> TIME_WAIT : FIN\nCLOSE_WAIT -> LAST_ACK : active close (FIN)\nCLOSING -> TIME_WAIT : ACK\nLAST_ACK -> CLOSED : ACK\nTIME_WAIT -> CLOSED : timeout (2MSL)\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 11
+      }
+    },
+    {
+      "id": "state-ticket",
+      "family": "state",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nstateDiagram-v2\n    [*] --> new\n    new --> triaged\n    triaged --> in_progress\n    in_progress --> waiting_on_customer\n    in_progress --> resolved\n    waiting_on_customer --> in_progress\n    resolved --> closed\n    resolved --> reopened\n    reopened --> in_progress\n    closed --> [*]\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "state-ticket",
+      "family": "state",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nstate\ntitle: Support Ticket Lifecycle\n\n[*] -> New\nNew -> Triaged : triage complete\nTriaged -> \"In Progress\" : work starts\n\"In Progress\" -> \"Waiting on Customer\" : need info\n\"Waiting on Customer\" -> \"In Progress\" : customer responds\n\"In Progress\" -> Resolved : work complete\nResolved -> Closed : customer confirms\nResolved -> Reopened : not satisfied\nReopened -> \"In Progress\" : resume work\nReopened -> Triaged : re-assess\nClosed -> [*]\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "state-player",
+      "family": "state",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nstateDiagram-v2\n    [*] --> stopped\n    stopped --> buffering : play\n    buffering --> playing : ready\n    buffering --> error : error\n\n    state playing {\n        [*] --> normal\n        normal --> fast_forward : fast_forward\n        fast_forward --> normal : normal_speed\n        normal --> paused : pause\n        fast_forward --> paused : pause\n        normal --> stopped : stop\n        fast_forward --> stopped : stop\n        normal --> error : error\n        fast_forward --> error : error\n    }\n\n    paused --> playing : resume\n    paused --> stopped : stop\n    paused --> error : error\n\n    error --> stopped : reset\n    error --> [*] : shutdown\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 9
+      }
+    },
+    {
+      "id": "state-player",
+      "family": "state",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nstate\ntitle: Media Player\n\n[*] -> Stopped\n\nstate Playing {\n  [*] -> Normal\n  Normal -> FastForward : speed up\n  FastForward -> Normal : normal speed\n}\n\nStopped -> Buffering : load\nStopped -> Playing : play\nBuffering -> Playing : ready\nBuffering -> Error : failed\nPlaying -> Paused : pause\nPlaying -> Stopped : stop\nPlaying -> Error : error\nPaused -> Playing : play\nPaused -> Stopped : stop\nError -> Stopped : reset\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 8
+      }
+    },
+    {
+      "id": "state-deploy",
+      "family": "state",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nstateDiagram-v2\n    [*] --> queued\n    queued --> building\n    building --> testing : build success\n    building --> failed : build failure\n    testing --> deploying : tests pass\n    testing --> failed : tests fail\n    deploying --> live : deploy success\n    deploying --> failed : deploy failure\n    live --> rolled_back : rollback triggered\n    failed --> queued : retry\n    failed --> rolled_back : rollback triggered\n    rolled_back --> queued : re-deploy\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 8
+      }
+    },
+    {
+      "id": "state-deploy",
+      "family": "state",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nstate\ntitle: Deployment State Machine\n\nqueued [ellipse]\nbuilding\ntesting\ndeploying\nlive [green]\nfailed [red]\nrolled_back [orange]\n\nqueued -> building : start build\nbuilding -> testing : build ok\nbuilding -> failed : build error\ntesting -> deploying : tests pass\ntesting -> failed : tests fail\ndeploying -> live : deploy ok\ndeploying -> failed : deploy error\nfailed -> rolled_back : rollback\nlive -> rolled_back : rollback\nrolled_back -> queued : retry\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 7
+      }
+    },
+    {
+      "id": "class-shapes",
+      "family": "class",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nclassDiagram\n    <<abstract>> Shape\n    <<interface>> Renderer\n    \n    Shape : +id: string\n    Shape : +fillColor: string\n    Shape : +strokeColor: string\n    Shape : +strokeWidth: number\n    Shape : +opacity: number\n    Shape : +visible: boolean\n    Shape : +getBounds(): BoundingBox\n    Shape : +move(dx: number, dy: number): void\n    Shape : +clone(): Shape\n    Shape : #draw(renderer: Renderer): void\n    \n    class Rectangle {\n        +x: number\n        +y: number\n        +width: number\n        +height: number\n        +radius: number\n        +draw(renderer: Renderer): void\n    }\n    \n    class Circle {\n        +cx: number\n        +cy: number\n        +radius: number\n        +draw(renderer: Renderer): void\n    }\n    \n    class Path {\n        +commands: PathCommand[]\n        +draw(renderer: Renderer): void\n        +addCommand(cmd: PathCommand): void\n        +closePath(): void\n    }\n    \n    class Canvas {\n        -shapes: Shape[]\n        -renderer: Renderer\n        +addShape(shape: Shape): void\n        +removeShape(shape: Shape): boolean\n        +getShapes(): Shape[]\n        +clear(): void\n        +render(): void\n        +setRenderer(renderer: Renderer): void\n        +getShapeAt(x: number, y: number): Shape | null\n    }\n    \n    class Renderer {\n        <<interface>>\n        +renderRectangle(rect: Rectangle): void\n        +renderCircle(circle: Circle): void\n        +renderPath(path: Path): void\n        +setFillColor(color: string): void\n        +setStrokeColor(color: string): void\n        +setStrokeWidth(width: number): void\n    }\n    \n    Shape <|-- Rectangle\n    Shape <|-- Circle\n    Shape <|-- Path\n    \n    Canvas *-- Shape : owns\n    Canvas ..> Renderer : uses\n    Shape ..> Renderer : draws with\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "class-shapes",
+      "family": "class",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nclass\nabstract Shape {\n  +id: string\n  +fillColor: string\n  +strokeColor: string\n  +strokeWidth: number\n  +move(dx: number, dy: number): void\n  #draw(ctx: CanvasRenderingContext2D): void\n  +clone(): Shape\n}\n\nRectangle extends Shape {\n  +x: number\n  +y: number\n  +width: number\n  +height: number\n  +draw(ctx): void\n  +contains(px: number, py: number): boolean\n}\n\nCircle extends Shape {\n  +cx: number\n  +cy: number\n  +radius: number\n  +draw(ctx): void\n  +contains(px: number, py: number): boolean\n}\n\nPath extends Shape {\n  +commands: PathCommand[]\n  +draw(ctx): void\n  +addCommand(cmd: PathCommand): void\n}\n\ninterface Renderer {\n  +renderShape(shape: Shape): void\n  +renderAll(shapes: Shape[]): void\n  +clear(): void\n}\n\nCanvas {\n  +shapes: Shape[]\n  +addShape(shape: Shape): void\n  +removeShape(shape: Shape): void\n  +getShapeAt(x: number, y: number): Shape | null\n  +render(renderer: Renderer): void\n  +serialize(): string\n  +static deserialize(data: string): Canvas\n}\n\nCanvas *-- Shape : owns\nRenderer <.. Shape : renders\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 8
+      }
+    },
+    {
+      "id": "class-payment",
+      "family": "class",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nclassDiagram\n    interface PaymentProcessor {\n        +processPayment(amount: double, currency: String) Payment\n        +refund(payment: Payment, amount: double) Refund\n    }\n\n    class StripeProcessor\n    class PayPalProcessor\n\n    StripeProcessor --|> PaymentProcessor\n    PayPalProcessor --|> PaymentProcessor\n\n    class Payment {\n        -id: String\n        -amount: double\n        -currency: String\n        -status: String\n        -timestamp: Date\n        +getId() String\n        +getAmount() double\n        +getCurrency() String\n        +getStatus() String\n        +getTimestamp() Date\n    }\n\n    class Refund {\n        -id: String\n        -payment: Payment\n        -amount: double\n        -status: String\n        -timestamp: Date\n        +getId() String\n        +getPayment() Payment\n        +getAmount() double\n        +getStatus() String\n        +getTimestamp() Date\n    }\n\n    class PaymentService {\n        -processor: PaymentProcessor\n        +PaymentService(processor: PaymentProcessor)\n        +processPayment(amount: double, currency: String) Payment\n        +refundPayment(paymentId: String, amount: double) Refund\n    }\n\n    PaymentService --> PaymentProcessor\n    PaymentService --> Payment\n    PaymentService --> Refund\n    Refund --> Payment\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 5,
+        "nodes": 6
+      }
+    },
+    {
+      "id": "class-payment",
+      "family": "class",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nclass\ntitle: Payment Module\n\ninterface PaymentProcessor {\n  + processPayment(amount: Money) PaymentResult\n  + refund(paymentId: String) RefundResult\n}\n\nclass StripeProcessor {\n  + processPayment(amount: Money) PaymentResult\n  + refund(paymentId: String) RefundResult\n}\n\nclass PayPalProcessor {\n  + processPayment(amount: Money) PaymentResult\n  + refund(paymentId: String) RefundResult\n}\n\nclass Payment {\n  + id: String\n  + amount: Money\n  + status: PaymentStatus\n  + processorId: String\n  + createdAt: DateTime\n}\n\nclass Refund {\n  + id: String\n  + paymentId: String\n  + amount: Money\n  + status: RefundStatus\n  + createdAt: DateTime\n}\n\nclass PaymentService {\n  - processor: PaymentProcessor\n  + processPayment(amount: Money) Payment\n  + refund(paymentId: String) Refund\n}\n\nPaymentProcessor <|.. StripeProcessor : implements\nPaymentProcessor <|.. PayPalProcessor : implements\nPaymentService --> PaymentProcessor : uses\nPaymentService --> Payment : creates\nPaymentService --> Refund : creates\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 7
+      }
+    },
+    {
+      "id": "class-repo",
+      "family": "class",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nclassDiagram\n    class Repository~T~ {\n        <<interface>>\n        +getById(id: ID): T\n        +getAll(): List~T~\n        +add(entity: T): void\n        +remove(entity: T): void\n        +update(entity: T): void\n    }\n\n    class UserRepository {\n        +getByEmail(email: String): User\n        +getActiveUsers(): List~User~\n    }\n\n    class OrderRepository {\n        +getByUserId(userId: ID): List~Order~\n        +getByStatus(status: OrderStatus): List~Order~\n        +getOrdersInDateRange(start: Date, end: Date): List~Order~\n    }\n\n    class User {\n        -id: ID\n        -email: String\n        -name: String\n        -isActive: Boolean\n        +getId(): ID\n        +getEmail(): String\n        +getName(): String\n        +isActive(): Boolean\n    }\n\n    class Order {\n        -id: ID\n        -userId: ID\n        -status: OrderStatus\n        -totalAmount: Decimal\n        -createdAt: Date\n        +getId(): ID\n        +getUserId(): ID\n        +getStatus(): OrderStatus\n        +getTotalAmount(): Decimal\n        +getCreatedAt(): Date\n    }\n\n    class OrderStatus {\n        <<enumeration>>\n        PENDING\n        CONFIRMED\n        SHIPPED\n        DELIVERED\n        CANCELLED\n    }\n\n    class UnitOfWork {\n        -userRepository: UserRepository\n        -orderRepository: OrderRepository\n        +getUserRepository(): UserRepository\n        +getOrderRepository(): OrderRepository\n        +commit(): void\n        +rollback(): void\n        +dispose(): void\n    }\n\n    Repository~T~ <|.. UserRepository : implements\n    Repository~T~ <|.. OrderRepository : implements\n    UserRepository --> User : manages\n    OrderRepository --> Order : manages\n    Order --> OrderStatus : uses\n    UnitOfWork --> UserRepository : contains\n    UnitOfWork --> OrderRepository : contains\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 7
+      }
+    },
+    {
+      "id": "class-repo",
+      "family": "class",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nclass\ntitle: Repository Pattern\n\nnamespace Domain {\n  class User {\n    +id: UUID\n    +email: String\n    +name: String\n    +createdAt: DateTime\n  }\n  class Order {\n    +id: UUID\n    +userId: UUID\n    +items: List<OrderItem>\n    +total: Money\n    +status: OrderStatus\n    +createdAt: DateTime\n  }\n  enum OrderStatus {\n    PENDING\n    CONFIRMED\n    SHIPPED\n    DELIVERED\n    CANCELLED\n  }\n  class OrderItem {\n    +productId: UUID\n    +quantity: Int\n    +price: Money\n  }\n}\n\nnamespace Data {\n  interface Repository[T] {\n    +findById(id: UUID): T?\n    +findAll(): List[T]\n    +save(entity: T): T\n    +delete(id: UUID): Boolean\n    +exists(id: UUID): Boolean\n  }\n  \n  class UserRepository {\n    +findByEmail(email: String): User?\n    +findByName(name: String): List[User]\n  }\n  class OrderRepository {\n    +findByUserId(userId: UUID): List[Order]\n    +findByStatus(status: OrderStatus): List[Order]\n    +findRecentOrders(limit: Int): List[Order]\n  }\n}\n\nnamespace UnitOfWork {\n  interface UnitOfWork {\n    +userRepository: UserRepository\n    +orderRepository: OrderRepository\n    +begin(): void\n    +commit(): void\n    +rollback(): void\n  }\n  \n  class UnitOfWorkImpl {\n    -connection: Connection\n    -userRepo: UserRepository\n    -orderRepo: OrderRepository\n    +begin(): void\n    +commit(): void\n    +rollback(): void\n  }\n}\n\nRepository[T] <|-- UserRepository\nRepository[T] <|-- OrderRepository\nUserRepository ..> User : manages\nOrderRepository ..> Order : manages\nOrder \"1\" *-- \"*\" OrderItem : contains\nUnitOfWork <|-- UnitOfWorkImpl\nUnitOfWorkImpl --> UserRepository : creates\nUnitOfWorkImpl --> OrderRepository : creates\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 14
+      }
+    },
+    {
+      "id": "class-notifications",
+      "family": "class",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nclassDiagram\n    class Notifier {\n        <<interface>>\n        +send(notification: Notification) void\n        +supports(channel: Channel) boolean\n    }\n\n    class EmailNotifier {\n        +smtpConfig: SmtpConfig\n        +send(notification: Notification) void\n        +supports(channel: Channel) boolean\n        +validateEmail(address: String) boolean\n    }\n\n    class SmsNotifier {\n        +provider: SmsProvider\n        +send(notification: Notification) void\n        +supports(channel: Channel) boolean\n        +validatePhone(number: String) boolean\n    }\n\n    class PushNotifier {\n        +provider: PushProvider\n        +send(notification: Notification) void\n        +supports(channel: Channel) boolean\n        +registerDevice(token: String) void\n    }\n\n    class NotificationService {\n        -notifiers: List~Notifier~\n        -templateEngine: TemplateEngine\n        +sendNotification(notification: Notification) void\n        +sendBulk(notifications: List~Notification~) void\n        +registerNotifier(notifier: Notifier) void\n        +getNotifierForChannel(channel: Channel) Notifier\n    }\n\n    class Template {\n        -id: String\n        -name: String\n        -subject: String\n        -body: String\n        -channel: Channel\n        -variables: Map~String, Object~\n        +render(context: Map~String, Object~) String\n        +validate() boolean\n        +clone() Template\n    }\n\n    class TemplateEngine {\n        -templates: Map~String, Template~\n        +loadTemplate(id: String) Template\n        +render(template: Template, context: Map~String, Object~) String\n        +registerTemplate(template: Template) void\n    }\n\n    class Notification {\n        -id: String\n        -recipient: String\n        -channel: Channel\n        -templateId: String\n        -context: Map~String, Object~\n        -priority: Priority\n        -status: NotificationStatus\n        +getRenderedContent() String\n    }\n\n    class Channel {\n        <<enumeration>>\n        EMAIL\n        SMS\n        PUSH\n    }\n\n    class Priority {\n        <<enumeration>>\n        LOW\n        NORMAL\n        HIGH\n        URGENT\n    }\n\n    class NotificationStatus {\n        <<enumeration>>\n        PENDING\n        SENT\n        FAILED\n        DELIVERED\n    }\n\n    class SmtpConfig {\n        -host: String\n        -port: int\n        -username: String\n        -password: String\n        -useTls: boolean\n    }\n\n    class SmsProvider {\n        <<interface>>\n        +sendSms(to: String, body: String) SmsResult\n    }\n\n    class PushProvider {\n        <<interface>>\n        +sendPush(token: String, payload: PushPayload) PushResult\n    }\n\n    Notifier <|-- EmailNotifier\n    Notifier <|-- SmsNotifier\n    Notifier <|-- PushNotifier\n\n    NotificationService --> Notifier : uses\n    NotificationService --> TemplateEngine : uses\n    NotificationService --> Notification : manages\n\n    TemplateEngine --> Template : manages\n\n    EmailNotifier --> SmtpConfig : uses\n    SmsNotifier --> SmsProvider : uses\n    PushNotifier --> PushProvider : uses\n\n    Notification --> Template : references\n    Notification --> Channel : has\n    Notification --> Priority : has\n    Notification --> NotificationStatus : has\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 14
+      }
+    },
+    {
+      "id": "class-notifications",
+      "family": "class",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nclass\ntitle: Notification System\n\ngroup Notifiers {\n  Notifier <<interface>>\n  EmailNotifier\n  SmsNotifier\n  PushNotifier\n}\n\nNotificationService\nTemplate\n\nNotifier <|.. EmailNotifier\nNotifier <|.. SmsNotifier\nNotifier <|.. PushNotifier\n\nNotificationService -> Notifier : uses\nNotificationService -> Template : renders\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 7
+      }
+    },
+    {
+      "id": "class-game",
+      "family": "class",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nclassDiagram\n    class GameObject {\n        +string name\n        +bool active\n        +List~Component~ components\n        +AddComponent(Component)\n        +GetComponent~T~() T\n        +Update()\n    }\n\n    class Player {\n        +int health\n        +float speed\n        +Move(Vector2)\n        +TakeDamage(int)\n    }\n\n    class Enemy {\n        +int damage\n        +AIState state\n        +Patrol()\n        +Chase(Player)\n    }\n\n    class Component {\n        +GameObject gameObject\n        +virtual void Update()\n    }\n\n    class Transform {\n        +Vector2 position\n        +float rotation\n        +Vector2 scale\n        +Translate(Vector2)\n        +Rotate(float)\n    }\n\n    class Collider {\n        +Bounds bounds\n        +bool isTrigger\n        +CheckCollision(Collider) bool\n    }\n\n    class Scene {\n        +string name\n        +List~GameObject~ gameObjects\n        +AddGameObject(GameObject)\n        +RemoveGameObject(GameObject)\n        +Update()\n        +FindGameObject(string) GameObject\n    }\n\n    GameObject <|-- Player\n    GameObject <|-- Enemy\n    GameObject *-- Component : \"has\"\n    Component <|-- Transform\n    Component <|-- Collider\n    Scene *-- GameObject : \"contains\"\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 7
+      }
+    },
+    {
+      "id": "class-game",
+      "family": "class",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nclass\ntitle: Simple Game Engine\n\nclass GameObject {\n  +id: string\n  +name: string\n  +active: bool\n  +components: Component[]\n  +AddComponent(type): Component\n  +GetComponent<T>(): T\n  +Update(dt): void\n  +Destroy(): void\n}\n\nclass Component {\n  +gameObject: GameObject\n  +enabled: bool\n  +Awake(): void\n  +Start(): void\n  +Update(dt): void\n  +OnDestroy(): void\n}\n\nclass Transform : Component {\n  +position: Vector3\n  +rotation: Quaternion\n  +scale: Vector3\n  +parent: Transform\n  +children: Transform[]\n  +Translate(offset): void\n  +Rotate(euler): void\n  +LookAt(target): void\n}\n\nclass Collider : Component {\n  +isTrigger: bool\n  +bounds: Bounds\n  +OnCollisionEnter(other): void\n  +OnCollisionExit(other): void\n  +OnTriggerEnter(other): void\n}\n\nclass Rigidbody : Component {\n  +mass: float\n  +velocity: Vector3\n  +useGravity: bool\n  +AddForce(force): void\n  +AddTorque(torque): void\n}\n\nclass Player : GameObject {\n  +health: int\n  +score: int\n  +Move(input): void\n  +TakeDamage(amount): void\n  +Heal(amount): void\n}\n\nclass Enemy : GameObject {\n  +health: int\n  +damage: int\n  +target: Transform\n  +AIUpdate(dt): void\n  +Attack(target): void\n  +TakeDamage(amount): void\n}\n\nclass Scene {\n  +name: string\n  +rootObjects: GameObject[]\n  +Load(): void\n  +Unload(): void\n  +FindObjectOfType<T>(): T\n  +FindObjectsOfType<T>(): T[]\n  +DontDestroyOnLoad(obj): void\n}\n\nclass Vector3 {\n  +x: float\n  +y: float\n  +z: float\n  +magnitude: float\n  +normalized: Vector3\n  +operator+(other): Vector3\n  +operator-(other): Vector3\n  +operator*(scalar): Vector3\n}\n\nclass Quaternion {\n  +x: float\n  +y: float\n  +z: float\n  +w: float\n  +eulerAngles: Vector3\n  +operator*(other): Quaternion\n}\n\nclass Bounds {\n  +center: Vector3\n  +size: Vector3\n  +min: Vector3\n  +max: Vector3\n  +Contains(point): bool\n  +Intersects(other): bool\n}\n\nGameObject <|-- Player\nGameObject <|-- Enemy\nGameObject *-- Component : components\nComponent <|-- Transform\nComponent <|-- Collider\nComponent <|-- Rigidbody\nGameObject o-- Transform : has\nGameObject o-- Collider : has\nGameObject o-- Rigidbody : has\nScene *-- GameObject : rootObjects\nTransform *-- Transform : children\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 16
+      }
+    },
+    {
+      "id": "mind-launch",
+      "family": "mindmap",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nmindmap\n  root((Product Launch))\n    Marketing\n      Campaigns\n      Social Media\n      PR\n    Documentation\n      User Guides\n      API Docs\n      Release Notes\n    Pricing\n      Tiers\n      Discounts\n      Billing\n    Engineering Readiness\n      CI/CD\n      Testing\n      Performance\n    Support\n      Help Center\n      Ticketing\n      Training\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 21
+      }
+    },
+    {
+      "id": "mind-launch",
+      "family": "mindmap",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nmindmap\ncentral: Product Launch\n- Marketing [green]\n  - Launch Campaign\n  - Social Media\n  - Press & PR\n  - Email Sequences\n  - Landing Pages\n- Documentation [blue]\n  - User Guides\n  - API Reference\n  - Release Notes\n  - FAQ & Troubleshooting\n  - Video Tutorials\n- Pricing [orange]\n  - Tier Strategy\n  - Competitive Analysis\n  - Discount Codes\n  - Billing Integration\n  - Upgrade Paths\n- Engineering Readiness [violet]\n  - CI/CD Pipeline\n  - Feature Flags\n  - Monitoring & Alerts\n  - Load Testing\n  - Rollback Plan\n- Support [red]\n  - Knowledge Base\n  - Ticket Triage\n  - Escalation Paths\n  - On-call Schedule\n  - Feedback Loop\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 31
+      }
+    },
+    {
+      "id": "mind-security",
+      "family": "mindmap",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nmindmap\n  root((Web Application Security))\n    Authentication\n      Multi-Factor Authentication (MFA)\n      Password Policies\n      Session Management\n      OAuth/OIDC\n      JWT Handling\n      Brute Force Protection\n      Account Lockout\n    Authorization\n      Role-Based Access Control (RBAC)\n      Attribute-Based Access Control (ABAC)\n      Principle of Least Privilege\n      Resource-Level Permissions\n      API Authorization\n      Privilege Escalation Prevention\n    Input Validation\n      Server-Side Validation\n      Client-Side Validation\n      Output Encoding\n      SQL Injection Prevention\n      XSS Prevention\n      Command Injection Prevention\n      File Upload Validation\n      Rate Limiting\n    Secrets Management\n      Environment Variables\n      Secret Stores (Vault, AWS Secrets Manager)\n      API Keys Rotation\n      Database Credentials\n      Encryption Keys\n      Certificate Management\n      No Hardcoded Secrets\n    Dependencies\n      Dependency Scanning (SAST/SCA)\n      Vulnerability Monitoring\n      Automated Updates\n      License Compliance\n      Supply Chain Security\n      Lock Files\n      Minimal Dependencies\n    Logging & Monitoring\n      Structured Logging\n      Security Event Logging\n      Audit Trails\n      Log Aggregation\n      Real-Time Alerting\n      Log Retention Policies\n      PII Redaction\n      Incident Response Integration\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 50
+      }
+    },
+    {
+      "id": "mind-security",
+      "family": "mindmap",
+      "format": "dsl",
+      "first": {
+        "text": "{\n  \"dsl\": \"mindmap\\ncentral: Web App Security\\n- Authentication [blue]\\n  - MFA\\n  - OAuth/OIDC\\n  - Session management\\n  - Password policies\\n- Authorization [green]\\n  - RBAC\\n  - ABAC\\n  - Resource-level permissions\\n  - API scopes\\n- Input Validation [orange]\\n  - SQL injection prevention\\n  - XSS protection\\n  - CSRF tokens\\n  - File upload checks\\n- Secrets Management [red]\\n  - Env vars / vaults\\n  - Key rotation\\n  - No hardcoded secrets\\n  - Encryption at rest\\n- Dependencies [violet]\\n  - SCA scanning\\n  - Lockfiles\\n  - License compliance\\n  - Update cadence\\n- Logging & Monitoring [teal]\\n  - Structured logs\\n  - Audit trails\\n  - Alerting on anomalies\\n  - Log sanitization\"\n}",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 1
+      }
+    },
+    {
+      "id": "mind-learning-rust",
+      "family": "mindmap",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nmindmap\n  root((Learning Rust))\n    Ownership\n      Borrowing\n        Immutable References\n        Mutable References\n      Lifetimes\n        Lifetime Annotations\n        Lifetime Elision\n      Move Semantics\n        Copy vs Move\n        Drop Trait\n    Types\n      Primitive Types\n        Integers\n        Floats\n        Booleans\n        Characters\n      Compound Types\n        Tuples\n        Arrays\n        Slices\n      Custom Types\n        Structs\n        Enums\n        Type Aliases\n      Generics\n        Generic Functions\n        Generic Structs/Enums\n        Trait Bounds\n      Traits\n        Defining Traits\n        Implementing Traits\n        Trait Objects\n    Error Handling\n      Result Type\n        Ok / Err\n        ? Operator\n      Option Type\n        Some / None\n      Panic vs Recoverable Errors\n      Custom Error Types\n      Error Traits\n        std::error::Error\n        From / Into\n    Concurrency\n      Threads\n        spawn\n        join\n        Scoped Threads\n      Message Passing\n        Channels (mpsc)\n        Sync vs Async Channels\n      Shared State\n        Mutex\n        RwLock\n        Arc\n      Async/Await\n        Futures\n        Executors (tokio, async-std)\n        Async Traits\n      Send & Sync Traits\n    Tooling\n      Cargo\n        Build / Test / Run\n        Dependency Management\n        Workspaces\n      rustup\n        Toolchain Management\n        Components\n      Linting & Formatting\n        Clippy\n        rustfmt\n      IDE Support\n        rust-analyzer\n        VS Code / IntelliJ\n      Debugging\n        gdb / lldb\n        Visual Debuggers\n    Ecosystem\n      Crates.io\n        Popular Crates\n        Publishing Crates\n      Standard Library\n        Collections\n        I/O\n        Concurrency Primitives\n      Web Frameworks\n        Actix-web\n        Axum\n        Rocket\n      Async Runtimes\n        Tokio\n        async-std\n        smol\n      Embedded / WASM\n        no_std\n        wasm-pack\n      Testing\n        Unit Tests\n        Integration Tests\n        Property Testing (proptest)\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 101
+      }
+    },
+    {
+      "id": "mind-learning-rust",
+      "family": "mindmap",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nmindmap\ncentral: Learning Rust\n- Ownership [blue]\n  - Move semantics\n  - Borrowing & references\n  - Lifetimes\n  - Copy vs Clone\n  - Drop trait\n- Types [green]\n  - Primitives (int, float, bool, char)\n  - Compound (tuple, array, slice)\n  - Structs, enums, unions\n  - Generics & traits\n  - Option & Result\n  - Smart pointers (Box, Rc, Arc)\n- Error Handling [orange]\n  - Result<T, E>\n  - Option<T>\n  - ? operator\n  - Custom error types\n  - thiserror / anyhow\n  - Panic vs recoverable\n- Concurrency [red]\n  - Threads & scoped threads\n  - Channels (mpsc, async)\n  - Mutex, RwLock\n  - Atomic types\n  - Send & Sync traits\n  - Rayon / crossbeam\n  - Async/await (tokio, async-std)\n- Tooling [violet]\n  - cargo (build, test, doc)\n  - rustfmt / clippy\n  - rust-analyzer (LSP)\n  - rustup (toolchains)\n  - cargo-audit / deny\n  - miri (UB detection)\n- Ecosystem [teal]\n  - Crates.io\n  - Web (axum, actix, poem)\n  - Serialization (serde)\n  - Database (sqlx, diesel)\n  - CLI (clap, ratatui)\n  - Embedded (no_std)\n  - WASM (wasm-bindgen, leptos)\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 44
+      }
+    },
+    {
+      "id": "mind-q4-goals",
+      "family": "mindmap",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nmindmap\n  root((Q4 Engineering Goals))\n    Reliability\n      Incident Response\n        On-call rotation optimization\n        Runbook updates\n        Postmortem process improvement\n      System Health\n        SLO definition & monitoring\n        Alert fatigue reduction\n        Chaos engineering experiments\n      Data Integrity\n        Backup/restore validation\n        Consistency checks\n        Disaster recovery drills\n    Performance\n      Latency\n        API p99 < 200ms\n        Database query optimization\n        CDN cache hit ratio > 95%\n      Throughput\n        Load testing framework\n        Horizontal scaling automation\n        Batch processing pipelines\n      Resource Efficiency\n        CPU/memory profiling\n        Cost per request reduction\n        Container right-sizing\n    Developer Experience\n      Local Development\n        Dev container standardization\n        Seed data management\n        Hot reload reliability\n      CI/CD\n        Pipeline flakiness < 1%\n        Deploy time < 10 min\n        Feature flag framework\n      Tooling & Docs\n        Internal CLI improvements\n        Architecture decision records\n        Onboarding checklist automation\n    Hiring\n      Senior Engineers\n        3 backend, 2 platform\n        Interview loop calibration\n        Referral program refresh\n      Early Career\n        Intern conversion 80%\n        Mentorship program structure\n        University partnerships\n      Team Enablement\n        Hiring manager training\n        Candidate experience NPS\n        Diversity slate policy\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 53
+      }
+    },
+    {
+      "id": "mind-q4-goals",
+      "family": "mindmap",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nmindmap\ncentral: Q4 Engineering Goals\n- Reliability [green]\n  - Reduce p99 latency < 200ms\n  - Implement circuit breakers\n  - Improve alerting & runbooks\n  - Chaos engineering program\n- Performance [blue]\n  - Database query optimization\n  - Caching strategy revamp\n  - CDN configuration audit\n  - Bundle size reduction\n- Developer Experience [orange]\n  - Local dev environment overhaul\n  - CI/CD pipeline speedup\n  - Documentation consolidation\n  - Internal tooling investment\n- Hiring [violet]\n  - Senior backend (2)\n  - Platform engineer (1)\n  - Engineering manager (1)\n  - Improve interview process\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 21
+      }
+    },
+    {
+      "id": "mind-migration",
+      "family": "mindmap",
+      "format": "mermaid",
+      "first": {
+        "text": "```mermaid\nmindmap\n  root((Database Migration Plan))\n    Schema\n      Assessment\n        Current vs Target\n        Compatibility Check\n      Design\n        DDL Scripts\n        Indexing Strategy\n        Constraints & Triggers\n      Testing\n        Schema Validation\n        Performance Benchmarks\n    Data Backfill\n      Strategy\n        Full vs Incremental\n        Batch Sizing\n      Execution\n        ETL Pipelines\n        Parallel Processing\n        Progress Tracking\n      Validation\n        Row Counts\n        Checksums\n        Data Quality Rules\n    Dual Writes\n      Implementation\n        Application Changes\n        Transactional Outbox\n        CDC Capture\n      Monitoring\n        Latency Metrics\n        Error Rates\n        Data Consistency Checks\n      Fallback\n        Write Path Toggle\n        Replay Mechanism\n    Cutover\n      Planning\n        Maintenance Window\n        Stakeholder Communication\n        Runbook Preparation\n      Execution\n        Read-Only Mode\n        Final Sync\n        DNS/Config Switch\n      Verification\n        Smoke Tests\n        Critical Path Validation\n    Rollback\n      Triggers\n        Data Corruption\n        Performance Degradation\n        Critical Bugs\n      Procedure\n        Schema Reversion\n        Data Restore\n        Traffic Redirect\n      Validation\n        Integrity Checks\n        Service Health\n    Verification\n      Automated\n        Schema Diff\n        Data Comparison\n        Regression Suite\n      Manual\n        Business Logic Walkthrough\n        User Acceptance\n      Monitoring\n        Post-Cutover Metrics\n        Alerting Thresholds\n        Performance Baselines\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 1,
+        "nodes": 72
+      }
+    },
+    {
+      "id": "mind-migration",
+      "family": "mindmap",
+      "format": "dsl",
+      "first": {
+        "text": "```dsl\nmindmap\ncentral: Database Migration Plan\n- Schema\n  - Design new tables [green]\n  - Add indexes\n  - Foreign keys\n  - Constraints\n- Data Backfill\n  - Historical migration [blue]\n  - Batch processing\n  - Idempotent scripts\n  - Progress tracking\n- Dual Writes\n  - Write to old & new [orange]\n  - Sync verification\n  - Latency monitoring\n  - Fallback logic\n- Cutover\n  - Traffic switch [red]\n  - Read from new\n  - Deprecate old writes\n  - DNS / config flip\n- Rollback\n  - Revert plan [violet]\n  - Data reconciliation\n  - Feature flags\n  - Runbook steps\n- Verification\n  - Data integrity [teal]\n  - Query parity tests\n  - Performance benchmarks\n  - Stakeholder sign-off\n```",
+        "valid": true,
+        "problems": [],
+        "warnings": 0,
+        "losses": 0,
+        "nodes": 31
+      }
+    }
+  ]
+}

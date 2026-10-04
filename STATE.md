@@ -15,12 +15,15 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   13.1 tools take Mermaid / Structurizr / D2 (`readAgentSource`, `src/agent/lint.ts`) → `converted: {from, dsl, losses}`;
   13.2 headless SVG + `openflowkit build` draw icon art (`mcp-server/data/icon-art`, built by `build:icons`, ~11 MB);
   13.3 `skills/openflowkit/SKILL.md` = `public/llms.txt` (`npm run skill:sync`; `skill.test.ts` fails on drift);
-  13.4 `npm run eval:validity` built, NOT run (needs a key + owner's go; default claude-haiku-4-5, any BYOK provider);
+  13.4 `npm run eval:validity` RAN 2026-10-04 on nemotron-3-ultra (OpenRouter free): first-try valid Mermaid 96%, DSL 90%,
+  after one retry 100% / 96% — target ≥ 90% met (`mcp-server/evals/validity/results/`). That run was BEFORE the detector fix below;
+  re-run on a stronger model (free tier is 50 req/day, a full run is 100+) for the launch number;
   13.5 `d2ToDsl` (32 real D2 files) + Structurizr fixed on its own 4 example workspaces.
 - MCP 0.2.0 was never published; `npx @vrun-design/openflowkit-mcp` still serves 0.1.2 until it is.
 
 ## Found, not fixed (owner calls)
-- None. Fixed 2026-10-03: edges end on groups (grammar §4), quoted `\n` keeps its break, BYOK ids,
+- None. Fixed 2026-10-04: `flowchart right … A --> B` (the skill's own example) was read as Mermaid, because `-->` is our dashed edge
+  too; `looksLikeMermaid` now lets DSL-only signals (word direction, `title:`, `A ->`) win. Fixed 2026-10-03: edges end on groups (grammar §4), quoted `\n` keeps its break, BYOK ids,
   Mermaid `A`/`a` stay two nodes, v1 import lists only what v1 showed (stray copies go to the backup).
 
 ## Ceilings (`// ponytail:` in code)
@@ -30,7 +33,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - Phase-7 `frame.test.ts` flakes under load, passes alone.
 
 ## Next — owner's order, 2026-10-03
-- Run 13.4 (owner's go), check ≥ 90% first-try valid, commit the dated JSON. Then 14.1 quality pass, D11 UI,
+- Re-run 13.4 after the detector fix on a model with quota. Then 14.1 quality pass, D11 UI,
   14.4 analytics, 15 share links. Open calls: D7 paid; D8 labs (Claude: yes); D11 (V2 recommended).
 ## Deferred
 - Widget text width is estimated; wireframe comments move to the end; PDF = print dialog; no zip;
