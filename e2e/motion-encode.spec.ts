@@ -24,7 +24,7 @@ async function openAnimation(page: import('@playwright/test').Page, source: stri
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
   const editor = page.getByRole('textbox', { name: 'Diagram source' });
   await editor.fill(source);
-  await editor.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+  await editor.press('ControlOrMeta+Enter');
   await expect.poll(async () => page.evaluate(() => {
     const api = (window as unknown as { __V2__?: V2Api }).__V2__;
     return api?.getState().nodes.length ?? 0;
@@ -47,8 +47,8 @@ const MAGIC: Record<string, string> = {
 };
 
 for (const format of ['GIF', 'MP4', 'WebM'] as const) {
-  // GIF asserts a per-frame budget only a real GPU meets; CI skips it (@local).
-  test(`${format} downloads a real file`, { tag: format === 'GIF' ? '@local' : [] }, async ({ page }) => {
+  // The file is checked everywhere; the frame budget only where a real GPU runs (not CI's software WebGL).
+  test(`${format} downloads a real file`, async ({ page }) => {
     test.setTimeout(180_000);
     await openAnimation(page, DSL, 5);
     await page.getByRole('radio', { name: format, exact: true }).check();
@@ -80,6 +80,7 @@ for (const format of ['GIF', 'MP4', 'WebM'] as const) {
     expect(bytes.length).toBeLessThan(4_000_000);
     // The dialog stays usable: no error row, progress gone, button live again.
     await expect(page.getByRole('button', { name: new RegExp(`Export ${format}`) })).toBeEnabled();
+    if (process.env.CI) return;
     // A realistic page keeps its frames: no blocking task at all, and only a
     // cold-start raster can nudge a single frame past 32 ms.
     const stats = await page.evaluate(() => {

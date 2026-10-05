@@ -30,7 +30,8 @@ test('label editor follows the node through zoom', async ({ page }) => {
   await page.keyboard.press('Escape');
   await page.mouse.dblclick(640, 400);
   const editor = page.getByRole('textbox', { name: 'Edit node label' });
-  await editor.fill('cscxaxaxaxaxax');
+  // Short enough to stay on one line in any font (a wrap rightly changes the padding).
+  await editor.fill('cscxax');
   // Each keystroke re-measures; the centring padding must not creep.
   const pad = () => editor.evaluate((el) => getComputedStyle(el).paddingTop);
   const first = await pad();
