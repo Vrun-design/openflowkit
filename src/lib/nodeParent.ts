@@ -34,10 +34,3 @@ export function setNodeParent<T extends Node>(
 
   return nextNode as T;
 }
-
-export function clearNodeParent<T extends Node>(node: T): T {
-  const next = { ...node } as NodeWithParent;
-  delete next.parentId;
-  delete next.extent;
-  return next as T;
-}

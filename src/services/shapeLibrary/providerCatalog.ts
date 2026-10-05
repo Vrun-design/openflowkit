@@ -137,11 +137,6 @@ export function listProviderCatalogProviders(): string[] {
   );
 }
 
-export function getProviderCatalogCount(provider: DomainLibraryCategory): number {
-  const normalizedProvider = normalizeProviderPathSegment(provider);
-  return SVG_SOURCES.filter((source) => source.provider === normalizedProvider).length;
-}
-
 export async function loadProviderCatalog(
   provider: DomainLibraryCategory
 ): Promise<DomainLibraryItem[]> {
@@ -163,51 +158,6 @@ export async function loadProviderCatalog(
 
   providerCatalogPromiseCache.set(normalizedProvider, catalogPromise);
   return catalogPromise;
-}
-
-interface LoadProviderCatalogSuggestionsOptions {
-  category?: string;
-  excludeShapeId?: string;
-  limit?: number;
-  query?: string;
-}
-
-export async function loadProviderCatalogSuggestions(
-  provider: DomainLibraryCategory,
-  options: LoadProviderCatalogSuggestionsOptions = {}
-): Promise<DomainLibraryItem[]> {
-  const items = await loadProviderCatalog(provider);
-  const normalizedQuery = options.query?.trim().toLowerCase() ?? '';
-  const filtered = items.filter((item) => {
-    if (options.excludeShapeId && item.archIconShapeId === options.excludeShapeId) {
-      return false;
-    }
-    if (options.category && item.providerShapeCategory !== options.category) {
-      return false;
-    }
-    if (!normalizedQuery) {
-      return true;
-    }
-    return (
-      item.label.toLowerCase().includes(normalizedQuery) ||
-      item.description.toLowerCase().includes(normalizedQuery) ||
-      (item.providerShapeCategory || '').toLowerCase().includes(normalizedQuery)
-    );
-  });
-
-  const pool =
-    filtered.length > 0 || !options.category
-      ? filtered
-      : items.filter(
-          (item) =>
-            (!options.excludeShapeId || item.archIconShapeId !== options.excludeShapeId) &&
-            (!normalizedQuery ||
-              item.label.toLowerCase().includes(normalizedQuery) ||
-              item.description.toLowerCase().includes(normalizedQuery) ||
-              (item.providerShapeCategory || '').toLowerCase().includes(normalizedQuery))
-        );
-
-  return pool.slice(0, options.limit ?? 8);
 }
 
 export async function loadProviderShapePreview(

@@ -1,10 +1,5 @@
 import { createBounds2d } from '../geometry/bounds';
-import {
-  applyMatrixToPoint,
-  IDENTITY_MATRIX_2D,
-  multiplyMatrices,
-  transformBounds,
-} from '../geometry/matrix';
+import { applyMatrixToPoint, multiplyMatrices, transformBounds } from '../geometry/matrix';
 import { transformToMatrix } from '../geometry/transform';
 import type { Bounds2d, Matrix2d, Point2d } from '../geometry/types';
 import type { SceneNode, ScenePage } from '../document/types';
@@ -33,8 +28,4 @@ export function nodeWorldBounds(node: SceneNode, worldMatrix: Matrix2d): Bounds2
 
 export function nodeWorldCenter(node: SceneNode, worldMatrix: Matrix2d): Point2d {
   return applyMatrixToPoint(worldMatrix, { x: node.size.width / 2, y: node.size.height / 2 });
-}
-
-export function identityWorldMatrix(): Matrix2d {
-  return IDENTITY_MATRIX_2D;
 }

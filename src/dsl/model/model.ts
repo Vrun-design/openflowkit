@@ -195,10 +195,6 @@ export function childViewOf(index: ArchIndex, elementId: string): ArchView | und
   return candidates.find((view) => view.kind === 'custom') ?? candidates.find((view) => view.kind !== 'landscape');
 }
 
-export function emptyArchModel(): ArchModel {
-  return { elements: [], relations: [], views: [], flows: [] };
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -358,10 +354,6 @@ export function archModelOfDocument(document: SceneDocumentV1 | null | undefined
     if (model) return model;
   }
   return null;
-}
-
-export function archPageOfView(document: SceneDocumentV1, viewId: string): ScenePage | undefined {
-  return document.pages.find((page) => archViewIdOfPage(page) === viewId);
 }
 
 /** Flattened, playback-ordered steps with their structural depth and branch label. */

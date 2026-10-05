@@ -247,11 +247,6 @@ export function projectRelations(index: ArchIndex, shown: ReadonlySet<string>): 
   return order.map((key) => best.get(key)!);
 }
 
-/** Every element a view depicts, in model order. */
-export function viewOrder(index: ArchIndex, shown: ReadonlySet<string>): readonly ArchElement[] {
-  return index.model.elements.filter((element) => shown.has(element.id));
-}
-
 /** Tag words used anywhere in the model, for the perspective filter. */
 export function modelTags(model: ArchModel): readonly string[] {
   const tags = new Set<string>();

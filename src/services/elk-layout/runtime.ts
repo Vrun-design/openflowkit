@@ -67,8 +67,3 @@ export async function getElkInstance(): Promise<ElkLayoutEngine> {
   }
   return elkInstancePromise;
 }
-
-/** Reset the cached ELK instance — useful in tests or when the instance may have become stale. */
-export function resetElkInstance(): void {
-  elkInstancePromise = null;
-}

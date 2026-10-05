@@ -88,10 +88,6 @@ export function normalizeErField(value: string | ErField): ErField {
   return parseErField(String(value));
 }
 
-export function normalizeErFields(values: Array<string | ErField> | undefined): ErField[] {
-  return Array.isArray(values) ? values.map(normalizeErField) : [];
-}
-
 export function stringifyErField(field: ErField): string {
   const segments: string[] = [];
   const normalizedName = field.name.trim();
@@ -124,12 +120,4 @@ export function stringifyMermaidErField(field: ErField): string {
   }
 
   return segments.join(' ').trim();
-}
-
-export function formatErFieldLabel(field: ErField): string {
-  const parts = [field.name.trim() || 'field'];
-  if (field.dataType.trim()) {
-    parts.push(field.dataType.trim());
-  }
-  return parts.join(': ');
 }

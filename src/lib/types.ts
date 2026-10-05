@@ -33,10 +33,6 @@ export type MermaidVisualMode =
   | 'editable_partial'
   | 'editable_fallback';
 
-export function isDiagramType(value: unknown): value is DiagramType {
-  return typeof value === 'string' && (DIAGRAM_TYPES as readonly string[]).includes(value);
-}
-
 export enum NodeType {
   START = 'start',
   PROCESS = 'process',

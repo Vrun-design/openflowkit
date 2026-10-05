@@ -74,11 +74,6 @@ export function isMermaidImportedContainerNode(node: FlowNode): boolean {
   return metadata?.role === 'container';
 }
 
-export function isMermaidImportedLeafNode(node: FlowNode): boolean {
-  const metadata = readMermaidImportedNodeMetadata(node);
-  return metadata?.role === 'leaf';
-}
-
 export function readMermaidImportedEdgeMetadata(
   edge: FlowEdge
 ): MermaidImportedEdgeMetadata | null {
@@ -105,10 +100,6 @@ export function readMermaidImportedEdgeMetadata(
   }
 
   return candidate as MermaidImportedEdgeMetadata;
-}
-
-export function isMermaidImportedEdge(edge: FlowEdge): boolean {
-  return readMermaidImportedEdgeMetadata(edge) !== null;
 }
 
 export function downgradeMermaidImportedEdgeMetadata(edge: FlowEdge): EdgeData {

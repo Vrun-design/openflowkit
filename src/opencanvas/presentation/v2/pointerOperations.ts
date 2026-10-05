@@ -86,11 +86,6 @@ export function selectionAfterClick(
   return additive ? toggleSelection(current, nodeId) : replaceSelection([nodeId]);
 }
 
-export function selectionStatus(selection: CanvasSelection, mode: 'select' | 'pan'): string {
-  if (selection.nodeIds.length > 0) return `${selection.nodeIds.length} selected`;
-  return mode === 'select' ? 'Drag empty space to select' : 'Drag to pan';
-}
-
 export function transformLabel(kind: 'move' | 'resize' | 'rotate'): string {
   switch (kind) {
     case 'move':
@@ -102,20 +97,6 @@ export function transformLabel(kind: 'move' | 'resize' | 'rotate'): string {
   }
 }
 
-export function arrowNudgeDelta(key: string, amount: number): Point2d {
-  switch (key) {
-    case 'ArrowLeft':
-      return { x: -amount, y: 0 };
-    case 'ArrowRight':
-      return { x: amount, y: 0 };
-    case 'ArrowUp':
-      return { x: 0, y: -amount };
-    case 'ArrowDown':
-      return { x: 0, y: amount };
-    default:
-      return { x: 0, y: 0 };
-  }
-}
 
 export function beginTransformOperation(
   pointerId: number,

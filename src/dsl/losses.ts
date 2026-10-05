@@ -1,7 +1,6 @@
 import type { SceneConnector, SceneNode } from '../opencanvas/domain/document/types';
 import { resolveFreeformNodePresentation } from '../opencanvas/domain/nodes/freeformNodePresentation';
 import type { DslFrameScene } from './sceneMeta';
-import { serialize, type SerializeResult } from './serialize';
 
 // What the text cannot say back. Serializing is lossy in exactly the ways the
 // scene is richer than the language — canvas geometry (positions, sizes) is
@@ -47,9 +46,4 @@ export function serializeLosses(scene: DslFrameScene): readonly string[] {
       ? [`${labelOf(group)}: rotation is not in the language`] : [])),
     ...scene.connectors.flatMap(connectorLosses),
   ];
-}
-
-/** Canonical text plus the honest list of what the round-trip drops. */
-export function serializeWithLosses(scene: DslFrameScene): SerializeResult {
-  return { dsl: serialize(scene), losses: serializeLosses(scene) };
 }

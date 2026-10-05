@@ -1,8 +1,6 @@
 import { isFiniteNumber, requireNonNegativeNumber } from './finite';
 import type { Size2d } from './types';
 
-export const EMPTY_SIZE_2D: Size2d = Object.freeze({ width: 0, height: 0 });
-
 export function createSize2d(width: number, height: number): Size2d {
   return {
     width: requireNonNegativeNumber(width, 'size.width'),

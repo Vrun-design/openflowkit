@@ -7,9 +7,6 @@ import {
 } from './finite';
 import type { Point2d, Vector2d } from './types';
 
-export const ORIGIN_2D: Point2d = Object.freeze({ x: 0, y: 0 });
-export const ZERO_VECTOR_2D: Vector2d = Object.freeze({ x: 0, y: 0 });
-
 export function createPoint2d(x: number, y: number): Point2d {
   return {
     x: requireFiniteNumber(x, 'point.x'),

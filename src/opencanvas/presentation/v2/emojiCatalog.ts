@@ -197,7 +197,3 @@ export function searchEmoji(query: string, limit = 96): readonly string[] {
     .filter((glyph) => (seen.has(glyph) ? false : (seen.add(glyph), true)))
     .slice(0, limit);
 }
-
-export function emojiGroup(id: string): EmojiGroup | undefined {
-  return EMOJI_GROUPS.find((group) => group.id === id);
-}

@@ -1,12 +1,5 @@
 import { createDefaultSceneLayer } from '../../domain/document/defaults';
-import {
-  SCENE_DOCUMENT_FORMAT,
-  SCENE_DOCUMENT_VERSION,
-  type SceneConnector,
-  type SceneDocumentV1,
-  type SceneNode,
-  type ScenePage,
-} from '../../domain/document/types';
+import type { SceneConnector, SceneNode, ScenePage } from '../../domain/document/types';
 
 const NODE_WIDTH = 168;
 const NODE_HEIGHT = 72;
@@ -454,20 +447,6 @@ export function createPixiSpikePage(nodeCount: number): ScenePage {
     layers: [createDefaultSceneLayer()],
     nodes,
     connectors,
-    metadata: {},
-    extensions: {},
-  };
-}
-
-export function createPixiSpikeDocument(nodeCount: number): SceneDocumentV1 {
-  return {
-    format: SCENE_DOCUMENT_FORMAT,
-    schemaVersion: SCENE_DOCUMENT_VERSION,
-    id: `pixi-spike-document-${nodeCount}`,
-    name: 'OpenCanvas Pixi renderer lab',
-    createdAt: '2026-08-07T00:00:00.000Z',
-    updatedAt: '2026-08-07T00:00:00.000Z',
-    pages: [createPixiSpikePage(nodeCount)],
     metadata: {},
     extensions: {},
   };

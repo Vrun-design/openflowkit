@@ -36,7 +36,3 @@ export function buildNodeStateMap(page: ScenePage): Map<string, NodeEffectiveSta
   for (const node of page.nodes) resolve(node, 0);
   return states;
 }
-
-export function nodeEffectiveState(page: ScenePage, nodeId: string): NodeEffectiveState {
-  return buildNodeStateMap(page).get(nodeId) ?? { visible: false, locked: true };
-}

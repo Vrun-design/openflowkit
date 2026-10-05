@@ -1,7 +1,4 @@
-import {
-  DSL_FAMILIES, type DslAttribute, type DslDiagnostic, type DslEdge, type DslFamily,
-  type DslReference, type DslStatement,
-} from '../../ast';
+import type { DslAttribute, DslDiagnostic, DslEdge, DslReference, DslStatement } from '../../ast';
 import { diagnostic, tokenDiagnostic } from '../../diagnostics';
 import { readAttributes } from '../../attributes';
 import { joinTokens, splitStatements, type DslSegment } from '../../segments';
@@ -201,11 +198,6 @@ export function parseGraphStatements(segments: readonly DslSegment[], diagnostic
     diagnostics.push(diagnostic({ line: opener?.line ?? 1, col: opener?.col ?? 1, endCol: opener?.endCol ?? 1 }, 'W103', 'warning', 'Unclosed block at end of input', '} inserted'));
   }
   return statements;
-}
-
-/** True when the first word names a known family; used by the compat `parse()`. */
-export function isFamilyWord(word: string | undefined): word is DslFamily {
-  return Boolean(word) && DSL_FAMILIES.includes(word as DslFamily);
 }
 
 export { splitStatements };

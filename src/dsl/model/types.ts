@@ -128,8 +128,6 @@ export interface ArchModel {
   readonly flows: readonly ArchFlow[];
 }
 
-export const EMPTY_ARCH_MODEL: ArchModel = { elements: [], relations: [], views: [], flows: [] };
-
 /** One view compiled to a scene: the frame plus its placed elements and edges. */
 export interface ArchViewScene {
   readonly view: ArchView;

@@ -13,7 +13,6 @@ export interface StoredAsset {
 }
 
 const MAX_ASSET_BYTES = 10 * 1024 * 1024;
-export const MAX_IMAGE_BYTES = MAX_ASSET_BYTES;
 
 export function assetBytes(dataUrl: string): number {
   const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);

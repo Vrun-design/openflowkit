@@ -1,5 +1,5 @@
 import { MarkerType } from '@/lib/reactflowCompat';
-import { createDefaultEdge } from '@/constants';
+import { createId } from '@/lib/id';
 import { SECTION_MIN_HEIGHT, SECTION_MIN_WIDTH } from '@/lib/sectionBounds';
 import { setNodeParent } from './nodeParent';
 import {
@@ -23,6 +23,26 @@ import {
   normalizeMultilineStrings,
 } from './mermaidParserHelpers';
 import type { FlowEdge, FlowNode } from './types';
+
+// v1's edge defaults: the importer still builds v1-shaped edges before they convert.
+const DEFAULT_EDGE_OPTIONS = {
+  type: 'smoothstep' as const,
+  markerEnd: { type: MarkerType.ArrowClosed },
+  animated: false,
+  style: { stroke: '#94a3b8', strokeWidth: 2 },
+  labelStyle: { fill: '#334155', fontWeight: 500, fontSize: 12 },
+  labelBgStyle: { fill: '#ffffff', stroke: '#cbd5e1', strokeWidth: 1 },
+  labelBgPadding: [8, 4] as [number, number],
+  labelBgBorderRadius: 4,
+};
+
+const createDefaultEdge = (source: string, target: string, label?: string, id?: string): FlowEdge => ({
+  id: id || createId(`e-${source}-${target}`),
+  source,
+  target,
+  label,
+  ...DEFAULT_EDGE_OPTIONS,
+});
 
 const NODE_TYPE_DEFAULTS: Record<string, string> = {
   start: 'emerald',
