@@ -241,9 +241,10 @@ test('the canvas frame and the SVG still are the same picture', async ({ page })
         }, [at, preset] as const);
         expect(canvasUrl, `${name} ${preset} produced no canvas frame`).not.toBe('');
         const ratio = await diffCanvasAndStill(page, canvasUrl, still);
-        // Two per cent: font metrics and antialiasing are the only allowed
-        // differences; a wrong state, colour or position is an order above.
-        expect(ratio, `${name} ${preset} at ${at}ms`).toBeLessThan(0.02);
+        // Antialiasing is the only allowed difference (fonts are embedded as the encoder does); a wrong
+        // state, colour or position is an order above. Two per cent on a GPU; CI's software rasteriser
+        // edges zoomed walkthrough curves differently (2.2% seen), so five there, still under that order.
+        expect(ratio, `${name} ${preset} at ${at}ms`).toBeLessThan(process.env.CI ? 0.05 : 0.02);
       }
     }
   }
