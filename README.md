@@ -49,7 +49,7 @@ npm run test -- --run    # vitest (unit + goldens)
 npm run e2e:headed -- e2e/agent-live.spec.ts   # a real agent driving a real editor
 ```
 
-Requires Node 18+. The app is local-first: documents live in your browser (IndexedDB)
+Requires Node 22+. The app is local-first: documents live in your browser (IndexedDB)
 with the last-known-good copy kept for crash recovery.
 
 ## Diagram as code

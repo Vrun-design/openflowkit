@@ -57,7 +57,7 @@ export default defineConfig(() => {
       exclude: [
         'e2e/**',
         'scripts/**',
-        'node_modules/**',
+        '**/node_modules/**',
         'dist/**',
         'mcp-server/**',
       ],

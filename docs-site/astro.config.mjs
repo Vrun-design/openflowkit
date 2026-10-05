@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import { unified } from '@astrojs/markdown-remark';
 import { remarkOpenflowExamples } from './src/plugins/remark-openflow-examples.mjs';
 
 // The sidebar mirrors the file system, so a page can never be orphaned: every
@@ -44,13 +45,10 @@ const sidebar = [
 
 export default defineConfig({
   site: 'https://docs.openflowkit.com',
-  legacy: {
-    collections: true,
-  },
   // Every ```` ```openflow ```` block becomes a figure whose SVG was compiled
   // from the same block at build time (scripts/build-examples.mts).
   markdown: {
-    remarkPlugins: [remarkOpenflowExamples],
+    processor: unified({ remarkPlugins: [remarkOpenflowExamples] }),
   },
   integrations: [
     starlight({

@@ -15,9 +15,10 @@
     "prebuild": "npm run generate:dsl && npm run generate:examples && npm run generate:refs && npm run check:docs"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.34.0",
-    "astro": "^5.7.0",
-    "sharp": "^0.34.1"
+    "@astrojs/markdown-remark": "^7.3.1",
+    "@astrojs/starlight": "^0.42.5",
+    "astro": "^7.3.5",
+    "sharp": "^0.35.5"
   },
   "overrides": {
     "zod": "3"
