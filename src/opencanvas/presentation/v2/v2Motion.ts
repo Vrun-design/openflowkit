@@ -10,6 +10,7 @@ import { parseDocument } from '../../../dsl/document';
 import type { MotionFormat, MotionFps, MotionSize } from '../../infrastructure/export/motionSchedule';
 import { exportAnimatedSvg, exportMotionFrameSvg } from '../../infrastructure/export/animatedSvg';
 import { renderMotionFile } from '../../infrastructure/export/motionFrames';
+import { withEmbeddedInter } from '../../infrastructure/export/raster';
 import type { V2ExportFile } from './v2Export';
 import { loadIconArt } from './v2IconArt';
 
@@ -100,11 +101,11 @@ export function motionFileStem(request: V2MotionRequest): string {
   return `${document}-${name}-${request.preset ?? 'build'}`;
 }
 
-export function buildMotionSvgFile(request: V2MotionRequest): V2ExportFile {
+export async function buildMotionSvgFile(request: V2MotionRequest): Promise<V2ExportFile> {
   return {
     filename: `${motionFileStem(request)}.svg`,
     mime: 'image/svg+xml',
-    text: animatedSvgFor(request),
+    text: await withEmbeddedInter(animatedSvgFor(request)),
   };
 }
 

@@ -22,7 +22,7 @@ export function buildPrintDocument(svg: string, title: string, options: PrintDoc
   svg { width: 100%; height: 100%; max-height: 100%; }
 </style></head>
 <body>${svg}
-<script>window.addEventListener('load', function () { window.focus(); window.print(); });</script>
+<script>window.addEventListener('load', function () { document.fonts.ready.then(function () { window.focus(); window.print(); }); });</script>
 </body></html>`;
 }
 

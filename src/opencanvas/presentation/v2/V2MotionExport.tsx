@@ -135,9 +135,9 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
     durationMs: block ? null : targetMs, loop: block ? block.loop : loop, theme, iconArt,
     ...(codeText ? { codeText } : {}),
   };
-  function download(): void {
+  async function download(): Promise<void> {
     if (empty) return;
-    const file = buildMotionSvgFile(request);
+    const file = await buildMotionSvgFile(request);
     downloadV2Export([file]);
     onToast(`${file.filename} downloaded.`, 'success');
   }
@@ -341,7 +341,7 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
       {failure ? <p className="ofk-motion-failure" role="alert">{failure}</p> : null}
       <div className="ofk-v2-export-actions">
         <Button variant="primary" disabled={empty || busy}
-          onClick={() => { if (output === 'svg') download(); else void encode(); }}>
+          onClick={() => { if (output === 'svg') void download(); else void encode(); }}>
           <Icon icon={IconDownload} /> {output === 'svg' ? 'Download SVG' : `Export ${FORMAT_OPTIONS.find((option) => option.value === output)?.label ?? output}`}
         </Button>
         {output !== 'svg' ? (

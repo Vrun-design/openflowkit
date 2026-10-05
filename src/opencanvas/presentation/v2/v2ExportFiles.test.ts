@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { createEmptyV2Document } from './v2Document';
 import { buildCanonicalFixtureDocument } from './v2Export.testFixtures';
 import { buildV2Export, printV2Export } from './v2Export';
+import { printSvgDocument } from '../../infrastructure/export/print';
 
 vi.mock('../../infrastructure/export/raster', () => ({
   rasterizeSvgToPng: vi.fn(async () => new Uint8Array([137, 80, 78, 71])),
+  withEmbeddedInter: vi.fn(async (svg: string) => svg.replace(/<svg\b[^>]*>/, (open) => `${open}<style>@font-face{}</style>`)),
 }));
 vi.mock('../../infrastructure/export/print', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../infrastructure/export/print')>();
@@ -23,6 +25,7 @@ describe('v2 export', () => {
     expect(file?.mime).toBe('image/svg+xml');
     expect(file?.text).toContain('data-pixel-ratio="2"');
     expect(file?.text).toContain('data-page="page-1"');
+    expect(file?.text).toContain('<style>@font-face{}</style>');
   });
 
   it('exports a selected frame with everything inside it, and refuses an empty selection', async () => {
@@ -66,9 +69,10 @@ describe('v2 export', () => {
     expect(JSON.parse(file?.text ?? '{}')).toMatchObject({ id: 'doc-1', name: 'My Doc' });
   });
 
-  it('prints the page instead of downloading for PDF', async () => {
+  it('prints the page, with its font, instead of downloading for PDF', async () => {
     const document = await buildCanonicalFixtureDocument();
-    expect(() => printV2Export({ document, format: 'pdf', scope: 'page', pageId: document.pages[0]!.id })).not.toThrow();
+    await printV2Export({ document, format: 'pdf', scope: 'page', pageId: document.pages[0]!.id });
+    expect(vi.mocked(printSvgDocument).mock.calls[0]?.[0]).toContain('<style>@font-face{}</style>');
     await expect(buildV2Export({ document, format: 'pdf', scope: 'page', pageId: document.pages[0]!.id })).resolves.toEqual([]);
   });
 });

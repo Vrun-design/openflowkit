@@ -2,7 +2,7 @@ import type { SceneDocumentV1 } from '../../domain/document/types';
 import { exportCanonicalSvg, SVG_BACKGROUND } from '../../infrastructure/export/canonicalSvg';
 import { serializeCanonicalJson } from '../../infrastructure/export/canonicalJson';
 import { printSvgDocument } from '../../infrastructure/export/print';
-import { rasterizeSvgToPng } from '../../infrastructure/export/raster';
+import { rasterizeSvgToPng, withEmbeddedInter } from '../../infrastructure/export/raster';
 import { loadIconArt } from './v2IconArt';
 
 export type V2ExportFormat = 'png' | 'svg' | 'pdf' | 'json';
@@ -103,7 +103,8 @@ export async function buildV2Export(request: V2ExportRequest): Promise<readonly 
     const suffix = pages.length > 1 ? `-${index + 1}-${slug(page.name, page.id)}` : '';
     const svg = svgFor(request, page.id, scale, iconArt);
     if (request.format === 'svg') {
-      files.push({ filename: `${stem}${suffix}.svg`, mime: 'image/svg+xml', text: svg });
+      // A saved SVG is often shown through <img> (READMEs, docs), which cannot see web fonts.
+      files.push({ filename: `${stem}${suffix}.svg`, mime: 'image/svg+xml', text: await withEmbeddedInter(svg) });
       continue;
     }
     const bytes = await rasterizeSvgToPng(svg, {
@@ -119,7 +120,8 @@ export async function buildV2Export(request: V2ExportRequest): Promise<readonly 
 export async function printV2Export(request: V2ExportRequest): Promise<void> {
   const [page] = exportPages(request);
   if (!page) throw new RangeError('Export requires at least one page.');
-  printSvgDocument(svgFor(request, page.id, 1, await loadIconArt(request.document)), request.document.name);
+  const svg = svgFor(request, page.id, 1, await loadIconArt(request.document));
+  printSvgDocument(await withEmbeddedInter(svg), request.document.name);
 }
 
 /** Base64 for the wire (agent bridge / MCP JSON results); chunked for big PNGs. */

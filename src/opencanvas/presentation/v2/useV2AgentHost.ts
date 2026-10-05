@@ -9,6 +9,7 @@ import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { SVG_SOURCES } from '../../../services/shapeLibrary/providerCatalog';
 import { buildV2Export, bytesToBase64 } from './v2Export';
+import { withEmbeddedInter } from '../../infrastructure/export/raster';
 import { animatedSvgFor, buildMotionRasterFile } from './v2Motion';
 import { loadIconArt } from './v2IconArt';
 
@@ -64,7 +65,7 @@ export function useV2AgentHost(options: V2AgentHostOptions): OpCapabilities {
         iconArt: await loadIconArt(request.document),
       };
       if (request.format === 'svg-animated') {
-        return [{ filename: `${request.document.id}.svg`, mime: 'image/svg+xml', text: animatedSvgFor(motion) }];
+        return [{ filename: `${request.document.id}.svg`, mime: 'image/svg+xml', text: await withEmbeddedInter(animatedSvgFor(motion)) }];
       }
       const file = await buildMotionRasterFile({
         ...motion,

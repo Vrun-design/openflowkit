@@ -11,7 +11,8 @@ describe('withEmbeddedInter', () => {
     expect(await withEmbeddedInter(plain)).toBe(plain);
   });
 
-  it('keeps the system face when the font cannot be fetched (no server here), and tries again next time', async () => {
+  it('keeps the system face when the font cannot be fetched, and tries again next time', async () => {
+    vi.stubGlobal('fetch', async () => { throw new TypeError('Failed to fetch'); });
     expect(await withEmbeddedInter(LABEL)).toBe(LABEL);
     vi.stubGlobal('fetch', async () => new Response(new Uint8Array([1, 2, 3])));
     const embedded = await withEmbeddedInter(LABEL);

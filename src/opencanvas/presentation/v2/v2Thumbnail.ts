@@ -1,14 +1,21 @@
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { V2DocumentRepository, V2Thumbnail } from '../../../services/storage/v2/v2Repository';
-import { buildV2Export } from './v2Export';
+import { exportCanonicalSvg } from '../../infrastructure/export/canonicalSvg';
+import { loadIconArt } from './v2IconArt';
 
-/** First page, both themes, no background: the home card supplies its own surface. */
+/**
+ * First page, both themes, no background: the home card supplies its own surface.
+ * No embedded font (a saved SVG file has one): at card size the system face reads the same,
+ * and every stored preview would carry another 65 KB.
+ */
 export async function buildV2Thumbnail(document: SceneDocumentV1): Promise<V2Thumbnail | null> {
   const page = document.pages[0];
   if (!page || page.nodes.length + page.connectors.length === 0) return null;
-  const draw = async (theme: 'light' | 'dark') =>
-    (await buildV2Export({ document, format: 'svg', scope: 'page', pageId: page.id, theme, transparent: true }))[0]?.text ?? '';
-  const [light, dark] = await Promise.all([draw('light'), draw('dark')]);
+  const iconArt = await loadIconArt(document);
+  const draw = (theme: 'light' | 'dark') =>
+    exportCanonicalSvg(document, { pageId: page.id, iconArt, theme, pixelRatio: 1, transparent: true });
+  const light = draw('light');
+  const dark = draw('dark');
   return light && dark ? { light, dark } : null;
 }
 
