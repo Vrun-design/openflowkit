@@ -3,7 +3,9 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 (0–11) done, archived at `docs/archive/plan-executed-2026-10-03/`; 7b/8 parked; 6.10 → 14.1.
 
 ## Now
-- Gate: `npm run verify` (~3 min). CI (`quality.yml`) runs `test:ci` (incl. `bundle:check`) then the full e2e suite.
+- Gate: `npm run verify` (~3 min). CI runs `test:ci` (incl. `bundle:check`) then all non-`@local` e2e: 2026-10-05
+  first full run in 10 days, ~158/162. Red on CI only (pass on a Mac): MP4/WebM frame gaps, Home paint < 300 ms,
+  `edit-zoom` padding, `motion-svg` 2.9% vs 2% (fonts? Inter on the runner did not settle it). Owner: fix or `@local`.
 - **Phase 12 DONE 2026-10-03** except the merge. Owner's: merge `main` → `v2`, PR `v2` → `main`, Cloudflare
   Landing project, tag `v1-final`.
 - **Phase 13 DONE 2026-10-03** except 13.4 on a stronger model (nemotron free: Mermaid 96%, DSL 90% first try).
@@ -25,7 +27,6 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   under the left toolbar; phone welcome shows keyboard hints and clips the template row; dark-mode template
   thumbnails show white sequence/state boxes.
 - Fit under 65% zoom on 27/50 AI replies: land AI results at ≥65% anchored on the start, fit button for overview.
-- Not done: incremental index (9 ms at 5k), on-device model, code-panel virtualisation (0.8 s/key at 10k lines).
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.
