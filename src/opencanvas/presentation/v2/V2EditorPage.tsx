@@ -1,168 +1,94 @@
-import { useV2Preferences } from './useV2Preferences';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import {
-  clearSelection,
-  replaceSelection,
-  toggleSelection,
-} from '../../application/selection/selection';
+import { clearSelection, replaceSelection, toggleSelection } from '../../application/selection/selection';
 import { useDocumentSession } from '../../application/session/useDocumentSession';
 import type { PixiRendererHost, PixiRendererStatus } from '../../infrastructure/pixi/PixiRendererHost';
 import { createV2Repository } from '../../../services/storage/v2/v2Repository';
-import { scheduleV2Thumbnail } from './v2Thumbnail';
-import { V2FeatureTip } from './V2FeatureTip';
-import { TIP_QUIET_MS, V2_TIPS, markTipSeen, mayShowTip, recordTipShown, type V2TipId } from './v2FeatureTips';
-import { Panel, SystemRoot, ToastRegion, type ToastItem } from '../design-system';
-import { V2ContextMenu, type ContextMenuTarget } from './V2ContextMenu';
-import { V2CanvasHost } from './V2CanvasHost';
-import { V2Chrome } from './V2Chrome';
-import { V2AgentConnect } from './V2AgentConnect';
-import { INITIAL_CODE, V2CanvasWelcome, V2Shortcuts, V2WorkspaceRail, type V2WorkspaceMode } from './V2Workspace';
-import type { V2Tool } from './V2CreationToolbar';
-import {
-  DEFAULT_TOOL_CONFIG, type V2ChartKind, type V2ConnectorTool, type V2MoreItem, type V2ToolConfig,
-} from './v2ToolCatalog';
-import {
-  FRAME_PRESET_SPECS, createPresetFrame, enclosingPresetFrame, nextFrameSlot, type FramePreset,
-} from '../../domain/nodes/framePreset';
-import { WIDGETS, type WidgetKind } from '../../domain/nodes/widgetNodePresentation';
-import { createWidgetNode } from '../../domain/nodes/widgetNode';
-import { nextNodeZIndex } from '../../domain/nodes/shapeNode';
-import { createProductionSceneNode } from '../../application/active-document/productionNodeCatalog';
-import { reparentByPosition } from '../../domain/transforms/containment';
-import type { SceneNode } from '../../domain/document/types';
-import { createChartNode, DEFAULT_CHART_SIZE } from '../../domain/nodes/chartNode';
-import { DEFAULT_QUADRANT } from '../../domain/nodes/chartNodePresentation';
-import type { ShapeKind } from '../../domain/nodes/shapeNode';
-import { useV2IconLibrary } from './useV2IconLibrary';
-import { useV2MediaInsert } from './useV2MediaInsert';
-import { IMAGE_URL_PATTERN } from './useV2MediaInsert';
 import { isImageFile } from '../../../services/storage/assets';
-import { V2LoadCenter } from './V2LoadCenter';
-import { V2TreePanel } from './V2TreePanel';
-import { V2ChartDataPanel } from './V2ChartDataPanel';
-import { V2MotionExport } from './V2MotionExport';
-import { V2ExportMenu } from './V2ExportMenu';
-import { V2AgentPanel } from './V2AgentPanel';
-import { useV2Appearance } from './useV2Appearance';
-import { useV2Autosave } from './useV2Autosave';
-import { useV2Camera } from './useV2Camera';
-import { useV2DocumentLoad } from './useV2DocumentLoad';
-import { useV2EditActions } from './useV2EditActions';
-import { useV2Keyboard } from './useV2Keyboard';
-import { useV2LabelEditing, type OpenEditorOptions } from './useV2LabelEditing';
-import { useV2AgentBridge } from './useV2AgentBridge';
-import { useV2AgentHost } from './useV2AgentHost';
-import { useV2Assistant } from './useV2Assistant';
-import { selectedFrameIds } from '../../application/ai/assistantContext';
-import { useV2AiSettings } from './useV2AiSettings';
-import { useV2Proposal } from './useV2Proposal';
-import type { Proposal } from '../../application/ai/proposalSession';
-import { useV2Pages } from './useV2Pages';
-import { useV2Selection } from './useV2Selection';
-import { useV2TestApi } from './useV2TestApi';
-import type { V2GestureApi } from './useV2Pointer';
-import { worldToScreen } from '../../domain/camera/camera';
-import { createConnectorEditCommand, setPrimaryConnectorLabel } from '../../domain/connectors/editing';
-import type { Point2d } from '../../domain/geometry/types';
-import { isDiagramPalette, type DiagramPaletteName } from '../../domain/nodes/nodePalette';
-import { firstV2Page, isV2StartIntent, mintV2Id, rememberLastDocument } from './v2Document';
-import { findStarterTemplate } from '../../../agent/starterTemplates';
-import { downloadTextFile, type V2ExportScope } from './v2Export';
-import type { ScenePage } from '../../domain/document/types';
-import { dslFrameRaw } from '../../../dsl/sceneMeta';
-import { dslFrames, frameEdited, frameScene } from '../../../dsl/frameScene';
-import { compile, compileWorkspace, type CompileWorkspaceResult } from '../../../dsl/compile';
-import { parse } from '../../../dsl/parse';
-import { serialize } from '../../../dsl/serialize';
-import { writeAnimateBlock } from '../../../dsl/animate';
-import { buildDslPageCommand, nextDslFrameOrigin } from '../../application/dsl/dslPageCommand';
+import { looksLikeMermaid } from '../../../services/dsl/mermaidToDsl';
 import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
+import { findStarterTemplate } from '../../../agent/starterTemplates';
+import { compile, compileWorkspace, type CompileWorkspaceResult } from '../../../dsl/compile';
+import { dslFrames } from '../../../dsl/frameScene';
+import { writeAnimateBlock } from '../../../dsl/animate';
+import { architectureWorkspaceText } from '../../../dsl/families/architecture/text';
+import { archViewIdOfPage, placedElementId } from '../../../dsl/model/model';
+import { selectedFrameIds } from '../../application/ai/assistantContext';
+import { buildConnectorObjectAction } from '../../application/active-document/connectorActions';
+import { buildArchRelationCommands } from '../../application/dsl/architectureCommands';
+import { hasIcon } from '../../application/dsl/iconCommands';
+import { buildDeleteSelectionCommand, buildDuplicateSelectionCommand, buildToggleLockCommand } from '../../domain/commands/sceneEdits';
+import type { DocumentCommand } from '../../domain/commands/types';
+import type { ScenePage } from '../../domain/document/types';
+import type { Point2d } from '../../domain/geometry/types';
+import { Panel, SystemRoot, ToastRegion, type ToastItem } from '../design-system';
+import { V2AgentConnect } from './V2AgentConnect';
+import { V2AgentPanel } from './V2AgentPanel';
+import { V2CanvasHost } from './V2CanvasHost';
+import { V2ChartDataPanel } from './V2ChartDataPanel';
+import { V2Chrome } from './V2Chrome';
 import { V2CodePanel } from './V2CodePanel';
-import { V2ModelPanel } from './V2ModelPanel';
+import { V2ContextMenu, type ContextMenuTarget } from './V2ContextMenu';
+import type { V2Tool } from './V2CreationToolbar';
+import { V2ExportMenu } from './V2ExportMenu';
+import { V2FeatureTip } from './V2FeatureTip';
 import { V2FlowPanel } from './V2FlowPanel';
+import { V2LoadCenter } from './V2LoadCenter';
+import { V2ModelPanel } from './V2ModelPanel';
+import { V2MotionExport } from './V2MotionExport';
+import { V2TreePanel } from './V2TreePanel';
+import { V2CanvasWelcome, V2Shortcuts, V2WorkspaceRail } from './V2Workspace';
+import { isEditableTarget } from './pointerOperations';
+import { useV2AgentBridge } from './useV2AgentBridge';
+import { useV2AgentHost } from './useV2AgentHost';
+import { useV2AiSettings } from './useV2AiSettings';
+import { useV2Appearance } from './useV2Appearance';
 import { useV2Architecture } from './useV2Architecture';
 import { useV2ArchitectureActions } from './useV2ArchitectureActions';
+import { useV2Assistant } from './useV2Assistant';
+import { useV2Autosave } from './useV2Autosave';
+import { useV2Camera } from './useV2Camera';
+import { useV2CodeWorkspace } from './useV2CodeWorkspace';
+import { useV2ConnectorLabelEditing } from './useV2ConnectorLabelEditing';
+import { useV2DocumentLoad } from './useV2DocumentLoad';
+import { useV2EditActions } from './useV2EditActions';
+import { useV2EditorNotices } from './useV2EditorNotices';
+import { useV2FeatureTips } from './useV2FeatureTips';
 import { useV2FlowPlayback } from './useV2FlowPlayback';
-import { useV2WorkspaceFolder } from './useV2WorkspaceFolder';
-import { applySnapsToWorkspace, type WorkspaceSnap } from '../../../services/workspace/workspaceFolder';
-import { architectureWorkspaceText } from '../../../dsl/families/architecture/text';
-import { buildArchRelationCommands, buildWorkspacePagesCommand } from '../../application/dsl/architectureCommands';
-import { buildDeleteSelectionCommand, buildDuplicateSelectionCommand, buildToggleLockCommand } from '../../domain/commands/sceneEdits';
-import { buildConnectorObjectAction } from '../../application/active-document/connectorActions';
-import type { DocumentCommand } from '../../domain/commands/types';
-import { archViewIdOfPage, placedElementId } from '../../../dsl/model/model';
-import { isEditableTarget } from './pointerOperations';
-import { looksLikeMermaid, mermaidToDsl } from '../../../services/dsl/mermaidToDsl';
-import { runV1Import } from '../../../services/storage/v2/v1Import';
-import { buildAutoIconsOffCommand, hasAutoIcon, hasIcon } from '../../application/dsl/iconCommands';
 import { diagramIconsOn, iconToggleFrame, useV2IconActions } from './useV2IconActions';
-import { looksLikeStructurizr, structurizrToDsl } from '../../../services/dsl/structurizrToDsl';
-import { d2ToDsl, looksLikeD2 } from '../../../services/dsl/d2ToDsl';
+import { useV2IconLibrary } from './useV2IconLibrary';
+import { useV2Inserts } from './useV2Inserts';
+import { useV2Keyboard } from './useV2Keyboard';
+import { useV2LabelEditing, type OpenEditorOptions } from './useV2LabelEditing';
+import { IMAGE_URL_PATTERN, useV2MediaInsert } from './useV2MediaInsert';
+import { useV2Pages } from './useV2Pages';
+import { useV2Panels } from './useV2Panels';
+import type { V2GestureApi } from './useV2Pointer';
+import { useV2Preferences } from './useV2Preferences';
+import { useV2Proposal } from './useV2Proposal';
+import { useV2ProposalPreview } from './useV2ProposalPreview';
+import { useV2Selection } from './useV2Selection';
+import { useV2TestApi } from './useV2TestApi';
+import { useV2WorkspaceFolder } from './useV2WorkspaceFolder';
+import { firstV2Page, isV2StartIntent, mintV2Id, rememberLastDocument } from './v2Document';
+import { downloadTextFile, type V2ExportScope } from './v2Export';
+import type { V2TipId } from './v2FeatureTips';
+import { scheduleV2Thumbnail } from './v2Thumbnail';
+import { DEFAULT_TOOL_CONFIG, type V2ConnectorTool, type V2ToolConfig } from './v2ToolCatalog';
+import type { ShapeKind } from '../../domain/nodes/shapeNode';
 import './v2EditorPage.css';
 
-function changeObjectIds(changeId: string, proposal: Proposal | null): readonly string[] {
-  const change = proposal?.changes.find(({ id }) => id === changeId);
-  if (!change) return [];
-  const commands = change.command.kind === 'batch' ? change.command.commands : [change.command];
-  return commands.flatMap((command) => {
-    switch (command.kind) {
-      case 'insert-node': case 'remove-node': return [command.node.id];
-      case 'set-node': return [command.after.id];
-      case 'insert-connector': case 'remove-connector':
-        return [command.connector.source.nodeId, command.connector.target.nodeId].filter((id): id is string => !!id);
-      case 'set-connector':
-        return [command.after.source.nodeId, command.after.target.nodeId].filter((id): id is string => !!id);
-      // A diagram row: nodes it keeps are the same objects, so new identity = added or rebuilt.
-      case 'set-page': return command.after.nodes.filter((node) => !command.before.nodes.includes(node)).map(({ id }) => id);
-      default: return [];
-    }
-  });
-}
-
-// One import run per page load, so one notice per page load, whichever editor mounts first.
-let v1NoticeShown = false;
+const imageFiles = (list: DataTransfer | null): File[] => Array.from(list?.files ?? []).filter(isImageFile);
 
 export function V2EditorPage(): React.JSX.Element {
   const { id } = useParams();
   useEffect(() => { if (id) rememberLastDocument(id); }, [id]);
   const { preferences, updatePreferences } = useV2Preferences();
-  const [workspaceMode, setWorkspaceMode] = useState<V2WorkspaceMode | null>(null);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [codeDraft, setCodeDraft] = useState(INITIAL_CODE);
-  const [codeFrameId, setCodeFrameId] = useState<string | null>(null);
-  const [codeGenerating, setCodeGenerating] = useState(false);
-  const [compileDiagnostics, setCompileDiagnostics] = useState<ReturnType<typeof parse>['diagnostics']>([]);
-  const codeAbortRef = useRef<AbortController | null>(null);
-  const iconToastFramesRef = useRef(new Set<string>());
-  // The data panel is pinned to one chart: opening it never covers the canvas
-  // on a plain select, and it stays while you click around. Double-click, the
-  // context bar's Data button, or inserting a chart opens it. It docks in the
-  // same right-hand slot as the workspace panels, so only one of them is open.
-  const [chartPanelId, setChartPanelId] = useState<string | null>(null);
-  // Animation export docks in the LEFT slot, beside the tree: a preview, a
-  // transport, ten settings and the step chips never fitted a popover, and the
-  // right slot holds the code panel the chips write into — both stay visible.
-  const [motionOpen, setMotionOpen] = useState(false);
-  const agentOpen = workspaceMode === 'assistant';
-  const openWorkspace = (mode: V2WorkspaceMode) => {
-    setWorkspaceMode(mode);
-    setShortcutsOpen(false);
-    setChartPanelId(null);
-    if (window.innerWidth < 1100) { setTreeOpen(false); setMotionOpen(false); }
-  };
-  // One panel per slot: the tree and the animation panel share the left one.
-  const openMotion = () => {
-    setTreeOpen(false);
-    setMotionOpen(true);
-  };
-  const toggleAgent = () => { if (agentOpen) setWorkspaceMode(null); else openWorkspace('assistant'); };
-  const toggleModel = () => { if (workspaceMode === 'model') setWorkspaceMode(null); else openWorkspace('model'); };
-  const toggleCode = () => { if (workspaceMode === 'code') setWorkspaceMode(null); else { setCodeFrameId(null); openWorkspace('code'); } };
+  const panels = useV2Panels();
   const appearance = useV2Appearance(preferences.theme);
-  const canvasColor = preferences.canvasColor ?? (appearance === 'dark' ? '#191b19' : '#f7f7f5');
-  const rendererCanvasColor = Number.parseInt(canvasColor.slice(1), 16);
+  const canvasDefaultColor = appearance === 'dark' ? '#191b19' : '#f7f7f5';
+  const canvasColor = preferences.canvasColor ?? canvasDefaultColor;
   const repository = useMemo(
     () => createV2Repository(typeof window === 'undefined' ? null : window.indexedDB),
     []
@@ -170,11 +96,11 @@ export function V2EditorPage(): React.JSX.Element {
   const hostRef = useRef<PixiRendererHost | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
   const gestureApiRef = useRef<V2GestureApi | null>(null);
+  const focusCanvas = useCallback(() => sectionRef.current?.focus(), []);
   const [tool, setTool] = useState<V2Tool>('select');
   // Which variant a flyout tool draws with; its grid marks the last pick.
   const [toolConfig, setToolConfig] = useState<V2ToolConfig>(DEFAULT_TOOL_CONFIG);
   const [spacePan, setSpacePan] = useState(false);
-  const [treeOpen, setTreeOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuTarget | null>(null);
   // Export is one panel with two doors: the canvas menu (Page) and an element's
   // context menu (Selection + its subtree). One instance, so both share state.
@@ -195,20 +121,10 @@ export function V2EditorPage(): React.JSX.Element {
     setExportPoint({ x: point.x, y: point.y });
     openExport(exportPointRef.current, 'selection');
   };
-  const toggleTree = () => {
-    setTreeOpen((open) => !open);
-    setMotionOpen(false);
-    if (window.innerWidth < 1100) { setWorkspaceMode(null); setShortcutsOpen(false); }
-  };
-  const toggleShortcuts = () => {
-    setShortcutsOpen((open) => !open);
-    setWorkspaceMode(null);
-    setChartPanelId(null);
-    if (window.innerWidth < 1100) setTreeOpen(false);
-  };
   const [toasts, setToasts] = useState<readonly ToastItem[]>([]);
   const [announcement, setAnnouncement] = useState('');
   const [rendererStatus, setRendererStatus] = useState<PixiRendererStatus>('initializing');
+  const rendererReady = rendererStatus === 'ready';
 
   const toolRef = useRef(tool);
   const toolConfigRef = useRef(toolConfig);
@@ -238,44 +154,11 @@ export function V2EditorPage(): React.JSX.Element {
   const pushToast = useCallback((toast: ToastItem) => {
     setToasts((current) => [...current.slice(-3), toast]);
   }, []);
-
-  // Dev only: an uncaught error is a bug, so it must not fail silently while
-  // testing by hand. Production stays quiet (extensions throw into the page too).
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-    const show = (message: string) =>
-      pushToast({ id: `dev-error-${Date.now()}`, tone: 'danger', title: 'Uncaught error (dev)', description: message });
-    const onError = (event: ErrorEvent) => show(event.message);
-    const onRejection = (event: PromiseRejectionEvent) =>
-      show(event.reason instanceof Error ? event.reason.message : String(event.reason));
-    window.addEventListener('error', onError);
-    window.addEventListener('unhandledrejection', onRejection);
-    return () => {
-      window.removeEventListener('error', onError);
-      window.removeEventListener('unhandledrejection', onRejection);
-    };
-  }, [pushToast]);
-
-  // The one notice after v1 diagrams come over (12.4); later boots import nothing and stay quiet.
+  const dismissToast = useCallback((toastId: string) => {
+    setToasts((current) => current.filter((toast) => toast.id !== toastId));
+  }, []);
+  useV2EditorNotices(pushToast);
   const navigate = useNavigate();
-  useEffect(() => {
-    let live = true;
-    runV1Import().then(({ imported, failures, firstRun }) => {
-      // A failure that repeats on every boot is listed on Home, not toasted again.
-      if (!live || v1NoticeShown || (imported.length === 0 && !(firstRun && failures.length))) return;
-      v1NoticeShown = true;
-      const names = failures.slice(0, 3).map((failure) => `“${failure.name}”`).join(', ');
-      pushToast({
-        id: 'v1-import', tone: failures.length ? 'warning' : 'success', persistent: failures.length > 0,
-        title: imported.length
-          ? `Brought over ${imported.length} ${imported.length === 1 ? 'diagram' : 'diagrams'} from the previous editor.`
-          : 'Diagrams from the previous editor could not be brought over yet.',
-        ...(failures.length ? { description: `Not yet: ${names}${failures.length > 3 ? ` and ${failures.length - 3} more` : ''}. They stay safe in this browser.` } : {}),
-        action: { label: 'See all diagrams', onClick: () => navigate('/home') },
-      });
-    }, () => undefined);
-    return () => { live = false; };
-  }, [pushToast, navigate]);
 
   const camera = useV2Camera(hostRef);
   const reloadRef = useRef<() => void>(() => undefined);
@@ -304,6 +187,9 @@ export function V2EditorPage(): React.JSX.Element {
   const documentId = session.document?.id;
   useEffect(() => { setActivePageId(null); }, [documentId]);
   const pageRef = useRef<ScenePage | null>(null);
+  useEffect(() => {
+    pageRef.current = page;
+  });
   const [pendingView, setPendingView] = useState<string | null>(null);
   const architecture = useV2Architecture(session.document, page);
   const architectureActionsRef = useRef<ReturnType<typeof useV2ArchitectureActions> | null>(null);
@@ -313,7 +199,7 @@ export function V2EditorPage(): React.JSX.Element {
     camera: camera.camera,
     commit: session.commit,
     announce: setAnnouncement,
-    focusCanvas: useCallback(() => sectionRef.current?.focus(), []),
+    focusCanvas,
     onRenamePlacedElement: (nodeId, label) => {
       const node = page?.nodes.find((candidate) => candidate.id === nodeId);
       const elementId = node ? placedElementId(node) : null;
@@ -323,59 +209,6 @@ export function V2EditorPage(): React.JSX.Element {
     },
   });
   const { editing, editingRef } = labelEditing;
-
-  useEffect(() => {
-    pageRef.current = page;
-  });
-  const codeDiagnostics = useMemo(() => {
-    // compile() re-parses, so dedupe the live parse pass against the last generate.
-    const seen = new Set<string>();
-    return [...parse(codeDraft).diagnostics, ...compileDiagnostics].filter((item) => {
-      const key = `${item.code}:${item.line}:${item.col}:${item.message}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [codeDraft, compileDiagnostics]);
-  // Foreign text in the panel: Mermaid or Structurizr DSL converts in place.
-  const foreignSyntax = useMemo(() => (
-    looksLikeMermaid(codeDraft) ? { label: 'Mermaid', convert: mermaidToDsl }
-      : looksLikeStructurizr(codeDraft) ? { label: 'Structurizr', convert: structurizrToDsl }
-        : looksLikeD2(codeDraft) ? { label: 'D2', convert: d2ToDsl }
-        : null
-  ), [codeDraft]);
-  const convertForeign = useCallback(() => {
-    if (!foreignSyntax) return;
-    const conversion = foreignSyntax.convert(codeDraft);
-    if ('error' in conversion) {
-      setCompileDiagnostics([{ code: 'E003', severity: 'error', line: 1, col: 1, endCol: 1, message: conversion.error, source: 'parse' }]);
-      return;
-    }
-    setCodeDraft(conversion.dsl);
-    setCompileDiagnostics(conversion.diagnostics);
-    setAnnouncement(`${foreignSyntax.label} converted${conversion.losses.length ? ` with ${conversion.losses.length} loss notes` : ''}.`);
-  }, [codeDraft, foreignSyntax]);
-  const codeCanvasEdited = useMemo(() => {
-    if (!page || !codeFrameId) return false;
-    const scene = frameScene(page, codeFrameId);
-    return scene ? frameEdited(scene) : false;
-  }, [page, codeFrameId]);
-  const openFrameAsCode = useCallback((frameId: string) => {
-    const currentPage = pageRef.current;
-    const scene = currentPage ? frameScene(currentPage, frameId) : null;
-    if (!currentPage || !scene) return;
-    const metadata = dslFrameRaw(scene.frame);
-    const edited = frameEdited(scene);
-    const source = !edited && typeof metadata.source === 'string'
-      ? metadata.source
-      : serialize({ frame: scene.frame, nodes: scene.nodes, groups: scene.groups ?? [], connectors: scene.connectors });
-    // The picker follows the frame's authored palette so re-theming is explicit.
-    const framePalette = isDiagramPalette(metadata.appearance && typeof metadata.appearance === 'object'
-      ? (metadata.appearance as { palette?: unknown }).palette : undefined)
-      ? (metadata.appearance as { palette: DiagramPaletteName }).palette : null;
-    if (framePalette && framePalette !== preferences.diagramPalette) updatePreferences({ diagramPalette: framePalette });
-    setCodeDraft(source); setCodeFrameId(frameId); openWorkspace('code'); setContextMenu(null);
-  }, [preferences.diagramPalette, updatePreferences]);
 
   const load = useV2DocumentLoad({
     documentId: id,
@@ -388,83 +221,18 @@ export function V2EditorPage(): React.JSX.Element {
   }, [load.reload]);
   const readOnlyRef = useRef(load.readOnly);
   useEffect(() => { readOnlyRef.current = load.readOnly; }, [load.readOnly]);
-  // A new diagram is fitted once the renderer has its frame; regenerating keeps the camera.
-  const [fitFrameId, setFitFrameId] = useState<string | null>(null);
-  useEffect(() => {
-    if (!fitFrameId || !hostRef.current?.getContentBounds([fitFrameId])) return;
-    setFitFrameId(null);
-    camera.fitView([fitFrameId]);
-  }, [fitFrameId, page, camera]);
-  const generateCode = useCallback(async (overrideText?: string, snaps?: Readonly<Record<string, WorkspaceSnap>>) => {
-    const currentPage = pageRef.current;
-    if (!currentPage || load.readOnly || codeGenerating) return;
-    codeAbortRef.current?.abort();
-    const controller = new AbortController();
-    codeAbortRef.current = controller;
-    setCodeGenerating(true);
-    try {
-      const bound = codeFrameId ? currentPage.nodes.find((node) => node.id === codeFrameId) : undefined;
-      const origin = bound?.transform.translation ?? nextDslFrameOrigin(currentPage);
-      const compiledWorkspace = await compileWorkspace(overrideText ?? codeDraft, {
-        origin, layout: elkDslLayoutPort, signal: controller.signal, resolveIcon: resolveDslIcon,
-        // Panel defaults: an authored `appearance:` or `icons:` line wins.
-        appearance: { palette: preferences.diagramPalette }, autoIcons: preferences.autoIcons,
-      });
-      // Saved layout overrides win over ELK for the elements they name.
-      const workspace = snaps ? applySnapsToWorkspace(compiledWorkspace, snaps) : compiledWorkspace;
-      const primary = workspace.views[0]!.result;
-      setCompileDiagnostics(primary.diagnostics);
-      if (workspace.views.length > 1) {
-        // A C4 workspace: one page per view, all pages in one undo step. The
-        // view we land on is applied once the committed document arrives.
-        const command = buildWorkspacePagesCommand(session.document!, workspace, {
-          mintId: mintV2Id,
-          ...(codeFrameId ? { replaceFrameId: codeFrameId } : {}),
-        });
-        if (command) session.commit(command);
-        setCodeFrameId(null);
-        setPendingView(workspace.views[0]!.viewId);
-        setAnnouncement(`Generated ${workspace.views.length} views. Every element is shared across them.`);
-      } else {
-        const command = buildDslPageCommand(currentPage, primary, codeFrameId ?? undefined);
-        if (command) session.commit(command);
-        const frameId = codeFrameId ?? primary.frame.id;
-        // Say once per diagram what the compiler added, with the way out beside it.
-        const inferred = primary.nodes.filter(hasAutoIcon).length;
-        if (inferred && !iconToastFramesRef.current.has(frameId)) {
-          iconToastFramesRef.current.add(frameId);
-          const toastId = `auto-icons-${frameId}`;
-          pushToast({
-            id: toastId, tone: 'info',
-            title: `${inferred} ${inferred === 1 ? 'icon' : 'icons'} added from labels.`,
-            description: 'Right-click a node to remove one, or turn this off in Settings.',
-            action: { label: 'Remove all', onClick: () => {
-              setToasts((current) => current.filter((toast) => toast.id !== toastId));
-              const latest = pageRef.current;
-              const off = latest ? buildAutoIconsOffCommand(latest, frameId) : null;
-              if (off) session.commit(off);
-            } },
-          });
-        }
-        // A new diagram lands where the user can see it; regenerating keeps their camera.
-        if (!codeFrameId) setFitFrameId(frameId);
-        setCodeFrameId(frameId);
-        applySelection(replaceSelection([codeFrameId ?? primary.frame.id]));
-        setAnnouncement(`${primary.nodes.length} nodes generated${primary.diagnostics.some((item) => item.severity !== 'info') ? ' with diagnostics' : ''}.`);
-      }
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) pushToast({ id: `dsl-${Date.now()}`, tone: 'danger', title: error instanceof Error ? error.message : 'Diagram generation failed.' });
-    } finally {
-      if (codeAbortRef.current === controller) { codeAbortRef.current = null; setCodeGenerating(false); }
-    }
-  }, [load.readOnly, codeGenerating, codeFrameId, codeDraft, session, applySelection, pushToast, preferences.diagramPalette, preferences.autoIcons]);
-  // One template path for the canvas welcome and for home's template cards.
-  const startFromTemplate = ({ dsl }: { readonly dsl: string }) => {
-    setCodeFrameId(null);
-    setCodeDraft(dsl);
-    openWorkspace('code');
-    void generateCode(dsl);
-  };
+
+  const { openWorkspace } = panels;
+  const code = useV2CodeWorkspace({
+    document: session.document, page, pageRef, hostRef, readOnly: load.readOnly,
+    palette: preferences.diagramPalette, autoIcons: preferences.autoIcons,
+    onPaletteChange: useCallback((diagramPalette) => updatePreferences({ diagramPalette }), [updatePreferences]),
+    commit: session.commit, applySelection, fitView: camera.fitView,
+    openPanel: useCallback(() => openWorkspace('code'), [openWorkspace]),
+    onViews: setPendingView, pushToast, dismissToast, announce: setAnnouncement,
+  });
+  const toggleCode = () => { if (panels.workspace === 'code') panels.closeWorkspace(); else code.openNew(); };
+
   // Home hands a new diagram what to start with; run it once the empty document is open.
   const location = useLocation();
   const startIntent = isV2StartIntent(location.state) ? location.state : null;
@@ -472,17 +240,10 @@ export function V2EditorPage(): React.JSX.Element {
     if (!startIntent || load.phase !== 'ready' || !page) return;
     navigate(location.pathname, { replace: true, state: null });
     if ('start' in startIntent) openWorkspace(startIntent.start);
-    else if ('source' in startIntent) {
-      // Foreign text converts first; if that fails it stays in the panel with the convert offer and its error.
-      const converter = looksLikeMermaid(startIntent.source) ? mermaidToDsl : looksLikeStructurizr(startIntent.source) ? structurizrToDsl
-        : looksLikeD2(startIntent.source) ? d2ToDsl : null;
-      const converted = converter ? converter(startIntent.source) : null;
-      if (!converted) startFromTemplate({ dsl: startIntent.source });
-      else if ('error' in converted) { setCodeDraft(startIntent.source); openWorkspace('code'); }
-      else startFromTemplate({ dsl: converted.dsl });
-    } else {
+    else if ('source' in startIntent) code.startFromSource(startIntent.source);
+    else {
       const template = findStarterTemplate(startIntent.template);
-      if (template) startFromTemplate(template);
+      if (template) code.startFrom(template.dsl);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per intent
   }, [startIntent, load.phase, page === null]);
@@ -521,32 +282,7 @@ export function V2EditorPage(): React.JSX.Element {
     camera.fitOnOpen(rendererStatus, session.document, id, session.revision);
   }, [rendererStatus, session.document, session.revision, id, camera]);
 
-  // Ghost the proposal preview while it is reviewable; clears on apply/discard/stale.
-  const ghostPage = proposal.phase === 'ready' && !proposal.stale && proposal.proposal
-    ? proposal.proposal.preview.pages[0] : null;
-  const highlightedChange = proposal.changes.find(({ id }) => id === proposal.highlightedChangeId);
-  const highlightIds = useMemo(() => (highlightedChange ? changeObjectIds(highlightedChange.id, proposal.proposal) : []),
-    [highlightedChange, proposal.proposal]);
-  // A proposed diagram that lands off screen (or under the panel) is brought into view to be reviewed.
-  const ghostId = ghostPage ? proposal.proposal?.id : null;
-  useEffect(() => {
-    if (!ghostPage || rendererStatus !== 'ready') return;
-    const tops = ghostPage.nodes.filter((node) => !node.parentId);
-    if (!tops.length) return;
-    const x = Math.min(...tops.map((node) => node.transform.translation.x));
-    const y = Math.min(...tops.map((node) => node.transform.translation.y));
-    camera.revealBounds({
-      x, y,
-      width: Math.max(...tops.map((node) => node.transform.translation.x + node.size.width)) - x,
-      height: Math.max(...tops.map((node) => node.transform.translation.y + node.size.height)) - y,
-    });
-    // Once per proposal, not per render of its ghost.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ghostId, rendererStatus]);
-  useEffect(() => {
-    if (rendererStatus !== 'ready') return;
-    hostRef.current?.setProposalPreview(ghostPage ? { page: ghostPage, highlightIds } : null);
-  }, [ghostPage, highlightIds, rendererStatus]);
+  const ghostPage = useV2ProposalPreview(proposal, hostRef, rendererReady, camera.revealBounds);
 
   const pages = useV2Pages({
     document: session.document, pageId: page?.id ?? null, readOnly: load.readOnly,
@@ -557,13 +293,13 @@ export function V2EditorPage(): React.JSX.Element {
   // renders one page, so `fitView` is already page-scoped.
   const fittedPageRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!page || rendererStatus !== 'ready') return;
+    if (!page || !rendererReady) return;
     if (fittedPageRef.current === page.id) return;
     const first = fittedPageRef.current === null;
     fittedPageRef.current = page.id;
     if (!first) camera.fitView();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page?.id, rendererStatus]);
+  }, [page?.id, rendererReady]);
 
   // Drawing a connector between two model objects records the relation too:
   // one batch, one undo step, and Generate brings it back.
@@ -612,7 +348,7 @@ export function V2EditorPage(): React.JSX.Element {
   );
   architectureActionsRef.current = architectureActions;
   const workspaceFolder = useV2WorkspaceFolder({
-    onLoad: (dsl, snaps) => { setCodeDraft(dsl); void generateCode(dsl, snaps); },
+    onLoad: (dsl, snaps) => { code.setDraft(dsl); void code.generate(dsl, snaps); },
     onToast: (title, tone) => pushToast({ id: `workspace-${Date.now()}`, tone, title }),
   });
   // Committing a view writes the DSL + snaps back to the open folder. The
@@ -656,17 +392,15 @@ export function V2EditorPage(): React.JSX.Element {
   const selectedNode = selection.primaryNodeId && page
     ? page.nodes.find((node) => node.id === selection.primaryNodeId)
     : undefined;
-  const chartPanelNode = page && chartPanelId
-    ? page.nodes.find((node) => node.id === chartPanelId && node.kind === 'chart') ?? null
+  const chartPanelNode = page && panels.chartId
+    ? page.nodes.find((node) => node.id === panels.chartId && node.kind === 'chart') ?? null
     : null;
+  const { openChart } = panels;
   const openChartData = useCallback((nodeId: string): boolean => {
-    const node = pageRef.current?.nodes.find((candidate) => candidate.id === nodeId);
-    if (node?.kind !== 'chart') return false;
-    setChartPanelId(nodeId);
-    setWorkspaceMode(null);
-    setShortcutsOpen(false);
+    if (pageRef.current?.nodes.find((candidate) => candidate.id === nodeId)?.kind !== 'chart') return false;
+    openChart(nodeId);
     return true;
-  }, []);
+  }, [openChart]);
   const selectedElementId = selectedNode ? placedElementId(selectedNode) : null;
   const perspectiveFocus = useMemo(
     () => (playback.flow ? null : architectureActions.perspectiveFocus(preferences.perspectiveTags)),
@@ -675,9 +409,8 @@ export function V2EditorPage(): React.JSX.Element {
   );
   // One spotlight source: flow playback wins while it is open, then tags.
   useEffect(() => {
-    if (rendererStatus !== 'ready') return;
-    hostRef.current?.setFocus(playback.focus ?? perspectiveFocus);
-  }, [playback.focus, perspectiveFocus, rendererStatus]);
+    if (rendererReady) hostRef.current?.setFocus(playback.focus ?? perspectiveFocus);
+  }, [playback.focus, perspectiveFocus, rendererReady]);
 
   // Local agent pairing: the ops run here, against this session, through the
   // same registry the MCP server uses. Off until the user connects.
@@ -715,48 +448,10 @@ export function V2EditorPage(): React.JSX.Element {
     },
     [openLabelEditor, applyConnectorSelection, applySelection]
   );
-
-  const [connectorEditing, setConnectorEditing] = useState<{
-    connectorId: string; bounds: DOMRect; value: string;
-  } | null>(null);
-  const openConnectorEditor = useCallback((connectorId: string, at: Point2d) => {
-    const connector = pageRef.current?.connectors.find((candidate) => candidate.id === connectorId);
-    if (!connector || load.readOnly) return;
-    applySelection(clearSelection());
-    applyConnectorSelection([connectorId]);
-    // Sits on the existing label when there is one, else at the click; the
-    // box scales with zoom like the plate it replaces.
-    const zoom = camera.cameraRef.current.zoom;
-    const labelPoint = (connector.labels[0] && hostRef.current?.getConnectorLabelScreenPoint(connectorId))
-      ?? { x: at.x, y: at.y - 14 * zoom };
-    setConnectorEditing({
-      connectorId,
-      bounds: new DOMRect(labelPoint.x - 20 * zoom, labelPoint.y - 9 * zoom, 40 * zoom, 18 * zoom),
-      value: connector.labels[0]?.text ?? '',
-    });
-    setAnnouncement('Editing connector label');
-  }, [applyConnectorSelection, applySelection, load.readOnly, camera.cameraRef]);
-  const commitConnectorLabel = useCallback((value: string) => {
-    const currentPage = pageRef.current;
-    const before = currentPage?.connectors.find((candidate) => candidate.id === connectorEditing?.connectorId);
-    if (currentPage && before) {
-      const command = createConnectorEditCommand(
-        currentPage.id, before, setPrimaryConnectorLabel(before, value), 'Edit label');
-      if (command) session.commit(command);
-    }
-    setConnectorEditing(null);
-    sectionRef.current?.focus();
-  }, [connectorEditing, session]);
-  const cancelConnectorEdit = useCallback(() => {
-    setConnectorEditing(null);
-    sectionRef.current?.focus();
-  }, []);
-  const editSelectedConnectorLabel = useCallback(() => {
-    if (!selectedConnectorId) return;
-    const samples = hostRef.current?.getConnectorSamples(selectedConnectorId);
-    const middle = samples?.length ? samples[Math.floor(samples.length / 2)] : null;
-    if (middle) openConnectorEditor(selectedConnectorId, worldToScreen(camera.camera, middle));
-  }, [selectedConnectorId, openConnectorEditor, camera.camera]);
+  const connectorLabel = useV2ConnectorLabelEditing({
+    pageRef, hostRef, cameraRef: camera.cameraRef, readOnly: load.readOnly, selectedConnectorId,
+    commit: session.commit, applySelection, applyConnectorSelection, focusCanvas, announce: setAnnouncement,
+  });
 
   const editActions = useV2EditActions({
     commit: session.commit,
@@ -787,10 +482,11 @@ export function V2EditorPage(): React.JSX.Element {
         : { x: 0, y: 0 };
     },
   });
+  const inserts = useV2Inserts({
+    pageRef, readOnlyRef, selectionRef, commit: session.commit, applySelection, applyConnectorSelection,
+    centreWorld: media.centreWorld, setTool, openEditor, openChart, announce: setAnnouncement,
+  });
   const pickImageFile = () => imageInputRef.current?.click();
-  const onImageChosen = (file: File | undefined) => { if (file) void media.insertImageFile(file); };
-  const imageFiles = (list: DataTransfer | null): File[] =>
-    Array.from(list?.files ?? []).filter(isImageFile);
   const pointFromEvent = (event: { clientX: number; clientY: number }) => {
     const bounds = sectionRef.current?.getBoundingClientRect();
     return bounds && hostRef.current
@@ -804,6 +500,7 @@ export function V2EditorPage(): React.JSX.Element {
     const at = pointFromEvent(event);
     for (const file of files) void media.insertImageFile(file, at);
   };
+  const pastedMermaidRef = useRef('');
   const handlePaste = (event: React.ClipboardEvent<HTMLElement>) => {
     const files = imageFiles(event.clipboardData);
     if (files.length > 0) {
@@ -818,92 +515,10 @@ export function V2EditorPage(): React.JSX.Element {
     } else if (looksLikeMermaid(text)) {
       // Mermaid on the canvas has nowhere to go; point at the panel that draws it.
       pastedMermaidRef.current = text;
-      offerTip('mermaid');
+      tips.offer('mermaid');
     }
   };
   const [moreOpen, setMoreOpen] = useState(false);
-  /** One insert path for More: commit, select, and say what happened. */
-  const insertAndSelect = (node: SceneNode, label: string, announcement: string, also: readonly DocumentCommand[] = []) => {
-    const page = pageRef.current;
-    if (!page) return;
-    const insert: DocumentCommand = { kind: 'insert-node', id: `create-node:${node.id}`, label, pageId: page.id, index: page.nodes.length, node };
-    session.commit(also.length ? { kind: 'batch', id: insert.id, label, commands: [insert, ...also] } : insert);
-    applyConnectorSelection([]);
-    applySelection(replaceSelection([node.id]));
-    setTool('select');
-    setAnnouncement(announcement);
-  };
-  const centredAt = (size: { width: number; height: number }) => {
-    const centre = media.centreWorld();
-    return { x: centre.x - size.width / 2, y: centre.y - size.height / 2 };
-  };
-  const insertFrame = (preset: FramePreset) => {
-    const page = pageRef.current;
-    if (!page || readOnlyRef.current) return;
-    const spec = FRAME_PRESET_SPECS[preset];
-    insertAndSelect(createPresetFrame(page, { id: mintV2Id('node'), preset, at: centredAt(spec.size) }),
-      `Add ${spec.name.toLowerCase()}`, `${spec.name} added.`);
-  };
-  // With a frame (or anything in one) selected, widgets stack down its column,
-  // so a screen is built by picking controls one after another.
-  const insertWidget = (widget: WidgetKind) => {
-    const page = pageRef.current;
-    if (!page || readOnlyRef.current) return;
-    const spec = WIDGETS[widget];
-    const id = mintV2Id('node');
-    const frame = enclosingPresetFrame(page, selectionRef.current.primaryNodeId);
-    const slot = frame ? nextFrameSlot(page, frame, spec.size, !spec.intrinsic) : null;
-    const node = slot && frame
-      ? createWidgetNode(page, { id, widget, at: slot.at, size: slot.size, parentId: frame.id })
-      : createWidgetNode(page, { id, widget, at: centredAt(spec.size) });
-    // Dropped at the viewport centre over a frame, it joins that frame, like a drag would.
-    const placed = frame ? node : reparentByPosition({ ...page, nodes: [...page.nodes, node] }, [node])[0]!;
-    // A frame that is full grows to hold the pick, in the same undo step (the DSL does too).
-    const grow = frame && slot && slot.frameHeight > frame.size.height
-      ? { ...frame, size: { ...frame.size, height: slot.frameHeight } } : null;
-    insertAndSelect(placed, `Add ${spec.name.toLowerCase()}`, `${spec.name} added.`,
-      grow && frame ? [{ kind: 'set-node', id: `grow-frame:${frame.id}`, label: 'Grow frame', pageId: page.id, before: frame, after: grow }] : []);
-  };
-  const insertSticky = () => {
-    const page = pageRef.current;
-    if (!page || readOnlyRef.current) return;
-    const id = mintV2Id('node');
-    const sticky = createProductionSceneNode('sticky', id, { x: 0, y: 0 }, page.layers[0]?.id ?? 'default', { label: '', subLabel: '' });
-    insertAndSelect({ ...sticky, zIndex: nextNodeZIndex(page), transform: { ...sticky.transform, translation: centredAt(sticky.size) } },
-      'Add sticky note', 'Sticky note added.');
-    openEditor(id);
-  };
-  const pickMore = (item: V2MoreItem) => {
-    const [group, name] = item.split(':') as [string, string];
-    if (group === 'frame') insertFrame(name as FramePreset);
-    else if (group === 'widget') insertWidget(name as WidgetKind);
-    else if (name === 'sticky') insertSticky();
-    else setTool(name as 'lasso' | 'laser' | 'eraser');
-  };
-  const pickChart = (chart: V2ChartKind) => {
-    const page = pageRef.current;
-    if (!page) return;
-    const centre = media.centreWorld();
-    const size = DEFAULT_CHART_SIZE;
-    const node = createChartNode(page, {
-      id: mintV2Id('node'), chart, size,
-      at: { x: centre.x - size.width / 2, y: centre.y - size.height / 2 },
-      ...(chart === 'pie' || chart === 'donut' || chart === 'radar' || chart === 'heatmap'
-        ? { data: { categories: ['A', 'B', 'C', 'D', 'E'], series: [{ name: 'Series 1', values: [4, 8, 6, 9, 3] }] } }
-        : {}),
-      ...(chart === 'quadrant' ? { quadrant: DEFAULT_QUADRANT } : {}),
-    });
-    session.commit({
-      kind: 'insert-node', id: `create-node:${node.id}`, label: 'Add chart',
-      pageId: page.id, index: page.nodes.length, node,
-    });
-    applyConnectorSelection([]);
-    applySelection(replaceSelection([node.id]));
-    setChartPanelId(node.id);
-    setWorkspaceMode(null);
-    setShortcutsOpen(false);
-    setAnnouncement('Chart added.');
-  };
   const pickEmoji = (glyph: string) => {
     media.insertEmoji(glyph);
     const recent = [glyph, ...preferences.recentEmoji.filter((entry) => entry !== glyph)].slice(0, 24);
@@ -923,20 +538,17 @@ export function V2EditorPage(): React.JSX.Element {
       iconLibrary.setOpen(true);
     },
     onInsertImage: pickImageFile,
-    onInsertFrame: () => insertFrame('frame'),
-    onInsertSticky: insertSticky,
+    onInsertFrame: () => inserts.insertFrame('frame'),
+    onInsertSticky: inserts.insertSticky,
     onToggleMore: () => setMoreOpen((open) => !open),
     onUndo: session.undo, onRedo: session.redo,
     // On a C4 view Delete unplaces; the model keeps the element.
     onDelete: () => {
-      const nodeIds = selectionRef.current.nodeIds;
-      if (architectureActions.unplaceSelection(nodeIds)) return;
+      if (architectureActions.unplaceSelection(selectionRef.current.nodeIds)) return;
       editActions.deleteSelection();
     },
     onRemoveFromModel: () => {
-      const elementId = selectedElementId;
-      if (!elementId) return;
-      architectureActions.removeElement(elementId);
+      if (selectedElementId) architectureActions.removeElement(selectedElementId);
     },
     onDuplicate: editActions.duplicateSelection,
     onReorder: editActions.reorderSelection, onToggleLock: editActions.toggleLock,
@@ -959,7 +571,7 @@ export function V2EditorPage(): React.JSX.Element {
         openEditor(primary);
         return;
       }
-      editSelectedConnectorLabel();
+      connectorLabel.editSelected();
     },
     // FigJam/Excalidraw: typing on a single selected shape replaces its label.
     onTypeToEdit: (key) => {
@@ -972,83 +584,80 @@ export function V2EditorPage(): React.JSX.Element {
     onCancelGesture: () => gestureApiRef.current?.cancelGesture() ?? false,
     onCommitGesture: () => gestureApiRef.current?.commitGesture() ?? false,
     onEscapePanel: () => {
-      if (!chartPanelId) return false;
-      setChartPanelId(null);
+      if (!panels.chartId) return false;
+      panels.closeChart();
       sectionRef.current?.focus({ preventScroll: true });
       return true;
     },
-    // Escape chain tail: selection first, then the open agent panel.
+    // Escape chain tail: selection first, then the open panels.
     onClearSelection: () => {
       if (selectionRef.current.nodeIds.length > 0 || selectedConnectorIds.length > 0) selectionApi.clearAll();
-      else { setWorkspaceMode(null); setShortcutsOpen(false); setTreeOpen(false); }
+      else panels.closeDocked();
     },
     onSelectAll: () => selectionApi.selectAll(pageRef.current),
     onFitView: () => camera.fitView(),
     onZoomStep: camera.zoomStep,
     onResetZoom: camera.resetZoom,
-    onToggleTree: toggleTree,
-    onToggleAgent: toggleAgent,
+    onToggleTree: panels.toggleTree,
+    onToggleAgent: () => panels.toggleWorkspace('assistant'),
     onToggleCode: toggleCode,
-    onToggleModel: toggleModel,
+    onToggleModel: () => panels.toggleWorkspace('model'),
     onSpacePan: setSpacePan,
   });
 
+  const tips = useV2FeatureTips({
+    page, readOnly: load.readOnly, rendererReady, selectedCount: selection.nodeIds.length,
+    aiConfigured: aiSettings.configured, workspace: panels.workspace, motionOpen: panels.motionOpen,
+    // Typing a label is not the moment: the tip waits, so the Escape that ends editing cannot eat it.
+    blocked: panels.workspace !== null || panels.motionOpen || panels.treeOpen || panels.shortcutsOpen
+      || exportOpen || contextMenu !== null || editing !== null || connectorLabel.editing !== null,
+    announce: setAnnouncement,
+  });
+  const runTip = (tip: V2TipId) => {
+    tips.dismiss();
+    if (tip === 'code') code.openNew();
+    if (tip === 'mermaid') { code.writeNew(() => pastedMermaidRef.current); openWorkspace('code'); }
+    if (tip === 'assistant') openWorkspace('assistant');
+    if (tip === 'motion') panels.openMotion();
+  };
 
-  // Feature tips: one hint at the moment it pays off, at most one a session, never twice.
-  const [tip, setTip] = useState<V2TipId | null>(null);
-  const pastedMermaidRef = useRef('');
-  const offerTip = (id: V2TipId) => {
-    // Never over an open panel, menu or dialog (passive tooltips do not count).
-    if (tip || !mayShowTip(id) || document.querySelector('.ofk-panel, .ofk-popover:not([data-passive]), dialog[open]')) return;
-    recordTipShown(id);
-    setTip(id);
-    setAnnouncement(`Tip: ${V2_TIPS[id].title}. ${V2_TIPS[id].text}`);
+  /** The layers tree's row actions; each is one undo step. */
+  const runObjectAction = (nodeId: string, action: 'lock' | 'hide' | 'duplicate' | 'delete') => {
+    const node = page?.nodes.find((item) => item.id === nodeId);
+    if (load.readOnly || !page || !node) return;
+    if (action === 'lock') session.commit(buildToggleLockCommand(page, [nodeId]));
+    if (action === 'hide') session.commit({
+      kind: 'set-node', id: `visibility:${nodeId}`, label: node.content.sectionHidden ? 'Show object' : 'Hide object',
+      pageId: page.id, before: node,
+      after: { ...node, content: { ...node.content, sectionHidden: !node.content.sectionHidden } },
+    });
+    if (action === 'duplicate') {
+      const command = buildDuplicateSelectionCommand(page, [nodeId], page.connectors.map((item) => item.id), mintV2Id);
+      session.commit(command);
+      applyConnectorSelection([]);
+      applySelection(replaceSelection(command.commands.flatMap((item) => item.kind === 'insert-node' ? [item.node.id] : [])));
+    }
+    if (action === 'delete') {
+      if (!architectureActions.unplaceSelection([nodeId])) session.commit(buildDeleteSelectionCommand(page, [nodeId], []));
+      applySelection(clearSelection());
+    }
   };
-  // Typing a label is not the moment: the tip waits, so the Escape that ends editing cannot eat it.
-  const tipBlocked = workspaceMode !== null || motionOpen || exportOpen || contextMenu !== null || treeOpen || shortcutsOpen
-    || editing !== null || connectorEditing !== null;
-  useEffect(() => {
-    if (workspaceMode === 'code') { markTipSeen('code'); markTipSeen('mermaid'); }
-    if (workspaceMode === 'assistant') markTipSeen('assistant');
-    if (motionOpen) markTipSeen('motion');
-    if (page && page.connectors.length > 0) markTipSeen('connect');
-    if (tipBlocked) setTip(null);
-  }, [workspaceMode, motionOpen, page, tipBlocked]);
-  // Offered after a quiet moment: drawing a shape opens its label editor a render later, and a tip
-  // must not appear just to be swept away by it. Any change in between restarts the wait.
-  useEffect(() => {
-    if (!page || load.readOnly || rendererStatus !== 'ready' || tipBlocked) return;
-    const generated = page.nodes.some((node) => node.kind === 'frame');
-    const id: V2TipId | null = page.nodes.length >= 3 && !generated ? 'code'
-      : page.nodes.length >= 5 && !aiSettings.configured ? 'assistant'
-        : selection.nodeIds.length === 2 && page.connectors.length === 0 ? 'connect' : null;
-    if (!id || !mayShowTip(id)) return;
-    const timer = window.setTimeout(() => offerTip(id), TIP_QUIET_MS);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- offerTip reads the latest state; these are the triggers
-  }, [page, selection.nodeIds.length, rendererStatus, tipBlocked, aiSettings.configured]);
-  const runTip = (id: V2TipId) => {
-    setTip(null);
-    if (id === 'code') { setCodeFrameId(null); openWorkspace('code'); }
-    if (id === 'mermaid') { setCodeFrameId(null); setCodeDraft(pastedMermaidRef.current); openWorkspace('code'); }
-    if (id === 'assistant') openWorkspace('assistant');
-    if (id === 'motion') openMotion();
-  };
+
   return (
     <SystemRoot appearance={appearance} density={preferences.density}>
       <div className="ofk-v2" data-testid="v2-editor" data-tool={spacePan ? 'hand' : tool}
         style={{ backgroundColor: canvasColor }}
-        data-workspace-open={workspaceMode !== null || shortcutsOpen || chartPanelNode !== null}
-        data-left-open={treeOpen || motionOpen}
-        data-left-panel={motionOpen ? 'motion' : undefined}
+        data-workspace-open={panels.workspace !== null || panels.shortcutsOpen || chartPanelNode !== null}
+        data-left-open={panels.treeOpen || panels.motionOpen}
+        data-left-panel={panels.motionOpen ? 'motion' : undefined}
         onKeyDown={(event) => {
           if (playback.flow && !isEditableTarget(event.target)) {
             if (event.key === 'ArrowRight' || event.key === ' ') { playback.next(); event.preventDefault(); return; }
             if (event.key === 'ArrowLeft') { playback.prev(); event.preventDefault(); return; }
             if (event.key === 'Escape') { playback.close(); event.preventDefault(); return; }
           }
-          if (event.key === '?' && !(event.target instanceof HTMLElement && event.target.closest('input, textarea, [contenteditable="true"]'))) {
-            event.preventDefault(); toggleShortcuts();
+          if (event.key === '?' && !isEditableTarget(event.target)) {
+            event.preventDefault(); panels.toggleShortcuts();
           } else handleKeyDown(event);
         }}
         onKeyUp={(event) => { if (event.key === ' ') setSpacePan(false); }}
@@ -1057,7 +666,11 @@ export function V2EditorPage(): React.JSX.Element {
         onPaste={handlePaste}>
         <input ref={imageInputRef} type="file" hidden
           accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif"
-          onChange={(event) => { onImageChosen(event.target.files?.[0]); event.target.value = ''; }} />
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) void media.insertImageFile(file);
+            event.target.value = '';
+          }} />
         {load.phase === 'loading' || !page ? (
           <V2LoadCenter
             phase={load.phase}
@@ -1074,7 +687,7 @@ export function V2EditorPage(): React.JSX.Element {
         ) : (
           <>
             <V2Chrome
-              preferences={preferences} canvasDefaultColor={appearance === 'dark' ? '#191b19' : '#f7f7f5'}
+              preferences={preferences} canvasDefaultColor={canvasDefaultColor}
               onPreferencesChange={updatePreferences}
               document={session.document!}
               pages={pages}
@@ -1083,7 +696,7 @@ export function V2EditorPage(): React.JSX.Element {
               saveStatus={saveStatus}
               canUndo={session.canUndo} canRedo={session.canRedo}
               readOnly={load.readOnly} canvasUnavailable={rendererStatus === 'unavailable'}
-              tool={tool} zoomPercent={camera.zoom} treeOpen={treeOpen}
+              tool={tool} zoomPercent={camera.zoom} treeOpen={panels.treeOpen}
               onUndo={session.undo} onRedo={session.redo}
               onRetrySave={retrySave} onReload={load.reload} onToast={pushToast}
               workspace={{
@@ -1113,34 +726,34 @@ export function V2EditorPage(): React.JSX.Element {
               iconsOpen={iconLibrary.open} onIconsOpenChange={iconLibrary.setOpen} onInsertIcon={iconLibrary.insertIcon}
               onInsertImage={pickImageFile} onPickEmoji={pickEmoji}
               recentEmoji={preferences.recentEmoji} librarySection={librarySection}
-              onPickChart={pickChart}
-              moreOpen={moreOpen} onMoreOpenChange={setMoreOpen} onPickMore={pickMore}
+              onPickChart={inserts.insertChart}
+              moreOpen={moreOpen} onMoreOpenChange={setMoreOpen} onPickMore={inserts.pickMore}
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}
               onZoomTo={camera.zoomTo}
               onFitView={() => camera.fitView()}
-              onToggleTree={toggleTree}
+              onToggleTree={panels.toggleTree}
             />
             <V2CanvasHost
               page={page} hostRef={hostRef} camera={camera.camera} cameraRef={camera.cameraRef} pageRef={pageRef}
               selectionRef={selectionRef} selectedConnectorIdsRef={selectedConnectorIdsRef} toolRef={toolRef} tool={tool} spacePanRef={spacePanRef}
               toolConfigRef={toolConfigRef} onOpenChartData={openChartData}
               onRemoveIcons={() => iconActions.removeIcons(selectionRef.current.nodeIds)}
-              onOpenCode={() => { setCodeFrameId(null); openWorkspace('code'); }}
+              onOpenCode={code.openNew}
               readOnlyRef={readOnlyRef} gestureApiRef={gestureApiRef}
               selection={selection} selectedConnectorId={selectedConnectorId} selectedConnectorIds={selectedConnectorIds}
               editing={editing}
               commit={session.commit}
               applySelection={applySelection} applyConnectorSelection={applyConnectorSelection}
-              updateCamera={camera.updateCamera} openEditor={openEditor} openConnectorEditor={openConnectorEditor} onToolChange={setTool} mintId={mintV2Id}
+              updateCamera={camera.updateCamera} openEditor={openEditor} openConnectorEditor={connectorLabel.open} onToolChange={setTool} mintId={mintV2Id}
               extendConnectorCommand={extendConnectorCommand}
               onCommitLabel={labelEditing.commitLabel} onCancelEdit={labelEditing.cancelEdit}
-              connectorEditing={connectorEditing}
-              onCommitConnectorLabel={commitConnectorLabel} onCancelConnectorEdit={cancelConnectorEdit}
+              connectorEditing={connectorLabel.editing}
+              onCommitConnectorLabel={connectorLabel.commit} onCancelConnectorEdit={connectorLabel.cancel}
               onStatusChange={setRendererStatus}
               sectionRef={sectionRef}
               showGrid={preferences.showGrid} snapToGrid={preferences.snapToGrid}
-              backgroundColor={rendererCanvasColor}
+              backgroundColor={Number.parseInt(canvasColor.slice(1), 16)}
               readOnly={load.readOnly}
               onContextMenu={setContextMenu}
             />
@@ -1148,9 +761,9 @@ export function V2EditorPage(): React.JSX.Element {
               readOnly={load.readOnly} actions={editActions} commit={session.commit}
               onEditLabel={() => {
                 const primary = selectionRef.current.primaryNodeId;
-                if (primary) openEditor(primary); else editSelectedConnectorLabel();
+                if (primary) openEditor(primary); else connectorLabel.editSelected();
               }}
-              onEditAsCode={openFrameAsCode}
+              onEditAsCode={(frameId) => { code.openFrame(frameId); setContextMenu(null); }}
               // Only worked out while the menu is open: both walk the page.
               iconCount={contextMenu ? page.nodes.filter((node) => selection.nodeIds.includes(node.id) && hasIcon(node)).length : 0}
               onRemoveIcons={() => iconActions.removeIcons(selectionRef.current.nodeIds)}
@@ -1177,7 +790,7 @@ export function V2EditorPage(): React.JSX.Element {
               showGrid={preferences.showGrid} snapToGrid={preferences.snapToGrid}
               onToggleGrid={() => updatePreferences({ showGrid: !preferences.showGrid })}
               onToggleSnap={() => updatePreferences({ snapToGrid: !preferences.snapToGrid })}
-              onClose={() => { setContextMenu(null); sectionRef.current?.focus(); }}
+              onClose={() => { setContextMenu(null); focusCanvas(); }}
             />
             {/* The export panel's click-point anchor; 1×1 and never interactive. */}
             <div ref={exportPointRef} aria-hidden="true" style={{
@@ -1190,27 +803,27 @@ export function V2EditorPage(): React.JSX.Element {
               onClose={() => {
                 setExportOpen(false);
                 // Element export returns you to the canvas; the bar keeps its own focus.
-                if (exportAnchorRef.current === exportPointRef.current) sectionRef.current?.focus();
+                if (exportAnchorRef.current === exportPointRef.current) focusCanvas();
               }}
-              onToast={(title, tone) => { pushToast({ id: `export-${Date.now()}`, tone, title }); if (tone === 'success') offerTip('motion'); }}
-              onOpenAnimation={openMotion} />
-            <V2WorkspaceRail mode={workspaceMode}
-              onChange={(mode) => { if (workspaceMode === mode) setWorkspaceMode(null); else openWorkspace(mode); }}
-              onShortcuts={toggleShortcuts} agentConnected={agentBridge.status === 'connected'} />
-            {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !load.readOnly && rendererStatus === 'ready' ? <V2CanvasWelcome onOpen={openWorkspace} onTemplate={startFromTemplate} /> : null}
-            {workspaceMode === 'code' ? <V2CodePanel code={codeDraft} palette={preferences.diagramPalette}
+              onToast={(title, tone) => { pushToast({ id: `export-${Date.now()}`, tone, title }); if (tone === 'success') tips.offer('motion'); }}
+              onOpenAnimation={panels.openMotion} />
+            <V2WorkspaceRail mode={panels.workspace} onChange={panels.toggleWorkspace}
+              onShortcuts={panels.toggleShortcuts} agentConnected={agentBridge.status === 'connected'} />
+            {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !load.readOnly && rendererReady
+              ? <V2CanvasWelcome onOpen={openWorkspace} onTemplate={({ dsl }) => code.startFrom(dsl)} /> : null}
+            {panels.workspace === 'code' ? <V2CodePanel code={code.draft} palette={preferences.diagramPalette}
               onPaletteChange={(diagramPalette) => updatePreferences({ diagramPalette })}
-              onCodeChange={(value) => { setCodeDraft(value); setCompileDiagnostics([]); }}
-              diagnostics={codeDiagnostics} generating={codeGenerating} canvasEdited={codeCanvasEdited}
-              {...(foreignSyntax ? { convertFrom: { label: foreignSyntax.label, convert: convertForeign } } : {})}
-              onGenerate={() => { void generateCode(); }} onClose={() => { codeAbortRef.current?.abort(); setWorkspaceMode(null); }} /> : null}
-            {workspaceMode === 'agent' ? <V2AgentConnect status={agentBridge.status} detail={agentBridge.detail}
+              onCodeChange={code.edit}
+              diagnostics={code.diagnostics} generating={code.generating} canvasEdited={code.canvasEdited}
+              {...(code.foreign ? { convertFrom: code.foreign } : {})}
+              onGenerate={() => { void code.generate(); }} onClose={() => { code.cancel(); panels.closeWorkspace(); }} /> : null}
+            {panels.workspace === 'agent' ? <V2AgentConnect status={agentBridge.status} detail={agentBridge.detail}
               port={preferences.bridgePort} token={preferences.bridgeToken}
               onPortChange={(bridgePort) => updatePreferences({ bridgePort })}
               onTokenChange={(bridgeToken) => updatePreferences({ bridgeToken })}
               onToggle={(connect) => updatePreferences({ agentBridgeEnabled: connect })}
-              onClose={() => setWorkspaceMode(null)} /> : null}
-            {workspaceMode === 'model' ? (
+              onClose={panels.closeWorkspace} /> : null}
+            {panels.workspace === 'model' ? (
               <V2ModelPanel
                 onOpenCode={() => openWorkspace('code')}
                 architecture={architecture}
@@ -1236,7 +849,7 @@ export function V2EditorPage(): React.JSX.Element {
                 onEditElement={architectureActions.editElement}
                 onRemoveElement={architectureActions.removeElement}
                 onPlayFlow={playback.open}
-                onClose={() => setWorkspaceMode(null)}
+                onClose={panels.closeWorkspace}
                 readOnly={load.readOnly}
                 adrs={workspaceFolder.adrs}
               />
@@ -1256,53 +869,32 @@ export function V2EditorPage(): React.JSX.Element {
                 }}
               />
             ) : null}
-            {shortcutsOpen ? <V2Shortcuts onClose={() => setShortcutsOpen(false)} /> : null}
-            {tip ? <V2FeatureTip id={tip} onAction={() => runTip(tip)} onClose={() => setTip(null)} /> : null}
-            {motionOpen ? (
+            {panels.shortcutsOpen ? <V2Shortcuts onClose={panels.closeShortcuts} /> : null}
+            {tips.tip ? <V2FeatureTip id={tips.tip} onAction={() => runTip(tips.tip!)} onClose={tips.dismiss} /> : null}
+            {panels.motionOpen ? (
               <Panel title="Animation export" side="start" className="ofk-motion-panel ofk-v2-layers-panel"
-                onClose={() => setMotionOpen(false)}>
+                onClose={panels.closeMotion}>
                 <V2MotionExport key={page.id} document={session.document!} pageId={page.id}
                   onToast={(title, tone) => pushToast({ id: `motion-${Date.now()}`, tone, title })}
-                  codeText={codeDraft}
+                  codeText={code.draft}
                   onAnimateBlock={(block) => {
                     // The chips write the text hub; the code panel opens on the
                     // other side so the user sees where the block went.
-                    setCodeDraft((draft) => writeAnimateBlock(draft, block));
-                    setCodeFrameId(null);
-                    setWorkspaceMode((mode) => mode ?? 'code');
+                    code.writeNew((draft) => writeAnimateBlock(draft, block));
+                    panels.setWorkspace((mode) => mode ?? 'code');
                   }} />
               </Panel>
             ) : null}
             {chartPanelNode ? (
               <V2ChartDataPanel key={chartPanelNode.id} node={chartPanelNode} pageId={page.id}
-                commit={session.commit} onClose={() => setChartPanelId(null)} />
+                commit={session.commit} onClose={panels.closeChart} />
             ) : null}
-            {treeOpen ? (
+            {panels.treeOpen ? (
               <V2TreePanel
                 key={page.id}
                 page={page} selection={selection} selectedConnectorIds={selectedConnectorIds}
                 readOnly={load.readOnly}
-                onObjectAction={(nodeId, action) => {
-                  if (load.readOnly) return;
-                  const node = page.nodes.find((item) => item.id === nodeId);
-                  if (!node) return;
-                  if (action === 'lock') session.commit(buildToggleLockCommand(page, [nodeId]));
-                  if (action === 'hide') session.commit({
-                    kind: 'set-node', id: `visibility:${nodeId}`, label: node.content.sectionHidden ? 'Show object' : 'Hide object',
-                    pageId: page.id, before: node,
-                    after: { ...node, content: { ...node.content, sectionHidden: !node.content.sectionHidden } },
-                  });
-                  if (action === 'duplicate') {
-                    const command = buildDuplicateSelectionCommand(page, [nodeId], page.connectors.map((item) => item.id), mintV2Id);
-                    session.commit(command);
-                    applyConnectorSelection([]);
-                    applySelection(replaceSelection(command.commands.flatMap((item) => item.kind === 'insert-node' ? [item.node.id] : [])));
-                  }
-                  if (action === 'delete') {
-                    if (!architectureActions.unplaceSelection([nodeId])) session.commit(buildDeleteSelectionCommand(page, [nodeId], []));
-                    applySelection(clearSelection());
-                  }
-                }}
+                onObjectAction={runObjectAction}
                 onConnectorMenu={(connectorId, x, y) => {
                   applySelection(clearSelection());
                   applyConnectorSelection([connectorId]);
@@ -1324,19 +916,16 @@ export function V2EditorPage(): React.JSX.Element {
                   applySelection(clearSelection());
                   applyConnectorSelection([connectorId]);
                 }}
-                onClose={() => setTreeOpen(false)}
+                onClose={panels.closeTree}
               />
             ) : null}
-            {agentOpen ? (
+            {panels.workspace === 'assistant' ? (
               <V2AgentPanel assistant={assistant} proposal={proposal} aiSettings={aiSettings}
                 currentRevision={session.revision} readOnly={load.readOnly}
                 diagramCount={diagramCount} selectedDiagramCount={selectedDiagramCount}
-                onClose={toggleAgent} />
+                onClose={panels.closeWorkspace} />
             ) : null}
-            <ToastRegion
-              items={toasts}
-              onDismiss={(toastId) => setToasts((current) => current.filter((toast) => toast.id !== toastId))}
-            />
+            <ToastRegion items={toasts} onDismiss={dismissToast} />
             <p className="sr-only" aria-live="polite">{announcement || `Revision ${session.revision}.`}</p>
           </>
         )}

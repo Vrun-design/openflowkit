@@ -1,6 +1,7 @@
 // DSL lint for tools that only have text: the real parser's diagnostics, not a
 // second grammar. Compilation (layout, icons) is the caller's next step.
 import { parseDocument } from '../dsl/document';
+import type { DslDiagnostic } from '../dsl/ast';
 import { isReservedFamily } from '../dsl/document';
 import { d2ToDsl, looksLikeD2 } from '../services/dsl/d2ToDsl';
 import { looksLikeMermaid, mermaidToDsl } from '../services/dsl/mermaidToDsl';
@@ -43,12 +44,17 @@ const FOREIGN: readonly {
   readonly from: ForeignFormat;
   readonly label: string;
   readonly detect: (text: string) => boolean;
-  readonly convert: (text: string) => { dsl: string; diagnostics: readonly { line: number; message: string }[] } | { error: string };
+  readonly convert: (text: string) => { dsl: string; losses: readonly string[]; diagnostics: readonly DslDiagnostic[] } | { error: string };
 }[] = [
   { from: 'mermaid', label: 'Mermaid', detect: looksLikeMermaid, convert: mermaidToDsl },
   { from: 'structurizr', label: 'Structurizr DSL', detect: looksLikeStructurizr, convert: structurizrToDsl },
   { from: 'd2', label: 'D2', detect: looksLikeD2, convert: d2ToDsl },
 ];
+
+/** The language `text` is written in when it is one we convert; null for DSL (or anything else). */
+export function detectForeign(text: string): (typeof FOREIGN)[number] | null {
+  return FOREIGN.find(({ detect }) => detect(text)) ?? null;
+}
 
 /** The first ```fenced``` block in an agent's markdown, prose around it included. */
 const FENCED = /```[\w-]*[ \t]*\r?\n([\s\S]*?)\r?\n?[ \t]*```/;
@@ -69,7 +75,7 @@ function unfenced(text: string): string {
  */
 export function readAgentSource(text: string): AgentSource {
   const source = unfenced(text);
-  const foreign = FOREIGN.find(({ detect }) => detect(source));
+  const foreign = detectForeign(source);
   // DSL is stored as written inside the fence; only lint keeps the padded line numbers.
   if (!foreign) return { dsl: FENCED.exec(text)?.[1] ?? text };
   const conversion = foreign.convert(source);

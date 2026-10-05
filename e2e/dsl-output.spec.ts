@@ -82,7 +82,7 @@ test('Structurizr pasted into the panel converts to a C4 workspace', async ({ pa
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
   const editor = page.getByRole('textbox', { name: 'Diagram source' });
   await editor.fill('workspace {\n  model {\n    u = person "User"\n    s = softwareSystem "Shop" {\n      web = container "Web"\n    }\n    u -> web "Uses"\n  }\n  views {\n    systemContext s { include * }\n    container s { include * }\n  }\n}');
-  await expect(page.getByText('Structurizr detected.')).toBeVisible();
+  await expect(page.getByText('Structurizr DSL detected.')).toBeVisible();
   await page.getByRole('button', { name: /Convert/ }).click();
   await expect(editor).toHaveValue(/person User/);
   await expect(editor).toHaveValue(/view container of Shop/);
