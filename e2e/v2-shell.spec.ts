@@ -15,15 +15,10 @@ test('v2 workspace shell supports panels, view controls, and canvas creation @ga
     'Map a user onboarding flow'
   );
   await page.keyboard.press('Escape');
-  await workspace.getByRole('button', { name: 'Slides', exact: true }).click();
-  await page.getByRole('button', { name: 'Add slide', exact: true }).click();
-  await expect(page.getByText('The big idea', { exact: true })).toBeVisible();
   await workspace.getByRole('button', { name: 'Diagram as code', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Diagram source' })).toContainText(
     'Client -> API'
   );
-  await workspace.getByRole('button', { name: 'Slides', exact: true }).click();
-  await expect(page.getByText('The big idea', { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Layers', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Layers' })).toBeVisible();

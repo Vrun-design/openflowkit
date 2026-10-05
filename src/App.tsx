@@ -1,7 +1,6 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { HashRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { lastDocumentId, mintV2Id } from '@/opencanvas/presentation/v2/v2Document';
-import { runV1Import } from '@/services/storage/v2/v1Import';
 
 const HomePage = lazy(async () => {
   const module = await import('@/opencanvas/presentation/v2/V2HomePage');
@@ -38,7 +37,9 @@ function HomeDocument(): React.JSX.Element | null {
     let live = true;
     const fresh = mintV2Id('doc');
     void Promise.race([
-      runV1Import().then((report) => report.imported[0] ?? fresh, () => fresh),
+      // Loaded on demand: the converter it carries is the biggest thing a first paint never needs.
+      import('@/services/storage/v2/v1Import').then(({ runV1Import }) => runV1Import())
+        .then((report) => report.imported[0] ?? fresh, () => fresh),
       new Promise<string>((resolve) => setTimeout(() => resolve(fresh), FIRST_VISIT_WAIT_MS)),
     ]).then((id) => { if (live) setTarget(id); });
     return () => { live = false; };

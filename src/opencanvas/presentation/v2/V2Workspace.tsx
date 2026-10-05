@@ -2,8 +2,6 @@ import {
   IconCode,
   IconKeyboard,
   IconPlugConnected,
-  IconPlus,
-  IconPresentation,
   IconSitemap,
   IconSparkles,
 } from '@tabler/icons-react';
@@ -20,11 +18,10 @@ import {
 import { STARTER_TEMPLATES, type StarterTemplate } from '../../../agent/starterTemplates';
 import { shortcutGroups } from './v2Shortcuts';
 
-export type V2WorkspaceMode = 'assistant' | 'slides' | 'code' | 'model' | 'agent';
+export type V2WorkspaceMode = 'assistant' | 'code' | 'model' | 'agent';
 const MODES = [
   { id: 'assistant', label: 'AI assistant', icon: IconSparkles },
   { id: 'model', label: 'Architecture model', icon: IconSitemap },
-  { id: 'slides', label: 'Slides', icon: IconPresentation },
   { id: 'code', label: 'Diagram as code', icon: IconCode },
   { id: 'agent', label: 'Connect agent', icon: IconPlugConnected },
 ] as const;
@@ -104,7 +101,7 @@ export function V2CanvasWelcome({ onOpen, onTemplate }: {
           </span>
         </div>
         <div className="ofk-v2-welcome-actions">
-          {MODES.filter(({ id }) => id !== 'model' && id !== 'slides').map(({ id, label, icon }) => (
+          {MODES.filter(({ id }) => id !== 'model').map(({ id, label, icon }) => (
             <Button key={id} variant="secondary" onClick={() => onOpen(id)}>
               <Icon icon={icon} />
               {label}
@@ -129,93 +126,6 @@ export function V2CanvasWelcome({ onOpen, onTemplate }: {
 
 export const INITIAL_CODE =
   '%% ofk 1\narchitecture\ntitle: My first diagram\n\nClient\nAPI\nDatabase [cylinder]\n\nClient -> API : request\nAPI -> Database : query';
-
-// ponytail: local drafts only — connect these shells to the DSL compiler and slide model in their planned slices.
-export function V2DraftPanel({
-  mode,
-  onClose,
-  code,
-  onCodeChange,
-  slides,
-  onAddSlide,
-}: {
-  mode: 'slides' | 'code';
-  onClose: () => void;
-  code: string;
-  onCodeChange: (code: string) => void;
-  slides: number;
-  onAddSlide: () => void;
-}) {
-  return (
-    <Panel
-      title={mode === 'code' ? 'Diagram as code' : 'Slides'}
-      onClose={onClose}
-      className="ofk-v2-workspace-panel"
-      tools={<span className="ofk-v2-preview-label">Preview</span>}
-    >
-      {mode === 'code' ? (
-        <div className="ofk-v2-panel-stack">
-          <div>
-            <h3>Think in connections.</h3>
-            <p className="ofk-v2-muted">Describe your diagram. Keep the source close.</p>
-          </div>
-          <label className="ofk-v2-code-label" htmlFor="v2-code">
-            Diagram source <span>OpenFlow DSL</span>
-          </label>
-          <textarea
-            id="v2-code"
-            className="ofk-v2-code-editor"
-            spellCheck={false}
-            value={code}
-            onChange={(event) => onCodeChange(event.target.value)}
-          />
-          <footer className="ofk-v2-panel-footer">
-            <Button disabled>
-              <Icon icon={IconCode} /> Generate diagram
-            </Button>
-            <p>Editing preview. Diagram generation is coming soon.</p>
-          </footer>
-        </div>
-      ) : (
-        <div className="ofk-v2-panel-stack">
-          {slides === 0 ? (
-            <div className="ofk-model-welcome ofk-v2-slides-welcome">
-              <div className="ofk-v2-slides-hero" aria-hidden="true"><i /><i /><span><b />01</span></div>
-              <h3>Give your ideas a storyline.</h3>
-              <p>Frame moments on your canvas and walk through them as a presentation.</p>
-              <Button onClick={onAddSlide}><Icon icon={IconPlus} /> Add slide</Button>
-              <span className="ofk-model-welcome-note">Each slide is a frame of this canvas.</span>
-            </div>
-          ) : (
-          <div className="ofk-v2-slide-list">
-            {
-              Array.from({ length: slides }, (_, index) => (
-                <div className="ofk-v2-slide" key={index}>
-                  <span>{String(index + 1).padStart(2, '0')}</span>
-                  <div>
-                    <img src="/Logo_openflowkit.svg" width="24" height="24" alt="" />
-                    <strong>{index === 0 ? 'The big idea' : `Slide ${index + 1}`}</strong>
-                    <small>Canvas frame preview</small>
-                  </div>
-                </div>
-              ))
-            }
-            <Button onClick={onAddSlide}>
-              <Icon icon={IconPlus} /> Add slide
-            </Button>
-          </div>
-          )}
-          <footer className="ofk-v2-panel-footer">
-            <Button disabled>
-              <Icon icon={IconPresentation} /> Start presentation
-            </Button>
-            <p>Layout preview. Slides are not saved yet.</p>
-          </footer>
-        </div>
-      )}
-    </Panel>
-  );
-}
 
 export function V2Shortcuts({ onClose }: { onClose: () => void }) {
   return (

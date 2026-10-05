@@ -51,6 +51,9 @@ test.describe('storage blocked', () => {
 
 test('a damaged diagram offers the diagnostic and a way back @gate', async ({ page }) => {
   await page.goto('/#/home');
+  // Home creates the database from its own chunk; a version-less open before that would create an empty one.
+  await expect.poll(() => page.evaluate(async () =>
+    (await indexedDB.databases()).some(({ name }) => name === 'openflowkit-persistence'))).toBe(true);
   await page.evaluate(() => new Promise<void>((resolve, reject) => {
     const open = indexedDB.open('openflowkit-persistence');
     open.onsuccess = () => {

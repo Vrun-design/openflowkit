@@ -7,7 +7,6 @@ import {
   BRIDGE_POLL_SECONDS, bridgeUrls, isBridgeRequest,
   type BridgeClientInfo, type BridgePageSummary, type BridgeRequest,
 } from '../../../agent/bridge/protocol';
-import { findAgentOp } from '../../../agent/ops';
 import { resolveAgentOpCommand } from '../../../agent/runAction';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
@@ -84,6 +83,8 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
     const runRequest = async (request: BridgeRequest): Promise<void> => {
       const { capabilities, commit, onActivity } = optionsRef.current;
       try {
+        // The registry loads with the first request, so an editor that never pairs never downloads it.
+        const { findAgentOp } = await import('../../../agent/ops');
         const op = findAgentOp(request.op);
         if (!op) throw new RangeError(`Unknown op "${request.op}".`);
         const document = optionsRef.current.document;

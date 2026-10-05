@@ -69,6 +69,6 @@ describe('v2 export', () => {
   it('prints the page instead of downloading for PDF', async () => {
     const document = await buildCanonicalFixtureDocument();
     expect(() => printV2Export({ document, format: 'pdf', scope: 'page', pageId: document.pages[0]!.id })).not.toThrow();
-    expect(buildV2Export({ document, format: 'pdf', scope: 'page', pageId: document.pages[0]!.id })).resolves.toEqual([]);
+    await expect(buildV2Export({ document, format: 'pdf', scope: 'page', pageId: document.pages[0]!.id })).resolves.toEqual([]);
   });
 });

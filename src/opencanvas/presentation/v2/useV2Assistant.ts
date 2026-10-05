@@ -11,7 +11,7 @@ import { assistantContext } from '../../application/ai/assistantContext';
 import {
   assistantSystemPrompt, buildAssistantMessages, parseAssistantReply, type AssistantTurn,
 } from '../../application/ai/assistantPrompt';
-import { assistantToolkit, type AssistantWrite } from '../../application/ai/assistantTools';
+import type { AssistantWrite } from '../../application/ai/assistantTools';
 import type { SceneDocumentV1, ScenePage } from '../../domain/document/types';
 import { AiProviderError, createProvider, type AiMessage, type AiTurn } from '../../../services/ai/provider';
 import {
@@ -188,6 +188,8 @@ export function useV2Assistant(options: V2AssistantOptions) {
       let blocks: readonly AssistantWrite[] | null = null;
 
       if (tools?.document && !noTools.current.has(toolKey)) {
+        // The op registry (zod schemas, every importer) loads with the first tool turn, not the editor.
+        const { assistantToolkit } = await import('../../application/ai/assistantTools');
         const toolkit = assistantToolkit({
           document: tools.document, pageId: page.id, inScope: new Set(context.frames.map((frame) => frame.id)),
           selection: scope === 'selection' ? new Set(selectedIds) : null,

@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import { runV1Import } from './services/storage/v2/v1Import';
 import './index.css';
 
 // v1 shared `/view?flow=…` without a hash too; move it under the hash router (v1 did the same).
@@ -18,8 +17,3 @@ ReactDOM.createRoot(rootElement).render(
     <App />
   </React.StrictMode>
 );
-
-// After first paint, so the canvas never waits on bringing v1 diagrams over.
-requestAnimationFrame(() => setTimeout(() => {
-  runV1Import().catch((error: unknown) => console.warn('v1 import did not run:', error));
-}));

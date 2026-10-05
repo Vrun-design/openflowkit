@@ -27,7 +27,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "lint": "eslint . --ext ts,tsx --ignore-pattern 'docs-site/**' --report-unused-disable-directives --max-warnings 0",
-    "build:docs": "pnpm --filter openflowkit-docs build",
+    "build:docs": "npm run build --workspace docs-site",
     "shape-pack:manifest": "node scripts/shape-pack/generate-shape-pack-manifest.mjs",
     "shape-pack:validate": "node scripts/shape-pack/validate-shape-pack-manifests.mjs",
     "shape-pack:intake-check": "node scripts/shape-pack/check-provider-intake.mjs",

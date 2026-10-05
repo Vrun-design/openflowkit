@@ -1,5 +1,0 @@
-{
-  "name": "OpenFlowKit",
-  "description": "The bridge between Diagram-as-Code and visual whiteboarding. Instantly render Mermaid/DSL into editable UI, export to Figma, and iterate with Flowpilot.",
-  "requestFramePermissions": []
-}

@@ -17,7 +17,7 @@ import { V2ContextMenu, type ContextMenuTarget } from './V2ContextMenu';
 import { V2CanvasHost } from './V2CanvasHost';
 import { V2Chrome } from './V2Chrome';
 import { V2AgentConnect } from './V2AgentConnect';
-import { INITIAL_CODE, V2CanvasWelcome, V2DraftPanel, V2Shortcuts, V2WorkspaceRail, type V2WorkspaceMode } from './V2Workspace';
+import { INITIAL_CODE, V2CanvasWelcome, V2Shortcuts, V2WorkspaceRail, type V2WorkspaceMode } from './V2Workspace';
 import type { V2Tool } from './V2CreationToolbar';
 import {
   DEFAULT_TOOL_CONFIG, type V2ChartKind, type V2ConnectorTool, type V2MoreItem, type V2ToolConfig,
@@ -136,7 +136,6 @@ export function V2EditorPage(): React.JSX.Element {
   const [compileDiagnostics, setCompileDiagnostics] = useState<ReturnType<typeof parse>['diagnostics']>([]);
   const codeAbortRef = useRef<AbortController | null>(null);
   const iconToastFramesRef = useRef(new Set<string>());
-  const [slideDraftCount, setSlideDraftCount] = useState(0);
   // The data panel is pinned to one chart: opening it never covers the canvas
   // on a plain select, and it stays while you click around. Double-click, the
   // context bar's Data button, or inserting a chart opens it. It docks in the
@@ -1211,9 +1210,6 @@ export function V2EditorPage(): React.JSX.Element {
               onTokenChange={(bridgeToken) => updatePreferences({ bridgeToken })}
               onToggle={(connect) => updatePreferences({ agentBridgeEnabled: connect })}
               onClose={() => setWorkspaceMode(null)} /> : null}
-            {workspaceMode === 'slides' ? <V2DraftPanel mode={workspaceMode}
-              code={codeDraft} onCodeChange={setCodeDraft} slides={slideDraftCount}
-              onAddSlide={() => setSlideDraftCount((count) => count + 1)} onClose={() => setWorkspaceMode(null)} /> : null}
             {workspaceMode === 'model' ? (
               <V2ModelPanel
                 onOpenCode={() => openWorkspace('code')}

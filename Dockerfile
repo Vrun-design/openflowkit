@@ -8,8 +8,8 @@ WORKDIR /app
 # Copy manifests first for better layer caching.
 # Workspace manifests are required because the root package declares them.
 COPY package.json package-lock.json ./
-COPY pnpm-workspace.yaml ./
 COPY docs-site/package.json ./docs-site/package.json
+COPY mcp-server/package.json ./mcp-server/package.json
 
 # CI avoids running the husky prepare hook.
 ENV CI=1

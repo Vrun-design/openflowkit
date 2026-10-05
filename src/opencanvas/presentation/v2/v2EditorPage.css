@@ -207,7 +207,6 @@
 .ofk-v2 .ofk-v2-workspace-panel,
 .ofk-v2 .ofk-agent-panel { top: 0; bottom: 0; right: 0; border-radius: 0; border-width: 0 0 0 1px; box-shadow: none; --ofk-layout-panelWidth: var(--v2-panel-width); --ofk-layout-panelMaxWidth: var(--v2-panel-width); }
 .ofk-v2 .ofk-v2-layers-panel { left: 0; top: 0; bottom: 0; border-radius: 0; border-width: 0 1px 0 0; box-shadow: none; --ofk-layout-panelWidth: var(--v2-left-width); --ofk-layout-panelMaxWidth: var(--v2-left-width); }
-.ofk-v2-preview-label { font-size: 10px; font-weight: 500; color: var(--ofk-muted); border: 1px solid var(--ofk-border); border-radius: 5px; padding: 3px 6px; }
 .ofk-v2-welcome { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .ofk-v2-welcome-center { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: min(600px, calc(100% - 180px)); text-align: center; }
 .ofk-v2-welcome-center > img { margin-bottom: 22px; }
@@ -277,20 +276,6 @@
 .ofk-v2-code-diagnostics > button > span { color: var(--ofk-warning); font-family: var(--ofk-font-mono, monospace); }
 .ofk-v2-code-diagnostics > button > strong { color: var(--ofk-text); font-weight: 500; }
 .ofk-v2 textarea:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 2px; }
-.ofk-v2-slide-list { display: flex; flex-direction: column; gap: 16px; }
-/* Slides — empty state shares the model welcome; hero is three stacked frames. */
-.ofk-v2-slides-welcome { padding-top: 36px; }
-.ofk-v2-slides-hero { position: relative; width: 96px; height: 64px; }
-.ofk-v2-slides-hero > * { position: absolute; inset: 0; border: 1px solid var(--ofk-border); border-radius: 6px; background: var(--ofk-canvas); }
-.ofk-v2-slides-hero > i:first-child { transform: translate(-14px, -10px) rotate(-4deg); opacity: .45; }
-.ofk-v2-slides-hero > i:nth-child(2) { transform: translate(-7px, -5px) rotate(-2deg); opacity: .7; }
-.ofk-v2-slides-hero > span { display: grid; align-content: end; padding: 6px 8px; border-color: var(--ofk-accent); color: var(--ofk-accent); font-size: 10px; text-align: start; }
-.ofk-v2-slides-hero b { display: block; width: 40%; height: 4px; margin-bottom: 6px; border-radius: 2px; background: var(--ofk-accent); opacity: .5; }
-.ofk-v2-slide { display: flex; gap: 12px; align-items: start; }
-.ofk-v2-slide > span { font-size: 11px; padding-top: 10px; color: var(--ofk-muted); }
-.ofk-v2-slide > div { flex: 1; aspect-ratio: 16/9; border: 1px solid var(--ofk-border); background: var(--ofk-canvas); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
-.ofk-v2-slide strong { font-size: 15px; font-weight: 500; }
-.ofk-v2-slide small { font-size: 10px; color: var(--ofk-muted); }
 /* AI assistant — hero echoes Connect agent (prompt → sparkle → picture); provider lives in the header badge. */
 .ofk-v2-assistant-panel .ofk-thread { padding: 8px 24px 24px; }
 .ofk-v2-assistant-welcome { display: grid; justify-items: center; align-content: start; padding-top: 28px; text-align: center; }

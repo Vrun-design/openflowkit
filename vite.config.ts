@@ -34,10 +34,6 @@ export default defineConfig(() => {
               return undefined;
             }
 
-            if (id.includes('/node_modules/reactflow/')) {
-              return 'vendor-reactflow';
-            }
-
             if (id.includes('/node_modules/elkjs/')) {
               // Split the in-process fallback (elk.bundled) from the worker-mode API
               // so production loads only the small api shim; the bundled engine is
@@ -46,34 +42,6 @@ export default defineConfig(() => {
               return 'vendor-elk';
             }
 
-            if (
-              id.includes('/node_modules/react-markdown/') ||
-              id.includes('/node_modules/remark-gfm/') ||
-              id.includes('/node_modules/remark-breaks/') ||
-              id.includes('/node_modules/rehype-slug/') ||
-              id.includes('/node_modules/react-syntax-highlighter/')
-            ) {
-              return 'vendor-markdown';
-            }
-
-            if (
-              id.includes('/node_modules/i18next') ||
-              id.includes('/node_modules/react-i18next/')
-            ) {
-              return 'vendor-i18n';
-            }
-
-            if (id.includes('/node_modules/lucide-react/')) {
-              return 'vendor-lucide';
-            }
-
-            if (id.includes('/node_modules/framer-motion/')) {
-              return 'vendor-motion';
-            }
-
-            if (id.includes('/node_modules/@google/genai/')) {
-              return 'vendor-ai';
-            }
             return undefined;
           },
         },
@@ -85,12 +53,9 @@ export default defineConfig(() => {
       setupFiles: './vitest.setup.ts',
       testTimeout: 10000,
       maxWorkers: 2,
-      // benchmarks/** is Playwright and its own vitest project, never this run.
-      // scripts/** uses node:test, benchmarks/** is Playwright and its own
-      // vitest project. Neither belongs to this run.
+      // scripts/** uses node:test and mcp-server/** has its own vitest run.
       exclude: [
         'e2e/**',
-        'benchmarks/**',
         'scripts/**',
         'node_modules/**',
         'dist/**',
