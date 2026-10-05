@@ -21,8 +21,5 @@
   },
   "overrides": {
     "zod": "3"
-  },
-  "devDependencies": {
-    "lighthouse": "^13.5.0"
   }
 }

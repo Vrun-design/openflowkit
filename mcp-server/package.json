@@ -2,7 +2,7 @@
   "name": "@vrun-design/openflowkit-mcp",
   "version": "0.2.0",
   "mcpName": "io.github.Vrun-design/openflowkit-mcp",
-  "description": "Local-first Model Context Protocol server for OpenFlowKit \u2014 pair the live editor or edit .openflow.json files: create/update/read diagrams from DSL, scene ops, icon search, export. No account, no cloud.",
+  "description": "Local-first Model Context Protocol server for OpenFlowKit — pair the live editor or edit .openflow.json files: create/update/read diagrams from DSL, scene ops, icon search, export. No account, no cloud.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -55,12 +55,10 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "pako": "^2.1.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@types/pako": "^2.0.4",
     "tsx": "^4.19.0",
     "typescript": "^5.9.0",
     "vitest": "^4.1.0"
