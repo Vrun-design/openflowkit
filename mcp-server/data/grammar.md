@@ -332,7 +332,7 @@ sequence
 Optional; first non-blank line after the pragma. Missing → `architecture`, info I003.
 Unknown word in that position is a node (a diagram can legitimately start with a node), so
 the parser also emits W110 when the first statement is a single bare word that
-case-insensitively equals a family name. Directions: `down` (default for flowchart, state,
+case-insensitively equals a family name, or wraps one (`family architecture down`, `type: flowchart`). Directions: `down` (default for flowchart, state,
 gitgraph=`right`, mindmap radial), `right`, `left`, `up`. Aliases accepted, not canonical:
 `TB TD LR RL BT`, `top-down`, `left-right`.
 
@@ -384,6 +384,7 @@ group Name [attrs] {                 // container; nodes first seen inside are m
   Other
 }
 group id = Name [attrs] { … }        // explicit group id
+Client -> Name                       // an edge end that names a group ends on its frame
 Start [ellipse] -> Check [diamond] : ok [thick]   // inline node attrs (see below)
 Name {                               // group shorthand (graph families), canonical = group
   Member
@@ -409,6 +410,14 @@ and edge keys (`head:`, `tail:`, `from:`, `to:`, `label:`) stay on the edge, eve
 else (shape, colour, fill, `shadow`, icon, `tech:`…) lands on the target node — so
 `A -> B [dashed, red]` is a dashed edge to a red B and `A -> B [from: right]` exits B's
 left. Canonical never emits node attrs inline — the node gets its own declaration line.
+
+Edges to groups: an edge end that names a group ends on the group's frame — by its label or
+explicit id wherever the group opens, by its derived id (`payments`) once it has opened and no
+node holds that id. A node statement with that name wins (`Payments [red]` next to
+`group Payments { … }` keeps edges on the node); an edge alone never implies a box that
+shadows a group. The serializer declares such a node and names the group by `id = Name`, so
+the rule re-reads the same. (Added 2026-10-03, before v2 shipped; it
+was a stand-in box, so no version bump.)
 
 Node membership: a node belongs to the innermost group in which it is **first declared or
 first mentioned**. Mentioning an already-declared node inside another group does not move
@@ -481,7 +490,7 @@ Only when `slug(label) != id`: explicit ids that differ from the slug, or duplic
 
 ### 6.3 Declaration necessity
 A node line is emitted only if the node (a) has attributes, (b) has an explicit id, (c)
-belongs to a group, or (d) has no edges. Everything else is auto-declared by its edges.
+belongs to a group, (d) has no edges, or (e) shares its name with a group (§4). Everything else is auto-declared by its edges.
 
 ### 6.4 Canonical form
 `format(text) = serialize(parse(text))`. Canonical text is exactly:
@@ -723,11 +732,36 @@ spaces is quoted. Chart *data* is the one place where a canvas edit writes text 
 chart data panel serializes through `Edit as code` (grammar §6.7), because moving a bar is
 a data edit, not a layout edit. Unknown kinds warn W131 and fall back to `bar`.
 
-### 8.10 Later families (header reserved, parsed as flowchart with W105 "family not yet
+### 8.10 wireframe — implemented (slices 6.6–6.7, 2026-09-24)
+Koboyo's syntax, so their wireframe text compiles unchanged.
+```
+wireframe
+title: Onboarding
+screen Login [phone] {        // phone (default) | tablet | browser | window | frame
+  heading: Welcome back
+  input: Email [half]         // widths: full (default) | half | third | two-thirds (1/2, 1/3, 2/3)
+  input: Phone [half]         // consecutive controls share a row while their fractions fit
+  toggle: Dark mode [on]      // on / checked, off
+  slider [60%]                // 60% or 0.6: slider, progress, rating
+  tabs: Overview | Reports [active: 1]     // items are `A | B | C`; active: N selects one
+  alert: Storage almost full [warning]     // info | success | warning | error; buttons take primary
+  tabbar: Home | Search | Me [active: 0]   // pins to the screen bottom; fab floats above it
+}
+```
+Controls: button input search checkbox radio toggle dropdown slider navbar tabs image
+avatar heading paragraph divider link textarea stepper badge progress breadcrumbs
+pagination rating card list alert menu tooltip accordion datepicker sidebar
+segmented tabbar statusbar fab. A screen is a preset frame named above its
+edge; controls stack down its column (16 px padding, 12 px gaps) and the screen grows to
+fit. Screens sit side by side. Canonical: `screen Name [frame] {`, one control per line in
+top-to-bottom, left-to-right order, attributes in the order width, state, value, active,
+variant. Unknown controls warn W141, unknown attributes W142, unknown frames W143 (phone
+used). Controls outside a screen collect into one phone.
+
+### 8.11 Later families (header reserved, parsed as flowchart with W105 "family not yet
 rendered"): `bpmn` (lanes = groups, `[event|task|gateway]` shapes), `org` (edges = reports-to),
-`gantt` (`section`, `Task : 2026-01-01, 5d [done|active|crit|milestone]`), `wireframe`
-(control words), `sankey` (`A -> B : 12`), `journey` (`section`, `Task : 4 : Actor`),
-`timeline`.
+`gantt` (`section`, `Task : 2026-01-01, 5d [done|active|crit|milestone]`),
+`sankey` (`A -> B : 12`), `journey` (`section`, `Task : 4 : Actor`), `timeline`.
 
 ---
 
@@ -855,7 +889,7 @@ test: random bytes → diagnostics only).
 | W103 | unclosed block at EOF | `}` inserted |
 | W104 | duplicate directive, first wins | — |
 | W105 | family reserved, rendered as flowchart | — |
-| W110 | first statement looks like a family header with wrong case | `flowchart` |
+| W110 | first statement looks like a family header with wrong case or a `family`/`type`/`diagram` wrapper | `flowchart` |
 | W111 | arrow not valid in this family, line dropped | list of valid arrows |
 | W112 | chain/fan not allowed in this family | one edge per line |
 | W120 | `.` in id outside `model`, slugified | — |
@@ -1618,13 +1652,13 @@ input: 3 KB of random bytes → some W101/W102 lines, never a throw; canonical i
 ```
 OFK diagram language, v1. One statement per line. // comment. Bad lines are skipped with a warning.
 Line 1 (optional): %% ofk 1     Line 2 (optional): family [direction]  → flowchart | architecture (default) |
-  sequence | state | erd | class | mindmap | gitgraph ; direction: down | right | left | up
+  sequence | state | erd | class | mindmap | gitgraph | chart | wireframe ; direction: down | right | left | up
 title: My diagram         PALETTE   appearance: pastel | paper | builder | mono  (compile-time colours)
 ICONS     icons: auto | off   (icons from labels; icon: none opts one node out)
 NODES     Name                      Name [shape, colour, icon, key: value]      id = Long Name [attrs]
           Names are ids (slugified). Quote a name only if it has -> : = , [ ] { } // or starts with a keyword: "Cache: L2"
 EDGES     A -> B : label [attrs]     -> solid   --> dashed   <-> both   --  line     A -> B -> C  A -> B, C (expanded)
-GROUPS    group Name [attrs] {  Member  Other  }      nodes first seen inside belong to the group; groups nest
+GROUPS    group Name [attrs] {  Member  Other  }      nodes first seen inside belong to the group; groups nest; A -> Name ends on the group
 NOTE      note Name : text
 ATTRS (positional, any order):  shape: rect rounded circle ellipse diamond cylinder hexagon cloud doc note
           parallelogram person queue component browser mobile   colour: blue green red orange violet teal pink
@@ -1653,6 +1687,12 @@ commit Label [tag: v1, highlight|revert]   branch name   checkout name   merge n
 chart bar|line|area|scatter|pie|donut|radar|heatmap|table|quadrant
 Revenue: Jan 12, Feb 19        // one series per line: Category value pairs
 chart quadrant:  x: low, high   y: low, high   quadrants: tl, tr, bl, br   Feature A [0.32, 0.78]
+--- wireframe (Koboyo syntax) ---
+screen Login [phone|tablet|browser|window] {   heading: Hi   input: Email [half]   button: Go [half, primary]   }
+toggle: Dark mode [on]   slider [60%]   tabs: A | B | C [active: 1]   alert: Low disk [warning]   tabbar: Home | Me
+controls: button input search checkbox radio toggle dropdown slider navbar tabs image avatar heading paragraph divider
+  link textarea stepper badge progress breadcrumbs pagination rating card list alert menu tooltip accordion datepicker
+  sidebar segmented tabbar statusbar fab
 --- animate (motion export; §6.8) ---
 animate build|walkthrough|pulse [10s] [loop] {   step a, b   step a -> c : POST   step c hold 2s }
 --- C4 model (phase 5; today renders as boxes/groups) ---

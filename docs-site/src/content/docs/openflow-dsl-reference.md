@@ -336,7 +336,7 @@ sequence
 Optional; first non-blank line after the pragma. Missing → `architecture`, info I003.
 Unknown word in that position is a node (a diagram can legitimately start with a node), so
 the parser also emits W110 when the first statement is a single bare word that
-case-insensitively equals a family name. Directions: `down` (default for flowchart, state,
+case-insensitively equals a family name, or wraps one (`family architecture down`, `type: flowchart`). Directions: `down` (default for flowchart, state,
 gitgraph=`right`, mindmap radial), `right`, `left`, `up`. Aliases accepted, not canonical:
 `TB TD LR RL BT`, `top-down`, `left-right`.
 
@@ -388,6 +388,7 @@ group Name [attrs] {                 // container; nodes first seen inside are m
   Other
 }
 group id = Name [attrs] { … }        // explicit group id
+Client -> Name                       // an edge end that names a group ends on its frame
 Start [ellipse] -> Check [diamond] : ok [thick]   // inline node attrs (see below)
 Name {                               // group shorthand (graph families), canonical = group
   Member
@@ -413,6 +414,14 @@ and edge keys (`head:`, `tail:`, `from:`, `to:`, `label:`) stay on the edge, eve
 else (shape, colour, fill, `shadow`, icon, `tech:`…) lands on the target node — so
 `A -> B [dashed, red]` is a dashed edge to a red B and `A -> B [from: right]` exits B's
 left. Canonical never emits node attrs inline — the node gets its own declaration line.
+
+Edges to groups: an edge end that names a group ends on the group's frame — by its label or
+explicit id wherever the group opens, by its derived id (`payments`) once it has opened and no
+node holds that id. A node statement with that name wins (`Payments [red]` next to
+`group Payments { … }` keeps edges on the node); an edge alone never implies a box that
+shadows a group. The serializer declares such a node and names the group by `id = Name`, so
+the rule re-reads the same. (Added 2026-10-03, before v2 shipped; it
+was a stand-in box, so no version bump.)
 
 Node membership: a node belongs to the innermost group in which it is **first declared or
 first mentioned**. Mentioning an already-declared node inside another group does not move
@@ -485,7 +494,7 @@ Only when `slug(label) != id`: explicit ids that differ from the slug, or duplic
 
 ### 6.3 Declaration necessity
 A node line is emitted only if the node (a) has attributes, (b) has an explicit id, (c)
-belongs to a group, or (d) has no edges. Everything else is auto-declared by its edges.
+belongs to a group, (d) has no edges, or (e) shares its name with a group (§4). Everything else is auto-declared by its edges.
 
 ### 6.4 Canonical form
 `format(text) = serialize(parse(text))`. Canonical text is exactly:
@@ -884,7 +893,7 @@ test: random bytes → diagnostics only).
 | W103 | unclosed block at EOF | `}` inserted |
 | W104 | duplicate directive, first wins | — |
 | W105 | family reserved, rendered as flowchart | — |
-| W110 | first statement looks like a family header with wrong case | `flowchart` |
+| W110 | first statement looks like a family header with wrong case or a `family`/`type`/`diagram` wrapper | `flowchart` |
 | W111 | arrow not valid in this family, line dropped | list of valid arrows |
 | W112 | chain/fan not allowed in this family | one edge per line |
 | W120 | `.` in id outside `model`, slugified | — |
@@ -1653,7 +1662,7 @@ ICONS     icons: auto | off   (icons from labels; icon: none opts one node out)
 NODES     Name                      Name [shape, colour, icon, key: value]      id = Long Name [attrs]
           Names are ids (slugified). Quote a name only if it has -> : = , [ ] { } // or starts with a keyword: "Cache: L2"
 EDGES     A -> B : label [attrs]     -> solid   --> dashed   <-> both   --  line     A -> B -> C  A -> B, C (expanded)
-GROUPS    group Name [attrs] {  Member  Other  }      nodes first seen inside belong to the group; groups nest
+GROUPS    group Name [attrs] {  Member  Other  }      nodes first seen inside belong to the group; groups nest; A -> Name ends on the group
 NOTE      note Name : text
 ATTRS (positional, any order):  shape: rect rounded circle ellipse diamond cylinder hexagon cloud doc note
           parallelogram person queue component browser mobile   colour: blue green red orange violet teal pink
