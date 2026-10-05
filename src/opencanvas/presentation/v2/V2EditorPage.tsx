@@ -64,7 +64,7 @@ import { useV2LabelEditing, type OpenEditorOptions } from './useV2LabelEditing';
 import { IMAGE_URL_PATTERN, useV2MediaInsert } from './useV2MediaInsert';
 import { useV2Pages } from './useV2Pages';
 import { useV2Panels } from './useV2Panels';
-import type { V2GestureApi } from './useV2Pointer';
+import type { V2GestureApi } from './v2PointerGestures';
 import { useV2Preferences } from './useV2Preferences';
 import { useV2Proposal } from './useV2Proposal';
 import { useV2ProposalPreview } from './useV2ProposalPreview';
