@@ -64,3 +64,18 @@ jobs:
       # shipped feature with no page, or a page with no inventory backing.
       - name: Build docs
         run: npm run build --workspace docs-site
+
+  # docker-publish only runs on main; this keeps the self-host image from breaking unseen on v2.
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image and serve the app
+        run: |
+          docker build -t openflowkit:check .
+          docker run -d --name ofk -p 3045:3045 openflowkit:check
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:3045/ | grep -q '<div id="root"' && exit 0; sleep 1; done
+          docker logs ofk; exit 1
