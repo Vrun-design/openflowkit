@@ -32,8 +32,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.
 - Animation is page-scoped only; deployment relations (node → node) are not in the grammar.
 ## Next — owner's order, 2026-10-03
-- Phase 15 plan/audit DONE (Codex, 2026-10-04): ChatGPT, preservation, revisions, remote sessions.
-- Order: 13.4 with quota → 14.1 → D11 UI → 14.4 → 15. Open: D7 paid; D8 labs (Claude: no flag, see below); D11.
+- Order: 13.4 with quota → 14.1 → D11 UI → 14.4 → 15 (plan/audit done by Codex 2026-10-04). Open: D7, D8, D11.
 - D8 (Claude, 2026-10-05): no labs flag. Slides was the only unreal surface and is gone; charts and wireframes are
   real and tested. Lead the launch story with agent → diagram; a flag would cost a branch in every flyout.
 ## Deferred
