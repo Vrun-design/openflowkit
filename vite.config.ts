@@ -9,6 +9,9 @@ export default defineConfig(() => {
       host: '0.0.0.0',
     },
     plugins: [react()],
+    // Workers are not in the dev server's startup scan: their deps (gifenc, mediabunny) were found on the
+    // first encode, and Vite reloaded every open page mid-session (CI's motion-dialog flake).
+    optimizeDeps: { entries: ['index.html', 'src/**/*.worker.ts'] },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

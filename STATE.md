@@ -21,8 +21,8 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   draw labels in Inter (`withSvgImage`); saved SVG/PDF embed it (thumbnails don't). 39 dead exports gone. Docs on
   Astro 7 / Starlight 0.42, Node 22 everywhere, `npm audit` 0. README/SECURITY/CONTRIBUTING describe v2.
 ## Found, not fixed (owner calls)
-- Holds (MCP publish, merge, canvas UI, labs flag) + the CI flake H9: `docs/plan/launch-holds.md`. CI uploads
-  first-failure traces (`e2e-traces`) so a retry-green flake still leaves evidence.
+- Holds (MCP publish, merge, canvas UI, labs flag): `docs/plan/launch-holds.md`. CI uploads first-failure
+  traces (`e2e-traces`). A new worker's deps are pre-scanned (`optimizeDeps.entries`), or dev reloads mid-session.
 - Canvas UI (owner's D11 pass): "Connect agent" is in both the document bar and the rail; a fitted diagram tucks
   under the left toolbar; phone welcome shows keyboard hints and clips the template row; dark-mode template
   thumbnails show white sequence/state boxes; AI replies fit under 65% zoom on 27/50 (land ≥65% at the start).
