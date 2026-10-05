@@ -2,17 +2,10 @@
 
 ## Supported Versions
 
-OpenFlowKit is currently a pre-1.0 project. Security fixes are applied on a best-effort basis to the latest active code line only.
+Security fixes land on the latest `main` and the hosted app at app.openflowkit.com. Older commits, forks
+and self-hosted copies that have not pulled the fix are not patched separately.
 
-Current support policy:
-
-| Version / Branch | Supported |
-|---|---|
-| Latest `main` / `master` branch state | Yes |
-| Latest deployed app/docs surfaces | Best effort |
-| Older commits, forks, and historical pre-1.0 snapshots | No |
-
-If the project starts publishing stable release lines, this policy should be updated to list supported versions explicitly.
+The MCP server (`@vrun-design/openflowkit-mcp`) is versioned on its own; fixes ship in its latest npm release.
 
 ## Reporting a Vulnerability
 
@@ -35,36 +28,39 @@ When possible, include:
 OpenFlowKit is a browser-first, local-first application. Relevant security areas include:
 
 - persisted local application data
-- imported/exported files
+- imported files (`.json`, Mermaid, D2, Structurizr) and exports
 - AI provider API key handling
-- collaboration transport behavior
-- third-party asset ingestion and rendering
+- the local agent bridge between the editor and the MCP server
+- rendering of third-party icon artwork
 
 ## Data Storage Model
 
-OpenFlowKit is **fully local-first**. No diagram data, API keys, or user content is sent to OpenFlowKit servers. There are no OpenFlowKit servers.
+There are no OpenFlowKit servers. No diagram, key or user content is sent to the project.
 
 ### Diagram data
 
-Diagram state is persisted in **IndexedDB** (with localStorage as a fallback). It never leaves the browser unless you explicitly export or share it.
+Documents live in this browser's **IndexedDB** (`openflowkit-persistence`), with the last good copy kept for
+crash recovery. They leave the browser only when you export them, or when you send a diagram to an AI provider
+or connect an agent (below).
 
-### AI provider API keys (BYOK)
+### AI provider API keys (bring your own key)
 
-OpenFlowKit uses a Bring-Your-Own-Key (BYOK) model:
+- Keys are entered in the AI assistant's provider dialog and stored in this browser's **localStorage**
+  (`openflowkit-v2-ai`).
+- Requests go **directly from your browser to the provider you chose** (Anthropic, OpenAI, Google, OpenRouter,
+  Ollama or any OpenAI-compatible endpoint). Nothing is proxied.
+- Keys are never logged and never written into exports or documents.
 
-- API keys are entered in **Settings → AI** and stored in **localStorage** under a dedicated namespace.
-- Keys are sent **directly from your browser to the AI provider** (OpenAI, Anthropic, Google, etc.) — not proxied through any OpenFlowKit service.
-- Keys are never logged, never included in exports, and never transmitted to anyone other than the provider you configured.
+### Agent bridge (MCP)
 
-**Important:** Do not put API keys in `.env` or `.env.local` files. The settings modal is the only supported key entry point. Keys set via environment variables are a development-only convenience and should not be used in shared or deployed environments.
+When you press **Connect** in the Connect agent panel, the editor long-polls the MCP server on
+`127.0.0.1` (default port 43119). The server checks the request origin and, when
+`OPENFLOWKIT_BRIDGE_TOKEN` is set, a token. Agent edits apply as ordinary undoable commands.
 
-### Collaboration
+### Other network requests
 
-Real-time collaboration uses **WebRTC peer-to-peer transport** (via a public signalling server for initial handshake). Once connected, diagram data flows directly between peers — it is not stored on or readable by the signalling server. Room links contain the room ID; anyone with the link can join the session.
-
-### Third-party assets
-
-Cloud provider icon packs (AWS, Azure, GCP, CNCF) are fetched from a CDN at runtime. No user data is sent in those requests — they are plain asset fetches.
+- Icon artwork (AWS, Azure, GCP, CNCF, developer icons) ships with the app; no icon request leaves the site.
+- Home asks GitHub's public API for the repository's star count at most once a day, without credentials.
 
 ## Response Policy
 

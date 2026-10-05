@@ -69,19 +69,19 @@ NOTE: Be sure to merge the latest from "upstream" before making a pull request!
 npm install
 
 # Start dev server
-npm run dev          # http://localhost:5173
+npm run dev          # http://localhost:3000
 
-# Run unit + integration tests (Vitest)
+# Unit + integration tests (Vitest, watch mode; add `-- --run` for one pass)
 npm test
 
-# Watch mode
-npm run test:watch
-
-# Run E2E tests (requires dev server already running)
+# E2E tests (Playwright starts its own dev server)
 npm run e2e
 
 # Lint
 npm run lint
+
+# The merge gate: typecheck, lint, unit, MCP tests and the headed @gate browser set
+npm run verify
 ```
 
 ### Pre-commit hooks
@@ -99,25 +99,11 @@ Husky runs `lint-staged` on every commit. It lints changed `.ts` / `.tsx` files 
 
 ---
 
-## Rollout Flags
+## Storage Keys Warning
 
-Gate new features behind a flag in `src/config/rolloutFlags.ts`:
-
-```ts
-export type RolloutFlagKey = 'myFeature' | /* … */;
-
-export const ROLLOUT_FLAGS = {
-  myFeature: import.meta.env.VITE_ROLLOUT_MY_FEATURE === 'true',
-};
-```
-
-Remove the flag and its dead branches once the feature is fully promoted.
-
----
-
-## Storage Key Warning
-
-Persistence keys (`flowmind_snapshots`, `flowmind-clipboard`, etc.) use a legacy prefix. **Do not rename them** without a migration path — renaming silently erases existing user browser data.
+Documents live in the IndexedDB database `openflowkit-persistence`; settings use `openflowkit-v2-*` and `ofk.*` localStorage
+keys. **Do not rename a store or key** without a migration that reads the old one: a rename silently loses every
+user's data. v1 rows are read by the importer and never written.
 
 ---
 
