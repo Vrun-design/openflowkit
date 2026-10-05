@@ -23,6 +23,7 @@ import { frameDrawList } from '../../domain/animation/drawList';
 import { exportMotionFrameSvg } from './animatedSvg';
 import { svgViewBox } from './canonicalSvg';
 import { paintFrame } from './framePainter';
+import { INTER_URL } from './raster';
 import { motionBitrate, motionCanvasSize, motionFrameIntervalMs, motionFrameTimes, type MotionSize } from './motionSchedule';
 
 interface StartMessage {
@@ -181,7 +182,19 @@ function enqueue(state: Session, work: () => Promise<void>): void {
   });
 }
 
+// A worker cannot see the page's fonts: the canvas's Inter is loaded here once, or labels
+// fall back to the system face (which they still do, rather than fail, if it cannot load).
+let interLoaded: Promise<unknown> | null = null;
+function loadInter(): Promise<unknown> {
+  interLoaded ??= (async () => {
+    const face = new FontFace('Inter', `url(${INTER_URL})`, { weight: '400 700' });
+    (self as unknown as { fonts: FontFaceSet }).fonts.add(await face.load());
+  })().catch(() => undefined);
+  return interLoaded;
+}
+
 async function start(message: StartMessage): Promise<void> {
+  await loadInter();
   const page = message.document.pages.find(({ id }) => id === message.pageId)
     ?? message.document.pages[0];
   if (!page) throw new Error('The page to animate was not found.');

@@ -188,9 +188,9 @@ async function diffCanvasAndStill(
     const frame = await load(frameUrl as string);
     const width = frame.naturalWidth;
     const height = frame.naturalHeight;
-    const stillImage = await load(
-      `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup as string)}`, width, height,
-    );
+    const exportable = await (window as unknown as { __V2__: { embedExportFonts(svg: string): Promise<string> } })
+      .__V2__.embedExportFonts(markup as string);
+    const stillImage = await load(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(exportable)}`, width, height);
     const pixels = (image: HTMLImageElement) => {
       const canvas = document.createElement('canvas');
       canvas.width = width;

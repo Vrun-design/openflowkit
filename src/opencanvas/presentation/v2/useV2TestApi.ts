@@ -8,6 +8,7 @@ import { frameDrawList } from '../../domain/animation/drawList';
 import { svgViewBox } from '../../infrastructure/export/canonicalSvg';
 import { motionCanvasSize } from '../../infrastructure/export/motionSchedule';
 import { paintFrame } from '../../infrastructure/export/framePainter';
+import { withEmbeddedInter } from '../../infrastructure/export/raster';
 import { animatedSvgFor, motionFrameSvgFor, motionTimeline, timelineDuration } from './v2Motion';
 import type { V2Tool } from './V2CreationToolbar';
 import type { V2SaveStatus } from './useV2Autosave';
@@ -80,6 +81,8 @@ export function useV2TestApi(options: V2TestApiOptions) {
           stillAt: (tMs: number) => motionFrameSvgFor({ ...request, timeline }, tMs),
         };
       },
+      // What the encoder does to an SVG frame before it rasterises it.
+      embedExportFonts: withEmbeddedInter,
       // The frame renderer's own output at the export size, as a PNG; null
       // when the frame is a fallback (the encoder rasterises the SVG instead).
       // The parity gate rasterises the SVG still into the same pixels and

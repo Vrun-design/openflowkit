@@ -9,6 +9,7 @@ import { frameAt } from '../../domain/animation/frame';
 import { frameDrawList } from '../../domain/animation/drawList';
 import { exportMotionFrameSvg } from './animatedSvg';
 import { svgViewBox } from './canonicalSvg';
+import { withSvgImage } from './raster';
 import { paintFrame } from './framePainter';
 import {
   motionCanvasSize, motionFrameIntervalMs, motionFrameTimes,
@@ -59,20 +60,11 @@ function abortError(): Error {
 async function decodeFrame(
   svg: string, width: number, height: number, canvas: OffscreenCanvas, context: OffscreenCanvasRenderingContext2D,
 ): Promise<ImageBitmap> {
-  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
-  try {
-    const image = new Image();
-    image.decoding = 'async';
-    image.width = width;
-    image.height = height;
-    image.src = url;
-    await image.decode();
+  return withSvgImage(svg, width, height, (image) => {
     context.clearRect(0, 0, width, height);
     context.drawImage(image, 0, 0, width, height);
     return canvas.transferToImageBitmap();
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  });
 }
 
 /**
@@ -155,19 +147,8 @@ export async function renderMotionFile(request: MotionEncodeRequest): Promise<Mo
 }
 
 /** The MediaRecorder fallback draws into a real canvas, so it decodes plainly. */
-async function fallbackFrameBitmap(svg: string, width: number, height: number): Promise<ImageBitmap> {
-  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
-  try {
-    const image = new Image();
-    image.decoding = 'async';
-    image.width = width;
-    image.height = height;
-    image.src = url;
-    await image.decode();
-    return await createImageBitmap(image, 0, 0, width, height);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+function fallbackFrameBitmap(svg: string, width: number, height: number): Promise<ImageBitmap> {
+  return withSvgImage(svg, width, height, (image) => createImageBitmap(image, 0, 0, width, height));
 }
 
 function waitUntil(deadline: number, signal?: AbortSignal): Promise<void> {
