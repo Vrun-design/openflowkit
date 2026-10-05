@@ -53,6 +53,10 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **A diagram names its document.** Starting from a template, an import or Generate in an untitled document names
+  it after the diagram's `title:`, in the same undo step, so Home is not a wall of "Untitled diagram".
+- Home and first paint load less than half the JavaScript they did (566 KB → 231 KB): the v1 importer, the agent
+  op registry and the Structurizr/D2 converters load when first used.
 - **Failures say what happened and what to do.** No WebGL: the canvas says how to turn it on, hides the drawing
   tools and offers Diagram as code and All diagrams (the old link went nowhere). Blocked or full storage, a damaged
   diagram, an unreadable old link, a broken file, and an agent bridge with nothing listening (it names the port) each
@@ -82,6 +86,8 @@ Their work shipped in v1; v2 is a rewrite, so the code itself did not carry over
 
 ### Fixed
 
+- The Docker image's CSP blocked the local agent bridge and custom AI endpoints; it now matches the hosted one.
+- Home asked GitHub for the star count on every visit while rate-limited or offline; a failed lookup now waits a day.
 - **Code panel:** long lines wrap instead of scrolling sideways, with the highlight wrapping at the same places;
   ⌘Z undoes a Tab or an accepted completion (it did nothing); a CRLF file highlights and jumps to diagnostics on the
   right line; Enter during IME composition no longer picks a completion.
@@ -116,6 +122,7 @@ Their work shipped in v1; v2 is a rewrite, so the code itself did not carry over
 
 ### Removed
 
+- The Slides workspace button: it opened a mock-up that saved nothing. It returns when slides are real.
 - The `gh-pages` deploy script and `public/CNAME`; the app deploys on Cloudflare Pages.
 
 ## [2.0.0] — 2026-09-22

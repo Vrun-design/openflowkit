@@ -13,9 +13,9 @@ new agent surface. What changed and why: [CHANGELOG.md](CHANGELOG.md).
 
 - **Canvas that keeps up.** Pixi/WebGL renderer, zoom-to-cursor, connectors that bind to
   sides and never leave a stale route, one undo step per intent.
-- **Diagram as code.** Eight families — flowchart, architecture, sequence, state, ERD,
-  class, gitgraph, mindmap — behind one forgiving line-oriented DSL, with a deterministic
-  serializer: `serialize(parse(text)) == text`.
+- **Diagram as code.** Eight diagram families — flowchart, architecture, sequence, state,
+  ERD, class, gitgraph, mindmap — plus charts and wireframes, behind one forgiving
+  line-oriented DSL, with a deterministic serializer: `serialize(parse(text)) == text`.
 - **Agents are first-class.** An MCP server drives the *live* editor through a local
   bridge, or works on `.openflow.json` files. Bring your own key for generation inside
   the app. No account, no cloud, no telemetry.
@@ -42,7 +42,7 @@ flowchart
 
 ```bash
 npm install
-npm run dev              # http://localhost:5173/  → the canvas
+npm run dev              # http://localhost:3000/  → the canvas
 npm run typecheck        # tsc -b
 npm run lint             # eslint
 npm run test -- --run    # vitest (unit + goldens)
@@ -67,7 +67,8 @@ title: Image upload
   Resize -> Bucket [icon: aws/storage-simple-storage-service, cylinder]
 ```
 
-- Paste Mermaid and press <kbd>⌘⇧M</kbd>: it converts, with an honest loss list.
+- Paste Mermaid, Structurizr DSL or D2 and press <kbd>⌘⇧M</kbd>: it converts, with an
+  honest loss list.
 - Right-click a frame → **Edit as code** to reopen its source; the serializer only
   rewrites the frame, never the rest of the page.
 - Motion is part of the text too: an `animate` block names the steps an export plays, and
