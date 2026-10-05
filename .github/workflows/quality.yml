@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -34,6 +34,16 @@ jobs:
       - name: Run E2E suite (software WebGL; @local specs need a GPU)
         run: npm run e2e:ci
 
+      # Flaky tests pass on retry and leave the job green; their first-failure traces still land here.
+      - name: Upload failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-traces
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   docs:
     runs-on: ubuntu-latest
 
@@ -44,7 +54,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
