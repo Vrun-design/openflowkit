@@ -21,10 +21,8 @@ function DocsSiteRedirect(): null {
   return null;
 }
 
-const EditorPage = lazy(async () => {
-  const module = await import('@/opencanvas/presentation/v2/V2EditorPage');
-  return { default: module.V2EditorPage };
-});
+const loadEditor = () => import('@/opencanvas/presentation/v2/V2EditorPage');
+const EditorPage = lazy(async () => ({ default: (await loadEditor()).V2EditorPage }));
 
 // A first visit lands on the newest diagram brought over from v1, if the import finishes
 // within 2 s; otherwise a new document, and the import carries on in the background.
@@ -36,6 +34,8 @@ function HomeDocument(): React.JSX.Element | null {
     if (target) return undefined;
     let live = true;
     const fresh = mintV2Id('doc');
+    // The editor downloads while the v1 check runs; it is where this route lands either way.
+    void loadEditor();
     void Promise.race([
       // Loaded on demand: the converter it carries is the biggest thing a first paint never needs.
       import('@/services/storage/v2/v1Import').then(({ runV1Import }) => runV1Import())
