@@ -3,7 +3,7 @@ import { slugifyDslId } from '../text';
 import {
   ELEMENT_KINDS, ELEMENT_KINDS_WITH_CHILDREN, FLOW_STEP_KINDS, VIEW_KINDS,
   type ArchElement, type ArchModel, type ArchRelation, type ArchView,
-  type ElementKind, type FlowStep, type FlowStepKind, type ViewKind,
+  type ElementKind, type FlowStep, type FlowStepKind, type ViewKind, type ViewRuleWhere,
 } from './types';
 
 /**
@@ -270,6 +270,24 @@ function stepFromJson(value: unknown): FlowStep | null {
   };
 }
 
+function whereFromJson(value: unknown): ViewRuleWhere | undefined {
+  if (!isRecord(value)) return undefined;
+  const where: Record<string, unknown> = {};
+  for (const key of ['kind', 'kindNot', 'tag', 'tagNot'] as const) {
+    if (value[key] === undefined) continue;
+    if (typeof value[key] !== 'string' || !value[key]) return undefined;
+    where[key] = value[key];
+  }
+  for (const key of ['all', 'any'] as const) {
+    if (value[key] === undefined) continue;
+    if (!Array.isArray(value[key]) || !value[key].length) return undefined;
+    const clauses = value[key].map(whereFromJson);
+    if (clauses.some((clause) => !clause)) return undefined;
+    where[key] = clauses;
+  }
+  return Object.keys(where).length ? where as ViewRuleWhere : undefined;
+}
+
 function viewFromJson(value: unknown): ArchView | null {
   if (!isRecord(value)) return null;
   const { id, kind, name } = value;
@@ -281,15 +299,14 @@ function viewFromJson(value: unknown): ArchView | null {
       const arrow = isRecord(rule.arrow)
         ? { ...(typeof rule.arrow.from === 'string' ? { from: rule.arrow.from } : {}), ...(typeof rule.arrow.to === 'string' ? { to: rule.arrow.to } : {}) }
         : undefined;
-      const where = isRecord(rule.where)
-        ? { ...(typeof rule.where.kind === 'string' ? { kind: rule.where.kind } : {}), ...(typeof rule.where.tag === 'string' ? { tag: rule.where.tag } : {}), ...(typeof rule.where.tagNot === 'string' ? { tagNot: rule.where.tagNot } : {}) }
-        : undefined;
+      const where = whereFromJson(rule.where);
+
       return [{
         op: rule.op === 'exclude' ? 'exclude' as const : 'include' as const,
         subject: rule.subject,
         ...(arrow && (arrow.from || arrow.to) ? { arrow } : {}),
-        ...(where && (where.kind || where.tag || where.tagNot) ? { where } : {}),
-        ...(typeof rule.raw === 'string' ? { raw: rule.raw } : {}),
+        ...(where ? { where } : {}),
+        ...(typeof rule.raw === 'string' ? { raw: rule.raw } : rule.where !== undefined && !where ? {raw: `${rule.op} ${rule.subject} where invalid-saved-predicate`} : {}),
         ...(typeof rule.line === 'number' ? { line: rule.line } : {}),
       }];
     })

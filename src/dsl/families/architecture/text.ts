@@ -1,5 +1,5 @@
 import { createArchIndex, elementAncestors, elementPathRef, type ArchIndex } from '../../model/model';
-import type { ArchElement, ArchFlow, ArchModel, ArchRelation, ArchView, FlowStep } from '../../model/types';
+import type { ArchElement, ArchFlow, ArchModel, ArchRelation, ArchView, FlowStep, ViewRuleWhere } from '../../model/types';
 import { dslFrameRaw, type CanonicalAttribute, type DslFrameScene } from '../../sceneMeta';
 import { attributeText, quote, slugifyDslId } from '../../text';
 import { canonicalColorWord, sortAttributes } from '../../vocabulary';
@@ -206,15 +206,17 @@ function ruleText(rule: ArchView['rules'][number]): string {
   const subject = rule.arrow
     ? `${rule.arrow.from ?? ''} -> ${rule.arrow.to ?? ''}`.trim()
     : rule.subject;
-  const tag = (value: string) => value.startsWith('@') ? value : `@${value}`;
-  const where = rule.where?.kind
-    ? ` where kind is ${rule.where.kind}`
-    : rule.where?.tag
-      ? ` where tag is ${tag(rule.where.tag)}`
-      : rule.where?.tagNot
-        ? ` where tag is not ${tag(rule.where.tagNot)}`
-        : '';
+  const where = rule.where ? ` where ${whereText(rule.where)}` : '';
   return `${rule.op} ${subject}${where}`.trim();
+}
+
+function whereText(where: ViewRuleWhere): string {
+  if (where.any) return where.any.map(whereText).join(' or ');
+  if (where.all) return where.all.map(whereText).join(' and ');
+  if (where.kind) return `kind is ${where.kind}`;
+  if (where.kindNot) return `kind is not ${where.kindNot}`;
+  const value = where.tag ?? where.tagNot ?? '';
+  return `tag is ${where.tagNot ? 'not ' : ''}${/\s|^(?:@?and|@?or)$/i.test(value) ? quoted(value) : value.startsWith('@') ? value : `@${value}`}`;
 }
 
 function flowsText(model: ArchModel): string[] {

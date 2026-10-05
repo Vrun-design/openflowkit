@@ -1,3 +1,4 @@
+import { dslFrameRaw } from '../../../dsl/sceneMeta';
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type { CanvasCamera } from '../../domain/camera/types';
 import type { DocumentCommand } from '../../domain/commands/types';
@@ -66,6 +67,10 @@ export function useV2LabelEditing(options: V2LabelEditingOptions) {
       const node = optionsRef.current.page?.nodes.find((candidate) => candidate.id === nodeId);
       // Groups are invisible containers, and some widgets (an image, a divider)
       // draw no label: nothing to edit.
+      if (node?.kind === 'frame' && typeof dslFrameRaw(node).viewTitle === 'string') {
+        optionsRef.current.announce('This title comes from the architecture view. Edit it in diagram source.');
+        return;
+      }
       if (node?.kind === 'group' || (node?.kind === 'widget' && !widgetLabelBox(node))) return;
       const bounds = node && hostRef.current?.getNodeLabelScreenBounds(nodeId);
       if (!node || !bounds) {

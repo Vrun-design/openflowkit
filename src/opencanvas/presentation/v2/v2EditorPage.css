@@ -590,7 +590,7 @@
   .ofk-v2-divider { margin: 0 2px; }
   .ofk-v2-welcome-center { left: 54%; width: calc(100% - 150px); }
   .ofk-v2-welcome h1 { font-size: 21px; }
-  .ofk-v2-welcome-keys { flex-wrap: wrap; gap: 8px; }
+  .ofk-v2-welcome-keys { display: none; }
   .ofk-v2-welcome-actions { margin-top: 22px; }
   .ofk-v2-welcome-actions .ofk-button { width: 100%; }
 }
@@ -601,7 +601,7 @@
   /* Start under the rail instead of centring behind it; templates scroll as one row. */
   .ofk-v2-welcome-center { top: 136px; transform: translateX(-50%); }
   .ofk-v2-welcome-center > img { width: 36px; height: 36px; margin-bottom: 14px; }
-  .ofk-v2-welcome-templates { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; scrollbar-width: none; margin-inline: -4px; padding: 2px 4px 4px; }
+  .ofk-v2-welcome-templates { flex-wrap: wrap; justify-content: flex-start; gap: 8px; }
   .ofk-v2-welcome-templates > span { display: none; }
   .ofk-v2-welcome-templates .ofk-button { flex: none; }
 }
@@ -1068,3 +1068,20 @@
 .ofk-v2-tip-dot { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--ofk-accent); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ofk-accent) 40%, transparent); animation: ofk-v2-tip-ping 1.6s ease-out 3; }
 @keyframes ofk-v2-tip-ping { 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
 @media (prefers-reduced-motion: reduce) { .ofk-v2-tip-dot { animation: none; } }
+
+.ofk-v2-model-tree-item { display: flex; align-items: center; }
+.ofk-v2-model-expand { flex: none; width: 28px; min-height: 32px; border: 0; background: transparent; color: var(--ofk-muted); cursor: pointer; }
+.ofk-v2-model-expand:focus-visible { outline: 2px solid var(--ofk-focus); border-radius: 4px; }
+.ofk-v2-model-tree-item .ofk-v2-model-row { flex: 1; min-width: 0; min-height: 32px; }
+.ofk-v2-model-detail { padding-block: 12px; border-top: 1px solid var(--ofk-border); }
+.ofk-v2-model-relationships summary { cursor: pointer; font-weight: 600; }
+.ofk-v2-model-relationships li { display: grid; gap: 3px; padding-block: 6px; }
+@media (pointer: coarse) {
+ .ofk-v2-model-expand, .ofk-v2-model-row, .ofk-v2-model-tag { min-height: 44px; }
+}
+
+.ofk-v2-model-field select { width: 100%; min-height: 36px; padding: 7px 8px; background: var(--ofk-surface); color: var(--ofk-text); border: 1px solid var(--ofk-border); border-radius: 6px; font: inherit; }
+.ofk-v2-flow-message { margin: 0; min-width: 0; padding: 10px; border: 1px solid var(--ofk-border); border-radius: 8px; }
+
+.ofk-v2-model-relation-link { border: 0; padding: 2px; background: none; color: var(--ofk-accent); font: inherit; text-decoration: underline; cursor: pointer; }
+.ofk-v2-model-relation-link:focus-visible { outline: 2px solid var(--ofk-focus); }

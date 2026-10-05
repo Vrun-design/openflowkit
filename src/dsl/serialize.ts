@@ -24,7 +24,7 @@ export function serialize(scene: DslFrameScene): string {
   const meta = dslFrameMeta(frame);
   const raw = dslFrameRaw(frame);
   const direction = meta.direction && meta.direction !== dslFamilyDirection(meta.family) ? meta.direction : undefined;
-  const title = typeof frame.content.label === 'string' && frame.content.label.length > 0 ? frame.content.label : meta.title;
+  const title = typeof raw.viewTitle === 'string' ? meta.title : typeof frame.content.label === 'string' && frame.content.label.length > 0 ? frame.content.label : meta.title;
   // A family may need words on its header line (the chart kind, for one).
   const header = [meta.family, ...(meta.familyHeader ?? []), ...(direction ? [direction] : [])];
   const lines: string[] = ['%% ofk 1', header.join(' ')];

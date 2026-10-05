@@ -14,7 +14,6 @@ import {
   IconArchive,
   IconLoader2,
   IconLock,
-  IconPlugConnected,
 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import type { SceneDocumentV1 } from '../../domain/document/types';
@@ -38,7 +37,6 @@ import {
 } from '../design-system';
 import type { V2SaveStatus } from './useV2Autosave';
 import { V2PagesMenu } from './V2PagesMenu';
-import type { V2BridgeStatus } from './useV2AgentBridge';
 import type { useV2Pages } from './useV2Pages';
 import { isWorkspacePickerSupported } from '../../../services/workspace/workspaceFolder';
 
@@ -47,7 +45,6 @@ interface V2DocumentBarProps extends V2SettingsProps {
   /** Active page id; export and page controls act on it. */
   readonly pageId: string;
   readonly pages: ReturnType<typeof useV2Pages>;
-  readonly bridge: { readonly status: V2BridgeStatus; readonly onOpen: () => void };
   readonly saveStatus: V2SaveStatus;
   readonly readOnly: boolean;
   readonly onRetrySave: () => void;
@@ -224,20 +221,11 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               Reload
             </Button>
           ) : null}
-          <Tooltip content={props.bridge.status === 'connected'
-            ? 'Agent connected — click to manage'
-            : 'Connect agent (MCP)'}>
-            <IconButton variant="quiet"
-              label="Connect agent"
-              data-bridge-status={props.bridge.status}
-              icon={<Icon icon={IconPlugConnected} />}
-              onClick={props.bridge.onOpen} />
-          </Tooltip>
           <Tooltip content="Pages">
             <Button ref={pagesRef} variant="quiet" aria-expanded={panel === 'pages'} aria-haspopup="dialog"
               aria-label={`Pages (current: ${activePageName})`}
               onClick={() => togglePanel('pages')}>
-              {activePageName}
+              {props.breadcrumb?.length ? 'Pages' : activePageName}
               {props.pages.pages.length > 1 ? <span className="ofk-v2-page-total">{` / ${props.pages.pages.length}`}</span> : null}
             </Button>
           </Tooltip>

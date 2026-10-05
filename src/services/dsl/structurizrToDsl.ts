@@ -158,7 +158,8 @@ type RulePart =
   | { readonly kind: 'predecessors'; readonly ref: string }
   | { readonly kind: 'pair'; readonly from: string; readonly to: string }
   | { readonly kind: 'where-kind'; readonly value: string }
-  | { readonly kind: 'where-tag'; readonly value: string };
+  | { readonly kind: 'where-tag'; readonly value: string }
+  | { readonly kind: 'where-compound'; readonly value: string };
 
 interface DraftRule {
   readonly op: 'include' | 'exclude';
@@ -404,6 +405,10 @@ function isSafeWord(value: string): boolean {
 
 function quoted(value: string): string {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
+}
+
+function tagPredicate(value: string): string {
+  return `tag is ${/\s|^(and|or)$/i.test(value) ? quoted(value) : `@${value}`}`;
 }
 
 class StructurizrConverter {
@@ -750,14 +755,24 @@ class StructurizrConverter {
     };
     if (!body) return unsupported();
     const parts: RulePart[] = [];
+    const alternatives: string[] = [];
     for (const alternative of body.split(' || ')) {
+      const group: RulePart[] = [];
       for (const atom of alternative.split(' && ')) {
         const classified = classifyRuleAtom(atom);
         if (!classified) return unsupported();
-        parts.push(...classified);
+        group.push(...classified);
       }
+      if (body.includes('&&')) {
+        if (!group.every((part) => part.kind === 'where-kind' || part.kind === 'where-tag')) return unsupported();
+        alternatives.push(group.map((part) => {
+          if (part.kind === 'where-kind') return `kind is ${part.value}`;
+          if (part.kind === 'where-tag') return tagPredicate(part.value);
+          return '';
+        }).join(' and '));
+      } else parts.push(...group);
     }
-    if (body.includes('&&')) this.loss(statement.line, `view expression "${body}" conjunction flattened to a union`);
+    if (alternatives.length) parts.push({kind: 'where-compound', value: alternatives.join(' or ')});
     return [{ op, parts }];
   }
 
@@ -952,12 +967,6 @@ class StructurizrConverter {
         this.loss(draft.line, `relation ${draft.from ?? '->'} -> ${draft.to} dropped: endpoints in different environments`);
         continue;
       }
-      if (from.env && !this.commonNode(from, to)) {
-        // ponytail: a deployment relation is read inside a node block (§9), so one between two
-        // top-level nodes has nowhere to live. Add top-level deployment relations if a file needs one.
-        this.loss(draft.line, `deployment relation ${from.name} -> ${to.name} dropped: no deployment node holds both ends`);
-        continue;
-      }
       let tags = draft.tags;
       if (!draft.label && !draft.tech && tags.length > 0) {
         this.loss(draft.line, `relation ${from.name} -> ${to.name} tags dropped: no description to carry them`);
@@ -1148,6 +1157,7 @@ class StructurizrConverter {
       if (roots.length === 0) continue;
       lines.push(`deployment ${quote(env)} {`);
       for (const root of roots) this.emitElement(lines, root, '  ', relations);
+      for (const relation of relations) if (relation.from.env === env && !this.sharedScope(relation)) lines.push(`  ${this.relationText(relation)}`);
       lines.push('}');
     }
   }
@@ -1202,10 +1212,12 @@ class StructurizrConverter {
           return [`${rule.op} -> ${this.ruleRef(part.ref)}`];
         case 'pair':
           return [`${rule.op} ${this.ruleRef(part.from)} -> ${this.ruleRef(part.to)}`];
+        case 'where-compound':
+          return [`${rule.op} * where ${part.value}`];
         case 'where-kind':
           return [`${rule.op} * where kind is ${part.value}`];
         case 'where-tag':
-          return [`${rule.op} * where tag is @${part.value}`];
+          return [`${rule.op} * where ${tagPredicate(part.value)}`];
       }
     });
   }

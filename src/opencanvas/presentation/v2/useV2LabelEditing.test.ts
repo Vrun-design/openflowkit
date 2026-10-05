@@ -103,3 +103,12 @@ describe('useV2LabelEditing', () => {
     expect(commit).toHaveBeenCalledTimes(2);
   });
 });
+
+ it('keeps derived architecture view titles out of the generic label editor', () => {
+    const node = createTestNode('view', {kind: 'frame', content: {label: 'container of Shop'}, metadata: {dsl: {viewTitle: 'container of Shop'}}});
+    const announce = vi.fn();
+    const {result} = renderHook(() => useV2LabelEditing({page: createTestDocument({nodes: [node]}).pages[0]!, hostRef: {current: null}, camera: DEFAULT_CANVAS_CAMERA, commit: vi.fn(), announce, focusCanvas: vi.fn()}));
+    act(() => result.current.openEditor(node.id));
+    expect(result.current.editing).toBeNull();
+    expect(announce).toHaveBeenCalledWith('This title comes from the architecture view. Edit it in diagram source.');
+  });

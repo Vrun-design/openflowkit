@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compile, compileWorkspace } from '../../dsl/compile';
+import { dslFrameRaw } from '../../dsl/sceneMeta';
+import { archModelFromJson } from '../../dsl/model/model';
 import { format } from '../../dsl/serialize';
 import { looksLikeStructurizr, structurizrToDsl, type StructurizrConversion } from './structurizrToDsl';
 
@@ -131,7 +133,7 @@ describe('elements', () => {
     expect(result.dsl).toContain('x = container Web API [desc: desc] {');
     expect(result.dsl).toContain('component Router');
     await expectClean(result.dsl);
-    const compiled = await compile(result.dsl);
+    const compiled = await compile(`${result.dsl}\nviews {view custom Imported {include x.**}}`);
     expect(compiled.groups.map((group) => group.id)).toEqual(['x']);
     expect(compiled.nodes.map((node) => node.id)).toEqual(['x.router']);
   });
@@ -366,16 +368,26 @@ describe('views', () => {
     await expectIdempotent(result.dsl);
   });
 
-  it('flattens && conjunctions to a union with a loss', async () => {
+  it('preserves supported && conjunctions', async () => {
     const result = convert(`${WORKSPACE}
       views {
         container Shop {
           include element.type==Container && element.tag==core
         }
       }`);
-    expect(result.dsl).toContain('include * where kind is container');
-    expect(result.dsl).toContain('include * where tag is @core');
-    expect(result.losses.some((loss) => loss.includes('conjunction flattened to a union'))).toBe(true);
+    expect(result.dsl).toContain('include * where kind is container and tag is @core');
+    expect(result.losses.some((loss) => loss.includes('conjunction flattened to a union'))).toBe(false);
+    await expectCleanAndIdempotent(result.dsl);
+  });
+
+  it('preserves single tag filters containing logical operator words', async () => {
+    const result = convert(`workspace {
+      model { softwareSystem Shop { tags "foo or bar" } }
+      views { systemLandscape { exclude element.tag=="foo or bar" } }
+    }`);
+    expect(result.dsl).toContain('exclude * where tag is "foo or bar"');
+    expect(result.losses).toEqual([]);
+    expect(await viewElementIds(result.dsl)).toEqual([]);
     await expectCleanAndIdempotent(result.dsl);
   });
 
@@ -624,7 +636,9 @@ describe('fixture corpus', () => {
 
   it('01-web-3tier: components, deployment instances and styles', async () => {
     const result = convert(fixtures['./fixtures/structurizr/01-web-3tier.txt']!);
-    const ids = await viewElementIds(result.dsl);
+    const compiled = await compile(result.dsl);
+    const raw = dslFrameRaw(compiled.frame).arch as {model?: unknown};
+    const ids = archModelFromJson(raw.model)!.elements.map((element) => element.id);
     expect(ids).toContain('banking');
     expect(ids).toContain('banking.web');
     expect(ids).toContain('banking.web.sign-in-controller');
@@ -666,7 +680,7 @@ describe('fixture corpus', () => {
   it('04-styles-expressions: styles copied and unsupported expressions kept', async () => {
     const result = convert(fixtures['./fixtures/structurizr/04-styles-expressions.txt']!);
     expect(result.dsl).toContain('include * where kind is container');
-    expect(result.dsl).toContain('include * where tag is @critical');
+    expect(result.dsl).toContain('include * where kind is container and tag is @critical');
     expect(result.dsl).toContain('include -> Warehouse');
     expect(result.dsl).toContain('include Warehouse ->');
     expect(result.dsl).toContain('include element.parent==Collector');
@@ -677,7 +691,7 @@ describe('fixture corpus', () => {
     for (const loss of ['perspectives dropped', 'properties dropped', 'theme dropped', 'branding dropped', 'terminology dropped', '!docs docs dropped', '!adrs adrs dropped', '!include extra.dsl dropped']) {
       expect(result.losses).toContain(loss);
     }
-    expect(result.losses.some((loss) => loss.includes('conjunction flattened to a union'))).toBe(true);
+    expect(result.losses.some((loss) => loss.includes('conjunction flattened to a union'))).toBe(false);
     expect(result.losses.some((loss) => loss.includes('no OFK equivalent'))).toBe(true);
     await expectClean(result.dsl);
   });
@@ -716,3 +730,18 @@ describe('real workspaces (structurizr/structurizr test corpus)', () => {
     expect(real('getting-started').losses.filter((loss) => loss.startsWith('autoLayout'))).toEqual([]);
   });
 });
+
+ it('imports relations between separate deployment nodes without dropping them', async () => {
+    const result = convert(`workspace {model {
+ softwareSystem Shop
+ deploymentEnvironment Prod {
+  edge = deploymentNode Edge
+  server = deploymentNode Server
+  edge -> server "forwards" "HTTPS"
+ }
+} views {deployment Shop Prod {include *}}}`);
+    expect(result.losses.some((loss) => loss.includes('relation') && loss.includes('dropped'))).toBe(false);
+    const workspace = await compileWorkspace(result.dsl);
+    expect(workspace.views[0]!.result.connectors.map((connector) => connector.labels[0]?.text)).toEqual(['forwards [HTTPS]']);
+    await expectCleanAndIdempotent(result.dsl);
+  });

@@ -193,7 +193,9 @@ function assembleResult(options: AssembleOptions): CompileResult {
     id: frameId, kind: 'frame', parentId: null, layerId: 'default', zIndex: 0,
     transform: { translation: { ...origin }, rotationRadians: 0, scale: { x: 1, y: 1 } },
     size: scene.size,
-    content: { label: title ?? '' },
+    content: { label: typeof scene.meta?.viewTitle === 'string' ? scene.meta.viewTitle : title ?? '',
+      ...(typeof scene.meta?.viewKey === 'string' ? {subLabel: scene.meta.viewKey} : {}),
+    },
     appearance: {}, ports: [],
     metadata: {
       dsl: {

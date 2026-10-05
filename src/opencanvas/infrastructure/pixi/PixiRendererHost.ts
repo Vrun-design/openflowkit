@@ -203,7 +203,7 @@ export class PixiRendererHost {
     this.app.stage.addChild(this.dotGrid.graphics, this.world, this.focusOverlay.veil, this.marquee);
     const canvas = this.app.canvas as HTMLCanvasElement;
     canvas.className = 'pixi-spike__canvas';
-    canvas.setAttribute('aria-label', 'PixiJS OpenCanvas renderer spike');
+    canvas.setAttribute('aria-label', 'Diagram drawing surface');
     canvas.addEventListener('webglcontextlost', this.handleContextLost);
     canvas.addEventListener('webglcontextrestored', this.handleContextRestored);
     container.appendChild(canvas);

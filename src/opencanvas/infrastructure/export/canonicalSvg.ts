@@ -1,3 +1,4 @@
+import { architectureCardLayout } from '../../domain/nodes/architectureCardLayout';
 import { FONT_STACKS, resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import { resolveAnnotationVisualStyle, resolveTextVisualStyle } from '@/theme';
 import { nodePaletteName } from '../../domain/nodes/nodePalette';
@@ -33,6 +34,7 @@ import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worl
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { descendantIds } from '../../domain/scene/queries';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
+import { measurePortableText } from '../../domain/text/measurement';
 import { cameraFitMatrix } from '../../domain/animation/camera';
 import { PULSE_DASH } from '../../domain/animation/frame';
 import type { ElementFrameState, FrameState } from '../../domain/animation/types';
@@ -404,25 +406,42 @@ function connectorPathData(commands: ReturnType<typeof projectPageConnectors>[nu
   ).join(' ');
 }
 
+const SUB_LABEL_SIZE = 11;
+
 // The label sits in `nodeLabelBounds`, the rect the Pixi renderers and the DOM
 // editor use: a frame's title band, the canvas below an icon plate, a shape's inset.
-function labelElement(style: NodeStyle, box: Bounds2d, label: string, subLabel: string, clipId: string | null): string {
+function labelElement(style: NodeStyle, box: Bounds2d, label: string, subLabel: string, clipId: string | null, node: SceneNode): string {
   const padding = style.textPadding;
   const x = style.textAlign === 'start' ? box.x + padding
     : style.textAlign === 'end' ? box.x + box.width - padding : box.x + box.width / 2;
   const anchor = style.textAlign === 'start' ? 'start' : style.textAlign === 'end' ? 'end' : 'middle';
   const baseline = style.textVerticalAlign === 'top' ? 'hanging' : style.textVerticalAlign === 'bottom' ? 'auto' : 'middle';
-  const y = style.textVerticalAlign === 'top' ? box.y + padding
-    : style.textVerticalAlign === 'bottom' ? box.y + box.height - padding
-      : box.y + box.height / 2;
+  // The sub-label wraps like the canvas draws it (PixiNodeRenderer): 11px/400, the
+  // node's width less padding, its sizing policy's line cap and overflow.
+  const sizing = resolveNodeSizingPolicy(node);
+  const subLines = subLabel ? measurePortableText(subLabel, {
+    fontSize: SUB_LABEL_SIZE, fontWeight: 400, lineHeight: SUB_LABEL_SIZE * 1.2,
+    ...(sizing.overflow === 'visible' ? {} : { maxWidth: Math.max(1, node.size.width - padding * 2), maxLines: sizing.maxLines, overflow: sizing.overflow }),
+  }).lines : [];
+  // Label and sub-label stack as one block, 4px apart, like `layoutNodeContent`.
+  const labelHeight = style.fontSize * style.lineHeight;
+  const blockHeight = subLines.length ? labelHeight + 4 + subLines.length * SUB_LABEL_SIZE * 1.2 : 0;
+  const blockTop = style.textVerticalAlign === 'top' ? box.y + padding
+    : style.textVerticalAlign === 'bottom' ? box.y + box.height - padding - blockHeight
+      : box.y + (box.height - blockHeight) / 2;
+  const y = subLines.length ? blockTop + labelHeight / 2
+    : style.textVerticalAlign === 'top' ? box.y + padding
+      : style.textVerticalAlign === 'bottom' ? box.y + box.height - padding
+        : box.y + box.height / 2;
+  const subY = (line: number) => blockTop + labelHeight + 4 + (line + 0.5) * SUB_LABEL_SIZE * 1.2;
   const common = `fill="${style.textColor}" font-family="${xml(FONT_STACKS[style.fontFamily])}" font-size="${number(style.fontSize)}" font-weight="${style.fontWeight}"`;
   const decoration = style.textDecoration === 'none' ? '' : ` text-decoration="${style.textDecoration}"`;
   const styleAttr = style.fontStyle === 'normal' ? common : `${common} font-style="italic"`;
   const spacing = style.letterSpacing === 0 ? '' : ` letter-spacing="${number(style.letterSpacing * style.fontSize)}"`;
   const stretch = clipId ? ` clip-path="url(#${clipId})"` : '';
   return `<g${stretch}>`
-    + `<text x="${number(x)}" y="${number(y)}" text-anchor="${anchor}" dominant-baseline="${baseline}" ${styleAttr}${decoration}${spacing}>${xml(label)}</text>`
-    + (subLabel ? `<text x="${number(x)}" y="${number(y + style.fontSize * 1.5)}" text-anchor="${anchor}" dominant-baseline="${baseline}" ${styleAttr} opacity="0.72">${xml(subLabel)}</text>` : '')
+    + `<text x="${number(x)}" y="${number(y)}" text-anchor="${anchor}" dominant-baseline="${subLines.length ? 'middle' : baseline}" ${styleAttr}${decoration}${spacing}>${xml(label)}</text>`
+    + (subLines.length ? `<text text-anchor="${anchor}" dominant-baseline="middle" fill="${style.textColor}" font-family="${xml(FONT_STACKS[style.fontFamily])}" font-size="${SUB_LABEL_SIZE}" font-weight="400" opacity="0.72">${subLines.map((line, index) => `<tspan x="${number(x)}" y="${number(subY(index))}">${xml(line)}</tspan>`).join('')}</text>` : '')
     + '</g>';
 }
 
@@ -567,6 +586,22 @@ function exportWidgetNode(
   );
 }
 
+/** Semantic C4 cards use the same header, title and metadata as the canvas. */
+function exportArchitectureCard(node: SceneNode, matrix: Matrix2d, style: NodeStyle, wrapper: ReturnType<typeof elementFrameStyle>, iconArt: CanonicalSvgExportOptions['iconArt']): string | null {
+  const presentation = resolveArchitectureNodePresentation(node);
+  if (presentation?.display !== 'architecture-card') return null;
+  const font = `fill="${style.textColor}" font-family="${xml(FONT_STACKS[style.fontFamily])}"`;
+  const layout = architectureCardLayout(node, style);
+  return nodeGroup(`data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}"`,
+    `<rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="${number(style.cornerRadius)}" fill="${safeColor(style.fill, '#f8fafc')}" stroke="${safeColor(style.stroke, '#cbd5e1')}" stroke-width="${number(style.strokeWidth)}"/>`
+    + `<rect x="10" y="8" width="${number(node.size.width - 20)}" height="26" rx="7" fill="${safeColor(style.stroke, '#cbd5e1')}" opacity="0.12"/>`
+    + textElement(layout.provider.displayText, 38, 15, `${font} font-size="10" font-weight="700" dominant-baseline="hanging"`, 12)
+    + textElement(layout.resource.displayText, node.size.width - 16, 15, `${font} font-size="10" font-weight="600" text-anchor="end" dominant-baseline="hanging"`, 12)
+    + textElement(layout.title.displayText, layout.titleX, layout.titleY, `${font} font-size="${number(style.fontSize)}" font-weight="${style.fontWeight}" dominant-baseline="hanging"`, style.fontSize * style.lineHeight)
+    + textElement(layout.detail.displayText, 12, layout.detailY, `${font} font-size="10" font-weight="500" dominant-baseline="hanging"`, 12)
+    + iconMarkup(node, iconArt), wrapper);
+}
+
 function exportNode(
   node: SceneNode,
   matrix: Matrix2d,
@@ -592,6 +627,8 @@ function exportNode(
   // One resolver for every node kind: the renderer, the label editor and the
   // exporter cannot drift. Legacy content keys are its fallbacks, not ours.
   const style = resolveNodeStyle(node, background);
+  const architecture = exportArchitectureCard(node, matrix, style, wrapper, iconArt);
+  if (architecture) return architecture;
   const basic = resolveBasicNodePresentation(node);
   const preset = framePresetOf(node);
   const outline = nodeOutline(node);
@@ -612,7 +649,8 @@ function exportNode(
       + outlineMarkup(outline, style, filter)
       + (basic ? decorationMarkup(basic.shape, node.size, style) : '')
       + (preset ? widgetPrimitivesMarkup(frameChromePrimitives(preset, node.size), resolveWidgetInks(node, style, background), style) : '')
-      + labelElement(style, nodeLabelBounds(node), label, subLabel, clip)
+      + labelElement(style, nodeLabelBounds(node), label, isContainerNodeKind(node.kind) ? '' : subLabel, clip, node)
+      + (isContainerNodeKind(node.kind) && subLabel ? textElement(subLabel, 12, node.size.height - 22, `fill="${style.textColor}" font-family="${xml(FONT_STACKS[style.fontFamily])}" font-size="10" font-weight="500" dominant-baseline="hanging"`, 12) : '')
       + iconMarkup(node, iconArt),
     wrapper
   );

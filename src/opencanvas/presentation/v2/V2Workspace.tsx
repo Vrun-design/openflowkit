@@ -50,6 +50,7 @@ export function V2WorkspaceRail({
                 selected={mode === id}
                 aria-expanded={mode === id}
                 data-live={(id === 'agent' && agentConnected) || undefined}
+                data-bridge-status={id === 'agent' ? agentConnected ? 'connected' : 'disconnected' : undefined}
                 onClick={() => onChange(id)}
               />
             </Tooltip>

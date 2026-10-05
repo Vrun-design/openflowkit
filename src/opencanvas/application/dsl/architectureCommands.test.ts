@@ -1,11 +1,14 @@
+import { createTestNode } from '../../testing/builders/documentBuilder';
+import { buildNodeWorldMatrices } from '../../domain/scene/worldGeometry';
 import { describe, expect, it } from 'vitest';
-import { compileWorkspace } from '../../../dsl/compile';
+import { compile, compileWorkspace } from '../../../dsl/compile';
+import { buildDslPageCommand, nextDslFrameOrigin } from './dslPageCommand';
 import { archModelOfPage, archViewIdOfPage, placedElementId } from '../../../dsl/model/model';
 import { applyDocumentCommand } from '../../domain/commands/execute';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { createEmptyV2Document } from '../../presentation/v2/v2Document';
 import {
-  buildArchElementEditCommand, buildArchElementRemoveCommand,
+  buildArchFlowCreateCommand, buildArchElementEditCommand, buildArchElementRemoveCommand,
   buildArchRelationCommands, buildArchUnplaceCommand, buildWorkspacePagesCommand,
 } from './architectureCommands';
 
@@ -69,7 +72,7 @@ describe('workspace pages command', () => {
       .filter((page) => archViewIdOfPage(page))
       .flatMap((page) => page.nodes)
       .find((node) => node.id === 'shop.web')!;
-    expect(web.content).toMatchObject({ label: 'Web', subLabel: 'Remix' });
+    expect(web.content).toMatchObject({ label: 'Web', subLabel: '[Container · Remix]' });
   });
 
   it('replaces a bound frame in place and is one undo step', async () => {
@@ -99,9 +102,55 @@ describe('workspace pages command', () => {
     const undone = applyDocumentCommand(applied.document, applied.inverse).document;
     expect(undone.pages[0]!.nodes.map((node) => node.id)).toEqual(['bound-frame']);
   });
+
+  it('leaves an unrelated workspace alone and adds the new one beside it', async () => {
+    const shop = await generatedDocument();
+    const bank = await compileWorkspace('architecture\nmodel {\n  person Teller\n  system Bank\n  Teller -> Bank\n}\nviews {\n  view context of Bank\n}\n');
+    const applied = applyDocumentCommand(shop, buildWorkspacePagesCommand(shop, bank, { mintId })!).document;
+    expect(applied.pages.map((page) => page.name)).toEqual(['Page 1', 'context of Shop', 'container of Shop', 'context of Bank']);
+  });
+
+  it('keeps implicit landscapes of two different models on separate pages', async () => {
+    const alice = await generatedDocument('architecture\nmodel {\n  person Alice\n  system Shop\n  Alice -> Shop\n}\n');
+    const bob = await compileWorkspace('architecture\nmodel {\n  person Bob\n  system Bank\n  Bob -> Bank\n}\n');
+    const applied = applyDocumentCommand(alice, buildWorkspacePagesCommand(alice, bob, { mintId })!).document;
+    const placed = applied.pages.map((page) => page.nodes.flatMap((node) => placedElementId(node) ?? []));
+    expect(placed.filter((ids) => ids.length)).toEqual([['alice', 'shop'], ['bob', 'bank']]);
+  });
+
+  it('regenerates the bound frame when a page holds two model diagrams', async () => {
+    const A = 'architecture\nmodel {\n  person Alice\n  system Shop\n  Alice -> Shop\n}\n';
+    const B = 'architecture\nmodel {\n  person Bob\n  system Bank\n  Bob -> Bank\n}\n';
+    let document = createEmptyV2Document('doc-3', 'Two');
+    document = applyDocumentCommand(document, buildDslPageCommand(document.pages[0]!, await compile(A))!).document;
+    const second = await compile(B, { origin: nextDslFrameOrigin(document.pages[0]!) });
+    document = applyDocumentCommand(document, buildDslPageCommand(document.pages[0]!, second)!).document;
+    const secondFrame = document.pages[0]!.nodes.filter((node) => node.kind === 'frame')[1]!;
+    const edited = await compileWorkspace(B.replaceAll('Bob', 'Robert'));
+    const applied = applyDocumentCommand(document, buildWorkspacePagesCommand(document, edited, { mintId, replaceFrameId: secondFrame.id })!).document;
+    expect(applied.pages).toHaveLength(1);
+    expect(applied.pages[0]!.nodes.flatMap((node) => placedElementId(node) ?? [])).toEqual(['alice', 'shop', 'robert', 'bank']);
+  });
 });
 
 describe('element edits', () => {
+  it('leaves another model on another page alone', async () => {
+    const alice = await generatedDocument('architecture\nmodel {\n  person Alice\n  system Shop\n  Alice -> Shop\n}\n');
+    const bob = await compileWorkspace('architecture\nmodel {\n  person Bob\n  system Bank\n  Bob -> Bank\n}\n');
+    const both = applyDocumentCommand(alice, buildWorkspacePagesCommand(alice, bob, { mintId })!).document;
+    const ids = (document: SceneDocumentV1) => document.pages.flatMap((page) => {
+      const model = archModelOfPage(page);
+      return model ? [model.elements.map((element) => element.id).join(',')] : [];
+    });
+    const renamed = apply(both, buildArchElementEditCommand(both, 'bob', { name: 'Robert' })!).document;
+    expect(ids(renamed)).toEqual(['alice,shop', 'bob,bank']);
+    const removed = applyDocumentCommand(renamed, buildArchElementRemoveCommand(renamed, 'shop')!).document;
+    expect(ids(removed)).toEqual(['alice', 'bob,bank']);
+    const related = buildArchRelationCommands(removed, 'bank', 'bob', 'pays')!;
+    const linked = applyDocumentCommand(removed, { kind: 'batch', id: 'r', label: 'r', commands: related.commands }).document;
+    expect(archModelOfPage(linked.pages.find((page) => ids({ ...linked, pages: [page] })[0] === 'alice')!)!.relations).toHaveLength(0);
+  });
+
   it('renames an element across every view as one undo step', async () => {
     const document = await generatedDocument();
     const command = buildArchElementEditCommand(document, 'shop.web', { name: 'Frontend' })!;
@@ -128,7 +177,7 @@ describe('element edits', () => {
     const web = applied.document.pages.flatMap((page) => page.nodes).find((node) => node.id === 'shop.web')!;
     expect(web.id).toBe('shop.web');
     expect(web.content.label).toBe('Web');
-    expect('subLabel' in web.content).toBe(false);
+    expect(web.content.subLabel).toBe('[Container]\nThe front door');
     const element = archModelOfPage(applied.document.pages.find((page) => archViewIdOfPage(page))!)!
       .elements.find((candidate) => candidate.id === 'shop.web')!;
     expect(element.tech).toBeUndefined();
@@ -247,3 +296,61 @@ describe('element edits', () => {
     expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(document);
   });
 });
+
+ it('removes obsolete workspace views, retaining unrelated pages and reversible history', async () => {
+    const before = await generatedDocument();
+    const workspace = await compileWorkspace(WORKSPACE.replace('  view context of Shop\n', ''));
+    const applied = applyDocumentCommand(before, buildWorkspacePagesCommand(before, workspace, {mintId})!);
+    expect(applied.document.pages.map(archViewIdOfPage).filter(Boolean)).toEqual(['view:container:shop']);
+    expect(applied.document.pages[0]).toEqual(before.pages[0]);
+    expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(before);
+  });
+
+ it('creates a flow across all model views atomically, rejecting invalid and duplicate flows', async () => {
+    const before = await generatedDocument();
+    const flow = {id: 'flow:order', name: 'Order', steps: [{id: 'flow:order:step:1', kind: 'message' as const, from: 'shop.web', to: 'shop.api', label: 'Submit order', tags: []}]};
+    const applied = applyDocumentCommand(before, buildArchFlowCreateCommand(before, flow)!);
+    for (const page of applied.document.pages.filter((page) => archModelOfPage(page))) expect(archModelOfPage(page)!.flows).toContainEqual(flow);
+    expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(before);
+    expect(buildArchFlowCreateCommand(applied.document, flow)).toBeNull();
+    expect(buildArchFlowCreateCommand(before, {...flow, steps: [{...flow.steps[0]!, to: 'missing'}]})).toBeNull();
+  });
+
+ it('relabels the selected parallel relation and can clear its label without changing its protocol', async () => {
+    const before = await generatedDocument(WORKSPACE.replace('Web -> API : calls', 'Web -> API : calls [tech: HTTPS]\n    Web -> API : events [tech: AMQP]'));
+    const edit = buildArchRelationCommands(before, 'shop.web', 'shop.api', '', {relationId: 'rel:shop.web->shop.api:2'})!;
+    const applied = applyDocumentCommand(before, {kind: 'batch', id: 'relabel', label: 'Relabel', commands: edit.commands});
+    const model = archModelOfPage(applied.document.pages[1]!)!;
+    expect(model.relations.find((relation) => relation.id === 'rel:shop.web->shop.api')!.label).toBe('calls');
+    expect(model.relations.find((relation) => relation.id === 'rel:shop.web->shop.api:2')).toMatchObject({tech: 'AMQP'});
+    expect(model.relations.find((relation) => relation.id === 'rel:shop.web->shop.api:2')!.label).toBeUndefined();
+    expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(before);
+  });
+
+ it('records a second drawn relationship separately and projects it onto higher views', async () => {
+    const before = await generatedDocument();
+    const unlabelled = applyDocumentCommand(before, {kind: 'batch', id: 'unlabel', label: 'Unlabel', commands: buildArchRelationCommands(before, 'customer', 'shop.web', '')!.commands}).document;
+    // The new relationship is labelled and the old one isn't: it outscores it, but the pair is already drawn.
+    const edit = buildArchRelationCommands(unlabelled, 'customer', 'shop.web', 'tracks orders', {create: true})!;
+    expect(edit.relation.id).toBe('rel:customer->shop.web:2');
+    const applied = applyDocumentCommand(unlabelled, {kind: 'batch', id: 'parallel', label: 'Connect', commands: edit.commands});
+    const model = archModelOfPage(applied.document.pages[1]!)!;
+    expect(model.relations.filter((relation) => relation.from === 'customer' && relation.to === 'shop.web')).toHaveLength(2);
+    expect(applied.document.pages[1]!.connectors.filter((connector) => connector.source.nodeId === 'customer' && connector.target.nodeId === 'shop')).toHaveLength(1);
+    expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(unlabelled);
+  });
+
+ it('keeps notes inside an obsolete view at their exact world transforms', async () => {
+    const original = await generatedDocument();
+    const page = original.pages[1]!;
+    const frame = page.nodes.find((node) => node.kind === 'frame')!;
+    const note = createTestNode('review-note', {parentId: frame.id, content: {label: 'Keep this note'}});
+    const before = {...original, pages: original.pages.map((entry) => entry.id === page.id ? {...entry, nodes: [...entry.nodes, note]} : entry)};
+    const workspace = await compileWorkspace(WORKSPACE.replace('  view context of Shop\n', ''));
+    const applied = applyDocumentCommand(before, buildWorkspacePagesCommand(before, workspace, {mintId})!);
+    const kept = applied.document.pages.find((entry) => entry.id === page.id)!;
+    expect(archViewIdOfPage(kept)).toBeNull();
+    expect(archModelOfPage(kept)).toBeNull();
+    expect(buildNodeWorldMatrices(kept).get(note.id)).toEqual(buildNodeWorldMatrices(before.pages[1]!).get(note.id));
+    expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(before);
+  });

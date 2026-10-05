@@ -1,16 +1,17 @@
+import { V2FlowComposer } from './V2FlowComposer';
 import { useMemo, useState } from 'react';
 import {
   IconArrowsSplit2, IconChevronDown, IconCircleDot, IconExternalLink, IconPlayerPlay, IconTrash,
 } from '@tabler/icons-react';
 import { modelTags } from '../../../dsl/model/predicates';
-import { elementDescendantIds, elementPathRef, type ArchIndex } from '../../../dsl/model/model';
-import type { ArchElement, ArchFlow, ArchModel, ArchView } from '../../../dsl/model/types';
+import { elementAncestors, elementDescendantIds, elementPathRef, type ArchIndex } from '../../../dsl/model/model';
+import type { ArchElement, ArchFlow, ArchView } from '../../../dsl/model/types';
 import { Button, Icon, IconButton, Panel, Tabs } from '../design-system';
 import type { ArchitectureCrumb, V2Architecture } from './useV2Architecture';
 
 export interface V2ModelPanelProps {
   readonly architecture: V2Architecture;
-  readonly documentPages: readonly { id: string; name: string }[];
+  readonly elementPageIds: ReadonlyMap<string, string>;
   readonly selectedElementId: string | null;
   readonly placedElementIds: ReadonlySet<string>;
   readonly perspectiveTags: readonly string[];
@@ -18,12 +19,15 @@ export interface V2ModelPanelProps {
   readonly onNavigate: (crumb: { pageId: string; elementId?: string }) => void;
   readonly onSelectElement: (elementId: string) => void;
   /** Double-click an element to open its child view, like double-clicking on canvas. */
+  readonly onCreateChildView: (elementId: string) => void;
   readonly onDrillInto: (elementId: string) => void;
   readonly onEditElement: (elementId: string, patch: { name?: string; tech?: string; desc?: string; tags?: string[]; links?: string[] }) => void;
   readonly onRemoveElement: (elementId: string) => void;
+  readonly onCreateFlow: (flow: ArchFlow) => void;
   readonly onPlayFlow: (flow: ArchFlow) => void;
   readonly onClose: () => void;
   readonly onOpenCode: () => void;
+  readonly onCreateWorkspace: () => void;
   readonly readOnly: boolean;
   /** `adr/*.md` contents from the open workspace folder, matched by link. */
   readonly adrs?: readonly { readonly path: string; readonly text: string }[];
@@ -36,17 +40,25 @@ const KIND_LABEL: Readonly<Record<string, string>> = {
   store: 'Store', queue: 'Queue', external: 'External', node: 'Node', instance: 'Instance',
 };
 
-function elementRows(index: ArchIndex, model: ArchModel): Array<{ element: ArchElement; depth: number }> {
+function elementRows(index: ArchIndex, collapsed: ReadonlySet<string>, query: string): Array<{ element: ArchElement; depth: number }> {
   const rows: Array<{ element: ArchElement; depth: number }> = [];
-  const walk = (parent: string | null, depth: number) => {
-    for (const element of model.elements) {
-      if (element.parent !== parent) continue;
-      if (element.env && depth === 0) continue;
-      rows.push({ element, depth });
-      walk(element.id, depth + 1);
+  const visible = new Set<string>();
+  const search = query.trim().toLowerCase();
+  if (search) for (const element of index.model.elements) {
+    if ([element.name, element.id, element.kind, element.tech, element.desc, element.env, ...element.tags].some((value) => value?.toLowerCase().includes(search))) {
+      visible.add(element.id);
+      for (const ancestor of elementAncestors(index, element.id)) visible.add(ancestor);
+    }
+  }
+  const walk = (ids: readonly string[], depth: number) => {
+    for (const id of ids) {
+      const element = index.byId.get(id)!;
+      if (search && !visible.has(id)) continue;
+      rows.push({element, depth});
+      if (search || !collapsed.has(id)) walk(index.childIds.get(id) ?? [], depth + 1);
     }
   };
-  walk(null, 0);
+  walk(index.model.elements.filter((element) => !element.parent).map((element) => element.id), 0);
   return rows;
 }
 
@@ -69,10 +81,15 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
   const { architecture, readOnly } = props;
   const model = architecture.model;
   const index = architecture.index;
+  const [composingFlow, setComposingFlow] = useState(false);
   const [tab, setTab] = useState<Tab>('elements');
-  const rows = useMemo(() => (model && index ? elementRows(index, model) : []), [model, index]);
+  const [query, setQuery] = useState('');
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const [inspection, setInspection] = useState<{id: string; selectedAtClick: string | null} | null>(null);
+  const inspectedId = inspection && (!props.selectedElementId || props.selectedElementId === inspection.selectedAtClick) ? inspection.id : props.selectedElementId;
+  const rows = useMemo(() => index ? elementRows(index, collapsed, query) : [], [index, collapsed, query]);
   const tags = useMemo(() => (model ? modelTags(model) : []), [model]);
-  const selected = props.selectedElementId && index ? index.byId.get(props.selectedElementId) ?? null : null;
+  const selected = inspectedId && index ? index.byId.get(inspectedId) ?? null : null;
 
   if (!model || !index) {
     return (
@@ -81,7 +98,8 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
           <div className="ofk-model-preview" aria-hidden="true"><span>System</span><div><span>App</span><span>Data</span></div></div>
           <h3>One system. Every view.</h3>
           <p>Define your architecture once. Explore its systems and components across connected diagrams.</p>
-          <Button onClick={props.onOpenCode}>Open diagram as code</Button>
+          <Button variant="primary" disabled={readOnly} onClick={props.onCreateWorkspace}>Create C4 workspace</Button>
+          <Button variant="quiet" onClick={props.onOpenCode}>Open diagram as code</Button>
           <span className="ofk-model-welcome-note">Start with an architecture model.</span>
         </div>
       </Panel>
@@ -107,17 +125,30 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
             label: 'Elements',
             panel: (
               <>
+                <label className="ofk-v2-model-field"><span>Search architecture</span>
+                  <input type="search" value={query} placeholder="Name, technology, tag or environment" onChange={(event) => setQuery(event.target.value)} />
+                </label>
                 <ul className="ofk-v2-model-tree" aria-label="Model elements">
                   {rows.map(({ element, depth }) => (
-                    <li key={element.id}>
+                    <li key={element.id} className="ofk-v2-model-tree-item">
+                      {(index.childIds.get(element.id)?.length ?? 0) > 0 ? <button type="button" className="ofk-v2-model-expand"
+                        aria-label={`${collapsed.has(element.id) ? 'Expand' : 'Collapse'} ${element.name}`}
+                        aria-expanded={!collapsed.has(element.id) || Boolean(query.trim())}
+                        disabled={Boolean(query.trim())}
+                        onClick={() => setCollapsed((previous) => {
+                          const next = new Set(previous);
+                          if (next.has(element.id)) next.delete(element.id); else next.add(element.id);
+                          return next;
+                        })}>{collapsed.has(element.id) && !query.trim() ? '›' : '⌄'}</button> : <span className="ofk-v2-model-expand" aria-hidden="true" />}
                       <button
                         type="button"
                         className="ofk-v2-model-row"
                         style={{ paddingInlineStart: `${8 + depth * 14}px` }}
                         data-kind={element.kind}
-                        data-selected={element.id === props.selectedElementId || undefined}
+                        data-selected={element.id === selected?.id || undefined}
+                        aria-pressed={element.id === selected?.id}
                         data-placed={props.placedElementIds.has(element.id) || undefined}
-                        onClick={() => props.onSelectElement(element.id)}
+                        onClick={() => { setInspection({id: element.id, selectedAtClick: props.selectedElementId}); props.onSelectElement(element.id); }}
                         onDoubleClick={() => props.onDrillInto(element.id)}
                         title={element.id}
                       >
@@ -128,6 +159,24 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
                     </li>
                   ))}
                 </ul>
+                {rows.length === 0 ? <p role="status" className="ofk-v2-model-hint">No matching elements. Try another name, technology or tag.</p> : null}
+                {selected ? <div className="ofk-v2-model-detail">
+                  {architecture.childViewOf(selected.id) ? <Button variant="quiet" onClick={() => props.onDrillInto(selected.id)}>Open {viewKindLabel(architecture.childViewOf(selected.id)!)} view</Button> : null}
+                  {!architecture.childViewOf(selected.id) && !readOnly && ['system', 'container'].includes(selected.kind) ? <Button variant="quiet" onClick={() => props.onCreateChildView(selected.id)}>Create {selected.kind === 'system' ? 'Container' : 'Component'} view</Button> : null}
+                  {!props.placedElementIds.has(selected.id) && props.elementPageIds.has(selected.id) ? <Button variant="quiet" onClick={() => props.onNavigate({pageId: props.elementPageIds.get(selected.id)!, elementId: selected.id})}>Show in view</Button> : null}
+                  <details open className="ofk-v2-model-relationships"><summary>Relationships</summary>
+                    <ul className="ofk-v2-model-list" aria-label={`Relationships of ${selected.name}`}>
+                      {model.relations.filter((relation) => relation.from === selected.id || relation.to === selected.id).map((relation) => <li key={relation.id}>
+                        <span>{[relation.from, relation.to].map((id, at) => <span key={`${id}:${at}`}>
+                          {at ? ' → ' : ''}<button type="button" className="ofk-v2-model-relation-link" aria-label={`Inspect ${index.byId.get(id)?.name ?? id}`}
+                            onClick={() => { setInspection({id, selectedAtClick: props.selectedElementId}); props.onSelectElement(id); }}>{index.byId.get(id)?.name ?? id}</button>
+                        </span>)}</span>
+                        <span className="ofk-v2-model-hint">{relation.label ?? 'Unlabelled relationship'}{relation.tech ? ` · ${relation.tech}` : ''}</span>
+                      </li>)}
+                    </ul>
+                    {!model.relations.some((relation) => relation.from === selected.id || relation.to === selected.id) ? <p className="ofk-v2-model-hint">No incoming or outgoing relationships.</p> : null}
+                  </details>
+                </div> : null}
                 {selected ? (
                   <ElementInspector
                     key={selected.id}
@@ -159,6 +208,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
                       type="button"
                       className="ofk-v2-model-row ofk-v2-model-view"
                       data-current={view.id === architecture.view?.id || undefined}
+                      aria-current={view.id === architecture.view?.id ? 'page' : undefined}
                       onClick={() => props.onNavigate({ pageId: architecture.pageForView(view.id)?.id ?? '' })}
                       disabled={!architecture.pageForView(view.id)}
                     >
@@ -178,6 +228,9 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
             value: 'flows',
             label: `Flows (${model.flows.length})`,
             panel: (
+              <>
+              {!readOnly && !composingFlow ? <Button variant="quiet" onClick={() => setComposingFlow(true)}>Create flow</Button> : null}
+              {composingFlow && !readOnly ? <V2FlowComposer model={model} onSave={(flow) => { props.onCreateFlow(flow); setComposingFlow(false); }} onCancel={() => setComposingFlow(false)} /> : null}
               <ul className="ofk-v2-model-list" aria-label="Flows">
                 {model.flows.map((flow) => (
                   <li key={flow.id} className="ofk-v2-model-flow">
@@ -191,10 +244,11 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
                 ))}
                 {model.flows.length === 0 ? (
                   <li className="ofk-v2-model-hint">
-                    No flows yet. Add a <code>flow &quot;Name&quot; {'{ … }'}</code> block and regenerate.
+                    No flows yet. Create a message sequence, or add a flow in diagram source.
                   </li>
                 ) : null}
               </ul>
+              </>
             ),
           },
           {

@@ -4,7 +4,7 @@ import {
   deriveImpliedRelations, elementAncestors, elementDescendantIds, elementPathRef, flattenFlowSteps,
   hasChildren, nearestShown, placedElementId, resolveElementRef, viewsOf,
 } from './model';
-import { modelTags } from './predicates';
+import { selectViewElements, modelTags } from './predicates';
 import type { ArchModel } from './types';
 import type { SceneNode, ScenePage } from '../../opencanvas/domain/document/types';
 
@@ -161,3 +161,12 @@ describe('model json', () => {
     expect(flat[3]?.branch).toBe('failed');
   });
 });
+
+ it('preserves compound filters in saved models and skips malformed saved conditions', () => {
+    const view = {id: 'filtered', kind: 'custom', name: 'Filtered', rules: [{op: 'include', subject: '*', where: {all: [{kind: 'container'}, {tagNot: 'legacy'}]}}]};
+    const model = archModelFromJson({...SHOP, views: [view]})!;
+    expect(model.views[0]!.rules[0]!.where).toEqual(view.rules[0]!.where);
+    expect([...selectViewElements(createArchIndex(model), model.views[0]!).shown]).toEqual(['shop.web', 'shop.api']);
+    const malformed = archModelFromJson({...SHOP, views: [{...view, rules: [{...view.rules[0]!, where: {all: [{kind: 'container'}, 'bad']}}]}]})!;
+    expect([...selectViewElements(createArchIndex(malformed), malformed.views[0]!).shown]).toEqual([]);
+  });

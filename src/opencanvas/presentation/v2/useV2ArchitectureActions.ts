@@ -5,7 +5,7 @@ import { flowToSequenceDsl } from '../../../dsl/model/flowExport';
 import type { ArchFlow, ArchModel, ArchView } from '../../../dsl/model/types';
 import { buildWorkspacePagesCommand, type ArchElementPatch } from '../../application/dsl/architectureCommands';
 import {
-  buildArchElementEditCommand, buildArchElementRemoveCommand, buildArchIconsOffCommand, buildArchUnplaceCommand,
+  buildArchFlowCreateCommand, buildArchElementEditCommand, buildArchElementRemoveCommand, buildArchIconsOffCommand, buildArchUnplaceCommand,
 } from '../../application/dsl/architectureCommands';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1, ScenePage } from '../../domain/document/types';
@@ -32,6 +32,7 @@ export interface ArchitectureActionsOptions {
 }
 
 export interface ArchitectureActions {
+  createFlow: (flow: ArchFlow) => void;
   editElement: (elementId: string, patch: ArchElementPatch) => void;
   removeElement: (elementId: string) => void;
   /** Icons from labels for the whole workspace; on re-lays out every view (cards are bigger). */
@@ -86,6 +87,14 @@ export function useV2ArchitectureActions(options: ArchitectureActionsOptions, ho
     current.announce(patch.name !== undefined ? 'Element renamed in every view.' : 'Element updated in every view.');
   }, [document, readOnly]);
 
+  const createFlow = useCallback((flow: ArchFlow) => {
+    if (readOnly || !document) return;
+    const command = buildArchFlowCreateCommand(document, flow);
+    if (!command) return;
+    hostRef.current.commit(command);
+    hostRef.current.announce(`Created flow ${flow.name}.`);
+  }, [document, readOnly]);
+
   const removeElement = useCallback((elementId: string) => {
     const current = hostRef.current;
     if (readOnly || !document) return;
@@ -100,7 +109,7 @@ export function useV2ArchitectureActions(options: ArchitectureActionsOptions, ho
     const model = architecture.model;
     if (readOnly || !document || !model) return;
     if (!on) {
-      const command = buildArchIconsOffCommand(document);
+      const command = buildArchIconsOffCommand(document, model.elements[0]?.id ?? '');
       if (command) current.commit(command);
       current.announce('Icons from labels off in every view.');
       return;
@@ -214,5 +223,5 @@ export function useV2ArchitectureActions(options: ArchitectureActionsOptions, ho
     return { nodeIds, connectorIds: [] };
   }, [architecture, pageRef]);
 
-  return { editElement, removeElement, setModelIcons, unplaceSelection, drillInto, createChildView, openCrumb, openFlowAsSequence, perspectiveFocus };
+  return { createFlow, editElement, removeElement, setModelIcons, unplaceSelection, drillInto, createChildView, openCrumb, openFlowAsSequence, perspectiveFocus };
 }

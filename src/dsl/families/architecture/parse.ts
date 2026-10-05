@@ -10,7 +10,7 @@ import { createArchIndex, resolveElementRef } from '../../model/model';
 import {
   ELEMENT_KINDS, FLOW_STEP_KINDS, VIEW_KINDS,
   type ArchElement, type ArchFlow, type ArchModel, type ArchRelation, type ArchView,
-  type ElementKind, type FlowStep, type FlowStepKind, type ViewKind, type ViewRule,
+  type ElementKind, type FlowStep, type FlowStepKind, type ViewKind, type ViewRule, type ViewRuleWhere,
 } from '../../model/types';
 import { parseEdge } from '../graph/parse';
 
@@ -129,6 +129,7 @@ function splitAttributes(
 }
 
 interface RelationDraft {
+  readonly env?: string;
   readonly scope: string | null;
   readonly line: number;
   readonly from: string;
@@ -246,11 +247,11 @@ export function parseArchitectureWorkspace(
     return element;
   };
 
-  const declareRelation = (scope: string | null, edge: DslEdge): void => {
+  const declareRelation = (scope: string | null, edge: DslEdge, env?: string): void => {
     const { attributes, tags } = canonicalAttributesWithTags(edge.attributes, []);
     const typed = splitAttributes(attributes, TYPED_RELATION_KEYS);
     const draft: RelationDraft = {
-      scope, line: edge.line, tags,
+      scope, line: edge.line, tags, ...(env ? {env} : {}),
       from: edge.from.id ?? edge.from.label,
       to: edge.to.id ?? edge.to.label,
       ...(edge.label ?? typed.values.get('label') ? { label: edge.label ?? typed.values.get('label')! } : {}),
@@ -276,7 +277,7 @@ export function parseArchitectureWorkspace(
       }
       const edges = parseEdge(block.tokens, diagnostics);
       if (edges) {
-        for (const edge of edges) declareRelation(scope, edge);
+        for (const edge of edges) declareRelation(scope, edge, env);
         continue;
       }
       const line = blockLines(block).join('\n');
@@ -292,6 +293,11 @@ export function parseArchitectureWorkspace(
   const walkDeployment = (block: Block, env: string, parentId: string | null): void => {
     const declaration = readDeclaration(block.tokens, diagnostics);
     if (!declaration) {
+      const edges = parseEdge(block.tokens, diagnostics);
+      if (edges) {
+        for (const edge of edges) declareRelation(parentId, edge, env);
+        return;
+      }
       diagnostics.push(tokenDiagnostic('W101', 'warning', block.tokens[0], 'Deployment node needs a name; kept verbatim'));
       const line = blockLines(block).join('\n');
       if (line) reserved.push(line);
@@ -328,21 +334,34 @@ export function parseArchitectureWorkspace(
     let where: ViewRule['where'];
     if (whereAt >= 0) {
       const clause = tokens.slice(whereAt + 1);
-      if (clause.some((token) => ['and', 'or'].includes(token.value.toLowerCase()))) {
-        diagnostics.push(tokenDiagnostic('W160', 'warning', tokens[whereAt], 'Compound `where` is unsupported; kept verbatim'));
+      const parseWhere = (tokens: readonly DslToken[]): ViewRuleWhere | undefined => {
+        // AND binds more tightly than OR. Quoted words are values, never operators.
+        for (const [operator, field] of [['or', 'any'], ['and', 'all']] as const) {
+          const at = tokens.findIndex((token, index) => index > 2 && tokens[index - 1]?.value !== '@' && tokens[index - 1]?.value !== 'not' && token.kind === 'word' && token.value.toLowerCase() === operator);
+          if (at < 0) continue;
+          const left = parseWhere(tokens.slice(0, at));
+          const right = parseWhere(tokens.slice(at + 1));
+          return left && right ? { [field]: [left, right] } : undefined;
+        }
+        if (tokens[1]?.value.toLowerCase() !== 'is') return undefined;
+        const key = tokens[0]?.value.toLowerCase();
+        const negated = tokens[2]?.value.toLowerCase() === 'not';
+        const values = tokens.slice(negated ? 3 : 2);
+        if (!values.length) return undefined;
+        if (key === 'kind') {
+          const value = joinTokens(values).toLowerCase();
+          if (!(ELEMENT_KINDS as readonly string[]).includes(value)) return undefined;
+          return negated ? { kindNot: value } : { kind: value };
+        }
+        if (key === 'tag') return negated ? { tagNot: joinTagValue(values) } : { tag: joinTagValue(values) };
+        return undefined;
+      };
+      where = parseWhere(clause);
+      if (!where) {
+        diagnostics.push(tokenDiagnostic('W160', 'warning', clause[0], 'Unsupported `where` clause; skipped and kept verbatim'));
         return { op, subject, raw, line: tokens[0]?.line ?? 1 };
       }
-      const isAt = clause.findIndex((token) => token.value.toLowerCase() === 'is');
-      const key = clause[0]?.value.toLowerCase();
-      const negated = clause[isAt + 1]?.value.toLowerCase() === 'not';
-      const value = joinTokens(clause.slice(isAt + (negated ? 2 : 1)));
-      const tagValue = joinTagValue(clause.slice(isAt + (negated ? 2 : 1)));
-      if (isAt >= 0 && key === 'kind') where = { kind: value };
-      else if (isAt >= 0 && key === 'tag') where = negated ? { tagNot: tagValue } : { tag: tagValue };
-      else {
-        diagnostics.push(tokenDiagnostic('W160', 'warning', clause[0], `Unsupported \`where\` clause; kept verbatim`));
-        return { op, subject, raw, line: tokens[0]?.line ?? 1 };
-      }
+
     }
     if (!subject && !arrow) return null;
     return { op, subject: arrow ? subject : subject || '*', ...(arrow ? { arrow } : {}), ...(where ? { where } : {}), line: tokens[0]?.line ?? 1 };
@@ -557,15 +576,34 @@ export function parseArchitectureWorkspace(
     instanceTargets.set(entry.element, target.id);
   }
   const resolvedRelations: ArchRelation[] = [];
+  const pairOccurrences = new Map<string, number>();
+  const logicalIndex = createArchIndex({...index.model, elements: index.model.elements.filter((element) => !element.env)});
+  const environmentIndexes = new Map<string, ReturnType<typeof createArchIndex>>();
   for (const entry of pendingRelations) {
-    const from = resolveElementRef(index, entry.from, entry.scope);
-    const to = resolveElementRef(index, entry.to, entry.scope);
+    let relationIndex = index;
+    if (entry.env) {
+      if (!environmentIndexes.has(entry.env)) environmentIndexes.set(entry.env, createArchIndex({...index.model, elements: index.model.elements.filter((element) => element.env === entry.env)}));
+      relationIndex = environmentIndexes.get(entry.env)!;
+    }
+    const endpoint = (reference: string): ArchElement | null => {
+      const direct = resolveElementRef(relationIndex, reference, entry.scope);
+      if (direct || !entry.env) return direct;
+      // Importers may spell an instance by its logical target's display path.
+      const target = resolveElementRef(logicalIndex, reference);
+      const instances = target ? relationIndex.model.elements.filter((element) => instanceTargets.get(element) === target.id) : [];
+      return instances.length === 1 ? instances[0]! : null;
+    };
+    const from = endpoint(entry.from);
+    const to = endpoint(entry.to);
     if (!from || !to) {
       diagnostics.push(lineDiagnostic(entry.line, 'W122', 'warning', `Unknown element reference ${!from ? entry.from : entry.to}; relation dropped`));
       continue;
     }
+    const pair = `rel:${from.id}->${to.id}`;
+    const occurrence = pairOccurrences.get(pair) ?? 0;
+    pairOccurrences.set(pair, occurrence + 1);
     resolvedRelations.push({
-      id: `rel:${from.id}->${to.id}`, from: from.id, to: to.id, tags: entry.tags,
+      id: occurrence ? `${pair}:${occurrence + 1}` : pair, from: from.id, to: to.id, tags: entry.tags,
       ...(entry.label ? { label: entry.label } : {}),
       ...(entry.tech ? { tech: entry.tech } : {}),
       ...(entry.attrs ? { attrs: entry.attrs } : {}),

@@ -1,12 +1,50 @@
 import { describe, expect, it } from 'vitest';
 import { createTestConnector, createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import { exportCanonicalSvg, iconArtKey } from './canonicalSvg';
+import { compile } from '../../../dsl/compile';
 import { iconContent } from '../../domain/nodes/iconNode';
 import { architectureIconBounds } from '../../domain/nodes/architectureNodePresentation';
 import { createPresetFrame } from '../../domain/nodes/framePreset';
 import { createWidgetNode } from '../../domain/nodes/widgetNode';
 
 describe('canonical SVG export', () => {
+  it('a C4 element with a long description wraps it inside its box', async () => {
+    const compiled = await compile('architecture\nmodel {\n system Shop {\n  container API [tech: Go, desc: "Handles every order, payment, refund and shipping request from the web and mobile clients"]\n }\n}\nviews { view container of Shop }\n');
+    const api = compiled.nodes.find((node) => node.id === 'shop.api')!;
+    const sub = exportCanonicalSvg(createTestDocument({ nodes: [{ ...api, parentId: null }] })).match(/<text[^>]*opacity="0.72">(.*?)<\/text>/)!;
+    const lines = [...sub[1]!.matchAll(/<tspan x="[^"]*" y="([^"]*)">([^<]*)</g)];
+    expect(lines.length).toBeGreaterThan(2);
+    expect(Number(lines.at(-1)![1])).toBeLessThan(api.size.height);
+    expect(lines.map((line) => line[2]).join(' ')).toContain('mobile clients');
+  });
+
+  it('wraps a long sub-label at the canvas sub-label size and keeps it inside the node', () => {
+    const node = createTestNode('api', {
+      kind: 'process', size: { width: 320, height: 75 },
+      content: { label: 'API', subLabel: '[Container · Go]\nHandles every order, payment, refund and shipping request from the web and mobile clients' },
+    });
+    const svg = exportCanonicalSvg(createTestDocument({ nodes: [node] }), { padding: 0 });
+    const sub = svg.match(/<text[^>]*opacity="0.72">(.*?)<\/text>/)!;
+    expect(sub[0]).toContain('font-size="11"');
+    const ys = [...sub[1]!.matchAll(/<tspan x="[^"]*" y="([^"]*)"/g)].map((match) => Number(match[1]));
+    expect(ys.length).toBeGreaterThan(1);
+    expect(ys.at(-1)!).toBeLessThan(75);
+  });
+
+  it('wraps the sub-label where the sizing policy wraps it on the canvas', () => {
+    const node = createTestNode('api', {
+      kind: 'process', size: { width: 320, height: 110 },
+      content: {
+        label: 'API', subLabel: '[Container · Go]\nHandles every order, payment, refund and shipping request from the web and mobile clients',
+        sizingPolicy: { version: 1, mode: 'fixed', minSize: { width: 24, height: 24 }, maxSize: { width: 1600, height: 1200 }, overflow: 'wrap', clipContent: false, maxLines: 4 },
+      },
+    });
+    const sub = exportCanonicalSvg(createTestDocument({ nodes: [node] })).match(/<text[^>]*opacity="0.72">(.*?)<\/text>/)!;
+    const ys = [...sub[1]!.matchAll(/<tspan x="[^"]*" y="([^"]*)"/g)].map((match) => Number(match[1]));
+    expect(ys.length).toBeGreaterThan(2);
+    expect(ys.at(-1)!).toBeLessThan(110);
+  });
+
   it('omits hidden objects, their children and attached connectors', () => {
     const visible = createTestNode('visible');
     const hidden = createTestNode('hidden', { content: { sectionHidden: true } });
@@ -207,3 +245,11 @@ describe('chart export', () => {
     expect(svg).toMatch(/>\d+%</);
   });
 });
+
+ it('exports semantic architecture card headers and descriptions', () => {
+    const node = createTestNode('api', {kind: 'architecture', size: {width: 240, height: 152}, content: {
+      label: 'Order API', assetPresentation: 'card', archProviderLabel: 'Container', archResourceType: 'Go', archEnvironment: 'Handles orders',
+    }});
+    const svg = exportCanonicalSvg(createTestDocument({nodes: [node]}));
+    for (const text of ['Order API', 'Container', 'Go', 'Handles orders']) expect(svg).toContain(text);
+  });

@@ -80,7 +80,7 @@ test('C4 workspace: generate, drill down, rename across views, play a flow', asy
   await name.fill('Frontend');
   await page.getByRole('button', { name: 'Apply' }).click();
   await expect.poll(async () => (await pages(page)).filter((entry) => entry.id === container!.id)[0]!.labels.includes('Frontend')).toBe(true);
-  await expect.poll(async () => (await pages(page)).find((entry) => entry.id === landscape!.id)!.elements.includes('shop.web')).toBe(true);
+  await expect.poll(async () => (await pages(page)).find((entry) => entry.id === landscape!.id)!.elements.includes('shop.web')).toBe(false);
 
   // --- flow playback -------------------------------------------------------
   await page.getByRole('tab', { name: /Flows/ }).click();

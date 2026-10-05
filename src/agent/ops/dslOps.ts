@@ -3,11 +3,12 @@
 // read the frames back, honest about drift and losses.
 import { z } from 'zod';
 import { buildDslPageCommand, nextDslFrameOrigin } from '../../opencanvas/application/dsl/dslPageCommand';
-import { buildWorkspacePagesCommand } from '../../opencanvas/application/dsl/architectureCommands';
+import { buildWorkspacePagesCommand, workspaceViewFrames } from '../../opencanvas/application/dsl/architectureCommands';
 import { frameEdited, frameScene, dslFrames } from '../../dsl/frameScene';
 import { serializeLosses } from '../../dsl/losses';
 import { serialize } from '../../dsl/serialize';
 import { dslFrameMeta } from '../../dsl/sceneMeta';
+import { applyDocumentCommand } from '../../opencanvas/domain/commands/execute';
 import type { CompileResult, CompileWorkspaceResult } from '../../dsl/compile';
 import type { Point2d } from '../../opencanvas/domain/geometry/types';
 import type { SceneDocumentV1 } from '../../opencanvas/domain/document/types';
@@ -49,19 +50,20 @@ function diagramOutput(pageId: string, frameId: string, compiled: CompileResult)
 const mintPageId = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
 
 /**
- * A C4 workspace with several views lands as one page per view, like ⌘↵ does.
+ * A C4 workspace lands as one page per view, like ⌘↵ does.
  * The output describes the first view like a single diagram and lists the rest.
  */
 function workspaceOutcome(document: SceneDocumentV1, workspace: CompileWorkspaceResult, replaceFrameId?: string) {
   const command = buildWorkspacePagesCommand(document, workspace, { mintId: mintPageId, ...(replaceFrameId ? { replaceFrameId } : {}) });
-  const pageIds = (command?.kind === 'batch' ? command.commands : command ? [command] : []).flatMap((entry) =>
-    entry.kind === 'insert-page' ? [entry.page.id] : entry.kind === 'set-page' ? [entry.pageId] : []);
+  const result = command ? applyDocumentCommand(document, command).document : document;
+  const placed = workspaceViewFrames(result, workspace, replaceFrameId);
+  const views = workspace.views.map((view, index) => ({ viewId: view.viewId, name: view.name, ...placed[index]! }));
   const first = workspace.views[0]!.result;
   return {
     command,
     output: {
-      ...diagramOutput(pageIds[0] ?? '', first.frame.id, first),
-      views: workspace.views.map((view, index) => ({ viewId: view.viewId, name: view.name, frameId: view.result.frame.id, pageId: pageIds[index] ?? null })),
+      ...diagramOutput(views[0]!.pageId, views[0]!.frameId, first),
+      views,
     },
   };
 }
@@ -84,7 +86,7 @@ export const createDiagram = defineOp({
       origin,
       ...(palette ? { appearance: { palette } } : {}),
     });
-    if (workspace.views.length > 1) return withConverted(workspaceOutcome(context.document, workspace), source);
+    if (workspace.views.length > 1 || workspace.views[0]!.viewId.startsWith('view:')) return withConverted(workspaceOutcome(context.document, workspace), source);
     const compiled = workspace.views[0]!.result;
     return {
       command: buildDslPageCommand(page, compiled),
@@ -110,7 +112,7 @@ export const updateDiagram = defineOp({
       origin: frame.transform.translation,
       ...(palette ? { appearance: { palette } } : {}),
     });
-    if (workspace.views.length > 1) return withConverted(workspaceOutcome(context.document, workspace, frameId), source);
+    if (workspace.views.length > 1 || workspace.views[0]!.viewId.startsWith('view:')) return withConverted(workspaceOutcome(context.document, workspace, frameId), source);
     const compiled = workspace.views[0]!.result;
     return {
       command: buildDslPageCommand(page, compiled, frameId),

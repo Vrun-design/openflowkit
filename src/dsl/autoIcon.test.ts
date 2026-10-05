@@ -110,7 +110,7 @@ describe('compile with auto icons', () => {
   });
 
   it('uses tech: on model elements', async () => {
-    const result = await compile('architecture\nmodel {\n  shop = system Shop {\n    db = store Orders [tech: PostgreSQL]\n    web = container Storefront [tech: Next.js]\n  }\n}', auto);
+    const result = await compile('architecture\nmodel {\n  shop = system Shop {\n    db = store Orders [tech: PostgreSQL]\n    web = container Storefront [tech: Next.js]\n  }\n}\nviews {view container of Shop}', auto);
     const icons = Object.fromEntries(result.nodes.map((item) => [item.content.label, item.content.icon]));
     expect(icons).toMatchObject({ Orders: 'developer/database-postgresql', Storefront: 'developer/frontend-nextjs' });
   });

@@ -26,7 +26,8 @@ const cards = (page: Page) => page.getByRole('list', { name: 'Diagrams' }).getBy
 test('a template card opens a new diagram already drawn, with its text beside it @gate', async ({ page }) => {
   await page.goto('/#/home');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Let’s draw your first diagram.');
-  await expect(page.getByRole('list', { name: 'Templates' }).getByRole('button')).toHaveCount(5);
+  await expect(page.getByRole('list', { name: 'Templates' }).getByRole('button')).toHaveCount(6);
+  await expect(page.getByRole('button', { name: 'C4 architecture workspace', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Event pipeline' }).click();
   await expect(page).toHaveURL(/#\/d\/doc-/);
   await expect(page.getByRole('textbox', { name: 'Diagram source' })).toContainText('Event pipeline');

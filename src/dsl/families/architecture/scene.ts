@@ -1,9 +1,14 @@
 import type { SceneConnector, SceneNode } from '../../../opencanvas/domain/document/types';
 import { createArchIndex } from '../../model/model';
 import { boundaryIds, projectRelations, selectViewElements } from '../../model/predicates';
-import type { ArchElement, ArchModel, ArchRelation, ArchView } from '../../model/types';
+import { ELEMENT_KIND_LABEL, type ArchElement, type ArchModel, type ArchRelation, type ArchView } from '../../model/types';
 import { attrsToJson } from '../../sceneMeta';
 import { ACTOR_CONTENT_LAYOUT, measureGroupSize, measureNodeSize } from '../../sizing';
+
+const DESCRIPTION_WRAP = {
+  version: 1, mode: 'fixed', minSize: { width: 24, height: 24 }, maxSize: { width: 1600, height: 1200 },
+  overflow: 'wrap', clipContent: false, maxLines: 4,
+} as const;
 import { COLOR_WORDS, nodeAppearance, SHAPE_WORDS, type DslShapeSpec } from '../../vocabulary';
 import type { LayoutNodeInput } from '../../layout';
 import { AUTO_ICON_SHAPES } from '../../autoIcon';
@@ -17,8 +22,7 @@ import type { SwatchResolver } from '../../../opencanvas/domain/nodes/nodePalett
  * `Customer -> Shop.Web`. Geometry comes from the injected layout port.
  */
 
-const FRAME_PADDING = { top: 28, right: 28, bottom: 28, left: 28 };
-const FRAME_TITLE_PADDING = { top: 72, right: 28, bottom: 28, left: 28 };
+const FRAME_TITLE_PADDING = { top: 72, right: 28, bottom: 52, left: 28 };
 const GROUP_PADDING = { top: 54, right: 22, bottom: 22, left: 22 };
 
 /** Shape vocabulary per element kind; the tasteful default C4 look. */
@@ -94,7 +98,7 @@ export async function compileArchitectureView(
     nodes: layoutNodes,
     edges: connectors.map((connector) => ({ id: connector.id, sourceId: connector.source.nodeId!, targetId: connector.target.nodeId! })),
     direction: view.direction ?? context.direction,
-    rootPadding: context.title ? FRAME_TITLE_PADDING : FRAME_PADDING,
+    rootPadding: FRAME_TITLE_PADDING,
     groupPadding: GROUP_PADDING,
   }, context.signal);
 
@@ -109,6 +113,8 @@ export async function compileArchitectureView(
     connectors,
     size: laid.root.width > 0 && laid.root.height > 0 ? laid.root : { width: 640, height: 420 },
     meta: {
+      viewTitle: view.name,
+      viewKey: 'Solid: direct relationship · Dashed: projected relationship',
       arch: { model: model as unknown as Record<string, unknown>, view: view.id },
       ...(selection.unsupported.length ? { archUnsupported: selection.unsupported.map((rule) => rule.raw ?? '') } : {}),
     },
@@ -121,7 +127,7 @@ function boundaryNode(element: ArchElement, parentId: string | null, zIndex: num
     id: element.id, kind: 'frame', parentId, layerId: 'default', zIndex,
     transform: { translation: { ...context.origin }, rotationRadians: 0, scale: { x: 1, y: 1 } },
     size: { width: 240, height: 160 },
-    content: { label: element.name, ...(color ? { color: paletteKey(color) } : {}) },
+    content: { label: element.name, subLabel: `[${ELEMENT_KIND_LABEL[element.kind]}]`,  ...(color ? { color: paletteKey(color) } : {}) },
     appearance: {}, ports: [],
     metadata: {
       model: {
@@ -156,13 +162,15 @@ function elementNode(element: ArchElement, parentId: string | null, zIndex: numb
   const resolvedIcon = authoredIcon && context.resolveIcon ? context.resolveIcon(authoredIcon) : null;
   const isIconCard = Boolean(authoredIcon && (!context.resolveIcon || resolvedIcon));
   const label = element.name;
-  const subLabel = element.tech;
+  const subLabel = `[${ELEMENT_KIND_LABEL[element.kind]}${element.tech ? ` · ${element.tech}` : ''}]${element.desc ? `\n${element.desc}` : ''}`;
   const kind = isIconCard ? 'architecture' : spec.kind;
-  const size = context.measureLabel
-    ? context.measureLabel(label, kind)
-    : measureNodeSize({
-      kind, label, ...(subLabel ? { subLabel } : {}), hasIcon: isIconCard, spec,
+  // A description wraps inside its box on the canvas and in exports; the node is sized for it.
+  const wraps = !isIconCard && Boolean(element.desc);
+  const measured = measureNodeSize({
+      kind, label, ...(subLabel ? { subLabel } : {}), hasIcon: isIconCard, spec, ...(wraps ? { overflow: 'wrap' as const } : {}),
     });
+  const custom = context.measureLabel?.(label, kind);
+  const size = {width: Math.max(measured.width, custom?.width ?? 0, isIconCard ? 240 : 0), height: Math.max(measured.height, custom?.height ?? 0, isIconCard ? 152 : 0)};
   const color = elementColorWord(element);
   const fill = element.attrs?.some((entry) => entry.value === 'bold') ? 'bold' as const
     : element.attrs?.some((entry) => entry.value === 'outline') ? 'outline' as const : 'pastel' as const;
@@ -176,13 +184,15 @@ function elementNode(element: ArchElement, parentId: string | null, zIndex: numb
       ...(!isIconCard && !sticky && spec.shape ? { shape: spec.shape } : {}),
       ...(spec.shape === 'actor' ? { contentLayout: ACTOR_CONTENT_LAYOUT } : {}),
       ...(subLabel ? { subLabel } : {}),
+      ...(wraps ? { sizingPolicy: DESCRIPTION_WRAP } : {}),
       // Architecture cards and containers resolve their palette from content keys.
       ...(isIconCard && color ? { color: paletteKey(color), ...(fill === 'bold' ? { colorMode: 'filled' } : {}) } : {}),
       ...(isIconCard && authoredIcon ? {
         icon: authoredIcon,
-        archProvider: iconProvider(authoredIcon), archResourceType: iconResource(authoredIcon),
+        archProvider: iconProvider(authoredIcon), archProviderLabel: ELEMENT_KIND_LABEL[element.kind], archResourceType: element.tech ?? '',
+        ...(element.desc ? {archEnvironment: element.desc} : {}),
         ...(resolvedIcon ? { archIconPackId: resolvedIcon.packId, archIconShapeId: resolvedIcon.shapeId } : {}),
-        assetPresentation: 'icon',
+        assetPresentation: 'card',
       } : {}),
     },
     appearance: isIconCard || sticky
@@ -215,7 +225,7 @@ function elementNode(element: ArchElement, parentId: string | null, zIndex: numb
  */
 export function relationConnector(relation: ArchRelation, from: string, to: string, implied: boolean): SceneConnector {
   const label = relationLabel(relation.label, relation.tech);
-  const id = `rel:${from}->${to}`;
+  const id = relation.from === from && relation.to === to ? relation.id : `${relation.id}@${from}->${to}`;
   return {
     id,
     source: endpoint(from), target: endpoint(to),
@@ -245,9 +255,4 @@ function endpoint(nodeId: string): SceneConnector['source'] {
 function iconProvider(icon: string): string {
   const [provider] = icon.split(/[/:-]/);
   return provider || 'custom';
-}
-
-function iconResource(icon: string): string {
-  const [, ...rest] = icon.split(/[/:-]/);
-  return rest.join('-') || icon;
 }

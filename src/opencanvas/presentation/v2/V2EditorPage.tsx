@@ -1,3 +1,4 @@
+import { C4_STARTER } from '../../../agent/starterTemplates';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { clearSelection, replaceSelection, toggleSelection } from '../../application/selection/selection';
@@ -313,7 +314,7 @@ export function V2EditorPage(): React.JSX.Element {
     const from = elementOf(fromNodeId);
     const to = elementOf(toNodeId);
     if (!from || !to || from === to || !session.document) return command;
-    const relation = buildArchRelationCommands(session.document, from, to, undefined, { exceptPageId: currentPage.id });
+    const relation = buildArchRelationCommands(session.document, from, to, undefined, { exceptPageId: currentPage.id, create: true });
     if (!relation) return command;
     // The drawn connector keeps its minted id (selection follows it) but
     // records which relation it is, so flows and the panel can find it.
@@ -449,6 +450,7 @@ export function V2EditorPage(): React.JSX.Element {
     [openLabelEditor, applyConnectorSelection, applySelection]
   );
   const connectorLabel = useV2ConnectorLabelEditing({
+    document: session.document,
     pageRef, hostRef, cameraRef: camera.cameraRef, readOnly: load.readOnly, selectedConnectorId,
     commit: session.commit, applySelection, applyConnectorSelection, focusCanvas, announce: setAnnouncement,
   });
@@ -692,7 +694,6 @@ export function V2EditorPage(): React.JSX.Element {
               document={session.document!}
               pages={pages}
               pageId={page.id}
-              bridge={{ status: agentBridge.status, onOpen: () => openWorkspace('agent') }}
               saveStatus={saveStatus}
               canUndo={session.canUndo} canRedo={session.canRedo}
               readOnly={load.readOnly} canvasUnavailable={rendererStatus === 'unavailable'}
@@ -826,14 +827,23 @@ export function V2EditorPage(): React.JSX.Element {
             {panels.workspace === 'model' ? (
               <V2ModelPanel
                 onOpenCode={() => openWorkspace('code')}
+                onCreateWorkspace={() => code.startFrom(C4_STARTER)}
                 architecture={architecture}
-                documentPages={session.document!.pages.map((candidate) => ({ id: candidate.id, name: candidate.name }))}
+                elementPageIds={new Map(session.document!.pages.flatMap((candidate) => candidate.nodes.flatMap((node) => {
+                  const elementId = placedElementId(node);
+                  return elementId ? [[elementId, candidate.id] as const] : [];
+                })))}
                 selectedElementId={selectedElementId}
                 placedElementIds={placedElementIds}
                 perspectiveTags={preferences.perspectiveTags}
                 onPerspectiveChange={(tags) => updatePreferences({ perspectiveTags: [...tags] })}
                 onNavigate={(crumb) => architectureActions.openCrumb(crumb)}
                 onDrillInto={architectureActions.drillInto}
+                onCreateChildView={(elementId) => {
+                  void architectureActions.createChildView(elementId).catch((error: unknown) => pushToast({
+                    id: 'create-c4-view', tone: 'danger', title: error instanceof Error ? error.message : 'Could not create the view.',
+                  }));
+                }}
                 onSelectElement={(elementId) => {
                   const node = page.nodes.find((candidate) => placedElementId(candidate) === elementId);
                   if (node) {
@@ -842,12 +852,13 @@ export function V2EditorPage(): React.JSX.Element {
                     camera.glideToNodes([node.id]);
                     return;
                   }
-                  const target = architecture.pageForElement(elementId);
-                  if (target) { setActivePageId(target.id); setAnnouncement('Opened the view that shows this element.'); }
-                  else setAnnouncement('This element is not placed in any view yet.');
+                  applyConnectorSelection([]);
+                  applySelection(replaceSelection([]));
+                  setAnnouncement('Inspecting an element outside the current view.');
                 }}
                 onEditElement={architectureActions.editElement}
                 onRemoveElement={architectureActions.removeElement}
+                onCreateFlow={architectureActions.createFlow}
                 onPlayFlow={playback.open}
                 onClose={panels.closeWorkspace}
                 readOnly={load.readOnly}
@@ -856,6 +867,7 @@ export function V2EditorPage(): React.JSX.Element {
             ) : null}
             {playback.flow ? (
               <V2FlowPanel
+                model={architecture.model}
                 playback={playback}
                 onClose={playback.close}
                 onCopy={(kind) => {

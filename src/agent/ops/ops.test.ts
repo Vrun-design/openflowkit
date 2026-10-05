@@ -76,6 +76,41 @@ views { view context of Shop; view container of Shop }
     expect((listed.output as { diagrams: unknown[] }).diagrams).toHaveLength(2);
   });
 
+  it('returns actual C4 page and frame IDs when generation changes only some views or none', async () => {
+    const run = await host();
+    const source = 'architecture\nmodel { system Shop { container Web } }\nviews { view context of Shop; view container of Shop }';
+    await run.run('create_diagram', { dsl: source });
+    for (const dsl of [source, source.replace('view context of Shop; ', '')]) {
+      await run.run('create_diagram', { dsl });
+      const unchanged = await run.run('create_diagram', { dsl });
+      expect(unchanged.command).toBeNull();
+      const views = run.document().pages.filter((page) => page.name !== 'Page 1');
+      expect(unchanged.output).toMatchObject({
+        pageId: views[0]!.id,
+        frameId: views[0]!.nodes.find((node) => node.kind === 'frame')!.id,
+        views: views.map((page) => ({ pageId: page.id, frameId: page.nodes.find((node) => node.kind === 'frame')!.id })),
+      });
+    }
+  });
+
+  for (const name of ['create_diagram', 'update_diagram']) {
+    it(`${name} reconciles a C4 workspace reduced to one view in one undo step`, async () => {
+      const run = await host();
+      const source = 'architecture\nmodel { system Shop { container Web } }\nviews { view context of Shop; view container of Shop }';
+      await run.run('create_diagram', { dsl: source });
+      const before = run.document();
+      const page = before.pages.find((entry) => entry.name === 'context of Shop')!;
+      const frame = page.nodes.find((node) => node.kind === 'frame')!;
+      const input = { dsl: source.replace('view context of Shop; ', ''), frameId: frame.id };
+      const outcome = await op(name).run(op(name).schema.parse(input), { ...run.context(), pageId: page.id });
+      expect(outcome.command).not.toBeNull();
+      const applied = applyDocumentCommand(before, outcome.command!);
+      expect(applied.document.pages.map((entry) => entry.name)).toEqual(['Page 1', 'container of Shop']);
+      expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(before);
+      expect(outcome.output).toMatchObject({ views: [{ viewId: 'view:container:shop' }] });
+    });
+  }
+
   it('reports canvas drift and unrepresentable paint through get_diagram', async () => {
     const run = await host();
     await run.run('create_diagram', { dsl: FLOW });

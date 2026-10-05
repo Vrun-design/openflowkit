@@ -3,6 +3,7 @@ import {
   fitCameraToBounds,
   zoomCameraAt,
   DEFAULT_CANVAS_CAMERA,
+  DEFAULT_CAMERA_LIMITS,
 } from '../../domain/camera/camera';
 import { foundation } from '../design-system/tokens';
 import { visibleCanvasEdges } from './V2ContextBar';
@@ -87,15 +88,6 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     glideRef.current = requestAnimationFrame(step);
   }, [applyGlideFrame, stopGlide]);
 
-  /** Drill-down / flow camera: frame the nodes without zooming in past readability. */
-  const glideToNodes = useCallback((nodeIds: readonly string[], padding = 96) => {
-    const host = hostRef.current;
-    const bounds = host?.getContentBounds(nodeIds);
-    if (!host || !bounds) return;
-    const fitted = fitCameraToBounds(bounds, host.getViewportSize(), padding);
-    animateTo({ ...fitted, zoom: Math.min(fitted.zoom, 1.4) });
-  }, [animateTo, hostRef]);
-
   useEffect(() => () => {
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
     if (glideRef.current !== null) cancelAnimationFrame(glideRef.current);
@@ -107,16 +99,24 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
   }, [hostRef]);
 
   /** The camera that frames `bounds` in the canvas the side panels leave free, and that free region. */
-  const fitInto = useCallback((bounds: Bounds2d) => {
+  const fitInto = useCallback((bounds: Bounds2d, padding = 64, maxZoom = DEFAULT_CAMERA_LIMITS.maxZoom) => {
     const size = hostRef.current!.getViewportSize();
     // The canvas runs under the side panels: fit into what they leave free (a phone-width
     // panel covers it all, so that falls back to the whole viewport).
     const { left, right } = visibleCanvasEdges(document.querySelector<HTMLElement>('.ofk-v2'));
     const clear = right - left >= size.width / 2;
     const free = { left: clear ? left : 0, right: clear ? right : size.width, height: size.height };
-    const fitted = fitCameraToBounds(bounds, { width: free.right - free.left, height: free.height }, 64);
+    const fitted = fitCameraToBounds(bounds, { width: free.right - free.left, height: free.height }, padding, { ...DEFAULT_CAMERA_LIMITS, maxZoom });
     return { camera: { ...fitted, x: fitted.x + free.left }, free };
   }, [hostRef]);
+
+  /** Drill-down / flow camera: frame the nodes without zooming in past readability. */
+  const glideToNodes = useCallback((nodeIds: readonly string[], padding = 96) => {
+    const host = hostRef.current;
+    const bounds = host?.getContentBounds(nodeIds);
+    if (!host || !bounds) return;
+    animateTo(fitInto(bounds, padding, 1.4).camera);
+  }, [animateTo, hostRef, fitInto]);
 
   const fitView = useCallback((nodeIds?: readonly string[]) => {
     const bounds = hostRef.current?.getContentBounds(nodeIds);

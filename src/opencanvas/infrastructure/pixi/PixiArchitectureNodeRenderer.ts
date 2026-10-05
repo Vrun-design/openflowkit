@@ -1,3 +1,4 @@
+import { architectureCardLayout } from '../../domain/nodes/architectureCardLayout';
 import { Container, Graphics } from 'pixi.js';
 import { loadProviderShapePreview } from '@/services/shapeLibrary/providerCatalog';
 import { createBounds2d } from '../../domain/geometry/bounds';
@@ -115,20 +116,21 @@ export class PixiArchitectureNodeRenderer {
     const labelBounds = nodeLabelBounds(node);
     const wrap = Math.max(1, labelBounds.width - style.textPadding * 2);
     if (presentation.display === 'architecture-card') {
-      const provider = createPixiText(presentation.providerLabel, { size: 10, weight: '700', fill: visual.subText });
+      const layout = architectureCardLayout(node, style);
+      const provider = createPixiText(layout.provider.displayText, { size: 10, weight: '700', fill: visual.subText });
       provider.position.set(38, 15);
-      const resource = createPixiText(presentation.resourceType, { size: 10, weight: '600', fill: visual.subText });
+      const resource = createPixiText(layout.resource.displayText, { size: 10, weight: '600', fill: visual.subText });
       resource.anchor.set(1, 0);
       resource.position.set(node.size.width - 16, 15);
-      const title = createStyledPixiText(presentation.label, style, ink, wrap);
-      title.position.set(labelBounds.x + style.textPadding, labelBounds.y + style.textPadding);
+      const title = createStyledPixiText(layout.title.displayText, style, ink, wrap);
+      title.position.set(layout.titleX, layout.titleY);
       content.addChild(provider, resource, title);
       decoratePixiText(content, title, style, ink);
       if (presentation.metadata.length > 0) {
-        const metadata = createPixiText(presentation.metadata.join(' · '), {
+        const metadata = createPixiText(layout.detail.displayText, {
           size: 10, weight: '500', fill: visual.subText, wrapWidth: Math.max(1, node.size.width - 24),
         });
-        metadata.position.set(12, 67);
+        metadata.position.set(12, layout.detailY);
         content.addChild(metadata);
       }
       return content;

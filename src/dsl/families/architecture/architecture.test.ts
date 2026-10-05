@@ -289,7 +289,7 @@ describe('architecture view scenes', () => {
   it('tags nodes with their element id, tech, desc and tags', async () => {
     const compiled = await compile(CONTAINER);
     const db = compiled.nodes.find((node) => node.id === 'shop.db')!;
-    expect(db.content).toMatchObject({ label: 'DB', subLabel: 'Postgres', shape: 'cylinder' });
+    expect(db.content).toMatchObject({ label: 'DB', subLabel: '[Data store · Postgres]', shape: 'cylinder' });
     expect(db.metadata.model).toMatchObject({ elementId: 'shop.db' });
     const customer = compiled.nodes.find((node) => node.id === 'customer')!;
     expect(customer.content.shape).toBe('actor');
@@ -356,3 +356,74 @@ flow "Checkout" { intro "Start"; step Customer -> Web : opens; step Web -> API :
     expect(await format('architecture\nA -> B : x')).toContain('A -> B : x');
   });
 });
+
+ it('evaluates compound predicates with AND before OR and preserves them through serialization', async () => {
+    const source = `architecture
+model {
+ system Shop {
+  container API [tags: core]
+  store DB [tags: legacy]
+  container Web
+ }
+}
+views {
+ view custom Filtered {
+  include Shop.** where kind is container and tag is core or kind is store
+ }
+}`;
+    const compiled = await compile(source);
+    expect(compiled.nodes.map((node) => node.id)).toEqual(['shop.api', 'shop.db']);
+    const canonical = await format(source);
+    expect(canonical).toContain('kind is container and tag is @core or kind is store');
+    expect((await compile(canonical)).nodes.map((node) => node.id)).toEqual(['shop.api', 'shop.db']);
+  });
+
+ it('reads element kinds in where clauses case-insensitively', async () => {
+    const compiled = await compile('architecture\nmodel {\n system Shop {\n  container API\n  store DB\n  container Web\n }\n}\nviews {\n view custom Filtered {\n  include Shop.** where kind is Container\n }\n}');
+    expect(compiled.nodes.map((node) => node.id)).toEqual(['shop.api', 'shop.web']);
+  });
+
+ it('keeps distinct labels and protocols for parallel model relationships', async () => {
+    const compiled = await compile(`architecture
+model {
+ system Shop
+ external Bank
+ Shop -> Bank : authorizes [tech: HTTPS]
+ Shop -> Bank : settles [tech: AMQP]
+}
+views { view landscape }`);
+    expect(compiled.connectors).toHaveLength(2);
+    expect(new Set(compiled.connectors.map((connector) => connector.id)).size).toBe(2);
+    expect(compiled.connectors.map((connector) => connector.labels[0]?.text)).toEqual(['authorizes [HTTPS]', 'settles [AMQP]']);
+  });
+
+ it('retains semantics on icon cards and uses view titles without authoring a new document title', async () => {
+    const source = CONTAINER.replace('tech: Go', 'tech: Go, desc: Handles orders');
+    const result = await compile(source, {autoIcons: true, resolveIcon: () => ({packId: 'developer', shapeId: 'go'})});
+    const api = result.nodes.find((node) => node.id === 'shop.api')!;
+    expect(api.content).toMatchObject({assetPresentation: 'card', archProviderLabel: 'Container', archResourceType: 'Go', archEnvironment: 'Handles orders'});
+    expect(result.frame.content.label).toBe('container of Shop');
+    expect(await format(source)).not.toContain('title:');
+  });
+
+ it.each(['foo or bar', 'and', 'or'])('round-trips tag predicates containing operator words: %s', async (tag) => {
+    const source = `architecture\nmodel {system Shop [tags: "${tag}"]}\nviews {view custom Filtered {include * where tag is "${tag}"}}`;
+    expect((await compile(source)).nodes.map((node) => node.id)).toEqual(['shop']);
+    expect((await compile(await format(source))).nodes.map((node) => node.id)).toEqual(['shop']);
+  });
+
+ it('round-trips relationships between separate deployment nodes', async () => {
+    const source = `architecture
+model {system Shop}
+deployment Prod {
+ node Edge
+ node Server
+ Edge -> Server : forwards [tech: HTTPS]
+}
+views {view deployment of Shop in Prod}`;
+    const compiled = await compile(source);
+    expect(compiled.diagnostics.filter((diagnostic) => diagnostic.severity !== 'info')).toEqual([]);
+    expect(compiled.connectors.map((connector) => connector.labels[0]?.text)).toEqual(['forwards [HTTPS]']);
+    const canonical = await format(source);
+    expect((await compile(canonical)).connectors.map((connector) => connector.labels[0]?.text)).toEqual(['forwards [HTTPS]']);
+  });

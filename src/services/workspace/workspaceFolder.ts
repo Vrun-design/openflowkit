@@ -141,7 +141,7 @@ export function parseSnap(text: string | null): WorkspaceSnap | null {
     if (value.version !== 1 || typeof value.viewId !== 'string' || !value.positions) return null;
     const positions: Record<string, { x: number; y: number }> = {};
     for (const [id, point] of Object.entries(value.positions)) {
-      if (point && typeof point.x === 'number' && typeof point.y === 'number') positions[id] = { x: point.x, y: point.y };
+      if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) positions[id] = { x: point.x, y: point.y };
     }
     return { version: 1, viewId: value.viewId, positions };
   } catch {
@@ -167,8 +167,13 @@ export function snapOfPage(page: ScenePage): WorkspaceSnap | null {
 }
 
 /** Applies snaps to a compiled workspace before it becomes a command. */
-export function applySnapsToWorkspace<T extends { views: readonly { viewId: string; result: { nodes: readonly SceneNode[] } }[] }>(workspace: T, snaps: Readonly<Record<string, WorkspaceSnap>>): T {
+export function applySnapsToWorkspace<T extends { views: readonly { viewId: string; result: { nodes: readonly SceneNode[]; groups?: readonly SceneNode[] } }[] }>(workspace: T, snaps: Readonly<Record<string, WorkspaceSnap>>): T {
   if (Object.keys(snaps).length === 0) return workspace;
+  const restore = (node: SceneNode, snap: WorkspaceSnap): SceneNode => {
+    const elementId = placedElementId(node);
+    const point = elementId ? snap.positions[elementId] : undefined;
+    return point ? { ...node, transform: { ...node.transform, translation: { ...point } } } : node;
+  };
   return {
     ...workspace,
     views: workspace.views.map((view) => {
@@ -178,12 +183,8 @@ export function applySnapsToWorkspace<T extends { views: readonly { viewId: stri
         ...view,
         result: {
           ...view.result,
-          nodes: view.result.nodes.map((node) => {
-            const elementId = placedElementId(node);
-            const point = elementId ? snap.positions[elementId] : undefined;
-            if (!point) return node;
-            return { ...node, transform: { ...node.transform, translation: { x: point.x, y: point.y } } };
-          }),
+          nodes: view.result.nodes.map((node) => restore(node, snap)),
+          ...(view.result.groups ? { groups: view.result.groups.map((node) => restore(node, snap)) } : {}),
         },
       };
     }),

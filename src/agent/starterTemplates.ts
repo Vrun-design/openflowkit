@@ -14,7 +14,40 @@ export interface StarterTemplate {
   dsl: string;
 }
 
+export const C4_STARTER = `%% ofk 1
+architecture
+title: Shop architecture
+model {
+ person Customer [desc: Places and tracks orders]
+ system Shop [desc: Online shopping] {
+  container Web [tech: React, desc: Customer storefront]
+  container API [tech: Go, desc: Order processing] {
+   component Orders [desc: Validates orders]
+  }
+  store Database [tech: PostgreSQL, desc: Stores orders]
+  Web -> API : submits orders [tech: HTTPS]
+  API -> Database : stores orders [tech: SQL]
+ }
+ external Payments [desc: Processes card payments]
+ Customer -> Shop.Web : shops [tech: HTTPS]
+ Shop.API -> Payments : charges [tech: HTTPS]
+}
+views {
+ view landscape
+ view context of Shop
+ view container of Shop
+}
+flow "Place an order" {
+ intro "Customer checks out"
+ step Customer -> Shop.Web : confirms cart
+ step Shop.Web -> Shop.API : submits order
+ step Shop.API -> Shop.Database : saves order
+ conclusion "Order confirmed"
+}
+`;
+
 export const STARTER_TEMPLATES: readonly StarterTemplate[] = [
+  {name: 'c4-workspace', title: 'C4 architecture workspace', family: 'architecture', summary: 'Shared model with landscape, context and container views and a checkout flow.', dsl: C4_STARTER},
   {
     name: 'auth-flow',
     title: 'User authentication',

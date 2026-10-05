@@ -1,10 +1,11 @@
 import { IconPlayerPause, IconPlayerPlay, IconPlayerTrackNext, IconPlayerTrackPrev, IconX } from '@tabler/icons-react';
 import { Button, Icon, IconButton } from '../design-system';
 import type { FlowPlayback } from './useV2FlowPlayback';
-import type { FlowStepKind } from '../../../dsl/model/types';
+import type { ArchModel, FlowStepKind } from '../../../dsl/model/types';
 
 export interface V2FlowPanelProps {
   readonly playback: FlowPlayback;
+  readonly model: ArchModel | null;
   readonly onClose: () => void;
   readonly onCopy: (kind: 'mermaid' | 'plantuml' | 'sequence') => void;
 }
@@ -24,10 +25,11 @@ function stepText(kind: FlowStepKind, label: string | undefined, from?: string, 
  * Flow playback: a bottom bar with the step timeline, prev/play/next and the
  * text exports. Keyboard: ←/→ step, Space plays, Escape closes (owned by the page).
  */
-export function V2FlowPanel({ playback, onClose, onCopy }: V2FlowPanelProps): React.JSX.Element | null {
+export function V2FlowPanel({ playback, model, onClose, onCopy }: V2FlowPanelProps): React.JSX.Element | null {
   const { flow, flat, stepIndex, step, playing } = playback;
   if (!flow || !step) return null;
   const total = flat.length;
+  const name = (id: string | undefined) => id ? model?.elements.find((element) => element.id === id)?.name ?? id : undefined;
   return (
     <section className="ofk-v2-flow" aria-label={`Flow ${flow.name}`}>
       <header className="ofk-v2-flow-head">
@@ -54,7 +56,7 @@ export function V2FlowPanel({ playback, onClose, onCopy }: V2FlowPanelProps): Re
       </ol>
       <p className="ofk-v2-flow-step" data-kind={step.step.kind}>
         <span className="ofk-v2-flow-kind">{KIND_LABEL[step.step.kind]}</span>
-        <span>{stepText(step.step.kind, step.step.label, step.step.from, step.step.to)}</span>
+        <span>{stepText(step.step.kind, step.step.label, name(step.step.from), name(step.step.to))}</span>
       </p>
       <div className="ofk-v2-flow-controls">
         <IconButton label="Previous step" variant="quiet" onClick={playback.prev} disabled={stepIndex === 0}

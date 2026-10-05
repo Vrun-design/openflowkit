@@ -4,7 +4,7 @@ import type {
 import {
   elementAncestors, elementChildren, elementDescendantIds, nearestShown, relationPairKey, resolveElementRef,
 } from './model';
-import type { ArchElement, ArchModel, ArchView, ProjectedRelation, ViewRule } from './types';
+import type { ArchElement, ArchModel, ArchView, ProjectedRelation, ViewRule, ViewRuleWhere } from './types';
 
 /**
  * View predicates (grammar §9.4): the subset of Structurizr/LikeC4 include
@@ -23,9 +23,11 @@ const TAG = (value: string): string => value.replace(/^@/, '').toLowerCase();
 const sameEnv = (a: string | undefined, b: string | undefined): boolean =>
   a !== undefined && b !== undefined && a.toLowerCase() === b.toLowerCase();
 
-function matchesWhere(element: ArchElement, rule: ViewRule): boolean {
-  const where = rule.where;
+function matchesWhere(element: ArchElement, where: ViewRuleWhere | undefined): boolean {
   if (!where) return true;
+  if (where.all && !where.all.every((clause) => matchesWhere(element, clause))) return false;
+  if (where.any && !where.any.some((clause) => matchesWhere(element, clause))) return false;
+  if (where.kindNot && element.kind === where.kindNot) return false;
   if (where.kind && element.kind !== where.kind) return false;
   if (where.tag && !element.tags.some((tag) => TAG(tag) === TAG(where.tag!))) return false;
   if (where.tagNot && element.tags.some((tag) => TAG(tag) === TAG(where.tagNot!))) return false;
@@ -57,7 +59,8 @@ export function defaultScope(index: ArchIndex, view: ArchView): string[] {
 
   switch (view.kind) {
     case 'landscape':
-      return ids.filter((id) => !byId.get(id)?.env && byId.get(id)?.kind !== 'instance');
+      // Top-level, non-deployment: systems hide their children, and a model with no system still draws.
+      return model.elements.filter((element) => !element.parent && !element.env && element.kind !== 'instance').map((element) => element.id);
     case 'context': {
       if (!view.of || !byId.has(view.of)) return ids.filter((id) => !byId.get(id)?.env);
       const focus = view.of;
@@ -108,7 +111,7 @@ function resolveRule(index: ArchIndex, view: ArchView, rule: ViewRule): string[]
   const add = (candidates: readonly string[]) => {
     for (const id of candidates) {
       const element = index.byId.get(id);
-      if (element && matchesWhere(element, rule)) ids.add(id);
+      if (element && matchesWhere(element, rule.where)) ids.add(id);
     }
   };
   const subject = rule.subject.trim();
@@ -152,11 +155,12 @@ export function selectViewElements(index: ArchIndex, view: ArchView): ViewSelect
   }
   const excluded = new Set<string>();
   for (const rule of view.rules) {
-    const ids = resolveRule(index, view, rule);
-    if (ids === null) {
-      unsupported.push(rule);
-      continue;
-    }
+    // A `where` we could not read: an include is skipped, an exclude still hides its
+    // subject — the narrower view. Either way the rule is reported and kept verbatim.
+    const malformed = rule.raw !== undefined && !rule.where;
+    const ids = malformed && rule.op === 'include' ? null : resolveRule(index, view, rule);
+    if (malformed || ids === null) unsupported.push(rule);
+    if (ids === null) continue;
     for (const id of ids) {
       if (rule.op === 'include') {
         shown.add(id);
@@ -199,10 +203,6 @@ export function boundaryIds(index: ArchIndex, shown: ReadonlySet<string>): Reado
   return boundaries;
 }
 
-function candidateScore(candidate: ProjectedRelation): number {
-  return (candidate.implied ? 0 : 2) + (candidate.relation.label ? 1 : 0);
-}
-
 /**
  * Projects relations onto a view: an endpoint the view hides resolves to its
  * nearest shown ancestor, so `Customer -> Shop.Web` appears as
@@ -210,9 +210,12 @@ function candidateScore(candidate: ProjectedRelation): number {
  * them already produces the ancestor pair Structurizr spells out as an implied
  * relationship, without the redundant boundary-to-boundary duplicates.
  */
+function candidateScore(candidate: ProjectedRelation): number {
+  return (candidate.implied ? 0 : 2) + (candidate.relation.label ? 1 : 0);
+}
+
 export function projectRelations(index: ArchIndex, shown: ReadonlySet<string>): readonly ProjectedRelation[] {
-  const best = new Map<string, ProjectedRelation>();
-  const order: string[] = [];
+  const candidates: ProjectedRelation[] = [];
   const instances = [...shown].map((id) => index.byId.get(id)).filter((element) => element?.kind === 'instance');
   // Where an endpoint draws: its nearest shown ancestor, or (deployment views) every shown
   // instance of it or of an ancestor — `API -> DB` joins the API and DB instances.
@@ -229,22 +232,26 @@ export function projectRelations(index: ArchIndex, shown: ReadonlySet<string>): 
         // Two instances of the same container: the relation is internal to it (`api.auth -> api`).
         const fromTarget = index.byId.get(from)?.instanceOf;
         if (fromTarget && fromTarget === index.byId.get(to)?.instanceOf) continue;
-        const key = relationPairKey(from, to);
-        const candidate: ProjectedRelation = {
+        candidates.push({
           relation, from, to,
           implied: relation.implied === true || relation.from !== from || relation.to !== to,
-        };
-        const existing = best.get(key);
-        if (!existing) {
-          best.set(key, candidate);
-          order.push(key);
-        } else if (candidateScore(candidate) > candidateScore(existing)) {
-          best.set(key, candidate);
-        }
+        });
       }
     }
   }
-  return order.map((key) => best.get(key)!);
+  // Every direct relationship draws, parallel ones included. Projected ones draw once per
+  // pair (best score wins, first on ties), and not at all where a direct one covers the pair.
+  const covered = new Set(candidates.filter((candidate) => !candidate.implied).map((candidate) => relationPairKey(candidate.from, candidate.to)));
+  const projections: ProjectedRelation[] = [];
+  const slot = new Map<string, number>();
+  for (const candidate of candidates) {
+    const key = relationPairKey(candidate.from, candidate.to);
+    if (!candidate.implied) projections.push(candidate);
+    else if (covered.has(key)) continue;
+    else if (!slot.has(key)) slot.set(key, projections.push(candidate) - 1);
+    else if (candidateScore(candidate) > candidateScore(projections[slot.get(key)!]!)) projections[slot.get(key)!] = candidate;
+  }
+  return projections;
 }
 
 /** Tag words used anywhere in the model, for the perspective filter. */

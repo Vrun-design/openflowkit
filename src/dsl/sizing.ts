@@ -11,6 +11,8 @@ export interface NodeMeasureRequest {
   readonly spec: DslShapeSpec;
   readonly width?: number;
   readonly height?: number;
+  /** `wrap` reserves height for text wrapped at the node's width (C4 descriptions). */
+  readonly overflow?: 'wrap';
 }
 
 const LIMITS = { min: { width: 24, height: 24 }, max: { width: 640, height: 520 } };
@@ -66,11 +68,11 @@ export function measureNodeSize(request: NodeMeasureRequest): Size2d {
         version: 1, mode: 'responsive',
         minSize: { width: spec.minSize.width, height: spec.minSize.height },
         maxSize: { width: spec.maxSize.width, height: spec.maxSize.height },
-        overflow: 'visible', clipContent: false, maxLines: 4,
+        overflow: request.overflow ?? 'visible', clipContent: false, maxLines: 4,
       },
     },
     appearance: {},
-  }, { version: 1, mode: 'responsive', minSize: spec.minSize, maxSize: spec.maxSize, overflow: 'visible', clipContent: false, maxLines: 4 });
+  }, { version: 1, mode: 'responsive', minSize: spec.minSize, maxSize: spec.maxSize, overflow: request.overflow ?? 'visible', clipContent: false, maxLines: 4 });
   return clampSize(sized.size.width, sized.size.height, spec);
 }
 

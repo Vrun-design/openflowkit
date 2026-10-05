@@ -837,6 +837,9 @@ slugs, exact on explicit ids. Outside `model`, `.` in an id is W120 (§2.6).
 not, **unless any explicit relation `a -> b` exists**. Implied relations are derived, never
 serialized; they carry `metadata.model.implied = true`.
 
+Deployment blocks also accept relationships between separate nodes in the same environment;
+endpoint references resolve within that environment. Cross-environment references produce W122.
+
 ### 9.4 View predicates (subset) — implemented
 
 A typed view starts from its scope's default element set and `include`/`exclude` refine it
@@ -847,8 +850,11 @@ helper (agent reports, `explain`) and is never serialized.
 
 `include X`, `include X.*` (children), `include X.**` (descendants), `include *`, `include
 X -> Y`, `include -> X`, `include X ->`, `exclude …` same forms, `where kind is
-container`, `where tag is @core`, `where tag is not @deprecated`, `and`/`or`. Order matters
-(later overrides). Anything else → W160 "unsupported predicate, kept verbatim".
+container`, `where kind is not container`, `where tag is @core`, `where tag is not @deprecated`,
+`and`/`or` (AND binds before OR; quote tag values containing those words). Order matters
+(later overrides). Anything else → W160 "unsupported predicate, skipped and kept verbatim".
+A landscape starts with top-level people, systems and external systems; explicit descendant rules
+can add detail. Parallel authored relationships keep separate connectors and protocols.
 
 ### 9.5 Tags
 `@core` after a name = `[tags: core]`; several allowed. Canonical: `[tags: a, b]` inside the

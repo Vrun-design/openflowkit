@@ -39,6 +39,14 @@ describe('workspace snaps', () => {
     );
   });
 
+  it('restores boundary positions as well as leaf positions', async () => {
+    const { workspace } = await generated();
+    const snapped = applySnapsToWorkspace(workspace, {
+      'view:container:shop': {version: 1, viewId: 'view:container:shop', positions: {shop: {x: 70, y: 90}}},
+    });
+    expect(snapped.views[0]!.result.groups.find((node) => node.id === 'shop')!.transform.translation).toEqual({x: 70, y: 90});
+  });
+
   it('overrides compiled positions for named elements only', async () => {
     const { workspace } = await generated();
     const snapped = applySnapsToWorkspace(workspace, {

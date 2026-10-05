@@ -108,7 +108,7 @@ views {
     const after = applyDocumentCommand(document, command).document;
     const plain = placements(after, 'shop.db');
     expect(plain.every((node) => node.kind === 'process' && node.content.shape === 'cylinder' && !node.content.icon)).toBe(true);
-    expect(plain.every((node) => node.content.subLabel === 'PostgreSQL')).toBe(true);
+    expect(plain.every((node) => node.content.subLabel === '[Data store · PostgreSQL]')).toBe(true);
     expect(placements(after, 'shop.api')[0]!.content.icon).toBe('developer/backend-nodejs');
     expect(text(after)).toContain('icon: none');
     const again = await workspaceDocument(text(after));
@@ -117,7 +117,7 @@ views {
 
   it('turns the workspace off in every view and keeps authored icons and the palette', async () => {
     const document = await workspaceDocument();
-    const after = applyDocumentCommand(document, buildArchIconsOffCommand(document)!).document;
+    const after = applyDocumentCommand(document, buildArchIconsOffCommand(document, 'shop')!).document;
     const icons = after.pages.flatMap((page) => page.nodes).map((node) => node.content.icon).filter(Boolean);
     expect(new Set(icons)).toEqual(new Set(['aws/compute-ec2']));
     const dsl = text(after);
@@ -125,7 +125,7 @@ views {
     expect(dsl).toContain('appearance: paper');
     const again = await workspaceDocument(dsl);
     expect(placements(again, 'shop.web')[0]!.content.icon).toBeUndefined();
-    expect(buildArchIconsOffCommand(after)).toBeNull();
+    expect(buildArchIconsOffCommand(after, 'shop')).toBeNull();
   });
 });
 

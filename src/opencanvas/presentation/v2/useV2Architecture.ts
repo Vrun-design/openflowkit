@@ -39,7 +39,7 @@ function viewForElement(model: ArchModel, index: ArchIndex, elementId: string): 
  */
 export function useV2Architecture(document: SceneDocumentV1 | null, page: ScenePage | null): V2Architecture {
   return useMemo(() => {
-    const model = page ? archModelOfPage(page) : archModelOfDocument(document);
+    const model = (page ? archModelOfPage(page) : null) ?? archModelOfDocument(document);
     const index = model ? createArchIndex(model) : null;
     const viewId = page ? archViewIdOfPage(page) : null;
     const view = model && viewId ? model.views.find((candidate) => candidate.id === viewId) ?? null : null;

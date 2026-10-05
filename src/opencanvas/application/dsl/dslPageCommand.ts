@@ -85,6 +85,6 @@ export function nameUntitledDocument(document: SceneDocumentV1, command: Documen
   if (!name || (document.name && document.name !== UNTITLED_DOCUMENT_NAME)) return command;
   return {
     kind: 'batch', id: `${command.id}:name`, label: command.label,
-    commands: [command, { kind: 'set-document-name', id: `rename-document:${document.id}`, label: 'Rename document', before: document.name, after: name }],
+    commands: [...(command.kind === 'batch' ? command.commands : [command]), { kind: 'set-document-name', id: `rename-document:${document.id}`, label: 'Rename document', before: document.name, after: name }],
   };
 }

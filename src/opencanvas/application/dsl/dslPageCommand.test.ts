@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { applyDocumentCommand } from '../../domain/commands/execute';
+import { buildWorkspacePagesCommand } from './architectureCommands';
+import { compileWorkspace } from '../../../dsl/compile';
 import { compile } from '../../../dsl/compile';
 import { createEmptyV2Page } from '../../presentation/v2/v2Document';
 import { frameEdited, frameScene } from '../../../dsl/frameScene';
@@ -68,3 +71,14 @@ describe('DSL page command: two diagrams on one page', () => {
     expect(nameUntitledDocument(createEmptyV2Document('doc-3'), command, '   ')).toBe(command);
   });
 });
+
+ it('names a multi-view workspace atomically and undoes it completely', async () => {
+    const document = createEmptyV2Document('workspace');
+    const workspace = await compileWorkspace('architecture\ntitle: Shop\nmodel { system Shop }\nviews {\n view context of Shop\n view container of Shop\n}');
+    let id = 0;
+    const command = buildWorkspacePagesCommand(document, workspace, { mintId: (prefix) => `workspace-${prefix}-${id++}` })!;
+    const applied = applyDocumentCommand(document, nameUntitledDocument(document, command, 'Shop'));
+    expect(applied.document.name).toBe('Shop');
+    expect(applied.document.pages).toHaveLength(3);
+    expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(document);
+  });

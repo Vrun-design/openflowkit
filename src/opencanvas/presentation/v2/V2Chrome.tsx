@@ -14,7 +14,6 @@ interface V2ChromeProps extends V2SettingsProps {
   /** Page controls; the active page drives the canvas and export. */
   readonly pages: ReturnType<typeof import('./useV2Pages').useV2Pages>;
   readonly pageId: string;
-  readonly bridge: { readonly status: import('./useV2AgentBridge').V2BridgeStatus; readonly onOpen: () => void };
   readonly saveStatus: V2SaveStatus;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
@@ -73,7 +72,6 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         document={props.document}
         pages={props.pages}
         pageId={props.pageId}
-        bridge={props.bridge}
         saveStatus={props.saveStatus}
         readOnly={props.readOnly}
         onRetrySave={props.onRetrySave}

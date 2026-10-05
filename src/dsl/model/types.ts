@@ -37,7 +37,7 @@ export interface ArchElement {
 }
 
 export interface ArchRelation {
-  /** `rel:<from>-><to>` for authored, `implied:<from>-><to>` for derived. */
+  /** `rel:<from>-><to>[:occurrence]` for authored, `implied:<from>-><to>` for derived. */
   readonly id: string;
   readonly from: string;
   readonly to: string;
@@ -53,7 +53,15 @@ export interface ArchRelation {
 export const VIEW_KINDS = ['landscape', 'context', 'container', 'component', 'deployment', 'custom'] as const;
 export type ViewKind = (typeof VIEW_KINDS)[number];
 
+export const ELEMENT_KIND_LABEL: Readonly<Record<ElementKind, string>> = {
+  person: 'Person', system: 'Software system', external: 'External system', container: 'Container',
+  component: 'Component', store: 'Data store', queue: 'Queue', node: 'Deployment node', instance: 'Instance',
+};
+
 export interface ViewRuleWhere {
+  readonly all?: readonly ViewRuleWhere[];
+  readonly any?: readonly ViewRuleWhere[];
+  readonly kindNot?: string;
   readonly kind?: string;
   readonly tag?: string;
   readonly tagNot?: string;

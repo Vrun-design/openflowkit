@@ -19,6 +19,34 @@ const index = createArchIndex(model);
 const view = (partial: Partial<ArchView>): ArchView => ({ id: 'v', kind: 'custom', name: 'v', rules: [], ...partial });
 
 describe('selectViewElements', () => {
+  it('keeps landscape at the system level', () => {
+    expect([...selectViewElements(index, view({ kind: 'landscape' })).shown]).toEqual(['shop', 'crm']);
+  });
+
+  it('a landscape of a model with no top-level system still draws its top-level elements', () => {
+    const loose = createArchIndex({ ...model, elements: [
+      { id: 'web', kind: 'container', name: 'Web', parent: null, tags: [], links: [] },
+      { id: 'db', kind: 'store', name: 'DB', parent: null, tags: [], links: [] },
+      ...model.elements,
+      { id: 'prod', kind: 'node', name: 'Prod', parent: null, env: 'prod', tags: [], links: [] },
+    ] });
+    expect([...selectViewElements(loose, view({ kind: 'landscape' })).shown]).toEqual(['web', 'db', 'shop', 'crm']);
+  });
+
+  it('a malformed exclude still hides its subject and is reported', () => {
+    const selection = selectViewElements(index, view({ kind: 'container', of: 'shop', rules: [
+      { op: 'exclude', subject: 'Shop.DB', raw: 'exclude Shop.DB where tag is @legacy or' },
+    ] }));
+    expect(selection.shown.has('shop.db')).toBe(false);
+    expect(selection.shown.has('shop.api')).toBe(true);
+    expect(selection.unsupported).toHaveLength(1);
+  });
+
+  it('never applies an unsupported predicate as an unfiltered include', () => {
+    const selection = selectViewElements(index, view({ rules: [{op: 'include', subject: 'Shop.**', raw: 'include Shop.** where unknown is yes'}] }));
+    expect([...selection.shown]).toEqual([]);
+    expect(selection.unsupported).toHaveLength(1);
+  });
   it('a custom view shows exactly the included leaves, parent or not', () => {
     const shown = selectViewElements(index, view({ rules: [
       { op: 'include', subject: 'Shop.API' }, { op: 'include', subject: 'Shop.DB' },
@@ -66,5 +94,27 @@ describe('projectRelations on a deployment view', () => {
     const index = createArchIndex(model);
     const pairs = projectRelations(index, new Set(['aws', 'aws.api', 'aws.db', 'aws.replica'])).map(({ from, to }) => `${from}->${to}`);
     expect(pairs).toEqual(['aws.api->aws.db', 'aws.api->aws.replica']);
+  });
+});
+
+describe('projectRelations', () => {
+  it('keeps parallel direct relationships and aggregates projected ones per drawn pair', () => {
+    const projected = createArchIndex({ ...model,
+      elements: [{ id: 'customer', kind: 'person', name: 'Customer', parent: null, tags: [], links: [] }, ...model.elements],
+      relations: [
+        { id: 'rel:customer->shop.api', from: 'customer', to: 'shop.api', tags: [] },
+        { id: 'rel:customer->shop.db', from: 'customer', to: 'shop.db', label: 'reads', tags: [] },
+        { id: 'rel:shop.api->crm', from: 'shop.api', to: 'crm', label: 'syncs', tags: [] },
+        { id: 'rel:shop.api->crm:2', from: 'shop.api', to: 'crm', label: 'bills', tags: [] },
+        { id: 'rel:shop->crm', from: 'shop', to: 'crm', tags: [] },
+      ],
+    });
+    const ids = (shown: string[]) => projectRelations(projected, new Set(shown)).map((entry) => entry.relation.id);
+    // Context: two Customer → Shop children collapse to one (the labelled one); a direct Shop → CRM covers that pair.
+    expect(ids(['customer', 'shop', 'crm'])).toEqual(['rel:customer->shop.db', 'rel:shop->crm']);
+    // Container: both direct API → CRM relationships draw.
+    expect(ids(['customer', 'shop', 'shop.api', 'shop.db', 'crm'])).toEqual([
+      'rel:customer->shop.api', 'rel:customer->shop.db', 'rel:shop.api->crm', 'rel:shop.api->crm:2', 'rel:shop->crm',
+    ]);
   });
 });

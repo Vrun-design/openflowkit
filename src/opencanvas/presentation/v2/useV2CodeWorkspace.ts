@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } fro
 import { detectForeign } from '../../../agent/lint';
 import type { DslDiagnostic } from '../../../dsl/ast';
 import { compileWorkspace } from '../../../dsl/compile';
+import { architectureWorkspaceText } from '../../../dsl/families/architecture/text';
 import { frameEdited, frameScene } from '../../../dsl/frameScene';
+import { archModelOfPage } from '../../../dsl/model/model';
 import { parse } from '../../../dsl/parse';
 import { dslFrameRaw } from '../../../dsl/sceneMeta';
 import { serialize } from '../../../dsl/serialize';
@@ -56,6 +58,18 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
   const [compileDiagnostics, setCompileDiagnostics] = useState<readonly DslDiagnostic[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const iconToastFramesRef = useRef(new Set<string>());
+  // The text last generated as a workspace. While the draft still equals it, the draft
+  // follows the model (views, flows, relationships made outside the panel), so Generate
+  // from an untouched draft never undoes them. Text the user typed is never replaced.
+  const workspaceTextRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (draft !== workspaceTextRef.current) return;
+    const model = page ? archModelOfPage(page) : null;
+    const text = model ? architectureWorkspaceText(model) : null;
+    if (!text || text === draft) return;
+    workspaceTextRef.current = text;
+    setDraft(text);
+  }, [page, draft]);
 
   const diagnostics = useMemo(() => {
     // compile() re-parses, so dedupe the live parse pass against the last generate.
@@ -154,12 +168,13 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
       const workspace = snaps ? applySnapsToWorkspace(compiled, snaps) : compiled;
       const primary = workspace.views[0]!.result;
       setCompileDiagnostics(primary.diagnostics);
-      if (workspace.views.length > 1) {
+      if (workspace.views.length > 1 || workspace.views[0]!.viewId.startsWith('view:')) {
         // A C4 workspace: one page per view, all pages in one undo step.
         const command = buildWorkspacePagesCommand(document, workspace, {
           mintId: mintV2Id, ...(target ? { replaceFrameId: target } : {}),
         });
         if (command) commit(nameUntitledDocument(document, command, primary.meta.title));
+        workspaceTextRef.current = text ?? draft;
         setFrameId(null);
         onViews(workspace.views[0]!.viewId);
         announce(`Generated ${workspace.views.length} views. Every element is shared across them.`);
