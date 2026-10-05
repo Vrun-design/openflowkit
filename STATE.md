@@ -3,9 +3,8 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 (0–11) done, archived at `docs/archive/plan-executed-2026-10-03/`; 7b/8 parked; 6.10 → 14.1.
 
 ## Now
-- Gate: `npm run verify` (~3 min). CI runs `test:ci` (incl. `bundle:check`) then all non-`@local` e2e: 2026-10-05
-  first full run in 10 days, ~158/162. Red on CI only (pass on a Mac): MP4/WebM frame gaps, Home paint < 300 ms,
-  `edit-zoom` padding, `motion-svg` 2.9% vs 2% (fonts? Inter on the runner did not settle it). Owner: fix or `@local`.
+- Gate: `npm run verify` (~3 min). CI runs `test:ci` (incl. `bundle:check`) then all non-`@local` e2e. GPU frame
+  budgets run off CI only (`process.env.CI`); a loaded Mac flakes the gate (session-start code too, 2026-10-05).
 - **Phase 12 DONE 2026-10-03** except the merge. Owner's: merge `main` → `v2`, PR `v2` → `main`, Cloudflare
   Landing project, tag `v1-final`.
 - **Phase 13 DONE 2026-10-03** except 13.4 on a stronger model (nemotron free: Mermaid 96%, DSL 90% first try).
@@ -18,11 +17,11 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   `useV2ConnectorLabelEditing`, `useV2FeatureTips`, `useV2EditorNotices`, `useV2ProposalPreview`); `useV2Pointer`
   1306 → 633 + `v2PointerGestures` (operation types, geometry, `finishGesture`).
 - Removed the Slides rail mock (saved nothing). Untitled documents take their first diagram's `title:`
-  (`nameUntitledDocument`). Star count backs off a day on failure. nginx CSP = `_headers`. Unused deps dropped,
-  `npm audit fix` 28 → 8 (left: astro + sharp in docs-site, major bumps). README/SECURITY/CONTRIBUTING describe v2.
+  (`nameUntitledDocument`). Star count backs off a day on failure. nginx CSP = `_headers`. PNG/GIF/MP4 exports
+  draw labels in Inter (`withSvgImage`). 39 dead exports gone. Unused deps dropped, `npm audit fix` 28 → 8
+  (left: astro + sharp in docs-site, major bumps). README/SECURITY/CONTRIBUTING describe v2.
 ## Found, not fixed (owner calls)
-- 39 exports referenced nowhere (knip + grep, 2026-10-05), mostly v1 leftovers in `src/constants.ts`, `src/lib/*`,
-  `indexedDbHelpers`, `spikeFixture`. Bulk removal needs the owner's go (the session's auto-mode refused it).
+- Holds (MCP publish, merge, canvas UI, labs flag, SVG font): `docs/plan/launch-holds.md`.
 - Canvas UI (owner's D11 pass): "Connect agent" is in both the document bar and the rail; a fitted diagram tucks
   under the left toolbar; phone welcome shows keyboard hints and clips the template row; dark-mode template
   thumbnails show white sequence/state boxes.
