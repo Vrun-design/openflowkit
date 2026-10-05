@@ -31,6 +31,11 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      # An SVG drawn as an <img> cannot see the page's web fonts, so its labels fall back to
+      # system fonts. Inter here makes that fallback the canvas's own face, as on a Mac.
+      - name: Install Inter
+        run: sudo apt-get install -y fonts-inter
+
       - name: Run E2E suite (software WebGL; @local specs need a GPU)
         run: npm run e2e:ci
 

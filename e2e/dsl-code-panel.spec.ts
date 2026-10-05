@@ -12,10 +12,10 @@ test('diagram source generates and regenerates as one undo step', async ({ page 
   const source = page.getByRole('textbox', { name: 'Diagram source' });
   await expect(source).toBeVisible();
   await source.fill('%% ofk 1\nflowchart\nStart -> Build -> Ship');
-  await source.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+  await source.press('ControlOrMeta+Enter');
   await expect.poll(() => count(page)).toBe(4);
   await source.fill('%% ofk 1\nflowchart\nStart -> Test -> Build -> Ship');
-  await source.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+  await source.press('ControlOrMeta+Enter');
   await expect.poll(() => count(page)).toBe(5);
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect.poll(() => count(page)).toBe(4);
@@ -43,7 +43,7 @@ test('a generated diagram fits the canvas the open panel leaves free @gate', asy
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
   const source = page.getByRole('textbox', { name: 'Diagram source' });
   await source.fill('flowchart right\nA -> B -> C -> D -> E -> F -> G -> H -> I -> J');
-  await source.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+  await source.press('ControlOrMeta+Enter');
   await expect.poll(() => count(page)).toBeGreaterThan(5);
   const panelLeft = (await page.getByRole('textbox', { name: 'Diagram source' }).boundingBox())!.x;
   await expect.poll(async () => {
@@ -59,7 +59,7 @@ test('a long edge label wraps instead of running over the nodes it joins @gate',
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
   const source = page.getByRole('textbox', { name: 'Diagram source' });
   await source.fill('flowchart right\nA -> B : email the customer a receipt once the order has shipped');
-  await source.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
+  await source.press('ControlOrMeta+Enter');
   await expect.poll(() => count(page)).toBeGreaterThan(2);
   await expect.poll(async () => page.evaluate(() => (window as unknown as {
     __V2__: { getConnectorDebugSnapshot(): { labels: number; widestLabel: number } };
@@ -80,13 +80,13 @@ test('the code editor wraps long lines in step with its highlight, and ⌘Z undo
   await page.keyboard.type('flowchart\nA -> B');
   await page.keyboard.press('Tab');
   await expect(source).toHaveValue('flowchart\nA -> B  ');
-  await page.keyboard.press('Meta+z');
+  await page.keyboard.press('ControlOrMeta+z');
   await expect(source).toHaveValue('flowchart\nA -> B');
   await page.keyboard.type(' [');
   await expect(page.getByRole('listbox')).toBeVisible();
   await page.keyboard.press('Enter');
   await expect(source).not.toHaveValue('flowchart\nA -> B [');
-  await page.keyboard.press('Meta+z');
+  await page.keyboard.press('ControlOrMeta+z');
   await expect(source).toHaveValue('flowchart\nA -> B [');
 
   // A long AI-written line wraps; the highlight underneath wraps at the same places.

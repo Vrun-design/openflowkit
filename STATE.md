@@ -3,38 +3,38 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 (0–11) done, archived at `docs/archive/plan-executed-2026-10-03/`; 7b/8 parked; 6.10 → 14.1.
 
 ## Now
-- Stress sheet: `npm run stress:generate` → `stress/*.json`; gate: `npm run verify` (~2 min); CI runs the rest.
-- **Phase 12 DONE 2026-10-03 (opus-5.5)** except the merge: 27/27 v1 fidelity, bridge on `main` (PR #84), boot import,
-  old URLs, `sw.js` kill switch, BYOK carry-over, v1 backup. Owner's: merge `main` → `v2`, PR `v2` → `main`,
-  Cloudflare Landing project, tag `v1-final`.
-- **Phase 13 DONE 2026-10-03 (opus-5.5)** except the 13.4 run:
-  13.1 tools take Mermaid / Structurizr / D2 (`readAgentSource`, `src/agent/lint.ts`) → `converted: {from, dsl, losses}`;
-  13.2 headless SVG + `openflowkit build` draw icon art (`mcp-server/data/icon-art`, built by `build:icons`, ~11 MB);
-  13.3 `skills/openflowkit/SKILL.md` = `public/llms.txt` (`npm run skill:sync`; `skill.test.ts` fails on drift);
-  13.4 `npm run eval:validity` ran 2026-10-04 (nemotron free): first-try Mermaid 96%, DSL 90% (100% replayed on
-  current code); re-run on a stronger model (free tier 50 req/day, a run is 100+) for the launch number;
-  13.5 `d2ToDsl` (32 real D2 files) + Structurizr fixed on its own 4 example workspaces.
-- MCP 0.2.0 was never published; `npx @vrun-design/openflowkit-mcp` still serves 0.1.2 until it is.
-## Polish pass 2026-10-04 (opus-5.5) — UNCOMMITTED, `npm run verify` green, brief `docs/plan/polish-pass-brief.md`
-- A: failure/empty states share `ErrorState`/`EmptyState` (+ `hero`, `secondary`) and `V2StateHero`; WebGL off hides
-  canvas tools; storage copy from `describeStorageFailure`. B: home v3 — sidebar views (`?view=`), Archive (`archivedAt`
-  on the record, kept until deleted, a save restores), multi-select, ⌘K, import/drop (`{source}` intent), thumbnails IDB (**DB v5**).
-  C: feature tips (`v2FeatureTips.ts`, one a session, once ever). Decided: **auto-icons stay on by default**.
+- Gate: `npm run verify` (~3 min). CI (`quality.yml`) runs `test:ci` (incl. `bundle:check`) then the full e2e suite.
+- **Phase 12 DONE 2026-10-03** except the merge. Owner's: merge `main` → `v2`, PR `v2` → `main`, Cloudflare
+  Landing project, tag `v1-final`.
+- **Phase 13 DONE 2026-10-03** except 13.4 on a stronger model (nemotron free: Mermaid 96%, DSL 90% first try).
+- MCP 0.2.0 builds and answers over stdio (29 tools, Mermaid in) but is **unpublished**: npm still serves 0.1.2,
+  which has no live bridge. Publish (`prepublishOnly` rebuilds) before launch; see memory `project_mcp_registry_publish`.
+## Launch-readiness pass 2026-10-05 (opus-5.5) — committed on `v2`, verify green
+- CI had been red since 2026-09-25 (editor chunk over budget, so e2e never ran). Fixed: v1 importer, agent op
+  registry and Structurizr/D2 load on demand. Entry JS 566 → 231 KB; editor 1504 → 1422 KB (budget 1500).
+- Split god files: `V2EditorPage` 1350 → ~935 (`useV2Panels`, `useV2CodeWorkspace`, `useV2Inserts`,
+  `useV2ConnectorLabelEditing`, `useV2FeatureTips`, `useV2EditorNotices`, `useV2ProposalPreview`); `useV2Pointer`
+  1306 → 633 + `v2PointerGestures` (operation types, geometry, `finishGesture`).
+- Removed the Slides rail mock (saved nothing). Untitled documents take their first diagram's `title:`
+  (`nameUntitledDocument`). Star count backs off a day on failure. nginx CSP = `_headers`. Unused deps dropped,
+  `npm audit fix` 28 → 8 (left: astro + sharp in docs-site, major bumps). README/SECURITY/CONTRIBUTING describe v2.
 ## Found, not fixed (owner calls)
-- Fit under 65% zoom: 27/50 replayed DSL replies, median 0.63 (1040×900 canvas). Not a layout knob: 16 of 27 are
-  sequence/class/mindmap (own layouts); ELK wrapping moved it to 22 but tangled long flows (screenshots), reverted.
-  Recommend: land AI results at ≥65% anchored on the start, fit button for the overview.
-- Editor chunk 1511.6 KB at `ff154d3`, 1510.7 KB after the polish pass, vs 1500 KB budget (CI does not run `bundle:check`).
-- MCP 0.1.2 on npm has no live bridge at all: pairing needs 0.2.0 published.
-- Auto-icons on for flowcharts (keep); dark mode pastel tiles. Not done: split V2EditorPage/useV2Pointer, incremental
-  index (9 ms at 5k), on-device model, code-panel virtualisation (0.8 s/key at 10k lines).
+- 39 exports referenced nowhere (knip + grep, 2026-10-05), mostly v1 leftovers in `src/constants.ts`, `src/lib/*`,
+  `indexedDbHelpers`, `spikeFixture`. Bulk removal needs the owner's go (the session's auto-mode refused it).
+- Canvas UI (owner's D11 pass): "Connect agent" is in both the document bar and the rail; a fitted diagram tucks
+  under the left toolbar; phone welcome shows keyboard hints and clips the template row; dark-mode template
+  thumbnails show white sequence/state boxes.
+- Fit under 65% zoom on 27/50 AI replies: land AI results at ≥65% anchored on the start, fit button for overview.
+- Not done: incremental index (9 ms at 5k), on-device model, code-panel virtualisation (0.8 s/key at 10k lines).
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.
 - Animation is page-scoped only; deployment relations (node → node) are not in the grammar.
 ## Next — owner's order, 2026-10-03
-- Re-run 13.4 after the detector fix on a model with quota. Then 14.1 quality pass, D11 UI,
-  14.4 analytics, 15 share links. Open calls: D7 paid; D8 labs (Claude: yes); D11 (V2 recommended).
+- Phase 15 plan/audit DONE (Codex, 2026-10-04): ChatGPT, preservation, revisions, remote sessions.
+- Order: 13.4 with quota → 14.1 → D11 UI → 14.4 → 15. Open: D7 paid; D8 labs (Claude: no flag, see below); D11.
+- D8 (Claude, 2026-10-05): no labs flag. Slides was the only unreal surface and is gone; charts and wireframes are
+  real and tested. Lead the launch story with agent → diagram; a flag would cost a branch in every flyout.
 ## Deferred
 - Widget text width is estimated; wireframe comments move to the end; PDF = print dialog; no zip;
   bridge is long-poll; chart data panel commits per blur; image aspect lock is Shift-lock.
