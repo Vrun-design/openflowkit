@@ -12,7 +12,7 @@ import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { applySnapsToWorkspace, type WorkspaceSnap } from '../../../services/workspace/workspaceFolder';
 import { buildWorkspacePagesCommand } from '../../application/dsl/architectureCommands';
-import { buildDslPageCommand, nextDslFrameOrigin } from '../../application/dsl/dslPageCommand';
+import { buildDslPageCommand, nameUntitledDocument, nextDslFrameOrigin } from '../../application/dsl/dslPageCommand';
 import { buildAutoIconsOffCommand, hasAutoIcon } from '../../application/dsl/iconCommands';
 import { replaceSelection, type CanvasSelection } from '../../application/selection/selection';
 import type { DocumentCommand } from '../../domain/commands/types';
@@ -159,14 +159,14 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
         const command = buildWorkspacePagesCommand(document, workspace, {
           mintId: mintV2Id, ...(target ? { replaceFrameId: target } : {}),
         });
-        if (command) commit(command);
+        if (command) commit(nameUntitledDocument(document, command, primary.meta.title));
         setFrameId(null);
         onViews(workspace.views[0]!.viewId);
         announce(`Generated ${workspace.views.length} views. Every element is shared across them.`);
         return;
       }
       const command = buildDslPageCommand(currentPage, primary, target ?? undefined);
-      if (command) commit(command);
+      if (command) commit(nameUntitledDocument(document, command, primary.meta.title));
       const targetId = target ?? primary.frame.id;
       offerIconRemoval(targetId, primary.nodes.filter(hasAutoIcon).length);
       // A new diagram lands where the user can see it; regenerating keeps their camera.

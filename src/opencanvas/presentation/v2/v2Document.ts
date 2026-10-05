@@ -1,4 +1,4 @@
-import { createDefaultSceneLayer } from '../../domain/document/defaults';
+import { UNTITLED_DOCUMENT_NAME, createDefaultSceneLayer } from '../../domain/document/defaults';
 import {
   SCENE_DOCUMENT_FORMAT,
   SCENE_DOCUMENT_VERSION,
@@ -21,7 +21,7 @@ export function createEmptyV2Page(pageId = 'page-1'): ScenePage {
   };
 }
 
-export function createEmptyV2Document(id: string, name = 'Untitled diagram'): SceneDocumentV1 {
+export function createEmptyV2Document(id: string, name = UNTITLED_DOCUMENT_NAME): SceneDocumentV1 {
   const now = new Date().toISOString();
   return {
     format: SCENE_DOCUMENT_FORMAT,

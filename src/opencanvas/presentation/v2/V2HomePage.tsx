@@ -13,6 +13,7 @@ import {
 import { CommandPalette, type Command } from '../design-system/CommandPalette';
 import { createV2Repository, type V2DocumentSummary, type V2Thumbnail } from '../../../services/storage/v2/v2Repository';
 import { describeStorageFailure } from '../../../services/storage/v2/v2Errors';
+import { UNTITLED_DOCUMENT_NAME } from '../../domain/document/defaults';
 import { isV1Backup, openV1Backup, readV1ImportMarker, runV1Import } from '../../../services/storage/v2/v1Import';
 import { documentFromFileText } from '../../../services/storage/v2/openDocumentFile';
 import { STARTER_TEMPLATES } from '../../../agent/starterTemplates';
@@ -277,7 +278,7 @@ export function V2HomePage(): React.JSX.Element {
         }
         const opened = documentFromFileText(text, mintV2Id('doc'));
         if ('error' in opened) { problems.push(file.name); continue; }
-        const untitled = !opened.document.name || opened.document.name === 'Untitled diagram';
+        const untitled = !opened.document.name || opened.document.name === UNTITLED_DOCUMENT_NAME;
         const document = untitled ? { ...opened.document, name: file.name.replace(/\.json$/i, '') } : opened.document;
         const saved = await repository.saveDocument(document.id, document, 1);
         if (saved.status === 'saved') imported += 1; else problems.push(file.name);

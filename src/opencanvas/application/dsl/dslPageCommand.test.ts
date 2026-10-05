@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { compile } from '../../../dsl/compile';
 import { createEmptyV2Page } from '../../presentation/v2/v2Document';
 import { frameEdited, frameScene } from '../../../dsl/frameScene';
-import { buildDslPageCommand, nextDslFrameOrigin } from './dslPageCommand';
+import { buildDslPageCommand, nameUntitledDocument, nextDslFrameOrigin } from './dslPageCommand';
+import { createEmptyV2Document } from '../../presentation/v2/v2Document';
 
 describe('DSL page command', () => {
   it('inserts generated frame and content as one command', async () => {
@@ -47,5 +48,23 @@ describe('DSL page command: two diagrams on one page', () => {
     const second = buildDslPageCommand(first.after, compiled) as SetPage;
     expect(second.after.nodes.filter((node) => node.kind === 'frame').map(({ id }) => id))
       .toEqual([compiled.frame.id, `${compiled.frame.id}-2`]);
+  });
+
+  it('names an untitled document after its first diagram, in the same undo step', async () => {
+    const compiled = await compile('flowchart\ntitle: Checkout flow\nA -> B');
+    const document = createEmptyV2Document('doc-1');
+    const command = buildDslPageCommand(document.pages[0]!, compiled)!;
+    expect(nameUntitledDocument(document, command, compiled.meta.title)).toMatchObject({
+      kind: 'batch', commands: [command, { kind: 'set-document-name', before: 'Untitled diagram', after: 'Checkout flow' }],
+    });
+  });
+
+  it('keeps a name someone chose, and a diagram without a title changes nothing', async () => {
+    const compiled = await compile('flowchart\ntitle: Checkout flow\nA -> B');
+    const named = { ...createEmptyV2Document('doc-1'), name: 'Payments' };
+    const command = buildDslPageCommand(named.pages[0]!, compiled)!;
+    expect(nameUntitledDocument(named, command, compiled.meta.title)).toBe(command);
+    expect(nameUntitledDocument(createEmptyV2Document('doc-2'), command, undefined)).toBe(command);
+    expect(nameUntitledDocument(createEmptyV2Document('doc-3'), command, '   ')).toBe(command);
   });
 });

@@ -1,4 +1,5 @@
 import type { JsonObject } from '@/opencanvas/domain/document/json';
+import { UNTITLED_DOCUMENT_NAME } from '@/opencanvas/domain/document/defaults';
 import { migrateSceneDocument } from '@/opencanvas/domain/document/migration';
 import type { SceneDocumentV1 } from '@/opencanvas/domain/document/types';
 import type { DocumentValidationIssue } from '@/opencanvas/domain/document/validation';
@@ -225,7 +226,7 @@ async function listRecords(database: IDBDatabase, archived: boolean): Promise<V2
     .filter((record) => (typeof record.archivedAt === 'string') === archived)
     .map((record) => ({
       id: record.id,
-      name: typeof record.document.name === 'string' ? record.document.name : 'Untitled diagram',
+      name: typeof record.document.name === 'string' ? record.document.name : UNTITLED_DOCUMENT_NAME,
       savedAt: record.savedAt,
       pageCount: Array.isArray(record.document.pages) ? record.document.pages.length : 0,
       pageIds: Array.isArray(record.document.pages) ? record.document.pages.map((page) => page.id) : [],

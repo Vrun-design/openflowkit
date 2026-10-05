@@ -16,7 +16,8 @@ describe('App routing', () => {
   it('redirects / to a new document and opens the editor', async () => {
     window.location.hash = '#/';
     const { findByTestId } = render(<App />);
-    await findByTestId('editor');
+    // A first visit waits up to 2 s for the v1 import (loaded on demand) before minting a document.
+    await findByTestId('editor', {}, { timeout: 4000 });
     await waitFor(() => expect(window.location.hash).toMatch(/^#\/d\/doc-/));
   });
 

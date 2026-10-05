@@ -1,6 +1,7 @@
 import type { CompileResult } from '../../../dsl/compile';
 import type { DocumentCommand } from '../../domain/commands/types';
-import type { SceneConnector, SceneNode, ScenePage } from '../../domain/document/types';
+import { UNTITLED_DOCUMENT_NAME } from '../../domain/document/defaults';
+import type { SceneConnector, SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import { areStructurallyEqual } from '../../domain/commands/equality';
 import { hashDslScene } from '../../../dsl/compile';
 
@@ -76,4 +77,14 @@ export function buildDslPageCommand(page: ScenePage, compiled: CompileResult, bo
 export function nextDslFrameOrigin(page: ScenePage): { x: number; y: number } {
   const right = page.nodes.reduce((maximum, node) => Math.max(maximum, node.transform.translation.x + node.size.width), 0);
   return { x: right + 160, y: 80 };
+}
+
+/** An untitled document takes its first diagram's title, in the same undo step as the diagram. */
+export function nameUntitledDocument(document: SceneDocumentV1, command: DocumentCommand, title: string | undefined): DocumentCommand {
+  const name = title?.trim();
+  if (!name || (document.name && document.name !== UNTITLED_DOCUMENT_NAME)) return command;
+  return {
+    kind: 'batch', id: `${command.id}:name`, label: command.label,
+    commands: [command, { kind: 'set-document-name', id: `rename-document:${document.id}`, label: 'Rename document', before: document.name, after: name }],
+  };
 }
