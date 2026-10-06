@@ -2,7 +2,7 @@ import type { Bounds2d, Point2d } from '../geometry/types';
 import { createBounds2d } from '../geometry/bounds';
 
 // Stroke maths for the ink tools: capture-time simplification, render-time
-// smoothing, and the two hit tests the eraser and lasso need. Pure and small.
+// smoothing, and the hit test the eraser needs. Pure and small.
 
 /** Ramer–Douglas–Peucker: drops points a straight run already passes within `tolerance` of. */
 export function simplifyStroke(points: readonly Point2d[], tolerance: number): Point2d[] {
@@ -98,39 +98,6 @@ export function strokeHitBySegment(
   if (points.length === 1) return segmentDistance(points[0]!, points[0]!, segment[0], segment[1]) <= radius;
   for (let index = 1; index < points.length; index += 1) {
     if (segmentDistance(points[index - 1]!, points[index]!, segment[0], segment[1]) <= radius) return true;
-  }
-  return false;
-}
-
-export function pointInPolygon(point: Point2d, polygon: readonly Point2d[]): boolean {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
-    const a = polygon[i]!;
-    const b = polygon[j]!;
-    if ((a.y > point.y) !== (b.y > point.y)
-      && point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
-  }
-  return inside;
-}
-
-/** True when the polygon overlaps a node's box: a corner inside, or an edge crossing it. */
-export function polygonIntersectsBounds(polygon: readonly Point2d[], bounds: Bounds2d): boolean {
-  if (polygon.length < 3) return false;
-  const left = bounds.x; const right = bounds.x + bounds.width;
-  const top = bounds.y; const bottom = bounds.y + bounds.height;
-  if ([left, right].some((x) => [top, bottom].some((y) => pointInPolygon({ x, y }, polygon)))) return true;
-  const corners: readonly Point2d[] = [
-    { x: left, y: top }, { x: right, y: top }, { x: right, y: bottom }, { x: left, y: bottom },
-  ];
-  if (corners.some((corner) => pointInPolygon(corner, polygon))) return true;
-  const edges: readonly (readonly [Point2d, Point2d])[] = [
-    [corners[0]!, corners[1]!], [corners[1]!, corners[2]!],
-    [corners[2]!, corners[3]!], [corners[3]!, corners[0]!],
-  ];
-  for (let index = 0; index < polygon.length; index += 1) {
-    const a = polygon[index]!;
-    const b = polygon[(index + 1) % polygon.length]!;
-    if (edges.some(([c, d]) => segmentDistance(a, b, c, d) <= 0)) return true;
   }
   return false;
 }

@@ -1,4 +1,4 @@
-// Slice 6.4 headed check: ink draws at input rate, erases and lassos.
+// Slice 6.4 headed check: ink draws at input rate and erases.
 import { expect, test } from './test';
 
 type V2Api = {
@@ -88,19 +88,4 @@ test('pen draws one smoothed stroke per gesture, eraser removes it, one undo eac
   await page.keyboard.press('Meta+z');
   await expect.poll(async () => (await state(page)).nodes.length).toBe(2);
 
-  // Lasso: a polygon around nothing selects nothing, one around both strokes
-  // selects both. Each drag re-arms: a finished gesture returns to select.
-  const selectedCount = () => page.evaluate(() =>
-    (window as unknown as { __V2__: { getState(): { selectedNodes: string[] } } })
-      .__V2__.getState().selectedNodes.length);
-  await page.keyboard.press('Escape');
-  await page.keyboard.press('q');
-  await expect.poll(async () => (await state(page)).tool).toBe('lasso');
-  await drawStroke(page, { x: 200, y: 200 }, [{ x: 300, y: 200 }, { x: 300, y: 260 }, { x: 200, y: 260 }]);
-  await expect.poll(selectedCount).toBe(0);
-  await page.keyboard.press('q');
-  await expect.poll(async () => (await state(page)).tool).toBe('lasso');
-  await drawStroke(page, { x: 200, y: 180 },
-    [{ x: 900, y: 180 }, { x: 900, y: 620 }, { x: 200, y: 620 }]);
-  await expect.poll(selectedCount).toBe(2);
 });

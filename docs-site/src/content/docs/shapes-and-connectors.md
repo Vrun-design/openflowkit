@@ -27,7 +27,6 @@ longer offered in the flyout, but documents and DSL that use them still draw the
 | Text | `T` |
 | Pen / Highlighter | `P` / `Shift + P` |
 | Eraser | `X` |
-| Lasso | `Q` |
 
 Shapes arrive with sensible sizes; drag the handles to resize, hold `Shift` to keep the
 aspect, hold `Alt` to resize from the centre. Rotation has its own handle just outside the

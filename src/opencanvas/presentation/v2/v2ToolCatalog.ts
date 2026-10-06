@@ -12,7 +12,7 @@ import {
   IconAdjustmentsHorizontal, IconAlertTriangle, IconAlignLeft, IconAntennaBars5, IconAppWindow, IconBrowser,
   IconCalendar, IconChevronsDown, IconChevronsRight, IconCircleDot, IconCirclePlus, IconCursorText, IconDeviceMobile,
   IconDeviceTablet, IconDotsCircleHorizontal, IconEraser, IconFlare, IconForms, IconFrame, IconHeading,
-  IconHighlight, IconLasso, IconLayoutBottombar, IconLayoutCards, IconLayoutNavbar, IconLayoutSidebar, IconLink,
+  IconHighlight, IconLayoutBottombar, IconLayoutCards, IconLayoutNavbar, IconLayoutSidebar, IconLink,
   IconList, IconMenu2, IconPencil, IconPhoto, IconProgress, IconRectangle, IconSearch, IconSeparatorHorizontal,
   IconSquareCheck, IconSquareChevronDown, IconStairs, IconSwitchHorizontal, IconTabs, IconTag, IconToggleRight,
   IconTooltip, IconUserCircle, IconHandStop, IconPhotoPlus, IconPointer,
@@ -31,7 +31,7 @@ export type V2Tool =
   | 'connector'
   | 'text'
   | 'pen' | 'highlighter'
-  | 'eraser' | 'lasso' | 'laser';
+  | 'eraser' | 'laser';
 
 export type V2ConnectorTool = 'arrow' | 'elbow' | 'curve' | 'line' | 'path';
 export type V2ChartKind = ChartKind;
@@ -86,7 +86,6 @@ export const CONNECTOR_OPTIONS: readonly ToolOption<V2ConnectorTool>[] = [
 export const POINTER_OPTIONS: readonly ToolOption<V2Tool>[] = [
   { id: 'select', label: 'Select', icon: IconPointer, shortcut: 'V' },
   { id: 'hand', label: 'Hand', icon: IconHandStop, shortcut: 'H' },
-  { id: 'lasso', label: 'Lasso', icon: IconLasso, shortcut: 'Q' },
 ];
 
 /** Draw flyout: freehand marks, and the tools that remove or point at them. */

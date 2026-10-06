@@ -55,8 +55,7 @@ sections. Every cell places its item in one click; nothing opens a second menu.
   each one stacks into the frame. The [wireframe family](/diagram-wireframe/) writes the same
   screens as text.
 
-The other tools sit in their own groups: **Pointer** holds select (`V`), hand (`H`) and lasso
-(`Q`); **Draw** holds pen (`P`), highlighter, eraser (`X`) and the laser pointer (`K`), which
+The other tools sit in their own groups: **Pointer** holds select (`V`) and hand (`H`); **Draw** holds pen (`P`), highlighter, eraser (`X`) and the laser pointer (`K`), which
 draws a fading red trail for presenting and never touches the document.
 
 ## What it cannot do

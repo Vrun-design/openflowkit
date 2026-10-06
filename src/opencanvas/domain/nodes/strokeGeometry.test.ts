@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBounds2d } from '../geometry/bounds';
 import {
-  pointInPolygon, polygonIntersectsBounds, simplifyStroke, smoothStroke, strokeBounds,
-  strokeHitBySegment,
+  simplifyStroke, smoothStroke, strokeBounds, strokeHitBySegment,
 } from './strokeGeometry';
 
 const line = Array.from({ length: 11 }, (_, index) => ({ x: index * 10, y: 0 }));
@@ -56,22 +55,5 @@ describe('strokeHitBySegment', () => {
     expect(strokeHitBySegment(line, [{ x: 50, y: 20 }, { x: 50, y: 40 }], 6)).toBe(false);
     expect(strokeHitBySegment([{ x: 5, y: 5 }], [{ x: 0, y: 0 }, { x: 10, y: 10 }], 1)).toBe(true);
     expect(strokeHitBySegment([], [{ x: 0, y: 0 }, { x: 10, y: 10 }], 1)).toBe(false);
-  });
-});
-
-describe('lasso geometry', () => {
-  const triangle = [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 100 }];
-
-  it('tests a point against the polygon', () => {
-    expect(pointInPolygon({ x: 50, y: 40 }, triangle)).toBe(true);
-    expect(pointInPolygon({ x: 5, y: 90 }, triangle)).toBe(false);
-  });
-
-  it('selects a box inside, overlapping or crossing the lasso', () => {
-    expect(polygonIntersectsBounds(triangle, createBounds2d(40, 20, 20, 20))).toBe(true);
-    // Straddles the left edge: the box is outside but the edge crosses it.
-    expect(polygonIntersectsBounds(triangle, createBounds2d(-10, 20, 30, 20))).toBe(true);
-    expect(polygonIntersectsBounds(triangle, createBounds2d(200, 200, 20, 20))).toBe(false);
-    expect(polygonIntersectsBounds([], createBounds2d(0, 0, 10, 10))).toBe(false);
   });
 });

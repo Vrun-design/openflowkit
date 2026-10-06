@@ -24,7 +24,6 @@ renders this list itself, from the same data, so it cannot drift from what the k
 | Pen | `P` |
 | Highlighter | `Shift + P` |
 | Eraser | `X` |
-| Lasso | `Q` |
 | Laser pointer | `K` |
 | Frame | `F` |
 | Sticky note | `N` |

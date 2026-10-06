@@ -35,7 +35,6 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
         { label: 'Pen', keys: 'P', tokens: ['p'] },
         { label: 'Highlighter', keys: 'Shift + P', tokens: ['KeyP'] },
         { label: 'Eraser', keys: 'X', tokens: ['x'] },
-        { label: 'Lasso', keys: 'Q', tokens: ['q'] },
         { label: 'Laser pointer', keys: 'K', tokens: ['k'] },
         { label: 'Frame', keys: 'F', tokens: ['f'] },
         { label: 'Sticky note', keys: 'N', tokens: ['n'] },

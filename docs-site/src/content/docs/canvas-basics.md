@@ -13,7 +13,6 @@ and every gesture is one undo step.
 | Click a shape | That shape selected |
 | Shift + click | Add to or remove from the selection |
 | Drag on empty canvas | Box-select everything the box touches |
-| `Q` then drag | Lasso: select by a hand-drawn outline |
 | `⌘`/`Ctrl + A` | Select all on the page |
 | `Esc` | Dismiss the current panel or clear the selection |
 

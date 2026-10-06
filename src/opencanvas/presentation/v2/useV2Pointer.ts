@@ -269,10 +269,6 @@ export function useV2Pointer(options: V2PointerOptions) {
           if (strokeHitBySegment(points, [operation.from, world], radius)) operation.removed.add(node.id);
         }
         operationRef.current = { ...operation, from: world };
-      } else if (operation.kind === 'lasso') {
-        const world = host.screenToWorld(point);
-        operationRef.current = { ...operation, points: [...operation.points, world] };
-        host.setMarquee(boundsBetween(operation.points[0]!, point));
       } else if (operation.kind === 'connect') {
         const toWorld = host.screenToWorld(point);
         operationRef.current = { ...operation, toWorld };
@@ -404,12 +400,6 @@ export function useV2Pointer(options: V2PointerOptions) {
           matrices: buildNodeWorldMatrices(page),
           from: host.screenToWorld(point), removed: new Set(),
         };
-        return;
-      }
-      if (tool === 'lasso') {
-        const world = host.screenToWorld(point);
-        operationRef.current = { kind: 'lasso', pointerId: event.pointerId, page, points: [world] };
-        host.setMarquee(boundsBetween(point, point));
         return;
       }
       if (tool === 'connector' && opts.toolConfigRef.current.connector === 'path') {

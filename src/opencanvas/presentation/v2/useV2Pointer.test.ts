@@ -381,36 +381,3 @@ describe('path connector tool', () => {
     expect(command.connector.target.nodeId).toBe('b');
   });
 });
-
-/** The selection the hook last applied. */
-function useSelection(applySelection: ReturnType<typeof vi.fn>) {
-  const last = applySelection.mock.calls.at(-1)?.[0] as { nodeIds: readonly string[] } | undefined;
-  return { nodeIds: last?.nodeIds ?? [] };
-}
-
-describe('lasso tool', () => {
-  it('selects the nodes whose box the polygon touches', () => {
-    const { result, event, toolRef, applySelection, host } = setup();
-    toolRef.current = 'lasso';
-    host.pickNode = vi.fn((): string | null => null);
-    // Node 'a' occupies (0,0)-(100,50); the polygon wraps it.
-    act(() => result.current.handlePointerDown(event(-20, -20)));
-    act(() => result.current.handlePointerMove(event(200, -20)));
-    act(() => result.current.handlePointerMove(event(200, 200)));
-    act(() => result.current.handlePointerMove(event(-20, 200)));
-    act(() => result.current.handlePointerUp(event(-20, -20)));
-    expect(applySelection).toHaveBeenCalled();
-    expect(useSelection(applySelection).nodeIds).toEqual(['a']);
-  });
-
-  it('selects nothing when the polygon misses every node', () => {
-    const { result, event, toolRef, applySelection, host } = setup();
-    toolRef.current = 'lasso';
-    host.pickNode = vi.fn((): string | null => null);
-    act(() => result.current.handlePointerDown(event(400, 400)));
-    act(() => result.current.handlePointerMove(event(500, 400)));
-    act(() => result.current.handlePointerMove(event(500, 500)));
-    act(() => result.current.handlePointerUp(event(400, 400)));
-    expect(useSelection(applySelection).nodeIds).toEqual([]);
-  });
-});

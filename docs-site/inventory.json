@@ -143,7 +143,7 @@
       "name": "Selection",
       "status": "shipped",
       "evidence": "src/opencanvas/presentation/v2/useV2Selection.ts:15",
-      "notes": "Click, shift-click, box-select and lasso all feed one selection store.",
+      "notes": "Click, shift-click and box-select all feed one selection store.",
       "page": "canvas-basics",
       "shortcuts": [
         "Select all"
@@ -221,17 +221,6 @@
       "page": "shapes-and-connectors",
       "shortcuts": [
         "Eraser"
-      ]
-    },
-    {
-      "id": "lasso-tool",
-      "name": "Lasso",
-      "status": "shipped",
-      "evidence": "src/opencanvas/presentation/v2/useV2Pointer.ts:1079",
-      "notes": "Polygon drag selects every node whose box it touches.",
-      "page": "canvas-basics",
-      "shortcuts": [
-        "Lasso"
       ]
     },
     {
@@ -1022,7 +1011,7 @@
       "name": "Insert flyout and grouped tools",
       "status": "shipped",
       "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts",
-      "notes": "Seven-button rail (2026-10-06): Pointer (select, hand, lasso), Shapes, Connector, Text, Draw (pen, highlighter, eraser, laser pointer), Icons and emoji, Insert (upload image, sticky note, charts, frames, wireframe). Frame, phone, tablet, browser and window frames adopt what is dropped on them and draw their chrome in the export too.",
+      "notes": "Seven-button rail (2026-10-06): Pointer (select, hand), Shapes, Connector, Text, Draw (pen, highlighter, eraser, laser pointer), Icons and emoji, Insert (upload image, sticky note, charts, frames, wireframe). Frame, phone, tablet, browser and window frames adopt what is dropped on them and draw their chrome in the export too.",
       "page": "insert-media",
       "shortcuts": [
         "Laser pointer",

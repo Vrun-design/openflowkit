@@ -24,8 +24,8 @@ import { ensureConnectorEndpointPorts } from '../../domain/connectors/portAuthor
 import { defaultShapeSize } from '../../domain/nodes/shapeNode';
 import { buildInsertConnectorCommand, buildInsertShapeCommand, buildQuickCreateCommand, type V2ShapeKind } from '../../domain/commands/sceneEdits';
 import type { V2Tool } from './V2CreationToolbar';
-import { polygonIntersectsBounds, simplifyStroke, strokeBounds } from '../../domain/nodes/strokeGeometry';
-import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worldGeometry';
+import { simplifyStroke, strokeBounds } from '../../domain/nodes/strokeGeometry';
+import { buildNodeWorldMatrices } from '../../domain/scene/worldGeometry';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import type { FreeformPreviewFrame } from '../../infrastructure/pixi/PixiFreeformPreview';
 import { buildDeleteSelectionCommand } from '../../domain/commands/sceneEdits';
@@ -75,8 +75,7 @@ interface V2InkOperation {
   readonly points: Point2d[];
 }
 
-// Eraser and lasso are drags too: the eraser collects the strokes it crossed,
-// the lasso collects the nodes whose box the polygon touches.
+// The eraser is a drag too: it collects the strokes it crossed.
 interface V2EraseOperation {
   readonly kind: 'erase';
   readonly pointerId: number;
@@ -95,16 +94,10 @@ interface V2ChartPointOperation {
   readonly index: number;
 }
 
-interface V2LassoOperation {
-  readonly kind: 'lasso';
-  readonly pointerId: number;
-  readonly page: ScenePage;
-  readonly points: Point2d[];
-}
 
 export type V2Operation =
   | PixiPointerOperation | V2CreateOperation | V2ConnectOperation
-  | V2InkOperation | V2EraseOperation | V2LassoOperation | V2ChartPointOperation;
+  | V2InkOperation | V2EraseOperation | V2ChartPointOperation;
 
 // The path tool is click-by-click, so its draft lives beside the pointer
 // operations: points are the ends committed so far, cursor is the live end.
@@ -562,20 +555,6 @@ export function finishGesture(operation: V2Operation, opts: V2PointerOptions, ho
         },
       });
     }
-  } else if (operation.kind === 'lasso') {
-    host.setMarquee(null);
-    const matrices = buildNodeWorldMatrices(operation.page);
-    const hit = operation.points.length >= 3
-      ? operation.page.nodes
-        .filter((node) => {
-          const matrix = matrices.get(node.id);
-          return matrix ? polygonIntersectsBounds(operation.points, nodeWorldBounds(node, matrix)) : false;
-        })
-        .map((node) => node.id)
-      : [];
-    if (hit.length > 0) opts.applyConnectorSelection([]);
-    opts.applySelection(replaceSelection(hit));
-    opts.onToolChange('select');
   } else if (operation.kind === 'connect') {
     host.setConnectionPreview(null);
     const moved = Math.hypot(

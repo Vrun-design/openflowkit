@@ -224,8 +224,6 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onToolChange('pen');
     } else if (!command && !event.shiftKey && !event.altKey && key === 'x') {
       opts.onToolChange('eraser');
-    } else if (!command && !event.shiftKey && !event.altKey && key === 'q') {
-      opts.onToolChange('lasso');
     } else if (!command && !event.shiftKey && !event.altKey && key === 'k') {
       opts.onToolChange('laser');
     } else if (!command && !event.shiftKey && !event.altKey && key === 'f') {

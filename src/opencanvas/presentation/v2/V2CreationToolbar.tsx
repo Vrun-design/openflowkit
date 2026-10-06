@@ -22,7 +22,7 @@ type V2FlyoutId = 'pointer' | 'shapes' | 'connector' | 'draw';
 
 export type { V2Tool, V2ToolConfig, V2ConnectorTool };
 
-const POINTER_TOOLS = new Set<V2Tool>(['select', 'hand', 'lasso']);
+const POINTER_TOOLS = new Set<V2Tool>(['select', 'hand']);
 const DRAW_TOOLS = new Set<V2Tool>(['pen', 'highlighter', 'eraser', 'laser']);
 
 // Seven buttons, grouped by intent. Every flyout is one level: a pick places or
@@ -67,9 +67,9 @@ export function V2CreationToolbar(props: {
   return (
     <FloatingRegion ref={toolsRef} slot="top-start" className="ofk-v2-tools">
       <Toolbar label="Create" orientation="vertical">
-        <FlyoutButton label="Pointer" shortcut="V / H / Q" icon={<Icon icon={IconPointer} />}
+        <FlyoutButton label="Pointer" shortcut="V / H" icon={<Icon icon={IconPointer} />}
           selected={POINTER_TOOLS.has(tool)} open={flyout === 'pointer'}
-          onOpenChange={setFlyoutOpen('pointer')} options={POINTER_OPTIONS} columns={3}
+          onOpenChange={setFlyoutOpen('pointer')} options={POINTER_OPTIONS} columns={2}
           selectedId={POINTER_TOOLS.has(tool) ? tool : null} onPick={props.onToolChange} />
         <span className="ofk-v2-tools-separator" aria-hidden="true" />
         <FlyoutButton label="Shapes" shortcut="R / O / S" icon={<Icon icon={IconSquare} />}
