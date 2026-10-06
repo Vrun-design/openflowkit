@@ -28,19 +28,24 @@ export function shapeIconPath(shape: IconShape): string {
   ].join('');
 }
 
+/** A Tabler-compatible icon from one 24×24 stroke path, for picks Tabler has no glyph for. */
+export function pathIcon(d: string): IconComponent {
+  const PathIcon = ({ size = VIEW, stroke = 2, ...rest }: IconProps) => (
+    <svg {...rest} width={size} height={size} viewBox={`0 0 ${VIEW} ${VIEW}`} fill="none"
+      stroke="currentColor" strokeWidth={stroke} strokeLinejoin="round" strokeLinecap="round">
+      <path d={d} />
+    </svg>
+  );
+  return PathIcon;
+}
+
 const icons = new Map<IconShape, IconComponent>();
 
 /** A Tabler-compatible icon component for a shape; one per shape, made once. */
 export function shapeIcon(shape: IconShape): IconComponent {
   const cached = icons.get(shape);
   if (cached) return cached;
-  const d = shapeIconPath(shape);
-  const ShapeIcon = ({ size = VIEW, stroke = 2, ...rest }: IconProps) => (
-    <svg {...rest} width={size} height={size} viewBox={`0 0 ${VIEW} ${VIEW}`} fill="none"
-      stroke="currentColor" strokeWidth={stroke} strokeLinejoin="round" strokeLinecap="round">
-      <path d={d} />
-    </svg>
-  );
-  icons.set(shape, ShapeIcon);
-  return ShapeIcon;
+  const icon = pathIcon(shapeIconPath(shape));
+  icons.set(shape, icon);
+  return icon;
 }

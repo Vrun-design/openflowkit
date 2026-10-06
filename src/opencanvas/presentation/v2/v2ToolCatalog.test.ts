@@ -26,13 +26,18 @@ describe('v2 tool catalog', () => {
     expect(CONNECTOR_ROUTE.curve).toBe('bezier');
   });
 
-  it('Insert offers every frame, widget and chart, the sticky note and an upload, each once', () => {
+  it('Insert offers the common frames, widgets and charts, the sticky note and an upload, each once', () => {
     const ids = INSERT_SECTIONS.flatMap((section) => section.options.map((option) => option.id));
     expect(new Set(ids).size).toBe(ids.length);
     const of = (group: string) => ids.filter((id) => id.startsWith(`${group}:`)).map((id) => id.slice(group.length + 1));
-    expect(of('frame')).toEqual([...FRAME_PRESETS]);
-    expect(of('widget')).toEqual([...WIDGET_KINDS]);
-    expect(of('chart')).toEqual(CHART_OPTIONS.map((option) => option.id));
+    expect(of('frame').every((id) => (FRAME_PRESETS as readonly string[]).includes(id))).toBe(true);
+    expect(of('widget').every((id) => (WIDGET_KINDS as readonly string[]).includes(id))).toBe(true);
+    expect(of('chart').every((id) => CHART_OPTIONS.some((option) => option.id === id))).toBe(true);
+    // Cut from Insert on 2026-10-06 (owner): they still draw from code and old files.
+    for (const gone of ['frame:window', 'chart:radar', 'chart:heatmap', 'chart:area', 'chart:scatter', 'chart:donut',
+      'widget:stepper', 'widget:rating', 'widget:datepicker', 'widget:statusbar', 'widget:fab', 'widget:slider', 'widget:badge']) expect(ids).not.toContain(gone);
+    // The chart style bar still switches between every kind.
+    expect(CHART_OPTIONS).toHaveLength(10);
     expect(of('insert')).toEqual(['image', 'sticky']);
     // A cell's name is how people and tests find it: no two cells share one.
     const names = INSERT_SECTIONS.flatMap((section) => section.options.map((option) => option.label));

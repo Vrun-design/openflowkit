@@ -1,21 +1,19 @@
 import {
   IconArrowCurveLeft, IconArrowUpRight, IconChartArea, IconChartBar, IconChartDots, IconChartDonut, IconChartLine,
-  IconChartPie, IconChartRadar, IconCornerDownRight, IconGridDots, IconNote, IconStar, IconSquareDashed,
+  IconChartPie, IconChartRadar, IconCornerDownRight, IconGridDots, IconLayoutGrid, IconNote,
   IconTable,
 } from '@tabler/icons-react';
 import type { ConnectorRouteKind } from '../../domain/document/types';
 import type { ChartKind } from '../../domain/nodes/chartNodePresentation';
 import type { LibraryShape, ShapeKind } from '../../domain/nodes/shapeNode';
 import type { IconComponent } from '../design-system/Icon';
-import { shapeIcon } from './shapeIcon';
+import { pathIcon, shapeIcon } from './shapeIcon';
 import {
-  IconAdjustmentsHorizontal, IconAlertTriangle, IconAlignLeft, IconAntennaBars5, IconAppWindow, IconBrowser,
-  IconCalendar, IconChevronsDown, IconChevronsRight, IconCircleDot, IconCirclePlus, IconCursorText, IconDeviceMobile,
-  IconDeviceTablet, IconDotsCircleHorizontal, IconEraser, IconFlare, IconForms, IconFrame, IconHeading,
-  IconHighlight, IconLayoutBottombar, IconLayoutCards, IconLayoutNavbar, IconLayoutSidebar, IconLink,
-  IconList, IconMenu2, IconPencil, IconPhoto, IconProgress, IconRectangle, IconSearch, IconSeparatorHorizontal,
-  IconSquareCheck, IconSquareChevronDown, IconStairs, IconSwitchHorizontal, IconTabs, IconTag, IconToggleRight,
-  IconTooltip, IconUserCircle, IconHandStop, IconPhotoPlus, IconPointer,
+  IconAlertTriangle, IconAlignBoxLeftTop, IconAlignLeft, IconBrowser, IconCircleDot,
+  IconDeviceMobile, IconDeviceTablet, IconEraser, IconFlare, IconForms, IconFrame, IconHeading, IconHighlight,
+  IconInputSearch, IconLayoutBottombar, IconLayoutList, IconLayoutNavbar, IconLayoutSidebar,
+  IconPencil, IconPhoto, IconRectangle, IconSelect, IconSquareCheck, IconTabs, IconToggleRight,
+  IconUserCircle, IconHandStop, IconPhotoPlus, IconPointer,
 } from '@tabler/icons-react';
 import type { FramePreset } from '../../domain/nodes/framePreset';
 import { WIDGETS, type WidgetKind } from '../../domain/nodes/widgetNodePresentation';
@@ -109,7 +107,7 @@ export const SHAPE_SECTIONS: readonly ToolSection<V2ShapePick>[] = [
 
 export const CHART_OPTIONS: readonly ToolOption<V2ChartKind>[] = [
   { id: 'table', label: 'Table', icon: IconTable },
-  { id: 'quadrant', label: 'Quadrant', icon: IconSquareDashed },
+  { id: 'quadrant', label: 'Quadrant', icon: IconLayoutGrid },
   { id: 'bar', label: 'Bar chart', icon: IconChartBar },
   { id: 'line', label: 'Line chart', icon: IconChartLine },
   { id: 'area', label: 'Area chart', icon: IconChartArea },
@@ -132,6 +130,15 @@ export const CONNECTOR_ROUTE: Readonly<Record<V2ConnectorTool, ConnectorRouteKin
 export type V2MoreItem = `frame:${FramePreset}` | `widget:${WidgetKind}` | `chart:${V2ChartKind}` | 'insert:sticky';
 export type V2InsertPick = V2MoreItem | 'insert:image';
 
+/** A progress bar: Tabler's progress icons are spinners. */
+const IconProgressBar = pathIcon('M5 9h14a3 3 0 0 1 0 6H5a3 3 0 0 1 0-6zM6 12h7');
+/** A card: image band on top, a title line under it. */
+const IconCard = pathIcon('M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM4 11h16M7 15h7');
+
+// Insert keeps the common picks; every chart kind, frame and widget still draws
+// from code and old files, and the chart style bar still switches between all of them.
+const INSERT_CHARTS: readonly V2ChartKind[] = ['table', 'quadrant', 'bar', 'line', 'pie'];
+
 /** Insert: everything placed whole rather than drawn. One panel, sections, no second level. */
 export const INSERT_SECTIONS: readonly ToolSection<V2InsertPick>[] = [
   {
@@ -143,7 +150,8 @@ export const INSERT_SECTIONS: readonly ToolSection<V2InsertPick>[] = [
   },
   {
     title: 'Charts',
-    options: CHART_OPTIONS.map((option) => ({ ...option, id: `chart:${option.id}` as const })),
+    options: CHART_OPTIONS.filter((option) => INSERT_CHARTS.includes(option.id))
+      .map((option) => ({ ...option, id: `chart:${option.id}` as const })),
   },
   {
     title: 'Frames',
@@ -152,23 +160,20 @@ export const INSERT_SECTIONS: readonly ToolSection<V2InsertPick>[] = [
       { id: 'frame:phone', label: 'Phone', icon: IconDeviceMobile },
       { id: 'frame:tablet', label: 'Tablet', icon: IconDeviceTablet },
       { id: 'frame:browser', label: 'Browser', icon: IconBrowser },
-      { id: 'frame:window', label: 'Window', icon: IconAppWindow },
     ],
   },
   {
     title: 'Wireframe',
+    // Four rows of five: fields, choices and status, navigation, content.
     options: ([
-      ['button', IconRectangle], ['input', IconCursorText], ['search', IconSearch], ['checkbox', IconSquareCheck],
-      ['radio', IconCircleDot], ['toggle', IconToggleRight], ['dropdown', IconSquareChevronDown],
-      ['slider', IconAdjustmentsHorizontal], ['navbar', IconLayoutNavbar], ['tabs', IconTabs], ['image', IconPhoto],
-      ['avatar', IconUserCircle], ['heading', IconHeading], ['paragraph', IconAlignLeft],
-      ['divider', IconSeparatorHorizontal], ['link', IconLink], ['textarea', IconForms], ['stepper', IconStairs],
-      ['badge', IconTag], ['progress', IconProgress], ['breadcrumbs', IconChevronsRight],
-      ['pagination', IconDotsCircleHorizontal], ['rating', IconStar], ['card', IconLayoutCards], ['list', IconList],
-      ['alert', IconAlertTriangle], ['menu', IconMenu2], ['tooltip', IconTooltip], ['accordion', IconChevronsDown],
-      ['datepicker', IconCalendar], ['sidebar', IconLayoutSidebar],
-      ['segmented', IconSwitchHorizontal], ['tabbar', IconLayoutBottombar], ['statusbar', IconAntennaBars5],
-      ['fab', IconCirclePlus],
+      ['button', IconRectangle], ['input', IconForms], ['textarea', IconAlignBoxLeftTop], ['search', IconInputSearch],
+      ['dropdown', IconSelect],
+      ['checkbox', IconSquareCheck], ['radio', IconCircleDot], ['toggle', IconToggleRight],
+      ['progress', IconProgressBar], ['alert', IconAlertTriangle],
+      ['navbar', IconLayoutNavbar], ['tabs', IconTabs], ['sidebar', IconLayoutSidebar], ['tabbar', IconLayoutBottombar],
+      ['list', IconLayoutList],
+      ['heading', IconHeading], ['paragraph', IconAlignLeft], ['image', IconPhoto], ['avatar', IconUserCircle],
+      ['card', IconCard],
     ] as const).map(([widget, icon]) => ({ id: `widget:${widget}` as const, label: WIDGETS[widget].name, icon })),
   },
 ];

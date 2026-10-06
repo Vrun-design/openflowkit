@@ -1011,7 +1011,7 @@
       "name": "Insert flyout and grouped tools",
       "status": "shipped",
       "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts",
-      "notes": "Seven-button rail (2026-10-06): Pointer (select, hand), Shapes, Connector, Text, Draw (pen, highlighter, eraser, laser pointer), Icons and emoji, Insert (upload image, sticky note, charts, frames, wireframe). Frame, phone, tablet, browser and window frames adopt what is dropped on them and draw their chrome in the export too.",
+      "notes": "Seven-button rail (2026-10-06): Pointer (select, hand), Shapes, Connector, Text, Draw (pen, highlighter, eraser, laser pointer), Icons and emoji, Insert (upload image, sticky note, charts, frames, wireframe). Insert offers 5 charts, 4 frames and 20 wireframe controls; the rest stay in code. Frame, phone, tablet, browser and window frames adopt what is dropped on them and draw their chrome in the export too.",
       "page": "insert-media",
       "shortcuts": [
         "Laser pointer",

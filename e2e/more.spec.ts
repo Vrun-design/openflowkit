@@ -26,7 +26,7 @@ test('Insert opens by mouse and keyboard with one level of sections; Pointer and
   for (const section of ['Media', 'Charts', 'Frames', 'Wireframe']) {
     await expect(page.getByRole('group', { name: section })).toBeVisible();
   }
-  await expect(page.getByRole('option')).toHaveCount(2 + 10 + 5 + 35);
+  await expect(page.getByRole('option')).toHaveCount(2 + 5 + 4 + 20);
   await page.keyboard.press('Escape');
   await expect(more(page)).toHaveAttribute('aria-expanded', 'false');
   await expect(more(page)).toBeFocused();
@@ -97,8 +97,9 @@ test('a phone frame collects picked widgets, moves them with it, and undoes step
 test('a full phone grows to hold the next pick, and one undo shrinks it back @gate', async ({ page }) => {
   await openCanvas(page);
   await pick(page, 'Phone');
-  for (const count of [2, 3, 4]) {
-    await pick(page, 'Date picker');
+  // Three 160px images fit the 740px phone; the fourth makes it grow.
+  for (const count of [2, 3, 4, 5]) {
+    await pick(page, 'Image');
     await expect.poll(async () => (await nodes(page)).length).toBe(count);
   }
   const all = await nodes(page);
@@ -107,7 +108,7 @@ test('a full phone grows to hold the next pick, and one undo shrinks it back @ga
   expect(phone.size.height).toBeGreaterThan(740);
   expect(last.transform.translation.y + last.size.height).toBeLessThan(phone.size.height);
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect.poll(async () => (await nodes(page)).length).toBe(3);
+  await expect.poll(async () => (await nodes(page)).length).toBe(4);
   expect((await nodes(page)).find(({ id }) => id === phone.id)!.size.height).toBe(740);
 });
 
