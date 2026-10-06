@@ -18,7 +18,7 @@ import {
 import { STARTER_TEMPLATES, type StarterTemplate } from '../../../agent/starterTemplates';
 import { shortcutGroups } from './v2Shortcuts';
 
-export type V2WorkspaceMode = 'assistant' | 'code' | 'model' | 'agent';
+export type V2WorkspaceMode = 'assistant' | 'code' | 'model' | 'agent' | 'inspect';
 const MODES = [
   { id: 'assistant', label: 'AI assistant', icon: IconSparkles },
   { id: 'model', label: 'Architecture model', icon: IconSitemap },

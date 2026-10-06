@@ -11,6 +11,8 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
   const onSpacePan = vi.fn();
   const onReorder = vi.fn();
   const onToggleLock = vi.fn();
+  const onToggleInspect = vi.fn();
+  const onToggleIcons = vi.fn();
   const insert = { onInsertFrame: vi.fn(), onInsertSticky: vi.fn(), onToggleMore: vi.fn() };
   const clipboard = { onGroup: vi.fn(), onUngroup: vi.fn(), onWrapInSection: vi.fn(), onCut: vi.fn(), onCopy: vi.fn(), onPaste: vi.fn(), onCopyStyle: vi.fn(), onPasteStyle: vi.fn() };
   const arrange = { onAlign: vi.fn(), onDistribute: vi.fn(), onFlip: vi.fn(), onZoomToSelection: vi.fn(), onTextStyle: vi.fn() };
@@ -19,14 +21,14 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
     toolRef: { current: 'select' }, editingRef: { current: false }, onToolChange,
     onUndo: vi.fn(), onRedo: vi.fn(), onDelete: vi.fn(), onDuplicate: vi.fn(), onEditPrimary: vi.fn(), onRemoveFromModel: vi.fn(),
     onNudge: vi.fn(), onCommitGesture: () => false, onEscapePanel: () => false, onToggleEmoji: () => undefined, onInsertImage: () => undefined, onCancelGesture: () => false, onClearSelection: vi.fn(), onSelectAll: vi.fn(),
-    onFitView, onZoomStep, onResetZoom, onToggleTree: vi.fn(), onToggleIcons: vi.fn(),
+    onFitView, onZoomStep, onResetZoom, onToggleTree: vi.fn(), onToggleIcons, onToggleInspect,
     onToggleAgent: vi.fn(), onToggleCode: vi.fn(), onToggleModel: vi.fn(), onSpacePan, onTypeToEdit,
   }));
   const key = (init: Partial<KeyboardEvent<HTMLElement>>) => result.current({
     key: 'q', target: document.createElement('section'), preventDefault: vi.fn(),
     ...init,
   } as unknown as KeyboardEvent<HTMLElement>);
-  return { key, ...insert, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan, onReorder, onToggleLock, ...clipboard, ...arrange };
+  return { key, ...insert, onToggleInspect, onToggleIcons, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan, onReorder, onToggleLock, ...clipboard, ...arrange };
 }
 
 describe('useV2Keyboard type-to-edit', () => {
@@ -46,6 +48,17 @@ describe('useV2Keyboard type-to-edit', () => {
     expect(onToolChange).toHaveBeenCalledWith('rectangle');
     key({ key: 'z', metaKey: true });
     expect(onTypeToEdit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useV2Keyboard inspect', () => {
+  it('⌥I toggles Inspect even with a selection, and never types or opens icons', () => {
+    const { key, onToggleInspect, onToggleIcons, onTypeToEdit } = setup();
+    // macOS reports ⌥I as a dead key; the physical code is what we match.
+    key({ key: 'Dead', code: 'KeyI', altKey: true });
+    expect(onToggleInspect).toHaveBeenCalledOnce();
+    expect(onToggleIcons).not.toHaveBeenCalled();
+    expect(onTypeToEdit).not.toHaveBeenCalled();
   });
 });
 

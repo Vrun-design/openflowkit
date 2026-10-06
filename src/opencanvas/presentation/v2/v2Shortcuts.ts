@@ -101,6 +101,7 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
       rows: [
         { label: 'Architecture model', keys: 'Alt + M', tokens: ['KeyM'] },
         { label: 'Diagram as code', keys: 'Alt + D', tokens: ['KeyD'] },
+        { label: 'Inspect selection', keys: 'Alt + I', tokens: ['KeyI'] },
         { label: 'AI assistant', keys: `${command} + J`, tokens: ['j'] },
         { label: 'This cheatsheet', keys: '?', tokens: ['?'] },
         { label: 'Dismiss panel', keys: 'Esc', tokens: ['Escape'] },

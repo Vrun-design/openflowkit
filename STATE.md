@@ -23,7 +23,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   draw labels in Inter (`withSvgImage`); saved SVG/PDF embed it (thumbnails don't). 39 dead exports gone. Docs on
   Astro 7 / Starlight 0.42, Node 22 everywhere, `npm audit` 0. README/SECURITY/CONTRIBUTING describe v2.
 ## Found, not fixed (owner calls)
-- Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI, labs flag): `docs/plan/launch-holds.md`. CI uploads first-failure
+- Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI): `docs/plan/launch-holds.md`. CI uploads first-failure
   traces (`e2e-traces`). A new worker's deps are pre-scanned (`optimizeDeps.entries`), or dev reloads mid-session.
 - D11 still open: dark sequence/state thumbnails and AI initial fit ≥65%. C4 pass fixes duplicate agent entry,
   subject centering beside panels, phone keyboard hints and clipped starter choices; see updated C4 audit.
@@ -31,10 +31,10 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.
 - Animation is page-scoped only; deployment replica/group semantics and migration fidelity remain partial.
-## Next — owner's order, 2026-10-03
-- Order: 13.4 with quota → 14.1 → D11 UI → 14.4 → 15 (plan/audit done by Codex 2026-10-04). Open: D7, D8, D11.
-- D8 (Claude, 2026-10-05): no labs flag. Slides was the only unreal surface and is gone; charts and wireframes are
-  real and tested. Lead the launch story with agent → diagram; a flag would cost a branch in every flyout.
+## Next — owner's order, 2026-10-06 (D8 decided: no labs flag)
+- Canvas UI first, launch holds after; then 13.4 → 14.4 → 15. Open: D7 (paid), D11. Inspect done (opus-5.5):
+  menu / selection bar / ⌥I, read-only, `domain/scene/inspect.ts`. Toolbar → 6 tools waits on owner's look at
+  `docs/plan/design/canvas-v2-lite.html`.
 ## Deferred
 - Widget text width is estimated; wireframe comments move to the end; PDF = print dialog; no zip;
   bridge is long-poll; chart data panel commits per blur; image aspect lock is Shift-lock.

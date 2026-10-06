@@ -37,6 +37,8 @@ import { V2FeatureTip } from './V2FeatureTip';
 import { V2FlowPanel } from './V2FlowPanel';
 import { V2LoadCenter } from './V2LoadCenter';
 import { V2ModelPanel } from './V2ModelPanel';
+import { V2InspectPanel } from './V2InspectPanel';
+import { inspectSelection } from '../../domain/scene/inspect';
 import { V2MotionExport } from './V2MotionExport';
 import { V2TreePanel } from './V2TreePanel';
 import { V2CanvasWelcome, V2Shortcuts, V2WorkspaceRail } from './V2Workspace';
@@ -604,6 +606,7 @@ export function V2EditorPage(): React.JSX.Element {
     onToggleAgent: () => panels.toggleWorkspace('assistant'),
     onToggleCode: toggleCode,
     onToggleModel: () => panels.toggleWorkspace('model'),
+    onToggleInspect: () => panels.toggleWorkspace('inspect'),
     onSpacePan: setSpacePan,
   });
 
@@ -741,6 +744,7 @@ export function V2EditorPage(): React.JSX.Element {
               toolConfigRef={toolConfigRef} onOpenChartData={openChartData}
               onRemoveIcons={() => iconActions.removeIcons(selectionRef.current.nodeIds)}
               onOpenCode={code.openNew}
+              onInspect={() => openWorkspace('inspect')}
               readOnlyRef={readOnlyRef} gestureApiRef={gestureApiRef}
               selection={selection} selectedConnectorId={selectedConnectorId} selectedConnectorIds={selectedConnectorIds}
               editing={editing}
@@ -764,6 +768,7 @@ export function V2EditorPage(): React.JSX.Element {
                 const primary = selectionRef.current.primaryNodeId;
                 if (primary) openEditor(primary); else connectorLabel.editSelected();
               }}
+              onInspect={() => openWorkspace('inspect')}
               onEditAsCode={(frameId) => { code.openFrame(frameId); setContextMenu(null); }}
               // Only worked out while the menu is open: both walk the page.
               iconCount={contextMenu ? page.nodes.filter((node) => selection.nodeIds.includes(node.id) && hasIcon(node)).length : 0}
@@ -824,6 +829,17 @@ export function V2EditorPage(): React.JSX.Element {
               onTokenChange={(bridgeToken) => updatePreferences({ bridgeToken })}
               onToggle={(connect) => updatePreferences({ agentBridgeEnabled: connect })}
               onClose={panels.closeWorkspace} /> : null}
+            {panels.workspace === 'inspect' ? (
+              <V2InspectPanel report={inspectSelection(page, selection.nodeIds, selectedConnectorIds)}
+                onClose={() => { panels.closeWorkspace(); focusCanvas(); }}
+                onSelectNode={(nodeId) => {
+                  applyConnectorSelection([]);
+                  applySelection(replaceSelection([nodeId]));
+                  camera.glideToNodes([nodeId]);
+                }}
+                onShowCode={code.openFrame}
+                onOpenModel={() => openWorkspace('model')} />
+            ) : null}
             {panels.workspace === 'model' ? (
               <V2ModelPanel
                 onOpenCode={() => openWorkspace('code')}

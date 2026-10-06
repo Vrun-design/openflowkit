@@ -19,6 +19,8 @@ interface V2ContextMenuProps {
   readonly actions: ReturnType<typeof useV2EditActions>;
   readonly commit: (command: DocumentCommand) => void;
   readonly onEditLabel: () => void;
+  /** Opens the Inspect panel on the selection. */
+  readonly onInspect: () => void;
   readonly onEditAsCode: (frameId: string) => void;
   /** Selected nodes that carry an icon; drives "Remove icon". */
   readonly iconCount: number;
@@ -72,6 +74,7 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
         ) : target.kind === 'connector' ? (
           <>
             <MenuItem onSelect={props.onEditLabel} shortcut="↵" disabled={!edit}>Edit label</MenuItem>
+            <MenuItem onSelect={props.onInspect} shortcut="⌥I">Inspect</MenuItem>
             <MenuSeparator />
             <MenuSubmenu label="Path">
                 {(['orthogonal', 'direct', 'bezier'] as const).map((route) => (
@@ -102,6 +105,7 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
             <MenuItem onSelect={actions.duplicateSelection} shortcut="⌘D" disabled={!edit}>Duplicate</MenuItem>
             <MenuSeparator />
             <MenuItem onSelect={props.onEditLabel} shortcut="↵" disabled={!edit || many}>Edit label</MenuItem>
+            <MenuItem onSelect={props.onInspect} shortcut="⌥I">Inspect</MenuItem>
             {selectedFrame ? <MenuItem onSelect={() => props.onEditAsCode(selectedFrame.id)} shortcut="⌥D">Edit as code</MenuItem> : null}
             {props.diagramIcons ? (
               <MenuItem onSelect={props.onToggleDiagramIcons} checked={props.diagramIcons.on} disabled={!edit}>Icons from labels</MenuItem>

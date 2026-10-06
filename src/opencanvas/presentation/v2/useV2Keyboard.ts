@@ -55,6 +55,7 @@ interface V2KeyboardOptions {
   readonly onToggleAgent: () => void;
   readonly onToggleCode: () => void;
   readonly onToggleModel: () => void;
+  readonly onToggleInspect: () => void;
   readonly onSpacePan: (active: boolean) => void;
   /** Type-to-edit: return true when the key opened an editor, false to fall through to shortcuts. */
   readonly onTypeToEdit: (key: string) => boolean;
@@ -157,6 +158,9 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       event.preventDefault();
     } else if (!command && event.altKey && event.code === 'KeyM') {
       opts.onToggleModel();
+      event.preventDefault();
+    } else if (!command && event.altKey && !event.shiftKey && event.code === 'KeyI') {
+      opts.onToggleInspect();
       event.preventDefault();
     } else if (command && key === 'j') {
       opts.onToggleAgent();

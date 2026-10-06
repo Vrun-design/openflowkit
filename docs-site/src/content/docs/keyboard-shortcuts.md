@@ -88,6 +88,7 @@ renders this list itself, from the same data, so it cannot drift from what the k
 | --- | --- |
 | Architecture model | `Alt + M` |
 | Diagram as code | `Alt + D` |
+| Inspect selection | `Alt + I` |
 | AI assistant | `⌘ + J` |
 | This cheatsheet | `?` |
 | Dismiss panel | `Esc` |

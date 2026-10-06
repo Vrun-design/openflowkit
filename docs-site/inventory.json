@@ -720,6 +720,17 @@
       ]
     },
     {
+      "id": "inspect-panel",
+      "name": "Inspect panel",
+      "status": "shipped",
+      "evidence": "src/opencanvas/presentation/v2/V2InspectPanel.tsx:1",
+      "notes": "Read-only facts for the selection: layout, resolved style, content, connections, source line, model element. Opens from the context menu, the selection bar or Alt + I.",
+      "page": "keyboard-shortcuts",
+      "shortcuts": [
+        "Inspect selection"
+      ]
+    },
+    {
       "id": "architecture-drilldown",
       "name": "C4 element views and drill-down",
       "status": "shipped",

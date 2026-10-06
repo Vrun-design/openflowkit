@@ -5,7 +5,7 @@ import { V2NodeStylePanels } from './V2NodeStyle';
 import { V2ArrangeControls } from './V2ArrangeControls';
 import { V2ConnectorStyle } from './V2ConnectorStyle';
 import type { ConnectorStylePatch } from '../../domain/commands/styleConnectors';
-import { IconDots, IconTable } from '@tabler/icons-react';
+import { IconDots, IconLayoutSidebarRight, IconTable } from '@tabler/icons-react';
 import { Button, ContextBar, ContextGroup, Icon, IconButton, Tooltip } from '../design-system';
 
 interface V2ContextBarProps {
@@ -20,6 +20,7 @@ interface V2ContextBarProps {
   readonly onConnectorStyleCommitted: (patch: ConnectorStylePatch) => void;
   readonly style: React.CSSProperties;
   readonly onOpenMenu: (x: number, y: number) => void;
+  readonly onInspect: () => void;
   /** Single chart selected: jump straight to its data panel. */
   readonly onOpenChartData?: () => void;
 }
@@ -100,6 +101,10 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
             onCommitted={props.onConnectorStyleCommitted} />
         </ContextGroup>
         <ContextGroup label="Actions">
+          <Tooltip content="Inspect" shortcut="⌥I">
+            <IconButton variant="quiet" label="Inspect" icon={<Icon icon={IconLayoutSidebarRight} />}
+              onClick={props.onInspect} />
+          </Tooltip>
           <Tooltip content="More options">
             <IconButton variant="quiet" label="More options" icon={<Icon icon={IconDots} />}
               onClick={(event) => openMenu(event.currentTarget)} />
@@ -130,6 +135,10 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
         <V2ArrangeControls page={props.page} nodeIds={props.nodeIds} commit={props.commit} />
       </ContextGroup>
       <ContextGroup label="Actions">
+        <Tooltip content="Inspect" shortcut="⌥I">
+          <IconButton variant="quiet" label="Inspect" icon={<Icon icon={IconLayoutSidebarRight} />}
+            onClick={props.onInspect} />
+        </Tooltip>
         <Tooltip content="More options">
           <IconButton variant="quiet" label="More options" icon={<Icon icon={IconDots} />}
             onClick={(event) => openMenu(event.currentTarget)} />

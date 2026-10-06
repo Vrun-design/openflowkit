@@ -1085,3 +1085,23 @@
 
 .ofk-v2-model-relation-link { border: 0; padding: 2px; background: none; color: var(--ofk-accent); font: inherit; text-decoration: underline; cursor: pointer; }
 .ofk-v2-model-relation-link:focus-visible { outline: 2px solid var(--ofk-focus); }
+
+/* Inspect: read-only facts about the selection. */
+.ofk-v2 .ofk-v2-inspect-panel .ofk-panel-body { padding: 4px 20px 20px; overflow: auto; }
+.ofk-v2-inspect-head { padding: 14px 0 12px; display: flex; flex-direction: column; gap: 2px; }
+.ofk-v2-inspect-head h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--ofk-text); overflow-wrap: anywhere; }
+.ofk-v2-inspect-head span { font-size: 12.5px; color: var(--ofk-muted); }
+.ofk-v2-inspect-group { border-top: 1px solid var(--ofk-border); padding: 12px 0 8px; }
+.ofk-v2-inspect-group h3, .ofk-v2-inspect-group h4 { margin: 0 0 6px; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--ofk-muted); }
+.ofk-v2-inspect-group dl { margin: 0; display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 1px 10px; font-size: 13px; }
+.ofk-v2-inspect-group dl > div { display: contents; }
+.ofk-v2-inspect-group dt { color: var(--ofk-muted); padding: 4px 0; }
+.ofk-v2-inspect-group dd { margin: 0; min-width: 0; }
+.ofk-v2-inspect-group dd button { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 7px; width: 100%; padding: 4px 6px; border-radius: 6px; color: var(--ofk-text); cursor: copy; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ofk-v2-inspect-group dd button:hover { background: var(--ofk-raised); }
+.ofk-v2-inspect-group dd button:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: -1px; }
+.ofk-v2-inspect-swatch { flex: none; width: 13px; height: 13px; border-radius: 4px; border: 1px solid var(--ofk-border); }
+.ofk-v2-inspect-code { margin: 0 0 6px; padding: 8px 10px; border-radius: 8px; background: var(--ofk-raised); font: 12px/1.5 var(--ofk-font-mono, ui-monospace, monospace); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ofk-text); }
+.ofk-v2-inspect-code span { color: var(--ofk-muted); margin-inline-end: 10px; user-select: none; }
+.ofk-v2-inspect-empty { margin: 0; font-size: 12.5px; color: var(--ofk-muted); }
+.ofk-v2-inspect-item { padding: 4px 8px; font-size: 13px; color: var(--ofk-text); }

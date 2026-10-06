@@ -60,6 +60,7 @@ interface V2CanvasHostProps {
   readonly onRemoveIcons: () => void;
   /** WebGL off: Diagram as code still works, so the fallback offers it. */
   readonly onOpenCode: () => void;
+  readonly onInspect: () => void;
   readonly hostRef: RefObject<PixiRendererHost | null>;
   readonly camera: CanvasCamera;
   readonly cameraRef: RefObject<CanvasCamera>;
@@ -554,6 +555,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
             && props.page.nodes.find((node) => node.id === props.selection.nodeIds[0])?.kind === 'chart'
             ? { onOpenChartData: () => props.onOpenChartData!(props.selection.nodeIds[0]!) }
             : {})}
+          onInspect={props.onInspect}
           onOpenMenu={(x, y) => props.onContextMenu(props.selectedConnectorId
             ? { kind: 'connector', id: props.selectedConnectorId, x, y }
             : { kind: 'nodes', x, y })}
