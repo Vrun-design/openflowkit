@@ -22,12 +22,14 @@ import type { SwatchResolver } from '../../../opencanvas/domain/nodes/nodePalett
  * `Customer -> Shop.Web`. Geometry comes from the injected layout port.
  */
 
+const PERSON_ICON = 'tabler/user';
 const FRAME_TITLE_PADDING = { top: 72, right: 28, bottom: 52, left: 28 };
 const GROUP_PADDING = { top: 54, right: 22, bottom: 22, left: 22 };
 
-/** Shape vocabulary per element kind; the tasteful default C4 look. */
+/** Shape vocabulary per element kind; the tasteful default C4 look. A person is a card with a user icon:
+ * the stick-figure silhouette crowds its name and description. `[person]` still asks for the silhouette. */
 const KIND_SHAPE: Readonly<Record<string, string>> = {
-  person: 'person', system: 'rect', external: 'rect', container: 'rounded',
+  person: 'rounded', system: 'rect', external: 'rect', container: 'rounded',
   component: 'component', store: 'cylinder', queue: 'queue', node: 'rounded', instance: 'rounded',
 };
 
@@ -154,9 +156,9 @@ export function plainElementNode(element: ArchElement, swatch: SwatchResolver): 
 function elementNode(element: ArchElement, parentId: string | null, zIndex: number, context: ElementContext): SceneNode {
   const shapeWord = elementShapeWord(element);
   const spec = specFor(shapeWord);
-  // `icon: none` opts out; a person or a boundary keeps its C4 shape.
+  // `icon: none` opts out; a boundary keeps its C4 shape. A person with no better match is a user.
   const autoIcon = !element.icon && context.inferIcon && AUTO_ICON_SHAPES.has(shapeWord)
-    ? context.inferIcon(element.name, element.tech) ?? undefined
+    ? context.inferIcon(element.name, element.tech) ?? (element.kind === 'person' ? PERSON_ICON : undefined)
     : undefined;
   const authoredIcon = element.icon === 'none' ? undefined : element.icon ?? autoIcon;
   const resolvedIcon = authoredIcon && context.resolveIcon ? context.resolveIcon(authoredIcon) : null;

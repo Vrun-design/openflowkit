@@ -292,7 +292,8 @@ describe('architecture view scenes', () => {
     expect(db.content).toMatchObject({ label: 'DB', subLabel: '[Data store · Postgres]', shape: 'cylinder' });
     expect(db.metadata.model).toMatchObject({ elementId: 'shop.db' });
     const customer = compiled.nodes.find((node) => node.id === 'customer')!;
-    expect(customer.content.shape).toBe('actor');
+    // A person is a rounded card, not the silhouette; with auto icons it carries a user icon.
+    expect(customer.content.shape).toBe('rounded');
     expect(dslNodeMeta(db).id).toBe('shop.db');
   });
 
@@ -404,6 +405,18 @@ views { view landscape }`);
     expect(api.content).toMatchObject({assetPresentation: 'card', archProviderLabel: 'Container', archResourceType: 'Go', archEnvironment: 'Handles orders'});
     expect(result.frame.content.label).toBe('container of Shop');
     expect(await format(source)).not.toContain('title:');
+  });
+
+ it('draws a person as a card with a user icon; [person] still asks for the silhouette', async () => {
+    const source = 'architecture\nmodel {person Zed; person Admin; person Guest [person]}\nviews {view landscape}';
+    const icons = await compile(source, {autoIcons: true, resolveIcon: (id) => ({packId: 'tabler-outline-v3', shapeId: id.split('/')[1]!})});
+    const byId = Object.fromEntries(icons.nodes.map((node) => [node.id, node]));
+    // "Zed" matches no icon rule: a person still gets the user icon and a Person header. A better match wins.
+    expect(byId.zed!.content).toMatchObject({icon: 'tabler/user', assetPresentation: 'card', archProviderLabel: 'Person'});
+    expect(byId.admin!.content.icon).toBe('tabler/user-shield');
+    expect(byId.guest!.content.shape).toBe('actor');
+    const plain = await compile(source);
+    expect(plain.nodes.find((node) => node.id === 'zed')!.content).toMatchObject({shape: 'rounded', subLabel: '[Person]'});
   });
 
  it.each(['foo or bar', 'and', 'or'])('round-trips tag predicates containing operator words: %s', async (tag) => {

@@ -77,6 +77,9 @@ function viewKindLabel(view: ArchView): string {
  * The model side of the canvas: one object, many views. Elements drive the
  * inspector; views and flows navigate and play; tags become perspectives.
  */
+// ponytail: plain label, no flag — drop it when the C4 workspace leaves beta.
+const BETA = <span className="ofk-v2-beta">Beta</span>;
+
 export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
   const { architecture, readOnly } = props;
   const model = architecture.model;
@@ -93,7 +96,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
 
   if (!model || !index) {
     return (
-      <Panel title="Architecture model" onClose={props.onClose} className="ofk-v2-workspace-panel ofk-v2-model-panel">
+      <Panel title="Architecture model" onClose={props.onClose} className="ofk-v2-workspace-panel ofk-v2-model-panel" tools={BETA}>
         <div className="ofk-model-welcome">
           <div className="ofk-model-preview" aria-hidden="true"><span>System</span><div><span>App</span><span>Data</span></div></div>
           <h3>One system. Every view.</h3>
@@ -113,7 +116,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
       title="Architecture model"
       onClose={props.onClose}
       className="ofk-agent-panel ofk-v2-model-panel"
-      tools={<span className="ofk-v2-model-count">{model.elements.length} elements</span>}
+      tools={<>{BETA}<span className="ofk-v2-model-count">{model.elements.length} elements</span></>}
     >
       <Tabs
         label="Model sections"

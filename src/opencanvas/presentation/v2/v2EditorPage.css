@@ -878,7 +878,10 @@
 .ofk-v2-breadcrumb-current { color: var(--ofk-text); font-weight: 600; }
 
 .ofk-v2 .ofk-v2-model-panel .ofk-panel-body { display: flex; flex-direction: column; min-height: 0; padding: 16px; }
-.ofk-v2-model-count { font-size: 11.5px; color: var(--ofk-muted); margin-inline-end: 4px; }
+.ofk-v2-model-count { font-size: 11.5px; color: var(--ofk-muted); margin-inline: auto 4px; }
+.ofk-v2-model-panel .ofk-panel-title { flex: 0 1 auto; }
+.ofk-v2-model-panel .ofk-v2-beta + .ofk-icon-button { margin-inline-start: auto; }
+.ofk-v2-beta { flex: none; padding: 1px 7px; border: 1px solid var(--ofk-border); border-radius: 999px; font-size: 11px; font-weight: 500; color: var(--ofk-muted); }
 .ofk-v2-model-body { display: flex; flex-direction: column; gap: 10px; min-height: 0; flex: 1; overflow: auto; padding: 10px 12px 16px; }
 .ofk-v2-model-hint { font-size: 12.5px; color: var(--ofk-muted); line-height: 1.6; margin: 12px 0 0; }
 .ofk-v2-model-tree, .ofk-v2-model-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
