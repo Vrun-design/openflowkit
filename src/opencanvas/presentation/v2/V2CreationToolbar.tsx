@@ -83,7 +83,7 @@ export function V2CreationToolbar(props: {
           }} />
         <FlyoutButton label="Connector" shortcut="A" icon={<Icon icon={IconArrowUpRight} />}
           selected={tool === 'connector'} open={flyout === 'connector'}
-          onOpenChange={setFlyoutOpen('connector')} options={CONNECTOR_OPTIONS} columns={5}
+          onOpenChange={setFlyoutOpen('connector')} options={CONNECTOR_OPTIONS} columns={3}
           selectedId={props.toolConfig.connector} onPick={props.onPickConnector} />
         <Tooltip content="Text" shortcut="T">
           <IconButton variant="quiet" label="Text" icon={<Icon icon={IconTypography} />}

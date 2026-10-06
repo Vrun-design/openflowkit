@@ -78,7 +78,7 @@ test('the connector flyout picks a route kind used by the next connector', async
 
   const connector = page.getByRole('button', { name: 'Connector' });
   await connector.click();
-  await page.getByRole('option', { name: 'Line' }).click();
+  await page.getByRole('option', { name: 'Curve' }).click();
   await expect(connector).toHaveAttribute('aria-expanded', 'false');
 
   const [first, second] = (await state(page)).nodes;
@@ -92,6 +92,6 @@ test('the connector flyout picks a route kind used by the next connector', async
 
   await expect.poll(async () => (await state(page)).connectors.length).toBe(1);
   const edge = (await doc(page)).pages[0].connectors[0]!;
-  expect(edge.route.kind).toBe('direct');
-  expect(edge.appearance.markerEnd).toBe('none');
+  expect(edge.route.kind).toBe('bezier');
+  expect(edge.appearance.markerEnd).toBe('arrow');
 });

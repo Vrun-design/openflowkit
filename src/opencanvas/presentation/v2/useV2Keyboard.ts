@@ -36,7 +36,6 @@ interface V2KeyboardOptions {
   /** Escape: close an open utility panel first; false falls through. */
   readonly onEscapePanel?: () => boolean;
   /** Enter: finish a click-by-click path; false falls through to label editing. */
-  readonly onCommitGesture: () => boolean;
   readonly onClearSelection: () => void;
   readonly onSelectAll: () => void;
   readonly onFitView: () => void;
@@ -240,7 +239,7 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       opts.onEditPrimary('f2');
       event.preventDefault();
     } else if (event.key === 'Enter') {
-      if (!opts.onCommitGesture()) opts.onEditPrimary(event.metaKey || event.shiftKey ? 'f2' : 'enter');
+      opts.onEditPrimary(event.metaKey || event.shiftKey ? 'f2' : 'enter');
       event.preventDefault();
     } else if (event.key === 'Escape') {
       if (opts.onCancelGesture()) {

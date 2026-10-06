@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CHART_OPTIONS, CONNECTOR_OPTIONS, CONNECTOR_ROUTE, DRAW_OPTIONS, INSERT_SECTIONS, POINTER_OPTIONS, SHAPE_OPTIONS,
-  SHAPE_SECTIONS, connectorHeadEnd,
+  SHAPE_SECTIONS,
 } from './v2ToolCatalog';
 import { LIBRARY_SHAPES } from '../../domain/nodes/shapeNode';
 import { FRAME_PRESETS } from '../../domain/nodes/framePreset';
@@ -19,16 +19,11 @@ describe('v2 tool catalog', () => {
     for (const gone of ['cube', 'prism', 'layer-stack', 'heart', 'pin', 'actor', 'brace', 'arrow-up']) expect(ids).not.toContain(gone);
   });
 
-  it('maps connector picks onto routes and heads', () => {
-    expect(CONNECTOR_OPTIONS.map((option) => option.id)).toEqual(['arrow', 'elbow', 'curve', 'line', 'path']);
+  it('maps connector picks onto routes', () => {
+    expect(CONNECTOR_OPTIONS.map((option) => option.id)).toEqual(['arrow', 'elbow', 'curve']);
     expect(CONNECTOR_ROUTE.arrow).toBe('direct');
     expect(CONNECTOR_ROUTE.elbow).toBe('orthogonal');
-    expect(CONNECTOR_ROUTE.line).toBe('direct');
     expect(CONNECTOR_ROUTE.curve).toBe('bezier');
-    expect(CONNECTOR_ROUTE.path).toBe('polyline');
-    expect(connectorHeadEnd('line')).toBe('none');
-    expect(connectorHeadEnd('arrow')).toBe('arrow');
-    expect(connectorHeadEnd('elbow')).toBe('arrow');
   });
 
   it('Insert offers every frame, widget and chart, the sticky note and an upload, each once', () => {

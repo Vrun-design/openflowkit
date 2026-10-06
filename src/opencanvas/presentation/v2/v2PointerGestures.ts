@@ -29,7 +29,7 @@ import { buildNodeWorldMatrices } from '../../domain/scene/worldGeometry';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import type { FreeformPreviewFrame } from '../../infrastructure/pixi/PixiFreeformPreview';
 import { buildDeleteSelectionCommand } from '../../domain/commands/sceneEdits';
-import { CONNECTOR_ROUTE, connectorHeadEnd, type V2ToolConfig } from './v2ToolCatalog';
+import { CONNECTOR_ROUTE, type V2ToolConfig } from './v2ToolCatalog';
 
 
 export const CLICK_THRESHOLD_PX = 4;
@@ -99,23 +99,8 @@ export type V2Operation =
   | PixiPointerOperation | V2CreateOperation | V2ConnectOperation
   | V2InkOperation | V2EraseOperation | V2ChartPointOperation;
 
-// The path tool is click-by-click, so its draft lives beside the pointer
-// operations: points are the ends committed so far, cursor is the live end.
-interface V2PathPoint {
-  readonly at: Point2d;
-  readonly nodeId: string | null;
-}
-
-export interface V2PathDraft {
-  readonly page: ScenePage;
-  readonly points: V2PathPoint[];
-  cursor: Point2d;
-}
-
 export interface V2GestureApi {
   readonly cancelGesture: () => boolean;
-  /** Enter: finish the click-by-click path (false when no draft is open). */
-  readonly commitGesture: () => boolean;
 }
 
 export interface V2PointerOptions {
@@ -233,15 +218,12 @@ export function pickHandleNear(
   return null;
 }
 
-// The dragged-out (or click-by-click) connector as it will commit: routed live,
+// The dragged-out connector as it will commit: routed live,
 // so the user sees the real lane and the side it will bind to before letting go.
 export function connectorPreview(options: V2PointerOptions, ends: {
   readonly source: { readonly nodeId: string | null; readonly point: Point2d };
   readonly target: { readonly nodeId: string | null; readonly point: Point2d };
-  readonly waypoints?: readonly Point2d[];
-}, routeKind?: ConnectorRouteKind): SceneConnector {
-  const kind = routeKind ?? CONNECTOR_ROUTE[options.toolConfigRef.current.connector];
-  const waypoints = ends.waypoints ?? [];
+}): SceneConnector {
   return {
     id: '__connect-preview',
     source: ends.source.nodeId
@@ -250,9 +232,9 @@ export function connectorPreview(options: V2PointerOptions, ends: {
     target: ends.target.nodeId
       ? { nodeId: ends.target.nodeId, portId: null, anchor: null, point: null }
       : { nodeId: null, portId: null, anchor: null, point: ends.target.point },
-    route: { kind, ownership: waypoints.length ? 'manual' : 'automatic' },
-    waypoints: waypoints.map((point) => ({ ...point })),
-    labels: [], appearance: { markerEnd: connectorHeadEnd(options.toolConfigRef.current.connector) },
+    route: { kind: connectorRoute(options), ownership: 'automatic' },
+    waypoints: [],
+    labels: [], appearance: { markerEnd: 'arrow' },
     semantics: {}, metadata: {}, extensions: {},
   };
 }
@@ -261,11 +243,10 @@ export function stickyAppearance(options: V2PointerOptions, shape: V2ShapeKind):
   return options.stylePresetsRef?.current[shape === 'text' ? 'text' : 'shape'];
 }
 
-// The picked connector tool decides route and target marker; sticky style
-// carries the rest, so "arrow" always points and "line" never does.
-export function connectorAppearance(options: V2PointerOptions): JsonObject {
-  const kind = options.toolConfigRef.current.connector;
-  return { ...options.stylePresetsRef?.current.connector, markerEnd: connectorHeadEnd(kind) };
+// The picked connector tool decides the route; sticky style carries the rest,
+// and every new connector points at its target.
+function connectorAppearance(options: V2PointerOptions): JsonObject {
+  return { ...options.stylePresetsRef?.current.connector, markerEnd: 'arrow' };
 }
 
 function connectorRoute(options: V2PointerOptions): ConnectorRouteKind {

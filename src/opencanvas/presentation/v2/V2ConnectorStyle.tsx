@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { IconChevronDown, IconArrowsRightLeft, IconBold, IconItalic, IconUnderline } from '@tabler/icons-react';
+import { IconChevronDown, IconArrowsRightLeft, IconBold, IconItalic } from '@tabler/icons-react';
 import type { ConnectorRouteKind, ScenePage } from '../../domain/document/types';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { resolveConnectorPresentation } from '../../domain/connectors/presentation';
@@ -28,7 +28,7 @@ type RouteChoice = ConnectorRouteKind;
 
 const MARKERS: readonly { value: ConnectorMarkerEnd; label: string }[] = [
   { value: 'none', label: 'None' }, { value: 'arrow', label: 'Arrow' }, { value: 'dot', label: 'Dot' },
-  { value: 'cross', label: 'Cross' }, { value: 'diamond', label: 'Diamond' },
+  { value: 'diamond', label: 'Diamond' },
 ];
 const WIDTH_PRESETS = [1, 2, 3, 4].map((value) => ({
   value, label: <span className="ofk-width-glyph" style={{ height: value }} />, title: `${value}px`,
@@ -94,7 +94,7 @@ export function V2ConnectorStyle({ page, connectorId, commit, onCommitted }: V2C
         <PanelRow label="Path">
           <Segmented<RouteChoice> label="Path" value={route} onChange={(value) => apply({ route: value })}
             options={[{ value: 'orthogonal', label: 'Elbow' }, { value: 'direct', label: 'Straight' },
-              { value: 'bezier', label: 'Curve' }, { value: 'polyline', label: 'Path' }]} />
+              { value: 'bezier', label: 'Curve' }]} />
         </PanelRow>
         {route === 'orthogonal' ? (
           <PanelRow label="Corners">
@@ -102,10 +102,6 @@ export function V2ConnectorStyle({ page, connectorId, commit, onCommitted }: V2C
               onChange={() => undefined} onCommit={(value) => apply({ cornerRadius: value })} />
           </PanelRow>
         ) : null}
-        <PanelRow label="Opacity">
-          <NumberField stepper="stacked" label="Opacity" hideLabel value={Math.round(presentation.stroke.opacity * 100)} min={10} max={100} step={10} unit="%"
-            onChange={() => undefined} onCommit={(value) => apply({ opacity: value / 100 })} />
-        </PanelRow>
       </StyleButton>
 
       <StyleButton label="Ends" open={open === 'ends'} onToggle={() => toggle('ends')} onClose={close}
@@ -150,12 +146,10 @@ export function V2ConnectorStyle({ page, connectorId, commit, onCommitted }: V2C
         <PanelRow label="Style">
           <ToggleRow label="Label style" onToggle={(id) => {
             if (id === 'bold') apply({ labelFontWeight: label.fontWeight === 700 ? 400 : 700 });
-            else if (id === 'italic') apply({ labelFontStyle: label.fontStyle === 'italic' ? 'normal' : 'italic' });
-            else apply({ labelTextDecoration: label.textDecoration === 'underline' ? 'none' : 'underline' });
+            else apply({ labelFontStyle: label.fontStyle === 'italic' ? 'normal' : 'italic' });
           }} options={[
             { id: 'bold', label: 'Bold', icon: <Icon icon={IconBold} />, on: label.fontWeight === 700 },
             { id: 'italic', label: 'Italic', icon: <Icon icon={IconItalic} />, on: label.fontStyle === 'italic' },
-            { id: 'underline', label: 'Underline', icon: <Icon icon={IconUnderline} />, on: label.textDecoration === 'underline' },
           ]} />
         </PanelRow>
       </StyleButton>

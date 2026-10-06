@@ -26,9 +26,9 @@ palette does not have to approve it.
 
 | Panel | What it edits |
 | --- | --- |
-| **Line** | Colour, width, dash, path (elbow, straight, curve, path), corner radius for elbows, opacity |
-| **Ends** | Start and end markers (none, arrow, dot, cross, diamond) and reverse direction |
-| **Label** | Label colour, background, font, size, bold/italic/underline |
+| **Line** | Colour, width, dash, path (elbow, straight, curve), corner radius for elbows |
+| **Ends** | Start and end markers (none, arrow, dot, diamond) and reverse direction |
+| **Label** | Label colour, background, font, size, bold/italic |
 
 ## Mixed selections
 

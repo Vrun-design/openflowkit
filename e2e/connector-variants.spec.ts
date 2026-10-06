@@ -47,43 +47,29 @@ test('each connector kind binds to shapes and re-routes when a shape moves', asy
     await page.getByRole('option', { name }).click();
   };
 
-  // Elbow, line and curve: drag one onto the other.
-  for (const name of ['Elbow', 'Line', 'Curve']) {
+  // Elbow, arrow and curve: drag one onto the other.
+  for (const name of ['Elbow', 'Arrow', 'Curve']) {
     await pick(name);
     await page.mouse.move(from.x, from.y);
     await page.mouse.down();
     await page.mouse.move(to.x, to.y, { steps: 10 });
     await page.mouse.up();
     await expect.poll(async () => (await state(page)).connectors.length).toBe(
-      ['Elbow', 'Line', 'Curve'].indexOf(name) + 1
+      ['Elbow', 'Arrow', 'Curve'].indexOf(name) + 1
     );
   }
 
-  // Path: click the first shape, click a bend, click the second shape.
-  await pick('Path');
-  await page.mouse.click(from.x, from.y);
-  await page.mouse.click((from.x + to.x) / 2, from.y - 120);
-  await page.mouse.click(to.x, to.y);
-  await expect.poll(async () => (await state(page)).connectors.length).toBe(4);
-
   const connectors = (await doc(page)).pages[0].connectors;
   expect(connectors.map((connector) => connector.route.kind)).toEqual([
-    'orthogonal', 'direct', 'bezier', 'polyline',
+    'orthogonal', 'direct', 'bezier',
   ]);
-  expect(connectors[1]!.appearance.markerEnd).toBe('none');
-  expect(connectors[0]!.appearance.markerEnd).toBe('arrow');
+  for (const connector of connectors) expect(connector.appearance.markerEnd).toBe('arrow');
 
   // Every route has real samples, and the straight one is just two points.
   const before = await Promise.all(connectors.map((connector) => samples(page, connector.id)));
   for (const points of before) expect(points.length).toBeGreaterThanOrEqual(2);
-  // Parallel edges fan apart, so "straight" means a 3-point path whose middle
-  // sits near the midpoint (within the parallel-edge offset).
-  const line = before[1]!;
-  expect(line).toHaveLength(3);
-  expect(Math.hypot(
-    line[1]!.x - (line[0]!.x + line[2]!.x) / 2,
-    line[1]!.y - (line[0]!.y + line[2]!.y) / 2
-  )).toBeLessThan(12);
+  // The middle of three parallel edges takes no fan offset: two points.
+  expect(before[1]).toHaveLength(2);
 
   // Drag the second shape: every route re-routes, none keeps a stale segment.
   await page.keyboard.press('Escape');
@@ -100,7 +86,7 @@ test('each connector kind binds to shapes and re-routes when a shape moves', asy
     expect(Math.hypot(last.x - previous.x, last.y - previous.y)).toBeGreaterThan(50);
   });
   // The straight route stays a straight line after the move.
-  expect(after[1]).toHaveLength(3);
+  expect(after[1]).toHaveLength(2);
 });
 
 test('a marquee selects connectors with their shapes, and Delete removes them all', async ({ page }) => {

@@ -586,7 +586,6 @@ export function V2EditorPage(): React.JSX.Element {
     },
     onNudge: editActions.nudgeSelection,
     onCancelGesture: () => gestureApiRef.current?.cancelGesture() ?? false,
-    onCommitGesture: () => gestureApiRef.current?.commitGesture() ?? false,
     onEscapePanel: () => {
       if (!panels.chartId) return false;
       panels.closeChart();

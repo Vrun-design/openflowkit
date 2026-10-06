@@ -1,7 +1,7 @@
 import {
   IconArrowCurveLeft, IconArrowUpRight, IconChartArea, IconChartBar, IconChartDots, IconChartDonut, IconChartLine,
-  IconChartPie, IconChartRadar, IconCornerDownRight, IconGridDots, IconMinus, IconNote, IconStar, IconSquareDashed,
-  IconTable, IconVectorBezier2,
+  IconChartPie, IconChartRadar, IconCornerDownRight, IconGridDots, IconNote, IconStar, IconSquareDashed,
+  IconTable,
 } from '@tabler/icons-react';
 import type { ConnectorRouteKind } from '../../domain/document/types';
 import type { ChartKind } from '../../domain/nodes/chartNodePresentation';
@@ -33,7 +33,7 @@ export type V2Tool =
   | 'pen' | 'highlighter'
   | 'eraser' | 'laser';
 
-export type V2ConnectorTool = 'arrow' | 'elbow' | 'curve' | 'line' | 'path';
+export type V2ConnectorTool = 'arrow' | 'elbow' | 'curve';
 export type V2ChartKind = ChartKind;
 
 export interface V2ToolConfig {
@@ -78,8 +78,6 @@ export const CONNECTOR_OPTIONS: readonly ToolOption<V2ConnectorTool>[] = [
   { id: 'arrow', label: 'Arrow', icon: IconArrowUpRight },
   { id: 'elbow', label: 'Elbow', icon: IconCornerDownRight },
   { id: 'curve', label: 'Curve', icon: IconArrowCurveLeft },
-  { id: 'line', label: 'Line', icon: IconMinus },
-  { id: 'path', label: 'Path', icon: IconVectorBezier2 },
 ];
 
 /** Pointer flyout: ways to point at the canvas without drawing on it. */
@@ -123,19 +121,12 @@ export const CHART_OPTIONS: readonly ToolOption<V2ChartKind>[] = [
 ];
 
 /** The route a picked connector tool draws. The arrow goes where it is dragged,
- * like its icon; elbows are asked for. `polyline` is the click-by-click path. */
+ * like its icon; elbows are asked for. Bends come from dragging a segment. */
 export const CONNECTOR_ROUTE: Readonly<Record<V2ConnectorTool, ConnectorRouteKind>> = {
   arrow: 'direct',
   elbow: 'orthogonal',
-  line: 'direct',
   curve: 'bezier',
-  path: 'polyline',
 };
-
-/** A line has no head; every other connector points at its target. */
-export function connectorHeadEnd(kind: V2ConnectorTool): 'arrow' | 'none' {
-  return kind === 'line' ? 'none' : 'arrow';
-}
 
 /** An Insert pick names its group, so one panel can hold media, charts, frames and widgets. */
 export type V2MoreItem = `frame:${FramePreset}` | `widget:${WidgetKind}` | `chart:${V2ChartKind}` | 'insert:sticky';

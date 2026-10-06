@@ -31,10 +31,9 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.
 - Animation is page-scoped only; deployment replica/group semantics and migration fidelity remain partial.
 ## Next — owner's order, 2026-10-06 (D8 decided: no labs flag)
-- Canvas UI first, then launch holds, 13.4 → 14.4 → 15. Open: D7, D11. Done 10-06: Inspect (⌥I); rail 12 → 7, no orange
-  marker (owner); C4 person = card + user icon; model panel Beta; Shapes picker 41 → 19, icons from outlines
-  (`shapeIcon.tsx`); Lasso removed; connector UX pass (drop target, hover halo, bar placement, quieter handles,
-  12px labels, quick-create in frames). D11 left: own glyphs, empty screen, dark thumbs.
+- Canvas UI first, then launch holds, 13.4 → 14.4 → 15. Open: D7, D11. Done 10-06: Inspect (⌥I); rail 12 → 7 (black pill);
+  C4 person card + Beta; Shapes 41 → 19; Lasso gone; connector UX pass; connector cuts (Line/Path tools, Cross,
+  underline, opacity). Next: `docs/plan/launch-qa-prompt.md`. D11 left: own glyphs, empty screen, dark thumbs.
 ## Deferred
 - Widget text width is estimated; wireframe comments move to the end; PDF = print dialog; no zip;
   bridge is long-poll; chart data panel commits per blur; image aspect lock is Shift-lock.

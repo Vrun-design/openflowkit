@@ -34,18 +34,17 @@ corner.
 
 ## Connectors
 
-Click the Connector button to open its five kinds; `A` arms the last one picked:
+Click the Connector button to open its three kinds; `A` arms the last one picked:
 
 | Kind | Route | Use for |
 | --- | --- | --- |
 | Arrow | direct | the default; goes straight where you drag it |
 | Elbow | orthogonal | flowcharts and architecture; routes around obstacles |
 | Curve | bezier | soft links where the elbow path looks busy |
-| Line | direct | a straight link with no head |
-| Path | polyline | click each waypoint yourself |
 
 A connector binds to a node's side or to a free point. Orthogonal routes recompute while
-either end or any bound node moves; manual waypoints you place survive that recomputation.
+either end or any bound node moves; drag a segment to add a bend; manual waypoints survive that recomputation.
+Set the end to None in the style bar for a link with no head.
 Hovering a shape shows four side handles — drag from one to draw, release on empty canvas to
 create a connected shape of the same kind with its label open.
 
