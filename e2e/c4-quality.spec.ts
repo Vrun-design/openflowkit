@@ -50,7 +50,6 @@ test('C4 starter, keyboard inspection, focused camera and visual flow authoring 
     })
     .toBe(true);
   await expect(page.getByRole('button', { name: 'Zoom 140%', exact: true })).toContainText('140%');
-  await page.screenshot({ path: '/private/tmp/c4-quality-desktop.png' });
   await page.getByRole('tab', { name: /Flows/ }).click();
   await page.getByRole('button', { name: 'Create flow', exact: true }).click();
   const form = page.getByRole('form', { name: 'Create flow' });
@@ -82,7 +81,6 @@ test('phone welcome exposes C4 creation and hides keyboard hints', async ({ page
   const box = (await starter.boundingBox())!;
   expect(box.x).toBeGreaterThanOrEqual(0);
   expect(box.x + box.width).toBeLessThanOrEqual(390);
-  await page.screenshot({ path: '/private/tmp/c4-quality-phone.png' });
 });
 
 test('Generate from the untouched starter draft keeps a view made in the model panel @gate', async ({ page }) => {
