@@ -34,7 +34,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 ## Next — owner's order, 2026-10-06 (D8 decided: no labs flag)
 - Canvas UI first, launch holds after; then 13.4 → 14.4 → 15. Open: D7 (paid), D11. Done 2026-10-06 (opus-5.5):
   Inspect (menu / selection bar / ⌥I, `domain/scene/inspect.ts`); create rail 12 → 7 (Pointer, Shapes, Connector,
-  Text, Draw, Icons, Insert; one flyout level; orange active marker). D11 left: own glyphs, empty screen, dark thumbs.
+  Text, Draw, Icons, Insert; one flyout level). Owner: no orange marker, keep the black active pill. D11 left: own glyphs, empty screen, dark thumbs.
 ## Deferred
 - Widget text width is estimated; wireframe comments move to the end; PDF = print dialog; no zip;
   bridge is long-poll; chart data panel commits per blur; image aspect lock is Shift-lock.
