@@ -28,7 +28,7 @@ renders this list itself, from the same data, so it cannot drift from what the k
 | Laser pointer | `K` |
 | Frame | `F` |
 | Sticky note | `N` |
-| More: frames, tools, wireframe | `Shift + S` |
+| Insert: media, charts, frames, wireframe | `Shift + S` |
 | Icons and emoji | `I / E` |
 | Image | `Shift + I` |
 

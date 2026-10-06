@@ -61,7 +61,8 @@ test('every popover trigger opens, and closes on a second click, Escape and an o
 
 test('every toolbar button presses without an error and Escape backs out of it @gate', async ({ page }) => {
   const all = (await controls(page)).filter(({ disabled }) => !disabled);
-  expect(all.length, 'discovery found the toolbars').toBeGreaterThanOrEqual(20);
+  // The create rail is 7 buttons since 2026-10-06 (was 12); the floor only catches broken discovery.
+  expect(all.length, 'discovery found the toolbars').toBeGreaterThanOrEqual(18);
   const layers = page.locator('.ofk-popover:not([data-passive]), [role="dialog"][aria-modal="true"]');
   for (const control of all) {
     const { name } = control;

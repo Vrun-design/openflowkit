@@ -94,8 +94,8 @@ export function useV2Inserts(options: V2InsertsOptions) {
     const [group, name] = item.split(':') as [string, string];
     if (group === 'frame') insertFrame(name as FramePreset);
     else if (group === 'widget') insertWidget(name as WidgetKind);
-    else if (name === 'sticky') insertSticky();
-    else setTool(name as 'lasso' | 'laser' | 'eraser');
+    else if (group === 'chart') insertChart(name as V2ChartKind);
+    else insertSticky();
   };
   /** A chart lands with its data panel open: data is the first thing it needs. */
   const insertChart = (chart: V2ChartKind) => {

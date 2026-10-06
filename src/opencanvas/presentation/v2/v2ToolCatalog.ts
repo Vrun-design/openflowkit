@@ -20,6 +20,7 @@ import {
   IconLayoutSidebar, IconLink, IconList, IconMenu2, IconPencil, IconPhoto, IconProgress,
   IconRectangle, IconSearch, IconSeparatorHorizontal, IconSquareCheck, IconSquareChevronDown, IconStairs,
   IconSwitchHorizontal, IconTabs, IconTag, IconToggleRight, IconTooltip, IconUserCircle,
+  IconHandStop, IconPhotoPlus, IconPointer, IconSquare,
 } from '@tabler/icons-react';
 import type { FramePreset } from '../../domain/nodes/framePreset';
 import { WIDGETS, type WidgetKind } from '../../domain/nodes/widgetNodePresentation';
@@ -38,7 +39,6 @@ export type V2Tool =
   | 'eraser' | 'lasso' | 'laser';
 
 export type V2ConnectorTool = 'arrow' | 'elbow' | 'curve' | 'line' | 'path';
-export type V2InkTool = 'pen' | 'highlighter';
 export type V2ChartKind = ChartKind;
 
 export interface V2ToolConfig {
@@ -57,6 +57,11 @@ export interface ToolOption<T extends string> {
   readonly label: string;
   readonly icon: TablerIcon;
   readonly shortcut?: string;
+}
+
+export interface ToolSection<T extends string> {
+  readonly title: string;
+  readonly options: readonly ToolOption<T>[];
 }
 
 /** Grid order matches the reference rail: pointy, round, then the box family. */
@@ -113,9 +118,33 @@ export const CONNECTOR_OPTIONS: readonly ToolOption<V2ConnectorTool>[] = [
   { id: 'path', label: 'Path', icon: IconVectorBezier2 },
 ];
 
-export const INK_OPTIONS: readonly ToolOption<V2InkTool>[] = [
-  { id: 'pen', label: 'Pen', icon: IconPencil },
-  { id: 'highlighter', label: 'Highlighter', icon: IconHighlight },
+/** Pointer flyout: ways to point at the canvas without drawing on it. */
+export const POINTER_OPTIONS: readonly ToolOption<V2Tool>[] = [
+  { id: 'select', label: 'Select', icon: IconPointer, shortcut: 'V' },
+  { id: 'hand', label: 'Hand', icon: IconHandStop, shortcut: 'H' },
+  { id: 'lasso', label: 'Lasso', icon: IconLasso, shortcut: 'Q' },
+];
+
+/** Draw flyout: freehand marks, and the tools that remove or point at them. */
+export const DRAW_OPTIONS: readonly ToolOption<V2Tool>[] = [
+  { id: 'pen', label: 'Pen', icon: IconPencil, shortcut: 'P' },
+  { id: 'highlighter', label: 'Highlighter', icon: IconHighlight, shortcut: '⇧P' },
+  { id: 'eraser', label: 'Eraser', icon: IconEraser, shortcut: 'X' },
+  { id: 'laser', label: 'Laser pointer', icon: IconFlare, shortcut: 'K' },
+];
+
+/** Shapes flyout: R and O arm their own tools; the library grid arms the shape tool. */
+export type V2ShapePick = ShapeKind | 'tool:rectangle' | 'tool:ellipse';
+export const SHAPE_SECTIONS: readonly ToolSection<V2ShapePick>[] = [
+  {
+    title: 'Basic',
+    options: [
+      { id: 'tool:rectangle', label: 'Rectangle', icon: IconSquare, shortcut: 'R' },
+      { id: 'tool:ellipse', label: 'Ellipse', icon: IconCircle, shortcut: 'O' },
+    ],
+  },
+  // The library's ellipse is the O tool's shape; one cell for it, in Basic.
+  { title: 'All shapes', options: SHAPE_OPTIONS.filter((option) => option.id !== 'ellipse') },
 ];
 
 export const CHART_OPTIONS: readonly ToolOption<V2ChartKind>[] = [
@@ -146,17 +175,23 @@ export function connectorHeadEnd(kind: V2ConnectorTool): 'arrow' | 'none' {
   return kind === 'line' ? 'none' : 'arrow';
 }
 
-/** A More pick names its group, so one grid can hold frames, tools and widgets. */
-export type V2MoreTool = 'lasso' | 'laser' | 'eraser' | 'sticky';
-export type V2MoreItem = `frame:${FramePreset}` | `tool:${V2MoreTool}` | `widget:${WidgetKind}`;
+/** An Insert pick names its group, so one panel can hold media, charts, frames and widgets. */
+export type V2MoreItem = `frame:${FramePreset}` | `widget:${WidgetKind}` | `chart:${V2ChartKind}` | 'insert:sticky';
+export type V2InsertPick = V2MoreItem | 'insert:image';
 
-export interface ToolSection<T extends string> {
-  readonly title: string;
-  readonly options: readonly ToolOption<T>[];
-}
-
-/** The More flyout, in Koboyo's order: frames, drawing tools, then the wireframe kit. */
-export const MORE_SECTIONS: readonly ToolSection<V2MoreItem>[] = [
+/** Insert: everything placed whole rather than drawn. One panel, sections, no second level. */
+export const INSERT_SECTIONS: readonly ToolSection<V2InsertPick>[] = [
+  {
+    title: 'Media',
+    options: [
+      { id: 'insert:image', label: 'Upload image', icon: IconPhotoPlus, shortcut: '⇧I' },
+      { id: 'insert:sticky', label: 'Sticky note', icon: IconNote, shortcut: 'N' },
+    ],
+  },
+  {
+    title: 'Charts',
+    options: CHART_OPTIONS.map((option) => ({ ...option, id: `chart:${option.id}` as const })),
+  },
   {
     title: 'Frames',
     options: [
@@ -165,15 +200,6 @@ export const MORE_SECTIONS: readonly ToolSection<V2MoreItem>[] = [
       { id: 'frame:tablet', label: 'Tablet', icon: IconDeviceTablet },
       { id: 'frame:browser', label: 'Browser', icon: IconBrowser },
       { id: 'frame:window', label: 'Window', icon: IconAppWindow },
-    ],
-  },
-  {
-    title: 'Tools',
-    options: [
-      { id: 'tool:lasso', label: 'Lasso', icon: IconLasso, shortcut: 'Q' },
-      { id: 'tool:laser', label: 'Laser pointer', icon: IconFlare, shortcut: 'K' },
-      { id: 'tool:eraser', label: 'Eraser', icon: IconEraser, shortcut: 'X' },
-      { id: 'tool:sticky', label: 'Sticky note', icon: IconNote, shortcut: 'N' },
     ],
   },
   {

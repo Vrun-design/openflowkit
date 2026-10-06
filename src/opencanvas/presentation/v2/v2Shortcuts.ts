@@ -39,7 +39,7 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
         { label: 'Laser pointer', keys: 'K', tokens: ['k'] },
         { label: 'Frame', keys: 'F', tokens: ['f'] },
         { label: 'Sticky note', keys: 'N', tokens: ['n'] },
-        { label: 'More: frames, tools, wireframe', keys: 'Shift + S', tokens: ['KeyS'] },
+        { label: 'Insert: media, charts, frames, wireframe', keys: 'Shift + S', tokens: ['KeyS'] },
         { label: 'Icons and emoji', keys: 'I / E', tokens: ['i', 'e'] },
         { label: 'Image', keys: 'Shift + I', tokens: ['KeyI'] },
       ],

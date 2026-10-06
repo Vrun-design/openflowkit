@@ -5,7 +5,8 @@ test('object actions, page menus and connection states stay usable', async ({ pa
   await page.addInitScript(() => localStorage.setItem('openflowkit-v2-preferences', JSON.stringify({ theme: 'dark' })));
   await page.goto('/');
   await expect(page.getByTestId('v2-canvas')).toBeVisible();
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await page.getByRole('button', { name: 'Shapes', exact: true }).click();
+  await page.getByRole('option', { name: 'Rectangle', exact: true }).click();
   await page.mouse.move(430, 230);
   await page.mouse.down();
   await page.mouse.move(580, 320);

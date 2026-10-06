@@ -690,7 +690,7 @@
       "name": "Browser and mobile frame nodes",
       "status": "shipped",
       "evidence": "src/opencanvas/domain/nodes/wireframeNodePresentation.ts:61",
-      "notes": "Reachable through the DSL shape words `browser` and `mobile`; the app draws the frame chrome. The SVG/PNG export draws them as plain labelled cards. The More flyout's device frames are separate containers (see frames-tools).",
+      "notes": "Reachable through the DSL shape words `browser` and `mobile`; the app draws the frame chrome. The SVG/PNG export draws them as plain labelled cards. The Insert flyout's device frames are separate containers (see frames-tools).",
       "page": "diagram-flowchart"
     },
     {
@@ -1019,16 +1019,16 @@
     },
     {
       "id": "frames-tools",
-      "name": "More flyout: frame presets and tools",
+      "name": "Insert flyout and grouped tools",
       "status": "shipped",
       "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts",
-      "notes": "Frame, phone, tablet, browser and window frames adopt what is dropped on them and draw their chrome in the export too. Tools: lasso, laser pointer (presentation only), eraser, sticky note.",
+      "notes": "Seven-button rail (2026-10-06): Pointer (select, hand, lasso), Shapes, Connector, Text, Draw (pen, highlighter, eraser, laser pointer), Icons and emoji, Insert (upload image, sticky note, charts, frames, wireframe). Frame, phone, tablet, browser and window frames adopt what is dropped on them and draw their chrome in the export too.",
       "page": "insert-media",
       "shortcuts": [
         "Laser pointer",
         "Frame",
         "Sticky note",
-        "More: frames, tools, wireframe"
+        "Insert: media, charts, frames, wireframe"
       ]
     },
     {

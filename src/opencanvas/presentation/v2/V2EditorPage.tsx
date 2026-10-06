@@ -730,7 +730,6 @@ export function V2EditorPage(): React.JSX.Element {
               iconsOpen={iconLibrary.open} onIconsOpenChange={iconLibrary.setOpen} onInsertIcon={iconLibrary.insertIcon}
               onInsertImage={pickImageFile} onPickEmoji={pickEmoji}
               recentEmoji={preferences.recentEmoji} librarySection={librarySection}
-              onPickChart={inserts.insertChart}
               moreOpen={moreOpen} onMoreOpenChange={setMoreOpen} onPickMore={inserts.pickMore}
               onZoomIn={() => camera.zoomStep(1.2)}
               onZoomOut={() => camera.zoomStep(1 / 1.2)}

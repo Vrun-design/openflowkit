@@ -22,7 +22,7 @@ const node = async (page: import('@playwright/test').Page) => {
 test('dragging a quadrant point writes x/y and the panel follows', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('v2-canvas').focus();
-  await page.getByRole('button', { name: 'Charts' }).click();
+  await page.getByRole('button', { name: 'Insert', exact: true }).click();
   await page.getByRole('option', { name: 'Quadrant' }).click();
   await expect.poll(async () => (await state(page)).nodes.length).toBe(1);
   expect((await node(page)).content.chart).toBe('quadrant');

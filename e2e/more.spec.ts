@@ -1,4 +1,4 @@
-// Slices 6.6–6.7 headed check: the More flyout — frames, tools, wireframe
+// Slices 6.6–6.7 headed check: the Insert flyout — media, charts, frames, wireframe
 // widgets, their state from the style bar, and the `wireframe` family.
 import { expect, test, type Page } from './test';
 import { centreOf, emptyPoint, openCanvas, rect, state } from './helpers';
@@ -13,32 +13,44 @@ interface Node {
 }
 const nodes = (page: Page): Promise<Node[]> => page.evaluate(() =>
   (window as unknown as { __V2__: { getDocument(): { pages: { nodes: Node[] }[] } } }).__V2__.getDocument().pages[0]!.nodes);
-const more = (page: Page) => page.getByRole('toolbar', { name: 'Create' }).getByRole('button', { name: 'More', exact: true });
+const rail = (page: Page) => page.getByRole('toolbar', { name: 'Create' });
+const more = (page: Page) => rail(page).getByRole('button', { name: 'Insert', exact: true });
 const pick = async (page: Page, name: string) => {
   await more(page).click();
   await page.getByRole('option', { name, exact: true }).click();
 };
 
-test('More opens by mouse and keyboard, with frames, tools and wireframe sections @gate', async ({ page }) => {
+test('Insert opens by mouse and keyboard with one level of sections; Pointer and Draw hold the tools @gate', async ({ page }) => {
   await openCanvas(page);
   await more(page).click();
-  for (const section of ['Frames', 'Tools', 'Wireframe']) {
+  for (const section of ['Media', 'Charts', 'Frames', 'Wireframe']) {
     await expect(page.getByRole('group', { name: section })).toBeVisible();
   }
-  await expect(page.getByRole('option')).toHaveCount(5 + 4 + 35);
+  await expect(page.getByRole('option')).toHaveCount(2 + 10 + 5 + 35);
   await page.keyboard.press('Escape');
   await expect(more(page)).toHaveAttribute('aria-expanded', 'false');
   await expect(more(page)).toBeFocused();
 
-  // ⇧S opens it on the first cell; Down crosses from the Frames row into Tools.
+  // ⇧S opens it on the first cell; Down crosses from Media into Charts.
   await page.getByTestId('v2-canvas').focus();
   await page.keyboard.press('Shift+S');
-  await expect(page.getByRole('option', { name: 'Frame', exact: true })).toBeFocused();
+  await expect(page.getByRole('option', { name: 'Upload image', exact: true })).toBeFocused();
   await page.keyboard.press('ArrowDown');
-  await expect(page.getByRole('option', { name: 'Lasso' })).toBeFocused();
-  await page.keyboard.press('Enter');
+  await expect(page.getByRole('option', { name: 'Table', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+
+  // Lasso moved from More to Pointer, Eraser to Draw; each lights its group.
+  const pointer = rail(page).getByRole('button', { name: 'Pointer', exact: true });
+  await pointer.click();
+  await page.getByRole('option', { name: 'Lasso' }).click();
   await expect.poll(async () => (await state(page)).tool).toBe('lasso');
-  await expect(more(page)).toHaveAttribute('aria-pressed', 'true');
+  await expect(pointer).toHaveAttribute('aria-pressed', 'true');
+  const draw = rail(page).getByRole('button', { name: 'Draw', exact: true });
+  await draw.click();
+  await page.getByRole('option', { name: 'Eraser' }).click();
+  await expect.poll(async () => (await state(page)).tool).toBe('eraser');
+  await expect(draw).toHaveAttribute('aria-pressed', 'true');
+  await expect(pointer).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('a phone frame collects picked widgets, moves them with it, and undoes step by step @gate', async ({ page }) => {

@@ -31,7 +31,8 @@ test('v2 workspace shell supports panels, view controls, and canvas creation @ga
   await page.getByRole('button', { name: 'Zoom 100%', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Zoom in', exact: false }).click();
   await expect(page.getByRole('button', { name: 'Zoom 120%', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await page.getByRole('button', { name: 'Shapes', exact: true }).click();
+  await page.getByRole('option', { name: 'Rectangle', exact: true }).click();
   await page.mouse.move(450, 270);
   await page.mouse.down();
   await page.mouse.move(630, 390);

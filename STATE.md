@@ -32,9 +32,9 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.
 - Animation is page-scoped only; deployment replica/group semantics and migration fidelity remain partial.
 ## Next — owner's order, 2026-10-06 (D8 decided: no labs flag)
-- Canvas UI first, launch holds after; then 13.4 → 14.4 → 15. Open: D7 (paid), D11. Inspect done (opus-5.5):
-  menu / selection bar / ⌥I, read-only, `domain/scene/inspect.ts`. Toolbar → 6 tools waits on owner's look at
-  `docs/plan/design/canvas-v2-lite.html`.
+- Canvas UI first, launch holds after; then 13.4 → 14.4 → 15. Open: D7 (paid), D11. Done 2026-10-06 (opus-5.5):
+  Inspect (menu / selection bar / ⌥I, `domain/scene/inspect.ts`); create rail 12 → 7 (Pointer, Shapes, Connector,
+  Text, Draw, Icons, Insert; one flyout level; orange active marker). D11 left: own glyphs, empty screen, dark thumbs.
 ## Deferred
 - Widget text width is estimated; wireframe comments move to the end; PDF = print dialog; no zip;
   bridge is long-poll; chart data panel commits per blur; image aspect lock is Shift-lock.

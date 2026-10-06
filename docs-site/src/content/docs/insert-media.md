@@ -26,7 +26,7 @@ controls.
 
 Three ways in, one node each:
 
-- **Toolbar** (`Shift + I`) opens a file picker; the image lands at the viewport centre.
+- **Insert → Upload image** (`Shift + I`) opens a file picker; the image lands at the viewport centre.
 - **Paste** an image file or an image URL — anything matching `http(s)…png/jpg/svg/webp/gif`.
 - **Drop** a file onto the canvas; the image lands where you dropped it.
 
@@ -37,22 +37,27 @@ broken image. Hold `Shift` while resizing an image to keep its aspect ratio.
 
 ## Charts
 
-The Charts flyout inserts a chart node of any of the ten kinds (bar, line, area, scatter,
+**Insert → Charts** places a chart node of any of the ten kinds (bar, line, area, scatter,
 pie, donut, radar, heatmap, table, quadrant). Charts are also a diagram family — the [chart
 family](/diagram-chart/) page covers the data format and the data panel.
 
-## More: frames, tools and wireframe
+## Insert: media, charts, frames and wireframe
 
-The **More** button (`Shift + S`) at the bottom of the toolbar opens three sections:
+The **Insert** button (`Shift + S`) at the bottom of the toolbar opens one panel with four
+sections. Every cell places its item in one click; nothing opens a second menu.
 
+- **Media** — upload an image (`Shift + I`) and sticky note (`N`).
+- **Charts** — the ten chart kinds above.
 - **Frames** — a plain frame (`F`), phone, tablet, browser and window. A frame is named above
   its top edge, holds whatever you drop on it, and moves it along. Device chrome is part of the
   export; for a dashed frame, set the outline style.
-- **Tools** — lasso (`Q`), laser pointer (`K`), eraser (`X`) and sticky note (`N`). The laser
-  draws a fading red trail for presenting and never touches the document.
 - **Wireframe** — 35 controls, from buttons and toggles to date pickers. With a frame selected,
   each one stacks into the frame. The [wireframe family](/diagram-wireframe/) writes the same
   screens as text.
+
+The other tools sit in their own groups: **Pointer** holds select (`V`), hand (`H`) and lasso
+(`Q`); **Draw** holds pen (`P`), highlighter, eraser (`X`) and the laser pointer (`K`), which
+draws a fading red trail for presenting and never touches the document.
 
 ## What it cannot do
 

@@ -178,6 +178,11 @@
 .ofk-v2-tools-separator { width: 20px; height: 1px; margin: 4px 0; background: var(--ofk-border); flex: none; }
 .ofk-v2-lock-slot { display: inline-flex; }
 .ofk-v2-lock-slot .ofk-icon-button:disabled { pointer-events: none; opacity: .4; }
+/* Our active tool: an orange edge marker on a soft fill, not the inverse pill other canvases use. */
+.ofk-system .ofk-v2-tools .ofk-button[aria-pressed='true'] {
+  background: var(--ofk-accentSoft); color: var(--ofk-accent); border-color: transparent;
+  box-shadow: inset 3px 0 0 var(--ofk-accent);
+}
 /* A flyout trigger carries the small corner triangle at its bottom-right. */
 .ofk-v2-tools [data-flyout] { position: relative; }
 .ofk-v2-tools [data-flyout]::after {

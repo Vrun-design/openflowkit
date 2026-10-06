@@ -27,7 +27,7 @@ test('chart flyout, data panel edits, type switch and three undos', async ({ pag
   await page.goto('/');
   await page.getByTestId('v2-canvas').focus();
 
-  await page.getByRole('button', { name: 'Charts' }).click();
+  await page.getByRole('button', { name: 'Insert', exact: true }).click();
   await page.getByRole('option', { name: 'Bar chart' }).click();
   await expect.poll(async () => (await state(page)).nodes.length).toBe(1);
   const original = await chart(page);
@@ -66,7 +66,7 @@ test('chart flyout, data panel edits, type switch and three undos', async ({ pag
 test('the data panel opens on demand, not on every select, and Esc closes it', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('v2-canvas').focus();
-  await page.getByRole('button', { name: 'Charts' }).click();
+  await page.getByRole('button', { name: 'Insert', exact: true }).click();
   await page.getByRole('option', { name: 'Bar chart' }).click();
   await expect.poll(async () => (await state(page)).nodes.length).toBe(1);
 

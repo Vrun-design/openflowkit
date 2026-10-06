@@ -73,7 +73,7 @@ screen Settings [browser] {
 
 ## On the canvas
 
-The same controls are in the toolbar's **More** flyout (`Shift + S`), under Wireframe. With a
+The same controls are in the toolbar's **Insert** flyout (`Shift + S`), under Wireframe. With a
 frame selected — or anything inside one — each pick stacks into that frame's column, so a
 screen can be built by clicking controls one after another. Select a control to change its
 state from the style bar's **State** button; double-click to edit its label.
@@ -89,5 +89,5 @@ state from the style bar's **State** button; double-click to edit its label.
 
 ## Where to go next
 
-- [Insert media](/insert-media/) — frames and tools from the More flyout.
+- [Insert media](/insert-media/) — frames, charts and widgets from the Insert flyout.
 - [The OpenFlow DSL](/openflow-dsl/) — how every family shares one language.
