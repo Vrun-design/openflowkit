@@ -1,6 +1,6 @@
 ---
 title: Shapes and connectors
-description: The 42-shape library and the four connector kinds — routes, ports, labels, markers and waypoints.
+description: The shape library and the four connector kinds — routes, ports, labels, markers and waypoints.
 ---
 
 Shapes carry structure; connectors carry meaning between them. Both are created from the
@@ -8,11 +8,14 @@ toolbar, the keyboard or the DSL, and both are editable afterwards.
 
 ## Shapes
 
-The Shapes flyout (S) holds 42 shapes: diamond, triangle, circle, parallelogram, trapezoid,
-cylinder, venn, document, speech bubble, hexagon, star, check circle, cross circle, heart,
-cloud, four direction arrows, plus, lightning, note, rounded rectangle, ellipse, pill,
-octagon, tag, chevron, bar, half round, bookmark, folder, brace, bracket, numbered circle,
-list card, cube, prism, layer stack, target, pin and actor.
+The Shapes flyout (S) has two sections. **Basic** holds rectangle (`R`) and ellipse (`O`).
+**All shapes** holds the 19 shapes diagrams use: diamond, triangle, circle, parallelogram,
+trapezoid, hexagon, octagon, cylinder, document, note, speech bubble, cloud, folder, rounded
+rectangle, pill, chevron, tag, arrow (rotate it for other directions) and star. Each cell's
+icon is the shape's own outline.
+
+Older shapes — cube, prism, layer stack, heart, pin, actor, brackets and the like — are no
+longer offered in the flyout, but documents and DSL that use them still draw them.
 
 | Tool | Shortcut |
 | --- | --- |

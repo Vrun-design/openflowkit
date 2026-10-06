@@ -8,11 +8,15 @@ import { FRAME_PRESETS } from '../../domain/nodes/framePreset';
 import { WIDGET_KINDS } from '../../domain/nodes/widgetNodePresentation';
 
 describe('v2 tool catalog', () => {
-  it('offers every library shape once, and nothing the R/O tools already draw', () => {
+  it('offers the 19 diagram shapes once, all from the library, nothing the R/O tools already draw', () => {
     const ids = SHAPE_OPTIONS.map((option) => option.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect([...ids].sort()).toEqual([...LIBRARY_SHAPES].sort());
+    expect(ids).toHaveLength(19);
+    expect(ids.every((id) => (LIBRARY_SHAPES as readonly string[]).includes(id))).toBe(true);
     expect(ids).not.toContain('rectangle');
+    expect(ids).not.toContain('ellipse');
+    // Cut from the picker on 2026-10-06 (owner): 3D, icon-like and bracket shapes still draw, just aren't offered.
+    for (const gone of ['cube', 'prism', 'layer-stack', 'heart', 'pin', 'actor', 'brace', 'arrow-up']) expect(ids).not.toContain(gone);
   });
 
   it('maps connector picks onto routes and heads', () => {
@@ -44,8 +48,6 @@ describe('v2 tool catalog', () => {
     const tools = [...POINTER_OPTIONS, ...DRAW_OPTIONS].map((option) => option.id);
     expect(tools.sort()).toEqual(['eraser', 'hand', 'highlighter', 'laser', 'lasso', 'pen', 'select']);
     const shapes = SHAPE_SECTIONS.flatMap((section) => section.options.map((option) => option.id));
-    expect(shapes.slice(0, 2)).toEqual(['tool:rectangle', 'tool:ellipse']);
-    // The library's ellipse is the O tool's; everything else in the library is still one cell.
-    expect([...shapes.slice(2), 'ellipse'].sort()).toEqual(SHAPE_OPTIONS.map((option) => option.id).sort());
+    expect(shapes).toEqual(['tool:rectangle', 'tool:ellipse', ...SHAPE_OPTIONS.map((option) => option.id)]);
   });
 });

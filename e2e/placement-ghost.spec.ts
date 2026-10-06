@@ -17,16 +17,16 @@ test('shape tools ghost under the pointer and drop at the shape size', async ({ 
   await page.getByTestId('v2-canvas').focus();
   const shapes = page.getByRole('button', { name: 'Shapes' });
   await shapes.click();
-  await page.getByRole('option', { name: 'Actor' }).click();
+  await page.getByRole('option', { name: 'Star' }).click();
   await expect.poll(async () => (await api(page)).state.tool).toBe('shape');
 
   await page.mouse.move(500, 400);
-  await page.screenshot({ path: 'test-results/placement-ghost-actor.png' });
+  await page.screenshot({ path: 'test-results/placement-ghost-star.png' });
   await page.mouse.click(500, 400);
   await expect.poll(async () => (await api(page)).nodes.length).toBe(1);
-  const [actor] = (await api(page)).nodes;
-  expect(actor.content.shape).toBe('actor');
-  expect(actor.size).toEqual({ width: 112, height: 136 });
+  const [star] = (await api(page)).nodes;
+  expect(star.content.shape).toBe('star');
+  expect(star.size).toEqual({ width: 128, height: 128 });
 
   await shapes.click();
   await page.getByRole('option', { name: 'Folder' }).click();

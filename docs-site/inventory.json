@@ -159,10 +159,10 @@
     },
     {
       "id": "shape-tools",
-      "name": "Rectangle, ellipse and 42 shapes",
+      "name": "Rectangle, ellipse and 19 picker shapes",
       "status": "shipped",
       "evidence": "src/opencanvas/presentation/v2/v2ToolCatalog.ts:52",
-      "notes": "SHAPE_OPTIONS is the 42-entry library behind the Shapes flyout.",
+      "notes": "SHAPE_OPTIONS is the 19-shape picker (icons drawn from each outline). The full library still renders for old documents and DSL words.",
       "page": "shapes-and-connectors",
       "shortcuts": [
         "Rectangle",

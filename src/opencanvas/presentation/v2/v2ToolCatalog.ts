@@ -1,26 +1,21 @@
 import {
-  IconArrowCurveLeft, IconArrowDown, IconArrowLeft, IconArrowRight, IconArrowUp,
-  IconArrowUpRight, IconBolt, IconBookmark, IconBrackets, IconBraces, IconCapsuleHorizontal, IconChevronRight,
-  IconChartArea, IconChartBar, IconChartDots, IconChartDonut, IconChartLine, IconChartPie,
-  IconChartRadar, IconCircle, IconCircleCheck, IconCircleNumber1, IconCircleX, IconCircles,
-  IconCloud, IconCornerDownRight, IconCube, IconCylinder, IconDiamond, IconFile, IconFolder, IconGridDots,
-  IconHeart, IconHexagon, IconIdBadge, IconLayersSubtract, IconLayoutList,
-  IconLayoutSidebarRight, IconMessage, IconMinus, IconNote, IconOval, IconPin, IconPlus,
-  IconPolygon, IconPrism, IconShape2, IconShape3, IconSquareRounded, IconStar,
-  IconSquareDashed, IconTable, IconTarget, IconTriangle, IconUser, IconVectorBezier2,
+  IconArrowCurveLeft, IconArrowUpRight, IconChartArea, IconChartBar, IconChartDots, IconChartDonut, IconChartLine,
+  IconChartPie, IconChartRadar, IconCornerDownRight, IconGridDots, IconMinus, IconNote, IconStar, IconSquareDashed,
+  IconTable, IconVectorBezier2,
 } from '@tabler/icons-react';
 import type { ConnectorRouteKind } from '../../domain/document/types';
 import type { ChartKind } from '../../domain/nodes/chartNodePresentation';
-import type { ShapeKind } from '../../domain/nodes/shapeNode';
+import type { LibraryShape, ShapeKind } from '../../domain/nodes/shapeNode';
+import type { IconComponent } from '../design-system/Icon';
+import { shapeIcon } from './shapeIcon';
 import {
-  IconAdjustmentsHorizontal, IconAlertTriangle, IconAlignLeft, IconAntennaBars5, IconAppWindow,
-  IconBrowser, IconCalendar, IconChevronsDown, IconChevronsRight, IconCircleDot, IconCirclePlus, IconCursorText,
-  IconDeviceMobile, IconDeviceTablet, IconDotsCircleHorizontal, IconEraser, IconFlare, IconForms, IconFrame,
-  IconHeading, IconHighlight, IconLasso, IconLayoutBottombar, IconLayoutCards, IconLayoutNavbar,
-  IconLayoutSidebar, IconLink, IconList, IconMenu2, IconPencil, IconPhoto, IconProgress,
-  IconRectangle, IconSearch, IconSeparatorHorizontal, IconSquareCheck, IconSquareChevronDown, IconStairs,
-  IconSwitchHorizontal, IconTabs, IconTag, IconToggleRight, IconTooltip, IconUserCircle,
-  IconHandStop, IconPhotoPlus, IconPointer, IconSquare,
+  IconAdjustmentsHorizontal, IconAlertTriangle, IconAlignLeft, IconAntennaBars5, IconAppWindow, IconBrowser,
+  IconCalendar, IconChevronsDown, IconChevronsRight, IconCircleDot, IconCirclePlus, IconCursorText, IconDeviceMobile,
+  IconDeviceTablet, IconDotsCircleHorizontal, IconEraser, IconFlare, IconForms, IconFrame, IconHeading,
+  IconHighlight, IconLasso, IconLayoutBottombar, IconLayoutCards, IconLayoutNavbar, IconLayoutSidebar, IconLink,
+  IconList, IconMenu2, IconPencil, IconPhoto, IconProgress, IconRectangle, IconSearch, IconSeparatorHorizontal,
+  IconSquareCheck, IconSquareChevronDown, IconStairs, IconSwitchHorizontal, IconTabs, IconTag, IconToggleRight,
+  IconTooltip, IconUserCircle, IconHandStop, IconPhotoPlus, IconPointer,
 } from '@tabler/icons-react';
 import type { FramePreset } from '../../domain/nodes/framePreset';
 import { WIDGETS, type WidgetKind } from '../../domain/nodes/widgetNodePresentation';
@@ -50,7 +45,7 @@ export interface V2ToolConfig {
 
 export const DEFAULT_TOOL_CONFIG: V2ToolConfig = { shape: 'diamond', connector: 'arrow' };
 
-export type TablerIcon = typeof IconDiamond;
+export type TablerIcon = IconComponent;
 
 export interface ToolOption<T extends string> {
   readonly id: T;
@@ -64,51 +59,20 @@ export interface ToolSection<T extends string> {
   readonly options: readonly ToolOption<T>[];
 }
 
-/** Grid order matches the reference rail: pointy, round, then the box family. */
-export const SHAPE_OPTIONS: readonly ToolOption<ShapeKind>[] = [
-  { id: 'diamond', label: 'Diamond', icon: IconDiamond },
-  { id: 'triangle', label: 'Triangle', icon: IconTriangle },
-  { id: 'circle', label: 'Circle', icon: IconCircle },
-  { id: 'parallelogram', label: 'Parallelogram', icon: IconShape2 },
-  { id: 'trapezoid', label: 'Trapezoid', icon: IconShape3 },
-  { id: 'cylinder', label: 'Cylinder', icon: IconCylinder },
-  { id: 'venn', label: 'Venn', icon: IconCircles },
-  { id: 'document', label: 'Document', icon: IconFile },
-  { id: 'speech-bubble', label: 'Speech bubble', icon: IconMessage },
-  { id: 'hexagon', label: 'Hexagon', icon: IconHexagon },
-  { id: 'star', label: 'Star', icon: IconStar },
-  { id: 'check-circle', label: 'Check circle', icon: IconCircleCheck },
-  { id: 'cross-circle', label: 'Cross circle', icon: IconCircleX },
-  { id: 'heart', label: 'Heart', icon: IconHeart },
-  { id: 'cloud', label: 'Cloud', icon: IconCloud },
-  { id: 'arrow-up', label: 'Arrow up', icon: IconArrowUp },
-  { id: 'arrow-down', label: 'Arrow down', icon: IconArrowDown },
-  { id: 'arrow-left', label: 'Arrow left', icon: IconArrowLeft },
-  { id: 'arrow-right', label: 'Arrow right', icon: IconArrowRight },
-  { id: 'plus', label: 'Plus', icon: IconPlus },
-  { id: 'lightning', label: 'Lightning', icon: IconBolt },
-  { id: 'page', label: 'Note', icon: IconNote },
-  { id: 'rounded', label: 'Rounded rectangle', icon: IconSquareRounded },
-  { id: 'ellipse', label: 'Ellipse', icon: IconOval },
-  { id: 'capsule', label: 'Pill', icon: IconCapsuleHorizontal },
-  { id: 'octagon', label: 'Octagon', icon: IconPolygon },
-  { id: 'pentagon-tag', label: 'Tag', icon: IconIdBadge },
-  { id: 'chevron', label: 'Chevron', icon: IconChevronRight },
-  { id: 'filled-bar', label: 'Bar', icon: IconMinus },
-  { id: 'half-round', label: 'Half round', icon: IconLayoutSidebarRight },
-  { id: 'bookmark', label: 'Bookmark', icon: IconBookmark },
-  { id: 'folder', label: 'Folder', icon: IconFolder },
-  { id: 'brace', label: 'Brace', icon: IconBraces },
-  { id: 'bracket', label: 'Bracket', icon: IconBrackets },
-  { id: 'numbered-circle', label: 'Numbered circle', icon: IconCircleNumber1 },
-  { id: 'list-card', label: 'List card', icon: IconLayoutList },
-  { id: 'cube', label: 'Cube', icon: IconCube },
-  { id: 'prism', label: 'Prism', icon: IconPrism },
-  { id: 'layer-stack', label: 'Layer stack', icon: IconLayersSubtract },
-  { id: 'target', label: 'Target', icon: IconTarget },
-  { id: 'pin', label: 'Pin', icon: IconPin },
-  { id: 'actor', label: 'Actor', icon: IconUser },
+/**
+ * The picker's shapes: what diagrams actually use. The rest of the library
+ * (3D, icon-like, brackets…) still draws for old documents and DSL words; it is
+ * just not offered. Each cell's icon is the shape's own outline.
+ */
+const PICKER_SHAPES: readonly (readonly [LibraryShape, string])[] = [
+  ['diamond', 'Diamond'], ['triangle', 'Triangle'], ['circle', 'Circle'], ['parallelogram', 'Parallelogram'],
+  ['trapezoid', 'Trapezoid'], ['hexagon', 'Hexagon'], ['octagon', 'Octagon'], ['cylinder', 'Cylinder'],
+  ['document', 'Document'], ['page', 'Note'], ['speech-bubble', 'Speech bubble'], ['cloud', 'Cloud'],
+  ['folder', 'Folder'], ['rounded', 'Rounded rectangle'], ['capsule', 'Pill'], ['chevron', 'Chevron'],
+  ['pentagon-tag', 'Tag'], ['arrow-right', 'Arrow'], ['star', 'Star'],
 ];
+
+export const SHAPE_OPTIONS: readonly ToolOption<ShapeKind>[] = PICKER_SHAPES.map(([id, label]) => ({ id, label, icon: shapeIcon(id) }));
 
 export const CONNECTOR_OPTIONS: readonly ToolOption<V2ConnectorTool>[] = [
   { id: 'arrow', label: 'Arrow', icon: IconArrowUpRight },
@@ -139,12 +103,11 @@ export const SHAPE_SECTIONS: readonly ToolSection<V2ShapePick>[] = [
   {
     title: 'Basic',
     options: [
-      { id: 'tool:rectangle', label: 'Rectangle', icon: IconSquare, shortcut: 'R' },
-      { id: 'tool:ellipse', label: 'Ellipse', icon: IconCircle, shortcut: 'O' },
+      { id: 'tool:rectangle', label: 'Rectangle', icon: shapeIcon('rectangle'), shortcut: 'R' },
+      { id: 'tool:ellipse', label: 'Ellipse', icon: shapeIcon('ellipse'), shortcut: 'O' },
     ],
   },
-  // The library's ellipse is the O tool's shape; one cell for it, in Basic.
-  { title: 'All shapes', options: SHAPE_OPTIONS.filter((option) => option.id !== 'ellipse') },
+  { title: 'All shapes', options: SHAPE_OPTIONS },
 ];
 
 export const CHART_OPTIONS: readonly ToolOption<V2ChartKind>[] = [
