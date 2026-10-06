@@ -398,12 +398,13 @@ function commitQuickCreateDelivery(
   options: V2PointerOptions,
   operation: V2ConnectOperation,
   sourceNodeId: string,
-  sourceSide: ConnectSide
+  sourceSide: ConnectSide,
+  dropAt?: Point2d
 ): void {
   const nodeId = options.mintId('node');
   const connectorId = options.mintId('connector');
   options.commit(buildQuickCreateCommand(operation.page, {
-    sourceNodeId, sourceSide, newNodeId: nodeId, connectorId,
+    sourceNodeId, sourceSide, newNodeId: nodeId, connectorId, ...(dropAt ? { dropAt } : {}),
   }));
   options.applyConnectorSelection([]);
   options.applySelection(replaceSelection([nodeId]));
@@ -579,7 +580,8 @@ export function finishGesture(operation: V2Operation, opts: V2PointerOptions, ho
         opts.applyConnectorSelection([id]);
         opts.onToolChange('select');
       } else if (targetId === null) {
-        commitQuickCreateDelivery(opts, operation, sourceNodeId, sourceSide);
+        // A drag lands the new node where it was released (FigJam, Miro); a click keeps the fixed gap.
+        commitQuickCreateDelivery(opts, operation, sourceNodeId, sourceSide, host.screenToWorld(point));
       }
       // Release back on the source node cancels; loops arrive in 1.6.
     } else if (moved >= CLICK_THRESHOLD_PX && !(targetId && targetId === operation.sourceNodeId)) {

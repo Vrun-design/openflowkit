@@ -1,4 +1,4 @@
-import { connectorEditHandles, type ConnectorEditHandle } from '../../domain/connectors/editing';
+import { connectorEditHandles, MIN_SEGMENT_HANDLE_PX, type ConnectorEditHandle } from '../../domain/connectors/editing';
 import { projectConnector } from '../../domain/connectors/routeProjection';
 import type { ScenePage } from '../../domain/document/types';
 import { worldToScreen } from '../../domain/camera/camera';
@@ -54,7 +54,7 @@ export function inspectConnectorHandleScreenPoints(
 ): readonly ConnectorHandleScreenPoint[] {
   const connector = page?.connectors.find(({ id }) => id === connectorId);
   if (!page || !connector) return [];
-  return connectorEditHandles(page, connector).map((handle) => {
+  return connectorEditHandles(page, connector, MIN_SEGMENT_HANDLE_PX / camera.zoom).map((handle) => {
     const screen = worldToScreen(camera, handle.point);
     return { ...handle, x: screen.x, y: screen.y };
   });

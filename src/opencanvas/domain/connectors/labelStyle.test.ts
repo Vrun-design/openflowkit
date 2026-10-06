@@ -14,7 +14,7 @@ function connector(appearance: SceneConnector['appearance']): SceneConnector {
 describe('resolveConnectorLabelStyle', () => {
   it('defaults to the 11px plate label', () => {
     expect(resolveConnectorLabelStyle(connector({}))).toMatchObject({
-      fill: '#ffffff', stroke: '#e2e8f0', textColor: '#334155', fontSize: 11, fontWeight: 600, fontFamily: 'sans',
+      fill: '#ffffff', stroke: '#e2e8f0', textColor: '#334155', fontSize: 12, fontWeight: 500, fontFamily: 'sans',
     });
   });
   it('reads label* keys', () => {

@@ -36,7 +36,7 @@ function setup(
     pickConnectorHandle: vi.fn(() => null),
     pickTransformHandle: vi.fn((): 'south-east' | null => null),
     pickConnectHandle: vi.fn(() => null),
-    setMarquee: vi.fn(), setPlacementGhost: vi.fn(), setTransformPreview: vi.fn(), setAlignmentGuides: vi.fn(), setConnectionPreview: vi.fn(),
+    setMarquee: vi.fn(), setPlacementGhost: vi.fn(), setTransformPreview: vi.fn(), setAlignmentGuides: vi.fn(), setConnectionPreview: vi.fn(), setDropTarget: vi.fn(), setHoveredConnector: vi.fn(),
     setConnectorSelection: vi.fn(), setConnectorPreview: vi.fn(),
     setHover: vi.fn(), getNodesWorldBounds: vi.fn((_ids: readonly string[]): Bounds2d | null => null),
     pickNodesInScreenBounds: vi.fn((_bounds: Bounds2d): readonly string[] => []),
@@ -193,6 +193,21 @@ describe('V2 direct manipulation', () => {
     expect(host.pickNode).not.toHaveBeenCalled();
   });
 
+  it('haloes the line under the pointer only when no shape or handle is there', () => {
+    const { result, event, host } = setup();
+    const canvas = document.createElement('canvas');
+    const hover = (x: number) => act(() => result.current.handlePointerMove({ ...event(x, 25), target: canvas }));
+    host.pickNode.mockReturnValue(null);
+    host.pickConnector.mockReturnValue('edge');
+    hover(300);
+    expect(host.setHoveredConnector).toHaveBeenLastCalledWith('edge');
+    host.pickNode.mockReturnValue('a');
+    hover(40);
+    expect(host.setHoveredConnector).toHaveBeenLastCalledWith(null);
+    act(() => result.current.handlePointerLeave());
+    expect(host.setHoveredConnector).toHaveBeenLastCalledWith(null);
+  });
+
   it('selecting a connector clears node selection', () => {
     const { result, event, host, selectionRef, applyConnectorSelection } = setup();
     selectionRef.current = replaceSelection(['a']);
@@ -260,22 +275,23 @@ describe('V2 quick-create from side handles', () => {
     expect(host.setHover).toHaveBeenLastCalledWith(null, null);
   });
 
-  it('drags from a handle to empty canvas: same-size node at the fixed gap, bound right→left, editor open', () => {
+  it('drags from a handle to empty canvas: same-size node centred where it was released, bound, editor open', () => {
     const { result, event, host, commit, selectionRef, openEditor } = setup();
     host.getNodesWorldBounds.mockImplementation(boundsOf);
     host.pickNodesInScreenBounds.mockReturnValue(['a']);
     host.pickNode.mockImplementation((point: { x: number }) => (point.x < 150 ? 'a' : null));
     act(() => result.current.handlePointerDown(event(122, 25)));
     expect(selectionRef.current.nodeIds).toEqual(['a']);
-    act(() => result.current.handlePointerMove(event(322, 25)));
-    act(() => result.current.handlePointerUp(event(322, 25)));
+    act(() => result.current.handlePointerMove(event(322, 125)));
+    act(() => result.current.handlePointerUp(event(322, 125)));
     expect(commit).toHaveBeenCalledOnce();
     const batch = commit.mock.calls[0][0];
     expect(batch.kind).toBe('batch');
     expect(batch.label).toBe('Quick create');
     const insertNode = batch.commands.find((command: { kind: string }) => command.kind === 'insert-node');
     expect(insertNode.node.size).toEqual({ width: 100, height: 50 });
-    expect(insertNode.node.transform.translation).toEqual({ x: 200, y: 0 });
+    // Centred on the release point (FigJam/Miro), not parked at the fixed gap.
+    expect(insertNode.node.transform.translation).toEqual({ x: 322 - 50, y: 125 - 25 });
     const insertEdge = batch.commands.find((command: { kind: string }) => command.kind === 'insert-connector');
     expect(insertEdge.connector.source).toMatchObject({ nodeId: 'a', portId: null });
     expect(insertEdge.connector.target).toMatchObject({ nodeId: insertNode.node.id, portId: null });
@@ -313,6 +329,35 @@ describe('V2 quick-create from side handles', () => {
     expect(edge.connector.target).toMatchObject({ nodeId: 'b', portId: null });
     expect(selectionRef.current.nodeIds).toEqual([]);
     expect(applyConnectorSelection).toHaveBeenCalledWith([edge.connector.id]);
+  });
+
+  it('outlines the shape a dragged connector will bind to, never its own source', () => {
+    const other = createTestNode('b', {
+      size: { width: 100, height: 50 },
+      transform: { translation: { x: 400, y: 0 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+    });
+    const { result, event, host } = setup([other]);
+    host.getNodesWorldBounds.mockImplementation(boundsOf);
+    host.pickNodesInScreenBounds.mockReturnValue(['a']);
+    host.pickNode.mockImplementation((point: { x: number }) => (point.x < 150 ? 'a' : point.x > 380 ? 'b' : null));
+    act(() => result.current.handlePointerDown(event(122, 25)));
+    act(() => result.current.handlePointerMove(event(140, 25)));
+    expect(host.setDropTarget).toHaveBeenLastCalledWith(null);
+    act(() => result.current.handlePointerMove(event(395, 25)));
+    expect(host.setDropTarget).toHaveBeenLastCalledWith('b');
+    act(() => result.current.handlePointerMove(event(300, 25)));
+    expect(host.setDropTarget).toHaveBeenLastCalledWith(null);
+  });
+
+  it('outlines the shape an endpoint is dragged onto', () => {
+    const edge = createTestConnector('edge', 'a', 'a');
+    const { result, event, host } = setup([], [edge]);
+    host.getSelectedConnectorId.mockReturnValue('edge');
+    host.pickConnectorHandle.mockReturnValue({ kind: 'endpoint', role: 'target', point: { x: 50, y: 25 } });
+    host.pickNode.mockReturnValue('a');
+    act(() => result.current.handlePointerDown(event(50, 25)));
+    act(() => result.current.handlePointerMove(event(200, 100)));
+    expect(host.setDropTarget).toHaveBeenLastCalledWith('a');
   });
 
   it('shift-drags an endpoint free instead of rebinding it', () => {

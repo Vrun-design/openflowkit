@@ -1,5 +1,5 @@
 import { Graphics } from 'pixi.js';
-import { connectorEditHandles, type ConnectorEditHandle } from '../../domain/connectors/editing';
+import { connectorEditHandles, MIN_SEGMENT_HANDLE_PX, type ConnectorEditHandle } from '../../domain/connectors/editing';
 import { projectConnector } from '../../domain/connectors/routeProjection';
 import type { SceneConnector, ScenePage } from '../../domain/document/types';
 import type { Point2d } from '../../domain/geometry/types';
@@ -55,7 +55,7 @@ export class PixiConnectorEditOverlay {
     const [connector, projected] = projections[0]!;
     if (!projected) return;
     const first = projected.samples[0];
-    const handles = connectorEditHandles(page, connector);
+    const handles = connectorEditHandles(page, connector, MIN_SEGMENT_HANDLE_PX * scale);
     const controls = handles.filter(
       (handle): handle is Extract<ConnectorEditHandle, { kind: 'control' }> =>
         handle.kind === 'control'

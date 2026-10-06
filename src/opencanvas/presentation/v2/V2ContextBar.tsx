@@ -60,7 +60,13 @@ export function contextBarStyle(anchor: DOMRect, layout: ContextBarLayout, avoid
   const above = anchor.y - 104;
   // Below clears the + handle that sits ~28px under the selection.
   const below = anchor.y + anchor.height + 40;
-  const top = above < 80 ? anchor.y + anchor.height + 16 : covers(above) && !covers(below) ? below : above;
+  // Both spots blocked (a shape above and below a selected line): lift the bar clear of what it would cover.
+  const lifted = Math.min(...avoid.filter((rect) => rect.x - 8 < x + layout.width && rect.x + rect.width + 8 > x
+    && rect.y - 8 < above + BAR_HEIGHT && rect.y + rect.height + 8 > above).map((rect) => rect.y)) - BAR_HEIGHT - 8;
+  const top = above < 80 ? anchor.y + anchor.height + 16
+    : !covers(above) ? above
+      : !covers(below) ? below
+        : lifted >= 80 && !covers(lifted) ? lifted : above;
   return {
     position: 'absolute',
     left: x,

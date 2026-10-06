@@ -2,6 +2,8 @@ import { createShapeNode, type ShapeKind } from '../nodes/shapeNode';
 import type { SceneConnector, SceneNode, ScenePage } from '../document/types';
 import type { Point2d } from '../geometry/types';
 import type { ConnectSide } from './connectHandles';
+import { applyMatrixToPoint, invertMatrix } from '../geometry/matrix';
+import { buildNodeWorldMatrices } from '../scene/worldGeometry';
 
 export function oppositeSide(side: ConnectSide): ConnectSide {
   switch (side) {
@@ -42,18 +44,26 @@ export function planQuickCreate(
   sourceNodeId: string,
   sourceSide: ConnectSide,
   newNodeId: string,
-  connectorId: string
+  connectorId: string,
+  /** World point a handle drag was released at; the new node centres on it. Absent: the fixed gap. */
+  dropAt?: Point2d
 ): QuickCreatePlan {
   const source = page.nodes.find((node) => node.id === sourceNodeId);
   if (!source) throw new RangeError(`Node "${sourceNodeId}" was not found.`);
+  // The new node lives beside its source, in the same container: translations are parent-local.
+  const parentMatrix = source.parentId ? buildNodeWorldMatrices(page).get(source.parentId) : undefined;
+  const drop = dropAt && parentMatrix ? applyMatrixToPoint(invertMatrix(parentMatrix), dropAt) : dropAt;
   const base = createShapeNode(page, {
     kind: sourceShapeKind(source),
     id: newNodeId,
-    at: quickCreateOrigin(source, sourceSide),
+    at: drop
+      ? { x: drop.x - source.size.width / 2, y: drop.y - source.size.height / 2 }
+      : quickCreateOrigin(source, sourceSide),
     size: { ...source.size },
   });
   const node: SceneNode = {
     ...base,
+    parentId: source.parentId,
     kind: source.kind,
     content: { ...source.content, label: '' },
     appearance: { ...source.appearance },

@@ -42,6 +42,44 @@ describe('quick-create', () => {
     expect(plan.connector.target).toEqual({ nodeId: 'new', portId: null, anchor: null, point: null });
   });
 
+  it('a source inside a frame gets its new node in the same frame, beside it (not at the page origin)', () => {
+    const doc = createTestDocument({
+      nodes: [
+        createTestNode('frame', {
+          size: { width: 600, height: 600 },
+          transform: { translation: { x: 1000, y: 500 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+        }),
+        { ...createTestNode('child', {
+          size: { width: 100, height: 40 },
+          transform: { translation: { x: 50, y: 60 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+        }), parentId: 'frame' },
+      ],
+    }).pages[0];
+    const plan = planQuickCreate(doc, 'child', 'right', 'new', 'edge');
+    expect(plan.node.parentId).toBe('frame');
+    expect(plan.node.transform.translation).toEqual({ x: 50 + 200, y: 60 });
+  });
+
+  it('a drag released on empty canvas centres the new node on the drop point, in its parent space', () => {
+    const doc = createTestDocument({
+      nodes: [
+        createTestNode('frame', {
+          size: { width: 600, height: 600 },
+          transform: { translation: { x: 1000, y: 500 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+        }),
+        { ...createTestNode('child', {
+          size: { width: 100, height: 40 },
+          transform: { translation: { x: 50, y: 60 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+        }), parentId: 'frame' },
+      ],
+    }).pages[0];
+    const plan = planQuickCreate(doc, 'child', 'bottom', 'new', 'edge', { x: 1300, y: 900 });
+    expect(plan.node.parentId).toBe('frame');
+    expect(plan.node.transform.translation).toEqual({ x: 300 - 50, y: 400 - 20 });
+    const root = planQuickCreate(page(), 'source', 'right', 'new', 'edge', { x: 900, y: 50 });
+    expect(root.node.transform.translation).toEqual({ x: 900 - 80, y: 50 - 36 });
+  });
+
   it('throws for an unknown source node', () => {
     expect(() => planQuickCreate(page(), 'ghost', 'right', 'new', 'edge')).toThrow(RangeError);
   });

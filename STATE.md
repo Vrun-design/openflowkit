@@ -25,8 +25,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 ## Found, not fixed (owner calls)
 - Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI): `docs/plan/launch-holds.md`. CI uploads first-failure
   traces (`e2e-traces`). A new worker's deps are pre-scanned (`optimizeDeps.entries`), or dev reloads mid-session.
-- D11 still open: dark sequence/state thumbnails and AI initial fit ≥65%. C4 pass fixes duplicate agent entry,
-  subject centering beside panels, phone keyboard hints and clipped starter choices; see updated C4 audit.
+- D11 still open: dark sequence/state thumbnails and AI initial fit ≥65% (C4 audit has the rest).
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.
@@ -34,7 +33,8 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 ## Next — owner's order, 2026-10-06 (D8 decided: no labs flag)
 - Canvas UI first, then launch holds, 13.4 → 14.4 → 15. Open: D7, D11. Done 10-06: Inspect (⌥I); rail 12 → 7, no orange
   marker (owner); C4 person = card + user icon; model panel Beta; Shapes picker 41 → 19, icons from outlines
-  (`shapeIcon.tsx`). D11 left: own glyphs, empty screen, dark thumbs.
+  (`shapeIcon.tsx`); Lasso removed; connector UX pass (drop target, hover halo, bar placement, quieter handles,
+  12px labels, quick-create in frames). D11 left: own glyphs, empty screen, dark thumbs.
 ## Deferred
 - Widget text width is estimated; wireframe comments move to the end; PDF = print dialog; no zip;
   bridge is long-poll; chart data panel commits per blur; image aspect lock is Shift-lock.

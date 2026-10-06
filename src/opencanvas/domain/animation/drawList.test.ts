@@ -103,7 +103,7 @@ describe('frame draw list', () => {
     expect(path!.stroke).toMatchObject({ color: '#64748b', alpha: 1 });
     // The label sits on a white plate, centred on the line, as on the canvas.
     expect(ops[2]).toMatchObject({ kind: 'rect', fill: { color: '#ffffff' }, radius: 4 });
-    expect(texts(ops)[0]).toMatchObject({ text: 'POST', fontSize: 11, color: '#334155', baseline: 'middle' });
+    expect(texts(ops)[0]).toMatchObject({ text: 'POST', fontSize: 12, color: '#334155', baseline: 'middle' });
   });
 
   it('carries the pulse phase as a travelling dash', () => {

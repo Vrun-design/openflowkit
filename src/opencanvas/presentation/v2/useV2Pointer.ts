@@ -191,14 +191,17 @@ export function useV2Pointer(options: V2PointerOptions) {
           const hoverSide = handleHit?.side ?? null;
           host.setHover(hoverNode, hoverSide);
           const connectorHandle = host.getSelectedConnectorId() ? host.pickConnectorHandle(point) : null;
+          const hoverConnector = hoverNode || handle || connectorHandle ? null : host.pickConnector(point);
+          host.setHoveredConnector(hoverConnector);
           const cursor = hoverSide ? 'crosshair'
             : handle ? HANDLE_CURSORS[handle]
               : hoverNode ? 'move'
                 : connectorHandle ? (connectorHandle.kind === 'endpoint' ? 'crosshair' : 'grab')
-                  : host.pickConnector(point) ? 'pointer' : '';
+                  : hoverConnector ? 'pointer' : '';
           event.target.style.cursor = cursor;
         } else {
           host.setHover(null, null);
+          host.setHoveredConnector(null);
         }
         return;
       }
@@ -273,13 +276,12 @@ export function useV2Pointer(options: V2PointerOptions) {
         const toWorld = host.screenToWorld(point);
         operationRef.current = { ...operation, toWorld };
         const overNode = host.pickNode(point);
+        const target = overNode !== operation.sourceNodeId ? overNode : null;
         host.setConnectionPreview(connectorPreview(opts, {
           source: { nodeId: operation.sourceNodeId, point: operation.fromWorld },
-          target: {
-            nodeId: overNode !== operation.sourceNodeId ? overNode : null,
-            point: toWorld,
-          },
+          target: { nodeId: target, point: toWorld },
         }));
+        host.setDropTarget(target);
       } else if (operation.kind === 'connector-edit') {
         // Shift pins a dragged endpoint to free canvas space instead of binding.
         const overNode = operation.handle.kind === 'endpoint' && !event.shiftKey
@@ -288,6 +290,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         const next = updateConnectorOperation(operation, host.screenToWorld(point), overNode);
         operationRef.current = next;
         host.setConnectorPreview(next.preview);
+        host.setDropTarget(overNode);
       } else if (operation.kind === 'marquee') {
         operationRef.current = { ...operation, current: point };
         host.setMarquee(boundsBetween(operation.start, point));
@@ -442,6 +445,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         return;
       }
       host.setHover(null, null);
+      host.setHoveredConnector(null);
       const additive = event.shiftKey || event.metaKey || event.ctrlKey;
       const selectedConnectorId = host.getSelectedConnectorId();
       const selectedConnector = selectedConnectorId
@@ -555,6 +559,7 @@ export function useV2Pointer(options: V2PointerOptions) {
   // Leaving the canvas for the rail takes the placement ghost with it.
   const handlePointerLeave = useCallback(() => {
     if (!operationRef.current) optionsRef.current.hostRef.current?.setPlacementGhost(null);
+    optionsRef.current.hostRef.current?.setHoveredConnector(null);
   }, []);
 
   const handleDoubleClick = useCallback(

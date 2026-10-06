@@ -57,6 +57,16 @@ describe('connector editing', () => {
     ).toEqual(['endpoint', 'endpoint', 'control', 'control']);
   });
 
+  it('drops midpoint handles on segments shorter than the minimum, keeping the endpoints', () => {
+    const page = pageWith();
+    const connector = page.connectors[0];
+    const all = connectorEditHandles(page, connector);
+    const segment = all.find((handle) => handle.kind === 'segment')!;
+    const length = 2 * Math.hypot(segment.point.x - all[0]!.point.x, segment.point.y - all[0]!.point.y);
+    expect(connectorEditHandles(page, connector, length - 1).map((handle) => handle.kind)).toContain('segment');
+    expect(connectorEditHandles(page, connector, length + 1).map((handle) => handle.kind)).toEqual(['endpoint', 'endpoint']);
+  });
+
   it('converts a direct segment edit into a persistent manual polyline', () => {
     const page = pageWith();
     const connector = page.connectors[0];

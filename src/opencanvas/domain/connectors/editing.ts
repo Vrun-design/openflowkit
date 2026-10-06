@@ -31,9 +31,14 @@ function midpoint(start: Point2d, end: Point2d): Point2d {
   return { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
 }
 
+/** Shorter segments (screen px) get no midpoint handle: corners and stubs would bristle with dots. */
+export const MIN_SEGMENT_HANDLE_PX = 32;
+
 export function connectorEditHandles(
   page: ScenePage,
-  connector: SceneConnector
+  connector: SceneConnector,
+  /** World length below which a segment shows no midpoint handle; callers pass MIN_SEGMENT_HANDLE_PX / zoom. */
+  minSegment = 0
 ): readonly ConnectorEditHandle[] {
   const projected = projectConnector(page, connector);
   if (!projected || projected.samples.length < 2) return [];
@@ -55,6 +60,8 @@ export function connectorEditHandles(
   }
   connector.waypoints.forEach((point, index) => handles.push({ kind: 'waypoint', index, point }));
   for (let index = 0; index < projected.samples.length - 1; index += 1) {
+    const [start, end] = [projected.samples[index]!, projected.samples[index + 1]!];
+    if (Math.hypot(end.x - start.x, end.y - start.y) < minSegment) continue;
     handles.push({
       kind: 'segment',
       index,
@@ -84,9 +91,9 @@ export function isPointOnConnectorLabel(
   label: { readonly text: string; readonly point: Point2d },
   point: Point2d
 ): boolean {
-  // ponytail: 6.5px per glyph approximates Inter 600 11px; measure in the renderer if it misses.
-  const halfWidth = label.text.length * 6.5 / 2 + 5;
-  return Math.abs(point.x - label.point.x) <= halfWidth && Math.abs(point.y - label.point.y) <= 9;
+  // ponytail: 7px per glyph approximates Inter 500 12px; measure in the renderer if it misses.
+  const halfWidth = label.text.length * 7 / 2 + 5;
+  return Math.abs(point.x - label.point.x) <= halfWidth && Math.abs(point.y - label.point.y) <= 10;
 }
 
 export function pickConnectorEditHandle(

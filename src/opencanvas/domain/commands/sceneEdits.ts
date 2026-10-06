@@ -363,6 +363,8 @@ export interface QuickCreateOptions {
   readonly sourceSide: ConnectSide;
   readonly newNodeId: string;
   readonly connectorId: string;
+  /** World release point of a handle drag; absent for a click (fixed gap). */
+  readonly dropAt?: Point2d;
 }
 
 // Handle-drag released on empty canvas: new same-kind node at the fixed gap
@@ -372,7 +374,7 @@ export function buildQuickCreateCommand(
   options: QuickCreateOptions
 ): BatchDocumentCommand {
   const plan = planQuickCreate(
-    page, options.sourceNodeId, options.sourceSide, options.newNodeId, options.connectorId
+    page, options.sourceNodeId, options.sourceSide, options.newNodeId, options.connectorId, options.dropAt
   );
   return {
     kind: 'batch', id: `quick-create:${plan.node.id}`, label: 'Quick create',

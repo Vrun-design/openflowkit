@@ -24,7 +24,16 @@ describe('contextBarStyle', () => {
     expect(contextBarStyle(node, layout, [label]).top).toBe(500);
     // A label elsewhere changes nothing.
     expect(contextBarStyle(node, layout, [new DOMRect(900, 340, 90, 20)]).top).toBe(296);
-    // Labels on both sides: stay above, where people look first.
-    expect(contextBarStyle(node, layout, [label, new DOMRect(320, 510, 90, 20)]).top).toBe(296);
+    // Labels on both sides: stay above, where people look first, lifted clear of the label.
+    expect(contextBarStyle(node, layout, [label, new DOMRect(320, 510, 90, 20)]).top).toBe(284);
+  });
+
+  it('a selected line between two shapes puts the bar above the upper shape, not on it', () => {
+    // Line from the bottom of A (y 224-296) down to C (y 564-636); the point anchor spans the path.
+    const line = new DOMRect(400, 296, 0, 304);
+    const a = new DOMRect(280, 224, 160, 72);
+    const c = new DOMRect(380, 564, 160, 72);
+    const top = contextBarStyle(line, layout, [a, c]).top as number;
+    expect(top + 48).toBeLessThanOrEqual(a.y - 8);
   });
 });

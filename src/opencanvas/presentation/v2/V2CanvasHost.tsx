@@ -404,6 +404,25 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   }, [contextAnchor, selectionIds, props.page, props.camera]);
   labelPlatesRef.current = labelPlates;
 
+  // Shapes in the band the bar could take, above or below the selection: the bar keeps off them too,
+  // so it never sits on a neighbour or on the shapes a selected line joins. Containers hold everything; skipped.
+  const avoid = useMemo(() => {
+    const host = props.hostRef.current;
+    if (!contextAnchor || !host) return labelPlates;
+    const selected = new Set(selectionIds);
+    const band = {
+      x: contextAnchor.x - barWidth, y: contextAnchor.y - 112,
+      width: contextAnchor.width + barWidth * 2, height: contextAnchor.height + 112 + 96,
+    };
+    const shapes = host.pickNodesInScreenBounds(band)
+      .filter((id) => !selected.has(id))
+      .flatMap((id) => {
+        const bounds = host.getNodeScreenBounds(id);
+        return bounds ? [new DOMRect(bounds.x, bounds.y, bounds.width, bounds.height)] : [];
+      });
+    return [...labelPlates, ...shapes];
+  }, [contextAnchor, labelPlates, selectionIds, barWidth, props.hostRef]);
+
   useLayoutEffect(() => {
     const bar = props.sectionRef.current?.querySelector<HTMLElement>('[data-context-bar]');
     if (!contextAnchor || !bar) return;
@@ -533,7 +552,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
               bounds: snapshot.bounds, snappedX: false, snappedY: false,
             } : null);
           }}
-          style={contextBarStyle(contextAnchor, { width: barWidth, ...edges }, labelPlates)}
+          style={contextBarStyle(contextAnchor, { width: barWidth, ...edges }, avoid)}
           onRemoveIcons={props.onRemoveIcons}
           onNodeStyleCommitted={(patch) => {
             const selected = props.selection.nodeIds

@@ -13,7 +13,7 @@ import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import { nodeLabelBounds } from '../../domain/nodes/nodeLabelBounds';
 import type { SceneConnector, ScenePage } from '../../domain/document/types';
 import {
-  connectorEditHandles,
+  connectorEditHandles, MIN_SEGMENT_HANDLE_PX,
   pickConnectorAtPoint,
   pickConnectorEditHandle as pickEditHandle,
   type ConnectorEditHandle,
@@ -141,6 +141,12 @@ export class PixiRendererHost {
   private primaryNodeId: string | null = null;
   private hoveredNodeId: string | null = null;
   private hoveredSide: ConnectSide | null = null;
+  /** The shape a dragged connector end would bind to. */
+  private dropTargetId: string | null = null;
+  /** The unselected connector under the pointer. */
+  private hoveredConnectorId: string | null = null;
+  /** The connector whose endpoint/segment is being dragged: its committed copy is not drawn. */
+  private previewConnectorId: string | null = null;
   // Many connectors can be selected (marquee, ⌘A); edit handles show for one.
   private selectedConnectorIds: readonly string[] = [];
   private activeConnectorHandle: ConnectorEditHandle | null = null;
@@ -429,7 +435,7 @@ export class PixiRendererHost {
     const connector = this.getSelectedConnector();
     if (!this.page || !connector) return null;
     return pickEditHandle(
-      connectorEditHandles(this.page, connector),
+      connectorEditHandles(this.page, connector, MIN_SEGMENT_HANDLE_PX / this.camera.zoom),
       this.screenToWorld(screenPoint),
       9 / this.camera.zoom
     );
@@ -447,7 +453,14 @@ export class PixiRendererHost {
 
   setConnectorPreview(connector: SceneConnector | null): void {
     if (!this.page) return;
+    // While an end or segment is dragged, only the edited line shows; the old path would read as a second connector.
+    const previewId = connector?.id ?? null;
+    if (previewId !== this.previewConnectorId) {
+      this.previewConnectorId = previewId;
+      this.rebuildScene(false);
+    }
     if (!connector) {
+      this.setDropTarget(null);
       this.drawConnectorEditOverlay();
     } else {
       const previewPage = {
@@ -502,6 +515,7 @@ export class PixiRendererHost {
   /** The connector being dragged out, routed live like it will be once committed. */
   setConnectionPreview(connector: SceneConnector | null): void {
     if (!connector || !this.page) {
+      this.setDropTarget(null);
       this.connectionPreview.container.visible = false;
     } else {
       this.connectionPreview.draw({ ...this.page, connectors: [connector] }, true);
@@ -743,10 +757,12 @@ export class PixiRendererHost {
       ? new Set(this.page.nodes.filter((node) => !excluded.has(node.id)
         && (!this.viewportProjection?.nodeIds || this.viewportProjection.nodeIds.has(node.id))).map((node) => node.id))
       : this.viewportProjection?.nodeIds ?? null;
-    const renderedConnectorIds = excluded.size
+    const projected = this.viewportProjection?.connectorIds ?? null;
+    const renderedConnectorIds = excluded.size || this.previewConnectorId
       ? new Set(this.page.connectors.filter((edge) => !excluded.has(edge.source.nodeId ?? '')
-        && !excluded.has(edge.target.nodeId ?? '')).map((edge) => edge.id))
-      : this.viewportProjection?.connectorIds ?? null;
+        && !excluded.has(edge.target.nodeId ?? '') && edge.id !== this.previewConnectorId
+        && (excluded.size > 0 || !projected || projected.has(edge.id))).map((edge) => edge.id))
+      : projected;
     const detailLevel = this.viewportProjection?.detailLevel ?? 'full';
     this.connectorRenderer.draw(this.page, this.connectorModelEnabled, renderedConnectorIds);
     if (redrawNodes) {
@@ -798,7 +814,10 @@ export class PixiRendererHost {
       this.primaryNodeId,
       this.camera.zoom,
       this.livePreview !== null,
-      this.hoveredNodeId ? { nodeId: this.hoveredNodeId, side: this.hoveredSide } : null
+      this.hoveredNodeId ? { nodeId: this.hoveredNodeId, side: this.hoveredSide } : null,
+      this.dropTargetId,
+      this.hoveredConnectorId && !this.selectedConnectorIds.includes(this.hoveredConnectorId)
+        ? this.getLiveConnectorSamples(this.hoveredConnectorId) : null
     );
   }
 
@@ -814,6 +833,22 @@ export class PixiRendererHost {
     // Connector labels are rebuilt, not toggled: redraw them now or the label
     // stays hidden until the next page/camera change.
     this.rebuildScene(false);
+    this.requestRender();
+  }
+
+  /** Haloes the connector under the pointer; null clears it. */
+  setHoveredConnector(connectorId: string | null): void {
+    if (this.hoveredConnectorId === connectorId) return;
+    this.hoveredConnectorId = connectorId;
+    this.drawSelection();
+    this.requestRender();
+  }
+
+  /** Outlines the shape a dragged connector end will bind to; null clears it. */
+  setDropTarget(nodeId: string | null): void {
+    if (this.dropTargetId === nodeId) return;
+    this.dropTargetId = nodeId;
+    this.drawSelection();
     this.requestRender();
   }
 

@@ -1,6 +1,6 @@
 import { Graphics } from 'pixi.js';
 import { unionBounds } from '../../domain/geometry/bounds';
-import type { Bounds2d } from '../../domain/geometry/types';
+import type { Bounds2d, Point2d } from '../../domain/geometry/types';
 import type { SceneIndex } from '../../domain/scene/types';
 import { nodeWorldBounds } from '../../domain/scene/worldGeometry';
 import { drawTransformFrame } from './PixiTransformOverlay';
@@ -91,9 +91,17 @@ export class PixiSelectionOverlay {
     primaryNodeId: string | null,
     zoom: number,
     cleanFrame = false,
-    hover: ConnectHover | null = null
+    hover: ConnectHover | null = null,
+    dropTarget: string | null = null,
+    connectorHalo: readonly Point2d[] | null = null
   ): void {
     this.graphics.clear();
+    // A hovered line gets a soft halo so the click target reads before the click.
+    if (connectorHalo && connectorHalo.length > 1) {
+      this.graphics.moveTo(connectorHalo[0]!.x, connectorHalo[0]!.y);
+      for (const point of connectorHalo.slice(1)) this.graphics.lineTo(point.x, point.y);
+      this.graphics.stroke({ color: SELECTION_STROKE, alpha: 0.28, width: 6 / zoom, cap: 'round', join: 'round' });
+    }
     // One frame for one node; members of a group get a hairline each so the
     // union frame stays the only heavy line on screen.
     if (selectedNodeIds.length > 1) {
@@ -120,5 +128,15 @@ export class PixiSelectionOverlay {
       if (hovered) this.drawHandles(hovered, zoom, hover.side);
     }
     if (hover?.side) this.drawQuickCreateGhost(index, hover.nodeId, hover.side, zoom);
+    // A dragged connector end names the shape it will bind to: outline plus its connection points.
+    const target = dropTarget ? this.nodeBounds(index, dropTarget) : null;
+    if (target) {
+      const pad = 4 / zoom;
+      this.graphics
+        .roundRect(target.x - pad, target.y - pad, target.width + pad * 2, target.height + pad * 2, 6 / zoom)
+        .fill({ color: SELECTION_STROKE, alpha: 0.06 })
+        .stroke({ color: SELECTION_STROKE, width: 2 / zoom });
+      this.drawHandles(target, zoom, null);
+    }
   }
 }
