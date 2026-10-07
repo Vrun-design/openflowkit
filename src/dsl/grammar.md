@@ -1706,6 +1706,7 @@ model { person P  system S { container C [tech: Go] { component X }  store DB  q
 deployment Prod { node AWS [aws/cloud] { node ECS { instance S.C } } }
 views { view landscape | context of S | container of S | component of S.C | deployment of S in Prod
         view custom "Name" { include S.*  include -> DB  exclude * where tag is @old } }
+          `views` is optional: none = one landscape page. Write only the views the user asked for; each is a page.
 flow "Checkout" { step P -> C : opens   alt "ok" { step … } else { step … }   par { … } and { … }   goto "Other"   note "…" }
 RULES     canonical output: one edge per line, attrs in fixed order, no ; , reversed arrows normalised to ->
           same text → same ids. Edit by line: get_diagram returns canonical text + hash; update_diagram patches line ranges.

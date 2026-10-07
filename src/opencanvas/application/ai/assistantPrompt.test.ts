@@ -21,6 +21,10 @@ describe('grammar text helpers', () => {
     expect(appendix.length).toBeLessThan(5000);
   });
 
+  it('tells the model a C4 diagram needs no views block, so a simple ask is one page', () => {
+    expect(grammarAppendix(grammar)).toContain('`views` is optional: none = one landscape page');
+  });
+
   it('narrows to a family section and degrades to the whole document', () => {
     const sequence = grammarSection(grammar, 'sequence');
     expect(sequence.toLowerCase()).toContain('sequence');
