@@ -20,9 +20,11 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   middles, ratio steps, ±plate off the line); canvas, SVG, animation, editor read the same points; labels wrap at 140 px in files too.
 - Mermaid: `-x`/`--x` → `[head: cross]`; class `namespace` → `group` (class/erd, nested); state notes keep line breaks and may sit
   on a composite; W106 for `a = Foo {bar}`; the assistant converts Mermaid/Structurizr/D2 answers (`agent/compileSource.ts`).
-- Ceilings: labels avoid nodes and labels, not other connectors' lines; message heads landing on an activation bar from the right
-  are half hidden; a composite's note sits outside its frame; a class with only methods clips its last row; deleted view page
-  returns on Generate (the text is the truth); rotated nodes keep box-side attachment; layout differs from Mermaid's. D14: no runtime.
+- Fixed after: messages end on an activation bar's edge, not under it; a class's divider takes 6 px, not a row, so no method clips;
+  the frame grows to hold a composite's note.
+- Ceilings: labels avoid nodes and labels, not other connectors' lines; a composite's note can overlap a neighbour on its right (no
+  room reserved); deleted view page returns on Generate (the text is the truth); rotated nodes keep box-side attachment; layout
+  differs from Mermaid's. D14: no runtime.
 ## Found, not fixed (owner calls)
 - Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI): `docs/plan/launch-holds.md`. CI uploads first-failure
   traces (`e2e-traces`). A new worker's deps are pre-scanned (`optimizeDeps.entries`), or dev reloads mid-session.

@@ -45,6 +45,15 @@ describe('state family', () => {
     expect(serialize(result)).toBe(text);
   });
 
+  // Found 2026-10-07: the layout reserves no room beside a composite, so its note crossed the frame's border.
+  it('grows the frame to hold the note of a composite', async () => {
+    const result = await compile('state\nstate Moving {\n  Walking -> Running\n}\nnote Moving : a note that is wider than the gap\nMoving -> Done');
+    const sticky = result.nodes.find((node) => node.kind === 'sticky')!;
+    const { x, y } = sticky.transform.translation;
+    expect(result.frame.size.width).toBeGreaterThanOrEqual(x + sticky.size.width + 28);
+    expect(result.frame.size.height).toBeGreaterThanOrEqual(y + sticky.size.height + 28);
+  });
+
   it('draws fork, join and choice as control nodes', async () => {
     const result = await compile('state\nA -> F [fork]\nF -> B\nB -> M [join]\nM -> C [choice]');
     const fork = result.nodes.find((node) => node.id === 'f')!;

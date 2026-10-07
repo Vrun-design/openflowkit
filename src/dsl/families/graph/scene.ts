@@ -388,11 +388,12 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
       id: node.id, parentId: node.parentId, size: withLoopRoom(noteRoom.get(node.id)?.box ?? node.size, loopRoom.get(node.id)),
     } satisfies LayoutNodeInput)),
   ];
+  const rootPadding = input.title ? FRAME_TITLE_PADDING : FRAME_PADDING;
   const laid = await context.layout({
     nodes: layoutNodes,
     edges: layoutEdges(connectors),
     direction: context.direction,
-    rootPadding: input.title ? FRAME_TITLE_PADDING : FRAME_PADDING,
+    rootPadding,
     groupPadding: GROUP_PADDING,
   }, context.signal);
 
@@ -445,11 +446,21 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
   for (const group of positionedGroups) boxes.set(group.id, { parentId: group.parentId, at: group.transform.translation, size: group.size });
   for (const node of positionedNodes) boxes.set(node.id, { parentId: node.parentId, at: node.transform.translation, size: node.size });
 
+  // ponytail: the layout reserves no room beside a group, so its note can still overlap what sits to its right; the frame at least holds it.
+  const size = noteDrafts.filter(({ targetId }) => groupsById.has(targetId)).reduce((frame, { id }) => {
+    const note = boxes.get(id)!;
+    const origin = worldOrigin(boxes, id)!;
+    return {
+      width: Math.max(frame.width, origin.x + note.size.width + rootPadding.right),
+      height: Math.max(frame.height, origin.y + note.size.height + rootPadding.bottom),
+    };
+  }, laid.root.width > 0 && laid.root.height > 0 ? laid.root : { width: 640, height: 420 });
+
   return {
     // Containers first keeps the deterministic order the editor hashes.
     nodes: [...groupsWithNotes, ...positionedNodes],
     connectors: separateLanes(connectors, boxes),
-    size: laid.root.width > 0 && laid.root.height > 0 ? laid.root : { width: 640, height: 420 },
+    size,
     meta: {
       ...(alignLines.length ? { align: alignLines } : {}),
       ...(reserved.length ? { reserved } : {}),
@@ -483,22 +494,29 @@ function noteSlots(
 
 type Box = { parentId: string | null; at: Point2d; size: Size2d };
 
+/** A box's top-left corner in the frame, through the groups it sits in. */
+function worldOrigin(boxes: ReadonlyMap<string, Box>, id: string): Point2d | null {
+  let box = boxes.get(id);
+  if (!box) return null;
+  let x = 0;
+  let y = 0;
+  while (box) {
+    x += box.at.x;
+    y += box.at.y;
+    box = box.parentId ? boxes.get(box.parentId) : undefined;
+  }
+  return { x, y };
+}
+
 /**
  * Opposite edges (`A -> B`, `B --> A`) would draw on one line. Once the layout has placed the nodes, each
  * gets its own lane on the two sides that face, at two heights. Edges with a side of their own are left alone.
  */
 function separateLanes(connectors: readonly SceneConnector[], boxes: ReadonlyMap<string, Box>): SceneConnector[] {
   const centre = (id: string): Point2d | null => {
-    let box = boxes.get(id);
-    if (!box) return null;
-    let x = box.size.width / 2;
-    let y = box.size.height / 2;
-    while (box) {
-      x += box.at.x;
-      y += box.at.y;
-      box = box.parentId ? boxes.get(box.parentId) : undefined;
-    }
-    return { x, y };
+    const box = boxes.get(id);
+    const origin = worldOrigin(boxes, id);
+    return box && origin ? { x: origin.x + box.size.width / 2, y: origin.y + box.size.height / 2 } : null;
   };
   const free = (connector: SceneConnector) => connector.source.anchor === null && connector.target.anchor === null && connector.source.nodeId && connector.target.nodeId;
   return connectors.map((connector, index) => {
