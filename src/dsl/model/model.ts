@@ -186,7 +186,7 @@ export function viewDisplayName(view: Pick<ArchView, 'kind' | 'name' | 'env'>, t
     case 'context': return `Context: ${target.name}`;
     case 'container': return `Containers: ${target.name}`;
     case 'component': return `Components: ${target.name}`;
-    case 'deployment': return `Deployment: ${target.name}${view.env ? ` · ${view.env}` : ''}`;
+    case 'deployment': return `Deployment${view.env ? ` (${view.env})` : ''}: ${target.name}`;
     default: return view.name;
   }
 }

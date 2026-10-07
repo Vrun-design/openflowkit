@@ -276,7 +276,7 @@ views {
 `);
     expect(workspace.views.map((view) => view.name)).toEqual([
       'System landscape', 'Context: Docs Site', 'Containers: Docs Site', 'Components: API App',
-      'Deployment: Docs Site · Live', 'Data paths',
+      'Deployment (Live): Docs Site', 'Data paths',
     ]);
   });
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { IconArrowDown, IconArrowUp, IconCheck, IconCopy, IconDots, IconFile, IconPencil, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
+import { pageListEntries } from '../../application/dsl/pageGroups';
 import { Button, Icon, IconButton, Menu, MenuItem, MenuSeparator, Popover } from '../design-system';
 import type { useV2Pages } from './useV2Pages';
 
@@ -44,7 +45,10 @@ export function V2PagesMenu({ pages, open, anchorRef, onClose }: V2PagesMenuProp
       <IconButton variant="quiet" label="Close pages" icon={<Icon icon={IconX} />} onClick={onClose} />
     </header>
     <ul className="ofk-page-rows" aria-label="Pages">
-      {pages.pages.map((page) => <li key={page.id} data-active={page.id === pages.activePage?.id || undefined}
+      {pageListEntries(pages.pages).map((entry) => {
+        if (entry.kind === 'group') return <li key={entry.id} className="ofk-page-group">{entry.name}</li>;
+        const { page, depth } = entry;
+        return <li key={page.id} data-active={page.id === pages.activePage?.id || undefined} data-depth={depth || undefined}
         onContextMenu={(event) => { event.preventDefault(); actionAnchor.current = event.currentTarget; setActionId(page.id); }}>
         {renamingId === page.id ? <input ref={inputRef} className="ofk-v2-page-rename" value={draft} aria-label={`Rename ${page.name}`} maxLength={80}
           onChange={(event) => setDraft(event.target.value)} onBlur={() => commitRename(page.id)}
@@ -53,12 +57,13 @@ export function V2PagesMenu({ pages, open, anchorRef, onClose }: V2PagesMenuProp
             if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); cancelled.current = true; setRenamingId(null); }
           }} /> : <button type="button" className="ofk-v2-page-select" aria-current={page.id === pages.activePage?.id ? 'page' : undefined}
           onClick={() => pages.select(page.id)} onDoubleClick={() => rename(page.id, page.name)}>
-          <Icon icon={IconFile} /><span className="ofk-v2-page-name">{page.name}</span>
+          <Icon icon={IconFile} /><span className="ofk-v2-page-name" title={page.name}>{page.name}</span>
           {page.id === pages.activePage?.id ? <Icon icon={IconCheck} /> : null}
         </button>}
         <IconButton variant="quiet" label={`Actions for ${page.name}`} aria-haspopup="menu" aria-expanded={actionId === page.id}
           icon={<Icon icon={IconDots} />} onClick={(event) => { actionAnchor.current = event.currentTarget; setActionId(page.id); }} />
-      </li>)}
+      </li>;
+      })}
     </ul>
     <footer className="ofk-pages-footer"><Button variant="quiet" disabled={pages.readOnly} onClick={pages.add}><Icon icon={IconPlus} /> Add page</Button></footer>
     <Menu open={!!actionPage} anchorRef={actionAnchor} onClose={() => setActionId(null)} label="Page actions" placement="right-start">
