@@ -52,6 +52,37 @@ describe('sequence family', () => {
     expect(await format(text)).toBe(text);
   });
 
+  // The owner's report, 2026-10-07: two notes sat on top of each other and on the loop below them.
+  it('gives every note its own room on the timeline, inside the block it was written in', async () => {
+    const result = await compile('sequence\nA -> B : one\nnote right of B : first\nnote over A, B : second\nA -> B : two\nloop again {\n  note over A : inside\n  A -> B : three\n}');
+    const notes = result.nodes.filter((node) => node.kind === 'sequence_note');
+    const loop = result.nodes.find((node) => node.kind === 'annotation')!;
+    // Frame-relative message y: header 48 + actor room 40 + offset 20, then 52 px a row.
+    const messageY = result.connectors.map((connector) => 108 + 52 * Number(connector.semantics.seqMessageRow ?? connector.semantics.seqMessageOrder));
+    const spans = notes.map((note) => [note.transform.translation.y, note.transform.translation.y + note.size.height] as const);
+    for (const [top, bottom] of spans) for (const y of messageY) expect(y > top && y < bottom).toBe(false);
+    for (const [index, [top, bottom]] of spans.entries()) {
+      for (const [otherTop, otherBottom] of spans.slice(index + 1)) expect(top < otherBottom && otherTop < bottom).toBe(false);
+    }
+    // `inside` was written in the loop: the loop's band starts above it; `second` was written before it.
+    expect(loop.transform.translation.y).toBeLessThan(spans[2]![0]);
+    expect(loop.transform.translation.y).toBeGreaterThanOrEqual(spans[1]![1]);
+    // Orders stay message indices, so the text round-trips; only rows move.
+    expect(result.connectors.map((connector) => connector.semantics.seqMessageOrder)).toEqual([0, 1, 2]);
+    expect(await format(serialize(result))).toBe(serialize(result));
+  });
+
+  // Found 2026-10-07: the home "Request lifecycle" starter wrote Mermaid's `alt x … else y … end`;
+  // with no warning, `end` and the words after a `{` in a label became three participants.
+  it('warns on a Mermaid-style block instead of reading its words as participants', async () => {
+    const result = await compile('sequence\nparticipant A\nparticipant B\nalt ok\n  A -> B : yes\nelse no\n  A -> B : nope\nend');
+    expect(result.diagnostics.filter((item) => item.severity === 'warning').map((item) => item.message)).toEqual([
+      'alt needs a { … } block', 'else needs a { … } block', '`end` closes nothing: a block closes with }',
+    ]);
+    expect(result.nodes.filter((node) => node.kind === 'sequence_participant').map((node) => node.content.label)).toEqual(['A', 'B']);
+    expect(result.connectors).toHaveLength(2);
+  });
+
   it('places notes relative to their targets', async () => {
     const result = await compile('sequence\nA\nB\nnote over A, B : shared\nnote right of B : hint\nnote left of A : aside');
     const [over, right, left] = result.nodes.filter((node) => node.kind === 'sequence_note');

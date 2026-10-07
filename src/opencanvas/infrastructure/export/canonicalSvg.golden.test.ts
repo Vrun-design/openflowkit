@@ -54,6 +54,32 @@ describe('canonical SVG goldens', () => {
   }
 });
 
+describe('canonical SVG sequence', () => {
+  // Found 2026-10-07: every export drew a participant as one box the height of its lifeline,
+  // over its own messages; notes were plain boxes.
+  it('draws a participant as the canvas does: header, dashed lifeline, actor figure; a note as a note', async () => {
+    const compiled = await compile('sequence\nparticipant Browser [actor]\nAPI = API Gateway\nBrowser -> API : hi\nactivate API\nnote right of API : cached\nAPI --> Browser : ok\ndeactivate API');
+    const svg = exportCanonicalSvg(documentFrom(compiled, 'sequence'), { theme: 'light' });
+    const group = (id: string) => new RegExp(`<g data-node-id="${id}"[^>]*>([^]*?)</g>`).exec(svg)?.[1] ?? '';
+    const api = group('API');
+    expect(api).toMatch(/<rect [^>]*height="48"/);
+    expect(api).toMatch(/<line [^>]*stroke-dasharray="6 6"/);
+    expect(api).toMatch(/<rect [^>]*width="12"/);
+    expect(api).toContain('>API Gateway<');
+    expect(api).not.toMatch(new RegExp(`<(rect|path)[^>]*height="${compiled.nodes.find((node) => node.id === 'API')!.size.height}"`));
+    expect(group('browser')).toMatch(/<circle [^>]*r="5"/);
+    expect(group('note-1')).toContain('>cached<');
+  });
+
+  it('paints a fragment band under the messages it holds, as the canvas does', async () => {
+    const compiled = await compile('sequence\nA\nB\nalt ok {\n  A -> B : inside\n}');
+    const svg = exportCanonicalSvg(documentFrom(compiled, 'sequence'), { theme: 'light' });
+    const band = svg.indexOf(`data-node-id="${compiled.nodes.find((node) => node.kind === 'annotation')!.id}"`);
+    expect(band).toBeGreaterThan(-1);
+    expect(band).toBeLessThan(svg.indexOf('data-connector-id='));
+  });
+});
+
 describe('canonical SVG labels', () => {
   it('places labels where the canvas does: frame title band, icon label below its plate', async () => {
     const compiled = await compile(readFixture('architecture/aws-3tier.dsl'));

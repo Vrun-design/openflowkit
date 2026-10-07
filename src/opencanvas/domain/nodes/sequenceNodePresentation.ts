@@ -79,7 +79,11 @@ function activationRanges(value: JsonValue | undefined): readonly SequenceActiva
         Boolean(event) && typeof event === 'object' && !Array.isArray(event)
     )
     .filter((event) => typeof event.order === 'number' && typeof event.activate === 'boolean')
-    .map((event) => ({ order: order(event.order), activate: event.activate as boolean }))
+    // A row (notes above it take room) places the bar; the order is what the text says.
+    .map((event) => ({
+      order: typeof event.row === 'number' && Number.isFinite(event.row) ? Math.max(0, event.row) : order(event.order),
+      activate: event.activate as boolean,
+    }))
     .sort((left, right) => left.order - right.order);
   const open: number[] = [];
   const ranges: SequenceActivationRange[] = [];

@@ -5,6 +5,7 @@ import {
   resolveSequenceNodePresentation,
   type SequenceNodePresentation,
 } from '../../domain/nodes/sequenceNodePresentation';
+import { normalizeHex } from '@/lib/colorUtils';
 import { pixiHexColor } from './pixiColor';
 
 export interface PixiSequenceNodeVisual {
@@ -16,18 +17,30 @@ export interface PixiSequenceNodeVisual {
   readonly accentFill: number;
 }
 
-export function projectSequenceNodeVisual(node: SceneNode): PixiSequenceNodeVisual | null {
+/** Sequence ink as hex, shared by the canvas and the SVG export so the two cannot drift. */
+export interface SequenceNodeColors {
+  readonly presentation: SequenceNodePresentation;
+  readonly fill: string;
+  readonly stroke: string;
+  readonly text: string;
+  readonly subText: string;
+  readonly accentFill: string;
+}
+
+const pick = (value: string | undefined, fallback: string) => normalizeHex(value ?? '') ?? fallback;
+
+export function sequenceNodeColors(node: SceneNode): SequenceNodeColors | null {
   const presentation = resolveSequenceNodePresentation(node);
   if (!presentation) return null;
   if (presentation.kind === 'sequence_note') {
     const colors = resolveAnnotationVisualStyle('yellow', 'subtle', undefined, nodePaletteName(node));
     return {
       presentation,
-      fill: pixiHexColor(colors.containerBg, 0xfef9c3),
-      stroke: pixiHexColor(colors.containerBorder, 0xeab308),
-      text: pixiHexColor(colors.titleText, 0x713f12),
-      subText: pixiHexColor(colors.bodyText, 0x854d0e),
-      accentFill: pixiHexColor(colors.foldBg, 0xfef08a),
+      fill: pick(colors.containerBg, '#fef9c3'),
+      stroke: pick(colors.containerBorder, '#eab308'),
+      text: pick(colors.titleText, '#713f12'),
+      subText: pick(colors.bodyText, '#854d0e'),
+      accentFill: pick(colors.foldBg, '#fef08a'),
     };
   }
   const colors = resolveContainerVisualStyle(
@@ -39,10 +52,23 @@ export function projectSequenceNodeVisual(node: SceneNode): PixiSequenceNodeVisu
   );
   return {
     presentation,
-    fill: pixiHexColor(colors.bg, 0xffffff),
-    stroke: pixiHexColor(colors.border, 0x94a3b8),
+    fill: pick(colors.bg, '#ffffff'),
+    stroke: pick(colors.border, '#94a3b8'),
+    text: pick(colors.text, '#0f172a'),
+    subText: pick(colors.subText, '#64748b'),
+    accentFill: pick(colors.badgeBg, '#e2e8f0'),
+  };
+}
+
+export function projectSequenceNodeVisual(node: SceneNode): PixiSequenceNodeVisual | null {
+  const colors = sequenceNodeColors(node);
+  if (!colors) return null;
+  return {
+    presentation: colors.presentation,
+    fill: pixiHexColor(colors.fill, 0xffffff),
+    stroke: pixiHexColor(colors.stroke, 0x94a3b8),
     text: pixiHexColor(colors.text, 0x0f172a),
     subText: pixiHexColor(colors.subText, 0x64748b),
-    accentFill: pixiHexColor(colors.badgeBg, 0xe2e8f0),
+    accentFill: pixiHexColor(colors.accentFill, 0xe2e8f0),
   };
 }

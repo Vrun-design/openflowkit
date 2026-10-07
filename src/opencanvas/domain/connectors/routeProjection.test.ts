@@ -196,6 +196,31 @@ describe('connector route projection', () => {
     expect(projectConnector(page, connector)!.samples.at(-1)).toEqual({ x: 338, y: 40 });
   });
 
+  it('staggers where a fan-out turns so its edges neither share a run nor cross', () => {
+    const nodes = [
+      createTestNode('hub', { transform: at(0, 0) }),
+      createTestNode('near', { transform: at(300, 100) }),
+      createTestNode('far', { transform: at(300, 250) }),
+    ];
+    const connectors = ['near', 'far'].map((id) => createTestConnector(`e-${id}`, 'hub', id, { route: { kind: 'orthogonal', ownership: 'automatic' } }));
+    const page = { ...createTestDocument({ nodes }).pages[0], connectors };
+    const routes = projectPageConnectors(page).map((edge) => edge.samples);
+    type P = { x: number; y: number };
+    const segments = (route: readonly P[]) => route.slice(1).map((point, index) => [route[index]!, point] as const);
+    const vertical = (route: readonly P[]) => segments(route).filter(([a, b]) => a.x === b.x).map(([a]) => a.x);
+    // Each turns on its own vertical run…
+    expect(new Set([...vertical(routes[0]!), ...vertical(routes[1]!)]).size).toBe(vertical(routes[0]!).length + vertical(routes[1]!).length);
+    // …and no segment of one crosses a segment of the other.
+    const crosses = ([a, b]: readonly [P, P], [c, d]: readonly [P, P]) => {
+      const [h, v] = a.y === b.y ? [[a, b], [c, d]] : [[c, d], [a, b]];
+      if (h[0]!.y !== h[1]!.y || v[0]!.x !== v[1]!.x) return false;
+      const x = v[0]!.x;
+      const y = h[0]!.y;
+      return x > Math.min(h[0]!.x, h[1]!.x) && x < Math.max(h[0]!.x, h[1]!.x) && y > Math.min(v[0]!.y, v[1]!.y) && y < Math.max(v[0]!.y, v[1]!.y);
+    };
+    for (const one of segments(routes[0]!)) for (const other of segments(routes[1]!)) expect(crosses(one, other)).toBe(false);
+  });
+
   it('moves a label off a node to the longest run where it sits clear', () => {
     const route = [{ x: 0, y: 0 }, { x: 0, y: 100 }, { x: 200, y: 100 }, { x: 200, y: 200 }];
     const plate = (text: string, point: { x: number; y: number }) => ({ x: point.x - 20, y: point.y - 10, width: 40, height: 20 });
@@ -274,6 +299,22 @@ describe('connector route projection', () => {
     ]);
     expect(projected.presentation.targetMarkers).toEqual(['arrow']);
     expect(projected.presentation.stroke.dash).toEqual([10, 6]);
+  });
+
+  // The owner's report, 2026-10-07: messages between the same two lanes bent into V shapes, the
+  // first up into the header row, because the parallel-edge fan treated them as parallel edges.
+  it('keeps every sequence message between the same two lanes straight', () => {
+    const lanes = ['a', 'b'].map((id, index) => createTestNode(id, {
+      kind: 'sequence_participant', content: { label: id, seqParticipantKind: 'participant' }, transform: at(index * 300, 0),
+    }));
+    const messages = [0, 1, 2].map((order) => createTestConnector(`m${order}`, order % 2 ? 'b' : 'a', order % 2 ? 'a' : 'b', {
+      route: { kind: 'direct', ownership: 'automatic' }, semantics: { seqMessageKind: 'sync', seqMessageOrder: order },
+    }));
+    const page = { ...createTestDocument({ nodes: lanes }).pages[0], connectors: messages };
+    for (const projected of projectPageConnectors(page)) {
+      expect(projected.samples).toHaveLength(2);
+      expect(projected.samples[0]!.y).toBe(projected.samples[1]!.y);
+    }
   });
 
   it('projects sequence self messages as a readable right-side loop', () => {

@@ -200,6 +200,8 @@ function parallelLateralOffsets(connectors: readonly SceneConnector[]): Readonly
   const groups = new Map<string, SceneConnector[]>();
   for (const connector of connectors) {
     if (!connector.source.nodeId || !connector.target.nodeId) continue;
+    // Sequence messages already sit on their own rows; fanning them bends each into a V.
+    if (typeof connector.semantics.seqMessageKind === 'string') continue;
     const key = [connector.source.nodeId, connector.target.nodeId].sort().join('→');
     const group = groups.get(key);
     if (group) group.push(connector);
@@ -316,8 +318,10 @@ function sequenceMessageEndpoints(
   ) {
     return null;
   }
-  const sequenceOrder =
-    typeof connector.semantics.seqMessageOrder === 'number' &&
+  // A row (fractional: notes above it take room) wins over the bare message order.
+  const row = connector.semantics.seqMessageRow;
+  const sequenceOrder = typeof row === 'number' && Number.isFinite(row) ? Math.max(0, row)
+    : typeof connector.semantics.seqMessageOrder === 'number' &&
     Number.isFinite(connector.semantics.seqMessageOrder)
       ? Math.max(0, Math.floor(connector.semantics.seqMessageOrder))
       : 0;
@@ -545,7 +549,23 @@ function orthogonalPath(
   for (const node of context.nodesById.values()) {
     obstacles.push(nodeWorldBounds(node, context.matrices.get(node.id)!));
   }
-  return routeOrthogonalBetweenSides(start.point, start.side, end.point, end.side, obstacles);
+  return routeOrthogonalBetweenSides(start.point, start.side, end.point, end.side, obstacles,
+    midShift(start, end, context.spreadByEnd.get(`${connector.id}:source`), context.spreadByEnd.get(`${connector.id}:target`)));
+}
+
+/**
+ * Where a Z's middle run sits off centre, along the route. Ends spread along a side
+ * turn in nested order: the exit farthest from where its partner lies turns farthest
+ * from its own node, so the L shapes nest instead of sharing a run or crossing.
+ */
+function midShift(start: OrthogonalEnd, end: OrthogonalEnd, source: SpreadEnd | undefined, target: SpreadEnd | undefined): number {
+  const across = (side: ConnectSide | null) => (side === 'left' || side === 'right' ? 'y' : 'x');
+  const toward = (from: Point2d, to: Point2d, side: ConnectSide | null) => Math.sign(to[across(side)] - from[across(side)]);
+  const along = start.side === 'left' || start.side === 'right' ? 'x' : 'y';
+  const shift = -(source?.offset ?? 0) * toward(start.point, end.point, start.side)
+    + (target?.offset ?? 0) * toward(end.point, start.point, end.side);
+  // `shift` runs from start to end; the router wants a coordinate offset.
+  return end.point[along] >= start.point[along] ? shift : -shift;
 }
 
 function projectConnectorWithContext(

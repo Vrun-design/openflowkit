@@ -35,6 +35,7 @@ import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { descendantIds } from '../../domain/scene/queries';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
 import { measurePortableText } from '../../domain/text/measurement';
+import { sequenceNodeColors } from '../pixi/sequenceNodeVisual';
 import { cameraFitMatrix } from '../../domain/animation/camera';
 import { PULSE_DASH } from '../../domain/animation/frame';
 import type { ElementFrameState, FrameState } from '../../domain/animation/types';
@@ -602,6 +603,48 @@ function exportArchitectureCard(node: SceneNode, matrix: Matrix2d, style: NodeSt
     + iconMarkup(node, iconArt), wrapper);
 }
 
+/** Sequence participants and notes, drawn as PixiSequenceNodeRenderer draws them (same geometry, same ink). */
+function exportSequenceNode(node: SceneNode, matrix: Matrix2d, wrapper: ReturnType<typeof elementFrameStyle>): string | null {
+  const colors = sequenceNodeColors(node);
+  const presentation = colors?.presentation;
+  if (!colors || !presentation || presentation.kind === 'sequence_fragment') return null;
+  const ink = `stroke="${colors.stroke}"`;
+  const font = `font-family="${xml(FONT_STACKS.sans)}"`;
+  const group = (body: string) => nodeGroup(`data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}"`, body, wrapper);
+  if (presentation.kind === 'sequence_note') {
+    const text = measurePortableText(presentation.label, { fontSize: 11, fontWeight: 500, maxWidth: Math.max(40, node.size.width - 24), overflow: 'wrap' });
+    return group(`<rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="8" fill="${colors.fill}" ${ink} stroke-width="1.25"/>`
+      + `<rect x="10" y="10" width="8" height="8" rx="2" fill="${colors.accentFill}" ${ink}/>`
+      + textElement(text.displayText, 12, 27, `fill="${colors.text}" ${font} font-size="11" font-weight="500" dominant-baseline="hanging"`, 13));
+  }
+  const actor = presentation.participantKind === 'actor';
+  const top = actor ? SEQUENCE_ACTOR_HEIGHT : 0;
+  const centerX = node.size.width / 2;
+  const lifelineStart = top + SEQUENCE_HEADER_HEIGHT;
+  const activations = presentation.activations.flatMap(({ startOrder, endOrder }) => {
+    const y = lifelineStart + SEQUENCE_MESSAGE_OFFSET + startOrder * SEQUENCE_MESSAGE_SPACING;
+    if (y >= node.size.height) return [];
+    const height = Math.min(Math.max(12, (endOrder - startOrder) * SEQUENCE_MESSAGE_SPACING), node.size.height - y);
+    return [`<rect x="${number(centerX - 6)}" y="${number(y)}" width="12" height="${number(height)}" rx="2" fill="${colors.accentFill}" ${ink}/>`];
+  });
+  const figure = actor
+    ? `<circle cx="${number(centerX)}" cy="9" r="5" fill="none" ${ink} stroke-width="1.5"/>`
+      + `<path d="M${number(centerX)} 14V28M${number(centerX - 9)} 20H${number(centerX + 9)}M${number(centerX)} 28L${number(centerX - 8)} 37M${number(centerX)} 28L${number(centerX + 8)} 37" fill="none" ${ink} stroke-width="1.5"/>`
+    : '';
+  const titleY = top + SEQUENCE_HEADER_HEIGHT / 2 - (presentation.alias ? 6 : 0);
+  return group(`<rect y="${number(top)}" width="${number(node.size.width)}" height="${SEQUENCE_HEADER_HEIGHT}" rx="5" fill="${colors.fill}" ${ink} stroke-width="1.5"/>`
+    + `<line x1="${number(centerX)}" y1="${number(lifelineStart)}" x2="${number(centerX)}" y2="${number(node.size.height)}" ${ink} stroke-width="1.5" stroke-dasharray="6 6"/>`
+    + activations.join('') + figure
+    + textElement(presentation.label, centerX, titleY, `fill="${colors.text}" ${font} font-size="12" font-weight="600" text-anchor="middle" dominant-baseline="central"`, 14)
+    + (presentation.alias ? textElement(presentation.alias, centerX, top + SEQUENCE_HEADER_HEIGHT / 2 + 10, `fill="${colors.subText}" ${font} font-size="9" font-weight="500" text-anchor="middle" dominant-baseline="central"`, 11) : ''));
+}
+
+// The sequence renderer's geometry (PixiSequenceNodeRenderer, routeProjection): header, actor room, message rows.
+const SEQUENCE_HEADER_HEIGHT = 48;
+const SEQUENCE_ACTOR_HEIGHT = 40;
+const SEQUENCE_MESSAGE_OFFSET = 20;
+const SEQUENCE_MESSAGE_SPACING = 52;
+
 function exportNode(
   node: SceneNode,
   matrix: Matrix2d,
@@ -612,7 +655,8 @@ function exportNode(
   parentOf: (id: string) => SceneNode | undefined,
 ): string {
   const wrapper = elementFrameStyle('node', node.id, frame, node.size, animations);
-  const chart = exportChartNode(node, matrix, theme, wrapper) ?? exportWidgetNode(node, matrix, theme, wrapper, parentOf);
+  const chart = exportChartNode(node, matrix, theme, wrapper) ?? exportWidgetNode(node, matrix, theme, wrapper, parentOf)
+    ?? exportSequenceNode(node, matrix, wrapper);
   if (chart) return chart;
   const freeform = resolveFreeformNodePresentation(node);
   if (freeform && (freeform.kind === 'pen' || freeform.kind === 'highlighter'
@@ -802,11 +846,13 @@ export function exportCanonicalSvg(
       + markerMarkup(connector, stroke)
       + '</g>';
   }).join('');
-  // Containers first, like the canvas: Pixi paints them on a layer under every
-  // node, so a shape dropped into a newer frame still shows in the file.
-  const layer = (node: SceneNode) => (isContainerNodeKind(node.kind) ? 0 : 1);
-  const nodeMarkup = [...page.nodes].sort((a, b) => layer(a) - layer(b) || a.zIndex - b.zIndex || a.id.localeCompare(b.id))
+  // The canvas's layers: containers (and a sequence's fragment bands) under the connectors, every
+  // other node over them, so a frame never hides its edges and a band never hides its messages.
+  const backdrop = (node: SceneNode) => isContainerNodeKind(node.kind) || typeof node.content.seqFragmentId === 'string';
+  const markupOf = (nodes: readonly SceneNode[]) => [...nodes].sort((a, b) => a.zIndex - b.zIndex || a.id.localeCompare(b.id))
     .map((node) => exportNode(node, matrices.get(node.id)!, theme, options.frame?.nodes[node.id], options.animations, options.iconArt, (id) => byId.get(id))).join('');
+  const nodeMarkup = markupOf(page.nodes.filter((node) => !backdrop(node)));
+  const backdropMarkup = markupOf(page.nodes.filter(backdrop));
   // Camera glide lives on a root group: CSS cannot animate `viewBox` inside an
   // `<img>`. The still path applies the same matrix, so both stay in step.
   const cameraMatrix = options.frame?.camera ? cameraFitMatrix(options.frame.camera, viewBox) : null;
@@ -817,7 +863,7 @@ export function exportCanonicalSvg(
     ...(cameraMatrix ? [`transform:${matrixCss(cameraMatrix)}`] : []),
   ].join(';');
   const content = options.cameraAnimation || cameraMatrix
-    ? `<g${options.cameraAnimation ? ` class="${ANIMATED_CLASS}"` : ''} style="${cameraStyle}">${connectorMarkup}${nodeMarkup}</g>`
-    : `${connectorMarkup}${nodeMarkup}`;
+    ? `<g${options.cameraAnimation ? ` class="${ANIMATED_CLASS}"` : ''} style="${cameraStyle}">${backdropMarkup}${connectorMarkup}${nodeMarkup}</g>`
+    : `${backdropMarkup}${connectorMarkup}${nodeMarkup}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${number(x)} ${number(y)} ${number(width)} ${number(height)}" width="${number(width * pixelRatio)}" height="${number(height * pixelRatio)}" data-openflowkit-document="${xml(document.id)}" data-page="${xml(page.id)}" data-theme="${theme}" data-pixel-ratio="${number(pixelRatio)}">${options.styleSheet ? `<style>${options.styleSheet}</style>` : ''}${options.transparent ? '' : `<rect x="${number(x)}" y="${number(y)}" width="${number(width)}" height="${number(height)}" fill="${background}"/>`}${content}</svg>`;
 }

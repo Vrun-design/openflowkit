@@ -20,6 +20,7 @@ const HEADER = 48;
 const ACTOR_EXTRA = 40;
 const MESSAGE_OFFSET = 20;
 const MESSAGE_SPACING = 52;
+const NOTE_GAP = 12;
 const LIFELINE_TAIL = 44;
 const PADDING = { top: 96, right: 56, bottom: 56, left: 56 };
 const FRAGMENT_INSET = 40;
@@ -210,6 +211,15 @@ function parseSequence(segments: readonly DslSegment[], context: FamilyContext):
       });
       continue;
     }
+    // Mermaid writes `alt x … end`; ours is `alt x { … }`. Said, not guessed: the lines inside still import.
+    if ((FRAGMENT_KINDS.has(keyword) || keyword === 'else' || keyword === 'and') && !segment.opens) {
+      fail(segment, 'W101', `${keyword} needs a { … } block`, `${keyword} condition { … }`);
+      continue;
+    }
+    if (keyword === 'end' && segment.tokens.length === 1) {
+      fail(segment, 'W101', '`end` closes nothing: a block closes with }', '}');
+      continue;
+    }
     if (FRAGMENT_KINDS.has(keyword)) {
       const parsed = readAttributes(segment.tokens.slice(1), context.diagnostics);
       const branch: BranchDraft = {
@@ -319,12 +329,40 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
     cursor += laneWidth.get(participant.id)! + LANE_GAP;
   }
   const lanesRight = model.participants.length > 0 ? cursor - LANE_GAP : PADDING.left + LANE_WIDTH;
-  const timelineY = (order: number) => HEADER + ACTOR_EXTRA + MESSAGE_OFFSET + order * MESSAGE_SPACING;
+  const timelineY = (row: number) => HEADER + ACTOR_EXTRA + MESSAGE_OFFSET + row * MESSAGE_SPACING;
+  // Notes take their own room on the timeline: each pushes everything written after it down by
+  // its height. Orders stay message indices (the text round-trips on them); rows carry the room.
+  const noteSizes = new Map(model.notes.map((note) => {
+    const width = Math.max(180, textWidth(note.text, 11, 44));
+    const height = Math.max(56, Math.round(measurePortableText(note.text, { fontSize: 11, fontWeight: 500, maxWidth: width - 24, overflow: 'wrap' }).height) + 40);
+    return [note.id, { width, height }] as const;
+  }));
+  const room = (note: NoteDraft) => noteSizes.get(note.id)!.height + NOTE_GAP;
+  const roomOf = (notes: readonly NoteDraft[]) => notes.reduce((total, note) => total + room(note), 0);
+  /** Message `order`'s row: every note written before it (order ≤ its own) sits above it. */
+  const rowOf = (order: number) => order + roomOf(model.notes.filter((note) => note.order <= order)) / MESSAGE_SPACING;
+  const noteTop = new Map(model.notes.map((note, index) => [note.id, timelineY(note.order) + roomOf(model.notes.slice(0, index)) - 18]));
+  const parentOf = new Map(model.branches.map((branch) => [branch.id, branch.parent]));
+  const within = (note: NoteDraft, branchId: string) => {
+    for (let at = note.parent; at; at = parentOf.get(at) ?? null) if (at === branchId) return true;
+    return false;
+  };
+  const branchSpan = (branch: BranchDraft) => {
+    // Notes written inside the block sit in its band; one written just before it sits above.
+    const startY = timelineY(branch.startOrder)
+      + roomOf(model.notes.filter((note) => note.order < branch.startOrder || (note.order === branch.startOrder && !within(note, branch.id)))) - 44;
+    const lastMessage = branch.endOrder >= branch.startOrder ? timelineY(rowOf(branch.endOrder)) : startY + 8;
+    const notesBottom = Math.max(-Infinity, ...model.notes.filter((note) => within(note, branch.id))
+      .map((note) => noteTop.get(note.id)! + noteSizes.get(note.id)!.height));
+    return { startY, endY: Math.max(lastMessage, notesBottom) };
+  };
   const lastOrder = Math.max(-1, ...model.messages.map((message) => message.order));
-  const branchesBottom = model.branches.reduce((bottom, branch) => Math.max(bottom, timelineY(branch.endOrder) + 48), 0);
+  const branchesBottom = model.branches.reduce((bottom, branch) => Math.max(bottom, branchSpan(branch).endY + 48), 0);
+  const notesBottom = Math.max(0, ...model.notes.map((note) => noteTop.get(note.id)! + noteSizes.get(note.id)!.height));
   const lifeline = Math.max(
-    HEADER + ACTOR_EXTRA + MESSAGE_OFFSET + (lastOrder + 1) * MESSAGE_SPACING + LIFELINE_TAIL,
+    HEADER + ACTOR_EXTRA + MESSAGE_OFFSET + (rowOf(lastOrder) + 1) * MESSAGE_SPACING + LIFELINE_TAIL,
     branchesBottom + 24,
+    notesBottom + LIFELINE_TAIL,
   );
   const scene = (x: number, y: number) => ({ x, y });
   const nodes: SceneNode[] = [];
@@ -332,8 +370,7 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
 
   // Fragments first: their fills paint behind the participants (draw order).
   for (const branch of model.branches) {
-    const startY = timelineY(branch.startOrder) - 44;
-    const endY = branch.endOrder >= branch.startOrder ? timelineY(branch.endOrder) : startY + 8;
+    const { startY, endY } = branchSpan(branch);
     const topLeft = scene(PADDING.left - FRAGMENT_INSET, startY);
     nodes.push({
       id: branch.id, kind: 'annotation', parentId: null, layerId: 'default', zIndex: 0,
@@ -375,7 +412,8 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
       content: {
         label: participant.label,
         seqParticipantKind: participant.kind,
-        ...(participant.activations.length ? { seqActivations: participant.activations.map((activation) => ({ ...activation })) } : {}),
+        ...(participant.activations.length ? { seqActivations: participant.activations.map((activation) => (
+          rowOf(activation.order) === activation.order ? { ...activation } : { ...activation, row: rowOf(activation.order) })) } : {}),
         ...(custom ? { color: 'custom', customColor: custom } : palette ? { color: palette } : {}),
       },
       appearance: {}, ports: [],
@@ -403,7 +441,11 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
       route: { kind: 'direct', ownership: 'automatic' }, waypoints: [],
       labels: message.label ? [{ id: `${message.id}-label`, text: message.label, pathRatio: 0.5, offset: { x: 0, y: 0 }, metadata: {} }] : [],
       appearance: {},
-      semantics: { seqMessageKind: self ? 'self' : message.arrow === '-->' || message.arrow === '-->>' ? 'return' : message.arrow === '->>' ? 'async' : 'sync', seqMessageOrder: message.order },
+      semantics: {
+        seqMessageKind: self ? 'self' : message.arrow === '-->' || message.arrow === '-->>' ? 'return' : message.arrow === '->>' ? 'async' : 'sync',
+        seqMessageOrder: message.order,
+        ...(rowOf(message.order) === message.order ? {} : { seqMessageRow: rowOf(message.order) }),
+      },
       metadata: {
         dsl: {
           line: message.line, seqArrow: message.arrow,
@@ -416,8 +458,7 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
   }
 
   for (const note of model.notes) {
-    const width = Math.max(180, textWidth(note.text, 11, 44));
-    const height = Math.max(56, Math.round(measurePortableText(note.text, { fontSize: 11, fontWeight: 500, maxWidth: width - 24, overflow: 'wrap' }).height) + 40);
+    const { width, height } = noteSizes.get(note.id)!;
     const firstLane = laneX.get(note.targets[0]!) ?? PADDING.left;
     const lastLane = laneX.get(note.targets.at(-1)!) ?? firstLane;
     const x = note.position === 'over'
@@ -427,7 +468,7 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
         : firstLane + laneWidth.get(note.targets[0]!)! + 32;
     nodes.push({
       id: note.id, kind: 'sequence_note', parentId: null, layerId: 'default', zIndex: 2,
-      transform: { translation: scene(x, timelineY(note.order) - 18), rotationRadians: 0, scale: { x: 1, y: 1 } },
+      transform: { translation: scene(x, noteTop.get(note.id)!), rotationRadians: 0, scale: { x: 1, y: 1 } },
       size: { width, height },
       content: { label: note.text, seqNotePosition: note.position, seqNoteTargets: [...note.targets], seqMessageOrder: note.order },
       appearance: {}, ports: [],

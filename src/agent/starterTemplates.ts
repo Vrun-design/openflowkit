@@ -96,11 +96,11 @@ title: Request lifecycle
 
   Browser -> Gateway : POST /orders
   Gateway -> Service : order.create
-  alt accepted
-    Service --> Gateway : 202 {orderId}
-  else rejected
-    Service --> Gateway : 409 {reason}
-  end
+  alt accepted {
+    Service --> Gateway : "202 {orderId}"
+  } else rejected {
+    Service --> Gateway : "409 {reason}"
+  }
   Gateway --> Browser : response
 `,
   },

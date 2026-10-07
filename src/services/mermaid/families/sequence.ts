@@ -344,7 +344,8 @@ function parseSequence(input: string): {
   }));
 
   const edges: FlowEdge[] = messages.map((msg, i) => {
-    const frag = [...fragments].reverse().find((f) => i >= f.startOrder && i <= f.endOrder);
+    // `endOrder` is the next message's index when the block closed: exclusive.
+    const frag = [...fragments].reverse().find((f) => i >= f.startOrder && i < f.endOrder);
 
     return {
       id: `e-seq-${i + 1}`,

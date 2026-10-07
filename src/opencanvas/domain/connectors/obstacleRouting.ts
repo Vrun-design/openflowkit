@@ -70,6 +70,8 @@ function detourLanes(start: Point2d, end: Point2d, obstacle: Bounds2d): DetourLa
 export interface OrthogonalRouteOptions {
   /** Lane with a middle segment perpendicular to this axis is tried first (the Z shape). */
   readonly midSplit?: 'x' | 'y';
+  /** How far the Z's middle segment sits off centre, so edges sharing a gap take their own runs. */
+  readonly midShift?: number;
 }
 
 export function routeOrthogonalAroundObstacles(
@@ -140,8 +142,15 @@ export function routeOrthogonalAroundObstacles(
     }
     return false;
   };
-  const midX = (start.x + end.x) / 2;
-  const midY = (start.y + end.y) / 2;
+  // The shifted middle stays 4 px inside the span, so a tight gap degrades to the centre, never past an end.
+  const shifted = (from: number, to: number) => {
+    const low = Math.min(from, to) + 4;
+    const high = Math.max(from, to) - 4;
+    const mid = (from + to) / 2 + (options.midShift ?? 0);
+    return low < high ? Math.min(high, Math.max(low, mid)) : (from + to) / 2;
+  };
+  const midX = shifted(start.x, end.x);
+  const midY = shifted(start.y, end.y);
   // Candidate order is the tie-break: equal-length lanes resolve to the
   // earliest, so the Z for the requested axis wins over an L when both clear.
   const lanes: CandidateLane[] = [
@@ -231,7 +240,8 @@ export function routeOrthogonalBetweenSides(
   startSide: ConnectSide | null,
   end: Point2d,
   endSide: ConnectSide | null,
-  obstacleBounds: readonly Bounds2d[]
+  obstacleBounds: readonly Bounds2d[],
+  midShift = 0
 ): readonly Point2d[] {
   // A box enclosing an end point (a container around the node, an
   // overlapping shape) would block every lane; it is context, not an obstacle.
@@ -244,6 +254,7 @@ export function routeOrthogonalBetweenSides(
   const opposite = startSide && endSide && sideAxis(startSide) === sideAxis(endSide);
   const lane = routeOrthogonalAroundObstacles(stubStart, stubEndPoint, obstacles, {
     midSplit: opposite && axis ? axis : undefined,
+    midShift,
   });
   return dropCollinear(dedupePolyline([start, ...lane, end]));
 }

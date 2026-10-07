@@ -158,6 +158,8 @@ describe('mermaidToDsl', () => {
     expect(lines.indexOf('w -> u : highlighted')).toBeLessThan(lines.indexOf('break when down {'));
     expect(lines.indexOf('activate w')).toBeLessThan(lines.indexOf('u -> w : "Open\\ncheckout"'));
     expect(lines.indexOf('deactivate w')).toBeGreaterThan(lines.indexOf('w --> u : bye'));
+    // A block ends where its `end` is: the message after it is outside (each block used to swallow one).
+    expect(lines[lines.indexOf('w --> u : bye') - 1]).toBe('}');
     const compiled = await compile(dsl);
     expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
   });
