@@ -83,12 +83,21 @@ import type { V2TipId } from './v2FeatureTips';
 import { scheduleV2Thumbnail } from './v2Thumbnail';
 import { DEFAULT_TOOL_CONFIG, type V2ConnectorTool, type V2ToolConfig } from './v2ToolCatalog';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
+import { TURNSTILE_SITE_KEY } from '../../../services/share/turnstile';
+import type { SceneDocumentV1 } from '../../domain/document/types';
 import './v2EditorPage.css';
 
 const imageFiles = (list: DataTransfer | null): File[] => Array.from(list?.files ?? []).filter(isImageFile);
 
-export function V2EditorPage(): React.JSX.Element {
-  const { id } = useParams();
+/** A shared link opens here: the decrypted document, read-only, never stored; `onEdit` saves a local copy. */
+export interface V2SharedView { readonly document: SceneDocumentV1; readonly onEdit: () => Promise<void> }
+
+export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}): React.JSX.Element {
+  // Under /s/:id the route's id is the share's, not a stored document's.
+  const routeId = useParams().id;
+  const id = shared ? undefined : routeId;
+  // Fit-once needs a stable key; a shared document has no stored id.
+  const fitKey = id ?? (shared ? `shared:${shared.document.id}` : undefined);
   useEffect(() => { if (id) rememberLastDocument(id); }, [id]);
   const { preferences, updatePreferences } = useV2Preferences();
   const panels = useV2Panels();
@@ -219,6 +228,7 @@ export function V2EditorPage(): React.JSX.Element {
   const load = useV2DocumentLoad({
     documentId: id,
     repository,
+    fixed: shared?.document,
     openDocument: session.openDocument,
     onRecovered: () => pushToast({ id: 'recovered', tone: 'warning', title: 'Recovered from the last good backup.' }),
   });
@@ -227,6 +237,13 @@ export function V2EditorPage(): React.JSX.Element {
   }, [load.reload]);
   const readOnlyRef = useRef(load.readOnly);
   useEffect(() => { readOnlyRef.current = load.readOnly; }, [load.readOnly]);
+
+  // The viewer's way in to editing (document bar) is a local, editable copy.
+  useEffect(() => {
+    if (!shared || load.phase !== 'ready') return;
+    pushToast({ id: 'shared-view', tone: 'info', title: 'Shared diagram, read-only.' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per opened link
+  }, [load.phase, shared?.document]);
 
   const { openWorkspace } = panels;
   const code = useV2CodeWorkspace({
@@ -286,8 +303,8 @@ export function V2EditorPage(): React.JSX.Element {
   });
 
   useEffect(() => {
-    camera.fitOnOpen(rendererStatus, session.document, id, session.revision);
-  }, [rendererStatus, session.document, session.revision, id, camera]);
+    camera.fitOnOpen(rendererStatus, session.document, fitKey, session.revision);
+  }, [rendererStatus, session.document, session.revision, fitKey, camera]);
 
   const ghostPage = useV2ProposalPreview(proposal, hostRef, rendererReady, camera.revealBounds);
 
@@ -724,6 +741,7 @@ export function V2EditorPage(): React.JSX.Element {
               }}
               breadcrumb={architecture.breadcrumb}
               onCrumb={(crumb) => architectureActions.openCrumb(crumb)}
+              {...(shared ? { onEditShared: shared.onEdit } : {})}
               onOpenExport={(anchor) => openExport(anchor, 'page')}
               onDismissExport={() => setExportOpen(false)}
               onRename={(name) => {
@@ -816,14 +834,14 @@ export function V2EditorPage(): React.JSX.Element {
               width: 1, height: 1, pointerEvents: 'none',
             }} />
             <V2ExportMenu open={exportOpen} anchorRef={exportAnchorRef} initialScope={exportScope}
-              document={session.document!} pageId={page.id}
+              document={session.document!} pageId={page.id} canShare={!shared && Boolean(TURNSTILE_SITE_KEY)}
               selectedNodeIds={selection.nodeIds} selectedConnectorIds={selectedConnectorIds}
               onClose={() => {
                 setExportOpen(false);
                 // Element export returns you to the canvas; the bar keeps its own focus.
                 if (exportAnchorRef.current === exportPointRef.current) focusCanvas();
               }}
-              onToast={(title, tone) => { pushToast({ id: `export-${Date.now()}`, tone, title }); if (tone === 'success') tips.offer('motion'); }}
+              onToast={(title, tone, extra) => { pushToast({ id: `export-${Date.now()}`, tone, title, ...extra }); if (tone === 'success') tips.offer('motion'); }}
               onOpenAnimation={panels.openMotion} />
             <V2WorkspaceRail mode={panels.workspace} onChange={panels.toggleWorkspace}
               onShortcuts={panels.toggleShortcuts} agentConnected={agentBridge.status === 'connected'} />

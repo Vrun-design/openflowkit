@@ -45,6 +45,8 @@ const SHARED_KERNEL = [
   // Folder workspaces (File System Access API adapter) and their pure merge
   // helpers; no DOM beyond the picker call itself.
   path.join(srcDir, 'services', 'workspace'),
+  // Share links: WebCrypto envelope + fetch adapter for the share Worker (D6).
+  path.join(srcDir, 'services', 'share'),
 ];
 
 // Data read as text at runtime (the grammar for get_syntax), not code. It sits

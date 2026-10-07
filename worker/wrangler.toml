@@ -1,0 +1,20 @@
+# Share-link Worker. Deploy from this folder: `npx wrangler deploy`. Ids and secrets are not kept here.
+name = "openflowkit-share"
+main = "index.ts"
+compatibility_date = "2026-03-18"
+
+# Route share.openflowkit.com/* to this Worker in the Cloudflare dashboard (or add a [[routes]] entry).
+
+[[r2_buckets]]
+binding = "SHARES"
+bucket_name = "openflowkit-shares"
+
+# Per-IP limit on POST /s: 10 uploads per 60 s, counted per Cloudflare location (soft, eventually consistent).
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+  [ratelimits.simple]
+  limit = 10
+  period = 60
+
+# Secret, set with `npx wrangler secret put TURNSTILE_SECRET` (never written to this file).

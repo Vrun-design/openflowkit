@@ -10,6 +10,8 @@ interface V2DocumentLoadOptions {
   readonly repository: V2DocumentRepository | null;
   readonly openDocument: (document: SceneDocumentV1) => void;
   readonly onRecovered: () => void;
+  /** A document that is not stored (a shared link): opened as is, read-only, never saved. */
+  readonly fixed?: SceneDocumentV1 | undefined;
 }
 
 export type V2LoadPhase = 'loading' | 'ready' | 'corrupt' | 'failed';
@@ -27,6 +29,13 @@ export function useV2DocumentLoad(options: V2DocumentLoadOptions) {
   const reload = useCallback(() => setReloadCount((count) => count + 1), []);
 
   useEffect(() => {
+    if (options.fixed) {
+      options.openDocument(options.fixed);
+      setBaseRevision(0);
+      setReadOnly(true);
+      setPhase('ready');
+      return;
+    }
     if (!options.documentId || !options.repository) return;
     let cancelled = false;
     setPhase('loading');
@@ -74,7 +83,7 @@ export function useV2DocumentLoad(options: V2DocumentLoadOptions) {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.documentId, options.repository, reloadCount]);
+  }, [options.documentId, options.repository, options.fixed, reloadCount]);
 
   return { phase, readOnly, baseRevision, corruptIssues, loadError, reload };
 }

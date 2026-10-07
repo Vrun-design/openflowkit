@@ -55,6 +55,8 @@ interface V2DocumentBarProps extends V2SettingsProps {
   readonly onOpenExport: (anchor: HTMLElement | null) => void;
   /** A document panel taking the foreground closes an open export panel. */
   readonly onDismissExport: () => void;
+  /** A shared link's viewer: saves a local, editable copy and opens it. Throws a readable error on failure. */
+  readonly onEditShared?: () => Promise<void>;
   readonly workspace?: {
     readonly name: string | null;
     readonly onOpenFolder: () => void;
@@ -123,6 +125,14 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
 
   const toast = (title: string, tone: ToastItem['tone']): void =>
     props.onToast({ id: `toast-${Date.now()}`, tone, title });
+  const [copying, setCopying] = useState(false);
+  const editShared = (): void => {
+    if (copying || !props.onEditShared) return;
+    setCopying(true);
+    props.onEditShared()
+      .catch((error: unknown) => toast(error instanceof Error ? error.message : 'Could not save a copy.', 'danger'))
+      .finally(() => setCopying(false));
+  };
 
   // Open a .json file (our export or a V1 file) as a new document and go there.
   const navigate = useNavigate();
@@ -220,6 +230,9 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
             <Button variant="quiet" onClick={props.onReload}>
               Reload
             </Button>
+          ) : null}
+          {props.onEditShared ? (
+            <Button variant="primary" disabled={copying} onClick={editShared}>Edit in OpenFlowKit</Button>
           ) : null}
           <Tooltip content="Pages">
             <Button ref={pagesRef} variant="quiet" aria-expanded={panel === 'pages'} aria-haspopup="dialog"
