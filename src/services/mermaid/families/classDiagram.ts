@@ -15,6 +15,8 @@ interface ClassRecord {
   /** `style X fill:…` wins over a `:::css` / `cssClass` class's fill. */
   fill?: string;
   cssClasses?: string[];
+  /** The `namespace` blocks it was declared in, outermost first. */
+  namespace?: string[];
 }
 
 /** `class X["Shown label"]`, then an optional `:::css` class. */
@@ -102,11 +104,17 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
   let hasHeader = false;
   let activeClass: ClassRecord | null = null;
   let activeClassLine = -1;
-  let namespaceDepth = 0;
+  /** The `namespace` blocks open at this line, outermost first. */
+  const namespaces: string[] = [];
   let noteDropped = false;
   const classDefs = new Map<string, string>();
+  /** A class declared inside a namespace belongs to it. */
+  const place = (record: ClassRecord): ClassRecord => {
+    if (namespaces.length > 0 && !record.namespace) record.namespace = [...namespaces];
+    return record;
+  };
   const declare = (rawId: string, label?: string, css?: string): ClassRecord => {
-    const record = ensureClassRecord(classes, normalizeClassIdentifier(rawId));
+    const record = place(ensureClassRecord(classes, normalizeClassIdentifier(rawId)));
     if (label) record.label = label;
     if (css) record.cssClasses = [...(record.cssClasses ?? []), css];
     return record;
@@ -137,12 +145,11 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
 
     const namespace = line.match(/^namespace\s+(\S+)\s*\{\s*$/i);
     if (namespace) {
-      namespaceDepth += 1;
-      diagnostics.push(`Namespace ${namespace[1]} is drawn without its box at line ${lineNumber}: "${line}"`);
+      namespaces.push(namespace[1]);
       continue;
     }
-    if (line === '}' && namespaceDepth > 0) {
-      namespaceDepth -= 1;
+    if (line === '}' && namespaces.length > 0) {
+      namespaces.pop();
       continue;
     }
     if (/^note\b/i.test(line)) {
@@ -173,7 +180,7 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
     if (typed) {
       const word = typed[1].toLowerCase().split(/\s+/)[0];
       const id = normalizeClassIdentifier(typed[2]);
-      const record = ensureClassRecord(classes, id);
+      const record = place(ensureClassRecord(classes, id));
       record.stereotype = word === 'enum' ? 'enumeration' : word;
       diagnostics.push(`Line ${lineNumber}: \`${line.replace(/\s*\{$/, '')}\` is not Mermaid; read as \`class ${id} <<${record.stereotype}>>\`.`);
       if (typed[3]) {
@@ -204,7 +211,7 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
     const classWithStereotype = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})\\s*<<\\s*(.+?)\\s*>>\\s*$`));
     if (classWithStereotype) {
       const id = normalizeClassIdentifier(classWithStereotype[1]);
-      const existing = ensureClassRecord(classes, id);
+      const existing = place(ensureClassRecord(classes, id));
       existing.stereotype = classWithStereotype[2];
       continue;
     }
@@ -290,6 +297,7 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
       ...(fillOf(record) ? { classFill: fillOf(record) } : {}),
       classAttributes: record.attributes,
       classMethods: record.methods,
+      ...(record.namespace ? { classNamespace: record.namespace } : {}),
     },
   }));
 

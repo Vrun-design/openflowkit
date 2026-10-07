@@ -32,6 +32,8 @@ interface FlowNodeStyle {
 }
 
 interface FlowNodeData {
+  /** A class's `namespace` blocks, outermost first. */
+  classNamespace?: readonly string[];
   label?: string;
   subLabel?: string;
   shape?: string;
@@ -489,17 +491,34 @@ function classDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Conve
   const losses: string[] = [];
   const lines: string[] = ['class'];
   const byId = new Map(nodes.map((node) => [node.id, node]));
-  for (const node of nodes) {
-    const stereotype = typeof node.data?.classStereotype === 'string' && node.data.classStereotype ? [node.data.classStereotype] : [];
-    const fill = typeof node.data?.classFill === 'string' ? [node.data.classFill.toLowerCase()] : [];
-    lines.push(`${nodeName(node)}${attrText([...stereotype, ...fill])} {`);
-    const attributes = Array.isArray(node.data?.classAttributes) ? node.data.classAttributes as string[] : [];
-    const methods = Array.isArray(node.data?.classMethods) ? node.data.classMethods as string[] : [];
-    for (const member of attributes) lines.push(`  ${member}`);
-    if (attributes.length && methods.length) lines.push('  ---');
-    for (const member of methods) lines.push(`  ${member}`);
-    lines.push('}');
-  }
+  const namespaceOf = (node: FlowNode): readonly string[] => (Array.isArray(node.data?.classNamespace) ? node.data.classNamespace as string[] : []);
+  /** Classes at `path` as blocks; each namespace under it opens where its first class is, holding every class that names it. */
+  const emitClasses = (path: readonly string[], indent: string): void => {
+    const opened = new Set<string>();
+    for (const node of nodes) {
+      const own = namespaceOf(node);
+      if (own.length < path.length || path.some((name, depth) => own[depth] !== name)) continue;
+      if (own.length === path.length) {
+        const stereotype = typeof node.data?.classStereotype === 'string' && node.data.classStereotype ? [node.data.classStereotype] : [];
+        const fill = typeof node.data?.classFill === 'string' ? [node.data.classFill.toLowerCase()] : [];
+        lines.push(`${indent}${nodeName(node)}${attrText([...stereotype, ...fill])} {`);
+        const attributes = Array.isArray(node.data?.classAttributes) ? node.data.classAttributes as string[] : [];
+        const methods = Array.isArray(node.data?.classMethods) ? node.data.classMethods as string[] : [];
+        for (const member of attributes) lines.push(`${indent}  ${member}`);
+        if (attributes.length && methods.length) lines.push(`${indent}  ---`);
+        for (const member of methods) lines.push(`${indent}  ${member}`);
+        lines.push(`${indent}}`);
+        continue;
+      }
+      const child = own[path.length]!;
+      if (opened.has(child)) continue;
+      opened.add(child);
+      lines.push(`${indent}group ${quote(child)} {`);
+      emitClasses([...path, child], `${indent}  `);
+      lines.push(`${indent}}`);
+    }
+  };
+  emitClasses([], '');
   for (const edge of edges) {
     const source = byId.get(edge.source);
     const target = byId.get(edge.target);

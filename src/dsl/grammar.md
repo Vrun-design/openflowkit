@@ -678,8 +678,9 @@ emitted only when a class has both attributes and methods. Member text canonical
 spacing (`+id: int`, `+go(): void`); `[interface|abstract|enum]` sets the stereotype.
 Reversed relations normalise by swapping endpoints (`Order <|-- Base` → `Base --|> Order`);
 multiplicity is quoted beside the arrow (`Order "1" --> "*" Item`).
-Canonical: classes in line order as blocks, relations after. Nodes are `class` tables with
-attribute/method compartments sized so every member is visible.
+`group Zoo { … }` boxes the classes declared inside it (groups nest; erd takes it too), like a
+Mermaid `namespace`. Canonical: classes and groups in line order as blocks, relations after.
+Nodes are `class` tables with attribute/method compartments sized so every member is visible.
 
 ### 8.7 mindmap (radial)
 ```

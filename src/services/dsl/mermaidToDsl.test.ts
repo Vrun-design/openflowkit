@@ -188,6 +188,48 @@ describe('mermaidToDsl', () => {
     expect(await format(dsl)).toContain('[head: cross]');
   });
 
+  // https://mermaid.js.org/syntax/classDiagram.html#namespace — plus a class outside and a namespace in a namespace.
+  it('boxes a class namespace as a group, with the classes outside it left outside', async () => {
+    const { dsl, losses, diagnostics } = convert(`classDiagram
+  class Loose
+  namespace BaseShapes {
+    class Triangle
+    class Rectangle {
+      double width
+      double height
+    }
+  }
+  namespace Outer {
+    namespace Inner {
+      class Deep
+    }
+    class Shallow
+  }
+  Triangle --|> Rectangle
+  Loose --> Deep`);
+    expect(losses).toEqual([]);
+    expect(diagnostics?.map((item) => item.message).join('\n') ?? '').not.toMatch(/without its box/);
+    const lines = dsl.split('\n');
+    const at = (text: string) => lines.indexOf(text);
+    expect(lines).toContain('group BaseShapes {');
+    expect(lines.slice(at('group BaseShapes {'), at('group Outer {'))).toEqual([
+      'group BaseShapes {', '  Triangle {', '  }', '  Rectangle {', '    double width', '    double height', '  }', '}',
+    ]);
+    expect(lines.slice(at('group Outer {'), at('Triangle --|> Rectangle'))).toEqual([
+      'group Outer {', '  group Inner {', '    Deep {', '    }', '  }', '  Shallow {', '  }', '}',
+    ]);
+    expect(at('Loose {')).toBeLessThan(at('group BaseShapes {'));
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    expect(compiled.groups.map((group) => group.id)).toEqual(['baseshapes', 'outer', 'inner']);
+    const parent = (id: string) => compiled.nodes.find((node) => node.id === id)!.parentId;
+    expect(parent('triangle')).toBe('baseshapes');
+    expect(parent('deep')).toBe('inner');
+    expect(parent('shallow')).toBe('outer');
+    expect(parent('loose')).toBe(compiled.frame.id);
+    expect(await format(dsl)).toBe(await format(await format(dsl)));
+  });
+
   it('converts real-world class syntax: unlabelled relations, labels, namespaces, styles, title', async () => {
     const { dsl, losses } = convert(`classDiagram
     title Shop
@@ -212,12 +254,12 @@ describe('mermaidToDsl', () => {
     classDef highlight fill:#ffd`);
     const lines = dsl.split('\n');
     expect(lines[1]).toBe('title: Shop');
-    for (const line of ['Animal 🐾 [abstract, #f9f] {', 'Duck [#ffd] {', 'Cage {', 'Keeper {',
+    for (const line of ['Animal 🐾 [abstract, #f9f] {', 'Duck [#ffd] {', 'group Zoo {', '  Cage {', '  Keeper {',
       'Animal 🐾 <|-- Duck', 'Animal 🐾 o-- Owner', 'Duck ..> Bread', 'Customer "1" --> "*" Ticket', 'Duck --> Pond : swims', 'Cage --> Keeper']) {
       expect(lines).toContain(line);
     }
     // Only what was really dropped is reported.
-    expect(losses).toEqual(['Namespace Zoo is drawn without its box', '`note for` is dropped']);
+    expect(losses).toEqual(['`note for` is dropped']);
     const compiled = await compile(dsl);
     expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
   });

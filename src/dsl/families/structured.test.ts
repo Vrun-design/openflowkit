@@ -109,3 +109,60 @@ describe('class layout', () => {
     expect(edges.map((edge) => `${edge.sourceId}>${edge.targetId}`)).toEqual(['animal>duck', 'animal>bird', 'flyer>bird', 'animal>leg', 'duck>pond']);
   });
 });
+
+describe('groups in class and erd diagrams', () => {
+  const CLASSES = `%% ofk 1
+class
+
+Loose {
+}
+group Zoo {
+  Cage {
+    +int size
+  }
+  Keeper {
+  }
+}
+Cage --> Keeper : locks
+Loose --> Cage
+`;
+
+  it('boxes the classes declared inside a group and leaves the others outside', async () => {
+    const result = await compile(CLASSES);
+    expect(result.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    const [zoo] = result.groups;
+    expect(zoo).toMatchObject({ id: 'zoo', kind: 'frame', content: { label: 'Zoo' } });
+    const parent = (id: string) => result.nodes.find((node) => node.id === id)!.parentId;
+    expect(parent('cage')).toBe('zoo');
+    expect(parent('keeper')).toBe('zoo');
+    expect(parent('loose')).toBe(result.frame.id);
+    // The box has room for what it holds: the members sit inside it.
+    const cage = result.nodes.find((node) => node.id === 'cage')!;
+    expect(zoo!.size.width).toBeGreaterThanOrEqual(cage.size.width);
+    expect(zoo!.size.height).toBeGreaterThanOrEqual(cage.size.height);
+  });
+
+  it('writes the same text back, groups where they were declared', async () => {
+    const result = await compile(CLASSES);
+    expect(serialize(result)).toBe(CLASSES);
+    expect(await format(CLASSES)).toBe(CLASSES);
+  });
+
+  it('nests a group in a group, and closes each with its own brace', async () => {
+    const text = '%% ofk 1\nclass\n\ngroup Outer {\n  group Inner {\n    A {\n    }\n  }\n  B {\n  }\n}\nA --> B\n';
+    const result = await compile(text);
+    expect(result.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    expect(result.groups.map((group) => `${group.id}<${group.parentId === result.frame.id ? 'frame' : group.parentId}`)).toEqual(['outer<frame', 'inner<outer']);
+    expect(result.nodes.find((node) => node.id === 'a')!.parentId).toBe('inner');
+    expect(result.nodes.find((node) => node.id === 'b')!.parentId).toBe('outer');
+    expect(serialize(result)).toBe(text);
+  });
+
+  it('boxes entities in an erd the same way, and warns about a stray close', async () => {
+    const result = await compile('erd\ngroup Billing {\n  invoices {\n    id uuid pk\n  }\n}\nusers {\n  id uuid pk\n}\nusers ||--o{ invoices');
+    expect(result.nodes.find((node) => node.id === 'invoices')!.parentId).toBe('billing');
+    expect(result.nodes.find((node) => node.id === 'users')!.parentId).toBe(result.frame.id);
+    const stray = await compile('class\nA {\n}\n}\n');
+    expect(stray.diagnostics.map((item) => item.code)).toContain('W101');
+  });
+});
