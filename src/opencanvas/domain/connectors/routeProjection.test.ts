@@ -4,6 +4,9 @@ import {
   createTestDocument,
   createTestNode,
 } from '../../testing/builders/documentBuilder';
+import { intersectsBounds } from '../geometry/bounds';
+import { nodeWorldBounds, buildNodeWorldMatrices } from '../scene/worldGeometry';
+import { connectorLabelPlate } from './labelStyle';
 import { clearLabelPoint, projectConnector, projectPageConnectors } from './routeProjection';
 
 function connectorFixture() {
@@ -230,6 +233,100 @@ describe('connector route projection', () => {
     expect(clearLabelPoint('yes', 0.5, route, [], plate)).toEqual({ x: 100, y: 100 });
     // Nowhere clear: the asked-for point, not a guess.
     expect(clearLabelPoint('yes', 0.5, route, [{ x: -50, y: -50, width: 300, height: 300 }], plate)).toEqual({ x: 100, y: 100 });
+  });
+
+  it('steps a label off the line when no point along the route is clear', () => {
+    const route = [{ x: 0, y: 0 }, { x: 200, y: 0 }];
+    const plate = (_text: string, point: { x: number; y: number }) => ({ x: point.x - 20, y: point.y - 10, width: 40, height: 20 });
+    const band = [{ x: -50, y: -12, width: 300, height: 24 }];
+    // A plate 20 tall plus a 4 px gap, off the middle, to the side the route's normal points.
+    expect(clearLabelPoint('yes', 0.5, route, band, plate)).toEqual({ x: 100, y: 24 });
+    // That side taken too: the other one.
+    expect(clearLabelPoint('yes', 0.5, route, [...band, { x: 80, y: 14, width: 40, height: 20 }], plate)).toEqual({ x: 100, y: -24 });
+  });
+
+  it('keeps a label on a route with no length instead of losing it', () => {
+    const dot = [{ x: 5, y: 5 }, { x: 5, y: 5 }];
+    const plate = (_text: string, point: { x: number; y: number }) => ({ x: point.x - 20, y: point.y - 10, width: 40, height: 20 });
+    expect(clearLabelPoint('yes', 0.5, dot, [], plate)).toEqual({ x: 5, y: 5 });
+    expect(clearLabelPoint('yes', 0.5, dot, [{ x: -500, y: -500, width: 1000, height: 1000 }], plate)).toEqual({ x: 5, y: 5 });
+  });
+
+  describe('label placement across a page', () => {
+    const at = (x: number, y: number) => ({ translation: { x, y }, rotationRadians: 0, scale: { x: 1, y: 1 } });
+    const label = (id: string, text: string, offset = { x: 0, y: 0 }) => ({ id, text, pathRatio: 0.5, offset, metadata: {} });
+    const orthogonal = { route: { kind: 'orthogonal', ownership: 'automatic' } } as const;
+    const plates = (page: ReturnType<typeof createTestDocument>['pages'][number]) => projectPageConnectors(page)
+      .flatMap((edge) => edge.labels.map((entry) => ({ id: `${edge.id}:${entry.id}`, point: entry.point, plate: connectorLabelPlate(entry.text, edge.presentation.label, entry.point) })));
+    const noneIntersect = (boxes: readonly { plate: ReturnType<typeof connectorLabelPlate> }[]) =>
+      boxes.every((one, index) => boxes.slice(index + 1).every((other) => !intersectsBounds(one.plate, other.plate)));
+
+    const pair = () => [createTestNode('a', { transform: at(0, 0) }), createTestNode('b', { transform: at(400, 0) })];
+    const without = (connector: ReturnType<typeof createTestConnector>) => ({ ...connector, labels: [] });
+
+    it('keeps the labels of parallel and reverse edges off each other and off the nodes', () => {
+      const nodes = pair();
+      const connectors = ['reads', 'writes', 'acks', 'locks'].map((text, index) =>
+        createTestConnector(text, index === 2 ? 'b' : 'a', index === 2 ? 'a' : 'b', { ...orthogonal, labels: [label('l', text)] }));
+      const page = { ...createTestDocument({ nodes }).pages[0]!, connectors };
+      const placed = plates(page);
+      expect(placed).toHaveLength(4);
+      expect(noneIntersect(placed)).toBe(true);
+      const matrices = buildNodeWorldMatrices(page);
+      for (const { plate } of placed) {
+        for (const node of nodes) expect(intersectsBounds(nodeWorldBounds(node, matrices.get(node.id)!), plate)).toBe(false);
+      }
+    });
+
+    it('never moves a label the user placed, and steps the others off it', () => {
+      const moved = createTestConnector('moved', 'a', 'b', { ...orthogonal, labels: [label('l', 'moved', { x: 0, y: 1 })] });
+      const free = createTestConnector('free', 'a', 'b', { ...orthogonal, labels: [label('l', 'moved')] });
+      const base = { ...createTestDocument({ nodes: pair() }).pages[0]!, connectors: [moved, free] };
+      for (const connectors of [[moved, free], [free, moved]]) {
+        const placed = plates({ ...base, connectors });
+        // Where the placed label sits when the other edge has no label to compete with.
+        const alone = plates({ ...base, connectors: connectors.map((connector) => connector === free ? without(free) : connector) })
+          .find((entry) => entry.id === 'moved:l')!.point;
+        expect(placed.find((entry) => entry.id === 'moved:l')!.point).toEqual(alone);
+        expect(noneIntersect(placed)).toBe(true);
+      }
+    });
+
+    it('places labels in connector order: the first keeps its own spot, the rest give way', () => {
+      const connectors = ['x', 'y', 'z'].map((id) => createTestConnector(id, 'a', 'b', { ...orthogonal, labels: [label('l', 'same label')] }));
+      const page = { ...createTestDocument({ nodes: pair() }).pages[0]!, connectors };
+      const first = plates({ ...page, connectors: [connectors[0]!, without(connectors[1]!), without(connectors[2]!)] })[0]!.point;
+      expect(plates(page)[0]!.point).toEqual(first);
+      expect(plates(page).map((entry) => entry.point)).toEqual(plates(page).map((entry) => entry.point));
+      expect(noneIntersect(plates(page))).toBe(true);
+    });
+
+    it('places a hundred labelled edges, every label somewhere and the same twice over', () => {
+      const nodes = Array.from({ length: 40 }, (_, index) => createTestNode(`n${index}`, { transform: at((index % 8) * 220, Math.floor(index / 8) * 140) }));
+      const connectors = Array.from({ length: 120 }, (_, index) => createTestConnector(`e${index}`, `n${index % 40}`, `n${(index * 7 + 3) % 40}`, { ...orthogonal, labels: [label('l', `edge ${index}`)] }));
+      const page = { ...createTestDocument({ nodes }).pages[0]!, connectors };
+      const once = projectPageConnectors(page).flatMap((edge) => edge.labels.map((entry) => entry.point));
+      expect(once).toHaveLength(120);
+      expect(once.every((point) => Number.isFinite(point.x) && Number.isFinite(point.y))).toBe(true);
+      expect(projectPageConnectors(page).flatMap((edge) => edge.labels.map((entry) => entry.point))).toEqual(once);
+    });
+
+    it('keeps a label that is longer than its edge', () => {
+      const nodes = [createTestNode('a', { transform: at(0, 0) }), createTestNode('b', { transform: at(130, 0) })];
+      const edge = createTestConnector('short', 'a', 'b', { ...orthogonal, labels: [label('l', 'a label far longer than the thirty pixels between these two nodes')] });
+      const page = { ...createTestDocument({ nodes }).pages[0]!, connectors: [edge] };
+      const [projected] = projectPageConnectors(page);
+      expect(projected!.labels).toHaveLength(1);
+      expect(Number.isFinite(projected!.labels[0]!.point.x)).toBe(true);
+    });
+
+    it('leaves a self-loop label where it is drawn and still counts it as taken', () => {
+      const nodes = [createTestNode('a', { transform: at(0, 0) })];
+      const loop = createTestConnector('loop', 'a', 'a', { ...orthogonal, labels: [label('l', 'retry')] });
+      const other = createTestConnector('other', 'a', 'a', { ...orthogonal, labels: [label('l', 'again')] });
+      const page = { ...createTestDocument({ nodes }).pages[0]!, connectors: [loop, other] };
+      expect(plates(page)).toHaveLength(2);
+    });
   });
 
   it('routes a self-loop as a bump out of the right side', () => {

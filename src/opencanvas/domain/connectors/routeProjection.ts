@@ -6,7 +6,7 @@ import type {
   ScenePage,
 } from '../document/types';
 import { applyMatrixToPoint, invertMatrix } from '../geometry/matrix';
-import { dedupePolyline, pointAtPolylineRatio } from '../geometry/polyline';
+import { dedupePolyline, pointAtPolylineRatio, polylineLength } from '../geometry/polyline';
 import { distanceBetweenPoints } from '../geometry/point';
 import type { Bounds2d, Matrix2d, Point2d } from '../geometry/types';
 import { createBounds2d, intersectsBounds } from '../geometry/bounds';
@@ -164,10 +164,48 @@ function spreadEnds(
   return spread;
 }
 
+// Ratios tried along a route once no run's middle is clear, nearest the middle first.
+const LABEL_RATIOS = [0.5, 0.35, 0.65, 0.25, 0.75];
+const LABEL_NUDGE_GAP_PX = 4;
+
+/** The unit normal of the route where it meets `ratio`, for stepping a plate off the line. */
+function normalAtRatio(samples: readonly Point2d[], ratio: number): Point2d {
+  let remaining = polylineLength(samples) * ratio;
+  for (let index = 1; index < samples.length; index += 1) {
+    const from = samples[index - 1]!;
+    const to = samples[index]!;
+    const length = distanceBetweenPoints(from, to);
+    if (length > 1e-9 && (remaining <= length || index === samples.length - 1)) return { x: -(to.y - from.y) / length, y: (to.x - from.x) / length };
+    remaining -= length;
+  }
+  return { x: 0, y: -1 };
+}
+
 /**
- * Where a label sits clear of every node: the asked-for point if it is, else the
- * midpoint of the longest clear run, else the asked-for point after all. Labels
- * the user placed (an offset) never come here.
+ * Where a label may sit along its route, in the order it is tried: the asked-for point (so a label
+ * never jumps while its neighbours move), the middle of each run longest first (a label mid-run reads
+ * better than one on a corner), a few steps along the route, then a step off the line to either side.
+ */
+function* labelCandidates(pathRatio: number, samples: readonly Point2d[], plateHeight: number): Generator<Point2d> {
+  const preferred = pointAtPolylineRatio(samples, pathRatio);
+  if (!preferred) return;
+  yield preferred;
+  const runs = samples.slice(1).map((point, index) => ({ from: samples[index]!, to: point }))
+    .sort((a, b) => distanceBetweenPoints(b.from, b.to) - distanceBetweenPoints(a.from, a.to));
+  for (const { from, to } of runs) yield { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+  for (const ratio of LABEL_RATIOS) {
+    const point = pointAtPolylineRatio(samples, ratio);
+    if (point) yield point;
+  }
+  const normal = normalAtRatio(samples, pathRatio);
+  const step = plateHeight + LABEL_NUDGE_GAP_PX;
+  for (const side of [1, -1]) yield { x: preferred.x + normal.x * step * side, y: preferred.y + normal.y * step * side };
+}
+
+/**
+ * Where a label sits clear of everything in `obstacles` (the nodes, and the labels placed before
+ * it): the asked-for point if it is, else the first of the other candidates that is, else the
+ * asked-for point after all. Labels the user placed (an offset) never come here.
  */
 export function clearLabelPoint(
   text: string,
@@ -178,11 +216,12 @@ export function clearLabelPoint(
 ): Point2d | null {
   const preferred = pointAtPolylineRatio(samples, pathRatio);
   if (!preferred) return null;
-  const runs = samples.slice(1).map((point, index) => ({ from: samples[index]!, to: point }))
-    .sort((a, b) => distanceBetweenPoints(b.from, b.to) - distanceBetweenPoints(a.from, a.to))
-    .map(({ from, to }) => ({ x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }));
-  const clear = (point: Point2d) => !obstacles.some((bounds) => intersectsBounds(bounds, plate(text, point)));
-  return [preferred, ...runs].find(clear) ?? preferred;
+  const clear = (point: Point2d) => {
+    const box = plate(text, point);
+    return !obstacles.some((bounds) => intersectsBounds(bounds, box));
+  };
+  for (const point of labelCandidates(pathRatio, samples, plate(text, preferred).height)) if (clear(point)) return point;
+  return preferred;
 }
 
 function endAnchor(endpoint: ConnectorEndpoint, node: SceneNode): SceneAnchor | null {
@@ -568,10 +607,10 @@ function midShift(start: OrthogonalEnd, end: OrthogonalEnd, source: SpreadEnd | 
   return end.point[along] >= start.point[along] ? shift : -shift;
 }
 
-function projectConnectorWithContext(
+function draftConnector(
   connector: SceneConnector,
   context: ConnectorProjectionContext
-): ProjectedConnector | null {
+): ConnectorDraft | null {
   if (connector.metadata.hidden === true) return null;
   const sourceNode =
     connector.source.nodeId === null ? undefined : context.nodesById.get(connector.source.nodeId);
@@ -631,25 +670,63 @@ function projectConnectorWithContext(
     && connector.source.nodeId > connector.target.nodeId;
   const samples = shiftInteriorOrthogonal(path.samples, lateral, flipNormal);
   const presentation = resolveConnectorPresentation(connector);
-  // An automatic route's label steps off any node it would cover; a placed one stays put.
-  const automaticLabels = orthogonal !== null && connector.waypoints.length === 0;
-  const labels = connector.labels.map((label) => {
-    const point = (automaticLabels && label.offset.x === 0 && label.offset.y === 0
-      ? clearLabelPoint(label.text, label.pathRatio, samples, context.labelObstacles(),
-        (text, at) => connectorLabelPlate(text, presentation.label, at))
-      : pointAtPolylineRatio(samples, label.pathRatio)) ?? start;
-    return {
-      id: label.id,
-      text: label.text,
-      point: { x: point.x + label.offset.x, y: point.y + label.offset.y },
-    };
-  });
+  return {
+    connector, start, commands: path.commands, samples, presentation,
+    // An automatic route's labels step off whatever they would cover; a placed route's stay put.
+    steersLabels: orthogonal !== null && connector.waypoints.length === 0,
+  };
+}
+
+/** A connector's route and look: everything but where its labels sit, which needs the whole page. */
+interface ConnectorDraft {
+  readonly connector: SceneConnector;
+  readonly start: Point2d;
+  readonly commands: ProjectedConnector['commands'];
+  readonly samples: readonly Point2d[];
+  readonly presentation: ProjectedConnector['presentation'];
+  readonly steersLabels: boolean;
+}
+
+/**
+ * Where every label of a page sits, keyed `${connectorId}:${labelId}`. A label the user placed, or on
+ * a route they drew, stays where it is and is taken from the start; the rest are placed in connector
+ * order, each placed plate an obstacle for the next, so no two labels cover each other or a node.
+ * ponytail: O(labels × candidates × (nodes + labels)); a grid over the plates if a page ever needs it.
+ */
+function placeLabels(drafts: readonly ConnectorDraft[], leaves: readonly Bounds2d[]): ReadonlyMap<string, Point2d> {
+  const points = new Map<string, Point2d>();
+  const taken: Bounds2d[] = [...leaves];
+  const free: { key: string; text: string; pathRatio: number; draft: ConnectorDraft }[] = [];
+  for (const draft of drafts) {
+    for (const label of draft.connector.labels) {
+      const key = `${draft.connector.id}:${label.id}`;
+      if (draft.steersLabels && label.text && label.offset.x === 0 && label.offset.y === 0) {
+        free.push({ key, text: label.text, pathRatio: label.pathRatio, draft });
+        continue;
+      }
+      const at = pointAtPolylineRatio(draft.samples, label.pathRatio) ?? draft.start;
+      const point = { x: at.x + label.offset.x, y: at.y + label.offset.y };
+      points.set(key, point);
+      if (label.text) taken.push(connectorLabelPlate(label.text, draft.presentation.label, point));
+    }
+  }
+  for (const { key, text, pathRatio, draft } of free) {
+    const plate = (words: string, at: Point2d) => connectorLabelPlate(words, draft.presentation.label, at);
+    const point = clearLabelPoint(text, pathRatio, draft.samples, taken, plate) ?? draft.start;
+    points.set(key, point);
+    taken.push(plate(text, point));
+  }
+  return points;
+}
+
+function finishConnector(draft: ConnectorDraft, points: ReadonlyMap<string, Point2d>): ProjectedConnector {
+  const { connector } = draft;
   return {
     id: connector.id,
-    commands: path.commands,
-    samples,
-    labels,
-    presentation,
+    commands: draft.commands,
+    samples: draft.samples,
+    labels: connector.labels.map((label) => ({ id: label.id, text: label.text, point: points.get(`${connector.id}:${label.id}`) ?? draft.start })),
+    presentation: draft.presentation,
   };
 }
 
@@ -657,17 +734,20 @@ export function projectConnector(
   page: ScenePage,
   connector: SceneConnector
 ): ProjectedConnector | null {
-  return projectConnectorWithContext(connector, createConnectorProjectionContext(page));
+  return projectConnectors(page, [connector])[0] ?? null;
 }
 
 export function projectPageConnectors(page: ScenePage): readonly ProjectedConnector[] {
   return projectConnectors(page, page.connectors);
 }
 
-/** Some of a page's connectors, sharing one projection context. */
+/**
+ * Some of a page's connectors, sharing one projection context. Their labels are placed among
+ * themselves: ask for the whole page to place them among every label on it.
+ */
 export function projectConnectors(page: ScenePage, connectors: readonly SceneConnector[]): readonly ProjectedConnector[] {
   const context = createConnectorProjectionContext(page);
-  return connectors
-    .map((connector) => projectConnectorWithContext(connector, context))
-    .filter((connector): connector is ProjectedConnector => connector !== null);
+  const drafts = connectors.flatMap((connector) => draftConnector(connector, context) ?? []);
+  const points = placeLabels(drafts, context.labelObstacles());
+  return drafts.map((draft) => finishConnector(draft, points));
 }

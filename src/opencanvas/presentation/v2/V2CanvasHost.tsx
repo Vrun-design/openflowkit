@@ -33,7 +33,7 @@ import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
 import { resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import { resolveWidgetInks, widgetBackdrop, widgetLabelBox } from '../../domain/nodes/widgetNodePresentation';
 import { connectorLabelPlate, resolveConnectorLabelStyle } from '../../domain/connectors/labelStyle';
-import { projectConnectors } from '../../domain/connectors/routeProjection';
+import { projectPageConnectors } from '../../domain/connectors/routeProjection';
 import { semanticDetailLevel } from '../../infrastructure/pixi/viewportProjection';
 import { V2ContextBar, contextBarStyle, sameRect, unionScreenBounds, visibleCanvasEdges } from './V2ContextBar';
 import type { ContextMenuTarget } from './V2ContextMenu';
@@ -386,16 +386,20 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   }, [selectionIds, selectedConnectorId, props.editing, props.readOnly, props.hostRef,
     props.camera, props.page, viewportSize]);
 
+  // The page's connectors as drawn, only while a selection has a bar to place; the camera does not change them.
+  const hasBar = contextAnchor !== null && selectionIds.length > 0;
+  const pageProjection = useMemo(() => (hasBar ? projectPageConnectors(props.page) : []), [hasBar, props.page]);
   // Label plates of the connectors touching the selection, in screen space: the bar keeps off them.
   const labelPlates = useMemo(() => {
     // Below full detail the canvas draws no connector labels, so there is nothing to keep off.
     if (!contextAnchor || selectionIds.length === 0 || semanticDetailLevel(props.camera.zoom) !== 'full') return [];
     const selected = new Set(selectionIds);
-    const touching = props.page.connectors.filter((connector) => connector.labels.length > 0
-      && (selected.has(connector.source.nodeId ?? '') || selected.has(connector.target.nodeId ?? '')));
-    const byId = new Map(touching.map((connector) => [connector.id, connector]));
-    return projectConnectors(props.page, touching).flatMap((projected) => {
-      const style = resolveConnectorLabelStyle(byId.get(projected.id)!);
+    const touching = new Map(props.page.connectors.filter((connector) => connector.labels.length > 0
+      && (selected.has(connector.source.nodeId ?? '') || selected.has(connector.target.nodeId ?? '')))
+      .map((connector) => [connector.id, connector]));
+    // The whole page: a label sits where it does because of its neighbours, so a subset would put it elsewhere.
+    return pageProjection.filter((projected) => touching.has(projected.id)).flatMap((projected) => {
+      const style = resolveConnectorLabelStyle(touching.get(projected.id)!);
       return projected.labels.map(({ text, point }) => {
         const plate = connectorLabelPlate(text, style, point);
         const from = worldToScreen(props.camera, { x: plate.x, y: plate.y });
@@ -403,7 +407,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
         return new DOMRect(from.x, from.y, to.x - from.x, to.y - from.y);
       });
     });
-  }, [contextAnchor, selectionIds, props.page, props.camera]);
+  }, [contextAnchor, selectionIds, pageProjection, props.page, props.camera]);
   labelPlatesRef.current = labelPlates;
 
   // Shapes in the band the bar could take, above or below the selection: the bar keeps off them too,
