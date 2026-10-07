@@ -54,8 +54,8 @@ test('C4 workspace: generate, drill down, rename across views, play a flow', asy
   const editor = page.getByRole('textbox', { name: 'Diagram source' });
   await editor.fill(WORKSPACE);
   await page.getByRole('button', { name: 'Generate diagram' }).click();
-  await expect.poll(async () => (await pages(page)).length).toBe(3);
-  const [, landscape, container] = await pages(page);
+  await expect.poll(async () => (await pages(page)).length).toBe(2);
+  const [landscape, container] = await pages(page);
   expect(landscape!.name).toBe('System landscape');
   expect(container!.name).toBe('container of Shop');
   expect(landscape!.elements).toEqual(expect.arrayContaining(['customer', 'shop']));
@@ -100,7 +100,7 @@ test('C4 workspace: generate, drill down, rename across views, play a flow', asy
   await page.getByRole('button', { name: 'Close panel' }).click();
   await page.keyboard.press('Escape');
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+0' : 'Control+0');
-  await expect.poll(async () => (await pages(page)).length).toBe(3);
+  await expect.poll(async () => (await pages(page)).length).toBe(2);
 });
 
 test('canvas connector between two model objects records the relation', async ({ page }) => {
@@ -117,7 +117,7 @@ views { view landscape; view container of Shop }
 `);
   await page.getByRole('button', { name: 'Generate diagram' }).click();
   // The code panel aborts an in-flight generate on close: wait for the commit.
-  await expect.poll(async () => (await pages(page)).length).toBe(3);
+  await expect.poll(async () => (await pages(page)).length).toBe(2);
   await page.getByRole('button', { name: 'Close panel' }).click();
   // Land on the container view before drawing, via the model panel.
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model' }).click();

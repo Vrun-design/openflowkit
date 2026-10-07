@@ -182,7 +182,7 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
       if (workspace.views.length > 1 || workspace.views[0]!.viewId.startsWith('view:')) {
         // A C4 workspace: one page per view, all pages in one undo step.
         const command = buildWorkspacePagesCommand(document, workspace, {
-          mintId: mintV2Id, ...(target ? { replaceFrameId: target } : {}),
+          mintId: mintV2Id, intoPageId: currentPage.id, ...(target ? { replaceFrameId: target } : {}),
         });
         if (command) commit(nameUntitledDocument(document, command, primary.meta.title));
         workspaceTextRef.current = source;

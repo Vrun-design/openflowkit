@@ -68,10 +68,10 @@ views { view context of Shop; view container of Shop }
     const created = await run.run('create_diagram', { dsl: C4 });
     expect(created.command!.kind).toBe('batch');
     expect(created.output).toMatchObject({ family: 'architecture', views: [{ viewId: 'view:context:shop' }, { viewId: 'view:container:shop' }] });
-    expect(run.document().pages.map((page) => page.name)).toEqual(['Page 1', 'context of Shop', 'container of Shop']);
+    expect(run.document().pages.map((page) => page.name)).toEqual(['context of Shop', 'container of Shop']); // the empty page it was made on becomes the first view
     const again = await run.run('create_diagram', { dsl: C4 });
     expect(again.command).toBeNull();
-    expect(run.document().pages).toHaveLength(3);
+    expect(run.document().pages).toHaveLength(2);
     const listed = await run.run('list_diagrams', {});
     expect((listed.output as { diagrams: unknown[] }).diagrams).toHaveLength(2);
   });
@@ -84,7 +84,7 @@ views { view context of Shop; view container of Shop }
       await run.run('create_diagram', { dsl });
       const unchanged = await run.run('create_diagram', { dsl });
       expect(unchanged.command).toBeNull();
-      const views = run.document().pages.filter((page) => page.name !== 'Page 1');
+      const views = run.document().pages;
       expect(unchanged.output).toMatchObject({
         pageId: views[0]!.id,
         frameId: views[0]!.nodes.find((node) => node.kind === 'frame')!.id,
@@ -105,7 +105,7 @@ views { view context of Shop; view container of Shop }
       const outcome = await op(name).run(op(name).schema.parse(input), { ...run.context(), pageId: page.id });
       expect(outcome.command).not.toBeNull();
       const applied = applyDocumentCommand(before, outcome.command!);
-      expect(applied.document.pages.map((entry) => entry.name)).toEqual(['Page 1', 'container of Shop']);
+      expect(applied.document.pages.map((entry) => entry.name)).toEqual(['container of Shop']);
       expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(before);
       expect(outcome.output).toMatchObject({ views: [{ viewId: 'view:container:shop' }] });
     });

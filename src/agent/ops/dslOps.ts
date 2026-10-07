@@ -3,7 +3,7 @@
 // read the frames back, honest about drift and losses.
 import { z } from 'zod';
 import { buildDslPageCommand, nextDslFrameOrigin } from '../../opencanvas/application/dsl/dslPageCommand';
-import { buildWorkspacePagesCommand, workspaceViewFrames } from '../../opencanvas/application/dsl/architectureCommands';
+import { buildWorkspacePagesCommand, workspaceViewFrames, type WorkspacePagesOptions } from '../../opencanvas/application/dsl/architectureCommands';
 import { frameEdited, frameScene, dslFrames } from '../../dsl/frameScene';
 import { serializeLosses } from '../../dsl/losses';
 import { serialize } from '../../dsl/serialize';
@@ -53,10 +53,10 @@ const mintPageId = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0,
  * A C4 workspace lands as one page per view, like ⌘↵ does.
  * The output describes the first view like a single diagram and lists the rest.
  */
-function workspaceOutcome(document: SceneDocumentV1, workspace: CompileWorkspaceResult, replaceFrameId?: string) {
-  const command = buildWorkspacePagesCommand(document, workspace, { mintId: mintPageId, ...(replaceFrameId ? { replaceFrameId } : {}) });
+function workspaceOutcome(document: SceneDocumentV1, workspace: CompileWorkspaceResult, where: Omit<WorkspacePagesOptions, 'mintId'> = {}) {
+  const command = buildWorkspacePagesCommand(document, workspace, { mintId: mintPageId, ...where });
   const result = command ? applyDocumentCommand(document, command).document : document;
-  const placed = workspaceViewFrames(result, workspace, replaceFrameId);
+  const placed = workspaceViewFrames(result, workspace, where.replaceFrameId);
   const views = workspace.views.map((view, index) => ({ viewId: view.viewId, name: view.name, ...placed[index]! }));
   const first = workspace.views[0]!.result;
   return {
@@ -81,12 +81,20 @@ export const createDiagram = defineOp({
   async run({ dsl, pageId, at, palette }, context) {
     const page = requirePage(context.document, pageId ?? context.pageId);
     const source = readAgentSource(dsl);
-    const origin: Point2d = at ? pointOf(at) : nextDslFrameOrigin(page);
-    const workspace = await context.capabilities.compileWorkspace(source.dsl, {
+    const compileAt = (origin: Point2d) => context.capabilities.compileWorkspace(source.dsl, {
       origin,
       ...(palette ? { appearance: { palette } } : {}),
     });
-    if (workspace.views.length > 1 || workspace.views[0]!.viewId.startsWith('view:')) return withConverted(workspaceOutcome(context.document, workspace), source);
+    const origin: Point2d = at ? pointOf(at) : nextDslFrameOrigin(page);
+    let workspace = await compileAt(origin);
+    if (workspace.views.length > 1 || workspace.views[0]!.viewId.startsWith('view:')) {
+      // Views live on their own pages: a regenerate keeps the frame where it is, not right of whatever the target page holds.
+      const held = at ? undefined : workspaceViewFrames(context.document, workspace)[0];
+      const there = held && context.document.pages.find((entry) => entry.id === held.pageId)
+        ?.nodes.find((node) => node.id === held.frameId)?.transform.translation;
+      if (there && (there.x !== origin.x || there.y !== origin.y)) workspace = await compileAt(there);
+      return withConverted(workspaceOutcome(context.document, workspace, { intoPageId: page.id }), source);
+    }
     const compiled = workspace.views[0]!.result;
     return {
       command: buildDslPageCommand(page, compiled),
@@ -112,7 +120,7 @@ export const updateDiagram = defineOp({
       origin: frame.transform.translation,
       ...(palette ? { appearance: { palette } } : {}),
     });
-    if (workspace.views.length > 1 || workspace.views[0]!.viewId.startsWith('view:')) return withConverted(workspaceOutcome(context.document, workspace, frameId), source);
+    if (workspace.views.length > 1 || workspace.views[0]!.viewId.startsWith('view:')) return withConverted(workspaceOutcome(context.document, workspace, { replaceFrameId: frameId }), source);
     const compiled = workspace.views[0]!.result;
     return {
       command: buildDslPageCommand(page, compiled, frameId),

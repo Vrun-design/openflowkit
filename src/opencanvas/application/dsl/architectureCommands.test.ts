@@ -62,6 +62,26 @@ describe('workspace pages command', () => {
     ]);
   });
 
+  it('puts the first view on the empty page it is generated from, as one undo step', async () => {
+    const empty = createEmptyV2Document('doc-4', 'Shop');
+    const pageId = empty.pages[0]!.id;
+    const command = buildWorkspacePagesCommand(empty, await compileWorkspace(WORKSPACE), { mintId, intoPageId: pageId })!;
+    const applied = applyDocumentCommand(empty, command);
+    expect(applied.document.pages.map((page) => page.name)).toEqual(['context of Shop', 'container of Shop']);
+    expect(applied.document.pages[0]!.id).toBe(pageId);
+    expect(archViewIdOfPage(applied.document.pages[0]!)).toBe('view:context:shop');
+    expect(applyDocumentCommand(applied.document, applied.inverse).document.pages).toEqual(empty.pages);
+  });
+
+  it('leaves a page that holds drawings alone', async () => {
+    const seeded = await generatedDocument('architecture\nmodel {\n  person Alice\n  system Shop\n  Alice -> Shop\n}\n');
+    const busy = seeded.pages.find((page) => archViewIdOfPage(page))!;
+    const bob = await compileWorkspace('architecture\nmodel {\n  person Bob\n  system Bank\n  Bob -> Bank\n}\n');
+    const applied = applyDocumentCommand(seeded, buildWorkspacePagesCommand(seeded, bob, { mintId, intoPageId: busy.id })!).document;
+    expect(applied.pages).toHaveLength(seeded.pages.length + 1);
+    expect(applied.pages.find((page) => page.id === busy.id)).toEqual(busy);
+  });
+
   it('regenerates the same pages instead of duplicating them', async () => {
     const document = await generatedDocument();
     const again = await compileWorkspace(EDITED);

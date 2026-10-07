@@ -111,6 +111,8 @@ function setPage(page: ScenePage, after: ScenePage, id: string, label: string): 
 export interface WorkspacePagesOptions {
   /** A frame the code panel is bound to: its view replaces the frame in place. */
   readonly replaceFrameId?: string;
+  /** The page the user generates from: when it holds nothing, the first new view takes it instead of leaving it empty. */
+  readonly intoPageId?: string;
   readonly mintId: (prefix: string) => string;
 }
 
@@ -184,6 +186,8 @@ export function buildWorkspacePagesCommand(
   const used = new Set<string>();
   const changed = new Map<string, ScenePage>();
   const inserts: DocumentCommand[] = [];
+  // The first view that needs a page takes the empty one the user is on.
+  let blank = document.pages.find((page) => page.id === options.intoPageId && page.nodes.length === 0 && page.connectors.length === 0);
   const regenerate = (page: ScenePage, frameId: string, view: CompileWorkspaceResult['views'][number]) => {
     used.add(frameId);
     const before = changed.get(page.id) ?? page;
@@ -200,7 +204,11 @@ export function buildWorkspacePagesCommand(
       && (view.viewId === boundViewId || (!existing && !(boundViewId && live.has(boundViewId))));
     if (boundTakes) regenerate(boundPage, boundId!, view);
     else if (existing) regenerate(existing.page, existing.frame.id, view);
-    else inserts.push(insertViewPageCommand(document.pages.length + inserts.length, view.viewId, view.name, view.result, options.mintId));
+    else if (blank) {
+      const { name, diagramKind, nodes, connectors, metadata } = viewPage(blank.id, view.viewId, view.name, view.result);
+      changed.set(blank.id, { ...blank, name, diagramKind, nodes, connectors, metadata: { ...blank.metadata, ...metadata } });
+      blank = undefined;
+    } else inserts.push(insertViewPageCommand(document.pages.length + inserts.length, view.viewId, view.name, view.result, options.mintId));
   }
   const commands: DocumentCommand[] = [
     ...document.pages.flatMap((page) => {
@@ -243,15 +251,8 @@ export function buildWorkspacePagesCommand(
   return batch('architecture-workspace-generate', `Generate ${workspace.views.length} views`, commands);
 }
 
-function insertViewPageCommand(
-  index: number,
-  viewId: string,
-  name: string,
-  result: CompileWorkspaceResult['views'][number]['result'],
-  mintId: (prefix: string) => string,
-): DocumentCommand {
-  const pageId = mintId('page');
-  const page: ScenePage = {
+function viewPage(pageId: string, viewId: string, name: string, result: CompileWorkspaceResult['views'][number]['result']): ScenePage {
+  return {
     id: pageId,
     name,
     diagramKind: result.meta.family,
@@ -261,6 +262,16 @@ function insertViewPageCommand(
     metadata: { view: { id: viewId } },
     extensions: {},
   };
+}
+
+function insertViewPageCommand(
+  index: number,
+  viewId: string,
+  name: string,
+  result: CompileWorkspaceResult['views'][number]['result'],
+  mintId: (prefix: string) => string,
+): DocumentCommand {
+  const page = viewPage(mintId('page'), viewId, name, result);
   return {
     kind: 'insert-page',
     id: `insert-view-page:${viewId}`,

@@ -87,7 +87,7 @@ test('Structurizr pasted into the panel converts to a C4 workspace', async ({ pa
   await expect(editor).toHaveValue(/person User/);
   await expect(editor).toHaveValue(/view container of Shop/);
   await editor.press(process.platform === 'darwin' ? 'Meta+Enter' : 'Control+Enter');
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __V2__?: V2Api }).__V2__?.getDocument()?.pages.length ?? 0)).toBe(3);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __V2__?: V2Api }).__V2__?.getDocument()?.pages.length ?? 0)).toBe(2);
 });
 
 test('D2 pasted into the panel converts and generates', async ({ page }) => {

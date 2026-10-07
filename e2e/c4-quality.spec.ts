@@ -11,7 +11,9 @@ test('C4 starter, keyboard inspection, focused camera and visual flow authoring 
   const workspace = page.getByRole('toolbar', { name: 'Workspace', exact: true });
   await workspace.getByRole('button', { name: 'Architecture model', exact: true }).click();
   await page.getByRole('button', { name: 'Create C4 workspace', exact: true }).click();
-  await expect.poll(async () => (await doc(page))?.pages.length).toBe(4);
+  await expect.poll(async () => (await doc(page))?.pages.length).toBe(3);
+  // The three views are the only pages: the empty page it was made on became the first.
+  expect((await doc(page))?.pages.every((entry) => entry.nodes.length > 0)).toBe(true);
   await expect(page.getByRole('button', { name: 'Shop architecture', exact: true })).toBeVisible();
   await workspace.getByRole('button', { name: 'Architecture model', exact: true }).click();
   await expect(page.getByLabel('Search architecture')).toBeVisible();
@@ -92,17 +94,17 @@ test('Generate from the untouched starter draft keeps a view made in the model p
   const modelButton = workspace.getByRole('button', { name: 'Architecture model', exact: true });
   await modelButton.click();
   await page.getByRole('button', { name: 'Create C4 workspace', exact: true }).click();
-  await expect.poll(async () => (await doc(page))?.pages.length).toBe(4);
+  await expect.poll(async () => (await doc(page))?.pages.length).toBe(3);
   const modelPanel = page.getByRole('complementary', { name: 'Architecture model' });
   if (!(await modelPanel.isVisible())) await modelButton.click();
   await modelPanel.locator('.ofk-v2-model-row', { hasText: 'API' }).first().click();
   await page.getByRole('button', { name: 'Create Component view', exact: true }).click();
-  await expect.poll(async () => (await doc(page))?.pages.length).toBe(5);
+  await expect.poll(async () => (await doc(page))?.pages.length).toBe(4);
   const generate = page.getByRole('button', { name: 'Generate diagram' });
   if (!(await generate.isVisible())) await workspace.getByRole('button', { name: 'Diagram as code' }).click();
   await generate.click();
   await expect(generate).toBeEnabled();
-  await expect.poll(async () => (await doc(page))?.pages.length).toBe(5);
+  await expect.poll(async () => (await doc(page))?.pages.length).toBe(4);
   if (!(await modelPanel.isVisible())) await modelButton.click();
   await modelPanel.getByRole('tab', { name: /Views/ }).click();
   await expect(modelPanel.getByRole('list', { name: 'Views' })).toContainText('Component');
