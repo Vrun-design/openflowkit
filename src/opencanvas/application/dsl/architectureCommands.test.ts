@@ -93,6 +93,21 @@ describe('workspace pages command', () => {
     expect(firstViewLanding(document, await compileWorkspace(EDITED), again)).toEqual({ pageId: landed.pageId, frameId: landed.frameId });
   });
 
+  it('keeps a page name the user chose, and renames one still carrying the generated name', async () => {
+    const document = await generatedDocument();
+    const [, context, containers] = document.pages;
+    const renamed = { ...document, pages: document.pages.map((page) => page.id === context!.id ? { ...page, name: 'Shop overview' } : page) };
+    const applied = applyDocumentCommand(renamed, buildWorkspacePagesCommand(renamed, await compileWorkspace(EDITED), { mintId })!).document;
+    expect(applied.pages.find((page) => page.id === context!.id)!.name).toBe('Shop overview');
+    expect(applied.pages.find((page) => page.id === containers!.id)!.name).toBe('Containers: Shop');
+    // A page still named like its frame (a pre-level-names document) follows the view.
+    const stale = { ...document, pages: document.pages.map((page) => page.id === containers!.id ? { ...page, name: 'container of Shop' } : page) };
+    const frame = stale.pages.find((page) => page.id === containers!.id)!.nodes.find((node) => node.kind === 'frame')!;
+    const label = { ...stale, pages: stale.pages.map((page) => page.id === containers!.id ? { ...page, nodes: page.nodes.map((node) => node.id === frame.id ? { ...node, content: { ...node.content, label: 'container of Shop' } } : node) } : page) };
+    const migrated = applyDocumentCommand(label, buildWorkspacePagesCommand(label, await compileWorkspace(WORKSPACE.replace('Web [tech: React]', 'Web [tech: Vue]')), { mintId })!).document;
+    expect(migrated.pages.find((page) => page.id === containers!.id)!.name).toBe('Containers: Shop');
+  });
+
   it('leaves a page that holds drawings alone', async () => {
     const seeded = await generatedDocument('architecture\nmodel {\n  person Alice\n  system Shop\n  Alice -> Shop\n}\n');
     const busy = seeded.pages.find((page) => archViewIdOfPage(page))!;

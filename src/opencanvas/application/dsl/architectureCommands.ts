@@ -193,8 +193,10 @@ export function buildWorkspacePagesCommand(
     const before = changed.get(page.id) ?? page;
     const command = buildDslPageCommand(before, view.result, frameId);
     let after = command?.kind === 'set-page' ? command.after : before;
-    // A page that holds other diagrams keeps its own name.
-    if (after.name !== view.name && modelFrameCount(after) <= 1) after = { ...after, name: view.name };
+    // A page that holds other diagrams, or that the user renamed, keeps its own name.
+    const oldLabel = before.nodes.find((node) => node.id === frameId)?.content.label;
+    const unnamed = /^Page \d+$/.test(before.name) || before.name === oldLabel;
+    if (unnamed && after.name !== view.name && modelFrameCount(after) <= 1) after = { ...after, name: view.name };
     if (after !== page) changed.set(page.id, after);
   };
   for (const view of workspace.views) {
