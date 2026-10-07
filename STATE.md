@@ -14,14 +14,15 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - **Phase 13 DONE 2026-10-03** except 13.4 on a stronger model (nemotron free: Mermaid 96%, DSL 90% first try).
 - MCP 0.2.0 builds and answers over stdio (29 tools, Mermaid in) but is **unpublished**: npm still serves 0.1.2,
   which has no live bridge. Publish (`prepublishOnly` rebuilds) before launch; see memory `project_mcp_registry_publish`.
-## Launch-readiness pass 2026-10-05 (opus-5.5) — committed on `v2`, verify green
-- CI had been red since 2026-09-25 (editor chunk over budget, so e2e never ran). Fixed: v1 importer, agent op
-  registry and Structurizr/D2 load on demand. Entry JS 566 → 231 KB; editor 1504 → 1422 KB (budget 1500).
-- Split god files: `V2EditorPage` 1350 → ~935 (seven `useV2*` hooks); `useV2Pointer` 1306 → 633 + `v2PointerGestures`.
-- Removed the Slides rail mock (saved nothing). Untitled documents take their first diagram's `title:`
-  (`nameUntitledDocument`). Star count backs off a day on failure. nginx CSP = `_headers`. PNG/GIF/MP4 exports
-  draw labels in Inter (`withSvgImage`); saved SVG/PDF embed it (thumbnails don't). 39 dead exports gone. Docs on
-  Astro 7 / Starlight 0.42, Node 22 everywhere, `npm audit` 0. README/SECURITY/CONTRIBUTING describe v2.
+## Launch-readiness pass 2026-10-05: CI green again, entry JS 566 → 231 KB, god files split (see git log)
+## Mermaid fidelity pass 2026-10-07 (opus-5.5), 6 commits on `v2`, verify green (2121 unit)
+- Pasted Mermaid generates without Convert (code panel, home, MCP all go through `detectForeign`/`readAgentSource`).
+- Flowchart: 48-construct corpus (`fixtures/mermaid/flowchartSyntax.ts`), classDef/linkStyle colours, `&` chains,
+  edge ids/animate, subgraph direction (Mermaid's rule), `icons: off` on import. Sequence/class/state/ER: real syntax.
+- Layout: ELK honours label size and back edges (`backEdges`); router lands on real outlines, spreads ends, keeps
+  labels off nodes. Sequence notes get their own rows; SVG export draws participants like the canvas. Class: parent on top.
+- Ceilings: labels avoid nodes, not other labels; namespace boxes not drawn; multi-line state notes dropped.
+  Owner call: adopt Mermaid's runtime (like Excalidraw/draw.io) or keep our parser, see the 10-07 report.
 ## Found, not fixed (owner calls)
 - Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI): `docs/plan/launch-holds.md`. CI uploads first-failure
   traces (`e2e-traces`). A new worker's deps are pre-scanned (`optimizeDeps.entries`), or dev reloads mid-session.
