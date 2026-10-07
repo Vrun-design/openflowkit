@@ -64,13 +64,13 @@ export interface DetectionRule {
 }
 
 export const SERVICE_RULES: DetectionRule[] = [
-  { name: 'PostgreSQL', type: 'database', provider: 'unknown', patterns: [/\bpsycopg\b/i, /\bpostgres\b/i, /\bpostgresql\b/i, /\bpg\b/i] },
+  { name: 'PostgreSQL', type: 'database', provider: 'unknown', patterns: [/\bpsycopg2?\b/i, /\bpostgres\b/i, /\bpostgresql\b/i, /\bpg\b/i] },
   { name: 'MySQL', type: 'database', provider: 'unknown', patterns: [/\bmysql2?\b/i, /\bpymysql\b/i] },
   { name: 'MongoDB', type: 'database', provider: 'unknown', patterns: [/\bmongodb\b/i, /\bmongoose\b/i] },
   { name: 'Redis', type: 'cache', provider: 'unknown', patterns: [/\bioredis\b/i, /\bredis\b/i] },
   { name: 'Kafka', type: 'messaging', provider: 'unknown', patterns: [/\bkafkajs\b/i, /\bconfluent-kafka\b/i] },
   { name: 'RabbitMQ', type: 'queue', provider: 'unknown', patterns: [/\bamqplib\b/i, /\bpika\b/i] },
-  { name: 'S3', type: 'storage', provider: 'aws', patterns: [/\bS3Client\b/, /\bboto3\b/i] },
+  { name: 'S3', type: 'storage', provider: 'aws', patterns: [/\bS3Client\b/, /@aws-sdk\/client-s3\b/] },
   { name: 'CloudFront', type: 'network', provider: 'aws', patterns: [/\bcloudfront\b/i] },
   { name: 'RDS', type: 'database', provider: 'aws', patterns: [/\bRDS\b/, /\brds\b/i] },
   { name: 'DynamoDB', type: 'database', provider: 'aws', patterns: [/\bDynamoDB\b/, /\bdynamodb\b/i] },
@@ -117,8 +117,9 @@ export function isScannedFileName(name: string): boolean {
 
 /**
  * The one walk both the analyzer and architecture discovery use: same skip
- * list, same size cap. `accept` widens the extension filter (Dockerfiles,
- * go.mod) without forking the ignore rules.
+ * list, same size cap. `accept` sees the repo-relative path: it widens the
+ * extension filter (Dockerfiles, go.mod) or narrows it (tests) without forking
+ * the ignore rules.
  */
 export async function walkProjectFiles(
   rootDir: string,
@@ -146,7 +147,7 @@ export async function walkProjectFiles(
       }
       if (!entry.isFile()) continue;
       totalFiles += 1;
-      if (!accept(entry.name)) continue;
+      if (!accept(path.relative(rootDir, fullPath))) continue;
       if (collected.length >= maxFiles) break;
       try {
         const stat = await fs.promises.stat(fullPath);

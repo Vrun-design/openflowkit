@@ -103,7 +103,10 @@ describe('architecture discovery', () => {
     const root = await fixture();
     const discovery = await runArchitectureDiscovery(root);
     const names = discovery.units.map((unit) => unit.name);
-    expect(names).toEqual(expect.arrayContaining(['web', 'api', 'db', 'worker', 'PostgreSQL', 'jobs', 'Stripe']));
+    expect(names).toEqual(expect.arrayContaining(['web', 'api', 'db', 'worker', 'jobs', 'Stripe']));
+    // The compose service running postgres is the store, not a second "PostgreSQL" node.
+    expect(names).not.toContain('PostgreSQL');
+    expect(discovery.units.find((unit) => unit.name === 'db')).toMatchObject({ kind: 'store', tech: 'PostgreSQL' });
 
     const api = discovery.units.find((unit) => unit.name === 'api')!;
     expect(api.kind).toBe('container');
@@ -117,7 +120,6 @@ describe('architecture discovery', () => {
       'api->db:depends on',
       'deploy.worker->api:deploys',
       'api->stripe:calls',
-      'db->postgresql:uses',
     ]));
     expect(discovery.evidenceCount).toBeGreaterThan(0);
     expect(discovery.languages['typescript']).toBeGreaterThan(0);
@@ -152,9 +154,9 @@ describe('architecture discovery', () => {
     await write(root, 'docker-compose.yml', 'services:\n  cache:\n    image: redis:7\n');
     const shrunk = await runArchitectureDiscovery(root);
     const drifted = driftReport(model, shrunk);
-    expect(drifted.missing.map((finding) => finding.name)).toEqual(expect.arrayContaining(['cache', 'Redis']));
+    expect(drifted.missing.map((finding) => finding.name)).toEqual(['cache']);
     expect(drifted.missing[0]?.evidence.length).toBeGreaterThan(0);
-    expect(drifted.undrawn.map((finding) => finding.name)).toEqual(expect.arrayContaining(['db', 'PostgreSQL']));
+    expect(drifted.undrawn.map((finding) => finding.name)).toEqual(expect.arrayContaining(['db']));
     expect(drifted.undrawn.find((finding) => finding.name === 'db')?.evidence[0]?.text).toBe('db');
 
     const retagged: ArchModelData = {

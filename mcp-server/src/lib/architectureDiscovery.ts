@@ -64,9 +64,16 @@ const LOCKFILES = new Set([
   'poetry.lock', 'Pipfile.lock', 'Cargo.lock', 'composer.lock', 'go.sum', 'Gemfile.lock',
 ]);
 
-/** The analyzer's filter, widened for the files that define a deployable unit. */
-export function acceptsArchitectureFile(name: string): boolean {
-  if (LOCKFILES.has(name)) return false;
+/** Folders and files that test, fake or measure the system rather than run it. */
+const NON_PRODUCTION_DIRS = new Set(['test', 'tests', '__tests__', 'spec', 'specs', 'e2e', 'fixtures', '__fixtures__', 'testdata', '__mocks__', 'evals']);
+const NON_PRODUCTION_FILE = /\.(?:test|spec)\.[^.]+$|_test\.(?:go|py)$|^test_[^/]*\.py$/;
+
+/** The analyzer's filter, widened for the files that define a deployable unit; takes a repo-relative path. */
+export function acceptsArchitectureFile(file: string): boolean {
+  const segments = file.split(/[\\/]/);
+  const name = segments.pop()!;
+  if (LOCKFILES.has(name) || NON_PRODUCTION_FILE.test(name)) return false;
+  if (segments.some((segment) => NON_PRODUCTION_DIRS.has(segment))) return false;
   return isScannedFileName(name) || DOCKERFILE.test(name) || COMPOSE.test(name) || LOOSE_MANIFESTS.has(name);
 }
 
@@ -82,9 +89,16 @@ interface UnitDraft {
   image?: string;
   /** Declared package/module name, for import matching. */
   packageName?: string;
+  /** Named by compose or k8s: that name is what other services call it by. */
+  deployed?: boolean;
+  /** `dir` holds the unit's code (a Dockerfile or package manifest), not just its deploy yaml. */
+  code?: boolean;
   evidence: DiscoveryEvidence[];
   order: number;
 }
+
+type UnitInput = Pick<UnitDraft, 'id' | 'name' | 'kind' | 'dir'>
+  & Partial<Pick<UnitDraft, 'tech' | 'image' | 'packageName' | 'deployed' | 'code'>>;
 
 interface RelationDraft {
   from: string;
@@ -151,6 +165,58 @@ function normalizeName(value: string): string {
   return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
+/** Unrendered Helm/Go template text names nothing real. */
+function isTemplated(value: string): boolean {
+  return value.includes('{{');
+}
+
+/** Files that make their folder a package of its own. */
+const PACKAGE_MANIFESTS = new Set(['package.json', 'go.mod', 'pyproject.toml', 'requirements.txt', 'pom.xml']);
+
+/**
+ * `src/cartservice/src/Dockerfile` builds cartservice: a Dockerfile in a `src`
+ * folder that is not a package itself belongs to the folder above. Never lifted
+ * to the repo root, so a top-level `src/` stays its own unit.
+ */
+function serviceDir(dir: string, packageDirs: ReadonlySet<string>): string {
+  const parent = path.posix.dirname(dir);
+  return path.posix.basename(dir) === 'src' && parent !== '.' && !packageDirs.has(dir) ? parent : dir;
+}
+
+const CLUSTER_SUFFIX = /^(?:[a-z0-9-]+\.)?svc(?:\.cluster\.local)?$/i;
+
+/**
+ * The services an env value addresses: `checkoutservice:5050`, `http://api:8080/v1`,
+ * `postgres://user:pw@db:5432/app`, `cart.default.svc.cluster.local:7070`. A value
+ * needs an address's shape (a scheme, `user@` or a `:port`), so a database name, a
+ * role or `true` is never a call; a dotted host counts only with a cluster suffix,
+ * so `api.openai.com` is not the local `api`.
+ */
+function envHosts(value: string): string[] {
+  return scalar(value).split(/[\s,;]+/).flatMap((part) => {
+    const scheme = /^[a-z][a-z0-9+.-]*:\/\//i.exec(part)?.[0] ?? '';
+    const user = /^[^@/]*@/.exec(part.slice(scheme.length))?.[0] ?? '';
+    const [host = '', port] = part.slice(scheme.length + user.length).split(/[/?#]/)[0]!.split(':');
+    if (!scheme && !user && !/^\d+$/.test(port ?? '')) return [];
+    const [first = '', ...rest] = host.split('.');
+    if (rest.length > 0 && !CLUSTER_SUFFIX.test(rest.join('.'))) return [];
+    return /^[A-Za-z][A-Za-z0-9_-]*$/.test(first) ? [first] : [];
+  });
+}
+
+/** Images that are a datastore or queue, by base name; a tool built on one (`redis-commander`) is not. */
+// ponytail: a fixed list of the common images; add one when a repo's store shows up as a container.
+const DATA_IMAGES: Readonly<Record<string, string>> = {
+  redis: 'Redis', valkey: 'Redis', postgres: 'PostgreSQL', postgis: 'PostgreSQL', mysql: 'MySQL', mariadb: 'MySQL',
+  mongo: 'MongoDB', rabbitmq: 'RabbitMQ', kafka: 'Kafka', 'cp-kafka': 'Kafka',
+};
+
+function dataRuleOfImage(image: string): { name: string; kind: DiscoveredUnitKind } | undefined {
+  const name = DATA_IMAGES[imageBase(image)];
+  const rule = name ? SERVICE_RULES.find((entry) => entry.name === name) : undefined;
+  return rule ? { name: rule.name, kind: serviceKind(rule.type, rule.provider) } : undefined;
+}
+
 /* ------------------------------------------------------------- discovery */
 
 /** Deployables and data units can absorb a same-named unit; externals stay distinct. */
@@ -164,7 +230,10 @@ class Builder {
   private readonly units = new Map<string, UnitDraft>();
   private readonly relations: RelationDraft[] = [];
   private readonly manifestIds = new Map<string, string>();
+  /** A unit's own names: a second unit by one of them is the same service. */
   private readonly nameIds = new Map<string, string>();
+  /** Other names it answers to (a deployed unit's package, a store's product): for resolving only. */
+  private readonly aliasIds = new Map<string, string>();
   private counter = 0;
   private relationCounter = 0;
 
@@ -173,19 +242,18 @@ class Builder {
    * one folder describe one deployable, even when their names differ. Package
    * metadata beats a Dockerfile's base image for name and tech.
    */
-  manifest(input: {
-    id: string; name: string; kind: DiscoveredUnitKind; dir: string;
-    tech?: string; image?: string; packageName?: string;
-  }): UnitDraft {
+  manifest(input: UnitInput): UnitDraft {
     const existingId = this.manifestIds.get(input.dir);
     const existing = existingId ? this.units.get(existingId) : undefined;
     if (!existing) {
-      const draft = this.unit(input);
+      const draft = this.unit({ ...input, code: true });
       this.manifestIds.set(input.dir, draft.id);
       return draft;
     }
     if (input.packageName) {
-      existing.name = input.name;
+      // Other services call a deployed unit by its deploy name; the package name is an alias.
+      if (existing.deployed) this.alias(existing, input.name);
+      else this.rename(existing, input.name);
       existing.packageName = input.packageName;
       if (input.tech) existing.tech = input.tech;
     } else if (!existing.tech && input.tech) {
@@ -195,40 +263,61 @@ class Builder {
     return existing;
   }
 
-  unit(input: {
-    id: string; name: string; kind: DiscoveredUnitKind; dir: string;
-    tech?: string; image?: string; packageName?: string;
-  }): UnitDraft {
-    const nameKey = `${kindGroup(input.kind)}:${normalizeName(input.name)}`;
-    const nameMatchId = this.nameIds.get(nameKey);
-    if (nameMatchId && nameMatchId !== input.id) {
-      const match = this.units.get(nameMatchId);
-      if (match) {
-        // The compose service `api` and the manifest in `services/api` are one
-        // deployable: keep the directory with real files for import ownership.
-        if (input.dir.length > match.dir.length) match.dir = input.dir;
-        if (!match.tech && input.tech) match.tech = input.tech;
-        if (!match.image && input.image) match.image = input.image;
-        if (!match.packageName && input.packageName) match.packageName = input.packageName;
-        if (KIND_RANK[input.kind] < KIND_RANK[match.kind]) match.kind = input.kind;
-        return match;
+  /**
+   * One unit per service, however many files name it: the same `frontend` in
+   * k8s, kustomize, a release bundle and `src/frontend` is merged by name.
+   */
+  unit(input: UnitInput): UnitDraft {
+    const nameMatchId = this.nameIds.get(this.nameKey(input.kind, input.name));
+    const named = nameMatchId && nameMatchId !== input.id ? this.units.get(nameMatchId) : undefined;
+    // Two folders of code are two services, whatever their packages are called.
+    const sameService = named && !(input.code && named.code && input.dir !== named.dir) ? named : undefined;
+    const match = sameService ?? this.units.get(input.id);
+    if (match) {
+      // The directory with the service's code wins over its deploy yaml (then
+      // the deeper one), so imports get an owner.
+      if (input.code && !match.code) {
+        match.dir = input.dir;
+        match.code = true;
+      } else if (Boolean(input.code) === Boolean(match.code) && input.dir.length > match.dir.length) {
+        match.dir = input.dir;
       }
-    }
-    const existing = this.units.get(input.id);
-    if (existing) {
-      // A compose service at the repo root and its package in `web/` are one
-      // unit: the directory with real files wins, so imports get an owner.
-      if (input.dir.length > existing.dir.length) existing.dir = input.dir;
-      if (!existing.tech && input.tech) existing.tech = input.tech;
-      if (!existing.image && input.image) existing.image = input.image;
-      if (!existing.packageName && input.packageName) existing.packageName = input.packageName;
-      if (KIND_RANK[input.kind] < KIND_RANK[existing.kind]) existing.kind = input.kind;
-      return existing;
+      if (input.deployed && !match.deployed) {
+        this.rename(match, input.name);
+        match.deployed = true;
+      }
+      if (!match.tech && input.tech) match.tech = input.tech;
+      if (!match.image && input.image) match.image = input.image;
+      if (!match.packageName && input.packageName) match.packageName = input.packageName;
+      if (KIND_RANK[input.kind] < KIND_RANK[match.kind]) match.kind = input.kind;
+      return match;
     }
     const draft: UnitDraft = { ...input, evidence: [], order: this.counter++ };
     this.units.set(draft.id, draft);
-    this.nameIds.set(nameKey, draft.id);
+    this.rename(draft, input.name);
     return draft;
+  }
+
+  /** The unit that answers to `name` (own name first, then an alias), in one kind group. */
+  named(kind: DiscoveredUnitKind, name: string): UnitDraft | undefined {
+    const key = this.nameKey(kind, name);
+    const id = this.nameIds.get(key) ?? this.aliasIds.get(key);
+    return id ? this.units.get(id) : undefined;
+  }
+
+  alias(draft: UnitDraft, name: string): void {
+    const key = this.nameKey(draft.kind, name);
+    if (!this.aliasIds.has(key)) this.aliasIds.set(key, draft.id);
+  }
+
+  private nameKey(kind: DiscoveredUnitKind, name: string): string {
+    return `${kindGroup(kind)}:${normalizeName(name)}`;
+  }
+
+  private rename(draft: UnitDraft, name: string): void {
+    draft.name = name;
+    const key = this.nameKey(draft.kind, name);
+    if (!this.nameIds.has(key)) this.nameIds.set(key, draft.id);
   }
 
   relation(from: string, to: TargetRef, label: string | undefined, file: string, line: number, text: string): void {
@@ -253,6 +342,10 @@ class Builder {
     }
     const wanted = ref.name ? normalizeName(ref.name) : '';
     const wantedImage = ref.image ? imageBase(ref.image) : '';
+    for (const key of wanted ? [`app:${wanted}`, `data:${wanted}`] : []) {
+      const id = this.nameIds.get(key) ?? this.aliasIds.get(key);
+      if (id && id !== excludeId) return this.units.get(id);
+    }
     for (const unit of this.all()) {
       if (unit.id === excludeId) continue;
       if (wanted && normalizeName(unit.name) === wanted) return unit;
@@ -296,12 +389,19 @@ class Builder {
 
 /* ----------------------------------------------------------- compose etc. */
 
+interface ConfigLine {
+  value: string;
+  line: number;
+  text: string;
+}
+
 interface ComposeService {
   name: string;
   line: number;
   text: string;
   image?: string;
   dependsOn: Array<{ name: string; line: number; text: string }>;
+  environment: ConfigLine[];
 }
 
 function parseComposeServices(content: string): ComposeService[] {
@@ -324,6 +424,7 @@ function parseComposeServices(content: string): ComposeService[] {
   const services: ComposeService[] = [];
   let current: ComposeService | null = null;
   let dependsIndent = -1;
+  let environmentIndent = -1;
   block.forEach((raw, index) => {
     const line = start + 2 + index;
     if (raw.trim() === '' || raw.trimStart().startsWith('#')) return;
@@ -331,16 +432,25 @@ function parseComposeServices(content: string): ComposeService[] {
     const text = raw.trim();
     const key = /^([A-Za-z0-9._-]+):(?:\s*(.*))?$/.exec(text);
     if (indent === serviceIndent && key) {
-      current = { name: key[1]!, line, text, dependsOn: [] };
+      current = { name: key[1]!, line, text, dependsOn: [], environment: [] };
       services.push(current);
       dependsIndent = -1;
+      environmentIndent = -1;
       return;
     }
     if (!current) return;
     if (dependsIndent !== -1 && indent <= dependsIndent) dependsIndent = -1;
+    if (environmentIndent !== -1 && (indent < environmentIndent || (indent === environmentIndent && !text.startsWith('-')))) environmentIndent = -1;
+    // `environment:` as a map (`API_URL: http://api`) or a list (`- API_URL=http://api`).
+    if (environmentIndent !== -1) {
+      const entry = /^-\s*["']?[A-Za-z_][A-Za-z0-9_]*=(.*?)["']?$/.exec(text)?.[1] ?? key?.[2];
+      if (entry) current.environment.push({ value: entry, line, text });
+      return;
+    }
     if (key && indent > serviceIndent) {
       const [, keyName, rawValue] = key;
       if (keyName === 'image') current.image = scalar(rawValue ?? '');
+      if (keyName === 'environment' && !rawValue) environmentIndent = indent;
       if (keyName === 'depends_on') dependsIndent = indent;
       else if (dependsIndent !== -1 && indent > dependsIndent && !rawValue) {
         current.dependsOn.push({ name: keyName!, line, text });
@@ -359,6 +469,8 @@ interface K8sWorkload {
   kind: string;
   name: string;
   images: Array<{ image: string; line: number; text: string }>;
+  /** Every `value:` line (container env); hosts in them become calls. */
+  values: ConfigLine[];
   kindLine: number;
   nameLine: number;
 }
@@ -368,10 +480,12 @@ function parseK8sWorkloads(content: string): K8sWorkload[] {
   const workloads: K8sWorkload[] = [];
   let current: K8sWorkload | null = null;
   let inMetadata = false;
+  let envIndent = -1;
   const flush = () => {
     if (current?.name) workloads.push(current);
     current = null;
     inMetadata = false;
+    envIndent = -1;
   };
   lines.forEach((raw, index) => {
     const line = index + 1;
@@ -380,7 +494,7 @@ function parseK8sWorkloads(content: string): K8sWorkload[] {
     if (kind) {
       flush();
       if (/^(?:Deployment|StatefulSet|CronJob|DaemonSet)$/.test(kind[1]!)) {
-        current = { kind: kind[1]!, name: '', images: [], kindLine: line, nameLine: line };
+        current = { kind: kind[1]!, name: '', images: [], values: [], kindLine: line, nameLine: line };
       }
       return;
     }
@@ -389,12 +503,21 @@ function parseK8sWorkloads(content: string): K8sWorkload[] {
     if (/^spec:\s*$/.test(raw)) { inMetadata = false; return; }
     const name = /^\s+name:\s*(.+)$/.exec(raw);
     if (name && inMetadata && !current.name) {
+      // A Helm template (`{{ .Values.x.name }}`) names nothing until rendered: drop the workload.
+      if (isTemplated(name[1]!)) { current = null; return; }
       current.name = scalar(name[1]!);
       current.nameLine = line;
       return;
     }
     const image = /^\s+image:\s*(.+)$/.exec(raw);
-    if (image) current.images.push({ image: scalar(image[1]!), line, text: raw.trim() });
+    if (image && !isTemplated(image[1]!)) current.images.push({ image: scalar(image[1]!), line, text: raw.trim() });
+    // Only a container's `env:` list addresses services; probe headers and tolerations have values too.
+    const indent = indentOf(raw);
+    const text = raw.trim();
+    if (envIndent !== -1 && text && !text.startsWith('#') && (indent < envIndent || (indent === envIndent && !text.startsWith('-')))) envIndent = -1;
+    if (/^(?:-\s+)?env:\s*$/.test(text)) { envIndent = indent; return; }
+    const value = /^(?:-\s+)?value:\s*(.+)$/.exec(text);
+    if (value && envIndent !== -1 && !isTemplated(value[1]!)) current.values.push({ value: value[1]!, line, text });
   });
   flush();
   return workloads;
@@ -491,6 +614,17 @@ function importFacts(file: ScannedFile): ImportFact[] {
   const ext = path.extname(file.path).toLowerCase();
   const facts: ImportFact[] = [];
   if (ext === '.json' && /(^|\/)package\.json$/.test(file.path)) facts.push(...manifestDependencyFacts(file));
+  const base = path.posix.basename(file.path);
+  if (base === 'requirements.txt' || base === 'go.mod') {
+    // `redis==5.0` and `github.com/redis/go-redis/v9 v9.5.0` (in or after `require`) name a dependency.
+    file.content.split(/\r?\n/).forEach((raw, index) => {
+      const specifier = base === 'requirements.txt'
+        ? /^\s*([A-Za-z0-9][A-Za-z0-9_.-]*)\s*(?:[=<>~!;[]|$)/.exec(raw)?.[1]
+        : /^\s*(?:require\s+)?([a-z0-9.-]+\.[a-z]+\/\S+)\s+v\d/.exec(raw)?.[1];
+      if (specifier) facts.push({ specifier, line: index + 1, text: raw.trim() });
+    });
+    return facts;
+  }
   file.content.split(/\r?\n/).forEach((raw, index) => {
     const line = index + 1;
     let specifier: string | undefined;
@@ -527,8 +661,6 @@ const SDK_SERVICES: ReadonlyArray<SdkService> = [
   { pattern: /^(?:firebase|firebase-admin)$/, name: 'Firebase' },
   { pattern: /^@supabase\//, name: 'Supabase' },
   { pattern: /^@sentry\//, name: 'Sentry' },
-  { pattern: /^google\.golang\.org\/grpc$/, name: 'gRPC' },
-  { pattern: /^(?:grpc|grpcio)$/, name: 'gRPC' },
 ];
 
 const CLIENT_CALL = /\b(?:fetch|axios|got|superagent|requests\.|httpx|aiohttp|urllib|http\.Get|http\.NewRequest)\b/;
@@ -598,6 +730,9 @@ export async function runArchitectureDiscovery(
     .map((file) => ({ path: file.path.split(path.sep).join('/'), content: file.content }))
     .sort((a, b) => a.path.localeCompare(b.path));
   const builder = new Builder();
+  const packageDirs = new Set(ordered
+    .filter((file) => PACKAGE_MANIFESTS.has(path.posix.basename(file.path)))
+    .map((file) => path.posix.dirname(file.path)));
 
   for (const file of ordered) {
     const base = path.posix.basename(file.path);
@@ -606,25 +741,29 @@ export async function runArchitectureDiscovery(
 
     if (COMPOSE.test(base)) {
       for (const service of parseComposeServices(file.content)) {
-        const image = service.image ? imageBase(service.image) : undefined;
+        const data = service.image ? dataRuleOfImage(service.image) : undefined;
         const draft = builder.unit({
-          id: unitId(dir, service.name), name: service.name, kind: 'container', dir,
-          ...(image ? { image: service.image!, tech: image } : {}),
+          id: unitId(dir, service.name), name: service.name, kind: data?.kind ?? 'container', dir, deployed: true,
+          ...(service.image ? { image: service.image, tech: data?.name ?? imageBase(service.image) } : {}),
         });
+        if (data) builder.alias(draft, data.name);
         pushEvidence(draft, file.path, service.line, service.text);
         for (const dependency of service.dependsOn) {
           builder.relation(draft.id, { id: unitId(dir, dependency.name), name: dependency.name }, 'depends on', file.path, dependency.line, dependency.text);
         }
+        callsFromConfig(builder, draft.id, service.environment, file.path);
       }
     }
 
     if (DOCKERFILE.test(base)) {
       const from = lines.find((line) => /^\s*FROM\s+/i.test(line));
-      const name = dir ? path.posix.basename(dir) : path.posix.basename(resolved);
-      const baseImage = from ? scalar(from.replace(/^\s*FROM\s+/i, '').split(/\s+/)[0] ?? '') : undefined;
+      const home = serviceDir(dir, packageDirs);
+      const name = home ? path.posix.basename(home) : path.posix.basename(resolved);
+      // `FROM --platform=$BUILDPLATFORM golang:1.23 AS builder`: the image is the first non-flag word.
+      const baseImage = from?.replace(/^\s*FROM\s+/i, '').split(/\s+/).find((word) => !word.startsWith('--'));
       const draft = builder.manifest({
-        id: unitId(dir, name), name, kind: 'container', dir,
-        ...(baseImage && baseImage !== 'scratch' ? { tech: imageBase(baseImage) } : {}),
+        id: unitId(home, name), name, kind: 'container', dir: home,
+        ...(baseImage && baseImage !== 'scratch' ? { tech: imageBase(scalar(baseImage)) } : {}),
       });
       const fromLine = lines.findIndex((line) => /^\s*FROM\s+/i.test(line));
       if (fromLine >= 0) pushEvidence(draft, file.path, fromLine + 1, lines[fromLine]!);
@@ -634,15 +773,20 @@ export async function runArchitectureDiscovery(
 
     if ((base.endsWith('.yml') || base.endsWith('.yaml')) && /\bkind:\s*(?:Deployment|StatefulSet|CronJob|DaemonSet)\b/.test(file.content)) {
       for (const workload of parseK8sWorkloads(file.content)) {
+        // A workload is the store only when that is all it runs; a store sidecar doesn't make it one.
+        const data = workload.images.length === 1 ? dataRuleOfImage(workload.images[0]!.image) : undefined;
         const draft = builder.unit({
-          id: unitId(dir, workload.name), name: workload.name, kind: 'container', dir,
+          id: unitId(dir, workload.name), name: workload.name, kind: data?.kind ?? 'container', dir, deployed: true,
+          ...(data ? { tech: data.name } : {}),
         });
+        if (data) builder.alias(draft, data.name);
         pushEvidence(draft, file.path, workload.kindLine, `kind: ${workload.kind}`);
         pushEvidence(draft, file.path, workload.nameLine, `metadata.name: ${workload.name}`);
         for (const image of workload.images) {
           pushEvidence(draft, file.path, image.line, image.text);
           builder.relation(draft.id, { image: image.image }, 'deploys', file.path, image.line, image.text);
         }
+        callsFromConfig(builder, draft.id, workload.values, file.path);
       }
     }
 
@@ -701,8 +845,6 @@ export async function runArchitectureDiscovery(
     }
   }
 
-  scanServiceRules(ordered, builder);
-
   const all = builder.all();
   const packageIndex = new Map<string, UnitDraft>();
   for (const unit of all) {
@@ -720,6 +862,17 @@ export async function runArchitectureDiscovery(
         builder.relation(owner.id, { id: target.id }, 'imports', file.path, fact.line, fact.text);
         continue;
       }
+      // Local modules (`./lambda/handler`) and type packages never talk to a service.
+      if (/^(?:\.|\/|@\/|~\/|@types\/)/.test(fact.specifier)) continue;
+      // A datastore, queue or cloud service counts only when code imports its client
+      // (or a manifest depends on it): a word in a comment or a string is not a service.
+      const rule = serviceRuleFor(fact.specifier);
+      if (rule) {
+        const service = serviceUnit(builder, rule);
+        pushEvidence(service, file.path, fact.line, fact.text);
+        if (owner) builder.relation(owner.id, { id: service.id }, 'uses', file.path, fact.line, fact.text);
+        continue;
+      }
       const sdk = SDK_SERVICES.find((entry) => entry.pattern.test(fact.specifier));
       if (!sdk) continue;
       const external = builder.unit({
@@ -735,10 +888,12 @@ export async function runArchitectureDiscovery(
       const host = URL_LITERAL.exec(line)?.[1];
       if (!host || skipHost(host)) return;
       const name = host.replace(/^www\./, '');
-      // `api.stripe.com` is the Stripe the scanner already found: reuse it.
+      // `api.stripe.com` is Stripe, `sqs.us-east-1.amazonaws.com` is SQS.
+      const rule = serviceRuleFor(name);
+      // `api.openai.com` is the OpenAI the import pass already found.
       const known = builder.all().find((unit) => unit.kind === 'external'
         && normalizeName(unit.name).length > 2 && normalizeName(name).includes(normalizeName(unit.name)));
-      const external = known ?? builder.unit({
+      const external = rule ? serviceUnit(builder, rule) : known ?? builder.unit({
         id: slugDiscoveryId(name), name, kind: 'external', dir: '', tech: 'http',
       });
       pushEvidence(external, file.path, index + 1, line);
@@ -746,39 +901,30 @@ export async function runArchitectureDiscovery(
     });
   }
 
-  // A datastore/queue is used by the unit whose code mentions it: attach the
-  // dependency to its evidence's owner so the diagram is connected. Externals
-  // already got a relation from the import/URL pass, so they are skipped.
-  for (const unit of builder.all()) {
-    if (unit.kind !== 'store' && unit.kind !== 'queue') continue;
-    const evidence = unit.evidence[0];
-    if (!evidence) continue;
-    const owner = ownerOf(builder.all(), evidence.file);
-    if (owner && owner.id !== unit.id) {
-      builder.relation(owner.id, { id: unit.id }, 'uses', evidence.file, evidence.line, evidence.text);
-    }
-  }
-
   return builder.finish(ordered);
 }
 
-function scanServiceRules(files: readonly ScannedFile[], builder: Builder): void {
-  const drafts = new Map<string, UnitDraft>();
-  for (const file of files) {
-    file.content.split(/\r?\n/).forEach((line, index) => {
-      for (const rule of SERVICE_RULES) {
-        if (rule.name === 'Kubernetes' || rule.name === 'Docker Compose') continue;
-        const draft = drafts.get(rule.name);
-        if (draft && draft.evidence.length >= MAX_EVIDENCE) continue;
-        if (!rule.patterns.some((pattern) => pattern.test(line))) continue;
-        const target = draft ?? builder.unit({
-          id: slugDiscoveryId(rule.name), name: rule.name, kind: serviceKind(rule.type, rule.provider), dir: '',
-        });
-        drafts.set(rule.name, target);
-        pushEvidence(target, file.path, index + 1, line);
-      }
-    });
+/**
+ * Config values that name another service (`CART_SERVICE_ADDR: cartservice:7070`)
+ * are calls. The target is resolved by name when discovery finishes, so a host
+ * that names no unit (a SaaS URL, a port, `true`) draws nothing.
+ */
+function callsFromConfig(builder: Builder, from: string, values: readonly ConfigLine[], file: string): void {
+  for (const { value, line, text } of values) {
+    for (const host of envHosts(value)) builder.relation(from, { name: host }, 'calls', file, line, text);
   }
+}
+
+/** The scanner's rule for a client import or a host; cluster tooling is never a service here. */
+function serviceRuleFor(value: string): (typeof SERVICE_RULES)[number] | undefined {
+  return SERVICE_RULES.find((rule) => rule.provider !== 'cncf' && rule.provider !== 'docker'
+    && rule.patterns.some((pattern) => pattern.test(value)));
+}
+
+/** The rule's unit: a compose/k8s store already running it (`cache` on redis), else one named for it. */
+function serviceUnit(builder: Builder, rule: (typeof SERVICE_RULES)[number]): UnitDraft {
+  const kind = serviceKind(rule.type, rule.provider);
+  return builder.named(kind, rule.name) ?? builder.unit({ id: slugDiscoveryId(rule.name), name: rule.name, kind, dir: '' });
 }
 
 function serviceKind(type: string, provider: string): DiscoveredUnitKind {
