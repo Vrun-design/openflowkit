@@ -613,6 +613,7 @@ A -> B : message              solid, arrow
 A --> B : reply               dashed
 A ->> B : async               open head
 A -->> B : async reply
+A -> B : lost [head: cross]   ends in a cross (UML lost message); `-->` with it is dashed
 A -> A : self call
 activate A / deactivate A
 loop every 5s {  … }

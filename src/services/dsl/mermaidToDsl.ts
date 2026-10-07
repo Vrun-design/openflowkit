@@ -299,7 +299,6 @@ function sequenceDsl(source: string, nodes: readonly FlowNode[], edges: readonly
     if (self) return '->';
     if (kind === 'return') return '-->';
     if (kind === 'async') return '->>';
-    // `-x` ends in a cross the DSL message has no head for.
     return '->';
   };
   // Messages, notes and activations interleave by source order. The parser
@@ -331,7 +330,7 @@ function sequenceDsl(source: string, nodes: readonly FlowNode[], edges: readonly
     const self = message.source === message.target;
     events.push({
       order: numberData(message.data?.seqMessageOrder), rank: 1,
-      text: `${participantRef(message.source)} ${arrowOf(message.data?.seqMessageKind, self)} ${participantRef(message.target)}${label}`,
+      text: `${participantRef(message.source)} ${arrowOf(message.data?.seqMessageKind, self)} ${participantRef(message.target)}${label}${message.data?.head === 'cross' ? ' [head: cross]' : ''}`,
       fragment: message.data?.seqFragment ?? null,
     });
   }

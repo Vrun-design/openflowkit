@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { compile } from '../compile';
+import { resolveConnectorPresentation } from '../../opencanvas/domain/connectors/presentation';
 import { format, serialize } from '../serialize';
 
 describe('sequence family', () => {
@@ -20,6 +21,19 @@ describe('sequence family', () => {
     expect(first?.semantics).toMatchObject({ seqMessageKind: 'sync', seqMessageOrder: 0 });
     expect(second?.semantics).toMatchObject({ seqMessageKind: 'return', seqMessageOrder: 1 });
     expect(alice.size.height).toBeGreaterThan(200);
+  });
+
+  it('draws a message with `[head: cross]` ending in a cross, solid or dashed, and keeps it on a round trip', async () => {
+    const text = '%% ofk 1\nsequence\n\nA -> B : lost [head: cross]\nB --> A : lost reply [head: cross]\nA -> B : plain\n';
+    const result = await compile(text);
+    expect(result.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    const [solid, dashed, plain] = result.connectors.map(resolveConnectorPresentation);
+    expect(solid).toMatchObject({ targetMarkers: ['cross'], stroke: { dash: [] } });
+    expect(dashed!.targetMarkers).toEqual(['cross']);
+    expect(dashed!.stroke.dash.length).toBeGreaterThan(0);
+    expect(plain!.targetMarkers).toEqual(['triangle-filled']);
+    expect(serialize(result)).toBe(text);
+    expect(await format(text)).toBe(text);
   });
 
   it('marks actors and keeps their header aligned with participants', async () => {

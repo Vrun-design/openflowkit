@@ -123,9 +123,11 @@ function semanticMarkers(connector: SceneConnector): {
   if (erRelation) return erRelationMarkers(erRelation);
   const sequenceKind = optionalString(connector.semantics.seqMessageKind);
   if (sequenceKind) {
+    // A message that ends in a cross (`-x`) says so in its appearance; otherwise its kind decides the head.
+    const lost = markerFromAppearance(connector.appearance.markerEnd).filter((glyph) => glyph === 'cross');
     return {
       source: [],
-      target: [sequenceKind === 'sync' || sequenceKind === 'create' ? 'triangle-filled' : 'arrow'],
+      target: lost.length > 0 ? lost : [sequenceKind === 'sync' || sequenceKind === 'create' ? 'triangle-filled' : 'arrow'],
       dashed: sequenceKind === 'return',
     };
   }

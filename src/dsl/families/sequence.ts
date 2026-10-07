@@ -440,7 +440,8 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
       target: { nodeId: message.to, portId: null, anchor: null, point: null },
       route: { kind: 'direct', ownership: 'automatic' }, waypoints: [],
       labels: message.label ? [{ id: `${message.id}-label`, text: message.label, pathRatio: 0.5, offset: { x: 0, y: 0 }, metadata: {} }] : [],
-      appearance: {},
+      // `[head: cross]` is the one visual a message keeps: the lost message of UML, Mermaid's `-x`.
+      appearance: message.attrs.some((attribute) => attribute.key === 'head' && attribute.value.toLowerCase() === 'cross') ? { markerEnd: 'cross' } : {},
       semantics: {
         seqMessageKind: self ? 'self' : message.arrow === '-->' || message.arrow === '-->>' ? 'return' : message.arrow === '->>' ? 'async' : 'sync',
         seqMessageOrder: message.order,
@@ -566,7 +567,8 @@ function sequenceText(scene: DslFrameScene): string[] {
     const meta = dslConnectorMeta(connector);
     const arrow = (connector.metadata.dsl as { seqArrow?: string }).seqArrow ?? '->';
     const label = connector.labels[0]?.text;
-    return [...commentLines(meta.comments, ''), `${nodeName(from)} ${arrow} ${nodeName(to)}${label ? ` : ${quote(label)}` : ''}${attributeText(sortAttributes(meta.attrs ?? []))}`];
+    const attrs = [...(meta.attrs ?? []), ...(connector.appearance.markerEnd === 'cross' ? [{ key: 'head', value: 'cross' }] : [])];
+    return [...commentLines(meta.comments, ''), `${nodeName(from)} ${arrow} ${nodeName(to)}${label ? ` : ${quote(label)}` : ''}${attributeText(sortAttributes(attrs))}`];
   };
   const noteLine = (node: SceneNode): string[] => {
     const meta = dslNodeMeta(node);

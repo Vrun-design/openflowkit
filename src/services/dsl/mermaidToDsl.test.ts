@@ -149,7 +149,7 @@ describe('mermaidToDsl', () => {
     const lines = dsl.split('\n').map((line) => line.trim());
     expect(lines[1]).toBe('title: Checkout');
     for (const line of ['participant u = User [actor]', 'participant w = Web App', 'participant DB [db]', 'participant l = Logger',
-      'activate w', 'u -> w : "Open\\ncheckout"', 'w -> DB : drop', 'note right of w : retries',
+      'activate w', 'u -> w : "Open\\ncheckout"', 'w -> DB : drop [head: cross]', 'note right of w : retries',
       'alt connect {', '} else timeout {', 'break when down {', 'w --> u : bye', 'deactivate w', 'w -> l : hello']) {
       expect(lines).toContain(line);
     }
@@ -162,6 +162,30 @@ describe('mermaidToDsl', () => {
     expect(lines[lines.indexOf('w --> u : bye') - 1]).toBe('}');
     const compiled = await compile(dsl);
     expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+  });
+
+  // https://mermaid.js.org/syntax/sequenceDiagram.html#messages — all eight arrows in one block.
+  it('keeps the cross end of -x and --x, and the other six arrows as they were', async () => {
+    const { dsl, losses } = convert(`sequenceDiagram
+  Alice->John: Hello John, how are you?
+  Alice-->John: Hello John, how are you?
+  Alice->>John: Hello John, how are you?
+  Alice-->>John: Hello John, how are you?
+  Alice-xJohn: I am lost
+  Alice--xJohn: I am lost too
+  Alice-)John: See you later!
+  Alice--)John: See you later!`);
+    const lines = dsl.split('\n');
+    expect(lines).toContain('Alice -> John : "Hello John, how are you?"');
+    expect(lines).toContain('Alice --> John : "Hello John, how are you?"');
+    expect(lines).toContain('Alice -> John : I am lost [head: cross]');
+    expect(lines).toContain('Alice --> John : I am lost too [head: cross]');
+    expect(losses).toEqual([]);
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    const crossed = compiled.connectors.filter((connector) => connector.appearance.markerEnd === 'cross');
+    expect(crossed.map((connector) => connector.semantics.seqMessageKind)).toEqual(['sync', 'return']);
+    expect(await format(dsl)).toContain('[head: cross]');
   });
 
   it('converts real-world class syntax: unlabelled relations, labels, namespaces, styles, title', async () => {

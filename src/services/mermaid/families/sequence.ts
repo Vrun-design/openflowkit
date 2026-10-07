@@ -17,7 +17,9 @@ interface ParsedMessage {
   from: string;
   to: string;
   label: string;
-  kind: 'sync' | 'async' | 'return' | 'self' | 'create' | 'destroy';
+  kind: 'sync' | 'async' | 'return' | 'self' | 'create';
+  /** `-x` and `--x` end in a cross: a solid and a dotted line. */
+  head?: 'cross';
 }
 
 interface ParsedFragment {
@@ -69,7 +71,6 @@ function getParticipantLaneIndex(participants: ParsedParticipant[], participantI
 function resolveMessageKind(arrow: string): ParsedMessage['kind'] {
   if (arrow === '-->' || arrow === '-->>' || arrow === '-->>>' || arrow === '--x') return 'return';
   if (arrow === '-)' || arrow === '--)') return 'async';
-  if (arrow === '-x') return 'destroy';
   return 'sync';
 }
 
@@ -297,7 +298,7 @@ function parseSequence(input: string): {
       const isSelf = from === to;
       const kind = isSelf ? 'self' : resolveMessageKind(arrow);
       if (mark?.[1] === '+') activations.push({ participant: to, activate: true, order: messageOrder });
-      messages.push({ from, to, label, kind });
+      messages.push({ from, to, label, kind, ...(arrow === '-x' || arrow === '--x' ? { head: 'cross' as const } : {}) });
       messageOrder++;
       if (mark?.[1] === '-') activations.push({ participant: from, activate: false, order: messageOrder });
       matched = true;
@@ -357,6 +358,7 @@ function parseSequence(input: string): {
       type: 'sequence_message',
       data: {
         seqMessageKind: msg.kind,
+        ...(msg.head ? { head: msg.head } : {}),
         seqMessageOrder: i,
         sourceIsActor: participantKindMap.get(msg.from) === 'actor',
         targetIsActor: participantKindMap.get(msg.to) === 'actor',
