@@ -55,6 +55,8 @@ interface V2KeyboardOptions {
   readonly onToggleCode: () => void;
   readonly onToggleModel: () => void;
   readonly onToggleInspect: () => void;
+  /** ⌘F: the find bar, in place of the browser's. */
+  readonly onFind: () => void;
   readonly onSpacePan: (active: boolean) => void;
   /** Type-to-edit: return true when the key opened an editor, false to fall through to shortcuts. */
   readonly onTypeToEdit: (key: string) => boolean;
@@ -114,6 +116,9 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       event.preventDefault();
     } else if (command && key === 'd') {
       opts.onDuplicate();
+      event.preventDefault();
+    } else if (command && key === 'f') {
+      opts.onFind();
       event.preventDefault();
     } else if (command && key === 'l') {
       opts.onToggleLock();

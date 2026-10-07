@@ -37,6 +37,7 @@ renders this list itself, from the same data, so it cannot drift from what the k
 | --- | --- |
 | Pan | `Space + drag` |
 | Zoom to fit | `⌘ + 0` |
+| Find on canvas (Enter next, Shift + Enter previous, Escape back) | `⌘ + F` |
 | Zoom to selection | `Shift + 2` |
 | Zoom to fit (Shift) | `Shift + 1` |
 | Zoom to 100% | `⌘ + 1` |

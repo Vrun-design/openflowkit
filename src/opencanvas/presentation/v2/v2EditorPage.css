@@ -1113,3 +1113,9 @@
 .ofk-v2-inspect-code span { color: var(--ofk-muted); margin-inline-end: 10px; user-select: none; }
 .ofk-v2-inspect-empty { margin: 0; font-size: 12.5px; color: var(--ofk-muted); }
 .ofk-v2-inspect-item { padding: 4px 8px; font-size: 13px; color: var(--ofk-text); }
+
+/* Find on canvas (⌘F): a floating bar under the top chrome. */
+.ofk-v2-find { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 37; display: flex; align-items: center; gap: 4px; padding: 6px 8px; background: var(--ofk-surface); border: 1px solid var(--ofk-border); border-radius: var(--ofk-radius-control); box-shadow: var(--ofk-material-shadowChrome); }
+.ofk-v2-find .ofk-field label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ofk-v2-find .ofk-field input { width: 220px; }
+.ofk-v2-find-count { min-width: 64px; padding-inline: 6px; font-size: 12px; color: var(--ofk-muted); text-align: center; font-variant-numeric: tabular-nums; }

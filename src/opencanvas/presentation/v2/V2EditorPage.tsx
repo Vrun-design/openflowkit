@@ -35,6 +35,7 @@ import { V2ContextMenu, type ContextMenuTarget } from './V2ContextMenu';
 import type { V2Tool } from './V2CreationToolbar';
 import { V2ExportMenu } from './V2ExportMenu';
 import { V2FeatureTip } from './V2FeatureTip';
+import { V2FindBar } from './V2FindBar';
 import { V2FlowPanel } from './V2FlowPanel';
 import { V2LoadCenter } from './V2LoadCenter';
 import { V2ModelPanel } from './V2ModelPanel';
@@ -59,6 +60,7 @@ import { useV2DocumentLoad } from './useV2DocumentLoad';
 import { useV2EditActions } from './useV2EditActions';
 import { useV2EditorNotices } from './useV2EditorNotices';
 import { useV2FeatureTips } from './useV2FeatureTips';
+import { useV2Find } from './useV2Find';
 import { useV2FlowPlayback } from './useV2FlowPlayback';
 import { diagramIconsOn, iconToggleFrame, useV2IconActions } from './useV2IconActions';
 import { useV2IconLibrary } from './useV2IconLibrary';
@@ -536,6 +538,12 @@ export function V2EditorPage(): React.JSX.Element {
     iconLibrary.setOpen(false);
   };
 
+  const find = useV2Find({
+    page, selectionRef, selectedConnectorIdsRef, cameraRef: camera.cameraRef,
+    applySelection, applyConnectorSelection,
+    glideToNodes: camera.glideToNodes, animateTo: camera.animateTo, focusCanvas,
+  });
+
   const handleKeyDown = useV2Keyboard({
     toolRef, editingRef,
     onToolChange: setTool,
@@ -612,6 +620,7 @@ export function V2EditorPage(): React.JSX.Element {
     onToggleCode: toggleCode,
     onToggleModel: () => panels.toggleWorkspace('model'),
     onToggleInspect: () => panels.toggleWorkspace('inspect'),
+    onFind: find.show,
     onSpacePan: setSpacePan,
   });
 
@@ -901,6 +910,7 @@ export function V2EditorPage(): React.JSX.Element {
               />
             ) : null}
             {panels.shortcutsOpen ? <V2Shortcuts onClose={panels.closeShortcuts} /> : null}
+            {find.open ? <V2FindBar find={find} /> : null}
             {tips.tip ? <V2FeatureTip id={tips.tip} onAction={() => runTip(tips.tip!)} onClose={tips.dismiss} /> : null}
             {panels.motionOpen ? (
               <Panel title="Animation export" side="start" className="ofk-motion-panel ofk-v2-layers-panel"

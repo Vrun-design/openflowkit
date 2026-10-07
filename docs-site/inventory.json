@@ -150,6 +150,17 @@
       ]
     },
     {
+      "id": "find-on-canvas",
+      "name": "Find on canvas",
+      "status": "shipped",
+      "evidence": "src/opencanvas/presentation/v2/useV2Find.ts:29",
+      "notes": "⌘F searches the visible text on the current page; Enter / Shift+Enter step through matches, Escape restores the selection and view.",
+      "page": "keyboard-shortcuts",
+      "shortcuts": [
+        "Find on canvas"
+      ]
+    },
+    {
       "id": "hover-connector-handles",
       "name": "Hover handles and drag-to-connect",
       "status": "shipped",

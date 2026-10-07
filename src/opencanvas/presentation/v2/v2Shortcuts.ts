@@ -52,6 +52,7 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
         { label: 'Zoom to fit (Shift)', keys: 'Shift + 1', tokens: ['Digit1'] },
         { label: 'Zoom to 100%', keys: `${command} + 1`, tokens: ['1', meta] },
         { label: 'Zoom in / out', keys: `${command} + = / −`, tokens: ['=', '+', '-'] },
+        { label: 'Find on canvas', keys: `${command} + F`, tokens: ['f', meta] },
         { label: 'Layers', keys: 'L', tokens: ['l'] },
         // The dispatcher reads metaKey/ctrlKey for this, never altKey: Alt is
         // taken by resize-from-centre.
