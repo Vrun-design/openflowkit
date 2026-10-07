@@ -34,7 +34,7 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=18.3"
   },
   "scripts": {
     "build:icons": "node scripts/build-icon-manifest.mjs",

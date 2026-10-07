@@ -40,6 +40,13 @@ This project follows [Semantic Versioning](https://semver.org/).
   from `sql_table`s, tested on the D2 project's own example files.
 - **Agent skill** (`skills/openflowkit/SKILL.md`) and a `llms.txt` that describes v2 (it still
   described the 1.x DSL). `npm run eval:validity` measures how often a model's diagrams compile.
+- **`openflowkit` CLI covers every op.** `openflowkit op <name>` runs any MCP op on a
+  `.openflow.json` (new ops appear without CLI code), plus `render` (→ SVG), `convert`
+  (→ `.openflow.json`), `validate` and `ops`. Stdin, `--json`, `--strict`, exit codes 0/1/2.
+- **MCP: headless layout is ELK**, the editor's engine, so file mode and the CLI draw the same
+  diagram as the app. Over 1000 shapes or 400 connections stops with a message.
+- **MCP schema fix (0.2.0): `add_shape` advertises its fields.** Its refined schema exposed only
+  `documentId`, so clients sent no `kind`/`label` and every call failed validation.
 - **MCP: icons in headless exports.** File-mode SVG and animated SVG, and the
   `openflowkit build` site, draw the same icon art as the editor.
 - **The assistant edits hand-drawn shapes, not only diagrams.** "Make the selected box red and move it right" now

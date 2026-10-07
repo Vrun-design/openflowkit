@@ -163,6 +163,8 @@ export interface OpCapabilities {
 interface AgentBundle {
   readonly AGENT_OPS: readonly AgentOp[];
   findAgentOp(name: string): AgentOp | null;
+  /** The op's fields, through a `.refine` wrapper: what a client advertises. */
+  opInputShape(op: AgentOp): AgentOpSchemaObject['shape'];
   runAgentOp(op: AgentOp, rawInput: unknown, context: {
     document: SceneDocumentV1; pageId: string; capabilities: OpCapabilities;
   }): Promise<{ document: SceneDocumentV1; changed: boolean; output: unknown }>;
@@ -184,6 +186,10 @@ interface AgentBundle {
   collectIconArt(document: SvgExportDocument, load: (packId: string, shapeId: string) => Promise<string | null>): Promise<Record<string, string>>;
   tablerSvg(nodes: readonly (readonly [string, Readonly<Record<string, string>>])[]): string;
   readonly ICON_PACK_IDS: Readonly<Record<string, string>>;
+  /** One row per op: the human operation it mirrors. */
+  readonly CAPABILITY_MANIFEST: readonly { readonly action: string; readonly operation: string; readonly mutates: boolean }[];
+  /** A cheap grid layout, for checks that discard positions. */
+  readonly deterministicLayout: unknown;
   /** ELK in process: the editor's layout, for file mode and the CLI. */
   readonly headlessElkLayout: unknown;
   readonly BRIDGE_PROTOCOL_VERSION: number;
@@ -209,10 +215,10 @@ export interface StarterTemplate {
 }
 
 export const {
-  AGENT_OPS, findAgentOp, runAgentOp, createFileCapabilities, grammarSection, lintDsl,
+  AGENT_OPS, findAgentOp, opInputShape, runAgentOp, createFileCapabilities, grammarSection, lintDsl,
   createAgentDocument, parseAgentDocument,
   compileWorkspace, architectureWorkspaceText, archModelFromJson, exportCanonicalSvg,
-  collectIconArt, tablerSvg, ICON_PACK_IDS, headlessElkLayout,
+  collectIconArt, tablerSvg, ICON_PACK_IDS, headlessElkLayout, deterministicLayout, CAPABILITY_MANIFEST,
   BRIDGE_PROTOCOL_VERSION, BRIDGE_DEFAULT_PORT, BRIDGE_POLL_SECONDS, BRIDGE_IDLE_MS,
   bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeRequest, WIDGET_KINDS, FRAME_PRESETS,
   STARTER_TEMPLATES, findStarterTemplate,

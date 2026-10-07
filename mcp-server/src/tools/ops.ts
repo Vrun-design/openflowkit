@@ -9,7 +9,7 @@ import { writeFile } from 'node:fs/promises';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { AGENT_OPS, runAgentOp, type AgentOpSchemaObject, type SceneDocumentV1 } from '../lib/agent.js';
+import { AGENT_OPS, opInputShape, runAgentOp, type SceneDocumentV1 } from '../lib/agent.js';
 import type { DocumentStore } from '../lib/documentStore.js';
 import type { LiveBridge } from '../lib/bridge.js';
 import { loadFileCapabilities } from '../lib/fileCapabilities.js';
@@ -31,11 +31,10 @@ function text(payload: unknown): CallToolResult {
 /** Live editor wins whenever one is paired; file mode needs an explicit id. */
 export function registerOpTools(server: McpServer, deps: OpToolDeps): void {
   for (const op of AGENT_OPS) {
-    const shape = (op.schema as unknown as AgentOpSchemaObject).shape;
     server.registerTool(op.name, {
       title: op.title,
       description: op.description,
-      inputSchema: { ...shape, documentId: documentIdField },
+      inputSchema: { ...opInputShape(op), documentId: documentIdField },
     }, async (raw: Record<string, unknown>): Promise<CallToolResult> => {
       const { documentId, ...input } = raw;
       try {

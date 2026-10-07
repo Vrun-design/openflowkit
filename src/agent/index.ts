@@ -4,7 +4,7 @@ import { projectLegacyDocument } from '@/opencanvas/domain/document/legacyProjec
 import type { SceneDocumentV1 } from '@/opencanvas/domain/document/types';
 import { validateSceneDocumentV1 } from '@/opencanvas/domain/document/validation';
 
-export { AGENT_OPS, findAgentOp } from './ops';
+export { AGENT_OPS, findAgentOp, opInputShape } from './ops';
 export { createFileCapabilities, grammarSection } from './host';
 export { headlessElkLayout } from './headlessLayout';
 export type { FileHostOptions } from './host';
@@ -27,6 +27,8 @@ export type { SceneDocumentV1 };
 // Headless consumers (the `openflowkit` CLI) compile whole workspaces and
 // render canonical SVG without a browser. Re-exported, not re-implemented.
 export { compileWorkspace } from '../dsl/compile';
+// Checks that throw positions away (`openflowkit validate`) skip ELK and its size cap.
+export { deterministicLayout } from '../dsl/layout';
 export { architectureWorkspaceText } from '../dsl/families/architecture/text';
 export { archModelFromJson } from '../dsl/model/model';
 export { collectIconArt, exportCanonicalSvg } from '../opencanvas/infrastructure/export/canonicalSvg';

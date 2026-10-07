@@ -50,6 +50,20 @@ describe('op tools', () => {
     }
   });
 
+  it('advertises the input fields of an op whose schema carries a cross-field rule', async () => {
+    // add_shape's schema is refined (catalog kinds need a label), which hid every field from MCP clients.
+    const { tools } = await (await client()).listTools();
+    const properties = Object.keys(tools.find(({ name }) => name === 'add_shape')!.inputSchema.properties ?? {});
+    expect(properties).toEqual(expect.arrayContaining(['kind', 'label', 'x', 'y', 'documentId']));
+  });
+
+  it('runs add_shape with the fields an agent sends', async () => {
+    const target = await client();
+    const { documentId } = await call(target, 'openflow_create', { name: 'Shapes' });
+    const added = await call(target, 'add_shape', { documentId, kind: 'process', label: 'Charge card', x: 40, y: 80 });
+    expect(added).toMatchObject({ changed: true });
+  });
+
   it('creates, reads, updates and exports a diagram in file mode', async () => {
     const target = await client();
     const created = await call(target, 'openflow_create', { name: 'Eval doc' });

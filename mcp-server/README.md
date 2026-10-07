@@ -135,14 +135,25 @@ one to target a file-mode document.
 
 ### `openflowkit` CLI
 
-The package also ships the `openflowkit` binary — the same discovery engine without an
-MCP client:
+The package also ships the `openflowkit` binary: every MCP op, plus discovery, without an
+MCP client. No browser download; SVG is drawn in plain TypeScript.
 
 ```bash
+openflowkit render diagram.mmd -o diagram.svg          # Mermaid, D2, Structurizr or DSL → SVG (stdin: -)
+openflowkit convert diagram.mmd -o diagram.openflow.json # → an editable document
+openflowkit validate diagram.mmd --json                # per-line diagnostics; exit 1 on an error
+openflowkit op create_diagram --doc flow.openflow.json --args '{"dsl":"flowchart\nA -> B"}'
+openflowkit op move --help                             # any op's arguments; `openflowkit ops` lists them
 openflowkit discover ./my-app --out architecture.ofk   # propose a model, with evidence
 openflowkit drift ./my-app --model architecture.ofk    # report drift; exit 1 when the model is stale
 openflowkit build ./docs-architecture --out dist       # static site: every view, drill-down, flows
 ```
+
+Unconverted Mermaid lines go to stderr and the command still succeeds; `--strict` makes them
+(and warnings) exit 1. `op` reads a `.openflow.json` (or starts an empty one) and writes the
+change back. Exit codes: 0 done, 1 the input or diagram is wrong, 2 usage. `--json` always prints
+one JSON document. Layout outside the app stops at 1000 shapes or 400 connections with a message
+rather than block; `validate` checks any size. Stdin is read only for `-`.
 
 `build` reads `architecture.ofk` (plus `views/*.snap` layout overrides) and writes a
 self-contained `index.html` with inline SVG views, breadcrumb drill-down and a flow

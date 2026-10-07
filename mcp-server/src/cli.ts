@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectIconArt, compileWorkspace, exportCanonicalSvg, type BundleWorkspace, type SvgExportDocument } from './lib/agent.js';
 import { loadFileCapabilities, loadIconArt } from './lib/fileCapabilities.js';
+import { OP_COMMANDS, OP_USAGE, runRegistryCommand } from './cliCommands.js';
 import {
   discoverySummary, discoveryToDsl, driftReport, modelFromNode, runArchitectureDiscovery,
   type ArchFlowData, type ArchFlowStepData, type ArchModelData, type ArchitectureDiscovery,
@@ -16,16 +17,20 @@ import {
 export interface CliIo {
   out(message: string): void;
   err(message: string): void;
+  /** Piped input for `-`; absent on a terminal. */
+  stdin?: () => Promise<string>;
 }
 
-const USAGE = `openflowkit — local-first architecture tools
+const USAGE = `openflowkit — diagrams agents write, kept valid, editable and next to the code
 
 Usage:
+${OP_USAGE}
   openflowkit discover <dir> [--out architecture.ofk]
   openflowkit drift <dir> [--model architecture.ofk] [--json]
   openflowkit build <dir> [--out dist]
 
 Commands:
+${OP_COMMANDS}
   discover  scan a repository and print or write a proposed C4 DSL workspace
   drift     compare a repository against its model (exit 1 when drift is found)
   build     compile architecture.ofk into a self-contained static site
@@ -36,7 +41,9 @@ Options:
   --json          drift: machine-readable report
   --name <name>   discover: system name (default: directory name)
   --max-files <n> discover/drift: cap on files scanned (default: 2000)
-  --help          this text`;
+  --help          this text
+
+Exit codes: 0 done, 1 the input or the diagram is wrong (or drift found), 2 usage error.`;
 
 interface ParsedArgs {
   positionals: string[];
@@ -558,6 +565,8 @@ export async function main(argv: readonly string[], io: CliIo): Promise<number> 
   if (command === 'drift') return runDrift(rest, io);
   if (command === 'discover') return runDiscover(rest, io);
   if (command === 'build') return runBuild(rest, io);
+  const handled = await runRegistryCommand(command, rest, io, USAGE);
+  if (handled !== null) return handled;
   io.err(`openflowkit: unknown command "${command}"\n\n${USAGE}`);
   return 2;
 }
@@ -567,6 +576,14 @@ if (invokedPath && invokedPath === fileURLToPath(import.meta.url)) {
   main(process.argv.slice(2), {
     out: (message) => process.stdout.write(`${message}\n`),
     err: (message) => process.stderr.write(`${message}\n`),
+    ...(process.stdin.isTTY ? {} : {
+      stdin: async () => {
+        // Whole bytes first: a UTF-8 character split across two chunks must not decode as two halves.
+        const chunks: Buffer[] = [];
+        for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+        return Buffer.concat(chunks).toString('utf8');
+      },
+    }),
   }).then(
     (code) => { process.exitCode = code; },
     (error: unknown) => {
