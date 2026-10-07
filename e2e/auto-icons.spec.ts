@@ -56,7 +56,8 @@ const iconsByLabel = async (page: Page): Promise<Record<string, unknown>> => Obj
     return [content.label ?? candidate.id, content.icon];
   }));
 
-test('a Mermaid import gets icons from its labels', async ({ page }) => {
+// Mermaid draws no icons from labels, so an import doesn't either (`icons: off`, 1a0ce97).
+test('a Mermaid import keeps Mermaid\'s look: no icons from its labels', async ({ page }) => {
   await openCanvas(page);
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
   const source = page.getByRole('textbox', { name: 'Diagram source' });
@@ -64,10 +65,11 @@ test('a Mermaid import gets icons from its labels', async ({ page }) => {
   await page.getByRole('button', { name: /^Convert/ }).click();
   await expect(source).not.toHaveValue(/-->/);
   await source.press(`${META}+Enter`);
-  await expect.poll(async () => (await iconsByLabel(page))['Postgres'], { timeout: 15_000 }).toBe('developer/database-postgresql');
+  await expect.poll(async () => Object.keys(await iconsByLabel(page)), { timeout: 15_000 }).toEqual(expect.arrayContaining(['Postgres', 'Valid?']));
   expect(await iconsByLabel(page)).toMatchObject({
-    'React App': 'developer/frontend-reactjs', 'Node.js API': 'developer/backend-nodejs', 'Valid?': undefined,
+    'React App': undefined, 'Node.js API': undefined, Postgres: undefined, 'Valid?': undefined,
   });
+  await expect(source).toHaveValue(/icons: off/);
 });
 
 test('an AI-generated diagram gets icons once the proposal is applied', async ({ page }) => {

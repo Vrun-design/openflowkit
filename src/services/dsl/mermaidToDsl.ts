@@ -643,7 +643,8 @@ function lossDiagnostic(line: number, message: string): DslDiagnostic {
  * `service api(server)[API]`. Our DSL puts a space before `[attrs]` and keeps
  * brackets inside quoted labels, so it never starts a line like this.
  */
-const MERMAID_SHAPED = /^\s*([\w.-]*(\(\(|\[|\(|\{\{|\)\))|::icon\(|(service|group|junction)\s+[\w-]+\s*[([])/m;
+// Mermaid glues the shape to the id (`root((Idea))`, `group api(cloud)[API]`); our DSL puts a space first.
+const MERMAID_SHAPED = /^\s*([\w.-]*(\(\(|\[|\(|\{\{|\)\))|::icon\(|(service|group|junction)\s+[\w-]+[([])/m;
 
 /**
  * Mermaid YAML front matter (`---` … `---` before the header) as blank lines, so

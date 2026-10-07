@@ -369,12 +369,17 @@ test('a complex import is fully editable: rename, drag, resize, connect, delete,
   expect((await state(page)).connectors.length).toBe(importedConnectors + 1);
 
   await page.keyboard.press('Escape');
-  const doomed = (await state(page)).connectors[0]!;
+  // The longest imported connector: a short one's midpoint sits on a node's quick-create
+  // handle, and a click there adds a node instead of selecting the line.
   // Screen samples already carry the camera, which ⌘0 left at an odd zoom.
-  const lane = await page.evaluate((id: string) =>
-    (window as unknown as { __V2__: { getConnectorScreenSamples(id: string): { x: number; y: number }[] | null } })
-      .__V2__.getConnectorScreenSamples(id), doomed);
-  const mid = midpointOf(lane!);
+  const lanes = await page.evaluate((ids: string[]) => ids.map((id) => ({
+    id,
+    lane: (window as unknown as { __V2__: { getConnectorScreenSamples(id: string): { x: number; y: number }[] | null } })
+      .__V2__.getConnectorScreenSamples(id) ?? [],
+  })), (await state(page)).connectors.filter((id) => id.startsWith('edge:')));
+  const length = (lane: { x: number; y: number }[]) => lane.reduce((total, point, index) => index === 0 ? 0 : total + Math.hypot(point.x - lane[index - 1]!.x, point.y - lane[index - 1]!.y), 0);
+  const { id: doomed, lane } = lanes.reduce((best, entry) => (length(entry.lane) > length(best.lane) ? entry : best));
+  const mid = midpointOf(lane);
   await page.mouse.click(box.x + mid.x, box.y + mid.y);
   await expect.poll(async () => (await state(page)).selectedConnector).toBe(doomed);
   await page.keyboard.press('Backspace');

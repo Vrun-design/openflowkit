@@ -12,6 +12,27 @@ const convert = (source: string) => {
   return result;
 };
 
+describe('looksLikeMermaid on our own architecture DSL', () => {
+  // CI 2026-10-07: converted architecture-beta (`group API [icon: cloud] {`) read as
+  // Mermaid again on Generate, failed re-conversion with E003 and drew nothing.
+  it('is false for DSL groups and nodes written with a space before their brackets', () => {
+    expect(looksLikeMermaid('architecture\ngroup API [icon: cloud] {\n  db = Database [icon: database]\n}\n')).toBe(false);
+    expect(looksLikeMermaid('architecture\nservice Billing [icon: server]\n')).toBe(false);
+    expect(looksLikeMermaid('mindmap\nRoot (round)\n')).toBe(false);
+  });
+
+  it('still reads Mermaid architecture and mindmap shorthand', () => {
+    expect(looksLikeMermaid('architecture\n  group api(cloud)[API]\n')).toBe(true);
+    expect(looksLikeMermaid('architecture\n  service db(database)[Database] in api\n')).toBe(true);
+    expect(looksLikeMermaid('mindmap\n  root((Idea))\n')).toBe(true);
+  });
+
+  it('converts architecture-beta to DSL that generates without converting again', () => {
+    const { dsl } = mermaidToDsl('architecture-beta\n  group api(cloud)[API]\n  service db(database)[Database] in api\n  service gateway(internet)[Gateway]\n  gateway:B --> T:db') as { dsl: string };
+    expect(looksLikeMermaid(dsl)).toBe(false);
+  });
+});
+
 describe('mermaidToDsl', () => {
   it('detects Mermaid headers and leaves DSL alone', () => {
     expect(looksLikeMermaid('flowchart LR\nA --> B')).toBe(true);
