@@ -27,7 +27,7 @@ export function graphText(scene: DslFrameScene, options: GraphTextOptions = {}):
   const swatchOf = paletteResolver(nodePaletteName(frame));
   const groups = [...(scene.groups ?? [])];
   const nodes = [...scene.nodes].filter((node) => !dslNodeMeta(node).noteFor);
-  const noteCarriers = nodes.filter((node) => (dslNodeMeta(node).notes ?? []).length > 0);
+  const noteCarriers = [...nodes, ...groups].filter((node) => (dslNodeMeta(node).notes ?? []).length > 0);
   const byId = new Map([...nodes, ...groups].map((node) => [node.id, node]));
   const groupIds = new Set(groups.map((group) => group.id));
   const groupNames = new Set(groups.map(nodeReference));
@@ -135,7 +135,7 @@ export function graphText(scene: DslFrameScene, options: GraphTextOptions = {}):
   }
   if (Array.isArray(frameDsl.align)) lines.push(...frameDsl.align.filter((item): item is string => typeof item === 'string'));
   for (const node of noteCarriers) {
-    for (const note of dslNodeMeta(node).notes ?? []) lines.push(`note ${quote(nodeReference(node))} : ${note}`);
+    for (const note of dslNodeMeta(node).notes ?? []) lines.push(`note ${quote(nodeReference(node))} : ${note.includes('\n') ? quote(note) : note}`);
   }
   if (Array.isArray(frameDsl.reserved)) lines.push(...frameDsl.reserved.filter((item): item is string => typeof item === 'string'));
   while (lines.length > 0 && lines.at(-1) === '') lines.pop();

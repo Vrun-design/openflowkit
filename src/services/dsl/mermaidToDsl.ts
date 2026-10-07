@@ -445,14 +445,24 @@ function stateDsl(source: string, nodes: readonly FlowNode[], edges: readonly Fl
     if (inside && inside === insideOf(edge.target)) continue;
     lines.push(edgeText(edge));
   }
-  // The parser drops notes; one-line `note right of X : text` maps straight
-  // onto our `note X : text`, block notes (`end note`) do not.
-  for (const line of source.split('\n')) {
-    const note = /^\s*note\s+(?:left|right)\s+of\s+(\S+)\s*:\s*(.+)$/i.exec(line);
+  // The parser drops notes, so they are read from the source: `note right of X : text`, or
+  // `note right of X` … `end note` with its lines kept as line breaks. A composite takes one too.
+  const sourceLines = source.split('\n');
+  for (let index = 0; index < sourceLines.length; index += 1) {
+    const start = /^\s*note\s+(?:left|right)\s+of\s+(\S+?)\s*(?::\s*(.*?))?\s*$/i.exec(sourceLines[index]!);
+    if (!start) continue;
+    let text = start[2];
+    if (text === undefined) {
+      const body: string[] = [];
+      let end = index + 1;
+      while (end < sourceLines.length && !/^\s*end\s+note\s*$/i.test(sourceLines[end]!)) body.push(sourceLines[end++]!.trim());
+      if (end === sourceLines.length) losses.push(`The note on ${start[1]} has no \`end note\``);
+      index = end;
+      text = body.join('\n');
+    }
     // The note names the Mermaid id; `distinctIds` may have renamed it (`a` → `a-2`).
-    if (note && byId.has(rename(note[1]!))) lines.push(`note ${refOf(rename(note[1]!))} : ${quote(note[2]!.trim())}`);
-    else if (note) losses.push(`Note on unknown state ${note[1]} dropped`);
-    else if (/^\s*note\s+(?:left|right)\s+of\s+\S+\s*$/i.test(line)) losses.push('Multi-line state notes are dropped');
+    if (!byId.has(rename(start[1]!))) losses.push(`Note on unknown state ${start[1]} dropped`);
+    else if (text.trim()) lines.push(`note ${refOf(rename(start[1]!))} : ${quote(text.trim())}`);
   }
   return { dsl: `${lines.join('\n')}\n`, losses };
 }

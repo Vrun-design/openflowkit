@@ -159,7 +159,7 @@ export function parseGraphStatements(segments: readonly DslSegment[], diagnostic
       current.push(...edge);
       statement = edge.at(-1);
     } else if (DIRECTIVES.has(keyword)) {
-      statement = { kind: 'directive', name: keyword as 'title', value: joinTokens(segment.tokens.slice(segment.tokens[1]?.value === ':' ? 2 : 1)), raw: joinTokens(segment.tokens), line: firstToken.line, col: firstToken.col, endCol: lastToken.endCol };
+      statement = { kind: 'directive', name: keyword as 'title', value: joinTokens(segment.tokens.slice(segment.tokens[1]?.value === ':' ? 2 : 1), keyword === 'note'), raw: joinTokens(segment.tokens), line: firstToken.line, col: firstToken.col, endCol: lastToken.endCol };
       current.push(statement);
     } else if (keyword === 'group' || segment.opens) {
       const reservedKind = RESERVED_KINDS.has(keyword) || reservedRecords.has(keyword) ? keyword : undefined;

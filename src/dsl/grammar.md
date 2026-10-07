@@ -636,6 +636,7 @@ fragment frames (`annotation` nodes) that enclose their messages; participants a
 Idle -> Running : start
 state Running { … }           composite; `--` line inside = concurrent region divider
 F [fork] ; J [join] ; C [choice]      pseudo-states via shape words
+note Idle : text              a sticky beside a state or a composite; "a\nb" keeps its line break
 ```
 `[*]` is a token, never a name; before an arrow it is the initial state, after one the
 final state (two distinct nodes). Canonical: composites as `state Name { … }` blocks,

@@ -455,6 +455,36 @@ describe('mermaidToDsl', () => {
     expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
   });
 
+  // https://mermaid.js.org/syntax/stateDiagram.html#notes
+  it('keeps multi-line state notes, one-line notes and notes on a composite, with their line breaks', async () => {
+    const { dsl, losses } = convert(`stateDiagram-v2
+  [*] --> Idle
+  state Moving {
+    Walking --> Running
+  }
+  Idle --> Moving
+  note right of Idle
+    Waits for a job.
+
+    Retries twice.
+  end note
+  note left of Moving : one line only
+  note right of Moving
+    Whole box
+    spans two lines
+  end note`);
+    expect(losses).toEqual([]);
+    const lines = dsl.split('\n');
+    expect(lines).toContain('note Idle : "Waits for a job.\\n\\nRetries twice."');
+    expect(lines).toContain('note Moving : one line only');
+    expect(lines).toContain('note Moving : "Whole box\\nspans two lines"');
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    const stickies = compiled.nodes.filter((node) => node.kind === 'sticky').map((node) => node.content.label);
+    expect(stickies).toEqual(['Waits for a job.\n\nRetries twice.', 'one line only', 'Whole box\nspans two lines']);
+    expect(await format(dsl)).toContain('note Idle : "Waits for a job.\\n\\nRetries twice."');
+  });
+
   it('maps state pseudo-states and control kinds', async () => {
     const { dsl } = convert(`stateDiagram-v2
   [*] --> Idle

@@ -305,7 +305,9 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     if (separator < 0) continue;
     const targetName = note.text.slice(0, separator).trim();
     const noteText = note.text.slice(separator + 1).trim();
-    const target = sceneNodes.find((node) => node.id === slugifyDslId(targetName) || node.content.label === targetName || (node.metadata.dsl as { name?: string }).name === targetName);
+    const matches = (node: SceneNode) => node.id === slugifyDslId(targetName) || node.content.label === targetName || (node.metadata.dsl as { name?: string }).name === targetName;
+    // A note may sit on a group (a composite state) as well as on a node.
+    const target = sceneNodes.find(matches) ?? groupNodes.find(matches);
     if (!target) {
       diagnostics.push(diagnostic({ line: note.line, col: 1, endCol: 1 }, 'W101', 'warning', `note target ${targetName} was not found; note dropped`));
       continue;
@@ -368,7 +370,8 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
 
   // ponytail: `rank:` and `group [direction]` round-trip but do not constrain ELK yet — wire them to layer options when a family needs them.
   const noteIds = new Set(noteDrafts.map(({ id }) => id));
-  const noteRoom = noteSlots(noteDrafts, sceneNodes);
+  // ponytail: a group's notes sit beside its box without the layout reserving room; node notes get a slot.
+  const noteRoom = noteSlots(noteDrafts.filter((draft) => sceneNodes.some((node) => node.id === draft.targetId)), sceneNodes);
   const loopRoom = loopReach(edges);
   const layoutNodes: LayoutNodeInput[] = [
     ...groupNodes.map((group) => {
@@ -411,7 +414,7 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
   const noteTextByTarget = new Map<string, string[]>();
   const stackedBelow = new Map<string, number>();
   for (const note of noteDrafts) {
-    const target = sceneNodes.find((node) => node.id === note.targetId);
+    const target = sceneNodes.find((node) => node.id === note.targetId) ?? positionedGroups.find((group) => group.id === note.targetId);
     if (!target) continue;
     const noteNode = sceneNodes.find((node) => node.id === note.id);
     const targetPosition = positionOf.get(target.id) ?? { x: 0, y: 0 };
@@ -434,13 +437,17 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     transform: { ...node.transform, translation: positionOf.get(node.id) ?? { x: 0, y: 0 } },
   }));
 
+  const groupsWithNotes = positionedGroups.map((group) => (noteTextByTarget.has(group.id)
+    ? { ...group, metadata: { ...group.metadata, dsl: { ...(group.metadata.dsl as Record<string, unknown>), notes: noteTextByTarget.get(group.id) } } }
+    : group));
+
   const boxes = new Map<string, Box>();
   for (const group of positionedGroups) boxes.set(group.id, { parentId: group.parentId, at: group.transform.translation, size: group.size });
   for (const node of positionedNodes) boxes.set(node.id, { parentId: node.parentId, at: node.transform.translation, size: node.size });
 
   return {
     // Containers first keeps the deterministic order the editor hashes.
-    nodes: [...positionedGroups, ...positionedNodes],
+    nodes: [...groupsWithNotes, ...positionedNodes],
     connectors: separateLanes(connectors, boxes),
     size: laid.root.width > 0 && laid.root.height > 0 ? laid.root : { width: 640, height: 420 },
     meta: {

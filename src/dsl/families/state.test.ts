@@ -23,6 +23,28 @@ describe('state family', () => {
     expect(serialize(result)).toContain('state Processing {');
   });
 
+  it('keeps the line breaks of a note, in the sticky and in the text it writes back', async () => {
+    const text = '%% ofk 1\nstate\n\nIdle\nnote Idle : "waits for a job\\nretries twice"\n';
+    const result = await compile(text);
+    expect(result.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    const sticky = result.nodes.find((node) => node.kind === 'sticky')!;
+    expect(sticky.content.label).toBe('waits for a job\nretries twice');
+    expect(serialize(result)).toBe(text);
+    expect(await format(text)).toBe(text);
+  });
+
+  it('puts a note on a composite state: a sticky beside its box, written back as a note', async () => {
+    const text = '%% ofk 1\nstate\n\nstate Moving {\n  Walking\n}\nnote Moving : whole box\n';
+    const result = await compile(text);
+    expect(result.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    const moving = result.groups.find((group) => group.id === 'moving')!;
+    const sticky = result.nodes.find((node) => node.kind === 'sticky')!;
+    expect(sticky.content.label).toBe('whole box');
+    // To the right of the composite, not inside it.
+    expect(sticky.transform.translation.x).toBeGreaterThanOrEqual(moving.transform.translation.x + moving.size.width);
+    expect(serialize(result)).toBe(text);
+  });
+
   it('draws fork, join and choice as control nodes', async () => {
     const result = await compile('state\nA -> F [fork]\nF -> B\nB -> M [join]\nM -> C [choice]');
     const fork = result.nodes.find((node) => node.id === 'f')!;

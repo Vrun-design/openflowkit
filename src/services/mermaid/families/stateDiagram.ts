@@ -87,6 +87,8 @@ function collectStateDiagramDiagnostics(input: string): { diagnostics: string[];
   let hasHeader = false;
   let compositeDepth = 0;
   let direction: 'TB' | 'LR' | undefined;
+  // Inside `note right of X` … `end note`: the text is the note's, whatever it looks like.
+  let inNote = false;
 
   for (const [index, rawLine] of lines.entries()) {
     const lineNumber = index + 1;
@@ -99,6 +101,11 @@ function collectStateDiagramDiagnostics(input: string): { diagnostics: string[];
     }
     if (!hasHeader) continue;
 
+    if (inNote) {
+      inNote = !/^end\s+note\s*$/i.test(line);
+      continue;
+    }
+
     if (/^direction\b/i.test(line)) {
       const directionMatch = line.match(/^direction\s+(LR|TB)\s*$/i);
       if (!directionMatch) {
@@ -106,6 +113,11 @@ function collectStateDiagramDiagnostics(input: string): { diagnostics: string[];
         continue;
       }
       direction = directionMatch[1].toUpperCase() as 'TB' | 'LR';
+      continue;
+    }
+
+    if (/^note\s+(?:left|right)\s+of\s+\S+\s*$/i.test(line)) {
+      inNote = true;
       continue;
     }
 
