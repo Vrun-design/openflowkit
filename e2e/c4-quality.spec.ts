@@ -1,5 +1,5 @@
 import { expect, test } from './test';
-import { doc, rect, state } from './helpers';
+import { clickNode, doc, rect, state } from './helpers';
 
 test('C4 starter, keyboard inspection, focused camera and visual flow authoring @gate', async ({
   page,
@@ -135,4 +135,34 @@ test('a second model opens on its own landscape, not the first model\'s @gate', 
   // The canvas draws the open page only: Bob is on screen, Alice is not.
   await expect.poll(async () => rect(page, 'bob')).not.toBeNull();
   expect(await rect(page, 'alice')).toBeNull();
+});
+
+test('an element with a deeper view opens it from the canvas and climbs back @gate', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
+  await page.getByRole('button', { name: 'Create C4 workspace', exact: true }).click();
+  await expect.poll(async () => (await doc(page))?.pages.length).toBe(3);
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  const fitted = (id: string) => expect.poll(async () => {
+    const box = await rect(page, id);
+    const view = page.viewportSize()!;
+    return !!box && box.x >= 0 && box.y >= 0 && box.x + box.width <= view.width && box.y + box.height <= view.height;
+  }).toBe(true);
+  await fitted('shop');
+  // Selecting the system offers its containers view; Customer has none.
+  await clickNode(page, 'customer');
+  await expect(page.getByRole('button', { name: /^Open Containers/ })).toHaveCount(0);
+  await clickNode(page, 'shop');
+  await page.getByRole('button', { name: 'Open Containers: Shop' }).click();
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Containers: Shop');
+  await fitted('shop.web');
+  await page.locator('.ofk-v2-breadcrumb-link').first().click();
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('System landscape');
+  await fitted('shop');
+  // The keyboard does the same: Enter on the selected system.
+  await clickNode(page, 'shop');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Containers: Shop');
 });

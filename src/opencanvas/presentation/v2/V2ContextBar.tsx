@@ -5,7 +5,7 @@ import { V2NodeStylePanels } from './V2NodeStyle';
 import { V2ArrangeControls } from './V2ArrangeControls';
 import { V2ConnectorStyle } from './V2ConnectorStyle';
 import type { ConnectorStylePatch } from '../../domain/commands/styleConnectors';
-import { IconDots, IconLayoutSidebarRight, IconTable } from '@tabler/icons-react';
+import { IconDots, IconLayoutSidebarRight, IconTable, IconZoomIn } from '@tabler/icons-react';
 import { Button, ContextBar, ContextGroup, Icon, IconButton, Tooltip } from '../design-system';
 
 interface V2ContextBarProps {
@@ -23,6 +23,8 @@ interface V2ContextBarProps {
   readonly onInspect: () => void;
   /** Single chart selected: jump straight to its data panel. */
   readonly onOpenChartData?: () => void;
+  /** A model element with a deeper view selected: the name of that view and the way in. */
+  readonly zoomInto?: { readonly name: string; readonly open: () => void };
 }
 
 export interface ContextBarLayout {
@@ -141,6 +143,12 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
         <V2ArrangeControls page={props.page} nodeIds={props.nodeIds} commit={props.commit} />
       </ContextGroup>
       <ContextGroup label="Actions">
+        {props.zoomInto ? (
+          <Tooltip content={`Open ${props.zoomInto.name}`} shortcut="↵">
+            <IconButton variant="quiet" label={`Open ${props.zoomInto.name}`} icon={<Icon icon={IconZoomIn} />}
+              onClick={props.zoomInto.open} />
+          </Tooltip>
+        ) : null}
         <Tooltip content="Inspect" shortcut="⌥I">
           <IconButton variant="quiet" label="Inspect" icon={<Icon icon={IconLayoutSidebarRight} />}
             onClick={props.onInspect} />

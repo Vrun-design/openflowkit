@@ -405,6 +405,10 @@ export function V2EditorPage(): React.JSX.Element {
     return true;
   }, [openChart]);
   const selectedElementId = selectedNode ? placedElementId(selectedNode) : null;
+  // The deeper view of the selected element, when its page exists.
+  const deeperView = selectedElementId ? architecture.childViewOf(selectedElementId) : null;
+  const zoomInto = deeperView && architecture.pageForView(deeperView.id) && selectedElementId
+    ? { name: deeperView.name, open: () => { architectureActions.drillInto(selectedElementId); } } : null;
   const perspectiveFocus = useMemo(
     () => (playback.flow ? null : architectureActions.perspectiveFocus(preferences.perspectiveTags)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -566,12 +570,12 @@ export function V2EditorPage(): React.JSX.Element {
     onZoomToSelection: () => camera.fitView(selectionRef.current.nodeIds.length ? selectionRef.current.nodeIds : undefined),
     onTextStyle: editActions.toggleTextStyle,
     onEditPrimary: (source) => {
-      if (load.readOnly) return;
       const primary = selectionRef.current.primaryNodeId;
+      // Enter on a model object with a deeper view opens it, even read-only;
+      // F2 or ⌘Enter edits the label instead.
+      if (primary && source === 'enter' && selectedElementId && architectureActions.drillInto(selectedElementId)) return;
+      if (load.readOnly) return;
       if (primary) {
-        // Enter on a model object with children drills into its view; F2 or
-        // ⌘Enter edits the label instead.
-        if (source === 'enter' && selectedElementId && architectureActions.drillInto(selectedElementId)) return;
         openEditor(primary);
         return;
       }
@@ -739,7 +743,7 @@ export function V2EditorPage(): React.JSX.Element {
             <V2CanvasHost
               page={page} hostRef={hostRef} camera={camera.camera} cameraRef={camera.cameraRef} pageRef={pageRef}
               selectionRef={selectionRef} selectedConnectorIdsRef={selectedConnectorIdsRef} toolRef={toolRef} tool={tool} spacePanRef={spacePanRef}
-              toolConfigRef={toolConfigRef} onOpenChartData={openChartData}
+              toolConfigRef={toolConfigRef} onOpenChartData={openChartData} zoomInto={zoomInto}
               onRemoveIcons={() => iconActions.removeIcons(selectionRef.current.nodeIds)}
               onOpenCode={code.openNew}
               onInspect={() => openWorkspace('inspect')}
@@ -780,8 +784,7 @@ export function V2EditorPage(): React.JSX.Element {
               modelElement={selectedElementId && selectedNode ? {
                 id: selectedElementId,
                 name: selectedNode.content.label as string ?? selectedElementId,
-                childView: Boolean(architecture.childViewOf(selectedElementId)
-                  && architecture.pageForView(architecture.childViewOf(selectedElementId)!.id)),
+                childView: zoomInto !== null,
               } : null}
               onDrillInto={() => { if (selectedElementId) architectureActions.drillInto(selectedElementId); }}
               onUnplace={() => architectureActions.unplaceSelection(selectionRef.current.nodeIds)}

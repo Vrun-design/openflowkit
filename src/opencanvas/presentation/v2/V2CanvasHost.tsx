@@ -72,6 +72,8 @@ interface V2CanvasHostProps {
   readonly toolConfigRef: RefObject<V2ToolConfig>;
   /** Double-click on a chart opens its data panel (the page owns the panel). */
   readonly onOpenChartData?: (nodeId: string) => boolean;
+  /** The one selected model element has a deeper view: its name and the way in. */
+  readonly zoomInto?: { readonly name: string; readonly open: () => void } | null;
   readonly spacePanRef: RefObject<boolean>;
   readonly readOnlyRef: RefObject<boolean>;
   readonly gestureApiRef: RefObject<V2GestureApi | null>;
@@ -574,6 +576,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
             && props.page.nodes.find((node) => node.id === props.selection.nodeIds[0])?.kind === 'chart'
             ? { onOpenChartData: () => props.onOpenChartData!(props.selection.nodeIds[0]!) }
             : {})}
+          {...(props.zoomInto && props.selection.nodeIds.length === 1 ? { zoomInto: props.zoomInto } : {})}
           onInspect={props.onInspect}
           onOpenMenu={(x, y) => props.onContextMenu(props.selectedConnectorId
             ? { kind: 'connector', id: props.selectedConnectorId, x, y }
