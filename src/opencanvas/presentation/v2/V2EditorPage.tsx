@@ -243,7 +243,7 @@ export function V2EditorPage(): React.JSX.Element {
     if (!startIntent || load.phase !== 'ready' || !page) return;
     navigate(location.pathname, { replace: true, state: null });
     if ('start' in startIntent) openWorkspace(startIntent.start);
-    else if ('source' in startIntent) code.startFromSource(startIntent.source);
+    else if ('source' in startIntent) code.startFrom(startIntent.source);
     else {
       const template = findStarterTemplate(startIntent.template);
       if (template) code.startFrom(template.dsl);

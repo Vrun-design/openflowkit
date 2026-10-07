@@ -326,6 +326,12 @@ function buildMermaidParseModel({ lines, lineNumbers }: { lines: string[]; lineN
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     const lineNumber = lineNumbers[i];
+    const subgraphDirection = state.diagramType === 'flowchart' ? parseFlowchartDeclaration(`flowchart ${line.replace(/^direction\s+/i, '')}`) : null;
+    const section = state.nodesMap.get(state.parentStack[state.parentStack.length - 1] ?? '');
+    if (/^direction\s/i.test(line) && subgraphDirection && section) {
+      section.metadata = { ...section.metadata, sectionMermaidDirection: subgraphDirection };
+      continue;
+    }
     if (isSkippableLine(line)) {
       continue;
     }
@@ -430,6 +436,9 @@ function createFlowNodes(model: MermaidParseModel): FlowNode[] {
         ...(node.metadata?.sectionMermaidTitle
           ? { sectionMermaidTitle: node.metadata.sectionMermaidTitle }
           : {}),
+        ...(node.metadata?.sectionMermaidDirection
+          ? { sectionMermaidDirection: node.metadata.sectionMermaidDirection }
+          : {}),
       },
       ...(node.type === 'section'
         ? {
@@ -503,6 +512,10 @@ function createFlowEdges(model: MermaidParseModel): FlowEdge[] {
       `e-mermaid-${index}`
     );
 
+    // `~~~` positions its ends like a link but draws nothing.
+    if (edge.arrowType === '~~~') {
+      flowEdge.style = { ...flowEdge.style, stroke: 'transparent' };
+    }
     if (edge.arrowType.includes('-.') || edge.arrowType.includes('-.-')) {
       flowEdge.style = { ...flowEdge.style, strokeDasharray: '5 3' };
     }
@@ -520,6 +533,8 @@ function createFlowEdges(model: MermaidParseModel): FlowEdge[] {
     if (style) {
       if (style.stroke) {
         flowEdge.style = { ...flowEdge.style, stroke: style.stroke };
+        // Authored, unlike the default stroke every edge carries.
+        flowEdge.data = { ...flowEdge.data, linkStroke: style.stroke };
       }
       if (style['stroke-width']) {
         flowEdge.style = {

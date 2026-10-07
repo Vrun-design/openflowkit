@@ -121,7 +121,8 @@ describe('mermaidParser', () => {
 
     expect(result.error).toBeUndefined();
     expect(result.nodes.find((n) => n.id === 'API')?.data.label).toBe('API Gateway');
-    expect(result.nodes.find((n) => n.id === 'API')?.data.shape).toBe('rounded');
+    // Mermaid's `rect` is the square box.
+    expect(result.nodes.find((n) => n.id === 'API')?.data.shape).toBe('rectangle');
     expect(result.nodes.find((n) => n.id === 'DB')?.data.label).toBe('Primary DB');
     expect(result.nodes.find((n) => n.id === 'DB')?.data.shape).toBe('cylinder');
     expect(result.edges).toHaveLength(1);

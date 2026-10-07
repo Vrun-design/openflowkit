@@ -18,7 +18,7 @@ export const SHAPE_OPENERS: Array<{
   { open: '[/', close: '\\]', type: 'process', shape: 'parallelogram' },
   { open: '[\\', close: '/]', type: 'process', shape: 'parallelogram' },
   { open: '{', close: '}', type: 'decision', shape: 'diamond' },
-  { open: '[', close: ']', type: 'process', shape: 'rounded' },
+  { open: '[', close: ']', type: 'process', shape: 'rectangle' },
   { open: '(', close: ')', type: 'process', shape: 'rounded' },
   { open: '>', close: ']', type: 'process', shape: 'parallelogram' },
 ];
@@ -117,8 +117,13 @@ export function normalizeMultilineStrings(input: string): string {
   return result;
 }
 
+/** Line by line: a pattern that crossed lines let a `%% ----` comment swallow the next statement. */
 export function normalizeEdgeLabels(input: string): string {
-  let result = input;
+  return input.split('\n').map((line) => (line.trim().startsWith('%%') ? line : normalizeLineEdgeLabels(line))).join('\n');
+}
+
+function normalizeLineEdgeLabels(line: string): string {
+  let result = line;
   // Collapse extended arrows: ---> → -->, ====> → ==>, -..-> → -.->
   // Mermaid spec allows any number of repeated chars in the arrow body.
   result = result.replace(/={3,}>/g, '==>');
@@ -146,6 +151,7 @@ export interface RawNode {
   metadata?: {
     sectionMermaidId?: string;
     sectionMermaidTitle?: string;
+    sectionMermaidDirection?: string;
   };
 }
 
@@ -161,8 +167,8 @@ const MODERN_SHAPE_MAP: Record<string, { type: string; shape: NodeData['shape'] 
   'lean-l': { type: 'process', shape: 'parallelogram' },
   stadium: { type: 'start', shape: 'capsule' },
   rounded: { type: 'process', shape: 'rounded' },
-  rect: { type: 'process', shape: 'rounded' },
-  square: { type: 'process', shape: 'rounded' },
+  rect: { type: 'process', shape: 'rectangle' },
+  square: { type: 'process', shape: 'rectangle' },
   doublecircle: { type: 'end', shape: 'circle' },
 };
 
@@ -188,6 +194,11 @@ function extractModernAnnotation(input: string): ModernShapeAnnotation {
     labelOverride: labelMatch?.[1],
     cleanInput: `${id}${rest}`,
   };
+}
+
+/** Mermaid breaks a label on `\n` and on `<br>`, `<br/>`, `<br />`. */
+export function breakLines(label: string): string {
+  return label.replace(/\\n|<br\s*\/?>/gi, '\n');
 }
 
 function stripMarkdown(label: string): string {
@@ -237,7 +248,7 @@ function tryParseWithShape(
   ) {
     label = label.slice(1, -1);
   }
-  label = label.replace(/\\n/g, '\n');
+  label = breakLines(label);
   label = stripFaIcons(label);
   label = stripMarkdown(label);
   if (!label) label = id;
@@ -298,6 +309,7 @@ export function parseNodeDeclaration(raw: string): RawNode | null {
 }
 
 export const ARROW_PATTERNS = [
+  '~~~',
   '<==>',
   '<-.->',
   '<-->',
@@ -536,7 +548,7 @@ export function parseEdgeLine(line: string): Array<{
     );
 
     if (sourceRaw && targetRaw) {
-      edges.push({ sourceRaw, targetRaw, label, arrowType: arrow });
+      edges.push({ sourceRaw, targetRaw, label: breakLines(label), arrowType: arrow });
     }
 
     lastNodeRaw = targetRaw;

@@ -200,6 +200,8 @@ export interface SectionNodeData {
   sectionCollapsed?: boolean;
   sectionMermaidId?: string;
   sectionMermaidTitle?: string;
+  /** A subgraph's own `direction` line (TB, LR, RL, BT). */
+  sectionMermaidDirection?: string;
 }
 
 export interface MermaidSvgNodeData {

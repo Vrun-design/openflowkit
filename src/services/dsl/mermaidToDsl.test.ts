@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MERMAID_COMPAT_FIXTURES } from '../../../scripts/mermaid-compat-fixtures.mjs';
 import { compile } from '../../dsl/compile';
 import { format } from '../../dsl/serialize';
+import platform from './fixtures/mermaid/platform.mmd?raw';
 import { looksLikeMermaid, mermaidToDsl } from './mermaidToDsl';
 
 const convert = (source: string) => {
@@ -71,10 +72,46 @@ describe('mermaidToDsl', () => {
     expect(dsl).toContain('b -> c : yes');
     expect(dsl).toContain('b --> d');
     expect(dsl).toContain('c -> d [thick]');
-    expect(dsl).toContain('[rounded, #f66]');
+    // `[text]` is Mermaid's square box: rect, the DSL default, so only the colour is written.
+    expect(dsl).toContain('a = Start [#f66]');
+    expect(dsl).toContain('c = Go [rounded]');
     expect(losses).toEqual([]);
     const compiled = await compile(dsl);
     expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
+  });
+
+  // The owner's report, 2026-10-07: a commented, styled 47-node flowchart lost its first edge, merged
+  // three stores into one label, kept `<br/>` literally and grew icons Mermaid never draws.
+  it('converts a commented, styled 47-node flowchart the way Mermaid draws it', async () => {
+    const { dsl, losses } = convert(platform);
+    // Mermaid draws no icons from labels.
+    expect(dsl).toMatch(/^flowchart down\nicons: off\n/);
+    // A `%% ----------` comment must not swallow the statement after it.
+    expect(dsl).toContain('user = User Request [rounded]');
+    expect(dsl).toContain('cdn = CDN / WAF [hexagon]');
+    // linkStyle 0 is the first link in the source.
+    expect(dsl).toContain('user -> cdn [#4f46e5, thick]');
+    expect(dsl).toMatch(/^cdn -> deny : blocked$/m);
+    // `[text]` is a square box: rect is the default and is not written.
+    expect(dsl).toMatch(/^ {2}gw = API Gateway$/m);
+    expect(dsl).toContain('rl = "Rate limit\\nexceeded?" [diamond, #fef9c3]');
+    // `~~~` links shape the layout but are not drawn; all three stores stay in their group.
+    expect(dsl).toMatch(/group obs = Observability \{\n {2}log = Logs \[cylinder, #e0e7ff\]\n {2}met = Metrics \[cylinder, #e0e7ff\]\n {2}trace = Traces \[cylinder, #e0e7ff\]\n\}/);
+    expect(dsl).toContain('log -- met [invisible]');
+    // Both LR subgraphs link outside themselves, so Mermaid ignores their direction.
+    expect(dsl).toContain('group edge = Edge Layer {');
+    expect(dsl).toContain('group async = Async Pipeline {');
+    expect(losses).toEqual([]);
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
+    expect(compiled.nodes).toHaveLength(47);
+    expect(compiled.connectors).toHaveLength(63);
+  });
+
+  it('keeps a subgraph direction only when no link leaves the subgraph, as Mermaid does', () => {
+    const { dsl } = convert('flowchart TD\n  subgraph S\n    direction LR\n    a --> b\n  end\n  subgraph T\n    direction LR\n    c --> d\n  end\n  d --> e');
+    expect(dsl).toContain('group S [right] {');
+    expect(dsl).toContain('group T {');
   });
 
   it('edges to a subgraph end on its group, by the subgraph id or its title', async () => {

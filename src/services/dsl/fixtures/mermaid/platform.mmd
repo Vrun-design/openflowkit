@@ -1,0 +1,103 @@
+flowchart TD
+    %% ---------- Entry ----------
+    User([User Request]) --> CDN{{CDN / WAF}}
+    CDN -->|blocked| Deny[/403 Response/]
+    CDN -->|allowed| LB[[Load Balancer]]
+
+    %% ---------- Edge / Auth ----------
+    subgraph Edge["Edge Layer"]
+        direction LR
+        LB --> GW[API Gateway]
+        GW --> RL{Rate limit<br/>exceeded?}
+        RL -->|yes| R429[/429 Too Many/]
+        RL -->|no| AuthN[Authenticate]
+        AuthN --> TokenOK{Valid JWT?}
+        TokenOK -->|no| Refresh[Refresh Token Flow]
+        Refresh -->|fail| R401[/401 Unauthorized/]
+        Refresh -->|ok| AuthZ
+        TokenOK -->|yes| AuthZ[Authorize RBAC]
+    end
+
+    AuthZ -->|forbidden| R403[/403 Forbidden/]
+    AuthZ -->|permitted| Router{Route by type}
+
+    %% ---------- Services ----------
+    subgraph Core["Core Services"]
+        direction TB
+
+        subgraph Orders["Order Service"]
+            O1[Validate Cart] --> O2{In stock?}
+            O2 -->|no| O3[Backorder Queue]
+            O2 -->|yes| O4[Reserve Inventory]
+            O4 --> O5[Create Order]
+        end
+
+        subgraph Payments["Payment Service"]
+            P1[Build Intent] --> P2{Method}
+            P2 -->|card| P3[Stripe]
+            P2 -->|wallet| P4[Wallet Ledger]
+            P2 -->|bank| P5[ACH Gateway]
+            P3 & P4 & P5 --> P6{Fraud score<br/>> 0.8?}
+            P6 -->|yes| P7[Manual Review]
+            P6 -->|no| P8[Capture Funds]
+            P7 -->|approve| P8
+            P7 -->|reject| P9[Void + Notify]
+        end
+
+        subgraph Search["Search Service"]
+            S1[Parse Query] --> S2[(Redis Cache)]
+            S2 -->|hit| S5[Return Results]
+            S2 -->|miss| S3[(Elasticsearch)]
+            S3 --> S4[Rank + Personalize]
+            S4 --> S2
+            S4 --> S5
+        end
+    end
+
+    Router -->|/orders| O1
+    Router -->|/search| S1
+    O5 --> P1
+    P8 --> Ship
+
+    %% ---------- Async pipeline ----------
+    subgraph Async["Async Pipeline"]
+        direction LR
+        Ship[Shipping Service] --> Bus>Kafka: order.events]
+        Bus --> W1[Email Worker]
+        Bus --> W2[Analytics Worker]
+        Bus --> W3[Inventory Sync]
+        W1 --> Mail([SendGrid])
+        W2 --> DW[(Data Warehouse)]
+        W3 -.->|reconcile| O4
+        W1 -- retry x3 --> DLQ[(Dead Letter Queue)]
+    end
+
+    %% ---------- Observability ----------
+    subgraph Obs["Observability"]
+        Log[(Logs)] ~~~ Met[(Metrics)] ~~~ Trace[(Traces)]
+    end
+    GW -.-> Log
+    P8 -.-> Met
+    S5 -.-> Trace
+    DLQ ==>|alert| Pager((PagerDuty))
+
+    %% ---------- Responses ----------
+    S5 --> Done
+    Mail --> Done
+    P9 --> Failed[/Order Failed/]
+    O3 --> Failed
+    Done([200 OK]) --> User
+    Failed --> User
+    R401 & R403 & R429 & Deny --> User
+
+    %% ---------- Styling ----------
+    classDef err fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+    classDef ok fill:#dcfce7,stroke:#16a34a,color:#14532d;
+    classDef store fill:#e0e7ff,stroke:#4f46e5,color:#1e1b4b;
+    classDef decision fill:#fef9c3,stroke:#ca8a04,color:#713f12;
+    class R401,R403,R429,Deny,Failed,P9,DLQ err;
+    class Done,P8,O5,S5 ok;
+    class S2,S3,DW,Log,Met,Trace store;
+    class RL,TokenOK,Router,O2,P2,P6 decision;
+    style Pager fill:#f97316,stroke:#9a3412,color:#fff,stroke-width:3px
+    linkStyle 0 stroke:#4f46e5,stroke-width:3px

@@ -64,6 +64,8 @@ interface FlowNode {
 }
 
 interface FlowEdgeData {
+  /** A flowchart `linkStyle` stroke. */
+  linkStroke?: string;
   seqMessageKind?: string;
   seqMessageOrder?: number;
   seqFragment?: { type?: string; condition?: string; branchKind?: string };
@@ -144,8 +146,11 @@ const SIDE_WORDS: Readonly<Record<string, string>> = { L: 'left', R: 'right', T:
 
 function edgeAttributes(edge: FlowEdge): string[] {
   const attrs: string[] = [];
+  const stroke = typeof edge.style?.stroke === 'string' ? edge.style.stroke : '';
+  const linkStroke = edge.data?.linkStroke ?? '';
+  if (/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(linkStroke)) attrs.push(linkStroke.toLowerCase());
   if (typeof edge.style?.strokeWidth === 'number' && edge.style.strokeWidth > 2) attrs.push('thick');
-  if (typeof edge.style?.stroke === 'string' && edge.style.stroke === 'transparent') attrs.push('invisible');
+  if (stroke === 'transparent') attrs.push('invisible');
   // Mermaid architecture pins each end to a side (`a:L -- R:b`); the DSL says `from:`/`to:`.
   const from = SIDE_WORDS[String(edge.data?.archSourceSide ?? '').toUpperCase()];
   const to = SIDE_WORDS[String(edge.data?.archTargetSide ?? '').toUpperCase()];
@@ -173,9 +178,20 @@ function edgeLine(edge: FlowEdge, nodes: ReadonlyMap<string, FlowNode>, losses: 
 function flowchartDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[], direction: string | undefined): Converted {
   const losses: string[] = [];
   const byId = new Map(nodes.map((node) => [node.id, node]));
-  const sections = nodes.filter((node) => node.type === 'section');
-  const sectionIds = new Set(sections.map((section) => section.id));
-  const lines: string[] = ['flowchart' + (direction && DIRECTION_WORDS[direction] ? ` ${DIRECTION_WORDS[direction]}` : '')];
+  // Mermaid draws no icons from labels, so neither does its import.
+  const lines: string[] = ['flowchart' + (direction && DIRECTION_WORDS[direction] ? ` ${DIRECTION_WORDS[direction]}` : ''), 'icons: off'];
+  const inside = (id: string, sectionId: string): boolean => {
+    for (let node = byId.get(id); node; node = node.parentId ? byId.get(node.parentId) : undefined) {
+      if (node.parentId === sectionId) return true;
+    }
+    return false;
+  };
+  // Mermaid ignores a subgraph's direction once any link crosses its border.
+  const sectionDirection = (section: FlowNode): string | undefined => {
+    const word = DIRECTION_WORDS[(section.data as { sectionMermaidDirection?: string } | undefined)?.sectionMermaidDirection ?? ''];
+    const crossed = edges.some((edge) => inside(edge.source, section.id) !== inside(edge.target, section.id));
+    return word && !crossed ? word : undefined;
+  };
   const emitted = new Set<string>();
   const emitNode = (node: FlowNode, indent: string) => {
     if (emitted.has(node.id)) return;
@@ -183,14 +199,15 @@ function flowchartDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[], di
     const isSection = node.type === 'section';
     // `subgraph one [Group One]`: edges say `one`, so the group keeps that id; a title-only subgraph has no id to keep.
     const name = isSection && !(node.data as { sectionMermaidId?: string } | undefined)?.sectionMermaidId ? quote(node.data?.label ?? node.id) : nodeName(node);
-    lines.push(`${indent}${isSection ? 'group ' : ''}${name}${attrText(nodeAttributes(node))}${isSection ? ' {' : ''}`);
+    const attributes = isSection ? [...nodeAttributes(node), ...[sectionDirection(node)].filter((word): word is string => Boolean(word))] : nodeAttributes(node);
+    lines.push(`${indent}${isSection ? 'group ' : ''}${name}${attrText(attributes)}${isSection ? ' {' : ''}`);
     if (isSection) {
       for (const child of nodes.filter((candidate) => candidate.parentId === node.id)) emitNode(child, `${indent}  `);
       lines.push(`${indent}}`);
     }
   };
-  for (const node of nodes) if (!node.parentId && !sectionIds.has(node.id)) emitNode(node, '');
-  for (const section of sections) if (!section.parentId) emitNode(section, '');
+  // Source order: the layout keeps declaration order the way Mermaid's does.
+  for (const node of nodes) if (!node.parentId) emitNode(node, '');
   for (const edge of edges) {
     const line = edgeLine(edge, byId, losses);
     if (line) lines.push(line);

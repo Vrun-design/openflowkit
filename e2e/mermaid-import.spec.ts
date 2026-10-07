@@ -1,6 +1,7 @@
 // Mermaid import, end to end: paste into the code panel, convert, generate, and
 // check what actually lands on the canvas. The unit suites cover text → DSL;
 // this one covers DSL → real nodes the user can then edit.
+import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from './test';
 import { MERMAID_COMPAT_FIXTURES } from '../scripts/mermaid-compat-fixtures.mjs';
 import { centreOf, clickNode, connect, doc, midpointOf, node, openCanvas, rect, state } from './helpers';
@@ -81,6 +82,20 @@ test('flowchart: shapes, labelled edges, subgraphs and styles land on the canvas
   for (const label of ['Start', 'Check', 'Go', 'Store', 'Edge', 'Fan', 'API Layer']) expect(found).toContain(label);
   expect(await connectorLabels(page)).toContain('yes');
   expect((await state(page)).connectors.length).toBeGreaterThanOrEqual(5);
+});
+
+// The owner's report, 2026-10-07: pasted Mermaid and ⌘Enter, no Convert click, drew one box per
+// source line — `classDef …`, `subgraph Orders`, `|no| Refresh` — in a single row with inferred icons.
+test('pasted Mermaid generates without a Convert click, and draws what Mermaid draws @gate', async ({ page }) => {
+  const source = await openCodePanel(page);
+  await source.fill(readFileSync('src/services/dsl/fixtures/mermaid/platform.mmd', 'utf8'));
+  await source.press(`${META}+Enter`);
+  await expect.poll(async () => (await state(page)).connectors.length, { timeout: 15_000 }).toBe(63);
+  await expect(source).toHaveValue(/^flowchart down\nicons: off\n/);
+  const found = await labels(page);
+  for (const label of ['User Request', 'CDN / WAF', 'Logs', 'Metrics', 'Traces', 'Rate limit\nexceeded?']) expect(found).toContain(label);
+  expect(found.filter((label) => /^(classDef|class |subgraph|style |linkStyle|%%)|\||<br/.test(label))).toEqual([]);
+  await expect(page.getByText(/icons? added from labels/)).toHaveCount(0);
 });
 
 test('sequence: participants, messages, notes and fragments survive the import', async ({ page }) => {

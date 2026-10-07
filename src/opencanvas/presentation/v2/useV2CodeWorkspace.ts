@@ -157,8 +157,19 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
     abortRef.current = controller;
     setGenerating(true);
     try {
+      // Mermaid, Structurizr or D2 converts first: compiled as DSL it parses into one node per line.
+      const written = text ?? draft;
+      const foreignSource = detectForeign(written);
+      const attempt = foreignSource?.convert(written);
+      if (attempt && 'error' in attempt) {
+        setCompileDiagnostics([{ code: 'E003', severity: 'error', line: 1, col: 1, endCol: 1, message: attempt.error, source: 'parse' }]);
+        return;
+      }
+      const conversion = attempt && 'dsl' in attempt ? attempt : undefined;
+      const source = conversion ? conversion.dsl : written;
+      if (conversion) setDraft(source);
       const bound = target ? currentPage.nodes.find((node) => node.id === target) : undefined;
-      const compiled = await compileWorkspace(text ?? draft, {
+      const compiled = await compileWorkspace(source, {
         origin: bound?.transform.translation ?? nextDslFrameOrigin(currentPage),
         layout: elkDslLayoutPort, signal: controller.signal, resolveIcon: resolveDslIcon,
         // Panel defaults: an authored `appearance:` or `icons:` line wins.
@@ -167,14 +178,14 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
       // Saved layout overrides win over ELK for the elements they name.
       const workspace = snaps ? applySnapsToWorkspace(compiled, snaps) : compiled;
       const primary = workspace.views[0]!.result;
-      setCompileDiagnostics(primary.diagnostics);
+      setCompileDiagnostics([...(conversion?.diagnostics ?? []), ...primary.diagnostics]);
       if (workspace.views.length > 1 || workspace.views[0]!.viewId.startsWith('view:')) {
         // A C4 workspace: one page per view, all pages in one undo step.
         const command = buildWorkspacePagesCommand(document, workspace, {
           mintId: mintV2Id, ...(target ? { replaceFrameId: target } : {}),
         });
         if (command) commit(nameUntitledDocument(document, command, primary.meta.title));
-        workspaceTextRef.current = text ?? draft;
+        workspaceTextRef.current = source;
         setFrameId(null);
         onViews(workspace.views[0]!.viewId);
         announce(`Generated ${workspace.views.length} views. Every element is shared across them.`);
@@ -205,17 +216,6 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
     openPanel();
     void generate(dsl, undefined, null);
   }, [openPanel, generate]);
-  /** Text brought from elsewhere: foreign text converts first; if that fails it waits in the panel with its error. */
-  const startFromSource = useCallback((text: string) => {
-    const conversion = detectForeign(text)?.convert(text);
-    if (!conversion) startFrom(text);
-    else if ('dsl' in conversion) startFrom(conversion.dsl);
-    else {
-      setFrameId(null);
-      setDraft(text);
-      openPanel();
-    }
-  }, [openPanel, startFrom]);
   /** Writes the draft for a new diagram without opening the panel (the motion chips, a pasted Mermaid tip). */
   const writeNew = useCallback((update: (current: string) => string) => {
     setDraft(update);
@@ -226,6 +226,6 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
   return {
     draft, setDraft, edit, writeNew, generating, diagnostics, canvasEdited,
     foreign: foreign ? { label: foreign.label, convert: convertForeign } : null,
-    openNew, openFrame, generate, startFrom, startFromSource, cancel,
+    openNew, openFrame, generate, startFrom, cancel,
   };
 }
