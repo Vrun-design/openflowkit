@@ -251,6 +251,26 @@ export function buildWorkspacePagesCommand(
   return batch('architecture-workspace-generate', `Generate ${workspace.views.length} views`, commands);
 }
 
+/**
+ * Where the first generated view lives once `command` (from `buildWorkspacePagesCommand`) is
+ * applied: the page to open and the frame to fit. A view is matched by its model's pages, so two
+ * models' landscapes never cross.
+ */
+export function firstViewLanding(
+  document: SceneDocumentV1,
+  workspace: CompileWorkspaceResult,
+  command: DocumentCommand | null,
+  replaceFrameId?: string,
+): { readonly pageId: string; readonly frameId: string } | null {
+  const first = workspace.views[0]!;
+  const held = workspaceViewFrames(document, workspace, replaceFrameId)[0];
+  if (held) return held;
+  const pages = (command?.kind === 'batch' ? command.commands : command ? [command] : [])
+    .flatMap((entry) => entry.kind === 'insert-page' ? [entry.page] : entry.kind === 'set-page' ? [entry.after] : []);
+  const page = pages.find((candidate) => archViewIdOfPage(candidate) === first.viewId);
+  return page ? { pageId: page.id, frameId: first.result.frame.id } : null;
+}
+
 function viewPage(pageId: string, viewId: string, name: string, result: CompileWorkspaceResult['views'][number]['result']): ScenePage {
   return {
     id: pageId,

@@ -14,7 +14,7 @@ import { compile, compileWorkspace, type CompileWorkspaceResult } from '../../..
 import { dslFrames } from '../../../dsl/frameScene';
 import { writeAnimateBlock } from '../../../dsl/animate';
 import { architectureWorkspaceText } from '../../../dsl/families/architecture/text';
-import { archViewIdOfPage, placedElementId } from '../../../dsl/model/model';
+import { placedElementId } from '../../../dsl/model/model';
 import { selectedFrameIds } from '../../application/ai/assistantContext';
 import { buildConnectorObjectAction } from '../../application/active-document/connectorActions';
 import { buildArchRelationCommands } from '../../application/dsl/architectureCommands';
@@ -193,7 +193,7 @@ export function V2EditorPage(): React.JSX.Element {
   useEffect(() => {
     pageRef.current = page;
   });
-  const [pendingView, setPendingView] = useState<string | null>(null);
+  const [pendingPageId, setPendingPageId] = useState<string | null>(null);
   const architecture = useV2Architecture(session.document, page);
   const architectureActionsRef = useRef<ReturnType<typeof useV2ArchitectureActions> | null>(null);
   const labelEditing = useV2LabelEditing({
@@ -232,7 +232,7 @@ export function V2EditorPage(): React.JSX.Element {
     onPaletteChange: useCallback((diagramPalette) => updatePreferences({ diagramPalette }), [updatePreferences]),
     commit: session.commit, applySelection, fitView: camera.fitView,
     openPanel: useCallback(() => openWorkspace('code'), [openWorkspace]),
-    onViews: setPendingView, pushToast, dismissToast, announce: setAnnouncement,
+    onViews: setPendingPageId, pushToast, dismissToast, announce: setAnnouncement,
   });
   const toggleCode = () => { if (panels.workspace === 'code') panels.closeWorkspace(); else code.openNew(); };
 
@@ -364,13 +364,13 @@ export function V2EditorPage(): React.JSX.Element {
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.revision, workspaceFolder.folder, architecture.model, load.readOnly]);
-  // A workspace generate commits pages for views that may not exist yet; land
-  // on the requested view as soon as the committed document arrives.
+  // A workspace generate commits pages that may not exist yet; land on the
+  // requested one as soon as the committed document arrives.
   useEffect(() => {
-    if (!pendingView || !session.document) return;
-    const target = session.document.pages.find((candidate) => archViewIdOfPage(candidate) === pendingView);
-    if (target) { setActivePageId(target.id); setPendingView(null); }
-  }, [pendingView, session.document]);
+    if (!pendingPageId || !session.document?.pages.some((candidate) => candidate.id === pendingPageId)) return;
+    setActivePageId(pendingPageId);
+    setPendingPageId(null);
+  }, [pendingPageId, session.document]);
   const playback = useV2FlowPlayback({
     model: architecture.model,
     document: session.document,

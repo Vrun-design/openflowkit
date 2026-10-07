@@ -13,7 +13,7 @@ import { serialize } from '../../../dsl/serialize';
 import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { applySnapsToWorkspace, type WorkspaceSnap } from '../../../services/workspace/workspaceFolder';
-import { buildWorkspacePagesCommand } from '../../application/dsl/architectureCommands';
+import { buildWorkspacePagesCommand, firstViewLanding } from '../../application/dsl/architectureCommands';
 import { buildDslPageCommand, nameUntitledDocument, nextDslFrameOrigin } from '../../application/dsl/dslPageCommand';
 import { buildAutoIconsOffCommand, hasAutoIcon } from '../../application/dsl/iconCommands';
 import { replaceSelection, type CanvasSelection } from '../../application/selection/selection';
@@ -39,8 +39,8 @@ export interface V2CodeWorkspaceOptions {
   readonly applySelection: (selection: CanvasSelection) => void;
   readonly fitView: (ids?: readonly string[]) => void;
   readonly openPanel: () => void;
-  /** A C4 workspace generated several views; land on this one once its page exists. */
-  readonly onViews: (viewId: string) => void;
+  /** A C4 workspace generated several views; land on the first one's page once it exists. */
+  readonly onViews: (pageId: string) => void;
   readonly pushToast: (toast: ToastItem) => void;
   readonly dismissToast: (id: string) => void;
   readonly announce: (message: string) => void;
@@ -187,7 +187,12 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
         if (command) commit(nameUntitledDocument(document, command, primary.meta.title));
         workspaceTextRef.current = source;
         setFrameId(null);
-        onViews(workspace.views[0]!.viewId);
+        const first = firstViewLanding(document, workspace, command, target ?? undefined);
+        if (first) {
+          onViews(first.pageId);
+          // The first view may have taken the page the user is on: no page switch to fit it.
+          if (!target) setFitFrameId(first.frameId);
+        }
         announce(`Generated ${workspace.views.length} views. Every element is shared across them.`);
         return;
       }

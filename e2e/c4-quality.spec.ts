@@ -14,6 +14,13 @@ test('C4 starter, keyboard inspection, focused camera and visual flow authoring 
   await expect.poll(async () => (await doc(page))?.pages.length).toBe(3);
   // The three views are the only pages: the empty page it was made on became the first.
   expect((await doc(page))?.pages.every((entry) => entry.nodes.length > 0)).toBe(true);
+  // ...and the first view lands fitted, not at 100% off the edge of the screen.
+  const landscape = (await doc(page))!.pages[0]!.nodes.find((entry) => entry.kind === 'frame')!;
+  await expect.poll(async () => {
+    const box = await rect(page, landscape.id);
+    const view = page.viewportSize()!;
+    return !!box && box.x >= 0 && box.y >= 0 && box.x + box.width <= view.width && box.y + box.height <= view.height;
+  }).toBe(true);
   await expect(page.getByRole('button', { name: 'Shop architecture', exact: true })).toBeVisible();
   await workspace.getByRole('button', { name: 'Architecture model', exact: true }).click();
   await expect(page.getByLabel('Search architecture')).toBeVisible();
@@ -108,4 +115,24 @@ test('Generate from the untouched starter draft keeps a view made in the model p
   if (!(await modelPanel.isVisible())) await modelButton.click();
   await modelPanel.getByRole('tab', { name: /Views/ }).click();
   await expect(modelPanel.getByRole('list', { name: 'Views' })).toContainText('Component');
+});
+
+test('a second model opens on its own landscape, not the first model\'s @gate', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Diagram as code' }).click();
+  const editor = page.getByRole('textbox', { name: 'Diagram source' });
+  const generate = page.getByRole('button', { name: 'Generate diagram' });
+  const model = (person: string, system: string) =>
+    `architecture\nmodel {\n  person ${person}\n  system ${system}\n  ${person} -> ${system}\n}\n`;
+  await editor.fill(model('Alice', 'Shop'));
+  await generate.click();
+  await expect.poll(async () => (await doc(page))?.pages.length).toBe(1);
+  await expect.poll(async () => rect(page, 'alice')).not.toBeNull();
+  await editor.fill(model('Bob', 'Bank'));
+  await generate.click();
+  await expect.poll(async () => (await doc(page))?.pages.length).toBe(2);
+  // The canvas draws the open page only: Bob is on screen, Alice is not.
+  await expect.poll(async () => rect(page, 'bob')).not.toBeNull();
+  expect(await rect(page, 'alice')).toBeNull();
 });

@@ -9,7 +9,7 @@ import type { SceneDocumentV1 } from '../../domain/document/types';
 import { createEmptyV2Document } from '../../presentation/v2/v2Document';
 import {
   buildArchFlowCreateCommand, buildArchElementEditCommand, buildArchElementRemoveCommand,
-  buildArchRelationCommands, buildArchUnplaceCommand, buildWorkspacePagesCommand,
+  buildArchRelationCommands, buildArchUnplaceCommand, buildWorkspacePagesCommand, firstViewLanding,
 } from './architectureCommands';
 
 const WORKSPACE = `architecture
@@ -71,6 +71,26 @@ describe('workspace pages command', () => {
     expect(applied.document.pages[0]!.id).toBe(pageId);
     expect(archViewIdOfPage(applied.document.pages[0]!)).toBe('view:context:shop');
     expect(applyDocumentCommand(applied.document, applied.inverse).document.pages).toEqual(empty.pages);
+  });
+
+  it('says where the first view lands: the empty page, a new page, or the page it regenerates', async () => {
+    const empty = createEmptyV2Document('doc-5', 'Shop');
+    const frameOf = (document: SceneDocumentV1, pageId: string) => document.pages.find((page) => page.id === pageId)!.nodes.find((node) => node.kind === 'frame')!.id;
+    const shop = await compileWorkspace(WORKSPACE);
+    const onEmpty = buildWorkspacePagesCommand(empty, shop, { mintId, intoPageId: empty.pages[0]!.id })!;
+    const landed = firstViewLanding(empty, shop, onEmpty)!;
+    expect(landed.pageId).toBe(empty.pages[0]!.id);
+    const document = applyDocumentCommand(empty, onEmpty).document;
+    expect(landed.frameId).toBe(frameOf(document, landed.pageId));
+
+    const bank = await compileWorkspace('architecture\nmodel {\n  person Bob\n  system Bank\n  Bob -> Bank\n}\n');
+    const beside = buildWorkspacePagesCommand(document, bank, { mintId, intoPageId: document.pages[0]!.id })!;
+    const second = firstViewLanding(document, bank, beside)!;
+    expect(second.pageId).not.toBe(landed.pageId);
+    expect(second.frameId).toBe(frameOf(applyDocumentCommand(document, beside).document, second.pageId));
+
+    const again = buildWorkspacePagesCommand(document, await compileWorkspace(EDITED), { mintId, intoPageId: document.pages[0]!.id });
+    expect(firstViewLanding(document, await compileWorkspace(EDITED), again)).toEqual({ pageId: landed.pageId, frameId: landed.frameId });
   });
 
   it('leaves a page that holds drawings alone', async () => {

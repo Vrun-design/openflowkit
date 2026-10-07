@@ -43,8 +43,10 @@ export function useV2Architecture(document: SceneDocumentV1 | null, page: SceneP
     const index = model ? createArchIndex(model) : null;
     const viewId = page ? archViewIdOfPage(page) : null;
     const view = model && viewId ? model.views.find((candidate) => candidate.id === viewId) ?? null : null;
-    const pageForView = (wanted: string) =>
-      document?.pages.find((candidate) => archViewIdOfPage(candidate) === wanted);
+    // Two models in one document each have a landscape: a view id alone names the first one's.
+    const mine = new Set(model?.elements.map((element) => element.id));
+    const pageForView = (wanted: string) => document?.pages.find((candidate) => archViewIdOfPage(candidate) === wanted
+      && (!model || archModelOfPage(candidate)?.elements.some((element) => mine.has(element.id))));
     const pageForElement = (elementId: string) => {
       if (!model || !index) return undefined;
       const child = viewForElement(model, index, elementId);
