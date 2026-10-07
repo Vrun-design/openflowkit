@@ -66,6 +66,10 @@ interface FlowNode {
 interface FlowEdgeData {
   /** A flowchart `linkStyle` stroke. */
   linkStroke?: string;
+  /** Flowchart `--o` / `--x` ends, and `id@{ animate: true }`. */
+  head?: 'circle' | 'cross';
+  tail?: 'circle' | 'cross';
+  animate?: boolean;
   seqMessageKind?: string;
   seqMessageOrder?: number;
   seqFragment?: { type?: string; condition?: string; branchKind?: string };
@@ -151,6 +155,9 @@ function edgeAttributes(edge: FlowEdge): string[] {
   if (/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(linkStroke)) attrs.push(linkStroke.toLowerCase());
   if (typeof edge.style?.strokeWidth === 'number' && edge.style.strokeWidth > 2) attrs.push('thick');
   if (stroke === 'transparent') attrs.push('invisible');
+  if (edge.data?.animate) attrs.push('flow');
+  if (edge.data?.head) attrs.push(`head: ${edge.data.head}`);
+  if (edge.data?.tail) attrs.push(`tail: ${edge.data.tail}`);
   // Mermaid architecture pins each end to a side (`a:L -- R:b`); the DSL says `from:`/`to:`.
   const from = SIDE_WORDS[String(edge.data?.archSourceSide ?? '').toUpperCase()];
   const to = SIDE_WORDS[String(edge.data?.archTargetSide ?? '').toUpperCase()];
@@ -624,6 +631,8 @@ export function looksLikeMermaid(text: string): boolean {
   if (/^(flowchart|graph)\b/i.test(first)) {
     // `-->` is our dashed edge too, so these DSL-only signals decide before MERMAID_ONLY does.
     if (/^(flowchart|graph)\s+(right|left|down|up)\b/i.test(first) || DSL_ONLY.test(text)) return false;
+    // Our directions are words; `TD`/`LR`/… is Mermaid's header and needs no other hint.
+    if (/^(flowchart|graph)\s+(TD|TB|LR|RL|BT)\s*;?$/.test(first)) return true;
     if (MERMAID_ONLY.test(text)) return true;
     // `A[Label]` is Mermaid shorthand; our DSL writes `A [shape]` with a space.
     if (/\w\[/.test(text) || /\|\w+\|/.test(text)) return true;

@@ -7,6 +7,7 @@ export const SHAPE_OPENERS: Array<{
   shape: NodeData['shape'];
 }> = [
   { open: '([', close: '])', type: 'start', shape: 'capsule' },
+  { open: '(((', close: ')))', type: 'end', shape: 'circle' },
   { open: '((', close: '))', type: 'end', shape: 'circle' },
   { open: '{{', close: '}}', type: 'custom', shape: 'hexagon' },
   { open: '[(', close: ')]', type: 'process', shape: 'cylinder' },
@@ -196,9 +197,14 @@ function extractModernAnnotation(input: string): ModernShapeAnnotation {
   };
 }
 
-/** Mermaid breaks a label on `\n` and on `<br>`, `<br/>`, `<br />`. */
-export function breakLines(label: string): string {
-  return label.replace(/\\n|<br\s*\/?>/gi, '\n');
+const NAMED_ENTITIES: Readonly<Record<string, string>> = { quot: '"', amp: '&', lt: '<', gt: '>', apos: "'", nbsp: ' ', hash: '#', semi: ';' };
+
+/** Label text as Mermaid shows it: `\n` and `<br>`/`<br/>` break the line; `#quot;` and `#9829;` are entity codes. */
+export function labelText(label: string): string {
+  return label
+    .replace(/\\n|<br\s*\/?>/gi, '\n')
+    .replace(/#(\d+);/g, (code, digits: string) => (Number(digits) <= 0x10ffff ? String.fromCodePoint(Number(digits)) : code))
+    .replace(/#([a-z]+);/gi, (code, name: string) => NAMED_ENTITIES[name.toLowerCase()] ?? code);
 }
 
 function stripMarkdown(label: string): string {
@@ -248,7 +254,7 @@ function tryParseWithShape(
   ) {
     label = label.slice(1, -1);
   }
-  label = breakLines(label);
+  label = labelText(label);
   label = stripFaIcons(label);
   label = stripMarkdown(label);
   if (!label) label = id;
@@ -308,8 +314,11 @@ export function parseNodeDeclaration(raw: string): RawNode | null {
   return null;
 }
 
+// Order matters at each position: longer and marker forms before the plain ones they start with.
 export const ARROW_PATTERNS = [
   '~~~',
+  'o--o',
+  'x--x',
   '<==>',
   '<-.->',
   '<-->',
@@ -321,9 +330,13 @@ export const ARROW_PATTERNS = [
   '--->',
   '-->',
   '===',
+  '---o',
+  '---x',
   '---',
   '==>',
   '-.-',
+  '--o',
+  '--x',
   '--',
 ];
 
@@ -486,77 +499,29 @@ function splitOnUnquotedAmpersand(input: string): string[] {
   return parts;
 }
 
-function expandAmpersandEdges(line: string): string[] {
-  if (!line.includes('&')) return [line];
-  const arrowMatch = findArrowInLine(line);
-  if (!arrowMatch) return [line];
-
-  const { arrow, index } = arrowMatch;
-  const sourcePart = line.substring(0, index).trim();
-  const afterArrow = line.substring(index + arrow.length).trim();
-
-  // Parse optional pipe label after arrow
-  const labelMatch = afterArrow.match(/^\|([^|]*)\|(.*)/);
-  const label = labelMatch ? `|${labelMatch[1]}|` : '';
-  const targetPart = labelMatch ? labelMatch[2].trim() : afterArrow;
-
-  // Only split on `&` when it sits outside any quoted label or shape bracket —
-  // otherwise an `&` inside a label (e.g. "User & Auth") gets mistaken for the
-  // fan-out separator and the label is destroyed.
-  const sources = splitOnUnquotedAmpersand(sourcePart).map((s) => s.trim()).filter(Boolean);
-  const targets = splitOnUnquotedAmpersand(targetPart).map((s) => s.trim()).filter(Boolean);
-
-  if (sources.length <= 1 && targets.length <= 1) return [line];
-
-  const lines: string[] = [];
-  for (const src of sources) {
-    for (const tgt of targets) {
-      lines.push(`${src} ${arrow}${label} ${tgt}`);
-    }
-  }
-  return lines;
-}
-
+/**
+ * A link statement as node groups and the links between them: `a --> b & c --> d` is
+ * a→b, a→c, b→d, c→d. `&` splits a group only outside quotes and brackets, so a label
+ * like "User & Auth" stays whole.
+ */
 export function parseEdgeLine(line: string): Array<{
   sourceRaw: string;
   targetRaw: string;
   label: string;
   arrowType: string;
 }> {
-  const expanded = expandAmpersandEdges(line);
-  if (expanded.length > 1) {
-    return expanded.flatMap(parseEdgeLine);
-  }
-
-  const edges: Array<{ sourceRaw: string; targetRaw: string; label: string; arrowType: string }> =
-    [];
+  const groups: string[][] = [];
+  const links: { arrow: string; label: string }[] = [];
   let remaining = line.trim();
-  let lastNodeRaw: string | null = null;
-
-  while (remaining.trim()) {
-    const arrowMatch = findArrowInLine(remaining);
-    if (!arrowMatch) break;
-
-    const { arrow } = arrowMatch;
-    const sourceRaw = sanitizeEdgeEndpoint(lastNodeRaw || arrowMatch.before);
-    const sourceOffset = arrowMatch.index + arrow.length;
-    const { label, nextIndex } = parseEdgeLabelSegment(remaining, sourceOffset);
-    const targetSegment = remaining.slice(nextIndex).trim();
-    const nextArrowMatch = findArrowInLine(targetSegment);
-    const targetRaw = sanitizeEdgeEndpoint(
-      nextArrowMatch ? targetSegment.slice(0, nextArrowMatch.index) : targetSegment
-    );
-
-    if (sourceRaw && targetRaw) {
-      edges.push({ sourceRaw, targetRaw, label: breakLines(label), arrowType: arrow });
-    }
-
-    lastNodeRaw = targetRaw;
-    remaining = nextArrowMatch ? targetSegment.slice(nextArrowMatch.index) : '';
-    if (!nextArrowMatch) break;
+  for (let match = findArrowInLine(remaining); match; match = findArrowInLine(remaining)) {
+    groups.push(splitOnUnquotedAmpersand(remaining.slice(0, match.index)).map(sanitizeEdgeEndpoint).filter(Boolean));
+    const { label, nextIndex } = parseEdgeLabelSegment(remaining, match.index + match.arrow.length);
+    links.push({ arrow: match.arrow, label: labelText(label) });
+    remaining = remaining.slice(nextIndex);
   }
-
-  return edges;
+  groups.push(splitOnUnquotedAmpersand(remaining).map(sanitizeEdgeEndpoint).filter(Boolean));
+  return links.flatMap(({ arrow, label }, index) => groups[index]!.flatMap((sourceRaw) =>
+    groups[index + 1]!.map((targetRaw) => ({ sourceRaw, targetRaw, label, arrowType: arrow }))));
 }
 
 export function parseStyleString(styleStr: string): Record<string, string> {

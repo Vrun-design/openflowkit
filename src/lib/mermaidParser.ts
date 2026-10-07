@@ -64,7 +64,10 @@ export interface ParseResult {
   diagnostics?: string[];
 }
 
-/** Flowchart `;` ends a statement (`graph LR; A-->B; B-->C`) unless it sits in quotes, brackets or a |label|. */
+/**
+ * Flowchart `;` ends a statement (`graph LR; A-->B; B-->C`) unless it sits in quotes, brackets or a |label|;
+ * `%%` there starts a comment that runs to the end of the line.
+ */
 function splitStatements(line: string): string[] {
   const parts: string[] = [];
   let depth = 0;
@@ -75,6 +78,10 @@ function splitStatements(line: string): string[] {
     const char = line[index];
     if (char === '"') quoted = !quoted;
     else if (quoted) continue;
+    else if (char === '%' && line[index + 1] === '%' && depth === 0 && !piped) {
+      parts.push(line.slice(start, index));
+      return parts;
+    }
     else if (char === '|' && depth === 0) piped = !piped;
     else if ('[({'.includes(char)) depth++;
     else if (')]}'.includes(char)) depth = Math.max(0, depth - 1);
@@ -106,15 +113,14 @@ function isSkippableLine(line: string): boolean {
   return !line || SKIP_PATTERNS.some((pattern) => pattern.test(line));
 }
 
+/** `flowchart LR`, or a bare `flowchart` / `graph`, which Mermaid draws top to bottom. */
 function parseFlowchartDeclaration(line: string): MermaidDirection | null {
-  const flowchartMatch = line.match(/^(?:flowchart|graph)\s+(TD|TB|LR|RL|BT)/i);
+  const flowchartMatch = line.match(/^(?:flowchart|graph)(?:\s+(TD|TB|LR|RL|BT))?\s*$/i);
   if (!flowchartMatch) {
     return null;
   }
-
-  return (
-    flowchartMatch[1].toUpperCase() === 'TD' ? 'TB' : flowchartMatch[1].toUpperCase()
-  ) as MermaidDirection;
+  const direction = (flowchartMatch[1] ?? 'TB').toUpperCase();
+  return (direction === 'TD' ? 'TB' : direction) as MermaidDirection;
 }
 
 function parseStateDiagramDirection(nextLine: string | undefined): MermaidDirection {
@@ -273,27 +279,39 @@ function parseEdgeDeclaration(
     return false;
   }
 
-  const edgesFound = parseEdgeLine(line);
+  // `A e1@--> B`: the id names the link that follows it.
+  const ids: string[] = [];
+  const unnamed = line.replace(/(^|\s)([A-Za-z_][\w-]*)@(?=[<ox]?[-=.~])/g, (_, lead: string, id: string) => {
+    ids.push(id);
+    return lead;
+  });
+  const edgesFound = parseEdgeLine(unnamed);
   if (edgesFound.length === 0) {
     state.diagnostics.push(`Invalid Mermaid edge syntax at line ${lineNumber}: "${line}"`);
     return true;
   }
 
-  edgesFound.forEach((edge) => {
+  edgesFound.forEach((edge, index) => {
     const type = state.diagramType === 'stateDiagram' ? 'state' : 'process';
     const sourceId = registerMermaidNode(state, edge.sourceRaw, type);
     const targetId = registerMermaidNode(state, edge.targetRaw, type);
 
     if (sourceId && targetId) {
-      state.rawEdges.push({
-        source: sourceId,
-        target: targetId,
-        label: edge.label,
-        arrowType: edge.arrowType,
-      });
+      const rawEdge = { source: sourceId, target: targetId, label: edge.label, arrowType: edge.arrowType };
+      state.rawEdges.push(rawEdge);
+      if (ids.length === edgesFound.length) state.edgeIds.set(ids[index]!, rawEdge);
     }
   });
 
+  return true;
+}
+
+/** `e1@{ animate: true }` (or `animation: fast|slow`) on an edge named earlier. */
+function applyEdgeProperties(state: ReturnType<typeof createMermaidParseState>, line: string): boolean {
+  const match = line.match(/^([A-Za-z_][\w-]*)@\{(.*)\}$/);
+  const edge = match ? state.edgeIds.get(match[1]!) : undefined;
+  if (!edge) return false;
+  if (/\banimat(?:e\s*:\s*true|ion\s*:)/.test(match![2]!)) edge.animate = true;
   return true;
 }
 
@@ -384,6 +402,10 @@ function buildMermaidParseModel({ lines, lineNumbers }: { lines: string[]; lineN
     const linkStyleMatch = parseLinkStyleLine(line);
     if (linkStyleMatch) {
       linkStyleMatch.indices.forEach((index) => state.linkStyles.set(index, linkStyleMatch.style));
+      continue;
+    }
+
+    if (applyEdgeProperties(state, line)) {
       continue;
     }
 
@@ -527,6 +549,13 @@ function createFlowEdges(model: MermaidParseModel): FlowEdge[] {
     }
     if (!edge.arrowType.includes('>')) {
       flowEdge.markerEnd = undefined;
+    }
+    // `--o` / `--x` end in a circle or cross; `o--o` / `x--x` at both ends.
+    const markerKind = (end: string | undefined) => (end === 'o' ? 'circle' : end === 'x' ? 'cross' : undefined);
+    const head = markerKind(edge.arrowType.at(-1));
+    const tail = markerKind(edge.arrowType[0]);
+    if (head || tail || edge.animate) {
+      flowEdge.data = { ...flowEdge.data, ...(head ? { head } : {}), ...(tail ? { tail } : {}), ...(edge.animate ? { animate: true } : {}) };
     }
 
     const style = model.linkStyles.get(index);

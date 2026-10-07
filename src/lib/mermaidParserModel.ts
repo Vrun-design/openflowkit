@@ -8,6 +8,8 @@ export interface MermaidRawEdge {
   target: string;
   label: string;
   arrowType: string;
+  /** `e1@{ animate: true }` on the edge declared as `A e1@--> B`. */
+  animate?: boolean;
 }
 
 export interface MermaidParseModel {
@@ -23,6 +25,8 @@ export interface MermaidParseModel {
 export interface MermaidParseState {
   nodesMap: Map<string, RawNode>;
   rawEdges: MermaidRawEdge[];
+  /** Edge ids (`A e1@--> B`), so `e1@{ … }` sets the edge instead of declaring a node. */
+  edgeIds: Map<string, MermaidRawEdge>;
   linkStyles: Map<number, Record<string, string>>;
   classDefs: Map<string, Record<string, string>>;
   diagnostics: string[];
@@ -36,6 +40,7 @@ export function createMermaidParseState(): MermaidParseState {
   return {
     nodesMap: new Map<string, RawNode>(),
     rawEdges: [],
+    edgeIds: new Map<string, MermaidRawEdge>(),
     linkStyles: new Map<number, Record<string, string>>(),
     classDefs: new Map<string, Record<string, string>>(),
     diagnostics: [],

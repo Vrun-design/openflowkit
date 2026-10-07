@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MERMAID_COMPAT_FIXTURES } from '../../../scripts/mermaid-compat-fixtures.mjs';
 import { compile } from '../../dsl/compile';
 import { format } from '../../dsl/serialize';
+import { FLOWCHART_SYNTAX } from './fixtures/mermaid/flowchartSyntax';
 import platform from './fixtures/mermaid/platform.mmd?raw';
 import { looksLikeMermaid, mermaidToDsl } from './mermaidToDsl';
 
@@ -106,6 +107,19 @@ describe('mermaidToDsl', () => {
     expect(compiled.diagnostics.filter((item) => item.severity === 'error')).toEqual([]);
     expect(compiled.nodes).toHaveLength(47);
     expect(compiled.connectors).toHaveLength(63);
+  });
+
+  it.each(FLOWCHART_SYNTAX.map((item) => [item.n, item] as const))('flowchart syntax: %s', async (_, item) => {
+    const { dsl } = convert(item.s);
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((entry) => entry.severity === 'error')).toEqual([]);
+    expect({ nodes: compiled.nodes.length, edges: compiled.connectors.length }).toEqual({ nodes: item.nodes, edges: item.edges });
+    if (item.groups !== undefined) expect(compiled.groups).toHaveLength(item.groups);
+    const labels = [...compiled.nodes, ...compiled.groups].map((node) => node.content.label);
+    for (const label of item.labels ?? []) expect(labels).toContain(label);
+    const edgeLabels = compiled.connectors.flatMap((connector) => connector.labels.map((label) => label.text));
+    for (const label of item.edgeLabels ?? []) expect(edgeLabels).toContain(label);
+    for (const line of item.dsl ?? []) expect(dsl.split('\n')).toContain(line);
   });
 
   it('keeps a subgraph direction only when no link leaves the subgraph, as Mermaid does', () => {
