@@ -6,6 +6,8 @@ import { isClassEntityNodeKind } from './classEntityNodePresentation';
 export const CLASS_ENTITY_HEADER_HEIGHT = 44;
 export const CLASS_ENTITY_ROW_HEIGHT = 18;
 export const CLASS_ENTITY_CONTENT_PADDING = 10;
+/** The line between a class's attributes and its methods takes this much room, not a whole row. */
+const CLASS_ENTITY_DIVIDER_GAP = 6;
 
 export type ClassEntityList = 'classAttributes' | 'classMethods' | 'erFields';
 
@@ -20,6 +22,19 @@ export interface ClassEntityRow {
 function listLength(node: SceneNode, list: ClassEntityList): number {
   const value = node.content[list];
   return Array.isArray(value) ? value.length : 0;
+}
+
+/** How a class box of this height splits between attributes and methods, in node-local y. */
+export function classCompartments(height: number) {
+  const availableRows = Math.max(2, Math.floor((height - CLASS_ENTITY_HEADER_HEIGHT - CLASS_ENTITY_CONTENT_PADDING * 2) / CLASS_ENTITY_ROW_HEIGHT));
+  const attributeSlots = Math.max(1, Math.ceil(availableRows / 2));
+  const dividerY = CLASS_ENTITY_HEADER_HEIGHT + CLASS_ENTITY_CONTENT_PADDING + attributeSlots * CLASS_ENTITY_ROW_HEIGHT;
+  return {
+    attributeSlots,
+    methodSlots: Math.max(1, availableRows - attributeSlots),
+    dividerY: dividerY + CLASS_ENTITY_DIVIDER_GAP / 2,
+    methodsTop: dividerY + CLASS_ENTITY_DIVIDER_GAP,
+  };
 }
 
 /** The visible member rows of a class or entity node, top to bottom. */
@@ -37,12 +52,9 @@ export function classEntityRows(node: SceneNode): readonly ClassEntityRow[] {
     return Array.from({ length: count }, (_, index) =>
       row('erFields', index, top + index * CLASS_ENTITY_ROW_HEIGHT));
   }
-  const availableRows = Math.max(2, Math.floor(usable / CLASS_ENTITY_ROW_HEIGHT));
-  const attributeSlots = Math.max(1, Math.ceil(availableRows / 2));
-  const methodSlots = Math.max(1, availableRows - attributeSlots);
+  const { attributeSlots, methodSlots, methodsTop } = classCompartments(node.size.height);
   const attributes = Math.min(listLength(node, 'classAttributes') + 1, attributeSlots);
   const methods = Math.min(listLength(node, 'classMethods') + 1, methodSlots);
-  const methodsTop = top + attributeSlots * CLASS_ENTITY_ROW_HEIGHT + CLASS_ENTITY_ROW_HEIGHT;
   return [
     ...Array.from({ length: attributes }, (_, index) =>
       row('classAttributes', index, top + index * CLASS_ENTITY_ROW_HEIGHT)),

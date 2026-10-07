@@ -16,6 +16,7 @@ import { applyPixiNodeMatrix } from './pixiNodeTransform';
 import { createPixiText, truncateTextToWidth } from './pixiText';
 
 import {
+  classCompartments,
   CLASS_ENTITY_CONTENT_PADDING as CONTENT_PADDING,
   CLASS_ENTITY_HEADER_HEIGHT as HEADER_HEIGHT,
   CLASS_ENTITY_ROW_HEIGHT as ROW_HEIGHT,
@@ -185,12 +186,7 @@ export class PixiClassEntityNodeRenderer {
     drawPixiLocalRect(graphics, createBounds2d(0, HEADER_HEIGHT, node.size.width, 1), matrix);
     graphics.fill({ color: visual.stroke });
     if (visual.presentation.kind === 'class') {
-      const availableRows = Math.max(
-        2,
-        Math.floor((node.size.height - HEADER_HEIGHT - CONTENT_PADDING * 2) / ROW_HEIGHT)
-      );
-      const attributeSlots = Math.max(1, Math.ceil(availableRows / 2));
-      const dividerY = HEADER_HEIGHT + CONTENT_PADDING + (attributeSlots + 0.5) * ROW_HEIGHT;
+      const { dividerY } = classCompartments(node.size.height);
       drawPixiLocalRect(graphics, createBounds2d(0, dividerY, node.size.width, 1), matrix);
       graphics.fill({ color: visual.stroke });
     }
@@ -227,17 +223,11 @@ export class PixiClassEntityNodeRenderer {
   private createClassLabel(node: SceneNode, visual: PixiClassEntityNodeVisual): Container {
     if (visual.presentation.kind !== 'class') return new Container();
     const content = this.createHeader(node, visual, 'Class', visual.presentation.stereotype);
-    const availableRows = Math.max(
-      2,
-      Math.floor((node.size.height - HEADER_HEIGHT - CONTENT_PADDING * 2) / ROW_HEIGHT)
-    );
-    const attributeSlots = Math.max(1, Math.ceil(availableRows / 2));
-    const methodSlots = Math.max(1, availableRows - attributeSlots);
+    const { attributeSlots, methodSlots, methodsTop } = classCompartments(node.size.height);
     const visibleAttributes = visibleRowCount(
       visual.presentation.attributes.length,
       attributeSlots
     );
-    const attributesHeight = attributeSlots * ROW_HEIGHT;
     addClassRows(
       content,
       visual.presentation.attributes,
@@ -252,7 +242,7 @@ export class PixiClassEntityNodeRenderer {
       visual.presentation.methods,
       visibleRowCount(visual.presentation.methods.length, methodSlots),
       CONTENT_PADDING,
-      HEADER_HEIGHT + CONTENT_PADDING + attributesHeight + ROW_HEIGHT,
+      methodsTop,
       node.size.width - CONTENT_PADDING * 2,
       visual
     );

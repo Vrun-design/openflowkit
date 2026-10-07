@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { deterministicLayout, type LayoutEdgeInput, type LayoutPort } from '../layout';
+import { classEntityRows } from '../../opencanvas/domain/nodes/classEntityRows';
 import { compile } from '../compile';
 import { format, serialize } from '../serialize';
 
@@ -96,6 +97,22 @@ describe('class family', () => {
     const codes = result.diagnostics.map((item) => item.code);
     expect(codes).toContain('W101');
     expect(result.connectors).toHaveLength(0);
+  });
+});
+
+describe('class compartments', () => {
+  // Found 2026-10-07: the divider took a whole row, so the last method sat on the border.
+  it.each([
+    ['one of each', '+id: int\n---\n+save(): void'],
+    ['two and two', '+a: int\n+b: int\n---\n+x(): void\n+y(): void'],
+    ['methods only', '+a(): void\n+b(): void\n+c(): void'],
+    ['attributes only', '+a: int\n+b: int'],
+    ['two and three, no divider', '+id: int\n+name: string\n+save(): void\n+load(): void\n+drop(): void'],
+  ])('keeps every row of a class with %s inside the box', async (_name, body) => {
+    const node = (await compile(`class\nShape {\n${body}\n}`)).nodes[0]!;
+    const rows = classEntityRows(node);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row.bounds.y + row.bounds.height).toBeLessThanOrEqual(node.size.height);
   });
 });
 
