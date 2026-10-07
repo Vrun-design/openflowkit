@@ -149,6 +149,8 @@ export interface RawNode {
   parentId?: string;
   styles?: Record<string, string>;
   classes?: string[];
+  /** A state's `id : text` under a name it already has. */
+  description?: string;
   metadata?: {
     sectionMermaidId?: string;
     sectionMermaidTitle?: string;

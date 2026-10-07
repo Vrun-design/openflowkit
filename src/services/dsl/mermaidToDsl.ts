@@ -37,6 +37,7 @@ interface FlowNodeData {
   shape?: string;
   color?: string;
   seqParticipantKind?: string;
+  seqParticipantStereotype?: string;
   seqParticipantAlias?: string;
   seqNoteTarget?: string;
   seqNoteTargets?: string[];
@@ -45,6 +46,7 @@ interface FlowNodeData {
   seqFragment?: { type?: string; condition?: string; branchKind?: string };
   erFields?: unknown;
   classStereotype?: string;
+  classFill?: string;
   classAttributes?: string[];
   classMethods?: string[];
   stateControlKind?: string;
@@ -79,6 +81,7 @@ interface FlowEdgeData {
   classRelation?: string;
   classRelationSourceCardinality?: string;
   classRelationTargetCardinality?: string;
+  classRelationLabel?: string;
 }
 
 interface FlowEdge {
@@ -287,6 +290,7 @@ function sequenceDsl(source: string, nodes: readonly FlowNode[], edges: readonly
   for (const participant of participants) {
     const attrs: string[] = [];
     if (participant.data?.seqParticipantKind === 'actor') attrs.push('actor');
+    if (participant.data?.seqParticipantStereotype) attrs.push(participant.data.seqParticipantStereotype);
     const alias = participant.data?.seqParticipantAlias;
     if (typeof alias === 'string' && alias && alias !== participant.data?.label) losses.push(`Participant alias "${alias}" folded into the label`);
     lines.push(`participant ${participantDecl(participant)}${attrText(attrs)}`);
@@ -295,7 +299,7 @@ function sequenceDsl(source: string, nodes: readonly FlowNode[], edges: readonly
     if (self) return '->';
     if (kind === 'return') return '-->';
     if (kind === 'async') return '->>';
-    if (kind === 'destroy') return '<->';
+    // `-x` ends in a cross the DSL message has no head for.
     return '->';
   };
   // Messages, notes and activations interleave by source order. The parser
@@ -332,6 +336,11 @@ function sequenceDsl(source: string, nodes: readonly FlowNode[], edges: readonly
     });
   }
   events.sort((a, b) => a.order - b.order || a.rank - b.rank);
+  // The DSL continues only `alt` with `else`: a `critical` with `option` branches becomes alt/else.
+  const optioned = [...edges.map((edge) => edge.data?.seqFragment), ...notes.map((note) => note.data?.seqFragment)]
+    .some((fragment) => fragment?.type === 'critical' && fragment.branchKind === 'option');
+  if (optioned) losses.push('critical/option is drawn as alt/else');
+  const kindOf = (type: string) => (type === 'critical' && optioned ? 'alt' : type);
   // The parser tags each event with its innermost fragment branch only, so
   // one block is open at a time: a `start` branch opens a new block, any other
   // branch kind continues the open one with `else`/`and`.
@@ -339,17 +348,18 @@ function sequenceDsl(source: string, nodes: readonly FlowNode[], edges: readonly
   for (const event of events) {
     const fragment = event.fragment?.type ? event.fragment : null;
     if (fragment) {
+      const type = kindOf(fragment.type!);
       const branch = fragment.branchKind ?? 'start';
       const condition = fragment.condition ?? '';
-      const same = open && open.type === fragment.type && open.branch === branch && open.condition === condition;
+      const same = open && open.type === type && open.branch === branch && open.condition === condition;
       if (!same) {
-        if (open && branch !== 'start' && open.type === fragment.type) {
-          lines.push(`} ${fragment.type === 'par' ? 'and' : 'else'}${condition ? ` ${condition}` : ''} {`);
+        if (open && branch !== 'start' && open.type === type) {
+          lines.push(`} ${type === 'par' ? 'and' : 'else'}${condition ? ` ${condition}` : ''} {`);
         } else {
           if (open) lines.push('}');
-          lines.push(`${fragment.type}${condition ? ` ${condition}` : ''} {`);
+          lines.push(`${type}${condition ? ` ${condition}` : ''} {`);
         }
-        open = { type: fragment.type, branch, condition };
+        open = { type, branch, condition };
       }
     } else if (open) {
       lines.push('}');
@@ -482,7 +492,8 @@ function classDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Conve
   const byId = new Map(nodes.map((node) => [node.id, node]));
   for (const node of nodes) {
     const stereotype = typeof node.data?.classStereotype === 'string' && node.data.classStereotype ? [node.data.classStereotype] : [];
-    lines.push(`${nodeName(node)}${attrText(stereotype)} {`);
+    const fill = typeof node.data?.classFill === 'string' ? [node.data.classFill.toLowerCase()] : [];
+    lines.push(`${nodeName(node)}${attrText([...stereotype, ...fill])} {`);
     const attributes = Array.isArray(node.data?.classAttributes) ? node.data.classAttributes as string[] : [];
     const methods = Array.isArray(node.data?.classMethods) ? node.data.classMethods as string[] : [];
     for (const member of attributes) lines.push(`  ${member}`);
@@ -497,12 +508,13 @@ function classDsl(nodes: readonly FlowNode[], edges: readonly FlowEdge[]): Conve
     const token = typeof edge.data?.classRelation === 'string' ? edge.data.classRelation : '-->';
     const sourceCardinality = typeof edge.data?.classRelationSourceCardinality === 'string' ? edge.data.classRelationSourceCardinality : undefined;
     const targetCardinality = typeof edge.data?.classRelationTargetCardinality === 'string' ? edge.data.classRelationTargetCardinality : undefined;
-    const label = typeof edge.label === 'string' && edge.label ? ` : ${quote(edge.label)}` : '';
+    // The authored label only: the parser's display label falls back to the cardinalities or the token.
+    const authored = edge.data?.classRelationLabel;
+    const label = typeof authored === 'string' && authored ? ` : ${quote(authored)}` : '';
     lines.push(
       `${nodeRef(source)} ${sourceCardinality ? `"${sourceCardinality}" ` : ''}${token} ${targetCardinality ? `"${targetCardinality}" ` : ''}${nodeRef(target)}${label}`,
     );
   }
-  if (losses.length === 0) losses.push('Namespaces and `note for` are dropped');
   return { dsl: `${lines.join('\n')}\n`, losses };
 }
 
@@ -728,9 +740,10 @@ export function mermaidToDsl(source: string): MermaidConversion | MermaidConvers
   })();
   if ('error' in conversion) return conversion;
   const { losses, lossLines = [] } = conversion;
-  // Front matter: the title becomes our `title:` directive; config has no DSL form.
-  const dsl = front.title && !/^title:/m.test(conversion.dsl)
-    ? conversion.dsl.replace(/^.*\n/, (family) => `${family}title: ${front.title}\n`) : conversion.dsl;
+  // Front matter's title, or a diagram's own `title …` line, becomes our `title:` directive; config has no DSL form.
+  const title = front.title ?? (/^(flowchart|graph)\b/i.test(header) ? undefined : /^\s*title:?\s+(.+?)\s*$/m.exec(text)?.[1]);
+  const dsl = title && !/^title:/m.test(conversion.dsl)
+    ? conversion.dsl.replace(/^.*\n/, (family) => `${family}title: ${quote(title)}\n`) : conversion.dsl;
   const dropped = front.keys.length ? [`Front matter ${front.keys.join(', ')} dropped`] : [];
   return {
     dsl,

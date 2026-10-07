@@ -122,6 +122,130 @@ describe('mermaidToDsl', () => {
     for (const line of item.dsl ?? []) expect(dsl.split('\n')).toContain(line);
   });
 
+  it('converts real-world sequence syntax: activation shorthand, sides, critical, rect, create, typed participants', async () => {
+    const { dsl } = convert(`sequenceDiagram
+  title Checkout
+  actor U as User
+  participant W as Web App
+  participant DB@{ "type" : "database" }
+  U->>+W: Open<br/>checkout
+  W-xDB: drop
+  Note right of W: retries
+  critical connect
+    W->>DB: connect
+  option timeout
+    W->>W: retry
+  end
+  rect rgb(191, 223, 255)
+    W->>U: highlighted
+  end
+  break when down
+    W->>U: sorry
+  end
+  W-->>-U: bye
+  create participant L as Logger
+  W->>L: hello
+  destroy L`);
+    const lines = dsl.split('\n').map((line) => line.trim());
+    expect(lines[1]).toBe('title: Checkout');
+    for (const line of ['participant u = User [actor]', 'participant w = Web App', 'participant DB [db]', 'participant l = Logger',
+      'activate w', 'u -> w : "Open\\ncheckout"', 'w -> DB : drop', 'note right of w : retries',
+      'alt connect {', '} else timeout {', 'break when down {', 'w --> u : bye', 'deactivate w', 'w -> l : hello']) {
+      expect(lines).toContain(line);
+    }
+    // `+W` / `-U` are activation marks, not participants; the rect's `end` closes the rect, not `break`.
+    expect(dsl).not.toMatch(/[+-][WU]\b/);
+    expect(lines.indexOf('w -> u : highlighted')).toBeLessThan(lines.indexOf('break when down {'));
+    expect(lines.indexOf('activate w')).toBeLessThan(lines.indexOf('u -> w : "Open\\ncheckout"'));
+    expect(lines.indexOf('deactivate w')).toBeGreaterThan(lines.indexOf('w --> u : bye'));
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+  });
+
+  it('converts real-world class syntax: unlabelled relations, labels, namespaces, styles, title', async () => {
+    const { dsl, losses } = convert(`classDiagram
+    title Shop
+    class Animal["Animal 🐾"]{
+        <<abstract>>
+        +String name
+        +mate()$ void
+    }
+    class Duck:::highlight
+    Animal <|-- Duck
+    Animal o-- Owner
+    Duck ..> Bread
+    Customer "1" --> "*" Ticket
+    Duck --> Pond : swims
+    namespace Zoo {
+      class Cage
+      class Keeper
+    }
+    Cage --> Keeper
+    note for Duck "can fly"
+    style Animal fill:#f9f
+    classDef highlight fill:#ffd`);
+    const lines = dsl.split('\n');
+    expect(lines[1]).toBe('title: Shop');
+    for (const line of ['Animal 🐾 [abstract, #f9f] {', 'Duck [#ffd] {', 'Cage {', 'Keeper {',
+      'Animal 🐾 <|-- Duck', 'Animal 🐾 o-- Owner', 'Duck ..> Bread', 'Customer "1" --> "*" Ticket', 'Duck --> Pond : swims', 'Cage --> Keeper']) {
+      expect(lines).toContain(line);
+    }
+    // Only what was really dropped is reported.
+    expect(losses).toEqual(['Namespace Zoo is drawn without its box', '`note for` is dropped']);
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+  });
+
+  it('converts real-world state syntax: :::class, choice, named states with descriptions', async () => {
+    const { dsl } = convert(`stateDiagram-v2
+    [*] --> Still
+    Still --> Moving : push
+    state "Long name state" as LNS
+    LNS : description here
+    Moving --> LNS
+    state if_state <<choice>>
+    Moving --> if_state
+    if_state --> Still : n < 0
+    if_state --> LNS : n >= 0
+    classDef bad fill:#f00
+    Still:::bad
+    Moving --> Crash:::bad`);
+    const lines = dsl.split('\n').map((line) => line.trim());
+    expect(dsl).not.toContain(':::');
+    expect(dsl).not.toContain('::bad');
+    expect(lines).toContain('Still [#f00]');
+    expect(lines).toContain('Crash [#f00]');
+    expect(lines.some((line) => /^if-state\b.*\[choice\]/.test(line) || /^if_state\b.*\[choice\]/.test(line))).toBe(true);
+    expect(lines).toContain('lns = Long name state [desc: description here]');
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+  });
+
+  it('converts real-world ER syntax: quoted names, aliases, word cardinalities, title', async () => {
+    const { dsl, losses } = convert(`erDiagram
+    title Store
+    CUSTOMER ||--o{ ORDER : places
+    "LINE-ITEM" {
+        int qty
+    }
+    ORDER ||--|{ "LINE-ITEM" : contains
+    p[Person] {
+        string firstName
+    }
+    p only one to zero or more ORDER : owns
+    PRODUCT one or more optionally to 1+ "LINE-ITEM" : "listed in"`);
+    const lines = dsl.split('\n').map((line) => line.trim());
+    expect(lines[1]).toBe('title: Store');
+    for (const line of ['p = Person {', 'firstName string', 'qty int', 'ORDER ||--|{ LINE-ITEM : contains',
+      'p ||--o{ ORDER : owns', 'PRODUCT }|..|{ LINE-ITEM : listed in']) {
+      expect(lines).toContain(line);
+    }
+    expect(losses).toEqual([]);
+    const compiled = await compile(dsl);
+    expect(compiled.diagnostics.filter((item) => item.severity !== 'info')).toEqual([]);
+    expect(compiled.connectors).toHaveLength(4);
+  });
+
   it('keeps a subgraph direction only when no link leaves the subgraph, as Mermaid does', () => {
     const { dsl } = convert('flowchart TD\n  subgraph S\n    direction LR\n    a --> b\n  end\n  subgraph T\n    direction LR\n    c --> d\n  end\n  d --> e');
     expect(dsl).toContain('group S [right] {');

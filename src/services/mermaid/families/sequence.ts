@@ -1,4 +1,5 @@
 import type { FlowEdge, FlowNode } from '@/lib/types';
+import { labelText } from '@/lib/mermaidParserHelpers';
 import type { DiagramPlugin } from './plugin';
 
 interface ParsedParticipant {
@@ -6,7 +7,11 @@ interface ParsedParticipant {
   label: string;
   kind: 'participant' | 'actor';
   alias?: string;
+  /** `participant DB@{ "type": "database" }`. */
+  stereotype?: 'db' | 'queue';
 }
+
+const PARTICIPANT_TYPES: Readonly<Record<string, ParsedParticipant['stereotype']>> = { database: 'db', collections: 'db', queue: 'queue' };
 
 interface ParsedMessage {
   from: string;
@@ -91,6 +96,8 @@ function parseSequence(input: string): {
     branchKind: ParsedFragment['branchKind'];
     startOrder: number;
   }> = [];
+  // Every block an `end` can close: fragments, and the `rect` / `box` wrappers that draw nothing here.
+  const blocks: Array<'fragment' | 'wrapper'> = [];
 
   function pushCompletedFragmentBranch(
     fragment: {
@@ -155,16 +162,25 @@ function parseSequence(input: string): {
 
     if (/^title\b/i.test(line)) continue;
     if (/^autonumber\b/i.test(line)) continue;
+    if (/^destroy\s/i.test(line)) continue;
 
-    const participantMatch = line.match(/^(participant|actor)\s+(.+?)(?:\s+as\s+(.+))?$/i);
+    const participantMatch = line.match(/^(?:create\s+)?(participant|actor)\s+(.+?)(?:\s+as\s+(.+))?$/i);
     if (participantMatch) {
-      const kind = participantMatch[1].toLowerCase() as 'participant' | 'actor';
-      const rawId = participantMatch[2].trim();
+      const annotated = participantMatch[2].trim().match(/^(.+?)@\{(.*)\}$/);
+      const rawId = annotated ? annotated[1].trim() : participantMatch[2].trim();
+      const type = annotated?.[2].match(/"?type"?\s*:\s*"?(\w+)/)?.[1]?.toLowerCase();
+      const kind = type === 'actor' ? 'actor' : participantMatch[1].toLowerCase() as 'participant' | 'actor';
+      const stereotype = type ? PARTICIPANT_TYPES[type] : undefined;
       const alias = participantMatch[3]?.trim();
       if (!knownIds.has(rawId)) {
-        participants.push({ id: rawId, label: alias || rawId, kind, alias });
+        participants.push({ id: rawId, label: alias || rawId, kind, alias, ...(stereotype ? { stereotype } : {}) });
         knownIds.add(rawId);
       }
+      continue;
+    }
+
+    if (/^(rect|box)\b/i.test(line)) {
+      blocks.push('wrapper');
       continue;
     }
 
@@ -179,6 +195,7 @@ function parseSequence(input: string): {
 
     const fragmentMatch = line.match(/^(alt|loop|opt|par|break|critical)\s+(.+)$/i);
     if (fragmentMatch) {
+      blocks.push('fragment');
       fragmentStack.push({
         id: `seq-fragment-${fragmentStack.length + fragments.length + 1}`,
         type: fragmentMatch[1].toLowerCase() as ParsedFragment['type'],
@@ -220,7 +237,7 @@ function parseSequence(input: string): {
     }
 
     if (/^end\b/i.test(line)) {
-      if (fragmentStack.length > 0) {
+      if (blocks.pop() === 'fragment' && fragmentStack.length > 0) {
         const top = fragmentStack.pop()!;
         pushCompletedFragmentBranch(top);
       }
@@ -228,13 +245,13 @@ function parseSequence(input: string): {
     }
 
     const noteMatch = line.match(
-      /^note\s+(left of|right of|over)\s+(\S+?)(?:,\s*(\S+))?\s*:\s*(.+)$/i
+      /^note\s+(left of|right of|over)\s+(\S+?)(?:\s*,\s*(\S+))?\s*:\s*(.+)$/i
     );
     if (noteMatch) {
-      const position = noteMatch[1].toLowerCase().replace(' ', '_') as 'left' | 'right' | 'over';
+      const position = noteMatch[1].toLowerCase().split(' ')[0] as 'left' | 'right' | 'over';
       const target1 = noteMatch[2];
       const target2 = noteMatch[3];
-      const text = noteMatch[4].trim();
+      const text = labelText(noteMatch[4].trim());
       ensureParticipant(target1);
       if (target2) ensureParticipant(target2);
       notes.push({
@@ -262,8 +279,11 @@ function parseSequence(input: string): {
       const from = line.slice(0, arrowIndex).trim();
       const rest = line.slice(arrowIndex + arrow.length).trim();
       const colonIndex = rest.indexOf(':');
-      const to = colonIndex >= 0 ? rest.slice(0, colonIndex).trim() : rest.trim();
-      const label = colonIndex >= 0 ? rest.slice(colonIndex + 1).trim() : '';
+      const target = colonIndex >= 0 ? rest.slice(0, colonIndex).trim() : rest.trim();
+      const label = labelText(colonIndex >= 0 ? rest.slice(colonIndex + 1).trim() : '');
+      // `A->>+B` activates B with this message; `B-->>-A` deactivates B, the sender, after it.
+      const mark = target.match(/^([+-])\s*(.+)$/);
+      const to = mark ? mark[2] : target;
 
       if (!from || !to) {
         diagnostics.push(`Invalid message at line ${lineNumber}: "${line}"`);
@@ -276,8 +296,10 @@ function parseSequence(input: string): {
 
       const isSelf = from === to;
       const kind = isSelf ? 'self' : resolveMessageKind(arrow);
+      if (mark?.[1] === '+') activations.push({ participant: to, activate: true, order: messageOrder });
       messages.push({ from, to, label, kind });
       messageOrder++;
+      if (mark?.[1] === '-') activations.push({ participant: from, activate: false, order: messageOrder });
       matched = true;
       break;
     }
@@ -316,6 +338,7 @@ function parseSequence(input: string): {
       label: p.label,
       seqParticipantKind: p.kind,
       seqParticipantAlias: p.alias,
+      ...(p.stereotype ? { seqParticipantStereotype: p.stereotype } : {}),
       seqActivations: activationByParticipant.get(p.id),
     },
   }));

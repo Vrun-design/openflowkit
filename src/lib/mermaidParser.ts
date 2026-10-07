@@ -329,9 +329,12 @@ function parseStateDiagramNodeDeclaration(
     return true;
   }
 
-  const stateDescMatch = line.match(/^(\w+)\s*:\s*(.+)/);
+  // `id : text` (never `id:::class`): the shown name, or under a name `state "…" as id` already gave.
+  const stateDescMatch = line.match(/^(\w+)\s*:(?!:)\s*(.+)/);
   if (stateDescMatch) {
-    registerMermaidNode(state, stateDescMatch[1], 'state', stateDescMatch[2]);
+    const named = state.nodesMap.get(stateDescMatch[1]);
+    if (named && named.label !== named.id) named.description = stateDescMatch[2].trim();
+    else registerMermaidNode(state, stateDescMatch[1], 'state', stateDescMatch[2]);
     return true;
   }
 
@@ -449,7 +452,7 @@ function createFlowNodes(model: MermaidParseModel): FlowNode[] {
       position: { x: 0, y: 0 },
       data: {
         label: node.label,
-        subLabel: '',
+        subLabel: node.description ?? '',
         color: getDefaultColor(node.type),
         ...(node.shape ? { shape: node.shape } : {}),
         ...(node.metadata?.sectionMermaidId

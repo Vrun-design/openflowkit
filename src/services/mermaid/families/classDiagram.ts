@@ -12,7 +12,13 @@ interface ClassRecord {
   stereotype?: string;
   attributes: string[];
   methods: string[];
+  /** `style X fill:…` wins over a `:::css` / `cssClass` class's fill. */
+  fill?: string;
+  cssClasses?: string[];
 }
+
+/** `class X["Shown label"]`, then an optional `:::css` class. */
+const CLASS_LABEL_PATTERN = '(?:\\s*\\["([^"]*)"\\])?(?:\\s*:::\\s*([\\w-]+))?';
 
 interface RelationRecord {
   source: string;
@@ -96,6 +102,15 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
   let hasHeader = false;
   let activeClass: ClassRecord | null = null;
   let activeClassLine = -1;
+  let namespaceDepth = 0;
+  let noteDropped = false;
+  const classDefs = new Map<string, string>();
+  const declare = (rawId: string, label?: string, css?: string): ClassRecord => {
+    const record = ensureClassRecord(classes, normalizeClassIdentifier(rawId));
+    if (label) record.label = label;
+    if (css) record.cssClasses = [...(record.cssClasses ?? []), css];
+    return record;
+  };
 
   for (const [index, rawLine] of lines.entries()) {
     const lineNumber = index + 1;
@@ -108,6 +123,7 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
     }
 
     if (!hasHeader) continue;
+    if (/^(title|direction|accTitle|accDescr)\b/i.test(line)) continue;
 
     if (activeClass) {
       if (line === '}') {
@@ -116,6 +132,39 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
         continue;
       }
       parseClassBodyLine(line, activeClass);
+      continue;
+    }
+
+    const namespace = line.match(/^namespace\s+(\S+)\s*\{\s*$/i);
+    if (namespace) {
+      namespaceDepth += 1;
+      diagnostics.push(`Namespace ${namespace[1]} is drawn without its box at line ${lineNumber}: "${line}"`);
+      continue;
+    }
+    if (line === '}' && namespaceDepth > 0) {
+      namespaceDepth -= 1;
+      continue;
+    }
+    if (/^note\b/i.test(line)) {
+      if (!noteDropped) diagnostics.push(`\`note for\` is dropped at line ${lineNumber}: "${line}"`);
+      noteDropped = true;
+      continue;
+    }
+    const style = line.match(new RegExp(`^style\\s+(${CLASS_ID_PATTERN})\\s+(.+)$`));
+    if (style) {
+      const fill = style[2].match(/(?:^|[,;])\s*fill\s*:\s*(#[0-9a-f]{3,8})\b/i)?.[1];
+      if (fill) declare(style[1]).fill = fill;
+      continue;
+    }
+    const classDef = line.match(/^classDef\s+([\w-]+(?:\s*,\s*[\w-]+)*)\s+(.+)$/i);
+    if (classDef) {
+      const fill = classDef[2].match(/(?:^|[,;])\s*fill\s*:\s*(#[0-9a-f]{3,8})\b/i)?.[1];
+      if (fill) for (const name of classDef[1].split(/\s*,\s*/)) classDefs.set(name, fill);
+      continue;
+    }
+    const cssClass = line.match(/^cssClass\s+"([^"]+)"\s+([\w-]+)\s*;?$/i);
+    if (cssClass) {
+      for (const id of cssClass[1].split(/\s*,\s*/)) declare(id, undefined, cssClass[2]);
       continue;
     }
 
@@ -134,11 +183,10 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
       continue;
     }
 
-    const inlineBlock = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})\\s*\\{\\s*(.*?)\\s*\\}$`));
+    const inlineBlock = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})${CLASS_LABEL_PATTERN}\\s*\\{\\s*(.*?)\\s*\\}$`));
     if (inlineBlock) {
-      const id = normalizeClassIdentifier(inlineBlock[1]);
-      const existing = ensureClassRecord(classes, id);
-      const members = inlineBlock[2]
+      const existing = declare(inlineBlock[1], inlineBlock[2], inlineBlock[3]);
+      const members = inlineBlock[4]
         .split(';')
         .map((member) => member.trim())
         .filter(Boolean);
@@ -146,11 +194,9 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
       continue;
     }
 
-    const blockStart = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})\\s*\\{\\s*$`));
+    const blockStart = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})${CLASS_LABEL_PATTERN}\\s*\\{\\s*$`));
     if (blockStart) {
-      const id = normalizeClassIdentifier(blockStart[1]);
-      const existing = ensureClassRecord(classes, id);
-      activeClass = existing;
+      activeClass = declare(blockStart[1], blockStart[2], blockStart[3]);
       activeClassLine = lineNumber;
       continue;
     }
@@ -170,10 +216,9 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
       continue;
     }
 
-    const standaloneClass = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})\\s*$`));
+    const standaloneClass = line.match(new RegExp(`^class\\s+(${CLASS_ID_PATTERN})${CLASS_LABEL_PATTERN}\\s*;?$`));
     if (standaloneClass) {
-      const id = normalizeClassIdentifier(standaloneClass[1]);
-      ensureClassRecord(classes, id);
+      declare(standaloneClass[1], standaloneClass[2], standaloneClass[3]);
       continue;
     }
 
@@ -232,6 +277,7 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
   }
 
   const classList = Array.from(classes.values());
+  const fillOf = (record: ClassRecord) => record.fill ?? record.cssClasses?.map((name) => classDefs.get(name)).find(Boolean);
   const nodes: FlowNode[] = classList.map((record, index) => ({
     id: record.id,
     type: 'class',
@@ -241,6 +287,7 @@ function parseClassDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[
       color: 'slate',
       shape: 'rectangle',
       classStereotype: record.stereotype,
+      ...(fillOf(record) ? { classFill: fillOf(record) } : {}),
       classAttributes: record.attributes,
       classMethods: record.methods,
     },

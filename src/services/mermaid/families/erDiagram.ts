@@ -22,6 +22,26 @@ interface RelationRecord {
 }
 
 const ENTITY_ID_PATTERN = '[A-Za-z_][\\w.-]*';
+/** An entity reference: `NAME`, `"Quoted name"`, or Mermaid 11's `id[Alias]` / `id["Alias"]`. */
+const ENTITY_REF_PATTERN = `(?:"[^"]+"|${ENTITY_ID_PATTERN}(?:\\[[^\\]]*\\])?)`;
+
+function readEntityRef(reference: string): { id: string; label?: string } {
+  const quoted = reference.match(/^"([^"]+)"$/);
+  if (quoted) return { id: quoted[1] };
+  const alias = reference.match(/^([A-Za-z_][\w.-]*)\[\s*"?([^"\]]*?)"?\s*\]$/);
+  return alias ? { id: alias[1], ...(alias[2] ? { label: alias[2] } : {}) } : { id: reference };
+}
+
+// Mermaid's word cardinalities, as the left-hand symbol; the right-hand one mirrors it.
+const CARDINALITY_WORDS: Readonly<Record<string, string>> = {
+  'only one': '||', '1': '||', '||': '||',
+  'zero or one': '|o', 'one or zero': '|o', '|o': '|o', 'o|': '|o',
+  'one or more': '}|', 'one or many': '}|', 'many(1)': '}|', '1+': '}|', '}|': '}|', '|{': '}|',
+  'zero or more': '}o', 'zero or many': '}o', 'many(0)': '}o', '0+': '}o', '}o': '}o', 'o{': '}o',
+};
+const MIRRORED: Readonly<Record<string, string>> = { '||': '||', '|o': 'o|', '}|': '|{', '}o': 'o{' };
+const CARDINALITY_PATTERN = Object.keys(CARDINALITY_WORDS).sort((a, b) => b.length - a.length)
+  .map((word) => word.replace(/[|{}()+]/g, '\\$&')).join('|');
 
 function parseReferenceTarget(reference: string): {
   referencesTable?: string;
@@ -103,21 +123,25 @@ function parseMermaidErField(line: string): ErField {
 
 function parseRelation(line: string): RelationRecord | null {
   const relationTokenPattern = buildERRelationTokenRegexPattern();
-  const match = line.match(
-    new RegExp(`^(${ENTITY_ID_PATTERN})\\s+(${relationTokenPattern})\\s+(${ENTITY_ID_PATTERN})(?:\\s*:\\s*(.+))?$`)
+  const unquote = (label: string | undefined) => label?.trim().replace(/^"(.*)"$/, '$1');
+  const symbolic = line.match(
+    new RegExp(`^(${ENTITY_REF_PATTERN})\\s*(${relationTokenPattern})\\s*(${ENTITY_REF_PATTERN})(?:\\s*:\\s*(.+))?$`)
   );
-  if (!match) return null;
-
-  return {
-    left: match[1],
-    relation: match[2] as ERRelationToken,
-    right: match[3],
-    label: match[4]?.trim(),
-  };
+  if (symbolic) {
+    return { left: symbolic[1], relation: symbolic[2] as ERRelationToken, right: symbolic[3], label: unquote(symbolic[4]) };
+  }
+  // `A only one to zero or more B`: `to` identifies (--), `optionally to` does not (..).
+  const worded = line.match(new RegExp(
+    `^(${ENTITY_REF_PATTERN})\\s+(${CARDINALITY_PATTERN})\\s*(--|\\.\\.|optionally to|to)\\s*(${CARDINALITY_PATTERN})\\s+(${ENTITY_REF_PATTERN})(?:\\s*:\\s*(.+))?$`, 'i'));
+  if (!worded) return null;
+  const left = CARDINALITY_WORDS[worded[2].toLowerCase()]!;
+  const right = MIRRORED[CARDINALITY_WORDS[worded[4].toLowerCase()]!]!;
+  const link = worded[3] === '..' || /^optionally/i.test(worded[3]) ? '..' : '--';
+  return { left: worded[1], relation: `${left}${link}${right}` as ERRelationToken, right: worded[5], label: unquote(worded[6]) };
 }
 
 function parseEntityInline(line: string): string | null {
-  const match = line.match(new RegExp(`^(${ENTITY_ID_PATTERN})\\s*\\{\\s*$`));
+  const match = line.match(new RegExp(`^(${ENTITY_REF_PATTERN})\\s*\\{\\s*$`));
   return match ? match[1] : null;
 }
 
@@ -130,6 +154,14 @@ function parseERDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; 
   let hasHeader = false;
   let activeEntity: EntityRecord | null = null;
   let activeEntityLine = -1;
+  /** The entity a reference names, made on first sight; an alias sets its label. */
+  const entityOf = (reference: string): EntityRecord => {
+    const { id, label } = readEntityRef(reference);
+    const entity = entities.get(id) ?? createEmptyEntity(id);
+    if (label) entity.label = label;
+    entities.set(id, entity);
+    return entity;
+  };
 
   for (const [index, rawLine] of lines.entries()) {
     const lineNumber = index + 1;
@@ -142,6 +174,7 @@ function parseERDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; 
     }
 
     if (!hasHeader) continue;
+    if (/^(title|direction|accTitle|accDescr)\b/i.test(line)) continue;
 
     if (activeEntity) {
       if (line === '}') {
@@ -153,24 +186,16 @@ function parseERDiagram(input: string): { nodes: FlowNode[]; edges: FlowEdge[]; 
       continue;
     }
 
-    const entityId = parseEntityInline(line);
-    if (entityId) {
-      const existing = entities.get(entityId) || createEmptyEntity(entityId);
-      entities.set(entityId, existing);
-      activeEntity = existing;
+    const entityRef = parseEntityInline(line);
+    if (entityRef) {
+      activeEntity = entityOf(entityRef);
       activeEntityLine = lineNumber;
       continue;
     }
 
     const relation = parseRelation(line);
     if (relation) {
-      relations.push(relation);
-      if (!entities.has(relation.left)) {
-        entities.set(relation.left, createEmptyEntity(relation.left));
-      }
-      if (!entities.has(relation.right)) {
-        entities.set(relation.right, createEmptyEntity(relation.right));
-      }
+      relations.push({ ...relation, left: entityOf(relation.left).id, right: entityOf(relation.right).id });
       continue;
     }
 

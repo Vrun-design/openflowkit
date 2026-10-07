@@ -14,7 +14,7 @@ interface StateNoteRecord {
 interface StateControlRecord {
   id: string;
   label: string;
-  kind: 'fork' | 'join';
+  kind: 'fork' | 'join' | 'choice';
 }
 
 const STATE_DIAGRAM_NOTE_RE = /^note\s+(left of|right of|over)\s+("?)([^":]+)\2\s*:\s*(.+)$/i;
@@ -24,7 +24,8 @@ function normalizeStateTransitionLabels(input: string): string {
   const normalized = lines.map((rawLine) => {
     const line = rawLine.trim();
     if (line.includes('|')) return rawLine;
-    const transitionMatch = line.match(/^(.+?)\s+(<-->|<--|-->|==>|-.->)\s+(.+?)\s*:\s*(.+)$/);
+    // The label colon is never part of a `:::class`.
+    const transitionMatch = line.match(/^(.+?)\s+(<-->|<--|-->|==>|-.->)\s+(.+?)\s*(?<!:):(?!:)\s*(.+)$/);
     if (!transitionMatch) return rawLine;
 
     const source = transitionMatch[1].trim();
@@ -40,14 +41,14 @@ function normalizeStateTransitionLabels(input: string): string {
 
 function extractDeclaredStateId(line: string): string | null {
   const aliasCompositeMatch = line.match(
-    /^state\s+"([^"]+)"\s+as\s+([A-Za-z_][\w.-]*)(?:\s+<<(fork|join)>>)?\s*\{$/i
+    /^state\s+"([^"]+)"\s+as\s+([A-Za-z_][\w.-]*)(?:\s+<<(fork|join|choice)>>)?\s*\{$/i
   );
   if (aliasCompositeMatch) {
     return aliasCompositeMatch[2].trim();
   }
 
   const aliasMatch = line.match(
-    /^state\s+"([^"]+)"\s+as\s+([A-Za-z_][\w.-]*)(?:\s+<<(fork|join)>>)?\s*$/i
+    /^state\s+"([^"]+)"\s+as\s+([A-Za-z_][\w.-]*)(?:\s+<<(fork|join|choice)>>)?\s*$/i
   );
   if (aliasMatch) {
     return aliasMatch[2].trim();
@@ -58,7 +59,7 @@ function extractDeclaredStateId(line: string): string | null {
     return compositeMatch[2].trim();
   }
 
-  const simpleMatch = line.match(/^state\s+([A-Za-z_][\w.-]*)(?:\s+<<(fork|join)>>)?\s*$/i);
+  const simpleMatch = line.match(/^state\s+([A-Za-z_][\w.-]*)(?:\s+<<(fork|join|choice)>>)?\s*$/i);
   if (simpleMatch) {
     return simpleMatch[1].trim();
   }
@@ -72,7 +73,7 @@ function extractDeclaredStateId(line: string): string | null {
 }
 
 function extractTransitionStateIds(line: string): string[] {
-  const transitionMatch = line.match(/^(.+?)\s+(<-->|<--|-->|==>|-.->)\s+(.+?)(?:\s*:\s*(.+))?$/);
+  const transitionMatch = line.match(/^(.+?)\s+(<-->|<--|-->|==>|-.->)\s+(.+?)(?:\s*(?<!:):(?!:)\s*(.+))?$/);
   if (!transitionMatch) {
     return [];
   }
@@ -285,7 +286,7 @@ function parseStateDiagramControls(input: string): StateControlRecord[] {
     .forEach((rawLine) => {
       const line = rawLine.trim();
       const aliasMatch = line.match(
-        /^state\s+"([^"]+)"\s+as\s+([A-Za-z_][\w.-]*)\s+<<(fork|join)>>\s*$/i
+        /^state\s+"([^"]+)"\s+as\s+([A-Za-z_][\w.-]*)\s+<<(fork|join|choice)>>\s*$/i
       );
       if (aliasMatch) {
         controls.push({
@@ -296,11 +297,12 @@ function parseStateDiagramControls(input: string): StateControlRecord[] {
         return;
       }
 
-      const simpleMatch = line.match(/^state\s+([A-Za-z_][\w.-]*)\s+<<(fork|join)>>\s*$/i);
+      const simpleMatch = line.match(/^state\s+([A-Za-z_][\w.-]*)\s+<<(fork|join|choice)>>\s*$/i);
       if (simpleMatch) {
         controls.push({
           id: simpleMatch[1],
-          label: simpleMatch[2].toLowerCase() === 'fork' ? 'Fork' : 'Join',
+          // A choice is a bare diamond in Mermaid: its id is all there is to name it.
+          label: { fork: 'Fork', join: 'Join' }[simpleMatch[2].toLowerCase()] ?? simpleMatch[1],
           kind: simpleMatch[2].toLowerCase() as StateControlRecord['kind'],
         });
       }
