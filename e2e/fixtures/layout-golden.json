@@ -1,0 +1,25 @@
+{
+  "dsl": "flowchart right\ngroup Backend {\n  API -> DB\n}\nUser -> API: calls\nAPI -> Cache",
+  "positions": {
+    "Backend": {
+      "x": 364,
+      "y": 28
+    },
+    "API": {
+      "x": 22,
+      "y": 73
+    },
+    "DB": {
+      "x": 190,
+      "y": 54
+    },
+    "User": {
+      "x": 28,
+      "y": 101
+    },
+    "Cache": {
+      "x": 793,
+      "y": 149
+    }
+  }
+}

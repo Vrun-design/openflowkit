@@ -4,6 +4,7 @@ import { createAgentDocument } from './index';
 import manifestText from '../../mcp-server/data/icons.json?raw';
 import { AUTO_ICON_IDS } from '../dsl/autoIcon';
 import { resolveDslIcon } from '../services/dsl/iconResolver';
+import { headlessElkLayout } from './headlessLayout';
 import { createFileCapabilities, grammarSection, manifestIconResolver } from './host';
 import type { IconMatch } from './ops/types';
 
@@ -37,7 +38,7 @@ describe('file host', () => {
   });
 
   it('honours a palette override and records it on the frame', async () => {
-    const host = createFileCapabilities({ grammar: GRAMMAR });
+    const host = createFileCapabilities({ layout: headlessElkLayout, grammar: GRAMMAR });
     const pageWith = async (input: Record<string, unknown>) => {
       const outcome = await findAgentOp('create_diagram')!.run(input, {
         document: document(), pageId: 'doc-host:page-1', capabilities: host,
@@ -55,6 +56,7 @@ describe('file host', () => {
 
   it('searches icons by provider, slug, label and token overlap', async () => {
     const host = createFileCapabilities({
+      layout: headlessElkLayout,
       grammar: GRAMMAR,
       icons: [
         { provider: 'aws', slug: 'lambda', label: 'Lambda', category: 'Compute' },
@@ -79,7 +81,7 @@ describe('file host', () => {
   });
 
   it('puts icons from labels on file-mode diagrams, and honours icons: off', async () => {
-    const host = createFileCapabilities({ grammar: GRAMMAR, icons: MANIFEST });
+    const host = createFileCapabilities({ layout: headlessElkLayout, grammar: GRAMMAR, icons: MANIFEST });
     const nodesOf = async (dsl: string) => {
       const outcome = await findAgentOp('create_diagram')!.run({ dsl }, {
         document: document(), pageId: 'doc-host:page-1', capabilities: host,
@@ -96,7 +98,7 @@ describe('file host', () => {
   });
 
   it('exports svg, json and print html from the same source, and refuses png', async () => {
-    const host = createFileCapabilities({ grammar: GRAMMAR });
+    const host = createFileCapabilities({ layout: headlessElkLayout, grammar: GRAMMAR });
     const created = await findAgentOp('create_diagram')!.run(
       { dsl: 'flowchart\n  A [blue] -> B' },
       { document: document(), pageId: 'doc-host:page-1', capabilities: host });
@@ -128,6 +130,6 @@ describe('file host', () => {
   });
 
   it('has no viewport to fit', () => {
-    expect(createFileCapabilities({ grammar: GRAMMAR }).fitView).toBeUndefined();
+    expect(createFileCapabilities({ layout: headlessElkLayout, grammar: GRAMMAR }).fitView).toBeUndefined();
   });
 });

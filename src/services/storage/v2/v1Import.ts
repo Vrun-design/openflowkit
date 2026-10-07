@@ -2,7 +2,7 @@ import { legacyMermaidConverter } from '@/opencanvas/application/dsl/legacyMerma
 import { isJsonObject, type JsonObject } from '@/opencanvas/domain/document/json';
 import { legacyWorkspaceRows, migrateLegacyWorkspace, type LegacyImportFailure, type LegacyWorkspaceSources } from '@/opencanvas/domain/document/legacyWorkspace';
 import type { SceneDocumentV1 } from '@/opencanvas/domain/document/types';
-import { elkDslLayoutPort } from '../../dsl/elkLayoutPort';
+import { elkDslLayoutPort } from '../../elk-layout/runtime';
 import { readAssetUrl } from '../assets';
 import { getIndexedDbFactory, requestToPromise } from '../indexedDbHelpers';
 import {

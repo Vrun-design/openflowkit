@@ -168,6 +168,7 @@ interface AgentBundle {
   }): Promise<{ document: SceneDocumentV1; changed: boolean; output: unknown }>;
   createFileCapabilities(options: {
     grammar: string;
+    layout: unknown;
     icons?: readonly IconMatch[];
     resolveIcon?: (id: string) => { packId: string; shapeId: string } | null;
     loadIcon?: (packId: string, shapeId: string) => Promise<string | null>;
@@ -177,13 +178,14 @@ interface AgentBundle {
   createAgentDocument(name: string, id?: string): SceneDocumentV1;
   parseAgentDocument(value: unknown): SceneDocumentV1;
   compileWorkspace(text: string, options?: { readonly layout?: unknown; readonly origin?: { readonly x: number; readonly y: number } }): Promise<BundleWorkspace>;
-  readonly deterministicLayout: unknown;
   architectureWorkspaceText(model: unknown): string;
   archModelFromJson(value: unknown): unknown;
   exportCanonicalSvg(document: SvgExportDocument, options?: SvgExportOptions): string;
   collectIconArt(document: SvgExportDocument, load: (packId: string, shapeId: string) => Promise<string | null>): Promise<Record<string, string>>;
   tablerSvg(nodes: readonly (readonly [string, Readonly<Record<string, string>>])[]): string;
   readonly ICON_PACK_IDS: Readonly<Record<string, string>>;
+  /** ELK in process: the editor's layout, for file mode and the CLI. */
+  readonly headlessElkLayout: unknown;
   readonly BRIDGE_PROTOCOL_VERSION: number;
   readonly BRIDGE_DEFAULT_PORT: number;
   readonly BRIDGE_POLL_SECONDS: number;
@@ -209,8 +211,8 @@ export interface StarterTemplate {
 export const {
   AGENT_OPS, findAgentOp, runAgentOp, createFileCapabilities, grammarSection, lintDsl,
   createAgentDocument, parseAgentDocument,
-  compileWorkspace, deterministicLayout, architectureWorkspaceText, archModelFromJson, exportCanonicalSvg,
-  collectIconArt, tablerSvg, ICON_PACK_IDS,
+  compileWorkspace, architectureWorkspaceText, archModelFromJson, exportCanonicalSvg,
+  collectIconArt, tablerSvg, ICON_PACK_IDS, headlessElkLayout,
   BRIDGE_PROTOCOL_VERSION, BRIDGE_DEFAULT_PORT, BRIDGE_POLL_SECONDS, BRIDGE_IDLE_MS,
   bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeRequest, WIDGET_KINDS, FRAME_PRESETS,
   STARTER_TEMPLATES, findStarterTemplate,

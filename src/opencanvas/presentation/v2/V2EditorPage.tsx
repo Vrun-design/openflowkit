@@ -7,7 +7,7 @@ import type { PixiRendererHost, PixiRendererStatus } from '../../infrastructure/
 import { createV2Repository } from '../../../services/storage/v2/v2Repository';
 import { isImageFile } from '../../../services/storage/assets';
 import { looksLikeMermaid } from '../../../services/dsl/mermaidToDsl';
-import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
+import { elkDslLayoutPort } from '../../../services/elk-layout/runtime';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { findStarterTemplate } from '../../../agent/starterTemplates';
 import { compileSource } from '../../../agent/compileSource';

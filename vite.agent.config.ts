@@ -10,6 +10,6 @@ export default defineConfig({
     lib: { entry: resolve(__dirname, 'src/agent/index.ts'), fileName: () => 'openflowkit-agent.js', formats: ['es'] },
     outDir: 'mcp-server/src/generated',
     emptyOutDir: true,
-    rollupOptions: { external: ['zod'] },
+    rollupOptions: { external: ['zod', /^elkjs\//] },
   },
 });

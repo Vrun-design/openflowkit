@@ -10,7 +10,7 @@ import { archModelOfPage } from '../../../dsl/model/model';
 import { parse } from '../../../dsl/parse';
 import { dslFrameRaw } from '../../../dsl/sceneMeta';
 import { serialize } from '../../../dsl/serialize';
-import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
+import { elkDslLayoutPort } from '../../../services/elk-layout/runtime';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { applySnapsToWorkspace, type WorkspaceSnap } from '../../../services/workspace/workspaceFolder';
 import { buildWorkspacePagesCommand, firstViewLanding } from '../../application/dsl/architectureCommands';

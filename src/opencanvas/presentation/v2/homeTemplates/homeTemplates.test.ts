@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { STARTER_TEMPLATES } from '../../../../agent/starterTemplates';
 import { compile } from '../../../../dsl/compile';
-import { elkDslLayoutPort } from '../../../../services/dsl/elkLayoutPort';
+import { elkDslLayoutPort } from '../../../../services/elk-layout/runtime';
 import { resolveDslIcon } from '../../../../services/dsl/iconResolver';
 import { createEmptyV2Document } from '../v2Document';
 import { buildV2Thumbnail } from '../v2Thumbnail';

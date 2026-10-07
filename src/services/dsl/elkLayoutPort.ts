@@ -1,6 +1,10 @@
 import type { ElkNode } from 'elkjs/lib/elk.bundled.js';
 import type { LayoutGraph, LayoutInsets, LayoutNodeInput, LayoutPort, LayoutResult } from '../../dsl/layout';
-import { getElkInstance, type ElkLayoutEngine } from '../elk-layout/runtime';
+
+/** Anything that lays out an ELK graph: the browser's worker, or the bundled engine in Node. */
+export interface ElkLayoutEngine {
+  layout: (graph: ElkNode) => Promise<ElkNode>;
+}
 
 const DIRECTION = { down: 'DOWN', right: 'RIGHT', left: 'LEFT', up: 'UP' } as const;
 
@@ -98,7 +102,7 @@ function collect(node: ElkNode, result: { positions: Record<string, { x: number;
   }
 }
 
-export function createElkLayoutPort(getEngine: () => Promise<ElkLayoutEngine> = getElkInstance): LayoutPort {
+export function createElkLayoutPort(getEngine: () => Promise<ElkLayoutEngine>): LayoutPort {
   return {
     async run(graph, signal): Promise<LayoutResult> {
       if (signal?.aborted) throw new DOMException('Layout cancelled', 'AbortError');
@@ -122,6 +126,3 @@ export function createElkLayoutPort(getEngine: () => Promise<ElkLayoutEngine> = 
     },
   };
 }
-
-export type { ElkLayoutEngine };
-export const elkDslLayoutPort = createElkLayoutPort();

@@ -5,7 +5,7 @@ import { grammarSection } from '../../../agent/host';
 import type { ExportFormat, ExportRequest, OpCapabilities } from '../../../agent/ops/types';
 import type { CompileOptions } from '../../../dsl/compile';
 import { compile, compileWorkspace } from '../../../dsl/compile';
-import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
+import { elkDslLayoutPort } from '../../../services/elk-layout/runtime';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { SVG_SOURCES } from '../../../services/shapeLibrary/providerCatalog';
 import { buildV2Export, bytesToBase64 } from './v2Export';

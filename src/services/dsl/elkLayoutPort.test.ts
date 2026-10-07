@@ -78,6 +78,6 @@ describe('createElkLayoutPort', () => {
   it('rejects cancelled runs', async () => {
     const controller = new AbortController();
     controller.abort();
-    await expect(createElkLayoutPort().run(graph, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(createElkLayoutPort(async () => fakeEngine([])).run(graph, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
   });
 });

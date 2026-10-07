@@ -3,7 +3,7 @@
 // read once per process and cached.
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { ICON_PACK_IDS, createFileCapabilities, tablerSvg, type IconMatch, type OpCapabilities } from './agent.js';
+import { ICON_PACK_IDS, createFileCapabilities, headlessElkLayout, tablerSvg, type IconMatch, type OpCapabilities } from './agent.js';
 
 const HERE = import.meta.dirname ?? new URL('.', import.meta.url).pathname;
 const DATA_DIR = resolve(HERE, '..', '..', 'data');
@@ -72,6 +72,6 @@ export async function loadIconArt(packId: string, shapeId: string): Promise<stri
 export async function loadFileCapabilities(): Promise<OpCapabilities> {
   if (capabilities) return capabilities;
   const [grammar, icons] = await Promise.all([loadGrammar(), loadIcons()]);
-  capabilities = createFileCapabilities({ grammar, icons, loadIcon: loadIconArt });
+  capabilities = createFileCapabilities({ grammar, icons, loadIcon: loadIconArt, layout: headlessElkLayout });
   return capabilities;
 }

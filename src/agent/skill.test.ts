@@ -4,6 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { llmsText } from '../../scripts/sync-llms.mjs';
+import { headlessElkLayout } from './headlessLayout';
 import { createFileCapabilities } from './host';
 import { lintDsl } from './lint';
 import { AGENT_OPS } from './ops';
@@ -22,7 +23,7 @@ describe('agent skill', () => {
 
   it('every DSL example compiles without a warning, icons resolved', async () => {
     const icons = JSON.parse(readFileSync('mcp-server/data/icons.json', 'utf8')) as IconMatch[];
-    const host = createFileCapabilities({ grammar, icons });
+    const host = createFileCapabilities({ grammar, icons, layout: headlessElkLayout });
     expect(blocks('dsl').length).toBeGreaterThanOrEqual(3);
     for (const source of blocks('dsl')) {
       const compiled = await host.compile(source);

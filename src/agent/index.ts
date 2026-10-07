@@ -6,6 +6,7 @@ import { validateSceneDocumentV1 } from '@/opencanvas/domain/document/validation
 
 export { AGENT_OPS, findAgentOp } from './ops';
 export { createFileCapabilities, grammarSection } from './host';
+export { headlessElkLayout } from './headlessLayout';
 export type { FileHostOptions } from './host';
 export {
   BRIDGE_DEFAULT_PORT, BRIDGE_IDLE_MS, BRIDGE_POLL_SECONDS, BRIDGE_PROTOCOL_VERSION,
@@ -26,7 +27,6 @@ export type { SceneDocumentV1 };
 // Headless consumers (the `openflowkit` CLI) compile whole workspaces and
 // render canonical SVG without a browser. Re-exported, not re-implemented.
 export { compileWorkspace } from '../dsl/compile';
-export { deterministicLayout } from '../dsl/layout';
 export { architectureWorkspaceText } from '../dsl/families/architecture/text';
 export { archModelFromJson } from '../dsl/model/model';
 export { collectIconArt, exportCanonicalSvg } from '../opencanvas/infrastructure/export/canonicalSvg';

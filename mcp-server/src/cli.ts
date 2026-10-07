@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // The `openflowkit` CLI: discover a repo, check drift in CI, or build the
-// self-contained static site. Node stdlib + the agent bundle only — the browser
-// ELK worker is not available here, so views use the deterministic layout port.
+// self-contained static site. Node stdlib + the agent bundle only; views are laid
+// out by the file host's in-process ELK, the same engine the editor runs.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { collectIconArt, compileWorkspace, deterministicLayout, exportCanonicalSvg, type SvgExportDocument } from './lib/agent.js';
+import { collectIconArt, compileWorkspace, exportCanonicalSvg, type BundleWorkspace, type SvgExportDocument } from './lib/agent.js';
 import { loadFileCapabilities, loadIconArt } from './lib/fileCapabilities.js';
 import {
   discoverySummary, discoveryToDsl, driftReport, modelFromNode, runArchitectureDiscovery,
@@ -110,7 +110,8 @@ async function runDrift(args: readonly string[], io: CliIo): Promise<number> {
     const maxFiles = maxFilesOf(parsed.flags);
     const discovery = await runArchitectureDiscovery(dir, maxFiles ? { maxFiles } : {});
     const source = await readFile(modelPath, 'utf8');
-    const model = await firstModel(source);
+    // Only the model is read, so the compile's default layout is fine here.
+    const model = firstModel(await compileWorkspace(source));
     if (!model) {
       io.err(`openflowkit drift: no C4 model in ${modelPath}`);
       return 2;
@@ -465,8 +466,7 @@ function escapeHtml(value: string): string {
   })[character]!);
 }
 
-async function firstModel(source: string): Promise<ArchModelData | null> {
-  const workspace = await compileWorkspace(source, { layout: deterministicLayout });
+function firstModel(workspace: BundleWorkspace): ArchModelData | null {
   for (const view of workspace.views) {
     const model = modelFromNode(view.result.frame);
     if (model) return model;
@@ -482,13 +482,13 @@ async function runBuild(args: readonly string[], io: CliIo): Promise<number> {
   const outDir = parsed.flags.get('out') ?? 'dist';
   try {
     const source = await readFile(path.join(dir, 'architecture.ofk'), 'utf8');
-    // The MCP file host's compile: deterministic layout plus the editor's icon rule and art.
-    const workspace = await (await loadFileCapabilities()).compileWorkspace(source) as unknown as Awaited<ReturnType<typeof compileWorkspace>>;
+    // The MCP file host's compile: ELK layout plus the editor's icon rule and art.
+    const workspace = await (await loadFileCapabilities()).compileWorkspace(source) as unknown as BundleWorkspace;
     if (workspace.views.length === 0) {
       io.err('openflowkit build: architecture.ofk compiled to no views');
       return 2;
     }
-    const model = await firstModel(source) ?? { elements: [], relations: [], views: [], flows: [] };
+    const model = firstModel(workspace) ?? { elements: [], relations: [], views: [], flows: [] };
     const name = model.name ?? path.basename(path.resolve(dir));
 
     const used = new Set<string>();

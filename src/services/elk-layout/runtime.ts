@@ -1,9 +1,5 @@
-import type { ElkNode } from 'elkjs/lib/elk.bundled.js';
 import { createLogger } from '@/lib/logger';
-
-export interface ElkLayoutEngine {
-  layout: (graph: ElkNode) => Promise<ElkNode>;
-}
+import { createElkLayoutPort, type ElkLayoutEngine } from '../dsl/elkLayoutPort';
 
 interface ElkModuleLike {
   default?: new () => unknown;
@@ -67,3 +63,6 @@ export async function getElkInstance(): Promise<ElkLayoutEngine> {
   }
   return elkInstancePromise;
 }
+
+/** The editor's layout port: ELK in a worker, in process under tests. */
+export const elkDslLayoutPort = createElkLayoutPort(getElkInstance);

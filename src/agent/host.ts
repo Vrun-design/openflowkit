@@ -1,5 +1,6 @@
 // A file (headless) host for the ops: what an MCP server can honour without a
-// browser. It compiles with the deterministic layout, reads the grammar text
+// browser. It lays out with the port it is given (ELK from the agent entry, as
+// the editor does), reads the grammar text
 // the caller ships, searches the icon manifest it was given, and exports the
 // text formats directly. PNG is absent by construction — that is the live
 // editor's job.
@@ -11,7 +12,7 @@ import { buildPrintDocument } from '../opencanvas/infrastructure/export/print';
 import { compile, compileWorkspace, type CompileOptions } from '../dsl/compile';
 import { grammarSection } from '../dsl/grammar';
 import { matchIconId } from '../dsl/iconMatch';
-import { deterministicLayout } from '../dsl/layout';
+import type { LayoutPort } from '../dsl/layout';
 import type { IconMatch, OpCapabilities } from './ops/types';
 
 export { grammarSection } from '../dsl/grammar';
@@ -19,6 +20,8 @@ export { grammarSection } from '../dsl/grammar';
 export interface FileHostOptions {
   /** The grammar reference `get_syntax` serves (the MCP server reads it from disk). */
   readonly grammar: string;
+  /** Node hosts pass `headlessElkLayout`; tests may pass the deterministic layout for speed. */
+  readonly layout: LayoutPort;
   /** Icon manifest entries; search is a scored substring match over provider/slug/label. */
   readonly icons?: readonly IconMatch[];
   /** Icon id → pack/shape; defaults to matching against `icons`, the way the editor matches its packs. */
@@ -52,7 +55,7 @@ export function createFileCapabilities(options: FileHostOptions): OpCapabilities
   // No manifest, no resolver: ids stay unchecked and no icon is inferred.
   const resolveIcon = options.resolveIcon ?? (icons.length ? manifestIconResolver(icons) : undefined);
   const defaults: CompileOptions = {
-    layout: deterministicLayout,
+    layout: options.layout,
     ...(resolveIcon ? { resolveIcon } : {}),
     autoIcons: options.autoIcons ?? true,
   };

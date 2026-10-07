@@ -1,4 +1,4 @@
-import { createAgentDocument, createFileCapabilities, findAgentOp, grammarSection } from '../../src/lib/agent.js';
+import { createAgentDocument, createFileCapabilities, findAgentOp, grammarSection, headlessElkLayout } from '../../src/lib/agent.js';
 import { loadGrammar } from '../../src/lib/fileCapabilities.js';
 
 /** Compiles DSL through the shared op registry, exactly like a live call. */
@@ -6,7 +6,7 @@ export async function compileTemplate(dsl: string): Promise<{
   nodes: number; groups: number; connectors: number; diagnostics: { severity: string; code: string }[];
 }> {
   const document = createAgentDocument('Template test', 'template-doc');
-  const capabilities = createFileCapabilities({ grammar: grammarSection(await loadGrammar()) });
+  const capabilities = createFileCapabilities({ grammar: grammarSection(await loadGrammar()), layout: headlessElkLayout });
   const op = findAgentOp('create_diagram');
   if (!op) throw new Error('create_diagram is missing from the agent bundle');
   const outcome = await op.run({ dsl }, { document, pageId: document.pages[0]!.id, capabilities });
