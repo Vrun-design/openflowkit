@@ -4,7 +4,7 @@ import {
   createTestDocument,
   createTestNode,
 } from '../../testing/builders/documentBuilder';
-import { projectConnector, projectPageConnectors } from './routeProjection';
+import { clearLabelPoint, projectConnector, projectPageConnectors } from './routeProjection';
 
 function connectorFixture() {
   const source = createTestNode('source', {
@@ -148,6 +148,63 @@ describe('connector route projection', () => {
       const dy = middles[index].y - middles[index - 1].y;
       expect(Math.hypot(dx, dy)).toBeCloseTo(12, 5);
     }
+  });
+
+  // The owner's report, 2026-10-07: edges into one side met at its midpoint and shared their
+  // last run, drawing a bracket; an icon node's edges stopped 38 px short of its plate.
+  const at = (x: number, y: number) => ({ translation: { x, y }, rotationRadians: 0, scale: { x: 1, y: 1 } });
+  const fanIn = (targetContent: Record<string, unknown> = {}) => {
+    const nodes = [
+      createTestNode('left', { transform: at(0, 0) }),
+      createTestNode('middle', { transform: at(200, 0) }),
+      createTestNode('right', { transform: at(400, 0) }),
+      createTestNode('target', { transform: at(200, 200), content: { label: 'Target', ...targetContent } }),
+    ];
+    const connectors = ['right', 'left', 'middle'].map((id) => createTestConnector(`e-${id}`, id, 'target', {
+      route: { kind: 'orthogonal', ownership: 'automatic' },
+    }));
+    const page = { ...createTestDocument({ nodes }).pages[0], connectors };
+    return Object.fromEntries(projectPageConnectors(page).map((edge) => [edge.id, edge.samples.at(-1)!]));
+  };
+
+  it('spreads edges that meet one flat side, in the order their other ends sit', () => {
+    const ends = fanIn();
+    expect(ends['e-left']!.y).toBe(200);
+    expect(ends['e-left']!.x).toBeLessThan(ends['e-middle']!.x);
+    expect(ends['e-middle']!.x).toBe(250);
+    expect(ends['e-right']!.x).toBeGreaterThan(ends['e-middle']!.x);
+    expect(ends['e-right']!.x - ends['e-middle']!.x).toBe(ends['e-middle']!.x - ends['e-left']!.x);
+  });
+
+  it('spreads ends across a diamond and lands each on its outline, not the box around it', () => {
+    // The 100×50 diamond's tip is (250, 200); 24 px either side its upper edges sit 12 px lower.
+    const ends = fanIn({ shape: 'diamond' });
+    expect([ends['e-left'], ends['e-middle'], ends['e-right']]).toEqual([{ x: 226, y: 212 }, { x: 250, y: 200 }, { x: 274, y: 212 }]);
+  });
+
+  it('meets an icon node at its plate, not the caption box around it', () => {
+    const nodes = [
+      createTestNode('source', { transform: at(0, 0), size: { width: 100, height: 80 } }),
+      createTestNode('icon', {
+        kind: 'architecture', transform: at(300, 0), size: { width: 148, height: 116 },
+        content: { label: 'Stripe', assetPresentation: 'icon', icon: 'stripe' },
+      }),
+    ];
+    const connector = createTestConnector('edge', 'source', 'icon', { route: { kind: 'orthogonal', ownership: 'automatic' } });
+    const page = { ...createTestDocument({ nodes }).pages[0], connectors: [connector] };
+    // The plate is 72 px wide, centred, 4 px down: its left side is at x 300 + 38, its middle at y 40.
+    expect(projectConnector(page, connector)!.samples.at(-1)).toEqual({ x: 338, y: 40 });
+  });
+
+  it('moves a label off a node to the longest run where it sits clear', () => {
+    const route = [{ x: 0, y: 0 }, { x: 0, y: 100 }, { x: 200, y: 100 }, { x: 200, y: 200 }];
+    const plate = (text: string, point: { x: number; y: number }) => ({ x: point.x - 20, y: point.y - 10, width: 40, height: 20 });
+    // The middle run's midpoint is under a node: the first run is the next longest that is clear.
+    expect(clearLabelPoint('yes', 0.5, route, [{ x: 60, y: 80, width: 80, height: 40 }], plate)).toEqual({ x: 0, y: 50 });
+    // Clear where it was asked for: it stays.
+    expect(clearLabelPoint('yes', 0.5, route, [], plate)).toEqual({ x: 100, y: 100 });
+    // Nowhere clear: the asked-for point, not a guess.
+    expect(clearLabelPoint('yes', 0.5, route, [{ x: -50, y: -50, width: 300, height: 300 }], plate)).toEqual({ x: 100, y: 100 });
   });
 
   it('routes a self-loop as a bump out of the right side', () => {

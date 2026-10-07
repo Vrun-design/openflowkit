@@ -8,7 +8,34 @@ function insets(padding: LayoutInsets): string {
   return `[top=${padding.top},left=${padding.left},bottom=${padding.bottom},right=${padding.right}]`;
 }
 
+/**
+ * Edges that close a cycle, found depth-first from each node in declaration order
+ * (dagre's acyclic pass, so Mermaid's). ELK's own cycle breaking compares model order
+ * per hierarchy level, so an edge into a group's first child counts as backward and a
+ * flow's entry chain lands at the bottom.
+ */
+export function backEdges(graph: LayoutGraph): ReadonlySet<string> {
+  const outgoing = new Map<string, LayoutGraph['edges'][number][]>();
+  for (const edge of graph.edges) outgoing.set(edge.sourceId, [...(outgoing.get(edge.sourceId) ?? []), edge]);
+  const back = new Set<string>();
+  const done = new Set<string>();
+  const onPath = new Set<string>();
+  // ponytail: recursive, so a single chain deeper than ~5k nodes would overflow; go iterative if one shows up.
+  const visit = (id: string) => {
+    done.add(id);
+    onPath.add(id);
+    for (const edge of outgoing.get(id) ?? []) {
+      if (onPath.has(edge.targetId)) back.add(edge.id);
+      else if (!done.has(edge.targetId)) visit(edge.targetId);
+    }
+    onPath.delete(id);
+  };
+  for (const node of graph.nodes) if (!done.has(node.id)) visit(node.id);
+  return back;
+}
+
 function toElkGraph(graph: LayoutGraph): ElkNode {
+  const back = backEdges(graph);
   const childrenByParent = new Map<string, LayoutNodeInput[]>();
   for (const node of graph.nodes) {
     const parent = node.parentId ?? graph.rootId;
@@ -43,14 +70,21 @@ function toElkGraph(graph: LayoutGraph): ElkNode {
       'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
       'elk.padding': insets(graph.rootPadding),
       'elk.spacing.nodeNode': '48',
-      'elk.layered.spacing.nodeNodeBetweenLayers': '96',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '64',
       'elk.layered.spacing.edgeNodeBetweenLayers': '20',
       'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
       'elk.randomSeed': '1337',
     },
     children: (childrenByParent.get(graph.rootId) ?? []).map(build),
     // Edges sit on the root; INCLUDE_CHILDREN lets ELK route across group borders.
-    edges: graph.edges.map((edge) => ({ id: edge.id, sources: [edge.sourceId], targets: [edge.targetId] })),
+    // Only positions come back, so a reversed back edge changes ranks and nothing else.
+    // A sized label gets its own slot between layers, so ranks open up wherever text must fit.
+    edges: graph.edges.map((edge) => ({
+      id: edge.id,
+      ...(back.has(edge.id) ? { sources: [edge.targetId], targets: [edge.sourceId] } : { sources: [edge.sourceId], targets: [edge.targetId] }),
+      // ELK skips a label without text; the size is what it lays out.
+      ...(edge.label ? { labels: [{ id: `${edge.id}:label`, text: ' ', width: edge.label.width, height: edge.label.height }] } : {}),
+    })),
   };
 }
 

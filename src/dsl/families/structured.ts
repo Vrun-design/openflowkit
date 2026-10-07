@@ -12,6 +12,7 @@ import { attributeText, commentLines, nodeName, quote, slugifyDslId } from '../t
 import { COLOR_WORDS, isHexColor, sortAttributes } from '../vocabulary';
 import type { Family, FamilyContext, FamilyScene } from './types';
 import type { DslToken } from '../tokenize';
+import { layoutEdges } from '../layout';
 
 // ERD and UML class diagrams share one engine: a graph of structured entities
 // (blocks of member rows) with typed relations. Only the row grammar, the
@@ -411,7 +412,7 @@ async function materialize(kind: StructuredKind, model: StructuredModel, context
 
   const laid = await context.layout({
     nodes: nodes.map((node) => ({ id: node.id, parentId: null, size: node.size })),
-    edges: connectors.map((connector) => ({ id: connector.id, sourceId: connector.source.nodeId!, targetId: connector.target.nodeId! })),
+    edges: layoutEdges(connectors),
     direction: context.direction,
     rootPadding: { top: context.title ? 72 : 28, right: 28, bottom: 28, left: 28 },
     groupPadding: { top: 54, right: 22, bottom: 22, left: 22 },

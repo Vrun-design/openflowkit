@@ -10,7 +10,7 @@ import type { FamilyContext, FamilyScene } from '../types';
 import { attrsToJson, type CanonicalAttribute } from '../../sceneMeta';
 import { ACTOR_CONTENT_LAYOUT, measureGroupSize, measureNodeSize } from '../../sizing';
 import { slugifyDslId } from '../../text';
-import type { LayoutNodeInput } from '../../layout';
+import { layoutEdges, type LayoutNodeInput } from '../../layout';
 import {
   COLOR_WORDS, DIRECTIONS, SHAPE_WORDS, attributeSlot,
   canonicalShapeWord, dslShapeWord, isHexColor, nodeAppearance,
@@ -387,7 +387,7 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
   ];
   const laid = await context.layout({
     nodes: layoutNodes,
-    edges: connectors.map((connector) => ({ id: connector.id, sourceId: connector.source.nodeId!, targetId: connector.target.nodeId! })),
+    edges: layoutEdges(connectors),
     direction: context.direction,
     rootPadding: input.title ? FRAME_TITLE_PADDING : FRAME_PADDING,
     groupPadding: GROUP_PADDING,

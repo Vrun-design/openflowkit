@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { deterministicLayout, type LayoutGraph } from './layout';
+import { createTestConnector } from '../opencanvas/testing/builders/documentBuilder';
+import { deterministicLayout, layoutEdges, type LayoutGraph } from './layout';
 
 const graph: LayoutGraph = {
   rootId: 'root',
@@ -38,5 +39,25 @@ describe('deterministicLayout', () => {
     const controller = new AbortController();
     controller.abort();
     await expect(deterministicLayout.run(graph, controller.signal)).rejects.toMatchObject({ name: 'AbortError' });
+  });
+});
+
+describe('layoutEdges', () => {
+  const connector = (id: string, labels: { text: string }[]) => createTestConnector(id, 'a', 'b', {
+    labels: labels.map((label, index) => ({ id: `${id}:${index}`, text: label.text, pathRatio: 0.5, offset: { x: 0, y: 0 }, metadata: {} })),
+  });
+
+  it('sizes a label so the layout leaves room for it, and leaves an unlabelled edge alone', () => {
+    const [short, long, none] = layoutEdges([
+      connector('short', [{ text: 'yes' }]),
+      connector('long', [{ text: 'retry three times with exponential backoff before giving up' }]),
+      connector('none', []),
+    ]);
+    expect(short).toMatchObject({ id: 'short', sourceId: 'a', targetId: 'b' });
+    expect(short!.label!.width).toBeGreaterThan(30);
+    // Long text wraps at 140 px like the canvas draws it: wider stops, taller grows.
+    expect(long!.label!.width).toBeLessThanOrEqual(140 + 10 + 16 + 1);
+    expect(long!.label!.height).toBeGreaterThan(short!.label!.height);
+    expect(none).toEqual({ id: 'none', sourceId: 'a', targetId: 'b' });
   });
 });

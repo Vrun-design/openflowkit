@@ -10,7 +10,7 @@ const DESCRIPTION_WRAP = {
   overflow: 'wrap', clipContent: false, maxLines: 4,
 } as const;
 import { COLOR_WORDS, nodeAppearance, SHAPE_WORDS, type DslShapeSpec } from '../../vocabulary';
-import type { LayoutNodeInput } from '../../layout';
+import { layoutEdges, type LayoutNodeInput } from '../../layout';
 import { AUTO_ICON_SHAPES } from '../../autoIcon';
 import type { FamilyContext, FamilyScene } from '../types';
 import type { SwatchResolver } from '../../../opencanvas/domain/nodes/nodePalette';
@@ -98,7 +98,7 @@ export async function compileArchitectureView(
   ];
   const laid = await context.layout({
     nodes: layoutNodes,
-    edges: connectors.map((connector) => ({ id: connector.id, sourceId: connector.source.nodeId!, targetId: connector.target.nodeId! })),
+    edges: layoutEdges(connectors),
     direction: view.direction ?? context.direction,
     rootPadding: FRAME_TITLE_PADDING,
     groupPadding: GROUP_PADDING,

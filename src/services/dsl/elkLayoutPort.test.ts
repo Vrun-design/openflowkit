@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ElkNode } from 'elkjs/lib/elk.bundled.js';
 import type { LayoutGraph } from '../../dsl/layout';
-import { createElkLayoutPort, type ElkLayoutEngine } from './elkLayoutPort';
+import { backEdges, createElkLayoutPort, type ElkLayoutEngine } from './elkLayoutPort';
 
 const graph: LayoutGraph = {
   rootId: 'root',
@@ -40,6 +40,39 @@ describe('createElkLayoutPort', () => {
     const group = seen.children?.find((node) => node.id === 'group');
     expect(group?.children?.map((node) => node.id)).toEqual(['a']);
     expect(seen.children?.map((node) => node.id)).toEqual(['group', 'b']);
+  });
+
+  it('breaks cycles depth-first in declaration order, as Mermaid does, across group borders', () => {
+    // User → CDN → (group) GW → Done → User: only the edge closing the loop turns around,
+    // so the first-declared node leads the flow even when the loop runs through a group.
+    const cyclic: LayoutGraph = {
+      ...graph,
+      nodes: [
+        { id: 'user', parentId: null, size: { width: 100, height: 60 } },
+        { id: 'cdn', parentId: null, size: { width: 100, height: 60 } },
+        { id: 'edge', parentId: null, size: { width: 0, height: 0 } },
+        { id: 'gw', parentId: 'edge', size: { width: 100, height: 60 } },
+        { id: 'done', parentId: null, size: { width: 100, height: 60 } },
+      ],
+      edges: [
+        { id: 'e1', sourceId: 'user', targetId: 'cdn' },
+        { id: 'e2', sourceId: 'cdn', targetId: 'gw' },
+        { id: 'e3', sourceId: 'gw', targetId: 'done' },
+        { id: 'e4', sourceId: 'done', targetId: 'user' },
+        { id: 'e5', sourceId: 'gw', targetId: 'gw' },
+      ],
+    };
+    expect([...backEdges(cyclic)]).toEqual(['e4', 'e5']);
+  });
+
+  it('hands ELK each back edge reversed', async () => {
+    let seen: { edges?: Array<{ id: string; sources: string[]; targets: string[] }> } = {};
+    const port = createElkLayoutPort(async () => ({ layout: async (input) => { seen = input as typeof seen; return { ...input, children: [] }; } }));
+    await port.run({ ...graph, edges: [...graph.edges, { id: 'back', sourceId: 'b', targetId: 'a' }] });
+    expect(seen.edges).toEqual([
+      { id: 'e', sources: ['a'], targets: ['b'] },
+      { id: 'back', sources: ['a'], targets: ['b'] },
+    ]);
   });
 
   it('rejects cancelled runs', async () => {

@@ -1,4 +1,6 @@
+import type { SceneConnector } from '../opencanvas/domain/document/types';
 import type { Point2d, Size2d } from '../opencanvas/domain/geometry/types';
+import { measurePortableText } from '../opencanvas/domain/text/measurement';
 import type { DslDirection } from './ast';
 
 export interface LayoutInsets {
@@ -23,6 +25,24 @@ export interface LayoutEdgeInput {
   id: string;
   sourceId: string;
   targetId: string;
+  /** The label's plate plus breathing room; the layout leaves it this much space. */
+  label?: Size2d;
+}
+
+/** Label plates are 12px text wrapped at 140 (the canvas renderer's values), padded 5; room beside the text matters more than above it. */
+const LABEL_ROOM = { padding: 5, marginX: 8, marginY: 4, wrap: 140, fontSize: 12 };
+
+/** Layout edges for a family's connectors, each label measured so the layout makes room for it. */
+export function layoutEdges(connectors: readonly SceneConnector[]): LayoutEdgeInput[] {
+  return connectors.map((connector) => {
+    const text = connector.labels.map((label) => label.text).filter(Boolean).join('\n');
+    const measured = text ? measurePortableText(text, { fontSize: LABEL_ROOM.fontSize, fontWeight: 500, maxWidth: LABEL_ROOM.wrap, overflow: 'wrap' }) : null;
+    const room = (extent: number, padding: number, margin: number) => Math.ceil(extent + padding + margin * 2);
+    return {
+      id: connector.id, sourceId: connector.source.nodeId!, targetId: connector.target.nodeId!,
+      ...(measured ? { label: { width: room(measured.width, LABEL_ROOM.padding * 2, LABEL_ROOM.marginX), height: room(measured.height, LABEL_ROOM.padding, LABEL_ROOM.marginY) } } : {}),
+    };
+  });
 }
 
 export interface LayoutGraph {

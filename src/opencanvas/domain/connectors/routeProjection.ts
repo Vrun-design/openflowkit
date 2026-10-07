@@ -9,16 +9,30 @@ import { applyMatrixToPoint, invertMatrix } from '../geometry/matrix';
 import { dedupePolyline, pointAtPolylineRatio } from '../geometry/polyline';
 import { distanceBetweenPoints } from '../geometry/point';
 import type { Bounds2d, Matrix2d, Point2d } from '../geometry/types';
+import { createBounds2d, intersectsBounds } from '../geometry/bounds';
+import { connectorLabelPlate } from './labelStyle';
+import { transformBounds } from '../geometry/matrix';
+import { nodeOutline } from '../nodes/nodeLabelBounds';
 import { buildNodeWorldMatrices, nodeWorldBounds, nodeWorldCenter } from '../scene/worldGeometry';
 import { resolveConnectorPresentation } from './presentation';
 import { dropCollinear, routeOrthogonalBetweenSides } from './obstacleRouting';
 import { facingSide, sideAnchor, type ConnectSide } from './connectHandles';
 import type { ConnectorPathCommand, ProjectedConnector } from './types';
 
+/** Where an automatic orthogonal end meets its node: the side, and how far off its middle. */
+interface SpreadEnd {
+  readonly side: ConnectSide;
+  readonly offset: number;
+}
+
 interface ConnectorProjectionContext {
   readonly nodesById: ReadonlyMap<string, SceneNode>;
   readonly matrices: ReadonlyMap<string, Matrix2d>;
   readonly lateralByConnectorId: ReadonlyMap<string, number>;
+  /** Keyed `${connectorId}:source|target`. */
+  readonly spreadByEnd: ReadonlyMap<string, SpreadEnd>;
+  /** Nodes a label must not cover: every node but the containers, which a label may sit inside. */
+  readonly labelObstacles: () => readonly Bounds2d[];
 }
 
 const SEQUENCE_PARTICIPANT_HEADER_HEIGHT = 48;
@@ -27,11 +41,154 @@ const SEQUENCE_MESSAGE_OFFSET = 20;
 const SEQUENCE_MESSAGE_SPACING = 52;
 
 function createConnectorProjectionContext(page: ScenePage): ConnectorProjectionContext {
+  const nodesById = new Map(page.nodes.map((node) => [node.id, node]));
+  const matrices = buildNodeWorldMatrices(page);
+  let labelObstacles: readonly Bounds2d[] | null = null;
   return {
-    nodesById: new Map(page.nodes.map((node) => [node.id, node])),
-    matrices: buildNodeWorldMatrices(page),
+    nodesById, matrices,
     lateralByConnectorId: parallelLateralOffsets(page.connectors),
+    spreadByEnd: spreadEnds(page.connectors, nodesById, matrices),
+    labelObstacles: () => {
+      if (labelObstacles) return labelObstacles;
+      const parents = new Set(page.nodes.map((node) => node.parentId));
+      labelObstacles = page.nodes.filter((node) => !parents.has(node.id) && matrices.has(node.id))
+        .map((node) => nodeWorldBounds(node, matrices.get(node.id)!));
+      return labelObstacles;
+    },
   };
+}
+
+/**
+ * The box edges meet: the painted silhouette's (an icon node's 72 px plate, not the
+ * caption box around it). With `toBottom` it runs down to the node's bottom, where a
+ * downward edge leaves so it never cuts through a caption under the plate.
+ */
+function connectWorldBounds(node: SceneNode, matrix: Matrix2d, toBottom = true): Bounds2d {
+  const outline = nodeOutline(node);
+  const left = Math.min(...outline.map((point) => point.x));
+  const top = Math.min(...outline.map((point) => point.y));
+  const right = Math.max(...outline.map((point) => point.x));
+  const bottom = toBottom ? node.size.height : Math.max(...outline.map((point) => point.y));
+  return transformBounds(matrix, createBounds2d(left, top, right - left, bottom - top));
+}
+
+const SPREAD_STEP_PX = 24;
+
+/**
+ * Where a line in from `side`, `along` px off its middle, first meets the outline
+ * (node-local): a diamond's slanted edge, a parallelogram's lean, a circle's rim.
+ */
+function outlineHit(outline: readonly Point2d[], side: ConnectSide, along: number): Point2d | null {
+  const vertical = side === 'top' || side === 'bottom';
+  let best: Point2d | null = null;
+  outline.forEach((from, index) => {
+    const to = outline[(index + 1) % outline.length]!;
+    const [a, b] = vertical ? [from.x, to.x] : [from.y, to.y];
+    if ((a - along) * (b - along) > 0 || a === b) return;
+    const t = (along - a) / (b - a);
+    const hit = vertical ? { x: along, y: from.y + t * (to.y - from.y) } : { x: from.x + t * (to.x - from.x), y: along };
+    const better = !best || (side === 'top' ? hit.y < best.y : side === 'bottom' ? hit.y > best.y : side === 'left' ? hit.x < best.x : hit.x > best.x);
+    if (better) best = hit;
+  });
+  return best;
+}
+
+/**
+ * An automatic end's point: `offset` px along `side` from its middle, on the painted
+ * outline. A downward end under an icon plate leaves below the caption instead.
+ * ponytail: rotated or flipped nodes meet their box side; project onto the outline there too if one shows up.
+ */
+function outlinePoint(node: SceneNode, matrix: Matrix2d, side: ConnectSide, offset: number): Point2d {
+  const outline = nodeOutline(node);
+  const xs = outline.map((point) => point.x);
+  const ys = outline.map((point) => point.y);
+  const box = createBounds2d(Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+  const vertical = side === 'top' || side === 'bottom';
+  if (matrix.b !== 0 || matrix.c !== 0 || matrix.a <= 0 || matrix.d <= 0) {
+    const middle = sideAnchor(connectWorldBounds(node, matrix, side === 'bottom'), side);
+    return vertical ? { x: middle.x + offset, y: middle.y } : { x: middle.x, y: middle.y + offset };
+  }
+  const along = vertical ? box.x + box.width / 2 + offset / matrix.a : box.y + box.height / 2 + offset / matrix.d;
+  const caption = side === 'bottom' && node.size.height > box.y + box.height + 0.5;
+  const local = caption ? { x: along, y: node.size.height }
+    : outlineHit(outline, side, along) ?? sideAnchor(box, side);
+  return applyMatrixToPoint(matrix, local);
+}
+
+/**
+ * Automatic orthogonal ends that meet the same flat side spread along it, ordered
+ * by where their other ends sit, so no two edges share a point or a final run (the
+ * "bracket" a fan-in drew when every end took the side's middle).
+ */
+function spreadEnds(
+  connectors: readonly SceneConnector[],
+  nodesById: ReadonlyMap<string, SceneNode>,
+  matrices: ReadonlyMap<string, Matrix2d>
+): ReadonlyMap<string, SpreadEnd> {
+  const bounds = new Map<string, Bounds2d>();
+  const boundsOf = (node: SceneNode): Bounds2d => {
+    const known = bounds.get(node.id);
+    if (known) return known;
+    const fresh = connectWorldBounds(node, matrices.get(node.id)!);
+    bounds.set(node.id, fresh);
+    return fresh;
+  };
+  const sides = new Map<string, { key: string; node: SceneNode; side: ConnectSide; along: number }[]>();
+  for (const connector of connectors) {
+    const { source, target } = connector;
+    if (connector.route.kind !== 'orthogonal' || connector.waypoints.length > 0 || connector.metadata.hidden === true) continue;
+    if (typeof connector.semantics.seqMessageKind === 'string' || !source.nodeId || !target.nodeId || source.nodeId === target.nodeId) continue;
+    const sourceNode = nodesById.get(source.nodeId);
+    const targetNode = nodesById.get(target.nodeId);
+    if (!sourceNode || !targetNode || !matrices.has(sourceNode.id) || !matrices.has(targetNode.id)) continue;
+    for (const [end, self, other, which] of [[source, sourceNode, targetNode, 'source'], [target, targetNode, sourceNode, 'target']] as const) {
+      if (endAnchor(end, self)) continue;
+      const side = facingSide(boundsOf(self), boundsOf(other));
+      const otherBounds = boundsOf(other);
+      const along = side === 'top' || side === 'bottom' ? otherBounds.x + otherBounds.width / 2 : otherBounds.y + otherBounds.height / 2;
+      const group = `${self.id}:${side}`;
+      sides.set(group, [...(sides.get(group) ?? []), { key: `${connector.id}:${which}`, node: self, side, along }]);
+    }
+  }
+  const spread = new Map<string, SpreadEnd>();
+  for (const ends of sides.values()) {
+    const { node, side } = ends[0]!;
+    if (ends.length < 2) continue;
+    const box = boundsOf(node);
+    const length = side === 'top' || side === 'bottom' ? box.width : box.height;
+    const step = Math.min(SPREAD_STEP_PX, (length * 0.6) / (ends.length - 1));
+    [...ends].sort((a, b) => a.along - b.along).forEach((end, index) => {
+      spread.set(end.key, { side, offset: (index - (ends.length - 1) / 2) * step });
+    });
+  }
+  return spread;
+}
+
+/**
+ * Where a label sits clear of every node: the asked-for point if it is, else the
+ * midpoint of the longest clear run, else the asked-for point after all. Labels
+ * the user placed (an offset) never come here.
+ */
+export function clearLabelPoint(
+  text: string,
+  pathRatio: number,
+  samples: readonly Point2d[],
+  obstacles: readonly Bounds2d[],
+  plate: (text: string, point: Point2d) => Bounds2d
+): Point2d | null {
+  const preferred = pointAtPolylineRatio(samples, pathRatio);
+  if (!preferred) return null;
+  const runs = samples.slice(1).map((point, index) => ({ from: samples[index]!, to: point }))
+    .sort((a, b) => distanceBetweenPoints(b.from, b.to) - distanceBetweenPoints(a.from, a.to))
+    .map(({ from, to }) => ({ x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }));
+  const clear = (point: Point2d) => !obstacles.some((bounds) => intersectsBounds(bounds, plate(text, point)));
+  return [preferred, ...runs].find(clear) ?? preferred;
+}
+
+function endAnchor(endpoint: ConnectorEndpoint, node: SceneNode): SceneAnchor | null {
+  return endpoint.anchor
+    ?? node.ports.find((port) => port.id === endpoint.portId)?.anchor
+    ?? sideAnchorForDanglingPort(endpoint.portId);
 }
 
 // Parallel (and reverse) edges between the same node pair fan out so none
@@ -205,22 +362,21 @@ function orthogonalEnd(
   endpoint: ConnectorEndpoint,
   node: SceneNode | undefined,
   matrix: Matrix2d | undefined,
-  toward: Bounds2d
+  toward: Bounds2d,
+  spread: SpreadEnd | undefined
 ): OrthogonalEnd | null {
   if (endpoint.point) return { point: endpoint.point, side: null };
   if (!node || !matrix) return null;
-  const bounds = nodeWorldBounds(node, matrix);
-  const anchor = endpoint.anchor
-    ?? node.ports.find((port) => port.id === endpoint.portId)?.anchor
-    ?? sideAnchorForDanglingPort(endpoint.portId);
+  const bounds = connectWorldBounds(node, matrix);
+  const anchor = endAnchor(endpoint, node);
   if (anchor) {
     return {
       point: applyMatrixToPoint(matrix, anchorLocalPoint(node, anchor)),
       side: anchor.kind === 'side' ? anchor.side : facingSide(bounds, toward),
     };
   }
-  const side = facingSide(bounds, toward);
-  return { point: sideAnchor(bounds, side), side };
+  const side = spread?.side ?? facingSide(bounds, toward);
+  return { point: outlinePoint(node, matrix, side, spread?.offset ?? 0), side };
 }
 
 // Hybrid routes keep the user's corners and re-link both ends every frame:
@@ -370,15 +526,17 @@ function orthogonalPath(
   targetMatrix: Matrix2d | undefined,
   context: ConnectorProjectionContext
 ): readonly Point2d[] | null {
-  const sourceBounds = sourceNode && sourceMatrix ? nodeWorldBounds(sourceNode, sourceMatrix)
+  const sourceBounds = sourceNode && sourceMatrix ? connectWorldBounds(sourceNode, sourceMatrix)
     : connector.source.point ? pointBounds(connector.source.point) : null;
-  const targetBounds = targetNode && targetMatrix ? nodeWorldBounds(targetNode, targetMatrix)
+  const targetBounds = targetNode && targetMatrix ? connectWorldBounds(targetNode, targetMatrix)
     : connector.target.point ? pointBounds(connector.target.point) : null;
   if (!sourceBounds || !targetBounds) return null;
   const first = connector.waypoints[0];
   const last = connector.waypoints.at(-1);
-  const start = orthogonalEnd(connector.source, sourceNode, sourceMatrix, first ? pointBounds(first) : targetBounds);
-  const end = orthogonalEnd(connector.target, targetNode, targetMatrix, last ? pointBounds(last) : sourceBounds);
+  const start = orthogonalEnd(connector.source, sourceNode, sourceMatrix, first ? pointBounds(first) : targetBounds,
+    context.spreadByEnd.get(`${connector.id}:source`));
+  const end = orthogonalEnd(connector.target, targetNode, targetMatrix, last ? pointBounds(last) : sourceBounds,
+    context.spreadByEnd.get(`${connector.id}:target`));
   if (!start || !end) return null;
   if (connector.waypoints.length > 0) return linkOrthogonal(start, connector.waypoints, end);
   // Every node is an obstacle, the endpoints' own included: that is what
@@ -452,8 +610,14 @@ function projectConnectorWithContext(
   const flipNormal = !!connector.source.nodeId && !!connector.target.nodeId
     && connector.source.nodeId > connector.target.nodeId;
   const samples = shiftInteriorOrthogonal(path.samples, lateral, flipNormal);
+  const presentation = resolveConnectorPresentation(connector);
+  // An automatic route's label steps off any node it would cover; a placed one stays put.
+  const automaticLabels = orthogonal !== null && connector.waypoints.length === 0;
   const labels = connector.labels.map((label) => {
-    const point = pointAtPolylineRatio(samples, label.pathRatio) ?? start;
+    const point = (automaticLabels && label.offset.x === 0 && label.offset.y === 0
+      ? clearLabelPoint(label.text, label.pathRatio, samples, context.labelObstacles(),
+        (text, at) => connectorLabelPlate(text, presentation.label, at))
+      : pointAtPolylineRatio(samples, label.pathRatio)) ?? start;
     return {
       id: label.id,
       text: label.text,
@@ -465,7 +629,7 @@ function projectConnectorWithContext(
     commands: path.commands,
     samples,
     labels,
-    presentation: resolveConnectorPresentation(connector),
+    presentation,
   };
 }
 
