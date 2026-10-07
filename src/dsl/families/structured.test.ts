@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { deterministicLayout, type LayoutEdgeInput, type LayoutPort } from '../layout';
 import { compile } from '../compile';
 import { format, serialize } from '../serialize';
 
@@ -95,5 +96,16 @@ describe('class family', () => {
     const codes = result.diagnostics.map((item) => item.code);
     expect(codes).toContain('W101');
     expect(result.connectors).toHaveLength(0);
+  });
+});
+
+describe('class layout', () => {
+  // Found 2026-10-07: `Animal <|-- Duck` drew Duck above Animal. UML puts the parent on top,
+  // however the arrow was written; a whole still sits above its parts.
+  it('lays a parent above its children and a whole above its parts', async () => {
+    let edges: readonly LayoutEdgeInput[] = [];
+    const capture: LayoutPort = { run: async (graph, signal) => { edges = graph.edges; return deterministicLayout.run(graph, signal); } };
+    await compile('class\nAnimal <|-- Duck\nBird --|> Animal\nFlyer <|.. Bird\nAnimal *-- Leg\nDuck --> Pond', { layout: capture });
+    expect(edges.map((edge) => `${edge.sourceId}>${edge.targetId}`)).toEqual(['animal>duck', 'animal>bird', 'flyer>bird', 'animal>leg', 'duck>pond']);
   });
 });

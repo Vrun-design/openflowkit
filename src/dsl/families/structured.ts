@@ -20,6 +20,8 @@ import { layoutEdges } from '../layout';
 
 export type StructuredKind = 'erd' | 'class';
 
+/** Child-to-parent relations; the parent goes first in layout. */
+const PARENT_FIRST = new Set(['--|>', '..|>']);
 const CLASS_TOKENS = ['<|--', '--|>', '<|..', '..|>', '*--', '--*', 'o--', '--o', '..>', '<..', '<--', '-->', '<-->', '..', '--'] as const;
 const ER_ALIASES: Readonly<Record<string, string>> = Object.fromEntries(Object.entries({
   '1:1': '||--||', '1:1..': '||..||', '1:n': '||--o{', 'n:1': '}o--||', 'n:m': '}o--o{', '1:n..': '||..o{', 'n:m..': '}o..o{',
@@ -412,7 +414,9 @@ async function materialize(kind: StructuredKind, model: StructuredModel, context
 
   const laid = await context.layout({
     nodes: nodes.map((node) => ({ id: node.id, parentId: null, size: node.size })),
-    edges: layoutEdges(connectors),
+    // UML reads top-down from the parent: an inheritance or realisation edge (child --|> parent) is laid out reversed.
+    edges: layoutEdges(connectors).map((edge, index) => (PARENT_FIRST.has(String(connectors[index]!.semantics.classRelation))
+      ? { ...edge, sourceId: edge.targetId, targetId: edge.sourceId } : edge)),
     direction: context.direction,
     rootPadding: { top: context.title ? 72 : 28, right: 28, bottom: 28, left: 28 },
     groupPadding: { top: 54, right: 22, bottom: 22, left: 22 },
