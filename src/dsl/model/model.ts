@@ -180,12 +180,16 @@ export function viewsOf(index: ArchIndex, elementId: string): readonly ArchView[
   return index.model.views.filter((view) => view.of === elementId);
 }
 
-/** A view's name by C4 level and the element it zooms into ("Containers: Shop"); landscape and custom views keep their own. */
+/**
+ * A view's name by level and the element it zooms into, in plain words: C4 is the
+ * engine, not the surface (R4). Context → "Overview: Shop", container → "Services:
+ * Shop", component → "Inside API". Landscape and custom views keep their own.
+ */
 export function viewDisplayName(view: Pick<ArchView, 'kind' | 'name' | 'env'>, target: ArchElement): string {
   switch (view.kind) {
-    case 'context': return `Context: ${target.name}`;
-    case 'container': return `Containers: ${target.name}`;
-    case 'component': return `Components: ${target.name}`;
+    case 'context': return `Overview: ${target.name}`;
+    case 'container': return `Services: ${target.name}`;
+    case 'component': return `Inside ${target.name}`;
     case 'deployment': return `Deployment${view.env ? ` (${view.env})` : ''}: ${target.name}`;
     default: return view.name;
   }

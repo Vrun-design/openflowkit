@@ -39,7 +39,7 @@ test('C4 starter, keyboard inspection, focused camera and visual flow authoring 
   await page.locator('.ofk-v2-model-row', { hasText: 'Shop' }).first().focus();
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: 'Open Container view', exact: true }).click();
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Containers: Shop');
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop');
   await page.locator('.ofk-v2-model-row', { hasText: 'Web' }).first().click();
   await expect
     .poll(async () => {
@@ -80,12 +80,12 @@ test('C4 starter, keyboard inspection, focused camera and visual flow authoring 
   await expect(page.getByRole('button', { name: /^Track order/ })).toHaveCount(0);
 });
 
-test('phone welcome exposes C4 creation and hides keyboard hints', async ({ page }) => {
+test('phone welcome exposes system map creation and hides keyboard hints', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.waitForSelector('[data-testid="v2-canvas"]');
   await expect(page.locator('.ofk-v2-welcome-keys')).toBeHidden();
-  const starter = page.getByRole('button', { name: 'C4 architecture workspace', exact: true });
+  const starter = page.getByRole('button', { name: 'System map', exact: true });
   await expect(starter).toBeVisible();
   const box = (await starter.boundingBox())!;
   expect(box.x).toBeGreaterThanOrEqual(0);
@@ -153,16 +153,16 @@ test('an element with a deeper view opens it from the canvas and climbs back @ga
   await fitted('shop');
   // Selecting the system offers its containers view; Customer has none.
   await clickNode(page, 'customer');
-  await expect(page.getByRole('button', { name: /^Open Containers/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Open Services/ })).toHaveCount(0);
   await clickNode(page, 'shop');
-  await page.getByRole('button', { name: 'Open Containers: Shop' }).click();
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Containers: Shop');
+  await page.getByRole('button', { name: 'Open Services: Shop' }).click();
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop');
   await fitted('shop.web');
   await page.locator('.ofk-v2-breadcrumb-link').first().click();
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('System landscape');
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('System map');
   await fitted('shop');
   // The keyboard does the same: Enter on the selected system.
   await clickNode(page, 'shop');
   await page.keyboard.press('Enter');
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Containers: Shop');
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop');
 });

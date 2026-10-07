@@ -76,7 +76,7 @@ function fakeFolder(files: Record<string, string>): WorkspaceFolder & { files: R
 describe('workspace folder', () => {
   it('reads the DSL, snaps and ADRs, then writes them back', async () => {
     const { document } = await generated();
-    const page = document.pages.find((candidate) => candidate.name === 'Containers: Shop')!;
+    const page = document.pages.find((candidate) => candidate.name === 'Services: Shop')!;
     const snap = snapOfPage(page)!;
     const folder = fakeFolder({
       'architecture.ofk': WORKSPACE,
@@ -98,7 +98,7 @@ describe('workspace folder', () => {
 
   it('drops non-model nodes from a snap and returns null for plain pages', async () => {
     const { document } = await generated();
-    const page = document.pages.find((candidate) => candidate.name === 'Containers: Shop')!;
+    const page = document.pages.find((candidate) => candidate.name === 'Services: Shop')!;
     expect(snapOfPage({ ...page, nodes: page.nodes.filter((node) => !placedElementId(node)) })).toMatchObject({ positions: {} });
     expect(snapOfPage({ ...page, metadata: { view: { id: 'x' } }, nodes: [] })).toBeNull();
   });

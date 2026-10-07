@@ -53,7 +53,7 @@ describe('workspace pages command', () => {
     const document = await generatedDocument();
     expect(document.pages).toHaveLength(3); // the empty starter page stays
     const shopPages = document.pages.filter((page) => archViewIdOfPage(page));
-    expect(shopPages.map((page) => page.name)).toEqual(['Context: Shop', 'Containers: Shop']);
+    expect(shopPages.map((page) => page.name)).toEqual(['Overview: Shop', 'Services: Shop']);
     expect(shopPages.every((page) => page.diagramKind === 'architecture')).toBe(true);
     const contextNodes = shopPages[0]!.nodes.map((node) => node.id).sort();
     expect(contextNodes).toEqual(expect.arrayContaining(['customer', 'shop']));
@@ -67,7 +67,7 @@ describe('workspace pages command', () => {
     const pageId = empty.pages[0]!.id;
     const command = buildWorkspacePagesCommand(empty, await compileWorkspace(WORKSPACE), { mintId, intoPageId: pageId })!;
     const applied = applyDocumentCommand(empty, command);
-    expect(applied.document.pages.map((page) => page.name)).toEqual(['Context: Shop', 'Containers: Shop']);
+    expect(applied.document.pages.map((page) => page.name)).toEqual(['Overview: Shop', 'Services: Shop']);
     expect(applied.document.pages[0]!.id).toBe(pageId);
     expect(archViewIdOfPage(applied.document.pages[0]!)).toBe('view:context:shop');
     expect(applyDocumentCommand(applied.document, applied.inverse).document.pages).toEqual(empty.pages);
@@ -99,13 +99,13 @@ describe('workspace pages command', () => {
     const renamed = { ...document, pages: document.pages.map((page) => page.id === context!.id ? { ...page, name: 'Shop overview' } : page) };
     const applied = applyDocumentCommand(renamed, buildWorkspacePagesCommand(renamed, await compileWorkspace(EDITED), { mintId })!).document;
     expect(applied.pages.find((page) => page.id === context!.id)!.name).toBe('Shop overview');
-    expect(applied.pages.find((page) => page.id === containers!.id)!.name).toBe('Containers: Shop');
+    expect(applied.pages.find((page) => page.id === containers!.id)!.name).toBe('Services: Shop');
     // A page still named like its frame (a pre-level-names document) follows the view.
     const stale = { ...document, pages: document.pages.map((page) => page.id === containers!.id ? { ...page, name: 'container of Shop' } : page) };
     const frame = stale.pages.find((page) => page.id === containers!.id)!.nodes.find((node) => node.kind === 'frame')!;
     const label = { ...stale, pages: stale.pages.map((page) => page.id === containers!.id ? { ...page, nodes: page.nodes.map((node) => node.id === frame.id ? { ...node, content: { ...node.content, label: 'container of Shop' } } : node) } : page) };
     const migrated = applyDocumentCommand(label, buildWorkspacePagesCommand(label, await compileWorkspace(WORKSPACE.replace('Web [tech: React]', 'Web [tech: Vue]')), { mintId })!).document;
-    expect(migrated.pages.find((page) => page.id === containers!.id)!.name).toBe('Containers: Shop');
+    expect(migrated.pages.find((page) => page.id === containers!.id)!.name).toBe('Services: Shop');
   });
 
   it('leaves a page that holds drawings alone', async () => {
@@ -127,7 +127,7 @@ describe('workspace pages command', () => {
       .filter((page) => archViewIdOfPage(page))
       .flatMap((page) => page.nodes)
       .find((node) => node.id === 'shop.web')!;
-    expect(web.content).toMatchObject({ label: 'Web', subLabel: '[Container · Remix]' });
+    expect(web.content).toMatchObject({ label: 'Web', subLabel: '[Service · Remix]' });
   });
 
   it('replaces a bound frame in place and is one undo step', async () => {
@@ -151,7 +151,7 @@ describe('workspace pages command', () => {
     const applied = applyDocumentCommand(seeded, command);
     const page = applied.document.pages[0]!;
     expect(page.nodes.some((node) => node.id === 'bound-frame')).toBe(true);
-    expect(page.name).toBe('Context: Shop');
+    expect(page.name).toBe('Overview: Shop');
     expect(page.nodes.some((node) => node.id === 'customer')).toBe(true);
     expect(applied.inverse).toBeTruthy();
     const undone = applyDocumentCommand(applied.document, applied.inverse).document;
@@ -162,7 +162,7 @@ describe('workspace pages command', () => {
     const shop = await generatedDocument();
     const bank = await compileWorkspace('architecture\nmodel {\n  person Teller\n  system Bank\n  Teller -> Bank\n}\nviews {\n  view context of Bank\n}\n');
     const applied = applyDocumentCommand(shop, buildWorkspacePagesCommand(shop, bank, { mintId })!).document;
-    expect(applied.pages.map((page) => page.name)).toEqual(['Page 1', 'Context: Shop', 'Containers: Shop', 'Context: Bank']);
+    expect(applied.pages.map((page) => page.name)).toEqual(['Page 1', 'Overview: Shop', 'Services: Shop', 'Overview: Bank']);
   });
 
   it('keeps implicit landscapes of two different models on separate pages', async () => {
@@ -232,7 +232,7 @@ describe('element edits', () => {
     const web = applied.document.pages.flatMap((page) => page.nodes).find((node) => node.id === 'shop.web')!;
     expect(web.id).toBe('shop.web');
     expect(web.content.label).toBe('Web');
-    expect(web.content.subLabel).toBe('[Container]\nThe front door');
+    expect(web.content.subLabel).toBe('[Service]\nThe front door');
     const element = archModelOfPage(applied.document.pages.find((page) => archViewIdOfPage(page))!)!
       .elements.find((candidate) => candidate.id === 'shop.web')!;
     expect(element.tech).toBeUndefined();

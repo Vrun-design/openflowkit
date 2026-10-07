@@ -53,8 +53,9 @@ export interface ArchRelation {
 export const VIEW_KINDS = ['landscape', 'context', 'container', 'component', 'deployment', 'custom'] as const;
 export type ViewKind = (typeof VIEW_KINDS)[number];
 
+/** The kind a card names under its title: plain words, not C4 terms (R4). */
 export const ELEMENT_KIND_LABEL: Readonly<Record<ElementKind, string>> = {
-  person: 'Person', system: 'Software system', external: 'External system', container: 'Container',
+  person: 'Person', system: 'Software system', external: 'External system', container: 'Service',
   component: 'Component', store: 'Data store', queue: 'Queue', node: 'Deployment node', instance: 'Instance',
 };
 

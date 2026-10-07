@@ -246,7 +246,7 @@ describe('architecture view scenes', () => {
       'view:landscape', 'view:context:shop', 'view:container:shop',
     ]);
     expect(workspace.views.map((view) => view.name)).toEqual([
-      'System landscape', 'Context: Shop', 'Containers: Shop',
+      'System map', 'Overview: Shop', 'Services: Shop',
     ]);
     const container = workspace.views[2]!;
     expect(container.result.groups.map((node) => node.id)).toEqual(['shop']);
@@ -275,7 +275,7 @@ views {
 }
 `);
     expect(workspace.views.map((view) => view.name)).toEqual([
-      'System landscape', 'Context: Docs Site', 'Containers: Docs Site', 'Components: API App',
+      'System map', 'Overview: Docs Site', 'Services: Docs Site', 'Inside API App',
       'Deployment (Live): Docs Site', 'Data paths',
     ]);
   });
@@ -425,8 +425,8 @@ views { view landscape }`);
     const source = CONTAINER.replace('tech: Go', 'tech: Go, desc: Handles orders');
     const result = await compile(source, {autoIcons: true, resolveIcon: () => ({packId: 'developer', shapeId: 'go'})});
     const api = result.nodes.find((node) => node.id === 'shop.api')!;
-    expect(api.content).toMatchObject({assetPresentation: 'card', archProviderLabel: 'Container', archResourceType: 'Go', archEnvironment: 'Handles orders'});
-    expect(result.frame.content.label).toBe('Containers: Shop');
+    expect(api.content).toMatchObject({assetPresentation: 'card', archProviderLabel: 'Service', archResourceType: 'Go', archEnvironment: 'Handles orders'});
+    expect(result.frame.content.label).toBe('Services: Shop');
     expect(await format(source)).not.toContain('title:');
   });
 

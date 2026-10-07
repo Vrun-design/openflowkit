@@ -410,7 +410,7 @@ export function parseArchitectureWorkspace(
     if (inAt >= 0) env = words.slice(inAt + 1).map((token) => token.value).join(' ');
     const name = kind === 'custom'
       ? strings[0]?.value ?? of ?? 'Custom view'
-      : of ? `${kind} of ${of}` : kind === 'deployment' && env ? `deployment in ${env}` : kind === 'landscape' ? 'System landscape' : kind;
+      : of ? `${kind} of ${of}` : kind === 'deployment' && env ? `deployment in ${env}` : kind === 'landscape' ? 'System map' : kind;
     const rules = block.children.map(parseRule).filter((rule): rule is ViewRule => rule !== null);
     const id = kind === 'custom'
       ? `view:custom:${slugifyDslId(name)}`

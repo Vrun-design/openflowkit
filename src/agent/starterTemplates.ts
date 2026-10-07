@@ -47,7 +47,7 @@ flow "Place an order" {
 `;
 
 export const STARTER_TEMPLATES: readonly StarterTemplate[] = [
-  {name: 'c4-workspace', title: 'C4 architecture workspace', family: 'architecture', summary: 'Shared model with landscape, context and container views and a checkout flow.', dsl: C4_STARTER},
+  {name: 'c4-workspace', title: 'System map', family: 'architecture', summary: 'One model drawn as a system map, an overview and its services, with a checkout flow.', dsl: C4_STARTER},
   {
     name: 'auth-flow',
     title: 'User authentication',

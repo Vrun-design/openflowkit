@@ -59,7 +59,7 @@ export function useV2Architecture(document: SceneDocumentV1 | null, page: SceneP
     if (model && view && index) {
       const landscape = pageForView('view:landscape');
       if (landscape && view.id !== 'view:landscape') {
-        crumbs.push({ viewId: 'view:landscape', pageId: landscape.id, label: model.name ?? 'System landscape' });
+        crumbs.push({ viewId: 'view:landscape', pageId: landscape.id, label: model.name ?? 'System map' });
       }
       const chain = view.of ? [...elementAncestors(index, view.of)].reverse() : [];
       for (const ancestorId of chain) {
