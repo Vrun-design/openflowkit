@@ -36,13 +36,42 @@ export function resolveConnectorLabelStyle(connector: SceneConnector): NodeStyle
   return style;
 }
 
-/**
- * The plate behind a label, centred on its point, padded as the canvas pads it.
- * ponytail: exporters cannot measure text, so width is estimated at 0.58em per
- * character — upgrade to a shared metrics table if long labels overflow.
- */
+/** Labels wrap here, as the canvas draws them. */
+export const LABEL_WRAP_WIDTH = 140;
+
+// ponytail: exporters cannot measure text, so widths are estimated per character — upgrade to a
+// shared metrics table if long labels overflow. The plate is padded generously (0.58em); where a
+// line breaks is closer to Inter's real average (about 0.5em), so the file wraps where the canvas does.
+const CHAR_EM = 0.58;
+const WRAP_EM = 0.5;
+
+/** The lines a label breaks into: the author's own breaks, then greedy word wrap at LABEL_WRAP_WIDTH. */
+export function connectorLabelLines(text: string, style: NodeStyle): readonly string[] {
+  const charWidth = style.fontSize * WRAP_EM;
+  return text.split('\n').flatMap((paragraph) => {
+    const lines: string[] = [];
+    let line = '';
+    for (const word of paragraph.split(/\s+/).filter(Boolean)) {
+      if (line && (line.length + 1 + word.length) * charWidth > LABEL_WRAP_WIDTH) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = line ? `${line} ${word}` : word;
+      }
+    }
+    return [...lines, line];
+  });
+}
+
+/** The height of one label line, as the plate counts it. */
+export function connectorLabelLineHeight(style: NodeStyle): number {
+  return style.fontSize * 1.25;
+}
+
+/** The plate behind a label, centred on its point, padded as the canvas pads it. */
 export function connectorLabelPlate(text: string, style: NodeStyle, point: Point2d): Bounds2d {
-  const width = text.length * style.fontSize * 0.58 + style.textPadding * 2;
-  const height = style.fontSize * 1.25 + style.textPadding;
+  const lines = connectorLabelLines(text, style);
+  const width = Math.max(...lines.map((line) => line.length)) * style.fontSize * CHAR_EM + style.textPadding * 2;
+  const height = lines.length * connectorLabelLineHeight(style) + style.textPadding;
   return { x: point.x - width / 2, y: point.y - height / 2, width, height };
 }

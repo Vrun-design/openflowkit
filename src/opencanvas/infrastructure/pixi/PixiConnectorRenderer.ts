@@ -7,6 +7,7 @@ import type { ScenePage } from '../../domain/document/types';
 import { roundPolylineCorners } from '../../domain/geometry/polyline';
 import { distanceBetweenPoints } from '../../domain/geometry/point';
 import type { Point2d } from '../../domain/geometry/types';
+import { LABEL_WRAP_WIDTH } from '../../domain/connectors/labelStyle';
 import { projectPageConnectors } from '../../domain/connectors/routeProjection';
 import type {
   ConnectorMarkerGlyph,
@@ -17,7 +18,6 @@ import { buildNodeWorldMatrices, nodeWorldCenter } from '../../domain/scene/worl
 const LEGACY_STROKE = 0x94a3b8;
 const LABEL_DETAIL_ZOOM = 0.65;
 /** A longer label wraps: one line would run over the nodes the edge joins. */
-const LABEL_WRAP_WIDTH = 140;
 
 function normalizedDirection(from: Point2d, to: Point2d): Point2d {
   const distance = distanceBetweenPoints(from, to);

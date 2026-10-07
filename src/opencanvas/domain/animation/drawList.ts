@@ -7,7 +7,7 @@ import { buildNodeStateMap } from '../scene/nodeState';
 import { buildNodeWorldMatrices } from '../scene/worldGeometry';
 import { projectPageConnectors } from '../connectors/routeProjection';
 import { connectorMarkerShapes, type MarkerShape } from '../connectors/markers';
-import { connectorLabelPlate } from '../connectors/labelStyle';
+import { connectorLabelLineHeight, connectorLabelLines, connectorLabelPlate } from '../connectors/labelStyle';
 import { resolveBasicNodePresentation } from '../nodes/basicNodePresentation';
 import { basicNodeDecorations } from '../nodes/basicNodeDecorations';
 import { nodeLabelBounds, nodeOutline } from '../nodes/nodeLabelBounds';
@@ -307,13 +307,13 @@ function connectorOps(
       fill: style.fill === 'transparent' ? null : paint(style.fill),
       stroke: style.stroke === 'transparent' || style.strokeWidth <= 0 ? null : paint(style.stroke),
       strokeWidth: style.strokeWidth,
-    }, {
+    }, ...connectorLabelLines(label.text, style).map((line, index, lines): DrawOp => ({
       kind: 'text', transform: IDENTITY, opacity, clip: null,
-      text: label.text, x: label.point.x, y: label.point.y,
+      text: line, x: label.point.x, y: label.point.y + (index - (lines.length - 1) / 2) * connectorLabelLineHeight(style),
       fontSize: style.fontSize, fontFamily: FONT_STACKS[style.fontFamily], fontWeight: String(style.fontWeight),
       fontStyle: style.fontStyle, letterSpacing: 0, align: 'center', baseline: 'middle',
       color: style.textColor, decoration: null,
-    });
+    })));
   }
   return ops;
 }

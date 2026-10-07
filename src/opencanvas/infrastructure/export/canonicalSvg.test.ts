@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createTestConnector, createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import { exportCanonicalSvg, iconArtKey } from './canonicalSvg';
+import { connectorLabelLineHeight, connectorLabelLines, connectorLabelPlate } from '../../domain/connectors/labelStyle';
+import { projectPageConnectors } from '../../domain/connectors/routeProjection';
 import { compile } from '../../../dsl/compile';
 import { iconContent } from '../../domain/nodes/iconNode';
 import { architectureIconBounds } from '../../domain/nodes/architectureNodePresentation';
@@ -98,6 +100,31 @@ describe('canonical SVG export', () => {
     // No art loaded (headless, or a failed fetch): the plate alone, never a broken link.
     expect(exportCanonicalSvg(document)).not.toContain('<image');
     expect(exportCanonicalSvg(document, { iconArt: {} })).not.toContain('<image');
+  });
+
+  it('draws a connector label where the projection puts it, wrapped like the canvas', () => {
+    const text = 'Gets account information from, and makes payments using';
+    const connector = createTestConnector('edge', 'a', 'b', {
+      route: { kind: 'orthogonal', ownership: 'automatic' },
+      labels: [{ id: 'l', text, pathRatio: 0.5, offset: { x: 0, y: 0 }, metadata: {} }],
+    });
+    const document = createTestDocument({
+      nodes: [createTestNode('a', { transform: { translation: { x: 0, y: 0 }, rotationRadians: 0, scale: { x: 1, y: 1 } } }),
+        createTestNode('b', { transform: { translation: { x: 400, y: 0 }, rotationRadians: 0, scale: { x: 1, y: 1 } } })],
+      connectors: [connector],
+    });
+    const svg = exportCanonicalSvg(document);
+    const projected = projectPageConnectors(document.pages[0]!)[0]!;
+    const { point } = projected.labels[0]!;
+    const n = (value: number) => Math.round(value * 100) / 100;
+    const lines = connectorLabelLines(text, projected.presentation.label);
+    expect(lines.length).toBeGreaterThan(2);
+    for (const [index, line] of lines.entries()) {
+      const y = point.y + (index - (lines.length - 1) / 2) * connectorLabelLineHeight(projected.presentation.label);
+      expect(svg).toMatch(new RegExp(`<text x="${n(point.x)}" y="${n(y)}"[^>]*>${line}</text>`));
+    }
+    const plate = connectorLabelPlate(text, projected.presentation.label, point);
+    expect(svg).toContain(`<rect x="${n(plate.x)}" y="${n(plate.y)}" width="${n(plate.width)}" height="${n(plate.height)}"`);
   });
 
   it('exports a visible selection and rejects empty output', () => {

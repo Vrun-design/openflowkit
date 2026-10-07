@@ -17,7 +17,7 @@ import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentatio
 import { nodeLabelBounds, nodeOutline } from '../../domain/nodes/nodeLabelBounds';
 import type { ConnectorMarkerGlyph, ProjectedConnector } from '../../domain/connectors/types';
 import { connectorMarkerShapes, type MarkerShape } from '../../domain/connectors/markers';
-import { connectorLabelPlate } from '../../domain/connectors/labelStyle';
+import { connectorLabelLineHeight, connectorLabelLines, connectorLabelPlate } from '../../domain/connectors/labelStyle';
 import { architectureIconBounds, resolveArchitectureNodePresentation } from '../../domain/nodes/architectureNodePresentation';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import {
@@ -723,7 +723,11 @@ function connectorLabelMarkup(text: string, point: Point2d, style: NodeStyle): s
   const fill = style.fill === 'transparent' ? 'none' : style.fill;
   const stroke = style.stroke === 'transparent' || style.strokeWidth <= 0 ? 'none' : style.stroke;
   return `<rect x="${number(plate.x)}" y="${number(plate.y)}" width="${number(plate.width)}" height="${number(plate.height)}" rx="${number(style.cornerRadius)}" fill="${fill}" stroke="${stroke}" stroke-width="${number(style.strokeWidth)}"/>`
-    + `<text x="${number(point.x)}" y="${number(point.y)}" text-anchor="middle" dominant-baseline="middle" fill="${xml(style.textColor)}" font-family="${xml(FONT_STACKS[style.fontFamily])}" font-size="${number(style.fontSize)}" font-weight="${style.fontWeight}">${xml(text)}</text>`;
+    + connectorLabelLines(text, style).map((line, index, lines) => {
+      // Wrapped like the canvas: the block of lines is centred on the point.
+      const y = point.y + (index - (lines.length - 1) / 2) * connectorLabelLineHeight(style);
+      return `<text x="${number(point.x)}" y="${number(y)}" text-anchor="middle" dominant-baseline="middle" fill="${xml(style.textColor)}" font-family="${xml(FONT_STACKS[style.fontFamily])}" font-size="${number(style.fontSize)}" font-weight="${style.fontWeight}">${xml(line)}</text>`;
+    }).join('');
 }
 
 /** Arrowheads and end glyphs, with the exact geometry the Pixi renderer uses. */
