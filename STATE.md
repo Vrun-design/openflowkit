@@ -22,7 +22,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - Layout: ELK honours label size and back edges (`backEdges`); router lands on real outlines, spreads ends, keeps
   labels off nodes. Sequence notes get their own rows; SVG export draws participants like the canvas. Class: parent on top.
 - Ceilings: labels avoid nodes, not other labels; namespace boxes not drawn; multi-line state notes dropped.
-  Owner call: adopt Mermaid's runtime (like Excalidraw/draw.io) or keep our parser, see the 10-07 report.
+  D14 (owner): no Mermaid runtime. Next: `docs/plan/next-mermaid-c4-prompt.md` (labels, Mermaid gaps, C4 pages).
 ## Found, not fixed (owner calls)
 - Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI): `docs/plan/launch-holds.md`. CI uploads first-failure
   traces (`e2e-traces`). A new worker's deps are pre-scanned (`optimizeDeps.entries`), or dev reloads mid-session.
