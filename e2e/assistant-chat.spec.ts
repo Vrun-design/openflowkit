@@ -4,7 +4,7 @@
 // starts fresh and History reopens the old one. Every call goes to the local
 // stub (stubProviderServer.mjs).
 import { expect, test } from './test';
-import { clickNode, drawShape, node, openCanvas } from './helpers';
+import { clickNode, doc, drawShape, node, openCanvas } from './helpers';
 
 const STUB = 'http://127.0.0.1:4399/v1';
 // A 1×1 PNG.
@@ -136,4 +136,26 @@ test('"make the selected box red and move it right" is one reviewable change and
   await page.getByTestId('v2-canvas').focus();
   await page.keyboard.press('Meta+z');
   await expect.poll(async () => node(page, box)).toEqual(before);
+});
+
+test('an answer in Mermaid is drawn as the diagram it describes, not as a line per node @gate', async ({ page }) => {
+  await page.addInitScript((baseUrl) => {
+    localStorage.setItem('openflowkit-v2-ai', JSON.stringify({
+      provider: 'custom', connections: { custom: { apiKey: 'sk-ok', baseUrl, model: 'stub-model' } },
+    }));
+  }, STUB);
+  await page.goto('/');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true })
+    .getByRole('button', { name: 'AI assistant', exact: true }).click();
+  const panel = page.getByRole('complementary', { name: 'AI assistant' });
+  const composer = panel.getByRole('textbox', { name: 'Ask AI assistant' });
+  await composer.fill('draw it in mermaid');
+  await composer.press('Enter');
+  await panel.getByText('1 step').click();
+  await expect(panel.getByText('Drafted a new sequence')).toBeVisible();
+  await panel.getByRole('button', { name: /^Apply/ }).click();
+  await expect(panel.getByText('Applied 1 change.')).toBeVisible();
+  const shapes = (await doc(page))!.pages[0]!;
+  expect(shapes.nodes.filter((entry) => entry.kind === 'sequence_participant')).toHaveLength(2);
+  expect(shapes.connectors).toHaveLength(2);
 });

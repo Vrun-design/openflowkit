@@ -40,7 +40,9 @@ const replyFor = (body, path) => {
     return { calls: [call('call_red', 'style_shapes', { ids: [shape], fill: '#ef4444' }), call('call_right', 'move_shapes', { ids: [shape], dx: 200, dy: 0 })] };
   }
   if (path.includes('/chat/completions') && request.tools?.some((tool) => tool.function?.name === 'add_diagram')) {
-    return { call: { id: 'call_stub', type: 'function', function: { name: 'add_diagram', arguments: JSON.stringify({ dsl: 'flowchart\n  Stub -> Works' }) } } };
+    // A model that answers in Mermaid, which it often does: the editor reads it as it reads a paste.
+    const dsl = textOf(last).includes('draw it in mermaid') ? 'sequenceDiagram\n  Alice->>John: Hello\n  John-xAlice: lost' : 'flowchart\n  Stub -> Works';
+    return { call: { id: 'call_stub', type: 'function', function: { name: 'add_diagram', arguments: JSON.stringify({ dsl }) } } };
   }
   return { text: DRAW };
 };

@@ -10,6 +10,7 @@ import { looksLikeMermaid } from '../../../services/dsl/mermaidToDsl';
 import { elkDslLayoutPort } from '../../../services/dsl/elkLayoutPort';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { findStarterTemplate } from '../../../agent/starterTemplates';
+import { compileSource } from '../../../agent/compileSource';
 import { compile, compileWorkspace, type CompileWorkspaceResult } from '../../../dsl/compile';
 import { dslFrames } from '../../../dsl/frameScene';
 import { writeAnimateBlock } from '../../../dsl/animate';
@@ -261,8 +262,9 @@ export function V2EditorPage(): React.JSX.Element {
     onSaved: (saved) => { if (id) scheduleV2Thumbnail(repository, id, saved); },
   });
 
+  // What the assistant writes: DSL, or Mermaid, Structurizr or D2, read as the code panel and the MCP tools read them.
   const compileDraft = useCallback(
-    (text: string) => compile(text, { origin: { x: 0, y: 0 }, layout: elkDslLayoutPort, resolveIcon: resolveDslIcon, autoIcons: preferences.autoIcons }),
+    (text: string) => compileSource(text, { origin: { x: 0, y: 0 }, layout: elkDslLayoutPort, resolveIcon: resolveDslIcon, autoIcons: preferences.autoIcons }),
     [preferences.autoIcons]);
   const compileAny = useCallback(
     (text: string): Promise<CompileWorkspaceResult> => compileWorkspace(text, {
