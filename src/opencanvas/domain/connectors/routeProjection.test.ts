@@ -4,6 +4,7 @@ import {
   createTestDocument,
   createTestNode,
 } from '../../testing/builders/documentBuilder';
+import type { JsonObject } from '../document/json';
 import { intersectsBounds } from '../geometry/bounds';
 import { nodeWorldBounds, buildNodeWorldMatrices } from '../scene/worldGeometry';
 import { connectorLabelPlate } from './labelStyle';
@@ -28,6 +29,14 @@ function connectorFixture() {
     ],
   });
   return createTestDocument({ nodes: [source, target] }).pages[0];
+}
+
+// A lane 100 wide at x, so its centre sits at x + 50, with activation events.
+function barLane(id: string, x: number, bars: JsonObject[] = []) {
+  return createTestNode(id, {
+    kind: 'sequence_participant', transform: { translation: { x, y: 0 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+    content: { label: id, seqParticipantKind: 'participant', ...(bars.length ? { seqActivations: bars } : {}) },
+  });
 }
 
 describe('connector route projection', () => {
@@ -412,6 +421,33 @@ describe('connector route projection', () => {
       expect(projected.samples).toHaveLength(2);
       expect(projected.samples[0]!.y).toBe(projected.samples[1]!.y);
     }
+  });
+
+  // Found 2026-10-07: the bar is drawn over the lane, so a head ending on the lane's centre was half under it.
+  it('ends a sequence message on the edge of an activation bar, not under it', () => {
+    // b is active from message 1 to message 3; a never is: centres sit at 50 and 350.
+    const nodes = [barLane('a', 0), barLane('b', 300, [{ order: 1, activate: true }, { order: 3, activate: false }])];
+    const message = (id: string, from: string, to: string, order: number) => createTestConnector(id, from, to, {
+      route: { kind: 'direct', ownership: 'automatic' }, semantics: { seqMessageKind: 'sync', seqMessageOrder: order },
+    });
+    const page = {
+      ...createTestDocument({ nodes }).pages[0],
+      connectors: [message('before', 'a', 'b', 0), message('in', 'a', 'b', 1), message('back', 'b', 'a', 3), message('after', 'a', 'b', 4)],
+    };
+    const xs = Object.fromEntries(projectPageConnectors(page).map((entry) => [entry.id, [entry.samples[0]!.x, entry.samples.at(-1)!.x]]));
+    expect(xs.before).toEqual([50, 350]);
+    expect(xs.in).toEqual([50, 344]);
+    expect(xs.back).toEqual([344, 50]);
+    expect(xs.after).toEqual([50, 350]);
+  });
+
+  it('ends a message from the right on the right edge of the bar it lands on', () => {
+    const nodes = [barLane('a', 0, [{ order: 0, activate: true }, { order: 2, activate: false }]), barLane('b', 300)];
+    const reply = createTestConnector('reply', 'b', 'a', {
+      route: { kind: 'direct', ownership: 'automatic' }, semantics: { seqMessageKind: 'return', seqMessageOrder: 1 },
+    });
+    const page = { ...createTestDocument({ nodes }).pages[0], connectors: [reply] };
+    expect(projectConnector(page, reply)!.samples.at(-1)!.x).toBe(56);
   });
 
   it('projects sequence self messages as a readable right-side loop', () => {

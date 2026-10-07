@@ -2,6 +2,9 @@ import { isJsonObject, type JsonObject, type JsonValue } from '../document/json'
 import type { SceneNode } from '../document/types';
 import { optionalPresentationString, presentationString } from './nodePresentationValues';
 
+/** An activation bar is drawn this wide on its lane; messages on it end on its edge. */
+export const SEQUENCE_ACTIVATION_WIDTH = 12;
+
 export interface SequenceActivationRange {
   readonly startOrder: number;
   readonly endOrder: number;

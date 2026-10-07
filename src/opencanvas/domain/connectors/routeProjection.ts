@@ -14,6 +14,7 @@ import { connectorLabelPlate } from './labelStyle';
 import { transformBounds } from '../geometry/matrix';
 import { nodeOutline } from '../nodes/nodeLabelBounds';
 import { buildNodeWorldMatrices, nodeWorldBounds, nodeWorldCenter } from '../scene/worldGeometry';
+import { resolveSequenceNodePresentation, SEQUENCE_ACTIVATION_WIDTH } from '../nodes/sequenceNodePresentation';
 import { resolveConnectorPresentation } from './presentation';
 import { dropCollinear, routeOrthogonalBetweenSides } from './obstacleRouting';
 import { facingSide, sideAnchor, type ConnectSide } from './connectHandles';
@@ -343,6 +344,12 @@ function sideAnchorForDanglingPort(portId: string | null): SceneAnchor | null {
     : null;
 }
 
+function onActivationBar(node: SceneNode, order: number): boolean {
+  const presentation = resolveSequenceNodePresentation(node);
+  return presentation?.kind === 'sequence_participant'
+    && presentation.activations.some(({ startOrder, endOrder }) => order >= startOrder && order <= endOrder);
+}
+
 function sequenceMessageEndpoints(
   connector: SceneConnector,
   sourceNode: SceneNode,
@@ -378,13 +385,18 @@ function sequenceMessageEndpoints(
     x: targetNode.size.width / 2,
     y: targetHeaderHeight,
   });
+  // A bar is drawn over its lane, so a head that stopped on the lane's centre ended half under it.
+  // A message on a bar starts or ends on the bar's edge, the side facing the other lane (a self loop leaves right).
+  const facing = sourceNode.id === targetNode.id ? 1 : Math.sign(targetHeader.x - sourceHeader.x);
+  const sourceEdge = onActivationBar(sourceNode, sequenceOrder) ? facing * SEQUENCE_ACTIVATION_WIDTH / 2 : 0;
+  const targetEdge = onActivationBar(targetNode, sequenceOrder) ? -facing * SEQUENCE_ACTIVATION_WIDTH / 2 : 0;
   const y =
     Math.max(sourceHeader.y, targetHeader.y) +
     SEQUENCE_MESSAGE_OFFSET +
     sequenceOrder * SEQUENCE_MESSAGE_SPACING;
   return {
-    start: { x: sourceHeader.x, y },
-    end: { x: targetHeader.x, y },
+    start: { x: sourceHeader.x + sourceEdge, y },
+    end: { x: targetHeader.x + targetEdge, y },
   };
 }
 

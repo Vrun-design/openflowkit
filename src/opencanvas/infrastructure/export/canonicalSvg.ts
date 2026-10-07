@@ -35,6 +35,7 @@ import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { descendantIds } from '../../domain/scene/queries';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
 import { measurePortableText } from '../../domain/text/measurement';
+import { SEQUENCE_ACTIVATION_WIDTH } from '../../domain/nodes/sequenceNodePresentation';
 import { sequenceNodeColors } from '../pixi/sequenceNodeVisual';
 import { cameraFitMatrix } from '../../domain/animation/camera';
 import { PULSE_DASH } from '../../domain/animation/frame';
@@ -625,7 +626,7 @@ function exportSequenceNode(node: SceneNode, matrix: Matrix2d, wrapper: ReturnTy
     const y = lifelineStart + SEQUENCE_MESSAGE_OFFSET + startOrder * SEQUENCE_MESSAGE_SPACING;
     if (y >= node.size.height) return [];
     const height = Math.min(Math.max(12, (endOrder - startOrder) * SEQUENCE_MESSAGE_SPACING), node.size.height - y);
-    return [`<rect x="${number(centerX - 6)}" y="${number(y)}" width="12" height="${number(height)}" rx="2" fill="${colors.accentFill}" ${ink}/>`];
+    return [`<rect x="${number(centerX - SEQUENCE_ACTIVATION_WIDTH / 2)}" y="${number(y)}" width="${SEQUENCE_ACTIVATION_WIDTH}" height="${number(height)}" rx="2" fill="${colors.accentFill}" ${ink}/>`];
   });
   const figure = actor
     ? `<circle cx="${number(centerX)}" cy="9" r="5" fill="none" ${ink} stroke-width="1.5"/>`

@@ -1,5 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import type { SceneNode } from '../../domain/document/types';
+import { SEQUENCE_ACTIVATION_WIDTH } from '../../domain/nodes/sequenceNodePresentation';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import type { Matrix2d, Point2d } from '../../domain/geometry/types';
 import type { PixiNodeDebugRecord } from './pixiNodeDebug';
@@ -90,7 +91,7 @@ export class PixiSequenceNodeRenderer {
       const height = Math.max(12, (activation.endOrder - activation.startOrder) * MESSAGE_SPACING);
       drawPixiLocalRect(
         graphics,
-        { x: centerX - 6, y, width: 12, height: Math.min(height, node.size.height - y) },
+        { x: centerX - SEQUENCE_ACTIVATION_WIDTH / 2, y, width: SEQUENCE_ACTIVATION_WIDTH, height: Math.min(height, node.size.height - y) },
         matrix,
         2
       );
