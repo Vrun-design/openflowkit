@@ -161,6 +161,31 @@ describe('compile graph structure', () => {
     expect(result.diagnostics).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'W121' })]));
   });
 
+  // `a = Foo {bar}` used to open a group `a` around a node `bar`, silently. The text is still read that way; it now says so.
+  it('warns when a `{…}` closed on the same line turns a label into a group, and suggests quotes', async () => {
+    const result = await compile('flowchart\na = Foo {bar}\nb = Baz\na -> b');
+    const warning = result.diagnostics.find((item) => item.code === 'W106');
+    expect(warning).toMatchObject({ severity: 'warning', line: 2 });
+    expect(warning!.message).toMatch(/opens a group/);
+    expect(warning!.hint).toContain('"Foo {bar}"');
+    expect(result.groups.map((group) => group.id)).toEqual(['a']);
+    // What it was meant to be, written the way the grammar asks for it.
+    const quoted = await compile('flowchart\na = "Foo {bar}"\nb = Baz\na -> b');
+    expect(quoted.diagnostics.filter((item) => item.code === 'W106')).toEqual([]);
+    expect(quoted.nodes.find((node) => node.id === 'a')!.content.label).toBe('Foo {bar}');
+  });
+
+  it('reports a stray closing brace on its own line, not on line 1', async () => {
+    const result = await compile('flowchart\nA -> B\nB -> C\n}\n');
+    expect(result.diagnostics.find((item) => item.message.includes('Unexpected block close'))).toMatchObject({ line: 4 });
+  });
+
+  it('does not warn about a group written as one', async () => {
+    for (const text of ['flowchart\ngroup Zoo { A }\nA -> B', 'flowchart\ngroup Zoo {\n  A\n}\nA -> B', 'flowchart\nZoo {\n  A\n}\nA -> B', 'state\nstate Running { A }\nA -> B']) {
+      expect((await compile(text)).diagnostics.filter((item) => item.code === 'W106')).toEqual([]);
+    }
+  });
+
   it('resolves bare references to an explicit id', async () => {
     const result = await compile('flowchart\napi = API Gateway [rounded]\ndb = Customer records [cylinder]\napi -> db : reads');
     expect(result.nodes.map((node) => node.id)).toEqual(['api', 'db']);

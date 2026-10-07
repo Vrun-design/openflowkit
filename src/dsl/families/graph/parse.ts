@@ -140,12 +140,25 @@ export function parseGraphStatements(segments: readonly DslSegment[], diagnostic
   const reservedRecords = options.reservedRecords ?? RESERVED_RECORDS;
   const statements: DslStatement[] = [];
   const stack: Array<{ statements: DslStatement[]; opener?: DslStatement }> = [{ statements }];
+  // A block that opens and closes on one line: on a plain statement it is nearly always a label with braces in it.
+  const oneLineBlocks = new Map<DslSegment, string>();
+  const open: Array<{ opener: DslSegment; inner: string[] }> = [];
+  for (const segment of segments) {
+    if (segment.opens) {
+      open.push({ opener: segment, inner: [] });
+    } else if (segment.closes) {
+      const block = open.pop();
+      if (block?.opener.line === segment.line) oneLineBlocks.set(block.opener, block.inner.join(' '));
+    } else if (open.length > 0) {
+      open.at(-1)!.inner.push(joinTokens(segment.tokens));
+    }
+  }
   for (const segment of segments) {
     const current = stack.at(-1)!.statements;
     if (segment.tokens[0]?.kind === 'comment') continue;
     if (segment.closes) {
       if (stack.length > 1) stack.pop();
-      else diagnostics.push(tokenDiagnostic('W101', 'warning', segment.tokens[0], 'Unexpected block close; line dropped'));
+      else diagnostics.push(diagnostic({ line: segment.line, col: segment.col, endCol: segment.endCol }, 'W101', 'warning', 'Unexpected block close; line dropped'));
       continue;
     }
     if (segment.tokens.length === 0) continue;
@@ -166,6 +179,12 @@ export function parseGraphStatements(segments: readonly DslSegment[], diagnostic
       const strippedTokens = keyword === 'group' || reservedKind ? segment.tokens.slice(1) : segment.tokens;
       const referenceTokens = strippedTokens.length > 0 ? strippedTokens : [firstToken];
       const group = parseReference(referenceTokens, diagnostics);
+      const inner = oneLineBlocks.get(segment);
+      if (group && inner !== undefined && keyword !== 'group' && !reservedKind) {
+        diagnostics.push(tokenDiagnostic('W106', 'warning', firstToken,
+          `\`{${inner}}\` closed on this line opens a group around ${group.label}; the braces are not part of the label`,
+          `${group.id ? `${group.id} = ` : ''}"${group.label} {${inner}}"`));
+      }
       if (group) {
         statement = { kind: 'group', group, ...(reservedKind ? { reservedKind } : {}), statements: [], raw: joinTokens(segment.tokens), line: firstToken.line, col: firstToken.col, endCol: lastToken.endCol };
         current.push(statement);

@@ -54,7 +54,7 @@ export function splitStatements(tokens: readonly DslToken[]): DslSegment[] {
     else if (token.value === '{') flush(true);
     else if (token.value === '}') {
       flush();
-      flush(false, true);
+      flush(false, true, token);
     } else current.push(token);
   }
   flush();

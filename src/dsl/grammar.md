@@ -898,6 +898,7 @@ test: random bytes → diagnostics only).
 | W103 | unclosed block at EOF | `}` inserted |
 | W104 | duplicate directive, first wins | — |
 | W105 | family reserved, rendered as flowchart | — |
+| W106 | `Name {…}` closed on one line opens a group around `Name`; read as a group, braces are not label text | the quoted form `"Name {…}"` |
 | W110 | first statement looks like a family header with wrong case or a `family`/`type`/`diagram` wrapper | `flowchart` |
 | W111 | arrow not valid in this family, line dropped | list of valid arrows |
 | W112 | chain/fan not allowed in this family | one edge per line |
