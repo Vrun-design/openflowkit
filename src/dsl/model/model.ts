@@ -180,6 +180,17 @@ export function viewsOf(index: ArchIndex, elementId: string): readonly ArchView[
   return index.model.views.filter((view) => view.of === elementId);
 }
 
+/** A view's name by C4 level and the element it zooms into ("Containers: Shop"); landscape and custom views keep their own. */
+export function viewDisplayName(view: Pick<ArchView, 'kind' | 'name' | 'env'>, target: ArchElement): string {
+  switch (view.kind) {
+    case 'context': return `Context: ${target.name}`;
+    case 'container': return `Containers: ${target.name}`;
+    case 'component': return `Components: ${target.name}`;
+    case 'deployment': return `Deployment: ${target.name}${view.env ? ` · ${view.env}` : ''}`;
+    default: return view.name;
+  }
+}
+
 /** The canonical child view of an element: a container view of a system, component view of a container. */
 export function childViewOf(index: ArchIndex, elementId: string): ArchView | undefined {
   const element = index.byId.get(elementId);

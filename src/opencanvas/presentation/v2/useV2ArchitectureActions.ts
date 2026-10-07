@@ -10,6 +10,7 @@ import {
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1, ScenePage } from '../../domain/document/types';
 import type { V2Architecture } from './useV2Architecture';
+import { viewDisplayName } from '../../../dsl/model/model';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 
 /** Camera + selection side effects the actions ask the page to perform. */
@@ -166,7 +167,7 @@ export function useV2ArchitectureActions(options: ArchitectureActionsOptions, ho
       drillInto(elementId);
       return;
     }
-    const view: ArchView = { id: viewId, kind, name: `${kind} of ${element.name}`, of: element.id, rules: [] };
+    const view: ArchView = { id: viewId, kind, name: viewDisplayName({ kind, name: element.name }, element), of: element.id, rules: [] };
     const next: ArchModel = { ...model, views: [...model.views, view] };
     const workspace = await current.compileWorkspace(architectureWorkspaceText(next));
     const command = buildWorkspacePagesCommand(document, workspace, { mintId });

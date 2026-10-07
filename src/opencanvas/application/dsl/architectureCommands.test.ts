@@ -53,7 +53,7 @@ describe('workspace pages command', () => {
     const document = await generatedDocument();
     expect(document.pages).toHaveLength(3); // the empty starter page stays
     const shopPages = document.pages.filter((page) => archViewIdOfPage(page));
-    expect(shopPages.map((page) => page.name)).toEqual(['context of Shop', 'container of Shop']);
+    expect(shopPages.map((page) => page.name)).toEqual(['Context: Shop', 'Containers: Shop']);
     expect(shopPages.every((page) => page.diagramKind === 'architecture')).toBe(true);
     const contextNodes = shopPages[0]!.nodes.map((node) => node.id).sort();
     expect(contextNodes).toEqual(expect.arrayContaining(['customer', 'shop']));
@@ -67,7 +67,7 @@ describe('workspace pages command', () => {
     const pageId = empty.pages[0]!.id;
     const command = buildWorkspacePagesCommand(empty, await compileWorkspace(WORKSPACE), { mintId, intoPageId: pageId })!;
     const applied = applyDocumentCommand(empty, command);
-    expect(applied.document.pages.map((page) => page.name)).toEqual(['context of Shop', 'container of Shop']);
+    expect(applied.document.pages.map((page) => page.name)).toEqual(['Context: Shop', 'Containers: Shop']);
     expect(applied.document.pages[0]!.id).toBe(pageId);
     expect(archViewIdOfPage(applied.document.pages[0]!)).toBe('view:context:shop');
     expect(applyDocumentCommand(applied.document, applied.inverse).document.pages).toEqual(empty.pages);
@@ -116,7 +116,7 @@ describe('workspace pages command', () => {
     const applied = applyDocumentCommand(seeded, command);
     const page = applied.document.pages[0]!;
     expect(page.nodes.some((node) => node.id === 'bound-frame')).toBe(true);
-    expect(page.name).toBe('context of Shop');
+    expect(page.name).toBe('Context: Shop');
     expect(page.nodes.some((node) => node.id === 'customer')).toBe(true);
     expect(applied.inverse).toBeTruthy();
     const undone = applyDocumentCommand(applied.document, applied.inverse).document;
@@ -127,7 +127,7 @@ describe('workspace pages command', () => {
     const shop = await generatedDocument();
     const bank = await compileWorkspace('architecture\nmodel {\n  person Teller\n  system Bank\n  Teller -> Bank\n}\nviews {\n  view context of Bank\n}\n');
     const applied = applyDocumentCommand(shop, buildWorkspacePagesCommand(shop, bank, { mintId })!).document;
-    expect(applied.pages.map((page) => page.name)).toEqual(['Page 1', 'context of Shop', 'container of Shop', 'context of Bank']);
+    expect(applied.pages.map((page) => page.name)).toEqual(['Page 1', 'Context: Shop', 'Containers: Shop', 'Context: Bank']);
   });
 
   it('keeps implicit landscapes of two different models on separate pages', async () => {

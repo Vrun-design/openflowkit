@@ -246,7 +246,7 @@ describe('architecture view scenes', () => {
       'view:landscape', 'view:context:shop', 'view:container:shop',
     ]);
     expect(workspace.views.map((view) => view.name)).toEqual([
-      'System landscape', 'context of Shop', 'container of Shop',
+      'System landscape', 'Context: Shop', 'Containers: Shop',
     ]);
     const container = workspace.views[2]!;
     expect(container.result.groups.map((node) => node.id)).toEqual(['shop']);
@@ -254,6 +254,29 @@ describe('architecture view scenes', () => {
     expect(container.result.nodes.map((node) => node.id).sort()).toEqual(['billing', 'shop.api']);
     expect(container.result.connectors.map((c) => `${c.source.nodeId}->${c.target.nodeId}`)).toEqual([
       'shop.api->billing',
+    ]);
+  });
+
+  it('names a view by its C4 level and the element it zooms into, by display name', async () => {
+    const workspace = await compileWorkspace(`architecture
+model {
+  system "Docs Site" {
+    container "API App" { component Sign }
+  }
+}
+deployment Live { node Server { instance docs-site.api-app } }
+views {
+  view landscape
+  view context of "Docs Site"
+  view container of "Docs Site"
+  view component of docs-site.api-app
+  view deployment of "Docs Site" in Live
+  view custom "Data paths" { include * }
+}
+`);
+    expect(workspace.views.map((view) => view.name)).toEqual([
+      'System landscape', 'Context: Docs Site', 'Containers: Docs Site', 'Components: API App',
+      'Deployment: Docs Site · Live', 'Data paths',
     ]);
   });
 
@@ -403,7 +426,7 @@ views { view landscape }`);
     const result = await compile(source, {autoIcons: true, resolveIcon: () => ({packId: 'developer', shapeId: 'go'})});
     const api = result.nodes.find((node) => node.id === 'shop.api')!;
     expect(api.content).toMatchObject({assetPresentation: 'card', archProviderLabel: 'Container', archResourceType: 'Go', archEnvironment: 'Handles orders'});
-    expect(result.frame.content.label).toBe('container of Shop');
+    expect(result.frame.content.label).toBe('Containers: Shop');
     expect(await format(source)).not.toContain('title:');
   });
 

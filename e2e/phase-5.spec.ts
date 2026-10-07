@@ -57,7 +57,7 @@ test('C4 workspace: generate, drill down, rename across views, play a flow', asy
   await expect.poll(async () => (await pages(page)).length).toBe(2);
   const [landscape, container] = await pages(page);
   expect(landscape!.name).toBe('System landscape');
-  expect(container!.name).toBe('container of Shop');
+  expect(container!.name).toBe('Containers: Shop');
   expect(landscape!.elements).toEqual(expect.arrayContaining(['customer', 'shop']));
   expect(container!.labels).toEqual(expect.arrayContaining(['Web', 'API', 'DB']));
 
@@ -67,12 +67,12 @@ test('C4 workspace: generate, drill down, rename across views, play a flow', asy
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model' }).click();
   await page.getByRole('tab', { name: 'Elements' }).waitFor();
   await page.locator('.ofk-v2-model-row', { hasText: 'Shop' }).first().dblclick();
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('container of Shop', { timeout: 5000 });
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Containers: Shop', { timeout: 5000 });
   // Back up a level with the breadcrumb link.
   await page.locator('.ofk-v2-breadcrumb-link').first().click();
   await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('System landscape');
   await page.locator('.ofk-v2-model-row', { hasText: 'Shop' }).first().dblclick();
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('container of Shop');
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Containers: Shop');
 
   // --- rename an element: every view follows -------------------------------
   await page.locator('.ofk-v2-model-row', { hasText: 'Web' }).first().click();
@@ -122,11 +122,11 @@ views { view landscape; view container of Shop }
   // Land on the container view before drawing, via the model panel.
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model' }).click();
   await page.getByRole('tab', { name: /Views/ }).click();
-  await page.locator('.ofk-v2-model-row', { hasText: 'container of Shop' }).first().click();
+  await page.locator('.ofk-v2-model-row', { hasText: 'Containers: Shop' }).first().click();
   await page.getByRole('button', { name: 'Close panel' }).click();
   await expect.poll(async () => page.evaluate(() => {
     const api = (window as unknown as { __V2__?: { getDocument(): { pages: { name: string; nodes: { id: string }[] }[] } | null } }).__V2__;
-    const page = api?.getDocument?.()?.pages.find((candidate) => candidate.name === 'container of Shop');
+    const page = api?.getDocument?.()?.pages.find((candidate) => candidate.name === 'Containers: Shop');
     return page?.nodes.map((node) => node.id) ?? [];
   })).toEqual(expect.arrayContaining(['shop.web', 'shop.api']));
   // Draw Web -> API with the connector tool by dragging between the two nodes.
@@ -146,7 +146,7 @@ views { view landscape; view container of Shop }
   await page.mouse.up();
   await expect.poll(async () => page.evaluate(() => {
     const api = (window as unknown as { __V2__?: { getDocument(): { pages: { name: string; connectors: { metadata?: { model?: { relationId?: string } } }[] }[] } | null } }).__V2__;
-    const page = api?.getDocument?.()?.pages.find((candidate) => candidate.name === 'container of Shop');
+    const page = api?.getDocument?.()?.pages.find((candidate) => candidate.name === 'Containers: Shop');
     return page?.connectors.map((connector) => connector.metadata?.model?.relationId ?? null) ?? [];
   })).toContain('rel:shop.web->shop.api');
 });

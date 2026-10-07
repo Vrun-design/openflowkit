@@ -32,7 +32,7 @@ test('C4 starter, keyboard inspection, focused camera and visual flow authoring 
   await page.locator('.ofk-v2-model-row', { hasText: 'Shop' }).first().focus();
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: 'Open Container view', exact: true }).click();
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('container of Shop');
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Containers: Shop');
   await page.locator('.ofk-v2-model-row', { hasText: 'Web' }).first().click();
   await expect
     .poll(async () => {

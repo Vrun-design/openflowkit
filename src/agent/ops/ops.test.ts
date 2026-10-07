@@ -68,7 +68,7 @@ views { view context of Shop; view container of Shop }
     const created = await run.run('create_diagram', { dsl: C4 });
     expect(created.command!.kind).toBe('batch');
     expect(created.output).toMatchObject({ family: 'architecture', views: [{ viewId: 'view:context:shop' }, { viewId: 'view:container:shop' }] });
-    expect(run.document().pages.map((page) => page.name)).toEqual(['context of Shop', 'container of Shop']); // the empty page it was made on becomes the first view
+    expect(run.document().pages.map((page) => page.name)).toEqual(['Context: Shop', 'Containers: Shop']); // the empty page it was made on becomes the first view
     const again = await run.run('create_diagram', { dsl: C4 });
     expect(again.command).toBeNull();
     expect(run.document().pages).toHaveLength(2);
@@ -99,13 +99,13 @@ views { view context of Shop; view container of Shop }
       const source = 'architecture\nmodel { system Shop { container Web } }\nviews { view context of Shop; view container of Shop }';
       await run.run('create_diagram', { dsl: source });
       const before = run.document();
-      const page = before.pages.find((entry) => entry.name === 'context of Shop')!;
+      const page = before.pages.find((entry) => entry.name === 'Context: Shop')!;
       const frame = page.nodes.find((node) => node.kind === 'frame')!;
       const input = { dsl: source.replace('view context of Shop; ', ''), frameId: frame.id };
       const outcome = await op(name).run(op(name).schema.parse(input), { ...run.context(), pageId: page.id });
       expect(outcome.command).not.toBeNull();
       const applied = applyDocumentCommand(before, outcome.command!);
-      expect(applied.document.pages.map((entry) => entry.name)).toEqual(['container of Shop']);
+      expect(applied.document.pages.map((entry) => entry.name)).toEqual(['Containers: Shop']);
       expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(before);
       expect(outcome.output).toMatchObject({ views: [{ viewId: 'view:container:shop' }] });
     });

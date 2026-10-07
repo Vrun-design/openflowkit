@@ -6,7 +6,7 @@ import { joinTokens, type DslSegment } from '../../segments';
 import { slugifyDslId } from '../../text';
 import { DIRECTIONS } from '../../vocabulary';
 import type { DslToken } from '../../tokenize';
-import { createArchIndex, resolveElementRef } from '../../model/model';
+import { createArchIndex, resolveElementRef, viewDisplayName } from '../../model/model';
 import {
   ELEMENT_KINDS, FLOW_STEP_KINDS, VIEW_KINDS,
   type ArchElement, type ArchFlow, type ArchModel, type ArchRelation, type ArchView,
@@ -617,7 +617,7 @@ export function parseArchitectureWorkspace(
   const resolvedViews = views.map((view) => {
     if (!view.of) return view;
     const target = resolveElementRef(index, view.of, null);
-    return target ? { ...view, of: target.id } : view;
+    return target ? { ...view, of: target.id, name: viewDisplayName(view, target) } : view;
   });
   const resolvedElements = elements.map((element) => {
     const target = instanceTargets.get(element);
