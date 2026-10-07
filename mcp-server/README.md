@@ -53,6 +53,25 @@ tells an agent when a diagram helps, how to write it (Mermaid or DSL), and to sa
 `.openflow.json` beside the code. For Claude Code, copy it into `~/.claude/skills/openflowkit/`.
 Agents that fetch the web read the same text at `https://app.openflowkit.com/llms.txt`.
 
+### Claude Code plugin
+
+```bash
+claude plugin marketplace add Vrun-design/openflowkit
+claude plugin install openflowkit@openflowkit
+```
+
+Installs this server and the skill together.
+
+### Codex
+
+Codex reads MCP servers from `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.openflowkit]
+command = "npx"
+args = ["-y", "@vrun-design/openflowkit-mcp"]
+```
+
 ---
 
 ## Claude Desktop setup

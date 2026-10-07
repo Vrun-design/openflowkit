@@ -1,0 +1,17 @@
+{
+  "name": "openflowkit",
+  "displayName": "OpenFlowKit",
+  "version": "0.2.0",
+  "description": "Draw diagrams that stay valid, editable and saved next to the code: the OpenFlowKit MCP server plus the skill that teaches Claude to use it.",
+  "author": { "name": "OpenFlowKit", "url": "https://github.com/Vrun-design/openflowkit" },
+  "homepage": "https://github.com/Vrun-design/openflowkit#readme",
+  "repository": "https://github.com/Vrun-design/openflowkit",
+  "license": "MIT",
+  "keywords": ["diagram", "mermaid", "flowchart", "mcp"],
+  "mcpServers": {
+    "openflowkit": {
+      "command": "npx",
+      "args": ["-y", "@vrun-design/openflowkit-mcp"]
+    }
+  }
+}
