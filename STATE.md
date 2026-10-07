@@ -12,19 +12,13 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - MCP 0.2.0 builds and answers over stdio (29 tools, Mermaid in) but is **unpublished**: npm still serves 0.1.2,
   which has no live bridge. Publish (`prepublishOnly` rebuilds) before launch; see memory `project_mcp_registry_publish`.
 ## Launch-readiness pass 2026-10-05: CI green again, entry JS 566 → 231 KB, god files split (see git log)
-## C4 pages, labels, Mermaid gaps 2026-10-07 (sonnet-5.5), 14 commits on `v2`; verify green (2162 unit, 39 MCP, 68 gates)
-- C4: pages = views (the first takes the empty page you are on); named by level (`Context: Shop`); page list groups a model's
-  views under its title, indented; selected element with a deeper view gets a zoom-in button (Enter, read-only too); dbl-click
-  still edits the label. Generate lands fitted on the first view's page; two models never cross; a hand-set page name stays.
-- Labels: one pass per page, `placeLabels` in `routeProjection.ts` (user-placed first, then connector order: asked-for spot, run
-  middles, ratio steps, ±plate off the line); canvas, SVG, animation, editor read the same points; labels wrap at 140 px in files too.
-- Mermaid: `-x`/`--x` → `[head: cross]`; class `namespace` → `group` (class/erd, nested); state notes keep line breaks and may sit
-  on a composite; W106 for `a = Foo {bar}`; the assistant converts Mermaid/Structurizr/D2 answers (`agent/compileSource.ts`).
-- Fixed after: messages end on an activation bar's edge, not under it; a class's divider takes 6 px, not a row, so no method clips;
-  the frame grows to hold a composite's note.
-- Ceilings: labels avoid nodes and labels, not other connectors' lines; a composite's note can overlap a neighbour on its right (no
-  room reserved); deleted view page returns on Generate (the text is the truth); rotated nodes keep box-side attachment; layout
-  differs from Mermaid's. D14: no runtime.
+## C4 pages, labels, Mermaid gaps 2026-10-07: C4 pages = views, one label pass per page, Mermaid gaps (see git log 5930197).
+## Roadmap 2026-10 run (opus-5.5, from 2026-10-07): plan `docs/plan/roadmap-2026-10.md`, log + RESUME `docs/plan/roadmap-progress.md`
+- Done, pushed: 1.1 ELK headless (golden browser = Node), 1.2–1.5 discovery (this repo → 3 units; env/compose calls with
+  file:line), 1.6 System map / Overview / Services names, 2.1 CLI from the op registry (`op`, `render`, `convert`,
+  `validate`; MCP add_shape schema fix), 2.3 share links (Worker + viewer; deploy is owner's), 2.6 ⌘F, 2.7 Claude plugin.
+- CI was red from earlier untested commits; fixed forward f72a2cb. In progress: 2.2 repo page (core in src/dsl/discovery).
+- Headless layout cap: 1000 shapes / 400 connections. Share Worker setup: `worker/README.md`.
 ## Found, not fixed (owner calls)
 - Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI): `docs/plan/launch-holds.md`. CI uploads first-failure
   traces (`e2e-traces`). A new worker's deps are pre-scanned (`optimizeDeps.entries`), or dev reloads mid-session.
