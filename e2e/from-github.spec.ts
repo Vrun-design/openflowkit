@@ -34,6 +34,12 @@ test('a public repo opens in the editor as its architecture @gate', async ({ pag
   await expect(source).toBeVisible();
   for (const unit of ['container web', 'container api', 'container worker', 'store db']) await expect(source).toHaveValue(new RegExp(`^\\s*${unit}\\b`, 'm'));
   await expect(source).toHaveValue(/store db \[cylinder, tech: PostgreSQL/);
+  // One product: the landing page is its services, not a lone system box.
+  await expect.poll(() => page.evaluate(() => {
+    type Api = { getDocument(): { pages: { name: string; nodes: { content?: { label?: string } }[] }[] } | null };
+    const pages = (window as unknown as { __V2__?: Api }).__V2__?.getDocument()?.pages ?? [];
+    return { count: pages.length, name: pages[0]?.name, labels: pages[0]?.nodes.map((node) => node.content?.label) };
+  })).toMatchObject({ count: 1, name: expect.stringMatching(/^Services/), labels: expect.arrayContaining(['web', 'api', 'worker']) });
   // The arrow says where it came from: a GitHub link in the model panel.
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
   const panel = page.getByRole('complementary', { name: 'Architecture model' });
@@ -49,4 +55,27 @@ test('a repo that is not found says so and offers the way home @gate', async ({ 
   await expect(page.getByRole('alert')).toContainText('not found, or it is private');
   await page.getByRole('button', { name: 'Back to home' }).click();
   await expect.poll(() => page.url()).toContain('#/home');
+});
+
+test('a rate-limited read asks for an optional token, sends it to the API only, and succeeds @gate', async ({ page }) => {
+  await serveGitHub(page, REPO);
+  const seen: { url: string; auth: string | undefined }[] = [];
+  page.on('request', (request) => { if (/api\.github\.com|raw\.githubusercontent\.com/.test(request.url())) seen.push({ url: request.url(), auth: request.headers().authorization }); });
+  let limited = true;
+  await page.route('https://api.github.com/repos/acme/shop/git/trees/**', (route) => limited && !route.request().headers().authorization
+    ? route.fulfill({ status: 403, json: { message: 'API rate limit exceeded' }, headers: { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'x-ratelimit-remaining, x-ratelimit-reset', 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1791396922' } })
+    : route.fallback());
+  await page.goto('/#/from/github/acme/shop');
+  await expect(page.getByRole('alert')).toContainText('limiting reads');
+  await expect(page.getByRole('alert')).toContainText('The CLI reads a checkout');
+  await expect(page.getByText('A token raises the limit to 5,000/hour.')).toBeVisible();
+  await expect(page.getByRole('link', { name: /token on GitHub/ })).toHaveAttribute('href', 'https://github.com/settings/personal-access-tokens/new');
+  limited = false;
+  await page.getByLabel('GitHub token (optional)').fill('github_pat_test123');
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect.poll(() => page.url(), { timeout: 20_000 }).toContain('#/d/');
+  const api = seen.filter((entry) => entry.url.startsWith('https://api.github.com/'));
+  expect(api.some((entry) => entry.auth === 'Bearer github_pat_test123')).toBe(true);
+  expect(seen.filter((entry) => entry.url.startsWith('https://raw.githubusercontent.com/')).every((entry) => entry.auth === undefined)).toBe(true);
+  expect(page.url()).not.toContain('github_pat');
 });

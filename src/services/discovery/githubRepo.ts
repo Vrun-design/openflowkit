@@ -17,6 +17,7 @@ export type RepoProblem =
   | { readonly kind: 'rate-limited'; readonly resetAt: Date | null }
   | { readonly kind: 'empty' }
   | { readonly kind: 'offline' }
+  | { readonly kind: 'token-rejected' }
   | { readonly kind: 'http'; readonly status: number };
 
 export class RepoError extends Error {
@@ -87,6 +88,8 @@ export interface FetchRepoOptions {
   readonly signal?: AbortSignal;
   /** Per-request timeout, reported as offline. */
   readonly timeoutMs?: number;
+  /** A GitHub token: sent as a Bearer header to the API host only, never to raw file downloads. */
+  readonly token?: string;
   /** Where the two reads go. Exists so a test can fetch a real closed port (AGENTS rule 6). */
   readonly hosts?: { readonly api: string; readonly raw: string };
 }
@@ -95,12 +98,15 @@ export async function fetchRepoFiles(ref: RepoRef, options: FetchRepoOptions = {
   const get = options.fetch ?? fetch;
   const { signal } = options;
   const hosts = options.hosts ?? { api: 'https://api.github.com', raw: 'https://raw.githubusercontent.com' };
-  const call = async (url: string, init?: RequestInit): Promise<Response> => {
+  const token = options.token?.trim() || null;
+  const call = async (url: string, init: RequestInit = {}): Promise<Response> => {
+    // Raw downloads are not counted against the API limit, so the token never leaves for them.
+    const headers = token && url.startsWith(`${hosts.api}/`) ? { ...init.headers, Authorization: `Bearer ${token}` } : init.headers;
     try {
       const timeout = AbortSignal.timeout(options.timeoutMs ?? 20_000);
       // ponytail: AbortSignal.any is Safari 17.4+/Chrome 116+; older browsers keep the caller's signal and lose the timeout.
       const combined = !signal ? timeout : typeof AbortSignal.any === 'function' ? AbortSignal.any([signal, timeout]) : signal;
-      return await get(url, { ...init, signal: combined });
+      return await get(url, { ...init, ...(headers ? { headers } : {}), signal: combined });
     } catch (error) {
       if (signal?.aborted) throw signal.reason ?? error;
       throw new RepoError({ kind: 'offline' }, 'GitHub could not be reached. Check your connection and try again.');
@@ -110,7 +116,7 @@ export async function fetchRepoFiles(ref: RepoRef, options: FetchRepoOptions = {
   const treeResponse = await call(`${hosts.api}/repos/${repoPath}/git/trees/${encodeURIComponent(ref.ref)}?recursive=1`, {
     headers: { Accept: 'application/vnd.github+json' },
   });
-  if (!treeResponse.ok) throw await treeError(treeResponse, ref);
+  if (!treeResponse.ok) throw await treeError(treeResponse, ref, token !== null);
   const tree = await treeResponse.json() as { tree?: readonly { path: string; type: string; size?: number }[]; truncated?: boolean };
   const wanted = (tree.tree ?? [])
     .filter((entry) => entry.type === 'blob' && entry.path.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..') && (entry.size ?? 0) <= MAX_FILE_BYTES && acceptsArchitectureFile(entry.path))
@@ -161,18 +167,20 @@ export async function fetchRepoFiles(ref: RepoRef, options: FetchRepoOptions = {
 }
 
 /** Any 429, or a 403 that says no calls are left or carries `retry-after` (a secondary limit). */
-function rateLimit(response: Response, source: 'api' | 'raw' = 'api'): RepoError | null {
+function rateLimit(response: Response, source: 'api' | 'raw' = 'api', hadToken = false): RepoError | null {
   if (response.status !== 403 && response.status !== 429) return null;
   if (response.status === 403 && response.headers.get('x-ratelimit-remaining') !== '0' && !response.headers.has('retry-after')) return null;
   if (source === 'raw') return new RepoError({ kind: 'rate-limited', resetAt: null }, 'GitHub is limiting file downloads from your network right now. Wait a minute and try again, or use the CLI on a checkout.');
   const reset = Number(response.headers.get('x-ratelimit-reset'));
   const resetAt = Number.isFinite(reset) && reset > 0 ? new Date(reset * 1000) : null;
   const when = resetAt ? ` It resets at ${resetAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.` : '';
+  if (hadToken) return new RepoError({ kind: 'rate-limited', resetAt }, `That token's GitHub limit (5,000 reads an hour) was reached.${when} The CLI reads a checkout with no limit.`);
   return new RepoError({ kind: 'rate-limited', resetAt }, `GitHub allows 60 repo reads an hour from your network, and they're used up.${when} The CLI reads a checkout with no limit.`);
 }
 
-async function treeError(response: Response, ref: RepoRef): Promise<RepoError> {
-  const limited = rateLimit(response);
+async function treeError(response: Response, ref: RepoRef, hadToken: boolean): Promise<RepoError> {
+  if (response.status === 401 && hadToken) return new RepoError({ kind: 'token-rejected' }, 'GitHub rejected that token. It may be expired or mistyped; it has been cleared.');
+  const limited = rateLimit(response, 'api', hadToken);
   if (limited) return limited;
   // GitHub answers 404 alike for a private repo, a missing one and a wrong branch.
   if (response.status === 404 || response.status === 422) {

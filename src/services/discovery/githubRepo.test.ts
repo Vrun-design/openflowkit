@@ -314,3 +314,52 @@ describe('fetchRepoFiles', () => {
     expect(seen).toEqual([]);
   });
 });
+
+describe('fetchRepoFiles token', () => {
+  const ref = { owner: 'acme', repo: 'shop', ref: 'HEAD' };
+  const spy = (status = 200) => {
+    const calls: { url: string; auth: string | null }[] = [];
+    const fetcher = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push({ url, auth: new Headers(init?.headers).get('authorization') });
+      if (url.startsWith('https://api.github.com/')) {
+        if (status !== 200) return new Response('{"message":"Bad credentials"}', { status });
+        return new Response(tree(['Dockerfile']).body, { status: 200 });
+      }
+      return new Response('FROM alpine\n', { status: 200 });
+    }) as typeof fetch;
+    return { calls, fetcher };
+  };
+
+  it('sends Authorization to api.github.com only, never to raw downloads', async () => {
+    const { calls, fetcher } = spy();
+    await fetchRepoFiles(ref, { fetch: fetcher, token: ' ghp_secret ' });
+    const api = calls.filter((call) => call.url.startsWith('https://api.github.com/'));
+    const rawCalls = calls.filter((call) => call.url.startsWith('https://raw.githubusercontent.com/'));
+    expect(api.length).toBeGreaterThan(0);
+    expect(rawCalls.length).toBeGreaterThan(0);
+    expect(api.every((call) => call.auth === 'Bearer ghp_secret')).toBe(true);
+    expect(rawCalls.every((call) => call.auth === null)).toBe(true);
+  });
+
+  it('sends no header without a token', async () => {
+    const { calls, fetcher } = spy();
+    await fetchRepoFiles(ref, { fetch: fetcher });
+    expect(calls.every((call) => call.auth === null)).toBe(true);
+  });
+
+  it('a 401 with a token is token-rejected; without one it is a plain http error', async () => {
+    await expect(fetchRepoFiles(ref, { fetch: spy(401).fetcher, token: 'bad' })).rejects.toMatchObject({ problem: { kind: 'token-rejected' } });
+    await expect(fetchRepoFiles(ref, { fetch: spy(401).fetcher })).rejects.toMatchObject({ problem: { kind: 'http', status: 401 } });
+  });
+
+  it('a rate limit with a token names the token limit, not the 60 an hour', async () => {
+    const limited = (async () => new Response('{}', { status: 403, headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1791396922' } })) as typeof fetch;
+    const withToken = await fetchRepoFiles(ref, { fetch: limited, token: 't' }).catch((error: RepoError) => error);
+    expect(withToken).toMatchObject({ problem: { kind: 'rate-limited' } });
+    expect((withToken as RepoError).message).toContain("That token's GitHub limit");
+    expect((withToken as RepoError).message).not.toContain('60 repo reads');
+    const without = await fetchRepoFiles(ref, { fetch: limited }).catch((error: RepoError) => error);
+    expect((without as RepoError).message).toContain('60 repo reads');
+  });
+});
