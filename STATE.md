@@ -37,4 +37,4 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   C4 person card + Beta; Shapes 41 → 19; Lasso gone; connector UX pass; connector cuts (Line/Path tools, Cross,
   underline, opacity). Next: `docs/plan/launch-qa-prompt.md`. D11 left: own glyphs, empty screen.
 ## Deferred
-- Widget text width estimated; wireframe comments move to end; PDF = print dialog; no zip; bridge long-poll; chart data commits per blur.
+- Widget text width estimated; wireframe comments move to end; PDF = print dialog; no zip; bridge long-poll; chart data commits per blur; image aspect lock = Shift.
