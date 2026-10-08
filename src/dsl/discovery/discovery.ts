@@ -1093,8 +1093,15 @@ export function discoveryToDsl(
   const repoName = name.trim() || 'System';
   const containers = result.units.filter((unit) => unit.kind === 'container' || unit.kind === 'system');
   const dependencies = result.units.filter((unit) => unit.kind !== 'container' && unit.kind !== 'system');
-  const segments = [...new Set(containers.map((unit) => systemSegment(unit.dir)).filter(Boolean))];
-  const grouped = segments.length >= 2;
+  // A top-level folder is a product only if it holds 2+ services; a lone service (web/, api/) is
+  // part of the repo's one system. The repo splits only when 2+ products exist.
+  const perSegment = new Map<string, number>();
+  for (const unit of containers) {
+    const segment = systemSegment(unit.dir);
+    if (segment) perSegment.set(segment, (perSegment.get(segment) ?? 0) + 1);
+  }
+  const products = new Set([...perSegment].filter(([, count]) => count >= 2).map(([segment]) => segment));
+  const grouped = products.size >= 2;
 
   const groups: EmitGroup[] = [];
   const byKey = new Map<string, EmitGroup>();
@@ -1107,7 +1114,8 @@ export function discoveryToDsl(
     return group;
   };
   for (const unit of containers) {
-    const key = grouped ? systemSegment(unit.dir) : '';
+    const segment = systemSegment(unit.dir);
+    const key = grouped && products.has(segment) ? segment : '';
     groupFor(key, key ? prettify(key) : systemName(repoName)).units.push(unit);
   }
   for (const unit of dependencies) {
@@ -1158,7 +1166,9 @@ export function discoveryToDsl(
     }];
   });
 
-  const views: ArchView[] = [{
+  // One system: the services are the diagram. A landscape would be that one box (discovery
+  // emits no external people or systems), so it is not emitted and the container view lands first.
+  const views: ArchView[] = groups.length === 1 ? [] : [{
     id: 'view:landscape', kind: 'landscape', name: `${repoName} landscape`, rules: [],
   }];
   for (const group of groups) {

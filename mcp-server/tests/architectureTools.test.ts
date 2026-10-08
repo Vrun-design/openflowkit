@@ -130,17 +130,17 @@ describe('architecture discovery', () => {
     const discovery = await runArchitectureDiscovery(root);
     const dsl = discoveryToDsl(discovery, 'Fixture');
     expect(dsl).toContain('tags: discovered');
-    expect(dsl).toContain('view landscape');
+    expect(dsl).not.toContain('view landscape');
     expect(dsl).toContain('// discovered by openflowkit');
 
     const workspace = await compileWorkspace(dsl, { layout: deterministicLayout });
     expect(workspace.family).toBe('architecture');
     expect(workspace.views.flatMap((view) => view.result.diagnostics)).toEqual([]);
-    expect(workspace.views.length).toBeGreaterThan(1);
+    expect(workspace.views).toHaveLength(1);
     const model = await modelOfDsl(dsl);
     expect(model.elements.map((element) => element.name)).toEqual(expect.arrayContaining(['Fixture', 'web', 'api', 'worker']));
     expect(model.elements.every((element) => element.tags.includes('discovered'))).toBe(true);
-    expect(model.views.some((view) => view.kind === 'landscape')).toBe(true);
+    expect(model.views.some((view) => view.kind === 'landscape')).toBe(false);
     expect(model.views.some((view) => view.kind === 'container')).toBe(true);
   });
 

@@ -37,6 +37,8 @@ export const SKIP_DIRS = new Set([
   'coverage', 'out', 'tmp', '.cache', '.turbo', '.vercel',
   '__pycache__', '.pytest_cache', 'venv', '.venv', 'target',
   '.gradle', '.idea', '.vscode',
+  // Generated test output: reports carry third-party URLs that read as services.
+  'playwright-report', 'test-results', 'blob-report', 'htmlcov', 'storybook-static',
 ]);
 
 /** A directory name every scan skips: the shared list, or any dot-directory. */

@@ -48,7 +48,8 @@ describe('openflowkit CLI', () => {
     expect(await main(['discover', root, '--out', modelPath], writeOut.io)).toBe(0);
     expect(writeOut.out.join('\n')).toContain('wrote');
     const written = await readFile(modelPath, 'utf8');
-    expect(written).toContain('view landscape');
+    expect(written).not.toContain('view landscape');
+    expect(written).toMatch(/^\s*view container of /m);
 
     // --out creates missing folders instead of failing.
     const nested = join(root, 'docs', 'architecture', 'workspace.ofk');
@@ -111,7 +112,11 @@ describe('openflowkit CLI', () => {
     expect(flows.flows[0]?.name).toBe('Checkout');
     expect(flows.flows[0]?.steps).toHaveLength(1);
 
-    const views = await readFile(join(outDir, 'views', 'view-landscape.svg'), 'utf8');
+    const files = await readdir(join(outDir, 'views'));
+    expect(files).not.toContain('view-landscape.svg');
+    const container = files.find((file) => /^view-container-.*\.svg$/.test(file));
+    expect(container).toBeDefined();
+    const views = await readFile(join(outDir, 'views', container!), 'utf8');
     expect(views).toContain('<svg');
     expect(views).toContain('data-node-id=');
   });

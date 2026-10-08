@@ -30,6 +30,35 @@ describe('discoverArchitecture', () => {
   });
 });
 
+describe('discoveryToDsl view order', () => {
+  const viewLines = (dsl: string) => dsl.split('\n').map((line) => line.trim()).filter((line) => /^view (landscape|container)\b/.test(line));
+
+  it('a single-product repo opens on its services and has no lone-box system map', () => {
+    const files = ['frontend', 'cartservice', 'checkoutservice'].map((svc) => ({ path: `src/${svc}/Dockerfile`, content: 'FROM alpine\n' }));
+    const dsl = discoveryToDsl(discoverArchitecture(files, 'microservices-demo'), 'microservices-demo');
+    expect(viewLines(dsl)).toEqual(['view container of microservices-demo']);
+  });
+
+  const dockerfiles = (...dirs: string[]) => dirs.map((dir) => ({ path: `${dir}/Dockerfile`, content: 'FROM node\n' }));
+
+  it('web/ + api/ + worker/, one service each, is one system that lands on its services', () => {
+    const views = viewLines(discoveryToDsl(discoverArchitecture(dockerfiles('web', 'api', 'worker'), 'shop'), 'shop'));
+    expect(views).toEqual(['view container of shop']);
+  });
+
+  it('two folders that each hold 2+ services are two systems, System map first', () => {
+    const files = dockerfiles('billing/api', 'billing/worker', 'storefront/web', 'storefront/api');
+    const views = viewLines(discoveryToDsl(discoverArchitecture(files, 'mono'), 'mono'));
+    expect(views[0]).toBe('view landscape');
+    expect(views).toHaveLength(3);
+  });
+
+  it('one product folder plus a single-unit folder stays one repo system', () => {
+    const files = dockerfiles('billing/api', 'billing/worker', 'docs');
+    expect(viewLines(discoveryToDsl(discoverArchitecture(files, 'mono'), 'mono'))).toEqual(['view container of mono']);
+  });
+});
+
 describe('capUnits', () => {
   it('keeps services before dependencies, drops their relations, and counts what it left out', () => {
     const result = discoverArchitecture(FILES, 'shop');
@@ -48,6 +77,9 @@ describe('acceptsArchitectureFile skip directories', () => {
       { path: 'node_modules/foo/package.json', content: '{"name":"foo","dependencies":{"redis":"1"}}' },
       { path: 'dist/Dockerfile', content: 'FROM node:20\n' },
       { path: '.github/workflows/ci.yml', content: 'name: ci\n' },
+      // A failed Playwright run leaves an HTML report full of third-party URLs.
+      { path: 'playwright-report/index.js', content: 'fetch("https://trace.playwright.dev/x")\n' },
+      { path: 'test-results/a/trace.js', content: 'fetch("https://www.dropbox.com/s")\n' },
     ];
     expect(discoverArchitecture([api, ...noise], 'shop').units).toEqual(discoverArchitecture([api], 'shop').units);
   });
