@@ -13,14 +13,13 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   which has no live bridge. Publish (`prepublishOnly` rebuilds) before launch; see memory `project_mcp_registry_publish`.
 ## 10-05 launch pass (entry JS 566 → 231 KB); 10-07 C4 pages = views, label pass, Mermaid gaps (git log 5930197)
 ## Roadmap 2026-10 run (opus-5.5, from 2026-10-07): plan `docs/plan/roadmap-2026-10.md`, log + RESUME `docs/plan/roadmap-progress.md`
-- Done, pushed: 1.1 ELK headless (golden browser = Node), 1.2–1.5 discovery (this repo → 3 units; env/compose calls with
-  file:line), 1.6 System map / Overview / Services names, 2.1 CLI from the op registry (`op`, `render`, `convert`,
-  `validate`; MCP add_shape schema fix), 2.3 share links (Worker + viewer; deploy is owner's), 2.6 ⌘F, 2.7 Claude plugin.
-- 2026-10-08 done, pushed: 2.2 repo → diagram (`/#/from/github/o/r`, one discovery core for app + MCP), 2.4 `--svg` /
-  `openflow_save svg`, 2.8 dark wash for default fills, 4.2 PR diagrams Action (`action/`), 4.3 Copy as Mermaid,
-  4.1 remote MCP Apps endpoint (`start:http`) + viewer + `/#/from/dsl` links; Claude thinking 400 fix + prompt caching.
-- 2026-10-08 pm: AI first fit (big AI diagrams land at 65% on their start), Structurizr guide + share-links terms page,
-  Codex plugin (`plugin/.codex-plugin`, `.agents/plugins/`), discovery finds Cloudflare Workers + R2/D1, W122 on a view target.
+- Done, pushed: 1.1 headless ELK, 1.2–1.6 discovery + names, 2.1 CLI ops, 2.2 repo → diagram, 2.3 share links, 2.4 `--svg`,
+  2.6 ⌘F, 2.7/Codex plugins, 2.8 dark wash, 4.1 MCP Apps endpoint, 4.2 PR Action, 4.3 Copy as Mermaid, AI first fit,
+  Workers + R2/D1 discovery, W122 (details: roadmap-progress.md).
+## Living Map run (from 2026-10-08): plan `docs/plan/map-plan.md`, log + RESUME `docs/plan/map-progress.md`
+- P1–P4 pushed (47b98eb..4a9837e): engine `src/dsl/map`, TS/JS/Py/Go import facts `src/dsl/discovery/imports`,
+  semantic folding (≤ 14 children), page `/#/map/github/o/r` (worker, IndexedDB cache, states, 10 @gate e2e),
+  CLI `openflowkit map <dir> [--html]`. Next: owner look #1, then P5 persistence; P6 AI needs key + OK.
 - Owner: publish MCP 0.2.0 (Action default CLI needs it); deploy `start:http` over HTTPS, then verify hosts (README table).
   Owner action list: `docs/plan/cofounder-action-list.md`. Waiting on owner's go: `e2e:headed` + walkthrough, H5 eval.
 - Headless layout cap: 1000 shapes / 400 connections. Share Worker setup: `worker/README.md`.
