@@ -4,6 +4,7 @@ import { fromArch } from '../../../../dsl/map/fromArch';
 import { archModelFromJson } from '../../../../dsl/model/model';
 import type { ScenePage } from '../../../domain/document/types';
 import type { MapModel, MapNode } from '../../../../dsl/map/types';
+import { READABLE } from '../../../application/map/geometry';
 import { BOX_BUDGET, fitsBudget, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, toggleBox } from './mapMode';
 
 const TEXT = `architecture
@@ -119,25 +120,47 @@ describe('map camera', () => {
     expect(sceneExtent(page([]))).toBeNull();
   });
 
-  it('fits a small map readably and starts a big one at the top-left at 0.6', () => {
+  it('fits a small map readably and starts a big one at the top-left at the readable floor', () => {
     const free = { left: 0, width: 1200, height: 800 };
-    expect(mapCamera({ x: 0, y: 0, width: 800, height: 400 }, free).zoom).toBeGreaterThanOrEqual(0.6);
+    expect(mapCamera({ x: 0, y: 0, width: 800, height: 400 }, free).zoom).toBeGreaterThanOrEqual(READABLE);
     const big = mapCamera({ x: 100, y: 50, width: 6000, height: 4000 }, free);
-    expect(big.zoom).toBe(0.6);
-    expect(big.x).toBeCloseTo(48 - 100 * 0.6);
+    expect(big.zoom).toBe(READABLE);
+    expect(big.x).toBeCloseTo(48 - 100 * READABLE);
   });
 
   it('lands on the whole map when it is readable, else on the box that changed at 0.6 or more, wherever the map starts', () => {
     const free = { left: 100, width: 1200, height: 800 };
     const small = landOn({ x: 20, y: 30, width: 800, height: 400 }, { x: 20, y: 30, width: 100, height: 50 }, free);
-    expect(small.zoom).toBeGreaterThanOrEqual(0.6);
+    expect(small.zoom).toBeGreaterThanOrEqual(READABLE);
     // Everything fits: the map's centre is the free canvas's centre, even though the map does not start at the origin.
     expect(small.x + (20 + 400) * small.zoom).toBeCloseTo(free.left + free.width / 2);
     const extent = { x: 500, y: 300, width: 6000, height: 4000 };
     const focus = { x: 3000, y: 2000, width: 400, height: 200 };
     const big = landOn(extent, focus, free);
-    expect(big.zoom).toBeGreaterThanOrEqual(0.6);
+    expect(big.zoom).toBeGreaterThanOrEqual(READABLE);
     // The focus box is centred in the free canvas.
     expect(big.x + (focus.x + focus.width / 2) * big.zoom).toBeCloseTo(free.left + free.width / 2);
+  });
+
+  it('shows the header and first row of a box too big to fit, at the floor, never smaller', () => {
+    const free = { left: 100, width: 1200, height: 800 };
+    const extent = { x: 500, y: 300, width: 6000, height: 4000 };
+    const huge = { x: 3000, y: 2000, width: 3000, height: 1800 };
+    const cam = landOn(extent, huge, free);
+    expect(cam.zoom).toBe(READABLE);
+    // Its top-left corner sits at the top-left of the free canvas (below the top bar), so the title is on screen.
+    expect(cam.x + huge.x * cam.zoom).toBeCloseTo(free.left + 48);
+    expect(cam.y + huge.y * cam.zoom).toBeCloseTo(56 + 48);
+  });
+
+  it('lands on the closed box\'s parent when that fits, else on the box', () => {
+    const free = { left: 0, width: 1200, height: 800 };
+    const extent = { x: 0, y: 0, width: 6000, height: 4000 };
+    const box = { x: 3000, y: 2000, width: 200, height: 100 };
+    const parent = { x: 2800, y: 1900, width: 800, height: 500 };
+    const cam = landOn(extent, box, free, parent);
+    expect(cam.x + (parent.x + parent.width / 2) * cam.zoom).toBeCloseTo(free.width / 2);
+    const tooBig = landOn(extent, box, free, { x: 0, y: 0, width: 5000, height: 3000 });
+    expect(tooBig.x + (box.x + box.width / 2) * tooBig.zoom).toBeCloseTo(free.width / 2);
   });
 });

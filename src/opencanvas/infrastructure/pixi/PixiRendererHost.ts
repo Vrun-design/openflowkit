@@ -89,7 +89,8 @@ interface PixiRendererHostOptions {
 }
 
 const SELECTION_STROKE = CHROME_ACCENT;
-const ARROW_FADE_MS = 160;
+// Short on purpose: arrows must be fully back <= 200 ms after a move ends, even when a frame takes a while.
+const ARROW_FADE_MS = 100;
 
 export interface PlacementGhost {
   readonly shape: BasicNodeShape | 'text';
@@ -327,11 +328,14 @@ export class PixiRendererHost {
       this.requestRender();
       return;
     }
+    // A fade drawn at a few frames a second is a stall, not a fade: when the move's own frames were slow, the arrows
+    // come back with the first render after it (the one that has to rasterize everything anyway).
+    const slow = (this.motionRenderMs.at(-1) ?? 0) > ARROW_FADE_MS / 2;
     this.arrowAlpha = 0;
     this.connectorRenderer.container.alpha = 0;
     const startedAt = performance.now();
     const step = (now: number): void => {
-      this.arrowAlpha = Math.min(1, Math.max(0, now - startedAt) / ARROW_FADE_MS);
+      this.arrowAlpha = slow ? 1 : Math.min(1, Math.max(0, now - startedAt) / ARROW_FADE_MS);
       this.connectorRenderer.container.alpha = this.arrowAlpha;
       this.renderNow();
       // The motion layers go after the first render that also draws the host's own boxes, so the labels it made share
@@ -342,11 +346,11 @@ export class PixiRendererHost {
     this.arrowFade = requestAnimationFrame(step);
   }
 
-  /** Whether a move is on screen, and how visible the arrows are (0 during the move, ramping to 1 after). */
-  getMotionState(): { active: boolean; arrowAlpha: number; renderMs: { p50: number; p95: number } } {
+  /** Whether a move is on screen, how visible the arrows are (0 during the move, ramping to 1 after), and whether they are still coming back. */
+  getMotionState(): { fading: boolean; active: boolean; arrowAlpha: number; renderMs: { p50: number; p95: number } } {
     const sorted = [...this.motionRenderMs].sort((a, b) => a - b);
     const at = (p: number): number => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0;
-    return { active: this.motionActive, arrowAlpha: this.motionActive ? 0 : this.arrowAlpha, renderMs: { p50: at(0.5), p95: at(0.95) } };
+    return { fading: this.arrowFade !== null, active: this.motionActive, arrowAlpha: this.motionActive ? 0 : this.arrowAlpha, renderMs: { p50: at(0.5), p95: at(0.95) } };
   }
 
   private stopArrowFade(): void {

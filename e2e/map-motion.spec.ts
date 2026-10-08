@@ -135,44 +135,166 @@ test('reduced motion lands the end state at once with the arrows visible and no 
   expect((await motion(page)).frames).toBe(0);
 });
 
-// A generated C4 model: 3 systems x 14 services x 3 components = 171 boxes with everything open.
-const SYSTEMS = 3;
-const SERVICES = 14;
-function bigModel(): string {
-  const systems = Array.from({ length: SYSTEMS }, (_, s) => {
-    const services = Array.from({ length: SERVICES }, (_, c) => {
-      const parts = Array.from({ length: 3 }, (_, p) => `    component P${s}x${c}x${p}`).join('\n');
+// A system too wide for the screen: 14 services in a chain, so its open frame is ~3500 px wide (a Marketplace-like big box).
+function wideModel(): string {
+  const services = Array.from({ length: 14 }, (_, c) => `  container W${c} [tech: Go]`).join('\n');
+  const relations = Array.from({ length: 13 }, (_, c) => ` hub.W${c} -> hub.W${c + 1} : feeds [tech: gRPC]`).join('\n');
+  return `%% ofk 1\narchitecture\ntitle: Wide\nmodel {\n system Hub {\n${services}\n }\n${relations}\n}\nviews {\n view landscape\n}\n`;
+}
+const READABLE_FLOOR = 0.7;
+const zoomOf = (page: Page): Promise<number> => page.evaluate(() => {
+  const v = (window as unknown as { __V2__: { worldToScreen(p: { x: number; y: number }): { x: number } } }).__V2__;
+  return v.worldToScreen({ x: 1, y: 0 }).x - v.worldToScreen({ x: 0, y: 0 }).x;
+});
+const detail = (page: Page): Promise<string> =>
+  page.evaluate(() => (window as unknown as { __V2__: { getRenderDiagnostics(): { detailLevel: string } } }).__V2__.getRenderDiagnostics().detailLevel);
+
+async function openWide(page: Page): Promise<void> {
+  const { deflateRawSync } = await import('node:zlib');
+  await openModel(page, async () => {
+    await page.goto(`/#/from/dsl?d=${deflateRawSync(Buffer.from(wideModel(), 'utf8')).toString('base64url')}`);
+    await page.waitForSelector('[data-testid="v2-canvas"]', { timeout: 30_000 });
+  });
+  await idle(page);
+}
+
+test('opening a box too big for the screen lands readable: labels on, header in view, never compact @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openWide(page);
+  expect(await zoomOf(page)).toBeGreaterThanOrEqual(READABLE_FLOOR - 0.001);
+  await click(page, 'hub');
+  await expect.poll(async () => (await mapNodes(page))).toContain('hub.w13');
+  await idle(page);
+  // The landing is the floor, not a fit of 3500 px into 1440: labels stay on (not "compact").
+  expect(await zoomOf(page)).toBeGreaterThanOrEqual(READABLE_FLOOR - 0.001);
+  expect(await detail(page)).toBe('full');
+  // Its header strip (where a click closes it) and first row are on screen.
+  const frame = (await rect(page, 'hub'))!;
+  expect(frame.x).toBeGreaterThanOrEqual(0);
+  expect(frame.y).toBeGreaterThanOrEqual(0);
+  expect(frame.y + 60).toBeLessThan(1000);
+  // Closing lands readable too (the whole map fits again, at the most the editor's zoom allows).
+  await page.waitForTimeout(PAST_DOUBLE_CLICK_MS);
+  const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
+  await page.mouse.click(box.x + frame.x + 12, box.y + frame.y + 8);
+  await expect.poll(async () => (await mapNodes(page))).not.toContain('hub.w13');
+  await idle(page);
+  expect(await zoomOf(page)).toBeGreaterThanOrEqual(READABLE_FLOOR - 0.001);
+  expect(await detail(page)).toBe('full');
+});
+
+test('the map is fully drawn the moment the motion state says idle: arrows at alpha 1, and back within 200 ms of the move ending @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openStarter(page);
+  await idle(page);
+  // Sampled in the page on every frame, so no poll gap hides a window where it says idle but the arrows are not back.
+  await page.evaluate(() => {
+    const w = window as unknown as { __V2__: { getMapMotion(): { running: boolean; active: boolean; arrowAlpha: number } }; __samples: { t: number; running: boolean; active: boolean; alpha: number }[]; __stop: boolean };
+    w.__samples = []; w.__stop = false;
+    const tick = () => { const m = w.__V2__.getMapMotion(); w.__samples.push({ t: performance.now(), running: m.running, active: m.active, alpha: m.arrowAlpha }); if (!w.__stop) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  });
+  await click(page, 'shop.api');
+  await expect.poll(async () => (await mapNodes(page))).toContain('shop.api.orders');
+  await idle(page);
+  await page.waitForTimeout(100);
+  const samples = await page.evaluate(() => { const w = window as unknown as { __samples: { t: number; running: boolean; active: boolean; alpha: number }[]; __stop: boolean }; w.__stop = true; return w.__samples; });
+  expect(samples.some((m) => m.running)).toBe(true);
+  // Not running means every arrow is at full opacity, and no box is still being drawn by the move.
+  for (const m of samples) if (!m.running) expect(m.alpha).toBe(1);
+  // The move ends (no longer `active`) and the arrows are back (not `running`) within 200 ms, or two frames when the
+  // machine draws slower than that (software WebGL: a frame can take 100 ms, and no fade can beat the first frame).
+  const moveEnd = samples.findIndex((m, i) => i > 0 && samples[i - 1]!.active && !m.active);
+  expect(moveEnd).toBeGreaterThan(0);
+  const back = samples.findIndex((m, i) => i >= moveEnd && !m.running);
+  expect(back).toBeGreaterThanOrEqual(moveEnd);
+  const frame = Math.max(...samples.slice(moveEnd, back + 1).map((m, i, all) => (i ? m.t - all[i - 1]!.t : 0)));
+  expect(samples[back]!.t - samples[moveEnd]!.t).toBeLessThanOrEqual(Math.max(200, 2 * frame));
+});
+
+test('an open box keeps its children clear of its kind tag, at every depth @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openStarter(page);
+  await idle(page);
+  await click(page, 'shop');
+  await expect.poll(async () => (await mapNodes(page))).toContain('shop.api');
+  await idle(page);
+  await page.waitForTimeout(PAST_DOUBLE_CLICK_MS);
+  await click(page, 'shop.api');
+  await expect.poll(async () => (await mapNodes(page))).toContain('shop.api.orders');
+  await idle(page);
+  const ids = await mapNodes(page);
+  const z = await zoomOf(page);
+  let frames = 0;
+  for (const id of ids) {
+    const kids = ids.filter((other) => other.startsWith(`${id}.`) && !other.slice(id.length + 1).includes('.'));
+    if (!kids.length) continue;
+    frames += 1;
+    const frame = (await rect(page, id))!;
+    // The tag: 10px type whose line starts 22px above the frame's bottom edge, at its left (PixiContainerRenderer.createLabel).
+    const tag = { x: frame.x + 12 * z, y: frame.y + frame.height - 22 * z, right: frame.x + 12 * z + 120 * z, bottom: frame.y + frame.height - 8 * z };
+    for (const kid of kids) {
+      const r = (await rect(page, kid))!;
+      const overlaps = r.x < tag.right && r.x + r.width > tag.x && r.y < tag.bottom && r.y + r.height > tag.y;
+      expect(overlaps, `${kid} runs into ${id}'s kind tag`).toBe(false);
+    }
+  }
+  expect(frames).toBeGreaterThanOrEqual(2);
+});
+
+// A generated C4 model with everything open: S systems x V services x P components (+ a few relations).
+interface Shape { systems: number; services: number; parts: number }
+function bigModel({ systems: S, services: V, parts: P }: Shape): string {
+  const systems = Array.from({ length: S }, (_, s) => {
+    const services = Array.from({ length: V }, (_, c) => {
+      const parts = Array.from({ length: P }, (_, p) => `    component P${s}x${c}x${p}`).join('\n');
       return `   container C${s}x${c} [tech: Go] {\n${parts}\n   }`;
     }).join('\n');
     return `  system S${s} {\n${services}\n  }`;
   }).join('\n');
-  const relations = Array.from({ length: SYSTEMS - 1 }, (_, s) => ` S${s}.C${s}x0 -> S${s + 1}.C${s + 1}x1 : calls`).join('\n');
+  const relations = [
+    ...Array.from({ length: S - 1 }, (_, s) => ` S${s}.C${s}x0 -> S${s + 1}.C${s + 1}x1 : calls`),
+    ...Array.from({ length: S }, (_, s) => Array.from({ length: V - 1 }, (_, c) => ` S${s}.C${s}x${c} -> S${s}.C${s}x${c + 1} : feeds`).join('\n')),
+  ].join('\n');
   return `%% ofk 1\narchitecture\ntitle: Big\nmodel {\n${systems}\n${relations}\n}\nviews {\n view landscape\n}\n`;
 }
 
-test('opening a box among ~170 never drops a frame, drawing and rendering @local', async ({ page }) => {
-  test.setTimeout(120_000);
+/** Opens everything but the last service, then the last one (the measured move, camera landing on it); returns the motion numbers. */
+async function measureOpen(page: Page, shape: Shape): Promise<{ boxes: number; m: Motion }> {
   const { deflateRawSync } = await import('node:zlib');
   await openModel(page, async () => {
-    await page.goto(`/#/from/dsl?d=${deflateRawSync(Buffer.from(bigModel(), 'utf8')).toString('base64url')}`);
+    await page.goto(`/#/from/dsl?d=${deflateRawSync(Buffer.from(bigModel(shape), 'utf8')).toString('base64url')}`);
     await page.waitForSelector('[data-testid="v2-canvas"]', { timeout: 30_000 });
   });
   await idle(page);
-  const systems = Array.from({ length: SYSTEMS }, (_, s) => `s${s}`);
-  const services = systems.flatMap((s) => Array.from({ length: SERVICES }, (_, c) => `${s}.c${s.slice(1)}x${c}`));
+  const systems = Array.from({ length: shape.systems }, (_, s) => `s${s}`);
+  const services = systems.flatMap((s) => Array.from({ length: shape.services }, (_, c) => `${s}.c${s.slice(1)}x${c}`));
   const last = services.at(-1)!;
   const openBoxes = (ids: string[], focus?: string) => page.evaluate(([list, at]) => (window as unknown as { __V2__: { openMapBoxes(ids: string[], focus?: string): void } }).__V2__.openMapBoxes(list as string[], at as string | undefined), [ids, focus]);
+  // Lands on the one before last: the camera is already where the measured move happens, at 100%.
   await openBoxes([...systems, ...services.slice(0, -1)]);
-  await expect.poll(async () => (await mapNodes(page)).length, { timeout: 30_000 }).toBeGreaterThan(150);
+  await expect.poll(async () => (await mapNodes(page)).length, { timeout: 60_000 }).toBeGreaterThan(shape.systems * shape.services * 0.8);
   await idle(page);
+  await page.waitForTimeout(500);
   const boxes = (await mapNodes(page)).length;
   await openBoxes([...systems, ...services], last);
   await expect.poll(async () => (await mapNodes(page))).toContain(`${last}.p${last.slice(1, 2)}x${last.split('x')[1]}x0`);
   await idle(page);
-  const m = await motion(page);
-  const fps = m.frames / 0.48;
-  console.log(`perf: ${boxes} boxes, ${m.frames} frames (${fps.toFixed(0)} fps), draw+render p50 ${m.workMs.p50.toFixed(2)} p95 ${m.workMs.p95.toFixed(2)} max ${m.workMs.max.toFixed(2)} ms (render alone p50 ${m.renderMs.p50.toFixed(2)} p95 ${m.renderMs.p95.toFixed(2)}), raf p50 ${m.rafMs.p50.toFixed(1)} p95 ${m.rafMs.p95.toFixed(1)} ms, react renders ${m.reactRendersDuringMotion}`);
-  // ponytail: whole-frame redraw of every moving box (path A) — move translate-only boxes as cached containers if 300 boxes drop frames.
-  expect(m.workMs.p95).toBeLessThanOrEqual(16);
-  expect(m.reactRendersDuringMotion).toBeLessThanOrEqual(2);
-});
+  return { boxes, m: await motion(page) };
+}
+
+for (const [name, shape, max] of [
+  ['~170 boxes', { systems: 3, services: 14, parts: 3 }, Infinity],
+  // Model C of the look-2 package: 305 boxes, ~25 on screen at 100%; a spike past two frames (33 ms) is a visible hitch.
+  ['~300 boxes', { systems: 5, services: 12, parts: 4 }, 33],
+] as [string, Shape, number][]) {
+  test(`opening a box among ${name} never drops a frame, drawing and rendering @local`, async ({ page }) => {
+    test.setTimeout(240_000);
+    const { boxes, m } = await measureOpen(page, shape);
+    const fps = m.frames / 0.48;
+    console.log(`perf ${name}: ${boxes} boxes, ${m.frames} frames (${fps.toFixed(0)} fps), draw+render p50 ${m.workMs.p50.toFixed(2)} p95 ${m.workMs.p95.toFixed(2)} max ${m.workMs.max.toFixed(2)} ms (render alone p50 ${m.renderMs.p50.toFixed(2)} p95 ${m.renderMs.p95.toFixed(2)}), raf p50 ${m.rafMs.p50.toFixed(1)} p95 ${m.rafMs.p95.toFixed(1)} ms, react renders ${m.reactRendersDuringMotion}`);
+    expect(m.workMs.p95).toBeLessThanOrEqual(16);
+    expect(m.workMs.max).toBeLessThanOrEqual(max);
+    expect(m.reactRendersDuringMotion).toBeLessThanOrEqual(2);
+  });
+}

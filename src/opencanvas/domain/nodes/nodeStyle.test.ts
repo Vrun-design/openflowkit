@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { SceneNode } from '../document/types';
+import { mixHex, getLuminance } from '../../../lib/colorUtils';
+import { darkWashFill } from '../color/adaptiveColor';
 import { nodeStyleFont, resolveNodeStyle } from './nodeStyle';
+
+const contrast = (a: string, b: string) => {
+  const [hi, lo] = [getLuminance(a), getLuminance(b)].sort((x, y) => y - x);
+  return (hi! + 0.05) / (lo! + 0.05);
+};
 
 function node(overrides: Partial<SceneNode>): SceneNode {
   return {
@@ -41,6 +48,26 @@ describe('resolveNodeStyle', () => {
     for (const each of explicit) {
       expect(resolveNodeStyle(each, '#191b19').fill, JSON.stringify(each.content)).toBe(resolveNodeStyle(each, '#f7f7f5').fill);
     }
+  });
+  it('gives descriptions and kind tags on a dark wash readable ink; light and explicit colours are untouched', () => {
+    const canvas = '#191b19';
+    const washed = [
+      node({}),
+      node({ kind: 'architecture', content: { label: 'A' } }),
+      node({ kind: 'frame', content: { label: 'F', color: 'slate' } }),
+      node({ kind: 'section', content: { label: 'S', color: 'slate' } }),
+    ];
+    for (const each of washed) {
+      const dark = resolveNodeStyle(each, canvas);
+      const rgb = darkWashFill(dark.fill).match(/\d+/g)!.map(Number);
+      const backdrop = mixHex(canvas, `#${rgb.slice(0, 3).map((v) => v.toString(16).padStart(2, '0')).join('')}`, Number(dark.fill.match(/[\d.]+\)$/)![0].slice(0, -1)));
+      expect(dark.subTextColor, each.kind).toBeDefined();
+      expect(contrast(dark.subTextColor!, backdrop), each.kind).toBeGreaterThanOrEqual(4.5);
+      expect(resolveNodeStyle(each, '#f7f7f5').subTextColor, each.kind).toBeUndefined();
+    }
+    const pinned = node({ appearance: { textColor: '#ef4444' } });
+    expect(resolveNodeStyle(pinned, canvas).subTextColor).toBeUndefined();
+    expect(resolveNodeStyle(node({ content: { shape: 'rounded', label: 'A', color: 'blue' } }), canvas).subTextColor).toBeUndefined();
   });
   it('falls back to the palette for shapes with no appearance keys', () => {
     const style = resolveNodeStyle(node({ content: { shape: 'rounded', color: 'blue' } }));

@@ -1,3 +1,5 @@
+import { READABLE_ZOOM } from '../../domain/camera/readableLanding';
+
 // Pure geometry for the map: easing, camera framing, zoom. (SVG path strings stay in presentation.)
 
 export interface Rect { x: number; y: number; width: number; height: number }
@@ -36,20 +38,30 @@ export function frameBox(box: Rect, view: Viewport, maxK = 1.15, minK = 0.2): Ca
   return { k, x: view.width / 2 - (box.x + box.width / 2) * k, y: view.top + h / 2 - (box.y + box.height / 2) * k };
 }
 
-/** Scale below which text on a box is not readable. */
-export const READABLE = 0.6;
+/**
+ * The scale a Map camera never lands below. The editor drops to its compact detail (icon strip, no labels) under
+ * READABLE_ZOOM, so landing exactly there would flip on rounding: keep a margin above it (a test pins both).
+ */
+export const READABLE = Math.max(0.7, READABLE_ZOOM + 0.05);
 
 /**
- * Fit everything when that stays readable (k >= 0.6). Otherwise frame the box that was just opened at k >= 0.6;
- * with no such box, start at `anchor` (the map's top-left corner) at k = 0.6, so the reader begins at a known place and pans.
+ * Where the camera lands, always at k >= READABLE: everything when it fits at that scale; else the box that was just
+ * opened or closed, fitted when it fits, else its top-left corner (header and first row) at READABLE; with no such box,
+ * `anchor` (the map's top-left corner) at READABLE. The reader can still zoom out by hand.
+ * `context` (the closed box's parent) is preferred over `focus` when it fits.
  */
-export function landing(size: { width: number; height: number }, focus: Rect | undefined, view: Viewport, anchor?: Rect): Cam {
+export function landing(size: { width: number; height: number }, focus: Rect | undefined, view: Viewport, anchor?: Rect, context?: Rect): Cam {
   const all = frameBox({ x: 0, y: 0, width: size.width, height: size.height }, view);
   if (all.k >= READABLE) return all;
-  if (focus) return frameBox(focus, view, 1, READABLE);
-  if (!anchor) return all;
-  return { k: READABLE, x: view.pad - anchor.x * READABLE, y: view.top + view.pad - anchor.y * READABLE };
+  const fits = (box: Rect): boolean => frameBox(box, view, 1, 0).k >= READABLE;
+  if (context && fits(context)) return frameBox(context, view, 1, READABLE);
+  if (focus) return fits(focus) ? frameBox(focus, view, 1, READABLE) : corner(focus, view);
+  return corner(anchor ?? { x: 0, y: 0 }, view);
 }
+
+/** `at` at the top-left of the free view, at READABLE: a box too big to fit shows its header and first row. */
+const corner = (at: { x: number; y: number }, view: Viewport): Cam =>
+  ({ k: READABLE, x: view.pad - at.x * READABLE, y: view.top + view.pad - at.y * READABLE });
 
 /** The top-left corner of everything drawn (a zero-size anchor): where a reader who cannot see it all starts reading. */
 export function topLeftOpen(rects: ReadonlyMap<string, Rect>): Rect | undefined {

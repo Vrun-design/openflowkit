@@ -183,7 +183,7 @@ export class PixiContainerRenderer {
       const metadata = this.texts.plain(detail, {
         size: 10,
         weight: '500',
-        fill: visual.badgeText,
+        fill: style.subTextColor ? pixiPaintColor(style.subTextColor, 0).color : visual.badgeText,
         wrapWidth: Math.max(1, (finalWidth ?? node.size.width) - 24),
       });
       metadata.position.set(12, node.size.height - 22);

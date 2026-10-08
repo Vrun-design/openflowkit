@@ -7,11 +7,11 @@ exports[`mapScene > draws the C4 starter at overview: closed boxes as the family
     "process",
     null,
     {
-      "height": 75,
-      "width": 169,
+      "height": 80,
+      "width": 170,
     },
     {
-      "x": 351,
+      "x": 352,
       "y": 20,
     },
   ],
@@ -20,12 +20,12 @@ exports[`mapScene > draws the C4 starter at overview: closed boxes as the family
     "frame",
     null,
     {
-      "height": 156,
-      "width": 831,
+      "height": 172,
+      "width": 834,
     },
     {
       "x": 20,
-      "y": 223,
+      "y": 228,
     },
   ],
   [
@@ -33,12 +33,12 @@ exports[`mapScene > draws the C4 starter at overview: closed boxes as the family
     "process",
     "shop",
     {
-      "height": 75,
-      "width": 146,
+      "height": 80,
+      "width": 147,
     },
     {
       "x": 16,
-      "y": 58.5,
+      "y": 56,
     },
   ],
   [
@@ -46,12 +46,12 @@ exports[`mapScene > draws the C4 starter at overview: closed boxes as the family
     "process",
     "shop",
     {
-      "height": 75,
-      "width": 125,
+      "height": 80,
+      "width": 126,
     },
     {
-      "x": 346,
-      "y": 58.5,
+      "x": 347,
+      "y": 56,
     },
   ],
   [
@@ -60,10 +60,10 @@ exports[`mapScene > draws the C4 starter at overview: closed boxes as the family
     "shop",
     {
       "height": 88,
-      "width": 178,
+      "width": 179,
     },
     {
-      "x": 637,
+      "x": 639,
       "y": 52,
     },
   ],
@@ -72,12 +72,12 @@ exports[`mapScene > draws the C4 starter at overview: closed boxes as the family
     "process",
     null,
     {
-      "height": 75,
-      "width": 168,
+      "height": 80,
+      "width": 169,
     },
     {
-      "x": 351.5,
-      "y": 507,
+      "x": 352.5,
+      "y": 528,
     },
   ],
 ]

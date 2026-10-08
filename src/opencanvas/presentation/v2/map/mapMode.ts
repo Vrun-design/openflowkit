@@ -2,7 +2,7 @@ import { isInside } from '../../../../dsl/map/tree';
 import type { MapModel } from '../../../../dsl/map/types';
 import { visible } from '../../../../dsl/map/view';
 import { canOpen } from '../../../application/map/navigate';
-import { frameBox, landing, READABLE, type Rect, type Viewport } from '../../../application/map/geometry';
+import { landing, type Rect, type Viewport } from '../../../application/map/geometry';
 import type { CanvasCamera } from '../../../domain/camera/types';
 import type { ScenePage } from '../../../domain/document/types';
 import type { Bounds2d } from '../../../domain/geometry/types';
@@ -81,21 +81,21 @@ export function sceneExtent(page: ScenePage): Bounds2d | null {
 const VIEW = { top: 56, bottom: 72, pad: 48 };
 
 /**
- * The camera a map opens at: everything when that stays readable (scale 0.6), else the map's top-left corner at 0.6,
+ * The camera a map opens at: everything when that stays readable (READABLE), else the map's top-left corner at READABLE,
  * so the reader starts at a known place. `free` is the canvas the side panels leave.
  */
 export function mapCamera(extent: Bounds2d, free: { left: number; width: number; height: number }): CanvasCamera {
-  const view: Viewport = { width: free.width, height: free.height, ...VIEW };
-  const all = frameBox(extent, view);
-  const cam = all.k >= READABLE ? all
-    : { k: READABLE, x: view.pad - extent.x * READABLE, y: view.top + view.pad - extent.y * READABLE };
-  return { zoom: cam.k, x: free.left + cam.x, y: cam.y };
+  return landOn(extent, undefined, free);
 }
 
-/** Where the camera goes when `focus` (the box just opened or closed) changes the map: everything when readable, else that box at scale >= 0.6. */
-export function landOn(extent: Bounds2d, focus: Rect | undefined, free: { left: number; width: number; height: number }): CanvasCamera {
+/**
+ * Where the camera goes when `focus` (the box just opened or closed) changes the map, never below READABLE: everything
+ * when it fits, else `context` (the closed box's parent) or `focus` fitted, else `focus`'s header and first row.
+ */
+export function landOn(extent: Bounds2d, focus: Rect | undefined, free: { left: number; width: number; height: number }, context?: Rect): CanvasCamera {
   const view: Viewport = { width: free.width, height: free.height, ...VIEW };
   // `landing` frames a map that starts at the origin; shift the focus there and the result back.
-  const cam = landing(extent, focus && { ...focus, x: focus.x - extent.x, y: focus.y - extent.y }, view);
+  const rel = (r: Rect | undefined) => r && { ...r, x: r.x - extent.x, y: r.y - extent.y };
+  const cam = landing(extent, rel(focus), view, undefined, rel(context));
   return { zoom: cam.k, x: free.left + cam.x - extent.x * cam.k, y: cam.y - extent.y * cam.k };
 }

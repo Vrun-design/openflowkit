@@ -230,7 +230,7 @@ export class PixiNodeRenderer {
                 fontSize: 11, fontWeight: 400,
                 ...(wrap === null ? {} : { maxWidth: wrap, maxLines: sizing.maxLines, overflow: sizing.overflow }),
               }).displayText,
-              subStyle, visual?.subText ?? 0x64748b, wrap
+              subStyle, style.subTextColor ? pixiPaintColor(style.subTextColor, 0).color : visual?.subText ?? 0x64748b, wrap
             )
           : null;
       const hasIcon =

@@ -1,7 +1,7 @@
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { describe, expect, it } from 'vitest';
 import { buildMap } from './build';
-import { fromElkLayout, toElkGraph, type ElkNode, type LaidRect } from './elk';
+import { fromElkLayout, OPEN_BOX_PADDING, toElkGraph, type ElkNode, type LaidRect } from './elk';
 import { FIXTURE } from './fixture';
 import { aggregate } from './view';
 
@@ -40,6 +40,20 @@ describe('toElkGraph', () => {
 });
 
 describe('real elkjs layout', () => {
+  it('keeps every child of an open box clear of the title band and the kind tag at its bottom', async () => {
+    const open = new Set(['web', 'server', 'server/routes']);
+    const { laid } = await layout(open);
+    // The tag is drawn 22px above the bottom edge (PixiContainerRenderer.createLabel): children stay above it.
+    const TAG_TOP = 22;
+    for (const id of open) {
+      const frame = laid.rects.get(id)!;
+      const kids = model.nodes[id].children.map((c) => laid.rects.get(c)!);
+      for (const kid of kids) {
+        expect(kid.y, `${id} title band`).toBeGreaterThanOrEqual(frame.y + OPEN_BOX_PADDING.top - EPS);
+        expect(kid.y + kid.height, `${id} kind tag`).toBeLessThanOrEqual(frame.y + frame.height - TAG_TOP - 4 + EPS);
+      }
+    }
+  });
   it('starts and ends every arrow on the border of its two boxes', async () => {
     const { edges, laid } = await layout(new Set(['web', 'server', 'server/routes']));
     expect(laid.edges.length).toBe(edges.length);

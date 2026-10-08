@@ -30,6 +30,10 @@ export interface Laid { rects: Map<string, LaidRect>; edges: LaidEdge[]; size: {
 
 const EDGE = 'e:';
 
+// An open box draws its title band on top (52 with its margin) and its kind tag ("[Service]") bottom-left, 10px type
+// whose line starts 22px above the bottom edge (PixiContainerRenderer.createLabel); the children keep clear of both.
+export const OPEN_BOX_PADDING = { top: 52, left: 16, bottom: 32, right: 16 } as const;
+
 /**
  * One ELK node per visible box; each open box carries the arrows between its own children
  * (ELK routes them inside it). `considerModelOrder` plus model order keeps unchanged boxes in place
@@ -53,7 +57,7 @@ export function toElkGraph(
     if (!expanded.has(id) || !n.children.length) return { id, ...sizeOf(n) };
     return {
       id,
-      layoutOptions: { 'elk.padding': '[top=52,left=16,bottom=16,right=16]', 'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': '(260,90)' },
+      layoutOptions: { 'elk.padding': `[top=${OPEN_BOX_PADDING.top},left=${OPEN_BOX_PADDING.left},bottom=${OPEN_BOX_PADDING.bottom},right=${OPEN_BOX_PADDING.right}]`, 'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': '(260,90)' },
       children: n.children.map(node),
       edges: byParent.get(id) ?? [],
     };

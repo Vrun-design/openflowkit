@@ -11,6 +11,7 @@ import { getElkInstance } from '../../../../services/elk-layout/runtime';
 import { MOVE_MS } from '../../../application/map/geometry';
 import { layoutMap, type LayoutPorts } from '../../../application/map/layoutMap';
 import { absoluteRects } from '../../../application/map/motionFrame';
+import { cullMotion, movedView } from '../../../application/map/motionCull';
 import { MapMotionPlayer } from '../../../application/map/motionPlayer';
 import { planMotion } from '../../../application/map/planMotion';
 import type { LaidRect } from '../../../../dsl/map/elk';
@@ -85,6 +86,10 @@ export function useV2MapMode(options: Options) {
   const leaving = useRef(false);
   const lastFlip = useRef(Number.NEGATIVE_INFINITY);
   const layouts = useRef(0);
+  // Layouts asked for vs. shown on the host: between the two the map is about to move, which is not idle yet.
+  const asked = useRef(0);
+  const shownSeq = useRef(0);
+  const landedSeq = useRef(0);
   // How often the editor page rendered: a move must not add one per frame (counted for the test hook).
   const renders = useRef(0);
   useEffect(() => { renders.current += 1; });
@@ -102,8 +107,8 @@ export function useV2MapMode(options: Options) {
   }, [active, arch, lineageKey]);
   const updateRef = useRef(updateCamera);
   useEffect(() => { updateRef.current = updateCamera; });
-  // The box a click just opened or closed: the camera lands on it when its layout arrives.
-  const focusRef = useRef<string | null>(null);
+  // The box a click just opened or closed (and, for a close, the box around it): the camera lands there when its layout arrives.
+  const focusRef = useRef<{ id: string; context: string | null } | null>(null);
   const mine = useRef<CanvasCamera | null>(null);
   // The sink reads the refs when a frame runs, never during render.
   // eslint-disable-next-line react-hooks/refs
@@ -147,6 +152,7 @@ export function useV2MapMode(options: Options) {
   useEffect(() => {
     if (!active || !arch || !model || !look) return;
     let stale = false;
+    const seq = ++asked.current;
     const draw = async (): Promise<ScenePage> => {
       if (empty) return mapScene(model, open, { rects: new Map(), edges: [] }, look);
       const ports: LayoutPorts = {
@@ -158,9 +164,11 @@ export function useV2MapMode(options: Options) {
       return mapScene(model, open, { rects: laid.laid.rects, edges: laid.edges }, look);
     };
     // Latest request wins; a scene of this model stays up until the next is ready, one of another model never does.
-    draw().then((next) => { if (!stale) { layouts.current += 1; setError(null); setScene({ model: arch, page: next, lineage: keyRef.current, chain: chain.current }); } })
+    draw().then((next) => { if (!stale) { layouts.current += 1; landedSeq.current = seq; setError(null); setScene({ model: arch, page: next, lineage: keyRef.current, chain: chain.current }); } })
       .catch((cause: unknown) => {
         if (stale) return;
+        landedSeq.current = seq;
+        shownSeq.current = seq;
         setScene(null);
         setError(cause instanceof Error ? cause.message : 'The map could not be drawn.');
       });
@@ -210,10 +218,12 @@ export function useV2MapMode(options: Options) {
   // From here only the picture moves, from where each box is drawn to where it now belongs.
   useEffect(() => {
     // Map off, or no scene for this page (another page's model, a layout error): nothing of an earlier map may keep moving or draw.
-    if (!mapPage || mapPage === EMPTY_MAP) { player.stop(); shown.current = null; player.cur.clear(); drawn.current.clear(); focusRef.current = null; return; }
+    if (!mapPage || mapPage === EMPTY_MAP) { player.stop(); shown.current = null; player.cur.clear(); drawn.current.clear(); focusRef.current = null; shownSeq.current = asked.current; return; }
     const host = hostRef.current;
     const before = shown.current;
     if (!host || before?.page === mapPage) return;
+    // This effect is where a landed layout starts moving, or lands at once: from here the motion state tells the truth.
+    shownSeq.current = landedSeq.current;
     const extent = sceneExtent(mapPage);
     const rects = absoluteRects(mapPage);
     const settle = () => { player.cur.clear(); drawn.current.clear(); rects.forEach((rect, id) => player.cur.set(id, rect)); mapPage.nodes.forEach((node) => drawn.current.set(node.id, node)); };
@@ -230,7 +240,7 @@ export function useV2MapMode(options: Options) {
     mapPage.nodes.forEach((node) => drawn.current.set(node.id, node));
     const focus = focusRef.current;
     focusRef.current = null;
-    const camTo = focus && rects.has(focus) ? landOn(extent, rects.get(focus), clearance(host)) : null;
+    const camTo = focus && rects.has(focus.id) ? landOn(extent, rects.get(focus.id), clearance(host), focus.context ? rects.get(focus.context) : undefined) : null;
     const moving = items.some((item) => item.fade || (['x', 'y', 'width', 'height'] as const).some((key) => item.from[key] !== item.to[key]));
     if (reducedMotion() || !moving) {
       // End state in one frame, arrows visible at once.
@@ -242,7 +252,10 @@ export function useV2MapMode(options: Options) {
     // Labels wrap to the width each box ends with (a leaving box, to the one it had), so they are laid out once.
     const widths = new Map([...before.page.nodes, ...mapPage.nodes].map((node) => [node.id, node.size.width] as const));
     mine.current = cameraRef.current;
-    player.play({ items, nodeOf: (id) => drawn.current.get(id), widths, camFrom: cameraRef.current, camTo }, MOVE_MS, () => {
+    // Only boxes someone can see are tweened; the rest jump to where they end (the host draws them at the end of the move).
+    const { live, jumped } = cullMotion(items, movedView(cameraRef.current, camTo, host.getViewportSize()));
+    for (const item of jumped) { if (item.fade === 'out') player.cur.delete(item.id); else player.cur.set(item.id, item.to); }
+    player.play({ items: live, nodeOf: (id) => drawn.current.get(id), widths, camFrom: cameraRef.current, camTo }, MOVE_MS, () => {
       for (const id of [...drawn.current.keys()]) if (!rects.has(id)) drawn.current.delete(id);
       // React learns the camera once, here, not once per frame.
       if (player.camera) updateCamera(player.camera);
@@ -255,16 +268,19 @@ export function useV2MapMode(options: Options) {
     const next = toggleBox(model, open, id);
     if (next === open) return false;
     if (!fitsBudget(model, next)) { notify(BUDGET_NOTE); return false; }
-    focusRef.current = id;
+    // Closing lands on the region around the box when that fits readably, so the reader sees where it went.
+    const around = open.has(id) ? model.nodes[id]?.parent ?? null : null;
+    focusRef.current = { id, context: around && around !== model.root ? around : null };
     setOpenState(next);
     return true;
   }, [model, open, notify]);
-  /** Test hook: opens exactly `ids` (within the box budget, like a click), landing the camera on `focus`. */
+  /** Test hook: opens exactly `ids` (within the box budget, like a click), landing the camera on `focus` (default: the last one opened). */
   const openBoxes = useCallback((ids: readonly string[], focus?: string) => {
     if (!model) return;
     const next = prune(model, new Set(ids));
     if (!fitsBudget(model, next)) { notify(BUDGET_NOTE); return; }
-    focusRef.current = focus ?? null;
+    const at = focus ?? ids.at(-1);
+    focusRef.current = at ? { id: at, context: null } : null;
     setOpenState(next);
   }, [model, notify]);
   const clickNode = useCallback((id: string) => {
@@ -309,7 +325,12 @@ export function useV2MapMode(options: Options) {
     layouts: layouts.current,
   }), [active, open, mapPage]);
   /** The last move's numbers (frames, drawing cost, frame gaps, page renders): for the test hook and the perf spec. */
-  const motionStats = useCallback(() => player.stats(), [player]);
+  const motionStats = useCallback(() => {
+    const stats = player.stats();
+    // Running until the layout asked for is on screen, the move is over and the arrows are all the way back.
+    const running = stats.running || shownSeq.current < asked.current || (hostRef.current?.getMotionState().fading ?? false);
+    return { ...stats, running };
+  }, [player, hostRef]);
 
   return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty, error: active ? error : null, setMode, toggle, clickNode, onKey, state, motionStats, openBoxes };
 }

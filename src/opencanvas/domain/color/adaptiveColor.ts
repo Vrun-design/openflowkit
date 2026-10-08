@@ -21,6 +21,9 @@ export const isDarkCanvas = (canvas: unknown): canvas is string =>
 
 const WASH_ALPHA = 0.08;
 
+/** Secondary ink (descriptions, kind tags, legends) on a dark-canvas wash: muted, but readable. */
+export const WASH_SUB_INK = '#cbd5e1';
+
 /** The one dark-canvas wash: a default fill as a faint rgba of its own hue. */
 export function darkWashFill(fill: string): string {
   if (fill.startsWith('rgba(')) return fill.replace(/,\s*[\d.]+\)$/, `,${WASH_ALPHA})`);
@@ -43,7 +46,7 @@ export function washOnDark<T extends WashInk>(ink: T, canvas: string): T {
     ...ink,
     fill: mixHex(canvas, rgbToHex(r!, g!, b!), WASH_ALPHA),
     text: '#ffffff',
-    subText: '#cbd5e1',
+    subText: WASH_SUB_INK,
     accentFill: mixHex(canvas, ink.stroke, 0.3),
   };
 }

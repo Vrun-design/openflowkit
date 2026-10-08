@@ -5,7 +5,7 @@ import { resolveBasicNodePresentation } from './basicNodePresentation';
 import { resolveContainerNodePresentation } from './containerNodePresentation';
 import { resolveNodeStroke, type NodeStrokeStyle } from './nodeStroke';
 import { optionalPresentationString } from './nodePresentationValues';
-import { darkWashFill, isDarkCanvas, resolveAdaptiveInk } from '../color/adaptiveColor';
+import { darkWashFill, isDarkCanvas, resolveAdaptiveInk, WASH_SUB_INK } from '../color/adaptiveColor';
 import { hasExplicitColor, nodePaletteName, paletteResolver } from './nodePalette';
 import { widgetLabelBox } from './widgetNodePresentation';
 import { framePresetOf } from './framePreset';
@@ -39,6 +39,8 @@ export interface NodeStyle {
   readonly opacity: number;
   readonly shadow: boolean;
   readonly textColor: string;
+  /** Ink for descriptions, kind tags and legends when the node is a dark-canvas wash; otherwise undefined (the palette's own). */
+  readonly subTextColor?: string;
   readonly fontSize: number;
   readonly fontFamily: FontFamilyKey;
   readonly fontWeight: FontWeight;
@@ -226,6 +228,7 @@ function computeNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
     textColor: canvasColor !== undefined && textBackdrop !== undefined
       ? resolveAdaptiveInk(explicitTextColor, textBackdrop)
       : paint(a.textColor, defaults.text),
+    ...(darkWash && explicitTextColor === undefined ? { subTextColor: WASH_SUB_INK } : {}),
     fontSize: clampNumber(a.fontSize, STYLE_LIMITS.fontSize, defaults.fontSize),
     fontFamily: oneOf<FontFamilyKey>(a.fontFamily, ['sans', 'serif', 'mono', 'hand'],
       FONT_FAMILY_ALIASES[optionalPresentationString(c.fontFamily) ?? ''] ?? 'sans'),

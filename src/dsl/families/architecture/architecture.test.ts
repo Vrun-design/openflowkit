@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { compile, compileWorkspace } from '../../compile';
 import { format } from '../../serialize';
 import { dslFrameRaw, dslNodeMeta } from '../../sceneMeta';
+import { measurePortableText } from '../../../opencanvas/domain/text/measurement';
+import { elementNode } from './scene';
+import { paletteResolver } from '../../../opencanvas/domain/nodes/nodePalette';
 
 const CONTEXT = `architecture
 model {
@@ -498,3 +501,22 @@ views {view deployment of Shop in Prod}`;
     const canonical = await format(source);
     expect((await compile(canonical)).connectors.map((connector) => connector.labels[0]?.text)).toEqual(['forwards [HTTPS]']);
   });
+
+describe('plain C4 shape sizing', () => {
+  it('holds the name, kind and a long description inside the border as the renderer wraps them', () => {
+    const swatch = paletteResolver(undefined);
+    const cases = [
+      ['Marketplace', 'system', 'Online marketplace for second-hand goods'],
+      ['Carrier', 'external', 'Shipping carrier API'],
+      ['Gateway', 'system', 'Public API for web and mobile with rate limits, routing, sessions, tokens and a very long tail of detail'],
+    ] as const;
+    for (const [name, kind, desc] of cases) {
+      const node = elementNode({ id: name, name, kind, desc, icon: 'none', tags: [], links: [] } as never, null, 0, { origin: { x: 0, y: 0 }, swatch });
+      const inner = node.size.width - 32;
+      const label = measurePortableText(name, { fontSize: 14, fontWeight: 600, lineHeight: 16.8, maxWidth: inner, maxLines: 4, overflow: 'wrap' });
+      const sub = measurePortableText(String(node.content.subLabel), { fontSize: 11, fontWeight: 400, maxWidth: inner, maxLines: 4, overflow: 'wrap' });
+      expect(label.height + 4 + sub.height + 32, name).toBeLessThanOrEqual(node.size.height);
+      expect(sub.truncated || sub.lines.length <= 4, name).toBe(true);
+    }
+  });
+});

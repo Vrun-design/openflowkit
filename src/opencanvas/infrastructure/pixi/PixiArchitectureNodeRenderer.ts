@@ -132,7 +132,8 @@ export class PixiArchitectureNodeRenderer {
       decoratePixiText(content, title, style, ink);
       if (presentation.metadata.length > 0) {
         const metadata = this.texts.plain(layout.detail.displayText, {
-          size: 10, weight: '500', fill: visual.subText, wrapWidth: Math.max(1, node.size.width + grown - 24),
+          size: 10, weight: '500',
+          fill: style.subTextColor ? pixiPaintColor(style.subTextColor, visual.subText).color : visual.subText, wrapWidth: Math.max(1, node.size.width + grown - 24),
         });
         metadata.position.set(12, layout.detailY);
         content.addChild(metadata);
