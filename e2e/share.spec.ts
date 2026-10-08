@@ -72,6 +72,13 @@ async function shareLink(page: Page): Promise<string> {
   return page.evaluate(() => navigator.clipboard.readText());
 }
 
+/** Regression guard: a share state renders inside the system root, with design-system buttons. */
+async function expectSystemState(page: Page, primary: string): Promise<void> {
+  await expect(page.locator('.ofk-system[data-ofk-appearance] [data-testid="v2-shared-state"]')).toBeVisible();
+  await expect(page.getByRole('button', { name: primary })).toHaveAttribute('data-variant', 'primary');
+  await expect(page.getByRole('button', { name: primary })).toHaveClass(/ofk-button/);
+}
+
 test.beforeEach(async ({ context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 });
@@ -139,6 +146,7 @@ test('share → open in another tab → delete → deleted message @gate', async
   const gone = await context.newPage();
   await gone.goto(link);
   await expect(gone.getByText('This link has been deleted.')).toBeVisible();
+  await expectSystemState(gone, 'Back to home');
 });
 
 test('a link with its key stripped or cut short says so @gate', async ({ page, context }) => {
@@ -163,6 +171,7 @@ test('opened offline shows try again that works once back online @gate', async (
   backend.online = false;
   await viewer.goto(link);
   await expect(viewer.getByText('You’re offline.')).toBeVisible();
+  await expectSystemState(viewer, 'Try again');
   backend.online = true;
   await viewer.getByRole('button', { name: 'Try again' }).click();
   await expect.poll(() => labels(viewer)).toContain(LABEL);

@@ -47,6 +47,17 @@
   padding: 24px;
 }
 
+/* Standalone state pages (github, dsl, share): the themed ground, one calm column. */
+.ofk-v2-state { position: fixed; background: var(--ofk-canvas); color: var(--ofk-text); overflow-y: auto; }
+.ofk-v2-state .ofk-empty { max-width: 420px; padding: 0; }
+.ofk-v2-state .ofk-empty-actions { align-items: center; }
+.ofk-v2-state .ofk-empty .ofk-progress { width: 240px; text-align: center; }
+.ofk-v2-state-token { display: grid; gap: var(--ofk-space-sm); width: min(320px, 100%); text-align: left; }
+.ofk-v2-state-token .ofk-field { width: 100%; }
+.ofk-v2-state-token .ofk-field > span { overflow-wrap: anywhere; font-size: var(--ofk-type-caption); color: var(--ofk-muted); line-height: 1.5; }
+.ofk-v2-state-token .ofk-empty-actions { margin-top: var(--ofk-space-xs); }
+.ofk-v2-state-notes { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--ofk-space-xs); max-width: 42ch; text-align: left; color: var(--ofk-muted); font-size: var(--ofk-type-label); line-height: 1.5; }
+
 /* WebGL off: the state covers the dead canvas; canvas-only chrome is not rendered. */
 .ofk-v2-fallback {
   position: absolute;
@@ -71,6 +82,9 @@
 @keyframes ofk-state-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes ofk-state-part-left { to { transform: translateX(-4px); } }
 @keyframes ofk-state-part-right { to { transform: translateX(4px); } }
+.ofk-state-hero[data-busy] .ofk-state-hero-link { animation: none; }
+.ofk-state-hero[data-busy] .ofk-state-hero-accent { animation: ofk-state-travel 1.4s cubic-bezier(.45, 0, .55, 1) infinite; }
+@keyframes ofk-state-travel { 0% { opacity: 0; transform: translateX(-15px); } 20%, 80% { opacity: 1; } 100% { opacity: 0; transform: translateX(15px); } }
 @media (prefers-reduced-motion: reduce) { .ofk-state-hero * { animation: none !important; } }
 
 .ofk-v2-document-bar { gap: 2px; padding: 5px; }

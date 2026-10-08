@@ -26,6 +26,14 @@ async function serveGitHub(page: Page, repo: Readonly<Record<string, string>> | 
   });
 }
 
+
+/** Regression guard: a standalone state renders inside the system root, with design-system buttons. */
+async function expectSystemState(page: Page, testId: string, primary: string): Promise<void> {
+  await expect(page.locator(`.ofk-system[data-ofk-appearance] [data-testid="${testId}"]`)).toBeVisible();
+  await expect(page.getByRole('button', { name: primary })).toHaveAttribute('data-variant', 'primary');
+  await expect(page.getByRole('button', { name: primary })).toHaveClass(/ofk-button/);
+}
+
 test('a public repo opens in the editor as its architecture @gate', async ({ page }) => {
   await serveGitHub(page, REPO);
   await page.goto('/#/from/github/acme/shop');
@@ -53,6 +61,7 @@ test('a repo that is not found says so and offers the way home @gate', async ({ 
   await serveGitHub(page, null);
   await page.goto('/#/from/github/acme/shop');
   await expect(page.getByRole('alert')).toContainText('not found, or it is private');
+  await expectSystemState(page, 'v2-from-github', 'Back to home');
   await page.getByRole('button', { name: 'Back to home' }).click();
   await expect.poll(() => page.url()).toContain('#/home');
 });
@@ -68,14 +77,25 @@ test('a rate-limited read asks for an optional token, sends it to the API only, 
   await page.goto('/#/from/github/acme/shop');
   await expect(page.getByRole('alert')).toContainText('limiting reads');
   await expect(page.getByRole('alert')).toContainText('The CLI reads a checkout');
+  await expectSystemState(page, 'v2-from-github', 'Try with token');
   await expect(page.getByText('A token raises the limit to 5,000/hour.')).toBeVisible();
   await expect(page.getByRole('link', { name: /token on GitHub/ })).toHaveAttribute('href', 'https://github.com/settings/personal-access-tokens/new');
   limited = false;
   await page.getByLabel('GitHub token (optional)').fill('github_pat_test123');
-  await page.getByRole('button', { name: 'Try again' }).click();
+  await page.getByRole('button', { name: 'Try with token' }).click();
   await expect.poll(() => page.url(), { timeout: 20_000 }).toContain('#/d/');
   const api = seen.filter((entry) => entry.url.startsWith('https://api.github.com/'));
   expect(api.some((entry) => entry.auth === 'Bearer github_pat_test123')).toBe(true);
   expect(seen.filter((entry) => entry.url.startsWith('https://raw.githubusercontent.com/')).every((entry) => entry.auth === undefined)).toBe(true);
   expect(page.url()).not.toContain('github_pat');
+});
+
+test('the state pages follow the dark theme @gate', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await serveGitHub(page, null);
+  await page.goto('/#/from/github/acme/shop');
+  await expect(page.getByRole('alert')).toContainText('not found, or it is private');
+  const ground = await page.getByTestId('v2-from-github').evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(ground).not.toBe('rgb(255, 255, 255)');
+  await expect(page.locator('.ofk-system')).toHaveAttribute('data-ofk-appearance', 'dark');
 });

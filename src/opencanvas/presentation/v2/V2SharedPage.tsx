@@ -1,11 +1,12 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, ErrorState, Spinner } from '../design-system';
+import { Button, ErrorState } from '../design-system';
 import { loadSharedDocument, type SharedProblem } from '../../../services/share/shareClient';
 import { createV2Repository } from '../../../services/storage/v2/v2Repository';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { mintV2Id } from './v2Document';
 import { V2StateHero } from './V2StateHero';
+import { V2StateShell } from './V2StateShell';
 import './v2EditorPage.css';
 
 const Editor = lazy(async () => ({ default: (await import('./V2EditorPage')).V2EditorPage }));
@@ -36,17 +37,20 @@ export function V2SharedPage(): React.JSX.Element {
   const shared = useMemo(() => document ? { document, onEdit: edit } : undefined, [document, edit]);
 
   if (shared) return <Suspense fallback={null}><Editor shared={shared} /></Suspense>;
+  const home = (primary: boolean) => <Button variant={primary ? 'primary' : 'secondary'} onClick={() => navigate('/home')}>Back to home</Button>;
   return (
-    <div className="ofk-v2-center" role="status" data-testid="v2-shared-state">
-      {state === null ? <Spinner label="Opening shared diagram" /> : 'problem' in state ? (
+    <V2StateShell testId="v2-shared-state">
+      {state === null ? (
+        <div className="ofk-empty"><V2StateHero kind="no-canvas" busy /><p className="ofk-caption" role="status">Opening diagram…</p></div>
+      ) : 'problem' in state ? (
         <ErrorState
-          hero={<V2StateHero kind="lost-link" />}
+          // A retry can help when the service or network failed; a bad link stays bad.
+          hero={<V2StateHero kind={state.problem.retry ? 'torn-page' : 'lost-link'} />}
           title={state.problem.title}
           description={state.problem.detail}
-          {...(state.problem.retry ? { onRetry: () => setAttempt((count) => count + 1) } : {})}
-          secondary={<Button variant="quiet" onClick={() => navigate('/home')}>Back to home</Button>}
+          {...(state.problem.retry ? { onRetry: () => setAttempt((count) => count + 1), secondary: home(false) } : { action: home(true) })}
         />
       ) : null}
-    </div>
+    </V2StateShell>
   );
 }
