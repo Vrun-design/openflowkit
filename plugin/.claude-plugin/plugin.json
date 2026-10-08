@@ -8,10 +8,5 @@
   "repository": "https://github.com/Vrun-design/openflowkit",
   "license": "MIT",
   "keywords": ["diagram", "mermaid", "flowchart", "mcp"],
-  "mcpServers": {
-    "openflowkit": {
-      "command": "npx",
-      "args": ["-y", "@vrun-design/openflowkit-mcp"]
-    }
-  }
+  "mcpServers": "./.mcp.json"
 }

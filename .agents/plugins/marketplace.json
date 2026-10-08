@@ -1,0 +1,20 @@
+{
+  "name": "openflowkit",
+  "interface": {
+    "displayName": "OpenFlowKit"
+  },
+  "plugins": [
+    {
+      "name": "openflowkit",
+      "source": {
+        "source": "local",
+        "path": "./plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

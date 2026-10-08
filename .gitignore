@@ -50,8 +50,9 @@ docs-site/public/examples/
 # Generated stress-test canvases; regenerate with `npm run stress:generate`.
 stress/*.json
 
-# Local AI tooling (skills, agents, scratch edits) — not product code
-.agents/
+# Local AI tooling (skills, agents, scratch edits) — not product code; the Codex marketplace ships
+.agents/*
+!.agents/plugins/
 .claude/skills/
 .codex-skill-edits/
 tsconfig.tsbuildinfo

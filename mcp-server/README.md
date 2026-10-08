@@ -72,6 +72,14 @@ command = "npx"
 args = ["-y", "@vrun-design/openflowkit-mcp"]
 ```
 
+Or install the plugin, which adds the server and the skill together:
+
+```bash
+codex plugin marketplace add Vrun-design/openflowkit
+```
+
+Then install **OpenFlowKit** from that marketplace in the Plugins Directory.
+
 ---
 
 ## Claude Desktop setup

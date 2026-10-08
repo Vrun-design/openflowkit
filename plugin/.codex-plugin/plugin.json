@@ -1,0 +1,39 @@
+{
+  "name": "openflowkit",
+  "version": "0.2.0",
+  "description": "Draw diagrams that stay valid, editable and saved next to the code: the OpenFlowKit MCP server plus the skill that teaches the agent to use it.",
+  "author": {
+    "name": "OpenFlowKit",
+    "url": "https://github.com/Vrun-design/openflowkit"
+  },
+  "homepage": "https://openflowkit.com/",
+  "repository": "https://github.com/Vrun-design/openflowkit",
+  "license": "MIT",
+  "keywords": [
+    "diagram",
+    "mermaid",
+    "flowchart",
+    "architecture",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "OpenFlowKit",
+    "shortDescription": "Diagrams that stay editable",
+    "longDescription": "Draw flowcharts, architecture maps and sequence diagrams as text that lays itself out. Diagrams stay valid, open in the OpenFlowKit editor, and live next to your code.",
+    "developerName": "OpenFlowKit",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://openflowkit.com/",
+    "defaultPrompt": [
+      "Draw the architecture of this repository."
+    ],
+    "composerIcon": "./assets/logo.svg",
+    "logo": "./assets/logo.svg",
+    "screenshots": []
+  }
+}
