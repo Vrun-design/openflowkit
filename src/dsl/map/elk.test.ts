@@ -35,7 +35,7 @@ describe('toElkGraph', () => {
     expect(web.edges!.map((e) => e.id)).toEqual(edges.filter((e) => e.parent === 'web').map((e) => `e:${e.key}`));
     expect(graph.edges!.length).toBe(edges.filter((e) => e.parent === 'root').length);
     expect(graph.layoutOptions!['elk.json.edgeCoords']).toBe('ROOT');
-    expect(graph.children!.find((c) => c.id === 'README.md')).toMatchObject({ width: 200, height: 46 });
+    expect(graph.children!.find((c) => c.id === 'root#files')).toMatchObject({ width: 232, height: 92 });
   });
 });
 

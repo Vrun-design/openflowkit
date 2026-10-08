@@ -9,8 +9,8 @@ const open = (...ids: string[]) => new Set(ids);
 
 describe('visible / representative', () => {
   it('lists the root children, plus the children of open boxes right after them', () => {
-    expect(visible(model, open())).toEqual(['server', 'web', 'README.md', 'root#outside']);
-    expect(visible(model, open('web'))).toEqual(['server', 'web', 'web/lib/deep/only', 'web/ui', 'web/App.tsx', 'README.md', 'root#outside']);
+    expect(visible(model, open())).toEqual(['server', 'web', 'root#files', 'root#outside']);
+    expect(visible(model, open('web'))).toEqual(['server', 'web', 'web/lib/deep/only', 'web/ui', 'web/App.tsx', 'root#files', 'root#outside']);
   });
 
   it('puts a hidden node in its nearest visible ancestor, and a visible node in itself', () => {
@@ -75,7 +75,7 @@ describe('aggregate', () => {
 describe('presets', () => {
   it('overview opens the top level, detailed two levels, everything stays within 300 boxes', () => {
     const p = presets(model);
-    expect([...p.overview].sort()).toEqual(['root#outside', 'server', 'web']);
+    expect([...p.overview].sort()).toEqual(['root#files', 'root#outside', 'server', 'web']);
     expect(p.detailed.has('server/routes')).toBe(true);
     expect(p.detailed.has('server/routes#more')).toBe(false); // never auto-open "more"
     expect(p.everything.has('server/routes')).toBe(true);
@@ -83,10 +83,15 @@ describe('presets', () => {
     expect(p.overview.has('root')).toBe(false);
   });
 
-  it('falls back to a shut map when even the top level would pass 300 boxes', () => {
-    const files = Array.from({ length: 400 }, (_, i) => ({ path: `p${String(i).padStart(3, '0')}/a.ts`, loc: 1 }));
-    const big = buildMap({ files, imports: [] });
-    const p = presets(big);
+  it('falls back to a shut map when a hand-made model opens past 300 boxes at the top level', () => {
+    // buildMap never produces this (14 x 14 at most); other model sources might.
+    const ids = Array.from({ length: 400 }, (_, i) => `p${i}`);
+    const node = (id: string, parent: string | null, children: string[]) => ({ id, kind: 'part' as const, name: id, parent, children, files: 0, loc: 0 });
+    const wide = {
+      root: 'root', links: [], source: {}, stats: { files: 0, loc: 0, imports: 0, unresolved: 0 },
+      nodes: { root: node('root', null, ids), ...Object.fromEntries(ids.map((id) => [id, node(id, 'root', [`${id}/a`])])), ...Object.fromEntries(ids.map((id) => [`${id}/a`, node(`${id}/a`, id, [])])) },
+    };
+    const p = presets(wide);
     expect([p.overview.size, p.detailed.size, p.everything.size]).toEqual([0, 0, 0]);
   });
 

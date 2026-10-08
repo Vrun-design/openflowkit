@@ -8,7 +8,7 @@ const childIds = (id: string) => model.nodes[id].children;
 
 describe('buildMap tree', () => {
   it('makes parts from facts.parts under the root, then loose root files', () => {
-    expect(childIds('root')).toEqual(['server', 'web', 'README.md', 'root#outside']);
+    expect(childIds('root')).toEqual(['server', 'web', 'root#files', 'root#outside']);
     expect(model.nodes.web).toMatchObject({ kind: 'part', name: 'Web app', desc: 'The storefront.', path: 'web' });
   });
 
@@ -24,13 +24,13 @@ describe('buildMap tree', () => {
     expect(model.nodes['web/lib']).toBeUndefined();
   });
 
-  it('folds a flat folder of 16 files into the 12 most connected plus "4 more files"', () => {
+  it('folds a flat folder of 16 files into the 13 most connected plus "3 more files": 14 children with the box', () => {
     const kids = childIds('server/routes');
-    expect(kids).toHaveLength(13);
+    expect(kids).toHaveLength(14);
     expect(kids.slice(0, 3)).toEqual(['server/routes/r00.ts', 'server/routes/r01.ts', 'server/routes/r02.ts']);
     expect(kids.at(-1)).toBe('server/routes#more');
-    expect(model.nodes['server/routes#more']).toMatchObject({ kind: 'more', name: '4 more files', files: 4 });
-    expect(childIds('server/routes#more')).toEqual(['server/routes/r12.ts', 'server/routes/r13.ts', 'server/routes/r14.ts', 'server/routes/r15.ts']);
+    expect(model.nodes['server/routes#more']).toMatchObject({ kind: 'more', name: '3 more files', files: 3 });
+    expect(childIds('server/routes#more')).toEqual(['server/routes/r13.ts', 'server/routes/r14.ts', 'server/routes/r15.ts']);
   });
 
   it('does not fold 14 or fewer', () => {
@@ -123,6 +123,12 @@ describe('buildMap links', () => {
     expect(model.links.some((l) => l.from === 'web/App.tsx' && l.to === 'web/lib/deep/only')).toBe(true);
   });
 
+  it('treats a dir import of the repo root as a real import of the root box, not unresolved', () => {
+    const m = buildMap({ files: [{ path: 'sub/s.go', loc: 1 }, { path: 'gin.go', loc: 1 }], imports: [{ from: 'sub/s.go', to: '', line: 3, text: 'import "x/gin"', toKind: 'dir' }, { from: 'sub/s.go', to: '.', line: 4, text: 'import "x/gin"', toKind: 'dir' }] });
+    expect(m.stats).toMatchObject({ unresolved: 0, imports: 2 });
+    expect(m.links).toMatchObject([{ from: 'sub/s.go', to: 'root' }]);
+  });
+
   it('counts unknown endpoints as unresolved and drops them', () => {
     expect(model.stats.unresolved).toBe(2); // nope.ts and ext:missing
     expect(model.links.some((l) => l.to === 'nope.ts' || l.to === 'ext:missing')).toBe(false);
@@ -146,7 +152,7 @@ describe('buildMap overlay', () => {
     expect(m.nodes['server/routes#pay']).toMatchObject({ kind: 'group', name: 'Payments', ai: true, files: 2 });
     expect(m.nodes['server/routes'].children).toContain('server/routes#pay');
     expect(m.nodes['server/routes/r01.ts'].parent).toBe('server/routes#pay');
-    expect(m.nodes['server/routes'].children.filter((c) => c.endsWith('.ts'))).toHaveLength(14); // 14 left: under the fold limit
+    expect(m.nodes['server/routes'].children.filter((c) => c.endsWith('.ts'))).toHaveLength(12); // 14 left, 13 slots (one is the group) minus the more box
   });
 
   it('skips a group keyed "more" and a repeated key rather than colliding', () => {
@@ -166,5 +172,123 @@ describe('buildMap overlay', () => {
     expect(m.nodes['web/lib/deep/only']).toMatchObject({ name: 'Helpers', desc: 'Small tools.', ai: true });
     const exact = buildMap(FIXTURE, { names: { 'web/lib': { name: 'Shallow' }, 'web/lib/deep/only': { name: 'Exact' } } });
     expect(exact.nodes['web/lib/deep/only'].name).toBe('Exact');
+  });
+});
+
+describe('buildMap folding', () => {
+  const widest = (m: ReturnType<typeof buildMap>) => Math.max(...Object.values(m.nodes).map((n) => n.children.length));
+
+  it('keeps every box in the fixture to 14 children or fewer', () => {
+    expect(widest(model)).toBeLessThanOrEqual(14);
+  });
+
+  it('keeps every box to 14 children for a 200-file folder beside 20 subfolders, and places every file once', () => {
+    const kinds = ['Panel', 'Menu', 'Dialog', 'Chart', 'Table'];
+    const loose = Array.from({ length: 200 }, (_, i) => ({ path: `app/${kinds[i % 5]}${String(i).padStart(3, '0')}Item.ts`, loc: 1 + i }));
+    const subs = Array.from({ length: 20 }, (_, s) => Array.from({ length: 3 }, (_, i) => ({ path: `app/s${String(s).padStart(2, '0')}/f${i}.ts`, loc: 5 })));
+    const files = [...loose, ...subs.flat()];
+    const imports = loose.slice(1).map((f, i) => ({ from: f.path, to: loose[i].path, line: 1, text: 'i' }));
+    const m = buildMap({ files, imports });
+    expect(widest(m)).toBeLessThanOrEqual(14);
+    const placed = Object.values(m.nodes).filter((n) => n.kind === 'file');
+    expect(placed).toHaveLength(260);
+    expect(new Set(placed.map((n) => n.id)).size).toBe(260);
+    expect(m.nodes.root.files).toBe(260);
+    const app = m.nodes.app;
+    expect(app.children.length).toBeLessThanOrEqual(14);
+    expect(m.nodes['app#more'].name).toMatch(/^\d+ more folders?( and \d+ more files?)?$|^\d+ more files?$/);
+    expect(Object.values(m.nodes).some((n) => n.kind === 'group' && n.ai === false)).toBe(true);
+  });
+
+  it('puts loose root files in one "Repo files" group once there are parts or folders, and not otherwise', () => {
+    expect(model.nodes['root#files']).toMatchObject({ kind: 'group', name: 'Repo files', ai: false, parent: 'root', children: ['README.md'] });
+    const m = buildMap({ files: [file('vite.config.ts'), file('a/x.ts'), ...Array.from({ length: 20 }, (_, i) => file(`tool${String(i).padStart(2, '0')}.config.js`))], imports: [] });
+    expect(m.nodes.root.children).toContain('root#files');
+    expect(m.nodes['vite.config.ts'].parent).not.toBe('root');
+    expect(widest(m)).toBeLessThanOrEqual(14);
+    const flat = buildMap({ files: [file('a.ts'), file('b.ts')], imports: [] });
+    expect(flat.nodes.root.children).toEqual(['a.ts', 'b.ts']);
+  });
+
+  it('names a more box for what it holds: folders, files or both', () => {
+    const subs = Array.from({ length: 14 }, (_, s) => ({ path: `p/d${String(s).padStart(2, '0')}/a.ts`, loc: 1 }));
+    expect(buildMap({ files: subs, imports: [] }).nodes['p#more'].name).toBe('3 more folders');
+    const files = Array.from({ length: 18 }, (_, i) => ({ path: `q/f${String(i).padStart(2, '0')}.ts`, loc: 1 }));
+    expect(buildMap({ files, imports: [] }).nodes['q#more'].name).toBe('5 more files');
+    expect(buildMap({ files: [...files, ...subs.slice(0, 3).map((f) => ({ path: `q/${f.path.slice(2)}`, loc: 1 }))], imports: [] }).nodes['q#more']).toBeDefined();
+  });
+
+  it('lets overlay groups win: fold.ts only sees the files the overlay leaves loose', () => {
+    const mine = ['server/routes/r05.ts', 'server/routes/r06.ts'];
+    const m = buildMap(FIXTURE, { groups: { 'server/routes': [{ key: 'x', name: 'Mine', files: mine }] } });
+    expect(m.nodes['server/routes#x']).toMatchObject({ ai: true, files: 2 });
+    for (const f of mine) expect(m.nodes[f].parent).toBe('server/routes#x');
+    expect(widest(m)).toBeLessThanOrEqual(14);
+  });
+
+  // Reviewer's inputs: every one used to leave some box wider than 14.
+  const check = (m: ReturnType<typeof buildMap>, files: number) => {
+    expect(widest(m)).toBeLessThanOrEqual(14);
+    expect(Object.values(m.nodes).filter((n) => n.kind === 'file')).toHaveLength(files);
+    expect(m.nodes.root.files).toBe(files);
+  };
+  const file = (path: string) => ({ path, loc: 1 });
+
+  it('folds 20 top-level folders into the root `more` box', () => {
+    const m = buildMap({ files: Array.from({ length: 20 }, (_, i) => file(`t${String(i).padStart(2, '0')}/a.ts`)), imports: [] });
+    check(m, 20);
+    expect(m.nodes['root#more'].name).toBe('9 more parts');
+  });
+
+  it('folds 16 declared parts', () => {
+    const ids = Array.from({ length: 16 }, (_, i) => `p${String(i).padStart(2, '0')}`);
+    const m = buildMap({ files: ids.map((d) => file(`${d}/a.ts`)), imports: [], parts: ids.map((d) => ({ name: d, dir: d })) });
+    check(m, 16);
+    expect(m.nodes.root.children).toHaveLength(12); // 11 kept parts + the more box
+  });
+
+  it('fits 12 top-level folders, 20 root files and an external in 14', () => {
+    const files = [...Array.from({ length: 12 }, (_, i) => file(`t${String(i).padStart(2, '0')}/a.ts`)), ...Array.from({ length: 20 }, (_, i) => file(`root${String(i).padStart(2, '0')}.ts`))];
+    check(buildMap({ files, imports: [], externals: [{ id: 'ext:x', name: 'X' }] }), 32);
+  });
+
+  it('counts overlay groups against the 14: 12 and 16 groups', () => {
+    for (const n of [12, 16]) {
+      const names = Array.from({ length: n * 2 }, (_, i) => `server/routes/g${String(i).padStart(2, '0')}.ts`);
+      const groups = Array.from({ length: n }, (_, g) => ({ key: `k${g}`, name: `Group ${g}`, files: [names[g * 2], names[g * 2 + 1]] }));
+      const m = buildMap({ files: names.map(file), imports: [] }, { groups: { 'server/routes': groups } });
+      check(m, n * 2);
+    }
+  });
+
+  it('folds many outside services too', () => {
+    const externals = Array.from({ length: 20 }, (_, i) => ({ id: `ext:s${String(i).padStart(2, '0')}`, name: `S${i}` }));
+    const m = buildMap({ files: [file('a/x.ts')], imports: [], externals });
+    expect(widest(m)).toBeLessThanOrEqual(14);
+    expect(Object.values(m.nodes).filter((n) => n.kind === 'external')).toHaveLength(20);
+  });
+
+  it('splits an overflowing `more` box into alphabetical ranges, each 14 or fewer', () => {
+    const files = Array.from({ length: 300 }, (_, i) => file(`big/x${String(i).padStart(3, '0')}.ts`));
+    const m = buildMap({ files, imports: [] });
+    check(m, 300);
+    const ranges = Object.values(m.nodes).filter((n) => n.kind === 'group' && n.name.includes('\u2013'));
+    expect(ranges.length).toBeGreaterThan(1);
+    expect(ranges[0].name).toMatch(/^x\d+ \u2013 x\d+$/);
+  });
+});
+
+describe('buildMap speed', () => {
+  it('builds a 1,000-file folder with 2,000 imports well inside the budget', () => {
+    const words = ['panel', 'menu', 'dialog', 'chart', 'table', 'canvas', 'export', 'import', 'style', 'theme', 'pointer', 'camera', 'layer', 'frame', 'render', 'input', 'tool', 'page', 'home', 'agent'];
+    const cap = (w: string) => w[0].toUpperCase() + w.slice(1);
+    const files = Array.from({ length: 1000 }, (_, i) => ({ path: `big/${cap(words[i % 20])}${cap(words[(i * 7 + 3) % 20])}V${i}.ts`, loc: 10 }));
+    const imports = Array.from({ length: 2000 }, (_, i) => ({ from: files[(i * 13) % 1000].path, to: files[(i * 29 + 5) % 1000].path, line: 1, text: 'i' }));
+    const t0 = performance.now();
+    const m = buildMap({ files, imports });
+    const ms = performance.now() - t0;
+    console.log(`buildMap 1,000 files / 2,000 imports: ${ms.toFixed(0)} ms`);
+    expect(Math.max(...Object.values(m.nodes).map((n) => n.children.length))).toBeLessThanOrEqual(14);
+    expect(ms).toBeLessThan(250);
   });
 });
