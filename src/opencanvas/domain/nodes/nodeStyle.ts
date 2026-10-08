@@ -5,10 +5,10 @@ import { resolveBasicNodePresentation } from './basicNodePresentation';
 import { resolveContainerNodePresentation } from './containerNodePresentation';
 import { resolveNodeStroke, type NodeStrokeStyle } from './nodeStroke';
 import { optionalPresentationString } from './nodePresentationValues';
-import { resolveAdaptiveInk } from '../color/adaptiveColor';
-import { getContrastText } from '../../../lib/colorUtils';
-import { nodePaletteName } from './nodePalette';
+import { darkWashFill, isDarkCanvas, resolveAdaptiveInk } from '../color/adaptiveColor';
+import { hasExplicitColor, nodePaletteName, paletteResolver } from './nodePalette';
 import { widgetLabelBox } from './widgetNodePresentation';
+import { framePresetOf } from './framePreset';
 
 // Every visible property of a node, resolved from flat `appearance` keys
 // (docs/plan/phase-1-style.md §1) with legacy `content.*` palette/typography
@@ -181,6 +181,12 @@ function familyDefaults(node: SceneNode): FamilyDefaults {
   };
 }
 
+/** The colour word a node of this family has when none is set. */
+function familyColorKey(node: SceneNode): string | undefined {
+  const bare = { ...node, content: { ...node.content, color: undefined } };
+  return (resolveBasicNodePresentation(bare) ?? resolveArchitectureNodePresentation(bare))?.colorKey;
+}
+
 function computeNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
   const a = node.appearance;
   const c = node.content;
@@ -190,10 +196,19 @@ function computeNodeStyle(node: SceneNode, canvasColor?: string): NodeStyle {
   const strokeWidth = a.strokeWidth === undefined ? (text ? 0 : defaults.strokeWidth) : stroke.width;
   // A container's default tint is a light wash; on a dark canvas it turns into
   // a grey slab. Keep the hue as a faint wash and let the title ink follow the canvas.
-  const darkWash = a.fill === undefined && defaults.fill.startsWith('rgba(')
-    && canvasColor !== undefined && getContrastText(canvasColor) === '#ffffff';
-  const fill = darkWash ? defaults.fill.replace(/,\s*[\d.]+\)$/, ',0.08)') : paint(a.fill, defaults.fill);
-  const explicitTextColor = a.textColor ?? (text ? c.customColor : undefined);
+  const dark = isDarkCanvas(canvasColor);
+  const containerWash = a.fill === undefined && defaults.fill.startsWith('rgba(') && dark;
+  // A default paper-white or pastel node washes the same way; an explicit colour never does. The DSL
+  // writes the white swatch for a node with no colour word, so that exact fill counts as unset.
+  const white = paletteResolver(nodePaletteName(node))('white', 'pastel');
+  const unsetFill = a.fill === undefined || (typeof a.fill === 'string' && a.fill.toLowerCase() === white.fill);
+  const defaultWash = dark && unsetFill && /^#[0-9a-f]{6}$/i.test(defaults.fill)
+    && !widgetLabelBox(node) && !framePresetOf(node) && !hasExplicitColor(node, familyColorKey(node));
+  const darkWash = containerWash || defaultWash;
+  const fill = darkWash ? darkWashFill(a.fill === undefined ? defaults.fill : white.fill) : paint(a.fill, defaults.fill);
+  // The white swatch's own ink is part of that default and follows the canvas with it.
+  const swatchInk = darkWash && a.fill !== undefined && typeof a.textColor === 'string' && a.textColor.toLowerCase() === white.textColor;
+  const explicitTextColor = swatchInk ? undefined : a.textColor ?? (text ? c.customColor : undefined);
   // Ink adapts to whatever is behind the label: a solid fill, or the canvas
   // when the label sits outside the fill or the fill is transparent. A tinted
   // (rgba) container fill keeps its palette ink, except as a dark-canvas wash.

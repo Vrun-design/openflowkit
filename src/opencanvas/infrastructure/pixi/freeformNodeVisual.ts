@@ -1,11 +1,12 @@
 import { resolveAnnotationVisualStyle, resolveTextVisualStyle } from '@/theme';
-import { nodePaletteName } from '../../domain/nodes/nodePalette';
+import { hasExplicitColor, nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneNode } from '../../domain/document/types';
 import {
   resolveFreeformNodePresentation,
   type FreeformNodePresentation,
   type StrokeNodePresentation,
 } from '../../domain/nodes/freeformNodePresentation';
+import { isDarkCanvas, washOnDark } from '../../domain/color/adaptiveColor';
 import { pixiHexColor } from './pixiColor';
 
 interface PixiTextNodeVisual {
@@ -54,7 +55,23 @@ function isStrokePresentation(presentation: FreeformNodePresentation):
     || presentation.kind === 'line' || presentation.kind === 'arrow';
 }
 
-export function projectFreeformNodeVisual(node: SceneNode): PixiFreeformNodeVisual | null {
+/**
+ * Annotation ink for the canvas and the SVG export. A sequence's fragment band takes its tint from the
+ * fragment type, not from the author, so on a dark canvas it washes like any other default card.
+ */
+export function annotationColors(
+  node: SceneNode,
+  presentation: { readonly colorKey: string; readonly customColor?: string },
+  canvasColor?: unknown
+): ReturnType<typeof resolveAnnotationVisualStyle> {
+  const colors = resolveAnnotationVisualStyle(presentation.colorKey, 'subtle', presentation.customColor, nodePaletteName(node));
+  if (typeof node.content.seqFragmentId !== 'string' || hasExplicitColor(node, presentation.colorKey) || !isDarkCanvas(canvasColor)) return colors;
+  const ink = washOnDark({ fill: colors.containerBg, stroke: colors.containerBorder, text: colors.titleText,
+    subText: colors.bodyText, accentFill: colors.foldBg }, canvasColor);
+  return { ...colors, containerBg: ink.fill, titleText: ink.text, bodyText: ink.subText, foldBg: ink.accentFill };
+}
+
+export function projectFreeformNodeVisual(node: SceneNode, canvasColor?: unknown): PixiFreeformNodeVisual | null {
   const presentation = resolveFreeformNodePresentation(node);
   if (!presentation) return null;
   if (presentation.kind === 'text') {
@@ -87,12 +104,7 @@ export function projectFreeformNodeVisual(node: SceneNode): PixiFreeformNodeVisu
     return { presentation, kind: presentation.kind, fill: 0, text: 0,
       stroke: pixiHexColor(presentation.color, 0x334155) };
   }
-  const colors = resolveAnnotationVisualStyle(
-    presentation.colorKey,
-    'subtle',
-    presentation.customColor,
-    nodePaletteName(node)
-  );
+  const colors = annotationColors(node, presentation, canvasColor);
   return {
     presentation,
     kind: presentation.kind,

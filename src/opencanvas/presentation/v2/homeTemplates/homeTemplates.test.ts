@@ -27,18 +27,30 @@ beforeAll(() => {
 });
 afterAll(() => vi.unstubAllGlobals());
 
+async function drawn(name: string, title: string, dsl: string) {
+  const compiled = await compile(dsl, { layout: elkDslLayoutPort, resolveIcon: resolveDslIcon, autoIcons: true });
+  const document = createEmptyV2Document(`template-${name}`, title);
+  const page = document.pages[0]!;
+  const thumbnail = await buildV2Thumbnail({ ...document, pages: [{ ...page, diagramKind: compiled.meta.family,
+    nodes: [compiled.frame, ...compiled.groups, ...compiled.nodes], connectors: compiled.connectors }] });
+  expect(thumbnail).not.toBeNull();
+  return thumbnail!;
+}
+
 describe('home template previews', () => {
   it.each(STARTER_TEMPLATES.map((template) => [template.name, template] as const))('%s matches its checked-in picture', async (name, template) => {
-    const compiled = await compile(template.dsl, { layout: elkDslLayoutPort, resolveIcon: resolveDslIcon, autoIcons: true });
-    const document = createEmptyV2Document(`template-${name}`, template.title);
-    const page = document.pages[0]!;
-    const thumbnail = await buildV2Thumbnail({ ...document, pages: [{ ...page, diagramKind: compiled.meta.family,
-      nodes: [compiled.frame, ...compiled.groups, ...compiled.nodes], connectors: compiled.connectors }] });
-    expect(thumbnail).not.toBeNull();
+    const thumbnail = await drawn(name, template.title, template.dsl);
     for (const theme of ['light', 'dark'] as const) {
       const file = join(DIR, `${name}-${theme}.svg`);
-      if (process.env.UPDATE_HOME_PREVIEWS) writeFileSync(file, thumbnail![theme]);
-      expect(thumbnail![theme], `${name}-${theme}.svg drifted: rerun with UPDATE_HOME_PREVIEWS=1`).toBe(readFileSync(file, 'utf8'));
+      if (process.env.UPDATE_HOME_PREVIEWS) writeFileSync(file, thumbnail[theme]);
+      expect(thumbnail[theme], `${name}-${theme}.svg drifted: rerun with UPDATE_HOME_PREVIEWS=1`).toBe(readFileSync(file, 'utf8'));
     }
+  });
+
+  // Default (unset) fills and label plates wash into the dark canvas instead of staying paper-white.
+  it.each(['request-sequence', 'order-state'])('%s draws no paper-white shape or label plate in dark', async (name) => {
+    const template = STARTER_TEMPLATES.find((candidate) => candidate.name === name)!;
+    const { dark } = await drawn(name, template.title, template.dsl);
+    expect(dark).not.toMatch(/<(rect|path)\b[^>]*fill="#(ffffff|f8fafc|f5f3ff)"/i);
   });
 });

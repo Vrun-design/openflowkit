@@ -32,7 +32,7 @@ import {
 import { OpenCanvasTextEditorOverlay } from './OpenCanvasTextEditorOverlay';
 import { resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
 import { resolveWidgetInks, widgetBackdrop, widgetLabelBox } from '../../domain/nodes/widgetNodePresentation';
-import { connectorLabelPlate, resolveConnectorLabelStyle } from '../../domain/connectors/labelStyle';
+import { connectorLabelOnCanvas, connectorLabelPlate, resolveConnectorLabelStyle } from '../../domain/connectors/labelStyle';
 import { projectPageConnectors } from '../../domain/connectors/routeProjection';
 import { semanticDetailLevel } from '../../infrastructure/pixi/viewportProjection';
 import { V2ContextBar, contextBarStyle, sameRect, unionScreenBounds, visibleCanvasEdges } from './V2ContextBar';
@@ -468,7 +468,8 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   const editingStyle = editingNode ? editorStyle(editingNode, props.page, numericColorToHex(props.backgroundColor)) : null;
   const editingConnector = props.connectorEditing
     && props.page.connectors.find((connector) => connector.id === props.connectorEditing?.connectorId);
-  const connectorEditingStyle = editingConnector ? resolveConnectorLabelStyle(editingConnector) : null;
+  const connectorEditingStyle = editingConnector
+    ? connectorLabelOnCanvas(resolveConnectorLabelStyle(editingConnector), numericColorToHex(props.backgroundColor)) : null;
 
   return (
     <section

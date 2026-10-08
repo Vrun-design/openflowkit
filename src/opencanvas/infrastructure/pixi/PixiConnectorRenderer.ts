@@ -7,7 +7,8 @@ import type { ScenePage } from '../../domain/document/types';
 import { roundPolylineCorners } from '../../domain/geometry/polyline';
 import { distanceBetweenPoints } from '../../domain/geometry/point';
 import type { Point2d } from '../../domain/geometry/types';
-import { LABEL_WRAP_WIDTH } from '../../domain/connectors/labelStyle';
+import { isDarkCanvas } from '../../domain/color/adaptiveColor';
+import { LABEL_WRAP_WIDTH, connectorLabelOnCanvas } from '../../domain/connectors/labelStyle';
 import { projectPageConnectors } from '../../domain/connectors/routeProjection';
 import type {
   ConnectorMarkerGlyph,
@@ -195,7 +196,8 @@ export class PixiConnectorRenderer {
   draw(
     page: ScenePage,
     advanced: boolean,
-    renderedConnectorIds: ReadonlySet<string> | null = null
+    renderedConnectorIds: ReadonlySet<string> | null = null,
+    canvasColor?: string
   ): void {
     this.paths.clear();
     this.labelPlates.clear();
@@ -216,6 +218,7 @@ export class PixiConnectorRenderer {
       return;
     }
     const connectors = projectPageConnectors(visiblePage);
+    const onDark = isDarkCanvas(canvasColor);
     let labelCount = 0;
     let markerCount = 0;
     this.widestLabel = 0;
@@ -249,7 +252,7 @@ export class PixiConnectorRenderer {
         markerCount += connector.presentation.targetMarkers.length;
       }
       if (connector.id !== this.editingConnectorId) {
-        for (const labelGeometry of connector.labels) this.drawLabel(labelGeometry, presentation.label);
+        for (const labelGeometry of connector.labels) this.drawLabel(labelGeometry, onDark ? connectorLabelOnCanvas(presentation.label, canvasColor) : presentation.label);
         labelCount += connector.labels.length;
       }
     }

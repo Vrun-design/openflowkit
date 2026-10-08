@@ -155,7 +155,7 @@ export class PixiNodeRenderer {
           ?? this.classEntityRenderer.drawNode(node, matrix, this.graphics)
           ?? this.mindmapRenderer.drawNode(node, matrix, this.graphics)
           ?? this.journeyRenderer.drawNode(node, matrix, this.graphics)
-          ?? this.sequenceRenderer.drawNode(node, matrix, this.graphics)
+          ?? this.sequenceRenderer.drawNode(node, matrix, this.graphics, canvasHex)
           ?? this.wireframeRenderer.drawNode(node, matrix, this.graphics, wireframeMediaGeneration)
           ?? this.freeformRenderer.drawNode(node, matrix, this.graphics, freeformMediaGeneration, canvasHex);
       if (family) {

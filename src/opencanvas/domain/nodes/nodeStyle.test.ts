@@ -30,6 +30,18 @@ describe('resolveNodeStyle', () => {
     expect(dark.textColor).toBe('#ffffff');
     expect(resolveNodeStyle(node({ kind: 'section', appearance: { fill: '#fef2f2' } }), '#191b19').fill).toBe('#fef2f2');
   });
+  it('washes a default node on a dark canvas but never an explicit colour', () => {
+    expect(resolveNodeStyle(node({}), '#191b19')).toMatchObject({ fill: 'rgba(255,255,255,0.08)', textColor: '#ffffff' });
+    expect(resolveNodeStyle(node({}), '#f7f7f5').fill).toBe('#ffffff');
+    const explicit = [
+      node({ content: { shape: 'rounded', label: 'A', color: 'blue' } }),
+      node({ content: { shape: 'rounded', label: 'A', color: 'custom', customColor: '#123456' } }),
+      node({ kind: 'text', content: { label: 'A', backgroundColor: '#fef2f2' } }),
+    ];
+    for (const each of explicit) {
+      expect(resolveNodeStyle(each, '#191b19').fill, JSON.stringify(each.content)).toBe(resolveNodeStyle(each, '#f7f7f5').fill);
+    }
+  });
   it('falls back to the palette for shapes with no appearance keys', () => {
     const style = resolveNodeStyle(node({ content: { shape: 'rounded', color: 'blue' } }));
     expect(style.fill).toBe('#eff6ff');

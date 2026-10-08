@@ -108,7 +108,7 @@ export class PixiFreeformNodeRenderer {
     generation: number,
     canvasColor = '#f7f7f5'
   ): PixiFreeformNodeDrawResult | null {
-    const visual = projectFreeformNodeVisual(node);
+    const visual = projectFreeformNodeVisual(node, canvasColor);
     if (!visual) return null;
     if (visual.kind === 'text') return drawTextNode(node, matrix, graphics, visual, canvasColor);
     if (visual.kind === 'pen' || visual.kind === 'highlighter'

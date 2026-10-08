@@ -280,3 +280,10 @@ export function paletteKeyForStrokeIn(stroke: string, swatch: SwatchResolver): P
   }
   return null;
 }
+
+/** A colour the author chose: a custom or background colour, or a colour word other than the family default. */
+export function hasExplicitColor(node: { readonly content: Readonly<Record<string, unknown>> }, defaultKey?: string): boolean {
+  const c = node.content;
+  return typeof c.customColor === 'string' || typeof c.backgroundColor === 'string'
+    || (typeof c.color === 'string' && c.color !== defaultKey);
+}

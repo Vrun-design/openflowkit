@@ -1,4 +1,5 @@
 import { PixiDotGrid } from './PixiDotGrid';
+import { isDarkCanvas, numericColorToHex } from '../../domain/color/adaptiveColor';
 import { PixiLiveTransformPreview } from './PixiLiveTransformPreview';
 import { Application, Container, Graphics } from 'pixi.js';
 import { screenToWorld, visibleWorldBounds, worldToScreen } from '../../domain/camera/camera';
@@ -227,7 +228,7 @@ export class PixiRendererHost {
 
   private drawDotGrid(): void {
     this.dotGrid.graphics.visible = this.showDotGrid;
-    if (this.showDotGrid) this.dotGrid.draw(this.camera, this.getViewportSize(), this.backgroundColor < 0x808080);
+    if (this.showDotGrid) this.dotGrid.draw(this.camera, this.getViewportSize(), isDarkCanvas(numericColorToHex(this.backgroundColor)));
   }
 
   /** Canvas ground color; applied at mount and live afterwards. */
@@ -765,7 +766,7 @@ export class PixiRendererHost {
         && (excluded.size > 0 || !projected || projected.has(edge.id))).map((edge) => edge.id))
       : projected;
     const detailLevel = this.viewportProjection?.detailLevel ?? 'full';
-    this.connectorRenderer.draw(this.page, this.connectorModelEnabled, renderedConnectorIds);
+    this.connectorRenderer.draw(this.page, this.connectorModelEnabled, renderedConnectorIds, numericColorToHex(this.backgroundColor));
     if (redrawNodes) {
       this.containerRenderer.draw(this.page, this.index, renderedNodeIds, this.backgroundColor);
       this.nodeRenderer.draw(this.page, this.index, renderedNodeIds, detailLevel, this.backgroundColor);

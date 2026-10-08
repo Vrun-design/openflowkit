@@ -1,11 +1,12 @@
 import { resolveAnnotationVisualStyle, resolveContainerVisualStyle } from '@/theme';
-import { nodePaletteName } from '../../domain/nodes/nodePalette';
+import { hasExplicitColor, nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneNode } from '../../domain/document/types';
 import {
   resolveSequenceNodePresentation,
   type SequenceNodePresentation,
 } from '../../domain/nodes/sequenceNodePresentation';
 import { normalizeHex } from '@/lib/colorUtils';
+import { isDarkCanvas, washOnDark } from '../../domain/color/adaptiveColor';
 import { pixiHexColor } from './pixiColor';
 
 export interface PixiSequenceNodeVisual {
@@ -29,7 +30,7 @@ export interface SequenceNodeColors {
 
 const pick = (value: string | undefined, fallback: string) => normalizeHex(value ?? '') ?? fallback;
 
-export function sequenceNodeColors(node: SceneNode): SequenceNodeColors | null {
+export function sequenceNodeColors(node: SceneNode, canvasColor?: string): SequenceNodeColors | null {
   const presentation = resolveSequenceNodePresentation(node);
   if (!presentation) return null;
   if (presentation.kind === 'sequence_note') {
@@ -50,7 +51,7 @@ export function sequenceNodeColors(node: SceneNode): SequenceNodeColors | null {
     presentation.kind === 'sequence_fragment' ? 'violet' : 'slate',
     nodePaletteName(node)
   );
-  return {
+  const ink = {
     presentation,
     fill: pick(colors.bg, '#ffffff'),
     stroke: pick(colors.border, '#94a3b8'),
@@ -58,10 +59,14 @@ export function sequenceNodeColors(node: SceneNode): SequenceNodeColors | null {
     subText: pick(colors.subText, '#64748b'),
     accentFill: pick(colors.badgeBg, '#e2e8f0'),
   };
+  // Only the default tint washes; a colour the author picked stays as it is.
+  const isDefault = presentation.colorMode === 'subtle'
+    && !hasExplicitColor(node, presentation.kind === 'sequence_fragment' ? presentation.colorKey : 'slate');
+  return isDefault && isDarkCanvas(canvasColor) ? washOnDark(ink, canvasColor) : ink;
 }
 
-export function projectSequenceNodeVisual(node: SceneNode): PixiSequenceNodeVisual | null {
-  const colors = sequenceNodeColors(node);
+export function projectSequenceNodeVisual(node: SceneNode, canvasColor?: string): PixiSequenceNodeVisual | null {
+  const colors = sequenceNodeColors(node, canvasColor);
   if (!colors) return null;
   return {
     presentation: colors.presentation,

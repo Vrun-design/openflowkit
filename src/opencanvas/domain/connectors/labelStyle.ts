@@ -1,6 +1,7 @@
 import type { SceneConnector } from '../document/types';
 import type { Bounds2d, Point2d } from '../geometry/types';
 import { resolveNodeStyle, type NodeStyle } from '../nodes/nodeStyle';
+import { isDarkCanvas } from '../color/adaptiveColor';
 
 // Connector labels share the node style vocabulary (docs/plan/phase-1-style.md
 // §1) under `label*` appearance keys, so the renderer, the label editor and
@@ -9,6 +10,8 @@ import { resolveNodeStyle, type NodeStyle } from '../nodes/nodeStyle';
 // Presentation resolves every connector every frame while dragging; the
 // appearance object is immutable, so its identity is the cache key.
 const cache = new WeakMap<object, NodeStyle>();
+// Styles whose plate is the unset default; only those follow a dark canvas.
+const defaultPlate = new WeakSet<NodeStyle>();
 
 export function resolveConnectorLabelStyle(connector: SceneConnector): NodeStyle {
   const a = connector.appearance;
@@ -33,7 +36,17 @@ export function resolveConnectorLabelStyle(connector: SceneConnector): NodeStyle
     },
   });
   cache.set(a, style);
+  if (a.labelBackground === undefined) defaultPlate.add(style);
   return style;
+}
+
+/** A default label plate is the canvas colour on a dark canvas, not paper-white; an explicit one stays. */
+export function connectorLabelOnCanvas(style: NodeStyle, canvasColor?: unknown): NodeStyle {
+  if (!defaultPlate.has(style) || !isDarkCanvas(canvasColor)) return style;
+  // Ink and border are remapped by value (the unset defaults), not by flag: a label colour set to exactly
+  // those defaults follows the canvas too.
+  return { ...style, fill: canvasColor, textColor: style.textColor === '#334155' ? '#e2e8f0' : style.textColor,
+    stroke: style.stroke === '#e2e8f0' ? '#475569' : style.stroke };
 }
 
 /** Labels wrap here, as the canvas draws them. */

@@ -1,6 +1,6 @@
 import { architectureCardLayout } from '../../domain/nodes/architectureCardLayout';
 import { FONT_STACKS, resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
-import { resolveAnnotationVisualStyle, resolveTextVisualStyle } from '@/theme';
+import { resolveTextVisualStyle } from '@/theme';
 import { nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import { boundsFromPoints } from '../../domain/geometry/bounds';
@@ -17,7 +17,7 @@ import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentatio
 import { nodeLabelBounds, nodeOutline } from '../../domain/nodes/nodeLabelBounds';
 import type { ConnectorMarkerGlyph, ProjectedConnector } from '../../domain/connectors/types';
 import { connectorMarkerShapes, type MarkerShape } from '../../domain/connectors/markers';
-import { connectorLabelLineHeight, connectorLabelLines, connectorLabelPlate } from '../../domain/connectors/labelStyle';
+import { connectorLabelLineHeight, connectorLabelLines, connectorLabelOnCanvas, connectorLabelPlate } from '../../domain/connectors/labelStyle';
 import { architectureIconBounds, resolveArchitectureNodePresentation } from '../../domain/nodes/architectureNodePresentation';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import {
@@ -36,6 +36,7 @@ import { descendantIds } from '../../domain/scene/queries';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
 import { measurePortableText } from '../../domain/text/measurement';
 import { SEQUENCE_ACTIVATION_WIDTH } from '../../domain/nodes/sequenceNodePresentation';
+import { annotationColors } from '../pixi/freeformNodeVisual';
 import { sequenceNodeColors } from '../pixi/sequenceNodeVisual';
 import { cameraFitMatrix } from '../../domain/animation/camera';
 import { PULSE_DASH } from '../../domain/animation/frame';
@@ -364,14 +365,10 @@ function exportAnnotationNode(
   node: SceneNode,
   matrix: Matrix2d,
   presentation: AnnotationNodePresentation,
+  theme: 'light' | 'dark' | 'print',
   frame: { readonly className: string; readonly style: string } | null
 ): string {
-  const colors = resolveAnnotationVisualStyle(
-    presentation.colorKey,
-    'subtle',
-    presentation.customColor,
-    nodePaletteName(node)
-  );
+  const colors = annotationColors(node, presentation, theme === 'dark' ? SVG_BACKGROUND.dark : undefined);
   const foldSize = Math.min(28, node.size.width / 4, node.size.height / 3);
   const fold = pathData([
     { x: node.size.width - foldSize, y: node.size.height },
@@ -605,8 +602,8 @@ function exportArchitectureCard(node: SceneNode, matrix: Matrix2d, style: NodeSt
 }
 
 /** Sequence participants and notes, drawn as PixiSequenceNodeRenderer draws them (same geometry, same ink). */
-function exportSequenceNode(node: SceneNode, matrix: Matrix2d, wrapper: ReturnType<typeof elementFrameStyle>): string | null {
-  const colors = sequenceNodeColors(node);
+function exportSequenceNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 'dark' | 'print', wrapper: ReturnType<typeof elementFrameStyle>): string | null {
+  const colors = sequenceNodeColors(node, theme === 'dark' ? SVG_BACKGROUND.dark : undefined);
   const presentation = colors?.presentation;
   if (!colors || !presentation || presentation.kind === 'sequence_fragment') return null;
   const ink = `stroke="${colors.stroke}"`;
@@ -657,7 +654,7 @@ function exportNode(
 ): string {
   const wrapper = elementFrameStyle('node', node.id, frame, node.size, animations);
   const chart = exportChartNode(node, matrix, theme, wrapper) ?? exportWidgetNode(node, matrix, theme, wrapper, parentOf)
-    ?? exportSequenceNode(node, matrix, wrapper);
+    ?? exportSequenceNode(node, matrix, theme, wrapper);
   if (chart) return chart;
   const freeform = resolveFreeformNodePresentation(node);
   if (freeform && (freeform.kind === 'pen' || freeform.kind === 'highlighter'
@@ -667,7 +664,7 @@ function exportNode(
   if (freeform?.kind === 'text') return exportTextNode(node, matrix, freeform, theme, wrapper);
   if (freeform?.kind === 'image') return exportImageNode(node, matrix, freeform, theme, wrapper);
   if (freeform && (freeform.kind === 'annotation' || freeform.kind === 'sticky'
-    || freeform.kind === 'callout')) return exportAnnotationNode(node, matrix, freeform, wrapper);
+    || freeform.kind === 'callout')) return exportAnnotationNode(node, matrix, freeform, theme, wrapper);
   const background = theme === 'dark' ? SVG_BACKGROUND.dark : SVG_BACKGROUND.light;
   // One resolver for every node kind: the renderer, the label editor and the
   // exporter cannot drift. Legacy content keys are its fallbacks, not ours.
@@ -847,7 +844,7 @@ export function exportCanonicalSvg(
       : connectorPathDash(state);
     const group = elementFrameStyle('connector', connector.id, state, undefined, options.animations);
     return `<g data-connector-id="${xml(connector.id)}"${group?.className ?? ''}${group?.style ?? ''}><path d="${connectorPathData(connector.commands)}"${pathAnimation} fill="none" stroke="${stroke}" stroke-width="${number(connector.presentation.stroke.width)}" opacity="${number(connector.presentation.stroke.opacity)}"${dash}${connector.presentation.stroke.dash.length && !dash ? ` stroke-dasharray="${connector.presentation.stroke.dash.map(number).join(' ')}"` : ''}/>`
-      + connector.labels.map((label) => connectorLabelMarkup(label.text, label.point, connector.presentation.label)).join('')
+      + connector.labels.map((label) => connectorLabelMarkup(label.text, label.point, connectorLabelOnCanvas(connector.presentation.label, theme === 'dark' ? background : undefined))).join('')
       + markerMarkup(connector, stroke)
       + '</g>';
   }).join('');

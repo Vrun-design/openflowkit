@@ -52,9 +52,10 @@ export class PixiSequenceNodeRenderer {
   drawNode(
     node: SceneNode,
     matrix: Matrix2d,
-    graphics: Graphics
+    graphics: Graphics,
+    canvasColor?: string
   ): PixiSequenceNodeDrawResult | null {
-    const visual = projectSequenceNodeVisual(node);
+    const visual = projectSequenceNodeVisual(node, canvasColor);
     if (!visual) return null;
     switch (visual.presentation.kind) {
       case 'sequence_participant':
