@@ -261,7 +261,8 @@ export function V2ExportMenu({
                 </Button>
               ) : null}
             </div>
-            <p className="ofk-caption">Share link: the whole document, encrypted in your browser. Read-only for viewers. “Delete link” removes the newest one made here.</p>
+            <p className="ofk-caption">Share link: the whole document, encrypted in your browser. Read-only for viewers. “Delete link” removes the newest one made here.{' '}
+              <a href="https://docs.openflowkit.com/share-links/" target="_blank" rel="noreferrer">How share links work</a></p>
           </>
         ) : null}
       </div>

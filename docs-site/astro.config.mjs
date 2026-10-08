@@ -12,7 +12,7 @@ const DOCS_DIR = fileURLToPath(new URL('./src/content/docs', import.meta.url));
 
 const CURATED = {
   'Start here': ['introduction', 'quick-start', 'local-first-diagramming'],
-  'Diagram as code': ['openflow-dsl', 'mermaid-import'],
+  'Diagram as code': ['openflow-dsl', 'mermaid-import', 'coming-from-structurizr'],
   'Diagram families': [
     'diagram-flowchart', 'diagram-architecture', 'diagram-sequence', 'diagram-state',
     'diagram-erd', 'diagram-class', 'diagram-mindmap', 'diagram-gitgraph', 'diagram-chart', 'diagram-wireframe',
@@ -20,7 +20,7 @@ const CURATED = {
   'The canvas': ['canvas-basics', 'shapes-and-connectors', 'insert-media', 'context-menu', 'properties-panel', 'settings', 'theming'],
   'Agents & MCP': ['mcp-server', 'prompting-agents'],
   'AI (bring your own key)': ['ai-generation'],
-  'Export & motion': ['exporting', 'animated-export'],
+  'Export & motion': ['exporting', 'animated-export', 'share-links'],
   'Architecture (C4)': ['architecture-c4', 'architecture-workspace'],
   Reference: ['openflow-dsl-reference', 'keyboard-shortcuts'],
 };

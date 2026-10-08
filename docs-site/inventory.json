@@ -571,6 +571,22 @@
       "page": "architecture-c4"
     },
     {
+      "id": "share-links",
+      "name": "Encrypted share links",
+      "status": "shipped",
+      "evidence": "src/services/share/shareClient.ts:55",
+      "notes": "The editor encrypts the document, the Worker stores only ciphertext (1 MiB cap, delete token, no expiry); the key stays in the link's # fragment.",
+      "page": "share-links"
+    },
+    {
+      "id": "structurizr-migration",
+      "name": "Coming from Structurizr",
+      "status": "shipped",
+      "evidence": "src/services/dsl/structurizrToDsl.ts:1",
+      "notes": "Guide for moving a Structurizr DSL workspace: import, losses, CLI convert, repo files, drift and PR diagrams.",
+      "page": "coming-from-structurizr"
+    },
+    {
       "id": "d2-import",
       "name": "D2 import",
       "status": "shipped",
@@ -991,10 +1007,10 @@
     },
     {
       "id": "collaboration-sharing",
-      "name": "Collaboration, share links, room IDs, viewer counts",
+      "name": "Live collaboration, room IDs, viewer counts",
       "status": "absent",
       "evidence": "src/",
-      "notes": "Removed in phase 0 with yjs; nothing in src/ mentions collaboration, share links, rooms or viewers."
+      "notes": "Removed in phase 0 with yjs; there is no live collaboration, rooms or viewer counts. Read-only share links are a separate feature (share-links)."
     },
     {
       "id": "infra-sync",
