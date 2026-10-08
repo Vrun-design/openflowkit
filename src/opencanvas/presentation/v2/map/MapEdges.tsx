@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import type { LaidEdge, LaidRect } from '../../../../dsl/map/elk';
-import type { AggEdge, LinkKind, Talk } from '../../../../dsl/map/types';
+import type { AggEdge, LinkKind, MapModel, Talk } from '../../../../dsl/map/types';
 import { edgeText } from '../../../../dsl/map/view';
 import { curve, roundedPath } from './geometry';
 import { FONT, measure } from './layout';
@@ -27,18 +27,27 @@ interface EdgesProps {
   byKey: ReadonlyMap<string, AggEdge>;
   selected: string | null;
   onSelect: (key: string) => void;
+  /** Boxes left undimmed by a selection; null when nothing is selected. */
+  near: ReadonlySet<string> | null;
+  /** Boxes whose arrows are in the Tab order (the selection and what it holds or sits in); others are reachable by click. */
+  tabbable: ReadonlySet<string> | null;
+  model?: MapModel;
 }
+const dimmed = (e: AggEdge, near: ReadonlySet<string> | null) => (near && !near.has(e.from) && !near.has(e.to) ? ' dim' : '');
 
 /** Arrow lines (rounded orthogonal ELK routes) and, in a later layer, their masked count labels. */
-export const MapEdgeLines = memo(function MapEdgeLines({ laid, byKey, selected, onSelect }: EdgesProps): React.JSX.Element {
+export const MapEdgeLines = memo(function MapEdgeLines({ laid, byKey, selected, onSelect, near, model, tabbable }: EdgesProps): React.JSX.Element {
   return (
     <>
       {laid.map((l) => {
         const e = byKey.get(l.key);
         if (!e || l.points.length < 2) return null;
+        const name = (id: string) => model?.nodes[id]?.name ?? id;
         const d = roundedPath(l.points);
         return (
-          <g key={l.key} className={`edge k-${e.kind}${selected === l.key ? ' sel' : ''}${e.inferred ? ' inferred' : ''}`} data-edge={l.key} onClick={(ev) => { ev.stopPropagation(); onSelect(l.key); }}>
+          <g key={l.key} className={`edge k-${e.kind}${selected === l.key ? ' sel' : ''}${e.inferred ? ' inferred' : ''}${dimmed(e, near)}`} data-edge={l.key} tabIndex={selected === l.key || tabbable?.has(e.from) || tabbable?.has(e.to) ? 0 : -1} role="button"
+            aria-label={`${name(e.from)} to ${name(e.to)}, ${e.kind}, ${edgeText(e)}`}
+            onClick={(ev) => { ev.stopPropagation(); onSelect(l.key); }} onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onSelect(l.key); } }}>
             <path className="line" d={d} strokeWidth={strokeOf(e)} markerEnd={`url(#mm-${e.kind})`} markerStart={e.both ? `url(#mm-${e.kind})` : undefined} />
             <path className="hit" d={d} />
           </g>
@@ -48,7 +57,7 @@ export const MapEdgeLines = memo(function MapEdgeLines({ laid, byKey, selected, 
   );
 });
 
-export const MapEdgeLabels = memo(function MapEdgeLabels({ laid, byKey, selected, onSelect }: EdgesProps): React.JSX.Element {
+export const MapEdgeLabels = memo(function MapEdgeLabels({ laid, byKey, selected, onSelect, near }: EdgesProps): React.JSX.Element {
   return (
     <>
       {laid.map((l) => {
@@ -57,7 +66,7 @@ export const MapEdgeLabels = memo(function MapEdgeLabels({ laid, byKey, selected
         const text = edgeText(e);
         const w = l.label.width;
         return (
-          <g key={l.key} className={`lbl${selected === l.key ? ' sel' : ''}`} transform={`translate(${l.label.x ?? 0},${l.label.y ?? 0})`} onClick={(ev) => { ev.stopPropagation(); onSelect(l.key); }}>
+          <g key={l.key} className={`lbl${selected === l.key ? ' sel' : ''}${dimmed(e, near)}`} transform={`translate(${l.label.x ?? 0},${l.label.y ?? 0})`} onClick={(ev) => { ev.stopPropagation(); onSelect(l.key); }}>
             <rect width={w} height={16} rx={2} />
             <text x={w / 2} y={11.5} textAnchor="middle">{text}</text>
           </g>

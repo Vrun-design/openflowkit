@@ -20,6 +20,8 @@ export interface MapBoxProps {
   canOpen: boolean;
   open: boolean;
   selected: boolean;
+  /** Not the selection's neighbourhood: drawn fainter (never the only cue). */
+  dim: boolean;
   /** Fixed-list hue of the part this box lives in; null for plain paper. */
   hue: string | null;
   depth: number;
@@ -29,7 +31,7 @@ export interface MapBoxProps {
 }
 
 /** One box. Geometry props are only the first paint: the motion loop owns transform, size and right/bottom anchors. */
-export const MapBox = memo(function MapBox({ node, rect, canOpen, open, selected, hue, depth, leaving, onActivate }: MapBoxProps): React.JSX.Element {
+export const MapBox = memo(function MapBox({ node, rect, canOpen, open, selected, dim, hue, depth, leaving, onActivate }: MapBoxProps): React.JSX.Element {
   const { width: w, height: h } = rect;
   const container = open && canOpen;
   const tinted = hue !== null && node.kind !== 'file' && node.kind !== 'more' && node.kind !== 'external';
@@ -40,7 +42,7 @@ export const MapBox = memo(function MapBox({ node, rect, canOpen, open, selected
   const eyebrowW = measure(eyebrow, FONT.eyebrow) + eyebrow.length * 1.4 + 12;
   return (
     <g data-box="" data-id={node.id} transform={`translate(${rect.x},${rect.y})`} style={style} tabIndex={leaving ? -1 : 0} role="button" pointerEvents={leaving ? 'none' : undefined}
-      className={`mb ${node.kind}${container ? ' open' : ''}${selected ? ' sel' : ''}${tinted ? ' tint' : ''}`} aria-label={`${node.name}${canOpen ? (open ? ', open' : ', closed') : ''}`}
+      className={`mb ${node.kind}${container ? ' open' : ''}${selected ? ' sel' : ''}${dim ? ' dim' : ''}${tinted ? ' tint' : ''}`} aria-label={`${node.name}${canOpen ? (open ? ', open' : ', closed') : ''}`}
       aria-expanded={canOpen ? open : undefined} onClick={(e) => { e.stopPropagation(); onActivate(node.id, true); }} onKeyDown={onKey}>
       <rect className="box" width={w} height={h} rx={container ? 8 : 6} strokeDasharray={node.kind === 'external' ? '5 3' : node.kind === 'more' ? '4 3' : undefined} />
       {container ? (

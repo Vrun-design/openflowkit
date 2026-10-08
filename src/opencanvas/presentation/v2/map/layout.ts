@@ -1,6 +1,6 @@
 import { fromElkLayout, toElkGraph, type ElkNode, type Laid } from '../../../../dsl/map/elk';
 import { aggregate } from '../../../../dsl/map/view';
-import type { AggEdge, MapModel, MapNode } from '../../../../dsl/map/types';
+import type { AggEdge, LinkKind, MapModel, MapNode } from '../../../../dsl/map/types';
 import { getElkInstance } from '../../../../services/elk-layout/runtime';
 import { foundation } from '../../design-system/tokens';
 
@@ -62,8 +62,8 @@ export const sizeOf = (n: MapNode): { width: number; height: number } =>
 export interface Scene { laid: Laid; edges: AggEdge[] }
 
 /** The engine's ELK graph, laid out in the shared elkjs worker. */
-export async function layoutMap(model: MapModel, expanded: ReadonlySet<string>): Promise<Scene> {
-  const { edges } = aggregate(model, expanded);
+export async function layoutMap(model: MapModel, expanded: ReadonlySet<string>, layers?: readonly LinkKind[]): Promise<Scene> {
+  const { edges } = aggregate(model, expanded, layers);
   const graph = toElkGraph(model, expanded, edges, sizeOf, (t) => measure(t, FONT.label));
   const elk = await getElkInstance();
   const out = (await elk.layout(graph as never)) as unknown as ElkNode;

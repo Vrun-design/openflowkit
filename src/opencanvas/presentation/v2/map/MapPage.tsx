@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ErrorState, SystemRoot } from '../../design-system';
 import { loadRepoMap } from '../../../../services/map/loadRepoMap';
@@ -29,7 +29,7 @@ export function MapPage(): React.JSX.Element {
   const [state, setState] = useState<State & { key: string }>({ key: '', status: 'reading', read: 0, total: 0, model: null });
   const key = `${pathname}/${attempt}`;
   const lastTick = useRef(0);
-  const repo = parseRepoPath(pathname.replace(/^\/map\/github\//, ''));
+  const repo = useMemo(() => parseRepoPath(pathname.replace(/^\/map\/github\//, '')), [pathname]);
 
   useEffect(() => {
     if (!repo) return undefined;
@@ -51,8 +51,7 @@ export function MapPage(): React.JSX.Element {
       set({ status: 'error', message: error instanceof RepoError ? error.message : 'Something went wrong reading this repo.' });
     });
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `repo` is derived from pathname
-  }, [key]);
+  }, [key, repo]);
 
   const fail = useCallback((message: string) => setState({ key, status: 'error', message }), [key]);
   const current = state.key === key ? state : null;
@@ -75,7 +74,7 @@ export function MapPage(): React.JSX.Element {
   const busy = !current.done;
   return (
     <SystemRoot appearance={appearance} density={preferences.density} className="map-root" data-testid="v2-map">
-      <MapSurface model={current.model} onError={fail} />
+      <MapSurface model={current.model} repo={repo} onError={fail} />
       {busy ? <div className="map-progress" role="status">{`Reading files ${current.read} of ${current.total}`}</div> : null}
     </SystemRoot>
   );
