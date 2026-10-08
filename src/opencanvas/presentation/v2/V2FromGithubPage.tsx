@@ -1,39 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button, ErrorState, Field, Progress } from '../design-system';
+import { Button, ErrorState, Progress } from '../design-system';
 import { capUnits, discoverArchitecture, discoveryToDsl } from '../../../dsl/discovery/discovery';
 import { fetchRepoFiles, githubEvidenceLink, parseRepoPath, RepoError, type RepoRef } from '../../../services/discovery/githubRepo';
 import { mintV2Id, type V2StartIntent } from './v2Document';
-import { V2StateHero, type V2StateHeroKind } from './V2StateHero';
+import { V2StateHero } from './V2StateHero';
+import { cliCommand, describeRepoError, keepToken, RepoTokenForm, storedToken, type RepoProblemView } from './v2RepoProblem';
 import { V2StateShell } from './V2StateShell';
 import './v2EditorPage.css';
 
 const MAX_UNITS = 40;
-const CLI = 'Try the CLI on a checkout: npx -p @vrun-design/openflowkit-mcp openflowkit discover .';
-
-// The token lives in this tab's sessionStorage only: never logged, never in a URL.
-const TOKEN_KEY = 'ofk.github-token';
-const storedToken = (): string | undefined => { try { return sessionStorage.getItem(TOKEN_KEY) ?? undefined; } catch { return undefined; } };
-const keepToken = (token: string | null): void => { try { if (token) sessionStorage.setItem(TOKEN_KEY, token); else sessionStorage.removeItem(TOKEN_KEY); } catch { /* storage blocked: the token is used for this try only */ } };
+const CLI = `Try the CLI on a checkout: ${cliCommand('discover')}`;
 
 type Outcome =
   | { readonly status: 'reading'; readonly done: number; readonly total: number }
-  | { readonly status: 'problem'; readonly title: string; readonly detail: string; readonly retry: boolean; readonly hero: V2StateHeroKind; readonly askToken?: boolean }
+  | RepoProblemView
   | { readonly status: 'notes'; readonly notes: readonly string[]; readonly source: string };
 
 const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? '' : 's'}`;
-
-function describe(error: unknown): Extract<Outcome, { status: 'problem' }> {
-  if (!(error instanceof RepoError)) return { status: 'problem', title: 'Something went wrong reading this repo.', detail: 'Try again, or use the CLI on a checkout.', retry: true, hero: 'torn-page' };
-  switch (error.problem.kind) {
-    case 'not-found': return { status: 'problem', title: 'This repo was not found, or it is private.', detail: `${error.message} Check the spelling, or use the CLI on a checkout.`, retry: false, hero: 'lost-link' };
-    case 'rate-limited': return { status: 'problem', title: 'GitHub is limiting reads from your network.', detail: error.message, retry: false, hero: 'torn-page', askToken: true };
-    case 'token-rejected': return { status: 'problem', title: 'That GitHub token was rejected.', detail: error.message, retry: false, hero: 'lost-link', askToken: true };
-    case 'offline': return { status: 'problem', title: 'GitHub could not be reached.', detail: 'Check your connection and try again.', retry: true, hero: 'torn-page' };
-    case 'empty': return { status: 'problem', title: 'This repo is empty.', detail: 'There is nothing in it to draw yet.', retry: false, hero: 'no-canvas' };
-    default: return { status: 'problem', title: 'GitHub had a problem.', detail: error.message, retry: true, hero: 'torn-page' };
-  }
-}
 
 /** The repo's text diagram, and what the editor cannot tell the user about it. */
 async function readRepo(repo: RepoRef, signal: AbortSignal, onProgress: (done: number, total: number) => void): Promise<Outcome> {
@@ -55,21 +39,6 @@ async function readRepo(repo: RepoRef, signal: AbortSignal, onProgress: (done: n
     ...(read.unread + read.skipped ? [`Read ${read.files.length + read.failed} of ${read.wanted} relevant files; the rest were left out to keep this quick.`] : []),
   ];
   return { status: 'notes', notes, source: discoveryToDsl(result, repo.repo, githubEvidenceLink(repo)) };
-}
-
-function TokenForm({ onSubmit, home }: { readonly onSubmit: (token: string) => void; readonly home: React.ReactNode }): React.JSX.Element {
-  const [token, setToken] = useState('');
-  return (
-    <form className="ofk-v2-state-token" onSubmit={(event) => { event.preventDefault(); onSubmit(token.trim()); }}>
-      <Field label="GitHub token (optional)" type="password" autoComplete="new-password" spellCheck={false} value={token} onChange={(event) => setToken(event.target.value)}
-        hint="A token raises the limit to 5,000/hour. Use a fine-grained token with public-repo read only. It stays in this browser tab." />
-      <a className="ofk-caption" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Create a fine-grained token on GitHub</a>
-      <div className="ofk-empty-actions">
-        <Button variant="primary" type="submit">Try with token</Button>
-        {home}
-      </div>
-    </form>
-  );
 }
 
 /** `#/from/github/<owner>/<repo>[/tree/<ref>]`: read a public repo in the browser and open its architecture in the editor. */
@@ -97,7 +66,7 @@ export function V2FromGithubPage(): React.JSX.Element {
         if (outcome.status === 'notes' && outcome.notes.length === 0) navigate(`/d/${mintV2Id('doc')}`, { replace: true, state: { source: outcome.source } satisfies V2StartIntent });
         else publish(outcome);
       },
-      (error: unknown) => { if (!controller.signal.aborted) publish(describe(error)); },
+      (error: unknown) => { if (!controller.signal.aborted) publish(describeRepoError(error, 'discover')); },
     );
     return () => controller.abort();
   }, [pathname, request, navigate]);
@@ -111,7 +80,7 @@ export function V2FromGithubPage(): React.JSX.Element {
       {outcome?.status === 'problem' ? (
         <ErrorState hero={<V2StateHero kind={outcome.hero} />} title={outcome.title} description={outcome.detail}
           {...(outcome.askToken
-            ? { action: <TokenForm home={home(false)} onSubmit={(token) => { if (token) keepToken(token); setAttempt((count) => count + 1); }} /> }
+            ? { action: <RepoTokenForm home={home(false)} onSubmit={(token) => { if (token) keepToken(token); setAttempt((count) => count + 1); }} /> }
             : outcome.retry ? { onRetry: () => setAttempt((count) => count + 1), secondary: home(false) } : { action: home(true) })} />
       ) : outcome?.status === 'notes' ? (
         <div className="ofk-empty" data-hero="" role="status">

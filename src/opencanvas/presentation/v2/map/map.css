@@ -41,8 +41,7 @@
 .ov rect { fill: var(--ofk-canvas); stroke: var(--ofk-selection); stroke-width: 1; }
 .ov text { font: 600 10px var(--ofk-mono); fill: var(--ofk-selection); }
 
-.map-note { position: absolute; left: 12px; bottom: 12px; padding: 6px 10px; background: var(--ofk-canvas); border: 1px solid var(--ofk-selection); border-radius: 6px; font: 400 11px var(--ofk-mono); color: var(--ofk-selection); }
-.map-progress { position: absolute; right: 12px; bottom: 12px; padding: 4px 8px; background: var(--ofk-canvas); border: 1px solid var(--ofk-border); border-radius: 6px; font: 400 11px var(--ofk-mono); color: var(--ofk-muted); }
+.map-note { position: absolute; left: 12px; bottom: 56px; padding: 6px 10px; background: var(--ofk-canvas); border: 1px solid var(--ofk-selection); border-radius: 6px; font: 400 11px var(--ofk-mono); color: var(--ofk-selection); }
 
 .mb.dim, .edge.dim, .lbl.dim { opacity: 0.35; }
 .edge:focus-visible { outline: none; }
@@ -67,8 +66,12 @@
 .map-item-name { font-weight: 600; overflow-wrap: anywhere; }
 .map-file { margin-bottom: 8px; }
 .map-line { display: flex; gap: 8px; align-items: baseline; }
+.map-lineno { color: var(--ofk-muted); font: 500 11px var(--ofk-mono); flex: none; }
 .map-line a { color: var(--ofk-info); font: 500 11px var(--ofk-mono); flex: none; }
 .map-line code { font: 400 11px var(--ofk-mono); color: var(--ofk-secondary); overflow-wrap: anywhere; }
 @media (max-width: 720px) { .map-search input { width: 120px; } }
 .map-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .map-empty { padding: 8px 10px; font: 400 12px var(--ofk-font); color: var(--ofk-muted); }
+.map-status { position: absolute; left: 12px; bottom: 12px; display: grid; gap: 6px; justify-items: start; }
+.map-chip { padding: 4px 10px; background: var(--ofk-surface); border: 1px solid var(--ofk-border); border-radius: 8px; font: 400 11px var(--ofk-mono); color: var(--ofk-secondary); }
+.map-chip .ofk-progress { min-width: 220px; }

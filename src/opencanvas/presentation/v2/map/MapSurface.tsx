@@ -3,11 +3,11 @@ import { insights } from '../../../../dsl/map/insights';
 import { depthOf, isInside, pathTo } from '../../../../dsl/map/tree';
 import type { AggEdge, Depth, LinkKind, MapModel } from '../../../../dsl/map/types';
 import { linksOf, presets, visible } from '../../../../dsl/map/view';
-import { githubEvidenceLink, type RepoRef } from '../../../../services/discovery/githubRepo';
-import { frameBox, landing, MOVE_MS, zoomAt, type Cam, type Viewport } from './geometry';
+import { frameBox, landing, MOVE_MS, topLeftOpen, zoomAt, type Cam, type Viewport } from './geometry';
 import { layoutMap, type Scene } from './layout';
 import { MapBox } from './MapBox';
 import { MapDefs, MapEdgeLabels, MapEdgeLines, MapHighlights } from './MapEdges';
+import type { EvidenceLink } from './MapEvidence';
 import { MapPanel } from './MapPanel';
 import { MapToolbar } from './MapToolbar';
 import { Motion, type MotionItem } from './motion';
@@ -21,7 +21,8 @@ import './map.css';
 const HUES = ['#4f7cd4', '#d4764f', '#4fa37c', '#a85fc9', '#c9a23f', '#3fa8b8', '#c95f84', '#7a8a3f'];
 const BUDGET = 420;
 const KINDS: LinkKind[] = ['import', 'call', 'data', 'build'];
-const VIEW = { top: 48, bottom: 24, pad: 24 };
+// Visible area: below the toolbar strip, beside the panel (a bottom sheet on a phone).
+const VIEW = { top: 72, bottom: 24, pad: 24 };
 
 interface View { model: MapModel; expanded: ReadonlySet<string>; scene: Scene; ids: string[]; leaving: Leaving[] }
 interface Plan { items: MotionItem[]; cam: Cam | null; ms: number }
@@ -30,7 +31,7 @@ interface Want { model: MapModel; expanded: ReadonlySet<string>; focus: string |
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PANEL_W = 340;
 
-export const MapSurface = memo(function MapSurface({ model, repo, onError }: { model: MapModel; repo: RepoRef; onError?: (message: string) => void }): React.JSX.Element {
+export const MapSurface = memo(function MapSurface({ model, storageKey, evidenceLink, onError }: { model: MapModel; storageKey: string; evidenceLink: EvidenceLink; onError?: (message: string) => void }): React.JSX.Element {
   const svgRef = useRef<SVGSVGElement>(null);
   const camRef = useRef<SVGGElement>(null);
   const edgesRef = useRef<SVGGElement>(null);
@@ -42,17 +43,19 @@ export const MapSurface = memo(function MapSurface({ model, repo, onError }: { m
   const [note, setNote] = useState<string | null>(null);
   const [depth, setDepth] = useState<Depth | null>(null);
   const [off, setOff] = useState<ReadonlySet<LinkKind>>(new Set());
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 720); // a phone starts with the map, not the sheet
   const searchRef = useRef<HTMLInputElement>(null);
   const plan = useRef<Plan | null>(null);
-  const live = useRef({ model, expanded: new Set<string>(), touched: false, scene: null as Scene | null, view: null as View | null, userCam: false, landNext: false, mounted: true, off: new Set<LinkKind>(), panel: true });
+  const live = useRef({ model, expanded: new Set<string>(), touched: false, scene: null as Scene | null, view: null as View | null, userCam: false, landNext: false, mounted: true, off: new Set<LinkKind>(), panel: window.innerWidth > 720 });
   const want = useRef<Want | null>(null);
   const busy = useRef(false);
 
   const viewport = (): Viewport => {
     const b = svgRef.current?.getBoundingClientRect();
-    const panel = live.current.panel && window.innerWidth > 720 ? PANEL_W : 0;
-    return { width: (b?.width ?? 1000) - panel, height: b?.height ?? 700, ...VIEW };
+    const open = live.current.panel;
+    const wide = window.innerWidth > 720;
+    const height = b?.height ?? 700;
+    return { width: (b?.width ?? 1000) - (open && wide ? PANEL_W : 0), height, ...VIEW, bottom: open && !wide ? height * 0.6 : VIEW.bottom };
   };
 
   const commit = useCallback((m: MapModel, expanded: ReadonlySet<string>, scene: Scene, focus: string | null, auto: boolean) => {
@@ -65,7 +68,7 @@ export const MapSurface = memo(function MapSurface({ model, repo, onError }: { m
     const wantCam = first || live.current.landNext || auto;
     live.current.landNext = false;
     const focusRect = focus ? rects.get(focus) : undefined;
-    const cam = wantCam ? landing(scene.laid.size, focusRect, viewport()) : null;
+    const cam = wantCam ? landing(scene.laid.size, focusRect, viewport(), topLeftOpen(rects)) : null;
     plan.current = { items, cam, ms: first || reducedMotion() ? 0 : MOVE_MS };
     live.current.scene = scene;
     live.current.view = { model: m, expanded, scene, ids, leaving };
@@ -107,12 +110,12 @@ export const MapSurface = memo(function MapSurface({ model, repo, onError }: { m
     const l = live.current;
     l.model = model;
     const keep = [...l.expanded].filter((id) => model.nodes[id] && canOpen(model, id));
-    const saved = savedDepth(repo);
+    const saved = savedDepth(storageKey);
     l.expanded = l.touched ? new Set(keep) : presets(model)[saved ?? 'overview'];
     if (!l.touched) setDepth(saved ?? 'overview');
     setSelected((s) => (s?.type === 'node' && !model.nodes[s.id] ? null : s));
     relayout(model, l.expanded, null, !l.touched && !l.userCam);
-  }, [model, repo, relayout]);
+  }, [model, storageKey, relayout]);
 
   useLayoutEffect(() => {
     const p = plan.current;
@@ -163,7 +166,7 @@ export const MapSurface = memo(function MapSurface({ model, repo, onError }: { m
 
   /** Toolbar and panel actions hand focus back to the map, so its keys keep working. */
   const focusMap = () => { window.setTimeout(() => svgRef.current?.focus(), 60); };
-  const chooseDepth = (d: Depth) => { saveDepth(repo, d); apply(presets(live.current.model)[d], null, d, false); focusMap(); };
+  const chooseDepth = (d: Depth) => { saveDepth(storageKey, d); apply(presets(live.current.model)[d], null, d, false); focusMap(); };
   const toggleLayer = (kind: LinkKind) => {
     const l = live.current;
     const next = new Set(l.off);
@@ -228,7 +231,6 @@ export const MapSurface = memo(function MapSurface({ model, repo, onError }: { m
   const shownModel = view?.model ?? model;
   const facts = useMemo(() => insights(shownModel), [shownModel]);
   const counts = useMemo(() => layerCounts(shownModel), [shownModel]);
-  const link = useMemo(() => githubEvidenceLink(repo), [repo]);
   const talks = useMemo(() => (view && selected?.type === 'node' && view.model.nodes[selected.id] ? linksOf(view.model, selected.id, view.expanded) : []), [view, selected]);
   const touching = useMemo(() => (view && selected?.type === 'node' && view.model.nodes[selected.id] ? new Set(view.ids.filter((id) => isInside(view.model, id, selected.id) || isInside(view.model, selected.id, id))) : null), [view, selected]);
   const near = useMemo(() => (view && selected?.type === 'node' && view.model.nodes[selected.id] ? neighbours(view.model, view.ids, selected.id, talks) : null), [view, selected, talks]);
@@ -263,7 +265,7 @@ export const MapSurface = memo(function MapSurface({ model, repo, onError }: { m
         onLevel={() => { const s = live.current.view; if (s) apply(oneLevel(s.model, s.expanded), selected?.type === 'node' ? selected.id : null, null); focusMap(); }}
         onCollapse={() => { apply(new Set(), null, null, false); focusMap(); }} panelOpen={panelOpen} onPanel={togglePanel} />
       {note ? <div className="map-note" role="status">{note}</div> : null}
-      {panelOpen ? <MapPanel model={shownModel} selected={selected} edge={selKey ? byKey.get(selKey) : undefined} talks={talks} insights={facts} link={link} onReveal={reveal} onClose={togglePanel} /> : null}
+      {panelOpen ? <MapPanel model={shownModel} selected={selected} edge={selKey ? byKey.get(selKey) : undefined} talks={talks} insights={facts} evidenceLink={evidenceLink} onReveal={reveal} onClose={togglePanel} /> : null}
     </div>
   );
 });

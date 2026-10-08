@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cubicBezier, curve, ease, frameBox, landing, roundedPath, zoomAt } from './geometry';
+import { cubicBezier, curve, ease, frameBox, landing, roundedPath, topLeftOpen, zoomAt } from './geometry';
 
 const view = { width: 1000, height: 700, top: 50, bottom: 50, pad: 24 };
 
@@ -34,5 +34,23 @@ describe('geometry', () => {
     const c = curve({ x: 0, y: 0, width: 10, height: 10 }, { x: 100, y: 0, width: 10, height: 10 });
     expect(c.d.startsWith('M10,5')).toBe(true);
     expect(c.mid.x).toBeGreaterThan(10);
+  });
+});
+
+describe('landing on a big map', () => {
+  const big = { width: 6000, height: 4000 };
+  it('starts at the top-left open box at a readable scale when nothing was opened', () => {
+    const cam = landing(big, undefined, view, { x: 100, y: 200, width: 500, height: 400 });
+    expect(cam.k).toBe(0.6);
+    expect(cam.x + 100 * cam.k).toBeCloseTo(view.pad);
+    expect(cam.y + 200 * cam.k).toBeGreaterThanOrEqual(view.top);
+  });
+  it('still fits a map that is readable whole', () => {
+    expect(landing({ width: 800, height: 500 }, undefined, view, { x: 0, y: 0, width: 10, height: 10 }).k).toBeGreaterThanOrEqual(0.6);
+  });
+  it('picks the top row first, then the leftmost', () => {
+    const r = (x: number, y: number) => ({ x, y, width: 10, height: 10, open: true });
+    expect(topLeftOpen(new Map([['a', r(500, 0)], ['b', r(100, 10)], ['c', r(0, 300)]]))).toMatchObject({ x: 100 });
+    expect(topLeftOpen(new Map([['a', { ...r(0, 0), open: false }]]))).toBeUndefined();
   });
 });

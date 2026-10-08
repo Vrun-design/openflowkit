@@ -37,10 +37,29 @@ export function frameBox(box: Rect, view: Viewport, maxK = 1.15, minK = 0.2): Ca
   return { k, x: view.width / 2 - (box.x + box.width / 2) * k, y: view.top + h / 2 - (box.y + box.height / 2) * k };
 }
 
-/** Fit everything when that stays readable (k >= 0.6); else frame the box that was just opened at k >= 0.6. */
-export function landing(size: { width: number; height: number }, focus: Rect | undefined, view: Viewport): Cam {
+/** Scale below which text on a box is not readable. */
+export const READABLE = 0.6;
+
+/**
+ * Fit everything when that stays readable (k >= 0.6). Otherwise frame the box that was just opened at k >= 0.6;
+ * with no such box, start at `anchor`'s top-left corner at k = 0.6, so the reader begins at a known place and pans.
+ */
+export function landing(size: { width: number; height: number }, focus: Rect | undefined, view: Viewport, anchor?: Rect): Cam {
   const all = frameBox({ x: 0, y: 0, ...size }, view);
-  return all.k >= 0.6 || !focus ? all : frameBox(focus, view, 1, 0.6);
+  if (all.k >= READABLE) return all;
+  if (focus) return frameBox(focus, view, 1, READABLE);
+  if (!anchor) return all;
+  return { k: READABLE, x: view.pad - anchor.x * READABLE, y: view.top + view.pad - anchor.y * READABLE };
+}
+
+/** The open box nearest the top-left of the map: the top row first, then the leftmost in it. */
+export function topLeftOpen(rects: ReadonlyMap<string, Rect & { open: boolean }>): Rect | undefined {
+  let best: Rect | undefined;
+  for (const r of rects.values()) {
+    if (!r.open) continue;
+    if (!best || Math.round(r.y / 40) < Math.round(best.y / 40) || (Math.round(r.y / 40) === Math.round(best.y / 40) && r.x < best.x)) best = r;
+  }
+  return best;
 }
 
 export const zoomAt = (cam: Cam, factor: number, px: number, py: number): Cam => {

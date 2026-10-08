@@ -1,10 +1,11 @@
 import type { AggEdge, Evidence, MapModel } from '../../../../dsl/map/types';
 import { edgeText } from '../../../../dsl/map/view';
 
-type LinkFor = (e: { file: string; line: number }) => string;
+/** A link for a `file:line`, or null when the repo has no web home (the line is then plain text). */
+export type EvidenceLink = (file: string, line: number) => string | null;
 
 /** One direction's evidence, grouped by file; every line links to GitHub. `total` is the exact count; evidence is capped by the engine. */
-function Direction({ title, evidence, total, link }: { title: string; evidence: readonly Evidence[]; total: number; link: LinkFor }): React.JSX.Element {
+function Direction({ title, evidence, total, link }: { title: string; evidence: readonly Evidence[]; total: number; link: EvidenceLink }): React.JSX.Element {
   const byFile = new Map<string, Evidence[]>();
   for (const e of evidence) byFile.set(e.file, [...(byFile.get(e.file) ?? []), e]);
   const more = total - evidence.length;
@@ -16,7 +17,7 @@ function Direction({ title, evidence, total, link }: { title: string; evidence: 
           <div className="map-path">{file}</div>
           {lines.map((e, i) => (
             <div key={i} className="map-line">
-              <a href={link(e)} target="_blank" rel="noreferrer noopener">{`:${e.line}`}</a>
+              {(() => { const href = link(e.file, e.line); return href ? <a href={href} target="_blank" rel="noreferrer noopener">{`:${e.line}`}</a> : <span className="map-lineno">{`:${e.line}`}</span>; })()}
               <code>{e.text}</code>
             </div>
           ))}
@@ -28,7 +29,7 @@ function Direction({ title, evidence, total, link }: { title: string; evidence: 
 }
 
 /** Arrow details: both directions with their exact lines. */
-export function MapEvidence({ model, edge, link }: { model: MapModel; edge: AggEdge; link: LinkFor }): React.JSX.Element {
+export function MapEvidence({ model, edge, link }: { model: MapModel; edge: AggEdge; link: EvidenceLink }): React.JSX.Element {
   const a = model.nodes[edge.from]?.name ?? edge.from;
   const b = model.nodes[edge.to]?.name ?? edge.to;
   return (

@@ -1,7 +1,7 @@
 import type { Insights } from '../../../../dsl/map/insights';
 import type { AggEdge, MapModel, Talk } from '../../../../dsl/map/types';
 import { Button, Panel } from '../../design-system';
-import { MapEvidence } from './MapEvidence';
+import { MapEvidence, type EvidenceLink } from './MapEvidence';
 import type { Selected } from './navigate';
 
 const fmt = (n: number): string => n.toLocaleString('en-US');
@@ -12,7 +12,7 @@ interface Props {
   edge: AggEdge | undefined;
   talks: readonly Talk[];
   insights: Insights;
-  link: (e: { file: string; line: number }) => string;
+  evidenceLink: EvidenceLink;
   onReveal: (id: string) => void;
   onClose: () => void;
 }
@@ -76,13 +76,13 @@ function NodeDetail({ model, id, talks, onReveal }: { model: MapModel; id: strin
 }
 
 /** The right-hand panel: overview, one box, or one arrow. No flow view yet: nothing produces flows without AI (P6). */
-export function MapPanel({ model, selected, edge, talks, insights, link, onReveal, onClose }: Props): React.JSX.Element {
+export function MapPanel({ model, selected, edge, talks, insights, evidenceLink, onReveal, onClose }: Props): React.JSX.Element {
   const node = selected?.type === 'node' ? model.nodes[selected.id] : undefined;
   const title = node ? node.name : edge ? 'Arrow' : 'Overview';
   return (
     <Panel title={title} onClose={onClose} closeLabel="Close details" className="map-panel">
       {node ? <NodeDetail model={model} id={node.id} talks={talks} onReveal={onReveal} />
-        : edge ? <MapEvidence model={model} edge={edge} link={link} />
+        : edge ? <MapEvidence model={model} edge={edge} link={evidenceLink} />
           : <Overview model={model} insights={insights} onReveal={onReveal} />}
     </Panel>
   );
