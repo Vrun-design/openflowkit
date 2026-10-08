@@ -43,6 +43,8 @@ export interface ArchRelation {
   readonly to: string;
   readonly label?: string;
   readonly tech?: string;
+  /** Evidence or doc URL (`[link: …]`); user-editable, so render only https. */
+  readonly link?: string;
   readonly tags: readonly string[];
   readonly attrs?: readonly { readonly key?: string; readonly value: string }[];
   readonly line?: number;

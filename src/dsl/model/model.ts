@@ -255,6 +255,7 @@ function relationFromJson(value: unknown): ArchRelation | null {
     ...(canonicalAttrs(value.attrs).length ? { attrs: canonicalAttrs(value.attrs) } : {}),
     ...(typeof value.label === 'string' ? { label: value.label } : {}),
     ...(typeof value.tech === 'string' ? { tech: value.tech } : {}),
+    ...(typeof value.link === 'string' ? { link: value.link } : {}),
     ...(typeof value.line === 'number' ? { line: value.line } : {}),
     ...(value.implied === true ? { implied: true } : {}),
   };

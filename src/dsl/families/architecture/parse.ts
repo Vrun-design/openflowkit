@@ -136,6 +136,7 @@ interface RelationDraft {
   readonly to: string;
   readonly label?: string;
   readonly tech?: string;
+  readonly link?: string;
   readonly tags: readonly string[];
   readonly attrs?: readonly CanonicalAttribute[];
 }
@@ -256,6 +257,7 @@ export function parseArchitectureWorkspace(
       to: edge.to.id ?? edge.to.label,
       ...(edge.label ?? typed.values.get('label') ? { label: edge.label ?? typed.values.get('label')! } : {}),
       ...(typed.values.has('tech') ? { tech: typed.values.get('tech')! } : {}),
+      ...(typed.values.has('link') ? { link: typed.values.get('link')! } : {}),
       ...(typed.attrs.length ? { attrs: typed.attrs } : {}),
     };
     pendingRelations.push(draft);
@@ -606,6 +608,7 @@ export function parseArchitectureWorkspace(
       id: occurrence ? `${pair}:${occurrence + 1}` : pair, from: from.id, to: to.id, tags: entry.tags,
       ...(entry.label ? { label: entry.label } : {}),
       ...(entry.tech ? { tech: entry.tech } : {}),
+      ...(entry.link ? { link: entry.link } : {}),
       ...(entry.attrs ? { attrs: entry.attrs } : {}),
       line: entry.line,
     });

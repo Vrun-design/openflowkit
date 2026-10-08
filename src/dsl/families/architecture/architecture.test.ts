@@ -231,6 +231,24 @@ views { view container of "Docs Site" }
     expect(await format(text)).toContain('view container of Docs Site');
   });
 
+  it('keeps a relation link as a typed field and writes it back', async () => {
+    const text = `architecture
+model {
+  system A
+  system B
+  A -> B : uses [link: https://github.com/x/y/blob/HEAD/f#L1]
+}
+views { view landscape }
+`;
+    const raw = dslFrameRaw((await compile(text)).frame);
+    const relation = (raw.arch as { model: { relations: { link?: string; attrs?: unknown }[] } }).model.relations[0]!;
+    expect(relation.link).toBe('https://github.com/x/y/blob/HEAD/f#L1');
+    expect(relation.attrs).toBeUndefined();
+    const canonical = await format(text);
+    expect(canonical).toContain('A -> B : uses [link: https://github.com/x/y/blob/HEAD/f#L1]');
+    expect(await format(canonical)).toBe(canonical);
+  });
+
   it('is idempotent for every example', async () => {
     for (const text of [CONTEXT, CONTAINER, TWO_SYSTEMS]) {
       const canonical = await format(text);

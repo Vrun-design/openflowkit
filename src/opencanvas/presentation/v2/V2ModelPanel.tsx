@@ -5,7 +5,7 @@ import {
 } from '@tabler/icons-react';
 import { modelTags } from '../../../dsl/model/predicates';
 import { elementAncestors, elementDescendantIds, elementPathRef, type ArchIndex } from '../../../dsl/model/model';
-import type { ArchElement, ArchFlow, ArchView } from '../../../dsl/model/types';
+import type { ArchElement, ArchFlow, ArchRelation, ArchView } from '../../../dsl/model/types';
 import { Button, Icon, IconButton, Panel, Tabs } from '../design-system';
 import type { ArchitectureCrumb, V2Architecture } from './useV2Architecture';
 
@@ -60,6 +60,31 @@ function elementRows(index: ArchIndex, collapsed: ReadonlySet<string>, query: st
   };
   walk(index.model.elements.filter((element) => !element.parent).map((element) => element.id), 0);
   return rows;
+}
+
+/** DSL is user-editable: only an https URL may become an anchor. */
+const safeHttpsUrl = (value: string): string | null => value.startsWith('https://') ? value : null;
+
+export function ElementLinks({ links }: { readonly links: readonly string[] }): React.JSX.Element {
+  return (
+    <span className="ofk-v2-model-links">
+      {links.map((link) => safeHttpsUrl(link)
+        ? <a key={link} href={link} target="_blank" rel="noopener noreferrer"><Icon icon={IconExternalLink} />{link.split('/').pop()}</a>
+        : <span key={link}>{link}</span>)}
+    </span>
+  );
+}
+
+/** The relation's label and tech, then its `link` attribute: DSL is user-editable, so only an https URL becomes an anchor. */
+export function RelationNote({ relation }: { readonly relation: Pick<ArchRelation, 'label' | 'tech' | 'link'> }): React.JSX.Element {
+  const { link } = relation;
+  return (
+    <span className="ofk-v2-model-hint">
+      {relation.label ?? 'Unlabelled relationship'}{relation.tech ? ` · ${relation.tech}` : ''}
+      {link ? <>{' · '}{safeHttpsUrl(link)
+        ? <a href={link} target="_blank" rel="noopener noreferrer">Source<Icon icon={IconExternalLink} /></a> : link}</> : null}
+    </span>
+  );
 }
 
 function viewKindLabel(view: ArchView): string {
@@ -174,7 +199,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
                           {at ? ' → ' : ''}<button type="button" className="ofk-v2-model-relation-link" aria-label={`Inspect ${index.byId.get(id)?.name ?? id}`}
                             onClick={() => { setInspection({id, selectedAtClick: props.selectedElementId}); props.onSelectElement(id); }}>{index.byId.get(id)?.name ?? id}</button>
                         </span>)}</span>
-                        <span className="ofk-v2-model-hint">{relation.label ?? 'Unlabelled relationship'}{relation.tech ? ` · ${relation.tech}` : ''}</span>
+                        <RelationNote relation={relation} />
                       </li>)}
                     </ul>
                     {!model.relations.some((relation) => relation.from === selected.id || relation.to === selected.id) ? <p className="ofk-v2-model-hint">No incoming or outgoing relationships.</p> : null}
@@ -374,15 +399,7 @@ function ElementInspector(props: ElementInspectorProps): React.JSX.Element {
       </label>
       <div className="ofk-v2-model-inspector-actions">
         <Button type="submit" variant="primary" disabled={props.readOnly}>Apply</Button>
-        {element.links.length > 0 ? (
-          <span className="ofk-v2-model-links">
-            {element.links.map((link) => (
-              <a key={link} href={link} target="_blank" rel="noreferrer">
-                <Icon icon={IconExternalLink} />{link.split('/').pop()}
-              </a>
-            ))}
-          </span>
-        ) : null}
+        {element.links.length > 0 ? <ElementLinks links={element.links} /> : null}
       </div>
       <div className="ofk-v2-model-danger">
         {confirming ? (

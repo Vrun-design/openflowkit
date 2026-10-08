@@ -127,6 +127,7 @@ function elementAttributes(element: ArchElement): CanonicalAttribute[] {
 function relationAttributes(relation: ArchRelation): CanonicalAttribute[] {
   const entries: CanonicalAttribute[] = [...(relation.attrs ?? [])];
   if (relation.tech) entries.push({ key: 'tech', value: relation.tech });
+  if (relation.link) entries.push({ key: 'link', value: relation.link });
   if (relation.tags.length) entries.push({ key: 'tags', value: relation.tags.join(', ') });
   return sortAttributes(entries);
 }

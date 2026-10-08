@@ -47,6 +47,8 @@ const SHARED_KERNEL = [
   path.join(srcDir, 'services', 'workspace'),
   // Share links: WebCrypto envelope + fetch adapter for the share Worker (D6).
   path.join(srcDir, 'services', 'share'),
+  // Repo → diagram: fetch adapter that reads a public GitHub repo for discovery.
+  path.join(srcDir, 'services', 'discovery'),
 ];
 
 // Data read as text at runtime (the grammar for get_syntax), not code. It sits
