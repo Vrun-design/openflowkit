@@ -2,7 +2,7 @@ import { architectureWorkspaceText } from '../families/architecture/text';
 import { archModelFromJson } from '../model/model';
 import type { ArchElement, ArchView } from '../model/types';
 import {
-  LANGUAGE_BY_EXT, SERVICE_RULES, basename, dirname, extname, isScannedFileName, isSkippedDir,
+  LANGUAGE_BY_EXT, NON_SYSTEM_DIRS, SERVICE_RULES, basename, dirname, extname, isScannedFileName, isSkippedDir,
   type ScannedFile,
 } from './rules';
 
@@ -150,6 +150,12 @@ function unitId(dir: string, name: string): string {
 
 function firstSegment(dir: string): string {
   return dir.split('/')[0] ?? '';
+}
+
+/** The top-level folder that names a product system; generic and deploy folders name none. */
+function systemSegment(dir: string): string {
+  const segment = firstSegment(dir);
+  return NON_SYSTEM_DIRS.has(segment.toLowerCase()) ? '' : segment;
 }
 
 function imageBase(image: string): string {
@@ -1087,7 +1093,7 @@ export function discoveryToDsl(
   const repoName = name.trim() || 'System';
   const containers = result.units.filter((unit) => unit.kind === 'container' || unit.kind === 'system');
   const dependencies = result.units.filter((unit) => unit.kind !== 'container' && unit.kind !== 'system');
-  const segments = [...new Set(containers.map((unit) => firstSegment(unit.dir)).filter(Boolean))];
+  const segments = [...new Set(containers.map((unit) => systemSegment(unit.dir)).filter(Boolean))];
   const grouped = segments.length >= 2;
 
   const groups: EmitGroup[] = [];
@@ -1101,12 +1107,12 @@ export function discoveryToDsl(
     return group;
   };
   for (const unit of containers) {
-    const key = grouped ? firstSegment(unit.dir) : '';
+    const key = grouped ? systemSegment(unit.dir) : '';
     groupFor(key, key ? prettify(key) : systemName(repoName)).units.push(unit);
   }
   for (const unit of dependencies) {
     const evidence = unit.evidence[0];
-    const segment = evidence ? firstSegment(dirname(evidence.file) === '.' ? '' : dirname(evidence.file)) : '';
+    const segment = evidence ? systemSegment(dirname(evidence.file) === '.' ? '' : dirname(evidence.file)) : '';
     const key = segment && byKey.has(segment) ? segment : '';
     groupFor(key, key ? prettify(key) : systemName(repoName)).units.push(unit);
   }
@@ -1119,9 +1125,8 @@ export function discoveryToDsl(
       // A local id never contains a dot: the serializer writes `x = kind Name`
       // and the parser rejects dots there (W120). A unit named like its group
       // (`api` inside group `api`) nests as `api.api`.
-      const local = unit.id.split('.').pop()!;
-      const nested = unit.id.startsWith(`${group.id}.`) ? unit.id : `${group.id}.${local}`;
-      elementId.set(unit.id, uniqueId(nested, usedIds));
+      const local = slugDiscoveryId(unit.id.split('.').pop()!);
+      elementId.set(unit.id, uniqueId(`${group.id}.${local}`, usedIds));
     }
   }
 

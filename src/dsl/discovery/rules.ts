@@ -44,6 +44,17 @@ export function isSkippedDir(name: string): boolean {
   return SKIP_DIRS.has(name) || (name.startsWith('.') && name !== '.' && name !== '..');
 }
 
+/**
+ * Top-level folders that never name a system: generic groupings (`src`, `services`)
+ * and deploy config (`kustomize`, `k8s`). Units under them belong to the repo's own system.
+ */
+export const NON_SYSTEM_DIRS = new Set([
+  'src', 'source', 'services', 'service', 'apps', 'app', 'packages', 'pkg', 'cmd',
+  'internal', 'lib', 'libs', 'modules', 'components',
+  'kustomize', 'k8s', 'kubernetes', 'kubernetes-manifests', 'manifests', 'helm', 'charts',
+  'deploy', 'deployment', 'deployments', 'infra', 'terraform', '.github', 'docker',
+]);
+
 export const INCLUDE_EXT = new Set([
   '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
   '.py', '.rb', '.go', '.rs', '.java', '.kt', '.swift',
