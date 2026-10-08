@@ -96,6 +96,8 @@ export interface AggEdge {
   reverseEvidence: Evidence[];
   links: MapLink[];
   inferred: boolean;
+  /** Set by `budgetEdges`: not among the strongest arrows of its container, so surfaces may leave it undrawn. */
+  minor?: boolean;
 }
 
 export interface Talk {

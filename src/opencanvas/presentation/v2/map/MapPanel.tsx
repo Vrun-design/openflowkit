@@ -2,7 +2,7 @@ import type { Insights } from '../../../../dsl/map/insights';
 import type { AggEdge, MapModel, Talk } from '../../../../dsl/map/types';
 import { Button, Panel } from '../../design-system';
 import { MapEvidence, type EvidenceLink } from './MapEvidence';
-import type { Selected } from './navigate';
+import { labelsFor, type Selected } from './navigate';
 
 const fmt = (n: number): string => n.toLocaleString('en-US');
 
@@ -17,11 +17,11 @@ interface Props {
   onClose: () => void;
 }
 
-function Item({ model, id, onReveal, note }: { model: MapModel; id: string; onReveal: (id: string) => void; note?: string }): React.JSX.Element {
+function Item({ model, id, onReveal, note, label }: { model: MapModel; id: string; onReveal: (id: string) => void; note?: string; label?: string }): React.JSX.Element {
   return (
     <li>
       <Button variant="quiet" className="map-item" onClick={() => onReveal(id)}>
-        <span className="map-item-name">{model.nodes[id]?.name ?? id}</span>
+        <span className="map-item-name">{label ?? model.nodes[id]?.name ?? id}</span>
         {note ? <span className="map-muted">{note}</span> : null}
       </Button>
     </li>
@@ -30,22 +30,24 @@ function Item({ model, id, onReveal, note }: { model: MapModel; id: string; onRe
 
 function Overview({ model, insights, onReveal }: Pick<Props, 'model' | 'insights' | 'onReveal'>): React.JSX.Element {
   const { twoWay, largest, unreferenced } = insights;
-  const name = (id: string) => model.nodes[id]?.name ?? id;
+  const labels = labelsFor(model, [...twoWay.flatMap((p) => [p.a, p.b]), ...largest, ...unreferenced.slice(0, 8)]);
+  const name = (id: string) => labels.get(id) ?? model.nodes[id]?.name ?? id;
   return (
     <>
       <p className="map-lead">{model.source.repo ?? 'Repository'}</p>
       <p className="map-muted">{`${model.source.ref ?? ''} · ${fmt(model.stats.files)} files · ${fmt(model.stats.loc)} lines · ${fmt(model.stats.imports)} imports`}</p>
       {twoWay.length > 0 ? (
         <section className="map-sec"><h3>Import each other</h3>
-          <ul>{twoWay.map((p) => <Item key={`${p.a}|${p.b}`} model={model} id={p.a} onReveal={onReveal} note={`${name(p.a)} ⇄ ${name(p.b)} · ${p.ab} ⇄ ${p.ba}`} />)}</ul>
+          <ul>{twoWay.map((p) => <Item key={`${p.a}|${p.b}`} model={model} id={p.a} label={name(p.a)} onReveal={onReveal} note={`${name(p.a)} ⇄ ${name(p.b)} · ${p.ab} ⇄ ${p.ba}`} />)}</ul>
         </section>
       ) : null}
       <section className="map-sec"><h3>Largest files</h3>
-        <ul>{largest.map((id) => <Item key={id} model={model} id={id} onReveal={onReveal} note={`${fmt(model.nodes[id]?.loc ?? 0)} lines`} />)}</ul>
+        <ul>{largest.map((id) => <Item key={id} model={model} id={id} label={name(id)} onReveal={onReveal} note={`${fmt(model.nodes[id]?.loc ?? 0)} lines`} />)}</ul>
       </section>
       {unreferenced.length > 0 ? (
-        <section className="map-sec"><h3>Worth a look: nothing imports these</h3>
-          <ul>{unreferenced.slice(0, 8).map((id) => <Item key={id} model={model} id={id} onReveal={onReveal} />)}</ul>
+        <section className="map-sec"><h3>Not imported inside this repo</h3>
+          <p className="map-hint">Often entry points or public API.</p>
+          <ul>{unreferenced.slice(0, 8).map((id) => <Item key={id} model={model} id={id} label={name(id)} onReveal={onReveal} />)}</ul>
           {unreferenced.length > 8 ? <p className="map-muted">{`${unreferenced.length - 8} more`}</p> : null}
         </section>
       ) : null}

@@ -44,8 +44,8 @@ async function serveGitHub(page: Page, repo: Readonly<Record<string, string>> | 
 }
 
 /** The map page with the fake repo loaded and settled. */
-async function openMap(page: Page): Promise<void> {
-  await serveGitHub(page, REPO);
+async function openMap(page: Page, repo: Readonly<Record<string, string>> = REPO): Promise<void> {
+  await serveGitHub(page, repo);
   await page.goto('/#/map/github/acme/shop');
   await expect(page.locator('[data-box]').first()).toBeVisible({ timeout: 20_000 });
   await expect(page.locator('.map-status [role="status"]')).toHaveCount(0, { timeout: 20_000 });
@@ -109,14 +109,14 @@ test('depth presets and layers change what is drawn @gate', async ({ page }) => 
   expect(await scale(page), 'readable landing at overview').toBeGreaterThanOrEqual(0.6);
   await page.getByRole('button', { name: /^Depth/ }).click();
   await page.getByRole('menuitemradio', { name: 'Detailed' }).click();
-  await expect.poll(() => count(page)).toBeGreaterThan(overview);
+  // The fixture has three top-level boxes, so Overview already opens them: Detailed is the same picture.
+  await expect.poll(() => count(page)).toBe(overview);
+  expect(await page.evaluate(() => localStorage.getItem('ofk.map.depth.acme/shop'))).toBe('detailed');
   await expect.poll(() => scale(page)).toBeGreaterThanOrEqual(0.6);
   await page.getByRole('button', { name: /^Depth/ }).click();
   await page.getByRole('menuitemradio', { name: 'Everything' }).click();
+  await expect.poll(() => count(page)).toBeGreaterThan(overview);
   await expect.poll(() => scale(page)).toBeGreaterThanOrEqual(0.6);
-  await page.getByRole('button', { name: /^Depth/ }).click();
-  await page.getByRole('menuitemradio', { name: 'Detailed' }).click();
-  expect(await page.evaluate(() => localStorage.getItem('ofk.map.depth.acme/shop'))).toBe('detailed');
   await page.getByRole('button', { name: /^Depth/ }).click();
   await page.getByRole('menuitemradio', { name: 'Overview' }).click();
   await expect.poll(() => count(page)).toBe(overview);
@@ -270,4 +270,24 @@ test('a repo that is not found, an unreachable GitHub and a repo with nothing to
   await serveGitHub(page, { 'README.md': '# nothing\n', 'LICENSE': 'MIT\n' });
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByText('Nothing to map here.')).toBeVisible({ timeout: 20_000 });
+});
+
+test('a crowded level draws its strongest arrows and offers the rest @gate', async ({ page }) => {
+  // Ten folders, each importing the next three: 30 arrows at the top level, a budget of 15.
+  const dense: Record<string, string> = {};
+  for (let i = 0; i < 10; i++) dense[`p${i}/index.ts`] = [1, 2, 3].map((d) => imp(`x${d}`, `../p${(i + d) % 10}/index`)).join('') + `export const x${i} = 1;\n`;
+  await openMap(page, dense);
+  await expect(page.locator('[data-edge]')).toHaveCount(15);
+  const chip = page.getByRole('group', { name: 'Arrows shown' });
+  await expect(chip).toContainText('Showing 15 of 30 links');
+  const all = chip.getByRole('button', { name: 'Show all' });
+  await all.click();
+  await expect(page.locator('[data-edge]')).toHaveCount(30);
+  await expect(chip).toContainText('Showing all 30 links');
+  expect(await page.evaluate(() => localStorage.getItem('ofk.map.links.acme/shop'))).toBe('all');
+  await chip.getByRole('button', { name: 'Show fewer' }).click();
+  await expect(page.locator('[data-edge]')).toHaveCount(15);
+  // A selected box still lists every exact link, drawn or not.
+  await box(page, 'p0').click();
+  await expect(page.getByRole('complementary', { name: 'p0/' })).toContainText('Talks to');
 });

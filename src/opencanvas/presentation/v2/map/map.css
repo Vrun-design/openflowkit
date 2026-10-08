@@ -26,6 +26,9 @@
 .edge.k-build .line { stroke: var(--ofk-muted); stroke-dasharray: 5 4; opacity: 1; }
 .edge .hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; pointer-events: stroke; }
 .edge.sel .line { stroke: var(--ofk-selection); stroke-width: 2.4; opacity: 1; }
+.edge.single .line { opacity: 0.4; }
+.edge.single.sel .line { opacity: 1; }
+.map-sec .map-hint { margin: -2px 0 6px; font: 400 11px var(--ofk-font); color: var(--ofk-muted); }
 .lbl { cursor: pointer; }
 .lbl rect { fill: var(--ofk-canvas); }
 .lbl text { font: 500 10px var(--ofk-mono); letter-spacing: 0.06em; fill: var(--ofk-muted); pointer-events: none; }
@@ -75,3 +78,6 @@
 .map-status { position: absolute; left: 12px; bottom: 12px; display: grid; gap: 6px; justify-items: start; }
 .map-chip { padding: 4px 10px; background: var(--ofk-surface); border: 1px solid var(--ofk-border); border-radius: 8px; font: 400 11px var(--ofk-mono); color: var(--ofk-secondary); }
 .map-chip .ofk-progress { min-width: 220px; }
+.map-links-chip { position: absolute; top: 72px; left: 16px; display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; background: var(--ofk-surface); border: 1px solid var(--ofk-border); border-radius: 8px; font: 400 11px var(--ofk-mono); color: var(--ofk-secondary); }
+/* Wide screens: beside the toolbar, so it never covers the map's corner. */
+@media (min-width: 1200px) { .map-links-chip { top: 20px; left: 612px; } }

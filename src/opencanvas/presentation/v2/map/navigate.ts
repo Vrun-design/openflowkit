@@ -51,6 +51,19 @@ export function layerCounts(model: MapModel): Partial<Record<LinkKind, number>> 
   return out;
 }
 
+/**
+ * A short label per id: its name, or `parent/name` when another listed box shares the name (and the full id when even
+ * that collides), so two `common/` folders can be told apart.
+ */
+export function labelsFor(model: MapModel, ids: readonly string[]): Map<string, string> {
+  const plain = (id: string) => (model.nodes[id]?.name ?? id).replace(/\/$/, '');
+  const count = (key: (id: string) => string) => { const m = new Map<string, number>(); for (const id of ids) m.set(key(id), (m.get(key(id)) ?? 0) + 1); return m; };
+  const names = count(plain);
+  const withParent = (id: string) => { const p = model.nodes[id]?.parent; return p && p !== model.root ? `${plain(p)}/${plain(id)}` : plain(id); };
+  const paired = count(withParent);
+  return new Map(ids.map((id) => [id, (names.get(plain(id)) ?? 0) < 2 ? (model.nodes[id]?.name ?? id) : (paired.get(withParent(id)) ?? 0) < 2 ? withParent(id) : id]));
+}
+
 /** The selected box, what holds it, what it holds, and the boxes it talks to: everything else may be dimmed. */
 export function neighbours(model: MapModel, shown: readonly string[], selected: string, talks: readonly Talk[]): Set<string> {
   const talking = new Set(talks.map((t) => t.id));

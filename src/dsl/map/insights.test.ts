@@ -41,4 +41,15 @@ describe('insights', () => {
     });
     expect(insights(m).unreferenced).toEqual(['src/orphan.ts']);
   });
+
+  it('never lists a `more` bucket as one side of a two-way pair', () => {
+    const node = (id: string, kind: 'part' | 'more' | 'file', parent: string | null, children: string[] = []) => ({ id, kind, name: id, parent, children, files: 1, loc: 1 });
+    const link = (from: string, to: string, n: number) => ({ from, to, kind: 'import' as const, evidence: Array.from({ length: n }, (_, i) => ({ file: from, line: i + 1, text: 'i' })) });
+    const m = {
+      root: 'root', source: {}, stats: { files: 2, loc: 2, imports: 6, unresolved: 0 },
+      nodes: { root: node('root', 'part', null, ['a', 'a#more']), a: node('a', 'part', 'root', ['a/x']), 'a/x': node('a/x', 'file', 'a'), 'a#more': node('a#more', 'more', 'root', ['a#more/y']), 'a#more/y': node('a#more/y', 'file', 'a#more') },
+      links: [link('a/x', 'a#more/y', 3), link('a#more/y', 'a/x', 3)],
+    };
+    expect(insights(m).twoWay).toEqual([]);
+  });
 });

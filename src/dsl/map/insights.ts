@@ -23,9 +23,11 @@ const NOT_IMPORTED = new RegExp(
 );
 
 export function insights(model: MapModel, { minPair = 3, top = 5 } = {}): Insights {
-  const { edges } = aggregate(model, presets(model).overview, ['import']);
+  const { edges } = aggregate(model, presets(model).detailed, ['import']);
+  // A `more` box (or a range inside one) is a bucket of leftovers, not a part: two buckets importing each other say nothing.
+  const bucket = (id: string) => model.nodes[id]?.kind === 'more' || id.includes('#more');
   const twoWay = edges
-    .filter((e) => e.reverse >= minPair && e.forward >= minPair)
+    .filter((e) => e.reverse >= minPair && e.forward >= minPair && !bucket(e.from) && !bucket(e.to))
     .map((e) => (e.from < e.to ? { a: e.from, b: e.to, ab: e.forward, ba: e.reverse } : { a: e.to, b: e.from, ab: e.reverse, ba: e.forward }))
     .sort((x, y) => y.ab + y.ba - (x.ab + x.ba) || compare(x.a, y.a));
 

@@ -14,7 +14,8 @@ import { Motion, type MotionItem } from './motion';
 import { planMotion, type Leaving } from './planMotion';
 import { canOpen, layerCounts, neighbours, oneLevel, pickNeighbour, revealExpanded, type Dir, type Selected } from './navigate';
 import { usePointerCamera } from './usePointerCamera';
-import { saveDepth, savedDepth } from './mapDepth';
+import { MapLinksChip } from './MapLinksChip';
+import { saveAllLinks, saveDepth, savedAllLinks, savedDepth } from './mapDepth';
 import { useMapKeys } from './useMapKeys';
 import './map.css';
 
@@ -43,10 +44,11 @@ export const MapSurface = memo(function MapSurface({ model, storageKey, evidence
   const [note, setNote] = useState<string | null>(null);
   const [depth, setDepth] = useState<Depth | null>(null);
   const [off, setOff] = useState<ReadonlySet<LinkKind>>(new Set());
+  const [showAll, setShowAll] = useState(() => savedAllLinks(storageKey));
   const [panelOpen, setPanelOpen] = useState(() => window.innerWidth > 720); // a phone starts with the map, not the sheet
   const searchRef = useRef<HTMLInputElement>(null);
   const plan = useRef<Plan | null>(null);
-  const live = useRef({ model, expanded: new Set<string>(), touched: false, scene: null as Scene | null, view: null as View | null, userCam: false, landNext: false, mounted: true, off: new Set<LinkKind>(), panel: window.innerWidth > 720 });
+  const live = useRef({ model, expanded: new Set<string>(), touched: false, scene: null as Scene | null, view: null as View | null, userCam: false, landNext: false, mounted: true, off: new Set<LinkKind>(), showAll: savedAllLinks(storageKey), panel: window.innerWidth > 720 });
   const want = useRef<Want | null>(null);
   const busy = useRef(false);
 
@@ -86,7 +88,7 @@ export const MapSurface = memo(function MapSurface({ model, storageKey, evidence
           const job = want.current;
           want.current = null;
           try {
-            const scene = await layoutMap(job.model, job.expanded, live.current.off.size ? KINDS.filter((k) => !live.current.off.has(k)) : undefined);
+            const scene = await layoutMap(job.model, job.expanded, live.current.off.size ? KINDS.filter((k) => !live.current.off.has(k)) : undefined, live.current.showAll);
             if (!want.current && live.current.mounted) commit(job.model, job.expanded, scene, job.focus, job.auto);
           } catch (error) {
             console.error('map layout failed', error);
@@ -173,6 +175,13 @@ export const MapSurface = memo(function MapSurface({ model, storageKey, evidence
     if (!next.delete(kind)) next.add(kind);
     l.off = next;
     setOff(next);
+    relayout(l.model, l.expanded, null);
+  };
+  const toggleAll = () => {
+    const l = live.current;
+    l.showAll = !l.showAll;
+    setShowAll(l.showAll);
+    saveAllLinks(storageKey, l.showAll);
     relayout(l.model, l.expanded, null);
   };
   const selectEdge = useCallback((key: string) => { if (!moved.current) setSelected({ type: 'edge', key }); }, [moved]);
@@ -264,6 +273,7 @@ export const MapSurface = memo(function MapSurface({ model, storageKey, evidence
       <MapToolbar model={shownModel} depth={depth} onDepth={chooseDepth} counts={counts} layers={layersOn} onLayer={toggleLayer} onReveal={reveal} searchRef={searchRef} onFit={fit}
         onLevel={() => { const s = live.current.view; if (s) apply(oneLevel(s.model, s.expanded), selected?.type === 'node' ? selected.id : null, null); focusMap(); }}
         onCollapse={() => { apply(new Set(), null, null, false); focusMap(); }} panelOpen={panelOpen} onPanel={togglePanel} />
+      <MapLinksChip shown={view?.scene.edges.length ?? 0} total={view?.scene.total ?? 0} minor={view?.scene.minor ?? 0} all={showAll} onToggle={toggleAll} />
       {note ? <div className="map-note" role="status">{note}</div> : null}
       {panelOpen ? <MapPanel model={shownModel} selected={selected} edge={selKey ? byKey.get(selKey) : undefined} talks={talks} insights={facts} evidenceLink={evidenceLink} onReveal={reveal} onClose={togglePanel} /> : null}
     </div>

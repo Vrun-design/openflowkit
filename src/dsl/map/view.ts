@@ -95,7 +95,10 @@ function openTo(model: MapModel, depth: number): Set<string> {
   return open;
 }
 
-/** Overview opens the top level, Detailed two, Everything as deep as 300 boxes allow. */
+/**
+ * Overview shows the top-level boxes shut, with the arrows between them (a repo of three or fewer opens them, so a
+ * one-part repo does not land on two boxes). Detailed opens the top level, Everything goes as deep as 300 boxes allow.
+ */
 export function presets(model: MapModel): Record<Depth, Set<string>> {
   const deepest = Math.max(1, ...Object.keys(model.nodes).map((id) => depthOf(model, id)));
   // Fall back to a fully shut map when even the top level opens past the budget.
@@ -104,7 +107,8 @@ export function presets(model: MapModel): Record<Depth, Set<string>> {
     if (visible(model, openTo(model, d)).length > BUDGET) break;
     fit = d;
   }
-  return { overview: openTo(model, Math.min(1, fit)), detailed: openTo(model, Math.min(2, fit)), everything: openTo(model, fit) };
+  const top = openTo(model, Math.min(1, fit));
+  return { overview: model.nodes[model.root].children.length <= 3 ? top : new Set(), detailed: top, everything: openTo(model, fit) };
 }
 
 /** Where one box's links go, grouped by the box they land in right now ("Talks to" + highlight curves). */

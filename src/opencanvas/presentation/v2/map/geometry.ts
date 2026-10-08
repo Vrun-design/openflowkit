@@ -42,7 +42,7 @@ export const READABLE = 0.6;
 
 /**
  * Fit everything when that stays readable (k >= 0.6). Otherwise frame the box that was just opened at k >= 0.6;
- * with no such box, start at `anchor`'s top-left corner at k = 0.6, so the reader begins at a known place and pans.
+ * with no such box, start at `anchor` (the map's top-left corner) at k = 0.6, so the reader begins at a known place and pans.
  */
 export function landing(size: { width: number; height: number }, focus: Rect | undefined, view: Viewport, anchor?: Rect): Cam {
   const all = frameBox({ x: 0, y: 0, ...size }, view);
@@ -52,14 +52,12 @@ export function landing(size: { width: number; height: number }, focus: Rect | u
   return { k: READABLE, x: view.pad - anchor.x * READABLE, y: view.top + view.pad - anchor.y * READABLE };
 }
 
-/** The open box nearest the top-left of the map: the top row first, then the leftmost in it. */
-export function topLeftOpen(rects: ReadonlyMap<string, Rect & { open: boolean }>): Rect | undefined {
-  let best: Rect | undefined;
-  for (const r of rects.values()) {
-    if (!r.open) continue;
-    if (!best || Math.round(r.y / 40) < Math.round(best.y / 40) || (Math.round(r.y / 40) === Math.round(best.y / 40) && r.x < best.x)) best = r;
-  }
-  return best;
+/** The top-left corner of everything drawn (a zero-size anchor): where a reader who cannot see it all starts reading. */
+export function topLeftOpen(rects: ReadonlyMap<string, Rect>): Rect | undefined {
+  if (rects.size === 0) return undefined;
+  let [x, y] = [Infinity, Infinity];
+  for (const r of rects.values()) { x = Math.min(x, r.x); y = Math.min(y, r.y); }
+  return { x, y, width: 0, height: 0 };
 }
 
 export const zoomAt = (cam: Cam, factor: number, px: number, py: number): Cam => {

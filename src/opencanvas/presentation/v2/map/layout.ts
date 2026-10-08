@@ -1,4 +1,5 @@
 import { fromElkLayout, toElkGraph, type ElkNode, type Laid } from '../../../../dsl/map/elk';
+import { budgetEdges } from '../../../../dsl/map/edgeBudget';
 import { aggregate } from '../../../../dsl/map/view';
 import type { AggEdge, LinkKind, MapModel, MapNode } from '../../../../dsl/map/types';
 import { getElkInstance } from '../../../../services/elk-layout/runtime';
@@ -59,13 +60,15 @@ export function wrap(text: string, font: string, width: number, lines: number): 
 export const sizeOf = (n: MapNode): { width: number; height: number } =>
   n.kind === 'file' || n.kind === 'more' ? { width: 200, height: 46 } : n.kind === 'external' ? { width: 212, height: 76 } : { width: 232, height: 92 };
 
-export interface Scene { laid: Laid; edges: AggEdge[] }
+/** `edges` are the arrows laid out and drawn; `total` counts every arrow and `minor` those past their container's budget. */
+export interface Scene { laid: Laid; edges: AggEdge[]; total: number; minor: number }
 
 /** The engine's ELK graph, laid out in the shared elkjs worker. */
-export async function layoutMap(model: MapModel, expanded: ReadonlySet<string>, layers?: readonly LinkKind[]): Promise<Scene> {
-  const { edges } = aggregate(model, expanded, layers);
+export async function layoutMap(model: MapModel, expanded: ReadonlySet<string>, layers?: readonly LinkKind[], showAll = false): Promise<Scene> {
+  const all = budgetEdges(model, aggregate(model, expanded, layers).edges);
+  const edges = showAll ? all : all.filter((e) => !e.minor);
   const graph = toElkGraph(model, expanded, edges, sizeOf, (t) => measure(t, FONT.label));
   const elk = await getElkInstance();
   const out = (await elk.layout(graph as never)) as unknown as ElkNode;
-  return { laid: fromElkLayout(out), edges };
+  return { laid: fromElkLayout(out), edges, total: all.length, minor: all.filter((e) => e.minor).length };
 }

@@ -613,6 +613,7 @@ A -> B : message              solid, arrow
 A --> B : reply               dashed
 A ->> B : async               open head
 A -->> B : async reply
+A -> B : lost [head: cross]   ends in a cross (UML lost message); `-->` with it is dashed
 A -> A : self call
 activate A / deactivate A
 loop every 5s {  … }
@@ -635,6 +636,7 @@ fragment frames (`annotation` nodes) that enclose their messages; participants a
 Idle -> Running : start
 state Running { … }           composite; `--` line inside = concurrent region divider
 F [fork] ; J [join] ; C [choice]      pseudo-states via shape words
+note Idle : text              a sticky beside a state or a composite; "a\nb" keeps its line break
 ```
 `[*]` is a token, never a name; before an arrow it is the initial state, after one the
 final state (two distinct nodes). Canonical: composites as `state Name { … }` blocks,
@@ -677,8 +679,9 @@ emitted only when a class has both attributes and methods. Member text canonical
 spacing (`+id: int`, `+go(): void`); `[interface|abstract|enum]` sets the stereotype.
 Reversed relations normalise by swapping endpoints (`Order <|-- Base` → `Base --|> Order`);
 multiplicity is quoted beside the arrow (`Order "1" --> "*" Item`).
-Canonical: classes in line order as blocks, relations after. Nodes are `class` tables with
-attribute/method compartments sized so every member is visible.
+`group Zoo { … }` boxes the classes declared inside it (groups nest; erd takes it too), like a
+Mermaid `namespace`. Canonical: classes and groups in line order as blocks, relations after.
+Nodes are `class` tables with attribute/method compartments sized so every member is visible.
 
 ### 8.7 mindmap (radial)
 ```
@@ -837,6 +840,9 @@ slugs, exact on explicit ids. Outside `model`, `.` in an id is W120 (§2.6).
 not, **unless any explicit relation `a -> b` exists**. Implied relations are derived, never
 serialized; they carry `metadata.model.implied = true`.
 
+Deployment blocks also accept relationships between separate nodes in the same environment;
+endpoint references resolve within that environment. Cross-environment references produce W122.
+
 ### 9.4 View predicates (subset) — implemented
 
 A typed view starts from its scope's default element set and `include`/`exclude` refine it
@@ -847,8 +853,11 @@ helper (agent reports, `explain`) and is never serialized.
 
 `include X`, `include X.*` (children), `include X.**` (descendants), `include *`, `include
 X -> Y`, `include -> X`, `include X ->`, `exclude …` same forms, `where kind is
-container`, `where tag is @core`, `where tag is not @deprecated`, `and`/`or`. Order matters
-(later overrides). Anything else → W160 "unsupported predicate, kept verbatim".
+container`, `where kind is not container`, `where tag is @core`, `where tag is not @deprecated`,
+`and`/`or` (AND binds before OR; quote tag values containing those words). Order matters
+(later overrides). Anything else → W160 "unsupported predicate, skipped and kept verbatim".
+A landscape starts with top-level people, systems and external systems; explicit descendant rules
+can add detail. Parallel authored relationships keep separate connectors and protocols.
 
 ### 9.5 Tags
 `@core` after a name = `[tags: core]`; several allowed. Canonical: `[tags: a, b]` inside the
@@ -889,6 +898,7 @@ test: random bytes → diagnostics only).
 | W103 | unclosed block at EOF | `}` inserted |
 | W104 | duplicate directive, first wins | — |
 | W105 | family reserved, rendered as flowchart | — |
+| W106 | `Name {…}` closed on one line opens a group around `Name`; read as a group, braces are not label text | the quoted form `"Name {…}"` |
 | W110 | first statement looks like a family header with wrong case or a `family`/`type`/`diagram` wrapper | `flowchart` |
 | W111 | arrow not valid in this family, line dropped | list of valid arrows |
 | W112 | chain/fan not allowed in this family | one edge per line |
@@ -1700,6 +1710,7 @@ model { person P  system S { container C [tech: Go] { component X }  store DB  q
 deployment Prod { node AWS [aws/cloud] { node ECS { instance S.C } } }
 views { view landscape | context of S | container of S | component of S.C | deployment of S in Prod
         view custom "Name" { include S.*  include -> DB  exclude * where tag is @old } }
+          `views` is optional: none = one landscape page. Write only the views the user asked for; each is a page.
 flow "Checkout" { step P -> C : opens   alt "ok" { step … } else { step … }   par { … } and { … }   goto "Other"   note "…" }
 RULES     canonical output: one edge per line, attrs in fixed order, no ; , reversed arrows normalised to ->
           same text → same ids. Edit by line: get_diagram returns canonical text + hash; update_diagram patches line ranges.

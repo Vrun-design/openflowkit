@@ -32,7 +32,7 @@ function tau(a: number[], b: number[]) {
 const median = (xs: number[]) => [...xs].sort((x, y) => x - y)[Math.floor(xs.length / 2)];
 
 async function measureStability() {
-  const base = presets(model).overview;
+  const base = presets(model).detailed;
   const before = await layout(base);
   const openable = visible(model, base).filter((id) => model.nodes[id].children.length > 0 && !base.has(id));
   const taus: number[] = [];

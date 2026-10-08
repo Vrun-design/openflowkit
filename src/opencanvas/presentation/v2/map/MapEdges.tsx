@@ -33,6 +33,8 @@ interface EdgesProps {
   tabbable: ReadonlySet<string> | null;
   model?: MapModel;
 }
+/** A single import line: drawn thin and quiet, and its count shows only on hover or when it is in the selection. */
+const single = (e: AggEdge) => e.kind === 'import' && e.count === 1;
 const dimmed = (e: AggEdge, near: ReadonlySet<string> | null) => (near && !near.has(e.from) && !near.has(e.to) ? ' dim' : '');
 
 /** Arrow lines (rounded orthogonal ELK routes) and, in a later layer, their masked count labels. */
@@ -45,9 +47,10 @@ export const MapEdgeLines = memo(function MapEdgeLines({ laid, byKey, selected, 
         const name = (id: string) => model?.nodes[id]?.name ?? id;
         const d = roundedPath(l.points);
         return (
-          <g key={l.key} className={`edge k-${e.kind}${selected === l.key ? ' sel' : ''}${e.inferred ? ' inferred' : ''}${dimmed(e, near)}`} data-edge={l.key} tabIndex={selected === l.key || tabbable?.has(e.from) || tabbable?.has(e.to) ? 0 : -1} role="button"
+          <g key={l.key} className={`edge k-${e.kind}${selected === l.key ? ' sel' : ''}${e.inferred ? ' inferred' : ''}${single(e) ? ' single' : ''}${dimmed(e, near)}`} data-edge={l.key} tabIndex={selected === l.key || tabbable?.has(e.from) || tabbable?.has(e.to) ? 0 : -1} role="button"
             aria-label={`${name(e.from)} to ${name(e.to)}, ${e.kind}, ${edgeText(e)}`}
             onClick={(ev) => { ev.stopPropagation(); onSelect(l.key); }} onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onSelect(l.key); } }}>
+            <title>{`${name(e.from)} to ${name(e.to)}: ${e.kind} ${edgeText(e)}`}</title>
             <path className="line" d={d} strokeWidth={strokeOf(e)} markerEnd={`url(#mm-${e.kind})`} markerStart={e.both ? `url(#mm-${e.kind})` : undefined} />
             <path className="hit" d={d} />
           </g>
@@ -63,6 +66,7 @@ export const MapEdgeLabels = memo(function MapEdgeLabels({ laid, byKey, selected
       {laid.map((l) => {
         const e = byKey.get(l.key);
         if (!e || !l.label || l.points.length < 2) return null;
+        if (single(e) && selected !== l.key && !near?.has(e.from) && !near?.has(e.to)) return null;
         const text = edgeText(e);
         const w = l.label.width;
         return (

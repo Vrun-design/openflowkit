@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildMap } from '../../../../dsl/map/build';
 import { FIXTURE } from '../../../../dsl/map/fixture';
-import { layerCounts, neighbours, oneLevel, pickNeighbour, revealExpanded } from './navigate';
+import { labelsFor, layerCounts, neighbours, oneLevel, pickNeighbour, revealExpanded } from './navigate';
 
 const box = (x: number, y: number) => ({ x, y, width: 100, height: 50 });
 
@@ -43,5 +43,16 @@ describe('reveal, level, layers, neighbours', () => {
     const shown = ['web', 'server', 'ext:stripe'];
     const near = neighbours(model, shown, 'web', [{ id: 'server', out: 1, in: 0, links: [] }]);
     expect([...near].sort()).toEqual(['server', 'web']);
+  });
+});
+
+describe('labelsFor', () => {
+  it('keeps names that are unique and adds the parent to ones that collide', () => {
+    const m = buildMap({ files: [{ path: 'packages/common/a.ts', loc: 1 }, { path: 'excalidraw/common/b.ts', loc: 1 }, { path: 'excalidraw/solo/c.ts', loc: 1 }, { path: 'packages/solo2/d.ts', loc: 1 }], imports: [] });
+    const ids = Object.keys(m.nodes).filter((id) => m.nodes[id].name.replace(/\/$/, '') === 'common' || m.nodes[id].name.replace(/\/$/, '') === 'solo');
+    const labels = labelsFor(m, ids);
+    const common = ids.filter((id) => m.nodes[id].name.includes('common'));
+    expect(new Set(common.map((id) => labels.get(id))).size).toBe(common.length);
+    expect(common.every((id) => (labels.get(id) ?? '').includes('/') && (labels.get(id) ?? '') !== m.nodes[id].name)).toBe(true);
   });
 });

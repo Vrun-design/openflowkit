@@ -48,9 +48,9 @@ describe('landing on a big map', () => {
   it('still fits a map that is readable whole', () => {
     expect(landing({ width: 800, height: 500 }, undefined, view, { x: 0, y: 0, width: 10, height: 10 }).k).toBeGreaterThanOrEqual(0.6);
   });
-  it('picks the top row first, then the leftmost', () => {
-    const r = (x: number, y: number) => ({ x, y, width: 10, height: 10, open: true });
-    expect(topLeftOpen(new Map([['a', r(500, 0)], ['b', r(100, 10)], ['c', r(0, 300)]]))).toMatchObject({ x: 100 });
-    expect(topLeftOpen(new Map([['a', { ...r(0, 0), open: false }]]))).toBeUndefined();
+  it('anchors at the top-left corner of everything drawn', () => {
+    const r = (x: number, y: number) => ({ x, y, width: 10, height: 10 });
+    expect(topLeftOpen(new Map([['a', r(500, 0)], ['b', r(100, 10)], ['c', r(0, 300)]]))).toMatchObject({ x: 0, y: 0 });
+    expect(topLeftOpen(new Map())).toBeUndefined();
   });
 });

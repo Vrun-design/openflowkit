@@ -73,14 +73,22 @@ describe('aggregate', () => {
 });
 
 describe('presets', () => {
-  it('overview opens the top level, detailed two levels, everything stays within 300 boxes', () => {
+  it('overview is the top level shut, detailed opens it, everything goes deeper within 300 boxes', () => {
     const p = presets(model);
-    expect([...p.overview].sort()).toEqual(['root#files', 'root#outside', 'server', 'web']);
-    expect(p.detailed.has('server/routes')).toBe(true);
+    expect(model.nodes[model.root].children.length).toBeGreaterThan(3);
+    expect(p.overview.size).toBe(0);
+    expect([...p.detailed].sort()).toEqual(['root#files', 'root#outside', 'server', 'web']);
+    expect(p.detailed.has('server/routes')).toBe(false);
     expect(p.detailed.has('server/routes#more')).toBe(false); // never auto-open "more"
     expect(p.everything.has('server/routes')).toBe(true);
     expect(p.everything.has('server/routes#more')).toBe(false);
     expect(p.overview.has('root')).toBe(false);
+  });
+
+  it('opens the top level at overview when there are three boxes or fewer', () => {
+    const small = buildMap({ files: [{ path: 'a/x.ts', loc: 1 }, { path: 'b/y.ts', loc: 1 }], imports: [] });
+    expect([...presets(small).overview].sort()).toEqual(['a', 'b']);
+    expect(presets(small).overview).toEqual(presets(small).detailed);
   });
 
   it('falls back to a shut map when a hand-made model opens past 300 boxes at the top level', () => {
