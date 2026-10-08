@@ -65,6 +65,8 @@ interface V2DocumentBarProps extends V2SettingsProps {
   /** Architecture level chain when the document carries a model. */
   readonly breadcrumb?: readonly { readonly pageId: string; readonly label: string; readonly elementId?: string }[];
   readonly onCrumb?: (crumb: { readonly pageId: string; readonly elementId?: string }) => void;
+  /** Canvas | Map, present only when the page belongs to an architecture model. */
+  readonly mapMode?: { readonly mode: 'canvas' | 'map'; readonly onChange: (mode: 'canvas' | 'map') => void };
 }
 
 // ponytail: icon-only save indicator; text lives in the tooltip + live region.
@@ -212,6 +214,18 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
                 </Fragment>
               ))}
             </nav>
+          ) : null}
+          {props.mapMode ? (
+            <div className="ofk-v2-mode" role="group" aria-label="View mode">
+              <Tooltip content="Draw and arrange the page">
+                <Button variant="quiet" selected={props.mapMode.mode === 'canvas'} aria-label="Canvas"
+                  onClick={() => props.mapMode!.onChange('canvas')}>Canvas</Button>
+              </Tooltip>
+              <Tooltip content="Explore the model: click a box to open it" shortcut="M">
+                <Button variant="quiet" selected={props.mapMode.mode === 'map'} aria-label="Map"
+                  onClick={() => props.mapMode!.onChange(props.mapMode!.mode === 'map' ? 'canvas' : 'map')}>Map</Button>
+              </Tooltip>
+            </div>
           ) : null}
           <Tooltip content={props.readOnly ? 'Read-only' : save.text}>
             <span className="ofk-v2-save-status" role="status" aria-atomic

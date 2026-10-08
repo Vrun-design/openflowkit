@@ -72,6 +72,8 @@ interface V2CanvasHostProps {
   readonly toolConfigRef: RefObject<V2ToolConfig>;
   /** Double-click on a chart opens its data panel (the page owns the panel). */
   readonly onOpenChartData?: (nodeId: string) => boolean;
+  /** A plain click on a node, after it was selected (Map mode: open or close the box). */
+  readonly onNodeClick?: (nodeId: string) => void;
   /** The one selected model element has a deeper view: its name and the way in. */
   readonly zoomInto?: { readonly name: string; readonly open: () => void } | null;
   readonly spacePanRef: RefObject<boolean>;
@@ -159,6 +161,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     toolRef: props.toolRef,
     toolConfigRef: props.toolConfigRef,
     ...(props.onOpenChartData ? { onOpenChartData: props.onOpenChartData } : {}),
+    ...(props.onNodeClick ? { onNodeClick: props.onNodeClick } : {}),
     spacePanRef: props.spacePanRef,
     readOnlyRef: props.readOnlyRef,
     gestureApiRef: props.gestureApiRef,
@@ -326,6 +329,11 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
   useEffect(() => {
     props.hostRef.current?.setEditingConnector(props.connectorEditing?.connectorId ?? null);
   }, [props.connectorEditing, props.hostRef, props.page, status]);
+
+  // A read-only page (shared view, Map mode) shows what is selected and nothing to grab.
+  useEffect(() => {
+    props.hostRef.current?.setEditable(!props.readOnly);
+  }, [props.readOnly, props.hostRef, status]);
 
   useEffect(() => {
     props.hostRef.current?.setSelection(props.selection.nodeIds, props.selection.primaryNodeId);

@@ -1,0 +1,272 @@
+import { expect, test, type Page } from './test';
+import { centreOf, doc, openCanvas, rect, state } from './helpers';
+
+interface MapState {
+  mode: 'canvas' | 'map';
+  open: string[];
+  nodes: string[];
+  labels: Record<string, string>;
+  /** How many layouts have landed: a click that changes nothing must not add one. */
+  layouts: number;
+  connectors: { id: string; from: string; to: string; label: string }[];
+}
+const mapState = (page: Page): Promise<MapState> =>
+  page.evaluate(() => (window as unknown as { __V2__: { getMapState(): MapState } }).__V2__.getMapState());
+
+// Past the editor's double-click guard (400 ms after a click that opened or closed a box): two flips this far apart are two clicks.
+const BETWEEN_CLICKS_MS = 450;
+
+async function openC4(page: Page): Promise<void> {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
+  await page.getByRole('button', { name: 'Create C4 workspace', exact: true }).click();
+  await expect.poll(async () => (await doc(page))?.pages.length).toBe(3);
+  // The Model panel stays open from here.
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
+}
+
+const mapButton = (page: Page) => page.getByRole('button', { name: 'Map', exact: true });
+const canvasButton = (page: Page) => page.getByRole('button', { name: 'Canvas', exact: true });
+
+async function enterMap(page: Page): Promise<void> {
+  await mapButton(page).click();
+  await expect(mapButton(page)).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => (await mapState(page)).nodes.length).toBeGreaterThan(0);
+}
+
+/** An open box is mostly its children: its own click target is the header strip. */
+async function clickHeader(page: Page, id: string): Promise<void> {
+  const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
+  const r = (await rect(page, id))!;
+  await page.mouse.click(box.x + r.x + 12, box.y + r.y + 8);
+}
+
+async function click(page: Page, id: string): Promise<void> {
+  const at = await centreOf(page, id);
+  await page.mouse.click(at.x, at.y);
+}
+
+test('Map shows the model as boxes; a click opens a box in place and a second closes it @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  await expect(canvasButton(page)).toHaveAttribute('aria-pressed', 'true');
+  await enterMap(page);
+  const first = await mapState(page);
+  expect(first.mode).toBe('map');
+  expect(first.nodes).toEqual(expect.arrayContaining(['customer', 'shop', 'payments']));
+  expect(first.nodes).not.toContain('shop.api.orders');
+  // Arrows are labelled with the relation they stand for.
+  expect(first.connectors.map((c) => c.label).join('|')).toContain('shops');
+
+  await click(page, 'shop.api');
+  await expect.poll(async () => (await mapState(page)).nodes).toContain('shop.api.orders');
+  expect((await state(page)).selectedNodes).toEqual(['shop.api']);
+  await page.waitForTimeout(BETWEEN_CLICKS_MS);
+  await clickHeader(page, 'shop.api');
+  await expect.poll(async () => (await mapState(page)).nodes).not.toContain('shop.api.orders');
+});
+
+test('a click on a leaf changes neither the open boxes nor the layout @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  await enterMap(page);
+  await expect.poll(async () => (await mapState(page)).nodes).toContain('shop.web');
+  const before = await mapState(page);
+  await click(page, 'shop.web');
+  await expect.poll(async () => (await state(page)).selectedNodes).toEqual(['shop.web']);
+  await page.keyboard.press('Enter');
+  // Nothing to poll for: a relayout, if there were one, lands within a few frames.
+  await page.waitForTimeout(400);
+  const after = await mapState(page);
+  expect(after.open).toEqual(before.open);
+  expect(after.layouts).toBe(before.layouts);
+});
+
+test('browsing the map never dirties the document or adds an undo step @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  // A reload empties the undo stack, so any step the browsing adds is the only thing ⌘Z could undo.
+  await expect.poll(async () => (await state(page)).save).toBe('saved');
+  await page.reload();
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  await expect.poll(async () => (await doc(page))?.pages.length).toBe(3);
+  const revision = (await state(page)).revision;
+  const pages = JSON.stringify((await doc(page))!.pages);
+  await enterMap(page);
+  await click(page, 'shop.api');
+  await expect.poll(async () => (await mapState(page)).nodes).toContain('shop.api.orders');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Meta+z');
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(300);
+  expect((await state(page)).revision).toBe(revision);
+  expect(JSON.stringify((await doc(page))!.pages)).toBe(pages);
+});
+
+test('Delete, drag, nudge, typing and duplicate on a map box change nothing @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  await enterMap(page);
+  const revision = (await state(page)).revision;
+  const pages = JSON.stringify((await doc(page))!.pages);
+  await click(page, 'customer');
+  expect((await state(page)).selectedNodes).toEqual(['customer']);
+  // Selecting a model element shows it in the Model panel, whose fields are the only inputs there should be.
+  const editors = await page.locator('textarea, [contenteditable="true"]').count();
+  const at = await centreOf(page, 'customer');
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  await page.mouse.move(at.x + 120, at.y + 60, { steps: 6 });
+  await page.mouse.up();
+  for (const key of ['Delete', 'Backspace', 'ArrowRight', 'Shift+ArrowDown', 'Meta+d', 'Control+d', 'Meta+Shift+Backspace', 'F2', 'q', 'Meta+x', 'Meta+a', 'r']) {
+    await page.keyboard.press(key);
+  }
+  await page.mouse.dblclick(at.x, at.y);
+  await page.waitForTimeout(300);
+  await expect(page.locator('textarea, [contenteditable="true"]')).toHaveCount(editors);
+  expect((await state(page)).revision).toBe(revision);
+  expect(JSON.stringify((await doc(page))!.pages)).toBe(pages);
+  // The box did not move on the map either.
+  const after = await rect(page, 'customer');
+  expect(Math.abs(after!.x + after!.width / 2 - (at.x - (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!.x))).toBeLessThan(2);
+  await expect(page.getByTestId('v2-editor')).toHaveAttribute('data-tool', 'select');
+});
+
+test('M returns to Canvas with the original page, the camera and the selection kept @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  await click(page, 'customer');
+  await expect.poll(async () => (await state(page)).selectedNodes).toEqual(['customer']);
+  const canvasBox = await rect(page, 'customer');
+  // Nothing selected: M is a mode key, not type-to-edit.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('m');
+  await expect(mapButton(page)).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => (await mapState(page)).nodes.length).toBeGreaterThan(0);
+  await click(page, 'customer');
+  await expect.poll(async () => (await state(page)).selectedNodes).toEqual(['customer']);
+  await page.keyboard.press('m');
+  await expect(canvasButton(page)).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => (await mapState(page)).mode).toBe('canvas');
+  expect((await mapState(page)).nodes).toEqual([]);
+  expect((await state(page)).selectedNodes).toEqual(['customer']);
+  const back = await rect(page, 'customer');
+  expect(Math.abs(back!.x - canvasBox!.x)).toBeLessThan(2);
+  expect(Math.abs(back!.width - canvasBox!.width)).toBeLessThan(1);
+});
+
+test('Escape closes the box around the selection, then clears it @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  await enterMap(page);
+  await click(page, 'shop.api');
+  await expect.poll(async () => (await mapState(page)).nodes).toContain('shop.api.orders');
+  await page.waitForTimeout(BETWEEN_CLICKS_MS);
+  await click(page, 'shop.api.orders');
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await mapState(page)).nodes).not.toContain('shop.api.orders');
+  // The reader keeps their place: the box that closed is the one now selected.
+  await expect.poll(async () => (await state(page)).selectedNodes).toEqual(['shop.api']);
+  // Escape again: the open box has no open parent but Shop, which closes in turn.
+  await page.waitForTimeout(BETWEEN_CLICKS_MS);
+  await click(page, 'shop.api');
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await mapState(page)).nodes).not.toContain('shop.web');
+  await expect.poll(async () => (await state(page)).selectedNodes).toEqual(['shop']);
+  // Nothing selected is left to close: Escape clears the selection.
+  await click(page, 'customer');
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await state(page)).selectedNodes).toEqual([]);
+});
+
+test('another page of the model keeps the map where it is; leaving Map lands on that page @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  await enterMap(page);
+  const before = (await rect(page, 'customer'))!;
+  await page.getByRole('button', { name: /^Pages/ }).click();
+  const list = page.getByRole('dialog', { name: 'Pages', exact: true });
+  const other = list.locator('.ofk-v2-page-select:not([aria-current="page"])').first();
+  const name = (await other.innerText()).trim();
+  await other.click();
+  await page.getByRole('button', { name: 'Close pages' }).click();
+  await expect.poll(async () => (await mapState(page)).nodes).toContain('customer');
+  expect((await mapState(page)).mode).toBe('map');
+  // The map did not jump to the other page's content.
+  const during = (await rect(page, 'customer'))!;
+  expect(Math.abs(during.x - before.x)).toBeLessThan(2);
+  expect(Math.abs(during.y - before.y)).toBeLessThan(2);
+
+  await canvasButton(page).click();
+  await expect.poll(async () => (await mapState(page)).mode).toBe('canvas');
+  // Canvas shows the page switched to, framed: every one of its top-level nodes is on screen.
+  const target = (await doc(page))!.pages.find((p) => p.name === name)!;
+  const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
+  await expect.poll(async () => {
+    const rects = await Promise.all(target.nodes.map((n) => rect(page, n.id)));
+    return rects.some((r) => r !== null) && rects.every((r) => r === null
+      || (r.x >= -1 && r.y >= -1 && r.x + r.width <= box.width + 1 && r.y + r.height <= box.height + 1));
+  }).toBe(true);
+});
+
+test('an edit made from the Model panel shows in the map, and undo takes it back there too @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  await enterMap(page);
+  const original = (await mapState(page)).labels.customer!;
+  // openC4 leaves the Model panel open.
+  await page.getByLabel('Search architecture').fill(original);
+  await page.locator('.ofk-v2-model-row', { hasText: original }).first().focus();
+  await page.keyboard.press('Enter');
+  await page.getByLabel('Name', { exact: true }).fill('Buyer');
+  await page.getByRole('button', { name: 'Apply', exact: true }).click();
+  await expect.poll(async () => (await mapState(page)).labels.customer).toContain('Buyer');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect.poll(async () => (await mapState(page)).labels.customer).toBe(original);
+  // Not silent: what was undone is announced, the Canvas page behind the map being what changed.
+  await expect(page.getByText('Undid last change').first()).toBeAttached();
+});
+
+test('a selected map box shows an outline and no handles to resize or rotate it @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  const handleAtCorner = async (id: string) => {
+    const r = (await rect(page, id))!;
+    return page.evaluate((at) => (window as unknown as { __V2__: { pickTransformHandle(p: { x: number; y: number }): string | null } })
+      .__V2__.pickTransformHandle(at), { x: r.x + r.width, y: r.y + r.height });
+  };
+  // The probe means something: on Canvas the same corner is a handle.
+  await click(page, 'customer');
+  await expect.poll(async () => (await state(page)).selectedNodes).toEqual(['customer']);
+  expect(await handleAtCorner('customer')).not.toBeNull();
+  await enterMap(page);
+  await click(page, 'customer');
+  await expect.poll(async () => (await state(page)).selectedNodes).toEqual(['customer']);
+  expect(await handleAtCorner('customer')).toBeNull();
+});
+
+test('a click on an arrow lists the relations behind it in the Model panel @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  await enterMap(page);
+  const arrow = (await mapState(page)).connectors.find((c) => c.from === 'customer' || c.to === 'customer')!;
+  const lane = await page.evaluate((id: string) =>
+    (window as unknown as { __V2__: { getConnectorScreenSamples(id: string): { x: number; y: number }[] | null } }).__V2__.getConnectorScreenSamples(id) ?? [], arrow.id);
+  // A quarter of the way along, clear of the label in the middle.
+  const [a, b] = [lane[0]!, lane[lane.length - 1]!];
+  const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
+  await page.mouse.click(box.x + a.x + (b.x - a.x) / 4, box.y + a.y + (b.y - a.y) / 4);
+  await expect.poll(async () => (await state(page)).selectedConnector).toBe(arrow.id);
+  const panel = page.getByText('1 relation', { exact: true });
+  await expect(panel).toBeVisible();
+  await expect(page.getByText('shops · HTTPS', { exact: true })).toBeVisible();
+});
+
+test('a plain diagram has no Canvas | Map switch @gate', async ({ page }) => {
+  await openCanvas(page);
+  await expect(page.getByRole('group', { name: 'View mode' })).toHaveCount(0);
+  await page.keyboard.press('m');
+  expect((await mapState(page)).mode).toBe('canvas');
+});

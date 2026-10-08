@@ -142,6 +142,7 @@ export class PixiRendererHost {
   private primaryNodeId: string | null = null;
   private hoveredNodeId: string | null = null;
   private hoveredSide: ConnectSide | null = null;
+  private editable = true;
   /** The shape a dragged connector end would bind to. */
   private dropTargetId: string | null = null;
   /** The unselected connector under the pointer. */
@@ -435,7 +436,7 @@ export class PixiRendererHost {
 
   pickConnectorHandle(screenPoint: Point2d): ConnectorEditHandle | null {
     const connector = this.getSelectedConnector();
-    if (!this.page || !connector) return null;
+    if (!this.page || !connector || !this.editable) return null;
     return pickEditHandle(
       connectorEditHandles(this.page, connector, MIN_SEGMENT_HANDLE_PX / this.camera.zoom),
       this.screenToWorld(screenPoint),
@@ -527,7 +528,7 @@ export class PixiRendererHost {
   }
 
   pickTransformHandle(screenPoint: Point2d): TransformHandle | null {
-    const bounds = this.getSelectionWorldBounds();
+    const bounds = this.editable ? this.getSelectionWorldBounds() : null;
     return bounds ? pickHandle(bounds, screenPoint, this.camera) : null;
   }
 
@@ -808,6 +809,15 @@ export class PixiRendererHost {
     if (guides.length > 0) this.precisionGrid.stroke({ color: 0x2563eb, width: 1, alpha: 0.8 });
   }
 
+  /** False on a read-only page (a shared view, Map mode): selection is outlined, but no handle is drawn or can be picked. */
+  setEditable(editable: boolean): void {
+    if (this.editable === editable) return;
+    this.editable = editable;
+    this.drawSelection();
+    this.drawConnectorEditOverlay();
+    this.requestRender();
+  }
+
   private drawSelection(): void {
     if (!this.index) return;
     this.selectionOverlay.draw(
@@ -819,7 +829,8 @@ export class PixiRendererHost {
       this.hoveredNodeId ? { nodeId: this.hoveredNodeId, side: this.hoveredSide } : null,
       this.dropTargetId,
       this.hoveredConnectorId && !this.selectedConnectorIds.includes(this.hoveredConnectorId)
-        ? this.getLiveConnectorSamples(this.hoveredConnectorId) : null
+        ? this.getLiveConnectorSamples(this.hoveredConnectorId) : null,
+      this.editable
     );
   }
 
@@ -881,7 +892,7 @@ export class PixiRendererHost {
 
   private drawConnectorEditOverlay(): void {
     const connectors = this.getSelectedConnectors();
-    if (!this.page || connectors.length === 0) {
+    if (!this.page || connectors.length === 0 || !this.editable) {
       this.connectorEditOverlay.clear();
       return;
     }

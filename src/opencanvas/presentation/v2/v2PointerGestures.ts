@@ -134,6 +134,8 @@ export interface V2PointerOptions {
   readonly stylePresetsRef?: RefObject<StylePresets>;
   /** Double-click on a chart opens its data panel; true means it was handled. */
   readonly onOpenChartData?: (nodeId: string) => boolean;
+  /** A plain click that landed on a node (not a drag, marquee or additive click); Map mode opens and closes boxes with it. */
+  readonly onNodeClick?: (nodeId: string) => void;
 }
 
 export interface StylePresets {
@@ -424,6 +426,7 @@ export function finishGesture(operation: V2Operation, opts: V2PointerOptions, ho
         opts.applySelection(
           selectionAfterClick(opts.selectionRef.current, nodeId, operation.additive)
         );
+        if (nodeId && !operation.additive) opts.onNodeClick?.(nodeId);
       }
     }
   } else if (operation.kind === 'transform') {

@@ -23,6 +23,8 @@ interface V2TestApiOptions {
   readonly revision: number;
   readonly saveStatus: V2SaveStatus;
   readonly proposal: ReturnType<typeof useV2Proposal>;
+  /** Map mode's view state: mode, open boxes, and what the scene draws. */
+  readonly mapState: () => unknown;
 }
 
 // Read-only handle for the Playwright gate and deterministic evaluations
@@ -30,7 +32,7 @@ interface V2TestApiOptions {
 // document state and geometry, never writes.
 export function useV2TestApi(options: V2TestApiOptions) {
   const {
-    hostRef, selectionRef, toolRef, selectedConnectorIds, document, revision, saveStatus, proposal,
+    hostRef, selectionRef, toolRef, selectedConnectorIds, document, revision, saveStatus, proposal, mapState,
   } = options;
   useEffect(() => {
     const api = {
@@ -44,6 +46,8 @@ export function useV2TestApi(options: V2TestApiOptions) {
         selectedConnectors: selectedConnectorIds,
         tool: toolRef.current,
       }),
+      getMapState: mapState,
+      pickTransformHandle: (point: { x: number; y: number }) => hostRef.current?.pickTransformHandle(point) ?? null,
       getDocument: () => document,
       getProposal: () => ({
         phase: proposal.phase, stale: proposal.stale, id: proposal.proposal?.id ?? null,

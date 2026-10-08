@@ -14,6 +14,7 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
   const onToggleInspect = vi.fn();
   const onToggleIcons = vi.fn();
   const onFind = vi.fn();
+  const onToggleMap = vi.fn(() => true);
   const insert = { onInsertFrame: vi.fn(), onInsertSticky: vi.fn(), onToggleMore: vi.fn() };
   const clipboard = { onGroup: vi.fn(), onUngroup: vi.fn(), onWrapInSection: vi.fn(), onCut: vi.fn(), onCopy: vi.fn(), onPaste: vi.fn(), onCopyStyle: vi.fn(), onPasteStyle: vi.fn() };
   const arrange = { onAlign: vi.fn(), onDistribute: vi.fn(), onFlip: vi.fn(), onZoomToSelection: vi.fn(), onTextStyle: vi.fn() };
@@ -22,14 +23,14 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
     toolRef: { current: 'select' }, editingRef: { current: false }, onToolChange,
     onUndo: vi.fn(), onRedo: vi.fn(), onDelete: vi.fn(), onDuplicate: vi.fn(), onEditPrimary: vi.fn(), onRemoveFromModel: vi.fn(),
     onNudge: vi.fn(), onEscapePanel: () => false, onToggleEmoji: () => undefined, onInsertImage: () => undefined, onCancelGesture: () => false, onClearSelection: vi.fn(), onSelectAll: vi.fn(),
-    onFitView, onZoomStep, onResetZoom, onToggleTree: vi.fn(), onToggleIcons, onToggleInspect, onFind,
+    onFitView, onZoomStep, onResetZoom, onToggleTree: vi.fn(), onToggleIcons, onToggleInspect, onToggleMap, onFind,
     onToggleAgent: vi.fn(), onToggleCode: vi.fn(), onToggleModel: vi.fn(), onSpacePan, onTypeToEdit,
   }));
   const key = (init: Partial<KeyboardEvent<HTMLElement>>) => result.current({
     key: 'q', target: document.createElement('section'), preventDefault: vi.fn(),
     ...init,
   } as unknown as KeyboardEvent<HTMLElement>);
-  return { key, ...insert, onFind, onToggleInspect, onToggleIcons, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan, onReorder, onToggleLock, ...clipboard, ...arrange };
+  return { key, ...insert, onFind, onToggleMap, onToggleInspect, onToggleIcons, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan, onReorder, onToggleLock, ...clipboard, ...arrange };
 }
 
 describe('useV2Keyboard type-to-edit', () => {
@@ -60,6 +61,26 @@ describe('useV2Keyboard inspect', () => {
     expect(onToggleInspect).toHaveBeenCalledOnce();
     expect(onToggleIcons).not.toHaveBeenCalled();
     expect(onTypeToEdit).not.toHaveBeenCalled();
+  });
+});
+
+describe('useV2Keyboard map', () => {
+  it('M toggles Map before type-to-edit on a model page; ⌥M stays the Model panel', () => {
+    const { key, onToggleMap, onTypeToEdit } = setup();
+    key({ key: 'm' });
+    expect(onToggleMap).toHaveBeenCalledOnce();
+    expect(onTypeToEdit).not.toHaveBeenCalled();
+    key({ key: 'M', shiftKey: true });
+    key({ key: 'm', metaKey: true });
+    key({ key: 'Dead', code: 'KeyM', altKey: true });
+    expect(onToggleMap).toHaveBeenCalledOnce();
+  });
+
+  it('M is an ordinary key on a page without a model', () => {
+    const none = setup();
+    none.onToggleMap.mockReturnValue(false);
+    none.key({ key: 'm' });
+    expect(none.onTypeToEdit).toHaveBeenCalledWith('m');
   });
 });
 

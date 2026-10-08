@@ -8,6 +8,7 @@ import { elementAncestors, elementDescendantIds, elementPathRef, type ArchIndex 
 import { safeHttpsUrl } from '../../../dsl/model/relationSource';
 import type { ArchElement, ArchFlow, ArchRelation, ArchView } from '../../../dsl/model/types';
 import { Button, Icon, IconButton, Panel, Tabs } from '../design-system';
+import { MapArrowDetails } from './map/MapArrowDetails';
 import type { ArchitectureCrumb, V2Architecture } from './useV2Architecture';
 
 export interface V2ModelPanelProps {
@@ -32,6 +33,8 @@ export interface V2ModelPanelProps {
   readonly readOnly: boolean;
   /** `adr/*.md` contents from the open workspace folder, matched by link. */
   readonly adrs?: readonly { readonly path: string; readonly text: string }[];
+  /** A clicked Map arrow: the Elements tab lists every relation behind it instead of the element inspector. */
+  readonly mapArrow?: { readonly from: string; readonly to: string; readonly relationIds: readonly string[] } | null;
 }
 
 type Tab = 'elements' | 'views' | 'flows' | 'tags';
@@ -186,7 +189,9 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
                   ))}
                 </ul>
                 {rows.length === 0 ? <p role="status" className="ofk-v2-model-hint">No matching elements. Try another name, technology or tag.</p> : null}
-                {selected ? <div className="ofk-v2-model-detail">
+                {props.mapArrow ? <MapArrowDetails model={model} arrow={props.mapArrow}
+                  onSelectElement={(id) => { setInspection({id, selectedAtClick: props.selectedElementId}); props.onSelectElement(id); }} /> : null}
+                {!props.mapArrow && selected ? <div className="ofk-v2-model-detail">
                   {architecture.childViewOf(selected.id) ? <Button variant="quiet" onClick={() => props.onDrillInto(selected.id)}>Open {viewKindLabel(architecture.childViewOf(selected.id)!)} view</Button> : null}
                   {!architecture.childViewOf(selected.id) && !readOnly && ['system', 'container'].includes(selected.kind) ? <Button variant="quiet" onClick={() => props.onCreateChildView(selected.id)}>Create {selected.kind === 'system' ? 'Container' : 'Component'} view</Button> : null}
                   {!props.placedElementIds.has(selected.id) && props.elementPageIds.has(selected.id) ? <Button variant="quiet" onClick={() => props.onNavigate({pageId: props.elementPageIds.get(selected.id)!, elementId: selected.id})}>Show in view</Button> : null}
@@ -203,7 +208,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
                     {!model.relations.some((relation) => relation.from === selected.id || relation.to === selected.id) ? <p className="ofk-v2-model-hint">No incoming or outgoing relationships.</p> : null}
                   </details>
                 </div> : null}
-                {selected ? (
+                {props.mapArrow ? null : selected ? (
                   <ElementInspector
                     key={selected.id}
                     element={selected}

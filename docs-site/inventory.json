@@ -758,6 +758,16 @@
       ]
     },
     {
+      "id": "map-mode",
+      "name": "Map mode",
+      "status": "partial",
+      "evidence": "src/opencanvas/presentation/v2/map/useV2MapMode.ts",
+      "notes": "Canvas | Map switch on pages with a C4 model: the model as boxes inside boxes, a click opens a box in place, a click on an arrow lists its relations. Motion, map toolbar and repo maps in the editor still to come.",
+      "shortcuts": [
+        "Canvas / Map (pages with a model)"
+      ]
+    },
+    {
       "id": "architecture-actions",
       "name": "Architecture edits",
       "status": "shipped",

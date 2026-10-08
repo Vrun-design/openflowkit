@@ -93,7 +93,8 @@ export class PixiSelectionOverlay {
     cleanFrame = false,
     hover: ConnectHover | null = null,
     dropTarget: string | null = null,
-    connectorHalo: readonly Point2d[] | null = null
+    connectorHalo: readonly Point2d[] | null = null,
+    editable = true
   ): void {
     this.graphics.clear();
     // A hovered line gets a soft halo so the click target reads before the click.
@@ -114,7 +115,9 @@ export class PixiSelectionOverlay {
       }
     }
     const bounds = selectionWorldBounds(index, selectedNodeIds);
-    if (bounds) drawTransformFrame(this.graphics, bounds, zoom);
+    if (bounds) drawTransformFrame(this.graphics, bounds, zoom, editable);
+    // Read-only: the outline says what is selected; there is nothing to grab, connect from or create.
+    if (!editable) return;
     // Connect handles: the single selected node, plus any hovered node.
     // A hovered handle inverts so the grab target reads at a glance.
     if (bounds && selectedNodeIds.length === 1) {

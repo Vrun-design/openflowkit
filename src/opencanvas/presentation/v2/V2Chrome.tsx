@@ -36,6 +36,8 @@ interface V2ChromeProps extends V2SettingsProps {
   };
   readonly breadcrumb?: readonly { readonly pageId: string; readonly label: string; readonly elementId?: string }[];
   readonly onCrumb?: (crumb: { readonly pageId: string; readonly elementId?: string }) => void;
+  /** Canvas | Map; Map draws nothing by hand, so the creation toolbar steps aside. */
+  readonly mapMode?: { readonly mode: 'canvas' | 'map'; readonly onChange: (mode: 'canvas' | 'map') => void };
   readonly onToolChange: (tool: V2Tool) => void;
   readonly toolConfig: V2ToolConfig;
   readonly onPickShape: (shape: ShapeKind) => void;
@@ -81,11 +83,12 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         {...(props.workspace ? { workspace: props.workspace } : {})}
         {...(props.breadcrumb ? { breadcrumb: props.breadcrumb } : {})}
         {...(props.onCrumb ? { onCrumb: props.onCrumb } : {})}
+        {...(props.mapMode ? { mapMode: props.mapMode } : {})}
         onOpenExport={props.onOpenExport}
         onDismissExport={props.onDismissExport}
         {...(props.onEditShared ? { onEditShared: props.onEditShared } : {})}
       />
-      {props.readOnly || props.canvasUnavailable ? null : (
+      {props.readOnly || props.canvasUnavailable || props.mapMode?.mode === 'map' ? null : (
         <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange}
           toolConfig={props.toolConfig} onPickShape={props.onPickShape}
           onPickConnector={props.onPickConnector}

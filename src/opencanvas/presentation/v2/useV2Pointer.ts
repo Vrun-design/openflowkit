@@ -129,10 +129,11 @@ export function useV2Pointer(options: V2PointerOptions) {
         }
         host.setPlacementGhost(null);
         if (tool === 'select' && event.target instanceof HTMLCanvasElement) {
-          const handle = host.pickTransformHandle(point);
+          const readOnly = opts.readOnlyRef.current;
+          const handle = readOnly ? null : host.pickTransformHandle(point);
           // Handles sit outside their node, so a hover over one comes from
           // the neighbourhood search, not from the node under the pointer.
-          const handleHit = opts.readOnlyRef.current ? null : pickHandleNear(host, opts, point);
+          const handleHit = readOnly ? null : pickHandleNear(host, opts, point);
           const hoverNode = handleHit?.nodeId ?? host.pickNode(point);
           const hoverSide = handleHit?.side ?? null;
           host.setHover(hoverNode, hoverSide);
@@ -141,7 +142,7 @@ export function useV2Pointer(options: V2PointerOptions) {
           host.setHoveredConnector(hoverConnector);
           const cursor = hoverSide ? 'crosshair'
             : handle ? HANDLE_CURSORS[handle]
-              : hoverNode ? 'move'
+              : hoverNode ? (readOnly ? 'pointer' : 'move')
                 : connectorHandle ? (connectorHandle.kind === 'endpoint' ? 'crosshair' : 'grab')
                   : hoverConnector ? 'pointer' : '';
           event.target.style.cursor = cursor;
@@ -317,7 +318,7 @@ export function useV2Pointer(options: V2PointerOptions) {
           pointerId: event.pointerId,
           start: point,
           current: point,
-          additive: false,
+          additive: event.shiftKey || event.metaKey || event.ctrlKey,
         };
         return;
       }

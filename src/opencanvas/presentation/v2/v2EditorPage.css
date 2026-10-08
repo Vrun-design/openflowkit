@@ -1136,3 +1136,9 @@
 .ofk-v2-find .ofk-field label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .ofk-v2-find .ofk-field input { width: 220px; }
 .ofk-v2-find-count { min-width: 64px; padding-inline: 6px; font-size: 12px; color: var(--ofk-muted); text-align: center; font-variant-numeric: tabular-nums; }
+
+/* Map mode: a state over the canvas (empty model, map that could not be drawn). Only its own buttons take clicks. */
+.ofk-v2-map-state { position: absolute; inset: 0; display: grid; place-items: center; padding: 96px 16px 24px; pointer-events: none; }
+.ofk-v2-map-state > * { pointer-events: auto; }
+/* Canvas | Map: two quiet buttons; the selected one is the design system's black pill. */
+.ofk-v2-mode { display: flex; align-items: center; gap: 2px; }
