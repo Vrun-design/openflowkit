@@ -57,7 +57,7 @@ function implicitView(model: ArchModel): ArchView {
   return {
     id: 'view:landscape',
     kind: 'landscape',
-    name: model.name ?? 'System map',
+    name: model.name ?? 'Landscape',
     rules: [],
   };
 }

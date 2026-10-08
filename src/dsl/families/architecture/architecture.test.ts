@@ -267,7 +267,7 @@ describe('architecture view scenes', () => {
       'view:landscape', 'view:context:shop', 'view:container:shop',
     ]);
     expect(workspace.views.map((view) => view.name)).toEqual([
-      'System map', 'Overview: Shop', 'Services: Shop',
+      'Landscape', 'Overview: Shop', 'Services: Shop',
     ]);
     const container = workspace.views[2]!;
     expect(container.result.groups.map((node) => node.id)).toEqual(['shop']);
@@ -296,7 +296,7 @@ views {
 }
 `);
     expect(workspace.views.map((view) => view.name)).toEqual([
-      'System map', 'Overview: Docs Site', 'Services: Docs Site', 'Inside API App',
+      'Landscape', 'Overview: Docs Site', 'Services: Docs Site', 'Inside API App',
       'Deployment (Live): Docs Site', 'Data paths',
     ]);
   });

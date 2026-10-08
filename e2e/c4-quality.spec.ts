@@ -159,7 +159,7 @@ test('an element with a deeper view opens it from the canvas and climbs back @ga
   await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop');
   await fitted('shop.web');
   await page.locator('.ofk-v2-breadcrumb-link').first().click();
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('System map');
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Landscape');
   await fitted('shop');
   // The keyboard does the same: Enter on the selected system.
   await clickNode(page, 'shop');

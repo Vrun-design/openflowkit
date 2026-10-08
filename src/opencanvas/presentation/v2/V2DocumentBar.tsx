@@ -198,7 +198,8 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               {props.document.name}
             </Button>
           )}
-          {props.breadcrumb && props.breadcrumb.length > 0 ? (
+          {/* The breadcrumb walks Canvas pages: Map has its own boxes, so it is not shown there. */}
+          {props.breadcrumb && props.breadcrumb.length > 0 && props.mapMode?.mode !== 'map' ? (
             <nav className="ofk-v2-breadcrumb" aria-label="Architecture level">
               {props.breadcrumb.map((crumb, index) => (
                 <Fragment key={`${crumb.pageId}-${index}`}>
@@ -215,6 +216,7 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               ))}
             </nav>
           ) : null}
+          {props.mapMode ? <span className="ofk-v2-divider" aria-hidden="true" /> : null}
           {props.mapMode ? (
             <div className="ofk-v2-mode" role="group" aria-label="View mode">
               <Tooltip content="Draw and arrange the page">

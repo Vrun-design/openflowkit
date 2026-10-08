@@ -46,7 +46,7 @@ describe('discoveryToDsl view order', () => {
     expect(views).toEqual(['view container of shop']);
   });
 
-  it('two folders that each hold 2+ services are two systems, System map first', () => {
+  it('two folders that each hold 2+ services are two systems, Landscape first', () => {
     const files = dockerfiles('billing/api', 'billing/worker', 'storefront/web', 'storefront/api');
     const views = viewLines(discoveryToDsl(discoverArchitecture(files, 'mono'), 'mono'));
     expect(views[0]).toBe('view landscape');

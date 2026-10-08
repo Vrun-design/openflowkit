@@ -2,9 +2,9 @@ import { doc } from './helpers';
 import { expect, test } from './test';
 
 // R4: C4 is the engine, not a word on the surface. Pages, crumbs, cards and the
-// home gallery say System map / Overview / Services / Inside; only the model
+// home gallery say Landscape / Overview / Services / Inside; only the model
 // panel (and the docs) name C4 levels, for people who know them.
-const JARGON = /\bC4\b|\bContainers?\b|\bContext\b|\bLandscape\b/i;
+const JARGON = /\bC4\b|\bContainers?\b|\bContext\b/i;
 
 test('a generated system map shows no C4 jargon outside the model panel @gate', async ({ page }) => {
   await page.goto('/');
@@ -17,7 +17,7 @@ test('a generated system map shows no C4 jargon outside the model panel @gate', 
   await expect(page.getByLabel('Search architecture')).toBeHidden();
 
   const document = (await doc(page))!;
-  expect(document.pages.map((entry) => entry.name)).toEqual(['System map', 'Overview: Shop', 'Services: Shop']);
+  expect(document.pages.map((entry) => entry.name)).toEqual(['Landscape', 'Overview: Shop', 'Services: Shop']);
   const text = document.pages.flatMap((entry) => entry.nodes.flatMap((node) => {
     const content = node.content as { label?: unknown; subLabel?: unknown } | undefined;
     return [content?.label, content?.subLabel].filter((value): value is string => typeof value === 'string');

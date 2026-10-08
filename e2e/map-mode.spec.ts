@@ -270,3 +270,20 @@ test('a plain diagram has no Canvas | Map switch @gate', async ({ page }) => {
   await page.keyboard.press('m');
   expect((await mapState(page)).mode).toBe('canvas');
 });
+
+test('the architecture breadcrumb is set apart from Canvas | Map in Canvas and gone in Map @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  const crumbs = page.getByRole('navigation', { name: 'Architecture level' });
+  // The first page of a C4 workspace is its top view, by the name "Landscape".
+  await expect(crumbs).toBeVisible();
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Landscape');
+  const bar = page.getByRole('toolbar', { name: 'Document', exact: true });
+  const [navBox, divider, modes] = [await crumbs.boundingBox(), await bar.locator('.ofk-v2-divider').boundingBox(), await bar.getByRole('group', { name: 'View mode' }).boundingBox()];
+  expect(navBox!.x + navBox!.width).toBeLessThanOrEqual(divider!.x);
+  expect(divider!.x + divider!.width).toBeLessThanOrEqual(modes!.x);
+  await enterMap(page);
+  await expect(crumbs).toHaveCount(0);
+  await canvasButton(page).click();
+  await expect(crumbs).toBeVisible();
+});

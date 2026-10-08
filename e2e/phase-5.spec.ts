@@ -56,7 +56,7 @@ test('C4 workspace: generate, drill down, rename across views, play a flow', asy
   await page.getByRole('button', { name: 'Generate diagram' }).click();
   await expect.poll(async () => (await pages(page)).length).toBe(2);
   const [landscape, container] = await pages(page);
-  expect(landscape!.name).toBe('System map');
+  expect(landscape!.name).toBe('Landscape');
   expect(container!.name).toBe('Services: Shop');
   expect(landscape!.elements).toEqual(expect.arrayContaining(['customer', 'shop']));
   expect(container!.labels).toEqual(expect.arrayContaining(['Web', 'API', 'DB']));
@@ -70,7 +70,7 @@ test('C4 workspace: generate, drill down, rename across views, play a flow', asy
   await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop', { timeout: 5000 });
   // Back up a level with the breadcrumb link.
   await page.locator('.ofk-v2-breadcrumb-link').first().click();
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('System map');
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Landscape');
   await page.locator('.ofk-v2-model-row', { hasText: 'Shop' }).first().dblclick();
   await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop');
 

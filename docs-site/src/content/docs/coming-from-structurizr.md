@@ -134,7 +134,7 @@ Every view is one page. The plain names:
 
 | Structurizr view | Page name |
 | --- | --- |
-| `systemLandscape` | the landscape page, named by the view (the starter calls it **System map**) |
+| `systemLandscape` | the landscape page, named by the view (the starter calls it **Landscape**) |
 | `systemContext x` | `Overview: x` |
 | `container x` | `Services: x` |
 | `component x` | `Inside x` |
