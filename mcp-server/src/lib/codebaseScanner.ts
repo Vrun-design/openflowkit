@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { LANGUAGE_BY_EXT, SERVICE_RULES, isScannedFileName, isSkippedDir, type ScannedFile } from './agent.js';
 
 /**
  * Lightweight Node-side codebase scanner that mirrors the heuristics from
@@ -7,6 +8,9 @@ import path from 'node:path';
  * pulling its UI-bound dependencies. Detects cloud platform and common
  * services from file paths + content via regex rules.
  */
+
+export { INCLUDE_EXT, LANGUAGE_BY_EXT, SERVICE_RULES, isScannedFileName } from './agent.js';
+export type { DetectionRule, ScannedFile } from './agent.js';
 
 export type CloudPlatform = 'aws' | 'gcp' | 'azure' | 'cncf' | 'docker' | 'mixed' | 'unknown';
 
@@ -26,67 +30,6 @@ export interface CodebaseScanResult {
   topDirectories: Array<{ path: string; fileCount: number }>;
   languages: Record<string, number>;
 }
-
-export interface ScannedFile {
-  path: string;
-  content: string;
-}
-
-export const INCLUDE_EXT = new Set([
-  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
-  '.py', '.rb', '.go', '.rs', '.java', '.kt', '.swift',
-  '.php', '.cs', '.scala', '.clj', '.ex', '.exs',
-  '.yaml', '.yml', '.tf', '.json', '.toml',
-]);
-
-const SKIP_DIRS = new Set([
-  'node_modules', '.git', 'dist', 'build', '.next', '.nuxt',
-  'coverage', 'out', 'tmp', '.cache', '.turbo', '.vercel',
-  '__pycache__', '.pytest_cache', 'venv', '.venv', 'target',
-  '.gradle', '.idea', '.vscode',
-]);
-
-export const LANGUAGE_BY_EXT: Record<string, string> = {
-  '.ts': 'typescript', '.tsx': 'typescript',
-  '.js': 'javascript', '.jsx': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript',
-  '.py': 'python', '.rb': 'ruby', '.go': 'go', '.rs': 'rust',
-  '.java': 'java', '.kt': 'kotlin', '.swift': 'swift',
-  '.php': 'php', '.cs': 'csharp',
-  '.yaml': 'yaml', '.yml': 'yaml', '.tf': 'terraform',
-  '.json': 'json', '.toml': 'toml',
-};
-
-export interface DetectionRule {
-  name: string;
-  type: DetectedService['type'];
-  provider: DetectedService['provider'];
-  patterns: RegExp[];
-}
-
-export const SERVICE_RULES: DetectionRule[] = [
-  { name: 'PostgreSQL', type: 'database', provider: 'unknown', patterns: [/\bpsycopg2?\b/i, /\bpostgres\b/i, /\bpostgresql\b/i, /\bpg\b/i] },
-  { name: 'MySQL', type: 'database', provider: 'unknown', patterns: [/\bmysql2?\b/i, /\bpymysql\b/i] },
-  { name: 'MongoDB', type: 'database', provider: 'unknown', patterns: [/\bmongodb\b/i, /\bmongoose\b/i] },
-  { name: 'Redis', type: 'cache', provider: 'unknown', patterns: [/\bioredis\b/i, /\bredis\b/i] },
-  { name: 'Kafka', type: 'messaging', provider: 'unknown', patterns: [/\bkafkajs\b/i, /\bconfluent-kafka\b/i] },
-  { name: 'RabbitMQ', type: 'queue', provider: 'unknown', patterns: [/\bamqplib\b/i, /\bpika\b/i] },
-  { name: 'S3', type: 'storage', provider: 'aws', patterns: [/\bS3Client\b/, /@aws-sdk\/client-s3\b/] },
-  { name: 'CloudFront', type: 'network', provider: 'aws', patterns: [/\bcloudfront\b/i] },
-  { name: 'RDS', type: 'database', provider: 'aws', patterns: [/\bRDS\b/, /\brds\b/i] },
-  { name: 'DynamoDB', type: 'database', provider: 'aws', patterns: [/\bDynamoDB\b/, /\bdynamodb\b/i] },
-  { name: 'Lambda', type: 'compute', provider: 'aws', patterns: [/\bLambda\b/, /@aws-sdk\/client-lambda/, /\blambda\b/i] },
-  { name: 'API Gateway', type: 'api', provider: 'aws', patterns: [/\bapi gateway\b/i, /\bapigateway\b/i] },
-  { name: 'SQS', type: 'queue', provider: 'aws', patterns: [/\bSQS\b/, /\bsqs\b/i] },
-  { name: 'Azure Functions', type: 'compute', provider: 'azure', patterns: [/@azure\/functions/i, /\bfunctionapp\b/i] },
-  { name: 'Azure SQL', type: 'database', provider: 'azure', patterns: [/\bazure sql\b/i, /\bmssql\b/i] },
-  { name: 'Cloud Storage', type: 'storage', provider: 'gcp', patterns: [/@google-cloud\/storage/, /\bcloud storage\b/i] },
-  { name: 'Cloud SQL', type: 'database', provider: 'gcp', patterns: [/\bcloud sql\b/i] },
-  { name: 'BigQuery', type: 'database', provider: 'gcp', patterns: [/@google-cloud\/bigquery/i, /\bbigquery\b/i] },
-  { name: 'Pub/Sub', type: 'messaging', provider: 'gcp', patterns: [/@google-cloud\/pubsub/i, /\bpub\/sub\b/i] },
-  { name: 'Kubernetes', type: 'compute', provider: 'cncf', patterns: [/\bapiVersion:\s*apps\//i, /\bkind:\s*Deployment\b/i, /\bkubectl\b/i] },
-  { name: 'Docker Compose', type: 'compute', provider: 'docker', patterns: [/\bdocker-compose\b/i, /\bcompose\.ya?ml\b/i] },
-  { name: 'Stripe', type: 'api', provider: 'third-party', patterns: [/\bstripe\b/i] },
-];
 
 function detectCloudPlatform(allContent: string, allPaths: string[]): CloudPlatform {
   const hits = new Set<Exclude<CloudPlatform, 'mixed' | 'unknown'>>();
@@ -108,11 +51,7 @@ function detectCloudPlatform(allContent: string, allPaths: string[]): CloudPlatf
 }
 
 function shouldVisit(entryName: string): boolean {
-  return !SKIP_DIRS.has(entryName) && !entryName.startsWith('.');
-}
-
-export function isScannedFileName(name: string): boolean {
-  return INCLUDE_EXT.has(path.extname(name).toLowerCase());
+  return !isSkippedDir(entryName);
 }
 
 /**

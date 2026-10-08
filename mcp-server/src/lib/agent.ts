@@ -160,6 +160,119 @@ export interface OpCapabilities {
   readonly fitView?: (objectIds?: readonly string[]) => void;
 }
 
+/* Architecture discovery: shapes copied from src/dsl/discovery/discovery.ts. */
+export interface DiscoveryEvidence {
+  readonly file: string;
+  readonly line: number;
+  readonly text: string;
+}
+
+export type DiscoveredUnitKind = 'system' | 'container' | 'store' | 'queue' | 'external';
+
+export interface DiscoveredUnit {
+  readonly id: string;
+  readonly name: string;
+  readonly kind: DiscoveredUnitKind;
+  readonly tech?: string;
+  readonly evidence: readonly DiscoveryEvidence[];
+  readonly dir: string;
+}
+
+export interface DiscoveredRelation {
+  readonly from: string;
+  readonly to: string;
+  readonly label?: string;
+  readonly evidence: readonly DiscoveryEvidence[];
+}
+
+export interface ArchitectureDiscovery {
+  readonly units: readonly DiscoveredUnit[];
+  readonly relations: readonly DiscoveredRelation[];
+  readonly languages: Readonly<Record<string, number>>;
+  readonly evidenceCount: number;
+}
+
+export interface ArchElementData {
+  readonly id: string;
+  readonly kind: string;
+  readonly name: string;
+  readonly parent: string | null;
+  readonly tech?: string;
+  readonly desc?: string;
+  readonly tags: readonly string[];
+  readonly links: readonly string[];
+  readonly attrs?: readonly { readonly key?: string; readonly value: string }[];
+}
+
+export interface ArchRelationData {
+  readonly id: string;
+  readonly from: string;
+  readonly to: string;
+  readonly label?: string;
+  readonly tech?: string;
+}
+
+export interface ArchViewData {
+  readonly id: string;
+  readonly kind: string;
+  readonly name: string;
+  readonly of?: string;
+}
+
+export interface ArchFlowStepData {
+  readonly id: string;
+  readonly kind: string;
+  readonly from?: string;
+  readonly to?: string;
+  readonly label?: string;
+  readonly branches?: readonly { readonly label?: string; readonly steps: readonly ArchFlowStepData[] }[];
+}
+
+export interface ArchFlowData {
+  readonly id: string;
+  readonly name: string;
+  readonly steps: readonly ArchFlowStepData[];
+}
+
+export interface ArchModelData {
+  readonly name?: string;
+  readonly elements: readonly ArchElementData[];
+  readonly relations: readonly ArchRelationData[];
+  readonly views: readonly ArchViewData[];
+  readonly flows: readonly ArchFlowData[];
+}
+
+export interface DriftFinding {
+  readonly id: string;
+  readonly name: string;
+  readonly evidence: readonly DiscoveryEvidence[];
+}
+
+export interface DriftChange {
+  readonly id: string;
+  readonly field: 'tech' | 'dir';
+  readonly model: string;
+  readonly repo: string;
+}
+
+export interface DriftReportResult {
+  readonly missing: readonly DriftFinding[];
+  readonly undrawn: readonly DriftFinding[];
+  readonly changed: readonly DriftChange[];
+}
+
+export interface DetectionRule {
+  readonly name: string;
+  readonly type: string;
+  readonly provider: 'aws' | 'gcp' | 'azure' | 'cncf' | 'docker' | 'third-party' | 'unknown';
+  readonly patterns: readonly RegExp[];
+}
+
+export interface ScannedFile {
+  readonly path: string;
+  readonly content: string;
+}
+
 interface AgentBundle {
   readonly AGENT_OPS: readonly AgentOp[];
   findAgentOp(name: string): AgentOp | null;
@@ -204,6 +317,21 @@ interface AgentBundle {
   readonly FRAME_PRESETS: readonly string[];
   readonly STARTER_TEMPLATES: readonly StarterTemplate[];
   readonly findStarterTemplate: (name: string) => StarterTemplate | undefined;
+  discoverArchitecture(files: readonly ScannedFile[], rootName: string): ArchitectureDiscovery;
+  capUnits(result: ArchitectureDiscovery, max: number): { readonly result: ArchitectureDiscovery; readonly dropped: number };
+  discoveryToDsl(result: ArchitectureDiscovery, name: string, evidenceLink?: (evidence: DiscoveryEvidence) => string): string;
+  driftReport(modelOrJson: ArchModelData | string, result: ArchitectureDiscovery): DriftReportResult;
+  modelFromNode(node: unknown): ArchModelData | null;
+  modelFromDocument(document: unknown): ArchModelData | null;
+  readArchModel(value: unknown): ArchModelData | null;
+  discoverySummary(result: ArchitectureDiscovery): string;
+  acceptsArchitectureFile(file: string): boolean;
+  slugDiscoveryId(value: string): string;
+  readonly SERVICE_RULES: readonly DetectionRule[];
+  readonly LANGUAGE_BY_EXT: Readonly<Record<string, string>>;
+  readonly INCLUDE_EXT: ReadonlySet<string>;
+  isScannedFileName(name: string): boolean;
+  isSkippedDir(name: string): boolean;
 }
 
 export interface StarterTemplate {
@@ -222,6 +350,9 @@ export const {
   BRIDGE_PROTOCOL_VERSION, BRIDGE_DEFAULT_PORT, BRIDGE_POLL_SECONDS, BRIDGE_IDLE_MS,
   bridgeTokenHeader, bridgeUrls, isAllowedBridgeOrigin, isBridgeRequest, WIDGET_KINDS, FRAME_PRESETS,
   STARTER_TEMPLATES, findStarterTemplate,
+  discoverArchitecture, capUnits, discoveryToDsl, driftReport, modelFromNode, modelFromDocument, readArchModel,
+  discoverySummary, acceptsArchitectureFile, slugDiscoveryId,
+  SERVICE_RULES, LANGUAGE_BY_EXT, INCLUDE_EXT, isScannedFileName, isSkippedDir,
 } = bundle as unknown as AgentBundle;
 
 export type { ZodType, ZodRawShape, ZodObject } from 'zod';

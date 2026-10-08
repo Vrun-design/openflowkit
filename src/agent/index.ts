@@ -34,6 +34,12 @@ export { archModelFromJson } from '../dsl/model/model';
 export { collectIconArt, exportCanonicalSvg } from '../opencanvas/infrastructure/export/canonicalSvg';
 export { tablerSvg } from '../services/shapeLibrary/tablerSvg';
 export { ICON_PACK_IDS } from '../dsl/iconMatch';
+// Architecture discovery: one core for the MCP server, the CLI and the repo page.
+export {
+  acceptsArchitectureFile, capUnits, discoverArchitecture, discoverySummary, discoveryToDsl, driftReport,
+  modelFromDocument, modelFromNode, readArchModel, slugDiscoveryId,
+} from '../dsl/discovery/discovery';
+export { INCLUDE_EXT, LANGUAGE_BY_EXT, SERVICE_RULES, isScannedFileName, isSkippedDir } from '../dsl/discovery/rules';
 // The wireframe vocabulary, so discovery lists what the renderer draws.
 export { WIDGET_KINDS } from '../opencanvas/domain/nodes/widgetNodePresentation';
 export { FRAME_PRESETS } from '../opencanvas/domain/nodes/framePreset';

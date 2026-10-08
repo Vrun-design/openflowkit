@@ -24,8 +24,8 @@ export function quote(value: string): string {
   // Keywords are case-sensitive lowercase (grammar §2.5), so `Join` needs no quotes.
   const mustQuote = RESERVED_LABELS.has(value) || /(?:->|-->|<->|<-->|<-|<--|:|=|,|\[|\]|\{|\}|\/\/|;)/.test(value)
     // A label that does not open with a letter or digit (`...etc`, `(beta) API`) is not a word to the lexer.
-    || /^[^\p{L}\p{N}_]/u.test(value) || value.includes('\n');
-  return mustQuote ? `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"` : value;
+    || /^[^\p{L}\p{N}_]/u.test(value) || value.includes('\n') || value.includes('\r');
+  return mustQuote ? `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r\n?|\n/g, '\\n')}"` : value;
 }
 
 export function nodeLabel(node: SceneNode): string {
@@ -96,7 +96,7 @@ export function nodeAttributes(node: SceneNode, swatchOf: SwatchResolver = palet
 export function attributeText(attributes: readonly CanonicalAttribute[]): string {
   if (attributes.length === 0) return '';
   return ` [${attributes.map((attribute) => {
-    const value = /[,;[\]]/.test(attribute.value) || attribute.value !== attribute.value.trim()
+    const value = /[,;[\]\r\n]/.test(attribute.value) || attribute.value !== attribute.value.trim()
       ? quote(attribute.value) : attribute.value;
     return attribute.key ? `${attribute.key}: ${value}` : value;
   }).join(', ')}]`;
