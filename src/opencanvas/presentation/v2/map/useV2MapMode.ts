@@ -10,6 +10,7 @@ import { resolveDslIcon } from '../../../../services/dsl/iconResolver';
 import { getElkInstance } from '../../../../services/elk-layout/runtime';
 import { MOVE_MS } from '../../../application/map/geometry';
 import { layoutMap, type LayoutPorts } from '../../../application/map/layoutMap';
+import { mapFocus } from '../../../application/map/mapFocus';
 import { absoluteRects } from '../../../application/map/motionFrame';
 import { cullMotion, movedView } from '../../../application/map/motionCull';
 import { MapMotionPlayer } from '../../../application/map/motionPlayer';
@@ -45,6 +46,9 @@ interface Options {
   /** The one selected box, for Enter and Escape. */
   readonly primaryId: () => string | null;
   readonly select: (id: string) => void;
+  /** What the reader has picked, for the focus: the one selected box, or the one selected arrow (null when several or none). */
+  readonly selectedNodeId: string | null;
+  readonly selectedConnectorId: string | null;
   /** The editor's own Escape chain before Map closes a box: gesture, panel, tool. True when it cancelled something. */
   readonly cancelTransient: () => boolean;
   readonly closeChart: () => void;
@@ -73,7 +77,7 @@ function useStable<T>(value: T): T {
  * written; the scene is a ScenePage handed to the canvas in place of the page.
  */
 export function useV2MapMode(options: Options) {
-  const { page, documentId, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, cancelTransient, closeChart, notify } = options;
+  const { page, documentId, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify } = options;
   // Cheap: only whether the page carries a model. The model itself is read only while the map is on.
   const available = useMemo(() => (page ? archFrameOf(page) !== null : false), [page]);
   const [mode, setModeState] = useState<V2MapModeName>('canvas');
@@ -269,6 +273,16 @@ export function useV2MapMode(options: Options) {
     }, () => renders.current);
   }, [mapPage, scene, model, hostRef, cameraRef, updateCamera, player, clearance]);
 
+  // The focus is the selection, drawn by the host: the box or arrow, what it talks to, the rest dimmed. Only a focus set here is cleared here
+  // (Canvas has its own, flow playback and perspectives). A scene change recomputes it: a box just opened brings its arrows with it.
+  const focusing = useRef(false);
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const focus = active && mapPage && mapPage !== EMPTY_MAP ? mapFocus(mapPage, { nodeId: selectedNodeId, connectorId: selectedConnectorId }) : null;
+    if (focus) { host.setFocus({ ...focus, tone: 'selection' }); focusing.current = true; } else if (focusing.current) { host.setFocus(null); focusing.current = false; }
+  }, [active, mapPage, selectedNodeId, selectedConnectorId, hostRef]);
+
   /** True when the open set changed. */
   const flip = useCallback((id: string): boolean => {
     if (!model) return false;
@@ -328,7 +342,9 @@ export function useV2MapMode(options: Options) {
     })) ?? [],
     // How many layouts have landed: a click that changes nothing must not add one.
     layouts: layouts.current,
-  }), [active, open, mapPage]);
+    // What the host dims around: the ids kept bright, and whether the arrows are marching.
+    focus: hostRef.current?.getFocusState() ?? null,
+  }), [active, open, mapPage, hostRef]);
   /** The last move's numbers (frames, drawing cost, frame gaps, page renders): for the test hook and the perf spec. */
   const motionStats = useCallback(() => {
     const stats = player.stats();

@@ -220,6 +220,8 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     cameraRef: camera.cameraRef, updateCamera: camera.updateCamera, fitView: camera.fitView, onToolChange: setTool,
     primaryId: () => selectionRef.current.primaryNodeId,
     select: (id) => { applyConnectorSelection([]); applySelection(replaceSelection([id])); },
+    selectedNodeId: selection.nodeIds.length === 1 && selectedConnectorIds.length === 0 ? selection.nodeIds[0]! : null,
+    selectedConnectorId: selection.nodeIds.length === 0 ? selectedConnectorId : null,
     cancelTransient: () => {
       if (gestureApiRef.current?.cancelGesture()) return true;
       if (escapePanel()) return true;
@@ -487,10 +489,10 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [architectureActions, playback.flow, preferences.perspectiveTags, page],
   );
-  // One spotlight source: flow playback wins while it is open, then tags.
+  // One spotlight source: flow playback wins while it is open, then tags. Map mode has its own, from its selection.
   useEffect(() => {
-    if (rendererReady) hostRef.current?.setFocus(playback.focus ?? perspectiveFocus);
-  }, [playback.focus, perspectiveFocus, rendererReady]);
+    if (rendererReady && !map.active) hostRef.current?.setFocus(playback.focus ?? perspectiveFocus);
+  }, [playback.focus, perspectiveFocus, rendererReady, map.active]);
 
   // Local agent pairing: the ops run here, against this session, through the
   // same registry the MCP server uses. Off until the user connects.

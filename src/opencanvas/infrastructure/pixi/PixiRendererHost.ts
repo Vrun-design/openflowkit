@@ -33,7 +33,7 @@ import { drawPixiNodeOutline } from './pixiNodeOutline';
 import { basicNodeDecorations } from '../../domain/nodes/basicNodeDecorations';
 import type { BasicNodeShape } from '../../domain/nodes/basicNodePresentation';
 import { PixiProposalPreview, type ProposalPreviewFrame } from './PixiProposalPreview';
-import { PixiFocusOverlay, type FocusFrame } from './PixiFocusOverlay';
+import { FLOW_SPEED, PixiFocusOverlay, type FocusFrame } from './PixiFocusOverlay';
 import { PixiContainerRenderer } from './PixiContainerRenderer';
 import { PixiMapMotion } from './PixiMapMotion';
 import type { MotionFrame } from '../../application/map/motionFrame';
@@ -132,6 +132,8 @@ export class PixiRendererHost {
   private proposalFrame: ProposalPreviewFrame | null = null;
   private readonly focusOverlay = new PixiFocusOverlay();
   private focusFrame: FocusFrame | null = null;
+  private flowFrame: number | null = null;
+  private flowStart = 0;
   private readonly marquee = new Graphics();
   private readonly placementGhost = new Graphics();
   private readonly connectionPreview = new PixiConnectorRenderer();
@@ -219,11 +221,13 @@ export class PixiRendererHost {
       this.alignmentGuides
     );
     if (this.livePreview) this.world.addChild(this.livePreview.container);
-    this.world.addChild(this.proposalPreview.container, this.focusOverlay.content);
-    this.app.stage.addChild(this.dotGrid.graphics, this.world, this.focusOverlay.veil, this.marquee);
+    this.world.addChild(this.proposalPreview.container);
+    // The veil dims the page; the focused objects sit above it, in their own layer that follows the camera like the world.
+    this.app.stage.addChild(this.dotGrid.graphics, this.world, this.focusOverlay.veil, this.focusOverlay.content, this.marquee);
     const canvas = this.app.canvas as HTMLCanvasElement;
     canvas.className = 'pixi-spike__canvas';
     canvas.setAttribute('aria-label', 'Diagram drawing surface');
+    document.addEventListener('visibilitychange', this.onVisibility);
     canvas.addEventListener('webglcontextlost', this.handleContextLost);
     canvas.addEventListener('webglcontextrestored', this.handleContextRestored);
     container.appendChild(canvas);
@@ -284,6 +288,8 @@ export class PixiRendererHost {
     this.camera = camera;
     this.world.position.set(camera.x, camera.y);
     this.world.scale.set(camera.zoom);
+    this.focusOverlay.content.position.set(camera.x, camera.y);
+    this.focusOverlay.content.scale.set(camera.zoom);
     this.cameraDirty = true;
     this.requestRender();
   }
@@ -303,6 +309,7 @@ export class PixiRendererHost {
       this.motionActive = true;
       this.motionRenderMs = [];
       this.setSceneRenderable(false);
+      this.syncFlow();
     }
     this.stopArrowFade();
     this.connectorRenderer.container.renderable = false;
@@ -363,7 +370,8 @@ export class PixiRendererHost {
   /** Hides or shows what setPage draws (boxes, titles, arrows, selection) without touching what `visible` means to their owners. */
   private setSceneRenderable(shown: boolean): void {
     for (const part of [this.containerRenderer.graphics, this.containerRenderer.labels, this.nodeRenderer.graphics,
-      this.nodeRenderer.media, this.nodeRenderer.labels, this.connectorRenderer.container, this.selectionOverlay.graphics]) {
+      this.nodeRenderer.media, this.nodeRenderer.labels, this.connectorRenderer.container, this.selectionOverlay.graphics,
+      this.focusOverlay.veil, this.focusOverlay.content]) {
       part.renderable = shown;
     }
   }
@@ -378,13 +386,13 @@ export class PixiRendererHost {
       // Mid-move the camera only moves the world: no projection change (that would rebuild the scene), no label or overlay work.
       this.connectorRenderer.setZoom(camera.zoom);
       const resolution = textResolutionForZoom(camera.zoom, window.devicePixelRatio || 1);
-      if (resolution !== currentPixiTextResolution()) applyTextResolution(this.world, resolution);
+      if (resolution !== currentPixiTextResolution()) { applyTextResolution(this.world, resolution); applyTextResolution(this.focusOverlay.content, resolution); }
       return;
     }
     this.drawSelection();
     this.connectorRenderer.setZoom(camera.zoom);
     const textResolution = textResolutionForZoom(camera.zoom, window.devicePixelRatio || 1);
-    if (textResolution !== currentPixiTextResolution()) applyTextResolution(this.world, textResolution);
+    if (textResolution !== currentPixiTextResolution()) { applyTextResolution(this.world, textResolution); applyTextResolution(this.focusOverlay.content, textResolution); }
     this.drawProposalPreview();
     this.drawFocus();
 
@@ -690,11 +698,41 @@ export class PixiRendererHost {
   private drawFocus(): void {
     if (!this.page || !this.focusFrame) {
       this.focusOverlay.clear();
+      this.syncFlow();
       return;
     }
-    this.focusOverlay.drawScreen(this.getViewportSize(), this.backgroundColor, 0.62);
+    // The SVG map dims to 0.35 opacity, so its veil is 0.65; the storyboard's stays 0.62.
+    this.focusOverlay.drawScreen(this.getViewportSize(), this.backgroundColor, this.focusFrame.tone === 'selection' ? 0.65 : 0.62);
     this.focusOverlay.draw(this.page, this.focusFrame, this.camera.zoom, this.backgroundColor);
+    this.syncFlow();
   }
+
+  /** What is focused now, and whether its arrows are marching (false under reduced motion, hidden tabs and mid-move). */
+  getFocusState(): { nodeIds: readonly string[]; connectorIds: readonly string[]; animating: boolean } | null {
+    return this.focusFrame ? { nodeIds: this.focusFrame.nodeIds, connectorIds: this.focusFrame.connectorIds, animating: this.flowFrame !== null } : null;
+  }
+
+  /** One rAF loop, alive only while a Map focus with arrows is on screen, the tab is visible and motion is allowed. */
+  private syncFlow(): void {
+    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const want = !this.destroyed && !!this.page && this.focusFrame?.tone === 'selection' && this.focusOverlay.hasFlow()
+      && !this.motionActive && !reduced && typeof document !== 'undefined' && !document.hidden;
+    if (!want) {
+      if (this.flowFrame !== null) { cancelAnimationFrame(this.flowFrame); this.flowFrame = null; this.focusOverlay.drawFlow(0); }
+      return;
+    }
+    if (this.flowFrame !== null) return;
+    this.flowStart = performance.now();
+    const tick = (now: number): void => {
+      if (document.hidden) { this.flowFrame = null; return; }
+      this.focusOverlay.drawFlow(((now - this.flowStart) / 1000) * FLOW_SPEED);
+      this.renderNow();
+      this.flowFrame = requestAnimationFrame(tick);
+    };
+    this.flowFrame = requestAnimationFrame(tick);
+  }
+
+  private readonly onVisibility = (): void => { if (!document.hidden) this.syncFlow(); };
 
   setFreeformPreview(frame: FreeformPreviewFrame | null): void {
     if (frame) this.freeformPreview.draw(frame);
@@ -841,6 +879,8 @@ export class PixiRendererHost {
     if (this.previewFrame !== null) cancelAnimationFrame(this.previewFrame);
     if (this.renderFrame !== null) cancelAnimationFrame(this.renderFrame);
     if (this.arrowFade !== null) cancelAnimationFrame(this.arrowFade);
+    if (this.flowFrame !== null) cancelAnimationFrame(this.flowFrame);
+    document.removeEventListener('visibilitychange', this.onVisibility);
     if (this.app.renderer) {
       const canvas = this.app.canvas as HTMLCanvasElement;
       canvas.removeEventListener('webglcontextlost', this.handleContextLost);
@@ -1002,6 +1042,8 @@ export class PixiRendererHost {
   private applyCamera(): void {
     this.world.position.set(this.camera.x, this.camera.y);
     this.world.scale.set(this.camera.zoom);
+    this.focusOverlay.content.position.set(this.camera.x, this.camera.y);
+    this.focusOverlay.content.scale.set(this.camera.zoom);
     this.drawDotGrid();
   }
 

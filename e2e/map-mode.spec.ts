@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './test';
-import { centreOf, doc, openCanvas, rect, state } from './helpers';
+import { centreOf, doc, emptyPoint, openCanvas, rect, state } from './helpers';
 
 interface MapState {
   mode: 'canvas' | 'map';
@@ -9,6 +9,8 @@ interface MapState {
   /** How many layouts have landed: a click that changes nothing must not add one. */
   layouts: number;
   connectors: { id: string; from: string; to: string; label: string }[];
+  /** What the canvas keeps bright around the selection (null: nothing dimmed) and whether its arrows are marching. */
+  focus: { nodeIds: string[]; connectorIds: string[]; animating: boolean } | null;
 }
 const mapState = (page: Page): Promise<MapState> =>
   page.evaluate(() => (window as unknown as { __V2__: { getMapState(): MapState } }).__V2__.getMapState());
@@ -286,4 +288,60 @@ test('the architecture breadcrumb is set apart from Canvas | Map in Canvas and g
   await expect(crumbs).toHaveCount(0);
   await canvasButton(page).click();
   await expect(crumbs).toBeVisible();
+});
+
+test('a click on a box focuses it and the boxes it talks to; an empty click, Escape or leaving Map clears it @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  await enterMap(page);
+  expect((await mapState(page)).focus).toBeNull();
+  await click(page, 'customer');
+  await expect.poll(async () => (await mapState(page)).focus?.nodeIds ?? []).toContain('customer');
+  const map = await mapState(page);
+  const touching = map.connectors.filter((c) => c.from === 'customer' || c.to === 'customer');
+  expect(touching.length).toBeGreaterThan(0);
+  expect(map.focus!.connectorIds).toEqual(touching.map((c) => c.id).sort());
+  expect(map.focus!.nodeIds).toEqual([...new Set(['customer', ...touching.flatMap((c) => [c.from, c.to])])].sort());
+  expect(map.focus!.animating).toBe(true);
+  // Empty canvas clears it.
+  const empty = await emptyPoint(page, 700, 960);
+  await page.mouse.click(empty.x, empty.y);
+  await expect.poll(async () => (await mapState(page)).focus).toBeNull();
+  // Escape clears it too (after the editor's own cancel chain).
+  await click(page, 'customer');
+  await expect.poll(async () => (await mapState(page)).focus !== null).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await mapState(page)).focus).toBeNull();
+  // Leaving Map clears it.
+  await click(page, 'customer');
+  await expect.poll(async () => (await mapState(page)).focus !== null).toBe(true);
+  await canvasButton(page).click();
+  await expect.poll(async () => (await mapState(page)).mode).toBe('canvas');
+  expect((await mapState(page)).focus).toBeNull();
+});
+
+test('a click on an arrow focuses the arrow and its two ends @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page);
+  await enterMap(page);
+  const arrow = (await mapState(page)).connectors.find((c) => c.from === 'customer' || c.to === 'customer')!;
+  const lane = await page.evaluate((id: string) =>
+    (window as unknown as { __V2__: { getConnectorScreenSamples(id: string): { x: number; y: number }[] | null } }).__V2__.getConnectorScreenSamples(id) ?? [], arrow.id);
+  const [a, b] = [lane[0]!, lane[lane.length - 1]!];
+  const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
+  await page.mouse.click(box.x + a.x + (b.x - a.x) / 4, box.y + a.y + (b.y - a.y) / 4);
+  await expect.poll(async () => (await mapState(page)).focus?.connectorIds).toEqual([arrow.id]);
+  expect((await mapState(page)).focus!.nodeIds).toEqual([...new Set([arrow.from, arrow.to])].sort());
+  expect((await mapState(page)).focus!.animating).toBe(true);
+});
+
+test('with reduced motion the focus is shown and the arrows do not march @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openC4(page);
+  await enterMap(page);
+  await click(page, 'customer');
+  await expect.poll(async () => (await mapState(page)).focus?.nodeIds ?? []).toContain('customer');
+  expect((await mapState(page)).focus!.connectorIds.length).toBeGreaterThan(0);
+  expect((await mapState(page)).focus!.animating).toBe(false);
 });
