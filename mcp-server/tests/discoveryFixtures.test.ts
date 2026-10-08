@@ -244,7 +244,7 @@ describe('discovery on this repository', () => {
   // icon data and its own rule source. A real new dependency belongs in this list.
   it('reports the app, the docs site and the MCP server, and nothing it made up', async () => {
     const discovery = await runArchitectureDiscovery(fileURLToPath(new URL('../..', import.meta.url)));
-    expect(discovery.units.map((unit) => unit.name).sort()).toEqual(['openflowkit', 'openflowkit-docs', 'openflowkit-mcp']);
+    expect(discovery.units.map((unit) => unit.name).sort()).toEqual(['openflowkit', 'openflowkit-docs', 'openflowkit-mcp', 'openflowkit-share', 'openflowkit-shares']);
   });
 });
 

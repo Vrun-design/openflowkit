@@ -92,3 +92,48 @@ describe('acceptsArchitectureFile skip directories', () => {
     expect(acceptsArchitectureFile('api/index.ts')).toBe(true);
   });
 });
+
+describe('Cloudflare Workers', () => {
+  const toml = 'name = "openflowkit-share"\nmain = "index.ts"\n\n[[r2_buckets]]\nbinding = "SHARES"\nbucket_name = "openflowkit-shares"\n';
+  const worker = [
+    { path: 'worker/wrangler.toml', content: toml },
+    { path: 'worker/index.ts', content: 'export default { fetch() {} };\n' },
+  ];
+
+  it('a wrangler config makes its folder a Worker, and its R2 binding a store it uses', () => {
+    const result = discoverArchitecture(worker, 'repo');
+    const unit = result.units.find((entry) => entry.dir === 'worker')!;
+    expect(unit).toMatchObject({ kind: 'container', name: 'openflowkit-share', tech: 'Cloudflare Workers' });
+    expect(unit.evidence[0]).toMatchObject({ file: 'worker/wrangler.toml', line: 1 });
+    const bucket = result.units.find((entry) => entry.name === 'openflowkit-shares')!;
+    expect(bucket).toMatchObject({ kind: 'store', tech: 'R2' });
+    const use = result.relations.find((relation) => relation.to === bucket.id)!;
+    expect(use).toMatchObject({ from: unit.id, label: 'uses' });
+    expect(use.evidence[0]).toMatchObject({ file: 'worker/wrangler.toml', line: 6 });
+  });
+
+  it('enriches the folder\'s package.json unit instead of adding a second one', () => {
+    const files = [...worker, { path: 'worker/package.json', content: '{"name":"share","dependencies":{"hono":"^4"}}' }];
+    const units = discoverArchitecture(files, 'repo').units.filter((entry) => entry.dir === 'worker');
+    expect(units).toHaveLength(1);
+    expect(units[0]!.tech).toBe('Cloudflare Workers');
+  });
+
+  it('an assets-only wrangler config (no main) is static hosting: no Worker unit, tech untouched', () => {
+    const files = [
+      { path: 'wrangler.toml', content: 'name = "site"\n\n[assets]\ndirectory = "./dist"\n' },
+      { path: 'package.json', content: '{"name":"site","dependencies":{"react":"^19"}}' },
+    ];
+    expect(discoverArchitecture(files, 'repo').units.map((unit) => unit.tech)).toEqual(['React']);
+  });
+
+  it('accepts every wrangler config spelling', () => {
+    for (const name of ['wrangler.toml', 'wrangler.json', 'wrangler.jsonc']) expect(acceptsArchitectureFile(`worker/${name}`)).toBe(true);
+  });
+
+  it('reads a wrangler.jsonc the same way', () => {
+    const jsonc = '{\n  // share links\n  "name": "share",\n  "main": "src/index.ts",\n  "r2_buckets": [\n    { "binding": "SHARES", "bucket_name": "shares" }\n  ]\n}\n';
+    const result = discoverArchitecture([{ path: 'w/wrangler.jsonc', content: jsonc }], 'repo');
+    expect(result.units.map((entry) => [entry.name, entry.kind])).toEqual([['share', 'container'], ['shares', 'store']]);
+  });
+});

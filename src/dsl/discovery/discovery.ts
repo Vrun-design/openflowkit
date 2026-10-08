@@ -53,6 +53,7 @@ const MAX_EVIDENCE = 2;
 
 const DOCKERFILE = /^(?:Dockerfile(?:\.[A-Za-z0-9_-]+)?|[A-Za-z0-9_-]+\.dockerfile)$/i;
 const COMPOSE = /^(?:docker-compose|compose)\.ya?ml$/i;
+const WRANGLER = /^wrangler\.(?:toml|jsonc?)$/;
 const LOOSE_MANIFESTS = new Set(['go.mod', 'requirements.txt', 'pom.xml']);
 /** Lock files list every transitive dependency: pure noise for discovery. */
 const LOCKFILES = new Set([
@@ -70,7 +71,7 @@ export function acceptsArchitectureFile(file: string): boolean {
   const name = segments.pop()!;
   if (LOCKFILES.has(name) || NON_PRODUCTION_FILE.test(name)) return false;
   if (segments.some((segment) => isSkippedDir(segment) || NON_PRODUCTION_DIRS.has(segment))) return false;
-  return isScannedFileName(name) || DOCKERFILE.test(name) || COMPOSE.test(name) || LOOSE_MANIFESTS.has(name);
+  return isScannedFileName(name) || DOCKERFILE.test(name) || COMPOSE.test(name) || WRANGLER.test(name) || LOOSE_MANIFESTS.has(name);
 }
 
 /* ----------------------------------------------------------------- drafts */
@@ -815,6 +816,25 @@ export function discoverArchitecture(files: readonly ScannedFile[], rootName: st
         });
         pushEvidence(draft, file.path, 1, `package.json: ${typeof parsed.name === 'string' ? parsed.name : name}`);
       }
+    }
+
+    // An assets-only config (no `main`) deploys a static site, not a Worker: the folder's own manifest names it.
+    if (WRANGLER.test(base) && lines.some((line) => /^\s*["']?main["']?\s*[=:]\s*"/.test(line))) {
+      // toml and json(c) alike: `name`, then the bucket/database names under `r2_buckets` / `d1_databases`.
+      const nameLine = lines.findIndex((line) => /^\s*["']?name["']?\s*[=:]\s*"[^"]+"/.test(line));
+      const name = nameLine >= 0 ? /"([^"]+)"/.exec(lines[nameLine]!.replace(/^\s*["']?name["']?/, ''))![1]! : (dir ? basename(dir) : rootName);
+      const draft = builder.manifest({ id: unitId(dir, name), name, kind: 'container', dir, tech: 'Cloudflare Workers' });
+      draft.tech = 'Cloudflare Workers';
+      pushEvidence(draft, file.path, nameLine >= 0 ? nameLine + 1 : 1, nameLine >= 0 ? lines[nameLine]! : `${base}: ${name}`);
+      let tech = '';
+      lines.forEach((line, index) => {
+        tech = /r2_buckets/.test(line) ? 'R2' : /d1_databases/.test(line) ? 'D1' : tech;
+        const resource = tech && /["']?(?:bucket|database)_name["']?\s*[=:]\s*"([^"]+)"/.exec(line)?.[1];
+        if (!resource) return;
+        const store = builder.unit({ id: slugDiscoveryId(resource), name: resource, kind: 'store', dir: '', tech });
+        pushEvidence(store, file.path, index + 1, line);
+        builder.relation(draft.id, { id: store.id }, 'uses', file.path, index + 1, line);
+      });
     }
 
     if (base === 'pyproject.toml' || base === 'requirements.txt') {

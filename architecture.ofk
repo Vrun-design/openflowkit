@@ -5,10 +5,13 @@ title: OpenFlowKit
 // Started with `openflowkit discover . --out architecture.ofk`, names reviewed by hand.
 // CI: the PR diagrams check (action/) renders this on every PR that changes it.
 model {
-  system openflowkit "OpenFlowKit" {
+  openflowkit = system "OpenFlowKit" {
     app = container "openflowkit" [tech: React]
     docs = container "openflowkit-docs" [tech: Node]
     mcp = container "openflowkit-mcp" [tech: Node CLI]
+    share = container "openflowkit-share" [tech: Cloudflare Workers]
+    shares = store "openflowkit-shares" [tech: R2]
+    share -> shares : uses
   }
 }
 views {
