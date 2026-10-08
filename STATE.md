@@ -20,12 +20,15 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - 2026-10-08 done, pushed: 2.2 repo → diagram (`/#/from/github/o/r`, one discovery core for app + MCP), 2.4 `--svg` /
   `openflow_save svg`, 2.8 dark wash for default fills, 4.2 PR diagrams Action (`action/`), 4.3 Copy as Mermaid,
   4.1 remote MCP Apps endpoint (`start:http`) + viewer + `/#/from/dsl` links; Claude thinking 400 fix + prompt caching.
+- 2026-10-08 pm: AI first fit (big AI diagrams land at 65% on their start), Structurizr guide + share-links terms page,
+  Codex plugin (`plugin/.codex-plugin`, `.agents/plugins/`), discovery finds Cloudflare Workers + R2/D1, W122 on a view target.
 - Owner: publish MCP 0.2.0 (Action default CLI needs it); deploy `start:http` over HTTPS, then verify hosts (README table).
+  Owner action list: `docs/plan/cofounder-action-list.md`. Waiting on owner's go: `e2e:headed` + walkthrough, H5 eval.
 - Headless layout cap: 1000 shapes / 400 connections. Share Worker setup: `worker/README.md`.
 ## Found, not fixed (owner calls)
 - Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI): `docs/plan/launch-holds.md`. CI uploads first-failure
   traces (`e2e-traces`). A new worker's deps are pre-scanned (`optimizeDeps.entries`), or dev reloads mid-session.
-- D11 still open: AI initial fit ≥65% (C4 audit has the rest). Discovery is blind to .NET/Elixir without containers (G1).
+- Discovery is blind to .NET/Elixir without containers (G1).
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.
