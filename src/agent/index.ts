@@ -40,6 +40,13 @@ export {
   modelFromDocument, modelFromNode, readArchModel, slugDiscoveryId,
 } from '../dsl/discovery/discovery';
 export { INCLUDE_EXT, LANGUAGE_BY_EXT, SERVICE_RULES, isScannedFileName, isSkippedDir } from '../dsl/discovery/rules';
+// The Living Map: facts from a checkout's files, the model, its depth presets and the two-way pairs `map` prints.
+export { acceptsMapFile, factsFromFiles } from '../dsl/map/facts';
+export { buildMap } from '../dsl/map/build';
+export { presets } from '../dsl/map/view';
+export { insights } from '../dsl/map/insights';
+// The same owner/repo rules the repo page applies to a pasted address.
+export { parseRepoPath } from '../services/discovery/githubRepo';
 // The wireframe vocabulary, so discovery lists what the renderer draws.
 export { WIDGET_KINDS } from '../opencanvas/domain/nodes/widgetNodePresentation';
 export { FRAME_PRESETS } from '../opencanvas/domain/nodes/framePreset';

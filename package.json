@@ -35,6 +35,7 @@
     "stress:open": "node scripts/open-stress-sheet.mjs",
     "prepare": "node -e \"if (process.env.CI) process.exit(0)\" && husky || true",
     "build:agent": "vite build -c vite.agent.config.ts",
+    "build:map-viewer": "vite build -c vite.map-viewer.config.ts",
     "eval:agent": "npm --prefix mcp-server run eval:agent",
     "skill:sync": "node scripts/sync-llms.mjs",
     "eval:validity": "npm --prefix mcp-server run eval:validity"

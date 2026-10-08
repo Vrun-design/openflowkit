@@ -10,6 +10,7 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- CLI: `openflowkit map <dir> [--depth overview|detailed|everything]` prints a repository's parts, files, lines, resolved and unresolved imports, and the folders that import each other. `--html out.html` writes the interactive map as one offline page (no network; evidence links to GitHub only for a github.com checkout root, at the commit HEAD). In a git checkout only tracked files are mapped.
 - MCP (0.2.0): remote MCP Apps endpoint (`start:http`) with render_diagram + inline viewer; stores nothing.
 - **A real home page.** A sidebar with Recents, Starred, Templates and Archive, search (`/`), your starred diagrams,
   a dated What's new page, and links to request a feature or star the project (with its live star count). Diagrams show as a grid

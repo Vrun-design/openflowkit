@@ -160,6 +160,30 @@ export interface OpCapabilities {
   readonly fitView?: (objectIds?: readonly string[]) => void;
 }
 
+/* The Living Map: structural subset of src/dsl/map/types.ts that the CLI reads. */
+export interface MapFactsData {
+  readonly files: readonly { path: string; loc: number }[];
+  readonly source?: { repo?: string; ref?: string; sha?: string };
+  readonly [key: string]: unknown;
+}
+export interface MapNodeData {
+  readonly id: string;
+  readonly kind: string;
+  readonly name: string;
+  readonly parent: string | null;
+  readonly children: readonly string[];
+  readonly files: number;
+  readonly loc: number;
+}
+export interface MapModelData {
+  readonly root: string;
+  readonly nodes: Readonly<Record<string, MapNodeData>>;
+  readonly links: readonly unknown[];
+  readonly source: { readonly repo?: string; readonly ref?: string; readonly sha?: string };
+  readonly stats: { readonly files: number; readonly loc: number; readonly imports: number; readonly unresolved: number };
+}
+export type MapDepth = 'overview' | 'detailed' | 'everything';
+
 /* Architecture discovery: shapes copied from src/dsl/discovery/discovery.ts. */
 export interface DiscoveryEvidence {
   readonly file: string;
@@ -317,6 +341,12 @@ interface AgentBundle {
   readonly FRAME_PRESETS: readonly string[];
   readonly STARTER_TEMPLATES: readonly StarterTemplate[];
   readonly findStarterTemplate: (name: string) => StarterTemplate | undefined;
+  acceptsMapFile(path: string): boolean;
+  factsFromFiles(files: readonly { path: string; content: string }[], repoName: string, options?: { paths?: readonly string[]; listed?: readonly string[] }): MapFactsData;
+  parseRepoPath(input: string): { owner: string; repo: string; ref: string } | null;
+  buildMap(facts: MapFactsData, overlay?: unknown): MapModelData;
+  presets(model: MapModelData): Record<MapDepth, Set<string>>;
+  insights(model: MapModelData, options?: { minPair?: number; top?: number }): { twoWay: { a: string; b: string; ab: number; ba: number }[] };
   discoverArchitecture(files: readonly ScannedFile[], rootName: string): ArchitectureDiscovery;
   capUnits(result: ArchitectureDiscovery, max: number): { readonly result: ArchitectureDiscovery; readonly dropped: number };
   discoveryToDsl(result: ArchitectureDiscovery, name: string, evidenceLink?: (evidence: DiscoveryEvidence) => string): string;
@@ -353,6 +383,7 @@ export const {
   discoverArchitecture, capUnits, discoveryToDsl, driftReport, modelFromNode, modelFromDocument, readArchModel,
   discoverySummary, acceptsArchitectureFile, slugDiscoveryId,
   SERVICE_RULES, LANGUAGE_BY_EXT, INCLUDE_EXT, isScannedFileName, isSkippedDir,
+  acceptsMapFile, factsFromFiles, buildMap, presets, insights, parseRepoPath,
 } = bundle as unknown as AgentBundle;
 
 export type { ZodType, ZodRawShape, ZodObject } from 'zod';

@@ -15,6 +15,8 @@ import {
   type ArchFlowData, type ArchFlowStepData, type ArchModelData, type ArchitectureDiscovery,
   type DriftReportResult,
 } from './lib/architectureDiscovery.js';
+import { renderMapHtml } from './lib/mapHtml.js';
+import { MAP_DEPTHS, MapInputError, buildRepoMap, summarizeMap } from './lib/repoMap.js';
 
 export interface CliIo {
   out(message: string): void;
@@ -30,12 +32,14 @@ ${OP_USAGE}
   openflowkit discover <dir> [--out architecture.ofk] [--no-svg]
   openflowkit drift <dir> [--model architecture.ofk] [--json]
   openflowkit build <dir> [--out dist]
+  openflowkit map <dir> [--depth overview|detailed|everything] [--html out.html]
 
 Commands:
 ${OP_COMMANDS}
   discover  scan a repository and print or write a proposed C4 DSL workspace
   drift     compare a repository against its model (exit 1 when drift is found)
   build     compile architecture.ofk into a self-contained static site
+  map       print what a repository is made of: parts, files, lines, imports, the folders that import each other
 
 Options:
   --out <path>    discover: write the DSL here (default: stdout); build: output dir (default: dist)
@@ -43,6 +47,8 @@ Options:
   --svg           op --doc / convert -o: also write the .svg beside the .openflow.json
   --model <path>  drift: model file (default: <dir>/architecture.ofk)
   --json          drift: machine-readable report
+  --depth <d>     map: overview (default), detailed or everything
+  --html <path>   map: also write one self-contained, offline HTML page of the map
   --name <name>   discover: system name (default: directory name)
   --max-files <n> discover/drift: cap on files scanned (default: 2000)
   --help          this text
@@ -180,6 +186,37 @@ async function runDiscover(args: readonly string[], io: CliIo): Promise<number> 
   } catch (error) {
     io.err(`openflowkit discover: ${error instanceof Error ? error.message : String(error)}`);
     return 2;
+  }
+}
+
+/* ------------------------------------------------------------------- map */
+
+async function runMap(args: readonly string[], io: CliIo): Promise<number> {
+  const parsed = parseArgs(args, new Set(['depth', 'html']));
+  if (parsed.error) { io.err(`openflowkit map: ${parsed.error}\n\n${USAGE}`); return 2; }
+  const dir = parsed.positionals[0];
+  if (!dir) { io.err(`openflowkit map: missing <dir>\n\n${USAGE}`); return 2; }
+  const depth = parsed.flags.get('depth') ?? 'overview';
+  if (!(MAP_DEPTHS as readonly string[]).includes(depth)) {
+    io.err(`openflowkit map: --depth must be overview, detailed or everything, not "${depth}"`);
+    return 2;
+  }
+  try {
+    const chosen = depth as (typeof MAP_DEPTHS)[number];
+    const map = await buildRepoMap(dir);
+    io.out(summarizeMap(map, chosen));
+    const html = parsed.flags.get('html');
+    if (html) {
+      const repo = map.github;
+      const page = await renderMapHtml({ name: map.name, model: map.model, depth: chosen, repo });
+      await mkdir(path.dirname(path.resolve(html)), { recursive: true });
+      await writeFile(html, page, 'utf8');
+      io.out(`wrote ${html} (${(Buffer.byteLength(page) / 1048576).toFixed(1)} MB) — ${repo ? `evidence links to github.com/${repo.owner}/${repo.repo} at ${repo.ref.slice(0, 7)}` : 'no evidence links (needs a github.com origin and the checkout root)'}`);
+    }
+    return 0;
+  } catch (error) {
+    io.err(`openflowkit map: ${error instanceof Error ? error.message : String(error)}`);
+    return error instanceof MapInputError ? 1 : 2;
   }
 }
 
@@ -583,6 +620,7 @@ export async function main(argv: readonly string[], io: CliIo): Promise<number> 
   if (command === 'drift') return runDrift(rest, io);
   if (command === 'discover') return runDiscover(rest, io);
   if (command === 'build') return runBuild(rest, io);
+  if (command === 'map') return runMap(rest, io);
   const handled = await runRegistryCommand(command, rest, io, USAGE);
   if (handled !== null) return handled;
   io.err(`openflowkit: unknown command "${command}"\n\n${USAGE}`);
