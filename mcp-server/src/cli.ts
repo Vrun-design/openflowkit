@@ -161,7 +161,7 @@ async function runDiscover(args: readonly string[], io: CliIo): Promise<number> 
       // The picture is for a README, so it is on unless --no-svg.
       let failedSvg = false;
       if (!parsed.flags.has('no-svg')) {
-        const document = await documentOfDsl(dsl, path.basename(out));
+        const document = await documentOfDsl(dsl, path.basename(out).replace(/\.[^.]+$/, ''));
         if (document === null) {
           const stale = existsSync(svgBeside(out)) ? `; ${svgBeside(out)} is now stale` : '';
           io.err(`openflowkit discover: ${out} does not compile; no svg written${stale}`);

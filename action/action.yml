@@ -1,0 +1,38 @@
+name: OpenFlowKit PR diagrams
+description: Comment on a pull request with how its diagrams changed (DSL diff, drift, stale SVGs). Runs in your CI, no server.
+inputs:
+  github-token:
+    description: Token used to comment and to push refreshed SVGs.
+    default: ${{ github.token }}
+  cli:
+    description: Command that runs the openflowkit CLI.
+    default: npx -y -p @vrun-design/openflowkit-mcp@0.2.0 openflowkit
+  refresh-svg:
+    description: Commit a fresh SVG to the PR branch when the committed one beside a diagram is stale (same-repo PRs only).
+    default: 'true'
+  comment-author:
+    description: Login of the account that owns the comment to update (the author of the token's comments).
+    default: github-actions[bot]
+  paths:
+    description: Diagram files to watch, as comma-separated extensions or globs.
+    default: .openflow.json,.ofk
+runs:
+  using: composite
+  steps:
+    - name: Diagram changes
+      id: diagrams
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        OFK_CLI: ${{ inputs.cli }}
+        OFK_REFRESH_SVG: ${{ inputs.refresh-svg }}
+        OFK_COMMENT_AUTHOR: ${{ inputs.comment-author }}
+        OFK_PATHS: ${{ inputs.paths }}
+      run: node "$GITHUB_ACTION_PATH/pr-diagrams.mjs"
+    - name: Upload before/after SVGs
+      if: steps.diagrams.outputs.artifact-dir != ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: diagram-svgs
+        path: ${{ steps.diagrams.outputs.artifact-dir }}
+        retention-days: 14

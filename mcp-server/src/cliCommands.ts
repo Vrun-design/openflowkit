@@ -2,6 +2,7 @@
 // .openflow.json file, so every MCP op is a CLI command too and a new op needs
 // no CLI code. render / convert / validate are friendly verbs over the same
 // ops. Output is plain text or `--json`, never colour, so agents can pipe it.
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -39,10 +40,20 @@ function parse(args: readonly string[], options: NonNullable<ParseArgsConfig['op
   }
 }
 
-/** The document a DSL source compiles to, or null when it doesn't (the caller's file is already written). */
+/**
+ * The document with its id (and the page ids built on it) taken from the source text, for pictures only:
+ * the id lands in the SVG, so a committed SVG must not churn between runs. Documents that get saved or opened
+ * keep their random UUID, because the MCP store keys by id.
+ */
+export function stableForPicture(document: SceneDocumentV1, source: string): SceneDocumentV1 {
+  const id = createHash('sha256').update(source).digest('hex').slice(0, 32);
+  return JSON.parse(JSON.stringify(document).split(document.id).join(id)) as SceneDocumentV1;
+}
+
+/** The document a DSL source compiles to (id stable per source, see `stableForPicture`), or null when it doesn't compile (the caller's file is already written). */
 export async function documentOfDsl(source: string, name: string): Promise<SceneDocumentV1 | null> {
   const checked = await check(source, name);
-  return failed(checked, false) ? null : checked.document!;
+  return failed(checked, false) ? null : stableForPicture(checked.document!, source);
 }
 
 /** A file path, or `-` for stdin. Never stdin implicitly: an open, silent pipe would wait forever. */
@@ -211,7 +222,8 @@ async function runCompile(command: 'render' | 'convert', args: readonly string[]
   const { document, views } = checked as Checked & { document: SceneDocumentV1 };
   let text: string;
   if (command === 'render') {
-    text = await exportSvg(document, document.pages[0]!.id, theme);
+    const still = stableForPicture(document, source);
+    text = await exportSvg(still, still.pages[0]!.id, theme);
     // ponytail: one page per render; a workspace's other views stay in `convert`'s file.
     if (views > 1 && !values.json) io.err(`render: ${views} views; drew the first. convert keeps them all.`);
   } else {
@@ -221,7 +233,7 @@ async function runCompile(command: 'render' | 'convert', args: readonly string[]
   if (out) {
     await mkdir(path.dirname(path.resolve(out)), { recursive: true });
     await writeFile(out, text, 'utf8');
-    if (values.svg) picture = await tryWriteSvgBeside(out, document, undefined, theme);
+    if (values.svg) picture = await tryWriteSvgBeside(out, stableForPicture(document, source), undefined, theme);
   }
   const svgError = picture && 'svgError' in picture ? picture.svgError : undefined;
   if (values.json) {
