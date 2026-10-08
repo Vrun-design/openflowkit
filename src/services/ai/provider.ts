@@ -369,6 +369,9 @@ function anthropicReader(): WireReader {
   };
 }
 
+// ponytail: a regex list of legacy ids that still take budget_tokens — read capabilities from /v1/models instead.
+const LEGACY_THINKING = /^claude-(3-|(haiku-4-5|sonnet-4-5|opus-4-5|opus-4-1|opus-4|sonnet-4)(-\d{8})?$)/;
+
 function createAnthropicProvider(definition: AiProviderDefinition, baseUrl: string, model: string, apiKey: string): AiProvider {
   const endpoint = `${baseUrl}/v1/messages`;
   return {
@@ -385,10 +388,13 @@ function createAnthropicProvider(definition: AiProviderDefinition, baseUrl: stri
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: {
-          model, max_tokens: maxTokens, system,
+          model, max_tokens: maxTokens,
+          ...(system.trim() ? { system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] } : {}),
+          cache_control: { type: 'ephemeral' },
           messages: turns(request).map(anthropicMessage),
           ...(tools?.length ? { tools: tools.map(({ name, description, parameters }) => ({ name, description, input_schema: parameters })) } : {}),
-          ...(thinking && maxTokens > budget ? { thinking: { type: 'enabled', budget_tokens: budget } } : {}),
+          ...(thinking && !LEGACY_THINKING.test(model) ? { thinking: { type: 'adaptive', display: 'summarized' } } : {}),
+          ...(thinking && LEGACY_THINKING.test(model) && maxTokens > budget ? { thinking: { type: 'enabled', budget_tokens: budget } } : {}),
           ...(onDelta ? { stream: true } : {}),
         },
       }, anthropicReader(), onDelta);

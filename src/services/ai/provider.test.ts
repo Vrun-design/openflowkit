@@ -26,12 +26,47 @@ describe('anthropic wire', () => {
     expect(headers['anthropic-version']).toBe('2023-06-01');
     expect(headers['anthropic-dangerous-direct-browser-access']).toBe('true');
     expect(text).toBe('flowchart\n  A -> B');
-    expect(body).toMatchObject({ model: 'claude-sonnet-5-5', max_tokens: 16_000, system: 'sys', messages: [{ role: 'user', content: 'draw' }] });
+    expect(body).toMatchObject({ model: 'claude-sonnet-5-5', max_tokens: 16_000, system: [{ type: 'text', text: 'sys', cache_control: { type: 'ephemeral' } }], cache_control: { type: 'ephemeral' }, messages: [{ role: 'user', content: 'draw' }] });
   });
 
   it('joins multiple text blocks and ignores non-text ones', async () => {
     const { text } = await call('claude', ok({ content: [{ type: 'thinking', thinking: 'hmm' }, { type: 'text', text: 'one' }, { type: 'text', text: 'two' }] }));
     expect(text).toBe('onetwo');
+  });
+});
+
+describe('anthropic thinking and caching', () => {
+  const send = async (model: string, request: { system?: string; thinking?: boolean } = {}) => {
+    const fetchMock = vi.fn(async () => ok({ content: [{ type: 'text', text: 'x' }] }));
+    vi.stubGlobal('fetch', fetchMock);
+    await createProvider({ provider: 'claude', apiKey: KEY, model }).complete({ system: 'sys', prompt: 'draw', ...request });
+    const [, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
+    vi.unstubAllGlobals();
+    return JSON.parse(String(init.body)) as Record<string, unknown>;
+  };
+
+  it.each(['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-fable-5-1', 'claude-opus-4-6', 'claude-opus-4-7', 'claude-opus-4-8', 'claude-sonnet-4-6', 'my-proxy-model'])(
+    '%s gets adaptive summarized thinking', async (model) => {
+      expect((await send(model, { thinking: true })).thinking).toEqual({ type: 'adaptive', display: 'summarized' });
+    });
+
+  it.each(['claude-haiku-4-5', 'claude-sonnet-4-5-20250929', 'claude-opus-4-5', 'claude-opus-4-1-20250805', 'claude-opus-4-20250514', 'claude-sonnet-4', 'claude-3-7-sonnet-20250219'])(
+    '%s keeps the budget_tokens form', async (model) => {
+      expect((await send(model, { thinking: true })).thinking).toEqual({ type: 'enabled', budget_tokens: 4000 });
+    });
+
+  it('sends no thinking key when thinking is off', async () => {
+    expect(await send('claude-sonnet-5-5')).not.toHaveProperty('thinking');
+  });
+
+  it('caches the system prompt and the growing conversation', async () => {
+    const body = await send('claude-sonnet-5-5');
+    expect(body.system).toEqual([{ type: 'text', text: 'sys', cache_control: { type: 'ephemeral' } }]);
+    expect(body.cache_control).toEqual({ type: 'ephemeral' });
+  });
+
+  it('sends no system block when the system prompt is blank', async () => {
+    expect(await send('claude-sonnet-5-5', { system: '  ' })).not.toHaveProperty('system');
   });
 });
 
@@ -271,7 +306,7 @@ describe('streaming and conversation', () => {
     ));
     expect(text).toBe('Hello');
     expect(deltas).toEqual([{ thinking: 'Plan.' }, { text: 'Hel' }, { text: 'lo' }]);
-    expect(body).toMatchObject({ stream: true, thinking: { type: 'enabled', budget_tokens: 4000 } });
+    expect(body).toMatchObject({ stream: true, thinking: { type: 'adaptive', display: 'summarized' } });
     expect((body.messages as unknown[]).length).toBe(3);
   });
 
