@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { ScenePage } from '../../domain/document/types';
 import type { JsonObject } from '../../domain/document/json';
@@ -5,7 +6,8 @@ import { V2NodeStylePanels } from './V2NodeStyle';
 import { V2ArrangeControls } from './V2ArrangeControls';
 import { V2ConnectorStyle } from './V2ConnectorStyle';
 import type { ConnectorStylePatch } from '../../domain/commands/styleConnectors';
-import { IconDots, IconLayoutSidebarRight, IconTable, IconZoomIn } from '@tabler/icons-react';
+import { connectorSource, relationSourceLabel, safeHttpsUrl } from '../../../dsl/model/relationSource';
+import { IconDots, IconExternalLink, IconLayoutSidebarRight, IconTable, IconZoomIn } from '@tabler/icons-react';
 import { Button, ContextBar, ContextGroup, Icon, IconButton, Tooltip } from '../design-system';
 
 interface V2ContextBarProps {
@@ -95,11 +97,15 @@ export function unionScreenBounds(rects: readonly (DOMRect | null | undefined)[]
 // Keydown bubbles to the page on purpose: ⌘Z after a swatch click must undo
 // (the page ignores keys aimed at inputs; buttons keep Enter/Space/arrows).
 export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
+  const { page, connectorId } = props;
+  const source = useMemo(() => connectorId ? connectorSource(page, connectorId) : null, [page, connectorId]);
   const openMenu = (button: HTMLButtonElement) => {
     const rect = button.getBoundingClientRect();
     props.onOpenMenu(rect.left, rect.bottom + 6);
   };
   if (props.connectorId) {
+    const href = source ? safeHttpsUrl(source.link) : null;
+    const text = source ? relationSourceLabel(source.link) : '';
     return (
       <ContextBar label="Connector actions" data-context-bar style={props.style}
         onPointerDown={(event) => event.stopPropagation()}
@@ -108,6 +114,15 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
           <V2ConnectorStyle page={props.page} connectorId={props.connectorId} commit={props.commit}
             onCommitted={props.onConnectorStyleCommitted} />
         </ContextGroup>
+        {source ? (
+          <ContextGroup label="Source">
+            <span className="ofk-v2-connector-source" title={`${source.from} → ${source.to} · ${text}`}>
+              {source.from} → {source.to} · {href
+                ? <a href={href} target="_blank" rel="noopener noreferrer" aria-label={text}><span className="ofk-v2-connector-source-text">{tail(text)}</span><Icon icon={IconExternalLink} /></a>
+                : <span className="ofk-v2-connector-source-text">{tail(text)}</span>}
+            </span>
+          </ContextGroup>
+        ) : null}
         <ContextGroup label="Actions">
           <Tooltip content="Inspect" shortcut="⌥I">
             <IconButton variant="quiet" label="Inspect" icon={<Icon icon={IconLayoutSidebarRight} />}
@@ -160,4 +175,9 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
       </ContextGroup>
     </ContextBar>
   );
+}
+
+/** Keep the end of a long path (file name and line); the full text is in the title. */
+function tail(text: string, max = 44): string {
+  return text.length > max ? `…${text.slice(-(max - 1))}` : text;
 }

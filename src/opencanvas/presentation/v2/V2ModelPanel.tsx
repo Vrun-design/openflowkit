@@ -5,6 +5,7 @@ import {
 } from '@tabler/icons-react';
 import { modelTags } from '../../../dsl/model/predicates';
 import { elementAncestors, elementDescendantIds, elementPathRef, type ArchIndex } from '../../../dsl/model/model';
+import { safeHttpsUrl } from '../../../dsl/model/relationSource';
 import type { ArchElement, ArchFlow, ArchRelation, ArchView } from '../../../dsl/model/types';
 import { Button, Icon, IconButton, Panel, Tabs } from '../design-system';
 import type { ArchitectureCrumb, V2Architecture } from './useV2Architecture';
@@ -61,9 +62,6 @@ function elementRows(index: ArchIndex, collapsed: ReadonlySet<string>, query: st
   walk(index.model.elements.filter((element) => !element.parent).map((element) => element.id), 0);
   return rows;
 }
-
-/** DSL is user-editable: only an https URL may become an anchor. */
-const safeHttpsUrl = (value: string): string | null => value.startsWith('https://') ? value : null;
 
 export function ElementLinks({ links }: { readonly links: readonly string[] }): React.JSX.Element {
   return (
