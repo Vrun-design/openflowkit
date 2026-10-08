@@ -2,12 +2,14 @@
 // The `openflowkit` CLI: discover a repo, check drift in CI, or build the
 // self-contained static site. Node stdlib + the agent bundle only; views are laid
 // out by the file host's in-process ELK, the same engine the editor runs.
+import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectIconArt, compileWorkspace, exportCanonicalSvg, type BundleWorkspace, type SvgExportDocument } from './lib/agent.js';
+import { svgBeside, tryWriteSvgBeside } from './lib/svgBeside.js';
 import { loadFileCapabilities, loadIconArt } from './lib/fileCapabilities.js';
-import { OP_COMMANDS, OP_USAGE, runRegistryCommand } from './cliCommands.js';
+import { OP_COMMANDS, OP_USAGE, documentOfDsl, runRegistryCommand } from './cliCommands.js';
 import {
   discoverySummary, discoveryToDsl, driftReport, modelFromNode, runArchitectureDiscovery,
   type ArchFlowData, type ArchFlowStepData, type ArchModelData, type ArchitectureDiscovery,
@@ -25,7 +27,7 @@ const USAGE = `openflowkit — diagrams agents write, kept valid, editable and n
 
 Usage:
 ${OP_USAGE}
-  openflowkit discover <dir> [--out architecture.ofk]
+  openflowkit discover <dir> [--out architecture.ofk] [--no-svg]
   openflowkit drift <dir> [--model architecture.ofk] [--json]
   openflowkit build <dir> [--out dist]
 
@@ -37,6 +39,8 @@ ${OP_COMMANDS}
 
 Options:
   --out <path>    discover: write the DSL here (default: stdout); build: output dir (default: dist)
+  --no-svg        discover --out also writes <path>.svg for a README; this skips it
+  --svg           op --doc / convert -o: also write the .svg beside the .openflow.json
   --model <path>  drift: model file (default: <dir>/architecture.ofk)
   --json          drift: machine-readable report
   --name <name>   discover: system name (default: directory name)
@@ -154,7 +158,21 @@ async function runDiscover(args: readonly string[], io: CliIo): Promise<number> 
       await mkdir(path.dirname(path.resolve(out)), { recursive: true });
       await writeFile(out, dsl, 'utf8');
       io.out(`wrote ${out} — ${discovery.units.length} units, ${discovery.relations.length} relations, ${discovery.evidenceCount} evidence lines`);
+      // The picture is for a README, so it is on unless --no-svg.
+      let failedSvg = false;
+      if (!parsed.flags.has('no-svg')) {
+        const document = await documentOfDsl(dsl, path.basename(out));
+        if (document === null) {
+          const stale = existsSync(svgBeside(out)) ? `; ${svgBeside(out)} is now stale` : '';
+          io.err(`openflowkit discover: ${out} does not compile; no svg written${stale}`);
+        } else {
+          const picture = await tryWriteSvgBeside(out, document);
+          if ('svg' in picture) io.out(`wrote ${picture.svg}`);
+          else { failedSvg = true; io.err(`openflowkit discover: saved ${out}; svg failed: ${picture.svgError}`); }
+        }
+      }
       io.err(discoverySummary(discovery));
+      if (failedSvg) return 1;
     } else {
       io.out(dsl);
     }

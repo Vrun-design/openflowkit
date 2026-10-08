@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -117,6 +118,80 @@ describe('openflowkit render / convert / validate', () => {
     expect(await main(['convert', input, '-o', join(dir, 'flow.openflow.json'), '--json'], run.io)).toBe(0);
     expect(JSON.parse(run.out[0]!)).toMatchObject({ ok: true, saved: join(dir, 'flow.openflow.json'), losses: [] });
     expect(JSON.parse(await readFile(join(dir, 'flow.openflow.json'), 'utf8')).pages[0].nodes.length).toBeGreaterThan(0);
+  });
+
+  it('writes the SVG beside the JSON only with --svg', async () => {
+    const dir = await tempDir();
+    const input = join(dir, 'flow.mmd');
+    await writeFile(input, MERMAID.flowchart!, 'utf8');
+    expect(await main(['convert', input, '-o', join(dir, 'plain.openflow.json')], capture().io)).toBe(0);
+    expect(existsSync(join(dir, 'plain.openflow.json'))).toBe(true);
+    expect(existsSync(join(dir, 'plain.svg'))).toBe(false);
+    expect(await main(['convert', input, '-o', join(dir, 'pic.openflow.json'), '--svg'], capture().io)).toBe(0);
+    expect(existsSync(join(dir, 'pic.openflow.json'))).toBe(true);
+    expect(await readFile(join(dir, 'pic.svg'), 'utf8')).toMatch(/^<svg /);
+  });
+
+  it('op --svg writes the SVG beside the document, and nothing without it', async () => {
+    const dir = await tempDir();
+    const args = JSON.stringify({ dsl: 'flowchart\n  A -> B' });
+    expect(await main(['op', 'create_diagram', '--doc', join(dir, 'a.openflow.json'), '--args', args], capture().io)).toBe(0);
+    expect(existsSync(join(dir, 'a.svg'))).toBe(false);
+    expect(await main(['op', 'create_diagram', '--doc', join(dir, 'b.openflow.json'), '--args', args, '--svg'], capture().io)).toBe(0);
+    expect(await readFile(join(dir, 'b.svg'), 'utf8')).toMatch(/^<svg /);
+  });
+
+  it('keeps the saved JSON and exits 1 naming it when the SVG cannot be written', async () => {
+    const dir = await tempDir();
+    const input = join(dir, 'flow.mmd');
+    await writeFile(input, MERMAID.flowchart!, 'utf8');
+    await mkdir(join(dir, 'pic.svg'));
+    const run = capture();
+    expect(await main(['convert', input, '-o', join(dir, 'pic.openflow.json'), '--svg', '--json'], run.io)).toBe(1);
+    expect(existsSync(join(dir, 'pic.openflow.json'))).toBe(true);
+    expect(run.err.join('\n')).toContain(`saved ${join(dir, 'pic.openflow.json')}; svg failed:`);
+    expect(JSON.parse(run.out[0]!)).toMatchObject({ saved: join(dir, 'pic.openflow.json') });
+    expect(JSON.parse(run.out[0]!).svgError).toBeTruthy();
+
+    const op = capture();
+    const args = JSON.stringify({ dsl: 'flowchart\n  A -> B' });
+    expect(await main(['op', 'create_diagram', '--doc', join(dir, 'pic.openflow.json'), '--args', args, '--svg'], op.io)).toBe(1);
+    expect(op.err.join('\n')).toContain(`saved ${join(dir, 'pic.openflow.json')}; svg failed:`);
+  });
+
+  it('refuses --svg without a file to sit beside, and never overwrites the input', async () => {
+    const dir = await tempDir();
+    const input = join(dir, 'flow.mmd');
+    await writeFile(input, MERMAID.flowchart!, 'utf8');
+    expect(await main(['convert', input, '--svg'], capture().io)).toBe(2);
+    expect(await main(['op', 'list_diagrams', '--svg'], capture().io)).toBe(2);
+    expect(await main(['render', input, '--svg'], capture().io)).toBe(2);
+    // flow.json -> flow.svg: converting an .svg input would be clobbered by its own picture.
+    const clash = join(dir, 'flow.svg');
+    await writeFile(clash, MERMAID.flowchart!, 'utf8');
+    expect(await main(['convert', clash, '-o', join(dir, 'flow.json'), '--svg'], capture().io)).toBe(2);
+    expect(await readFile(clash, 'utf8')).toBe(MERMAID.flowchart);
+    expect(existsSync(join(dir, 'flow.json'))).toBe(false);
+  });
+
+  it('says nothing was written when a read-only op is asked for an SVG', async () => {
+    const dir = await tempDir();
+    const doc = join(dir, 'a.openflow.json');
+    await main(['op', 'create_diagram', '--doc', doc, '--args', JSON.stringify({ dsl: 'flowchart\n  A -> B' })], capture().io);
+    const run = capture();
+    expect(await main(['op', 'list_diagrams', '--doc', doc, '--svg'], run.io)).toBe(0);
+    expect(run.err.join('\n')).toContain('no SVG written, nothing was saved');
+    expect(existsSync(join(dir, 'a.svg'))).toBe(false);
+  });
+
+  it('draws the --svg picture in the --theme asked for, and reports its path in --json', async () => {
+    const dir = await tempDir();
+    const input = join(dir, 'flow.mmd');
+    await writeFile(input, MERMAID.flowchart!, 'utf8');
+    const run = capture();
+    expect(await main(['convert', input, '-o', join(dir, 'd.openflow.json'), '--svg', '--theme', 'dark', '--json'], run.io)).toBe(0);
+    expect(await readFile(join(dir, 'd.svg'), 'utf8')).toContain('data-theme="dark"');
+    expect(JSON.parse(run.out[0]!)).toMatchObject({ saved: join(dir, 'd.openflow.json'), svg: join(dir, 'd.svg') });
   });
 
   it('reports Mermaid it could not convert on stderr, and fails only with --strict', async () => {

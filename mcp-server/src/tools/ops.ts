@@ -13,6 +13,7 @@ import { AGENT_OPS, opInputShape, runAgentOp, type SceneDocumentV1 } from '../li
 import type { DocumentStore } from '../lib/documentStore.js';
 import type { LiveBridge } from '../lib/bridge.js';
 import { loadFileCapabilities } from '../lib/fileCapabilities.js';
+import { svgBeside, tryWriteSvgBeside } from '../lib/svgBeside.js';
 import { toolError } from '../lib/errors.js';
 
 export interface OpToolDeps {
@@ -81,12 +82,13 @@ export function registerDocumentTools(server: McpServer, deps: DocumentToolDeps)
 
   server.registerTool('openflow_save', {
     title: 'Save to .openflow.json',
-    description: 'Write a document to disk. With a paired editor and no documentId, saves what the editor currently shows.',
+    description: 'Write a document to disk (svg: true also writes the first page as a .svg beside it). With a paired editor and no documentId, saves what the editor currently shows.',
     inputSchema: {
       path: z.string().min(1),
       documentId: z.string().min(1).optional().describe('File-mode document; omit to save the paired editor document.'),
+      svg: z.boolean().default(false).describe('Also write the first page as <same name>.svg next to the file.'),
     },
-  }, async ({ path, documentId }) => {
+  }, async ({ path, documentId, svg }) => {
     try {
       if (!documentId && deps.bridge.connected) {
         // Live mode: the editor owns the document, so ask it for canonical
@@ -97,12 +99,23 @@ export function registerDocumentTools(server: McpServer, deps: DocumentToolDeps)
         const json = exported.files?.[0]?.text;
         if (!json) throw new Error('The editor did not return canonical JSON.');
         await writeFile(path, json, 'utf8');
-        return text({ saved: path, mode: 'live-editor' });
+        if (!svg) return text({ saved: path, mode: 'live-editor' });
+        try {
+          // The first page, as file mode and the docs say, not whichever page the editor shows.
+          const picture = await deps.bridge.call('export', { format: 'svg', scope: 'page' }, deps.bridge.health().pages[0]?.pageId) as { files?: readonly { text?: string }[] };
+          const svgText = picture.files?.[0]?.text;
+          if (!svgText) throw new Error('The editor did not return an SVG.');
+          await writeFile(svgBeside(path), svgText, 'utf8');
+          return text({ saved: path, svg: svgBeside(path), mode: 'live-editor' });
+        } catch (error) {
+          return text({ saved: path, svgError: error instanceof Error ? error.message : String(error), mode: 'live-editor' });
+        }
       }
       const id = (typeof documentId === 'string' ? documentId : undefined) ?? deps.store.list()[0]?.id;
       if (!id) throw new Error('Nothing to save: pass a documentId or open a file first.');
       await deps.store.save(id, path);
-      return text({ saved: path, documentId: id });
+      if (!svg) return text({ saved: path, documentId: id });
+      return text({ saved: path, ...await tryWriteSvgBeside(path, deps.store.get(id)), documentId: id });
     } catch (error) {
       return toolError(error instanceof Error ? error.message : String(error));
     }

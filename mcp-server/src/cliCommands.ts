@@ -12,13 +12,14 @@ import {
 } from './lib/agent.js';
 import { DocumentStore } from './lib/documentStore.js';
 import { loadFileCapabilities } from './lib/fileCapabilities.js';
+import { exportSvg, svgBeside, tryWriteSvgBeside } from './lib/svgBeside.js';
 import type { CliIo } from './cli.js';
 
-export const OP_USAGE = `  openflowkit op <name> [--doc file.openflow.json] [--args '{…}' | --args -] [--page <id>]
+export const OP_USAGE = `  openflowkit op <name> [--doc file.openflow.json] [--args '{…}' | --args -] [--page <id>] [--svg]
   openflowkit op <name> --help
   openflowkit ops [--json]
   openflowkit render <file|-> [-o out.svg] [--theme light|dark] [--strict] [--json]
-  openflowkit convert <file|-> [-o out.openflow.json] [--strict] [--json]
+  openflowkit convert <file|-> [-o out.openflow.json] [--svg] [--strict] [--json]
   openflowkit validate <file|-> [--strict] [--json]`;
 
 export const OP_COMMANDS = `  op        run one agent op (the same ops as the MCP server) on a document file
@@ -36,6 +37,12 @@ function parse(args: readonly string[], options: NonNullable<ParseArgsConfig['op
   } catch (error) {
     throw new UsageError(error instanceof Error ? error.message : String(error));
   }
+}
+
+/** The document a DSL source compiles to, or null when it doesn't (the caller's file is already written). */
+export async function documentOfDsl(source: string, name: string): Promise<SceneDocumentV1 | null> {
+  const checked = await check(source, name);
+  return failed(checked, false) ? null : checked.document!;
 }
 
 /** A file path, or `-` for stdin. Never stdin implicitly: an open, silent pipe would wait forever. */
@@ -63,7 +70,7 @@ const opList = () => AGENT_OPS.map((op) => op.name).join(', ');
 
 async function runOp(args: readonly string[], io: CliIo): Promise<number> {
   const { values, positionals } = parse(args, {
-    doc: { type: 'string' }, args: { type: 'string' }, page: { type: 'string' }, json: { type: 'boolean' }, help: { type: 'boolean', short: 'h' },
+    doc: { type: 'string' }, args: { type: 'string' }, page: { type: 'string' }, json: { type: 'boolean' }, svg: { type: 'boolean' }, help: { type: 'boolean', short: 'h' },
   });
   const name = positionals[0];
   if (!name && values.help) { io.out(`${OP_USAGE}\n\nOps: ${opList()}`); return 0; }
@@ -71,6 +78,7 @@ async function runOp(args: readonly string[], io: CliIo): Promise<number> {
   const op = findAgentOp(name);
   if (!op) throw new UsageError(`unknown op "${name}". Ops: ${opList()}`);
   if (values.help) { io.out(opHelp(op)); return 0; }
+  if (values.svg && !values.doc) throw new UsageError('--svg writes beside the --doc file, so it needs --doc');
 
   const rawArgs = values.args === '-' ? await readInput('-', io) : (values.args as string | undefined) ?? '{}';
   let input: unknown;
@@ -93,15 +101,20 @@ async function runOp(args: readonly string[], io: CliIo): Promise<number> {
     io.err(`openflowkit op ${name}: ${errors.map((issue) => `line ${issue.line}: ${issue.message}`).join('; ')}; nothing saved`);
     return 1;
   }
+  let picture: Awaited<ReturnType<typeof tryWriteSvgBeside>> | undefined;
   if (result.changed && docPath) {
     store.set(result.document);
     await mkdir(path.dirname(path.resolve(docPath)), { recursive: true });
     await store.save(result.document.id, docPath);
+    if (values.svg) picture = await tryWriteSvgBeside(docPath, result.document, pageId);
   } else if (result.changed) {
     io.err(`openflowkit op ${name}: no --doc, so the change was not saved`);
+  } else if (values.svg) {
+    io.err(`openflowkit op ${name}: no SVG written, nothing was saved`);
   }
-  io.out(JSON.stringify({ changed: result.changed, ...(result.changed && docPath ? { saved: docPath } : {}), output: result.output }, null, 2));
-  return 0;
+  if (picture && 'svgError' in picture) io.err(`openflowkit op ${name}: saved ${docPath}; svg failed: ${picture.svgError}`);
+  io.out(JSON.stringify({ changed: result.changed, ...(result.changed && docPath ? { saved: docPath } : {}), ...picture, output: result.output }, null, 2));
+  return picture && 'svgError' in picture ? 1 : 0;
 }
 
 function runOps(args: readonly string[], io: CliIo): number {
@@ -170,9 +183,14 @@ const summary = (checked: Checked, ok: boolean) => ({
 /** `render` and `convert`: one parse, one compile, one export through the registry. */
 async function runCompile(command: 'render' | 'convert', args: readonly string[], io: CliIo): Promise<number> {
   const { values, positionals } = parse(args, {
-    out: { type: 'string', short: 'o' }, theme: { type: 'string' }, strict: { type: 'boolean' }, json: { type: 'boolean' },
+    out: { type: 'string', short: 'o' }, theme: { type: 'string' }, strict: { type: 'boolean' }, json: { type: 'boolean' }, svg: { type: 'boolean' },
   });
+  if (values.svg && command === 'render') throw new UsageError('render already writes SVG; --svg is for convert and op');
   const out = values.out as string | undefined;
+  if (values.svg && !out) throw new UsageError('--svg writes beside the file, so it needs -o');
+  if (values.svg && out && positionals[0] && positionals[0] !== '-' && path.resolve(svgBeside(out)) === path.resolve(positionals[0])) {
+    throw new UsageError(`--svg would overwrite the input ${positionals[0]}; pick another -o name`);
+  }
   const extensions = command === 'render' ? ['.svg'] : ['.json'];
   if (out && !extensions.includes(path.extname(out).toLowerCase())) {
     throw new UsageError(command === 'render'
@@ -193,28 +211,29 @@ async function runCompile(command: 'render' | 'convert', args: readonly string[]
   const { document, views } = checked as Checked & { document: SceneDocumentV1 };
   let text: string;
   if (command === 'render') {
-    const exported = await runAgentOp(findAgentOp('export')!, { format: 'svg', scope: 'page', theme }, {
-      document, pageId: document.pages[0]!.id, capabilities: await loadFileCapabilities(),
-    });
-    text = (exported.output as { files: readonly { text?: string }[] }).files[0]!.text!;
+    text = await exportSvg(document, document.pages[0]!.id, theme);
     // ponytail: one page per render; a workspace's other views stay in `convert`'s file.
     if (views > 1 && !values.json) io.err(`render: ${views} views; drew the first. convert keeps them all.`);
   } else {
     text = `${JSON.stringify(document, null, 2)}\n`;
   }
+  let picture: Awaited<ReturnType<typeof tryWriteSvgBeside>> | undefined;
   if (out) {
     await mkdir(path.dirname(path.resolve(out)), { recursive: true });
     await writeFile(out, text, 'utf8');
+    if (values.svg) picture = await tryWriteSvgBeside(out, document, undefined, theme);
   }
+  const svgError = picture && 'svgError' in picture ? picture.svgError : undefined;
   if (values.json) {
-    const result = out ? { saved: out } : command === 'render' ? { svg: text } : { document };
+    const result = out ? { saved: out, ...picture } : command === 'render' ? { svg: text } : { document };
     io.out(JSON.stringify({ ...summary(checked, true), ...result }, null, 2));
   } else if (!out) {
     io.out(text.trimEnd());
   } else {
     io.err(`${command}: wrote ${out}`);
   }
-  return 0;
+  if (svgError) io.err(`${command}: saved ${out}; svg failed: ${svgError}`);
+  return svgError ? 1 : 0;
 }
 
 async function runValidate(args: readonly string[], io: CliIo): Promise<number> {

@@ -28,6 +28,7 @@ the command is `npx -y @vrun-design/openflowkit-mcp`). Nothing leaves the machin
    `create_diagram` with `{ dsl, documentId }`.
 4. `openflow_save` with `{ path }` (plus `documentId` in file mode). Put it beside the code:
    `docs/architecture.openflow.json`, `src/payments/checkout-flow.openflow.json`.
+   Add `svg: true` only when the user wants a picture file too (a README embed): it writes the `.svg` beside the JSON.
 5. Tell the user the path, and what you left out.
 
 ## Change a saved diagram

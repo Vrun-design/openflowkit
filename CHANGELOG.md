@@ -47,6 +47,10 @@ This project follows [Semantic Versioning](https://semver.org/).
   diagram as the app. Over 1000 shapes or 400 connections stops with a message.
 - **MCP schema fix (0.2.0): `add_shape` advertises its fields.** Its refined schema exposed only
   `documentId`, so clients sent no `kind`/`label` and every call failed validation.
+- **MCP (0.2.0, schema change): `openflow_save` takes an optional `svg` boolean** (default false). When true it also
+  writes the first page as `<same name>.svg` next to the file and returns its path as `svg`. CLI: `--svg` on
+  `convert -o` and `op --doc`; `openflowkit discover --out` now writes `<name>.svg` beside the model too (`--no-svg` to skip). If the SVG
+  fails after the file is saved, the save stands: the CLI exits 1 naming the saved path, `openflow_save` returns `svgError`.
 - **MCP: icons in headless exports.** File-mode SVG and animated SVG, and the
   `openflowkit build` site, draw the same icon art as the editor.
 - **The assistant edits hand-drawn shapes, not only diagrams.** "Make the selected box red and move it right" now

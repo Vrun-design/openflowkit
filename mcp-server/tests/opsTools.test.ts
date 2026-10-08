@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -122,6 +123,60 @@ describe('op tools', () => {
     expect(reopened).toMatchObject({ documentId: created.id, name: 'Round trip' });
     const read = await run(target, 'get_diagram', { documentId: reopened.documentId as string });
     expect(String(read.dsl)).toContain('A -> B');
+  });
+
+  it('openflow_save writes the SVG beside the file only when svg is true', async () => {
+    const target = await client();
+    const dir = await mkdtemp(join(tmpdir(), 'openflowkit-ops-'));
+    tempDirs.push(dir);
+    const created = await call(target, 'openflow_create', { name: 'Pictured' });
+    await run(target, 'create_diagram', { documentId: created.id, dsl: 'flowchart\n  A -> B' });
+
+    const plain = await call(target, 'openflow_save', { documentId: created.id, path: join(dir, 'plain.openflow.json') });
+    expect(plain.svg).toBeUndefined();
+    expect(existsSync(join(dir, 'plain.openflow.json'))).toBe(true);
+    expect(existsSync(join(dir, 'plain.svg'))).toBe(false);
+
+    const withSvg = await call(target, 'openflow_save', { documentId: created.id, path: join(dir, 'pic.openflow.json'), svg: true });
+    expect(withSvg.svg).toBe(join(dir, 'pic.svg'));
+    expect(existsSync(join(dir, 'pic.openflow.json'))).toBe(true);
+    expect(await readFile(join(dir, 'pic.svg'), 'utf8')).toMatch(/^<svg /);
+  });
+
+  it('openflow_save keeps the saved file and returns svgError when the SVG cannot be written', async () => {
+    const target = await client();
+    const dir = await mkdtemp(join(tmpdir(), 'openflowkit-ops-'));
+    tempDirs.push(dir);
+    const created = await call(target, 'openflow_create', { name: 'Blocked' });
+    await run(target, 'create_diagram', { documentId: created.id, dsl: 'flowchart\n  A -> B' });
+    await mkdir(join(dir, 'blocked.svg'));
+    const saved = await call(target, 'openflow_save', { documentId: created.id, path: join(dir, 'blocked.openflow.json'), svg: true });
+    expect(saved).toMatchObject({ saved: join(dir, 'blocked.openflow.json') });
+    expect(String(saved.svgError)).not.toBe('');
+    expect(saved.svg).toBeUndefined();
+    expect(existsSync(join(dir, 'blocked.openflow.json'))).toBe(true);
+  });
+
+  it('openflow_save in live mode asks the editor for the first page', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'openflowkit-ops-'));
+    tempDirs.push(dir);
+    const calls: { input: { format: string }; pageId?: string }[] = [];
+    const bridge = {
+      connected: true,
+      health: () => ({ pages: [{ pageId: 'p-first' }, { pageId: 'p-second' }] }),
+      call: async (_op: string, input: { format: string }, pageId?: string) => {
+        calls.push({ input, ...(pageId ? { pageId } : {}) });
+        return { files: [{ text: input.format === 'svg' ? '<svg live/>' : '{}' }] };
+      },
+    } as unknown as LiveBridge;
+    const { server } = createServerWithDeps({ log: () => undefined, bridge });
+    const live = new Client({ name: 'test', version: '0.0.0' });
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await Promise.all([server.connect(b), live.connect(a)]);
+    const saved = await call(live, 'openflow_save', { path: join(dir, 'live.openflow.json'), svg: true });
+    expect(saved).toMatchObject({ svg: join(dir, 'live.svg') });
+    expect(calls.find(({ input }) => input.format === 'svg')?.pageId).toBe('p-first');
+    expect(await readFile(join(dir, 'live.svg'), 'utf8')).toBe('<svg live/>');
   });
 
   it('validates DSL with the real parser and reports diagnostics', async () => {

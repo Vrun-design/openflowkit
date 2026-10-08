@@ -128,7 +128,7 @@ one to target a file-mode document.
 | `discover_architecture` | Walk a repo (compose, Dockerfiles, k8s, terraform, manifests) and propose a C4 `architecture` workspace as DSL, with evidence per element |
 | `drift_report` | Re-run discovery against a model (DSL text, open document, or `architecture.ofk` in an open folder) and report `missing` / `undrawn` / `changed` with evidence lines |
 | `explain_element` | An element with its relations, discovery evidence, and the text of any linked `adr/*.md` |
-| `openflow_create` / `openflow_open` / `openflow_save` | File-mode lifecycle |
+| `openflow_create` / `openflow_open` / `openflow_save` | File-mode lifecycle; `openflow_save` takes `svg: true` to also write the `.svg` beside the file |
 | `list_starter_templates` / `get_starter_template` | Working DSL to start from |
 | `whoami` | Which mode you are in and what this server holds |
 | `list_diagram_node_types` / `server_info` | Reference data and capability metadata |

@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -113,6 +114,17 @@ describe('openflowkit CLI', () => {
     const views = await readFile(join(outDir, 'views', 'view-landscape.svg'), 'utf8');
     expect(views).toContain('<svg');
     expect(views).toContain('data-node-id=');
+  });
+
+  it('discover --out writes the SVG beside the model by default, and --no-svg skips it', async () => {
+    const root = await fixture();
+    const on = join(root, 'on', 'architecture.ofk');
+    expect(await main(['discover', root, '--out', on], capture().io)).toBe(0);
+    expect(await readFile(join(root, 'on', 'architecture.svg'), 'utf8')).toMatch(/^<svg /);
+    const off = join(root, 'off', 'architecture.ofk');
+    expect(await main(['discover', root, '--out', off, '--no-svg'], capture().io)).toBe(0);
+    expect(existsSync(off)).toBe(true);
+    expect(existsSync(join(root, 'off', 'architecture.svg'))).toBe(false);
   });
 
   it('draws icon art in the built views, the way the editor does', async () => {
