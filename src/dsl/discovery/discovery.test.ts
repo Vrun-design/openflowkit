@@ -137,3 +137,30 @@ describe('Cloudflare Workers', () => {
     expect(result.units.map((entry) => [entry.name, entry.kind])).toEqual([['share', 'container'], ['shares', 'store']]);
   });
 });
+
+describe('compose depends_on flow lists', () => {
+  const edges = (dependsOn: string) => {
+    const content = `services:\n  web:\n    image: web:1\n    depends_on: ${dependsOn}\n  api:\n    image: api:1\n  db:\n    image: postgres:16\n`;
+    const found = discoverArchitecture([{ path: 'docker-compose.yml', content }], 'shop');
+    return found.relations.map((r) => `${r.from}>${r.to}`).sort();
+  };
+
+  it('reads [a, b] in every spacing and quote style, with a trailing comment', () => {
+    for (const list of ['[api, db]', '[api,db]', '[ api , db ]', '["api", \'db\']', '[api, db]   # needs both']) expect(edges(list), list).toEqual(['web>api', 'web>db']);
+  });
+
+  it('reads the single and empty forms and ignores junk', () => {
+    expect(edges('[api]')).toEqual(['web>api']);
+    expect(edges('[]')).toEqual([]);
+    expect(edges('[ {a: b} ]')).toEqual([]);
+    expect(edges('api')).toEqual([]);
+  });
+
+  it('stays linear on hostile lines (1 MB)', () => {
+    for (const hostile of [`${'['.repeat(1e6)}`, `[a${' '.repeat(1e6)}b]`, `[${'a,'.repeat(5e5)}]`, `[${']'.repeat(5e5)} x`]) {
+      const started = performance.now();
+      edges(hostile);
+      expect(performance.now() - started).toBeLessThan(200);
+    }
+  });
+});

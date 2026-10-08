@@ -407,6 +407,13 @@ interface ComposeService {
   environment: ConfigLine[];
 }
 
+/** A YAML flow list (`[api, "db"]`) as plain names; anything else is not a list. Capped: no service has hundreds of dependencies. */
+function flowListItems(value: string): string[] {
+  const inside = /^\[(.*)\]\s*(?:#.*)?$/.exec(value.trim())?.[1];
+  if (inside === undefined) return [];
+  return inside.split(',', 50).map((item) => scalar(item.trim().slice(0, 200))).filter((name) => /^[A-Za-z0-9._-]+$/.test(name));
+}
+
 function parseComposeServices(content: string): ComposeService[] {
   const lines = content.split(/\r?\n/);
   const start = lines.findIndex((line) => /^services:\s*(?:#.*)?$/.test(line));
@@ -454,8 +461,11 @@ function parseComposeServices(content: string): ComposeService[] {
       const [, keyName, rawValue] = key;
       if (keyName === 'image') current.image = scalar(rawValue ?? '');
       if (keyName === 'environment' && !rawValue) environmentIndent = indent;
-      if (keyName === 'depends_on') dependsIndent = indent;
-      else if (dependsIndent !== -1 && indent > dependsIndent && !rawValue) {
+      if (keyName === 'depends_on') {
+        dependsIndent = indent;
+        // The flow list `depends_on: [api, "db"]`; the map and block-list forms are read line by line below.
+        for (const name of flowListItems(rawValue ?? '')) current.dependsOn.push({ name, line, text });
+      } else if (dependsIndent !== -1 && indent > dependsIndent && !rawValue) {
         current.dependsOn.push({ name: keyName!, line, text });
       }
       return;
