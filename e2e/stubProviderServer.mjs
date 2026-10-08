@@ -41,7 +41,8 @@ const replyFor = (body, path) => {
   }
   if (path.includes('/chat/completions') && request.tools?.some((tool) => tool.function?.name === 'add_diagram')) {
     // A model that answers in Mermaid, which it often does: the editor reads it as it reads a paste.
-    const dsl = textOf(last).includes('draw it in mermaid') ? 'sequenceDiagram\n  Alice->>John: Hello\n  John-xAlice: lost' : 'flowchart\n  Stub -> Works';
+    const big = ['flowchart', ...Array.from({ length: 39 }, (_, i) => `  Step ${i + 1} -> Step ${i + 2}`)].join('\n');
+    const dsl = textOf(last).includes('draw a big flow') ? big : textOf(last).includes('draw it in mermaid') ? 'sequenceDiagram\n  Alice->>John: Hello\n  John-xAlice: lost' : 'flowchart\n  Stub -> Works';
     return { call: { id: 'call_stub', type: 'function', function: { name: 'add_diagram', arguments: JSON.stringify({ dsl }) } } };
   }
   return { text: DRAW };

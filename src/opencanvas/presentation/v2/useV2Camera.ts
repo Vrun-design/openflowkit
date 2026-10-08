@@ -5,6 +5,7 @@ import {
   DEFAULT_CANVAS_CAMERA,
   DEFAULT_CAMERA_LIMITS,
 } from '../../domain/camera/camera';
+import { readableLanding, type LandingDirection } from '../../domain/camera/readableLanding';
 import { foundation } from '../design-system/tokens';
 import { visibleCanvasEdges } from './V2ContextBar';
 import type { CanvasCamera } from '../../domain/camera/types';
@@ -118,6 +119,16 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     animateTo(fitInto(bounds, padding, 1.4).camera);
   }, [animateTo, hostRef, fitInto]);
 
+  /** After the assistant draws: the fit when readable, else a readable zoom on the diagram's start. True when it zoomed in. */
+  const landReadable = useCallback((direction: LandingDirection) => {
+    const bounds = hostRef.current?.getContentBounds();
+    if (!bounds) return false;
+    const { camera: fitted, free } = fitInto(bounds);
+    const landing = readableLanding(bounds, { width: free.right - free.left, height: free.height }, direction);
+    updateCamera(landing.zoomedIn ? { ...landing.camera, x: landing.camera.x + free.left } : fitted);
+    return landing.zoomedIn;
+  }, [hostRef, updateCamera, fitInto]);
+
   const fitView = useCallback((nodeIds?: readonly string[]) => {
     const bounds = hostRef.current?.getContentBounds(nodeIds);
     if (!bounds) return;
@@ -186,6 +197,7 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     animateTo,
     glideToNodes,
     fitView,
+    landReadable,
     revealBounds,
     zoomStep,
     zoomTo,

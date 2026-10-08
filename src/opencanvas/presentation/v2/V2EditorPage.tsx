@@ -13,6 +13,10 @@ import { findStarterTemplate } from '../../../agent/starterTemplates';
 import { compileSource } from '../../../agent/compileSource';
 import { compile, compileWorkspace, type CompileWorkspaceResult } from '../../../dsl/compile';
 import { dslFrames } from '../../../dsl/frameScene';
+import { dslFrameMeta } from '../../../dsl/sceneMeta';
+import { dslFamilyDirection } from '../../../dsl/vocabulary';
+import type { LandingDirection } from '../../domain/camera/readableLanding';
+import { shortcutGroups } from './v2Shortcuts';
 import { writeAnimateBlock } from '../../../dsl/animate';
 import { architectureWorkspaceText } from '../../../dsl/families/architecture/text';
 import { placedElementId } from '../../../dsl/model/model';
@@ -450,8 +454,16 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     settings: aiSettings.settings, proposal, loadGrammar,
     tools: { document: session.document, capabilities: agentCapabilities, compile: compileDraft },
     undo: session.undo, announce: setAnnouncement,
-    // The committed page arrives next frame; fit once it has.
-    onApplied: () => requestAnimationFrame(() => camera.fitView()),
+    // The committed page arrives next frame; land on it once it has.
+    onApplied: () => requestAnimationFrame(() => {
+      // ponytail: direction of the page's last diagram — a reply with mixed directions lands on the last one.
+      const last = pageRef.current ? dslFrames(pageRef.current).at(-1) : undefined;
+      const meta = last ? dslFrameMeta(last) : null;
+      const direction = (meta?.direction as LandingDirection | undefined) ?? (meta ? dslFamilyDirection(meta.family) : 'down');
+      if (!camera.landReadable(direction)) return;
+      const fit = shortcutGroups().flatMap(({ rows }) => rows).find(({ label }) => label === 'Zoom to fit')?.keys;
+      pushToast({ id: `ai-landing-${Date.now()}`, tone: 'info', title: `Zoomed in to read. Press ${fit} to see it all.` });
+    }),
   });
   const diagramCount = useMemo(() => (page ? dslFrames(page).length : 0), [page]);
   const selectedDiagramCount = useMemo(() => (page ? selectedFrameIds(page, selection.nodeIds).length : 0), [page, selection.nodeIds]);
