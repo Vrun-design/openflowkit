@@ -620,6 +620,7 @@ export function parseArchitectureWorkspace(
   const resolvedViews = views.map((view) => {
     if (!view.of) return view;
     const target = resolveElementRef(index, view.of, null);
+    if (!target) diagnostics.push(lineDiagnostic(view.line ?? 1, 'W122', 'warning', `Unknown view target ${view.of}; the view shows nothing`));
     return target ? { ...view, of: target.id, name: viewDisplayName(view, target) } : view;
   });
   const resolvedElements = elements.map((element) => {

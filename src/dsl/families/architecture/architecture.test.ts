@@ -361,6 +361,23 @@ views { view container of Shop { include Shop.** where technology is React } }
     expect(canonical).toContain('include Shop.** where technology is React');
   });
 
+  it('warns when a view names an element the model does not have', async () => {
+    // `system shop "Shop"` is Structurizr's order; ours reads it as one element named "shop Shop".
+    const compiled = await compileWorkspace(`architecture
+model {
+  system shop "Shop" {
+    container Web
+  }
+}
+views {
+  view container of shop
+}
+`);
+    const warning = compiled.views.flatMap((view) => view.result.diagnostics).find((item) => item.code === 'W122');
+    expect(warning?.message).toBe('Unknown view target shop; the view shows nothing');
+    expect(warning?.line).toBe(8);
+  });
+
   it('warns and drops unknown references, and keeps unknown lines verbatim', async () => {
     const compiled = await compile(`architecture
 model {
