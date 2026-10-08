@@ -3,10 +3,13 @@
 // serves both entry points — the canvas menu's Export… and an element's
 // context menu — so scope always matches what the user pointed at.
 import { useState } from 'react';
-import { IconCopy, IconDownload, IconLink, IconLinkOff, IconMovie } from '@tabler/icons-react';
+import { dslFrames, frameScene } from '../../../dsl/frameScene';
+import { diagramToMermaid, mermaidLossSummary } from '../../../dsl/mermaid/toMermaid';
+import { dslFrameMeta } from '../../../dsl/sceneMeta';
+import { IconCopy, IconDownload, IconLink, IconLinkOff, IconMovie, IconTopologyStar3 } from '@tabler/icons-react';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
-import { Button, Icon, Popover, PopoverHeader, Segmented, type ToastItem } from '../design-system';
+import { Button, Icon, IconButton, Popover, PopoverHeader, Segmented, Tooltip, type ToastItem } from '../design-system';
 import { createShareLink, browserStorage, deleteShare, forgetShare, latestShareFor, rememberShare, ShareError } from '../../../services/share/shareClient';
 import { getTurnstileToken } from '../../../services/share/turnstile';
 import {
@@ -51,6 +54,18 @@ function selectionCaption(nodeIds: readonly string[], connectorIds: readonly str
     : 'The selected element.';
 }
 
+/** The code diagram a Mermaid copy is about: the one holding the selection, else the first on the page. */
+function mermaidFrame(page: SceneDocumentV1['pages'][number] | undefined, selectedNodeIds: readonly string[]) {
+  if (!page) return null;
+  const frames = dslFrames(page);
+  const byId = new Map(page.nodes.map((node) => [node.id, node]));
+  for (let id: string | undefined = selectedNodeIds[0]; id; id = byId.get(id)?.parentId) {
+    const hit = frames.find((frame) => frame.id === id);
+    if (hit) return hit;
+  }
+  return frames[0] ?? null;
+}
+
 export function V2ExportMenu({
   open, anchorRef, document, pageId, canShare = false, selectedNodeIds, selectedConnectorIds = [], initialScope = 'page',
   onClose, onToast, onOpenAnimation,
@@ -92,6 +107,26 @@ export function V2ExportMenu({
     ? effectiveScope === 'selection' ? 'Select an element or connection first.' : 'Nothing to export here — this page has no shapes.'
     : effectiveScope === 'selection' ? selectionCaption(selectedNodeIds, selectedConnectorIds, activePage)
       : effectiveScope === 'document' ? 'Every page as its own file.' : 'The current page.';
+
+  // Only while the panel is open: closed, it costs nothing per render.
+  const mermaidTarget = open ? mermaidFrame(activePage, selectedNodeIds) : null;
+  const mermaidFamily = mermaidTarget ? dslFrameMeta(mermaidTarget).family : undefined;
+  const mermaidReason = !mermaidTarget ? 'Copy as Mermaid needs a diagram made from code; this page has none.'
+    : mermaidFamily !== 'flowchart' && mermaidFamily !== 'sequence' ? `Copy as Mermaid supports flowchart and sequence, not ${mermaidFamily}.` : '';
+
+  async function copyMermaid(): Promise<void> {
+    const scene = mermaidTarget && activePage ? frameScene(activePage, mermaidTarget.id) : null;
+    if (!mermaidTarget || !scene || mermaidReason) return;
+    try {
+      const { text, losses } = diagramToMermaid(scene);
+      await navigator.clipboard.writeText(text);
+      const name = (typeof mermaidTarget.content.label === 'string' && mermaidTarget.content.label) || dslFrameMeta(mermaidTarget).title || `${mermaidFamily} diagram`;
+      onToast(`Copied “${name}” as Mermaid.`, 'success', losses.length > 0 ? { description: mermaidLossSummary(losses) } : undefined);
+      onClose();
+    } catch {
+      onToast('This browser blocked copying to the clipboard.', 'danger');
+    }
+  }
 
   async function run(action: 'download' | 'copy-png'): Promise<void> {
     setBusy(true);
@@ -208,6 +243,10 @@ export function V2ExportMenu({
               <Icon icon={IconCopy} /> Copy 2×
             </Button>
           ) : null}
+          <Tooltip content={mermaidReason || 'Copy as Mermaid text (flowchart or sequence)'}>
+            <IconButton variant="quiet" label="Copy as Mermaid" icon={<Icon icon={IconTopologyStar3} />}
+              disabled={Boolean(mermaidReason)} onClick={() => { void copyMermaid(); }} />
+          </Tooltip>
         </div>
         <p className="ofk-caption">{caption}</p>
         {canShare ? (
