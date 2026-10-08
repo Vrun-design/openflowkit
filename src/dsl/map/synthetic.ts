@@ -29,8 +29,8 @@ const LAYOUT: Record<string, Record<string, number>> = {
 // Which parts may import which (everything else stays inside its part).
 const CROSS: [string, string, number][] = [['docs', 'app', 0.5], ['app', 'server', 0.1], ['server', 'app', 0.05], ['mcp', 'server', 0.3], ['mcp', 'app', 0.1]];
 
-export function syntheticRepo(): MapFacts {
-  const next = rng(7);
+export function syntheticRepo(seed = 7): MapFacts {
+  const next = rng(seed);
   const pick = <T,>(xs: T[]) => xs[Math.floor(next() * xs.length)];
   const byPart = new Map<string, string[]>();
   const byFolder = new Map<string, string[]>();

@@ -116,13 +116,13 @@ describe('fetchRepoFiles', () => {
     const error = await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, { fetch: fakeGitHub({ 'https://api.github.com/': RATE_LIMITED }) }).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(RepoError);
     expect((error as RepoError).problem).toEqual({ kind: 'rate-limited', resetAt: new Date(1791396922 * 1000) });
-    expect((error as RepoError).message).toMatch(/60 repo reads an hour.*resets at .*CLI/);
+    expect((error as RepoError).message).toMatch(/60 repo reads an hour.*resets at /);
   });
 
-  it('says a 404 may be a private repo, and points at the CLI', async () => {
+  it('says what a 404 is, with no advice (the page adds that)', async () => {
     const error = await fetchRepoFiles({ owner: 'acme', repo: 'secret', ref: 'HEAD' }, { fetch: fakeGitHub({ 'https://api.github.com/': NOT_FOUND }) }).catch((caught: unknown) => caught) as RepoError;
     expect(error.problem).toEqual({ kind: 'not-found' });
-    expect(error.message).toMatch(/acme\/secret wasn't found\. Private repos need the CLI/);
+    expect(error.message).toMatch(/^acme\/secret wasn't found\.$/);
   });
 
   it('reports offline when the network itself fails', async () => {
@@ -361,5 +361,19 @@ describe('fetchRepoFiles token', () => {
     expect((withToken as RepoError).message).not.toContain('60 repo reads');
     const without = await fetchRepoFiles(ref, { fetch: limited }).catch((error: RepoError) => error);
     expect((without as RepoError).message).toContain('60 repo reads');
+  });
+});
+
+describe('fetchRepoFiles callbacks', () => {
+  const tree = JSON.stringify({ tree: [{ path: 'a.ts', type: 'blob', size: 5 }, { path: 'b.ts', type: 'blob', size: 5 }] });
+  const get = (async (input: RequestInfo | URL) => (String(input).includes('/git/trees/') ? new Response(tree, { status: 200 }) : new Response('x', { status: 200 }))) as typeof fetch;
+
+  it('lists what will be fetched, and lets a throwing onFile stop the run instead of counting a failed file', async () => {
+    const chosen: string[][] = [];
+    const error = await fetchRepoFiles({ owner: 'o', repo: 'r', ref: 'main' }, {
+      fetch: get, select: () => true, onChosen: (paths) => chosen.push([...paths]), onFile: () => { throw new Error('caller bug'); },
+    }).catch((e: unknown) => e);
+    expect(chosen).toEqual([['a.ts', 'b.ts']]);
+    expect((error as Error).message).toBe('caller bug');
   });
 });

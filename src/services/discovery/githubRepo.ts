@@ -88,7 +88,15 @@ export interface FetchRepoOptions {
   /** Read order, lowest first; the default puts deploy manifests first. */
   readonly priority?: (path: string) => number;
   /** Called once with every selected path (before the size filter and the `maxFiles` cap), as soon as the tree is in. */
-  readonly onTree?: (paths: readonly string[], treeSha?: string) => void;
+  readonly onTree?: (paths: readonly string[], treeSha?: string) => void | boolean | Promise<void | boolean>;
+  /** The paths that will actually be fetched (after the size filter, the cap and the byte budget), in read order. */
+  readonly onChosen?: (paths: readonly string[]) => void;
+  /** Each file as it arrives (completion order), so a caller can work while the rest download. */
+  readonly onFile?: (file: ScannedFile) => void;
+  /** A file that would not load, so a caller waiting on specific files knows they will never come. */
+  readonly onFail?: (path: string) => void;
+  /** Requests in flight; the default is 8. */
+  readonly concurrency?: number;
   readonly onProgress?: (done: number, total: number) => void;
   /** Abort on unmount: the scan stops and rejects with the signal's reason. */
   readonly signal?: AbortSignal;
@@ -127,13 +135,17 @@ export async function fetchRepoFiles(ref: RepoRef, options: FetchRepoOptions = {
   const selected = (tree.tree ?? [])
     .filter((entry) => entry.type === 'blob' && entry.path.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..') && (options.select ?? acceptsArchitectureFile)(entry.path));
   // Listed before the size filter: a file too big to read is still a file the caller may want to show.
-  options.onTree?.(selected.map((entry) => entry.path), tree.sha);
+  // `false` from onTree means "stop here" (a cache hit): nothing is fetched and the result is empty.
+  if ((await options.onTree?.(selected.map((entry) => entry.path), tree.sha)) === false) {
+    return { files: [], wanted: selected.length, truncated: tree.truncated === true, failed: 0, unread: 0, skipped: 0 };
+  }
   const rank = options.priority ?? priority;
   const wanted = selected.filter((entry) => (entry.size ?? 0) <= MAX_FILE_BYTES).sort((a, b) => rank(a.path) - rank(b.path) || a.path.localeCompare(b.path));
   const capped = wanted.slice(0, options.maxFiles ?? 400);
   // The byte budget is spent on the listed sizes, manifests first, before any file is fetched.
   let bytes = 0;
   const chosen = capped.filter((entry) => (bytes += entry.size ?? 0) <= MAX_TOTAL_BYTES).map((entry) => entry.path);
+  options.onChosen?.(chosen);
   const refPath = ref.ref.split('/').map(encodeURIComponent).join('/');
 
   const files: ScannedFile[] = [];
@@ -142,14 +154,17 @@ export async function fetchRepoFiles(ref: RepoRef, options: FetchRepoOptions = {
   let failed = 0;
   let lastFailure: RepoError | null = null;
   let stopped: unknown = null;
-  // ponytail: 8 requests at a time from one browser; raise if big repos feel slow.
   const worker = async () => {
     while (next < chosen.length && stopped === null) {
       const path = chosen[next++]!;
+      let received: ScannedFile | null = null;
       try {
         const response = await call(`${hosts.raw}/${repoPath}/${refPath}/${path.split('/').map(encodeURIComponent).join('/')}`);
-        if (response.ok) files.push({ path, content: await response.text() });
-        else {
+        if (response.ok) {
+          received = { path, content: await response.text() };
+          files.push(received);
+        } else {
+          options.onFail?.(path);
           // A file that vanished or won't load is counted: discovery works on what it can read.
           failed++;
           lastFailure = rateLimit(response, 'raw') ?? new RepoError({ kind: 'http', status: response.status }, `GitHub answered ${response.status}. Try again in a minute.`);
@@ -159,14 +174,19 @@ export async function fetchRepoFiles(ref: RepoRef, options: FetchRepoOptions = {
         if (signal?.aborted || (error instanceof RepoError && error.problem.kind === 'offline')) stopped = error;
         else {
           failed++;
+          options.onFail?.(path);
           lastFailure = error instanceof RepoError ? error : new RepoError({ kind: 'http', status: 0 }, 'A file could not be read. Try again in a minute.');
         }
+      }
+      // Outside the fetch try: a caller's own error stops the run instead of being miscounted as a failed file.
+      if (received) {
+        try { options.onFile?.(received); } catch (error) { stopped ??= error; }
       }
       done++;
       if (stopped === null) options.onProgress?.(done, chosen.length);
     }
   };
-  await Promise.all(Array.from({ length: Math.min(8, chosen.length) }, worker));
+  await Promise.all(Array.from({ length: Math.min(options.concurrency ?? 8, chosen.length) }, worker));
   if (stopped !== null) throw stopped;
   if (failed * 2 > chosen.length && lastFailure) throw lastFailure;
   return {
@@ -179,12 +199,12 @@ export async function fetchRepoFiles(ref: RepoRef, options: FetchRepoOptions = {
 function rateLimit(response: Response, source: 'api' | 'raw' = 'api', hadToken = false): RepoError | null {
   if (response.status !== 403 && response.status !== 429) return null;
   if (response.status === 403 && response.headers.get('x-ratelimit-remaining') !== '0' && !response.headers.has('retry-after')) return null;
-  if (source === 'raw') return new RepoError({ kind: 'rate-limited', resetAt: null }, 'GitHub is limiting file downloads from your network right now. Wait a minute and try again, or use the CLI on a checkout.');
+  if (source === 'raw') return new RepoError({ kind: 'rate-limited', resetAt: null }, 'GitHub is limiting file downloads from your network right now. Wait a minute and try again.');
   const reset = Number(response.headers.get('x-ratelimit-reset'));
   const resetAt = Number.isFinite(reset) && reset > 0 ? new Date(reset * 1000) : null;
   const when = resetAt ? ` It resets at ${resetAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.` : '';
-  if (hadToken) return new RepoError({ kind: 'rate-limited', resetAt }, `That token's GitHub limit (5,000 reads an hour) was reached.${when} The CLI reads a checkout with no limit.`);
-  return new RepoError({ kind: 'rate-limited', resetAt }, `GitHub allows 60 repo reads an hour from your network, and they're used up.${when} The CLI reads a checkout with no limit.`);
+  if (hadToken) return new RepoError({ kind: 'rate-limited', resetAt }, `That token's GitHub limit (5,000 reads an hour) was reached.${when}`);
+  return new RepoError({ kind: 'rate-limited', resetAt }, `GitHub allows 60 repo reads an hour from your network, and they're used up.${when}`);
 }
 
 async function treeError(response: Response, ref: RepoRef, hadToken: boolean): Promise<RepoError> {
@@ -193,7 +213,7 @@ async function treeError(response: Response, ref: RepoRef, hadToken: boolean): P
   if (limited) return limited;
   // GitHub answers 404 alike for a private repo, a missing one and a wrong branch.
   if (response.status === 404 || response.status === 422) {
-    return new RepoError({ kind: 'not-found' }, `${ref.owner}/${ref.repo}${ref.ref === 'HEAD' ? '' : ` (${ref.ref})`} wasn't found. Private repos need the CLI on a checkout: npx -p @vrun-design/openflowkit-mcp openflowkit discover .`);
+    return new RepoError({ kind: 'not-found' }, `${ref.owner}/${ref.repo}${ref.ref === 'HEAD' ? '' : ` (${ref.ref})`} wasn't found.`);
   }
   if (response.status === 409) return new RepoError({ kind: 'empty' }, `${ref.owner}/${ref.repo} is empty.`);
   return new RepoError({ kind: 'http', status: response.status }, `GitHub answered ${response.status}. Try again in a minute.`);

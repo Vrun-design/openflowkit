@@ -68,6 +68,8 @@ export interface MapFacts {
   /** `id` is ignored: a part's node id is its dir. */
   parts?: { id?: string; name: string; dir: string; desc?: string }[];
   source?: MapSource;
+  /** Imports the scanner could not resolve (broken paths): added to `stats.unresolved`, so they show up somewhere. */
+  unresolvedImports?: number;
 }
 
 export interface MapOverlay {

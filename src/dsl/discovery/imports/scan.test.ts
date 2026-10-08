@@ -192,3 +192,21 @@ describe('limits and aliases', () => {
     expect(scan.unresolved.map((u) => u.spec)).toEqual(['@vue/gone']);
   });
 });
+
+describe('streamed scans', () => {
+  it('resolves to files listed in `paths` that are not in `files` yet, and scans only `only`', () => {
+    const files = [file('a.ts', "import './b';\nimport '@/c';"), file('x.ts', "import './b';"), file('tsconfig.json', '{"compilerOptions":{"paths":{"@/*":["./*"]}}}')];
+    const scan = scanImports(files, { paths: ['a.ts', 'b.ts', 'c.ts', 'x.ts', 'tsconfig.json'], only: new Set(['a.ts']) });
+    expect(scan.imports.map((i) => `${i.from}>${i.to}`)).toEqual(['a.ts>b.ts', 'a.ts>c.ts']);
+    expect(Object.keys(scan.loc)).toEqual(['a.ts']);
+    expect(scanImports(files).unresolved).toHaveLength(3);
+  });
+
+  it('batches add up to the one-shot scan', () => {
+    const files = [file('a.ts', "import './b';"), file('b.ts', "import './c';"), file('c.ts')];
+    const paths = files.map((f) => f.path);
+    const whole = scanImports(files).imports;
+    const parts = ['a.ts', 'b.ts', 'c.ts'].flatMap((p) => scanImports(files, { paths, only: new Set([p]) }).imports);
+    expect(parts).toEqual(whole);
+  });
+});

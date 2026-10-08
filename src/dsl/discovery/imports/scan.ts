@@ -14,6 +14,13 @@ const MAX_SCANNED = 1_000_000;
 
 const countLines = (content: string): number => (content === '' ? 0 : content.split('\n').length - (content.endsWith('\n') ? 1 : 0));
 
+export interface ScanOptions {
+  /** Every path in the repo, read or not: a streamed batch resolves imports to files that have not arrived yet. */
+  paths?: readonly string[];
+  /** Scan only these files; the rest of `files` is context (configs the resolver reads). */
+  only?: ReadonlySet<string>;
+}
+
 /** One scanner per language: how to read statements, and how to resolve them against the whole file list. */
 interface Language {
   test: RegExp;
@@ -30,7 +37,10 @@ const LANGUAGES: Language[] = [
  * Scans every non-skipped TS/JS, Python and Go file, but resolves against all of `files`: an import of a
  * generated or test file is not broken, it is just not on the map, so its edge is dropped.
  */
-export function scanImports(files: readonly SourceFile[]): ImportScan {
+export function scanImports(files: readonly SourceFile[], options: ScanOptions = {}): ImportScan {
+  // Resolution sees the whole tree; a path not read yet is an empty file, enough to be a target.
+  const have = new Set(files.map((file) => file.path));
+  const context = options.paths ? [...files, ...options.paths.filter((path) => !have.has(path)).map((path) => ({ path, content: '' }))] : files;
   const resolvers = new Map<Language, ReturnType<Language['resolver']>>();
   const imports: ImportFact[] = [];
   const unresolved: UnresolvedImport[] = [];
@@ -38,11 +48,11 @@ export function scanImports(files: readonly SourceFile[]): ImportScan {
   const loc: Record<string, number> = {};
   for (const file of [...files].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))) {
     const language = LANGUAGES.find((l) => l.test.test(file.path));
-    if (!language || isSkippedSource(file.path)) continue;
+    if (!language || isSkippedSource(file.path) || (options.only && !options.only.has(file.path))) continue;
     loc[file.path] = countLines(file.content);
     // ponytail: a file over 1 MB is bundled or data, not hand-written source — counted, not scanned; upgrade path: raise the cap.
     if (file.content.length > MAX_SCANNED) continue;
-    if (!resolvers.has(language)) resolvers.set(language, language.resolver(files));
+    if (!resolvers.has(language)) resolvers.set(language, language.resolver(context));
     const resolve = resolvers.get(language)!;
     const seen = new Set<string>();
     for (const raw of language.extract(file.content)) {

@@ -20,7 +20,8 @@ const push = (map: Map<string, string[]>, key: string, value: string) => {
 };
 
 export function buildMap(facts: MapFacts, overlay: MapOverlay = {}): MapModel {
-  const nodes: Record<string, MapNode> = {};
+  // No prototype: a folder called `constructor` or `__proto__` is a key like any other.
+  const nodes: Record<string, MapNode> = Object.create(null);
   const alias = new Map<string, string>(); // folder path -> id of the node that stands for it
   const loc = new Map<string, number>();
   for (const f of facts.files) loc.set(f.path, Math.max(loc.get(f.path) ?? f.loc, f.loc)); // duplicates: the larger count, whatever the order
@@ -239,7 +240,7 @@ export function buildMap(facts: MapFacts, overlay: MapOverlay = {}): MapModel {
   total('root');
 
   // Links. A dir import lands on the folder; anything unknown is counted, never drawn.
-  let unresolved = 0;
+  let unresolved = facts.unresolvedImports ?? 0;
   let importLines = 0;
   const grouped = new Map<string, MapLink>();
   for (const i of facts.imports) {

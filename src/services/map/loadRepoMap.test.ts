@@ -4,6 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { RepoError } from '../discovery/githubRepo';
 import { loadRepoMap, mapPriority, selectMapFile, type MapProgress } from './loadRepoMap';
 import type { MapModel } from '../../dsl/map/types';
+import { buildMap } from '../../dsl/map/build';
+import { factsFromFiles, isMapSource } from '../../dsl/map/facts';
+import type { CacheEntry, CacheStore } from './cache';
 
 const FILES: Record<string, string> = {
   'src/a.ts': "import { b } from './b';\nexport const a = b;\n",
@@ -100,5 +103,158 @@ describe('loadRepoMap', () => {
     const error = await loadRepoMap({ owner: 'o', repo: 'r', ref: 'HEAD' }, { hosts: { api: url, raw: url }, onSnapshot: () => undefined }).catch((e: unknown) => e) as RepoError;
     expect(error).toBeInstanceOf(RepoError);
     expect(error.problem.kind).toBe('offline');
+  });
+});
+
+describe('streaming, cache and sampling', () => {
+  const repoOf = (count: number): Record<string, string> => {
+    const repo: Record<string, string> = { 'tsconfig.json': '{}' };
+    for (let i = 0; i < count; i++) repo[`src/d${i % 10}/f${i}.ts`] = `export const v${i} = ${i};\n`;
+    return repo;
+  };
+  const serve = (repo: Record<string, string>, counter: { raw: number; tree: number }) => (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('/git/trees/')) {
+      counter.tree++;
+      return new Response(JSON.stringify({ sha: 'tree1', tree: Object.keys(repo).map((path) => ({ path, type: 'blob', size: 30 })) }), { status: 200 });
+    }
+    counter.raw++;
+    const path = Object.keys(repo).find((p) => url.endsWith(`/${p}`));
+    return path ? new Response(repo[path]!, { status: 200 }) : new Response('nope', { status: 404 });
+  }) as typeof fetch;
+  const memory = (): CacheStore => {
+    const rows = new Map<string, CacheEntry>();
+    const used = new Map<string, number>();
+    return { get: async (k) => rows.get(k), put: async (e) => { rows.set(e.key, e); }, touch: async (k, at) => { used.set(k, at); }, list: async () => [...used].map(([key, usedAt]) => ({ key, usedAt })), remove: async (k) => { rows.delete(k); used.delete(k); } };
+  };
+
+  it('posts growing snapshots while files arrive, and the last one equals the returned map', async () => {
+    const counter = { raw: 0, tree: 0 };
+    const snaps: { model: MapModel; progress: MapProgress }[] = [];
+    const model = await loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: serve(repoOf(250), counter), cache: null, onSnapshot: (m, progress) => snaps.push({ model: m, progress }) });
+    expect(snaps.length).toBeGreaterThanOrEqual(3);
+    expect(snaps[0]!.model.stats.loc).toBe(0);
+    const locs = snaps.map((s) => s.model.stats.loc);
+    expect(locs).toEqual([...locs].sort((a, b) => a - b));
+    expect(snaps.at(-1)!.model).toBe(model);
+    expect(model.stats.files).toBe(250);
+    expect(model.stats.loc).toBeGreaterThan(0);
+  });
+
+  it('answers a revisit of the same tree sha from the cache with one tree call and no file reads', async () => {
+    const cache = memory();
+    const first = { raw: 0, tree: 0 };
+    const model = await loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: serve(repoOf(30), first), cache, onSnapshot: () => undefined });
+    expect(first.raw).toBeGreaterThan(0);
+    const again = { raw: 0, tree: 0 };
+    const snaps: MapModel[] = [];
+    const revisit = await loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: serve(repoOf(30), again), cache, onSnapshot: (m) => snaps.push(m) });
+    expect(again).toEqual({ raw: 0, tree: 1 });
+    expect(snaps).toHaveLength(1);
+    expect(revisit.stats).toEqual(model.stats);
+    expect(revisit.source.sha).toBe('tree1');
+  });
+
+  it('does not remember a partial read', async () => {
+    const cache = memory();
+    const flaky = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/git/trees/')) return new Response(JSON.stringify({ sha: 't', tree: [{ path: 'a.ts', type: 'blob', size: 5 }, { path: 'b.ts', type: 'blob', size: 5 }, { path: 'c.ts', type: 'blob', size: 5 }] }), { status: 200 });
+      return url.endsWith('/a.ts') ? new Response('x', { status: 404 }) : new Response('export {};\n', { status: 200 });
+    }) as typeof fetch;
+    await loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: flaky, cache, onSnapshot: () => undefined });
+    expect(await cache.list()).toEqual([]);
+  });
+
+  it('samples by folder breadth above 5,000 sources and says how many were read', async () => {
+    const repo: Record<string, string> = {};
+    for (let i = 0; i < 5200; i++) repo[`d${i % 200}/f${i}.ts`] = 'export {};\n';
+    const snaps: MapProgress[] = [];
+    const model = await loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: serve(repo, { raw: 0, tree: 0 }), cache: null, onSnapshot: (_m, p) => snaps.push(p) });
+    expect(snaps[0]!.sampled).toEqual({ read: 5000, total: 5200 });
+    expect(model.stats.files).toBe(5000);
+    expect(new Set(Object.values(model.nodes).filter((n) => n.kind === 'folder' || n.kind === 'part').map((n) => n.name)).size).toBeGreaterThanOrEqual(200);
+  }, 60_000);
+
+  it('stops when aborted', async () => {
+    const controller = new AbortController();
+    const counter = { raw: 0, tree: 0 };
+    const promise = loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: serve(repoOf(40), counter), cache: null, signal: controller.signal, onSnapshot: () => controller.abort(new Error('left')) });
+    await expect(promise).rejects.toThrow('left');
+  });
+});
+
+describe('root app and outside services', () => {
+  const fakeRepo = (repo: Record<string, string>) => (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('/git/trees/')) return new Response(JSON.stringify({ sha: 's', tree: Object.keys(repo).map((path) => ({ path, type: 'blob', size: 80 })) }), { status: 200 });
+    const path = Object.keys(repo).find((p) => url.endsWith(`/${p}`));
+    return path ? new Response(repo[path]!, { status: 200 }) : new Response('nope', { status: 404 });
+  }) as typeof fetch;
+
+  it('makes the root unit the part for src/, and a Worker\'s R2 binding a data link to an Outside services node', async () => {
+    const repo = {
+      'package.json': '{"name":"webapp","dependencies":{"react":"^19"}}',
+      'src/main.ts': 'export {};\n',
+      'worker/wrangler.toml': 'name = "share"\nmain = "index.ts"\n\n[[r2_buckets]]\nbinding = "SHARES"\nbucket_name = "shares"\n',
+      'worker/index.ts': 'export {};\n',
+    };
+    const model = await loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: fakeRepo(repo), cache: null, onSnapshot: () => undefined });
+    expect(model.nodes['src']?.kind).toBe('part');
+    expect(model.nodes['src']?.name).toBe('webapp');
+    const store = model.nodes['ext:shares'];
+    expect(store).toMatchObject({ kind: 'external', name: 'shares' });
+    expect(store?.desc).toContain('R2');
+    const link = model.links.find((l) => l.to === 'ext:shares');
+    expect(link).toMatchObject({ from: 'worker', kind: 'data' });
+    expect(link?.evidence[0]).toMatchObject({ file: 'worker/wrangler.toml', line: 6 });
+  });
+
+  it('draws a compose database as a data link and an API service as a call link', async () => {
+    const repo = {
+      'docker-compose.yml': 'services:\n  api:\n    build: ./api\n    environment:\n      DATABASE_URL: postgres://db:5432/x\n  db:\n    image: postgres:16\n',
+      'api/Dockerfile': 'FROM node:20\n',
+      'api/package.json': '{"name":"api","dependencies":{"stripe":"^14"}}',
+      'api/index.ts': "import Stripe from 'stripe';\nexport const s = Stripe;\n",
+    };
+    const model = await loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: fakeRepo(repo), cache: null, onSnapshot: () => undefined });
+    const outside = model.links.filter((l) => l.from === 'api' && l.to.startsWith('ext:'));
+    expect(outside.length).toBeGreaterThan(0);
+    expect(outside.every((l) => l.evidence.length > 0)).toBe(true);
+    expect(new Set(outside.map((l) => l.kind))).toContain('data');
+  });
+});
+
+describe('browser map equals CLI map', () => {
+  it('a cold streamed load ends JSON-equal to factsFromFiles + buildMap over the same files', async () => {
+    const repo: Record<string, string> = {
+      'package.json': '{"name":"app"}',
+      'tsconfig.json': '{"extends":"./config/base.json"}',
+      'config/base.json': '{"compilerOptions":{"paths":{"@/*":["../src/*"]}}}',
+      'src/types.d.ts': 'export type T = 1;\n',
+      'vendor/lib.ts': 'export const v = 1;\n',
+      'docs/guide.ts': 'export const g = 1;\n',
+      'src/huge.ts': 'export const h = 1;\n',
+    };
+    for (let i = 0; i < 260; i++) repo[`src/m${i % 13}/f${i}.ts`] = `import { x } from '@/m${(i + 1) % 13}/f${(i + 1) % 260}';\nexport const v${i} = x;\n`;
+    const sizes: Record<string, number> = { 'src/huge.ts': 900_000 };
+    const get = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/git/trees/')) return new Response(JSON.stringify({ sha: 's', tree: Object.keys(repo).map((path) => ({ path, type: 'blob', size: sizes[path] ?? 60 })) }), { status: 200 });
+      const path = Object.keys(repo).find((p) => url.endsWith(`/${p}`));
+      return path ? new Response(repo[path]!, { status: 200 }) : new Response('nope', { status: 404 });
+    }) as typeof fetch;
+    const streamed: MapModel[] = [];
+    const model = await loadRepoMap({ owner: 'o', repo: 'r', ref: 'main' }, { fetch: get, cache: null, onSnapshot: (m) => streamed.push(m) });
+    expect(streamed.length).toBeGreaterThan(3);
+    const selected = Object.keys(repo).filter(selectMapFile);
+    const files = selected.filter((p) => (sizes[p] ?? 0) <= 256 * 1024).map((path) => ({ path, content: repo[path]! }));
+    const expected = buildMap({ ...factsFromFiles(files, 'r', { paths: selected, listed: selected.filter(isMapSource) }), source: { repo: 'o/r', ref: 'main', sha: 's' } });
+    expect(JSON.parse(JSON.stringify(model))).toEqual(JSON.parse(JSON.stringify(expected)));
+    // The browser leaks nothing the CLI skips, and keeps the oversize file as a 0-line box.
+    expect(model.nodes['src/types.d.ts']).toBeUndefined();
+    expect(Object.keys(model.nodes).some((id) => id.startsWith('vendor') || id.startsWith('docs'))).toBe(false);
+    expect(model.nodes['src/huge.ts']?.loc).toBe(0);
+    expect(model.stats.imports).toBeGreaterThan(200);
   });
 });
