@@ -1,0 +1,16 @@
+%% ofk 1
+architecture
+title: OpenFlowKit
+
+// Started with `openflowkit discover . --out architecture.ofk`, names reviewed by hand.
+// CI: the PR diagrams check (action/) renders this on every PR that changes it.
+model {
+  system openflowkit "OpenFlowKit" {
+    app = container "openflowkit" [tech: React]
+    docs = container "openflowkit-docs" [tech: Node]
+    mcp = container "openflowkit-mcp" [tech: Node CLI]
+  }
+}
+views {
+  view container of openflowkit
+}
