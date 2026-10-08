@@ -11,8 +11,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - **Phase 13 DONE 2026-10-03** except 13.4 on a stronger model (nemotron free: Mermaid 96%, DSL 90% first try).
 - MCP 0.2.0 builds and answers over stdio (29 tools, Mermaid in) but is **unpublished**: npm still serves 0.1.2,
   which has no live bridge. Publish (`prepublishOnly` rebuilds) before launch; see memory `project_mcp_registry_publish`.
-## Launch-readiness pass 2026-10-05: CI green again, entry JS 566 → 231 KB, god files split (see git log)
-## C4 pages, labels, Mermaid gaps 2026-10-07: C4 pages = views, one label pass per page, Mermaid gaps (see git log 5930197).
+## 10-05 launch pass (entry JS 566 → 231 KB); 10-07 C4 pages = views, label pass, Mermaid gaps (git log 5930197)
 ## Roadmap 2026-10 run (opus-5.5, from 2026-10-07): plan `docs/plan/roadmap-2026-10.md`, log + RESUME `docs/plan/roadmap-progress.md`
 - Done, pushed: 1.1 ELK headless (golden browser = Node), 1.2–1.5 discovery (this repo → 3 units; env/compose calls with
   file:line), 1.6 System map / Overview / Services names, 2.1 CLI from the op registry (`op`, `render`, `convert`,
@@ -38,5 +37,4 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   C4 person card + Beta; Shapes 41 → 19; Lasso gone; connector UX pass; connector cuts (Line/Path tools, Cross,
   underline, opacity). Next: `docs/plan/launch-qa-prompt.md`. D11 left: own glyphs, empty screen.
 ## Deferred
-- Widget text width is estimated; wireframe comments move to the end; PDF = print dialog; no zip;
-  bridge is long-poll; chart data panel commits per blur; image aspect lock is Shift-lock.
+- Widget text width estimated; wireframe comments move to end; PDF = print dialog; no zip; bridge long-poll; chart data commits per blur.
