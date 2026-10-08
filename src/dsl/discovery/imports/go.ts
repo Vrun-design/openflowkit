@@ -1,11 +1,10 @@
 // Go imports and what they point at. Go imports packages (folders), so every local edge is a `dir` edge.
-import { floor, lineStarts, nextAt, positionsOf, statementText } from './lines';
-import { dirOf, joinPath } from './paths';
+import { byLine, floor, lineStarts, nextAt, positionsOf, statementText } from './lines';
+import { compare, dirOf, joinPath } from './paths';
 import type { Resolution } from './resolve';
 import { isSkippedSource } from './skip';
-import type { RawImport, SourceFile } from './types';
-
-const blank = (text: string): string => text.replace(/[^\n]/g, ' ');
+import { blank } from './strip';
+import { MAX_CONFIG, MAX_SPEC, type RawImport, type SourceFile } from './types';
 
 /** Comments out, raw-string bodies out; interpreted strings stay because an import path is one.
  * Rune literals are skipped whole so `'"'` does not open a string. */
@@ -38,9 +37,6 @@ export function stripGo(text: string): string {
 }
 
 // `import "x"`, `import alias "x"`, and the opening of `import (`; anchored on literals, no nested quantifiers.
-/** No real import path is this long, and a go.mod bigger than any real one is not parsed. */
-const MAX_SPEC = 256;
-const MAX_GO_MOD = 200_000;
 const IMPORT = /^[ \t]*import[ \t]*(?:(\()|(?:[\w.]+[ \t]+)?"([^"\n]*)")/gm;
 const ENTRY = /^[ \t]*(?:[\w.]+[ \t]+)?"([^"\n]*)"/;
 
@@ -66,7 +62,7 @@ export function extractGo(content: string): RawImport[] {
       offset += entry.length + 1;
     }
   });
-  return found.sort((a, b) => a.line - b.line || (a.spec < b.spec ? -1 : a.spec > b.spec ? 1 : 0));
+  return found.sort(byLine);
 }
 
 interface GoModule {
@@ -103,12 +99,12 @@ export function createGoResolver(files: readonly SourceFile[]): (from: string, r
   const goDirs = new Set<string>();
   for (const file of files) {
     if (file.path.endsWith('.go')) goDirs.add(dirOf(file.path));
-    else if ((file.path === 'go.mod' || file.path.endsWith('/go.mod')) && file.content.length <= MAX_GO_MOD) {
+    else if ((file.path === 'go.mod' || file.path.endsWith('/go.mod')) && file.content.length <= MAX_CONFIG) {
       const parsed = parseGoMod(file);
       if (parsed) modules.set(parsed.dir, parsed);
     }
   }
-  const all = [...modules.values()].sort((a, b) => (a.dir < b.dir ? -1 : 1));
+  const all = [...modules.values()].sort((a, b) => compare(a.dir, b.dir));
   return (from, raw) => {
     const spec = raw.spec;
     // The nearest go.mod governs: its `replace` lines apply, others' do not.

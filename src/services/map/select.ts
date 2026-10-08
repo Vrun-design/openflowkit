@@ -1,7 +1,6 @@
 // Which repo files the map reads, and in what order.
+import { compare, dirOf } from '../../dsl/discovery/imports/paths';
 import { acceptsMapFile, CONFIG, SOURCE } from '../../dsl/map/facts';
-
-export { CONFIG, SOURCE };
 
 /** Sources the map draws, plus the configs the import resolver reads (the one rule the CLI shares). */
 export const selectMapFile = acceptsMapFile;
@@ -19,11 +18,11 @@ export const SOURCE_CAP = 5000;
 export function breadthOrder(paths: readonly string[]): string[] {
   const groups = new Map<string, string[]>();
   for (const path of [...paths].sort()) {
-    const dir = path.slice(0, Math.max(path.lastIndexOf('/'), 0));
+    const dir = dirOf(path);
     const list = groups.get(dir);
     if (list) list.push(path); else groups.set(dir, [path]);
   }
-  const lists = [...groups.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([, list]) => list);
+  const lists = [...groups.entries()].sort(([a], [b]) => compare(a, b)).map(([, list]) => list);
   const out: string[] = [];
   for (let round = 0; out.length < paths.length; round++) for (const list of lists) if (round < list.length) out.push(list[round]!);
   return out;

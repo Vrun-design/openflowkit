@@ -1,9 +1,9 @@
 // The configuration that decides what an import specifier means: tsconfig/jsconfig `paths`
 // and `baseUrl`, and package.json files that turn a package name into a folder.
-import { dirOf, joinPath } from './paths';
+import { baseName, compare, dirOf, joinPath } from './paths';
 import { isSkippedSource } from './skip';
 import { stripComments } from './strip';
-import type { SourceFile } from './types';
+import { MAX_CONFIG, type SourceFile } from './types';
 
 export interface TsPaths {
   /** Repo-relative folder `baseUrl` points at. */
@@ -23,23 +23,22 @@ export interface WorkspacePackage {
   json: Record<string, unknown>;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
+
 /** tsconfig is JSON with comments and trailing commas (and sometimes a BOM).
  * ponytail: a `,` before `}` inside a string is also dropped — upgrade path: strip commas in the tokenizer. */
-export function parseJsonc(text: string): Record<string, unknown> {
+function parseJsonc(text: string): Record<string, unknown> {
   try {
     const value: unknown = JSON.parse(stripComments(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text, false).replace(/,(\s*[}\]])/g, '$1'));
-    return value !== null && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+    return isRecord(value) ? value : {};
   } catch {
     return {};
   }
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []);
 /** A hostile chain of `extends` fans out exponentially; real ones are one or two deep. */
 const MAX_EXTENDS = 8;
-/** Bigger than any real tsconfig or package.json: skipped rather than parsed. */
-const MAX_CONFIG = 200_000;
 
 /** Whether a config's `include` reaches the file: its literal folder prefix is enough ("src", "src/**\/*"). */
 function covers(config: TsPaths, file: string): boolean {
@@ -58,10 +57,10 @@ export function loadConfigs(files: readonly SourceFile[]): { configFor: (file: s
   /** Every name any scanned package.json depends on, in any section. */
   const dependencies = new Set<string>();
   // Sorted, so the result never depends on the order the caller listed files in.
-  const sorted = files.filter((file) => file.path.endsWith('.json') && file.content.length <= MAX_CONFIG && !isSkippedSource(file.path)).sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  const sorted = files.filter((file) => file.path.endsWith('.json') && file.content.length <= MAX_CONFIG && !isSkippedSource(file.path)).sort((a, b) => compare(a.path, b.path));
   for (const file of sorted) {
     content.set(file.path, file.content);
-    if (file.path.slice(file.path.lastIndexOf('/') + 1) !== 'package.json') continue;
+    if (baseName(file.path) !== 'package.json') continue;
     const json = parseJsonc(file.content);
     for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) if (isRecord(json[section])) for (const name of Object.keys(json[section] as object)) dependencies.add(name);
     const dir = dirOf(file.path);

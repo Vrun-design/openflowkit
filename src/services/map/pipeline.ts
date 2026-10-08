@@ -3,11 +3,12 @@
 import { scanImports } from '../../dsl/discovery/imports/scan';
 import type { ImportFact, SourceFile } from '../../dsl/discovery/imports/types';
 import { buildMap } from '../../dsl/map/build';
-import { factsFromFiles, isMapSource } from '../../dsl/map/facts';
+import { compare } from '../../dsl/discovery/imports/paths';
+import { CONFIG, factsFromFiles, isMapSource } from '../../dsl/map/facts';
 import type { MapModel } from '../../dsl/map/types';
 import { fetchRepoFiles, type FetchRepoOptions, type RepoRef } from '../discovery/githubRepo';
 import { cacheKey, readCache, touchCache, writeCache, type CacheStore, type CachedFacts } from './cache';
-import { breadthOrder, CONFIG, mapPriority, selectMapFile, SOURCE_CAP } from './select';
+import { breadthOrder, mapPriority, selectMapFile, SOURCE_CAP } from './select';
 
 export interface MapProgress {
   read: number;
@@ -34,9 +35,9 @@ const FLUSH_FILES = 100;
 const FLUSH_MS = 400;
 /** Sources, plus room for configs, manifests and the deploy files discovery reads. */
 const MAX_FILES = SOURCE_CAP + 500;
-export const DEFAULT_CONCURRENCY = 16;
+const DEFAULT_CONCURRENCY = 16;
 
-const byFromLine = (a: ImportFact, b: ImportFact) => (a.from < b.from ? -1 : a.from > b.from ? 1 : a.line - b.line || (a.to < b.to ? -1 : a.to > b.to ? 1 : 0));
+const byFromLine = (a: ImportFact, b: ImportFact) => compare(a.from, b.from) || a.line - b.line || compare(a.to, b.to);
 
 export async function runMapPipeline(ref: RepoRef, opts: PipelineOptions): Promise<MapModel> {
   const source: { repo: string; ref: string; sha?: string } = { repo: `${ref.owner}/${ref.repo}`, ref: ref.ref };

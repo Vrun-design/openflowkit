@@ -1,9 +1,8 @@
 // Python import statements: `import a.b as x, c`, `from .m import (a,\n b)`, `from . import x`.
 // Comments and strings are blanked first (line numbers kept) so docstrings and f-strings never hold imports.
-import { floor, lineStarts, nextAt, positionsOf, statementText } from './lines';
-import type { RawImport } from './types';
-
-const blank = (text: string): string => text.replace(/[^\n]/g, ' ');
+import { byLine, floor, lineStarts, nextAt, positionsOf, statementText } from './lines';
+import { blank } from './strip';
+import { MAX_SPEC, type RawImport } from './types';
 
 /** `#` comments, and ', ", ''' and """ strings of any prefix (f, r, b…) emptied to spaces. Escapes are honoured
  * so `'\''` ends where Python ends it.
@@ -43,8 +42,6 @@ export function stripPython(text: string): string {
 // (`[\w.]+`) so the two whitespace runs around it can never match the same spaces: that overlap made `from` + 200k spaces cubic.
 const IMPORT = /(?:^|[;:])[ \t]*import[ \t]+([^\n;]*)/gm;
 const FROM = /(?:^|[;:])[ \t]*from[ \t]+([\w.]+)[ \t]+import\b[ \t]*/gm;
-/** Longest module path a real import has; anything beyond is noise or an attack. */
-const MAX_SPEC = 256;
 const MAX_SEGMENTS = 32;
 const plausible = (spec: string): boolean => spec.length <= MAX_SPEC && spec.split('.').length <= MAX_SEGMENTS;
 
@@ -84,5 +81,5 @@ export function extractPython(content: string): RawImport[] {
     const names = body.split(',').map((part) => /^\s*(\w+|\*)/.exec(part)?.[1]).filter((n): n is string => n !== undefined);
     found.push({ spec: m[1]!, line: lineOf(start), text: statementText(code, start, end + 1), names });
   });
-  return found.sort((a, b) => a.line - b.line || (a.spec < b.spec ? -1 : a.spec > b.spec ? 1 : 0));
+  return found.sort(byLine);
 }

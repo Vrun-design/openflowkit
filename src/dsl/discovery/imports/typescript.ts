@@ -2,10 +2,9 @@
 // literal itself (`from 'x'`, `import 'x'`, `import('x')`, `require('x')`), so every scan is linear.
 // A statement's line is its `import`/`export` keyword's, so multi-line clauses report where they start.
 import { floor, lineStarts as lineStartsOf } from './lines';
+import { compare } from './paths';
 import { stripComments } from './strip';
-import type { RawImport } from './types';
-
-export type { RawImport };
+import { MAX_SPEC, type RawImport } from './types';
 
 const FROM = /\bfrom\s*(['"])([^'"\n]*)\1/g;
 const SIDE_EFFECT = /\bimport\s*(['"])([^'"\n]*)\1/g;
@@ -14,8 +13,6 @@ const CALL = /(?<![.\w$])(?:import|require)\s*\(\s*(['"])([^'"\n]*)\1\s*\)/g;
 const KEYWORD = /\b(?:import|export)\b/g;
 
 const MAX_TEXT = 160;
-/** No real specifier is this long. */
-const MAX_SPEC = 256;
 /** How far back from `from` its `import`/`export` keyword may be: a clause longer than this is not an import list. */
 const LOOK_BACK = 4000;
 
@@ -44,8 +41,7 @@ export function extractImports(content: string): RawImport[] {
   }
   for (const m of code.matchAll(SIDE_EFFECT)) if (startsStatement(m.index)) add(m[2]!, m.index, m.index + m[0].length);
   for (const m of code.matchAll(CALL)) add(m[2]!, m.index, m.index + m[0].length);
-  // Position, then spec by code unit: deterministic whatever the locale.
-  return found.sort((a, b) => a.at - b.at || (a.spec < b.spec ? -1 : a.spec > b.spec ? 1 : 0)).map(({ at: _at, ...raw }) => raw);
+  return found.sort((a, b) => a.at - b.at || compare(a.spec, b.spec)).map(({ at: _at, ...raw }) => raw);
 }
 
 /** Languages this module reads. ponytail: `.astro`/`.vue`/`.svelte` script blocks are not scanned — upgrade path: extract the block, then run `extractImports`. */

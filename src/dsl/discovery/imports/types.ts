@@ -51,3 +51,8 @@ export interface RawImport {
   /** Python `from m import a, b`: the names, since each may be a submodule. */
   names?: string[];
 }
+
+/** No real specifier or module path is this long. */
+export const MAX_SPEC = 256;
+/** Bigger than any real tsconfig, package.json, go.mod or packaging file: skipped rather than parsed. */
+export const MAX_CONFIG = 200_000;

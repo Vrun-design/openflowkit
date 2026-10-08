@@ -5,6 +5,12 @@ export function dirOf(path: string): string {
   return path.slice(0, Math.max(path.lastIndexOf('/'), 0));
 }
 
+/** Last path segment. */
+export const baseName = (path: string): string => path.slice(path.lastIndexOf('/') + 1);
+
+/** Code-unit order: the same whatever the locale. */
+export const compare = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
 /** Joins and normalizes; `..` past the repo root stays as `..` so the result matches no file. */
 export function joinPath(...parts: string[]): string {
   const out: string[] = [];

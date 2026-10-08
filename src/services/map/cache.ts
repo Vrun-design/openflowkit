@@ -1,5 +1,6 @@
 // The map's cache: facts per `owner/repo@treeSha`, in its own IndexedDB database (the app's schema is untouched).
 // A tree sha names the content exactly, so a hit never goes stale; the only job left is keeping the store small.
+import { compare } from '../../dsl/discovery/imports/paths';
 import type { MapFacts } from '../../dsl/map/types';
 
 export const CACHE_CAP = 50;
@@ -63,7 +64,7 @@ export async function writeCache(store: CacheStore, key: string, facts: CachedFa
     if (JSON.stringify(facts).length > MAX_ENTRY_CHARS) return;
     await store.put({ key, facts, scannedAt: now });
     await store.touch(key, now);
-    const all = (await store.list()).sort((a, b) => a.usedAt - b.usedAt || (a.key < b.key ? -1 : 1));
+    const all = (await store.list()).sort((a, b) => a.usedAt - b.usedAt || compare(a.key, b.key));
     for (const old of all.slice(0, Math.max(0, all.length - cap))) await store.remove(old.key);
   } catch {
     // Quota or a blocked database: the map still loaded.

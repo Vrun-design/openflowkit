@@ -1,8 +1,8 @@
 // What a Python import points at: a module file, a package, a namespace folder, stdlib (ignored) or a distribution.
-import { dirOf, joinPath } from './paths';
+import { baseName, dirOf, joinPath } from './paths';
 import type { Resolution } from './resolve';
 import { isSkippedSource } from './skip';
-import type { RawImport, SourceFile } from './types';
+import { MAX_CONFIG, type RawImport, type SourceFile } from './types';
 
 const STDLIB = new Set(`__future__ _thread abc aifc argparse array ast asyncio atexit base64 bdb binascii bisect builtins bz2 calendar cgi cgitb chunk
 cmath cmd code codecs codeop collections colorsys compileall concurrent configparser contextlib contextvars copy copyreg cProfile csv ctypes curses
@@ -24,9 +24,6 @@ const DIST: Record<string, string> = {
   skimage: 'scikit-image', docx: 'python-docx', git: 'GitPython', jose: 'python-jose', multipart: 'python-multipart', ruamel: 'ruamel.yaml',
 };
 
-/** Bigger than any real packaging file: skipped rather than regex-scanned. */
-const MAX_CONFIG = 200_000;
-
 type Found = { res: Resolution; pkgDir?: string };
 
 /** Folders `where`/`from`/`package_dir` name in packaging config. Cheap regexes, not a TOML parser.
@@ -34,7 +31,7 @@ type Found = { res: Resolution; pkgDir?: string };
 function configuredRoots(files: readonly SourceFile[]): string[] {
   const roots = new Set<string>(['', 'src']);
   for (const file of files) {
-    const name = file.path.slice(file.path.lastIndexOf('/') + 1);
+    const name = baseName(file.path);
     if ((name !== 'pyproject.toml' && name !== 'setup.cfg') || file.content.length > MAX_CONFIG) continue;
     const dir = dirOf(file.path);
     const add = (value: string): void => { roots.add(joinPath(dir, value)); };
@@ -63,7 +60,7 @@ export function createPythonResolver(files: readonly SourceFile[]): (from: strin
     let top = dirOf(p);
     while (top !== '' && known.has(joinPath(dirOf(top), '__init__.py'))) top = dirOf(top);
     if (top === '') continue;
-    const name = top.slice(top.lastIndexOf('/') + 1);
+    const name = baseName(top);
     const list = autoRoots.get(name) ?? [];
     if (!list.includes(dirOf(top))) list.push(dirOf(top));
     autoRoots.set(name, list);

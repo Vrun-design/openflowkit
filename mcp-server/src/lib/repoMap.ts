@@ -11,8 +11,8 @@ import { originOf, trackedFiles, type GithubRepo } from './mapGit.js';
  */
 
 export const MAP_DEPTHS: readonly MapDepth[] = ['overview', 'detailed', 'everything'];
-export const MAX_MAP_FILES = 20_000;
-export const MAX_MAP_BYTES = 64 * 1024 * 1024;
+const MAX_MAP_FILES = 20_000;
+const MAX_MAP_BYTES = 64 * 1024 * 1024;
 const SOURCE = /\.(?:[cm]?[jt]sx?|py|go)$/;
 const MAX_FILE_BYTES = 256 * 1024;
 

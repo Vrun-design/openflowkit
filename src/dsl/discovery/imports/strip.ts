@@ -1,7 +1,7 @@
 // Blanks comments (and template-literal bodies) with spaces so import patterns can run over the
 // whole file while every character keeps its offset and every newline its place: line numbers survive.
 
-const blank = (text: string): string => text.replace(/[^\n]/g, ' ');
+export const blank = (text: string): string => text.replace(/[^\n]/g, ' ');
 
 /**
  * Strings are copied through untouched, so `'//cdn'` is not a comment and the specifier survives.

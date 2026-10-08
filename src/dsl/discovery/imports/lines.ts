@@ -1,4 +1,9 @@
 // Offset arithmetic shared by the language scanners: which line an offset is on, what comes next.
+import { compare } from './paths';
+import type { RawImport } from './types';
+
+/** Statement order: line, then specifier. */
+export const byLine = (a: RawImport, b: RawImport): number => a.line - b.line || compare(a.spec, b.spec);
 
 /** Largest index in `sorted` whose value is <= `offset`, or -1. */
 export function floor(sorted: readonly number[], offset: number): number {

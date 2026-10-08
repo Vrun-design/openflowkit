@@ -8,7 +8,7 @@ const run = promisify(execFile);
  * Every git call goes through here. A checkout we are asked to read may be someone else's: its .git/config can name a
  * command for `core.fsmonitor`, which git runs on many read-only commands. Turning it off first keeps `map` read-only.
  */
-export async function git(dir: string, ...args: string[]): Promise<string | null> {
+async function git(dir: string, ...args: string[]): Promise<string | null> {
   try {
     return (await run('git', ['-c', 'core.fsmonitor=false', ...args], { cwd: dir, maxBuffer: 512 * 1024 * 1024 })).stdout;
   } catch {

@@ -1,6 +1,6 @@
 // Entry point: files in, import facts out. Pure — the caller reads the disk (or GitHub).
 import { extractGo, createGoResolver } from './go';
-import { dirOf } from './paths';
+import { compare, dirOf } from './paths';
 import { extractPython } from './python';
 import { createPythonResolver } from './pythonResolve';
 import { createResolver, type Resolution } from './resolve';
@@ -46,7 +46,7 @@ export function scanImports(files: readonly SourceFile[], options: ScanOptions =
   const unresolved: UnresolvedImport[] = [];
   const externals: ExternalUse[] = [];
   const loc: Record<string, number> = {};
-  for (const file of [...files].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))) {
+  for (const file of [...files].sort((a, b) => compare(a.path, b.path))) {
     const language = LANGUAGES.find((l) => l.test.test(file.path));
     if (!language || isSkippedSource(file.path) || (options.only && !options.only.has(file.path))) continue;
     loc[file.path] = countLines(file.content);
