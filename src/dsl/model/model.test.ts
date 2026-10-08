@@ -170,3 +170,23 @@ describe('model json', () => {
     const malformed = archModelFromJson({...SHOP, views: [{...view, rules: [{...view.rules[0]!, where: {all: [{kind: 'container'}, 'bad']}}]}]})!;
     expect([...selectViewElements(createArchIndex(malformed), malformed.views[0]!).shown]).toEqual([]);
   });
+
+describe('a parent chain that loops (JSON import)', () => {
+  const el = (id: string, parent: string | null) => ({ id, kind: 'container', name: id.toUpperCase(), parent, ...ELEMENT });
+  const json = (elements: unknown[]) => ({ elements, relations: [], views: [] });
+
+  // A sync loop cannot be interrupted by a test timeout: a regression here hangs the run, which is the bug.
+  it('cuts a loop at its first-authored element, so every consumer terminates', () => {
+    const model = archModelFromJson(json([el('a', 'c'), el('b', 'a'), el('c', 'b'), el('d', 'c')]))!;
+    expect(model.elements.map((e) => [e.id, e.parent])).toEqual([['a', null], ['b', 'a'], ['c', 'b'], ['d', 'c']]);
+    const index = createArchIndex(model);
+    expect(elementAncestors(index, 'd')).toEqual(['c', 'b', 'a']);
+    expect([...index.byNamePath.keys()]).toContain('a.b.c.d');
+  }, 2000);
+
+  it('makes a self-parent top level and keeps a dangling parent as it was', () => {
+    const model = archModelFromJson(json([el('a', 'a'), el('b', 'gone')]))!;
+    expect(model.elements.map((e) => e.parent)).toEqual([null, 'gone']);
+    expect(createArchIndex(model).byNamePath.get('a')?.id).toBe('a');
+  }, 2000);
+});

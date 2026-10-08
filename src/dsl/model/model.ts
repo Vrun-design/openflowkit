@@ -337,6 +337,27 @@ function viewFromJson(value: unknown): ArchView | null {
 }
 
 /** Reads a model out of JSON metadata; anything malformed is dropped, never thrown. */
+/**
+ * A parent chain that loops (only reachable through hand-edited JSON) has no root, and every walk up it never
+ * ends. The element authored first in each loop becomes top level, as Map mode reads it (`fromArch`).
+ */
+function withoutParentLoops(elements: readonly ArchElement[]): ArchElement[] {
+  const parentOf = new Map(elements.map((element) => [element.id, element.parent]));
+  const order = new Map(elements.map((element, i) => [element.id, i]));
+  const done = new Set<string>();
+  for (const element of elements) {
+    const path: string[] = [];
+    let at: string | null | undefined = element.id;
+    while (at && !done.has(at) && !path.includes(at)) { path.push(at); at = parentOf.get(at); }
+    if (at && path.includes(at)) {
+      const loop = path.slice(path.indexOf(at));
+      parentOf.set(loop.reduce((a, b) => (order.get(b)! < order.get(a)! ? b : a)), null);
+    }
+    path.forEach((id) => done.add(id));
+  }
+  return elements.map((element) => parentOf.get(element.id) === element.parent ? element : { ...element, parent: null });
+}
+
 export function archModelFromJson(value: unknown): ArchModel | null {
   if (!isRecord(value)) return null;
   if (!Array.isArray(value.elements) || !Array.isArray(value.relations) || !Array.isArray(value.views)) return null;
@@ -344,7 +365,7 @@ export function archModelFromJson(value: unknown): ArchModel | null {
     ...(typeof value.name === 'string' ? { name: value.name } : {}),
     ...(typeof value.palette === 'string' ? { palette: value.palette } : {}),
     ...(value.icons === 'auto' || value.icons === 'off' ? { icons: value.icons } : {}),
-    elements: value.elements.flatMap((element) => elementFromJson(element) ?? []),
+    elements: withoutParentLoops(value.elements.flatMap((element) => elementFromJson(element) ?? [])),
     relations: value.relations.flatMap((relation) => relationFromJson(relation) ?? []),
     views: value.views.flatMap((view) => viewFromJson(view) ?? []),
     flows: Array.isArray(value.flows)
