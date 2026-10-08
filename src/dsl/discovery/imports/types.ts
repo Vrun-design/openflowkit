@@ -41,3 +41,13 @@ export interface ImportScan {
   /** Line count per scanned file. */
   loc: Record<string, number>;
 }
+
+/** One import statement as a language scanner reads it, before resolution. */
+export interface RawImport {
+  /** What follows `from`/`import`: a path, or a dotted module (Python keeps leading dots for relative). */
+  spec: string;
+  line: number;
+  text: string;
+  /** Python `from m import a, b`: the names, since each may be a submodule. */
+  names?: string[];
+}

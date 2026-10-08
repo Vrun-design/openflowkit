@@ -170,3 +170,25 @@ describe('config edge cases', () => {
     expect(scan.loc['a.ts']).toBe(150001);
   });
 });
+
+describe('limits and aliases', () => {
+  it('skips docs/ and examples/ only at the repo top', () => {
+    expect(isSkippedSource('docs/a.ts')).toBe(true);
+    expect(isSkippedSource('examples/a.ts')).toBe(true);
+    expect(isSkippedSource('apps/docs/a.ts')).toBe(false);
+    expect(isSkippedSource('cmd/example/main.go')).toBe(false);
+  });
+
+  it('ignores config files over 200 KB instead of parsing them', () => {
+    const big = `{"compilerOptions":{"paths":{"@/*":["./src/*"]}},"pad":"${'x'.repeat(250000)}"}`;
+    expect(scanImports([file('tsconfig.json', big), file('a.ts', "import '@/b';"), file('src/b.ts')]).unresolved).toHaveLength(1);
+  });
+
+  it('treats a matched-but-missing paths alias as external only when some package.json lists it', () => {
+    const tsconfig = file('tsconfig.json', '{"compilerOptions":{"paths":{"@vue/*":["./packages/*/src"]}}}');
+    const files = [tsconfig, file('a.ts', "import '@vue/repl';\nimport '@vue/gone';"), file('package.json', '{"devDependencies":{"@vue/repl":"^4"}}')];
+    const scan = scanImports(files);
+    expect(scan.externals.map((e) => e.pkg)).toEqual(['@vue/repl']);
+    expect(scan.unresolved.map((u) => u.spec)).toEqual(['@vue/gone']);
+  });
+});

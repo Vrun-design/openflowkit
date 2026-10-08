@@ -28,14 +28,14 @@ export function packageName(spec: string): string {
 
 export function createResolver(files: readonly SourceFile[]): (from: string, spec: string) => Resolution {
   const known = new Set(files.map((file) => file.path));
-  const { configFor, packages } = loadConfigs(files);
+  const { configFor, packages, dependencies } = loadConfigs(files);
 
   /** A path as written → the file it names: exact, `.js`→`.ts`, extensions, `/index`. */
   function resolveFile(base: string): string | undefined {
     const ext = /\.[cm]?[jt]sx?$/.exec(base)?.[0] ?? '';
     const stem = base.slice(0, base.length - ext.length);
     // `./a.js` means `a.ts` when both exist, as in TypeScript's own resolution.
-    const candidates = [...(JS_TO_TS[ext] ?? []).map((e) => stem + e), base, ...CODE_EXT.map((e) => base + e), ...CODE_EXT.map((e) => joinPath(base, `index${e}`))];
+    const candidates = [...(JS_TO_TS[ext] ?? []).map((e) => stem + e), base, ...CODE_EXT.map((e) => base + e), `${base}.d.ts`, ...CODE_EXT.map((e) => joinPath(base, `index${e}`))];
     return candidates.find((candidate) => known.has(candidate));
   }
 
@@ -76,9 +76,11 @@ export function createResolver(files: readonly SourceFile[]): (from: string, spe
     const spec = rawSpec.replace(/\?.*$/, '');
     if (spec.startsWith('.')) {
       if (ASSET.test(spec)) return { kind: 'ignore' };
-      const file = resolveFile(joinPath(dirOf(from), spec));
+      const target = joinPath(dirOf(from), spec);
+      const file = resolveFile(target);
       if (file) return { kind: 'file', to: file };
-      return FRAMEWORK.test(spec) ? { kind: 'ignore' } : { kind: 'unresolved' };
+      // Missing build output (`./dist/x.js`) is not a broken import: the folder is skipped, so nothing is expected there.
+      return FRAMEWORK.test(spec) || (!target.startsWith('..') && isSkippedSource(`${target}/_`)) ? { kind: 'ignore' } : { kind: 'unresolved' };
     }
     if (spec === '' || spec.startsWith('/') || spec.includes(':')) return { kind: 'ignore' };
     const config = configFor(from);
@@ -88,7 +90,7 @@ export function createResolver(files: readonly SourceFile[]): (from: string, spe
     for (const pattern of patterns) {
       const star = matchStar(pattern, spec);
       if (star === undefined) continue;
-      // A bare `*` pattern matches every package name; only a literal prefix (`@/`, `~lib/`) marks an alias.
+      // A bare `*` pattern matches every package name; only a literal prefix (`@vue/`, `~lib/`) marks an alias.
       if (!pattern.startsWith('*')) aliased = true;
       const file = config.paths![pattern]!.map((target) => resolveFile(joinPath(config.pathsBase ?? '', target.replace('*', () => star)))).find(Boolean);
       if (file) return { kind: 'file', to: file };
@@ -100,8 +102,11 @@ export function createResolver(files: readonly SourceFile[]): (from: string, spe
     const name = packageName(spec);
     const workspace = packages.get(name);
     if (workspace) return resolvePackage(workspace, spec.slice(name.length + 1));
-    // `@/x`, `~/x`, `#x`: local by convention, so a miss is a broken import, not an npm package.
-    if (aliased || /^(?:@\/|~\/|#)/.test(spec)) return { kind: 'unresolved' };
+    // `@/x`, `~/x`, `#x`: local by convention, so a miss is a broken import.
+    if (/^(?:@\/|~\/|#)/.test(spec)) return { kind: 'unresolved' };
+    // A `paths` pattern that matched but found nothing falls through to node_modules, as in TypeScript: that is a real
+    // package only if some package.json lists it (`@vue/repl`); otherwise a missing monorepo target is a broken import.
+    if (aliased && !dependencies.has(name)) return { kind: 'unresolved' };
     return BUILTINS.has(name) ? { kind: 'ignore' } : { kind: 'external', pkg: name };
   };
 }

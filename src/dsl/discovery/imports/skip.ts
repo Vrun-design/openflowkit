@@ -8,12 +8,17 @@ const SKIPPED_DIR = new Set([
   'node_modules', 'dist', 'coverage', 'venv', 'storybook-static', 'playwright-report', 'test-results',
   'test', 'tests', '__tests__', 'spec', 'specs', 'e2e', 'fixtures', '__fixtures__', 'testdata', '__mocks__', 'evals', 'testing',
   'generated', '__generated__', 'vendor', 'vendored', 'third_party', 'third-party',
+  // Python and docs: doc snippets (fastapi's docs_src) are not the system either.
+  'site-packages', '__pycache__', 'docs_src', '__benchmarks__',
 ]);
-const SKIPPED_FILE = /\.(?:test|spec|integration|generated|gen|min)\.|\.d\.[cm]?ts$/;
+const SKIPPED_FILE = /\.(?:test|spec|integration|generated|gen|min|bench)\.|\.test-d\.|\.d\.[cm]?ts$|^test_.*\.py$|_test\.(?:py|go)$|^conftest\.py$/;
+
+// Only at the repo top: `docs/` and `examples/` there are samples, but `apps/docs` or `cmd/example` are real code.
+const SKIPPED_TOP_DIR = new Set(['docs', 'example', 'examples']);
 
 /** Skipped: tests, specs, fixtures, mocks, generated, vendored or built output, `.d.ts`, and anything under a dot-folder. */
 export function isSkippedSource(path: string): boolean {
   const segments = path.split('/');
   const name = segments.pop()!;
-  return SKIPPED_FILE.test(name) || segments.some((segment) => SKIPPED_DIR.has(segment) || segment.startsWith('.'));
+  return SKIPPED_FILE.test(name) || SKIPPED_TOP_DIR.has(segments[0] ?? '') || segments.some((segment) => SKIPPED_DIR.has(segment) || segment.startsWith('.'));
 }

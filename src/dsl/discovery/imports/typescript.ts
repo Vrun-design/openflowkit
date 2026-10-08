@@ -1,13 +1,11 @@
 // TS/JS import statements, found without regex backtracking: each pattern anchors on the specifier
 // literal itself (`from 'x'`, `import 'x'`, `import('x')`, `require('x')`), so every scan is linear.
 // A statement's line is its `import`/`export` keyword's, so multi-line clauses report where they start.
+import { floor, lineStarts as lineStartsOf } from './lines';
 import { stripComments } from './strip';
+import type { RawImport } from './types';
 
-export interface RawImport {
-  spec: string;
-  line: number;
-  text: string;
-}
+export type { RawImport };
 
 const FROM = /\bfrom\s*(['"])([^'"\n]*)\1/g;
 const SIDE_EFFECT = /\bimport\s*(['"])([^'"\n]*)\1/g;
@@ -16,23 +14,14 @@ const CALL = /(?<![.\w$])(?:import|require)\s*\(\s*(['"])([^'"\n]*)\1\s*\)/g;
 const KEYWORD = /\b(?:import|export)\b/g;
 
 const MAX_TEXT = 160;
+/** No real specifier is this long. */
+const MAX_SPEC = 256;
 /** How far back from `from` its `import`/`export` keyword may be: a clause longer than this is not an import list. */
 const LOOK_BACK = 4000;
 
 export function extractImports(content: string): RawImport[] {
   const code = stripComments(content);
-  const lineStarts = [0];
-  for (let i = code.indexOf('\n'); i >= 0; i = code.indexOf('\n', i + 1)) lineStarts.push(i + 1);
-  /** Largest index in `sorted` whose value is <= `offset`, or -1. */
-  const floor = (sorted: readonly number[], offset: number): number => {
-    let lo = -1;
-    let hi = sorted.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
-      if (sorted[mid]! <= offset) lo = mid; else hi = mid - 1;
-    }
-    return lo;
-  };
+  const lineStarts = lineStartsOf(code);
   // A statement starts a line or follows `;`/`{`/`}`: that keeps `"import x from 'y'"` inside a string out, yet `a;import x from 'y'` in.
   const startsStatement = (at: number): boolean => {
     let i = at - 1;
@@ -46,6 +35,7 @@ export function extractImports(content: string): RawImport[] {
   for (let i = 0; i < code.length; i++) barriers[i + 1] = barriers[i]! + (/[;'"`]/.test(code[i]!) ? 1 : 0);
   const found: (RawImport & { at: number })[] = [];
   const add = (spec: string, start: number, end: number): void => {
+    if (spec.length > MAX_SPEC) return;
     found.push({ spec, at: start, line: floor(lineStarts, start) + 1, text: code.slice(start, end).replace(/\s+/g, ' ').slice(0, MAX_TEXT) });
   };
   for (const m of code.matchAll(FROM)) {

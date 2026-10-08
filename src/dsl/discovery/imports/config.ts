@@ -38,6 +38,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> => value !==
 const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : []);
 /** A hostile chain of `extends` fans out exponentially; real ones are one or two deep. */
 const MAX_EXTENDS = 8;
+/** Bigger than any real tsconfig or package.json: skipped rather than parsed. */
+const MAX_CONFIG = 200_000;
 
 /** Whether a config's `include` reaches the file: its literal folder prefix is enough ("src", "src/**\/*"). */
 function covers(config: TsPaths, file: string): boolean {
@@ -50,15 +52,18 @@ function covers(config: TsPaths, file: string): boolean {
 }
 
 /** Everything config-shaped in the file list, ready for per-file lookups. */
-export function loadConfigs(files: readonly SourceFile[]): { configFor: (file: string) => TsPaths; packages: Map<string, WorkspacePackage> } {
+export function loadConfigs(files: readonly SourceFile[]): { configFor: (file: string) => TsPaths; packages: Map<string, WorkspacePackage>; dependencies: Set<string> } {
   const content = new Map<string, string>();
   const packages = new Map<string, WorkspacePackage>();
+  /** Every name any scanned package.json depends on, in any section. */
+  const dependencies = new Set<string>();
   // Sorted, so the result never depends on the order the caller listed files in.
-  const sorted = files.filter((file) => file.path.endsWith('.json') && !isSkippedSource(file.path)).sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  const sorted = files.filter((file) => file.path.endsWith('.json') && file.content.length <= MAX_CONFIG && !isSkippedSource(file.path)).sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
   for (const file of sorted) {
     content.set(file.path, file.content);
     if (file.path.slice(file.path.lastIndexOf('/') + 1) !== 'package.json') continue;
     const json = parseJsonc(file.content);
+    for (const section of ['dependencies', 'devDependencies', 'peerDependencies']) if (isRecord(json[section])) for (const name of Object.keys(json[section] as object)) dependencies.add(name);
     const dir = dirOf(file.path);
     // Two packages with one name: the shallowest wins, then path order.
     const taken = packages.get(json.name as string);
@@ -112,5 +117,5 @@ export function loadConfigs(files: readonly SourceFile[]): { configFor: (file: s
       dir = dirOf(dir);
     }
   }
-  return { configFor, packages };
+  return { configFor, packages, dependencies };
 }

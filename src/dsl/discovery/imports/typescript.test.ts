@@ -41,6 +41,10 @@ describe('extractImports', () => {
     expect(specs("import {\n  a,\n  b,\n} from './ok';")).toEqual([['./ok', 1]]);
   });
 
+  it('ignores a specifier longer than 256 characters', () => {
+    expect(specs(`import a from '${'x'.repeat(300)}';\nimport b from 'ok';`)).toEqual([['ok', 2]]);
+  });
+
   it('finds imports after a semicolon and in minified code', () => {
     expect(specs("a();import x from 'y';export{z}from'w';import'side'")).toEqual([['y', 1], ['w', 1], ['side', 1]]);
   });
@@ -52,6 +56,7 @@ describe('extractImports cost', () => {
     ['export blocks', 'export interface A {\n'.repeat(40000)],
     ['wide space', `import${' '.repeat(1e5)}x`],
     ['1 MB of keywords', 'import {\n'.repeat(110000)],
+    ['1 MB specifier', `import x from '${'a'.repeat(1e6)}'`],
     ['many froms', "import {\n a } from 'x'\n".repeat(40000)],
   ];
   it.each(inputs)('scans %s in under 200 ms', (_name, source) => {
