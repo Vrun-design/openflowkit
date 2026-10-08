@@ -25,7 +25,7 @@ import type { V2Tool } from '../V2CreationToolbar';
 import { isEditableTarget } from '../pointerOperations';
 import { measure } from './layout';
 import {
-  BUDGET_NOTE, fitsBudget, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, toggleBox, type TaggedScene,
+  BUDGET_NOTE, fitsBudget, isDoubleClick, freeArea, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, toggleBox, type FreeArea, type TaggedScene,
 } from './mapMode';
 
 export type V2MapModeName = 'canvas' | 'map';
@@ -107,8 +107,8 @@ export function useV2MapMode(options: Options) {
   }, [active, arch, lineageKey]);
   const updateRef = useRef(updateCamera);
   useEffect(() => { updateRef.current = updateCamera; });
-  // The box a click just opened or closed (and, for a close, the box around it): the camera lands there when its layout arrives.
-  const focusRef = useRef<{ id: string; context: string | null } | null>(null);
+  // The box a click just opened or closed: the camera brings it into view when its layout arrives.
+  const focusRef = useRef<{ id: string } | null>(null);
   const mine = useRef<CanvasCamera | null>(null);
   // The sink reads the refs when a frame runs, never during render.
   // eslint-disable-next-line react-hooks/refs
@@ -208,11 +208,18 @@ export function useV2MapMode(options: Options) {
   }, [active, page?.id, updateCamera, fitView]);
 
   const mapPage = active ? sceneFor(scene, arch, EMPTY_MAP, lineageKey) : null;
-  const clearance = useCallback((host: PixiRendererHost) => {
+  // The canvas the side panels and the floating chrome leave: the document bar, the right rail and the camera controls are measured now.
+  const clearance = useCallback((host: PixiRendererHost): FreeArea => {
     const size = host.getViewportSize();
-    const { left, right } = visibleCanvasEdges(document.querySelector<HTMLElement>('.ofk-v2'));
-    const clear = right - left >= size.width / 2;
-    return { left: clear ? left : 0, width: clear ? right - left : size.width, height: size.height };
+    const root = document.querySelector<HTMLElement>('.ofk-v2');
+    const origin = document.querySelector<HTMLElement>('[data-testid="v2-canvas"]')?.getBoundingClientRect();
+    const at = (label: string) => root?.querySelector<HTMLElement>(`[role="toolbar"][aria-label="${label}"]`)?.getBoundingClientRect();
+    const [bar, rail, controls] = [at('Document'), at('Workspace'), at('View')];
+    const { left, right } = visibleCanvasEdges(root);
+    const [ox, oy] = [origin?.left ?? 0, origin?.top ?? 0];
+    return freeArea(size, { left, right: right - ox }, {
+      ...(bar ? { top: bar.bottom - oy } : {}), ...(rail ? { rail: rail.left - ox } : {}), ...(controls ? { bottom: controls.top - oy } : {}),
+    });
   }, []);
   // The host has already taken the new scene (the canvas effect runs first): its index is the target, so clicks land on it.
   // From here only the picture moves, from where each box is drawn to where it now belongs.
@@ -240,7 +247,7 @@ export function useV2MapMode(options: Options) {
     mapPage.nodes.forEach((node) => drawn.current.set(node.id, node));
     const focus = focusRef.current;
     focusRef.current = null;
-    const camTo = focus && rects.has(focus.id) ? landOn(extent, rects.get(focus.id), clearance(host), focus.context ? rects.get(focus.context) : undefined) : null;
+    const camTo = focus && rects.has(focus.id) ? landOn(extent, rects.get(focus.id), clearance(host), cameraRef.current) : null;
     const moving = items.some((item) => item.fade || (['x', 'y', 'width', 'height'] as const).some((key) => item.from[key] !== item.to[key]));
     if (reducedMotion() || !moving) {
       // End state in one frame, arrows visible at once.
@@ -268,9 +275,7 @@ export function useV2MapMode(options: Options) {
     const next = toggleBox(model, open, id);
     if (next === open) return false;
     if (!fitsBudget(model, next)) { notify(BUDGET_NOTE); return false; }
-    // Closing lands on the region around the box when that fits readably, so the reader sees where it went.
-    const around = open.has(id) ? model.nodes[id]?.parent ?? null : null;
-    focusRef.current = { id, context: around && around !== model.root ? around : null };
+    focusRef.current = { id };
     setOpenState(next);
     return true;
   }, [model, open, notify]);
@@ -280,7 +285,7 @@ export function useV2MapMode(options: Options) {
     const next = prune(model, new Set(ids));
     if (!fitsBudget(model, next)) { notify(BUDGET_NOTE); return; }
     const at = focus ?? ids.at(-1);
-    focusRef.current = at ? { id: at, context: null } : null;
+    focusRef.current = at ? { id: at } : null;
     setOpenState(next);
   }, [model, notify]);
   const clickNode = useCallback((id: string) => {

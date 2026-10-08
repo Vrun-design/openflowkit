@@ -48,15 +48,38 @@ export const READABLE = Math.max(0.7, READABLE_ZOOM + 0.05);
  * Where the camera lands, always at k >= READABLE: everything when it fits at that scale; else the box that was just
  * opened or closed, fitted when it fits, else its top-left corner (header and first row) at READABLE; with no such box,
  * `anchor` (the map's top-left corner) at READABLE. The reader can still zoom out by hand.
- * `context` (the closed box's parent) is preferred over `focus` when it fits.
  */
-export function landing(size: { width: number; height: number }, focus: Rect | undefined, view: Viewport, anchor?: Rect, context?: Rect): Cam {
+export function landing(size: { width: number; height: number }, focus: Rect | undefined, view: Viewport, anchor?: Rect): Cam {
   const all = frameBox({ x: 0, y: 0, width: size.width, height: size.height }, view);
   if (all.k >= READABLE) return all;
-  const fits = (box: Rect): boolean => frameBox(box, view, 1, 0).k >= READABLE;
-  if (context && fits(context)) return frameBox(context, view, 1, READABLE);
-  if (focus) return fits(focus) ? frameBox(focus, view, 1, READABLE) : corner(focus, view);
+  if (focus) return frameBox(focus, view, 1, 0).k >= READABLE ? frameBox(focus, view, 1, READABLE) : corner(focus, view);
   return corner(anchor ?? { x: 0, y: 0 }, view);
+}
+
+/** Space kept between a box the camera brought into view and the edge of the free area. */
+const KEEP_MARGIN = 24;
+
+/**
+ * The camera after a box opened or closed, when the reader is already at a readable scale: keep that scale and pan
+ * only as far as the whole box needs to be inside the view (not at all when it already is). A box that does not fit
+ * at `cam.k` is shown at the largest scale that does, never below READABLE; the scale never grows. Null when `cam` is
+ * below READABLE or the box cannot fit at READABLE: the caller then uses `landing`. `box` and `cam` share one space;
+ * the view's free area is x in [0, width], y in [top, height - bottom].
+ */
+export function keepInView(box: Rect, cam: Cam, view: Viewport): Cam | null {
+  if (cam.k < READABLE) return null;
+  const [w, h] = [view.width - KEEP_MARGIN * 2, view.height - view.top - view.bottom - KEEP_MARGIN * 2];
+  const fit = Math.min(w / box.width, h / box.height);
+  if (fit < READABLE) return null;
+  if (fit < cam.k) return frameBox(box, { ...view, pad: KEEP_MARGIN }, fit, READABLE);
+  // The box's screen extent at the kept scale, nudged by the smallest amount that puts all of it inside.
+  const nudge = (at: number, size: number, lo: number, hi: number): number => (at < lo ? lo - at : at + size > hi ? hi - at - size : 0);
+  const [sx, sy] = [box.x * cam.k + cam.x, box.y * cam.k + cam.y];
+  return {
+    k: cam.k,
+    x: cam.x + nudge(sx, box.width * cam.k, KEEP_MARGIN, view.width - KEEP_MARGIN),
+    y: cam.y + nudge(sy, box.height * cam.k, view.top + KEEP_MARGIN, view.height - view.bottom - KEEP_MARGIN),
+  };
 }
 
 /** `at` at the top-left of the free view, at READABLE: a box too big to fit shows its header and first row. */

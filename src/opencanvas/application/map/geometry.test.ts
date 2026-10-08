@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { semanticDetailLevel } from '../../infrastructure/pixi/viewportProjection';
-import { cubicBezier, ease, frameBox, landing, READABLE, topLeftOpen, zoomAt } from './geometry';
+import { cubicBezier, ease, frameBox, keepInView, landing, READABLE, topLeftOpen, zoomAt } from './geometry';
 
 const view = { width: 1000, height: 700, top: 50, bottom: 50, pad: 24 };
 
@@ -43,14 +43,37 @@ describe('geometry', () => {
     expect(head.x + huge.x * head.k).toBeCloseTo(view.pad);
     expect(head.y + huge.y * head.k).toBeCloseTo(view.top + view.pad);
   });
-  it('prefers the context box (the closed one\'s parent) when it fits at the floor', () => {
-    const size = { width: 6000, height: 4000 };
-    const box = { x: 1000, y: 1000, width: 200, height: 100 };
-    const parent = { x: 900, y: 900, width: 700, height: 400 };
-    const cam = landing(size, box, view, undefined, parent);
-    expect(cam.x + 1250 * cam.k).toBeCloseTo(view.width / 2);
-    const wide = landing(size, box, view, undefined, { x: 0, y: 0, width: 5000, height: 3000 });
-    expect(wide.x + 1100 * wide.k).toBeCloseTo(view.width / 2);
+  describe('keepInView', () => {
+    // Free area x 0..1000, y 50..650; a box keeps 24px from every edge.
+    const k = 1;
+    const cam = { k, x: 0, y: 0 };
+    it('does not move when the box is already fully visible', () => {
+      expect(keepInView({ x: 200, y: 200, width: 300, height: 200 }, cam, view)).toEqual(cam);
+    });
+    it('pans only as far as the box needs, on the side it is cut off', () => {
+      const right = keepInView({ x: 800, y: 200, width: 300, height: 200 }, cam, view)!;
+      expect(right).toEqual({ k, x: -(1100 - (1000 - 24)), y: 0 });
+      const top = keepInView({ x: 200, y: 20, width: 300, height: 200 }, cam, view)!;
+      expect(top).toEqual({ k, x: 0, y: 50 + 24 - 20 });
+      const bottom = keepInView({ x: 200, y: 500, width: 300, height: 200 }, cam, view)!;
+      expect(bottom).toEqual({ k, x: 0, y: -(700 - (650 - 24)) });
+    });
+    it('keeps the scale, even a large one, when the box fits', () => {
+      expect(keepInView({ x: 10, y: 60, width: 100, height: 100 }, { k: 1.4, x: 0, y: 0 }, view)!.k).toBe(1.4);
+    });
+    it('zooms out to fit a box that does not, never below the floor and never in', () => {
+      const box = { x: 0, y: 0, width: 1200, height: 300 };
+      const out = keepInView(box, { k: 1, x: 0, y: 0 }, view)!;
+      expect(out.k).toBeLessThan(1);
+      expect(out.k).toBeGreaterThanOrEqual(READABLE);
+      expect(out.x + box.width * out.k).toBeLessThanOrEqual(view.width);
+      expect(out.x).toBeGreaterThanOrEqual(0);
+      // At the floor already and still too big: the caller falls back to the header-first landing.
+      expect(keepInView({ x: 0, y: 0, width: 4000, height: 3000 }, cam, view)).toBeNull();
+    });
+    it('leaves a camera below the floor to the landing rule', () => {
+      expect(keepInView({ x: 0, y: 0, width: 100, height: 100 }, { k: READABLE - 0.1, x: 0, y: 0 }, view)).toBeNull();
+    });
   });
   it('zooms around the cursor', () => {
     const next = zoomAt({ x: 0, y: 0, k: 1 }, 2, 100, 100);

@@ -298,3 +298,50 @@ for (const [name, shape, max] of [
     expect(m.reactRendersDuringMotion).toBeLessThanOrEqual(2);
   });
 }
+
+/** A box's rect in page pixels, and the three floating chrome rects that must stay clear of it. */
+async function clearOfChrome(page: Page, id: string): Promise<void> {
+  const canvas = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
+  const r = (await rect(page, id))!;
+  const box = { x: canvas.x + r.x, y: canvas.y + r.y, width: r.width, height: r.height };
+  expect(box.x, `${id} inside the canvas`).toBeGreaterThanOrEqual(canvas.x);
+  expect(box.y, `${id} inside the canvas`).toBeGreaterThanOrEqual(canvas.y);
+  expect(box.x + box.width, `${id} inside the canvas`).toBeLessThanOrEqual(canvas.x + canvas.width);
+  expect(box.y + box.height, `${id} inside the canvas`).toBeLessThanOrEqual(canvas.y + canvas.height);
+  for (const name of ['Document', 'Workspace', 'View']) {
+    const chrome = (await page.getByRole('toolbar', { name, exact: true }).boundingBox())!;
+    const apart = box.x + box.width <= chrome.x || chrome.x + chrome.width <= box.x || box.y + box.height <= chrome.y || chrome.y + chrome.height <= box.y;
+    expect(apart, `${id} (${JSON.stringify(box)}) is under the ${name} toolbar (${JSON.stringify(chrome)})`).toBe(true);
+  }
+}
+
+test('an opened box lands inside the canvas the chrome leaves, and a small child keeps the zoom @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openStarter(page);
+  await idle(page);
+  await click(page, 'shop');
+  await expect.poll(async () => (await mapNodes(page))).toContain('shop.api');
+  await idle(page);
+  await clearOfChrome(page, 'shop');
+  const before = await zoomOf(page);
+  await page.waitForTimeout(PAST_DOUBLE_CLICK_MS);
+  await click(page, 'shop.api');
+  await expect.poll(async () => (await mapNodes(page))).toContain('shop.api.orders');
+  await idle(page);
+  // Opening a small box inside a box that is already open never zooms in (nor out: it fits where it is).
+  expect(await zoomOf(page)).toBeCloseTo(before, 3);
+  await clearOfChrome(page, 'shop.api');
+  await clearOfChrome(page, 'shop.api.orders');
+});
+
+test('a box too big for the screen still lands with its header clear of the chrome @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  await openWide(page);
+  await click(page, 'hub');
+  await expect.poll(async () => (await mapNodes(page))).toContain('hub.w13');
+  await idle(page);
+  const canvas = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
+  const frame = (await rect(page, 'hub'))!;
+  const bar = (await page.getByRole('toolbar', { name: 'Document', exact: true }).boundingBox())!;
+  expect(canvas.y + frame.y).toBeGreaterThanOrEqual(bar.y + bar.height);
+});

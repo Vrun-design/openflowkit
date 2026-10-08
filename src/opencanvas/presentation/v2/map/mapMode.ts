@@ -2,7 +2,7 @@ import { isInside } from '../../../../dsl/map/tree';
 import type { MapModel } from '../../../../dsl/map/types';
 import { visible } from '../../../../dsl/map/view';
 import { canOpen } from '../../../application/map/navigate';
-import { landing, type Rect, type Viewport } from '../../../application/map/geometry';
+import { keepInView, landing, type Cam, type Rect, type Viewport } from '../../../application/map/geometry';
 import type { CanvasCamera } from '../../../domain/camera/types';
 import type { ScenePage } from '../../../domain/document/types';
 import type { Bounds2d } from '../../../domain/geometry/types';
@@ -78,24 +78,49 @@ export function sceneExtent(page: ScenePage): Bounds2d | null {
   return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
 }
 
-const VIEW = { top: 56, bottom: 72, pad: 48 };
+const PAD = 48;
+/** Space kept between the free canvas and the chrome that floats over it. */
+const CHROME_GAP = 8;
+
+/** The part of the canvas the map may use, in canvas pixels. */
+export interface FreeArea { left: number; top: number; width: number; height: number }
+
+/**
+ * The canvas the floating chrome leaves: `edges` are what the side panels leave (left, right), `chrome` where the
+ * document bar ends (`top`), the right rail begins (`rail`) and the camera controls begin (`bottom`), all measured in
+ * canvas pixels. A chrome so large it would leave under a third of the canvas (a phone) is ignored.
+ */
+export function freeArea(size: { width: number; height: number }, edges: { left: number; right: number }, chrome: { top?: number; rail?: number; bottom?: number }): FreeArea {
+  const clear = edges.right - edges.left >= size.width / 2;
+  const left = clear ? edges.left : 0;
+  const right = Math.min(clear ? edges.right : size.width, chrome.rail === undefined ? size.width : chrome.rail - CHROME_GAP);
+  const top = chrome.top === undefined ? 0 : Math.max(0, chrome.top + CHROME_GAP);
+  const bottom = chrome.bottom === undefined ? size.height : Math.min(size.height, chrome.bottom - CHROME_GAP);
+  const area = { left, top, width: right - left, height: bottom - top };
+  return area.width < size.width / 3 || area.height < size.height / 3 ? { left, top: 0, width: clear ? edges.right - left : size.width, height: size.height } : area;
+}
 
 /**
  * The camera a map opens at: everything when that stays readable (READABLE), else the map's top-left corner at READABLE,
- * so the reader starts at a known place. `free` is the canvas the side panels leave.
+ * so the reader starts at a known place. `free` is the canvas the panels and floating chrome leave.
  */
-export function mapCamera(extent: Bounds2d, free: { left: number; width: number; height: number }): CanvasCamera {
+export function mapCamera(extent: Bounds2d, free: FreeArea): CanvasCamera {
   return landOn(extent, undefined, free);
 }
 
 /**
- * Where the camera goes when `focus` (the box just opened or closed) changes the map, never below READABLE: everything
- * when it fits, else `context` (the closed box's parent) or `focus` fitted, else `focus`'s header and first row.
+ * Where the camera goes when `focus` (the box just opened or closed) changes the map. With a camera already at a readable
+ * scale it stays there and pans only until the whole box is in `free` (zooming out, never in, when the box does not fit);
+ * otherwise, never below READABLE: everything when it fits, else `focus` fitted, else its header and first row.
  */
-export function landOn(extent: Bounds2d, focus: Rect | undefined, free: { left: number; width: number; height: number }, context?: Rect): CanvasCamera {
-  const view: Viewport = { width: free.width, height: free.height, ...VIEW };
+export function landOn(extent: Bounds2d, focus: Rect | undefined, free: FreeArea, current?: CanvasCamera): CanvasCamera {
+  const view: Viewport = { width: free.width, height: free.height, top: 0, bottom: 0, pad: PAD };
+  const place = (cam: Cam): CanvasCamera => ({ zoom: cam.k, x: free.left + cam.x, y: free.top + cam.y });
+  if (focus && current) {
+    const kept = keepInView(focus, { k: current.zoom, x: current.x - free.left, y: current.y - free.top }, view);
+    if (kept) return place(kept);
+  }
   // `landing` frames a map that starts at the origin; shift the focus there and the result back.
-  const rel = (r: Rect | undefined) => r && { ...r, x: r.x - extent.x, y: r.y - extent.y };
-  const cam = landing(extent, rel(focus), view, undefined, rel(context));
-  return { zoom: cam.k, x: free.left + cam.x - extent.x * cam.k, y: cam.y - extent.y * cam.k };
+  const cam = landing(extent, focus && { ...focus, x: focus.x - extent.x, y: focus.y - extent.y }, view);
+  return place({ ...cam, x: cam.x - extent.x * cam.k, y: cam.y - extent.y * cam.k });
 }

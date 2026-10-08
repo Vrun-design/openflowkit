@@ -5,7 +5,7 @@ import { archModelFromJson } from '../../../../dsl/model/model';
 import type { ScenePage } from '../../../domain/document/types';
 import type { MapModel, MapNode } from '../../../../dsl/map/types';
 import { READABLE } from '../../../application/map/geometry';
-import { BOX_BUDGET, fitsBudget, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, toggleBox } from './mapMode';
+import { BOX_BUDGET, fitsBudget, freeArea, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, toggleBox } from './mapMode';
 
 const TEXT = `architecture
 model {
@@ -121,7 +121,7 @@ describe('map camera', () => {
   });
 
   it('fits a small map readably and starts a big one at the top-left at the readable floor', () => {
-    const free = { left: 0, width: 1200, height: 800 };
+    const free = { left: 0, top: 56, width: 1200, height: 672 };
     expect(mapCamera({ x: 0, y: 0, width: 800, height: 400 }, free).zoom).toBeGreaterThanOrEqual(READABLE);
     const big = mapCamera({ x: 100, y: 50, width: 6000, height: 4000 }, free);
     expect(big.zoom).toBe(READABLE);
@@ -129,7 +129,7 @@ describe('map camera', () => {
   });
 
   it('lands on the whole map when it is readable, else on the box that changed at 0.6 or more, wherever the map starts', () => {
-    const free = { left: 100, width: 1200, height: 800 };
+    const free = { left: 100, top: 56, width: 1200, height: 672 };
     const small = landOn({ x: 20, y: 30, width: 800, height: 400 }, { x: 20, y: 30, width: 100, height: 50 }, free);
     expect(small.zoom).toBeGreaterThanOrEqual(READABLE);
     // Everything fits: the map's centre is the free canvas's centre, even though the map does not start at the origin.
@@ -143,24 +143,50 @@ describe('map camera', () => {
   });
 
   it('shows the header and first row of a box too big to fit, at the floor, never smaller', () => {
-    const free = { left: 100, width: 1200, height: 800 };
+    const free = { left: 100, top: 56, width: 1200, height: 672 };
     const extent = { x: 500, y: 300, width: 6000, height: 4000 };
     const huge = { x: 3000, y: 2000, width: 3000, height: 1800 };
     const cam = landOn(extent, huge, free);
     expect(cam.zoom).toBe(READABLE);
     // Its top-left corner sits at the top-left of the free canvas (below the top bar), so the title is on screen.
     expect(cam.x + huge.x * cam.zoom).toBeCloseTo(free.left + 48);
-    expect(cam.y + huge.y * cam.zoom).toBeCloseTo(56 + 48);
+    expect(cam.y + huge.y * cam.zoom).toBeCloseTo(free.top + 48);
   });
 
-  it('lands on the closed box\'s parent when that fits, else on the box', () => {
-    const free = { left: 0, width: 1200, height: 800 };
+  it('keeps the zoom and pans minimally when the opened box fits; zooms out (not below the floor) when it does not', () => {
+    const free = { left: 100, top: 56, width: 1200, height: 672 };
     const extent = { x: 0, y: 0, width: 6000, height: 4000 };
-    const box = { x: 3000, y: 2000, width: 200, height: 100 };
-    const parent = { x: 2800, y: 1900, width: 800, height: 500 };
-    const cam = landOn(extent, box, free, parent);
-    expect(cam.x + (parent.x + parent.width / 2) * cam.zoom).toBeCloseTo(free.width / 2);
-    const tooBig = landOn(extent, box, free, { x: 0, y: 0, width: 5000, height: 3000 });
-    expect(tooBig.x + (box.x + box.width / 2) * tooBig.zoom).toBeCloseTo(free.width / 2);
+    const cam = { zoom: 1, x: 0, y: 0 };
+    // Fully visible in the free area (screen x 100..1300, y 56..728): no move at all, and the zoom is never raised.
+    const seen = { x: 400, y: 200, width: 200, height: 100 };
+    expect(landOn(extent, seen, free, cam)).toEqual(cam);
+    // Cut off at the bottom: only y changes, by what brings the box inside with its margin.
+    const low = { x: 400, y: 650, width: 200, height: 150 };
+    const panned = landOn(extent, low, free, cam);
+    expect(panned.zoom).toBe(1);
+    expect(panned.x).toBe(0);
+    expect(panned.y + (650 + 150)).toBeCloseTo(56 + 672 - 24);
+    // Too wide for the free area at this zoom: zoomed out to fit, within the floor.
+    const wide = { x: 0, y: 100, width: 1300, height: 200 };
+    const out = landOn(extent, wide, free, cam);
+    expect(out.zoom).toBeLessThan(1);
+    expect(out.zoom).toBeGreaterThanOrEqual(READABLE);
+    expect(out.x + wide.x * out.zoom).toBeGreaterThanOrEqual(free.left);
+    expect(out.x + (wide.x + wide.width) * out.zoom).toBeLessThanOrEqual(free.left + free.width);
+  });
+
+  it('lands inside the free area, never under the chrome that measured it', () => {
+    const size = { width: 1440, height: 1000 };
+    // Bar ends at 66, rail starts at 1373, controls start at 920, the Model panel leaves x 0..1100.
+    const free = freeArea(size, { left: 0, right: 1100 }, { top: 66, rail: 1373, bottom: 920 });
+    expect(free).toEqual({ left: 0, top: 74, width: 1100, height: 838 });
+    const noPanel = freeArea(size, { left: 0, right: 1440 }, { top: 66, rail: 1373, bottom: 920 });
+    expect(noPanel.left + noPanel.width).toBe(1373 - 8);
+    expect(freeArea(size, { left: 0, right: 1440 }, {})).toEqual({ left: 0, top: 0, width: 1440, height: 1000 });
+    // A phone: the chrome would leave a sliver, so it is ignored.
+    expect(freeArea({ width: 390, height: 844 }, { left: 0, right: 390 }, { top: 66, rail: 40, bottom: 800 }).width).toBe(390);
+    // A landing with no box in view starts at the free area's top-left, below the bar.
+    const cam = mapCamera({ x: 0, y: 0, width: 6000, height: 4000 }, noPanel);
+    expect(cam.y).toBe(noPanel.top + 48);
   });
 });
