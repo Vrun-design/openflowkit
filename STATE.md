@@ -17,9 +17,9 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   2.6 ⌘F, 2.7/Codex plugins, 2.8 dark wash, 4.1 MCP Apps endpoint, 4.2 PR Action, 4.3 Copy as Mermaid, AI first fit,
   Workers + R2/D1 discovery, W122 (details: roadmap-progress.md).
 ## Map mode run (from 2026-10-08): plan `docs/plan/map-mode-plan.md` (supersedes map-plan P5+), log + RESUME `docs/plan/map-progress.md`
-- Living Map P1–P4 pushed (47b98eb..fe036cf): engine `src/dsl/map`, import facts `src/dsl/discovery/imports`, SVG page
-  `/#/map/github/o/r`, CLI `openflowkit map <dir> [--html]`. Now: one editor, `Canvas | Map` modes, Map on Pixi,
-  C4 drill = grow in place; SVG page deleted in M5. In flight: M0 (motion spike) + M1 (pure layer). Owner looks after M3, M6.
+- Living Map P1–P4 (engine, import facts, SVG page `/#/map/github/o/r`, CLI map). Map mode in the editor: M1 b0b90370
+  (fromArch, mapScene), M2 a78a5995 (`Canvas | Map`, click opens in place, arrow → relations), M3 2ae7cafa (grow-in-place
+  motion, ~60 fps / 170 boxes; ELK fixed alignment = stable), add element 96af974f. Now: owner look #2; then M4–M6.
 - Owner: publish MCP 0.2.0 (Action default CLI needs it); deploy `start:http` over HTTPS, then verify hosts (README table).
   Owner action list: `docs/plan/cofounder-action-list.md`. Waiting on owner's go: `e2e:headed` + walkthrough, H5 eval.
 - Headless layout cap: 1000 shapes / 400 connections. Share Worker setup: `worker/README.md`.
