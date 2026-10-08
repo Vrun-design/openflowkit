@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildMap } from '../../../../dsl/map/build';
-import { FIXTURE } from '../../../../dsl/map/fixture';
+import { buildMap } from '../../../dsl/map/build';
+import { FIXTURE } from '../../../dsl/map/fixture';
 import { planMotion } from './planMotion';
 
 const r = (x: number) => ({ x, y: 0, width: 10, height: 10, open: false });

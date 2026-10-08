@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildMap } from '../../../../dsl/map/build';
-import { FIXTURE } from '../../../../dsl/map/fixture';
+import { buildMap } from '../../../dsl/map/build';
+import { FIXTURE } from '../../../dsl/map/fixture';
 import { labelsFor, layerCounts, neighbours, oneLevel, pickNeighbour, revealExpanded } from './navigate';
 
 const box = (x: number, y: number) => ({ x, y, width: 100, height: 50 });

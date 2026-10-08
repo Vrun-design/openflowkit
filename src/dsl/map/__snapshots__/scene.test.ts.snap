@@ -1,0 +1,157 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`mapScene > draws the C4 starter at overview: closed boxes as the family draws them, arrows with counts 1`] = `
+[
+  [
+    "customer",
+    "process",
+    null,
+    {
+      "height": 75,
+      "width": 169,
+    },
+    {
+      "x": 351,
+      "y": 20,
+    },
+  ],
+  [
+    "shop",
+    "frame",
+    null,
+    {
+      "height": 156,
+      "width": 831,
+    },
+    {
+      "x": 20,
+      "y": 223,
+    },
+  ],
+  [
+    "shop.web",
+    "process",
+    "shop",
+    {
+      "height": 75,
+      "width": 146,
+    },
+    {
+      "x": 16,
+      "y": 58.5,
+    },
+  ],
+  [
+    "shop.api",
+    "process",
+    "shop",
+    {
+      "height": 75,
+      "width": 125,
+    },
+    {
+      "x": 346,
+      "y": 58.5,
+    },
+  ],
+  [
+    "shop.database",
+    "process",
+    "shop",
+    {
+      "height": 88,
+      "width": 178,
+    },
+    {
+      "x": 637,
+      "y": 52,
+    },
+  ],
+  [
+    "payments",
+    "process",
+    null,
+    {
+      "height": 75,
+      "width": 168,
+    },
+    {
+      "x": 351.5,
+      "y": 507,
+    },
+  ],
+]
+`;
+
+exports[`mapScene > draws the C4 starter at overview: closed boxes as the family draws them, arrows with counts 2`] = `
+[
+  [
+    "customer>shop:call",
+    "customer",
+    "shop",
+    [
+      "shops [HTTPS]",
+    ],
+    {
+      "dashPattern": "dashed",
+    },
+    {
+      "count": 1,
+      "minor": false,
+      "relations": [
+        "rel:customer->shop.web",
+      ],
+    },
+  ],
+  [
+    "payments>shop:call",
+    "shop",
+    "payments",
+    [
+      "charges [HTTPS]",
+    ],
+    {
+      "dashPattern": "dashed",
+    },
+    {
+      "count": 1,
+      "minor": false,
+      "relations": [
+        "rel:shop.api->payments",
+      ],
+    },
+  ],
+  [
+    "shop.api>shop.database:call",
+    "shop.api",
+    "shop.database",
+    [
+      "stores orders [SQL]",
+    ],
+    {},
+    {
+      "count": 1,
+      "minor": false,
+      "relations": [
+        "rel:shop.api->shop.database",
+      ],
+    },
+  ],
+  [
+    "shop.api>shop.web:call",
+    "shop.web",
+    "shop.api",
+    [
+      "submits orders [HTTPS]",
+    ],
+    {},
+    {
+      "count": 1,
+      "minor": false,
+      "relations": [
+        "rel:shop.web->shop.api",
+      ],
+    },
+  ],
+]
+`;

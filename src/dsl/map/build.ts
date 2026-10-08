@@ -1,4 +1,4 @@
-import { foldFiles, MAX_CHILDREN, planBudget } from './fold';
+import { foldFiles, MAX_CHILDREN, moreLabel, placeMore, planBudget } from './fold';
 import { compare } from './tree';
 import type { Evidence, MapFacts, MapLink, MapModel, MapNode, MapNodeKind, MapOverlay } from './types';
 
@@ -80,27 +80,11 @@ export function buildMap(facts: MapFacts, overlay: MapOverlay = {}): MapModel {
   // Overlay group ids are reserved up front: a folded group is only built later, inside `more`.
   const reserved = new Set<string>();
 
-  // Phone-book split for what overflowed: sorted by name, then cut into ranges of at most MAX_CHILDREN,
-  // each range a box named "first - last", recursively. No graph, nothing to rank: just findable.
-  const placeMore = (parent: string, items: Item[]) => {
-    const sorted = [...items].sort((a, b) => compare(a.label.toLowerCase(), b.label.toLowerCase()) || compare(a.key, b.key));
-    if (sorted.length <= MAX_CHILDREN) return sorted.forEach((it) => it.make(parent));
-    let size = 1;
-    while (Math.ceil(sorted.length / size) > MAX_CHILDREN) size *= MAX_CHILDREN;
-    for (let i = 0; i < sorted.length; i += size) {
-      const chunk = sorted.slice(i, i + size);
-      if (chunk.length === 1) { chunk[0].make(parent); continue; }
-      const range = add(`${parent}#r${i}`, 'group', parent, `${chunk[0].label.slice(0, 12)} \u2013 ${chunk[chunk.length - 1].label.slice(0, 12)}`, { ai: false });
-      placeMore(range.id, chunk);
-    }
-  };
-
-  const count = (n: number, noun: string) => `${n} more ${n === 1 ? noun : noun.endsWith('x') ? `${noun}es` : `${noun}s`}`;
-  const moreLabel = (folded: Item[], files: number) => {
-    const nouns = new Set(folded.map((i) => i.noun));
-    const boxes = folded.length ? count(folded.length, nouns.size === 1 ? [...nouns][0] : 'box') : '';
-    return boxes && files ? `${boxes} and ${count(files, 'file')}` : boxes || count(files, 'file');
-  };
+  // The engine's phone-book split (fold.ts) with this builder's way of making items and range boxes.
+  const spill = (parent: string, items: Item[]) => placeMore(parent, items, {
+    item: (it, p) => it.make(p),
+    range: (id, p, name) => add(id, 'group', p, name, { ai: false }),
+  });
 
   // One box, the same rule at every level (root, parts, folders, groups, outside): planBudget keeps the
   // best-connected sub-boxes, fold.ts groups the loose files, and what is left waits in `${id}#more`.
@@ -121,8 +105,8 @@ export function buildMap(facts: MapFacts, overlay: MapOverlay = {}): MapModel {
     for (const f of loose) addFile(f, id);
     const folded = plan.folded.map((k) => byKey.get(k)!);
     if (!folded.length && !more.length) return;
-    const box = add(`${id}#more`, 'more', id, moreLabel(folded, more.length), { desc: 'Fewer connections; open to list them.' });
-    placeMore(box.id, [...folded, ...more.map(fileItem)]);
+    const box = add(`${id}#more`, 'more', id, moreLabel(folded.map((i) => i.noun), more.length), { desc: 'Fewer connections; open to list them.' });
+    spill(box.id, [...folded, ...more.map(fileItem)]);
   };
 
   // Fill a folder: overlay groups are sub-boxes like any other and win over folding, so fold.ts only

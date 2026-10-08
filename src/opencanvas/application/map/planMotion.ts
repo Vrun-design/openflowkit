@@ -1,8 +1,8 @@
-import type { LaidRect } from '../../../../dsl/map/elk';
-import type { MapModel } from '../../../../dsl/map/types';
+import type { LaidRect } from '../../../dsl/map/elk';
+import type { MapModel } from '../../../dsl/map/types';
 import type { Rect } from './geometry';
-import type { MotionItem } from './motion';
 
+export interface MotionItem { id: string; from: Rect; to: Rect; fade: 'in' | 'out' | null }
 export interface Leaving { id: string; rect: LaidRect; open: boolean }
 
 const nearest = (m: MapModel, id: string, rects: ReadonlyMap<string, Rect>): Rect | undefined => {

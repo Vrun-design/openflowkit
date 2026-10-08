@@ -311,3 +311,33 @@ function nameByStem(groups: number[][], paths: string[], words: string[][], acr:
     return { name, files: g.map((i) => paths[i]), extras: [] };
   }));
 }
+
+/**
+ * Phone-book split for what overflowed a box: sorted by label, then cut into ranges of at most MAX_CHILDREN,
+ * each range a box (`${parent}#r${i}`) named "first - last", recursively. No graph, nothing to rank: just findable.
+ * The caller says how an item and a range box are made, so buildMap and fromArch share the rule.
+ */
+export function placeMore<T extends { key: string; label: string }>(
+  parent: string, items: readonly T[], make: { item: (item: T, parent: string) => void; range: (id: string, parent: string, name: string) => void },
+): void {
+  const sorted = [...items].sort((a, b) => compare(a.label.toLowerCase(), b.label.toLowerCase()) || compare(a.key, b.key));
+  if (sorted.length <= MAX_CHILDREN) return sorted.forEach((it) => make.item(it, parent));
+  let size = 1;
+  while (Math.ceil(sorted.length / size) > MAX_CHILDREN) size *= MAX_CHILDREN;
+  for (let i = 0; i < sorted.length; i += size) {
+    const chunk = sorted.slice(i, i + size);
+    if (chunk.length === 1) { make.item(chunk[0], parent); continue; }
+    const id = `${parent}#r${i}`;
+    make.range(id, parent, `${chunk[0].label.slice(0, 12)} \u2013 ${chunk[chunk.length - 1].label.slice(0, 12)}`);
+    placeMore(id, chunk, make);
+  }
+}
+
+const count = (n: number, noun: string) => `${n} more ${n === 1 ? noun : noun.endsWith('x') ? `${noun}es` : `${noun}s`}`;
+
+/** "5 more folders" when the folded boxes share a noun, else "5 more <fallback>s"; `files` loose files are added to it. */
+export function moreLabel(nouns: readonly string[], files = 0, fallback = 'box'): string {
+  const same = new Set(nouns);
+  const boxes = nouns.length ? count(nouns.length, same.size === 1 ? nouns[0] : fallback) : '';
+  return boxes && files ? `${boxes} and ${count(files, 'file')}` : boxes || count(files, 'file');
+}

@@ -23,6 +23,8 @@ const SHARED_KERNEL = [
   path.join(ocDir, 'domain'),
   path.join(srcDir, 'dsl'),
   path.join(ocDir, 'application', 'history'),
+  // Map mode's pure pieces (navigation, motion plan, geometry, ELK layout with injected ports): the editor and the map viewer share them.
+  path.join(ocDir, 'application', 'map'),
   path.join(ocDir, 'application', 'selection'),
   // Pure command builders for pages and layers; the document bar commits them.
   path.join(ocDir, 'application', 'active-document'),

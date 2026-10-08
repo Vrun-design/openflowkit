@@ -1,9 +1,8 @@
-import { ease, FADE_MS, lerpRect, type Cam, type Rect } from './geometry';
+import { ease, FADE_MS, lerpRect, type Cam, type Rect } from '../../../application/map/geometry';
+import type { MotionItem } from '../../../application/map/planMotion';
 
 // The one rAF loop. React renders structure; this writes geometry (box transforms and sizes,
 // camera, arrow opacity) straight to SVG attributes, so no frame re-renders React.
-
-export interface MotionItem { id: string; from: Rect; to: Rect; fade: 'in' | 'out' | null }
 
 interface Handle { item: MotionItem; g: SVGGElement; box: SVGRectElement | null; right: Element[]; bottom: Element[] }
 interface Job { handles: Handle[]; t0: number; ms: number; camFrom: Cam; camTo: Cam | null; fadeStart: number | null; done: () => void }

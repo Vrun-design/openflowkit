@@ -1,5 +1,5 @@
 import { useEffect, useRef, type PointerEvent, type RefObject } from 'react';
-import { zoomAt, type Cam } from './geometry';
+import { zoomAt, type Cam } from '../../../application/map/geometry';
 import type { Motion } from './motion';
 
 /** Wheel zoom at the cursor, drag pan and pinch on the svg. `moved` is true after a drag, so the click that follows it is ignored. */

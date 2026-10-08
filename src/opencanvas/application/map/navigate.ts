@@ -1,6 +1,6 @@
-import { isInside, pathTo, weightOf } from '../../../../dsl/map/tree';
-import type { LinkKind, MapModel, Talk } from '../../../../dsl/map/types';
-import { visible } from '../../../../dsl/map/view';
+import { isInside, pathTo, weightOf } from '../../../dsl/map/tree';
+import type { LinkKind, MapModel, Talk } from '../../../dsl/map/types';
+import { visible } from '../../../dsl/map/view';
 import type { Rect } from './geometry';
 
 // Pure helpers for moving around the map: which box is next, what opens to reveal one, what to dim.

@@ -123,7 +123,7 @@ export async function compileArchitectureView(
   };
 }
 
-function boundaryNode(element: ArchElement, parentId: string | null, zIndex: number, context: FamilyContext): SceneNode {
+export function boundaryNode(element: ArchElement, parentId: string | null, zIndex: number, context: Pick<FamilyContext, 'origin'>): SceneNode {
   const color = elementColorWord(element);
   return {
     id: element.id, kind: 'frame', parentId, layerId: 'default', zIndex,
@@ -142,7 +142,7 @@ function boundaryNode(element: ArchElement, parentId: string | null, zIndex: num
   };
 }
 
-type ElementContext = Pick<FamilyContext, 'origin' | 'swatch' | 'resolveIcon' | 'inferIcon' | 'measureLabel'>;
+export type ElementContext = Pick<FamilyContext, 'origin' | 'swatch' | 'resolveIcon' | 'inferIcon' | 'measureLabel'>;
 
 /**
  * How an element draws with no icon — the node a compile gives it under
@@ -153,7 +153,7 @@ export function plainElementNode(element: ArchElement, swatch: SwatchResolver): 
   return elementNode({ ...element, icon: 'none' }, null, 0, { origin: { x: 0, y: 0 }, swatch });
 }
 
-function elementNode(element: ArchElement, parentId: string | null, zIndex: number, context: ElementContext): SceneNode {
+export function elementNode(element: ArchElement, parentId: string | null, zIndex: number, context: ElementContext): SceneNode {
   const shapeWord = elementShapeWord(element);
   const spec = specFor(shapeWord);
   // `icon: none` opts out; a boundary keeps its C4 shape. A person with no better match is a user.
