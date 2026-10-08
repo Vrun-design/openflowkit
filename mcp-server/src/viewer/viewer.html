@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenFlowKit diagram</title>
+<style>
+  :root { color-scheme: light dark; --bg: #fff; --fg: #1a1a1a; --muted: #666; --line: #d8d8d8; --panel: #f6f6f6; --accent: #111; --warn: #9a5b00; }
+  :root[data-theme="dark"] { --bg: #1b1b1c; --fg: #ececec; --muted: #a0a0a0; --line: #3a3a3c; --panel: #262628; --accent: #fff; --warn: #e5b25d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  :root[data-mode="fullscreen"], :root[data-mode="fullscreen"] body { height: 100%; }
+  body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font: 13px/1.4 system-ui, sans-serif; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  h1 { margin: 0; font-size: 14px; font-weight: 600; }
+  #meta { color: var(--muted); font-size: 12px; margin-right: auto; }
+  button { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button:focus-visible, #stage:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #stage { position: relative; height: 420px; overflow: hidden; cursor: grab; touch-action: none; }
+  :root[data-mode="fullscreen"] #stage { flex: 1; height: auto; }
+  #stage.drag { cursor: grabbing; }
+  #img { position: absolute; left: 0; top: 0; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; max-width: none; }
+  #zoom { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 4px; }
+  details { padding: 6px 12px; border-top: 1px solid var(--line); color: var(--warn); font-size: 12px; }
+  details ul { margin: 4px 0 0; padding-left: 18px; }
+  #hint { color: var(--muted); font-size: 12px; padding: 0 12px 6px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Diagram</h1>
+  <span id="meta"></span>
+  <button id="open" class="primary" type="button">Open in OpenFlowKit</button>
+  <button id="download" type="button" hidden>Download SVG</button>
+  <button id="expand" type="button" hidden>Expand</button>
+</header>
+<div id="stage" tabindex="0" role="img" aria-label="Diagram. Drag to pan, scroll or +/- to zoom, 0 to fit.">
+  <img id="img" alt="" draggable="false">
+  <div id="zoom">
+    <button id="out" type="button" aria-label="Zoom out">&minus;</button>
+    <button id="fit" type="button" aria-label="Fit to view">Fit</button>
+    <button id="in" type="button" aria-label="Zoom in">+</button>
+  </div>
+</div>
+<div id="hint" role="status" hidden></div>
+<details id="notes" hidden><summary id="notesLabel"></summary><ul id="notesList"></ul></details>
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const stage = $('stage'), img = $('img');
+  const view = { x: 0, y: 0, k: 1 };
+  let data = null, host = { displayModes: [], mode: 'inline', download: false };
+
+  // --- MCP Apps (SEP-1865) over postMessage JSON-RPC 2.0, hand-rolled ---------------------------
+  let nextId = 1;
+  const pending = new Map();
+  const post = (msg) => parent.postMessage({ jsonrpc: '2.0', ...msg }, '*');
+  const request = (method, params) => new Promise((resolve, reject) => {
+    const id = nextId++;
+    pending.set(id, { resolve, reject });
+    post({ id, method, params });
+  });
+  const notify = (method, params) => post({ method, params });
+
+  window.addEventListener('message', (event) => {
+    if (event.source !== parent) return;
+    const msg = event.data;
+    if (!msg || msg.jsonrpc !== '2.0') return;
+    if (msg.method === undefined) {
+      const waiter = pending.get(msg.id);
+      if (!waiter) return;
+      pending.delete(msg.id);
+      if (msg.error) waiter.reject(new Error(msg.error.message || 'request failed')); else waiter.resolve(msg.result);
+      return;
+    }
+    const reply = (result) => { if (msg.id !== undefined) post({ id: msg.id, result }); };
+    switch (msg.method) {
+      case 'ui/notifications/tool-result': render(msg.params && msg.params.structuredContent); break;
+      case 'ui/notifications/host-context-changed': applyContext(msg.params || {}); break;
+      case 'ui/resource-teardown': case 'ping': reply({}); break;
+      default:
+        if (msg.id !== undefined) post({ id: msg.id, error: { code: -32601, message: 'Method not found' } });
+    }
+  });
+
+  function applyContext(ctx) {
+    if (ctx.theme === 'light' || ctx.theme === 'dark') document.documentElement.dataset.theme = ctx.theme;
+    if (Array.isArray(ctx.availableDisplayModes)) host.displayModes = ctx.availableDisplayModes;
+    if (typeof ctx.displayMode === 'string') host.mode = ctx.displayMode;
+    document.documentElement.dataset.mode = host.mode;
+    $('expand').hidden = !host.displayModes.includes('fullscreen');
+    $('expand').textContent = host.mode === 'fullscreen' ? 'Collapse' : 'Expand';
+    if (data) fit();
+  }
+
+  request('ui/initialize', {
+    protocolVersion: '2026-01-26',
+    appInfo: { name: 'openflowkit-viewer', version: '1.0.0' },
+    clientInfo: { name: 'openflowkit-viewer', version: '1.0.0' },
+    appCapabilities: { availableDisplayModes: ['inline', 'fullscreen'] },
+  }).then((result) => {
+    host.download = !!(result && result.hostCapabilities && result.hostCapabilities.downloadFile);
+    $('download').hidden = !host.download;
+    applyContext((result && result.hostContext) || {});
+    notify('ui/notifications/initialized', {});
+  }, (error) => showHint(`Could not connect to the host: ${error.message}`));
+
+  // --- Rendering --------------------------------------------------------------------------------
+  const utf8Base64 = (text) => { let s = ''; for (const b of new TextEncoder().encode(text)) s += String.fromCharCode(b); return btoa(s); };
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+  const OPEN_URL = /^https:\/\/[^/]+\/#\/from\/dsl\?d=[A-Za-z0-9_-]+$/;
+  function showHint(text) { const hint = $('hint'); hint.hidden = !text; hint.textContent = text; }
+  const noteLines = (sc) => [
+    ...(sc.diagnostics || []).map((d) => `${d.severity}${d.line ? ` (line ${d.line})` : ''}: ${d.message}`),
+    ...(sc.losses || []).map((l) => `Not drawn: ${l}`),
+  ];
+
+  function render(sc) {
+    if (!sc) return;
+    if (typeof sc.svg !== 'string') {
+      data = null;
+      $('title').textContent = sc.title || 'Diagram could not be drawn';
+      $('meta').textContent = '';
+      $('open').disabled = true; $('download').hidden = true;
+      img.removeAttribute('src');
+      showHint(noteLines(sc).join('\n') || 'The tool returned no diagram.');
+      $('hint').style.whiteSpace = 'pre-line';
+      return;
+    }
+    data = sc;
+    $('title').textContent = sc.title || 'Diagram';
+    document.title = sc.title || 'OpenFlowKit diagram';
+    $('meta').textContent = `${plural(sc.nodes ?? 0, 'node')} · ${plural(sc.connectors ?? 0, 'connector')}`;
+    const linkOk = typeof sc.openUrl === 'string' && OPEN_URL.test(sc.openUrl);
+    $('open').disabled = !linkOk;
+    $('open').title = linkOk ? '' : 'No link: no valid editor address was provided for this diagram.';
+    showHint(linkOk ? '' : 'Open in OpenFlowKit is unavailable: no editor link was provided.');
+    $('download').hidden = !host.download;
+    const notes = noteLines(sc);
+    $('notes').hidden = notes.length === 0;
+    $('notesLabel').textContent = `${plural(notes.length, 'note')} about this diagram`;
+    const list = $('notesList');
+    list.replaceChildren(...notes.map((n) => Object.assign(document.createElement('li'), { textContent: n })));
+    // An <img> never runs scripts in the SVG; textContent/data URL only, no innerHTML.
+    img.onload = fit;
+    img.src = `data:image/svg+xml;base64,${utf8Base64(sc.svg)}`;
+    img.alt = sc.title || 'Diagram';
+  }
+
+  // --- Pan / zoom (CSS transform) -----------------------------------------------------------------
+  const paint = () => { img.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.k})`; };
+  function fit() {
+    const w = img.naturalWidth || 1, h = img.naturalHeight || 1;
+    const box = stage.getBoundingClientRect();
+    view.k = Math.min(1, (box.width - 32) / w, (box.height - 32) / h) || 1;
+    view.x = (box.width - w * view.k) / 2;
+    view.y = (box.height - h * view.k) / 2;
+    paint();
+  }
+  function zoomAt(factor, cx, cy) {
+    const k = Math.min(8, Math.max(0.05, view.k * factor));
+    const ratio = k / view.k;
+    view.x = cx - (cx - view.x) * ratio;
+    view.y = cy - (cy - view.y) * ratio;
+    view.k = k;
+    paint();
+  }
+  const zoomCentre = (factor) => { const b = stage.getBoundingClientRect(); zoomAt(factor, b.width / 2, b.height / 2); };
+
+  stage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const b = stage.getBoundingClientRect();
+    zoomAt(Math.exp(-e.deltaY * 0.002), e.clientX - b.left, e.clientY - b.top);
+  }, { passive: false });
+  let drag = null;
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('#zoom')) return;
+    drag = { x: e.clientX, y: e.clientY };
+    stage.setPointerCapture(e.pointerId);
+    stage.classList.add('drag');
+  });
+  stage.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    view.x += e.clientX - drag.x; view.y += e.clientY - drag.y;
+    drag = { x: e.clientX, y: e.clientY };
+    paint();
+  });
+  const endDrag = () => { drag = null; stage.classList.remove('drag'); };
+  stage.addEventListener('pointerup', endDrag);
+  stage.addEventListener('pointercancel', endDrag);
+  stage.addEventListener('keydown', (e) => {
+    if (e.key === '+' || e.key === '=') zoomCentre(1.25);
+    else if (e.key === '-' || e.key === '_') zoomCentre(0.8);
+    else if (e.key === '0') fit();
+    else return;
+    e.preventDefault();
+  });
+  $('in').onclick = () => zoomCentre(1.25);
+  $('out').onclick = () => zoomCentre(0.8);
+  $('fit').onclick = fit;
+  window.addEventListener('resize', () => { if (data) fit(); });
+  let last = '';
+  new ResizeObserver(() => {
+    const width = Math.ceil(document.documentElement.scrollWidth), height = Math.ceil(document.documentElement.scrollHeight);
+    if (`${width}x${height}` !== last) { last = `${width}x${height}`; notify('ui/notifications/size-changed', { width, height }); }
+  }).observe(document.body);
+
+  // --- Buttons ------------------------------------------------------------------------------------
+  $('open').onclick = () => {
+    if (!data || !OPEN_URL.test(String(data.openUrl))) return;
+    request('ui/open-link', { url: data.openUrl }).catch(() => showHint('The host declined to open the link.'));
+  };
+  // Only shown when the host advertises hostCapabilities.downloadFile (spec.types.ts, McpUiDownloadFileRequest).
+  $('download').onclick = () => {
+    if (!data) return;
+    const name = `${(data.title || 'diagram').replace(/[^\w.-]+/g, '-')}.svg`;
+    request('ui/download-file', { contents: [{ type: 'resource', resource: { uri: `file:///${name}`, mimeType: 'image/svg+xml', text: data.svg } }] })
+      .catch(() => showHint('The host could not save the file.'));
+  };
+  $('expand').onclick = () => {
+    const mode = host.mode === 'fullscreen' ? 'inline' : 'fullscreen';
+    request('ui/request-display-mode', { mode }).then((r) => { applyContext({ displayMode: (r && r.mode) || mode }); }, () => {});
+  };
+})();
+</script>
+</body>
+</html>

@@ -41,6 +41,7 @@
     "prebuild": "npm run build:icons && npm run build:grammar && npm run build:agent",
     "build": "node scripts/build-dist.mjs",
     "dev": "tsx src/index.ts",
+    "start:http": "node dist/http.js",
     "test": "vitest --config vitest.config.ts",
     "test:run": "vitest --config vitest.config.ts --run",
     "lint": "tsc -p tsconfig.json --noEmit",

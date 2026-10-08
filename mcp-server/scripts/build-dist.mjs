@@ -11,6 +11,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
 const GENERATED = resolve(ROOT, 'src', 'generated');
 const DIST_GENERATED = resolve(ROOT, 'dist', 'generated');
+const VIEWER = resolve(ROOT, 'src', 'viewer', 'viewer.html');
+const DIST_VIEWER = resolve(ROOT, 'dist', 'viewer', 'viewer.html');
 
 function run(command, args) {
   return new Promise((resolvePromise, reject) => {
@@ -25,6 +27,9 @@ async function main() {
   await run('npx', ['tsc', '-p', 'tsconfig.json']);
   await mkdir(DIST_GENERATED, { recursive: true });
   await cp(GENERATED, DIST_GENERATED, { recursive: true });
+  // The remote endpoint serves this file; a missing viewer fails the build.
+  await mkdir(dirname(DIST_VIEWER), { recursive: true });
+  await cp(VIEWER, DIST_VIEWER);
   console.log('[build] dist ready (agent bundle copied to dist/generated)');
 }
 

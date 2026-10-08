@@ -141,7 +141,7 @@ function runOps(args: readonly string[], io: CliIo): number {
 
 type Diagnostic = DslLintReport['diagnostics'][number];
 
-interface Checked {
+export interface Checked {
   readonly lint: DslLintReport;
   /** Parse and compile warnings and errors, once each; info notes ("version 1 assumed") are left out. */
   readonly issues: readonly Diagnostic[];
@@ -153,7 +153,7 @@ interface Checked {
  * Parse, then compile through `create_diagram`: compiling finds what parsing can't
  * (`Shop -> Ghost` names no element), so --strict and validate see both.
  */
-async function check(source: string, name: string, layout: 'elk' | 'none' = 'elk'): Promise<Checked> {
+export async function check(source: string, name: string, layout: 'elk' | 'none' = 'elk'): Promise<Checked> {
   const lint = lintDsl(source);
   const notable = (list: readonly Diagnostic[]) => list.filter(({ severity }) => severity !== 'info');
   if (!lint.ok) return { lint, issues: notable(lint.diagnostics), views: 0 };

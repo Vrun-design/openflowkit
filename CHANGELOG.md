@@ -10,6 +10,7 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- MCP (0.2.0): remote MCP Apps endpoint (`start:http`) with render_diagram + inline viewer; stores nothing.
 - **A real home page.** A sidebar with Recents, Starred, Templates and Archive, search (`/`), your starred diagrams,
   a dated What's new page, and links to request a feature or star the project (with its live star count). Diagrams show as a grid
   or a list with a live thumbnail, sorted by last edited or name. Each card has star, rename, duplicate, open in a

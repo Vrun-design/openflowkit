@@ -203,6 +203,32 @@ Using openflowkit: call analyze_codebase on /path/to/project, read openflowkit:/
 
 ---
 
+## Remote (MCP Apps)
+
+`start:http` serves two tools over Streamable HTTP for hosts that render MCP Apps (Claude, ChatGPT, VS Code): `render_diagram` (OpenFlowKit DSL or Mermaid in, inline SVG out, with the canonical DSL and an open-in-app link) and `get_syntax`. It is stateless (a fresh server per request), needs no login and **stores nothing**. It has no file system, bridge, discovery or document tools; the stdio server is unchanged.
+
+```bash
+npm run build && PORT=8787 npm run start:http   # http://127.0.0.1:8787/mcp, health at /healthz
+```
+
+| Env | Default | Meaning |
+|---|---|---|
+| `PORT` | `8787` | Listen port. |
+| `HOST` | `127.0.0.1` | Bind address. Anything but localhost requires `OPENFLOWKIT_ALLOWED_HOSTS`. |
+| `OPENFLOWKIT_ALLOWED_HOSTS` | none | Comma-separated hostnames (no port) the `Host` header may carry (DNS-rebinding protection). Localhost is always allowed when bound to localhost. |
+| `APP_ORIGIN` | `https://app.openflowkit.com` | Origin of the open-in-app link: `<origin>/#/from/dsl?d=<base64url(deflate-raw(dsl))>`. Over 32 KB the link is dropped and `losses` says so. |
+
+Only `POST /mcp` is served (GET and DELETE get 405: there are no sessions). Requests over 512 KB get 413; `source` is capped at 100 KB. A diagram over 1000 shapes or 400 connections in total (all views) is refused, only the first view is laid out and drawn, a render has a 15 s deadline, and a 5th concurrent render gets 503 with `Retry-After`. Deploying it is the owner's job; nothing here deploys.
+
+| Host | Connects | Renders UI | Open link | Download | Fullscreen | Verified |
+|---|---|---|---|---|---|---|
+| Claude | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) |
+| ChatGPT | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) |
+| VS Code | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) | not verified (needs a deployed HTTPS endpoint) |
+| MCP SDK client (local test) | yes, over HTTP on localhost | no (serves the `ui://` resource only) | link decodes back to the DSL | n/a | n/a | tools/list, render_diagram, resources/read, 413, Host check (`tests/http.test.ts`) |
+
+---
+
 ## Privacy model
 
 - **No telemetry.** The server never phones home.
