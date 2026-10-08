@@ -4,12 +4,13 @@ import { relationConnector } from '../../../dsl/families/architecture/scene';
 import {
   archFrameOf, archModelFromJson, archModelOfPage, archViewIdOfPage, createArchIndex, elementDescendantIds, placedElementId,
 } from '../../../dsl/model/model';
-import { ELEMENT_KIND_LABEL, type ArchElement, type ArchFlow, type ArchModel, type ArchRelation, type FlowStep } from '../../../dsl/model/types';
+import { ELEMENT_KIND_LABEL, type ElementKind, type ArchElement, type ArchFlow, type ArchModel, type ArchRelation, type FlowStep } from '../../../dsl/model/types';
 import { createDefaultSceneLayer } from '../../domain/document/defaults';
 import type { BatchDocumentCommand, DocumentCommand } from '../../domain/commands/types';
 import type { JsonObject } from '../../domain/document/json';
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import { buildDeleteSelectionCommand } from '../../domain/commands/sceneEdits';
+import { slugifyDslId } from '../../../dsl/text';
 import { buildDslPageCommand } from './dslPageCommand';
 import { hasAutoIcon, hasIcon, refreshAutoIcon, withoutElementIcon, type IconResolver } from './iconCommands';
 
@@ -354,6 +355,43 @@ export function buildArchElementEditCommand(
   const label = patch.name !== undefined && merged.name !== element.name ? 'Rename element' : 'Edit element';
   const commands = pages.map(({ page }) => setPage(page, pageWithModel(page, next, resolveIcon), `model-edit:${elementId}`, label));
   return commands.length === 1 ? commands[0]! : batch('model-edit', label, commands);
+}
+
+/** The kind a new element takes under `parentKind` (null = top level); null when that parent cannot hold children. */
+export function defaultChildKind(parentKind: ElementKind | null): ElementKind | null {
+  if (parentKind === null) return 'system';
+  if (parentKind === 'system') return 'container';
+  if (parentKind === 'container') return 'component';
+  return null;
+}
+
+export interface ArchElementAdd {
+  readonly parentId: string | null;
+  readonly kind: ElementKind;
+  readonly name: string;
+}
+
+/**
+ * Add an element to the model of `pageId` (placed on no view); every page sharing that model follows, so Map and the
+ * code text show it. Returns the new id with the command, so the panel can select it.
+ */
+export function buildArchElementAddCommand(document: SceneDocumentV1, pageId: string, add: ArchElementAdd): { command: DocumentCommand; id: string } | null {
+  const name = add.name.trim();
+  const page = document.pages.find((candidate) => candidate.id === pageId);
+  const model = page ? archModelOfPage(page) : null;
+  if (!page || !model || !name) return null;
+  // ponytail: pages share a model by element overlap, so an empty model is only this page's — match by a model id if empties ever span views.
+  const pages = model.elements.length ? modelPages(document, model.elements[0]!.id) : [{ page, model, viewId: archViewIdOfPage(page) }];
+  const parent = add.parentId ? model.elements.find((element) => element.id === add.parentId) : null;
+  if (add.parentId && (!parent || defaultChildKind(parent.kind) === null)) return null;
+  const taken = new Set(model.elements.map((element) => element.id));
+  const base = `${parent ? `${parent.id}.` : ''}${slugifyDslId(name)}`;
+  let id = base;
+  for (let n = 2; taken.has(id); n += 1) id = `${base}-${n}`;
+  const element: ArchElement = { id, kind: add.kind, name, parent: parent?.id ?? null, tags: [], links: [] };
+  const next: ArchModel = { ...model, elements: [...model.elements, element] };
+  const commands = pages.map((entry) => setPage(entry.page, pageWithModel(entry.page, next), `model-add:${id}`, 'Add element'));
+  return { command: commands.length === 1 ? commands[0]! : batch(`model-add:${id}`, 'Add element', commands), id };
 }
 
 /** `icon: none` on several elements at once; every view that places them follows. */

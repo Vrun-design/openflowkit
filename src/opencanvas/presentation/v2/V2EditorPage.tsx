@@ -981,6 +981,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 }}
                 onEditElement={architectureActions.editElement}
                 onRemoveElement={architectureActions.removeElement}
+                onAddElement={architectureActions.addElement}
                 onCreateFlow={architectureActions.createFlow}
                 onPlayFlow={playback.open}
                 onClose={panels.closeWorkspace}

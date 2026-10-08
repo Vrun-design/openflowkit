@@ -3,12 +3,14 @@ import { buildNodeWorldMatrices } from '../../domain/scene/worldGeometry';
 import { describe, expect, it } from 'vitest';
 import { compile, compileWorkspace } from '../../../dsl/compile';
 import { buildDslPageCommand, nextDslFrameOrigin } from './dslPageCommand';
+import { architectureWorkspaceText } from '../../../dsl/families/architecture/text';
 import { archModelOfPage, archViewIdOfPage, placedElementId } from '../../../dsl/model/model';
 import { applyDocumentCommand } from '../../domain/commands/execute';
 import type { SceneDocumentV1 } from '../../domain/document/types';
+import type { ElementKind } from '../../../dsl/model/types';
 import { createEmptyV2Document } from '../../presentation/v2/v2Document';
 import {
-  buildArchFlowCreateCommand, buildArchElementEditCommand, buildArchElementRemoveCommand,
+  buildArchElementAddCommand, defaultChildKind, buildArchFlowCreateCommand, buildArchElementEditCommand, buildArchElementRemoveCommand,
   buildArchRelationCommands, buildArchUnplaceCommand, buildWorkspacePagesCommand, firstViewLanding,
 } from './architectureCommands';
 
@@ -409,3 +411,58 @@ describe('element edits', () => {
     expect(buildNodeWorldMatrices(kept).get(note.id)).toEqual(buildNodeWorldMatrices(before.pages[1]!).get(note.id));
     expect(applyDocumentCommand(applied.document, applied.inverse).document).toEqual(before);
   });
+
+describe('add element command', () => {
+  const modelsOf = (document: SceneDocumentV1) => document.pages.flatMap((page) => archModelOfPage(page) ?? []);
+  const modelPageId = (document: SceneDocumentV1) => document.pages.find((page) => archModelOfPage(page))!.id;
+  const add = (document: SceneDocumentV1, parentId: string | null, kind: ElementKind, name: string) =>
+    buildArchElementAddCommand(document, modelPageId(document), { parentId, kind, name });
+
+  it('adds a top-level element to every page copy and the code text, and undo restores exactly', async () => {
+    const document = await generatedDocument();
+    const { command, id } = add(document, null, 'system', 'Billing')!;
+    expect(id).toBe('billing');
+    expect(command.label).toBe('Add element');
+    const after = applyDocumentCommand(document, command);
+    const models = modelsOf(after.document);
+    expect(models.length).toBeGreaterThan(1);
+    for (const model of models) expect(model.elements.find((e) => e.id === 'billing')).toMatchObject({ kind: 'system', name: 'Billing', parent: null });
+    expect(architectureWorkspaceText(models[0]!)).toContain('system Billing');
+    expect(applyDocumentCommand(after.document, after.inverse).document).toEqual(document);
+  });
+
+  it('adds a child under a system and de-duplicates ids', async () => {
+    const document = await generatedDocument();
+    const first = applyDocumentCommand(document, add(document, 'shop', 'container', 'Web')!.command).document;
+    expect(modelsOf(first)[0]!.elements.find((e) => e.id === 'shop.web-2')).toMatchObject({ parent: 'shop', name: 'Web' });
+    const second = add(first, 'shop', 'container', 'Web')!.command;
+    expect(modelsOf(applyDocumentCommand(first, second).document)[0]!.elements.some((e) => e.id === 'shop.web-3')).toBe(true);
+    expect(architectureWorkspaceText(modelsOf(first)[0]!)).toContain('container Web');
+  });
+
+  it('rejects parents that cannot hold children, unknown parents and empty names', async () => {
+    const document = await generatedDocument();
+    expect(add(document, 'customer', 'component', 'X')).toBeNull();
+    expect(add(document, 'shop.db', 'component', 'X')).toBeNull();
+    expect(add(document, 'nope', 'container', 'X')).toBeNull();
+    expect(add(document, null, 'system', '  ')).toBeNull();
+  });
+
+  it('adds to the model of the given page only, and to an empty model', async () => {
+    const alice = await generatedDocument('architecture\nmodel {\n  person Alice\n  system Shop\n  Alice -> Shop\n}\n');
+    const bob = await compileWorkspace('architecture\nmodel {\n  person Bob\n  system Bank\n  Bob -> Bank\n}\n');
+    const both = applyDocumentCommand(alice, buildWorkspacePagesCommand(alice, bob, { mintId })!).document;
+    const bobPage = both.pages.find((page) => archModelOfPage(page)?.elements.some((e) => e.id === 'bob'))!;
+    const added = applyDocumentCommand(both, buildArchElementAddCommand(both, bobPage.id, { parentId: null, kind: 'system', name: 'Ledger' })!.command).document;
+    expect(modelsOf(added).map((model) => model.elements.map((e) => e.id).join(','))).toEqual(['alice,shop', 'bob,bank,ledger']);
+
+    const empty = await generatedDocument('architecture\nmodel {}\n');
+    const first = buildArchElementAddCommand(empty, modelPageId(empty), { parentId: null, kind: 'system', name: 'Shop' })!;
+    expect(modelsOf(applyDocumentCommand(empty, first.command).document)[0]!.elements.map((e) => e.id)).toEqual(['shop']);
+  });
+
+  it('picks the default kind by parent', () => {
+    expect([null, 'system', 'container', 'component', 'person', 'store', 'external'].map((kind) => defaultChildKind(kind as never)))
+      .toEqual(['system', 'container', 'component', null, null, null, null]);
+  });
+});

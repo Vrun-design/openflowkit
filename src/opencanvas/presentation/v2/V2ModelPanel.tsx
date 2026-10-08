@@ -1,12 +1,13 @@
 import { V2FlowComposer } from './V2FlowComposer';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  IconArrowsSplit2, IconChevronDown, IconCircleDot, IconExternalLink, IconPlayerPlay, IconTrash,
+  IconArrowsSplit2, IconChevronDown, IconCircleDot, IconExternalLink, IconPlayerPlay, IconPlus, IconTrash,
 } from '@tabler/icons-react';
 import { modelTags } from '../../../dsl/model/predicates';
 import { elementAncestors, elementDescendantIds, elementPathRef, type ArchIndex } from '../../../dsl/model/model';
 import { safeHttpsUrl } from '../../../dsl/model/relationSource';
-import type { ArchElement, ArchFlow, ArchRelation, ArchView } from '../../../dsl/model/types';
+import type { ArchElement, ArchFlow, ArchRelation, ArchView, ElementKind } from '../../../dsl/model/types';
+import { defaultChildKind } from '../../application/dsl/architectureCommands';
 import { Button, Icon, IconButton, Panel, Tabs } from '../design-system';
 import { MapArrowDetails } from './map/MapArrowDetails';
 import type { ArchitectureCrumb, V2Architecture } from './useV2Architecture';
@@ -25,6 +26,8 @@ export interface V2ModelPanelProps {
   readonly onDrillInto: (elementId: string) => void;
   readonly onEditElement: (elementId: string, patch: { name?: string; tech?: string; desc?: string; tags?: string[]; links?: string[] }) => void;
   readonly onRemoveElement: (elementId: string) => void;
+  /** Adds an element at the top level (`null`) or under a parent; returns the new id. */
+  readonly onAddElement: (parentId: string | null, kind: ElementKind) => string | null;
   readonly onCreateFlow: (flow: ArchFlow) => void;
   readonly onPlayFlow: (flow: ArchFlow) => void;
   readonly onClose: () => void;
@@ -110,6 +113,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
   const { architecture, readOnly } = props;
   const model = architecture.model;
   const index = architecture.index;
+  const [justAdded, setJustAdded] = useState<string | null>(null);
   const [composingFlow, setComposingFlow] = useState(false);
   const [tab, setTab] = useState<Tab>('elements');
   const [query, setQuery] = useState('');
@@ -135,6 +139,15 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
     );
   }
 
+  const addElement = (parentId: string | null, kind: ElementKind) => {
+    const id = props.onAddElement(parentId, kind);
+    if (!id) return;
+    setQuery('');
+    setJustAdded(id);
+    setInspection({id, selectedAtClick: props.selectedElementId});
+    props.onSelectElement(id);
+  };
+  const childKind = selected ? defaultChildKind(selected.kind) : null;
   const descendantCount = selected ? elementDescendantIds(index, selected.id).length : 0;
 
   return (
@@ -154,6 +167,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
             label: 'Elements',
             panel: (
               <>
+                {readOnly ? null : <Button variant="quiet" onClick={() => addElement(null, 'system')}><Icon icon={IconPlus} /> Add element</Button>}
                 <label className="ofk-v2-model-field"><span>Search architecture</span>
                   <input type="search" value={query} placeholder="Name, technology, tag or environment" onChange={(event) => setQuery(event.target.value)} />
                 </label>
@@ -194,6 +208,9 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
                 {!props.mapArrow && selected ? <div className="ofk-v2-model-detail">
                   {architecture.childViewOf(selected.id) ? <Button variant="quiet" onClick={() => props.onDrillInto(selected.id)}>Open {viewKindLabel(architecture.childViewOf(selected.id)!)} view</Button> : null}
                   {!architecture.childViewOf(selected.id) && !readOnly && ['system', 'container'].includes(selected.kind) ? <Button variant="quiet" onClick={() => props.onCreateChildView(selected.id)}>Create {selected.kind === 'system' ? 'Container' : 'Component'} view</Button> : null}
+                  {readOnly ? null : <Button variant="quiet" disabled={!childKind}
+                    title={childKind ? undefined : `A ${KIND_LABEL[selected.kind] ?? selected.kind} cannot contain other elements.`}
+                    onClick={() => childKind && addElement(selected.id, childKind)}><Icon icon={IconPlus} /> Add child</Button>}
                   {!props.placedElementIds.has(selected.id) && props.elementPageIds.has(selected.id) ? <Button variant="quiet" onClick={() => props.onNavigate({pageId: props.elementPageIds.get(selected.id)!, elementId: selected.id})}>Show in view</Button> : null}
                   <details open className="ofk-v2-model-relationships"><summary>Relationships</summary>
                     <ul className="ofk-v2-model-list" aria-label={`Relationships of ${selected.name}`}>
@@ -221,6 +238,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
                     crumbs={architecture.breadcrumb}
                     inCurrentView={props.placedElementIds.has(selected.id)}
                     adrs={props.adrs ?? []}
+                    focusName={justAdded === selected.id}
                   />
                 ) : (
                   <p className="ofk-v2-model-hint">Select an element to inspect it. Edits propagate to every view.</p>
@@ -345,6 +363,8 @@ interface ElementInspectorProps {
   readonly onRemove: (elementId: string) => void;
   readonly onNavigate: V2ModelPanelProps['onNavigate'];
   readonly adrs: readonly { readonly path: string; readonly text: string }[];
+  /** A just-added element: its Name takes focus, selected, ready to be typed over. */
+  readonly focusName: boolean;
 }
 
 function ElementInspector(props: ElementInspectorProps): React.JSX.Element {
@@ -355,6 +375,8 @@ function ElementInspector(props: ElementInspectorProps): React.JSX.Element {
   const [tags, setTags] = useState(element.tags.join(', '));
   const [links, setLinks] = useState(element.links.join('\n'));
   const [confirming, setConfirming] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (props.focusName) { nameRef.current?.focus(); nameRef.current?.select(); } }, [props.focusName]);
   const commit = (patch: Parameters<V2ModelPanelProps['onEditElement']>[1]) => props.onEdit(element.id, patch);
 
   return (
@@ -379,7 +401,7 @@ function ElementInspector(props: ElementInspectorProps): React.JSX.Element {
       </header>
       <label className="ofk-v2-model-field">
         <span>Name</span>
-        <input value={name} disabled={props.readOnly} onChange={(event) => setName(event.target.value)} />
+        <input ref={nameRef} value={name} disabled={props.readOnly} onChange={(event) => setName(event.target.value)} />
       </label>
       <label className="ofk-v2-model-field">
         <span>Technology</span>

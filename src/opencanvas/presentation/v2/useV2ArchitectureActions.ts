@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, type RefObject } from 'react';
 import { architectureWorkspaceText } from '../../../dsl/families/architecture/text';
 import type { CompileWorkspaceResult } from '../../../dsl/compile';
 import { flowToSequenceDsl } from '../../../dsl/model/flowExport';
-import type { ArchFlow, ArchModel, ArchView } from '../../../dsl/model/types';
+import type { ArchFlow, ArchModel, ArchView, ElementKind } from '../../../dsl/model/types';
 import { buildWorkspacePagesCommand, type ArchElementPatch } from '../../application/dsl/architectureCommands';
 import {
-  buildArchFlowCreateCommand, buildArchElementEditCommand, buildArchElementRemoveCommand, buildArchIconsOffCommand, buildArchUnplaceCommand,
+  buildArchElementAddCommand, buildArchFlowCreateCommand, buildArchElementEditCommand, buildArchElementRemoveCommand, buildArchIconsOffCommand, buildArchUnplaceCommand,
 } from '../../application/dsl/architectureCommands';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1, ScenePage } from '../../domain/document/types';
@@ -36,6 +36,8 @@ export interface ArchitectureActions {
   createFlow: (flow: ArchFlow) => void;
   editElement: (elementId: string, patch: ArchElementPatch) => void;
   removeElement: (elementId: string) => void;
+  /** Adds a new element at the top level or under `parentId`; returns its id, or null when it cannot be added. */
+  addElement: (parentId: string | null, kind: ElementKind) => string | null;
   /** Icons from labels for the whole workspace; on re-lays out every view (cards are bigger). */
   setModelIcons: (on: boolean) => Promise<void>;
   /** Delete on a model view unplaces instead; false lets the normal delete run. */
@@ -87,6 +89,17 @@ export function useV2ArchitectureActions(options: ArchitectureActionsOptions, ho
     current.commit(command);
     current.announce(patch.name !== undefined ? 'Element renamed in every view.' : 'Element updated in every view.');
   }, [document, readOnly]);
+
+  const addElement = useCallback((parentId: string | null, kind: ElementKind): string | null => {
+    const current = hostRef.current;
+    if (readOnly || !document) return null;
+    const page = pageRef.current;
+    const added = page ? buildArchElementAddCommand(document, page.id, { parentId, kind, name: `New ${kind}` }) : null;
+    if (!added) return null;
+    current.commit(added.command);
+    current.announce('Element added to the model.');
+    return added.id;
+  }, [document, readOnly, pageRef]);
 
   const createFlow = useCallback((flow: ArchFlow) => {
     if (readOnly || !document) return;
@@ -224,5 +237,5 @@ export function useV2ArchitectureActions(options: ArchitectureActionsOptions, ho
     return { nodeIds, connectorIds: [] };
   }, [architecture, pageRef]);
 
-  return { createFlow, editElement, removeElement, setModelIcons, unplaceSelection, drillInto, createChildView, openCrumb, openFlowAsSequence, perspectiveFocus };
+  return { createFlow, editElement, removeElement, addElement, setModelIcons, unplaceSelection, drillInto, createChildView, openCrumb, openFlowAsSequence, perspectiveFocus };
 }
