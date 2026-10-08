@@ -35,6 +35,8 @@ import type { BasicNodeShape } from '../../domain/nodes/basicNodePresentation';
 import { PixiProposalPreview, type ProposalPreviewFrame } from './PixiProposalPreview';
 import { PixiFocusOverlay, type FocusFrame } from './PixiFocusOverlay';
 import { PixiContainerRenderer } from './PixiContainerRenderer';
+import { PixiMapMotion } from './PixiMapMotion';
+import type { MotionFrame } from '../../application/map/motionFrame';
 import { PixiConnectorEditOverlay } from './PixiConnectorEditOverlay';
 import {
   inspectConnectorEdit,
@@ -87,6 +89,7 @@ interface PixiRendererHostOptions {
 }
 
 const SELECTION_STROKE = CHROME_ACCENT;
+const ARROW_FADE_MS = 160;
 
 export interface PlacementGhost {
   readonly shape: BasicNodeShape | 'text';
@@ -135,6 +138,7 @@ export class PixiRendererHost {
   private alignmentGuidesShown = false;
   private readonly onStatusChange?: PixiRendererHostOptions['onStatusChange'];
   private readonly connectorModelEnabled: boolean;
+  private readonly resolveAsset: PixiRendererHostOptions['resolveAsset'];
   private camera: CanvasCamera = { x: 64, y: 64, zoom: 1 };
   private page: ScenePage | null = null;
   private index: ReturnType<typeof createSceneIndex> | null = null;
@@ -161,8 +165,15 @@ export class PixiRendererHost {
   private coalescedRequests = 0;
   private lastRenderDurationMs = 0;
   private viewportProjection: ViewportSceneProjection | null = null;
+  // Map mode's open/close move: a layer drawn over the page while the host's own boxes are hidden (see drawMotionFrame).
+  private motion: PixiMapMotion | null = null;
+  private motionActive = false;
+  private arrowAlpha = 1;
+  private arrowFade: number | null = null;
+  private motionRenderMs: number[] = [];
 
   constructor(options: PixiRendererHostOptions = {}) {
+    this.resolveAsset = options.resolveAsset;
     this.nodeRenderer = new PixiNodeRenderer(() => this.requestRender(), options.resolveAsset);
     this.livePreview = options.liveTransformPreview ? new PixiLiveTransformPreview() : null;
     this.onStatusChange = options.onStatusChange;
@@ -276,12 +287,96 @@ export class PixiRendererHost {
     this.requestRender();
   }
 
+  /**
+   * One frame of Map mode's open/close move. The host's own boxes and arrows are hidden and `frame` is drawn instead,
+   * from its interpolated rects. View only: the page and the index stay the target's, so a click during the move lands
+   * on the target layout. The selection outline is hidden for the move (it would sit at the target while the boxes travel).
+   */
+  drawMotionFrame(frame: MotionFrame): void {
+    if (this.destroyed || !this.page || !this.index || !this.app.renderer) return;
+    if (!this.motion) {
+      this.motion = new PixiMapMotion(() => this.requestRender(), this.resolveAsset);
+      this.world.addChildAt(this.motion.container, this.world.getChildIndex(this.selectionOverlay.graphics));
+    }
+    if (!this.motionActive) {
+      this.motionActive = true;
+      this.motionRenderMs = [];
+      this.setSceneRenderable(false);
+    }
+    this.stopArrowFade();
+    this.connectorRenderer.container.renderable = false;
+    this.motion.draw(frame, this.page, this.index, this.backgroundColor);
+    // Rendered now, in the same tick as the camera: icons are placed at once from cached textures, and the boxes and
+    // the camera of one frame reach the screen together.
+    const startedAt = performance.now();
+    this.renderNow();
+    this.motionRenderMs.push(performance.now() - startedAt);
+    if (this.renderFrame !== null) { cancelAnimationFrame(this.renderFrame); this.renderFrame = null; }
+  }
+
+  /** The move is over: the host's own (target) boxes show again and, when it ran to its end, the arrows fade in. */
+  endMotion(fadeArrows = true): void {
+    if (!this.motionActive) return;
+    this.motionActive = false;
+    this.setSceneRenderable(true);
+    // Held back during the move: the viewport projection, labels and selection settle once, now.
+    this.cameraDirty = true;
+    if (!fadeArrows) {
+      this.stopArrowFade();
+      this.motion?.clear();
+      this.requestRender();
+      return;
+    }
+    this.arrowAlpha = 0;
+    this.connectorRenderer.container.alpha = 0;
+    const startedAt = performance.now();
+    const step = (now: number): void => {
+      this.arrowAlpha = Math.min(1, Math.max(0, now - startedAt) / ARROW_FADE_MS);
+      this.connectorRenderer.container.alpha = this.arrowAlpha;
+      this.renderNow();
+      // The motion layers go after the first render that also draws the host's own boxes, so the labels it made share
+      // the textures the layers rasterized instead of making them again.
+      if (this.motion?.container.visible) this.motion.clear();
+      this.arrowFade = this.arrowAlpha < 1 ? requestAnimationFrame(step) : null;
+    };
+    this.arrowFade = requestAnimationFrame(step);
+  }
+
+  /** Whether a move is on screen, and how visible the arrows are (0 during the move, ramping to 1 after). */
+  getMotionState(): { active: boolean; arrowAlpha: number; renderMs: { p50: number; p95: number } } {
+    const sorted = [...this.motionRenderMs].sort((a, b) => a - b);
+    const at = (p: number): number => sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0;
+    return { active: this.motionActive, arrowAlpha: this.motionActive ? 0 : this.arrowAlpha, renderMs: { p50: at(0.5), p95: at(0.95) } };
+  }
+
+  private stopArrowFade(): void {
+    if (this.arrowFade !== null) cancelAnimationFrame(this.arrowFade);
+    this.arrowFade = null;
+    this.arrowAlpha = 1;
+    this.connectorRenderer.container.alpha = 1;
+  }
+
+  /** Hides or shows what setPage draws (boxes, titles, arrows, selection) without touching what `visible` means to their owners. */
+  private setSceneRenderable(shown: boolean): void {
+    for (const part of [this.containerRenderer.graphics, this.containerRenderer.labels, this.nodeRenderer.graphics,
+      this.nodeRenderer.media, this.nodeRenderer.labels, this.connectorRenderer.container, this.selectionOverlay.graphics]) {
+      part.renderable = shown;
+    }
+  }
+
   private settleCamera(): void {
     if (!this.cameraDirty) return;
     this.cameraDirty = false;
     const cameraStartedAt = performance.now();
     const camera = this.camera;
     this.drawDotGrid();
+    if (this.motionActive) {
+      // Mid-move the camera only moves the world: no projection change (that would rebuild the scene), no label or overlay work.
+      this.connectorRenderer.setZoom(camera.zoom);
+      const resolution = textResolutionForZoom(camera.zoom, window.devicePixelRatio || 1);
+      if (resolution !== currentPixiTextResolution()) applyTextResolution(this.world, resolution);
+      return;
+    }
     this.drawSelection();
     this.connectorRenderer.setZoom(camera.zoom);
     const textResolution = textResolutionForZoom(camera.zoom, window.devicePixelRatio || 1);
@@ -741,6 +836,7 @@ export class PixiRendererHost {
     this.destroyed = true;
     if (this.previewFrame !== null) cancelAnimationFrame(this.previewFrame);
     if (this.renderFrame !== null) cancelAnimationFrame(this.renderFrame);
+    if (this.arrowFade !== null) cancelAnimationFrame(this.arrowFade);
     if (this.app.renderer) {
       const canvas = this.app.canvas as HTMLCanvasElement;
       canvas.removeEventListener('webglcontextlost', this.handleContextLost);

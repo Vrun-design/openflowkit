@@ -4,7 +4,7 @@ import { fromArch } from '../../../../dsl/map/fromArch';
 import { archModelFromJson } from '../../../../dsl/model/model';
 import type { ScenePage } from '../../../domain/document/types';
 import type { MapModel, MapNode } from '../../../../dsl/map/types';
-import { BOX_BUDGET, fitsBudget, isDoubleClick, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, toggleBox } from './mapMode';
+import { BOX_BUDGET, fitsBudget, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, toggleBox } from './mapMode';
 
 const TEXT = `architecture
 model {
@@ -87,6 +87,10 @@ describe('map budget, double-click guard and scene tag', () => {
     expect(sceneFor({ model: modelA, page: built }, modelB, empty)).toBe(empty);
     expect(sceneFor({ model: modelA, page: built }, null, empty)).toBe(empty);
     expect(sceneFor(null, modelA, empty)).toBe(empty);
+    // An edit makes a new model on the same page: the old scene stays up until the new one is laid out.
+    expect(sceneFor({ model: modelA, page: built, lineage: 'p1' }, modelB, empty, 'p1')).toBe(built);
+    expect(sceneFor({ model: modelA, page: built, lineage: 'p1' }, modelB, empty, 'p2')).toBe(empty);
+    expect(sceneFor({ model: modelA, page: built }, modelB, empty, 'p1')).toBe(empty);
   });
 });
 
@@ -121,5 +125,19 @@ describe('map camera', () => {
     const big = mapCamera({ x: 100, y: 50, width: 6000, height: 4000 }, free);
     expect(big.zoom).toBe(0.6);
     expect(big.x).toBeCloseTo(48 - 100 * 0.6);
+  });
+
+  it('lands on the whole map when it is readable, else on the box that changed at 0.6 or more, wherever the map starts', () => {
+    const free = { left: 100, width: 1200, height: 800 };
+    const small = landOn({ x: 20, y: 30, width: 800, height: 400 }, { x: 20, y: 30, width: 100, height: 50 }, free);
+    expect(small.zoom).toBeGreaterThanOrEqual(0.6);
+    // Everything fits: the map's centre is the free canvas's centre, even though the map does not start at the origin.
+    expect(small.x + (20 + 400) * small.zoom).toBeCloseTo(free.left + free.width / 2);
+    const extent = { x: 500, y: 300, width: 6000, height: 4000 };
+    const focus = { x: 3000, y: 2000, width: 400, height: 200 };
+    const big = landOn(extent, focus, free);
+    expect(big.zoom).toBeGreaterThanOrEqual(0.6);
+    // The focus box is centred in the free canvas.
+    expect(big.x + (focus.x + focus.width / 2) * big.zoom).toBeCloseTo(free.left + free.width / 2);
   });
 });

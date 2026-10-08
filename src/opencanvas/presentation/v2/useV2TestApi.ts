@@ -25,6 +25,10 @@ interface V2TestApiOptions {
   readonly proposal: ReturnType<typeof useV2Proposal>;
   /** Map mode's view state: mode, open boxes, and what the scene draws. */
   readonly mapState: () => unknown;
+  /** The last Map open/close move: frames, drawing cost, frame gaps, page renders. */
+  readonly mapMotion: () => unknown;
+  /** Opens exactly these Map boxes (view state only), landing the camera on `focus`. */
+  readonly mapOpen: (ids: readonly string[], focus?: string) => void;
 }
 
 // Read-only handle for the Playwright gate and deterministic evaluations
@@ -32,7 +36,7 @@ interface V2TestApiOptions {
 // document state and geometry, never writes.
 export function useV2TestApi(options: V2TestApiOptions) {
   const {
-    hostRef, selectionRef, toolRef, selectedConnectorIds, document, revision, saveStatus, proposal, mapState,
+    hostRef, selectionRef, toolRef, selectedConnectorIds, document, revision, saveStatus, proposal, mapState, mapMotion, mapOpen,
   } = options;
   useEffect(() => {
     const api = {
@@ -47,6 +51,8 @@ export function useV2TestApi(options: V2TestApiOptions) {
         tool: toolRef.current,
       }),
       getMapState: mapState,
+      openMapBoxes: mapOpen,
+      getMapMotion: () => ({ ...(mapMotion() as object), ...hostRef.current?.getMotionState() }),
       pickTransformHandle: (point: { x: number; y: number }) => hostRef.current?.pickTransformHandle(point) ?? null,
       getDocument: () => document,
       getProposal: () => ({

@@ -18,7 +18,8 @@ import { pixiPaintColor } from './pixiColor';
 import { drawPixiLocalRect, drawPixiNodeOutline } from './pixiNodeOutline';
 import type { PixiNodeDebugRecord } from './pixiNodeDebug';
 import { applyPixiNodeMatrix } from './pixiNodeTransform';
-import { createPixiText, createStyledPixiText, decoratePixiText } from './pixiText';
+import { decoratePixiText } from './pixiText';
+import { PixiTextPool } from './pixiTextPool';
 
 function containerShape(kind: PixiContainerNodeVisual['presentation']['kind']): string {
   if (kind === 'group') return 'group-frame';
@@ -53,6 +54,7 @@ function isQuietGroup(node: SceneNode): boolean {
 export class PixiContainerRenderer {
   readonly graphics = new Graphics();
   readonly labels = new Container();
+  private readonly texts = new PixiTextPool();
   private readonly labelByNodeId = new Map<string, Container>();
   private debugRecords: readonly PixiNodeDebugRecord[] = [];
   private editingNodeId: string | null = null;
@@ -61,11 +63,12 @@ export class PixiContainerRenderer {
     page: ScenePage,
     index: SceneIndex,
     renderedNodeIds: ReadonlySet<string> | null = null,
-    canvasColor?: number
+    canvasColor?: number,
+    textWidths?: ReadonlyMap<string, number>
   ): void {
     this.graphics.clear();
     const canvas = canvasColor === undefined ? undefined : numericColorToHex(canvasColor);
-    this.labels.removeChildren().forEach((child) => child.destroy({ children: true }));
+    for (const content of this.labels.removeChildren()) this.texts.recycle(content);
     this.labelByNodeId.clear();
     const records: PixiNodeDebugRecord[] = [];
     const nodeStates = buildNodeStateMap(page);
@@ -79,7 +82,7 @@ export class PixiContainerRenderer {
       const style = resolveNodeStyle(node, canvas);
       this.drawContainer(node, matrix, visual, style, canvas ?? DEFAULT_CANVAS_COLOR);
       if (!isQuietGroup(node) && visual.presentation.header) {
-        const label = this.createLabel(node, visual, style);
+        const label = this.createLabel(node, visual, style, textWidths?.get(node.id));
         label.visible = node.id !== this.editingNodeId;
         applyPixiNodeMatrix(label, matrix);
         this.labels.addChild(label);
@@ -99,6 +102,7 @@ export class PixiContainerRenderer {
       });
     }
     this.debugRecords = records;
+    this.texts.flush();
   }
 
   getDebugSnapshot(): readonly PixiNodeDebugRecord[] {
@@ -157,12 +161,14 @@ export class PixiContainerRenderer {
     if (visual.presentation.kind === 'swimlane') drawSwimlaneGlyph(this.graphics, matrix, visual);
   }
 
-  private createLabel(node: SceneNode, visual: PixiContainerNodeVisual, style: NodeStyle): Container {
+  private createLabel(node: SceneNode, visual: PixiContainerNodeVisual, style: NodeStyle, finalWidth?: number): Container {
     const content = new Container();
     content.alpha = style.opacity;
     const ink = pixiPaintColor(style.textColor, visual.title).color;
     const band = nodeLabelBounds(node);
-    const title = createStyledPixiText(visual.presentation.label, style, ink, Math.max(1, band.width - style.textPadding * 2));
+    // `finalWidth`: the width a moving box ends with (Map mode), so a title wraps the same all the way.
+    const bandWidth = finalWidth === undefined ? band.width : band.width + finalWidth - node.size.width;
+    const title = this.texts.styled(visual.presentation.label, style, ink, Math.max(1, bandWidth - style.textPadding * 2));
     // Anchored to the band's vertical centre so the editor and the label share one baseline.
     title.anchor.set(style.textAlign === 'end' ? 1 : style.textAlign === 'center' ? 0.5 : 0, 0.5);
     const x = style.textAlign === 'end' ? band.x + band.width - style.textPadding
@@ -174,11 +180,11 @@ export class PixiContainerRenderer {
       .filter((value): value is string => Boolean(value))
       .join(' · ');
     if (detail) {
-      const metadata = createPixiText(detail, {
+      const metadata = this.texts.plain(detail, {
         size: 10,
         weight: '500',
         fill: visual.badgeText,
-        wrapWidth: Math.max(1, node.size.width - 24),
+        wrapWidth: Math.max(1, (finalWidth ?? node.size.width) - 24),
       });
       metadata.position.set(12, node.size.height - 22);
       content.addChild(metadata);

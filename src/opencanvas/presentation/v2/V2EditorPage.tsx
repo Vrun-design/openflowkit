@@ -216,7 +216,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const notify = (message: string) => { setAnnouncement(message); pushToast({ id: `map-${Date.now()}`, tone: 'info', title: message }); };
   // Map mode: a lens on the page's model. The canvas draws `viewPage`; commands, undo and autosave still see `page`.
   const map = useV2MapMode({
-    page, palette: preferences.diagramPalette, autoIcons: preferences.autoIcons, hostRef,
+    page, documentId: session.document?.id, palette: preferences.diagramPalette, autoIcons: preferences.autoIcons, hostRef,
     cameraRef: camera.cameraRef, updateCamera: camera.updateCamera, fitView: camera.fitView, onToolChange: setTool,
     primaryId: () => selectionRef.current.primaryNodeId,
     select: (id) => { applyConnectorSelection([]); applySelection(replaceSelection([id])); },
@@ -343,7 +343,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
 
   useV2TestApi({
     hostRef, selectionRef, toolRef, selectedConnectorIds,
-    document: session.document, revision: session.revision, saveStatus, proposal, mapState: map.state,
+    document: session.document, revision: session.revision, saveStatus, proposal, mapState: map.state, mapMotion: map.motionStats, mapOpen: map.openBoxes,
   });
 
   useEffect(() => {

@@ -4,7 +4,7 @@ import { basicNodeOutlinePoints } from '../../domain/nodes/basicNodeOutline';
 import { basicNodeDecorations } from '../../domain/nodes/basicNodeDecorations';
 import { drawDashedPath } from './PixiConnectorRenderer';
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
 import type { ScenePage } from '../../domain/document/types';
 import type { SceneIndex } from '../../domain/scene/types';
@@ -25,7 +25,8 @@ import type { PixiNodeDebugRecord } from './pixiNodeDebug';
 import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
 import { measurePortableText } from '../../domain/text/measurement';
-import { currentPixiTextResolution, decoratePixiText, pixiTextStyle } from './pixiText';
+import { decoratePixiText } from './pixiText';
+import { PixiTextPool } from './pixiTextPool';
 import type { SemanticDetailLevel } from './viewportProjection';
 import { numericColorToHex } from '../../domain/color/adaptiveColor';
 
@@ -49,11 +50,6 @@ function textAnchor(alignment: 'start' | 'center' | 'end'): number {
   return 0.5;
 }
 
-function textKey(text: string, style: NodeStyle, fill: number, wrapWidth: number | null): string {
-  return [style.fontSize, style.fontFamily, style.fontWeight, style.fontStyle, style.textDecoration,
-    style.lineHeight, style.letterSpacing, fill, wrapWidth ?? '', text].join('|');
-}
-
 /** Sub-labels use the node's family/colour at a fixed smaller size. */
 function subLabelStyle(style: NodeStyle): NodeStyle {
   return { ...style, fontSize: 11, fontWeight: 400, textDecoration: 'none' };
@@ -65,10 +61,9 @@ export class PixiNodeRenderer {
   readonly labels = new Container();
   private readonly labelByNodeId = new Map<string, Container>();
   // Label Text objects rasterize to a texture on creation (~0.5–1 ms each), so
-  // a redraw reuses last frame's instances with the same text and style
+  // a redraw reuses last draw's instances with the same text and style
   // instead of destroying and re-creating every label.
-  private textPool = new Map<string, Text[]>();
-  private readonly textKeys = new WeakMap<Text, string>();
+  private readonly texts = new PixiTextPool();
   private readonly freeformRenderer: PixiFreeformNodeRenderer;
   private readonly architectureRenderer: PixiArchitectureNodeRenderer;
   private readonly classEntityRenderer = new PixiClassEntityNodeRenderer();
@@ -77,7 +72,7 @@ export class PixiNodeRenderer {
   private readonly sequenceRenderer = new PixiSequenceNodeRenderer();
   private readonly wireframeRenderer: PixiWireframeNodeRenderer;
   private readonly chartRenderer: PixiChartNodeRenderer;
-  private readonly widgetRenderer = new PixiWidgetNodeRenderer((text, style, fill) => this.acquireText(text, style, fill, null));
+  private readonly widgetRenderer = new PixiWidgetNodeRenderer((text, style, fill) => this.texts.styled(text, style, fill, null));
   private debugRecords: readonly PixiNodeDebugRecord[] = [];
   private editingNodeId: string | null = null;
 
@@ -93,7 +88,7 @@ export class PixiNodeRenderer {
       if (label) label.visible = false;
       onMediaReady();
     }, resolveAsset);
-    this.architectureRenderer = new PixiArchitectureNodeRenderer((nodeId) => {
+    this.architectureRenderer = new PixiArchitectureNodeRenderer(this.texts, (nodeId) => {
       this.debugRecords = this.debugRecords.map((record) =>
         record.id === nodeId ? { ...record, mediaState: 'loaded' } : record
       );
@@ -119,20 +114,11 @@ export class PixiNodeRenderer {
     index: SceneIndex,
     renderedNodeIds: ReadonlySet<string> | null = null,
     detailLevel: SemanticDetailLevel = 'full',
-    canvasColor = 0xf7f7f5
+    canvasColor = 0xf7f7f5,
+    textWidths?: ReadonlyMap<string, number>
   ): void {
     this.graphics.clear();
-    this.textPool = new Map();
-    for (const content of this.labels.removeChildren()) {
-      for (const child of [...content.children]) {
-        if (!(child instanceof Text)) continue;
-        child.removeFromParent();
-        const key = this.textKeys.get(child);
-        if (key === undefined) { child.destroy(); continue; }
-        this.textPool.set(key, [...(this.textPool.get(key) ?? []), child]);
-      }
-      content.destroy({ children: true });
-    }
+    for (const content of this.labels.removeChildren()) this.texts.recycle(content);
     const freeformMediaGeneration = this.freeformRenderer.beginDraw();
     const architectureMediaGeneration = this.architectureRenderer.beginDraw();
     const wireframeMediaGeneration = this.wireframeRenderer.beginDraw();
@@ -151,7 +137,7 @@ export class PixiNodeRenderer {
       const family = detailLevel === 'overview' ? null
         : this.chartRenderer.drawNode(node, matrix, this.graphics, canvasHex)
           ?? this.widgetRenderer.drawNode(node, matrix, this.graphics, canvasHex, (id) => index.nodesById.get(id))
-          ?? this.architectureRenderer.drawNode(node, matrix, this.graphics, architectureMediaGeneration, canvasHex)
+          ?? this.architectureRenderer.drawNode(node, matrix, this.graphics, architectureMediaGeneration, canvasHex, textWidths?.get(node.id))
           ?? this.classEntityRenderer.drawNode(node, matrix, this.graphics)
           ?? this.mindmapRenderer.drawNode(node, matrix, this.graphics)
           ?? this.journeyRenderer.drawNode(node, matrix, this.graphics)
@@ -227,18 +213,19 @@ export class PixiNodeRenderer {
         labelAlignment: style.textAlign,
         padding: { top: pad, right: pad, bottom: pad, left: pad },
       };
-      const availableTextWidth = Math.max(1, node.size.width - pad * 2);
+      // A move (Map mode) wraps each label to the width its box ends with, so the text pool keeps hitting while the box resizes.
+      const availableTextWidth = Math.max(1, (textWidths?.get(node.id) ?? node.size.width) - pad * 2);
       const wrap = sizing.overflow === 'visible' ? null : availableTextWidth;
       const labelMeasurement = measurePortableText(labelText, {
         fontSize: style.fontSize, fontWeight: style.fontWeight, lineHeight: style.fontSize * style.lineHeight,
         ...(wrap === null ? {} : { maxWidth: wrap, maxLines: sizing.maxLines, overflow: sizing.overflow }),
       });
       const textColor = pixiPaintColor(style.textColor, visual?.text ?? 0x1e293b).color;
-      const label = this.acquireText(labelMeasurement.displayText, style, textColor, wrap);
+      const label = this.texts.styled(labelMeasurement.displayText, style, textColor, wrap);
       const subStyle = subLabelStyle(style);
       const subLabel =
         typeof node.content.subLabel === 'string' && node.content.subLabel.length > 0
-          ? this.acquireText(
+          ? this.texts.styled(
               measurePortableText(node.content.subLabel, {
                 fontSize: 11, fontWeight: 400,
                 ...(wrap === null ? {} : { maxWidth: wrap, maxLines: sizing.maxLines, overflow: sizing.overflow }),
@@ -309,25 +296,8 @@ export class PixiNodeRenderer {
       this.labels.addChild(content);
       this.labelByNodeId.set(node.id, content);
     }
-    for (const leftovers of this.textPool.values()) leftovers.forEach((text) => text.destroy());
-    this.textPool.clear();
+    this.texts.flush();
     this.debugRecords = debugRecords;
-  }
-
-  private acquireText(text: string, style: NodeStyle, fill: number, wrapWidth: number | null): Text {
-    const key = textKey(text, style, fill, wrapWidth);
-    const cached = this.textPool.get(key)?.pop();
-    if (cached) {
-      cached.anchor.set(0, 0);
-      return cached;
-    }
-    const created = new Text({
-      text,
-      resolution: currentPixiTextResolution(),
-      style: pixiTextStyle(style, fill, wrapWidth),
-    });
-    this.textKeys.set(created, key);
-    return created;
   }
 
   getDebugSnapshot(): readonly PixiNodeDebugRecord[] {

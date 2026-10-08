@@ -64,6 +64,9 @@ export function toElkGraph(
       'elk.algorithm': 'layered', 'elk.direction': 'DOWN', 'elk.edgeRouting': 'ORTHOGONAL',
       'elk.json.edgeCoords': 'ROOT', 'elk.edgeLabels.placement': 'CENTER',
       'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+      // Brandes-Koepf otherwise picks the most compact of four alignments, and a box that widens on open flips which
+      // one wins, so whole columns swap sides (C4 stability: worst tau 0.29 → 0.82, same crossings, edges +4%).
+      'elk.layered.nodePlacement.bk.fixedAlignment': 'LEFTDOWN',
       'elk.spacing.nodeNode': '28', 'elk.layered.spacing.nodeNodeBetweenLayers': '56',
       'elk.spacing.edgeNode': '16', 'elk.spacing.edgeEdge': '10', 'elk.padding': '[top=20,left=20,bottom=20,right=20]',
     },

@@ -44,7 +44,7 @@ export const READABLE = 0.6;
  * with no such box, start at `anchor` (the map's top-left corner) at k = 0.6, so the reader begins at a known place and pans.
  */
 export function landing(size: { width: number; height: number }, focus: Rect | undefined, view: Viewport, anchor?: Rect): Cam {
-  const all = frameBox({ x: 0, y: 0, ...size }, view);
+  const all = frameBox({ x: 0, y: 0, width: size.width, height: size.height }, view);
   if (all.k >= READABLE) return all;
   if (focus) return frameBox(focus, view, 1, READABLE);
   if (!anchor) return all;

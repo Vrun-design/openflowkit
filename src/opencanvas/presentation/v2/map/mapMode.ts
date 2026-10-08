@@ -2,7 +2,7 @@ import { isInside } from '../../../../dsl/map/tree';
 import type { MapModel } from '../../../../dsl/map/types';
 import { visible } from '../../../../dsl/map/view';
 import { canOpen } from '../../../application/map/navigate';
-import { frameBox, READABLE, type Viewport } from '../../../application/map/geometry';
+import { frameBox, landing, READABLE, type Rect, type Viewport } from '../../../application/map/geometry';
 import type { CanvasCamera } from '../../../domain/camera/types';
 import type { ScenePage } from '../../../domain/document/types';
 import type { Bounds2d } from '../../../domain/geometry/types';
@@ -31,10 +31,14 @@ export const fitsBudget = (model: MapModel, open: ReadonlySet<string>): boolean 
 export const DOUBLE_CLICK_MS = 400;
 export const isDoubleClick = (lastFlipAt: number, now: number): boolean => now - lastFlipAt < DOUBLE_CLICK_MS;
 
-/** The scene built for one model; it may be shown only while that model is still the page's. */
-export interface TaggedScene<M> { readonly model: M; readonly page: ScenePage }
-export const sceneFor = <M>(tagged: TaggedScene<M> | null, model: M | null, empty: ScenePage): ScenePage =>
-  tagged && model !== null && tagged.model === model ? tagged.page : empty;
+/**
+ * The scene built for one model; it may be shown only while that model is still the page's. `lineage` (the page it was
+ * built for) also keeps it up through an edit, which makes a new model: the map then moves to the edited layout instead
+ * of blanking while it is laid out. Another page's model never matches.
+ */
+export interface TaggedScene<M> { readonly model: M; readonly page: ScenePage; readonly lineage?: string; /** Which run of related maps it belongs to (an edit continues a run; another page's model starts one). */ readonly chain?: number }
+export const sceneFor = <M>(tagged: TaggedScene<M> | null, model: M | null, empty: ScenePage, lineage?: string): ScenePage =>
+  tagged && model !== null && (tagged.model === model || (lineage !== undefined && tagged.lineage === lineage)) ? tagged.page : empty;
 
 /** Escape on a selected box closes the open box around it (never the root); null means there is nothing to close. */
 export function parentToClose(model: MapModel, open: ReadonlySet<string>, selectedId: string): string | null {
@@ -74,14 +78,24 @@ export function sceneExtent(page: ScenePage): Bounds2d | null {
   return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
 }
 
+const VIEW = { top: 56, bottom: 72, pad: 48 };
+
 /**
  * The camera a map opens at: everything when that stays readable (scale 0.6), else the map's top-left corner at 0.6,
  * so the reader starts at a known place. `free` is the canvas the side panels leave.
  */
 export function mapCamera(extent: Bounds2d, free: { left: number; width: number; height: number }): CanvasCamera {
-  const view: Viewport = { width: free.width, height: free.height, top: 56, bottom: 72, pad: 48 };
+  const view: Viewport = { width: free.width, height: free.height, ...VIEW };
   const all = frameBox(extent, view);
   const cam = all.k >= READABLE ? all
     : { k: READABLE, x: view.pad - extent.x * READABLE, y: view.top + view.pad - extent.y * READABLE };
   return { zoom: cam.k, x: free.left + cam.x, y: cam.y };
+}
+
+/** Where the camera goes when `focus` (the box just opened or closed) changes the map: everything when readable, else that box at scale >= 0.6. */
+export function landOn(extent: Bounds2d, focus: Rect | undefined, free: { left: number; width: number; height: number }): CanvasCamera {
+  const view: Viewport = { width: free.width, height: free.height, ...VIEW };
+  // `landing` frames a map that starts at the origin; shift the focus there and the result back.
+  const cam = landing(extent, focus && { ...focus, x: focus.x - extent.x, y: focus.y - extent.y }, view);
+  return { zoom: cam.k, x: free.left + cam.x - extent.x * cam.k, y: cam.y - extent.y * cam.k };
 }

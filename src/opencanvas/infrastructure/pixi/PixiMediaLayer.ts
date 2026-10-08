@@ -9,7 +9,11 @@ interface PixiMediaLoadRequest {
   readonly bounds: Bounds2d;
   readonly opacity?: number;
   readonly resolveUrl: () => Promise<string | null>;
+  /** Names the image: a texture loaded once under this key is placed at once on every later draw (Map mode redraws per frame). */
+  readonly cacheKey?: string;
 }
+
+const loadedTextures = new Map<string, Texture>();
 
 /**
  * Pixi's asset resolver brace-expands `{a,b}` in URLs, so a data-URL SVG coloured by
@@ -37,7 +41,9 @@ export class PixiMediaLayer {
   }
 
   load(request: PixiMediaLoadRequest): void {
-    void this.performLoad(request);
+    const known = request.cacheKey ? loadedTextures.get(request.cacheKey) : undefined;
+    if (known) this.place(request, known);
+    else void this.performLoad(request);
   }
 
   private async performLoad(request: PixiMediaLoadRequest): Promise<void> {
@@ -45,29 +51,34 @@ export class PixiMediaLayer {
       const url = await request.resolveUrl();
       if (!url || request.generation !== this.generation) return;
       const texture = await Assets.load<Texture>(pixiAssetUrl(url));
+      if (request.cacheKey) loadedTextures.set(request.cacheKey, texture);
       if (request.generation !== this.generation) return;
-      const container = new Container();
-      applyPixiNodeMatrix(container, request.matrix);
-      const sprite = new Sprite(texture);
-      const textureWidth = Math.max(1, texture.width);
-      const textureHeight = Math.max(1, texture.height);
-      const scale = Math.min(
-        request.bounds.width / textureWidth,
-        request.bounds.height / textureHeight
-      );
-      sprite.width = textureWidth * scale;
-      sprite.height = textureHeight * scale;
-      sprite.position.set(
-        request.bounds.x + (request.bounds.width - sprite.width) / 2,
-        request.bounds.y + (request.bounds.height - sprite.height) / 2
-      );
-      sprite.alpha = request.opacity ?? 1;
-      container.addChild(sprite);
-      this.container.addChild(container);
-      this.loadedNodeIds.add(request.nodeId);
-      this.onReady(request.nodeId);
+      this.place(request, texture);
     } catch {
       // A missing or unreadable media source leaves the authored fallback visible.
     }
+  }
+
+  private place(request: PixiMediaLoadRequest, texture: Texture): void {
+    const container = new Container();
+    applyPixiNodeMatrix(container, request.matrix);
+    const sprite = new Sprite(texture);
+    const textureWidth = Math.max(1, texture.width);
+    const textureHeight = Math.max(1, texture.height);
+    const scale = Math.min(
+      request.bounds.width / textureWidth,
+      request.bounds.height / textureHeight
+    );
+    sprite.width = textureWidth * scale;
+    sprite.height = textureHeight * scale;
+    sprite.position.set(
+      request.bounds.x + (request.bounds.width - sprite.width) / 2,
+      request.bounds.y + (request.bounds.height - sprite.height) / 2
+    );
+    sprite.alpha = request.opacity ?? 1;
+    container.addChild(sprite);
+    this.container.addChild(container);
+    this.loadedNodeIds.add(request.nodeId);
+    this.onReady(request.nodeId);
   }
 }
