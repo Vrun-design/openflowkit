@@ -24,6 +24,7 @@ function DocsSiteRedirect(): null {
 const SharedPage = lazy(async () => ({ default: (await import('@/opencanvas/presentation/v2/V2SharedPage')).V2SharedPage }));
 
 const FromGithubPage = lazy(async () => ({ default: (await import('@/opencanvas/presentation/v2/V2FromGithubPage')).V2FromGithubPage }));
+const MapPage = lazy(async () => ({ default: (await import('@/opencanvas/presentation/v2/map/MapPage')).MapPage }));
 const FromDslPage = lazy(async () => ({ default: (await import('@/opencanvas/presentation/v2/V2FromDslPage')).V2FromDslPage }));
 
 const loadEditor = () => import('@/opencanvas/presentation/v2/V2EditorPage');
@@ -70,6 +71,7 @@ export default function App(): React.JSX.Element {
           <Route path="/d/:id" element={<EditorPage />} />
           <Route path="/s/:id/:key?" element={<SharedPage />} />
           <Route path="/from/github/*" element={<FromGithubPage />} />
+          <Route path="/map/github/*" element={<MapPage />} />
           <Route path="/from/dsl" element={<FromDslPage />} />
           <Route path="/v2/:id" element={<LegacyV2Redirect />} />
           <Route path="*" element={<HomeDocument />} />

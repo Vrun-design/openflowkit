@@ -49,6 +49,8 @@ const SHARED_KERNEL = [
   path.join(srcDir, 'services', 'share'),
   // Repo → diagram: fetch adapter that reads a public GitHub repo for discovery.
   path.join(srcDir, 'services', 'discovery'),
+  // Living Map: loads a repo's code facts into the pure map engine (src/dsl/map).
+  path.join(srcDir, 'services', 'map'),
 ];
 
 // Data read as text at runtime (the grammar for get_syntax), not code. It sits

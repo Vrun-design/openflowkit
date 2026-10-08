@@ -83,6 +83,12 @@ const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
 export interface FetchRepoOptions {
   readonly fetch?: typeof fetch;
   readonly maxFiles?: number;
+  /** Which tree paths to read; the default is what architecture discovery reads. */
+  readonly select?: (path: string) => boolean;
+  /** Read order, lowest first; the default puts deploy manifests first. */
+  readonly priority?: (path: string) => number;
+  /** Called once with every selected path (before the size filter and the `maxFiles` cap), as soon as the tree is in. */
+  readonly onTree?: (paths: readonly string[], treeSha?: string) => void;
   readonly onProgress?: (done: number, total: number) => void;
   /** Abort on unmount: the scan stops and rejects with the signal's reason. */
   readonly signal?: AbortSignal;
@@ -117,10 +123,13 @@ export async function fetchRepoFiles(ref: RepoRef, options: FetchRepoOptions = {
     headers: { Accept: 'application/vnd.github+json' },
   });
   if (!treeResponse.ok) throw await treeError(treeResponse, ref, token !== null);
-  const tree = await treeResponse.json() as { tree?: readonly { path: string; type: string; size?: number }[]; truncated?: boolean };
-  const wanted = (tree.tree ?? [])
-    .filter((entry) => entry.type === 'blob' && entry.path.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..') && (entry.size ?? 0) <= MAX_FILE_BYTES && acceptsArchitectureFile(entry.path))
-    .sort((a, b) => priority(a.path) - priority(b.path) || a.path.localeCompare(b.path));
+  const tree = await treeResponse.json() as { sha?: string; tree?: readonly { path: string; type: string; size?: number }[]; truncated?: boolean };
+  const selected = (tree.tree ?? [])
+    .filter((entry) => entry.type === 'blob' && entry.path.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..') && (options.select ?? acceptsArchitectureFile)(entry.path));
+  // Listed before the size filter: a file too big to read is still a file the caller may want to show.
+  options.onTree?.(selected.map((entry) => entry.path), tree.sha);
+  const rank = options.priority ?? priority;
+  const wanted = selected.filter((entry) => (entry.size ?? 0) <= MAX_FILE_BYTES).sort((a, b) => rank(a.path) - rank(b.path) || a.path.localeCompare(b.path));
   const capped = wanted.slice(0, options.maxFiles ?? 400);
   // The byte budget is spent on the listed sizes, manifests first, before any file is fetched.
   let bytes = 0;
