@@ -162,6 +162,8 @@ async function mcpPage(): Promise<string> {
         openflow_save: 'Write a document back to disk',
         whoami: 'Which mode the server is in, and which documents it holds',
         server_info: 'Server name, version and capabilities',
+        render_diagram: 'Remote endpoint only (`npm run start:http`): draw DSL or Mermaid inline in the chat, with an editor link',
+        get_syntax: 'Remote endpoint only: the DSL grammar, whole or one family, for `render_diagram`',
       };
       return `| \`${name}\` | ${descriptions[name] ?? 'See the tool description in your client'} |`;
     }).join('\n') + '\n\n'

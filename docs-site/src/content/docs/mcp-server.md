@@ -53,11 +53,13 @@ document; without it, tools use the paired editor or the first open document.
 | `drift_report` | Compare a model against the repository; matches by name and tech only |
 | `explain_element` | What the model says about one element, plus linked ADR markdown |
 | `get_starter_template` | One starter template, by name |
+| `get_syntax` | Remote endpoint only: the DSL grammar, whole or one family, for `render_diagram` |
 | `list_diagram_node_types` | Family names, shape words and edge styles |
 | `list_starter_templates` | List the starter DSL templates |
 | `openflow_create` | Create an empty file-mode document |
 | `openflow_open` | Load a .openflow.json from disk into file mode |
 | `openflow_save` | Write a document back to disk |
+| `render_diagram` | Remote endpoint only (`npm run start:http`): draw DSL or Mermaid inline in the chat, with an editor link |
 | `server_info` | Server name, version and capabilities |
 | `validate_openflow_dsl` | Parse DSL with the real parser and return its diagnostics |
 | `whoami` | Which mode the server is in, and which documents it holds |
