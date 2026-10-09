@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './test';
 import { centreOf, doc, state } from './helpers';
 
-// Map mode's bottom toolbar (depth, expand/collapse) and arrow-key walking. Entering Map and the C4 fixture as in map-mode.spec.
+// Map mode's bottom toolbar (depth) and arrow-key walking. Entering Map and the C4 fixture as in map-mode.spec.
 const mapState = (page: Page): Promise<{ open: string[]; nodes: string[] }> =>
   page.evaluate(() => (window as unknown as { __V2__: { getMapState(): { open: string[]; nodes: string[] } } }).__V2__.getMapState());
 const settled = (page: Page) => expect.poll(() => page.evaluate(() =>
@@ -30,45 +30,40 @@ test('the Map toolbar shows only in Map; the depth pill follows the open set @ga
   test.setTimeout(60_000);
   await openMap(page);
   await expect(toolbar(page)).toBeVisible();
-  await expect(pill(page, 'Overview')).toHaveAttribute('aria-pressed', 'true');
-  await pill(page, 'Everything').click();
+  // A map of three top boxes or fewer opens with its top level open: that is One level in, not Top level.
+  await expect(pill(page, 'One level in')).toHaveAttribute('aria-pressed', 'true');
+  await expect(pill(page, 'Top level')).toHaveAttribute('aria-pressed', 'false');
+  await pill(page, 'All levels').click();
   await expect.poll(async () => (await mapState(page)).nodes).toContain('shop.api.orders');
-  await expect(pill(page, 'Everything')).toHaveAttribute('aria-pressed', 'true');
-  await expect(pill(page, 'Overview')).toHaveAttribute('aria-pressed', 'false');
+  await expect(pill(page, 'All levels')).toHaveAttribute('aria-pressed', 'true');
+  await expect(pill(page, 'Top level')).toHaveAttribute('aria-pressed', 'false');
   await settled(page);
-  await pill(page, 'Overview').click();
+  await pill(page, 'Top level').click();
   await expect.poll(async () => (await mapState(page)).nodes).not.toContain('shop.api.orders');
-  await expect(pill(page, 'Overview')).toHaveAttribute('aria-pressed', 'true');
+  await expect(pill(page, 'Top level')).toHaveAttribute('aria-pressed', 'true');
   await settled(page);
   // A custom state is no preset. This small model reaches every other set by a preset, so the test hook sets one directly.
   await page.evaluate(() => (window as unknown as { __V2__: { openMapBoxes(ids: string[]): void } }).__V2__.openMapBoxes(['shop.api']));
   await expect.poll(async () => (await mapState(page)).open).toEqual(['shop.api']);
-  for (const name of ['Overview', 'Detailed', 'Everything']) await expect(pill(page, name)).toHaveAttribute('aria-pressed', 'false');
+  for (const name of ['Top level', 'One level in', 'All levels']) await expect(pill(page, name)).toHaveAttribute('aria-pressed', 'false');
   // Leaving Map takes the toolbar away.
   await page.getByRole('button', { name: 'Canvas', exact: true }).click();
   await expect(toolbar(page)).toHaveCount(0);
 });
 
-test('Expand one level then Collapse all change the open boxes and the motion settles @gate', async ({ page }) => {
+test('a selected box that a depth change hides hands its selection to the box around it @gate', async ({ page }) => {
   test.setTimeout(60_000);
   await openMap(page);
-  const start = (await mapState(page)).open;
-  await page.getByRole('button', { name: 'Expand one level', exact: true }).click();
-  await expect.poll(async () => (await mapState(page)).open.length).toBeGreaterThan(start.length);
+  await pill(page, 'All levels').click();
+  await expect.poll(async () => (await mapState(page)).nodes).toContain('shop.web');
   await settled(page);
-  await expect.poll(async () => (await mapState(page)).nodes).toContain('shop.api.orders');
-  // A selected box that collapses away hands the selection to the box around it.
   const leaf = await centreOf(page, 'shop.web');
   await page.mouse.click(leaf.x, leaf.y);
   await expect.poll(() => selected(page)).toEqual(['shop.web']);
-  await page.getByRole('button', { name: 'Collapse all', exact: true }).click();
-  await expect.poll(async () => (await mapState(page)).open).toEqual([]);
+  await pill(page, 'Top level').click();
+  await expect.poll(async () => (await mapState(page)).nodes).not.toContain('shop.web');
   await settled(page);
-  await expect.poll(async () => (await mapState(page)).nodes).not.toContain('shop.api');
   await expect.poll(() => selected(page)).toEqual(['shop']);
-  // Nothing open: Collapse all again changes nothing and the toolbar stays.
-  await page.getByRole('button', { name: 'Collapse all', exact: true }).click();
-  await expect(toolbar(page)).toBeVisible();
 });
 
 test('arrow keys walk between boxes and Down enters an open box @gate', async ({ page }) => {

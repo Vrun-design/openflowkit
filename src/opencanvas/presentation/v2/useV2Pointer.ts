@@ -240,7 +240,7 @@ export function useV2Pointer(options: V2PointerOptions) {
         host.setDropTarget(overNode);
       } else if (operation.kind === 'marquee') {
         operationRef.current = { ...operation, current: point };
-        host.setMarquee(boundsBetween(operation.start, point));
+        if (!operation.fromNode) host.setMarquee(boundsBetween(operation.start, point));
       }
     },
     [applyPendingTransformPreview]
@@ -313,12 +313,15 @@ export function useV2Pointer(options: V2PointerOptions) {
       // The laser only points: V2LaserTrail draws it, the document never hears of it.
       if (tool === 'laser') return;
       if (opts.readOnlyRef.current) {
+        const additive = event.shiftKey || event.metaKey || event.ctrlKey;
+        const fromNode = opts.onNodeDrag && !additive ? host.pickNode(point) : null;
         operationRef.current = {
           kind: 'marquee',
           pointerId: event.pointerId,
           start: point,
           current: point,
-          additive: event.shiftKey || event.metaKey || event.ctrlKey,
+          additive,
+          ...(fromNode ? { fromNode } : {}),
         };
         return;
       }
@@ -515,7 +518,12 @@ function useDoubleTap(optionsRef: RefObject<V2PointerOptions>) {
     (point: Point2d) => {
       const opts = optionsRef.current;
       const host = opts.hostRef.current;
-      if (!host || opts.readOnlyRef.current) return;
+      if (!host) return;
+      if (opts.readOnlyRef.current) {
+        const nodeId = opts.onNodeDoubleClick ? host.pickNode(point) : null;
+        if (nodeId) opts.onNodeDoubleClick!(nodeId);
+        return;
+      }
       if (opts.toolRef.current !== 'select') return;
       const nodeId = host.pickNode(point);
       if (nodeId) {

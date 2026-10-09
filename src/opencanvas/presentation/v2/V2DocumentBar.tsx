@@ -221,11 +221,11 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
           )}
           {props.mapMode ? (
             <div className="ofk-v2-mode" role="group" aria-label="View mode">
-              <Tooltip content="Draw and arrange the page">
+              <Tooltip content="Draw and arrange freely">
                 <Button variant="quiet" selected={props.mapMode.mode === 'canvas'} aria-label="Canvas"
                   onClick={() => props.mapMode!.onChange('canvas')}>Canvas</Button>
               </Tooltip>
-              <Tooltip content="Explore the model: click a box to open it" shortcut="M">
+              <Tooltip content="Laid out from your model: click a box to open it" shortcut="M">
                 <Button variant="quiet" selected={props.mapMode.mode === 'map'} aria-label="Map"
                   onClick={() => props.mapMode!.onChange('map')}>Map</Button>
               </Tooltip>

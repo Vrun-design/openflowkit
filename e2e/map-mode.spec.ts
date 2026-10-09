@@ -110,6 +110,7 @@ test('browsing the map never dirties the document or adds an undo step @gate', a
   expect(JSON.stringify((await doc(page))!.pages)).toBe(pages);
 });
 
+// Remove from model (⌘⇧⌫) is a model edit Map allows: e2e/map-edit-cues.spec.ts.
 test('Delete, drag, nudge, typing and duplicate on a map box change nothing @gate', async ({ page }) => {
   test.setTimeout(60_000);
   await openC4(page);
@@ -125,7 +126,7 @@ test('Delete, drag, nudge, typing and duplicate on a map box change nothing @gat
   await page.mouse.down();
   await page.mouse.move(at.x + 120, at.y + 60, { steps: 6 });
   await page.mouse.up();
-  for (const key of ['Delete', 'Backspace', 'ArrowRight', 'Shift+ArrowDown', 'Meta+d', 'Control+d', 'Meta+Shift+Backspace', 'F2', 'q', 'Meta+x', 'Meta+a', 'r']) {
+  for (const key of ['Delete', 'Backspace', 'ArrowRight', 'Shift+ArrowDown', 'Meta+d', 'Control+d', 'F2', 'q', 'Meta+x', 'Meta+a', 'r']) {
     await page.keyboard.press(key);
   }
   await page.mouse.dblclick(at.x, at.y);

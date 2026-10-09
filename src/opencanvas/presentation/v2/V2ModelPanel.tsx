@@ -18,6 +18,8 @@ export interface V2ModelPanelProps {
   readonly architecture: V2Architecture;
   readonly elementPageIds: ReadonlyMap<string, string>;
   readonly selectedElementId: string | null;
+  /** "Edit in model" (a Map double-click, the context menu): open this element's card with its name ready to type. A new object each time. */
+  readonly renameRequest?: { readonly id: string } | null;
   readonly placedElementIds: ReadonlySet<string>;
   readonly perspectiveTags: readonly string[];
   readonly onPerspectiveChange: (tags: readonly string[]) => void;
@@ -99,6 +101,12 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
   if (lastSelected !== props.selectedElementId) {
     setLastSelected(props.selectedElementId);
     if (inspection && props.selectedElementId !== inspection.expects) { setInspection(null); setJustAdded(null); }
+  }
+  // Starts empty, so a request that opened the panel is seen on its first render.
+  const [lastRename, setLastRename] = useState<V2ModelPanelProps['renameRequest']>(null);
+  if (lastRename !== props.renameRequest) {
+    setLastRename(props.renameRequest);
+    if (props.renameRequest) { setTab('elements'); setInspection(null); setJustAdded(props.renameRequest.id); }
   }
   // Where you were in the outline: marked and refocused when you come back.
   const [lastId, setLastId] = useState<string | null>(null);
@@ -217,7 +225,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
             inCurrentView={placed}
             childView={architecture.childViewOf(selected.id)}
             adrs={props.adrs ?? []}
-            focusName={justAdded === selected.id}
+            focusName={justAdded === selected.id && (props.renameRequest?.id === selected.id ? props.renameRequest : true)}
             focusBack={inspection?.fromOutline === true && inspection.id === selected.id}
             mapAction={props.onShowOnCanvas && props.canvasElementIds?.has(selected.id)
               ? { label: 'Show on canvas', run: () => props.onShowOnCanvas!(selected.id) }

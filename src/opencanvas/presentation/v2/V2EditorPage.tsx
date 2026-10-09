@@ -282,8 +282,11 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   // A model being written (the start screen's action) keeps Map on until its page is the one on screen (generating, then the page switch pending).
   const startable = !load.readOnly && !shared && repo.lockedPageId === null && (!modelled || code.generating || pendingPageId !== null);
   const pinRef = useRef<() => void>(() => undefined);
+  // Map cannot edit the drawing: a blocked edit explains why (set below, once the selection is known).
+  const explainMapRef = useRef<() => void>(() => undefined);
   const map = useV2MapMode({
     onPin: () => pinRef.current(),
+    onBlockedEdit: () => explainMapRef.current(),
     panelsKey: [panels.workspace, panels.shortcutsOpen, panels.chartId, panels.treeOpen, panels.motionOpen].join(),
     selectedIds: () => selectionRef.current.nodeIds,
     glide: camera.animateTo,
@@ -364,7 +367,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     commit(buildPinPageCommand(document, mapPage, { pageId, name: `${single ?? document.name} (pinned)` }));
     setActivePageId(pageId);
     map.setMode('canvas');
-    setAnnouncement('Pinned as a page');
+    setAnnouncement('Map copied to a new Canvas page to edit as a drawing');
   };
   const editLocked = docReadOnly || map.active;
   useEffect(() => { readOnlyRef.current = editLocked; }, [editLocked]);
@@ -538,6 +541,25 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     return elementId ? [elementId] : [];
   })), [page]);
   const showOnCanvas = (elementId: string) => map.choose('canvas', elementId);
+  // "Edit in model": the model panel opens on the element's card with its name ready to type.
+  const [renameRequest, setRenameRequest] = useState<{ readonly id: string } | null>(null);
+  const editInModel = (elementId: string) => { setRenameRequest({ id: elementId }); openWorkspace('model'); };
+  // Spent once the panel closes: reopening it from the rail is not another rename.
+  useEffect(() => { if (panels.workspace !== 'model') setRenameRequest(null); }, [panels.workspace]);
+  // A double-click on a Map box: the drawing cannot change, so the box opens where it can (a repo box has only details).
+  const editBox = (id: string) => {
+    const box = map.mapPage?.nodes.find((node) => node.id === id);
+    const elementId = box ? placedElementId(box) : null;
+    if (elementId && !docReadOnly) editInModel(elementId); else openWorkspace('model');
+  };
+  // Once per visit to Map: the first edit that cannot happen says why, and where it can.
+  // Map's start screen writes a model: its panel opens once the model is there, never on an empty "create one" state.
+  const [modelPanelOnStart, setModelPanelOnStart] = useState(false);
+  useEffect(() => {
+    if (modelPanelOnStart && architecture.model) { setModelPanelOnStart(false); openWorkspace('model'); }
+  }, [modelPanelOnStart, architecture.model, openWorkspace]);
+  const explainedMap = useRef(false);
+  useEffect(() => { if (!map.active) explainedMap.current = false; }, [map.active]);
   const compileAt = useCallback((text: string, origin: Point2d) => compile(text, {
     origin, layout: elkDslLayoutPort, resolveIcon: resolveDslIcon,
     appearance: { palette: preferences.diagramPalette }, autoIcons: preferences.autoIcons,
@@ -559,6 +581,17 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     return true;
   }, [openChart]);
   const selectedElementId = selectedNode ? placedElementId(selectedNode) : null;
+  explainMapRef.current = () => {
+    if (explainedMap.current || load.readOnly) return;
+    explainedMap.current = true;
+    const elementId = !docReadOnly ? selectedElementId : null;
+    const copy = pinnable ? { action: { label: 'Edit as drawing', onClick: () => pinRef.current() } } : {};
+    pushToast(repoSource
+      ? { id: 'map-read-only', tone: 'info', title: 'This map is read from the code.', description: 'To move boxes and draw, use Edit as drawing.', ...copy }
+      : { id: 'map-read-only', tone: 'info', title: 'Map lays itself out.',
+        description: 'Edit boxes in the model panel, or use Edit as drawing to move them.',
+        ...(elementId ? { action: { label: 'Edit in model', onClick: () => editInModel(elementId) } } : copy) });
+  };
   // The deeper view of the selected element, when its page exists.
   const deeperView = selectedElementId ? architecture.childViewOf(selectedElementId) : null;
   const zoomInto = deeperView && architecture.pageForView(deeperView.id) && selectedElementId
@@ -739,8 +772,9 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
       if (architectureActions.unplaceSelection(selectionRef.current.nodeIds)) return;
       editActions.deleteSelection();
     },
+    // A model edit, not a drawing edit: Map allows it, as its panel does.
     onRemoveFromModel: () => {
-      if (!editLocked && selectedElementId) architectureActions.removeElement(selectedElementId);
+      if (!docReadOnly && selectedElementId) architectureActions.removeElement(selectedElementId);
     },
     onDuplicate: editActions.duplicateSelection,
     onReorder: editActions.reorderSelection, onToggleLock: editActions.toggleLock,
@@ -931,7 +965,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               page={viewPage ?? page} hostRef={hostRef} camera={camera.camera} cameraRef={camera.cameraRef} pageRef={pageRef}
               selectionRef={selectionRef} selectedConnectorIdsRef={selectedConnectorIdsRef} toolRef={toolRef} tool={tool} spacePanRef={spacePanRef}
               toolConfigRef={toolConfigRef} onOpenChartData={openChartData} zoomInto={map.active ? null : zoomInto}
-              {...(map.active ? { onNodeClick: map.clickNode } : {})}
+              {...(map.active ? { onNodeClick: map.clickNode, onNodeDoubleClick: editBox, onNodeDrag: () => explainMapRef.current() } : {})}
               onRemoveIcons={() => iconActions.removeIcons(selectionRef.current.nodeIds)}
               onOpenCode={code.openNew}
               onInspect={() => openWorkspace('inspect')}
@@ -954,7 +988,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
             >
               {repoSource && map.active ? <V2RepoMapOverlay source={repoSource} map={repo.state} links={map.links} /> : null}
               {map.start ? (
-                <V2MapStart busy={code.generating} onStartModel={() => code.startFrom(C4_STARTER, { openPanel: false })}
+                <V2MapStart busy={code.generating} onStartModel={() => { code.startFrom(C4_STARTER, { openPanel: false }); setModelPanelOnStart(true); }}
                   onMapRepo={({ owner, repo: name, ref }) => navigate(`/map/github/${owner}/${name}${ref !== 'HEAD' ? `/tree/${encodeURIComponent(ref)}` : ''}`)}
                   onAgent={() => openWorkspace('agent')} />
               ) : null}
@@ -994,6 +1028,12 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 name: selectedNode.content.label as string ?? selectedElementId,
                 // Opening a deeper view is Canvas behaviour: it would switch the page under the map.
                 childView: !map.active && zoomInto !== null,
+                editable: !docReadOnly,
+              } : null}
+              onEditInModel={() => { if (selectedElementId) editInModel(selectedElementId); }}
+              inMap={map.active ? {
+                ...(selectedElementId && canvasElementIds.has(selectedElementId) && !repoSource ? { onShowOnCanvas: () => showOnCanvas(selectedElementId) } : {}),
+                ...(pinnable ? { onCopyToCanvas: () => pinRef.current() } : {}),
               } : null}
               onDrillInto={() => { if (selectedElementId) architectureActions.drillToMap(selectedElementId); }}
               onUnplace={() => architectureActions.unplaceSelection(selectionRef.current.nodeIds)}
@@ -1063,6 +1103,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                   return elementId ? [[elementId, candidate.id] as const] : [];
                 })))}
                 selectedElementId={selectedElementId}
+                renameRequest={renameRequest}
                 mapArrow={mapArrow}
                 {...(repoPanel.box ? { mapBox: repoPanel.box } : {})}
                 {...(map.active && map.model ? { mapOverview: { model: map.model, arch: map.arch, onSelect: map.reveal } } : {})}

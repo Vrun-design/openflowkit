@@ -69,10 +69,19 @@ export function mapKeyAllowed(e: KeyLike): boolean {
   const command = e.metaKey || e.ctrlKey;
   const key = e.key.toLowerCase();
   if (e.key === ' ') return true;
+  // Remove from model edits the model, not the drawing: the model panel offers it in Map too.
+  if (command && e.shiftKey && !e.altKey && (e.key === 'Delete' || e.key === 'Backspace')) return true;
   if (command) return !e.altKey && ['z', 'y', 'f', 'j', '0', '1', '=', '+', '-'].includes(key);
   if (e.altKey) return !e.shiftKey && ['KeyD', 'KeyM', 'KeyI'].includes(e.code);
   if (e.shiftKey) return e.code === 'Digit1' || e.code === 'Digit2';
   return ['v', 'h', 'l', 'm'].includes(key);
+}
+
+/** A swallowed key that edits on Canvas (delete, typing, a tool, cut, paste, duplicate, group): Map says why nothing happened. */
+export function isEditKey(e: KeyLike): boolean {
+  if (e.key === 'Delete' || e.key === 'Backspace') return true;
+  if (e.metaKey || e.ctrlKey) return !e.altKey && ['x', 'v', 'd', 'g'].includes(e.key.toLowerCase());
+  return !e.altKey && e.key.length === 1 && e.key !== ' ';
 }
 
 /** Whether `box` (scene space) is on screen at `cam` inside `free`: a box bigger than the free area counts once its top-left is. */

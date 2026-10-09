@@ -15,7 +15,8 @@ import type { V2Tool } from './V2CreationToolbar';
 
 function setup(
   extraNodes: ReturnType<typeof createTestNode>[] = [],
-  extraConnectors: ReturnType<typeof createTestConnector>[] = []
+  extraConnectors: ReturnType<typeof createTestConnector>[] = [],
+  readOnly?: { onNodeDrag: (nodeId: string) => void; onNodeDoubleClick?: (nodeId: string) => void },
 ) {
   const page = createTestDocument({
     nodes: [createTestNode('a'), ...extraNodes],
@@ -54,7 +55,9 @@ function setup(
     cameraRef: { current: { x: 0, y: 0, zoom: 1 } }, pageRef: { current: page },
     selectionRef, selectedConnectorIdsRef, toolRef, toolConfigRef,
     spacePanRef: { current: false },
-    readOnlyRef: { current: false }, gestureApiRef, commit,
+    readOnlyRef: { current: Boolean(readOnly) }, gestureApiRef, commit,
+    ...(readOnly ? { onNodeDrag: readOnly.onNodeDrag } : {}),
+    ...(readOnly?.onNodeDoubleClick ? { onNodeDoubleClick: readOnly.onNodeDoubleClick } : {}),
     applySelection, applyConnectorSelection,
     updateCamera: vi.fn(), openEditor, openConnectorEditor: vi.fn(), onToolChange: vi.fn(), mintId: () => 'new',
   }));
@@ -228,6 +231,29 @@ describe('V2 direct manipulation', () => {
     act(() => result.current.handlePointerUp(event(300, 300)));
     expect(selectionRef.current.nodeIds).toEqual(['a']);
     expect(applyConnectorSelection).toHaveBeenLastCalledWith(['edge', 'free']);
+  });
+
+  it('read-only (Map): a drag from a box moves nothing, draws no marquee and reports the box; a click still selects', () => {
+    const onNodeDrag = vi.fn();
+    const { result, event, host, commit, selectionRef } = setup([], [], { onNodeDrag });
+    act(() => result.current.handlePointerDown(event(100, 100)));
+    act(() => result.current.handlePointerMove(event(160, 140)));
+    act(() => result.current.handlePointerUp(event(160, 140)));
+    expect(onNodeDrag).toHaveBeenCalledWith('a');
+    expect(host.setMarquee).not.toHaveBeenCalledWith(expect.objectContaining({ width: expect.any(Number) }));
+    expect(commit).not.toHaveBeenCalled();
+    act(() => result.current.handlePointerDown(event(100, 100)));
+    act(() => result.current.handlePointerUp(event(100, 100)));
+    expect(onNodeDrag).toHaveBeenCalledOnce();
+    expect(selectionRef.current.nodeIds).toEqual(['a']);
+  });
+
+  it('read-only (Map): a double-click on a box reports it instead of opening the label editor', () => {
+    const onNodeDoubleClick = vi.fn();
+    const { result, event, openEditor } = setup([], [], { onNodeDrag: vi.fn(), onNodeDoubleClick });
+    act(() => result.current.handleDoubleClick(event(100, 100)));
+    expect(onNodeDoubleClick).toHaveBeenCalledWith('a');
+    expect(openEditor).not.toHaveBeenCalled();
   });
 });
 

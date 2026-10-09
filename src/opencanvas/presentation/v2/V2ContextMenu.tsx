@@ -29,7 +29,11 @@ interface V2ContextMenuProps {
   readonly diagramIcons: { readonly on: boolean } | null;
   readonly onToggleDiagramIcons: () => void;
   /** Set when the selection is a model placement; drives the C4 actions. */
-  readonly modelElement?: { readonly id: string; readonly name: string; readonly childView: boolean } | null;
+  readonly modelElement?: { readonly id: string; readonly name: string; readonly childView: boolean; readonly editable: boolean } | null;
+  /** Opens the model panel on the element's card, name ready to type. */
+  readonly onEditInModel?: () => void;
+  /** Map mode: the drawing cannot be edited, so a box or arrow offers only what Map can do. */
+  readonly inMap?: { readonly onShowOnCanvas?: () => void; readonly onCopyToCanvas?: () => void } | null;
   readonly onDrillInto?: () => void;
   readonly onUnplace?: () => void;
   readonly onRemoveElement?: () => void;
@@ -70,6 +74,19 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
             <MenuSeparator />
             <MenuItem onSelect={props.onToggleGrid} checked={props.showGrid} keepOpen>Show grid</MenuItem>
             <MenuItem onSelect={props.onToggleSnap} checked={props.snapToGrid} keepOpen>Snap to grid</MenuItem>
+          </>
+        ) : props.inMap ? (
+          <>
+            {props.modelElement ? <MenuItem onSelect={() => props.onEditInModel?.()}>Edit in model</MenuItem> : null}
+            {props.inMap.onShowOnCanvas ? <MenuItem onSelect={props.inMap.onShowOnCanvas}>Show on canvas</MenuItem> : null}
+            {props.inMap.onCopyToCanvas ? <MenuItem onSelect={props.inMap.onCopyToCanvas} shortcut="⇧M">Edit as drawing</MenuItem> : null}
+            <MenuItem onSelect={props.onZoomToSelection} shortcut="⇧2">Zoom to selection</MenuItem>
+            <MenuSeparator />
+            <MenuItem onSelect={props.onExport}>Export…</MenuItem>
+            {props.modelElement ? <>
+              <MenuSeparator />
+              <MenuItem onSelect={() => props.onRemoveElement?.()} shortcut="⌘⇧⌫" disabled={!props.modelElement.editable} danger>Remove from model</MenuItem>
+            </> : null}
           </>
         ) : target.kind === 'connector' ? (
           <>
@@ -116,11 +133,12 @@ export function V2ContextMenu(props: V2ContextMenuProps): React.JSX.Element | nu
             {props.modelElement ? (
               <>
                 <MenuSeparator />
+                <MenuItem onSelect={() => props.onEditInModel?.()}>Edit in model</MenuItem>
                 {props.modelElement.childView ? (
                   <MenuItem onSelect={() => props.onDrillInto?.()}>Open {props.modelElement.name} view</MenuItem>
                 ) : null}
                 <MenuItem onSelect={() => props.onUnplace?.()} disabled={!edit || many}>Unplace from this view</MenuItem>
-                <MenuItem onSelect={() => props.onRemoveElement?.()} disabled={!edit} danger>Remove from model</MenuItem>
+                <MenuItem onSelect={() => props.onRemoveElement?.()} shortcut="⌘⇧⌫" disabled={!props.modelElement.editable} danger>Remove from model</MenuItem>
               </>
             ) : null}
             <MenuSubmenu label="Style">

@@ -24,13 +24,15 @@ export function Panel({
 }: PanelProps) {
   const ref = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const invoker = useRef<HTMLElement | null>(null);
+  // Read at first render, before any child effect moves focus: that is who opened the panel.
+  const invoker = useRef(document.activeElement as HTMLElement | null);
   useEffect(() => {
     const panel = ref.current;
-    invoker.current = document.activeElement as HTMLElement | null;
-    closeRef.current?.focus();
+    const opener = invoker.current;
+    // A child that took focus as it mounted (a field ready to type) keeps it; otherwise focus lands on Close.
+    if (!panel?.contains(document.activeElement)) closeRef.current?.focus();
     return () => {
-      if (panel?.contains(document.activeElement)) invoker.current?.focus?.();
+      if (panel?.contains(document.activeElement)) opener?.focus?.();
     };
   }, []);
   return (

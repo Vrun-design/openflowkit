@@ -74,6 +74,9 @@ interface V2CanvasHostProps {
   readonly onOpenChartData?: (nodeId: string) => boolean;
   /** A plain click on a node, after it was selected (Map mode: open or close the box). */
   readonly onNodeClick?: (nodeId: string) => void;
+  /** Read-only: a double-click or a drag on a node (Map: edit it in the model panel; explain why it does not move). */
+  readonly onNodeDoubleClick?: (nodeId: string) => void;
+  readonly onNodeDrag?: (nodeId: string) => void;
   /** The one selected model element has a deeper view: its name and the way in. */
   readonly zoomInto?: { readonly name: string; readonly open: () => void } | null;
   readonly spacePanRef: RefObject<boolean>;
@@ -162,6 +165,8 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
     toolConfigRef: props.toolConfigRef,
     ...(props.onOpenChartData ? { onOpenChartData: props.onOpenChartData } : {}),
     ...(props.onNodeClick ? { onNodeClick: props.onNodeClick } : {}),
+    ...(props.onNodeDoubleClick ? { onNodeDoubleClick: props.onNodeDoubleClick } : {}),
+    ...(props.onNodeDrag ? { onNodeDrag: props.onNodeDrag } : {}),
     spacePanRef: props.spacePanRef,
     readOnlyRef: props.readOnlyRef,
     gestureApiRef: props.gestureApiRef,

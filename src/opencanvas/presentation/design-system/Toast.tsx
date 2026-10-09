@@ -1,8 +1,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { IconX } from '@tabler/icons-react';
+import { IconAlertCircle, IconAlertTriangle, IconCircleCheck, IconX } from '@tabler/icons-react';
 import { Button, IconButton } from './Button';
 import { Icon } from './Icon';
-import { Status, type StatusTone } from './Status';
+import type { StatusTone } from './Status';
 import { foundation } from './tokens';
 export interface ToastItem {
   id: string;
@@ -14,6 +14,8 @@ export interface ToastItem {
   /** Errors and conflicts persist until dismissed; informational toasts auto-dismiss. */
   persistent?: boolean;
 }
+const TONE_ICON: Partial<Record<StatusTone, typeof IconX>> = { success: IconCircleCheck, warning: IconAlertTriangle, danger: IconAlertCircle };
+
 /** One live region for transient outcomes (saved, failed, conflict). Never for streaming progress. */
 export function ToastRegion({
   items,
@@ -48,12 +50,14 @@ export function ToastRegion({
             data-tone={t.tone ?? 'neutral'}
             style={{ '--ofk-origin': 'bottom center' } as React.CSSProperties}
           >
-            <div>
-              <Status tone={t.tone}>{t.title}</Status>
+            {/* Only an outcome gets a mark; a neutral or informational note is just words. */}
+            {t.tone && TONE_ICON[t.tone] ? <span className="ofk-toast-mark"><Icon icon={TONE_ICON[t.tone]!} /></span> : null}
+            <div className="ofk-toast-text">
+              <strong>{t.title}</strong>
               {t.description && <p>{t.description}</p>}
             </div>
             {t.action && (
-              <Button variant="quiet" onClick={t.action.onClick}>
+              <Button variant="secondary" onClick={t.action.onClick}>
                 {t.action.label}
               </Button>
             )}

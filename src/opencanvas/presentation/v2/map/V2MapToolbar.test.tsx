@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { V2MapToolbar, type V2MapToolbarProps } from './V2MapToolbar';
 
 const props = (over: Partial<V2MapToolbarProps> = {}): V2MapToolbarProps => ({
-  depth: 'detailed', onDepth: vi.fn(), onExpandOne: vi.fn(), onCollapseAll: vi.fn(), canExpand: true, onToggleLayer: vi.fn(),
+  depth: 'detailed', onDepth: vi.fn(), onToggleLayer: vi.fn(),
   layers: [{ kind: 'import', label: 'Imports', count: 12, on: true }, { kind: 'call', label: 'Calls', count: 3, on: false }], ...over,
 });
 
@@ -14,20 +14,18 @@ describe('V2MapToolbar', () => {
   it('marks the current depth as pressed and reports a change', () => {
     const p = props();
     render(<V2MapToolbar {...p} />);
-    expect(screen.getByRole('button', { name: 'Detailed' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-pressed', 'false');
-    fireEvent.click(screen.getByRole('button', { name: 'Everything' }));
+    expect(screen.getByRole('button', { name: 'One level in' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Top level' })).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'All levels' }));
     expect(p.onDepth).toHaveBeenCalledWith('everything');
   });
-  it('expands, collapses and disables expand when nothing can open', () => {
-    const p = props();
-    const { rerender } = render(<V2MapToolbar {...p} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Expand one level' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Collapse all' }));
-    expect(p.onExpandOne).toHaveBeenCalledOnce();
-    expect(p.onCollapseAll).toHaveBeenCalledOnce();
-    rerender(<V2MapToolbar {...props({ canExpand: false })} />);
-    expect(screen.getByRole('button', { name: 'Expand one level' })).toBeDisabled();
+  it('offers Edit as drawing as words, disabled while nothing is drawn', () => {
+    const onPin = vi.fn();
+    const { rerender } = render(<V2MapToolbar {...props({ onPin, canPin: true })} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit as drawing' }));
+    expect(onPin).toHaveBeenCalledOnce();
+    rerender(<V2MapToolbar {...props({ onPin, canPin: false })} />);
+    expect(screen.getByRole('button', { name: 'Edit as drawing' })).toBeDisabled();
   });
   it('opens Connections, toggles a layer with its count, and closes on Escape', () => {
     const p = props();
@@ -52,6 +50,6 @@ describe('V2MapToolbar', () => {
     const { layers: _layers, onToggleLayer: _toggle, ...rest } = props();
     render(<V2MapToolbar {...rest} />);
     expect(screen.queryByRole('button', { name: 'Connections' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Top level' })).toBeInTheDocument();
   });
 });

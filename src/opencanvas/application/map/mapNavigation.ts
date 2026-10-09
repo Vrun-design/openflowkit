@@ -1,32 +1,29 @@
 import type { AggEdge, Depth, LinkKind, MapModel } from '../../../dsl/map/types';
-import { presets, visible } from '../../../dsl/map/view';
+import { presets } from '../../../dsl/map/view';
 import type { Rect } from './geometry';
-import { oneLevel, pickNeighbour, type Dir } from './navigate';
+import { pickNeighbour, type Dir } from './navigate';
 
 /** Boxes drawn at once in Map mode. */
 export const MAP_BOX_BUDGET = 420;
 
-/** One more level opened; the same set back when nothing opens or the result would pass the budget. */
-export function expandOneLevel(model: MapModel, open: ReadonlySet<string>): ReadonlySet<string> {
-  const next = oneLevel(model, open);
-  return next.size === open.size || visible(model, next).length > MAP_BOX_BUDGET ? open : next;
-}
-
-/** Whether one more level has a box to open (still true past the budget). */
-export const canExpandOne = (model: MapModel, open: ReadonlySet<string>): boolean => oneLevel(model, open).size > open.size;
-
 /** The same boxes open (a no-op change must not relayout the map). */
 export const sameOpen = (a: ReadonlySet<string>, b: ReadonlySet<string>): boolean => a.size === b.size && [...a].every((id) => b.has(id));
 
-/** Nothing open: the root's children shut (the engine's own minimal state). */
-export const collapseAll = (): Set<string> => new Set();
+/**
+ * The editor's depth dial. Top level is every box shut, even where the engine's overview opens a small map's top
+ * level (that would make it the same as One level in); the other two are the engine's.
+ */
+function dial(model: MapModel): Record<Depth, ReadonlySet<string>> {
+  const all = presets(model);
+  return { overview: new Set(), detailed: all.detailed, everything: all.everything };
+}
 
 /** The open set of a depth preset, as a copy. */
-export const presetOpen = (model: MapModel, depth: Depth): Set<string> => new Set(presets(model)[depth]);
+export const presetOpen = (model: MapModel, depth: Depth): Set<string> => new Set(dial(model)[depth]);
 
-/** The preset whose open set equals `open`, or null for a custom state. Overview wins a tie with Detailed. */
+/** The preset whose open set equals `open`, or null for a custom state. Top level wins a tie (a map too big to open any level). */
 export function depthOf(model: MapModel, open: ReadonlySet<string>): Depth | null {
-  const all = presets(model);
+  const all = dial(model);
   return (['overview', 'detailed', 'everything'] as const).find((d) => sameOpen(all[d], open)) ?? null;
 }
 

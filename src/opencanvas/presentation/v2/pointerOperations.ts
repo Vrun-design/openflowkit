@@ -27,7 +27,8 @@ import { worldToScreen } from '../../domain/camera/camera';
 
 export type PixiPointerOperation =
   | { kind: 'pan'; pointerId: number; last: Point2d }
-  | { kind: 'marquee'; pointerId: number; start: Point2d; current: Point2d; additive: boolean }
+  // `fromNode`: read-only (Map) and pressed on a box; a drag from it is an attempt to move it, not a marquee.
+  | { kind: 'marquee'; pointerId: number; start: Point2d; current: Point2d; additive: boolean; fromNode?: string }
   | V2ConnectorOperation
   | TransformPointerOperation;
 

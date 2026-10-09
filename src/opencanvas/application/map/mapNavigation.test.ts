@@ -1,63 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { buildMap } from '../../../dsl/map/build';
 import { FIXTURE } from '../../../dsl/map/fixture';
-import { presets, visible } from '../../../dsl/map/view';
+import { presets } from '../../../dsl/map/view';
 import type { AggEdge } from '../../../dsl/map/types';
-import { oneLevel } from './navigate';
-import { canExpandOne, collapseAll, depthOf, edgeLayerCounts, expandOneLevel, MAP_BOX_BUDGET, presetOpen, sameOpen, siblingMove, topLeftFirst } from './mapNavigation';
+import { depthOf, edgeLayerCounts, presetOpen, sameOpen, siblingMove, topLeftFirst } from './mapNavigation';
 
 const model = buildMap(FIXTURE);
-const files = (n: number) => Array.from({ length: n }, (_, i) => ({ path: `a/f${i}.ts`, loc: 1 }));
-const wide = (parts: number, each: number) => buildMap({ files: Array.from({ length: parts }, (_, p) => Array.from({ length: each }, (_, i) => ({ path: `p${p}/d${i % 12}/f${i}.ts`, loc: 1 }))).flat(), imports: [] });
 
-describe('expandOneLevel', () => {
-  it('opens one level more, and keeps going', () => {
-    const one = expandOneLevel(model, new Set());
-    expect(one.has('server')).toBe(true);
-    expect(expandOneLevel(model, one).size).toBeGreaterThan(one.size);
-  });
-  it('returns the same set when nothing is left to open', () => {
-    let open: ReadonlySet<string> = new Set();
-    for (let i = 0; i < 10; i++) open = expandOneLevel(model, open);
-    expect(expandOneLevel(model, open)).toBe(open);
-  });
-  it('never opens a more box', () => {
-    const m = buildMap({ files: files(40), imports: [] });
-    const more = Object.values(m.nodes).find((n) => n.kind === 'more')!;
-    expect(more).toBeTruthy();
-    const open = new Set(['a']);
-    expect(expandOneLevel(m, open)).toBe(open);
-    expect(expandOneLevel(m, new Set()).has(more.id)).toBe(false);
-  });
-  it('refuses a step past the box budget', () => {
-    const m = wide(40, 36);
-    let open: ReadonlySet<string> = new Set();
-    for (let i = 0; i < 6; i++) {
-      const next = expandOneLevel(m, open);
-      expect(visible(m, next).length).toBeLessThanOrEqual(MAP_BOX_BUDGET);
-      if (next === open) break;
-      open = next;
-    }
-    const refused = expandOneLevel(m, open);
-    expect(refused).toBe(open);
-    expect(visible(m, oneLevel(m, open)).length).toBeGreaterThan(MAP_BOX_BUDGET);
-    expect(visible(m, refused).length).toBeLessThanOrEqual(MAP_BOX_BUDGET);
-  });
-  it('is deterministic', () => {
-    expect([...expandOneLevel(model, new Set())]).toEqual([...expandOneLevel(model, new Set())]);
-  });
-});
-
-describe('collapse and presets', () => {
-  it('collapseAll is empty and fresh each time', () => {
-    expect(collapseAll().size).toBe(0);
-    expect(collapseAll()).not.toBe(collapseAll());
-  });
-  it('presetOpen copies the engine preset', () => {
-    for (const d of ['overview', 'detailed', 'everything'] as const) {
+describe('presets', () => {
+  it('presetOpen copies the engine preset; Top level is every box shut', () => {
+    for (const d of ['detailed', 'everything'] as const) {
       expect([...presetOpen(model, d)]).toEqual([...presets(model)[d]]);
       expect(presetOpen(model, d)).not.toBe(presets(model)[d]);
     }
+    expect(presetOpen(model, 'overview').size).toBe(0);
+    // A small map's engine overview opens its top level; the dial keeps Top level and One level in apart.
+    const small = buildMap({ files: [{ path: 'a/x.ts', loc: 1 }, { path: 'b/y.ts', loc: 1 }], imports: [] });
+    expect(presets(small).overview.size).toBeGreaterThan(0);
+    expect(depthOf(small, new Set())).toBe('overview');
+    expect(depthOf(small, presetOpen(small, 'detailed'))).toBe('detailed');
   });
   it('depthOf names a preset state and null for a custom one', () => {
     expect(depthOf(model, presetOpen(model, 'everything'))).not.toBeNull();
@@ -106,13 +67,7 @@ describe('edgeLayerCounts', () => {
   });
 });
 
-describe('canExpandOne and sameOpen', () => {
-  it('canExpandOne is true until everything on screen is open or a leaf', () => {
-    expect(canExpandOne(model, new Set())).toBe(true);
-    let open: ReadonlySet<string> = new Set();
-    for (let i = 0; i < 10; i++) open = oneLevel(model, open);
-    expect(canExpandOne(model, open)).toBe(false);
-  });
+describe('sameOpen', () => {
   it('sameOpen compares members, not identity', () => {
     expect(sameOpen(new Set(['a', 'b']), new Set(['b', 'a']))).toBe(true);
     expect(sameOpen(new Set(['a']), new Set(['a', 'b']))).toBe(false);

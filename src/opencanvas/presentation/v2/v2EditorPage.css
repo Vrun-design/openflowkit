@@ -1147,8 +1147,10 @@
 .ofk-system .ofk-v2-mode .ofk-button:active:not([aria-disabled='true']) { transform: none; box-shadow: none; }
 .ofk-system .ofk-v2-mode .ofk-button[aria-pressed='true']:active:not([aria-disabled='true']) { box-shadow: var(--ofk-material-shadowRaised); }
 
-/* Map mode toolbar (depth, expand/collapse, connections): wraps on a phone instead of covering the canvas centre. */
+/* Map mode toolbar (depth, connections, Edit as drawing): wraps on a phone instead of covering the canvas centre. */
 .ofk-v2-map-toolbar { flex-wrap: wrap; max-width: calc(100vw - 32px); }
+/* Map's bar reaches the centre of the bottom edge: a toast rises above it instead of covering it. */
+.ofk-v2:has(.ofk-v2-map-toolbar) .ofk-toasts { bottom: calc(var(--ofk-layout-edgeInset) + 64px); }
 /* Beside the camera controls in the bottom region; on a phone it stacks above them instead. */
 .ofk-v2 .ofk-floating-region[data-slot='bottom-start'] .ofk-v2-map-toolbar { flex-wrap: nowrap; }
 @media (max-width: 720px) {

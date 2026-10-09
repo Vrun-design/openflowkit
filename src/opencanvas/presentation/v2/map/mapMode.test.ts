@@ -6,7 +6,7 @@ import type { ScenePage } from '../../../domain/document/types';
 import type { MapModel, MapNode } from '../../../../dsl/map/types';
 import { READABLE } from '../../../application/map/geometry';
 import { MAP_BOX_BUDGET as BOX_BUDGET } from '../../../application/map/mapNavigation';
-import { clearOfPanel, nudgeInto, fitsBudget, freeArea, inView, nearestDrawn, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, startOpen, toggleBox } from './mapMode';
+import { clearOfPanel, nudgeInto, fitsBudget, freeArea, inView, nearestDrawn, isDoubleClick, isEditKey, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, startOpen, toggleBox } from './mapMode';
 
 const TEXT = `architecture
 model {
@@ -112,9 +112,20 @@ describe('map keys', () => {
     }
     for (const k of [{ key: 'Delete' }, { key: 'Backspace' }, { key: 'r' }, { key: 'ArrowLeft' }, { key: 'q' },
       { key: 'a', metaKey: true }, { key: 'v', metaKey: true }, { key: 'x', metaKey: true }, { key: 'd', metaKey: true },
-      { key: 'Dead', code: 'KeyA', altKey: true }, { key: 'Delete', metaKey: true, shiftKey: true }]) {
+      { key: 'Dead', code: 'KeyA', altKey: true }]) {
       expect(key(k), JSON.stringify(k)).toBe(false);
     }
+    // Remove from model is a model edit, which Map allows (the panel offers it too).
+    expect(key({ key: 'Delete', metaKey: true, shiftKey: true })).toBe(true);
+    expect(key({ key: 'Backspace', ctrlKey: true, shiftKey: true })).toBe(true);
+  });
+  it('tells an edit attempt (delete, typing, a tool, cut, paste) from a key Map just has no use for', () => {
+    const edit = (init: Partial<Parameters<typeof isEditKey>[0]>) =>
+      isEditKey({ key: '', code: '', metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, ...init });
+    for (const k of [{ key: 'Delete' }, { key: 'Backspace' }, { key: 'r' }, { key: 'A', shiftKey: true }, { key: 'v', metaKey: true },
+      { key: 'x', ctrlKey: true }, { key: 'd', metaKey: true }, { key: 'g', metaKey: true }]) expect(edit(k), JSON.stringify(k)).toBe(true);
+    for (const k of [{ key: 'ArrowLeft' }, { key: ' ' }, { key: 'Tab' }, { key: 'a', metaKey: true }, { key: 'Dead', code: 'KeyA', altKey: true },
+      { key: 'Shift', shiftKey: true }, { key: 'F5' }]) expect(edit(k), JSON.stringify(k)).toBe(false);
   });
 });
 

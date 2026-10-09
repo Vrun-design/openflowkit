@@ -104,7 +104,8 @@ test('every toolbar button presses without an error and Escape backs out of it @
 
 test('every Map toolbar button presses without an error and Escape backs out of it @gate', async ({ page }) => {
   await enterMap(page);
-  await pressEvery(page, 5, 'Map depth', true);
+  // Three depths; Edit as drawing stays disabled until the first layout lands, so it may not count.
+  await pressEvery(page, 3, 'Map depth', true);
 });
 
 async function tooltipEvery(page: Page, floor: number, only?: string): Promise<void> {
@@ -128,5 +129,6 @@ test('every icon-only toolbar button names itself in a tooltip @gate', async ({ 
 
 test('every icon-only Map toolbar button names itself in a tooltip @gate', async ({ page }) => {
   await enterMap(page);
-  await tooltipEvery(page, 2, 'Map depth');
+  // All words since 2026-10-09; the sweep stays for the next icon.
+  await tooltipEvery(page, 0, 'Map depth');
 });

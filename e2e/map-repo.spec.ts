@@ -153,13 +153,16 @@ test('a selected box shows where it lives, what it talks to and what is inside @
 
 test('depth presets change what is drawn @gate', async ({ page }) => {
   await openMap(page);
-  const overview = (await mapState(page)).nodes.length;
-  await expect(pill(page, 'Overview')).toHaveAttribute('aria-pressed', 'true');
-  await pill(page, 'Everything').click();
-  await expect.poll(async () => (await mapState(page)).nodes.length).toBeGreaterThan(overview);
-  await expect(pill(page, 'Everything')).toHaveAttribute('aria-pressed', 'true');
+  // Top level is every box shut, whatever this small repo opened with.
+  await pill(page, 'Top level').click();
+  await expect(pill(page, 'Top level')).toHaveAttribute('aria-pressed', 'true');
   await settled(page);
-  await pill(page, 'Overview').click();
+  const overview = (await mapState(page)).nodes.length;
+  await pill(page, 'All levels').click();
+  await expect.poll(async () => (await mapState(page)).nodes.length).toBeGreaterThan(overview);
+  await expect(pill(page, 'All levels')).toHaveAttribute('aria-pressed', 'true');
+  await settled(page);
+  await pill(page, 'Top level').click();
   await expect.poll(async () => (await mapState(page)).nodes.length).toBe(overview);
   await settled(page);
 });

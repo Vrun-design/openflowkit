@@ -6,8 +6,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - 14.1 C4 is in (landscape = top-level elements; pages matched by element overlap; model edits stay in their own model).
 - Gate: `npm run verify` (~3 min; GPU busy → headless SwiftShader, needs stub on 4399). CI: `test:ci` then non-`@local` e2e.
 - **Phases 12 + 13 DONE 2026-10-03.** Owner's: merge `main` → `v2`, PR `v2` → `main`, Cloudflare Landing, tag `v1-final`; 13.4 needs a stronger model.
-- MCP 0.2.0 builds and answers over stdio (29 tools, Mermaid in) but is **unpublished**: npm still serves 0.1.2,
-  which has no live bridge. Publish (`prepublishOnly` rebuilds) before launch; see memory `project_mcp_registry_publish`.
+- MCP 0.2.0 (29 tools) is **unpublished**: npm serves 0.1.2, no live bridge. Publish before launch (memory `project_mcp_registry_publish`).
 ## 10-05 launch pass (entry JS 566 → 231 KB); 10-07 C4 pages = views, label pass, Mermaid gaps (git log 5930197)
 ## Roadmap 2026-10 run (opus-5.5, from 2026-10-07): plan `docs/plan/roadmap-2026-10.md`, log + RESUME `docs/plan/roadmap-progress.md`
 - Done, pushed: 1.1 headless ELK, 1.2–1.6 discovery + names, 2.1 CLI ops, 2.2 repo → diagram, 2.3 share links, 2.4 `--svg`,
@@ -23,7 +22,8 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   switch + Map path crumb, selection carries across modes, Model panel = outline (Tree) + element card, save on blur, no
   Views tab; views/first open land readable; one dark card palette (+ dark SVG export); panels never hide content; blue
   focus ring, neutral read-only lock (dff3aeac). cf87050b: Canvas|Map on every doc (Map start screen shares the canvas
-  welcome layout), Share/Export bar top right. Pre-existing @gate fail: view-controls:37 no-cors probe. Not pushed.
+  welcome layout), Share/Export bar top right. Map bar = segmented Top level (all shut) | One level in | All levels +
+  Edit as drawing; Map edits go to the model card (double-click, menu, ⌘⇧⌫) or explain once per visit. Pre-existing @gate fail: view-controls:37. Not pushed.
 - Owner: publish MCP 0.2.0 (Action default CLI needs it); deploy `start:http` over HTTPS, then verify hosts (README table).
   Owner action list: `docs/plan/cofounder-action-list.md`. `e2e:headed` 10-09: 261/266; 5 local GPU budgets fail at 23ff9aa4 too (Mac). Open: H5 eval.
 ## Found, not fixed (owner calls)

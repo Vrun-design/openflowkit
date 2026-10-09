@@ -17,7 +17,7 @@ import { isEditableTarget } from '../pointerOperations';
 import { measure } from './layout';
 import { mapPathOf } from './mapPath';
 import {
-  BUDGET_NOTE, clearance, fitsBudget, isDoubleClick, nudgeInto, mapKeyAllowed, parentToClose, prune, sceneFor, startOpen, toggleBox, type TaggedScene,
+  BUDGET_NOTE, clearance, fitsBudget, isDoubleClick, isEditKey, nudgeInto, mapKeyAllowed, parentToClose, prune, sceneFor, startOpen, toggleBox, type TaggedScene,
 } from './mapMode';
 import { useMapFocus } from './useMapFocus';
 import { mapFindMatches } from '../../../application/map/mapFind';
@@ -68,6 +68,8 @@ interface Options {
   readonly selectedIds?: () => readonly string[];
   /** The editor's camera glide (interruptible; instant under reduced motion). */
   readonly glide?: (camera: CanvasCamera) => void;
+  /** A key that would edit on Canvas was swallowed: the editor explains instead of doing nothing. */
+  readonly onBlockedEdit?: () => void;
 }
 
 const NONE: ReadonlySet<string> = new Set();
@@ -90,7 +92,7 @@ function useStable<T>(value: T): T {
  * written; the scene is a ScenePage handed to the canvas in place of the page.
  */
 export function useV2MapMode(options: Options) {
-  const { page, documentId, repo = null, startable = false, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify, onPin, panelsKey = '', selectedIds = () => [], glide = updateCamera } = options;
+  const { page, documentId, repo = null, startable = false, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify, onPin, panelsKey = '', selectedIds = () => [], glide = updateCamera, onBlockedEdit } = options;
   // Cheap: only whether the page carries a model. The model itself is read only while the map is on.
   const isRepo = repo !== null;
   const hasModel = useMemo(() => isRepo || (page ? archFrameOf(page) !== null : false), [isRepo, page]);
@@ -305,6 +307,7 @@ export function useV2MapMode(options: Options) {
   }, [model, notify, setOpenState]);
   const clickNode = useCallback((id: string) => {
     const now = performance.now();
+    // The second click of a double-click (which edits the box) must not shut the box the first click opened.
     if (isDoubleClick(lastFlip.current, now)) return;
     if (flip(id)) lastFlip.current = now;
   }, [flip]);
@@ -354,8 +357,10 @@ export function useV2MapMode(options: Options) {
       event.preventDefault();
       return true;
     }
-    return !mapKeyAllowed(event);
-  }, [active, start, choose, model, open, primaryId, flip, select, cancelTransient, arrow, shown, onPin]);
+    if (mapKeyAllowed(event)) return false;
+    if (isEditKey(event)) onBlockedEdit?.();
+    return true;
+  }, [active, start, choose, model, open, primaryId, flip, select, cancelTransient, arrow, shown, onPin, onBlockedEdit]);
 
   const path = useMemo(() => (active && model ? mapPathOf(model, selectedNodeId) : []), [active, model, selectedNodeId]);
 
@@ -385,7 +390,7 @@ export function useV2MapMode(options: Options) {
   return { mode: active ? 'map' as const : 'canvas' as const, available, active, start, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, choose, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, path, findSource, enterMapAt,
     /** The aggregated edge a repo-map connector stands for (its evidence), or undefined. */
     edgeOf, edgesAt,
-    toolbar: { depth: controls.depth, canExpand: controls.canExpand, onDepth: controls.setDepth, onExpandOne: controls.expandOne, onCollapseAll: controls.collapse,
+    toolbar: { depth: controls.depth, onDepth: controls.setDepth,
       ...(layers.layers ? { layers: layers.layers, onToggleLayer: layers.toggle } : {}) },
     /** A crowded repo level: how many arrows are drawn of all, and the switch for the rest (null when none are left out). */
     links: isRepo && counts && counts.minor > 0 ? { ...counts, all: layers.all, onToggle: layers.toggleAll } : null };

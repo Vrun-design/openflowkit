@@ -99,8 +99,8 @@ export interface ElementCardProps {
   readonly inCurrentView: boolean;
   readonly childView: ArchView | null;
   readonly adrs: readonly { readonly path: string; readonly text: string }[];
-  /** A just-added element: its Name takes focus, selected, ready to be typed over. */
-  readonly focusName: boolean;
+  /** A just-added element or "Edit in model": its Name takes focus, selected, ready to be typed over. A new request object focuses it again. */
+  readonly focusName: boolean | { readonly id: string };
   /** Opened from the outline: focus moves to the back link so the keyboard stays in the panel. */
   readonly focusBack: boolean;
   /** Opens the element in the other surface (Map from Canvas, Canvas from Map), when that is possible. */

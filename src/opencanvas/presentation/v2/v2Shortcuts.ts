@@ -56,7 +56,7 @@ export function shortcutGroups(command = COMMAND()): readonly ShortcutGroup[] {
         { label: 'Layers', keys: 'L', tokens: ['l'] },
         { label: 'Canvas / Map (pages with a model)', keys: 'M', tokens: ['m'] },
         { label: 'Move between boxes (Map)', keys: 'Arrows', tokens: [] },
-        { label: 'Pin map as page (Map)', keys: 'Shift + M', tokens: ['KeyM'] },
+        { label: 'Edit map as drawing (Map)', keys: 'Shift + M', tokens: ['KeyM'] },
         // The dispatcher reads metaKey/ctrlKey for this, never altKey: Alt is
         // taken by resize-from-centre.
         { label: 'Snap bypass while dragging', keys: command, tokens: [] },

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, type RefObject } from 'react';
 import type { LaidRect } from '../../../../dsl/map/elk';
 import type { Depth, MapModel } from '../../../../dsl/map/types';
-import { canExpandOne, collapseAll, depthOf, expandOneLevel, presetOpen, sameOpen, siblingMove, topLeftFirst } from '../../../application/map/mapNavigation';
+import { depthOf, presetOpen, sameOpen, siblingMove, topLeftFirst } from '../../../application/map/mapNavigation';
 import type { Dir } from '../../../application/map/navigate';
 import type { CanvasCamera } from '../../../domain/camera/types';
 import type { ScenePage } from '../../../domain/document/types';
@@ -30,10 +30,9 @@ interface Options {
 
 const DIRS: Readonly<Partial<Record<string, Dir>>> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
 
-/** What the Map toolbar does (depth, one level, collapse) and where an arrow key goes. The open set stays view state. */
+/** What the Map toolbar does (depth) and where an arrow key goes. The open set stays view state. */
 export function useMapControls({ model, open, setOpen, focusRef, shown, hostRef, cameraRef, updateCamera, primaryId, select, clearSelection, pendingRef, notify }: Options) {
   const depth = useMemo(() => (model ? depthOf(model, open) : null), [model, open]);
-  const canExpand = model ? canExpandOne(model, open) : false;
   const change = useCallback((next: ReadonlySet<string>, fit: boolean) => {
     if (sameOpen(next, open)) return;
     focusRef.current = fit ? { id: null } : null;
@@ -47,13 +46,6 @@ export function useMapControls({ model, open, setOpen, focusRef, shown, hostRef,
     setOpen(next);
   }, [model, open, setOpen, focusRef, primaryId, select, clearSelection]);
   const setDepth = useCallback((value: Depth) => { if (model) change(presetOpen(model, value), true); }, [model, change]);
-  // A level that would pass the budget leaves the set as it was: say why instead of doing nothing.
-  const expandOne = useCallback(() => {
-    if (!model) return;
-    const next = expandOneLevel(model, open);
-    if (sameOpen(next, open)) notify(BUDGET_NOTE); else change(next, false);
-  }, [model, open, change, notify]);
-  const collapse = useCallback(() => change(collapseAll(), false), [change]);
 
   /** The camera follows a drawn box only when it is off screen. */
   const follow = useCallback((id: string) => {
@@ -98,5 +90,5 @@ export function useMapControls({ model, open, setOpen, focusRef, shown, hostRef,
     return true;
   }, [shown, model, open, setOpen, focusRef, pendingRef, select, follow, notify]);
 
-  return { depth, canExpand, setDepth, expandOne, collapse, arrow, reveal };
+  return { depth, setDepth, arrow, reveal };
 }

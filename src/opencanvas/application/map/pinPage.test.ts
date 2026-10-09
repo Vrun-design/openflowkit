@@ -68,7 +68,7 @@ describe('buildPinPageCommand', () => {
   it('inserts a valid page in one undo step that restores the document exactly', async () => {
     const { model, document } = await world(NESTED);
     const command = pin(document, await mapPageOf(model, new Set(['shop'])));
-    expect(command).toMatchObject({ kind: 'insert-page', label: 'Pin map as page', index: 1 });
+    expect(command).toMatchObject({ kind: 'insert-page', label: 'Edit map as drawing', index: 1 });
     const applied = applyDocumentCommand(document, command);
     expect(applied.document.pages.map((p) => p.id)).toEqual(['p1', 'pinned']);
     expect(validateSceneDocumentV1(JSON.parse(JSON.stringify(applied.document)))).toEqual({ success: true, document: applied.document });

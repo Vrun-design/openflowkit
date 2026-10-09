@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './test';
 import { doc, state } from './helpers';
 
-// Pin as page: the open Map becomes an ordinary Canvas page (one insert-page, one undo step), and Canvas shows it.
+// Edit as drawing (pin): the open Map becomes an ordinary Canvas page (one insert-page, one undo step), and Canvas shows it.
 interface MapState { mode: 'canvas' | 'map'; open: string[]; nodes: string[]; labels: Record<string, string> }
 const mapState = (page: Page): Promise<MapState> =>
   page.evaluate(() => (window as unknown as { __V2__: { getMapState(): MapState } }).__V2__.getMapState())
@@ -9,7 +9,7 @@ const mapState = (page: Page): Promise<MapState> =>
 const settled = (page: Page) => expect.poll(() => page.evaluate(() =>
   (window as unknown as { __V2__: { getMapMotion(): { running: boolean } } }).__V2__.getMapMotion().running), { timeout: 20_000 }).toBe(false);
 const pagesOf = async (page: Page) => (await doc(page).catch(() => null))?.pages ?? [];
-const pin = (page: Page) => page.getByRole('toolbar', { name: 'Map depth', exact: true }).getByRole('button', { name: 'Pin as page', exact: true });
+const pin = (page: Page) => page.getByRole('toolbar', { name: 'Map depth', exact: true }).getByRole('button', { name: 'Edit as drawing', exact: true });
 
 async function openC4Map(page: Page): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });

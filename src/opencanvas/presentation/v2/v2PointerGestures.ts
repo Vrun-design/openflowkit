@@ -136,6 +136,10 @@ export interface V2PointerOptions {
   readonly onOpenChartData?: (nodeId: string) => boolean;
   /** A plain click that landed on a node (not a drag, marquee or additive click); Map mode opens and closes boxes with it. */
   readonly onNodeClick?: (nodeId: string) => void;
+  /** Read-only: a double-click on a node (Map opens it where it can be edited). */
+  readonly onNodeDoubleClick?: (nodeId: string) => void;
+  /** Read-only: a drag that started on a node. Nothing moves, so the host says why; no marquee is drawn. */
+  readonly onNodeDrag?: (nodeId: string) => void;
 }
 
 export interface StylePresets {
@@ -404,7 +408,9 @@ export function finishGesture(operation: V2Operation, opts: V2PointerOptions, ho
     const bounds: Bounds2d = boundsBetween(operation.start, point);
     const moved = Math.hypot(point.x - operation.start.x, point.y - operation.start.y);
     host.setMarquee(null);
-    if (moved >= CLICK_THRESHOLD_PX) {
+    if (operation.fromNode && moved >= CLICK_THRESHOLD_PX) {
+      opts.onNodeDrag?.(operation.fromNode);
+    } else if (moved >= CLICK_THRESHOLD_PX) {
       const ids = host.pickNodesInScreenBounds(bounds);
       const connectorIds = host.pickConnectorsInScreenBounds(bounds);
       opts.applySelection(

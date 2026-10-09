@@ -41,7 +41,7 @@ export function buildPinPageCommand(
     layers: [createDefaultSceneLayer()], nodes, connectors, metadata: {}, extensions: {},
   };
   return {
-    kind: 'insert-page', id: `pin-map:${opts.pageId}`, label: 'Pin map as page',
+    kind: 'insert-page', id: `pin-map:${opts.pageId}`, label: 'Edit map as drawing',
     index: opts.index ?? document.pages.length, page: structuredClone(page),
   };
 }

@@ -927,8 +927,8 @@
   pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: var(--ofk-space-sm);
-  padding: var(--ofk-space-sm) var(--ofk-space-sm) var(--ofk-space-sm) var(--ofk-space-md);
+  gap: 10px;
+  padding: 10px 8px 10px 14px;
   border-radius: var(--ofk-radius-surface);
   animation: ofk-toast-in var(--ofk-motion-reveal) var(--ofk-curve-enter) both;
 }
@@ -938,14 +938,37 @@
     transform: translateY(8px) scale(0.98);
   }
 }
-.ofk-toast > div:first-child {
+.ofk-toast-text {
   flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
 }
-.ofk-toast p {
-  margin: 2px 0 0;
-  font-size: var(--ofk-type-label);
+.ofk-toast-text strong {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ofk-text);
+}
+.ofk-toast-text p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
   color: var(--ofk-secondary);
 }
+.ofk-toast-mark {
+  flex: none;
+  display: inline-flex;
+  align-self: flex-start;
+  margin-top: 1px;
+}
+.ofk-toast-mark svg { width: 18px; height: 18px; }
+.ofk-toast[data-tone='success'] .ofk-toast-mark { color: var(--ofk-success); }
+.ofk-toast[data-tone='warning'] .ofk-toast-mark { color: var(--ofk-warning); }
+.ofk-toast[data-tone='danger'] .ofk-toast-mark { color: var(--ofk-danger); }
+.ofk-toast > .ofk-button { flex: none; min-height: 28px; padding-inline: 10px; font-size: 12.5px; }
+.ofk-toast > .ofk-icon-button { flex: none; width: 28px; height: 28px; min-width: 28px; color: var(--ofk-muted); }
+.ofk-toast > .ofk-icon-button .ofk-icon { width: 16px; height: 16px; }
 
 /* Tree */
 .ofk-tree,
