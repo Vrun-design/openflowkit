@@ -173,6 +173,8 @@ export class PixiRendererHost {
   private motionActive = false;
   private arrowAlpha = 1;
   private arrowFade: number | null = null;
+  // Frames can stop coming (a busy software GPU, a hidden tab); the fade still ends on time and the next render shows the arrows.
+  private arrowFadeDeadline: ReturnType<typeof setTimeout> | null = null;
   private motionRenderMs: number[] = [];
 
   constructor(options: PixiRendererHostOptions = {}) {
@@ -359,6 +361,12 @@ export class PixiRendererHost {
       this.arrowFade = this.arrowAlpha < 1 ? requestAnimationFrame(step) : null;
     };
     this.arrowFade = requestAnimationFrame(step);
+    if (this.arrowFadeDeadline !== null) clearTimeout(this.arrowFadeDeadline);
+    this.arrowFadeDeadline = setTimeout(() => {
+      if (this.arrowFade === null) return;
+      this.stopArrowFade();
+      this.requestRender();
+    }, ARROW_FADE_MS * 3);
   }
 
   /** Whether a move is on screen, how visible the arrows are (0 during the move, ramping to 1 after), and whether they are still coming back. */
@@ -370,7 +378,9 @@ export class PixiRendererHost {
 
   private stopArrowFade(): void {
     if (this.arrowFade !== null) cancelAnimationFrame(this.arrowFade);
+    if (this.arrowFadeDeadline !== null) clearTimeout(this.arrowFadeDeadline);
     this.arrowFade = null;
+    this.arrowFadeDeadline = null;
     this.arrowAlpha = 1;
     this.connectorRenderer.container.alpha = 1;
   }
@@ -888,6 +898,7 @@ export class PixiRendererHost {
     this.destroyed = true;
     if (this.previewFrame !== null) cancelAnimationFrame(this.previewFrame);
     if (this.renderFrame !== null) cancelAnimationFrame(this.renderFrame);
+    if (this.arrowFadeDeadline !== null) clearTimeout(this.arrowFadeDeadline);
     if (this.arrowFade !== null) cancelAnimationFrame(this.arrowFade);
     if (this.flowFrame !== null) cancelAnimationFrame(this.flowFrame);
     document.removeEventListener('visibilitychange', this.onVisibility);

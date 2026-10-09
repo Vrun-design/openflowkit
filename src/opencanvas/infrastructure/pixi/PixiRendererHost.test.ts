@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PIXI_HOST_STAGE_DESTROY_OPTIONS, PixiRendererHost } from './PixiRendererHost';
 import { createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 
@@ -38,5 +38,20 @@ describe('Pixi renderer host lifecycle', () => {
     // Default camera is (64, 64, 1); south-east handle follows committed geometry.
     expect(host.pickTransformHandle({ x: 174, y: 119 })).toBe('south-east');
     host.destroy();
+  });
+
+  it('ends the arrow fade on time when no frame comes (a busy software GPU), so nothing waits on it forever', () => {
+    vi.useFakeTimers();
+    const frames = vi.spyOn(globalThis, 'requestAnimationFrame').mockReturnValue(1); // frames never come
+    const host = new PixiRendererHost();
+    // A move needs a WebGL renderer to start; the fade only needs the host to think one ran.
+    (host as unknown as { motionActive: boolean }).motionActive = true;
+    host.endMotion();
+    expect(host.getMotionState()).toMatchObject({ fading: true, arrowAlpha: 0 });
+    vi.advanceTimersByTime(400);
+    expect(host.getMotionState()).toMatchObject({ fading: false, arrowAlpha: 1 });
+    host.destroy();
+    frames.mockRestore();
+    vi.useRealTimers();
   });
 });

@@ -41,11 +41,12 @@ test('Find in Map opens the boxes around a match, keeps what was open, selects a
   await box.fill('orders');
   await expect(page.locator('.ofk-v2-find-count')).toContainText('found');
   // Matches step in tree order: Enter until the one inside the shut box is reached.
-  // Each Enter waits for its own jump (the selection moves) before the next: a second Enter must not land mid-reveal.
+  // Each Enter waits for its own step (the count moves; the first match is Customer, already selected) and its move.
+  const count = page.locator('.ofk-v2-find-count');
   for (let i = 0; i < 3 && !(await selected(page)).includes('shop.api.orders'); i++) {
-    const was = (await selected(page)).join();
+    const was = await count.textContent();
     await page.keyboard.press('Enter');
-    await expect.poll(async () => (await selected(page)).join()).not.toBe(was);
+    await expect(count).not.toHaveText(was ?? '');
     await settled(page);
   }
   await expect.poll(async () => (await mapState(page)).nodes).toContain('shop.api.orders');
