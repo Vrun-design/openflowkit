@@ -66,23 +66,27 @@ test('C4 workspace: generate, drill down, rename across views, play a flow', asy
   // --- drill down from the model panel -------------------------------------
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model' }).click();
   await page.getByRole('tab', { name: 'Elements' }).waitFor();
-  await page.locator('.ofk-v2-model-row', { hasText: 'Shop' }).first().dblclick();
+  await page.getByRole('treeitem', { name: /^Shop/ }).click();
+  await page.getByRole('button', { name: 'Open Container view', exact: true }).click();
   await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop', { timeout: 5000 });
   // Back up a level with the breadcrumb link.
   await page.locator('.ofk-v2-breadcrumb-link').first().click();
   await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Landscape');
-  await page.locator('.ofk-v2-model-row', { hasText: 'Shop' }).first().dblclick();
+  // Shop's card stays open: drill again from it.
+  await page.getByRole('button', { name: 'Open Container view', exact: true }).click();
   await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop');
 
   // --- rename an element: every view follows -------------------------------
-  await page.locator('.ofk-v2-model-row', { hasText: 'Web' }).first().click();
-  const name = page.getByLabel('Name');
+  await page.getByRole('button', { name: 'All elements', exact: true }).click();
+  await page.getByRole('treeitem', { name: /^Web/ }).click();
+  const name = page.getByLabel('Name', { exact: true });
   await name.fill('Frontend');
-  await page.getByRole('button', { name: 'Apply' }).click();
+  await name.blur(); // saves as you leave the field
   await expect.poll(async () => (await pages(page)).filter((entry) => entry.id === container!.id)[0]!.labels.includes('Frontend')).toBe(true);
   await expect.poll(async () => (await pages(page)).find((entry) => entry.id === landscape!.id)!.elements.includes('shop.web')).toBe(false);
 
   // --- flow playback -------------------------------------------------------
+  await page.getByRole('button', { name: 'All elements', exact: true }).click();
   await page.getByRole('tab', { name: /Flows/ }).click();
   await page.getByRole('button', { name: /^Checkout/ }).first().click();
   const flow = page.getByRole('region', { name: 'Flow Checkout' });
@@ -121,9 +125,10 @@ views { view landscape; view container of Shop }
   await page.getByRole('button', { name: 'Close panel' }).click();
   // Land on the container view before drawing, via the model panel.
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model' }).click();
-  await page.getByRole('tab', { name: /Views/ }).click();
-  await page.locator('.ofk-v2-model-row', { hasText: 'Services: Shop' }).first().click();
   await page.getByRole('button', { name: 'Close panel' }).click();
+  await page.getByRole('button', { name: /^Pages/ }).click();
+  await page.getByRole('dialog', { name: 'Pages', exact: true }).getByRole('button', { name: 'Services: Shop', exact: true }).click();
+  await page.keyboard.press('Escape');
   await expect.poll(async () => page.evaluate(() => {
     const api = (window as unknown as { __V2__?: { getDocument(): { pages: { name: string; nodes: { id: string }[] }[] } | null } }).__V2__;
     const page = api?.getDocument?.()?.pages.find((candidate) => candidate.name === 'Services: Shop');

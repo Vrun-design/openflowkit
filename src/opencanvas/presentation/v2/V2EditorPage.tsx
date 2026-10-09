@@ -239,7 +239,8 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const pinRef = useRef<() => void>(() => undefined);
   const map = useV2MapMode({
     onPin: () => pinRef.current(),
-    panelOpen: panels.workspace !== null || panels.shortcutsOpen,
+    panelsKey: [panels.workspace, panels.shortcutsOpen, panels.chartId, panels.treeOpen, panels.motionOpen].join(),
+    selectedIds: () => selectionRef.current.nodeIds,
     glide: camera.animateTo,
     page, documentId: session.document?.id, repo: repoSource ? { model: repo.state.model } : null, palette: preferences.diagramPalette, autoIcons: preferences.autoIcons, hostRef,
     cameraRef: camera.cameraRef, updateCamera: camera.updateCamera, fitView: camera.fitView, onToolChange: setTool,
@@ -389,8 +390,14 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     document: session.document, revision: session.revision, saveStatus, proposal, mapState: map.state, mapMotion: map.motionStats, mapOpen: map.openBoxes,
   });
 
+  // ponytail: direction of the page's last diagram — a reply with mixed directions lands on the last one.
+  const landingDirection = (): LandingDirection => {
+    const last = pageRef.current ? dslFrames(pageRef.current).at(-1) : undefined;
+    const meta = last ? dslFrameMeta(last) : null;
+    return (meta?.direction as LandingDirection | undefined) ?? (meta ? dslFamilyDirection(meta.family) : 'down');
+  };
   useEffect(() => {
-    camera.fitOnOpen(rendererStatus, session.document, fitKey, session.revision);
+    camera.fitOnOpen(rendererStatus, session.document, fitKey, session.revision, landingDirection());
   }, [rendererStatus, session.document, session.revision, fitKey, camera]);
 
   const ghostPage = useV2ProposalPreview(proposal, hostRef, rendererReady, camera.revealBounds);
@@ -400,15 +407,17 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     commit: commit, onSelect: setActivePageId, mintId: mintV2Id,
     announce: setAnnouncement,
   });
-  // A page switch moves the camera to that page's content; the canvas only ever
-  // renders one page, so `fitView` is already page-scoped.
+  // A page switch lands on that page's content, readable (never below the label floor);
+  // the canvas only ever renders one page, so the landing is already page-scoped.
   const fittedPageRef = useRef<string | null>(null);
+  // A new document opens through fitOnOpen, not as a page switch.
+  useEffect(() => { fittedPageRef.current = null; }, [fitKey]);
   useEffect(() => {
     if (!page || !rendererReady) return;
     if (fittedPageRef.current === page.id) return;
     const first = fittedPageRef.current === null;
     fittedPageRef.current = page.id;
-    if (!first && !map.active) camera.fitView();
+    if (!first && !map.active) camera.landReadable(landingDirection());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page?.id, rendererReady]);
 
@@ -493,6 +502,11 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
       return elementId ? [elementId] : [];
     }),
   ), [viewPage]);
+  const canvasElementIds = useMemo(() => new Set((page?.nodes ?? []).flatMap((node) => {
+    const elementId = placedElementId(node);
+    return elementId ? [elementId] : [];
+  })), [page]);
+  const showOnCanvas = (elementId: string) => map.choose('canvas', elementId);
   const compileAt = useCallback((text: string, origin: Point2d) => compile(text, {
     origin, layout: elkDslLayoutPort, resolveIcon: resolveDslIcon,
     appearance: { palette: preferences.diagramPalette }, autoIcons: preferences.autoIcons,
@@ -555,11 +569,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     undo: session.undo, announce: setAnnouncement,
     // The committed page arrives next frame; land on it once it has.
     onApplied: () => requestAnimationFrame(() => {
-      // ponytail: direction of the page's last diagram — a reply with mixed directions lands on the last one.
-      const last = pageRef.current ? dslFrames(pageRef.current).at(-1) : undefined;
-      const meta = last ? dslFrameMeta(last) : null;
-      const direction = (meta?.direction as LandingDirection | undefined) ?? (meta ? dslFamilyDirection(meta.family) : 'down');
-      if (!camera.landReadable(direction)) return;
+      if (!camera.landReadable(landingDirection())) return;
       const fit = shortcutGroups().flatMap(({ rows }) => rows).find(({ label }) => label === 'Zoom to fit')?.keys;
       pushToast({ id: `ai-landing-${Date.now()}`, tone: 'info', title: `Zoomed in to read. Press ${fit} to see it all.` });
     }),
@@ -853,6 +863,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               breadcrumb={architecture.breadcrumb}
               {...(repoPanel.drawn ? { mapToolbar: { ...map.toolbar, ...(load.readOnly ? {} : { onPin: () => pinRef.current(), canPin: pinnable }) } } : {})}
               {...(map.available ? { mapMode: { mode: map.mode, onChange: map.choose } } : {})}
+              {...(map.active ? { mapPath: map.path, onMapPath: map.reveal } : {})}
               onCrumb={(crumb) => architectureActions.openCrumb(crumb)}
               {...(shared ? { onEditShared: shared.onEdit } : {})}
               onOpenExport={(anchor) => openExport(anchor, 'page')}
@@ -1003,7 +1014,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
             {panels.workspace === 'model' ? (
               <V2ModelPanel
                 onOpenCode={() => openWorkspace('code')}
-                onCreateWorkspace={() => code.startFrom(C4_STARTER)}
+                onCreateWorkspace={() => code.startFrom(C4_STARTER, { openPanel: false })}
                 architecture={architecture}
                 elementPageIds={new Map(session.document!.pages.flatMap((candidate) => candidate.nodes.flatMap((node) => {
                   const elementId = placedElementId(node);
@@ -1035,6 +1046,9 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                   applySelection(replaceSelection([]));
                   setAnnouncement('Inspecting an element outside the current view.');
                 }}
+                onClearSelection={() => selectionApi.clearAll()}
+                {...(map.available && !map.active && !repoSource ? { onOpenInMap: (id: string) => { map.enterMapAt(id); } } : {})}
+                {...(map.active && !repoSource ? { onShowOnCanvas: showOnCanvas, canvasElementIds } : {})}
                 onEditElement={architectureActions.editElement}
                 onRemoveElement={architectureActions.removeElement}
                 onAddElement={architectureActions.addElement}

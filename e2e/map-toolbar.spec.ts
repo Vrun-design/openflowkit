@@ -19,7 +19,7 @@ async function openMap(page: Page): Promise<void> {
   await rail.click();
   await page.getByRole('button', { name: 'Create C4 workspace', exact: true }).click();
   await expect.poll(async () => (await doc(page).catch(() => null))?.pages.length).toBe(3);
-  await rail.click();
+  await expect(page.getByRole('complementary', { name: 'Architecture model' })).toBeVisible();
   await expect(toolbar(page)).toHaveCount(0);
   await page.getByRole('button', { name: 'Map', exact: true }).click();
   await expect.poll(async () => (await mapState(page)).nodes.length).toBeGreaterThan(0);
@@ -88,11 +88,11 @@ test('arrow keys walk between boxes and Down enters an open box @gate', async ({
   await page.keyboard.press('ArrowDown');
   await expect.poll(() => selected(page)).toEqual(['shop']);
   // With focus in the Model panel, arrows belong to the panel: the map selection stays.
-  const search = page.getByPlaceholder('Name, technology, tag or environment');
-  await search.focus();
+  // The selected box is open as a card there: its name field and back link both keep the arrows.
+  await page.getByLabel('Name', { exact: true }).focus();
   await page.keyboard.press('ArrowDown');
   await expect.poll(() => selected(page)).toEqual(['shop']);
-  await page.getByRole('tab', { name: /Elements/ }).focus();
+  await page.getByRole('button', { name: 'All elements', exact: true }).focus();
   await page.keyboard.press('ArrowDown');
   await expect.poll(() => selected(page)).toEqual(['shop']);
   const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;

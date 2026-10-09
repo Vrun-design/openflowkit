@@ -6,9 +6,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - 14.1 C4 is in (landscape = top-level elements; pages matched by element overlap; model edits stay in their own model).
 - Gate: `npm run verify` (~3 min). CI runs `test:ci` (incl. `bundle:check`) then all non-`@local` e2e. GPU frame
   budgets run off CI only (`process.env.CI`); a loaded Mac flakes the gate (session-start code too, 2026-10-05).
-- **Phase 12 DONE 2026-10-03** except the merge. Owner's: merge `main` → `v2`, PR `v2` → `main`, Cloudflare
-  Landing project, tag `v1-final`.
-- **Phase 13 DONE 2026-10-03** except 13.4 on a stronger model (nemotron free: Mermaid 96%, DSL 90% first try).
+- **Phases 12 + 13 DONE 2026-10-03.** Owner's: merge `main` → `v2`, PR `v2` → `main`, Cloudflare Landing, tag `v1-final`; 13.4 needs a stronger model.
 - MCP 0.2.0 builds and answers over stdio (29 tools, Mermaid in) but is **unpublished**: npm still serves 0.1.2,
   which has no live bridge. Publish (`prepublishOnly` rebuilds) before launch; see memory `project_mcp_registry_publish`.
 ## 10-05 launch pass (entry JS 566 → 231 KB); 10-07 C4 pages = views, label pass, Mermaid gaps (git log 5930197)
@@ -22,7 +20,10 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   motion), focus + flow; overnight 2026-10-09: two-way arrows + wrap everywhere, toolbar/keys/find, repo maps in the
   editor, drill → Map, Pin as page, panel clearance (51dd85ea…ae1bc1b1). Owner look #3 + open decisions:
   https://claude.ai/artifact/9gnWpNCFg2i9fFwmKVKKMD. Owner took the defaults: Canvas/Map remembered + pin on repo maps
-  (52fea93a). Next, UI chat: orange primary/focus ring, Architecture model panel (orange row/links), amber lock.
+  (52fea93a). UI pass 10-09 DONE (review https://claude.ai/artifact/TXok1h8arREGfZpJ4QmeX4, owner took A–C): fixed Canvas|Map
+  switch + Map path crumb, selection carries across modes, Model panel = outline (Tree) + element card, save on blur, no
+  Views tab; views/first open land readable; one dark card palette (+ dark SVG export); panels never hide content; blue
+  focus ring, neutral read-only lock. Pre-existing @gate fails: view-controls:37 no-cors probe (fails at 80aec97b too).
 - Owner: publish MCP 0.2.0 (Action default CLI needs it); deploy `start:http` over HTTPS, then verify hosts (README table).
   Owner action list: `docs/plan/cofounder-action-list.md`. `e2e:headed` 10-09: 261/266; 5 local GPU budgets fail at 23ff9aa4 too (Mac). Open: H5 eval.
 ## Found, not fixed (owner calls)
@@ -34,7 +35,6 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.
 - Animation is page-scoped only; deployment replica/group semantics and migration fidelity remain partial.
 ## Next — owner's order, 2026-10-06 (D8 decided: no labs flag)
-- Canvas UI first, then launch holds, 13.4 → 14.4 → 15. Open: D7, D11. Done 10-06: Inspect (⌥I); rail 12 → 7 (black pill);
-  C4 person card + Beta; Shapes 41 → 19; Lasso gone; connector UX pass; connector cuts (Line/Path tools, Cross,
-  underline, opacity). Next: `docs/plan/launch-qa-prompt.md`. D11 left: own glyphs, empty screen.
+- Canvas UI done (10-06 rail/Inspect/Shapes/connector pass; 10-09 UI pass above) → launch holds, 13.4 → 14.4 → 15.
+  Open: D7, D11 (own glyphs, empty screen). Next: owner click-through when the GPU is free, then `docs/plan/launch-qa-prompt.md`.
 - Deferred: widget text width estimated; wireframe comments move to end; PDF = print dialog; no zip; bridge long-poll; chart data commits per blur; image aspect lock = Shift.

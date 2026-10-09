@@ -1,9 +1,12 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { compile } from '@/dsl/compile';
 import { dslFrameRaw } from '@/dsl/sceneMeta';
-import { archModelFromJson } from '@/dsl/model/model';
-import { ElementLinks, RelationNote } from './V2ModelPanel';
+import { archModelFromJson, createArchIndex } from '@/dsl/model/model';
+import type { ArchModel } from '@/dsl/model/types';
+import { ElementLinks, RelationNote } from './V2ModelElementCard';
+import { V2ModelPanel, type V2ModelPanelProps } from './V2ModelPanel';
+import type { V2Architecture } from './useV2Architecture';
 
 const relation = (link: string) => ({ label: 'Reads', link });
 
@@ -43,5 +46,66 @@ describe('RelationNote on a parsed relation', () => {
     const model = archModelFromJson((dslFrameRaw((await compile(text)).frame).arch as { model: unknown }).model)!;
     render(<RelationNote relation={model.relations[0]!} />);
     expect(screen.getByRole('link')).toHaveAttribute('href', 'https://github.com/x/y/blob/HEAD/f#L1');
+  });
+});
+
+describe('V2ModelPanel outline and card', () => {
+  const el = (id: string, name: string, kind: string, parent: string | null = null, tech?: string) => ({ id, name, kind, parent, tech, tags: [], links: [] });
+  const model = {
+    elements: [el('shop', 'Shop', 'system'), el('shop.api', 'API', 'container', 'shop', 'Go'), el('shop.db', 'DB', 'store', 'shop')],
+    relations: [{ id: 'r1', from: 'shop.api', to: 'shop.db', label: 'stores orders', tags: [] }],
+    views: [], flows: [],
+  } as unknown as ArchModel;
+  const architecture = { model, index: createArchIndex(model), view: null, breadcrumb: [], parent: null, childViewOf: () => null } as unknown as V2Architecture;
+  const props = (over: Partial<V2ModelPanelProps> = {}): V2ModelPanelProps => ({
+    architecture, elementPageIds: new Map(), selectedElementId: null, placedElementIds: new Set(['shop', 'shop.api', 'shop.db']),
+    perspectiveTags: [], onPerspectiveChange: vi.fn(), onNavigate: vi.fn(), onSelectElement: vi.fn(), onCreateChildView: vi.fn(),
+    onDrillInto: vi.fn(), onEditElement: vi.fn(), onRemoveElement: vi.fn(), onAddElement: vi.fn(), onCreateFlow: vi.fn(),
+    onPlayFlow: vi.fn(), onClose: vi.fn(), onOpenCode: vi.fn(), onCreateWorkspace: vi.fn(), onClearSelection: vi.fn(), readOnly: false, ...over,
+  });
+
+  it('opens an element from the outline on click and returns with All elements, clearing the selection', () => {
+    const p = props();
+    render(<V2ModelPanel {...p} />);
+    expect(screen.getByRole('tree', { name: 'Model elements' })).toBeInTheDocument();
+    expect(screen.getByText('3 elements · 1 relationship')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('treeitem', { name: /API/ }));
+    expect(p.onSelectElement).toHaveBeenCalledWith('shop.api');
+    expect(screen.getByLabelText('Name')).toHaveValue('API');
+    expect(screen.queryByRole('tree')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'All elements' }));
+    expect(p.onClearSelection).toHaveBeenCalled();
+    expect(screen.getByRole('tree', { name: 'Model elements' })).toBeInTheDocument();
+  });
+
+  it('a later selection from the canvas does not pull focus into the panel, and an empty canvas click returns to the outline', () => {
+    const p = props();
+    const { rerender } = render(<V2ModelPanel {...p} />);
+    fireEvent.click(screen.getByRole('treeitem', { name: /API/ }));
+    expect(screen.getByRole('button', { name: 'All elements' })).toHaveFocus();
+    rerender(<V2ModelPanel {...p} selectedElementId="shop.api" />);
+    rerender(<V2ModelPanel {...p} selectedElementId="shop.db" />);
+    expect(screen.getByLabelText('Name')).toHaveValue('DB');
+    expect(screen.getByRole('button', { name: 'All elements' })).not.toHaveFocus();
+    rerender(<V2ModelPanel {...p} selectedElementId={null} />);
+    expect(screen.getByRole('tree', { name: 'Model elements' })).toBeInTheDocument();
+  });
+
+  it('shows the card straight away for an element selected on the canvas', () => {
+    render(<V2ModelPanel {...props({ selectedElementId: 'shop.db' })} />);
+    expect(screen.getByLabelText('Name')).toHaveValue('DB');
+  });
+
+  it('filters the outline and keeps the ancestors of a match', () => {
+    render(<V2ModelPanel {...props()} />);
+    fireEvent.change(screen.getByLabelText('Search architecture'), { target: { value: 'go' } });
+    expect(screen.getByRole('treeitem', { name: /Shop/ })).toBeInTheDocument();
+    expect(screen.getByRole('treeitem', { name: /API/ })).toBeInTheDocument();
+    expect(screen.queryByRole('treeitem', { name: /DB/ })).toBeNull();
+  });
+
+  it('read-only has no Add element', () => {
+    render(<V2ModelPanel {...props({ readOnly: true })} />);
+    expect(screen.queryByRole('button', { name: 'Add element' })).toBeNull();
   });
 });

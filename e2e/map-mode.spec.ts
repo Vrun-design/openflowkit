@@ -18,15 +18,18 @@ const mapState = (page: Page): Promise<MapState> =>
 // Past the editor's double-click guard (400 ms after a click that opened or closed a box): two flips this far apart are two clicks.
 const BETWEEN_CLICKS_MS = 450;
 
-async function openC4(page: Page): Promise<void> {
-  await page.setViewportSize({ width: 1440, height: 1000 });
+async function openC4(page: Page, width = 1440): Promise<void> {
+  await page.setViewportSize({ width, height: 1000 });
   await page.goto('/');
   await page.waitForSelector('[data-testid="v2-canvas"]');
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
   await page.getByRole('button', { name: 'Create C4 workspace', exact: true }).click();
   await expect.poll(async () => (await doc(page))?.pages.length).toBe(3);
   // The Model panel stays open from here.
-  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
+  await expect(page.getByRole('complementary', { name: 'Architecture model' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Diagram as code' })).toHaveCount(0);
+  // A phone-width panel covers the bar and the canvas: the switch tests need them.
+  if (width <= 720) await page.getByRole('button', { name: 'Close panel' }).click();
 }
 
 const mapButton = (page: Page) => page.getByRole('button', { name: 'Map', exact: true });
@@ -220,10 +223,11 @@ test('an edit made from the Model panel shows in the map, and undo takes it back
   const original = (await mapState(page)).labels.customer!;
   // openC4 leaves the Model panel open.
   await page.getByLabel('Search architecture').fill(original);
-  await page.locator('.ofk-v2-model-row', { hasText: original }).first().focus();
+  await page.getByRole('treeitem', { name: new RegExp(`^${original}`) }).first().focus();
   await page.keyboard.press('Enter');
-  await page.getByLabel('Name', { exact: true }).fill('Buyer');
-  await page.getByRole('button', { name: 'Apply', exact: true }).click();
+  const name = page.getByLabel('Name', { exact: true });
+  await name.fill('Buyer');
+  await name.blur(); // saves as you leave the field
   await expect.poll(async () => (await mapState(page)).labels.customer).toContain('Buyer');
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect.poll(async () => (await mapState(page)).labels.customer).toBe(original);
@@ -273,7 +277,7 @@ test('a plain diagram has no Canvas | Map switch @gate', async ({ page }) => {
   expect((await mapState(page)).mode).toBe('canvas');
 });
 
-test('the architecture breadcrumb is set apart from Canvas | Map in Canvas and gone in Map @gate', async ({ page }) => {
+test('the Canvas | Map switch sits right after the title and never moves; the path follows it @gate', async ({ page }) => {
   test.setTimeout(60_000);
   await openC4(page);
   const crumbs = page.getByRole('navigation', { name: 'Architecture level' });
@@ -281,13 +285,52 @@ test('the architecture breadcrumb is set apart from Canvas | Map in Canvas and g
   await expect(crumbs).toBeVisible();
   await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Landscape');
   const bar = page.getByRole('toolbar', { name: 'Document', exact: true });
-  const [navBox, divider, modes] = [await crumbs.boundingBox(), await bar.locator('.ofk-v2-divider').boundingBox(), await bar.getByRole('group', { name: 'View mode' }).boundingBox()];
-  expect(navBox!.x + navBox!.width).toBeLessThanOrEqual(divider!.x);
-  expect(divider!.x + divider!.width).toBeLessThanOrEqual(modes!.x);
+  const modes = bar.getByRole('group', { name: 'View mode' });
+  const [navBox, divider, modesBox] = [await crumbs.boundingBox(), await bar.locator('.ofk-v2-divider').boundingBox(), await modes.boundingBox()];
+  expect(modesBox!.x + modesBox!.width).toBeLessThanOrEqual(divider!.x);
+  expect(divider!.x + divider!.width).toBeLessThanOrEqual(navBox!.x);
   await enterMap(page);
+  // Nothing selected: no path, and no divider for it.
+  await expect(page.getByRole('navigation', { name: 'Map path' })).toHaveCount(0);
   await expect(crumbs).toHaveCount(0);
+  await expect(bar.locator('.ofk-v2-divider')).toHaveCount(0);
+  expect((await modes.boundingBox())!.x).toBe(modesBox!.x);
   await canvasButton(page).click();
   await expect(crumbs).toBeVisible();
+});
+
+for (const width of [1440, 700]) test(`the switch is under the same point in Canvas and Map, with a path in Map, at ${width}px @gate`, async ({ page }) => {
+  test.setTimeout(60_000);
+  await openC4(page, width);
+  await page.getByRole('button', { name: /^Pages/ }).click();
+  await page.getByRole('dialog', { name: 'Pages', exact: true }).getByRole('button', { name: /^Services: Shop/ }).click();
+  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop');
+  const before = (await mapButton(page).boundingBox())!;
+  await enterMap(page);
+  await click(page, 'shop.api');
+  const path = page.getByRole('navigation', { name: 'Map path' });
+  await expect(path).toBeVisible();
+  await expect(path.locator('.ofk-v2-breadcrumb-current')).toHaveText('API');
+  const inMap = (await mapButton(page).boundingBox())!;
+  expect(inMap.x).toBe(before.x);
+  expect(inMap.width).toBe(before.width);
+  // An ancestor segment selects that box; the current one is no button.
+  await expect(path.getByRole('button', { name: 'API' })).toHaveCount(0);
+  await path.getByRole('button', { name: 'Shop', exact: true }).click();
+  await expect.poll(async () => (await state(page)).selectedNodes).toEqual(['shop']);
+  await expect(path.locator('.ofk-v2-breadcrumb-current')).toHaveText('Shop');
+  // The button the keyboard was on became the current crumb: focus follows it.
+  await expect(path.locator('.ofk-v2-breadcrumb-current')).toBeFocused();
+  await expect(path.locator('[aria-current="location"]')).toHaveCount(1);
+  // The Map segment is a segmented control, not a toggle: pressing it again stays in Map (the M key toggles).
+  await mapButton(page).click();
+  await expect(mapButton(page)).toHaveAttribute('aria-pressed', 'true');
+  // The Canvas button is under the point the Map button was at.
+  const canvasAt = (await canvasButton(page).boundingBox())!;
+  const mapAt = (await mapButton(page).boundingBox())!;
+  expect(mapAt.x).toBe(before.x);
+  await page.mouse.click(mapAt.x - canvasAt.width / 2, mapAt.y + mapAt.height / 2);
+  await expect(canvasButton(page)).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('a click on a box focuses it and the boxes it talks to; an empty click, Escape or leaving Map clears it @gate', async ({ page }) => {

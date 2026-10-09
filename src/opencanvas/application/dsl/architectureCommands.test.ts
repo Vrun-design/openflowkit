@@ -226,6 +226,17 @@ describe('element edits', () => {
     expect(undone).toEqual(document);
   });
 
+  it('keeps the kind-colour marker consistent with the element colour', async () => {
+    const document = await generatedDocument(WORKSPACE.replace('person Customer', 'person Customer [icon: tabler/user]'));
+    const placed = (doc: SceneDocumentV1) => doc.pages.flatMap((page) => page.nodes).filter((node) => placedElementId(node) === 'customer');
+    expect(placed(document).every((node) => node.content.archKindColor === 'violet')).toBe(true);
+    const authored = apply(document, buildArchElementEditCommand(document, 'customer', { color: 'red' })!).document;
+    for (const node of placed(authored)) {
+      expect(node.content.archKindColor).toBeUndefined();
+      expect(node.content.color).toBe('red');
+    }
+  });
+
   it('returns null when nothing changes and keeps ids stable on tech edits', async () => {
     const document = await generatedDocument();
     expect(buildArchElementEditCommand(document, 'shop.web', { name: 'Web' })).toBeNull();

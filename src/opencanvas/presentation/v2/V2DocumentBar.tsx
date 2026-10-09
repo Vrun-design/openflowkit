@@ -65,6 +65,9 @@ interface V2DocumentBarProps extends V2SettingsProps {
   /** Architecture level chain when the document carries a model. */
   readonly breadcrumb?: readonly { readonly pageId: string; readonly label: string; readonly elementId?: string }[];
   readonly onCrumb?: (crumb: { readonly pageId: string; readonly elementId?: string }) => void;
+  /** Map mode: the selected box's path (ancestors, then the box), and the way to select an ancestor. */
+  readonly mapPath?: readonly { readonly id: string; readonly label: string }[];
+  readonly onMapPath?: (id: string) => void;
   /** Canvas | Map, present only when the page belongs to an architecture model. */
   readonly mapMode?: { readonly mode: 'canvas' | 'map'; readonly onChange: (mode: 'canvas' | 'map') => void };
 }
@@ -110,6 +113,11 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
   const pagesRef = useRef<HTMLButtonElement>(null);
   const activePageName = props.pages.activePage?.name ?? 'Page 1';
   const save = saveLabel(props.saveStatus);
+  // Beside the switch, never before it: the switch must not move when the path changes. Canvas walks pages; Map shows the selected box's path.
+  const inMap = props.mapMode?.mode === 'map';
+  const crumbs: { key: string; label: string; open?: () => void }[] = inMap
+    ? (props.mapPath ?? []).map((box, index, all) => ({ key: box.id, label: box.label, ...(index < all.length - 1 ? { open: () => props.onMapPath?.(box.id) } : {}) }))
+    : (props.breadcrumb ?? []).map((crumb, index, all) => ({ key: crumb.pageId, label: crumb.label, ...(index < all.length - 1 ? { open: () => props.onCrumb?.(crumb) } : {}) }));
   useEffect(() => { if (editingTitle) titleRef.current?.select(); }, [editingTitle]);
 
   function startRename(): void {
@@ -124,6 +132,16 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
     else setTitleDraft(props.document.name);
     setEditingTitle(false);
   }
+
+  // Activating an ancestor turns that button into the current crumb: the keyboard follows it instead of falling to the page.
+  const crumbRef = useRef<HTMLElement>(null);
+  const refocus = useRef(false);
+  const crumbKey = crumbs.map((crumb) => crumb.key).join('/');
+  useEffect(() => {
+    if (!refocus.current) return;
+    refocus.current = false;
+    crumbRef.current?.querySelector<HTMLElement>('.ofk-v2-breadcrumb-current')?.focus({ preventScroll: true });
+  }, [crumbKey]);
 
   const toast = (title: string, tone: ToastItem['tone']): void =>
     props.onToast({ id: `toast-${Date.now()}`, tone, title });
@@ -198,25 +216,6 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               {props.document.name}
             </Button>
           )}
-          {/* The breadcrumb walks Canvas pages: Map has its own boxes, so it is not shown there. */}
-          {props.breadcrumb && props.breadcrumb.length > 0 && props.mapMode?.mode !== 'map' ? (
-            <nav className="ofk-v2-breadcrumb" aria-label="Architecture level">
-              {props.breadcrumb.map((crumb, index) => (
-                <Fragment key={`${crumb.pageId}-${index}`}>
-                  {index > 0 ? <span className="ofk-v2-breadcrumb-sep" aria-hidden="true">/</span> : null}
-                  {index === props.breadcrumb!.length - 1 ? (
-                    <span className="ofk-v2-breadcrumb-current" aria-current="page">{crumb.label}</span>
-                  ) : (
-                    <button type="button" className="ofk-v2-breadcrumb-link"
-                      onClick={() => props.onCrumb?.(crumb)}>
-                      {crumb.label}
-                    </button>
-                  )}
-                </Fragment>
-              ))}
-            </nav>
-          ) : null}
-          {props.mapMode ? <span className="ofk-v2-divider" aria-hidden="true" /> : null}
           {props.mapMode ? (
             <div className="ofk-v2-mode" role="group" aria-label="View mode">
               <Tooltip content="Draw and arrange the page">
@@ -225,13 +224,39 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               </Tooltip>
               <Tooltip content="Explore the model: click a box to open it" shortcut="M">
                 <Button variant="quiet" selected={props.mapMode.mode === 'map'} aria-label="Map"
-                  onClick={() => props.mapMode!.onChange(props.mapMode!.mode === 'map' ? 'canvas' : 'map')}>Map</Button>
+                  onClick={() => props.mapMode!.onChange('map')}>Map</Button>
               </Tooltip>
             </div>
           ) : null}
+          {crumbs.length > 0 ? <span className="ofk-v2-divider" aria-hidden="true" /> : null}
+          {crumbs.length > 0 ? (
+            <nav ref={crumbRef} className="ofk-v2-breadcrumb" aria-label={inMap ? 'Map path' : 'Architecture level'}>
+              {crumbs.map((crumb, index) => (
+                <Fragment key={`${crumb.key}-${index}`}>
+                  {index > 0 ? <span className="ofk-v2-breadcrumb-sep" aria-hidden="true">/</span> : null}
+                  {crumb.open ? (
+                    <button type="button" className="ofk-v2-breadcrumb-link" onClick={() => { refocus.current = true; window.setTimeout(() => { refocus.current = false; }, 600); crumb.open?.(); }}>{crumb.label}</button>
+                  ) : (
+                    <span className="ofk-v2-breadcrumb-current" tabIndex={-1} aria-current={inMap ? 'location' : 'page'}>{crumb.label}</span>
+                  )}
+                </Fragment>
+              ))}
+            </nav>
+          ) : null}
+          {props.onEditShared ? (
+            <Button variant="primary" disabled={copying} onClick={editShared}>Edit in OpenFlowKit</Button>
+          ) : null}
+          <Tooltip content="Pages">
+            <Button ref={pagesRef} variant="quiet" aria-expanded={panel === 'pages'} aria-haspopup="dialog"
+              aria-label={`Pages (current: ${activePageName})`}
+              onClick={() => togglePanel('pages')}>
+              {props.breadcrumb?.length ? 'Pages' : activePageName}
+              {props.pages.pages.length > 1 ? <span className="ofk-v2-page-total">{` / ${props.pages.pages.length}`}</span> : null}
+            </Button>
+          </Tooltip>
           <Tooltip content={props.readOnly ? 'Read-only' : save.text}>
             <span className="ofk-v2-save-status" role="status" aria-atomic
-              data-tone={props.readOnly ? 'warning' : save.tone}
+              data-tone={props.readOnly ? 'neutral' : save.tone}
               data-busy={props.saveStatus.state === 'pending' || undefined}>
               <Icon icon={props.readOnly ? IconLock : save.icon} />
               <span className="ofk-visually-hidden">{props.readOnly ? 'Read-only' : save.text}</span>
@@ -247,17 +272,6 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
               Reload
             </Button>
           ) : null}
-          {props.onEditShared ? (
-            <Button variant="primary" disabled={copying} onClick={editShared}>Edit in OpenFlowKit</Button>
-          ) : null}
-          <Tooltip content="Pages">
-            <Button ref={pagesRef} variant="quiet" aria-expanded={panel === 'pages'} aria-haspopup="dialog"
-              aria-label={`Pages (current: ${activePageName})`}
-              onClick={() => togglePanel('pages')}>
-              {props.breadcrumb?.length ? 'Pages' : activePageName}
-              {props.pages.pages.length > 1 ? <span className="ofk-v2-page-total">{` / ${props.pages.pages.length}`}</span> : null}
-            </Button>
-          </Tooltip>
         </Toolbar>
       </FloatingRegion>
 

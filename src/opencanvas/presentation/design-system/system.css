@@ -958,7 +958,7 @@
   display: flex;
   align-items: center;
   gap: var(--ofk-space-xs);
-  min-height: var(--ofk-control-compact);
+  min-height: 30px;
   padding: 0 var(--ofk-space-sm) 0
     calc(var(--ofk-space-xs) + (var(--ofk-tree-level) - 1) * var(--ofk-space-lg));
   border-radius: var(--ofk-radius-control);
@@ -969,9 +969,13 @@
 .ofk-tree-row:hover {
   background: var(--ofk-raised);
 }
+/* Selected is a neutral lift, never the brand colour (the inverse pill is for buttons). */
 .ofk-tree-row[aria-selected='true'] {
-  background: var(--ofk-accentSoft);
-  color: var(--ofk-accent);
+  background: color-mix(in srgb, var(--ofk-text) 9%, transparent);
+  font-weight: var(--ofk-weight-label);
+}
+.ofk-tree-row[data-muted] .ofk-tree-label {
+  color: var(--ofk-secondary);
 }
 .ofk-tree-row:focus-visible {
   outline: var(--ofk-focus-width) solid var(--ofk-focus);
@@ -1013,6 +1017,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.ofk-tree-meta {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--ofk-type-caption);
+  font-weight: var(--ofk-weight-body);
+  color: var(--ofk-muted);
 }
 .ofk-tree-trailing {
   display: inline-flex;

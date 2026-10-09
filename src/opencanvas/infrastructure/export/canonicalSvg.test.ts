@@ -280,3 +280,26 @@ describe('chart export', () => {
     const svg = exportCanonicalSvg(createTestDocument({nodes: [node]}));
     for (const text of ['Order API', 'Container', 'Go', 'Handles orders']) expect(svg).toContain(text);
   });
+
+describe('dark architecture card export', () => {
+  const person = (extra: Record<string, unknown> = {}) => createTestNode('who', { kind: 'architecture', size: { width: 240, height: 152 }, content: {
+    label: 'Customer', assetPresentation: 'card', archProviderLabel: 'Person', archResourceType: '', color: 'violet', archKindColor: 'violet', ...extra,
+  } });
+  const cardRect = (svg: string) => svg.match(/<g[^>]*data-node-id="who"[^>]*>\s*<rect[^>]*>/)![0];
+
+  it('washes a kind-default card as a faint tint, never an opaque light fill under white text', () => {
+    const dark = exportCanonicalSvg(createTestDocument({ nodes: [person()] }), { theme: 'dark' });
+    const rect = cardRect(dark);
+    expect(rect).toMatch(/fill-opacity="0\.08"/);
+    expect(rect).not.toContain('#f8fafc');
+    expect(dark).toMatch(/fill="#ffffff"[^>]*><tspan[^>]*>Customer/);
+  });
+  it('keeps the light export of the same card unchanged', () => {
+    const light = exportCanonicalSvg(createTestDocument({ nodes: [person()] }));
+    expect(cardRect(light)).not.toContain('fill-opacity');
+  });
+  it('keeps a bold (filled) card solid in dark', () => {
+    const dark = exportCanonicalSvg(createTestDocument({ nodes: [person({ colorMode: 'filled', archKindColor: undefined })] }), { theme: 'dark' });
+    expect(cardRect(dark)).not.toContain('fill-opacity');
+  });
+});

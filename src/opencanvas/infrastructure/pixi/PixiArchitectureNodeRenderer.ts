@@ -100,6 +100,13 @@ export class PixiArchitectureNodeRenderer {
       graphics.fill(fill);
       if (style.strokeWidth > 0) graphics.stroke({ ...stroke, width: style.strokeWidth });
       drawPixiLocalRect(graphics, createBounds2d(10, 8, Math.max(0, node.size.width - 20), 26), matrix, 7);
+      if (!style.subTextColor) {
+        graphics.fill({ color: visual.iconFill });
+        return;
+      }
+      // On a dark-canvas wash the header takes the card's own hue; the icon (dark ink) keeps a light tile.
+      graphics.fill({ color: stroke.color, alpha: 0.3 });
+      drawPixiLocalRect(graphics, bounds, matrix, 6);
       graphics.fill({ color: visual.iconFill });
       return;
     }
@@ -121,9 +128,10 @@ export class PixiArchitectureNodeRenderer {
     const wrap = Math.max(1, labelBounds.width + grown - style.textPadding * 2);
     if (presentation.display === 'architecture-card') {
       const layout = architectureCardLayout(grown === 0 ? node : { ...node, size: { ...node.size, width: finalWidth! } }, style);
-      const provider = this.texts.plain(layout.provider.displayText, { size: 10, weight: '700', fill: visual.subText });
+      const subInk = style.subTextColor ? pixiPaintColor(style.subTextColor, visual.subText).color : visual.subText;
+      const provider = this.texts.plain(layout.provider.displayText, { size: 10, weight: '700', fill: subInk });
       provider.position.set(38, 15);
-      const resource = this.texts.plain(layout.resource.displayText, { size: 10, weight: '600', fill: visual.subText });
+      const resource = this.texts.plain(layout.resource.displayText, { size: 10, weight: '600', fill: subInk });
       resource.anchor.set(1, 0);
       resource.position.set(node.size.width - 16, 15);
       const title = this.texts.styled(layout.title.displayText, style, ink, wrap);
@@ -133,7 +141,7 @@ export class PixiArchitectureNodeRenderer {
       if (presentation.metadata.length > 0) {
         const metadata = this.texts.plain(layout.detail.displayText, {
           size: 10, weight: '500',
-          fill: style.subTextColor ? pixiPaintColor(style.subTextColor, visual.subText).color : visual.subText, wrapWidth: Math.max(1, node.size.width + grown - 24),
+          fill: subInk, wrapWidth: Math.max(1, node.size.width + grown - 24),
         });
         metadata.position.set(12, layout.detailY);
         content.addChild(metadata);

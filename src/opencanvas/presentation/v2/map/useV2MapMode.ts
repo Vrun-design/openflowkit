@@ -4,7 +4,7 @@ import { fromArch } from '../../../../dsl/map/fromArch';
 import { closedBoxSize, mapScene } from '../../../../dsl/map/scene';
 import type { AggEdge, MapModel } from '../../../../dsl/map/types';
 import { presets } from '../../../../dsl/map/view';
-import { archFrameOf, archModelOfPage } from '../../../../dsl/model/model';
+import { archFrameOf, archModelOfPage, placedElementId } from '../../../../dsl/model/model';
 import { getElkInstance } from '../../../../services/elk-layout/runtime';
 import { layoutMap, type LayoutPorts } from '../../../application/map/layoutMap';
 import type { CanvasCamera } from '../../../domain/camera/types';
@@ -15,14 +15,15 @@ import { foundation } from '../../design-system/tokens';
 import type { V2Tool } from '../V2CreationToolbar';
 import { isEditableTarget } from '../pointerOperations';
 import { measure } from './layout';
+import { mapPathOf } from './mapPath';
 import {
-  BUDGET_NOTE, fitsBudget, isDoubleClick, mapKeyAllowed, parentToClose, prune, sceneFor, startOpen, toggleBox, type TaggedScene,
+  BUDGET_NOTE, clearance, fitsBudget, isDoubleClick, nudgeInto, mapKeyAllowed, parentToClose, prune, sceneFor, startOpen, toggleBox, type TaggedScene,
 } from './mapMode';
 import { useMapFocus } from './useMapFocus';
 import { mapFindMatches } from '../../../application/map/mapFind';
 import { savedMode, saveMode, savedOpen, saveOpen } from './mapDepth';
 import { useMapControls } from './useMapControls';
-import { useMapClearance } from './useMapClearance';
+import { useClearance } from '../useClearance';
 import { useMapEntry } from './useMapEntry';
 import { useMapMotion } from './useMapMotion';
 import { useMapLayers } from './useMapLayers';
@@ -59,8 +60,10 @@ interface Options {
   readonly notify: (message: string) => void;
   /** Shift+M in Map: pin the map as a Canvas page (the editor does the commit). */
   readonly onPin?: () => void;
-  /** A right panel covers part of the canvas. */
-  readonly panelOpen?: boolean;
+  /** Which panels are open (one string): opening, closing or swapping one re-clears the camera. */
+  readonly panelsKey?: string;
+  /** Canvas mode: the selected nodes, read when a panel opens. */
+  readonly selectedIds?: () => readonly string[];
   /** The editor's camera glide (interruptible; instant under reduced motion). */
   readonly glide?: (camera: CanvasCamera) => void;
 }
@@ -85,7 +88,7 @@ function useStable<T>(value: T): T {
  * written; the scene is a ScenePage handed to the canvas in place of the page.
  */
 export function useV2MapMode(options: Options) {
-  const { page, documentId, repo = null, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify, onPin, panelOpen = false, glide = updateCamera } = options;
+  const { page, documentId, repo = null, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify, onPin, panelsKey = '', selectedIds = () => [], glide = updateCamera } = options;
   // Cheap: only whether the page carries a model. The model itself is read only while the map is on.
   const isRepo = repo !== null;
   const available = useMemo(() => isRepo || (page ? archFrameOf(page) !== null : false), [isRepo, page]);
@@ -109,6 +112,11 @@ export function useV2MapMode(options: Options) {
   const [drawError, setError] = useState<string | null>(null);
   const saved = useRef<{ pageId: string | null; camera: CanvasCamera } | null>(null);
   const leaving = useRef(false);
+  // The box to select on Canvas once back (an element id), and the box a Canvas selection asked Map to land on (until it has).
+  const carry = useRef<string | null>(null);
+  const intent = useRef<string | null>(null);
+  /** The one selected node: a selection of several carries nothing across. */
+  const onlySelected = useCallback((): string | null => { const ids = selectedIds(); return ids.length === 1 ? ids[0]! : null; }, [selectedIds]);
   const lastFlip = useRef(Number.NEGATIVE_INFINITY);
   const layouts = useRef(0);
   // Layouts asked for vs. shown on the host: between the two the map is about to move, which is not idle yet.
@@ -196,21 +204,12 @@ export function useV2MapMode(options: Options) {
     } else {
       setError(null);
       leaving.current = true;
+      // A box still on its way to the screen (a quick M M) counts as selected: Map's own scene has pruned the selection meanwhile.
+      carry.current = pendingRef.current ?? intent.current ?? onlySelected();
+      intent.current = null;
     }
     setModeState(next);
-  }, [mode, available, page?.id, cameraRef, closeChart, onToolChange]);
-  /** The reader's own switch (the buttons, the M key): remembered for this document. Automatic switches (Pin, a drill) use `setMode`. */
-  const choose = useCallback((next: V2MapModeName) => {
-    setMode(next);
-    if (documentId) saveMode(documentId, next);
-  }, [setMode, documentId]);
-  /** M: true when the page has a map to switch to or from, so the key is spent. */
-  const toggle = useCallback((): boolean => {
-    if (!available) return false;
-    choose(mode === 'map' ? 'canvas' : 'map');
-    return true;
-  }, [available, mode, choose]);
-
+  }, [mode, available, page?.id, onlySelected, cameraRef, closeChart, onToolChange]);
   // A page without a model has no map: fall back to Canvas (the page switch already fitted its own camera).
   if (mode === 'map' && !available) { setModeState('canvas'); setScene(null); setError(null); }
 
@@ -220,22 +219,58 @@ export function useV2MapMode(options: Options) {
     leaving.current = false;
     const was = saved.current;
     saved.current = null;
-    if (was && was.pageId === (page?.id ?? null)) updateCamera(was.camera); else fitView();
-  }, [active, page?.id, updateCamera, fitView]);
+    const restored = was !== null && was.pageId === (page?.id ?? null);
+    if (restored) updateCamera(was.camera); else fitView();
+    // The selected box comes along when this page places it, whatever happened to the camera; else no stale ids stay.
+    const box = carry.current;
+    carry.current = null;
+    const host = hostRef.current;
+    const places = box ? (page?.nodes ?? []).filter((node) => placedElementId(node) === box) : [];
+    if (!host || places.length === 0) { clearSelection(); return; }
+    // Placed twice: the one on screen now, else the first.
+    const view = host.getViewportSize();
+    const cam = cameraRef.current;
+    const onScreen = (id: string) => {
+      const b = host.getContentBounds([id]);
+      return !!b && b.x * cam.zoom + cam.x < view.width && (b.x + b.width) * cam.zoom + cam.x > 0 && b.y * cam.zoom + cam.y < view.height && (b.y + b.height) * cam.zoom + cam.y > 0;
+    };
+    const nodeId = (places.find((node) => onScreen(node.id)) ?? places[0]!).id;
+    select(nodeId);
+    const bounds = host.getContentBounds([nodeId]);
+    const pan = restored && bounds ? nudgeInto(bounds, cameraRef.current, clearance(host)) : null;
+    if (pan) glide(pan);
+  }, [active, page, updateCamera, fitView, clearSelection, select, hostRef, cameraRef, glide]);
 
   const mapPage = active ? sceneFor(scene, subject, EMPTY_MAP, lineageKey) : null;
   const { shown, player } = useMapMotion({ mapPage, emptyPage: EMPTY_MAP, scene, model, hostRef, cameraRef, updateCamera, markShown, focusRef });
-  useMapClearance({ active, selectedId: selectedNodeId, panelOpen, shown, hostRef, cameraRef, glide, busy: () => player.stats().running || seqs.current.shown < seqs.current.asked });
+  useClearance({ active, selectedId: selectedNodeId, panelsKey, selectedIds, shown, hostRef, cameraRef, glide, busy: () => player.stats().running || seqs.current.shown < seqs.current.asked });
   useMapFocus(hostRef, active && mapPage && mapPage !== EMPTY_MAP ? mapPage : null, selectedNodeId, selectedConnectorId);
 
   useEffect(() => { pendingRef.current = null; }, [active, lineageKey]);
   useEffect(() => {
     const id = pendingRef.current;
-    if (id && mapPage && mapPage !== EMPTY_MAP && mapPage.nodes.some((node) => node.id === id)) { pendingRef.current = null; select(id); }
+    if (id && mapPage && mapPage !== EMPTY_MAP && mapPage.nodes.some((node) => node.id === id)) { pendingRef.current = null; intent.current = null; select(id); }
   }, [mapPage, select]);
   const controls = useMapControls({ model, open, setOpen: setOpenState, focusRef, shown, hostRef, cameraRef, updateCamera, primaryId, select, clearSelection, pendingRef, notify });
 
   const { enterMapAt } = useMapEntry({ available, active, lineageKey, model, open, setOpen: setOpenState, setMode, focusRef, pendingRef, notify });
+
+  /** The reader's own switch (the buttons, the M key): remembered for this document. Automatic switches (Pin, a drill) use `setMode`. With a placed element selected, Map reveals it (its ancestors open, itself not) and lands on it. */
+  const choose = useCallback((next: V2MapModeName, showElement?: string) => {
+    const id = next === 'map' && mode === 'canvas' ? onlySelected() : null;
+    const element = id && page ? placedElementId(page.nodes.find((node) => node.id === id) ?? { metadata: {} }) : null;
+    if (element) intent.current = element;
+    // "Show on canvas": the element to select once back, in place of whatever Map had selected.
+    if (next === 'canvas' && showElement) intent.current = showElement;
+    if (!(element && enterMapAt(element, { reveal: true }))) setMode(next);
+    if (documentId) saveMode(documentId, next);
+  }, [mode, page, onlySelected, enterMapAt, setMode, documentId]);
+  /** M: true when the page has a map to switch to or from, so the key is spent. */
+  const toggle = useCallback((): boolean => {
+    if (!available) return false;
+    choose(mode === 'map' ? 'canvas' : 'map');
+    return true;
+  }, [available, mode, choose]);
 
   /** True when the open set changed. */
   const flip = useCallback((id: string): boolean => {
@@ -299,6 +334,8 @@ export function useV2MapMode(options: Options) {
     return !mapKeyAllowed(event);
   }, [active, model, open, primaryId, flip, select, cancelTransient, arrow, shown, onPin]);
 
+  const path = useMemo(() => (active && model ? mapPathOf(model, selectedNodeId) : []), [active, model, selectedNodeId]);
+
   const state = useCallback(() => ({
     mode: active ? 'map' as const : 'canvas' as const,
     open: [...open].sort(),
@@ -322,7 +359,7 @@ export function useV2MapMode(options: Options) {
     return { ...stats, running };
   }, [player, hostRef]);
 
-  return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, choose, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, findSource, enterMapAt,
+  return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, choose, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, path, findSource, enterMapAt,
     /** The aggregated edge a repo-map connector stands for (its evidence), or undefined. */
     edgeOf, edgesAt,
     toolbar: { depth: controls.depth, canExpand: controls.canExpand, onDepth: controls.setDepth, onExpandOne: controls.expandOne, onCollapseAll: controls.collapse,

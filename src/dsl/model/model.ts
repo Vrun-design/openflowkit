@@ -126,6 +126,28 @@ export function elementAncestors(index: ArchIndex, id: string): readonly string[
   return out;
 }
 
+export interface CrossingRelation { readonly relation: ArchRelation; readonly via: string | null }
+
+/**
+ * What an element talks to and is used by: its own relations plus those of everything inside it that cross
+ * its boundary, each tagged with the inner element it runs through (`via`, null when it is the element's own).
+ * Relations wholly inside are not its business.
+ */
+export function crossingRelations(index: ArchIndex, id: string): { talksTo: CrossingRelation[]; usedBy: CrossingRelation[] } {
+  const inside = new Set([id, ...elementDescendantIds(index, id)]);
+  const seen = new Set<string>();
+  const talksTo: CrossingRelation[] = [];
+  const usedBy: CrossingRelation[] = [];
+  for (const relation of index.model.relations) {
+    const fromIn = inside.has(relation.from);
+    if (fromIn === inside.has(relation.to) || seen.has(relation.id)) continue;
+    seen.add(relation.id);
+    const near = fromIn ? relation.from : relation.to;
+    (fromIn ? talksTo : usedBy).push({ relation, via: near === id ? null : near });
+  }
+  return { talksTo, usedBy };
+}
+
 export function hasChildren(index: ArchIndex, element: ArchElement): boolean {
   return ELEMENT_KINDS_WITH_CHILDREN.includes(element.kind) && (index.childIds.get(element.id)?.length ?? 0) > 0;
 }

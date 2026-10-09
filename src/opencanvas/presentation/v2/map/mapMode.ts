@@ -109,12 +109,13 @@ export interface FreeArea { left: number; top: number; width: number; height: nu
 
 /**
  * The canvas the floating chrome leaves: `edges` are what the side panels leave (left, right), `chrome` where the
- * document bar ends (`top`), the right rail begins (`rail`) and the camera controls begin (`bottom`), all measured in
+ * document bar ends (`top`), the right rail begins (`rail`), the camera controls begin (`bottom`) and the creation rail
+ * ends (`tools`), all measured in
  * canvas pixels. A chrome so large it would leave under a third of the canvas (a phone) is ignored.
  */
-export function freeArea(size: { width: number; height: number }, edges: { left: number; right: number }, chrome: { top?: number; rail?: number; bottom?: number }): FreeArea {
+export function freeArea(size: { width: number; height: number }, edges: { left: number; right: number }, chrome: { top?: number; rail?: number; bottom?: number; tools?: number }): FreeArea {
   const clear = edges.right - edges.left >= size.width / 2;
-  const left = clear ? edges.left : 0;
+  const left = Math.max(clear ? edges.left : 0, chrome.tools === undefined ? 0 : chrome.tools + CHROME_GAP);
   const right = Math.min(clear ? edges.right : size.width, chrome.rail === undefined ? size.width : chrome.rail - CHROME_GAP);
   const top = chrome.top === undefined ? 0 : Math.max(0, chrome.top + CHROME_GAP);
   const bottom = chrome.bottom === undefined ? size.height : Math.min(size.height, chrome.bottom - CHROME_GAP);
@@ -123,16 +124,18 @@ export function freeArea(size: { width: number; height: number }, edges: { left:
 }
 
 /** The canvas the side panels and the floating chrome leave: the document bar, the right rail and the camera controls are measured now. */
-export function clearance(host: { getViewportSize(): { width: number; height: number } }): FreeArea {
+export function clearance(host: { getViewportSize(): { width: number; height: number } }, withTools = true): FreeArea {
   const size = host.getViewportSize();
   const root = document.querySelector<HTMLElement>('.ofk-v2');
   const origin = document.querySelector<HTMLElement>('[data-testid="v2-canvas"]')?.getBoundingClientRect();
   const at = (label: string) => root?.querySelector<HTMLElement>(`[role="toolbar"][aria-label="${label}"]`)?.getBoundingClientRect();
-  const [bar, rail, controls] = [at('Document'), at('Workspace'), at('View')];
+  const [bar, rail, controls, tools] = [at('Document'), at('Workspace'), at('View'), at('Create')];
   const { left, right } = visibleCanvasEdges(root);
   const [ox, oy] = [origin?.left ?? 0, origin?.top ?? 0];
   return freeArea(size, { left, right: right - ox }, {
     ...(bar ? { top: bar.bottom - oy } : {}), ...(rail ? { rail: rail.left - ox } : {}), ...(controls ? { bottom: controls.top - oy } : {}),
+    // The creation rail floats at the left (a left panel shifts it); hidden on a phone, where it has no width.
+    ...(withTools && tools?.width ? { tools: tools.right - ox } : {}),
   });
 }
 
@@ -147,6 +150,25 @@ export function nudgeInto(box: Rect, cam: CanvasCamera, free: FreeArea): CanvasC
   const dx = axis(box.x * cam.zoom + cam.x, box.width * cam.zoom, free.left + m, free.left + free.width - m);
   const dy = axis(box.y * cam.zoom + cam.y, box.height * cam.zoom, free.top + m, free.top + free.height - m);
   return Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 ? null : { zoom: cam.zoom, x: cam.x + dx, y: cam.y + dy };
+}
+
+/**
+ * Canvas mode, a panel just opened (the free area shrank from `before` to `after`): the camera that keeps what you were
+ * looking at clear of it, zoom kept. The selection if there is
+ * one; else the content whose start was in view in `seen` (the canvas the panels left, before the tool rail), aligned to the free
+ * area's start when it no longer fits. Null when nothing needs to move, and always null when the free area did not shrink
+ * (closing never pans).
+ */
+export function clearOfPanel({ selection, content, cam, before, seen, after }: {
+  selection?: Rect | null; content?: Rect | null; cam: CanvasCamera; before: FreeArea; seen: FreeArea; after: FreeArea;
+}): CanvasCamera | null {
+  const shrank = after.left > before.left + 0.5 || after.left + after.width < before.left + before.width - 0.5;
+  if (!shrank) return null;
+  if (selection) return nudgeInto(selection, cam, after);
+  // Seen means its start was: a diagram a previous panel already pushed half under the next one counts too.
+  const [x, y] = content ? [content.x * cam.zoom + cam.x, content.y * cam.zoom + cam.y] : [0, 0];
+  const seenStart = x >= seen.left && x < seen.left + seen.width && y >= seen.top && y < seen.top + seen.height;
+  return content && seenStart ? nudgeInto(content, cam, after) : null;
 }
 
 /**

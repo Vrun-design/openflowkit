@@ -38,7 +38,7 @@ async function openStarter(page: Page): Promise<void> {
     await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
     await page.getByRole('button', { name: 'Create C4 workspace', exact: true }).click();
     await expect.poll(async () => (await doc(page))?.pages.length).toBe(3);
-    await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
+    await expect(page.getByRole('complementary', { name: 'Architecture model' })).toBeVisible();
   });
 }
 

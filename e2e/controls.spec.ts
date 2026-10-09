@@ -65,7 +65,7 @@ async function enterMap(page: Page): Promise<void> {
   await rail.click();
   await page.getByRole('button', { name: 'Create C4 workspace', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Map', exact: true })).toBeVisible();
-  await rail.click();
+  await expect(page.getByRole('complementary', { name: 'Architecture model' })).toBeVisible();
   await page.getByRole('button', { name: 'Map', exact: true }).click();
   await expect(page.getByRole('toolbar', { name: 'Map depth', exact: true })).toBeVisible();
 }

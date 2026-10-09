@@ -1,6 +1,6 @@
 import type { CompileWorkspaceResult } from '../../../dsl/compile';
 import { projectRelations } from '../../../dsl/model/predicates';
-import { relationConnector } from '../../../dsl/families/architecture/scene';
+import { elementColorKey, relationConnector } from '../../../dsl/families/architecture/scene';
 import {
   archFrameOf, archModelFromJson, archModelOfPage, archViewIdOfPage, createArchIndex, elementDescendantIds, placedElementId,
 } from '../../../dsl/model/model';
@@ -74,6 +74,12 @@ function pageWithModel(page: ScenePage, model: ArchModel, resolveIcon?: IconReso
       content.archProviderLabel = ELEMENT_KIND_LABEL[element.kind];
       content.archResourceType = element.tech ?? '';
       if (element.desc) content.archEnvironment = element.desc; else delete content.archEnvironment;
+      // A kind-coloured card follows its element: an authored colour replaces it, a new kind brings its own.
+      if (content.archKindColor !== undefined) {
+        const { key, fromKind } = elementColorKey(element);
+        if (key) content.color = key; else delete content.color;
+        if (key && fromKind) content.archKindColor = key; else delete content.archKindColor;
+      }
     }
     const placement: Record<string, unknown> = { ...(isRecord(drawn.metadata.model) ? drawn.metadata.model : {}), tags: [...element.tags] };
     if (element.desc) placement.desc = element.desc; else delete placement.desc;

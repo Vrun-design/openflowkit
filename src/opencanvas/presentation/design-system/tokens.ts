@@ -82,7 +82,8 @@ export const lightColors = {
   inverse: '#252724',
   onInverse: '#fdfdfb',
   onAccent: '#fdfdfb',
-  focus: '#b63e14',
+  /** Keyboard focus is the system blue: distinct from the inverse selected pill, never the brand orange. */
+  focus: '#275c9b',
   selection: '#b63e14',
   info: '#275c9b',
   infoSoft: '#e8f0fa',
@@ -115,7 +116,7 @@ export const darkColors: ThemeColors = {
   inverse: '#f1f2ec',
   onInverse: '#191b19',
   onAccent: '#301b12',
-  focus: '#ffb18e',
+  focus: '#a6caff',
   selection: '#ffb18e',
   info: '#a6caff',
   infoSoft: '#20364d',

@@ -185,6 +185,8 @@ function familyDefaults(node: SceneNode): FamilyDefaults {
 
 /** The colour word a node of this family has when none is set. */
 function familyColorKey(node: SceneNode): string | undefined {
+  // A C4 kind's own colour is the family default too: the author did not choose it.
+  if (typeof node.content.archKindColor === 'string' && node.content.colorMode !== 'filled') return node.content.archKindColor;
   const bare = { ...node, content: { ...node.content, color: undefined } };
   return (resolveBasicNodePresentation(bare) ?? resolveArchitectureNodePresentation(bare))?.colorKey;
 }

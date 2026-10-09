@@ -330,6 +330,21 @@ views {
     expect(raw.source).toBe(CONTAINER);
   });
 
+  it('marks a kind-default colour so dark canvases can wash it, and leaves an authored one unmarked', () => {
+    const swatch = paletteResolver(undefined);
+    const draw = (kind: string, color?: string) => elementNode(
+      { id: 'x', name: 'X', kind, icon: 'tabler/user', tags: [], links: [], ...(color ? { color } : {}) } as never,
+      null, 0, { origin: { x: 0, y: 0 }, swatch },
+    ).content;
+    expect(draw('person')).toMatchObject({ color: 'violet', archKindColor: 'violet' });
+    expect(draw('external')).toMatchObject({ archKindColor: expect.any(String) });
+    expect(draw('person', 'red')).not.toHaveProperty('archKindColor');
+    expect(draw('container')).not.toHaveProperty('archKindColor');
+    const bold = elementNode({ id: 'x', name: 'X', kind: 'person', icon: 'tabler/user', attrs: [{ value: 'bold' }], tags: [], links: [] } as never, null, 0, { origin: { x: 0, y: 0 }, swatch }).content;
+    expect(bold).toMatchObject({ colorMode: 'filled' });
+    expect(bold).not.toHaveProperty('archKindColor');
+  });
+
   it('tags nodes with their element id, tech, desc and tags', async () => {
     const compiled = await compile(CONTAINER);
     const db = compiled.nodes.find((node) => node.id === 'shop.db')!;

@@ -43,6 +43,12 @@ function elementColorWord(element: ArchElement): string | undefined {
   return element.color ?? KIND_COLOR[element.kind];
 }
 
+/** The palette word the element draws with, and whether the kind chose it (a dark canvas washes those). */
+export function elementColorKey(element: ArchElement): { readonly key: string | undefined; readonly fromKind: boolean } {
+  const word = elementColorWord(element);
+  return { key: word ? paletteKey(word) : undefined, fromKind: !element.color };
+}
+
 function paletteKey(word: string): string {
   return COLOR_WORDS[word.toLowerCase()]?.key ?? word;
 }
@@ -185,6 +191,8 @@ export function elementNode(element: ArchElement, parentId: string | null, zInde
       ...(wrapPolicy ? { sizingPolicy: wrapPolicy } : {}),
       // Architecture cards and containers resolve their palette from content keys.
       ...(isIconCard && color ? { color: paletteKey(color), ...(fill === 'bold' ? { colorMode: 'filled' } : {}) } : {}),
+      // The colour came from the kind, not the author: a dark canvas washes it like an unset one.
+      ...(isIconCard && !element.color && color && fill !== 'bold' ? { archKindColor: paletteKey(color) } : {}),
       ...(isIconCard && authoredIcon ? {
         icon: authoredIcon,
         archProvider: iconProvider(authoredIcon), archProviderLabel: ELEMENT_KIND_LABEL[element.kind], archResourceType: element.tech ?? '',

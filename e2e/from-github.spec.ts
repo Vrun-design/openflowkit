@@ -51,7 +51,7 @@ test('a public repo opens in the editor as its architecture @gate', async ({ pag
   // The arrow says where it came from: a GitHub link in the model panel.
   await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
   const panel = page.getByRole('complementary', { name: 'Architecture model' });
-  const row = (unit: string) => panel.locator('.ofk-v2-model-row').filter({ has: page.locator('.ofk-v2-model-name', { hasText: new RegExp(`^${unit}$`) }) });
+  const row = (unit: string) => panel.getByRole('treeitem').filter({ has: page.locator('.ofk-tree-label', { hasText: new RegExp(`^${unit}$`) }) });
   for (const unit of ['web', 'api', 'worker', 'db']) await expect(row(unit)).toHaveCount(1);
   await row('web').click();
   await expect(panel.locator('a[href^="https://github.com/acme/shop/blob/"]').first()).toBeVisible();

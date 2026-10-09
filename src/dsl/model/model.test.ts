@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  archModelFromJson, archModelOfPage, archViewIdOfPage, childViewOf, createArchIndex,
+  archModelFromJson, archModelOfPage, archViewIdOfPage, childViewOf, createArchIndex, crossingRelations,
   deriveImpliedRelations, elementAncestors, elementDescendantIds, elementPathRef, flattenFlowSteps,
   hasChildren, nearestShown, placedElementId, resolveElementRef, viewsOf,
 } from './model';
@@ -189,4 +189,17 @@ describe('a parent chain that loops (JSON import)', () => {
     expect(model.elements.map((e) => e.parent)).toEqual([null, 'gone']);
     expect(createArchIndex(model).byNamePath.get('a')?.id).toBe('a');
   }, 2000);
+});
+
+describe('crossingRelations', () => {
+  const index = createArchIndex(SHOP);
+  it('lists what crosses the boundary through the inner element and leaves the rest out', () => {
+    const { talksTo, usedBy } = crossingRelations(index, 'shop');
+    expect(talksTo.map((c) => [c.relation.id, c.via])).toEqual([['rel:shop.api->stripe', 'shop.api']]);
+    expect(usedBy.map((c) => [c.relation.id, c.via])).toEqual([['rel:customer->shop.web', 'shop.web']]);
+  });
+  it('an element\'s own relations have no via, and a leaf with none is empty', () => {
+    expect(crossingRelations(index, 'shop.api').talksTo.map((c) => c.via)).toEqual([null]);
+    expect(crossingRelations(index, 'shop.api.orders')).toEqual({ talksTo: [], usedBy: [] });
+  });
 });

@@ -49,6 +49,21 @@ describe('resolveNodeStyle', () => {
       expect(resolveNodeStyle(each, '#191b19').fill, JSON.stringify(each.content)).toBe(resolveNodeStyle(each, '#f7f7f5').fill);
     }
   });
+  it('washes a C4 card on its own kind hue in dark, but keeps an authored colour', () => {
+    const card = (content: Record<string, unknown>) => node({ kind: 'architecture', content: { label: 'A', icon: 'tabler/user', ...content } });
+    const kind = card({ color: 'violet', archKindColor: 'violet' });
+    const dark = resolveNodeStyle(kind, '#191b19');
+    expect(dark.fill).toMatch(/^rgba\(\d+,\d+,\d+,0\.08\)$/);
+    expect(dark.fill).not.toBe(resolveNodeStyle(card({ color: 'blue', archKindColor: 'blue' }), '#191b19').fill);
+    expect(dark.subTextColor).toBeDefined();
+    expect(resolveNodeStyle(kind, '#f7f7f5').fill).toBe(resolveNodeStyle(card({ color: 'violet' }), '#f7f7f5').fill);
+    const authored = card({ color: 'red', archKindColor: 'violet' });
+    expect(resolveNodeStyle(authored, '#191b19').fill).toBe(resolveNodeStyle(authored, '#f7f7f5').fill);
+    const bold = card({ color: 'violet', colorMode: 'filled', archKindColor: 'violet' });
+    expect(resolveNodeStyle(bold, '#191b19').fill).toBe(resolveNodeStyle(bold, '#f7f7f5').fill);
+    const plain = card({ color: 'violet' });
+    expect(resolveNodeStyle(plain, '#191b19').fill).toBe(resolveNodeStyle(plain, '#f7f7f5').fill);
+  });
   it('gives descriptions and kind tags on a dark wash readable ink; light and explicit colours are untouched', () => {
     const canvas = '#191b19';
     const washed = [

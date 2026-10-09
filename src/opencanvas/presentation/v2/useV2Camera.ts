@@ -160,7 +160,7 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
   );
   const resetZoom = useCallback(() => zoomTo(100), [zoomTo]);
 
-  // First open of a non-empty doc fits with padding (I-32), including after
+  // First open of a non-empty doc lands fitted, or readable when the fit would be too small, (I-32), including after
   // a reload. Empty docs keep the default camera; later edits never hijack
   // it. The host receives the page just after reporting ready, so a missing
   // content bounds means "not yet" rather than "empty": only auto-fit while
@@ -171,7 +171,8 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
       status: PixiRendererStatus,
       document: SceneDocumentV1 | null,
       docId: string | undefined,
-      revision: number
+      revision: number,
+      direction: LandingDirection
     ) => {
       if (status !== 'ready' || !document || fittedRef.current === docId) return;
       if (revision !== 0) {
@@ -180,9 +181,9 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
       }
       if (!hostRef.current?.getContentBounds()) return;
       fittedRef.current = docId ?? null;
-      fitView();
+      landReadable(direction);
     },
-    [fitView, hostRef]
+    [landReadable, hostRef]
   );
 
   const resetFit = useCallback(() => {

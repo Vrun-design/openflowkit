@@ -1,6 +1,6 @@
 import { architectureCardLayout } from '../../domain/nodes/architectureCardLayout';
 import { FONT_STACKS, resolveNodeStyle, type NodeStyle } from '../../domain/nodes/nodeStyle';
-import { resolveTextVisualStyle } from '@/theme';
+import { resolveNodeVisualStyle, resolveTextVisualStyle } from '@/theme';
 import { nodePaletteName } from '../../domain/nodes/nodePalette';
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import { boundsFromPoints } from '../../domain/geometry/bounds';
@@ -139,6 +139,14 @@ function xml(value: unknown): string {
 function safeColor(value: unknown, fallback: string): string {
   return typeof value === 'string' && /^(?:#[0-9a-f]{3,8}|[a-z]{3,20})$/i.test(value)
     ? value : fallback;
+}
+
+/** `fill` (+ `fill-opacity` for an rgba wash): SVG consumers differ on rgba() attribute values. */
+function fillAttributes(value: unknown, fallback: string): string {
+  const wash = typeof value === 'string' ? value.match(/^rgba\((\d+),(\d+),(\d+),([\d.]+)\)$/) : null;
+  if (!wash) return `fill="${safeColor(value, fallback)}"`;
+  const hex = [wash[1], wash[2], wash[3]].map((part) => Number(part).toString(16).padStart(2, '0')).join('');
+  return `fill="#${hex}" fill-opacity="${number(Number(wash[4]))}"`;
 }
 
 function matrixAttribute(matrix: Matrix2d): string {
@@ -599,14 +607,22 @@ function exportArchitectureCard(node: SceneNode, matrix: Matrix2d, style: NodeSt
   const presentation = resolveArchitectureNodePresentation(node);
   if (presentation?.display !== 'architecture-card') return null;
   const font = `fill="${style.textColor}" font-family="${xml(FONT_STACKS[style.fontFamily])}"`;
+  const subFont = style.subTextColor ? `fill="${safeColor(style.subTextColor, '#cbd5e1')}" font-family="${xml(FONT_STACKS[style.fontFamily])}"` : font;
   const layout = architectureCardLayout(node, style);
+  // As the canvas draws it: on a dark wash the header takes the card's hue and the icon keeps a light tile.
+  const washed = Boolean(style.subTextColor);
+  const icon = architectureIconBounds(node, 'architecture-card');
+  const tile = washed
+    ? `<rect x="${number(icon.x)}" y="${number(icon.y)}" width="${number(icon.width)}" height="${number(icon.height)}" rx="6" fill="${safeColor(resolveNodeVisualStyle(presentation.colorKey, presentation.colorMode, presentation.customColor, nodePaletteName(node)).iconBg, '#f1f5f9')}"/>`
+    : '';
   return nodeGroup(`data-node-id="${xml(node.id)}" transform="${matrixAttribute(matrix)}"`,
-    `<rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="${number(style.cornerRadius)}" fill="${safeColor(style.fill, '#f8fafc')}" stroke="${safeColor(style.stroke, '#cbd5e1')}" stroke-width="${number(style.strokeWidth)}"/>`
-    + `<rect x="10" y="8" width="${number(node.size.width - 20)}" height="26" rx="7" fill="${safeColor(style.stroke, '#cbd5e1')}" opacity="0.12"/>`
-    + textElement(layout.provider.displayText, 38, 15, `${font} font-size="10" font-weight="700" dominant-baseline="hanging"`, 12)
-    + textElement(layout.resource.displayText, node.size.width - 16, 15, `${font} font-size="10" font-weight="600" text-anchor="end" dominant-baseline="hanging"`, 12)
+    `<rect width="${number(node.size.width)}" height="${number(node.size.height)}" rx="${number(style.cornerRadius)}" ${fillAttributes(style.fill, '#f8fafc')} stroke="${safeColor(style.stroke, '#cbd5e1')}" stroke-width="${number(style.strokeWidth)}"/>`
+    + `<rect x="10" y="8" width="${number(node.size.width - 20)}" height="26" rx="7" fill="${safeColor(style.stroke, '#cbd5e1')}" opacity="${washed ? '0.3' : '0.12'}"/>`
+    + tile
+    + textElement(layout.provider.displayText, 38, 15, `${subFont} font-size="10" font-weight="700" dominant-baseline="hanging"`, 12)
+    + textElement(layout.resource.displayText, node.size.width - 16, 15, `${subFont} font-size="10" font-weight="600" text-anchor="end" dominant-baseline="hanging"`, 12)
     + textElement(layout.title.displayText, layout.titleX, layout.titleY, `${font} font-size="${number(style.fontSize)}" font-weight="${style.fontWeight}" dominant-baseline="hanging"`, style.fontSize * style.lineHeight)
-    + textElement(layout.detail.displayText, 12, layout.detailY, `${font} font-size="10" font-weight="500" dominant-baseline="hanging"`, 12)
+    + textElement(layout.detail.displayText, 12, layout.detailY, `${subFont} font-size="10" font-weight="500" dominant-baseline="hanging"`, 12)
     + iconMarkup(node, iconArt), wrapper);
 }
 

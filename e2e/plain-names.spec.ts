@@ -13,7 +13,7 @@ test('a generated system map shows no C4 jargon outside the model panel @gate', 
   await workspace.getByRole('button', { name: 'Architecture model', exact: true }).click();
   await page.getByRole('button', { name: 'Create C4 workspace', exact: true }).click();
   await expect.poll(async () => (await doc(page))?.pages.length).toBe(3);
-  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Close panel' }).click();
   await expect(page.getByLabel('Search architecture')).toBeHidden();
 
   const document = (await doc(page))!;

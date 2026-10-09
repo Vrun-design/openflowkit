@@ -6,7 +6,7 @@ import type { ScenePage } from '../../../domain/document/types';
 import type { MapModel, MapNode } from '../../../../dsl/map/types';
 import { READABLE } from '../../../application/map/geometry';
 import { MAP_BOX_BUDGET as BOX_BUDGET } from '../../../application/map/mapNavigation';
-import { nudgeInto, fitsBudget, freeArea, inView, nearestDrawn, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, startOpen, toggleBox } from './mapMode';
+import { clearOfPanel, nudgeInto, fitsBudget, freeArea, inView, nearestDrawn, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, startOpen, toggleBox } from './mapMode';
 
 const TEXT = `architecture
 model {
@@ -240,5 +240,36 @@ describe('nudgeInto', () => {
   it('aligns the top-left of a box larger than the free area', () => {
     const out = nudgeInto({ x: 300, y: 400, width: 2000, height: 2000 }, cam, free)!;
     expect(out).toEqual({ zoom: 1, x: 16 - 300, y: 66 - 400 });
+  });
+});
+
+describe('clearOfPanel', () => {
+  const cam = { zoom: 1, x: 0, y: 0 };
+  const before = { left: 0, top: 50, width: 1400, height: 800 };
+  const left = { ...before, left: 300, width: 1100 };
+  const both = { ...before, left: 300, width: 800 };
+  const box = { x: 100, y: 200, width: 200, height: 100 };
+  it('pans the content that was fully visible clear of a panel that now covers it, keeping the zoom', () => {
+    const out = clearOfPanel({ content: box, cam, before, seen: before, after: left })!;
+    expect(out).toEqual({ zoom: 1, x: 300 + 16 - 100, y: 0 });
+  });
+  it('keeps the selection clear, not the content', () => {
+    const picked = { x: 1050, y: 200, width: 100, height: 100 };
+    const out = clearOfPanel({ selection: picked, content: box, cam, before, seen: before, after: both })!;
+    expect(out).toEqual({ zoom: 1, x: 1084 - 1150, y: 0 });
+  });
+  it('does nothing when the content was already partly hidden or the panel closed', () => {
+    expect(clearOfPanel({ content: { ...box, x: -50 }, cam, before, seen: before, after: left })).toBeNull();
+    expect(clearOfPanel({ content: box, cam, before: left, seen: left, after: before })).toBeNull();
+    expect(clearOfPanel({ selection: { ...box, x: 0 }, cam, before: left, seen: left, after: before })).toBeNull();
+  });
+  it('aligns content that no longer fits to the free area start, and judges "seen" without the tool rail', () => {
+    const wide = { x: 40, y: 200, width: 1200, height: 100 };
+    const rail = { ...before, left: 100, width: 1300 };
+    expect(clearOfPanel({ content: wide, cam, before: rail, seen: before, after: { ...rail, left: 300, width: 800 } })).toEqual({ zoom: 1, x: 300 + 16 - 40, y: 0 });
+    expect(clearOfPanel({ content: wide, cam, before: rail, seen: rail, after: { ...rail, left: 300, width: 800 } })).toBeNull();
+  });
+  it('does nothing without content or selection', () => {
+    expect(clearOfPanel({ cam, before, seen: before, after: left })).toBeNull();
   });
 });

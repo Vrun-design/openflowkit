@@ -214,11 +214,11 @@ export function useV2CodeWorkspace(options: V2CodeWorkspaceOptions) {
     }
   }, [pageRef, document, readOnly, generating, frameId, draft, palette, autoIcons, commit, onViews, announce, offerIconRemoval, applySelection, pushToast]);
 
-  /** One template path for the canvas welcome, home's cards and the starter gallery. */
-  const startFrom = useCallback((dsl: string) => {
+  /** One template path for the canvas welcome, home's cards and the starter gallery. The Model panel's own button keeps itself open (`openPanel: false`). */
+  const startFrom = useCallback((dsl: string, { openPanel: showPanel = true }: { openPanel?: boolean } = {}) => {
     setFrameId(null);
     setDraft(dsl);
-    openPanel();
+    if (showPanel) openPanel();
     void generate(dsl, undefined, null);
   }, [openPanel, generate]);
   /** Writes the draft for a new diagram without opening the panel (the motion chips, a pasted Mermaid tip). */

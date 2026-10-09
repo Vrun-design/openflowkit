@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { IconChevronRight } from '@tabler/icons-react';
 import { Icon } from './Icon';
 export interface TreeNode {
@@ -10,18 +10,30 @@ export interface TreeNode {
   trailing?: ReactNode;
   /** Agent-authored or otherwise annotated rows get a caption. */
   caption?: string;
+  /** Quiet right-aligned detail, always visible (unlike `trailing`). */
+  meta?: string;
+  /** De-emphasised: still a row, but not what the host is looking at right now. */
+  muted?: boolean;
 }
 export interface TreeProps {
   label: string;
   nodes: readonly TreeNode[];
   selectedId: string | null;
   expandedIds: ReadonlySet<string>;
+  /** Click, Enter or Space. Arrow keys only move focus. */
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
-  /** Host implements reorder/reparent; Tree only reports intent. */
+  /** Double-click. Host implements reorder/reparent/drill; Tree only reports intent. */
   onActivate?: (id: string) => void;
 }
-/** Layers/pages tree: single Tab stop, arrows navigate, Right/Left expand/collapse, Enter activates. */
+function visibleIds(list: readonly TreeNode[], expandedIds: ReadonlySet<string>, out: string[] = []): string[] {
+  for (const node of list) {
+    out.push(node.id);
+    if (node.children?.length && expandedIds.has(node.id)) visibleIds(node.children, expandedIds, out);
+  }
+  return out;
+}
+/** Layers/pages tree: single Tab stop, arrows move focus, Right/Left expand/collapse, Enter/Space/click select. */
 export function Tree({
   label,
   nodes,
@@ -32,6 +44,10 @@ export function Tree({
   onActivate,
 }: TreeProps) {
   const ref = useRef<HTMLUListElement>(null);
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const visible = visibleIds(nodes, expandedIds);
+  // Roving tab stop: where focus last was, else the selection, else the first row.
+  const tabStop = [focusId, selectedId].find((id) => id !== null && visible.includes(id)) ?? visible[0];
   function rows() {
     return Array.from(ref.current?.querySelectorAll<HTMLElement>('[role="treeitem"]') ?? []);
   }
@@ -50,18 +66,14 @@ export function Tree({
     else if (e.key === 'End') next = list[list.length - 1];
     else if (e.key === 'ArrowRight') {
       if (expandable && !expanded) onToggle(id);
-      else next = list[i + 1];
+      else if (expandable) next = list[i + 1];
     } else if (e.key === 'ArrowLeft') {
       if (expandable && expanded) onToggle(id);
-      else next = current.parentElement?.closest<HTMLElement>('[role="treeitem"]') ?? undefined;
-    } else if (e.key === 'Enter') onActivate?.(id);
-    else if (e.key === ' ') onSelect(id);
+      else next = list.slice(0, i).reverse().find((row) => Number(row.getAttribute('aria-level')) < Number(current.getAttribute('aria-level')));
+    } else if (e.key === 'Enter' || e.key === ' ') onSelect(id);
     else return;
     e.preventDefault();
-    if (next) {
-      next.focus();
-      onSelect(next.dataset.id!);
-    }
+    next?.focus();
   }
   function render(list: readonly TreeNode[], level: number): ReactNode {
     return list.map((node) => {
@@ -76,7 +88,9 @@ export function Tree({
             aria-level={level}
             aria-selected={selected}
             aria-expanded={expandable ? expanded : undefined}
-            tabIndex={selected || (!selectedId && level === 1 && node === list[0]) ? 0 : -1}
+            tabIndex={node.id === tabStop ? 0 : -1}
+            data-muted={node.muted || undefined}
+            onFocus={() => setFocusId(node.id)}
             className="ofk-tree-row"
             style={{ '--ofk-tree-level': level } as React.CSSProperties}
             onClick={() => onSelect(node.id)}
@@ -101,10 +115,11 @@ export function Tree({
                 {node.icon}
               </span>
             )}
-            <span className="ofk-tree-label">
+            <span className="ofk-tree-label" title={node.label}>
               {node.label}
               {node.caption && <span className="ofk-caption"> · {node.caption}</span>}
             </span>
+            {node.meta && <span className="ofk-tree-meta">{node.meta}</span>}
             {node.trailing && <span className="ofk-tree-trailing">{node.trailing}</span>}
           </div>
           {expandable && expanded && <ul role="group">{render(node.children!, level + 1)}</ul>}

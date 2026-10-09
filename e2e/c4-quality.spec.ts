@@ -22,25 +22,35 @@ test('C4 starter, keyboard inspection, focused camera and visual flow authoring 
     return !!box && box.x >= 0 && box.y >= 0 && box.x + box.width <= view.width && box.y + box.height <= view.height;
   }).toBe(true);
   await expect(page.getByRole('button', { name: 'Shop architecture', exact: true })).toBeVisible();
-  await workspace.getByRole('button', { name: 'Architecture model', exact: true }).click();
+  // Create C4 workspace leaves the Model panel open: it replaces nothing, and Diagram as code stays closed.
+  await expect(page.getByRole('complementary', { name: 'Architecture model' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Diagram as code' })).toHaveCount(0);
   await expect(page.getByLabel('Search architecture')).toBeVisible();
   await page.getByLabel('Search architecture').fill('Go');
-  const api = page.locator('.ofk-v2-model-row', { hasText: 'API' });
-  await api.focus();
+  const allElements = page.getByRole('button', { name: 'All elements', exact: true });
+  await page.getByRole('treeitem', { name: /^API/ }).focus();
+  await page.keyboard.press('ArrowDown'); // arrows only move focus: the outline stays
+  await expect(page.getByRole('tree', { name: 'Model elements' })).toBeVisible();
+  await page.getByRole('treeitem', { name: /^API/ }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByLabel('Name', { exact: true })).toHaveValue('API');
-  await expect(page.getByRole('list', { name: 'Relationships of API' })).toContainText(
-    'stores orders'
-  );
+  await expect(page.getByRole('list', { name: 'API talks to' })).toContainText('stores orders');
+  await allElements.click();
+  await expect(page.getByRole('treeitem', { name: /^API/ })).toBeFocused();
   await page.getByLabel('Search architecture').fill('');
-  await page.getByRole('button', { name: 'Collapse Shop', exact: true }).click();
-  await expect(page.locator('.ofk-v2-model-row', { hasText: 'Database' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Expand Shop', exact: true }).click();
-  await page.locator('.ofk-v2-model-row', { hasText: 'Shop' }).first().focus();
+  const shopRow = page.getByRole('treeitem', { name: /^Shop/ });
+  await shopRow.locator('.ofk-tree-toggle').click(); // the chevron collapses
+  await expect(page.getByRole('treeitem', { name: /^Database/ })).toHaveCount(0);
+  await shopRow.focus();
+  await page.keyboard.press('ArrowRight'); // and Right expands
+  await expect(page.getByRole('treeitem', { name: /^Database/ })).toHaveCount(1);
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: 'Open Container view', exact: true }).click();
   await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop');
-  await page.locator('.ofk-v2-model-row', { hasText: 'Web' }).first().click();
+  // Shop's card is still open after the drill.
+  await expect(allElements).toBeVisible();
+  await allElements.click();
+  await page.getByRole('treeitem', { name: /^Web/ }).click();
   await expect
     .poll(async () => {
       const id = (await state(page)).selectedNodes[0];
@@ -59,6 +69,7 @@ test('C4 starter, keyboard inspection, focused camera and visual flow authoring 
     })
     .toBe(true);
   await expect(page.getByRole('button', { name: 'Zoom 140%', exact: true })).toContainText('140%');
+  await allElements.click();
   await page.getByRole('tab', { name: /Flows/ }).click();
   await page.getByRole('button', { name: 'Create flow', exact: true }).click();
   const form = page.getByRole('form', { name: 'Create flow' });
@@ -104,7 +115,7 @@ test('Generate from the untouched starter draft keeps a view made in the model p
   await expect.poll(async () => (await doc(page))?.pages.length).toBe(3);
   const modelPanel = page.getByRole('complementary', { name: 'Architecture model' });
   if (!(await modelPanel.isVisible())) await modelButton.click();
-  await modelPanel.locator('.ofk-v2-model-row', { hasText: 'API' }).first().click();
+  await modelPanel.getByRole('treeitem', { name: /^API/ }).click();
   await page.getByRole('button', { name: 'Create Component view', exact: true }).click();
   await expect.poll(async () => (await doc(page))?.pages.length).toBe(4);
   const generate = page.getByRole('button', { name: 'Generate diagram' });
@@ -113,8 +124,8 @@ test('Generate from the untouched starter draft keeps a view made in the model p
   await expect(generate).toBeEnabled();
   await expect.poll(async () => (await doc(page))?.pages.length).toBe(4);
   if (!(await modelPanel.isVisible())) await modelButton.click();
-  await modelPanel.getByRole('tab', { name: /Views/ }).click();
-  await expect(modelPanel.getByRole('list', { name: 'Views' })).toContainText('Component');
+  await page.getByRole('button', { name: /^Pages/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Pages', exact: true }).getByRole('list', { name: 'Pages' })).toContainText('Inside API');
 });
 
 test('a second model opens on its own landscape, not the first model\'s @gate', async ({ page }) => {

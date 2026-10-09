@@ -37,6 +37,8 @@ interface V2ChromeProps extends V2SettingsProps {
   };
   readonly breadcrumb?: readonly { readonly pageId: string; readonly label: string; readonly elementId?: string }[];
   readonly onCrumb?: (crumb: { readonly pageId: string; readonly elementId?: string }) => void;
+  readonly mapPath?: readonly { readonly id: string; readonly label: string }[];
+  readonly onMapPath?: (id: string) => void;
   /** Canvas | Map; Map draws nothing by hand, so the creation toolbar steps aside. */
   readonly mapMode?: { readonly mode: 'canvas' | 'map'; readonly onChange: (mode: 'canvas' | 'map') => void };
   /** Map mode's depth and expand controls; present only while the map is on screen. */
@@ -87,6 +89,8 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         {...(props.breadcrumb ? { breadcrumb: props.breadcrumb } : {})}
         {...(props.onCrumb ? { onCrumb: props.onCrumb } : {})}
         {...(props.mapMode ? { mapMode: props.mapMode } : {})}
+        {...(props.mapPath ? { mapPath: props.mapPath } : {})}
+        {...(props.onMapPath ? { onMapPath: props.onMapPath } : {})}
         onOpenExport={props.onOpenExport}
         onDismissExport={props.onDismissExport}
         {...(props.onEditShared ? { onEditShared: props.onEditShared } : {})}
