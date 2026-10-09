@@ -59,14 +59,29 @@ test('every popover trigger opens, and closes on a second click, Escape and an o
   }
 });
 
-test('every toolbar button presses without an error and Escape backs out of it @gate', async ({ page }) => {
-  const all = (await controls(page)).filter(({ disabled }) => !disabled);
+/** Map mode's toolbar only exists on a page with a C4 model, in Map: build one and switch to it. */
+async function enterMap(page: Page): Promise<void> {
+  const rail = page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true });
+  await rail.click();
+  await page.getByRole('button', { name: 'Create C4 workspace', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Map', exact: true })).toBeVisible();
+  await rail.click();
+  await page.getByRole('button', { name: 'Map', exact: true }).click();
+  await expect(page.getByRole('toolbar', { name: 'Map depth', exact: true })).toBeVisible();
+}
+
+/** Presses every enabled button of `only` (all toolbars when omitted), backing out of whatever it opens. */
+async function pressEvery(page: Page, floor: number, only?: string, mayDisable = false): Promise<void> {
+  const all = (await controls(page)).filter(({ disabled, toolbar }) => !disabled && (only === undefined || toolbar === only));
   // The create rail is 7 buttons since 2026-10-06 (was 12); the floor only catches broken discovery.
-  expect(all.length, 'discovery found the toolbars').toBeGreaterThanOrEqual(18);
+  expect(all.length, 'discovery found the toolbars').toBeGreaterThanOrEqual(floor);
   const layers = page.locator('.ofk-popover:not([data-passive]), [role="dialog"][aria-modal="true"]');
   for (const control of all) {
     const { name } = control;
     const target = button(page, control);
+    // Map only: a press earlier in the sweep can turn a control off for good reason (Expand once everything is open).
+    // Elsewhere a control that disables itself is a failure, so the click below fails.
+    if (mayDisable && await target.isDisabled()) continue;
     const pressed = await target.getAttribute('aria-pressed');
     await target.click();
     for (let i = 0; i < 3 && (await layers.count()); i++) await page.keyboard.press('Escape');
@@ -75,11 +90,20 @@ test('every toolbar button presses without an error and Escape backs out of it @
     if (pressed !== null && (await target.getAttribute('aria-pressed')) !== pressed) await target.click();
     await page.keyboard.press('v');
   }
+}
+
+test('every toolbar button presses without an error and Escape backs out of it @gate', async ({ page }) => {
+  await pressEvery(page, 18);
 });
 
-test('every icon-only toolbar button names itself in a tooltip @gate', async ({ page }) => {
-  const iconOnly = (await controls(page)).filter(({ text }) => !text);
-  expect(iconOnly.length, 'discovery found icon buttons').toBeGreaterThanOrEqual(15);
+test('every Map toolbar button presses without an error and Escape backs out of it @gate', async ({ page }) => {
+  await enterMap(page);
+  await pressEvery(page, 5, 'Map depth', true);
+});
+
+async function tooltipEvery(page: Page, floor: number, only?: string): Promise<void> {
+  const iconOnly = (await controls(page)).filter(({ text, toolbar }) => !text && (only === undefined || toolbar === only));
+  expect(iconOnly.length, 'discovery found icon buttons').toBeGreaterThanOrEqual(floor);
   await expect(page.locator('.ofk-tooltip-anchor [title]'), 'custom tooltips own every visible hint').toHaveCount(0);
   const tip = page.getByRole('tooltip');
   for (const control of iconOnly) {
@@ -90,4 +114,13 @@ test('every icon-only toolbar button names itself in a tooltip @gate', async ({ 
     // A native title would pop a second, late tooltip over ours.
     await expect(button(page, control), `${name}: no native title`).not.toHaveAttribute('title');
   }
+}
+
+test('every icon-only toolbar button names itself in a tooltip @gate', async ({ page }) => {
+  await tooltipEvery(page, 15);
+});
+
+test('every icon-only Map toolbar button names itself in a tooltip @gate', async ({ page }) => {
+  await enterMap(page);
+  await tooltipEvery(page, 2, 'Map depth');
 });

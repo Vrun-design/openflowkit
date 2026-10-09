@@ -1142,3 +1142,12 @@
 .ofk-v2-map-state > * { pointer-events: auto; }
 /* Canvas | Map: two quiet buttons; the selected one is the design system's black pill. */
 .ofk-v2-mode { display: flex; align-items: center; gap: 2px; }
+
+/* Map mode toolbar (depth, expand/collapse, connections): wraps on a phone instead of covering the canvas centre. */
+.ofk-v2-map-toolbar { flex-wrap: wrap; max-width: calc(100vw - 32px); }
+/* Beside the camera controls in the bottom region; on a phone it stacks above them instead. */
+.ofk-v2 .ofk-floating-region[data-slot='bottom-start'] .ofk-v2-map-toolbar { flex-wrap: nowrap; }
+@media (max-width: 720px) {
+  .ofk-v2 .ofk-floating-region[data-slot='bottom-start']:has(.ofk-v2-map-toolbar) { flex-direction: column-reverse; align-items: flex-start; gap: 8px; }
+  .ofk-v2 .ofk-floating-region[data-slot='bottom-start'] .ofk-v2-map-toolbar { flex-wrap: wrap; }
+}

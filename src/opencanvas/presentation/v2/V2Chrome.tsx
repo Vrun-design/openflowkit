@@ -6,6 +6,7 @@ import { V2CreationToolbar, type V2Tool } from './V2CreationToolbar';
 import type { V2ConnectorTool, V2MoreItem, V2ToolConfig } from './v2ToolCatalog';
 import type { ShapeKind } from '../../domain/nodes/shapeNode';
 import { V2DocumentBar } from './V2DocumentBar';
+import { V2MapToolbar, type V2MapToolbarProps } from './map/V2MapToolbar';
 import type { V2SaveStatus } from './useV2Autosave';
 import type { IconChoice } from '../../domain/nodes/iconNode';
 
@@ -38,6 +39,8 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly onCrumb?: (crumb: { readonly pageId: string; readonly elementId?: string }) => void;
   /** Canvas | Map; Map draws nothing by hand, so the creation toolbar steps aside. */
   readonly mapMode?: { readonly mode: 'canvas' | 'map'; readonly onChange: (mode: 'canvas' | 'map') => void };
+  /** Map mode's depth and expand controls; present only while the map is on screen. */
+  readonly mapToolbar?: V2MapToolbarProps;
   readonly onToolChange: (tool: V2Tool) => void;
   readonly toolConfig: V2ToolConfig;
   readonly onPickShape: (shape: ShapeKind) => void;
@@ -109,7 +112,7 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         onZoomTo={props.onZoomTo}
         onFitView={props.onFitView}
         onToggleTree={props.onToggleTree}
-      />}
+      >{props.mapToolbar ? <V2MapToolbar {...props.mapToolbar} /> : null}</V2CameraControls>}
     </>
   );
 }

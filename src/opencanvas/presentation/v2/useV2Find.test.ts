@@ -59,4 +59,41 @@ describe('useV2Find', () => {
     view.rerender({ page: pageOf(node('a', 'api', 0)) });
     expect(view.result.current).toMatchObject({ index: -1, count: 1 });
   });
+
+  it('with a source, matches and stepping come from it and replace select + glide', () => {
+    const reveal = vi.fn(() => true);
+    const cancel = vi.fn();
+    const matches = vi.fn((q: string) => (q === 'x' ? ['m1', 'm2'] : []));
+    const spies = { applySelection: vi.fn(), applyConnectorSelection: vi.fn(), glideToNodes: vi.fn(), animateTo: vi.fn(), focusCanvas: vi.fn() };
+    const { result } = renderHook(() => useV2Find({
+      page: pageOf(node('a', 'x', 0)), selectionRef: { current: replaceSelection(['a']) }, selectedConnectorIdsRef: { current: [] },
+      cameraRef: { current: camera }, source: { matches, reveal, cancel }, ...spies,
+    }));
+    act(() => result.current.show());
+    act(() => result.current.search('x'));
+    expect(result.current.count).toBe(2);
+    act(() => result.current.step(1));
+    act(() => result.current.step(1));
+    expect(reveal.mock.calls).toEqual([['m1'], ['m2']]);
+    expect(result.current.index).toBe(1);
+    expect(spies.applySelection).not.toHaveBeenCalled();
+    expect(spies.glideToNodes).not.toHaveBeenCalled();
+    act(() => result.current.close(true));
+    expect(spies.animateTo).toHaveBeenCalledWith(camera);
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it('a refused reveal leaves the position where it was', () => {
+    const reveal = vi.fn((id: string) => id !== 'm2');
+    const spies = { applySelection: vi.fn(), applyConnectorSelection: vi.fn(), glideToNodes: vi.fn(), animateTo: vi.fn(), focusCanvas: vi.fn() };
+    const { result } = renderHook(() => useV2Find({
+      page: pageOf(node('a', 'x', 0)), selectionRef: { current: replaceSelection(['a']) }, selectedConnectorIdsRef: { current: [] },
+      cameraRef: { current: camera }, source: { matches: () => ['m1', 'm2'], reveal }, ...spies,
+    }));
+    act(() => result.current.show());
+    act(() => result.current.search('x'));
+    act(() => result.current.step(1));
+    act(() => result.current.step(1));
+    expect(result.current.index).toBe(0);
+  });
 });

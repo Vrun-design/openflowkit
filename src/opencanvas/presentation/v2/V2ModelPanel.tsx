@@ -9,7 +9,9 @@ import { safeHttpsUrl } from '../../../dsl/model/relationSource';
 import type { ArchElement, ArchFlow, ArchRelation, ArchView, ElementKind } from '../../../dsl/model/types';
 import { defaultChildKind } from '../../application/dsl/architectureCommands';
 import { Button, Icon, IconButton, Panel, Tabs } from '../design-system';
-import { MapArrowDetails } from './map/MapArrowDetails';
+import { MapArrowDetails, type MapArrow } from './map/MapArrowDetails';
+import { MapArrowEvidence, type MapRepoArrow } from './map/MapArrowEvidence';
+import { MapOverview, type MapOverviewData } from './map/MapOverview';
 import type { ArchitectureCrumb, V2Architecture } from './useV2Architecture';
 
 export interface V2ModelPanelProps {
@@ -37,7 +39,9 @@ export interface V2ModelPanelProps {
   /** `adr/*.md` contents from the open workspace folder, matched by link. */
   readonly adrs?: readonly { readonly path: string; readonly text: string }[];
   /** A clicked Map arrow: the Elements tab lists every relation behind it instead of the element inspector. */
-  readonly mapArrow?: { readonly from: string; readonly to: string; readonly relationIds: readonly string[] } | null;
+  readonly mapArrow?: MapArrow | MapRepoArrow | null;
+  /** Map mode: with nothing selected, the Elements tab opens with a short overview of the map. */
+  readonly mapOverview?: MapOverviewData;
 }
 
 type Tab = 'elements' | 'views' | 'flows' | 'tags';
@@ -167,6 +171,7 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
             label: 'Elements',
             panel: (
               <>
+                {props.mapOverview && !props.mapArrow && !selected ? <MapOverview {...props.mapOverview} /> : null}
                 {readOnly ? null : <Button variant="quiet" onClick={() => addElement(null, 'system')}><Icon icon={IconPlus} /> Add element</Button>}
                 <label className="ofk-v2-model-field"><span>Search architecture</span>
                   <input type="search" value={query} placeholder="Name, technology, tag or environment" onChange={(event) => setQuery(event.target.value)} />
@@ -203,8 +208,8 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
                   ))}
                 </ul>
                 {rows.length === 0 ? <p role="status" className="ofk-v2-model-hint">No matching elements. Try another name, technology or tag.</p> : null}
-                {props.mapArrow ? <MapArrowDetails model={model} arrow={props.mapArrow}
-                  onSelectElement={(id) => { setInspection({id, selectedAtClick: props.selectedElementId}); props.onSelectElement(id); }} /> : null}
+                {props.mapArrow ? ('edge' in props.mapArrow ? <MapArrowEvidence arrow={props.mapArrow} /> : <MapArrowDetails model={model} arrow={props.mapArrow}
+                  onSelectElement={(id) => { setInspection({id, selectedAtClick: props.selectedElementId}); props.onSelectElement(id); }} />) : null}
                 {!props.mapArrow && selected ? <div className="ofk-v2-model-detail">
                   {architecture.childViewOf(selected.id) ? <Button variant="quiet" onClick={() => props.onDrillInto(selected.id)}>Open {viewKindLabel(architecture.childViewOf(selected.id)!)} view</Button> : null}
                   {!architecture.childViewOf(selected.id) && !readOnly && ['system', 'container'].includes(selected.kind) ? <Button variant="quiet" onClick={() => props.onCreateChildView(selected.id)}>Create {selected.kind === 'system' ? 'Container' : 'Component'} view</Button> : null}

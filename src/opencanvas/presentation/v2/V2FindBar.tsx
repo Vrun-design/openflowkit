@@ -3,13 +3,13 @@ import { Field, Icon, IconButton } from '../design-system';
 import type { useV2Find } from './useV2Find';
 
 /** The ⌘F bar: a query, "n of m", and previous/next. Enter and Shift+Enter step; Escape closes and restores. */
-export function V2FindBar({ find }: { readonly find: ReturnType<typeof useV2Find> }): React.JSX.Element {
+export function V2FindBar({ find, label = 'Find on canvas' }: { readonly find: ReturnType<typeof useV2Find>; readonly label?: string }): React.JSX.Element {
   const { query, index, count } = find;
   const status = !query.trim() ? '' : count === 0 ? 'No matches' : index < 0 ? `${count} found` : `${index + 1} of ${count}`;
   return (
-    <div className="ofk-v2-find" role="search" aria-label="Find on canvas">
-      <Field ref={(input) => find.register(input)} label="Find on canvas" type="search" autoFocus autoComplete="off" value={query}
-        placeholder="Find on canvas"
+    <div className="ofk-v2-find" role="search" aria-label={label}>
+      <Field ref={(input) => find.register(input)} label={label} type="search" autoFocus autoComplete="off" value={query}
+        placeholder={label}
         onChange={(event) => find.search(event.target.value)}
         onKeyDown={(event) => {
           // Enter belongs to the input method while it composes (CJK, accents).

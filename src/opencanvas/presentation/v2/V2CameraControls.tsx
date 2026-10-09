@@ -29,6 +29,8 @@ interface V2CameraControlsProps extends V2SettingsProps {
   readonly onZoomTo: (percent: number) => void;
   readonly onFitView: () => void;
   readonly onToggleTree: () => void;
+  /** Sits beside the controls in the same bottom region (Map mode's toolbar). */
+  readonly children?: React.ReactNode;
 }
 
 const ZOOM_PRESETS = [50, 100, 200];
@@ -77,6 +79,7 @@ export function V2CameraControls(props: V2CameraControlsProps): React.JSX.Elemen
           <Tooltip content="Undo" shortcut="⌘Z"><IconButton variant="quiet" label="Undo" icon={<Icon icon={IconArrowBackUp} />} disabled={!props.canUndo} onClick={props.onUndo} /></Tooltip>
           <Tooltip content="Redo" shortcut="⇧⌘Z"><IconButton variant="quiet" label="Redo" icon={<Icon icon={IconArrowForwardUp} />} disabled={!props.canRedo} onClick={props.onRedo} /></Tooltip>
         </Toolbar>
+        {props.children}
       </FloatingRegion>
       <Popover role="dialog" aria-label="Canvas background" open={colorOpen} anchorRef={colorRef}
         onClose={() => setColorOpen(false)} placement="top-start">

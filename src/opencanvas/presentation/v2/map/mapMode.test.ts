@@ -5,7 +5,8 @@ import { archModelFromJson } from '../../../../dsl/model/model';
 import type { ScenePage } from '../../../domain/document/types';
 import type { MapModel, MapNode } from '../../../../dsl/map/types';
 import { READABLE } from '../../../application/map/geometry';
-import { BOX_BUDGET, fitsBudget, freeArea, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, toggleBox } from './mapMode';
+import { MAP_BOX_BUDGET as BOX_BUDGET } from '../../../application/map/mapNavigation';
+import { fitsBudget, freeArea, inView, nearestDrawn, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, startOpen, toggleBox } from './mapMode';
 
 const TEXT = `architecture
 model {
@@ -71,6 +72,14 @@ describe('map budget, double-click guard and scene tag', () => {
     expect(fitsBudget(wide(BOX_BUDGET - 1), new Set(['big']))).toBe(true);
     expect(fitsBudget(wide(BOX_BUDGET), new Set(['big']))).toBe(false);
     expect(fitsBudget(wide(BOX_BUDGET), new Set())).toBe(true);
+  });
+
+  it('starts from the remembered set only while it fits the budget, else the preset', () => {
+    const preset = new Set<string>();
+    const fits = new Set(['big', 'gone']);
+    expect([...startOpen(wide(10), fits, preset)]).toEqual(['big']);
+    expect(startOpen(wide(BOX_BUDGET), fits, preset)).toBe(preset);
+    expect(startOpen(wide(10), null, preset)).toBe(preset);
   });
 
   it('a second click inside the window is a double-click, any box, and only a time check', () => {
@@ -188,5 +197,29 @@ describe('map camera', () => {
     // A landing with no box in view starts at the free area's top-left, below the bar.
     const cam = mapCamera({ x: 0, y: 0, width: 6000, height: 4000 }, noPanel);
     expect(cam.y).toBe(noPanel.top + 48);
+  });
+});
+
+describe('inView', () => {
+  const free = { left: 0, top: 50, width: 1000, height: 600 };
+  const cam = { zoom: 1, x: 0, y: 0 };
+  it('is true while the whole box is inside the free area, false once any edge is out', () => {
+    expect(inView({ x: 10, y: 60, width: 100, height: 100 }, cam, free)).toBe(true);
+    expect(inView({ x: 950, y: 60, width: 100, height: 100 }, cam, free)).toBe(false);
+    expect(inView({ x: 10, y: 20, width: 100, height: 100 }, cam, free)).toBe(false);
+  });
+  it('follows the camera, and a box bigger than the free area counts once its top-left is in', () => {
+    expect(inView({ x: 10, y: 60, width: 100, height: 100 }, { zoom: 2, x: 900, y: 0 }, free)).toBe(false);
+    expect(inView({ x: 10, y: 60, width: 3000, height: 3000 }, cam, free)).toBe(true);
+  });
+});
+
+describe('nearestDrawn', () => {
+  it('picks the closest drawn box around a vanished one, never the root, null when none', async () => {
+    const model = fromArch(await arch());
+    expect(nearestDrawn(model, 'shop.api.router', new Set(['shop', 'shop.api']))).toBe('shop.api');
+    expect(nearestDrawn(model, 'shop.api.router', new Set(['shop']))).toBe('shop');
+    expect(nearestDrawn(model, 'shop.api.router', new Set())).toBeNull();
+    expect(nearestDrawn(model, 'shop', new Set())).toBeNull();
   });
 });

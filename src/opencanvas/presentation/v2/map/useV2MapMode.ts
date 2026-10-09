@@ -8,26 +8,23 @@ import { archFrameOf, archModelOfPage } from '../../../../dsl/model/model';
 import type { ArchModel } from '../../../../dsl/model/types';
 import { resolveDslIcon } from '../../../../services/dsl/iconResolver';
 import { getElkInstance } from '../../../../services/elk-layout/runtime';
-import { MOVE_MS } from '../../../application/map/geometry';
 import { layoutMap, type LayoutPorts } from '../../../application/map/layoutMap';
-import { mapFocus } from '../../../application/map/mapFocus';
-import { absoluteRects } from '../../../application/map/motionFrame';
-import { cullMotion, movedView } from '../../../application/map/motionCull';
-import { MapMotionPlayer } from '../../../application/map/motionPlayer';
-import { planMotion } from '../../../application/map/planMotion';
-import type { LaidRect } from '../../../../dsl/map/elk';
 import type { CanvasCamera } from '../../../domain/camera/types';
-import type { SceneNode, ScenePage } from '../../../domain/document/types';
+import type { ScenePage } from '../../../domain/document/types';
 import { diagramPalette, paletteResolver, type DiagramPaletteName } from '../../../domain/nodes/nodePalette';
 import type { PixiRendererHost } from '../../../infrastructure/pixi/PixiRendererHost';
 import { foundation } from '../../design-system/tokens';
-import { visibleCanvasEdges } from '../V2ContextBar';
 import type { V2Tool } from '../V2CreationToolbar';
 import { isEditableTarget } from '../pointerOperations';
 import { measure } from './layout';
 import {
-  BUDGET_NOTE, fitsBudget, isDoubleClick, freeArea, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, toggleBox, type FreeArea, type TaggedScene,
+  BUDGET_NOTE, fitsBudget, isDoubleClick, mapKeyAllowed, parentToClose, prune, sceneFor, startOpen, toggleBox, type TaggedScene,
 } from './mapMode';
+import { useMapFocus } from './useMapFocus';
+import { mapFindMatches } from '../../../application/map/mapFind';
+import { savedOpen, saveOpen } from './mapDepth';
+import { useMapControls } from './useMapControls';
+import { useMapMotion } from './useMapMotion';
 
 export type V2MapModeName = 'canvas' | 'map';
 
@@ -46,6 +43,8 @@ interface Options {
   /** The one selected box, for Enter and Escape. */
   readonly primaryId: () => string | null;
   readonly select: (id: string) => void;
+  /** Drops the selection (a box that left the map had none to fall back on). */
+  readonly clearSelection: () => void;
   /** What the reader has picked, for the focus: the one selected box, or the one selected arrow (null when several or none). */
   readonly selectedNodeId: string | null;
   readonly selectedConnectorId: string | null;
@@ -57,7 +56,6 @@ interface Options {
 }
 
 const NONE: ReadonlySet<string> = new Set();
-const reducedMotion = (): boolean => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const LABEL_FONT = `500 12px ${foundation.font}`;
 // What the canvas draws while the map of the current model is not laid out yet: never the Canvas page, never another model.
 const EMPTY_MAP: ScenePage = {
@@ -77,13 +75,14 @@ function useStable<T>(value: T): T {
  * written; the scene is a ScenePage handed to the canvas in place of the page.
  */
 export function useV2MapMode(options: Options) {
-  const { page, documentId, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify } = options;
+  const { page, documentId, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify } = options;
   // Cheap: only whether the page carries a model. The model itself is read only while the map is on.
   const available = useMemo(() => (page ? archFrameOf(page) !== null : false), [page]);
   const [mode, setModeState] = useState<V2MapModeName>('canvas');
   const active = mode === 'map' && available;
   const arch = useStable(useMemo(() => (active && page ? archModelOfPage(page) : null), [active, page]));
-  const [openState, setOpenState] = useState<ReadonlySet<string> | null>(null);
+  // What the reader opened, per page; a page not chosen yet starts from what this browser remembers, then from the preset.
+  const [held, setHeld] = useState<{ key: string; set: ReadonlySet<string> } | null>(null);
   const [scene, setScene] = useState<TaggedScene<ArchModel> | null>(null);
   const [drawError, setError] = useState<string | null>(null);
   const saved = useRef<{ pageId: string | null; camera: CanvasCamera } | null>(null);
@@ -91,14 +90,11 @@ export function useV2MapMode(options: Options) {
   const lastFlip = useRef(Number.NEGATIVE_INFINITY);
   const layouts = useRef(0);
   // Layouts asked for vs. shown on the host: between the two the map is about to move, which is not idle yet.
-  const asked = useRef(0);
-  const shownSeq = useRef(0);
-  const landedSeq = useRef(0);
-  // How often the editor page rendered: a move must not add one per frame (counted for the test hook).
-  const renders = useRef(0);
-  useEffect(() => { renders.current += 1; });
+  const seqs = useRef({ asked: 0, landed: 0, shown: 0 });
+  const markShown = useCallback((layout: 'asked' | 'landed') => { seqs.current.shown = seqs.current[layout]; }, []);
   // A map's lineage is its document and page: an edit keeps it (and keeps the old scene up while it lays out).
-  const lineageKey = `${documentId ?? ''}/${page?.id ?? ''}`;
+  const pageId = page?.id;
+  const lineageKey = `${documentId ?? ''}/${pageId ?? ''}`;
   const keyRef = useRef(lineageKey);
   useEffect(() => { keyRef.current = lineageKey; });
   // Chains count runs of related maps: another page's model, or the map opening, starts a new one (it lands, it does not move).
@@ -109,37 +105,10 @@ export function useV2MapMode(options: Options) {
     seen.current = active ? { arch, key: lineageKey } : { arch: null, key: null };
     if (active && (was.arch === null || (was.key !== lineageKey && was.arch !== arch))) chain.current += 1;
   }, [active, arch, lineageKey]);
-  const updateRef = useRef(updateCamera);
-  useEffect(() => { updateRef.current = updateCamera; });
   // The box a click just opened or closed: the camera brings it into view when its layout arrives.
-  const focusRef = useRef<{ id: string } | null>(null);
-  const mine = useRef<CanvasCamera | null>(null);
-  // The sink reads the refs when a frame runs, never during render.
-  // eslint-disable-next-line react-hooks/refs
-  const [player] = useState(() => {
-    const self: MapMotionPlayer = new MapMotionPlayer({
-      frame: (frame, camera) => {
-        const host = hostRef.current;
-        if (!host) return;
-        if (camera) {
-          // The reader moved the camera mid-move (wheel, drag, buttons): it is theirs now.
-          if (cameraRef.current !== mine.current) self.releaseCam();
-          else { mine.current = camera; cameraRef.current = camera; host.setCamera(camera); }
-        }
-        host.drawMotionFrame(frame);
-      },
-      end: (settled, camera) => {
-        hostRef.current?.endMotion(settled);
-        // Cut short mid-move: React still has to learn where the camera was left.
-        if (!settled && camera) updateRef.current(camera);
-      },
-    });
-    return self;
-  });
-  useEffect(() => () => player.stop(), [player]);
-  const shown = useRef<{ page: ScenePage; rects: Map<string, LaidRect>; chain: number | undefined } | null>(null);
-  // Every box drawn now or still folding away, by id: the leaving ones are no longer in the scene.
-  const drawn = useRef(new Map<string, SceneNode>());
+  const focusRef = useRef<{ id: string | null } | null>(null);
+  // The box a find or the overview revealed: selected once the layout that draws it has landed.
+  const pendingRef = useRef<string | null>(null);
 
   const built = useMemo(() => {
     if (!arch) return null;
@@ -149,14 +118,20 @@ export function useV2MapMode(options: Options) {
   }, [arch, palette, autoIcons]);
   const model = built && 'model' in built ? built.model : null;
   const look = built && 'look' in built ? built.look : null;
-  const open = useMemo(() => (model ? (openState ? prune(model, openState) : presets(model).overview) : NONE), [model, openState]);
+  const remembered = useMemo(() => (active && documentId && pageId ? savedOpen(documentId, pageId) : null), [active, documentId, pageId]);
+  const openState = held?.key === lineageKey ? held.set : remembered;
+  const open = useMemo(() => (model ? startOpen(model, openState, presets(model).overview) : NONE), [model, openState]);
+  const setOpenState = useCallback((set: ReadonlySet<string>) => {
+    setHeld({ key: lineageKey, set });
+    if (documentId && pageId) saveOpen(documentId, pageId, set);
+  }, [lineageKey, documentId, pageId]);
   const error = built && 'error' in built ? built.error ?? null : active && !arch ? 'This page has no readable model.' : drawError;
   const empty = model !== null && model.nodes[model.root].children.length === 0;
 
   useEffect(() => {
     if (!active || !arch || !model || !look) return;
     let stale = false;
-    const seq = ++asked.current;
+    const seq = ++seqs.current.asked;
     const draw = async (): Promise<ScenePage> => {
       if (empty) return mapScene(model, open, { rects: new Map(), edges: [] }, look);
       const ports: LayoutPorts = {
@@ -168,11 +143,12 @@ export function useV2MapMode(options: Options) {
       return mapScene(model, open, { rects: laid.laid.rects, edges: laid.edges }, look);
     };
     // Latest request wins; a scene of this model stays up until the next is ready, one of another model never does.
-    draw().then((next) => { if (!stale) { layouts.current += 1; landedSeq.current = seq; setError(null); setScene({ model: arch, page: next, lineage: keyRef.current, chain: chain.current }); } })
+    draw().then((next) => { if (!stale) { layouts.current += 1; seqs.current.landed = seq; setError(null); setScene({ model: arch, page: next, lineage: keyRef.current, chain: chain.current }); } })
       .catch((cause: unknown) => {
         if (stale) return;
-        landedSeq.current = seq;
-        shownSeq.current = seq;
+        seqs.current.landed = seq;
+        seqs.current.shown = seq;
+        pendingRef.current = null;
         setScene(null);
         setError(cause instanceof Error ? cause.message : 'The map could not be drawn.');
       });
@@ -212,76 +188,15 @@ export function useV2MapMode(options: Options) {
   }, [active, page?.id, updateCamera, fitView]);
 
   const mapPage = active ? sceneFor(scene, arch, EMPTY_MAP, lineageKey) : null;
-  // The canvas the side panels and the floating chrome leave: the document bar, the right rail and the camera controls are measured now.
-  const clearance = useCallback((host: PixiRendererHost): FreeArea => {
-    const size = host.getViewportSize();
-    const root = document.querySelector<HTMLElement>('.ofk-v2');
-    const origin = document.querySelector<HTMLElement>('[data-testid="v2-canvas"]')?.getBoundingClientRect();
-    const at = (label: string) => root?.querySelector<HTMLElement>(`[role="toolbar"][aria-label="${label}"]`)?.getBoundingClientRect();
-    const [bar, rail, controls] = [at('Document'), at('Workspace'), at('View')];
-    const { left, right } = visibleCanvasEdges(root);
-    const [ox, oy] = [origin?.left ?? 0, origin?.top ?? 0];
-    return freeArea(size, { left, right: right - ox }, {
-      ...(bar ? { top: bar.bottom - oy } : {}), ...(rail ? { rail: rail.left - ox } : {}), ...(controls ? { bottom: controls.top - oy } : {}),
-    });
-  }, []);
-  // The host has already taken the new scene (the canvas effect runs first): its index is the target, so clicks land on it.
-  // From here only the picture moves, from where each box is drawn to where it now belongs.
-  useEffect(() => {
-    // Map off, or no scene for this page (another page's model, a layout error): nothing of an earlier map may keep moving or draw.
-    if (!mapPage || mapPage === EMPTY_MAP) { player.stop(); shown.current = null; player.cur.clear(); drawn.current.clear(); focusRef.current = null; shownSeq.current = asked.current; return; }
-    const host = hostRef.current;
-    const before = shown.current;
-    if (!host || before?.page === mapPage) return;
-    // This effect is where a landed layout starts moving, or lands at once: from here the motion state tells the truth.
-    shownSeq.current = landedSeq.current;
-    const extent = sceneExtent(mapPage);
-    const rects = absoluteRects(mapPage);
-    const settle = () => { player.cur.clear(); drawn.current.clear(); rects.forEach((rect, id) => player.cur.set(id, rect)); mapPage.nodes.forEach((node) => drawn.current.set(node.id, node)); };
-    shown.current = { page: mapPage, rects, chain: scene?.chain };
-    if (!before || before.chain !== scene?.chain || !extent || !model) {
-      player.stop();
-      settle();
-      if (!extent) return;
-      updateCamera(mapCamera(extent, clearance(host)));
-      return;
-    }
-    const { items, gone } = planMotion(model, mapPage.nodes.map((node) => node.id), rects, before.rects, player.cur);
-    for (const id of gone) { player.cur.delete(id); drawn.current.delete(id); }
-    mapPage.nodes.forEach((node) => drawn.current.set(node.id, node));
-    const focus = focusRef.current;
-    focusRef.current = null;
-    const camTo = focus && rects.has(focus.id) ? landOn(extent, rects.get(focus.id), clearance(host), cameraRef.current) : null;
-    const moving = items.some((item) => item.fade || (['x', 'y', 'width', 'height'] as const).some((key) => item.from[key] !== item.to[key]));
-    if (reducedMotion() || !moving) {
-      // End state in one frame, arrows visible at once.
-      player.stop();
-      settle();
-      if (camTo) updateCamera(camTo);
-      return;
-    }
-    // Labels wrap to the width each box ends with (a leaving box, to the one it had), so they are laid out once.
-    const widths = new Map([...before.page.nodes, ...mapPage.nodes].map((node) => [node.id, node.size.width] as const));
-    mine.current = cameraRef.current;
-    // Only boxes someone can see are tweened; the rest jump to where they end (the host draws them at the end of the move).
-    const { live, jumped } = cullMotion(items, movedView(cameraRef.current, camTo, host.getViewportSize()));
-    for (const item of jumped) { if (item.fade === 'out') player.cur.delete(item.id); else player.cur.set(item.id, item.to); }
-    player.play({ items: live, nodeOf: (id) => drawn.current.get(id), widths, camFrom: cameraRef.current, camTo }, MOVE_MS, () => {
-      for (const id of [...drawn.current.keys()]) if (!rects.has(id)) drawn.current.delete(id);
-      // React learns the camera once, here, not once per frame.
-      if (player.camera) updateCamera(player.camera);
-    }, () => renders.current);
-  }, [mapPage, scene, model, hostRef, cameraRef, updateCamera, player, clearance]);
+  const { shown, player } = useMapMotion({ mapPage, emptyPage: EMPTY_MAP, scene, model, hostRef, cameraRef, updateCamera, markShown, focusRef });
+  useMapFocus(hostRef, active && mapPage && mapPage !== EMPTY_MAP ? mapPage : null, selectedNodeId, selectedConnectorId);
 
-  // The focus is the selection, drawn by the host: the box or arrow, what it talks to, the rest dimmed. Only a focus set here is cleared here
-  // (Canvas has its own, flow playback and perspectives). A scene change recomputes it: a box just opened brings its arrows with it.
-  const focusing = useRef(false);
+  useEffect(() => { pendingRef.current = null; }, [active, lineageKey]);
   useEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    const focus = active && mapPage && mapPage !== EMPTY_MAP ? mapFocus(mapPage, { nodeId: selectedNodeId, connectorId: selectedConnectorId }) : null;
-    if (focus) { host.setFocus({ ...focus, tone: 'selection' }); focusing.current = true; } else if (focusing.current) { host.setFocus(null); focusing.current = false; }
-  }, [active, mapPage, selectedNodeId, selectedConnectorId, hostRef]);
+    const id = pendingRef.current;
+    if (id && mapPage && mapPage !== EMPTY_MAP && mapPage.nodes.some((node) => node.id === id)) { pendingRef.current = null; select(id); }
+  }, [mapPage, select]);
+  const controls = useMapControls({ model, open, setOpen: setOpenState, focusRef, shown, hostRef, cameraRef, updateCamera, primaryId, select, clearSelection, pendingRef, notify });
 
   /** True when the open set changed. */
   const flip = useCallback((id: string): boolean => {
@@ -292,7 +207,7 @@ export function useV2MapMode(options: Options) {
     focusRef.current = { id };
     setOpenState(next);
     return true;
-  }, [model, open, notify]);
+  }, [model, open, notify, setOpenState]);
   /** Test hook: opens exactly `ids` (within the box budget, like a click), landing the camera on `focus` (default: the last one opened). */
   const openBoxes = useCallback((ids: readonly string[], focus?: string) => {
     if (!model) return;
@@ -301,22 +216,31 @@ export function useV2MapMode(options: Options) {
     const at = focus ?? ids.at(-1);
     focusRef.current = at ? { id: at } : null;
     setOpenState(next);
-  }, [model, notify]);
+  }, [model, notify, setOpenState]);
   const clickNode = useCallback((id: string) => {
     const now = performance.now();
     if (isDoubleClick(lastFlip.current, now)) return;
     if (flip(id)) lastFlip.current = now;
   }, [flip]);
 
-/** True when the editor's own shortcuts must not see this key. */
+  const { arrow, reveal } = controls;
+  const findMatches = useCallback((query: string) => (model ? mapFindMatches(model, arch, query) : []), [model, arch]);
+  // Closing find drops a reveal still waiting for its layout: it must not select or move the camera after the search is over.
+  const cancelReveal = useCallback(() => { pendingRef.current = null; focusRef.current = null; }, []);
+  const findSource = useMemo(() => (active ? { matches: findMatches, reveal, cancel: cancelReveal } : undefined), [active, findMatches, reveal, cancelReveal]);
+  /** True when the editor's own shortcuts must not see this key. */
   const onKey = useCallback((event: KeyboardEvent<HTMLElement>): boolean => {
     if (!active || !model || event.defaultPrevented || isEditableTarget(event.target)) return false;
     // A focused control keeps the keys that press it.
     if (event.target instanceof HTMLElement && event.target.closest('button, [role="slider"], [role="menu"], [role="listbox"]')
       && [' ', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return false;
+    // Arrows walk between boxes (Map has nothing to nudge), but only from the canvas or the bare page: a panel, tree or dialog keeps its own.
+    // With a modifier they are swallowed like every other key Map has no use for (mapKeyAllowed below).
+    const onCanvas = event.target === document.body || (event.target instanceof HTMLElement && event.target.matches('[data-testid="v2-canvas"]'));
+    if (onCanvas && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && arrow(event.key)) { event.preventDefault(); return true; }
     const id = primaryId();
     if (event.key === 'Enter') {
-      if (id) flip(id);
+      if (id && shown.current?.rects.has(id)) flip(id);
       event.preventDefault();
       return true;
     }
@@ -330,7 +254,7 @@ export function useV2MapMode(options: Options) {
       return true;
     }
     return !mapKeyAllowed(event);
-  }, [active, model, open, primaryId, flip, select, cancelTransient]);
+  }, [active, model, open, primaryId, flip, select, cancelTransient, arrow, shown]);
 
   const state = useCallback(() => ({
     mode: active ? 'map' as const : 'canvas' as const,
@@ -349,11 +273,12 @@ export function useV2MapMode(options: Options) {
   const motionStats = useCallback(() => {
     const stats = player.stats();
     // Running until the layout asked for is on screen, the move is over and the arrows are all the way back.
-    const running = stats.running || shownSeq.current < asked.current || (hostRef.current?.getMotionState().fading ?? false);
+    const running = stats.running || seqs.current.shown < seqs.current.asked || (hostRef.current?.getMotionState().fading ?? false);
     return { ...stats, running };
   }, [player, hostRef]);
 
-  return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty, error: active ? error : null, setMode, toggle, clickNode, onKey, state, motionStats, openBoxes };
+  return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty, error: active ? error : null, setMode, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, findSource,
+    toolbar: { depth: controls.depth, canExpand: controls.canExpand, onDepth: controls.setDepth, onExpandOne: controls.expandOne, onCollapseAll: controls.collapse } };
 }
 
 function lookOf(arch: ArchModel, palette: DiagramPaletteName, autoIcons: boolean): MapLook {

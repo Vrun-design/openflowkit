@@ -220,6 +220,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     cameraRef: camera.cameraRef, updateCamera: camera.updateCamera, fitView: camera.fitView, onToolChange: setTool,
     primaryId: () => selectionRef.current.primaryNodeId,
     select: (id) => { applyConnectorSelection([]); applySelection(replaceSelection([id])); },
+    clearSelection: () => selectionApi.clearAll(),
     selectedNodeId: selection.nodeIds.length === 1 && selectedConnectorIds.length === 0 ? selection.nodeIds[0]! : null,
     selectedConnectorId: selection.nodeIds.length === 0 ? selectedConnectorId : null,
     cancelTransient: () => {
@@ -310,7 +311,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     navigate(location.pathname, { replace: true, state: null });
     if ('start' in startIntent) openWorkspace(startIntent.start);
     else if ('source' in startIntent) code.startFrom(startIntent.source);
-    else {
+    else if ('template' in startIntent) { // repoMap intent: wired by the map integration
       const template = findStarterTemplate(startIntent.template);
       if (template) code.startFrom(template.dsl);
     }
@@ -479,9 +480,10 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   // A Map arrow stands for every relation between the two boxes and their insides; the Model panel lists them.
   const mapArrow = useMemo(() => {
     const connector = map.active && selectedConnectorId ? viewPage?.connectors.find((c) => c.id === selectedConnectorId) : undefined;
-    const relations = (connector?.metadata.map as { relations?: string[] } | undefined)?.relations;
+    const meta = connector?.metadata.map as { relations?: string[]; both?: boolean } | undefined;
+    const relations = meta?.relations;
     return connector?.source.nodeId && connector.target.nodeId && relations
-      ? { from: connector.source.nodeId, to: connector.target.nodeId, relationIds: relations } : null;
+      ? { from: connector.source.nodeId, to: connector.target.nodeId, relationIds: relations, both: meta?.both === true } : null;
   }, [map.active, selectedConnectorId, viewPage]);
   useEffect(() => { if (mapArrow) openWorkspace('model'); }, [mapArrow, openWorkspace]);
   const perspectiveFocus = useMemo(
@@ -621,6 +623,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     page: viewPage, selectionRef, selectedConnectorIdsRef, cameraRef: camera.cameraRef,
     applySelection, applyConnectorSelection,
     glideToNodes: camera.glideToNodes, animateTo: camera.animateTo, focusCanvas,
+    ...(map.findSource ? { source: map.findSource } : {}),
   });
 
   const handleKeyDown = useV2Keyboard({
@@ -801,6 +804,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 onCloseFolder: workspaceFolder.closeFolder,
               }}
               breadcrumb={architecture.breadcrumb}
+              {...(map.active ? { mapToolbar: map.toolbar } : {})}
               {...(map.available ? { mapMode: { mode: map.mode, onChange: map.setMode } } : {})}
               onCrumb={(crumb) => architectureActions.openCrumb(crumb)}
               {...(shared ? { onEditShared: shared.onEdit } : {})}
@@ -959,6 +963,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 })))}
                 selectedElementId={selectedElementId}
                 mapArrow={mapArrow}
+                {...(map.active && map.model ? { mapOverview: { model: map.model, arch: map.arch, onSelect: map.reveal } } : {})}
                 placedElementIds={placedElementIds}
                 perspectiveTags={preferences.perspectiveTags}
                 onPerspectiveChange={(tags) => updatePreferences({ perspectiveTags: [...tags] })}
@@ -1008,7 +1013,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               />
             ) : null}
             {panels.shortcutsOpen ? <V2Shortcuts onClose={panels.closeShortcuts} /> : null}
-            {find.open ? <V2FindBar find={find} /> : null}
+            {find.open ? <V2FindBar find={find} label={map.active ? 'Find in map' : 'Find on canvas'} /> : null}
             {tips.tip ? <V2FeatureTip id={tips.tip} onAction={() => runTip(tips.tip!)} onClose={tips.dismiss} /> : null}
             {panels.motionOpen ? (
               <Panel title="Animation export" side="start" className="ofk-motion-panel ofk-v2-layers-panel"

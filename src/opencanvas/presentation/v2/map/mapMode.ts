@@ -1,14 +1,17 @@
-import { isInside } from '../../../../dsl/map/tree';
+import { isInside, pathTo } from '../../../../dsl/map/tree';
 import type { MapModel } from '../../../../dsl/map/types';
 import { visible } from '../../../../dsl/map/view';
+import { MAP_BOX_BUDGET } from '../../../application/map/mapNavigation';
 import { canOpen } from '../../../application/map/navigate';
 import { keepInView, landing, type Cam, type Rect, type Viewport } from '../../../application/map/geometry';
 import type { CanvasCamera } from '../../../domain/camera/types';
 import type { ScenePage } from '../../../domain/document/types';
 import type { Bounds2d } from '../../../domain/geometry/types';
+import { visibleCanvasEdges } from '../V2ContextBar';
 
-// The pure rules of Map mode in the editor: what a click opens, what Escape closes, which keys still act, where the
-// camera lands. The hook (useV2MapMode) holds the state and the async layout; nothing here touches React or Pixi.
+// The rules of Map mode in the editor: what a click opens, what Escape closes, which keys still act, where the
+// camera lands. The hook (useV2MapMode) holds the state and the async layout; nothing here touches React or Pixi
+// (`clearance` alone reads the DOM, to measure the chrome).
 
 /**
  * A click on a box: a shut box with children opens; an open one closes along with everything inside it.
@@ -19,12 +22,11 @@ export function toggleBox(model: MapModel, open: ReadonlySet<string>, id: string
   return canOpen(model, id) ? new Set(open).add(id) : open;
 }
 
-// The SVG map's budget (MapSurface): 300 boxes x 1.4. Past it the scene is too heavy to lay out and draw at once.
-export const BOX_BUDGET = 420;
+// Past the budget the scene is too heavy to lay out and draw at once.
 export const BUDGET_NOTE = 'That opens too many boxes at once. Open a smaller part first.';
 
 /** Whether opening to `open` stays within the box budget. */
-export const fitsBudget = (model: MapModel, open: ReadonlySet<string>): boolean => visible(model, open).length <= BOX_BUDGET;
+export const fitsBudget = (model: MapModel, open: ReadonlySet<string>): boolean => visible(model, open).length <= MAP_BOX_BUDGET;
 
 // A second click on a box inside this window is the second half of a double-click: it must not undo the first flip.
 // ponytail: fixed 400 ms — a slower double-click flips again; read the OS double-click interval if it matters.
@@ -45,6 +47,12 @@ export function parentToClose(model: MapModel, open: ReadonlySet<string>, select
   const parent = model.nodes[selectedId]?.parent;
   return parent && parent !== model.root && open.has(parent) ? parent : null;
 }
+
+/** The open set a map starts from: what this browser remembers when it still fits the budget (a model that grew may not), else the preset. */
+export const startOpen = (model: MapModel, stored: ReadonlySet<string> | null, preset: ReadonlySet<string>): ReadonlySet<string> => {
+  const kept = stored ? prune(model, stored) : null;
+  return kept && fitsBudget(model, kept) ? kept : preset;
+};
 
 /** Only ids that are still boxes of the model: an edit may remove an element the reader had open. */
 export const prune = (model: MapModel, open: ReadonlySet<string>): Set<string> =>
@@ -67,6 +75,13 @@ export function mapKeyAllowed(e: KeyLike): boolean {
   return ['v', 'h', 'l', 'm'].includes(key);
 }
 
+/** Whether `box` (scene space) is on screen at `cam` inside `free`: a box bigger than the free area counts once its top-left is. */
+export function inView(box: Rect, cam: CanvasCamera, free: FreeArea): boolean {
+  const axis = (at: number, size: number, lo: number, hi: number) => at >= lo && (at + size <= hi || size > hi - lo);
+  return axis(box.x * cam.zoom + cam.x, box.width * cam.zoom, free.left, free.left + free.width)
+    && axis(box.y * cam.zoom + cam.y, box.height * cam.zoom, free.top, free.top + free.height);
+}
+
 /** The top-level boxes' union: the map's absolute extent (children sit inside their parent). */
 export function sceneExtent(page: ScenePage): Bounds2d | null {
   const top = page.nodes.filter((node) => node.parentId === null);
@@ -76,6 +91,13 @@ export function sceneExtent(page: ScenePage): Bounds2d | null {
   const x1 = Math.max(...top.map((n) => n.transform.translation.x + n.size.width));
   const y1 = Math.max(...top.map((n) => n.transform.translation.y + n.size.height));
   return { x: x0, y: y0, width: x1 - x0, height: y1 - y0 };
+}
+
+/** The nearest box around `id` (never the root) that is drawn; null when none is, so the selection should clear. */
+export function nearestDrawn(model: MapModel, id: string, drawn: ReadonlySet<string>): string | null {
+  const chain = pathTo(model, id).slice(1);
+  if (chain.length === 0) return null;
+  return chain.reverse().find((at) => drawn.has(at)) ?? null;
 }
 
 const PAD = 48;
@@ -98,6 +120,20 @@ export function freeArea(size: { width: number; height: number }, edges: { left:
   const bottom = chrome.bottom === undefined ? size.height : Math.min(size.height, chrome.bottom - CHROME_GAP);
   const area = { left, top, width: right - left, height: bottom - top };
   return area.width < size.width / 3 || area.height < size.height / 3 ? { left, top: 0, width: clear ? edges.right - left : size.width, height: size.height } : area;
+}
+
+/** The canvas the side panels and the floating chrome leave: the document bar, the right rail and the camera controls are measured now. */
+export function clearance(host: { getViewportSize(): { width: number; height: number } }): FreeArea {
+  const size = host.getViewportSize();
+  const root = document.querySelector<HTMLElement>('.ofk-v2');
+  const origin = document.querySelector<HTMLElement>('[data-testid="v2-canvas"]')?.getBoundingClientRect();
+  const at = (label: string) => root?.querySelector<HTMLElement>(`[role="toolbar"][aria-label="${label}"]`)?.getBoundingClientRect();
+  const [bar, rail, controls] = [at('Document'), at('Workspace'), at('View')];
+  const { left, right } = visibleCanvasEdges(root);
+  const [ox, oy] = [origin?.left ?? 0, origin?.top ?? 0];
+  return freeArea(size, { left, right: right - ox }, {
+    ...(bar ? { top: bar.bottom - oy } : {}), ...(rail ? { rail: rail.left - ox } : {}), ...(controls ? { bottom: controls.top - oy } : {}),
+  });
 }
 
 /**

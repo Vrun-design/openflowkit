@@ -14,6 +14,14 @@ interface V2FindOptions {
   readonly glideToNodes: (nodeIds: readonly string[]) => void;
   readonly animateTo: (camera: CanvasCamera) => void;
   readonly focusCanvas: () => void;
+  /** Map mode: its own matches (ids it understands) and its own way to land on one, instead of canvas select + glide. Pass stable callbacks. */
+  readonly source?: {
+    readonly matches: (query: string) => string[];
+    /** False when the match could not be shown (the box budget): stepping then stays where it was. */
+    readonly reveal: (id: string) => boolean;
+    /** Closing find drops a reveal still waiting for its layout. */
+    readonly cancel?: () => void;
+  };
 }
 
 interface Snapshot {
@@ -25,7 +33,8 @@ interface Snapshot {
 
 // ⌘F: stepping through matches moves selection and camera, never the document,
 // so there is no history entry. Escape puts both back as they were on open
-// (what still exists); the X keeps wherever the search ended.
+// (what still exists); the X keeps wherever the search ended. With a `source`, Escape restores
+// selection and camera the same way but does not close boxes that `reveal` opened.
 export function useV2Find(options: V2FindOptions) {
   const optionsRef = useRef(options);
   useEffect(() => { optionsRef.current = options; });
@@ -35,7 +44,11 @@ export function useV2Find(options: V2FindOptions) {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const snapshotRef = useRef<Snapshot | null>(null);
-  const matches = useMemo(() => (open && options.page ? findNodes(options.page, query) : []), [open, options.page, query]);
+  const sourceMatches = options.source?.matches;
+  const matches = useMemo(
+    () => (!open ? [] : sourceMatches ? sourceMatches(query) : options.page ? findNodes(options.page, query) : []),
+    [open, options.page, query, sourceMatches],
+  );
   const index = currentId === null ? -1 : matches.indexOf(currentId);
 
   const show = useCallback(() => {
@@ -51,6 +64,7 @@ export function useV2Find(options: V2FindOptions) {
   const close = useCallback((restore: boolean) => {
     const snapshot = snapshotRef.current;
     snapshotRef.current = null;
+    optionsRef.current.source?.cancel?.();
     setOpen(false);
     setQuery('');
     setCurrentId(null);
@@ -70,7 +84,8 @@ export function useV2Find(options: V2FindOptions) {
   const step = useCallback((direction: 1 | -1) => {
     if (matches.length === 0) return;
     const next = index < 0 ? (direction > 0 ? 0 : matches.length - 1) : (index + direction + matches.length) % matches.length;
-    const { applySelection, applyConnectorSelection, glideToNodes } = optionsRef.current;
+    const { applySelection, applyConnectorSelection, glideToNodes, source } = optionsRef.current;
+    if (source) { if (source.reveal(matches[next]!)) setCurrentId(matches[next]!); return; }
     setCurrentId(matches[next]!);
     applyConnectorSelection([]);
     applySelection(replaceSelection([matches[next]!]));

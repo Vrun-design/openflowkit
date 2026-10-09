@@ -1,18 +1,16 @@
 import type { AggEdge, Evidence, MapModel } from '../../../../dsl/map/types';
 import { edgeText } from '../../../../dsl/map/view';
+import { groupByFile, type EvidenceLink } from '../../../application/map/evidenceLink';
 
-/** A link for a `file:line`, or null when the repo has no web home (the line is then plain text). */
-export type EvidenceLink = (file: string, line: number) => string | null;
+export type { EvidenceLink };
 
 /** One direction's evidence, grouped by file; every line links to GitHub. `total` is the exact count; evidence is capped by the engine. */
 function Direction({ title, evidence, total, link }: { title: string; evidence: readonly Evidence[]; total: number; link: EvidenceLink }): React.JSX.Element {
-  const byFile = new Map<string, Evidence[]>();
-  for (const e of evidence) byFile.set(e.file, [...(byFile.get(e.file) ?? []), e]);
   const more = total - evidence.length;
   return (
     <section className="map-sec">
       <h3>{title}</h3>
-      {[...byFile].map(([file, lines]) => (
+      {groupByFile(evidence).map(([file, lines]) => (
         <div key={file} className="map-file">
           <div className="map-path">{file}</div>
           {lines.map((e, i) => (
