@@ -23,7 +23,8 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   (52fea93a). UI pass 10-09 DONE (review https://claude.ai/artifact/TXok1h8arREGfZpJ4QmeX4, owner took A–C): fixed Canvas|Map
   switch + Map path crumb, selection carries across modes, Model panel = outline (Tree) + element card, save on blur, no
   Views tab; views/first open land readable; one dark card palette (+ dark SVG export); panels never hide content; blue
-  focus ring, neutral read-only lock. Pre-existing @gate fails: view-controls:37 no-cors probe (fails at 80aec97b too).
+  focus ring, neutral read-only lock (dff3aeac). cf87050b: Canvas|Map on every doc (Map start screen shares the canvas
+  welcome layout), Share/Export bar top right. Pre-existing @gate fail: view-controls:37 no-cors probe. Not pushed.
 - Owner: publish MCP 0.2.0 (Action default CLI needs it); deploy `start:http` over HTTPS, then verify hosts (README table).
   Owner action list: `docs/plan/cofounder-action-list.md`. `e2e:headed` 10-09: 261/266; 5 local GPU budgets fail at 23ff9aa4 too (Mac). Open: H5 eval.
 ## Found, not fixed (owner calls)
@@ -37,4 +38,4 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 ## Next — owner's order, 2026-10-06 (D8 decided: no labs flag)
 - Canvas UI done (10-06 rail/Inspect/Shapes/connector pass; 10-09 UI pass above) → launch holds, 13.4 → 14.4 → 15.
   Open: D7, D11 (own glyphs, empty screen). Next: owner click-through when the GPU is free, then `docs/plan/launch-qa-prompt.md`.
-- Deferred: widget text width estimated; wireframe comments move to end; PDF = print dialog; no zip; bridge long-poll; chart data commits per blur; image aspect lock = Shift.
+- Deferred (owner to decide): view frame title as a real heading + rename Landscape → All systems. Widget text width estimated; wireframe comments move to end; PDF = print dialog; no zip; bridge long-poll; chart data commits per blur; image aspect lock = Shift.
