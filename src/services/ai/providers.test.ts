@@ -39,7 +39,7 @@ describe('AI provider catalogue', () => {
   it('uses https everywhere except the local Ollama daemon, and knows custom needs the user', () => {
     for (const definition of AI_PROVIDERS) {
       if (definition.id === 'ollama') {
-        expect(definition.defaultBaseUrl).toBe('http://localhost:11434/v1');
+        expect(definition.defaultBaseUrl).toBe('http://localhost:11434');
       } else if (definition.id === 'custom') {
         expect(definition.defaultBaseUrl).toBe('');
         expect(definition.defaultModel).toBe('');
@@ -74,9 +74,9 @@ describe('AI provider catalogue', () => {
     expect(providerById('ollama').needsKey).toBe(false);
   });
 
-  it('documents all three wire formats and all three risk ratings', () => {
+  it('documents all four wire formats and all three risk ratings', () => {
     const wires = new Set<AiWireFormat>(AI_PROVIDERS.map(({ wire }) => wire));
-    expect(wires).toEqual(new Set<AiWireFormat>(['openai', 'anthropic', 'google']));
+    expect(wires).toEqual(new Set<AiWireFormat>(['openai', 'anthropic', 'google', 'ollama']));
     for (const definition of AI_PROVIDERS) {
       expect(RISK_LABELS[definition.risk]).toBeTruthy();
       expect(RISK_DETAILS[definition.risk]).toBeTruthy();

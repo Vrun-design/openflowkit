@@ -77,6 +77,19 @@ describe('assistant agent', () => {
     expect(last.results[0]!.content).toContain('Step limit reached');
   });
 
+  it('Stop ends the run even while a tool never settles', async () => {
+    const { toolkit } = await setup();
+    const controller = new AbortController();
+    const stuck = { ...toolkit, run: () => new Promise<never>(() => undefined) };
+    const running = runAssistantAgent({
+      messages: [], toolkit: stuck, signal: controller.signal, onStep: () => undefined,
+      respond: async () => turn('', [['add_diagram', { dsl: 'flowchart\nA -> B' }]]),
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.abort();
+    await expect(running).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
   it('finds icon ids through the concept search', async () => {
     const { toolkit } = await setup();
     const outcome = await toolkit.run({ id: 'i', name: 'find_icons', input: { concept: 'database' } });

@@ -18,6 +18,8 @@ describe('listModels', () => {
     expect(await listModels({ provider: 'custom', apiKey: 'sk-ok', baseUrl: `${base}/v1` })).toEqual(['stub-chat']);
     expect(await listModels({ provider: 'claude', apiKey: 'sk-ok', baseUrl: base })).toEqual(['claude-stub-1']);
     expect(await listModels({ provider: 'gemini', apiKey: 'sk-ok', baseUrl: base })).toEqual(['gemini-stub']);
+    // Ollama lists its pulled models natively, and a base URL saved with the old /v1 suffix still works.
+    expect(await listModels({ provider: 'ollama', apiKey: '', baseUrl: `${base}/v1` })).toEqual(['llama-stub:latest']);
   });
 
   it('rejects on a wrong key and on a closed port, so the caller keeps its suggestions', async () => {

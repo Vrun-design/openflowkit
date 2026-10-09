@@ -6,8 +6,8 @@ export type AiProviderId =
   | 'gemini' | 'openai' | 'claude' | 'groq' | 'nvidia'
   | 'cerebras' | 'mistral' | 'openrouter' | 'ollama' | 'custom';
 
-/** The request/response shape, not the vendor. Three cover all ten. */
-export type AiWireFormat = 'anthropic' | 'openai' | 'google';
+/** The request/response shape, not the vendor. Four cover all ten. */
+export type AiWireFormat = 'anthropic' | 'openai' | 'google' | 'ollama';
 
 /** V1's rating, kept verbatim: what the browser will let this provider do. */
 export type ProviderRisk = 'browser_friendly' | 'mixed' | 'proxy_likely';
@@ -59,7 +59,7 @@ export const RISK_DETAILS: Readonly<Record<ProviderRisk, string>> = {
   proxy_likely: 'The provider usually refuses browser calls (CORS). Expect to pick another provider or point at your own endpoint.',
 };
 
-// ponytail: model ids go stale with every vendor release. Verified 2026-09-23
+// ponytail: model ids go stale with every vendor release. Verified 2026-09-23 (Claude 2026-10-09)
 // against each provider's model docs / live catalogue; re-check on a release.
 const HOSTED_OUTPUT = 16_000;
 const LOCAL_OUTPUT = 4096;
@@ -95,7 +95,7 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
     defaultBaseUrl: 'https://api.anthropic.com',
     // Mid-tier by default: BYOK users pay per call, and Opus is a choice, not a surprise.
     defaultModel: 'claude-sonnet-5-5',
-    suggestedModels: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-haiku-4-5', 'claude-fable-5-1'],
+    suggestedModels: ['claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-opus-5-5', 'claude-fable-5-1'],
     maxOutputTokens: HOSTED_OUTPUT,
     keyPlaceholder: 'sk-ant-...', keyPattern: '^sk-ant-', needsKey: true,
     consoleUrl: 'https://console.anthropic.com/settings/keys', consoleName: 'Anthropic Console',
@@ -159,8 +159,9 @@ export const AI_PROVIDERS: readonly AiProviderDefinition[] = Object.freeze([
     extraHeaders: Object.freeze({ 'HTTP-Referer': 'https://openflowkit.com', 'X-Title': 'OpenFlowKit' }),
   },
   {
-    id: 'ollama', label: 'Ollama', wire: 'openai',
-    defaultBaseUrl: 'http://localhost:11434/v1',
+    // Its own /api/chat, not the /v1 shim: only the native API takes num_ctx (see provider.ts).
+    id: 'ollama', label: 'Ollama', wire: 'ollama',
+    defaultBaseUrl: 'http://localhost:11434',
     defaultModel: 'gemma4',
     suggestedModels: ['gemma4', 'qwen3.8', 'gpt-oss:20b'],
     maxOutputTokens: LOCAL_OUTPUT,

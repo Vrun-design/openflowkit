@@ -22,6 +22,12 @@ describe('failure causes', () => {
     expect(classifyStatus(400, 'invalid model id')).toBe('bad-model');
     expect(classifyStatus(400, 'malformed field')).toBe('bad-response');
     expect(classifyStatus(418, '')).toBe('bad-response');
+    // Too long is the user's next action (new chat, fewer images), not "a shape we could not read"; checked before "model".
+    expect(classifyStatus(400, '{"error":{"message":"prompt is too long: 210000 tokens > 200000 maximum"}}')).toBe('too-long');
+    expect(classifyStatus(400, "This model's maximum context length is 128000 tokens")).toBe('too-long');
+    expect(classifyStatus(400, 'The input token count (1200000) exceeds the maximum number of tokens allowed')).toBe('too-long');
+    expect(classifyStatus(413, '')).toBe('too-long');
+    expect(classifyStatus(400, '{"error":{"message":"Your credit balance is too low to access the Anthropic API."}}')).toBe('out-of-credits');
     // Out of money is not a bad answer: OpenRouter sends 402, OpenAI a 429 with insufficient_quota.
     expect(classifyStatus(402, '{"error":{"message":"This request requires more credits"}}')).toBe('out-of-credits');
     expect(classifyStatus(429, '{"error":{"code":"insufficient_quota"}}')).toBe('out-of-credits');
@@ -33,7 +39,7 @@ describe('failure causes', () => {
     expect(RETRYABLE['provider-down']).toBe(true);
     expect(RETRYABLE.offline).toBe(true);
     expect(RETRYABLE['bad-response']).toBe(true);
-    for (const cause of ['bad-key', 'bad-model', 'out-of-credits', 'blocked-by-browser', 'not-configured'] as const) {
+    for (const cause of ['bad-key', 'bad-model', 'out-of-credits', 'blocked-by-browser', 'too-long', 'not-configured'] as const) {
       expect(RETRYABLE[cause], cause).toBe(false);
     }
   });
@@ -92,7 +98,10 @@ describe('failure causes', () => {
 
   it('covers the last two causes with a next action', () => {
     expect(describeCause('offline', context())).toMatch(/offline/);
-    expect(describeCause('provider-down', context({ timedOut: true }))).toMatch(/30 seconds/);
+    expect(describeCause('provider-down', context({ timedOut: true }))).toBe('No answer from OpenAI in time — the endpoint may be down. Try again.');
+    expect(describeCause('provider-down', context({ timedOut: true, definition: providerById('ollama') }))).toMatch(/or the model is still loading/);
+    expect(describeCause('provider-down', context({ status: 529 }))).toBe('OpenAI is overloaded right now (529). Try again in a minute.');
+    expect(describeCause('too-long', context())).toMatch(/too long for gpt-5-mini\. Start a new chat/);
   });
 
   it('extracts the origin from whatever the browser reported', () => {

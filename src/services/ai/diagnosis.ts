@@ -7,6 +7,8 @@ import type { AiProviderDefinition } from './providers';
 export type AiFailureCause =
   | 'bad-key' | 'bad-model' | 'out-of-credits' | 'rate-limited' | 'provider-down'
   | 'blocked-by-browser' | 'offline' | 'bad-response'
+  /** The request outgrew the model's context, or the reply its output budget. */
+  | 'too-long'
   /** Setup is incomplete (missing key, endpoint or model) — caught before any request. */
   | 'not-configured';
 
@@ -19,16 +21,19 @@ export const RETRYABLE: Readonly<Record<AiFailureCause, boolean>> = {
   'blocked-by-browser': false,
   offline: true,
   'bad-response': true,
+  'too-long': false,
   'not-configured': false,
 };
 
 /** HTTP status plus body keywords decide the cause; the body never leaves this function. */
 export function classifyStatus(status: number, bodyText: string): AiFailureCause {
   if (status === 401 || status === 403) return 'bad-key';
-  if (status === 402 || (status === 429 && /insufficient_quota|exceeded your current quota/i.test(bodyText))) return 'out-of-credits';
+  // Anthropic says it with a 400: "Your credit balance is too low".
+  if (status === 402 || ((status === 429 || status === 400) && /insufficient_quota|exceeded your current quota|credit balance/i.test(bodyText))) return 'out-of-credits';
   if (status === 429) return 'rate-limited';
   if (status >= 500) return 'provider-down';
   if (status === 404) return 'bad-model';
+  if (status === 413 || (status === 400 && /too long|too large|too many tokens|context (length|window)|exceeds the maximum/i.test(bodyText))) return 'too-long';
   if (status === 400) {
     if (/api[ _-]?key|invalid key|unauthori[sz]ed|credential/i.test(bodyText)) return 'bad-key';
     if (/model/i.test(bodyText)) return 'bad-model';
@@ -88,8 +93,9 @@ export function describeCause(cause: AiFailureCause, context: FailureContext): s
       return 'The provider is rate limiting this key (429). Wait a moment, or use a different key.';
     case 'provider-down':
       return context.timedOut
-        ? `No answer from ${definition.label} within 30 seconds — the endpoint may be down. Try again.`
-        : `The provider had a server error (${context.status}). Try again shortly.`;
+        ? `No answer from ${definition.label} in time — the endpoint may be down${definition.corsFix === 'ollama-origins' ? ', or the model is still loading' : ''}. Try again.`
+        : context.status === 529 ? `${definition.label} is overloaded right now (529). Try again in a minute.`
+          : `The provider had a server error${context.status ? ` (${context.status})` : ''}. Try again shortly.`;
     case 'blocked-by-browser': {
       if (context.blockedOrigin) {
         return `Our page's security policy blocked ${context.blockedOrigin}. Endpoints must be https:// (or localhost) — check the base URL.`;
@@ -117,6 +123,8 @@ export function describeCause(cause: AiFailureCause, context: FailureContext): s
       return 'This browser is offline. Reconnect and try again.';
     case 'bad-response':
       return 'The provider answered in a shape OpenFlowKit could not read. Try again, or choose another model.';
+    case 'too-long':
+      return `This request is too long for ${context.model}. Start a new chat, attach fewer or smaller images, or pick a model with a larger context.`;
     case 'not-configured':
       return 'This provider is not fully set up. Open the provider settings and fill in what is missing.';
   }

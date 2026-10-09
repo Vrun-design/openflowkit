@@ -53,12 +53,14 @@ const successFor = (path, body) => {
   const text = reply.text ?? '';
   if (path.includes(':generateContent')) return { candidates: [{ content: { parts: [{ text }] } }] };
   if (path === '/v1/messages') return { content: [{ type: 'text', text }] };
+  if (path === '/api/chat') return { message: { role: 'assistant', content: text }, done: true, done_reason: 'stop' };
   const calls = reply.calls ?? (reply.call ? [reply.call] : null);
   return { choices: [{ message: calls ? { content: null, tool_calls: calls } : { content: text } }] };
 };
 
 /** Each wire's model list, with one entry a chat picker must leave out. */
 const modelsFor = (path, headers) => {
+  if (path === '/api/tags') return { models: [{ name: 'llama-stub:latest' }, { name: 'nomic-embed-text:latest' }] };
   if (path.includes('/v1beta/models')) {
     return { models: [
       { name: 'models/gemini-stub', supportedGenerationMethods: ['generateContent'] },
@@ -116,7 +118,7 @@ export function createStubProviderServer() {
         return;
       }
       response.writeHead(200, { ...cors, 'content-type': 'application/json' });
-      response.end(JSON.stringify(request.method === 'GET' && /\/models(\?|$)/.test(path) ? modelsFor(path, request.headers) : successFor(path, body)));
+      response.end(JSON.stringify(request.method === 'GET' && (/\/models(\?|$)/.test(path) || path === '/api/tags') ? modelsFor(path, request.headers) : successFor(path, body)));
       console.log(`stub ${path} → 200`);
     });
   });

@@ -6,7 +6,7 @@
 // key is only ever sent to the provider it was entered for.
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { IconAlertTriangle, IconChevronDown, IconCircleCheck, IconExternalLink } from '@tabler/icons-react';
-import { AiProviderError, createProvider, listModels } from '../../../services/ai/provider';
+import { AiProviderError, createProvider, keyProblem, listModels } from '../../../services/ai/provider';
 import {
   AI_PROVIDERS, RISK_DETAILS, RISK_LABELS, isConfigured, providerById, type AiProviderDefinition,
 } from '../../../services/ai/providers';
@@ -23,6 +23,9 @@ export interface V2AiProviderDialogProps {
 }
 
 const TEST_TIMEOUT_MS = 30_000;
+// A local model loads into memory on its first call; on a laptop that alone can take most of a minute.
+const LOCAL_TEST_TIMEOUT_MS = 120_000;
+const isLocal = (url: string): boolean => /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(url);
 // Thinking models spend part of any budget before they answer; 16 tokens came
 // back empty on a valid key. This is still a fraction of a cent.
 const TEST_MAX_TOKENS = 1024;
@@ -46,6 +49,7 @@ function ProviderMark({ definition }: { readonly definition: AiProviderDefinitio
 
 /** A sentence when the key cannot be this provider's; null when it may be. */
 function keyShapeHint(definition: AiProviderDefinition, key: string): string | null {
+  if (key && keyProblem(key)) return keyProblem(key);
   if (!key || !definition.keyPattern || new RegExp(definition.keyPattern).test(key)) return null;
   return `This does not look like a ${definition.label} key — they start with ${definition.keyPlaceholder.replace(/\.+$/, '')}.`;
 }
@@ -92,7 +96,8 @@ export function V2AiProviderDialog({ open, settings, onSave, onClose }: V2AiProv
     setTest({ state: 'testing', message: `Asking ${definition.label}…` });
     const controller = new AbortController();
     testAbort.current = controller;
-    const timer = setTimeout(() => controller.abort(new DOMException('No answer in time.', 'TimeoutError')), TEST_TIMEOUT_MS);
+    const timeout = isLocal(connection.baseUrl.trim() || definition.defaultBaseUrl) ? LOCAL_TEST_TIMEOUT_MS : TEST_TIMEOUT_MS;
+    const timer = setTimeout(() => controller.abort(new DOMException('No answer in time.', 'TimeoutError')), timeout);
     try {
       const provider = createProvider({
         provider: draft.provider, apiKey: key,

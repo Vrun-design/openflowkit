@@ -1,6 +1,6 @@
-// BYOK provider clients. Three wire formats cover all ten catalogue entries
+// BYOK provider clients. Four wire formats cover all ten catalogue entries
 // (providers.ts): Anthropic messages, OpenAI chat completions, Google
-// generateContent. Provider differences are read from the catalogue, not
+// generateContent, Ollama chat. Provider differences are read from the catalogue, not
 // branched on here. Keys never leave this module's request headers: nothing is
 // logged, stored or echoed — including provider error bodies, which can quote
 // a key back at us.
@@ -190,18 +190,43 @@ async function send({ url, headers, body, definition, model, signal }: WireCall)
     }), { cause, ...(blockedOrigin ? { origin: blockedOrigin } : {}) });
   }
   csp.stop();
-  if (!response.ok) {
-    const bodyText = await response.text();
-    const cause = classifyStatus(response.status, bodyText);
-    // The key travels in one of these three headers; redact it whatever its length.
-    const keys = [headers['x-api-key'], headers['x-goog-api-key'], headers.authorization?.replace(/^Bearer\s+/i, '')];
-    const detail = providerDetail(bodyText, keys.filter((key): key is string => !!key));
-    throw new AiProviderError(describeCause(cause, {
-      definition, endpoint: url, model, status: response.status,
-      ...(pageOrigin() ? { pageOrigin: pageOrigin()! } : {}),
-    }) + (detail ? ` ${definition.label} said: “${detail}”` : ''), { cause, status: response.status });
-  }
+  if (!response.ok) throw failure({ url, headers, body, definition, model }, response.status, await response.text());
   return response;
+}
+
+/** The provider's own error, classified, with its sentence quoted and the key redacted. */
+function failure({ url, headers, definition, model }: WireCall, status: number, bodyText: string): AiProviderError {
+  const cause = classifyStatus(status, bodyText);
+  // The key travels in one of these three headers; redact it whatever its length.
+  const keys = [headers['x-api-key'], headers['x-goog-api-key'], headers.authorization?.replace(/^Bearer\s+/i, '')];
+  const detail = providerDetail(bodyText, keys.filter((key): key is string => !!key));
+  return new AiProviderError(describeCause(cause, {
+    definition, endpoint: url, model, status,
+    ...(pageOrigin() ? { pageOrigin: pageOrigin()! } : {}),
+  }) + (detail ? ` ${definition.label} said: “${detail}”` : ''), { cause, status });
+}
+
+// Anthropic names a mid-stream error by type, not status.
+const ERROR_STATUS: Readonly<Record<string, number>> = {
+  invalid_request_error: 400, authentication_error: 401, permission_error: 403, not_found_error: 404,
+  request_too_large: 413, rate_limit_error: 429, api_error: 500, overloaded_error: 529,
+};
+
+/** An error sent inside a 200 stream (all three wires put it under `error`); null when the payload is data. */
+function streamFailure(call: WireCall, payload: unknown): AiProviderError | null {
+  const error = asRecord(payload).error;
+  if (!error) return null;
+  const record = asRecord(error);
+  const status = Number(record.code) || ERROR_STATUS[String(record.type ?? '')] || 500;
+  return failure(call, status, JSON.stringify(payload));
+}
+
+/** True when this payload says the reply stopped at the output budget (Anthropic, OpenAI, Gemini, Ollama spellings). */
+function cutOff(payload: unknown): boolean {
+  const record = asRecord(payload);
+  const choice = asRecord(Array.isArray(record.choices) ? record.choices[0] : Array.isArray(record.candidates) ? record.candidates[0] : null);
+  return record.stop_reason === 'max_tokens' || asRecord(record.delta).stop_reason === 'max_tokens'
+    || choice.finish_reason === 'length' || choice.finishReason === 'MAX_TOKENS' || record.done_reason === 'length';
 }
 
 function parseJson(text: string, call: WireCall, status: number): unknown {
@@ -224,9 +249,45 @@ interface WireReader {
   readonly finish: () => { readonly toolCalls: AiToolCall[]; readonly replay: unknown };
 }
 
+// ponytail: one fixed idle limit; thinking streams summaries and pings well inside it. Per-model if one goes quieter.
+export const STALL_MS = 120_000;
+
+/** A streamed reply that goes quiet this long is dead, not thinking; only Stop ended it before. */
 async function exchange(call: WireCall, reader: WireReader, onDelta?: (delta: AiDelta) => void): Promise<AiTurn> {
+  // A local model sends nothing while it loads and reads a long prompt, which can take minutes on a laptop.
+  if (!onDelta || /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(call.url)) return read(call, reader, onDelta);
+  const stall = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const alive = () => { clearTimeout(timer); timer = setTimeout(() => stall.abort(), STALL_MS); };
+  alive();
+  try {
+    return await read({ ...call, signal: call.signal ? AbortSignal.any([call.signal, stall.signal]) : stall.signal }, reader, onDelta, alive);
+  } catch (error) {
+    if (!stall.signal.aborted || call.signal?.aborted) throw error;
+    throw new AiProviderError(`${call.definition.label} went quiet for ${STALL_MS / 60_000} minutes mid-reply. Try again.`, { cause: 'provider-down' });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function read(call: WireCall, reader: WireReader, onDelta?: (delta: AiDelta) => void, alive = () => undefined): Promise<AiTurn> {
   const response = await send(call);
+  alive();
   let text = '';
+  let truncated = false;
+  const take = (payload: unknown, whole: boolean): AiDelta[] => {
+    const error = streamFailure(call, payload);
+    if (error) throw error;
+    if (cutOff(payload)) truncated = true;
+    return whole ? reader.whole(payload) : reader.event(payload);
+  };
+  // A reply cut at the budget is half a diagram or a tool call with broken arguments; never pass it on as whole.
+  const result = (): AiTurn => {
+    if (truncated) {
+      throw new AiProviderError(`${call.definition.label} reached its output limit before finishing. Ask for less at once — a smaller diagram, or one part at a time.`, { cause: 'too-long' });
+    }
+    return { text, ...reader.finish() };
+  };
   const emit = (deltas: AiDelta[]) => {
     for (const delta of deltas) {
       if (!delta.text && !delta.thinking) continue;
@@ -234,10 +295,10 @@ async function exchange(call: WireCall, reader: WireReader, onDelta?: (delta: Ai
       onDelta?.(delta);
     }
   };
-  const streamed = onDelta && response.body && (response.headers?.get('content-type') ?? '').includes('text/event-stream');
+  const streamed = onDelta && response.body && /text\/event-stream|ndjson/.test(response.headers?.get('content-type') ?? '');
   if (!streamed) {
-    emit(reader.whole(parseJson(await response.text(), call, response.status)));
-    return { text, ...reader.finish() };
+    emit(take(parseJson(await response.text(), call, response.status), true));
+    return result();
   }
   const stream = response.body!.getReader();
   const decoder = new TextDecoder();
@@ -246,20 +307,28 @@ async function exchange(call: WireCall, reader: WireReader, onDelta?: (delta: Ai
     const lines = buffer.split(/\r?\n/);
     buffer = final ? '' : lines.pop() ?? '';
     for (const line of lines) {
-      const data = line.startsWith('data:') ? line.slice(5).trim() : '';
+      // SSE carries each payload on a data: line; Ollama's NDJSON is one bare object per line.
+      const data = line.startsWith('data:') ? line.slice(5).trim() : line.trim().startsWith('{') ? line.trim() : '';
       if (!data || data === '[DONE]') continue;
-      emit(reader.event(parseJson(data, call, response.status)));
+      emit(take(parseJson(data, call, response.status), false));
     }
   };
   for (;;) {
-    const { done, value } = await stream.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+    try {
+      chunk = await stream.read();
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') throw error;
+      throw new AiProviderError(`The connection to ${call.definition.label} dropped mid-reply. Try again.`, { cause: isOffline() ? 'offline' : 'provider-down' });
+    }
+    if (chunk.done) break;
+    alive();
+    buffer += decoder.decode(chunk.value, { stream: true });
     drain(false);
   }
   buffer += decoder.decode();
   drain(true);
-  return { text, ...reader.finish() };
+  return result();
 }
 
 /** A tool call's arguments; unparseable JSON reads as none, and the tool's own validation says what is missing. */
@@ -570,6 +639,78 @@ function createGoogleProvider(definition: AiProviderDefinition, baseUrl: string,
   };
 }
 
+/**
+ * Why a key cannot be sent, or null. Keys are printable ASCII; a pasted arrow, zero-width space
+ * or line break makes fetch throw before any request, which would otherwise read as CORS.
+ */
+export function keyProblem(key: string): string | null {
+  return /^[\x21-\x7e]*$/.test(key.trim()) ? null
+    : 'The key has a hidden or unusual character (a space, line break or symbol). Copy it again straight from the console.';
+}
+
+/**
+ * The context window to ask Ollama for. Its default is 4096 on most machines, and it silently drops
+ * the start of a longer prompt (our system prompt, ~3k tokens) to fit — the model then rambles for
+ * minutes. Sized to the request, in doubling steps so a growing chat reloads the model rarely; not
+ * a fixed 16k, which spills to CPU on an 8 GB Mac.
+ */
+export function ollamaContext(body: unknown, maxTokens: number): number {
+  // ponytail: chars/3 overestimates English tokens (~4 chars each); a tokenizer call if it ever runs short.
+  const needed = Math.ceil(JSON.stringify(body).length / 3) + maxTokens;
+  return Math.max(8192, 2 ** Math.ceil(Math.log2(needed)));
+}
+
+function ollamaMessages(message: AiMessage): unknown[] {
+  if (message.role === 'tool') return message.results.map(({ name, content }) => ({ role: 'tool', tool_name: name, content }));
+  if (message.role === 'assistant') {
+    return [{
+      role: 'assistant', content: message.content,
+      ...(message.toolCalls?.length ? { tool_calls: message.toolCalls.map(({ name, input }) => ({ function: { name, arguments: input } })) } : {}),
+    }];
+  }
+  return [{ role: 'user', content: message.content, ...(message.images?.length ? { images: message.images.map(({ data }) => data) } : {}) }];
+}
+
+/** Ollama sends each tool call whole, arguments as an object, with no index to merge on: append. */
+function ollamaReader(): WireReader {
+  const calls: AiToolCall[] = [];
+  const read = (payload: unknown): AiDelta[] => {
+    const message = asRecord(asRecord(payload).message);
+    for (const raw of Array.isArray(message.tool_calls) ? message.tool_calls : []) {
+      const fn = asRecord(asRecord(raw).function);
+      calls.push({ id: String(asRecord(raw).id ?? '') || `call_${calls.length}`, name: String(fn.name ?? ''), input: parseArgs(fn.arguments) });
+    }
+    return [{ thinking: String(message.thinking ?? ''), text: String(message.content ?? '') }];
+  };
+  return { whole: read, event: read, finish: () => ({ toolCalls: calls, replay: null }) };
+}
+
+/** A saved base URL may still end in the /v1 of the OpenAI shim; the native API lives at the root. */
+const ollamaRoot = (baseUrl: string): string => baseUrl.replace(/\/v1$/, '');
+
+function createOllamaProvider(definition: AiProviderDefinition, baseUrl: string, model: string): AiProvider {
+  const endpoint = `${ollamaRoot(baseUrl)}/api/chat`;
+  return {
+    id: definition.id, model, endpoint,
+    ...entryPoints((request) => {
+      const { system, maxTokens = definition.maxOutputTokens, signal, tools, onDelta } = request;
+      const prompt = {
+        messages: [{ role: 'system', content: system }, ...turns(request).flatMap(ollamaMessages)],
+        ...(tools?.length ? { tools: tools.map(({ name, description, parameters }) => ({ type: 'function', function: { name, description, parameters } })) } : {}),
+      };
+      return exchange({
+        url: endpoint, definition, model, signal, headers: {},
+        body: {
+          // No `think`: true makes a model without thinking refuse the call, and false leaves an always-thinking
+          // build (qwen3:4b) reasoning anyway, only now inside the reply. The model's default parses it out.
+          model, stream: Boolean(onDelta), ...prompt,
+          options: { num_ctx: ollamaContext(prompt, maxTokens), num_predict: maxTokens },
+        },
+      }, ollamaReader(), onDelta);
+    }, definition),
+  };
+}
+
 export function createProvider(config: AiProviderConfig): AiProvider {
   const definition = providerById(config.provider);
   const baseUrl = trimSlash(config.baseUrl?.trim() || definition.defaultBaseUrl);
@@ -578,11 +719,14 @@ export function createProvider(config: AiProviderConfig): AiProvider {
   if (definition.needsKey && !apiKey) {
     throw new AiProviderError('Add an API key in the provider settings.', { cause: 'not-configured' });
   }
+  const problem = keyProblem(apiKey);
+  if (problem) throw new AiProviderError(problem, { cause: 'bad-key' });
   if (!baseUrl) throw new AiProviderError('Add the endpoint URL for this provider.', { cause: 'not-configured' });
   if (!model) throw new AiProviderError('Add a model id for this provider.', { cause: 'not-configured' });
 
   if (definition.wire === 'anthropic') return createAnthropicProvider(definition, baseUrl, model, apiKey);
   if (definition.wire === 'google') return createGoogleProvider(definition, baseUrl, model, apiKey);
+  if (definition.wire === 'ollama') return createOllamaProvider(definition, baseUrl, model);
   return createOpenAiProvider(definition, baseUrl, model, apiKey);
 }
 
@@ -603,10 +747,15 @@ export async function listModels(config: Omit<AiProviderConfig, 'model'>, signal
     ? [`${baseUrl}/v1/models?limit=1000`, { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }]
     : definition.wire === 'google'
       ? [`${baseUrl}/v1beta/models?pageSize=1000`, { 'x-goog-api-key': apiKey }]
+      : definition.wire === 'ollama'
+        ? [`${ollamaRoot(baseUrl)}/api/tags`, {}]
       : [`${baseUrl}/models`, { ...definition.extraHeaders, ...(definition.needsKey ? { authorization: `Bearer ${apiKey}` } : {}) }];
   const response = await fetch(url, { headers, signal });
   if (!response.ok) throw new Error(`The model list answered ${response.status}.`);
   const payload = asRecord(await response.json());
+  if (definition.wire === 'ollama') {
+    return (Array.isArray(payload.models) ? payload.models : []).map((model) => String(asRecord(model).name ?? '')).filter((id) => id && !NOT_CHAT.test(id));
+  }
   if (definition.wire === 'google') {
     return (Array.isArray(payload.models) ? payload.models : []).map(asRecord)
       .filter((model) => Array.isArray(model.supportedGenerationMethods) && model.supportedGenerationMethods.includes('generateContent'))

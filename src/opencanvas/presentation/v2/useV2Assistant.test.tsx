@@ -17,6 +17,9 @@ const toolCall = (name: string, input: unknown, content: string | null = null) =
   text: async () => JSON.stringify({ choices: [{ message: { content, tool_calls: [{ id: 'call_1', type: 'function', function: { name, arguments: JSON.stringify(input) } }] } }] }),
 }) as Response;
 
+// Compiles wait on this, so a test can hold the build step open.
+let compileGate: Promise<unknown> = Promise.resolve();
+
 function harness(replies: Response[], withTools = false) {
   const fetchMock = vi.fn(async () => replies.shift()!);
   vi.stubGlobal('fetch', fetchMock);
@@ -24,7 +27,7 @@ function harness(replies: Response[], withTools = false) {
   const hook = renderHook(() => {
     const proposal = useV2Proposal({
       document, revision: 1, pageId: 'page-1', commit: vi.fn((_command: DocumentCommand) => undefined),
-      readOnly: false, announce: vi.fn(), compileDsl: (text) => compile(text, { layout: deterministicLayout }),
+      readOnly: false, announce: vi.fn(), compileDsl: async (text) => { await compileGate; return compile(text, { layout: deterministicLayout }); },
     });
     const assistant = useV2Assistant({
       documentId: null, page: document.pages[0]!, selectedIds: [], settings, proposal,
@@ -58,6 +61,21 @@ describe('assistant conversation', () => {
     const sent = bodies()[1]!.messages;
     expect(sent.map(({ role }) => role)).toEqual(['system', 'user', 'assistant', 'user']);
     expect(sent[3]!.content).toMatch(/^<canvas>[\s\S]*draw a flow$/);
+  });
+
+  it('Stop while the answer is being built ends the turn as stopped, with no proposal left behind', async () => {
+    let open!: () => void;
+    compileGate = new Promise<void>((resolve) => { open = resolve; });
+    const { hook } = harness([reply('Here.\n```openflow new\nflowchart\n  A -> B\n```')]);
+    act(() => hook.result.current.assistant.send('draw a flow', 'page'));
+    await waitFor(() => expect(hook.result.current.proposal.phase).toBe('working'));
+    act(() => hook.result.current.assistant.stop());
+    await act(async () => { open(); await compileGate; });
+    await waitFor(() => expect(hook.result.current.assistant.busy).toBe(false));
+    expect(hook.result.current.assistant.messages.at(-1)).toMatchObject({ status: 'stopped' });
+    expect(hook.result.current.assistant.messages.at(-1)!.proposalId).toBeUndefined();
+    expect(hook.result.current.proposal.proposal).toBeNull();
+    compileGate = Promise.resolve();
   });
 
   it('retries a 503 once, quietly, before anything streamed', async () => {

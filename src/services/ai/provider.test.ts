@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AI_PROVIDERS, providerById } from './providers';
-import { AiProviderError, createProvider } from './provider';
+import { AiProviderError, STALL_MS, createProvider, ollamaContext } from './provider';
 
 const ok = (body: unknown) => ({ ok: true, status: 200, text: async () => JSON.stringify(body) }) as Response;
 const fail = (status: number, body = '{"error":{"message":"bad key"}}') =>
@@ -92,7 +92,7 @@ describe('openai wire', () => {
   const openaiWired = AI_PROVIDERS.filter(({ wire }) => wire === 'openai');
 
   it('covers eight providers with one client', () => {
-    expect(openaiWired.map(({ id }) => id)).toEqual(['openai', 'groq', 'nvidia', 'cerebras', 'mistral', 'openrouter', 'ollama', 'custom']);
+    expect(openaiWired.map(({ id }) => id)).toEqual(['openai', 'groq', 'nvidia', 'cerebras', 'mistral', 'openrouter', 'custom']);
   });
 
   it.each(openaiWired.map((definition) => [definition.id, definition] as const))(
@@ -131,15 +131,27 @@ describe('openai wire', () => {
     expect(plain['HTTP-Referer']).toBeUndefined();
   });
 
-  it('lets Ollama run without a key and send no auth header', async () => {
-    const fetchMock = vi.fn(async () => ok({ choices: [{ message: { content: 'x' } }] }));
+  it('lets Ollama run without a key on its native chat API, asking for a context that fits', async () => {
+    const fetchMock = vi.fn(async () => ok({ message: { role: 'assistant', content: 'x' }, done: true }));
     vi.stubGlobal('fetch', fetchMock);
-    const provider = createProvider({ provider: 'ollama', apiKey: '' });
-    await provider.complete({ system: 's', prompt: 'p' });
-    const [url, init] = fetchMock.mock.calls[0]! as unknown as [string, RequestInit];
-    expect(url).toBe('http://localhost:11434/v1/chat/completions');
-    expect((init.headers as Record<string, string>).authorization).toBeUndefined();
+    // A base URL saved for the old /v1 shim still reaches the native API.
+    for (const baseUrl of [undefined, 'http://localhost:11434/v1']) {
+      await createProvider({ provider: 'ollama', apiKey: '', ...(baseUrl ? { baseUrl } : {}) }).complete({ system: 's', prompt: 'p' });
+    }
+    for (const [url, init] of fetchMock.mock.calls as unknown as [string, RequestInit][]) {
+      expect(url).toBe('http://localhost:11434/api/chat');
+      expect((init.headers as Record<string, string>).authorization).toBeUndefined();
+      const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+      expect(body).toMatchObject({ stream: false, options: { num_ctx: 8192, num_predict: 4096 } });
+      expect(body).not.toHaveProperty('think');
+    }
     vi.unstubAllGlobals();
+  });
+
+  it('sizes the Ollama context to the request in doubling steps, never under 8k', () => {
+    expect(ollamaContext({ messages: [{ content: 'hi' }] }, 4096)).toBe(8192);
+    expect(ollamaContext({ messages: [{ content: 'x'.repeat(30_000) }] }, 4096)).toBe(16_384);
+    expect(ollamaContext({ messages: [{ content: 'x'.repeat(60_000) }] }, 4096)).toBe(32_768);
   });
 });
 
@@ -225,14 +237,14 @@ describe('failures and secrets', () => {
   });
 
   it('reports offline when the browser knows it is offline', async () => {
-    const onLine = Object.getOwnPropertyDescriptor(Navigator.prototype, 'onLine');
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
     const provider = createProvider({ provider: 'openai', apiKey: KEY });
     const error = (await provider.complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught)) as AiProviderError;
     expect(error.cause).toBe('offline');
     vi.unstubAllGlobals();
-    if (onLine) Object.defineProperty(Navigator.prototype, 'onLine', onLine);
+    // The override is an own property; deleting it uncovers the prototype's getter again.
+    delete (navigator as { onLine?: boolean }).onLine;
   });
 
   it('treats a timeout as a down endpoint, and passes AbortError through untouched', async () => {
@@ -240,7 +252,7 @@ describe('failures and secrets', () => {
     const provider = createProvider({ provider: 'openai', apiKey: KEY });
     const error = (await provider.complete({ system: 's', prompt: 'p' }).catch((caught: unknown) => caught)) as AiProviderError;
     expect(error.cause).toBe('provider-down');
-    expect(error.message).toMatch(/30 seconds/);
+    expect(error.message).toMatch(/in time/);
     vi.unstubAllGlobals();
 
     const abort = new DOMException('aborted', 'AbortError');
@@ -264,13 +276,20 @@ describe('failures and secrets', () => {
     vi.unstubAllGlobals();
   });
 
+  it('refuses a key with a character no key has, before fetch can throw it as CORS', () => {
+    for (const key of ['sk-ant-ab→cd', 'sk-ant-ab\u200bcd', 'sk-ant-ab\ncd', 'sk-ant-ab cd']) {
+      expect(() => createProvider({ provider: 'claude', apiKey: key }), JSON.stringify(key)).toThrow(/hidden or unusual character/);
+    }
+    expect(() => createProvider({ provider: 'claude', apiKey: '  sk-ant-abc\n' })).not.toThrow();
+  });
+
   it('refuses to build a keyed provider without a key, and Ollama without anything', () => {
     const missing = (() => { try { createProvider({ provider: 'openai', apiKey: '  ' }); } catch (error) { return error; } return null; })() as AiProviderError;
     expect(missing).toBeInstanceOf(AiProviderError);
     expect(missing.cause).toBe('not-configured');
     expect(missing.message).toMatch(/API key/);
     expect(() => createProvider({ provider: 'custom', apiKey: KEY })).toThrow(/endpoint URL/);
-    expect(createProvider({ provider: 'ollama', apiKey: '' }).endpoint).toBe('http://localhost:11434/v1/chat/completions');
+    expect(createProvider({ provider: 'ollama', apiKey: '' }).endpoint).toBe('http://localhost:11434/api/chat');
   });
 });
 
@@ -334,6 +353,117 @@ describe('streaming and conversation', () => {
     expect(text).toBe('Done');
     expect(deltas).toEqual([{ thinking: 'Think', text: '' }, { thinking: ' more', text: '' }, { thinking: '', text: 'Done' }]);
     expect(body).toMatchObject({ stream: true, messages: [{ role: 'system' }, { role: 'user' }, { role: 'assistant' }, { role: 'user' }] });
+  });
+
+  it('turns an error sent inside a 200 stream into a provider failure, on every wire', async () => {
+    const overloaded = await stream('claude', sse(
+      { type: 'content_block_delta', delta: { type: 'text_delta', text: 'Half' } },
+      { type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } },
+    )).catch((error: unknown) => error);
+    expect(overloaded).toBeInstanceOf(AiProviderError);
+    expect(overloaded).toMatchObject({ cause: 'provider-down', status: 529, retryable: true });
+    expect((overloaded as Error).message).toMatch(/overloaded right now \(529\).*Claude said: “Overloaded”/);
+    const limited = await stream('openrouter', sse({ error: { message: 'Slow down', code: 429 } })).catch((error: unknown) => error);
+    expect(limited).toMatchObject({ cause: 'rate-limited', status: 429 });
+  });
+
+  it('says the reply hit the output limit instead of passing on half of it', async () => {
+    const cut = [
+      stream('claude', sse(
+        { type: 'content_block_delta', delta: { type: 'text_delta', text: '```openflow\nflowchart\n  A ->' } },
+        { type: 'message_delta', delta: { stop_reason: 'max_tokens' } },
+      )),
+      stream('claude', ok({ content: [{ type: 'text', text: 'flowchart' }], stop_reason: 'max_tokens' })),
+      stream('openrouter', sse({ choices: [{ delta: { content: 'A' }, finish_reason: 'length' }] })),
+      stream('gemini', sse({ candidates: [{ content: { parts: [{ text: 'A' }] }, finishReason: 'MAX_TOKENS' }] })),
+    ];
+    for (const result of await Promise.all(cut.map((reply) => reply.catch((error: unknown) => error)))) {
+      expect(result).toBeInstanceOf(AiProviderError);
+      expect(result).toMatchObject({ cause: 'too-long', retryable: false });
+      expect((result as Error).message).toMatch(/output limit/);
+    }
+  });
+
+  it('names a connection that drops mid-reply, not a bare TypeError', async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hi"}}\n\n'));
+        controller.error(new TypeError('network error'));
+      },
+    });
+    const dropped = await stream('claude', new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } }))
+      .catch((error: unknown) => error);
+    expect(dropped).toBeInstanceOf(AiProviderError);
+    expect(dropped).toMatchObject({ cause: 'provider-down', retryable: true });
+    expect((dropped as Error).message).toBe('The connection to Claude dropped mid-reply. Try again.');
+  });
+
+  it('gives up on a stream that goes quiet, but leaves Stop an AbortError', async () => {
+    // Like a real fetch: aborting the request errors the body mid-read.
+    const quiet = vi.fn(async (_url: string, init: RequestInit) => new Response(new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hi"}}\n\n'));
+        init.signal!.addEventListener('abort', () => controller.error(new DOMException('aborted', 'AbortError')));
+      },
+    }), { status: 200, headers: { 'content-type': 'text/event-stream' } }));
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', quiet);
+    const provider = createProvider({ provider: 'claude', apiKey: KEY });
+    const stalled = provider.complete({ system: 's', prompt: 'p', onDelta: () => undefined }).catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(STALL_MS - 1000);
+    const stop = new AbortController();
+    const stopped = provider.complete({ system: 's', prompt: 'p', onDelta: () => undefined, signal: stop.signal }).catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await stalled).toMatchObject({ cause: 'provider-down', message: 'Claude went quiet for 2 minutes mid-reply. Try again.' });
+    stop.abort();
+    expect(await stopped).toMatchObject({ name: 'AbortError' });
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('streams Ollama NDJSON: thinking, text and whole tool calls; a cut reply and an error line fail loudly', async () => {
+    const ndjson = (...lines: unknown[]) => new Response(lines.map((line) => `${JSON.stringify(line)}\n`).join(''),
+      { status: 200, headers: { 'content-type': 'application/x-ndjson' } });
+    const fetchMock = vi.fn(async () => ndjson(
+      { message: { role: 'assistant', content: '', thinking: 'Plan.' }, done: false },
+      { message: { role: 'assistant', content: 'Drawing.' }, done: false },
+      { message: { role: 'assistant', content: '', tool_calls: [{ function: { name: 'add_diagram', arguments: { dsl: 'flowchart\nA -> B' } } }] }, done: false },
+      { message: { role: 'assistant', content: '', tool_calls: [{ function: { name: 'list_diagrams', arguments: {} } }] }, done: false },
+      { message: { role: 'assistant', content: '' }, done: true, done_reason: 'stop' },
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    const deltas: unknown[] = [];
+    const provider = createProvider({ provider: 'ollama', apiKey: '' });
+    const turn = await provider.respond({
+      system: 's', onDelta: (delta) => deltas.push(delta),
+      tools: [{ name: 'add_diagram', description: 'd', parameters: { type: 'object' } }],
+      messages: [
+        { role: 'user', content: 'draw', images: [{ mediaType: 'image/png', data: 'AAAA' }] },
+        { role: 'assistant', content: '', toolCalls: [{ id: 'c0', name: 'list_diagrams', input: {} }] },
+        { role: 'tool', results: [{ callId: 'c0', name: 'list_diagrams', content: '[]' }] },
+      ],
+    });
+    expect(turn.text).toBe('Drawing.');
+    expect(deltas).toContainEqual({ thinking: 'Plan.', text: '' });
+    expect(turn.toolCalls).toEqual([
+      { id: 'call_0', name: 'add_diagram', input: { dsl: 'flowchart\nA -> B' } },
+      { id: 'call_1', name: 'list_diagrams', input: {} },
+    ]);
+    const body = JSON.parse(String((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].body)) as { messages: unknown[]; stream: boolean };
+    expect(body.stream).toBe(true);
+    // Ollama's own shapes: images as bare base64, tool arguments as objects, results named by tool.
+    expect(body.messages).toEqual([
+      { role: 'system', content: 's' },
+      { role: 'user', content: 'draw', images: ['AAAA'] },
+      { role: 'assistant', content: '', tool_calls: [{ function: { name: 'list_diagrams', arguments: {} } }] },
+      { role: 'tool', tool_name: 'list_diagrams', content: '[]' },
+    ]);
+    vi.stubGlobal('fetch', vi.fn(async () => ndjson({ message: { content: 'flowchart' }, done: true, done_reason: 'length' })));
+    await expect(provider.complete({ system: 's', prompt: 'p', onDelta: () => undefined })).rejects.toMatchObject({ cause: 'too-long' });
+    vi.stubGlobal('fetch', vi.fn(async () => ndjson({ error: 'model runner has unexpectedly stopped' })));
+    await expect(provider.complete({ system: 's', prompt: 'p', onDelta: () => undefined }))
+      .rejects.toThrow(/Ollama said: “model runner has unexpectedly stopped”/);
+    vi.unstubAllGlobals();
   });
 
   it('reads a JSON reply whole when a streamed request is not answered with SSE', async () => {

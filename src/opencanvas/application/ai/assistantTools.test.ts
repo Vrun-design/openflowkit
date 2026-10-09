@@ -100,6 +100,23 @@ describe('assistant scene tools', () => {
     expect(ops().map(({ op }) => op.name)).toEqual(['move', 'move', 'delete']);
   });
 
+  it('a second add with the same title replaces the queued draft; another title adds', async () => {
+    const { call, toolkit } = await setup();
+    await call('add_diagram', { dsl: 'flowchart\ntitle: Login\nA -> B' });
+    const redo = await call('add_diagram', { dsl: 'flowchart\ntitle: Login\nA -> B -> C' });
+    expect(redo.content).toMatch(/^Replaced your earlier draft titled “Login” \(3 shapes\)/);
+    expect(toolkit.blocks()).toEqual([{ frameId: null, dsl: 'flowchart\ntitle: Login\nA -> B -> C' }]);
+    await call('add_diagram', { dsl: 'flowchart\ntitle: Signup\nA -> B' });
+    expect(toolkit.blocks()).toHaveLength(2);
+  });
+
+  it('tells the model a C4 model without views drew only its landscape', async () => {
+    const { call } = await setup();
+    const model = 'architecture\ntitle: Shop\nmodel {\n  person Buyer\n  system Shop {\n    container Web\n  }\n  Buyer -> Web\n}';
+    expect((await call('add_diagram', { dsl: model })).content).toMatch(/Only the landscape view is drawn/);
+    expect((await call('add_diagram', { dsl: `${model}\nviews {\n  view container of Shop\n}` })).content).not.toMatch(/landscape/);
+  });
+
   it('cannot rewrite a diagram it deleted this turn', async () => {
     const { call, frameId } = await setup();
     expect((await call('delete_shapes', { ids: [frameId] })).isError).toBeFalsy();

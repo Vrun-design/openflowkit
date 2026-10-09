@@ -144,6 +144,8 @@ export function useV2Assistant(options: V2AssistantOptions) {
     let firstText = 0;
     setThread(chatId, [...thread, { id, role: 'assistant', text: '', status: 'streaming' }]);
     setActivity('waiting');
+    // Stop can land after the model answered; end as stopped, never as a stuck 'streaming' or a late proposal.
+    const halt = () => { if (controller.signal.aborted) throw new DOMException('Stopped', 'AbortError'); };
     try {
       const connection = activeConnection(settings);
       const provider = createProvider({
@@ -233,14 +235,18 @@ export function useV2Assistant(options: V2AssistantOptions) {
         }
         blocks = parseAssistantReply(text).blocks;
       }
-      if (controller.signal.aborted) return;
+      halt();
       patch(id, (message) => ({ text, ...(message.thinking ? { thoughtMs: Math.round((firstText || performance.now()) - started) } : {}) }));
 
       if (!blocks.length) {
         // A turn whose drafts all failed reads like a reply ("Let me create it…"); say that nothing was drawn.
         patch(id, (message) => ({
           status: 'done',
-          ...(message.steps?.some((step) => step.status === 'error') ? { note: 'Nothing was added: the draft did not work. Retry, or pick a stronger model.' } : {}),
+          // A weaker model writes drafts that do not compile; any other failed step is not the model's fault.
+          ...(message.steps?.some((step) => step.status === 'error')
+            ? { note: message.steps.some((step) => step.status === 'error' && /did not compile/.test(step.label))
+              ? 'Nothing was added: the draft did not work. Retry, or pick a stronger model.'
+              : 'Nothing was added: a step failed. Open the steps to see why.' } : {}),
         }));
         announce('The assistant replied.');
         return;
@@ -261,6 +267,8 @@ export function useV2Assistant(options: V2AssistantOptions) {
       setActivity('building');
       // ponytail: tool writes compile once to validate and again here; one compile cache if layout gets slow.
       let result = await proposal.propose({ blocks: allowed, intent: user.text, source: `byok:${provider.id}`, scope });
+      if (controller.signal.aborted && 'id' in result) proposal.discard();
+      halt();
       let fixed = false;
       if ('error' in result && result.compile) {
         // One repair round: show the model its compile errors, keep its prose.
@@ -274,10 +282,12 @@ export function useV2Assistant(options: V2AssistantOptions) {
             text: `Your diagram text did not compile:\n${errors}\nReply with only the corrected \`\`\`openflow blocks, same targets.`,
           }]),
         }))).text;
-        if (controller.signal.aborted) return;
+        halt();
         const again = parseAssistantReply(repair).blocks;
         if (again.length) {
           result = await proposal.propose({ blocks: [...again, ...allowed.filter((write) => 'op' in write)], intent: user.text, source: `byok:${provider.id}`, scope });
+          if (controller.signal.aborted && 'id' in result) proposal.discard();
+          halt();
           fixed = 'id' in result;
         }
       }

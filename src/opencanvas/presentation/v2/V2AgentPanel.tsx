@@ -4,7 +4,7 @@
 // copy and report replies, pick the scope (selection or page), toggle thinking
 // and reopen past chats. Composes design-system parts over useV2Assistant and
 // useV2Proposal; owns no document state.
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react';
 import {
   IconAlertTriangle, IconArrowLeft, IconArrowUp, IconBook, IconBulb, IconCheck, IconCopy, IconEye, IconFlag,
   IconHistory, IconIcons, IconListDetails, IconMessagePlus, IconPencil, IconPhoto, IconPhotoOff, IconPlayerStop,
@@ -295,6 +295,8 @@ export function V2AgentPanel({
 }: V2AgentPanelProps) {
   const [draft, setDraft] = useState('');
   const [providerOpen, setProviderOpen] = useState(false);
+  // A send without a provider opens the dialog; connecting then sends what was typed.
+  const sendOnConnect = useRef(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   // null follows the canvas: the selection when it holds a diagram, else the page.
   const [scopePick, setScopePick] = useState<AssistantScope | null>(null);
@@ -316,13 +318,20 @@ export function V2AgentPanel({
   const send = (): void => {
     const prompt = draft.trim();
     if ((!prompt && !images.length) || busy || readOnly) return;
-    if (!configured) { setProviderOpen(true); return; }
+    if (!configured) { sendOnConnect.current = true; setProviderOpen(true); return; }
     setDraft('');
     setImages([]);
     setAttachError(null);
     setHistoryOpen(false);
     assistant.send(prompt, scope, images);
   };
+  const sendNow = useEffectEvent(send);
+  useEffect(() => {
+    if (providerOpen || !sendOnConnect.current) return;
+    sendOnConnect.current = false;
+    // Cancelled without a key: the prompt stays typed, unsent.
+    if (configured) sendNow();
+  }, [configured, providerOpen]);
   const attach = async (list: readonly File[]): Promise<void> => {
     const picked = list.filter((file) => file.type.startsWith('image/'));
     const room = MAX_IMAGES - images.length;

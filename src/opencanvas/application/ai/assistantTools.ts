@@ -178,10 +178,21 @@ export function assistantToolkit(context: AssistantToolContext): AssistantToolki
       };
     }
     const block: AssistantBlock = { frameId, dsl: dsl.trim() };
-    queued.set(frameId ?? `new:${added++}`, block);
+    // A model cannot edit a draft it queued, so a second add with the same title is its redo: replace, never stack two.
+    const title = compiled.meta.title?.trim();
+    const key = frameId ?? (title ? `new:${title}` : `new:${added++}`);
+    const replaced = !frameId && queued.has(key);
+    queued.set(key, block);
     const shapes = compiled.nodes.length + compiled.groups.length;
+    // A C4 model without views draws its landscape only: the containers the user asked for stay hidden.
+    const landscapeOnly = compiled.meta.family === 'architecture' && /^\s*model\s*\{/m.test(dsl) && !/^\s*views\s*\{/m.test(dsl);
     return {
-      content: `Queued for the user's review (${plural(shapes, 'shape')}).${warnings.length ? ` Some lines were skipped — fix them if they matter:\n${lines(warnings)}` : ''} Nothing changes until the user applies it; do not paste the DSL in your reply.`,
+      content: [
+        `${replaced ? `Replaced your earlier draft titled “${title}”` : 'Queued for the user\'s review'} (${plural(shapes, 'shape')}).`,
+        warnings.length ? `Some lines were skipped — to fix them, call ${frameId ? 'update_diagram' : 'add_diagram'} again with the same title and the whole corrected text:\n${lines(warnings)}` : '',
+        landscapeOnly ? 'Only the landscape view is drawn (people and top-level systems); containers inside a system are hidden. For a container diagram, add `views {\n  view container of <System>\n}` and call again with the same title.' : '',
+        'Nothing changes until the user applies it; do not paste the DSL in your reply.',
+      ].filter(Boolean).join(' '),
       label: target ? `Drafted changes to ${target}` : `Drafted a new ${compiled.meta.family}`,
       detail: plural(shapes, 'shape'),
     };

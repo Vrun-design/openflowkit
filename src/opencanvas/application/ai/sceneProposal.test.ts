@@ -33,5 +33,8 @@ describe('AI scene proposals', () => {
       { ...document, updatedAt: 'later' })).toThrow(/document changed/);
     expect(redactAiText('token sk-test_ABCDEFGHIJKLMNOPQRSTUVWXYZ')).not.toContain('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
     expect(classifyAiError(new Error('429 sk-test_ABCDEFGHIJKLMNOPQRSTUVWXYZ')).message).not.toContain('sk-test');
+    // "generate" contains "rate"; only a real rate limit reads as one.
+    expect(classifyAiError(new Error('Could not generate the connector route')).code).not.toBe('RATE_LIMITED');
+    expect(classifyAiError(new Error('Rate limit exceeded')).code).toBe('RATE_LIMITED');
   });
 });

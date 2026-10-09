@@ -38,6 +38,11 @@ const aborted = (signal?: AbortSignal): void => {
 export async function runAssistantAgent(options: AgentRunOptions): Promise<{ readonly text: string; readonly rounds: number }> {
   const { toolkit, respond, onStep, onNarration, signal, maxRounds = MAX_ROUNDS } = options;
   const messages: AiMessage[] = [...options.messages];
+  // A tool that never settles (a stuck layout) must not outlive Stop.
+  const stopped = new Promise<never>((_, reject) => {
+    signal?.addEventListener('abort', () => reject(new DOMException('Stopped', 'AbortError')), { once: true });
+  });
+  stopped.catch(() => undefined);
   for (let round = 0; ; round += 1) {
     aborted(signal);
     const turn = await respond(messages, round);
@@ -49,7 +54,7 @@ export async function runAssistantAgent(options: AgentRunOptions): Promise<{ rea
       aborted(signal);
       const id = `${round}:${index}:${call.name}`;
       onStep({ id, tool: call.name, label: call.name.replace(/_/g, ' '), status: 'running' });
-      const outcome = await toolkit.run(call);
+      const outcome = await Promise.race([toolkit.run(call), stopped]);
       onStep({ id, tool: call.name, label: outcome.label, ...(outcome.detail ? { detail: outcome.detail } : {}), status: outcome.isError ? 'error' : 'done' });
       results.push({ callId: call.id, name: call.name, content: outcome.content, ...(outcome.isError ? { isError: true } : {}) });
     }
