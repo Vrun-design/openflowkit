@@ -10,7 +10,7 @@ interface MapState {
   layouts: number;
   connectors: { id: string; from: string; to: string; label: string }[];
   /** What the canvas keeps bright around the selection (null: nothing dimmed) and whether its arrows are marching. */
-  focus: { nodeIds: string[]; connectorIds: string[]; animating: boolean } | null;
+  focus: { nodeIds: string[]; connectorIds: string[]; twoWayIds?: string[]; animating: boolean } | null;
 }
 const mapState = (page: Page): Promise<MapState> =>
   page.evaluate(() => (window as unknown as { __V2__: { getMapState(): MapState } }).__V2__.getMapState());
@@ -344,4 +344,33 @@ test('with reduced motion the focus is shown and the arrows do not march @gate',
   await expect.poll(async () => (await mapState(page)).focus?.nodeIds ?? []).toContain('customer');
   expect((await mapState(page)).focus!.connectorIds.length).toBeGreaterThan(0);
   expect((await mapState(page)).focus!.animating).toBe(false);
+});
+
+test('an arrow between boxes that call each other is two-way, and its focus marches both ways @gate', async ({ page }) => {
+  test.setTimeout(60_000);
+  const dsl = '%% ofk 1\narchitecture\ntitle: Two ways\nmodel {\n system Web\n system Api\n system Db\n Web -> Api : asks\n Api -> Web : answers\n Api -> Db : saves\n}\nviews {\n view landscape\n}\n';
+  const { deflateRawSync } = await import('node:zlib');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`/#/from/dsl?d=${deflateRawSync(Buffer.from(dsl, 'utf8')).toString('base64url')}`);
+  await page.waitForSelector('[data-testid="v2-canvas"]', { timeout: 30_000 });
+  await enterMap(page);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __V2__: { getMapMotion(): { running: boolean } } }).__V2__.getMapMotion().running)).toBe(false);
+  const connectors = (await mapState(page)).connectors;
+  expect(connectors).toHaveLength(2);
+  const focusArrow = async (id: string): Promise<void> => {
+    const lane = await page.evaluate((arrow: string) =>
+      (window as unknown as { __V2__: { getConnectorScreenSamples(id: string): { x: number; y: number }[] | null } }).__V2__.getConnectorScreenSamples(arrow) ?? [], id);
+    // Halfway along the first leg: the route bends, so the straight line between its ends is off it.
+    const [a, b] = [lane[0]!, lane[1]!];
+    const box = (await page.locator('[data-testid="v2-canvas"] canvas').boundingBox())!;
+    await page.mouse.click(box.x + (a.x + b.x) / 2, box.y + (a.y + b.y) / 2);
+    await expect.poll(async () => (await mapState(page)).focus?.connectorIds).toEqual([id]);
+  };
+  const [twoWay] = connectors.filter((c) => [c.from, c.to].sort().join() === 'api,web');
+  const [oneWay] = connectors.filter((c) => [c.from, c.to].sort().join() === 'api,db');
+  await focusArrow(twoWay!.id);
+  expect((await mapState(page)).focus).toMatchObject({ twoWayIds: [twoWay!.id], animating: true });
+  // The other arrow goes one way: its focus marches toward its target only.
+  await focusArrow(oneWay!.id);
+  expect((await mapState(page)).focus).toMatchObject({ twoWayIds: [], animating: true });
 });

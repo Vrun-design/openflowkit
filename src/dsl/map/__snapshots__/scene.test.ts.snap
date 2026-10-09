@@ -94,8 +94,10 @@ exports[`mapScene > draws the C4 starter at overview: closed boxes as the family
     ],
     {
       "dashPattern": "dashed",
+      "markerEnd": "arrow",
     },
     {
+      "both": false,
       "count": 1,
       "minor": false,
       "relations": [
@@ -112,8 +114,10 @@ exports[`mapScene > draws the C4 starter at overview: closed boxes as the family
     ],
     {
       "dashPattern": "dashed",
+      "markerEnd": "arrow",
     },
     {
+      "both": false,
       "count": 1,
       "minor": false,
       "relations": [
@@ -128,8 +132,11 @@ exports[`mapScene > draws the C4 starter at overview: closed boxes as the family
     [
       "stores orders [SQL]",
     ],
-    {},
     {
+      "markerEnd": "arrow",
+    },
+    {
+      "both": false,
       "count": 1,
       "minor": false,
       "relations": [
@@ -144,8 +151,11 @@ exports[`mapScene > draws the C4 starter at overview: closed boxes as the family
     [
       "submits orders [HTTPS]",
     ],
-    {},
     {
+      "markerEnd": "arrow",
+    },
+    {
+      "both": false,
       "count": 1,
       "minor": false,
       "relations": [

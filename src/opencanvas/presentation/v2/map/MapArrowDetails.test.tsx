@@ -25,6 +25,11 @@ describe('MapArrowDetails', () => {
     expect(screen.getByText('submits orders · HTTPS')).toBeTruthy();
   });
 
+  it('reads Web ⇄ API when the arrow goes both ways, even if its relations are deeper ones', () => {
+    render(<MapArrowDetails model={model} arrow={{ from: 'web', to: 'api', relationIds: ['r1'], both: true }} onSelectElement={vi.fn()} />);
+    expect(screen.getByText('Web ⇄ API')).toBeTruthy();
+  });
+
   it('skips unknown ids and singularises the count', () => {
     show(['nope', 'r3']);
     expect(screen.getByText('1 relation')).toBeTruthy();

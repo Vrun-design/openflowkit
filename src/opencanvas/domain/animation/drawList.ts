@@ -12,6 +12,7 @@ import { resolveBasicNodePresentation } from '../nodes/basicNodePresentation';
 import { basicNodeDecorations } from '../nodes/basicNodeDecorations';
 import { nodeLabelBounds, nodeOutline } from '../nodes/nodeLabelBounds';
 import { isContainerNodeKind } from '../nodes/containerNodePresentation';
+import { measurePortableText } from '../text/measurement';
 import { resolveNodeSizingPolicy } from '../node-sizing/model';
 import { FONT_STACKS, resolveNodeStyle, type NodeStyle } from '../nodes/nodeStyle';
 import { cameraFitMatrix } from './camera';
@@ -219,11 +220,21 @@ function shapeNodeOps(
   const label = typeof node.content.label === 'string' ? node.content.label : node.id;
   const clip = resolveNodeSizingPolicy(node).clipContent ? outline : null;
   const labelBox = nodeLabelBounds(node);
-  ops.push(labelOp(transform, style, labelBox, label, opacity, clip));
+  // A wrapping node (sizing policy) draws its label in the lines the canvas wraps it to, centred as a block.
+  const sizing = resolveNodeSizingPolicy(node);
+  const lines = sizing.overflow === 'visible' ? [label] : measurePortableText(label, {
+    fontSize: style.fontSize, fontWeight: style.fontWeight, lineHeight: style.fontSize * style.lineHeight,
+    maxWidth: Math.max(1, node.size.width - style.textPadding * 2), maxLines: sizing.maxLines, overflow: sizing.overflow,
+  }).lines;
+  const lineHeight = style.fontSize * style.lineHeight;
+  lines.forEach((line, index) => {
+    const op = labelOp(transform, style, labelBox, line, opacity, clip);
+    ops.push({ ...op, y: op.y + (index - (lines.length - 1) / 2) * lineHeight, ...(lines.length > 1 ? { decoration: null } : {}) });
+  });
   const subLabel = typeof node.content.subLabel === 'string' ? node.content.subLabel : '';
   if (subLabel) {
     const sub = labelOp(transform, style, labelBox, subLabel, opacity * 0.72, clip);
-    ops.push({ ...sub, y: sub.y + style.fontSize * 1.5, decoration: null });
+    ops.push({ ...sub, y: sub.y + style.fontSize * 1.5 + (lines.length - 1) / 2 * lineHeight, decoration: null });
   }
   return ops;
 }

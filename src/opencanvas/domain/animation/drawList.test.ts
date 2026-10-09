@@ -42,6 +42,18 @@ describe('frame draw list', () => {
     expect(label).toMatchObject({ text: 'Alpha', x: 50, y: 25, align: 'center', baseline: 'middle' });
   });
 
+  it('draws a label that wraps by its sizing policy in the lines the canvas wraps it to', () => {
+    const policy = { version: 1, mode: 'fixed', minSize: { width: 24, height: 24 }, maxSize: { width: 1600, height: 1200 }, overflow: 'wrap', clipContent: false, maxLines: 4 };
+    const node = createTestNode('a', {
+      size: { width: 260, height: 80 },
+      content: { label: 'Validate the incoming payment request', shape: 'rectangle', sizingPolicy: policy },
+    });
+    const labels = texts(frameDrawList(pageOf({ nodes: [node] }), frameOf(), 'light', VIEW_BOX));
+    expect(labels.map((op) => op.text)).toEqual(['Validate the incoming payment', 'request']);
+    expect(labels[1]!.y - labels[0]!.y).toBeCloseTo(16.8);
+    expect((labels[0]!.y + labels[1]!.y) / 2).toBeCloseTo(40);
+  });
+
   it('bakes the frame opacity, the pop scale about the node centre and the camera', () => {
     const node = createTestNode('a', { size: { width: 100, height: 50 } });
     const frame = frameOf({ a: { opacity: 0.5, scale: 0.92, drawProgress: 1 } }, {}, { x: 0, y: 0, width: 100, height: 50 });

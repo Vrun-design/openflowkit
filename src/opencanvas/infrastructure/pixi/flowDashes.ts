@@ -34,3 +34,12 @@ export function flowDashes(points: readonly Point2d[], on: number, off: number, 
   }
   return dashes;
 }
+
+/**
+ * The phase of a two-way arrow: the dashes march `half` px toward the end, then `half` px back, and so on, so the line
+ * keeps its ordinary dashes (two trains passing on one line blur into a steady line) and the direction visibly turns.
+ */
+export function pingPong(phase: number, half: number): number {
+  const at = ((phase % (2 * half)) + 2 * half) % (2 * half);
+  return at < half ? at : 2 * half - at;
+}

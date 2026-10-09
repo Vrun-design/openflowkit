@@ -22,4 +22,13 @@ describe('portable text measurement', () => {
     });
     expect(ellipsis.displayText).toMatch(/…$/);
   });
+
+  it('keeps a line that fits the limit, even when the space after it would not', () => {
+    const text = 'Validate the incoming payment request against fraud rules and limits';
+    const style = { fontSize: 14, fontWeight: 600 as const, overflow: 'wrap' as const };
+    const roomy = measurePortableText(text, { ...style, maxWidth: 288 });
+    expect(roomy.lines).toEqual(['Validate the incoming payment request', 'against fraud rules and limits']);
+    const snug = measurePortableText(text, { ...style, maxWidth: Math.ceil(roomy.width) });
+    expect(snug.lines).toEqual(roomy.lines);
+  });
 });

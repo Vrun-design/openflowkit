@@ -3,13 +3,8 @@ import { createArchIndex } from '../../model/model';
 import { boundaryIds, projectRelations, selectViewElements } from '../../model/predicates';
 import { ELEMENT_KIND_LABEL, type ArchElement, type ArchModel, type ArchRelation, type ArchView } from '../../model/types';
 import { attrsToJson } from '../../sceneMeta';
-import { ACTOR_CONTENT_LAYOUT, measureGroupSize, measureNodeSize } from '../../sizing';
-import { measurePortableText } from '../../../opencanvas/domain/text/measurement';
+import { ACTOR_CONTENT_LAYOUT, measureGroupSize, measureNodeSize, WRAP_SIZING_POLICY, wrapPolicyFor } from '../../sizing';
 
-const DESCRIPTION_WRAP = {
-  version: 1, mode: 'fixed', minSize: { width: 24, height: 24 }, maxSize: { width: 1600, height: 1200 },
-  overflow: 'wrap', clipContent: false, maxLines: 4,
-} as const;
 import { COLOR_WORDS, nodeAppearance, SHAPE_WORDS, type DslShapeSpec } from '../../vocabulary';
 import { layoutEdges, type LayoutNodeInput } from '../../layout';
 import { AUTO_ICON_SHAPES } from '../../autoIcon';
@@ -143,27 +138,6 @@ export function boundaryNode(element: ArchElement, parentId: string | null, zInd
   };
 }
 
-/** The padding a plain shape's text keeps on every side, as the renderer applies it (nodeStyle `textPadding`). */
-const PLAIN_TEXT_PADDING = 16;
-
-/**
- * The size a plain C4 shape needs for the lines the renderer draws: the name at 14px/600 and the kind +
- * description at 11px/400, each wrapped to `width - 2 * padding` (PixiNodeRenderer). The generic measure
- * rounds its width to the nearest pixel and pads 14px top and bottom, so a line that only just fit can wrap
- * on canvas and run out of the box; widen to the width the unwrapped text needs and take the height from the wrap.
- */
-export function fitPlainShape(size: { width: number; height: number }, label: string, subLabel: string, spec: DslShapeSpec) {
-  const wide = (text: string, fontSize: number, fontWeight: 400 | 600) =>
-    measurePortableText(text, { fontSize, fontWeight, lineHeight: fontSize * 1.2, maxWidth: spec.maxSize.width - 2 * PLAIN_TEXT_PADDING, overflow: 'wrap', maxLines: 4 });
-  const natural = Math.max(wide(label, 14, 600).width, wide(subLabel, 11, 400).width) + 2 * PLAIN_TEXT_PADDING;
-  const width = Math.min(spec.maxSize.width, Math.max(size.width, Math.ceil(natural)));
-  const inner = Math.max(1, width - 2 * PLAIN_TEXT_PADDING);
-  const drawn = (text: string, fontSize: number, fontWeight: 400 | 600) =>
-    measurePortableText(text, { fontSize, fontWeight, lineHeight: fontSize * 1.2, maxWidth: inner, overflow: 'wrap', maxLines: 4 }).height;
-  const height = Math.min(spec.maxSize.height, Math.max(size.height, Math.ceil(2 * PLAIN_TEXT_PADDING + drawn(label, 14, 600) + 4 + drawn(subLabel, 11, 400))));
-  return { width, height };
-}
-
 export type ElementContext = Pick<FamilyContext, 'origin' | 'swatch' | 'resolveIcon' | 'inferIcon' | 'measureLabel'>;
 
 /**
@@ -188,14 +162,13 @@ export function elementNode(element: ArchElement, parentId: string | null, zInde
   const label = element.name;
   const subLabel = `[${ELEMENT_KIND_LABEL[element.kind]}${element.tech ? ` · ${element.tech}` : ''}]${element.desc ? `\n${element.desc}` : ''}`;
   const kind = isIconCard ? 'architecture' : spec.kind;
-  // A description wraps inside its box on the canvas and in exports; the node is sized for it.
   const wraps = !isIconCard && Boolean(element.desc);
-  const measured = measureNodeSize({
-      kind, label, ...(subLabel ? { subLabel } : {}), hasIcon: isIconCard, spec, ...(wraps ? { overflow: 'wrap' as const } : {}),
-    });
+  const measure = { kind, label, ...(subLabel ? { subLabel } : {}), hasIcon: isIconCard, spec, ...(wraps ? { overflow: 'wrap' as const } : {}) };
+  const measured = measureNodeSize(measure);
   const custom = context.measureLabel?.(label, kind);
-  const fitted = wraps && spec.shape !== 'actor' ? fitPlainShape(measured, label, subLabel, spec) : measured;
-  const size = {width: Math.max(fitted.width, custom?.width ?? 0, isIconCard ? 240 : 0), height: Math.max(fitted.height, custom?.height ?? 0, isIconCard ? 152 : 0)};
+  const size = {width: Math.max(measured.width, custom?.width ?? 0, isIconCard ? 240 : 0), height: Math.max(measured.height, custom?.height ?? 0, isIconCard ? 152 : 0)};
+  // A description wraps inside its box on the canvas and in exports (the node is sized for it); a long name wraps too.
+  const wrapPolicy = wraps ? WRAP_SIZING_POLICY : wrapPolicyFor(measure, size);
   const color = elementColorWord(element);
   const fill = element.attrs?.some((entry) => entry.value === 'bold') ? 'bold' as const
     : element.attrs?.some((entry) => entry.value === 'outline') ? 'outline' as const : 'pastel' as const;
@@ -209,7 +182,7 @@ export function elementNode(element: ArchElement, parentId: string | null, zInde
       ...(!isIconCard && !sticky && spec.shape ? { shape: spec.shape } : {}),
       ...(spec.shape === 'actor' ? { contentLayout: ACTOR_CONTENT_LAYOUT } : {}),
       ...(subLabel ? { subLabel } : {}),
-      ...(wraps ? { sizingPolicy: DESCRIPTION_WRAP } : {}),
+      ...(wrapPolicy ? { sizingPolicy: wrapPolicy } : {}),
       // Architecture cards and containers resolve their palette from content keys.
       ...(isIconCard && color ? { color: paletteKey(color), ...(fill === 'bold' ? { colorMode: 'filled' } : {}) } : {}),
       ...(isIconCard && authoredIcon ? {

@@ -9,7 +9,7 @@ import { distanceBetweenPoints } from '../../domain/geometry/point';
 import type { Point2d } from '../../domain/geometry/types';
 import { isDarkCanvas } from '../../domain/color/adaptiveColor';
 import { LABEL_WRAP_WIDTH, connectorLabelOnCanvas } from '../../domain/connectors/labelStyle';
-import { projectPageConnectors } from '../../domain/connectors/routeProjection';
+import { projectConnectors } from '../../domain/connectors/routeProjection';
 import type {
   ConnectorMarkerGlyph,
   ConnectorStrokePresentation,
@@ -180,6 +180,17 @@ export function drawDashedPath(
   }
 }
 
+/** The page with the connectors that draw: not hidden, and both ends visible. One definition for the renderer and the focus overlay's dashes. */
+export function visibleConnectorPage(page: ScenePage): ScenePage {
+  const nodeStates = buildNodeStateMap(page);
+  return {
+    ...page,
+    connectors: page.connectors.filter((connector) => connector.metadata.hidden !== true
+      && (connector.source.nodeId === null || nodeStates.get(connector.source.nodeId)?.visible === true)
+      && (connector.target.nodeId === null || nodeStates.get(connector.target.nodeId)?.visible === true)),
+  };
+}
+
 export class PixiConnectorRenderer {
   readonly container = new Container();
   private readonly paths = new Graphics();
@@ -193,31 +204,35 @@ export class PixiConnectorRenderer {
     this.container.addChild(this.paths, this.labelPlates, this.labels);
   }
 
+  /**
+   * Draws the page's connectors, or only `renderedConnectorIds`. Lanes shared with an arrow that is not drawn still come from the whole page
+   * (the projection context reads every connector), so a subset sits where the page draws it. `placeLabelsAmongAll` also places the subset's
+   * labels among every visible arrow's, for a copy that must land exactly on the page's own labels (the focus overlay); the base draw never pays for it.
+   */
   draw(
     page: ScenePage,
     advanced: boolean,
     renderedConnectorIds: ReadonlySet<string> | null = null,
-    canvasColor?: string
+    canvasColor?: string,
+    placeLabelsAmongAll = false
   ): void {
     this.paths.clear();
     this.labelPlates.clear();
     this.labels.removeChildren().forEach((child) => child.destroy());
-    const nodeStates = buildNodeStateMap(page);
-    const visiblePage = {
-      ...page,
-      connectors: page.connectors.filter((connector) => {
-        if (connector.metadata.hidden === true) return false;
-        if (renderedConnectorIds && !renderedConnectorIds.has(connector.id)) return false;
-        return (connector.source.nodeId === null || nodeStates.get(connector.source.nodeId)?.visible === true)
-          && (connector.target.nodeId === null || nodeStates.get(connector.target.nodeId)?.visible === true);
-      }),
-    };
-    if (!advanced) {
-      this.drawLegacy(visiblePage);
-      this.debugSnapshot = { connectors: visiblePage.connectors.length, labels: 0, markers: 0, widestLabel: 0 };
+    if (renderedConnectorIds?.size === 0) {
+      this.debugSnapshot = { connectors: 0, labels: 0, markers: 0, widestLabel: 0 };
       return;
     }
-    const connectors = projectPageConnectors(visiblePage);
+    const visiblePage = visibleConnectorPage(page);
+    const wanted = (connector: { readonly id: string }): boolean => !renderedConnectorIds || renderedConnectorIds.has(connector.id);
+    if (!advanced) {
+      this.drawLegacy({ ...visiblePage, connectors: visiblePage.connectors.filter(wanted) });
+      this.debugSnapshot = { connectors: visiblePage.connectors.filter(wanted).length, labels: 0, markers: 0, widestLabel: 0 };
+      return;
+    }
+    const connectors = placeLabelsAmongAll
+      ? projectConnectors(visiblePage, visiblePage.connectors).filter(wanted)
+      : projectConnectors(visiblePage, visiblePage.connectors.filter(wanted));
     const onDark = isDarkCanvas(canvasColor);
     let labelCount = 0;
     let markerCount = 0;

@@ -51,8 +51,9 @@ function wrapParagraph(text: string, maximum: number, fontSize: number, weight: 
     }
     let prefix = fitPrefix(remaining, maximum, fontSize, weight);
     if (!prefix) prefix = [...remaining][0] ?? '';
+    // A prefix that ends right before a space is already whole words; only cut back to a space mid-word.
     const breakAt = prefix.lastIndexOf(' ');
-    if (breakAt > 0) prefix = prefix.slice(0, breakAt);
+    if (remaining[prefix.length] !== ' ' && breakAt > 0) prefix = prefix.slice(0, breakAt);
     lines.push(prefix.trimEnd());
     remaining = remaining.slice(prefix.length).trimStart();
   }

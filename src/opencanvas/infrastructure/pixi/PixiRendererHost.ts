@@ -1,7 +1,7 @@
 import { PixiDotGrid } from './PixiDotGrid';
 import { isDarkCanvas, numericColorToHex } from '../../domain/color/adaptiveColor';
 import { PixiLiveTransformPreview } from './PixiLiveTransformPreview';
-import { Application, Container, Graphics } from 'pixi.js';
+import { Application, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { screenToWorld, visibleWorldBounds, worldToScreen } from '../../domain/camera/camera';
 import {
   recordOpenCanvasCameraPhase,
@@ -203,6 +203,14 @@ export class PixiRendererHost {
       abandonInitializedApplication(this.app);
       throw new Error('Pixi renderer was destroyed during initialization.');
     }
+
+    // The first draw of a node compiles and links Pixi's batch shader (seconds under software GL) inside the frame that shows it,
+    // holding the label editor back. Draw one pixel now, while nothing waits, so that frame finds the program ready.
+    const warm = new Sprite(Texture.WHITE);
+    warm.setSize(1, 1);
+    this.app.stage.addChild(warm);
+    this.app.render();
+    warm.destroy();
 
     this.world.addChild(
       this.precisionGrid,
@@ -708,8 +716,10 @@ export class PixiRendererHost {
   }
 
   /** What is focused now, and whether its arrows are marching (false under reduced motion, hidden tabs and mid-move). */
-  getFocusState(): { nodeIds: readonly string[]; connectorIds: readonly string[]; animating: boolean } | null {
-    return this.focusFrame ? { nodeIds: this.focusFrame.nodeIds, connectorIds: this.focusFrame.connectorIds, animating: this.flowFrame !== null } : null;
+  getFocusState(): { nodeIds: readonly string[]; connectorIds: readonly string[]; twoWayIds: readonly string[]; animating: boolean } | null {
+    return this.focusFrame
+      ? { nodeIds: this.focusFrame.nodeIds, connectorIds: this.focusFrame.connectorIds, twoWayIds: this.focusOverlay.twoWayIds(), animating: this.flowFrame !== null }
+      : null;
   }
 
   /** One rAF loop, alive only while a Map focus with arrows is on screen, the tab is visible and motion is allowed. */

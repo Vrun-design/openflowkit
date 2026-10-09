@@ -8,7 +8,7 @@ import {
 import { AUTO_ICON_SHAPES } from '../../autoIcon';
 import type { FamilyContext, FamilyScene } from '../types';
 import { attrsToJson, type CanonicalAttribute } from '../../sceneMeta';
-import { ACTOR_CONTENT_LAYOUT, measureGroupSize, measureNodeSize } from '../../sizing';
+import { ACTOR_CONTENT_LAYOUT, measureGroupSize, measureNodeSize, wrapPolicyFor } from '../../sizing';
 import { slugifyDslId } from '../../text';
 import { layoutEdges, type LayoutNodeInput } from '../../layout';
 import {
@@ -244,13 +244,14 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
     }
     const isIconCard = Boolean(icon && (!context.resolveIcon || resolvedIcon));
     const kind = isIconCard ? 'architecture' : spec.kind;
-    const size = context.measureLabel
-      ? context.measureLabel(label, kind)
-      : measureNodeSize({
-        kind, label, ...(desc ? { subLabel: desc } : {}), hasIcon: isIconCard, spec,
-        ...(typed.width !== undefined ? { width: typed.width } : {}),
-        ...(typed.height !== undefined ? { height: typed.height } : {}),
-      });
+    const measure = {
+      kind, label, ...(desc ? { subLabel: desc } : {}), hasIcon: isIconCard, spec,
+      ...(typed.width !== undefined ? { width: typed.width } : {}),
+      ...(typed.height !== undefined ? { height: typed.height } : {}),
+    };
+    const size = context.measureLabel ? context.measureLabel(label, kind) : measureNodeSize(measure);
+    // Text wider than the box can be wraps inside it; the renderer wraps by the policy, so say so.
+    const wrapPolicy = context.measureLabel ? null : wrapPolicyFor(measure, size);
     const palette = typed.color && !isHexColor(typed.color) ? COLOR_WORDS[typed.color]?.key : undefined;
     const custom = typed.color && isHexColor(typed.color) ? typed.color : undefined;
     const lossyShape = isLossyShape(canonicalWord, kind);
@@ -264,6 +265,7 @@ export async function compileGraph(input: GraphInput, context: FamilyContext): P
         ...(!isIconCard && !sticky && spec.shape ? { shape: spec.shape } : {}),
         ...(spec.shape === 'actor' ? { contentLayout: ACTOR_CONTENT_LAYOUT } : {}),
         ...(desc ? { subLabel: desc } : {}),
+        ...(wrapPolicy ? { sizingPolicy: wrapPolicy } : {}),
         ...(sticky ? { color: palette ?? 'yellow' } : {}),
         // Architecture cards and containers resolve their palette from content keys.
         ...(isIconCard ? {

@@ -9,8 +9,8 @@ import { projectConnectors } from '../../domain/connectors/routeProjection';
 import { roundPolylineCorners } from '../../domain/geometry/polyline';
 import type { Point2d } from '../../domain/geometry/types';
 import { CHROME_ACCENT } from './chrome';
-import { flowDashes } from './flowDashes';
-import { PixiConnectorRenderer } from './PixiConnectorRenderer';
+import { flowDashes, pingPong } from './flowDashes';
+import { PixiConnectorRenderer, visibleConnectorPage } from './PixiConnectorRenderer';
 import { PixiContainerRenderer } from './PixiContainerRenderer';
 import { PixiNodeRenderer } from './PixiNodeRenderer';
 
@@ -27,6 +27,8 @@ export interface FocusFrame {
 
 /** Screen px per second a focused arrow's dashes travel. */
 export const FLOW_SPEED = 40;
+/** Seconds a two-way arrow's dashes march one way before turning back. */
+const FLOW_TURN = 1.2;
 const FLOW_ON = 8;
 const FLOW_OFF = 10;
 
@@ -51,7 +53,7 @@ export class PixiFocusOverlay {
   private readonly flow = new Graphics();
   private last: { page: ScenePage; index: SceneIndex; color: number } | null = null;
   /** The focused arrows' routes, world px, source to target: computed once per page and frame. */
-  private routes: { readonly page: ScenePage; readonly frame: FocusFrame; readonly paths: readonly { points: readonly Point2d[]; width: number }[] } | null = null;
+  private routes: { readonly page: ScenePage; readonly frame: FocusFrame; readonly paths: readonly { id: string; points: readonly Point2d[]; width: number; both: boolean }[] } | null = null;
   private zoom = 1;
   private phase = 0;
 
@@ -89,7 +91,7 @@ export class PixiFocusOverlay {
     this.containers.draw(page, index, containers, canvasColor);
     this.nodes.draw(page, index, plainNodes, 'full', canvasColor);
     this.connectors.setZoom(zoom);
-    this.connectors.draw(page, true, new Set(frame.connectorIds));
+    this.connectors.draw(page, true, new Set(frame.connectorIds), undefined, true);
     this.marks.clear();
     this.setRoutes(page, frame);
     this.drawFlow(this.phase);
@@ -123,8 +125,10 @@ export class PixiFocusOverlay {
     const paths = this.routes?.paths;
     if (!paths?.length) return;
     const zoom = this.zoom;
-    for (const { points, width } of paths) {
-      for (const dash of flowDashes(points, FLOW_ON / zoom, FLOW_OFF / zoom, phase / zoom)) {
+    for (const { points, width, both } of paths) {
+      // A two-way arrow's dashes turn around every FLOW_TURN seconds; every other arrow marches toward its target as before.
+      const shown = both ? pingPong(phase, FLOW_SPEED * FLOW_TURN) : phase;
+      for (const dash of flowDashes(points, FLOW_ON / zoom, FLOW_OFF / zoom, shown / zoom)) {
         this.flow.moveTo(dash[0]!.x, dash[0]!.y);
         for (const point of dash.slice(1)) this.flow.lineTo(point.x, point.y);
         this.flow.stroke({ color: CHROME_ACCENT, width: width + 1 / zoom, cap: 'round', join: 'round' });
@@ -132,14 +136,24 @@ export class PixiFocusOverlay {
     }
   }
 
+  /** The focused arrows that go both ways (Map mode draws them with a head at each end). */
+  twoWayIds(): string[] {
+    return (this.routes?.paths ?? []).filter((path) => path.both).map((path) => path.id).sort();
+  }
+
   private setRoutes(page: ScenePage, frame: FocusFrame): void {
     if (this.routes?.page === page && this.routes.frame === frame) return;
     if (frame.tone !== 'selection') { this.routes = null; return; }
     const wanted = new Set(frame.connectorIds);
-    const projected = projectConnectors(page, page.connectors.filter((connector) => wanted.has(connector.id)));
+    const focused = page.connectors.filter((connector) => wanted.has(connector.id));
+    const twoWay = new Set(focused.filter((connector) => (connector.metadata.map as { both?: boolean } | undefined)?.both === true).map((connector) => connector.id));
+    // The context reads every visible connector, so a lane shared with a sibling is the lane the page draws.
+    const visible = visibleConnectorPage(page);
+    const projected = projectConnectors(visible, visible.connectors.filter((connector) => wanted.has(connector.id)));
     this.routes = {
       page, frame,
       paths: projected.map((connector) => ({
+        id: connector.id, both: twoWay.has(connector.id),
         points: connector.commands.some((command) => command.kind === 'cubic')
           ? connector.samples : roundPolylineCorners(connector.samples, connector.presentation.cornerRadius),
         width: connector.presentation.stroke.width,

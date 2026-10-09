@@ -19,6 +19,7 @@ test('icon library inserts an icon node; the style bar swaps its icon as one und
   await expect.poll(() => icons(page)).toEqual(['architecture:aws/compute-lambda']);
 
   // The label editor opened on the new node; keep the default label.
+  await expect(page.getByRole('textbox', { name: 'Edit node label' })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Icon', exact: true }).click();
   await page.getByRole('tab', { name: 'Standard' }).click();

@@ -40,6 +40,12 @@ describe('mapFocus', () => {
     expect(mapFocus(page, { connectorId: 'api>db' })).toEqual({ nodeIds: ['api', 'db'], connectorIds: ['api>db'] });
   });
 
+  it('a two-way arrow is one arrow: focusing it, or either end, keeps it once with both ends', () => {
+    const twoWay = { ...page, connectors: [...page.connectors, { ...arrow('db>api', 'db', 'api'), metadata: { map: { both: true } } }] } as unknown as ScenePage;
+    expect(mapFocus(twoWay, { connectorId: 'db>api' })).toEqual({ nodeIds: ['api', 'db'], connectorIds: ['db>api'] });
+    expect(mapFocus(twoWay, { nodeId: 'db' })).toEqual({ nodeIds: ['api', 'db'], connectorIds: ['api>db', 'db>api'] });
+  });
+
   it('nothing selected, or an id the map does not draw, is no focus', () => {
     expect(mapFocus(page, {})).toBeNull();
     expect(mapFocus(page, { nodeId: null, connectorId: null })).toBeNull();

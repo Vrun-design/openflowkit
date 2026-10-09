@@ -8,7 +8,7 @@ import { aggregate, presets, visible } from './view';
 // What disorients a reader when one more box opens: boxes that were already on screen swapping places,
 // or one of them flying far away. For every openable box on the overview we lay out before and after with
 // the real ELK, take the boxes present in both and remove the one shift the camera absorbs (their mean
-// offset). Then: (a) Kendall tau of their x- and y-centres (1 = same order), (b) the biggest remaining jump
+// offset). Then: (a) Kendall tau-b of their x- and y-centres (1 = same order), (b) the biggest remaining jump
 // against how much the opened box grew. Mean and p90 px are logged only: growth forces movement, so they
 // cannot reach zero.
 
@@ -23,11 +23,16 @@ async function layout(expanded: Set<string>): Promise<Laid> {
   return fromElkLayout(out as unknown as ElkNode);
 }
 
-// Kendall tau-a: concordant minus discordant pairs over all pairs (ties count as neither).
+// Kendall tau-b: a row of boxes tied on y before and after is in order, not "unknown" (tau-a scores a perfectly
+// stable three-box row 0.8).
 function tau(a: number[], b: number[]) {
-  let sum = 0;
-  for (let i = 0; i < a.length; i++) for (let j = i + 1; j < a.length; j++) sum += Math.sign(a[i] - a[j]) * Math.sign(b[i] - b[j]);
-  return a.length > 1 ? sum / ((a.length * (a.length - 1)) / 2) : 1;
+  let sum = 0, tiesA = 0, tiesB = 0, pairs = 0;
+  for (let i = 0; i < a.length; i++) for (let j = i + 1; j < a.length; j++) {
+    const sa = Math.sign(a[i] - a[j]), sb = Math.sign(b[i] - b[j]);
+    sum += sa * sb; pairs++; if (!sa) tiesA++; if (!sb) tiesB++;
+  }
+  const denominator = Math.sqrt((pairs - tiesA) * (pairs - tiesB));
+  return denominator ? sum / denominator : 1;
 }
 const median = (xs: number[]) => [...xs].sort((x, y) => x - y)[Math.floor(xs.length / 2)];
 
@@ -64,10 +69,10 @@ describe('layout stability', () => {
     const r = await measureStability();
     console.log(`stability: ${r.opens} opens, tau median ${r.tauMedian.toFixed(2)} min ${r.tauMin.toFixed(2)}, max jump/growth ${r.maxJumpPerGrowth.toFixed(2)}, mean ${r.mean.toFixed(0)} px, p90 ${r.p90.toFixed(0)} px, overview aspect ${r.aspect.toFixed(2)}`);
     expect(r.opens).toBeGreaterThan(15);
-    // Targets are tau median >= 0.9 and min >= 0.75; the shipped options reach 0.84 and 0.70 on this repo
-    // (measured 2026-10-08), so this guards those. Nothing tried reached both targets and kept the aspect.
-    expect(r.tauMedian).toBeGreaterThanOrEqual(0.8);
-    expect(r.tauMin).toBeGreaterThanOrEqual(0.65);
+    // Targets are tau-b median >= 0.9 and min >= 0.75; the shipped options reach 0.86 and 0.71 on this repo
+    // (measured 2026-10-09), so this guards those. Nothing tried reached both targets and kept the aspect.
+    expect(r.tauMedian).toBeGreaterThanOrEqual(0.85);
+    expect(r.tauMin).toBeGreaterThanOrEqual(0.70);
     expect(r.maxJumpPerGrowth).toBeLessThanOrEqual(2); // reaches 0.97
     // A wide, tiny overview or a tall sliver is a regression even when boxes stay put.
     expect(r.aspect).toBeGreaterThan(1.2);

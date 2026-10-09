@@ -5,6 +5,8 @@ export interface MapArrow {
   readonly from: string;
   readonly to: string;
   readonly relationIds: readonly string[];
+  /** The arrow goes both ways (the scene's `metadata.map.both`): rolled-up arrows hide that from their relations' own ends. */
+  readonly both?: boolean;
 }
 
 interface MapArrowDetailsProps {
@@ -29,7 +31,7 @@ export function MapArrowDetails({ model, arrow, onSelectElement }: MapArrowDetai
 
   return (
     <div className="ofk-v2-model-detail">
-      <strong>{nameOf(arrow.from)} → {nameOf(arrow.to)}</strong>
+      <strong>{nameOf(arrow.from)} {arrow.both ? '⇄' : '→'} {nameOf(arrow.to)}</strong>
       {relations.length === 0
         ? <p role="status" className="ofk-v2-model-hint">No relations found for this arrow.</p>
         : <>

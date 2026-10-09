@@ -1,5 +1,7 @@
 import type { SceneNode, ScenePage } from '../../opencanvas/domain/document/types';
 import { createDefaultSceneLayer } from '../../opencanvas/domain/document/defaults';
+import { SUBLABEL_FONT, TEXT_PADDING } from '../sizing';
+import { measurePortableText } from '../../opencanvas/domain/text/measurement';
 import type { Point2d, Size2d } from '../../opencanvas/domain/geometry/types';
 import { boundaryNode, elementNode, relationConnector, type ElementContext } from '../families/architecture/scene';
 import type { ArchElement, ArchModel } from '../model/types';
@@ -17,6 +19,8 @@ import { edgeText, visible } from './view';
  */
 export interface MapLook extends Omit<ElementContext, 'origin'> {
   arch: ArchModel;
+  /** Box id -> the kind tag its card shows ("Folder · 12 files") in place of the C4 kind word; a repo map has no C4 kinds. */
+  tags?: ReadonlyMap<string, string>;
 }
 
 /** Where each visible box sits (absolute coordinates, as ELK hands them back) and which arrows are drawn. */
@@ -38,11 +42,22 @@ const unlabelled = (node: SceneNode): SceneNode => {
   return { ...node, content: { ...content, ...(desc ? { subLabel: desc } : {}) } };
 };
 
+const retag = (node: SceneNode, tag: string): SceneNode => {
+  const [, ...desc] = String(node.content.subLabel ?? '').split('\n');
+  return { ...node, content: { ...node.content, subLabel: [`[${tag}]`, ...desc].join('\n') } };
+};
+
 export const closedBoxSize = (look: MapLook, node: MapNode): Size2d => {
   const element = look.arch.elements.find((e) => e.id === node.id)
     ?? (node.kind === 'more' || node.kind === 'group' ? synthetic(node.id, node.name, node.desc) : undefined);
   if (!element) throw new Error(`map: no element ${node.id}`);
-  return elementNode(element, null, 0, { ...look, origin: ORIGIN }).size;
+  // The card is sized for the kind word it would show ("Service"); a repo tag ("Folder · 120 files") can be wider, so the box grows to it.
+  const tag = look.tags?.get(node.id);
+  const tagWidth = tag ? Math.ceil(measurePortableText(`[${tag}]`, { ...SUBLABEL_FONT, maxWidth: 400, overflow: 'visible' }).width) + 2 * TEXT_PADDING : 0;
+  return elementNode(element, null, 0, { ...look, origin: ORIGIN, measureLabel: (label, kind) => {
+    const own = look.measureLabel?.(label, kind);
+    return { width: Math.max(own?.width ?? 0, tagWidth), height: own?.height ?? 0 };
+  } }).size;
 };
 
 export function mapScene(model: MapModel, open: ReadonlySet<string>, layout: MapLayout, look: MapLook): ScenePage {
@@ -58,7 +73,9 @@ export function mapScene(model: MapModel, open: ReadonlySet<string>, layout: Map
     const parentRect = parent && parent !== model.root ? layout.rects.get(parent) : undefined;
     const isOpen = open.has(id) && node.children.length;
     const parentId = parentRect ? parent : null;
-    const built = isOpen ? boundaryNode(element, parentId, i + 1, ctx) : elementNode(element, parentId, i + 1, ctx);
+    const tag = look.tags?.get(id);
+    const drawn = isOpen ? boundaryNode(element, parentId, i + 1, ctx) : elementNode(element, parentId, i + 1, ctx);
+    const built = tag ? retag(drawn, tag) : drawn;
     nodes.push({
       ...(elements.has(id) ? built : unlabelled(built)),
       size: { width: rect.width, height: rect.height },
@@ -71,10 +88,12 @@ export function mapScene(model: MapModel, open: ReadonlySet<string>, layout: Map
   const connectors = layout.edges.map((e) => {
     // Solid only where a relation joins exactly these two boxes: an arrow with at least one such relation is real, one that rides up from deeper boxes is implied.
     const direct = e.links.some((l) => (l.from === e.from && l.to === e.to) || (l.from === e.to && l.to === e.from));
-    const connector = relationConnector({ id: e.key, from: e.from, to: e.to, label: edgeText(e), tags: [] }, e.from, e.to, e.inferred || !direct || !!e.minor);
+    const built = relationConnector({ id: e.key, from: e.from, to: e.to, label: edgeText(e), tags: [] }, e.from, e.to, e.inferred || !direct || !!e.minor);
+    // Direction matters in architecture: every arrow has a head at its target, and a two-way arrow one at each end (the connector's own markerStart/markerEnd).
+    const connector = { ...built, appearance: { ...built.appearance, ...(e.both ? { markerStart: 'arrow' } : {}), markerEnd: 'arrow' } };
     // fromArch makes each relation's id its evidence `file`, so the panel can list the relations behind this arrow.
     const relations = [...new Set(e.links.flatMap((l) => l.evidence.map((ev) => ev.file)))].sort();
-    return { ...connector, metadata: { ...connector.metadata, map: { count: e.count, minor: !!e.minor, relations } } };
+    return { ...connector, metadata: { ...connector.metadata, map: { count: e.count, minor: !!e.minor, both: e.both, relations } } };
   });
 
   return {

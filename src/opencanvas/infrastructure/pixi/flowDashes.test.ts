@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flowDashes } from './flowDashes';
+import { flowDashes, pingPong } from './flowDashes';
 
 const line = [{ x: 0, y: 0 }, { x: 100, y: 0 }];
 
@@ -22,5 +22,18 @@ describe('flowDashes', () => {
   it('nothing to draw for a point or a zero dash', () => {
     expect(flowDashes([{ x: 1, y: 1 }], 10, 10, 0)).toEqual([]);
     expect(flowDashes(line, 0, 10, 0)).toEqual([]);
+  });
+});
+
+describe('pingPong', () => {
+  it('runs forward for `half`, back for `half`, and repeats', () => {
+    expect([0, 12, 24, 36, 48, 60, 72].map((p) => pingPong(p, 48))).toEqual([0, 12, 24, 36, 48, 36, 24]);
+    expect(pingPong(96, 48)).toBe(0);
+    expect(pingPong(100, 48)).toBe(4);
+  });
+
+  it('is continuous at the turns and tolerates a negative phase', () => {
+    expect(pingPong(47.9, 48)).toBeCloseTo(pingPong(48.1, 48), 1);
+    expect(pingPong(-10, 48)).toBe(10);
   });
 });

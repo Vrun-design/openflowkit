@@ -19,6 +19,7 @@ const FIXTURES: readonly { readonly family: string; readonly file: string }[] = 
   { family: 'gitgraph', file: 'gitgraph/basic.dsl' },
   { family: 'mindmap', file: 'mindmap/product.dsl' },
   { family: 'shape-library', file: 'shapes/library.dsl' },
+  { family: 'long-label', file: 'flowchart/long-label.dsl' },
   { family: 'edge-markers', file: 'flowchart/markers.dsl' },
 ] as const;
 
@@ -52,6 +53,28 @@ describe('canonical SVG goldens', () => {
       expect(dark).toContain('data-theme="dark"');
     });
   }
+});
+
+describe('canonical SVG wrapped labels', () => {
+  it('draws a long label in the lines the canvas wraps it to', async () => {
+    const compiled = await compile(readFixture('flowchart/long-label.dsl'));
+    const svg = exportCanonicalSvg(documentFrom(compiled, 'long-label'), { theme: 'light', pixelRatio: 1 });
+    expect(svg).toContain('<tspan');
+    expect(svg).toContain('>Validate the incoming payment request</tspan>');
+    expect(svg).toContain('>against fraud rules and limits</tspan>');
+  });
+
+  it('draws a C4 card with a long name in wrapped lines', async () => {
+    const compiled = await compile(`architecture
+model {
+  person Customer [desc: "Places and tracks orders"]
+  system Shop "Online shop for customers who want to place and track orders from anywhere" [desc: "Takes orders"]
+  Customer -> Shop : buys
+}`);
+    const svg = exportCanonicalSvg(documentFrom(compiled, 'c4-long-name'), { theme: 'light', pixelRatio: 1 });
+    expect(svg).toMatchSnapshot();
+    expect(svg).toContain('>anywhere</tspan>');
+  });
 });
 
 describe('canonical SVG sequence', () => {

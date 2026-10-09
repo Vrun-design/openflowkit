@@ -117,9 +117,19 @@ describe('mapScene', () => {
     const page = await sceneAt((await archOf(NESTED))!, 'overview', new Set(['shop']));
     const solid = page.connectors.find((c) => c.source.nodeId === 'shop.web' && c.target.nodeId === 'shop.api')!;
     const rolledUp = page.connectors.find((c) => c.source.nodeId === 'shop' && c.target.nodeId === 'stripe')!;
-    expect(solid.appearance).toEqual({});
-    expect(rolledUp.appearance).toEqual({ dashPattern: 'dashed' });
+    expect(solid.appearance).toEqual({ markerEnd: 'arrow' });
+    expect(rolledUp.appearance).toEqual({ dashPattern: 'dashed', markerEnd: 'arrow' });
     expect(rolledUp.labels[0].text).toBe('charges [HTTPS]');
+  });
+
+  it('marks an arrow both ways, with a head at each end (one-way: a head at the target), only where the boxes call each other', async () => {
+    const page = await sceneAt((await archOf(NESTED.replace('API -> DB : reads', 'API -> DB : reads\n    API -> Web : replies')))!, 'overview', new Set(['shop']));
+    const web = page.connectors.find((c) => [c.source.nodeId, c.target.nodeId].sort().join() === 'shop.api,shop.web')!;
+    expect(web.metadata.map).toMatchObject({ both: true });
+    expect(web.appearance).toMatchObject({ markerStart: 'arrow', markerEnd: 'arrow' });
+    const one = page.connectors.find((c) => [c.source.nodeId, c.target.nodeId].sort().join() === 'shop.api,shop.db')!;
+    expect(one.metadata.map).toMatchObject({ both: false });
+    expect(one.appearance).toEqual({ markerEnd: 'arrow' });
   });
 
   it('is deterministic', async () => {
@@ -163,7 +173,7 @@ describe('mapScene', () => {
     const page = await sceneAt(hub, 'overview');
     const into = page.connectors.find((c) => c.source.nodeId === 's000' && c.target.nodeId === '#model#more');
     expect(into?.labels[0].text).toBe('7 links');
-    expect(into?.appearance).toEqual({ dashPattern: 'dashed' });
+    expect(into?.appearance).toEqual({ dashPattern: 'dashed', markerEnd: 'arrow' });
   });
 
   it('draws an empty model as an empty scene', async () => {

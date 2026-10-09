@@ -415,20 +415,27 @@ function labelElement(style: NodeStyle, box: Bounds2d, label: string, subLabel: 
     : style.textAlign === 'end' ? box.x + box.width - padding : box.x + box.width / 2;
   const anchor = style.textAlign === 'start' ? 'start' : style.textAlign === 'end' ? 'end' : 'middle';
   const baseline = style.textVerticalAlign === 'top' ? 'hanging' : style.textVerticalAlign === 'bottom' ? 'auto' : 'middle';
-  // The sub-label wraps like the canvas draws it (PixiNodeRenderer): 11px/400, the
-  // node's width less padding, its sizing policy's line cap and overflow.
+  // Label and sub-label wrap like the canvas draws them (PixiNodeRenderer): the node's width less
+  // padding, its sizing policy's line cap and overflow; the sub-label is 11px/400.
   const sizing = resolveNodeSizingPolicy(node);
+  const wrap = sizing.overflow === 'visible' ? {}
+    : { maxWidth: Math.max(1, node.size.width - padding * 2), maxLines: sizing.maxLines, overflow: sizing.overflow };
+  const labelLines = sizing.overflow === 'visible' ? [label] : measurePortableText(label, {
+    fontSize: style.fontSize, fontWeight: style.fontWeight, lineHeight: style.fontSize * style.lineHeight, ...wrap,
+  }).lines;
   const subLines = subLabel ? measurePortableText(subLabel, {
     fontSize: SUB_LABEL_SIZE, fontWeight: 400, lineHeight: SUB_LABEL_SIZE * 1.2,
-    ...(sizing.overflow === 'visible' ? {} : { maxWidth: Math.max(1, node.size.width - padding * 2), maxLines: sizing.maxLines, overflow: sizing.overflow }),
+    ...wrap,
   }).lines : [];
   // Label and sub-label stack as one block, 4px apart, like `layoutNodeContent`.
-  const labelHeight = style.fontSize * style.lineHeight;
-  const blockHeight = subLines.length ? labelHeight + 4 + subLines.length * SUB_LABEL_SIZE * 1.2 : 0;
+  const lineHeight = style.fontSize * style.lineHeight;
+  const stacked = subLines.length > 0 || labelLines.length > 1;
+  const labelHeight = labelLines.length * lineHeight;
+  const blockHeight = stacked ? labelHeight + (subLines.length ? 4 + subLines.length * SUB_LABEL_SIZE * 1.2 : 0) : 0;
   const blockTop = style.textVerticalAlign === 'top' ? box.y + padding
     : style.textVerticalAlign === 'bottom' ? box.y + box.height - padding - blockHeight
       : box.y + (box.height - blockHeight) / 2;
-  const y = subLines.length ? blockTop + labelHeight / 2
+  const y = stacked ? blockTop + lineHeight / 2
     : style.textVerticalAlign === 'top' ? box.y + padding
       : style.textVerticalAlign === 'bottom' ? box.y + box.height - padding
         : box.y + box.height / 2;
@@ -439,7 +446,8 @@ function labelElement(style: NodeStyle, box: Bounds2d, label: string, subLabel: 
   const spacing = style.letterSpacing === 0 ? '' : ` letter-spacing="${number(style.letterSpacing * style.fontSize)}"`;
   const stretch = clipId ? ` clip-path="url(#${clipId})"` : '';
   return `<g${stretch}>`
-    + `<text x="${number(x)}" y="${number(y)}" text-anchor="${anchor}" dominant-baseline="${subLines.length ? 'middle' : baseline}" ${styleAttr}${decoration}${spacing}>${xml(label)}</text>`
+    + `<text x="${number(x)}" y="${number(y)}" text-anchor="${anchor}" dominant-baseline="${stacked ? 'middle' : baseline}" ${styleAttr}${decoration}${spacing}>${labelLines.length > 1
+      ? labelLines.map((line, index) => `<tspan x="${number(x)}" y="${number(y + index * lineHeight)}">${xml(line)}</tspan>`).join('') : xml(label)}</text>`
     + (subLines.length ? `<text text-anchor="${anchor}" dominant-baseline="middle" fill="${style.textColor}" font-family="${xml(FONT_STACKS[style.fontFamily])}" font-size="${SUB_LABEL_SIZE}" font-weight="400" opacity="0.72">${subLines.map((line, index) => `<tspan x="${number(x)}" y="${number(subY(index))}">${xml(line)}</tspan>`).join('')}</text>` : '')
     + '</g>';
 }

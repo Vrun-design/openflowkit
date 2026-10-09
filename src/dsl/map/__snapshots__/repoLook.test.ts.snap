@@ -1,0 +1,53 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`repoLook > draws the repo scene at overview 1`] = `
+[
+  [
+    "server",
+    "process",
+    null,
+    {
+      "height": 80,
+      "width": 135,
+    },
+    "API server",
+    "[Part · 17 files]
+server",
+  ],
+  [
+    "web",
+    "process",
+    null,
+    {
+      "height": 80,
+      "width": 135,
+    },
+    "Web app",
+    "[Part · 4 files]
+web",
+  ],
+  [
+    "root#files",
+    "process",
+    null,
+    {
+      "height": 66,
+      "width": 120,
+    },
+    "Repo files",
+    "[Group · 1 file]",
+  ],
+  [
+    "root#outside",
+    "process",
+    null,
+    {
+      "height": 80,
+      "width": 258,
+    },
+    "Outside services",
+    "[Outside services]
+Services the code calls over the network.",
+  ],
+]
+`;
