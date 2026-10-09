@@ -14,6 +14,7 @@ import {
     line as d3Line,
     type CurveFactory,
 } from 'd3-shape';
+import { normalizeMarkerTangents } from './curvePathMarkerTangents';
 
 export type EdgeCurve =
     | 'basis'
@@ -87,6 +88,10 @@ function dedupeConsecutive(points: Point[]): Point[] {
  * For smooth curves we anchor the endpoints by duplicating them so the resulting
  * spline passes through the actual source/target (B-spline / curveBasis otherwise
  * floats the endpoints inward).
+ *
+ * The result is run through `normalizeMarkerTangents` because that anchoring — and
+ * d3's own endpoint handling for cardinal/catmullRom — leaves degenerate commands at
+ * both ends, which collapses the tangent `orient="auto"` arrow markers rely on.
  */
 export function buildCurvedPath(points: Point[], curve: EdgeCurve): string | null {
     if (curve === 'smoothstep') return null; // handled elsewhere via getSmoothStepPath
@@ -99,7 +104,8 @@ export function buildCurvedPath(points: Point[], curve: EdgeCurve): string | nul
         : cleaned;
 
     const generator = DEFAULT_LINE_GENERATOR.curve(factory);
-    return generator(anchored);
+    const path = generator(anchored);
+    return path === null ? null : normalizeMarkerTangents(path);
 }
 
 const VALID_CURVES = new Set<EdgeCurve>([

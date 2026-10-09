@@ -1026,4 +1026,73 @@ describe('buildEdgePath', () => {
     expect(first.labelY).toBeLessThan(70);
     expect(first.labelY).toBeGreaterThan(60);
   });
+
+  describe('arrow lead', () => {
+    const BEZIER_NODES = [
+      { id: 'src', position: { x: 0, y: 0 }, width: 0, height: 0 },
+      { id: 'dst', position: { x: 400, y: 300 }, width: 0, height: 0 },
+    ];
+
+    function buildBezier(
+      sourcePosition: Position,
+      targetPosition: Position,
+      targetX = 400,
+      targetY = 300
+    ): string {
+      return buildEdgePath(
+        {
+          id: 'edge-1',
+          source: 'src',
+          target: 'dst',
+          sourceX: 0,
+          sourceY: 0,
+          targetX,
+          targetY,
+          sourcePosition,
+          targetPosition,
+          sourceHandleId: null,
+          targetHandleId: null,
+        },
+        [{ id: 'edge-1', source: 'src', target: 'dst' }],
+        BEZIER_NODES,
+        'bezier',
+        { curve: 'basis' }
+      ).edgePath;
+    }
+
+    it('ends with a straight run as long as the arrow marker', () => {
+      const path = buildBezier(Position.Right, Position.Left);
+
+      // Target handle is Left, so the arrow approaches along +x: the final segment must
+      // be the 12px straight lead ending exactly on the handle.
+      expect(path.endsWith('388,300 L400,300')).toBe(true);
+    });
+
+    it('starts with a straight run out of the source handle', () => {
+      const path = buildBezier(Position.Right, Position.Left);
+
+      expect(path.startsWith('M0,0 L12,0 C')).toBe(true);
+    });
+
+    it('orients the lead along the handle normal for every side', () => {
+      expect(buildBezier(Position.Bottom, Position.Top).endsWith('L400,300')).toBe(true);
+      expect(buildBezier(Position.Bottom, Position.Top)).toContain('400,288');
+      expect(buildBezier(Position.Top, Position.Bottom)).toContain('400,312');
+      expect(buildBezier(Position.Left, Position.Right)).toContain('412,300');
+    });
+
+    it('keeps the exact source and target endpoints', () => {
+      const path = buildBezier(Position.Right, Position.Left);
+
+      expect(path.startsWith('M0,0 ')).toBe(true);
+      expect(path.endsWith(' L400,300')).toBe(true);
+    });
+
+    it('skips the lead on very short edges so it cannot dominate the path', () => {
+      const path = buildBezier(Position.Right, Position.Left, 30, 0);
+
+      expect(path.startsWith('M0,0 C')).toBe(true);
+      expect(path).not.toContain('L12,0');
+    });
+  });
 });
