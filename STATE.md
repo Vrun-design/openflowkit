@@ -29,7 +29,7 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 ## Found, not fixed (owner calls)
 - Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI): `docs/plan/launch-holds.md`. CI uploads first-failure
   traces (`e2e-traces`). A new worker's deps are pre-scanned (`optimizeDeps.entries`), or dev reloads mid-session.
-- AI pass 10-09 (Haiku/Sonnet + real Ollama): fixed hangs/silent failures, Ollama context; open: camera after Apply, chart title ×2, sequence overlaps. Discovery is blind to .NET/Elixir without containers (G1). Headless layout cap: 1000 shapes / 400 connections; Share Worker: `worker/README.md`.
+- AI pass 10-09 (Haiku/Sonnet + real Ollama): hangs, silent failures, Ollama context, camera lands on the applied diagram, chart title ×1, sequence labels clear; big grouped layouts kept INCLUDE_CHILDREN (SEPARATE wrecks small ones). Discovery is blind to .NET/Elixir without containers (G1). Headless layout cap: 1000 shapes / 400 connections; Share Worker: `worker/README.md`.
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.

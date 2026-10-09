@@ -14,6 +14,9 @@ import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { PixiRendererStatus } from '../../infrastructure/pixi/PixiRendererHost';
 import type { PixiRendererHost } from '../../infrastructure/pixi/PixiRendererHost';
 
+/** The closest a landing ever zooms; drill-down uses the same ceiling. */
+const LANDING_MAX_ZOOM = 1.4;
+
 // Camera per I-12: wheel/trackpad pan-zoom anchored at the pointer, fit,
 // Space-pan (owned by the keyboard hook), zoom to 100%. Canvas zoom is
 // independent of browser zoom (I-32).
@@ -116,15 +119,20 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     const host = hostRef.current;
     const bounds = host?.getContentBounds(nodeIds);
     if (!host || !bounds) return;
-    animateTo(fitInto(bounds, padding, 1.4).camera);
+    animateTo(fitInto(bounds, padding, LANDING_MAX_ZOOM).camera);
   }, [animateTo, hostRef, fitInto]);
 
-  /** After the assistant draws: the fit when readable, else a readable zoom on the diagram's start. True when it zoomed in. */
-  const landReadable = useCallback((direction: LandingDirection) => {
-    const bounds = hostRef.current?.getContentBounds();
+  /**
+   * On open, or after the assistant draws: the fit when readable, else a readable zoom on the start of
+   * `nodeIds` (all content when absent). Never past LANDING_MAX_ZOOM: a two-box diagram is not a close-up.
+   * True when it zoomed in.
+   */
+  const landReadable = useCallback((direction: LandingDirection, nodeIds?: readonly string[]) => {
+    const bounds = hostRef.current?.getContentBounds(nodeIds);
     if (!bounds) return false;
-    const { camera: fitted, free } = fitInto(bounds);
-    const landing = readableLanding(bounds, { width: free.right - free.left, height: free.height }, direction);
+    const { camera: fitted, free } = fitInto(bounds, 64, LANDING_MAX_ZOOM);
+    const landing = readableLanding(bounds, { width: free.right - free.left, height: free.height }, direction, 64,
+      { ...DEFAULT_CAMERA_LIMITS, maxZoom: LANDING_MAX_ZOOM });
     updateCamera(landing.zoomedIn ? { ...landing.camera, x: landing.camera.x + free.left } : fitted);
     return landing.zoomedIn;
   }, [hostRef, updateCamera, fitInto]);

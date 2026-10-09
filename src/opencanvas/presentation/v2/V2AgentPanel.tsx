@@ -325,6 +325,8 @@ export function V2AgentPanel({
     setHistoryOpen(false);
     assistant.send(prompt, scope, images);
   };
+  // Opening the assistant is for typing; the panel's own focus lands on its close button first.
+  useEffect(() => { input.current?.focus({ preventScroll: true }); }, []);
   const sendNow = useEffectEvent(send);
   useEffect(() => {
     if (providerOpen || !sendOnConnect.current) return;
@@ -374,7 +376,7 @@ export function V2AgentPanel({
         onDiscard={assistant.discard} onHighlight={proposal.highlight}
         labels={readOnly ? { apply: 'Read-only' } : undefined} />;
     }
-    if (isLive && proposal.phase === 'applied' && message.outcome !== 'undone') {
+    if (isLive && proposal.undoable && message.outcome !== 'undone') {
       return <ProposalBar view={{ phase: 'applied', summary: proposal.appliedSummary }} labels={BAR_LABELS}
         onAccept={async () => undefined} onDismiss={proposal.discard} onUndo={assistant.undo} />;
     }
@@ -459,14 +461,16 @@ export function V2AgentPanel({
             onClick={() => { assistant.newChat(); setEditingId(null); setHistoryOpen(false); input.current?.focus(); }} /> : null}
           <button type="button" className="ofk-connection-badge ofk-v2-provider-badge"
             aria-label={configured ? `AI provider: ${modelLabel}. Change` : 'Connect an AI provider'}
-            onClick={() => setProviderOpen(true)}>
-            <span className="ofk-connection-dot" />{configured ? modelLabel : 'No provider'}
+            title={configured ? modelLabel : undefined} onClick={() => setProviderOpen(true)}>
+            <span className="ofk-connection-dot" /><span className="ofk-v2-provider-model">{configured ? modelLabel : 'No provider'}</span>
           </button>
         </>}
         messages={historyOpen ? [] : thread}
         empty={historyOpen ? <ChatHistory chats={assistant.chats} activeId={assistant.activeChatId}
           onOpen={(chatId) => { assistant.openChat(chatId); setEditingId(null); openHistory(false); }}
-          onDelete={assistant.deleteChat} onClose={() => openHistory(false)} /> : <div className="ofk-v2-assistant-welcome">
+          // The last chat gone leaves nothing to list, and no History button to leave by.
+          onDelete={(chatId) => { assistant.deleteChat(chatId); if (assistant.chats.length <= 1) openHistory(false); }}
+          onClose={() => openHistory(false)} /> : <div className="ofk-v2-assistant-welcome">
           <div className="ofk-v2-assistant-hero" aria-hidden="true">
             <span className="ofk-v2-assistant-hero-prompt">Map onboarding</span>
             <span className="ofk-connection-hero-link"><i /><i /><i /></span>

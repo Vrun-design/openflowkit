@@ -15,6 +15,7 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
   const onToggleIcons = vi.fn();
   const onFind = vi.fn();
   const onToggleMap = vi.fn(() => true);
+  const onToggleAgent = vi.fn();
   const insert = { onInsertFrame: vi.fn(), onInsertSticky: vi.fn(), onToggleMore: vi.fn() };
   const clipboard = { onGroup: vi.fn(), onUngroup: vi.fn(), onWrapInSection: vi.fn(), onCut: vi.fn(), onCopy: vi.fn(), onPaste: vi.fn(), onCopyStyle: vi.fn(), onPasteStyle: vi.fn() };
   const arrange = { onAlign: vi.fn(), onDistribute: vi.fn(), onFlip: vi.fn(), onZoomToSelection: vi.fn(), onTextStyle: vi.fn() };
@@ -24,13 +25,13 @@ function setup(onTypeToEdit = vi.fn(() => true)) {
     onUndo: vi.fn(), onRedo: vi.fn(), onDelete: vi.fn(), onDuplicate: vi.fn(), onEditPrimary: vi.fn(), onRemoveFromModel: vi.fn(),
     onNudge: vi.fn(), onEscapePanel: () => false, onToggleEmoji: () => undefined, onInsertImage: () => undefined, onCancelGesture: () => false, onClearSelection: vi.fn(), onSelectAll: vi.fn(),
     onFitView, onZoomStep, onResetZoom, onToggleTree: vi.fn(), onToggleIcons, onToggleInspect, onToggleMap, onFind,
-    onToggleAgent: vi.fn(), onToggleCode: vi.fn(), onToggleModel: vi.fn(), onSpacePan, onTypeToEdit,
+    onToggleAgent, onToggleCode: vi.fn(), onToggleModel: vi.fn(), onSpacePan, onTypeToEdit,
   }));
   const key = (init: Partial<KeyboardEvent<HTMLElement>>) => result.current({
     key: 'q', target: document.createElement('section'), preventDefault: vi.fn(),
     ...init,
   } as unknown as KeyboardEvent<HTMLElement>);
-  return { key, ...insert, onFind, onToggleMap, onToggleInspect, onToggleIcons, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan, onReorder, onToggleLock, ...clipboard, ...arrange };
+  return { key, ...insert, onToggleAgent, onFind, onToggleMap, onToggleInspect, onToggleIcons, onToolChange, onTypeToEdit, onFitView, onResetZoom, onZoomStep, onSpacePan, onReorder, onToggleLock, ...clipboard, ...arrange };
 }
 
 describe('useV2Keyboard type-to-edit', () => {
@@ -191,5 +192,17 @@ describe('useV2Keyboard find', () => {
     key({ key: 'f' });
     expect(onFind).toHaveBeenCalledTimes(2);
     expect(onInsertFrame).toHaveBeenCalledOnce();
+  });
+});
+
+describe('useV2Keyboard assistant toggle', () => {
+  it('⌘J toggles the assistant even from a text field, and only with that exact chord', () => {
+    const { key, onToggleAgent } = setup();
+    key({ key: 'j', metaKey: true, target: document.createElement('textarea') });
+    key({ key: 'J', ctrlKey: true });
+    expect(onToggleAgent).toHaveBeenCalledTimes(2);
+    key({ key: 'j', metaKey: true, shiftKey: true });
+    key({ key: 'j', target: document.createElement('textarea') });
+    expect(onToggleAgent).toHaveBeenCalledTimes(2);
   });
 });

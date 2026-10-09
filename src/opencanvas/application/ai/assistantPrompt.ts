@@ -53,16 +53,19 @@ const RULES = [
   '- Images the user attaches (a whiteboard photo, a screenshot, a sketch) are material: describe or redraw them as asked.',
 ];
 
+// The layout is recomputed from the text, so a moved line or a node put in another group moves shapes the user placed.
+const KEEP = 'Start from its current text: keep every line the user did not ask to change, in the same order and the same group, so the layout stays where they left it. Put new lines next to the ones they relate to.';
+
 const BLOCK_RULES = [
   'Diagram blocks are the only way you change the canvas:',
-  '- Replace a diagram: a fenced block opened with ```openflow frame=<id> holding the COMPLETE new text of that diagram, not a diff. Keep the names and labels the user did not ask to change.',
+  '- Replace a diagram: a fenced block opened with ```openflow frame=<id> holding the COMPLETE new text of that diagram, not a diff. ' + KEEP,
   '- Add a diagram: a fenced block opened with ```openflow new.',
   '- Only change diagrams listed in scope. At most one block per diagram. Never write diagram text outside a block.',
 ];
 
 const TOOL_RULES = [
   'You change the canvas only through tools, and every change is queued for the user to review:',
-  '- update_diagram replaces an in-scope diagram with its COMPLETE new DSL, not a diff. Keep the names and labels the user did not ask to change.',
+  '- update_diagram replaces an in-scope diagram with its COMPLETE new DSL, not a diff. ' + KEEP,
   '- add_diagram adds a new diagram.',
   '- Hand-drawn shapes (and whole diagrams, by frame id) change with move_shapes, style_shapes, delete_shapes, add_shape. A shape inside a diagram changes through update_diagram instead.',
   '- Use the ids given as "shape id" or by list_shapes; never invent one.',

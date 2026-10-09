@@ -70,9 +70,21 @@ describe('useV2Proposal', () => {
     expect(result.current.phase).toBe('applied');
     expect(announce).toHaveBeenCalledWith('Applied 1 change. Press ⌘Z to undo.');
     sync();
+    expect(result.current.undoable).toBe(true);
     // Double-click on Apply: the same proposal id never commits twice.
     await act(() => result.current.apply());
     expect(commit).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops offering Undo once the canvas moves past the Apply (an edit, or an undo there)', async () => {
+    const { result, sync, external } = setup();
+    await act(() => result.current.propose(draw));
+    await act(() => result.current.apply());
+    sync();
+    expect(result.current.undoable).toBe(true);
+    external();
+    expect(result.current.phase).toBe('applied');
+    expect(result.current.undoable).toBe(false);
   });
 
   it('goes stale when the document moved on after the request', async () => {
@@ -111,7 +123,7 @@ describe('useV2Proposal', () => {
     const [first, second] = result.current.changes.map(({ id }) => id);
     expect(second).toBeDefined();
     await act(() => result.current.decide(first!, 'rejected'));
-    await act(async () => { expect(await result.current.apply()).toBe(true); });
+    await act(async () => { expect(await result.current.apply()).toHaveLength(1); });
     const [command] = commit.mock.calls[0]!;
     const commands = (command as { commands: readonly { kind: string; after: { nodes: readonly { id: string }[] } }[] }).commands;
     expect(commands).toHaveLength(1);
@@ -160,7 +172,7 @@ describe('useV2Proposal', () => {
     expect(result.current.decisions[ids[4]!]).toBe('rejected');
     const a = () => result.current.proposal!.preview.pages[0]!.nodes.find(({ id }) => id === 'a')!;
     expect(a().appearance.fill).not.toBe('#ff0000');
-    await act(async () => { expect(await result.current.apply()).toBe(true); });
+    await act(async () => { expect(await result.current.apply()).toEqual(['a']); });
     expect(commit).toHaveBeenCalledTimes(1);
     expect(result.current.appliedSummary).toBe('Applied 2 changes.');
   });

@@ -135,3 +135,20 @@ export function summarizeChanges(
     };
   });
 }
+
+/**
+ * The top-level nodes (a diagram's frame, or a loose shape) that `after` adds or changes on the page,
+ * so the camera lands on what was just drawn rather than on the whole page. Removals land nowhere.
+ */
+export function changedRoots(before: ScenePage | undefined, after: ScenePage): string[] {
+  const was = new Map((before?.nodes ?? []).map((node) => [node.id, JSON.stringify(node)]));
+  const byId = new Map(after.nodes.map((node) => [node.id, node]));
+  const roots = new Set<string>();
+  for (const node of after.nodes) {
+    if (was.get(node.id) === JSON.stringify(node)) continue;
+    let root = node;
+    while (root.parentId && byId.has(root.parentId)) root = byId.get(root.parentId)!;
+    roots.add(root.id);
+  }
+  return [...roots];
+}

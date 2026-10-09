@@ -1,6 +1,11 @@
 import { expect, test } from './test';
 
-test('assistant asks for a provider on first send, then remembers it', async ({ page }) => {
+test('assistant asks for a provider on first send, then sends what was typed', async ({ page }) => {
+  // The test key never reaches Anthropic; this checks the send happens, not the reply.
+  await page.route('https://api.anthropic.com/**', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ content: [{ type: 'text', text: 'Here is a plan.' }], stop_reason: 'end_turn' }),
+  }));
   await page.goto('/');
   await page.getByRole('toolbar', { name: 'Workspace', exact: true })
     .getByRole('button', { name: 'AI assistant', exact: true }).click();
@@ -19,7 +24,9 @@ test('assistant asks for a provider on first send, then remembers it', async ({ 
   await expect(dialog).toBeHidden();
   await expect(panel.getByRole('button', { name: /^AI provider: claude/ })).toBeVisible();
   await expect(panel.getByRole('textbox', { name: 'Ask AI assistant' })).toBeFocused();
-  await expect(panel.getByRole('textbox', { name: 'Ask AI assistant' })).toHaveValue('Sketch a three-tier web architecture');
+  await expect(panel.getByRole('textbox', { name: 'Ask AI assistant' })).toHaveValue('');
+  await expect(panel.locator('.ofk-message[data-role="user"]')).toHaveText('Sketch a three-tier web architecture');
+  await expect(panel.getByText('Here is a plan.')).toBeVisible();
 });
 
 test('the send button is a square on the chips’ row, empty or not @gate', async ({ page }) => {

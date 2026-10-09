@@ -122,6 +122,19 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const sectionRef = useRef<HTMLElement | null>(null);
   const gestureApiRef = useRef<V2GestureApi | null>(null);
   const focusCanvas = useCallback(() => sectionRef.current?.focus(), []);
+  // Shortcuts listen on the editor, so with focus on <body> (a fresh load, a panel that closed with no opener to
+  // return to, a click on bare chrome) every key went nowhere. Hand those keys to the canvas.
+  useEffect(() => {
+    const forward = (event: KeyboardEvent) => {
+      const canvas = sectionRef.current;
+      if (event.target !== document.body || !canvas) return;
+      const copy = new KeyboardEvent('keydown', event);
+      canvas.dispatchEvent(copy);
+      if (copy.defaultPrevented) event.preventDefault();
+    };
+    document.addEventListener('keydown', forward);
+    return () => document.removeEventListener('keydown', forward);
+  }, []);
   const [tool, setTool] = useState<V2Tool>('select');
   // Which variant a flyout tool draws with; its grid marks the last pick.
   const [toolConfig, setToolConfig] = useState<V2ToolConfig>(DEFAULT_TOOL_CONFIG);
@@ -568,8 +581,9 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     tools: { document: session.document, capabilities: agentCapabilities, compile: compileDraft },
     undo: session.undo, announce: setAnnouncement,
     // The committed page arrives next frame; land on it once it has.
-    onApplied: () => requestAnimationFrame(() => {
-      if (!camera.landReadable(landingDirection())) return;
+    // The committed page arrives next frame; land on what was drawn (a removal leaves the camera alone).
+    onApplied: (nodeIds) => requestAnimationFrame(() => {
+      if (!nodeIds.length || !camera.landReadable(landingDirection(), nodeIds)) return;
       const fit = shortcutGroups().flatMap(({ rows }) => rows).find(({ label }) => label === 'Zoom to fit')?.keys;
       pushToast({ id: `ai-landing-${Date.now()}`, tone: 'info', title: `Zoomed in to read. Press ${fit} to see it all.` });
     }),

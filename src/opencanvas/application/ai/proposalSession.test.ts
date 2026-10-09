@@ -7,7 +7,7 @@ import type { BatchDocumentCommand, DocumentCommand } from '../../domain/command
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import { createTestConnector, createTestDocument, createTestNode } from '../../testing/builders/documentBuilder';
 import {
-  applyCommand, createProposal, decideChange, StaleProposalError, summarizeChanges,
+  applyCommand, changedRoots, createProposal, decideChange, StaleProposalError, summarizeChanges,
 } from './proposalSession';
 
 const PAGE = { kind: 'page', pageId: 'page-1', objectIds: [] } as const;
@@ -141,5 +141,19 @@ describe('proposal session', () => {
       { id: '4', kind: 'modification', label: 'a', reason: 'move' },
       { id: '5', kind: 'removal', label: 'b', reason: 'delete' },
     ]);
+  });
+});
+
+describe('changedRoots', () => {
+  it('names the top-level node of each added or changed shape, and nothing for a removal', () => {
+    const page = fixture().pages[0]!;
+    const frame = createTestNode('frame', { kind: 'frame' });
+    const child = createTestNode('child', { parentId: 'frame' });
+    const added = { ...page, nodes: [...page.nodes, frame, child] };
+    expect(changedRoots(page, added)).toEqual(['frame']);
+    const edited = { ...added, nodes: added.nodes.map((node) => (node.id === 'child' ? { ...node, content: { ...node.content, label: 'New' } } : node)) };
+    expect(changedRoots(added, edited)).toEqual(['frame']);
+    expect(changedRoots(added, page)).toEqual([]);
+    expect(changedRoots(undefined, page)).toEqual(['a', 'b']);
   });
 });

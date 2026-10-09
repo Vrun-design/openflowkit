@@ -6,7 +6,7 @@ import type { CompileResult } from '../../../dsl/compile';
 import { chainAssistantChanges, type AssistantDraft } from '../../application/ai/assistantChanges';
 import type { AssistantWrite } from '../../application/ai/assistantTools';
 import {
-  applyCommand, createProposal, decideChange, StaleProposalError, summarizeChanges,
+  applyCommand, changedRoots, createProposal, decideChange, StaleProposalError, summarizeChanges,
   type Proposal, type ProposalChangeSummary,
 } from '../../application/ai/proposalSession';
 import { StaleSessionRevisionError } from '../../application/session/session';
@@ -42,6 +42,8 @@ export function useV2Proposal(options: V2ProposalOptions) {
   const [intent, setIntent] = useState<string | null>(null);
   const [highlightedChangeId, setHighlightedChangeId] = useState<string | null>(null);
   const [appliedSummary, setAppliedSummary] = useState('');
+  // The revision the Apply produced: once the canvas moves past it, Undo would undo something else.
+  const [appliedRevision, setAppliedRevision] = useState<number | null>(null);
   const appliedIds = useRef(new Set<string>());
   const baseDocument = useRef<SceneDocumentV1 | null>(null);
   const drafts = useRef<readonly AssistantDraft[]>([]);
@@ -129,13 +131,17 @@ export function useV2Proposal(options: V2ProposalOptions) {
   }, []);
 
   /** Resolves true once the accepted rows are committed. */
-  const apply = useCallback(async (): Promise<boolean> => {
+  /** Commits the accepted changes; resolves to the diagrams they touched (for the camera), or null when nothing applied. */
+  const apply = useCallback(async (): Promise<readonly string[] | null> => {
     const { document, revision, commit, readOnly, announce } = optionsRef.current;
-    if (!proposal || !document || readOnly || appliedIds.current.has(proposal.id)) return false;
+    if (!proposal || !document || readOnly || appliedIds.current.has(proposal.id)) return null;
     try {
       const command = applyCommand(proposal, revision, document);
-      if (!command) { setPhase('idle'); show(null); return false; }
+      if (!command) { setPhase('idle'); show(null); return null; }
+      const { pageId } = proposal.scope;
+      const touched = changedRoots(document.pages.find(({ id }) => id === pageId), proposal.preview.pages.find(({ id }) => id === pageId)!);
       commit(command, proposal.baseRevision);
+      setAppliedRevision(proposal.baseRevision + 1);
       appliedIds.current.add(proposal.id);
       const count = command.commands.length;
       const summary = `Applied ${count} ${count === 1 ? 'change' : 'changes'}.`;
@@ -143,16 +149,16 @@ export function useV2Proposal(options: V2ProposalOptions) {
       announce(`${summary} Press ⌘Z to undo.`);
       setPhase('applied');
       setHighlightedChangeId(null);
-      return true;
+      return touched;
     } catch (caught) {
       if (caught instanceof StaleProposalError || caught instanceof StaleSessionRevisionError) {
         setPhase('stale');
         setHighlightedChangeId(null);
-        return false;
+        return null;
       }
       setError(caught instanceof Error ? caught.message : String(caught));
       setPhase('failed');
-      return false;
+      return null;
     }
   }, [proposal]);
 
@@ -173,6 +179,8 @@ export function useV2Proposal(options: V2ProposalOptions) {
   return {
     proposal, phase, intent, stale, error, changes, decisions, appliedSummary,
     canApply: phase === 'ready' && !stale && !options.readOnly,
+    /** Applied and nothing since: the bar's Undo still undoes exactly this. */
+    undoable: phase === 'applied' && options.revision === appliedRevision,
     highlightedChangeId, highlight: setHighlightedChangeId,
     propose, decide, apply, discard,
   };

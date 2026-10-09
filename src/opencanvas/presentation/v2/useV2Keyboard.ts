@@ -79,6 +79,12 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
 
   return useCallback((event: KeyboardEvent<HTMLElement>) => {
     const opts = optionsRef.current;
+    // ⌘J toggles the assistant from anywhere, its own composer included: it opens and closes the place you type.
+    if (!event.defaultPrevented && (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'j') {
+      opts.onToggleAgent();
+      event.preventDefault();
+      return;
+    }
     if (event.defaultPrevented || isEditableTarget(event.target)) return;
     // Native chrome controls keep activation/navigation keys. Global tool and
     // history shortcuts still work after choosing a tool with the mouse.
@@ -167,9 +173,6 @@ export function useV2Keyboard(options: V2KeyboardOptions) {
       event.preventDefault();
     } else if (!command && event.altKey && !event.shiftKey && event.code === 'KeyI') {
       opts.onToggleInspect();
-      event.preventDefault();
-    } else if (command && key === 'j') {
-      opts.onToggleAgent();
       event.preventDefault();
     } else if (command && event.shiftKey && (event.key === 'Delete' || event.key === 'Backspace')) {
       opts.onRemoveFromModel();

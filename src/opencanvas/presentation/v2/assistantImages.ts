@@ -29,7 +29,8 @@ export async function prepareImage(file: File): Promise<ChatImage> {
   try {
     const image = new Image();
     image.src = url;
-    await image.decode().catch(() => { throw new Error(`${file.name || 'That image'} could not be read.`); });
+    // The browser refuses to decode a damaged file and a very large one (tens of megapixels) alike.
+    await image.decode().catch(() => { throw new Error(`${file.name || 'That image'} could not be opened — it may be damaged or too large. Try a smaller screenshot.`); });
     const size = fitWithin(image.naturalWidth, image.naturalHeight);
     if (size.width === image.naturalWidth && PASSTHROUGH.has(file.type) && file.size <= PASSTHROUGH_BYTES) {
       return { name: file.name, mediaType: file.type, data: await base64Of(file) };

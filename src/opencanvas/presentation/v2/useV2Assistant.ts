@@ -41,7 +41,8 @@ export interface V2AssistantOptions {
     readonly compile: (dsl: string) => Promise<CompileResult>;
   };
   /** After a proposal lands, so the host can bring it into view. */
-  readonly onApplied?: () => void;
+  /** After Apply, with the top-level nodes it added or changed. */
+  readonly onApplied?: (nodeIds: readonly string[]) => void;
   readonly announce: (message: string) => void;
 }
 
@@ -381,9 +382,10 @@ export function useV2Assistant(options: V2AssistantOptions) {
   }, [leave]);
 
   const apply = useCallback(async () => {
-    if (!(await optionsRef.current.proposal.apply())) return;
+    const touched = await optionsRef.current.proposal.apply();
+    if (!touched) return;
     markLive('applied');
-    optionsRef.current.onApplied?.();
+    optionsRef.current.onApplied?.(touched);
   }, [markLive]);
   const discard = useCallback(() => {
     markLive('discarded');
