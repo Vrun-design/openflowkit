@@ -1,3 +1,4 @@
+import { isRepoMapAddress } from '../../application/map/repoMapSource';
 import { UNTITLED_DOCUMENT_NAME, createDefaultSceneLayer } from '../../domain/document/defaults';
 import {
   SCENE_DOCUMENT_FORMAT,
@@ -73,10 +74,13 @@ export type V2StartIntent =
   | { readonly start: 'assistant' | 'code' | 'agent' }
   | { readonly template: string }
   /** A file's text from home's Import: OpenFlow DSL, or Mermaid / Structurizr / D2 to convert first. */
-  | { readonly source: string };
+  | { readonly source: string }
+  /** `/map/github/<owner>/<repo>`: a new document that is the repo's map. `ref` absent = default branch. */
+  | { readonly repoMap: { readonly owner: string; readonly repo: string; readonly ref?: string } };
 
 export function isV2StartIntent(value: unknown): value is V2StartIntent {
   if (typeof value !== 'object' || value === null) return false;
-  const { start, template, source } = value as { start?: unknown; template?: unknown; source?: unknown };
-  return start === 'assistant' || start === 'code' || start === 'agent' || typeof template === 'string' || typeof source === 'string';
+  const { start, template, source, repoMap } = value as { start?: unknown; template?: unknown; source?: unknown; repoMap?: { owner?: unknown; repo?: unknown; ref?: unknown } | null };
+  return start === 'assistant' || start === 'code' || start === 'agent' || typeof template === 'string' || typeof source === 'string'
+    || (typeof repoMap === 'object' && repoMap !== null && isRepoMapAddress(repoMap));
 }

@@ -73,6 +73,8 @@ import { useV2Inserts } from './useV2Inserts';
 import { useV2Keyboard } from './useV2Keyboard';
 import { useV2LabelEditing, type OpenEditorOptions } from './useV2LabelEditing';
 import { useV2MapMode } from './map/useV2MapMode';
+import { useV2RepoDocument, useV2RepoPanel } from './useV2RepoDocument';
+import { BadRepoAddress, V2RepoMapOverlay } from './map/V2RepoMapState';
 import { IMAGE_URL_PATTERN, useV2MediaInsert } from './useV2MediaInsert';
 import { useV2Pages } from './useV2Pages';
 import { useV2Panels } from './useV2Panels';
@@ -214,9 +216,12 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const [pendingPageId, setPendingPageId] = useState<string | null>(null);
   const architecture = useV2Architecture(session.document, page);
   const notify = (message: string) => { setAnnouncement(message); pushToast({ id: `map-${Date.now()}`, tone: 'info', title: message }); };
+  const location = useLocation();
+  const startIntent = isV2StartIntent(location.state) ? location.state : null;
+  const repo = useV2RepoDocument(session.document, startIntent);
   // Map mode: a lens on the page's model. The canvas draws `viewPage`; commands, undo and autosave still see `page`.
   const map = useV2MapMode({
-    page, documentId: session.document?.id, palette: preferences.diagramPalette, autoIcons: preferences.autoIcons, hostRef,
+    page, documentId: session.document?.id, repo: repo.source ? { model: repo.state.model } : null, palette: preferences.diagramPalette, autoIcons: preferences.autoIcons, hostRef,
     cameraRef: camera.cameraRef, updateCamera: camera.updateCamera, fitView: camera.fitView, onToolChange: setTool,
     primaryId: () => selectionRef.current.primaryNodeId,
     select: (id) => { applyConnectorSelection([]); applySelection(replaceSelection([id])); },
@@ -271,6 +276,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
 
   const load = useV2DocumentLoad({
     documentId: id,
+    initialize: repo.initialize,
     repository,
     fixed: shared?.document,
     openDocument: session.openDocument,
@@ -282,7 +288,8 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const readOnlyRef = useRef(load.readOnly);
   // Map mode is read-only for geometry: its box ids are the Canvas page's node ids, so any edit that got through
   // would land on the Canvas node of the same id.
-  const editLocked = load.readOnly || map.active;
+  const docReadOnly = load.readOnly || repo.readOnly;
+  const editLocked = docReadOnly || map.active;
   useEffect(() => { readOnlyRef.current = editLocked; }, [editLocked]);
 
   // The viewer's way in to editing (document bar) is a local, editable copy.
@@ -294,7 +301,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
 
   const { openWorkspace } = panels;
   const code = useV2CodeWorkspace({
-    document: session.document, page, pageRef, hostRef, readOnly: load.readOnly,
+    document: session.document, page, pageRef, hostRef, readOnly: docReadOnly,
     palette: preferences.diagramPalette, autoIcons: preferences.autoIcons,
     onPaletteChange: useCallback((diagramPalette) => updatePreferences({ diagramPalette }), [updatePreferences]),
     commit: session.commit, applySelection, fitView: camera.fitView,
@@ -304,14 +311,12 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const toggleCode = () => { if (panels.workspace === 'code') panels.closeWorkspace(); else code.openNew(); };
 
   // Home hands a new diagram what to start with; run it once the empty document is open.
-  const location = useLocation();
-  const startIntent = isV2StartIntent(location.state) ? location.state : null;
   useEffect(() => {
     if (!startIntent || load.phase !== 'ready' || !page) return;
     navigate(location.pathname, { replace: true, state: null });
     if ('start' in startIntent) openWorkspace(startIntent.start);
     else if ('source' in startIntent) code.startFrom(startIntent.source);
-    else if ('template' in startIntent) { // repoMap intent: wired by the map integration
+    else if ('template' in startIntent) { // a repoMap intent needs nothing here: the document was born with its source
       const template = findStarterTemplate(startIntent.template);
       if (template) code.startFrom(template.dsl);
     }
@@ -340,7 +345,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     [preferences.diagramPalette, preferences.autoIcons]);
   const proposal = useV2Proposal({
     document: session.document, revision: session.revision, pageId: page?.id ?? null,
-    commit: session.commit, readOnly: load.readOnly,
+    commit: session.commit, readOnly: docReadOnly,
     announce: setAnnouncement, compileDsl: compileDraft,
   });
 
@@ -356,7 +361,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const ghostPage = useV2ProposalPreview(proposal, hostRef, rendererReady, camera.revealBounds);
 
   const pages = useV2Pages({
-    document: session.document, pageId: page?.id ?? null, readOnly: load.readOnly,
+    document: session.document, pageId: page?.id ?? null, readOnly: docReadOnly,
     commit: session.commit, onSelect: setActivePageId, mintId: mintV2Id,
     announce: setAnnouncement,
   });
@@ -406,7 +411,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   }, [architecture, session.document]);
 
   const architectureActions = useV2ArchitectureActions(
-    { architecture, document: session.document, pageRef, readOnly: load.readOnly, mintId: mintV2Id },
+    { architecture, document: session.document, pageRef, readOnly: docReadOnly, mintId: mintV2Id },
     {
       glideToNodes: camera.glideToNodes,
       openPage: setActivePageId,
@@ -425,13 +430,13 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   // Committing a view writes the DSL + snaps back to the open folder. The
   // folder is the git-facing artifact; IndexedDB stays the app's storage.
   useEffect(() => {
-    if (!workspaceFolder.folder || !session.document || load.readOnly) return;
+    if (!workspaceFolder.folder || !session.document || docReadOnly) return;
     const dsl = architecture.model ? architectureWorkspaceText(architecture.model) : null;
     if (!dsl) return;
     const timer = window.setTimeout(() => { void workspaceFolder.save(dsl, session.document!); }, 900);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.revision, workspaceFolder.folder, architecture.model, load.readOnly]);
+  }, [session.revision, workspaceFolder.folder, architecture.model, docReadOnly]);
   // A workspace generate commits pages that may not exist yet; land on the
   // requested one as soon as the committed document arrives.
   useEffect(() => {
@@ -477,14 +482,20 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const deeperView = selectedElementId ? architecture.childViewOf(selectedElementId) : null;
   const zoomInto = deeperView && architecture.pageForView(deeperView.id) && selectedElementId
     ? { name: deeperView.name, open: () => { architectureActions.drillInto(selectedElementId); } } : null;
+  const repoPanel = useV2RepoPanel({
+    source: repo.source, map, selectedConnectorId,
+    selectedBoxId: selection.nodeIds.length === 1 ? selection.nodeIds[0]! : null,
+    selectArrow: (key) => { applySelection(replaceSelection([])); applyConnectorSelection([key]); },
+  });
   // A Map arrow stands for every relation between the two boxes and their insides; the Model panel lists them.
-  const mapArrow = useMemo(() => {
-    const connector = map.active && selectedConnectorId ? viewPage?.connectors.find((c) => c.id === selectedConnectorId) : undefined;
+  const c4Arrow = useMemo(() => {
+    const connector = map.active && !repo.source && selectedConnectorId ? viewPage?.connectors.find((c) => c.id === selectedConnectorId) : undefined;
     const meta = connector?.metadata.map as { relations?: string[]; both?: boolean } | undefined;
     const relations = meta?.relations;
     return connector?.source.nodeId && connector.target.nodeId && relations
       ? { from: connector.source.nodeId, to: connector.target.nodeId, relationIds: relations, both: meta?.both === true } : null;
-  }, [map.active, selectedConnectorId, viewPage]);
+  }, [map.active, repo.source, selectedConnectorId, viewPage]);
+  const mapArrow = repoPanel.arrow ?? c4Arrow;
   useEffect(() => { if (mapArrow) openWorkspace('model'); }, [mapArrow, openWorkspace]);
   const perspectiveFocus = useMemo(
     () => (playback.flow ? null : architectureActions.perspectiveFocus(preferences.perspectiveTags)),
@@ -520,7 +531,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const diagramCount = useMemo(() => (page ? dslFrames(page).length : 0), [page]);
   const selectedDiagramCount = useMemo(() => (page ? selectedFrameIds(page, selection.nodeIds).length : 0), [page, selection.nodeIds]);
   const agentBridge = useV2AgentBridge({
-    enabled: preferences.agentBridgeEnabled,
+    enabled: preferences.agentBridgeEnabled, readOnly: docReadOnly,
     port: preferences.bridgePort,
     token: preferences.bridgeToken,
     document: session.document,
@@ -623,7 +634,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     page: viewPage, selectionRef, selectedConnectorIdsRef, cameraRef: camera.cameraRef,
     applySelection, applyConnectorSelection,
     glideToNodes: camera.glideToNodes, animateTo: camera.animateTo, focusCanvas,
-    ...(map.findSource ? { source: map.findSource } : {}),
+    ...(map.findSource && repoPanel.drawn ? { source: map.findSource } : {}),
   });
 
   const handleKeyDown = useV2Keyboard({
@@ -771,7 +782,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
             if (file) void media.insertImageFile(file);
             event.target.value = '';
           }} />
-        {load.phase === 'loading' || !page ? (
+        {repo.mismatch ? <BadRepoAddress /> : load.phase === 'loading' || !page ? (
           <V2LoadCenter
             phase={load.phase}
             documentId={id}
@@ -794,7 +805,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               pageId={page.id}
               saveStatus={saveStatus}
               canUndo={session.canUndo} canRedo={session.canRedo}
-              readOnly={load.readOnly} canvasUnavailable={rendererStatus === 'unavailable'}
+              readOnly={docReadOnly} canvasUnavailable={rendererStatus === 'unavailable'}
               tool={tool} zoomPercent={camera.zoom} treeOpen={panels.treeOpen}
               onUndo={undo} onRedo={session.redo}
               onRetrySave={retrySave} onReload={load.reload} onToast={pushToast}
@@ -804,7 +815,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 onCloseFolder: workspaceFolder.closeFolder,
               }}
               breadcrumb={architecture.breadcrumb}
-              {...(map.active ? { mapToolbar: map.toolbar } : {})}
+              {...(repoPanel.drawn ? { mapToolbar: map.toolbar } : {})}
               {...(map.available ? { mapMode: { mode: map.mode, onChange: map.setMode } } : {})}
               onCrumb={(crumb) => architectureActions.openCrumb(crumb)}
               {...(shared ? { onEditShared: shared.onEdit } : {})}
@@ -860,6 +871,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               readOnly={editLocked}
               onContextMenu={setContextMenu}
             >
+              {repo.source && map.active ? <V2RepoMapOverlay source={repo.source} map={repo.state} links={map.links} /> : null}
               {map.empty ? (
                 <div className="ofk-v2-map-state" data-testid="v2-map-empty">
                   <EmptyState hero={<V2StateHero kind="no-canvas" />} title="No elements yet"
@@ -916,7 +928,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               width: 1, height: 1, pointerEvents: 'none',
             }} />
             <V2ExportMenu open={exportOpen} anchorRef={exportAnchorRef} initialScope={exportScope}
-              document={exportDocument!} pageId={page.id} canShare={!shared && Boolean(TURNSTILE_SITE_KEY)}
+              document={exportDocument!} sourceDocument={session.document!} pageId={page.id} canShare={!shared && Boolean(TURNSTILE_SITE_KEY)}
               selectedNodeIds={selection.nodeIds} selectedConnectorIds={selectedConnectorIds}
               onClose={() => {
                 setExportOpen(false);
@@ -927,7 +939,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               onOpenAnimation={panels.openMotion} />
             <V2WorkspaceRail mode={panels.workspace} onChange={panels.toggleWorkspace}
               onShortcuts={panels.toggleShortcuts} agentConnected={agentBridge.status === 'connected'} />
-            {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !load.readOnly && rendererReady
+            {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !docReadOnly && rendererReady
               ? <V2CanvasWelcome onOpen={openWorkspace} onTemplate={({ dsl }) => code.startFrom(dsl)} /> : null}
             {panels.workspace === 'code' ? <V2CodePanel code={code.draft} palette={preferences.diagramPalette}
               onPaletteChange={(diagramPalette) => updatePreferences({ diagramPalette })}
@@ -963,6 +975,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 })))}
                 selectedElementId={selectedElementId}
                 mapArrow={mapArrow}
+                {...(repoPanel.box ? { mapBox: repoPanel.box } : {})}
                 {...(map.active && map.model ? { mapOverview: { model: map.model, arch: map.arch, onSelect: map.reveal } } : {})}
                 placedElementIds={placedElementIds}
                 perspectiveTags={preferences.perspectiveTags}
@@ -992,7 +1005,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 onCreateFlow={architectureActions.createFlow}
                 onPlayFlow={playback.open}
                 onClose={panels.closeWorkspace}
-                readOnly={load.readOnly}
+                readOnly={docReadOnly}
                 adrs={workspaceFolder.adrs}
               />
             ) : null}
@@ -1065,7 +1078,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
             ) : null}
             {panels.workspace === 'assistant' ? (
               <V2AgentPanel assistant={assistant} proposal={proposal} aiSettings={aiSettings}
-                currentRevision={session.revision} readOnly={load.readOnly}
+                currentRevision={session.revision} readOnly={docReadOnly}
                 diagramCount={diagramCount} selectedDiagramCount={selectedDiagramCount}
                 onClose={panels.closeWorkspace} />
             ) : null}

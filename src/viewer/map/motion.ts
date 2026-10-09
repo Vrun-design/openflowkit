@@ -1,5 +1,5 @@
-import { ease, FADE_MS, lerpRect, type Cam, type Rect } from '../../../application/map/geometry';
-import type { MotionItem } from '../../../application/map/planMotion';
+import { ease, FADE_MS, lerpRect, type Cam, type Rect } from '../../opencanvas/application/map/geometry';
+import type { MotionItem } from '../../opencanvas/application/map/planMotion';
 
 // The one rAF loop. React renders structure; this writes geometry (box transforms and sizes,
 // camera, arrow opacity) straight to SVG attributes, so no frame re-renders React.

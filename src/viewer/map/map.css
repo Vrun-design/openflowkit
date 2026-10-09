@@ -1,0 +1,83 @@
+/* The Living Map surface. Colours come from the design system's --ofk-* tokens (light and dark alike). */
+.map-root { position: fixed; inset: 0; background: var(--ofk-canvas); color: var(--ofk-text); font-family: var(--ofk-font); }
+.map-stage { position: relative; width: 100%; height: 100%; background: var(--ofk-canvas); overflow: hidden; }
+.map-svg { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; outline: none; cursor: grab; }
+.map-svg:active { cursor: grabbing; }
+
+.mb { cursor: pointer; outline: none; }
+.mb .box { fill: var(--ofk-canvas); stroke: color-mix(in srgb, var(--ofk-text) 22%, var(--ofk-canvas)); stroke-width: 1; }
+.mb.tint .box { fill: color-mix(in srgb, var(--hue) 3%, var(--ofk-canvas)); stroke: color-mix(in srgb, var(--hue) 35%, var(--ofk-border)); }
+.mb.open .box { fill: color-mix(in srgb, var(--hue, var(--ofk-canvas)) 3%, color-mix(in srgb, var(--ofk-text) calc(1.5% + var(--depth, 1) * 0.5%), var(--ofk-canvas))); stroke: color-mix(in srgb, var(--ofk-text) 35%, var(--ofk-canvas)); }
+.mb.external .box, .mb.more .box { stroke: var(--ofk-border); }
+.mb.sel .box { stroke: var(--ofk-selection); stroke-width: 1.5; }
+.mb:focus-visible .box { stroke: var(--ofk-selection); stroke-width: 2; }
+.mb text { pointer-events: none; }
+.mb .name { font: 600 12px var(--ofk-font); fill: var(--ofk-text); }
+.mb .mono { font: 500 11px var(--ofk-mono); fill: var(--ofk-text); }
+.mb .desc { font: 400 11px var(--ofk-font); fill: var(--ofk-secondary); }
+.mb .meta { font: 400 10px var(--ofk-mono); fill: var(--ofk-muted); }
+.mb .eyebrow { font: 500 10px var(--ofk-mono); letter-spacing: 0.14em; fill: var(--ofk-secondary); }
+.mb .mask { fill: var(--ofk-canvas); }
+.mb .chev { font: 500 14px var(--ofk-mono); fill: var(--ofk-muted); }
+
+.edge .line { fill: none; stroke: var(--ofk-secondary); stroke-linecap: round; stroke-linejoin: round; opacity: 0.75; }
+.edge.k-call .line { stroke: var(--ofk-info); opacity: 1; }
+.edge.k-data .line { stroke: var(--ofk-success); opacity: 1; }
+.edge.k-build .line { stroke: var(--ofk-muted); stroke-dasharray: 5 4; opacity: 1; }
+.edge .hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; pointer-events: stroke; }
+.edge.sel .line { stroke: var(--ofk-selection); stroke-width: 2.4; opacity: 1; }
+.edge.single .line { opacity: 0.4; }
+.edge.single.sel .line { opacity: 1; }
+.map-sec .map-hint { margin: -2px 0 6px; font: 400 11px var(--ofk-font); color: var(--ofk-muted); }
+.lbl { cursor: pointer; }
+.lbl rect { fill: var(--ofk-canvas); }
+.lbl text { font: 500 10px var(--ofk-mono); letter-spacing: 0.06em; fill: var(--ofk-muted); pointer-events: none; }
+.lbl.sel text { fill: var(--ofk-selection); }
+
+.mm path { fill: var(--ofk-secondary); }
+.mm-call path { fill: var(--ofk-info); }
+.mm-data path { fill: var(--ofk-success); }
+.mm-build path { fill: var(--ofk-muted); }
+.mm-hl path { fill: var(--ofk-selection); }
+.l-hl { pointer-events: none; }
+.ov path { fill: none; stroke: var(--ofk-selection); stroke-width: 1.8; }
+.ov rect { fill: var(--ofk-canvas); stroke: var(--ofk-selection); stroke-width: 1; }
+.ov text { font: 600 10px var(--ofk-mono); fill: var(--ofk-selection); }
+
+.map-note { position: absolute; left: 12px; bottom: 56px; padding: 6px 10px; background: var(--ofk-canvas); border: 1px solid var(--ofk-selection); border-radius: 6px; font: 400 11px var(--ofk-mono); color: var(--ofk-selection); }
+
+.mb.dim, .edge.dim, .lbl.dim { opacity: 0.35; }
+.edge:focus-visible { outline: none; }
+.edge:focus-visible .line { stroke: var(--ofk-selection); stroke-width: 2.4; opacity: 1; }
+.map-toolbar { position: relative; }
+.map-search { position: relative; }
+.map-search .ofk-field { display: block; }
+.map-search label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.map-search input { width: 190px; }
+.map-results { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; width: 320px; max-height: 320px; margin: 0; padding: 4px; overflow: auto; list-style: none; background: var(--ofk-surface); border: 1px solid var(--ofk-border); border-radius: 8px; }
+.map-results li { display: grid; padding: 6px 8px; border-radius: 6px; cursor: pointer; font: 600 12px var(--ofk-font); }
+.map-results li[aria-selected="true"] { background: var(--ofk-raised); }
+.map-result-path { font: 400 10px var(--ofk-mono); color: var(--ofk-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-panel { font-size: 12px; }
+.map-lead { margin: 0 0 2px; font: 600 14px var(--ofk-font); overflow-wrap: anywhere; }
+.map-muted { margin: 0 0 8px; font: 400 11px var(--ofk-mono); color: var(--ofk-muted); }
+.map-path { margin: 0 0 8px; font: 400 11px var(--ofk-mono); color: var(--ofk-secondary); overflow-wrap: anywhere; }
+.map-sec { margin-top: 14px; }
+.map-sec h3 { margin: 0 0 6px; font: 500 10px var(--ofk-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ofk-muted); }
+.map-sec ul { margin: 0; padding: 0; list-style: none; }
+.map-item.ofk-button { width: 100%; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; height: auto; min-height: 28px; padding: 4px 8px; text-align: left; }
+.map-item-name { font-weight: 600; overflow-wrap: anywhere; }
+.map-file { margin-bottom: 8px; }
+.map-line { display: flex; gap: 8px; align-items: baseline; }
+.map-lineno { color: var(--ofk-muted); font: 500 11px var(--ofk-mono); flex: none; }
+.map-line a { color: var(--ofk-info); font: 500 11px var(--ofk-mono); flex: none; }
+.map-line code { font: 400 11px var(--ofk-mono); color: var(--ofk-secondary); overflow-wrap: anywhere; }
+@media (max-width: 720px) { .map-search input { width: 120px; } }
+.map-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.map-empty { padding: 8px 10px; font: 400 12px var(--ofk-font); color: var(--ofk-muted); }
+.map-status { position: absolute; left: 12px; bottom: 12px; display: grid; gap: 6px; justify-items: start; }
+.map-chip { padding: 4px 10px; background: var(--ofk-surface); border: 1px solid var(--ofk-border); border-radius: 8px; font: 400 11px var(--ofk-mono); color: var(--ofk-secondary); }
+.map-chip .ofk-progress { min-width: 220px; }
+.map-links-chip { position: absolute; top: 72px; left: 16px; display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; background: var(--ofk-surface); border: 1px solid var(--ofk-border); border-radius: 8px; font: 400 11px var(--ofk-mono); color: var(--ofk-secondary); }
+/* Wide screens: beside the toolbar, so it never covers the map's corner. */
+@media (min-width: 1200px) { .map-links-chip { top: 20px; left: 612px; } }

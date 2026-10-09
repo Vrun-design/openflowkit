@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { describe, expect, it } from 'vitest';
-import { RepoError, fetchRepoFiles, githubEvidenceLink, parseRepoPath } from './githubRepo';
+import { RepoError, fetchRepoFiles, githubEvidenceLink, githubPathLink, parseRepoPath } from './githubRepo';
 
 // Responses recorded from api.github.com and raw.githubusercontent.com on 2026-10-07
 // (status, the headers the code reads, and the body as GitHub sent it).
@@ -77,6 +77,30 @@ describe('githubEvidenceLink', () => {
   it('points at the line, with every segment encoded', () => {
     const link = githubEvidenceLink({ owner: 'acme', repo: 'shop', ref: 'feat/a#b' });
     expect(link({ file: 'web app/package.json', line: 7 })).toBe('https://github.com/acme/shop/blob/feat/a%23b/web%20app/package.json#L7');
+  });
+});
+
+describe('githubPathLink', () => {
+  it('names a folder as tree and a file as blob, every segment encoded, at the ref', () => {
+    expect(githubPathLink({ owner: 'acme', repo: 'shop', ref: 'HEAD' }, 'web/src', true)).toBe('https://github.com/acme/shop/tree/HEAD/web/src');
+    expect(githubPathLink({ owner: 'acme', repo: 'shop', ref: 'dev' }, 'web app/a#b.ts', false)).toBe('https://github.com/acme/shop/blob/dev/web%20app/a%23b.ts');
+  });
+  it('never leaves the repo for an unsafe ref, owner or repo', () => {
+    expect(githubPathLink({ owner: 'acme', repo: 'shop', ref: '../../x' }, 'a.ts', false)).toBe('https://github.com/acme/shop/blob/HEAD/a.ts');
+    expect(githubPathLink({ owner: '..', repo: 'shop', ref: 'HEAD' }, 'a.ts', false)).toBe('https://github.com/');
+  });
+});
+
+describe('path-climbing refs', () => {
+  it('never produce a link or tree request outside the repo', async () => {
+    const link = githubEvidenceLink({ owner: 'acme', repo: 'shop', ref: '../../../evil/x' })({ file: 'a.ts', line: 1 });
+    expect(link.startsWith('https://github.com/acme/shop/blob/')).toBe(true);
+    expect(new URL(link).pathname.startsWith('/acme/shop/blob/')).toBe(true);
+    expect(githubEvidenceLink({ owner: '..', repo: 'shop', ref: 'HEAD' })({ file: 'a.ts', line: 1 })).toBe('https://github.com/');
+    const seen: string[] = [];
+    const get = (async (url: string) => { seen.push(url); return new Response('{}', { status: 404 }); }) as unknown as typeof fetch;
+    await fetchRepoFiles({ owner: 'acme', repo: 'shop', ref: '../../../evil/x' }, { fetch: get }).catch(() => undefined);
+    expect(seen[0]).toBe('https://api.github.com/repos/acme/shop/git/trees/HEAD?recursive=1');
   });
 });
 

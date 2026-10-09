@@ -1,6 +1,6 @@
-import type { AggEdge, Evidence, MapModel } from '../../../../dsl/map/types';
-import { edgeText } from '../../../../dsl/map/view';
-import { groupByFile, type EvidenceLink } from '../../../application/map/evidenceLink';
+import type { AggEdge, Evidence, MapModel } from '../../dsl/map/types';
+import { edgeText } from '../../dsl/map/view';
+import { groupByFile, type EvidenceLink } from '../../opencanvas/application/map/evidenceLink';
 
 export type { EvidenceLink };
 

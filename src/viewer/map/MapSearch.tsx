@@ -1,7 +1,7 @@
 import { useId, useMemo, useState, type RefObject } from 'react';
-import { search } from '../../../../dsl/map/view';
-import type { MapModel } from '../../../../dsl/map/types';
-import { Field } from '../../design-system';
+import { search } from '../../dsl/map/view';
+import type { MapModel } from '../../dsl/map/types';
+import { Field } from '../../opencanvas/presentation/design-system';
 
 /** Search field with a result list (engine `search`, at most 8). Enter or click reveals; Escape clears. */
 export function MapSearch({ model, inputRef, onReveal }: { model: MapModel; inputRef: RefObject<HTMLInputElement | null>; onReveal: (id: string) => void }): React.JSX.Element {

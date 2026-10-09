@@ -1,4 +1,4 @@
-import { Button } from '../../design-system';
+import { Button } from '../../opencanvas/presentation/design-system';
 
 /** "Showing 18 of 43 links · Show all": the map leaves its weakest arrows undrawn until asked. Nothing when none were left out. */
 export function MapLinksChip({ shown, total, minor, all, onToggle }: { shown: number; total: number; minor: number; all: boolean; onToggle: () => void }): React.JSX.Element | null {

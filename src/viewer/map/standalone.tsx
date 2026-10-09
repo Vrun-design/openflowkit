@@ -2,10 +2,10 @@
 // <script type="application/json" id="ofk-map-data">; nothing is fetched. Imports nothing from src/services/map.
 import { useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
-import { SystemRoot } from '../../design-system';
-import type { Depth, MapModel } from '../../../../dsl/map/types';
-import { githubEvidenceLink, type RepoRef } from '../../../../services/discovery/githubRepo';
-import { useV2Appearance } from '../useV2Appearance';
+import { SystemRoot } from '../../opencanvas/presentation/design-system';
+import type { Depth, MapModel } from '../../dsl/map/types';
+import { githubEvidenceLink, type RepoRef } from '../../services/discovery/githubRepo';
+import { useV2Appearance } from '../../opencanvas/presentation/v2/useV2Appearance';
 import { saveDepth } from './mapDepth';
 import { MapSurface } from './MapSurface';
 import './map.css';

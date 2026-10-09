@@ -12,6 +12,8 @@ interface V2DocumentLoadOptions {
   readonly onRecovered: () => void;
   /** A document that is not stored (a shared link): opened as is, read-only, never saved. */
   readonly fixed?: SceneDocumentV1 | undefined;
+  /** Shapes a document that is created fresh (never one that was stored), e.g. a repo map born with its source; it is saved at once. */
+  readonly initialize?: ((document: SceneDocumentV1) => SceneDocumentV1) | undefined;
 }
 
 export type V2LoadPhase = 'loading' | 'ready' | 'corrupt' | 'failed';
@@ -46,11 +48,24 @@ export function useV2DocumentLoad(options: V2DocumentLoadOptions) {
       .then((result) => {
         if (cancelled) return;
         switch (result.status) {
-          case 'missing':
-            options.openDocument(createEmptyV2Document(options.documentId!));
-            setBaseRevision(0);
-            setPhase('ready');
-            break;
+          case 'missing': {
+            const fresh = createEmptyV2Document(options.documentId!);
+            if (!options.initialize) {
+              options.openDocument(fresh);
+              setBaseRevision(0);
+              setPhase('ready');
+              break;
+            }
+            // A born-shaped document (a repo map) is saved at once: nothing the reader can do would ever make it dirty.
+            const born = options.initialize(fresh);
+            return options.repository!.saveDocument(options.documentId!, born, 1).then((saved) => {
+              if (cancelled) return;
+              if (saved.status !== 'saved') { setReloadCount((count) => count + 1); return; } // another tab made it first
+              options.openDocument(born);
+              setBaseRevision(1);
+              setPhase('ready');
+            });
+          }
           case 'ok':
             options.openDocument(result.record.document);
             setBaseRevision(result.record.revision);

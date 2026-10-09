@@ -1,8 +1,8 @@
-import type { Insights } from '../../../../dsl/map/insights';
-import type { AggEdge, MapModel, Talk } from '../../../../dsl/map/types';
-import { Button, Panel } from '../../design-system';
+import type { Insights } from '../../dsl/map/insights';
+import type { AggEdge, MapModel, Talk } from '../../dsl/map/types';
+import { Button, Panel } from '../../opencanvas/presentation/design-system';
 import { MapEvidence, type EvidenceLink } from './MapEvidence';
-import { labelsFor, type Selected } from '../../../application/map/navigate';
+import { labelsFor, type Selected } from '../../opencanvas/application/map/navigate';
 
 const fmt = (n: number): string => n.toLocaleString('en-US');
 

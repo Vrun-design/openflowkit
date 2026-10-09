@@ -1,7 +1,7 @@
 import { useRef, useState, type RefObject } from 'react';
 import { IconFold, IconFoldDown, IconLayoutSidebarRight, IconMaximize } from '@tabler/icons-react';
-import type { Depth, LinkKind, MapModel } from '../../../../dsl/map/types';
-import { Button, FloatingRegion, Icon, IconButton, Menu, MenuItem, Toolbar, Tooltip } from '../../design-system';
+import type { Depth, LinkKind, MapModel } from '../../dsl/map/types';
+import { Button, FloatingRegion, Icon, IconButton, Menu, MenuItem, Toolbar, Tooltip } from '../../opencanvas/presentation/design-system';
 import { MapSearch } from './MapSearch';
 
 const DEPTHS: { value: Depth; label: string }[] = [

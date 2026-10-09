@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Dir } from '../../../application/map/navigate';
+import type { Dir } from '../../opencanvas/application/map/navigate';
 
 export interface MapKeyActions {
   search: () => void;

@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 
 // Bundles the map viewer for `openflowkit map --html`: one JS and one CSS the CLI inlines into a single page.
 // ELK runs in the page (no worker file to fetch), so the editor's runtime module is swapped for the bundled engine.
-const map = resolve(__dirname, 'src/opencanvas/presentation/v2/map');
+const map = resolve(__dirname, 'src/viewer/map');
 export default defineConfig({
   plugins: [react()],
   define: { 'process.env.NODE_ENV': '"production"' },

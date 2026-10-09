@@ -1,7 +1,7 @@
 import { memo, type CSSProperties, type KeyboardEvent } from 'react';
-import type { LaidRect } from '../../../../dsl/map/elk';
-import type { MapNode } from '../../../../dsl/map/types';
-import { FONT, fit, measure, wrap } from './layout';
+import type { LaidRect } from '../../dsl/map/elk';
+import type { MapNode } from '../../dsl/map/types';
+import { FONT, fit, measure, wrap } from '../../opencanvas/presentation/v2/map/layout';
 
 const fmt = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n));
 const lines = (n: MapNode): string => (n.loc > 0 ? `${fmt(n.loc)} lines` : '');

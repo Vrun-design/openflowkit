@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
-import { inferIcon } from '../../../../dsl/autoIcon';
 import { createDefaultSceneLayer } from '../../../domain/document/defaults';
 import { fromArch } from '../../../../dsl/map/fromArch';
-import { closedBoxSize, mapScene, type MapLook } from '../../../../dsl/map/scene';
+import { closedBoxSize, mapScene } from '../../../../dsl/map/scene';
+import type { AggEdge, MapModel } from '../../../../dsl/map/types';
 import { presets } from '../../../../dsl/map/view';
 import { archFrameOf, archModelOfPage } from '../../../../dsl/model/model';
-import type { ArchModel } from '../../../../dsl/model/types';
-import { resolveDslIcon } from '../../../../services/dsl/iconResolver';
 import { getElkInstance } from '../../../../services/elk-layout/runtime';
 import { layoutMap, type LayoutPorts } from '../../../application/map/layoutMap';
 import type { CanvasCamera } from '../../../domain/camera/types';
 import type { ScenePage } from '../../../domain/document/types';
-import { diagramPalette, paletteResolver, type DiagramPaletteName } from '../../../domain/nodes/nodePalette';
+import type { DiagramPaletteName } from '../../../domain/nodes/nodePalette';
 import type { PixiRendererHost } from '../../../infrastructure/pixi/PixiRendererHost';
 import { foundation } from '../../design-system/tokens';
 import type { V2Tool } from '../V2CreationToolbar';
@@ -25,6 +23,8 @@ import { mapFindMatches } from '../../../application/map/mapFind';
 import { savedOpen, saveOpen } from './mapDepth';
 import { useMapControls } from './useMapControls';
 import { useMapMotion } from './useMapMotion';
+import { useMapLayers } from './useMapLayers';
+import { lookOf, repoLookOf } from './mapLook';
 
 export type V2MapModeName = 'canvas' | 'map';
 
@@ -32,6 +32,8 @@ interface Options {
   readonly page: ScenePage | null;
   /** With the page id, names a map's lineage: default page ids repeat across documents. */
   readonly documentId?: string;
+  /** A repo document: the map of this model (null while it loads) in place of a C4 page's. Opens in Map; Canvas stays one switch away. */
+  readonly repo?: { readonly model: MapModel | null } | null;
   readonly palette: DiagramPaletteName;
   readonly autoIcons: boolean;
   readonly hostRef: RefObject<PixiRendererHost | null>;
@@ -75,15 +77,23 @@ function useStable<T>(value: T): T {
  * written; the scene is a ScenePage handed to the canvas in place of the page.
  */
 export function useV2MapMode(options: Options) {
-  const { page, documentId, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify } = options;
+  const { page, documentId, repo = null, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify } = options;
   // Cheap: only whether the page carries a model. The model itself is read only while the map is on.
-  const available = useMemo(() => (page ? archFrameOf(page) !== null : false), [page]);
+  const isRepo = repo !== null;
+  const available = useMemo(() => isRepo || (page ? archFrameOf(page) !== null : false), [isRepo, page]);
   const [mode, setModeState] = useState<V2MapModeName>('canvas');
+  // A repo document opens in Map, once per document; the reader may switch to Canvas after.
+  const [openedMap, setOpenedMap] = useState<string | null>(null);
+  const repoDoc = isRepo ? (documentId ?? null) : null;
+  if (repoDoc !== null && openedMap !== repoDoc) { setOpenedMap(repoDoc); setModeState('map'); }
   const active = mode === 'map' && available;
-  const arch = useStable(useMemo(() => (active && page ? archModelOfPage(page) : null), [active, page]));
+  const arch = useStable(useMemo(() => (active && page && !isRepo ? archModelOfPage(page) : null), [active, page, isRepo]));
+  const repoModel = repo?.model ?? null;
+  // What the map is of: the C4 model, or the repo's.
+  const subject: object | null = arch ?? repoModel;
   // What the reader opened, per page; a page not chosen yet starts from what this browser remembers, then from the preset.
   const [held, setHeld] = useState<{ key: string; set: ReadonlySet<string> } | null>(null);
-  const [scene, setScene] = useState<TaggedScene<ArchModel> | null>(null);
+  const [scene, setScene] = useState<TaggedScene<object> | null>(null);
   const [drawError, setError] = useState<string | null>(null);
   const saved = useRef<{ pageId: string | null; camera: CanvasCamera } | null>(null);
   const leaving = useRef(false);
@@ -99,23 +109,24 @@ export function useV2MapMode(options: Options) {
   useEffect(() => { keyRef.current = lineageKey; });
   // Chains count runs of related maps: another page's model, or the map opening, starts a new one (it lands, it does not move).
   const chain = useRef(0);
-  const seen = useRef<{ arch: ArchModel | null; key: string | null }>({ arch: null, key: null });
+  const seen = useRef<{ arch: object | null; key: string | null }>({ arch: null, key: null });
   useEffect(() => {
     const was = seen.current;
-    seen.current = active ? { arch, key: lineageKey } : { arch: null, key: null };
-    if (active && (was.arch === null || (was.key !== lineageKey && was.arch !== arch))) chain.current += 1;
-  }, [active, arch, lineageKey]);
+    seen.current = active ? { arch: subject, key: lineageKey } : { arch: null, key: null };
+    if (active && (was.arch === null || (was.key !== lineageKey && was.arch !== subject))) chain.current += 1;
+  }, [active, subject, lineageKey]);
   // The box a click just opened or closed: the camera brings it into view when its layout arrives.
   const focusRef = useRef<{ id: string | null } | null>(null);
   // The box a find or the overview revealed: selected once the layout that draws it has landed.
   const pendingRef = useRef<string | null>(null);
 
   const built = useMemo(() => {
+    if (repoModel) return { model: repoModel, look: repoLookOf(repoModel, palette) };
     if (!arch) return null;
     try { return { model: fromArch(arch), look: lookOf(arch, palette, autoIcons) }; } catch (cause) {
       return { error: cause instanceof Error ? cause.message : 'The map could not be drawn.' };
     }
-  }, [arch, palette, autoIcons]);
+  }, [arch, repoModel, palette, autoIcons]);
   const model = built && 'model' in built ? built.model : null;
   const look = built && 'look' in built ? built.look : null;
   const remembered = useMemo(() => (active && documentId && pageId ? savedOpen(documentId, pageId) : null), [active, documentId, pageId]);
@@ -125,25 +136,33 @@ export function useV2MapMode(options: Options) {
     setHeld({ key: lineageKey, set });
     if (documentId && pageId) saveOpen(documentId, pageId, set);
   }, [lineageKey, documentId, pageId]);
-  const error = built && 'error' in built ? built.error ?? null : active && !arch ? 'This page has no readable model.' : drawError;
+  const error = built && 'error' in built ? built.error ?? null : active && !subject && !repo ? 'This page has no readable model.' : drawError;
   const empty = model !== null && model.nodes[model.root].children.length === 0;
 
+  const layers = useMapLayers(model, open, isRepo, lineageKey);
+  const [counts, setCounts] = useState<{ shown: number; total: number; minor: number } | null>(null);
+  const edgeMap = useRef<ReadonlyMap<string, AggEdge>>(new Map());
   useEffect(() => {
-    if (!active || !arch || !model || !look) return;
+    if (!active || !subject || !model || !look) return;
     let stale = false;
     const seq = ++seqs.current.asked;
-    const draw = async (): Promise<ScenePage> => {
-      if (empty) return mapScene(model, open, { rects: new Map(), edges: [] }, look);
+    // Edges and counts belong to the layout that lands, so they are handed over with it (a late older layout is dropped).
+    const draw = async (): Promise<{ page: ScenePage; edges: ReadonlyMap<string, AggEdge>; counts: { shown: number; total: number; minor: number } | null }> => {
+      if (empty) return { page: mapScene(model, open, { rects: new Map(), edges: [] }, look), edges: new Map(), counts: null };
       const ports: LayoutPorts = {
         elk: await getElkInstance() as unknown as LayoutPorts['elk'],
         measure: (text) => measure(text, LABEL_FONT),
         sizeOf: (node) => closedBoxSize(look, node),
       };
-      const laid = await layoutMap(ports, model, open);
-      return mapScene(model, open, { rects: laid.laid.rects, edges: laid.edges }, look);
+      const laid = await layoutMap(ports, model, open, layers.shown, layers.all);
+      return {
+        page: mapScene(model, open, { rects: laid.laid.rects, edges: laid.edges }, look),
+        edges: new Map(laid.edges.map((e) => [e.key, e])),
+        counts: isRepo ? { shown: laid.edges.length, total: laid.total, minor: laid.minor } : null,
+      };
     };
     // Latest request wins; a scene of this model stays up until the next is ready, one of another model never does.
-    draw().then((next) => { if (!stale) { layouts.current += 1; seqs.current.landed = seq; setError(null); setScene({ model: arch, page: next, lineage: keyRef.current, chain: chain.current }); } })
+    draw().then((next) => { if (!stale) { edgeMap.current = next.edges; setCounts(next.counts); layouts.current += 1; seqs.current.landed = seq; setError(null); setScene({ model: subject, page: next.page, lineage: keyRef.current, chain: chain.current }); } })
       .catch((cause: unknown) => {
         if (stale) return;
         seqs.current.landed = seq;
@@ -153,7 +172,7 @@ export function useV2MapMode(options: Options) {
         setError(cause instanceof Error ? cause.message : 'The map could not be drawn.');
       });
     return () => { stale = true; };
-  }, [active, arch, model, look, open, empty]);
+  }, [active, subject, model, look, open, empty, layers.shown, layers.all, isRepo]);
 
   const setMode = useCallback((next: V2MapModeName) => {
     if (next === mode || (next === 'map' && !available)) return;
@@ -187,7 +206,7 @@ export function useV2MapMode(options: Options) {
     if (was && was.pageId === (page?.id ?? null)) updateCamera(was.camera); else fitView();
   }, [active, page?.id, updateCamera, fitView]);
 
-  const mapPage = active ? sceneFor(scene, arch, EMPTY_MAP, lineageKey) : null;
+  const mapPage = active ? sceneFor(scene, subject, EMPTY_MAP, lineageKey) : null;
   const { shown, player } = useMapMotion({ mapPage, emptyPage: EMPTY_MAP, scene, model, hostRef, cameraRef, updateCamera, markShown, focusRef });
   useMapFocus(hostRef, active && mapPage && mapPage !== EMPTY_MAP ? mapPage : null, selectedNodeId, selectedConnectorId);
 
@@ -223,6 +242,9 @@ export function useV2MapMode(options: Options) {
     if (flip(id)) lastFlip.current = now;
   }, [flip]);
 
+  const edgeOf = useCallback((connectorId: string): AggEdge | undefined => edgeMap.current.get(connectorId), []);
+  /** The repo-map arrows drawn now that touch a box. */
+  const edgesAt = useCallback((id: string): AggEdge[] => [...edgeMap.current.values()].filter((e) => e.from === id || e.to === id), []);
   const { arrow, reveal } = controls;
   const findMatches = useCallback((query: string) => (model ? mapFindMatches(model, arch, query) : []), [model, arch]);
   // Closing find drops a reveal still waiting for its layout: it must not select or move the camera after the search is over.
@@ -263,6 +285,8 @@ export function useV2MapMode(options: Options) {
     labels: Object.fromEntries(mapPage?.nodes.map((node) => [node.id, String(node.content.label ?? '')]) ?? []),
     connectors: mapPage?.connectors.map((connector) => ({
       id: connector.id, from: connector.source.nodeId, to: connector.target.nodeId, label: connector.labels[0]?.text ?? '',
+      // A repo map's kind of connection (import, call, data); null on a C4 map.
+      kind: edgeMap.current.get(connector.id)?.kind ?? null,
     })) ?? [],
     // How many layouts have landed: a click that changes nothing must not add one.
     layouts: layouts.current,
@@ -277,15 +301,11 @@ export function useV2MapMode(options: Options) {
     return { ...stats, running };
   }, [player, hostRef]);
 
-  return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty, error: active ? error : null, setMode, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, findSource,
-    toolbar: { depth: controls.depth, canExpand: controls.canExpand, onDepth: controls.setDepth, onExpandOne: controls.expandOne, onCollapseAll: controls.collapse } };
-}
-
-function lookOf(arch: ArchModel, palette: DiagramPaletteName, autoIcons: boolean): MapLook {
-  // The same choices a compile makes, so a map draws a box the way its Canvas page does.
-  const auto = (arch.icons ?? (autoIcons ? 'auto' : 'off')) === 'auto';
-  return {
-    arch, swatch: paletteResolver(diagramPalette(arch.palette ?? palette)), resolveIcon: resolveDslIcon,
-    ...(auto ? { inferIcon: (label: string, hint?: string) => { const id = inferIcon(label, hint); return id && resolveDslIcon(id) ? id : null; } } : {}),
-  };
+  return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, findSource,
+    /** The aggregated edge a repo-map connector stands for (its evidence), or undefined. */
+    edgeOf, edgesAt,
+    toolbar: { depth: controls.depth, canExpand: controls.canExpand, onDepth: controls.setDepth, onExpandOne: controls.expandOne, onCollapseAll: controls.collapse,
+      ...(layers.layers ? { layers: layers.layers, onToggleLayer: layers.toggle } : {}) },
+    /** A crowded repo level: how many arrows are drawn of all, and the switch for the rest (null when none are left out). */
+    links: isRepo && counts && counts.minor > 0 ? { ...counts, all: layers.all, onToggle: layers.toggleAll } : null };
 }

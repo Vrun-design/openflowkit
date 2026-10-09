@@ -21,6 +21,8 @@ export interface V2ExportMenuProps {
   readonly open: boolean;
   readonly anchorRef: React.RefObject<HTMLElement | null>;
   readonly document: SceneDocumentV1;
+  /** The stored document, when `document` is a view of it (a Map scene stands in for the page): JSON and share links carry this, never the view. */
+  readonly sourceDocument?: SceneDocumentV1;
   readonly pageId: string;
   /** Sharing needs a Turnstile site key, and is hidden in a shared viewer (its URL holds another link's key). */
   readonly canShare?: boolean;
@@ -67,7 +69,7 @@ function mermaidFrame(page: SceneDocumentV1['pages'][number] | undefined, select
 }
 
 export function V2ExportMenu({
-  open, anchorRef, document, pageId, canShare = false, selectedNodeIds, selectedConnectorIds = [], initialScope = 'page',
+  open, anchorRef, document, sourceDocument, pageId, canShare = false, selectedNodeIds, selectedConnectorIds = [], initialScope = 'page',
   onClose, onToast, onOpenAnimation,
 }: V2ExportMenuProps) {
   const [format, setFormat] = useState<V2ExportFormat>('png');
@@ -95,8 +97,9 @@ export function V2ExportMenu({
   const empty = effectiveScope === 'selection'
     ? !hasSelection
     : effectiveScope === 'page' && (activePage?.nodes.length ?? 0) + (activePage?.connectors.length ?? 0) === 0;
+  const whole = sourceDocument ?? document;
   const request = {
-    document, format: effectiveFormat, scope: effectiveScope, pageId, theme,
+    document: effectiveFormat === 'json' ? whole : document, format: effectiveFormat, scope: effectiveScope, pageId, theme,
     ...(effectiveScope === 'selection'
       ? { selectedNodeIds, ...(selectedConnectorIds.length ? { selectedConnectorIds } : {}) }
       : {}),
@@ -158,7 +161,7 @@ export function V2ExportMenu({
   async function copyShareLink(): Promise<void> {
     setSharing(true);
     try {
-      const link = await createShareLink(document, { appUrl: window.location.href, getTurnstileToken });
+      const link = await createShareLink(whole, { appUrl: window.location.href, getTurnstileToken });
       rememberShare(browserStorage(), document.id, link.id, link.deleteToken);
       setShareTick((tick) => tick + 1);
       const copied = await navigator.clipboard.writeText(link.url).then(() => true, () => false);
@@ -170,7 +173,7 @@ export function V2ExportMenu({
       if (error instanceof ShareError && error.code === 'too-large') {
         onToast('Too big to share as a link.', 'danger', {
           description: 'Links hold up to 1 MB. Send the file instead.', persistent: true,
-          action: { label: 'Download file', onClick: () => { void buildV2Export({ document, format: 'json', scope: 'document', pageId }).then(downloadV2Export); } },
+          action: { label: 'Download file', onClick: () => { void buildV2Export({ document: whole, format: 'json', scope: 'document', pageId }).then(downloadV2Export); } },
         });
       } else {
         onToast(error instanceof Error ? error.message : 'Couldn’t create the link.', 'danger');

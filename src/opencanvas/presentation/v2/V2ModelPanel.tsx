@@ -11,6 +11,7 @@ import { defaultChildKind } from '../../application/dsl/architectureCommands';
 import { Button, Icon, IconButton, Panel, Tabs } from '../design-system';
 import { MapArrowDetails, type MapArrow } from './map/MapArrowDetails';
 import { MapArrowEvidence, type MapRepoArrow } from './map/MapArrowEvidence';
+import { MapBoxPanel, type MapBoxData } from './map/MapBoxPanel';
 import { MapOverview, type MapOverviewData } from './map/MapOverview';
 import type { ArchitectureCrumb, V2Architecture } from './useV2Architecture';
 
@@ -42,6 +43,8 @@ export interface V2ModelPanelProps {
   readonly mapArrow?: MapArrow | MapRepoArrow | null;
   /** Map mode: with nothing selected, the Elements tab opens with a short overview of the map. */
   readonly mapOverview?: MapOverviewData;
+  /** A repo map: the selected box's details. */
+  readonly mapBox?: MapBoxData | null;
 }
 
 type Tab = 'elements' | 'views' | 'flows' | 'tags';
@@ -127,6 +130,15 @@ export function V2ModelPanel(props: V2ModelPanelProps): React.JSX.Element {
   const rows = useMemo(() => index ? elementRows(index, collapsed, query) : [], [index, collapsed, query]);
   const tags = useMemo(() => (model ? modelTags(model) : []), [model]);
   const selected = inspectedId && index ? index.byId.get(inspectedId) ?? null : null;
+
+  // A repo map has no C4 model: the panel is its overview, or the evidence behind the arrow you clicked.
+  if (!model && (props.mapOverview || (props.mapArrow && 'edge' in props.mapArrow))) {
+    return (
+      <Panel title="Map" onClose={props.onClose} className="ofk-v2-workspace-panel ofk-v2-model-panel">
+        {props.mapArrow && 'edge' in props.mapArrow ? <MapArrowEvidence arrow={props.mapArrow} /> : props.mapBox ? <MapBoxPanel {...props.mapBox} /> : props.mapOverview ? <MapOverview {...props.mapOverview} /> : null}
+      </Panel>
+    );
+  }
 
   if (!model || !index) {
     return (

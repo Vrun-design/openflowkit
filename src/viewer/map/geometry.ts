@@ -1,5 +1,5 @@
 // SVG path strings for map arrows; the geometry math they sit on is in application/map/geometry.
-import type { Rect } from '../../../application/map/geometry';
+import type { Rect } from '../../opencanvas/application/map/geometry';
 
 export interface Pt { x: number; y: number }
 

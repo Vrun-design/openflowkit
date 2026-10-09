@@ -1,9 +1,9 @@
 import { memo, useMemo } from 'react';
-import type { LaidEdge, LaidRect } from '../../../../dsl/map/elk';
-import type { AggEdge, LinkKind, MapModel, Talk } from '../../../../dsl/map/types';
-import { edgeText } from '../../../../dsl/map/view';
+import type { LaidEdge, LaidRect } from '../../dsl/map/elk';
+import type { AggEdge, LinkKind, MapModel, Talk } from '../../dsl/map/types';
+import { edgeText } from '../../dsl/map/view';
 import { curve, roundedPath } from './geometry';
-import { FONT, measure } from './layout';
+import { FONT, measure } from '../../opencanvas/presentation/v2/map/layout';
 
 export const KINDS: LinkKind[] = ['import', 'call', 'data', 'build'];
 

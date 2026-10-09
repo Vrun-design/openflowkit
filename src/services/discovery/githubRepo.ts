@@ -63,10 +63,22 @@ export function parseRepoPath(input: string): RepoRef | null {
   return { owner, repo, ref: name };
 }
 
+/** A ref that could climb out of `blob/` or the tree path (`..`, `.`, empty segments) is never sent anywhere. */
+const safeRef = (ref: string): string => (ref.split('/').every((s) => s !== '' && s !== '.' && s !== '..') ? ref : 'HEAD');
+
 /** Where a piece of evidence lives on GitHub: `…/blob/<ref>/<file>#L<line>`, every segment encoded. */
 export function githubEvidenceLink(ref: RepoRef): (evidence: { readonly file: string; readonly line: number }) => string {
   const encode = (path: string) => path.split('/').map(encodeURIComponent).join('/');
-  return ({ file, line }) => `https://github.com/${encodeURIComponent(ref.owner)}/${encodeURIComponent(ref.repo)}/blob/${encode(ref.ref)}/${encode(file)}#L${line}`;
+  // owner/repo of `..` would climb out of the repo on the URL; there is no such repo, so no link.
+  if (!plainSegment(ref.owner) || !plainSegment(ref.repo)) return () => 'https://github.com/';
+  return ({ file, line }) => `https://github.com/${encodeURIComponent(ref.owner)}/${encodeURIComponent(ref.repo)}/blob/${encode(safeRef(ref.ref))}/${encode(file)}#L${line}`;
+}
+
+/** Where a file (`blob`) or folder (`tree`) lives on GitHub at the ref; the repo's front page when owner or repo is unsafe. */
+export function githubPathLink(ref: RepoRef, path: string, folder: boolean): string {
+  if (!plainSegment(ref.owner) || !plainSegment(ref.repo)) return 'https://github.com/';
+  const encode = (p: string) => p.split('/').map(encodeURIComponent).join('/');
+  return `https://github.com/${encodeURIComponent(ref.owner)}/${encodeURIComponent(ref.repo)}/${folder ? 'tree' : 'blob'}/${encode(safeRef(ref.ref))}/${encode(path)}`;
 }
 
 /** Deploy manifests first: they define the units; source files only add edges. */
@@ -127,7 +139,7 @@ export async function fetchRepoFiles(ref: RepoRef, options: FetchRepoOptions = {
     }
   };
   const repoPath = `${encodeURIComponent(ref.owner)}/${encodeURIComponent(ref.repo)}`;
-  const treeResponse = await call(`${hosts.api}/repos/${repoPath}/git/trees/${encodeURIComponent(ref.ref)}?recursive=1`, {
+  const treeResponse = await call(`${hosts.api}/repos/${repoPath}/git/trees/${encodeURIComponent(safeRef(ref.ref))}?recursive=1`, {
     headers: { Accept: 'application/vnd.github+json' },
   });
   if (!treeResponse.ok) throw await treeError(treeResponse, ref, token !== null);
@@ -146,7 +158,7 @@ export async function fetchRepoFiles(ref: RepoRef, options: FetchRepoOptions = {
   let bytes = 0;
   const chosen = capped.filter((entry) => (bytes += entry.size ?? 0) <= MAX_TOTAL_BYTES).map((entry) => entry.path);
   options.onChosen?.(chosen);
-  const refPath = ref.ref.split('/').map(encodeURIComponent).join('/');
+  const refPath = safeRef(ref.ref).split('/').map(encodeURIComponent).join('/');
 
   const files: ScannedFile[] = [];
   let done = 0;

@@ -16,6 +16,8 @@ const V2_ROOTS = [
   path.join(ocDir, 'presentation', 'v2'),
   path.join(srcDir, 'services', 'storage', 'v2'),
   path.join(srcDir, 'services', 'dsl'),
+  // The map viewer bundled into the CLI's `map --html` page: a second host of the Map surface, built on the editor's design system.
+  path.join(srcDir, 'viewer'),
 ];
 
 // The kernel the editor builds on: pure domain, application services, adapters.
@@ -163,6 +165,12 @@ describe('v2 production graph', () => {
     expect(offenders).toEqual([]);
   });
 
+
+  it('keeps the editor free of the standalone viewer', () => {
+    const offenders = sourceFiles(path.join(ocDir, 'presentation')).flatMap((file) =>
+      moduleSpecifiers(file).filter((specifier) => /(^|\/)viewer(\/|$)/.test(specifier)).map((specifier) => `${path.relative(srcDir, file)} imports ${specifier}`));
+    expect(offenders).toEqual([]);
+  });
 
   it('routes presentation and active-document writes through the session', () => {
     const roots = [
