@@ -4,9 +4,10 @@ import { centreOf, clickNode, state } from './helpers';
 import { expect, test } from './test';
 
 test('Inspect shows a node, follows its connections and opens its code @gate', async ({ page }) => {
-  await page.goto('/');
+  // The starter templates live on home (the empty canvas no longer lists them).
+  await page.goto('/#/home');
+  await page.getByRole('list', { name: 'Templates' }).getByRole('button', { name: 'User authentication' }).click();
   await page.waitForSelector('[data-testid="v2-canvas"]');
-  await page.getByTestId('v2-welcome').getByRole('button', { name: 'User authentication' }).click();
   await expect.poll(async () => (await state(page)).nodes).toContain('login');
 
   const inspect = page.getByRole('complementary', { name: 'Inspect' });

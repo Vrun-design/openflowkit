@@ -9,9 +9,10 @@ const parentOf = (page: import('@playwright/test').Page, id: string) => page.eva
 
 test('quick-create from a shape in a template frame lands beside it, and a drag lands where released @gate', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  // The starter templates live on home (the empty canvas no longer lists them).
+  await page.goto('/#/home');
+  await page.getByRole('list', { name: 'Templates' }).getByRole('button', { name: 'User authentication' }).click();
   await page.waitForSelector('[data-testid="v2-canvas"]');
-  await page.getByTestId('v2-welcome').getByRole('button', { name: 'User authentication' }).click();
   await expect.poll(async () => (await state(page)).nodes).toContain('login');
   await page.keyboard.press('Escape');
   await page.mouse.click(1300, 860);

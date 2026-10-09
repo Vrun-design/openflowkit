@@ -41,6 +41,8 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly onMapPath?: (id: string) => void;
   /** Canvas | Map; Map draws nothing by hand, so the creation toolbar steps aside. */
   readonly mapMode?: { readonly mode: 'canvas' | 'map'; readonly onChange: (mode: 'canvas' | 'map') => void };
+  /** Map with no model yet: nothing to protect, so the Create tools stay (the welcome points at them). */
+  readonly mapStart?: boolean;
   /** Map mode's depth and expand controls; present only while the map is on screen. */
   readonly mapToolbar?: V2MapToolbarProps;
   readonly onToolChange: (tool: V2Tool) => void;
@@ -64,6 +66,7 @@ interface V2ChromeProps extends V2SettingsProps {
   readonly onToggleTree: () => void;
   /** Export… opens the shared panel; a document panel closes it again. */
   readonly onOpenExport: (anchor: HTMLElement | null) => void;
+  readonly onOpenShare?: (anchor: HTMLElement | null) => void;
   readonly onDismissExport: () => void;
   readonly onEditShared?: () => Promise<void>;
 }
@@ -92,10 +95,11 @@ export function V2Chrome(props: V2ChromeProps): React.JSX.Element {
         {...(props.mapPath ? { mapPath: props.mapPath } : {})}
         {...(props.onMapPath ? { onMapPath: props.onMapPath } : {})}
         onOpenExport={props.onOpenExport}
+        {...(props.onOpenShare ? { onOpenShare: props.onOpenShare } : {})}
         onDismissExport={props.onDismissExport}
         {...(props.onEditShared ? { onEditShared: props.onEditShared } : {})}
       />
-      {props.readOnly || props.canvasUnavailable || props.mapMode?.mode === 'map' ? null : (
+      {props.readOnly || props.canvasUnavailable || (props.mapMode?.mode === 'map' && !props.mapStart) ? null : (
         <V2CreationToolbar tool={props.tool} onToolChange={props.onToolChange}
           toolConfig={props.toolConfig} onPickShape={props.onPickShape}
           onPickConnector={props.onPickConnector}

@@ -31,6 +31,10 @@ export interface V2ExportMenuProps {
   readonly selectedConnectorIds?: readonly string[];
   /** The scope this entry point implies: Page from the document bar, Selection from an element. */
   readonly initialScope?: V2ExportScope;
+  /** Share from the top-right bar shows only the link; every other door shows the whole panel. */
+  readonly section?: 'export' | 'share';
+  /** The bar at the right edge opens its panel toward the inside. */
+  readonly placement?: 'bottom-start' | 'bottom-end';
   readonly onClose: () => void;
   readonly onToast: (title: string, tone: 'info' | 'success' | 'danger', extra?: Pick<ToastItem, 'description' | 'action' | 'persistent'>) => void;
   /** Animation is a docked panel, not a popover: too much to read in a flyout. */
@@ -70,7 +74,7 @@ function mermaidFrame(page: SceneDocumentV1['pages'][number] | undefined, select
 
 export function V2ExportMenu({
   open, anchorRef, document, sourceDocument, pageId, canShare = false, selectedNodeIds, selectedConnectorIds = [], initialScope = 'page',
-  onClose, onToast, onOpenAnimation,
+  section = 'export', placement = 'bottom-start', onClose, onToast, onOpenAnimation,
 }: V2ExportMenuProps) {
   const [format, setFormat] = useState<V2ExportFormat>('png');
   const [scope, setScope] = useState<V2ExportScope>(initialScope);
@@ -201,10 +205,14 @@ export function V2ExportMenu({
     }
   }
 
+  const sharingOnly = section === 'share' && canShare;
+  const title = sharingOnly ? 'Share' : 'Export';
+
   return (
-    <Popover role="dialog" aria-label="Export" open={open} anchorRef={anchorRef} onClose={onClose} placement="bottom-start">
-      <PopoverHeader title="Export" close={<Button variant="quiet" onClick={onClose}>Done</Button>} />
+    <Popover role="dialog" aria-label={title} open={open} anchorRef={anchorRef} onClose={onClose} placement={placement}>
+      <PopoverHeader title={title} close={<Button variant="quiet" onClick={onClose}>Done</Button>} />
       <div className="ofk-v2-properties">
+        {sharingOnly ? null : <>
         <Button className="ofk-v2-export-animate" variant="quiet"
           onClick={() => { onClose(); onOpenAnimation(); }}>
           <Icon icon={IconMovie} /> Animate this page…
@@ -252,6 +260,7 @@ export function V2ExportMenu({
           </Tooltip>
         </div>
         <p className="ofk-caption">{caption}</p>
+        </>}
         {canShare ? (
           <>
             <div className="ofk-v2-export-actions">

@@ -91,18 +91,6 @@ test('C4 starter, keyboard inspection, focused camera and visual flow authoring 
   await expect(page.getByRole('button', { name: /^Track order/ })).toHaveCount(0);
 });
 
-test('phone welcome exposes system map creation and hides keyboard hints', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
-  await page.waitForSelector('[data-testid="v2-canvas"]');
-  await expect(page.locator('.ofk-v2-welcome-keys')).toBeHidden();
-  const starter = page.getByRole('button', { name: 'System map', exact: true });
-  await expect(starter).toBeVisible();
-  const box = (await starter.boundingBox())!;
-  expect(box.x).toBeGreaterThanOrEqual(0);
-  expect(box.x + box.width).toBeLessThanOrEqual(390);
-});
-
 test('Generate from the untouched starter draft keeps a view made in the model panel @gate', async ({ page }) => {
   test.setTimeout(60_000);
   await page.setViewportSize({ width: 1440, height: 1000 });

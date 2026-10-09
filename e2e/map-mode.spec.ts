@@ -270,10 +270,13 @@ test('a click on an arrow lists the relations behind it in the Model panel @gate
   await expect(page.getByText('shops · HTTPS', { exact: true })).toBeVisible();
 });
 
-test('a plain diagram has no Canvas | Map switch @gate', async ({ page }) => {
+test('a plain diagram has the switch too; Map there is the start screen, and M leaves it @gate', async ({ page }) => {
   await openCanvas(page);
-  await expect(page.getByRole('group', { name: 'View mode' })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'View mode' })).toBeVisible();
   await page.keyboard.press('m');
+  await expect(page.getByTestId('v2-map-start')).toBeVisible();
+  await page.keyboard.press('m');
+  await expect(page.getByTestId('v2-map-start')).toHaveCount(0);
   expect((await mapState(page)).mode).toBe('canvas');
 });
 

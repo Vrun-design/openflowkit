@@ -5,6 +5,7 @@ import {
   IconSitemap,
   IconSparkles,
 } from '@tabler/icons-react';
+import type { ReactNode } from 'react';
 import {
   Button,
   FloatingRegion,
@@ -15,7 +16,6 @@ import {
   Toolbar,
   Tooltip,
 } from '../design-system';
-import { STARTER_TEMPLATES, type StarterTemplate } from '../../../agent/starterTemplates';
 import { shortcutGroups } from './v2Shortcuts';
 
 export type V2WorkspaceMode = 'assistant' | 'code' | 'model' | 'agent' | 'inspect';
@@ -25,6 +25,32 @@ const MODES = [
   { id: 'code', label: 'Diagram as code', icon: IconCode },
   { id: 'agent', label: 'Connect agent', icon: IconPlugConnected },
 ] as const;
+
+/** The document bar's pair at the right edge: the same top line, the workspace rail hangs below it. */
+export function V2ShareBar({ canShare, shareOpen, exportOpen, onShare, onExport }: {
+  canShare: boolean;
+  shareOpen: boolean;
+  exportOpen: boolean;
+  onShare: (anchor: HTMLElement) => void;
+  onExport: (anchor: HTMLElement) => void;
+}) {
+  return (
+    <FloatingRegion slot="top-end" className="ofk-v2-share-bar">
+      <Toolbar label="Share and export">
+        {canShare ? (
+          <Button variant="quiet" aria-haspopup="dialog" aria-expanded={shareOpen}
+            onClick={(event) => onShare(event.currentTarget)}>
+            Share
+          </Button>
+        ) : null}
+        <Button variant="primary" aria-haspopup="dialog" aria-expanded={exportOpen}
+          onClick={(event) => onExport(event.currentTarget)}>
+          Export
+        </Button>
+      </Toolbar>
+    </FloatingRegion>
+  );
+}
 
 export function V2WorkspaceRail({
   mode,
@@ -73,13 +99,15 @@ export function V2WorkspaceRail({
   );
 }
 
-export function V2CanvasWelcome({ onOpen, onTemplate }: {
-  onOpen: (mode: V2WorkspaceMode) => void;
-  /** Draws a starter diagram: the first minute needs no API key. */
-  onTemplate: (template: StarterTemplate) => void;
+/** The centred welcome Canvas and Map share, so switching between them changes only the words and buttons: logo, title, one line, a row of actions, and the arrows pointing at the chrome. */
+export function V2Welcome({ testId, title, body, actions }: {
+  testId: string;
+  title: string;
+  body: string;
+  actions: ReactNode;
 }) {
   return (
-    <div className="ofk-v2-welcome" data-testid="v2-welcome">
+    <div className="ofk-v2-welcome" data-testid={testId}>
       <div className="ofk-v2-guide ofk-v2-guide-tools" aria-hidden="true">
         <svg viewBox="0 0 110 70"><path d="M103 9 C76 11 47 29 9 59 M11 44 Q7 54 9 60 Q20 60 29 55" /></svg><span>Start with a shape</span>
       </div>
@@ -88,33 +116,9 @@ export function V2CanvasWelcome({ onOpen, onTemplate }: {
       </div>
       <div className="ofk-v2-welcome-center">
         <img src="/Logo_openflowkit.svg" alt="OpenFlowKit" width="48" height="48" />
-        <h1>Make room for your next idea.</h1>
-        <p>Double-click anywhere to add text, or start with a shape.</p>
-        <div className="ofk-v2-welcome-keys">
-          <span>
-            <Kbd keys="R" /> rectangle
-          </span>
-          <span>
-            <Kbd keys="O" /> ellipse
-          </span>
-          <span>
-            <Kbd keys="A" /> connector
-          </span>
-        </div>
-        <div className="ofk-v2-welcome-actions">
-          {MODES.filter(({ id }) => id !== 'model').map(({ id, label, icon }) => (
-            <Button key={id} variant="secondary" onClick={() => onOpen(id)}>
-              <Icon icon={icon} />
-              {label}
-            </Button>
-          ))}
-        </div>
-        <div className="ofk-v2-welcome-templates" role="group" aria-label="Start from a template">
-          <span>Or start from</span>
-          {STARTER_TEMPLATES.map((template) => (
-            <Button key={template.name} variant="quiet" title={template.summary} onClick={() => onTemplate(template)}>{template.title}</Button>
-          ))}
-        </div>
+        <h1>{title}</h1>
+        <p>{body}</p>
+        <div className="ofk-v2-welcome-actions">{actions}</div>
       </div>
       <div className="ofk-v2-guide ofk-v2-guide-view" aria-hidden="true">
         <svg viewBox="0 0 110 100"><path d="M102 9 C58 12 25 43 17 89 M8 74 Q12 86 17 91 Q25 85 31 76" /></svg>
@@ -122,6 +126,22 @@ export function V2CanvasWelcome({ onOpen, onTemplate }: {
       </div>
       <div className="ofk-v2-guide ofk-v2-guide-help" aria-hidden="true"><span>Keyboard shortcuts</span><svg viewBox="0 0 110 100"><path d="M8 9 C53 8 84 42 94 89 M82 78 Q90 87 95 91 Q101 82 102 73" /></svg></div>
     </div>
+  );
+}
+
+export function V2CanvasWelcome({ onOpen }: { onOpen: (mode: V2WorkspaceMode) => void }) {
+  return (
+    <V2Welcome
+      testId="v2-welcome"
+      title="Make room for your next idea."
+      body="Double-click anywhere to add text, or start with a shape."
+      actions={MODES.filter(({ id }) => id !== 'model').map(({ id, label, icon }) => (
+        <Button key={id} variant="secondary" onClick={() => onOpen(id)}>
+          <Icon icon={icon} />
+          {label}
+        </Button>
+      ))}
+    />
   );
 }
 

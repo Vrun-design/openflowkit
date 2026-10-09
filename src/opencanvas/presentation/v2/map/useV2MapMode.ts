@@ -37,6 +37,8 @@ interface Options {
   readonly documentId?: string;
   /** A repo document: the map of this model (null while it loads) in place of a C4 page's. Opens in Map; Canvas stays one switch away. */
   readonly repo?: { readonly model: MapModel | null } | null;
+  /** A page without a model still has the switch (an editable document with no model anywhere): Map then shows its start screen. */
+  readonly startable?: boolean;
   readonly palette: DiagramPaletteName;
   readonly autoIcons: boolean;
   readonly hostRef: RefObject<PixiRendererHost | null>;
@@ -88,20 +90,29 @@ function useStable<T>(value: T): T {
  * written; the scene is a ScenePage handed to the canvas in place of the page.
  */
 export function useV2MapMode(options: Options) {
-  const { page, documentId, repo = null, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify, onPin, panelsKey = '', selectedIds = () => [], glide = updateCamera } = options;
+  const { page, documentId, repo = null, startable = false, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify, onPin, panelsKey = '', selectedIds = () => [], glide = updateCamera } = options;
   // Cheap: only whether the page carries a model. The model itself is read only while the map is on.
   const isRepo = repo !== null;
-  const available = useMemo(() => isRepo || (page ? archFrameOf(page) !== null : false), [isRepo, page]);
+  const hasModel = useMemo(() => isRepo || (page ? archFrameOf(page) !== null : false), [isRepo, page]);
+  const available = hasModel || startable;
   const [mode, setModeState] = useState<V2MapModeName>('canvas');
   // Once per document: the reader's last choice (this browser), else a repo document opens in Map and a model page in Canvas.
   const [restored, setRestored] = useState<string | null>(null);
   // Each time the map becomes available again (back on the repo page from a pinned one) the choice applies again.
-  if (!available && restored !== null) setRestored(null);
-  if (documentId && available && restored !== documentId) {
+  if (!hasModel && restored !== null) setRestored(null);
+  // Another document (Open file…, a link) never inherits the last one's mode: its own saved choice, else Canvas.
+  const [seenDocument, setSeenDocument] = useState(documentId);
+  if (documentId !== seenDocument) {
+    setSeenDocument(documentId);
+    setModeState(documentId && hasModel && (savedMode(documentId) ?? (isRepo ? 'map' : 'canvas')) === 'map' ? 'map' : 'canvas');
+  }
+  if (documentId && hasModel && restored !== documentId) {
     setRestored(documentId);
     if ((savedMode(documentId) ?? (isRepo ? 'map' : 'canvas')) === 'map') setModeState('map');
   }
   const active = mode === 'map' && available;
+  // Map on a document with no model: the start screen, not a map.
+  const start = active && !hasModel;
   const arch = useStable(useMemo(() => (active && page && !isRepo ? archModelOfPage(page) : null), [active, page, isRepo]));
   const repoModel = repo?.model ?? null;
   // What the map is of: the C4 model, or the repo's.
@@ -156,7 +167,7 @@ export function useV2MapMode(options: Options) {
     setHeld({ key: lineageKey, set });
     if (documentId && pageId) saveOpen(documentId, pageId, set);
   }, [lineageKey, documentId, pageId]);
-  const error = built && 'error' in built ? built.error ?? null : active && !subject && !repo ? 'This page has no readable model.' : drawError;
+  const error = built && 'error' in built ? built.error ?? null : active && !start && !subject && !repo ? 'This page has no readable model.' : drawError;
   const empty = model !== null && model.nodes[model.root].children.length === 0;
 
   const layers = useMapLayers(model, open, isRepo, lineageKey);
@@ -263,8 +274,9 @@ export function useV2MapMode(options: Options) {
     // "Show on canvas": the element to select once back, in place of whatever Map had selected.
     if (next === 'canvas' && showElement) intent.current = showElement;
     if (!(element && enterMapAt(element, { reveal: true }))) setMode(next);
-    if (documentId) saveMode(documentId, next);
-  }, [mode, page, onlySelected, enterMapAt, setMode, documentId]);
+    // Map without a model is not a choice worth keeping: reopening lands on the drawing.
+    if (documentId && hasModel) saveMode(documentId, next);
+  }, [mode, page, onlySelected, enterMapAt, setMode, documentId, hasModel]);
   /** M: true when the page has a map to switch to or from, so the key is spent. */
   const toggle = useCallback((): boolean => {
     if (!available) return false;
@@ -307,6 +319,17 @@ export function useV2MapMode(options: Options) {
   const findSource = useMemo(() => (active ? { matches: findMatches, reveal, cancel: cancelReveal } : undefined), [active, findMatches, reveal, cancelReveal]);
   /** True when the editor's own shortcuts must not see this key. */
   const onKey = useCallback((event: KeyboardEvent<HTMLElement>): boolean => {
+    if (start && !event.defaultPrevented) {
+      // Escape leaves (a panel or tool in the way goes first); a control keeps the keys that press it; the rest is Map's own filter.
+      // Typing in a field: Escape leaves the field, a second one leaves Map.
+      if (event.key === 'Escape' && isEditableTarget(event.target)) { (event.target as HTMLElement).blur(); event.preventDefault(); return true; }
+      if (event.key === 'Escape') { if (!cancelTransient()) choose('canvas'); event.preventDefault(); return true; }
+      if (isEditableTarget(event.target)) return false;
+      if (event.target instanceof HTMLElement && event.target.closest('button') && [' ', 'Enter'].includes(event.key)) return false;
+      // Find has nothing to search here (the canvas behind is hidden), and the browser's own must not open instead.
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); return true; }
+      return !mapKeyAllowed(event);
+    }
     if (!active || !model || event.defaultPrevented || isEditableTarget(event.target)) return false;
     // A focused control keeps the keys that press it.
     if (event.target instanceof HTMLElement && event.target.closest('button, [role="slider"], [role="menu"], [role="listbox"]')
@@ -332,7 +355,7 @@ export function useV2MapMode(options: Options) {
       return true;
     }
     return !mapKeyAllowed(event);
-  }, [active, model, open, primaryId, flip, select, cancelTransient, arrow, shown, onPin]);
+  }, [active, start, choose, model, open, primaryId, flip, select, cancelTransient, arrow, shown, onPin]);
 
   const path = useMemo(() => (active && model ? mapPathOf(model, selectedNodeId) : []), [active, model, selectedNodeId]);
 
@@ -359,7 +382,7 @@ export function useV2MapMode(options: Options) {
     return { ...stats, running };
   }, [player, hostRef]);
 
-  return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, choose, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, path, findSource, enterMapAt,
+  return { mode: active ? 'map' as const : 'canvas' as const, available, active, start, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, choose, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, path, findSource, enterMapAt,
     /** The aggregated edge a repo-map connector stands for (its evidence), or undefined. */
     edgeOf, edgesAt,
     toolbar: { depth: controls.depth, canExpand: controls.canExpand, onDepth: controls.setDepth, onExpandOne: controls.expandOne, onCollapseAll: controls.collapse,

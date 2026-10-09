@@ -212,9 +212,11 @@
 .ofk-v2-canvas:has(.ofk-v2-laser) { cursor: crosshair; }
 .ofk-v2-flyout-section + .ofk-v2-flyout-section { margin-top: 6px; }
 .ofk-v2-flyout-heading { padding: 6px 6px 4px; font-size: 12px; font-weight: 500; color: var(--ofk-muted); }
-.ofk-v2 .ofk-v2-workspace-rail { top: 16px; }
+.ofk-v2 .ofk-v2-workspace-rail { top: 80px; }
 .ofk-v2-workspace-rail .ofk-toolbar { padding: 5px; gap: 4px; }
+.ofk-v2-share-bar .ofk-toolbar { gap: 2px; padding: 5px; }
 .ofk-v2[data-workspace-open='true'] .ofk-v2-workspace-rail,
+.ofk-v2[data-workspace-open='true'] .ofk-v2-share-bar,
 .ofk-v2[data-workspace-open='true'] .ofk-v2-help { right: calc(var(--v2-panel-width) + 16px); }
 .ofk-v2-divider { height: 20px; width: 1px; margin: 0 4px; background: var(--ofk-border); flex: none; }
 .ofk-v2 .ofk-floating-region[data-slot='bottom-start'] .ofk-toolbar { gap: 0; padding: 5px; }
@@ -222,27 +224,18 @@
 .ofk-v2 .ofk-agent-panel { top: 0; bottom: 0; right: 0; border-radius: 0; border-width: 0 0 0 1px; box-shadow: none; --ofk-layout-panelWidth: var(--v2-panel-width); --ofk-layout-panelMaxWidth: var(--v2-panel-width); }
 .ofk-v2 .ofk-v2-layers-panel { left: 0; top: 0; bottom: 0; border-radius: 0; border-width: 0 1px 0 0; box-shadow: none; --ofk-layout-panelWidth: var(--v2-left-width); --ofk-layout-panelMaxWidth: var(--v2-left-width); }
 .ofk-v2-welcome { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
-.ofk-v2-welcome-center { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); width: min(600px, calc(100% - 180px)); text-align: center; }
+.ofk-v2-welcome-center { position: absolute; top: calc(45% - 107px); left: 50%; transform: translateX(-50%); width: min(600px, calc(100% - 180px)); text-align: center; }
 .ofk-v2-welcome-center > img { margin-bottom: 22px; }
 .ofk-v2-welcome h1 { font-size: 28px; letter-spacing: -.8px; line-height: 1.25; font-weight: 500; margin: 0 0 12px; }
 .ofk-v2-welcome p { font-size: 16px; color: var(--ofk-muted); margin: 0; }
-.ofk-v2-welcome-keys { display: flex; justify-content: center; gap: 18px; margin-top: 20px; font-size: 14px; color: var(--ofk-muted); }
-.ofk-v2-welcome-keys > span { display: flex; align-items: center; gap: 6px; }
 .ofk-v2-welcome-actions { display: flex; justify-content: center; gap: 8px; margin-top: 34px; pointer-events: auto; }
 .ofk-v2-welcome-actions .ofk-button { font-size: 14px; min-height: 38px; padding: 0 12px; gap: 8px; }
 /* Templates: label on its own line, then tight chips that wrap as a block. */
-.ofk-v2-welcome-templates { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; max-width: 600px; margin: 22px auto 0; pointer-events: auto; color: var(--ofk-muted); font-size: 12px; }
-.ofk-v2-welcome-templates > span { flex-basis: 100%; margin-bottom: 2px; }
-.ofk-v2-welcome-templates .ofk-button { min-height: 28px; padding: 0 12px; border: 1px solid var(--ofk-border); border-radius: 999px; background: var(--ofk-surface); font-size: 12.5px; transition: transform 120ms ease-out, border-color 120ms ease-out; }
-@media (hover: hover) and (pointer: fine) { .ofk-v2-welcome-templates .ofk-button:hover { border-color: var(--ofk-accent); transform: translateY(-1px); } }
-.ofk-v2-welcome-templates .ofk-button:active { transform: translateY(0); }
-@media (prefers-reduced-motion: reduce) { .ofk-v2-welcome-templates .ofk-button { transition: none; } }
-
-.ofk-v2-guide { position: absolute; color: var(--ofk-muted); font-size: 17px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+@media (hover: hover) and (pointer: fine) { .ofk-v2-guide { position: absolute; color: var(--ofk-muted); font-size: 17px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
 .ofk-v2-guide svg { width: 100px; height: 80px; fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .ofk-v2-guide-tools { top: 150px; left: 82px; align-items: flex-start; }
 .ofk-v2-guide-tools span { margin-top: 0; }
-.ofk-v2-guide-workspace { right: 86px; top: 42px; align-items: flex-end; }
+.ofk-v2-guide-workspace { right: 86px; top: 106px; align-items: flex-end; }
 .ofk-v2-guide-view { left: 26px; bottom: 76px; align-items: flex-start; }
 .ofk-v2-guide-view svg { height: 100px; margin-top: 8px; }
 .ofk-v2-guide-help { right: 28px; bottom: 76px; align-items: flex-start; }
@@ -596,6 +589,8 @@
   .ofk-v2 .ofk-v2-workspace-panel, .ofk-v2 .ofk-agent-panel, .ofk-v2 .ofk-v2-layers-panel { top: 0; bottom: 0; left: 64px; right: 0; width: auto; max-width: none; max-height: none; border-radius: 0; }
   /* The panel covers the canvas here, so a selection toolbar would only sit on top of it. */
   .ofk-v2:has(.ofk-v2-workspace-panel, .ofk-agent-panel, .ofk-v2-layers-panel) [data-context-bar] { display: none; }
+  .ofk-v2 .ofk-v2-workspace-rail { top: 16px; }
+  .ofk-v2 .ofk-v2-share-bar { display: none; }
   .ofk-v2[data-workspace-open='true'] .ofk-v2-workspace-rail { right: 16px; }
   .ofk-v2 .ofk-v2-workspace-rail .ofk-toolbar { flex-direction: row; }
   .ofk-v2[data-workspace-open='true'] .ofk-v2-help { right: 16px; }
@@ -607,7 +602,6 @@
   .ofk-v2-divider { margin: 0 2px; }
   .ofk-v2-welcome-center { left: 54%; width: calc(100% - 150px); }
   .ofk-v2-welcome h1 { font-size: 21px; }
-  .ofk-v2-welcome-keys { display: none; }
   .ofk-v2-welcome-actions { margin-top: 22px; }
   .ofk-v2-welcome-actions .ofk-button { width: 100%; }
 }
@@ -618,14 +612,13 @@
   /* Start under the rail instead of centring behind it; templates scroll as one row. */
   .ofk-v2-welcome-center { top: 136px; transform: translateX(-50%); }
   .ofk-v2-welcome-center > img { width: 36px; height: 36px; margin-bottom: 14px; }
-  .ofk-v2-welcome-templates { flex-wrap: wrap; justify-content: flex-start; gap: 8px; }
-  .ofk-v2-welcome-templates > span { display: none; }
-  .ofk-v2-welcome-templates .ofk-button { flex: none; }
 }
 @media (max-height: 650px) { .ofk-v2-guide { display: none; } .ofk-v2-welcome-center > img { width: 32px; height: 32px; margin-bottom: 12px; } }
 .ofk-v2 .ofk-panel { background: var(--ofk-surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .ofk-v2-document-bar { flex-wrap: nowrap; }
 /* A Model or code panel at this width leaves the bar less room: the path gives way first (it is the long part). */
+/* The document bar and the Share/Export bar cannot both fit beside an open panel here; the menu keeps both actions. */
+@media (max-width: 1100px) { .ofk-v2[data-workspace-open='true'] .ofk-v2-share-bar, .ofk-v2[data-left-open='true'] .ofk-v2-share-bar { display: none; } }
 @media (max-width: 1100px) and (min-width: 721px) { .ofk-v2[data-workspace-open='true'] .ofk-v2-document-bar { max-width: calc(100vw - var(--v2-panel-width) - 96px); } }
 .ofk-v2-document-bar > .ofk-tooltip-anchor { flex: none; white-space: nowrap; }
 /* Nothing before the Canvas | Map switch may resize: the title keeps its width and the path (after the switch) gives way. */
@@ -1251,3 +1244,8 @@
 .ofk-v2-card > .ofk-v2-model-detail > strong { font-size: 18px; font-weight: 600; letter-spacing: -.2px; overflow-wrap: anywhere; }
 .ofk-v2-card .ofk-v2-map-label { margin: 8px 0 0; padding-top: 12px; border-top: 1px solid var(--ofk-border); font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--ofk-muted); }
 .ofk-v2-card .ofk-v2-model-relationships li { padding-block: 4px; }
+
+
+/* Map start's repo popover. */
+.ofk-v2-map-repo { width: 320px; }
+.ofk-v2-map-repo-form { display: grid; gap: var(--ofk-space-md); padding: var(--ofk-space-md); }

@@ -14,6 +14,7 @@ import {
   IconArchive,
   IconLoader2,
   IconLock,
+  IconShare2,
 } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import type { SceneDocumentV1 } from '../../domain/document/types';
@@ -53,6 +54,8 @@ interface V2DocumentBarProps extends V2SettingsProps {
   readonly onRename: (name: string) => void;
   /** Opens the shared export panel, anchored on the canvas-menu button. */
   readonly onOpenExport: (anchor: HTMLElement | null) => void;
+  /** Where sharing is offered; the bar at the right edge hides on a phone, so the menu keeps the way in. */
+  readonly onOpenShare?: (anchor: HTMLElement | null) => void;
   /** A document panel taking the foreground closes an open export panel. */
   readonly onDismissExport: () => void;
   /** A shared link's viewer: saves a local, editable copy and opens it. Throws a readable error on failure. */
@@ -281,6 +284,9 @@ export function V2DocumentBar(props: V2DocumentBarProps): React.JSX.Element {
         <MenuItem icon={<Icon icon={IconPencil} />} disabled={props.readOnly} onSelect={startRename}>Rename diagram</MenuItem>
         <MenuItem icon={<Icon icon={IconSettings} />} onSelect={() => openPanel('settings')}>Settings</MenuItem>
         <MenuItem icon={<Icon icon={IconFileImport} />} onSelect={() => fileRef.current?.click()}>Open file…</MenuItem>
+        {props.onOpenShare ? (
+          <MenuItem icon={<Icon icon={IconShare2} />} onSelect={() => { setPanel(null); props.onOpenShare?.(settingsRef.current); }}>Share…</MenuItem>
+        ) : null}
         <MenuItem icon={<Icon icon={IconDownload} />} onSelect={() => { setPanel(null); props.onOpenExport(settingsRef.current); }}>Export…</MenuItem>
         {/* Only where v1 diagrams were found; the permanent stand-in for Classic (12.7). */}
         {hasV1Diagrams ? (

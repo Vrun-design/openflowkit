@@ -86,6 +86,12 @@ async function pressEvery(page: Page, floor: number, only?: string, mayDisable =
     await target.click();
     for (let i = 0; i < 3 && (await layers.count()); i++) await page.keyboard.press('Escape');
     await expect(layers, `${name}: Escape leaves no layer open`).toHaveCount(0);
+    // Map is a mode switch, not a toggle: on a plain document it is the start screen, and Canvas is the way back.
+    if (name === 'Map') {
+      await expect(page.getByTestId('v2-map-start'), 'Map: start screen').toBeVisible();
+      await button(page, { ...control, name: 'Canvas' }).click();
+      await expect(page.getByTestId('v2-map-start')).toHaveCount(0);
+    }
     // Toggles (panels, modes) go back to how they were, so the next button is reachable.
     if (pressed !== null && (await target.getAttribute('aria-pressed')) !== pressed) await target.click();
     await page.keyboard.press('v');
