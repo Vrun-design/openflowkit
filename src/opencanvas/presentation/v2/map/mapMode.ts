@@ -137,6 +137,19 @@ export function clearance(host: { getViewportSize(): { width: number; height: nu
 }
 
 /**
+ * The camera that puts `box` (scene space) fully inside `free`, panning the least and keeping the zoom; a box larger than
+ * `free` on an axis is aligned to its start there. Null when it already is inside.
+ */
+export function nudgeInto(box: Rect, cam: CanvasCamera, free: FreeArea): CanvasCamera | null {
+  const axis = (at: number, size: number, lo: number, hi: number): number =>
+    size > hi - lo ? lo - at : at < lo ? lo - at : at + size > hi ? hi - at - size : 0;
+  const m = CHROME_GAP * 2;
+  const dx = axis(box.x * cam.zoom + cam.x, box.width * cam.zoom, free.left + m, free.left + free.width - m);
+  const dy = axis(box.y * cam.zoom + cam.y, box.height * cam.zoom, free.top + m, free.top + free.height - m);
+  return Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 ? null : { zoom: cam.zoom, x: cam.x + dx, y: cam.y + dy };
+}
+
+/**
  * The camera a map opens at: everything when that stays readable (READABLE), else the map's top-left corner at READABLE,
  * so the reader starts at a known place. `free` is the canvas the panels and floating chrome leave.
  */

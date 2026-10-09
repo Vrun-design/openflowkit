@@ -50,6 +50,10 @@ describe('V2RepoMapChips', () => {
     expect(screen.getByText('Showing 4 of 90 files')).toBeTruthy();
     expect(screen.getByText('Reading 1 of 4 files…')).toBeTruthy();
   });
+  it('shows no counter before a map is drawn or while the total is unknown (the state screen has its own)', () => {
+    expect(render(<V2RepoMapChips map={{ ...base, progress: { read: 0, total: 40 } }} />).container.textContent).toBe('');
+    expect(render(<V2RepoMapChips map={{ ...base, model: model(4) }} />).container.textContent).toBe('');
+  });
   it('is empty when ready and not sampled', () => {
     expect(render(<V2RepoMapChips map={{ ...base, status: 'ready', model: model(4) }} />).container.textContent).toBe('');
   });

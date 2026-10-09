@@ -22,6 +22,7 @@ import { useMapFocus } from './useMapFocus';
 import { mapFindMatches } from '../../../application/map/mapFind';
 import { savedOpen, saveOpen } from './mapDepth';
 import { useMapControls } from './useMapControls';
+import { useMapClearance } from './useMapClearance';
 import { useMapEntry } from './useMapEntry';
 import { useMapMotion } from './useMapMotion';
 import { useMapLayers } from './useMapLayers';
@@ -58,6 +59,10 @@ interface Options {
   readonly notify: (message: string) => void;
   /** Shift+M in Map: pin the map as a Canvas page (the editor does the commit). */
   readonly onPin?: () => void;
+  /** A right panel covers part of the canvas. */
+  readonly panelOpen?: boolean;
+  /** The editor's camera glide (interruptible; instant under reduced motion). */
+  readonly glide?: (camera: CanvasCamera) => void;
 }
 
 const NONE: ReadonlySet<string> = new Set();
@@ -80,7 +85,7 @@ function useStable<T>(value: T): T {
  * written; the scene is a ScenePage handed to the canvas in place of the page.
  */
 export function useV2MapMode(options: Options) {
-  const { page, documentId, repo = null, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify, onPin } = options;
+  const { page, documentId, repo = null, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify, onPin, panelOpen = false, glide = updateCamera } = options;
   // Cheap: only whether the page carries a model. The model itself is read only while the map is on.
   const isRepo = repo !== null;
   const available = useMemo(() => isRepo || (page ? archFrameOf(page) !== null : false), [isRepo, page]);
@@ -211,6 +216,7 @@ export function useV2MapMode(options: Options) {
 
   const mapPage = active ? sceneFor(scene, subject, EMPTY_MAP, lineageKey) : null;
   const { shown, player } = useMapMotion({ mapPage, emptyPage: EMPTY_MAP, scene, model, hostRef, cameraRef, updateCamera, markShown, focusRef });
+  useMapClearance({ active, selectedId: selectedNodeId, panelOpen, shown, hostRef, cameraRef, glide, busy: () => player.stats().running || seqs.current.shown < seqs.current.asked });
   useMapFocus(hostRef, active && mapPage && mapPage !== EMPTY_MAP ? mapPage : null, selectedNodeId, selectedConnectorId);
 
   useEffect(() => { pendingRef.current = null; }, [active, lineageKey]);

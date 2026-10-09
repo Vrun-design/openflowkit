@@ -64,7 +64,9 @@ export function V2RepoMapState({ source, map }: { readonly source: RepoMapSource
 /** Notes over the drawn map: a sampled big repo, and the reading counter while it fills in. */
 export function V2RepoMapChips({ map, links }: { readonly map: RepoMapState; readonly links?: RepoLinks | null }): React.JSX.Element | null {
   const { sampled, read, total } = map.progress;
-  if (map.status === 'idle' || (!sampled && !links && map.status !== 'loading')) return null;
+  // Before a map is drawn the state screen has its own counter; an unknown total would read "0 of 0".
+  const counting = map.status === 'loading' && (map.model?.stats.files ?? 0) > 0 && total > 0;
+  if (map.status === 'idle' || (!sampled && !links && !counting)) return null;
   return (
     <div className="map-status">
       {sampled ? <div className="map-chip" role="note">{`Showing ${fmt(sampled.read)} of ${fmt(sampled.total)} files`}</div> : null}
@@ -74,7 +76,7 @@ export function V2RepoMapChips({ map, links }: { readonly map: RepoMapState; rea
           <Button variant="quiet" selected={links.all} onClick={links.onToggle}>{links.all ? 'Show fewer' : 'Show all'}</Button>
         </div>
       ) : null}
-      {map.status === 'loading' ? <div className="map-chip" role="status"><Progress label={`Reading ${fmt(read)} of ${fmt(total)} files…`} value={read} max={Math.max(1, total)} /></div> : null}
+      {counting ? <div className="map-chip" role="status"><Progress label={`Reading ${fmt(read)} of ${fmt(total)} files…`} value={read} max={total} /></div> : null}
     </div>
   );
 }

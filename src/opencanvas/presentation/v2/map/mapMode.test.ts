@@ -6,7 +6,7 @@ import type { ScenePage } from '../../../domain/document/types';
 import type { MapModel, MapNode } from '../../../../dsl/map/types';
 import { READABLE } from '../../../application/map/geometry';
 import { MAP_BOX_BUDGET as BOX_BUDGET } from '../../../application/map/mapNavigation';
-import { fitsBudget, freeArea, inView, nearestDrawn, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, startOpen, toggleBox } from './mapMode';
+import { nudgeInto, fitsBudget, freeArea, inView, nearestDrawn, isDoubleClick, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, startOpen, toggleBox } from './mapMode';
 
 const TEXT = `architecture
 model {
@@ -221,5 +221,24 @@ describe('nearestDrawn', () => {
     expect(nearestDrawn(model, 'shop.api.router', new Set(['shop']))).toBe('shop');
     expect(nearestDrawn(model, 'shop.api.router', new Set())).toBeNull();
     expect(nearestDrawn(model, 'shop', new Set())).toBeNull();
+  });
+});
+
+describe('nudgeInto', () => {
+  const free = { left: 0, top: 50, width: 700, height: 600 };
+  const cam = { zoom: 1, x: 0, y: 0 };
+  it('is null while the box is inside the free area with its margin', () => {
+    expect(nudgeInto({ x: 100, y: 100, width: 100, height: 100 }, cam, free)).toBeNull();
+  });
+  it('pans the least it takes and keeps the zoom', () => {
+    const out = nudgeInto({ x: 650, y: 100, width: 100, height: 100 }, { zoom: 2, x: -500, y: 0 }, free)!;
+    expect(out.zoom).toBe(2);
+    expect(out.y).toBe(0);
+    // 650*2-500 = 800 start, 1000 end: moved left until the end is 16px inside the 700 edge.
+    expect(out.x).toBe(-500 - (1000 - (700 - 16)));
+  });
+  it('aligns the top-left of a box larger than the free area', () => {
+    const out = nudgeInto({ x: 300, y: 400, width: 2000, height: 2000 }, cam, free)!;
+    expect(out).toEqual({ zoom: 1, x: 16 - 300, y: 66 - 400 });
   });
 });

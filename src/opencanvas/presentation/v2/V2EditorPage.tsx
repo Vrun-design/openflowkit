@@ -224,6 +224,8 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const pinRef = useRef<() => void>(() => undefined);
   const map = useV2MapMode({
     onPin: () => pinRef.current(),
+    panelOpen: panels.workspace !== null || panels.shortcutsOpen,
+    glide: camera.animateTo,
     page, documentId: session.document?.id, repo: repo.source ? { model: repo.state.model } : null, palette: preferences.diagramPalette, autoIcons: preferences.autoIcons, hostRef,
     cameraRef: camera.cameraRef, updateCamera: camera.updateCamera, fitView: camera.fitView, onToolChange: setTool,
     primaryId: () => selectionRef.current.primaryNodeId,
