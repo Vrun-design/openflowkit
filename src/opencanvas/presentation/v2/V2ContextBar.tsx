@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { ScenePage } from '../../domain/document/types';
+import type { IconChoice } from '../../domain/nodes/iconNode';
 import type { JsonObject } from '../../domain/document/json';
 import { V2NodeStylePanels } from './V2NodeStyle';
 import { V2ArrangeControls } from './V2ArrangeControls';
@@ -19,6 +20,7 @@ interface V2ContextBarProps {
   /** Sticky defaults: the last committed style patch seeds the next created item. */
   readonly onNodeStyleCommitted: (patch: JsonObject) => void;
   readonly onRemoveIcons: () => void;
+  readonly onSetIcon: (icon: IconChoice) => void;
   readonly onConnectorStyleCommitted: (patch: ConnectorStylePatch) => void;
   readonly style: React.CSSProperties;
   readonly onOpenMenu: (x: number, y: number) => void;
@@ -143,7 +145,7 @@ export function V2ContextBar(props: V2ContextBarProps): React.JSX.Element {
       <ContextGroup label="Appearance">
         <V2NodeStylePanels key={props.nodeIds.join(':')} page={props.page} nodeIds={props.nodeIds}
           commit={props.commit} onPreview={props.onStylePreview} onCommitted={props.onNodeStyleCommitted}
-          onRemoveIcons={props.onRemoveIcons} />
+          onRemoveIcons={props.onRemoveIcons} onSetIcon={props.onSetIcon} />
       </ContextGroup>
       {props.onOpenChartData ? (
         <ContextGroup label="Data">

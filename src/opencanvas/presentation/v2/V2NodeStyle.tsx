@@ -10,7 +10,7 @@ import type { SceneNode, ScenePage } from '../../domain/document/types';
 import type { JsonObject } from '../../domain/document/json';
 import type { DocumentCommand } from '../../domain/commands/types';
 import { buildStyleNodesCommand } from '../../domain/commands/styleNodes';
-import { buildSetIconCommand } from '../../domain/commands/iconCommands';
+import type { IconChoice } from '../../domain/nodes/iconNode';
 import { hasIcon } from '../../application/dsl/iconCommands';
 import { buildSetInkCommand } from '../../domain/commands/inkCommands';
 import { buildSetChartKindCommand } from '../../domain/commands/chartCommands';
@@ -60,6 +60,7 @@ interface NodeStylePanelsProps {
   readonly onCommitted: (patch: JsonObject) => void;
   /** Takes icons off the selection (model elements included). */
   readonly onRemoveIcons: () => void;
+  readonly onSetIcon: (icon: IconChoice) => void;
 }
 
 type Panel = 'icon' | 'fill' | 'outline' | 'text' | 'ink' | 'chart' | 'widget';
@@ -76,7 +77,7 @@ function inkOptions(): { id: string; label: string; color: string }[] {
   return INK_PRESETS.map(({ key, hex }) => ({ id: hex, label: PALETTE_LABELS[key], color: hex }));
 }
 
-export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitted, onRemoveIcons }: NodeStylePanelsProps): React.JSX.Element | null {
+export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitted, onRemoveIcons, onSetIcon }: NodeStylePanelsProps): React.JSX.Element | null {
   const [open, setOpen] = useState<Panel | null>(null);
   const nodes = page.nodes.filter((node) => nodeIds.includes(node.id));
   const { draft, preview, apply, clear } = useStyleDraft<JsonObject>(onPreview, (patch) => {
@@ -155,11 +156,7 @@ export function V2NodeStylePanels({ page, nodeIds, commit, onPreview, onCommitte
           preview={selectedIcon ? <IconSwatch packId={selectedIcon.packId} shapeId={selectedIcon.shapeId} /> : <Icon icon={IconMoodSmile} />}>
           <V2IconPicker selected={selectedIcon} onClose={close}
             {...(nodes.some(hasIcon) ? { onRemove: () => { onRemoveIcons(); close(); } } : {})}
-            onPick={(icon) => {
-            const command = buildSetIconCommand(page, nodeIds, icon);
-            if (command) commit(command);
-            close();
-          }} />
+            onPick={(icon) => { onSetIcon(icon); close(); }} />
         </StyleButton>
       ) : null}
       {isChart ? (

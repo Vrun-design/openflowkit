@@ -17,7 +17,7 @@ import { isEditableTarget } from '../pointerOperations';
 import { measure } from './layout';
 import { mapPathOf } from './mapPath';
 import {
-  BUDGET_NOTE, clearance, fitsBudget, isDoubleClick, isEditKey, nudgeInto, mapKeyAllowed, parentToClose, prune, sceneFor, startOpen, toggleBox, type TaggedScene,
+  BUDGET_NOTE, clearance, fitsBudget, isDoubleClick, isEditKey, mapKeyAllowed, panToUncover, parentToClose, prune, sceneFor, startOpen, toggleBox, type TaggedScene,
 } from './mapMode';
 import { useMapFocus } from './useMapFocus';
 import { mapFindMatches } from '../../../application/map/mapFind';
@@ -250,7 +250,7 @@ export function useV2MapMode(options: Options) {
     const nodeId = (places.find((node) => onScreen(node.id)) ?? places[0]!).id;
     select(nodeId);
     const bounds = host.getContentBounds([nodeId]);
-    const pan = restored && bounds ? nudgeInto(bounds, cameraRef.current, clearance(host)) : null;
+    const pan = restored && bounds ? panToUncover(bounds, cameraRef.current, clearance(host)) : null;
     if (pan) glide(pan);
   }, [active, page, updateCamera, fitView, clearSelection, select, hostRef, cameraRef, glide]);
 

@@ -9,7 +9,7 @@ import { diagramPalette, paletteResolver } from '../../domain/nodes/nodePalette'
 import { frameScene } from '../../../dsl/frameScene';
 import { dslFrameRaw, dslNodeMeta } from '../../../dsl/sceneMeta';
 import { measureNodeSize } from '../../../dsl/sizing';
-import { plainElementNode } from '../../../dsl/families/architecture/scene';
+import { elementNode, plainElementNode } from '../../../dsl/families/architecture/scene';
 import type { ArchElement } from '../../../dsl/model/types';
 import { inferIcon } from '../../../dsl/autoIcon';
 import { canonicalShapeWord, nodeAppearance, SHAPE_WORDS } from '../../../dsl/vocabulary';
@@ -83,6 +83,17 @@ export function withoutElementIcon(node: SceneNode, element: ArchElement): Scene
 }
 
 export type IconResolver = (id: string) => { packId: string; shapeId: string } | null;
+
+/**
+ * A C4 placement wearing its element's icon: the card a compile draws for it, centred where the node was.
+ * The node as it was when the icon does not resolve (a compile would draw it plain too).
+ */
+export function withElementIcon(node: SceneNode, element: ArchElement, resolveIcon: IconResolver): SceneNode {
+  const swatch = paletteResolver(diagramPalette(record(record(node.metadata.dsl).appearance).palette));
+  const card = elementNode(element, node.parentId, node.zIndex, { origin: { x: 0, y: 0 }, swatch, resolveIcon });
+  if (card.kind !== 'architecture') return node;
+  return { ...node, kind: card.kind, size: card.size, transform: centred(node, card.size), content: card.content, appearance: card.appearance };
+}
 
 /**
  * A renamed node keeps its inferred icon honest: the new label's icon, or the

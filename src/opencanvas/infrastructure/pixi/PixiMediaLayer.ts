@@ -23,6 +23,27 @@ export function pixiAssetUrl(url: string): string {
   return url.startsWith('data:') ? url.replace(/[{}]/g, (brace) => encodeURIComponent(brace)) : url;
 }
 
+/** SVGs rasterize at their own size (Azure's are 18 px): an icon is drawn at least this big on its long side, so a card stays sharp zoomed in on a 2× screen. */
+const SVG_RASTER_PX = 256;
+
+export const isSvgUrl = (url: string): boolean => url.startsWith('data:image/svg+xml') || /\.svg(?:[?#]|$)/i.test(url);
+
+/** The raster resolution that takes a `width` × `height` SVG to SVG_RASTER_PX on its long side; never below 1. */
+export const svgRasterResolution = (width: number, height: number): number =>
+  Math.max(1, Math.ceil(SVG_RASTER_PX / Math.max(width, height, 1)));
+
+async function textureFor(url: string): Promise<Texture> {
+  const src = pixiAssetUrl(url);
+  if (!isSvgUrl(url)) return Assets.load<Texture>(src);
+  const image = new Image();
+  image.src = url;
+  // One the browser cannot measure up front loads as before, at its own size.
+  const measured = typeof image.decode === 'function' && await image.decode().then(() => true, () => false);
+  return measured
+    ? Assets.load<Texture>({ src, data: { resolution: svgRasterResolution(image.naturalWidth, image.naturalHeight) } })
+    : Assets.load<Texture>(src);
+}
+
 export class PixiMediaLayer {
   readonly container = new Container();
   private generation = 0;
@@ -50,7 +71,7 @@ export class PixiMediaLayer {
     try {
       const url = await request.resolveUrl();
       if (!url || request.generation !== this.generation) return;
-      const texture = await Assets.load<Texture>(pixiAssetUrl(url));
+      const texture = await textureFor(url);
       if (request.cacheKey) loadedTextures.set(request.cacheKey, texture);
       if (request.generation !== this.generation) return;
       this.place(request, texture);

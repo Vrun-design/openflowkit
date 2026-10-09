@@ -158,9 +158,9 @@ test('M returns to Canvas with the original page, the camera and the selection k
   await expect.poll(async () => (await mapState(page)).mode).toBe('canvas');
   expect((await mapState(page)).nodes).toEqual([]);
   expect((await state(page)).selectedNodes).toEqual(['customer']);
-  const back = await rect(page, 'customer');
-  expect(Math.abs(back!.x - canvasBox!.x)).toBeLessThan(2);
-  expect(Math.abs(back!.width - canvasBox!.width)).toBeLessThan(1);
+  // The same camera: a box in full view is not nudged (a pan, if one ran, would show here once it settled).
+  await expect.poll(async () => Math.abs((await rect(page, 'customer'))!.x - canvasBox!.x)).toBeLessThan(2);
+  expect(Math.abs((await rect(page, 'customer'))!.width - canvasBox!.width)).toBeLessThan(1);
 });
 
 test('Escape closes the box around the selection, then clears it @gate', async ({ page }) => {

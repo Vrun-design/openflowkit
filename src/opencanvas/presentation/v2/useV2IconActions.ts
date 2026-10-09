@@ -13,7 +13,10 @@ import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import { buildDslPageCommand } from '../../application/dsl/dslPageCommand';
 import { buildAutoIconsOffCommand, buildRemoveIconCommand, hasAutoIcon, hasIcon } from '../../application/dsl/iconCommands';
-import { buildArchRemoveIconsCommand } from '../../application/dsl/architectureCommands';
+import { buildArchRemoveIconsCommand, buildArchSetIconCommand } from '../../application/dsl/architectureCommands';
+import { buildSetIconCommand } from '../../domain/commands/iconCommands';
+import type { IconChoice } from '../../domain/nodes/iconNode';
+import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 
 export interface V2IconActionsOptions {
   readonly pageRef: RefObject<ScenePage | null>;
@@ -68,6 +71,20 @@ export function useV2IconActions(options: V2IconActionsOptions) {
     announce(nodes.length === 1 ? 'Icon removed.' : `${nodes.length} icons removed.`);
   }, [pageRef, readOnly, commit, announce, document]);
 
+  const setIcons = useCallback((nodeIds: readonly string[], icon: IconChoice) => {
+    const page = pageRef.current;
+    if (!page || readOnly) return;
+    // As with removing: a model placement's icon is its element's, so every view of it changes.
+    const nodes = page.nodes.filter((node) => nodeIds.includes(node.id));
+    const elements = nodes.map(placedElementId).filter((id): id is string => id !== null);
+    const commands = [
+      document && elements.length ? buildArchSetIconCommand(document, elements, `${icon.provider}/${icon.shapeId}`, resolveDslIcon) : null,
+      buildSetIconCommand(page, nodes.filter((node) => !placedElementId(node)).map((node) => node.id), icon),
+    ].filter((command): command is DocumentCommand => command !== null);
+    if (!commands.length) return;
+    commit(commands.length === 1 ? commands[0]! : { kind: 'batch', id: 'set-icon', label: 'Change icon', commands });
+  }, [pageRef, readOnly, commit, document]);
+
   const setDiagramIcons = useCallback(async (frameId: string, on: boolean) => {
     const page = pageRef.current;
     const scene = page ? frameScene(page, frameId) : null;
@@ -88,5 +105,5 @@ export function useV2IconActions(options: V2IconActionsOptions) {
     announce(`Icons from labels on: ${compiled.nodes.filter(hasAutoIcon).length} added.`);
   }, [pageRef, readOnly, commit, announce, compileAt, setModelIcons]);
 
-  return { removeIcons, setDiagramIcons };
+  return { removeIcons, setIcons, setDiagramIcons };
 }

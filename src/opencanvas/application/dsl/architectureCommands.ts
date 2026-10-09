@@ -12,7 +12,7 @@ import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/documen
 import { buildDeleteSelectionCommand } from '../../domain/commands/sceneEdits';
 import { slugifyDslId } from '../../../dsl/text';
 import { buildDslPageCommand } from './dslPageCommand';
-import { hasAutoIcon, hasIcon, refreshAutoIcon, withoutElementIcon, type IconResolver } from './iconCommands';
+import { hasAutoIcon, hasIcon, refreshAutoIcon, withElementIcon, withoutElementIcon, type IconResolver } from './iconCommands';
 
 /**
  * Model-aware commands: one element, many views. Every builder returns ONE
@@ -60,7 +60,10 @@ function pageWithModel(page: ScenePage, model: ArchModel, resolveIcon?: IconReso
     if (!element) return withModelCopy;
     // `icon: none` on the element, or `icons: off` on the model, takes the card back to its shape.
     const iconGone = hasIcon(withModelCopy) && (element.icon === 'none' || (model.icons === 'off' && hasAutoIcon(withModelCopy)));
-    const stripped = iconGone ? withoutElementIcon(withModelCopy, element) : withModelCopy;
+    // An icon the author picked (in the text, or on the canvas for every view) draws the element as its card.
+    const iconPicked = !iconGone && resolveIcon && element.icon && element.icon !== 'none' && withModelCopy.content.icon !== element.icon;
+    const stripped = iconGone ? withoutElementIcon(withModelCopy, element)
+      : iconPicked ? withElementIcon(withModelCopy, element, resolveIcon) : withModelCopy;
     // A rename or a new `tech:` moves an inferred icon with it (needs the host's resolver).
     const drawn = resolveIcon
       ? refreshAutoIcon(stripped, element.name, element.tech, resolveIcon, (plain) => withoutElementIcon(plain, element))
@@ -412,6 +415,20 @@ export function buildArchRemoveIconsCommand(document: SceneDocumentV1, elementId
   };
   const commands = pages.map(({ page }) => setPage(page, pageWithModel(page, next), 'model-remove-icons', 'Remove icon'));
   return commands.length === 1 ? commands[0]! : batch('model-remove-icons', 'Remove icon', commands);
+}
+
+/** Picks `icon` (`aws/compute-lambda`) for these elements, on every view of their model, as one undo step. */
+export function buildArchSetIconCommand(document: SceneDocumentV1, elementIds: readonly string[], icon: string, resolveIcon: IconResolver): DocumentCommand | null {
+  const pages = modelPages(document, elementIds[0] ?? '');
+  const source = pages[0];
+  const ids = new Set(elementIds);
+  if (!source || !source.model.elements.some((element) => ids.has(element.id))) return null;
+  const next: ArchModel = {
+    ...source.model,
+    elements: source.model.elements.map((element) => ids.has(element.id) ? { ...element, icon } : element),
+  };
+  const commands = pages.map(({ page }) => setPage(page, pageWithModel(page, next, resolveIcon), 'model-set-icon', 'Change icon'));
+  return commands.length === 1 ? commands[0]! : batch('model-set-icon', 'Change icon', commands);
 }
 
 /**

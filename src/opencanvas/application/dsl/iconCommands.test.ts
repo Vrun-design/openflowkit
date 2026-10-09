@@ -8,7 +8,7 @@ import { serialize } from '../../../dsl/serialize';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1, SceneNode, ScenePage } from '../../domain/document/types';
 import { createEmptyV2Document, createEmptyV2Page } from '../../presentation/v2/v2Document';
-import { buildArchElementEditCommand, buildArchIconsOffCommand, buildArchRemoveIconsCommand, buildWorkspacePagesCommand } from './architectureCommands';
+import { buildArchElementEditCommand, buildArchIconsOffCommand, buildArchRemoveIconsCommand, buildArchSetIconCommand, buildWorkspacePagesCommand } from './architectureCommands';
 import { buildDslPageCommand } from './dslPageCommand';
 import { buildAutoIconsOffCommand, buildRemoveIconCommand, hasAutoIcon, refreshAutoIcon, withoutIcon } from './iconCommands';
 
@@ -113,6 +113,23 @@ views {
     expect(text(after)).toContain('icon: none');
     const again = await workspaceDocument(text(after));
     expect(placements(again, 'shop.db')[0]!.content.icon).toBeUndefined();
+  });
+
+  it('picking an icon for a plain element draws it as its card in every view, one step, and the text keeps it (owner bug 2026-10-09)', async () => {
+    const document = await workspaceDocument();
+    const plainDoc = applyDocumentCommand(document, buildArchRemoveIconsCommand(document, ['shop.db'])!).document;
+    expect(placements(plainDoc, 'shop.db').every((node) => node.kind === 'process')).toBe(true);
+    const command = buildArchSetIconCommand(plainDoc, ['shop.db'], 'aws/database-rds', resolveIcon)!;
+    expect(command).not.toBeNull();
+    const after = applyDocumentCommand(plainDoc, command).document;
+    const cards = placements(after, 'shop.db');
+    expect(cards.length).toBe(placements(document, 'shop.db').length);
+    expect(cards.every((node) => node.kind === 'architecture' && node.content.icon === 'aws/database-rds')).toBe(true);
+    expect(cards.every((node) => node.content.assetPresentation === 'card' && node.content.archProviderLabel === 'Data store')).toBe(true);
+    expect(text(after)).toContain('aws/database-rds');
+    // A card that already had an icon swaps it, still a card.
+    const swapped = applyDocumentCommand(after, buildArchSetIconCommand(after, ['shop.api'], 'aws/compute-lambda', resolveIcon)!).document;
+    expect(placements(swapped, 'shop.api').every((node) => node.kind === 'architecture' && node.content.icon === 'aws/compute-lambda')).toBe(true);
   });
 
   it('turns the workspace off in every view and keeps authored icons and the palette', async () => {

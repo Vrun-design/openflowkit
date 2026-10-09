@@ -6,7 +6,7 @@ import type { ScenePage } from '../../../domain/document/types';
 import type { MapModel, MapNode } from '../../../../dsl/map/types';
 import { READABLE } from '../../../application/map/geometry';
 import { MAP_BOX_BUDGET as BOX_BUDGET } from '../../../application/map/mapNavigation';
-import { clearOfPanel, nudgeInto, fitsBudget, freeArea, inView, nearestDrawn, isDoubleClick, isEditKey, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, startOpen, toggleBox } from './mapMode';
+import { clearOfPanel, nudgeInto, panToUncover, fitsBudget, freeArea, inView, nearestDrawn, isDoubleClick, isEditKey, landOn, mapCamera, mapKeyAllowed, parentToClose, prune, sceneExtent, sceneFor, startOpen, toggleBox } from './mapMode';
 
 const TEXT = `architecture
 model {
@@ -251,6 +251,17 @@ describe('nudgeInto', () => {
   it('aligns the top-left of a box larger than the free area', () => {
     const out = nudgeInto({ x: 300, y: 400, width: 2000, height: 2000 }, cam, free)!;
     expect(out).toEqual({ zoom: 1, x: 16 - 300, y: 66 - 400 });
+  });
+});
+
+describe('panToUncover', () => {
+  const free = { left: 80, top: 50, width: 700, height: 600 };
+  const cam = { zoom: 1, x: 0, y: 0 };
+  it('keeps the camera for a box in full view, even inside the margin by the chrome (CI flake 10-09)', () => {
+    expect(panToUncover({ x: 84, y: 100, width: 100, height: 100 }, cam, free)).toBeNull();
+  });
+  it('pans a box the chrome covers clear of it, margin included', () => {
+    expect(panToUncover({ x: 60, y: 100, width: 100, height: 100 }, cam, free)).toEqual({ zoom: 1, x: 80 + 16 - 60, y: 0 });
   });
 });
 

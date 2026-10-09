@@ -53,10 +53,8 @@ describe('Pixi freeform node renderer', () => {
     const imageNode = createPixiSpikePage(7).nodes[6];
 
     renderer.drawNode(imageNode, IDENTITY_MATRIX, graphicsStub(), renderer.beginDraw());
-    await Promise.resolve();
-    await Promise.resolve();
 
-    expect(renderer.media.children).toHaveLength(1);
+    await vi.waitFor(() => expect(renderer.media.children).toHaveLength(1));
     expect(onMediaReady).toHaveBeenCalledWith(imageNode.id);
   });
 

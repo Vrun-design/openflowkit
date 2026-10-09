@@ -161,6 +161,10 @@ export function nudgeInto(box: Rect, cam: CanvasCamera, free: FreeArea): CanvasC
   return Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 ? null : { zoom: cam.zoom, x: cam.x + dx, y: cam.y + dy };
 }
 
+/** Back on Canvas: the camera stays unless the selected box is partly under the chrome; then the least pan that clears it. */
+export const panToUncover = (box: Rect, cam: CanvasCamera, free: FreeArea): CanvasCamera | null =>
+  inView(box, cam, free) ? null : nudgeInto(box, cam, free);
+
 /**
  * Canvas mode, a panel just opened (the free area shrank from `before` to `after`): the camera that keeps what you were
  * looking at clear of it, zoom kept. The selection if there is

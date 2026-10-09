@@ -966,6 +966,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               toolConfigRef={toolConfigRef} onOpenChartData={openChartData} zoomInto={map.active ? null : zoomInto}
               {...(map.active ? { onNodeClick: map.clickNode, onNodeDoubleClick: editBox, onNodeDrag: () => explainMapRef.current() } : {})}
               onRemoveIcons={() => iconActions.removeIcons(selectionRef.current.nodeIds)}
+              onSetIcon={(icon) => iconActions.setIcons(selectionRef.current.nodeIds, icon)}
               onOpenCode={code.openNew}
               onInspect={() => openWorkspace('inspect')}
               readOnlyRef={readOnlyRef} gestureApiRef={gestureApiRef}

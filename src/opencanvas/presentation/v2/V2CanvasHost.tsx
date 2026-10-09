@@ -1,5 +1,6 @@
 import { createTransformSnapshot } from '../../domain/transforms/transformSelection';
 import { V2LaserTrail } from './V2LaserTrail';
+import type { IconChoice } from '../../domain/nodes/iconNode';
 import {
   useEffect,
   useLayoutEffect,
@@ -58,6 +59,7 @@ export interface V2EditingState {
 interface V2CanvasHostProps {
   readonly page: ScenePage;
   readonly onRemoveIcons: () => void;
+  readonly onSetIcon: (icon: IconChoice) => void;
   /** WebGL off: Diagram as code still works, so the fallback offers it. */
   readonly onOpenCode: () => void;
   readonly onInspect: () => void;
@@ -574,6 +576,7 @@ export function V2CanvasHost(props: V2CanvasHostProps): React.JSX.Element {
           }}
           style={contextBarStyle(contextAnchor, { width: barWidth, ...edges }, avoid)}
           onRemoveIcons={props.onRemoveIcons}
+          onSetIcon={props.onSetIcon}
           onNodeStyleCommitted={(patch) => {
             const selected = props.selection.nodeIds
               .map((id) => props.page.nodes.find((node) => node.id === id))
