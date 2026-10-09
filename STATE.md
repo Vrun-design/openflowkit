@@ -21,7 +21,8 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   (fromArch, mapScene), M2 a78a5995 (`Canvas | Map`, click opens in place, arrow → relations), M3 2ae7cafa (grow-in-place
   motion), focus + flow; overnight 2026-10-09: two-way arrows + wrap everywhere, toolbar/keys/find, repo maps in the
   editor, drill → Map, Pin as page, panel clearance (51dd85ea…ae1bc1b1). Owner look #3 + open decisions:
-  https://claude.ai/artifact/9gnWpNCFg2i9fFwmKVKKMD. Next: Architecture model panel UI (orange row/links, owner).
+  https://claude.ai/artifact/9gnWpNCFg2i9fFwmKVKKMD. Owner took the defaults: Canvas/Map remembered + pin on repo maps
+  (52fea93a). Next, UI chat: orange primary/focus ring, Architecture model panel (orange row/links), amber lock.
 - Owner: publish MCP 0.2.0 (Action default CLI needs it); deploy `start:http` over HTTPS, then verify hosts (README table).
   Owner action list: `docs/plan/cofounder-action-list.md`. `e2e:headed` 10-09: 261/266; 5 local GPU budgets fail at 23ff9aa4 too (Mac). Open: H5 eval.
 - Headless layout cap: 1000 shapes / 400 connections. Share Worker setup: `worker/README.md`.
