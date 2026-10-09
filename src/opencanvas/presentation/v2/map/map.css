@@ -1,4 +1,4 @@
 /* What the editor's repo-map notes use: the reading counter and the sampled/crowded chips. The standalone viewer has its own sheet in src/viewer/map. */
 .map-status { position: absolute; left: 16px; bottom: 80px; display: grid; gap: 6px; justify-items: start; }
-.map-chip { display: flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--ofk-surface); border: 1px solid var(--ofk-border); border-radius: 8px; font: 400 11px var(--ofk-mono); color: var(--ofk-secondary); }
+.map-chip { display: flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--ofk-surface); border: 1px solid var(--ofk-border); border-radius: 8px; font: 400 11px var(--ofk-mono); color: var(--ofk-muted); }
 .map-chip .ofk-progress { min-width: 220px; }

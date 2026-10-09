@@ -1151,3 +1151,14 @@
   .ofk-v2 .ofk-floating-region[data-slot='bottom-start']:has(.ofk-v2-map-toolbar) { flex-direction: column-reverse; align-items: flex-start; gap: 8px; }
   .ofk-v2 .ofk-floating-region[data-slot='bottom-start'] .ofk-v2-map-toolbar { flex-wrap: wrap; }
 }
+
+/* The repo map's panel: one neutral link style (the C4 panel keeps its own), evidence as a block per line. */
+.ofk-v2-map-panel .ofk-panel-title { flex: 1; }
+.ofk-v2-map-link { border: 0; padding: 0; background: none; color: var(--ofk-text); font: inherit; text-align: start; text-decoration: none; cursor: pointer; overflow-wrap: anywhere; }
+.ofk-v2-map-link:visited { color: var(--ofk-text); }
+.ofk-v2-map-link:hover, .ofk-v2-map-link:focus-visible { text-decoration: underline; }
+.ofk-v2-map-link:focus-visible { outline: 2px solid var(--ofk-focus); outline-offset: 1px; }
+.ofk-v2-map-ev { display: block; padding-block: 3px; min-width: 0; }
+.ofk-v2-map-src { display: block; margin-top: 2px; font: 400 11px var(--ofk-mono); color: var(--ofk-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ofk-v2-map-path { text-decoration: underline; text-decoration-color: var(--ofk-muted); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.ofk-v2-map-label { margin: 12px 0 4px; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--ofk-muted); }

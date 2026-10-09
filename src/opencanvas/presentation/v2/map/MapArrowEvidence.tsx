@@ -22,10 +22,10 @@ function Direction({ from, to, kind, total, evidence, link }: {
         {shown.map((e, i) => {
           const href = link(e.file, e.line);
           const where = `${e.file}:${e.line}`;
-          return <li key={i}>
-            {href ? <a href={href} target="_blank" rel="noopener noreferrer">{where}</a> : <span>{where}</span>}
+          return <li key={i} className="ofk-v2-map-ev">
+            {href ? <a className="ofk-v2-map-link" href={href} target="_blank" rel="noopener noreferrer">{where}</a> : <span>{where}</span>}
             {/* Repo text is untrusted: React text only. */}
-            <code className="ofk-v2-model-hint">{e.text}</code>
+            <code className="ofk-v2-map-src">{e.text}</code>
           </li>;
         })}
       </ul>

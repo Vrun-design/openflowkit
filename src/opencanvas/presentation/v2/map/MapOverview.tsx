@@ -34,8 +34,8 @@ export function MapOverview({ model, arch, onSelect }: MapOverviewData): React.J
       <strong>{boxes === 1 ? '1 box' : `${boxes} boxes`} · {plural(model.links.length, 'connection')}</strong>
       {rows.length > 0 ? <ul className="ofk-v2-model-list" aria-label="Worth a look">
         {rows.map((r) => <li key={`${r.id}:${r.text}`}>
-          <button type="button" className="ofk-v2-model-relation-link" onClick={() => onSelect(r.id)}>{r.text}</button>
-          {r.note ? <span className="ofk-v2-model-hint">{r.note}</span> : null}
+          <button type="button" className="ofk-v2-map-link" onClick={() => onSelect(r.id)}>{r.text}</button>
+          {r.note ? <>{' '}<span className="ofk-v2-model-hint">{r.note}</span></> : null}
         </li>)}
       </ul> : null}
       {flows.length > 0 ? <ul className="ofk-v2-model-list" aria-label="Flows in this map">

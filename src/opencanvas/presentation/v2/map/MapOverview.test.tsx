@@ -41,4 +41,10 @@ describe('MapOverview', () => {
     const { container } = render(<MapOverview model={empty} arch={null} onSelect={vi.fn()} />);
     expect(container.innerHTML).toBe('');
   });
+
+  it('puts a space between an insight and its note', () => {
+    const { container } = render(<MapOverview model={model} arch={null} onSelect={vi.fn()} />);
+    const row = [...container.querySelectorAll('li')].find((li) => li.textContent?.includes('lines'));
+    expect(row?.textContent).toMatch(/largest lines|largest \d[\d,]* lines/);
+  });
 });

@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { AggEdge, MapModel } from '../../../../dsl/map/types';
 
 export interface MapBoxData {
@@ -18,6 +19,7 @@ const KIND = { part: 'Part', folder: 'Folder', file: 'File', group: 'Group', ext
 
 /** A selected repo box: what it is, where it lives on GitHub, what it talks to and what is inside. Repo text is React text only. */
 export function MapBoxPanel({ model, id, edges, pathLink, onSelect, onSelectArrow }: MapBoxData): React.JSX.Element | null {
+  const labelId = useId();
   const node = model.nodes[id];
   if (!node) return null;
   const size = node.kind === 'file' ? plural(node.loc, 'line') : node.files > 0 ? plural(node.files, 'file') : '';
@@ -26,20 +28,22 @@ export function MapBoxPanel({ model, id, edges, pathLink, onSelect, onSelectArro
     <div className="ofk-v2-model-detail" aria-label="Selected box">
       <strong>{node.name}</strong>
       <p className="ofk-v2-model-hint">{KIND[node.kind]}{size ? ` · ${size}` : ''}</p>
-      {node.path ? (pathLink ? <a href={pathLink} target="_blank" rel="noopener noreferrer">{node.path}</a> : <span>{node.path}</span>) : null}
+      {node.path ? (pathLink ? <a className="ofk-v2-map-link ofk-v2-map-path" href={pathLink} target="_blank" rel="noopener noreferrer">{node.path}</a> : <span>{node.path}</span>) : null}
       {node.desc ? <p className="ofk-v2-model-hint">{node.desc}</p> : null}
-      {edges.length > 0 ? <ul className="ofk-v2-model-list" aria-label="Talks to">
+      {edges.length > 0 ? <h3 className="ofk-v2-map-label" id={`${labelId}-talks`}>Talks to</h3> : null}
+      {edges.length > 0 ? <ul className="ofk-v2-model-list" aria-labelledby={`${labelId}-talks`}>
         {edges.map((e) => {
           const out = e.from === id;
           return <li key={e.key}>
-            <button type="button" className="ofk-v2-model-relation-link" onClick={() => onSelectArrow(e.key)}>{out ? '→' : '←'} {name(out ? e.to : e.from)}</button>
+            <button type="button" className="ofk-v2-map-link" onClick={() => onSelectArrow(e.key)}>{out ? '→' : '←'} {name(out ? e.to : e.from)}</button>
             <span className="ofk-v2-model-hint">{e.kind} · {e.count}</span>
           </li>;
         })}
       </ul> : null}
-      {node.children.length > 0 ? <ul className="ofk-v2-model-list" aria-label="Inside">
+      {node.children.length > 0 ? <h3 className="ofk-v2-map-label" id={`${labelId}-inside`}>Inside</h3> : null}
+      {node.children.length > 0 ? <ul className="ofk-v2-model-list" aria-labelledby={`${labelId}-inside`}>
         {node.children.slice(0, 40).map((child) => <li key={child}>
-          <button type="button" className="ofk-v2-model-relation-link" onClick={() => onSelect(child)}>{name(child)}</button>
+          <button type="button" className="ofk-v2-map-link" onClick={() => onSelect(child)}>{name(child)}</button>
         </li>)}
         {node.children.length > 40 ? <li className="ofk-v2-model-hint">{`and ${node.children.length - 40} more`}</li> : null}
       </ul> : null}
