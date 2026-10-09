@@ -67,7 +67,9 @@ function isStaticAssetWrapperChunk(relativePath) {
     && !/\bawait\s/.test(source)
     && !/\byield\s/.test(source)
     && !/^import\s/m.test(source)
-    && /Object\.freeze\(Object\.defineProperty\(/.test(source);
+    // Lazy per-icon imports wrap each URL in a frozen module object; an eager glob (one module per provider pack,
+    // src/services/shapeLibrary/iconUrls) leaves plain `const x = "data:…"` / `new URL(…).href` strings.
+    && (/Object\.freeze\(Object\.defineProperty\(/.test(source) || /^const\s+\w+=(?:""\+new URL\(|["'`])/.test(source));
   return isBucketedAssetChunk;
 }
 

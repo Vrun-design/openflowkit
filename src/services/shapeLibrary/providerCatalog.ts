@@ -1,6 +1,8 @@
 import type { DomainLibraryCategory, DomainLibraryItem } from '@/services/domainLibrary';
 import { ICON_PACK_IDS } from '@/dsl/iconMatch';
 import { loadTablerIconUrl, TABLER_ICON_NAMES, TABLER_PACK_ID, TABLER_PROVIDER } from './tablerIcons';
+import { PROVIDER_ICON_MANIFEST } from './providerIconManifest';
+import { loadProviderIconUrl } from './providerIconUrls';
 
 export interface ProviderShapePreview {
   packId: string;
@@ -19,10 +21,6 @@ export interface SvgSource {
   previewLoader: () => Promise<string>;
 }
 
-const svgModules = import.meta.glob('../../../assets/third-party-icons/*/processed/**/*.svg', {
-  query: '?url',
-  import: 'default',
-}) as Record<string, () => Promise<string>>;
 const providerCatalogPromiseCache = new Map<string, Promise<DomainLibraryItem[]>>();
 const shapePreviewCache = new Map<string, ProviderShapePreview>();
 const shapePreviewPromiseCache = new Map<string, Promise<ProviderShapePreview | null>>();
@@ -72,30 +70,19 @@ function getProviderColor(provider: string): string {
   return 'slate';
 }
 
-function parseSvgSource(
-  modulePath: string,
-  previewLoader: () => Promise<string>
-): SvgSource | null {
-  const normalized = modulePath.replaceAll('\\', '/');
-  const match = normalized.match(/assets\/third-party-icons\/([^/]+)\/processed\/(.+)\.svg$/);
-
-  if (!match) {
-    return null;
-  }
-
-  const provider = normalizeProviderPathSegment(match[1]);
-  const relativePath = match[2];
-  const pathParts = relativePath.split('/');
+/** One bundled icon, from its manifest entry: `aws`, `Compute/Lambda`. Its URL loads with its pack, on first use. */
+function providerSource(folder: string, iconPath: string): SvgSource {
+  const provider = normalizeProviderPathSegment(folder);
+  const pathParts = iconPath.split('/');
   const category = pathParts.length > 1 ? inferLabelFromId(slugify(pathParts[0])) : 'Misc';
-  const shapeId = slugify(relativePath.replaceAll('/', '-'));
-
+  const shapeId = slugify(iconPath.replaceAll('/', '-'));
   return {
     provider,
     packId: getPackIdForProvider(provider),
     shapeId,
     label: inferLabelFromId(shapeId),
     category,
-    previewLoader,
+    previewLoader: async () => (await loadProviderIconUrl(folder, iconPath)) ?? '',
   };
 }
 
@@ -110,9 +97,9 @@ const tablerSources: SvgSource[] = TABLER_ICON_NAMES.map((name) => ({
 
 // Standard icons first, so an unfiltered picker opens on the general set.
 export const SVG_SOURCES: SvgSource[] = tablerSources.concat(
-  Object.entries(svgModules)
-    .map(([modulePath, previewLoader]) => parseSvgSource(modulePath, previewLoader))
-    .filter((value): value is SvgSource => value !== null)
+  Object.entries(PROVIDER_ICON_MANIFEST).flatMap(([folder, categories]) =>
+    Object.entries(categories).flatMap(([category, names]) =>
+      names.map((name) => providerSource(folder, category ? `${category}/${name}` : name))))
 );
 
 function createProviderItem(provider: DomainLibraryCategory, source: SvgSource): DomainLibraryItem {

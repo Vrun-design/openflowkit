@@ -23,9 +23,9 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   Views tab; views/first open land readable; one dark card palette (+ dark SVG export); panels never hide content; blue
   focus ring, neutral read-only lock (dff3aeac). cf87050b: Canvas|Map on every doc (Map start screen shares the canvas
   welcome layout), Share/Export bar top right. Map bar = segmented Top level (all shut) | One level in | All levels +
-  Edit as drawing; Map edits go to the model card (double-click, menu, ⌘⇧⌫) or explain once per visit. Pre-existing @gate fail: view-controls:37. Not pushed.
-- Owner: publish MCP 0.2.0 (Action default CLI needs it); deploy `start:http` over HTTPS, then verify hosts (README table).
-  Owner action list: `docs/plan/cofounder-action-list.md`. `e2e:headed` 10-09: 261/266; 5 local GPU budgets fail at 23ff9aa4 too (Mac). Open: H5 eval.
+  Edit as drawing; Map edits go to the model card (double-click, menu, ⌘⇧⌫) or explain once per visit. Export panel docks right. Pushed.
+- Icon catalog: names from generated `providerIconManifest.ts` (re-run `node scripts/gen-icon-manifest.mjs` after adding SVGs; a test fails until you do), URLs load per provider (`iconUrls/`). Editor chunk 1581 → 1236 KB; CI was red on the bundle budget 10-09 03:20 → this fix.
+- Owner: publish MCP 0.2.0 (Action default CLI needs it); deploy `start:http` over HTTPS, verify hosts (README). Actions: `docs/plan/cofounder-action-list.md`. `e2e:headed` 10-09: 261/266; 5 local GPU budgets fail at 23ff9aa4 too (Mac). Open: H5 eval.
 ## Found, not fixed (owner calls)
 - Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI): `docs/plan/launch-holds.md`. CI uploads first-failure
   traces (`e2e-traces`). A new worker's deps are pre-scanned (`optimizeDeps.entries`), or dev reloads mid-session.
