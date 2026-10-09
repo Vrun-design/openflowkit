@@ -1067,7 +1067,8 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               onShare={(anchor) => toggleBarPanel(anchor, 'bar-share')} onExport={(anchor) => toggleBarPanel(anchor, 'bar-export')} />
             <V2WorkspaceRail mode={panels.workspace} onChange={panels.toggleWorkspace}
               onShortcuts={panels.toggleShortcuts} agentConnected={agentBridge.status === 'connected'} />
-            {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !docReadOnly && rendererReady && !map.active
+            {/* A drawing tool armed means the next click draws: the welcome steps aside instead of catching it. */}
+            {page.nodes.length === 0 && page.connectors.length === 0 && !ghostPage && !docReadOnly && rendererReady && !map.active && tool === 'select'
               ? <V2CanvasWelcome onOpen={openWorkspace} /> : null}
             {panels.workspace === 'code' ? <V2CodePanel code={code.draft} palette={preferences.diagramPalette}
               onPaletteChange={(diagramPalette) => updatePreferences({ diagramPalette })}

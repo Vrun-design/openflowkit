@@ -227,7 +227,9 @@
 .ofk-v2-welcome-center > img { margin-bottom: 22px; }
 .ofk-v2-welcome h1 { font-size: 28px; letter-spacing: -.8px; line-height: 1.25; font-weight: 500; margin: 0 0 12px; }
 .ofk-v2-welcome p { font-size: 16px; color: var(--ofk-muted); margin: 0; }
-.ofk-v2-welcome-actions { display: flex; justify-content: center; gap: 8px; margin-top: 34px; pointer-events: auto; }
+/* Only the buttons take clicks: the gaps around them are canvas. */
+.ofk-v2-welcome-actions { display: flex; justify-content: center; gap: 8px; margin-top: 34px; }
+.ofk-v2-welcome-actions > * { pointer-events: auto; }
 .ofk-v2-welcome-actions .ofk-button { font-size: 14px; min-height: 38px; padding: 0 12px; gap: 8px; }
 /* Templates: label on its own line, then tight chips that wrap as a block. */
 @media (hover: hover) and (pointer: fine) { .ofk-v2-guide { position: absolute; color: var(--ofk-muted); font-size: 17px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
