@@ -24,13 +24,17 @@ export function Panel({
 }: PanelProps) {
   const ref = useRef<HTMLElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  // Read at first render, before any child effect moves focus: that is who opened the panel.
-  const invoker = useRef(document.activeElement as HTMLElement | null);
+  // Focus at first render: the opener when a child takes focus as it mounts (a field ready to type).
+  const beforeMount = useRef(document.activeElement as HTMLElement | null);
+  const invoker = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const panel = ref.current;
+    const childTookFocus = panel?.contains(document.activeElement) ?? false;
+    // Otherwise read it now, after the commit: a dialog that closed as the panel opened has handed focus back by then.
+    invoker.current = childTookFocus ? beforeMount.current : document.activeElement as HTMLElement | null;
     const opener = invoker.current;
-    // A child that took focus as it mounted (a field ready to type) keeps it; otherwise focus lands on Close.
-    if (!panel?.contains(document.activeElement)) closeRef.current?.focus();
+    // A child that took focus keeps it; otherwise focus lands on Close.
+    if (!childTookFocus) closeRef.current?.focus();
     return () => {
       if (panel?.contains(document.activeElement)) opener?.focus?.();
     };

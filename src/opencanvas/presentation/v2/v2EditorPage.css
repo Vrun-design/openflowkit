@@ -177,7 +177,6 @@
 /* V2 workspace: stable edge controls, generous canvas, task-scoped panels. */
 .ofk-v2 { --v2-panel-width: 400px; --v2-layers-width: 300px; --v2-left-width: var(--v2-layers-width); }
 /* The animation panel needs room for a preview and the step chips. */
-.ofk-v2[data-left-panel='motion'] { --v2-left-width: 380px; }
 .ofk-v2 .ofk-floating-region .ofk-toolbar { background: var(--ofk-surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
 .ofk-v2 .ofk-v2-tools { top: 80px; }
 .ofk-v2-tools .ofk-toolbar {
@@ -1041,6 +1040,7 @@
 
 /* Animation export docks in the right-hand slot. A preview, a transport, ten
    settings and the step chips never fitted a popover — they were clipped. */
+.ofk-motion-show-code { justify-self: start; align-self: flex-start; }
 .ofk-motion-panel .ofk-panel-body { padding: 0; --ofk-panel-gutter: var(--ofk-space-lg); }
 .ofk-motion-panel .ofk-motion { width: auto; gap: 12px; padding: 0 16px 16px; }
 /* The preview and its transport stay put while the settings scroll under them:

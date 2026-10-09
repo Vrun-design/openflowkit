@@ -6,8 +6,8 @@ const NARROW_PX = 1100;
 const narrow = () => window.innerWidth < NARROW_PX;
 
 /**
- * Which panel holds each slot. Right: one workspace panel, the shortcuts sheet or
- * a chart's data panel. Left: the layers tree or the animation export. Opening
+ * Which panel holds each slot. Right: one workspace panel, the shortcuts sheet,
+ * a chart's data panel or the animation export. Left: the layers tree. Opening
  * one closes whatever shared its slot; on a narrow window, the other slot too.
  */
 export function useV2Panels() {
@@ -15,7 +15,7 @@ export function useV2Panels() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   // Pinned to one chart: a plain select never opens it, and it stays while you click around.
   const [chartId, setChartId] = useState<string | null>(null);
-  // Animation export docks left, beside the code panel its step chips write into.
+  // Animation export docks right, under the Export button that opens it: one right-side panel at a time.
   const [motionOpen, setMotionOpen] = useState(false);
   const [treeOpen, setTreeOpen] = useState(false);
 
@@ -23,7 +23,8 @@ export function useV2Panels() {
     setWorkspace(mode);
     setShortcutsOpen(false);
     setChartId(null);
-    if (narrow()) { setTreeOpen(false); setMotionOpen(false); }
+    setMotionOpen(false);
+    if (narrow()) setTreeOpen(false);
   }, []);
   const toggleWorkspace = useCallback((mode: V2WorkspaceMode) => {
     if (workspace === mode) setWorkspace(null); else openWorkspace(mode);
@@ -33,23 +34,27 @@ export function useV2Panels() {
     setChartId(nodeId);
     setWorkspace(null);
     setShortcutsOpen(false);
+    setMotionOpen(false);
   }, []);
   const closeChart = useCallback(() => setChartId(null), []);
   const openMotion = useCallback(() => {
-    setTreeOpen(false);
+    setWorkspace(null);
+    setShortcutsOpen(false);
+    setChartId(null);
+    if (narrow()) setTreeOpen(false);
     setMotionOpen(true);
   }, []);
   const closeMotion = useCallback(() => setMotionOpen(false), []);
   const toggleTree = useCallback(() => {
     setTreeOpen((open) => !open);
-    setMotionOpen(false);
-    if (narrow()) { setWorkspace(null); setShortcutsOpen(false); }
+    if (narrow()) { setWorkspace(null); setShortcutsOpen(false); setMotionOpen(false); }
   }, []);
   const closeTree = useCallback(() => setTreeOpen(false), []);
   const toggleShortcuts = useCallback(() => {
     setShortcutsOpen((open) => !open);
     setWorkspace(null);
     setChartId(null);
+    setMotionOpen(false);
     if (narrow()) setTreeOpen(false);
   }, []);
   const closeShortcuts = useCallback(() => setShortcutsOpen(false), []);

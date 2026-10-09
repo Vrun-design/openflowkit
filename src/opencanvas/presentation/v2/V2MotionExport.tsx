@@ -42,9 +42,10 @@ export interface V2MotionExportProps {
   readonly onAnimateBlock?: (block: AnimateBlock) => void;
   /** The code panel's live text; the `code` order reads its block. */
   readonly codeText?: string;
+  readonly onShowCode?: () => void;
 }
 
-export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, codeText }: V2MotionExportProps) {
+export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, codeText, onShowCode }: V2MotionExportProps) {
   const page = document.pages.find(({ id }) => id === pageId) ?? document.pages[0];
   const flows = useMemo(() => (page ? archModelOfPage(page)?.flows ?? [] : []), [page]);
   const [preset, setPreset] = useState<AnimationPreset>('build');
@@ -327,7 +328,7 @@ export function V2MotionExport({ document, pageId, onToast, onAnimateBlock, code
         <Checkbox label="Loop" checked={loop} onChange={(event) => setLoop(event.currentTarget.checked)} />
       </div>
       {timeline && page && !empty ? (
-        <V2MotionSteps steps={timeline.steps} page={page} onReorder={move} onMerge={merge} onHold={setHold} />
+        <V2MotionSteps steps={timeline.steps} page={page} onReorder={move} onMerge={merge} onHold={setHold} {...(onShowCode ? { onShowCode } : {})} />
       ) : null}
       {progress ? (
         <div className="ofk-motion-progress" role="status">

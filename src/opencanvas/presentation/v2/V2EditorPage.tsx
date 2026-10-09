@@ -870,9 +870,8 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     <SystemRoot appearance={appearance} density={preferences.density}>
       <div className="ofk-v2" data-testid="v2-editor" data-tool={spacePan ? 'hand' : tool}
         style={{ backgroundColor: canvasColor }}
-        data-workspace-open={panels.workspace !== null || panels.shortcutsOpen || chartPanelNode !== null}
-        data-left-open={panels.treeOpen || panels.motionOpen}
-        data-left-panel={panels.motionOpen ? 'motion' : undefined}
+        data-workspace-open={panels.workspace !== null || panels.shortcutsOpen || panels.motionOpen || chartPanelNode !== null}
+        data-left-open={panels.treeOpen}
         onKeyDown={(event) => {
           if (playback.flow && !isEditableTarget(event.target)) {
             if (event.key === 'ArrowRight' || event.key === ' ') { playback.next(); event.preventDefault(); return; }
@@ -1162,17 +1161,14 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
             {find.open ? <V2FindBar find={find} label={map.active ? 'Find in map' : 'Find on canvas'} /> : null}
             {tips.tip ? <V2FeatureTip id={tips.tip} onAction={() => runTip(tips.tip!)} onClose={tips.dismiss} /> : null}
             {panels.motionOpen ? (
-              <Panel title="Animation export" side="start" className="ofk-motion-panel ofk-v2-layers-panel"
+              <Panel title="Animation export" className="ofk-motion-panel ofk-v2-workspace-panel"
                 onClose={panels.closeMotion}>
                 <V2MotionExport key={page.id} document={session.document!} pageId={page.id}
                   onToast={(title, tone) => pushToast({ id: `motion-${Date.now()}`, tone, title })}
                   codeText={code.draft}
-                  onAnimateBlock={(block) => {
-                    // The chips write the text hub; the code panel opens on the
-                    // other side so the user sees where the block went.
-                    code.writeNew((draft) => writeAnimateBlock(draft, block));
-                    panels.setWorkspace((mode) => mode ?? 'code');
-                  }} />
+                  // The chips write the text hub; the code panel shares this side, so it opens only when asked.
+                  onAnimateBlock={(block) => code.writeNew((draft) => writeAnimateBlock(draft, block))}
+                  onShowCode={() => panels.openWorkspace('code')} />
               </Panel>
             ) : null}
             {chartPanelNode ? (

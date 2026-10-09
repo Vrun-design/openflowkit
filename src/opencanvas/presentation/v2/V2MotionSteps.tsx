@@ -19,6 +19,8 @@ export interface V2MotionStepsProps {
   readonly onReorder: (from: number, to: number) => void;
   readonly onMerge: (from: number, to: number) => void;
   readonly onHold: (index: number, holdMs: number | null) => void;
+  /** Opens the code panel on the animate block (it shares the right side with this panel). */
+  readonly onShowCode?: () => void;
 }
 
 function labelOf(page: ScenePage, id: string): string {
@@ -47,7 +49,7 @@ function chipLabel(page: ScenePage, step: AnimationStep): string {
   return `${parts.join(' + ')}${extra > 0 ? ` +${extra}` : ''}`;
 }
 
-export function V2MotionSteps({ steps, page, onReorder, onMerge, onHold }: V2MotionStepsProps) {
+export function V2MotionSteps({ steps, page, onReorder, onMerge, onHold, onShowCode }: V2MotionStepsProps) {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dropAt, setDropAt] = useState<number | null>(null);
   const [holdIndex, setHoldIndex] = useState<number | null>(null);
@@ -116,7 +118,8 @@ export function V2MotionSteps({ steps, page, onReorder, onMerge, onHold }: V2Mot
               </li>
             ))}
           </ol>
-          <p className="ofk-caption">Drag to reorder, drop one onto another to merge, click for its hold. Every edit writes the <code>animate</code> block.</p>
+          <p className="ofk-caption">Drag to reorder, drop one onto another to merge, click for its hold. Every edit writes the <code>animate</code> block in the diagram&apos;s code.</p>
+          {onShowCode ? <Button variant="secondary" className="ofk-motion-show-code" onClick={onShowCode}>Show code</Button> : null}
           {steps.length > MAX_CHIPS ? (
             <p className="ofk-caption">Showing the first {MAX_CHIPS} steps — the rest are in the <code>animate</code> block in the code panel.</p>
           ) : null}
