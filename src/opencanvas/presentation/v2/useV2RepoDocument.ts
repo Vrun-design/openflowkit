@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { AggEdge, MapModel } from '../../../dsl/map/types';
 import { githubEvidenceLink, githubPathLink } from '../../../services/discovery/githubRepo';
-import { repoMapSourceOf, sameRepoMapAddress, withRepoMapSource, type RepoMapSource } from '../../application/map/repoMapSource';
+import { repoMapPageOf, repoMapSourceOf, sameRepoMapAddress, withRepoMapSource, type RepoMapSource } from '../../application/map/repoMapSource';
 import type { SceneDocumentV1 } from '../../domain/document/types';
 import type { MapBoxData } from './map/MapBoxPanel';
 import type { MapRepoArrow } from './map/MapArrowEvidence';
@@ -12,7 +12,7 @@ type RepoIntent = Extract<V2StartIntent, { repoMap: unknown }>['repoMap'];
 
 /**
  * A repo document keeps only its address (`metadata.map.source`); the facts are read here, in memory (and from the
- * IndexedDB cache after the first read while online). Read-only end to end: nothing the reader can do edits it.
+ * IndexedDB cache after the first read while online). Its map page is read-only end to end: nothing the reader can do edits it.
  */
 export function useV2RepoDocument(document: SceneDocumentV1 | null, intent: V2StartIntent | null) {
   const source = useMemo(() => (document ? repoMapSourceOf(document) : null), [document]);
@@ -22,7 +22,13 @@ export function useV2RepoDocument(document: SceneDocumentV1 | null, intent: V2St
   const initialize = repoIntent ? (fresh: SceneDocumentV1) => ({ ...withRepoMapSource(fresh, repoIntent), name: `${repoIntent.owner}/${repoIntent.repo}` }) : undefined;
   // A stored document under this id that is another repo's: say so rather than show the wrong map.
   const mismatch = repoIntent !== null && source !== null && !sameRepoMapAddress(repoIntent, source);
-  return { source, state, initialize, mismatch, readOnly: source !== null };
+  // The repo's own map page, recorded in the document's metadata when it was made (first page for one saved before that): the
+  // only page that stays read-only. Any other page of the document is an ordinary Canvas page. A marker naming a page that
+  // is gone fails closed: the whole document is read-only.
+  const marker = source && document ? repoMapPageOf(document) : null;
+  const lockedPageId = source && document ? marker ?? document.pages[0]?.id ?? null : null;
+  const broken = source !== null && document !== null && lockedPageId !== null && !document.pages.some((page) => page.id === lockedPageId);
+  return { source, state, initialize, mismatch, lockedPageId, broken };
 }
 
 interface PanelOptions {

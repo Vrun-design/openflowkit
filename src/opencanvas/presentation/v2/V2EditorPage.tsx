@@ -26,6 +26,7 @@ import { buildArchRelationCommands } from '../../application/dsl/architectureCom
 import { hasIcon } from '../../application/dsl/iconCommands';
 import { buildDeleteSelectionCommand, buildDuplicateSelectionCommand, buildToggleLockCommand } from '../../domain/commands/sceneEdits';
 import type { DocumentCommand } from '../../domain/commands/types';
+import { commandTouchesPage } from '../../domain/commands/pageTouch';
 import type { ScenePage } from '../../domain/document/types';
 import type { Point2d } from '../../domain/geometry/types';
 import { EmptyState, Button, ErrorState, Panel, SystemRoot, ToastRegion, type ToastItem } from '../design-system';
@@ -220,13 +221,27 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const location = useLocation();
   const startIntent = isV2StartIntent(location.state) ? location.state : null;
   const repo = useV2RepoDocument(session.document, startIntent);
+  // Only the repo's own map page is locked and drawn as a map; its other pages are ordinary Canvas pages.
+  const repoPage = repo.lockedPageId !== null && page?.id === repo.lockedPageId;
+  // "This is the repo page", not "this is a repo document": a page added to a repo document is an ordinary one.
+  const repoSource = repoPage ? repo.source : null;
+  // Every write goes through here: one that touches the repo's own page (an agent addressing it, a proposal applied after the reader
+  // left it) or any write to a document whose lock is broken is refused, with no undo entry.
+  const lockRef = useRef({ id: repo.lockedPageId, broken: repo.broken });
+  useEffect(() => { lockRef.current = { id: repo.lockedPageId, broken: repo.broken }; });
+  const sessionCommit = session.commit;
+  const commit = useCallback((command: DocumentCommand) => {
+    const { id, broken } = lockRef.current;
+    if (broken || (id !== null && commandTouchesPage(command, id))) { setAnnouncement('The repo map is read-only'); return; }
+    sessionCommit(command);
+  }, [sessionCommit]);
   // Map mode: a lens on the page's model. The canvas draws `viewPage`; commands, undo and autosave still see `page`.
   const pinRef = useRef<() => void>(() => undefined);
   const map = useV2MapMode({
     onPin: () => pinRef.current(),
     panelOpen: panels.workspace !== null || panels.shortcutsOpen,
     glide: camera.animateTo,
-    page, documentId: session.document?.id, repo: repo.source ? { model: repo.state.model } : null, palette: preferences.diagramPalette, autoIcons: preferences.autoIcons, hostRef,
+    page, documentId: session.document?.id, repo: repoSource ? { model: repo.state.model } : null, palette: preferences.diagramPalette, autoIcons: preferences.autoIcons, hostRef,
     cameraRef: camera.cameraRef, updateCamera: camera.updateCamera, fitView: camera.fitView, onToolChange: setTool,
     primaryId: () => selectionRef.current.primaryNodeId,
     select: (id) => { applyConnectorSelection([]); applySelection(replaceSelection([id])); },
@@ -266,7 +281,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     hostRef,
     page,
     camera: camera.camera,
-    commit: session.commit,
+    commit: commit,
     announce: setAnnouncement,
     focusCanvas,
     onRenamePlacedElement: (nodeId, label) => {
@@ -293,10 +308,10 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const readOnlyRef = useRef(load.readOnly);
   // Map mode is read-only for geometry: its box ids are the Canvas page's node ids, so any edit that got through
   // would land on the Canvas node of the same id.
-  const docReadOnly = load.readOnly || repo.readOnly;
+  const docReadOnly = load.readOnly || repo.broken || repoPage;
   // Pin as page: the map as drawn now becomes a plain Canvas page, one undo step. It adds a page, not a model edit,
-  // a repo document is read-only as a whole (a page pinned there could be neither edited nor deleted), so it offers no pin for now.
-  const pinnable = !docReadOnly && map.active && map.mapPage !== null && map.mapPage.nodes.length > 0;
+  // the repo map's own page is read-only, but pinning only adds a page, so it is offered there; a shared view (load.readOnly) is not.
+  const pinnable = !load.readOnly && map.active && map.mapPage !== null && map.mapPage.nodes.length > 0;
   pinRef.current = () => {
     const document = session.document;
     const mapPage = map.mapPage;
@@ -304,7 +319,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     const open = map.state().open;
     const single = open.length === 1 && map.model ? map.model.nodes[open[0]!]?.name : undefined;
     const pageId = mintV2Id('page');
-    session.commit(buildPinPageCommand(document, mapPage, { pageId, name: `${single ?? document.name} (pinned)` }));
+    commit(buildPinPageCommand(document, mapPage, { pageId, name: `${single ?? document.name} (pinned)` }));
     setActivePageId(pageId);
     map.setMode('canvas');
     setAnnouncement('Pinned as a page');
@@ -324,7 +339,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     document: session.document, page, pageRef, hostRef, readOnly: docReadOnly,
     palette: preferences.diagramPalette, autoIcons: preferences.autoIcons,
     onPaletteChange: useCallback((diagramPalette) => updatePreferences({ diagramPalette }), [updatePreferences]),
-    commit: session.commit, applySelection, fitView: camera.fitView,
+    commit: commit, applySelection, fitView: camera.fitView,
     openPanel: useCallback(() => openWorkspace('code'), [openWorkspace]),
     onViews: setPendingPageId, pushToast, dismissToast, announce: setAnnouncement,
   });
@@ -365,7 +380,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     [preferences.diagramPalette, preferences.autoIcons]);
   const proposal = useV2Proposal({
     document: session.document, revision: session.revision, pageId: page?.id ?? null,
-    commit: session.commit, readOnly: docReadOnly,
+    commit: commit, readOnly: docReadOnly,
     announce: setAnnouncement, compileDsl: compileDraft,
   });
 
@@ -381,8 +396,8 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const ghostPage = useV2ProposalPreview(proposal, hostRef, rendererReady, camera.revealBounds);
 
   const pages = useV2Pages({
-    document: session.document, pageId: page?.id ?? null, readOnly: docReadOnly,
-    commit: session.commit, onSelect: setActivePageId, mintId: mintV2Id,
+    document: session.document, pageId: page?.id ?? null, readOnly: load.readOnly || repo.broken, lockedPageId: repo.lockedPageId,
+    commit: commit, onSelect: setActivePageId, mintId: mintV2Id,
     announce: setAnnouncement,
   });
   // A page switch moves the camera to that page's content; the canvas only ever
@@ -436,7 +451,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
       glideToNodes: camera.glideToNodes,
       openPage: setActivePageId,
       selectNodes: (nodeIds) => { applyConnectorSelection([]); applySelection(replaceSelection(nodeIds)); },
-      commit: session.commit,
+      commit: commit,
       announce: setAnnouncement,
       compileWorkspace: compileAny,
       compileSequence: compileAny,
@@ -483,7 +498,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     appearance: { palette: preferences.diagramPalette }, autoIcons: preferences.autoIcons,
   }), [preferences.diagramPalette, preferences.autoIcons]);
   const iconActions = useV2IconActions({
-    pageRef, readOnly: editLocked, commit: session.commit, announce: setAnnouncement,
+    pageRef, readOnly: editLocked, commit: commit, announce: setAnnouncement,
     compileAt, document: session.document, setModelIcons: architectureActions.setModelIcons,
   });
   const selectedNode = selection.primaryNodeId && viewPage
@@ -504,18 +519,18 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const zoomInto = deeperView && architecture.pageForView(deeperView.id) && selectedElementId
     ? { name: deeperView.name, open: () => { architectureActions.drillToMap(selectedElementId); } } : null;
   const repoPanel = useV2RepoPanel({
-    source: repo.source, map, selectedConnectorId,
+    source: repoSource, map, selectedConnectorId,
     selectedBoxId: selection.nodeIds.length === 1 ? selection.nodeIds[0]! : null,
     selectArrow: (key) => { applySelection(replaceSelection([])); applyConnectorSelection([key]); },
   });
   // A Map arrow stands for every relation between the two boxes and their insides; the Model panel lists them.
   const c4Arrow = useMemo(() => {
-    const connector = map.active && !repo.source && selectedConnectorId ? viewPage?.connectors.find((c) => c.id === selectedConnectorId) : undefined;
+    const connector = map.active && !repoSource && selectedConnectorId ? viewPage?.connectors.find((c) => c.id === selectedConnectorId) : undefined;
     const meta = connector?.metadata.map as { relations?: string[]; both?: boolean } | undefined;
     const relations = meta?.relations;
     return connector?.source.nodeId && connector.target.nodeId && relations
       ? { from: connector.source.nodeId, to: connector.target.nodeId, relationIds: relations, both: meta?.both === true } : null;
-  }, [map.active, repo.source, selectedConnectorId, viewPage]);
+  }, [map.active, repoSource, selectedConnectorId, viewPage]);
   const mapArrow = repoPanel.arrow ?? c4Arrow;
   useEffect(() => { if (mapArrow) openWorkspace('model'); }, [mapArrow, openWorkspace]);
   const perspectiveFocus = useMemo(
@@ -552,14 +567,14 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const diagramCount = useMemo(() => (page ? dslFrames(page).length : 0), [page]);
   const selectedDiagramCount = useMemo(() => (page ? selectedFrameIds(page, selection.nodeIds).length : 0), [page, selection.nodeIds]);
   const agentBridge = useV2AgentBridge({
-    enabled: preferences.agentBridgeEnabled, readOnly: docReadOnly,
+    enabled: preferences.agentBridgeEnabled, readOnly: load.readOnly || repo.broken, lockedPageId: repo.lockedPageId,
     port: preferences.bridgePort,
     token: preferences.bridgeToken,
     document: session.document,
     pageId: page?.id ?? null,
     revision: session.revision,
     capabilities: agentCapabilities,
-    commit: session.commit,
+    commit: commit,
     onActivity: setAnnouncement,
   });
 
@@ -575,11 +590,11 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const connectorLabel = useV2ConnectorLabelEditing({
     document: session.document,
     pageRef, hostRef, cameraRef: camera.cameraRef, readOnly: editLocked, selectedConnectorId,
-    commit: session.commit, applySelection, applyConnectorSelection, focusCanvas, announce: setAnnouncement,
+    commit: commit, applySelection, applyConnectorSelection, focusCanvas, announce: setAnnouncement,
   });
 
   const editActions = useV2EditActions({
-    commit: session.commit,
+    commit: commit,
     pageRef,
     selectionRef,
     selectedConnectorIds,
@@ -591,14 +606,14 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   });
 
   const iconLibrary = useV2IconLibrary({
-    hostRef, pageRef, commit: session.commit, mintId: mintV2Id, openEditor, readOnly: editLocked,
+    hostRef, pageRef, commit: commit, mintId: mintV2Id, openEditor, readOnly: editLocked,
   });
 
   // The icon library hosts emoji on their own tab; I and E open it there.
   const [librarySection, setLibrarySection] = useState<'icons' | 'emoji'>('icons');
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const media = useV2MediaInsert({
-    pageRef, commit: session.commit, applySelection, applyConnectorSelection,
+    pageRef, commit: commit, applySelection, applyConnectorSelection,
     announce: setAnnouncement, mintId: mintV2Id, readOnlyRef,
     centreWorld: () => {
       const bounds = sectionRef.current?.getBoundingClientRect();
@@ -608,7 +623,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     },
   });
   const inserts = useV2Inserts({
-    pageRef, readOnlyRef, selectionRef, commit: session.commit, applySelection, applyConnectorSelection,
+    pageRef, readOnlyRef, selectionRef, commit: commit, applySelection, applyConnectorSelection,
     centreWorld: media.centreWorld, setTool, openEditor, openChart, announce: setAnnouncement,
   });
   const pickImageFile = () => imageInputRef.current?.click();
@@ -757,20 +772,20 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const runObjectAction = (nodeId: string, action: 'lock' | 'hide' | 'duplicate' | 'delete') => {
     const node = page?.nodes.find((item) => item.id === nodeId);
     if (editLocked || !page || !node) return;
-    if (action === 'lock') session.commit(buildToggleLockCommand(page, [nodeId]));
-    if (action === 'hide') session.commit({
+    if (action === 'lock') commit(buildToggleLockCommand(page, [nodeId]));
+    if (action === 'hide') commit({
       kind: 'set-node', id: `visibility:${nodeId}`, label: node.content.sectionHidden ? 'Show object' : 'Hide object',
       pageId: page.id, before: node,
       after: { ...node, content: { ...node.content, sectionHidden: !node.content.sectionHidden } },
     });
     if (action === 'duplicate') {
       const command = buildDuplicateSelectionCommand(page, [nodeId], page.connectors.map((item) => item.id), mintV2Id);
-      session.commit(command);
+      commit(command);
       applyConnectorSelection([]);
       applySelection(replaceSelection(command.commands.flatMap((item) => item.kind === 'insert-node' ? [item.node.id] : [])));
     }
     if (action === 'delete') {
-      if (!architectureActions.unplaceSelection([nodeId])) session.commit(buildDeleteSelectionCommand(page, [nodeId], []));
+      if (!architectureActions.unplaceSelection([nodeId])) commit(buildDeleteSelectionCommand(page, [nodeId], []));
       applySelection(clearSelection());
     }
   };
@@ -836,8 +851,8 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 onCloseFolder: workspaceFolder.closeFolder,
               }}
               breadcrumb={architecture.breadcrumb}
-              {...(repoPanel.drawn ? { mapToolbar: { ...map.toolbar, ...(docReadOnly ? {} : { onPin: () => pinRef.current(), canPin: pinnable }) } } : {})}
-              {...(map.available ? { mapMode: { mode: map.mode, onChange: map.setMode } } : {})}
+              {...(repoPanel.drawn ? { mapToolbar: { ...map.toolbar, ...(load.readOnly ? {} : { onPin: () => pinRef.current(), canPin: pinnable }) } } : {})}
+              {...(map.available ? { mapMode: { mode: map.mode, onChange: map.choose } } : {})}
               onCrumb={(crumb) => architectureActions.openCrumb(crumb)}
               {...(shared ? { onEditShared: shared.onEdit } : {})}
               onOpenExport={(anchor) => openExport(anchor, 'page')}
@@ -845,7 +860,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               onRename={(name) => {
                 const before = session.document!.name;
                 if (name === before) return;
-                session.commit({
+                commit({
                   kind: 'set-document-name',
                   id: `rename-document:${session.document!.id}`,
                   label: 'Rename document',
@@ -878,7 +893,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               readOnlyRef={readOnlyRef} gestureApiRef={gestureApiRef}
               selection={selection} selectedConnectorId={selectedConnectorId} selectedConnectorIds={selectedConnectorIds}
               editing={editing}
-              commit={session.commit}
+              commit={commit}
               applySelection={applySelection} applyConnectorSelection={applyConnectorSelection}
               updateCamera={camera.updateCamera} openEditor={openEditor} openConnectorEditor={connectorLabel.open} onToolChange={setTool} mintId={mintV2Id}
               extendConnectorCommand={extendConnectorCommand}
@@ -892,7 +907,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               readOnly={editLocked}
               onContextMenu={setContextMenu}
             >
-              {repo.source && map.active ? <V2RepoMapOverlay source={repo.source} map={repo.state} links={map.links} /> : null}
+              {repoSource && map.active ? <V2RepoMapOverlay source={repoSource} map={repo.state} links={map.links} /> : null}
               {map.empty ? (
                 <div className="ofk-v2-map-state" data-testid="v2-map-empty">
                   <EmptyState hero={<V2StateHero kind="no-canvas" />} title="No elements yet"
@@ -908,7 +923,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
               ) : null}
             </V2CanvasHost>
             <V2ContextMenu target={contextMenu} page={viewPage ?? page} selectionCount={selection.nodeIds.length} selectedNodeId={selection.primaryNodeId}
-              readOnly={editLocked} actions={editActions} commit={session.commit}
+              readOnly={editLocked} actions={editActions} commit={commit}
               onEditLabel={() => {
                 const primary = selectionRef.current.primaryNodeId;
                 if (primary) openEditor(primary); else connectorLabel.editSelected();
@@ -1065,7 +1080,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
             ) : null}
             {chartPanelNode ? (
               <V2ChartDataPanel key={chartPanelNode.id} node={chartPanelNode} pageId={page.id}
-                commit={session.commit} onClose={panels.closeChart} />
+                commit={commit} onClose={panels.closeChart} />
             ) : null}
             {panels.treeOpen ? (
               <V2TreePanel
@@ -1082,7 +1097,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                   if (editLocked) return;
                   const command = buildConnectorObjectAction(page, connectorId, action, mintV2Id);
                   if (!command) return;
-                  session.commit(command);
+                  commit(command);
                   applySelection(clearSelection());
                   applyConnectorSelection(command.kind === 'insert-connector' ? [command.connector.id] : []);
                 }}

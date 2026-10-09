@@ -20,7 +20,7 @@ import {
 } from './mapMode';
 import { useMapFocus } from './useMapFocus';
 import { mapFindMatches } from '../../../application/map/mapFind';
-import { savedOpen, saveOpen } from './mapDepth';
+import { savedMode, saveMode, savedOpen, saveOpen } from './mapDepth';
 import { useMapControls } from './useMapControls';
 import { useMapClearance } from './useMapClearance';
 import { useMapEntry } from './useMapEntry';
@@ -90,10 +90,14 @@ export function useV2MapMode(options: Options) {
   const isRepo = repo !== null;
   const available = useMemo(() => isRepo || (page ? archFrameOf(page) !== null : false), [isRepo, page]);
   const [mode, setModeState] = useState<V2MapModeName>('canvas');
-  // A repo document opens in Map, once per document; the reader may switch to Canvas after.
-  const [openedMap, setOpenedMap] = useState<string | null>(null);
-  const repoDoc = isRepo ? (documentId ?? null) : null;
-  if (repoDoc !== null && openedMap !== repoDoc) { setOpenedMap(repoDoc); setModeState('map'); }
+  // Once per document: the reader's last choice (this browser), else a repo document opens in Map and a model page in Canvas.
+  const [restored, setRestored] = useState<string | null>(null);
+  // Each time the map becomes available again (back on the repo page from a pinned one) the choice applies again.
+  if (!available && restored !== null) setRestored(null);
+  if (documentId && available && restored !== documentId) {
+    setRestored(documentId);
+    if ((savedMode(documentId) ?? (isRepo ? 'map' : 'canvas')) === 'map') setModeState('map');
+  }
   const active = mode === 'map' && available;
   const arch = useStable(useMemo(() => (active && page && !isRepo ? archModelOfPage(page) : null), [active, page, isRepo]));
   const repoModel = repo?.model ?? null;
@@ -195,12 +199,17 @@ export function useV2MapMode(options: Options) {
     }
     setModeState(next);
   }, [mode, available, page?.id, cameraRef, closeChart, onToolChange]);
+  /** The reader's own switch (the buttons, the M key): remembered for this document. Automatic switches (Pin, a drill) use `setMode`. */
+  const choose = useCallback((next: V2MapModeName) => {
+    setMode(next);
+    if (documentId) saveMode(documentId, next);
+  }, [setMode, documentId]);
   /** M: true when the page has a map to switch to or from, so the key is spent. */
   const toggle = useCallback((): boolean => {
     if (!available) return false;
-    setMode(mode === 'map' ? 'canvas' : 'map');
+    choose(mode === 'map' ? 'canvas' : 'map');
     return true;
-  }, [available, mode, setMode]);
+  }, [available, mode, choose]);
 
   // A page without a model has no map: fall back to Canvas (the page switch already fitted its own camera).
   if (mode === 'map' && !available) { setModeState('canvas'); setScene(null); setError(null); }
@@ -313,7 +322,7 @@ export function useV2MapMode(options: Options) {
     return { ...stats, running };
   }, [player, hostRef]);
 
-  return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, findSource, enterMapAt,
+  return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, choose, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, findSource, enterMapAt,
     /** The aggregated edge a repo-map connector stands for (its evidence), or undefined. */
     edgeOf, edgesAt,
     toolbar: { depth: controls.depth, canExpand: controls.canExpand, onDepth: controls.setDepth, onExpandOne: controls.expandOne, onCollapseAll: controls.collapse,

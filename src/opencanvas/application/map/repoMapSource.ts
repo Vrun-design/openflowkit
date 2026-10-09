@@ -36,10 +36,22 @@ export function repoMapSourceOf(document: SceneDocumentV1): RepoMapSource | null
   return { owner: owner as string, repo: repo as string, ...(ref ? { ref: ref as string } : {}), ...(typeof sha === 'string' && /^[0-9a-f]{40}$/.test(sha) ? { sha } : {}) };
 }
 
-/** The document with its source recorded. Not an undo step: the editor applies it when it creates the document. */
+/**
+ * The page that is the repo's own map, as recorded when the document was made (null for a document saved before that:
+ * the caller falls back to its first page). Document metadata is no command's target, so nothing in the editor can forge it.
+ */
+export function repoMapPageOf(document: SceneDocumentV1): string | null {
+  const map = document.metadata['map'];
+  if (typeof map !== 'object' || map === null || Array.isArray(map)) return null;
+  const page = (map as { page?: unknown }).page;
+  return typeof page === 'string' && page !== '' && page.length <= 200 ? page : null;
+}
+
+/** The document with its source and its map page recorded. Not an undo step: the editor applies it when it creates the document. */
 export function withRepoMapSource(document: SceneDocumentV1, source: RepoMapSource): SceneDocumentV1 {
   const { owner, repo, ref, sha } = source;
-  return { ...document, metadata: { ...document.metadata, map: { source: { owner, repo, ...(ref ? { ref } : {}), ...(sha ? { sha } : {}) } } } };
+  const page = document.pages[0]?.id;
+  return { ...document, metadata: { ...document.metadata, map: { source: { owner, repo, ...(ref ? { ref } : {}), ...(sha ? { sha } : {}) }, ...(page ? { page } : {}) } } };
 }
 
 /**

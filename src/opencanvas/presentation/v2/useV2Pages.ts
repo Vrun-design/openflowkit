@@ -17,6 +17,8 @@ export interface V2PagesOptions {
   readonly document: SceneDocumentV1 | null;
   readonly pageId: string | null;
   readonly readOnly: boolean;
+  /** One page that stays as it is whatever the document allows (a repo document's map page): no rename, move, duplicate or delete. */
+  readonly lockedPageId?: string | null;
   readonly commit: (command: DocumentCommand) => void;
   readonly onSelect: (pageId: string) => void;
   readonly mintId: (prefix: string) => string;
@@ -24,7 +26,8 @@ export interface V2PagesOptions {
 }
 
 export function useV2Pages(options: V2PagesOptions) {
-  const { document, pageId, readOnly, commit, onSelect, mintId, announce } = options;
+  const { document, pageId, readOnly, lockedPageId = null, commit, onSelect, mintId, announce } = options;
+  const isLocked = useCallback((id: string) => lockedPageId !== null && id === lockedPageId, [lockedPageId]);
   const pages: readonly ScenePage[] = document?.pages ?? [];
   const activePage = pages.find((page) => page.id === pageId) ?? pages[0] ?? null;
 
@@ -49,30 +52,34 @@ export function useV2Pages(options: V2PagesOptions) {
   }, [document, mintId, run, onSelect]);
 
   const duplicate = useCallback((sourceId: string) => {
-    if (!document) return;
+    if (!document || isLocked(sourceId)) return;
     const id = mintId('page');
     run(() => buildProductionDuplicatePageCommand(document, sourceId, id), () => 'Page duplicated.');
     onSelect(id);
-  }, [document, mintId, run, onSelect]);
+  }, [document, mintId, run, onSelect, isLocked]);
 
   const rename = useCallback((targetId: string, name: string) => {
-    if (!document) return;
+    if (!document || isLocked(targetId)) return;
     run(() => buildProductionRenamePageCommand(document, targetId, name), () => `Renamed page to ${name.trim()}.`);
-  }, [document, run]);
+  }, [document, run, isLocked]);
 
   const remove = useCallback((targetId: string) => {
-    if (!document) return;
+    if (!document || isLocked(targetId)) return;
     const index = document.pages.findIndex((page) => page.id === targetId);
     const next = document.pages[index + 1] ?? document.pages[index - 1] ?? null;
     const name = document.pages[index]?.name ?? 'page';
     run(() => buildProductionRemovePageCommand(document, targetId), () => `Deleted ${name}.`);
     if (pageId === targetId && next) onSelect(next.id);
-  }, [document, run, pageId, onSelect]);
+  }, [document, run, pageId, onSelect, isLocked]);
 
   const move = useCallback((targetId: string, direction: 'left' | 'right') => {
     if (!document) return;
+    // Swapping with the locked page would move it too.
+    const at = document.pages.findIndex((page) => page.id === targetId);
+    const neighbour = document.pages[at + (direction === 'left' ? -1 : 1)];
+    if (isLocked(targetId) || (neighbour && isLocked(neighbour.id))) return;
     run(() => buildProductionReorderPageCommand(document, targetId, direction), () => 'Reordered pages.');
-  }, [document, run]);
+  }, [document, run, isLocked]);
 
-  return { pages, activePage, select: onSelect, add, duplicate, rename, remove, move, readOnly };
+  return { pages, activePage, select: onSelect, add, duplicate, rename, remove, move, readOnly, isLocked };
 }

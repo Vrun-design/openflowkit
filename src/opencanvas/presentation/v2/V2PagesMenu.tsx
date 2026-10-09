@@ -26,7 +26,7 @@ export function V2PagesMenu({ pages, open, anchorRef, onClose }: V2PagesMenuProp
   // pattern), not in an effect, so the closed popover never paints stale rows.
   if (!open && (actionId !== null || renamingId !== null)) { setActionId(null); setRenamingId(null); }
   function rename(id: string, name: string): void {
-    if (pages.readOnly) return;
+    if (pages.readOnly || pages.isLocked(id)) return;
     cancelled.current = false;
     setDraft(name);
     setRenamingId(id);
@@ -68,13 +68,13 @@ export function V2PagesMenu({ pages, open, anchorRef, onClose }: V2PagesMenuProp
     <footer className="ofk-pages-footer"><Button variant="quiet" disabled={pages.readOnly} onClick={pages.add}><Icon icon={IconPlus} /> Add page</Button></footer>
     <Menu open={!!actionPage} anchorRef={actionAnchor} onClose={() => setActionId(null)} label="Page actions" placement="right-start">
       {actionPage ? <>
-        <MenuItem icon={<Icon icon={IconPencil} />} disabled={pages.readOnly} onSelect={() => rename(actionPage.id, actionPage.name)}>Rename</MenuItem>
-        <MenuItem icon={<Icon icon={IconCopy} />} disabled={pages.readOnly} onSelect={() => pages.duplicate(actionPage.id)}>Duplicate</MenuItem>
+        <MenuItem icon={<Icon icon={IconPencil} />} disabled={pages.readOnly || pages.isLocked(actionPage.id)} onSelect={() => rename(actionPage.id, actionPage.name)}>Rename</MenuItem>
+        <MenuItem icon={<Icon icon={IconCopy} />} disabled={pages.readOnly || pages.isLocked(actionPage.id)} onSelect={() => pages.duplicate(actionPage.id)}>Duplicate</MenuItem>
         <MenuSeparator />
-        <MenuItem icon={<Icon icon={IconArrowUp} />} disabled={pages.readOnly || actionIndex === 0} onSelect={() => pages.move(actionPage.id, 'left')}>Move up</MenuItem>
-        <MenuItem icon={<Icon icon={IconArrowDown} />} disabled={pages.readOnly || actionIndex === pages.pages.length - 1} onSelect={() => pages.move(actionPage.id, 'right')}>Move down</MenuItem>
+        <MenuItem icon={<Icon icon={IconArrowUp} />} disabled={pages.readOnly || actionIndex === 0 || pages.isLocked(actionPage.id) || pages.isLocked(pages.pages[actionIndex - 1]?.id ?? '')} onSelect={() => pages.move(actionPage.id, 'left')}>Move up</MenuItem>
+        <MenuItem icon={<Icon icon={IconArrowDown} />} disabled={pages.readOnly || actionIndex === pages.pages.length - 1 || pages.isLocked(actionPage.id) || pages.isLocked(pages.pages[actionIndex + 1]?.id ?? '')} onSelect={() => pages.move(actionPage.id, 'right')}>Move down</MenuItem>
         <MenuSeparator />
-        <MenuItem icon={<Icon icon={IconTrash} />} disabled={pages.readOnly || pages.pages.length === 1} danger onSelect={() => pages.remove(actionPage.id)}>Delete page</MenuItem>
+        <MenuItem icon={<Icon icon={IconTrash} />} disabled={pages.readOnly || pages.isLocked(actionPage.id) || pages.pages.length === 1} danger onSelect={() => pages.remove(actionPage.id)}>Delete page</MenuItem>
       </> : null}
     </Menu>
   </Popover>;

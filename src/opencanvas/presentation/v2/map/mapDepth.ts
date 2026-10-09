@@ -14,3 +14,23 @@ export function saveOpen(documentId: string, pageId: string, open: ReadonlySet<s
   if (open.size > MAX_OPEN_IDS) return;
   try { localStorage.setItem(openKey(documentId, pageId), JSON.stringify([...open].sort())); } catch { /* storage blocked or full: the choice lasts this visit */ }
 }
+
+// Canvas or Map, as the reader last chose it for a document: this browser only, never the document or undo.
+const modeKey = (documentId: string): string => `ofk.map-mode:${documentId}`;
+
+// A saved 'map' stays dormant while the document has no model (Map is not available there); it applies once one exists.
+export function savedMode(documentId: string): 'canvas' | 'map' | null {
+  try {
+    const v = localStorage.getItem(modeKey(documentId));
+    return v === 'canvas' || v === 'map' ? v : null;
+  } catch { return null; }
+}
+
+export function saveMode(documentId: string, mode: 'canvas' | 'map'): void {
+  try { localStorage.setItem(modeKey(documentId), mode); } catch { /* storage blocked: the choice lasts this visit */ }
+}
+
+/** A deleted document leaves no choice behind. */
+export function forgetMapMode(documentId: string): void {
+  try { localStorage.removeItem(modeKey(documentId)); } catch { /* storage blocked */ }
+}

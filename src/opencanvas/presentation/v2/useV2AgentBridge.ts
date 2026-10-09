@@ -26,6 +26,8 @@ export interface V2AgentBridgeOptions {
   readonly commit: (command: DocumentCommand) => void;
   /** A document the reader cannot edit (a shared link, a repo map): a connected agent's change is refused, and told so. */
   readonly readOnly?: boolean;
+  /** A page that stays as it is (a repo document's map page): a request addressed to it is refused, whichever page the reader is on. */
+  readonly lockedPageId?: string | null;
   readonly onActivity: (message: string) => void;
 }
 
@@ -93,7 +95,7 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
         if (!document) throw new Error('The editor has no document open.');
         const pageId = request.pageId ?? optionsRef.current.pageId ?? document.pages[0]?.id ?? '';
         const outcome = await resolveAgentOpCommand(op, request.input, { document, pageId, capabilities });
-        if (outcome.command && optionsRef.current.readOnly) throw new Error('This document is read-only, so the editor did not apply the change.');
+        if (outcome.command && (optionsRef.current.readOnly || (optionsRef.current.lockedPageId ?? null) === pageId)) throw new Error('This document is read-only, so the editor did not apply the change.');
         if (outcome.command) commit(outcome.command);
         onActivity(`${request.op} ran from the connected agent.`);
         await post(urls.result, { id: request.id, ok: true, output: outcome.output });

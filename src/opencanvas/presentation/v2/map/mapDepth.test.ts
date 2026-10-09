@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { savedOpen, saveOpen } from './mapDepth';
+import { forgetMapMode, savedOpen, saveOpen, savedMode, saveMode } from './mapDepth';
 
 afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
 
@@ -29,5 +29,32 @@ describe('remembered open boxes', () => {
   it('does not write past the id cap', () => {
     saveOpen('d', 'p', new Set(Array.from({ length: 2001 }, (_, i) => `n${i}`)));
     expect(localStorage.getItem('ofk.map-open:d:p')).toBeNull();
+  });
+});
+
+describe('remembered Canvas or Map', () => {
+  it('round-trips per document and ignores anything else', () => {
+    expect(savedMode('d1')).toBeNull();
+    saveMode('d1', 'canvas');
+    saveMode('d2', 'map');
+    expect(savedMode('d1')).toBe('canvas');
+    expect(savedMode('d2')).toBe('map');
+    localStorage.setItem('ofk.map-mode:d3', 'sideways');
+    expect(savedMode('d3')).toBeNull();
+  });
+  it('survives storage that throws', () => {
+    vi.stubGlobal('localStorage', { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('full'); } });
+    expect(savedMode('d')).toBeNull();
+    expect(() => saveMode('d', 'map')).not.toThrow();
+  });
+});
+
+describe('forgetMapMode', () => {
+  it('removes the saved choice and ignores blocked storage', () => {
+    saveMode('gone', 'map');
+    forgetMapMode('gone');
+    expect(savedMode('gone')).toBeNull();
+    vi.stubGlobal('localStorage', { removeItem: () => { throw new Error('blocked'); } });
+    expect(() => forgetMapMode('gone')).not.toThrow();
   });
 });

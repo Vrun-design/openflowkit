@@ -85,4 +85,23 @@ describe('useV2Pages', () => {
     act(() => hook.result.current.rename(document.pages[0]!.id, 'Nope'));
     expect(commit).not.toHaveBeenCalled();
   });
+
+  it('a locked page cannot be renamed, duplicated, moved, swapped with or removed; the others can', () => {
+    let document = createTestDocument({ nodes: [] });
+    document = { ...document, pages: [document.pages[0]!, { ...document.pages[0]!, id: 'pinned', name: 'Pinned' }] };
+    const commit = vi.fn();
+    const locked = document.pages[0]!.id;
+    const hook = renderHook(() => useV2Pages({
+      document, pageId: 'pinned', readOnly: false, lockedPageId: locked, commit,
+      onSelect: vi.fn(), mintId: (prefix) => `${prefix}-new-1`, announce: vi.fn(),
+    }));
+    const api = hook.result.current;
+    expect(api.isLocked(locked)).toBe(true);
+    expect(api.isLocked('pinned')).toBe(false);
+    act(() => { api.rename(locked, 'No'); api.duplicate(locked); api.remove(locked); api.move(locked, 'right'); api.move('pinned', 'left'); });
+    expect(commit).not.toHaveBeenCalled();
+    act(() => api.rename('pinned', 'Renamed'));
+    act(() => api.remove('pinned'));
+    expect(commit).toHaveBeenCalledTimes(2);
+  });
 });

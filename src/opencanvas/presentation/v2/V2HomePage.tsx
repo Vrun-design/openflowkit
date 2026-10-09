@@ -18,6 +18,7 @@ import { isV1Backup, openV1Backup, readV1ImportMarker, runV1Import } from '../..
 import { documentFromFileText } from '../../../services/storage/v2/openDocumentFile';
 import { STARTER_TEMPLATES } from '../../../agent/starterTemplates';
 import { ISSUE_URL } from '../../application/ai/assistantReport';
+import { forgetMapMode } from './map/mapDepth';
 import { forgetLastDocument, mintV2Id, type V2StartIntent } from './v2Document';
 import {
   CHIP_ICON, DiagramCard, HomeCard, HomeNoticeStrip, SkeletonCard, StartCard, StartChip, ArchivedCard, type CardSelection, type StartKind,
@@ -207,7 +208,7 @@ export function V2HomePage(): React.JSX.Element {
     const name = byId.get(ids[0]!)?.name ?? 'Diagram';
     try {
       await repository.archiveDocuments(ids);
-      ids.forEach(forgetLastDocument);
+      ids.forEach((id) => { forgetLastDocument(id); forgetMapMode(id); });
       toast({
         title: ids.length === 1 ? `“${name}” archived.` : `${plural(ids.length, 'diagram')} archived.`,
         action: { label: 'Undo', onClick: () => void restore(ids, false) },

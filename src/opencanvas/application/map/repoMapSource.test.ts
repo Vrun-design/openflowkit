@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createEmptyV2Document } from '../../presentation/v2/v2Document';
-import { isRepoMapAddress, repoMapDocumentId, repoMapSourceOf, withRepoMapSource } from './repoMapSource';
+import { isRepoMapAddress, repoMapDocumentId, repoMapPageOf, repoMapSourceOf, withRepoMapSource } from './repoMapSource';
 
 const SHA = 'a'.repeat(40);
 
@@ -10,7 +10,10 @@ describe('repoMapSource', () => {
   it('round-trips, dropping empty fields, keeping other metadata, leaving the input alone', () => {
     const base = { ...doc, metadata: { keep: 1 } };
     const out = withRepoMapSource(base, { owner: 'a', repo: 'b', sha: SHA });
-    expect(out.metadata).toEqual({ keep: 1, map: { source: { owner: 'a', repo: 'b', sha: SHA } } });
+    expect(out.metadata).toEqual({ keep: 1, map: { source: { owner: 'a', repo: 'b', sha: SHA }, page: doc.pages[0]!.id } });
+    expect(repoMapPageOf(out)).toBe(doc.pages[0]!.id);
+    expect(repoMapPageOf(doc)).toBeNull();
+    expect(repoMapPageOf({ ...doc, metadata: { map: { page: 5 } } as never })).toBeNull();
     expect(repoMapSourceOf(out)).toEqual({ owner: 'a', repo: 'b', sha: SHA });
     expect(base.metadata).toEqual({ keep: 1 });
     expect(repoMapSourceOf(withRepoMapSource(doc, { owner: 'a', repo: 'b', ref: 'dev' }))).toEqual({ owner: 'a', repo: 'b', ref: 'dev' });

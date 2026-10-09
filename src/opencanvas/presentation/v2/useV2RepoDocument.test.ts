@@ -13,13 +13,13 @@ describe('useV2RepoDocument', () => {
   it('a plain document is no repo document', () => {
     const { result } = renderHook(() => useV2RepoDocument(plain, null));
     expect(result.current.source).toBeNull();
-    expect(result.current.readOnly).toBe(false);
+    expect(result.current.lockedPageId).toBeNull();
     expect(result.current.initialize).toBeUndefined();
   });
-  it('a repo document is read-only and names its source', () => {
+  it('a repo document locks its first page only and names its source', () => {
     const { result } = renderHook(() => useV2RepoDocument(repoDoc, null));
     expect(result.current.source).toEqual({ owner: 'a', repo: 'b' });
-    expect(result.current.readOnly).toBe(true);
+    expect(result.current.lockedPageId).toBe(repoDoc.pages[0]!.id);
     expect(result.current.mismatch).toBe(false);
   });
   it('the intent shapes a fresh document with its source and the repo name', () => {

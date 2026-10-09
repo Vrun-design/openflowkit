@@ -9,8 +9,9 @@ const mapState = (page: Page): Promise<{ open: string[]; nodes: string[] }> =>
 const mapButton = (page: Page) => page.getByRole('button', { name: 'Map', exact: true });
 const canvasButton = (page: Page) => page.getByRole('button', { name: 'Canvas', exact: true });
 
+// A reload comes back in the mode the reader last chose (map-mode-remember.spec), so press Map only when it is off.
 async function enterMap(page: Page): Promise<void> {
-  await mapButton(page).click();
+  if ((await mapButton(page).getAttribute('aria-pressed')) !== 'true') await mapButton(page).click();
   await expect(mapButton(page)).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(async () => (await mapState(page)).nodes.length).toBeGreaterThan(0);
 }
