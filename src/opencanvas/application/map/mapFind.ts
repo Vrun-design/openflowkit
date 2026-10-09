@@ -7,10 +7,7 @@ const fold = (text: string | undefined) => (text ?? '').toLowerCase();
 /** Engine-made buckets (`more` boxes and their alphabetical ranges) are no element: nobody searches for them. */
 export const synthetic = (n: MapNode) => n.kind === 'more' || (n.kind === 'group' && n.id.includes('#more'));
 
-/**
- * Boxes whose name, path, or (C4) technology or description contains `query`, in tree order: depth-first by
- * children order, so the same query always steps the same way. Closed boxes are searched too.
- */
+/** Boxes whose name, path or (C4) technology or description contains `query`, in tree order. Closed boxes are searched too. */
 export function mapFindMatches(model: MapModel, arch: ArchModel | null, query: string): string[] {
   const needle = fold(query.trim());
   if (!needle) return [];

@@ -4,7 +4,7 @@ import { FIXTURE } from '../../../dsl/map/fixture';
 import { presets, visible } from '../../../dsl/map/view';
 import type { AggEdge } from '../../../dsl/map/types';
 import { oneLevel } from './navigate';
-import { canExpandOne, collapseAll, depthOf, edgeLayerCounts, expandOneLevel, MAP_BOX_BUDGET, presetOpen, sameOpen, siblingMove } from './mapNavigation';
+import { canExpandOne, collapseAll, depthOf, edgeLayerCounts, expandOneLevel, MAP_BOX_BUDGET, presetOpen, sameOpen, siblingMove, topLeftFirst } from './mapNavigation';
 
 const model = buildMap(FIXTURE);
 const files = (n: number) => Array.from({ length: n }, (_, i) => ({ path: `a/f${i}.ts`, loc: 1 }));
@@ -117,5 +117,12 @@ describe('canExpandOne and sameOpen', () => {
     expect(sameOpen(new Set(['a', 'b']), new Set(['b', 'a']))).toBe(true);
     expect(sameOpen(new Set(['a']), new Set(['a', 'b']))).toBe(false);
     expect(sameOpen(new Set(['a']), new Set(['b']))).toBe(false);
+  });
+});
+
+describe('topLeftFirst', () => {
+  it('orders by row, then column, then id', () => {
+    const rects = new Map([['b', { x: 10, y: 0 }], ['a', { x: 10, y: 0 }], ['c', { x: 0, y: 0 }], ['d', { x: 0, y: 5 }]]);
+    expect(['d', 'b', 'a', 'c'].sort(topLeftFirst(rects))).toEqual(['c', 'a', 'b', 'd']);
   });
 });

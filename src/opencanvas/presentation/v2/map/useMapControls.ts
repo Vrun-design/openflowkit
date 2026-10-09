@@ -1,7 +1,7 @@
 import { useCallback, useMemo, type RefObject } from 'react';
 import type { LaidRect } from '../../../../dsl/map/elk';
 import type { Depth, MapModel } from '../../../../dsl/map/types';
-import { canExpandOne, collapseAll, depthOf, expandOneLevel, presetOpen, sameOpen, siblingMove } from '../../../application/map/mapNavigation';
+import { canExpandOne, collapseAll, depthOf, expandOneLevel, presetOpen, sameOpen, siblingMove, topLeftFirst } from '../../../application/map/mapNavigation';
 import type { Dir } from '../../../application/map/navigate';
 import type { CanvasCamera } from '../../../domain/camera/types';
 import type { ScenePage } from '../../../domain/document/types';
@@ -14,7 +14,7 @@ interface Options {
   readonly model: MapModel | null;
   readonly open: ReadonlySet<string>;
   readonly setOpen: (open: ReadonlySet<string>) => void;
-  /** Where the camera goes when the new layout lands: `id: null` re-fits the whole map. */
+  /** Where the camera goes when the layout lands (`id: null`: re-fit the whole map). */
   readonly focusRef: RefObject<{ id: string | null } | null>;
   readonly shown: RefObject<{ page: ScenePage; rects: Map<string, LaidRect> } | null>;
   readonly hostRef: RefObject<PixiRendererHost | null>;
@@ -23,17 +23,17 @@ interface Options {
   readonly primaryId: () => string | null;
   readonly select: (id: string) => void;
   readonly clearSelection: () => void;
-  /** The box to select once its layout lands (a reveal opens boxes first). */
+  /** The box to select once its layout lands. */
   readonly pendingRef: RefObject<string | null>;
   readonly notify: (message: string) => void;
 }
 
-const DIRS: Readonly<Record<string, Dir>> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+const DIRS: Readonly<Partial<Record<string, Dir>>> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
 
 /** What the Map toolbar does (depth, one level, collapse) and where an arrow key goes. The open set stays view state. */
 export function useMapControls({ model, open, setOpen, focusRef, shown, hostRef, cameraRef, updateCamera, primaryId, select, clearSelection, pendingRef, notify }: Options) {
   const depth = useMemo(() => (model ? depthOf(model, open) : null), [model, open]);
-  const canExpand = useMemo(() => (model ? canExpandOne(model, open) : false), [model, open]);
+  const canExpand = model ? canExpandOne(model, open) : false;
   const change = useCallback((next: ReadonlySet<string>, fit: boolean) => {
     if (sameOpen(next, open)) return;
     focusRef.current = fit ? { id: null } : null;
@@ -75,8 +75,7 @@ export function useMapControls({ model, open, setOpen, focusRef, shown, hostRef,
     const from = picked && view.rects.has(picked) ? picked : null;
     const target = from
       ? siblingMove(model, open, from, dir, view.rects)
-      : model.nodes[model.root].children.filter((id) => view.rects.has(id))
-        .sort((a, b) => view.rects.get(a)!.y - view.rects.get(b)!.y || view.rects.get(a)!.x - view.rects.get(b)!.x)[0] ?? null;
+      : model.nodes[model.root].children.filter((id) => view.rects.has(id)).sort(topLeftFirst(view.rects))[0] ?? null;
     if (!target) return true;
     select(target);
     follow(target);

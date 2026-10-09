@@ -1,36 +1,40 @@
 import type { AggEdge, Depth, LinkKind, MapModel } from '../../../dsl/map/types';
 import { presets, visible } from '../../../dsl/map/view';
 import type { Rect } from './geometry';
-import { canOpen, oneLevel, pickNeighbour, type Dir } from './navigate';
+import { oneLevel, pickNeighbour, type Dir } from './navigate';
 
-// Map mode's depth, expand/collapse and arrow-key rules, pure. Sibling picking and "one level" come from navigate.ts.
-
-/** Boxes drawn at once in Map mode (the SVG map's 300 x 1.4). */
+/** Boxes drawn at once in Map mode. */
 export const MAP_BOX_BUDGET = 420;
 
-/** Every shut box on screen that can open, opened. The same set back when nothing opens or the result would pass the budget. */
+/** One more level opened; the same set back when nothing opens or the result would pass the budget. */
 export function expandOneLevel(model: MapModel, open: ReadonlySet<string>): ReadonlySet<string> {
   const next = oneLevel(model, open);
   return next.size === open.size || visible(model, next).length > MAP_BOX_BUDGET ? open : next;
 }
 
-/** Whether one more level has a box to open (false: everything on screen is open or a leaf). Past the budget it is still true. */
+/** Whether one more level has a box to open (still true past the budget). */
 export const canExpandOne = (model: MapModel, open: ReadonlySet<string>): boolean => oneLevel(model, open).size > open.size;
 
-/** The same boxes open: a click that would change nothing must not relayout the map. */
+/** The same boxes open (a no-op change must not relayout the map). */
 export const sameOpen = (a: ReadonlySet<string>, b: ReadonlySet<string>): boolean => a.size === b.size && [...a].every((id) => b.has(id));
 
 /** Nothing open: the root's children shut (the engine's own minimal state). */
 export const collapseAll = (): Set<string> => new Set();
 
-/** The engine's open set for a depth preset (a copy, safe to keep). */
+/** The open set of a depth preset, as a copy. */
 export const presetOpen = (model: MapModel, depth: Depth): Set<string> => new Set(presets(model)[depth]);
 
 /** The preset whose open set equals `open`, or null for a custom state. Overview wins a tie with Detailed. */
 export function depthOf(model: MapModel, open: ReadonlySet<string>): Depth | null {
   const all = presets(model);
-  return (['overview', 'detailed', 'everything'] as const).find((d) => all[d].size === open.size && [...open].every((id) => all[d].has(id))) ?? null;
+  return (['overview', 'detailed', 'everything'] as const).find((d) => sameOpen(all[d], open)) ?? null;
 }
+
+/** Top-left first, ties by id so the pick is deterministic. */
+export const topLeftFirst = (rects: ReadonlyMap<string, { x: number; y: number }>) => (a: string, b: string): number => {
+  const [p, q] = [rects.get(a)!, rects.get(b)!];
+  return p.y - q.y || p.x - q.x || (a < b ? -1 : 1);
+};
 
 /**
  * Where an arrow key lands from `fromId`. `rects` are the laid-out boxes on screen (only those are reachable).
@@ -49,10 +53,7 @@ export function siblingMove(
   const node = model.nodes[fromId];
   if (!node || !rects.has(fromId)) return null;
   if (dir === 'down' && open.has(fromId)) {
-    const first = node.children.filter((c) => rects.has(c)).sort((a, b) => {
-      const [p, q] = [rects.get(a)!, rects.get(b)!];
-      return p.y - q.y || p.x - q.x || (a < b ? -1 : 1);
-    })[0];
+    const first = node.children.filter((c) => rects.has(c)).sort(topLeftFirst(rects))[0];
     if (first) return first;
   }
   const siblings = (node.parent ? model.nodes[node.parent]?.children ?? [] : []).filter((id) => rects.has(id));
@@ -61,11 +62,9 @@ export function siblingMove(
   return dir === 'up' && node.parent && node.parent !== model.root && rects.has(node.parent) ? node.parent : null;
 }
 
-/** Lines each link kind stands for across the arrows on screen; only kinds present. */
+/** Lines each link kind stands for across the arrows on screen. */
 export function edgeLayerCounts(edges: readonly AggEdge[]): Partial<Record<LinkKind, number>> {
   const out: Partial<Record<LinkKind, number>> = {};
   for (const e of edges) out[e.kind] = (out[e.kind] ?? 0) + e.count;
   return out;
 }
-
-export { canOpen };
