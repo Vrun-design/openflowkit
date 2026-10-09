@@ -25,11 +25,10 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
   (52fea93a). Next, UI chat: orange primary/focus ring, Architecture model panel (orange row/links), amber lock.
 - Owner: publish MCP 0.2.0 (Action default CLI needs it); deploy `start:http` over HTTPS, then verify hosts (README table).
   Owner action list: `docs/plan/cofounder-action-list.md`. `e2e:headed` 10-09: 261/266; 5 local GPU budgets fail at 23ff9aa4 too (Mac). Open: H5 eval.
-- Headless layout cap: 1000 shapes / 400 connections. Share Worker setup: `worker/README.md`.
 ## Found, not fixed (owner calls)
 - Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI): `docs/plan/launch-holds.md`. CI uploads first-failure
   traces (`e2e-traces`). A new worker's deps are pre-scanned (`optimizeDeps.entries`), or dev reloads mid-session.
-- Discovery is blind to .NET/Elixir without containers (G1).
+- Discovery is blind to .NET/Elixir without containers (G1). Headless layout cap: 1000 shapes / 400 connections; Share Worker: `worker/README.md`.
 ## Ceilings (`// ponytail:` in code)
 - Whole SVG re-emitted per export; chart/ink/image/annotation/text frames rasterized in JS.
   GIF: 256 colours, ≤ 20 fps, no custom keyframes (phase 8). Frames don't clip on export.
