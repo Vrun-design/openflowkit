@@ -1247,5 +1247,10 @@
 
 
 /* Map start's repo popover. */
-.ofk-v2-map-repo { width: 320px; }
-.ofk-v2-map-repo-form { display: grid; gap: var(--ofk-space-md); padding: var(--ofk-space-md); }
+.ofk-v2-welcome .ofk-v2-welcome-or { display: flex; align-items: center; gap: 12px; width: min(420px, 100%); margin: 22px auto 14px; color: var(--ofk-muted); font-size: 13px; }
+.ofk-v2-welcome .ofk-v2-welcome-or::before, .ofk-v2-welcome .ofk-v2-welcome-or::after { content: ''; flex: 1; border-top: 1px solid var(--ofk-border); }
+/* The repo field reads as one more row of the welcome: button height and radius, label for screen readers only. */
+.ofk-v2-map-repo-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px; width: min(420px, 100%); margin: 0 auto; text-align: left; pointer-events: auto; }
+.ofk-v2-map-repo-form .ofk-field label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.ofk-v2-map-repo-form .ofk-field input { min-height: 38px; border-radius: var(--ofk-radius-control); border-color: var(--ofk-border); background: var(--ofk-surface); font-size: 14px; }
+.ofk-v2-map-repo-form .ofk-button { font-size: 14px; min-height: 38px; padding: 0 14px; border-color: var(--ofk-border); background: var(--ofk-surface); }

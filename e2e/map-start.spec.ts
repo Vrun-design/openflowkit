@@ -66,21 +66,19 @@ test('the agent action opens Connect agent @gate', async ({ page }) => {
   await expect(start(page)).toBeVisible();
 });
 
-test('Map a GitHub repo opens a popover that checks the address, then opens the repo map @gate', async ({ page }) => {
+test('the repo field under "or" checks the address, then opens the repo map @gate', async ({ page }) => {
   const CORS = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'x-ratelimit-remaining, x-ratelimit-reset' };
   await page.route('https://api.github.com/repos/acme/shop/git/trees/**', (route) => route.fulfill({ status: 404, json: { message: 'Not Found' }, headers: CORS }));
   await openCanvas(page);
   await page.keyboard.press('m');
-  await start(page).getByRole('button', { name: 'Map a GitHub repo' }).click();
-  const popover = page.getByRole('dialog', { name: 'Map a GitHub repo' });
-  const field = popover.getByLabel('owner/repo or GitHub URL');
-  await expect(field).toBeFocused();
+  const form = start(page).getByRole('form', { name: 'Map a GitHub repo' });
+  const field = form.getByRole('textbox', { name: 'Map a GitHub repo' });
   await field.fill('not a repo');
-  await popover.getByRole('button', { name: 'Map', exact: true }).click();
-  await expect(popover.getByText('Enter owner/repo or a github.com address.')).toBeVisible();
+  await form.getByRole('button', { name: 'Map repo', exact: true }).click();
+  await expect(form.getByText('Enter owner/repo or a github.com address.')).toBeVisible();
   await expect(field).toHaveAttribute('aria-invalid', 'true');
   await field.fill('https://github.com/acme/shop');
-  await expect(popover.getByText('Enter owner/repo or a github.com address.')).toHaveCount(0);
+  await expect(form.getByText('Enter owner/repo or a github.com address.')).toHaveCount(0);
   await field.press('Enter');
   await expect(page).toHaveURL(/#\/d\/map-acme_shop$/);
 });
@@ -96,14 +94,13 @@ test('a plain document reopens on Canvas even when it was left in Map @gate', as
   await expect(start(page)).toHaveCount(0);
 });
 
-test('Escape closes the repo popover and keeps Map; a second Escape leaves it @gate', async ({ page }) => {
+test('Escape in the repo field leaves the field, a second Escape leaves Map @gate', async ({ page }) => {
   await openCanvas(page);
   await page.keyboard.press('m');
-  await start(page).getByRole('button', { name: 'Map a GitHub repo' }).click();
-  const popover = page.getByRole('dialog', { name: 'Map a GitHub repo' });
-  await popover.getByLabel('owner/repo or GitHub URL').fill('acme');
+  const field = start(page).getByRole('textbox', { name: 'Map a GitHub repo' });
+  await field.fill('acme');
   await page.keyboard.press('Escape');
-  await expect(popover).toHaveCount(0);
+  await expect(field).not.toBeFocused();
   await expect(start(page)).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(start(page)).toHaveCount(0);

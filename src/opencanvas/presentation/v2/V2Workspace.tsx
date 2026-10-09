@@ -99,12 +99,13 @@ export function V2WorkspaceRail({
   );
 }
 
-/** The centred welcome Canvas and Map share, so switching between them changes only the words and buttons: logo, title, one line, a row of actions, and the arrows pointing at the chrome. */
-export function V2Welcome({ testId, title, body, actions }: {
+/** The centred welcome Canvas and Map share, so switching between them changes only the words and buttons: logo, title, one line, a row of actions, and the arrows pointing at the chrome. `below` hangs under the actions without moving them. */
+export function V2Welcome({ testId, title, body, actions, below }: {
   testId: string;
   title: string;
   body: string;
   actions: ReactNode;
+  below?: ReactNode;
 }) {
   return (
     <div className="ofk-v2-welcome" data-testid={testId}>
@@ -119,6 +120,7 @@ export function V2Welcome({ testId, title, body, actions }: {
         <h1>{title}</h1>
         <p>{body}</p>
         <div className="ofk-v2-welcome-actions">{actions}</div>
+        {below}
       </div>
       <div className="ofk-v2-guide ofk-v2-guide-view" aria-hidden="true">
         <svg viewBox="0 0 110 100"><path d="M102 9 C58 12 25 43 17 89 M8 74 Q12 86 17 91 Q25 85 31 76" /></svg>
