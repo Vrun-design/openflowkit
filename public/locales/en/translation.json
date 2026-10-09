@@ -1019,11 +1019,26 @@
       },
       "models": {
         "gemini": {
-          "gemini-2.5-flash-lite": {
-            "label": "2.5 Flash Lite",
+          "gemini-3.5-flash-lite": {
+            "label": "3.5 Flash Lite",
             "hint": "Fastest · Free tier default",
             "category": "Speed",
             "badge": "Default"
+          },
+          "gemini-3.5-flash": {
+            "label": "3.5 Flash",
+            "hint": "Best price/performance balance",
+            "category": "Speed"
+          },
+          "gemini-3.5-pro": {
+            "label": "3.5 Pro",
+            "hint": "Most powerful · Multimodal",
+            "category": "Reasoning"
+          },
+          "gemini-2.5-flash-lite": {
+            "label": "2.5 Flash Lite",
+            "hint": "Legacy · unavailable to new API keys",
+            "category": "Legacy"
           },
           "gemini-2.5-flash": {
             "label": "2.5 Flash",

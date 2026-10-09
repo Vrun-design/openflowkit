@@ -24,6 +24,14 @@ describe('aiProviders config consistency', () => {
         expect(riskIds).toEqual(providerIds);
     });
 
+    it('defaults the Gemini dropdown to the current flash-lite model', () => {
+        // Google retired gemini-2.5-flash-lite for new API keys, so the default
+        // that the model dropdown falls back to has to be the 3.5 replacement.
+        expect(DEFAULT_MODELS.gemini).toBe('gemini-3.5-flash-lite');
+        expect(PROVIDERS.find((provider) => provider.id === 'gemini')?.defaultModel).toBe('gemini-3.5-flash-lite');
+        expect(PROVIDER_MODELS.gemini[0].id).toBe('gemini-3.5-flash-lite');
+    });
+
     it('provides default base urls for all non-gemini and non-claude providers', () => {
         const required = PROVIDERS
             .map((provider) => provider.id)
