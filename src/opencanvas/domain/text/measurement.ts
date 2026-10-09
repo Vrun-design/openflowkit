@@ -11,6 +11,10 @@ export interface PortableTextStyle {
   readonly overflow?: TextOverflowPolicy;
 }
 
+/** The node title and the kind/description line under it: one definition for sizing, canvas and export. */
+export const LABEL_FONT = { fontSize: 14, fontWeight: 600 } as const;
+export const SUBLABEL_FONT = { fontSize: 11, fontWeight: 400 } as const;
+
 export interface PortableTextMeasurement extends Size2d {
   readonly lines: readonly string[];
   readonly displayText: string;

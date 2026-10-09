@@ -226,8 +226,9 @@ export class PixiConnectorRenderer {
     const visiblePage = visibleConnectorPage(page);
     const wanted = (connector: { readonly id: string }): boolean => !renderedConnectorIds || renderedConnectorIds.has(connector.id);
     if (!advanced) {
-      this.drawLegacy({ ...visiblePage, connectors: visiblePage.connectors.filter(wanted) });
-      this.debugSnapshot = { connectors: visiblePage.connectors.filter(wanted).length, labels: 0, markers: 0, widestLabel: 0 };
+      const drawn = visiblePage.connectors.filter(wanted);
+      this.drawLegacy({ ...visiblePage, connectors: drawn });
+      this.debugSnapshot = { connectors: drawn.length, labels: 0, markers: 0, widestLabel: 0 };
       return;
     }
     const connectors = placeLabelsAmongAll

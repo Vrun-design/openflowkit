@@ -1,5 +1,5 @@
 import { resolveSizedNode } from '../opencanvas/domain/node-sizing/model';
-import { measurePortableText } from '../opencanvas/domain/text/measurement';
+import { LABEL_FONT, measurePortableText, SUBLABEL_FONT } from '../opencanvas/domain/text/measurement';
 import type { SceneNode } from '../opencanvas/domain/document/types';
 import { nodeLabelBounds } from '../opencanvas/domain/nodes/nodeLabelBounds';
 import type { Size2d } from '../opencanvas/domain/geometry/types';
@@ -25,16 +25,31 @@ export const WRAP_SIZING_POLICY = {
 
 /** Matches the renderer's `textPadding` for shapes (nodeStyle), so measured and drawn wrap widths agree. */
 export const TEXT_PADDING = 16;
-/** The kind line under a node title. */
-export const SUBLABEL_FONT = { fontSize: 11, fontWeight: 400 } as const;
+export { SUBLABEL_FONT };
 
 const LIMITS = { min: { width: 24, height: 24 }, max: { width: 640, height: 520 } };
+
+const pad = (n: number) => ({ top: n, right: n, bottom: n, left: n });
 
 /** UML actor: the silhouette fills the box, so the label sits below it. */
 export const ACTOR_CONTENT_LAYOUT = {
   version: 1, horizontal: 'center', vertical: 'end', iconPlacement: 'top', labelAlignment: 'center',
-  padding: { top: 10, right: 10, bottom: 10, left: 10 }, gap: 8, iconScale: 1, freeIconPosition: { x: 0.5, y: 0.5 },
+  padding: pad(10), gap: 8, iconScale: 1, freeIconPosition: { x: 0.5, y: 0.5 },
 } as const;
+
+const TEXT_LAYOUT = {
+  version: 1, horizontal: 'center', vertical: 'center', iconPlacement: 'top', labelAlignment: 'center',
+  padding: pad(TEXT_PADDING), gap: 8, iconScale: 1, freeIconPosition: { x: 0.5, y: 0.5 },
+} as const;
+
+/** A scene node with only what sizing and label bounds read. */
+function blankNode(content: SceneNode['content'], size: Size2d, kind = 'process'): SceneNode {
+  return {
+    id: 'measure', kind, parentId: null, layerId: 'default', zIndex: 0,
+    transform: { translation: { x: 0, y: 0 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
+    size, ports: [], metadata: {}, extensions: {}, content, appearance: {},
+  };
+}
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
@@ -60,7 +75,7 @@ export function measureNodeSize(request: NodeMeasureRequest): Size2d {
       height: Math.round(clamp(request.height ?? fallback.height, LIMITS.min.height, LIMITS.max.height)),
     };
   }
-  const label = measurePortableText(request.label, { fontSize: 14, fontWeight: 600, maxWidth: spec.wrap, overflow: 'visible' });
+  const label = measurePortableText(request.label, { ...LABEL_FONT, maxWidth: spec.wrap, overflow: 'visible' });
   if (request.kind === 'architecture') {
     const title = measurePortableText(request.label, { fontSize: 12, fontWeight: 600, maxWidth: 200, overflow: 'visible' });
     return clampSize(Math.max(148, title.width + 32), 84 + title.height + 16, spec);
@@ -74,28 +89,22 @@ export function measureNodeSize(request: NodeMeasureRequest): Size2d {
     maxSize: { width: spec.maxSize.width, height: spec.maxSize.height },
     overflow: wrapping ? 'wrap' : 'visible', clipContent: false, maxLines: 4,
   } as const;
-  const sized = resolveSizedNode({
-    id: 'measure', kind: request.kind, parentId: null, layerId: 'default', zIndex: 0,
-    transform: { translation: { x: 0, y: 0 }, rotationRadians: 0, scale: { x: 1, y: 1 } },
-    size: { width: 1, height: 1 }, ports: [], metadata: {}, extensions: {},
-    content: {
-      label: request.label,
-      ...(request.subLabel ? { subLabel: request.subLabel } : {}),
-      ...(request.hasIcon ? { icon: 'icon' } : {}),
-      contentLayout: request.spec.shape === 'actor' ? ACTOR_CONTENT_LAYOUT : { version: 1, horizontal: 'center', vertical: 'center', iconPlacement: 'top', labelAlignment: 'center', padding: { top: TEXT_PADDING, right: TEXT_PADDING, bottom: TEXT_PADDING, left: TEXT_PADDING }, gap: 8, iconScale: 1, freeIconPosition: { x: 0.5, y: 0.5 } },
-      sizingPolicy: policy,
-    },
-    appearance: {},
-  }, policy);
+  const sized = resolveSizedNode(blankNode({
+    label: request.label,
+    ...(request.subLabel ? { subLabel: request.subLabel } : {}),
+    ...(request.hasIcon ? { icon: 'icon' } : {}),
+    contentLayout: request.spec.shape === 'actor' ? ACTOR_CONTENT_LAYOUT : TEXT_LAYOUT,
+    sizingPolicy: policy,
+  }, { width: 1, height: 1 }, request.kind), policy);
   const size = clampSize(sized.size.width, sized.size.height, spec);
   // A wrapped node takes the full wrap width: the canvas wraps with the real font at that width, so the
   // estimate's narrower widest line would leave no slack for glyphs wider than measured.
-  return wrapping && wrapPolicyFor(request, { width: spec.maxSize.width, height: size.height })
+  return wrapping && needsWrap(request, spec.maxSize.width - 2 * textPadding(spec))
     ? { width: clampSize(spec.maxSize.width, 1, spec).width, height: size.height } : size;
 }
 
 /** Text sits `padding` from the box on every side; an actor's silhouette fills the box, so it keeps 10. */
-const textPadding = (spec: DslShapeSpec) => spec.shape === 'actor' ? 10 : TEXT_PADDING;
+const textPadding = (spec: DslShapeSpec) => spec.shape === 'actor' ? ACTOR_CONTENT_LAYOUT.padding.left : TEXT_PADDING;
 
 /**
  * Whether this node's text may wrap in its box. Shapes whose label rect is inset (diamond, circle, ...)
@@ -104,10 +113,19 @@ const textPadding = (spec: DslShapeSpec) => spec.shape === 'actor' ? 10 : TEXT_P
  */
 function wrapsText(request: NodeMeasureRequest): boolean {
   if (request.hasIcon || request.width !== undefined || request.height !== undefined) return false;
-  if (request.spec.shape === 'actor' || request.overflow === 'wrap') return true;
-  const probe = { id: 'probe', kind: request.kind, content: { shape: request.spec.shape }, size: { width: 100, height: 100 } } as unknown as SceneNode;
-  const bounds = nodeLabelBounds(probe);
-  return bounds.x === 0 && bounds.y === 0 && bounds.width === 100 && bounds.height === 100;
+  return request.spec.shape === 'actor' || request.overflow === 'wrap' || !insetLabel(request.spec.shape, request.kind);
+}
+
+/** Whether the shape's label area is smaller than its box. */
+function insetLabel(shape: string | undefined, kind: string): boolean {
+  const bounds = nodeLabelBounds(blankNode({ ...(shape ? { shape } : {}) }, { width: 100, height: 100 }, kind));
+  return !(bounds.x === 0 && bounds.y === 0 && bounds.width === 100 && bounds.height === 100);
+}
+
+/** Whether a line of the label or sub-label is wider than `inner`, so it must wrap. */
+function needsWrap(request: NodeMeasureRequest, inner: number): boolean {
+  const wide = (text: string, font: typeof LABEL_FONT | typeof SUBLABEL_FONT) => measurePortableText(text, { ...font, overflow: 'visible' }).width > inner;
+  return wide(request.label, LABEL_FONT) || (request.subLabel ? wide(request.subLabel, SUBLABEL_FONT) : false);
 }
 
 /**
@@ -116,10 +134,7 @@ function wrapsText(request: NodeMeasureRequest): boolean {
  */
 export function wrapPolicyFor(request: NodeMeasureRequest, size: Size2d) {
   if (request.kind === 'architecture' || request.kind === 'sticky' || !wrapsText(request)) return null;
-  const inner = size.width - 2 * textPadding(request.spec);
-  const wide = (text: string, fontSize: number, fontWeight: 400 | 600) =>
-    measurePortableText(text, { fontSize, fontWeight, overflow: 'visible' }).width > inner;
-  return wide(request.label, 14, 600) || (request.subLabel ? wide(request.subLabel, 11, 400) : false) ? WRAP_SIZING_POLICY : null;
+  return needsWrap(request, size.width - 2 * textPadding(request.spec)) ? WRAP_SIZING_POLICY : null;
 }
 
 /** Container minimums keep a group big enough for its header band and label. */

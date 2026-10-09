@@ -34,7 +34,7 @@ import { buildNodeWorldMatrices, nodeWorldBounds } from '../../domain/scene/worl
 import { buildNodeStateMap } from '../../domain/scene/nodeState';
 import { descendantIds } from '../../domain/scene/queries';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
-import { measurePortableText } from '../../domain/text/measurement';
+import { measurePortableText, SUBLABEL_FONT } from '../../domain/text/measurement';
 import { SEQUENCE_ACTIVATION_WIDTH } from '../../domain/nodes/sequenceNodePresentation';
 import { annotationColors } from '../pixi/freeformNodeVisual';
 import { sequenceNodeColors } from '../pixi/sequenceNodeVisual';
@@ -405,7 +405,7 @@ function connectorPathData(commands: ReturnType<typeof projectPageConnectors>[nu
   ).join(' ');
 }
 
-const SUB_LABEL_SIZE = 11;
+const SUB_LABEL_SIZE = SUBLABEL_FONT.fontSize;
 
 // The label sits in `nodeLabelBounds`, the rect the Pixi renderers and the DOM
 // editor use: a frame's title band, the canvas below an icon plate, a shape's inset.
@@ -418,13 +418,14 @@ function labelElement(style: NodeStyle, box: Bounds2d, label: string, subLabel: 
   // Label and sub-label wrap like the canvas draws them (PixiNodeRenderer): the node's width less
   // padding, its sizing policy's line cap and overflow; the sub-label is 11px/400.
   const sizing = resolveNodeSizingPolicy(node);
-  const wrap = sizing.overflow === 'visible' ? {}
+  const wrapped = sizing.overflow !== 'visible';
+  const wrap = !wrapped ? {}
     : { maxWidth: Math.max(1, node.size.width - padding * 2), maxLines: sizing.maxLines, overflow: sizing.overflow };
-  const labelLines = sizing.overflow === 'visible' ? [label] : measurePortableText(label, {
+  const labelLines = !wrapped ? [label] : measurePortableText(label, {
     fontSize: style.fontSize, fontWeight: style.fontWeight, lineHeight: style.fontSize * style.lineHeight, ...wrap,
   }).lines;
   const subLines = subLabel ? measurePortableText(subLabel, {
-    fontSize: SUB_LABEL_SIZE, fontWeight: 400, lineHeight: SUB_LABEL_SIZE * 1.2,
+    ...SUBLABEL_FONT, lineHeight: SUB_LABEL_SIZE * 1.2,
     ...wrap,
   }).lines : [];
   // Label and sub-label stack as one block, 4px apart, like `layoutNodeContent`.

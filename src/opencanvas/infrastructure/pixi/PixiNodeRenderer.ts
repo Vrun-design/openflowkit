@@ -24,7 +24,7 @@ import { drawPixiNodeOutline } from './pixiNodeOutline';
 import type { PixiNodeDebugRecord } from './pixiNodeDebug';
 import { isContainerNodeKind } from '../../domain/nodes/containerNodePresentation';
 import { resolveNodeSizingPolicy } from '../../domain/node-sizing/model';
-import { measurePortableText } from '../../domain/text/measurement';
+import { measurePortableText, SUBLABEL_FONT } from '../../domain/text/measurement';
 import { decoratePixiText } from './pixiText';
 import { PixiTextPool } from './pixiTextPool';
 import type { SemanticDetailLevel } from './viewportProjection';
@@ -52,7 +52,7 @@ function textAnchor(alignment: 'start' | 'center' | 'end'): number {
 
 /** Sub-labels use the node's family/colour at a fixed smaller size. */
 function subLabelStyle(style: NodeStyle): NodeStyle {
-  return { ...style, fontSize: 11, fontWeight: 400, textDecoration: 'none' };
+  return { ...style, ...SUBLABEL_FONT, textDecoration: 'none' };
 }
 
 export class PixiNodeRenderer {
@@ -227,7 +227,7 @@ export class PixiNodeRenderer {
         typeof node.content.subLabel === 'string' && node.content.subLabel.length > 0
           ? this.texts.styled(
               measurePortableText(node.content.subLabel, {
-                fontSize: 11, fontWeight: 400,
+                ...SUBLABEL_FONT,
                 ...(wrap === null ? {} : { maxWidth: wrap, maxLines: sizing.maxLines, overflow: sizing.overflow }),
               }).displayText,
               subStyle, style.subTextColor ? pixiPaintColor(style.subTextColor, 0).color : visual?.subText ?? 0x64748b, wrap
@@ -243,7 +243,7 @@ export class PixiNodeRenderer {
           iconSize: hasIcon ? { width: 28, height: 28 } : null,
           labelSize: labelMeasurement,
           subLabelSize: subLabel ? measurePortableText(subLabel.text, {
-            fontSize: 11, fontWeight: 400,
+            ...SUBLABEL_FONT,
           }) : null,
         }
       );
