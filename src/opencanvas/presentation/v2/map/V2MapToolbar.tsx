@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { IconFold, IconFoldDown } from '@tabler/icons-react';
+import { IconFold, IconFoldDown, IconPin } from '@tabler/icons-react';
 import type { Depth, LinkKind } from '../../../../dsl/map/types';
 import { Button, Icon, IconButton, Menu, MenuItem, Toolbar, Tooltip } from '../../design-system';
 
@@ -18,6 +18,9 @@ export interface V2MapToolbarProps {
   readonly layers?: readonly { kind: LinkKind; label: string; count: number; on: boolean }[];
   readonly onToggleLayer?: (kind: LinkKind) => void;
   readonly canExpand: boolean;
+  /** Pin the map as a Canvas page; absent when pinning cannot be offered (a shared view), disabled while nothing is drawn. */
+  readonly onPin?: () => void;
+  readonly canPin?: boolean;
 }
 
 /** Map mode's depth, expand/collapse and connection layers. The host places it (beside the camera controls). */
@@ -42,6 +45,12 @@ export function V2MapToolbar(p: V2MapToolbarProps): React.JSX.Element {
             <Tooltip content="Which kinds of connections are drawn">
               <Button ref={ref} variant="quiet" aria-haspopup="menu" aria-expanded={open} disabled={layers.length === 0} onClick={() => setOpen((o) => !o)}>Connections</Button>
             </Tooltip>
+          </>
+        ) : null}
+        {p.onPin ? (
+          <>
+            <span className="ofk-v2-divider" aria-hidden="true" />
+            <Tooltip content="Pin this map as a Canvas page" shortcut="⇧M"><IconButton variant="quiet" label="Pin as page" icon={<Icon icon={IconPin} />} disabled={!p.canPin} onClick={p.onPin} /></Tooltip>
           </>
         ) : null}
       </Toolbar>

@@ -762,10 +762,11 @@
       "name": "Map mode",
       "status": "partial",
       "evidence": "src/opencanvas/presentation/v2/map/useV2MapMode.ts",
-      "notes": "Canvas | Map switch on pages with a C4 model: the model as boxes inside boxes, a click opens a box in place, a click on an arrow lists its relations. A bottom toolbar sets the depth (Overview, Detailed, Everything), opens one more level or closes every box; arrow keys walk between boxes. Repo maps in the editor still to come.",
+      "notes": "Canvas | Map switch on pages with a C4 model: the model as boxes inside boxes, a click opens a box in place, a click on an arrow lists its relations. A bottom toolbar sets the depth (Overview, Detailed, Everything), opens one more level or closes every box; arrow keys walk between boxes; Pin as page (Shift+M) freezes the map into an ordinary Canvas page. Repo maps in the editor still to come.",
       "shortcuts": [
         "Canvas / Map (pages with a model)",
-        "Move between boxes (Map)"
+        "Move between boxes (Map)",
+        "Pin map as page (Map)"
       ]
     },
     {

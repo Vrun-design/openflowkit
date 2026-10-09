@@ -83,7 +83,10 @@ export function useMapMotion({ mapPage, emptyPage, scene, model, hostRef, camera
       player.stop();
       settle();
       if (!extent) return;
-      updateCamera(mapCamera(extent, clearance(host)));
+      // A map entered at an element (a drill from Canvas) frames that element; otherwise the whole map.
+      const at = focusRef.current;
+      focusRef.current = null;
+      updateCamera(at?.id && rects.has(at.id) ? landOn(extent, rects.get(at.id)!, clearance(host)) : mapCamera(extent, clearance(host)));
       return;
     }
     const { items, gone } = planMotion(model, mapPage.nodes.map((node) => node.id), rects, before.rects, player.cur);

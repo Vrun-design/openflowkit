@@ -73,6 +73,7 @@ import { useV2Inserts } from './useV2Inserts';
 import { useV2Keyboard } from './useV2Keyboard';
 import { useV2LabelEditing, type OpenEditorOptions } from './useV2LabelEditing';
 import { useV2MapMode } from './map/useV2MapMode';
+import { buildPinPageCommand } from '../../application/map/pinPage';
 import { useV2RepoDocument, useV2RepoPanel } from './useV2RepoDocument';
 import { BadRepoAddress, V2RepoMapOverlay } from './map/V2RepoMapState';
 import { IMAGE_URL_PATTERN, useV2MediaInsert } from './useV2MediaInsert';
@@ -220,7 +221,9 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   const startIntent = isV2StartIntent(location.state) ? location.state : null;
   const repo = useV2RepoDocument(session.document, startIntent);
   // Map mode: a lens on the page's model. The canvas draws `viewPage`; commands, undo and autosave still see `page`.
+  const pinRef = useRef<() => void>(() => undefined);
   const map = useV2MapMode({
+    onPin: () => pinRef.current(),
     page, documentId: session.document?.id, repo: repo.source ? { model: repo.state.model } : null, palette: preferences.diagramPalette, autoIcons: preferences.autoIcons, hostRef,
     cameraRef: camera.cameraRef, updateCamera: camera.updateCamera, fitView: camera.fitView, onToolChange: setTool,
     primaryId: () => selectionRef.current.primaryNodeId,
@@ -289,6 +292,21 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   // Map mode is read-only for geometry: its box ids are the Canvas page's node ids, so any edit that got through
   // would land on the Canvas node of the same id.
   const docReadOnly = load.readOnly || repo.readOnly;
+  // Pin as page: the map as drawn now becomes a plain Canvas page, one undo step. It adds a page, not a model edit,
+  // a repo document is read-only as a whole (a page pinned there could be neither edited nor deleted), so it offers no pin for now.
+  const pinnable = !docReadOnly && map.active && map.mapPage !== null && map.mapPage.nodes.length > 0;
+  pinRef.current = () => {
+    const document = session.document;
+    const mapPage = map.mapPage;
+    if (!pinnable || !document || !mapPage) return;
+    const open = map.state().open;
+    const single = open.length === 1 && map.model ? map.model.nodes[open[0]!]?.name : undefined;
+    const pageId = mintV2Id('page');
+    session.commit(buildPinPageCommand(document, mapPage, { pageId, name: `${single ?? document.name} (pinned)` }));
+    setActivePageId(pageId);
+    map.setMode('canvas');
+    setAnnouncement('Pinned as a page');
+  };
   const editLocked = docReadOnly || map.active;
   useEffect(() => { readOnlyRef.current = editLocked; }, [editLocked]);
 
@@ -420,6 +438,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
       announce: setAnnouncement,
       compileWorkspace: compileAny,
       compileSequence: compileAny,
+      openInMap: map.enterMapAt,
     },
   );
   architectureActionsRef.current = architectureActions;
@@ -481,7 +500,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
   // The deeper view of the selected element, when its page exists.
   const deeperView = selectedElementId ? architecture.childViewOf(selectedElementId) : null;
   const zoomInto = deeperView && architecture.pageForView(deeperView.id) && selectedElementId
-    ? { name: deeperView.name, open: () => { architectureActions.drillInto(selectedElementId); } } : null;
+    ? { name: deeperView.name, open: () => { architectureActions.drillToMap(selectedElementId); } } : null;
   const repoPanel = useV2RepoPanel({
     source: repo.source, map, selectedConnectorId,
     selectedBoxId: selection.nodeIds.length === 1 ? selection.nodeIds[0]! : null,
@@ -677,9 +696,9 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     onTextStyle: editActions.toggleTextStyle,
     onEditPrimary: (source) => {
       const primary = selectionRef.current.primaryNodeId;
-      // Enter on a model object with a deeper view opens it, even read-only;
+      // Enter on a model object with a deeper view opens it in Map (or its view page), even read-only;
       // F2 or ⌘Enter edits the label instead.
-      if (primary && source === 'enter' && selectedElementId && architectureActions.drillInto(selectedElementId)) return;
+      if (primary && source === 'enter' && selectedElementId && architectureActions.drillToMap(selectedElementId)) return;
       if (editLocked) return;
       if (primary) {
         openEditor(primary);
@@ -815,7 +834,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 onCloseFolder: workspaceFolder.closeFolder,
               }}
               breadcrumb={architecture.breadcrumb}
-              {...(repoPanel.drawn ? { mapToolbar: map.toolbar } : {})}
+              {...(repoPanel.drawn ? { mapToolbar: { ...map.toolbar, ...(docReadOnly ? {} : { onPin: () => pinRef.current(), canPin: pinnable }) } } : {})}
               {...(map.available ? { mapMode: { mode: map.mode, onChange: map.setMode } } : {})}
               onCrumb={(crumb) => architectureActions.openCrumb(crumb)}
               {...(shared ? { onEditShared: shared.onEdit } : {})}
@@ -909,7 +928,7 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
                 // Opening a deeper view is Canvas behaviour: it would switch the page under the map.
                 childView: !map.active && zoomInto !== null,
               } : null}
-              onDrillInto={() => { if (selectedElementId) architectureActions.drillInto(selectedElementId); }}
+              onDrillInto={() => { if (selectedElementId) architectureActions.drillToMap(selectedElementId); }}
               onUnplace={() => architectureActions.unplaceSelection(selectionRef.current.nodeIds)}
               onRemoveElement={() => { if (selectedElementId) architectureActions.removeElement(selectedElementId); }}
               onSelectAll={() => selectionApi.selectAll(viewPage)}

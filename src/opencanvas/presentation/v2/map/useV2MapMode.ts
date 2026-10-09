@@ -22,6 +22,7 @@ import { useMapFocus } from './useMapFocus';
 import { mapFindMatches } from '../../../application/map/mapFind';
 import { savedOpen, saveOpen } from './mapDepth';
 import { useMapControls } from './useMapControls';
+import { useMapEntry } from './useMapEntry';
 import { useMapMotion } from './useMapMotion';
 import { useMapLayers } from './useMapLayers';
 import { lookOf, repoLookOf } from './mapLook';
@@ -55,6 +56,8 @@ interface Options {
   readonly closeChart: () => void;
   /** A short polite note, shown and announced by the editor. */
   readonly notify: (message: string) => void;
+  /** Shift+M in Map: pin the map as a Canvas page (the editor does the commit). */
+  readonly onPin?: () => void;
 }
 
 const NONE: ReadonlySet<string> = new Set();
@@ -77,7 +80,7 @@ function useStable<T>(value: T): T {
  * written; the scene is a ScenePage handed to the canvas in place of the page.
  */
 export function useV2MapMode(options: Options) {
-  const { page, documentId, repo = null, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify } = options;
+  const { page, documentId, repo = null, palette, autoIcons, hostRef, cameraRef, updateCamera, fitView, onToolChange, primaryId, select, clearSelection, selectedNodeId, selectedConnectorId, cancelTransient, closeChart, notify, onPin } = options;
   // Cheap: only whether the page carries a model. The model itself is read only while the map is on.
   const isRepo = repo !== null;
   const available = useMemo(() => isRepo || (page ? archFrameOf(page) !== null : false), [isRepo, page]);
@@ -217,6 +220,8 @@ export function useV2MapMode(options: Options) {
   }, [mapPage, select]);
   const controls = useMapControls({ model, open, setOpen: setOpenState, focusRef, shown, hostRef, cameraRef, updateCamera, primaryId, select, clearSelection, pendingRef, notify });
 
+  const { enterMapAt } = useMapEntry({ available, active, lineageKey, model, open, setOpen: setOpenState, setMode, focusRef, pendingRef, notify });
+
   /** True when the open set changed. */
   const flip = useCallback((id: string): boolean => {
     if (!model) return false;
@@ -260,6 +265,7 @@ export function useV2MapMode(options: Options) {
     // With a modifier they are swallowed like every other key Map has no use for (mapKeyAllowed below).
     const onCanvas = event.target === document.body || (event.target instanceof HTMLElement && event.target.matches('[data-testid="v2-canvas"]'));
     if (onCanvas && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey && arrow(event.key)) { event.preventDefault(); return true; }
+    if (onPin && event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey && event.code === 'KeyM') { onPin(); event.preventDefault(); return true; }
     const id = primaryId();
     if (event.key === 'Enter') {
       if (id && shown.current?.rects.has(id)) flip(id);
@@ -276,7 +282,7 @@ export function useV2MapMode(options: Options) {
       return true;
     }
     return !mapKeyAllowed(event);
-  }, [active, model, open, primaryId, flip, select, cancelTransient, arrow, shown]);
+  }, [active, model, open, primaryId, flip, select, cancelTransient, arrow, shown, onPin]);
 
   const state = useCallback(() => ({
     mode: active ? 'map' as const : 'canvas' as const,
@@ -301,7 +307,7 @@ export function useV2MapMode(options: Options) {
     return { ...stats, running };
   }, [player, hostRef]);
 
-  return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, findSource,
+  return { mode: active ? 'map' as const : 'canvas' as const, available, active, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, findSource, enterMapAt,
     /** The aggregated edge a repo-map connector stands for (its evidence), or undefined. */
     edgeOf, edgesAt,
     toolbar: { depth: controls.depth, canExpand: controls.canExpand, onDepth: controls.setDepth, onExpandOne: controls.expandOne, onCollapseAll: controls.collapse,

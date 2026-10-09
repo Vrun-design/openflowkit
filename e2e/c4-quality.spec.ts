@@ -137,7 +137,7 @@ test('a second model opens on its own landscape, not the first model\'s @gate', 
   expect(await rect(page, 'alice')).toBeNull();
 });
 
-test('an element with a deeper view opens it from the canvas and climbs back @gate', async ({ page }) => {
+test('an element with a deeper view opens in Map from the canvas and Canvas climbs back @gate', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('/');
   await page.waitForSelector('[data-testid="v2-canvas"]');
@@ -155,14 +155,35 @@ test('an element with a deeper view opens it from the canvas and climbs back @ga
   await clickNode(page, 'customer');
   await expect(page.getByRole('button', { name: /^Open Services/ })).toHaveCount(0);
   await clickNode(page, 'shop');
+  // The context-bar button goes to Map with the system opened and still selected (not to the child view's page).
+  const mapState = () => page.evaluate(() => (window as unknown as { __V2__: { getMapState(): { mode: string; open: string[] } } }).__V2__.getMapState());
   await page.getByRole('button', { name: 'Open Services: Shop' }).click();
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop');
+  await expect(page.getByRole('button', { name: 'Map', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => (await mapState()).open).toContain('shop');
+  await expect.poll(async () => (await state(page)).selectedNodes).toEqual(['shop']);
   await fitted('shop.web');
-  await page.locator('.ofk-v2-breadcrumb-link').first().click();
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Landscape');
+  // Back on Canvas it is the Landscape page again.
+  await page.getByRole('button', { name: 'Canvas', exact: true }).click();
+  await expect.poll(async () => (await mapState()).mode).toBe('canvas');
   await fitted('shop');
   // The keyboard does the same: Enter on the selected system.
   await clickNode(page, 'shop');
   await page.keyboard.press('Enter');
-  await expect(page.locator('.ofk-v2-breadcrumb-current')).toHaveText('Services: Shop');
+  await expect(page.getByRole('button', { name: 'Map', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => (await mapState()).open).toContain('shop');
+  await expect.poll(async () => (await state(page)).selectedNodes).toEqual(['shop']);
+});
+
+test('Enter on an element with no deeper view edits its label and stays in Canvas @gate', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await page.waitForSelector('[data-testid="v2-canvas"]');
+  await page.getByRole('toolbar', { name: 'Workspace', exact: true }).getByRole('button', { name: 'Architecture model', exact: true }).click();
+  await page.getByRole('button', { name: 'Create C4 workspace', exact: true }).click();
+  await expect.poll(async () => (await doc(page).catch(() => null))?.pages.length).toBe(3);
+  await page.getByRole('button', { name: 'Close panel' }).click();
+  await clickNode(page, 'customer');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('textbox', { name: 'Edit node label' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Canvas', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });

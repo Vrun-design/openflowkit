@@ -22,6 +22,8 @@ export interface ArchitectureActionHost {
   readonly announce: (message: string) => void;
   readonly compileWorkspace: (text: string) => Promise<CompileWorkspaceResult>;
   readonly compileSequence: (text: string) => Promise<CompileWorkspaceResult>;
+  /** Map mode, when the page has one: switch to it with the element opened and focused. False when it cannot (no map, a leaf). */
+  readonly openInMap?: (elementId: string) => boolean;
 }
 
 export interface ArchitectureActionsOptions {
@@ -43,6 +45,8 @@ export interface ArchitectureActions {
   /** Delete on a model view unplaces instead; false lets the normal delete run. */
   unplaceSelection: (nodeIds: readonly string[]) => boolean;
   drillInto: (elementId: string) => boolean;
+  /** The canvas gestures (Enter, the context bar, the context menu): into Map with the element opened; else drillInto. */
+  drillToMap: (elementId: string) => boolean;
   createChildView: (elementId: string) => Promise<void>;
   openCrumb: (crumb: { pageId: string; elementId?: string }) => void;
   openFlowAsSequence: (flow: ArchFlow) => Promise<void>;
@@ -168,6 +172,13 @@ export function useV2ArchitectureActions(options: ArchitectureActionsOptions, ho
     return true;
   }, [architecture, pageRef]);
 
+  // Only an element with a deeper view goes into Map (the test drillInto uses); a leaf falls through, so Enter still edits its label.
+  const drillToMap = useCallback((elementId: string): boolean => {
+    const childView = architecture.childViewOf(elementId);
+    if (childView && architecture.pageForView(childView.id) && hostRef.current.openInMap?.(elementId) === true) return true;
+    return drillInto(elementId);
+  }, [architecture, drillInto]);
+
   const createChildView = useCallback(async (elementId: string) => {
     const current = hostRef.current;
     const model = architecture.model;
@@ -237,5 +248,5 @@ export function useV2ArchitectureActions(options: ArchitectureActionsOptions, ho
     return { nodeIds, connectorIds: [] };
   }, [architecture, pageRef]);
 
-  return { createFlow, editElement, removeElement, addElement, setModelIcons, unplaceSelection, drillInto, createChildView, openCrumb, openFlowAsSequence, perspectiveFocus };
+  return { createFlow, editElement, removeElement, addElement, setModelIcons, unplaceSelection, drillInto, drillToMap, createChildView, openCrumb, openFlowAsSequence, perspectiveFocus };
 }
