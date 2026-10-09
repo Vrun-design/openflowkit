@@ -38,7 +38,7 @@ interface ConnectorProjectionContext {
 
 const SEQUENCE_PARTICIPANT_HEADER_HEIGHT = 48;
 const SEQUENCE_ACTOR_HEIGHT = 40;
-const SEQUENCE_MESSAGE_OFFSET = 20;
+const SEQUENCE_MESSAGE_OFFSET = 44;
 const SEQUENCE_MESSAGE_SPACING = 52;
 
 function createConnectorProjectionContext(page: ScenePage): ConnectorProjectionContext {

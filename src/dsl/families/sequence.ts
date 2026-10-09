@@ -1,4 +1,5 @@
 import type { SceneConnector, SceneNode } from '../../opencanvas/domain/document/types';
+import { connectorLabelPlate, resolveConnectorLabelStyle } from '../../opencanvas/domain/connectors/labelStyle';
 import type { PaletteKey } from '../../opencanvas/domain/nodes/nodePalette';
 import { measurePortableText } from '../../opencanvas/domain/text/measurement';
 import type { DslDiagnostic } from '../ast';
@@ -18,12 +19,18 @@ const LANE_WIDTH = 168;
 const LANE_GAP = 84;
 const HEADER = 48;
 const ACTOR_EXTRA = 40;
-const MESSAGE_OFFSET = 20;
+// A two-line label rides above its arrow, so the first row leaves the header that much room.
+const MESSAGE_OFFSET = 44;
 const MESSAGE_SPACING = 52;
 const NOTE_GAP = 12;
 const LIFELINE_TAIL = 44;
 const PADDING = { top: 96, right: 56, bottom: 56, left: 56 };
 const FRAGMENT_INSET = 40;
+// A fragment's header sits this far above its first message line: clear of the label that rides above that line.
+const FRAGMENT_LEAD = 48;
+const LABEL_LIFT = 3;
+// The guard text starts this far right of the first lifeline, which the header tag (left of it) never reaches.
+const GUARD_INSET = 10;
 
 const FRAGMENT_COLORS: Readonly<Record<string, PaletteKey>> = {
   loop: 'blue', opt: 'amber', critical: 'red', break: 'red', par: 'emerald', alt: 'violet',
@@ -322,6 +329,7 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
   const laneWidth = new Map(model.participants.map((participant) => [
     participant.id, Math.max(LANE_WIDTH, textWidth(participant.label, 12, 40)),
   ]));
+  const labelStyle = resolveConnectorLabelStyle({ appearance: {} } as SceneConnector);
   const laneX = new Map<string, number>();
   let cursor = PADDING.left;
   for (const participant of model.participants) {
@@ -350,11 +358,17 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
   const branchSpan = (branch: BranchDraft) => {
     // Notes written inside the block sit in its band; one written just before it sits above.
     const startY = timelineY(branch.startOrder)
-      + roomOf(model.notes.filter((note) => note.order < branch.startOrder || (note.order === branch.startOrder && !within(note, branch.id)))) - 44;
+      + roomOf(model.notes.filter((note) => note.order < branch.startOrder || (note.order === branch.startOrder && !within(note, branch.id)))) - FRAGMENT_LEAD;
     const lastMessage = branch.endOrder >= branch.startOrder ? timelineY(rowOf(branch.endOrder)) : startY + 8;
     const notesBottom = Math.max(-Infinity, ...model.notes.filter((note) => within(note, branch.id))
       .map((note) => noteTop.get(note.id)! + noteSizes.get(note.id)!.height));
     return { startY, endY: Math.max(lastMessage, notesBottom) };
+  };
+  // A branch ends where the next one (`else`, `and`) of its block begins, not 44px below its last message.
+  const nextStartY = (branch: BranchDraft) => {
+    const next = model.branches.find((other) => other.type === branch.type && other.parent === branch.parent
+      && other.branchIndex === branch.branchIndex + 1 && other.startOrder === branch.endOrder + 1);
+    return next ? branchSpan(next).startY : undefined;
   };
   const lastOrder = Math.max(-1, ...model.messages.map((message) => message.order));
   const branchesBottom = model.branches.reduce((bottom, branch) => Math.max(bottom, branchSpan(branch).endY + 48), 0);
@@ -368,6 +382,14 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
   const nodes: SceneNode[] = [];
   const connectors: SceneConnector[] = [];
 
+  // The guard text starts right of the first lifeline and stops short of the second, so no lifeline runs through it.
+  const guardBox = (fragmentX: number) => {
+    const [first, second] = model.participants;
+    const start = first ? laneX.get(first.id)! + laneWidth.get(first.id)! / 2 + GUARD_INSET : PADDING.left;
+    const end = second ? laneX.get(second.id)! + laneWidth.get(second.id)! / 2 - GUARD_INSET : start + 200;
+    return { x: start - fragmentX, width: end - start };
+  };
+
   // Fragments first: their fills paint behind the participants (draw order).
   for (const branch of model.branches) {
     const { startY, endY } = branchSpan(branch);
@@ -377,12 +399,12 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
       transform: { translation: topLeft, rotationRadians: 0, scale: { x: 1, y: 1 } },
       size: {
         width: Math.max(220, lanesRight - PADDING.left + FRAGMENT_INSET + 30),
-        height: Math.max(64, endY - startY + 44),
+        height: Math.max(64, (nextStartY(branch) ?? endY + 44) - startY),
       },
       content: {
         seqFragmentId: branch.id,
         label: branch.branchIndex === 0 ? branch.type.toUpperCase() : branch.type === 'par' ? 'AND' : 'ELSE',
-        ...(branch.condition ? { subLabel: branch.condition } : {}),
+        ...(branch.condition ? { subLabel: branch.condition, seqGuard: guardBox(topLeft.x) } : {}),
         color: FRAGMENT_COLORS[branch.type] ?? 'violet',
         seqMessageOrder: branch.startOrder,
       },
@@ -431,6 +453,7 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
     });
   }
 
+  const labelLift = (text: string) => connectorLabelPlate(text, labelStyle, { x: 0, y: 0 }).height / 2 + LABEL_LIFT;
   for (const message of model.messages) {
     const attrs = nonVisualAttributes(typedFrom(message.attrs), 'edge');
     const self = message.from === message.to;
@@ -439,7 +462,8 @@ function materialize(model: SeqModel, context: FamilyContext): FamilyScene {
       source: { nodeId: message.from, portId: null, anchor: null, point: null },
       target: { nodeId: message.to, portId: null, anchor: null, point: null },
       route: { kind: 'direct', ownership: 'automatic' }, waypoints: [],
-      labels: message.label ? [{ id: `${message.id}-label`, text: message.label, pathRatio: 0.5, offset: { x: 0, y: 0 }, metadata: {} }] : [],
+      // A label rides on top of its arrow, so its plate never hides the line or the lifelines it crosses.
+      labels: message.label ? [{ id: `${message.id}-label`, text: message.label, pathRatio: 0.5, offset: self ? { x: 0, y: 0 } : { x: 0, y: -labelLift(message.label) }, metadata: {} }] : [],
       // `[head: cross]` is the one visual a message keeps: the lost message of UML, Mermaid's `-x`.
       appearance: message.attrs.some((attribute) => attribute.key === 'head' && attribute.value.toLowerCase() === 'cross') ? { markerEnd: 'cross' } : {},
       semantics: {

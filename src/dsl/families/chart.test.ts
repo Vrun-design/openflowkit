@@ -10,6 +10,13 @@ quadrants: Do now, Plan, Skip, Delegate
 Search [0.2, 0.9]`;
 
 describe('chart family', () => {
+  it('titles once: the chart draws the title, so its frame shows no header', async () => {
+    const chart = await compile('chart bar\ntitle: Revenue\nRevenue: Jan 12, Feb 19');
+    expect(chart.nodes[0]!.content.title).toBe('Revenue');
+    expect(chart.frame.content).toMatchObject({ label: 'Revenue', showHeader: false });
+    expect((await compile('flowchart\ntitle: Flow\nA -> B')).frame.content.showHeader).toBeUndefined();
+  });
+
   it('reads quadrant axis and region labels, and keeps them through a round trip', async () => {
     const result = await compile(QUADRANT);
     expect(result.diagnostics.filter(({ severity }) => severity !== 'info')).toEqual([]);

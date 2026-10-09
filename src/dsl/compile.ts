@@ -195,6 +195,8 @@ function assembleResult(options: AssembleOptions): CompileResult {
     size: scene.size,
     content: { label: typeof scene.meta?.viewTitle === 'string' ? scene.meta.viewTitle : title ?? '',
       ...(typeof scene.meta?.viewKey === 'string' ? {subLabel: scene.meta.viewKey} : {}),
+      // A chart prints its title inside the plot; the frame header would print it twice, over the axis.
+      ...(family === 'chart' && title ? { showHeader: false } : {}),
     },
     appearance: {}, ports: [],
     metadata: {

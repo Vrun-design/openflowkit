@@ -1,4 +1,5 @@
 import { Container, Graphics } from 'pixi.js';
+import { isJsonObject } from '../../domain/document/json';
 import type { SceneNode } from '../../domain/document/types';
 import { SEQUENCE_ACTIVATION_WIDTH } from '../../domain/nodes/sequenceNodePresentation';
 import { applyMatrixToPoint } from '../../domain/geometry/matrix';
@@ -11,7 +12,7 @@ import { projectSequenceNodeVisual, type PixiSequenceNodeVisual } from './sequen
 
 const PARTICIPANT_HEADER_HEIGHT = 48;
 const ACTOR_HEIGHT = 40;
-const MESSAGE_OFFSET = 20;
+const MESSAGE_OFFSET = 44;
 const MESSAGE_SPACING = 52;
 
 export interface PixiSequenceNodeDrawResult {
@@ -229,11 +230,15 @@ export class PixiSequenceNodeRenderer {
     type.position.set(8, 6);
     label.addChild(type);
     if (presentation.condition) {
+      // The layout says where the guard fits between lifelines; without it, it follows the tag.
+      const guard = node.content.seqGuard;
+      const box = isJsonObject(guard) && typeof guard.x === 'number' && typeof guard.width === 'number'
+        ? { x: guard.x, width: guard.width } : { x: 82, width: node.size.width - 92 };
       const condition = createPixiText(
-        truncateTextToWidth(presentation.condition, node.size.width - 92, 6.2),
+        truncateTextToWidth(presentation.condition, box.width, 6.2),
         { size: 10, weight: '500', fill: visual.subText }
       );
-      condition.position.set(82, 6);
+      condition.position.set(box.x, 6);
       label.addChild(condition);
     }
     applyPixiNodeMatrix(label, matrix);

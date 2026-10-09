@@ -665,7 +665,7 @@ function exportSequenceNode(node: SceneNode, matrix: Matrix2d, theme: 'light' | 
 // The sequence renderer's geometry (PixiSequenceNodeRenderer, routeProjection): header, actor room, message rows.
 const SEQUENCE_HEADER_HEIGHT = 48;
 const SEQUENCE_ACTOR_HEIGHT = 40;
-const SEQUENCE_MESSAGE_OFFSET = 20;
+const SEQUENCE_MESSAGE_OFFSET = 44;
 const SEQUENCE_MESSAGE_SPACING = 52;
 
 function exportNode(

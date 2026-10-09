@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { compile } from '../compile';
 import { resolveConnectorPresentation } from '../../opencanvas/domain/connectors/presentation';
+import { connectorLabelPlate, resolveConnectorLabelStyle } from '../../opencanvas/domain/connectors/labelStyle';
 import { format, serialize } from '../serialize';
 
 describe('sequence family', () => {
@@ -119,5 +120,46 @@ describe('sequence family', () => {
     expect(declared.nodes.map((node) => node.id)).toEqual(['alpha', 'beta']);
     const broken = await compile('sequence\nAlpha -> : no receiver');
     expect(broken.diagnostics.map((item) => item.code)).toContain('W101');
+  });
+  describe('readable layout', () => {
+    const login = 'sequence\nparticipant Browser\nparticipant API Gateway\nparticipant Auth Service\nparticipant Database\n'
+      + 'Browser -> API Gateway : POST /login (email, password)\nAPI Gateway -> Auth Service : validate credentials\n'
+      + 'Auth Service -> Database : SELECT user by email\nDatabase --> Auth Service : user record\n'
+      + 'alt password matches {\n  Auth Service -> Database : create session\n  API Gateway --> Browser : 200 OK + session cookie\n'
+      + '} else mismatch {\n  Auth Service --> API Gateway : 401 invalid credentials\n  API Gateway --> Browser : 401 Unauthorized\n}';
+    const center = (node: { transform: { translation: { x: number } }; size: { width: number } }) => node.transform.translation.x + node.size.width / 2;
+
+    it('lifts a label above its arrow so the plate never covers the line', async () => {
+      const result = await compile(login);
+      const style = resolveConnectorLabelStyle(result.connectors[0]!);
+      for (const connector of result.connectors) {
+        const label = connector.labels[0]!;
+        const plate = connectorLabelPlate(label.text, style, { x: 0, y: label.offset.y });
+        expect(plate.y + plate.height).toBeLessThan(0);
+      }
+    });
+
+    it('keeps a fragment header above the label of its first message', async () => {
+      const result = await compile(login);
+      const style = resolveConnectorLabelStyle(result.connectors[0]!);
+      const rowTop = (index: number) => Number(result.connectors[index]!.semantics.seqMessageOrder) * 52;
+      for (const fragment of result.nodes.filter((node) => node.kind === 'annotation')) {
+        const first = result.connectors[Number(fragment.content.seqMessageOrder)]!;
+        const plate = connectorLabelPlate(first.labels[0]!.text, style, { x: 0, y: first.labels[0]!.offset.y });
+        const lineY = 132 + rowTop(Number(fragment.content.seqMessageOrder));
+        // The 24px header tag ends above the first message's label plate.
+        expect(fragment.transform.translation.y + 24).toBeLessThanOrEqual(lineY + plate.y);
+      }
+    });
+
+    it('puts the guard text clear of every lifeline', async () => {
+      const result = await compile(login);
+      const lifelines = result.nodes.filter((node) => node.kind === 'sequence_participant').map(center);
+      for (const fragment of result.nodes.filter((node) => node.kind === 'annotation')) {
+        const guard = fragment.content.seqGuard as { x: number; width: number };
+        const left = fragment.transform.translation.x + guard.x;
+        for (const lifeline of lifelines) expect(lifeline <= left || lifeline >= left + guard.width).toBe(true);
+      }
+    });
   });
 });

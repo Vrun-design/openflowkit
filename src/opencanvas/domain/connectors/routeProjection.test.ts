@@ -400,8 +400,8 @@ describe('connector route projection', () => {
     const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
 
     expect(projected.samples).toEqual([
-      { x: 350, y: 212 },
-      { x: 50, y: 212 },
+      { x: 350, y: 236 },
+      { x: 50, y: 236 },
     ]);
     expect(projected.presentation.targetMarkers).toEqual(['arrow']);
     expect(projected.presentation.stroke.dash).toEqual([10, 6]);
@@ -468,10 +468,10 @@ describe('connector route projection', () => {
     const projected = projectConnector({ ...page, connectors: [connector] }, connector)!;
 
     expect(projected.samples).toEqual([
-      { x: 150, y: 160 },
-      { x: 206, y: 160 },
-      { x: 206, y: 188 },
-      { x: 150, y: 188 },
+      { x: 150, y: 184 },
+      { x: 206, y: 184 },
+      { x: 206, y: 212 },
+      { x: 150, y: 212 },
     ]);
     expect(projected.presentation.targetMarkers).toEqual(['triangle-filled']);
   });
