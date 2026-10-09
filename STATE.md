@@ -19,10 +19,11 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 ## Map mode run (from 2026-10-08): plan `docs/plan/map-mode-plan.md` (supersedes map-plan P5+), log + RESUME `docs/plan/map-progress.md`
 - Living Map P1–P4 (engine, import facts, SVG page `/#/map/github/o/r`, CLI map). Map mode in the editor: M1 b0b90370
   (fromArch, mapScene), M2 a78a5995 (`Canvas | Map`, click opens in place, arrow → relations), M3 2ae7cafa (grow-in-place
-  motion; ELK fixed alignment), add element, readable landing, "Landscape", focus + flow (7f2aa147). Next: overnight run
-  `docs/plan/map-mode-overnight.md` (M4 → M6 → owner look #3).
+  motion), focus + flow; overnight 2026-10-09: two-way arrows + wrap everywhere, toolbar/keys/find, repo maps in the
+  editor, drill → Map, Pin as page, panel clearance (51dd85ea…ae1bc1b1). Owner look #3 + open decisions:
+  https://claude.ai/artifact/9gnWpNCFg2i9fFwmKVKKMD. Next: Architecture model panel UI (orange row/links, owner).
 - Owner: publish MCP 0.2.0 (Action default CLI needs it); deploy `start:http` over HTTPS, then verify hosts (README table).
-  Owner action list: `docs/plan/cofounder-action-list.md`. Waiting on owner's go: `e2e:headed` + walkthrough, H5 eval.
+  Owner action list: `docs/plan/cofounder-action-list.md`. `e2e:headed` 10-09: 261/266; 5 local GPU budgets fail at 23ff9aa4 too (Mac). Open: H5 eval.
 - Headless layout cap: 1000 shapes / 400 connections. Share Worker setup: `worker/README.md`.
 ## Found, not fixed (owner calls)
 - Launch checklist (tested + evidence, then holds: MCP publish, merge, canvas UI): `docs/plan/launch-holds.md`. CI uploads first-failure
@@ -36,5 +37,4 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 - Canvas UI first, then launch holds, 13.4 → 14.4 → 15. Open: D7, D11. Done 10-06: Inspect (⌥I); rail 12 → 7 (black pill);
   C4 person card + Beta; Shapes 41 → 19; Lasso gone; connector UX pass; connector cuts (Line/Path tools, Cross,
   underline, opacity). Next: `docs/plan/launch-qa-prompt.md`. D11 left: own glyphs, empty screen.
-## Deferred
-- Widget text width estimated; wireframe comments move to end; PDF = print dialog; no zip; bridge long-poll; chart data commits per blur; image aspect lock = Shift.
+- Deferred: widget text width estimated; wireframe comments move to end; PDF = print dialog; no zip; bridge long-poll; chart data commits per blur; image aspect lock = Shift.
