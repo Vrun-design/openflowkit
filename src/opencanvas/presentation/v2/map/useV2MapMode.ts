@@ -384,7 +384,8 @@ export function useV2MapMode(options: Options) {
     const stats = player.stats();
     // Running until the layout asked for is on screen, the move is over and the arrows are all the way back.
     const running = stats.running || seqs.current.shown < seqs.current.asked || (hostRef.current?.getMotionState().fading ?? false);
-    return { ...stats, running };
+    // The layout counters too: a move that never settles says which part is still waiting.
+    return { ...stats, running, layouts: { ...seqs.current } };
   }, [player, hostRef]);
 
   return { mode: active ? 'map' as const : 'canvas' as const, available, active, start, mapPage, empty: active && empty && !repo, error: active ? error : null, setMode, choose, toggle, clickNode, onKey, state, motionStats, openBoxes, model, arch, reveal, path, findSource, enterMapAt,

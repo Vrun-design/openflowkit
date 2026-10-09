@@ -5,8 +5,11 @@ import { centreOf, doc, state } from './helpers';
 const mapState = (page: Page): Promise<{ open: string[]; nodes: string[] }> =>
   page.evaluate(() => (window as unknown as { __V2__: { getMapState(): { open: string[]; nodes: string[] } } }).__V2__.getMapState())
     .catch(() => ({ open: [], nodes: [] }));
-const settled = (page: Page) => expect.poll(() => page.evaluate(() =>
-  (window as unknown as { __V2__: { getMapMotion(): { running: boolean } } }).__V2__.getMapMotion().running)).toBe(false);
+// Settled reads false; still moving reads the whole motion state, so a stall says which part is waiting.
+const settled = (page: Page) => expect.poll(() => page.evaluate(() => {
+  const motion = (window as unknown as { __V2__: { getMapMotion(): { running: boolean } } }).__V2__.getMapMotion();
+  return motion.running ? JSON.stringify(motion) : false;
+})).toBe(false);
 const selected = async (page: Page) => (await state(page)).selectedNodes;
 
 async function openMap(page: Page): Promise<void> {
@@ -38,8 +41,11 @@ test('Find in Map opens the boxes around a match, keeps what was open, selects a
   await box.fill('orders');
   await expect(page.locator('.ofk-v2-find-count')).toContainText('found');
   // Matches step in tree order: Enter until the one inside the shut box is reached.
+  // Each Enter waits for its own jump (the selection moves) before the next: a second Enter must not land mid-reveal.
   for (let i = 0; i < 3 && !(await selected(page)).includes('shop.api.orders'); i++) {
+    const was = (await selected(page)).join();
     await page.keyboard.press('Enter');
+    await expect.poll(async () => (await selected(page)).join()).not.toBe(was);
     await settled(page);
   }
   await expect.poll(async () => (await mapState(page)).nodes).toContain('shop.api.orders');

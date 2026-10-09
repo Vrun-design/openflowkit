@@ -6,7 +6,7 @@
 
 [![npm](https://img.shields.io/npm/v/@vrun-design/openflowkit-mcp?style=flat-square&color=f97316)](https://www.npmjs.com/package/@vrun-design/openflowkit-mcp)
 [![MIT License](https://img.shields.io/badge/License-MIT-f97316.svg?style=flat-square)](https://github.com/Vrun-design/openflowkit/blob/main/LICENSE)
-[![Node 18+](https://img.shields.io/badge/Node-18%2B-339933.svg?style=flat-square)](https://nodejs.org/)
+[![Node 20.11+](https://img.shields.io/badge/Node-20.11%2B-339933.svg?style=flat-square)](https://nodejs.org/)
 
 </div>
 
@@ -17,7 +17,7 @@ OpenFlowKit MCP is **local-first by design** — it runs on your machine over st
 It gives the agent the same operations a human has, in two modes:
 
 - **Live** — click **Connect agent** in the app and the tools act on the document you
-  see, over a local bridge on `127.0.0.1:43119` (origin-checked; optional
+  see, over a local bridge on `127.0.0.1:43119` (Host- and origin-checked; optional
   `OPENFLOWKIT_BRIDGE_TOKEN`). `screenshot` returns a real PNG and every edit is one undo.
 - **File** — `openflow_open` a `.openflow.json`, edit it with the same tools,
   `openflow_save` it back.
@@ -44,7 +44,7 @@ npm install -g @vrun-design/openflowkit-mcp
 openflowkit-mcp
 ```
 
-Requires **Node 18+**.
+Requires **Node 20.11+**.
 
 ### Teach your agent when and how to draw
 
@@ -117,8 +117,10 @@ The server speaks the standard MCP stdio protocol. Client UIs differ, but the co
 
 All tools run locally and require no provider key.
 
-Every tool accepts an optional `documentId`: omit it while an editor is paired, pass
-one to target a file-mode document.
+Every op accepts an optional `documentId`: omit it while an editor is paired, pass one to
+target a file-mode document (omitted in file mode, it means the document opened or created
+last). Page-scoped ops (`update_diagram`, `move`, `style`, `delete`, `add_shape`, `get_document`,
+`export`, …) also take a `pageId` from `list_pages`.
 
 | Tool | What it does |
 |---|---|
@@ -131,10 +133,10 @@ one to target a file-mode document.
 | `screenshot` | PNG of one frame (live mode) |
 | `fit_view` | Frame the camera |
 | `get_document` / `list_pages` | Nodes, connectors and pages with geometry |
-| `validate_openflow_dsl` | Parse DSL (or Mermaid, Structurizr DSL, D2 — converted first) with the real parser, structured diagnostics |
+| `validate_openflow_dsl` | Parse and compile DSL (or Mermaid, Structurizr DSL, D2 — converted first): the same diagnostics as `openflowkit validate` |
 | `analyze_codebase` | Detect platforms, services, structure and language mix in a local repo |
 | `discover_architecture` | Walk a repo (compose, Dockerfiles, k8s, terraform, manifests) and propose a C4 `architecture` workspace as DSL, with evidence per element |
-| `drift_report` | Re-run discovery against a model (DSL text, open document, or `architecture.ofk` in an open folder) and report `missing` / `undrawn` / `changed` with evidence lines |
+| `drift_report` | Re-run discovery against a model (DSL text, a `documentId`, or else `architecture.ofk` in the repo) and report `missing` / `undrawn` / `changed` with evidence lines |
 | `explain_element` | An element with its relations, discovery evidence, and the text of any linked `adr/*.md` |
 | `openflow_create` / `openflow_open` / `openflow_save` | File-mode lifecycle; `openflow_save` takes `svg: true` to also write the `.svg` beside the file |
 | `list_starter_templates` / `get_starter_template` | Working DSL to start from |
