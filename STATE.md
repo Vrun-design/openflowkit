@@ -3,12 +3,12 @@ Plan: `docs/plan/README.md` (untracked, owner's copy), v3 from 2026-10-03: phase
 (0–11) done, archived at `docs/archive/plan-executed-2026-10-03/`; 7b/8 parked; 6.10 → 14.1.
 
 ## Now
-- **Overnight 2026-10-10 (committed same day)**: 6 code audits + 10 persona walkthroughs → ~150 fixes across 10 lanes;
-  log, decisions taken, rejected asks: `docs/plan/overnight-2026-10-10.md`; patches `docs/plan/overnight-2026-10-10/patches/` (ALL-final.patch).
-  Highlights: CAS saves (two tabs no longer overwrite), save on tab close, CLI works via npx (symlink), ⌘V paste + Mermaid paste-to-canvas,
-  ⌥C code panel, one undo per intent, DSL round-trip quoting, Structurizr regen fidelity, phone CSS (unclosed @media), docs truthful.
+- **Overnight 2026-10-10**: 6 audits + 10 personas → ~150 fixes (CAS saves, ⌘V/Mermaid paste, ⌥C, one undo per intent, DSL quoting,
+  Structurizr regen, phone CSS, docs): `docs/plan/overnight-2026-10-10.md` (decisions, rejected asks, patches).
+- **Launch checks 2026-10-10 (day)**: `docs/plan/launch-checks-2026-10-10.md`. `_headers` now ships (public/), dev + e2e run under the
+  production CSP and fail on any violation; agent get_syntax/icon search/frame paging fixed; ERD SVG valid; repo maps on 11 real repos.
 - Icon catalog: re-run `node scripts/gen-icon-manifest.mjs` after adding SVGs (a test fails until you do); URLs load per provider.
-- Gate: `npm run verify` (~3 min; GPU busy → headless SwiftShader, needs stub on 4399). CI: `test:ci` then non-`@local` e2e.
+- Gate: `npm run verify` (~9 min headed). CI: `quality` (unit, build, MCP) ∥ 4 e2e shards → `e2e-report` (one merged report).
 - **Phases 12 + 13 DONE 2026-10-03.** Owner's: merge `main` → `v2`, PR `v2` → `main`, Cloudflare Landing, tag `v1-final`; 13.4 needs a stronger model.
 ## Roadmap 2026-10 run (opus-5.5, from 2026-10-07): plan `docs/plan/roadmap-2026-10.md`, log + RESUME `docs/plan/roadmap-progress.md`
 - Done, pushed: 1.1 headless ELK, 1.2–1.6 discovery + names, 2.1 CLI ops, 2.2 repo → diagram, 2.3 share links, 2.4 `--svg`,
