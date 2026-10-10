@@ -5,7 +5,7 @@ import type { MapFacts } from '../../dsl/map/types';
 
 export const CACHE_CAP = 50;
 /** Bump when what the facts contain changes: old entries then simply never match. (3: partial reads carry `sampled`; 4: `ref`.) */
-export const FACTS_VERSION = 4;
+export const FACTS_VERSION = 5;
 /** A repo whose facts are bigger than this is rebuilt each time rather than stored. */
 const MAX_ENTRY_CHARS = 5_000_000;
 

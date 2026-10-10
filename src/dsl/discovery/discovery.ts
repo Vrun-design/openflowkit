@@ -30,6 +30,12 @@ export interface DiscoveredUnit {
   readonly tech?: string;
   readonly evidence: readonly DiscoveryEvidence[];
   readonly dir: string;
+  /** `dir` holds the unit's code (a Dockerfile, a manifest, a compose build), not only the yaml that deploys it. */
+  readonly code?: true;
+  /** A package nothing deploys or starts (a monorepo's shared code, its workspace root): drawn after the services. */
+  readonly library?: true;
+  /** Under an `examples/`, `samples/` or `example-apps/` folder: a sample of the system, not part of it. */
+  readonly example?: true;
 }
 
 export interface DiscoveredRelation {
@@ -52,7 +58,9 @@ const MAX_EVIDENCE = 2;
 /* ------------------------------------------------------------------ files */
 
 const DOCKERFILE = /^(?:Dockerfile(?:\.[A-Za-z0-9_-]+)?|[A-Za-z0-9_-]+\.dockerfile)$/i;
-const COMPOSE = /^(?:docker-compose|compose)\.ya?ml$/i;
+/** `compose.yaml`, `docker-compose.yml` and their override and per-environment files (`compose.override.yml`, `docker-compose.prod.yaml`). */
+const COMPOSE = /^(?:docker-)?compose(?:\.[A-Za-z0-9_-]+)?\.ya?ml$/i;
+const PLAIN_COMPOSE = /^(?:docker-)?compose\.ya?ml$/i;
 const WRANGLER = /^wrangler\.(?:toml|jsonc?)$/;
 const LOOSE_MANIFESTS = new Set(['go.mod', 'requirements.txt', 'pom.xml']);
 /** Lock files list every transitive dependency: pure noise for discovery. */
@@ -60,6 +68,9 @@ const LOCKFILES = new Set([
   'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', 'npm-shrinkwrap.json',
   'poetry.lock', 'Pipfile.lock', 'Cargo.lock', 'composer.lock', 'go.sum', 'Gemfile.lock',
 ]);
+
+/** Sample apps beside the product (supabase's `examples/`, cal.com's `example-apps/`): read, but drawn last. */
+const EXAMPLE_DIR = /(?:^|\/)(?:examples?|samples?|example-apps)(?:\/|$)/i;
 
 /** Folders and files that test, fake or measure the system rather than run it. */
 const NON_PRODUCTION_DIRS = new Set(['test', 'tests', '__tests__', 'spec', 'specs', 'e2e', 'fixtures', '__fixtures__', 'testdata', '__mocks__', 'evals']);
@@ -82,26 +93,36 @@ export function acceptsArchitectureFile(file: string): boolean {
 
 /* ----------------------------------------------------------------- drafts */
 
+/** The package ecosystems whose names imports match: a Python `import emails` never means a JS package `emails`. */
+type Ecosystem = 'js' | 'py' | 'go';
+
 interface UnitDraft {
   id: string;
   name: string;
   kind: DiscoveredUnitKind;
   dir: string;
   tech?: string;
+  /** The language the unit's name and tech come from (its base image or first manifest). */
+  eco?: Ecosystem;
+  /** How much `tech` says: 0 an image's own name, 1 the language of a base image, 2 a manifest or a store. A better source replaces it. */
+  techRank?: number;
   /** Published container image, for k8s/compose matching. */
   image?: string;
-  /** Declared package/module name, for import matching. */
-  packageName?: string;
+  /** Declared package/module names, for import matching. */
+  packages: Partial<Record<Ecosystem, string>>;
   /** Named by compose or k8s: that name is what other services call it by. */
   deployed?: boolean;
   /** `dir` holds the unit's code (a Dockerfile or package manifest), not just its deploy yaml. */
   code?: boolean;
+  /** Something builds, deploys or starts it; a package.json alone that does none of that is a library. */
+  runs?: boolean;
   evidence: DiscoveryEvidence[];
   order: number;
 }
 
 type UnitInput = Pick<UnitDraft, 'id' | 'name' | 'kind' | 'dir'>
-  & Partial<Pick<UnitDraft, 'tech' | 'image' | 'packageName' | 'deployed' | 'code'>>;
+  & Partial<Pick<UnitDraft, 'tech' | 'eco' | 'techRank' | 'image' | 'deployed' | 'code' | 'runs'>>
+  & { packageName?: string };
 
 interface RelationDraft {
   from: string;
@@ -170,6 +191,34 @@ function imageBase(image: string): string {
   return withoutTag.split('/').pop() ?? withoutTag;
 }
 
+/** Base images named for what they run, and the package ecosystem that goes with it. */
+// ponytail: the common language images only; any other image is labelled by its own name.
+const IMAGE_LANGUAGES: Readonly<Record<string, readonly [string, Ecosystem?]>> = {
+  node: ['Node', 'js'], bun: ['Bun', 'js'], deno: ['Deno', 'js'], python: ['Python', 'py'], golang: ['Go', 'go'],
+  rust: ['Rust'], ruby: ['Ruby'], php: ['PHP'], elixir: ['Elixir'], erlang: ['Erlang'], swift: ['Swift'],
+  openjdk: ['Java'], 'eclipse-temurin': ['Java'], amazoncorretto: ['Java'], gradle: ['Java'], maven: ['Java'],
+};
+/** OS and empty bases say nothing about the code. */
+const BARE_IMAGES = new Set(['alpine', 'debian', 'ubuntu', 'busybox', 'scratch', 'distroless', 'centos', 'fedora', 'buildpack-deps']);
+
+/**
+ * A base image as the language it runs (`mcr.microsoft.com/dotnet/sdk` is .NET, `golang:1.23` is Go: rank 1), else
+ * its own name (`traefik`: rank 0); nothing for a bare OS or a variable.
+ */
+function imageTech(image: string): { tech?: string; eco?: Ecosystem; techRank?: number } {
+  if (/(?:^|\/)dotnet\//.test(image)) return { tech: '.NET', techRank: 1 };
+  const base = imageBase(image);
+  const known = IMAGE_LANGUAGES[base];
+  if (known) return { tech: known[0], techRank: 1, ...(known[1] ? { eco: known[1] } : {}) };
+  return BARE_IMAGES.has(base) || base.includes('$') ? {} : { tech: base, techRank: 0 };
+}
+
+/** A compose image with its variables read: `${X:-postgres:16}` is its default, any other variable names nothing. */
+function composeImage(image: string): string | undefined {
+  const fallback = /^\$\{[A-Za-z_][A-Za-z0-9_]*:?-([^}$]+)\}$/.exec(image)?.[1];
+  return fallback ?? (image.includes('$') ? undefined : image);
+}
+
 function normalizeName(value: string): string {
   return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
@@ -217,7 +266,7 @@ function envHosts(value: string): string[] {
 // ponytail: a fixed list of the common images; add one when a repo's store shows up as a container.
 const DATA_IMAGES: Readonly<Record<string, string>> = {
   redis: 'Redis', valkey: 'Redis', postgres: 'PostgreSQL', postgis: 'PostgreSQL', mysql: 'MySQL', mariadb: 'MySQL',
-  mongo: 'MongoDB', rabbitmq: 'RabbitMQ', kafka: 'Kafka', 'cp-kafka': 'Kafka',
+  mongo: 'MongoDB', rabbitmq: 'RabbitMQ', kafka: 'Kafka', 'cp-kafka': 'Kafka', elasticsearch: 'Elasticsearch',
 };
 
 function dataRuleOfImage(image: string): { name: string; kind: DiscoveredUnitKind } | undefined {
@@ -259,17 +308,45 @@ class Builder {
       this.manifestIds.set(input.dir, draft.id);
       return draft;
     }
+    if (input.runs) existing.runs = true;
+    if (input.packageName && input.eco) existing.packages[input.eco] ??= input.packageName;
+    if (!existing.image && input.image) existing.image = input.image;
+    // A manifest in another language is tooling beside the app (gitea's linting pyproject, a Go server's
+    // frontend package.json): it neither renames nor re-labels it.
+    if (existing.eco && input.eco && existing.eco !== input.eco) return existing;
+    existing.eco ??= input.eco;
     if (input.packageName) {
       // Other services call a deployed unit by its deploy name; the package name is an alias.
       if (existing.deployed) this.alias(existing, input.name);
       else this.rename(existing, input.name);
-      existing.packageName = input.packageName;
-      if (input.tech) existing.tech = input.tech;
-    } else if (!existing.tech && input.tech) {
-      existing.tech = input.tech;
+      this.label(existing, input, true);
+    } else {
+      this.label(existing, input);
     }
-    if (!existing.image && input.image) existing.image = input.image;
     return existing;
+  }
+
+  /**
+   * A compose service that builds a folder is that folder's unit (`seed` builds `./seed-data`), named as compose
+   * calls it. The first service to build a folder claims it; another building the same one (a worker on the api's
+   * image) stays its own container, at the compose file as before.
+   */
+  built(input: UnitInput, composeDir: string): UnitDraft {
+    const existingId = this.manifestIds.get(input.dir);
+    const existing = existingId ? this.units.get(existingId) : undefined;
+    if (existing?.deployed) return this.unit({ ...input, id: unitId(composeDir, input.name), dir: composeDir });
+    if (existing) return this.absorb(existing, { ...input, code: true });
+    const draft = this.unit({ ...input, code: true });
+    this.manifestIds.set(input.dir, draft.id);
+    return draft;
+  }
+
+  /** `input`'s tech, when it says more than what the unit has (`examplevotingapp_vote` < Python < Flask); `force` for a manifest's own. */
+  private label(draft: UnitDraft, input: UnitInput, force = false): void {
+    const rank = input.techRank ?? 2;
+    if (!input.tech || (!force && draft.tech && rank <= (draft.techRank ?? 2))) return;
+    draft.tech = input.tech;
+    draft.techRank = rank;
   }
 
   /**
@@ -282,29 +359,35 @@ class Builder {
     // Two folders of code are two services, whatever their packages are called.
     const sameService = named && !(input.code && named.code && input.dir !== named.dir) ? named : undefined;
     const match = sameService ?? this.units.get(input.id);
-    if (match) {
-      // The directory with the service's code wins over its deploy yaml (then
-      // the deeper one), so imports get an owner.
-      if (input.code && !match.code) {
-        match.dir = input.dir;
-        match.code = true;
-      } else if (Boolean(input.code) === Boolean(match.code) && input.dir.length > match.dir.length) {
-        match.dir = input.dir;
-      }
-      if (input.deployed && !match.deployed) {
-        this.rename(match, input.name);
-        match.deployed = true;
-      }
-      if (!match.tech && input.tech) match.tech = input.tech;
-      if (!match.image && input.image) match.image = input.image;
-      if (!match.packageName && input.packageName) match.packageName = input.packageName;
-      if (KIND_RANK[input.kind] < KIND_RANK[match.kind]) match.kind = input.kind;
-      return match;
-    }
-    const draft: UnitDraft = { ...input, evidence: [], order: this.counter++ };
+    if (match) return this.absorb(match, input);
+    const { packageName, ...rest } = input;
+    const draft: UnitDraft = { ...rest, packages: packageName && input.eco ? { [input.eco]: packageName } : {}, evidence: [], order: this.counter++ };
     this.units.set(draft.id, draft);
     this.rename(draft, input.name);
     return draft;
+  }
+
+  /** `input` names a unit already drawn: fold what it adds into it. */
+  private absorb(match: UnitDraft, input: UnitInput): UnitDraft {
+    // The directory with the service's code wins over its deploy yaml (then
+    // the deeper one), so imports get an owner.
+    if (input.code && !match.code) {
+      match.dir = input.dir;
+      match.code = true;
+    } else if (Boolean(input.code) === Boolean(match.code) && input.dir.length > match.dir.length) {
+      match.dir = input.dir;
+    }
+    if (input.deployed && !match.deployed) {
+      this.rename(match, input.name);
+      match.deployed = true;
+    }
+    if (input.runs) match.runs = true;
+    this.label(match, input);
+    match.eco ??= input.eco;
+    if (!match.image && input.image) match.image = input.image;
+    if (input.packageName && input.eco) match.packages[input.eco] ??= input.packageName;
+    if (KIND_RANK[input.kind] < KIND_RANK[match.kind]) match.kind = input.kind;
+    return match;
   }
 
   /** The unit that answers to `name` (own name first, then an alias), in one kind group. */
@@ -387,6 +470,9 @@ class Builder {
         id: unit.id, name: unit.name, kind: unit.kind, dir: unit.dir,
         ...(unit.tech ? { tech: unit.tech } : {}),
         evidence: unit.evidence,
+        ...(unit.code ? { code: true as const } : {}),
+        ...(unit.code && !unit.runs && !unit.deployed && kindGroup(unit.kind) === 'app' ? { library: true as const } : {}),
+        ...(EXAMPLE_DIR.test(unit.dir) ? { example: true as const } : {}),
       })),
       relations: resolved,
       languages,
@@ -409,8 +495,33 @@ interface ComposeService {
   line: number;
   text: string;
   image?: string;
+  /** `build: ./dir`, or the `context` and `dockerfile` under `build:`. */
+  build?: { context?: string; dockerfile?: string };
+  /** `extends:` or a `<<:` merge: what it runs is defined elsewhere. */
+  inherits?: boolean;
   dependsOn: Array<{ name: string; line: number; text: string }>;
   environment: ConfigLine[];
+}
+
+/**
+ * The repo folder a compose service builds: its context, or the folder of the Dockerfile it names (relative to the
+ * context). Null when a variable or a remote decides, or the path climbs out of the repo.
+ */
+function buildDir(composeDir: string, build: NonNullable<ComposeService['build']>): string | null {
+  const context = build.context ?? '.';
+  if ([context, build.dockerfile ?? ''].some((path) => /[$:]|^\//.test(path))) return null;
+  const parts: string[] = [];
+  for (const segment of [composeDir, context, build.dockerfile ? dirname(build.dockerfile) : ''].join('/').split('/')) {
+    if (segment === '' || segment === '.') continue;
+    if (segment !== '..') parts.push(segment);
+    else if (parts.pop() === undefined) return null;
+  }
+  return parts.join('/');
+}
+
+/** A Dockerfile other than the folder's own (`Dockerfile.playwright`, `test.Dockerfile`): a side job, not the service. */
+function sideDockerfile(build: NonNullable<ComposeService['build']>): boolean {
+  return build.dockerfile !== undefined && basename(build.dockerfile) !== 'Dockerfile';
 }
 
 /** A YAML flow list (`[api, "db"]`) as plain names; anything else is not a list. Capped: no service has hundreds of dependencies. */
@@ -441,6 +552,7 @@ function parseComposeServices(content: string): ComposeService[] {
   let current: ComposeService | null = null;
   let dependsIndent = -1;
   let environmentIndent = -1;
+  let buildIndent = -1;
   block.forEach((raw, index) => {
     const line = start + 2 + index;
     if (raw.trim() === '' || raw.trimStart().startsWith('#')) return;
@@ -452,10 +564,12 @@ function parseComposeServices(content: string): ComposeService[] {
       services.push(current);
       dependsIndent = -1;
       environmentIndent = -1;
+      buildIndent = -1;
       return;
     }
     if (!current) return;
     if (dependsIndent !== -1 && indent <= dependsIndent) dependsIndent = -1;
+    if (buildIndent !== -1 && indent <= buildIndent) buildIndent = -1;
     if (environmentIndent !== -1 && (indent < environmentIndent || (indent === environmentIndent && !text.startsWith('-')))) environmentIndent = -1;
     // `environment:` as a map (`API_URL: http://api`) or a list (`- API_URL=http://api`).
     if (environmentIndent !== -1) {
@@ -463,10 +577,18 @@ function parseComposeServices(content: string): ComposeService[] {
       if (entry) current.environment.push({ value: entry, line, text });
       return;
     }
+    if (/^(?:extends|<<)\s*:/.test(text) && indent > serviceIndent) current.inherits = true;
     if (key && indent > serviceIndent) {
       const [, keyName, rawValue] = key;
       if (keyName === 'image') current.image = scalar(rawValue ?? '');
       if (keyName === 'environment' && !rawValue) environmentIndent = indent;
+      // ponytail: the flow form `build: { context: x }` is not read — the service keeps its compose folder.
+      if (keyName === 'build' && !current.build && !rawValue?.startsWith('{')) {
+        if (!rawValue) buildIndent = indent;
+        current.build = rawValue ? { context: scalar(rawValue) } : {};
+      } else if (buildIndent !== -1 && indent > buildIndent && rawValue && (keyName === 'context' || keyName === 'dockerfile')) {
+        current.build![keyName] = scalar(rawValue);
+      }
       if (keyName === 'depends_on') {
         dependsIndent = indent;
         // The flow list `depends_on: [api, "db"]`; the map and block-list forms are read line by line below.
@@ -528,7 +650,8 @@ function parseK8sWorkloads(content: string): K8sWorkload[] {
       current.nameLine = line;
       return;
     }
-    const image = /^\s+image:\s*(.+)$/.exec(raw);
+    // `image:` under a container, or first in its list item (`- image: postgres:15`, as kubectl writes it).
+    const image = /^\s+(?:-\s+)?image:\s*(.+)$/.exec(raw);
     if (image && !isTemplated(image[1]!)) current.images.push({ image: scalar(image[1]!), line, text: raw.trim() });
     // Only a container's `env:` list addresses services; probe headers and tolerations have values too.
     const indent = indentOf(raw);
@@ -561,12 +684,13 @@ const NODE_FRAMEWORKS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 const PYTHON_FRAMEWORKS: ReadonlyArray<readonly [RegExp, string]> = [
-  [/^\s*fastapi\b/m, 'FastAPI'], [/^\s*django\b/m, 'Django'], [/^\s*flask\b/m, 'Flask'],
-  [/^\s*celery\b/m, 'Celery'], [/^\s*starlette\b/m, 'Starlette'],
+  // A requirements line, a poetry key or a quoted pyproject entry (`dependencies = ["fastapi[standard]<1"]`); pip names ignore case.
+  [/(?:^\s*|["'])fastapi\b/im, 'FastAPI'], [/(?:^\s*|["'])django\b/im, 'Django'], [/(?:^\s*|["'])flask\b/im, 'Flask'],
+  [/(?:^\s*|["'])celery\b/im, 'Celery'], [/(?:^\s*|["'])starlette\b/im, 'Starlette'],
 ];
 
 const GO_FRAMEWORKS: ReadonlyArray<readonly [RegExp, string]> = [
-  [/gin-gonic\/gin/, 'Gin'], [/labstack\/echo/, 'Echo'], [/gofiber\/fiber/, 'Fiber'],
+  [/gin-gonic\/gin/, 'Gin'], [/labstack\/echo/, 'Echo'], [/gofiber\/fiber/, 'Fiber'], [/go-chi\/chi/, 'chi'],
   [/google\.golang\.org\/grpc/, 'gRPC'],
 ];
 
@@ -575,6 +699,25 @@ function nodeTech(dependencies: Record<string, unknown>, hasBin: boolean): strin
     if (dependency in dependencies) return framework;
   }
   return hasBin ? 'Node CLI' : 'Node';
+}
+
+/** Dependencies that serve an app by themselves: a package that needs one runs. */
+const NODE_SERVERS = new Set(['next', 'nuxt', '@nestjs/core', 'express', 'fastify', 'koa', 'hono', 'astro', '@sveltejs/kit', '@remix-run/node', 'react-scripts', 'expo']);
+/** A dev script that starts a server or a dev server (not `tsc --watch`, not `vite build --watch`). */
+const DEV_SERVER = /^(?!.*\bbuild\b).*\b(?:vite|next|nuxt|astro|remix|webpack-dev-server|parcel|expo|wrangler|nodemon|ng serve)\b/;
+
+/**
+ * Whether a package.json starts something: a `bin`, a `start` script, a server framework among its own
+ * dependencies, or a dev server. A workspace root starts its packages, not itself.
+ */
+function nodeRuns(manifest: Record<string, unknown>): boolean {
+  const scripts = isRecord(manifest.scripts) ? manifest.scripts : {};
+  const own = isRecord(manifest.dependencies) ? manifest.dependencies : {};
+  const dev = isRecord(manifest.devDependencies) ? manifest.devDependencies : {};
+  if (Object.keys(own).some((name) => NODE_SERVERS.has(name)) || (typeof scripts.dev === 'string' && DEV_SERVER.test(scripts.dev))) return true;
+  // A workspace root's `start` runs its packages (`turbo run start`), not itself.
+  const root = manifest.workspaces !== undefined || 'turbo' in dev || 'lerna' in dev || 'nx' in dev;
+  return !root && (typeof manifest.bin === 'string' || isRecord(manifest.bin) || typeof scripts.start === 'string');
 }
 
 function pythonTech(content: string): string {
@@ -629,14 +772,71 @@ function manifestDependencyFacts(file: ScannedFile): ImportFact[] {
   return facts;
 }
 
+/**
+ * A requirements.txt or go.mod with what only came in through another package blanked (line numbers kept):
+ * pip-compile's `# via flask` (anything but `# via -r …`) and go's `// indirect`. A pinned lockfile-style list
+ * names every transitive client; only the direct ones say what the code talks to.
+ */
+function directLines(file: ScannedFile): string[] {
+  const lines = file.content.split(/\r?\n/);
+  if (basename(file.path) === 'go.mod') return lines.map((line) => (/\/\/\s*indirect\b/.test(line) ? '' : line));
+  let requirement = -1;
+  let via: string[] | null = null;
+  const transitive = new Set<number>();
+  const settle = () => { if (requirement !== -1 && via?.length && !via.some((from) => from.startsWith('-'))) transitive.add(requirement); };
+  lines.forEach((raw, index) => {
+    const comment = /^\s*#\s*(.*)$/.exec(raw)?.[1];
+    if (comment === undefined) {
+      if (!/^\s*[A-Za-z0-9]/.test(raw)) return;
+      settle();
+      requirement = index;
+      const inline = /#\s*via\s+(.+)$/.exec(raw)?.[1];
+      via = inline ? inline.split(/[\s,]+/).filter(Boolean) : null;
+    } else if (requirement !== -1) {
+      const words = comment.trim();
+      if (/^via\b/.test(words)) via = words.replace(/^via\s*/, '') ? [words.replace(/^via\s*/, '')] : [];
+      else if (via && words) via.push(words);
+    }
+  });
+  settle();
+  return lines.map((line, index) => (transitive.has(index) ? '' : line));
+}
+
+/** pyproject tables whose arrays list requirements, and the poetry tables whose keys are dependencies. */
+const PYPROJECT_ARRAYS = /^(?:project\.optional-dependencies|dependency-groups)$/;
+const POETRY_TABLE = /^tool\.poetry\.(?:dev-)?dependencies$|^tool\.poetry\.group\.[^.]+\.dependencies$/;
+
+/** A pyproject's dependencies: PEP 621 / uv arrays (`"redis>=5"`) and poetry tables (`redis = "^5"`). */
+function pyprojectDependencyFacts(file: ScannedFile): ImportFact[] {
+  const facts: ImportFact[] = [];
+  let table = '';
+  let inArray = false;
+  file.content.split(/\r?\n/).forEach((raw, index) => {
+    const header = /^\s*\[{1,2}([^\]]+)\]{1,2}\s*(?:#.*)?$/.exec(raw);
+    if (header) { table = header[1]!.trim(); inArray = false; return; }
+    const opens = !inArray && ((table === 'project' && /^\s*dependencies\s*=\s*\[/.test(raw)) || (PYPROJECT_ARRAYS.test(table) && /^\s*[A-Za-z0-9_.-]+\s*=\s*\[/.test(raw)));
+    if (opens || inArray) {
+      const items = opens ? raw.slice(raw.indexOf('[') + 1) : raw;
+      for (const match of items.matchAll(/["']([A-Za-z0-9][A-Za-z0-9_.-]*)/g)) facts.push({ specifier: match[1]!, line: index + 1, text: raw.trim() });
+      // Extras (`uvicorn[standard]`) sit inside the strings: only a bracket outside them closes the list.
+      inArray = !/\]/.test(items.replace(/"[^"]*"|'[^']*'/g, ''));
+      return;
+    }
+    const key = POETRY_TABLE.test(table) ? /^\s*([A-Za-z0-9][A-Za-z0-9_.-]*)\s*=/.exec(raw)?.[1] : undefined;
+    if (key && key.toLowerCase() !== 'python') facts.push({ specifier: key, line: index + 1, text: raw.trim() });
+  });
+  return facts;
+}
+
 function importFacts(file: ScannedFile): ImportFact[] {
   const ext = extname(file.path).toLowerCase();
   const facts: ImportFact[] = [];
   if (ext === '.json' && /(^|\/)package\.json$/.test(file.path)) facts.push(...manifestDependencyFacts(file));
   const base = basename(file.path);
+  if (base === 'pyproject.toml') return pyprojectDependencyFacts(file);
   if (base === 'requirements.txt' || base === 'go.mod') {
     // `redis==5.0` and `github.com/redis/go-redis/v9 v9.5.0` (in or after `require`) name a dependency.
-    file.content.split(/\r?\n/).forEach((raw, index) => {
+    directLines(file).forEach((raw, index) => {
       const specifier = base === 'requirements.txt'
         ? /^\s*([A-Za-z0-9][A-Za-z0-9_.-]*)\s*(?:[=<>~!;[]|$)/.exec(raw)?.[1]
         : /^\s*(?:require\s+)?([a-z0-9.-]+\.[a-z]+\/\S+)\s+v\d/.exec(raw)?.[1];
@@ -683,7 +883,10 @@ const SDK_SERVICES: ReadonlyArray<SdkService> = [
 ];
 
 const CLIENT_CALL = /\b(?:fetch|axios|got|superagent|requests\.|httpx|aiohttp|urllib|http\.Get|http\.NewRequest)\b/;
-const URL_LITERAL = /https?:\/\/(?:[^/@\s]*@)?([A-Za-z0-9.-]+)/;
+/** A URL that opens a string (`fetch("https://…`, f"https://…"): one in prose or a comment calls nothing. */
+const URL_LITERAL = /["'`]https?:\/\/(?:[^/@\s"'`]*@)?([A-Za-z0-9.-]+)/;
+/** `//`, `#`, `*` (inside a block comment), `<!--`: documentation, even when it says `fetch`. */
+const COMMENT_LINE = /^\s*(?:\/\/|#|\/?\*|<!--)/;
 
 /** Hosts that are never architecture: local dev, docs, schemas. */
 const SKIP_HOSTS = new Set([
@@ -699,12 +902,33 @@ function skipHost(host: string): boolean {
     || lower.endsWith('.readthedocs.io') || /^\d+\.\d+\.\d+\.\d+$/.test(lower);
 }
 
-function packageTarget(index: ReadonlyMap<string, UnitDraft>, specifier: string): UnitDraft | undefined {
-  if (specifier.startsWith('.')) return undefined;
+/** Which package names a file's imports can mean: its language's, or none (Java, Ruby: matched to services only). */
+function ecosystemOf(file: string): Ecosystem | undefined {
+  const base = basename(file);
+  const ext = extname(file).toLowerCase();
+  if (base === 'package.json' || SCRIPT_EXT.has(ext)) return 'js';
+  if (base === 'pyproject.toml' || base === 'requirements.txt' || ext === '.py') return 'py';
+  if (base === 'go.mod' || ext === '.go') return 'go';
+  return undefined;
+}
+
+/** pip names ignore case and treat `-` and `_` alike (`my-lib` is imported as `my_lib`). */
+const pythonName = (name: string) => name.toLowerCase().replace(/-/g, '_');
+
+/** Index keys a package answers to: `@acme/api` also as `api`, a Python name normalised, a Go module as itself. */
+function packageKeys(eco: Ecosystem, name: string): string[] {
+  if (eco === 'py') return [`py:${pythonName(name)}`];
+  if (eco === 'go') return [`go:${name}`];
+  return [`js:${name}`, `js:${name.split('/').pop()!}`];
+}
+
+function packageTarget(index: ReadonlyMap<string, UnitDraft>, eco: Ecosystem | undefined, specifier: string): UnitDraft | undefined {
+  if (!eco || specifier.startsWith('.')) return undefined;
   const parts = specifier.split('/');
-  const candidates = specifier.startsWith('@')
-    ? [`${parts[0]}/${parts[1] ?? ''}`, specifier]
-    : [parts[0]!, specifier];
+  // A Go import names a package inside a module: the longest module path it starts with.
+  const candidates = eco === 'go' ? parts.map((_, end) => `go:${parts.slice(0, parts.length - end).join('/')}`)
+    : eco === 'py' ? [`py:${pythonName(specifier.split('.')[0]!)}`]
+      : specifier.startsWith('@') ? [`js:${parts[0]}/${parts[1] ?? ''}`, `js:${specifier}`] : [`js:${parts[0]}`, `js:${specifier}`];
   for (const candidate of candidates) {
     const hit = index.get(candidate);
     if (hit) return hit;
@@ -712,25 +936,29 @@ function packageTarget(index: ReadonlyMap<string, UnitDraft>, specifier: string)
   return undefined;
 }
 
+/** Top-level folders a lone root app does not own: its docs and samples are not its code. */
+const NOT_ROOT_CODE = new Set(['docs', 'doc', 'example', 'examples', 'samples']);
+
 /**
- * The unit whose directory owns a file. Deepest directory wins; a root-level
- * unit only owns root files, and only when it is unambiguous (several root
- * manifests — a compose file's services, say — own nothing).
+ * The unit whose code holds a file: the deepest unit folder with code in it (a deploy yaml's folder holds none).
+ * A repo with one app at its root (saleor, gitea) gives it every file no other unit claims; with several root
+ * units, or none, root files have no owner.
  */
 function ownerOf(units: readonly UnitDraft[], file: string): UnitDraft | undefined {
   const dir = dirname(file);
   let best: UnitDraft | undefined;
   const roots: UnitDraft[] = [];
   for (const unit of units) {
-    if (unit.kind !== 'container' && unit.kind !== 'system') continue;
+    if (!unit.code || (unit.kind !== 'container' && unit.kind !== 'system')) continue;
     if (unit.dir === '') {
-      if (!file.includes('/')) roots.push(unit);
+      roots.push(unit);
       continue;
     }
     if (dir !== unit.dir && !dir.startsWith(`${unit.dir}/`)) continue;
     if (!best || unit.dir.length > best.dir.length) best = unit;
   }
-  return best ?? (roots.length === 1 ? roots[0] : undefined);
+  if (best || roots.length !== 1) return best;
+  return NOT_ROOT_CODE.has(file.split('/')[0]!) && file.includes('/') ? undefined : roots[0];
 }
 
 /* --------------------------------------------------------------- scanning */
@@ -747,19 +975,34 @@ export function discoverArchitecture(files: readonly ScannedFile[], rootName: st
   const packageDirs = new Set(ordered
     .filter((file) => PACKAGE_MANIFESTS.has(basename(file.path)))
     .map((file) => dirname(file.path)));
+  // An override or per-environment compose file beside a plain one adds dev tooling (mailpit, a test runner) or
+  // repeats it as published tags; alone in its folder, it is the deployment.
+  const composeDirs = new Set(ordered.filter((file) => PLAIN_COMPOSE.test(basename(file.path))).map((file) => dirname(file.path)));
+  const readPaths = new Set(ordered.map((file) => file.path));
 
   for (const file of ordered) {
     const base = basename(file.path);
     const dir = dirname(file.path) === '.' ? '' : dirname(file.path);
     const lines = file.content.split(/\r?\n/);
 
-    if (COMPOSE.test(base)) {
+    if (COMPOSE.test(base) && (PLAIN_COMPOSE.test(base) || !composeDirs.has(dirname(file.path)))) {
       for (const service of parseComposeServices(file.content)) {
-        const data = service.image ? dataRuleOfImage(service.image) : undefined;
-        const draft = builder.unit({
-          id: unitId(dir, service.name), name: service.name, kind: data?.kind ?? 'container', dir, deployed: true,
-          ...(service.image ? { image: service.image, tech: data?.name ?? imageBase(service.image) } : {}),
-        });
+        // No image, no build, nothing inherited: an override's patch (`db:` with volumes) of a service defined elsewhere.
+        if (!service.image && !service.build && !service.inherits) continue;
+        const folder = service.build && !sideDockerfile(service.build) ? buildDir(dir, service.build) : null;
+        // A build whose Dockerfile is not in the repo (a context meant to be run from elsewhere) names no folder.
+        const built = folder !== null && readPaths.has(`${folder ? `${folder}/` : ''}${basename(service.build!.dockerfile ?? 'Dockerfile')}`) ? folder : null;
+        // Named like the Dockerfile's own unit: `src/cart/src/Dockerfile` builds `src/cart`.
+        const home = built === null ? null : serviceDir(built, packageDirs);
+        const image = service.image ? composeImage(service.image) : undefined;
+        // A service built from this repo runs its code: `image:` is only the tag it is pushed as, never its tech.
+        const data = home === null && image ? dataRuleOfImage(image) : undefined;
+        const { tech, techRank } = home !== null || !image ? {} : data ? { tech: data.name, techRank: 2 } : imageTech(image);
+        const input: UnitInput = {
+          id: unitId(home ?? dir, service.name), name: service.name, kind: data?.kind ?? 'container', dir: home ?? dir, deployed: true, runs: true,
+          ...(image ? { image } : {}), ...(tech ? { tech, techRank: techRank ?? 0 } : {}),
+        };
+        const draft = home === null ? builder.unit(input) : builder.built(input, dir);
         if (data) builder.alias(draft, data.name);
         pushEvidence(draft, file.path, service.line, service.text);
         for (const dependency of service.dependsOn) {
@@ -770,14 +1013,23 @@ export function discoverArchitecture(files: readonly ScannedFile[], rootName: st
     }
 
     if (DOCKERFILE.test(base)) {
-      const from = lines.find((line) => /^\s*FROM\s+/i.test(line));
       const home = serviceDir(dir, packageDirs);
       const name = home ? basename(home) : rootName;
       // `FROM --platform=$BUILDPLATFORM golang:1.23 AS builder`: the image is the first non-flag word.
-      const baseImage = from?.replace(/^\s*FROM\s+/i, '').split(/\s+/).find((word) => !word.startsWith('--'));
+      const aliases = new Set<string>();
+      const stages = lines.flatMap((line) => {
+        const words = /^\s*FROM\s+(.+)$/i.exec(line)?.[1]?.split(/\s+/).filter((word) => !word.startsWith('--')) ?? [];
+        const image = words[0] && !aliases.has(words[0].toLowerCase()) ? scalar(words[0]) : undefined;
+        // `FROM base AS builder` builds on an earlier stage: `base` names no image.
+        if (words[1]?.toLowerCase() === 'as' && words[2]) aliases.add(words[2].toLowerCase());
+        return image ? [imageTech(image)] : [];
+      });
+      // The last stage with a language runs the code (python after a bun build stage, golang before a bare alpine);
+      // without one, the first image that names anything (nginx serving a build).
+      const { tech, eco, techRank } = [...stages].reverse().find((stage) => stage.techRank === 1) ?? stages.find((stage) => stage.tech) ?? {};
       const draft = builder.manifest({
-        id: unitId(home, name), name, kind: 'container', dir: home,
-        ...(baseImage && baseImage !== 'scratch' ? { tech: imageBase(scalar(baseImage)) } : {}),
+        id: unitId(home, name), name, kind: 'container', dir: home, runs: true,
+        ...(tech ? { tech, techRank: techRank ?? 0 } : {}), ...(eco ? { eco } : {}),
       });
       const fromLine = lines.findIndex((line) => /^\s*FROM\s+/i.test(line));
       if (fromLine >= 0) pushEvidence(draft, file.path, fromLine + 1, lines[fromLine]!);
@@ -790,7 +1042,7 @@ export function discoverArchitecture(files: readonly ScannedFile[], rootName: st
         // A workload is the store only when that is all it runs; a store sidecar doesn't make it one.
         const data = workload.images.length === 1 ? dataRuleOfImage(workload.images[0]!.image) : undefined;
         const draft = builder.unit({
-          id: unitId(dir, workload.name), name: workload.name, kind: data?.kind ?? 'container', dir, deployed: true,
+          id: unitId(dir, workload.name), name: workload.name, kind: data?.kind ?? 'container', dir, deployed: true, runs: true,
           ...(data ? { tech: data.name } : {}),
         });
         if (data) builder.alias(draft, data.name);
@@ -826,7 +1078,7 @@ export function discoverArchitecture(files: readonly ScannedFile[], rootName: st
         };
         const hasBin = typeof parsed.bin === 'string' || isRecord(parsed.bin);
         const draft = builder.manifest({
-          id: unitId(dir, name), name, kind: 'container', dir,
+          id: unitId(dir, name), name, kind: 'container', dir, eco: 'js', runs: nodeRuns(parsed),
           tech: nodeTech(dependencies, hasBin),
           ...(typeof parsed.name === 'string' ? { packageName: parsed.name } : {}),
         });
@@ -839,7 +1091,7 @@ export function discoverArchitecture(files: readonly ScannedFile[], rootName: st
       // toml and json(c) alike: `name`, then the bucket/database names under `r2_buckets` / `d1_databases`.
       const nameLine = lines.findIndex((line) => /^\s*["']?name["']?\s*[=:]\s*"[^"]+"/.test(line));
       const name = nameLine >= 0 ? /"([^"]+)"/.exec(lines[nameLine]!.replace(/^\s*["']?name["']?/, ''))![1]! : (dir ? basename(dir) : rootName);
-      const draft = builder.manifest({ id: unitId(dir, name), name, kind: 'container', dir, tech: 'Cloudflare Workers' });
+      const draft = builder.manifest({ id: unitId(dir, name), name, kind: 'container', dir, tech: 'Cloudflare Workers', runs: true });
       draft.tech = 'Cloudflare Workers';
       pushEvidence(draft, file.path, nameLine >= 0 ? nameLine + 1 : 1, nameLine >= 0 ? lines[nameLine]! : `${base}: ${name}`);
       let tech = '';
@@ -858,8 +1110,8 @@ export function discoverArchitecture(files: readonly ScannedFile[], rootName: st
         ? (/^\s*name\s*=\s*"([^"]+)"/m.exec(file.content)?.[1] ?? (dir ? basename(dir) : rootName))
         : (dir ? basename(dir) : rootName);
       const draft = builder.manifest({
-        id: unitId(dir, name), name, kind: 'container', dir,
-        tech: pythonTech(file.content),
+        id: unitId(dir, name), name, kind: 'container', dir, eco: 'py', runs: true,
+        tech: pythonTech(base === 'requirements.txt' ? directLines(file).join('\n') : file.content),
         ...(base === 'pyproject.toml' ? { packageName: name } : {}),
       });
       pushEvidence(draft, file.path, 1, `${base}: ${name}`);
@@ -869,8 +1121,8 @@ export function discoverArchitecture(files: readonly ScannedFile[], rootName: st
       const module = /^module\s+(\S+)/m.exec(file.content)?.[1];
       const name = module?.split('/').pop() ?? (dir ? basename(dir) : rootName);
       const draft = builder.manifest({
-        id: unitId(dir, name), name, kind: 'container', dir,
-        tech: goTech(file.content),
+        id: unitId(dir, name), name, kind: 'container', dir, eco: 'go', runs: true,
+        tech: goTech(directLines(file).join('\n')),
         ...(module ? { packageName: module } : {}),
       });
       const moduleLine = lines.findIndex((line) => /^module\s+/.test(line));
@@ -881,16 +1133,16 @@ export function discoverArchitecture(files: readonly ScannedFile[], rootName: st
   const all = builder.all();
   const packageIndex = new Map<string, UnitDraft>();
   for (const unit of all) {
-    if (!unit.packageName) continue;
-    packageIndex.set(unit.packageName, unit);
-    const short = unit.packageName.split('/').pop();
-    if (short && !packageIndex.has(short)) packageIndex.set(short, unit);
+    for (const [eco, name] of Object.entries(unit.packages) as [Ecosystem, string][]) {
+      for (const key of packageKeys(eco, name)) if (!packageIndex.has(key)) packageIndex.set(key, unit);
+    }
   }
 
   for (const file of ordered) {
     const owner = ownerOf(all, file.path);
+    const eco = ecosystemOf(file.path);
     for (const fact of importFacts(file)) {
-      const target = packageTarget(packageIndex, fact.specifier);
+      const target = packageTarget(packageIndex, eco, fact.specifier);
       if (target && owner && target.id !== owner.id) {
         builder.relation(owner.id, { id: target.id }, 'imports', file.path, fact.line, fact.text);
         continue;
@@ -917,7 +1169,7 @@ export function discoverArchitecture(files: readonly ScannedFile[], rootName: st
     }
 
     file.content.split(/\r?\n/).forEach((line, index) => {
-      if (!CLIENT_CALL.test(line)) return;
+      if (!CLIENT_CALL.test(line) || COMMENT_LINE.test(line)) return;
       const host = URL_LITERAL.exec(line)?.[1];
       if (!host || skipHost(host)) return;
       const name = host.replace(/^www\./, '');
@@ -1090,16 +1342,23 @@ function uniqueId(candidate: string, used: Set<string>): string {
   return id;
 }
 
+/** Services, then stores, queues and externals, then libraries, then sample apps. */
+const capTier = (unit: DiscoveredUnit): number => (unit.example ? 6 : unit.library ? 5 : KIND_RANK[unit.kind]);
+
 /**
  * At most `max` units for a readable first picture of a big monorepo: services
- * first, then stores, queues and externals, each in discovery order. Relations to
- * a dropped unit go with it; the caller says how many were left out.
+ * first, then stores, queues and externals, each in discovery order; then the
+ * libraries most relations touch, then sample apps. Relations to a dropped unit
+ * go with it; the caller says how many were left out.
  */
 export function capUnits(result: ArchitectureDiscovery, max: number): { readonly result: ArchitectureDiscovery; readonly dropped: number } {
   if (result.units.length <= max) return { result, dropped: 0 };
+  const degree = new Map<string, number>();
+  for (const relation of result.relations) for (const id of [relation.from, relation.to]) degree.set(id, (degree.get(id) ?? 0) + 1);
+  const touches = (unit: DiscoveredUnit) => (unit.library ? degree.get(unit.id) ?? 0 : 0);
   const kept = [...result.units]
     .map((unit, order) => ({ unit, order }))
-    .sort((a, b) => KIND_RANK[a.unit.kind] - KIND_RANK[b.unit.kind] || a.order - b.order)
+    .sort((a, b) => capTier(a.unit) - capTier(b.unit) || touches(b.unit) - touches(a.unit) || a.order - b.order)
     .slice(0, max)
     .sort((a, b) => a.order - b.order)
     .map(({ unit }) => unit);
@@ -1114,6 +1373,10 @@ export function capUnits(result: ArchitectureDiscovery, max: number): { readonly
   };
 }
 
+/** What an arrow's label says, most first: the code's own use of a service, then wiring, then startup order. */
+const LABEL_ORDER = ['uses', 'calls', 'imports', 'depends on', 'deploys'];
+const labelRank = (label: string | undefined): number => (label && LABEL_ORDER.includes(label) ? LABEL_ORDER.indexOf(label) : LABEL_ORDER.length);
+
 /**
  * The discovered units as a compiling OFK architecture workspace: one system per
  * top-level directory (or one named after the repo), `view landscape` plus a
@@ -1127,8 +1390,13 @@ export function discoveryToDsl(
   evidenceLink: (evidence: DiscoveryEvidence) => string = ({ file, line }) => `${file}:${line}`,
 ): string {
   const repoName = name.trim() || 'System';
-  const containers = result.units.filter((unit) => unit.kind === 'container' || unit.kind === 'system');
-  const dependencies = result.units.filter((unit) => unit.kind !== 'container' && unit.kind !== 'system');
+  // A library nothing uses and that uses nothing (a workspace root, a config package) is a lone box that says
+  // nothing, unless the repo has nothing else to draw.
+  const linked = new Set(result.relations.flatMap((relation) => [relation.from, relation.to]));
+  const shown = result.units.filter((unit) => !unit.library || linked.has(unit.id));
+  const units = shown.some((unit) => kindGroup(unit.kind) === 'app') ? shown : result.units;
+  const containers = units.filter((unit) => unit.kind === 'container' || unit.kind === 'system');
+  const dependencies = units.filter((unit) => unit.kind !== 'container' && unit.kind !== 'system');
   // A top-level folder is a product only if it holds 2+ services; a lone service (web/, api/) is
   // part of the repo's one system. The repo splits only when 2+ products exist.
   const perSegment = new Map<string, number>();
@@ -1189,17 +1457,25 @@ export function discoveryToDsl(
     }
   }
 
-  const relations = result.relations.flatMap((relation) => {
+  // One arrow per pair: compose's `depends on` and the code's client for the same store are one line, labelled by
+  // what the code does, in the place of the first relation that named the pair.
+  const strongest = new Map<string, DiscoveredRelation>();
+  for (const relation of result.relations) {
     const from = elementId.get(relation.from);
     const to = elementId.get(relation.to);
-    if (!from || !to || from === to) return [];
+    if (!from || !to || from === to) continue;
+    const key = `rel:${from}->${to}`;
+    const held = strongest.get(key);
+    if (!held || labelRank(relation.label) < labelRank(held.label)) strongest.set(key, relation);
+  }
+  const relations = [...strongest].map(([id, relation]) => {
     const evidence = relation.evidence[0];
-    return [{
-      id: `rel:${from}->${to}`, from, to,
+    return {
+      id, from: elementId.get(relation.from)!, to: elementId.get(relation.to)!,
       ...(relation.label ? { label: relation.label } : {}),
       ...(evidence ? { attrs: [{ key: 'link', value: evidenceLink(evidence) }] } : {}),
       tags: [],
-    }];
+    };
   });
 
   // One system: the services are the diagram. A landscape would be that one box (discovery
@@ -1218,7 +1494,7 @@ export function discoveryToDsl(
     name: repoName, elements, relations, views, flows: [],
   });
   const header = [
-    `// discovered by openflowkit — ${result.units.length} units, ${result.relations.length} relations, ${result.evidenceCount} evidence lines`,
+    `// discovered by openflowkit — ${units.length} units, ${result.relations.length} relations, ${result.evidenceCount} evidence lines`,
     '// heuristics read manifests, imports and line matches; review names, tech and grouping before committing',
   ];
   const lines = text.split('\n');

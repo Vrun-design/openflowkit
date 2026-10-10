@@ -292,3 +292,20 @@ describe('buildMap speed', () => {
     expect(ms).toBeLessThan(250);
   });
 });
+
+// calcom/cal.com: 90 app-store apps are parts inside packages/app-store; drawn beside it, they filled the top level.
+describe('buildMap nested parts', () => {
+  const file = (path: string) => ({ path, loc: 1 });
+  const m = buildMap({
+    files: ['apps/web/page.ts', 'packages/app-store/index.ts', 'packages/app-store/zoom/api.ts', 'packages/app-store/templates/basic/a.ts'].map(file),
+    imports: [{ from: 'apps/web/page.ts', to: 'packages/app-store/zoom/api.ts', line: 1, text: "import 'zoom'" }],
+    parts: [{ name: 'web', dir: 'apps/web' }, { name: 'app-store', dir: 'packages/app-store' }, { name: 'zoom', dir: 'packages/app-store/zoom' }, { name: 'basic', dir: 'packages/app-store/templates/basic' }],
+  });
+
+  it('opens a part inside the part whose folder holds it', () => {
+    expect(m.nodes.root.children).toEqual(['apps/web', 'packages/app-store']);
+    expect(m.nodes['packages/app-store'].children.sort()).toEqual(['packages/app-store/index.ts', 'packages/app-store/templates/basic', 'packages/app-store/zoom']);
+    expect(m.nodes['packages/app-store']).toMatchObject({ kind: 'part', files: 3 });
+    expect(m.links.map((l) => `${l.from}>${l.to}`)).toEqual(['apps/web/page.ts>packages/app-store/zoom/api.ts']);
+  });
+});

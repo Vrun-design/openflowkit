@@ -176,3 +176,213 @@ describe('compose depends_on flow lists', () => {
     }
   });
 });
+
+// Shapes that read wrong on public repos (eval 2026-10-10): each fixture is the real repo's layout, cut down.
+describe('real repo shapes', () => {
+  const byName = (files: { path: string; content: string }[], root = 'repo') => {
+    const found = discoverArchitecture(files, root);
+    return { found, unit: (name: string) => found.units.find((unit) => unit.name === name) };
+  };
+
+  // dockersamples/example-voting-app: compose builds folders, kubectl-style k8s puts `- image:` first.
+  const voting = [
+    { path: 'docker-compose.yml', content: [
+      'services:', '  vote:', '    build:', '      context: ./vote', '      target: dev', '    depends_on:', '      redis:', '        condition: service_healthy',
+      '  worker:', '    build:', '      context: ./worker', '  seed:', '    build: ./seed-data', '    depends_on:', '      vote:', '        condition: service_healthy',
+      '  redis:', '    image: redis:alpine', '  db:', '    image: postgres:15-alpine', ''].join('\n') },
+    { path: 'k8s-specifications/db-deployment.yaml', content: 'apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: db\nspec:\n  template:\n    spec:\n      containers:\n      - image: postgres:15-alpine\n        name: postgres\n' },
+    { path: 'k8s-specifications/vote-deployment.yaml', content: 'apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: vote\nspec:\n  template:\n    spec:\n      containers:\n      - image: dockersamples/examplevotingapp_vote\n        name: vote\n' },
+    { path: 'seed-data/Dockerfile', content: 'FROM python:3.9-slim\n' },
+    { path: 'vote/Dockerfile', content: 'FROM python:3.11-slim AS base\n' },
+    { path: 'worker/Dockerfile', content: 'FROM --platform=${BUILDPLATFORM} mcr.microsoft.com/dotnet/sdk:7.0 as build\nFROM mcr.microsoft.com/dotnet/runtime:7.0\n' },
+  ];
+
+  it('a compose service is the unit of the folder it builds, and a kubectl-style workload of a store image is that store', () => {
+    const { found, unit } = byName(voting);
+    expect(found.units.map((u) => `${u.name}:${u.kind}`).sort()).toEqual(['db:store', 'redis:store', 'seed:container', 'vote:container', 'worker:container']);
+    expect([unit('seed')!.dir, unit('vote')!.dir]).toEqual(['seed-data', 'vote']);
+    expect(found.relations.map((r) => `${r.from}>${r.to}`)).toContain(`${unit('seed')!.id}>${unit('vote')!.id}`);
+  });
+
+  it('names a base image by its language, not its last path segment', () => {
+    const { unit } = byName(voting);
+    expect([unit('worker')!.tech, unit('vote')!.tech]).toEqual(['.NET', 'Python']);
+    const tech = (from: string) => discoverArchitecture([{ path: 'svc/Dockerfile', content: `FROM ${from}\n` }], 'r').units[0]!.tech;
+    expect(['eclipse-temurin:21', 'golang:1.23 AS builder', 'node:20-alpine', 'alpine:3.20', 'gradle:8-jdk21 AS build'].map(tech)).toEqual(['Java', 'Go', 'Node', undefined, 'Java']);
+  });
+
+  it('reads a per-environment compose file, a build context with a dockerfile path, and an image default', () => {
+    const { unit } = byName([
+      { path: 'compose.yml', content: 'services:\n  backend:\n    image: backend:latest\n    build:\n      context: .\n      dockerfile: backend/Dockerfile\n  db:\n    image: "${POSTGRES_IMAGE:-postgres:17}"\n' },
+      { path: 'ops/docker-compose.prod.yml', content: 'services:\n  mailpit:\n    image: axllent/mailpit\n  ad:\n    image: ${IMAGE_NAME}:${DEMO_VERSION}-ad\n' },
+      { path: 'backend/Dockerfile', content: 'FROM python:3.10\n' },
+    ]);
+    expect(unit('backend')).toMatchObject({ dir: 'backend', tech: 'Python' });
+    expect(unit('db')).toMatchObject({ kind: 'store', tech: 'PostgreSQL' });
+    expect(unit('mailpit')).toMatchObject({ kind: 'container' });
+    expect(unit('ad')!.tech).toBeUndefined();
+  });
+
+  it('a URL in a comment is not a call, and a Python import never matches a JavaScript package', () => {
+    const { found } = byName([
+      { path: 'backend/pyproject.toml', content: '[project]\nname = "app"\n' },
+      { path: 'backend/app/utils.py', content: 'import emails\n' },
+      { path: 'frontend/package.json', content: '{"name":"frontend"}' },
+      { path: 'frontend/src/client.gen.ts', content: ' * @see https://developer.mozilla.org/docs/Web/API/fetch\n// fetch("https://api.example.org/x")\n' },
+      { path: 'packages/email/package.json', content: '{"name":"emails"}' },
+    ]);
+    expect(found.relations).toEqual([]);
+    expect(found.units.map((u) => u.kind)).toEqual(['container', 'container', 'container']);
+  });
+
+  // saleor/saleor: one Django app at the root, its code in a package folder, its stores in pyproject only.
+  it('reads pyproject dependencies, and a lone root app owns the code in its folders', () => {
+    const { found, unit } = byName([
+      { path: 'Dockerfile', content: 'FROM python:3.12 AS build-python\n' },
+      { path: 'pyproject.toml', content: '[project]\nname = "saleor"\ndependencies = [\n  "Django[bcrypt]~=5.2",\n  "celery[redis, sqs]>=5.5",\n  "psycopg[binary]>=3.2",\n  "redis>=5", "stripe>=12"\n]\n\n[tool.poetry.group.dev.dependencies]\nmypy = "^1"\n' },
+      { path: 'saleor/core/storages.py', content: 'import boto3\n' },
+    ], 'saleor');
+    const app = unit('saleor')!;
+    expect(app.tech).toBe('Django');
+    expect(found.relations.filter((r) => r.from === app.id).map((r) => found.units.find((u) => u.id === r.to)!.name).sort()).toEqual(['AWS', 'PostgreSQL', 'Redis', 'Stripe']);
+  });
+
+  // go-gitea/gitea: a Go server whose root also holds a frontend package.json and a linting pyproject.
+  it('a manifest in another language does not rename or re-label the folder\'s app', () => {
+    const { found } = byName([
+      { path: 'Dockerfile', content: 'FROM docker.io/library/golang:1.25-alpine3.22 AS build-env\n' },
+      { path: 'go.mod', content: 'module code.gitea.io/gitea\n\nrequire (\n\tgithub.com/lib/pq v1.10.9\n)\n' },
+      { path: 'package.json', content: '{"type":"module","dependencies":{"vue":"3"}}' },
+      { path: 'pyproject.toml', content: '[project]\nname = "gitea-linters"\n' },
+    ], 'gitea');
+    expect(found.units.map((u) => `${u.name}:${u.tech}`)).toEqual(['gitea:Go', 'PostgreSQL:undefined']);
+  });
+});
+
+// calcom/cal.com and supabase/supabase: a hundred workspace packages and sample apps crowded out the services.
+describe('capUnits on a big monorepo', () => {
+  const pkg = (dir: string, json: Record<string, unknown>) => ({ path: `${dir}/package.json`, content: JSON.stringify(json) });
+  const files = [
+    { path: 'docker-compose.yml', content: 'services:\n  database:\n    image: postgres:16\n  redis:\n    image: redis:7\n' },
+    pkg('.', { name: 'calcom-monorepo', workspaces: ['apps/*', 'packages/*'], scripts: { start: 'turbo run start' } }),
+    pkg('apps/web', { name: '@calcom/web', scripts: { start: 'next start' }, dependencies: { next: '15', '@calcom/lib': '*', '@calcom/ui': '*' } }),
+    pkg('apps/api', { name: '@calcom/api', dependencies: { '@nestjs/core': '10', '@calcom/lib': '*' } }),
+    ...['alby', 'zoom', 'giphy', 'hubspot'].map((app) => pkg(`packages/app-store/${app}`, { name: `@calcom/${app}`, main: 'index.ts', dependencies: { '@calcom/lib': '*' } })),
+    pkg('packages/lib', { name: '@calcom/lib', main: 'index.ts' }),
+    pkg('packages/ui', { name: '@calcom/ui', main: 'index.ts', devDependencies: { next: '15' }, dependencies: { '@calcom/lib': '*' } }),
+    pkg('examples/nextjs', { name: 'nextjs-example', scripts: { dev: 'next dev' }, dependencies: { next: '15' } }),
+  ];
+
+  it('marks packages nothing starts as libraries and sample apps as examples', () => {
+    const { units } = discoverArchitecture(files, 'cal.com');
+    const flags = (name: string) => { const u = units.find((unit) => unit.name === name)!; return [u.library ?? false, u.example ?? false]; };
+    expect(['web', 'api', 'lib', 'alby', 'calcom-monorepo', 'nextjs-example'].map(flags)).toEqual([[false, false], [false, false], [true, false], [true, false], [true, false], [false, true]]);
+  });
+
+  it('keeps services and their stores, then the best-connected libraries, then samples', () => {
+    const { result, dropped } = capUnits(discoverArchitecture(files, 'cal.com'), 6);
+    expect(result.units.map((unit) => unit.name).sort()).toEqual(['api', 'database', 'lib', 'redis', 'ui', 'web']);
+    expect(dropped).toBe(6);
+  });
+});
+
+// microservices-demo's loadgenerator: a pip-compiled list pins flask (via locust) and redis (via a plugin).
+describe('pinned dependency lists', () => {
+  it('reads only direct requirements and direct go modules', () => {
+    const { units, relations } = discoverArchitecture([
+      { path: 'load/requirements.txt', content: 'flask==3.0.3\n    # via\n    #   flask-cors\n    #   locust\nlocust==2.31.0\n    # via -r requirements.in\nredis==5.0  # via locust-plugins\npika==1.3  # via -r requirements.in\n' },
+      { path: 'api/go.mod', content: 'module example.com/api\n\nrequire (\n\tgithub.com/redis/go-redis/v9 v9.5.0 // indirect\n\tgoogle.golang.org/grpc v1.64.0 // indirect\n\tgithub.com/lib/pq v1.10.9\n)\n' },
+    ], 'demo');
+    expect(units.map((unit) => `${unit.name}:${unit.tech ?? ''}`)).toEqual(['api:Go', 'load:Python', 'PostgreSQL:', 'RabbitMQ:']);
+    expect(relations).toHaveLength(2);
+  });
+});
+
+describe('second-pass shapes (eval 2026-10-10)', () => {
+  it('a Dockerfile is labelled by the last stage that names a language, an image tag never beats it', () => {
+    const { units } = discoverArchitecture([
+      // fastapi's backend builds the emails with bun, then runs on python.
+      { path: 'backend/Dockerfile', content: 'FROM oven/bun:1 AS frontend-build\nRUN bun build\nFROM python:3.14\n' },
+      { path: 'backend/pyproject.toml', content: '[project]\nname = "app"\ndependencies = ["fastapi[standard]<1.0.0"]\n' },
+      // voting-app: a compose file of published tags beside the one that builds.
+      { path: 'compose.yml', content: 'services:\n  vote:\n    build: ./vote\n' },
+      { path: 'vote/Dockerfile', content: 'FROM python:3.11-slim\n' },
+      { path: 'web/Dockerfile', content: 'FROM node:20 AS build\nFROM nginx:1.27-alpine\n' },
+      // opentelemetry-demo's currency: a later stage built FROM an earlier one names no image.
+      { path: 'currency/Dockerfile', content: 'FROM alpine:3.21 AS base\nFROM base AS builder\nFROM base\n' },
+    ], 'repo');
+    expect(units.map((unit) => `${unit.name}:${unit.tech}`)).toEqual(['app:FastAPI', 'vote:Python', 'currency:undefined', 'web:Node']);
+  });
+
+  it('reads a compose variant only where no plain compose file sits beside it', () => {
+    const names = (files: { path: string; content: string }[]) => discoverArchitecture(files, 'repo').units.map((unit) => unit.name).sort();
+    const variant = { path: 'compose.override.yml', content: 'services:\n  mailpit:\n    image: axllent/mailpit\n' };
+    expect(names([{ path: 'compose.yml', content: 'services:\n  api:\n    image: acme/api\n' }, variant])).toEqual(['api']);
+    expect(names([{ path: 'deploy/docker-compose.prod.yml', content: 'services:\n  api:\n    image: acme/api\n' }, variant])).toEqual(['api', 'mailpit']);
+  });
+
+  it('a workspace root that runs a dev server is the app; one that only fans out to its packages is not', () => {
+    const root = (scripts: Record<string, string>) => discoverArchitecture([
+      { path: 'package.json', content: JSON.stringify({ name: 'site', workspaces: ['packages/*'], scripts }) },
+    ], 'repo').units[0]!.library;
+    expect([root({ dev: 'vite' }), root({ dev: 'turbo run dev', start: 'turbo run start' })]).toEqual([undefined, true]);
+  });
+
+  it('leaves a library nothing uses out of the diagram', () => {
+    const dsl = discoveryToDsl(discoverArchitecture([
+      { path: 'package.json', content: '{"name":"template","workspaces":["frontend","packages/*"]}' },
+      { path: 'frontend/package.json', content: '{"name":"frontend","scripts":{"dev":"vite"},"dependencies":{"react":"19","@acme/ui":"*"}}' },
+      { path: 'packages/ui/package.json', content: '{"name":"@acme/ui","main":"index.ts"}' },
+    ], 'repo'), 'repo');
+    expect(dsl).toMatch(/container frontend/);
+    expect(dsl).toMatch(/container ui/);
+    expect(dsl).not.toMatch(/template/);
+  });
+});
+
+// example-voting-app: compose's depends_on and the code's pg client named the same pair twice: two arrows on one line.
+describe('discoveryToDsl one arrow per pair', () => {
+  it('draws one arrow between two units, labelled by what the code does', () => {
+    const dsl = discoveryToDsl(discoverArchitecture([
+      { path: 'docker-compose.yml', content: 'services:\n  result:\n    build: ./result\n    depends_on:\n      - db\n  db:\n    image: postgres:15\n' },
+      { path: 'result/package.json', content: '{"name":"result","dependencies":{"express":"4","pg":"8"}}' },
+    ], 'repo'), 'repo');
+    expect(dsl.split('\n').filter((line) => line.includes(' -> ')).map((line) => line.trim().replace(/ \[link:.*$/, ''))).toEqual(['result -> db : uses']);
+    expect(dsl).toContain('result/package.json:1');
+  });
+});
+
+// supabase/supabase: docker/dev/docker-compose.dev.yml only patches the stack in docker/ (a `db:` with volumes), and
+// builds studio from a path that is not in the repo.
+describe('compose fragments', () => {
+  it('a service with no image or build patches one defined elsewhere; a build of a missing Dockerfile is not a folder', () => {
+    const { units } = discoverArchitecture([
+      { path: 'apps/studio/package.json', content: '{"name":"studio","scripts":{"dev":"next dev"},"dependencies":{"next":"15"}}' },
+      { path: 'apps/studio/Dockerfile', content: 'FROM node:22\n' },
+      { path: 'docker/dev/docker-compose.dev.yml', content: 'services:\n  studio:\n    build:\n      context: ..\n      dockerfile: apps/studio/Dockerfile\n  db:\n    restart: "no"\n' },
+      { path: 'docker/docker-compose.yml', content: 'services:\n  studio:\n    image: supabase/studio:2025\n  db:\n    image: supabase/postgres:15.8\n' },
+    ], 'supabase');
+    expect(units.map((unit) => `${unit.name}:${unit.kind}:${unit.dir}`)).toEqual(['studio:container:apps/studio', 'db:store:docker']);
+  });
+
+  it('keeps a service whose image comes from an `extends:` or a `<<:` merge', () => {
+    const content = 'x-app: &app\n  image: acme/app\nservices:\n  web:\n    <<: *app\n  worker:\n    extends:\n      service: web\n';
+    expect(discoverArchitecture([{ path: 'compose.yml', content }], 'repo').units.map((unit) => unit.name)).toEqual(['web', 'worker']);
+  });
+});
+
+describe('new manifest readers on hostile input', () => {
+  it('stays linear on 1 MB dev scripts, pyproject arrays, pinned lists and quoted URLs', () => {
+    const big = 'a '.repeat(5e5);
+    for (const file of [
+      { path: 'package.json', content: JSON.stringify({ name: 'x', scripts: { dev: `${big}vite` } }) },
+      { path: 'pyproject.toml', content: `[project]\ndependencies = [${'"a[b,c]",'.repeat(1e5)}\n` },
+      { path: 'requirements.txt', content: `flask==1\n${'    #   via x\n'.repeat(1e5)}` },
+      { path: 'api/main.py', content: `requests.get(${'"https://'.repeat(1e5)})\n` },
+    ]) {
+      const started = performance.now();
+      discoverArchitecture([file], 'repo');
+      expect(performance.now() - started, file.path).toBeLessThan(HOSTILE_INPUT_MS);
+    }
+  });
+});

@@ -82,9 +82,10 @@ export interface DetectionRule {
 }
 
 export const SERVICE_RULES: DetectionRule[] = [
-  { name: 'PostgreSQL', type: 'database', provider: 'unknown', patterns: [/\bpsycopg2?\b/i, /\bpostgres\b/i, /\bpostgresql\b/i, /\bpg\b/i] },
+  { name: 'PostgreSQL', type: 'database', provider: 'unknown', patterns: [/\bpsycopg2?\b/i, /\bpostgres\b/i, /\bpostgresql\b/i, /\bpg\b/i, /\basyncpg\b/, /\blib\/pq\b/, /\bjackc\/pgx\b/] },
   { name: 'MySQL', type: 'database', provider: 'unknown', patterns: [/\bmysql2?\b/i, /\bpymysql\b/i] },
   { name: 'MongoDB', type: 'database', provider: 'unknown', patterns: [/\bmongodb\b/i, /\bmongoose\b/i] },
+  { name: 'Elasticsearch', type: 'database', provider: 'unknown', patterns: [/\belasticsearch\b/i, /\belastic\/go-elasticsearch\b/] },
   { name: 'Redis', type: 'cache', provider: 'unknown', patterns: [/\bioredis\b/i, /\bredis\b/i] },
   { name: 'Kafka', type: 'messaging', provider: 'unknown', patterns: [/\bkafkajs\b/i, /\bconfluent-kafka\b/i] },
   { name: 'RabbitMQ', type: 'queue', provider: 'unknown', patterns: [/\bamqplib\b/i, /\bpika\b/i] },

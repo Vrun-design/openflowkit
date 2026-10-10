@@ -17,6 +17,8 @@ export const isMapSource = (path: string): boolean => SOURCE.test(path) && !isSk
 const WRANGLER = /(?:^|\/)wrangler\.(?:toml|jsonc?)$/;
 /** Source files in every language discovery reads (rules.ts INCLUDE_EXT, minus data and deploy formats). */
 const CODE = /\.(?:[cm]?[jt]sx?|py|rb|go|rs|java|kt|swift|php|cs|scala|clj|exs?)$/;
+/** Languages discovery reads no imports for: the map draws nothing from them (605 downloads on meilisearch for an empty map). */
+const NO_IMPORTS = /\.(?:rs|swift|php|cs|clj|exs?)$/;
 /** Code samples for the docs (fastapi's `docs_src/`, a top-level `docs/`) and vendored copies: hundreds of files, none of them the system. */
 const DOC_SNIPPETS = /^docs\/|(?:^|\/)(?:docs_src|vendor|vendored|third_party|third-party)\//;
 const DATA_ONLY = /\.(?:json|toml)$/;
@@ -34,7 +36,7 @@ export const acceptsMapFile = (path: string): boolean => {
   if (!acceptsArchitectureFile(path)) return (SOURCE.test(path) || CONFIG.test(path)) && !isSkippedSource(path);
   // Deploy files, manifests and even example apps count (`examples/app` imports the library: that is a real arrow in
   // discovery). Only documentation snippets are dropped: they are most of the downloads on a framework repo.
-  if (CODE.test(path) && DOC_SNIPPETS.test(path)) return false;
+  if (CODE.test(path) && (DOC_SNIPPETS.test(path) || NO_IMPORTS.test(path))) return false;
   return !DATA_ONLY.test(path) || CONFIG.test(path) || WRANGLER.test(path) || EXTENDABLE.test(path);
 };
 
@@ -44,20 +46,21 @@ const byFromLine = (a: ImportFact, b: ImportFact) => (a.from < b.from ? -1 : a.f
 export type Deployables = Required<Pick<MapFacts, 'parts' | 'links' | 'externals'>>;
 
 /**
- * Units with a folder become parts. A unit at the repo root (the main app) stands for `src/` when the repo has
- * one, since that is where its code lives. Relations between parts become 'call' links; a relation to anything
- * without a folder (a store, a queue, an outside service) becomes a link to an `ext:` node: 'data' for stores and
- * queues, 'call' for services. Evidence (file:line) rides along on every link.
+ * Units whose folder holds their code become parts (a workload known only from its deploy yaml is an outside
+ * node, like a store). A unit at the repo root (the main app) stands for `src/` when the repo has one, since that
+ * is where its code lives. Relations between parts become 'call' links; a relation to anything without a folder
+ * (a store, a queue, an outside service) becomes a link to an `ext:` node: 'data' for stores and queues, 'call'
+ * for services. Evidence (file:line) rides along on every link.
  */
 export function deployablesFrom(files: readonly SourceFile[], repoName: string, hasSrc: boolean): Deployables {
   const found = discoverArchitecture(files, repoName);
   const rootApp = hasSrc && !found.units.some((u) => u.dir === 'src')
-    ? found.units.find((u) => (u.dir === '' || u.dir === '.') && (u.kind === 'container' || u.kind === 'system'))
+    ? found.units.find((u) => u.code && (u.dir === '' || u.dir === '.') && (u.kind === 'container' || u.kind === 'system'))
     : undefined;
-  const dirOf = new Map(found.units.flatMap((u): [string, string][] => (u === rootApp ? [[u.id, 'src']] : u.dir !== '' && u.dir !== '.' ? [[u.id, u.dir]] : [])));
+  const dirOf = new Map(found.units.flatMap((u): [string, string][] => (u === rootApp ? [[u.id, 'src']] : u.code && u.dir !== '' && u.dir !== '.' ? [[u.id, u.dir]] : [])));
   const unitById = new Map(found.units.map((u) => [u.id, u]));
   const parts = [...new Map([...dirOf].map(([id, dir]) => [dir, unitById.get(id)!])).entries()]
-    .map(([dir, u]) => ({ name: u.name, dir, desc: [u.kind, u.tech].filter(Boolean).join(' · ') }));
+    .map(([dir, u]) => ({ name: u.name, dir, desc: [u.kind, u.tech].filter(Boolean).join(' · '), ...(u === rootApp ? { rootApp: true as const } : {}) }));
   const externals = new Map<string, { id: string; name: string; desc?: string }>();
   const links: MapLink[] = found.relations.flatMap((r) => {
     const from = dirOf.get(r.from);

@@ -65,8 +65,11 @@ export interface MapFacts {
   links?: MapLink[];
   externals?: { id: string; name: string; desc?: string }[];
   /** Deployable parts; without them every top-level folder is a part. */
-  /** `id` is ignored: a part's node id is its dir. */
-  parts?: { id?: string; name: string; dir: string; desc?: string }[];
+  /**
+   * `id` is ignored: a part's node id is its dir. A part inside another part's folder opens from it, unless that one
+   * is `rootApp`: the repo-root app standing for `src/`, whose folder holds its code, not other packages.
+   */
+  parts?: { id?: string; name: string; dir: string; desc?: string; rootApp?: true }[];
   source?: MapSource;
   /** Imports the scanner could not resolve (broken paths): added to `stats.unresolved`, so they show up somewhere. */
   unresolvedImports?: number;

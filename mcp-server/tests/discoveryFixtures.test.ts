@@ -202,7 +202,7 @@ describe('discovery on a microservices-demo-shaped repo', () => {
     const discovery = await runArchitectureDiscovery(await repo(microservicesDemo()));
     expect(discovery.units.find((unit) => unit.name === 'frontend')?.tech).toBe('Go');
     expect(discovery.units.find((unit) => unit.name === 'checkoutservice')?.tech).toBe('Go');
-    expect(discovery.units.find((unit) => unit.name === 'emailservice')?.tech).toBe('python');
+    expect(discovery.units.find((unit) => unit.name === 'emailservice')?.tech).toBe('Python');
     // The Dockerfile sits in src/cartservice/src: the service is the folder above, and owns its code.
     expect(discovery.units.find((unit) => unit.name === 'cartservice')?.dir).toBe('src/cartservice');
     expect(discovery.units.find((unit) => unit.name === 'redis-cart')).toMatchObject({ kind: 'store', tech: 'Redis' });

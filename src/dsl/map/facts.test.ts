@@ -104,3 +104,48 @@ describe('compose depends_on', () => {
     }
   });
 });
+
+// GoogleCloudPlatform/microservices-demo: a workload with no code of its own (redis-cart, the collector) took a
+// top-level box named after its yaml folder and pushed real services into "more".
+describe('deployablesFrom on deploy-only workloads', () => {
+  const workload = (name: string, image: string, env = '') =>
+    `apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: ${name}\nspec:\n  template:\n    spec:\n      containers:\n        - name: server\n          image: ${image}\n${env}`;
+  const files = [
+    { path: 'kubernetes-manifests/cartservice.yaml', content: `${workload('cartservice', 'cartservice', '          env:\n          - name: REDIS_ADDR\n            value: "redis-cart:6379"\n')}---\n${workload('redis-cart', 'redis:alpine')}` },
+    { path: 'kustomize/components/otel/collector.yaml', content: workload('opentelemetrycollector', 'otel/opentelemetry-collector-contrib:0.1') },
+    { path: 'src/cartservice/Dockerfile', content: 'FROM mcr.microsoft.com/dotnet/sdk:9.0\n' },
+  ];
+
+  it('draws only units with code as parts; a store it calls is an outside node', () => {
+    const { parts, links, externals } = deployablesFrom(files, 'demo', true);
+    expect(parts.map((p) => p.dir)).toEqual(['src/cartservice']);
+    expect(externals.map((e) => e.name)).toEqual(['redis-cart']);
+    expect(links.map((l) => `${l.from}>${l.to}:${l.kind}`)).toEqual([`src/cartservice>${externals[0]!.id}:data`]);
+  });
+
+  it('never lets an image-only compose service stand for src/', () => {
+    const { parts } = deployablesFrom([{ path: 'compose.yml', content: 'services:\n  proxy:\n    image: traefik:v3\n' }], 'demo', true);
+    expect(parts).toEqual([]);
+  });
+
+  it('does not read sources in languages it draws nothing for', () => {
+    expect(['crates/milli/src/lib.rs', 'App/Main.swift', 'lib/app.php', 'src/Program.cs', 'cmd/main.go', 'app/models.py', 'src/Main.java'].map(acceptsMapFile))
+      .toEqual([false, false, false, false, true, true, true]);
+  });
+});
+
+// opentelemetry-demo and this repo: the root app stands for src/, and src/ also holds services (src/cart) or a
+// library (src/lib). Those stay beside the app at the top, not inside it.
+describe('the root app standing for src/', () => {
+  it('keeps the parts under src/ beside it', () => {
+    const model = buildMap(factsFromFiles([
+      { path: 'package.json', content: '{"name":"demo","scripts":{"dev":"vite"}}' },
+      { path: 'src/main.ts', content: "import './lib/core';\n" },
+      { path: 'src/lib/package.json', content: '{"name":"core"}' },
+      { path: 'src/lib/core.ts', content: 'export {};\n' },
+      { path: 'src/cart/Dockerfile', content: 'FROM node:20\n' },
+      { path: 'src/cart/index.ts', content: 'export {};\n' },
+    ], 'demo'));
+    expect(model.nodes.root.children.filter((id) => model.nodes[id]!.kind === 'part').sort()).toEqual(['src', 'src/cart', 'src/lib']);
+  });
+});

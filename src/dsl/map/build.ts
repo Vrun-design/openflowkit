@@ -111,10 +111,10 @@ export function buildMap(facts: MapFacts, overlay: MapOverlay = {}): MapModel {
 
   // Fill a folder: overlay groups are sub-boxes like any other and win over folding, so fold.ts only
   // sees the files they leave loose.
-  const fill = (id: string, dir: string, files: string[]) => {
+  const fill = (id: string, dir: string, files: string[], parts: Item[] = []) => {
     const { sub, loose: all } = split(dir, files);
     let loose = all;
-    const subs = [...sub.keys()].sort(compare).map((seg) => folderItem(dir ? `${dir}/${seg}` : seg, sub.get(seg)!));
+    const subs = [...[...sub.keys()].sort(compare).map((seg) => folderItem(dir ? `${dir}/${seg}` : seg, sub.get(seg)!)), ...parts];
     for (const g of overlay.groups?.[id] ?? (dir ? overlay.groups?.[dir] : undefined) ?? []) {
       const gid = `${id}#${g.key}`;
       const wanted = new Set(g.files);
@@ -168,14 +168,24 @@ export function buildMap(facts: MapFacts, overlay: MapOverlay = {}): MapModel {
     if (p) push(byPart, p.dir, f);
     else rest.push(f);
   }
-  const items: Item[] = parts.map((p) => ({
-    key: p.dir, label: p.name, noun: 'module', degree: sum(byPart.get(p.dir) ?? []),
-    make: (parent: string) => {
-      alias.set(p.dir, p.dir);
-      add(p.dir, 'part', parent, p.name, { desc: p.desc, path: p.dir });
-      fill(p.dir, p.dir, byPart.get(p.dir) ?? []);
-    },
-  }));
+  // A part inside another part's folder (cal.com's 90 apps under packages/app-store) opens from that part, not
+  // beside it at the top; its weight counts toward the part that holds it. A root app's `src/` holds no packages:
+  // the services or library beside its code there (opentelemetry-demo's src/cart) stay beside it.
+  const inner = new Map<string, Item[]>();
+  const items: Item[] = [];
+  for (const p of parts) {
+    const item: Item = {
+      key: p.dir, label: p.name, noun: 'module', degree: sum(paths.filter((f) => f.startsWith(`${p.dir}/`))),
+      make: (parent: string) => {
+        alias.set(p.dir, p.dir);
+        add(p.dir, 'part', parent, p.name, { desc: p.desc, path: p.dir });
+        fill(p.dir, p.dir, byPart.get(p.dir) ?? [], inner.get(p.dir));
+      },
+    };
+    const holder = parts.filter((q) => !q.rootApp && p.dir.startsWith(`${q.dir}/`)).sort((a, b) => b.dir.length - a.dir.length)[0];
+    if (holder) (inner.get(holder.dir) ?? inner.set(holder.dir, []).get(holder.dir)!).push(item);
+    else items.push(item);
+  }
   // Everything outside a declared part: top-level folders become parts, root files fold loosely.
   const top = split('', rest);
   for (const seg of [...top.sub.keys()].sort(compare)) items.push(folderItem(seg, top.sub.get(seg)!, 'part'));
