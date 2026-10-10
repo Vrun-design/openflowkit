@@ -7,7 +7,7 @@ import {
   BRIDGE_POLL_SECONDS, bridgeUrls, isBridgeRequest,
   type BridgeClientInfo, type BridgePageSummary, type BridgeRequest,
 } from '../../../agent/bridge/protocol';
-import { resolveAgentOpCommand } from '../../../agent/runAction';
+import { pageHolding, resolveAgentOpCommand } from '../../../agent/runAction';
 import { commandTouchedRoots } from '../../application/ai/proposalSession';
 import type { DocumentCommand } from '../../domain/commands/types';
 import type { SceneDocumentV1 } from '../../domain/document/types';
@@ -106,7 +106,8 @@ export function useV2AgentBridge(options: V2AgentBridgeOptions): V2AgentBridge {
         if (!op) throw new RangeError(`Unknown op "${request.op}".`);
         const document = optionsRef.current.document;
         if (!document) throw new Error('The editor has no document open.');
-        const pageId = request.pageId ?? optionsRef.current.pageId ?? document.pages[0]?.id ?? '';
+        // The page the op will run on (a named frame's own page), so the read-only check and the camera agree with it.
+        const pageId = pageHolding({ document, pageId: request.pageId ?? optionsRef.current.pageId ?? document.pages[0]?.id ?? '', capabilities }, request.input);
         const outcome = await resolveAgentOpCommand(op, request.input, { document, pageId, capabilities });
         if (outcome.command && (optionsRef.current.readOnly || (optionsRef.current.lockedPageId ?? null) === pageId)) throw new Error('This document is read-only, so the editor did not apply the change.');
         if (outcome.command) {

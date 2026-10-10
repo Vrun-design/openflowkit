@@ -12,7 +12,16 @@ export async function resolveAgentOpCommand<Input, Output>(
   rawInput: unknown,
   context: OpContext
 ): Promise<OpOutcome<Output>> {
-  return op.run(op.schema.parse(rawInput ?? {}), context);
+  const input = op.schema.parse(rawInput ?? {});
+  return op.run(input, { ...context, pageId: pageHolding(context, input) });
+}
+
+/** Frame ids are unique across pages: an op that names a frame runs on the page holding it (a C4 view's own page). */
+export function pageHolding({ document, pageId }: OpContext, input: unknown): string {
+  const frameId = (input as { frameId?: unknown } | null)?.frameId;
+  if (typeof frameId !== 'string') return pageId;
+  const holds = (page: SceneDocumentV1['pages'][number]) => page.nodes.some((node) => node.id === frameId);
+  return document.pages.some((page) => page.id === pageId && holds(page)) ? pageId : document.pages.find(holds)?.id ?? pageId;
 }
 
 export interface RunOpResult {

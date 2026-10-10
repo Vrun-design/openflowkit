@@ -5,6 +5,7 @@ import { grammarSection } from '../../../agent/host';
 import type { ExportFormat, ExportRequest, OpCapabilities } from '../../../agent/ops/types';
 import type { CompileOptions } from '../../../dsl/compile';
 import { compile, compileWorkspace } from '../../../dsl/compile';
+import { rankIcons } from '../../../dsl/iconMatch';
 import { elkDslLayoutPort } from '../../../services/elk-layout/runtime';
 import { resolveDslIcon } from '../../../services/dsl/iconResolver';
 import { SVG_SOURCES } from '../../../services/shapeLibrary/providerCatalog';
@@ -21,22 +22,9 @@ export interface V2AgentHostOptions {
   readonly autoIcons: boolean;
 }
 
-const searchIcons = async (query: string, limit: number) => {
-  const needle = query.trim().toLowerCase();
-  if (!needle) return [];
-  const scored = SVG_SOURCES
-    .map((source) => {
-      const haystack = `${source.provider}/${source.shapeId} ${source.label} ${source.category}`.toLowerCase();
-      const exact = source.shapeId.toLowerCase() === needle || source.label.toLowerCase() === needle ? 100 : 0;
-      const prefix = source.shapeId.toLowerCase().startsWith(needle) ? 80 : 0;
-      const contains = haystack.includes(needle) ? 60 : 0;
-      return { source, score: exact + prefix + contains };
-    })
-    .filter(({ score }) => score > 0)
-    .sort((a, b) => b.score - a.score || a.source.shapeId.localeCompare(b.source.shapeId))
-    .slice(0, limit);
-  return scored.map(({ source }) => ({ provider: source.provider, slug: source.shapeId, label: source.label, category: source.category }));
-};
+const searchIcons = async (query: string, limit: number) => rankIcons(SVG_SOURCES, query, (source) => ({ provider: source.provider, id: source.shapeId, label: source.label, category: source.category }))
+  .slice(0, query.trim() ? limit : 0)
+  .map((source) => ({ provider: source.provider, slug: source.shapeId, label: source.label, category: source.category }));
 
 /** §0 is the design record (sources we checked), not reference: agents get the language only, as from the MCP package. */
 export const shippedGrammar = (grammar: string): string =>

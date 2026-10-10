@@ -6,25 +6,29 @@ const isHeading = (line: string | undefined, level: 2 | 3): boolean =>
   new RegExp(`^#{${level}}\\s`).test(line ?? '');
 
 /**
- * The section that documents a family: the `##` section when its heading names
- * it, else the `###` subsection. Matching only headings keeps prose mentions
- * ("unlike sequence…") from pulling sections in.
+ * What `get_syntax` serves for one family: the cheat-sheet appendix (everything needed to write any
+ * family) plus the section that documents it — the heading whose title starts with the family word
+ * (`### 8.2 architecture`, not §4's "Core statements (all graph families: …)"), or for a reserved
+ * family the subsection that names it in code (`bpmn` in "8.11 Later families"). Matching titles only
+ * keeps prose mentions ("unlike sequence…") from pulling sections in. Unknown → the whole reference.
  */
 export function grammarSection(grammar: string, family?: string): string {
   if (!family) return grammar;
   const needle = family.trim().toLowerCase();
   const lines = grammar.split('\n');
-  const headingAt = (level: 2 | 3): number =>
-    lines.findIndex((line) => isHeading(line, level) && line.toLowerCase().includes(needle));
   const sliceFrom = (start: number): string => {
     const rest = lines.slice(start + 1);
     const end = rest.findIndex((line) => isHeading(line, 2) || isHeading(line, 3));
     return lines.slice(start, end < 0 ? lines.length : start + 1 + end).join('\n').trimEnd();
   };
-  const section = headingAt(2);
-  if (section >= 0) return sliceFrom(section);
-  const subsection = headingAt(3);
-  return subsection >= 0 ? sliceFrom(subsection) : grammar;
+  const titled = (level: 2 | 3): number => lines.findIndex((line) => isHeading(line, level)
+    && line.replace(/^#+\s+(?:[\d.]+\s+)?/, '').toLowerCase().split(/[^a-z0-9]/)[0] === needle);
+  let start = titled(2);
+  if (start < 0) start = titled(3);
+  if (start < 0) start = lines.findIndex((line, index) => isHeading(line, 3) && sliceFrom(index).includes(`\`${needle}\``));
+  if (start < 0) return grammar;
+  const cheatSheet = grammarAppendix(grammar);
+  return cheatSheet ? `${cheatSheet}\n\n${sliceFrom(start)}` : sliceFrom(start);
 }
 
 /** The fenced cheat-sheet appendix, without the fence. Empty when absent. */

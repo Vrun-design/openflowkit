@@ -80,6 +80,11 @@ export function readAgentSource(text: string): AgentSource {
   if (!foreign) return { dsl: FENCED.exec(text)?.[1] ?? text };
   const conversion = foreign.convert(source);
   if ('error' in conversion) throw new RangeError(conversion.error.startsWith(foreign.label) ? conversion.error : `${foreign.label}: ${conversion.error}`);
+  // As in the code panel: a line the importer could not read stops the conversion, rather than drawing around it.
+  const errors = conversion.diagnostics.filter(({ severity }) => severity === 'error');
+  if (errors.length) {
+    throw Object.assign(new RangeError(`${foreign.label} not converted:\n${errors.map(({ message }) => message).join('\n')}`), { diagnostics: errors });
+  }
   return {
     dsl: conversion.dsl,
     converted: { from: foreign.from, losses: conversion.diagnostics.map(({ line, message }) => ({ line, message })) },
@@ -123,7 +128,8 @@ export function lintDsl(text: string): DslLintReport {
     source = readAgentSource(text);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, family: 'unknown', reserved: false, statements: 0, lines: text.split('\n').length, diagnostics: [{ code: 'E003', severity: 'error', line: 1, col: 1, message }] };
+    const marked = (error as { diagnostics?: readonly DslDiagnostic[] }).diagnostics?.map(({ code, severity, line, col, message: text }) => ({ code, severity, line, col, message: text }));
+    return { ok: false, family: 'unknown', reserved: false, statements: 0, lines: text.split('\n').length, diagnostics: marked ?? [{ code: 'E003', severity: 'error', line: 1, col: 1, message }] };
   }
   const parsed = source.converted ? source.dsl : unfenced(text);
   const document = parseDocument(parsed);

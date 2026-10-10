@@ -359,7 +359,8 @@ describe('page targeting', () => {
     const updated = await run(target, 'update_diagram', { documentId, pageId: second.pageId, frameId: second.frameId, dsl: C4.replace('container API', 'container Api2') });
     // A workspace update rewrites every view; finding the frame at all needed the pageId.
     expect((updated.views as { pageId: string }[]).map(({ pageId }) => pageId)).toContain(second.pageId);
-    await expect(call(target, 'update_diagram', { documentId, frameId: second.frameId, dsl: C4 })).rejects.toThrow(/not found on this page/);
+    // Frame ids are unique across pages: without a pageId the op finds the frame's own page.
+    expect(((await run(target, 'update_diagram', { documentId, frameId: second.frameId, dsl: C4 })).views as { pageId: string }[]).map(({ pageId }) => pageId)).toContain(second.pageId);
   });
 
   it('passes the pageId to the paired editor', async () => {
@@ -394,7 +395,8 @@ describe('Mermaid in', () => {
   it('validate_openflow_dsl answers Mermaid with its Mermaid line, and names what converts', async () => {
     const target = await client();
     const broken = await call(target, 'validate_openflow_dsl', { dsl: 'flowchart TD\n  A --> B\n  A[Start --> C' });
-    expect(broken.converted).toMatchObject({ from: 'mermaid', losses: [{ line: 3 }] });
+    // Not converted around the broken edge: an error on its Mermaid line, so the agent fixes it.
+    expect(broken).toMatchObject({ ok: false, diagnostics: [{ code: 'E004', line: 3 }] });
     const gantt = await call(target, 'validate_openflow_dsl', { dsl: 'gantt\n  title Plan' });
     expect(gantt).toMatchObject({ ok: false, diagnostics: [{ code: 'E003', message: expect.stringMatching(/Convertible: flowchart/) }] });
     const { id: documentId } = await call(target, 'openflow_create', { name: 'Pie' });

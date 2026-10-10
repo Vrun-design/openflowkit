@@ -11,7 +11,7 @@ import { serializeCanonicalJson } from '../opencanvas/infrastructure/export/cano
 import { buildPrintDocument } from '../opencanvas/infrastructure/export/print';
 import { compile, compileWorkspace, type CompileOptions } from '../dsl/compile';
 import { grammarSection } from '../dsl/grammar';
-import { matchIconId } from '../dsl/iconMatch';
+import { matchIconId, rankIcons } from '../dsl/iconMatch';
 import type { LayoutPort } from '../dsl/layout';
 import type { IconMatch, OpCapabilities } from './ops/types';
 
@@ -22,7 +22,7 @@ export interface FileHostOptions {
   readonly grammar: string;
   /** Node hosts pass `headlessElkLayout`; tests may pass the deterministic layout for speed. */
   readonly layout: LayoutPort;
-  /** Icon manifest entries; search is a scored substring match over provider/slug/label. */
+  /** Icon manifest entries; searched with the editor's ranking (`rankIcons`). */
   readonly icons?: readonly IconMatch[];
   /** Icon id → pack/shape; defaults to matching against `icons`, the way the editor matches its packs. */
   readonly resolveIcon?: CompileOptions['resolveIcon'];
@@ -30,17 +30,6 @@ export interface FileHostOptions {
   readonly autoIcons?: boolean;
   /** One icon's art as a data URL, or null; without it, exported icons are plates alone. */
   readonly loadIcon?: (packId: string, shapeId: string) => Promise<string | null>;
-}
-
-function score(icon: IconMatch, query: string): number {
-  const haystack = `${icon.provider}/${icon.slug} ${icon.label} ${icon.category ?? ''}`.toLowerCase();
-  const needle = query.toLowerCase();
-  if (icon.slug.toLowerCase() === needle || icon.label.toLowerCase() === needle) return 100;
-  if (icon.slug.toLowerCase().startsWith(needle)) return 80;
-  if (haystack.includes(needle)) return 60;
-  const tokens = needle.split(/[^a-z0-9]+/).filter(Boolean);
-  const hits = tokens.filter((token) => haystack.includes(token)).length;
-  return hits > 0 ? 20 + hits * 10 : 0;
 }
 
 /** A resolver over a manifest: the same matching the editor runs over its bundled packs. */
@@ -63,12 +52,9 @@ export function createFileCapabilities(options: FileHostOptions): OpCapabilities
     compile: (text, compileOptions) => compile(text, { ...defaults, ...compileOptions }),
     compileWorkspace: (text, compileOptions) => compileWorkspace(text, { ...defaults, ...compileOptions }),
     syntax: (family) => grammarSection(options.grammar, family),
-    searchIcons: async (query, limit) => icons
-      .map((icon) => ({ icon, score: score(icon, query) }))
-      .filter(({ score: value }) => value > 0)
-      .sort((a, b) => b.score - a.score || a.icon.slug.localeCompare(b.icon.slug))
-      .slice(0, limit)
-      .map(({ icon }) => icon),
+    searchIcons: async (query, limit) => query.trim()
+      ? rankIcons(icons, query, (icon) => ({ provider: icon.provider, id: icon.slug, label: icon.label, category: icon.category })).slice(0, limit)
+      : [],
     exportFiles: async (request) => {
       if (request.format === 'png' || request.format === 'gif' || request.format === 'mp4' || request.format === 'webm') {
         // No canvas, no codecs: this host has no rasterizer by construction.

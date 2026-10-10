@@ -70,6 +70,8 @@ describe('file host', () => {
     expect((await host.searchIcons('rds', 5)).map(({ provider }) => provider)).toEqual(['aws']);
     expect(await host.searchIcons('kubernetes', 5)).toEqual([]);
     expect((await host.searchIcons('aws lambda', 1)).length).toBe(1);
+    // The editor's ranking, alias table included: the acronym an agent types finds the service.
+    expect((await createFileCapabilities({ layout: headlessElkLayout, grammar: GRAMMAR, icons: [{ provider: 'aws', slug: 'application-integration-simple-queue-service', label: 'Simple Queue Service' }] }).searchIcons('sqs', 3)).map(({ slug }) => slug)).toEqual(['application-integration-simple-queue-service']);
   });
 
   it('resolves every auto-icon id through the shipped MCP manifest, exactly as the editor does', () => {

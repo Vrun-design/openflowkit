@@ -6,6 +6,7 @@ import { createShapeNode } from '../../opencanvas/domain/nodes/shapeNode';
 import { buildStyleNodesCommand } from '@/opencanvas/domain/commands/styleNodes';
 import type { SceneDocumentV1, ScenePage } from '@/opencanvas/domain/document/types';
 import { createAgentDocument } from '../index';
+import { resolveAgentOpCommand } from '../runAction';
 import { AGENT_OPS } from './index';
 import type { AgentOp, OpContext } from './types';
 import { createTestCapabilities } from './testHost';
@@ -44,6 +45,17 @@ async function host(document: SceneDocumentV1 = createAgentDocument('Ops fixture
 }
 
 describe('agent ops', () => {
+  // Frame ids are unique across pages. A C4 workspace puts each view on its own page, and an agent
+  // reading view 2 by its frameId got "not found on this page" unless it also passed pageId.
+  it('an op naming a frame on another page runs on that page', async () => {
+    const run = await host();
+    const made = await run.run('create_diagram', { dsl: 'architecture\nmodel {\n  system Shop {\n    container Web\n    container API\n    Web -> API\n  }\n}\nviews {\n  view landscape\n  view container of Shop\n}' });
+    const views = (made.output as { views: { pageId: string; frameId: string }[] }).views;
+    const other = views.find(({ pageId }) => pageId !== run.context().pageId)!;
+    const read = await resolveAgentOpCommand(op('get_diagram'), { frameId: other.frameId }, run.context());
+    expect(read.output).toMatchObject({ frameId: other.frameId, pageId: other.pageId });
+  });
+
   it('refuses DSL with nothing drawable instead of leaving an empty frame, and says why', async () => {
     const run = await host();
     const before = run.document();
@@ -307,11 +319,14 @@ describe('Mermaid input', () => {
 
   it('finds the fence inside prose and front matter, and counts lines as the agent sent them', async () => {
     const sent = 'Here is the flow:\n\n```mermaid\n---\ntitle: Checkout\n---\nflowchart LR\n  A --> B\n  A[Start --> C\n```\nIt shows checkout.';
+    // Line 9 is the broken edge as the agent sent it (prose and fence counted); like the code panel,
+    // nothing converts around it — drawing past it would drop or invent nodes.
     const report = lintDsl(sent);
-    expect(report.converted?.dsl).toMatch(/^flowchart right\ntitle: Checkout\n/);
-    expect(report.converted?.losses).toContainEqual({ line: 9, message: expect.stringMatching(/edge syntax/i) });
+    expect(report.ok).toBe(false);
+    expect(report.diagnostics).toContainEqual(expect.objectContaining({ code: 'E004', line: 9, message: expect.stringMatching(/edge syntax/i) }));
     const run = await host();
-    await run.run('create_diagram', { dsl: sent });
+    await expect(run.run('create_diagram', { dsl: sent })).rejects.toThrow(/line 9/);
+    await run.run('create_diagram', { dsl: sent.replace('A[Start --> C', 'A[Start] --> C') });
     expect(run.frame().content.label).toBe('Checkout');
   });
 
@@ -333,9 +348,10 @@ describe('Mermaid input', () => {
     expect(created.output).not.toHaveProperty('converted');
   });
 
-  it('broken Mermaid reports the Mermaid line instead of throwing', () => {
+  it('broken Mermaid reports the Mermaid line as an error', () => {
     const report = lintDsl('flowchart TD\n  A --> B\n  A[Start --> C');
-    expect(report.converted?.losses).toContainEqual({ line: 3, message: expect.stringMatching(/edge syntax/i) });
+    expect(report).toMatchObject({ ok: false });
+    expect(report.diagnostics).toContainEqual(expect.objectContaining({ code: 'E004', line: 3, message: expect.stringMatching(/edge syntax/i) }));
   });
 
   it('an unconvertible family names what converts, in lint and in create', async () => {
