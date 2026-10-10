@@ -785,7 +785,7 @@ function directionBetween(from: Point2d, to: Point2d): Point2d {
 function markerShapeMarkup(shape: MarkerShape, stroke: string, width: number, opacity: number): string {
   const strokeAttrs = `fill="none" stroke="${stroke}" stroke-width="${number(width)}" opacity="${number(opacity)}"`;
   if (shape.kind === 'circle') {
-    return `<circle cx="${number(shape.center.x)}" cy="${number(shape.center.y)}" r="${number(shape.radius)}" fill="none" ${strokeAttrs}/>`;
+    return `<circle cx="${number(shape.center.x)}" cy="${number(shape.center.y)}" r="${number(shape.radius)}" ${strokeAttrs}/>`;
   }
   const data = shape.subpaths
     .map((points) => points.map((point, index) => `${index ? 'L' : 'M'}${number(point.x)} ${number(point.y)}`).join(' '))

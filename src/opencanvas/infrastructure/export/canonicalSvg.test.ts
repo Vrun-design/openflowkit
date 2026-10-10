@@ -9,6 +9,8 @@ import { architectureIconBounds } from '../../domain/nodes/architectureNodePrese
 import { createPresetFrame } from '../../domain/nodes/framePreset';
 import { createWidgetNode } from '../../domain/nodes/widgetNode';
 
+const DSL_FIXTURES = import.meta.glob('../../../dsl/fixtures/**/*.dsl', { eager: true, query: '?raw', import: 'default' }) as Record<string, string>;
+
 describe('canonical SVG export', () => {
   it('a C4 element with a long description wraps it inside its box', async () => {
     const compiled = await compile('architecture\nmodel {\n system Shop {\n  container API [tech: Go, desc: "Handles every order, payment, refund and shipping request from the web and mobile clients"]\n }\n}\nviews { view container of Shop }\n');
@@ -93,6 +95,15 @@ describe('canonical SVG export', () => {
     const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml');
     expect(parsed.getElementsByTagName('parsererror')).toHaveLength(0);
     expect(svg).toContain('linebreak nul bad ok 😀');
+  });
+
+  // An agent's screenshot rasterizes this SVG through <img>: one duplicate attribute (an ERD's `o` marker
+  // wrote fill="none" twice) and the whole image fails to decode. Every fixture family, parsed as XML.
+  it.each(Object.keys(DSL_FIXTURES).sort())('stays well-formed XML for %s', async (name) => {
+    const compiled = await compile(DSL_FIXTURES[name]!);
+    const svg = exportCanonicalSvg(createTestDocument({ nodes: [compiled.frame, ...compiled.nodes], connectors: compiled.connectors }));
+    const parsed = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    expect(parsed.getElementsByTagName('parsererror')[0]?.textContent ?? null).toBeNull();
   });
 
   it('draws icon art where the canvas draws it, and only art it was given', () => {
