@@ -461,6 +461,10 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     const meta = last ? dslFrameMeta(last) : null;
     return (meta?.direction as LandingDirection | undefined) ?? (meta ? dslFamilyDirection(meta.family) : 'down');
   };
+  const toastZoomedToRead = () => {
+    const fit = shortcutGroups().flatMap(({ rows }) => rows).find(({ label }) => label === 'Zoom to fit')?.keys;
+    pushToast({ id: `landing-${Date.now()}`, tone: 'info', title: `Zoomed in to read. Press ${fit} to see it all.` });
+  };
   // The Animation panel is about the whole page: opening it lands the page readable beside it.
   useEffect(() => { if (panels.motionOpen) camera.landReadable(landingDirection()); }, [panels.motionOpen]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -671,12 +675,9 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     settings: aiSettings.settings, proposal, loadGrammar,
     tools: { document: session.document, capabilities: agentCapabilities, compile: compileDraft },
     undo: session.undo, announce: setAnnouncement,
-    // The committed page arrives next frame; land on it once it has.
     // The committed page arrives next frame; land on what was drawn (a removal leaves the camera alone).
     onApplied: (nodeIds) => requestAnimationFrame(() => {
-      if (!nodeIds.length || !camera.landReadable(landingDirection(), nodeIds)) return;
-      const fit = shortcutGroups().flatMap(({ rows }) => rows).find(({ label }) => label === 'Zoom to fit')?.keys;
-      pushToast({ id: `ai-landing-${Date.now()}`, tone: 'info', title: `Zoomed in to read. Press ${fit} to see it all.` });
+      if (nodeIds.length && camera.landReadable(landingDirection(), nodeIds)) toastZoomedToRead();
     }),
   });
   const diagramCount = useMemo(() => (page ? dslFrames(page).length : 0), [page]);
@@ -691,10 +692,9 @@ export function V2EditorPage({ shared }: { readonly shared?: V2SharedView } = {}
     capabilities: agentCapabilities,
     commit: commit,
     onActivity: setAnnouncement,
-    // An agent edit off-screen (or under the agent panel) pulls the camera to it; one already in view leaves it alone.
+    // An agent edit off-screen (or under the agent panel) lands readable, as the assistant's does; one in view stays put.
     onApplied: (nodeIds) => requestAnimationFrame(() => {
-      const bounds = hostRef.current?.getContentBounds(nodeIds);
-      if (bounds) camera.revealBounds(bounds);
+      if (camera.revealReadable(landingDirection(), nodeIds)) toastZoomedToRead();
     }),
   });
 

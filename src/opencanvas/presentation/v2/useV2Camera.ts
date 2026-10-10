@@ -157,15 +157,27 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     updateCamera(fitInto(bounds).camera);
   }, [hostRef, updateCamera, fitInto]);
 
+  /** Whether `bounds` is fully on screen, beside any open panel. */
+  const inView = useCallback((bounds: Bounds2d) => {
+    const { free } = fitInto(bounds);
+    const { x, y, zoom } = cameraRef.current;
+    return bounds.x * zoom + x >= free.left && (bounds.x + bounds.width) * zoom + x <= free.right
+      && bounds.y * zoom + y >= 0 && (bounds.y + bounds.height) * zoom + y <= free.height;
+  }, [fitInto]);
+
   /** Brings `bounds` into view, and leaves the camera alone when it is already fully visible. */
   const revealBounds = useCallback((bounds: Bounds2d) => {
-    if (!hostRef.current) return;
-    const { camera: target, free } = fitInto(bounds);
-    const { x, y, zoom } = cameraRef.current;
-    const inside = bounds.x * zoom + x >= free.left && (bounds.x + bounds.width) * zoom + x <= free.right
-      && bounds.y * zoom + y >= 0 && (bounds.y + bounds.height) * zoom + y <= free.height;
-    if (!inside) updateCamera(target);
-  }, [hostRef, updateCamera, fitInto]);
+    if (hostRef.current && !inView(bounds)) updateCamera(fitInto(bounds).camera);
+  }, [hostRef, updateCamera, fitInto, inView]);
+
+  /**
+   * An agent's edit: left alone when it is already on screen, else landed like the assistant's (readable,
+   * at its start). A plain fit put a wide diagram at 40%, below the zoom where labels draw. True when it zoomed in.
+   */
+  const revealReadable = useCallback((direction: LandingDirection, nodeIds: readonly string[]) => {
+    const bounds = hostRef.current?.getContentBounds(nodeIds);
+    return bounds && !inView(bounds) ? landReadable(direction, nodeIds) : false;
+  }, [hostRef, inView, landReadable]);
 
   const zoomStep = useCallback(
     (factor: number) => {
@@ -237,6 +249,7 @@ export function useV2Camera(hostRef: RefObject<PixiRendererHost | null>) {
     fitView,
     landReadable,
     revealBounds,
+    revealReadable,
     zoomStep,
     zoomTo,
     resetZoom,

@@ -104,3 +104,21 @@ it('ready with the viewport still 0×0 retries on the next frames until it has a
   act(() => { frames.splice(0).forEach((callback) => callback(0)); });
   expect(result.current.cameraRef.current.zoom).toBeGreaterThan(1);
 });
+
+it('an agent edit off screen lands readable, not at a fit too small to draw labels; one in view stays put', () => {
+  vi.stubGlobal('innerWidth', 1440);
+  // A wide architecture diagram well right of the view: fitted, it sits near 40%.
+  const wide = { x: 2400, y: 0, width: 3200, height: 500 };
+  const host = { getContentBounds: () => wide, getViewportSize: () => ({ width: 1440, height: 900 }), setCamera: vi.fn() } as unknown as PixiRendererHost;
+  const fitted = renderHook(() => useV2Camera({ current: host }));
+  act(() => fitted.result.current.revealBounds(wide));
+  const landed = renderHook(() => useV2Camera({ current: host }));
+  act(() => { landed.result.current.revealReadable('right', ['frame']); });
+  expect(fitted.result.current.cameraRef.current.zoom).toBeLessThan(0.5);
+  expect(landed.result.current.cameraRef.current.zoom).toBeGreaterThan(fitted.result.current.cameraRef.current.zoom);
+  const near = { x: 100, y: 100, width: 200, height: 100 };
+  const still = renderHook(() => useV2Camera({ current: { ...host, getContentBounds: () => near } as unknown as PixiRendererHost }));
+  const before = still.result.current.cameraRef.current;
+  act(() => { still.result.current.revealReadable('right', ['box']); });
+  expect(still.result.current.cameraRef.current).toEqual(before);
+});
