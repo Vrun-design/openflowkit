@@ -56,3 +56,4 @@ stress/*.json
 .claude/skills/
 .codex-skill-edits/
 tsconfig.tsbuildinfo
+blob-report

@@ -9,7 +9,8 @@ export default defineConfig({
   // One browser at a time: two headed WebGL canvases starve each other and
   // canvas specs fail with "no empty point". Serial is slower, never flaky.
   workers: 1,
-  reporter: 'html',
+  // CI shards each write a blob; the e2e-report job merges them into one HTML report.
+  reporter: process.env.CI ? [['blob'], ['list']] : 'html',
   use: {
     baseURL: 'http://127.0.0.1:4173',
     // CI keeps the failing attempt itself: a flake that passes on retry still leaves its trace.
