@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { extractImports } from './typescript';
 
+// Linear scans take ~60 ms here and ~250 ms on a CI runner; catastrophic backtracking
+// on ~1 MB takes seconds, so this cap catches it without timing the runner.
+const HOSTILE_INPUT_MS = 1000;
+
 const specs = (source: string) => extractImports(source).map((i) => [i.spec, i.line]);
 
 describe('extractImports', () => {
@@ -59,9 +63,9 @@ describe('extractImports cost', () => {
     ['1 MB specifier', `import x from '${'a'.repeat(1e6)}'`],
     ['many froms', "import {\n a } from 'x'\n".repeat(40000)],
   ];
-  it.each(inputs)('scans %s in under 200 ms', (_name, source) => {
+  it.each(inputs)('scans %s under a second', (_name, source) => {
     const started = performance.now();
     extractImports(source);
-    expect(performance.now() - started).toBeLessThan(200);
+    expect(performance.now() - started).toBeLessThan(HOSTILE_INPUT_MS);
   });
 });

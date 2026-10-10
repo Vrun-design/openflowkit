@@ -3,6 +3,10 @@ import { compileWorkspace } from '../compile';
 import { deterministicLayout } from '../layout';
 import { acceptsArchitectureFile, capUnits, definesUnit, discoverArchitecture, discoveryToDsl } from './discovery';
 
+// Linear scans take ~60 ms here and ~250 ms on a CI runner; catastrophic backtracking
+// on ~1 MB takes seconds, so this cap catches it without timing the runner.
+const HOSTILE_INPUT_MS = 1000;
+
 // The browser entry point: files already read (the repo page fetches them from
 // GitHub). mcp-server/tests/discoveryFixtures.test.ts runs the fixtures through the Node walk.
 const FILES = [
@@ -168,7 +172,7 @@ describe('compose depends_on flow lists', () => {
     for (const hostile of [`${'['.repeat(1e6)}`, `[a${' '.repeat(1e6)}b]`, `[${'a,'.repeat(5e5)}]`, `[${']'.repeat(5e5)} x`]) {
       const started = performance.now();
       edges(hostile);
-      expect(performance.now() - started).toBeLessThan(200);
+      expect(performance.now() - started).toBeLessThan(HOSTILE_INPUT_MS);
     }
   });
 });

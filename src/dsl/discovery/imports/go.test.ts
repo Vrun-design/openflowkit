@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { extractGo, stripGo } from './go';
 import { scanImports } from './scan';
 
+// Linear scans take ~60 ms here and ~250 ms on a CI runner; catastrophic backtracking
+// on ~1 MB takes seconds, so this cap catches it without timing the runner.
+const HOSTILE_INPUT_MS = 1000;
+
 const file = (path: string, content = '') => ({ path, content });
 const edges = (files: ReturnType<typeof file>[]) => scanImports(files).imports.map((i) => `${i.from}>${i.to}${i.toKind ? ':dir' : ''}@${i.line}`);
 
@@ -63,9 +67,9 @@ describe('go scan cost', () => {
     ['import + spaces + paren', `import${' '.repeat(1e6)}(`],
     ['one huge block', `import (\n${'\t"a/b"\n'.repeat(120000)})\n`],
   ];
-  it.each(inputs)('scans %s (~1 MB) in under 200 ms', (_name, source) => {
+  it.each(inputs)('scans %s (~1 MB) under a second', (_name, source) => {
     const started = performance.now();
     extractGo(source);
-    expect(performance.now() - started).toBeLessThan(200);
+    expect(performance.now() - started).toBeLessThan(HOSTILE_INPUT_MS);
   });
 });

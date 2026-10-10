@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { extractPython, stripPython } from './python';
 import { scanImports } from './scan';
 
+// Linear scans take ~60 ms here and ~250 ms on a CI runner; catastrophic backtracking
+// on ~1 MB takes seconds, so this cap catches it without timing the runner.
+const HOSTILE_INPUT_MS = 1000;
+
 const file = (path: string, content = '') => ({ path, content });
 const edges = (files: ReturnType<typeof file>[]) => scanImports(files).imports.map((i) => `${i.from}>${i.to}${i.toKind ? ':dir' : ''}@${i.line}`);
 const specs = (source: string) => extractPython(source).map((i) => [i.spec, i.line, ...(i.names ? [i.names.join('|')] : [])]);
@@ -108,9 +112,9 @@ describe('python scan cost', () => {
     ['colons', 'x:'.repeat(300000)],
     ['backslashes', '\\\n'.repeat(300000)],
   ];
-  it.each(inputs)('scans %s (~1 MB) in under 200 ms', (_name, source) => {
+  it.each(inputs)('scans %s (~1 MB) under a second', (_name, source) => {
     const started = performance.now();
     extractPython(source);
-    expect(performance.now() - started).toBeLessThan(200);
+    expect(performance.now() - started).toBeLessThan(HOSTILE_INPUT_MS);
   });
 });
