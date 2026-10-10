@@ -342,7 +342,9 @@ export function useV2MapMode(options: Options) {
       if (event.target instanceof HTMLElement && event.target.closest('button') && [' ', 'Enter'].includes(event.key)) return false;
       // Find has nothing to search here (the canvas behind is hidden), and the browser's own must not open instead.
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'f') { event.preventDefault(); return true; }
-      return !mapKeyAllowed(event);
+      if (mapKeyAllowed(event)) return false;
+      if (isEditKey(event)) event.preventDefault();
+      return true;
     }
     if (!active || !model || keyOwnedByTarget(event)) return false;
     // Arrows walk between boxes (Map has nothing to nudge), but only from the canvas or the bare page: a panel, tree or dialog keeps its own.
@@ -366,7 +368,8 @@ export function useV2MapMode(options: Options) {
       return true;
     }
     if (mapKeyAllowed(event)) return false;
-    if (isEditKey(event)) onBlockedEdit?.();
+    // A swallowed edit key does nothing at all: WebKit takes Backspace as Back and would leave the app.
+    if (isEditKey(event)) { event.preventDefault(); onBlockedEdit?.(); }
     return true;
   }, [active, start, choose, model, open, primaryId, flip, select, cancelTransient, arrow, shown, onPin, onBlockedEdit]);
 

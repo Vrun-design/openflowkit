@@ -129,6 +129,12 @@ test('Delete, drag, nudge, typing and duplicate on a map box change nothing @gat
   for (const key of ['Delete', 'Backspace', 'ArrowRight', 'Shift+ArrowDown', 'Meta+d', 'Control+d', 'F2', 'q', 'Meta+x', 'Meta+a', 'r']) {
     await page.keyboard.press(key);
   }
+  // Swallowed, not passed on: WebKit's default for Backspace is Back, which left the app.
+  expect(await page.evaluate(() => {
+    const event = new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true });
+    document.querySelector('[data-testid="v2-canvas"]')!.dispatchEvent(event);
+    return event.defaultPrevented;
+  })).toBe(true);
   await page.mouse.dblclick(at.x, at.y);
   await page.waitForTimeout(300);
   await expect(page.locator('textarea, [contenteditable="true"]')).toHaveCount(editors);
